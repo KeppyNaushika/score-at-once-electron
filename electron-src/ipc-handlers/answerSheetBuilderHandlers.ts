@@ -9,7 +9,7 @@ import path from "path"
 
 import type {
   AnswerSheetDefinition,
-  ASBConvertToProjectArgs,
+  ASBConvertToExamArgs,
   ASBExportPdfArgs,
   ASBExportPngArgs,
   ASBPrintArgs,
@@ -20,9 +20,9 @@ import {
   loadDefinition,
   saveDefinition,
 } from "../lib/answer-sheet-builder/definitionStorage"
+import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
 import { generatePdf } from "../lib/answer-sheet-builder/pdfGenerator"
 import { generatePng } from "../lib/answer-sheet-builder/pngGenerator"
-import { convertToProject } from "../lib/answer-sheet-builder/projectConverter"
 
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
@@ -228,25 +228,23 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   )
 
-  // プロジェクト変換
+  // 試験変換
   ipcMain.handle(
-    "asb:convert-to-project",
-    async (_event, args: ASBConvertToProjectArgs) => {
+    "asb:convert-to-exam",
+    async (_event, args: ASBConvertToExamArgs) => {
       try {
-        const result = await convertToProject(
+        const result = await convertToExam(
           args.definition,
           args.userId,
           args.svgString
         )
         return result
       } catch (error) {
-        console.error("asb:convert-to-project error:", error)
+        console.error("asb:convert-to-exam error:", error)
         return {
           success: false,
           error:
-            error instanceof Error
-              ? error.message
-              : "プロジェクト変換に失敗しました",
+            error instanceof Error ? error.message : "試験変換に失敗しました",
         }
       }
     }

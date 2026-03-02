@@ -13,7 +13,7 @@ import type {
   MatchedItem,
   PreMatchingResult,
   ScoringConflictResolutionStrategy,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 type UpdateStrategy = "keep_existing" | "use_import" | "use_newer"
 

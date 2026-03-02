@@ -8,8 +8,8 @@
 
 import { describe, expect, test } from "vitest"
 
-import { generateExportFileName } from "../../../electron-src/lib/export/project-archive/archiveCreator"
-import type { ExportMode } from "../../../types/projectArchive.types"
+import { generateExportFileName } from "../../../electron-src/lib/export/exam-archive/archiveCreator"
+import type { ExportMode } from "../../../types/examArchive.types"
 
 describe("generateExportFileName - エクスポートモード対応", () => {
   // EM-1: fullモード（デフォルト）はサフィックスなし

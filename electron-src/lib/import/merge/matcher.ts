@@ -5,12 +5,12 @@
  */
 
 import type {
+  ExamPreMatchingResult,
   FileOverviewData,
   MatchingConfig,
-  ProjectPreMatchingResult,
-} from "../../../../types/projectArchive.types"
+} from "../../../../types/examArchive.types"
 import prisma from "../../prisma/client"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import {
   type AllMatchResults,
   type ClassData,
@@ -139,53 +139,53 @@ export function buildIdMappings(matchResults: AllMatchResults): {
 export async function performPreMatching(
   importData: ExtractedArchiveData
 ): Promise<FileOverviewData> {
-  const [studentResult, classResult, subtotalGroupResult, projectResult] =
+  const [studentResult, classResult, subtotalGroupResult, examResult] =
     await Promise.all([
       preMatchStudents(importData),
       preMatchClasses(importData),
       preMatchSubtotalGroups(importData),
-      preMatchProject(importData),
+      preMatchExam(importData),
     ])
 
   return {
     student: studentResult,
     class: classResult,
     subtotalGroup: subtotalGroupResult,
-    project: projectResult,
+    exam: examResult,
   }
 }
 
 /**
- * プロジェクトの事前照合
+ * 試験の事前照合
  *
- * プロジェクトIDが既存データベースに存在するかチェック。
+ * 試験IDが既存データベースに存在するかチェック。
  * ID一致 = 同じPCでエクスポートしたデータ → マージ可能
  */
-async function preMatchProject(
+async function preMatchExam(
   importData: ExtractedArchiveData
-): Promise<ProjectPreMatchingResult> {
-  const importProject = importData.projectData.project
+): Promise<ExamPreMatchingResult> {
+  const importExam = importData.examData.exam
 
   // ID照合
-  const existingProject = await prisma.project.findUnique({
-    where: { id: importProject.id },
+  const existingExam = await prisma.exam.findUnique({
+    where: { id: importExam.id },
   })
 
-  if (existingProject) {
+  if (existingExam) {
     return {
       isIdMatch: true,
-      importProjectId: importProject.id,
-      existingProjectId: existingProject.id,
-      importData: importProject as unknown as Record<string, unknown>,
-      existingData: existingProject as unknown as Record<string, unknown>,
-      displayLabel: importProject.examName,
+      importExamId: importExam.id,
+      existingExamId: existingExam.id,
+      importData: importExam as unknown as Record<string, unknown>,
+      existingData: existingExam as unknown as Record<string, unknown>,
+      displayLabel: importExam.examName,
     }
   }
 
   return {
     isIdMatch: false,
-    importProjectId: importProject.id,
-    importData: importProject as unknown as Record<string, unknown>,
-    displayLabel: importProject.examName,
+    importExamId: importExam.id,
+    importData: importExam as unknown as Record<string, unknown>,
+    displayLabel: importExam.examName,
   }
 }

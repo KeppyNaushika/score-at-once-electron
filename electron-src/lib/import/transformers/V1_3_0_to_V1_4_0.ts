@@ -2,7 +2,7 @@
  * v1.3.0 → v1.4.0 変換器
  *
  * 主な変更点:
- * - ProjectMarkingFormat, ProjectExportSettings, CropRegionMarkingOverride をプロジェクトデータに追加
+ * - ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride を試験データに追加
  * - Subject, SubjectSubtotalGroup を教科データとして追加
  *
  * v1.3.0形式のアーカイブにはこれらのフィールドが存在しないため、
@@ -35,12 +35,12 @@ export class V1_3_0_to_V1_4_0_Transformer implements VersionTransformer {
           ...data.manifest,
           version: this.toVersion,
         },
-        projectData: {
-          ...data.projectData,
-          projectMarkingFormats: data.projectData.projectMarkingFormats ?? [],
-          projectExportSettings: data.projectData.projectExportSettings ?? null,
+        examData: {
+          ...data.examData,
+          examMarkingFormats: data.examData.examMarkingFormats ?? [],
+          examExportSettings: data.examData.examExportSettings ?? null,
           cropRegionMarkingOverrides:
-            data.projectData.cropRegionMarkingOverrides ?? [],
+            data.examData.cropRegionMarkingOverrides ?? [],
         },
         subjectsData: data.subjectsData ?? {
           subjects: [],

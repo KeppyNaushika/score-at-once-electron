@@ -8,7 +8,7 @@
 
 ## 概要
 
-NASに弱いSQLiteで分散型協調採点を実現するため、sqlite-nas-sync ライブラリを新規開発し、本プロジェクトに導入する。
+NASに弱いSQLiteで分散型協調採点を実現するため、sqlite-nas-sync ライブラリを新規開発し、本試験に導入する。
 
 **基本アーキテクチャ:**
 
@@ -24,7 +24,7 @@ Sync時: Client AがNAS上のclient_b.dbを読み取り専用で開く → ロ�
 
 ## sqlite-nas-sync の役割
 
-sqlite-nas-sync は独立したnpmパッケージとして開発し、他プロジェクトでも流用可能にする。
+sqlite-nas-sync は独立したnpmパッケージとして開発し、他試験でも流用可能にする。
 アプリ側のコード変更は原則不要。
 
 ### 1. 条件チェック（バリデーション）
@@ -45,17 +45,17 @@ SQLiteのトリガーを利用し、アプリのコード変更なしに削除�
 
 ```sql
 -- sqlite-nas-sync が自動生成するトリガーの例
-CREATE TRIGGER IF NOT EXISTS _tombstone_after_delete_Project
-AFTER DELETE ON Project
+CREATE TRIGGER IF NOT EXISTS _tombstone_after_delete_Exam
+AFTER DELETE ON Exam
 FOR EACH ROW
 BEGIN
   INSERT INTO _tombstone (tableName, recordId, deletedAt)
-  VALUES ('Project', OLD.id, datetime('now'));
+  VALUES ('Exam', OLD.id, datetime('now'));
 END;
 ```
 
 **重要**: SQLiteのトリガーは `onDelete: Cascade` による連鎖削除でも発火する。
-Projectを物理削除すればCascadeで子レコードも削除され、各テーブルのトリガーが自動でtombstoneを記録する。
+Examを物理削除すればCascadeで子レコードも削除され、各テーブルのトリガーが自動でtombstoneを記録する。
 
 ### 3. Sync発火（コア機能）
 
@@ -79,14 +79,14 @@ import { setupSync } from 'sqlite-nas-sync'
 setupSync({
   dbPath: './data/database.db',
   nasPath: '//nas/shared/score-at-once/',
-  tables: ['Project', 'Student', 'Class', ...],
+  tables: ['Exam', 'Student', 'Class', ...],
   primaryKey: 'id',
 })
 ```
 
 ---
 
-## 本プロジェクトの準備状況
+## 本試験の準備状況
 
 ### 1. PK：UUID化の現状
 
@@ -99,26 +99,26 @@ setupSync({
 | User                      | `id String @id @default(uuid())` |
 | Class                     | `id String @id @default(uuid())` |
 | Student                   | `id String @id @default(uuid())` |
-| Project                   | `id String @id @default(uuid())` |
-| ProjectStudent            | 同上                             |
-| ProjectPage               | 同上                             |
+| Exam                      | `id String @id @default(uuid())` |
+| ExamStudent               | 同上                             |
+| ExamPage                  | 同上                             |
 | MasterImage               | 同上                             |
 | StudentAnswerImage        | 同上                             |
 | CropRegion                | 同上                             |
 | SubtotalGroup             | 同上                             |
 | Subtotal                  | 同上                             |
 | CropSubtotal              | 同上                             |
-| UserProject               | 同上                             |
-| ProjectSubtotalGroup      | 同上                             |
+| UserExam                  | 同上                             |
+| ExamSubtotalGroup         | 同上                             |
 | QuestionScore             | 同上                             |
 | DrawingAnnotation         | 同上                             |
-| ProjectClass              | 同上                             |
+| ExamClass                 | 同上                             |
 | Subject                   | 同上                             |
 | SubjectSubtotalGroup      | 同上                             |
 | UserKeyboardShortcut      | 同上                             |
 | UserScoringPreference     | 同上                             |
-| ProjectMarkingFormat      | 同上                             |
-| ProjectExportSettings     | 同上                             |
+| ExamMarkingFormat         | 同上                             |
+| ExamExportSettings        | 同上                             |
 | CropRegionMarkingOverride | 同上                             |
 | StudentClassMembership    | 同上                             |
 
@@ -141,7 +141,7 @@ setupSync({
 - Cascade削除でもトリガーが発火するため、全ての削除が記録される
 
 ```
-アプリ側:  prisma.project.delete({ where: { id } })
+アプリ側:  prisma.exam.delete({ where: { id } })
                     │
           (いつも通りPrismaで削除するだけ)
                     │
@@ -149,7 +149,7 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
                     │
 トリガー:  各テーブルの AFTER DELETE トリガーが自動発火
                     │
-結果:     _tombstone テーブルに Project + 全子レコードが記録
+結果:     _tombstone テーブルに Exam + 全子レコードが記録
 ```
 
 ### 3. UNIQUE制約：現状分析
@@ -165,13 +165,13 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 | 3   | Student.studentNumber                                        | `@unique` | 5          | **高** - 同一生徒を別クライアントで登録   |
 | 4   | Subject.name                                                 | `@unique` | 2          | **中** - 同名教科の重複                   |
 | 5   | UserScoringPreference.userId                                 | `@unique` | 3          | **低** - 1:1リレーション                  |
-| 6   | ProjectExportSettings.projectId                              | `@unique` | 2          | **低** - 1:1リレーション                  |
-| 7   | ProjectStudent @@unique([projectId, studentId])              | 複合      | 1          | **中**                                    |
-| 8   | UserProject @@unique([userId, projectId])                    | 複合      | 5          | **低**                                    |
-| 9   | ProjectClass @@unique([projectId, classId])                  | 複合      | 3          | **中**                                    |
+| 6   | ExamExportSettings.examId                                    | `@unique` | 2          | **低** - 1:1リレーション                  |
+| 7   | ExamStudent @@unique([examId, studentId])                    | 複合      | 1          | **中**                                    |
+| 8   | UserExam @@unique([userId, examId])                          | 複合      | 5          | **低**                                    |
+| 9   | ExamClass @@unique([examId, classId])                        | 複合      | 3          | **中**                                    |
 | 10  | Subtotal @@unique([subtotalGroupId, name])                   | 複合      | 1          | **中**                                    |
 | 11  | UserKeyboardShortcut @@unique([userId, action])              | 複合      | 2          | **低**                                    |
-| 12  | ProjectMarkingFormat @@unique([projectId, markType])         | 複合      | 3          | **低**                                    |
+| 12  | ExamMarkingFormat @@unique([examId, markType])               | 複合      | 3          | **低**                                    |
 | 13  | SubjectSubtotalGroup @@unique([subjectId, subtotalGroupId])  | 複合      | 1          | **低**                                    |
 | 14  | CropRegionMarkingOverride @@unique([cropRegionId, markType]) | 複合      | 3          | **低**                                    |
 
@@ -190,10 +190,10 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 
 **カテゴリB：1:1リレーション保証**
 
-| 制約                            | 理由               |
-| ------------------------------- | ------------------ |
-| UserScoringPreference.userId    | 1ユーザー1設定     |
-| ProjectExportSettings.projectId | 1プロジェクト1設定 |
+| 制約                         | 理由           |
+| ---------------------------- | -------------- |
+| UserScoringPreference.userId | 1ユーザー1設定 |
+| ExamExportSettings.examId    | 1試験1設定     |
 
 → 親レコードのsyncに連動。LWWで上書き。
 
@@ -201,12 +201,12 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 
 | 制約                                              | sync衝突シナリオ                       |
 | ------------------------------------------------- | -------------------------------------- |
-| ProjectStudent(projectId, studentId)              | クライアントA・Bが同時に同じ生徒を追加 |
-| UserProject(userId, projectId)                    | 同時参加                               |
-| ProjectClass(projectId, classId)                  | 同時追加                               |
+| ExamStudent(examId, studentId)                    | クライアントA・Bが同時に同じ生徒を追加 |
+| UserExam(userId, examId)                          | 同時参加                               |
+| ExamClass(examId, classId)                        | 同時追加                               |
 | Subtotal(subtotalGroupId, name)                   | 同名小計の同時作成                     |
 | UserKeyboardShortcut(userId, action)              | 設定の同時変更                         |
-| ProjectMarkingFormat(projectId, markType)         | 設定の同時変更                         |
+| ExamMarkingFormat(examId, markType)               | 設定の同時変更                         |
 | SubjectSubtotalGroup(subjectId, subtotalGroupId)  | 同時追加                               |
 | CropRegionMarkingOverride(cropRegionId, markType) | 設定の同時変更                         |
 
@@ -223,9 +223,9 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 | `databaseSetup.ts:126`               | Student.studentNumber                             |
 | `userSettings.ts:39,58`              | UserKeyboardShortcut(userId, action)              |
 | `userSettings.ts:145,207`            | UserScoringPreference.userId                      |
-| `projectSettings.ts:40,62`           | ProjectMarkingFormat(projectId, markType)         |
-| `projectSettings.ts:111`             | ProjectExportSettings.projectId                   |
-| `projectClass.ts:355`                | ProjectClass(projectId, classId)                  |
+| `examSettings.ts:40,62`              | ExamMarkingFormat(examId, markType)               |
+| `examSettings.ts:111`                | ExamExportSettings.examId                         |
+| `examClass.ts:355`                   | ExamClass(examId, classId)                        |
 | `cropRegionMarkingOverride.ts:49,76` | CropRegionMarkingOverride(cropRegionId, markType) |
 | `dataCreator.ts:156`                 | Subject.name                                      |
 
@@ -238,9 +238,9 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 | `uniqueNameGenerators.ts:65,77`   | Class.name                                        |
 | `subject.ts:77`                   | Subject.name                                      |
 | `userSettings.ts:131,184`         | UserScoringPreference.userId                      |
-| `projectSettings.ts:29`           | ProjectMarkingFormat(projectId, markType)         |
-| `projectSettings.ts:95`           | ProjectExportSettings.projectId                   |
-| `userProject.ts:60,147,191,236`   | UserProject(userId, projectId)                    |
+| `examSettings.ts:29`              | ExamMarkingFormat(examId, markType)               |
+| `examSettings.ts:95`              | ExamExportSettings.examId                         |
+| `userExam.ts:60,147,191,236`      | UserExam(userId, examId)                          |
 | `cropRegionMarkingOverride.ts:35` | CropRegionMarkingOverride(cropRegionId, markType) |
 | `dataCreator.ts:183`              | SubjectSubtotalGroup(subjectId, subtotalGroupId)  |
 
@@ -258,10 +258,10 @@ LWW（Last-Write-Wins）方式では、行単位で上書きされるため、�
 | Student (名前 + 学籍番号)             | **OK** | 生徒マスタは一人の管理者が編集              |
 | CropRegion (座標 + 配点 + ラベル)     | **OK** | テンプレート定義は一体で変更                |
 | DrawingAnnotation (各種属性)          | **OK** | 1アノテーション = 1変更単位                 |
-| ProjectStudent (status + customOrder) | **OK** | 受験生徒一覧画面で同じ管理者が一体で操作    |
+| ExamStudent (status + customOrder)    | **OK** | 受験生徒一覧画面で同じ管理者が一体で操作    |
 | UserScoringPreference (各種設定)      | **OK** | 各ユーザーが自分の設定のみ変更              |
 | UserKeyboardShortcut (action + key)   | **OK** | 各ユーザーが自分の設定のみ変更              |
-| ProjectMarkingFormat (各種設定)       | **OK** | プロジェクト設定として一体管理              |
+| ExamMarkingFormat (各種設定)          | **OK** | 試験設定として一体管理                      |
 
 ---
 
@@ -300,31 +300,31 @@ LWW（Last-Write-Wins）方式では、行単位で上書きされるため、�
 | ------------- | ------------------------- | -------------------- |
 | Student       | StudentClassMembership    | studentId → id       |
 | Class         | StudentClassMembership    | classId → id         |
-| Project       | ProjectStudent            | projectId → id       |
-| Student       | ProjectStudent            | studentId → id       |
-| Project       | ProjectPage               | projectId → id       |
-| ProjectPage   | MasterImage               | projectPageId → id   |
-| ProjectPage   | StudentAnswerImage        | projectPageId → id   |
+| Exam          | ExamStudent               | examId → id          |
+| Student       | ExamStudent               | studentId → id       |
+| Exam          | ExamPage                  | examId → id          |
+| ExamPage      | MasterImage               | examPageId → id      |
+| ExamPage      | StudentAnswerImage        | examPageId → id      |
 | Student       | StudentAnswerImage        | studentId → id       |
-| ProjectPage   | CropRegion                | projectPageId → id   |
+| ExamPage      | CropRegion                | examPageId → id      |
 | SubtotalGroup | Subtotal                  | subtotalGroupId → id |
 | CropRegion    | CropSubtotal              | cropRegionId → id    |
 | Subtotal      | CropSubtotal              | subtotalId → id      |
-| User          | UserProject               | userId → id          |
-| Project       | UserProject               | projectId → id       |
-| Project       | ProjectSubtotalGroup      | projectId → id       |
-| SubtotalGroup | ProjectSubtotalGroup      | subtotalGroupId → id |
+| User          | UserExam                  | userId → id          |
+| Exam          | UserExam                  | examId → id          |
+| Exam          | ExamSubtotalGroup         | examId → id          |
+| SubtotalGroup | ExamSubtotalGroup         | subtotalGroupId → id |
 | CropRegion    | QuestionScore             | cropRegionId → id    |
 | Student       | QuestionScore             | studentId → id       |
 | QuestionScore | DrawingAnnotation         | questionScoreId → id |
-| Project       | ProjectClass              | projectId → id       |
-| Class         | ProjectClass              | classId → id         |
+| Exam          | ExamClass                 | examId → id          |
+| Class         | ExamClass                 | classId → id         |
 | Subject       | SubjectSubtotalGroup      | subjectId → id       |
 | SubtotalGroup | SubjectSubtotalGroup      | subtotalGroupId → id |
 | User          | UserKeyboardShortcut      | userId → id          |
 | User          | UserScoringPreference     | userId → id          |
-| Project       | ProjectMarkingFormat      | projectId → id       |
-| Project       | ProjectExportSettings     | projectId → id       |
+| Exam          | ExamMarkingFormat         | examId → id          |
+| Exam          | ExamExportSettings        | examId → id          |
 | CropRegion    | CropRegionMarkingOverride | cropRegionId → id    |
 
 ### B. 明示的な delete / deleteMany 呼び出し（48箇所）
@@ -346,47 +346,47 @@ LWW（Last-Write-Wins）方式では、行単位で上書きされるため、�
 | `electron-src/lib/prisma/drawingAnnotation.ts:347`         | DrawingAnnotation         | アノテーションを単一削除                 |
 | `electron-src/lib/prisma/drawingAnnotation.ts:367`         | DrawingAnnotation         | アノテーションを一括削除                 |
 | `electron-src/lib/prisma/subtotalGroup.ts:98`              | Subtotal                  | 既存小計を全削除（再作成）               |
-| `electron-src/lib/prisma/subtotalGroup.ts:204`             | ProjectSubtotalGroup      | プロジェクト関連付けを削除               |
+| `electron-src/lib/prisma/subtotalGroup.ts:204`             | ExamSubtotalGroup         | 試験関連付けを削除                       |
 | `electron-src/lib/prisma/subtotalGroup.ts:209`             | SubtotalGroup             | 小計グループを削除                       |
-| `electron-src/lib/prisma/subtotalGroup.ts:386`             | ProjectSubtotalGroup      | プロジェクト関連付けを削除               |
+| `electron-src/lib/prisma/subtotalGroup.ts:386`             | ExamSubtotalGroup         | 試験関連付けを削除                       |
 | `electron-src/lib/prisma/studentClassMembership.ts:79`     | StudentClassMembership    | メンバーシップを単一削除                 |
 | `electron-src/lib/prisma/studentAnswer/placement.ts:36`    | StudentAnswerImage        | 答案画像を単一削除                       |
 | `electron-src/lib/prisma/student.ts:109`                   | Student                   | 生徒を削除                               |
 | `electron-src/lib/prisma/student.ts:204`                   | Class                     | 学級を削除                               |
-| `electron-src/lib/prisma/projectSettings.ts:85`            | ProjectMarkingFormat      | 採点マーク形式を一括削除                 |
-| `electron-src/lib/prisma/projectSettings.ts:119`           | ProjectExportSettings     | 出力設定を一括削除                       |
+| `electron-src/lib/prisma/examSettings.ts:85`               | ExamMarkingFormat         | 採点マーク形式を一括削除                 |
+| `electron-src/lib/prisma/examSettings.ts:119`              | ExamExportSettings        | 出力設定を一括削除                       |
 | `electron-src/lib/prisma/studentAnswer/crud.ts:168`        | StudentAnswerImage        | 答案画像を単一削除                       |
 | `electron-src/lib/prisma/class.ts:103`                     | Class                     | 学級を削除                               |
 | `electron-src/lib/prisma/masterAnswer.ts:128`              | MasterImage               | 模範解答画像を削除                       |
-| `electron-src/lib/prisma/masterAnswer.ts:140`              | ProjectPage               | プロジェクトページを削除                 |
+| `electron-src/lib/prisma/masterAnswer.ts:140`              | ExamPage                  | 試験ページを削除                         |
 | `electron-src/lib/prisma/masterAnswer.ts:381`              | MasterImage               | 模範解答画像を一括削除                   |
-| `electron-src/lib/prisma/masterAnswer.ts:397`              | ProjectPage               | 空ページを一括削除                       |
+| `electron-src/lib/prisma/masterAnswer.ts:397`              | ExamPage                  | 空ページを一括削除                       |
 | `electron-src/lib/prisma/questionScore.ts:276`             | QuestionScore             | 採点を単一削除                           |
-| `electron-src/lib/prisma/projectClass.ts:247`              | ProjectClass              | プロジェクト学級を削除                   |
-| `electron-src/lib/prisma/projectClass.ts:264`              | ProjectClass              | プロジェクト学級を削除（複数）           |
-| `electron-src/lib/prisma/projectStudent.ts:117`            | ProjectStudent            | プロジェクト生徒を一括削除               |
-| `electron-src/lib/prisma/projectStudent.ts:125`            | StudentAnswerImage        | 答案画像を一括削除                       |
-| `electron-src/lib/prisma/project.ts:189`                   | Project                   | プロジェクト全体を削除                   |
+| `electron-src/lib/prisma/examClass.ts:247`                 | ExamClass                 | 試験学級を削除                           |
+| `electron-src/lib/prisma/examClass.ts:264`                 | ExamClass                 | 試験学級を削除（複数）                   |
+| `electron-src/lib/prisma/examStudent.ts:117`               | ExamStudent               | 試験生徒を一括削除                       |
+| `electron-src/lib/prisma/examStudent.ts:125`               | StudentAnswerImage        | 答案画像を一括削除                       |
+| `electron-src/lib/prisma/exam.ts:189`                      | Exam                      | 試験全体を削除                           |
 | `electron-src/lib/prisma/questionGroup.ts:35`              | SubtotalGroup             | 設問グループを削除                       |
 | `electron-src/lib/prisma/cropRegion.ts:86`                 | CropRegion                | 採点領域を削除                           |
 | `electron-src/lib/prisma/questionSubtotalAssignment.ts:29` | CropSubtotal              | 設問小計を単一削除                       |
 | `electron-src/lib/prisma/questionSubtotalAssignment.ts:38` | CropSubtotal              | 設問小計を一括削除（複数）               |
 | `electron-src/lib/prisma/questionSubtotalAssignment.ts:47` | CropSubtotal              | 設問小計を一括削除（すべて）             |
-| `electron-src/lib/prisma/projectPage.ts:47`                | ProjectPage               | プロジェクトページを単一削除             |
+| `electron-src/lib/prisma/examPage.ts:47`                   | ExamPage                  | 試験ページを単一削除                     |
 | `electron-src/lib/prisma/cropSubtotal.ts:134`              | CropSubtotal              | 採点領域小計を単一削除                   |
 | `electron-src/lib/prisma/cropSubtotal.ts:143`              | CropSubtotal              | 採点領域小計を一括削除                   |
-| `electron-src/lib/prisma/userProject.ts:205`               | UserProject               | ユーザープロジェクトを削除               |
+| `electron-src/lib/prisma/userExam.ts:205`                  | UserExam                  | ユーザー試験を削除                       |
 | `electron-src/lib/prisma/gradingData.ts:100`               | QuestionScore             | 採点結果を一括削除                       |
 | `electron-src/lib/prisma/gradingData.ts:112`               | StudentAnswerImage        | 答案画像を一括削除                       |
 | `electron-src/lib/prisma/questionScore.ts:347`             | QuestionScore             | 採点を一括削除                           |
 | `electron-src/lib/prisma/studentAnswer/batch.ts:69`        | QuestionScore             | 採点結果を一括削除                       |
 | `electron-src/lib/prisma/studentAnswer/batch.ts:84`        | StudentAnswerImage        | 答案画像を一括削除                       |
 
-### C. Cascade削除の連鎖影響（Project削除時）
+### C. Cascade削除の連鎖影響（Exam削除時）
 
 ```
-Project (DELETE)
-├─ ProjectPage (Cascade)
+Exam (DELETE)
+├─ ExamPage (Cascade)
 │  ├─ MasterImage (Cascade)              ← トリガーで tombstone 記録
 │  ├─ StudentAnswerImage (Cascade)       ← トリガーで tombstone 記録
 │  └─ CropRegion (Cascade)              ← トリガーで tombstone 記録
@@ -394,12 +394,12 @@ Project (DELETE)
 │     ├─ QuestionScore (Cascade)         ← トリガーで tombstone 記録
 │     │  └─ DrawingAnnotation (Cascade)  ← トリガーで tombstone 記録
 │     └─ CropRegionMarkingOverride       ← トリガーで tombstone 記録
-├─ ProjectStudent (Cascade)              ← トリガーで tombstone 記録
-├─ ProjectSubtotalGroup (Cascade)        ← トリガーで tombstone 記録
-├─ UserProject (Cascade)                 ← トリガーで tombstone 記録
-├─ ProjectClass (Cascade)                ← トリガーで tombstone 記録
-├─ ProjectMarkingFormat (Cascade)        ← トリガーで tombstone 記録
-└─ ProjectExportSettings (Cascade)       ← トリガーで tombstone 記録
+├─ ExamStudent (Cascade)              ← トリガーで tombstone 記録
+├─ ExamSubtotalGroup (Cascade)        ← トリガーで tombstone 記録
+├─ UserExam (Cascade)                 ← トリガーで tombstone 記録
+├─ ExamClass (Cascade)                ← トリガーで tombstone 記録
+├─ ExamMarkingFormat (Cascade)        ← トリガーで tombstone 記録
+└─ ExamExportSettings (Cascade)       ← トリガーで tombstone 記録
 ```
 
 ---
@@ -408,11 +408,11 @@ Project (DELETE)
 
 ### エクスポート対象モデル
 
-**必須データ**: Project, ProjectPage, CropRegion, Student, Class, StudentClassMembership, User, SubtotalGroup, Subtotal
+**必須データ**: Exam, ExamPage, CropRegion, Student, Class, StudentClassMembership, User, SubtotalGroup, Subtotal
 
 **v1.2.0+**: MasterImage, StudentAnswerImage
 
-**v1.4.0+**: ProjectMarkingFormat, ProjectExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup, ProjectClass
+**v1.4.0+**: ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup, ExamClass
 
 **採点データ**: QuestionScore, DrawingAnnotation（ログインユーザーのみ）
 
@@ -429,7 +429,7 @@ sqlite-nas-sync の導入は既知バグに影響しない。バグ修正は独�
 
 ---
 
-## 結論：本プロジェクト側で必要な作業
+## 結論：本試験側で必要な作業
 
 | 項目                         | 作業内容                                      | 工数 |
 | ---------------------------- | --------------------------------------------- | ---- |
@@ -443,8 +443,8 @@ sqlite-nas-sync の導入は既知バグに影響しない。バグ修正は独�
 | sync UIの実装                | **必要** - sync状態表示・手動sync発火ボタン等 | 中   |
 | バージョン更新               | **必要** - v0.4.10 → v0.5.0                   | 小   |
 
-**本プロジェクトのスキーマ変更・既存コード変更は不要。**
-主な作業は sqlite-nas-sync ライブラリの開発と、本プロジェクトへの統合（初期化 + UI）のみ。
+**本試験のスキーマ変更・既存コード変更は不要。**
+主な作業は sqlite-nas-sync ライブラリの開発と、本試験への統合（初期化 + UI）のみ。
 
 ---
 
@@ -571,7 +571,7 @@ const sync = setupSync({
   dbPath: './data/database.db',
   nasPath: '//nas/shared/score-at-once/',
   clientId: 'client-uuid',
-  tables: ['Project', 'Student', 'Class', ...],
+  tables: ['Exam', 'Student', 'Class', ...],
   primaryKey: 'id',
   intervalMs: 30000,             // デフォルト30秒、ユーザー設定可能
   changelogRetentionDays: 7,     // _changelog保持期間

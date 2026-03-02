@@ -1,6 +1,6 @@
 # コーディングスタイルガイド
 
-このドキュメントは、Score at Once プロジェクトのコード規約と設計方針をまとめたものです。
+このドキュメントは、Score at Once 試験のコード規約と設計方針をまとめたものです。
 
 ## 目次
 
@@ -78,7 +78,7 @@ npx @tailwindcss/upgrade --force
 | 拡張子 | 規則       | 例                                        |
 | ------ | ---------- | ----------------------------------------- |
 | `.tsx` | PascalCase | `ActionButton.tsx`, `ScoringMainView.tsx` |
-| `.ts`  | camelCase  | `useProject.ts`, `dataFetcher.ts`         |
+| `.ts`  | camelCase  | `useExam.ts`, `dataFetcher.ts`            |
 
 ### 例外
 
@@ -112,14 +112,14 @@ function calc(arr: number[]): number
 
 | 接頭辞               | 用途               | 例                                    |
 | -------------------- | ------------------ | ------------------------------------- |
-| `get`                | 値を取得           | `getStudentById`, `getProjectList`    |
+| `get`                | 値を取得           | `getStudentById`, `getExamList`       |
 | `set`                | 値を設定           | `setCurrentPage`, `setFilter`         |
 | `is` / `has` / `can` | 真偽値を返す       | `isValid`, `hasPermission`, `canEdit` |
-| `create`             | 新規作成           | `createProject`, `createStudent`      |
+| `create`             | 新規作成           | `createExam`, `createStudent`         |
 | `update`             | 更新               | `updateScore`, `updateStatus`         |
-| `delete` / `remove`  | 削除               | `deleteProject`, `removeStudent`      |
+| `delete` / `remove`  | 削除               | `deleteExam`, `removeStudent`         |
 | `handle`             | イベントハンドラ   | `handleClick`, `handleSubmit`         |
-| `fetch`              | 非同期でデータ取得 | `fetchProjects`, `fetchUserData`      |
+| `fetch`              | 非同期でデータ取得 | `fetchExams`, `fetchUserData`         |
 
 ### 変数名
 
@@ -188,26 +188,26 @@ npm run lint:strict
 
 ## ディレクトリ構造方針
 
-本プロジェクトでは **階層別住み分け方式** を採用しています。
+本試験では **階層別住み分け方式** を採用しています。
 
 ### トップレベル配置（`/hooks`, `/types`, `/lib`）
 
-**対象**: プロジェクト全体で共有される要素
+**対象**: 試験全体で共有される要素
 
 **配置基準**:
 
 - ✅ 3つ以上の機能・画面で使用される
-- ✅ プロジェクトの根幹となる型・ロジック
+- ✅ 試験の根幹となる型・ロジック
 - ✅ 外部ライブラリとのインターフェース
 - ✅ 汎用的なユーティリティ関数
 
 ```
-/hooks/useProject.ts       // 複数画面で使用されるプロジェクト管理
-/types/common.types.ts     // ProjectData, StudentDataなど全体共通型
+/hooks/useExam.ts       // 複数画面で使用される試験管理
+/types/common.types.ts     // ExamData, StudentDataなど全体共通型
 /lib/utils.ts              // 日付フォーマット、バリデーション等の汎用関数
 ```
 
-### 機能内配置（`/components/projects/06-answer-sheets/hooks` 等）
+### 機能内配置（`/components/exams/06-answer-sheets/hooks` 等）
 
 **対象**: 特定機能専用の要素
 
@@ -220,7 +220,7 @@ npm run lint:strict
 
 ```typescript
 // 機能内配置の例
-/components/projects/06-answer-sheets/
+/components/exams/06-answer-sheets/
 ├── hooks/useAnswerSheetUpload.ts     // 答案アップロード専用ロジック
 ├── types/answer-sheet.types.ts       // PendingChange, ScoringDataOption等
 └── utils/file-processing.ts          // ファイル変換・検証の専用関数
@@ -246,7 +246,7 @@ npm run lint:strict
 
 | 優先度 | 型の種類           | 説明                                           | 例                                                             |
 | :----: | ------------------ | ---------------------------------------------- | -------------------------------------------------------------- |
-|   1    | **Prisma型**       | `@prisma/client` が生成する基本型              | `Student`, `Project`, `CropRegion`                             |
+|   1    | **Prisma型**       | `@prisma/client` が生成する基本型              | `Student`, `Exam`, `CropRegion`                                |
 |   2    | **Prisma拡張型**   | `include` 等で生まれるペイロード型             | `Prisma.StudentGetPayload<{ include: { memberships: true } }>` |
 |   3    | **シリアライズ型** | Decimal→number等、やむを得ず一部を再定義する型 | `SerializedQuestionScore`                                      |
 |   4    | **独自定義型**     | 上記で対応できない場合のみ                     | UI専用の中間状態など                                           |
@@ -296,20 +296,20 @@ Main process（electron-src）と Renderer process（components, hooks）間のI
 
 ```typescript
 // ✅ OK: Main/Renderer両方で同じ型を参照
-// electron-src/ipc-handlers/project-handlers.ts
-import type { ProjectWithDetails } from "../../types/common.types"
+// electron-src/ipc-handlers/exam-handlers.ts
+import type { ExamWithDetails } from "../../types/common.types"
 import type { StudentWithMemberships } from "../../types/prismaExtensions"
 
-// components/projects/ProjectList.tsx
-import type { ProjectWithDetails } from "@/types/common.types"
+// components/exams/ExamList.tsx
+import type { ExamWithDetails } from "@/types/common.types"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 // ❌ NG: Main側とRenderer側で別々に型を定義
-// electron-src/types/project.ts
-interface ProjectData { ... }  // Main独自
+// electron-src/types/exam.ts
+interface ExamData { ... }  // Main独自
 
-// components/types/project.ts
-interface ProjectData { ... }  // Renderer独自（微妙に違う可能性）
+// components/types/exam.ts
+interface ExamData { ... }  // Renderer独自（微妙に違う可能性）
 ```
 
 **理由**: IPC通信のデータは Structured Clone で受け渡されるため、型定義が一致していないと実行時エラーや型の不整合が発生する。
@@ -319,7 +319,7 @@ interface ProjectData { ... }  // Renderer独自（微妙に違う可能性）
 | スコープ         | 配置場所                      | 例                                                   |
 | ---------------- | ----------------------------- | ---------------------------------------------------- |
 | 単一ファイル     | ファイル内で宣言              | Props型、ローカルな状態型                            |
-| 機能内で共有     | 機能ディレクトリの `types.ts` | `components/projects/07-score-at-once/types.ts`      |
+| 機能内で共有     | 機能ディレクトリの `types.ts` | `components/exams/07-score-at-once/types.ts`         |
 | アプリ全体で共有 | `/types/` ディレクトリ        | `types/common.types.ts`, `types/prismaExtensions.ts` |
 
 ### Prisma拡張型の管理
@@ -342,7 +342,7 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
 
 export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
   include: {
-    projectPage: { include: { project: true } }
+    examPage: { include: { exam: true } }
     questionScores: { include: { student: true; user: true } }
   }
 }>
@@ -520,8 +520,8 @@ import { clsx } from "clsx"
 import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
-import { useProject } from "@/hooks/useProject"
-import type { ProjectData } from "@/types/common.types"
+import { useExam } from "@/hooks/useExam"
+import type { ExamData } from "@/types/common.types"
 
 import { FeatureHeader } from "./components/FeatureHeader"
 import { useFeature } from "./hooks/useFeature"
@@ -540,7 +540,7 @@ import type { FeatureProps } from "./types"
 
 ```typescript
 // ✅ トップレベルは絶対パス
-import { useProject } from "@/hooks/useProject"
+import { useExam } from "@/hooks/useExam"
 
 // ✅ 機能内は相対パス
 import { useFeature } from "./hooks/useFeature"
@@ -555,14 +555,14 @@ import { something } from "../../../shared/utils" // → @/を使用
 
 ```typescript
 // ✅ 型のみのインポート
-import type { ProjectData } from "@/types/common.types"
+import type { ExamData } from "@/types/common.types"
 
 // ✅ 値と型の混在
-import { useProject } from "@/hooks/useProject"
-import type { ProjectData } from "@/types/common.types"
+import { useExam } from "@/hooks/useExam"
+import type { ExamData } from "@/types/common.types"
 
 // または
-import { useProject, type ProjectData } from "@/hooks/useProject"
+import { useExam, type ExamData } from "@/hooks/useExam"
 ```
 
 ---
@@ -606,9 +606,9 @@ function process(a, b, c, d) { ... }
 
 ```typescript
 /**
- * プロジェクトの採点データをExcel形式でエクスポートする
+ * 試験の採点データをExcel形式でエクスポートする
  *
- * @param projectId - エクスポート対象のプロジェクトID
+ * @param examId - エクスポート対象の試験ID
  * @param options - エクスポートオプション
  * @returns エクスポートされたファイルのパス
  * @throws {ExportError} エクスポートに失敗した場合
@@ -617,7 +617,7 @@ function process(a, b, c, d) { ... }
  * const path = await exportToExcel('proj-123', { includePartial: true })
  */
 export async function exportToExcel(
-  projectId: string,
+  examId: string,
   options: ExportOptions
 ): Promise<string> { ... }
 ```

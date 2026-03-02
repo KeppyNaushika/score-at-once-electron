@@ -14,7 +14,7 @@ export {
   batchUpdateStudentAnswerPlacements,
   deleteStudentAnswer,
   getStudentAnswerById,
-  getStudentAnswersByProjectId,
+  getStudentAnswersByExamId,
   // ステータス管理
   setStudentAnswerAbsent,
   swapStudentAnswerPlacements,

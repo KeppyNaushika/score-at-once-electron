@@ -7,10 +7,10 @@ import { toast } from "sonner"
 import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 
 type MasterAnswer = Prisma.MasterImageGetPayload<{
-  include: { projectPage: true }
+  include: { examPage: true }
 }>
 
-// MasterImage type - projectPage is added when mapping
+// MasterImage type - examPage is added when mapping
 
 export interface MasterAnswersState {
   answers: MasterAnswer[]
@@ -28,7 +28,7 @@ export interface MasterAnswersState {
 }
 
 export function useMasterAnswers(
-  projectId: string,
+  examId: string,
   initialAnswers: MasterAnswer[],
   onAnswersChange: (answers: MasterAnswer[]) => void
 ) {
@@ -50,7 +50,7 @@ export function useMasterAnswers(
   // Initialize answers and fetch URLs
   useEffect(() => {
     const sortedAnswers = [...initialAnswers].sort(
-      (a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber
+      (a, b) => a.examPage.pageNumber - b.examPage.pageNumber
     )
     setState((prev) => ({ ...prev, answers: sortedAnswers }))
 
@@ -125,8 +125,8 @@ export function useMasterAnswers(
 
   const uploadAnswers = useCallback(
     async (files: File[]) => {
-      if (!projectId) {
-        toast.error("プロジェクトIDが指定されていません。")
+      if (!examId) {
+        toast.error("試験IDが指定されていません。")
         return
       }
 
@@ -172,7 +172,7 @@ export function useMasterAnswers(
         }
 
         const result = await window.electronAPI.uploadMasterAnswers(
-          projectId,
+          examId,
           allFilesData
         )
 
@@ -192,17 +192,16 @@ export function useMasterAnswers(
 
           toast.success(message)
 
-          // Get updated project data
-          const updatedProject =
-            await window.electronAPI.fetchProjectById(projectId)
-          if (updatedProject && updatedProject.projectPages) {
-            // Extract master answers from project pages
-            const masterAnswers = updatedProject.projectPages.flatMap((page) =>
-              page.masterImages.map((img) => ({ ...img, projectPage: page }))
+          // Get updated exam data
+          const updatedExam = await window.electronAPI.fetchExamById(examId)
+          if (updatedExam && updatedExam.examPages) {
+            // Extract master answers from exam pages
+            const masterAnswers = updatedExam.examPages.flatMap((page) =>
+              page.masterImages.map((img) => ({ ...img, examPage: page }))
             )
 
             const sortedUpdatedAnswers = [...masterAnswers].sort(
-              (a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber
+              (a, b) => a.examPage.pageNumber - b.examPage.pageNumber
             )
 
             setState((prev) => ({ ...prev, answers: sortedUpdatedAnswers }))
@@ -235,7 +234,7 @@ export function useMasterAnswers(
         setState((prev) => ({ ...prev, isUploading: false }))
       }
     },
-    [projectId, onAnswersChange, convertPdfToImagesWithPassword]
+    [examId, onAnswersChange, convertPdfToImagesWithPassword]
   )
 
   // パスワード送信処理
@@ -349,14 +348,14 @@ export function useMasterAnswers(
 
       try {
         const result = await window.electronAPI.deleteMasterAnswer(answerId)
-        const updatedAnswers = result.projectPages
+        const updatedAnswers = result.examPages
           .flatMap((page) =>
             page.masterImages.map((img) => ({
               ...img,
-              projectPage: page,
+              examPage: page,
             }))
           )
-          .sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
+          .sort((a, b) => a.examPage.pageNumber - b.examPage.pageNumber)
 
         const newUrls: Record<string, string> = {}
         for (const answer of updatedAnswers) {

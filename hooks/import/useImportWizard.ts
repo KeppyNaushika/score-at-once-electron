@@ -14,7 +14,7 @@ import type {
   MatchingDecisionType,
   ScoringConflictResolutionStrategy,
   UpdateStrategy,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 import { initialState, STEP_ORDER } from "./constants"
 

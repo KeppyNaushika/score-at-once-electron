@@ -35,7 +35,7 @@ export function createMinimalPng(filePath: string): void {
  * テスト用の画像ファイル構造を作成
  *
  * baseDir/
- *   projects/{projectId}/
+ *   exams/{examId}/
  *     master-images/
  *       page1.png, page2.png, ...
  *     answer-sheets/
@@ -43,7 +43,7 @@ export function createMinimalPng(filePath: string): void {
  */
 export function createTestImageFiles(
   baseDir: string,
-  projectId: string,
+  examId: string,
   pageCount: number,
   studentNumbers: string[]
 ): { masterImagePaths: string[]; answerSheetPaths: string[] } {
@@ -52,7 +52,7 @@ export function createTestImageFiles(
 
   // マスター画像
   for (let i = 1; i <= pageCount; i++) {
-    const relativePath = `projects/${projectId}/master-images/page${i}.png`
+    const relativePath = `exams/${examId}/master-images/page${i}.png`
     const absolutePath = path.join(baseDir, relativePath)
     createMinimalPng(absolutePath)
     masterImagePaths.push(relativePath)
@@ -61,7 +61,7 @@ export function createTestImageFiles(
   // 答案画像
   for (const studentNumber of studentNumbers) {
     for (let i = 1; i <= pageCount; i++) {
-      const relativePath = `projects/${projectId}/answer-sheets/${studentNumber}_page${i}.png`
+      const relativePath = `exams/${examId}/answer-sheets/${studentNumber}_page${i}.png`
       const absolutePath = path.join(baseDir, relativePath)
       createMinimalPng(absolutePath)
       answerSheetPaths.push(relativePath)

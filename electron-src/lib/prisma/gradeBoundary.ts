@@ -12,12 +12,12 @@ function serialize<T>(data: T): T {
 }
 
 /**
- * 成績算出プロジェクトの全境界セットを取得
+ * 成績算出試験の全境界セットを取得
  */
-export async function getBoundarySetsByGradeProjectId(gradeProjectId: string) {
+export async function getBoundarySetsByGradeId(gradeId: string) {
   try {
     const boundarySets = await prisma.gradeBoundarySet.findMany({
-      where: { gradeProjectId },
+      where: { gradeId },
       include: {
         gradeItem: { select: { id: true, name: true, order: true } },
         boundaries: { orderBy: { order: "asc" } },
@@ -38,7 +38,7 @@ export async function getBoundarySetsByGradeProjectId(gradeProjectId: string) {
  * 境界セットをupsert（セット＋境界を一括保存）
  */
 export async function upsertBoundarySet(data: {
-  gradeProjectId: string
+  gradeId: string
   targetType: string // "grade_item" | "overall"
   gradeItemId: string | null
   boundaries: { label: string; minPercentage: number; order: number }[]
@@ -49,7 +49,7 @@ export async function upsertBoundarySet(data: {
         // 既存セットを検索
         const existing = await tx.gradeBoundarySet.findFirst({
           where: {
-            gradeProjectId: data.gradeProjectId,
+            gradeId: data.gradeId,
             targetType: data.targetType,
             gradeItemId: data.gradeItemId,
           },
@@ -65,7 +65,7 @@ export async function upsertBoundarySet(data: {
         } else {
           const newSet = await tx.gradeBoundarySet.create({
             data: {
-              gradeProjectId: data.gradeProjectId,
+              gradeId: data.gradeId,
               targetType: data.targetType,
               gradeItemId: data.gradeItemId,
             },

@@ -20,7 +20,7 @@ export interface MockArchive {
   detectConflicts: ReturnType<typeof vi.fn>
   detectScoringConflicts: ReturnType<typeof vi.fn>
   idIntegrationImport: ReturnType<typeof vi.fn>
-  exportProject: ReturnType<typeof vi.fn>
+  exportExam: ReturnType<typeof vi.fn>
 }
 
 /**
@@ -50,11 +50,11 @@ export function createMockElectronAPI() {
     }),
     idIntegrationImport: vi.fn().mockResolvedValue({
       success: true,
-      projectId: "imported-project-id",
+      examId: "imported-exam-id",
       summary: createMockImportSummary(),
       warnings: [],
     }),
-    exportProject: vi.fn().mockResolvedValue({
+    exportExam: vi.fn().mockResolvedValue({
       success: true,
       outputPath: "/path/to/export.score",
     }),

@@ -22,7 +22,7 @@ const usage = `### 📝 使用方法
 
 const license = `### 📄 ライセンス
 
-- 本プロジェクトは GNU Affero General Public License v3.0（AGPLv3）で提供されています。
+- 本試験は GNU Affero General Public License v3.0（AGPLv3）で提供されています。
 - 再配布や派生物を公開する場合は、同一ライセンスを適用し、改変ソースコード一式を利用者に提示してください。
 - ネットワーク越しに提供するサービスでも、利用者が対応するソースコードへアクセスできる手段を用意する必要があります。`
 

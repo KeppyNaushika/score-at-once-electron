@@ -41,7 +41,7 @@ export async function executeIdChanges(
 
 /**
  * 生徒IDの変更
- * FK: StudentClassMembership.studentId, ProjectStudent.studentId,
+ * FK: StudentClassMembership.studentId, ExamStudent.studentId,
  *     StudentAnswerImage.studentId, QuestionScore.studentId
  *
  * temp-value方式: studentNumber（UNIQUE制約）を一時値に変更してから新レコードを作成
@@ -86,7 +86,7 @@ async function changeStudentId(
     data: { studentId: target.newId },
   })
 
-  await tx.projectStudent.updateMany({
+  await tx.examStudent.updateMany({
     where: { studentId: target.existingId },
     data: { studentId: target.newId },
   })
@@ -96,10 +96,10 @@ async function changeStudentId(
     where: { studentId: target.existingId },
   })
   for (const img of existingAnswerImages) {
-    // 移行先のstudentIdで同じprojectPageIdのレコードが既に存在するか確認
+    // 移行先のstudentIdで同じexamPageIdのレコードが既に存在するか確認
     const duplicate = await tx.studentAnswerImage.findFirst({
       where: {
-        projectPageId: img.projectPageId,
+        examPageId: img.examPageId,
         studentId: target.newId,
       },
     })
@@ -134,7 +134,7 @@ async function changeStudentId(
 
 /**
  * 学級IDの変更
- * FK: StudentClassMembership.classId, ProjectClass.classId
+ * FK: StudentClassMembership.classId, ExamClass.classId
  *
  * temp-value方式: name（UNIQUE制約）を一時値に変更してから新レコードを作成
  */
@@ -176,7 +176,7 @@ async function changeClassId(
     data: { classId: target.newId },
   })
 
-  await tx.projectClass.updateMany({
+  await tx.examClass.updateMany({
     where: { classId: target.existingId },
     data: { classId: target.newId },
   })
@@ -196,7 +196,7 @@ async function changeClassId(
 
 /**
  * 小計グループIDの変更
- * FK: ProjectSubtotalGroup.subtotalGroupId, Subtotal.subtotalGroupId,
+ * FK: ExamSubtotalGroup.subtotalGroupId, Subtotal.subtotalGroupId,
  *     SubjectSubtotalGroup.subtotalGroupId
  */
 async function changeSubtotalGroupId(
@@ -220,7 +220,7 @@ async function changeSubtotalGroupId(
     },
   })
 
-  await tx.projectSubtotalGroup.updateMany({
+  await tx.examSubtotalGroup.updateMany({
     where: { subtotalGroupId: target.existingId },
     data: { subtotalGroupId: target.newId },
   })

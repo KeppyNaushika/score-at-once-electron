@@ -1,22 +1,27 @@
 /**
- * プロジェクトアーカイブ（エクスポート/インポート）IPCハンドラー
+ * 試験アーカイブ（エクスポート/インポート）IPCハンドラー
  */
 
 import { dialog, ipcMain } from "electron"
 import * as path from "path"
 
 import type {
-  BulkExportProjectResult,
-  BulkExportProjectsResult,
+  BulkExportExamResult,
+  BulkExportExamsResult,
   ExportMode,
   FileOverviewData,
   IdIntegrationConfig,
   MatchingConfig,
   ScoringConflictConfig,
   UpdateDecisions,
-} from "../../types/projectArchive.types"
-import { exportProject } from "../lib/export/project-archive"
-import { generateExportFileName } from "../lib/export/project-archive/archiveCreator"
+} from "../../types/examArchive.types"
+import { exportExam } from "../lib/export/exam-archive"
+import { generateExportFileName } from "../lib/export/exam-archive/archiveCreator"
+import {
+  analyzeArchive,
+  cleanupTempDir,
+  extractArchive,
+} from "../lib/import/exam-archive"
 import { convertHszToScore } from "../lib/import/external-formats/hsz"
 import { convertDatToScore } from "../lib/import/external-formats/reattendant"
 import {
@@ -25,12 +30,7 @@ import {
   executeIdIntegrationImport,
   performPreMatching,
 } from "../lib/import/merge"
-import {
-  analyzeArchive,
-  cleanupTempDir,
-  extractArchive,
-} from "../lib/import/project-archive"
-import { getProjectById } from "../lib/prisma/project"
+import { getExamById } from "../lib/prisma/exam"
 
 /**
  * 一括エクスポートのコアロジック
@@ -38,48 +38,48 @@ import { getProjectById } from "../lib/prisma/project"
  * ダイアログを含まず、指定されたディレクトリに順次エクスポートする
  */
 export async function executeBulkExport(
-  projectIds: string[],
+  examIds: string[],
   userId: string,
   outputDirectory: string,
   exportMode?: ExportMode
-): Promise<BulkExportProjectsResult> {
-  const results: BulkExportProjectResult[] = []
+): Promise<BulkExportExamsResult> {
+  const results: BulkExportExamResult[] = []
 
   // 順次処理（SQLite同時書き込み制限のため）
-  for (const projectId of projectIds) {
+  for (const examId of examIds) {
     try {
-      const project = await getProjectById(projectId)
-      if (!project) {
+      const exam = await getExamById(examId)
+      if (!exam) {
         results.push({
-          projectId,
-          projectName: projectId,
+          examId,
+          examName: examId,
           success: false,
-          error: "プロジェクトが見つかりません",
+          error: "試験が見つかりません",
         })
         continue
       }
 
-      const fileName = generateExportFileName(project.examName, exportMode)
+      const fileName = generateExportFileName(exam.examName, exportMode)
       const outputPath = path.join(outputDirectory, fileName)
 
-      const exportResult = await exportProject({
-        projectId,
+      const exportResult = await exportExam({
+        examId,
         userId,
         outputPath,
         exportMode,
       })
 
       results.push({
-        projectId,
-        projectName: project.examName,
+        examId,
+        examName: exam.examName,
         success: exportResult.success,
         outputPath: exportResult.outputPath,
         error: exportResult.error,
       })
     } catch (error) {
       results.push({
-        projectId,
-        projectName: projectId,
+        examId,
+        examName: examId,
         success: false,
         error:
           error instanceof Error ? error.message : "エクスポートに失敗しました",
@@ -100,20 +100,20 @@ export async function executeBulkExport(
 export function registerArchiveHandlers(): void {
   // エクスポート
   ipcMain.handle(
-    "archive:exportProject",
+    "archive:exportExam",
     async (
       _event,
       options: {
-        projectId: string
+        examId: string
         userId: string
         outputPath?: string
-        exportMode?: import("../../types/projectArchive.types").ExportMode
+        exportMode?: import("../../types/examArchive.types").ExportMode
       }
     ) => {
       try {
-        return await exportProject(options)
+        return await exportExam(options)
       } catch (error) {
-        console.error("Error in archive:exportProject:", error)
+        console.error("Error in archive:exportExam:", error)
         return {
           success: false,
           error:
@@ -129,14 +129,14 @@ export function registerArchiveHandlers(): void {
   ipcMain.handle("archive:selectImportFile", async () => {
     try {
       const result = await dialog.showOpenDialog({
-        title: "プロジェクトをインポート",
+        title: "試験をインポート",
         filters: [
           {
             name: "対応ファイル (.score, .hsz, .dat)",
             extensions: ["score", "hsz", "dat"],
           },
           {
-            name: "一括採点プロジェクトデータ (.score)",
+            name: "一括採点試験データ (.score)",
             extensions: ["score"],
           },
           {
@@ -419,15 +419,15 @@ export function registerArchiveHandlers(): void {
 
   // 一括エクスポート
   ipcMain.handle(
-    "archive:bulkExportProjects",
+    "archive:bulkExportExams",
     async (
       _event,
       options: {
-        projectIds: string[]
+        examIds: string[]
         userId: string
         exportMode?: ExportMode
       }
-    ): Promise<BulkExportProjectsResult> => {
+    ): Promise<BulkExportExamsResult> => {
       try {
         // フォルダ選択ダイアログを表示
         const dialogResult = await dialog.showOpenDialog({
@@ -440,13 +440,13 @@ export function registerArchiveHandlers(): void {
         }
 
         return await executeBulkExport(
-          options.projectIds,
+          options.examIds,
           options.userId,
           dialogResult.filePaths[0],
           options.exportMode
         )
       } catch (error) {
-        console.error("Error in archive:bulkExportProjects:", error)
+        console.error("Error in archive:bulkExportExams:", error)
         return {
           success: false,
           results: [],

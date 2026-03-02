@@ -10,7 +10,7 @@ import type {
   GradeItemResult,
   SourceScoreResult,
   StudentGradeResult,
-} from "../../../../types/gradeProject.types"
+} from "../../../../types/grade.types"
 import prisma from "../../prisma/client"
 import { calculateActualScore } from "../../prisma/questionScore"
 import {
@@ -36,17 +36,17 @@ interface DataSourceInfo {
 /**
  * 成績を算出する
  */
-export async function calculateGrades(gradeProjectId: string): Promise<{
+export async function calculateGrades(gradeId: string): Promise<{
   success: boolean
   result?: GradeCalculationResult
   error?: string
 }> {
   try {
-    // 1. GradeProject + リレーションを取得
-    const gp = await prisma.gradeProject.findUnique({
-      where: { id: gradeProjectId },
+    // 1. Grade + リレーションを取得
+    const gp = await prisma.grade.findUnique({
+      where: { id: gradeId },
       include: {
-        gradeProjectClasses: {
+        gradeClasses: {
           include: { class: true },
           orderBy: { order: "asc" },
         },
@@ -54,7 +54,7 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
           include: {
             dataSources: {
               include: {
-                examProject: true,
+                exam: true,
                 subtotal: true,
                 cropRegion: true,
                 manualScores: true,
@@ -71,12 +71,12 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
     })
 
     if (!gp) {
-      return { success: false, error: "Grade project not found" }
+      return { success: false, error: "Grade exam not found" }
     }
 
-    // 2. プロジェクトの登録生徒一覧を取得
-    const projectStudents = await prisma.gradeProjectStudent.findMany({
-      where: { gradeProjectId },
+    // 2. 試験の登録生徒一覧を取得
+    const examStudents = await prisma.gradeStudent.findMany({
+      where: { gradeId },
       include: {
         student: {
           include: {
@@ -89,11 +89,11 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
       orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
     })
 
-    const classIds = gp.gradeProjectClasses.map((c) => c.classId)
+    const classIds = gp.gradeClasses.map((c) => c.classId)
 
     // 3. 上書きデータを取得
     const overrides = await prisma.gradeOverride.findMany({
-      where: { gradeProjectId },
+      where: { gradeId },
     })
     const overrideMap = new Map<string, string>()
     for (const ov of overrides) {
@@ -103,15 +103,15 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
 
     // 3.5. 除外データを取得
     const exclusions = await prisma.gradeItemExclusion.findMany({
-      where: { gradeProjectId },
+      where: { gradeId },
     })
     const exclusionSet = new Set(
       exclusions.map((ex) => `${ex.studentId}:${ex.gradeItemId}`)
     )
 
-    // 4. 全DataSourceから使用される試験プロジェクトIDを収集
+    // 4. 全DataSourceから使用される試験試験IDを収集
     const allDataSources = gp.gradeItems.flatMap((gi) => gi.dataSources)
-    const examProjectIds = [
+    const examIds = [
       ...new Set(
         allDataSources
           .filter(
@@ -119,19 +119,19 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
               (ds.type === "project_total" ||
                 ds.type === "subtotal" ||
                 ds.type === "crop_region") &&
-              ds.examProjectId
+              ds.examId
           )
-          .map((ds) => ds.examProjectId!)
+          .map((ds) => ds.examId!)
       ),
     ]
 
-    // 5. 試験プロジェクトのスコアデータを事前取得
+    // 5. 試験試験のスコアデータを事前取得
     const examDataCache = new Map<string, ExamDataCache>()
 
-    for (const examProjectId of examProjectIds) {
-      const [questionScores, projectPages] = await Promise.all([
+    for (const examId of examIds) {
+      const [questionScores, examPages] = await Promise.all([
         prisma.questionScore.findMany({
-          where: { cropRegion: { projectPage: { projectId: examProjectId } } },
+          where: { cropRegion: { examPage: { examId: examId } } },
           select: {
             studentId: true,
             cropRegionId: true,
@@ -139,13 +139,13 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
             partialScore: true,
           },
         }),
-        prisma.projectPage.findMany({
-          where: { projectId: examProjectId },
+        prisma.examPage.findMany({
+          where: { examId: examId },
           include: { cropRegions: true },
         }),
       ])
-      const cropRegions = projectPages.flatMap((pp) => pp.cropRegions)
-      examDataCache.set(examProjectId, {
+      const cropRegions = examPages.flatMap((pp) => pp.cropRegions)
+      examDataCache.set(examId, {
         questionScores: questionScores.map((qs) => ({
           studentId: qs.studentId,
           cropRegionId: qs.cropRegionId,
@@ -160,19 +160,19 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
       })
     }
 
-    // 5.5. 見込→欠測対応: examProjectIdごとのProjectStudent状態をプリロード
-    // Map<examProjectId, Map<studentId, status>>
-    const examProjectStudentStatusMap = new Map<string, Map<string, string>>()
-    for (const examProjectId of examProjectIds) {
-      const ps = await prisma.projectStudent.findMany({
-        where: { projectId: examProjectId },
+    // 5.5. 見込→欠測対応: examIdごとのExamStudent状態をプリロード
+    // Map<examId, Map<studentId, status>>
+    const examExamStudentStatusMap = new Map<string, Map<string, string>>()
+    for (const examId of examIds) {
+      const ps = await prisma.examStudent.findMany({
+        where: { examId: examId },
         select: { studentId: true, status: true },
       })
       const statusMap = new Map<string, string>()
       for (const p of ps) {
         statusMap.set(p.studentId, p.status)
       }
-      examProjectStudentStatusMap.set(examProjectId, statusMap)
+      examExamStudentStatusMap.set(examId, statusMap)
     }
 
     // DataSource情報をまとめる（推定で使用）
@@ -200,15 +200,15 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
     // Map<studentId, Map<dataSourceId, number | null>>
     const rawScoreMap = new Map<string, Map<string, number | null>>()
 
-    for (const ps of projectStudents) {
+    for (const ps of examStudents) {
       const studentScores = new Map<string, number | null>()
       for (const ds of allDataSources) {
         let raw = await getRawScore(ps.student.id, ds, examDataCache)
 
         // 見込→欠測対応: treatExpectedAsMissing が true かつ
-        // 試験プロジェクトの ProjectStudent.status === "EXPECTED" → null扱い
-        if (raw !== null && ds.treatExpectedAsMissing && ds.examProjectId) {
-          const statusMap = examProjectStudentStatusMap.get(ds.examProjectId)
+        // 試験試験の ExamStudent.status === "EXPECTED" → null扱い
+        if (raw !== null && ds.treatExpectedAsMissing && ds.examId) {
+          const statusMap = examExamStudentStatusMap.get(ds.examId)
           if (statusMap?.get(ps.student.id) === "EXPECTED") {
             raw = null
           }
@@ -222,7 +222,7 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
     // === パス2: 推定 + 重み付け ===
     const students: StudentGradeResult[] = []
 
-    for (const ps of projectStudents) {
+    for (const ps of examStudents) {
       const student = ps.student
       const membership = student.memberships.find((m) =>
         classIds.includes(m.classId)
@@ -418,9 +418,9 @@ export async function calculateGrades(gradeProjectId: string): Promise<{
     return {
       success: true,
       result: {
-        gradeProjectId: gp.id,
-        gradeProjectName: gp.name,
-        classNames: gp.gradeProjectClasses.map((c) => c.class.name),
+        gradeId: gp.id,
+        gradeName: gp.name,
+        classNames: gp.gradeClasses.map((c) => c.class.name),
         gradeItems: gp.gradeItems.map((gi) => ({
           id: gi.id,
           name: gi.name,
@@ -455,21 +455,17 @@ async function getRawScore(
   studentId: string,
   ds: {
     type: string
-    examProjectId: string | null
+    examId: string | null
     subtotalId: string | null
     cropRegionId: string | null
     manualScores: { studentId: string; score: unknown }[]
   },
   examDataCache: Map<string, ExamDataCache>
 ): Promise<number | null> {
-  if (ds.type === "project_total" && ds.examProjectId) {
-    return calculateProjectTotalScore(
-      studentId,
-      ds.examProjectId,
-      examDataCache
-    )
-  } else if (ds.type === "subtotal" && ds.subtotalId && ds.examProjectId) {
-    const examData = examDataCache.get(ds.examProjectId)
+  if (ds.type === "project_total" && ds.examId) {
+    return calculateExamTotalScore(studentId, ds.examId, examDataCache)
+  } else if (ds.type === "subtotal" && ds.subtotalId && ds.examId) {
+    const examData = examDataCache.get(ds.examId)
     if (examData) {
       const result = await calculateSubtotalScoreBySubtotalId(
         studentId,
@@ -481,11 +477,11 @@ async function getRawScore(
       )
       return result.score
     }
-  } else if (ds.type === "crop_region" && ds.cropRegionId && ds.examProjectId) {
+  } else if (ds.type === "crop_region" && ds.cropRegionId && ds.examId) {
     return calculateCropRegionScore(
       studentId,
       ds.cropRegionId,
-      ds.examProjectId,
+      ds.examId,
       examDataCache
     )
   } else if (ds.type === "manual") {
@@ -756,14 +752,14 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * project_total: プロジェクトの全QUESTION_ANSWER CropRegionスコア合計
+ * project_total: 試験の全QUESTION_ANSWER CropRegionスコア合計
  */
-function calculateProjectTotalScore(
+function calculateExamTotalScore(
   studentId: string,
-  examProjectId: string,
+  examId: string,
   examDataCache: Map<string, ExamDataCache>
 ): number | null {
-  const examData = examDataCache.get(examProjectId)
+  const examData = examDataCache.get(examId)
   if (!examData) return null
 
   const studentScores = examData.questionScores.filter(
@@ -796,10 +792,10 @@ function calculateProjectTotalScore(
 function calculateCropRegionScore(
   studentId: string,
   cropRegionId: string,
-  examProjectId: string,
+  examId: string,
   examDataCache: Map<string, ExamDataCache>
 ): number | null {
-  const examData = examDataCache.get(examProjectId)
+  const examData = examDataCache.get(examId)
   if (!examData) return null
 
   const cropRegion = examData.cropRegions.find((cr) => cr.id === cropRegionId)

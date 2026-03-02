@@ -6,22 +6,22 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { getDataDirectory } from "../../dataManager"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, PrismaTransaction } from "./types"
 
 /**
- * 画像ファイルをプロジェクトディレクトリにコピー
- * 既存のファイルがある場合はスキップ（プロジェクトID一致時のマージ対応）
+ * 画像ファイルを試験ディレクトリにコピー
+ * 既存のファイルがある場合はスキップ（試験ID一致時のマージ対応）
  */
 export async function copyImportImages(
   data: ExtractedArchiveData,
-  newProjectId: string
+  newExamId: string
 ): Promise<void> {
   const dataDir = getDataDirectory()
-  const projectDir = path.join(dataDir, "projects", newProjectId)
+  const examDir = path.join(dataDir, "exams", newExamId)
 
-  const masterImagesDir = path.join(projectDir, "master-images")
-  const answerSheetsDir = path.join(projectDir, "answer-sheets")
+  const masterImagesDir = path.join(examDir, "master-images")
+  const answerSheetsDir = path.join(examDir, "answer-sheets")
   fs.mkdirSync(masterImagesDir, { recursive: true })
   fs.mkdirSync(answerSheetsDir, { recursive: true })
 
@@ -56,27 +56,24 @@ export async function createImportImageRecords(
   idMappings: IdMappings,
   tx: PrismaTransaction
 ): Promise<void> {
-  const newProjectId = idMappings.project[data.projectData.project.id]
+  const newExamId = idMappings.exam[data.examData.exam.id]
 
   // MasterImage レコードの作成
-  if (
-    data.projectData.masterImages &&
-    data.projectData.masterImages.length > 0
-  ) {
-    await createMasterImageRecords(data, idMappings, newProjectId, tx)
+  if (data.examData.masterImages && data.examData.masterImages.length > 0) {
+    await createMasterImageRecords(data, idMappings, newExamId, tx)
   }
 
   // StudentAnswerImage レコードの作成
   if (
-    data.projectData.studentAnswerImages &&
-    data.projectData.studentAnswerImages.length > 0
+    data.examData.studentAnswerImages &&
+    data.examData.studentAnswerImages.length > 0
   ) {
-    await createStudentAnswerImageRecords(data, idMappings, newProjectId, tx)
+    await createStudentAnswerImageRecords(data, idMappings, newExamId, tx)
     return
   }
 
   // v1.1.0以前との後方互換性（pageImagesを使用）
-  await createLegacyImageRecords(data, idMappings, newProjectId, tx)
+  await createLegacyImageRecords(data, idMappings, newExamId, tx)
 }
 
 /**
@@ -85,21 +82,21 @@ export async function createImportImageRecords(
 async function createMasterImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  newProjectId: string,
+  newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const img of data.projectData.masterImages!) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
-    if (!newProjectPageId) continue
+  for (const img of data.examData.masterImages!) {
+    const newExamPageId = idMappings.examPage[img.examPageId]
+    if (!newExamPageId) continue
 
     // 既存のMasterImageレコードをチェック
     const existing = await tx.masterImage.findFirst({
-      where: { projectPageId: newProjectPageId },
+      where: { examPageId: newExamPageId },
     })
     if (existing) continue
 
     const filename = path.basename(img.imagePath)
-    const newImagePath = `projects/${newProjectId}/master-images/${filename}`
+    const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
     const existingById = await tx.masterImage.findUnique({
       where: { id: img.id },
@@ -108,7 +105,7 @@ async function createMasterImageRecords(
       await tx.masterImage.create({
         data: {
           id: img.id,
-          projectPageId: newProjectPageId,
+          examPageId: newExamPageId,
           imagePath: newImagePath,
         },
       })
@@ -122,18 +119,18 @@ async function createMasterImageRecords(
 async function createStudentAnswerImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  newProjectId: string,
+  newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const img of data.projectData.studentAnswerImages!) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
+  for (const img of data.examData.studentAnswerImages!) {
+    const newExamPageId = idMappings.examPage[img.examPageId]
     const newStudentId = idMappings.student[img.studentId]
-    if (!newProjectPageId || !newStudentId) continue
+    if (!newExamPageId || !newStudentId) continue
 
     // 既存のStudentAnswerImageレコードをチェック
     const existing = await tx.studentAnswerImage.findFirst({
       where: {
-        projectPageId: newProjectPageId,
+        examPageId: newExamPageId,
         studentId: newStudentId,
       },
     })
@@ -143,10 +140,7 @@ async function createStudentAnswerImageRecords(
       img.imagePath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const newImagePath =
-      `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
-        /\\/g,
-        "/"
-      )
+      `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
     const existingById = await tx.studentAnswerImage.findUnique({
       where: { id: img.id },
@@ -155,7 +149,7 @@ async function createStudentAnswerImageRecords(
       await tx.studentAnswerImage.create({
         data: {
           id: img.id,
-          projectPageId: newProjectPageId,
+          examPageId: newExamPageId,
           studentId: newStudentId,
           imagePath: newImagePath,
         },
@@ -170,23 +164,23 @@ async function createStudentAnswerImageRecords(
 async function createLegacyImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  newProjectId: string,
+  newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const img of data.projectData.pageImages) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
-    if (!newProjectPageId) continue
+  for (const img of data.examData.pageImages) {
+    const newExamPageId = idMappings.examPage[img.examPageId]
+    if (!newExamPageId) continue
 
     const filename = path.basename(img.imagePath)
 
     if (img.imageType === "MODEL_ANSWER") {
       // 既存のMasterImageレコードをチェック
       const existingMaster = await tx.masterImage.findFirst({
-        where: { projectPageId: newProjectPageId },
+        where: { examPageId: newExamPageId },
       })
       if (existingMaster) continue
 
-      const newImagePath = `projects/${newProjectId}/master-images/${filename}`
+      const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
       const existingById = await tx.masterImage.findUnique({
         where: { id: img.id },
@@ -195,7 +189,7 @@ async function createLegacyImageRecords(
         await tx.masterImage.create({
           data: {
             id: img.id,
-            projectPageId: newProjectPageId,
+            examPageId: newExamPageId,
             imagePath: newImagePath,
           },
         })
@@ -207,7 +201,7 @@ async function createLegacyImageRecords(
       // 既存のStudentAnswerImageレコードをチェック
       const existingAnswer = await tx.studentAnswerImage.findFirst({
         where: {
-          projectPageId: newProjectPageId,
+          examPageId: newExamPageId,
           studentId: newStudentId,
         },
       })
@@ -217,10 +211,7 @@ async function createLegacyImageRecords(
         img.imagePath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
       )
       const newImagePath =
-        `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
-          /\\/g,
-          "/"
-        )
+        `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
       const existingById = await tx.studentAnswerImage.findUnique({
         where: { id: img.id },
@@ -229,7 +220,7 @@ async function createLegacyImageRecords(
         await tx.studentAnswerImage.create({
           data: {
             id: img.id,
-            projectPageId: newProjectPageId,
+            examPageId: newExamPageId,
             studentId: newStudentId,
             imagePath: newImagePath,
           },

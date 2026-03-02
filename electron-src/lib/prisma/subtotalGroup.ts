@@ -12,9 +12,9 @@ export async function getSubtotalGroups() {
         subtotals: {
           orderBy: { order: "asc" },
         },
-        projectSubtotalGroups: {
+        examSubtotalGroups: {
           include: {
-            project: {
+            exam: {
               select: {
                 id: true,
                 examName: true,
@@ -145,9 +145,9 @@ export async function deleteSubtotalGroup(id: string) {
       include: {
         cropRegion: {
           include: {
-            projectPage: {
+            examPage: {
               include: {
-                project: {
+                exam: {
                   select: {
                     id: true,
                     examName: true,
@@ -167,28 +167,28 @@ export async function deleteSubtotalGroup(id: string) {
 
     // 実際に使用されている場合は削除を防ぐ
     if (usageDetails.length > 0) {
-      // プロジェクト別に使用状況をまとめる
-      const usageByProject = usageDetails.reduce(
+      // 試験別に使用状況をまとめる
+      const usageByExam = usageDetails.reduce(
         (acc, usage) => {
-          const projectName = usage.cropRegion.projectPage.project.examName
+          const examName = usage.cropRegion.examPage.exam.examName
           const subtotalName = usage.subtotal.name
           const cropRegionLabel =
             usage.cropRegion.label ||
             `設問${(usage.cropRegion.orderIndex || 0) + 1}`
 
-          if (!acc[projectName]) {
-            acc[projectName] = []
+          if (!acc[examName]) {
+            acc[examName] = []
           }
-          acc[projectName].push(`${cropRegionLabel} → ${subtotalName}`)
+          acc[examName].push(`${cropRegionLabel} → ${subtotalName}`)
           return acc
         },
         {} as Record<string, string[]>
       )
 
-      const usageMessages = Object.entries(usageByProject)
+      const usageMessages = Object.entries(usageByExam)
         .map(
-          ([projectName, assignments]) =>
-            `・${projectName}: ${assignments.join(", ")}`
+          ([examName, assignments]) =>
+            `・${examName}: ${assignments.join(", ")}`
         )
         .join("\n")
 
@@ -198,10 +198,10 @@ export async function deleteSubtotalGroup(id: string) {
       }
     }
 
-    // プロジェクトに追加されているが実際には使用されていない場合はProjectSubtotalGroupも削除
+    // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
     await prisma.$transaction(async (tx) => {
-      // ProjectSubtotalGroupを削除
-      await tx.projectSubtotalGroup.deleteMany({
+      // ExamSubtotalGroupを削除
+      await tx.examSubtotalGroup.deleteMany({
         where: { subtotalGroupId: id },
       })
 
@@ -224,15 +224,15 @@ export async function deleteSubtotalGroup(id: string) {
 }
 
 /**
- * プロジェクトで利用可能な小計点グループを取得（プロジェクトで有効化されていないもの）
+ * 試験で利用可能な小計点グループを取得（試験で有効化されていないもの）
  */
-export async function getAvailableSubtotalGroupsForProject(projectId: string) {
+export async function getAvailableSubtotalGroupsForExam(examId: string) {
   try {
     const subtotalGroups = await prisma.subtotalGroup.findMany({
       where: {
-        projectSubtotalGroups: {
+        examSubtotalGroups: {
           none: {
-            projectId,
+            examId,
           },
         },
       },
@@ -249,7 +249,7 @@ export async function getAvailableSubtotalGroupsForProject(projectId: string) {
       subtotalGroups,
     }
   } catch (error) {
-    console.error("Error getting available subtotal groups for project:", error)
+    console.error("Error getting available subtotal groups for exam:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -258,13 +258,13 @@ export async function getAvailableSubtotalGroupsForProject(projectId: string) {
 }
 
 /**
- * プロジェクトで有効化されている小計点グループを取得
+ * 試験で有効化されている小計点グループを取得
  */
-export async function getActiveSubtotalGroupsForProject(projectId: string) {
+export async function getActiveSubtotalGroupsForExam(examId: string) {
   try {
-    const projectSubtotalGroups = await prisma.projectSubtotalGroup.findMany({
+    const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
       where: {
-        projectId,
+        examId,
       },
       include: {
         subtotalGroup: {
@@ -284,10 +284,10 @@ export async function getActiveSubtotalGroupsForProject(projectId: string) {
 
     return {
       success: true,
-      projectSubtotalGroups,
+      examSubtotalGroups,
     }
   } catch (error) {
-    console.error("Error getting active subtotal groups for project:", error)
+    console.error("Error getting active subtotal groups for exam:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -296,16 +296,16 @@ export async function getActiveSubtotalGroupsForProject(projectId: string) {
 }
 
 /**
- * プロジェクトに小計点グループを追加
+ * 試験に小計点グループを追加
  */
-export async function addSubtotalGroupToProject(
-  projectId: string,
+export async function addSubtotalGroupToExam(
+  examId: string,
   subtotalGroupId: string
 ) {
   try {
-    const projectSubtotalGroup = await prisma.projectSubtotalGroup.create({
+    const examSubtotalGroup = await prisma.examSubtotalGroup.create({
       data: {
-        projectId,
+        examId,
         subtotalGroupId,
       },
       include: {
@@ -321,10 +321,10 @@ export async function addSubtotalGroupToProject(
 
     return {
       success: true,
-      projectSubtotalGroup,
+      examSubtotalGroup,
     }
   } catch (error) {
-    console.error("Error adding subtotal group to project:", error)
+    console.error("Error adding subtotal group to exam:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -333,22 +333,22 @@ export async function addSubtotalGroupToProject(
 }
 
 /**
- * プロジェクトから小計点グループを削除
+ * 試験から小計点グループを削除
  */
-export async function removeSubtotalGroupFromProject(
-  projectId: string,
+export async function removeSubtotalGroupFromExam(
+  examId: string,
   subtotalGroupId: string
 ) {
   try {
-    // このプロジェクトでCropSubtotalによって実際に使用されているかチェック
+    // この試験でCropSubtotalによって実際に使用されているかチェック
     const usageDetails = await prisma.cropSubtotal.findMany({
       where: {
         subtotal: {
           subtotalGroupId,
         },
         cropRegion: {
-          projectPage: {
-            projectId,
+          examPage: {
+            examId,
           },
         },
       },
@@ -378,14 +378,14 @@ export async function removeSubtotalGroupFromProject(
 
       return {
         success: false,
-        error: `この小計点グループは以下の設問で使用されており、プロジェクトから削除できません:\n\n${assignments.join(", ")}\n\n設問との関連付けを先に解除してから削除してください。`,
+        error: `この小計点グループは以下の設問で使用されており、試験から削除できません:\n\n${assignments.join(", ")}\n\n設問との関連付けを先に解除してから削除してください。`,
       }
     }
 
     // 使用されていない場合は削除を実行
-    await prisma.projectSubtotalGroup.deleteMany({
+    await prisma.examSubtotalGroup.deleteMany({
       where: {
-        projectId,
+        examId,
         subtotalGroupId,
       },
     })
@@ -394,7 +394,7 @@ export async function removeSubtotalGroupFromProject(
       success: true,
     }
   } catch (error) {
-    console.error("Error removing subtotal group from project:", error)
+    console.error("Error removing subtotal group from exam:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -403,12 +403,12 @@ export async function removeSubtotalGroupFromProject(
 }
 
 // 既存の関数は互換性のために残す
-export const getSubtotalGroupsByProjectId = async (projectId: string) => {
-  const result = await getActiveSubtotalGroupsForProject(projectId)
-  if (result.success && result.projectSubtotalGroups) {
-    return result.projectSubtotalGroups.map((psg) => ({
+export const getSubtotalGroupsByExamId = async (examId: string) => {
+  const result = await getActiveSubtotalGroupsForExam(examId)
+  if (result.success && result.examSubtotalGroups) {
+    return result.examSubtotalGroups.map((psg) => ({
       ...psg.subtotalGroup,
-      projectId,
+      examId,
     }))
   }
   return []
@@ -421,9 +421,9 @@ export const getSubtotalGroupById = async (id: string) => {
       subtotals: {
         orderBy: { order: "asc" },
       },
-      projectSubtotalGroups: {
+      examSubtotalGroups: {
         include: {
-          project: true,
+          exam: true,
         },
       },
     },

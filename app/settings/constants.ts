@@ -1,4 +1,4 @@
-import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoringKeybindings"
+import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 
 // キーの表示名マッピング
 export const KEY_DISPLAY_NAMES: { [key: string]: string } = {

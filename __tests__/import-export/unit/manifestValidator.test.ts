@@ -10,8 +10,8 @@ import {
   validateCompatibility,
   validateManifest,
   validateManifestFields,
-} from "../../../electron-src/lib/import/project-archive/manifestValidator"
-import type { ArchiveManifest } from "../../../types/projectArchive.types"
+} from "../../../electron-src/lib/import/exam-archive/manifestValidator"
+import type { ArchiveManifest } from "../../../types/examArchive.types"
 
 function createValidManifest(
   overrides: Partial<ArchiveManifest> = {}
@@ -21,8 +21,8 @@ function createValidManifest(
     schemaVersion: "test",
     appVersion: "0.5.0",
     exportedAt: new Date().toISOString(),
-    projectId: "test-project-id",
-    projectName: "テスト試験",
+    examId: "test-exam-id",
+    examName: "テスト試験",
     counts: {
       students: 3,
       classes: 1,
@@ -57,8 +57,8 @@ describe("manifestValidator", () => {
     const requiredFields = [
       "version",
       "exportedAt",
-      "projectId",
-      "projectName",
+      "examId",
+      "examName",
       "counts",
     ]
 

@@ -7,12 +7,12 @@ import type { Prisma } from "@prisma/client"
 import prisma from "./client"
 
 /**
- * プロジェクトの全上書きを取得
+ * 試験の全上書きを取得
  */
-export async function getGradeOverridesByProjectId(gradeProjectId: string) {
+export async function getGradeOverridesByExamId(gradeId: string) {
   try {
     const overrides = await prisma.gradeOverride.findMany({
-      where: { gradeProjectId },
+      where: { gradeId },
     })
     return { success: true, overrides }
   } catch (error) {
@@ -28,7 +28,7 @@ export async function getGradeOverridesByProjectId(gradeProjectId: string) {
  * 上書きを upsert（findFirst + create/update パターン: SQLite の NULL 制約問題回避）
  */
 export async function upsertGradeOverride(data: {
-  gradeProjectId: string
+  gradeId: string
   studentId: string
   targetType: string
   gradeItemId: string | null
@@ -39,7 +39,7 @@ export async function upsertGradeOverride(data: {
       async (tx: Prisma.TransactionClient) => {
         const existing = await tx.gradeOverride.findFirst({
           where: {
-            gradeProjectId: data.gradeProjectId,
+            gradeId: data.gradeId,
             studentId: data.studentId,
             targetType: data.targetType,
             gradeItemId: data.gradeItemId,
@@ -54,7 +54,7 @@ export async function upsertGradeOverride(data: {
         } else {
           return tx.gradeOverride.create({
             data: {
-              gradeProjectId: data.gradeProjectId,
+              gradeId: data.gradeId,
               studentId: data.studentId,
               targetType: data.targetType,
               gradeItemId: data.gradeItemId,
@@ -78,7 +78,7 @@ export async function upsertGradeOverride(data: {
  * 上書きを削除（自動計算に戻す）
  */
 export async function deleteGradeOverride(data: {
-  gradeProjectId: string
+  gradeId: string
   studentId: string
   targetType: string
   gradeItemId: string | null
@@ -86,7 +86,7 @@ export async function deleteGradeOverride(data: {
   try {
     const existing = await prisma.gradeOverride.findFirst({
       where: {
-        gradeProjectId: data.gradeProjectId,
+        gradeId: data.gradeId,
         studentId: data.studentId,
         targetType: data.targetType,
         gradeItemId: data.gradeItemId,

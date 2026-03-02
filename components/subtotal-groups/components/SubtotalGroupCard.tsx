@@ -55,19 +55,19 @@ export function SubtotalGroupCard({
               <Badge variant="outline">{group.subtotals.length}項目</Badge>
             </div>
 
-            {/* 使用プロジェクト数 */}
-            {group.projectSubtotalGroups && (
+            {/* 使用試験数 */}
+            {group.examSubtotalGroups && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">利用プロジェクト</span>
+                <span className="text-muted-foreground">利用試験</span>
                 <Badge
                   variant={
-                    group.projectSubtotalGroups.length > 0
+                    group.examSubtotalGroups.length > 0
                       ? "default"
                       : "secondary"
                   }
                   className="text-xs"
                 >
-                  {group.projectSubtotalGroups.length}件
+                  {group.examSubtotalGroups.length}件
                 </Badge>
               </div>
             )}

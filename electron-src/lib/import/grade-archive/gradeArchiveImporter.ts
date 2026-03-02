@@ -16,11 +16,11 @@ import prisma from "../../prisma/client"
 export async function previewGradeArchiveImport(
   data: GradeArchiveData
 ): Promise<GradeArchiveImportPreview> {
-  const { gradeProjectData, manualScoresData } = data
+  const { gradeData, manualScoresData } = data
 
   // Class照合（複数学級対応）
   const classMatches = await Promise.all(
-    gradeProjectData.classRefs.map(async (ref) => {
+    gradeData.classRefs.map(async (ref) => {
       const existing = await prisma.class.findUnique({
         where: { name: ref.name },
       })
@@ -28,17 +28,17 @@ export async function previewGradeArchiveImport(
     })
   )
 
-  // ExamProject照合
-  const examProjectMatches = await Promise.all(
-    gradeProjectData.examProjectRefs.map(async (ref) => {
-      const projects = await prisma.project.findMany({
+  // ExamExam照合
+  const examMatches = await Promise.all(
+    gradeData.examRefs.map(async (ref) => {
+      const exams = await prisma.exam.findMany({
         where: { examName: ref.examName },
         select: { id: true },
       })
       return {
         examName: ref.examName,
-        found: projects.length > 0,
-        projectId: projects[0]?.id ?? null,
+        found: exams.length > 0,
+        examId: exams[0]?.id ?? null,
       }
     })
   )
@@ -46,7 +46,7 @@ export async function previewGradeArchiveImport(
   // Student照合
   const studentNumbers = [
     ...new Set(manualScoresData.manualScores.map((ms) => ms.studentNumber)),
-    ...gradeProjectData.studentRefs.map((s) => s.studentNumber),
+    ...gradeData.studentRefs.map((s) => s.studentNumber),
   ]
   const uniqueNumbers = [...new Set(studentNumbers)]
   const existingStudents = await prisma.student.findMany({
@@ -60,7 +60,7 @@ export async function previewGradeArchiveImport(
   return {
     manifest: data.manifest,
     classMatches,
-    examProjectMatches,
+    examMatches,
     studentMatchCount: uniqueNumbers.filter((sn) => existingNumberSet.has(sn))
       .length,
     studentMissingCount: uniqueNumbers.filter(
@@ -74,30 +74,30 @@ export async function previewGradeArchiveImport(
  */
 export async function importGradeArchive(
   data: GradeArchiveData,
-  examProjectMapping?: Record<string, string>
-): Promise<{ success: boolean; gradeProjectId?: string; error?: string }> {
+  examMapping?: Record<string, string>
+): Promise<{ success: boolean; gradeId?: string; error?: string }> {
   try {
     return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const { gradeProjectData, manualScoresData, boundariesData } = data
+      const { gradeData, manualScoresData, boundariesData } = data
 
-      // 1. GradeProject作成
-      const gp = await tx.gradeProject.create({
+      // 1. Grade作成
+      const gp = await tx.grade.create({
         data: {
-          name: gradeProjectData.gradeProject.name,
-          description: gradeProjectData.gradeProject.description,
+          name: gradeData.grade.name,
+          description: gradeData.grade.description,
         },
       })
 
-      // 2. Class照合→GradeProjectClass作成
-      for (let i = 0; i < gradeProjectData.classRefs.length; i++) {
-        const ref = gradeProjectData.classRefs[i]
+      // 2. Class照合→GradeClass作成
+      for (let i = 0; i < gradeData.classRefs.length; i++) {
+        const ref = gradeData.classRefs[i]
         const cls = await tx.class.findUnique({
           where: { name: ref.name },
         })
         if (cls) {
-          await tx.gradeProjectClass.create({
+          await tx.gradeClass.create({
             data: {
-              gradeProjectId: gp.id,
+              gradeId: gp.id,
               classId: cls.id,
               order: i,
             },
@@ -105,15 +105,15 @@ export async function importGradeArchive(
         }
       }
 
-      // 3. Student照合→GradeProjectStudent作成
-      for (const studentRef of gradeProjectData.studentRefs) {
+      // 3. Student照合→GradeStudent作成
+      for (const studentRef of gradeData.studentRefs) {
         const student = await tx.student.findUnique({
           where: { studentNumber: studentRef.studentNumber },
         })
         if (student) {
-          await tx.gradeProjectStudent.create({
+          await tx.gradeStudent.create({
             data: {
-              gradeProjectId: gp.id,
+              gradeId: gp.id,
               studentId: student.id,
               customOrder: studentRef.customOrder,
             },
@@ -125,40 +125,36 @@ export async function importGradeArchive(
       // gradeItemName+dataSourceName → dataSourceId のマッピング
       const dsKeyToId = new Map<string, string>()
 
-      for (const giData of gradeProjectData.gradeItems) {
+      for (const giData of gradeData.gradeItems) {
         const gi = await tx.gradeItem.create({
           data: {
-            gradeProjectId: gp.id,
+            gradeId: gp.id,
             name: giData.name,
             order: giData.order,
           },
         })
 
         for (const dsData of giData.dataSources) {
-          let examProjectId: string | null = null
+          let examId: string | null = null
           if (
-            dsData.examProjectName &&
+            dsData.examName &&
             (dsData.type === "project_total" ||
               dsData.type === "subtotal" ||
               dsData.type === "crop_region")
           ) {
-            examProjectId = examProjectMapping?.[dsData.examProjectName] ?? null
-            if (!examProjectId) {
-              const projects = await tx.project.findMany({
-                where: { examName: dsData.examProjectName },
+            examId = examMapping?.[dsData.examName] ?? null
+            if (!examId) {
+              const exams = await tx.exam.findMany({
+                where: { examName: dsData.examName },
                 select: { id: true },
               })
-              examProjectId = projects[0]?.id ?? null
+              examId = exams[0]?.id ?? null
             }
           }
 
           // Subtotal照合（名前ベース）
           let subtotalId: string | null = null
-          if (
-            dsData.type === "subtotal" &&
-            dsData.subtotalName &&
-            examProjectId
-          ) {
+          if (dsData.type === "subtotal" && dsData.subtotalName && examId) {
             const subtotals = await tx.subtotal.findMany({
               where: { name: dsData.subtotalName },
             })
@@ -170,12 +166,12 @@ export async function importGradeArchive(
           if (
             dsData.type === "crop_region" &&
             dsData.cropRegionLabel &&
-            examProjectId
+            examId
           ) {
             const regions = await tx.cropRegion.findMany({
               where: {
                 label: dsData.cropRegionLabel,
-                projectPage: { projectId: examProjectId },
+                examPage: { examId: examId },
               },
             })
             cropRegionId = regions[0]?.id ?? null
@@ -185,7 +181,7 @@ export async function importGradeArchive(
             data: {
               gradeItemId: gi.id,
               type: dsData.type,
-              examProjectId,
+              examId,
               subtotalId,
               cropRegionId,
               name: dsData.name,
@@ -231,10 +227,10 @@ export async function importGradeArchive(
       for (const bsData of boundariesData.boundarySets) {
         let gradeItemId: string | null = null
         if (bsData.gradeItemName) {
-          // GradeItem名で照合（同じプロジェクト内）
+          // GradeItem名で照合（同じ試験内）
           const gi = await tx.gradeItem.findFirst({
             where: {
-              gradeProjectId: gp.id,
+              gradeId: gp.id,
               name: bsData.gradeItemName,
             },
           })
@@ -244,7 +240,7 @@ export async function importGradeArchive(
 
         const bs = await tx.gradeBoundarySet.create({
           data: {
-            gradeProjectId: gp.id,
+            gradeId: gp.id,
             targetType: bsData.targetType,
             gradeItemId,
           },
@@ -264,10 +260,10 @@ export async function importGradeArchive(
 
       // 7. GradeItemExclusion挿入（後方互換: optionalフィールド）
       if (
-        gradeProjectData.gradeItemExclusions &&
-        gradeProjectData.gradeItemExclusions.length > 0
+        gradeData.gradeItemExclusions &&
+        gradeData.gradeItemExclusions.length > 0
       ) {
-        for (const excl of gradeProjectData.gradeItemExclusions) {
+        for (const excl of gradeData.gradeItemExclusions) {
           const student = await tx.student.findUnique({
             where: { studentNumber: excl.studentNumber },
           })
@@ -275,7 +271,7 @@ export async function importGradeArchive(
 
           const gradeItem = await tx.gradeItem.findFirst({
             where: {
-              gradeProjectId: gp.id,
+              gradeId: gp.id,
               name: excl.gradeItemName,
             },
           })
@@ -283,7 +279,7 @@ export async function importGradeArchive(
 
           await tx.gradeItemExclusion.create({
             data: {
-              gradeProjectId: gp.id,
+              gradeId: gp.id,
               studentId: student.id,
               gradeItemId: gradeItem.id,
             },
@@ -291,7 +287,7 @@ export async function importGradeArchive(
         }
       }
 
-      return { success: true, gradeProjectId: gp.id }
+      return { success: true, gradeId: gp.id }
     })
   } catch (error) {
     console.error("Error importing grade archive:", error)

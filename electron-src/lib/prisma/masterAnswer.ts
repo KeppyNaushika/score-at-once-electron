@@ -1,4 +1,4 @@
-import { MasterImage, Prisma, ProjectPage } from "@prisma/client"
+import { ExamPage, MasterImage, Prisma } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
 
@@ -10,19 +10,19 @@ import {
 import prisma from "./client"
 
 export const uploadMasterAnswers = async (
-  projectId: string,
+  examId: string,
   filesData: {
     name: string
     type: string
     buffer: ArrayBuffer
     path?: string
   }[]
-): Promise<(MasterImage & { projectPage: ProjectPage })[]> => {
-  // Check if project exists and get existing pages
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+): Promise<(MasterImage & { examPage: ExamPage })[]> => {
+  // Check if exam exists and get existing pages
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
     include: {
-      projectPages: {
+      examPages: {
         include: {
           masterImages: true,
         },
@@ -31,21 +31,21 @@ export const uploadMasterAnswers = async (
     },
   })
 
-  if (!project) {
-    throw new Error("Project not found for master answer upload")
+  if (!exam) {
+    throw new Error("Exam not found for master answer upload")
   }
 
   const highestPageNumber =
-    project.projectPages?.reduce(
+    exam.examPages?.reduce(
       (max: number, page: { pageNumber: number }) =>
         Math.max(max, page.pageNumber),
       0
     ) || 0
 
-  const uploadedAnswers: (MasterImage & { projectPage: ProjectPage })[] = []
+  const uploadedAnswers: (MasterImage & { examPage: ExamPage })[] = []
 
-  const projectAnswerDir = getMasterAnswersDirectory(projectId)
-  await fs.mkdir(projectAnswerDir, { recursive: true })
+  const examAnswerDir = getMasterAnswersDirectory(examId)
+  await fs.mkdir(examAnswerDir, { recursive: true })
 
   for (const [index, fileData] of filesData.entries()) {
     try {
@@ -54,7 +54,7 @@ export const uploadMasterAnswers = async (
 
       // Generate unique filename
       const uniqueFileName = `${Date.now()}-${index}-${originalFileName}`
-      const destinationPath = path.join(projectAnswerDir, uniqueFileName)
+      const destinationPath = path.join(examAnswerDir, uniqueFileName)
       const relativePath = getRelativePathFromData(destinationPath)
 
       // Save file
@@ -62,10 +62,10 @@ export const uploadMasterAnswers = async (
 
       const pageNumber = highestPageNumber + 1 + index
 
-      // Create ProjectPage first
-      const projectPage = await prisma.projectPage.create({
+      // Create ExamPage first
+      const examPage = await prisma.examPage.create({
         data: {
-          projectId: projectId,
+          examId: examId,
           pageNumber: pageNumber,
         },
       })
@@ -73,11 +73,11 @@ export const uploadMasterAnswers = async (
       // Then create MasterImage
       const newImage = await prisma.masterImage.create({
         data: {
-          projectPageId: projectPage.id,
+          examPageId: examPage.id,
           imagePath: relativePath,
         },
         include: {
-          projectPage: true,
+          examPage: true,
         },
       })
 
@@ -89,9 +89,9 @@ export const uploadMasterAnswers = async (
   return uploadedAnswers
 }
 
-type ProjectPageWithMasterImages = Prisma.ProjectPageGetPayload<{
+type ExamPageWithMasterImages = Prisma.ExamPageGetPayload<{
   include: {
-    project: true
+    exam: true
     masterImages: {
       orderBy: { createdAt: "asc" }
     }
@@ -101,7 +101,7 @@ type ProjectPageWithMasterImages = Prisma.ProjectPageGetPayload<{
 
 export interface DeleteMasterAnswerResult {
   deletedAnswer: MasterImage | null
-  projectPages: ProjectPageWithMasterImages[]
+  examPages: ExamPageWithMasterImages[]
 }
 
 export const deleteMasterAnswer = async (
@@ -110,19 +110,19 @@ export const deleteMasterAnswer = async (
   try {
     const answer = await prisma.masterImage.findUnique({
       where: { id: answerId },
-      include: { projectPage: true },
+      include: { examPage: true },
     })
 
     if (!answer) {
       console.warn(
         `No MasterImage found for master answer deletion (id: ${answerId}).`
       )
-      return { deletedAnswer: null, projectPages: [] }
+      return { deletedAnswer: null, examPages: [] }
     }
 
-    const projectId = answer.projectPage.projectId
+    const examId = answer.examPage.examId
     const filePath = getAbsolutePathFromData(answer.imagePath)
-    let updatedPages: ProjectPageWithMasterImages[] = []
+    let updatedPages: ExamPageWithMasterImages[] = []
 
     await prisma.$transaction(async (tx) => {
       await tx.masterImage.delete({
@@ -130,23 +130,23 @@ export const deleteMasterAnswer = async (
       })
 
       const remainingMasterImages = await tx.masterImage.count({
-        where: { projectPageId: answer.projectPageId },
+        where: { examPageId: answer.examPageId },
       })
       const remainingStudentImages = await tx.studentAnswerImage.count({
-        where: { projectPageId: answer.projectPageId },
+        where: { examPageId: answer.examPageId },
       })
 
       if (remainingMasterImages === 0 && remainingStudentImages === 0) {
-        await tx.projectPage.delete({
-          where: { id: answer.projectPageId },
+        await tx.examPage.delete({
+          where: { id: answer.examPageId },
         })
       }
 
-      const pages = await tx.projectPage.findMany({
-        where: { projectId },
+      const pages = await tx.examPage.findMany({
+        where: { examId },
         orderBy: { pageNumber: "asc" },
         include: {
-          project: true,
+          exam: true,
           cropRegions: true,
           masterImages: {
             orderBy: { createdAt: "asc" },
@@ -159,7 +159,7 @@ export const deleteMasterAnswer = async (
         const targetPageNumber = index + 1
         if (pages[index].pageNumber !== targetPageNumber) {
           resequenced = true
-          await tx.projectPage.update({
+          await tx.examPage.update({
             where: { id: pages[index].id },
             data: { pageNumber: targetPageNumber },
           })
@@ -167,11 +167,11 @@ export const deleteMasterAnswer = async (
       }
 
       if (resequenced) {
-        updatedPages = await tx.projectPage.findMany({
-          where: { projectId },
+        updatedPages = await tx.examPage.findMany({
+          where: { examId },
           orderBy: { pageNumber: "asc" },
           include: {
-            project: true,
+            exam: true,
             cropRegions: true,
             masterImages: {
               orderBy: { createdAt: "asc" },
@@ -196,7 +196,7 @@ export const deleteMasterAnswer = async (
       }
     }
 
-    return { deletedAnswer: answer, projectPages: updatedPages }
+    return { deletedAnswer: answer, examPages: updatedPages }
   } catch (error) {
     console.error(`Failed to delete master answer ${answerId}:`, error)
     throw error
@@ -211,42 +211,42 @@ export const updateMasterAnswersOrder = async (
   }
 
   try {
-    // Get the ProjectPages that correspond to these answers
+    // Get the ExamPages that correspond to these answers
     const answers = await prisma.masterImage.findMany({
       where: {
         id: { in: answerOrders.map((order) => order.id) },
       },
-      include: { projectPage: true },
+      include: { examPage: true },
     })
 
     if (answers.length === 0) {
       throw new Error("No master answers found for reordering")
     }
 
-    const projectId = answers[0].projectPage.projectId
+    const examId = answers[0].examPage.examId
 
-    // Get current max page number in project
-    const maxPageNumberInProject = await prisma.projectPage.aggregate({
+    // Get current max page number in exam
+    const maxPageNumberInExam = await prisma.examPage.aggregate({
       _max: { pageNumber: true },
-      where: { projectId: projectId },
+      where: { examId: examId },
     })
     const offset =
-      (maxPageNumberInProject._max.pageNumber || 0) + answerOrders.length + 100
+      (maxPageNumberInExam._max.pageNumber || 0) + answerOrders.length + 100
 
     await prisma.$transaction(async (tx) => {
-      // Create a map of answer ID to ProjectPage ID
+      // Create a map of answer ID to ExamPage ID
       const answerToPageMap = new Map()
       answers.forEach((answer) => {
-        answerToPageMap.set(answer.id, answer.projectPageId)
+        answerToPageMap.set(answer.id, answer.examPageId)
       })
 
-      // 1. Update ProjectPages to temporary page numbers
+      // 1. Update ExamPages to temporary page numbers
       for (let i = 0; i < answerOrders.length; i++) {
         const answerId = answerOrders[i].id
-        const projectPageId = answerToPageMap.get(answerId)
-        if (projectPageId) {
-          await tx.projectPage.update({
-            where: { id: projectPageId },
+        const examPageId = answerToPageMap.get(answerId)
+        if (examPageId) {
+          await tx.examPage.update({
+            where: { id: examPageId },
             data: { pageNumber: offset + i },
           })
         }
@@ -254,10 +254,10 @@ export const updateMasterAnswersOrder = async (
 
       // 2. Update to final page numbers
       for (const order of answerOrders) {
-        const projectPageId = answerToPageMap.get(order.id)
-        if (projectPageId) {
-          await tx.projectPage.update({
-            where: { id: projectPageId },
+        const examPageId = answerToPageMap.get(order.id)
+        if (examPageId) {
+          await tx.examPage.update({
+            where: { id: examPageId },
             data: { pageNumber: order.pageNumber },
           })
         }
@@ -275,9 +275,9 @@ export const updateMasterAnswersOrder = async (
   }
 }
 
-export const getMasterAnswersByProjectId = async (projectId: string) => {
-  const projectPages = await prisma.projectPage.findMany({
-    where: { projectId },
+export const getMasterAnswersByExamId = async (examId: string) => {
+  const examPages = await prisma.examPage.findMany({
+    where: { examId },
     include: {
       masterImages: true,
     },
@@ -286,12 +286,12 @@ export const getMasterAnswersByProjectId = async (projectId: string) => {
 
   // Flatten to return individual answers with their page info
   const masterAnswers = []
-  for (const page of projectPages) {
+  for (const page of examPages) {
     for (const answer of page.masterImages) {
       masterAnswers.push({
         ...answer,
         pageNumber: page.pageNumber,
-        projectId: page.projectId,
+        examId: page.examId,
         // For compatibility with old API
         path: answer.imagePath,
       })
@@ -302,14 +302,14 @@ export const getMasterAnswersByProjectId = async (projectId: string) => {
 }
 
 export const createMasterAnswer = async (data: {
-  projectId: string
+  examId: string
   path: string
   pageNumber: number
 }) => {
-  // Create ProjectPage first
-  const projectPage = await prisma.projectPage.create({
+  // Create ExamPage first
+  const examPage = await prisma.examPage.create({
     data: {
-      projectId: data.projectId,
+      examId: data.examId,
       pageNumber: data.pageNumber,
     },
   })
@@ -317,7 +317,7 @@ export const createMasterAnswer = async (data: {
   // Then create MasterImage
   return prisma.masterImage.create({
     data: {
-      projectPageId: projectPage.id,
+      examPageId: examPage.id,
       imagePath: data.path,
     },
   })
@@ -325,7 +325,7 @@ export const createMasterAnswer = async (data: {
 
 export const createManyMasterAnswers = async (
   data: {
-    projectId: string
+    examId: string
     path: string
     pageNumber: number
   }[]
@@ -346,7 +346,7 @@ export const updateMasterAnswer = async (
 ) => {
   const answer = await prisma.masterImage.findUnique({
     where: { id },
-    include: { projectPage: true },
+    include: { examPage: true },
   })
 
   if (!answer) {
@@ -361,10 +361,10 @@ export const updateMasterAnswer = async (
     })
   }
 
-  // Update ProjectPage if pageNumber is provided
+  // Update ExamPage if pageNumber is provided
   if (data.pageNumber) {
-    await prisma.projectPage.update({
-      where: { id: answer.projectPageId },
+    await prisma.examPage.update({
+      where: { id: answer.examPageId },
       data: { pageNumber: data.pageNumber },
     })
   }
@@ -372,29 +372,29 @@ export const updateMasterAnswer = async (
   // Return updated data
   return prisma.masterImage.findUnique({
     where: { id },
-    include: { projectPage: true },
+    include: { examPage: true },
   })
 }
 
-export const deleteMasterAnswersByProjectId = async (projectId: string) => {
-  // Delete all master images for the project
+export const deleteMasterAnswersByExamId = async (examId: string) => {
+  // Delete all master images for the exam
   const deletedAnswers = await prisma.masterImage.deleteMany({
     where: {
-      projectPage: { projectId },
+      examPage: { examId },
     },
   })
 
-  // Delete ProjectPages that have no remaining images
-  const emptyPages = await prisma.projectPage.findMany({
+  // Delete ExamPages that have no remaining images
+  const emptyPages = await prisma.examPage.findMany({
     where: {
-      projectId,
+      examId,
       masterImages: { none: {} },
       studentAnswerImages: { none: {} },
     },
   })
 
   if (emptyPages.length > 0) {
-    await prisma.projectPage.deleteMany({
+    await prisma.examPage.deleteMany({
       where: {
         id: { in: emptyPages.map((page) => page.id) },
       },
@@ -405,11 +405,11 @@ export const deleteMasterAnswersByProjectId = async (projectId: string) => {
 }
 
 export const getMasterAnswerByPage = async (
-  projectId: string,
+  examId: string,
   pageNumber: number
 ) => {
-  const projectPage = await prisma.projectPage.findFirst({
-    where: { projectId, pageNumber },
+  const examPage = await prisma.examPage.findFirst({
+    where: { examId, pageNumber },
     include: {
       masterImages: {
         take: 1,
@@ -417,12 +417,12 @@ export const getMasterAnswerByPage = async (
     },
   })
 
-  if (projectPage?.masterImages?.[0]) {
+  if (examPage?.masterImages?.[0]) {
     return {
-      ...projectPage.masterImages[0],
-      pageNumber: projectPage.pageNumber,
-      projectId: projectPage.projectId,
-      path: projectPage.masterImages[0].imagePath,
+      ...examPage.masterImages[0],
+      pageNumber: examPage.pageNumber,
+      examId: examPage.examId,
+      path: examPage.masterImages[0].imagePath,
     }
   }
 
@@ -432,6 +432,6 @@ export const getMasterAnswerByPage = async (
 // For compatibility with existing code
 export type MasterAnswerPayload = MasterImage & {
   pageNumber: number
-  projectId: string
+  examId: string
   path: string
 }

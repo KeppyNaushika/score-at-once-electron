@@ -22,7 +22,7 @@ import type {
   ScoringConflictConfig,
   ScoringConflictData,
   UpdateDecisions,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 interface FinalConfirmStepProps {
   wizard: UseImportWizardReturn

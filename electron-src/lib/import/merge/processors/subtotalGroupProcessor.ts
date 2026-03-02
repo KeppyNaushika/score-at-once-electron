@@ -9,8 +9,8 @@ import type {
   IdIntegrationConfig,
   IdIntegrationDecision,
   UpdateDecisions,
-} from "../../../../../types/projectArchive.types"
-import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
+} from "../../../../../types/examArchive.types"
+import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type {
   IdChangeTarget,
   IdMappings,

@@ -6,8 +6,8 @@ export interface GradeArchiveManifest {
   version: string
   appVersion: string
   exportedAt: string
-  gradeProjectId: string
-  gradeProjectName: string
+  gradeId: string
+  gradeName: string
   counts: {
     gradeItems: number
     dataSources: number
@@ -21,19 +21,19 @@ export interface GradeArchiveManifest {
 
 export interface GradeArchiveData {
   manifest: GradeArchiveManifest
-  gradeProjectData: ArchiveGradeProjectData
+  gradeData: ArchiveGradeData
   manualScoresData: ArchiveManualScoresData
   boundariesData: ArchiveBoundariesData
 }
 
-export interface ArchiveGradeProjectData {
-  gradeProject: {
+export interface ArchiveGradeData {
+  grade: {
     name: string
     description: string | null
   }
   gradeItems: ArchiveGradeItem[]
   classRefs: { name: string }[]
-  examProjectRefs: {
+  examRefs: {
     examName: string
     examDate: string | null
     dataSourceName: string
@@ -62,7 +62,7 @@ export interface ArchiveDataSource {
   maxScore: number
   weight: number
   order: number
-  examProjectName: string | null
+  examName: string | null
   subtotalName: string | null
   cropRegionLabel: string | null
   absentMethod?: string
@@ -97,10 +97,10 @@ export interface ArchiveBoundariesData {
 export interface GradeArchiveImportPreview {
   manifest: GradeArchiveManifest
   classMatches: { found: boolean; name: string }[]
-  examProjectMatches: {
+  examMatches: {
     examName: string
     found: boolean
-    projectId: string | null
+    examId: string | null
   }[]
   studentMatchCount: number
   studentMissingCount: number

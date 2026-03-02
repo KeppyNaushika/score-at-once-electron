@@ -16,9 +16,9 @@ import type {
   IdIntegrationConfig,
   ScoringConflictConfig,
   UpdateDecisions,
-} from "../../../../types/projectArchive.types"
+} from "../../../../types/examArchive.types"
 import prisma from "../../prisma/client"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
 import {
@@ -33,7 +33,7 @@ import { createEmptyCounts } from "./types"
 /** インポート結果 */
 export interface IdIntegrationImportResult {
   success: boolean
-  projectId?: string
+  examId?: string
   summary?: {
     created: ArchiveDataCounts
     updated: ArchiveDataCounts
@@ -76,14 +76,14 @@ export async function executeIdIntegrationImport(
     class: {},
     subtotalGroup: {},
     subtotal: {},
-    project: {},
-    projectPage: {},
+    exam: {},
+    examPage: {},
     cropRegion: {},
     masterImage: {},
     studentAnswerImage: {},
-    projectStudent: {},
-    userProject: {},
-    projectSubtotalGroup: {},
+    examStudent: {},
+    userExam: {},
+    examSubtotalGroup: {},
     cropSubtotal: {},
     questionScore: {},
     drawingAnnotation: {},
@@ -147,9 +147,9 @@ export async function executeIdIntegrationImport(
           integrationConfig.subtotalMappings
         )
 
-        // 5. プロジェクト処理
-        const isProjectIdMatch = preMatchResult.project?.isIdMatch ?? false
-        const newProjectId = await processProject(
+        // 5. 試験処理
+        const isExamIdMatch = preMatchResult.exam?.isIdMatch ?? false
+        const newExamId = await processExam(
           data,
           preMatchResult,
           idMappings,
@@ -158,41 +158,36 @@ export async function executeIdIntegrationImport(
           tx
         )
 
-        // 6. UserProject
-        await processUserProject(
-          isProjectIdMatch,
-          newProjectId,
-          currentUserId,
-          tx
-        )
+        // 6. UserExam
+        await processUserExam(isExamIdMatch, newExamId, currentUserId, tx)
 
-        // 7. ProjectSubtotalGroup
-        await processProjectSubtotalGroups(data, newProjectId, idMappings, tx)
+        // 7. ExamSubtotalGroup
+        await processExamSubtotalGroups(data, newExamId, idMappings, tx)
 
-        // 8. ProjectStudent
-        await processProjectStudents(
+        // 8. ExamStudent
+        await processExamStudents(
           data,
-          isProjectIdMatch,
-          newProjectId,
+          isExamIdMatch,
+          newExamId,
           idMappings,
           tx
         )
 
-        // 9. ProjectPage（不一致時のみ）
-        if (!isProjectIdMatch) {
-          await processProjectPages(data, newProjectId, idMappings, counts, tx)
+        // 9. ExamPage（不一致時のみ）
+        if (!isExamIdMatch) {
+          await processExamPages(data, newExamId, idMappings, counts, tx)
         }
 
         // 10. CropRegion（不一致時のみ）
-        if (!isProjectIdMatch) {
+        if (!isExamIdMatch) {
           await processCropRegions(data, idMappings, counts, tx)
         }
 
-        // 10a. ProjectMarkingFormat (v1.4.0+)
-        await processProjectMarkingFormats(data, newProjectId, tx)
+        // 10a. ExamMarkingFormat (v1.4.0+)
+        await processExamMarkingFormats(data, newExamId, tx)
 
-        // 10b. ProjectExportSettings (v1.4.0+)
-        await processProjectExportSettings(data, newProjectId, tx)
+        // 10b. ExamExportSettings (v1.4.0+)
+        await processExamExportSettings(data, newExamId, tx)
 
         // 10c. CropRegionMarkingOverride (v1.4.0+)
         await processCropRegionMarkingOverrides(data, idMappings, tx)
@@ -200,13 +195,13 @@ export async function executeIdIntegrationImport(
         // 10d. Subject & SubjectSubtotalGroup (v1.4.0+)
         await processSubjects(data, idMappings, tx)
 
-        // 10e. ProjectClass (v1.1.0+)
-        await processProjectClasses(data, newProjectId, idMappings, tx)
+        // 10e. ExamClass (v1.1.0+)
+        await processExamClasses(data, newExamId, idMappings, tx)
 
         // 11. CropSubtotal
         await processCropSubtotals(
           data,
-          isProjectIdMatch,
+          isExamIdMatch,
           idMappings,
           warnings,
           tx
@@ -249,9 +244,9 @@ export async function executeIdIntegrationImport(
     // ========================================================================
     // 画像ファイルのコピー（ファイルI/O - トランザクション外）
     // ========================================================================
-    const newProjectId = idMappings.project[data.projectData.project.id]
+    const newExamId = idMappings.exam[data.examData.exam.id]
     try {
-      await copyImportImages(data, newProjectId)
+      await copyImportImages(data, newExamId)
     } catch (copyError) {
       warnings.push(
         "画像ファイルのコピーに一部失敗しました。再インポートで修復可能です。"
@@ -261,7 +256,7 @@ export async function executeIdIntegrationImport(
 
     return {
       success: true,
-      projectId: newProjectId,
+      examId: newExamId,
       summary: counts,
       warnings: warnings.length > 0 ? warnings : undefined,
     }
@@ -394,7 +389,7 @@ async function createNewSubtotal(
   idMappings.subtotal[s.id] = newId
 }
 
-async function processProject(
+async function processExam(
   data: ExtractedArchiveData,
   preMatchResult: FileOverviewData,
   idMappings: IdMappings,
@@ -402,77 +397,77 @@ async function processProject(
   warnings: string[],
   tx: Tx
 ): Promise<string> {
-  const project = data.projectData.project
-  const isProjectIdMatch = preMatchResult.project?.isIdMatch ?? false
+  const exam = data.examData.exam
+  const isExamIdMatch = preMatchResult.exam?.isIdMatch ?? false
 
-  if (isProjectIdMatch && preMatchResult.project?.existingProjectId) {
-    // プロジェクトID一致 → 既存プロジェクトを使用（マージ）
-    const newProjectId = preMatchResult.project.existingProjectId
-    idMappings.project[project.id] = newProjectId
+  if (isExamIdMatch && preMatchResult.exam?.existingExamId) {
+    // 試験ID一致 → 既存試験を使用（マージ）
+    const newExamId = preMatchResult.exam.existingExamId
+    idMappings.exam[exam.id] = newExamId
 
-    // 既存のProjectPageとCropRegionをID一致でマッピング
-    await mapExistingProjectPages(data, newProjectId, idMappings, counts, tx)
-    await mapExistingCropRegions(data, newProjectId, idMappings, counts, tx)
+    // 既存のExamPageとCropRegionをID一致でマッピング
+    await mapExistingExamPages(data, newExamId, idMappings, counts, tx)
+    await mapExistingCropRegions(data, newExamId, idMappings, counts, tx)
 
-    return newProjectId
+    return newExamId
   }
 
-  // プロジェクトID不一致 → 新規作成
-  const existingById = await tx.project.findUnique({
-    where: { id: project.id },
+  // 試験ID不一致 → 新規作成
+  const existingById = await tx.exam.findUnique({
+    where: { id: exam.id },
   })
   if (existingById) {
-    idMappings.project[project.id] = project.id
+    idMappings.exam[exam.id] = exam.id
     warnings.push(
-      `プロジェクトID「${project.id}」は既に使用されています。既存プロジェクトにデータがマージされます。`
+      `試験ID「${exam.id}」は既に使用されています。既存試験にデータがマージされます。`
     )
-    return project.id
+    return exam.id
   }
-  await tx.project.create({
+  await tx.exam.create({
     data: {
-      id: project.id,
-      examName: project.examName,
-      examDate: project.examDate ? new Date(project.examDate) : null,
-      subject: project.subject,
-      description: project.description,
+      id: exam.id,
+      examName: exam.examName,
+      examDate: exam.examDate ? new Date(exam.examDate) : null,
+      subject: exam.subject,
+      description: exam.description,
     },
   })
-  idMappings.project[project.id] = project.id
-  return project.id
+  idMappings.exam[exam.id] = exam.id
+  return exam.id
 }
 
-async function mapExistingProjectPages(
+async function mapExistingExamPages(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
-  const existingProjectPages = await tx.projectPage.findMany({
-    where: { projectId: newProjectId },
+  const existingExamPages = await tx.examPage.findMany({
+    where: { examId: newExamId },
   })
-  const existingPageIds = new Set(existingProjectPages.map((p) => p.id))
+  const existingPageIds = new Set(existingExamPages.map((p) => p.id))
 
-  for (const page of data.projectData.projectPages) {
+  for (const page of data.examData.examPages) {
     if (existingPageIds.has(page.id)) {
-      idMappings.projectPage[page.id] = page.id
+      idMappings.examPage[page.id] = page.id
       counts.unchanged.pages++
     } else {
-      const existingById = await tx.projectPage.findUnique({
+      const existingById = await tx.examPage.findUnique({
         where: { id: page.id },
       })
       if (existingById) {
-        idMappings.projectPage[page.id] = page.id
+        idMappings.examPage[page.id] = page.id
         counts.unchanged.pages++
       } else {
-        await tx.projectPage.create({
+        await tx.examPage.create({
           data: {
             id: page.id,
-            projectId: newProjectId,
+            examId: newExamId,
             pageNumber: page.pageNumber,
           },
         })
-        idMappings.projectPage[page.id] = page.id
+        idMappings.examPage[page.id] = page.id
         counts.created.pages++
       }
     }
@@ -481,20 +476,20 @@ async function mapExistingProjectPages(
 
 async function mapExistingCropRegions(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
   const existingCropRegions = await tx.cropRegion.findMany({
     where: {
-      projectPage: { projectId: newProjectId },
+      examPage: { examId: newExamId },
     },
   })
   const existingRegionIds = new Set(existingCropRegions.map((r) => r.id))
 
-  for (const region of data.projectData.cropRegions) {
-    const mappedPageId = idMappings.projectPage[region.projectPageId]
+  for (const region of data.examData.cropRegions) {
+    const mappedPageId = idMappings.examPage[region.examPageId]
     if (!mappedPageId) continue
 
     if (existingRegionIds.has(region.id)) {
@@ -511,7 +506,7 @@ async function mapExistingCropRegions(
         await tx.cropRegion.create({
           data: {
             id: region.id,
-            projectPageId: mappedPageId,
+            examPageId: mappedPageId,
             label: region.label,
             type: region.type,
             x: region.x,
@@ -529,27 +524,27 @@ async function mapExistingCropRegions(
   }
 }
 
-async function processUserProject(
-  isProjectIdMatch: boolean,
-  newProjectId: string,
+async function processUserExam(
+  isExamIdMatch: boolean,
+  newExamId: string,
   currentUserId: string,
   tx: Tx
 ): Promise<void> {
-  if (isProjectIdMatch) {
-    const existingUserProject = await tx.userProject.findUnique({
+  if (isExamIdMatch) {
+    const existingUserExam = await tx.userExam.findUnique({
       where: {
-        userId_projectId: {
+        userId_examId: {
           userId: currentUserId,
-          projectId: newProjectId,
+          examId: newExamId,
         },
       },
     })
-    if (!existingUserProject) {
-      await tx.userProject.create({
+    if (!existingUserExam) {
+      await tx.userExam.create({
         data: {
           id: randomUUID(),
           userId: currentUserId,
-          projectId: newProjectId,
+          examId: newExamId,
           role: "MEMBER",
           invitedAt: new Date(),
           invitedBy: null,
@@ -557,11 +552,11 @@ async function processUserProject(
       })
     }
   } else {
-    await tx.userProject.create({
+    await tx.userExam.create({
       data: {
         id: randomUUID(),
         userId: currentUserId,
-        projectId: newProjectId,
+        examId: newExamId,
         role: "OWNER",
         invitedAt: new Date(),
         invitedBy: null,
@@ -570,105 +565,105 @@ async function processUserProject(
   }
 }
 
-async function processProjectSubtotalGroups(
+async function processExamSubtotalGroups(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const psg of data.projectData.projectSubtotalGroups) {
+  for (const psg of data.examData.examSubtotalGroups) {
     const newGroupId = idMappings.subtotalGroup[psg.subtotalGroupId]
     if (newGroupId) {
-      const existing = await tx.projectSubtotalGroup.findFirst({
-        where: { projectId: newProjectId, subtotalGroupId: newGroupId },
+      const existing = await tx.examSubtotalGroup.findFirst({
+        where: { examId: newExamId, subtotalGroupId: newGroupId },
       })
       if (existing) {
-        idMappings.projectSubtotalGroup[psg.id] = existing.id
+        idMappings.examSubtotalGroup[psg.id] = existing.id
       } else {
-        const existingById = await tx.projectSubtotalGroup.findUnique({
+        const existingById = await tx.examSubtotalGroup.findUnique({
           where: { id: psg.id },
         })
         if (existingById) {
-          idMappings.projectSubtotalGroup[psg.id] = psg.id
+          idMappings.examSubtotalGroup[psg.id] = psg.id
         } else {
-          await tx.projectSubtotalGroup.create({
+          await tx.examSubtotalGroup.create({
             data: {
               id: psg.id,
-              projectId: newProjectId,
+              examId: newExamId,
               subtotalGroupId: newGroupId,
             },
           })
-          idMappings.projectSubtotalGroup[psg.id] = psg.id
+          idMappings.examSubtotalGroup[psg.id] = psg.id
         }
       }
     }
   }
 }
 
-async function processProjectStudents(
+async function processExamStudents(
   data: ExtractedArchiveData,
-  isProjectIdMatch: boolean,
-  newProjectId: string,
+  isExamIdMatch: boolean,
+  newExamId: string,
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const ps of data.projectData.projectStudents) {
+  for (const ps of data.examData.examStudents) {
     const newStudentId = idMappings.student[ps.studentId]
     if (newStudentId) {
-      if (isProjectIdMatch) {
-        const existing = await tx.projectStudent.findFirst({
-          where: { projectId: newProjectId, studentId: newStudentId },
+      if (isExamIdMatch) {
+        const existing = await tx.examStudent.findFirst({
+          where: { examId: newExamId, studentId: newStudentId },
         })
         if (existing) {
-          idMappings.projectStudent[ps.id] = existing.id
+          idMappings.examStudent[ps.id] = existing.id
           continue
         }
       }
 
-      const existingById = await tx.projectStudent.findUnique({
+      const existingById = await tx.examStudent.findUnique({
         where: { id: ps.id },
       })
       if (existingById) {
-        idMappings.projectStudent[ps.id] = ps.id
+        idMappings.examStudent[ps.id] = ps.id
       } else {
-        await tx.projectStudent.create({
+        await tx.examStudent.create({
           data: {
             id: ps.id,
-            projectId: newProjectId,
+            examId: newExamId,
             studentId: newStudentId,
             status: ps.status,
             customOrder: ps.customOrder,
           },
         })
-        idMappings.projectStudent[ps.id] = ps.id
+        idMappings.examStudent[ps.id] = ps.id
       }
     }
   }
 }
 
-async function processProjectPages(
+async function processExamPages(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
-  for (const page of data.projectData.projectPages) {
-    const existingById = await tx.projectPage.findUnique({
+  for (const page of data.examData.examPages) {
+    const existingById = await tx.examPage.findUnique({
       where: { id: page.id },
     })
     if (existingById) {
-      idMappings.projectPage[page.id] = page.id
+      idMappings.examPage[page.id] = page.id
       counts.unchanged.pages++
     } else {
-      await tx.projectPage.create({
+      await tx.examPage.create({
         data: {
           id: page.id,
-          projectId: newProjectId,
+          examId: newExamId,
           pageNumber: page.pageNumber,
         },
       })
-      idMappings.projectPage[page.id] = page.id
+      idMappings.examPage[page.id] = page.id
       counts.created.pages++
     }
   }
@@ -680,8 +675,8 @@ async function processCropRegions(
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
-  for (const region of data.projectData.cropRegions) {
-    const newPageId = idMappings.projectPage[region.projectPageId]
+  for (const region of data.examData.cropRegions) {
+    const newPageId = idMappings.examPage[region.examPageId]
     if (newPageId) {
       const existingById = await tx.cropRegion.findUnique({
         where: { id: region.id },
@@ -693,7 +688,7 @@ async function processCropRegions(
         await tx.cropRegion.create({
           data: {
             id: region.id,
-            projectPageId: newPageId,
+            examPageId: newPageId,
             label: region.label,
             type: region.type,
             x: region.x,
@@ -713,7 +708,7 @@ async function processCropRegions(
 
 async function processCropSubtotals(
   data: ExtractedArchiveData,
-  isProjectIdMatch: boolean,
+  isExamIdMatch: boolean,
   idMappings: IdMappings,
   warnings: string[],
   tx: Tx
@@ -724,7 +719,7 @@ async function processCropSubtotals(
     const newRegionId = idMappings.cropRegion[cs.cropRegionId]
     const newSubtotalId = idMappings.subtotal[cs.subtotalId]
     if (newRegionId && newSubtotalId) {
-      if (isProjectIdMatch) {
+      if (isExamIdMatch) {
         const existing = await tx.cropSubtotal.findFirst({
           where: { cropRegionId: newRegionId, subtotalId: newSubtotalId },
         })
@@ -947,26 +942,26 @@ async function processMemberships(
   }
 }
 
-async function processProjectMarkingFormats(
+async function processExamMarkingFormats(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   tx: Tx
 ): Promise<void> {
-  const formats = data.projectData.projectMarkingFormats ?? []
+  const formats = data.examData.examMarkingFormats ?? []
   for (const fmt of formats) {
-    const existing = await tx.projectMarkingFormat.findFirst({
-      where: { projectId: newProjectId, markType: fmt.markType },
+    const existing = await tx.examMarkingFormat.findFirst({
+      where: { examId: newExamId, markType: fmt.markType },
     })
     if (existing) continue
 
-    const existingById = await tx.projectMarkingFormat.findUnique({
+    const existingById = await tx.examMarkingFormat.findUnique({
       where: { id: fmt.id },
     })
     if (!existingById) {
-      await tx.projectMarkingFormat.create({
+      await tx.examMarkingFormat.create({
         data: {
           id: fmt.id,
-          projectId: newProjectId,
+          examId: newExamId,
           markType: fmt.markType,
           symbol: fmt.symbol,
           color: fmt.color,
@@ -978,27 +973,27 @@ async function processProjectMarkingFormats(
   }
 }
 
-async function processProjectExportSettings(
+async function processExamExportSettings(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   tx: Tx
 ): Promise<void> {
-  const settings = data.projectData.projectExportSettings
+  const settings = data.examData.examExportSettings
   if (!settings) return
 
-  const existing = await tx.projectExportSettings.findUnique({
-    where: { projectId: newProjectId },
+  const existing = await tx.examExportSettings.findUnique({
+    where: { examId: newExamId },
   })
   if (existing) return
 
-  const existingById = await tx.projectExportSettings.findUnique({
+  const existingById = await tx.examExportSettings.findUnique({
     where: { id: settings.id },
   })
   if (!existingById) {
-    await tx.projectExportSettings.create({
+    await tx.examExportSettings.create({
       data: {
         id: settings.id,
-        projectId: newProjectId,
+        examId: newExamId,
         settingsJson: settings.settingsJson,
       },
     })
@@ -1010,7 +1005,7 @@ async function processCropRegionMarkingOverrides(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  const overrides = data.projectData.cropRegionMarkingOverrides ?? []
+  const overrides = data.examData.cropRegionMarkingOverrides ?? []
   for (const ovr of overrides) {
     const newCropRegionId = idMappings.cropRegion[ovr.cropRegionId]
     if (!newCropRegionId) continue
@@ -1093,29 +1088,29 @@ async function processSubjects(
   }
 }
 
-async function processProjectClasses(
+async function processExamClasses(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newExamId: string,
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const pc of data.projectData.projectClasses) {
+  for (const pc of data.examData.examClasses) {
     const newClassId = idMappings.class[pc.classId]
     if (!newClassId) continue
 
-    const existing = await tx.projectClass.findFirst({
-      where: { projectId: newProjectId, classId: newClassId },
+    const existing = await tx.examClass.findFirst({
+      where: { examId: newExamId, classId: newClassId },
     })
     if (existing) continue
 
-    const existingById = await tx.projectClass.findUnique({
+    const existingById = await tx.examClass.findUnique({
       where: { id: pc.id },
     })
     if (!existingById) {
-      await tx.projectClass.create({
+      await tx.examClass.create({
         data: {
           id: pc.id,
-          projectId: newProjectId,
+          examId: newExamId,
           classId: newClassId,
           administered: pc.administered,
           statistics: pc.statistics,

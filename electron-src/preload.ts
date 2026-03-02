@@ -8,7 +8,7 @@ import {
   QuestionScoreCreateData,
   QuestionScoreUpdateData,
 } from "../types/common.types"
-import { CreateProjectArgs } from "../types/electron"
+import { CreateExamArgs } from "../types/electron"
 
 declare global {
   namespace NodeJS {
@@ -20,19 +20,18 @@ declare global {
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  fetchProjects: (userId: string) =>
-    ipcRenderer.invoke("fetch-projects", userId),
-  fetchProjectById: (projectId: string) =>
-    ipcRenderer.invoke("fetch-project-by-id", projectId),
-  createProject: (props: CreateProjectArgs, userId: string) => {
-    return ipcRenderer.invoke("create-project", props, userId)
+  fetchExams: (userId: string) => ipcRenderer.invoke("fetch-exams", userId),
+  fetchExamById: (examId: string) =>
+    ipcRenderer.invoke("fetch-exam-by-id", examId),
+  createExam: (props: CreateExamArgs, userId: string) => {
+    return ipcRenderer.invoke("create-exam", props, userId)
   },
-  updateProject: (projectId: string, data: Prisma.ProjectUpdateInput) => {
-    return ipcRenderer.invoke("update-project", projectId, data)
+  updateExam: (examId: string, data: Prisma.ExamUpdateInput) => {
+    return ipcRenderer.invoke("update-exam", examId, data)
   },
-  deleteProject: (
-    projectId: string // project オブジェクトではなく projectId を直接渡す
-  ) => ipcRenderer.invoke("delete-project", projectId),
+  deleteExam: (
+    examId: string // exam オブジェクトではなく examId を直接渡す
+  ) => ipcRenderer.invoke("delete-exam", examId),
   // Tag functions temporarily disabled
   // createTag: (tagText: string) => ipcRenderer.invoke("create-tag", tagText),
   // updateTag: (tagId: string, newText: string) =>
@@ -77,7 +76,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Student answer related
   uploadStudentAnswers: (
-    projectId: string,
+    examId: string,
     filesData: {
       name: string
       type: string
@@ -86,9 +85,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
       pageNumber?: number
       overwrite?: boolean
     }[]
-  ) => ipcRenderer.invoke("upload-answer-sheets", projectId, filesData),
-  getStudentAnswersByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-answer-sheets-by-project-id", projectId),
+  ) => ipcRenderer.invoke("upload-answer-sheets", examId, filesData),
+  getStudentAnswersByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-answer-sheets-by-exam-id", examId),
   deleteStudentAnswer: (answerSheetId: string) =>
     ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
   associateStudentAnswerWithStudent: (
@@ -208,9 +207,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // MasterAnswer related
   uploadMasterAnswers: (
-    projectId: string,
+    examId: string,
     filesData: { name: string; type: string; buffer: ArrayBuffer }[]
-  ) => ipcRenderer.invoke("upload-master-answers", projectId, filesData),
+  ) => ipcRenderer.invoke("upload-master-answers", examId, filesData),
   deleteMasterAnswer: (answerId: string) =>
     ipcRenderer.invoke("delete-master-answer", answerId),
   updateMasterAnswersOrder: (
@@ -224,10 +223,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("read-file-as-base64", filePath),
   checkFileExists: (relativePath: string) =>
     ipcRenderer.invoke("check-file-exists", relativePath),
-  getMasterImagesByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-master-images-by-project-id", projectId),
-  getProjectPagesByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-project-pages-by-project-id", projectId),
+  getMasterImagesByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-master-images-by-exam-id", examId),
+  getExamPagesByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-exam-pages-by-exam-id", examId),
   // CropRegion functions (renamed from LayoutRegion)
   createCropRegion: (data: CropRegionCreateData) =>
     ipcRenderer.invoke("create-crop-region", data),
@@ -237,52 +236,43 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-crop-region", id, data),
   deleteCropRegion: (id: string) =>
     ipcRenderer.invoke("delete-crop-region", id),
-  getCropRegionsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-crop-regions-by-project-id", projectId),
-  getQuestionAnswerRegionsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-question-answer-regions-by-project-id", projectId),
+  getCropRegionsByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-crop-regions-by-exam-id", examId),
+  getQuestionAnswerRegionsByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-question-answer-regions-by-exam-id", examId),
   getCropRegionById: (id: string) =>
     ipcRenderer.invoke("get-crop-region-by-id", id),
   updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>
   ) => ipcRenderer.invoke("update-crop-region-orders", updates),
 
-  // Project-Student relationship
-  getStudentsForProject: (projectId: string) =>
-    ipcRenderer.invoke("get-students-for-project", projectId),
-  addStudentsToProject: (projectId: string, studentIds: string[]) =>
-    ipcRenderer.invoke("add-students-to-project", projectId, studentIds),
-  removeStudentsFromProject: (projectId: string, studentIds: string[]) =>
-    ipcRenderer.invoke("remove-students-from-project", projectId, studentIds),
-  updateStudentProjectStatus: (
-    projectId: string,
+  // Exam-Student relationship
+  getStudentsForExam: (examId: string) =>
+    ipcRenderer.invoke("get-students-for-exam", examId),
+  addStudentsToExam: (examId: string, studentIds: string[]) =>
+    ipcRenderer.invoke("add-students-to-exam", examId, studentIds),
+  removeStudentsFromExam: (examId: string, studentIds: string[]) =>
+    ipcRenderer.invoke("remove-students-from-exam", examId, studentIds),
+  updateStudentExamStatus: (
+    examId: string,
     studentId: string,
     status: "participating" | "expected" | "absent"
   ) =>
-    ipcRenderer.invoke(
-      "update-student-project-status",
-      projectId,
-      studentId,
-      status
-    ),
-  checkGradingDataForStudents: (projectId: string, studentIds: string[]) =>
-    ipcRenderer.invoke(
-      "check-grading-data-for-students",
-      projectId,
-      studentIds
-    ),
-  getClassesNotInProject: (projectId: string) =>
-    ipcRenderer.invoke("get-classes-not-in-project", projectId),
-  getStudentsNotInProject: (projectId: string) =>
-    ipcRenderer.invoke("get-students-not-in-project", projectId),
+    ipcRenderer.invoke("update-student-exam-status", examId, studentId, status),
+  checkGradingDataForStudents: (examId: string, studentIds: string[]) =>
+    ipcRenderer.invoke("check-grading-data-for-students", examId, studentIds),
+  getClassesNotInExam: (examId: string) =>
+    ipcRenderer.invoke("get-classes-not-in-exam", examId),
+  getStudentsNotInExam: (examId: string) =>
+    ipcRenderer.invoke("get-students-not-in-exam", examId),
   updateStudentOrders: (
-    projectId: string,
+    examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
-  ) => ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
+  ) => ipcRenderer.invoke("update-student-orders", examId, studentOrders),
 
   // QuestionScore related functions
-  getQuestionScoresForProject: (projectId: string, userId?: string) =>
-    ipcRenderer.invoke("get-question-scores-for-project", projectId, userId),
+  getQuestionScoresForExam: (examId: string, userId?: string) =>
+    ipcRenderer.invoke("get-question-scores-for-exam", examId, userId),
   getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
     ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
   createQuestionScore: (data: QuestionScoreCreateData) =>
@@ -315,10 +305,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ),
   getAnswerSheetProgress: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
-  getProjectProgress: (projectId: string) =>
-    ipcRenderer.invoke("get-project-progress", projectId),
-  initializeScoringRecords: (projectId: string) =>
-    ipcRenderer.invoke("initialize-scoring-records", projectId),
+  getExamProgress: (examId: string) =>
+    ipcRenderer.invoke("get-exam-progress", examId),
+  initializeScoringRecords: (examId: string) =>
+    ipcRenderer.invoke("initialize-scoring-records", examId),
 
   // SubtotalGroup related (new management API with correct parameter format)
   createSubtotalGroup: (data: {
@@ -331,30 +321,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ) => ipcRenderer.invoke("update-subtotal-group", id, data),
   deleteSubtotalGroup: (id: string) =>
     ipcRenderer.invoke("delete-subtotal-group", id),
-  getSubtotalGroupsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-subtotal-groups-by-project-id", projectId),
+  getSubtotalGroupsByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-subtotal-groups-by-exam-id", examId),
   getSubtotalGroupById: (id: string) =>
     ipcRenderer.invoke("get-subtotal-group-by-id", id),
 
   // New SubtotalGroup management API
   getSubtotalGroups: () => ipcRenderer.invoke("get-subtotal-groups"),
-  getAvailableSubtotalGroupsForProject: (projectId: string) =>
-    ipcRenderer.invoke("get-available-subtotal-groups-for-project", projectId),
-  getActiveSubtotalGroupsForProject: (projectId: string) =>
-    ipcRenderer.invoke("get-active-subtotal-groups-for-project", projectId),
-  addSubtotalGroupToProject: (projectId: string, subtotalGroupId: string) =>
+  getAvailableSubtotalGroupsForExam: (examId: string) =>
+    ipcRenderer.invoke("get-available-subtotal-groups-for-exam", examId),
+  getActiveSubtotalGroupsForExam: (examId: string) =>
+    ipcRenderer.invoke("get-active-subtotal-groups-for-exam", examId),
+  addSubtotalGroupToExam: (examId: string, subtotalGroupId: string) =>
+    ipcRenderer.invoke("add-subtotal-group-to-exam", examId, subtotalGroupId),
+  removeSubtotalGroupFromExam: (examId: string, subtotalGroupId: string) =>
     ipcRenderer.invoke(
-      "add-subtotal-group-to-project",
-      projectId,
-      subtotalGroupId
-    ),
-  removeSubtotalGroupFromProject: (
-    projectId: string,
-    subtotalGroupId: string
-  ) =>
-    ipcRenderer.invoke(
-      "remove-subtotal-group-from-project",
-      projectId,
+      "remove-subtotal-group-from-exam",
+      examId,
       subtotalGroupId
     ),
 
@@ -399,8 +382,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-crop-region", id, data),
   deleteLayoutRegion: (id: string) =>
     ipcRenderer.invoke("delete-crop-region", id),
-  getLayoutRegionsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-crop-regions-by-project-id", projectId),
+  getLayoutRegionsByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-crop-regions-by-exam-id", examId),
   getLayoutRegionById: (id: string) =>
     ipcRenderer.invoke("get-crop-region-by-id", id),
   updateLayoutRegionOrders: (
@@ -413,8 +396,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-subtotal-group", id, data),
   deleteQuestionGroup: (id: string) =>
     ipcRenderer.invoke("delete-subtotal-group", id),
-  getQuestionGroupsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-subtotal-groups-by-project-id", projectId),
+  getQuestionGroupsByExamId: (examId: string) =>
+    ipcRenderer.invoke("get-subtotal-groups-by-exam-id", examId),
   getQuestionGroupById: (id: string) =>
     ipcRenderer.invoke("get-subtotal-group-by-id", id),
 
@@ -468,11 +451,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Canvas描画エンジン用PDF出力API
   export: {
     getPdfExportData: (options: {
-      projectId: string
+      examId: string
       selectedStudentIds: string[]
     }) => ipcRenderer.invoke("export:getPdfExportData", options),
     createPdfFromRenderedImages: (options: {
-      projectId: string
+      examId: string
       renderedPages: Array<{
         studentId: string
         pageNumber: number
@@ -486,7 +469,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       width?: number
       height?: number
     }) => ipcRenderer.invoke("export:convertSvgToPng", options),
-    selectPdfSavePath: (options: { projectName?: string }) =>
+    selectPdfSavePath: (options: { examName?: string }) =>
       ipcRenderer.invoke("export:selectPdfSavePath", options),
     // ストリーミングPDF生成API
     createPdfStreamingSession: (options: {
@@ -506,13 +489,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("export:cancelStreamingSession", sessionId),
     // 個人成績表PDF API
     getIndividualReportData: (options: {
-      projectId: string
+      examId: string
       selectedStudentIds: string[]
       options: import("./lib/export/individual-report").IndividualReportOptions
     }) => ipcRenderer.invoke("export:getIndividualReportData", options),
-    getSubtotalGroupsForReport: (projectId: string) =>
-      ipcRenderer.invoke("export:getSubtotalGroupsForReport", projectId),
-    selectIndividualReportSavePath: (options: { projectName?: string }) =>
+    getSubtotalGroupsForReport: (examId: string) =>
+      ipcRenderer.invoke("export:getSubtotalGroupsForReport", examId),
+    selectIndividualReportSavePath: (options: { examName?: string }) =>
       ipcRenderer.invoke("export:selectIndividualReportSavePath", options),
     saveIndividualReportPdf: (options: {
       filePath: string
@@ -539,7 +522,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }) => ipcRenderer.invoke("export:printMultipleHtmlToPdf", options),
     // Excelプレビューデータ取得
     getExcelPreviewData: (options: {
-      projectId: string
+      examId: string
       selectedStudentIds: string[]
     }) => ipcRenderer.invoke("export:getExcelPreviewData", options),
     // 印刷ダイアログを開く
@@ -549,7 +532,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Excel Export related
   exportGradingDataExcel: (options: {
-    projectId: string
+    examId: string
     selectedStudentIds: string[]
     outputPath?: string
   }) => ipcRenderer.invoke("export-grading-data-excel", options),
@@ -589,19 +572,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ),
     getByStudent: (
       studentId: string,
-      projectId: string,
+      examId: string,
       type?: string,
       userId?: string
     ) =>
       ipcRenderer.invoke(
         "drawing:getByStudent",
         studentId,
-        projectId,
+        examId,
         type,
         userId
       ),
-    getByProject: (projectId: string, type?: string, userId?: string) =>
-      ipcRenderer.invoke("drawing:getByProject", projectId, type, userId),
+    getByExam: (examId: string, type?: string, userId?: string) =>
+      ipcRenderer.invoke("drawing:getByExam", examId, type, userId),
     update: (id: string, data: Partial<DrawingAnnotation>) =>
       ipcRenderer.invoke("drawing:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
@@ -621,40 +604,40 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
   },
 
-  // Project Archive (Export/Import) related
+  // Exam Archive (Export/Import) related
   archive: {
-    exportProject: (options: {
-      projectId: string
+    exportExam: (options: {
+      examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("../types/projectArchive.types").ExportMode
-    }) => ipcRenderer.invoke("archive:exportProject", options),
+      exportMode?: import("../types/examArchive.types").ExportMode
+    }) => ipcRenderer.invoke("archive:exportExam", options),
     analyzeArchive: (options: { archivePath: string }) =>
       ipcRenderer.invoke("archive:analyzeArchive", options),
     preMatch: (options: { archivePath: string }) =>
       ipcRenderer.invoke("archive:preMatch", options),
     detectConflicts: (options: {
       archivePath: string
-      matchingConfig: import("../types/projectArchive.types").MatchingConfig
+      matchingConfig: import("../types/examArchive.types").MatchingConfig
     }) => ipcRenderer.invoke("archive:detectConflicts", options),
     idIntegrationImport: (options: {
       archivePath: string
-      preMatchResult: import("../types/projectArchive.types").FileOverviewData
-      integrationConfig: import("../types/projectArchive.types").IdIntegrationConfig
+      preMatchResult: import("../types/examArchive.types").FileOverviewData
+      integrationConfig: import("../types/examArchive.types").IdIntegrationConfig
       currentUserId: string
-      scoringConflictConfig?: import("../types/projectArchive.types").ScoringConflictConfig
-      updateDecisions?: import("../types/projectArchive.types").UpdateDecisions
+      scoringConflictConfig?: import("../types/examArchive.types").ScoringConflictConfig
+      updateDecisions?: import("../types/examArchive.types").UpdateDecisions
     }) => ipcRenderer.invoke("archive:idIntegrationImport", options),
     detectScoringConflicts: (options: {
       archivePath: string
-      preMatchResult: import("../types/projectArchive.types").FileOverviewData
-      integrationConfig: import("../types/projectArchive.types").IdIntegrationConfig
+      preMatchResult: import("../types/examArchive.types").FileOverviewData
+      integrationConfig: import("../types/examArchive.types").IdIntegrationConfig
     }) => ipcRenderer.invoke("archive:detectScoringConflicts", options),
-    bulkExportProjects: (options: {
-      projectIds: string[]
+    bulkExportExams: (options: {
+      examIds: string[]
       userId: string
-      exportMode?: import("../types/projectArchive.types").ExportMode
-    }) => ipcRenderer.invoke("archive:bulkExportProjects", options),
+      exportMode?: import("../types/examArchive.types").ExportMode
+    }) => ipcRenderer.invoke("archive:bulkExportExams", options),
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
     convertHszToScore: (options: { hszPath: string }) =>
       ipcRenderer.invoke("archive:convertHszToScore", options),
@@ -662,85 +645,78 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("archive:convertDatToScore", options),
   },
 
-  // ProjectClass
-  projectClass: {
-    getAll: (projectId: string) =>
-      ipcRenderer.invoke("project-class:get-all", projectId),
-    getAdministered: (projectId: string) =>
-      ipcRenderer.invoke("project-class:get-administered", projectId),
-    getStatistics: (projectId: string) =>
-      ipcRenderer.invoke("project-class:get-statistics", projectId),
-    getAvailable: (projectId: string) =>
-      ipcRenderer.invoke("project-class:get-available", projectId),
+  // ExamClass
+  examClass: {
+    getAll: (examId: string) =>
+      ipcRenderer.invoke("exam-class:get-all", examId),
+    getAdministered: (examId: string) =>
+      ipcRenderer.invoke("exam-class:get-administered", examId),
+    getStatistics: (examId: string) =>
+      ipcRenderer.invoke("exam-class:get-statistics", examId),
+    getAvailable: (examId: string) =>
+      ipcRenderer.invoke("exam-class:get-available", examId),
     add: (options: {
-      projectId: string
+      examId: string
       classId: string
       administered?: boolean
       statistics?: boolean
-    }) => ipcRenderer.invoke("project-class:add", options),
+    }) => ipcRenderer.invoke("exam-class:add", options),
     update: (options: {
       id: string
       administered?: boolean
       statistics?: boolean
       order?: number
-    }) => ipcRenderer.invoke("project-class:update", options),
-    remove: (id: string) => ipcRenderer.invoke("project-class:remove", id),
-    reorder: (options: { projectId: string; orderedIds: string[] }) =>
-      ipcRenderer.invoke("project-class:reorder", options),
-    removeByIds: (projectId: string, classId: string) =>
-      ipcRenderer.invoke("project-class:remove-by-ids", projectId, classId),
-    addStudentsFromClass: (projectId: string, classId: string) =>
+    }) => ipcRenderer.invoke("exam-class:update", options),
+    remove: (id: string) => ipcRenderer.invoke("exam-class:remove", id),
+    reorder: (options: { examId: string; orderedIds: string[] }) =>
+      ipcRenderer.invoke("exam-class:reorder", options),
+    removeByIds: (examId: string, classId: string) =>
+      ipcRenderer.invoke("exam-class:remove-by-ids", examId, classId),
+    addStudentsFromClass: (examId: string, classId: string) =>
+      ipcRenderer.invoke("exam-class:add-students-from-class", examId, classId),
+    getStudentClassInfo: (examId: string) =>
+      ipcRenderer.invoke("exam-class:get-student-class-info", examId),
+    getStudentClassInfoSingle: (examId: string, studentId: string) =>
       ipcRenderer.invoke(
-        "project-class:add-students-from-class",
-        projectId,
-        classId
-      ),
-    getStudentClassInfo: (projectId: string) =>
-      ipcRenderer.invoke("project-class:get-student-class-info", projectId),
-    getStudentClassInfoSingle: (projectId: string, studentId: string) =>
-      ipcRenderer.invoke(
-        "project-class:get-student-class-info-single",
-        projectId,
+        "exam-class:get-student-class-info-single",
+        examId,
         studentId
       ),
   },
 
-  // UserProject
-  userProject: {
-    getMembers: (projectId: string) =>
-      ipcRenderer.invoke("user-project:get-members", projectId),
-    getRole: (userId: string, projectId: string) =>
-      ipcRenderer.invoke("user-project:get-role", userId, projectId),
-    isOwner: (userId: string, projectId: string) =>
-      ipcRenderer.invoke("user-project:is-owner", userId, projectId),
-    isMember: (userId: string, projectId: string) =>
-      ipcRenderer.invoke("user-project:is-member", userId, projectId),
-    setOwner: (options: { projectId: string; userId: string }) =>
-      ipcRenderer.invoke("user-project:set-owner", options),
-    invite: (options: {
-      projectId: string
-      userId: string
-      invitedBy: string
-    }) => ipcRenderer.invoke("user-project:invite", options),
-    remove: (projectId: string, userId: string, removedBy: string) =>
-      ipcRenderer.invoke("user-project:remove", projectId, userId, removedBy),
+  // UserExam
+  userExam: {
+    getMembers: (examId: string) =>
+      ipcRenderer.invoke("user-exam:get-members", examId),
+    getRole: (userId: string, examId: string) =>
+      ipcRenderer.invoke("user-exam:get-role", userId, examId),
+    isOwner: (userId: string, examId: string) =>
+      ipcRenderer.invoke("user-exam:is-owner", userId, examId),
+    isMember: (userId: string, examId: string) =>
+      ipcRenderer.invoke("user-exam:is-member", userId, examId),
+    setOwner: (options: { examId: string; userId: string }) =>
+      ipcRenderer.invoke("user-exam:set-owner", options),
+    invite: (options: { examId: string; userId: string; invitedBy: string }) =>
+      ipcRenderer.invoke("user-exam:invite", options),
+    remove: (examId: string, userId: string, removedBy: string) =>
+      ipcRenderer.invoke("user-exam:remove", examId, userId, removedBy),
     transferOwnership: (
-      projectId: string,
+      examId: string,
       newOwnerId: string,
       currentOwnerId: string
     ) =>
       ipcRenderer.invoke(
-        "user-project:transfer-ownership",
-        projectId,
+        "user-exam:transfer-ownership",
+        examId,
         newOwnerId,
         currentOwnerId
       ),
-    getUserProjects: (userId: string) =>
-      ipcRenderer.invoke("user-project:get-user-projects", userId),
-    getOwner: (projectId: string) =>
-      ipcRenderer.invoke("user-project:get-owner", projectId),
-    searchUsers: (projectId: string, query: string) =>
-      ipcRenderer.invoke("user-project:search-users", projectId, query),
+    getUserExams: (userId: string) =>
+      ipcRenderer.invoke("user-exam:get-user-exams", userId),
+    getOwner: (examId: string) =>
+      ipcRenderer.invoke("user-exam:get-owner", examId),
+    searchUsers: (examId: string, query: string) =>
+      ipcRenderer.invoke("user-exam:search-users", examId, query),
   },
 
   // Settings
@@ -812,11 +788,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
         value
       ),
 
-    // ProjectMarkingFormat
-    getProjectMarkingFormats: (projectId: string) =>
-      ipcRenderer.invoke("settings:getProjectMarkingFormats", projectId),
-    saveProjectMarkingFormats: (
-      projectId: string,
+    // ExamMarkingFormat
+    getExamMarkingFormats: (examId: string) =>
+      ipcRenderer.invoke("settings:getExamMarkingFormats", examId),
+    saveExamMarkingFormats: (
+      examId: string,
       formats: Array<{
         markType: string
         symbol: string
@@ -824,25 +800,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
         fontSize?: number | null
         strokeWidth?: number | null
       }>
-    ) =>
-      ipcRenderer.invoke(
-        "settings:saveProjectMarkingFormats",
-        projectId,
-        formats
-      ),
+    ) => ipcRenderer.invoke("settings:saveExamMarkingFormats", examId, formats),
 
-    // ProjectExportSettings
-    getProjectExportSettings: (projectId: string) =>
-      ipcRenderer.invoke("settings:getProjectExportSettings", projectId),
-    saveProjectExportSettings: (
-      projectId: string,
+    // ExamExportSettings
+    getExamExportSettings: (examId: string) =>
+      ipcRenderer.invoke("settings:getExamExportSettings", examId),
+    saveExamExportSettings: (
+      examId: string,
       settings: Record<string, unknown>
     ) =>
-      ipcRenderer.invoke(
-        "settings:saveProjectExportSettings",
-        projectId,
-        settings
-      ),
+      ipcRenderer.invoke("settings:saveExamExportSettings", examId, settings),
 
     // CropRegionMarkingOverride (機能H)
     getCropRegionMarkingOverrides: (cropRegionId: string) =>
@@ -869,11 +836,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
         "settings:resetCropRegionMarkingOverrides",
         cropRegionId
       ),
-    getProjectCropRegionMarkingOverrides: (projectId: string) =>
-      ipcRenderer.invoke(
-        "settings:getProjectCropRegionMarkingOverrides",
-        projectId
-      ),
+    getExamCropRegionMarkingOverrides: (examId: string) =>
+      ipcRenderer.invoke("settings:getExamCropRegionMarkingOverrides", examId),
   },
 
   // PDF Tools related
@@ -936,16 +900,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   // =============================================================================
-  // GradeProject（成績算出）
+  // Grade（成績算出）
   // =============================================================================
-  gradeProject: {
-    getAll: () => ipcRenderer.invoke("grade-project:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("grade-project:getById", id),
+  grade: {
+    getAll: () => ipcRenderer.invoke("grade:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("grade:getById", id),
     create: (data: {
       name: string
       description?: string
       referenceDate?: string | null
-    }) => ipcRenderer.invoke("grade-project:create", data),
+    }) => ipcRenderer.invoke("grade:create", data),
     update: (
       id: string,
       data: {
@@ -953,48 +917,40 @@ contextBridge.exposeInMainWorld("electronAPI", {
         description?: string
         referenceDate?: string | null
       }
-    ) => ipcRenderer.invoke("grade-project:update", id, data),
-    delete: (id: string) => ipcRenderer.invoke("grade-project:delete", id),
+    ) => ipcRenderer.invoke("grade:update", id, data),
+    delete: (id: string) => ipcRenderer.invoke("grade:delete", id),
     // 生徒・学級管理
-    getStudents: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:getStudents", gradeProjectId),
-    getClasses: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:getClasses", gradeProjectId),
-    getAvailableClasses: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:getAvailableClasses", gradeProjectId),
-    addStudentsFromClass: (gradeProjectId: string, classId: string) =>
-      ipcRenderer.invoke(
-        "grade-project:addStudentsFromClass",
-        gradeProjectId,
-        classId
-      ),
-    removeClass: (gradeProjectId: string, classId: string) =>
-      ipcRenderer.invoke("grade-project:removeClass", gradeProjectId, classId),
+    getStudents: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getStudents", gradeId),
+    getClasses: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getClasses", gradeId),
+    getAvailableClasses: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getAvailableClasses", gradeId),
+    addStudentsFromClass: (gradeId: string, classId: string) =>
+      ipcRenderer.invoke("grade:addStudentsFromClass", gradeId, classId),
+    removeClass: (gradeId: string, classId: string) =>
+      ipcRenderer.invoke("grade:removeClass", gradeId, classId),
     updateStudentOrders: (
-      gradeProjectId: string,
+      gradeId: string,
       studentOrders: { studentId: string; customOrder: number }[]
     ) =>
-      ipcRenderer.invoke(
-        "grade-project:updateStudentOrders",
-        gradeProjectId,
-        studentOrders
-      ),
+      ipcRenderer.invoke("grade:updateStudentOrders", gradeId, studentOrders),
     // GradeItem
-    getGradeItems: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:getGradeItems", gradeProjectId),
-    createGradeItem: (data: { gradeProjectId: string; name: string }) =>
-      ipcRenderer.invoke("grade-project:createGradeItem", data),
+    getGradeItems: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getGradeItems", gradeId),
+    createGradeItem: (data: { gradeId: string; name: string }) =>
+      ipcRenderer.invoke("grade:createGradeItem", data),
     updateGradeItem: (id: string, data: { name?: string }) =>
-      ipcRenderer.invoke("grade-project:updateGradeItem", id, data),
+      ipcRenderer.invoke("grade:updateGradeItem", id, data),
     deleteGradeItem: (id: string) =>
-      ipcRenderer.invoke("grade-project:deleteGradeItem", id),
+      ipcRenderer.invoke("grade:deleteGradeItem", id),
     reorderGradeItems: (items: { id: string; order: number }[]) =>
-      ipcRenderer.invoke("grade-project:reorderGradeItems", items),
+      ipcRenderer.invoke("grade:reorderGradeItems", items),
     // データソース
     createDataSource: (data: {
       gradeItemId: string
       type: string
-      examProjectId?: string
+      examId?: string
       subtotalId?: string
       cropRegionId?: string
       name: string
@@ -1006,7 +962,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       treatExpectedAsMissing?: boolean
       estimationMode?: string
       estimationSourceIds?: string[]
-    }) => ipcRenderer.invoke("grade-project:createDataSource", data),
+    }) => ipcRenderer.invoke("grade:createDataSource", data),
     updateDataSource: (
       id: string,
       data: {
@@ -1020,11 +976,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
         estimationMode?: string
         estimationSourceIds?: string[]
       }
-    ) => ipcRenderer.invoke("grade-project:updateDataSource", id, data),
+    ) => ipcRenderer.invoke("grade:updateDataSource", id, data),
     deleteDataSource: (id: string) =>
-      ipcRenderer.invoke("grade-project:deleteDataSource", id),
+      ipcRenderer.invoke("grade:deleteDataSource", id),
     reorderDataSources: (items: { id: string; order: number }[]) =>
-      ipcRenderer.invoke("grade-project:reorderDataSources", items),
+      ipcRenderer.invoke("grade:reorderDataSources", items),
     batchUpdateAbsentPolicy: (
       dataSourceIds: string[],
       policy: {
@@ -1037,104 +993,85 @@ contextBridge.exposeInMainWorld("electronAPI", {
       }
     ) =>
       ipcRenderer.invoke(
-        "grade-project:batchUpdateAbsentPolicy",
+        "grade:batchUpdateAbsentPolicy",
         dataSourceIds,
         policy
       ),
     getManualScores: (gradeDataSourceId: string) =>
-      ipcRenderer.invoke("grade-project:getManualScores", gradeDataSourceId),
+      ipcRenderer.invoke("grade:getManualScores", gradeDataSourceId),
     batchUpsertManualScores: (
       scores: {
         gradeDataSourceId: string
         studentId: string
         score: number | null
       }[]
-    ) => ipcRenderer.invoke("grade-project:batchUpsertManualScores", scores),
-    getBoundarySets: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:getBoundarySets", gradeProjectId),
+    ) => ipcRenderer.invoke("grade:batchUpsertManualScores", scores),
+    getBoundarySets: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getBoundarySets", gradeId),
     upsertBoundarySet: (data: {
-      gradeProjectId: string
+      gradeId: string
       targetType: string
       gradeItemId: string | null
       boundaries: { label: string; minPercentage: number; order: number }[]
-    }) => ipcRenderer.invoke("grade-project:upsertBoundarySet", data),
+    }) => ipcRenderer.invoke("grade:upsertBoundarySet", data),
     deleteBoundarySet: (id: string) =>
-      ipcRenderer.invoke("grade-project:deleteBoundarySet", id),
+      ipcRenderer.invoke("grade:deleteBoundarySet", id),
     upsertGradeOverride: (data: {
-      gradeProjectId: string
+      gradeId: string
       studentId: string
       targetType: string
       gradeItemId: string | null
       overrideLabel: string
-    }) => ipcRenderer.invoke("grade-project:upsertGradeOverride", data),
+    }) => ipcRenderer.invoke("grade:upsertGradeOverride", data),
     deleteGradeOverride: (data: {
-      gradeProjectId: string
+      gradeId: string
       studentId: string
       targetType: string
       gradeItemId: string | null
-    }) => ipcRenderer.invoke("grade-project:deleteGradeOverride", data),
-    getGradeItemExclusions: (gradeProjectId: string) =>
-      ipcRenderer.invoke(
-        "grade-project:getGradeItemExclusions",
-        gradeProjectId
-      ),
+    }) => ipcRenderer.invoke("grade:deleteGradeOverride", data),
+    getGradeItemExclusions: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getGradeItemExclusions", gradeId),
     setGradeItemExclusion: (data: {
-      gradeProjectId: string
+      gradeId: string
       studentId: string
       gradeItemId: string
       excluded: boolean
-    }) => ipcRenderer.invoke("grade-project:setGradeItemExclusion", data),
+    }) => ipcRenderer.invoke("grade:setGradeItemExclusion", data),
     batchUpdateGradeItemExclusions: (
-      gradeProjectId: string,
+      gradeId: string,
       updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
     ) =>
       ipcRenderer.invoke(
-        "grade-project:batchUpdateGradeItemExclusions",
-        gradeProjectId,
+        "grade:batchUpdateGradeItemExclusions",
+        gradeId,
         updates
       ),
-    calculateGrades: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:calculateGrades", gradeProjectId),
-    getExamProjectCandidates: () =>
-      ipcRenderer.invoke("grade-project:getExamProjectCandidates"),
-    getProjectSubtotalGroups: (projectId: string) =>
-      ipcRenderer.invoke("grade-project:getProjectSubtotalGroups", projectId),
-    getProjectCropRegions: (projectId: string) =>
-      ipcRenderer.invoke("grade-project:getProjectCropRegions", projectId),
+    calculateGrades: (gradeId: string) =>
+      ipcRenderer.invoke("grade:calculateGrades", gradeId),
+    getExamCandidates: () => ipcRenderer.invoke("grade:getExamCandidates"),
+    getExamSubtotalGroups: (examId: string) =>
+      ipcRenderer.invoke("grade:getExamSubtotalGroups", examId),
+    getExamCropRegions: (examId: string) =>
+      ipcRenderer.invoke("grade:getExamCropRegions", examId),
     calculateSourceMaxScore: (data: {
       type: string
-      examProjectId?: string
+      examId?: string
       subtotalId?: string
       cropRegionId?: string
-    }) => ipcRenderer.invoke("grade-project:calculateSourceMaxScore", data),
-    exportExcel: (
-      gradeProjectId: string,
-      options?: { studentIds?: string[] }
-    ) =>
-      ipcRenderer.invoke("grade-project:exportExcel", gradeProjectId, options),
-    getExportSettings: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:getExportSettings", gradeProjectId),
-    saveExportSettings: (
-      gradeProjectId: string,
-      settings: Record<string, unknown>
-    ) =>
-      ipcRenderer.invoke(
-        "grade-project:saveExportSettings",
-        gradeProjectId,
-        settings
-      ),
-    exportArchive: (gradeProjectId: string) =>
-      ipcRenderer.invoke("grade-project:exportArchive", gradeProjectId),
-    importArchive: () => ipcRenderer.invoke("grade-project:importArchive"),
+    }) => ipcRenderer.invoke("grade:calculateSourceMaxScore", data),
+    exportExcel: (gradeId: string, options?: { studentIds?: string[] }) =>
+      ipcRenderer.invoke("grade:exportExcel", gradeId, options),
+    getExportSettings: (gradeId: string) =>
+      ipcRenderer.invoke("grade:getExportSettings", gradeId),
+    saveExportSettings: (gradeId: string, settings: Record<string, unknown>) =>
+      ipcRenderer.invoke("grade:saveExportSettings", gradeId, settings),
+    exportArchive: (gradeId: string) =>
+      ipcRenderer.invoke("grade:exportArchive", gradeId),
+    importArchive: () => ipcRenderer.invoke("grade:importArchive"),
     executeImport: (
       archiveData: unknown,
-      examProjectMapping?: Record<string, string>
-    ) =>
-      ipcRenderer.invoke(
-        "grade-project:executeImport",
-        archiveData,
-        examProjectMapping
-      ),
+      examMapping?: Record<string, string>
+    ) => ipcRenderer.invoke("grade:executeImport", archiveData, examMapping),
   },
 
   // =============================================================================
@@ -1196,10 +1133,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
       params: { colorThreshold: number; areaThreshold: number }
       pageIndex?: number
     }) => ipcRenderer.invoke("omr:batch-recognize", args),
-    saveTemplate: (projectId: string, template: unknown) =>
-      ipcRenderer.invoke("omr:save-template", projectId, template),
-    loadTemplate: (projectId: string) =>
-      ipcRenderer.invoke("omr:load-template", projectId),
+    saveTemplate: (examId: string, template: unknown) =>
+      ipcRenderer.invoke("omr:save-template", examId, template),
+    loadTemplate: (examId: string) =>
+      ipcRenderer.invoke("omr:load-template", examId),
     onBatchProgress: (
       callback: (progress: {
         total: number
@@ -1235,9 +1172,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ) => ipcRenderer.invoke("asb:export-png", args),
     selectSavePath: (options: { type: "pdf" | "png"; defaultName?: string }) =>
       ipcRenderer.invoke("asb:select-save-path", options),
-    convertToProject: (
-      args: import("../types/answerSheetBuilder.types").ASBConvertToProjectArgs
-    ) => ipcRenderer.invoke("asb:convert-to-project", args),
+    convertToExam: (
+      args: import("../types/answerSheetBuilder.types").ASBConvertToExamArgs
+    ) => ipcRenderer.invoke("asb:convert-to-exam", args),
     print: (args: import("../types/answerSheetBuilder.types").ASBPrintArgs) =>
       ipcRenderer.invoke("asb:print", args),
   },

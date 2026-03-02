@@ -58,10 +58,10 @@ export function isPointInAnnotation(
         )
       )
 
-      const projectionX = annotation.x + t * lineDx
-      const projectionY = annotation.y + t * lineDy
+      const examionX = annotation.x + t * lineDx
+      const examionY = annotation.y + t * lineDy
       const distance = Math.sqrt(
-        (point.x - projectionX) ** 2 + (point.y - projectionY) ** 2
+        (point.x - examionX) ** 2 + (point.y - examionY) ** 2
       )
 
       return distance < threshold

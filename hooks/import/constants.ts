@@ -5,7 +5,7 @@
 import type {
   ImportWizardState,
   ImportWizardStep,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 /**
  * インポートウィザードの初期状態
@@ -28,7 +28,7 @@ export const initialState: ImportWizardState = {
     student: "studentNumber",
     class: "name",
     user: "username",
-    project: "always_new",
+    exam: "always_new",
     subtotalGroup: "name",
   },
   isProcessing: false,

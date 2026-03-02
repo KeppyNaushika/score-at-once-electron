@@ -6,8 +6,8 @@ import {
   createManyCropRegions as dbCreateManyCropRegions,
   deleteCropRegion as dbDeleteCropRegion,
   getCropRegionById as dbGetCropRegionById,
-  getCropRegionsByProjectId as dbGetCropRegionsByProjectId,
-  getQuestionAnswerRegionsByProjectId as dbGetQuestionAnswerRegionsByProjectId,
+  getCropRegionsByExamId as dbGetCropRegionsByExamId,
+  getQuestionAnswerRegionsByExamId as dbGetQuestionAnswerRegionsByExamId,
   updateCropRegion as dbUpdateCropRegion,
   updateCropRegionOrders as dbUpdateCropRegionOrders,
 } from "../lib/prisma/cropRegion"
@@ -143,29 +143,29 @@ export function setupCropRegionHandlers(): void {
   })
 
   ipcMain.handle(
-    "get-crop-regions-by-project-id",
-    async (_event, projectId: string) => {
+    "get-crop-regions-by-exam-id",
+    async (_event, examId: string) => {
       try {
-        const result = await dbGetCropRegionsByProjectId(projectId)
+        const result = await dbGetCropRegionsByExamId(examId)
         // questionScoresのDecimalをnumberに変換
         return result?.map(serializeCropRegion) || []
       } catch (error) {
-        console.error("❌ IPC: get-crop-regions-by-project-id error:", error)
+        console.error("❌ IPC: get-crop-regions-by-exam-id error:", error)
         throw error
       }
     }
   )
 
   ipcMain.handle(
-    "get-question-answer-regions-by-project-id",
-    async (_event, projectId: string) => {
+    "get-question-answer-regions-by-exam-id",
+    async (_event, examId: string) => {
       try {
-        const result = await dbGetQuestionAnswerRegionsByProjectId(projectId)
+        const result = await dbGetQuestionAnswerRegionsByExamId(examId)
         // questionScoresのDecimalをnumberに変換
         return result?.map(serializeCropRegion) || []
       } catch (error) {
         console.error(
-          "❌ IPC: get-question-answer-regions-by-project-id error:",
+          "❌ IPC: get-question-answer-regions-by-exam-id error:",
           error
         )
         throw error

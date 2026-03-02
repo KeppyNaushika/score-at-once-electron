@@ -2,8 +2,8 @@
  * アーカイブ往復テスト
  *
  * テスト対象:
- * - electron-src/lib/export/project-archive/archiveCreator.ts
- * - electron-src/lib/import/project-archive/archiveExtractor.ts
+ * - electron-src/lib/export/exam-archive/archiveCreator.ts
+ * - electron-src/lib/import/exam-archive/archiveExtractor.ts
  *
  * Electron非依存でZIPの作成・抽出・検証を行う
  */
@@ -47,7 +47,7 @@ import {
   cleanupTempDir,
   extractArchive,
   readManifestOnly,
-} from "../../../electron-src/lib/import/project-archive/archiveExtractor"
+} from "../../../electron-src/lib/import/exam-archive/archiveExtractor"
 
 let testDir: string
 
@@ -65,8 +65,8 @@ describe("archiveRoundTrip", () => {
   // RT-1: CollectedDataからアーカイブ作成→抽出→全JSONファイル一致
   it("RT-1: アーカイブ作成→抽出で全JSONデータが一致する", async () => {
     const collectedData = createMinimalCollectedData({
-      projectId: "rt-project-1",
-      projectName: "RT試験",
+      examId: "rt-exam-1",
+      examName: "RT試験",
     })
 
     // students追加
@@ -86,7 +86,7 @@ describe("archiveRoundTrip", () => {
     collectedData.counts.students = 1
 
     const archivePath = path.join(testDir, "test.score")
-    createTestArchive(collectedData, archivePath, "rt-project-1", "RT試験")
+    createTestArchive(collectedData, archivePath, "rt-exam-1", "RT試験")
 
     // 抽出
     const result = await extractArchive(archivePath)
@@ -96,10 +96,10 @@ describe("archiveRoundTrip", () => {
     const data = result.data!
 
     // JSON一致
-    expect(data.projectData.project.id).toBe("rt-project-1")
+    expect(data.examData.exam.id).toBe("rt-exam-1")
     expect(data.studentsData.students.length).toBe(1)
     expect(data.studentsData.students[0].lastName).toBe("山田")
-    expect(data.manifest.projectName).toBe("RT試験")
+    expect(data.manifest.examName).toBe("RT試験")
 
     // 後片付け
     cleanupTempDir(data.tempDir)
@@ -108,22 +108,22 @@ describe("archiveRoundTrip", () => {
   // RT-2: マニフェスト構造の検証
   it("RT-2: マニフェスト構造が正しく作成される", async () => {
     const collectedData = createMinimalCollectedData({
-      projectId: "rt-project-2",
-      projectName: "マニフェストテスト",
+      examId: "rt-exam-2",
+      examName: "マニフェストテスト",
     })
 
     const archivePath = path.join(testDir, "manifest-test.score")
     createTestArchive(
       collectedData,
       archivePath,
-      "rt-project-2",
+      "rt-exam-2",
       "マニフェストテスト"
     )
 
     const contents = verifyArchiveContents(archivePath)
     expect(contents.manifest.version).toBe("1.4.0")
-    expect(contents.manifest.projectId).toBe("rt-project-2")
-    expect(contents.manifest.projectName).toBe("マニフェストテスト")
+    expect(contents.manifest.examId).toBe("rt-exam-2")
+    expect(contents.manifest.examName).toBe("マニフェストテスト")
     expect(contents.manifest.exportedAt).toBeDefined()
     expect(contents.manifest.counts).toBeDefined()
   })
@@ -134,7 +134,7 @@ describe("archiveRoundTrip", () => {
     const pngBuffer = createMinimalPngBuffer()
 
     const archivePath = path.join(testDir, "images-test.score")
-    createTestArchive(collectedData, archivePath, "img-project", "画像テスト", {
+    createTestArchive(collectedData, archivePath, "img-exam", "画像テスト", {
       masterImageFiles: [
         { archivePath: "master-images/page1.png", content: pngBuffer },
       ],
@@ -157,20 +157,14 @@ describe("archiveRoundTrip", () => {
     const pngBuffer = createMinimalPngBuffer()
 
     const archivePath = path.join(testDir, "answer-images.score")
-    createTestArchive(
-      collectedData,
-      archivePath,
-      "img-project-2",
-      "答案テスト",
-      {
-        answerSheetFiles: [
-          {
-            archivePath: "answer-sheets/S001_page1.png",
-            content: pngBuffer,
-          },
-        ],
-      }
-    )
+    createTestArchive(collectedData, archivePath, "img-exam-2", "答案テスト", {
+      answerSheetFiles: [
+        {
+          archivePath: "answer-sheets/S001_page1.png",
+          content: pngBuffer,
+        },
+      ],
+    })
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
@@ -185,7 +179,7 @@ describe("archiveRoundTrip", () => {
     const collectedData = createMinimalCollectedData()
 
     const archivePath = path.join(testDir, "no-images.score")
-    createTestArchive(collectedData, archivePath, "no-img-project", "画像なし")
+    createTestArchive(collectedData, archivePath, "no-img-exam", "画像なし")
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
@@ -200,7 +194,7 @@ describe("archiveRoundTrip", () => {
     const collectedData = createMinimalCollectedData()
 
     const archivePath = path.join(testDir, "sparse.score")
-    createTestArchive(collectedData, archivePath, "sparse-project", "疎テスト")
+    createTestArchive(collectedData, archivePath, "sparse-exam", "疎テスト")
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
@@ -229,7 +223,7 @@ describe("archiveRoundTrip", () => {
   it("RT-9: manifest.jsonなしのZIPでエラーが返る", async () => {
     const noManifestPath = path.join(testDir, "no-manifest.score")
     const zip = new AdmZip()
-    zip.addFile("project.json", Buffer.from("{}"))
+    zip.addFile("exam.json", Buffer.from("{}"))
     zip.writeZip(noManifestPath)
 
     const result = await extractArchive(noManifestPath)
@@ -240,22 +234,22 @@ describe("archiveRoundTrip", () => {
   // RT-10: readManifestOnlyで完全抽出なしにマニフェスト取得
   it("RT-10: readManifestOnlyで完全抽出なしにマニフェストを取得できる", async () => {
     const collectedData = createMinimalCollectedData({
-      projectId: "manifest-only-project",
+      examId: "manifest-only-exam",
     })
 
     const archivePath = path.join(testDir, "manifest-only.score")
     createTestArchive(
       collectedData,
       archivePath,
-      "manifest-only-project",
+      "manifest-only-exam",
       "マニフェストのみ"
     )
 
     const result = await readManifestOnly(archivePath)
     expect(result.success).toBe(true)
     expect(result.manifest).toBeDefined()
-    expect(result.manifest!.projectId).toBe("manifest-only-project")
-    expect(result.manifest!.projectName).toBe("マニフェストのみ")
+    expect(result.manifest!.examId).toBe("manifest-only-exam")
+    expect(result.manifest!.examName).toBe("マニフェストのみ")
   })
 
   // RT-11: subjects.jsonなし（v1.4.0以前）でデフォルト空配列
@@ -274,8 +268,8 @@ describe("archiveRoundTrip", () => {
           schemaVersion: "test",
           appVersion: "0.4.0",
           exportedAt: now,
-          projectId: "old-project",
-          projectName: "旧バージョン",
+          examId: "old-exam",
+          examName: "旧バージョン",
           counts: {
             students: 0,
             classes: 0,
@@ -292,11 +286,11 @@ describe("archiveRoundTrip", () => {
       )
     )
     zip.addFile(
-      "project.json",
+      "exam.json",
       Buffer.from(
         JSON.stringify({
-          project: {
-            id: "old-project",
+          exam: {
+            id: "old-exam",
             examName: "旧",
             examDate: now,
             subject: null,
@@ -304,15 +298,15 @@ describe("archiveRoundTrip", () => {
             createdAt: now,
             updatedAt: now,
           },
-          projectPages: [],
+          examPages: [],
           cropRegions: [],
           pageImages: [],
           masterImages: [],
           studentAnswerImages: [],
-          projectStudents: [],
-          userProjects: [],
-          projectSubtotalGroups: [],
-          projectClasses: [],
+          examStudents: [],
+          userExams: [],
+          examSubtotalGroups: [],
+          examClasses: [],
         })
       )
     )

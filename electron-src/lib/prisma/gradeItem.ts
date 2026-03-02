@@ -12,14 +12,14 @@ function serialize<T>(data: T): T {
 /**
  * GradeItem一覧を取得（dataSources含む）
  */
-export async function getGradeItemsByProjectId(gradeProjectId: string) {
+export async function getGradeItemsByExamId(gradeId: string) {
   try {
     const gradeItems = await prisma.gradeItem.findMany({
-      where: { gradeProjectId },
+      where: { gradeId },
       include: {
         dataSources: {
           include: {
-            examProject: {
+            exam: {
               select: { id: true, examName: true, examDate: true },
             },
             subtotal: { select: { id: true, name: true, order: true } },
@@ -44,27 +44,24 @@ export async function getGradeItemsByProjectId(gradeProjectId: string) {
 /**
  * GradeItemを作成（order自動計算）
  */
-export async function createGradeItem(data: {
-  gradeProjectId: string
-  name: string
-}) {
+export async function createGradeItem(data: { gradeId: string; name: string }) {
   try {
     const maxOrder = await prisma.gradeItem.aggregate({
-      where: { gradeProjectId: data.gradeProjectId },
+      where: { gradeId: data.gradeId },
       _max: { order: true },
     })
     const nextOrder = (maxOrder._max.order ?? -1) + 1
 
     const gradeItem = await prisma.gradeItem.create({
       data: {
-        gradeProjectId: data.gradeProjectId,
+        gradeId: data.gradeId,
         name: data.name,
         order: nextOrder,
       },
       include: {
         dataSources: {
           include: {
-            examProject: {
+            exam: {
               select: { id: true, examName: true, examDate: true },
             },
             subtotal: { select: { id: true, name: true, order: true } },
@@ -95,7 +92,7 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
       include: {
         dataSources: {
           include: {
-            examProject: {
+            exam: {
               select: { id: true, examName: true, examDate: true },
             },
             subtotal: { select: { id: true, name: true, order: true } },

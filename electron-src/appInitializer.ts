@@ -1,10 +1,19 @@
-import { initializeDataDirectory } from "./lib/dataManager"
+import {
+  initializeDataDirectory,
+  migrateProjectsToExams,
+} from "./lib/dataManager"
 import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseInitializer"
 
 export async function initializeApp(): Promise<void> {
   try {
     // データディレクトリの初期化
     await initializeDataDirectory()
+
+    // data/projects/ → data/exams/ マイグレーション（v0.6.x リネーム対応）
+    const migrated = await migrateProjectsToExams()
+    if (migrated) {
+      console.log("Migrated data/projects/ → data/exams/")
+    }
 
     // データベースの初期化とセットアップ
     try {

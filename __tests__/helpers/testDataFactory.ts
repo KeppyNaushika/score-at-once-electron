@@ -6,15 +6,15 @@
 
 import { randomUUID } from "crypto"
 
+import type { ExtractedArchiveData } from "../../electron-src/lib/import/exam-archive/archiveExtractor"
 import type {
   IdMappings,
   ImportCounts,
 } from "../../electron-src/lib/import/merge/types"
 import { createEmptyCounts } from "../../electron-src/lib/import/merge/types"
-import type { ExtractedArchiveData } from "../../electron-src/lib/import/project-archive/archiveExtractor"
 import type {
   ArchiveClassesData,
-  ArchiveProjectData,
+  ArchiveExamData,
   ArchiveScoresData,
   ArchiveStudentsData,
   ArchiveSubjectsData,
@@ -27,7 +27,7 @@ import type {
   PreMatchingResult,
   ScoringConflict,
   ScoringConflictConfig,
-} from "../../types/projectArchive.types"
+} from "../../types/examArchive.types"
 
 // =============================================================================
 // 基本ID生成
@@ -126,30 +126,30 @@ export function createArchiveUsersData(
   }
 }
 
-export function createArchiveProjectData(
+export function createArchiveExamData(
   overrides: {
-    projectId?: string
+    examId?: string
     examName?: string
     pageCount?: number
     cropRegionsPerPage?: number
   } = {}
-): ArchiveProjectData {
-  const projectId = overrides.projectId ?? generateId()
+): ArchiveExamData {
+  const examId = overrides.examId ?? generateId()
   const pageCount = overrides.pageCount ?? 1
   const cropRegionsPerPage = overrides.cropRegionsPerPage ?? 2
 
-  const projectPages = Array.from({ length: pageCount }, (_, i) => ({
+  const examPages = Array.from({ length: pageCount }, (_, i) => ({
     id: generateId(),
-    projectId,
+    examId,
     pageNumber: i + 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }))
 
-  const cropRegions = projectPages.flatMap((page, pi) =>
+  const cropRegions = examPages.flatMap((page, pi) =>
     Array.from({ length: cropRegionsPerPage }, (_, ri) => ({
       id: generateId(),
-      projectPageId: page.id,
+      examPageId: page.id,
       label: `問${pi * cropRegionsPerPage + ri + 1}`,
       type: "QUESTION",
       x: 0,
@@ -164,8 +164,8 @@ export function createArchiveProjectData(
   )
 
   return {
-    project: {
-      id: projectId,
+    exam: {
+      id: examId,
       examName: overrides.examName ?? "テスト試験",
       examDate: new Date().toISOString(),
       subject: "数学",
@@ -173,15 +173,15 @@ export function createArchiveProjectData(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-    projectPages,
+    examPages,
     cropRegions,
     pageImages: [],
     masterImages: [],
     studentAnswerImages: [],
-    projectStudents: [],
-    userProjects: [],
-    projectSubtotalGroups: [],
-    projectClasses: [],
+    examStudents: [],
+    userExams: [],
+    examSubtotalGroups: [],
+    examClasses: [],
   }
 }
 
@@ -255,7 +255,7 @@ export function createArchiveSubjectsData(): ArchiveSubjectsData {
 
 export function createExtractedArchiveData(
   overrides: {
-    projectData?: ArchiveProjectData
+    examData?: ArchiveExamData
     studentsData?: ArchiveStudentsData
     classesData?: ArchiveClassesData
     usersData?: ArchiveUsersData
@@ -270,8 +270,8 @@ export function createExtractedArchiveData(
       schemaVersion: "test",
       appVersion: "0.4.9-alpha.0",
       exportedAt: new Date().toISOString(),
-      projectId: overrides.projectData?.project.id ?? generateId(),
-      projectName: "テスト",
+      examId: overrides.examData?.exam.id ?? generateId(),
+      examName: "テスト",
       counts: {
         students: 0,
         classes: 0,
@@ -285,7 +285,7 @@ export function createExtractedArchiveData(
         answerSheetImages: 0,
       },
     },
-    projectData: overrides.projectData ?? createArchiveProjectData(),
+    examData: overrides.examData ?? createArchiveExamData(),
     studentsData: overrides.studentsData ?? createArchiveStudentsData(),
     classesData: overrides.classesData ?? createArchiveClassesData(),
     usersData: overrides.usersData ?? createArchiveUsersData(),
@@ -333,7 +333,7 @@ export function createFileOverviewData(
     student: overrides.student ?? createPreMatchingResult(),
     class: overrides.class ?? createPreMatchingResult(),
     subtotalGroup: overrides.subtotalGroup ?? createPreMatchingResult(),
-    project: overrides.project,
+    exam: overrides.exam,
     scoringConflicts: overrides.scoringConflicts,
   }
 }
@@ -379,14 +379,14 @@ export function createEmptyIdMappings(): IdMappings {
     class: {},
     subtotalGroup: {},
     subtotal: {},
-    project: {},
-    projectPage: {},
+    exam: {},
+    examPage: {},
     cropRegion: {},
     masterImage: {},
     studentAnswerImage: {},
-    projectStudent: {},
-    userProject: {},
-    projectSubtotalGroup: {},
+    examStudent: {},
+    userExam: {},
+    examSubtotalGroup: {},
     cropSubtotal: {},
     questionScore: {},
     drawingAnnotation: {},

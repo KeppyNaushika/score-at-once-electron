@@ -11,13 +11,13 @@
 import type { Prisma } from "@prisma/client"
 
 /**
- * IPCハンドラーが返すProject型
- * getProjectsクエリの戻り値 + 平坦化されたcropRegionsとanswerImages
+ * IPCハンドラーが返すExam型
+ * getExamsクエリの戻り値 + 平坦化されたcropRegionsとanswerImages
  */
-export type ProjectWithDetails = Prisma.ProjectGetPayload<{
+export type ExamWithDetails = Prisma.ExamGetPayload<{
   include: {
-    userProjects: { include: { user: true } }
-    projectPages: {
+    userExams: { include: { user: true } }
+    examPages: {
       include: {
         masterImages: true
         studentAnswerImages: { include: { student: true } }
@@ -28,10 +28,10 @@ export type ProjectWithDetails = Prisma.ProjectGetPayload<{
         }
       }
     }
-    projectSubtotalGroups: {
+    examSubtotalGroups: {
       include: { subtotalGroup: { include: { subtotals: true } } }
     }
-    projectStudents: true
+    examStudents: true
   }
 }> & {
   /** IPCハンドラーで平坦化されるcropRegions */
@@ -48,19 +48,19 @@ export type ProjectWithDetails = Prisma.ProjectGetPayload<{
   })[]
 }
 
-/** @deprecated Use ProjectWithDetails instead */
-export type SerializedProject = ProjectWithDetails
+/** @deprecated Use ExamWithDetails instead */
+export type SerializedExam = ExamWithDetails
 
 // =============================================================================
 // 型ガード関数
 // =============================================================================
 
 /**
- * データがProjectWithDetails型かどうかを検証する型ガード
+ * データがExamWithDetails型かどうかを検証する型ガード
  * @param data - 検証対象のデータ
- * @returns ProjectWithDetails型の場合true
+ * @returns ExamWithDetails型の場合true
  */
-export function isValidProject(data: unknown): data is ProjectWithDetails {
+export function isValidExam(data: unknown): data is ExamWithDetails {
   if (typeof data !== "object" || data === null) return false
 
   const obj = data as Record<string, unknown>
@@ -81,12 +81,12 @@ export function isValidProject(data: unknown): data is ProjectWithDetails {
       typeof obj.description === "string") &&
     isValidDate(obj.createdAt) &&
     isValidDate(obj.updatedAt) &&
-    (obj.projectPages === undefined || Array.isArray(obj.projectPages)) &&
+    (obj.examPages === undefined || Array.isArray(obj.examPages)) &&
     (obj.cropRegions === undefined || Array.isArray(obj.cropRegions)) &&
-    (obj.projectStudents === undefined || Array.isArray(obj.projectStudents)) &&
-    (obj.userProjects === undefined || Array.isArray(obj.userProjects)) &&
-    (obj.projectSubtotalGroups === undefined ||
-      Array.isArray(obj.projectSubtotalGroups)) &&
+    (obj.examStudents === undefined || Array.isArray(obj.examStudents)) &&
+    (obj.userExams === undefined || Array.isArray(obj.userExams)) &&
+    (obj.examSubtotalGroups === undefined ||
+      Array.isArray(obj.examSubtotalGroups)) &&
     (obj.answerImages === undefined || Array.isArray(obj.answerImages))
   )
 }
@@ -116,7 +116,7 @@ export type CropRegionAreaType = (typeof CROP_REGION_AREA_TYPES)[number]
  */
 export interface CropRegionArea {
   id?: string
-  projectPageId?: string
+  examPageId?: string
   label: string
   type: string
   x: number
@@ -177,7 +177,7 @@ export interface QuestionScoreUpdateData {
  * preload.tsでIPC通信時に使用
  */
 export interface CropRegionCreateData {
-  projectPageId: string
+  examPageId: string
   label: string
   type: CropRegionAreaType
   x: number

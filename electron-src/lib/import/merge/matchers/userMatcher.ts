@@ -2,9 +2,9 @@
  * ユーザーマッチングロジック
  */
 
-import type { UserMatchingMethod } from "../../../../../types/projectArchive.types"
+import type { UserMatchingMethod } from "../../../../../types/examArchive.types"
 import prisma from "../../../prisma/client"
-import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type { MatchResult, UserData } from "./types"
 
 /**

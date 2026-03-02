@@ -66,21 +66,21 @@ export function setupDrawingHandlers() {
   )
 
   /**
-   * 特定の学生・プロジェクトの全描画アノテーション取得（透明度制御用）
+   * 特定の学生・試験の全描画アノテーション取得（透明度制御用）
    */
   ipcMain.handle(
     "drawing:getByStudent",
     async (
       _,
       studentId: string,
-      projectId: string,
+      examId: string,
       type?: DrawingType,
       userId?: string
     ) => {
       try {
         const result = await drawingService.getDrawingAnnotationsByStudent(
           studentId,
-          projectId,
+          examId,
           type,
           userId
         )
@@ -99,26 +99,26 @@ export function setupDrawingHandlers() {
   )
 
   /**
-   * プロジェクト全体の描画アノテーション取得（PDF出力用）
+   * 試験全体の描画アノテーション取得（PDF出力用）
    */
   ipcMain.handle(
-    "drawing:getByProject",
-    async (_, projectId: string, type?: DrawingType, userId?: string) => {
+    "drawing:getByExam",
+    async (_, examId: string, type?: DrawingType, userId?: string) => {
       try {
-        const result = await drawingService.getDrawingAnnotationsByProject(
-          projectId,
+        const result = await drawingService.getDrawingAnnotationsByExam(
+          examId,
           type,
           userId
         )
         return { success: true, data: result }
       } catch (error) {
-        console.error("🚫 プロジェクト別描画アノテーション取得エラー:", error)
+        console.error("🚫 試験別描画アノテーション取得エラー:", error)
         return {
           success: false,
           error:
             error instanceof Error
               ? error.message
-              : "プロジェクト別描画アノテーション取得に失敗しました",
+              : "試験別描画アノテーション取得に失敗しました",
         }
       }
     }
@@ -288,7 +288,7 @@ export function removeDrawingHandlers() {
     "drawing:create",
     "drawing:getByQuestionScore",
     "drawing:getByStudent",
-    "drawing:getByProject",
+    "drawing:getByExam",
     "drawing:update",
     "drawing:delete",
     "drawing:deleteByQuestionScore",

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest"
 
 import type { IdMappings } from "../../../electron-src/lib/import/merge/types"
 import {
-  createArchiveProjectData,
+  createArchiveExamData,
   createEmptyIdMappings,
   createEmptyImportCounts,
   createExtractedArchiveData,
@@ -36,13 +36,13 @@ describe("バグ修正確認テスト", () => {
   })
 
   describe("B3: v1.4.0+データのインポート対応", () => {
-    it("修正済み: ProjectMarkingFormatがインポートで処理されることを確認", () => {
-      // 修正済み: v1.4.0+データは processProjectMarkingFormats等で処理される
-      const projectData = createArchiveProjectData()
-      projectData.projectMarkingFormats = [
+    it("修正済み: ExamMarkingFormatがインポートで処理されることを確認", () => {
+      // 修正済み: v1.4.0+データは processExamMarkingFormats等で処理される
+      const examData = createArchiveExamData()
+      examData.examMarkingFormats = [
         {
           id: generateId(),
-          projectId: projectData.project.id,
+          examId: examData.exam.id,
           markType: "correct",
           symbol: "○",
           color: "#00ff00",
@@ -53,30 +53,30 @@ describe("バグ修正確認テスト", () => {
         },
       ]
 
-      // 修正済み: idIntegrationImporterにprojectMarkingFormatsを処理するステップが追加された
-      expect(projectData.projectMarkingFormats).toHaveLength(1)
+      // 修正済み: idIntegrationImporterにexamMarkingFormatsを処理するステップが追加された
+      expect(examData.examMarkingFormats).toHaveLength(1)
     })
 
-    it("修正済み: ProjectExportSettingsがインポートで処理されることを確認", () => {
-      // 修正済み: v1.4.0+データは processProjectExportSettings で処理される
-      const projectData = createArchiveProjectData()
-      projectData.projectExportSettings = {
+    it("修正済み: ExamExportSettingsがインポートで処理されることを確認", () => {
+      // 修正済み: v1.4.0+データは processExamExportSettings で処理される
+      const examData = createArchiveExamData()
+      examData.examExportSettings = {
         id: generateId(),
-        projectId: projectData.project.id,
+        examId: examData.exam.id,
         settingsJson: JSON.stringify({ markSize: 20 }),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
 
-      expect(projectData.projectExportSettings).toBeTruthy()
+      expect(examData.examExportSettings).toBeTruthy()
     })
 
     it("修正済み: CropRegionMarkingOverrideがインポートで処理されることを確認", () => {
       // 修正済み: v1.4.0+データは processCropRegionMarkingOverrides で処理される
-      const projectData = createArchiveProjectData()
-      const cropRegionId = projectData.cropRegions[0]?.id
+      const examData = createArchiveExamData()
+      const cropRegionId = examData.cropRegions[0]?.id
       if (cropRegionId) {
-        projectData.cropRegionMarkingOverrides = [
+        examData.cropRegionMarkingOverrides = [
           {
             id: generateId(),
             cropRegionId,
@@ -88,7 +88,7 @@ describe("バグ修正確認テスト", () => {
             updatedAt: new Date().toISOString(),
           },
         ]
-        expect(projectData.cropRegionMarkingOverrides).toHaveLength(1)
+        expect(examData.cropRegionMarkingOverrides).toHaveLength(1)
       }
     })
 
@@ -98,14 +98,14 @@ describe("バグ修正確認テスト", () => {
       expect(data.subjectsData).toBeTruthy()
     })
 
-    it("修正済み: ProjectClassがインポートで処理されることを確認", () => {
-      // 修正済み: v1.4.0+データは processProjectClasses で処理される
-      const projectData = createArchiveProjectData()
+    it("修正済み: ExamClassがインポートで処理されることを確認", () => {
+      // 修正済み: v1.4.0+データは processExamClasses で処理される
+      const examData = createArchiveExamData()
       const classId = generateId()
-      projectData.projectClasses = [
+      examData.examClasses = [
         {
           id: generateId(),
-          projectId: projectData.project.id,
+          examId: examData.exam.id,
           classId,
           administered: true,
           statistics: false,
@@ -114,7 +114,7 @@ describe("バグ修正確認テスト", () => {
           updatedAt: new Date().toISOString(),
         },
       ]
-      expect(projectData.projectClasses).toHaveLength(1)
+      expect(examData.examClasses).toHaveLength(1)
     })
   })
 
@@ -150,24 +150,24 @@ describe("バグ修正確認テスト", () => {
     })
   })
 
-  describe("B7: processProjectのexistingById検出", () => {
+  describe("B7: processExamのexistingById検出", () => {
     it.todo(
-      "修正済み: processProjectでexistingById検出時に警告が追加される"
-      // 修正済み: プロジェクトID不一致で既にそのIDのプロジェクトが存在する場合、
+      "修正済み: processExamでexistingById検出時に警告が追加される"
+      // 修正済み: 試験ID不一致で既にそのIDの試験が存在する場合、
       // 警告が追加され、意図しない上書きが防止される。
     )
   })
 
-  describe("B8: idMappings.projectの明示的キー取得", () => {
-    it("修正済み: idMappings.project[data.projectData.project.id]で正しいIDを取得", () => {
+  describe("B8: idMappings.examの明示的キー取得", () => {
+    it("修正済み: idMappings.exam[data.examData.exam.id]で正しいIDを取得", () => {
       const idMappings: IdMappings = createEmptyIdMappings()
-      const projectId = generateId()
+      const examId = generateId()
       const mappedId = generateId()
 
-      idMappings.project[projectId] = mappedId
+      idMappings.exam[examId] = mappedId
 
       // 修正後: 明示的なキーで取得
-      const result = idMappings.project[projectId]
+      const result = idMappings.exam[examId]
       expect(result).toBe(mappedId)
     })
   })

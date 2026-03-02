@@ -45,7 +45,7 @@ import {
 /** CropRegionデータ */
 interface CropRegionData {
   id: string
-  projectPageId: string
+  examPageId: string
   label: string
   type: string
   x: number
@@ -106,7 +106,7 @@ export async function convertDatToScore(
     }
     const imageScale = contents.image_scale || 0.5
 
-    // 4. workbooks.json → プロジェクト名・教科取得
+    // 4. workbooks.json → 試験名・教科取得
     const workbooksEntry = entries.find((e) =>
       e.entryName.endsWith("workbooks.json")
     )
@@ -177,8 +177,8 @@ export async function convertDatToScore(
       pageImageSizes.set(i + 1, { w: width, h: height })
     }
 
-    // 8. UUID生成とプロジェクト構築
-    const projectId = generateUuid()
+    // 8. UUID生成と試験構築
+    const examId = generateUuid()
     const now = new Date().toISOString()
 
     // ページ番号 → UUID マッピング
@@ -187,21 +187,19 @@ export async function convertDatToScore(
       pageUuidMap.set(pageNo, generateUuid())
     }
 
-    // ProjectPages 生成
-    const projectPages = Array.from(pageUuidMap.entries()).map(
-      ([pageNo, id]) => ({
-        id,
-        projectId,
-        pageNumber: pageNo,
-        createdAt: now,
-        updatedAt: now,
-      })
-    )
+    // ExamPages 生成
+    const examPages = Array.from(pageUuidMap.entries()).map(([pageNo, id]) => ({
+      id,
+      examId,
+      pageNumber: pageNo,
+      createdAt: now,
+      updatedAt: now,
+    }))
 
     // MasterImages 生成
     const masterImages: Array<{
       id: string
-      projectPageId: string
+      examPageId: string
       imagePath: string
       createdAt: string
       updatedAt: string
@@ -212,7 +210,7 @@ export async function convertDatToScore(
       if (pageId) {
         masterImages.push({
           id: generateUuid(),
-          projectPageId: pageId,
+          examPageId: pageId,
           imagePath: `abc_m${String(pageNo).padStart(2, "0")}.png`,
           createdAt: now,
           updatedAt: now,
@@ -271,36 +269,36 @@ export async function convertDatToScore(
       questionAngles,
       quizNameToCropIds,
       largeQuestionToCropId,
-      projectId,
+      examId,
       now
     )
 
-    // 13. プロジェクトデータ構築
+    // 13. 試験データ構築
     const subjectName =
       DAT_SUBJECT_MAP[workbook.subject_id] || `教科${workbook.subject_id}`
-    const projectTitle = `${contents.contents_name} ${workbook.workbook_name}`
+    const examTitle = `${contents.contents_name} ${workbook.workbook_name}`
 
-    const projectData = {
-      project: {
-        id: projectId,
-        examName: projectTitle,
+    const examData = {
+      exam: {
+        id: examId,
+        examName: examTitle,
         examDate: null,
         subject: subjectName,
         description: `リアテンダントからインポート`,
         createdAt: now,
         updatedAt: now,
       },
-      projectPages,
+      examPages,
       cropRegions,
       pageImages: [],
       masterImages,
       studentAnswerImages: [],
-      projectStudents: [],
-      userProjects: [],
-      projectSubtotalGroups: subtotalData.projectSubtotalGroups,
-      projectClasses: [],
-      projectMarkingFormats: [],
-      projectExportSettings: null,
+      examStudents: [],
+      userExams: [],
+      examSubtotalGroups: subtotalData.examSubtotalGroups,
+      examClasses: [],
+      examMarkingFormats: [],
+      examExportSettings: null,
       cropRegionMarkingOverrides: [],
     }
 
@@ -311,14 +309,14 @@ export async function convertDatToScore(
       appVersion: "0.0.0",
       exportedAt: now,
       sourceDbId: `dat:${contents.contents_uid}`,
-      projectId,
-      projectName: projectTitle,
+      examId,
+      examName: examTitle,
       exportMode: "template_with_subtotals",
       counts: {
         students: 0,
         classes: 0,
         users: 0,
-        pages: projectPages.length,
+        pages: examPages.length,
         regions: cropRegions.length,
         scores: 0,
         annotations: 0,
@@ -336,8 +334,8 @@ export async function convertDatToScore(
       Buffer.from(JSON.stringify(manifest, null, 2))
     )
     scoreZip.addFile(
-      "project.json",
-      Buffer.from(JSON.stringify(projectData, null, 2))
+      "exam.json",
+      Buffer.from(JSON.stringify(examData, null, 2))
     )
     scoreZip.addFile(
       "students.json",
@@ -395,7 +393,7 @@ export async function convertDatToScore(
     return {
       success: true,
       scorePath,
-      originalTitle: projectTitle,
+      originalTitle: examTitle,
     }
   } catch (error) {
     console.error("Error converting DAT to Score:", error)
@@ -530,8 +528,8 @@ function createScoreRegion(
   pageImageSizes: Map<number, { w: number; h: number }>,
   now: string
 ): CropRegionData | null {
-  const projectPageId = pageUuidMap.get(page)
-  if (!projectPageId) return null
+  const examPageId = pageUuidMap.get(page)
+  if (!examPageId) return null
 
   const imageSize = pageImageSizes.get(page)
   if (!imageSize || imageSize.w === 0 || imageSize.h === 0) return null
@@ -544,7 +542,7 @@ function createScoreRegion(
   // フルスケール座標 → 正規化座標
   return {
     id: generateUuid(),
-    projectPageId,
+    examPageId,
     label,
     type,
     x: x / imageSize.w,
@@ -618,8 +616,8 @@ function convertPageBlocksToCropRegions(
   }
 
   for (const page of pageBlocks) {
-    const projectPageId = pageUuidMap.get(page.PageNo)
-    if (!projectPageId) continue
+    const examPageId = pageUuidMap.get(page.PageNo)
+    if (!examPageId) continue
 
     const imageSize = pageImageSizes.get(page.PageNo)
     if (!imageSize || imageSize.w === 0 || imageSize.h === 0) continue
@@ -635,7 +633,7 @@ function convertPageBlocksToCropRegions(
 
       regions.push({
         id: generateUuid(),
-        projectPageId,
+        examPageId,
         label: DAT_AREA_TYPE_TO_LABEL[area.Type] || area.Type,
         type: cropType,
         x: area.X / normW,
@@ -661,7 +659,7 @@ function convertPageBlocksToCropRegions(
           const id = generateUuid()
           regions.push({
             id,
-            projectPageId,
+            examPageId,
             label: `${q.QuizName}(${i + 1})`,
             type: "QUESTION_ANSWER",
             x: pointArea.X / normW,
@@ -683,7 +681,7 @@ function convertPageBlocksToCropRegions(
         const id = generateUuid()
         regions.push({
           id,
-          projectPageId,
+          examPageId,
           label: q.QuizName,
           type: "QUESTION_ANSWER",
           x: pointArea.X / normW,
@@ -703,7 +701,7 @@ function convertPageBlocksToCropRegions(
   return { regions, quizNameToCropIds }
 }
 
-/** SubtotalGroup/Subtotal/CropSubtotal/ProjectSubtotalGroup の生成結果 */
+/** SubtotalGroup/Subtotal/CropSubtotal/ExamSubtotalGroup の生成結果 */
 interface SubtotalGenerationResult {
   subtotalGroups: Array<{
     id: string
@@ -727,9 +725,9 @@ interface SubtotalGenerationResult {
     createdAt: string
     updatedAt: string
   }>
-  projectSubtotalGroups: Array<{
+  examSubtotalGroups: Array<{
     id: string
-    projectId: string
+    examId: string
     subtotalGroupId: string
   }>
 }
@@ -750,14 +748,13 @@ function generateSubtotalData(
   questionAngles: DatQuestionAngle[],
   quizNameToCropIds: Map<string, string[]>,
   largeQuestionToCropId: Map<string, string>,
-  projectId: string,
+  examId: string,
   now: string
 ): SubtotalGenerationResult {
   const subtotalGroups: SubtotalGenerationResult["subtotalGroups"] = []
   const subtotals: SubtotalGenerationResult["subtotals"] = []
   const cropSubtotals: SubtotalGenerationResult["cropSubtotals"] = []
-  const projectSubtotalGroups: SubtotalGenerationResult["projectSubtotalGroups"] =
-    []
+  const examSubtotalGroups: SubtotalGenerationResult["examSubtotalGroups"] = []
 
   // question_name → question_id マッピング
   const questionNameToId = new Map<string, number>()
@@ -790,9 +787,9 @@ function generateSubtotalData(
       createdAt: now,
       updatedAt: now,
     })
-    projectSubtotalGroups.push({
+    examSubtotalGroups.push({
       id: generateUuid(),
-      projectId,
+      examId,
       subtotalGroupId: daimonGroupId,
     })
 
@@ -867,9 +864,9 @@ function generateSubtotalData(
       createdAt: now,
       updatedAt: now,
     })
-    projectSubtotalGroups.push({
+    examSubtotalGroups.push({
       id: generateUuid(),
-      projectId,
+      examId,
       subtotalGroupId: kantenGroupId,
     })
 
@@ -916,7 +913,7 @@ function generateSubtotalData(
     }
   }
 
-  return { subtotalGroups, subtotals, cropSubtotals, projectSubtotalGroups }
+  return { subtotalGroups, subtotals, cropSubtotals, examSubtotalGroups }
 }
 
 /**

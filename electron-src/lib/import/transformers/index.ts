@@ -4,7 +4,7 @@
  * 連鎖変換パターン: 1.0.0 → 1.1.0 → 1.2.0 → ...
  */
 
-import type { ArchiveManifest } from "../../../../types/projectArchive.types"
+import type { ArchiveManifest } from "../../../../types/examArchive.types"
 import type {
   ArchiveData,
   ArchiveVersion,
@@ -17,6 +17,7 @@ import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
 import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
+import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 
 // =============================================================================
 // Transformer Registry
@@ -32,6 +33,7 @@ const TRANSFORMERS: VersionTransformer[] = [
   new V1_1_0_to_V1_2_0_Transformer(),
   new V1_2_0_to_V1_3_0_Transformer(),
   new V1_3_0_to_V1_4_0_Transformer(),
+  new V1_4_0_to_V1_5_0_Transformer(),
 ]
 
 /**
@@ -233,3 +235,4 @@ export { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 export { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
 export { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 export { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
+export { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"

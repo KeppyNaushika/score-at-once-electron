@@ -25,7 +25,7 @@ import type {
   CategoryMatchingSummary,
   MatchingCandidate,
   MatchingDecisionType,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 interface DataMatchingStepProps {
   wizard: UseImportWizardReturn

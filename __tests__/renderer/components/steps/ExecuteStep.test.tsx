@@ -47,7 +47,7 @@ describe("ExecuteStep", () => {
     // resolveして完了させる
     resolveImport!({
       success: true,
-      projectId: "test",
+      examId: "test",
       summary: {
         created: {
           students: 0,
@@ -117,7 +117,7 @@ describe("ExecuteStep", () => {
     })
   })
 
-  it("EX-4: 成功時にプロジェクトを開くボタンが表示される", async () => {
+  it("EX-4: 成功時に試験を開くボタンが表示される", async () => {
     const wizard = createMockWizard()
     const onClose = vi.fn()
 
@@ -125,7 +125,7 @@ describe("ExecuteStep", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /プロジェクトを開く/ })
+        screen.getByRole("button", { name: /試験を開く/ })
       ).toBeInTheDocument()
     })
   })
@@ -145,7 +145,7 @@ describe("ExecuteStep", () => {
     })
   })
 
-  it("EX-6: プロジェクトを開くボタンでonCompleteとonCloseが呼ばれる", async () => {
+  it("EX-6: 試験を開くボタンでonCompleteとonCloseが呼ばれる", async () => {
     const user = userEvent.setup()
     const wizard = createMockWizard()
     const onComplete = vi.fn()
@@ -157,13 +157,13 @@ describe("ExecuteStep", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /プロジェクトを開く/ })
+        screen.getByRole("button", { name: /試験を開く/ })
       ).toBeInTheDocument()
     })
 
-    await user.click(screen.getByRole("button", { name: /プロジェクトを開く/ }))
+    await user.click(screen.getByRole("button", { name: /試験を開く/ }))
 
-    expect(onComplete).toHaveBeenCalledWith("mock-project-id")
+    expect(onComplete).toHaveBeenCalledWith("mock-exam-id")
     expect(onClose).toHaveBeenCalledOnce()
   })
 })

@@ -4,7 +4,7 @@ import {
   createQuestionGroup,
   deleteQuestionGroup,
   getQuestionGroupById,
-  getQuestionGroupsByProjectId,
+  getQuestionGroupsByExamId,
   updateQuestionGroup,
 } from "../lib/prisma/questionGroup"
 import {
@@ -36,7 +36,7 @@ export function setupQuestionGroupHandlers(): void {
   ipcMain.removeHandler("create-question-group")
   ipcMain.removeHandler("update-question-group")
   ipcMain.removeHandler("delete-question-group")
-  ipcMain.removeHandler("get-question-groups-by-project-id")
+  ipcMain.removeHandler("get-question-groups-by-exam-id")
   ipcMain.removeHandler("get-question-group-by-id")
   ipcMain.removeHandler("create-question-group-item")
   ipcMain.removeHandler("create-many-question-group-items")
@@ -87,17 +87,14 @@ export function setupQuestionGroupHandlers(): void {
     }
   })
 
-  ipcMain.handle(
-    "get-question-groups-by-project-id",
-    async (_event, projectId) => {
-      try {
-        return await getQuestionGroupsByProjectId(projectId)
-      } catch (err) {
-        console.error("Error getting question groups by project id:", err)
-        throw err
-      }
+  ipcMain.handle("get-question-groups-by-exam-id", async (_event, examId) => {
+    try {
+      return await getQuestionGroupsByExamId(examId)
+    } catch (err) {
+      console.error("Error getting question groups by exam id:", err)
+      throw err
     }
-  )
+  })
 
   ipcMain.handle("get-question-group-by-id", async (_event, id) => {
     try {

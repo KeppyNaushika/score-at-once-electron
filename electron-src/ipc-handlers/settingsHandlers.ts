@@ -7,17 +7,17 @@ import { ipcMain } from "electron"
 import {
   bulkUpsertCropRegionMarkingOverrides,
   getCropRegionMarkingOverrides,
-  getProjectCropRegionMarkingOverrides,
+  getExamCropRegionMarkingOverrides,
   type MarkingOverrideData,
   resetCropRegionMarkingOverrides,
 } from "../lib/prisma/cropRegionMarkingOverride"
 import {
-  bulkUpsertProjectMarkingFormats,
-  getProjectExportSettings,
-  getProjectMarkingFormats,
+  bulkUpsertExamMarkingFormats,
+  getExamExportSettings,
+  getExamMarkingFormats,
   type MarkingFormatData,
-  upsertProjectExportSettings,
-} from "../lib/prisma/projectSettings"
+  upsertExamExportSettings,
+} from "../lib/prisma/examSettings"
 import {
   bulkUpsertUserKeyboardShortcuts,
   getScoringPreferenceColumn,
@@ -153,14 +153,14 @@ export function registerSettingsHandlers() {
   )
 
   // =========================================================================
-  // ProjectMarkingFormat
+  // ExamMarkingFormat
   // =========================================================================
 
   ipcMain.handle(
-    "settings:getProjectMarkingFormats",
-    async (_event, projectId: string) => {
+    "settings:getExamMarkingFormats",
+    async (_event, examId: string) => {
       try {
-        const formats = await getProjectMarkingFormats(projectId)
+        const formats = await getExamMarkingFormats(examId)
         return { success: true, formats }
       } catch (error) {
         console.error("Failed to get marking formats:", error)
@@ -170,10 +170,10 @@ export function registerSettingsHandlers() {
   )
 
   ipcMain.handle(
-    "settings:saveProjectMarkingFormats",
-    async (_event, projectId: string, formats: MarkingFormatData[]) => {
+    "settings:saveExamMarkingFormats",
+    async (_event, examId: string, formats: MarkingFormatData[]) => {
       try {
-        await bulkUpsertProjectMarkingFormats(projectId, formats)
+        await bulkUpsertExamMarkingFormats(examId, formats)
         return { success: true }
       } catch (error) {
         console.error("Failed to save marking formats:", error)
@@ -183,14 +183,14 @@ export function registerSettingsHandlers() {
   )
 
   // =========================================================================
-  // ProjectExportSettings
+  // ExamExportSettings
   // =========================================================================
 
   ipcMain.handle(
-    "settings:getProjectExportSettings",
-    async (_event, projectId: string) => {
+    "settings:getExamExportSettings",
+    async (_event, examId: string) => {
       try {
-        const settings = await getProjectExportSettings(projectId)
+        const settings = await getExamExportSettings(examId)
         return { success: true, settings }
       } catch (error) {
         console.error("Failed to get export settings:", error)
@@ -200,10 +200,10 @@ export function registerSettingsHandlers() {
   )
 
   ipcMain.handle(
-    "settings:saveProjectExportSettings",
-    async (_event, projectId: string, settings: Record<string, unknown>) => {
+    "settings:saveExamExportSettings",
+    async (_event, examId: string, settings: Record<string, unknown>) => {
       try {
-        await upsertProjectExportSettings(projectId, settings)
+        await upsertExamExportSettings(examId, settings)
         return { success: true }
       } catch (error) {
         console.error("Failed to save export settings:", error)
@@ -256,13 +256,13 @@ export function registerSettingsHandlers() {
   )
 
   ipcMain.handle(
-    "settings:getProjectCropRegionMarkingOverrides",
-    async (_event, projectId: string) => {
+    "settings:getExamCropRegionMarkingOverrides",
+    async (_event, examId: string) => {
       try {
-        const overrides = await getProjectCropRegionMarkingOverrides(projectId)
+        const overrides = await getExamCropRegionMarkingOverrides(examId)
         return { success: true, overrides }
       } catch (error) {
-        console.error("Failed to get project marking overrides:", error)
+        console.error("Failed to get exam marking overrides:", error)
         return { success: false, error: String(error) }
       }
     }

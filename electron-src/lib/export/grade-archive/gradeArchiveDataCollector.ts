@@ -4,13 +4,13 @@
 
 import type {
   ArchiveBoundariesData,
-  ArchiveGradeProjectData,
+  ArchiveGradeData,
   ArchiveManualScoresData,
 } from "../../../../types/gradeArchive.types"
 import prisma from "../../prisma/client"
 
 export interface CollectedGradeData {
-  gradeProjectData: ArchiveGradeProjectData
+  gradeData: ArchiveGradeData
   manualScoresData: ArchiveManualScoresData
   boundariesData: ArchiveBoundariesData
   counts: {
@@ -25,16 +25,16 @@ export interface CollectedGradeData {
 }
 
 export async function collectGradeArchiveData(
-  gradeProjectId: string
+  gradeId: string
 ): Promise<CollectedGradeData> {
-  const gp = await prisma.gradeProject.findUniqueOrThrow({
-    where: { id: gradeProjectId },
+  const gp = await prisma.grade.findUniqueOrThrow({
+    where: { id: gradeId },
     include: {
       gradeItems: {
         include: {
           dataSources: {
             include: {
-              examProject: { select: { examName: true, examDate: true } },
+              exam: { select: { examName: true, examDate: true } },
               subtotal: true,
               cropRegion: true,
               manualScores: {
@@ -46,11 +46,11 @@ export async function collectGradeArchiveData(
         },
         orderBy: { order: "asc" },
       },
-      gradeProjectClasses: {
+      gradeClasses: {
         include: { class: true },
         orderBy: { order: "asc" },
       },
-      gradeProjectStudents: {
+      gradeStudents: {
         include: {
           student: {
             include: {
@@ -77,7 +77,7 @@ export async function collectGradeArchiveData(
     },
   })
 
-  const classIds = new Set(gp.gradeProjectClasses.map((c) => c.classId))
+  const classIds = new Set(gp.gradeClasses.map((c) => c.classId))
 
   const gradeItems = gp.gradeItems.map((gi) => ({
     name: gi.name,
@@ -88,7 +88,7 @@ export async function collectGradeArchiveData(
       maxScore: Number(ds.maxScore),
       weight: Number(ds.weight),
       order: ds.order,
-      examProjectName: ds.examProject?.examName ?? null,
+      examName: ds.exam?.examName ?? null,
       subtotalName: ds.subtotal?.name ?? null,
       cropRegionLabel: ds.cropRegion?.label ?? null,
       absentMethod: ds.absentMethod,
@@ -111,25 +111,25 @@ export async function collectGradeArchiveData(
 
   const allDataSources = gp.gradeItems.flatMap((gi) => gi.dataSources)
 
-  const examProjectRefs = allDataSources
+  const examRefs = allDataSources
     .filter(
       (ds) =>
         (ds.type === "project_total" ||
           ds.type === "subtotal" ||
           ds.type === "crop_region") &&
-        ds.examProject
+        ds.exam
     )
     .map((ds) => ({
-      examName: ds.examProject!.examName,
-      examDate: ds.examProject!.examDate?.toISOString() ?? null,
+      examName: ds.exam!.examName,
+      examDate: ds.exam!.examDate?.toISOString() ?? null,
       dataSourceName: ds.name,
     }))
 
-  const classRefs = gp.gradeProjectClasses.map((c) => ({
+  const classRefs = gp.gradeClasses.map((c) => ({
     name: c.class.name,
   }))
 
-  const studentRefs = gp.gradeProjectStudents.map((ps) => {
+  const studentRefs = gp.gradeStudents.map((ps) => {
     const membership = ps.student.memberships.find((m) =>
       classIds.has(m.classId)
     )
@@ -179,14 +179,14 @@ export async function collectGradeArchiveData(
   }))
 
   return {
-    gradeProjectData: {
-      gradeProject: {
+    gradeData: {
+      grade: {
         name: gp.name,
         description: gp.description,
       },
       gradeItems,
       classRefs,
-      examProjectRefs,
+      examRefs,
       studentRefs,
       gradeItemExclusions:
         gradeItemExclusions.length > 0 ? gradeItemExclusions : undefined,

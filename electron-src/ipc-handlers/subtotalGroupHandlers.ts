@@ -1,13 +1,13 @@
 import { ipcMain } from "electron"
 
 import {
-  addSubtotalGroupToProject,
+  addSubtotalGroupToExam,
   createSubtotalGroup,
   deleteSubtotalGroup,
-  getActiveSubtotalGroupsForProject,
-  getAvailableSubtotalGroupsForProject,
+  getActiveSubtotalGroupsForExam,
+  getAvailableSubtotalGroupsForExam,
   getSubtotalGroups,
-  removeSubtotalGroupFromProject,
+  removeSubtotalGroupFromExam,
   updateSubtotalGroup,
 } from "../lib/prisma/subtotalGroup"
 
@@ -89,17 +89,14 @@ export function setupSubtotalGroupHandlers(): void {
     }
   })
 
-  // プロジェクトで利用可能な小計点グループ取得
+  // 試験で利用可能な小計点グループ取得
   ipcMain.handle(
-    "get-available-subtotal-groups-for-project",
-    async (_event, projectId: string) => {
+    "get-available-subtotal-groups-for-exam",
+    async (_event, examId: string) => {
       try {
-        return await getAvailableSubtotalGroupsForProject(projectId)
+        return await getAvailableSubtotalGroupsForExam(examId)
       } catch (err) {
-        console.error(
-          "Error getting available subtotal groups for project:",
-          err
-        )
+        console.error("Error getting available subtotal groups for exam:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error",
@@ -108,14 +105,14 @@ export function setupSubtotalGroupHandlers(): void {
     }
   )
 
-  // プロジェクトで有効化されている小計点グループ取得
+  // 試験で有効化されている小計点グループ取得
   ipcMain.handle(
-    "get-active-subtotal-groups-for-project",
-    async (_event, projectId: string) => {
+    "get-active-subtotal-groups-for-exam",
+    async (_event, examId: string) => {
       try {
-        return await getActiveSubtotalGroupsForProject(projectId)
+        return await getActiveSubtotalGroupsForExam(examId)
       } catch (err) {
-        console.error("Error getting active subtotal groups for project:", err)
+        console.error("Error getting active subtotal groups for exam:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error",
@@ -124,14 +121,14 @@ export function setupSubtotalGroupHandlers(): void {
     }
   )
 
-  // プロジェクトに小計点グループを追加
+  // 試験に小計点グループを追加
   ipcMain.handle(
-    "add-subtotal-group-to-project",
-    async (_event, projectId: string, subtotalGroupId: string) => {
+    "add-subtotal-group-to-exam",
+    async (_event, examId: string, subtotalGroupId: string) => {
       try {
-        return await addSubtotalGroupToProject(projectId, subtotalGroupId)
+        return await addSubtotalGroupToExam(examId, subtotalGroupId)
       } catch (err) {
-        console.error("Error adding subtotal group to project:", err)
+        console.error("Error adding subtotal group to exam:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error",
@@ -140,14 +137,14 @@ export function setupSubtotalGroupHandlers(): void {
     }
   )
 
-  // プロジェクトから小計点グループを削除
+  // 試験から小計点グループを削除
   ipcMain.handle(
-    "remove-subtotal-group-from-project",
-    async (_event, projectId: string, subtotalGroupId: string) => {
+    "remove-subtotal-group-from-exam",
+    async (_event, examId: string, subtotalGroupId: string) => {
       try {
-        return await removeSubtotalGroupFromProject(projectId, subtotalGroupId)
+        return await removeSubtotalGroupFromExam(examId, subtotalGroupId)
       } catch (err) {
-        console.error("Error removing subtotal group from project:", err)
+        console.error("Error removing subtotal group from exam:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error",

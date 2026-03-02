@@ -4,7 +4,7 @@
 
 import * as ExcelJS from "exceljs"
 
-import type { GradeCalculationResult } from "../../../../types/gradeProject.types"
+import type { GradeCalculationResult } from "../../../../types/grade.types"
 
 /**
  * 成績一覧シートを作成

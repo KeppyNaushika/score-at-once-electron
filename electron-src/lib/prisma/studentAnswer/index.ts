@@ -11,7 +11,7 @@ export {
   associateStudentAnswerWithStudent,
   deleteStudentAnswer,
   getStudentAnswerById,
-  getStudentAnswersByProjectId,
+  getStudentAnswersByExamId,
   uploadStudentAnswers,
 } from "./crud"
 

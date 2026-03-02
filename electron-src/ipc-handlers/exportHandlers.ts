@@ -23,7 +23,7 @@ export function setupExportHandlers(): void {
     async (
       _event,
       options: {
-        projectId: string
+        examId: string
         selectedStudentIds: string[]
         outputPath?: string
       }
@@ -46,13 +46,13 @@ export function setupExportHandlers(): void {
     async (
       _event,
       options: {
-        projectId: string
+        examId: string
         selectedStudentIds: string[]
       }
     ) => {
       try {
         const result = await fetchExportData(
-          options.projectId,
+          options.examId,
           options.selectedStudentIds
         )
         if (!result.success) {
@@ -115,7 +115,7 @@ export function setupExportHandlers(): void {
     async (
       _event,
       options: {
-        projectId: string
+        examId: string
         selectedStudentIds: string[]
       }
     ) => {
@@ -137,7 +137,7 @@ export function setupExportHandlers(): void {
     async (
       _event,
       options: {
-        projectId: string
+        examId: string
         renderedPages: Array<{
           studentId: string
           pageNumber: number
@@ -169,17 +169,17 @@ export function setupExportHandlers(): void {
     async (
       _event,
       options: {
-        projectName?: string
+        examName?: string
       }
     ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
       try {
         const { dialog } = require("electron")
         const dateStr = new Date().toISOString().split("T")[0]
-        const safeProjectName = options.projectName
-          ? options.projectName.replace(/[<>:"/\\|?*]/g, "_")
+        const safeExamName = options.examName
+          ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
           : null
-        const defaultFileName = safeProjectName
-          ? `採点済み答案_${safeProjectName}_${dateStr}.pdf`
+        const defaultFileName = safeExamName
+          ? `採点済み答案_${safeExamName}_${dateStr}.pdf`
           : `採点済み答案_${dateStr}.pdf`
 
         const result = await dialog.showSaveDialog({
@@ -401,9 +401,9 @@ export function setupExportHandlers(): void {
   // 個人成績表用小計点グループ一覧取得
   ipcMain.handle(
     "export:getSubtotalGroupsForReport",
-    async (_event, projectId: string) => {
+    async (_event, examId: string) => {
       try {
-        return await fetchSubtotalGroupsForReport(projectId)
+        return await fetchSubtotalGroupsForReport(examId)
       } catch (err) {
         console.error("Error getting subtotal groups for report:", err)
         return {
@@ -420,16 +420,16 @@ export function setupExportHandlers(): void {
     async (
       _event,
       options: {
-        projectName?: string
+        examName?: string
       }
     ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
       try {
         const dateStr = new Date().toISOString().split("T")[0]
-        const safeProjectName = options.projectName
-          ? options.projectName.replace(/[<>:"/\\|?*]/g, "_")
+        const safeExamName = options.examName
+          ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
           : null
-        const defaultFileName = safeProjectName
-          ? `個人成績表_${safeProjectName}_${dateStr}.pdf`
+        const defaultFileName = safeExamName
+          ? `個人成績表_${safeExamName}_${dateStr}.pdf`
           : `個人成績表_${dateStr}.pdf`
 
         const result = await dialog.showSaveDialog({

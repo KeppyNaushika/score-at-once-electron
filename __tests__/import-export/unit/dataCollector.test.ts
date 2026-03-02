@@ -1,10 +1,10 @@
 /**
  * データ収集ロジックのユニットテスト
  *
- * テスト対象: types/projectArchive.types.ts のアーカイブデータ構造
- * および electron-src/lib/export/project-archive/dataCollector.ts の出力形式
+ * テスト対象: types/examArchive.types.ts のアーカイブデータ構造
+ * および electron-src/lib/export/exam-archive/dataCollector.ts の出力形式
  *
- * Note: collectProjectData自体はPrisma依存のため統合テストで扱う。
+ * Note: collectExamData自体はPrisma依存のため統合テストで扱う。
  * ここではデータ構造の整合性・型安全性をテストする。
  */
 
@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   createArchiveClassesData,
-  createArchiveProjectData,
+  createArchiveExamData,
   createArchiveScoresData,
   createArchiveStudentsData,
   createArchiveSubtotalsData,
@@ -80,48 +80,48 @@ describe("アーカイブデータ構造", () => {
     })
   })
 
-  describe("ArchiveProjectData", () => {
-    it("プロジェクトデータがデフォルト設定で生成される", () => {
-      const data = createArchiveProjectData()
+  describe("ArchiveExamData", () => {
+    it("試験データがデフォルト設定で生成される", () => {
+      const data = createArchiveExamData()
 
-      expect(data.project.id).toBeTruthy()
-      expect(data.project.examName).toBe("テスト試験")
-      expect(data.projectPages).toHaveLength(1)
+      expect(data.exam.id).toBeTruthy()
+      expect(data.exam.examName).toBe("テスト試験")
+      expect(data.examPages).toHaveLength(1)
       expect(data.cropRegions).toHaveLength(2) // 1ページ × 2リージョン
     })
 
     it("ページ数とリージョン数を指定できる", () => {
-      const data = createArchiveProjectData({
+      const data = createArchiveExamData({
         pageCount: 3,
         cropRegionsPerPage: 5,
       })
 
-      expect(data.projectPages).toHaveLength(3)
+      expect(data.examPages).toHaveLength(3)
       expect(data.cropRegions).toHaveLength(15) // 3 × 5
     })
 
-    it("cropRegionのprojectPageIdが正しいページを参照する", () => {
-      const data = createArchiveProjectData({
+    it("cropRegionのexamPageIdが正しいページを参照する", () => {
+      const data = createArchiveExamData({
         pageCount: 2,
         cropRegionsPerPage: 2,
       })
 
-      const pageIds = new Set(data.projectPages.map((p) => p.id))
+      const pageIds = new Set(data.examPages.map((p) => p.id))
       for (const region of data.cropRegions) {
-        expect(pageIds.has(region.projectPageId)).toBe(true)
+        expect(pageIds.has(region.examPageId)).toBe(true)
       }
     })
 
     it("v1.4.0以前のフィールドは空配列で初期化される", () => {
-      const data = createArchiveProjectData()
+      const data = createArchiveExamData()
 
       expect(data.pageImages).toEqual([])
       expect(data.masterImages).toEqual([])
       expect(data.studentAnswerImages).toEqual([])
-      expect(data.projectStudents).toEqual([])
-      expect(data.userProjects).toEqual([])
-      expect(data.projectSubtotalGroups).toEqual([])
-      expect(data.projectClasses).toEqual([])
+      expect(data.examStudents).toEqual([])
+      expect(data.userExams).toEqual([])
+      expect(data.examSubtotalGroups).toEqual([])
+      expect(data.examClasses).toEqual([])
     })
   })
 
@@ -189,7 +189,7 @@ describe("アーカイブデータ構造", () => {
 
       expect(data.manifest).toBeTruthy()
       expect(data.manifest.version).toBe("1.4.0")
-      expect(data.projectData).toBeTruthy()
+      expect(data.examData).toBeTruthy()
       expect(data.studentsData).toBeTruthy()
       expect(data.classesData).toBeTruthy()
       expect(data.usersData).toBeTruthy()
@@ -200,10 +200,10 @@ describe("アーカイブデータ構造", () => {
     })
 
     it("個別のデータをオーバーライドできる", () => {
-      const projectData = createArchiveProjectData({ examName: "カスタム試験" })
-      const data = createExtractedArchiveData({ projectData })
+      const examData = createArchiveExamData({ examName: "カスタム試験" })
+      const data = createExtractedArchiveData({ examData })
 
-      expect(data.projectData.project.examName).toBe("カスタム試験")
+      expect(data.examData.exam.examName).toBe("カスタム試験")
     })
   })
 })

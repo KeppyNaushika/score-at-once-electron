@@ -18,18 +18,18 @@ function getAppVersion(): string {
 }
 
 export async function createGradeArchive(
-  gradeProjectId: string,
+  gradeId: string,
   outputPath: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const data = await collectGradeArchiveData(gradeProjectId)
+    const data = await collectGradeArchiveData(gradeId)
 
     const manifest: GradeArchiveManifest = {
       version: "1.1.0",
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
-      gradeProjectId,
-      gradeProjectName: data.gradeProjectData.gradeProject.name,
+      gradeId,
+      gradeName: data.gradeData.grade.name,
       counts: data.counts,
     }
 
@@ -50,8 +50,8 @@ export async function createGradeArchive(
       archive.append(JSON.stringify(manifest, null, 2), {
         name: "manifest.json",
       })
-      archive.append(JSON.stringify(data.gradeProjectData, null, 2), {
-        name: "grade-project.json",
+      archive.append(JSON.stringify(data.gradeData, null, 2), {
+        name: "grade-exam.json",
       })
       archive.append(JSON.stringify(data.manualScoresData, null, 2), {
         name: "manual-scores.json",

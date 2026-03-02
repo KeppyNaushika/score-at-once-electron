@@ -18,13 +18,13 @@ import {
 } from "vitest"
 
 import { createTestArchive } from "../../helpers/testArchiveHelper"
+import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {
   cleanupTestDatabase,
   createTestUser,
   disconnectTestPrisma,
   getTestPrismaClient,
 } from "../../helpers/testPrismaClient"
-import { createFullTestProject } from "../../helpers/testProjectBuilder"
 
 // electronモック
 vi.mock("electron", () => ({
@@ -54,13 +54,13 @@ vi.mock("../../../electron-src/lib/import/merge/imageImporter", () => ({
   createImportImageRecords: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { collectProjectData } from "../../../electron-src/lib/export/project-archive/dataCollector"
-import { executeIdIntegrationImport } from "../../../electron-src/lib/import/merge/idIntegrationImporter"
-import { performPreMatching } from "../../../electron-src/lib/import/merge/matcher"
+import { collectExamData } from "../../../electron-src/lib/export/exam-archive/dataCollector"
 import {
   cleanupTempDir,
   extractArchive,
-} from "../../../electron-src/lib/import/project-archive/archiveExtractor"
+} from "../../../electron-src/lib/import/exam-archive/archiveExtractor"
+import { executeIdIntegrationImport } from "../../../electron-src/lib/import/merge/idIntegrationImporter"
+import { performPreMatching } from "../../../electron-src/lib/import/merge/matcher"
 import { createIdIntegrationConfig } from "../../helpers/testDataFactory"
 
 const prisma = getTestPrismaClient()
@@ -83,17 +83,17 @@ describe("exportImportRoundTrip", () => {
 
   // E2E-1: export→import（クリーンDB）: 全データ一致
   it("E2E-1: export→importでクリーンDBに全データがインポートされる", async () => {
-    // 1. テストプロジェクト作成
-    const testProject = await createFullTestProject(prisma, {
+    // 1. テスト試験作成
+    const testExam = await createFullTestExam(prisma, {
       pageCount: 2,
       cropRegionsPerPage: 2,
       studentCount: 3,
     })
 
     // 2. エクスポート（データ収集）
-    const exportResult = await collectProjectData(
-      testProject.project.id,
-      testProject.user.id
+    const exportResult = await collectExamData(
+      testExam.exam.id,
+      testExam.user.id
     )
     expect(exportResult.success).toBe(true)
 
@@ -102,8 +102,8 @@ describe("exportImportRoundTrip", () => {
     createTestArchive(
       exportResult.data!,
       archivePath,
-      testProject.project.id,
-      testProject.project.examName
+      testExam.exam.id,
+      testExam.exam.examName
     )
 
     // 4. DBクリーン
@@ -128,39 +128,37 @@ describe("exportImportRoundTrip", () => {
     )
 
     expect(importResult.success).toBe(true)
-    expect(importResult.projectId).toBeDefined()
+    expect(importResult.examId).toBeDefined()
 
     // 9. データ検証
-    const importedProject = await prisma.project.findUnique({
-      where: { id: importResult.projectId! },
+    const importedExam = await prisma.exam.findUnique({
+      where: { id: importResult.examId! },
       include: {
-        projectPages: { include: { cropRegions: true } },
-        projectStudents: true,
+        examPages: { include: { cropRegions: true } },
+        examStudents: true,
       },
     })
 
-    expect(importedProject).not.toBeNull()
-    expect(importedProject!.projectPages.length).toBe(2)
-    expect(
-      importedProject!.projectPages.flatMap((p) => p.cropRegions).length
-    ).toBe(4)
-    expect(importedProject!.projectStudents.length).toBe(3)
+    expect(importedExam).not.toBeNull()
+    expect(importedExam!.examPages.length).toBe(2)
+    expect(importedExam!.examPages.flatMap((p) => p.cropRegions).length).toBe(4)
+    expect(importedExam!.examStudents.length).toBe(3)
 
     cleanupTempDir(extractResult.data!.tempDir)
   })
 
-  // E2E-2: export→import（同一プロジェクト存在）: マージ動作
-  it("E2E-2: 同一プロジェクトが存在する場合にマージされる", async () => {
-    const testProject = await createFullTestProject(prisma, {
+  // E2E-2: export→import（同一試験存在）: マージ動作
+  it("E2E-2: 同一試験が存在する場合にマージされる", async () => {
+    const testExam = await createFullTestExam(prisma, {
       pageCount: 1,
       cropRegionsPerPage: 1,
       studentCount: 1,
     })
 
     // エクスポート
-    const exportResult = await collectProjectData(
-      testProject.project.id,
-      testProject.user.id
+    const exportResult = await collectExamData(
+      testExam.exam.id,
+      testExam.user.id
     )
     expect(exportResult.success).toBe(true)
 
@@ -168,8 +166,8 @@ describe("exportImportRoundTrip", () => {
     createTestArchive(
       exportResult.data!,
       archivePath,
-      testProject.project.id,
-      testProject.project.examName
+      testExam.exam.id,
+      testExam.exam.examName
     )
 
     // アーカイブ抽出
@@ -178,40 +176,40 @@ describe("exportImportRoundTrip", () => {
 
     // プレマッチング（同一DBなので全てID一致）
     const preMatch = await performPreMatching(extractResult.data!)
-    expect(preMatch.project!.isIdMatch).toBe(true)
+    expect(preMatch.exam!.isIdMatch).toBe(true)
 
     // インポート（マージ）
     const importResult = await executeIdIntegrationImport(
       extractResult.data!,
       preMatch,
       createIdIntegrationConfig(),
-      testProject.user.id
+      testExam.user.id
     )
 
     expect(importResult.success).toBe(true)
-    expect(importResult.projectId).toBe(testProject.project.id)
+    expect(importResult.examId).toBe(testExam.exam.id)
 
-    // プロジェクトが重複していないことを確認
-    const projectCount = await prisma.project.count({
-      where: { id: testProject.project.id },
+    // 試験が重複していないことを確認
+    const examCount = await prisma.exam.count({
+      where: { id: testExam.exam.id },
     })
-    expect(projectCount).toBe(1)
+    expect(examCount).toBe(1)
 
     cleanupTempDir(extractResult.data!.tempDir)
   })
 
   // E2E-3: export→import（別ユーザー）: ユーザーフィルタ確認
-  it("E2E-3: 別ユーザーのインポートでUserProjectが適切に作成される", async () => {
-    const testProject = await createFullTestProject(prisma, {
+  it("E2E-3: 別ユーザーのインポートでUserExamが適切に作成される", async () => {
+    const testExam = await createFullTestExam(prisma, {
       pageCount: 1,
       cropRegionsPerPage: 1,
       studentCount: 1,
     })
 
     // エクスポート
-    const exportResult = await collectProjectData(
-      testProject.project.id,
-      testProject.user.id
+    const exportResult = await collectExamData(
+      testExam.exam.id,
+      testExam.user.id
     )
     expect(exportResult.success).toBe(true)
 
@@ -219,8 +217,8 @@ describe("exportImportRoundTrip", () => {
     createTestArchive(
       exportResult.data!,
       archivePath,
-      testProject.project.id,
-      testProject.project.examName
+      testExam.exam.id,
+      testExam.exam.examName
     )
 
     // アーカイブ抽出
@@ -245,21 +243,21 @@ describe("exportImportRoundTrip", () => {
 
     expect(importResult.success).toBe(true)
 
-    // 新ユーザーのUserProjectが作成されている
-    const userProject = await prisma.userProject.findFirst({
+    // 新ユーザーのUserExamが作成されている
+    const userExam = await prisma.userExam.findFirst({
       where: {
         userId: otherUser.id,
-        projectId: importResult.projectId!,
+        examId: importResult.examId!,
       },
     })
-    expect(userProject).not.toBeNull()
+    expect(userExam).not.toBeNull()
 
     cleanupTempDir(extractResult.data!.tempDir)
   })
 
   // E2E-4: export→import（画像あり）: 画像レコード検証
-  it("E2E-4: 画像付きプロジェクトのエクスポートでパスが含まれる", async () => {
-    const testProject = await createFullTestProject(prisma, {
+  it("E2E-4: 画像付き試験のエクスポートでパスが含まれる", async () => {
+    const testExam = await createFullTestExam(prisma, {
       pageCount: 1,
       cropRegionsPerPage: 1,
       studentCount: 1,
@@ -267,9 +265,9 @@ describe("exportImportRoundTrip", () => {
       includeStudentAnswerImages: true,
     })
 
-    const exportResult = await collectProjectData(
-      testProject.project.id,
-      testProject.user.id
+    const exportResult = await collectExamData(
+      testExam.exam.id,
+      testExam.user.id
     )
 
     expect(exportResult.success).toBe(true)
@@ -279,7 +277,7 @@ describe("exportImportRoundTrip", () => {
 
   // E2E-5: export→import（v1.4.0データ）: 全新規フィールド保持
   it("E2E-5: v1.4.0の全新規フィールドが保持される", async () => {
-    const testProject = await createFullTestProject(prisma, {
+    const testExam = await createFullTestExam(prisma, {
       pageCount: 1,
       cropRegionsPerPage: 1,
       studentCount: 1,
@@ -287,19 +285,17 @@ describe("exportImportRoundTrip", () => {
     })
 
     // エクスポート
-    const exportResult = await collectProjectData(
-      testProject.project.id,
-      testProject.user.id
+    const exportResult = await collectExamData(
+      testExam.exam.id,
+      testExam.user.id
     )
     expect(exportResult.success).toBe(true)
 
     // v1.4.0データが含まれている
     const data = exportResult.data!
-    expect(data.projectData.projectMarkingFormats!.length).toBeGreaterThan(0)
-    expect(data.projectData.projectExportSettings).not.toBeNull()
-    expect(data.projectData.cropRegionMarkingOverrides!.length).toBeGreaterThan(
-      0
-    )
+    expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
+    expect(data.examData.examExportSettings).not.toBeNull()
+    expect(data.examData.cropRegionMarkingOverrides!.length).toBeGreaterThan(0)
     expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
     expect(data.subjectsData.subjectSubtotalGroups.length).toBeGreaterThan(0)
 
@@ -308,8 +304,8 @@ describe("exportImportRoundTrip", () => {
     createTestArchive(
       data,
       archivePath,
-      testProject.project.id,
-      testProject.project.examName
+      testExam.exam.id,
+      testExam.exam.examName
     )
 
     // DBクリーン→再インポート
@@ -331,13 +327,13 @@ describe("exportImportRoundTrip", () => {
     expect(importResult.success).toBe(true)
 
     // v1.4.0データが正しくインポートされた
-    const formats = await prisma.projectMarkingFormat.findMany({
-      where: { projectId: importResult.projectId! },
+    const formats = await prisma.examMarkingFormat.findMany({
+      where: { examId: importResult.examId! },
     })
     expect(formats.length).toBeGreaterThan(0)
 
-    const settings = await prisma.projectExportSettings.findUnique({
-      where: { projectId: importResult.projectId! },
+    const settings = await prisma.examExportSettings.findUnique({
+      where: { examId: importResult.examId! },
     })
     expect(settings).not.toBeNull()
 

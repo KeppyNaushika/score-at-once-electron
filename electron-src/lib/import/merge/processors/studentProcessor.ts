@@ -7,9 +7,9 @@ import type {
   IdIntegrationConfig,
   IdIntegrationDecision,
   UpdateDecisions,
-} from "../../../../../types/projectArchive.types"
-import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
-import { generateUniqueStudentNumber } from "../../project-archive/uniqueNameGenerators"
+} from "../../../../../types/examArchive.types"
+import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
+import { generateUniqueStudentNumber } from "../../exam-archive/uniqueNameGenerators"
 import type {
   IdChangeTarget,
   IdMappings,

@@ -9,11 +9,11 @@ import { fetchGradeExportData } from "./gradeDataFetcher"
 import { createDetailSheet, createGradeResultSheet } from "./gradeSheetCreator"
 
 export async function exportGradeExcel(
-  gradeProjectId: string,
+  gradeId: string,
   options?: { outputPath?: string; studentIds?: string[] }
 ): Promise<{ success: boolean; outputPath?: string; error?: string }> {
   try {
-    const fetchResult = await fetchGradeExportData(gradeProjectId)
+    const fetchResult = await fetchGradeExportData(gradeId)
     if (!fetchResult.success || !fetchResult.data) {
       return {
         success: false,
@@ -21,7 +21,7 @@ export async function exportGradeExcel(
       }
     }
 
-    const { result, projectName } = fetchResult.data
+    const { result, examName } = fetchResult.data
 
     // 生徒フィルタ
     const filteredResult =
@@ -39,7 +39,7 @@ export async function exportGradeExcel(
     createGradeResultSheet(workbook, filteredResult)
     createDetailSheet(workbook, filteredResult)
 
-    return saveWorkbook(workbook, options?.outputPath, `成績_${projectName}`)
+    return saveWorkbook(workbook, options?.outputPath, `成績_${examName}`)
   } catch (error) {
     console.error("Error exporting grade Excel:", error)
     return {

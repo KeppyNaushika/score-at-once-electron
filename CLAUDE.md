@@ -1,8 +1,8 @@
 # Score at Once - 一括採点
 
-## プロジェクト概要
+## 試験概要
 
-このプロジェクトは、複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像をデジタル採点し、結果をExcel/PDFとして出力できます。
+この試験は、複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像をデジタル採点し、結果をExcel/PDFとして出力できます。
 
 ## 技術スタック
 
@@ -33,7 +33,7 @@
 | 拡張子 | 規則       | 例                                        |
 | ------ | ---------- | ----------------------------------------- |
 | `.tsx` | PascalCase | `ActionButton.tsx`, `ScoringMainView.tsx` |
-| `.ts`  | camelCase  | `useProject.ts`, `dataFetcher.ts`         |
+| `.ts`  | camelCase  | `useExam.ts`, `dataFetcher.ts`            |
 
 **例外**:
 
@@ -88,8 +88,8 @@ npx prisma studio
 │   ├── /dashboard           # ダッシュボード
 │   ├── /login               # ログイン
 │   ├── /signup              # サインアップ
-│   ├── /projects            # プロジェクト管理
-│   │   └── /[projectId]     # 個別プロジェクト（8段階ワークフロー）
+│   ├── /exams            # 試験管理
+│   │   └── /[examId]     # 個別試験（8段階ワークフロー）
 │   │       ├── /01-upload           # 模範解答アップロード
 │   │       ├── /02-template         # 採点領域作成
 │   │       ├── /03-region-info      # 領域情報
@@ -97,8 +97,8 @@ npx prisma studio
 │   │       ├── /06-answer-sheets    # 答案アップロード
 │   │       ├── /07-score-at-once    # 採点実行
 │   │       ├── /08-export           # 結果出力
-│   │       ├── layout.tsx           # プロジェクト共通レイアウト
-│   │       └── page.tsx             # プロジェクト詳細
+│   │       ├── layout.tsx           # 試験共通レイアウト
+│   │       └── page.tsx             # 試験詳細
 │   ├── /settings            # 設定
 │   │   ├── /components      # 設定関連コンポーネント
 │   │   ├── /hooks           # 設定専用フック
@@ -126,7 +126,7 @@ npx prisma studio
 │   │   └── PageHelpContent.tsx
 │   ├── /hooks               # コンポーネント固有のカスタムフック
 │   ├── /layout              # レイアウト関連
-│   ├── /projects            # プロジェクト関連（8段階ワークフロー対応）
+│   ├── /exams            # 試験関連（8段階ワークフロー対応）
 │   │   ├── /01-upload       # 模範解答アップロード
 │   │   ├── /02-template     # 採点領域作成
 │   │   ├── /03-region-info  # 領域情報
@@ -145,9 +145,9 @@ npx prisma studio
 │   │   ├── /08-export       # 結果出力
 │   │   │   ├── ExportProgressModal.tsx   # 出力プログレス表示
 │   │   │   └── ScoringMarkSettings.tsx   # 採点マーク設定
-│   │   ├── /detail          # プロジェクト詳細
-│   │   ├── /forms           # プロジェクト作成・編集
-│   │   ├── /list            # プロジェクト一覧
+│   │   ├── /detail          # 試験詳細
+│   │   ├── /forms           # 試験作成・編集
+│   │   ├── /list            # 試験一覧
 │   │   └── /shared          # 共有コンポーネント
 │   ├── /settings            # 設定
 │   ├── /student             # 生徒関連
@@ -157,17 +157,17 @@ npx prisma studio
 │   ├── /07-score-at-once    # 採点実行専用
 │   ├── /08-export           # 出力専用
 │   ├── /answer-sheet-upload # 答案アップロード専用
-│   ├── /project-detail      # プロジェクト詳細専用
+│   ├── /exam-detail      # 試験詳細専用
 │   ├── useFileUpload.ts     # ファイルアップロード
 │   ├── useMasterImages.ts   # マスター画像管理
-│   ├── useProject.ts        # プロジェクト管理
+│   ├── useExam.ts        # 試験管理
 │   └── useLayoutRegions.ts  # レイアウト領域管理
 ├── /lib                     # グローバルユーティリティ
 │   ├── pdfConverter.ts      # PDF変換ユーティリティ
 │   └── utils.ts             # 汎用ユーティリティ
 ├── /types                   # グローバル型定義
 │   ├── answer-sheet.types.ts    # 答案関連型定義
-│   ├── common.types.ts          # 共通型定義（LayoutRegionArea、ProjectWithDetails等）
+│   ├── common.types.ts          # 共通型定義（LayoutRegionArea、ExamWithDetails等）
 │   └── electron.d.ts            # Electron API型定義
 ├── /utils                   # 特殊ユーティリティ
 │   ├── answerSheetConverter.ts  # 答案変換
@@ -181,7 +181,7 @@ npx prisma studio
 ├── /electron-src            # Electronメインプロセス
 │   ├── /ipc-handlers        # IPC通信ハンドラー
 │   │   ├── export-handlers.ts
-│   │   ├── project-handlers.ts
+│   │   ├── exam-handlers.ts
 │   │   ├── scoring-handlers.ts
 │   │   └── student-handlers.ts
 │   ├── /lib                 # Electronライブラリ
@@ -207,8 +207,8 @@ npx prisma studio
 │   └── /score-assets        # 採点マーク画像素材
 ├── /data                    # アプリケーションデータ
 │   ├── /exports             # 出力ファイル保存先
-│   └── /projects            # プロジェクトファイル
-│       └── [プロジェクトID]/
+│   └── /exams            # 試験ファイル
+│       └── [試験ID]/
 │           ├── /master-images    # マスター画像
 │           └── /answer-sheets    # 答案画像
 ├── /docs                    # ドキュメント
@@ -220,27 +220,27 @@ npx prisma studio
 
 ### 📋 6段階採点ワークフロー
 
-1. **模範解答アップロード** (`/projects/[id]/score`)
+1. **模範解答アップロード** (`/exams/[id]/score`)
    - PDF・画像ファイルの高品質変換
    - ページ順序管理
 
-2. **採点領域作成** (`/projects/[id]/score/template`)
+2. **採点領域作成** (`/exams/[id]/score/template`)
    - ドラッグ&ドロップによる視覚的領域定義
    - マルチページ対応、自動保存
 
-3. **領域情報** (`/projects/[id]/score/region-info`)
+3. **領域情報** (`/exams/[id]/score/region-info`)
    - 表形式による効率的な設定編集
    - 設問番号・配点・ラベル管理
 
-4. **受験生徒管理** (`/projects/[id]/score/students`)
+4. **受験生徒管理** (`/exams/[id]/score/students`)
    - 学級単位・個別生徒の追加削除
    - 受験状態管理（受験・見込・欠席）
 
-5. **答案アップロード** (`/projects/[id]/answer-sheets`)
+5. **答案アップロード** (`/exams/[id]/answer-sheets`)
    - ファイル名による自動生徒推測
    - 答案状態管理
 
-6. **採点実行** (`/projects/[id]/score/grading`)
+6. **採点実行** (`/exams/[id]/score/grading`)
    - キーボードファースト採点UI
    - 複数教員協調採点、競合解決
 
@@ -261,16 +261,16 @@ npx prisma studio
 
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 
-**Project-User関係の多対多化**:
+**Exam-User関係の多対多化**:
 
-- Projectは複数のUserが参加可能（協調採点の実現）
-- UserProjectテーブルによる中間テーブル管理
+- Examは複数のUserが参加可能（協調採点の実現）
+- UserExamテーブルによる中間テーブル管理
 - ユーザーごとのロール・権限管理の準備
 
-**SubtotalGroup-Project関係の多対多化**:
+**SubtotalGroup-Exam関係の多対多化**:
 
-- SubtotalGroupは複数のProjectで再利用可能
-- ProjectSubtotalGroupテーブルによる中間テーブル管理
+- SubtotalGroupは複数のExamで再利用可能
+- ExamSubtotalGroupテーブルによる中間テーブル管理
 - 同一設問構成の試験における集計設定の統一化
 
 **新規Subject（教科）テーブルの追加**:
@@ -283,13 +283,13 @@ npx prisma studio
 
 **個人成績の横断分析**:
 
-- 複数Project間でのSubtotal推移追跡
+- 複数Exam間でのSubtotal推移追跡
 - 教科別成績分析とフィルタリング表示
 - 長期的な学習進度の可視化
 
 **協調採点機能の完全実現**:
 
-- 複数教員による同一プロジェクトへの参加
+- 複数教員による同一試験への参加
 - 教員間での採点作業分担と競合解決
 - 採点進捗の全体把握と効率的な作業配分
 
@@ -313,16 +313,16 @@ npx prisma studio
 
 ### 📁 ディレクトリ構造設計方針（重要）
 
-本プロジェクトでは、**階層別住み分け方式**を採用し、hooks・types・utilsの配置ルールを明確に定義します。
+本試験では、**階層別住み分け方式**を採用し、hooks・types・utilsの配置ルールを明確に定義します。
 
 #### 🌍 トップレベル配置（`/hooks`, `/types`, `/lib`）
 
-**対象**: プロジェクト全体で共有される要素
+**対象**: 試験全体で共有される要素
 
 **配置基準**:
 
 - ✅ 3つ以上の機能・画面で使用される
-- ✅ プロジェクトの根幹となる型・ロジック
+- ✅ 試験の根幹となる型・ロジック
 - ✅ 外部ライブラリとのインターフェース
 - ✅ 汎用的なユーティリティ関数
 
@@ -330,12 +330,12 @@ npx prisma studio
 
 ```typescript
 // トップレベル配置の例
-/hooks/useProject.ts       # 複数画面で使用されるプロジェクト管理
-/types/common.types.ts     # ProjectData, StudentDataなど全体共通型
+/hooks/useExam.ts       # 複数画面で使用される試験管理
+/types/common.types.ts     # ExamData, StudentDataなど全体共通型
 /lib/utils.ts             # 日付フォーマット、バリデーション等の汎用関数
 ```
 
-#### 🎯 機能内配置（`/components/projects/06-answer-sheets/hooks` 等）
+#### 🎯 機能内配置（`/components/exams/06-answer-sheets/hooks` 等）
 
 **対象**: 特定機能専用の要素
 
@@ -350,7 +350,7 @@ npx prisma studio
 
 ```typescript
 // 機能内配置の例
-/components/projects/06-answer-sheets/
+/components/exams/06-answer-sheets/
 ├── hooks/useAnswerSheetUpload.ts     # 答案アップロード専用ロジック
 ├── types/answer-sheet.types.ts      # PendingChange, ScoringDataOption等
 └── utils/file-processing.ts         # ファイル変換・検証の専用関数
@@ -361,8 +361,8 @@ npx prisma studio
 **トップレベル要素**:
 
 ```typescript
-import { useProject } from "@/hooks/useProject"
-import { ProjectData } from "@/types/common.types"
+import { useExam } from "@/hooks/useExam"
+import { ExamData } from "@/types/common.types"
 import { formatDate } from "@/lib/utils"
 ```
 
@@ -383,7 +383,7 @@ import { validateFile } from "./utils/file-processing"
    - この機能でのみ使用する？ → 機能内
 
 2. **責任範囲の確認**
-   - プロジェクト全体の基盤？ → トップレベル
+   - 試験全体の基盤？ → トップレベル
    - 特定機能のビジネスロジック？ → 機能内
 
 3. **命名の確認**
@@ -429,7 +429,7 @@ import { validateFile } from "./utils/file-processing"
 ```typescript
 // ファイル内で完結する型
 interface UseScoringOptions {
-  projectId: string
+  examId: string
   onComplete?: () => void
 }
 
@@ -442,7 +442,7 @@ export function useScoring(options: UseScoringOptions) { ... }
 - 例: 機能ディレクトリ内の複数コンポーネントで共有する型
 
 ```typescript
-// /components/projects/07-score-at-once/types.ts
+// /components/exams/07-score-at-once/types.ts
 export interface ScoringState { ... }
 export type ScoreStatus = 'correct' | 'incorrect' | 'partial' | ...
 ```
@@ -453,7 +453,7 @@ export type ScoreStatus = 'correct' | 'incorrect' | 'partial' | ...
 - 大規模で主要な機能の型はここに置くと全体像が把握しやすい
 
 ```typescript
-// /types/project-archive.types.ts - インポート/エクスポート機能の型
+// /types/exam-archive.types.ts - インポート/エクスポート機能の型
 // /types/common.types.ts - 汎用的な共通型
 ```
 

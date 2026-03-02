@@ -8,7 +8,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createArchiveClassesData,
-  createArchiveProjectData,
+  createArchiveExamData,
   createArchiveScoresData,
   createArchiveStudentsData,
   createArchiveSubtotalsData,
@@ -62,12 +62,12 @@ describe("edgeCases", () => {
     await disconnectTestPrisma()
   })
 
-  // EC-1: 空プロジェクト（生徒・スコアなし）のインポート
-  it("EC-1: 空プロジェクト（生徒・スコアなし）が正常にインポートされる", async () => {
-    const projectId = generateId()
+  // EC-1: 空試験（生徒・スコアなし）のインポート
+  it("EC-1: 空試験（生徒・スコアなし）が正常にインポートされる", async () => {
+    const examId = generateId()
     const data = createExtractedArchiveData({
-      projectData: createArchiveProjectData({
-        projectId,
+      examData: createArchiveExamData({
+        examId,
         pageCount: 1,
         cropRegionsPerPage: 0,
       }),
@@ -79,11 +79,11 @@ describe("edgeCases", () => {
     })
 
     const preMatch = createFileOverviewData({
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
-        displayLabel: "空プロジェクト",
+        displayLabel: "空試験",
       },
     })
 
@@ -95,17 +95,17 @@ describe("edgeCases", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.projectId).toBeDefined()
+    expect(result.examId).toBeDefined()
 
-    const project = await prisma.project.findUnique({
-      where: { id: result.projectId! },
+    const exam = await prisma.exam.findUnique({
+      where: { id: result.examId! },
     })
-    expect(project).not.toBeNull()
+    expect(exam).not.toBeNull()
   })
 
   // EC-2: 100人以上の生徒のインポート
   it("EC-2: 100人以上の生徒が正常にインポートされる", async () => {
-    const projectId = generateId()
+    const examId = generateId()
     const studentCount = 110
     const students = Array.from({ length: studentCount }, (_, i) => ({
       id: generateId(),
@@ -115,8 +115,8 @@ describe("edgeCases", () => {
     }))
 
     const data = createExtractedArchiveData({
-      projectData: createArchiveProjectData({
-        projectId,
+      examData: createArchiveExamData({
+        examId,
         pageCount: 1,
         cropRegionsPerPage: 1,
       }),
@@ -127,10 +127,10 @@ describe("edgeCases", () => {
       scoresData: createArchiveScoresData(),
     })
 
-    // ProjectStudentを追加
-    data.projectData.projectStudents = students.map((s) => ({
+    // ExamStudentを追加
+    data.examData.examStudents = students.map((s) => ({
       id: generateId(),
-      projectId,
+      examId,
       studentId: s.id!,
       status: "PARTICIPATING",
       customOrder: null,
@@ -146,9 +146,9 @@ describe("edgeCases", () => {
           displayLabel: `${s.lastName}${s.firstName}`,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "大規模テスト",
       },
@@ -163,28 +163,28 @@ describe("edgeCases", () => {
 
     expect(result.success).toBe(true)
 
-    const dbStudentCount = await prisma.projectStudent.count({
-      where: { projectId: result.projectId! },
+    const dbStudentCount = await prisma.examStudent.count({
+      where: { examId: result.examId! },
     })
     expect(dbStudentCount).toBe(studentCount)
   })
 
   // EC-3: partialScore=nullのスコアインポート
   it("EC-3: partialScore=nullのスコアが正常にインポートされる", async () => {
-    const projectId = generateId()
+    const examId = generateId()
     const studentId = generateId()
     const studentNumber = `NULL_SCORE_${Date.now()}`
 
-    const projectData = createArchiveProjectData({
-      projectId,
+    const examData = createArchiveExamData({
+      examId,
       pageCount: 1,
       cropRegionsPerPage: 1,
     })
 
-    projectData.projectStudents = [
+    examData.examStudents = [
       {
         id: generateId(),
-        projectId,
+        examId,
         studentId,
         status: "PARTICIPATING",
         customOrder: null,
@@ -193,10 +193,10 @@ describe("edgeCases", () => {
       },
     ]
 
-    const regionId = projectData.cropRegions[0].id
+    const regionId = examData.cropRegions[0].id
 
     const data = createExtractedArchiveData({
-      projectData,
+      examData,
       studentsData: createArchiveStudentsData([
         { id: studentId, studentNumber },
       ]),
@@ -221,9 +221,9 @@ describe("edgeCases", () => {
           },
         ],
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -240,7 +240,7 @@ describe("edgeCases", () => {
 
     const scores = await prisma.questionScore.findMany({
       where: {
-        cropRegion: { projectPage: { projectId: result.projectId! } },
+        cropRegion: { examPage: { examId: result.examId! } },
       },
     })
     expect(scores.length).toBe(1)
@@ -249,21 +249,21 @@ describe("edgeCases", () => {
 
   // EC-4: DrawingAnnotation付きインポート
   it("EC-4: DrawingAnnotation付きスコアが正常にインポートされる", async () => {
-    const projectId = generateId()
+    const examId = generateId()
     const studentId = generateId()
     const studentNumber = `DA_${Date.now()}`
     const scoreId = generateId()
 
-    const projectData = createArchiveProjectData({
-      projectId,
+    const examData = createArchiveExamData({
+      examId,
       pageCount: 1,
       cropRegionsPerPage: 1,
     })
 
-    projectData.projectStudents = [
+    examData.examStudents = [
       {
         id: generateId(),
-        projectId,
+        examId,
         studentId,
         status: "PARTICIPATING",
         customOrder: null,
@@ -272,10 +272,10 @@ describe("edgeCases", () => {
       },
     ]
 
-    const regionId = projectData.cropRegions[0].id
+    const regionId = examData.cropRegions[0].id
 
     const data = createExtractedArchiveData({
-      projectData,
+      examData,
       studentsData: createArchiveStudentsData([
         { id: studentId, studentNumber },
       ]),
@@ -329,9 +329,9 @@ describe("edgeCases", () => {
           { importId: studentId, importData: {}, displayLabel: "DA生徒" },
         ],
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -349,7 +349,7 @@ describe("edgeCases", () => {
     const annotations = await prisma.drawingAnnotation.findMany({
       where: {
         questionScore: {
-          cropRegion: { projectPage: { projectId: result.projectId! } },
+          cropRegion: { examPage: { examId: result.examId! } },
         },
       },
     })
@@ -359,7 +359,7 @@ describe("edgeCases", () => {
 
   // EC-5: CropSubtotalsの正しいリンク
   it("EC-5: CropSubtotalsが正しくリンクされる", async () => {
-    const projectId = generateId()
+    const examId = generateId()
     const groupId = generateId()
     const groupName = `CST_${Date.now()}`
 
@@ -371,16 +371,16 @@ describe("edgeCases", () => {
       },
     ])
 
-    const projectData = createArchiveProjectData({
-      projectId,
+    const examData = createArchiveExamData({
+      examId,
       pageCount: 1,
       cropRegionsPerPage: 2,
     })
 
-    projectData.projectSubtotalGroups = [
+    examData.examSubtotalGroups = [
       {
         id: generateId(),
-        projectId,
+        examId,
         subtotalGroupId: groupId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -388,7 +388,7 @@ describe("edgeCases", () => {
     ]
 
     // CropSubtotalsを追加
-    subtotalsData.cropSubtotals = projectData.cropRegions.map((r, i) => ({
+    subtotalsData.cropSubtotals = examData.cropRegions.map((r, i) => ({
       id: generateId(),
       cropRegionId: r.id,
       subtotalId:
@@ -399,7 +399,7 @@ describe("edgeCases", () => {
     }))
 
     const data = createExtractedArchiveData({
-      projectData,
+      examData,
       subtotalsData,
     })
 
@@ -409,9 +409,9 @@ describe("edgeCases", () => {
           { importId: groupId, importData: {}, displayLabel: groupName },
         ],
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -427,14 +427,14 @@ describe("edgeCases", () => {
     expect(result.success).toBe(true)
 
     const cropSubtotals = await prisma.cropSubtotal.findMany({
-      where: { cropRegion: { projectPage: { projectId: result.projectId! } } },
+      where: { cropRegion: { examPage: { examId: result.examId! } } },
     })
     expect(cropSubtotals.length).toBe(2)
   })
 
   // EC-6: 同一アーカイブの2回インポート（冪等性）
   it("EC-6: 同一アーカイブの2回インポートが冪等に動作する", async () => {
-    const projectId = generateId()
+    const examId = generateId()
     const studentId = generateId()
     const studentNumber = `IDEMP_${Date.now()}`
     const classId = generateId()
@@ -442,16 +442,16 @@ describe("edgeCases", () => {
     const groupId = generateId()
     const groupName = `IdempG_${Date.now()}`
 
-    const projectData = createArchiveProjectData({
-      projectId,
+    const examData = createArchiveExamData({
+      examId,
       pageCount: 1,
       cropRegionsPerPage: 1,
     })
 
-    projectData.projectStudents = [
+    examData.examStudents = [
       {
         id: generateId(),
-        projectId,
+        examId,
         studentId,
         status: "PARTICIPATING",
         customOrder: null,
@@ -460,10 +460,10 @@ describe("edgeCases", () => {
       },
     ]
 
-    projectData.projectClasses = [
+    examData.examClasses = [
       {
         id: generateId(),
-        projectId,
+        examId,
         classId,
         administered: true,
         statistics: true,
@@ -473,20 +473,20 @@ describe("edgeCases", () => {
       },
     ]
 
-    projectData.projectSubtotalGroups = [
+    examData.examSubtotalGroups = [
       {
         id: generateId(),
-        projectId,
+        examId,
         subtotalGroupId: groupId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
     ]
 
-    const regionId = projectData.cropRegions[0].id
+    const regionId = examData.cropRegions[0].id
 
     const data = createExtractedArchiveData({
-      projectData,
+      examData,
       studentsData: createArchiveStudentsData([
         { id: studentId, studentNumber },
       ]),
@@ -525,9 +525,9 @@ describe("edgeCases", () => {
           { importId: groupId, importData: {}, displayLabel: groupName },
         ],
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -554,10 +554,10 @@ describe("edgeCases", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -579,10 +579,10 @@ describe("edgeCases", () => {
     })
     expect(studentCount).toBe(1)
 
-    const projectCount = await prisma.project.count({
-      where: { id: projectId },
+    const examCount = await prisma.exam.count({
+      where: { id: examId },
     })
-    expect(projectCount).toBe(1)
+    expect(examCount).toBe(1)
 
     const scoreCount = await prisma.questionScore.count({
       where: { cropRegionId: regionId, studentId },
@@ -594,18 +594,18 @@ describe("edgeCases", () => {
   it("EC-7: マニフェストの互換バージョンが正しく処理される", async () => {
     // このテストは manifestValidator で検証済みだが、
     // インポートパイプライン全体での互換性を確認
-    const projectId = generateId()
+    const examId = generateId()
 
     const data = createExtractedArchiveData({
-      projectData: createArchiveProjectData({ projectId }),
+      examData: createArchiveExamData({ examId }),
     })
     // 古いバージョンのマニフェストに変更
     data.manifest.version = "1.0.0"
 
     const preMatch = createFileOverviewData({
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "旧バージョン",
       },
@@ -625,7 +625,7 @@ describe("edgeCases", () => {
 
   // EC-8: 手動解決(manual)の採点競合
   it("EC-8: manual戦略で手動解決が正しく適用される", async () => {
-    const projectId = generateId()
+    const examId = generateId()
     const studentId = generateId()
     const studentNumber = `MANUAL_${Date.now()}`
     const scoreId = generateId()
@@ -642,23 +642,23 @@ describe("edgeCases", () => {
       },
     })
 
-    await prisma.project.create({
-      data: { id: projectId, examName: "手動解決テスト" },
+    await prisma.exam.create({
+      data: { id: examId, examName: "手動解決テスト" },
     })
 
-    await prisma.userProject.create({
+    await prisma.userExam.create({
       data: {
         id: generateId(),
         userId: currentUser.id,
-        projectId,
+        examId,
         role: "OWNER",
       },
     })
 
-    const page = await prisma.projectPage.create({
+    const page = await prisma.examPage.create({
       data: {
         id: generateId(),
-        projectId,
+        examId,
         pageNumber: 1,
       },
     })
@@ -666,7 +666,7 @@ describe("edgeCases", () => {
     const region = await prisma.cropRegion.create({
       data: {
         id: generateId(),
-        projectPageId: page.id,
+        examPageId: page.id,
         label: "問1",
         type: "QUESTION",
         x: 0,
@@ -678,10 +678,10 @@ describe("edgeCases", () => {
       },
     })
 
-    await prisma.projectStudent.create({
+    await prisma.examStudent.create({
       data: {
         id: generateId(),
-        projectId,
+        examId,
         studentId,
         status: "PARTICIPATING",
       },
@@ -699,20 +699,20 @@ describe("edgeCases", () => {
     })
 
     // インポートデータを準備
-    const projectData = createArchiveProjectData({
-      projectId,
+    const examData = createArchiveExamData({
+      examId,
       pageCount: 1,
       cropRegionsPerPage: 1,
     })
     // 既存のpage/regionのIDを使う
-    projectData.projectPages[0].id = page.id
-    projectData.cropRegions[0].id = region.id
-    projectData.cropRegions[0].projectPageId = page.id
+    examData.examPages[0].id = page.id
+    examData.cropRegions[0].id = region.id
+    examData.cropRegions[0].examPageId = page.id
 
-    projectData.projectStudents = [
+    examData.examStudents = [
       {
         id: generateId(),
-        projectId,
+        examId,
         studentId,
         status: "PARTICIPATING",
         customOrder: null,
@@ -722,7 +722,7 @@ describe("edgeCases", () => {
     ]
 
     const data = createExtractedArchiveData({
-      projectData,
+      examData,
       studentsData: createArchiveStudentsData([
         { id: studentId, studentNumber },
       ]),
@@ -764,10 +764,10 @@ describe("edgeCases", () => {
           }),
         ],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",

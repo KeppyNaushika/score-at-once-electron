@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import { cn } from "@/lib/utils"
-import type { SubtotalInfo } from "@/types/projectArchive.types"
+import type { SubtotalInfo } from "@/types/examArchive.types"
 
 interface SubtotalMappingEditorProps {
   wizard: UseImportWizardReturn

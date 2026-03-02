@@ -24,7 +24,7 @@ import type {
  */
 interface V1_1_0_PageImage {
   id: string
-  projectPageId: string
+  examPageId: string
   studentId: string | null
   imagePath: string
   imageType: string // "MODEL_ANSWER" | "STUDENT_ANSWER"
@@ -37,7 +37,7 @@ interface V1_1_0_PageImage {
  */
 interface V1_2_0_MasterImage {
   id: string
-  projectPageId: string
+  examPageId: string
   imagePath: string
   createdAt: string
   updatedAt: string
@@ -48,7 +48,7 @@ interface V1_2_0_MasterImage {
  */
 interface V1_2_0_StudentAnswerImage {
   id: string
-  projectPageId: string
+  examPageId: string
   studentId: string
   imagePath: string
   createdAt: string
@@ -114,7 +114,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
     // PageImage → MasterImage / StudentAnswerImage に分離
     const { masterImages, studentAnswerImages, imageWarnings } =
       this.transformPageImages(
-        data.projectData.pageImages as unknown as V1_1_0_PageImage[]
+        data.examData.pageImages as unknown as V1_1_0_PageImage[]
       )
     warnings.push(...imageWarnings)
 
@@ -150,14 +150,14 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
           ...data.manifest,
           version: this.toVersion,
         },
-        projectData: {
-          ...data.projectData,
+        examData: {
+          ...data.examData,
           // pageImagesは後方互換性のため維持（空にはしない）
           masterImages: masterImages as unknown as NonNullable<
-            typeof data.projectData.masterImages
+            typeof data.examData.masterImages
           >,
           studentAnswerImages: studentAnswerImages as unknown as NonNullable<
-            typeof data.projectData.studentAnswerImages
+            typeof data.examData.studentAnswerImages
           >,
         },
         scoresData: {
@@ -188,7 +188,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
       if (img.imageType === "MODEL_ANSWER") {
         masterImages.push({
           id: img.id,
-          projectPageId: img.projectPageId,
+          examPageId: img.examPageId,
           imagePath: img.imagePath,
           createdAt: img.createdAt,
           updatedAt: img.updatedAt,
@@ -197,7 +197,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         if (img.studentId) {
           studentAnswerImages.push({
             id: img.id,
-            projectPageId: img.projectPageId,
+            examPageId: img.examPageId,
             studentId: img.studentId,
             imagePath: img.imagePath,
             createdAt: img.createdAt,

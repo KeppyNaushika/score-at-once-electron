@@ -160,7 +160,7 @@ CREATE TABLE "StudentClassMembership" (
 );
 
 -- CreateTable
-CREATE TABLE "Project" (
+CREATE TABLE "Exam" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "examName" TEXT NOT NULL,
     "examDate" DATETIME,
@@ -171,54 +171,54 @@ CREATE TABLE "Project" (
 );
 
 -- CreateTable
-CREATE TABLE "ProjectStudent" (
+CREATE TABLE "ExamStudent" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "studentId" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'PARTICIPATING',
     "customOrder" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ProjectStudent_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "ProjectStudent_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "ExamStudent_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ExamStudent_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "ProjectPage" (
+CREATE TABLE "ExamPage" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "pageNumber" INTEGER NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ProjectPage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "ExamPage_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
 CREATE TABLE "MasterImage" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectPageId" TEXT NOT NULL,
+    "examPageId" TEXT NOT NULL,
     "imagePath" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "MasterImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "MasterImage_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
 CREATE TABLE "StudentAnswerImage" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectPageId" TEXT NOT NULL,
+    "examPageId" TEXT NOT NULL,
     "studentId" TEXT NOT NULL,
     "imagePath" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "StudentAnswerImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "StudentAnswerImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "StudentAnswerImage_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
 CREATE TABLE "CropRegion" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectPageId" TEXT NOT NULL,
+    "examPageId" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "x" REAL NOT NULL,
@@ -229,7 +229,7 @@ CREATE TABLE "CropRegion" (
     "orderIndex" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "CropRegion_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "CropRegion_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -264,29 +264,29 @@ CREATE TABLE "CropSubtotal" (
 );
 
 -- CreateTable
-CREATE TABLE "UserProject" (
+CREATE TABLE "UserExam" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'GRADER',
     "invitedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "invitedBy" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "UserProject_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "UserProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "UserProject_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
+    CONSTRAINT "UserExam_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "UserExam_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "UserExam_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
 );
 
 -- CreateTable
-CREATE TABLE "ProjectSubtotalGroup" (
+CREATE TABLE "ExamSubtotalGroup" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "subtotalGroupId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ProjectSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "ProjectSubtotalGroup_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "ExamSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "ExamSubtotalGroup_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -335,17 +335,17 @@ CREATE TABLE "DrawingAnnotation" (
 );
 
 -- CreateTable
-CREATE TABLE "ProjectClass" (
+CREATE TABLE "ExamClass" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "classId" TEXT NOT NULL,
     "administered" BOOLEAN NOT NULL DEFAULT false,
     "statistics" BOOLEAN NOT NULL DEFAULT false,
     "order" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ProjectClass_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "ProjectClass_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "ExamClass_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ExamClass_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -396,9 +396,9 @@ CREATE TABLE "UserScoringPreference" (
 );
 
 -- CreateTable
-CREATE TABLE "ProjectMarkingFormat" (
+CREATE TABLE "ExamMarkingFormat" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "markType" TEXT NOT NULL,
     "symbol" TEXT NOT NULL,
     "color" TEXT NOT NULL,
@@ -406,17 +406,17 @@ CREATE TABLE "ProjectMarkingFormat" (
     "strokeWidth" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ProjectMarkingFormat_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "ExamMarkingFormat_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "ProjectExportSettings" (
+CREATE TABLE "ExamExportSettings" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
     "settingsJson" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ProjectExportSettings_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "ExamExportSettings_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -457,16 +457,16 @@ CREATE INDEX "StudentClassMembership_classId_attendanceNumber_idx" ON "StudentCl
 CREATE INDEX "StudentClassMembership_startDate_endDate_idx" ON "StudentClassMembership"("startDate", "endDate");
 
 -- CreateIndex
-CREATE INDEX "ProjectStudent_projectId_idx" ON "ProjectStudent"("projectId");
+CREATE INDEX "ExamStudent_examId_idx" ON "ExamStudent"("examId");
 
 -- CreateIndex
-CREATE INDEX "ProjectStudent_studentId_idx" ON "ProjectStudent"("studentId");
+CREATE INDEX "ExamStudent_studentId_idx" ON "ExamStudent"("studentId");
 
 -- CreateIndex
-CREATE INDEX "ProjectStudent_projectId_customOrder_idx" ON "ProjectStudent"("projectId", "customOrder");
+CREATE INDEX "ExamStudent_examId_customOrder_idx" ON "ExamStudent"("examId", "customOrder");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectStudent_projectId_studentId_key" ON "ProjectStudent"("projectId", "studentId");
+CREATE UNIQUE INDEX "ExamStudent_examId_studentId_key" ON "ExamStudent"("examId", "studentId");
 
 -- CreateIndex
 CREATE INDEX "Subtotal_subtotalGroupId_idx" ON "Subtotal"("subtotalGroupId");
@@ -487,19 +487,19 @@ CREATE INDEX "DrawingAnnotation_type_idx" ON "DrawingAnnotation"("type");
 CREATE INDEX "DrawingAnnotation_createdAt_idx" ON "DrawingAnnotation"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserProject_userId_projectId_key" ON "UserProject"("userId", "projectId");
+CREATE UNIQUE INDEX "UserExam_userId_examId_key" ON "UserExam"("userId", "examId");
 
 -- CreateIndex
-CREATE INDEX "UserProject_projectId_idx" ON "UserProject"("projectId");
+CREATE INDEX "UserExam_examId_idx" ON "UserExam"("examId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectClass_projectId_classId_key" ON "ProjectClass"("projectId", "classId");
+CREATE UNIQUE INDEX "ExamClass_examId_classId_key" ON "ExamClass"("examId", "classId");
 
 -- CreateIndex
-CREATE INDEX "ProjectClass_projectId_idx" ON "ProjectClass"("projectId");
+CREATE INDEX "ExamClass_examId_idx" ON "ExamClass"("examId");
 
 -- CreateIndex
-CREATE INDEX "ProjectClass_classId_idx" ON "ProjectClass"("classId");
+CREATE INDEX "ExamClass_classId_idx" ON "ExamClass"("classId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Subject_name_key" ON "Subject"("name");
@@ -523,13 +523,13 @@ CREATE INDEX "UserKeyboardShortcut_userId_idx" ON "UserKeyboardShortcut"("userId
 CREATE UNIQUE INDEX "UserScoringPreference_userId_key" ON "UserScoringPreference"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectMarkingFormat_projectId_markType_key" ON "ProjectMarkingFormat"("projectId", "markType");
+CREATE UNIQUE INDEX "ExamMarkingFormat_examId_markType_key" ON "ExamMarkingFormat"("examId", "markType");
 
 -- CreateIndex
-CREATE INDEX "ProjectMarkingFormat_projectId_idx" ON "ProjectMarkingFormat"("projectId");
+CREATE INDEX "ExamMarkingFormat_examId_idx" ON "ExamMarkingFormat"("examId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectExportSettings_projectId_key" ON "ProjectExportSettings"("projectId");
+CREATE UNIQUE INDEX "ExamExportSettings_examId_key" ON "ExamExportSettings"("examId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CropRegionMarkingOverride_cropRegionId_markType_key" ON "CropRegionMarkingOverride"("cropRegionId", "markType");
@@ -538,10 +538,10 @@ CREATE UNIQUE INDEX "CropRegionMarkingOverride_cropRegionId_markType_key" ON "Cr
 CREATE INDEX "CropRegionMarkingOverride_cropRegionId_idx" ON "CropRegionMarkingOverride"("cropRegionId");
 
 -- CreateIndex (MasterImage/StudentAnswerImage)
-CREATE UNIQUE INDEX "StudentAnswerImage_projectPageId_studentId_key" ON "StudentAnswerImage"("projectPageId", "studentId");
+CREATE UNIQUE INDEX "StudentAnswerImage_examPageId_studentId_key" ON "StudentAnswerImage"("examPageId", "studentId");
 
 -- CreateIndex
-CREATE INDEX "StudentAnswerImage_projectPageId_idx" ON "StudentAnswerImage"("projectPageId");
+CREATE INDEX "StudentAnswerImage_examPageId_idx" ON "StudentAnswerImage"("examPageId");
 
 -- CreateIndex
 CREATE INDEX "StudentAnswerImage_studentId_idx" ON "StudentAnswerImage"("studentId");

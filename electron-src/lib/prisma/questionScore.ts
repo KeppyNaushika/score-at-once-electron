@@ -67,20 +67,20 @@ export interface UpdateQuestionScoreData {
 }
 
 /**
- * プロジェクトの採点データを取得
- * @param projectId プロジェクトID
+ * 試験の採点データを取得
+ * @param examId 試験ID
  * @param userId 採点者のユーザーID（指定時はそのユーザーの採点データのみ取得）
  */
-export const getQuestionScoresForProject = async (
-  projectId: string,
+export const getQuestionScoresForExam = async (
+  examId: string,
   userId?: string
 ) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
         cropRegion: {
-          projectPage: {
-            projectId,
+          examPage: {
+            examId,
           },
         },
         // userIdが指定されている場合、そのユーザーの採点データのみ取得
@@ -90,7 +90,7 @@ export const getQuestionScoresForProject = async (
         student: true,
         cropRegion: {
           include: {
-            projectPage: true,
+            examPage: true,
           },
         },
         user: true,
@@ -104,7 +104,7 @@ export const getQuestionScoresForProject = async (
 
     return { success: true, scores }
   } catch (error) {
-    console.error("Failed to get question scores for project:", error)
+    console.error("Failed to get question scores for exam:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -390,7 +390,7 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
   try {
     // TODO: This function needs to be rewritten for new schema
     // In new schema, there's no direct answerSheet table
-    // Need to get student and project info differently
+    // Need to get student and exam info differently
     console.warn(
       "getAnswerSheetProgress function needs rewriting for new schema"
     )
@@ -403,9 +403,9 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
     const answerSheet = await prisma.pageImage.findUnique({
       where: { id: answerSheetId },
       include: {
-        projectPage: {
+        examPage: {
           include: {
-            project: {
+            exam: {
           include: {
             cropRegions: {
               where: {
@@ -421,7 +421,7 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
       return { success: false, error: "Answer sheet not found" }
     }
 
-    const totalQuestions = answerSheet.project.cropRegions.length
+    const totalQuestions = answerSheet.exam.cropRegions.length
 
     // 採点済み設問数を取得（finalまたはproposedステータス）
     const gradedQuestionsCount = await prisma.questionScore.groupBy({
@@ -464,13 +464,13 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
 }
 
 /**
- * プロジェクト全体の採点進捗を取得
+ * 試験全体の採点進捗を取得
  */
-export const getProjectProgress = async (projectId: string) => {
+export const getExamProgress = async (examId: string) => {
   try {
-    // プロジェクトに参加している生徒数を取得
-    const totalAnswerSheets = await prisma.projectStudent.count({
-      where: { projectId },
+    // 試験に参加している生徒数を取得
+    const totalAnswerSheets = await prisma.examStudent.count({
+      where: { examId },
     })
 
     if (totalAnswerSheets === 0) {
@@ -481,11 +481,11 @@ export const getProjectProgress = async (projectId: string) => {
       }
     }
 
-    // プロジェクトの採点領域数を取得
+    // 試験の採点領域数を取得
     const totalCropRegions = await prisma.cropRegion.count({
       where: {
-        projectPage: {
-          projectId,
+        examPage: {
+          examId,
         },
         type: "QUESTION_ANSWER",
       },
@@ -500,21 +500,21 @@ export const getProjectProgress = async (projectId: string) => {
     }
 
     // 各生徒の採点完了状況を確認
-    const projectStudents = await prisma.projectStudent.findMany({
-      where: { projectId },
+    const examStudents = await prisma.examStudent.findMany({
+      where: { examId },
       select: { studentId: true },
     })
 
     let completedAnswerSheets = 0
 
-    for (const projectStudent of projectStudents) {
+    for (const examStudent of examStudents) {
       // この生徒の採点済み設問数を取得
       const completedQuestions = await prisma.questionScore.count({
         where: {
-          studentId: projectStudent.studentId,
+          studentId: examStudent.studentId,
           cropRegion: {
-            projectPage: {
-              projectId,
+            examPage: {
+              examId,
             },
             type: "QUESTION_ANSWER",
           },
@@ -539,7 +539,7 @@ export const getProjectProgress = async (projectId: string) => {
       percentage: Math.round(percentage * 100) / 100, // 小数点2位まで
     }
   } catch (error) {
-    console.error("Error getting project progress:", error)
+    console.error("Error getting exam progress:", error)
     return {
       totalAnswerSheets: 0,
       completedAnswerSheets: 0,

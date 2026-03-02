@@ -55,8 +55,8 @@ describe("ImportWizardModal", () => {
   it("IM-1: モーダルが開くとfile_selectステップが表示される", () => {
     render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
-    expect(screen.getByText("プロジェクトインポート")).toBeInTheDocument()
-    expect(screen.getByText("プロジェクトアーカイブを選択")).toBeInTheDocument()
+    expect(screen.getByText("試験インポート")).toBeInTheDocument()
+    expect(screen.getByText("試験アーカイブを選択")).toBeInTheDocument()
   })
 
   it("IM-2: 戻るボタンがfile_selectで無効化される", () => {

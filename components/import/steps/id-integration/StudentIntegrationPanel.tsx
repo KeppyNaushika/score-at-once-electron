@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup } from "@/components/ui/radio-group"
-import type { StudentMatchingStrategy } from "@/types/projectArchive.types"
+import type { StudentMatchingStrategy } from "@/types/examArchive.types"
 
 import { DetailPanel } from "./DetailPanel"
 import { StrategyOption } from "./StrategyOption"

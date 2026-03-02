@@ -17,7 +17,7 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
     const dataSources = await prisma.gradeDataSource.findMany({
       where: { gradeItemId },
       include: {
-        examProject: { select: { id: true, examName: true, examDate: true } },
+        exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
         _count: { select: { manualScores: true } },
@@ -40,7 +40,7 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
 export async function createDataSource(data: {
   gradeItemId: string
   type: string // "project_total" | "subtotal" | "crop_region" | "manual"
-  examProjectId?: string
+  examId?: string
   subtotalId?: string
   cropRegionId?: string
   name: string
@@ -65,7 +65,7 @@ export async function createDataSource(data: {
       data: {
         gradeItemId: data.gradeItemId,
         type: data.type,
-        examProjectId: data.examProjectId,
+        examId: data.examId,
         subtotalId: data.subtotalId,
         cropRegionId: data.cropRegionId,
         name: data.name,
@@ -92,7 +92,7 @@ export async function createDataSource(data: {
         }),
       },
       include: {
-        examProject: { select: { id: true, examName: true, examDate: true } },
+        exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
       },
@@ -134,7 +134,7 @@ export async function updateDataSource(
       where: { id },
       data: updateData,
       include: {
-        examProject: { select: { id: true, examName: true, examDate: true } },
+        exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
       },
@@ -240,11 +240,11 @@ export async function batchUpdateAbsentPolicy(
 }
 
 /**
- * 全試験プロジェクト候補を取得（SubtotalGroupフィルタなし）
+ * 全試験試験候補を取得（SubtotalGroupフィルタなし）
  */
-export async function getExamProjectCandidates() {
+export async function getExamCandidates() {
   try {
-    const projects = await prisma.project.findMany({
+    const exams = await prisma.exam.findMany({
       select: {
         id: true,
         examName: true,
@@ -252,9 +252,9 @@ export async function getExamProjectCandidates() {
       },
       orderBy: { examDate: "desc" },
     })
-    return { success: true, projects }
+    return { success: true, exams }
   } catch (error) {
-    console.error("Error getting exam project candidates:", error)
+    console.error("Error getting exam exam candidates:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -263,12 +263,12 @@ export async function getExamProjectCandidates() {
 }
 
 /**
- * プロジェクトのSubtotalGroups取得（ProjectSubtotalGroup経由）
+ * 試験のSubtotalGroups取得（ExamSubtotalGroup経由）
  */
-export async function getProjectSubtotalGroups(projectId: string) {
+export async function getExamSubtotalGroups(examId: string) {
   try {
-    const psg = await prisma.projectSubtotalGroup.findMany({
-      where: { projectId },
+    const psg = await prisma.examSubtotalGroup.findMany({
+      where: { examId },
       include: {
         subtotalGroup: {
           include: { subtotals: { orderBy: { order: "asc" } } },
@@ -280,7 +280,7 @@ export async function getProjectSubtotalGroups(projectId: string) {
       subtotalGroups: psg.map((p) => p.subtotalGroup),
     }
   } catch (error) {
-    console.error("Error getting project subtotal groups:", error)
+    console.error("Error getting exam subtotal groups:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -289,12 +289,12 @@ export async function getProjectSubtotalGroups(projectId: string) {
 }
 
 /**
- * プロジェクトのQUESTION_ANSWER型CropRegion一覧を取得
+ * 試験のQUESTION_ANSWER型CropRegion一覧を取得
  */
-export async function getProjectCropRegions(projectId: string) {
+export async function getExamCropRegions(examId: string) {
   try {
-    const pages = await prisma.projectPage.findMany({
-      where: { projectId },
+    const pages = await prisma.examPage.findMany({
+      where: { examId },
       include: {
         cropRegions: {
           where: { type: "QUESTION_ANSWER" },
@@ -306,7 +306,7 @@ export async function getProjectCropRegions(projectId: string) {
     const cropRegions = pages.flatMap((p) => p.cropRegions)
     return { success: true, cropRegions: serialize(cropRegions) }
   } catch (error) {
-    console.error("Error getting project crop regions:", error)
+    console.error("Error getting exam crop regions:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -319,15 +319,15 @@ export async function getProjectCropRegions(projectId: string) {
  */
 export async function calculateSourceMaxScore(data: {
   type: string
-  examProjectId?: string
+  examId?: string
   subtotalId?: string
   cropRegionId?: string
 }): Promise<{ success: boolean; maxScore?: number; error?: string }> {
   try {
-    if (data.type === "project_total" && data.examProjectId) {
-      // プロジェクトの全QUESTION_ANSWER CropRegionのpoints合計
-      const pages = await prisma.projectPage.findMany({
-        where: { projectId: data.examProjectId },
+    if (data.type === "project_total" && data.examId) {
+      // 試験の全QUESTION_ANSWER CropRegionのpoints合計
+      const pages = await prisma.examPage.findMany({
+        where: { examId: data.examId },
         include: {
           cropRegions: { where: { type: "QUESTION_ANSWER" } },
         },
@@ -338,7 +338,7 @@ export async function calculateSourceMaxScore(data: {
       return { success: true, maxScore: total }
     }
 
-    if (data.type === "subtotal" && data.subtotalId && data.examProjectId) {
+    if (data.type === "subtotal" && data.subtotalId && data.examId) {
       // Subtotalに紐づくCropRegion（QUESTION_ASSIGNMENT）のpoints合計
       const cropSubtotals = await prisma.cropSubtotal.findMany({
         where: {
@@ -347,14 +347,12 @@ export async function calculateSourceMaxScore(data: {
         },
         include: {
           cropRegion: {
-            include: { projectPage: { select: { projectId: true } } },
+            include: { examPage: { select: { examId: true } } },
           },
         },
       })
       const total = cropSubtotals
-        .filter(
-          (cs) => cs.cropRegion.projectPage.projectId === data.examProjectId
-        )
+        .filter((cs) => cs.cropRegion.examPage.examId === data.examId)
         .reduce((sum, cs) => sum + (cs.cropRegion.points ?? 0), 0)
       return { success: true, maxScore: total }
     }

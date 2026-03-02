@@ -5,14 +5,14 @@
 import type {
   ArchiveDataCounts,
   ArchiveManifest,
+  ExamPreMatchingResult,
   FileOverviewData,
   ImportItem,
   MatchedItem,
   PreMatchingResult,
-  ProjectPreMatchingResult,
   ScoringConflict,
   ScoringConflictData,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 // ---------------------------------------------------------------------------
 // ArchiveManifest
@@ -44,8 +44,8 @@ export function createMockManifest(
     schemaVersion: "test",
     appVersion: "0.5.0",
     exportedAt: new Date().toISOString(),
-    projectId: "mock-project-id",
-    projectName: "テスト試験",
+    examId: "mock-exam-id",
+    examName: "テスト試験",
     counts: createMockCounts(),
     ...overrides,
   }
@@ -140,18 +140,18 @@ export function createMockFileOverviewData(
       byIdCount: 1,
       noMatchCount: 0,
     }),
-    project: createMockProjectPreMatchingResult(),
+    exam: createMockExamPreMatchingResult(),
     ...overrides,
   }
 }
 
-export function createMockProjectPreMatchingResult(
-  overrides?: Partial<ProjectPreMatchingResult>
-): ProjectPreMatchingResult {
+export function createMockExamPreMatchingResult(
+  overrides?: Partial<ExamPreMatchingResult>
+): ExamPreMatchingResult {
   return {
     isIdMatch: true,
-    importProjectId: "mock-project-id",
-    existingProjectId: "mock-project-id",
+    importExamId: "mock-exam-id",
+    existingExamId: "mock-exam-id",
     importData: {},
     existingData: {},
     displayLabel: "テスト試験",

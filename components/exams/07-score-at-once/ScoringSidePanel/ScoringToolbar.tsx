@@ -1,0 +1,419 @@
+"use client"
+
+import {
+  AlertTriangle,
+  CheckCircle,
+  Circle,
+  Clock,
+  Minus,
+  RefreshCw,
+  Target,
+  X,
+} from "lucide-react"
+
+import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
+import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
+import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+import type { ScoringStatusType } from "@/lib/scoringStatusColors"
+
+import { SidePanelSection } from "./SidePanelSection"
+
+interface ScoringToolbarProps {
+  selectedAnswersCount: number
+  currentCropRegion?: {
+    points: number | null
+  } | null
+  filterSettings?: {
+    unscored: boolean
+    correct: boolean
+    incorrect: boolean
+    partial: boolean
+    pending: boolean
+    no_answer: boolean
+  }
+  onScore: (status: ScoringStatus) => void
+  onToggleFilter?: (key: string) => void
+  onRefreshFilter?: () => void
+  partialScoreInput: string
+  gradingMode?: "grid" | "individual" // 採点モード
+}
+
+// ScoringStatus -> ScoringStatusType へのマッピング
+const STATUS_MAP: Record<ScoringStatus, ScoringStatusType> = {
+  unscored: "ungraded",
+  correct: "correct",
+  partial: "partial",
+  pending: "pending",
+  incorrect: "incorrect",
+  no_answer: "no_answer",
+}
+
+// 採点ボタン設定（色はuseScoringStatusColorsから動的取得）
+const SCORING_BUTTONS = [
+  {
+    status: "unscored" as ScoringStatus,
+    label: "未採点",
+    icon: Circle,
+    description: "未採点にする",
+  },
+  {
+    status: "correct" as ScoringStatus,
+    label: "正答",
+    icon: CheckCircle,
+    description: "正答にする",
+  },
+  {
+    status: "partial" as ScoringStatus,
+    label: "部分点",
+    icon: AlertTriangle,
+    description: "部分点にする",
+  },
+  {
+    status: "pending" as ScoringStatus,
+    label: "保留",
+    icon: Clock,
+    description: "保留にする",
+  },
+  {
+    status: "incorrect" as ScoringStatus,
+    label: "誤答",
+    icon: X,
+    description: "誤答にする",
+  },
+  {
+    status: "no_answer" as ScoringStatus,
+    label: "無答",
+    icon: Minus,
+    description: "無答にする",
+  },
+] as const
+
+// フィルターボタン設定（色はuseScoringStatusColorsから動的取得）
+const FILTER_BUTTONS = [
+  { key: "unscored", filterKey: "unscored", label: "未採点", icon: Circle },
+  { key: "correct", filterKey: "correct", label: "正答", icon: CheckCircle },
+  { key: "incorrect", filterKey: "incorrect", label: "誤答", icon: X },
+  {
+    key: "partial",
+    filterKey: "partial",
+    label: "部分点",
+    icon: AlertTriangle,
+  },
+  { key: "pending", filterKey: "pending", label: "保留", icon: Clock },
+  { key: "no_answer", filterKey: "no_answer", label: "無答", icon: Minus },
+] as const
+
+export default function ScoringToolbar({
+  selectedAnswersCount,
+  filterSettings,
+  onScore,
+  onToggleFilter,
+  onRefreshFilter,
+  partialScoreInput,
+  gradingMode = "grid",
+}: ScoringToolbarProps) {
+  // 新しいショートカットシステム: キーバインディング取得
+  const { keyBindings } = useKeyBindings()
+  // 動的採点状態色を取得
+  const scoringColors = useScoringStatusColors()
+
+  // コンテキスト値の設定（不要だがサンプルとして残す）
+  // hasSelectedAnswers は ScoringMainView で設定済み
+
+  // ============================================
+  // 採点コマンドの登録
+  // ============================================
+  useCommand("scoring.unscored", () => onScore("unscored"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "未採点として採点",
+      category: "採点",
+      description: "選択中の答案を未採点にします",
+    },
+  })
+
+  useCommand("scoring.correct", () => onScore("correct"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "正答として採点",
+      category: "採点",
+      description: "選択中の答案を正答として採点します",
+    },
+  })
+
+  useCommand("scoring.partial", () => onScore("partial"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "部分点として採点",
+      category: "採点",
+      description: "選択中の答案を部分点として採点します",
+    },
+  })
+
+  useCommand("scoring.pending", () => onScore("pending"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "保留として採点",
+      category: "採点",
+      description: "選択中の答案を保留として採点します",
+    },
+  })
+
+  useCommand("scoring.incorrect", () => onScore("incorrect"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "誤答として採点",
+      category: "採点",
+      description: "選択中の答案を誤答として採点します",
+    },
+  })
+
+  useCommand("scoring.noAnswer", () => onScore("no_answer"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "無答として採点",
+      category: "採点",
+      description: "選択中の答案を無答として採点します",
+    },
+  })
+
+  // ============================================
+  // フィルタトグルコマンドの登録（グリッドモードのみ）
+  // ============================================
+  useCommand(
+    "filter.toggleUnscored",
+    () => onToggleFilter && onToggleFilter("unscored"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "未採点フィルタトグル",
+        category: "フィルタ",
+        description: "未採点の答案の表示を切り替えます",
+      },
+    }
+  )
+
+  useCommand(
+    "filter.toggleCorrect",
+    () => onToggleFilter && onToggleFilter("correct"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "正答フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
+
+  useCommand(
+    "filter.togglePartial",
+    () => onToggleFilter && onToggleFilter("partial"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "部分点フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
+
+  useCommand(
+    "filter.togglePending",
+    () => onToggleFilter && onToggleFilter("pending"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "保留フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
+
+  useCommand(
+    "filter.toggleIncorrect",
+    () => onToggleFilter && onToggleFilter("incorrect"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "誤答フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
+
+  useCommand(
+    "filter.toggleNoAnswer",
+    () => onToggleFilter && onToggleFilter("no_answer"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "無答フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      {/* 採点セクション */}
+      <SidePanelSection
+        icon={Target}
+        title="採点"
+        badge={
+          selectedAnswersCount > 0 ? `${selectedAnswersCount}件` : undefined
+        }
+        rightElement={
+          partialScoreInput ? (
+            <Badge
+              variant="outline"
+              className="border-yellow-300 bg-yellow-50 text-xs"
+            >
+              入力中: {partialScoreInput}
+              {partialScoreInput.endsWith(".") ? "●" : ""}
+            </Badge>
+          ) : undefined
+        }
+      >
+        <div className="grid grid-cols-3 gap-2">
+          {SCORING_BUTTONS.map((button) => {
+            const Icon = button.icon
+            // コマンドIDからキーバインディングを取得
+            const commandId = `scoring.${button.status === "no_answer" ? "noAnswer" : button.status}`
+            const keyBinding = keyBindings[commandId] || "?"
+            // 動的色を取得
+            const statusType = STATUS_MAP[button.status]
+            const colors = scoringColors[statusType]
+            return (
+              <Tooltip key={button.status}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`flex h-12 flex-col gap-1 border-2 ${
+                      selectedAnswersCount === 0
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:opacity-80"
+                    }`}
+                    style={{
+                      backgroundColor: colors.bg,
+                      color: colors.text,
+                      borderColor: colors.bg,
+                    }}
+                    onClick={() => onScore(button.status)}
+                    disabled={selectedAnswersCount === 0}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <div className="text-xs">{button.label}</div>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-center">
+                    <div className="font-medium">{button.description}</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                        {keyBinding.toUpperCase()}
+                      </kbd>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+        </div>
+      </SidePanelSection>
+
+      {/* フィルターセクション - グリッド表示時のみ */}
+      {gradingMode === "grid" &&
+        filterSettings &&
+        onToggleFilter &&
+        onRefreshFilter && (
+          <SidePanelSection
+            icon={RefreshCw}
+            title="フィルター"
+            rightElement={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefreshFilter}
+                className="h-6 px-2 text-xs"
+              >
+                <RefreshCw className="mr-1 h-3 w-3" />
+                更新
+              </Button>
+            }
+          >
+            <div className="grid grid-cols-3 gap-2">
+              {FILTER_BUTTONS.map((button) => {
+                const Icon = button.icon
+                const isActive =
+                  filterSettings[
+                    button.filterKey as keyof typeof filterSettings
+                  ]
+                // コマンドIDからキーバインディングを取得
+                const statusKey =
+                  button.key === "no_answer"
+                    ? "NoAnswer"
+                    : button.key.charAt(0).toUpperCase() + button.key.slice(1)
+                const commandId = `filter.toggle${statusKey}`
+                const keyBinding = keyBindings[commandId] || "?"
+                // 動的色を取得
+                const statusType = STATUS_MAP[button.key as ScoringStatus]
+                const colors = scoringColors[statusType]
+                return (
+                  <Tooltip key={button.key}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex h-10 items-center gap-2 border-2"
+                        style={
+                          isActive
+                            ? {
+                                backgroundColor: colors.bg,
+                                color: colors.text,
+                                borderColor: colors.icon,
+                              }
+                            : {
+                                backgroundColor: "transparent",
+                                color: colors.icon,
+                                borderColor: colors.icon,
+                              }
+                        }
+                        onClick={() => onToggleFilter(button.key)}
+                      >
+                        <Icon className="h-3 w-3" />
+                        <div className="text-xs">{button.label}</div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-center">
+                        <div className="font-medium">
+                          {button.label}を{isActive ? "非表示" : "表示"}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-400">
+                          キー:{" "}
+                          <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                            {keyBinding.toUpperCase()}
+                          </kbd>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+          </SidePanelSection>
+        )}
+    </TooltipProvider>
+  )
+}

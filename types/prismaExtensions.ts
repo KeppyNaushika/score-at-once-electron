@@ -70,16 +70,16 @@ export type StudentAnswerWithDetails = Prisma.StudentAnswerImageGetPayload<{
   include: {
     student: {
       include: {
-        projectStudents: {
+        examStudents: {
           select: {
             customOrder: true
           }
         }
       }
     }
-    projectPage: {
+    examPage: {
       include: {
-        project: true
+        exam: true
       }
     }
   }
@@ -110,18 +110,18 @@ export type QuestionScoreWithRelations = Prisma.QuestionScoreGetPayload<{
 }>
 
 // =============================================================================
-// Project関連型
-// NOTE: IPCハンドラーが返す ProjectWithDetails は common.types.ts で定義
+// Exam関連型
+// NOTE: IPCハンドラーが返す ExamWithDetails は common.types.ts で定義
 // =============================================================================
 
 /**
- * 全リレーションを含むProject型（Prismaクエリ用）
- * IPCハンドラーが返す型は common.types.ts の ProjectWithDetails を使用
+ * 全リレーションを含むExam型（Prismaクエリ用）
+ * IPCハンドラーが返す型は common.types.ts の ExamWithDetails を使用
  */
-export type ProjectPayloadWithAllRelations = Prisma.ProjectGetPayload<{
+export type ExamPayloadWithAllRelations = Prisma.ExamGetPayload<{
   include: {
-    userProjects: { include: { user: true } }
-    projectPages: {
+    userExams: { include: { user: true } }
+    examPages: {
       include: {
         masterImages: true
         studentAnswerImages: { include: { student: true } }
@@ -134,10 +134,10 @@ export type ProjectPayloadWithAllRelations = Prisma.ProjectGetPayload<{
       }
       orderBy: { pageNumber: "asc" }
     }
-    projectSubtotalGroups: {
+    examSubtotalGroups: {
       include: { subtotalGroup: { include: { subtotals: true } } }
     }
-    projectStudents: { include: { student: true } }
+    examStudents: { include: { student: true } }
   }
 }>
 
@@ -150,7 +150,7 @@ export type ProjectPayloadWithAllRelations = Prisma.ProjectGetPayload<{
  */
 export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
   include: {
-    projectPage: { include: { project: true } }
+    examPage: { include: { exam: true } }
     cropSubtotals: {
       include: { subtotal: { include: { subtotalGroup: true } } }
     }
@@ -168,7 +168,7 @@ export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
 export type SubtotalGroupWithItems = Prisma.SubtotalGroupGetPayload<{
   include: {
     subtotals: { orderBy: { order: "asc" } }
-    projectSubtotalGroups: { include: { project: true } }
+    examSubtotalGroups: { include: { exam: true } }
   }
 }>
 
@@ -191,21 +191,21 @@ export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
  */
 export type CropSubtotalWithRelations = Prisma.CropSubtotalGetPayload<{
   include: {
-    cropRegion: { include: { projectPage: true } }
+    cropRegion: { include: { examPage: true } }
     subtotal: { include: { subtotalGroup: true } }
   }
 }>
 
 // =============================================================================
-// ProjectPage/MasterImage/StudentAnswerImage関連型
+// ExamPage/MasterImage/StudentAnswerImage関連型
 // =============================================================================
 
 /**
- * 詳細情報を含むProjectPage型
+ * 詳細情報を含むExamPage型
  */
-export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
+export type ExamPageWithDetails = Prisma.ExamPageGetPayload<{
   include: {
-    project: true
+    exam: true
     cropRegions: true
     masterImages: true
     studentAnswerImages: { include: { student: true } }
@@ -217,66 +217,65 @@ export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
  */
 export type MasterImageWithDetails = Prisma.MasterImageGetPayload<{
   include: {
-    projectPage: { include: { project: true } }
+    examPage: { include: { exam: true } }
   }
 }>
 
 /**
  * 詳細情報を含むStudentAnswerImage型
- * 採点機能で使用する際はprojectStudentsも含む
+ * 採点機能で使用する際はexamStudentsも含む
  */
 export type StudentAnswerImageWithDetails =
   Prisma.StudentAnswerImageGetPayload<{
     include: {
-      projectPage: true
+      examPage: true
       student: {
         include: {
-          projectStudents: true
+          examStudents: true
         }
       }
     }
   }>
 
 // =============================================================================
-// UserProject/ProjectSubtotalGroup関連型
+// UserExam/ExamSubtotalGroup関連型
 // =============================================================================
 
 /**
- * ユーザーとプロジェクトを含むUserProject型
+ * ユーザーと試験を含むUserExam型
  */
-export type UserProjectWithDetails = Prisma.UserProjectGetPayload<{
-  include: { user: true; project: true }
+export type UserExamWithDetails = Prisma.UserExamGetPayload<{
+  include: { user: true; exam: true }
 }>
 
 /**
- * プロジェクトを含むUserProject型
+ * 試験を含むUserExam型
  */
-export type UserProjectWithProject = Prisma.UserProjectGetPayload<{
-  include: { project: true }
+export type UserExamWithExam = Prisma.UserExamGetPayload<{
+  include: { exam: true }
 }>
 
 /**
- * ユーザーを含むUserProject型
+ * ユーザーを含むUserExam型
  */
-export type UserProjectWithUser = Prisma.UserProjectGetPayload<{
+export type UserExamWithUser = Prisma.UserExamGetPayload<{
   include: { user: true }
 }>
 
 /**
- * SubtotalGroupを含むProjectSubtotalGroup型
+ * SubtotalGroupを含むExamSubtotalGroup型
  */
-export type ProjectSubtotalGroupWithSubtotalGroup =
-  Prisma.ProjectSubtotalGroupGetPayload<{
+export type ExamSubtotalGroupWithSubtotalGroup =
+  Prisma.ExamSubtotalGroupGetPayload<{
     include: { subtotalGroup: { include: { subtotals: true } } }
   }>
 
 /**
- * Projectを含むProjectSubtotalGroup型
+ * Examを含むExamSubtotalGroup型
  */
-export type ProjectSubtotalGroupWithProject =
-  Prisma.ProjectSubtotalGroupGetPayload<{
-    include: { project: true }
-  }>
+export type ExamSubtotalGroupWithExam = Prisma.ExamSubtotalGroupGetPayload<{
+  include: { exam: true }
+}>
 
 // =============================================================================
 // 後方互換エイリアス
@@ -300,5 +299,5 @@ export type SubtotalDefinitionWithRelations = CropSubtotalWithRelations
 /** @deprecated Use CropSubtotalWithRelations instead */
 export type QuestionSubtotalAssignmentWithRelations = CropSubtotalWithRelations
 
-/** @deprecated Use ProjectPageWithDetails instead */
-export type MasterAnswerPayload = ProjectPageWithDetails
+/** @deprecated Use ExamPageWithDetails instead */
+export type MasterAnswerPayload = ExamPageWithDetails

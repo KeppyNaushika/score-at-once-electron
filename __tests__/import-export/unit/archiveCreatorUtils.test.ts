@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from "vitest"
 
-import { generateExportFileName } from "../../../electron-src/lib/export/project-archive/archiveCreator"
+import { generateExportFileName } from "../../../electron-src/lib/export/exam-archive/archiveCreator"
 
 describe("archiveCreatorUtils", () => {
   // AC-1: generateExportFileNameの形式検証
@@ -32,7 +32,7 @@ describe("archiveCreatorUtils", () => {
   })
 
   // AC-3: 日本語ファイル名の保持
-  test("AC-3: 日本語のプロジェクト名がそのまま保持される", () => {
+  test("AC-3: 日本語の試験名がそのまま保持される", () => {
     const fileName = generateExportFileName("数学Ⅰ　期末考査　2025年度")
 
     // 日本語文字がそのまま残っている

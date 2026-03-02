@@ -58,7 +58,7 @@ export async function generatePng(
 }
 
 /**
- * PNG画像をBufferとして生成（プロジェクト変換用）
+ * PNG画像をBufferとして生成（試験変換用）
  * 複数ページ対応: Buffer[] を返す
  */
 export async function generatePngBuffer(

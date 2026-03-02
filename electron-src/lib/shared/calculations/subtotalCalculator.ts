@@ -241,11 +241,11 @@ export async function calculateSubtotalScoreBySubtotalId(
       cropSubtotals as CropSubtotalWithCropRegion[]
     ).filter((cs) => cs.assignmentType === "QUESTION_ASSIGNMENT")
 
-    // 現在のプロジェクトのCropRegion IDでフィルタリング
-    // （SubtotalGroupは複数プロジェクトで共有されるため）
-    const projectCropRegionIds = new Set(cropRegions.map((r) => r.id))
+    // 現在の試験のCropRegion IDでフィルタリング
+    // （SubtotalGroupは複数試験で共有されるため）
+    const examCropRegionIds = new Set(cropRegions.map((r) => r.id))
     const questionAssignments = allQuestionAssignments.filter((cs) =>
-      projectCropRegionIds.has(cs.cropRegionId)
+      examCropRegionIds.has(cs.cropRegionId)
     )
 
     const hasQuestionAssignments = questionAssignments.length > 0

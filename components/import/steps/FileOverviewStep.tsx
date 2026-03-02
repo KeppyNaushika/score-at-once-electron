@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { PreMatchingResult } from "@/types/projectArchive.types"
+import type { PreMatchingResult } from "@/types/examArchive.types"
 
 interface FileOverviewStepProps {
   wizard: UseImportWizardReturn
@@ -85,7 +85,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
         <h3 className="mb-2 text-xl font-semibold">ファイルの内容</h3>
         {state.manifest && (
           <p className="text-muted-foreground">
-            「{state.manifest.projectName}」の内容を確認します
+            「{state.manifest.examName}」の内容を確認します
           </p>
         )}
       </div>

@@ -16,7 +16,7 @@
 [![Sharp](https://img.shields.io/badge/Sharp-99CC00?style=flat&logo=sharp&logoColor=white)](https://sharp.pixelplumbing.com/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 
-複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像・PDFをデジタル採点し、結果をExcel/PDFとして出力できます。本プロジェクトは **GNU Affero General Public License v3.0（AGPLv3）** の下で公開されています。
+複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像・PDFをデジタル採点し、結果をExcel/PDFとして出力できます。本試験は **GNU Affero General Public License v3.0（AGPLv3）** の下で公開されています。
 
 **Python版「一括採点.py」からの進化**: 従来のPython版の高速採点機能を完全継承し、Electronデスクトップアプリとして複数教員協調採点・競合解決機構・モダンUI/UXを実現しました。
 
@@ -58,9 +58,9 @@ Python版「一括採点.py」の操作性を完全再現し、さらに機能�
 
 ## ✨ 主な機能
 
-### 📋 プロジェクト管理
+### 📋 試験管理
 
-- 直感的な3列レイアウト（プロジェクト名、詳細、次のステップ）
+- 直感的な3列レイアウト（試験名、詳細、次のステップ）
 - 進捗に応じた自動ナビゲーション
 - ステップ別アクションボタンでスムーズなワークフロー
 
@@ -121,7 +121,7 @@ Python版「一括採点.py」の操作性を完全再現し、さらに機能�
 
 2. **初回セットアップ**
    - アプリを起動
-   - 新しいプロジェクトを作成
+   - 新しい試験を作成
    - 模範解答（PDF推奨）をアップロード
 
 3. **採点領域の設定**
@@ -219,14 +219,14 @@ npx prisma studio
 - **PDF処理**: PDF.js (react-pdf, pdfjs-dist)
 - **ファイル出力**: exceljs (Excel), pdf-lib (PDF)
 
-## 📁 プロジェクト構造
+## 📁 試験構造
 
 ```
 score-at-once-electron/
 ├── app/                     # Next.js App Router
 │   ├── dashboard/          # ダッシュボード
-│   ├── projects/           # プロジェクト管理
-│   │   └── [projectId]/    # 個別プロジェクト
+│   ├── exams/           # 試験管理
+│   │   └── [examId]/    # 個別試験
 │   │       ├── 01-upload/           # 模範解答アップロード
 │   │       ├── 02-template/         # 採点領域作成
 │   │       ├── 03-region-info/      # 領域情報
@@ -239,7 +239,7 @@ score-at-once-electron/
 │   └── students/           # 生徒管理
 ├── components/             # Reactコンポーネント
 │   ├── ui/                # 基礎UIコンポーネント
-│   ├── project/           # プロジェクト関連
+│   ├── exam/           # 試験関連
 │   ├── grading/           # 採点関連
 │   ├── answer-sheet/      # 答案関連
 │   ├── student/           # 生徒関連
@@ -268,7 +268,7 @@ score-at-once-electron/
 
 ### ✅ 完成済み（98%）
 
-- **プロジェクト管理・一覧表示**
+- **試験管理・一覧表示**
 - **PDF対応模範解答アップロード**
 - **採点領域定義エディタ**
 - **領域情報**
@@ -390,7 +390,7 @@ Electron + React + TypeScriptによる、保守性と拡張性を重視した設
 
 ## 📄 ライセンス
 
-このプロジェクトは [GNU Affero General Public License v3.0](./LICENSE)（AGPLv3）で提供されています。主なポイントは以下のとおりです。
+この試験は [GNU Affero General Public License v3.0](./LICENSE)（AGPLv3）で提供されています。主なポイントは以下のとおりです。
 
 - ソフトウェアの利用・複製・改変・再配布が可能です。
 - 変更版をネットワーク経由で提供する場合、利用者が対応するソースコードへアクセスできるようにする義務があります。

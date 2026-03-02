@@ -1,8 +1,8 @@
-# ProjectClass リレーション設計書
+# ExamClass リレーション設計書
 
 ## 概要
 
-プロジェクトとクラスの多対多関係を管理するテーブル。
+試験とクラスの多対多関係を管理するテーブル。
 受験生徒の追加元クラスと、統計集計用クラスを柔軟に設定可能にする。
 
 ---
@@ -13,13 +13,13 @@
 
 1. **クラス認識が固定的**
    - 生徒のクラスは `StudentClassMembership` の最新レコードから取得
-   - プロジェクト単位でのクラス指定ができない
+   - 試験単位でのクラス指定ができない
 
 2. **複数グループでの集計不可**
    - 例: 生徒は「1-A」から追加したいが、統計は「サッカー部」でも出したい
    - 現状は1つのクラスでしか集計できない
 
-3. **プロジェクトとクラスの関連が不明確**
+3. **試験とクラスの関連が不明確**
    - どのクラスがこのテストの対象なのか、データとして保存されていない
 
 ---
@@ -29,20 +29,20 @@
 ### データモデル
 
 ```prisma
-model ProjectClass {
+model ExamClass {
   id           String   @id @default(uuid())
-  projectId    String
+  examId    String
   classId      String
   administered Boolean  @default(false)  // 受験生徒追加用
   statistics   Boolean  @default(false)  // 統計集計用
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  exam      Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
   class        Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, classId])
-  @@index([projectId])
+  @@unique([examId, classId])
+  @@index([examId])
   @@index([classId])
 }
 ```
@@ -72,7 +72,7 @@ model ProjectClass {
 1年生全クラス（1-A, 1-B, 1-C）が受験し、クラス別・学年全体で統計を出す。
 
 ```
-| projectId | classId   | administered | statistics |
+| examId | classId   | administered | statistics |
 |-----------|-----------|--------------|------------|
 | exam-001  | class-1A  | true         | true       |
 | exam-001  | class-1B  | true         | true       |
@@ -84,7 +84,7 @@ model ProjectClass {
 サッカー部員（複数クラスに所属）のテスト。クラス別ではなく部活単位で統計。
 
 ```
-| projectId | classId       | administered | statistics |
+| examId | classId       | administered | statistics |
 |-----------|---------------|--------------|------------|
 | exam-002  | class-1A      | true         | false      |
 | exam-002  | class-1B      | true         | false      |
@@ -97,7 +97,7 @@ model ProjectClass {
 生徒は通常クラスから追加、統計は習熟度別クラスで集計。
 
 ```
-| projectId | classId        | administered | statistics |
+| examId | classId        | administered | statistics |
 |-----------|----------------|--------------|------------|
 | exam-003  | class-1A       | true         | false      |
 | exam-003  | class-1B       | true         | false      |
@@ -114,37 +114,37 @@ model ProjectClass {
 
 ```typescript
 // 受験生徒追加用クラス一覧
-async function getAdministeredClasses(projectId: string): Promise<Class[]> {
-  const projectClasses = await prisma.projectClass.findMany({
-    where: { projectId, administered: true },
+async function getAdministeredClasses(examId: string): Promise<Class[]> {
+  const examClasses = await prisma.examClass.findMany({
+    where: { examId, administered: true },
     include: { class: true },
   })
-  return projectClasses.map((pc) => pc.class)
+  return examClasses.map((pc) => pc.class)
 }
 
 // 統計集計用クラス一覧
-async function getStatisticsClasses(projectId: string): Promise<Class[]> {
-  const projectClasses = await prisma.projectClass.findMany({
-    where: { projectId, statistics: true },
+async function getStatisticsClasses(examId: string): Promise<Class[]> {
+  const examClasses = await prisma.examClass.findMany({
+    where: { examId, statistics: true },
     include: { class: true },
   })
-  return projectClasses.map((pc) => pc.class)
+  return examClasses.map((pc) => pc.class)
 }
 ```
 
 ### クラス設定
 
 ```typescript
-// プロジェクトにクラスを追加
-async function addProjectClass(
-  projectId: string,
+// 試験にクラスを追加
+async function addExamClass(
+  examId: string,
   classId: string,
   options: { administered?: boolean; statistics?: boolean }
-): Promise<ProjectClass> {
-  return prisma.projectClass.upsert({
-    where: { projectId_classId: { projectId, classId } },
+): Promise<ExamClass> {
+  return prisma.examClass.upsert({
+    where: { examId_classId: { examId, classId } },
     create: {
-      projectId,
+      examId,
       classId,
       administered: options.administered ?? false,
       statistics: options.statistics ?? false,
@@ -161,7 +161,7 @@ async function addProjectClass(
 
 ## UI設計
 
-### プロジェクト設定画面
+### 試験設定画面
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -299,9 +299,9 @@ function calculateClassStatistics(
 
 ### Phase 1: スキーマ追加
 
-1. `ProjectClass` テーブルを作成
-2. Project モデルに `projectClasses` リレーション追加
-3. Class モデルに `projectClasses` リレーション追加
+1. `ExamClass` テーブルを作成
+2. Exam モデルに `examClasses` リレーション追加
+3. Class モデルに `examClasses` リレーション追加
 
 ### Phase 2: バックエンド実装
 
@@ -311,13 +311,13 @@ function calculateClassStatistics(
 
 ### Phase 3: フロントエンド実装
 
-1. プロジェクト設定画面にクラス設定UIを追加
+1. 試験設定画面にクラス設定UIを追加
 2. 受験生徒追加モーダルを `administered` クラスでフィルタ
 3. 出力設定画面で統計クラスを確認可能に
 
 ### Phase 4: データ移行（オプション）
 
-- 既存プロジェクトに対して、受験生徒の membership から自動的に ProjectClass を生成
+- 既存試験に対して、受験生徒の membership から自動的に ExamClass を生成
 - `administered=true, statistics=true` として追加
 
 ---
@@ -332,15 +332,15 @@ function calculateClassStatistics(
 
 **バックエンド**
 
-- `electron-src/lib/prisma/projectClass.ts` (新規)
+- `electron-src/lib/prisma/examClass.ts` (新規)
 - `electron-src/lib/export/excel/data-fetcher.ts`
 - `electron-src/lib/export/individual-report/data-fetcher.ts`
-- `electron-src/ipc-handlers/project-handlers.ts`
+- `electron-src/ipc-handlers/exam-handlers.ts`
 
 **フロントエンド**
 
-- `components/projects/05-students/components/project-student-add-modal/`
-- `app/projects/[projectId]/settings/` (新規または既存拡張)
+- `components/exams/05-students/components/exam-student-add-modal/`
+- `app/exams/[examId]/settings/` (新規または既存拡張)
 
 **型定義**
 

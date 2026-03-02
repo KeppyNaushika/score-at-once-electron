@@ -7,9 +7,9 @@ import type {
   MatchedItem,
   PreMatchingResult,
   StudentMatchingMethod,
-} from "../../../../../types/projectArchive.types"
+} from "../../../../../types/examArchive.types"
 import prisma from "../../../prisma/client"
-import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type { MatchResult, StudentData } from "./types"
 
 /**

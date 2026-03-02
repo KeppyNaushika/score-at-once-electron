@@ -17,7 +17,7 @@ import {
 } from "../lib/prisma/class"
 import {
   deleteMasterAnswer,
-  getMasterAnswersByProjectId,
+  getMasterAnswersByExamId,
   updateMasterAnswersOrder,
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
@@ -26,7 +26,7 @@ import {
   batchUpdateStudentAnswerPlacements,
   deleteStudentAnswer,
   getStudentAnswerById,
-  getStudentAnswersByProjectId,
+  getStudentAnswersByExamId,
   setStudentAnswerAbsent,
   swapStudentAnswerPlacements,
   swapStudentAnswerPlacementsWithScoring,
@@ -191,7 +191,7 @@ export function setupMiscHandlers(): void {
     "upload-answer-sheets",
     async (
       _event,
-      projectId: string,
+      examId: string,
       filesData: {
         name: string
         type: string
@@ -202,7 +202,7 @@ export function setupMiscHandlers(): void {
       }[]
     ) => {
       try {
-        return await uploadStudentAnswers(projectId, filesData)
+        return await uploadStudentAnswers(examId, filesData)
       } catch (err) {
         console.error("Error uploading answer sheets:", err)
         throw err
@@ -211,10 +211,10 @@ export function setupMiscHandlers(): void {
   )
 
   ipcMain.handle(
-    "get-answer-sheets-by-project-id",
-    async (_event, projectId: string) => {
+    "get-answer-sheets-by-exam-id",
+    async (_event, examId: string) => {
       try {
-        const result = await getStudentAnswersByProjectId(projectId)
+        const result = await getStudentAnswersByExamId(examId)
         if (!result.success) {
           return { success: false, error: result.error }
         }
@@ -440,7 +440,7 @@ export function setupMiscHandlers(): void {
     "upload-master-answers",
     async (
       _event,
-      projectId: string,
+      examId: string,
       filesData: {
         name: string
         type: string
@@ -449,7 +449,7 @@ export function setupMiscHandlers(): void {
       }[]
     ) => {
       try {
-        return await uploadMasterAnswers(projectId, filesData)
+        return await uploadMasterAnswers(examId, filesData)
       } catch (err) {
         console.error("Error in IPC upload-master-images:", err)
         throw err
@@ -548,14 +548,14 @@ export function setupMiscHandlers(): void {
   })
 
   ipcMain.handle(
-    "get-master-images-by-project-id",
-    async (_event, projectId: string) => {
+    "get-master-images-by-exam-id",
+    async (_event, examId: string) => {
       try {
-        const masterAnswers = await getMasterAnswersByProjectId(projectId)
+        const masterAnswers = await getMasterAnswersByExamId(examId)
         // Dateオブジェクトをそのまま返す
         return masterAnswers
       } catch (err) {
-        console.error("Error getting master images by project ID:", err)
+        console.error("Error getting master images by exam ID:", err)
         throw err
       }
     }

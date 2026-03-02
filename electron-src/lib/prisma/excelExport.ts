@@ -5,7 +5,7 @@ export { exportGradingDataExcel } from "../export/excel/excelExportMain"
 
 // 互換性のため、旧インターface を維持
 export interface ExportGradingDataOptions {
-  projectId: string
+  examId: string
   selectedStudentIds: string[]
   outputPath?: string
 }

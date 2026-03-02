@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { SubtotalInfo } from "@/types/projectArchive.types"
+import type { SubtotalInfo } from "@/types/examArchive.types"
 
 import { SubtotalPreview } from "./SubtotalPreview"
 import type { NoMatchDecisionType, NoMatchItemRowProps } from "./types"

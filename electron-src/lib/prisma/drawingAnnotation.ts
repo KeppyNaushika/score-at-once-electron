@@ -156,16 +156,16 @@ export async function getDrawingAnnotationsByQuestionScore(
 }
 
 /**
- * 特定の学生・プロジェクトの全描画アノテーションを取得する（透明度制御用）
+ * 特定の学生・試験の全描画アノテーションを取得する（透明度制御用）
  * @param studentId 学生ID
- * @param projectId プロジェクトID
+ * @param examId 試験ID
  * @param type フィルタする描画タイプ（オプション）
  * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
  * @returns Promise<DrawingAnnotationWithQuestionScore[]> 描画アノテーション配列（設問情報付き）
  */
 export async function getDrawingAnnotationsByStudent(
   studentId: string,
-  projectId: string,
+  examId: string,
   type?: DrawingType,
   userId?: string
 ): Promise<DrawingAnnotation[]> {
@@ -175,8 +175,8 @@ export async function getDrawingAnnotationsByStudent(
         questionScore: {
           studentId: studentId,
           cropRegion: {
-            projectPage: {
-              projectId: projectId,
+            examPage: {
+              examId: examId,
             },
           },
         },
@@ -218,14 +218,14 @@ export async function getDrawingAnnotationsByStudent(
 }
 
 /**
- * プロジェクト全体の描画アノテーションを取得する（PDF出力用）
- * @param projectId プロジェクトID
+ * 試験全体の描画アノテーションを取得する（PDF出力用）
+ * @param examId 試験ID
  * @param type フィルタする描画タイプ（オプション）
  * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
  * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列（設問情報付き）
  */
-export async function getDrawingAnnotationsByProject(
-  projectId: string,
+export async function getDrawingAnnotationsByExam(
+  examId: string,
   type?: DrawingType,
   userId?: string
 ): Promise<DrawingAnnotation[]> {
@@ -234,8 +234,8 @@ export async function getDrawingAnnotationsByProject(
       where: {
         questionScore: {
           cropRegion: {
-            projectPage: {
-              projectId: projectId,
+            examPage: {
+              examId: examId,
             },
           },
         },
@@ -284,7 +284,7 @@ export async function getDrawingAnnotationsByProject(
 
     return result as DrawingAnnotation[]
   } catch (error) {
-    console.error("プロジェクト別描画アノテーション取得エラー:", error)
+    console.error("試験別描画アノテーション取得エラー:", error)
     throw error
   }
 }

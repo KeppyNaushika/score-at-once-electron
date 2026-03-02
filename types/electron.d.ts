@@ -2,66 +2,54 @@ import type {
   Class,
   CropRegion,
   CropSubtotal,
+  Exam,
+  ExamClass,
+  ExamSubtotalGroup,
   MasterImage,
   Prisma,
-  Project,
-  ProjectClass,
-  ProjectSubtotalGroup,
   QuestionScore,
   Student,
   Subtotal,
   SubtotalGroup,
   User,
-  UserProject,
+  UserExam,
 } from "@prisma/client"
 
-// ProjectWithDetails は common.types から（IPC用の拡張型）
-export type { ProjectWithDetails, SerializedProject } from "./common.types"
-
-// Prisma拡張型を prismaExtensions.ts から再エクスポート
+export type { ExamWithDetails, SerializedExam } from "./common.types"
 export type {
-  // Student関連
   ClassWithMemberships,
   ClassWithStudents,
-  // CropRegion関連
   CropRegionWithDetails,
-  // CropSubtotal関連
   CropSubtotalWithRelations,
+  ExamPageWithDetails,
+  ExamSubtotalGroupWithExam,
+  ExamSubtotalGroupWithSubtotalGroup,
   MasterAnswerPayload,
-  // ProjectPage/MasterImage/StudentAnswerImage関連
   MasterImageWithDetails,
-  ProjectPageWithDetails,
-  ProjectSubtotalGroupWithProject,
-  ProjectSubtotalGroupWithSubtotalGroup,
   QuestionGroupItemWithDetails,
   QuestionGroupWithItems,
   QuestionScoreWithRelations,
-  // QuestionScore関連
   QuestionScoreWithUser,
   QuestionSubtotalAssignmentWithRelations,
-  // Answer関連
   StudentAnswerImageWithDetails,
   StudentAnswerWithDetails,
   StudentClassMembershipWithDetails,
   StudentWithClass,
   StudentWithMemberships,
   SubtotalDefinitionWithRelations,
-  // SubtotalGroup/Subtotal関連
   SubtotalGroupWithItems,
   SubtotalWithDetails,
-  // UserProject/ProjectSubtotalGroup関連
-  UserProjectWithDetails,
-  UserProjectWithProject,
-  UserProjectWithUser,
+  UserExamWithDetails,
+  UserExamWithExam,
+  UserExamWithUser,
 } from "./prismaExtensions"
 
-// 内部使用のためのインポート（型ガード等で使用）
-import type { ProjectWithDetails } from "./common.types"
+import type { ExamWithDetails } from "./common.types"
 import type {
   CropRegionWithDetails,
   CropSubtotalWithRelations,
+  ExamPageWithDetails,
   MasterImageWithDetails,
-  ProjectPageWithDetails,
   QuestionScoreWithRelations,
   QuestionScoreWithUser,
   StudentAnswerImageWithDetails,
@@ -119,7 +107,7 @@ export interface UploadStudentAnswerFileData {
 
 // Student exam result type
 interface StudentExamResult {
-  projectId: string
+  examId: string
   examName: string
   examDate: Date | null
   subject: string | null
@@ -147,15 +135,15 @@ export interface QuestionScoreOperationResult {
   conflictData?: QuestionScore
 }
 
-// Replaced BackendCreateProjectProps with a more specific type based on Project model
-export interface CreateProjectArgs {
+// Replaced BackendCreateExamProps with a more specific type based on Exam model
+export interface CreateExamArgs {
   examName: string
   description?: string | null
   examDate?: Date | null
   subject?: string | null
 }
 
-export interface UpdateProjectArgs extends Partial<CreateProjectArgs> {
+export interface UpdateExamArgs extends Partial<CreateExamArgs> {
   id: string
 }
 
@@ -163,7 +151,7 @@ export interface UpdateProjectArgs extends Partial<CreateProjectArgs> {
 export type SaveCropRegionArgs = Omit<
   Prisma.CropRegionUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
-> & { id?: string; projectPageId: string }
+> & { id?: string; examPageId: string }
 
 // SubtotalGroup作成/更新用の引数型
 export type CreateSubtotalGroupArgs = Omit<
@@ -199,21 +187,21 @@ export type CreateQuestionSubtotalAssignmentArgs = CreateCropSubtotalArgs
 
 export interface MasterAnswerDeletionResult {
   deletedAnswer: MasterImage | null
-  projectPages: ProjectPageWithDetails[]
+  examPages: ExamPageWithDetails[]
 }
 
 export interface MyAPI {
-  fetchProjects: (userId: string) => Promise<ProjectWithDetails[]>
-  fetchProjectById: (projectId: string) => Promise<ProjectWithDetails | null>
-  createProject: (
-    projectData: CreateProjectArgs,
+  fetchExams: (userId: string) => Promise<ExamWithDetails[]>
+  fetchExamById: (examId: string) => Promise<ExamWithDetails | null>
+  createExam: (
+    examData: CreateExamArgs,
     userId: string
-  ) => Promise<ProjectWithDetails>
-  updateProject: (
-    projectId: string,
-    data: Prisma.ProjectUpdateInput
-  ) => Promise<ProjectWithDetails>
-  deleteProject: (projectId: string) => Promise<Project | void>
+  ) => Promise<ExamWithDetails>
+  updateExam: (
+    examId: string,
+    data: Prisma.ExamUpdateInput
+  ) => Promise<ExamWithDetails>
+  deleteExam: (examId: string) => Promise<Exam | void>
 
   fetchUsers: () => Promise<User[]>
   getCurrentUser: () => Promise<User | null>
@@ -276,14 +264,14 @@ export interface MyAPI {
 
   // Student answer related
   uploadStudentAnswers: (
-    projectId: string,
+    examId: string,
     filesData: UploadStudentAnswerFileData[]
   ) => Promise<{
     success: boolean
     studentAnswers?: StudentAnswerWithDetails[]
     error?: string
   }>
-  getStudentAnswersByProjectId: (projectId: string) => Promise<{
+  getStudentAnswersByExamId: (examId: string) => Promise<{
     success: boolean
     studentAnswerImages?: StudentAnswerImageWithDetails[]
     error?: string
@@ -362,12 +350,12 @@ export interface MyAPI {
 
   // Class related
   fetchClasses: () => Promise<ClassWithStudents[]>
-  getClassesNotInProject: (projectId: string) => Promise<{
+  getClassesNotInExam: (examId: string) => Promise<{
     success: boolean
     classes?: (ClassWithStudents & { studentCount: number })[]
     error?: string
   }>
-  getStudentsNotInProject: (projectId: string) => Promise<{
+  getStudentsNotInExam: (examId: string) => Promise<{
     success: boolean
     students?: StudentWithMemberships[]
     error?: string
@@ -426,13 +414,13 @@ export interface MyAPI {
     endDate?: Date
   ) => Promise<StudentClassMembershipWithDetails[]>
 
-  // ProjectPage and MasterImage/StudentAnswerImage related
-  createProjectPage: (
-    projectId: string,
+  // ExamPage and MasterImage/StudentAnswerImage related
+  createExamPage: (
+    examId: string,
     pageNumber: number
-  ) => Promise<ProjectPageWithDetails>
+  ) => Promise<ExamPageWithDetails>
   uploadMasterImages: (
-    projectId: string,
+    examId: string,
     filesData: {
       name: string
       type: string
@@ -442,7 +430,7 @@ export interface MyAPI {
     }[]
   ) => Promise<MasterImageWithDetails[]>
   deleteMasterImage: (imageId: string) => Promise<MasterImage | void>
-  updateProjectPagesOrder: (
+  updateExamPagesOrder: (
     pageOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
   resolveFileProtocolPath: (relativePath: string) => Promise<string>
@@ -458,36 +446,28 @@ export interface MyAPI {
     path: string
     error?: string
   }>
-  getProjectPagesByProjectId: (
-    projectId: string
-  ) => Promise<ProjectPageWithDetails[]>
-  getMasterImagesByProjectId: (
-    projectId: string
-  ) => Promise<MasterImageWithDetails[]>
-  getStudentAnswerImagesByProjectId: (
-    projectId: string
+  getExamPagesByExamId: (examId: string) => Promise<ExamPageWithDetails[]>
+  getMasterImagesByExamId: (examId: string) => Promise<MasterImageWithDetails[]>
+  getStudentAnswerImagesByExamId: (
+    examId: string
   ) => Promise<StudentAnswerImageWithDetails[]>
 
   // Backward compatibility aliases
   uploadMasterAnswers: (
-    projectId: string,
+    examId: string,
     filesData: {
       name: string
       type: string
       buffer: ArrayBuffer
       path?: string
     }[]
-  ) => Promise<ProjectPageWithDetails[]>
+  ) => Promise<ExamPageWithDetails[]>
   deleteMasterAnswer: (answerId: string) => Promise<MasterAnswerDeletionResult>
   updateMasterAnswersOrder: (
     answerOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
-  getMasterAnswersByProjectId: (
-    projectId: string
-  ) => Promise<ProjectPageWithDetails[]>
-  getProjectPagesByProjectId: (
-    projectId: string
-  ) => Promise<ProjectPageWithDetails[]>
+  getMasterAnswersByExamId: (examId: string) => Promise<ExamPageWithDetails[]>
+  getExamPagesByExamId: (examId: string) => Promise<ExamPageWithDetails[]>
 
   // CropRegion related (updated from LayoutRegion)
   createCropRegion: (
@@ -501,11 +481,9 @@ export interface MyAPI {
     data: Prisma.CropRegionUpdateInput
   ) => Promise<CropRegionWithDetails>
   deleteCropRegion: (id: string) => Promise<CropRegion | void>
-  getCropRegionsByProjectId: (
-    projectId: string
-  ) => Promise<CropRegionWithDetails[]>
-  getQuestionAnswerRegionsByProjectId: (
-    projectId: string
+  getCropRegionsByExamId: (examId: string) => Promise<CropRegionWithDetails[]>
+  getQuestionAnswerRegionsByExamId: (
+    examId: string
   ) => Promise<CropRegionWithDetails[]>
   getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateCropRegionOrders: (
@@ -524,16 +502,12 @@ export interface MyAPI {
     data: Prisma.CropRegionUpdateInput
   ) => Promise<CropRegionWithDetails>
   deleteLayoutRegion: (id: string) => Promise<CropRegion | void>
-  getLayoutRegionsByProjectId: (
-    projectId: string
-  ) => Promise<CropRegionWithDetails[]>
+  getLayoutRegionsByExamId: (examId: string) => Promise<CropRegionWithDetails[]>
   getLayoutRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateLayoutRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>
   ) => Promise<CropRegion[]>
-  getCropRegionsByProjectId: (
-    projectId: string
-  ) => Promise<CropRegionWithDetails[]>
+  getCropRegionsByExamId: (examId: string) => Promise<CropRegionWithDetails[]>
   getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>
@@ -574,18 +548,18 @@ export interface MyAPI {
     success: boolean
     error?: string
   }>
-  getSubtotalGroupsByProjectId: (
-    projectId: string
+  getSubtotalGroupsByExamId: (
+    examId: string
   ) => Promise<SubtotalGroupWithItems[]>
   getSubtotalGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
-  getAvailableSubtotalGroupsForProject: (projectId: string) => Promise<{
+  getAvailableSubtotalGroupsForExam: (examId: string) => Promise<{
     success: boolean
     subtotalGroups?: SubtotalGroupWithItems[]
     error?: string
   }>
-  getActiveSubtotalGroupsForProject: (projectId: string) => Promise<{
+  getActiveSubtotalGroupsForExam: (examId: string) => Promise<{
     success: boolean
-    projectSubtotalGroups?: Prisma.ProjectSubtotalGroupGetPayload<{
+    examSubtotalGroups?: Prisma.ExamSubtotalGroupGetPayload<{
       include: {
         subtotalGroup: {
           include: {
@@ -596,12 +570,12 @@ export interface MyAPI {
     }>[]
     error?: string
   }>
-  addSubtotalGroupToProject: (
-    projectId: string,
+  addSubtotalGroupToExam: (
+    examId: string,
     subtotalGroupId: string
   ) => Promise<{
     success: boolean
-    projectSubtotalGroup?: Prisma.ProjectSubtotalGroupGetPayload<{
+    examSubtotalGroup?: Prisma.ExamSubtotalGroupGetPayload<{
       include: {
         subtotalGroup: {
           include: {
@@ -612,8 +586,8 @@ export interface MyAPI {
     }>
     error?: string
   }>
-  removeSubtotalGroupFromProject: (
-    projectId: string,
+  removeSubtotalGroupFromExam: (
+    examId: string,
     subtotalGroupId: string
   ) => Promise<{
     success: boolean
@@ -629,8 +603,8 @@ export interface MyAPI {
     data: Prisma.SubtotalGroupUpdateInput
   ) => Promise<SubtotalGroupWithItems>
   deleteQuestionGroup: (id: string) => Promise<SubtotalGroup | void>
-  getQuestionGroupsByProjectId: (
-    projectId: string
+  getQuestionGroupsByExamId: (
+    examId: string
   ) => Promise<SubtotalGroupWithItems[]>
   getQuestionGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
 
@@ -718,32 +692,30 @@ export interface MyAPI {
     questionGroupItemId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
-  // UserProject and ProjectSubtotalGroup related (new many-to-many relations)
-  createUserProject: (
-    data: Prisma.UserProjectUncheckedCreateInput
+  // UserExam and ExamSubtotalGroup related (new many-to-many relations)
+  createUserExam: (
+    data: Prisma.UserExamUncheckedCreateInput
   ) => Promise<
-    Prisma.UserProjectGetPayload<{ include: { user: true; project: true } }>
+    Prisma.UserExamGetPayload<{ include: { user: true; exam: true } }>
   >
-  deleteUserProject: (id: string) => Promise<UserProject | void>
-  getUserProjectsByUserId: (
+  deleteUserExam: (id: string) => Promise<UserExam | void>
+  getUserExamsByUserId: (
     userId: string
-  ) => Promise<Prisma.UserProjectGetPayload<{ include: { project: true } }>[]>
-  getUserProjectsByProjectId: (
-    projectId: string
-  ) => Promise<Prisma.UserProjectGetPayload<{ include: { user: true } }>[]>
+  ) => Promise<Prisma.UserExamGetPayload<{ include: { exam: true } }>[]>
+  getUserExamsByExamId: (
+    examId: string
+  ) => Promise<Prisma.UserExamGetPayload<{ include: { user: true } }>[]>
 
-  createProjectSubtotalGroup: (
-    data: Prisma.ProjectSubtotalGroupUncheckedCreateInput
+  createExamSubtotalGroup: (
+    data: Prisma.ExamSubtotalGroupUncheckedCreateInput
   ) => Promise<
-    Prisma.ProjectSubtotalGroupGetPayload<{
-      include: { project: true; subtotalGroup: true }
+    Prisma.ExamSubtotalGroupGetPayload<{
+      include: { exam: true; subtotalGroup: true }
     }>
   >
-  deleteProjectSubtotalGroup: (
-    id: string
-  ) => Promise<ProjectSubtotalGroup | void>
-  getProjectSubtotalGroupsByProjectId: (projectId: string) => Promise<
-    Prisma.ProjectSubtotalGroupGetPayload<{
+  deleteExamSubtotalGroup: (id: string) => Promise<ExamSubtotalGroup | void>
+  getExamSubtotalGroupsByExamId: (examId: string) => Promise<
+    Prisma.ExamSubtotalGroupGetPayload<{
       include: { subtotalGroup: { include: { subtotals: true } } }
     }>[]
   >
@@ -774,32 +746,32 @@ export interface MyAPI {
     questionGroupItemId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
-  // Project-Student relationship
-  getStudentsForProject: (projectId: string) => Promise<{
+  // Exam-Student relationship
+  getStudentsForExam: (examId: string) => Promise<{
     success: boolean
     students?: (StudentWithMemberships & {
       status: "participating" | "expected" | "absent"
-      isInProject: boolean
+      isInExam: boolean
       customOrder: number | null
     })[]
     error?: string
   }>
-  addStudentsToProject: (
-    projectId: string,
+  addStudentsToExam: (
+    examId: string,
     studentIds: string[]
   ) => Promise<{
     success: boolean
     error?: string
   }>
-  removeStudentsFromProject: (
-    projectId: string,
+  removeStudentsFromExam: (
+    examId: string,
     studentIds: string[]
   ) => Promise<{
     success: boolean
     error?: string
   }>
-  updateStudentProjectStatus: (
-    projectId: string,
+  updateStudentExamStatus: (
+    examId: string,
     studentId: string,
     status: "participating" | "expected" | "absent"
   ) => Promise<{
@@ -807,14 +779,14 @@ export interface MyAPI {
     error?: string
   }>
   updateStudentOrders: (
-    projectId: string,
+    examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
   ) => Promise<{
     success: boolean
     error?: string
   }>
   checkGradingDataForStudents: (
-    projectId: string,
+    examId: string,
     studentIds: string[]
   ) => Promise<{
     success: boolean
@@ -833,8 +805,8 @@ export interface MyAPI {
   }>
 
   // QuestionScore関連のAPI
-  getQuestionScoresForProject: (
-    projectId: string,
+  getQuestionScoresForExam: (
+    examId: string,
     userId?: string
   ) => Promise<{
     success: boolean
@@ -933,12 +905,12 @@ export interface MyAPI {
     completedQuestions: number
     percentage: number
   }>
-  getProjectProgress: (projectId: string) => Promise<{
+  getExamProgress: (examId: string) => Promise<{
     totalStudentAnswers: number
     completedStudentAnswers: number
     percentage: number
   }>
-  initializeScoringRecords: (projectId: string) => Promise<{
+  initializeScoringRecords: (examId: string) => Promise<{
     success: boolean
     initialized?: number
     message?: string
@@ -949,11 +921,11 @@ export interface MyAPI {
   export: {
     // PDF出力に必要なデータを取得
     getPdfExportData: (options: {
-      projectId: string
+      examId: string
       selectedStudentIds: string[]
     }) => Promise<{
       success: boolean
-      projectName?: string
+      examName?: string
       pages?: Array<{
         studentId: string
         studentName: string
@@ -1023,7 +995,7 @@ export interface MyAPI {
 
     // Canvas描画済み画像からPDF作成
     createPdfFromRenderedImages: (options: {
-      projectId: string
+      examId: string
       renderedPages: Array<{
         studentId: string
         pageNumber: number
@@ -1051,7 +1023,7 @@ export interface MyAPI {
     }>
 
     // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
-    selectPdfSavePath: (options: { projectName?: string }) => Promise<{
+    selectPdfSavePath: (options: { examName?: string }) => Promise<{
       success: boolean
       filePath?: string
       canceled?: boolean
@@ -1103,7 +1075,7 @@ export interface MyAPI {
 
     // 個人成績表用データ取得
     getIndividualReportData: (options: {
-      projectId: string
+      examId: string
       selectedStudentIds: string[]
       options: import("../electron-src/lib/export/individual-report").IndividualReportOptions
     }) => Promise<
@@ -1112,14 +1084,14 @@ export interface MyAPI {
 
     // 個人成績表用小計点グループ一覧取得
     getSubtotalGroupsForReport: (
-      projectId: string
+      examId: string
     ) => Promise<
       import("../electron-src/lib/export/individual-report").SubtotalGroupsForReportResult
     >
 
     // 個人成績表PDF保存先選択ダイアログ
     selectIndividualReportSavePath: (options: {
-      projectName?: string
+      examName?: string
     }) => Promise<{
       success: boolean
       filePath?: string
@@ -1165,7 +1137,7 @@ export interface MyAPI {
 
     // Excelプレビューデータ取得
     getExcelPreviewData: (options: {
-      projectId: string
+      examId: string
       selectedStudentIds: string[]
     }) => Promise<{
       success: boolean
@@ -1221,7 +1193,7 @@ export interface MyAPI {
 
   // Excel Export related
   exportGradingDataExcel: (options: {
-    projectId: string
+    examId: string
     selectedStudentIds: string[]
     outputPath?: string
     forceExport?: boolean
@@ -1245,25 +1217,25 @@ export interface MyAPI {
   }>
 
   // =============================================================================
-  // プロジェクトアーカイブ（エクスポート/インポート）関連
+  // 試験アーカイブ（エクスポート/インポート）関連
   // =============================================================================
   archive: {
     /**
-     * プロジェクトをZIPアーカイブとしてエクスポート
+     * 試験をZIPアーカイブとしてエクスポート
      */
-    exportProject: (options: {
-      projectId: string
+    exportExam: (options: {
+      examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("./projectArchive.types").ExportMode
-    }) => Promise<import("./projectArchive.types").ExportProjectResult>
+      exportMode?: import("./examArchive.types").ExportMode
+    }) => Promise<import("./examArchive.types").ExportExamResult>
 
     /**
      * アーカイブファイルを解析してプレビュー情報を取得
      */
     analyzeArchive: (
-      options: import("./projectArchive.types").AnalyzeArchiveOptions
-    ) => Promise<import("./projectArchive.types").AnalyzeArchiveResult>
+      options: import("./examArchive.types").AnalyzeArchiveOptions
+    ) => Promise<import("./examArchive.types").AnalyzeArchiveResult>
 
     /**
      * 事前照合を実行（Step 2: ファイル概要表示用）
@@ -1271,7 +1243,7 @@ export interface MyAPI {
      */
     preMatch: (options: { archivePath: string }) => Promise<{
       success: boolean
-      data?: import("./projectArchive.types").FileOverviewData
+      data?: import("./examArchive.types").FileOverviewData
       error?: string
     }>
 
@@ -1279,8 +1251,8 @@ export interface MyAPI {
      * 競合を検出（マージインポート用ドライラン）
      */
     detectConflicts: (
-      options: import("./projectArchive.types").DetectConflictsOptions
-    ) => Promise<import("./projectArchive.types").ConflictDetectionResult>
+      options: import("./examArchive.types").DetectConflictsOptions
+    ) => Promise<import("./examArchive.types").ConflictDetectionResult>
 
     /**
      * ID統合インポートを実行（新しいフロー）
@@ -1291,19 +1263,19 @@ export interface MyAPI {
      */
     idIntegrationImport: (options: {
       archivePath: string
-      preMatchResult: import("./projectArchive.types").FileOverviewData
-      integrationConfig: import("./projectArchive.types").IdIntegrationConfig
+      preMatchResult: import("./examArchive.types").FileOverviewData
+      integrationConfig: import("./examArchive.types").IdIntegrationConfig
       currentUserId: string
-      scoringConflictConfig?: import("./projectArchive.types").ScoringConflictConfig
-      updateDecisions?: import("./projectArchive.types").UpdateDecisions
+      scoringConflictConfig?: import("./examArchive.types").ScoringConflictConfig
+      updateDecisions?: import("./examArchive.types").UpdateDecisions
     }) => Promise<{
       success: boolean
-      projectId?: string
+      examId?: string
       summary?: {
-        created: import("./projectArchive.types").ArchiveDataCounts
-        updated: import("./projectArchive.types").ArchiveDataCounts
-        skipped: import("./projectArchive.types").ArchiveDataCounts
-        unchanged: import("./projectArchive.types").ArchiveDataCounts
+        created: import("./examArchive.types").ArchiveDataCounts
+        updated: import("./examArchive.types").ArchiveDataCounts
+        skipped: import("./examArchive.types").ArchiveDataCounts
+        unchanged: import("./examArchive.types").ArchiveDataCounts
       }
       warnings?: string[]
       error?: string
@@ -1317,21 +1289,21 @@ export interface MyAPI {
      */
     detectScoringConflicts: (options: {
       archivePath: string
-      preMatchResult: import("./projectArchive.types").FileOverviewData
-      integrationConfig: import("./projectArchive.types").IdIntegrationConfig
+      preMatchResult: import("./examArchive.types").FileOverviewData
+      integrationConfig: import("./examArchive.types").IdIntegrationConfig
     }) => Promise<{
       success: boolean
-      data?: import("./projectArchive.types").ScoringConflictData
+      data?: import("./examArchive.types").ScoringConflictData
       error?: string
     }>
 
     /**
-     * 複数プロジェクトを一括エクスポート
-     * フォルダ選択ダイアログを表示し、各プロジェクトを個別の.scoreファイルとして保存
+     * 複数試験を一括エクスポート
+     * フォルダ選択ダイアログを表示し、各試験を個別の.scoreファイルとして保存
      */
-    bulkExportProjects: (
-      options: import("./projectArchive.types").BulkExportProjectsOptions
-    ) => Promise<import("./projectArchive.types").BulkExportProjectsResult>
+    bulkExportExams: (
+      options: import("./examArchive.types").BulkExportExamsOptions
+    ) => Promise<import("./examArchive.types").BulkExportExamsResult>
 
     /**
      * インポートファイル選択ダイアログ
@@ -1414,7 +1386,7 @@ export interface MyAPI {
     }>
     getByStudent: (
       studentId: string,
-      projectId: string,
+      examId: string,
       type?: import("./drawing-annotation.types").DrawingType,
       userId?: string
     ) => Promise<{
@@ -1422,8 +1394,8 @@ export interface MyAPI {
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
-    getByProject: (
-      projectId: string,
+    getByExam: (
+      examId: string,
       type?: import("./drawing-annotation.types").DrawingType,
       userId?: string
     ) => Promise<{
@@ -1479,176 +1451,169 @@ export interface MyAPI {
     }>
   }
 
-  // ProjectClass関連
-  projectClass: {
+  // ExamClass関連
+  examClass: {
     /**
-     * プロジェクトに関連付けられた全クラスを取得
+     * 試験に関連付けられた全クラスを取得
      */
-    getAll: (projectId: string) => Promise<ProjectClassWithClass[]>
+    getAll: (examId: string) => Promise<ExamClassWithClass[]>
 
     /**
      * 受験生徒追加用クラスを取得 (administered=true)
      */
-    getAdministered: (projectId: string) => Promise<ProjectClassWithClass[]>
+    getAdministered: (examId: string) => Promise<ExamClassWithClass[]>
 
     /**
      * 統計集計用クラスを取得 (statistics=true)
      */
-    getStatistics: (projectId: string) => Promise<ProjectClassWithClass[]>
+    getStatistics: (examId: string) => Promise<ExamClassWithClass[]>
 
     /**
-     * プロジェクトに追加可能なクラスを取得（まだProjectClassに含まれていないクラス）
+     * 試験に追加可能なクラスを取得（まだExamClassに含まれていないクラス）
      */
-    getAvailable: (projectId: string) => Promise<AvailableClass[]>
+    getAvailable: (examId: string) => Promise<AvailableClass[]>
 
     /**
-     * プロジェクトにクラスを追加
+     * 試験にクラスを追加
      */
     add: (options: {
-      projectId: string
+      examId: string
       classId: string
       administered?: boolean
       statistics?: boolean
-    }) => Promise<ProjectClassWithDetails>
+    }) => Promise<ExamClassWithDetails>
 
     /**
-     * ProjectClassを更新
+     * ExamClassを更新
      */
     update: (options: {
       id: string
       administered?: boolean
       statistics?: boolean
       order?: number
-    }) => Promise<ProjectClassWithDetails>
+    }) => Promise<ExamClassWithDetails>
 
     /**
-     * ProjectClassを削除 (idで指定)
+     * ExamClassを削除 (idで指定)
      */
-    remove: (id: string) => Promise<ProjectClass>
+    remove: (id: string) => Promise<ExamClass>
 
     /**
-     * ProjectClassの順序を一括更新
+     * ExamClassの順序を一括更新
      */
     reorder: (options: {
-      projectId: string
+      examId: string
       orderedIds: string[]
     }) => Promise<void>
 
     /**
-     * ProjectClassを削除 (projectIdとclassIdで指定)
+     * ExamClassを削除 (examIdとclassIdで指定)
      */
-    removeByIds: (projectId: string, classId: string) => Promise<ProjectClass>
+    removeByIds: (examId: string, classId: string) => Promise<ExamClass>
 
     /**
-     * クラスから生徒をプロジェクトに追加（B案: 統合型フロー）
-     * 1. ProjectClass を作成（administered=true）
-     * 2. クラスの生徒を出席番号順で ProjectStudent に追加
+     * クラスから生徒を試験に追加（B案: 統合型フロー）
+     * 1. ExamClass を作成（administered=true）
+     * 2. クラスの生徒を出席番号順で ExamStudent に追加
      */
     addStudentsFromClass: (
-      projectId: string,
+      examId: string,
       classId: string
     ) => Promise<{
       added: number
       skipped: number
-      projectClass: ProjectClass
+      examClass: ExamClass
     }>
 
     /**
-     * プロジェクト内の全生徒の学級・出席番号情報を取得
-     * ProjectClass (administered=true) 経由で解決
+     * 試験内の全生徒の学級・出席番号情報を取得
+     * ExamClass (administered=true) 経由で解決
      */
     getStudentClassInfo: (
-      projectId: string
+      examId: string
     ) => Promise<Record<string, StudentClassInfo>>
 
     /**
      * 単一生徒の学級・出席番号情報を取得
      */
     getStudentClassInfoSingle: (
-      projectId: string,
+      examId: string,
       studentId: string
     ) => Promise<StudentClassInfo>
   }
 
-  // UserProject権限管理関連
-  userProject: {
+  // UserExam権限管理関連
+  userExam: {
     /**
-     * プロジェクトのメンバー一覧を取得
+     * 試験のメンバー一覧を取得
      */
-    getMembers: (projectId: string) => Promise<UserProjectWithUserAndInviter[]>
+    getMembers: (examId: string) => Promise<UserExamWithUserAndInviter[]>
 
     /**
-     * ユーザーのプロジェクト内ロールを取得
+     * ユーザーの試験内ロールを取得
      */
-    getRole: (userId: string, projectId: string) => Promise<UserRole | null>
+    getRole: (userId: string, examId: string) => Promise<UserRole | null>
 
     /**
-     * ユーザーがプロジェクトのオーナーか確認
+     * ユーザーが試験のオーナーか確認
      */
-    isOwner: (userId: string, projectId: string) => Promise<boolean>
+    isOwner: (userId: string, examId: string) => Promise<boolean>
 
     /**
-     * ユーザーがプロジェクトのメンバーか確認
+     * ユーザーが試験のメンバーか確認
      */
-    isMember: (userId: string, projectId: string) => Promise<boolean>
+    isMember: (userId: string, examId: string) => Promise<boolean>
 
     /**
-     * プロジェクトのオーナーを設定（プロジェクト作成時）
+     * 試験のオーナーを設定（試験作成時）
      */
-    setOwner: (options: {
-      projectId: string
-      userId: string
-    }) => Promise<UserProject>
+    setOwner: (options: { examId: string; userId: string }) => Promise<UserExam>
 
     /**
      * メンバーを招待（GRADERとして追加）
      */
     invite: (options: {
-      projectId: string
+      examId: string
       userId: string
       invitedBy: string
-    }) => Promise<UserProjectWithUserAndInviter>
+    }) => Promise<UserExamWithUserAndInviter>
 
     /**
      * メンバーを削除
      */
     remove: (
-      projectId: string,
+      examId: string,
       userId: string,
       removedBy: string
-    ) => Promise<UserProject>
+    ) => Promise<UserExam>
 
     /**
      * オーナー権限を移譲
      */
     transferOwnership: (
-      projectId: string,
+      examId: string,
       newOwnerId: string,
       currentOwnerId: string
     ) => Promise<{
-      previousOwner: UserProject
-      newOwner: UserProject
+      previousOwner: UserExam
+      newOwner: UserExam
     }>
 
     /**
-     * ユーザーが参加している全プロジェクトを取得
+     * ユーザーが参加している全試験を取得
      */
-    getUserProjects: (
-      userId: string
-    ) => Promise<UserProjectWithProjectDetails[]>
+    getUserExams: (userId: string) => Promise<UserExamWithExamDetails[]>
 
     /**
-     * プロジェクトのオーナーを取得
+     * 試験のオーナーを取得
      */
-    getOwner: (
-      projectId: string
-    ) => Promise<UserProjectWithUserAndInviter | null>
+    getOwner: (examId: string) => Promise<UserExamWithUserAndInviter | null>
 
     /**
      * 招待可能なユーザーを検索（既存メンバー除外）
      */
     searchUsers: (
-      projectId: string,
+      examId: string,
       query: string
     ) => Promise<{ id: string; username: string; name: string }[]>
   }
@@ -1711,25 +1676,25 @@ export interface MyAPI {
       error?: string
     }>
 
-    // ProjectMarkingFormat
-    getProjectMarkingFormats: (projectId: string) => Promise<{
+    // ExamMarkingFormat
+    getExamMarkingFormats: (examId: string) => Promise<{
       success: boolean
-      formats?: ProjectMarkingFormat[]
+      formats?: ExamMarkingFormat[]
       error?: string
     }>
-    saveProjectMarkingFormats: (
-      projectId: string,
+    saveExamMarkingFormats: (
+      examId: string,
       formats: MarkingFormatData[]
     ) => Promise<{ success: boolean; error?: string }>
 
-    // ProjectExportSettings
-    getProjectExportSettings: (projectId: string) => Promise<{
+    // ExamExportSettings
+    getExamExportSettings: (examId: string) => Promise<{
       success: boolean
       settings?: Record<string, unknown> | null
       error?: string
     }>
-    saveProjectExportSettings: (
-      projectId: string,
+    saveExamExportSettings: (
+      examId: string,
       settings: Record<string, unknown>
     ) => Promise<{ success: boolean; error?: string }>
 
@@ -1746,7 +1711,7 @@ export interface MyAPI {
     resetCropRegionMarkingOverrides: (
       cropRegionId: string
     ) => Promise<{ success: boolean; error?: string }>
-    getProjectCropRegionMarkingOverrides: (projectId: string) => Promise<{
+    getExamCropRegionMarkingOverrides: (examId: string) => Promise<{
       success: boolean
       overrides?: CropRegionMarkingOverrideWithRegion[]
       error?: string
@@ -1811,18 +1776,18 @@ export interface MyAPI {
   }
 
   // =============================================================================
-  // GradeProject（成績算出）
+  // Grade（成績算出）
   // =============================================================================
 
-  gradeProject: {
+  grade: {
     getAll: () => Promise<{
       success: boolean
-      gradeProjects?: import("./gradeProject.types").GradeProjectWithDetails[]
+      grades?: import("./grade.types").GradeWithDetails[]
       error?: string
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      gradeProject?: import("./gradeProject.types").GradeProjectWithDetails
+      grade?: import("./grade.types").GradeWithDetails
       error?: string
     }>
     create: (data: {
@@ -1831,7 +1796,7 @@ export interface MyAPI {
       referenceDate?: string | null
     }) => Promise<{
       success: boolean
-      gradeProject?: import("./gradeProject.types").GradeProjectWithDetails
+      grade?: import("./grade.types").GradeWithDetails
       error?: string
     }>
     update: (
@@ -1843,16 +1808,16 @@ export interface MyAPI {
       }
     ) => Promise<{
       success: boolean
-      gradeProject?: import("./gradeProject.types").GradeProjectWithDetails
+      grade?: import("./grade.types").GradeWithDetails
       error?: string
     }>
     delete: (id: string) => Promise<{ success: boolean; error?: string }>
     // 生徒・学級管理
-    getStudents: (gradeProjectId: string) => Promise<{
+    getStudents: (gradeId: string) => Promise<{
       success: boolean
       students?: Array<{
         id: string
-        gradeProjectId: string
+        gradeId: string
         studentId: string
         customOrder: number | null
         student: {
@@ -1869,7 +1834,7 @@ export interface MyAPI {
       }>
       error?: string
     }>
-    getClasses: (gradeProjectId: string) => Promise<{
+    getClasses: (gradeId: string) => Promise<{
       success: boolean
       classes?: Array<{
         id: string
@@ -1880,7 +1845,7 @@ export interface MyAPI {
       }>
       error?: string
     }>
-    getAvailableClasses: (gradeProjectId: string) => Promise<{
+    getAvailableClasses: (gradeId: string) => Promise<{
       success: boolean
       classes?: Array<{
         id: string
@@ -1890,7 +1855,7 @@ export interface MyAPI {
       error?: string
     }>
     addStudentsFromClass: (
-      gradeProjectId: string,
+      gradeId: string,
       classId: string
     ) => Promise<{
       success: boolean
@@ -1899,7 +1864,7 @@ export interface MyAPI {
       error?: string
     }>
     removeClass: (
-      gradeProjectId: string,
+      gradeId: string,
       classId: string
     ) => Promise<{
       success: boolean
@@ -1907,21 +1872,18 @@ export interface MyAPI {
       error?: string
     }>
     updateStudentOrders: (
-      gradeProjectId: string,
+      gradeId: string,
       studentOrders: { studentId: string; customOrder: number }[]
     ) => Promise<{ success: boolean; error?: string }>
     // GradeItem
-    getGradeItems: (gradeProjectId: string) => Promise<{
+    getGradeItems: (gradeId: string) => Promise<{
       success: boolean
-      gradeItems?: import("./gradeProject.types").GradeItemWithDetails[]
+      gradeItems?: import("./grade.types").GradeItemWithDetails[]
       error?: string
     }>
-    createGradeItem: (data: {
-      gradeProjectId: string
-      name: string
-    }) => Promise<{
+    createGradeItem: (data: { gradeId: string; name: string }) => Promise<{
       success: boolean
-      gradeItem?: import("./gradeProject.types").GradeItemWithDetails
+      gradeItem?: import("./grade.types").GradeItemWithDetails
       error?: string
     }>
     updateGradeItem: (
@@ -1929,7 +1891,7 @@ export interface MyAPI {
       data: { name?: string }
     ) => Promise<{
       success: boolean
-      gradeItem?: import("./gradeProject.types").GradeItemWithDetails
+      gradeItem?: import("./grade.types").GradeItemWithDetails
       error?: string
     }>
     deleteGradeItem: (
@@ -1942,7 +1904,7 @@ export interface MyAPI {
     createDataSource: (data: {
       gradeItemId: string
       type: string
-      examProjectId?: string
+      examId?: string
       subtotalId?: string
       cropRegionId?: string
       name: string
@@ -1956,7 +1918,7 @@ export interface MyAPI {
       estimationSourceIds?: string[]
     }) => Promise<{
       success: boolean
-      dataSource?: import("./gradeProject.types").GradeDataSourceWithDetails
+      dataSource?: import("./grade.types").GradeDataSourceWithDetails
       error?: string
     }>
     updateDataSource: (
@@ -1974,7 +1936,7 @@ export interface MyAPI {
       }
     ) => Promise<{
       success: boolean
-      dataSource?: import("./gradeProject.types").GradeDataSourceWithDetails
+      dataSource?: import("./grade.types").GradeDataSourceWithDetails
       error?: string
     }>
     deleteDataSource: (
@@ -1996,7 +1958,7 @@ export interface MyAPI {
     ) => Promise<{ success: boolean; error?: string }>
     getManualScores: (gradeDataSourceId: string) => Promise<{
       success: boolean
-      manualScores?: import("./gradeProject.types").ManualScoreWithStudent[]
+      manualScores?: import("./grade.types").ManualScoreWithStudent[]
       error?: string
     }>
     batchUpsertManualScores: (
@@ -2006,68 +1968,68 @@ export interface MyAPI {
         score: number | null
       }[]
     ) => Promise<{ success: boolean; error?: string }>
-    getBoundarySets: (gradeProjectId: string) => Promise<{
+    getBoundarySets: (gradeId: string) => Promise<{
       success: boolean
-      boundarySets?: import("./gradeProject.types").GradeBoundarySetWithDetails[]
+      boundarySets?: import("./grade.types").GradeBoundarySetWithDetails[]
       error?: string
     }>
     upsertBoundarySet: (data: {
-      gradeProjectId: string
+      gradeId: string
       targetType: string
       gradeItemId: string | null
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => Promise<{
       success: boolean
-      boundarySet?: import("./gradeProject.types").GradeBoundarySetWithDetails
+      boundarySet?: import("./grade.types").GradeBoundarySetWithDetails
       error?: string
     }>
     deleteBoundarySet: (
       id: string
     ) => Promise<{ success: boolean; error?: string }>
     upsertGradeOverride: (data: {
-      gradeProjectId: string
+      gradeId: string
       studentId: string
       targetType: string
       gradeItemId: string | null
       overrideLabel: string
     }) => Promise<{ success: boolean; override?: unknown; error?: string }>
     deleteGradeOverride: (data: {
-      gradeProjectId: string
+      gradeId: string
       studentId: string
       targetType: string
       gradeItemId: string | null
     }) => Promise<{ success: boolean; error?: string }>
-    getGradeItemExclusions: (gradeProjectId: string) => Promise<{
+    getGradeItemExclusions: (gradeId: string) => Promise<{
       success: boolean
       exclusions?: Array<{
         id: string
-        gradeProjectId: string
+        gradeId: string
         studentId: string
         gradeItemId: string
       }>
       error?: string
     }>
     setGradeItemExclusion: (data: {
-      gradeProjectId: string
+      gradeId: string
       studentId: string
       gradeItemId: string
       excluded: boolean
     }) => Promise<{ success: boolean; error?: string }>
     batchUpdateGradeItemExclusions: (
-      gradeProjectId: string,
+      gradeId: string,
       updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
     ) => Promise<{ success: boolean; error?: string }>
-    calculateGrades: (gradeProjectId: string) => Promise<{
+    calculateGrades: (gradeId: string) => Promise<{
       success: boolean
-      result?: import("./gradeProject.types").GradeCalculationResult
+      result?: import("./grade.types").GradeCalculationResult
       error?: string
     }>
-    getExamProjectCandidates: () => Promise<{
+    getExamCandidates: () => Promise<{
       success: boolean
-      projects?: Array<{ id: string; examName: string; examDate: Date | null }>
+      exams?: Array<{ id: string; examName: string; examDate: Date | null }>
       error?: string
     }>
-    getProjectSubtotalGroups: (projectId: string) => Promise<{
+    getExamSubtotalGroups: (examId: string) => Promise<{
       success: boolean
       subtotalGroups?: Array<{
         id: string
@@ -2076,7 +2038,7 @@ export interface MyAPI {
       }>
       error?: string
     }>
-    getProjectCropRegions: (projectId: string) => Promise<{
+    getExamCropRegions: (examId: string) => Promise<{
       success: boolean
       cropRegions?: Array<{
         id: string
@@ -2089,31 +2051,31 @@ export interface MyAPI {
     }>
     calculateSourceMaxScore: (data: {
       type: string
-      examProjectId?: string
+      examId?: string
       subtotalId?: string
       cropRegionId?: string
     }) => Promise<{ success: boolean; maxScore?: number; error?: string }>
     exportExcel: (
-      gradeProjectId: string,
+      gradeId: string,
       options?: { studentIds?: string[] }
     ) => Promise<{
       success: boolean
       outputPath?: string
       error?: string
     }>
-    getExportSettings: (gradeProjectId: string) => Promise<{
+    getExportSettings: (gradeId: string) => Promise<{
       success: boolean
       settings?: Record<string, unknown> | null
       error?: string
     }>
     saveExportSettings: (
-      gradeProjectId: string,
+      gradeId: string,
       settings: Record<string, unknown>
     ) => Promise<{
       success: boolean
       error?: string
     }>
-    exportArchive: (gradeProjectId: string) => Promise<{
+    exportArchive: (gradeId: string) => Promise<{
       success: boolean
       error?: string
     }>
@@ -2125,10 +2087,10 @@ export interface MyAPI {
     }>
     executeImport: (
       archiveData: import("./gradeArchive.types").GradeArchiveData,
-      examProjectMapping?: Record<string, string>
+      examMapping?: Record<string, string>
     ) => Promise<{
       success: boolean
-      gradeProjectId?: string
+      gradeId?: string
       error?: string
     }>
   }
@@ -2215,8 +2177,8 @@ export interface MyAPI {
       canceled?: boolean
       error?: string
     }>
-    convertToProject: (
-      args: import("./answerSheetBuilder.types").ASBConvertToProjectArgs
+    convertToExam: (
+      args: import("./answerSheetBuilder.types").ASBConvertToExamArgs
     ) => Promise<import("./answerSheetBuilder.types").ASBConvertResult>
     print: (
       args: import("./answerSheetBuilder.types").ASBPrintArgs
@@ -2259,10 +2221,10 @@ export interface MyAPI {
       pageIndex?: number
     }) => Promise<import("./omr.types").OMRSheetResult[]>
     saveTemplate: (
-      projectId: string,
+      examId: string,
       template: import("./omr.types").OMRTemplate
     ) => Promise<{ success: boolean; error?: string }>
-    loadTemplate: (projectId: string) => Promise<{
+    loadTemplate: (examId: string) => Promise<{
       success: boolean
       template?: import("./omr.types").OMRTemplate
       error?: string
@@ -2274,15 +2236,15 @@ export interface MyAPI {
 }
 
 // =============================================================================
-// ProjectClass関連型
+// ExamClass関連型
 // =============================================================================
 
 /**
- * ProjectClass with class details
+ * ExamClass with class details
  */
-export interface ProjectClassWithDetails {
+export interface ExamClassWithDetails {
   id: string
-  projectId: string
+  examId: string
   classId: string
   administered: boolean
   statistics: boolean
@@ -2290,15 +2252,15 @@ export interface ProjectClassWithDetails {
   createdAt: Date
   updatedAt: Date
   class: Class
-  project: Project
+  exam: Exam
 }
 
 /**
- * ProjectClass with class and membership details
+ * ExamClass with class and membership details
  */
-export interface ProjectClassWithClass {
+export interface ExamClassWithClass {
   id: string
-  projectId: string
+  examId: string
   classId: string
   administered: boolean
   statistics: boolean
@@ -2309,7 +2271,7 @@ export interface ProjectClassWithClass {
 }
 
 /**
- * Available class for adding to ProjectClass
+ * Available class for adding to ExamClass
  */
 export interface AvailableClass {
   id: string
@@ -2320,14 +2282,14 @@ export interface AvailableClass {
 }
 
 /**
- * 生徒の学級・出席番号情報（ProjectClass経由で取得）
+ * 生徒の学級・出席番号情報（ExamClass経由で取得）
  */
 export interface StudentClassInfo {
   className: string | null
   classCode: string | null
   grade: number | null
   attendanceNumber: number | null
-  /** ProjectClass の並び順 */
+  /** ExamClass の並び順 */
   classOrder: number | null
 }
 
@@ -2363,21 +2325,21 @@ export interface StudentClassMembershipWithStudent {
 }
 
 // =============================================================================
-// UserProject権限管理関連型
+// UserExam権限管理関連型
 // =============================================================================
 
 /**
- * UserProject ロール
+ * UserExam ロール
  */
 export type UserRole = "OWNER" | "GRADER"
 
 /**
- * UserProject with user and inviter details
+ * UserExam with user and inviter details
  */
-export interface UserProjectWithUserAndInviter {
+export interface UserExamWithUserAndInviter {
   id: string
   userId: string
-  projectId: string
+  examId: string
   role: string
   invitedAt: Date
   invitedBy: string | null
@@ -2388,18 +2350,18 @@ export interface UserProjectWithUserAndInviter {
 }
 
 /**
- * UserProject with project details
+ * UserExam with exam details
  */
-export interface UserProjectWithProjectDetails {
+export interface UserExamWithExamDetails {
   id: string
   userId: string
-  projectId: string
+  examId: string
   role: string
   invitedAt: Date
   invitedBy: string | null
   createdAt: Date
   updatedAt: Date
-  project: Project
+  exam: Exam
 }
 
 // =============================================================================
@@ -2452,11 +2414,11 @@ export interface ScoringPreferenceColumns {
 }
 
 /**
- * プロジェクト採点記号設定
+ * 試験採点記号設定
  */
-export interface ProjectMarkingFormat {
+export interface ExamMarkingFormat {
   id: string
-  projectId: string
+  examId: string
   markType: string
   symbol: string
   color: string
@@ -2492,7 +2454,7 @@ export interface CropRegionMarkingOverrideWithRegion extends CropRegionMarkingOv
 }
 
 /**
- * ProjectMarkingFormat作成/更新用データ
+ * ExamMarkingFormat作成/更新用データ
  */
 export interface MarkingFormatData {
   markType: string

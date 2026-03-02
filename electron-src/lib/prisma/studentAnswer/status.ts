@@ -2,7 +2,7 @@
  * 答案のステータス管理
  * - 欠席状態の設定など
  *
- * 注: 欠席状態はProjectStudent.statusで管理されるため、
+ * 注: 欠席状態はExamStudent.statusで管理されるため、
  * StudentAnswerImage自体には欠席フラグはない。
  * この関数は互換性のために残されている。
  */
@@ -11,9 +11,9 @@ import prisma from "../client"
 /**
  * 答案の欠席状態を設定
  *
- * 注: 実際の欠席状態はProjectStudent.statusで管理される。
+ * 注: 実際の欠席状態はExamStudent.statusで管理される。
  * この関数は答案情報の取得のみを行い、欠席フラグは別途
- * ProjectStudentの更新で設定する必要がある。
+ * ExamStudentの更新で設定する必要がある。
  */
 export async function setStudentAnswerAbsent(
   answerSheetId: string,
@@ -26,9 +26,9 @@ export async function setStudentAnswerAbsent(
       where: { id: answerSheetId },
       include: {
         student: true,
-        projectPage: {
+        examPage: {
           include: {
-            project: true,
+            exam: true,
           },
         },
       },
@@ -38,7 +38,7 @@ export async function setStudentAnswerAbsent(
       throw new Error("答案が見つかりません")
     }
 
-    // 欠席状態はProjectStudent.statusで設定する必要がある
+    // 欠席状態はExamStudent.statusで設定する必要がある
     // ここでは答案情報のみを返す
     return { success: true, answerSheet }
   } catch (error) {
