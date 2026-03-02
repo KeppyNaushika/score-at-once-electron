@@ -4,7 +4,13 @@
 -- This migration renames tables, columns, and indexes to align
 -- with the new naming convention (Project → Exam, GradeProject → Grade).
 -- Data is fully preserved through ALTER TABLE RENAME operations.
+--
+-- IMPORTANT: PRAGMA foreign_keys = ON must be set so that
+-- ALTER TABLE RENAME automatically updates FK references
+-- in other tables' schema definitions.
 -- =============================================================
+
+PRAGMA foreign_keys = ON;
 
 -- =============================================================
 -- Step 1: Rename tables
