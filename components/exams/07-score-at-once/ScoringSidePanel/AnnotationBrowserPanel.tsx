@@ -52,6 +52,8 @@ interface AnnotationBrowserPanelProps {
   selectedScoringDataIds: string[]
   allScoringData: Array<{ id: string; studentId: string }>
   onQuestionScoreCreated?: () => void
+  /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
+  onAnnotationAddedFromBrowser?: () => void
 }
 
 // アノテーションタイプのアイコン
@@ -115,6 +117,7 @@ export function AnnotationBrowserPanel({
   selectedScoringDataIds,
   allScoringData,
   onQuestionScoreCreated,
+  onAnnotationAddedFromBrowser,
 }: AnnotationBrowserPanelProps) {
   // 初回ロード
   useEffect(() => {
@@ -228,6 +231,8 @@ export function AnnotationBrowserPanel({
 
       // 追加後にアノテーション一覧を再ロード
       await onLoadAnnotations(examId)
+      // キャンバスプレビューにも即時反映
+      onAnnotationAddedFromBrowser?.()
     },
     [
       currentUserId,
@@ -240,6 +245,7 @@ export function AnnotationBrowserPanel({
       onAddToTargets,
       onLoadAnnotations,
       examId,
+      onAnnotationAddedFromBrowser,
     ]
   )
 

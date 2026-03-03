@@ -93,6 +93,11 @@ export interface AnswerIndividualViewProps {
 
   // テキスト入力状態変更のコールバック
   onTextInputStateChange?: (showTextInput: boolean) => void
+
+  // アノテーション変更通知（キャンバス→ブラウザパネル連携用）
+  onAnnotationChanged?: () => void
+  // 外部からのアノテーション追加後のリフレッシュキー（ブラウザパネル→キャンバス連携用）
+  annotationRefreshKey?: number
 }
 
 // 選択範囲矩形の型定義

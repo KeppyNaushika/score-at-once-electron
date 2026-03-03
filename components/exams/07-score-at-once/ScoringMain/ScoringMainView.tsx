@@ -72,6 +72,22 @@ function ScoringMainViewContent() {
 
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
 
+  /** アノテーション双方向連携用バージョンカウンター */
+  const [annotationVersionForBrowser, setAnnotationVersionForBrowser] =
+    useState(0)
+  const [annotationVersionForCanvas, setAnnotationVersionForCanvas] =
+    useState(0)
+
+  // キャンバスでアノテーション変更 → ブラウザパネル一覧をリロード
+  const handleCanvasAnnotationChanged = useCallback(() => {
+    setAnnotationVersionForBrowser((v) => v + 1)
+  }, [])
+
+  // ブラウザの+ボタンでアノテーション追加 → キャンバスプレビューをリロード
+  const handleBrowserAnnotationAdded = useCallback(() => {
+    setAnnotationVersionForCanvas((v) => v + 1)
+  }, [])
+
   /** 個別表示用の状態 */
   const [scoringBehavior, setScoringBehavior] =
     useState<ScoringBehavior>("next-student")
@@ -364,6 +380,8 @@ function ScoringMainViewContent() {
             questionScores={questionScores}
             onQuestionScoreCreated={handleQuestionScoreCreated}
             expandMargin={expandMargin}
+            onAnnotationChanged={handleCanvasAnnotationChanged}
+            annotationRefreshKey={annotationVersionForCanvas}
           />
         </div>
 
@@ -415,6 +433,8 @@ function ScoringMainViewContent() {
               questionScores={questionScores}
               allScoringData={allScoringData}
               onQuestionScoreCreated={handleQuestionScoreCreated}
+              annotationRefreshKey={annotationVersionForBrowser}
+              onAnnotationAddedFromBrowser={handleBrowserAnnotationAdded}
             />
           </div>
         </div>

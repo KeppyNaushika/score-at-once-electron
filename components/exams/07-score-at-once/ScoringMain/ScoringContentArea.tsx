@@ -52,6 +52,11 @@ interface ScoringContentAreaProps {
 
   /** QuestionScore自動作成後のコールバック（リストの更新用） */
   onQuestionScoreCreated?: () => void
+
+  /** アノテーション変更通知（キャンバス→ブラウザパネル連携用） */
+  onAnnotationChanged?: () => void
+  /** 外部からのアノテーション追加後のリフレッシュキー（ブラウザパネル→キャンバス連携用） */
+  annotationRefreshKey?: number
 }
 
 export function ScoringContentArea({
@@ -75,6 +80,8 @@ export function ScoringContentArea({
   currentUserId,
   questionScores,
   onQuestionScoreCreated,
+  onAnnotationChanged,
+  annotationRefreshKey,
 }: ScoringContentAreaProps) {
   /** 個別表示時：selectedの最初の要素を利用 */
   const currentScoringDataId =
@@ -100,6 +107,8 @@ export function ScoringContentArea({
       currentUserId={currentUserId}
       questionScores={questionScores}
       onQuestionScoreCreated={onQuestionScoreCreated}
+      onAnnotationChanged={onAnnotationChanged}
+      annotationRefreshKey={annotationRefreshKey}
     />
   ) : (
     /** Grid表示：paddingとスクロールを統合 */
