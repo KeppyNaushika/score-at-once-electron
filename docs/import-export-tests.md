@@ -4,8 +4,8 @@
 
 このドキュメントは、Score at Once のインポート/エクスポート機能に関するテストスイートの全体像を説明します。
 
-- **テストファイル数**: 22
-- **合計テスト数**: 237（パス） + 5（todo）= 242
+- **テストファイル数**: 25
+- **合計テスト数**: 268（パス） + 5（todo）= 273
 - **テストフレームワーク**: Vitest
 - **テスト用DB**: `data/test-database.db`（SQLite）
 - **レンダラテスト環境**: jsdom + @testing-library/react
@@ -25,10 +25,13 @@ __tests__/
 │   │   ├── manifestValidator.test.ts    # マニフェスト検証
 │   │   ├── archiveCreatorUtils.test.ts  # ファイル名生成
 │   │   ├── dataCollector.test.ts        # データ構造の生成
+│   │   ├── exportMode.test.ts           # エクスポートモード別ファイル名
 │   │   ├── idMappings.test.ts           # IDマッピング操作
 │   │   └── scoringConflictResolver.test.ts # 採点競合の解決戦略
 │   ├── integration/                 # 統合テスト（実DB使用）
-│   │   ├── collectExamData.test.ts   # データ収集パイプライン
+│   │   ├── bulkExportExams.test.ts       # 一括エクスポート
+│   │   ├── collectExamData.test.ts      # データ収集パイプライン
+│   │   ├── collectExamDataExportMode.test.ts # エクスポートモード別データ収集
 │   │   ├── archiveRoundTrip.test.ts     # アーカイブ作成→抽出の往復
 │   │   ├── preMatching.test.ts          # 事前照合ロジック
 │   │   ├── idIntegrationImporter.test.ts # ID統合インポート全体
@@ -91,7 +94,7 @@ DBに完全な試験データを一式作成するヘルパー。
 
 ---
 
-## ユニットテスト（5ファイル、48テスト）
+## ユニットテスト（6ファイル、54テスト）
 
 DB接続不要で、純粋なロジックを検証します。
 
@@ -178,11 +181,63 @@ IDマッピングデータ構造の操作を検証。
 | SCR-11 | config未定義→newer_wins動作                   | config省略時の既定動作       |
 | SCR-12 | config未定義+既存新→existing                  | config省略で既存が新しい場合 |
 
+### exportMode.test.ts（6テスト）
+
+エクスポートモード別のファイル名生成ロジックを検証。
+
+| ID   | テスト名                                                             | 検証内容                              |
+| ---- | -------------------------------------------------------------------- | ------------------------------------- |
+| EM-1 | fullモードではサフィックスが付かない                                 | fullモードの基本動作                  |
+| EM-2 | exportMode未指定ではサフィックスが付かない                           | デフォルト動作（fullと同等）          |
+| EM-3 | templateモードで-templateサフィックスが付く                          | templateモードのサフィックス          |
+| EM-4 | template_with_subtotalsモードで-template-subtotalsサフィックスが付く | template_with_subtotalsのサフィックス |
+| EM-5 | 特殊文字のサニタイズとモードサフィックスが両立する                   | サニタイズとの共存                    |
+| EM-6 | 拡張子は全モードで.score                                             | 拡張子の統一性                        |
+
 ---
 
-## 統合テスト（9ファイル、104テスト）
+## 統合テスト（11ファイル、119テスト）
 
 実際のSQLiteデータベースを使用して、モジュール間の連携を検証します。
+
+### bulkExportExams.test.ts（7テスト）
+
+複数試験の一括エクスポート `executeBulkExport` を検証。
+
+| ID   | テスト名                                                   | 検証内容               |
+| ---- | ---------------------------------------------------------- | ---------------------- |
+| BE-1 | 複数試験を順次エクスポートし全て成功する                   | 基本的な一括処理       |
+| BE-2 | 存在しない試験IDは失敗し残りは続行する                     | 部分的失敗時の継続動作 |
+| BE-3 | 全試験が失敗した場合はsuccess=falseになる                  | 全失敗時の動作         |
+| BE-4 | 単一試験でも正常に動作する                                 | 単一入力の処理         |
+| BE-5 | 空の試験配列ではsuccess=falseで結果も空                    | 空入力の処理           |
+| BE-6 | 出力パスが指定ディレクトリ内の正しいファイル名で構成される | ファイルパスの正確性   |
+| BE-7 | 生成された.scoreファイルが有効なZIPアーカイブである        | 出力ファイルの妥当性   |
+
+### collectExamDataExportMode.test.ts（18テスト）
+
+エクスポートモード別（full/template/template_with_subtotals）のデータ収集を検証。
+
+| ID    | テスト名                                                        | 検証内容                                  |
+| ----- | --------------------------------------------------------------- | ----------------------------------------- |
+| EM-F1 | デフォルト（引数なし）はfullモードと同じ結果を返す              | デフォルト動作                            |
+| EM-F2 | fullモードは全データを含む                                      | fullモードの完全性                        |
+| EM-T1 | templateモード: 生徒データが空になる                            | 生徒除外                                  |
+| EM-T2 | templateモード: 学級データが空になる                            | 学級除外                                  |
+| EM-T3 | templateモード: 採点データが空になる                            | 採点除外                                  |
+| EM-T4 | templateモード: 答案画像が空になる                              | 答案画像除外                              |
+| EM-T5 | templateモード: 小計データが空になる                            | 小計除外                                  |
+| EM-T6 | templateモード: Subject/SubjectSubtotalGroupが空になる          | 教科データ除外                            |
+| EM-T7 | templateモード: 試験基本データ・ページ・領域・模範解答は保持    | テンプレート要素の保持                    |
+| EM-T8 | templateモード: マーク設定（v1.4.0+）は保持される               | v1.4.0設定の保持                          |
+| EM-T9 | templateモード: ユーザーデータは保持される                      | ユーザーの保持                            |
+| EM-S1 | template_with_subtotals: 生徒・学級・採点・答案が空になる       | templateと同じ除外                        |
+| EM-S2 | template_with_subtotals: 小計データが含まれる                   | 小計の保持（templateとの差分）            |
+| EM-S3 | template_with_subtotals: Subject/SubjectSubtotalGroupが含まれる | 教科データの保持                          |
+| EM-S4 | template_with_subtotals: 基本データ・ページ・領域は保持         | テンプレート要素の保持                    |
+| EM-S5 | template_with_subtotals: CropSubtotalが含まれる                 | CropSubtotalの保持                        |
+| EM-C1 | templateモードのcountsが実データ長と一致する                    | countsの整合性（template）                |
+| EM-C2 | template_with_subtotalsモードのcountsが実データ長と一致する     | countsの整合性（template_with_subtotals） |
 
 ### collectExamData.test.ts（12テスト）
 
