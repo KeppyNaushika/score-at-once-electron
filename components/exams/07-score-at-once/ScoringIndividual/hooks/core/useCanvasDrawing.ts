@@ -15,6 +15,7 @@ import type {
 import type {
   CropRegionWithExamPage,
   ScoringData,
+  ScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
@@ -22,6 +23,7 @@ import {
   clearSvgCache,
   renderTextElementV4,
 } from "../../utils/canvasTextRendererV4"
+import type { CropRegionWithStatus } from "./types"
 import { useDrawingRenderer } from "./useDrawingRenderer"
 import { getScoringMarkKey } from "./useScoringMarks"
 
@@ -49,6 +51,7 @@ interface UseCanvasDrawingProps {
   allAnnotations?: DrawingAnnotationWithQuestionScore[]
   currentCropRegionId?: string | null
   hoveredElementId?: string | null
+  allCropRegionsWithStatus?: CropRegionWithStatus[]
 }
 
 /**
@@ -76,6 +79,7 @@ export function useCanvasDrawing({
   allAnnotations = [],
   currentCropRegionId,
   hoveredElementId,
+  allCropRegionsWithStatus = [],
 }: UseCanvasDrawingProps): void {
   const { convertAnnotationToDrawingElement, drawSingleElement } =
     useDrawingRenderer()
@@ -152,57 +156,84 @@ export function useCanvasDrawing({
         currentY += img.naturalHeight + (images.length > 1 ? pageSpacing : 0)
       })
 
-      // 設問枠描画
-      if (currentCropRegion && images.length > 0) {
-        const questionPageNumber = currentCropRegion.examPage?.pageNumber || 1
-        const questionPageIndex = questionPageNumber - 1
+      // 採点領域の描画ヘルパー関数
+      const drawCropRegionMark = (
+        region: CropRegionWithExamPage,
+        status: ScoringStatus,
+        isCurrent: boolean
+      ) => {
+        const regionPageNumber = region.examPage?.pageNumber || 1
+        const regionPageIndex = regionPageNumber - 1
 
-        if (questionPageIndex >= 0 && questionPageIndex < images.length) {
-          const img = images[questionPageIndex]
+        if (regionPageIndex < 0 || regionPageIndex >= images.length) return
 
-          if (img) {
-            let pageOffsetY = 0
-            for (let i = 0; i < questionPageIndex; i++) {
-              pageOffsetY +=
-                images[i].naturalHeight + (images.length > 1 ? pageSpacing : 0)
-            }
+        const img = images[regionPageIndex]
+        if (!img) return
 
-            const offsetX = (canvasWidth - img.naturalWidth) / 2
-            const offsetY = pageOffsetY
+        let pageOffsetY = 0
+        for (let i = 0; i < regionPageIndex; i++) {
+          pageOffsetY +=
+            images[i].naturalHeight + (images.length > 1 ? pageSpacing : 0)
+        }
 
-            const questionX = currentCropRegion.x * img.naturalWidth + offsetX
-            const questionY = currentCropRegion.y * img.naturalHeight + offsetY
-            const questionWidth = currentCropRegion.width * img.naturalWidth
-            const questionHeight = currentCropRegion.height * img.naturalHeight
+        const offsetX = (canvasWidth - img.naturalWidth) / 2
+        const offsetY = pageOffsetY
 
-            ctx.strokeStyle = "#22c55e"
-            ctx.lineWidth = 2
-            ctx.setLineDash([])
-            ctx.strokeRect(questionX, questionY, questionWidth, questionHeight)
+        const regionX = region.x * img.naturalWidth + offsetX
+        const regionY = region.y * img.naturalHeight + offsetY
+        const regionWidth = region.width * img.naturalWidth
+        const regionHeight = region.height * img.naturalHeight
 
-            ctx.fillStyle = "#22c55e"
-            const labelFontSize = Math.max(12, 14 / zoom)
-            ctx.font = `${labelFontSize}px sans-serif`
-            ctx.fillText(currentCropRegion.label, questionX, questionY - 5)
+        // 枠とラベルの描画
+        if (isCurrent) {
+          ctx.strokeStyle = "#22c55e"
+          ctx.lineWidth = 2
+        } else {
+          ctx.strokeStyle = "#9ca3af"
+          ctx.lineWidth = 1
+        }
+        ctx.setLineDash([])
+        ctx.strokeRect(regionX, regionY, regionWidth, regionHeight)
 
-            // 採点記号の描画
-            if (
-              currentScoringData &&
-              currentScoringData.status !== "unscored"
-            ) {
-              const markKey = getScoringMarkKey(currentScoringData.status)
-              const markImage = markKey
-                ? scoringMarkImagesRef.current.get(markKey)
-                : null
+        const labelFontSize = Math.max(12, 14 / zoom)
+        ctx.font = `${labelFontSize}px sans-serif`
+        ctx.fillStyle = isCurrent ? "#22c55e" : "#9ca3af"
+        ctx.fillText(region.label, regionX, regionY - 5)
 
-              if (markImage) {
-                const markSize = Math.min(questionHeight * 0.5, 100)
-                const markX = questionX + (questionWidth - markSize) / 2
-                const markY = questionY + (questionHeight - markSize) / 2
-                ctx.drawImage(markImage, markX, markY, markSize, markSize)
-              }
-            }
+        // 採点記号の描画
+        if (status !== "unscored") {
+          const markKey = getScoringMarkKey(status)
+          const markImage = markKey
+            ? scoringMarkImagesRef.current.get(markKey)
+            : null
+
+          if (markImage) {
+            ctx.globalAlpha = isCurrent ? 1.0 : 0.6
+            const markSize = Math.min(regionHeight * 0.5, 100)
+            const markX = regionX + (regionWidth - markSize) / 2
+            const markY = regionY + (regionHeight - markSize) / 2
+            ctx.drawImage(markImage, markX, markY, markSize, markSize)
+            ctx.globalAlpha = 1.0
           }
+        }
+      }
+
+      // 全設問の枠と採点記号を描画
+      if (images.length > 0) {
+        // 他の設問を先に描画（半透明）
+        for (const { cropRegion, status } of allCropRegionsWithStatus) {
+          if (cropRegion.id === currentCropRegion?.id) continue
+          drawCropRegionMark(cropRegion, status, false)
+        }
+
+        // 現在の設問を最後に描画（前面に表示）
+        if (currentCropRegion) {
+          const currentStatus = currentScoringData?.status ?? "unscored"
+          drawCropRegionMark(
+            currentCropRegion,
+            currentStatus as ScoringStatus,
+            true
+          )
         }
       }
 
@@ -305,6 +336,7 @@ export function useCanvasDrawing({
       scoringMarkImagesRef,
       convertAnnotationToDrawingElement,
       drawSingleElement,
+      allCropRegionsWithStatus,
     ]
   )
 

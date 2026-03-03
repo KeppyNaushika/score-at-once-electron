@@ -36,6 +36,7 @@ export function useImageCanvas({
   allAnnotations = [],
   currentCropRegionId,
   hoveredElementId,
+  allCropRegionsWithStatus = [],
 }: UseImageCanvasProps): UseImageCanvasReturn {
   // キャンバス参照管理
   const {
@@ -84,6 +85,7 @@ export function useImageCanvas({
     allAnnotations,
     currentCropRegionId,
     hoveredElementId,
+    allCropRegionsWithStatus,
   })
 
   return {

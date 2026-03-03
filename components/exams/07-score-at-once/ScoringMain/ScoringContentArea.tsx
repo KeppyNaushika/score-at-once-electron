@@ -23,6 +23,8 @@ interface ScoringContentAreaProps {
 
   /** 設問情報（Individual表示のみ必要） */
   currentCropRegion?: CropRegionWithExamPage
+  /** 全採点領域（Individual表示の全設問マーク描画用） */
+  cropRegions?: CropRegionWithExamPage[]
 
   /** 操作関数（両View共通） */
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
@@ -59,6 +61,7 @@ export function ScoringContentArea({
   filteredScoringDataIds,
   selectedScoringDataIds,
   currentCropRegion,
+  cropRegions,
   onScoringDataSelect,
   onScoringDataReplace,
   layoutDirection,
@@ -90,6 +93,7 @@ export function ScoringContentArea({
       scoringDatas={allScoringData}
       currentScoringDataId={currentScoringDataId}
       currentCropRegion={currentCropRegion}
+      cropRegions={cropRegions}
       studentAnswerImages={studentAnswerImages}
       onTextInputStateChange={onTextInputStateChange}
       currentStudentId={currentStudentId}
