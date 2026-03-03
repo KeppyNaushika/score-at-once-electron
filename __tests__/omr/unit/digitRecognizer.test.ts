@@ -68,7 +68,6 @@ describe("digitRecognizer", () => {
       label: "1-1",
       points: 5,
       textElements: [],
-      modelAnswer: undefined,
       cellType: "answer",
       pageIndex: 0,
       omrDigitBoxes: [
@@ -118,7 +117,6 @@ describe("digitRecognizer", () => {
       label: "1-1",
       points: 5,
       textElements: [],
-      modelAnswer: undefined,
       cellType: "answer",
       pageIndex: 0,
       // omrDigitBoxes なし
@@ -159,7 +157,6 @@ describe("digitRecognizer", () => {
       label: "1-1",
       points: 5,
       textElements: [],
-      modelAnswer: undefined,
       cellType: "answer",
       pageIndex: 0,
       omrDigitBoxes: [
@@ -207,7 +204,6 @@ describe("digitRecognizer", () => {
       label: "1-1",
       points: 5,
       textElements: [],
-      modelAnswer: undefined,
       cellType: "answer",
       pageIndex: 0,
       omrDigitBoxes: [

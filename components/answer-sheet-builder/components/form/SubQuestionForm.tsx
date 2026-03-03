@@ -18,7 +18,6 @@ import type {
 
 import { BranchQuestionForm } from "./BranchQuestionForm"
 import { ManuscriptPaperSettings } from "./ManuscriptPaperSettings"
-import { ModelAnswerEditor } from "./ModelAnswerEditor"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
@@ -96,9 +95,7 @@ export function SubQuestionForm({
   const [detailOpen, setDetailOpen] = useState(false)
 
   const hasDetailContent =
-    !!sub.modelAnswer ||
-    sub.textElements.length > 0 ||
-    !!sub.manuscriptPaper?.enabled
+    sub.textElements.length > 0 || !!sub.manuscriptPaper?.enabled
 
   const branchMaxGoUps = useMemo(
     () => calcBranchMaxGoUps(sub.branchQuestions),
@@ -344,10 +341,6 @@ export function SubQuestionForm({
       {/* 枝問なし: 詳細設定（展開コンテンツ） */}
       {!hasBranches && detailOpen && (
         <div className="space-y-2 pt-1">
-          <ModelAnswerEditor
-            value={sub.modelAnswer}
-            onChange={(v) => onUpdate({ modelAnswer: v })}
-          />
           <TextElementEditor
             textElements={sub.textElements}
             onUpdate={(elements) => onUpdate({ textElements: elements })}

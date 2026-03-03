@@ -7,17 +7,13 @@ import {
   AlignRight,
   ArrowDownToLine,
   ArrowUpToLine,
-  Bold,
-  Italic,
   Plus,
-  Strikethrough,
   Trash2,
   UnfoldVertical,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Toggle } from "@/components/ui/toggle"
+import { Textarea } from "@/components/ui/textarea"
 import type {
   CellTextElement,
   HorizontalAlign,
@@ -61,7 +57,6 @@ function createDefaultTextElement(): CellTextElement {
     id: generateId(),
     text: "",
     fontSize: 10,
-    fontWeight: "normal",
     horizontalAlign: "center",
     verticalAlign: "middle",
   }
@@ -104,12 +99,13 @@ export function TextElementEditor({
       {textElements.map((el, i) => (
         <div key={el.id} className="space-y-1 rounded border p-1.5">
           {/* Row 1: テキスト + 削除 */}
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-7 min-w-0 flex-1 text-xs"
+          <div className="flex items-start gap-1">
+            <Textarea
+              className="min-h-7 min-w-0 flex-1 resize-none text-xs"
+              rows={2}
               value={el.text}
               onChange={(e) => handleChange(i, { text: e.target.value })}
-              placeholder="テキスト"
+              placeholder="テキスト（**太字** *斜体* __下線__ ~~打消~~ $数式$ ||模範解答||）"
             />
             <Button
               variant="ghost"
@@ -121,11 +117,11 @@ export function TextElementEditor({
             </Button>
           </div>
 
-          {/* Row 2: 書式ツールバー */}
+          {/* Row 2: フォントサイズ + 配置 */}
           <div className="flex items-center gap-1">
-            <Input
+            <input
               type="number"
-              className="h-7 w-14 shrink-0 text-center text-xs"
+              className="h-7 w-14 shrink-0 rounded border text-center text-xs"
               value={el.fontSize}
               min={6}
               max={24}
@@ -138,49 +134,6 @@ export function TextElementEditor({
               }}
               title="フォントサイズ"
             />
-
-            <Toggle
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 min-w-0 p-0"
-              pressed={el.fontWeight === "bold"}
-              onPressedChange={(pressed) =>
-                handleChange(i, { fontWeight: pressed ? "bold" : "normal" })
-              }
-              title="太字"
-            >
-              <Bold className="h-3.5 w-3.5" />
-            </Toggle>
-
-            <Toggle
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 min-w-0 p-0"
-              pressed={el.fontStyle === "italic"}
-              onPressedChange={(pressed) =>
-                handleChange(i, {
-                  fontStyle: pressed ? "italic" : "normal",
-                })
-              }
-              title="斜体"
-            >
-              <Italic className="h-3.5 w-3.5" />
-            </Toggle>
-
-            <Toggle
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 min-w-0 p-0"
-              pressed={el.textDecoration === "line-through"}
-              onPressedChange={(pressed) =>
-                handleChange(i, {
-                  textDecoration: pressed ? "line-through" : "none",
-                })
-              }
-              title="取り消し線"
-            >
-              <Strikethrough className="h-3.5 w-3.5" />
-            </Toggle>
 
             <CycleButton
               values={H_ALIGNS}
