@@ -74,6 +74,7 @@ export interface AnswerIndividualViewProps {
 
   // 設問情報（派生済みオブジェクト）
   currentCropRegion?: CropRegionWithExamPage | null // 現在の設問領域
+  cropRegions?: CropRegionWithExamPage[] // 全採点領域（全設問マーク描画用）
 
   // QuestionScore自動作成用のコンテキスト情報
   currentStudentId?: string

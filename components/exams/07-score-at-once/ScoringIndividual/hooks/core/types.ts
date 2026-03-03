@@ -8,9 +8,18 @@ import type {
 import type {
   CropRegionWithExamPage,
   ScoringData,
+  ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+
+/**
+ * 採点領域と採点ステータスのペア（全設問マーク描画用）
+ */
+export interface CropRegionWithStatus {
+  cropRegion: CropRegionWithExamPage
+  status: ScoringStatus
+}
 
 /**
  * useImageCanvasのプロパティ
@@ -41,6 +50,8 @@ export interface UseImageCanvasProps {
   currentCropRegionId?: string | null
   // ホバー中の要素ID（ハンドル表示用）
   hoveredElementId?: string | null
+  // 全設問の採点ステータス（全設問マーク描画用）
+  allCropRegionsWithStatus?: CropRegionWithStatus[]
 }
 
 /**

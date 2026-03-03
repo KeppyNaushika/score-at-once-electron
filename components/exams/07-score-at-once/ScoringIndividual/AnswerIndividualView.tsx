@@ -1,5 +1,10 @@
 "use client"
 
+import { useMemo } from "react"
+
+import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
+import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
+
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
@@ -24,6 +29,7 @@ export default function AnswerIndividualView({
   scoringDatas,
   currentScoringDataId,
   currentCropRegion,
+  cropRegions,
   studentAnswerImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
@@ -42,6 +48,20 @@ export default function AnswerIndividualView({
     scoringDatas.find(
       (scoringData) => scoringData.id === currentScoringDataId
     ) ?? null
+
+  // 全設問の採点ステータスを計算（全設問マーク描画用）
+  const allCropRegionsWithStatus = useMemo(() => {
+    if (!cropRegions || !questionScores || !currentScoringData) return []
+    const studentId = currentScoringData.studentId
+    return cropRegions.map((cr) => ({
+      cropRegion: cr,
+      status: getScoringStatusFromArray(
+        questionScores,
+        studentId,
+        cr.id
+      ) as ScoringStatus,
+    }))
+  }, [cropRegions, questionScores, currentScoringData])
 
   // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
   const { currentQuestionScoreId } = useAutoCreateQuestionScore({
@@ -112,6 +132,8 @@ export default function AnswerIndividualView({
     currentCropRegionId: currentCropRegion?.id,
     // ホバー要素ID（ハンドル表示用）
     hoveredElementId: drawingState.hoveredElementId,
+    // 全設問の採点ステータス（全設問マーク描画用）
+    allCropRegionsWithStatus,
   })
 
   // Canvas・V4統合フック
