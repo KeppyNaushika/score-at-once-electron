@@ -80,11 +80,14 @@ export function createDefaultSubQuestion(label?: string): SubQuestion {
   }
 }
 
-export function createDefaultMajorQuestion(label?: string): MajorQuestion {
+export function createDefaultMajorQuestion(
+  label?: string,
+  subLabel?: string
+): MajorQuestion {
   return {
     id: generateId(),
     label: label ?? "1",
-    subQuestions: [createDefaultSubQuestion()],
+    subQuestions: [createDefaultSubQuestion(subLabel)],
   }
 }
 

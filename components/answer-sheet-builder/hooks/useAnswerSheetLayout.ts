@@ -308,6 +308,55 @@ function computeGridRowRightEdges<T>(
   return result
 }
 
+/** グリッドセルからY区間ごとの左端X座標を計算（ステップ外枠描画用） */
+function computeGridRowLeftEdges<T>(
+  gridCells: GridCell<T>[],
+  areaStartY: number,
+  areaX: number,
+  areaWidth: number,
+  baseRowHeight: number
+): { yTop: number; yBottom: number; leftX: number }[] {
+  const ySet = new Set<number>()
+  const absCells: { y: number; yEnd: number; leftX: number }[] = []
+  for (const gc of gridCells) {
+    const cellY = areaStartY + gc.y * baseRowHeight
+    const cellYEnd = cellY + gc.height * baseRowHeight
+    const cellLeftX = areaX + gc.x * areaWidth
+    ySet.add(cellY)
+    ySet.add(cellYEnd)
+    absCells.push({ y: cellY, yEnd: cellYEnd, leftX: cellLeftX })
+  }
+
+  const sortedYs = Array.from(ySet).sort((a, b) => a - b)
+  const result: { yTop: number; yBottom: number; leftX: number }[] = []
+
+  for (let i = 0; i < sortedYs.length - 1; i++) {
+    const yTop = sortedYs[i]
+    const yBottom = sortedYs[i + 1]
+    const midY = (yTop + yBottom) / 2
+
+    let minLeftX = Infinity
+    for (const cell of absCells) {
+      if (cell.y <= midY + 1e-9 && cell.yEnd >= midY - 1e-9) {
+        minLeftX = Math.min(minLeftX, cell.leftX)
+      }
+    }
+
+    if (minLeftX < Infinity) {
+      if (
+        result.length > 0 &&
+        Math.abs(result[result.length - 1].leftX - minLeftX) < 0.01
+      ) {
+        result[result.length - 1].yBottom = yBottom
+      } else {
+        result.push({ yTop, yBottom, leftX: minLeftX })
+      }
+    }
+  }
+
+  return result
+}
+
 function computeSubHeight(sub: SubQuestion, baseRowHeight: number): number {
   if (sub.branchQuestions.length > 0) {
     const branchCells = buildBranchGridLayout(sub.branchQuestions)
@@ -756,6 +805,8 @@ function computeLayoutFromDefinition(
 
   // 各行の右端X座標を追跡（ステップ外枠描画用）
   const rowRightEdges: { yTop: number; yBottom: number; rightX: number }[] = []
+  // 各行の左端X座標を追跡（ステップ外枠描画用）
+  const rowLeftEdges: { yTop: number; yBottom: number; leftX: number }[] = []
 
   let currentY = margins.top + spacing.headerHeight
 
@@ -768,6 +819,19 @@ function computeLayoutFromDefinition(
         yTop: spacingTop,
         yBottom: currentY,
         rightX: contentRight,
+      })
+      // 横配置大問が隣接する場合はhorizontalAreaXを使用（大問番号枠が独立描画されるため）
+      const prevIsHorizontal = isGridHorizontal(
+        majorQuestions[mi - 1].subQuestions
+      )
+      const currIsHorizontal = isGridHorizontal(major.subQuestions)
+      rowLeftEdges.push({
+        yTop: spacingTop,
+        yBottom: currentY,
+        leftX:
+          prevIsHorizontal || currIsHorizontal
+            ? majorNumX + majorNumWidth
+            : contentLeft,
       })
     }
 
@@ -888,6 +952,21 @@ function computeLayoutFromDefinition(
         rowRightEdges.push(edge)
       }
 
+      // rowLeftEdges: Y区間ごとの左端X座標を計算
+      for (const edge of computeGridRowLeftEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )) {
+        rowLeftEdges.push({
+          yTop: edge.yTop,
+          yBottom: edge.yBottom,
+          leftX: edge.leftX,
+        })
+      }
+
       // グリッドセル間の区切り線（隣接セル間の共有辺）
       renderGridDividerLines(
         gridCells,
@@ -900,7 +979,51 @@ function computeLayoutFromDefinition(
         "sub"
       )
 
-      currentY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+      // 横配置モード: 大問番号枠を独立した長方形として描画
+      const majorEndY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+      const outerSw = getLineWidth("outer", settings.borderConfig)
+      // 左辺
+      lines.push({
+        x1: contentLeft,
+        y1: majorStartY,
+        x2: contentLeft,
+        y2: majorEndY,
+        style: settings.borderConfig.outerBorder,
+        strokeWidth: outerSw,
+        lineType: "outer",
+      })
+      // 右辺
+      lines.push({
+        x1: horizontalAreaX,
+        y1: majorStartY,
+        x2: horizontalAreaX,
+        y2: majorEndY,
+        style: settings.borderConfig.outerBorder,
+        strokeWidth: outerSw,
+        lineType: "outer",
+      })
+      // 上辺
+      lines.push({
+        x1: contentLeft,
+        y1: majorStartY,
+        x2: horizontalAreaX,
+        y2: majorStartY,
+        style: settings.borderConfig.outerBorder,
+        strokeWidth: outerSw,
+        lineType: "outer",
+      })
+      // 下辺
+      lines.push({
+        x1: contentLeft,
+        y1: majorEndY,
+        x2: horizontalAreaX,
+        y2: majorEndY,
+        style: settings.borderConfig.outerBorder,
+        strokeWidth: outerSw,
+        lineType: "outer",
+      })
+
+      currentY = majorEndY
     } else {
       // === 縦配置モード ===
       major.subQuestions.forEach((sub, si) => {
@@ -968,6 +1091,12 @@ function computeLayoutFromDefinition(
           yBottom: subStartY + subHeight,
           rightX: contentRight,
         })
+        // vertical-sub行の左端は常にcontentLeft
+        rowLeftEdges.push({
+          yTop: subStartY,
+          yBottom: subStartY + subHeight,
+          leftX: contentLeft,
+        })
 
         currentY += subHeight
 
@@ -1026,13 +1155,16 @@ function computeLayoutFromDefinition(
     contentBottom,
     settings.borderConfig.outerBorder,
     settings.borderConfig,
-    rowRightEdges
+    rowRightEdges,
+    rowLeftEdges
   )
 
   // vertical-sub 行のY範囲を収集（小問番号列セグメント化用）
   // branchVerticalRanges: vertical-branch行のY範囲（枝問番号列用）
+  // horizontalMajorRanges: 横配置大問のY範囲（大問番号列縦線セグメント化用）
   const verticalRanges: { top: number; bottom: number }[] = []
   const branchVerticalRanges: { top: number; bottom: number }[] = []
+  const horizontalMajorRanges: { top: number; bottom: number }[] = []
   {
     let trackY = margins.top + spacing.headerHeight
     for (let mi2 = 0; mi2 < majorQuestions.length; mi2++) {
@@ -1044,7 +1176,9 @@ function computeLayoutFromDefinition(
       if (isGridHorizontal(mq.subQuestions)) {
         // 横配置モード: 小問番号列は不要
         const gridCells = buildSubGridLayout(mq.subQuestions)
-        trackY += gridTotalHeight(gridCells) * baseRowHeight
+        const height = gridTotalHeight(gridCells) * baseRowHeight
+        horizontalMajorRanges.push({ top: trackY, bottom: trackY + height })
+        trackY += height
       } else {
         // 縦配置モード: 全体がvertical-sub
         const segStart = trackY
@@ -1067,23 +1201,65 @@ function computeLayoutFromDefinition(
     }
   }
 
-  // 大問番号列の縦線 → 全高（従来通り）
+  // 大問番号列の縦線 → 横配置大問の範囲を除外（大問番号枠の右辺で代替）
   const ncSw = getLineWidth("numberColumn", settings.borderConfig)
-  lines.push({
-    x1: majorNumX + majorNumWidth,
-    y1: contentTop,
-    x2: majorNumX + majorNumWidth,
-    y2: contentBottom,
-    style: settings.borderConfig.numberColumnDivider,
-    lineType: "numberColumn",
-    strokeWidth: ncSw,
-    dragInfo: {
-      axis: "vertical",
-      target: { type: "columnWidth", column: "majorNumber" },
-      currentValueMm: majorNumWidth,
-      minMm: 5,
-    },
-  })
+  const majorNumLineX = majorNumX + majorNumWidth
+  {
+    let segStart = contentTop
+    let isFirst = true
+    for (const range of horizontalMajorRanges) {
+      if (segStart < range.top - 0.01) {
+        lines.push({
+          x1: majorNumLineX,
+          y1: segStart,
+          x2: majorNumLineX,
+          y2: range.top,
+          style: settings.borderConfig.numberColumnDivider,
+          lineType: "numberColumn",
+          strokeWidth: ncSw,
+          ...(isFirst
+            ? {
+                dragInfo: {
+                  axis: "vertical" as const,
+                  target: {
+                    type: "columnWidth" as const,
+                    column: "majorNumber" as const,
+                  },
+                  currentValueMm: majorNumWidth,
+                  minMm: 5,
+                },
+              }
+            : {}),
+        })
+        isFirst = false
+      }
+      segStart = range.bottom
+    }
+    if (segStart < contentBottom - 0.01) {
+      lines.push({
+        x1: majorNumLineX,
+        y1: segStart,
+        x2: majorNumLineX,
+        y2: contentBottom,
+        style: settings.borderConfig.numberColumnDivider,
+        lineType: "numberColumn",
+        strokeWidth: ncSw,
+        ...(isFirst
+          ? {
+              dragInfo: {
+                axis: "vertical" as const,
+                target: {
+                  type: "columnWidth" as const,
+                  column: "majorNumber" as const,
+                },
+                currentValueMm: majorNumWidth,
+                minMm: 5,
+              },
+            }
+          : {}),
+      })
+    }
+  }
 
   // 小問番号列の縦線 → 縦配置のセグメントのみ
   for (const range of verticalRanges) {
@@ -1189,8 +1365,8 @@ function addBorderLines(
 }
 
 /**
- * ステップ外枠描画: partial行がある場合、右辺と下辺をL字型に凹ませる。
- * 全行がcontentRightまで到達している場合は通常の矩形外枠を描画。
+ * ステップ外枠描画: partial行がある場合、右辺/左辺をL字型に凹ませる。
+ * 全行がcontentRight/contentLeftまで到達している場合は通常の矩形外枠を描画。
  */
 function addSteppedBorderLines(
   lines: ComputedLine[],
@@ -1200,16 +1376,20 @@ function addSteppedBorderLines(
   contentBottom: number,
   style: LineStyle,
   borderConfig: BorderConfig,
-  rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
+  rowRightEdges: { yTop: number; yBottom: number; rightX: number }[],
+  rowLeftEdges?: { yTop: number; yBottom: number; leftX: number }[]
 ) {
   const sw = getLineWidth("outer", borderConfig)
 
-  // 全行がcontentRightに到達しているか確認
-  const hasPartialRow = rowRightEdges.some(
+  // 右辺にステップが必要か
+  const hasPartialRightRow = rowRightEdges.some(
     (r) => Math.abs(r.rightX - contentRight) > 0.01
   )
+  // 左辺にステップが必要か
+  const hasPartialLeftRow =
+    rowLeftEdges?.some((r) => Math.abs(r.leftX - contentLeft) > 0.01) ?? false
 
-  if (!hasPartialRow) {
+  if (!hasPartialRightRow && !hasPartialLeftRow) {
     // 通常の矩形外枠
     addBorderLines(
       lines,
@@ -1236,10 +1416,14 @@ function addSteppedBorderLines(
     return
   }
 
-  // 上辺: 最初の行のrightXまで
+  // === 上辺 ===
+  const topLeftX =
+    hasPartialLeftRow && rowLeftEdges!.length > 0
+      ? rowLeftEdges![0].leftX
+      : contentLeft
   const topRightX = rowRightEdges[0].rightX
   lines.push({
-    x1: contentLeft,
+    x1: topLeftX,
     y1: contentTop,
     x2: topRightX,
     y2: contentTop,
@@ -1248,18 +1432,63 @@ function addSteppedBorderLines(
     strokeWidth: sw,
   })
 
-  // 左辺: 常にフル高
-  lines.push({
-    x1: contentLeft,
-    y1: contentTop,
-    x2: contentLeft,
-    y2: contentBottom,
-    style,
-    lineType: "outer",
-    strokeWidth: sw,
-  })
+  // === 左辺（ステップまたはストレート） ===
+  if (!hasPartialLeftRow) {
+    lines.push({
+      x1: contentLeft,
+      y1: contentTop,
+      x2: contentLeft,
+      y2: contentBottom,
+      style,
+      lineType: "outer",
+      strokeWidth: sw,
+    })
+  } else {
+    let curLeftY = contentTop
+    let curLeftX = rowLeftEdges![0].leftX
 
-  // 右辺 + 下辺: ステップ描画
+    for (let i = 1; i < rowLeftEdges!.length; i++) {
+      const edge = rowLeftEdges![i]
+
+      if (Math.abs(edge.leftX - curLeftX) > 0.01) {
+        // 垂直線: curLeftX で curLeftY → edge.yTop
+        lines.push({
+          x1: curLeftX,
+          y1: curLeftY,
+          x2: curLeftX,
+          y2: edge.yTop,
+          style,
+          lineType: "outer",
+          strokeWidth: sw,
+        })
+        // 水平線: curLeftX → edge.leftX at edge.yTop
+        lines.push({
+          x1: Math.min(curLeftX, edge.leftX),
+          y1: edge.yTop,
+          x2: Math.max(curLeftX, edge.leftX),
+          y2: edge.yTop,
+          style,
+          lineType: "outer",
+          strokeWidth: sw,
+        })
+        curLeftY = edge.yTop
+        curLeftX = edge.leftX
+      }
+    }
+
+    // 最後の区間の下端まで左辺を描画
+    lines.push({
+      x1: curLeftX,
+      y1: curLeftY,
+      x2: curLeftX,
+      y2: contentBottom,
+      style,
+      lineType: "outer",
+      strokeWidth: sw,
+    })
+  }
+
+  // === 右辺（ステップ描画） ===
   let curY = contentTop
   let curRightX = topRightX
 
@@ -1303,9 +1532,13 @@ function addSteppedBorderLines(
     strokeWidth: sw,
   })
 
-  // 下辺: contentBottom で curRightX → contentLeft
+  // === 下辺 ===
+  const bottomLeftX =
+    hasPartialLeftRow && rowLeftEdges!.length > 0
+      ? rowLeftEdges![rowLeftEdges!.length - 1].leftX
+      : contentLeft
   lines.push({
-    x1: contentLeft,
+    x1: bottomLeftX,
     y1: contentBottom,
     x2: curRightX,
     y2: contentBottom,
@@ -1364,7 +1597,10 @@ function computeMultiPageLayoutFromDefinition(
     numberLabels: ComputedNumberLabel[]
     verticalRanges: { top: number; bottom: number }[]
     branchVerticalRanges: { top: number; bottom: number }[]
+    /** 横配置大問のY範囲（大問番号列縦線セグメント化用） */
+    horizontalMajorRanges: { top: number; bottom: number }[]
     rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
+    rowLeftEdges: { yTop: number; yBottom: number; leftX: number }[]
     contentBottomY: number
   }
 
@@ -1375,7 +1611,9 @@ function computeMultiPageLayoutFromDefinition(
       numberLabels: [],
       verticalRanges: [],
       branchVerticalRanges: [],
+      horizontalMajorRanges: [],
       rowRightEdges: [],
+      rowLeftEdges: [],
       contentBottomY: contentTop,
     }
   }
@@ -1509,6 +1747,21 @@ function computeMultiPageLayoutFromDefinition(
         page.rowRightEdges.push(edge)
       }
 
+      // rowLeftEdges: Y区間ごとの左端X座標を計算
+      for (const edge of computeGridRowLeftEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )) {
+        page.rowLeftEdges.push({
+          yTop: edge.yTop,
+          yBottom: edge.yBottom,
+          leftX: edge.leftX,
+        })
+      }
+
       // グリッドセル間の区切り線
       renderGridDividerLines(
         gridCells,
@@ -1521,7 +1774,52 @@ function computeMultiPageLayoutFromDefinition(
         "sub"
       )
 
-      localY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+      // 横配置モード: 大問番号枠を独立した長方形として描画
+      const majorEndY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+      const outerSw = getLineWidth("outer", settings.borderConfig)
+      page.lines.push(
+        {
+          x1: contentLeft,
+          y1: majorStartY,
+          x2: contentLeft,
+          y2: majorEndY,
+          style: settings.borderConfig.outerBorder,
+          strokeWidth: outerSw,
+          lineType: "outer",
+        },
+        {
+          x1: horizontalAreaX,
+          y1: majorStartY,
+          x2: horizontalAreaX,
+          y2: majorEndY,
+          style: settings.borderConfig.outerBorder,
+          strokeWidth: outerSw,
+          lineType: "outer",
+        },
+        {
+          x1: contentLeft,
+          y1: majorStartY,
+          x2: horizontalAreaX,
+          y2: majorStartY,
+          style: settings.borderConfig.outerBorder,
+          strokeWidth: outerSw,
+          lineType: "outer",
+        },
+        {
+          x1: contentLeft,
+          y1: majorEndY,
+          x2: horizontalAreaX,
+          y2: majorEndY,
+          style: settings.borderConfig.outerBorder,
+          strokeWidth: outerSw,
+          lineType: "outer",
+        }
+      )
+
+      // 横配置大問のY範囲を記録（大問番号列縦線のセグメント化用）
+      page.horizontalMajorRanges.push({ top: majorStartY, bottom: majorEndY })
+
+      localY = majorEndY
     } else {
       // === 縦配置モード ===
       const vertSegStart = localY
@@ -1598,6 +1896,12 @@ function computeMultiPageLayoutFromDefinition(
           yBottom: subStartY + subHeight,
           rightX: contentRight,
         })
+        // vertical-sub行の左端は常にcontentLeft
+        page.rowLeftEdges.push({
+          yTop: subStartY,
+          yBottom: subStartY + subHeight,
+          leftX: contentLeft,
+        })
 
         localY += subHeight
 
@@ -1638,13 +1942,26 @@ function computeMultiPageLayoutFromDefinition(
       currentY = contentTop
     } else {
       if (spacingHeight > 0) {
-        // 大問間スペーシングのrightX追跡
+        // 大問間スペーシングのrightX/leftX追跡
         const spacingTop = currentY
         currentY += spacingHeight
         pagesData[currentPageIdx].rowRightEdges.push({
           yTop: spacingTop,
           yBottom: currentY,
           rightX: contentRight,
+        })
+        // 横配置大問が隣接する場合はhorizontalAreaXを使用
+        const prevIsHorizontal = isGridHorizontal(
+          majorQuestions[mi - 1].subQuestions
+        )
+        const currIsHorizontal = isGridHorizontal(major.subQuestions)
+        pagesData[currentPageIdx].rowLeftEdges.push({
+          yTop: spacingTop,
+          yBottom: currentY,
+          leftX:
+            prevIsHorizontal || currIsHorizontal
+              ? majorNumX + majorNumWidth
+              : contentLeft,
         })
       }
     }
@@ -1695,22 +2012,43 @@ function computeMultiPageLayoutFromDefinition(
       pageContentBottom,
       settings.borderConfig.outerBorder,
       settings.borderConfig,
-      pd.rowRightEdges
+      pd.rowRightEdges,
+      pd.rowLeftEdges
     )
 
     // 番号列の縦線
     const ncSwPage = getLineWidth("numberColumn", settings.borderConfig)
 
-    // 大問番号列の縦線
-    pd.lines.push({
-      x1: majorNumX + majorNumWidth,
-      y1: contentTop,
-      x2: majorNumX + majorNumWidth,
-      y2: pageContentBottom,
-      style: settings.borderConfig.numberColumnDivider,
-      lineType: "numberColumn",
-      strokeWidth: ncSwPage,
-    })
+    // 大問番号列の縦線（横配置大問の範囲を除外）
+    {
+      const majorNumLineX = majorNumX + majorNumWidth
+      let segStart = contentTop
+      for (const range of pd.horizontalMajorRanges) {
+        if (segStart < range.top - 0.01) {
+          pd.lines.push({
+            x1: majorNumLineX,
+            y1: segStart,
+            x2: majorNumLineX,
+            y2: range.top,
+            style: settings.borderConfig.numberColumnDivider,
+            lineType: "numberColumn",
+            strokeWidth: ncSwPage,
+          })
+        }
+        segStart = range.bottom
+      }
+      if (segStart < pageContentBottom - 0.01) {
+        pd.lines.push({
+          x1: majorNumLineX,
+          y1: segStart,
+          x2: majorNumLineX,
+          y2: pageContentBottom,
+          style: settings.borderConfig.numberColumnDivider,
+          lineType: "numberColumn",
+          strokeWidth: ncSwPage,
+        })
+      }
+    }
 
     // 小問番号列の縦線（縦配置セグメントのみ）
     for (const range of pd.verticalRanges) {
