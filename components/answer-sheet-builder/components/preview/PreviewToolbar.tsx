@@ -3,13 +3,8 @@
 import { ChevronLeft, ChevronRight, Minus, Move, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import type { RenderMode } from "@/types/answerSheetBuilder.types"
 
 interface PreviewToolbarProps {
@@ -120,18 +115,22 @@ export function PreviewToolbar({
       </div>
 
       {/* モード切替 */}
-      <Select
-        value={renderMode}
-        onValueChange={(v) => onRenderModeChange(v as RenderMode)}
-      >
-        <SelectTrigger className="h-7 w-28 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="answer-sheet">解答用紙</SelectItem>
-          <SelectItem value="model-answer">模範解答</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="flex items-center gap-1.5">
+        <Switch
+          id="render-mode-toggle"
+          checked={renderMode === "model-answer"}
+          onCheckedChange={(checked) =>
+            onRenderModeChange(checked ? "model-answer" : "answer-sheet")
+          }
+          className="scale-75"
+        />
+        <Label
+          htmlFor="render-mode-toggle"
+          className="text-muted-foreground cursor-pointer text-xs"
+        >
+          模範解答の表示
+        </Label>
+      </div>
     </div>
   )
 }

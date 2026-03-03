@@ -62,18 +62,19 @@ function escapeXml(str: string): string {
 /** テキスト要素をインラインマークアップ対応でSVG tspan群に変換 */
 function renderTextElementTspans(text: string, renderMode: RenderMode): string {
   const segments = parseInlineMarkup(text)
-  const filtered = segments.filter(
-    (seg) => !seg.modelAnswer || renderMode === "model-answer"
-  )
-  if (filtered.length === 0) return ""
+  if (segments.length === 0) return ""
 
-  return filtered
+  return segments
     .map((seg) => {
       const attrs: string[] = []
       if (seg.bold) attrs.push('font-weight="bold"')
       if (seg.italic) attrs.push('font-style="italic"')
       if (seg.strikethrough) attrs.push('text-decoration="line-through"')
-      if (seg.modelAnswer) attrs.push('fill="#d00"')
+      if (seg.modelAnswer) {
+        attrs.push(
+          renderMode === "model-answer" ? 'fill="#d00"' : 'fill="transparent"'
+        )
+      }
       const attrStr = attrs.length > 0 ? ` ${attrs.join(" ")}` : ""
       return `<tspan${attrStr}>${escapeXml(seg.text)}</tspan>`
     })
