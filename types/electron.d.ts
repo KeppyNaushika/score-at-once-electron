@@ -2146,7 +2146,7 @@ export interface MyAPI {
   // Answer Sheet Builder（解答用紙作成）
   // =============================================================================
   answerSheetBuilder: {
-    listDefinitions: () => Promise<{
+    listDefinitions: (userId: string) => Promise<{
       success: boolean
       data?: import("./answerSheetBuilder.types").ASBDefinitionListItem[]
       error?: string
@@ -2157,7 +2157,8 @@ export interface MyAPI {
       error?: string
     }>
     saveDefinition: (
-      definition: import("./answerSheetBuilder.types").AnswerSheetDefinition
+      definition: import("./answerSheetBuilder.types").AnswerSheetDefinition,
+      userId: string
     ) => Promise<{ success: boolean; error?: string }>
     deleteDefinition: (
       id: string

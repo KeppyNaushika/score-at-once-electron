@@ -23,6 +23,7 @@ model User {
   invitedUserExams    UserExam[]             @relation("InvitedByUser")
   keyboardShortcuts   UserKeyboardShortcut[]
   scoringPreference   UserScoringPreference?
+  answerSheetDefinitions AsbDefinition[]
 }
 
 model Class {
@@ -601,4 +602,205 @@ model GradeExportSettings {
   updatedAt    DateTime @updatedAt
 
   grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+}
+
+// =============================================================================
+// 解答用紙ビルダー（Answer Sheet Builder）
+// =============================================================================
+
+/// 解答用紙定義（トップレベル + GlobalSettings インライン）
+model AsbDefinition {
+  id        String   @id @default(uuid())
+  name      String   @default("新しい解答用紙")
+  renderMode String  @default("answer-sheet")
+
+  // LabelPresets
+  labelPresetMajor String?
+  labelPresetSub   String?
+  labelPresetBranch String?
+
+  // GlobalSettings (フラット化)
+  paperSize            String  @default("A4")
+  orientation          String  @default("portrait")
+  baseRowHeight        Float   @default(12)
+  numberDisplayMode    String  @default("multirow")
+  marginTop            Float   @default(15)
+  marginBottom         Float   @default(15)
+  marginLeft           Float   @default(10)
+  marginRight          Float   @default(10)
+  colWidthMajorNumber  Float   @default(10)
+  colWidthSubNumber    Float   @default(10)
+  colWidthBranchNumber Float   @default(10)
+  majorQuestionSpacing Float   @default(5)
+  headerHeight         Float   @default(0)
+  // BorderConfig (7 styles + 7 widths)
+  borderOuterBorder              String @default("solid")
+  borderMajorDivider             String @default("solid")
+  borderSubDivider               String @default("solid")
+  borderBranchDivider            String @default("dashed")
+  borderMajorNumberDivider       String @default("solid")
+  borderSubNumberDivider         String @default("solid")
+  borderBranchNumberDivider      String @default("solid")
+  borderOuterBorderWidth         Float? @default(0.7)
+  borderMajorDividerWidth        Float? @default(0.5)
+  borderSubDividerWidth          Float? @default(0.4)
+  borderBranchDividerWidth       Float? @default(0.3)
+  borderMajorNumberDividerWidth  Float? @default(0.4)
+  borderSubNumberDividerWidth    Float? @default(0.4)
+  borderBranchNumberDividerWidth Float? @default(0.3)
+  // OMRMarkers
+  omrMarkersEnabled Boolean @default(false)
+  omrMarkersSizeMm  Float   @default(5)
+  omrMarkersOffsetMm Float  @default(3)
+  // Fonts
+  fontFamily          String @default("Noto Sans JP")
+  fontDefaultSize     Float  @default(6)
+  fontMajorNumberSize Float  @default(6)
+  fontSubNumberSize   Float  @default(6)
+  fontBranchNumberSize Float @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  majorQuestions AsbMajorQuestion[]
+
+  @@index([userId])
+}
+
+/// 大問
+model AsbMajorQuestion {
+  id           String   @id @default(uuid())
+  definitionId String
+  label        String
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  definition   AsbDefinition    @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  subQuestions AsbSubQuestion[]
+
+  @@index([definitionId])
+}
+
+/// 小問
+model AsbSubQuestion {
+  id               String  @id @default(uuid())
+  majorQuestionId  String
+  label            String
+  order            Int     @default(0)
+  heightMultiplier Float   @default(1)
+  points           Float   @default(1)
+  usesBranchPoints Boolean?
+  layoutWidth      String?
+  nextPlacement    String?
+  goUp             Int?
+  // ManuscriptPaper (1:1 inline)
+  manuscriptEnabled  Boolean @default(false)
+  manuscriptColumns  Int     @default(20)
+  manuscriptRows     Int     @default(10)
+  manuscriptCellSizeMm Float @default(8)
+  // BorderStyles (per-side)
+  borderStyleTop    String?
+  borderStyleBottom String?
+  borderStyleLeft   String?
+  borderStyleRight  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  majorQuestion   AsbMajorQuestion  @relation(fields: [majorQuestionId], references: [id], onDelete: Cascade)
+  branchQuestions AsbBranchQuestion[]
+  textElements    AsbTextElement[]
+  omrConfig       AsbOmrConfig?
+
+  @@index([majorQuestionId])
+}
+
+/// 枝問
+model AsbBranchQuestion {
+  id               String  @id @default(uuid())
+  subQuestionId    String
+  label            String
+  order            Int     @default(0)
+  heightMultiplier Float   @default(1)
+  points           Float   @default(1)
+  layoutWidth      String?
+  nextPlacement    String?
+  goUp             Int?
+  borderStyleTop    String?
+  borderStyleBottom String?
+  borderStyleLeft   String?
+  borderStyleRight  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subQuestion  AsbSubQuestion    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  textElements AsbTextElement[]
+  omrConfig    AsbOmrConfig?
+
+  @@index([subQuestionId])
+}
+
+/// セル内テキスト要素（小問 or 枝問に紐付く dual FK）
+model AsbTextElement {
+  id               String  @id @default(uuid())
+  subQuestionId    String?
+  branchQuestionId String?
+  text             String
+  fontSize         Float
+  horizontalAlign  String  @default("left")
+  verticalAlign    String  @default("top")
+  order            Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subQuestion    AsbSubQuestion?    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  branchQuestion AsbBranchQuestion? @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([subQuestionId])
+  @@index([branchQuestionId])
+}
+
+/// OMR設定（小問 or 枝問に紐付く dual FK）
+model AsbOmrConfig {
+  id               String  @id @default(uuid())
+  subQuestionId    String? @unique
+  branchQuestionId String? @unique
+  type             String // "choice" | "handwritten-digit"
+  numChoices       Int?
+  choiceLayout     String?
+  numDigits        Int?
+  correctAnswer    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subQuestion    AsbSubQuestion?    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  branchQuestion AsbBranchQuestion? @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
+  choiceOptions  AsbOmrChoiceOption[]
+
+  @@index([subQuestionId])
+  @@index([branchQuestionId])
+}
+
+/// OMR選択肢オプション
+model AsbOmrChoiceOption {
+  id          String  @id @default(uuid())
+  omrConfigId String
+  choiceIndex Int
+  label       String
+  isCorrect   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  omrConfig AsbOmrConfig @relation(fields: [omrConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([omrConfigId, choiceIndex])
+  @@index([omrConfigId])
 }
