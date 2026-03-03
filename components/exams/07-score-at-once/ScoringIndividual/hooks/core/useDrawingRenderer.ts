@@ -319,7 +319,7 @@ function drawLineElement(
 }
 
 /**
- * 波線を描画
+ * 波線を描画（quadraticCurveTo による滑らかな正弦波）
  */
 function drawWaveLine(
   ctx: CanvasRenderingContext2D,
@@ -331,32 +331,49 @@ function drawWaveLine(
   angle: number,
   strokeWidth: number
 ): void {
-  const waveAmplitude = strokeWidth * 2
-  const waveLength = strokeWidth * 4
-  const segments = Math.max(Math.floor(lineLength / waveLength), 1)
+  const waveAmplitude = strokeWidth * 3
+  const waveHalfPeriod = strokeWidth * 6
+
+  // 半周期の数を計算（偶数にして始点と終点が直線上に来るようにする）
+  let numHalves = Math.max(Math.round(lineLength / waveHalfPeriod), 2)
+  if (numHalves % 2 !== 0) numHalves++
+
+  const perpX = -Math.sin(angle)
+  const perpY = Math.cos(angle)
 
   ctx.beginPath()
   ctx.moveTo(startX, startY)
 
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments
-    const x = startX + dx * t
-    const y = startY + dy * t
-    const waveOffset = Math.sin(t * segments * Math.PI * 2) * waveAmplitude
-    const perpX = -Math.sin(angle) * waveOffset
-    const perpY = Math.cos(angle) * waveOffset
+  for (let i = 0; i < numHalves; i++) {
+    const tMid = (i + 0.5) / numHalves
+    const tEnd = (i + 1) / numHalves
 
-    if (i === 0) {
-      ctx.moveTo(x + perpX, y + perpY)
-    } else {
-      ctx.lineTo(x + perpX, y + perpY)
-    }
+    // 制御点を振幅の2倍に配置（2次ベジェ曲線の頂点は制御点の半分の高さになるため）
+    const controlAmplitude = (i % 2 === 0 ? 1 : -1) * waveAmplitude * 2
+
+    const ctrlX = startX + dx * tMid + perpX * controlAmplitude
+    const ctrlY = startY + dy * tMid + perpY * controlAmplitude
+
+    const endPointX = startX + dx * tEnd
+    const endPointY = startY + dy * tEnd
+
+    ctx.quadraticCurveTo(ctrlX, ctrlY, endPointX, endPointY)
   }
+
   ctx.stroke()
 }
 
 /**
- * ジグザグ線を描画
+ * ジグザグ線を描画（全セグメントの傾きが均一）
+ *
+ * 頂点を半ピッチずらして配置し、始端・終端セグメントの水平距離を
+ * 中間セグメントの半分にすることで、全ストロークの傾きを統一する。
+ *
+ *   start(0) → +A → -A → +A → end(0)
+ *     |d/2|  d  |  d  |d/2|
+ *
+ * 傾き: A/(d/2) = 2A/d （始端・終端）
+ *       2A/d           （中間）  → 全て同一
  */
 function drawZigzagLine(
   ctx: CanvasRenderingContext2D,
@@ -366,27 +383,34 @@ function drawZigzagLine(
   dy: number,
   lineLength: number,
   angle: number,
-  endX: number,
-  endY: number,
+  _endX: number,
+  _endY: number,
   strokeWidth: number
 ): void {
-  const zigHeight = strokeWidth * 2
-  const zigLength = strokeWidth * 3
-  const segments = Math.max(Math.floor(lineLength / zigLength), 1)
+  const zigAmplitude = strokeWidth * 3
+  const zigPitch = strokeWidth * 5
+
+  // 頂点（山・谷）の数を計算
+  const numPeaks = Math.max(Math.round(lineLength / zigPitch), 2)
+
+  const perpX = -Math.sin(angle)
+  const perpY = Math.cos(angle)
 
   ctx.beginPath()
   ctx.moveTo(startX, startY)
 
-  for (let i = 1; i <= segments; i++) {
-    const t = i / segments
-    const x = startX + dx * t
-    const y = startY + dy * t
-    const zigOffset = i % 2 === 1 ? zigHeight : -zigHeight
-    const perpX = -Math.sin(angle) * zigOffset
-    const perpY = Math.cos(angle) * zigOffset
-    ctx.lineTo(x + perpX, y + perpY)
+  // 各頂点を描画（t = (i + 0.5) / numPeaks で半ピッチずらす）
+  for (let i = 0; i < numPeaks; i++) {
+    const t = (i + 0.5) / numPeaks
+    const baseX = startX + dx * t
+    const baseY = startY + dy * t
+
+    const offset = i % 2 === 0 ? zigAmplitude : -zigAmplitude
+    ctx.lineTo(baseX + perpX * offset, baseY + perpY * offset)
   }
-  ctx.lineTo(endX, endY)
+
+  // 終点（直線上に戻る）
+  ctx.lineTo(startX + dx, startY + dy)
   ctx.stroke()
 }
 
