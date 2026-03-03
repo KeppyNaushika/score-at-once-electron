@@ -5,7 +5,7 @@ import {
   gridTotalHeight,
   isGridHorizontal,
   parseFraction,
-} from "@/electron-src/lib/answer-sheet-builder/layoutEngine"
+} from "@/components/answer-sheet-builder/hooks/useAnswerSheetLayout"
 
 // ─── テスト用ヘルパー ───
 

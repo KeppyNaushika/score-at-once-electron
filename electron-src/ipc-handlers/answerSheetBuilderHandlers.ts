@@ -2,10 +2,11 @@
  * 解答用紙作成機能のIPCハンドラー
  */
 
-import { BrowserWindow, dialog, ipcMain } from "electron"
+import { BrowserWindow, dialog, ipcMain, shell } from "electron"
 import fs from "fs"
 import os from "os"
 import path from "path"
+import sharp from "sharp"
 
 import type {
   AnswerSheetDefinition,
@@ -21,8 +22,6 @@ import {
   saveDefinition,
 } from "../lib/answer-sheet-builder/definitionStorage"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
-import { generatePdf } from "../lib/answer-sheet-builder/pdfGenerator"
-import { generatePng } from "../lib/answer-sheet-builder/pngGenerator"
 
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
@@ -164,10 +163,38 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   })
 
-  // PDF出力
+  // PDF出力: HTMLを受け取り → 一時ファイル → BrowserWindow → printToPDF
   ipcMain.handle("asb:export-pdf", async (_event, args: ASBExportPdfArgs) => {
+    let tempHtmlPath: string | null = null
+    let win: BrowserWindow | null = null
     try {
-      await generatePdf(args.definition, args.outputPath)
+      tempHtmlPath = path.join(os.tmpdir(), `asb-pdf-${Date.now()}.html`)
+      fs.writeFileSync(tempHtmlPath, args.html, "utf-8")
+
+      win = new BrowserWindow({
+        show: false,
+        webPreferences: { offscreen: true },
+      })
+      await win.loadFile(tempHtmlPath)
+
+      // レンダリング完了を待つ
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      const pdfBuffer = await win.webContents.printToPDF({
+        pageSize: {
+          width: args.pageWidthMm * 1000, // microns
+          height: args.pageHeightMm * 1000,
+        },
+        printBackground: true,
+        margins: { marginType: "custom", top: 0, bottom: 0, left: 0, right: 0 },
+      })
+
+      const outputDir = path.dirname(args.outputPath)
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true })
+      }
+      fs.writeFileSync(args.outputPath, pdfBuffer)
+
       return { success: true, filePath: args.outputPath }
     } catch (error) {
       console.error("asb:export-pdf error:", error)
@@ -175,18 +202,48 @@ export function setupAnswerSheetBuilderHandlers(): void {
         success: false,
         error: error instanceof Error ? error.message : "PDF出力に失敗しました",
       }
+    } finally {
+      win?.destroy()
+      if (tempHtmlPath) {
+        try {
+          fs.unlinkSync(tempHtmlPath)
+        } catch {
+          // ignore
+        }
+      }
     }
   })
 
-  // PNG出力
+  // PNG出力: SVG文字列を受け取り → sharp でラスタライズ
   ipcMain.handle("asb:export-png", async (_event, args: ASBExportPngArgs) => {
     try {
-      await generatePng(
-        args.definition,
-        args.outputPath,
-        args.dpi,
-        args.svgString
-      )
+      const widthPx = Math.round((args.pageWidthMm / 25.4) * args.dpi)
+      const heightPx = Math.round((args.pageHeightMm / 25.4) * args.dpi)
+
+      const outputDir = path.dirname(args.outputPath)
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true })
+      }
+
+      if (args.svgStrings.length === 1) {
+        const svgBuffer = Buffer.from(args.svgStrings[0])
+        await sharp(svgBuffer)
+          .resize(widthPx, heightPx)
+          .png()
+          .toFile(args.outputPath)
+      } else {
+        const ext = path.extname(args.outputPath)
+        const base = args.outputPath.slice(0, -ext.length)
+        for (let i = 0; i < args.svgStrings.length; i++) {
+          const pagePath = `${base}-${i + 1}${ext}`
+          const svgBuffer = Buffer.from(args.svgStrings[i])
+          await sharp(svgBuffer)
+            .resize(widthPx, heightPx)
+            .png()
+            .toFile(pagePath)
+        }
+      }
+
       return { success: true, filePath: args.outputPath }
     } catch (error) {
       console.error("asb:export-png error:", error)
@@ -228,7 +285,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   )
 
-  // 試験変換
+  // 試験変換: multiPageLayout + SVG文字列を受け取り
   ipcMain.handle(
     "asb:convert-to-exam",
     async (_event, args: ASBConvertToExamArgs) => {
@@ -236,7 +293,9 @@ export function setupAnswerSheetBuilderHandlers(): void {
         const result = await convertToExam(
           args.definition,
           args.userId,
-          args.svgString
+          args.multiPageLayout,
+          args.answerSheetSvgStrings,
+          args.modelAnswerSvgStrings
         )
         return result
       } catch (error) {
@@ -250,60 +309,54 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   )
 
-  // 印刷
+  // 印刷: HTMLを受け取り → printToPDF → プレビューで開く
   ipcMain.handle("asb:print", async (_event, args: ASBPrintArgs) => {
-    let tempPath: string | null = null
-    let printWin: BrowserWindow | null = null
+    let tempHtmlPath: string | null = null
+    let tempPdfPath: string | null = null
+    let win: BrowserWindow | null = null
     try {
-      // 1. 一時PDF生成
-      tempPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.pdf`)
-      await generatePdf(args.definition, tempPath)
+      tempHtmlPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.html`)
+      tempPdfPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.pdf`)
+      fs.writeFileSync(tempHtmlPath, args.html, "utf-8")
 
-      // 2. 隠しBrowserWindowでPDFをロード
-      printWin = new BrowserWindow({
+      win = new BrowserWindow({
         show: false,
-        webPreferences: { nodeIntegration: false, contextIsolation: true },
+        webPreferences: { offscreen: true },
       })
-      await printWin.loadURL(`file://${tempPath}`)
+      await win.loadFile(tempHtmlPath)
 
-      // 3. 印刷ダイアログ表示
-      return await new Promise<{ success: boolean; error?: string }>(
-        (resolve) => {
-          printWin!.webContents.print({}, (success, failureReason) => {
-            printWin?.close()
-            printWin = null
-            if (tempPath) {
-              try {
-                fs.unlinkSync(tempPath)
-              } catch {
-                // 一時ファイル削除失敗は無視
-              }
-            }
-            if (success) {
-              resolve({ success: true })
-            } else {
-              resolve({
-                success: false,
-                error: failureReason || "印刷がキャンセルされました",
-              })
-            }
-          })
-        }
-      )
+      // レンダリング完了を待つ
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      const pdfBuffer = await win.webContents.printToPDF({
+        pageSize: {
+          width: args.pageWidthMm * 1000, // microns
+          height: args.pageHeightMm * 1000,
+        },
+        printBackground: true,
+        margins: { marginType: "custom", top: 0, bottom: 0, left: 0, right: 0 },
+      })
+
+      fs.writeFileSync(tempPdfPath, pdfBuffer)
+      await shell.openPath(tempPdfPath)
+
+      return { success: true }
     } catch (error) {
-      printWin?.close()
-      if (tempPath) {
-        try {
-          fs.unlinkSync(tempPath)
-        } catch {
-          // ignore
-        }
-      }
       console.error("asb:print error:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "印刷に失敗しました",
       }
+    } finally {
+      win?.destroy()
+      if (tempHtmlPath) {
+        try {
+          fs.unlinkSync(tempHtmlPath)
+        } catch {
+          // ignore
+        }
+      }
+      // tempPdfPath はプレビュー中なので削除しない
     }
   })
 }

@@ -65,7 +65,7 @@ function getPaperDimensions(settings: GlobalSettings) {
 }
 
 /** 分数文字列 (e.g. "1/4", "3/4") を 0〜1 の数値に変換 */
-function parseFraction(s: string): number {
+export function parseFraction(s: string): number {
   const m = s.match(/^(\d+)\/(\d+)$/)
   if (m) return parseInt(m[1]) / parseInt(m[2])
   const n = parseFloat(s)
@@ -82,7 +82,7 @@ interface RowTrack {
  * 汎用グリッドレイアウトビルダー
  * layoutWidth を持つ要素が1つでもあれば横配置モード。
  */
-function buildGridLayout<
+export function buildGridLayout<
   T extends {
     layoutWidth?: string
     nextPlacement?: NextPlacement
@@ -247,14 +247,14 @@ function buildBranchGridLayout(
 }
 
 /** グリッドレイアウトが横配置モードかどうか */
-function isGridHorizontal<T extends { layoutWidth?: string }>(
+export function isGridHorizontal<T extends { layoutWidth?: string }>(
   items: T[]
 ): boolean {
   return items.some((item) => item.layoutWidth != null)
 }
 
 /** グリッドセル配列の合計高さ（baseRowHeight単位） */
-function gridTotalHeight<T>(cells: GridCell<T>[]): number {
+export function gridTotalHeight<T>(cells: GridCell<T>[]): number {
   if (cells.length === 0) return 0
   return Math.max(...cells.map((c) => c.y + c.height))
 }
@@ -466,7 +466,6 @@ function createCell(
   label: string,
   points: number,
   textElements: ComputedCell["textElements"],
-  modelAnswer: string | undefined,
   cellType: ComputedCell["cellType"],
   pageIndex: number = 0,
   manuscriptGrid?: ManuscriptGrid,
@@ -485,7 +484,6 @@ function createCell(
     label,
     points,
     textElements,
-    modelAnswer,
     cellType,
     pageIndex,
     ...(manuscriptGrid ? { manuscriptGrid } : {}),
@@ -549,6 +547,121 @@ function computeMajorHeight(
     (sum, sub) => sum + computeSubHeight(sub, baseRowHeight),
     0
   )
+}
+
+/**
+ * グリッドセルの空白隣接辺を描画する。
+ * renderGridDividerLines は隣接セル間の共有辺のみ、addSteppedBorderLines は外枠のみ描画するため、
+ * セルと空白スペースの境界はどちらにも描画されない。この関数がそれを補完する。
+ *
+ * 各セルの4辺を走査し、「外枠として描画済み」以外の辺を描画する。
+ * 共有辺は renderGridDividerLines と重複するが同一スタイル・位置なので視覚的に無害。
+ */
+function renderGridCompletionLines<
+  T extends {
+    layoutWidth?: string
+    nextPlacement?: NextPlacement
+    heightMultiplier: number
+  },
+>(
+  gridCells: GridCell<T>[],
+  areaStartY: number,
+  areaX: number,
+  areaWidth: number,
+  baseRowHeight: number,
+  settings: GlobalSettings,
+  lines: ComputedLine[],
+  level: "sub" | "branch",
+  outerBounds: {
+    top: number
+    bottom: number
+    rightEdges: { yTop: number; yBottom: number; rightX: number }[]
+    leftEdges: { yTop: number; yBottom: number; leftX: number }[]
+  }
+) {
+  if (gridCells.length <= 1) return
+
+  const lineType: ComputedLine["lineType"] =
+    level === "sub" ? "subHorizontalDivider" : "branch"
+  const divStyle =
+    level === "sub"
+      ? settings.borderConfig.subDivider
+      : settings.borderConfig.branchDivider
+  const sw = getLineWidth(lineType, settings.borderConfig)
+
+  const {
+    top: outerTop,
+    bottom: outerBottom,
+    rightEdges,
+    leftEdges,
+  } = outerBounds
+
+  for (const gc of gridCells) {
+    const left = areaX + gc.x * areaWidth
+    const right = areaX + (gc.x + gc.width) * areaWidth
+    const top = areaStartY + gc.y * baseRowHeight
+    const bottom = areaStartY + (gc.y + gc.height) * baseRowHeight
+
+    // 右辺: 外枠の rightX と一致するY区間はスキップ
+    for (const re of rightEdges) {
+      const oTop = Math.max(top, re.yTop)
+      const oBottom = Math.min(bottom, re.yBottom)
+      if (oBottom <= oTop + 1e-9) continue
+      if (Math.abs(right - re.rightX) < 0.01) continue
+      lines.push({
+        x1: right,
+        y1: oTop,
+        x2: right,
+        y2: oBottom,
+        style: divStyle,
+        lineType,
+        strokeWidth: sw,
+      })
+    }
+
+    // 左辺: 外枠の leftX と一致するY区間はスキップ
+    for (const le of leftEdges) {
+      const oTop = Math.max(top, le.yTop)
+      const oBottom = Math.min(bottom, le.yBottom)
+      if (oBottom <= oTop + 1e-9) continue
+      if (Math.abs(left - le.leftX) < 0.01) continue
+      lines.push({
+        x1: left,
+        y1: oTop,
+        x2: left,
+        y2: oBottom,
+        style: divStyle,
+        lineType,
+        strokeWidth: sw,
+      })
+    }
+
+    // 下辺: グリッド外枠の底辺と一致しない場合のみ
+    if (Math.abs(bottom - outerBottom) > 0.01) {
+      lines.push({
+        x1: left,
+        y1: bottom,
+        x2: right,
+        y2: bottom,
+        style: divStyle,
+        lineType,
+        strokeWidth: sw,
+      })
+    }
+
+    // 上辺: グリッド外枠の上辺と一致しない場合のみ
+    if (Math.abs(top - outerTop) > 0.01) {
+      lines.push({
+        x1: left,
+        y1: top,
+        x2: right,
+        y2: top,
+        style: divStyle,
+        lineType,
+        strokeWidth: sw,
+      })
+    }
+  }
 }
 
 /** グリッドセル間の区切り線を描画 */
@@ -681,7 +794,6 @@ function renderBranchQuestions(
           `${majorLabel}-${sub.label}-${gc.item.label}`,
           gc.item.points,
           gc.item.textElements,
-          gc.item.modelAnswer,
           "answer",
           pageIndex,
           undefined,
@@ -712,6 +824,30 @@ function renderBranchQuestions(
       lines,
       "branch"
     )
+
+    // セルと空白スペースの境界線を補完
+    // 枝問グリッドの外枠は親セルの境界（branchAreaX〜contentRight）
+    const subBottom = subStartY + gridTotalHeight(branchCells) * baseRowHeight
+    renderGridCompletionLines(
+      branchCells,
+      subStartY,
+      branchAreaX,
+      branchAreaWidth,
+      baseRowHeight,
+      settings,
+      lines,
+      "branch",
+      {
+        top: subStartY,
+        bottom: subBottom,
+        rightEdges: [
+          { yTop: subStartY, yBottom: subBottom, rightX: contentRight },
+        ],
+        leftEdges: [
+          { yTop: subStartY, yBottom: subBottom, leftX: branchAreaX },
+        ],
+      }
+    )
   } else {
     // 縦配置
     let branchY = subStartY
@@ -739,7 +875,6 @@ function renderBranchQuestions(
           `${majorLabel}-${sub.label}-${branch.label}`,
           branch.points,
           branch.textElements,
-          branch.modelAnswer,
           "answer",
           pageIndex,
           undefined,
@@ -771,6 +906,17 @@ function renderBranchQuestions(
       }
 
       branchY += branchHeight
+    })
+
+    // 枝問番号列の右側縦線
+    lines.push({
+      x1: branchNumX + branchNumWidth,
+      y1: subStartY,
+      x2: branchNumX + branchNumWidth,
+      y2: branchY,
+      style: settings.borderConfig.numberColumnDivider,
+      lineType: "numberColumn",
+      strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
     })
   }
 }
@@ -915,7 +1061,6 @@ function computeLayoutFromDefinition(
               `${major.label}-${sub.label}`,
               sub.points,
               sub.textElements,
-              sub.modelAnswer,
               "answer",
               0,
               computeManuscriptGrid(
@@ -979,8 +1124,43 @@ function computeLayoutFromDefinition(
         "sub"
       )
 
-      // 横配置モード: 大問番号枠を独立した長方形として描画
       const majorEndY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+
+      // セルと空白スペースの境界線を補完
+      // 小問グリッドの外枠は addSteppedBorderLines で描画されるため、
+      // 外枠と一致する辺はスキップする
+      const subRightEdges = computeGridRowRightEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )
+      const subLeftEdges = computeGridRowLeftEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )
+      renderGridCompletionLines(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight,
+        settings,
+        lines,
+        "sub",
+        {
+          top: majorStartY,
+          bottom: majorEndY,
+          rightEdges: subRightEdges,
+          leftEdges: subLeftEdges,
+        }
+      )
+
+      // 横配置モード: 大問番号枠を独立した長方形として描画
       const outerSw = getLineWidth("outer", settings.borderConfig)
       // 左辺
       lines.push({
@@ -1076,7 +1256,6 @@ function computeLayoutFromDefinition(
               `${major.label}-${sub.label}`,
               sub.points,
               sub.textElements,
-              sub.modelAnswer,
               "answer",
               0,
               computeManuscriptGrid(sub, answerX, subStartY, answerWidth),
@@ -1566,7 +1745,7 @@ function computeOMRMarkers(
   ]
 }
 
-function computeMultiPageLayoutFromDefinition(
+export function computeMultiPageLayoutFromDefinition(
   definition: AnswerSheetDefinition
 ): ComputedMultiPageLayout {
   const { settings, majorQuestions } = definition
@@ -1710,7 +1889,6 @@ function computeMultiPageLayoutFromDefinition(
               `${major.label}-${sub.label}`,
               sub.points,
               sub.textElements,
-              sub.modelAnswer,
               "answer",
               pageIdx,
               computeManuscriptGrid(
@@ -1774,8 +1952,41 @@ function computeMultiPageLayoutFromDefinition(
         "sub"
       )
 
-      // 横配置モード: 大問番号枠を独立した長方形として描画
       const majorEndY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+
+      // セルと空白スペースの境界線を補完
+      const subRightEdges = computeGridRowRightEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )
+      const subLeftEdges = computeGridRowLeftEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )
+      renderGridCompletionLines(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight,
+        settings,
+        page.lines,
+        "sub",
+        {
+          top: majorStartY,
+          bottom: majorEndY,
+          rightEdges: subRightEdges,
+          leftEdges: subLeftEdges,
+        }
+      )
+
+      // 横配置モード: 大問番号枠を独立した長方形として描画
       const outerSw = getLineWidth("outer", settings.borderConfig)
       page.lines.push(
         {
@@ -1881,7 +2092,6 @@ function computeMultiPageLayoutFromDefinition(
               `${major.label}-${sub.label}`,
               sub.points,
               sub.textElements,
-              sub.modelAnswer,
               "answer",
               pageIdx,
               computeManuscriptGrid(sub, answerX, subStartY, answerWidth),

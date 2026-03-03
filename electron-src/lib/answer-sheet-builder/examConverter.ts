@@ -1,13 +1,17 @@
 /**
  * 解答用紙定義 → 採点試験変換
  *
- * AnswerSheetDefinition → PNG生成 → Exam + ExamPage + MasterImage + CropRegion 作成
+ * renderer側から受け取った multiPageLayout + SVG文字列 → Exam + ExamPage + MasterImage + CropRegion 作成
  */
 
 import fs from "fs"
 import path from "path"
+import sharp from "sharp"
 
-import type { AnswerSheetDefinition } from "../../../types/answerSheetBuilder.types"
+import type {
+  AnswerSheetDefinition,
+  ComputedMultiPageLayout,
+} from "../../../types/answerSheetBuilder.types"
 import type { OMRCellConfig, OMRTemplate } from "../../../types/omr.types"
 import {
   getDataDirectory,
@@ -17,8 +21,6 @@ import {
 import prisma from "../prisma/client"
 import { createExam } from "../prisma/exam"
 import { createExamPage } from "../prisma/examPage"
-import { computeMultiPageLayout } from "./layoutEngine"
-import { generatePngBuffer } from "./pngGenerator"
 
 export interface ConvertToExamResult {
   success: boolean
@@ -28,12 +30,14 @@ export interface ConvertToExamResult {
 
 /**
  * 解答用紙定義を採点試験に変換
- * 複数ページ対応: ページごとにExamPage + MasterImage + CropRegionを作成
+ * renderer側からmultiPageLayout + SVG文字列を受け取り、PNGバッファ生成→DB作成
  */
 export async function convertToExam(
   definition: AnswerSheetDefinition,
   userId: string,
-  svgString?: string
+  multiPageLayout: ComputedMultiPageLayout,
+  answerSheetSvgStrings: string[],
+  modelAnswerSvgStrings: string[]
 ): Promise<ConvertToExamResult> {
   try {
     // 0. OMR設定を問題定義から抽出
@@ -51,36 +55,39 @@ export async function convertToExam(
       })
     })
 
-    // 1. レイアウト計算（複数ページ）
-    const multiLayout = computeMultiPageLayout(definition)
-
-    // 2. 試験作成
+    // 1. 試験作成
     const exam = await createExam(
       {
         examName: definition.name,
-        description: `解答用紙ビルダーから生成（${definition.settings.paperSize} ${definition.settings.orientation}、${multiLayout.totalPages}ページ）`,
+        description: `解答用紙ビルダーから生成（${definition.settings.paperSize} ${definition.settings.orientation}、${multiPageLayout.totalPages}ページ）`,
       },
       userId
     )
 
-    // 3. PNG生成（空白解答用紙 + 模範解答、ページごと）
-    const answerSheetDef: AnswerSheetDefinition = {
-      ...definition,
-      renderMode: "answer-sheet",
-    }
-    const templateBuffers = await generatePngBuffer(
-      answerSheetDef,
-      300,
-      svgString
-    )
+    // 2. SVG文字列 → PNG Buffer 生成
+    const dpi = 300
+    const widthPx = Math.round((multiPageLayout.pageWidthMm / 25.4) * dpi)
+    const heightPx = Math.round((multiPageLayout.pageHeightMm / 25.4) * dpi)
 
-    const modelAnswerDef: AnswerSheetDefinition = {
-      ...definition,
-      renderMode: "model-answer",
+    const templateBuffers: Buffer[] = []
+    for (const svg of answerSheetSvgStrings) {
+      const buf = await sharp(Buffer.from(svg))
+        .resize(widthPx, heightPx)
+        .png()
+        .toBuffer()
+      templateBuffers.push(buf)
     }
-    const modelBuffers = await generatePngBuffer(modelAnswerDef, 300)
 
-    // 4. 画像ファイル保存 + DB作成（ページごと）
+    const modelBuffers: Buffer[] = []
+    for (const svg of modelAnswerSvgStrings) {
+      const buf = await sharp(Buffer.from(svg))
+        .resize(widthPx, heightPx)
+        .png()
+        .toBuffer()
+      modelBuffers.push(buf)
+    }
+
+    // 3. 画像ファイル保存 + DB作成（ページごと）
     const masterDir = getMasterAnswersDirectory(exam.id)
     if (!fs.existsSync(masterDir)) {
       fs.mkdirSync(masterDir, { recursive: true })
@@ -88,8 +95,8 @@ export async function convertToExam(
 
     let globalOrderIndex = 0
 
-    for (let pi = 0; pi < multiLayout.totalPages; pi++) {
-      const pageLayout = multiLayout.pages[pi]
+    for (let pi = 0; pi < multiPageLayout.totalPages; pi++) {
+      const pageLayout = multiPageLayout.pages[pi]
       const timestamp = Date.now() + pi
 
       // 模範解答PNG保存
@@ -139,7 +146,7 @@ export async function convertToExam(
       }
     }
 
-    // 5. OMRテンプレート保存（OMR設定がある場合）
+    // 4. OMRテンプレート保存（OMR設定がある場合）
     if (Object.keys(omrCellConfigs).length > 0) {
       const omrTemplate: OMRTemplate = {
         definitionId: definition.id,

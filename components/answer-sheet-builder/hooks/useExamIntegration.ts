@@ -1,5 +1,7 @@
 /**
  * 試験変換hook
+ *
+ * renderer側でlayout計算→SVG生成→main側にデータを渡す。
  */
 
 import { useRouter } from "next/navigation"
@@ -8,6 +10,9 @@ import { toast } from "sonner"
 
 import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
+
+import { renderMultiPageSvgStrings } from "../utils/renderSvgStrings"
+import { computeMultiPageLayoutFromDefinition } from "./useAnswerSheetLayout"
 
 export function useExamIntegration() {
   const [isConverting, setIsConverting] = useState(false)
@@ -30,9 +35,23 @@ export function useExamIntegration() {
       try {
         setIsConverting(true)
 
+        const multiPageLayout = computeMultiPageLayoutFromDefinition(definition)
+
+        const answerSheetSvgStrings = renderMultiPageSvgStrings(
+          multiPageLayout,
+          "answer-sheet"
+        )
+        const modelAnswerSvgStrings = renderMultiPageSvgStrings(
+          multiPageLayout,
+          "model-answer"
+        )
+
         const result = await api.convertToExam({
           definition,
           userId: user.id,
+          multiPageLayout,
+          answerSheetSvgStrings,
+          modelAnswerSvgStrings,
         })
 
         if (result.success && result.examId) {
