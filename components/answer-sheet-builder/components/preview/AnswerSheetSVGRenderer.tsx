@@ -32,7 +32,7 @@ function getDashProps(
   switch (style) {
     case "dashed":
       dash = strokeWidth * 3
-      gap = strokeWidth * 1
+      gap = strokeWidth * 2
       break
     case "dotted":
       dash = 0.01

@@ -49,8 +49,12 @@ function getLineWidth(lineType: string, borderConfig: BorderConfig): number {
       return borderConfig.subDividerWidth ?? 0.4
     case "branch":
       return borderConfig.branchDividerWidth ?? 0.3
-    case "numberColumn":
-      return borderConfig.numberColumnDividerWidth ?? 0.4
+    case "majorNumberColumn":
+      return borderConfig.majorNumberDividerWidth ?? 0.4
+    case "subNumberColumn":
+      return borderConfig.subNumberDividerWidth ?? 0.4
+    case "branchNumberColumn":
+      return borderConfig.branchNumberDividerWidth ?? 0.3
     default:
       return 0.4
   }
@@ -779,7 +783,7 @@ function renderBranchQuestions(
         y: cellY,
         width: branchNumWidth,
         height: cellHeight,
-        fontSize: settings.fonts.numberSize - 1,
+        fontSize: settings.fonts.branchNumberSize,
         displayMode: "branch-horizontal",
       })
 
@@ -807,9 +811,9 @@ function renderBranchQuestions(
         y1: cellY,
         x2: cellX + branchNumWidth,
         y2: cellY + cellHeight,
-        style: settings.borderConfig.numberColumnDivider,
-        lineType: "numberColumn",
-        strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+        style: settings.borderConfig.branchNumberDivider,
+        lineType: "branchNumberColumn",
+        strokeWidth: getLineWidth("branchNumberColumn", settings.borderConfig),
       })
     }
 
@@ -860,7 +864,7 @@ function renderBranchQuestions(
         y: branchY,
         width: branchNumWidth,
         height: branchHeight,
-        fontSize: settings.fonts.numberSize - 1,
+        fontSize: settings.fonts.branchNumberSize,
         displayMode: "branch",
       })
 
@@ -914,9 +918,9 @@ function renderBranchQuestions(
       y1: subStartY,
       x2: branchNumX + branchNumWidth,
       y2: branchY,
-      style: settings.borderConfig.numberColumnDivider,
-      lineType: "numberColumn",
-      strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+      style: settings.borderConfig.branchNumberDivider,
+      lineType: "branchNumberColumn",
+      strokeWidth: getLineWidth("branchNumberColumn", settings.borderConfig),
     })
   }
 }
@@ -991,7 +995,7 @@ function computeLayoutFromDefinition(
       width: majorNumWidth,
       height:
         settings.numberDisplayMode === "multirow" ? majorHeight : baseRowHeight,
-      fontSize: settings.fonts.numberSize,
+      fontSize: settings.fonts.majorNumberSize,
       displayMode: settings.numberDisplayMode,
     })
 
@@ -1016,7 +1020,7 @@ function computeLayoutFromDefinition(
           y: cellY,
           width: subNumWidth,
           height: cellHeight,
-          fontSize: settings.fonts.numberSize,
+          fontSize: settings.fonts.subNumberSize,
           displayMode: "sub-horizontal",
         })
 
@@ -1080,9 +1084,9 @@ function computeLayoutFromDefinition(
           y1: cellY,
           x2: cellX + subNumWidth,
           y2: cellY + cellHeight,
-          style: settings.borderConfig.numberColumnDivider,
-          lineType: "numberColumn",
-          strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+          style: settings.borderConfig.subNumberDivider,
+          lineType: "subNumberColumn",
+          strokeWidth: getLineWidth("subNumberColumn", settings.borderConfig),
         })
       }
 
@@ -1217,7 +1221,7 @@ function computeLayoutFromDefinition(
           y: subStartY,
           width: subNumWidth,
           height: subHeight,
-          fontSize: settings.fonts.numberSize,
+          fontSize: settings.fonts.subNumberSize,
           displayMode: "sub",
         })
 
@@ -1381,7 +1385,7 @@ function computeLayoutFromDefinition(
   }
 
   // 大問番号列の縦線 → 横配置大問の範囲を除外（大問番号枠の右辺で代替）
-  const ncSw = getLineWidth("numberColumn", settings.borderConfig)
+  const majorNcSw = getLineWidth("majorNumberColumn", settings.borderConfig)
   const majorNumLineX = majorNumX + majorNumWidth
   {
     let segStart = contentTop
@@ -1393,9 +1397,9 @@ function computeLayoutFromDefinition(
           y1: segStart,
           x2: majorNumLineX,
           y2: range.top,
-          style: settings.borderConfig.numberColumnDivider,
-          lineType: "numberColumn",
-          strokeWidth: ncSw,
+          style: settings.borderConfig.majorNumberDivider,
+          lineType: "majorNumberColumn",
+          strokeWidth: majorNcSw,
           ...(isFirst
             ? {
                 dragInfo: {
@@ -1420,9 +1424,9 @@ function computeLayoutFromDefinition(
         y1: segStart,
         x2: majorNumLineX,
         y2: contentBottom,
-        style: settings.borderConfig.numberColumnDivider,
-        lineType: "numberColumn",
-        strokeWidth: ncSw,
+        style: settings.borderConfig.majorNumberDivider,
+        lineType: "majorNumberColumn",
+        strokeWidth: majorNcSw,
         ...(isFirst
           ? {
               dragInfo: {
@@ -1441,15 +1445,16 @@ function computeLayoutFromDefinition(
   }
 
   // 小問番号列の縦線 → 縦配置のセグメントのみ
+  const subNcSw = getLineWidth("subNumberColumn", settings.borderConfig)
   for (const range of verticalRanges) {
     lines.push({
       x1: subNumX + subNumWidth,
       y1: range.top,
       x2: subNumX + subNumWidth,
       y2: range.bottom,
-      style: settings.borderConfig.numberColumnDivider,
-      lineType: "numberColumn",
-      strokeWidth: ncSw,
+      style: settings.borderConfig.subNumberDivider,
+      lineType: "subNumberColumn",
+      strokeWidth: subNcSw,
       dragInfo: {
         axis: "vertical",
         target: { type: "columnWidth", column: "subNumber" },
@@ -1461,15 +1466,16 @@ function computeLayoutFromDefinition(
 
   // 枝問番号列の縦線 → vertical-branchセグメントのみ
   if (hasBranch) {
+    const branchNcSw = getLineWidth("branchNumberColumn", settings.borderConfig)
     for (const range of branchVerticalRanges) {
       lines.push({
         x1: branchNumX + branchNumWidth,
         y1: range.top,
         x2: branchNumX + branchNumWidth,
         y2: range.bottom,
-        style: settings.borderConfig.numberColumnDivider,
-        lineType: "numberColumn",
-        strokeWidth: ncSw,
+        style: settings.borderConfig.branchNumberDivider,
+        lineType: "branchNumberColumn",
+        strokeWidth: branchNcSw,
         dragInfo: {
           axis: "vertical",
           target: { type: "columnWidth", column: "branchNumber" },
@@ -1820,7 +1826,7 @@ export function computeMultiPageLayoutFromDefinition(
       width: majorNumWidth,
       height:
         settings.numberDisplayMode === "multirow" ? majorHeight : baseRowHeight,
-      fontSize: settings.fonts.numberSize,
+      fontSize: settings.fonts.majorNumberSize,
       displayMode: settings.numberDisplayMode,
     })
 
@@ -1845,7 +1851,7 @@ export function computeMultiPageLayoutFromDefinition(
           y: cellY,
           width: subNumWidth,
           height: cellHeight,
-          fontSize: settings.fonts.numberSize,
+          fontSize: settings.fonts.subNumberSize,
           displayMode: "sub-horizontal",
         })
 
@@ -1908,9 +1914,9 @@ export function computeMultiPageLayoutFromDefinition(
           y1: cellY,
           x2: cellX + subNumWidth,
           y2: cellY + cellHeight,
-          style: settings.borderConfig.numberColumnDivider,
-          lineType: "numberColumn",
-          strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+          style: settings.borderConfig.subNumberDivider,
+          lineType: "subNumberColumn",
+          strokeWidth: getLineWidth("subNumberColumn", settings.borderConfig),
         })
       }
 
@@ -2045,7 +2051,7 @@ export function computeMultiPageLayoutFromDefinition(
           y: subStartY,
           width: subNumWidth,
           height: subHeight,
-          fontSize: settings.fonts.numberSize,
+          fontSize: settings.fonts.subNumberSize,
           displayMode: "sub",
         })
 
@@ -2226,11 +2232,12 @@ export function computeMultiPageLayoutFromDefinition(
       pd.rowLeftEdges
     )
 
-    // 番号列の縦線
-    const ncSwPage = getLineWidth("numberColumn", settings.borderConfig)
-
     // 大問番号列の縦線（横配置大問の範囲を除外）
     {
+      const majorNcSwPage = getLineWidth(
+        "majorNumberColumn",
+        settings.borderConfig
+      )
       const majorNumLineX = majorNumX + majorNumWidth
       let segStart = contentTop
       for (const range of pd.horizontalMajorRanges) {
@@ -2240,9 +2247,9 @@ export function computeMultiPageLayoutFromDefinition(
             y1: segStart,
             x2: majorNumLineX,
             y2: range.top,
-            style: settings.borderConfig.numberColumnDivider,
-            lineType: "numberColumn",
-            strokeWidth: ncSwPage,
+            style: settings.borderConfig.majorNumberDivider,
+            lineType: "majorNumberColumn",
+            strokeWidth: majorNcSwPage,
           })
         }
         segStart = range.bottom
@@ -2253,37 +2260,44 @@ export function computeMultiPageLayoutFromDefinition(
           y1: segStart,
           x2: majorNumLineX,
           y2: pageContentBottom,
-          style: settings.borderConfig.numberColumnDivider,
-          lineType: "numberColumn",
-          strokeWidth: ncSwPage,
+          style: settings.borderConfig.majorNumberDivider,
+          lineType: "majorNumberColumn",
+          strokeWidth: majorNcSwPage,
         })
       }
     }
 
     // 小問番号列の縦線（縦配置セグメントのみ）
-    for (const range of pd.verticalRanges) {
-      pd.lines.push({
-        x1: subNumX + subNumWidth,
-        y1: range.top,
-        x2: subNumX + subNumWidth,
-        y2: range.bottom,
-        style: settings.borderConfig.numberColumnDivider,
-        lineType: "numberColumn",
-        strokeWidth: ncSwPage,
-      })
+    {
+      const subNcSwPage = getLineWidth("subNumberColumn", settings.borderConfig)
+      for (const range of pd.verticalRanges) {
+        pd.lines.push({
+          x1: subNumX + subNumWidth,
+          y1: range.top,
+          x2: subNumX + subNumWidth,
+          y2: range.bottom,
+          style: settings.borderConfig.subNumberDivider,
+          lineType: "subNumberColumn",
+          strokeWidth: subNcSwPage,
+        })
+      }
     }
 
     // 枝問番号列の縦線（vertical-branchセグメントのみ）
     if (hasBranch) {
+      const branchNcSwPage = getLineWidth(
+        "branchNumberColumn",
+        settings.borderConfig
+      )
       for (const range of pd.branchVerticalRanges) {
         pd.lines.push({
           x1: branchNumX + branchNumWidth,
           y1: range.top,
           x2: branchNumX + branchNumWidth,
           y2: range.bottom,
-          style: settings.borderConfig.numberColumnDivider,
-          lineType: "numberColumn",
-          strokeWidth: ncSwPage,
+          style: settings.borderConfig.branchNumberDivider,
+          lineType: "branchNumberColumn",
+          strokeWidth: branchNcSwPage,
         })
       }
     }

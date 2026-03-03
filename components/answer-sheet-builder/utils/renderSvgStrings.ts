@@ -23,8 +23,8 @@ const MM_SCALE = 1
 
 /**
  * 破線/点線のSVG属性を生成（中央基準パターン）
- * - 破線: dash = sw*3, gap = sw*1
- * - 点線: dash = sw*1, gap = sw*1
+ * - 破線: dash = sw*3, gap = sw*2
+ * - 点線: dash = 0.01, gap = sw*2
  * lineLength を渡すと stroke-dashoffset で中央対称にする
  */
 function lineDashAttrs(
@@ -36,7 +36,7 @@ function lineDashAttrs(
   switch (style) {
     case "dashed":
       dash = strokeWidth * 3
-      gap = strokeWidth * 1
+      gap = strokeWidth * 2
       break
     case "dotted":
       dash = 0.01

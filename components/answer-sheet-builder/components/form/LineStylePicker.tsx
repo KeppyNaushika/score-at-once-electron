@@ -17,12 +17,14 @@ const LINE_STYLES: { value: LineStyle; title: string }[] = [
   { value: "dotted", title: "点線" },
 ]
 
-const BORDER_FIELDS: {
+interface BorderField {
   styleKey: keyof BorderConfig
   widthKey: keyof BorderConfig
   label: string
   defaultWidth: number
-}[] = [
+}
+
+const DIVIDER_FIELDS: BorderField[] = [
   {
     styleKey: "outerBorder",
     widthKey: "outerBorderWidth",
@@ -47,11 +49,26 @@ const BORDER_FIELDS: {
     label: "枝問",
     defaultWidth: 0.3,
   },
+]
+
+const NUMBER_FIELDS: BorderField[] = [
   {
-    styleKey: "numberColumnDivider",
-    widthKey: "numberColumnDividerWidth",
-    label: "番号列",
+    styleKey: "majorNumberDivider",
+    widthKey: "majorNumberDividerWidth",
+    label: "大問",
     defaultWidth: 0.4,
+  },
+  {
+    styleKey: "subNumberDivider",
+    widthKey: "subNumberDividerWidth",
+    label: "小問",
+    defaultWidth: 0.4,
+  },
+  {
+    styleKey: "branchNumberDivider",
+    widthKey: "branchNumberDividerWidth",
+    label: "枝問",
+    defaultWidth: 0.3,
   },
 ]
 
@@ -65,7 +82,7 @@ function LineIcon({ style }: { style: LineStyle }) {
   } = {}
   if (style === "dashed") {
     const dash = sw * 3
-    const gap = sw * 1
+    const gap = sw * 2
     const period = dash + gap
     const offset = ((lineLen / 2) % period) - dash / 2
     dashProps = { strokeDasharray: `${dash} ${gap}`, strokeDashoffset: offset }
@@ -161,59 +178,89 @@ function EditableValue({
   )
 }
 
+function BorderFieldRow({
+  field,
+  borderConfig,
+  onUpdate,
+}: {
+  field: BorderField
+  borderConfig: BorderConfig
+  onUpdate: (config: Partial<BorderConfig>) => void
+}) {
+  const width =
+    (borderConfig[field.widthKey] as number | undefined) ?? field.defaultWidth
+  return (
+    <div className="flex min-h-6 items-center gap-2">
+      <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+        {field.label}
+      </span>
+      <div className="border-input flex shrink-0 rounded-md border">
+        {LINE_STYLES.map((ls) => (
+          <button
+            key={ls.value}
+            type="button"
+            title={ls.title}
+            className={cn(
+              "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
+              borderConfig[field.styleKey] === ls.value
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground"
+            )}
+            onClick={() =>
+              onUpdate({ [field.styleKey]: ls.value as LineStyle })
+            }
+          >
+            <LineIcon style={ls.value} />
+          </button>
+        ))}
+      </div>
+      <Slider
+        className="min-w-12 flex-1"
+        value={[width]}
+        min={0.1}
+        max={1.5}
+        step={0.1}
+        onValueChange={([v]) => onUpdate({ [field.widthKey]: v })}
+      />
+      <EditableValue
+        value={width}
+        min={0.1}
+        max={1.5}
+        step={0.1}
+        onChange={(v) => onUpdate({ [field.widthKey]: v })}
+      />
+    </div>
+  )
+}
+
 export function LineStylePicker({
   borderConfig,
   onUpdate,
 }: LineStylePickerProps) {
   return (
     <div className="space-y-3">
-      {BORDER_FIELDS.map((field) => {
-        const width =
-          (borderConfig[field.widthKey] as number | undefined) ??
-          field.defaultWidth
-        return (
-          <div key={field.styleKey} className="flex min-h-6 items-center gap-2">
-            <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
-              {field.label}
-            </span>
-            <div className="border-input flex shrink-0 rounded-md border">
-              {LINE_STYLES.map((ls) => (
-                <button
-                  key={ls.value}
-                  type="button"
-                  title={ls.title}
-                  className={cn(
-                    "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
-                    borderConfig[field.styleKey] === ls.value
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground"
-                  )}
-                  onClick={() =>
-                    onUpdate({ [field.styleKey]: ls.value as LineStyle })
-                  }
-                >
-                  <LineIcon style={ls.value} />
-                </button>
-              ))}
-            </div>
-            <Slider
-              className="min-w-12 flex-1"
-              value={[width]}
-              min={0.1}
-              max={1.5}
-              step={0.1}
-              onValueChange={([v]) => onUpdate({ [field.widthKey]: v })}
-            />
-            <EditableValue
-              value={width}
-              min={0.1}
-              max={1.5}
-              step={0.1}
-              onChange={(v) => onUpdate({ [field.widthKey]: v })}
-            />
-          </div>
-        )
-      })}
+      <div className="space-y-1.5">
+        <span className="text-muted-foreground text-[10px]">区切り線</span>
+        {DIVIDER_FIELDS.map((field) => (
+          <BorderFieldRow
+            key={field.styleKey}
+            field={field}
+            borderConfig={borderConfig}
+            onUpdate={onUpdate}
+          />
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <span className="text-muted-foreground text-[10px]">番号列</span>
+        {NUMBER_FIELDS.map((field) => (
+          <BorderFieldRow
+            key={field.styleKey}
+            field={field}
+            borderConfig={borderConfig}
+            onUpdate={onUpdate}
+          />
+        ))}
+      </div>
     </div>
   )
 }
