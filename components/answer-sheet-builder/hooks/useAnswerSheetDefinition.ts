@@ -53,11 +53,16 @@ function reducer(
       } else {
         nextLabel = String(idx + 1)
       }
+      let firstSubLabel: string | undefined
+      if (state.labelPresets?.sub) {
+        const subLabels = parsePresetLabels(state.labelPresets.sub)
+        firstSubLabel = subLabels[0]
+      }
       return {
         ...state,
         majorQuestions: [
           ...state.majorQuestions,
-          createDefaultMajorQuestion(nextLabel),
+          createDefaultMajorQuestion(nextLabel, firstSubLabel),
         ],
       }
     }
