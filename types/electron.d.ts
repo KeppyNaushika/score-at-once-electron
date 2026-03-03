@@ -1449,6 +1449,19 @@ export interface MyAPI {
       data?: import("./drawing-annotation.types").DrawingAnnotation | null
       error?: string
     }>
+    toggleFavorite: (
+      id: string,
+      isFavorite: boolean
+    ) => Promise<{
+      success: boolean
+      data?: import("./drawing-annotation.types").DrawingAnnotation
+      error?: string
+    }>
+    getForBrowse: (examId: string) => Promise<{
+      success: boolean
+      data?: import("./drawing-annotation.types").AnnotationWithContext[]
+      error?: string
+    }>
   }
 
   // ExamClass関連

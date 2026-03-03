@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 
 import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
@@ -263,6 +263,44 @@ export default function AnswerIndividualView({
       textBoundsCache,
     })
 
+  // お気に入りアノテーションIDのセット
+  const favoriteElementIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const el of drawingState.drawingElements) {
+      if ((el as { isFavorite?: boolean }).isFavorite) {
+        ids.add(el.id)
+      }
+    }
+    return ids
+  }, [drawingState.drawingElements])
+
+  // お気に入り切替ハンドラ
+  const handleToggleFavorite = useCallback(
+    async (elementIds: string[]) => {
+      for (const elementId of elementIds) {
+        const isFavorite = favoriteElementIds.has(elementId)
+        try {
+          const result = await window.electronAPI.drawing.toggleFavorite(
+            elementId,
+            !isFavorite
+          )
+          if (result.success) {
+            // ローカル状態を更新
+            drawingState.setDrawingElements(
+              (prev: typeof drawingState.drawingElements) =>
+                prev.map((el: (typeof prev)[number]) =>
+                  el.id === elementId ? { ...el, isFavorite: !isFavorite } : el
+                )
+            )
+          }
+        } catch (error) {
+          console.error("お気に入り切替エラー:", error)
+        }
+      }
+    },
+    [favoriteElementIds, drawingState]
+  )
+
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
     return (
@@ -474,6 +512,8 @@ export default function AnswerIndividualView({
         )}
         onUpdateSelectedElements={drawingState.updateDrawingElements}
         onClearSelection={drawingState.clearSelection}
+        onToggleFavorite={handleToggleFavorite}
+        favoriteElementIds={favoriteElementIds}
       />
 
       {/* V4統合: 高品質テキストエディターモーダル */}

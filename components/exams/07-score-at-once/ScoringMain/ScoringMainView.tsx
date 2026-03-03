@@ -410,6 +410,11 @@ function ScoringMainViewContent() {
               onScoringBehaviorChange={(behavior) =>
                 setScoringBehavior(behavior)
               }
+              currentUserId={currentUserId ?? undefined}
+              selectedScoringDataIds={Array.from(selectedStudentAnswerImageIds)}
+              questionScores={questionScores}
+              allScoringData={allScoringData}
+              onQuestionScoreCreated={handleQuestionScoreCreated}
             />
           </div>
         </div>

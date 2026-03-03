@@ -273,6 +273,7 @@ model DrawingAnnotation {
   anchorDirection String        @default("top-left")
   displayX        Float         @default(0.0)
   displayY        Float         @default(0.0)
+  isFavorite      Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   userId          String
@@ -282,6 +283,7 @@ model DrawingAnnotation {
   @@index([questionScoreId])
   @@index([type])
   @@index([createdAt])
+  @@index([isFavorite])
 }
 
 model ExamClass {
