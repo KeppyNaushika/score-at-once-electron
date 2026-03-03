@@ -260,10 +260,15 @@ function buildBranchGridLayout(
 }
 
 /** グリッドレイアウトが横配置モードかどうか */
-export function isGridHorizontal<T extends { layoutWidth?: string }>(
-  items: T[]
-): boolean {
-  return items.some((item) => item.layoutWidth != null)
+export function isGridHorizontal<
+  T extends {
+    layoutWidth?: string
+    manuscriptPaper?: { enabled: boolean }
+  },
+>(items: T[]): boolean {
+  return items.some(
+    (item) => item.layoutWidth != null || item.manuscriptPaper?.enabled
+  )
 }
 
 /** グリッドセル配列の合計高さ（baseRowHeight単位） */
@@ -552,10 +557,31 @@ function computeManuscriptGrid(
 
 function computeMajorHeight(
   major: MajorQuestion,
-  baseRowHeight: number
+  baseRowHeight: number,
+  horizontalAreaWidth?: number,
+  subNumWidth?: number
 ): number {
   if (isGridHorizontal(major.subQuestions)) {
-    const gridCells = buildSubGridLayout(major.subQuestions)
+    // 原稿用紙セルの layoutWidth を必要幅に合わせる（レンダリングと同じ計算）
+    const subs =
+      horizontalAreaWidth != null && subNumWidth != null
+        ? major.subQuestions.map((sub) => {
+            if (
+              sub.manuscriptPaper?.enabled &&
+              sub.branchQuestions.length === 0
+            ) {
+              const snw = sub.label === "" ? 0 : subNumWidth
+              const reqW =
+                baseRowHeight *
+                  sub.heightMultiplier *
+                  sub.manuscriptPaper.columns +
+                snw
+              return { ...sub, layoutWidth: String(reqW / horizontalAreaWidth) }
+            }
+            return sub
+          })
+        : major.subQuestions
+    const gridCells = buildSubGridLayout(subs)
     return gridTotalHeight(gridCells) * baseRowHeight
   }
   return major.subQuestions.reduce(
@@ -981,7 +1007,14 @@ function computeLayoutFromDefinition(
     }
 
     const majorStartY = currentY
-    const majorHeight = computeMajorHeight(major, baseRowHeight)
+    const horizontalAreaX = majorNumX + majorNumWidth
+    const horizontalAreaWidth = contentRight - horizontalAreaX
+    const majorHeight = computeMajorHeight(
+      major,
+      baseRowHeight,
+      horizontalAreaWidth,
+      subNumWidth
+    )
     // 大問ごとの行エッジ追跡
     const majorRightEdges: {
       yTop: number
@@ -1005,8 +1038,6 @@ function computeLayoutFromDefinition(
       displayMode: settings.numberDisplayMode,
     })
 
-    const horizontalAreaX = majorNumX + majorNumWidth
-    const horizontalAreaWidth = contentRight - horizontalAreaX
     const subIsHorizontal = isGridHorizontal(major.subQuestions)
 
     if (subIsHorizontal) {
@@ -1947,7 +1978,14 @@ export function computeMultiPageLayoutFromDefinition(
   ): number {
     let localY = startY
     const majorStartY = localY
-    const majorHeight = computeMajorHeight(major, baseRowHeight)
+    const horizontalAreaX = majorNumX + majorNumWidth
+    const horizontalAreaWidth = contentRight - horizontalAreaX
+    const majorHeight = computeMajorHeight(
+      major,
+      baseRowHeight,
+      horizontalAreaWidth,
+      subNumWidth
+    )
 
     // 大問番号ラベル
     page.numberLabels.push({
@@ -1961,8 +1999,6 @@ export function computeMultiPageLayoutFromDefinition(
       displayMode: settings.numberDisplayMode,
     })
 
-    const horizontalAreaX = majorNumX + majorNumWidth
-    const horizontalAreaWidth = contentRight - horizontalAreaX
     const subIsHorizontal = isGridHorizontal(major.subQuestions)
 
     if (subIsHorizontal) {
@@ -2366,7 +2402,13 @@ export function computeMultiPageLayoutFromDefinition(
   // 大問を順番に配置
   for (let mi = 0; mi < majorQuestions.length; mi++) {
     const major = majorQuestions[mi]
-    const majorHeight = computeMajorHeight(major, baseRowHeight)
+    const pgHorizontalAreaWidth = contentRight - majorNumX - majorNumWidth
+    const majorHeight = computeMajorHeight(
+      major,
+      baseRowHeight,
+      pgHorizontalAreaWidth,
+      subNumWidth
+    )
     const spacingHeight =
       mi > 0 && currentY > contentTop ? spacing.majorQuestionSpacing : 0
 

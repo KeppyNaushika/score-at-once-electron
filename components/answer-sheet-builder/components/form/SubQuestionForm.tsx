@@ -102,6 +102,9 @@ export function SubQuestionForm({
     [sub.branchQuestions]
   )
 
+  const isManuscriptPaper = !!sub.manuscriptPaper?.enabled && !hasBranches
+  const participatesInHorizontal = !!sub.layoutWidth || isManuscriptPaper
+
   const goUpActive = sub.goUp != null
   const isGoUpInvalid =
     goUpActive &&
@@ -160,31 +163,33 @@ export function SubQuestionForm({
               />
             </div>
           )}
-          {/* 幅 (layoutWidth) */}
-          <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">幅</span>
-            <input
-              className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
-              value={sub.layoutWidth ?? ""}
-              onChange={(e) => {
-                const v = e.target.value.trim()
-                if (v === "") {
-                  onUpdate({
-                    layoutWidth: undefined,
-                    nextPlacement: undefined,
-                    goUp: undefined,
-                  })
-                } else {
-                  onUpdate({ layoutWidth: v })
-                }
-              }}
-              placeholder="—"
-              aria-label="幅"
-            />
-          </div>
+          {/* 幅 (layoutWidth) - 原稿用紙有効時は列数から自動計算のため非表示 */}
+          {!isManuscriptPaper && (
+            <div className="flex items-center gap-0.5 px-1.5">
+              <span className="text-muted-foreground">幅</span>
+              <input
+                className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
+                value={sub.layoutWidth ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.trim()
+                  if (v === "") {
+                    onUpdate({
+                      layoutWidth: undefined,
+                      nextPlacement: undefined,
+                      goUp: undefined,
+                    })
+                  } else {
+                    onUpdate({ layoutWidth: v })
+                  }
+                }}
+                placeholder="—"
+                aria-label="幅"
+              />
+            </div>
+          )}
         </div>
         {/* 改行ボタン */}
-        {sub.layoutWidth && (
+        {participatesInHorizontal && (
           <Button
             variant="outline"
             size="icon"
@@ -202,7 +207,7 @@ export function SubQuestionForm({
           </Button>
         )}
         {/* 戻るボタン（自分自身をN行上に配置） */}
-        {sub.layoutWidth && (
+        {participatesInHorizontal && (
           <div className="inline-flex items-center gap-0">
             <Button
               variant="outline"
@@ -347,7 +352,14 @@ export function SubQuestionForm({
           />
           <ManuscriptPaperSettings
             config={sub.manuscriptPaper}
-            onUpdate={(config) => onUpdate({ manuscriptPaper: config })}
+            onUpdate={(config) => {
+              const updates: Partial<SubQuestion> = { manuscriptPaper: config }
+              // 原稿用紙有効化時にlayoutWidthが未設定なら自動設定（横配置参加のため）
+              if (config.enabled && !sub.layoutWidth) {
+                updates.layoutWidth = "1"
+              }
+              onUpdate(updates)
+            }}
           />
           <OMRCellConfigForm
             config={sub.omrConfig}
