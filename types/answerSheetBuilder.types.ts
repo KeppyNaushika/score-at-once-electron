@@ -489,5 +489,10 @@ export interface ASBConvertResult {
 export interface ASBDefinitionListItem {
   id: string
   name: string
+  paperSize?: string
+  orientation?: string
+  questionCount?: number
+  totalPoints?: number
   updatedAt?: string
+  createdAt?: string
 }

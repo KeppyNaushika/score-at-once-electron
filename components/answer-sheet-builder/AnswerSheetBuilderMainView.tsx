@@ -1,7 +1,15 @@
 "use client"
 
-import { Download, FolderOpen, Redo2, Save, Undo2 } from "lucide-react"
-import { useCallback, useState } from "react"
+import {
+  ArrowLeft,
+  Download,
+  FolderOpen,
+  Redo2,
+  Save,
+  Undo2,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -9,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/contexts/AuthContext"
 import type { RenderMode } from "@/types/answerSheetBuilder.types"
 
 import { ExamIntegrationDialog } from "./components/export/ExamIntegrationDialog"
@@ -25,10 +34,19 @@ import {
 } from "./hooks/useAnswerSheetLayout"
 import { useUndoRedoShortcuts } from "./hooks/useUndoRedoShortcuts"
 
-export function AnswerSheetBuilderMainView() {
+interface AnswerSheetBuilderMainViewProps {
+  definitionId: string
+}
+
+export function AnswerSheetBuilderMainView({
+  definitionId,
+}: AnswerSheetBuilderMainViewProps) {
+  const { user } = useAuth()
+  const router = useRouter()
   const {
     definition,
     dispatch,
+    setDefinition,
     setName,
     updateSettings,
     addMajorQuestion,
@@ -49,6 +67,24 @@ export function AnswerSheetBuilderMainView() {
     undo,
     redo,
   } = useAnswerSheetDefinition()
+
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // DBから定義をロード
+  useEffect(() => {
+    const load = async () => {
+      const api = window.electronAPI?.answerSheetBuilder
+      if (!api) return
+      const result = await api.loadDefinition(definitionId)
+      if (result.success && result.data) {
+        setDefinition(result.data)
+      } else {
+        toast.error(result.error ?? "定義の読み込みに失敗しました")
+      }
+      setIsLoaded(true)
+    }
+    load()
+  }, [definitionId, setDefinition])
 
   const layout = useAnswerSheetLayout(definition)
   const multiPageLayout = useMultiPageLayout(definition)
@@ -74,24 +110,41 @@ export function AnswerSheetBuilderMainView() {
 
   const handleSave = useCallback(async () => {
     const api = window.electronAPI?.answerSheetBuilder
-    if (!api) {
+    if (!api || !user?.id) {
       toast.error("Electron APIが利用できません")
       return
     }
-    const result = await api.saveDefinition(definition)
+    const result = await api.saveDefinition(definition, user.id)
     if (result.success) {
       toast.success("定義を保存しました")
     } else {
       toast.error(`保存エラー: ${result.error}`)
     }
-  }, [definition])
+  }, [definition, user?.id])
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground text-sm">読み込み中...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen">
       {/* 左パネル: フォーム */}
       <div className="flex w-1/2 max-w-2xl shrink-0 flex-col overflow-hidden border-r">
         {/* 名前入力 */}
-        <div className="border-b p-3">
+        <div className="flex items-center gap-2 border-b p-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={() => router.push("/answer-sheet-builder")}
+            title="一覧に戻る"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <Input
             value={definition.name}
             onChange={(e) => setName(e.target.value)}

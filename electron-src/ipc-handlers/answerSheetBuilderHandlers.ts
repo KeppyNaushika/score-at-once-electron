@@ -15,19 +15,20 @@ import type {
   ASBExportPngArgs,
   ASBPrintArgs,
 } from "../../types/answerSheetBuilder.types"
-import {
-  deleteDefinition,
-  listDefinitions,
-  loadDefinition,
-  saveDefinition,
-} from "../lib/answer-sheet-builder/definitionStorage"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
+import {
+  deleteAsbDefinition,
+  getAsbDefinition,
+  listAsbDefinitions,
+  saveAsbDefinition,
+} from "../lib/prisma/asbDefinition"
 
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
-  ipcMain.handle("asb:list-definitions", async () => {
+  ipcMain.handle("asb:list-definitions", async (_event, userId: string) => {
     try {
-      return { success: true, data: listDefinitions() }
+      const data = await listAsbDefinitions(userId)
+      return { success: true, data }
     } catch (error) {
       console.error("asb:list-definitions error:", error)
       return {
@@ -43,7 +44,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
   // 定義読込
   ipcMain.handle("asb:load-definition", async (_event, id: string) => {
     try {
-      const definition = loadDefinition(id)
+      const definition = await getAsbDefinition(id)
       if (!definition) {
         return { success: false, error: "定義が見つかりません" }
       }
@@ -61,9 +62,9 @@ export function setupAnswerSheetBuilderHandlers(): void {
   // 定義保存
   ipcMain.handle(
     "asb:save-definition",
-    async (_event, definition: AnswerSheetDefinition) => {
+    async (_event, definition: AnswerSheetDefinition, userId: string) => {
       try {
-        saveDefinition(definition)
+        await saveAsbDefinition(definition, userId)
         return { success: true }
       } catch (error) {
         console.error("asb:save-definition error:", error)
@@ -79,7 +80,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
   // 定義削除
   ipcMain.handle("asb:delete-definition", async (_event, id: string) => {
     try {
-      const deleted = deleteDefinition(id)
+      const deleted = await deleteAsbDefinition(id)
       return { success: deleted }
     } catch (error) {
       console.error("asb:delete-definition error:", error)

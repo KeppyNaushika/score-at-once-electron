@@ -1156,12 +1156,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   answerSheetBuilder: {
-    listDefinitions: () => ipcRenderer.invoke("asb:list-definitions"),
+    listDefinitions: (userId: string) =>
+      ipcRenderer.invoke("asb:list-definitions", userId),
     loadDefinition: (id: string) =>
       ipcRenderer.invoke("asb:load-definition", id),
     saveDefinition: (
-      definition: import("../types/answerSheetBuilder.types").AnswerSheetDefinition
-    ) => ipcRenderer.invoke("asb:save-definition", definition),
+      definition: import("../types/answerSheetBuilder.types").AnswerSheetDefinition,
+      userId: string
+    ) => ipcRenderer.invoke("asb:save-definition", definition, userId),
     deleteDefinition: (id: string) =>
       ipcRenderer.invoke("asb:delete-definition", id),
     exportPdf: (
