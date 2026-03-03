@@ -1,5 +1,7 @@
 "use client"
 
+import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParser"
+import { parseInlineMarkup } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import type {
   ComputedLayout,
   ComputedPageLayout,
@@ -69,6 +71,74 @@ function isDragInfoEqual(
     return a.target.column === b.target.column
   }
   return false
+}
+
+function getSegmentStyle(seg: InlineSegment): React.CSSProperties {
+  const style: React.CSSProperties = {}
+  if (seg.bold) style.fontWeight = "bold"
+  if (seg.italic || seg.math) style.fontStyle = "italic"
+  if (seg.strikethrough) style.textDecoration = "line-through"
+  if (seg.underline) {
+    style.textDecoration = style.textDecoration
+      ? `${style.textDecoration} underline`
+      : "underline"
+  }
+  if (seg.modelAnswer) style.color = "#d00"
+  return style
+}
+
+function renderSegmentsTspan(
+  segments: InlineSegment[],
+  renderMode: RenderMode
+): React.ReactNode[] {
+  return segments
+    .filter((seg) => !seg.modelAnswer || renderMode === "model-answer")
+    .map((seg, i) => (
+      <tspan
+        key={i}
+        fontWeight={seg.bold ? "bold" : undefined}
+        fontStyle={seg.italic || seg.math ? "italic" : undefined}
+        textDecoration={
+          seg.strikethrough && seg.underline
+            ? "line-through underline"
+            : seg.strikethrough
+              ? "line-through"
+              : seg.underline
+                ? "underline"
+                : undefined
+        }
+        fill={seg.modelAnswer ? "#d00" : undefined}
+      >
+        {seg.text}
+      </tspan>
+    ))
+}
+
+function renderSegmentsHtml(
+  segments: InlineSegment[],
+  renderMode: RenderMode,
+  fontSize: number
+): React.ReactNode[] {
+  return segments
+    .filter((seg) => !seg.modelAnswer || renderMode === "model-answer")
+    .map((seg, i) => {
+      const style = getSegmentStyle(seg)
+      if (seg.math) {
+        return (
+          <span
+            key={i}
+            className="mathjax-inline"
+            style={{ ...style, fontSize: `${fontSize}px` }}
+            dangerouslySetInnerHTML={{ __html: `\\(${seg.text}\\)` }}
+          />
+        )
+      }
+      return (
+        <span key={i} style={style}>
+          {seg.text}
+        </span>
+      )
+    })
 }
 
 export function AnswerSheetSVGRenderer({
@@ -168,26 +238,7 @@ export function AnswerSheetSVGRenderer({
         </text>
       ))}
 
-      {/* 模範解答テキスト */}
-      {renderMode === "model-answer" &&
-        cells
-          .filter((c) => c.cellType === "answer" && c.modelAnswer)
-          .map((cell, i) => (
-            <text
-              key={`model-${i}`}
-              x={cell.x + cell.width / 2}
-              y={cell.y + cell.height / 2}
-              fontSize={10}
-              fontFamily="'Noto Sans JP', sans-serif"
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="#d00"
-            >
-              {cell.modelAnswer}
-            </text>
-          ))}
-
-      {/* セル内テキスト要素 */}
+      {/* セル内テキスト要素（インラインマークアップ対応） */}
       {cells
         .filter((c) => c.cellType === "answer")
         .flatMap((cell) =>
@@ -211,25 +262,64 @@ export function AnswerSheetSVGRenderer({
                   ? "end"
                   : "middle"
 
+            const segments = parseInlineMarkup(te.text)
+            const hasMath = segments.some((s) => s.math)
+
+            if (hasMath) {
+              return (
+                <foreignObject
+                  key={`te-${cell.label}-${ti}`}
+                  x={cell.x + 1}
+                  y={
+                    te.verticalAlign === "top"
+                      ? cell.y + 1
+                      : te.verticalAlign === "bottom"
+                        ? cell.y + cell.height - te.fontSize * 1.5 - 1
+                        : cell.y + cell.height / 2 - te.fontSize * 0.75
+                  }
+                  width={cell.width - 2}
+                  height={te.fontSize * 1.5}
+                >
+                  <div
+                    style={{
+                      fontSize: `${te.fontSize}px`,
+                      fontFamily: "'Noto Sans JP', sans-serif",
+                      textAlign:
+                        te.horizontalAlign === "left"
+                          ? "left"
+                          : te.horizontalAlign === "right"
+                            ? "right"
+                            : "center",
+                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent:
+                        te.horizontalAlign === "left"
+                          ? "flex-start"
+                          : te.horizontalAlign === "right"
+                            ? "flex-end"
+                            : "center",
+                      height: "100%",
+                    }}
+                  >
+                    {renderSegmentsHtml(segments, renderMode, te.fontSize)}
+                  </div>
+                </foreignObject>
+              )
+            }
+
             return (
               <text
                 key={`te-${cell.label}-${ti}`}
                 x={tx}
                 y={ty}
                 fontSize={te.fontSize}
-                fontWeight={te.fontWeight}
-                fontStyle={te.fontStyle === "italic" ? "italic" : undefined}
-                textDecoration={
-                  te.textDecoration === "line-through"
-                    ? "line-through"
-                    : undefined
-                }
                 fontFamily="'Noto Sans JP', sans-serif"
                 textAnchor={anchor}
                 dominantBaseline="central"
                 fill="#000"
               >
-                {te.text}
+                {renderSegmentsTspan(segments, renderMode)}
               </text>
             )
           })

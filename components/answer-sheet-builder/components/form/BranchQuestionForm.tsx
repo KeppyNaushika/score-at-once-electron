@@ -6,7 +6,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { BranchQuestion } from "@/types/answerSheetBuilder.types"
 
-import { ModelAnswerEditor } from "./ModelAnswerEditor"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
@@ -33,8 +32,7 @@ export function BranchQuestionForm({
 }: BranchQuestionFormProps) {
   const [detailOpen, setDetailOpen] = useState(false)
 
-  const hasDetailContent =
-    !!branch.modelAnswer || branch.textElements.length > 0
+  const hasDetailContent = branch.textElements.length > 0
 
   const goUpActive = branch.goUp != null
   const isGoUpInvalid =
@@ -243,10 +241,6 @@ export function BranchQuestionForm({
       {/* 詳細設定（展開コンテンツ） */}
       {detailOpen && (
         <div className="space-y-2 pt-1">
-          <ModelAnswerEditor
-            value={branch.modelAnswer}
-            onChange={(v) => onUpdate({ modelAnswer: v })}
-          />
           <TextElementEditor
             textElements={branch.textElements}
             onUpdate={(elements) => onUpdate({ textElements: elements })}
