@@ -54,7 +54,6 @@ export interface ManuscriptPaperConfig {
   enabled: boolean
   columns: number
   rows: number
-  cellSizeMm: number
 }
 
 // =====================
