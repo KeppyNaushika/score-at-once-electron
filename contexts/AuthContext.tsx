@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await window.electronAPI.saveAuthToken(result.token)
         setUser(result.user)
         toast.success("ログインしました")
-        router.push("/dashboard")
+        router.push("/exams")
         return true
       } else {
         toast.error(result.error || "ログインに失敗しました")
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 簡易トークンとして user.id を保存
       await window.electronAPI.saveAuthToken(selectedUser.id)
       toast.success(`${selectedUser.name}さん、おかえりなさい！`)
-      router.push("/dashboard")
+      router.push("/exams")
     } catch (error) {
       console.error("Quick login failed:", error)
       toast.error("ログインに失敗しました")

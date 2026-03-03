@@ -12,7 +12,7 @@ const Page = () => {
   useEffect(() => {
     if (!isLoading) {
       if (user) {
-        router.push("/dashboard")
+        router.push("/exams")
       } else {
         router.push("/login")
       }

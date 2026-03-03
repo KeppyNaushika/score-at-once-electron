@@ -10,8 +10,8 @@ export default function NotFound() {
           Page Not Found
         </h2>
         <p className="mb-6 text-gray-600">Could not find the requested page.</p>
-        <Link href="/dashboard">
-          <Button variant="default">Return to Dashboard</Button>
+        <Link href="/exams">
+          <Button variant="default">試験一覧に戻る</Button>
         </Link>
       </div>
     </div>

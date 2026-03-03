@@ -41,7 +41,7 @@ interface NavItem {
 
 const navGroups: NavItem[][] = [
   [
-    { href: "/dashboard", label: "試験", icon: Home },
+    { href: "/exams", label: "試験一覧", icon: Home },
     { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
     { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
     { href: "/grades", label: "成績算出", icon: BarChart3 },
@@ -96,7 +96,7 @@ export default function Navigation({
         )}
       >
         {!isSidebarMinimized && (
-          <Link href="/dashboard" className="text-lg font-semibold">
+          <Link href="/exams" className="text-lg font-semibold">
             一括採点
           </Link>
         )}
