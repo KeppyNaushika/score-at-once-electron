@@ -4,6 +4,31 @@ import {
 } from "./lib/dataManager"
 import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseInitializer"
 
+// DB内の imagePath を projects/ → exams/ に一括更新（v0.6.x リネーム対応）
+async function migrateImagePathsInDatabase(): Promise<void> {
+  try {
+    const { getPrismaClient } = await import("./lib/prisma/client")
+    const prisma = getPrismaClient()
+
+    const [masterResult, answerResult] = await prisma.$transaction([
+      prisma.$executeRawUnsafe(
+        `UPDATE "MasterImage" SET "imagePath" = 'exams/' || SUBSTR("imagePath", LENGTH('projects/') + 1) WHERE "imagePath" LIKE 'projects/%'`
+      ),
+      prisma.$executeRawUnsafe(
+        `UPDATE "StudentAnswerImage" SET "imagePath" = 'exams/' || SUBSTR("imagePath", LENGTH('projects/') + 1) WHERE "imagePath" LIKE 'projects/%'`
+      ),
+    ])
+
+    if (masterResult > 0 || answerResult > 0) {
+      console.log(
+        `Migrated imagePath in DB: MasterImage=${masterResult}, StudentAnswerImage=${answerResult}`
+      )
+    }
+  } catch (error) {
+    console.error("Failed to migrate imagePath in database:", error)
+  }
+}
+
 export async function initializeApp(): Promise<void> {
   try {
     // データディレクトリの初期化
@@ -33,6 +58,9 @@ export async function initializeApp(): Promise<void> {
         `Database initialization failed: ${dbError instanceof Error ? dbError.message : dbError}`
       )
     }
+
+    // DB内の imagePath を projects/ → exams/ に更新（v0.6.x リネーム対応）
+    await migrateImagePathsInDatabase()
 
     // 共有ドライブ用の最適化
     await optimizeDatabaseForSharedDrive()

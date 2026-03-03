@@ -218,11 +218,14 @@ export async function collectExamData(
 
     for (const page of exam.examPages) {
       for (const img of page.masterImages) {
-        masterImagePaths.push(img.imagePath)
+        // projects/ → exams/ パス正規化（v0.6.x リネーム対応）
+        const normalized = img.imagePath.replace(/^projects\//, "exams/")
+        masterImagePaths.push(normalized)
       }
       if (!isTemplate) {
         for (const img of page.studentAnswerImages) {
-          answerSheetPaths.push(img.imagePath)
+          const normalized = img.imagePath.replace(/^projects\//, "exams/")
+          answerSheetPaths.push(normalized)
         }
       }
     }
