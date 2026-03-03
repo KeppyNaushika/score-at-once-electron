@@ -366,9 +366,6 @@ function computeSubHeight(sub: SubQuestion, baseRowHeight: number): number {
     const branchCells = buildBranchGridLayout(sub.branchQuestions)
     return gridTotalHeight(branchCells) * baseRowHeight
   }
-  if (sub.manuscriptPaper?.enabled) {
-    return sub.manuscriptPaper.rows * sub.manuscriptPaper.cellSizeMm
-  }
   return sub.heightMultiplier * baseRowHeight
 }
 
@@ -522,10 +519,12 @@ function computeManuscriptGrid(
   sub: SubQuestion,
   cellX: number,
   cellY: number,
-  cellWidth: number
+  cellWidth: number,
+  cellHeight: number
 ): ManuscriptGrid | undefined {
   if (!sub.manuscriptPaper?.enabled) return undefined
-  const { columns, rows, cellSizeMm } = sub.manuscriptPaper
+  const { columns, rows } = sub.manuscriptPaper
+  const cellSizeMm = cellHeight / rows
   const gridWidth = columns * cellSizeMm
   const gridHeight = rows * cellSizeMm
   return {
@@ -776,23 +775,26 @@ function renderBranchQuestions(
       const cellWidth = gc.width * branchAreaWidth
       const cellY = subStartY + gc.y * baseRowHeight
       const cellHeight = gc.height * baseRowHeight
+      const effBranchNumW = gc.item.label === "" ? 0 : branchNumWidth
 
-      numberLabels.push({
-        text: gc.item.label,
-        x: cellX,
-        y: cellY,
-        width: branchNumWidth,
-        height: cellHeight,
-        fontSize: settings.fonts.branchNumberSize,
-        displayMode: "branch-horizontal",
-      })
+      if (effBranchNumW > 0) {
+        numberLabels.push({
+          text: gc.item.label,
+          x: cellX,
+          y: cellY,
+          width: effBranchNumW,
+          height: cellHeight,
+          fontSize: settings.fonts.branchNumberSize,
+          displayMode: "branch-horizontal",
+        })
+      }
 
       cells.push(
         createCell(
           [mi, si, gc.itemIndex],
-          cellX + branchNumWidth,
+          cellX + effBranchNumW,
           cellY,
-          cellWidth - branchNumWidth,
+          cellWidth - effBranchNumW,
           cellHeight,
           paper,
           `${majorLabel}-${sub.label}-${gc.item.label}`,
@@ -806,15 +808,20 @@ function renderBranchQuestions(
       )
 
       // 番号ラベル右側の区切り線
-      lines.push({
-        x1: cellX + branchNumWidth,
-        y1: cellY,
-        x2: cellX + branchNumWidth,
-        y2: cellY + cellHeight,
-        style: settings.borderConfig.branchNumberDivider,
-        lineType: "branchNumberColumn",
-        strokeWidth: getLineWidth("branchNumberColumn", settings.borderConfig),
-      })
+      if (effBranchNumW > 0) {
+        lines.push({
+          x1: cellX + effBranchNumW,
+          y1: cellY,
+          x2: cellX + effBranchNumW,
+          y2: cellY + cellHeight,
+          style: settings.borderConfig.branchNumberDivider,
+          lineType: "branchNumberColumn",
+          strokeWidth: getLineWidth(
+            "branchNumberColumn",
+            settings.borderConfig
+          ),
+        })
+      }
     }
 
     // グリッドセル間の区切り線
@@ -857,23 +864,28 @@ function renderBranchQuestions(
     let branchY = subStartY
     sub.branchQuestions.forEach((branch, bi) => {
       const branchHeight = branch.heightMultiplier * baseRowHeight
+      const effBranchNumW = branch.label === "" ? 0 : branchNumWidth
+      const effBranchAnswerX = branchNumX + effBranchNumW
+      const effBranchAnswerW = contentRight - effBranchAnswerX
 
-      numberLabels.push({
-        text: branch.label,
-        x: branchNumX,
-        y: branchY,
-        width: branchNumWidth,
-        height: branchHeight,
-        fontSize: settings.fonts.branchNumberSize,
-        displayMode: "branch",
-      })
+      if (effBranchNumW > 0) {
+        numberLabels.push({
+          text: branch.label,
+          x: branchNumX,
+          y: branchY,
+          width: effBranchNumW,
+          height: branchHeight,
+          fontSize: settings.fonts.branchNumberSize,
+          displayMode: "branch",
+        })
+      }
 
       cells.push(
         createCell(
           [mi, si, bi],
-          answerX,
+          effBranchAnswerX,
           branchY,
-          answerWidth,
+          effBranchAnswerW,
           branchHeight,
           paper,
           `${majorLabel}-${sub.label}-${branch.label}`,
@@ -912,16 +924,7 @@ function renderBranchQuestions(
       branchY += branchHeight
     })
 
-    // 枝問番号列の右側縦線
-    lines.push({
-      x1: branchNumX + branchNumWidth,
-      y1: subStartY,
-      x2: branchNumX + branchNumWidth,
-      y2: branchY,
-      style: settings.borderConfig.branchNumberDivider,
-      lineType: "branchNumberColumn",
-      strokeWidth: getLineWidth("branchNumberColumn", settings.borderConfig),
-    })
+    // 枝問番号列の右側縦線 → ラベルのある区間は縦線セグメント収集で描画するため、ここでは不要
   }
 }
 
@@ -945,9 +948,6 @@ function computeLayoutFromDefinition(
   )
   const branchNumX = subNumX + subNumWidth
   const branchNumWidth = hasBranch ? columnWidths.branchNumber : 0
-
-  const answerX = branchNumX + branchNumWidth
-  const answerWidth = contentRight - answerX
 
   const cells: ComputedCell[] = []
   const lines: ComputedLine[] = []
@@ -1007,23 +1007,26 @@ function computeLayoutFromDefinition(
         const cellHeight = gc.height * baseRowHeight
         const sub = gc.item
         const hasBranches = sub.branchQuestions.length > 0
+        const effSubNumW = sub.label === "" ? 0 : subNumWidth
 
-        numberLabels.push({
-          text: sub.label,
-          x: cellX,
-          y: cellY,
-          width: subNumWidth,
-          height: cellHeight,
-          fontSize: settings.fonts.subNumberSize,
-          displayMode: "sub-horizontal",
-        })
+        if (effSubNumW > 0) {
+          numberLabels.push({
+            text: sub.label,
+            x: cellX,
+            y: cellY,
+            width: effSubNumW,
+            height: cellHeight,
+            fontSize: settings.fonts.subNumberSize,
+            displayMode: "sub-horizontal",
+          })
+        }
 
         if (hasBranches) {
           // 枝問をセル内でレンダリング
-          const cellBranchNumX = cellX + subNumWidth
+          const cellBranchNumX = cellX + effSubNumW
           const cellBranchNumWidth = branchNumWidth
           const cellAnswerX = cellBranchNumX + cellBranchNumWidth
-          const cellAnswerWidth = cellWidth - subNumWidth - cellBranchNumWidth
+          const cellAnswerWidth = cellWidth - effSubNumW - cellBranchNumWidth
           const cellRight = cellX + cellWidth
           renderBranchQuestions(
             sub,
@@ -1033,7 +1036,7 @@ function computeLayoutFromDefinition(
             cellY,
             0,
             cellX,
-            subNumWidth,
+            effSubNumW,
             cellBranchNumX,
             cellBranchNumWidth,
             cellAnswerX,
@@ -1051,9 +1054,9 @@ function computeLayoutFromDefinition(
           cells.push(
             createCell(
               [mi, gc.itemIndex],
-              cellX + subNumWidth,
+              cellX + effSubNumW,
               cellY,
-              cellWidth - subNumWidth,
+              cellWidth - effSubNumW,
               cellHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -1063,9 +1066,10 @@ function computeLayoutFromDefinition(
               0,
               computeManuscriptGrid(
                 sub,
-                cellX + subNumWidth,
+                cellX + effSubNumW,
                 cellY,
-                cellWidth - subNumWidth
+                cellWidth - effSubNumW,
+                cellHeight
               ),
               sub.omrConfig
             )
@@ -1073,15 +1077,17 @@ function computeLayoutFromDefinition(
         }
 
         // 番号ラベル右側の区切り線
-        lines.push({
-          x1: cellX + subNumWidth,
-          y1: cellY,
-          x2: cellX + subNumWidth,
-          y2: cellY + cellHeight,
-          style: settings.borderConfig.subNumberDivider,
-          lineType: "subNumberColumn",
-          strokeWidth: getLineWidth("subNumberColumn", settings.borderConfig),
-        })
+        if (effSubNumW > 0) {
+          lines.push({
+            x1: cellX + effSubNumW,
+            y1: cellY,
+            x2: cellX + effSubNumW,
+            y2: cellY + cellHeight,
+            style: settings.borderConfig.subNumberDivider,
+            lineType: "subNumberColumn",
+            strokeWidth: getLineWidth("subNumberColumn", settings.borderConfig),
+          })
+        }
       }
 
       // rowRightEdges: Y区間ごとの右端X座標を計算
@@ -1208,16 +1214,22 @@ function computeLayoutFromDefinition(
         const subStartY = currentY
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
+        const effSubNumW = sub.label === "" ? 0 : subNumWidth
+        const effBranchNumX = subNumX + effSubNumW
+        const effAnswerX = effBranchNumX + branchNumWidth
+        const effAnswerWidth = contentRight - effAnswerX
 
-        numberLabels.push({
-          text: sub.label,
-          x: subNumX,
-          y: subStartY,
-          width: subNumWidth,
-          height: subHeight,
-          fontSize: settings.fonts.subNumberSize,
-          displayMode: "sub",
-        })
+        if (effSubNumW > 0) {
+          numberLabels.push({
+            text: sub.label,
+            x: subNumX,
+            y: subStartY,
+            width: effSubNumW,
+            height: subHeight,
+            fontSize: settings.fonts.subNumberSize,
+            displayMode: "sub",
+          })
+        }
 
         if (hasBranches) {
           renderBranchQuestions(
@@ -1228,11 +1240,11 @@ function computeLayoutFromDefinition(
             subStartY,
             0,
             subNumX,
-            subNumWidth,
-            branchNumX,
+            effSubNumW,
+            effBranchNumX,
             branchNumWidth,
-            answerX,
-            answerWidth,
+            effAnswerX,
+            effAnswerWidth,
             contentRight,
             baseRowHeight,
             paper,
@@ -1246,9 +1258,9 @@ function computeLayoutFromDefinition(
           cells.push(
             createCell(
               [mi, si],
-              answerX,
+              effAnswerX,
               subStartY,
-              answerWidth,
+              effAnswerWidth,
               subHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -1256,7 +1268,13 @@ function computeLayoutFromDefinition(
               sub.textElements,
               "answer",
               0,
-              computeManuscriptGrid(sub, answerX, subStartY, answerWidth),
+              computeManuscriptGrid(
+                sub,
+                effAnswerX,
+                subStartY,
+                effAnswerWidth,
+                subHeight
+              ),
               sub.omrConfig
             )
           )
@@ -1384,23 +1402,52 @@ function computeLayoutFromDefinition(
         horizontalMajorRanges.push({ top: trackY, bottom: trackY + height })
         trackY += height
       } else {
-        // 縦配置モード: 全体がvertical-sub
-        const segStart = trackY
+        // 縦配置モード: ラベルのある小問の区間だけ小問番号列セグメントを収集
+        let subSegStart: number | null = null
         for (const sub of mq.subQuestions) {
-          // 枝問番号列のセグメント
+          const subH = computeSubHeight(sub, baseRowHeight)
+          if (sub.label !== "") {
+            if (subSegStart === null) subSegStart = trackY
+          } else {
+            if (subSegStart !== null) {
+              verticalRanges.push({ top: subSegStart, bottom: trackY })
+              subSegStart = null
+            }
+          }
+          // 枝問番号列のセグメント: ラベルのある枝問の区間だけ
           if (sub.branchQuestions.length > 0) {
             if (!isGridHorizontal(sub.branchQuestions)) {
-              // 全て縦配置 → 連続した垂直セグメント
-              branchVerticalRanges.push({
-                top: trackY,
-                bottom: trackY + computeSubHeight(sub, baseRowHeight),
-              })
+              let branchSegStart: number | null = null
+              let branchY = trackY
+              for (const bq of sub.branchQuestions) {
+                const bqH = bq.heightMultiplier * baseRowHeight
+                if (bq.label !== "") {
+                  if (branchSegStart === null) branchSegStart = branchY
+                } else {
+                  if (branchSegStart !== null) {
+                    branchVerticalRanges.push({
+                      top: branchSegStart,
+                      bottom: branchY,
+                    })
+                    branchSegStart = null
+                  }
+                }
+                branchY += bqH
+              }
+              if (branchSegStart !== null) {
+                branchVerticalRanges.push({
+                  top: branchSegStart,
+                  bottom: branchY,
+                })
+              }
             }
             // 横配置の場合は枝問番号列は不要（個別セル内に番号を表示）
           }
-          trackY += computeSubHeight(sub, baseRowHeight)
+          trackY += subH
         }
-        verticalRanges.push({ top: segStart, bottom: trackY })
+        if (subSegStart !== null) {
+          verticalRanges.push({ top: subSegStart, bottom: trackY })
+        }
       }
     }
   }
@@ -1805,8 +1852,6 @@ export function computeMultiPageLayoutFromDefinition(
   )
   const branchNumX = subNumX + subNumWidth
   const branchNumWidth = hasBranch ? columnWidths.branchNumber : 0
-  const answerX = branchNumX + branchNumWidth
-  const answerWidth = contentRight - answerX
 
   interface PageData {
     cells: ComputedCell[]
@@ -1884,22 +1929,25 @@ export function computeMultiPageLayoutFromDefinition(
         const cellHeight = gc.height * baseRowHeight
         const sub = gc.item
         const hasBranches = sub.branchQuestions.length > 0
+        const effSubNumW = sub.label === "" ? 0 : subNumWidth
 
-        page.numberLabels.push({
-          text: sub.label,
-          x: cellX,
-          y: cellY,
-          width: subNumWidth,
-          height: cellHeight,
-          fontSize: settings.fonts.subNumberSize,
-          displayMode: "sub-horizontal",
-        })
+        if (effSubNumW > 0) {
+          page.numberLabels.push({
+            text: sub.label,
+            x: cellX,
+            y: cellY,
+            width: effSubNumW,
+            height: cellHeight,
+            fontSize: settings.fonts.subNumberSize,
+            displayMode: "sub-horizontal",
+          })
+        }
 
         if (hasBranches) {
-          const cellBranchNumX = cellX + subNumWidth
+          const cellBranchNumX = cellX + effSubNumW
           const cellBranchNumWidth = branchNumWidth
           const cellAnswerX = cellBranchNumX + cellBranchNumWidth
-          const cellAnswerWidth = cellWidth - subNumWidth - cellBranchNumWidth
+          const cellAnswerWidth = cellWidth - effSubNumW - cellBranchNumWidth
           const cellRight = cellX + cellWidth
           renderBranchQuestions(
             sub,
@@ -1909,7 +1957,7 @@ export function computeMultiPageLayoutFromDefinition(
             cellY,
             pageIdx,
             cellX,
-            subNumWidth,
+            effSubNumW,
             cellBranchNumX,
             cellBranchNumWidth,
             cellAnswerX,
@@ -1927,9 +1975,9 @@ export function computeMultiPageLayoutFromDefinition(
           page.cells.push(
             createCell(
               [mi, gc.itemIndex],
-              cellX + subNumWidth,
+              cellX + effSubNumW,
               cellY,
-              cellWidth - subNumWidth,
+              cellWidth - effSubNumW,
               cellHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -1939,9 +1987,10 @@ export function computeMultiPageLayoutFromDefinition(
               pageIdx,
               computeManuscriptGrid(
                 sub,
-                cellX + subNumWidth,
+                cellX + effSubNumW,
                 cellY,
-                cellWidth - subNumWidth
+                cellWidth - effSubNumW,
+                cellHeight
               ),
               sub.omrConfig
             )
@@ -1949,15 +1998,17 @@ export function computeMultiPageLayoutFromDefinition(
         }
 
         // 番号ラベル右側の区切り線
-        page.lines.push({
-          x1: cellX + subNumWidth,
-          y1: cellY,
-          x2: cellX + subNumWidth,
-          y2: cellY + cellHeight,
-          style: settings.borderConfig.subNumberDivider,
-          lineType: "subNumberColumn",
-          strokeWidth: getLineWidth("subNumberColumn", settings.borderConfig),
-        })
+        if (effSubNumW > 0) {
+          page.lines.push({
+            x1: cellX + effSubNumW,
+            y1: cellY,
+            x2: cellX + effSubNumW,
+            y2: cellY + cellHeight,
+            style: settings.borderConfig.subNumberDivider,
+            lineType: "subNumberColumn",
+            strokeWidth: getLineWidth("subNumberColumn", settings.borderConfig),
+          })
+        }
       }
 
       // rowRightEdges: Y区間ごとの右端X座標を計算
@@ -2084,16 +2135,22 @@ export function computeMultiPageLayoutFromDefinition(
         const subStartY = localY
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
+        const effSubNumW = sub.label === "" ? 0 : subNumWidth
+        const effBranchNumX = subNumX + effSubNumW
+        const effAnswerX = effBranchNumX + branchNumWidth
+        const effAnswerWidth = contentRight - effAnswerX
 
-        page.numberLabels.push({
-          text: sub.label,
-          x: subNumX,
-          y: subStartY,
-          width: subNumWidth,
-          height: subHeight,
-          fontSize: settings.fonts.subNumberSize,
-          displayMode: "sub",
-        })
+        if (effSubNumW > 0) {
+          page.numberLabels.push({
+            text: sub.label,
+            x: subNumX,
+            y: subStartY,
+            width: effSubNumW,
+            height: subHeight,
+            fontSize: settings.fonts.subNumberSize,
+            displayMode: "sub",
+          })
+        }
 
         if (hasBranches) {
           renderBranchQuestions(
@@ -2104,11 +2161,11 @@ export function computeMultiPageLayoutFromDefinition(
             subStartY,
             pageIdx,
             subNumX,
-            subNumWidth,
-            branchNumX,
+            effSubNumW,
+            effBranchNumX,
             branchNumWidth,
-            answerX,
-            answerWidth,
+            effAnswerX,
+            effAnswerWidth,
             contentRight,
             baseRowHeight,
             paper,
@@ -2119,20 +2176,39 @@ export function computeMultiPageLayoutFromDefinition(
             page.rowRightEdges
           )
 
-          // 枝問番号列のセグメント
+          // 枝問番号列のセグメント（ラベルのある枝問のみ）
           if (!isGridHorizontal(sub.branchQuestions)) {
-            page.branchVerticalRanges.push({
-              top: subStartY,
-              bottom: subStartY + subHeight,
-            })
+            let branchSegStart: number | null = null
+            let branchY = subStartY
+            for (const bq of sub.branchQuestions) {
+              const bqH = bq.heightMultiplier * baseRowHeight
+              if (bq.label !== "") {
+                if (branchSegStart === null) branchSegStart = branchY
+              } else {
+                if (branchSegStart !== null) {
+                  page.branchVerticalRanges.push({
+                    top: branchSegStart,
+                    bottom: branchY,
+                  })
+                  branchSegStart = null
+                }
+              }
+              branchY += bqH
+            }
+            if (branchSegStart !== null) {
+              page.branchVerticalRanges.push({
+                top: branchSegStart,
+                bottom: branchY,
+              })
+            }
           }
         } else {
           page.cells.push(
             createCell(
               [mi, si],
-              answerX,
+              effAnswerX,
               subStartY,
-              answerWidth,
+              effAnswerWidth,
               subHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -2140,7 +2216,13 @@ export function computeMultiPageLayoutFromDefinition(
               sub.textElements,
               "answer",
               pageIdx,
-              computeManuscriptGrid(sub, answerX, subStartY, answerWidth),
+              computeManuscriptGrid(
+                sub,
+                effAnswerX,
+                subStartY,
+                effAnswerWidth,
+                subHeight
+              ),
               sub.omrConfig
             )
           )
@@ -2175,7 +2257,26 @@ export function computeMultiPageLayoutFromDefinition(
         }
       })
 
-      page.verticalRanges.push({ top: vertSegStart, bottom: localY })
+      // 小問番号列セグメント: ラベルのある小問の区間だけ
+      {
+        let subSegStart: number | null = null
+        let subTrackY = vertSegStart
+        for (const sub of major.subQuestions) {
+          const subH = computeSubHeight(sub, baseRowHeight)
+          if (sub.label !== "") {
+            if (subSegStart === null) subSegStart = subTrackY
+          } else {
+            if (subSegStart !== null) {
+              page.verticalRanges.push({ top: subSegStart, bottom: subTrackY })
+              subSegStart = null
+            }
+          }
+          subTrackY += subH
+        }
+        if (subSegStart !== null) {
+          page.verticalRanges.push({ top: subSegStart, bottom: subTrackY })
+        }
+      }
     }
 
     return localY

@@ -227,7 +227,7 @@ export async function saveAsbDefinition(
             manuscriptEnabled: sq.manuscriptPaper?.enabled ?? false,
             manuscriptColumns: sq.manuscriptPaper?.columns ?? 20,
             manuscriptRows: sq.manuscriptPaper?.rows ?? 10,
-            manuscriptCellSizeMm: sq.manuscriptPaper?.cellSizeMm ?? 8,
+            manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
             borderStyleTop: sq.borderStyles?.top ?? null,
             borderStyleBottom: sq.borderStyles?.bottom ?? null,
             borderStyleLeft: sq.borderStyles?.left ?? null,
@@ -502,7 +502,6 @@ function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
             enabled: true as const,
             columns: sq.manuscriptColumns,
             rows: sq.manuscriptRows,
-            cellSizeMm: sq.manuscriptCellSizeMm,
           }
         : undefined
       const borderStyles =
