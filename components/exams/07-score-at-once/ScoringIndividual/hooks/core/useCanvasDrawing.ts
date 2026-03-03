@@ -17,6 +17,10 @@ import type {
   ScoringData,
   ScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
+import type {
+  MarkPosition,
+  ScoringMarkConfig,
+} from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
 import {
@@ -26,6 +30,122 @@ import {
 import type { CropRegionWithStatus } from "./types"
 import { useDrawingRenderer } from "./useDrawingRenderer"
 import { getScoringMarkKey } from "./useScoringMarks"
+
+/**
+ * 印字設定に基づくマーク位置計算
+ */
+function calculateMarkPosition(
+  regionX: number,
+  regionY: number,
+  regionWidth: number,
+  regionHeight: number,
+  markSize: number,
+  position: MarkPosition,
+  offsetX: number = 0,
+  offsetY: number = 0
+): { x: number; y: number } {
+  const padding = 5
+  let x: number
+  let y: number
+
+  switch (position) {
+    case "top-left":
+      x = regionX + padding
+      y = regionY + padding
+      break
+    case "top-center":
+      x = regionX + (regionWidth - markSize) / 2
+      y = regionY + padding
+      break
+    case "top-right":
+      x = regionX + regionWidth - markSize - padding
+      y = regionY + padding
+      break
+    case "middle-left":
+      x = regionX + padding
+      y = regionY + (regionHeight - markSize) / 2
+      break
+    case "middle-right":
+      x = regionX + regionWidth - markSize - padding
+      y = regionY + (regionHeight - markSize) / 2
+      break
+    case "bottom-left":
+      x = regionX + padding
+      y = regionY + regionHeight - markSize - padding
+      break
+    case "bottom-center":
+      x = regionX + (regionWidth - markSize) / 2
+      y = regionY + regionHeight - markSize - padding
+      break
+    case "bottom-right":
+      x = regionX + regionWidth - markSize - padding
+      y = regionY + regionHeight - markSize - padding
+      break
+    default: // middle-center
+      x = regionX + (regionWidth - markSize) / 2
+      y = regionY + (regionHeight - markSize) / 2
+      break
+  }
+
+  return { x: x + offsetX, y: y + offsetY }
+}
+
+/**
+ * 印字設定に基づく点数テキスト位置計算
+ */
+function calculateScorePosition(
+  regionX: number,
+  regionY: number,
+  regionWidth: number,
+  regionHeight: number,
+  position: MarkPosition,
+  offsetX: number = 0,
+  offsetY: number = 0
+): { x: number; y: number } {
+  let baseX: number
+  let baseY: number
+
+  switch (position) {
+    case "top-left":
+      baseX = regionX
+      baseY = regionY
+      break
+    case "top-center":
+      baseX = regionX + regionWidth / 2
+      baseY = regionY
+      break
+    case "top-right":
+      baseX = regionX + regionWidth
+      baseY = regionY
+      break
+    case "middle-left":
+      baseX = regionX
+      baseY = regionY + regionHeight / 2
+      break
+    case "middle-right":
+      baseX = regionX + regionWidth
+      baseY = regionY + regionHeight / 2
+      break
+    case "bottom-left":
+      baseX = regionX
+      baseY = regionY + regionHeight
+      break
+    case "bottom-center":
+      baseX = regionX + regionWidth / 2
+      baseY = regionY + regionHeight
+      break
+    case "bottom-right":
+      baseX = regionX + regionWidth
+      baseY = regionY + regionHeight
+      break
+    default: // middle-center
+      baseX = regionX + regionWidth / 2
+      baseY = regionY + regionHeight / 2
+      break
+  }
+
+  return { x: baseX + offsetX, y: baseY + offsetY }
+}
 
 interface UseCanvasDrawingProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -52,6 +172,7 @@ interface UseCanvasDrawingProps {
   currentCropRegionId?: string | null
   hoveredElementId?: string | null
   allCropRegionsWithStatus?: CropRegionWithStatus[]
+  scoringMarkConfig?: ScoringMarkConfig | null
 }
 
 /**
@@ -80,6 +201,7 @@ export function useCanvasDrawing({
   currentCropRegionId,
   hoveredElementId,
   allCropRegionsWithStatus = [],
+  scoringMarkConfig,
 }: UseCanvasDrawingProps): void {
   const { convertAnnotationToDrawingElement, drawSingleElement } =
     useDrawingRenderer()
@@ -156,11 +278,16 @@ export function useCanvasDrawing({
         currentY += img.naturalHeight + (images.length > 1 ? pageSpacing : 0)
       })
 
+      // 透明度定数
+      const CURRENT_OPACITY = 0.8
+      const OTHER_OPACITY = 0.4
+
       // 採点領域の描画ヘルパー関数
       const drawCropRegionMark = (
         region: CropRegionWithExamPage,
         status: ScoringStatus,
-        isCurrent: boolean
+        isCurrent: boolean,
+        actualScore: number | null
       ) => {
         const regionPageNumber = region.examPage?.pageNumber || 1
         const regionPageIndex = regionPageNumber - 1
@@ -184,6 +311,8 @@ export function useCanvasDrawing({
         const regionWidth = region.width * img.naturalWidth
         const regionHeight = region.height * img.naturalHeight
 
+        const opacity = isCurrent ? CURRENT_OPACITY : OTHER_OPACITY
+
         // 枠とラベルの描画
         if (isCurrent) {
           ctx.strokeStyle = "#22c55e"
@@ -193,6 +322,7 @@ export function useCanvasDrawing({
           ctx.lineWidth = 1
         }
         ctx.setLineDash([])
+        ctx.globalAlpha = opacity
         ctx.strokeRect(regionX, regionY, regionWidth, regionHeight)
 
         const labelFontSize = Math.max(12, 14 / zoom)
@@ -200,39 +330,115 @@ export function useCanvasDrawing({
         ctx.fillStyle = isCurrent ? "#22c55e" : "#9ca3af"
         ctx.fillText(region.label, regionX, regionY - 5)
 
-        // 採点記号の描画
-        if (status !== "unscored") {
+        // 採点記号の描画（印字設定に基づく）
+        const shouldShowMark = scoringMarkConfig
+          ? (scoringMarkConfig.showMarkForStatus[
+              status as keyof typeof scoringMarkConfig.showMarkForStatus
+            ] ?? false)
+          : status !== "unscored"
+
+        if (shouldShowMark) {
           const markKey = getScoringMarkKey(status)
           const markImage = markKey
             ? scoringMarkImagesRef.current.get(markKey)
             : null
 
           if (markImage) {
-            ctx.globalAlpha = isCurrent ? 1.0 : 0.6
-            const markSize = Math.min(regionHeight * 0.5, 100)
-            const markX = regionX + (regionWidth - markSize) / 2
-            const markY = regionY + (regionHeight - markSize) / 2
-            ctx.drawImage(markImage, markX, markY, markSize, markSize)
-            ctx.globalAlpha = 1.0
+            const configMarkSize = scoringMarkConfig?.markSize ?? 50
+            const markSize = Math.min(
+              configMarkSize,
+              regionWidth * 0.8,
+              regionHeight * 0.8
+            )
+
+            const markPos = scoringMarkConfig
+              ? calculateMarkPosition(
+                  regionX,
+                  regionY,
+                  regionWidth,
+                  regionHeight,
+                  markSize,
+                  scoringMarkConfig.markPosition,
+                  scoringMarkConfig.markOffsetX,
+                  scoringMarkConfig.markOffsetY
+                )
+              : {
+                  x: regionX + (regionWidth - markSize) / 2,
+                  y: regionY + (regionHeight - markSize) / 2,
+                }
+
+            ctx.globalAlpha = opacity
+            ctx.drawImage(markImage, markPos.x, markPos.y, markSize, markSize)
           }
         }
+
+        // 点数テキストの描画（印字設定に基づく）
+        const shouldShowScore = scoringMarkConfig
+          ? (scoringMarkConfig.showScoreForStatus[
+              status as keyof typeof scoringMarkConfig.showScoreForStatus
+            ] ?? false)
+          : false
+
+        if (shouldShowScore && actualScore !== null) {
+          ctx.save()
+          // 印字設定からスコア表示設定を取得
+          const scoreConfig = scoringMarkConfig?.useSeparateScoreSettings
+            ? scoringMarkConfig.partialScore
+            : {
+                position: scoringMarkConfig?.scorePosition ?? "bottom-right",
+                offsetX: scoringMarkConfig?.scoreOffsetX ?? 0,
+                offsetY: scoringMarkConfig?.scoreOffsetY ?? 0,
+                size: scoringMarkConfig?.scoreSize ?? 14,
+                alignment: scoringMarkConfig?.scoreAlignment ?? "center",
+              }
+
+          const fontSize = scoreConfig.size
+          ctx.font = `bold ${fontSize}px sans-serif`
+          ctx.fillStyle = "#ef4444" // 赤色
+          ctx.globalAlpha = opacity
+          ctx.textAlign = scoreConfig.alignment as CanvasTextAlign
+          ctx.textBaseline = "middle"
+
+          const scorePos = calculateScorePosition(
+            regionX,
+            regionY,
+            regionWidth,
+            regionHeight,
+            scoreConfig.position as MarkPosition,
+            scoreConfig.offsetX,
+            scoreConfig.offsetY
+          )
+          ctx.fillText(String(actualScore), scorePos.x, scorePos.y)
+          ctx.restore()
+        }
+
+        ctx.globalAlpha = 1.0
       }
 
-      // 全設問の枠と採点記号を描画
+      // 全設問の枠と採点記号・点数を描画
       if (images.length > 0) {
         // 他の設問を先に描画（半透明）
-        for (const { cropRegion, status } of allCropRegionsWithStatus) {
+        for (const {
+          cropRegion,
+          status,
+          actualScore,
+        } of allCropRegionsWithStatus) {
           if (cropRegion.id === currentCropRegion?.id) continue
-          drawCropRegionMark(cropRegion, status, false)
+          drawCropRegionMark(cropRegion, status, false, actualScore)
         }
 
         // 現在の設問を最後に描画（前面に表示）
         if (currentCropRegion) {
           const currentStatus = currentScoringData?.status ?? "unscored"
+          // 現在の設問のスコアをallCropRegionsWithStatusから取得
+          const currentRegionData = allCropRegionsWithStatus.find(
+            (r) => r.cropRegion.id === currentCropRegion.id
+          )
           drawCropRegionMark(
             currentCropRegion,
             currentStatus as ScoringStatus,
-            true
+            true,
+            currentRegionData?.actualScore ?? null
           )
         }
       }
@@ -337,6 +543,7 @@ export function useCanvasDrawing({
       convertAnnotationToDrawingElement,
       drawSingleElement,
       allCropRegionsWithStatus,
+      scoringMarkConfig,
     ]
   )
 

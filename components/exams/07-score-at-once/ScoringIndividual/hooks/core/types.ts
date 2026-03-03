@@ -11,6 +11,7 @@ import type {
   ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
 /**
@@ -19,6 +20,7 @@ import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotati
 export interface CropRegionWithStatus {
   cropRegion: CropRegionWithExamPage
   status: ScoringStatus
+  actualScore: number | null
 }
 
 /**
@@ -52,6 +54,8 @@ export interface UseImageCanvasProps {
   hoveredElementId?: string | null
   // 全設問の採点ステータス（全設問マーク描画用）
   allCropRegionsWithStatus?: CropRegionWithStatus[]
+  // 印字設定（採点マーク・点数表示のプレビュー用）
+  scoringMarkConfig?: ScoringMarkConfig | null
 }
 
 /**
