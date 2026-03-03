@@ -1,9 +1,12 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
+import { defaultConfig as defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { useDrawingState } from "./hooks/core/useDrawingState"
@@ -38,10 +41,32 @@ export default function AnswerIndividualView({
   currentUserId,
   questionScores,
   onQuestionScoreCreated,
+  onAnnotationChanged,
+  annotationRefreshKey,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const { zoom, position, onZoomChange, onPositionChange } =
     useImageNavigation()
+
+  // 印字設定（採点マーク・点数表示のプレビュー用）をDBからロード
+  const params = useParams()
+  const examId = params?.examId as string | undefined
+  const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
+    defaultScoringMarkConfig
+  )
+
+  useEffect(() => {
+    if (!examId || !window.electronAPI?.settings) return
+    ;(async () => {
+      const result =
+        await window.electronAPI.settings.getExamExportSettings(examId)
+      if (result.success && result.settings?.scoringMarkConfig) {
+        const saved = result.settings
+          .scoringMarkConfig as Partial<ScoringMarkConfig>
+        setScoringMarkConfig({ ...defaultScoringMarkConfig, ...saved })
+      }
+    })()
+  }, [examId])
 
   // 現在表示中の採点データを取得
   const currentScoringData =
@@ -49,18 +74,37 @@ export default function AnswerIndividualView({
       (scoringData) => scoringData.id === currentScoringDataId
     ) ?? null
 
-  // 全設問の採点ステータスを計算（全設問マーク描画用）
+  // 全設問の採点ステータスと点数を計算（全設問マーク・点数描画用）
   const allCropRegionsWithStatus = useMemo(() => {
     if (!cropRegions || !questionScores || !currentScoringData) return []
     const studentId = currentScoringData.studentId
-    return cropRegions.map((cr) => ({
-      cropRegion: cr,
-      status: getScoringStatusFromArray(
+    return cropRegions.map((cr) => {
+      const status = getScoringStatusFromArray(
         questionScores,
         studentId,
         cr.id
-      ) as ScoringStatus,
-    }))
+      ) as ScoringStatus
+      const qs = questionScores.find(
+        (q) => q.studentId === studentId && q.cropRegionId === cr.id
+      )
+      const maxScore = cr.points ?? 0
+      let actualScore: number | null = null
+      switch (status) {
+        case "correct":
+          actualScore = maxScore
+          break
+        case "incorrect":
+        case "no_answer":
+          actualScore = 0
+          break
+        case "partial":
+        case "pending":
+          actualScore =
+            qs?.partialScore != null ? Number(qs.partialScore) : null
+          break
+      }
+      return { cropRegion: cr, status, actualScore }
+    })
   }, [cropRegions, questionScores, currentScoringData])
 
   // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
@@ -80,8 +124,23 @@ export default function AnswerIndividualView({
       currentStudentId,
       currentCropRegionId: currentCropRegion?.id,
       currentUserId,
-    }
+    },
+    onAnnotationChanged
   )
+
+  // 外部からのアノテーション追加（ブラウザパネルの+ボタン等）後にキャンバスをリロード
+  const { loadFromDatabase } = drawingState
+  const prevRefreshKeyRef = useRef(annotationRefreshKey)
+  useEffect(() => {
+    if (
+      annotationRefreshKey !== undefined &&
+      prevRefreshKeyRef.current !== undefined &&
+      annotationRefreshKey !== prevRefreshKeyRef.current
+    ) {
+      loadFromDatabase()
+    }
+    prevRefreshKeyRef.current = annotationRefreshKey
+  }, [annotationRefreshKey, loadFromDatabase])
 
   // 透明度制御用：全設問のアノテーション読み込み
   // currentUserIdを渡してログインユーザーのアノテーションのみ取得
@@ -134,6 +193,8 @@ export default function AnswerIndividualView({
     hoveredElementId: drawingState.hoveredElementId,
     // 全設問の採点ステータス（全設問マーク描画用）
     allCropRegionsWithStatus,
+    // 印字設定（採点マーク・点数表示のプレビュー用）
+    scoringMarkConfig,
   })
 
   // Canvas・V4統合フック

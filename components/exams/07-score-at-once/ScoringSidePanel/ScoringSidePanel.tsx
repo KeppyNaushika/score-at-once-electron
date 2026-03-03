@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useRef } from "react"
+
 import { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types/scoringDataTypes"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
@@ -85,6 +87,10 @@ interface ScoringSidePanelProps {
   }>
   allScoringData?: Array<{ id: string; studentId: string }>
   onQuestionScoreCreated?: () => void
+  /** キャンバスでアノテーション変更時にブラウザ一覧をリロードするキー */
+  annotationRefreshKey?: number
+  /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
+  onAnnotationAddedFromBrowser?: () => void
 }
 
 export function ScoringSidePanel({
@@ -126,8 +132,24 @@ export function ScoringSidePanel({
   questionScores,
   allScoringData,
   onQuestionScoreCreated,
+  annotationRefreshKey,
+  onAnnotationAddedFromBrowser,
 }: ScoringSidePanelProps) {
   const annotationBrowser = useAnnotationBrowser()
+  const { loadAnnotations: reloadBrowserAnnotations } = annotationBrowser
+
+  // キャンバスでアノテーション変更時にブラウザ一覧をリロード
+  const prevRefreshKeyRef = useRef(annotationRefreshKey)
+  useEffect(() => {
+    if (
+      annotationRefreshKey !== undefined &&
+      prevRefreshKeyRef.current !== undefined &&
+      annotationRefreshKey !== prevRefreshKeyRef.current
+    ) {
+      reloadBrowserAnnotations(examId)
+    }
+    prevRefreshKeyRef.current = annotationRefreshKey
+  }, [annotationRefreshKey, reloadBrowserAnnotations, examId])
 
   // 現在のstudentIdを取得
   const currentStudentId = (() => {
@@ -236,6 +258,7 @@ export function ScoringSidePanel({
             selectedScoringDataIds={selectedScoringDataIds ?? []}
             allScoringData={allScoringData ?? []}
             onQuestionScoreCreated={onQuestionScoreCreated}
+            onAnnotationAddedFromBrowser={onAnnotationAddedFromBrowser}
           />
         </TabsContent>
       </Tabs>

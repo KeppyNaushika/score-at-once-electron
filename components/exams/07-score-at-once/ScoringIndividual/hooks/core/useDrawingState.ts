@@ -35,7 +35,8 @@ export function useDrawingState(
     currentStudentId?: string
     currentCropRegionId?: string
     currentUserId?: string
-  }
+  },
+  onAnnotationChanged?: () => void
 ): DrawingState &
   DrawingActions & {
     // データベース統合機能
@@ -101,11 +102,23 @@ export function useDrawingState(
   // ホバー中の要素（端点表示用）
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null)
 
+  // onAnnotationChangedのref（コールバック変更でフックが再作成されないようにする）
+  const onAnnotationChangedRef = useRef(onAnnotationChanged)
+  useEffect(() => {
+    onAnnotationChangedRef.current = onAnnotationChanged
+  }, [onAnnotationChanged])
+
   // データベース統合フック
   const persistenceCallbacks: DrawingPersistenceCallbacks = {
-    onAnnotationCreated: () => {},
-    onAnnotationUpdated: () => {},
-    onAnnotationDeleted: () => {},
+    onAnnotationCreated: () => {
+      onAnnotationChangedRef.current?.()
+    },
+    onAnnotationUpdated: () => {
+      onAnnotationChangedRef.current?.()
+    },
+    onAnnotationDeleted: () => {
+      onAnnotationChangedRef.current?.()
+    },
     onError: (error) => {
       console.error("データベース操作エラー:", error)
     },
