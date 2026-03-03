@@ -1,17 +1,11 @@
 "use client"
 
-import {
-  ArrowLeft,
-  Download,
-  FolderOpen,
-  Redo2,
-  Save,
-  Undo2,
-} from "lucide-react"
+import { ArrowLeft, Download, FolderOpen, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
+import { useSaveStatus } from "@/components/hooks/useSaveStatus"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -69,6 +63,7 @@ export function AnswerSheetBuilderMainView({
   } = useAnswerSheetDefinition()
 
   const [isLoaded, setIsLoaded] = useState(false)
+  const { saveStatus, showSaving, showSaved } = useSaveStatus()
 
   // DBから定義をロード
   useEffect(() => {
@@ -85,6 +80,23 @@ export function AnswerSheetBuilderMainView({
     }
     load()
   }, [definitionId, setDefinition])
+
+  // 即時自動保存
+  useEffect(() => {
+    if (!isLoaded) return
+
+    const api = window.electronAPI?.answerSheetBuilder
+    if (!api || !user?.id) return
+
+    showSaving()
+    api.saveDefinition(definition, user.id).then((result) => {
+      if (result.success) {
+        showSaved()
+      } else {
+        toast.error(`保存エラー: ${result.error}`)
+      }
+    })
+  }, [definition, isLoaded, user?.id, showSaving, showSaved])
 
   const layout = useAnswerSheetLayout(definition)
   const multiPageLayout = useMultiPageLayout(definition)
@@ -107,20 +119,6 @@ export function AnswerSheetBuilderMainView({
     },
     [dispatch]
   )
-
-  const handleSave = useCallback(async () => {
-    const api = window.electronAPI?.answerSheetBuilder
-    if (!api || !user?.id) {
-      toast.error("Electron APIが利用できません")
-      return
-    }
-    const result = await api.saveDefinition(definition, user.id)
-    if (result.success) {
-      toast.success("定義を保存しました")
-    } else {
-      toast.error(`保存エラー: ${result.error}`)
-    }
-  }, [definition, user?.id])
 
   if (!isLoaded) {
     return (
@@ -176,15 +174,6 @@ export function AnswerSheetBuilderMainView({
             <Redo2 className="h-3.5 w-3.5" />
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5 self-center" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={handleSave}
-          >
-            <Save className="mr-1 h-3 w-3" />
-            保存
-          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -301,6 +290,7 @@ export function AnswerSheetBuilderMainView({
             {multiPageLayout.totalPages > 1 &&
               ` / ${multiPageLayout.totalPages}ページ`}
           </span>
+          <span>{saveStatus}</span>
           <span>合計 {totalPoints}点</span>
         </div>
       </div>
