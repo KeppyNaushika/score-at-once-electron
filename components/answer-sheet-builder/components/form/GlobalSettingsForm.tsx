@@ -207,13 +207,33 @@ export function GlobalSettingsForm({
           }
         />
         <SliderWithInput
-          label="設問番号"
-          value={settings.fonts.numberSize}
-          min={6}
+          label="大問番号"
+          value={settings.fonts.majorNumberSize}
+          min={4}
           max={24}
           step={0.5}
           onChange={(v) =>
-            onUpdate({ fonts: { ...settings.fonts, numberSize: v } })
+            onUpdate({ fonts: { ...settings.fonts, majorNumberSize: v } })
+          }
+        />
+        <SliderWithInput
+          label="小問番号"
+          value={settings.fonts.subNumberSize}
+          min={4}
+          max={24}
+          step={0.5}
+          onChange={(v) =>
+            onUpdate({ fonts: { ...settings.fonts, subNumberSize: v } })
+          }
+        />
+        <SliderWithInput
+          label="枝問番号"
+          value={settings.fonts.branchNumberSize}
+          min={4}
+          max={24}
+          step={0.5}
+          onChange={(v) =>
+            onUpdate({ fonts: { ...settings.fonts, branchNumberSize: v } })
           }
         />
       </div>

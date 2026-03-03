@@ -162,12 +162,16 @@ export interface BorderConfig {
   majorDivider: LineStyle
   subDivider: LineStyle
   branchDivider: LineStyle
-  numberColumnDivider: LineStyle
+  majorNumberDivider: LineStyle
+  subNumberDivider: LineStyle
+  branchNumberDivider: LineStyle
   outerBorderWidth?: number
   majorDividerWidth?: number
   subDividerWidth?: number
   branchDividerWidth?: number
-  numberColumnDividerWidth?: number
+  majorNumberDividerWidth?: number
+  subNumberDividerWidth?: number
+  branchNumberDividerWidth?: number
 }
 
 // =====================
@@ -187,7 +191,9 @@ export interface OMRMarkerConfig {
 export interface FontConfig {
   family: string
   defaultSize: number
-  numberSize: number
+  majorNumberSize: number
+  subNumberSize: number
+  branchNumberSize: number
 }
 
 // =====================
