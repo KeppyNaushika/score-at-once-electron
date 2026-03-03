@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from "react"
 import { DragSelectionOverlay } from "@/components/exams/07-score-at-once/ScoringGrid/DragSelectionOverlay"
 import { GridCell } from "@/components/exams/07-score-at-once/ScoringGrid/GridCell"
 import { useAutoScroll } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useAutoScroll"
+import { useGridAnnotations } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridAnnotations"
 import { useGridDragSelection } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridDragSelection"
 import { useGridLayout } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridLayout"
 import { useGridNavigation } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
 import { useGridSelection } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridSelection"
 import { useSelectionBorder } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useSelectionBorder"
 import type {
+  CropRegionWithExamPage,
   LayoutDirection,
   MasterGridItem,
   ScoringData,
@@ -39,6 +41,12 @@ export interface AnswerGridViewProps {
   showStudentNames?: boolean
   /** 表示領域拡張率 (0-50%) */
   expandMargin?: number
+  /** アノテーション描画用: 現在の設問 */
+  currentCropRegion?: CropRegionWithExamPage
+  /** アノテーション描画用: 現在のユーザーID */
+  currentUserId?: string
+  /** アノテーションリフレッシュキー（変更検知用） */
+  annotationRefreshKey?: number
   className?: string
 }
 
@@ -54,6 +62,9 @@ export default function AnswerGridView({
   autoScroll = true,
   showStudentNames = true,
   expandMargin,
+  currentCropRegion,
+  currentUserId,
+  annotationRefreshKey,
   className = "",
 }: AnswerGridViewProps) {
   /** フィルタリングされた採点データ（模範解答 + 学生データ） */
@@ -110,6 +121,13 @@ export default function AnswerGridView({
 
   const selectionBorderColor = useSelectionBorder()
   const scoringColors = useScoringStatusColors()
+
+  /** アノテーション取得（設問ごとに全学生分を一括取得） */
+  const { annotationsByStudent } = useGridAnnotations({
+    cropRegionId: currentCropRegion?.id,
+    currentUserId,
+    refreshKey: annotationRefreshKey,
+  })
 
   const { effectiveGridSize, sortedAnswers } = useGridLayout({
     answers,
@@ -231,6 +249,7 @@ export default function AnswerGridView({
               selectionBorderColor={selectionBorderColor}
               scoringColors={scoringColors}
               expandMargin={expandMargin}
+              annotations={annotationsByStudent.get(answer.studentId)}
               onMouseDown={onCellMouseDown}
             />
           )

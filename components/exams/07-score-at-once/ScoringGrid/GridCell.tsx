@@ -7,6 +7,7 @@ import CroppedAnswerImage from "@/components/exams/07-score-at-once/ScoringMain/
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 const VALID_STATUS_KEYS: ScoreStatusKey[] = [
   "unscored",
@@ -30,6 +31,7 @@ interface GridCellProps {
   selectionBorderColor: string
   scoringColors: ScoringStatusColors
   expandMargin?: number
+  annotations?: DrawingAnnotation[]
   onMouseDown: (e: React.MouseEvent, answerId: string) => void
 }
 
@@ -42,6 +44,7 @@ export function GridCell({
   selectionBorderColor,
   scoringColors,
   expandMargin,
+  annotations,
   onMouseDown,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
@@ -128,6 +131,7 @@ export function GridCell({
         calculatedCellHeight={calculatedCellHeight}
         isSelected={isSelected}
         expandMargin={expandMargin}
+        annotations={annotations}
       />
 
       {/* 学生情報と採点状況 */}

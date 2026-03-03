@@ -585,6 +585,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ),
     getByExam: (examId: string, type?: string, userId?: string) =>
       ipcRenderer.invoke("drawing:getByExam", examId, type, userId),
+    getByCropRegion: (cropRegionId: string, userId?: string) =>
+      ipcRenderer.invoke("drawing:getByCropRegion", cropRegionId, userId),
     update: (id: string, data: Partial<DrawingAnnotation>) =>
       ipcRenderer.invoke("drawing:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
