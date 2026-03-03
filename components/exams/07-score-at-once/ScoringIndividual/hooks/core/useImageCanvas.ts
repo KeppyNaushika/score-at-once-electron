@@ -37,6 +37,7 @@ export function useImageCanvas({
   currentCropRegionId,
   hoveredElementId,
   allCropRegionsWithStatus = [],
+  scoringMarkConfig,
 }: UseImageCanvasProps): UseImageCanvasReturn {
   // キャンバス参照管理
   const {
@@ -57,9 +58,10 @@ export function useImageCanvas({
     imageRef,
   })
 
-  // 採点記号画像のプリロード
+  // 採点記号画像のプリロード（印字設定の透過設定を反映）
   useScoringMarks({
     scoringMarkImagesRef,
+    useTransparent: scoringMarkConfig?.useTransparent ?? false,
   })
 
   // Canvas描画ロジック
@@ -86,6 +88,7 @@ export function useImageCanvas({
     currentCropRegionId,
     hoveredElementId,
     allCropRegionsWithStatus,
+    scoringMarkConfig,
   })
 
   return {
