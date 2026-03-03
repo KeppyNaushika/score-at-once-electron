@@ -231,12 +231,21 @@ export function buildGridLayout<
 /** SubQuestion 用のグリッドレイアウト */
 function buildSubGridLayout(subQuestions: SubQuestion[]): SubGridCell[] {
   // 枝問がある小問は、枝問レイアウトの要求高さで heightMultiplier を上書き
+  // 原稿用紙有効時は heightMultiplier × rows に拡張
   const adjusted = subQuestions.map((sub) => {
-    if (sub.branchQuestions.length === 0) return sub
-    const branchCells = buildBranchGridLayout(sub.branchQuestions)
-    const branchHeight = gridTotalHeight(branchCells)
-    if (branchHeight !== sub.heightMultiplier) {
-      return { ...sub, heightMultiplier: branchHeight }
+    if (sub.branchQuestions.length > 0) {
+      const branchCells = buildBranchGridLayout(sub.branchQuestions)
+      const branchHeight = gridTotalHeight(branchCells)
+      if (branchHeight !== sub.heightMultiplier) {
+        return { ...sub, heightMultiplier: branchHeight }
+      }
+      return sub
+    }
+    if (sub.manuscriptPaper?.enabled) {
+      return {
+        ...sub,
+        heightMultiplier: sub.heightMultiplier * sub.manuscriptPaper.rows,
+      }
     }
     return sub
   })
@@ -365,6 +374,9 @@ function computeSubHeight(sub: SubQuestion, baseRowHeight: number): number {
   if (sub.branchQuestions.length > 0) {
     const branchCells = buildBranchGridLayout(sub.branchQuestions)
     return gridTotalHeight(branchCells) * baseRowHeight
+  }
+  if (sub.manuscriptPaper?.enabled) {
+    return sub.heightMultiplier * baseRowHeight * sub.manuscriptPaper.rows
   }
   return sub.heightMultiplier * baseRowHeight
 }
@@ -999,7 +1011,18 @@ function computeLayoutFromDefinition(
 
     if (subIsHorizontal) {
       // === 横配置（グリッド）モード ===
-      const gridCells = buildSubGridLayout(major.subQuestions)
+      // 原稿用紙セルの layoutWidth を必要幅に合わせる
+      const subsForGrid = major.subQuestions.map((sub) => {
+        if (sub.manuscriptPaper?.enabled && sub.branchQuestions.length === 0) {
+          const snw = sub.label === "" ? 0 : subNumWidth
+          const reqW =
+            baseRowHeight * sub.heightMultiplier * sub.manuscriptPaper.columns +
+            snw
+          return { ...sub, layoutWidth: String(reqW / horizontalAreaWidth) }
+        }
+        return sub
+      })
+      const gridCells = buildSubGridLayout(subsForGrid)
       for (const gc of gridCells) {
         const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
         const cellWidth = gc.width * horizontalAreaWidth
@@ -1051,12 +1074,19 @@ function computeLayoutFromDefinition(
             majorRightEdges
           )
         } else {
+          let ansX = cellX + effSubNumW
+          let ansW = cellWidth - effSubNumW
+          if (sub.manuscriptPaper?.enabled) {
+            const cellSz = cellHeight / sub.manuscriptPaper.rows
+            const gridW = cellSz * sub.manuscriptPaper.columns
+            ansW = gridW
+          }
           cells.push(
             createCell(
               [mi, gc.itemIndex],
-              cellX + effSubNumW,
+              ansX,
               cellY,
-              cellWidth - effSubNumW,
+              ansW,
               cellHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -1064,13 +1094,7 @@ function computeLayoutFromDefinition(
               sub.textElements,
               "answer",
               0,
-              computeManuscriptGrid(
-                sub,
-                cellX + effSubNumW,
-                cellY,
-                cellWidth - effSubNumW,
-                cellHeight
-              ),
+              computeManuscriptGrid(sub, ansX, cellY, ansW, cellHeight),
               sub.omrConfig
             )
           )
@@ -1210,6 +1234,18 @@ function computeLayoutFromDefinition(
       currentY = majorEndY
     } else {
       // === 縦配置モード ===
+      // 各小問の右端X座標を事前計算（原稿用紙セルは必要幅に制限）
+      const subRightEdges = major.subQuestions.map((sub) => {
+        const hb = sub.branchQuestions.length > 0
+        if (hb || !sub.manuscriptPaper?.enabled) return contentRight
+        const sh = computeSubHeight(sub, baseRowHeight)
+        const esnw = sub.label === "" ? 0 : subNumWidth
+        const eax = subNumX + esnw + branchNumWidth
+        return (
+          eax + (sh / sub.manuscriptPaper.rows) * sub.manuscriptPaper.columns
+        )
+      })
+
       major.subQuestions.forEach((sub, si) => {
         const subStartY = currentY
         const hasBranches = sub.branchQuestions.length > 0
@@ -1245,7 +1281,7 @@ function computeLayoutFromDefinition(
             branchNumWidth,
             effAnswerX,
             effAnswerWidth,
-            contentRight,
+            subRightEdges[si],
             baseRowHeight,
             paper,
             settings,
@@ -1255,12 +1291,18 @@ function computeLayoutFromDefinition(
             majorRightEdges
           )
         } else {
+          let ansW = effAnswerWidth
+          if (sub.manuscriptPaper?.enabled) {
+            const cellSz = subHeight / sub.manuscriptPaper.rows
+            const gridW = cellSz * sub.manuscriptPaper.columns
+            ansW = gridW
+          }
           cells.push(
             createCell(
               [mi, si],
               effAnswerX,
               subStartY,
-              effAnswerWidth,
+              ansW,
               subHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -1272,7 +1314,7 @@ function computeLayoutFromDefinition(
                 sub,
                 effAnswerX,
                 subStartY,
-                effAnswerWidth,
+                ansW,
                 subHeight
               ),
               sub.omrConfig
@@ -1280,11 +1322,11 @@ function computeLayoutFromDefinition(
           )
         }
 
-        // vertical-sub行の右端は常にcontentRight
+        // vertical-sub行の右端（原稿用紙セルは必要幅に制限）
         majorRightEdges.push({
           yTop: subStartY,
           yBottom: subStartY + subHeight,
-          rightX: contentRight,
+          rightX: subRightEdges[si],
         })
         // vertical-sub行の左端は常にcontentLeft
         majorLeftEdges.push({
@@ -1297,10 +1339,14 @@ function computeLayoutFromDefinition(
 
         // 行間の区切り線（最後の行以外）
         if (si < major.subQuestions.length - 1) {
+          const dividerRightX = Math.max(
+            subRightEdges[si],
+            subRightEdges[si + 1]
+          )
           lines.push({
             x1: subNumX,
             y1: currentY,
-            x2: contentRight,
+            x2: dividerRightX,
             y2: currentY,
             style: settings.borderConfig.subDivider,
             lineType: "sub",
@@ -1921,7 +1967,18 @@ export function computeMultiPageLayoutFromDefinition(
 
     if (subIsHorizontal) {
       // === 横配置（グリッド）モード ===
-      const gridCells = buildSubGridLayout(major.subQuestions)
+      // 原稿用紙セルの layoutWidth を必要幅に合わせる
+      const subsForGrid = major.subQuestions.map((sub) => {
+        if (sub.manuscriptPaper?.enabled && sub.branchQuestions.length === 0) {
+          const snw = sub.label === "" ? 0 : subNumWidth
+          const reqW =
+            baseRowHeight * sub.heightMultiplier * sub.manuscriptPaper.columns +
+            snw
+          return { ...sub, layoutWidth: String(reqW / horizontalAreaWidth) }
+        }
+        return sub
+      })
+      const gridCells = buildSubGridLayout(subsForGrid)
       for (const gc of gridCells) {
         const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
         const cellWidth = gc.width * horizontalAreaWidth
@@ -1972,12 +2029,19 @@ export function computeMultiPageLayoutFromDefinition(
             page.rowRightEdges
           )
         } else {
+          let ansX = cellX + effSubNumW
+          let ansW = cellWidth - effSubNumW
+          if (sub.manuscriptPaper?.enabled) {
+            const cellSz = cellHeight / sub.manuscriptPaper.rows
+            const gridW = cellSz * sub.manuscriptPaper.columns
+            ansW = gridW
+          }
           page.cells.push(
             createCell(
               [mi, gc.itemIndex],
-              cellX + effSubNumW,
+              ansX,
               cellY,
-              cellWidth - effSubNumW,
+              ansW,
               cellHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -1985,13 +2049,7 @@ export function computeMultiPageLayoutFromDefinition(
               sub.textElements,
               "answer",
               pageIdx,
-              computeManuscriptGrid(
-                sub,
-                cellX + effSubNumW,
-                cellY,
-                cellWidth - effSubNumW,
-                cellHeight
-              ),
+              computeManuscriptGrid(sub, ansX, cellY, ansW, cellHeight),
               sub.omrConfig
             )
           )
@@ -2131,6 +2189,19 @@ export function computeMultiPageLayoutFromDefinition(
     } else {
       // === 縦配置モード ===
       const vertSegStart = localY
+
+      // 各小問の右端X座標を事前計算（原稿用紙セルは必要幅に制限）
+      const subRightEdges = major.subQuestions.map((sub) => {
+        const hb = sub.branchQuestions.length > 0
+        if (hb || !sub.manuscriptPaper?.enabled) return contentRight
+        const sh = computeSubHeight(sub, baseRowHeight)
+        const esnw = sub.label === "" ? 0 : subNumWidth
+        const eax = subNumX + esnw + branchNumWidth
+        return (
+          eax + (sh / sub.manuscriptPaper.rows) * sub.manuscriptPaper.columns
+        )
+      })
+
       major.subQuestions.forEach((sub, si) => {
         const subStartY = localY
         const hasBranches = sub.branchQuestions.length > 0
@@ -2166,7 +2237,7 @@ export function computeMultiPageLayoutFromDefinition(
             branchNumWidth,
             effAnswerX,
             effAnswerWidth,
-            contentRight,
+            subRightEdges[si],
             baseRowHeight,
             paper,
             settings,
@@ -2203,12 +2274,18 @@ export function computeMultiPageLayoutFromDefinition(
             }
           }
         } else {
+          let ansW = effAnswerWidth
+          if (sub.manuscriptPaper?.enabled) {
+            const cellSz = subHeight / sub.manuscriptPaper.rows
+            const gridW = cellSz * sub.manuscriptPaper.columns
+            ansW = gridW
+          }
           page.cells.push(
             createCell(
               [mi, si],
               effAnswerX,
               subStartY,
-              effAnswerWidth,
+              ansW,
               subHeight,
               paper,
               `${major.label}-${sub.label}`,
@@ -2220,7 +2297,7 @@ export function computeMultiPageLayoutFromDefinition(
                 sub,
                 effAnswerX,
                 subStartY,
-                effAnswerWidth,
+                ansW,
                 subHeight
               ),
               sub.omrConfig
@@ -2228,11 +2305,11 @@ export function computeMultiPageLayoutFromDefinition(
           )
         }
 
-        // vertical-sub行の右端は常にcontentRight
+        // vertical-sub行の右端（原稿用紙セルは必要幅に制限）
         page.rowRightEdges.push({
           yTop: subStartY,
           yBottom: subStartY + subHeight,
-          rightX: contentRight,
+          rightX: subRightEdges[si],
         })
         // vertical-sub行の左端は常にcontentLeft
         page.rowLeftEdges.push({
@@ -2245,10 +2322,14 @@ export function computeMultiPageLayoutFromDefinition(
 
         // 行間の区切り線（最後の行以外）
         if (si < major.subQuestions.length - 1) {
+          const dividerRightX = Math.max(
+            subRightEdges[si],
+            subRightEdges[si + 1]
+          )
           page.lines.push({
             x1: subNumX,
             y1: localY,
-            x2: contentRight,
+            x2: dividerRightX,
             y2: localY,
             style: settings.borderConfig.subDivider,
             lineType: "sub",

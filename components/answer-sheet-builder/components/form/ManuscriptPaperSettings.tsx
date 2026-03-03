@@ -14,7 +14,6 @@ const DEFAULT_CONFIG: ManuscriptPaperConfig = {
   enabled: false,
   columns: 20,
   rows: 10,
-  cellSizeMm: 5,
 }
 
 export function ManuscriptPaperSettings({
@@ -43,7 +42,7 @@ export function ManuscriptPaperSettings({
       </div>
 
       {current.enabled && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-muted-foreground text-[10px]">列数</Label>
             <Input
@@ -69,25 +68,6 @@ export function ManuscriptPaperSettings({
               min={1}
               max={20}
               onChange={(e) => handleChange({ rows: Number(e.target.value) })}
-              onBlur={(e) => {
-                e.target.value = String(Number(e.target.value))
-              }}
-            />
-          </div>
-          <div>
-            <Label className="text-muted-foreground text-[10px]">
-              マス目 (mm)
-            </Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={current.cellSizeMm}
-              min={2}
-              max={15}
-              step={0.5}
-              onChange={(e) =>
-                handleChange({ cellSizeMm: Number(e.target.value) })
-              }
               onBlur={(e) => {
                 e.target.value = String(Number(e.target.value))
               }}
