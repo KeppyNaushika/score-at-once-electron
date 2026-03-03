@@ -1,19 +1,22 @@
 /**
- * SVG文字列生成（サーバーサイド）
+ * SVG文字列生成（renderer側）
  *
  * ComputedLayoutからSVG文字列を生成する。
- * PNG生成時にsharpでラスタライズする際に使用。
+ * main側に渡してsharpでPNG化、またはprintToPDFでPDF化する。
  */
 
+import {
+  parseInlineMarkup,
+  stripMarkup,
+} from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import type {
   ComputedCell,
-  ComputedLayout,
   ComputedLine,
   ComputedMultiPageLayout,
   ComputedPageLayout,
   LineStyle,
   RenderMode,
-} from "../../../types/answerSheetBuilder.types"
+} from "@/types/answerSheetBuilder.types"
 
 /** mm → SVGのpx変換（出力DPIに応じて外部でスケーリング） */
 const MM_SCALE = 1
@@ -56,120 +59,29 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;")
 }
 
-export function renderSvgString(
-  layout: ComputedLayout,
-  renderMode: RenderMode = "answer-sheet"
-): string {
-  const w = layout.pageWidthMm * MM_SCALE
-  const h = layout.pageHeightMm * MM_SCALE
-  const parts: string[] = []
-
-  parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`
+/** テキスト要素をインラインマークアップ対応でSVG tspan群に変換 */
+function renderTextElementTspans(text: string, renderMode: RenderMode): string {
+  const segments = parseInlineMarkup(text)
+  const filtered = segments.filter(
+    (seg) => !seg.modelAnswer || renderMode === "model-answer"
   )
+  if (filtered.length === 0) return ""
 
-  // 白背景
-  parts.push(`<rect width="${w}" height="${h}" fill="white"/>`)
-
-  // OMRマーカー
-  for (const marker of layout.omrMarkerPositions) {
-    parts.push(
-      `<rect x="${marker.x}" y="${marker.y}" width="${marker.size}" height="${marker.size}" fill="black"/>`
-    )
-  }
-
-  // 罫線
-  for (const line of layout.lines) {
-    parts.push(renderLine(line))
-  }
-
-  // 番号ラベル
-  for (const label of layout.numberLabels) {
-    const cx = label.x + label.width / 2
-    const cy = label.y + label.height / 2
-    parts.push(
-      `<text x="${cx}" y="${cy}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central">${escapeXml(label.text)}</text>`
-    )
-  }
-
-  // 模範解答モード: セル内にmodelAnswerテキストを表示
-  if (renderMode === "model-answer") {
-    for (const cell of layout.cells) {
-      if (cell.cellType === "answer" && cell.modelAnswer) {
-        const cx = cell.x + cell.width / 2
-        const cy = cell.y + cell.height / 2
-        parts.push(
-          `<text x="${cx}" y="${cy}" font-size="10" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central" fill="#333">${escapeXml(cell.modelAnswer)}</text>`
-        )
-      }
-    }
-  }
-
-  // テキスト要素
-  for (const cell of layout.cells) {
-    if (cell.cellType !== "answer") continue
-    for (const te of cell.textElements) {
-      const tx =
-        te.horizontalAlign === "left"
-          ? cell.x + 2
-          : te.horizontalAlign === "right"
-            ? cell.x + cell.width - 2
-            : cell.x + cell.width / 2
-      const ty =
-        te.verticalAlign === "top"
-          ? cell.y + te.fontSize
-          : te.verticalAlign === "bottom"
-            ? cell.y + cell.height - 2
-            : cell.y + cell.height / 2
-      const anchor =
-        te.horizontalAlign === "left"
-          ? "start"
-          : te.horizontalAlign === "right"
-            ? "end"
-            : "middle"
-      const baseline =
-        te.verticalAlign === "top"
-          ? "hanging"
-          : te.verticalAlign === "bottom"
-            ? "auto"
-            : "central"
-      const extraAttrs = [
-        te.fontStyle === "italic" ? ' font-style="italic"' : "",
-        te.textDecoration === "line-through"
-          ? ' text-decoration="line-through"'
-          : "",
-      ].join("")
-      parts.push(
-        `<text x="${tx}" y="${ty}" font-size="${te.fontSize}" font-weight="${te.fontWeight}"${extraAttrs} font-family="'Noto Sans JP', sans-serif" text-anchor="${anchor}" dominant-baseline="${baseline}" fill="#000">${escapeXml(te.text)}</text>`
-      )
-    }
-  }
-
-  // OMRバブル
-  for (const cell of layout.cells) {
-    parts.push(
-      ...renderOMRBubbles(cell, layout.pageWidthMm, layout.pageHeightMm)
-    )
-  }
-
-  // OMR数字欄
-  for (const cell of layout.cells) {
-    parts.push(
-      ...renderOMRDigitBoxes(cell, layout.pageWidthMm, layout.pageHeightMm)
-    )
-  }
-
-  // 原稿用紙グリッド
-  for (const cell of layout.cells) {
-    parts.push(...renderManuscriptGrid(cell))
-  }
-
-  parts.push("</svg>")
-  return parts.join("\n")
+  return filtered
+    .map((seg) => {
+      const attrs: string[] = []
+      if (seg.bold) attrs.push('font-weight="bold"')
+      if (seg.italic) attrs.push('font-style="italic"')
+      if (seg.strikethrough) attrs.push('text-decoration="line-through"')
+      if (seg.modelAnswer) attrs.push('fill="#d00"')
+      const attrStr = attrs.length > 0 ? ` ${attrs.join(" ")}` : ""
+      return `<tspan${attrStr}>${escapeXml(seg.text)}</tspan>`
+    })
+    .join("")
 }
 
-/** 単一ページのSVG文字列を生成（ComputedPageLayout版） */
-export function renderPageSvgString(
+/** 単一ページのSVG文字列を生成 */
+function renderPageSvgString(
   pageLayout: ComputedPageLayout,
   pageWidthMm: number,
   pageHeightMm: number,
@@ -203,21 +115,20 @@ export function renderPageSvgString(
     )
   }
 
-  if (renderMode === "model-answer") {
-    for (const cell of pageLayout.cells) {
-      if (cell.cellType === "answer" && cell.modelAnswer) {
-        const cx = cell.x + cell.width / 2
-        const cy = cell.y + cell.height / 2
-        parts.push(
-          `<text x="${cx}" y="${cy}" font-size="10" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central" fill="#333">${escapeXml(cell.modelAnswer)}</text>`
-        )
-      }
-    }
-  }
-
   for (const cell of pageLayout.cells) {
     if (cell.cellType !== "answer") continue
     for (const te of cell.textElements) {
+      // マークアップ記法を除いたプレーンテキストが空なら表示しない
+      const plainText = stripMarkup(te.text)
+      if (!plainText) continue
+
+      // 模範解答のみのテキスト要素は model-answer モード以外で非表示
+      const segments = parseInlineMarkup(te.text)
+      const visibleSegments = segments.filter(
+        (seg) => !seg.modelAnswer || renderMode === "model-answer"
+      )
+      if (visibleSegments.length === 0) continue
+
       const tx =
         te.horizontalAlign === "left"
           ? cell.x + 2
@@ -242,14 +153,10 @@ export function renderPageSvgString(
           : te.verticalAlign === "bottom"
             ? "auto"
             : "central"
-      const extraAttrs = [
-        te.fontStyle === "italic" ? ' font-style="italic"' : "",
-        te.textDecoration === "line-through"
-          ? ' text-decoration="line-through"'
-          : "",
-      ].join("")
+
+      const tspans = renderTextElementTspans(te.text, renderMode)
       parts.push(
-        `<text x="${tx}" y="${ty}" font-size="${te.fontSize}" font-weight="${te.fontWeight}"${extraAttrs} font-family="'Noto Sans JP', sans-serif" text-anchor="${anchor}" dominant-baseline="${baseline}" fill="#000">${escapeXml(te.text)}</text>`
+        `<text x="${tx}" y="${ty}" font-size="${te.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="${anchor}" dominant-baseline="${baseline}" fill="#000">${tspans}</text>`
       )
     }
   }
@@ -288,6 +195,43 @@ export function renderMultiPageSvgStrings(
   )
 }
 
+/** PDF/印刷用: SVG群をHTML文字列にラップ */
+export function wrapSvgsInHtml(
+  svgStrings: string[],
+  pageWidthMm: number,
+  pageHeightMm: number
+): string {
+  const pages = svgStrings
+    .map((svg) => `<div class="page">${svg}</div>`)
+    .join("\n")
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: ${pageWidthMm}mm ${pageHeightMm}mm;
+    margin: 0;
+  }
+  * { margin: 0; padding: 0; }
+  body { margin: 0; padding: 0; }
+  .page {
+    width: ${pageWidthMm}mm;
+    height: ${pageHeightMm}mm;
+    page-break-after: always;
+    overflow: hidden;
+  }
+  .page:last-child { page-break-after: auto; }
+  svg { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+${pages}
+</body>
+</html>`
+}
+
 function renderLine(line: ComputedLine): string {
   const sw = line.strokeWidth ?? 0.5
   const len = Math.hypot(line.x2 - line.x1, line.y2 - line.y1)
@@ -306,11 +250,9 @@ function renderOMRBubbles(
     const cx = bubble.normalizedCx * pageWidthMm
     const cy = bubble.normalizedCy * pageHeightMm
     const r = bubble.normalizedRadius * pageWidthMm
-    // 空円（塗りつぶし前のバブル）
     parts.push(
       `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="black" stroke-width="0.3"/>`
     )
-    // ラベルテキスト（バブルの下）
     parts.push(
       `<text x="${cx}" y="${cy + r + 2}" font-size="2.5" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="hanging" fill="#333">${escapeXml(bubble.label)}</text>`
     )

@@ -31,12 +31,8 @@ export interface CellTextElement {
   id: string
   text: string
   fontSize: number
-  fontWeight: "normal" | "bold"
-  fontStyle?: "normal" | "italic"
-  textDecoration?: "none" | "line-through"
   horizontalAlign: HorizontalAlign
   verticalAlign: VerticalAlign
-  isMathJax?: boolean
 }
 
 // =====================
@@ -73,7 +69,6 @@ export interface BranchQuestion {
   heightMultiplier: number
   points: number
   textElements: CellTextElement[]
-  modelAnswer?: string
   borderStyles?: BorderStyles
   /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
   layoutWidth?: string
@@ -93,7 +88,6 @@ export interface SubQuestion {
   points: number
   textElements: CellTextElement[]
   manuscriptPaper?: ManuscriptPaperConfig
-  modelAnswer?: string
   borderStyles?: BorderStyles
   /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
   layoutWidth?: string
@@ -275,8 +269,6 @@ export interface ComputedCell {
   points: number
   /** テキスト要素 */
   textElements: CellTextElement[]
-  /** 模範解答 */
-  modelAnswer?: string
   /** セル種類 */
   cellType: "answer" | "major-number" | "sub-number" | "branch-number"
   /** このセルが属するページ (0-indexed) */
@@ -448,26 +440,32 @@ export type AnswerSheetAction =
 // =====================
 
 export interface ASBExportPdfArgs {
-  definition: AnswerSheetDefinition
+  html: string
   outputPath: string
-  svgString?: string
+  pageWidthMm: number
+  pageHeightMm: number
 }
 
 export interface ASBExportPngArgs {
-  definition: AnswerSheetDefinition
+  svgStrings: string[]
   outputPath: string
   dpi: number
-  svgString?: string
+  pageWidthMm: number
+  pageHeightMm: number
 }
 
 export interface ASBConvertToExamArgs {
   definition: AnswerSheetDefinition
   userId: string
-  svgString?: string
+  multiPageLayout: ComputedMultiPageLayout
+  answerSheetSvgStrings: string[]
+  modelAnswerSvgStrings: string[]
 }
 
 export interface ASBPrintArgs {
-  definition: AnswerSheetDefinition
+  html: string
+  pageWidthMm: number
+  pageHeightMm: number
 }
 
 export interface ASBExportResult {

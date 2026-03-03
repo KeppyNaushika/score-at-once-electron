@@ -1,11 +1,19 @@
 /**
  * PDF/PNG出力hook
+ *
+ * renderer側でlayout計算→SVG生成→main側にデータを渡す。
  */
 
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
+
+import {
+  renderMultiPageSvgStrings,
+  wrapSvgsInHtml,
+} from "../utils/renderSvgStrings"
+import { computeMultiPageLayoutFromDefinition } from "./useAnswerSheetLayout"
 
 export function useAnswerSheetExport() {
   const [isExporting, setIsExporting] = useState(false)
@@ -27,9 +35,22 @@ export function useAnswerSheetExport() {
 
       if (!pathResult.success || !pathResult.filePath) return
 
+      const multiLayout = computeMultiPageLayoutFromDefinition(definition)
+      const svgStrings = renderMultiPageSvgStrings(
+        multiLayout,
+        definition.renderMode
+      )
+      const html = wrapSvgsInHtml(
+        svgStrings,
+        multiLayout.pageWidthMm,
+        multiLayout.pageHeightMm
+      )
+
       const result = await api.exportPdf({
-        definition,
+        html,
         outputPath: pathResult.filePath,
+        pageWidthMm: multiLayout.pageWidthMm,
+        pageHeightMm: multiLayout.pageHeightMm,
       })
 
       if (result.success) {
@@ -64,10 +85,18 @@ export function useAnswerSheetExport() {
 
         if (!pathResult.success || !pathResult.filePath) return
 
+        const multiLayout = computeMultiPageLayoutFromDefinition(definition)
+        const svgStrings = renderMultiPageSvgStrings(
+          multiLayout,
+          definition.renderMode
+        )
+
         const result = await api.exportPng({
-          definition,
+          svgStrings,
           outputPath: pathResult.filePath,
           dpi,
+          pageWidthMm: multiLayout.pageWidthMm,
+          pageHeightMm: multiLayout.pageHeightMm,
         })
 
         if (result.success) {
@@ -96,7 +125,22 @@ export function useAnswerSheetExport() {
     try {
       setIsExporting(true)
 
-      const result = await api.print({ definition })
+      const multiLayout = computeMultiPageLayoutFromDefinition(definition)
+      const svgStrings = renderMultiPageSvgStrings(
+        multiLayout,
+        definition.renderMode
+      )
+      const html = wrapSvgsInHtml(
+        svgStrings,
+        multiLayout.pageWidthMm,
+        multiLayout.pageHeightMm
+      )
+
+      const result = await api.print({
+        html,
+        pageWidthMm: multiLayout.pageWidthMm,
+        pageHeightMm: multiLayout.pageHeightMm,
+      })
 
       if (result.success) {
         toast.success("印刷を開始しました")
