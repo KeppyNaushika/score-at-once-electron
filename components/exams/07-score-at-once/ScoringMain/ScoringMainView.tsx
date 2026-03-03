@@ -287,6 +287,8 @@ function ScoringMainViewContent() {
       handlePartialScoreConfirm("pending"),
     handlePartialScoreCancel,
     handlePartialScoreBackspace,
+    handleScore: handleBatchScoreWithProgress,
+    handleToggleFilter,
   })
 
   const currentStudentId = useMemo(() => {
@@ -337,76 +339,80 @@ function ScoringMainViewContent() {
         />
       </PageHeader>
 
-      {/* 採点エリア - Grid Layout */}
-      <div
-        className="grid h-full min-h-0 flex-1"
-        style={{
-          gridTemplateColumns: showSidePanel ? "1fr 24rem" : "1fr",
-          gridTemplateRows: "1fr",
-        }}
-      >
-        <ScoringContentArea
-          gradingMode={gradingMode}
-          allScoringData={allScoringData}
-          masterAnswerData={masterAnswerData}
-          filteredScoringDataIds={filteredScoringDataIds}
-          selectedScoringDataIds={selectedScoringDataIds}
-          currentCropRegion={currentCropRegion}
-          studentAnswerImages={studentAnswerImages}
-          onScoringDataSelect={(dataId, isSelected) =>
-            handleAnswerSelect(dataId, isSelected, studentAnswerImages)
-          }
-          onScoringDataReplace={handleReplaceSelection}
-          layoutDirection={layoutDirection}
-          itemsPerLine={itemsPerLine}
-          autoScroll={autoScroll}
-          showStudentNames={showStudentNames}
-          currentStudentId={currentStudentId || undefined}
-          currentUserId={currentUserId || undefined}
-          questionScores={questionScores}
-          onQuestionScoreCreated={handleQuestionScoreCreated}
-          expandMargin={expandMargin}
-        />
-
-        {/* 右側サイドパネル */}
-        {showSidePanel && (
-          <ScoringSidePanel
-            examId={examId}
-            cropRegions={cropRegions}
-            currentCropRegion={currentCropRegion}
-            onCropRegionChange={(cropRegion) => {
-              setCurrentCropRegionId(cropRegion?.id || null)
-            }}
-            onPrevQuestion={handlePrevQuestion}
-            onNextQuestion={handleNextQuestion}
-            questionProgress={questionProgress}
-            selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
-            selectedAnswersCount={selectedStudentAnswerImageIds.size}
-            filterSettings={filterSettings}
-            onScore={handleBatchScoreWithProgress}
-            onToggleFilter={handleToggleFilter}
-            onRefreshFilter={handleRefreshFilter}
-            partialScoreInput={partialScoreInput}
-            layoutDirection={layoutDirection}
-            visibleAnswersCount={visibleAnswers.length}
-            totalAnswersCount={studentAnswerImages.length}
-            onLayoutDirectionChange={setLayoutDirection}
-            onGridNavigation={handleGridNavigation}
-            onRefreshView={handleRefreshFilter}
-            itemsPerLine={itemsPerLine}
-            onItemsPerLineChange={handleItemsPerLineChange}
-            autoScroll={autoScroll}
-            onAutoScrollChange={handleAutoScrollChange}
+      {/* 採点エリア */}
+      <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <ScoringContentArea
             gradingMode={gradingMode}
-            expandMargin={expandMargin}
-            onExpandMarginChange={setExpandMargin}
-            students={students}
-            onStudentChange={handleStudentChange}
+            allScoringData={allScoringData}
+            masterAnswerData={masterAnswerData}
+            filteredScoringDataIds={filteredScoringDataIds}
+            selectedScoringDataIds={selectedScoringDataIds}
+            currentCropRegion={currentCropRegion}
+            cropRegions={cropRegions}
             studentAnswerImages={studentAnswerImages}
-            scoringBehavior={scoringBehavior}
-            onScoringBehaviorChange={(behavior) => setScoringBehavior(behavior)}
+            onScoringDataSelect={(dataId, isSelected) =>
+              handleAnswerSelect(dataId, isSelected, studentAnswerImages)
+            }
+            onScoringDataReplace={handleReplaceSelection}
+            layoutDirection={layoutDirection}
+            itemsPerLine={itemsPerLine}
+            autoScroll={autoScroll}
+            showStudentNames={showStudentNames}
+            currentStudentId={currentStudentId || undefined}
+            currentUserId={currentUserId || undefined}
+            questionScores={questionScores}
+            onQuestionScoreCreated={handleQuestionScoreCreated}
+            expandMargin={expandMargin}
           />
-        )}
+        </div>
+
+        {/* 右側サイドパネル（スライドイン/アウト） */}
+        <div
+          className="shrink-0 transition-[width] duration-300 ease-in-out"
+          style={{ width: showSidePanel ? "24rem" : "0" }}
+        >
+          <div className="h-full w-96">
+            <ScoringSidePanel
+              examId={examId}
+              cropRegions={cropRegions}
+              currentCropRegion={currentCropRegion}
+              onCropRegionChange={(cropRegion) => {
+                setCurrentCropRegionId(cropRegion?.id || null)
+              }}
+              onPrevQuestion={handlePrevQuestion}
+              onNextQuestion={handleNextQuestion}
+              questionProgress={questionProgress}
+              selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
+              selectedAnswersCount={selectedStudentAnswerImageIds.size}
+              filterSettings={filterSettings}
+              onScore={handleBatchScoreWithProgress}
+              onToggleFilter={handleToggleFilter}
+              onRefreshFilter={handleRefreshFilter}
+              partialScoreInput={partialScoreInput}
+              layoutDirection={layoutDirection}
+              visibleAnswersCount={visibleAnswers.length}
+              totalAnswersCount={studentAnswerImages.length}
+              onLayoutDirectionChange={setLayoutDirection}
+              onGridNavigation={handleGridNavigation}
+              onRefreshView={handleRefreshFilter}
+              itemsPerLine={itemsPerLine}
+              onItemsPerLineChange={handleItemsPerLineChange}
+              autoScroll={autoScroll}
+              onAutoScrollChange={handleAutoScrollChange}
+              gradingMode={gradingMode}
+              expandMargin={expandMargin}
+              onExpandMarginChange={setExpandMargin}
+              students={students}
+              onStudentChange={handleStudentChange}
+              studentAnswerImages={studentAnswerImages}
+              scoringBehavior={scoringBehavior}
+              onScoringBehaviorChange={(behavior) =>
+                setScoringBehavior(behavior)
+              }
+            />
+          </div>
+        </div>
       </div>
 
       {/* モーダル類 */}

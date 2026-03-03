@@ -6,6 +6,7 @@
  */
 
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
+import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
 
 /**
  * ショートカットハンドラーの型定義
@@ -37,6 +38,10 @@ interface ScoringShortcutHandlers {
   handlePartialScoreCancel: () => void
   /** 部分点入力バックスペース */
   handlePartialScoreBackspace: () => void
+  /** 採点実行（サイドパネル非表示でも有効にするため） */
+  handleScore: (status: ScoringStatus) => void
+  /** フィルタトグル（サイドパネル非表示でも有効にするため） */
+  handleToggleFilter: (key: string) => void
 }
 
 /**
@@ -59,7 +64,118 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     handlePartialScoreConfirmPending,
     handlePartialScoreCancel,
     handlePartialScoreBackspace,
+    handleScore,
+    handleToggleFilter,
   } = handlers
+
+  // ========================================
+  // 採点コマンド（サイドパネル非表示でも有効）
+  // ========================================
+  useCommand("scoring.unscored", () => handleScore("unscored"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "未採点として採点",
+      category: "採点",
+      description: "選択中の答案を未採点にします",
+    },
+  })
+
+  useCommand("scoring.correct", () => handleScore("correct"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "正答として採点",
+      category: "採点",
+      description: "選択中の答案を正答として採点します",
+    },
+  })
+
+  useCommand("scoring.partial", () => handleScore("partial"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "部分点として採点",
+      category: "採点",
+      description: "選択中の答案を部分点として採点します",
+    },
+  })
+
+  useCommand("scoring.pending", () => handleScore("pending"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "保留として採点",
+      category: "採点",
+      description: "選択中の答案を保留として採点します",
+    },
+  })
+
+  useCommand("scoring.incorrect", () => handleScore("incorrect"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "誤答として採点",
+      category: "採点",
+      description: "選択中の答案を誤答として採点します",
+    },
+  })
+
+  useCommand("scoring.noAnswer", () => handleScore("no_answer"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "無答として採点",
+      category: "採点",
+      description: "選択中の答案を無答として採点します",
+    },
+  })
+
+  // ========================================
+  // フィルタトグルコマンド（サイドパネル非表示でも有効、グリッドモードのみ）
+  // ========================================
+  useCommand("filter.toggleUnscored", () => handleToggleFilter("unscored"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "未採点フィルタトグル",
+      category: "フィルタ",
+      description: "未採点の答案の表示を切り替えます",
+    },
+  })
+
+  useCommand("filter.toggleCorrect", () => handleToggleFilter("correct"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "正答フィルタトグル",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.togglePartial", () => handleToggleFilter("partial"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "部分点フィルタトグル",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.togglePending", () => handleToggleFilter("pending"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "保留フィルタトグル",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggleIncorrect", () => handleToggleFilter("incorrect"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "誤答フィルタトグル",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggleNoAnswer", () => handleToggleFilter("no_answer"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "無答フィルタトグル",
+      category: "フィルタ",
+    },
+  })
 
   // ========================================
   // 表示関連ショートカット
