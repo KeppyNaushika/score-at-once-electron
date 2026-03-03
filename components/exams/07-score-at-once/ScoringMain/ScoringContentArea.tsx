@@ -57,6 +57,8 @@ interface ScoringContentAreaProps {
   onAnnotationChanged?: () => void
   /** 外部からのアノテーション追加後のリフレッシュキー（ブラウザパネル→キャンバス連携用） */
   annotationRefreshKey?: number
+  /** Grid表示用アノテーションリフレッシュキー */
+  gridAnnotationRefreshKey?: number
 }
 
 export function ScoringContentArea({
@@ -82,6 +84,7 @@ export function ScoringContentArea({
   onQuestionScoreCreated,
   onAnnotationChanged,
   annotationRefreshKey,
+  gridAnnotationRefreshKey,
 }: ScoringContentAreaProps) {
   /** 個別表示時：selectedの最初の要素を利用 */
   const currentScoringDataId =
@@ -124,6 +127,9 @@ export function ScoringContentArea({
       autoScroll={autoScroll}
       showStudentNames={showStudentNames}
       expandMargin={expandMargin}
+      currentCropRegion={currentCropRegion}
+      currentUserId={currentUserId}
+      annotationRefreshKey={gridAnnotationRefreshKey}
       className="p-4"
     />
   )

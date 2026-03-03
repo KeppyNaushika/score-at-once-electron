@@ -1403,6 +1403,14 @@ export interface MyAPI {
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
+    getByCropRegion: (
+      cropRegionId: string,
+      userId?: string
+    ) => Promise<{
+      success: boolean
+      data?: import("./drawing-annotation.types").DrawingAnnotation[]
+      error?: string
+    }>
     update: (
       id: string,
       data: import("./drawing-annotation.types").DrawingUpdateData

@@ -291,6 +291,56 @@ export async function getDrawingAnnotationsByExam(
 }
 
 /**
+ * CropRegion（設問）に紐づく全学生の描画アノテーションを取得する（Grid表示用）
+ * @param cropRegionId CropRegionのID
+ * @param userId 作成者のユーザーID（オプション）
+ * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列（studentId付き）
+ */
+export async function getDrawingAnnotationsByCropRegion(
+  cropRegionId: string,
+  userId?: string
+): Promise<DrawingAnnotation[]> {
+  try {
+    const result = await prisma.drawingAnnotation.findMany({
+      where: {
+        questionScore: {
+          cropRegionId,
+        },
+        ...(userId && { userId }),
+      },
+      orderBy: { createdAt: "asc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            studentId: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return result as DrawingAnnotation[]
+  } catch (error) {
+    console.error("設問別描画アノテーション取得エラー:", error)
+    throw error
+  }
+}
+
+/**
  * 描画アノテーションを更新する
  * @param id 描画アノテーションのID
  * @param data 更新データ

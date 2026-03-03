@@ -125,6 +125,31 @@ export function setupDrawingHandlers() {
   )
 
   /**
+   * CropRegion（設問）に紐づく全学生の描画アノテーション取得（Grid表示用）
+   */
+  ipcMain.handle(
+    "drawing:getByCropRegion",
+    async (_, cropRegionId: string, userId?: string) => {
+      try {
+        const result = await drawingService.getDrawingAnnotationsByCropRegion(
+          cropRegionId,
+          userId
+        )
+        return { success: true, data: result }
+      } catch (error) {
+        console.error("🚫 設問別描画アノテーション取得エラー:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "設問別描画アノテーション取得に失敗しました",
+        }
+      }
+    }
+  )
+
+  /**
    * 描画アノテーション更新
    */
   ipcMain.handle(
@@ -333,6 +358,7 @@ export function removeDrawingHandlers() {
     "drawing:getByQuestionScore",
     "drawing:getByStudent",
     "drawing:getByExam",
+    "drawing:getByCropRegion",
     "drawing:update",
     "drawing:delete",
     "drawing:deleteByQuestionScore",
