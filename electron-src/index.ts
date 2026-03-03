@@ -70,6 +70,11 @@ app.on("ready", async () => {
           request.url.replace(/^appimg:\/\/\/?/, "")
         )
 
+        // projects/ → exams/ パス正規化（v0.6.x リネーム対応）
+        if (filePath.startsWith("projects/")) {
+          filePath = "exams/" + filePath.slice("projects/".length)
+        }
+
         // 相対パスの場合はデータディレクトリからの絶対パスに変換
         if (!path.isAbsolute(filePath)) {
           filePath = getAbsolutePathFromData(filePath)
