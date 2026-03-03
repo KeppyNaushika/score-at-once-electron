@@ -100,7 +100,6 @@ const SCORING_BUTTONS = [
 const FILTER_BUTTONS = [
   { key: "unscored", filterKey: "unscored", label: "未採点", icon: Circle },
   { key: "correct", filterKey: "correct", label: "正答", icon: CheckCircle },
-  { key: "incorrect", filterKey: "incorrect", label: "誤答", icon: X },
   {
     key: "partial",
     filterKey: "partial",
@@ -108,6 +107,7 @@ const FILTER_BUTTONS = [
     icon: AlertTriangle,
   },
   { key: "pending", filterKey: "pending", label: "保留", icon: Clock },
+  { key: "incorrect", filterKey: "incorrect", label: "誤答", icon: X },
   { key: "no_answer", filterKey: "no_answer", label: "無答", icon: Minus },
 ] as const
 
