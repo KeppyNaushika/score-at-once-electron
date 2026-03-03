@@ -118,6 +118,13 @@ function renderPageSvgString(
 
   for (const cell of pageLayout.cells) {
     if (cell.cellType !== "answer") continue
+
+    // 原稿用紙セル: 字埋めレンダリング
+    if (cell.manuscriptGrid) {
+      parts.push(...renderManuscriptTextElements(cell, renderMode))
+      continue
+    }
+
     for (const te of cell.textElements) {
       // マークアップ記法を除いたプレーンテキストが空なら表示しない
       const plainText = stripMarkup(te.text)
@@ -297,4 +304,51 @@ function renderManuscriptGrid(cell: ComputedCell): string[] {
     )
   }
   return lines
+}
+
+function renderManuscriptTextElements(
+  cell: ComputedCell,
+  renderMode: RenderMode
+): string[] {
+  if (!cell.manuscriptGrid) return []
+  const g = cell.manuscriptGrid
+  const fontSize = g.cellSizeMm * 0.8
+  const parts: string[] = []
+
+  // 全テキスト要素のセグメントをフラット化して1文字ずつに分解
+  const chars: { char: string; attrs: string }[] = []
+  for (const te of cell.textElements) {
+    const segments = parseInlineMarkup(te.text)
+    for (const seg of segments) {
+      if (seg.modelAnswer && renderMode !== "model-answer") continue
+      const segAttrs: string[] = []
+      if (seg.bold) segAttrs.push('font-weight="bold"')
+      if (seg.italic) segAttrs.push('font-style="italic"')
+      if (seg.strikethrough) segAttrs.push('text-decoration="line-through"')
+      if (seg.modelAnswer) {
+        segAttrs.push(
+          renderMode === "model-answer" ? 'fill="#d00"' : 'fill="transparent"'
+        )
+      }
+      const attrStr = segAttrs.length > 0 ? ` ${segAttrs.join(" ")}` : ""
+      for (const ch of seg.text) {
+        chars.push({ char: ch, attrs: attrStr })
+      }
+    }
+  }
+
+  for (let ci = 0; ci < chars.length; ci++) {
+    const col = ci % g.columns
+    const row = Math.floor(ci / g.columns)
+    if (row >= g.rows) break
+    const cx = g.gridX + col * g.cellSizeMm + g.cellSizeMm / 2
+    const cy = g.gridY + row * g.cellSizeMm + g.cellSizeMm / 2
+    const { char, attrs } = chars[ci]
+    const fill = attrs.includes("fill=") ? "" : ' fill="#000"'
+    parts.push(
+      `<text x="${cx}" y="${cy}" font-size="${fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central"${fill}${attrs}>${escapeXml(char)}</text>`
+    )
+  }
+
+  return parts
 }

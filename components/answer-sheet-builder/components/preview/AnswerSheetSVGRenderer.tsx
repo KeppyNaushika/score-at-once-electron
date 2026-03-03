@@ -248,8 +248,66 @@ export function AnswerSheetSVGRenderer({
       {/* セル内テキスト要素（インラインマークアップ対応） */}
       {cells
         .filter((c) => c.cellType === "answer")
-        .flatMap((cell) =>
-          cell.textElements.map((te, ti) => {
+        .flatMap((cell) => {
+          // 原稿用紙セル: 字埋めレンダリング
+          if (cell.manuscriptGrid) {
+            const g = cell.manuscriptGrid
+            const fontSize = g.cellSizeMm * 0.8
+            // 全テキスト要素のセグメントをフラット化して1文字ずつに分解
+            const chars: { char: string; seg: InlineSegment }[] = []
+            for (const te of cell.textElements) {
+              const segments = parseInlineMarkup(te.text)
+              for (const seg of segments) {
+                if (seg.modelAnswer && renderMode !== "model-answer") continue
+                for (const ch of seg.text) {
+                  chars.push({ char: ch, seg })
+                }
+              }
+            }
+            return chars
+              .map(({ char, seg }, ci) => {
+                const col = ci % g.columns
+                const row = Math.floor(ci / g.columns)
+                if (row >= g.rows) return null
+                const cx = g.gridX + col * g.cellSizeMm + g.cellSizeMm / 2
+                const cy = g.gridY + row * g.cellSizeMm + g.cellSizeMm / 2
+                return (
+                  <text
+                    key={`mc-${cell.label}-${ci}`}
+                    x={cx}
+                    y={cy}
+                    fontSize={fontSize}
+                    fontFamily="'Noto Sans JP', sans-serif"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill={
+                      seg.modelAnswer
+                        ? renderMode === "model-answer"
+                          ? "#d00"
+                          : "transparent"
+                        : "#000"
+                    }
+                    fontWeight={seg.bold ? "bold" : undefined}
+                    fontStyle={seg.italic ? "italic" : undefined}
+                    textDecoration={
+                      seg.strikethrough && seg.underline
+                        ? "line-through underline"
+                        : seg.strikethrough
+                          ? "line-through"
+                          : seg.underline
+                            ? "underline"
+                            : undefined
+                    }
+                  >
+                    {char}
+                  </text>
+                )
+              })
+              .filter(Boolean)
+          }
+
+          // 通常セル
+          return cell.textElements.map((te, ti) => {
             const tx =
               te.horizontalAlign === "left"
                 ? cell.x + 2
@@ -330,7 +388,7 @@ export function AnswerSheetSVGRenderer({
               </text>
             )
           })
-        )}
+        })}
 
       {/* OMRバブル */}
       {cells
