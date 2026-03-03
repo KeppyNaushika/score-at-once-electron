@@ -261,6 +261,50 @@ export function setupDrawingHandlers() {
   })
 
   /**
+   * アノテーションお気に入り切替
+   */
+  ipcMain.handle(
+    "drawing:toggleFavorite",
+    async (_, id: string, isFavorite: boolean) => {
+      try {
+        const result = await drawingService.toggleAnnotationFavorite(
+          id,
+          isFavorite
+        )
+        return { success: true, data: result }
+      } catch (error) {
+        console.error("🚫 アノテーションお気に入り切替エラー:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "アノテーションお気に入り切替に失敗しました",
+        }
+      }
+    }
+  )
+
+  /**
+   * ブラウズ用アノテーション取得
+   */
+  ipcMain.handle("drawing:getForBrowse", async (_, examId: string) => {
+    try {
+      const result = await drawingService.getAnnotationsForBrowse(examId)
+      return { success: true, data: result }
+    } catch (error) {
+      console.error("🚫 ブラウズ用アノテーション取得エラー:", error)
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "ブラウズ用アノテーション取得に失敗しました",
+      }
+    }
+  })
+
+  /**
    * 描画アノテーションID取得
    */
   ipcMain.handle("drawing:getById", async (_, id: string) => {
@@ -296,6 +340,8 @@ export function removeDrawingHandlers() {
     "drawing:batchUpdate",
     "drawing:getStats",
     "drawing:getById",
+    "drawing:toggleFavorite",
+    "drawing:getForBrowse",
   ]
 
   handlers.forEach((handler) => {

@@ -6,6 +6,7 @@ import {
   Hand,
   Maximize,
   MousePointer2,
+  Star,
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
@@ -58,6 +59,10 @@ interface DrawingToolPaletteProps {
     updates: Array<{ id: string; updates: Partial<DrawingElement> }>
   ) => void
   onClearSelection?: () => void
+
+  // お気に入り機能
+  onToggleFavorite?: (elementIds: string[]) => void
+  favoriteElementIds?: Set<string>
 }
 
 export function DrawingToolPalette({
@@ -78,6 +83,8 @@ export function DrawingToolPalette({
   selectedElements = [],
   onUpdateSelectedElements,
   onClearSelection,
+  onToggleFavorite,
+  favoriteElementIds,
 }: DrawingToolPaletteProps) {
   // 選択中の各タイプの要素を取得（複数選択対応）
   const selectedLines = selectedElements.filter((el) => el.type === "line")
@@ -540,6 +547,44 @@ export function DrawingToolPalette({
               }
               onClearSelection={onClearSelection}
             />
+
+            {/* お気に入り登録ボタン（要素選択時のみ表示） */}
+            {selectedElements.length > 0 && onToggleFavorite && (
+              <>
+                <Separator className="my-1" />
+                <TooltipPrimitive.Root>
+                  <TooltipPrimitive.Trigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        onToggleFavorite(selectedElements.map((el) => el.id))
+                      }
+                    >
+                      <Star
+                        className={cn(
+                          "h-4 w-4",
+                          selectedElements.some((el) =>
+                            favoriteElementIds?.has(el.id)
+                          ) && "fill-yellow-400 text-yellow-400"
+                        )}
+                      />
+                    </Button>
+                  </TooltipPrimitive.Trigger>
+                  <TooltipPrimitive.Portal>
+                    <TooltipPrimitive.Content
+                      side="right"
+                      sideOffset={5}
+                      className={tooltipContentClass}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium">お気に入り</div>
+                      </div>
+                    </TooltipPrimitive.Content>
+                  </TooltipPrimitive.Portal>
+                </TooltipPrimitive.Root>
+              </>
+            )}
           </div>
         </Card>
       </div>

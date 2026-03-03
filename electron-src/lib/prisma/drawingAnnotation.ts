@@ -4,6 +4,7 @@
  */
 
 import type {
+  AnnotationWithContext,
   DrawingAnnotation,
   DrawingAnnotationStats,
   DrawingCreateData,
@@ -511,6 +512,118 @@ export async function getDrawingAnnotationById(
     return result as DrawingAnnotation | null
   } catch (error) {
     console.error("描画アノテーション単体取得エラー:", error)
+    throw error
+  }
+}
+
+/**
+ * アノテーションのお気に入りフラグを切り替える
+ * @param id 描画アノテーションのID
+ * @param isFavorite お気に入り状態
+ * @returns Promise<DrawingAnnotation> 更新された描画アノテーション
+ */
+export async function toggleAnnotationFavorite(
+  id: string,
+  isFavorite: boolean
+): Promise<DrawingAnnotation> {
+  try {
+    const result = await prisma.drawingAnnotation.update({
+      where: { id },
+      data: { isFavorite },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            studentId: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+            student: {
+              select: {
+                id: true,
+                studentNumber: true,
+                lastName: true,
+                firstName: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return result as DrawingAnnotation
+  } catch (error) {
+    console.error("アノテーションお気に入り切替エラー:", error)
+    throw error
+  }
+}
+
+/**
+ * 試験全体のアノテーションをブラウズ用に取得する（コンテキスト情報付き）
+ * @param examId 試験ID
+ * @returns Promise<AnnotationWithContext[]> コンテキスト情報付きアノテーション配列
+ */
+export async function getAnnotationsForBrowse(
+  examId: string
+): Promise<AnnotationWithContext[]> {
+  try {
+    const result = await prisma.drawingAnnotation.findMany({
+      where: {
+        questionScore: {
+          cropRegion: {
+            examPage: {
+              examId: examId,
+            },
+          },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            studentId: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+            student: {
+              select: {
+                id: true,
+                studentNumber: true,
+                lastName: true,
+                firstName: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return result as AnnotationWithContext[]
+  } catch (error) {
+    console.error("ブラウズ用アノテーション取得エラー:", error)
     throw error
   }
 }

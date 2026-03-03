@@ -602,6 +602,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getStats: (questionScoreId: string) =>
       ipcRenderer.invoke("drawing:getStats", questionScoreId),
     getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
+    toggleFavorite: (id: string, isFavorite: boolean) =>
+      ipcRenderer.invoke("drawing:toggleFavorite", id, isFavorite),
+    getForBrowse: (examId: string) =>
+      ipcRenderer.invoke("drawing:getForBrowse", examId),
   },
 
   // Exam Archive (Export/Import) related

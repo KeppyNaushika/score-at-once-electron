@@ -292,6 +292,7 @@ export function PdfCanvasRenderer({
           | "bottom-left"
           | "bottom"
           | "bottom-right",
+        isFavorite: false,
         createdAt: new Date(),
         updatedAt: new Date(),
         userId: a.userId,

@@ -62,6 +62,9 @@ export interface DrawingAnnotation {
   displayX: number // 0.0 - 1.0
   displayY: number // 0.0 - 1.0
 
+  // お気に入り
+  isFavorite: boolean
+
   // メタデータ
   createdAt: Date
   updatedAt: Date
@@ -120,6 +123,7 @@ export interface DrawingUpdateData {
   anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
+  isFavorite?: boolean
 }
 
 // 型ガード関数
@@ -176,6 +180,27 @@ export interface DrawingAnnotationResponse {
   success: boolean
   data?: DrawingAnnotation | DrawingAnnotation[]
   error?: string
+}
+
+// QuestionScore情報を含む拡張型（アノテーションブラウズパネル用）
+export interface AnnotationWithContext extends DrawingAnnotation {
+  questionScore?: {
+    id: string
+    studentId: string
+    cropRegionId: string
+    cropRegion?: { id: string; label: string }
+    student?: {
+      id: string
+      studentNumber: string
+      lastName: string
+      firstName: string
+    }
+  } | null
+  user?: {
+    id: string
+    username: string
+    name: string | null
+  } | null
 }
 
 // QuestionScore情報を含む拡張型（透明度制御用）
