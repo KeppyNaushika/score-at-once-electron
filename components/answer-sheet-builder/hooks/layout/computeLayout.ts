@@ -107,7 +107,6 @@ export function computeLayoutFromDefinition(
   const hasBranch = majorQuestions.some((mq) =>
     mq.subQuestions.some((sq) => sq.branchQuestions.length > 0)
   )
-  const branchNumX = subNumX + subNumWidth
   const branchNumWidth = hasBranch ? columnWidths.branchNumber : 0
 
   const cells: ComputedCell[] = []
@@ -582,7 +581,8 @@ export function computeLayoutFromDefinition(
 
   // vertical-sub 行のY範囲を収集（小問番号列セグメント化用）
   const verticalRanges: { top: number; bottom: number }[] = []
-  const branchVerticalRanges: { top: number; bottom: number }[] = []
+  const branchVerticalRanges: { top: number; bottom: number; lineX: number }[] =
+    []
   const horizontalMajorRanges: { top: number; bottom: number }[] = []
   {
     let trackY = margins.top + effectiveHeaderHeight
@@ -611,6 +611,8 @@ export function computeLayoutFromDefinition(
           }
           if (sub.branchQuestions.length > 0) {
             if (!isGridHorizontal(sub.branchQuestions)) {
+              const effSubNumW = sub.label === "" ? 0 : subNumWidth
+              const effBranchLineX = subNumX + effSubNumW + branchNumWidth
               let branchSegStart: number | null = null
               let branchY = trackY
               for (const bq of sub.branchQuestions) {
@@ -622,6 +624,7 @@ export function computeLayoutFromDefinition(
                     branchVerticalRanges.push({
                       top: branchSegStart,
                       bottom: branchY,
+                      lineX: effBranchLineX,
                     })
                     branchSegStart = null
                   }
@@ -632,6 +635,7 @@ export function computeLayoutFromDefinition(
                 branchVerticalRanges.push({
                   top: branchSegStart,
                   bottom: branchY,
+                  lineX: effBranchLineX,
                 })
               }
             }
@@ -745,9 +749,9 @@ export function computeLayoutFromDefinition(
       const clipped = clipRangeToMajorLayouts(range, majorLayoutRanges)
       for (const cr of clipped) {
         lines.push({
-          x1: branchNumX + branchNumWidth,
+          x1: range.lineX,
           y1: cr.top,
-          x2: branchNumX + branchNumWidth,
+          x2: range.lineX,
           y2: cr.bottom,
           style: settings.borderConfig.branchNumberDivider,
           lineType: "branchNumberColumn",

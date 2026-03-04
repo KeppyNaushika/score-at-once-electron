@@ -123,7 +123,7 @@ export function computeMultiPageLayoutFromDefinition(
 
   interface PerColData {
     verticalRanges: { top: number; bottom: number }[]
-    branchVerticalRanges: { top: number; bottom: number }[]
+    branchVerticalRanges: { top: number; bottom: number; lineX: number }[]
     horizontalMajorRanges: { top: number; bottom: number }[]
     rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
     rowLeftEdges: { yTop: number; yBottom: number; leftX: number }[]
@@ -492,6 +492,7 @@ export function computeMultiPageLayoutFromDefinition(
 
           // 枝問番号列のセグメント（ラベルのある枝問のみ）
           if (!isGridHorizontal(sub.branchQuestions)) {
+            const effBranchLineX = effBranchNumX + branchNumWidth
             let branchSegStart: number | null = null
             let branchY = subStartY
             for (const bq of sub.branchQuestions) {
@@ -503,6 +504,7 @@ export function computeMultiPageLayoutFromDefinition(
                   colData.branchVerticalRanges.push({
                     top: branchSegStart,
                     bottom: branchY,
+                    lineX: effBranchLineX,
                   })
                   branchSegStart = null
                 }
@@ -513,6 +515,7 @@ export function computeMultiPageLayoutFromDefinition(
               colData.branchVerticalRanges.push({
                 top: branchSegStart,
                 bottom: branchY,
+                lineX: effBranchLineX,
               })
             }
           }
@@ -855,9 +858,9 @@ export function computeMultiPageLayoutFromDefinition(
           )
           for (const cr of clipped) {
             pd.lines.push({
-              x1: col.branchNumX + branchNumWidth,
+              x1: range.lineX,
               y1: cr.top,
-              x2: col.branchNumX + branchNumWidth,
+              x2: range.lineX,
               y2: cr.bottom,
               style: settings.borderConfig.branchNumberDivider,
               lineType: "branchNumberColumn",
