@@ -59,6 +59,16 @@ export const getMasterAnswersDirectory = (examId: string): string => {
   return path.join(getExamDirectory(examId), "master-answers")
 }
 
+// ASB画像保存ディレクトリのパス
+export const getAsbImagesDirectory = (definitionId: string): string => {
+  return path.join(
+    getDataDirectory(),
+    "answer-sheet-builder",
+    definitionId,
+    "images"
+  )
+}
+
 // 出力ディレクトリのパス
 export const getExportsDirectory = (): string => {
   return path.join(getDataDirectory(), "exports")

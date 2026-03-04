@@ -35,6 +35,7 @@ function presetShortLabel(preset: string): string {
 interface QuestionListEditorProps {
   majorQuestions: MajorQuestion[]
   labelPresets?: LabelPresets
+  definitionId: string
   onSetLabelPreset: (
     category: "major" | "sub" | "branch",
     preset: string
@@ -74,6 +75,7 @@ interface QuestionListEditorProps {
 export function QuestionListEditor({
   majorQuestions,
   labelPresets,
+  definitionId,
   onSetLabelPreset,
   onAddMajor,
   onUpdateMajor,
@@ -175,6 +177,7 @@ export function QuestionListEditor({
             major={major}
             majorIndex={mi}
             totalMajorCount={majorQuestions.length}
+            definitionId={definitionId}
             onUpdate={(data) => onUpdateMajor(mi, data)}
             onDelete={() => onDeleteMajor(mi)}
             onMoveUp={mi > 0 ? () => onReorderMajor(mi, mi - 1) : undefined}

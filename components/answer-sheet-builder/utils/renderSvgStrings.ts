@@ -86,7 +86,8 @@ function renderPageSvgString(
   pageLayout: ComputedPageLayout,
   pageWidthMm: number,
   pageHeightMm: number,
-  renderMode: RenderMode = "answer-sheet"
+  renderMode: RenderMode = "answer-sheet",
+  imageDataUris?: Map<string, string>
 ): string {
   const w = pageWidthMm * MM_SCALE
   const h = pageHeightMm * MM_SCALE
@@ -169,6 +170,30 @@ function renderPageSvgString(
     }
   }
 
+  // 画像要素
+  for (const cell of pageLayout.cells) {
+    if (cell.cellType !== "answer" || !cell.imageElements?.length) continue
+    for (const ie of cell.imageElements) {
+      const pad = 1
+      const ix = cell.x + pad
+      const iy = cell.y + pad
+      const iw = cell.width - pad * 2
+      const ih = cell.height - pad * 2
+      const par =
+        ie.objectFit === "contain"
+          ? "xMidYMid meet"
+          : ie.objectFit === "cover"
+            ? "xMidYMid slice"
+            : "none"
+      // エクスポート時はbase64 data URIを使用、プレビュー時はappimg://
+      const href =
+        imageDataUris?.get(ie.imagePath) ?? `appimg:///${ie.imagePath}`
+      parts.push(
+        `<image href="${escapeXml(href)}" x="${ix}" y="${iy}" width="${iw}" height="${ih}" preserveAspectRatio="${par}" opacity="${ie.opacity}"/>`
+      )
+    }
+  }
+
   // OMRバブル
   for (const cell of pageLayout.cells) {
     parts.push(...renderOMRBubbles(cell, pageWidthMm, pageHeightMm))
@@ -191,14 +216,16 @@ function renderPageSvgString(
 /** 複数ページのSVG文字列を一括生成 */
 export function renderMultiPageSvgStrings(
   multiPageLayout: ComputedMultiPageLayout,
-  renderMode: RenderMode = "answer-sheet"
+  renderMode: RenderMode = "answer-sheet",
+  imageDataUris?: Map<string, string>
 ): string[] {
   return multiPageLayout.pages.map((page) =>
     renderPageSvgString(
       page,
       multiPageLayout.pageWidthMm,
       multiPageLayout.pageHeightMm,
-      renderMode
+      renderMode,
+      imageDataUris
     )
   )
 }
@@ -351,4 +378,42 @@ function renderManuscriptTextElements(
   }
 
   return parts
+}
+
+/**
+ * セル群から画像要素のパスを収集し、appimg:// → base64 data URI に変換する。
+ * エクスポート時（PDF/PNG/印刷）に使用。
+ */
+export async function resolveImageDataUris(
+  cells: ComputedCell[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  const paths = new Set<string>()
+
+  for (const cell of cells) {
+    if (!cell.imageElements?.length) continue
+    for (const ie of cell.imageElements) {
+      paths.add(ie.imagePath)
+    }
+  }
+
+  if (paths.size === 0) return map
+
+  const api = window.electronAPI
+  if (!api?.getImageData) return map
+
+  await Promise.all(
+    [...paths].map(async (imagePath) => {
+      try {
+        const result = await api.getImageData(imagePath)
+        if (result.success && result.data) {
+          map.set(imagePath, result.data)
+        }
+      } catch {
+        console.warn("Failed to resolve image data URI:", imagePath)
+      }
+    })
+  )
+
+  return map
 }

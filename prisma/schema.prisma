@@ -716,6 +716,7 @@ model AsbSubQuestion {
   majorQuestion   AsbMajorQuestion  @relation(fields: [majorQuestionId], references: [id], onDelete: Cascade)
   branchQuestions AsbBranchQuestion[]
   textElements    AsbTextElement[]
+  imageElements   AsbImageElement[]
   omrConfig       AsbOmrConfig?
 
   @@index([majorQuestionId])
@@ -742,6 +743,7 @@ model AsbBranchQuestion {
 
   subQuestion  AsbSubQuestion    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
   textElements AsbTextElement[]
+  imageElements AsbImageElement[]
   omrConfig    AsbOmrConfig?
 
   @@index([subQuestionId])
@@ -756,6 +758,29 @@ model AsbTextElement {
   fontSize         Float
   horizontalAlign  String  @default("left")
   verticalAlign    String  @default("top")
+  order            Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subQuestion    AsbSubQuestion?    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  branchQuestion AsbBranchQuestion? @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([subQuestionId])
+  @@index([branchQuestionId])
+}
+
+/// セル内画像要素（小問 or 枝問に紐付く dual FK）
+model AsbImageElement {
+  id               String  @id @default(uuid())
+  subQuestionId    String?
+  branchQuestionId String?
+  imagePath        String
+  originalName     String
+  objectFit        String  @default("contain")
+  horizontalAlign  String  @default("center")
+  verticalAlign    String  @default("middle")
+  opacity          Float   @default(1)
   order            Int     @default(0)
 
   createdAt DateTime @default(now())

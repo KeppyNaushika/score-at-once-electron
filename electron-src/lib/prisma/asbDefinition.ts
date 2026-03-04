@@ -7,6 +7,7 @@
 import type {
   AsbBranchQuestion,
   AsbDefinition,
+  AsbImageElement,
   AsbMajorQuestion,
   AsbOmrConfig,
   AsbSubQuestion,
@@ -19,6 +20,7 @@ import type {
   ASBDefinitionListItem,
   BorderConfig,
   BranchQuestion,
+  CellImageElement,
   CellTextElement,
   FontConfig,
   GlobalSettings,
@@ -96,6 +98,7 @@ type DbDefinitionFull = AsbDefinition & {
     subQuestions: (AsbSubQuestion & {
       branchQuestions: (AsbBranchQuestion & {
         textElements: AsbTextElement[]
+        imageElements: AsbImageElement[]
         omrConfig:
           | (AsbOmrConfig & {
               choiceOptions: {
@@ -107,6 +110,7 @@ type DbDefinitionFull = AsbDefinition & {
           | null
       })[]
       textElements: AsbTextElement[]
+      imageElements: AsbImageElement[]
       omrConfig:
         | (AsbOmrConfig & {
             choiceOptions: {
@@ -131,6 +135,7 @@ const fullInclude = {
             orderBy: { order: "asc" as const },
             include: {
               textElements: { orderBy: { order: "asc" as const } },
+              imageElements: { orderBy: { order: "asc" as const } },
               omrConfig: {
                 include: {
                   choiceOptions: {
@@ -142,6 +147,7 @@ const fullInclude = {
             },
           },
           textElements: { orderBy: { order: "asc" as const } },
+          imageElements: { orderBy: { order: "asc" as const } },
           omrConfig: {
             include: {
               choiceOptions: {
@@ -251,6 +257,26 @@ export async function saveAsbDefinition(
           })
         }
 
+        // 画像要素（小問）
+        if (sq.imageElements) {
+          for (let ii = 0; ii < sq.imageElements.length; ii++) {
+            const ie = sq.imageElements[ii]
+            await tx.asbImageElement.create({
+              data: {
+                id: ie.id,
+                subQuestionId: sq.id,
+                imagePath: ie.imagePath,
+                originalName: ie.originalName,
+                objectFit: ie.objectFit,
+                horizontalAlign: ie.horizontalAlign,
+                verticalAlign: ie.verticalAlign,
+                opacity: ie.opacity,
+                order: ii,
+              },
+            })
+          }
+        }
+
         // OMR設定（小問）
         if (sq.omrConfig) {
           await createOmrConfig(tx, { subQuestionId: sq.id }, sq.omrConfig)
@@ -291,6 +317,26 @@ export async function saveAsbDefinition(
                 order: ti,
               },
             })
+          }
+
+          // 画像要素（枝問）
+          if (bq.imageElements) {
+            for (let ii = 0; ii < bq.imageElements.length; ii++) {
+              const ie = bq.imageElements[ii]
+              await tx.asbImageElement.create({
+                data: {
+                  id: ie.id,
+                  branchQuestionId: bq.id,
+                  imagePath: ie.imagePath,
+                  originalName: ie.originalName,
+                  objectFit: ie.objectFit,
+                  horizontalAlign: ie.horizontalAlign,
+                  verticalAlign: ie.verticalAlign,
+                  opacity: ie.opacity,
+                  order: ii,
+                },
+              })
+            }
           }
 
           // OMR設定（枝問）
@@ -467,6 +513,18 @@ function dbTextElements(elements: AsbTextElement[]): CellTextElement[] {
   }))
 }
 
+function dbImageElements(elements: AsbImageElement[]): CellImageElement[] {
+  return elements.map((ie) => ({
+    id: ie.id,
+    imagePath: ie.imagePath,
+    originalName: ie.originalName,
+    objectFit: ie.objectFit as CellImageElement["objectFit"],
+    horizontalAlign: ie.horizontalAlign as CellImageElement["horizontalAlign"],
+    verticalAlign: ie.verticalAlign as CellImageElement["verticalAlign"],
+    opacity: ie.opacity,
+  }))
+}
+
 function dbToOmrConfig(
   config: AsbOmrConfig & {
     choiceOptions: { choiceIndex: number; label: string; isCorrect: boolean }[]
@@ -576,6 +634,7 @@ function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
             heightMultiplier: bq.heightMultiplier,
             points: bq.points,
             textElements: dbTextElements(bq.textElements),
+            imageElements: dbImageElements(bq.imageElements),
             borderStyles: bqBorderStyles as BranchQuestion["borderStyles"],
             layoutWidth: bq.layoutWidth ?? undefined,
             nextPlacement: bq.nextPlacement as BranchQuestion["nextPlacement"],
@@ -586,6 +645,7 @@ function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
         heightMultiplier: sq.heightMultiplier,
         points: sq.points,
         textElements: dbTextElements(sq.textElements),
+        imageElements: dbImageElements(sq.imageElements),
         manuscriptPaper,
         borderStyles: borderStyles as SubQuestion["borderStyles"],
         layoutWidth: sq.layoutWidth ?? undefined,

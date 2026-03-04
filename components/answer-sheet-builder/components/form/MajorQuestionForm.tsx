@@ -65,6 +65,7 @@ interface MajorQuestionFormProps {
   major: MajorQuestion
   majorIndex: number
   totalMajorCount: number
+  definitionId: string
   onUpdate: (data: Partial<MajorQuestion>) => void
   onDelete: () => void
   onMoveUp?: () => void
@@ -90,6 +91,7 @@ interface MajorQuestionFormProps {
 export function MajorQuestionForm({
   major,
   majorIndex,
+  definitionId,
   onUpdate,
   onDelete,
   onMoveUp,
@@ -194,6 +196,7 @@ export function MajorQuestionForm({
                   subIndex={si}
                   totalSubCount={major.subQuestions.length}
                   maxGoUp={subMaxGoUps[si]}
+                  definitionId={definitionId}
                   onUpdate={(data) => onUpdateSub(si, data)}
                   onDelete={() => onDeleteSub(si)}
                   onMoveUp={si > 0 ? () => onReorderSub(si, si - 1) : undefined}

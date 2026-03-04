@@ -11,11 +11,18 @@ import sharp from "sharp"
 import type {
   AnswerSheetDefinition,
   ASBConvertToExamArgs,
+  ASBDeleteImageArgs,
   ASBExportPdfArgs,
   ASBExportPngArgs,
   ASBPrintArgs,
+  ASBUploadImageArgs,
 } from "../../types/answerSheetBuilder.types"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
+import {
+  getAbsolutePathFromData,
+  getAsbImagesDirectory,
+  getRelativePathFromData,
+} from "../lib/dataManager"
 import {
   deleteAsbDefinition,
   getAsbDefinition,
@@ -77,10 +84,26 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   )
 
-  // 定義削除
+  // 定義削除（画像ディレクトリも削除）
   ipcMain.handle("asb:delete-definition", async (_event, id: string) => {
     try {
       const deleted = await deleteAsbDefinition(id)
+      if (deleted) {
+        // 画像ディレクトリの削除
+        const imagesDir = getAsbImagesDirectory(id)
+        try {
+          // ディレクトリの親（definitionId ディレクトリ）ごと削除
+          const definitionDir = path.dirname(imagesDir)
+          if (fs.existsSync(definitionDir)) {
+            fs.rmSync(definitionDir, { recursive: true, force: true })
+          }
+        } catch (cleanupError) {
+          console.warn(
+            "asb:delete-definition image cleanup warning:",
+            cleanupError
+          )
+        }
+      }
       return { success: deleted }
     } catch (error) {
       console.error("asb:delete-definition error:", error)
@@ -91,6 +114,62 @@ export function setupAnswerSheetBuilderHandlers(): void {
       }
     }
   })
+
+  // 画像アップロード
+  ipcMain.handle(
+    "asb:upload-image",
+    async (_event, args: ASBUploadImageArgs) => {
+      try {
+        const imagesDir = getAsbImagesDirectory(args.definitionId)
+        if (!fs.existsSync(imagesDir)) {
+          fs.mkdirSync(imagesDir, { recursive: true })
+        }
+
+        // ユニークなファイル名を生成
+        const ext = path.extname(args.originalName)
+        const baseName = path.basename(args.originalName, ext)
+        const uniqueName = `${baseName}_${Date.now()}${ext}`
+        const destPath = path.join(imagesDir, uniqueName)
+
+        // ファイルコピー
+        fs.copyFileSync(args.filePath, destPath)
+
+        // data/ からの相対パスを返す
+        const relativePath = getRelativePathFromData(destPath)
+        return { success: true, imagePath: relativePath }
+      } catch (error) {
+        console.error("asb:upload-image error:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "画像のアップロードに失敗しました",
+        }
+      }
+    }
+  )
+
+  // 画像削除
+  ipcMain.handle(
+    "asb:delete-image",
+    async (_event, args: ASBDeleteImageArgs) => {
+      try {
+        const absolutePath = getAbsolutePathFromData(args.imagePath)
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath)
+        }
+        return { success: true }
+      } catch (error) {
+        console.error("asb:delete-image error:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "画像の削除に失敗しました",
+        }
+      }
+    }
+  )
 
   // PDF出力: HTMLを受け取り → 一時ファイル → BrowserWindow → printToPDF
   ipcMain.handle("asb:export-pdf", async (_event, args: ASBExportPdfArgs) => {

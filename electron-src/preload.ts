@@ -1185,6 +1185,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ) => ipcRenderer.invoke("asb:convert-to-exam", args),
     print: (args: import("../types/answerSheetBuilder.types").ASBPrintArgs) =>
       ipcRenderer.invoke("asb:print", args),
+    uploadImage: (
+      args: import("../types/answerSheetBuilder.types").ASBUploadImageArgs
+    ) => ipcRenderer.invoke("asb:upload-image", args),
+    deleteImage: (
+      args: import("../types/answerSheetBuilder.types").ASBDeleteImageArgs
+    ) => ipcRenderer.invoke("asb:delete-image", args),
   },
 })
 

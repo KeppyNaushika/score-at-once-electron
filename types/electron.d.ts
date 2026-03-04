@@ -2205,6 +2205,12 @@ export interface MyAPI {
     print: (
       args: import("./answerSheetBuilder.types").ASBPrintArgs
     ) => Promise<{ success: boolean; error?: string }>
+    uploadImage: (
+      args: import("./answerSheetBuilder.types").ASBUploadImageArgs
+    ) => Promise<import("./answerSheetBuilder.types").ASBUploadImageResult>
+    deleteImage: (
+      args: import("./answerSheetBuilder.types").ASBDeleteImageArgs
+    ) => Promise<{ success: boolean; error?: string }>
   }
 
   // =============================================================================
