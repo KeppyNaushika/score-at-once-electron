@@ -683,6 +683,7 @@ model AsbDefinition {
 model AsbHeaderField {
   id           String @id @default(uuid())
   definitionId String
+  type         String @default("field") // "field" | "hfill" | "label"
   label        String
   widthMm      Float  @default(30)
   heightMm     Float  @default(8)
@@ -690,6 +691,7 @@ model AsbHeaderField {
   lineStyle    String @default("solid")
   lineWidth    Float  @default(0.4)
   order        Int    @default(0)
+  fontSize     Float? // label タイプ用
 
   definition AsbDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
 
