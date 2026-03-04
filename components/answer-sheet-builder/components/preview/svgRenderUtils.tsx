@@ -119,21 +119,31 @@ export function renderSegmentsTspan(
   ))
 }
 
-/** MathJax tex2svg でレンダリングするインラインspan */
-function MathSpan({ tex, style }: { tex: string; style: React.CSSProperties }) {
+/** MathJax tex2svg でレンダリングするspan（インライン/別行立て対応） */
+function MathSpan({
+  tex,
+  style,
+  displayMath,
+}: {
+  tex: string
+  style: React.CSSProperties
+  displayMath?: boolean
+}) {
   const ref = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const el = ref.current
     if (!el || !window.MathJax?.tex2svg) return
     try {
-      const container = window.MathJax.tex2svg(tex, { display: false })
+      const container = window.MathJax.tex2svg(tex, {
+        display: displayMath ?? false,
+      })
       el.innerHTML = ""
       el.appendChild(container)
     } catch {
       // フォールバック: そのまま表示
     }
-  }, [tex])
+  }, [tex, displayMath])
 
   return (
     <span ref={ref} style={style}>
@@ -151,11 +161,15 @@ export function renderSegmentsHtml(
   return segments.map((seg, i) => {
     const style = getSegmentStyle(seg, renderMode)
     if (seg.math) {
+      const mathStyle: React.CSSProperties = seg.displayMath
+        ? { ...style, display: "block", textAlign: "center" }
+        : { ...style, fontStyle: "italic" }
       return (
         <MathSpan
           key={i}
           tex={seg.text}
-          style={{ ...style, fontStyle: "italic" }}
+          style={mathStyle}
+          displayMath={seg.displayMath}
         />
       )
     }

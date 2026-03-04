@@ -6,7 +6,8 @@
  * - *text* → 斜体
  * - __text__ → 下線
  * - ~~text~~ → 打消線
- * - $formula$ → MathJax数式
+ * - $formula$ → MathJax数式（インライン）
+ * - $$formula$$ → MathJax数式（別行立て / ディスプレイモード）
  * - ||text|| → 模範解答
  *
  * $...$ 内では他のマークアップを無視（数式保護）。
@@ -21,6 +22,7 @@ export interface InlineSegment {
   underline?: boolean
   strikethrough?: boolean
   math?: boolean
+  displayMath?: boolean
   modelAnswer?: boolean
 }
 
@@ -70,7 +72,30 @@ export function parseInlineMarkup(input: string): InlineSegment[] {
   }
 
   while (i < input.length) {
-    // 数式: $...$
+    // 別行立て数式: $$...$$（$...$ より先にチェック）
+    if (input[i] === "$" && input[i + 1] === "$") {
+      const end = input.indexOf("$$", i + 2)
+      if (end !== -1) {
+        pushSegment(current)
+        current = ""
+        const mathText = input.slice(i + 2, end)
+        const seg: InlineSegment = {
+          text: mathText,
+          math: true,
+          displayMath: true,
+        }
+        if (style.modelAnswer) seg.modelAnswer = true
+        segments.push(seg)
+        i = end + 2
+        continue
+      }
+      // 閉じられていない $$ はリテラルとして扱う
+      current += "$$"
+      i += 2
+      continue
+    }
+
+    // インライン数式: $...$
     if (input[i] === "$") {
       const end = input.indexOf("$", i + 1)
       if (end !== -1) {
@@ -151,6 +176,7 @@ export function stripMarkup(text: string): string {
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/__([^_]+)__/g, "$1")
     .replace(/~~([^~]+)~~/g, "$1")
+    .replace(/\$\$([^$]+)\$\$/g, "$1")
     .replace(/\$([^$]+)\$/g, "$1")
     .replace(/\|\|([^|]+)\|\|/g, "$1")
 }
