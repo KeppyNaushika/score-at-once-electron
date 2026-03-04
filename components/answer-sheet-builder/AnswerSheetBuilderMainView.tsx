@@ -217,6 +217,7 @@ export function AnswerSheetBuilderMainView({
                 <QuestionListEditor
                   majorQuestions={definition.majorQuestions}
                   labelPresets={definition.labelPresets}
+                  definitionId={definition.id}
                   onSetLabelPreset={setLabelPreset}
                   onAddMajor={addMajorQuestion}
                   onUpdateMajor={updateMajorQuestion}

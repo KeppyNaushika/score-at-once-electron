@@ -390,6 +390,37 @@ export function AnswerSheetSVGRenderer({
           })
         })}
 
+      {/* 画像要素 */}
+      {cells
+        .filter((c) => c.cellType === "answer" && c.imageElements?.length)
+        .flatMap((cell) =>
+          cell.imageElements!.map((ie, ii) => {
+            const pad = 1
+            const ix = cell.x + pad
+            const iy = cell.y + pad
+            const iw = cell.width - pad * 2
+            const ih = cell.height - pad * 2
+            const par =
+              ie.objectFit === "contain"
+                ? "xMidYMid meet"
+                : ie.objectFit === "cover"
+                  ? "xMidYMid slice"
+                  : "none"
+            return (
+              <image
+                key={`img-${cell.label}-${ii}`}
+                href={`appimg:///${ie.imagePath}`}
+                x={ix}
+                y={iy}
+                width={iw}
+                height={ih}
+                preserveAspectRatio={par}
+                opacity={ie.opacity}
+              />
+            )
+          })
+        )}
+
       {/* OMRバブル */}
       {cells
         .filter((c) => c.cellType === "answer" && c.omrBubbles?.length)

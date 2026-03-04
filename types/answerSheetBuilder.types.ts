@@ -36,6 +36,22 @@ export interface CellTextElement {
 }
 
 // =====================
+// セル内画像要素
+// =====================
+
+export type ImageObjectFit = "contain" | "cover" | "fill"
+
+export interface CellImageElement {
+  id: string
+  imagePath: string // data/ からの相対パス
+  originalName: string // 表示用ファイル名
+  objectFit: ImageObjectFit
+  horizontalAlign: HorizontalAlign
+  verticalAlign: VerticalAlign
+  opacity: number // 0-1
+}
+
+// =====================
 // 罫線設定
 // =====================
 
@@ -68,6 +84,7 @@ export interface BranchQuestion {
   heightMultiplier: number
   points: number
   textElements: CellTextElement[]
+  imageElements?: CellImageElement[]
   borderStyles?: BorderStyles
   /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
   layoutWidth?: string
@@ -86,6 +103,7 @@ export interface SubQuestion {
   heightMultiplier: number
   points: number
   textElements: CellTextElement[]
+  imageElements?: CellImageElement[]
   manuscriptPaper?: ManuscriptPaperConfig
   borderStyles?: BorderStyles
   /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
@@ -274,6 +292,8 @@ export interface ComputedCell {
   points: number
   /** テキスト要素 */
   textElements: CellTextElement[]
+  /** 画像要素 */
+  imageElements?: CellImageElement[]
   /** セル種類 */
   cellType: "answer" | "major-number" | "sub-number" | "branch-number"
   /** このセルが属するページ (0-indexed) */
@@ -483,6 +503,22 @@ export interface ASBConvertResult {
   success: boolean
   examId?: string
   error?: string
+}
+
+export interface ASBUploadImageArgs {
+  definitionId: string
+  filePath: string
+  originalName: string
+}
+
+export interface ASBUploadImageResult {
+  success: boolean
+  imagePath?: string // data/ からの相対パス
+  error?: string
+}
+
+export interface ASBDeleteImageArgs {
+  imagePath: string // data/ からの相対パス
 }
 
 export interface ASBDefinitionListItem {

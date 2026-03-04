@@ -17,6 +17,7 @@ import type {
 } from "@/types/answerSheetBuilder.types"
 
 import { BranchQuestionForm } from "./BranchQuestionForm"
+import { ImageElementEditor } from "./ImageElementEditor"
 import { ManuscriptPaperSettings } from "./ManuscriptPaperSettings"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
@@ -69,6 +70,7 @@ interface SubQuestionFormProps {
   subIndex: number
   totalSubCount: number
   maxGoUp: number
+  definitionId: string
   onUpdate: (data: Partial<SubQuestion>) => void
   onDelete: () => void
   onMoveUp?: () => void
@@ -82,6 +84,7 @@ interface SubQuestionFormProps {
 export function SubQuestionForm({
   sub,
   maxGoUp,
+  definitionId,
   onUpdate,
   onDelete,
   onMoveUp,
@@ -95,7 +98,9 @@ export function SubQuestionForm({
   const [detailOpen, setDetailOpen] = useState(false)
 
   const hasDetailContent =
-    sub.textElements.length > 0 || !!sub.manuscriptPaper?.enabled
+    sub.textElements.length > 0 ||
+    (sub.imageElements?.length ?? 0) > 0 ||
+    !!sub.manuscriptPaper?.enabled
 
   const branchMaxGoUps = useMemo(
     () => calcBranchMaxGoUps(sub.branchQuestions),
@@ -350,6 +355,11 @@ export function SubQuestionForm({
             textElements={sub.textElements}
             onUpdate={(elements) => onUpdate({ textElements: elements })}
           />
+          <ImageElementEditor
+            imageElements={sub.imageElements ?? []}
+            onUpdate={(elements) => onUpdate({ imageElements: elements })}
+            definitionId={definitionId}
+          />
           <ManuscriptPaperSettings
             config={sub.manuscriptPaper}
             onUpdate={(config) => {
@@ -379,6 +389,7 @@ export function SubQuestionForm({
               totalBranchCount={sub.branchQuestions.length}
               showPoints={sub.usesBranchPoints !== false}
               maxGoUp={branchMaxGoUps[bi]}
+              definitionId={definitionId}
               onUpdate={(data) => onUpdateBranch(bi, data)}
               onDelete={() => onDeleteBranch(bi)}
               onMoveUp={bi > 0 ? () => onReorderBranch(bi, bi - 1) : undefined}

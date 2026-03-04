@@ -11,6 +11,7 @@ import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
 
 import {
   renderMultiPageSvgStrings,
+  resolveImageDataUris,
   wrapSvgsInHtml,
 } from "../utils/renderSvgStrings"
 import { computeMultiPageLayoutFromDefinition } from "./useAnswerSheetLayout"
@@ -36,9 +37,12 @@ export function useAnswerSheetExport() {
       if (!pathResult.success || !pathResult.filePath) return
 
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
+      const allCells = multiLayout.pages.flatMap((p) => p.cells)
+      const imageDataUris = await resolveImageDataUris(allCells)
       const svgStrings = renderMultiPageSvgStrings(
         multiLayout,
-        definition.renderMode
+        definition.renderMode,
+        imageDataUris
       )
       const html = wrapSvgsInHtml(
         svgStrings,
@@ -86,9 +90,12 @@ export function useAnswerSheetExport() {
         if (!pathResult.success || !pathResult.filePath) return
 
         const multiLayout = computeMultiPageLayoutFromDefinition(definition)
+        const allCells = multiLayout.pages.flatMap((p) => p.cells)
+        const imageDataUris = await resolveImageDataUris(allCells)
         const svgStrings = renderMultiPageSvgStrings(
           multiLayout,
-          definition.renderMode
+          definition.renderMode,
+          imageDataUris
         )
 
         const result = await api.exportPng({
@@ -126,9 +133,12 @@ export function useAnswerSheetExport() {
       setIsExporting(true)
 
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
+      const allCells = multiLayout.pages.flatMap((p) => p.cells)
+      const imageDataUris = await resolveImageDataUris(allCells)
       const svgStrings = renderMultiPageSvgStrings(
         multiLayout,
-        definition.renderMode
+        definition.renderMode,
+        imageDataUris
       )
       const html = wrapSvgsInHtml(
         svgStrings,

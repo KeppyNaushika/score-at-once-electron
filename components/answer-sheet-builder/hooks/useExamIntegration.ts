@@ -11,7 +11,10 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
 
-import { renderMultiPageSvgStrings } from "../utils/renderSvgStrings"
+import {
+  renderMultiPageSvgStrings,
+  resolveImageDataUris,
+} from "../utils/renderSvgStrings"
 import { computeMultiPageLayoutFromDefinition } from "./useAnswerSheetLayout"
 
 export function useExamIntegration() {
@@ -36,14 +39,18 @@ export function useExamIntegration() {
         setIsConverting(true)
 
         const multiPageLayout = computeMultiPageLayoutFromDefinition(definition)
+        const allCells = multiPageLayout.pages.flatMap((p) => p.cells)
+        const imageDataUris = await resolveImageDataUris(allCells)
 
         const answerSheetSvgStrings = renderMultiPageSvgStrings(
           multiPageLayout,
-          "answer-sheet"
+          "answer-sheet",
+          imageDataUris
         )
         const modelAnswerSvgStrings = renderMultiPageSvgStrings(
           multiPageLayout,
-          "model-answer"
+          "model-answer",
+          imageDataUris
         )
 
         const result = await api.convertToExam({

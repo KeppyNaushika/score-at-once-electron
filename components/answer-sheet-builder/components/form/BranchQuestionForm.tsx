@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { BranchQuestion } from "@/types/answerSheetBuilder.types"
 
+import { ImageElementEditor } from "./ImageElementEditor"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
@@ -15,6 +16,7 @@ interface BranchQuestionFormProps {
   totalBranchCount: number
   showPoints?: boolean
   maxGoUp: number
+  definitionId: string
   onUpdate: (data: Partial<BranchQuestion>) => void
   onDelete: () => void
   onMoveUp?: () => void
@@ -25,6 +27,7 @@ export function BranchQuestionForm({
   branch,
   showPoints = true,
   maxGoUp,
+  definitionId,
   onUpdate,
   onDelete,
   onMoveUp,
@@ -32,7 +35,8 @@ export function BranchQuestionForm({
 }: BranchQuestionFormProps) {
   const [detailOpen, setDetailOpen] = useState(false)
 
-  const hasDetailContent = branch.textElements.length > 0
+  const hasDetailContent =
+    branch.textElements.length > 0 || (branch.imageElements?.length ?? 0) > 0
 
   const goUpActive = branch.goUp != null
   const isGoUpInvalid =
@@ -244,6 +248,11 @@ export function BranchQuestionForm({
           <TextElementEditor
             textElements={branch.textElements}
             onUpdate={(elements) => onUpdate({ textElements: elements })}
+          />
+          <ImageElementEditor
+            imageElements={branch.imageElements ?? []}
+            onUpdate={(elements) => onUpdate({ imageElements: elements })}
+            definitionId={definitionId}
           />
           <OMRCellConfigForm
             config={branch.omrConfig}

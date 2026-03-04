@@ -76,6 +76,7 @@ export function createDefaultBranchQuestion(label?: string): BranchQuestion {
     heightMultiplier: 1,
     points: 1,
     textElements: [],
+    imageElements: [],
   }
 }
 
@@ -87,6 +88,7 @@ export function createDefaultSubQuestion(label?: string): SubQuestion {
     heightMultiplier: 1,
     points: 1,
     textElements: [],
+    imageElements: [],
   }
 }
 

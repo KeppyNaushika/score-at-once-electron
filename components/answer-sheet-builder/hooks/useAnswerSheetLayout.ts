@@ -68,6 +68,26 @@ function getPaperDimensions(settings: GlobalSettings) {
   return { width: base.width, height: base.height }
 }
 
+/**
+ * 縦線の範囲を大問レイアウト範囲内にクリップする。
+ * majorQuestionSpacing > 0 の場合に大問間のギャップを跨がないようにする。
+ */
+function clipRangeToMajorLayouts(
+  range: { top: number; bottom: number },
+  majorLayouts: Array<{ startY: number; endY: number }>
+): Array<{ top: number; bottom: number }> {
+  if (majorLayouts.length === 0) return [range]
+  const result: Array<{ top: number; bottom: number }> = []
+  for (const ml of majorLayouts) {
+    const top = Math.max(range.top, ml.startY)
+    const bottom = Math.min(range.bottom, ml.endY)
+    if (top < bottom - 0.01) {
+      result.push({ top, bottom })
+    }
+  }
+  return result.length > 0 ? result : [range]
+}
+
 /** 分数文字列 (e.g. "1/4", "3/4") を 0〜1 の数値に変換 */
 export function parseFraction(s: string): number {
   const m = s.match(/^(\d+)\/(\d+)$/)
@@ -487,7 +507,8 @@ function createCell(
   cellType: ComputedCell["cellType"],
   pageIndex: number = 0,
   manuscriptGrid?: ManuscriptGrid,
-  omrConfig?: OMRCellConfig
+  omrConfig?: OMRCellConfig,
+  imageElements?: ComputedCell["imageElements"]
 ): ComputedCell {
   const cell: ComputedCell = {
     questionPath,
@@ -502,6 +523,7 @@ function createCell(
     label,
     points,
     textElements,
+    imageElements,
     cellType,
     pageIndex,
     ...(manuscriptGrid ? { manuscriptGrid } : {}),
@@ -841,7 +863,8 @@ function renderBranchQuestions(
           "answer",
           pageIndex,
           undefined,
-          gc.item.omrConfig
+          gc.item.omrConfig,
+          gc.item.imageElements
         )
       )
 
@@ -932,7 +955,8 @@ function renderBranchQuestions(
           "answer",
           pageIndex,
           undefined,
-          branch.omrConfig
+          branch.omrConfig,
+          branch.imageElements
         )
       )
 
@@ -1126,7 +1150,8 @@ function computeLayoutFromDefinition(
               "answer",
               0,
               computeManuscriptGrid(sub, ansX, cellY, ansW, cellHeight),
-              sub.omrConfig
+              sub.omrConfig,
+              sub.imageElements
             )
           )
         }
@@ -1348,7 +1373,8 @@ function computeLayoutFromDefinition(
                 ansW,
                 subHeight
               ),
-              sub.omrConfig
+              sub.omrConfig,
+              sub.imageElements
             )
           )
         }
@@ -1600,45 +1626,52 @@ function computeLayoutFromDefinition(
     }
   }
 
-  // 小問番号列の縦線 → 縦配置のセグメントのみ
+  // 小問番号列の縦線 → 縦配置のセグメントのみ（大問外枠内にクリップ）
   const subNcSw = getLineWidth("subNumberColumn", settings.borderConfig)
   for (const range of verticalRanges) {
-    lines.push({
-      x1: subNumX + subNumWidth,
-      y1: range.top,
-      x2: subNumX + subNumWidth,
-      y2: range.bottom,
-      style: settings.borderConfig.subNumberDivider,
-      lineType: "subNumberColumn",
-      strokeWidth: subNcSw,
-      dragInfo: {
-        axis: "vertical",
-        target: { type: "columnWidth", column: "subNumber" },
-        currentValueMm: subNumWidth,
-        minMm: 5,
-      },
-    })
-  }
-
-  // 枝問番号列の縦線 → vertical-branchセグメントのみ
-  if (hasBranch) {
-    const branchNcSw = getLineWidth("branchNumberColumn", settings.borderConfig)
-    for (const range of branchVerticalRanges) {
+    // 大問間スペーシングで範囲を分割してクリップ
+    const clipped = clipRangeToMajorLayouts(range, majorLayoutRanges)
+    for (const cr of clipped) {
       lines.push({
-        x1: branchNumX + branchNumWidth,
-        y1: range.top,
-        x2: branchNumX + branchNumWidth,
-        y2: range.bottom,
-        style: settings.borderConfig.branchNumberDivider,
-        lineType: "branchNumberColumn",
-        strokeWidth: branchNcSw,
+        x1: subNumX + subNumWidth,
+        y1: cr.top,
+        x2: subNumX + subNumWidth,
+        y2: cr.bottom,
+        style: settings.borderConfig.subNumberDivider,
+        lineType: "subNumberColumn",
+        strokeWidth: subNcSw,
         dragInfo: {
           axis: "vertical",
-          target: { type: "columnWidth", column: "branchNumber" },
-          currentValueMm: branchNumWidth,
+          target: { type: "columnWidth", column: "subNumber" },
+          currentValueMm: subNumWidth,
           minMm: 5,
         },
       })
+    }
+  }
+
+  // 枝問番号列の縦線 → vertical-branchセグメントのみ（大問外枠内にクリップ）
+  if (hasBranch) {
+    const branchNcSw = getLineWidth("branchNumberColumn", settings.borderConfig)
+    for (const range of branchVerticalRanges) {
+      const clipped = clipRangeToMajorLayouts(range, majorLayoutRanges)
+      for (const cr of clipped) {
+        lines.push({
+          x1: branchNumX + branchNumWidth,
+          y1: cr.top,
+          x2: branchNumX + branchNumWidth,
+          y2: cr.bottom,
+          style: settings.borderConfig.branchNumberDivider,
+          lineType: "branchNumberColumn",
+          strokeWidth: branchNcSw,
+          dragInfo: {
+            axis: "vertical",
+            target: { type: "columnWidth", column: "branchNumber" },
+            currentValueMm: branchNumWidth,
+            minMm: 5,
+          },
+        })
+      }
     }
   }
 
@@ -2086,7 +2119,8 @@ export function computeMultiPageLayoutFromDefinition(
               "answer",
               pageIdx,
               computeManuscriptGrid(sub, ansX, cellY, ansW, cellHeight),
-              sub.omrConfig
+              sub.omrConfig,
+              sub.imageElements
             )
           )
         }
@@ -2336,7 +2370,8 @@ export function computeMultiPageLayoutFromDefinition(
                 ansW,
                 subHeight
               ),
-              sub.omrConfig
+              sub.omrConfig,
+              sub.imageElements
             )
           )
         }
@@ -2546,38 +2581,44 @@ export function computeMultiPageLayoutFromDefinition(
       }
     }
 
-    // 小問番号列の縦線（縦配置セグメントのみ）
+    // 小問番号列の縦線（縦配置セグメントのみ、大問外枠内にクリップ）
     {
       const subNcSwPage = getLineWidth("subNumberColumn", settings.borderConfig)
       for (const range of pd.verticalRanges) {
-        pd.lines.push({
-          x1: subNumX + subNumWidth,
-          y1: range.top,
-          x2: subNumX + subNumWidth,
-          y2: range.bottom,
-          style: settings.borderConfig.subNumberDivider,
-          lineType: "subNumberColumn",
-          strokeWidth: subNcSwPage,
-        })
+        const clipped = clipRangeToMajorLayouts(range, pd.majorLayoutRanges)
+        for (const cr of clipped) {
+          pd.lines.push({
+            x1: subNumX + subNumWidth,
+            y1: cr.top,
+            x2: subNumX + subNumWidth,
+            y2: cr.bottom,
+            style: settings.borderConfig.subNumberDivider,
+            lineType: "subNumberColumn",
+            strokeWidth: subNcSwPage,
+          })
+        }
       }
     }
 
-    // 枝問番号列の縦線（vertical-branchセグメントのみ）
+    // 枝問番号列の縦線（vertical-branchセグメントのみ、大問外枠内にクリップ）
     if (hasBranch) {
       const branchNcSwPage = getLineWidth(
         "branchNumberColumn",
         settings.borderConfig
       )
       for (const range of pd.branchVerticalRanges) {
-        pd.lines.push({
-          x1: branchNumX + branchNumWidth,
-          y1: range.top,
-          x2: branchNumX + branchNumWidth,
-          y2: range.bottom,
-          style: settings.borderConfig.branchNumberDivider,
-          lineType: "branchNumberColumn",
-          strokeWidth: branchNcSwPage,
-        })
+        const clipped = clipRangeToMajorLayouts(range, pd.majorLayoutRanges)
+        for (const cr of clipped) {
+          pd.lines.push({
+            x1: branchNumX + branchNumWidth,
+            y1: cr.top,
+            x2: branchNumX + branchNumWidth,
+            y2: cr.bottom,
+            style: settings.borderConfig.branchNumberDivider,
+            lineType: "branchNumberColumn",
+            strokeWidth: branchNcSwPage,
+          })
+        }
       }
     }
 
