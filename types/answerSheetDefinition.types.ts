@@ -194,6 +194,33 @@ export interface FontConfig {
 }
 
 // =====================
+// 段組み設定
+// =====================
+
+export interface MultiColumnConfig {
+  enabled: boolean
+  columnCount: 2 | 3
+  columnGapMm: number
+  dividerLine: LineStyle | null
+  dividerLineWidth: number
+}
+
+// =====================
+// ヘッダーフィールド定義
+// =====================
+
+export interface HeaderFieldDefinition {
+  id: string
+  label: string
+  widthMm: number
+  heightMm: number
+  gridCount: number
+  lineStyle: LineStyle
+  lineWidth: number
+  order: number
+}
+
+// =====================
 // グローバル設定
 // =====================
 
@@ -208,6 +235,8 @@ export interface GlobalSettings {
   omrMarkers: OMRMarkerConfig
   fonts: FontConfig
   numberDisplayMode: MajorNumberDisplayMode
+  multiColumn: MultiColumnConfig
+  headerFields: HeaderFieldDefinition[]
 }
 
 // =====================
@@ -298,4 +327,14 @@ export type AnswerSheetAction =
   | {
       type: "SET_LABEL_PRESET"
       payload: { category: "major" | "sub" | "branch"; preset: string }
+    }
+  | { type: "ADD_HEADER_FIELD"; payload?: Partial<HeaderFieldDefinition> }
+  | {
+      type: "UPDATE_HEADER_FIELD"
+      payload: { fieldId: string; data: Partial<HeaderFieldDefinition> }
+    }
+  | { type: "DELETE_HEADER_FIELD"; payload: { fieldId: string } }
+  | {
+      type: "REORDER_HEADER_FIELDS"
+      payload: { fromIndex: number; toIndex: number }
     }

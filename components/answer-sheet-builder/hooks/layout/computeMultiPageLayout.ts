@@ -11,6 +11,7 @@ import type {
 } from "@/types/answerSheetDefinition.types"
 import type {
   ComputedCell,
+  ComputedHeaderField,
   ComputedLine,
   ComputedMultiPageLayout,
   ComputedNumberLabel,
@@ -30,6 +31,7 @@ import {
   gridTotalHeight,
   isGridHorizontal,
 } from "./gridBuilder"
+import { computeHeaderFieldLayout } from "./headerFieldLayout"
 import {
   clipRangeToMajorLayouts,
   getLineWidth,
@@ -53,7 +55,20 @@ export function computeMultiPageLayoutFromDefinition(
 
   const contentLeft = margins.left
   const contentRight = paper.width - margins.right
-  const contentTop = margins.top + spacing.headerHeight
+
+  // ヘッダーフィールドレイアウト計算
+  const headerLayout = computeHeaderFieldLayout(
+    settings,
+    contentLeft,
+    margins.top
+  )
+  const headerFields: ComputedHeaderField[] = headerLayout.fields
+  const effectiveHeaderHeight =
+    headerLayout.totalHeightMm > 0
+      ? headerLayout.totalHeightMm + 2
+      : spacing.headerHeight
+
+  const contentTop = margins.top + effectiveHeaderHeight
   const contentMaxY = paper.height - margins.bottom
 
   const majorNumX = contentLeft
@@ -717,6 +732,28 @@ export function computeMultiPageLayoutFromDefinition(
       }
     }
 
+    // 段組み仕切り線
+    const mcDividerLine = settings.multiColumn.dividerLine
+    if (settings.multiColumn.enabled && mcDividerLine) {
+      const mc = settings.multiColumn
+      const singleColumnWidth =
+        (contentRight - contentLeft - (mc.columnCount - 1) * mc.columnGapMm) /
+        mc.columnCount
+      for (let ci = 1; ci < mc.columnCount; ci++) {
+        const dividerX =
+          contentLeft + ci * singleColumnWidth + (ci - 0.5) * mc.columnGapMm
+        pd.lines.push({
+          x1: dividerX,
+          y1: contentTop,
+          x2: dividerX,
+          y2: pageContentBottom,
+          style: mcDividerLine,
+          lineType: "columnDivider",
+          strokeWidth: mc.dividerLineWidth,
+        })
+      }
+    }
+
     const omrMarkerPositions = computeOMRMarkers(settings, paper)
 
     return {
@@ -725,6 +762,7 @@ export function computeMultiPageLayoutFromDefinition(
       lines: pd.lines,
       numberLabels: pd.numberLabels,
       omrMarkerPositions,
+      headerFields,
       contentHeightMm: pageContentBottom - margins.top,
     }
   })
