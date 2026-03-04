@@ -102,6 +102,41 @@ describe("parseInlineMarkup", () => {
     const result = parseInlineMarkup("||$x = 5$||")
     expect(result).toEqual([{ text: "x = 5", math: true, modelAnswer: true }])
   })
+
+  it("$$formula$$ を別行立て数式セグメントにパースする", () => {
+    const result = parseInlineMarkup("$$x^2$$")
+    expect(result).toEqual([{ text: "x^2", math: true, displayMath: true }])
+  })
+
+  it("$$...$$ 内では他のマークアップを無視する", () => {
+    const result = parseInlineMarkup("$$**not bold**$$")
+    expect(result).toEqual([
+      { text: "**not bold**", math: true, displayMath: true },
+    ])
+  })
+
+  it("$...$ と $$...$$ の混在", () => {
+    const result = parseInlineMarkup("前 $a+b$ 中 $$\\frac{a}{b}$$ 後")
+    expect(result).toEqual([
+      { text: "前 " },
+      { text: "a+b", math: true },
+      { text: " 中 " },
+      { text: "\\frac{a}{b}", math: true, displayMath: true },
+      { text: " 後" },
+    ])
+  })
+
+  it("閉じられていない $$ はリテラルテキストとして扱う", () => {
+    const result = parseInlineMarkup("$$閉じない")
+    expect(result).toEqual([{ text: "$$閉じない" }])
+  })
+
+  it("別行立て数式と模範解答の組み合わせ", () => {
+    const result = parseInlineMarkup("||$$x = 5$$||")
+    expect(result).toEqual([
+      { text: "x = 5", math: true, displayMath: true, modelAnswer: true },
+    ])
+  })
 })
 
 describe("hasModelAnswerContent", () => {
@@ -127,5 +162,13 @@ describe("stripMarkup", () => {
 
   it("マークアップなしのテキストはそのまま返す", () => {
     expect(stripMarkup("プレーンテキスト")).toBe("プレーンテキスト")
+  })
+
+  it("$$...$$ を除去する", () => {
+    expect(stripMarkup("前 $$x^2$$ 後")).toBe("前 x^2 後")
+  })
+
+  it("$...$ と $$...$$ が混在する場合に正しく除去する", () => {
+    expect(stripMarkup("$a$ と $$b$$")).toBe("a と b")
   })
 })
