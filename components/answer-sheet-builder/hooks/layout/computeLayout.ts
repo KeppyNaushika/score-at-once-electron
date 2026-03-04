@@ -20,6 +20,7 @@ import {
   computeSubHeight,
   createCell,
 } from "./cellBuilder"
+import { computeMultiPageLayoutFromDefinition } from "./computeMultiPageLayout"
 import {
   buildSubGridLayout,
   computeGridRowLeftEdges,
@@ -45,6 +46,39 @@ import {
 export function computeLayoutFromDefinition(
   definition: AnswerSheetDefinition
 ): ComputedLayout {
+  // 段組みが有効な場合はマルチページレイアウトに委譲
+  if (
+    definition.settings.multiColumn.enabled &&
+    definition.settings.multiColumn.columnCount > 1
+  ) {
+    const multiPage = computeMultiPageLayoutFromDefinition(definition)
+    const page = multiPage.pages[0]
+    if (!page) {
+      return {
+        pageWidthMm: multiPage.pageWidthMm,
+        pageHeightMm: multiPage.pageHeightMm,
+        cells: [],
+        lines: [],
+        numberLabels: [],
+        omrMarkerPositions: [],
+        headerFields: [],
+        overflow: false,
+        contentHeightMm: 0,
+      }
+    }
+    return {
+      pageWidthMm: multiPage.pageWidthMm,
+      pageHeightMm: multiPage.pageHeightMm,
+      cells: page.cells,
+      lines: page.lines,
+      numberLabels: page.numberLabels,
+      omrMarkerPositions: page.omrMarkerPositions,
+      headerFields: page.headerFields,
+      overflow: multiPage.totalPages > 1,
+      contentHeightMm: page.contentHeightMm,
+    }
+  }
+
   const { settings, majorQuestions } = definition
   const paper = getPaperDimensions(settings)
   const { margins, baseRowHeight, columnWidths, spacing } = settings
@@ -56,12 +90,13 @@ export function computeLayoutFromDefinition(
   const headerLayout = computeHeaderFieldLayout(
     settings,
     contentLeft,
-    margins.top
+    margins.top,
+    contentRight
   )
   const headerFields: ComputedHeaderField[] = headerLayout.fields
   const effectiveHeaderHeight =
     headerLayout.totalHeightMm > 0
-      ? headerLayout.totalHeightMm + 2 // 2mm gap between header and content
+      ? headerLayout.totalHeightMm + 2 + spacing.headerHeight
       : spacing.headerHeight
 
   const majorNumX = contentLeft
@@ -358,7 +393,7 @@ export function computeLayoutFromDefinition(
         if (hb || !sub.manuscriptPaper?.enabled) return contentRight
         const sh = computeSubHeight(sub, baseRowHeight)
         const esnw = sub.label === "" ? 0 : subNumWidth
-        const eax = subNumX + esnw + branchNumWidth
+        const eax = subNumX + esnw
         return (
           eax + (sh / sub.manuscriptPaper.rows) * sub.manuscriptPaper.columns
         )
@@ -370,7 +405,8 @@ export function computeLayoutFromDefinition(
         const subHeight = computeSubHeight(sub, baseRowHeight)
         const effSubNumW = sub.label === "" ? 0 : subNumWidth
         const effBranchNumX = subNumX + effSubNumW
-        const effAnswerX = effBranchNumX + branchNumWidth
+        const effBranchNumW = hasBranches ? branchNumWidth : 0
+        const effAnswerX = effBranchNumX + effBranchNumW
         const effAnswerWidth = contentRight - effAnswerX
 
         if (effSubNumW > 0) {

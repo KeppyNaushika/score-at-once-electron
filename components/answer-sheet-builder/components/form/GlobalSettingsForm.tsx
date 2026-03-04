@@ -203,7 +203,7 @@ export function GlobalSettingsForm({
         <SliderWithInput
           label="テキスト"
           value={settings.fonts.defaultSize}
-          min={6}
+          min={2}
           max={24}
           step={0.5}
           onChange={(v) =>
@@ -213,7 +213,7 @@ export function GlobalSettingsForm({
         <SliderWithInput
           label="大問番号"
           value={settings.fonts.majorNumberSize}
-          min={4}
+          min={2}
           max={24}
           step={0.5}
           onChange={(v) =>
@@ -223,7 +223,7 @@ export function GlobalSettingsForm({
         <SliderWithInput
           label="小問番号"
           value={settings.fonts.subNumberSize}
-          min={4}
+          min={2}
           max={24}
           step={0.5}
           onChange={(v) =>
@@ -233,7 +233,7 @@ export function GlobalSettingsForm({
         <SliderWithInput
           label="枝問番号"
           value={settings.fonts.branchNumberSize}
-          min={4}
+          min={2}
           max={24}
           step={0.5}
           onChange={(v) =>

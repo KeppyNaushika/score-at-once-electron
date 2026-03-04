@@ -5,6 +5,8 @@
  * セグメントスタイル変換・描画ヘルパーを提供する。
  */
 
+import { useEffect, useRef } from "react"
+
 import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import type { LineStyle, RenderMode } from "@/types/answerSheetDefinition.types"
 import type { DragInfo } from "@/types/answerSheetLayout.types"
@@ -117,21 +119,43 @@ export function renderSegmentsTspan(
   ))
 }
 
+/** MathJax tex2svg でレンダリングするインラインspan */
+function MathSpan({ tex, style }: { tex: string; style: React.CSSProperties }) {
+  const ref = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !window.MathJax?.tex2svg) return
+    try {
+      const container = window.MathJax.tex2svg(tex, { display: false })
+      el.innerHTML = ""
+      el.appendChild(container)
+    } catch {
+      // フォールバック: そのまま表示
+    }
+  }, [tex])
+
+  return (
+    <span ref={ref} style={style}>
+      {tex}
+    </span>
+  )
+}
+
 /** InlineSegment 配列を HTML <span> 要素配列に変換する（MathJax対応） */
 export function renderSegmentsHtml(
   segments: InlineSegment[],
   renderMode: RenderMode,
-  fontSize: number
+  _fontSize: number
 ): React.ReactNode[] {
   return segments.map((seg, i) => {
     const style = getSegmentStyle(seg, renderMode)
     if (seg.math) {
       return (
-        <span
+        <MathSpan
           key={i}
-          className="mathjax-inline"
-          style={{ ...style, fontSize: `${fontSize}px` }}
-          dangerouslySetInnerHTML={{ __html: `\\(${seg.text}\\)` }}
+          tex={seg.text}
+          style={{ ...style, fontStyle: "italic" }}
         />
       )
     }

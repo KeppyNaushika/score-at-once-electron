@@ -2,7 +2,7 @@
  * 複数ページレイアウト計算
  *
  * AnswerSheetDefinition → ComputedMultiPageLayout への変換を行う。
- * 大問単位でのページ分割に対応する。
+ * 大問単位でのページ分割・段組みレイアウトに対応する。
  */
 
 import type {
@@ -45,6 +45,15 @@ import {
   renderGridDividerLines,
 } from "./lineRenderer"
 
+/** 段組みの各段の座標範囲 */
+interface ColBounds {
+  contentLeft: number
+  contentRight: number
+  majorNumX: number
+  subNumX: number
+  branchNumX: number
+}
+
 /** AnswerSheetDefinition から複数ページの ComputedMultiPageLayout を計算する */
 export function computeMultiPageLayoutFromDefinition(
   definition: AnswerSheetDefinition
@@ -60,39 +69,64 @@ export function computeMultiPageLayoutFromDefinition(
   const headerLayout = computeHeaderFieldLayout(
     settings,
     contentLeft,
-    margins.top
+    margins.top,
+    contentRight
   )
   const headerFields: ComputedHeaderField[] = headerLayout.fields
   const effectiveHeaderHeight =
     headerLayout.totalHeightMm > 0
-      ? headerLayout.totalHeightMm + 2
+      ? headerLayout.totalHeightMm + 2 + spacing.headerHeight
       : spacing.headerHeight
 
   const contentTop = margins.top + effectiveHeaderHeight
   const contentMaxY = paper.height - margins.bottom
 
-  const majorNumX = contentLeft
   const majorNumWidth = columnWidths.majorNumber
-  const subNumX = majorNumX + majorNumWidth
   const subNumWidth = columnWidths.subNumber
 
   const hasBranch = majorQuestions.some((mq) =>
     mq.subQuestions.some((sq) => sq.branchQuestions.length > 0)
   )
-  const branchNumX = subNumX + subNumWidth
   const branchNumWidth = hasBranch ? columnWidths.branchNumber : 0
 
-  interface PageData {
-    cells: ComputedCell[]
-    lines: ComputedLine[]
-    numberLabels: ComputedNumberLabel[]
+  // ============================
+  // 段組み: 各段の座標範囲を計算
+  // ============================
+
+  const mc = settings.multiColumn
+  const isMultiCol = mc.enabled && mc.columnCount > 1
+  const fullContentWidth = contentRight - contentLeft
+  const singleColWidth = isMultiCol
+    ? (fullContentWidth - (mc.columnCount - 1) * mc.columnGapMm) /
+      mc.columnCount
+    : fullContentWidth
+  const columnCount = isMultiCol ? mc.columnCount : 1
+
+  const colBoundsArr: ColBounds[] = []
+  for (let ci = 0; ci < columnCount; ci++) {
+    const colLeft = isMultiCol
+      ? contentLeft + ci * (singleColWidth + mc.columnGapMm)
+      : contentLeft
+    const colRight = colLeft + singleColWidth
+    colBoundsArr.push({
+      contentLeft: colLeft,
+      contentRight: colRight,
+      majorNumX: colLeft,
+      subNumX: colLeft + majorNumWidth,
+      branchNumX: colLeft + majorNumWidth + subNumWidth,
+    })
+  }
+
+  // ============================
+  // ページデータ構造
+  // ============================
+
+  interface PerColData {
     verticalRanges: { top: number; bottom: number }[]
     branchVerticalRanges: { top: number; bottom: number }[]
-    /** 横配置大問のY範囲（大問番号列縦線セグメント化用） */
     horizontalMajorRanges: { top: number; bottom: number }[]
     rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
     rowLeftEdges: { yTop: number; yBottom: number; leftX: number }[]
-    /** 大問ごとのレイアウト範囲（大問間スペーシング時の個別外枠描画用） */
     majorLayoutRanges: Array<{
       startY: number
       endY: number
@@ -102,11 +136,15 @@ export function computeMultiPageLayoutFromDefinition(
     contentBottomY: number
   }
 
-  function newPageData(): PageData {
+  interface PageData {
+    cells: ComputedCell[]
+    lines: ComputedLine[]
+    numberLabels: ComputedNumberLabel[]
+    columns: PerColData[]
+  }
+
+  function newPerColData(): PerColData {
     return {
-      cells: [],
-      lines: [],
-      numberLabels: [],
       verticalRanges: [],
       branchVerticalRanges: [],
       horizontalMajorRanges: [],
@@ -117,21 +155,36 @@ export function computeMultiPageLayoutFromDefinition(
     }
   }
 
+  function newPageData(): PageData {
+    return {
+      cells: [],
+      lines: [],
+      numberLabels: [],
+      columns: Array.from({ length: columnCount }, () => newPerColData()),
+    }
+  }
+
   const pagesData: PageData[] = [newPageData()]
   let currentPageIdx = 0
-  let currentY = contentTop
+
+  // ============================
+  // 大問レイアウト関数（段組み対応）
+  // ============================
 
   function layoutMajorOnPage(
     page: PageData,
     major: MajorQuestion,
     mi: number,
     startY: number,
-    pageIdx: number
+    pageIdx: number,
+    col: ColBounds,
+    colIdx: number
   ): number {
+    const colData = page.columns[colIdx]
     let localY = startY
     const majorStartY = localY
-    const horizontalAreaX = majorNumX + majorNumWidth
-    const horizontalAreaWidth = contentRight - horizontalAreaX
+    const horizontalAreaX = col.majorNumX + majorNumWidth
+    const horizontalAreaWidth = col.contentRight - horizontalAreaX
     const majorHeight = computeMajorHeight(
       major,
       baseRowHeight,
@@ -142,7 +195,7 @@ export function computeMultiPageLayoutFromDefinition(
     // 大問番号ラベル
     page.numberLabels.push({
       text: major.label,
-      x: majorNumX,
+      x: col.majorNumX,
       y: majorStartY,
       width: majorNumWidth,
       height:
@@ -213,7 +266,7 @@ export function computeMultiPageLayoutFromDefinition(
             page.cells,
             page.lines,
             page.numberLabels,
-            page.rowRightEdges
+            colData.rowRightEdges
           )
         } else {
           let ansX = cellX + effSubNumW
@@ -265,7 +318,7 @@ export function computeMultiPageLayoutFromDefinition(
         horizontalAreaWidth,
         baseRowHeight
       )) {
-        page.rowRightEdges.push(edge)
+        colData.rowRightEdges.push(edge)
       }
 
       // rowLeftEdges
@@ -276,7 +329,7 @@ export function computeMultiPageLayoutFromDefinition(
         horizontalAreaWidth,
         baseRowHeight
       )) {
-        page.rowLeftEdges.push({
+        colData.rowLeftEdges.push({
           yTop: edge.yTop,
           yBottom: edge.yBottom,
           leftX: edge.leftX,
@@ -333,9 +386,9 @@ export function computeMultiPageLayoutFromDefinition(
       const outerSw = getLineWidth("outer", settings.borderConfig)
       page.lines.push(
         {
-          x1: contentLeft,
+          x1: col.contentLeft,
           y1: majorStartY,
-          x2: contentLeft,
+          x2: col.contentLeft,
           y2: majorEndY,
           style: settings.borderConfig.outerBorder,
           strokeWidth: outerSw,
@@ -351,7 +404,7 @@ export function computeMultiPageLayoutFromDefinition(
           lineType: "outer",
         },
         {
-          x1: contentLeft,
+          x1: col.contentLeft,
           y1: majorStartY,
           x2: horizontalAreaX,
           y2: majorStartY,
@@ -360,7 +413,7 @@ export function computeMultiPageLayoutFromDefinition(
           lineType: "outer",
         },
         {
-          x1: contentLeft,
+          x1: col.contentLeft,
           y1: majorEndY,
           x2: horizontalAreaX,
           y2: majorEndY,
@@ -370,7 +423,10 @@ export function computeMultiPageLayoutFromDefinition(
         }
       )
 
-      page.horizontalMajorRanges.push({ top: majorStartY, bottom: majorEndY })
+      colData.horizontalMajorRanges.push({
+        top: majorStartY,
+        bottom: majorEndY,
+      })
 
       localY = majorEndY
     } else {
@@ -379,10 +435,10 @@ export function computeMultiPageLayoutFromDefinition(
 
       const subRightEdges = major.subQuestions.map((sub) => {
         const hb = sub.branchQuestions.length > 0
-        if (hb || !sub.manuscriptPaper?.enabled) return contentRight
+        if (hb || !sub.manuscriptPaper?.enabled) return col.contentRight
         const sh = computeSubHeight(sub, baseRowHeight)
         const esnw = sub.label === "" ? 0 : subNumWidth
-        const eax = subNumX + esnw + branchNumWidth
+        const eax = col.subNumX + esnw
         return (
           eax + (sh / sub.manuscriptPaper.rows) * sub.manuscriptPaper.columns
         )
@@ -393,14 +449,15 @@ export function computeMultiPageLayoutFromDefinition(
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
         const effSubNumW = sub.label === "" ? 0 : subNumWidth
-        const effBranchNumX = subNumX + effSubNumW
-        const effAnswerX = effBranchNumX + branchNumWidth
-        const effAnswerWidth = contentRight - effAnswerX
+        const effBranchNumX = col.subNumX + effSubNumW
+        const effBranchNumW = hasBranches ? branchNumWidth : 0
+        const effAnswerX = effBranchNumX + effBranchNumW
+        const effAnswerWidth = col.contentRight - effAnswerX
 
         if (effSubNumW > 0) {
           page.numberLabels.push({
             text: sub.label,
-            x: subNumX,
+            x: col.subNumX,
             y: subStartY,
             width: effSubNumW,
             height: subHeight,
@@ -417,7 +474,7 @@ export function computeMultiPageLayoutFromDefinition(
             major.label,
             subStartY,
             pageIdx,
-            subNumX,
+            col.subNumX,
             effSubNumW,
             effBranchNumX,
             branchNumWidth,
@@ -430,7 +487,7 @@ export function computeMultiPageLayoutFromDefinition(
             page.cells,
             page.lines,
             page.numberLabels,
-            page.rowRightEdges
+            colData.rowRightEdges
           )
 
           // 枝問番号列のセグメント（ラベルのある枝問のみ）
@@ -443,7 +500,7 @@ export function computeMultiPageLayoutFromDefinition(
                 if (branchSegStart === null) branchSegStart = branchY
               } else {
                 if (branchSegStart !== null) {
-                  page.branchVerticalRanges.push({
+                  colData.branchVerticalRanges.push({
                     top: branchSegStart,
                     bottom: branchY,
                   })
@@ -453,7 +510,7 @@ export function computeMultiPageLayoutFromDefinition(
               branchY += bqH
             }
             if (branchSegStart !== null) {
-              page.branchVerticalRanges.push({
+              colData.branchVerticalRanges.push({
                 top: branchSegStart,
                 bottom: branchY,
               })
@@ -493,15 +550,15 @@ export function computeMultiPageLayoutFromDefinition(
         }
 
         // vertical-sub行の右端
-        page.rowRightEdges.push({
+        colData.rowRightEdges.push({
           yTop: subStartY,
           yBottom: subStartY + subHeight,
           rightX: subRightEdges[si],
         })
-        page.rowLeftEdges.push({
+        colData.rowLeftEdges.push({
           yTop: subStartY,
           yBottom: subStartY + subHeight,
-          leftX: contentLeft,
+          leftX: col.contentLeft,
         })
 
         localY += subHeight
@@ -513,7 +570,7 @@ export function computeMultiPageLayoutFromDefinition(
             subRightEdges[si + 1]
           )
           page.lines.push({
-            x1: subNumX,
+            x1: col.subNumX,
             y1: localY,
             x2: dividerRightX,
             y2: localY,
@@ -534,14 +591,17 @@ export function computeMultiPageLayoutFromDefinition(
             if (subSegStart === null) subSegStart = subTrackY
           } else {
             if (subSegStart !== null) {
-              page.verticalRanges.push({ top: subSegStart, bottom: subTrackY })
+              colData.verticalRanges.push({
+                top: subSegStart,
+                bottom: subTrackY,
+              })
               subSegStart = null
             }
           }
           subTrackY += subH
         }
         if (subSegStart !== null) {
-          page.verticalRanges.push({ top: subSegStart, bottom: subTrackY })
+          colData.verticalRanges.push({ top: subSegStart, bottom: subTrackY })
         }
       }
     }
@@ -549,51 +609,91 @@ export function computeMultiPageLayoutFromDefinition(
     return localY
   }
 
-  // 大問を順番に配置
+  // ============================
+  // 大問を各段・ページに配置
+  // ============================
+
+  let currentColIdx = 0
+  const colCurrentY: number[] = Array(columnCount).fill(contentTop)
+
   for (let mi = 0; mi < majorQuestions.length; mi++) {
     const major = majorQuestions[mi]
-    const pgHorizontalAreaWidth = contentRight - majorNumX - majorNumWidth
+    let col = colBoundsArr[currentColIdx]
+    let colHorizWidth = col.contentRight - col.majorNumX - majorNumWidth
     const majorHeight = computeMajorHeight(
       major,
       baseRowHeight,
-      pgHorizontalAreaWidth,
+      colHorizWidth,
       subNumWidth
     )
     const spacingHeight =
-      mi > 0 && currentY > contentTop ? spacing.majorQuestionSpacing : 0
+      colCurrentY[currentColIdx] > contentTop ? spacing.majorQuestionSpacing : 0
 
+    // 現在の段に収まらない場合
     if (
-      currentY + spacingHeight + majorHeight > contentMaxY &&
-      currentY > contentTop
+      colCurrentY[currentColIdx] + spacingHeight + majorHeight > contentMaxY &&
+      colCurrentY[currentColIdx] > contentTop
     ) {
-      pagesData[currentPageIdx].contentBottomY = currentY
-      currentPageIdx++
-      pagesData.push(newPageData())
-      currentY = contentTop
-    } else {
-      currentY += spacingHeight
+      // 現在の段のcontentBottomYを確定
+      pagesData[currentPageIdx].columns[currentColIdx].contentBottomY =
+        colCurrentY[currentColIdx]
+
+      // 次の段を試す
+      currentColIdx++
+      if (currentColIdx >= columnCount) {
+        // 全段が満杯 → 新ページ
+        // 残りの段のcontentBottomYも確定
+        for (let ci = currentColIdx; ci < columnCount; ci++) {
+          if (colCurrentY[ci] > contentTop) {
+            pagesData[currentPageIdx].columns[ci].contentBottomY =
+              colCurrentY[ci]
+          }
+        }
+        currentPageIdx++
+        pagesData.push(newPageData())
+        currentColIdx = 0
+        colCurrentY.fill(contentTop)
+      }
+
+      col = colBoundsArr[currentColIdx]
+      colHorizWidth = col.contentRight - col.majorNumX - majorNumWidth
     }
 
-    const majorStartY = currentY
+    // スペーシング
+    if (colCurrentY[currentColIdx] > contentTop) {
+      colCurrentY[currentColIdx] += spacing.majorQuestionSpacing
+    }
+
+    const majorStartY = colCurrentY[currentColIdx]
     const page = pagesData[currentPageIdx]
-    const rightEdgesBefore = page.rowRightEdges.length
-    const leftEdgesBefore = page.rowLeftEdges.length
+    const colData = page.columns[currentColIdx]
+    const rightEdgesBefore = colData.rowRightEdges.length
+    const leftEdgesBefore = colData.rowLeftEdges.length
 
-    currentY = layoutMajorOnPage(page, major, mi, currentY, currentPageIdx)
+    colCurrentY[currentColIdx] = layoutMajorOnPage(
+      page,
+      major,
+      mi,
+      colCurrentY[currentColIdx],
+      currentPageIdx,
+      colBoundsArr[currentColIdx],
+      currentColIdx
+    )
 
-    page.majorLayoutRanges.push({
+    colData.majorLayoutRanges.push({
       startY: majorStartY,
-      endY: currentY,
-      rowRightEdges: page.rowRightEdges.slice(rightEdgesBefore),
-      rowLeftEdges: page.rowLeftEdges.slice(leftEdgesBefore),
+      endY: colCurrentY[currentColIdx],
+      rowRightEdges: colData.rowRightEdges.slice(rightEdgesBefore),
+      rowLeftEdges: colData.rowLeftEdges.slice(leftEdgesBefore),
     })
 
+    // 大問間の区切り線（majorQuestionSpacing === 0 のとき）
     if (spacing.majorQuestionSpacing === 0 && mi < majorQuestions.length - 1) {
       page.lines.push({
-        x1: contentLeft,
-        y1: currentY,
-        x2: contentRight,
-        y2: currentY,
+        x1: colBoundsArr[currentColIdx].contentLeft,
+        y1: colCurrentY[currentColIdx],
+        x2: colBoundsArr[currentColIdx].contentRight,
+        y2: colCurrentY[currentColIdx],
         style: settings.borderConfig.majorDivider,
         lineType: "major",
         strokeWidth: getLineWidth("major", settings.borderConfig),
@@ -601,147 +701,179 @@ export function computeMultiPageLayoutFromDefinition(
     }
   }
 
-  pagesData[currentPageIdx].contentBottomY = currentY
-
-  // ページごとにborder線・番号列線・OMRマーカーを追加
-  const pages: ComputedPageLayout[] = pagesData.map((pd, idx) => {
-    const pageContentBottom = pd.contentBottomY
-
-    // ページ末尾の大問区切り線を削除
-    const lastLine = pd.lines[pd.lines.length - 1]
-    if (
-      lastLine &&
-      lastLine.lineType === "major" &&
-      Math.abs(lastLine.y1 - pageContentBottom) < 0.01
-    ) {
-      pd.lines.pop()
+  // 最終ページの全段のcontentBottomYを確定
+  for (let ci = 0; ci < columnCount; ci++) {
+    if (colCurrentY[ci] > contentTop) {
+      pagesData[currentPageIdx].columns[ci].contentBottomY = colCurrentY[ci]
     }
+  }
 
-    // 外枠線（ステップ形状対応）
-    if (spacing.majorQuestionSpacing > 0 && pd.majorLayoutRanges.length > 1) {
-      for (const range of pd.majorLayoutRanges) {
+  // ============================
+  // ページごとに罫線・番号列線・OMRマーカーを追加
+  // ============================
+
+  const pages: ComputedPageLayout[] = pagesData.map((pd, idx) => {
+    // 全段のcontentBottomYの最大値
+    const pageContentBottom = Math.max(
+      contentTop,
+      ...pd.columns.map((c) => c.contentBottomY)
+    )
+
+    // 各段の罫線処理
+    for (let ci = 0; ci < columnCount; ci++) {
+      const col = colBoundsArr[ci]
+      const colData = pd.columns[ci]
+      if (colData.contentBottomY <= contentTop) continue // この段に内容がない
+
+      const colContentBottom = colData.contentBottomY
+
+      // 段末尾の大問区切り線を削除
+      for (let li = pd.lines.length - 1; li >= 0; li--) {
+        const ln = pd.lines[li]
+        if (
+          ln.lineType === "major" &&
+          Math.abs(ln.y1 - colContentBottom) < 0.01 &&
+          Math.abs(ln.x1 - col.contentLeft) < 0.01
+        ) {
+          pd.lines.splice(li, 1)
+          break
+        }
+      }
+
+      // 外枠線（ステップ形状対応）
+      if (
+        spacing.majorQuestionSpacing > 0 &&
+        colData.majorLayoutRanges.length > 1
+      ) {
+        for (const range of colData.majorLayoutRanges) {
+          addSteppedBorderLines(
+            pd.lines,
+            col.contentLeft,
+            range.startY,
+            col.contentRight,
+            range.endY,
+            settings.borderConfig.outerBorder,
+            settings.borderConfig,
+            range.rowRightEdges,
+            range.rowLeftEdges
+          )
+        }
+      } else if (colData.majorLayoutRanges.length > 0) {
         addSteppedBorderLines(
           pd.lines,
-          contentLeft,
-          range.startY,
-          contentRight,
-          range.endY,
+          col.contentLeft,
+          contentTop,
+          col.contentRight,
+          colContentBottom,
           settings.borderConfig.outerBorder,
           settings.borderConfig,
-          range.rowRightEdges,
-          range.rowLeftEdges
+          colData.rowRightEdges,
+          colData.rowLeftEdges
         )
       }
-    } else {
-      addSteppedBorderLines(
-        pd.lines,
-        contentLeft,
-        contentTop,
-        contentRight,
-        pageContentBottom,
-        settings.borderConfig.outerBorder,
-        settings.borderConfig,
-        pd.rowRightEdges,
-        pd.rowLeftEdges
-      )
-    }
 
-    // 大問番号列の縦線
-    {
-      const majorNcSwPage = getLineWidth(
-        "majorNumberColumn",
-        settings.borderConfig
-      )
-      const majorNumLineX = majorNumX + majorNumWidth
-      const majorColExcludeRanges = [...pd.horizontalMajorRanges]
-      if (spacing.majorQuestionSpacing > 0) {
-        for (let i = 0; i < pd.majorLayoutRanges.length - 1; i++) {
-          majorColExcludeRanges.push({
-            top: pd.majorLayoutRanges[i].endY,
-            bottom: pd.majorLayoutRanges[i + 1].startY,
-          })
+      // 大問番号列の縦線
+      {
+        const majorNcSwPage = getLineWidth(
+          "majorNumberColumn",
+          settings.borderConfig
+        )
+        const majorNumLineX = col.majorNumX + majorNumWidth
+        const majorColExcludeRanges = [...colData.horizontalMajorRanges]
+        if (spacing.majorQuestionSpacing > 0) {
+          for (let i = 0; i < colData.majorLayoutRanges.length - 1; i++) {
+            majorColExcludeRanges.push({
+              top: colData.majorLayoutRanges[i].endY,
+              bottom: colData.majorLayoutRanges[i + 1].startY,
+            })
+          }
+          majorColExcludeRanges.sort((a, b) => a.top - b.top)
         }
-        majorColExcludeRanges.sort((a, b) => a.top - b.top)
-      }
-      let segStart = contentTop
-      for (const range of majorColExcludeRanges) {
-        if (segStart < range.top - 0.01) {
+        let segStart = contentTop
+        for (const range of majorColExcludeRanges) {
+          if (segStart < range.top - 0.01) {
+            pd.lines.push({
+              x1: majorNumLineX,
+              y1: segStart,
+              x2: majorNumLineX,
+              y2: range.top,
+              style: settings.borderConfig.majorNumberDivider,
+              lineType: "majorNumberColumn",
+              strokeWidth: majorNcSwPage,
+            })
+          }
+          segStart = range.bottom
+        }
+        if (segStart < colContentBottom - 0.01) {
           pd.lines.push({
             x1: majorNumLineX,
             y1: segStart,
             x2: majorNumLineX,
-            y2: range.top,
+            y2: colContentBottom,
             style: settings.borderConfig.majorNumberDivider,
             lineType: "majorNumberColumn",
             strokeWidth: majorNcSwPage,
           })
         }
-        segStart = range.bottom
       }
-      if (segStart < pageContentBottom - 0.01) {
-        pd.lines.push({
-          x1: majorNumLineX,
-          y1: segStart,
-          x2: majorNumLineX,
-          y2: pageContentBottom,
-          style: settings.borderConfig.majorNumberDivider,
-          lineType: "majorNumberColumn",
-          strokeWidth: majorNcSwPage,
-        })
-      }
-    }
 
-    // 小問番号列の縦線
-    {
-      const subNcSwPage = getLineWidth("subNumberColumn", settings.borderConfig)
-      for (const range of pd.verticalRanges) {
-        const clipped = clipRangeToMajorLayouts(range, pd.majorLayoutRanges)
-        for (const cr of clipped) {
-          pd.lines.push({
-            x1: subNumX + subNumWidth,
-            y1: cr.top,
-            x2: subNumX + subNumWidth,
-            y2: cr.bottom,
-            style: settings.borderConfig.subNumberDivider,
-            lineType: "subNumberColumn",
-            strokeWidth: subNcSwPage,
-          })
+      // 小問番号列の縦線
+      {
+        const subNcSwPage = getLineWidth(
+          "subNumberColumn",
+          settings.borderConfig
+        )
+        for (const range of colData.verticalRanges) {
+          const clipped = clipRangeToMajorLayouts(
+            range,
+            colData.majorLayoutRanges
+          )
+          for (const cr of clipped) {
+            pd.lines.push({
+              x1: col.subNumX + subNumWidth,
+              y1: cr.top,
+              x2: col.subNumX + subNumWidth,
+              y2: cr.bottom,
+              style: settings.borderConfig.subNumberDivider,
+              lineType: "subNumberColumn",
+              strokeWidth: subNcSwPage,
+            })
+          }
         }
       }
-    }
 
-    // 枝問番号列の縦線
-    if (hasBranch) {
-      const branchNcSwPage = getLineWidth(
-        "branchNumberColumn",
-        settings.borderConfig
-      )
-      for (const range of pd.branchVerticalRanges) {
-        const clipped = clipRangeToMajorLayouts(range, pd.majorLayoutRanges)
-        for (const cr of clipped) {
-          pd.lines.push({
-            x1: branchNumX + branchNumWidth,
-            y1: cr.top,
-            x2: branchNumX + branchNumWidth,
-            y2: cr.bottom,
-            style: settings.borderConfig.branchNumberDivider,
-            lineType: "branchNumberColumn",
-            strokeWidth: branchNcSwPage,
-          })
+      // 枝問番号列の縦線
+      if (hasBranch) {
+        const branchNcSwPage = getLineWidth(
+          "branchNumberColumn",
+          settings.borderConfig
+        )
+        for (const range of colData.branchVerticalRanges) {
+          const clipped = clipRangeToMajorLayouts(
+            range,
+            colData.majorLayoutRanges
+          )
+          for (const cr of clipped) {
+            pd.lines.push({
+              x1: col.branchNumX + branchNumWidth,
+              y1: cr.top,
+              x2: col.branchNumX + branchNumWidth,
+              y2: cr.bottom,
+              style: settings.borderConfig.branchNumberDivider,
+              lineType: "branchNumberColumn",
+              strokeWidth: branchNcSwPage,
+            })
+          }
         }
       }
     }
 
     // 段組み仕切り線
     const mcDividerLine = settings.multiColumn.dividerLine
-    if (settings.multiColumn.enabled && mcDividerLine) {
-      const mc = settings.multiColumn
-      const singleColumnWidth =
-        (contentRight - contentLeft - (mc.columnCount - 1) * mc.columnGapMm) /
-        mc.columnCount
-      for (let ci = 1; ci < mc.columnCount; ci++) {
+    if (isMultiCol && mcDividerLine) {
+      for (let ci = 1; ci < columnCount; ci++) {
         const dividerX =
-          contentLeft + ci * singleColumnWidth + (ci - 0.5) * mc.columnGapMm
+          contentLeft + ci * singleColWidth + (ci - 0.5) * mc.columnGapMm
         pd.lines.push({
           x1: dividerX,
           y1: contentTop,
