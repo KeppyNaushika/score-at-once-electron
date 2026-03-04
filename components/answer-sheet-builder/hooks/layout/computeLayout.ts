@@ -22,6 +22,7 @@ import {
 } from "./cellBuilder"
 import { computeMultiPageLayoutFromDefinition } from "./computeMultiPageLayout"
 import {
+  buildBranchGridLayout,
   buildSubGridLayout,
   computeGridRowLeftEdges,
   computeGridRowRightEdges,
@@ -268,15 +269,39 @@ export function computeLayoutFromDefinition(
         }
       }
 
-      // rowRightEdges: Y区間ごとの右端X座標を計算
-      for (const edge of computeGridRowRightEdges(
-        gridCells,
-        majorStartY,
-        horizontalAreaX,
-        horizontalAreaWidth,
-        baseRowHeight
-      )) {
-        majorRightEdges.push(edge)
+      // rowRightEdges: Y区間ごとの右端X座標を計算（枝問横配置を考慮）
+      for (const gc of gridCells) {
+        const sub2 = gc.item
+        const gcCellX = horizontalAreaX + gc.x * horizontalAreaWidth
+        const gcCellW = gc.width * horizontalAreaWidth
+        const gcCellY = majorStartY + gc.y * baseRowHeight
+        const gcCellH = gc.height * baseRowHeight
+        const gcCellRight = gcCellX + gcCellW
+        const gcEffSubNumW = sub2.label === "" ? 0 : subNumWidth
+
+        if (
+          sub2.branchQuestions.length > 0 &&
+          isGridHorizontal(sub2.branchQuestions)
+        ) {
+          const branchAreaX = gcCellX + gcEffSubNumW
+          const branchAreaWidth = gcCellRight - branchAreaX
+          const branchCells = buildBranchGridLayout(sub2.branchQuestions)
+          for (const edge of computeGridRowRightEdges(
+            branchCells,
+            gcCellY,
+            branchAreaX,
+            branchAreaWidth,
+            baseRowHeight
+          )) {
+            majorRightEdges.push(edge)
+          }
+        } else {
+          majorRightEdges.push({
+            yTop: gcCellY,
+            yBottom: gcCellY + gcCellH,
+            rightX: gcCellRight,
+          })
+        }
       }
 
       // rowLeftEdges: Y区間ごとの左端X座標を計算
@@ -476,12 +501,27 @@ export function computeLayoutFromDefinition(
           )
         }
 
-        // vertical-sub行の右端（原稿用紙セルは必要幅に制限）
-        majorRightEdges.push({
-          yTop: subStartY,
-          yBottom: subStartY + subHeight,
-          rightX: subRightEdges[si],
-        })
+        // vertical-sub行の右端（枝問横配置時は枝問グリッドの右端を使用）
+        if (hasBranches && isGridHorizontal(sub.branchQuestions)) {
+          const branchAreaX = subNumX + effSubNumW
+          const branchAreaWidth = subRightEdges[si] - branchAreaX
+          const branchCells = buildBranchGridLayout(sub.branchQuestions)
+          for (const edge of computeGridRowRightEdges(
+            branchCells,
+            subStartY,
+            branchAreaX,
+            branchAreaWidth,
+            baseRowHeight
+          )) {
+            majorRightEdges.push(edge)
+          }
+        } else {
+          majorRightEdges.push({
+            yTop: subStartY,
+            yBottom: subStartY + subHeight,
+            rightX: subRightEdges[si],
+          })
+        }
         // vertical-sub行の左端は常にcontentLeft
         majorLeftEdges.push({
           yTop: subStartY,
