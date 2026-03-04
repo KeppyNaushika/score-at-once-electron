@@ -198,7 +198,7 @@ export function AnswerSheetSVGRenderer({
       {/* セル内テキスト要素（インラインマークアップ対応） */}
       {cells
         .filter((c) => c.cellType === "answer")
-        .flatMap((cell) => {
+        .flatMap((cell, cellIdx) => {
           // 原稿用紙セル: 字埋めレンダリング
           if (cell.manuscriptGrid) {
             const g = cell.manuscriptGrid
@@ -223,7 +223,7 @@ export function AnswerSheetSVGRenderer({
                 const cy = g.gridY + row * g.cellSizeMm + g.cellSizeMm / 2
                 return (
                   <text
-                    key={`mc-${cell.label}-${ci}`}
+                    key={`mc-${cellIdx}-${cell.label}-${ci}`}
                     x={cx}
                     y={cy}
                     fontSize={fontSize}
@@ -268,7 +268,7 @@ export function AnswerSheetSVGRenderer({
 
               return (
                 <foreignObject
-                  key={`te-${cell.label}-${ti}`}
+                  key={`te-${cellIdx}-${cell.label}-${ti}`}
                   x={cell.x + 1}
                   y={cell.y + 1}
                   width={cell.width - 2}
@@ -331,7 +331,7 @@ export function AnswerSheetSVGRenderer({
 
             return (
               <text
-                key={`te-${cell.label}-${ti}`}
+                key={`te-${cellIdx}-${cell.label}-${ti}`}
                 x={tx}
                 y={ty}
                 fontSize={te.fontSize}
@@ -349,7 +349,7 @@ export function AnswerSheetSVGRenderer({
       {/* 画像要素 */}
       {cells
         .filter((c) => c.cellType === "answer" && c.imageElements?.length)
-        .flatMap((cell) =>
+        .flatMap((cell, cellIdx) =>
           cell
             .imageElements!.filter((ie) => {
               const vis = ie.visibility ?? "both"
@@ -374,7 +374,7 @@ export function AnswerSheetSVGRenderer({
                     : "none"
               return (
                 <image
-                  key={`img-${cell.label}-${ii}`}
+                  key={`img-${cellIdx}-${cell.label}-${ii}`}
                   href={`appimg:///${ie.imagePath}`}
                   x={ix}
                   y={iy}
@@ -390,13 +390,13 @@ export function AnswerSheetSVGRenderer({
       {/* OMRバブル */}
       {cells
         .filter((c) => c.cellType === "answer" && c.omrBubbles?.length)
-        .flatMap((cell) =>
+        .flatMap((cell, cellIdx) =>
           cell.omrBubbles!.map((bubble, bi) => {
             const cx = bubble.normalizedCx * pageWidthMm
             const cy = bubble.normalizedCy * pageHeightMm
             const r = bubble.normalizedRadius * pageWidthMm
             return (
-              <g key={`omr-bubble-${cell.label}-${bi}`}>
+              <g key={`omr-bubble-${cellIdx}-${cell.label}-${bi}`}>
                 <circle
                   cx={cx}
                   cy={cy}
@@ -424,7 +424,7 @@ export function AnswerSheetSVGRenderer({
       {/* OMR数字欄 */}
       {cells
         .filter((c) => c.cellType === "answer" && c.omrDigitBoxes?.length)
-        .flatMap((cell) =>
+        .flatMap((cell, cellIdx) =>
           cell.omrDigitBoxes!.map((box, di) => {
             const x = box.normalizedX * pageWidthMm
             const y = box.normalizedY * pageHeightMm
@@ -432,7 +432,7 @@ export function AnswerSheetSVGRenderer({
             const h = box.normalizedH * pageHeightMm
             return (
               <rect
-                key={`omr-digit-${cell.label}-${di}`}
+                key={`omr-digit-${cellIdx}-${cell.label}-${di}`}
                 x={x}
                 y={y}
                 width={w}
@@ -448,14 +448,14 @@ export function AnswerSheetSVGRenderer({
       {/* 原稿用紙グリッド */}
       {cells
         .filter((c) => c.cellType === "answer" && c.manuscriptGrid)
-        .map((cell) => {
+        .map((cell, cellIdx) => {
           const g = cell.manuscriptGrid!
           const gridLines: React.ReactNode[] = []
           for (let col = 1; col < g.columns; col++) {
             const x = g.gridX + col * g.cellSizeMm
             gridLines.push(
               <line
-                key={`mg-v-${cell.label}-${col}`}
+                key={`mg-v-${cellIdx}-${cell.label}-${col}`}
                 x1={x}
                 y1={g.gridY}
                 x2={x}
@@ -469,7 +469,7 @@ export function AnswerSheetSVGRenderer({
             const y = g.gridY + row * g.cellSizeMm
             gridLines.push(
               <line
-                key={`mg-h-${cell.label}-${row}`}
+                key={`mg-h-${cellIdx}-${cell.label}-${row}`}
                 x1={g.gridX}
                 y1={y}
                 x2={g.gridX + g.gridWidth}
@@ -479,7 +479,7 @@ export function AnswerSheetSVGRenderer({
               />
             )
           }
-          return <g key={`mg-${cell.label}`}>{gridLines}</g>
+          return <g key={`mg-${cellIdx}-${cell.label}`}>{gridLines}</g>
         })}
 
       {/* 溢れ警告（単一ページモード時のみ表示） */}
