@@ -138,6 +138,19 @@ export interface ComputedOMRMarker {
   size: number
 }
 
+export interface ComputedHeaderField {
+  fieldId: string
+  label: string
+  x: number
+  y: number
+  width: number
+  height: number
+  gridCount: number
+  lineStyle: LineStyle
+  lineWidth: number
+  gridCellWidthMm?: number
+}
+
 export interface ComputedLayout {
   pageWidthMm: number
   pageHeightMm: number
@@ -145,6 +158,7 @@ export interface ComputedLayout {
   lines: ComputedLine[]
   numberLabels: ComputedNumberLabel[]
   omrMarkerPositions: ComputedOMRMarker[]
+  headerFields: ComputedHeaderField[]
   /** ページ溢れ時にtrueになる */
   overflow: boolean
   /** 使用した高さ（mm） */
@@ -161,6 +175,7 @@ export interface ComputedPageLayout {
   lines: ComputedLine[]
   numberLabels: ComputedNumberLabel[]
   omrMarkerPositions: ComputedOMRMarker[]
+  headerFields: ComputedHeaderField[]
   contentHeightMm: number
 }
 

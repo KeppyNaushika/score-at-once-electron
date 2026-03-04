@@ -9,6 +9,7 @@ import type {
   AnswerSheetDefinition,
   BranchQuestion,
   GlobalSettings,
+  HeaderFieldDefinition,
   LabelPresets,
   MajorQuestion,
   SubQuestion,
@@ -17,6 +18,7 @@ import type {
 import {
   createDefaultBranchQuestion,
   createDefaultDefinition,
+  createDefaultHeaderField,
   createDefaultMajorQuestion,
   createDefaultSubQuestion,
   getCircledNumber,
@@ -286,6 +288,52 @@ function reducer(
       return { ...state, labelPresets: newPresets, majorQuestions }
     }
 
+    case "ADD_HEADER_FIELD": {
+      const fields = [...state.settings.headerFields]
+      const newField = createDefaultHeaderField({
+        ...action.payload,
+        order: fields.length,
+      })
+      fields.push(newField)
+      return {
+        ...state,
+        settings: { ...state.settings, headerFields: fields },
+      }
+    }
+
+    case "UPDATE_HEADER_FIELD": {
+      const { fieldId, data } = action.payload
+      const fields = state.settings.headerFields.map((f) =>
+        f.id === fieldId ? { ...f, ...data } : f
+      )
+      return {
+        ...state,
+        settings: { ...state.settings, headerFields: fields },
+      }
+    }
+
+    case "DELETE_HEADER_FIELD": {
+      const fields = state.settings.headerFields
+        .filter((f) => f.id !== action.payload.fieldId)
+        .map((f, i) => ({ ...f, order: i }))
+      return {
+        ...state,
+        settings: { ...state.settings, headerFields: fields },
+      }
+    }
+
+    case "REORDER_HEADER_FIELDS": {
+      const { fromIndex, toIndex } = action.payload
+      const fields = [...state.settings.headerFields]
+      const [moved] = fields.splice(fromIndex, 1)
+      fields.splice(toIndex, 0, moved)
+      const reordered = fields.map((f, i) => ({ ...f, order: i }))
+      return {
+        ...state,
+        settings: { ...state.settings, headerFields: reordered },
+      }
+    }
+
     default:
       return state
   }
@@ -429,6 +477,33 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     [dispatch]
   )
 
+  const addHeaderField = useCallback(
+    (defaults?: Partial<HeaderFieldDefinition>) =>
+      dispatch({ type: "ADD_HEADER_FIELD", payload: defaults }),
+    [dispatch]
+  )
+
+  const updateHeaderField = useCallback(
+    (fieldId: string, data: Partial<HeaderFieldDefinition>) =>
+      dispatch({ type: "UPDATE_HEADER_FIELD", payload: { fieldId, data } }),
+    [dispatch]
+  )
+
+  const deleteHeaderField = useCallback(
+    (fieldId: string) =>
+      dispatch({ type: "DELETE_HEADER_FIELD", payload: { fieldId } }),
+    [dispatch]
+  )
+
+  const reorderHeaderFields = useCallback(
+    (fromIndex: number, toIndex: number) =>
+      dispatch({
+        type: "REORDER_HEADER_FIELDS",
+        payload: { fromIndex, toIndex },
+      }),
+    [dispatch]
+  )
+
   return {
     definition,
     dispatch,
@@ -448,6 +523,10 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     reorderSubQuestions,
     reorderBranchQuestions,
     setLabelPreset,
+    addHeaderField,
+    updateHeaderField,
+    deleteHeaderField,
+    reorderHeaderFields,
     canUndo,
     canRedo,
     undo,

@@ -17,7 +17,9 @@ import type { RenderMode } from "@/types/answerSheetDefinition.types"
 import { ExamIntegrationDialog } from "./components/export/ExamIntegrationDialog"
 import { ExportDialog } from "./components/export/ExportDialog"
 import { GlobalSettingsForm } from "./components/form/GlobalSettingsForm"
+import { HeaderFieldEditor } from "./components/form/HeaderFieldEditor"
 import { LineStylePicker } from "./components/form/LineStylePicker"
+import { MultiColumnSettings } from "./components/form/MultiColumnSettings"
 import { OMRMarkerSettings } from "./components/form/OMRMarkerSettings"
 import { QuestionListEditor } from "./components/form/QuestionListEditor"
 import { AnswerSheetPreview } from "./components/preview/AnswerSheetPreview"
@@ -60,6 +62,10 @@ export function AnswerSheetBuilderMainView({
     reorderSubQuestions,
     reorderBranchQuestions,
     setLabelPreset,
+    addHeaderField,
+    updateHeaderField,
+    deleteHeaderField,
+    reorderHeaderFields,
     canUndo,
     canRedo,
     undo,
@@ -242,10 +248,23 @@ export function AnswerSheetBuilderMainView({
 
           <TabsContent value="paper" className="min-h-0 flex-1">
             <ScrollArea className="h-full">
-              <div className="p-3">
+              <div className="space-y-6 p-3">
                 <GlobalSettingsForm
                   settings={definition.settings}
                   onUpdate={updateSettings}
+                />
+                <Separator />
+                <MultiColumnSettings
+                  settings={definition.settings}
+                  onUpdate={updateSettings}
+                />
+                <Separator />
+                <HeaderFieldEditor
+                  fields={definition.settings.headerFields}
+                  onAdd={addHeaderField}
+                  onUpdate={updateHeaderField}
+                  onDelete={deleteHeaderField}
+                  onReorder={reorderHeaderFields}
                 />
               </div>
             </ScrollArea>

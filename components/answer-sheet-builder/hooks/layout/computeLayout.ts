@@ -8,6 +8,7 @@
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 import type {
   ComputedCell,
+  ComputedHeaderField,
   ComputedLayout,
   ComputedLine,
   ComputedNumberLabel,
@@ -26,6 +27,7 @@ import {
   gridTotalHeight,
   isGridHorizontal,
 } from "./gridBuilder"
+import { computeHeaderFieldLayout } from "./headerFieldLayout"
 import {
   clipRangeToMajorLayouts,
   getLineWidth,
@@ -50,6 +52,18 @@ export function computeLayoutFromDefinition(
   const contentLeft = margins.left
   const contentRight = paper.width - margins.right
 
+  // ヘッダーフィールドレイアウト計算
+  const headerLayout = computeHeaderFieldLayout(
+    settings,
+    contentLeft,
+    margins.top
+  )
+  const headerFields: ComputedHeaderField[] = headerLayout.fields
+  const effectiveHeaderHeight =
+    headerLayout.totalHeightMm > 0
+      ? headerLayout.totalHeightMm + 2 // 2mm gap between header and content
+      : spacing.headerHeight
+
   const majorNumX = contentLeft
   const majorNumWidth = columnWidths.majorNumber
   const subNumX = majorNumX + majorNumWidth
@@ -73,7 +87,7 @@ export function computeLayoutFromDefinition(
     rowLeftEdges: { yTop: number; yBottom: number; leftX: number }[]
   }> = []
 
-  let currentY = margins.top + spacing.headerHeight
+  let currentY = margins.top + effectiveHeaderHeight
 
   majorQuestions.forEach((major, mi) => {
     if (mi > 0) {
@@ -497,7 +511,7 @@ export function computeLayoutFromDefinition(
   })
 
   const contentBottom = currentY
-  const contentTop = margins.top + spacing.headerHeight
+  const contentTop = margins.top + effectiveHeaderHeight
 
   // 外枠（ステップ形状対応）
   if (spacing.majorQuestionSpacing > 0 && majorLayoutRanges.length > 1) {
@@ -535,7 +549,7 @@ export function computeLayoutFromDefinition(
   const branchVerticalRanges: { top: number; bottom: number }[] = []
   const horizontalMajorRanges: { top: number; bottom: number }[] = []
   {
-    let trackY = margins.top + spacing.headerHeight
+    let trackY = margins.top + effectiveHeaderHeight
     for (let mi2 = 0; mi2 < majorQuestions.length; mi2++) {
       const mq = majorQuestions[mi2]
       if (mi2 > 0) {
@@ -713,6 +727,28 @@ export function computeLayoutFromDefinition(
     }
   }
 
+  // 段組み仕切り線
+  const mcDividerLine = settings.multiColumn.dividerLine
+  if (settings.multiColumn.enabled && mcDividerLine) {
+    const mc = settings.multiColumn
+    const singleColumnWidth =
+      (contentRight - contentLeft - (mc.columnCount - 1) * mc.columnGapMm) /
+      mc.columnCount
+    for (let ci = 1; ci < mc.columnCount; ci++) {
+      const dividerX =
+        contentLeft + ci * singleColumnWidth + (ci - 0.5) * mc.columnGapMm
+      lines.push({
+        x1: dividerX,
+        y1: contentTop,
+        x2: dividerX,
+        y2: contentBottom,
+        style: mcDividerLine,
+        lineType: "columnDivider",
+        strokeWidth: mc.dividerLineWidth,
+      })
+    }
+  }
+
   // OMRマーカー
   const omrMarkerPositions = computeOMRMarkers(settings, paper)
 
@@ -723,6 +759,7 @@ export function computeLayoutFromDefinition(
     lines,
     numberLabels,
     omrMarkerPositions,
+    headerFields,
     overflow: contentBottom > paper.height - margins.bottom,
     contentHeightMm: contentBottom - margins.top,
   }

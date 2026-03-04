@@ -21,6 +21,8 @@ import type {
   CellTextElement,
   FontConfig,
   GlobalSettings,
+  HeaderFieldDefinition,
+  LineStyle,
   MajorQuestion,
   SubQuestion,
 } from "../../../types/answerSheetDefinition.types"
@@ -67,6 +69,11 @@ export type FlatGlobalSettings = {
   fontMajorNumberSize: number
   fontSubNumberSize: number
   fontBranchNumberSize: number
+  multiColumnEnabled: boolean
+  multiColumnCount: number
+  multiColumnGapMm: number
+  multiColumnDividerLine: string | null
+  multiColumnDividerLineWidth: number
 }
 
 /** GlobalSettings をDBフラットカラム形式に変換する */
@@ -109,6 +116,11 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
     fontMajorNumberSize: s.fonts.majorNumberSize,
     fontSubNumberSize: s.fonts.subNumberSize,
     fontBranchNumberSize: s.fonts.branchNumberSize,
+    multiColumnEnabled: s.multiColumn.enabled,
+    multiColumnCount: s.multiColumn.columnCount,
+    multiColumnGapMm: s.multiColumn.columnGapMm,
+    multiColumnDividerLine: s.multiColumn.dividerLine,
+    multiColumnDividerLineWidth: s.multiColumn.dividerLineWidth,
   }
 }
 
@@ -163,6 +175,14 @@ export function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
       subNumberSize: row.fontSubNumberSize,
       branchNumberSize: row.fontBranchNumberSize,
     } as FontConfig,
+    multiColumn: {
+      enabled: row.multiColumnEnabled,
+      columnCount: row.multiColumnCount as 2 | 3,
+      columnGapMm: row.multiColumnGapMm,
+      dividerLine: (row.multiColumnDividerLine as LineStyle) ?? null,
+      dividerLineWidth: row.multiColumnDividerLineWidth,
+    },
+    headerFields: [],
   }
 }
 
@@ -224,6 +244,22 @@ export function dbToOmrConfig(
 /** DbDefinitionFull を AnswerSheetDefinition に変換する */
 export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
   const settings = unflattenGlobalSettings(row)
+
+  // ヘッダーフィールドをDBから復元
+  if (row.headerFields) {
+    settings.headerFields = row.headerFields.map(
+      (hf): HeaderFieldDefinition => ({
+        id: hf.id,
+        label: hf.label,
+        widthMm: hf.widthMm,
+        heightMm: hf.heightMm,
+        gridCount: hf.gridCount,
+        lineStyle: hf.lineStyle as LineStyle,
+        lineWidth: hf.lineWidth,
+        order: hf.order,
+      })
+    )
+  }
   const majorQuestions: MajorQuestion[] = row.majorQuestions.map((mq) => ({
     id: mq.id,
     label: mq.label,

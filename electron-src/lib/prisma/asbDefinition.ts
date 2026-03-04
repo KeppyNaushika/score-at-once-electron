@@ -8,6 +8,7 @@
 import type {
   AsbBranchQuestion,
   AsbDefinition,
+  AsbHeaderField,
   AsbImageElement,
   AsbMajorQuestion,
   AsbOmrConfig,
@@ -29,6 +30,7 @@ import prisma from "./client"
 // =============================================================================
 
 export type DbDefinitionFull = AsbDefinition & {
+  headerFields: AsbHeaderField[]
   majorQuestions: (AsbMajorQuestion & {
     subQuestions: (AsbSubQuestion & {
       branchQuestions: (AsbBranchQuestion & {
@@ -60,6 +62,7 @@ export type DbDefinitionFull = AsbDefinition & {
 }
 
 const fullInclude = {
+  headerFields: { orderBy: { order: "asc" as const } },
   majorQuestions: {
     orderBy: { order: "asc" as const },
     include: {
@@ -204,6 +207,24 @@ export async function saveAsbDefinition(
         ...flat,
       },
     })
+
+    // ヘッダーフィールドを作成
+    for (let hi = 0; hi < definition.settings.headerFields.length; hi++) {
+      const hf = definition.settings.headerFields[hi]
+      await tx.asbHeaderField.create({
+        data: {
+          id: hf.id,
+          definitionId: definition.id,
+          label: hf.label,
+          widthMm: hf.widthMm,
+          heightMm: hf.heightMm,
+          gridCount: hf.gridCount,
+          lineStyle: hf.lineStyle,
+          lineWidth: hf.lineWidth,
+          order: hi,
+        },
+      })
+    }
 
     // 大問 → 小問 → 枝問 を再帰的に作成
     for (let mi = 0; mi < definition.majorQuestions.length; mi++) {

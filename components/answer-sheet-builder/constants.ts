@@ -2,6 +2,7 @@ import type {
   AnswerSheetDefinition,
   BranchQuestion,
   GlobalSettings,
+  HeaderFieldDefinition,
   MajorQuestion,
   PaperSize,
   SubQuestion,
@@ -58,6 +59,14 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
     branchNumberSize: 5,
   },
   numberDisplayMode: "multirow",
+  multiColumn: {
+    enabled: false,
+    columnCount: 2,
+    columnGapMm: 5,
+    dividerLine: null,
+    dividerLineWidth: 0.3,
+  },
+  headerFields: [],
 }
 
 // =====================
@@ -102,6 +111,34 @@ export function createDefaultMajorQuestion(
     subQuestions: [createDefaultSubQuestion(subLabel)],
   }
 }
+
+export function createDefaultHeaderField(
+  overrides?: Partial<HeaderFieldDefinition>
+): HeaderFieldDefinition {
+  return {
+    id: generateId(),
+    label: overrides?.label ?? "フィールド",
+    widthMm: overrides?.widthMm ?? 30,
+    heightMm: overrides?.heightMm ?? 8,
+    gridCount: overrides?.gridCount ?? 0,
+    lineStyle: overrides?.lineStyle ?? "solid",
+    lineWidth: overrides?.lineWidth ?? 0.4,
+    order: overrides?.order ?? 0,
+  }
+}
+
+export const HEADER_FIELD_PRESETS: {
+  label: string
+  defaults: Partial<HeaderFieldDefinition>
+}[] = [
+  {
+    label: "受験番号",
+    defaults: { label: "受験番号", widthMm: 40, gridCount: 8 },
+  },
+  { label: "クラス", defaults: { label: "クラス", widthMm: 20, gridCount: 3 } },
+  { label: "番号", defaults: { label: "番号", widthMm: 20, gridCount: 3 } },
+  { label: "氏名", defaults: { label: "氏名", widthMm: 60, gridCount: 0 } },
+]
 
 export function createDefaultDefinition(): AnswerSheetDefinition {
   return {

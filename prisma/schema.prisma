@@ -660,6 +660,12 @@ model AsbDefinition {
   fontMajorNumberSize Float  @default(6)
   fontSubNumberSize   Float  @default(6)
   fontBranchNumberSize Float @default(5)
+  // MultiColumn
+  multiColumnEnabled          Boolean @default(false)
+  multiColumnCount            Int     @default(2)
+  multiColumnGapMm            Float   @default(5)
+  multiColumnDividerLine      String?
+  multiColumnDividerLineWidth Float   @default(0.3)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -668,8 +674,26 @@ model AsbDefinition {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   majorQuestions AsbMajorQuestion[]
+  headerFields   AsbHeaderField[]
 
   @@index([userId])
+}
+
+/// ヘッダー記入欄
+model AsbHeaderField {
+  id           String @id @default(uuid())
+  definitionId String
+  label        String
+  widthMm      Float  @default(30)
+  heightMm     Float  @default(8)
+  gridCount    Int    @default(0)
+  lineStyle    String @default("solid")
+  lineWidth    Float  @default(0.4)
+  order        Int    @default(0)
+
+  definition AsbDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  @@index([definitionId])
 }
 
 /// 大問
