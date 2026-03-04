@@ -213,6 +213,10 @@ export function dbImageElements(
     horizontalAlign: ie.horizontalAlign as CellImageElement["horizontalAlign"],
     verticalAlign: ie.verticalAlign as CellImageElement["verticalAlign"],
     opacity: ie.opacity,
+    visibility:
+      ie.visibility !== "both"
+        ? (ie.visibility as CellImageElement["visibility"])
+        : undefined,
   }))
 }
 
