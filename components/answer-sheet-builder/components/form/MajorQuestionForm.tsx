@@ -15,7 +15,7 @@ import type {
   BranchQuestion,
   MajorQuestion,
   SubQuestion,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import { SubQuestionForm } from "./SubQuestionForm"
 

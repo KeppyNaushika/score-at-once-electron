@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Minus, Move, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import type { RenderMode } from "@/types/answerSheetBuilder.types"
+import type { RenderMode } from "@/types/answerSheetDefinition.types"
 
 interface PreviewToolbarProps {
   zoom: number

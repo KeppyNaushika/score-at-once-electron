@@ -16,7 +16,7 @@ import fs from "fs"
 import path from "path"
 import sharp from "sharp"
 
-import type { ComputedCell } from "../../../types/answerSheetBuilder.types"
+import type { ComputedCell } from "../../../types/answerSheetLayout.types"
 import type {
   BoundingBox,
   CoordinateTransform,

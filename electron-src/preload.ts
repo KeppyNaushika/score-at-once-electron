@@ -1167,7 +1167,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     loadDefinition: (id: string) =>
       ipcRenderer.invoke("asb:load-definition", id),
     saveDefinition: (
-      definition: import("../types/answerSheetBuilder.types").AnswerSheetDefinition,
+      definition: import("../types/answerSheetDefinition.types").AnswerSheetDefinition,
       userId: string
     ) => ipcRenderer.invoke("asb:save-definition", definition, userId),
     deleteDefinition: (id: string) =>

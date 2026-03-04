@@ -9,7 +9,6 @@ import path from "path"
 import sharp from "sharp"
 
 import type {
-  AnswerSheetDefinition,
   ASBConvertToExamArgs,
   ASBDeleteImageArgs,
   ASBExportPdfArgs,
@@ -17,6 +16,7 @@ import type {
   ASBPrintArgs,
   ASBUploadImageArgs,
 } from "../../types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "../../types/answerSheetDefinition.types"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
 import {
   getAbsolutePathFromData,

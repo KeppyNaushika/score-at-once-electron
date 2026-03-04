@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { ComputedCell } from "@/types/answerSheetBuilder.types"
+import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type {
   OMRBatchProgress,
   OMRCellConfig,

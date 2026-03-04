@@ -6,7 +6,7 @@
  * 塗りつぶし率からマーク状態を判定する。
  */
 
-import type { ComputedCell } from "../../../types/answerSheetBuilder.types"
+import type { ComputedCell } from "../../../types/answerSheetLayout.types"
 import type {
   CoordinateTransform,
   OMRCellConfig,

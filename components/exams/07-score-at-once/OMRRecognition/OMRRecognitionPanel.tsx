@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Slider } from "@/components/ui/slider"
-import type { ComputedCell } from "@/types/answerSheetBuilder.types"
+import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type { OMRCellConfig, OMRCellResult, Point } from "@/types/omr.types"
 
 import { useOMRRecognition } from "./hooks/useOMRRecognition"

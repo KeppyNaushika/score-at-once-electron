@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
 import { useAnswerSheetExport } from "../../hooks/useAnswerSheetExport"
 
@@ -22,6 +22,10 @@ interface ExportDialogProps {
   definition: AnswerSheetDefinition
 }
 
+/**
+ * PDF/PNG出力・印刷のダイアログコンポーネント。
+ * 出力形式の選択とDPI設定を提供する。
+ */
 export function ExportDialog({
   open,
   onOpenChange,

@@ -6,7 +6,7 @@ import { BrowserWindow, ipcMain } from "electron"
 import fs from "fs"
 import path from "path"
 
-import type { ComputedCell } from "../../types/answerSheetBuilder.types"
+import type { ComputedCell } from "../../types/answerSheetLayout.types"
 import type {
   MarkerDetectionResult,
   OMRBatchProgress,

@@ -9,14 +9,13 @@ import {
   parseInlineMarkup,
   stripMarkup,
 } from "@/lib/answer-sheet-builder/inlineMarkupParser"
+import type { LineStyle, RenderMode } from "@/types/answerSheetDefinition.types"
 import type {
   ComputedCell,
   ComputedLine,
   ComputedMultiPageLayout,
   ComputedPageLayout,
-  LineStyle,
-  RenderMode,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetLayout.types"
 
 /** mm → SVGのpx変換（出力DPIに応じて外部でスケーリング） */
 const MM_SCALE = 1

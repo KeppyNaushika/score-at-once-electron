@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
-import type { RenderMode } from "@/types/answerSheetBuilder.types"
+import type { RenderMode } from "@/types/answerSheetDefinition.types"
 
 import { ExamIntegrationDialog } from "./components/export/ExamIntegrationDialog"
 import { ExportDialog } from "./components/export/ExportDialog"
@@ -32,6 +32,10 @@ interface AnswerSheetBuilderMainViewProps {
   definitionId: string
 }
 
+/**
+ * 解答用紙ビルダーのメインビュー。
+ * 設問編集フォーム・SVGプレビュー・エクスポート機能を統合する。
+ */
 export function AnswerSheetBuilderMainView({
   definitionId,
 }: AnswerSheetBuilderMainViewProps) {

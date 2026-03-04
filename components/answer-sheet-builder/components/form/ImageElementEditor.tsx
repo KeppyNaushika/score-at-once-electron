@@ -15,7 +15,7 @@ import { Slider } from "@/components/ui/slider"
 import type {
   CellImageElement,
   ImageObjectFit,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import { generateId } from "../../constants"
 
@@ -31,6 +31,10 @@ interface ImageElementEditorProps {
   definitionId: string
 }
 
+/**
+ * セル内画像要素の追加・編集・削除エディタ。
+ * 画像ファイルのアップロードと表示設定（objectFit・配置・透過度）を管理する。
+ */
 export function ImageElementEditor({
   imageElements,
   onUpdate,

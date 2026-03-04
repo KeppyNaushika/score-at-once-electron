@@ -9,13 +9,13 @@ import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { useAuth } from "@/contexts/AuthContext"
-import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
 import {
   renderMultiPageSvgStrings,
   resolveImageDataUris,
 } from "../utils/renderSvgStrings"
-import { computeMultiPageLayoutFromDefinition } from "./useAnswerSheetLayout"
+import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
 export function useExamIntegration() {
   const [isConverting, setIsConverting] = useState(false)

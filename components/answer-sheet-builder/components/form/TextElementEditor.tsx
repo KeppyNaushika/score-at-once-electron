@@ -18,7 +18,7 @@ import type {
   CellTextElement,
   HorizontalAlign,
   VerticalAlign,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import { generateId } from "../../constants"
 
@@ -62,6 +62,10 @@ function createDefaultTextElement(): CellTextElement {
   }
 }
 
+/**
+ * セル内テキスト要素の追加・編集・削除エディタ。
+ * インラインマークアップ（太字・斜体・模範解答等）に対応する。
+ */
 export function TextElementEditor({
   textElements,
   onUpdate,

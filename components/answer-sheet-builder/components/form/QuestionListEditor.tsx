@@ -15,7 +15,7 @@ import type {
   LabelPresets,
   MajorQuestion,
   SubQuestion,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import {
   BRANCH_QUESTION_LABEL_PRESETS,

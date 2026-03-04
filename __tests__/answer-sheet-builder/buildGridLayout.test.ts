@@ -4,8 +4,8 @@ import {
   buildGridLayout,
   gridTotalHeight,
   isGridHorizontal,
-  parseFraction,
-} from "@/components/answer-sheet-builder/hooks/useAnswerSheetLayout"
+} from "@/components/answer-sheet-builder/hooks/layout/gridBuilder"
+import { parseFraction } from "@/components/answer-sheet-builder/hooks/layout/layoutUtils"
 
 // ─── テスト用ヘルパー ───
 

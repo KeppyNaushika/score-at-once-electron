@@ -12,7 +12,7 @@ import type {
   LabelPresets,
   MajorQuestion,
   SubQuestion,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import {
   createDefaultBranchQuestion,

@@ -4,10 +4,12 @@ import { useRef, useState } from "react"
 
 import type {
   AnswerSheetAction,
+  RenderMode,
+} from "@/types/answerSheetDefinition.types"
+import type {
   ComputedLayout,
   ComputedMultiPageLayout,
-  RenderMode,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetLayout.types"
 
 import { usePreviewDragInteraction } from "../../hooks/usePreviewDragInteraction"
 import { AnswerSheetSVGRenderer } from "./AnswerSheetSVGRenderer"
@@ -22,6 +24,10 @@ interface AnswerSheetPreviewProps {
   baseRowHeight: number
 }
 
+/**
+ * 解答用紙のSVGプレビューコンポーネント。
+ * 単一ページ/複数ページ表示の切替・ドラッグによるレイアウト微調整に対応する。
+ */
 export function AnswerSheetPreview({
   layout,
   multiPageLayout,
