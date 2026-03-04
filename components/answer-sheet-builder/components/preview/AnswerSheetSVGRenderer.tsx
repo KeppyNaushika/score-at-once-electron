@@ -64,6 +64,28 @@ export function AnswerSheetSVGRenderer({
 
       {/* ヘッダー記入欄 */}
       {headerFields?.map((field) => {
+        // hfill はスペーサーなので描画しない
+        if (field.type === "hfill") return null
+
+        // label タイプ: ボックスなしのテキスト表示
+        if (field.type === "label") {
+          return (
+            <text
+              key={`hf-${field.fieldId}`}
+              x={field.x + field.width / 2}
+              y={field.y + field.height / 2}
+              fontSize={field.fontSize ?? 5}
+              fontFamily="'Noto Sans JP', sans-serif"
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#333"
+            >
+              {field.label}
+            </text>
+          )
+        }
+
+        // field タイプ: ボックス + ラベル + マス目
         const dashProps = getDashProps(field.lineStyle, field.lineWidth, 0)
         return (
           <g key={`hf-${field.fieldId}`}>
@@ -236,42 +258,21 @@ export function AnswerSheetSVGRenderer({
 
           // 通常セル
           return cell.textElements.map((te, ti) => {
-            const tx =
-              te.horizontalAlign === "left"
-                ? cell.x + 2
-                : te.horizontalAlign === "right"
-                  ? cell.x + cell.width - 2
-                  : cell.x + cell.width / 2
-            const ty =
-              te.verticalAlign === "top"
-                ? cell.y + te.fontSize * 0.4
-                : te.verticalAlign === "bottom"
-                  ? cell.y + cell.height - 2
-                  : cell.y + cell.height / 2
-            const anchor =
-              te.horizontalAlign === "left"
-                ? "start"
-                : te.horizontalAlign === "right"
-                  ? "end"
-                  : "middle"
-
             const segments = parseInlineMarkup(te.text)
             const hasMath = segments.some((s) => s.math)
+            const hasNewline = te.text.includes("\n")
 
-            if (hasMath) {
+            // foreignObject: 数式 or 改行テキスト
+            if (hasMath || hasNewline) {
+              const textLines = te.text.split("\n")
+
               return (
                 <foreignObject
                   key={`te-${cell.label}-${ti}`}
                   x={cell.x + 1}
-                  y={
-                    te.verticalAlign === "top"
-                      ? cell.y + 1
-                      : te.verticalAlign === "bottom"
-                        ? cell.y + cell.height - te.fontSize * 1.5 - 1
-                        : cell.y + cell.height / 2 - te.fontSize * 0.75
-                  }
+                  y={cell.y + 1}
                   width={cell.width - 2}
-                  height={te.fontSize * 1.5}
+                  height={cell.height - 2}
                 >
                   <div
                     style={{
@@ -283,23 +284,50 @@ export function AnswerSheetSVGRenderer({
                           : te.horizontalAlign === "right"
                             ? "right"
                             : "center",
-                      lineHeight: 1,
                       display: "flex",
-                      alignItems: "center",
+                      flexDirection: "column",
                       justifyContent:
-                        te.horizontalAlign === "left"
+                        te.verticalAlign === "top"
                           ? "flex-start"
-                          : te.horizontalAlign === "right"
+                          : te.verticalAlign === "bottom"
                             ? "flex-end"
                             : "center",
                       height: "100%",
                     }}
                   >
-                    {renderSegmentsHtml(segments, renderMode, te.fontSize)}
+                    {textLines.map((line, li) => (
+                      <div key={li}>
+                        {renderSegmentsHtml(
+                          parseInlineMarkup(line),
+                          renderMode,
+                          te.fontSize
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </foreignObject>
               )
             }
+
+            // 単一行テキスト（math含むテキストは上のforeignObjectパスで処理済み）
+            const tx =
+              te.horizontalAlign === "left"
+                ? cell.x + 2
+                : te.horizontalAlign === "right"
+                  ? cell.x + cell.width - 2
+                  : cell.x + cell.width / 2
+            const ty =
+              te.verticalAlign === "top"
+                ? cell.y + te.fontSize / 2 + 1
+                : te.verticalAlign === "bottom"
+                  ? cell.y + cell.height - te.fontSize / 2 - 1
+                  : cell.y + cell.height / 2
+            const anchor =
+              te.horizontalAlign === "left"
+                ? "start"
+                : te.horizontalAlign === "right"
+                  ? "end"
+                  : "middle"
 
             return (
               <text

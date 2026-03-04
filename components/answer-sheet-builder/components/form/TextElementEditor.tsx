@@ -127,7 +127,7 @@ export function TextElementEditor({
               type="number"
               className="h-7 w-14 shrink-0 rounded border text-center text-xs"
               value={el.fontSize}
-              min={6}
+              min={2}
               max={24}
               step={0.5}
               onChange={(e) =>
