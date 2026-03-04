@@ -215,6 +215,7 @@ export async function saveAsbDefinition(
         data: {
           id: hf.id,
           definitionId: definition.id,
+          type: hf.type ?? "field",
           label: hf.label,
           widthMm: hf.widthMm,
           heightMm: hf.heightMm,
@@ -222,6 +223,7 @@ export async function saveAsbDefinition(
           lineStyle: hf.lineStyle,
           lineWidth: hf.lineWidth,
           order: hi,
+          fontSize: hf.fontSize ?? null,
         },
       })
     }

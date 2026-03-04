@@ -117,6 +117,7 @@ export function createDefaultHeaderField(
 ): HeaderFieldDefinition {
   return {
     id: generateId(),
+    type: overrides?.type ?? "field",
     label: overrides?.label ?? "フィールド",
     widthMm: overrides?.widthMm ?? 30,
     heightMm: overrides?.heightMm ?? 8,
@@ -124,6 +125,7 @@ export function createDefaultHeaderField(
     lineStyle: overrides?.lineStyle ?? "solid",
     lineWidth: overrides?.lineWidth ?? 0.4,
     order: overrides?.order ?? 0,
+    fontSize: overrides?.fontSize,
   }
 }
 
@@ -133,11 +135,34 @@ export const HEADER_FIELD_PRESETS: {
 }[] = [
   {
     label: "受験番号",
-    defaults: { label: "受験番号", widthMm: 40, gridCount: 8 },
+    defaults: { type: "field", label: "受験番号", widthMm: 40, gridCount: 8 },
   },
-  { label: "クラス", defaults: { label: "クラス", widthMm: 20, gridCount: 3 } },
-  { label: "番号", defaults: { label: "番号", widthMm: 20, gridCount: 3 } },
-  { label: "氏名", defaults: { label: "氏名", widthMm: 60, gridCount: 0 } },
+  {
+    label: "クラス",
+    defaults: { type: "field", label: "クラス", widthMm: 20, gridCount: 3 },
+  },
+  {
+    label: "番号",
+    defaults: { type: "field", label: "番号", widthMm: 20, gridCount: 3 },
+  },
+  {
+    label: "氏名",
+    defaults: { type: "field", label: "氏名", widthMm: 60, gridCount: 0 },
+  },
+  {
+    label: "可変スペース",
+    defaults: { type: "hfill", label: "", widthMm: 0, heightMm: 8 },
+  },
+  {
+    label: "ラベル（テキスト表示）",
+    defaults: {
+      type: "label",
+      label: "試験名",
+      widthMm: 40,
+      heightMm: 8,
+      fontSize: 5,
+    },
+  },
 ]
 
 export function createDefaultDefinition(): AnswerSheetDefinition {

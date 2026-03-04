@@ -209,8 +209,11 @@ export interface MultiColumnConfig {
 // ヘッダーフィールド定義
 // =====================
 
+export type HeaderFieldType = "field" | "hfill" | "label"
+
 export interface HeaderFieldDefinition {
   id: string
+  type: HeaderFieldType
   label: string
   widthMm: number
   heightMm: number
@@ -218,6 +221,8 @@ export interface HeaderFieldDefinition {
   lineStyle: LineStyle
   lineWidth: number
   order: number
+  /** label タイプのフォントサイズ (mm) */
+  fontSize?: number
 }
 
 // =====================

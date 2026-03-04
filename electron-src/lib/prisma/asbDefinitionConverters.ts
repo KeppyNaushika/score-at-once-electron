@@ -250,6 +250,7 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
     settings.headerFields = row.headerFields.map(
       (hf): HeaderFieldDefinition => ({
         id: hf.id,
+        type: (hf.type as HeaderFieldDefinition["type"]) ?? "field",
         label: hf.label,
         widthMm: hf.widthMm,
         heightMm: hf.heightMm,
@@ -257,6 +258,7 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
         lineStyle: hf.lineStyle as LineStyle,
         lineWidth: hf.lineWidth,
         order: hf.order,
+        fontSize: hf.fontSize ?? undefined,
       })
     )
   }

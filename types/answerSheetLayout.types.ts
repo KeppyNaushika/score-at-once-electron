@@ -140,6 +140,7 @@ export interface ComputedOMRMarker {
 
 export interface ComputedHeaderField {
   fieldId: string
+  type: "field" | "hfill" | "label"
   label: string
   x: number
   y: number
@@ -149,6 +150,8 @@ export interface ComputedHeaderField {
   lineStyle: LineStyle
   lineWidth: number
   gridCellWidthMm?: number
+  /** label タイプのフォントサイズ (mm) */
+  fontSize?: number
 }
 
 export interface ComputedLayout {
