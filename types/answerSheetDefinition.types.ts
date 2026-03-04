@@ -36,6 +36,7 @@ export interface CellTextElement {
 // =====================
 
 export type ImageObjectFit = "contain" | "cover" | "fill"
+export type ImageVisibility = "both" | "answer-sheet-only" | "model-answer-only"
 
 export interface CellImageElement {
   id: string
@@ -45,6 +46,8 @@ export interface CellImageElement {
   horizontalAlign: HorizontalAlign
   verticalAlign: VerticalAlign
   opacity: number // 0-1
+  /** 表示モード制限。未指定 = "both"（常に表示） */
+  visibility?: ImageVisibility
 }
 
 // =====================

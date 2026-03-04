@@ -807,6 +807,7 @@ model AsbImageElement {
   horizontalAlign  String  @default("center")
   verticalAlign    String  @default("middle")
   opacity          Float   @default(1)
+  visibility       String  @default("both") // "both" | "answer-sheet-only" | "model-answer-only"
   order            Int     @default(0)
 
   createdAt DateTime @default(now())

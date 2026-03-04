@@ -38,6 +38,10 @@ export function BranchQuestionForm({
   const hasDetailContent =
     branch.textElements.length > 0 || (branch.imageElements?.length ?? 0) > 0
 
+  const hasVisibilityRestricted = branch.imageElements?.some(
+    (ie) => ie.visibility && ie.visibility !== "both"
+  )
+
   const goUpActive = branch.goUp != null
   const isGoUpInvalid =
     goUpActive &&
@@ -221,13 +225,15 @@ export function BranchQuestionForm({
           <Button
             variant="ghost"
             size="icon"
-            className={`relative h-7 w-7 ${detailOpen ? "text-primary" : "text-muted-foreground"}`}
+            className={`relative h-7 w-7 ${hasVisibilityRestricted ? "text-orange-500" : detailOpen ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => setDetailOpen(!detailOpen)}
             title="詳細設定"
           >
             <Settings2 className="h-3.5 w-3.5" />
             {hasDetailContent && (
-              <span className="bg-primary absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full" />
+              <span
+                className={`absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ${hasVisibilityRestricted ? "bg-orange-500" : "bg-primary"}`}
+              />
             )}
           </Button>
           <Button

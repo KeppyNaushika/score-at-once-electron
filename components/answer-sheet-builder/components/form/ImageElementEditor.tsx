@@ -15,6 +15,7 @@ import { Slider } from "@/components/ui/slider"
 import type {
   CellImageElement,
   ImageObjectFit,
+  ImageVisibility,
 } from "@/types/answerSheetDefinition.types"
 
 import { generateId } from "../../constants"
@@ -23,6 +24,12 @@ const OBJECT_FIT_OPTIONS: { value: ImageObjectFit; label: string }[] = [
   { value: "contain", label: "収める" },
   { value: "cover", label: "覆う" },
   { value: "fill", label: "引き伸ばす" },
+]
+
+const VISIBILITY_OPTIONS: { value: ImageVisibility; label: string }[] = [
+  { value: "both", label: "常に表示" },
+  { value: "answer-sheet-only", label: "解答用紙のみ" },
+  { value: "model-answer-only", label: "模範解答のみ" },
 ]
 
 interface ImageElementEditorProps {
@@ -139,7 +146,7 @@ export function ImageElementEditor({
             </Button>
           </div>
 
-          {/* Row 2: objectFit + 不透明度 */}
+          {/* Row 2: objectFit + 表示モード */}
           <div className="flex items-center gap-2">
             <Select
               value={el.objectFit}
@@ -159,22 +166,41 @@ export function ImageElementEditor({
               </SelectContent>
             </Select>
 
-            <div className="flex flex-1 items-center gap-1.5">
-              <span className="text-muted-foreground shrink-0 text-[10px]">
-                透明度
-              </span>
-              <Slider
-                min={0}
-                max={100}
-                step={5}
-                value={[Math.round(el.opacity * 100)]}
-                onValueChange={([v]) => handleChange(i, { opacity: v / 100 })}
-                className="flex-1"
-              />
-              <span className="w-8 shrink-0 text-right text-[10px]">
-                {Math.round(el.opacity * 100)}%
-              </span>
-            </div>
+            <Select
+              value={el.visibility ?? "both"}
+              onValueChange={(v) =>
+                handleChange(i, { visibility: v as ImageVisibility })
+              }
+            >
+              <SelectTrigger className="h-7 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Row 3: 不透明度 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground shrink-0 text-[10px]">
+              透明度
+            </span>
+            <Slider
+              min={0}
+              max={100}
+              step={5}
+              value={[Math.round(el.opacity * 100)]}
+              onValueChange={([v]) => handleChange(i, { opacity: v / 100 })}
+              className="flex-1"
+            />
+            <span className="w-8 shrink-0 text-right text-[10px]">
+              {Math.round(el.opacity * 100)}%
+            </span>
           </div>
         </div>
       ))}

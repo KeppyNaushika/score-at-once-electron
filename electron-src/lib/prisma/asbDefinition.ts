@@ -295,6 +295,7 @@ export async function saveAsbDefinition(
                 horizontalAlign: ie.horizontalAlign,
                 verticalAlign: ie.verticalAlign,
                 opacity: ie.opacity,
+                visibility: ie.visibility ?? "both",
                 order: ii,
               },
             })
@@ -357,6 +358,7 @@ export async function saveAsbDefinition(
                   horizontalAlign: ie.horizontalAlign,
                   verticalAlign: ie.verticalAlign,
                   opacity: ie.opacity,
+                  visibility: ie.visibility ?? "both",
                   order: ii,
                 },
               })

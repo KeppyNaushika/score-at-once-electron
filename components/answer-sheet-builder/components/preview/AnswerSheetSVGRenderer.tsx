@@ -350,31 +350,41 @@ export function AnswerSheetSVGRenderer({
       {cells
         .filter((c) => c.cellType === "answer" && c.imageElements?.length)
         .flatMap((cell) =>
-          cell.imageElements!.map((ie, ii) => {
-            const pad = 1
-            const ix = cell.x + pad
-            const iy = cell.y + pad
-            const iw = cell.width - pad * 2
-            const ih = cell.height - pad * 2
-            const par =
-              ie.objectFit === "contain"
-                ? "xMidYMid meet"
-                : ie.objectFit === "cover"
-                  ? "xMidYMid slice"
-                  : "none"
-            return (
-              <image
-                key={`img-${cell.label}-${ii}`}
-                href={`appimg:///${ie.imagePath}`}
-                x={ix}
-                y={iy}
-                width={iw}
-                height={ih}
-                preserveAspectRatio={par}
-                opacity={ie.opacity}
-              />
-            )
-          })
+          cell
+            .imageElements!.filter((ie) => {
+              const vis = ie.visibility ?? "both"
+              if (vis === "both") return true
+              if (vis === "answer-sheet-only")
+                return renderMode === "answer-sheet"
+              if (vis === "model-answer-only")
+                return renderMode === "model-answer"
+              return true
+            })
+            .map((ie, ii) => {
+              const pad = 1
+              const ix = cell.x + pad
+              const iy = cell.y + pad
+              const iw = cell.width - pad * 2
+              const ih = cell.height - pad * 2
+              const par =
+                ie.objectFit === "contain"
+                  ? "xMidYMid meet"
+                  : ie.objectFit === "cover"
+                    ? "xMidYMid slice"
+                    : "none"
+              return (
+                <image
+                  key={`img-${cell.label}-${ii}`}
+                  href={`appimg:///${ie.imagePath}`}
+                  x={ix}
+                  y={iy}
+                  width={iw}
+                  height={ih}
+                  preserveAspectRatio={par}
+                  opacity={ie.opacity}
+                />
+              )
+            })
         )}
 
       {/* OMRバブル */}
