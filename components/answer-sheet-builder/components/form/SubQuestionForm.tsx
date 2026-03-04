@@ -161,7 +161,7 @@ export function SubQuestionForm({
                 className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={sub.heightMultiplier}
                 min={1}
-                max={10}
+                max={30}
                 step={0.5}
                 onChange={(e) =>
                   onUpdate({ heightMultiplier: Number(e.target.value) })
