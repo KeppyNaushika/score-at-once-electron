@@ -8,10 +8,8 @@ import fs from "fs"
 import path from "path"
 import sharp from "sharp"
 
-import type {
-  AnswerSheetDefinition,
-  ComputedMultiPageLayout,
-} from "../../../types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "../../../types/answerSheetDefinition.types"
+import type { ComputedMultiPageLayout } from "../../../types/answerSheetLayout.types"
 import type { OMRCellConfig, OMRTemplate } from "../../../types/omr.types"
 import {
   getDataDirectory,

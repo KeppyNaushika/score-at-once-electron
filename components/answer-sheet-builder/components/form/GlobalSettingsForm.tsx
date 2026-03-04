@@ -13,7 +13,7 @@ import type {
   MajorNumberDisplayMode,
   Orientation,
   PaperSize,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import { PAPER_SIZE_OPTIONS } from "../../constants"
 import { SliderWithInput } from "./SliderWithInput"
@@ -23,6 +23,10 @@ interface GlobalSettingsFormProps {
   onUpdate: (settings: Partial<GlobalSettings>) => void
 }
 
+/**
+ * グローバル設定フォーム。
+ * 用紙サイズ・余白・行高さ・列幅・フォントなどの全体設定を編集する。
+ */
 export function GlobalSettingsForm({
   settings,
   onUpdate,

@@ -2,13 +2,19 @@
 
 import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import { parseInlineMarkup } from "@/lib/answer-sheet-builder/inlineMarkupParser"
+import type { RenderMode } from "@/types/answerSheetDefinition.types"
 import type {
   ComputedLayout,
   ComputedPageLayout,
   DragInfo,
-  LineStyle,
-  RenderMode,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetLayout.types"
+
+import {
+  getDashProps,
+  isDragInfoEqual,
+  renderSegmentsHtml,
+  renderSegmentsTspan,
+} from "./svgRenderUtils"
 
 interface AnswerSheetSVGRendererProps {
   layout: ComputedLayout
@@ -19,135 +25,10 @@ interface AnswerSheetSVGRendererProps {
   hoveredDragInfo?: DragInfo | null
 }
 
-function getDashProps(
-  style: LineStyle,
-  strokeWidth: number,
-  lineLength: number
-): {
-  strokeDasharray?: string
-  strokeDashoffset?: number
-  strokeLinecap?: "round" | "butt"
-} {
-  let dash: number, gap: number
-  switch (style) {
-    case "dashed":
-      dash = strokeWidth * 3
-      gap = strokeWidth * 2
-      break
-    case "dotted":
-      dash = 0.01
-      gap = strokeWidth * 2
-      break
-    default:
-      return {}
-  }
-  const period = dash + gap
-  const offset = ((lineLength / 2) % period) - dash / 2
-  return {
-    strokeDasharray: `${dash} ${gap}`,
-    strokeDashoffset: offset,
-    strokeLinecap: "round",
-  }
-}
-
-function isDragInfoEqual(
-  a: DragInfo | undefined,
-  b: DragInfo | null | undefined
-): boolean {
-  if (!a || !b) return false
-  if (a.axis !== b.axis) return false
-  if (a.target.type !== b.target.type) return false
-  if (
-    a.target.type === "heightMultiplier" &&
-    b.target.type === "heightMultiplier"
-  ) {
-    return (
-      a.target.majorIndex === b.target.majorIndex &&
-      a.target.subIndex === b.target.subIndex &&
-      a.target.branchIndex === b.target.branchIndex
-    )
-  }
-  if (a.target.type === "columnWidth" && b.target.type === "columnWidth") {
-    return a.target.column === b.target.column
-  }
-  return false
-}
-
-function getSegmentStyle(
-  seg: InlineSegment,
-  renderMode?: RenderMode
-): React.CSSProperties {
-  const style: React.CSSProperties = {}
-  if (seg.bold) style.fontWeight = "bold"
-  if (seg.italic || seg.math) style.fontStyle = "italic"
-  if (seg.strikethrough) style.textDecoration = "line-through"
-  if (seg.underline) {
-    style.textDecoration = style.textDecoration
-      ? `${style.textDecoration} underline`
-      : "underline"
-  }
-  if (seg.modelAnswer) {
-    style.color = renderMode === "model-answer" ? "#d00" : "transparent"
-  }
-  return style
-}
-
-function renderSegmentsTspan(
-  segments: InlineSegment[],
-  renderMode: RenderMode
-): React.ReactNode[] {
-  return segments.map((seg, i) => (
-    <tspan
-      key={i}
-      fontWeight={seg.bold ? "bold" : undefined}
-      fontStyle={seg.italic || seg.math ? "italic" : undefined}
-      textDecoration={
-        seg.strikethrough && seg.underline
-          ? "line-through underline"
-          : seg.strikethrough
-            ? "line-through"
-            : seg.underline
-              ? "underline"
-              : undefined
-      }
-      fill={
-        seg.modelAnswer
-          ? renderMode === "model-answer"
-            ? "#d00"
-            : "transparent"
-          : undefined
-      }
-    >
-      {seg.text}
-    </tspan>
-  ))
-}
-
-function renderSegmentsHtml(
-  segments: InlineSegment[],
-  renderMode: RenderMode,
-  fontSize: number
-): React.ReactNode[] {
-  return segments.map((seg, i) => {
-    const style = getSegmentStyle(seg, renderMode)
-    if (seg.math) {
-      return (
-        <span
-          key={i}
-          className="mathjax-inline"
-          style={{ ...style, fontSize: `${fontSize}px` }}
-          dangerouslySetInnerHTML={{ __html: `\\(${seg.text}\\)` }}
-        />
-      )
-    }
-    return (
-      <span key={i} style={style}>
-        {seg.text}
-      </span>
-    )
-  })
-}
-
+/**
+ * 解答用紙のSVG描画コンポーネント。
+ * セル・罫線・番号ラベル・OMRマーカー・原稿用紙グリッドを描画する。
+ */
 export function AnswerSheetSVGRenderer({
   layout,
   pageLayout,

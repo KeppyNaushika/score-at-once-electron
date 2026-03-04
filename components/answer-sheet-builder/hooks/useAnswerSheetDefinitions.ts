@@ -5,6 +5,10 @@ import { toast } from "sonner"
 
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
+/**
+ * 解答用紙定義一覧のCRUDフック。
+ * IPC経由でメインプロセスの定義リストを取得・操作する。
+ */
 export function useAnswerSheetDefinitions(userId: string | undefined) {
   const [definitions, setDefinitions] = useState<ASBDefinitionListItem[]>([])
   const [isLoading, setIsLoading] = useState(false)

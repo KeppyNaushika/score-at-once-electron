@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import type { ManuscriptPaperConfig } from "@/types/answerSheetBuilder.types"
+import type { ManuscriptPaperConfig } from "@/types/answerSheetDefinition.types"
 
 interface ManuscriptPaperSettingsProps {
   config: ManuscriptPaperConfig | undefined

@@ -26,6 +26,9 @@ import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
 type SortKey = "name" | "updatedAt" | "questionCount" | "totalPoints"
 type SortDir = "asc" | "desc"
 
+/**
+ * 解答用紙定義の一覧表示・作成・複製・削除を行うコンポーネント。
+ */
 export function AnswerSheetDefinitionList() {
   const { user } = useAuth()
   const router = useRouter()

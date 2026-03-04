@@ -5,7 +5,7 @@ import type {
   MajorQuestion,
   PaperSize,
   SubQuestion,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 // =====================
 // 用紙サイズ定数（mm）

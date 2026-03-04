@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch"
 import type {
   BranchQuestion,
   SubQuestion,
-} from "@/types/answerSheetBuilder.types"
+} from "@/types/answerSheetDefinition.types"
 
 import { BranchQuestionForm } from "./BranchQuestionForm"
 import { ImageElementEditor } from "./ImageElementEditor"

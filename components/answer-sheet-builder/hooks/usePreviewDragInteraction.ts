@@ -7,11 +7,8 @@
 
 import { useCallback, useRef, useState } from "react"
 
-import type {
-  AnswerSheetAction,
-  ComputedLayout,
-  DragInfo,
-} from "@/types/answerSheetBuilder.types"
+import type { AnswerSheetAction } from "@/types/answerSheetDefinition.types"
+import type { ComputedLayout, DragInfo } from "@/types/answerSheetLayout.types"
 
 const HIT_DISTANCE_PX = 6
 

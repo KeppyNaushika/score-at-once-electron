@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import type { OMRMarkerConfig } from "@/types/answerSheetBuilder.types"
+import type { OMRMarkerConfig } from "@/types/answerSheetDefinition.types"
 
 interface OMRMarkerSettingsProps {
   config: OMRMarkerConfig

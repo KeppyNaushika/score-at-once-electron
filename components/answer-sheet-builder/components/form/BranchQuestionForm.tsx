@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Settings2, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import type { BranchQuestion } from "@/types/answerSheetBuilder.types"
+import type { BranchQuestion } from "@/types/answerSheetDefinition.types"
 
 import { ImageElementEditor } from "./ImageElementEditor"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"

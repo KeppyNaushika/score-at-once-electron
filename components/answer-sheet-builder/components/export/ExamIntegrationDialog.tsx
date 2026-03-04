@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { AnswerSheetDefinition } from "@/types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
 import { useExamIntegration } from "../../hooks/useExamIntegration"
 

@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest"
 
 import { recognizeDigitCell } from "../../../electron-src/lib/omr/digitRecognizer"
-import type { ComputedCell } from "../../../types/answerSheetBuilder.types"
+import type { ComputedCell } from "../../../types/answerSheetLayout.types"
 import type {
   CoordinateTransform,
   OMRRecognitionParams,
