@@ -333,21 +333,7 @@ export function computeLayoutFromDefinition(
 
       const majorEndY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
 
-      // セルと空白スペースの境界線を補完
-      const subRightEdges = computeGridRowRightEdges(
-        gridCells,
-        majorStartY,
-        horizontalAreaX,
-        horizontalAreaWidth,
-        baseRowHeight
-      )
-      const subLeftEdges = computeGridRowLeftEdges(
-        gridCells,
-        majorStartY,
-        horizontalAreaX,
-        horizontalAreaWidth,
-        baseRowHeight
-      )
+      // セルと空白スペースの境界線を補完（枝問横配置を反映したrightEdgesを使用）
       renderGridCompletionLines(
         gridCells,
         majorStartY,
@@ -360,8 +346,8 @@ export function computeLayoutFromDefinition(
         {
           top: majorStartY,
           bottom: majorEndY,
-          rightEdges: subRightEdges,
-          leftEdges: subLeftEdges,
+          rightEdges: majorRightEdges,
+          leftEdges: majorLeftEdges,
         }
       )
 

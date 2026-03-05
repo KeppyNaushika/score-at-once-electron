@@ -23,10 +23,26 @@ import type {
 import { createCell } from "./cellBuilder"
 import {
   buildBranchGridLayout,
+  computeGridRowRightEdges,
   gridTotalHeight,
   isGridHorizontal,
 } from "./gridBuilder"
 import { getLineWidth } from "./layoutUtils"
+
+/** 指定Y位置で外枠の最大rightXを取得し、セル右端とのminを返す */
+function clipRightToOuter(
+  y: number,
+  cellRight: number,
+  rightEdges: { yTop: number; yBottom: number; rightX: number }[]
+): number {
+  let maxOuter = -Infinity
+  for (const re of rightEdges) {
+    if (re.yTop <= y + 1e-9 && re.yBottom >= y - 1e-9) {
+      maxOuter = Math.max(maxOuter, re.rightX)
+    }
+  }
+  return maxOuter > -Infinity ? Math.min(cellRight, maxOuter) : cellRight
+}
 
 /**
  * グリッドセルの空白隣接辺を描画する。
@@ -78,12 +94,12 @@ export function renderGridCompletionLines<
     const top = areaStartY + gc.y * baseRowHeight
     const bottom = areaStartY + (gc.y + gc.height) * baseRowHeight
 
-    // 右辺: 外枠の rightX と一致するY区間はスキップ
+    // 右辺: セルの右端が外枠の rightX 以上ならスキップ（外枠が境界を描画する）
     for (const re of rightEdges) {
       const oTop = Math.max(top, re.yTop)
       const oBottom = Math.min(bottom, re.yBottom)
       if (oBottom <= oTop + 1e-9) continue
-      if (Math.abs(right - re.rightX) < 0.01) continue
+      if (right >= re.rightX - 0.01) continue
       lines.push({
         x1: right,
         y1: oTop,
@@ -95,12 +111,12 @@ export function renderGridCompletionLines<
       })
     }
 
-    // 左辺: 外枠の leftX と一致するY区間はスキップ
+    // 左辺: セルの左端が外枠の leftX 以下ならスキップ
     for (const le of leftEdges) {
       const oTop = Math.max(top, le.yTop)
       const oBottom = Math.min(bottom, le.yBottom)
       if (oBottom <= oTop + 1e-9) continue
-      if (Math.abs(left - le.leftX) < 0.01) continue
+      if (left <= le.leftX + 0.01) continue
       lines.push({
         x1: left,
         y1: oTop,
@@ -112,30 +128,36 @@ export function renderGridCompletionLines<
       })
     }
 
-    // 下辺: グリッド外枠の底辺と一致しない場合のみ
+    // 下辺: グリッド外枠の底辺と一致しない場合のみ（右端を外枠にクリップ）
     if (Math.abs(bottom - outerBottom) > 0.01) {
-      lines.push({
-        x1: left,
-        y1: bottom,
-        x2: right,
-        y2: bottom,
-        style: divStyle,
-        lineType,
-        strokeWidth: sw,
-      })
+      const clipRight = clipRightToOuter(bottom, right, rightEdges)
+      if (clipRight > left + 1e-9) {
+        lines.push({
+          x1: left,
+          y1: bottom,
+          x2: clipRight,
+          y2: bottom,
+          style: divStyle,
+          lineType,
+          strokeWidth: sw,
+        })
+      }
     }
 
-    // 上辺: グリッド外枠の上辺と一致しない場合のみ
+    // 上辺: グリッド外枠の上辺と一致しない場合のみ（右端を外枠にクリップ）
     if (Math.abs(top - outerTop) > 0.01) {
-      lines.push({
-        x1: left,
-        y1: top,
-        x2: right,
-        y2: top,
-        style: divStyle,
-        lineType,
-        strokeWidth: sw,
-      })
+      const clipRight = clipRightToOuter(top, right, rightEdges)
+      if (clipRight > left + 1e-9) {
+        lines.push({
+          x1: left,
+          y1: top,
+          x2: clipRight,
+          y2: top,
+          style: divStyle,
+          lineType,
+          strokeWidth: sw,
+        })
+      }
     }
   }
 }
@@ -310,8 +332,15 @@ export function renderBranchQuestions(
       "branch"
     )
 
-    // セルと空白スペースの境界線を補完
+    // セルと空白スペースの境界線を補完（枝問グリッドの実際の右端を使用）
     const subBottom = subStartY + gridTotalHeight(branchCells) * baseRowHeight
+    const branchRightEdges = computeGridRowRightEdges(
+      branchCells,
+      subStartY,
+      branchAreaX,
+      branchAreaWidth,
+      baseRowHeight
+    )
     renderGridCompletionLines(
       branchCells,
       subStartY,
@@ -324,9 +353,7 @@ export function renderBranchQuestions(
       {
         top: subStartY,
         bottom: subBottom,
-        rightEdges: [
-          { yTop: subStartY, yBottom: subBottom, rightX: contentRight },
-        ],
+        rightEdges: branchRightEdges,
         leftEdges: [
           { yTop: subStartY, yBottom: subBottom, leftX: branchAreaX },
         ],
