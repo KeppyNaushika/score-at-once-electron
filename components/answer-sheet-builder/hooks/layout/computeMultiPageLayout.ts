@@ -220,6 +220,8 @@ export function computeMultiPageLayoutFromDefinition(
         return sub
       })
       const gridCells = buildSubGridLayout(subsForGrid)
+      const rightEdgesStart = colData.rowRightEdges.length
+      const leftEdgesStart = colData.rowLeftEdges.length
       for (const gc of gridCells) {
         const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
         const cellWidth = gc.width * horizontalAreaWidth
@@ -375,21 +377,9 @@ export function computeMultiPageLayoutFromDefinition(
 
       const majorEndY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
 
-      // セルと空白スペースの境界線を補完
-      const subRightEdges = computeGridRowRightEdges(
-        gridCells,
-        majorStartY,
-        horizontalAreaX,
-        horizontalAreaWidth,
-        baseRowHeight
-      )
-      const subLeftEdges = computeGridRowLeftEdges(
-        gridCells,
-        majorStartY,
-        horizontalAreaX,
-        horizontalAreaWidth,
-        baseRowHeight
-      )
+      // セルと空白スペースの境界線を補完（枝問横配置を反映したrightEdgesを使用）
+      const majorRightEdges = colData.rowRightEdges.slice(rightEdgesStart)
+      const majorLeftEdges = colData.rowLeftEdges.slice(leftEdgesStart)
       renderGridCompletionLines(
         gridCells,
         majorStartY,
@@ -402,8 +392,8 @@ export function computeMultiPageLayoutFromDefinition(
         {
           top: majorStartY,
           bottom: majorEndY,
-          rightEdges: subRightEdges,
-          leftEdges: subLeftEdges,
+          rightEdges: majorRightEdges,
+          leftEdges: majorLeftEdges,
         }
       )
 
