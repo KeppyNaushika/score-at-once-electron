@@ -13,6 +13,7 @@ import {
   getDashProps,
   isDragInfoEqual,
   renderSegmentsHtml,
+  renderSegmentsHtmlForPrint,
   renderSegmentsTspan,
 } from "./svgRenderUtils"
 
@@ -23,6 +24,10 @@ interface AnswerSheetSVGRendererProps {
   renderMode: RenderMode
   interactive?: boolean
   hoveredDragInfo?: DragInfo | null
+  /** 印刷用モード: MathJaxデリミタ出力、appimg→file変換等 */
+  forPrint?: boolean
+  /** 印刷用: 画像パス → data URI のマップ */
+  imageDataUris?: Map<string, string>
 }
 
 /**
@@ -35,6 +40,8 @@ export function AnswerSheetSVGRenderer({
   renderMode,
   interactive,
   hoveredDragInfo,
+  forPrint,
+  imageDataUris,
 }: AnswerSheetSVGRendererProps) {
   const { pageWidthMm, pageHeightMm } = layout
   // pageLayoutが指定されている場合はそちらのデータを使用
@@ -297,11 +304,16 @@ export function AnswerSheetSVGRenderer({
                   >
                     {textLines.map((line, li) => (
                       <div key={li}>
-                        {renderSegmentsHtml(
-                          parseInlineMarkup(line),
-                          renderMode,
-                          te.fontSize
-                        )}
+                        {forPrint
+                          ? renderSegmentsHtmlForPrint(
+                              parseInlineMarkup(line),
+                              renderMode
+                            )
+                          : renderSegmentsHtml(
+                              parseInlineMarkup(line),
+                              renderMode,
+                              te.fontSize
+                            )}
                       </div>
                     ))}
                   </div>
@@ -372,10 +384,14 @@ export function AnswerSheetSVGRenderer({
                   : ie.objectFit === "cover"
                     ? "xMidYMid slice"
                     : "none"
+              const href =
+                forPrint && imageDataUris?.has(ie.imagePath)
+                  ? imageDataUris.get(ie.imagePath)!
+                  : `appimg:///${ie.imagePath}`
               return (
                 <image
                   key={`img-${cellIdx}-${cell.label}-${ii}`}
-                  href={`appimg:///${ie.imagePath}`}
+                  href={href}
                   x={ix}
                   y={iy}
                   width={iw}

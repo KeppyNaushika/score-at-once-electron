@@ -229,7 +229,7 @@ export function renderMultiPageSvgStrings(
   )
 }
 
-/** PDF/印刷用: SVG群をHTML文字列にラップ */
+/** PDF/印刷用: SVG群をHTML文字列にラップ（PNG出力のフォールバック用） */
 export function wrapSvgsInHtml(
   svgStrings: string[],
   pageWidthMm: number,

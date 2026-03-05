@@ -6,6 +6,7 @@ import {
   fetchIndividualReportData,
   fetchSubtotalGroupsForReport,
 } from "../lib/export/individual-report"
+import { resolveMathJaxSrc, waitForRendering } from "../lib/printUtils"
 import { exportGradingDataExcel } from "../lib/prisma/excelExport"
 import {
   addPageToStreamingSession,
@@ -486,7 +487,7 @@ export function setupExportHandlers(): void {
       options: {
         html: string
         filePath: string
-        pageSize?: "A4" | "Letter"
+        pageSize?: "A4" | "Letter" | { width: number; height: number }
         landscape?: boolean
         margins?: {
           top?: number
@@ -514,19 +515,35 @@ export function setupExportHandlers(): void {
       })
 
       try {
-        // HTMLを一時ファイルに書き込み
-        await fs.writeFile(tempHtmlPath, options.html, "utf-8")
+        // MathJaxパスを解決してHTMLを一時ファイルに書き込み
+        const html = resolveMathJaxSrc(options.html)
+        await fs.writeFile(tempHtmlPath, html, "utf-8")
 
         // 一時HTMLファイルをロード
         await win.loadFile(tempHtmlPath)
 
-        // レンダリング完了を待つ
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // MathJax描画完了を待つ（MathJaxがなければ500ms待機）
+        await waitForRendering(win)
 
         // PDFを生成（マージンはインチ単位、デフォルト5mm ≈ 0.2インチ）
         const margins = options.margins || {}
+        // pageSizeがmmオブジェクトの場合はインチに変換
+        let resolvedPageSize:
+          | "A4"
+          | "Letter"
+          | { width: number; height: number } = options.pageSize || "A4"
+        if (
+          typeof resolvedPageSize === "object" &&
+          "width" in resolvedPageSize &&
+          "height" in resolvedPageSize
+        ) {
+          resolvedPageSize = {
+            width: resolvedPageSize.width / 25.4,
+            height: resolvedPageSize.height / 25.4,
+          }
+        }
         const pdfBuffer = await win.webContents.printToPDF({
-          pageSize: options.pageSize || "A4",
+          pageSize: resolvedPageSize,
           landscape: options.landscape || false,
           printBackground: true,
           margins: {
@@ -658,6 +675,8 @@ export function setupExportHandlers(): void {
       options: {
         html: string
         title?: string
+        pageSize?: "A4" | "Letter" | { width: number; height: number }
+        landscape?: boolean
       }
     ): Promise<{ success: boolean; error?: string }> => {
       const fs = require("fs").promises
@@ -681,19 +700,34 @@ export function setupExportHandlers(): void {
       })
 
       try {
-        // HTMLを一時ファイルに書き込み
-        await fs.writeFile(tempHtmlPath, options.html, "utf-8")
+        // MathJaxパスを解決してHTMLを一時ファイルに書き込み
+        const html = resolveMathJaxSrc(options.html)
+        await fs.writeFile(tempHtmlPath, html, "utf-8")
 
         // 一時HTMLファイルをロード
         await win.loadFile(tempHtmlPath)
 
-        // レンダリング完了を待つ
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // MathJax描画完了を待つ（MathJaxがなければ500ms待機）
+        await waitForRendering(win)
 
         // PDFを生成（マージンはCSSの@page marginに任せるため0に設定）
+        // pageSizeがmmオブジェクトの場合はインチに変換
+        let pageSize: "A4" | "Letter" | { width: number; height: number } =
+          options.pageSize || "A4"
+        if (
+          typeof pageSize === "object" &&
+          "width" in pageSize &&
+          "height" in pageSize
+        ) {
+          pageSize = {
+            width: pageSize.width / 25.4,
+            height: pageSize.height / 25.4,
+          }
+        }
+
         const pdfBuffer = await win.webContents.printToPDF({
-          pageSize: "A4",
-          landscape: false,
+          pageSize,
+          landscape: options.landscape || false,
           printBackground: true,
           margins: {
             marginType: "custom",
