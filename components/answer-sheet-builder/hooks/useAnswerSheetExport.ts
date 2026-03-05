@@ -1,7 +1,9 @@
 /**
- * PDF/PNG出力hook
+ * PDF/PNG出力・印刷hook
  *
- * renderer側でlayout計算→SVG生成→main側にデータを渡す。
+ * PDF/印刷: renderToStaticMarkup でプレビューと同じReactコンポーネントをHTML化
+ *          → 既存の export:openPrintDialog / export:printHtmlToPdf で出力
+ * PNG:     SVG文字列 → sharp でラスタライズ（従来通り）
  */
 
 import { useCallback, useState } from "react"
@@ -9,10 +11,10 @@ import { toast } from "sonner"
 
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
+import { generateAnswerSheetPrintHtml } from "../utils/generatePrintHtml"
 import {
   renderMultiPageSvgStrings,
   resolveImageDataUris,
-  wrapSvgsInHtml,
 } from "../utils/renderSvgStrings"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
@@ -20,8 +22,9 @@ export function useAnswerSheetExport() {
   const [isExporting, setIsExporting] = useState(false)
 
   const exportPdf = useCallback(async (definition: AnswerSheetDefinition) => {
-    const api = window.electronAPI?.answerSheetBuilder
-    if (!api) {
+    const asbApi = window.electronAPI?.answerSheetBuilder
+    const exportApi = window.electronAPI?.export
+    if (!asbApi || !exportApi) {
       toast.error("Electron APIが利用できません")
       return
     }
@@ -29,32 +32,23 @@ export function useAnswerSheetExport() {
     try {
       setIsExporting(true)
 
-      const pathResult = await api.selectSavePath({
+      const pathResult = await asbApi.selectSavePath({
         type: "pdf",
         defaultName: `${definition.name}.pdf`,
       })
-
       if (!pathResult.success || !pathResult.filePath) return
 
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
-      const allCells = multiLayout.pages.flatMap((p) => p.cells)
-      const imageDataUris = await resolveImageDataUris(allCells)
-      const svgStrings = renderMultiPageSvgStrings(
-        multiLayout,
-        definition.renderMode,
-        imageDataUris
-      )
-      const html = wrapSvgsInHtml(
-        svgStrings,
-        multiLayout.pageWidthMm,
-        multiLayout.pageHeightMm
-      )
+      const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
 
-      const result = await api.exportPdf({
+      const result = await exportApi.printHtmlToPdf({
         html,
-        outputPath: pathResult.filePath,
-        pageWidthMm: multiLayout.pageWidthMm,
-        pageHeightMm: multiLayout.pageHeightMm,
+        filePath: pathResult.filePath,
+        pageSize: {
+          width: multiLayout.pageWidthMm,
+          height: multiLayout.pageHeightMm,
+        },
+        margins: { top: 0, bottom: 0, left: 0, right: 0 },
       })
 
       if (result.success) {
@@ -86,7 +80,6 @@ export function useAnswerSheetExport() {
           type: "png",
           defaultName: `${definition.name}.png`,
         })
-
         if (!pathResult.success || !pathResult.filePath) return
 
         const multiLayout = computeMultiPageLayoutFromDefinition(definition)
@@ -123,8 +116,8 @@ export function useAnswerSheetExport() {
   )
 
   const printSheet = useCallback(async (definition: AnswerSheetDefinition) => {
-    const api = window.electronAPI?.answerSheetBuilder
-    if (!api) {
+    const exportApi = window.electronAPI?.export
+    if (!exportApi) {
       toast.error("Electron APIが利用できません")
       return
     }
@@ -133,27 +126,19 @@ export function useAnswerSheetExport() {
       setIsExporting(true)
 
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
-      const allCells = multiLayout.pages.flatMap((p) => p.cells)
-      const imageDataUris = await resolveImageDataUris(allCells)
-      const svgStrings = renderMultiPageSvgStrings(
-        multiLayout,
-        definition.renderMode,
-        imageDataUris
-      )
-      const html = wrapSvgsInHtml(
-        svgStrings,
-        multiLayout.pageWidthMm,
-        multiLayout.pageHeightMm
-      )
+      const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
 
-      const result = await api.print({
+      const result = await exportApi.openPrintDialog({
         html,
-        pageWidthMm: multiLayout.pageWidthMm,
-        pageHeightMm: multiLayout.pageHeightMm,
+        title: definition.name,
+        pageSize: {
+          width: multiLayout.pageWidthMm,
+          height: multiLayout.pageHeightMm,
+        },
       })
 
       if (result.success) {
-        toast.success("印刷を開始しました")
+        toast.success("印刷プレビューを開きました")
       } else if (result.error) {
         toast.error(`印刷エラー: ${result.error}`)
       }

@@ -505,7 +505,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     printHtmlToPdf: (options: {
       html: string
       filePath: string
-      pageSize?: "A4" | "Letter"
+      pageSize?: "A4" | "Letter" | { width: number; height: number }
       landscape?: boolean
       margins?: {
         top?: number
@@ -526,8 +526,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       selectedStudentIds: string[]
     }) => ipcRenderer.invoke("export:getExcelPreviewData", options),
     // 印刷ダイアログを開く
-    openPrintDialog: (options: { html: string; title?: string }) =>
-      ipcRenderer.invoke("export:openPrintDialog", options),
+    openPrintDialog: (options: {
+      html: string
+      title?: string
+      pageSize?: "A4" | "Letter" | { width: number; height: number }
+      landscape?: boolean
+    }) => ipcRenderer.invoke("export:openPrintDialog", options),
   },
 
   // Excel Export related

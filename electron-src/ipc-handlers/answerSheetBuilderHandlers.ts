@@ -190,8 +190,8 @@ export function setupAnswerSheetBuilderHandlers(): void {
 
       const pdfBuffer = await win.webContents.printToPDF({
         pageSize: {
-          width: args.pageWidthMm * 1000, // microns
-          height: args.pageHeightMm * 1000,
+          width: args.pageWidthMm / 25.4, // mm → inches
+          height: args.pageHeightMm / 25.4,
         },
         printBackground: true,
         margins: { marginType: "custom", top: 0, bottom: 0, left: 0, right: 0 },
@@ -338,8 +338,8 @@ export function setupAnswerSheetBuilderHandlers(): void {
 
       const pdfBuffer = await win.webContents.printToPDF({
         pageSize: {
-          width: args.pageWidthMm * 1000, // microns
-          height: args.pageHeightMm * 1000,
+          width: args.pageWidthMm / 25.4, // mm → inches
+          height: args.pageHeightMm / 25.4,
         },
         printBackground: true,
         margins: { marginType: "custom", top: 0, bottom: 0, left: 0, right: 0 },

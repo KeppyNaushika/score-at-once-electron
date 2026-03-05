@@ -1111,7 +1111,7 @@ export interface MyAPI {
     printHtmlToPdf: (options: {
       html: string
       filePath: string
-      pageSize?: "A4" | "Letter"
+      pageSize?: "A4" | "Letter" | { width: number; height: number }
       landscape?: boolean
       margins?: {
         top?: number
@@ -1185,7 +1185,12 @@ export interface MyAPI {
     }>
 
     // 印刷ダイアログを開く
-    openPrintDialog: (options: { html: string; title?: string }) => Promise<{
+    openPrintDialog: (options: {
+      html: string
+      title?: string
+      pageSize?: "A4" | "Letter" | { width: number; height: number }
+      landscape?: boolean
+    }) => Promise<{
       success: boolean
       error?: string
     }>

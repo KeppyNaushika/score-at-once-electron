@@ -180,3 +180,50 @@ export function renderSegmentsHtml(
     )
   })
 }
+
+/**
+ * 印刷用: InlineSegment 配列を HTML <span> 要素配列に変換する。
+ * レンダラープロセスで window.MathJax.tex2svg() を使い数式を事前にSVG化する。
+ * オフスクリーンBrowserWindowでのMathJax読み込みは不要。
+ */
+export function renderSegmentsHtmlForPrint(
+  segments: InlineSegment[],
+  renderMode: RenderMode
+): React.ReactNode[] {
+  return segments.map((seg, i) => {
+    const style = getSegmentStyle(seg, renderMode)
+    if (seg.math) {
+      const mathStyle: React.CSSProperties = seg.displayMath
+        ? { ...style, display: "block", textAlign: "center" }
+        : { ...style, fontStyle: "italic" }
+      // レンダラープロセスのMathJaxでSVGにプリレンダリング
+      if (typeof window !== "undefined" && window.MathJax?.tex2svg) {
+        try {
+          const container = window.MathJax.tex2svg(seg.text, {
+            display: seg.displayMath ?? false,
+          })
+          const svgHtml = container.innerHTML
+          return (
+            <span
+              key={i}
+              style={mathStyle}
+              dangerouslySetInnerHTML={{ __html: svgHtml }}
+            />
+          )
+        } catch {
+          // フォールバック: テキストとして表示
+        }
+      }
+      return (
+        <span key={i} style={mathStyle}>
+          {seg.text}
+        </span>
+      )
+    }
+    return (
+      <span key={i} style={style}>
+        {seg.text}
+      </span>
+    )
+  })
+}
