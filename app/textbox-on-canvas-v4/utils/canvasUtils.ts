@@ -235,12 +235,6 @@ export function drawCreatingTextBox(
 }
 
 /**
- * Lucide AnchorアイコンのSVGパスデータ
- */
-const _ANCHOR_SVG_PATH =
-  "M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 6c0-5.5-4.5-10-10-10S-2 3.5-2 9c0 3.9 2.2 7.3 5.5 9l1.5-1.5V14h2v2.5l1.5 1.5c3.3-1.7 5.5-5.1 5.5-9z"
-
-/**
  * LucideのAnchorアイコンをCanvasに描画する
  * @param ctx Canvas描画コンテキスト
  * @param x アンカーのX座標
@@ -256,9 +250,6 @@ export async function drawAnchor(
   return new Promise((resolve) => {
     try {
       const size = CANVAS_SETTINGS.ANCHOR_RADIUS * 2
-      const _color = isSelected
-        ? CANVAS_SETTINGS.SELECTED_ANCHOR_COLOR
-        : CANVAS_SETTINGS.ANCHOR_COLOR
       const strokeColor = isSelected ? "#1d4ed8" : "#2563eb"
 
       // AnchorアイコンのSVGを生成

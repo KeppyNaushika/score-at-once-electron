@@ -325,7 +325,7 @@ export function getDiscriminationLevel(r: number | null): DiscriminationLevel {
  * 特定の生徒の統計データを計算
  */
 export function calculateStatisticsForStudent(
-  studentId: string,
+  _studentId: string,
   studentScore: number | null,
   allScoringData: ScoringData[],
   classScoringData: ScoringData[],

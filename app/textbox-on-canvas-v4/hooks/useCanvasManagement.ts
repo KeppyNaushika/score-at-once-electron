@@ -83,8 +83,8 @@ export function useCanvasManagement() {
   const redrawCanvas = useCallback(
     async (
       textBoxes: TextBox[],
-      currentDrag: DragState | null,
-      isCreatingAnchor: boolean,
+      _currentDrag: DragState | null,
+      _isCreatingAnchor: boolean,
       backgroundImageUrl?: string
     ): Promise<void> => {
       const canvas = canvasRef.current

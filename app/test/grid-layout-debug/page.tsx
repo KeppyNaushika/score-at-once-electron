@@ -40,7 +40,6 @@ function TestImage({
 
     // 方法2: グリッドコンテナから計算
     const containerWidth = container.offsetWidth
-    const _containerHeight = container.offsetHeight
     const gap = 8 // gap-2 = 8px
     const padding = 4 // p-1 = 4px
 

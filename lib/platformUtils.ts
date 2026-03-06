@@ -5,7 +5,7 @@
 /**
  * macOS検出
  */
-export const isMacOS = (): boolean => {
+const isMacOS = (): boolean => {
   if (typeof window !== "undefined") {
     return window.navigator.platform.toUpperCase().indexOf("MAC") >= 0
   }

@@ -107,7 +107,7 @@ export function createMainWindow(): BrowserWindow {
         if (await checkServer()) {
           mainWindow.webContents.once(
             "did-fail-load",
-            (event, errorCode, errorDescription) => {
+            (_event, errorCode, errorDescription) => {
               console.error("❌ Failed to load URL:", {
                 errorCode,
                 errorDescription,

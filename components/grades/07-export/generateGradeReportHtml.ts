@@ -166,7 +166,7 @@ export function generateGradeReportBatchHtml(
 }
 
 function renderStudentReport(
-  result: GradeCalculationResult,
+  _result: GradeCalculationResult,
   student: StudentGradeResult,
   options: GradeReportOptions
 ): string {

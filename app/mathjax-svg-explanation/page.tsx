@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState } from "react"
 
 /**
  * ステップ結果の型定義
@@ -50,7 +50,6 @@ export default function MathJaxSVGExplanation() {
     "$E = mc^2$ とは **アインシュタイン**の有名な公式です。"
   )
   const [stepResults, setStepResults] = useState<Record<number, StepResult>>({})
-  const _containerRef = useRef<HTMLDivElement>(null)
 
   const steps = [
     {
