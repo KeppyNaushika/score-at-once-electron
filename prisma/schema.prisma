@@ -681,17 +681,18 @@ model AsbDefinition {
 
 /// ヘッダー記入欄
 model AsbHeaderField {
-  id           String @id @default(uuid())
-  definitionId String
-  type         String @default("field") // "field" | "hfill" | "label"
-  label        String
-  widthMm      Float  @default(30)
-  heightMm     Float  @default(8)
-  gridCount    Int    @default(0)
-  lineStyle    String @default("solid")
-  lineWidth    Float  @default(0.4)
-  order        Int    @default(0)
-  fontSize     Float? // label タイプ用
+  id               String  @id @default(uuid())
+  definitionId     String
+  type             String  @default("field") // "field" | "hfill" | "label"
+  label            String
+  widthMm          Float   @default(30)
+  heightMm         Float   @default(8)
+  gridCount        Int     @default(0)
+  lineStyle        String  @default("solid")
+  lineWidth        Float   @default(0.4)
+  order            Int     @default(0)
+  fontSize         Float? // label タイプ用
+  linkedRegionType String? // "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "STUDENT_NAME" | "STUDENT_ID"
 
   definition AsbDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
 

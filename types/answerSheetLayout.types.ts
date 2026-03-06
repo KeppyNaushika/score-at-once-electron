@@ -152,6 +152,12 @@ export interface ComputedHeaderField {
   gridCellWidthMm?: number
   /** label タイプのフォントサイズ (mm) */
   fontSize?: number
+  /** 試験変換時に対応するCropRegionを自動生成する */
+  linkedRegionType?:
+    | "TOTAL_SCORE"
+    | "SUBTOTAL_SCORE"
+    | "STUDENT_NAME"
+    | "STUDENT_ID"
 }
 
 export interface ComputedLayout {

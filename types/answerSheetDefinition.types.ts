@@ -214,6 +214,12 @@ export interface MultiColumnConfig {
 
 export type HeaderFieldType = "field" | "hfill" | "label"
 
+export type LinkedRegionType =
+  | "TOTAL_SCORE"
+  | "SUBTOTAL_SCORE"
+  | "STUDENT_NAME"
+  | "STUDENT_ID"
+
 export interface HeaderFieldDefinition {
   id: string
   type: HeaderFieldType
@@ -226,6 +232,8 @@ export interface HeaderFieldDefinition {
   order: number
   /** label タイプのフォントサイズ (mm) */
   fontSize?: number
+  /** 試験変換時に対応するCropRegionを自動生成する */
+  linkedRegionType?: LinkedRegionType
 }
 
 // =====================

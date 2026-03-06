@@ -137,6 +137,30 @@ export async function convertToExam(
           },
         })
       }
+
+      // CropRegion作成（ヘッダーフィールドのlinkedRegionType）
+      const linkedFields = pageLayout.headerFields.filter(
+        (hf) => hf.linkedRegionType
+      )
+      for (const hf of linkedFields) {
+        const normalizedX = hf.x / multiPageLayout.pageWidthMm
+        const normalizedY = hf.y / multiPageLayout.pageHeightMm
+        const normalizedW = hf.width / multiPageLayout.pageWidthMm
+        const normalizedH = hf.height / multiPageLayout.pageHeightMm
+        await prisma.cropRegion.create({
+          data: {
+            examPageId: examPage.id,
+            label: hf.label,
+            type: hf.linkedRegionType!,
+            x: normalizedX,
+            y: normalizedY,
+            width: normalizedW,
+            height: normalizedH,
+            points: null,
+            orderIndex: globalOrderIndex++,
+          },
+        })
+      }
     }
 
     // 4. OMRテンプレート保存（OMR設定がある場合）
