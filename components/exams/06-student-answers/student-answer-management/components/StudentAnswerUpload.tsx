@@ -143,6 +143,9 @@ export function StudentAnswerUpload({
         onClose={passwordDialog.onCancel}
         onSubmit={passwordDialog.onSubmit}
         fileName={passwordDialog.filename}
+        error={passwordDialog.hasError ? "invalid-password" : undefined}
+        isLoading={passwordDialog.isLoading}
+        isFirstAttempt={!passwordDialog.hasError}
       />
     </div>
   )
