@@ -117,11 +117,72 @@ export async function convertToExam(
       })
 
       // CropRegion作成（このページの解答セルのみ）
+      // 枝問配点オフの場合、同一小問の枝問セルを1つの領域に統合する
       const answerCells = pageLayout.cells.filter(
         (c) => c.cellType === "answer"
       )
-      for (let i = 0; i < answerCells.length; i++) {
-        const cell = answerCells[i]
+
+      // 枝問配点オフの小問を特定し、枝問セルをグループ化
+      const mergedCells: Array<{
+        label: string
+        normalizedX: number
+        normalizedY: number
+        normalizedW: number
+        normalizedH: number
+        points: number
+      }> = []
+      const processedKeys = new Set<string>()
+
+      for (const cell of answerCells) {
+        const [mi, si, bi] = cell.questionPath
+        const isBranch = bi !== undefined
+
+        if (isBranch) {
+          const key = `${mi}-${si}`
+          if (processedKeys.has(key)) continue
+
+          const sub = definition.majorQuestions[mi]?.subQuestions[si]
+          if (sub?.usesBranchPoints === false) {
+            // 同一小問の全枝問セル（同一ページ内）を統合
+            processedKeys.add(key)
+            const siblings = answerCells.filter(
+              (c) =>
+                c.questionPath[0] === mi &&
+                c.questionPath[1] === si &&
+                c.questionPath.length === 3
+            )
+            const minX = Math.min(...siblings.map((c) => c.normalizedX))
+            const minY = Math.min(...siblings.map((c) => c.normalizedY))
+            const maxX = Math.max(
+              ...siblings.map((c) => c.normalizedX + c.normalizedW)
+            )
+            const maxY = Math.max(
+              ...siblings.map((c) => c.normalizedY + c.normalizedH)
+            )
+            mergedCells.push({
+              label: sub.label,
+              normalizedX: minX,
+              normalizedY: minY,
+              normalizedW: maxX - minX,
+              normalizedH: maxY - minY,
+              points: sub.points,
+            })
+            continue
+          }
+        }
+
+        // 通常セル（枝問配点オン or 枝問なし）
+        mergedCells.push({
+          label: cell.label,
+          normalizedX: cell.normalizedX,
+          normalizedY: cell.normalizedY,
+          normalizedW: cell.normalizedW,
+          normalizedH: cell.normalizedH,
+          points: cell.points,
+        })
+      }
+
+      for (const cell of mergedCells) {
         await prisma.cropRegion.create({
           data: {
             examPageId: examPage.id,
