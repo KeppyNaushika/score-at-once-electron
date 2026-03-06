@@ -6,7 +6,7 @@ import type {
   UnifiedFile,
   UploadData,
 } from "@/components/exams/06-student-answers/student-answer-management/types"
-import { convertPdfToImages } from "@/lib/pdfConverter"
+import { type ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 
 export function useStudentAnswerUpload(
   examId: string,
@@ -23,17 +23,106 @@ export function useStudentAnswerUpload(
   const [passwordDialog, setPasswordDialog] = useState<{
     isOpen: boolean
     filename: string
+    hasError: boolean
+    isLoading: boolean
     onSubmit: (password: string) => void
     onCancel: () => void
   }>({
     isOpen: false,
     filename: "",
+    hasError: false,
+    isLoading: false,
     onSubmit: () => {},
     onCancel: () => {},
   })
 
   // Intersection Observer for lazy loading (無効化)
   const observerRef = useRef<IntersectionObserver | null>(null)
+
+  // パスワード付きPDF変換（リトライ対応）
+  const convertPdfWithRetry = useCallback(
+    async (file: File): Promise<ConvertedImage[] | null> => {
+      let hasError = false
+
+      // まずパスワードなしで試行
+      try {
+        return await convertPdfToImages(file)
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          error.message !== "password-required"
+        ) {
+          toast.error(`${file.name}: PDF変換に失敗しました`)
+          return null
+        }
+      }
+
+      // パスワード入力ループ（キャンセルまたは成功まで）
+      while (true) {
+        const password = await new Promise<string | null>((resolve) => {
+          setPasswordDialog({
+            isOpen: true,
+            filename: file.name,
+            hasError,
+            isLoading: false,
+            onSubmit: (pwd) => {
+              setPasswordDialog((prev) => ({
+                ...prev,
+                isLoading: true,
+                hasError: false,
+              }))
+              resolve(pwd)
+            },
+            onCancel: () => {
+              setPasswordDialog((prev) => ({
+                ...prev,
+                isOpen: false,
+                hasError: false,
+                isLoading: false,
+              }))
+              resolve(null)
+            },
+          })
+        })
+
+        if (!password) {
+          // キャンセルされた
+          return null
+        }
+
+        try {
+          const images = await convertPdfToImages(file, password)
+          setPasswordDialog((prev) => ({
+            ...prev,
+            isOpen: false,
+            hasError: false,
+            isLoading: false,
+          }))
+          return images
+        } catch (retryError) {
+          if (
+            retryError instanceof Error &&
+            (retryError.message === "password-required" ||
+              retryError.message === "invalid-password")
+          ) {
+            // パスワードが間違っている → リトライ
+            hasError = true
+            continue
+          }
+          // その他のエラー
+          setPasswordDialog((prev) => ({
+            ...prev,
+            isOpen: false,
+            hasError: false,
+            isLoading: false,
+          }))
+          toast.error(`${file.name}: PDF変換に失敗しました`)
+          return null
+        }
+      }
+    },
+    []
+  )
 
   // ファイル変換処理
   const convertFiles = useCallback(
@@ -44,12 +133,11 @@ export function useStudentAnswerUpload(
       for (const file of rawFiles) {
         try {
           if (file.type === "application/pdf") {
-            // PDF処理 - 画像変換を実行
-            try {
-              const images = await convertPdfToImages(file)
-
-              for (let i = 0; i < images.length; i++) {
-                const image = images[i]
+            // PDF処理 - 画像変換を実行（パスワードリトライ対応）
+            const pdfImages = await convertPdfWithRetry(file)
+            if (pdfImages) {
+              for (let i = 0; i < pdfImages.length; i++) {
+                const image = pdfImages[i]
                 const blob = new Blob([image.buffer], { type: image.type })
                 const preview = URL.createObjectURL(blob)
 
@@ -64,66 +152,6 @@ export function useStudentAnswerUpload(
                   pageNumber: i + 1,
                   isSelected: false,
                 })
-              }
-            } catch (pdfError: unknown) {
-              console.error(`PDF conversion failed for ${file.name}:`, pdfError)
-
-              // パスワードエラーの場合はパスワードダイアログを表示
-              if (
-                pdfError instanceof Error &&
-                pdfError.message === "password-required"
-              ) {
-                // パスワード入力を要求
-                const password = await new Promise<string | null>((resolve) => {
-                  setPasswordDialog({
-                    isOpen: true,
-                    filename: file.name,
-                    onSubmit: (pwd) => {
-                      setPasswordDialog((prev) => ({ ...prev, isOpen: false }))
-                      resolve(pwd)
-                    },
-                    onCancel: () => {
-                      setPasswordDialog((prev) => ({ ...prev, isOpen: false }))
-                      resolve(null)
-                    },
-                  })
-                })
-
-                if (password) {
-                  try {
-                    const images = await convertPdfToImages(file, password)
-
-                    for (let i = 0; i < images.length; i++) {
-                      const image = images[i]
-                      const blob = new Blob([image.buffer], {
-                        type: image.type,
-                      })
-                      const preview = URL.createObjectURL(blob)
-
-                      results.push({
-                        id: crypto.randomUUID(),
-                        name: image.name,
-                        originalFileName: file.name,
-                        type: image.type,
-                        size: image.buffer.byteLength,
-                        buffer: image.buffer,
-                        preview,
-                        pageNumber: i + 1,
-                        isSelected: false,
-                      })
-                    }
-                  } catch (passwordError: unknown) {
-                    console.error(
-                      `PDF conversion with password failed for ${file.name}:`,
-                      passwordError
-                    )
-                    toast.error(
-                      `${file.name}: パスワードが正しくないか、変換に失敗しました`
-                    )
-                  }
-                }
-              } else {
-                toast.error(`${file.name}: PDF変換に失敗しました`)
               }
             }
           } else {
@@ -154,7 +182,7 @@ export function useStudentAnswerUpload(
 
       return results
     },
-    []
+    [convertPdfWithRetry]
   )
 
   // ファイルドロップ処理
