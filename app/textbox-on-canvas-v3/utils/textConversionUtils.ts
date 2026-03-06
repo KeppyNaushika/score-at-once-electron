@@ -418,8 +418,8 @@ async function processSingleLineMathJax(
 function combineLineSvgs(
   lineSvgs: SVGSVGElement[],
   spacing: number,
-  targetWidth?: number,
-  targetHeight?: number,
+  _targetWidth?: number,
+  _targetHeight?: number,
   horizontalAlign: "left" | "center" | "right" = "left",
   verticalAlign: "top" | "center" | "bottom" = "top"
 ): SVGSVGElement {

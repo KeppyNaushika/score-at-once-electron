@@ -423,7 +423,7 @@ export default function PDFWorkerTestContent() {
 
       const testPDFBytes = createTestPDF()
 
-      const _pdf = await pdfjs.getDocument({
+      await pdfjs.getDocument({
         data: testPDFBytes.buffer,
       }).promise
 

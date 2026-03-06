@@ -255,24 +255,6 @@ function extractMathJaxDefs(): string {
  * 既にdefsが存在する場合は即座に完了
  * @returns Promise<boolean> 初期化が完了したかどうか
  */
-async function _waitForMathJaxDefsGeneration(): Promise<boolean> {
-  // 既にグローバルdefsが存在するかチェック
-  const existingGlobalDefs = document.querySelector(
-    "#MJX-SVG-global-cache defs"
-  )
-  if (existingGlobalDefs && existingGlobalDefs.innerHTML.length > 100) {
-    return true
-  }
-
-  // グローバルdefsが存在しない場合は、コンテナ内defsを検索
-  const mjxContainers = document.querySelectorAll("mjx-container svg defs")
-  if (mjxContainers.length > 0) {
-    return true
-  }
-
-  return true // defsが不要な場合もある
-}
-
 /**
  * 測定結果に基づいて最適なSVGを生成する（軽量版）
  * @param htmlContent HTML内容
