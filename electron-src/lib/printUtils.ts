@@ -44,12 +44,24 @@ export function resolveMathJaxSrc(html: string): string {
 /**
  * HTML文字列をオフスクリーンBrowserWindowでロードし、capturePageでPNGバッファに変換。
  * 解答用紙のPNG出力・試験変換の模範解答画像生成で共通使用。
+ *
+ * HTMLはCSSの mm 単位で .page をレイアウトしているが、BrowserWindowは目的の
+ * 出力ピクセルサイズに設定し、.page をビューポート全体に引き伸ばす CSS を注入する。
+ * SVGの viewBox により自然にスケールされ、目的の解像度でラスタライズされる。
  */
 export async function htmlToPngBuffer(
   html: string,
-  widthPx: number,
-  heightPx: number
+  pageWidthMm: number,
+  pageHeightMm: number,
+  dpi: number = 300
 ): Promise<Buffer> {
+  const widthPx = Math.round((pageWidthMm / 25.4) * dpi)
+  const heightPx = Math.round((pageHeightMm / 25.4) * dpi)
+
+  // .page を固定 mm サイズからビューポート全体に拡張する CSS を注入
+  const overrideCss = `<style>.page { width: 100vw !important; height: 100vh !important; }</style>`
+  const modifiedHtml = html.replace("</head>", `${overrideCss}\n</head>`)
+
   let tempHtmlPath: string | null = null
   let win: BrowserWindow | null = null
   try {
@@ -57,7 +69,7 @@ export async function htmlToPngBuffer(
       os.tmpdir(),
       `asb-capture-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.html`
     )
-    fs.writeFileSync(tempHtmlPath, html, "utf-8")
+    fs.writeFileSync(tempHtmlPath, modifiedHtml, "utf-8")
 
     win = new BrowserWindow({
       show: false,

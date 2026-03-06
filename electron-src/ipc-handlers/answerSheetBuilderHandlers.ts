@@ -225,16 +225,18 @@ export function setupAnswerSheetBuilderHandlers(): void {
   // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
   ipcMain.handle("asb:export-png", async (_event, args: ASBExportPngArgs) => {
     try {
-      const widthPx = Math.round((args.pageWidthMm / 25.4) * args.dpi)
-      const heightPx = Math.round((args.pageHeightMm / 25.4) * args.dpi)
-
       const outputDir = path.dirname(args.outputPath)
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true })
       }
 
       if (args.htmlPages.length === 1) {
-        const buf = await htmlToPngBuffer(args.htmlPages[0], widthPx, heightPx)
+        const buf = await htmlToPngBuffer(
+          args.htmlPages[0],
+          args.pageWidthMm,
+          args.pageHeightMm,
+          args.dpi
+        )
         fs.writeFileSync(args.outputPath, buf)
       } else {
         const ext = path.extname(args.outputPath)
@@ -243,8 +245,9 @@ export function setupAnswerSheetBuilderHandlers(): void {
           const pagePath = `${base}-${i + 1}${ext}`
           const buf = await htmlToPngBuffer(
             args.htmlPages[i],
-            widthPx,
-            heightPx
+            args.pageWidthMm,
+            args.pageHeightMm,
+            args.dpi
           )
           fs.writeFileSync(pagePath, buf)
         }

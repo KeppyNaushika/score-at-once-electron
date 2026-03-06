@@ -65,18 +65,17 @@ export async function convertToExam(
 
     // 2. HTML → PNG Buffer 生成（BrowserWindow + capturePage）
     const dpi = 300
-    const widthPx = Math.round((multiPageLayout.pageWidthMm / 25.4) * dpi)
-    const heightPx = Math.round((multiPageLayout.pageHeightMm / 25.4) * dpi)
+    const { pageWidthMm, pageHeightMm } = multiPageLayout
 
     const templateBuffers: Buffer[] = []
     for (const html of answerSheetHtmlPages) {
-      const buf = await htmlToPngBuffer(html, widthPx, heightPx)
+      const buf = await htmlToPngBuffer(html, pageWidthMm, pageHeightMm, dpi)
       templateBuffers.push(buf)
     }
 
     const modelBuffers: Buffer[] = []
     for (const html of modelAnswerHtmlPages) {
-      const buf = await htmlToPngBuffer(html, widthPx, heightPx)
+      const buf = await htmlToPngBuffer(html, pageWidthMm, pageHeightMm, dpi)
       modelBuffers.push(buf)
     }
 
