@@ -1,7 +1,7 @@
 /**
  * 試験変換hook
  *
- * renderer側でlayout計算→SVG生成→main側にデータを渡す。
+ * renderer側でlayout計算→HTML生成→main側にデータを渡す。
  */
 
 import { useRouter } from "next/navigation"
@@ -11,10 +11,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
-import {
-  renderMultiPageSvgStrings,
-  resolveImageDataUris,
-} from "../utils/renderSvgStrings"
+import { generateAnswerSheetPageHtmls } from "../utils/generatePrintHtml"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
 export function useExamIntegration() {
@@ -39,26 +36,24 @@ export function useExamIntegration() {
         setIsConverting(true)
 
         const multiPageLayout = computeMultiPageLayoutFromDefinition(definition)
-        const allCells = multiPageLayout.pages.flatMap((p) => p.cells)
-        const imageDataUris = await resolveImageDataUris(allCells)
 
-        const answerSheetSvgStrings = renderMultiPageSvgStrings(
+        const answerSheetHtmlPages = await generateAnswerSheetPageHtmls(
+          definition,
           multiPageLayout,
-          "answer-sheet",
-          imageDataUris
+          "answer-sheet"
         )
-        const modelAnswerSvgStrings = renderMultiPageSvgStrings(
+        const modelAnswerHtmlPages = await generateAnswerSheetPageHtmls(
+          definition,
           multiPageLayout,
-          "model-answer",
-          imageDataUris
+          "model-answer"
         )
 
         const result = await api.convertToExam({
           definition,
           userId: user.id,
           multiPageLayout,
-          answerSheetSvgStrings,
-          modelAnswerSvgStrings,
+          answerSheetHtmlPages,
+          modelAnswerHtmlPages,
         })
 
         if (result.success && result.examId) {

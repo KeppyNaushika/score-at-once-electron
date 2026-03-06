@@ -6,7 +6,6 @@ import { BrowserWindow, dialog, ipcMain, shell } from "electron"
 import fs from "fs"
 import os from "os"
 import path from "path"
-import sharp from "sharp"
 
 import type {
   ASBConvertToExamArgs,
@@ -23,6 +22,7 @@ import {
   getAsbImagesDirectory,
   getRelativePathFromData,
 } from "../lib/dataManager"
+import { htmlToPngBuffer } from "../lib/printUtils"
 import {
   deleteAsbDefinition,
   getAsbDefinition,
@@ -222,7 +222,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   })
 
-  // PNG出力: SVG文字列を受け取り → sharp でラスタライズ
+  // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
   ipcMain.handle("asb:export-png", async (_event, args: ASBExportPngArgs) => {
     try {
       const widthPx = Math.round((args.pageWidthMm / 25.4) * args.dpi)
@@ -233,22 +233,20 @@ export function setupAnswerSheetBuilderHandlers(): void {
         fs.mkdirSync(outputDir, { recursive: true })
       }
 
-      if (args.svgStrings.length === 1) {
-        const svgBuffer = Buffer.from(args.svgStrings[0])
-        await sharp(svgBuffer)
-          .resize(widthPx, heightPx)
-          .png()
-          .toFile(args.outputPath)
+      if (args.htmlPages.length === 1) {
+        const buf = await htmlToPngBuffer(args.htmlPages[0], widthPx, heightPx)
+        fs.writeFileSync(args.outputPath, buf)
       } else {
         const ext = path.extname(args.outputPath)
         const base = args.outputPath.slice(0, -ext.length)
-        for (let i = 0; i < args.svgStrings.length; i++) {
+        for (let i = 0; i < args.htmlPages.length; i++) {
           const pagePath = `${base}-${i + 1}${ext}`
-          const svgBuffer = Buffer.from(args.svgStrings[i])
-          await sharp(svgBuffer)
-            .resize(widthPx, heightPx)
-            .png()
-            .toFile(pagePath)
+          const buf = await htmlToPngBuffer(
+            args.htmlPages[i],
+            widthPx,
+            heightPx
+          )
+          fs.writeFileSync(pagePath, buf)
         }
       }
 
@@ -293,7 +291,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
   )
 
-  // 試験変換: multiPageLayout + SVG文字列を受け取り
+  // 試験変換: multiPageLayout + HTML文字列を受け取り
   ipcMain.handle(
     "asb:convert-to-exam",
     async (_event, args: ASBConvertToExamArgs) => {
@@ -302,8 +300,8 @@ export function setupAnswerSheetBuilderHandlers(): void {
           args.definition,
           args.userId,
           args.multiPageLayout,
-          args.answerSheetSvgStrings,
-          args.modelAnswerSvgStrings
+          args.answerSheetHtmlPages,
+          args.modelAnswerHtmlPages
         )
         return result
       } catch (error) {
