@@ -31,6 +31,7 @@ import {
   computeGridRowRightEdges,
   gridTotalHeight,
   isGridHorizontal,
+  mergeAbsoluteRightEdges,
 } from "./gridBuilder"
 import { computeHeaderFieldLayout } from "./headerFieldLayout"
 import {
@@ -314,6 +315,8 @@ export function computeMultiPageLayoutFromDefinition(
       }
 
       // rowRightEdges（枝問横配置を考慮）
+      const rawRightEdges: { yTop: number; yBottom: number; rightX: number }[] =
+        []
       for (const gc of gridCells) {
         const sub2 = gc.item
         const gcCellX = horizontalAreaX + gc.x * horizontalAreaWidth
@@ -337,15 +340,18 @@ export function computeMultiPageLayoutFromDefinition(
             branchAreaWidth,
             baseRowHeight
           )) {
-            colData.rowRightEdges.push(edge)
+            rawRightEdges.push(edge)
           }
         } else {
-          colData.rowRightEdges.push({
+          rawRightEdges.push({
             yTop: gcCellY,
             yBottom: gcCellY + gcCellH,
             rightX: gcCellRight,
           })
         }
+      }
+      for (const edge of mergeAbsoluteRightEdges(rawRightEdges)) {
+        colData.rowRightEdges.push(edge)
       }
 
       // rowLeftEdges

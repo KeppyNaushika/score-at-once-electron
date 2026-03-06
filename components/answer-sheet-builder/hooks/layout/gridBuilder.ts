@@ -219,6 +219,42 @@ export function gridTotalHeight<T>(cells: GridCell<T>[]): number {
   return Math.max(...cells.map((c) => c.y + c.height))
 }
 
+/** 絶対座標のY区間・右端エントリをマージする（同一Y区間の最大rightXを取る） */
+export function mergeAbsoluteRightEdges(
+  edges: { yTop: number; yBottom: number; rightX: number }[]
+): { yTop: number; yBottom: number; rightX: number }[] {
+  if (edges.length === 0) return []
+  const ySet = new Set<number>()
+  for (const e of edges) {
+    ySet.add(e.yTop)
+    ySet.add(e.yBottom)
+  }
+  const sortedYs = Array.from(ySet).sort((a, b) => a - b)
+  const result: { yTop: number; yBottom: number; rightX: number }[] = []
+  for (let i = 0; i < sortedYs.length - 1; i++) {
+    const yTop = sortedYs[i]
+    const yBottom = sortedYs[i + 1]
+    const midY = (yTop + yBottom) / 2
+    let maxRightX = 0
+    for (const e of edges) {
+      if (e.yTop <= midY + 1e-9 && e.yBottom >= midY - 1e-9) {
+        maxRightX = Math.max(maxRightX, e.rightX)
+      }
+    }
+    if (maxRightX > 0) {
+      if (
+        result.length > 0 &&
+        Math.abs(result[result.length - 1].rightX - maxRightX) < 0.01
+      ) {
+        result[result.length - 1].yBottom = yBottom
+      } else {
+        result.push({ yTop, yBottom, rightX: maxRightX })
+      }
+    }
+  }
+  return result
+}
+
 /** グリッドセルからY区間ごとの右端X座標を計算（ステップ外枠描画用） */
 export function computeGridRowRightEdges<T>(
   gridCells: GridCell<T>[],
