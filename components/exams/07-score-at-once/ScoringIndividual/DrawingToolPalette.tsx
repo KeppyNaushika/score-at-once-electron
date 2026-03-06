@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -233,6 +234,9 @@ export function DrawingToolPalette({
     },
     [selectedTexts, onUpdateSelectedElements, onStrokeColorChange]
   )
+  // キーバインディング取得
+  const { keyBindings } = useKeyBindings()
+
   const [isVisible, setIsVisible] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -453,6 +457,12 @@ export function DrawingToolPalette({
                   <div className="text-center">
                     <div className="font-medium">ハンドツール</div>
                     <div className="text-xs text-gray-400">ドラッグで移動</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                        {(keyBindings["tool.hand"] || "H").toUpperCase()}
+                      </kbd>
+                    </div>
                   </div>
                 </TooltipPrimitive.Content>
               </TooltipPrimitive.Portal>
@@ -479,6 +489,12 @@ export function DrawingToolPalette({
                     <div className="text-xs text-gray-400">
                       図形を選択・移動・削除
                     </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                        {(keyBindings["tool.select"] || "G").toUpperCase()}
+                      </kbd>
+                    </div>
                   </div>
                 </TooltipPrimitive.Content>
               </TooltipPrimitive.Portal>
@@ -500,6 +516,7 @@ export function DrawingToolPalette({
                 selectedTexts.length > 0
               }
               onClearSelection={onClearSelection}
+              shortcutKey={keyBindings["tool.line"] || "L"}
             />
 
             <RectangleToolPopover
@@ -516,6 +533,7 @@ export function DrawingToolPalette({
                 selectedTexts.length > 0
               }
               onClearSelection={onClearSelection}
+              shortcutKey={keyBindings["tool.rectangle"] || "B"}
             />
 
             <EllipseToolPopover
@@ -532,6 +550,7 @@ export function DrawingToolPalette({
                 selectedTexts.length > 0
               }
               onClearSelection={onClearSelection}
+              shortcutKey={keyBindings["tool.ellipse"] || "Y"}
             />
 
             <TextToolPopover
@@ -546,6 +565,7 @@ export function DrawingToolPalette({
                 selectedEllipses.length > 0
               }
               onClearSelection={onClearSelection}
+              shortcutKey={keyBindings["tool.text"] || "T"}
             />
 
             {/* お気に入り登録ボタン（要素選択時のみ表示） */}

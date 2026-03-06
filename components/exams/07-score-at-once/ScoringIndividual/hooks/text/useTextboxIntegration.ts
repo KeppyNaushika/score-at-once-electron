@@ -84,7 +84,7 @@ export function useTextboxV4Integration({
   // モーダル表示状態
   const [showV4Modal, setShowV4Modal] = useState(false)
   const [currentTextValue, setCurrentTextValue] = useState("")
-  const [currentTextColor, setCurrentTextColor] = useState("#000000")
+  const [currentTextColor, setCurrentTextColor] = useState("#ef4444")
   const [currentPosition, setCurrentPosition] = useState({ x: 0.5, y: 0.5 })
   const [currentFontSize, setCurrentFontSize] = useState(16)
   const [currentAnchorDirection, setCurrentAnchorDirection] =
