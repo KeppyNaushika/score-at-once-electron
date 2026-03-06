@@ -156,10 +156,19 @@ function parseDiscordMarkdown(text: string): string {
   let result = text
 
   // Discord Markdown → HTML変換（数式コンテキストを考慮）
-  result = safeReplace(result, /\*\*(.+?)\*\*/g, "<strong>$1</strong>") // 太字
-  result = safeReplace(result, /(?<!\*)\*([^*\n]+?)\*(?!\*)/g, "<em>$1</em>") // 斜体
-  result = safeReplace(result, /__(.+?)__/g, "<u>$1</u>") // 下線
-  result = safeReplace(result, /~~(.+?)~~/g, "<del>$1</del>") // 取り消し線
+  // 注意: safeReplaceの文字列置換では$1がリテラル扱いされるため、関数置換を使用
+  result = safeReplace(
+    result,
+    /\*\*(.+?)\*\*/g,
+    (_m, p1) => `<strong>${p1}</strong>`
+  ) // 太字
+  result = safeReplace(
+    result,
+    /(?<!\*)\*([^*\n]+?)\*(?!\*)/g,
+    (_m, p1) => `<em>${p1}</em>`
+  ) // 斜体
+  result = safeReplace(result, /__(.+?)__/g, (_m, p1) => `<u>${p1}</u>`) // 下線
+  result = safeReplace(result, /~~(.+?)~~/g, (_m, p1) => `<del>${p1}</del>`) // 取り消し線
 
   return result
 }
