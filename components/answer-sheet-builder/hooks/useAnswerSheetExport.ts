@@ -1,9 +1,8 @@
 /**
  * PDF/PNG出力・印刷hook
  *
- * PDF/印刷: renderToStaticMarkup でプレビューと同じReactコンポーネントをHTML化
- *          → 既存の export:openPrintDialog / export:printHtmlToPdf で出力
- * PNG:     SVG文字列 → sharp でラスタライズ（従来通り）
+ * PDF/印刷/PNG: renderToStaticMarkup でプレビューと同じReactコンポーネントをHTML化
+ *              → BrowserWindow + printToPDF / capturePage で出力
  */
 
 import { useCallback, useState } from "react"
@@ -11,11 +10,10 @@ import { toast } from "sonner"
 
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
-import { generateAnswerSheetPrintHtml } from "../utils/generatePrintHtml"
 import {
-  renderMultiPageSvgStrings,
-  resolveImageDataUris,
-} from "../utils/renderSvgStrings"
+  generateAnswerSheetPageHtmls,
+  generateAnswerSheetPrintHtml,
+} from "../utils/generatePrintHtml"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
 export function useAnswerSheetExport() {
@@ -83,16 +81,13 @@ export function useAnswerSheetExport() {
         if (!pathResult.success || !pathResult.filePath) return
 
         const multiLayout = computeMultiPageLayoutFromDefinition(definition)
-        const allCells = multiLayout.pages.flatMap((p) => p.cells)
-        const imageDataUris = await resolveImageDataUris(allCells)
-        const svgStrings = renderMultiPageSvgStrings(
-          multiLayout,
-          definition.renderMode,
-          imageDataUris
+        const htmlPages = await generateAnswerSheetPageHtmls(
+          definition,
+          multiLayout
         )
 
         const result = await api.exportPng({
-          svgStrings,
+          htmlPages,
           outputPath: pathResult.filePath,
           dpi,
           pageWidthMm: multiLayout.pageWidthMm,
