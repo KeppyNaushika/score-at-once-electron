@@ -284,6 +284,7 @@ export function renderBranchQuestions(
         })
       }
 
+      const branchPoints = sub.usesBranchPoints === false ? 0 : gc.item.points
       cells.push(
         createCell(
           [mi, si, gc.itemIndex],
@@ -293,7 +294,7 @@ export function renderBranchQuestions(
           cellHeight,
           paper,
           `${majorLabel}-${sub.label}-${gc.item.label}`,
-          gc.item.points,
+          branchPoints,
           gc.item.textElements,
           "answer",
           pageIndex,
@@ -380,6 +381,7 @@ export function renderBranchQuestions(
         })
       }
 
+      const branchPoints = sub.usesBranchPoints === false ? 0 : branch.points
       cells.push(
         createCell(
           [mi, si, bi],
@@ -389,7 +391,7 @@ export function renderBranchQuestions(
           branchHeight,
           paper,
           `${majorLabel}-${sub.label}-${branch.label}`,
-          branch.points,
+          branchPoints,
           branch.textElements,
           "answer",
           pageIndex,
