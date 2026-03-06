@@ -7,6 +7,7 @@
 
 import { app, BrowserWindow } from "electron"
 import fs from "fs"
+import os from "os"
 import path from "path"
 
 let mathjaxCache: string | null = null
@@ -37,6 +38,55 @@ export function resolveMathJaxSrc(html: string): string {
   } catch (err) {
     console.error("Failed to load MathJax source:", err)
     return html.replace('<script src="__MATHJAX_SRC__"></script>', "")
+  }
+}
+
+/**
+ * HTML文字列をオフスクリーンBrowserWindowでロードし、capturePageでPNGバッファに変換。
+ * 解答用紙のPNG出力・試験変換の模範解答画像生成で共通使用。
+ */
+export async function htmlToPngBuffer(
+  html: string,
+  widthPx: number,
+  heightPx: number
+): Promise<Buffer> {
+  let tempHtmlPath: string | null = null
+  let win: BrowserWindow | null = null
+  try {
+    tempHtmlPath = path.join(
+      os.tmpdir(),
+      `asb-capture-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.html`
+    )
+    fs.writeFileSync(tempHtmlPath, html, "utf-8")
+
+    win = new BrowserWindow({
+      show: false,
+      width: widthPx,
+      height: heightPx,
+      webPreferences: { offscreen: true },
+    })
+    await win.loadFile(tempHtmlPath)
+
+    // レンダリング完了を待つ
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const image = await win.webContents.capturePage({
+      x: 0,
+      y: 0,
+      width: widthPx,
+      height: heightPx,
+    })
+
+    return image.toPNG()
+  } finally {
+    win?.destroy()
+    if (tempHtmlPath) {
+      try {
+        fs.unlinkSync(tempHtmlPath)
+      } catch {
+        // ignore
+      }
+    }
   }
 }
 
