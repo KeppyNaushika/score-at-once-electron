@@ -187,11 +187,7 @@ export async function saveAsbDefinition(
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // 既存があれば子テーブルごと削除（Cascade）
-    await tx.asbDefinition
-      .delete({ where: { id: definition.id } })
-      .catch(() => {
-        // 新規作成時は存在しないので無視
-      })
+    await tx.asbDefinition.deleteMany({ where: { id: definition.id } })
 
     // 定義を作成
     const flat = flattenGlobalSettings(definition.settings)
