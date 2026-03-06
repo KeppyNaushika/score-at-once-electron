@@ -191,7 +191,7 @@ export function RichTextEditorModalV4({
   }, [insertFormatting])
 
   const handleUnderline = useCallback(() => {
-    insertFormatting("<u>", "</u>")
+    insertFormatting("__", "__")
     setIsUnderline(true)
     setTimeout(() => setIsUnderline(false), 200)
   }, [insertFormatting])
