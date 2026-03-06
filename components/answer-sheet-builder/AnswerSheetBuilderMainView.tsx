@@ -216,6 +216,9 @@ export function AnswerSheetBuilderMainView({
             <TabsTrigger value="lines" className="text-xs">
               罫線
             </TabsTrigger>
+            <TabsTrigger value="header" className="text-xs">
+              ヘッダー
+            </TabsTrigger>
             <TabsTrigger value="omr" className="text-xs">
               OMR
             </TabsTrigger>
@@ -258,7 +261,13 @@ export function AnswerSheetBuilderMainView({
                   settings={definition.settings}
                   onUpdate={updateSettings}
                 />
-                <Separator />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="header" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="p-3">
                 <HeaderFieldEditor
                   fields={definition.settings.headerFields}
                   onAdd={addHeaderField}
