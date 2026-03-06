@@ -16,7 +16,7 @@ export interface ASBExportPdfArgs {
 }
 
 export interface ASBExportPngArgs {
-  svgStrings: string[]
+  htmlPages: string[]
   outputPath: string
   dpi: number
   pageWidthMm: number
@@ -27,8 +27,8 @@ export interface ASBConvertToExamArgs {
   definition: AnswerSheetDefinition
   userId: string
   multiPageLayout: ComputedMultiPageLayout
-  answerSheetSvgStrings: string[]
-  modelAnswerSvgStrings: string[]
+  answerSheetHtmlPages: string[]
+  modelAnswerHtmlPages: string[]
 }
 
 export interface ASBPrintArgs {

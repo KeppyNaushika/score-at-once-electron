@@ -1,12 +1,12 @@
 /**
  * 解答用紙定義 → 採点試験変換
  *
- * renderer側から受け取った multiPageLayout + SVG文字列 → Exam + ExamPage + MasterImage + CropRegion 作成
+ * renderer側から受け取った multiPageLayout + HTML文字列 → BrowserWindow + capturePage でPNG化
+ * → Exam + ExamPage + MasterImage + CropRegion 作成
  */
 
 import fs from "fs"
 import path from "path"
-import sharp from "sharp"
 
 import type { AnswerSheetDefinition } from "../../../types/answerSheetDefinition.types"
 import type { ComputedMultiPageLayout } from "../../../types/answerSheetLayout.types"
@@ -16,6 +16,7 @@ import {
   getMasterAnswersDirectory,
   getRelativePathFromData,
 } from "../dataManager"
+import { htmlToPngBuffer } from "../printUtils"
 import prisma from "../prisma/client"
 import { createExam } from "../prisma/exam"
 import { createExamPage } from "../prisma/examPage"
@@ -28,14 +29,14 @@ export interface ConvertToExamResult {
 
 /**
  * 解答用紙定義を採点試験に変換
- * renderer側からmultiPageLayout + SVG文字列を受け取り、PNGバッファ生成→DB作成
+ * renderer側からmultiPageLayout + HTML文字列を受け取り、PNGバッファ生成→DB作成
  */
 export async function convertToExam(
   definition: AnswerSheetDefinition,
   userId: string,
   multiPageLayout: ComputedMultiPageLayout,
-  answerSheetSvgStrings: string[],
-  modelAnswerSvgStrings: string[]
+  answerSheetHtmlPages: string[],
+  modelAnswerHtmlPages: string[]
 ): Promise<ConvertToExamResult> {
   try {
     // 0. OMR設定を問題定義から抽出
@@ -62,26 +63,20 @@ export async function convertToExam(
       userId
     )
 
-    // 2. SVG文字列 → PNG Buffer 生成
+    // 2. HTML → PNG Buffer 生成（BrowserWindow + capturePage）
     const dpi = 300
     const widthPx = Math.round((multiPageLayout.pageWidthMm / 25.4) * dpi)
     const heightPx = Math.round((multiPageLayout.pageHeightMm / 25.4) * dpi)
 
     const templateBuffers: Buffer[] = []
-    for (const svg of answerSheetSvgStrings) {
-      const buf = await sharp(Buffer.from(svg))
-        .resize(widthPx, heightPx)
-        .png()
-        .toBuffer()
+    for (const html of answerSheetHtmlPages) {
+      const buf = await htmlToPngBuffer(html, widthPx, heightPx)
       templateBuffers.push(buf)
     }
 
     const modelBuffers: Buffer[] = []
-    for (const svg of modelAnswerSvgStrings) {
-      const buf = await sharp(Buffer.from(svg))
-        .resize(widthPx, heightPx)
-        .png()
-        .toBuffer()
+    for (const html of modelAnswerHtmlPages) {
+      const buf = await htmlToPngBuffer(html, widthPx, heightPx)
       modelBuffers.push(buf)
     }
 
