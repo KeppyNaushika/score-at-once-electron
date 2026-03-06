@@ -224,6 +224,7 @@ export async function saveAsbDefinition(
           lineWidth: hf.lineWidth,
           order: hi,
           fontSize: hf.fontSize ?? null,
+          linkedRegionType: hf.linkedRegionType ?? null,
         },
       })
     }

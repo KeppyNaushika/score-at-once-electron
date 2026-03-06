@@ -66,6 +66,7 @@ export function computeHeaderFieldLayout(
           ? field.widthMm / field.gridCount
           : undefined,
       fontSize: fieldType === "label" ? (field.fontSize ?? 5) : undefined,
+      linkedRegionType: field.linkedRegionType,
     }
     currentX += effectiveWidth + gap
     return computed

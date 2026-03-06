@@ -126,6 +126,7 @@ export function createDefaultHeaderField(
     lineWidth: overrides?.lineWidth ?? 0.4,
     order: overrides?.order ?? 0,
     fontSize: overrides?.fontSize,
+    linkedRegionType: overrides?.linkedRegionType,
   }
 }
 
@@ -135,7 +136,13 @@ export const HEADER_FIELD_PRESETS: {
 }[] = [
   {
     label: "受験番号",
-    defaults: { type: "field", label: "受験番号", widthMm: 40, gridCount: 8 },
+    defaults: {
+      type: "field",
+      label: "受験番号",
+      widthMm: 40,
+      gridCount: 8,
+      linkedRegionType: "STUDENT_ID",
+    },
   },
   {
     label: "クラス",
@@ -147,7 +154,33 @@ export const HEADER_FIELD_PRESETS: {
   },
   {
     label: "氏名",
-    defaults: { type: "field", label: "氏名", widthMm: 60, gridCount: 0 },
+    defaults: {
+      type: "field",
+      label: "氏名",
+      widthMm: 60,
+      gridCount: 0,
+      linkedRegionType: "STUDENT_NAME",
+    },
+  },
+  {
+    label: "合計点",
+    defaults: {
+      type: "field",
+      label: "合計点",
+      widthMm: 30,
+      gridCount: 0,
+      linkedRegionType: "TOTAL_SCORE",
+    },
+  },
+  {
+    label: "小計点",
+    defaults: {
+      type: "field",
+      label: "小計点",
+      widthMm: 30,
+      gridCount: 0,
+      linkedRegionType: "SUBTOTAL_SCORE",
+    },
   },
   {
     label: "可変スペース",

@@ -23,6 +23,7 @@ import type {
   GlobalSettings,
   HeaderFieldDefinition,
   LineStyle,
+  LinkedRegionType,
   MajorQuestion,
   SubQuestion,
 } from "../../../types/answerSheetDefinition.types"
@@ -263,6 +264,8 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
         lineWidth: hf.lineWidth,
         order: hf.order,
         fontSize: hf.fontSize ?? undefined,
+        linkedRegionType:
+          (hf.linkedRegionType as LinkedRegionType) ?? undefined,
       })
     )
   }
