@@ -28,6 +28,7 @@ import {
   computeGridRowRightEdges,
   gridTotalHeight,
   isGridHorizontal,
+  mergeAbsoluteRightEdges,
 } from "./gridBuilder"
 import { computeHeaderFieldLayout } from "./headerFieldLayout"
 import {
@@ -270,6 +271,8 @@ export function computeLayoutFromDefinition(
       }
 
       // rowRightEdges: Y区間ごとの右端X座標を計算（枝問横配置を考慮）
+      const rawRightEdges: { yTop: number; yBottom: number; rightX: number }[] =
+        []
       for (const gc of gridCells) {
         const sub2 = gc.item
         const gcCellX = horizontalAreaX + gc.x * horizontalAreaWidth
@@ -293,15 +296,18 @@ export function computeLayoutFromDefinition(
             branchAreaWidth,
             baseRowHeight
           )) {
-            majorRightEdges.push(edge)
+            rawRightEdges.push(edge)
           }
         } else {
-          majorRightEdges.push({
+          rawRightEdges.push({
             yTop: gcCellY,
             yBottom: gcCellY + gcCellH,
             rightX: gcCellRight,
           })
         }
+      }
+      for (const edge of mergeAbsoluteRightEdges(rawRightEdges)) {
+        majorRightEdges.push(edge)
       }
 
       // rowLeftEdges: Y区間ごとの左端X座標を計算
