@@ -218,6 +218,41 @@ export function computeFilteredSubtotalStats(
   })
 }
 
+/**
+ * 合計点箱ひげ図の統計を受験状態フィルタ付きで計算
+ */
+export function computeFilteredOverallStat(
+  rawTotalScores: {
+    studentId: string
+    totalScore: number | null
+    status: "participating" | "expected" | "absent"
+  }[],
+  totalMaxScore: number,
+  includeStatuses: BoxPlotIncludeStatuses
+): ComputedSubtotalStat {
+  const filteredScores = rawTotalScores
+    .filter((s) => {
+      if (s.status === "participating") return includeStatuses.participating
+      if (s.status === "expected") return includeStatuses.expected
+      if (s.status === "absent") return includeStatuses.absent
+      return true
+    })
+    .map((s) => s.totalScore)
+    .filter((s): s is number => s !== null)
+
+  return {
+    subtotalId: "__overall__",
+    subtotalLabel: "合計点",
+    subtotalGroupId: "__overall__",
+    boxPlot:
+      filteredScores.length > 0
+        ? calculateBoxPlotData(filteredScores)
+        : { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
+    average: calculateAverage(filteredScores),
+    maxScore: totalMaxScore,
+  }
+}
+
 // ============================
 // 小計点テーブル計算
 // ============================
