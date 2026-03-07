@@ -19,6 +19,7 @@ import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
 import {
   type BoxPlotIncludeStatuses,
   type ComputedSubtotalStat,
+  computeFilteredOverallStat,
   computeFilteredSubtotalStats,
 } from "./computeReportData"
 
@@ -44,6 +45,7 @@ interface BoxPlotChartProps {
   boxPlotIncludeStatuses?: BoxPlotIncludeStatuses
   boxPlotFontSize?: number
   boxPlotItemHeight?: number
+  showOverallBoxPlot?: boolean
 }
 
 /**
@@ -65,6 +67,7 @@ export function BoxPlotChart({
   boxPlotIncludeStatuses = DEFAULT_INCLUDE_STATUSES,
   boxPlotFontSize = 11,
   boxPlotItemHeight = 50,
+  showOverallBoxPlot = false,
 }: BoxPlotChartProps) {
   // renderer側で統計を再計算（受験状態フィルタ対応）
   const computedStats = useMemo(() => {
@@ -113,19 +116,43 @@ export function BoxPlotChart({
     scoringData.subtotalScores,
   ])
 
-  if (subtotalStats.length === 0) return null
-
-  // 各小計の得点を取得
-  const getStudentScore = (subtotalId: string): number => {
-    const subtotal = scoringData.subtotalScores.find(
-      (s) => s.subtotalId === subtotalId
+  // 合計点の箱ひげ図データ
+  const overallStat = useMemo(() => {
+    if (!showOverallBoxPlot) return null
+    return computeFilteredOverallStat(
+      statistics.rawTotalScores || [],
+      scoringData.totalMaxScore,
+      boxPlotIncludeStatuses
     )
+  }, [
+    showOverallBoxPlot,
+    statistics.rawTotalScores,
+    scoringData.totalMaxScore,
+    boxPlotIncludeStatuses,
+  ])
+
+  // 全項目を合成: [合計点] + [小計別]
+  const allStats = useMemo(() => {
+    const items: ComputedSubtotalStat[] = []
+    if (overallStat) items.push(overallStat)
+    items.push(...subtotalStats)
+    return items
+  }, [overallStat, subtotalStats])
+
+  if (allStats.length === 0) return null
+
+  // 各項目の得点を取得
+  const getStudentScore = (id: string): number => {
+    if (id === "__overall__") {
+      return scoringData.totalScore ?? 0
+    }
+    const subtotal = scoringData.subtotalScores.find((s) => s.subtotalId === id)
     return subtotal?.score ?? 0
   }
 
   return (
     <BoxPlotChartView
-      subtotalStats={subtotalStats}
+      subtotalStats={allStats}
       getStudentScore={getStudentScore}
       fontScale={fontScale}
       showMin={showMin}
@@ -261,7 +288,7 @@ export function BoxPlotChartView({
       {subtotalStats.map((stat, index) => {
         const y = marginTop + index * rowHeight
         const boxPlot = stat.boxPlot
-        const maxScore = boxPlot.max || 100
+        const maxScore = stat.maxScore || boxPlot.max || 100
 
         const toPercent = (score: number) => (score / maxScore) * 100
         const toX = (percent: number) =>

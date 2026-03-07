@@ -200,7 +200,7 @@ export function IndividualReportPreview({
                 borderBottom: "1px solid #ddd",
               }}
             >
-              小計別分布
+              得点分布
             </h2>
             <BoxPlotChart
               statistics={report.statistics}
@@ -218,6 +218,7 @@ export function IndividualReportPreview({
               boxPlotIncludeStatuses={options.boxPlotIncludeStatuses}
               boxPlotFontSize={options.graphOptions.boxPlotFontSize}
               boxPlotItemHeight={options.graphOptions.boxPlotItemHeight}
+              showOverallBoxPlot={options.graphOptions.showOverallBoxPlot}
             />
           </section>
         ) : null

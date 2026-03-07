@@ -15,6 +15,7 @@ import { BoxPlotChartView } from "./BoxPlotChart"
 import {
   allocateColumnsDHondt,
   buildStatsItems,
+  computeFilteredOverallStat,
   computeFilteredStats,
   computeFilteredSubtotalStats,
   filterSubtotalScores,
@@ -269,12 +270,32 @@ function renderSectionElement(
         )
       }
 
-      if (subtotalStats.length === 0) return null
-
       const graphOptions = options.graphOptions
-      const getStudentScore = (subtotalId: string): number => {
+
+      // 合計点を合成
+      type ComputedStat = (typeof subtotalStats)[number]
+      const allStats: ComputedStat[] = []
+
+      if (graphOptions.showOverallBoxPlot) {
+        allStats.push(
+          computeFilteredOverallStat(
+            report.statistics.rawTotalScores || [],
+            report.scoringData.totalMaxScore,
+            includeStatuses
+          )
+        )
+      }
+
+      allStats.push(...subtotalStats)
+
+      if (allStats.length === 0) return null
+
+      const getStudentScore = (id: string): number => {
+        if (id === "__overall__") {
+          return report.scoringData.totalScore ?? 0
+        }
         const subtotal = report.scoringData.subtotalScores.find(
-          (s) => s.subtotalId === subtotalId
+          (s) => s.subtotalId === id
         )
         return subtotal?.score ?? 0
       }
@@ -294,10 +315,10 @@ function renderSectionElement(
               borderBottom: "1px solid #ddd",
             },
           },
-          "小計別分布"
+          "得点分布"
         ),
         React.createElement(BoxPlotChartView, {
-          subtotalStats,
+          subtotalStats: allStats,
           getStudentScore,
           fontScale,
           showMin: graphOptions.showBoxPlotMin,

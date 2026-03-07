@@ -37,6 +37,8 @@ export interface GraphOptions {
   showBarChart: boolean
   showRadarChart: boolean
   showBoxPlot: boolean
+  // 箱ひげ図の表示対象
+  showOverallBoxPlot: boolean // 合計点の箱ひげ図を表示
   // 箱ひげ図の詳細オプション
   showBoxPlotMin: boolean // 最小値のヒゲを表示
   showBoxPlotQ1: boolean // Q1（第1四分位数）を表示
@@ -288,6 +290,7 @@ export const DEFAULT_GRAPH_OPTIONS: GraphOptions = {
   showBarChart: true,
   showRadarChart: true,
   showBoxPlot: true,
+  showOverallBoxPlot: false,
   showBoxPlotMin: true,
   showBoxPlotQ1: true,
   showBoxPlotMedian: true,

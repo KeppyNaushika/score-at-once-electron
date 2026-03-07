@@ -245,6 +245,19 @@ export function IndividualReportSettings({
           >
             {options.graphOptions.showBoxPlot && (
               <div className="mt-2 flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2">
+                  <OptionCard
+                    label="合計点"
+                    checked={options.graphOptions.showOverallBoxPlot ?? false}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showOverallBoxPlot: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                </div>
                 <SubtotalGroupSelector
                   examId={examId}
                   selection={options.boxPlotSubtotalGroupSelection}
