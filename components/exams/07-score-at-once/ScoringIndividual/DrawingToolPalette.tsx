@@ -396,7 +396,7 @@ export function DrawingToolPalette({
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
                       <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
-                        A
+                        {(keyBindings["view.fullView"] || "M").toUpperCase()}
                       </kbd>
                     </div>
                   </div>
@@ -426,7 +426,9 @@ export function DrawingToolPalette({
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
                       <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
-                        C
+                        {(
+                          keyBindings["view.questionView"] || "C"
+                        ).toUpperCase()}
                       </kbd>
                     </div>
                   </div>

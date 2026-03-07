@@ -66,7 +66,7 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================
   "view.toggleStudentNames": "n",
   "view.toggleViewMode": "v",
-  "view.fullView": "a", // 全体表示（個別モード）
+  "view.fullView": "m", // 全体表示（個別モード）
   "view.questionView": "c", // 設問表示（個別モード）
 
   // ============================================

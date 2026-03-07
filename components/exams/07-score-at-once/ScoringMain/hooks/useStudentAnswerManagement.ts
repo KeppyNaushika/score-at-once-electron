@@ -57,6 +57,8 @@ interface UseStudentAnswerManagementReturn {
   handleStudentChange: (studentId: string) => void
   /** 次の生徒へ移動（個別表示用） */
   handleIndividualNextStudent: () => void
+  /** 前の生徒へ移動（個別表示用） */
+  handleIndividualPrevStudent: () => void
 }
 
 /**
@@ -202,9 +204,50 @@ export function useStudentAnswerManagement(
     currentCropRegion,
   ])
 
+  /**
+   * 前の生徒へ移動（個別表示用）
+   */
+  const handleIndividualPrevStudent = useCallback(() => {
+    if (selectedStudentAnswerImageIds.size === 0) return
+
+    const currentAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
+    const currentAnswer = studentAnswerImages.find(
+      (a) => a.id === currentAnswerId
+    )
+    if (!currentAnswer) return
+
+    const sortedStudents = [...students].sort(
+      (a, b) => a.customOrder - b.customOrder
+    )
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentAnswer.student?.id
+    )
+    if (currentIndex > 0) {
+      const prevStudent = sortedStudents[currentIndex - 1]
+      const prevStudentSheets = studentAnswerImages.filter(
+        (a) => a.student?.id === prevStudent.id
+      )
+      const prevStudentAnswer = currentCropRegion
+        ? prevStudentSheets.find(
+            (a) => a.examPageId === currentCropRegion.examPageId
+          ) || prevStudentSheets[0]
+        : prevStudentSheets[0]
+      if (prevStudentAnswer) {
+        setSelectedPageImageIds(new Set([prevStudentAnswer.id]))
+      }
+    }
+  }, [
+    students,
+    selectedStudentAnswerImageIds,
+    studentAnswerImages,
+    setSelectedPageImageIds,
+    currentCropRegion,
+  ])
+
   return {
     students,
     handleStudentChange,
     handleIndividualNextStudent,
+    handleIndividualPrevStudent,
   }
 }
