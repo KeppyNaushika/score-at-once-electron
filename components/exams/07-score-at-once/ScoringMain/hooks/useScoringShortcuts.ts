@@ -22,6 +22,8 @@ interface ScoringShortcutHandlers {
   handlePrevQuestion: () => void
   /** グリッドナビゲーション */
   handleGridNavigation: (key: string) => void
+  /** 個別モードナビゲーション（レイアウト方向に応じた次/前の生徒移動） */
+  handleIndividualNavigation: (key: string) => void
   /** ズームイン */
   handleZoomIn: () => void
   /** ズームアウト */
@@ -56,6 +58,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     handleNextQuestion,
     handlePrevQuestion,
     handleGridNavigation,
+    handleIndividualNavigation,
     handleZoomIn,
     handleZoomOut,
     handleResetZoom,
@@ -264,6 +267,70 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
       category: "ナビゲーション",
     },
   })
+
+  // ========================================
+  // 個別モード用ナビゲーション（レイアウト方向対応）
+  // ========================================
+  useCommand("navigation.moveUp", () => handleIndividualNavigation("w"), {
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+    metadata: {
+      title: "前の生徒（上）",
+      category: "ナビゲーション",
+      description: "レイアウト方向に応じて前の生徒に移動します",
+    },
+  })
+
+  useCommand("navigation.moveDown", () => handleIndividualNavigation("s"), {
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+    metadata: {
+      title: "次の生徒（下）",
+      category: "ナビゲーション",
+      description: "レイアウト方向に応じて次の生徒に移動します",
+    },
+  })
+
+  useCommand("navigation.moveLeft", () => handleIndividualNavigation("a"), {
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+    metadata: {
+      title: "前の生徒（左）",
+      category: "ナビゲーション",
+      description: "レイアウト方向に応じて前の生徒に移動します",
+    },
+  })
+
+  useCommand("navigation.moveRight", () => handleIndividualNavigation("d"), {
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+    metadata: {
+      title: "次の生徒（右）",
+      category: "ナビゲーション",
+      description: "レイアウト方向に応じて次の生徒に移動します",
+    },
+  })
+
+  // 矢印キーによる個別モードの生徒移動
+  useCommand(
+    "navigation.nextStudentArrow",
+    () => handleIndividualNavigation("ArrowDown"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+      metadata: {
+        title: "次の生徒（↓）",
+        category: "ナビゲーション",
+      },
+    }
+  )
+
+  useCommand(
+    "navigation.prevStudentArrow",
+    () => handleIndividualNavigation("ArrowUp"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+      metadata: {
+        title: "前の生徒（↑）",
+        category: "ナビゲーション",
+      },
+    }
+  )
 
   useCommand("navigation.zoomIn", handleZoomIn, {
     when: "!inputFocus && !modalOpen",

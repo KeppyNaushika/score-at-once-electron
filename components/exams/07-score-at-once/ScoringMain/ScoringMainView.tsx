@@ -154,15 +154,19 @@ function ScoringMainViewContent() {
   })
 
   /** 生徒・答案管理フック */
-  const { students, handleStudentChange, handleIndividualNextStudent } =
-    useStudentAnswerManagement({
-      studentAnswerImages,
-      selectedStudentAnswerImageIds,
-      gradingMode,
-      currentCropRegion,
-      setSelectedPageImageIds,
-      setCurrentStudentIndex,
-    })
+  const {
+    students,
+    handleStudentChange,
+    handleIndividualNextStudent,
+    handleIndividualPrevStudent,
+  } = useStudentAnswerManagement({
+    studentAnswerImages,
+    selectedStudentAnswerImageIds,
+    gradingMode,
+    currentCropRegion,
+    setSelectedPageImageIds,
+    setCurrentStudentIndex,
+  })
 
   /** 採点データ管理hook */
   const {
@@ -239,6 +243,48 @@ function ScoringMainViewContent() {
     cropRegions: cropRegions,
   })
 
+  /**
+   * 個別モード用ナビゲーション
+   * レイアウト方向に応じてWASD/矢印キーを次/前の生徒に変換
+   */
+  const handleIndividualNavigation = useCallback(
+    (key: string) => {
+      // レイアウト方向ごとに「次の生徒」方向のキーを判定
+      let isNext = false
+      let isPrev = false
+
+      switch (layoutDirection) {
+        case "right-down":
+          // 右→下: d/s/ArrowDown = next, a/w/ArrowUp = prev
+          isNext = key === "d" || key === "s" || key === "ArrowDown"
+          isPrev = key === "a" || key === "w" || key === "ArrowUp"
+          break
+        case "left-down":
+          // 左→下: a/s/ArrowDown = next, d/w/ArrowUp = prev
+          isNext = key === "a" || key === "s" || key === "ArrowDown"
+          isPrev = key === "d" || key === "w" || key === "ArrowUp"
+          break
+        case "down-right":
+          // 下→右: s/d/ArrowDown = next, w/a/ArrowUp = prev
+          isNext = key === "s" || key === "d" || key === "ArrowDown"
+          isPrev = key === "w" || key === "a" || key === "ArrowUp"
+          break
+        case "down-left":
+          // 下→左: s/a/ArrowDown = next, w/d/ArrowUp = prev
+          isNext = key === "s" || key === "a" || key === "ArrowDown"
+          isPrev = key === "w" || key === "d" || key === "ArrowUp"
+          break
+      }
+
+      if (isNext) {
+        handleIndividualNextStudent()
+      } else if (isPrev) {
+        handleIndividualPrevStudent()
+      }
+    },
+    [layoutDirection, handleIndividualNextStudent, handleIndividualPrevStudent]
+  )
+
   const { handleBatchScoreWithProgress } = useBatchScoringWithProgress({
     selectedAnswers: selectedStudentAnswerImageIds,
     gradingMode: gradingMode,
@@ -296,6 +342,7 @@ function ScoringMainViewContent() {
     handleNextQuestion,
     handlePrevQuestion,
     handleGridNavigation,
+    handleIndividualNavigation,
     handleZoomIn,
     handleZoomOut,
     handleResetZoom,
