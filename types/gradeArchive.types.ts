@@ -48,6 +48,13 @@ export interface ArchiveGradeData {
     studentNumber: string
     gradeItemName: string
   }[]
+  /** 成績ラベル手動上書き（後方互換: optional） */
+  gradeOverrides?: {
+    studentNumber: string
+    targetType: string
+    gradeItemName: string | null
+    overrideLabel: string
+  }[]
 }
 
 export interface ArchiveGradeItem {

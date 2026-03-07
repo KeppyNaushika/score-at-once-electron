@@ -30,26 +30,34 @@ export const initializeScoringRecords = async (examId: string) => {
         throw new Error("No default user found for scoring initialization")
       }
 
+      const studentIds = examStudents.map((es) => es.studentId)
+      const regionIds = questionRegions.map((r) => r.id)
+
+      // 既存レコードを一括取得してSetで管理
+      const existingScores = await tx.questionScore.findMany({
+        where: {
+          studentId: { in: studentIds },
+          cropRegionId: { in: regionIds },
+          userId: defaultUser.id,
+        },
+        select: { studentId: true, cropRegionId: true },
+      })
+      const existingSet = new Set(
+        existingScores.map((s) => `${s.studentId}#${s.cropRegionId}`)
+      )
+
       const scoringRecords = []
 
       // 全ての生徒×採点領域の組み合わせを作成
       for (const examStudent of examStudents) {
         for (const region of questionRegions) {
-          // 既存レコードをチェック
-          const existing = await tx.questionScore.findFirst({
-            where: {
-              studentId: examStudent.studentId,
-              cropRegionId: region.id,
-              userId: defaultUser.id,
-            },
-          })
-
-          if (!existing) {
+          const key = `${examStudent.studentId}#${region.id}`
+          if (!existingSet.has(key)) {
             scoringRecords.push({
               studentId: examStudent.studentId,
               cropRegionId: region.id,
               partialScore: null,
-              status: "ungraded",
+              status: "unscored",
               userId: defaultUser.id,
             })
           }

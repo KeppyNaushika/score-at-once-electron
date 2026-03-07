@@ -74,6 +74,12 @@ export async function collectGradeArchiveData(
           gradeItem: { select: { name: true } },
         },
       },
+      gradeOverrides: {
+        include: {
+          student: { select: { studentNumber: true } },
+          gradeItem: { select: { name: true } },
+        },
+      },
     },
   })
 
@@ -178,6 +184,13 @@ export async function collectGradeArchiveData(
     gradeItemName: ex.gradeItem.name,
   }))
 
+  const gradeOverrides = gp.gradeOverrides.map((ov) => ({
+    studentNumber: ov.student.studentNumber,
+    targetType: ov.targetType,
+    gradeItemName: ov.gradeItem?.name ?? null,
+    overrideLabel: ov.overrideLabel,
+  }))
+
   return {
     gradeData: {
       grade: {
@@ -190,6 +203,7 @@ export async function collectGradeArchiveData(
       studentRefs,
       gradeItemExclusions:
         gradeItemExclusions.length > 0 ? gradeItemExclusions : undefined,
+      gradeOverrides: gradeOverrides.length > 0 ? gradeOverrides : undefined,
     },
     manualScoresData: { manualScores },
     boundariesData: { boundarySets },

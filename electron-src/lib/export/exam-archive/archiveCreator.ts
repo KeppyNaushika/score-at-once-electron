@@ -108,9 +108,12 @@ function getDataDir(): string {
  * @param options - アーカイブ作成オプション
  * @returns 作成されたアーカイブのパス
  */
-export async function createArchive(
-  options: CreateArchiveOptions
-): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+export async function createArchive(options: CreateArchiveOptions): Promise<{
+  success: boolean
+  outputPath?: string
+  error?: string
+  warnings?: string[]
+}> {
   const {
     collectedData,
     examName,
@@ -134,8 +137,14 @@ export async function createArchive(
         zlib: { level: 9 }, // 最高圧縮率
       })
 
+      const missingFiles: string[] = []
+
       output.on("close", () => {
-        resolve({ success: true, outputPath })
+        resolve({
+          success: true,
+          outputPath,
+          ...(missingFiles.length > 0 ? { warnings: missingFiles } : {}),
+        })
       })
 
       archive.on("error", (err) => {
@@ -203,6 +212,7 @@ export async function createArchive(
           archive.file(absolutePath, { name: archivePath })
         } else {
           console.warn(`Master image not found: ${absolutePath}`)
+          missingFiles.push(`模範解答画像: ${path.basename(relativePath)}`)
         }
       }
 
@@ -215,6 +225,7 @@ export async function createArchive(
           archive.file(absolutePath, { name: archivePath })
         } else {
           console.warn(`Answer sheet not found: ${absolutePath}`)
+          missingFiles.push(`答案画像: ${path.basename(relativePath)}`)
         }
       }
 

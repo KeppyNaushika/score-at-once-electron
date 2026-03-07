@@ -292,6 +292,38 @@ export async function importGradeArchive(
         }
       }
 
+      // 8. GradeOverride挿入（後方互換: optionalフィールド）
+      if (gradeData.gradeOverrides && gradeData.gradeOverrides.length > 0) {
+        for (const ov of gradeData.gradeOverrides) {
+          const student = await tx.student.findUnique({
+            where: { studentNumber: ov.studentNumber },
+          })
+          if (!student) continue
+
+          let gradeItemId: string | null = null
+          if (ov.gradeItemName) {
+            const gradeItem = await tx.gradeItem.findFirst({
+              where: {
+                gradeId: gp.id,
+                name: ov.gradeItemName,
+              },
+            })
+            if (!gradeItem) continue
+            gradeItemId = gradeItem.id
+          }
+
+          await tx.gradeOverride.create({
+            data: {
+              gradeId: gp.id,
+              studentId: student.id,
+              targetType: ov.targetType,
+              gradeItemId,
+              overrideLabel: ov.overrideLabel,
+            },
+          })
+        }
+      }
+
       return { success: true, gradeId: gp.id }
     })
   } catch (error) {
