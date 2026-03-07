@@ -100,6 +100,9 @@ export interface TableHeaderProps {
   hasNameRegion: boolean
   allowOverwrite?: boolean
   onAllowOverwriteChange?: (allow: boolean) => void
+  markerCorrectionEnabled?: boolean
+  markerCorrectionAvailable?: boolean
+  onMarkerCorrectionChange?: (enabled: boolean) => void
 }
 
 export interface PlacementStrategySelectorProps {

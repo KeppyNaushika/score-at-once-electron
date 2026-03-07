@@ -95,6 +95,7 @@ export interface UploadData {
   studentId: string // 受験生徒ID
   pageNumber: number // ページ番号
   overwrite: boolean // 上書きフラグ
+  correctWithMarkers?: boolean // マーカー補正フラグ
 }
 
 /**

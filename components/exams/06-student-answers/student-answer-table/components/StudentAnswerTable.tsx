@@ -39,6 +39,9 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
     handleDragEnd,
     allowOverwrite,
     setAllowOverwrite,
+    markerCorrectionEnabled,
+    markerCorrectionAvailable,
+    setMarkerCorrectionEnabled,
     previewMode,
     uploadModalState,
     handlePreviewModeChange,
@@ -92,6 +95,9 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
             hasNameRegion={hasNameRegion}
             allowOverwrite={allowOverwrite}
             onAllowOverwriteChange={setAllowOverwrite}
+            markerCorrectionEnabled={markerCorrectionEnabled}
+            markerCorrectionAvailable={markerCorrectionAvailable}
+            onMarkerCorrectionChange={setMarkerCorrectionEnabled}
           />
 
           <CardContent className="p-4">

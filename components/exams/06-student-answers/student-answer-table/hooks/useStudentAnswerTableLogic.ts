@@ -91,6 +91,9 @@ export function useStudentAnswerTableLogic({
   const [uploadModalState, setUploadModalState] = useState<UploadModalState>({
     isOpen: false,
   })
+  const [markerCorrectionEnabled, setMarkerCorrectionEnabled] = useState(false)
+  const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
+    useState(false)
 
   // ============================================================================
   // 削除処理
@@ -135,6 +138,32 @@ export function useStudentAnswerTableLogic({
     initializeStudentsWithoutAnswers(students)
   }, [students, initializeStudentsWithoutAnswers])
 
+  // マスター画像のマーカー検出（マーカー補正の利用可否判定）
+  useEffect(() => {
+    if (mode !== "upload" || !examId) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const result = await window.electronAPI.omr.detectMasterMarkers(examId)
+        if (!cancelled) {
+          setMarkerCorrectionAvailable(result.success)
+          if (!result.success) {
+            setMarkerCorrectionEnabled(false)
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setMarkerCorrectionAvailable(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [examId, mode])
+
   // ============================================================================
   // イベントハンドラー
   // ============================================================================
@@ -164,6 +193,7 @@ export function useStudentAnswerTableLogic({
             studentId: cell.student.id,
             pageNumber: cell.pageNumber,
             overwrite: allowOverwrite,
+            correctWithMarkers: markerCorrectionEnabled,
           })
         }
       })
@@ -228,6 +258,9 @@ export function useStudentAnswerTableLogic({
     handleDragEnd,
     allowOverwrite,
     setAllowOverwrite,
+    markerCorrectionEnabled,
+    markerCorrectionAvailable,
+    setMarkerCorrectionEnabled,
 
     // ローカル状態
     previewMode,

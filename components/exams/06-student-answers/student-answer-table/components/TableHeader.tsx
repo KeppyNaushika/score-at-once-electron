@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 
+import { MarkerCorrectionToggle } from "./MarkerCorrectionToggle"
 import { OverwriteToggle } from "./OverwriteToggle"
 import { PlacementStrategySelector } from "./PlacementStrategySelector"
 import { PreviewModeToggle } from "./PreviewModeToggle"
@@ -33,6 +34,9 @@ export function TableHeader({
   hasNameRegion,
   allowOverwrite = false,
   onAllowOverwriteChange,
+  markerCorrectionEnabled = false,
+  markerCorrectionAvailable = false,
+  onMarkerCorrectionChange,
 }: TableHeaderProps) {
   const [isTrashOpen, setIsTrashOpen] = useState(false)
 
@@ -63,6 +67,15 @@ export function TableHeader({
             onPreviewModeChange={onPreviewModeChange}
             hasNameRegion={hasNameRegion}
           />
+
+          {/* マーカー補正トグル（アップロードモードのみ） */}
+          {mode === "upload" && onMarkerCorrectionChange && (
+            <MarkerCorrectionToggle
+              enabled={markerCorrectionEnabled}
+              available={markerCorrectionAvailable}
+              onChange={onMarkerCorrectionChange}
+            />
+          )}
 
           {/* 既存答案上書きトグル（アップロードモードのみ） */}
           {mode === "upload" && onAllowOverwriteChange && (
