@@ -169,7 +169,18 @@ export function useDrawingState(
   // CRUD操作時はsetAnnotationsによるuseEffect発火をスキップし、
   // 楽観的更新（addDrawingElement/updateDrawingElement/removeDrawingElement）に依存する
   // これにより、まだDBに保存されていない楽観的更新が上書きされることを防ぐ
+  //
+  // 注意: 初回マウント時、useEffect([annotations])はannotations=[]で即座に発火するが、
+  // loadAnnotationsはまだ非同期完了していない。この初回発火でisLoadTriggeredRefが
+  // 消費されると、実際のデータ到着時にスキップされてしまう。
+  // isInitialMountRefで初回発火をスキップすることでこの問題を回避する。
+  const isInitialMountRef = useRef(true)
+
   useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return
+    }
     if (!isLoadTriggeredRef.current) {
       return
     }

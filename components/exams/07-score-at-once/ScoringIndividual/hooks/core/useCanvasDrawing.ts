@@ -909,6 +909,12 @@ export function useCanvasDrawing({
   const isDrawingTextCanvasRef = useRef(false)
   const needsTextRedrawRef = useRef(false)
 
+  // 最新のdrawTextCanvasをrefで保持（stale closure防止）
+  // executeTextCanvasDrawのfinally内で再帰呼び出しする際、
+  // 古いクロージャのdrawTextCanvasではなく最新版を使用する
+  const latestDrawTextCanvasRef = useRef(drawTextCanvas)
+  latestDrawTextCanvasRef.current = drawTextCanvas
+
   const executeTextCanvasDraw = useCallback(async () => {
     if (isDrawingTextCanvasRef.current) {
       needsTextRedrawRef.current = true
@@ -919,16 +925,19 @@ export function useCanvasDrawing({
     needsTextRedrawRef.current = false
 
     try {
-      await drawTextCanvas()
+      // refから最新のdrawTextCanvasを取得（stale closure防止）
+      await latestDrawTextCanvasRef.current()
     } finally {
       isDrawingTextCanvasRef.current = false
 
       if (needsTextRedrawRef.current) {
         needsTextRedrawRef.current = false
+        // 再帰呼び出しもrefを通じて最新版を使用するため、
+        // 安定した参照（deps: []）のまま正しく動作する
         executeTextCanvasDraw()
       }
     }
-  }, [drawTextCanvas])
+  }, []) // deps不要: drawTextCanvasはrefから取得
 
   // テキストドラッグ終了時の再描画
   useEffect(() => {
