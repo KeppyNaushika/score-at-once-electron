@@ -15,6 +15,8 @@ export interface UseAllStudentAnnotationsParams {
   currentCropRegion?: CropRegionWithExamPage | null
   /** 現在のユーザーID（アノテーション取得のフィルタリング用） */
   currentUserId?: string
+  /** 外部からのアノテーション変更通知キー（変更時にリロード） */
+  refreshKey?: number
 }
 
 /** 全設問アノテーション読み込みフックの戻り値 */
@@ -38,6 +40,7 @@ export function useAllStudentAnnotations({
   currentStudentId,
   currentCropRegion,
   currentUserId,
+  refreshKey,
 }: UseAllStudentAnnotationsParams): UseAllStudentAnnotationsReturn {
   const [allStudentAnnotations, setAllStudentAnnotations] = useState<
     DrawingAnnotation[]
@@ -88,6 +91,7 @@ export function useAllStudentAnnotations({
     currentCropRegion?.examPage?.examId,
     currentCropRegion?.id,
     currentUserId,
+    refreshKey,
   ])
 
   return { allStudentAnnotations }

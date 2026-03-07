@@ -148,6 +148,7 @@ export default function AnswerIndividualView({
     currentStudentId,
     currentCropRegion,
     currentUserId,
+    refreshKey: annotationRefreshKey,
   })
 
   // テキスト入力状態変更の通知
