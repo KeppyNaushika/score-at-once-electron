@@ -199,6 +199,7 @@ export function setupMiscHandlers(): void {
         studentId?: string
         pageNumber?: number
         overwrite?: boolean
+        correctWithMarkers?: boolean
       }[]
     ) => {
       try {

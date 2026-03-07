@@ -1143,6 +1143,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       params: { colorThreshold: number; areaThreshold: number }
       pageIndex?: number
     }) => ipcRenderer.invoke("omr:batch-recognize", args),
+    detectMasterMarkers: (examId: string, colorThreshold?: number) =>
+      ipcRenderer.invoke("omr:detect-master-markers", examId, colorThreshold),
     saveTemplate: (examId: string, template: unknown) =>
       ipcRenderer.invoke("omr:save-template", examId, template),
     loadTemplate: (examId: string) =>

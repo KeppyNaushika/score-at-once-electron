@@ -13,6 +13,8 @@ export {
   detectCornerMarkersFromRaw,
 } from "./cornerMarkerDetector"
 export { recognizeDigitCell } from "./digitRecognizer"
+export type { ImageCorrectionResult } from "./imageCorrector"
+export { computeSimilarityTransform, correctImage } from "./imageCorrector"
 export {
   computeCircularFillRatio,
   computeFillRatio,

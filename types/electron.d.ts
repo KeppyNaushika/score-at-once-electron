@@ -103,6 +103,7 @@ export interface UploadStudentAnswerFileData {
   studentId: string
   pageNumber: number
   overwrite: boolean
+  correctWithMarkers?: boolean
 }
 
 // Student exam result type
@@ -2257,6 +2258,17 @@ export interface MyAPI {
       examId: string,
       template: import("./omr.types").OMRTemplate
     ) => Promise<{ success: boolean; error?: string }>
+    detectMasterMarkers: (
+      examId: string,
+      colorThreshold?: number
+    ) => Promise<{
+      success: boolean
+      pages: Array<{
+        pageNumber: number
+        result: import("./omr.types").MarkerDetectionResult
+      }>
+      error?: string
+    }>
     loadTemplate: (examId: string) => Promise<{
       success: boolean
       template?: import("./omr.types").OMRTemplate

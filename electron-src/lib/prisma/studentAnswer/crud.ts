@@ -5,12 +5,72 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 
+import type {
+  DetectedCornerMarker,
+  MarkerDetectionResult,
+} from "../../../../types/omr.types"
 import {
   getAbsolutePathFromData,
   getAnswerSheetsDirectory,
+  getDataDirectory,
   getRelativePathFromData,
 } from "../../dataManager"
+import { detectCornerMarkers } from "../../omr/cornerMarkerDetector"
+import { correctImage } from "../../omr/imageCorrector"
 import prisma from "../client"
+
+/** ページごとのマスターマーカーキャッシュ */
+type MasterMarkerInfo = {
+  markers: DetectedCornerMarker[]
+  width: number
+  height: number
+}
+
+/**
+ * マスター画像のマーカーを取得（ページごとにキャッシュ）
+ */
+async function getMasterMarkersForPage(
+  examId: string,
+  pageNumber: number,
+  cache: Map<number, MasterMarkerInfo | null>,
+  colorThreshold: number = 128
+): Promise<MasterMarkerInfo | null> {
+  if (cache.has(pageNumber)) {
+    return cache.get(pageNumber) ?? null
+  }
+
+  const masterImage = await prisma.masterImage.findFirst({
+    where: {
+      examPage: { examId, pageNumber },
+    },
+    include: { examPage: true },
+  })
+
+  if (!masterImage) {
+    cache.set(pageNumber, null)
+    return null
+  }
+
+  const dataDir = getDataDirectory()
+  const imagePath = path.join(dataDir, masterImage.imagePath)
+  const result: MarkerDetectionResult = await detectCornerMarkers(
+    imagePath,
+    colorThreshold
+  )
+
+  if (!result.success) {
+    cache.set(pageNumber, null)
+    return null
+  }
+
+  const info: MasterMarkerInfo = {
+    markers: result.markers,
+    width: result.imageWidth,
+    height: result.imageHeight,
+  }
+  cache.set(pageNumber, info)
+  return info
+}
 
 /**
  * 答案画像のアップロード
@@ -24,6 +84,7 @@ export async function uploadStudentAnswers(
     studentId?: string
     pageNumber?: number
     overwrite?: boolean
+    correctWithMarkers?: boolean
   }[]
 ) {
   try {
@@ -32,7 +93,16 @@ export async function uploadStudentAnswers(
     // 試験ディレクトリを作成
     await fs.mkdir(examDir, { recursive: true })
 
-    const uploadedSheets = []
+    const uploadedSheets: Array<{
+      id: string
+      imagePath: string
+      isOverwrite: boolean
+      correctionStatus: "corrected" | "skipped" | "not_requested"
+      correctionError?: string
+    }> = []
+
+    // 補正用のマスターマーカーキャッシュ（ページ番号→マーカー情報）
+    const masterMarkerCache = new Map<number, MasterMarkerInfo | null>()
 
     for (const fileData of filesData) {
       // studentIdが必須
@@ -72,10 +142,44 @@ export async function uploadStudentAnswers(
       const filePath = path.join(examDir, fileName)
       const relativePath = getRelativePathFromData(filePath)
 
+      // 画像バッファを準備（補正の可能性あり）
+      let buffer = Buffer.from(fileData.buffer)
+      let correctionStatus: "corrected" | "skipped" | "not_requested" =
+        "not_requested"
+      let correctionError: string | undefined
+
+      if (fileData.correctWithMarkers) {
+        const masterInfo = await getMasterMarkersForPage(
+          examId,
+          fileData.pageNumber || 1,
+          masterMarkerCache
+        )
+
+        if (masterInfo) {
+          const result = await correctImage(
+            buffer,
+            masterInfo.markers,
+            masterInfo.width,
+            masterInfo.height
+          )
+
+          if (result.success && result.correctedBuffer) {
+            buffer = Buffer.from(result.correctedBuffer)
+            correctionStatus = "corrected"
+          } else {
+            correctionStatus = "skipped"
+            correctionError = result.error
+            console.warn(`画像補正スキップ (${fileData.name}): ${result.error}`)
+          }
+        } else {
+          correctionStatus = "skipped"
+          correctionError = "マスター画像のマーカーが検出できませんでした"
+        }
+      }
+
       if (existingRecord) {
         if (fileData.overwrite) {
           // ファイルを保存
-          const buffer = Buffer.from(fileData.buffer)
           await fs.writeFile(filePath, buffer)
 
           // 古いファイルを削除
@@ -94,14 +198,22 @@ export async function uploadStudentAnswers(
             data: { imagePath: relativePath },
           })
 
-          uploadedSheets.push({ ...answerSheet, isOverwrite: true })
+          uploadedSheets.push({
+            ...answerSheet,
+            isOverwrite: true,
+            correctionStatus,
+            correctionError,
+          })
         } else {
           // 上書き無効: スキップ（既存レコードをそのまま返す）
-          uploadedSheets.push({ ...existingRecord, isOverwrite: false })
+          uploadedSheets.push({
+            ...existingRecord,
+            isOverwrite: false,
+            correctionStatus: "not_requested",
+          })
         }
       } else {
         // ファイルを保存
-        const buffer = Buffer.from(fileData.buffer)
         await fs.writeFile(filePath, buffer)
 
         // 新規作成
@@ -113,7 +225,12 @@ export async function uploadStudentAnswers(
           },
         })
 
-        uploadedSheets.push({ ...answerSheet, isOverwrite: false })
+        uploadedSheets.push({
+          ...answerSheet,
+          isOverwrite: false,
+          correctionStatus,
+          correctionError,
+        })
       }
     }
 
