@@ -328,6 +328,7 @@ CREATE TABLE "DrawingAnnotation" (
     "displayX" REAL NOT NULL DEFAULT 0.0,
     "displayY" REAL NOT NULL DEFAULT 0.0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isFavorite" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" DATETIME NOT NULL,
     "userId" TEXT NOT NULL,
     CONSTRAINT "DrawingAnnotation_questionScoreId_fkey" FOREIGN KEY ("questionScoreId") REFERENCES "QuestionScore" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -1045,6 +1046,201 @@ CREATE INDEX "AsbOmrChoiceOption_omrConfigId_idx" ON "AsbOmrChoiceOption"("omrCo
   } catch (error) {
     console.error("Database initialization failed:", error)
     throw error
+  }
+}
+
+// テーブルのカラム情報を取得するヘルパー
+const getTableColumns = async (
+  prisma: PrismaClient,
+  tableName: string
+): Promise<string[]> => {
+  try {
+    const tableInfo = await prisma.$queryRawUnsafe<{ name: string }[]>(
+      `PRAGMA table_info("${tableName}")`
+    )
+    return tableInfo.map((col) => col.name)
+  } catch {
+    return [] // テーブルが存在しない場合
+  }
+}
+
+// テーブルが存在するか確認するヘルパー
+const tableExists = async (
+  prisma: PrismaClient,
+  tableName: string
+): Promise<boolean> => {
+  const result = await prisma.$queryRawUnsafe<{ name: string }[]>(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='${tableName}'`
+  )
+  return result.length > 0
+}
+
+// 既存データベースのスキーママイグレーション
+export const migrateExistingDatabase = async (): Promise<void> => {
+  const prisma = createSharedPrismaClient()
+
+  try {
+    await prisma.$connect()
+
+    // --- Migration: DrawingAnnotation.isFavorite (20260303200000) ---
+    try {
+      const daColumns = await getTableColumns(prisma, "DrawingAnnotation")
+      if (daColumns.length > 0 && !daColumns.includes("isFavorite")) {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "DrawingAnnotation" ADD COLUMN "isFavorite" BOOLEAN NOT NULL DEFAULT false`
+        )
+        await prisma.$executeRawUnsafe(
+          `CREATE INDEX IF NOT EXISTS "DrawingAnnotation_isFavorite_idx" ON "DrawingAnnotation"("isFavorite")`
+        )
+        console.info("Migration: Added isFavorite column to DrawingAnnotation")
+      }
+    } catch (error) {
+      console.warn("Migration DrawingAnnotation.isFavorite failed:", error)
+    }
+
+    // --- Migration: AsbImageElement テーブル (20260304000000) ---
+    try {
+      if (!(await tableExists(prisma, "AsbImageElement"))) {
+        // AsbSubQuestion テーブルが存在する場合のみ（ASB機能が有効なDB）
+        if (await tableExists(prisma, "AsbSubQuestion")) {
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE "AsbImageElement" (
+              "id" TEXT NOT NULL PRIMARY KEY,
+              "subQuestionId" TEXT,
+              "branchQuestionId" TEXT,
+              "imagePath" TEXT NOT NULL,
+              "originalName" TEXT NOT NULL,
+              "objectFit" TEXT NOT NULL DEFAULT 'contain',
+              "horizontalAlign" TEXT NOT NULL DEFAULT 'center',
+              "verticalAlign" TEXT NOT NULL DEFAULT 'middle',
+              "opacity" REAL NOT NULL DEFAULT 1,
+              "visibility" TEXT NOT NULL DEFAULT 'both',
+              "order" INTEGER NOT NULL DEFAULT 0,
+              "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              "updatedAt" DATETIME NOT NULL,
+              CONSTRAINT "AsbImageElement_subQuestionId_fkey" FOREIGN KEY ("subQuestionId") REFERENCES "AsbSubQuestion" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+              CONSTRAINT "AsbImageElement_branchQuestionId_fkey" FOREIGN KEY ("branchQuestionId") REFERENCES "AsbBranchQuestion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          `)
+          await prisma.$executeRawUnsafe(
+            `CREATE INDEX IF NOT EXISTS "AsbImageElement_subQuestionId_idx" ON "AsbImageElement"("subQuestionId")`
+          )
+          await prisma.$executeRawUnsafe(
+            `CREATE INDEX IF NOT EXISTS "AsbImageElement_branchQuestionId_idx" ON "AsbImageElement"("branchQuestionId")`
+          )
+          console.info("Migration: Created AsbImageElement table")
+        }
+      }
+    } catch (error) {
+      console.warn("Migration AsbImageElement table failed:", error)
+    }
+
+    // --- Migration: AsbDefinition multiColumn カラム (20260305000000) ---
+    try {
+      const asbDefColumns = await getTableColumns(prisma, "AsbDefinition")
+      if (
+        asbDefColumns.length > 0 &&
+        !asbDefColumns.includes("multiColumnEnabled")
+      ) {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbDefinition" ADD COLUMN "multiColumnEnabled" BOOLEAN NOT NULL DEFAULT false`
+        )
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbDefinition" ADD COLUMN "multiColumnCount" INTEGER NOT NULL DEFAULT 2`
+        )
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbDefinition" ADD COLUMN "multiColumnGapMm" REAL NOT NULL DEFAULT 5`
+        )
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbDefinition" ADD COLUMN "multiColumnDividerLine" TEXT`
+        )
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbDefinition" ADD COLUMN "multiColumnDividerLineWidth" REAL NOT NULL DEFAULT 0.3`
+        )
+        console.info("Migration: Added multiColumn columns to AsbDefinition")
+      }
+    } catch (error) {
+      console.warn("Migration AsbDefinition multiColumn failed:", error)
+    }
+
+    // --- Migration: AsbHeaderField テーブル (20260305000000) ---
+    try {
+      if (!(await tableExists(prisma, "AsbHeaderField"))) {
+        if (await tableExists(prisma, "AsbDefinition")) {
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE "AsbHeaderField" (
+              "id" TEXT NOT NULL PRIMARY KEY,
+              "definitionId" TEXT NOT NULL,
+              "type" TEXT NOT NULL DEFAULT 'field',
+              "label" TEXT NOT NULL,
+              "widthMm" REAL NOT NULL DEFAULT 30,
+              "heightMm" REAL NOT NULL DEFAULT 8,
+              "gridCount" INTEGER NOT NULL DEFAULT 0,
+              "lineStyle" TEXT NOT NULL DEFAULT 'solid',
+              "lineWidth" REAL NOT NULL DEFAULT 0.4,
+              "order" INTEGER NOT NULL DEFAULT 0,
+              "fontSize" REAL,
+              "linkedRegionType" TEXT,
+              CONSTRAINT "AsbHeaderField_definitionId_fkey" FOREIGN KEY ("definitionId") REFERENCES "AsbDefinition" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          `)
+          await prisma.$executeRawUnsafe(
+            `CREATE INDEX IF NOT EXISTS "AsbHeaderField_definitionId_idx" ON "AsbHeaderField"("definitionId")`
+          )
+          console.info("Migration: Created AsbHeaderField table")
+        }
+      }
+    } catch (error) {
+      console.warn("Migration AsbHeaderField table failed:", error)
+    }
+
+    // --- Migration: AsbImageElement.visibility (20260305100000) ---
+    try {
+      const imgColumns = await getTableColumns(prisma, "AsbImageElement")
+      if (imgColumns.length > 0 && !imgColumns.includes("visibility")) {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbImageElement" ADD COLUMN "visibility" TEXT NOT NULL DEFAULT 'both'`
+        )
+        console.info("Migration: Added visibility column to AsbImageElement")
+      }
+    } catch (error) {
+      console.warn("Migration AsbImageElement.visibility failed:", error)
+    }
+
+    // --- Migration: AsbHeaderField.type, fontSize (20260306000000) ---
+    try {
+      const hfColumns = await getTableColumns(prisma, "AsbHeaderField")
+      if (hfColumns.length > 0 && !hfColumns.includes("type")) {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbHeaderField" ADD COLUMN "type" TEXT NOT NULL DEFAULT 'field'`
+        )
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbHeaderField" ADD COLUMN "fontSize" REAL`
+        )
+        console.info("Migration: Added type/fontSize columns to AsbHeaderField")
+      }
+    } catch (error) {
+      console.warn("Migration AsbHeaderField.type failed:", error)
+    }
+
+    // --- Migration: AsbHeaderField.linkedRegionType (20260307000000) ---
+    try {
+      const hfColumns2 = await getTableColumns(prisma, "AsbHeaderField")
+      if (hfColumns2.length > 0 && !hfColumns2.includes("linkedRegionType")) {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "AsbHeaderField" ADD COLUMN "linkedRegionType" TEXT`
+        )
+        console.info(
+          "Migration: Added linkedRegionType column to AsbHeaderField"
+        )
+      }
+    } catch (error) {
+      console.warn("Migration AsbHeaderField.linkedRegionType failed:", error)
+    }
+  } catch (error) {
+    console.error("Database migration failed:", error)
+  } finally {
+    await prisma.$disconnect()
   }
 }
 

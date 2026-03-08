@@ -218,6 +218,11 @@ export class DatabaseSetup {
           setupPerformed = true
         }
       } else {
+        // 既存DBにスキーママイグレーションを適用
+        const { migrateExistingDatabase } =
+          await import("./prisma/databaseInitializer")
+        await migrateExistingDatabase()
+
         const isEmpty = await this.isDatabaseEmpty()
         if (isEmpty) {
           await this.runSeed()
