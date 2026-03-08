@@ -105,6 +105,49 @@ module.exports = {
       const path = require("path")
       const { spawnSync } = require("child_process")
 
+      // onnxruntime-nodeの非ターゲットアーキテクチャバイナリを削除
+      // RPMビルド時にbrp-stripが異なるアーキテクチャのバイナリをstripできず失敗するのを防止
+      const removeNonTargetOnnxruntimeBinaries = (basePath) => {
+        const onnxBinPath = path.join(
+          basePath,
+          "node_modules",
+          "onnxruntime-node",
+          "bin",
+          "napi-v6"
+        )
+        if (!fs.existsSync(onnxBinPath)) return
+
+        const targetArch = options.arch === "x64" ? "x64" : options.arch
+        const platforms = fs.readdirSync(onnxBinPath)
+        platforms.forEach((platform) => {
+          const platformPath = path.join(onnxBinPath, platform)
+          if (!fs.statSync(platformPath).isDirectory()) return
+          const arches = fs.readdirSync(platformPath)
+          arches.forEach((arch) => {
+            if (arch !== targetArch) {
+              const archPath = path.join(platformPath, arch)
+              console.log(
+                `🧹 Removing non-target onnxruntime binary: ${platform}/${arch}`
+              )
+              fs.rmSync(archPath, { recursive: true, force: true })
+            }
+          })
+          // 現在のビルドプラットフォームと異なるOS用のバイナリも削除
+          const targetPlatform =
+            options.platform === "darwin"
+              ? "darwin"
+              : options.platform === "win32"
+                ? "win32"
+                : "linux"
+          if (platform !== targetPlatform) {
+            console.log(
+              `🧹 Removing non-target onnxruntime platform: ${platform}`
+            )
+            fs.rmSync(platformPath, { recursive: true, force: true })
+          }
+        })
+      }
+
       // オフライン動作に必要な静的ファイルの存在確認
       const verifyOfflineFiles = (resourcesPath) => {
         const criticalFiles = [
@@ -146,6 +189,12 @@ module.exports = {
         // オフラインファイル検証
         verifyOfflineFiles(resourcesPath)
 
+        // asar.unpackedのonnxruntime非ターゲットバイナリを削除
+        const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
+        if (fs.existsSync(unpackedPath)) {
+          removeNonTargetOnnxruntimeBinaries(unpackedPath)
+        }
+
         // カスタムアイコンをコピー
         const iconSource = path.join(__dirname, "public", "icons", "icon.icns")
         const iconDest = path.join(resourcesPath, "icon.icns")
@@ -168,6 +217,12 @@ module.exports = {
         // Windows/Linux用のパス
         const resourcesPath = path.join(options.outputPaths[0], "resources")
         verifyOfflineFiles(resourcesPath)
+
+        // asar.unpackedのonnxruntime非ターゲットバイナリを削除
+        const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
+        if (fs.existsSync(unpackedPath)) {
+          removeNonTargetOnnxruntimeBinaries(unpackedPath)
+        }
       }
     },
   },
