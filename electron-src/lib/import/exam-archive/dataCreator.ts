@@ -428,6 +428,7 @@ export async function createImportedData(
               anchorDirection: da.anchorDirection,
               displayX: da.displayX,
               displayY: da.displayY,
+              isFavorite: da.isFavorite,
               userId: currentUserId,
             },
           })
