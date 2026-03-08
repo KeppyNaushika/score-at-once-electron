@@ -39,7 +39,11 @@ export const getAppRootPath = (): string => {
 }
 
 // データディレクトリのパス
+// 環境変数 SCORE_AT_ONCE_DATA_DIR が設定されている場合はそちらを優先
 export const getDataDirectory = (): string => {
+  if (process.env.SCORE_AT_ONCE_DATA_DIR) {
+    return path.resolve(process.env.SCORE_AT_ONCE_DATA_DIR)
+  }
   const dataPath = path.join(getAppRootPath(), "data")
   return dataPath
 }

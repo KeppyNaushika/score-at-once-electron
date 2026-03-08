@@ -71,3 +71,8 @@ temp-notes-*.md
 release-files/
 
 /.claude
+
+# スクリーンショット撮影用
+__tests__/screenshots/data/
+__tests__/screenshots/output/
+__tests__/screenshots/artifacts/

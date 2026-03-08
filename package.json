@@ -47,6 +47,9 @@
     "github:prerelease:rc": "node scripts/github-release.js patch rc",
     "postinstall": "prisma generate && node scripts/setup-mathjax-fonts.js",
     "setup-assets": "node scripts/setup-mathjax-fonts.js",
+    "screenshot:setup": "npx tsx __tests__/screenshots/setup-data.ts",
+    "screenshot:test": "npx playwright test --config=playwright.screenshot.config.ts",
+    "screenshot": "npm run screenshot:setup && npm run screenshot:test",
     "db:seed": "node prisma/seed.js",
     "db:setup": "prisma migrate dev && npm run db:seed",
     "db:reset": "prisma migrate reset --force && npm run db:seed"
@@ -129,6 +132,7 @@
     "@electron-forge/maker-zip": "^7.11.1",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@eslint/eslintrc": "^3.3.3",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.2.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
