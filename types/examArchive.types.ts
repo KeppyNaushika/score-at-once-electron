@@ -829,6 +829,7 @@ export interface ArchiveScoresData {
     anchorDirection: string
     displayX: number
     displayY: number
+    isFavorite: boolean
     userId: string
     createdAt: string
     updatedAt: string

@@ -283,6 +283,7 @@ export async function collectExamData(
                 anchorDirection: ann.anchorDirection,
                 displayX: ann.displayX,
                 displayY: ann.displayY,
+                isFavorite: ann.isFavorite,
                 userId: ann.userId,
                 createdAt: ann.createdAt.toISOString(),
                 updatedAt: ann.updatedAt.toISOString(),
