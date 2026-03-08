@@ -14,6 +14,9 @@ import { computeMultiPageLayoutFromDefinition } from "@/components/answer-sheet-
 import type {
   AnswerSheetDefinition,
   BranchQuestion,
+  HeaderFieldType,
+  LineStyle,
+  LinkedRegionType,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
@@ -41,16 +44,16 @@ function templateToDefinition(
   const headerFields = (t.headerFields as Array<Record<string, unknown>>).map(
     (hf) => ({
       id: hf.id as string,
-      type: (hf.type as string) ?? "field",
+      type: ((hf.type as string) ?? "field") as HeaderFieldType,
       label: hf.label as string,
       widthMm: hf.widthMm as number,
       heightMm: hf.heightMm as number,
       gridCount: hf.gridCount as number,
-      lineStyle: hf.lineStyle as string,
+      lineStyle: hf.lineStyle as LineStyle,
       lineWidth: hf.lineWidth as number,
       order: hf.order as number,
       fontSize: (hf.fontSize as number) ?? undefined,
-      linkedRegionType: (hf.linkedRegionType as string) ?? undefined,
+      linkedRegionType: (hf.linkedRegionType as LinkedRegionType) ?? undefined,
     })
   )
 
@@ -85,7 +88,7 @@ function templateToDefinition(
               nextPlacement:
                 (bq.nextPlacement as BranchQuestion["nextPlacement"]) ??
                 undefined,
-              goUp: (bq.goUp as boolean) ?? undefined,
+              goUp: (bq.goUp as number) ?? undefined,
             })
           ),
           heightMultiplier: sq.heightMultiplier as number,
@@ -93,20 +96,20 @@ function templateToDefinition(
           textElements: (
             (sq.textElements as Array<Record<string, unknown>>) || []
           ).map((te) => ({
+            id: (te.id as string) ?? crypto.randomUUID(),
             text: te.text as string,
             fontSize: te.fontSize as number,
             horizontalAlign:
               (te.horizontalAlign as "left" | "center" | "right") ?? "left",
             verticalAlign:
               (te.verticalAlign as "top" | "middle" | "bottom") ?? "top",
-            order: (te.order as number) ?? 0,
           })),
           imageElements: [],
           manuscriptPaper,
           layoutWidth: (sq.layoutWidth as string) ?? undefined,
           nextPlacement:
             (sq.nextPlacement as SubQuestion["nextPlacement"]) ?? undefined,
-          goUp: (sq.goUp as boolean) ?? undefined,
+          goUp: (sq.goUp as number) ?? undefined,
           usesBranchPoints: (sq.usesBranchPoints as boolean) ?? undefined,
         }
       }
@@ -137,13 +140,13 @@ function templateToDefinition(
         headerHeight: t.headerHeight as number,
       },
       borderConfig: {
-        outerBorder: t.borderOuterBorder as string,
-        majorDivider: t.borderMajorDivider as string,
-        subDivider: t.borderSubDivider as string,
-        branchDivider: t.borderBranchDivider as string,
-        majorNumberDivider: t.borderMajorNumberDivider as string,
-        subNumberDivider: t.borderSubNumberDivider as string,
-        branchNumberDivider: t.borderBranchNumberDivider as string,
+        outerBorder: t.borderOuterBorder as LineStyle,
+        majorDivider: t.borderMajorDivider as LineStyle,
+        subDivider: t.borderSubDivider as LineStyle,
+        branchDivider: t.borderBranchDivider as LineStyle,
+        majorNumberDivider: t.borderMajorNumberDivider as LineStyle,
+        subNumberDivider: t.borderSubNumberDivider as LineStyle,
+        branchNumberDivider: t.borderBranchNumberDivider as LineStyle,
         outerBorderWidth: (t.borderOuterBorderWidth as number) ?? undefined,
         majorDividerWidth: (t.borderMajorDividerWidth as number) ?? undefined,
         subDividerWidth: (t.borderSubDividerWidth as number) ?? undefined,
@@ -171,7 +174,7 @@ function templateToDefinition(
         enabled: t.multiColumnEnabled as boolean,
         columnCount: (t.multiColumnCount as 2 | 3) ?? 2,
         columnGapMm: t.multiColumnGapMm as number,
-        dividerLine: (t.multiColumnDividerLine as string) ?? null,
+        dividerLine: (t.multiColumnDividerLine as LineStyle) ?? null,
         dividerLineWidth: (t.multiColumnDividerLineWidth as number) ?? 0.3,
       },
       headerFields,
