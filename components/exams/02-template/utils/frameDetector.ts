@@ -6,26 +6,21 @@
  *
  * ## 処理フロー
  *
- * 1. **前処理**: グレースケール変換 → Sobelエッジ検出 → 二値化
- *    - RGB画像を輝度値に変換し、エッジ（輪郭）を強調
- *    - 閾値128で二値化し、線分を抽出
+ * 1. **前処理**: グレースケール変換 → 適応的二値化（黒線を白に反転）
+ *    - RGB画像を輝度値に変換
+ *    - Otsu法で最適閾値を自動決定し、黒い線を白ピクセルとして抽出
  *
- * 2. **線検出**: 水平線・垂直線を走査して検出
- *    - 連続する白ピクセル（エッジ）を線分として認識
- *    - 最小長（画像サイズの2%）未満の線は除外
- *    - 近接する線分（3px以内）をマージして1本に統合
+ * 2. **モルフォロジー処理**: 膨張（dilation）で途切れた線のギャップを補完
  *
- * 3. **線延長**: ユーザー指定のピクセル分だけ線を延長
- *    - 途切れた枠線を補完し、閉じた矩形を形成しやすくする
+ * 3. **線検出**: 水平線・垂直線を走査して検出（ギャップ許容）
+ *    - 一定のギャップ（感度に応じて可変）を許容して線分を認識
+ *    - 近接する線分をマージして1本に統合
  *
- * 4. **矩形構築**: 4本の線（上下左右）の交点から矩形を生成
- *    - 水平線ペア × 垂直線ペアの組み合わせを全探索
- *    - 4つの交点が成立する場合のみ矩形として採用
+ * 4. **線延長**: ユーザー指定のピクセル分だけ線を延長
  *
- * 5. **フィルタリング**:
- *    - 最小幅・最小高さ未満の矩形を除外
- *    - 重複する矩形のうち、内包関係にある大きい方を除外
- *      （例: 「日」のような入れ子構造で外枠を除去）
+ * 5. **矩形構築**: 4本の線（上下左右）の交点から矩形を生成
+ *
+ * 6. **フィルタリング**: サイズ制約と重複除去
  *
  * ## 座標系
  * - 入力: ピクセル座標（画像サイズ依存）
@@ -44,20 +39,32 @@ type VLine = { x: number; y1: number; y2: number }
 /** ピクセル座標の矩形 */
 type PixelRect = { x: number; y: number; width: number; height: number }
 
-/** 線マージの許容ピクセル */
-const LINE_MERGE_TOLERANCE = 3
-
-/** 交点判定の許容ピクセル */
-const INTERSECTION_TOLERANCE = 5
-
 /** 重複判定の許容ピクセル */
 const DUPLICATE_TOLERANCE = 5
 
 /** 最小線長（画像サイズの2%） */
 const MIN_LINE_LENGTH_RATIO = 0.02
 
-/** 二値化の閾値 */
-const BINARIZE_THRESHOLD = 128
+/**
+ * 感度レベル（1-5）に応じたパラメータ
+ */
+function getSensitivityParams(sensitivity: number) {
+  // sensitivity: 1(低感度) ～ 5(高感度)
+  const s = Math.max(1, Math.min(5, sensitivity))
+
+  return {
+    /** 二値化閾値の補正係数（Otsu閾値に掛ける。低いほど薄い線も拾う） */
+    thresholdFactor: [1.0, 0.85, 0.7, 0.55, 0.4][s - 1],
+    /** 膨張回数 */
+    dilationIterations: [0, 1, 1, 2, 2][s - 1],
+    /** 線検出時に許容するギャップ（ピクセル） */
+    lineGapTolerance: [1, 3, 5, 8, 12][s - 1],
+    /** 線マージの許容ピクセル */
+    lineMergeTolerance: [3, 5, 6, 8, 10][s - 1],
+    /** 交点判定の許容ピクセル */
+    intersectionTolerance: [5, 7, 8, 10, 12][s - 1],
+  }
+}
 
 /**
  * 枠検出クラス
@@ -107,10 +114,6 @@ export class FrameDetector {
 
   /**
    * Canvasから枠を検出
-   *
-   * @param canvas - 画像が描画されたCanvas要素
-   * @param settings - 検出設定（線延長、最小幅、最小高さ）
-   * @returns 検出された矩形の配列（相対座標0-1）
    */
   detect(
     canvas: HTMLCanvasElement,
@@ -124,24 +127,24 @@ export class FrameDetector {
     this.settings = settings
     this.imageData = ctx.getImageData(0, 0, this.width, this.height)
 
+    const params = getSensitivityParams(settings.sensitivity)
+
     // Step 1: グレースケール変換
-    // RGB値を輝度値に変換（ITU-R BT.709準拠）
     const gray = this.toGrayscale()
 
-    // Step 2: エッジ検出（Sobel）
-    // 輝度の急激な変化（=線の境界）を検出
-    const edges = this.detectEdges(gray)
+    // Step 2: 適応的二値化（黒い線 → 白ピクセル）
+    const binary = this.adaptiveBinarize(gray, params.thresholdFactor)
 
-    // Step 3: 二値化
-    // エッジ強度を閾値で白黒に分離
-    const binary = this.binarize(edges, BINARIZE_THRESHOLD)
+    // Step 3: 膨張処理（途切れた線のギャップを補完）
+    let processed = binary
+    for (let i = 0; i < params.dilationIterations; i++) {
+      processed = this.dilate(processed)
+    }
 
     // Step 4: 線検出 → 延長 → 矩形構築
-    // 水平・垂直線を検出し、4線の交点から矩形を生成
-    const rects = this.findRectangles(binary)
+    const rects = this.findRectangles(processed, params)
 
     // Step 5: フィルタリング
-    // サイズ制約と重複除去を適用
     return this.filterRects(rects, settings)
   }
 
@@ -163,65 +166,128 @@ export class FrameDetector {
   }
 
   /**
-   * Sobelフィルタによるエッジ検出
-   * 3x3カーネルで水平・垂直方向の勾配を計算し、勾配強度を出力
-   * 黒い線の両端（白→黒、黒→白の境界）が白く検出される
+   * Otsu法による最適閾値の計算
+   * 画像のヒストグラムからクラス間分散を最大化する閾値を自動決定
    */
-  private detectEdges(gray: Uint8ClampedArray): Uint8ClampedArray {
-    const edges = new Uint8ClampedArray(this.width * this.height)
-    const w = this.width
-    const h = this.height
+  private computeOtsuThreshold(gray: Uint8ClampedArray): number {
+    // ヒストグラム作成
+    const histogram = new Array<number>(256).fill(0)
+    for (let i = 0; i < gray.length; i++) {
+      histogram[gray[i]]++
+    }
 
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const idx = y * w + x
+    const total = gray.length
+    let sumAll = 0
+    for (let i = 0; i < 256; i++) {
+      sumAll += i * histogram[i]
+    }
 
-        const tl = gray[(y - 1) * w + (x - 1)]
-        const t = gray[(y - 1) * w + x]
-        const tr = gray[(y - 1) * w + (x + 1)]
-        const l = gray[y * w + (x - 1)]
-        const r = gray[y * w + (x + 1)]
-        const bl = gray[(y + 1) * w + (x - 1)]
-        const b = gray[(y + 1) * w + x]
-        const br = gray[(y + 1) * w + (x + 1)]
+    let sumBg = 0
+    let weightBg = 0
+    let maxVariance = 0
+    let bestThreshold = 128
 
-        const gx = -tl + tr - 2 * l + 2 * r - bl + br
-        const gy = -tl - 2 * t - tr + bl + 2 * b + br
-        const magnitude = Math.sqrt(gx * gx + gy * gy)
-        edges[idx] = Math.min(255, magnitude)
+    for (let t = 0; t < 256; t++) {
+      weightBg += histogram[t]
+      if (weightBg === 0) continue
+
+      const weightFg = total - weightBg
+      if (weightFg === 0) break
+
+      sumBg += t * histogram[t]
+      const meanBg = sumBg / weightBg
+      const meanFg = (sumAll - sumBg) / weightFg
+
+      const variance =
+        weightBg * weightFg * (meanBg - meanFg) * (meanBg - meanFg)
+
+      if (variance > maxVariance) {
+        maxVariance = variance
+        bestThreshold = t
       }
     }
 
-    return edges
+    return bestThreshold
   }
 
   /**
-   * 二値化
+   * 適応的二値化（黒い線を白ピクセルとして抽出）
+   *
+   * Sobelエッジ検出ではなく、直接的にグレースケール値を閾値処理。
+   * 黒い線（低輝度）を検出するため、閾値以下を白(255)、以上を黒(0)に反転。
    */
-  private binarize(
-    edges: Uint8ClampedArray,
-    threshold: number
+  private adaptiveBinarize(
+    gray: Uint8ClampedArray,
+    thresholdFactor: number
   ): Uint8ClampedArray {
-    const binary = new Uint8ClampedArray(edges.length)
-    for (let i = 0; i < edges.length; i++) {
-      binary[i] = edges[i] > threshold ? 255 : 0
+    const binary = new Uint8ClampedArray(gray.length)
+
+    // Otsu法で最適閾値を計算し、感度係数で調整
+    const otsuThreshold = this.computeOtsuThreshold(gray)
+    const threshold = Math.min(255, Math.round(otsuThreshold * thresholdFactor))
+
+    // 閾値以下（暗い=線）→ 白(255)、閾値超（明るい=背景）→ 黒(0)
+    for (let i = 0; i < gray.length; i++) {
+      binary[i] = gray[i] <= threshold ? 255 : 0
     }
+
     return binary
   }
 
   /**
-   * 矩形を検出
-   * 水平線・垂直線を検出し、ユーザー指定分延長した後、
-   * 4線が交差する組み合わせを矩形として出力
+   * 3x3カーネルによる膨張処理
+   * 近傍に1つでも白ピクセルがあれば白にする
+   * 途切れた線のギャップを埋める効果がある
    */
-  private findRectangles(binary: Uint8ClampedArray): DetectedRect[] {
+  private dilate(binary: Uint8ClampedArray): Uint8ClampedArray {
+    const result = new Uint8ClampedArray(binary.length)
+    const w = this.width
+    const h = this.height
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let hasWhite = false
+        // 3x3近傍を走査
+        for (let dy = -1; dy <= 1 && !hasWhite; dy++) {
+          for (let dx = -1; dx <= 1 && !hasWhite; dx++) {
+            const ny = y + dy
+            const nx = x + dx
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+              if (binary[ny * w + nx] === 255) {
+                hasWhite = true
+              }
+            }
+          }
+        }
+        result[y * w + x] = hasWhite ? 255 : 0
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * 矩形を検出
+   */
+  private findRectangles(
+    binary: Uint8ClampedArray,
+    params: ReturnType<typeof getSensitivityParams>
+  ): DetectedRect[] {
     const w = this.width
     const h = this.height
     const rects: DetectedRect[] = []
 
-    // 水平線と垂直線を検出
-    let horizontalLines = this.detectHorizontalLines(binary)
-    let verticalLines = this.detectVerticalLines(binary)
+    // 水平線と垂直線を検出（ギャップ許容）
+    let horizontalLines = this.detectHorizontalLines(
+      binary,
+      params.lineGapTolerance,
+      params.lineMergeTolerance
+    )
+    let verticalLines = this.detectVerticalLines(
+      binary,
+      params.lineGapTolerance,
+      params.lineMergeTolerance
+    )
 
     // 線を延長（設定されている場合）
     const extension = this.settings?.lineExtension ?? 0
@@ -241,7 +307,8 @@ export class FrameDetector {
     // 線の交点から矩形を構築
     const candidateRects = this.buildRectsFromLines(
       horizontalLines,
-      verticalLines
+      verticalLines,
+      params.intersectionTolerance
     )
 
     for (const rect of candidateRects) {
@@ -260,9 +327,16 @@ export class FrameDetector {
   }
 
   /**
-   * 水平線を検出
+   * 水平線を検出（ギャップ許容）
+   *
+   * 連続する白ピクセルだけでなく、一定のギャップ（gapTolerance）を
+   * 許容して線分として認識する。スキャンによるかすれ対応。
    */
-  private detectHorizontalLines(binary: Uint8ClampedArray): HLine[] {
+  private detectHorizontalLines(
+    binary: Uint8ClampedArray,
+    gapTolerance: number,
+    mergeTolerance: number
+  ): HLine[] {
     const lines: HLine[] = []
     const w = this.width
     const h = this.height
@@ -270,29 +344,48 @@ export class FrameDetector {
 
     for (let y = 0; y < h; y++) {
       let lineStart = -1
+      let gapCount = 0
+
       for (let x = 0; x < w; x++) {
         const idx = y * w + x
         if (binary[idx] === 255) {
           if (lineStart === -1) lineStart = x
+          gapCount = 0
         } else {
-          if (lineStart !== -1 && x - lineStart >= minLength) {
-            lines.push({ y, x1: lineStart, x2: x - 1 })
+          if (lineStart !== -1) {
+            gapCount++
+            if (gapCount > gapTolerance) {
+              // ギャップ超過 → 線を確定
+              const lineEnd = x - gapCount
+              if (lineEnd - lineStart >= minLength) {
+                lines.push({ y, x1: lineStart, x2: lineEnd })
+              }
+              lineStart = -1
+              gapCount = 0
+            }
           }
-          lineStart = -1
         }
       }
-      if (lineStart !== -1 && w - lineStart >= minLength) {
-        lines.push({ y, x1: lineStart, x2: w - 1 })
+      // 行末処理
+      if (lineStart !== -1) {
+        const lineEnd = gapCount > 0 ? w - 1 - gapCount : w - 1
+        if (lineEnd - lineStart >= minLength) {
+          lines.push({ y, x1: lineStart, x2: lineEnd })
+        }
       }
     }
 
-    return this.mergeLines(lines, "horizontal")
+    return this.mergeLines(lines, "horizontal", mergeTolerance)
   }
 
   /**
-   * 垂直線を検出
+   * 垂直線を検出（ギャップ許容）
    */
-  private detectVerticalLines(binary: Uint8ClampedArray): VLine[] {
+  private detectVerticalLines(
+    binary: Uint8ClampedArray,
+    gapTolerance: number,
+    mergeTolerance: number
+  ): VLine[] {
     const lines: VLine[] = []
     const w = this.width
     const h = this.height
@@ -300,23 +393,36 @@ export class FrameDetector {
 
     for (let x = 0; x < w; x++) {
       let lineStart = -1
+      let gapCount = 0
+
       for (let y = 0; y < h; y++) {
         const idx = y * w + x
         if (binary[idx] === 255) {
           if (lineStart === -1) lineStart = y
+          gapCount = 0
         } else {
-          if (lineStart !== -1 && y - lineStart >= minLength) {
-            lines.push({ x, y1: lineStart, y2: y - 1 })
+          if (lineStart !== -1) {
+            gapCount++
+            if (gapCount > gapTolerance) {
+              const lineEnd = y - gapCount
+              if (lineEnd - lineStart >= minLength) {
+                lines.push({ x, y1: lineStart, y2: lineEnd })
+              }
+              lineStart = -1
+              gapCount = 0
+            }
           }
-          lineStart = -1
         }
       }
-      if (lineStart !== -1 && h - lineStart >= minLength) {
-        lines.push({ x, y1: lineStart, y2: h - 1 })
+      if (lineStart !== -1) {
+        const lineEnd = gapCount > 0 ? h - 1 - gapCount : h - 1
+        if (lineEnd - lineStart >= minLength) {
+          lines.push({ x, y1: lineStart, y2: lineEnd })
+        }
       }
     }
 
-    return this.mergeLines(lines, "vertical")
+    return this.mergeLines(lines, "vertical", mergeTolerance)
   }
 
   /**
@@ -324,7 +430,8 @@ export class FrameDetector {
    */
   private mergeLines<T extends HLine | VLine>(
     lines: T[],
-    direction: "horizontal" | "vertical"
+    direction: "horizontal" | "vertical",
+    mergeTolerance: number
   ): T[] {
     if (lines.length === 0) return []
 
@@ -338,8 +445,8 @@ export class FrameDetector {
         const last = merged[merged.length - 1] as HLine | undefined
         if (
           last &&
-          Math.abs(last.y - line.y) <= LINE_MERGE_TOLERANCE &&
-          line.x1 <= last.x2 + LINE_MERGE_TOLERANCE
+          Math.abs(last.y - line.y) <= mergeTolerance &&
+          line.x1 <= last.x2 + mergeTolerance
         ) {
           last.x2 = Math.max(last.x2, line.x2)
         } else {
@@ -354,8 +461,8 @@ export class FrameDetector {
         const last = merged[merged.length - 1] as VLine | undefined
         if (
           last &&
-          Math.abs(last.x - line.x) <= LINE_MERGE_TOLERANCE &&
-          line.y1 <= last.y2 + LINE_MERGE_TOLERANCE
+          Math.abs(last.x - line.x) <= mergeTolerance &&
+          line.y1 <= last.y2 + mergeTolerance
         ) {
           last.y2 = Math.max(last.y2, line.y2)
         } else {
@@ -370,7 +477,11 @@ export class FrameDetector {
   /**
    * 水平線と垂直線から矩形を構築
    */
-  private buildRectsFromLines(hLines: HLine[], vLines: VLine[]): PixelRect[] {
+  private buildRectsFromLines(
+    hLines: HLine[],
+    vLines: VLine[],
+    intersectionTolerance: number
+  ): PixelRect[] {
     const rects: PixelRect[] = []
 
     for (let i = 0; i < hLines.length; i++) {
@@ -390,10 +501,10 @@ export class FrameDetector {
 
             // 4つの線が交差するか
             if (
-              this.linesIntersect(top, left) &&
-              this.linesIntersect(top, right) &&
-              this.linesIntersect(bottom, left) &&
-              this.linesIntersect(bottom, right)
+              this.linesIntersect(top, left, intersectionTolerance) &&
+              this.linesIntersect(top, right, intersectionTolerance) &&
+              this.linesIntersect(bottom, left, intersectionTolerance) &&
+              this.linesIntersect(bottom, right, intersectionTolerance)
             ) {
               const x = left.x
               const y = top.y
@@ -415,12 +526,16 @@ export class FrameDetector {
   /**
    * 水平線と垂直線が交わるか判定
    */
-  private linesIntersect(hLine: HLine, vLine: VLine): boolean {
+  private linesIntersect(
+    hLine: HLine,
+    vLine: VLine,
+    tolerance: number
+  ): boolean {
     return (
-      vLine.x >= hLine.x1 - INTERSECTION_TOLERANCE &&
-      vLine.x <= hLine.x2 + INTERSECTION_TOLERANCE &&
-      hLine.y >= vLine.y1 - INTERSECTION_TOLERANCE &&
-      hLine.y <= vLine.y2 + INTERSECTION_TOLERANCE
+      vLine.x >= hLine.x1 - tolerance &&
+      vLine.x <= hLine.x2 + tolerance &&
+      hLine.y >= vLine.y1 - tolerance &&
+      hLine.y <= vLine.y2 + tolerance
     )
   }
 
@@ -468,15 +583,6 @@ export class FrameDetector {
 
   /**
    * 重なっている矩形のうち、内包関係にある大きい方を除外
-   *
-   * ロジック:
-   * - 2つの矩形A, B（A < B）が重なっている場合
-   * - Aのはみ出し部分 = A の面積 - 共通部分の面積
-   * - はみ出し部分 < 共通部分 なら、AはほぼBに含まれているとみなしBを除外
-   *
-   * 例: 「日」のような入れ子構造
-   * - 内側の2つの矩形と外側の大枠が検出される
-   * - 内側の矩形は外側にほぼ含まれるため、外側が除外される
    */
   private removeOverlappingLarger(rects: DetectedRect[]): DetectedRect[] {
     const toRemove = new Set<string>()
@@ -491,14 +597,11 @@ export class FrameDetector {
           const areaA = a.width * a.height
           const areaB = b.width * b.height
 
-          // 小さい方の面積と大きい方の矩形を特定
           const smallerArea = Math.min(areaA, areaB)
           const larger = areaA < areaB ? b : a
 
-          // 小さい方のはみ出し部分 = 小さい方の面積 - 共通部分
           const smallerNonOverlap = smallerArea - intersection
 
-          // はみ出し < 共通部分 なら、大きい方を除外
           if (smallerNonOverlap < intersection) {
             toRemove.add(larger.id)
           }

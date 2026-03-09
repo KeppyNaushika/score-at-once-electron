@@ -11,6 +11,7 @@ export const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
   lineExtension: 0, // 線の延長なし
   minWidth: 0.02, // 画像幅の2%以上
   minHeight: 0.01, // 画像高さの1%以上
+  sensitivity: 3, // 検出感度（1-5）
 }
 
 /**
