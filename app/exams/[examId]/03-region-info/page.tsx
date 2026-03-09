@@ -212,84 +212,93 @@ export default function RegionInfoPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left: All Pages Preview */}
         <div
-          className="overflow-y-auto border-r p-4"
+          className="flex flex-col border-r"
           style={{ width: "400px", maxWidth: "33.333%" }}
         >
-          <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
-          <div className="space-y-4">
-            {examPages.map((page) => {
-              const displayPageNumber = page.pageNumber
-              const imageUrl = backgroundImageUrls[page.id]
-              const pageRegions = cropRegions.filter(
-                (region) => region.examPage?.id === page.id
-              )
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
+            <div className="space-y-4">
+              {examPages.map((page) => {
+                const displayPageNumber = page.pageNumber
+                const imageUrl = backgroundImageUrls[page.id]
+                const pageRegions = cropRegions.filter(
+                  (region) => region.examPage?.id === page.id
+                )
 
-              return (
-                <div key={page.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium">
-                      ページ {displayPageNumber}
-                    </h4>
-                    <div className="text-muted-foreground text-xs">
-                      ({pageRegions.length}個の領域)
-                    </div>
-                  </div>
-
-                  {imageUrl ? (
-                    <div className="relative overflow-hidden rounded-lg border">
-                      <Image
-                        src={imageUrl}
-                        alt={`模範解答 ページ ${displayPageNumber}`}
-                        className="w-full cursor-pointer object-contain transition-opacity hover:opacity-75"
-                        width={800}
-                        height={600}
-                        unoptimized
-                        onClick={() => {
-                          setSelectedExamPage(page)
-                        }}
-                      />
-                      {pageRegions.map((area, index) => {
-                        const globalIndex = cropRegions.findIndex(
-                          (r) => r.id === area.id
-                        )
-                        const isSelected = selectedRowIndex === globalIndex
-                        return (
-                          <div
-                            key={area.id ?? `area-${page.id}-${index}`}
-                            className={`absolute border-2 ${
-                              isSelected
-                                ? "border-orange-500 bg-orange-500/30"
-                                : "border-blue-500 bg-blue-500/20"
-                            }`}
-                            style={{
-                              left: `${area.x * 100}%`,
-                              top: `${area.y * 100}%`,
-                              width: `${area.width * 100}%`,
-                              height: `${area.height * 100}%`,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedRowIndex(globalIndex)
-                            }}
-                          />
-                        )
-                      })}
-                      {selectedExamPage?.id === page.id && (
-                        <div className="absolute top-2 left-2 rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white">
-                          編集中
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="relative flex aspect-3/4 items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
-                      <div className="text-muted-foreground text-sm">
-                        画像が見つかりません
+                return (
+                  <div key={page.id} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-medium">
+                        ページ {displayPageNumber}
+                      </h4>
+                      <div className="text-muted-foreground text-xs">
+                        ({pageRegions.length}個の領域)
                       </div>
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    {imageUrl ? (
+                      <div className="relative overflow-hidden rounded-lg border">
+                        <Image
+                          src={imageUrl}
+                          alt={`模範解答 ページ ${displayPageNumber}`}
+                          className="w-full cursor-pointer object-contain transition-opacity hover:opacity-75"
+                          width={800}
+                          height={600}
+                          unoptimized
+                          onClick={() => {
+                            setSelectedExamPage(page)
+                          }}
+                        />
+                        {pageRegions.map((area, index) => {
+                          const globalIndex = cropRegions.findIndex(
+                            (r) => r.id === area.id
+                          )
+                          const isSelected = selectedRowIndex === globalIndex
+                          return (
+                            <div
+                              key={area.id ?? `area-${page.id}-${index}`}
+                              className={`absolute border-2 ${
+                                isSelected
+                                  ? "border-orange-500 bg-orange-500/30"
+                                  : "border-blue-500 bg-blue-500/20"
+                              }`}
+                              style={{
+                                left: `${area.x * 100}%`,
+                                top: `${area.y * 100}%`,
+                                width: `${area.width * 100}%`,
+                                height: `${area.height * 100}%`,
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedRowIndex(globalIndex)
+                              }}
+                            />
+                          )
+                        })}
+                        {selectedExamPage?.id === page.id && (
+                          <div className="absolute top-2 left-2 rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white">
+                            編集中
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="relative flex aspect-3/4 items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
+                        <div className="text-muted-foreground text-sm">
+                          画像が見つかりません
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          {/* フッター統計 */}
+          <div className="text-muted-foreground flex justify-between border-t p-2 text-xs">
+            <span>{cropRegions.length}個の領域</span>
+            <span>
+              合計 {cropRegions.reduce((sum, r) => sum + (r.points ?? 0), 0)}点
+            </span>
           </div>
         </div>
 
