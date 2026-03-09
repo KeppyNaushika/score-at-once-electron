@@ -55,6 +55,30 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
 
       {!collapsed && (
         <div className="space-y-3 border-t border-gray-200 px-3 py-2">
+          {/* 検出感度 */}
+          <div>
+            <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
+              <span>検出感度</span>
+              <span className="font-mono">{settings.sensitivity}/5</span>
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              step={1}
+              value={settings.sensitivity}
+              onChange={(e) =>
+                handleChange("sensitivity", parseInt(e.target.value))
+              }
+              title="検出感度（高いほど薄い線を検出）"
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
+            />
+            <div className="mt-0.5 flex justify-between text-[10px] text-gray-400">
+              <span>くっきり</span>
+              <span>かすれ対応</span>
+            </div>
+          </div>
+
           {/* 線の延長 */}
           <div>
             <label className="mb-1 flex items-center justify-between text-xs text-gray-600">

@@ -240,6 +240,8 @@ export interface DetectionSettings {
   minWidth: number
   /** 最小高さ（相対座標）デフォルト: 0.01 */
   minHeight: number
+  /** 検出感度 1-5（高いほど薄い線を検出）デフォルト: 3 */
+  sensitivity: number
 }
 
 /**
