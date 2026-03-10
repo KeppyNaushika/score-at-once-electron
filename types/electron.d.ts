@@ -380,6 +380,16 @@ export interface MyAPI {
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
   getStudentExamResults: (studentId: string) => Promise<StudentExamResult[]>
+  exportStudentsExcel: (selectedStudentIds: string[]) => Promise<{
+    success: boolean
+    outputPath?: string
+    error?: string
+  }>
+  exportClassesExcel: (selectedClassIds: string[]) => Promise<{
+    success: boolean
+    outputPath?: string
+    error?: string
+  }>
 
   // Student Class Membership related
   createStudentClassMembership: (

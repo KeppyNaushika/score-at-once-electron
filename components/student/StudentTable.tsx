@@ -1,14 +1,23 @@
 "use client"
 
 import type { Prisma } from "@prisma/client"
-import { Edit, PlusCircle, Search, Trash2, Upload } from "lucide-react"
+import {
+  Download,
+  Edit,
+  PlusCircle,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import StudentModal from "@/components/student/StudentModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -97,12 +106,18 @@ export default function StudentTable() {
     useState<string>("all")
   const [filterClassId, setFilterClassId] = useState<string>("all")
 
+  // Selection states
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
+    new Set()
+  )
+
   // Modal states
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [studentToEdit, setStudentToEdit] =
     useState<StudentWithMemberships | null>(null)
   const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] =
     useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Data fetching
   useEffect(() => {
@@ -176,6 +191,40 @@ export default function StudentTable() {
     defaultSort: { key: "fullName", direction: "asc" },
   })
 
+  // Selection handlers
+  const filteredIds = useMemo(() => sortedData.map((d) => d.id), [sortedData])
+
+  const isAllSelected =
+    filteredIds.length > 0 &&
+    filteredIds.every((id) => selectedStudentIds.has(id))
+
+  const isSomeSelected =
+    !isAllSelected && filteredIds.some((id) => selectedStudentIds.has(id))
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      // 表示中のものだけ解除
+      const newSet = new Set(selectedStudentIds)
+      filteredIds.forEach((id) => newSet.delete(id))
+      setSelectedStudentIds(newSet)
+    } else {
+      // 表示中のものを全選択
+      const newSet = new Set(selectedStudentIds)
+      filteredIds.forEach((id) => newSet.add(id))
+      setSelectedStudentIds(newSet)
+    }
+  }
+
+  const toggleSelectStudent = (studentId: string) => {
+    const newSet = new Set(selectedStudentIds)
+    if (newSet.has(studentId)) {
+      newSet.delete(studentId)
+    } else {
+      newSet.add(studentId)
+    }
+    setSelectedStudentIds(newSet)
+  }
+
   // Event handlers
   const handleAddNewStudent = () => {
     setStudentToEdit(null)
@@ -192,6 +241,11 @@ export default function StudentTable() {
       try {
         await window.electronAPI.deleteStudent(studentId)
         setStudents(students.filter((s) => s.id !== studentId))
+        setSelectedStudentIds((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(studentId)
+          return newSet
+        })
       } catch (error) {
         console.error("Failed to delete student:", error)
         alert("生徒の削除に失敗しました。")
@@ -228,6 +282,28 @@ export default function StudentTable() {
     } catch (error) {
       console.error("Failed to update student:", error)
       alert("生徒の更新に失敗しました。")
+    }
+  }
+
+  const handleExportExcel = async () => {
+    if (selectedStudentIds.size === 0) return
+    setIsExporting(true)
+    try {
+      const result = await window.electronAPI.exportStudentsExcel(
+        Array.from(selectedStudentIds)
+      )
+      if (result.success) {
+        toast.success(
+          `${selectedStudentIds.size}名の生徒データをExcelに出力しました`
+        )
+      } else if (result.error !== "出力がキャンセルされました") {
+        toast.error(`エクスポートに失敗しました: ${result.error}`)
+      }
+    } catch (error) {
+      console.error("Failed to export students:", error)
+      toast.error("エクスポート中にエラーが発生しました")
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -295,10 +371,24 @@ export default function StudentTable() {
             </SelectContent>
           </Select>
           <span className="text-muted-foreground text-sm tabular-nums">
+            {selectedStudentIds.size > 0
+              ? `${selectedStudentIds.size}名選択中 / `
+              : ""}
             {sortedData.length}名
           </span>
         </div>
         <div className="flex gap-3">
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            className="rounded-lg"
+            disabled={isExporting || selectedStudentIds.size === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {isExporting
+              ? "出力中..."
+              : `Excel出力${selectedStudentIds.size > 0 ? `(${selectedStudentIds.size})` : ""}`}
+          </Button>
           <Button
             onClick={handleAddNewStudent}
             variant="outline"
@@ -322,8 +412,21 @@ export default function StudentTable() {
         <Table wrapperClassName="h-full">
           <TableHeader className="bg-card sticky top-0 z-10 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
             <TableRow className="hover:bg-muted/40">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={
+                    isAllSelected
+                      ? true
+                      : isSomeSelected
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="全選択"
+                />
+              </TableHead>
               <SortableTableHead
-                sortKey="studentId"
+                sortKey="studentNumber"
                 currentSortKey={sortConfig.key as string | null}
                 currentDirection={sortConfig.direction}
                 onSort={(key) => requestSort(key as keyof StudentSortable)}
@@ -353,13 +456,25 @@ export default function StudentTable() {
           <TableBody>
             {sortedData.map(({ original: student }) => {
               const currentClasses = getCurrentClasses(student)
+              const isSelected = selectedStudentIds.has(student.id)
 
               return (
                 <TableRow
                   key={student.id}
                   onClick={() => router.push(`/students/${student.id}`)}
                   className="group cursor-pointer"
+                  data-state={isSelected ? "selected" : undefined}
                 >
+                  <TableCell
+                    className="w-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelectStudent(student.id)}
+                      aria-label={`${student.lastName} ${student.firstName}を選択`}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-sm">
                     {student.studentNumber}
                   </TableCell>
@@ -421,7 +536,7 @@ export default function StudentTable() {
             {sortedData.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-muted-foreground h-32 text-center"
                 >
                   該当する生徒が見つかりません。

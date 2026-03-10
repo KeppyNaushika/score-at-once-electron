@@ -167,6 +167,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteStudent: (id: string) => ipcRenderer.invoke("delete-student", id),
   getStudentExamResults: (studentId: string) =>
     ipcRenderer.invoke("get-student-exam-results", studentId),
+  exportStudentsExcel: (selectedStudentIds: string[]) =>
+    ipcRenderer.invoke("export-students-excel", selectedStudentIds) as Promise<{
+      success: boolean
+      outputPath?: string
+      error?: string
+    }>,
+  exportClassesExcel: (selectedClassIds: string[]) =>
+    ipcRenderer.invoke("export-classes-excel", selectedClassIds) as Promise<{
+      success: boolean
+      outputPath?: string
+      error?: string
+    }>,
 
   // Student Class Membership related
   createStudentClassMembership: (

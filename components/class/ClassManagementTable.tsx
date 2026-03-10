@@ -1,12 +1,14 @@
 "use client"
 
-import { Edit, PlusCircle, Search, Trash2 } from "lucide-react"
+import { Download, Edit, PlusCircle, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import ClassModal from "@/components/class/ClassModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
@@ -64,6 +66,12 @@ export default function ClassManagementTable() {
     null
   )
 
+  // Selection states
+  const [selectedClassIds, setSelectedClassIds] = useState<Set<string>>(
+    new Set()
+  )
+  const [isExporting, setIsExporting] = useState(false)
+
   // Data fetching
   useEffect(() => {
     const fetchClasses = async () => {
@@ -105,6 +113,38 @@ export default function ClassManagementTable() {
     defaultSort: { key: "name", direction: "asc" },
   })
 
+  // Selection handlers
+  const filteredIds = useMemo(() => sortedData.map((d) => d.id), [sortedData])
+
+  const isAllSelected =
+    filteredIds.length > 0 &&
+    filteredIds.every((id) => selectedClassIds.has(id))
+
+  const isSomeSelected =
+    !isAllSelected && filteredIds.some((id) => selectedClassIds.has(id))
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      const newSet = new Set(selectedClassIds)
+      filteredIds.forEach((id) => newSet.delete(id))
+      setSelectedClassIds(newSet)
+    } else {
+      const newSet = new Set(selectedClassIds)
+      filteredIds.forEach((id) => newSet.add(id))
+      setSelectedClassIds(newSet)
+    }
+  }
+
+  const toggleSelectClass = (classId: string) => {
+    const newSet = new Set(selectedClassIds)
+    if (newSet.has(classId)) {
+      newSet.delete(classId)
+    } else {
+      newSet.add(classId)
+    }
+    setSelectedClassIds(newSet)
+  }
+
   // Event handlers
   const handleAddNewClass = () => {
     setClassToEdit(null)
@@ -121,6 +161,11 @@ export default function ClassManagementTable() {
       try {
         await window.electronAPI.deleteClass(classId)
         setClasses(classes.filter((c) => c.id !== classId))
+        setSelectedClassIds((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(classId)
+          return newSet
+        })
       } catch (error) {
         console.error("Failed to delete class:", error)
         alert("学級の削除に失敗しました。")
@@ -155,6 +200,28 @@ export default function ClassManagementTable() {
     }
   }
 
+  const handleExportExcel = async () => {
+    if (selectedClassIds.size === 0) return
+    setIsExporting(true)
+    try {
+      const result = await window.electronAPI.exportClassesExcel(
+        Array.from(selectedClassIds)
+      )
+      if (result.success) {
+        toast.success(
+          `${selectedClassIds.size}学級のデータをExcelに出力しました`
+        )
+      } else if (result.error !== "出力がキャンセルされました") {
+        toast.error(`エクスポートに失敗しました: ${result.error}`)
+      }
+    } catch (error) {
+      console.error("Failed to export classes:", error)
+      toast.error("エクスポート中にエラーが発生しました")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-5">
       {/* Controls */}
@@ -170,13 +237,29 @@ export default function ClassManagementTable() {
             />
           </div>
           <span className="text-muted-foreground text-sm tabular-nums">
+            {selectedClassIds.size > 0
+              ? `${selectedClassIds.size}学級選択中 / `
+              : ""}
             {sortedData.length}学級
           </span>
         </div>
-        <Button onClick={handleAddNewClass} className="rounded-lg">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          学級追加
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            className="rounded-lg"
+            disabled={isExporting || selectedClassIds.size === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {isExporting
+              ? "出力中..."
+              : `Excel出力${selectedClassIds.size > 0 ? `(${selectedClassIds.size})` : ""}`}
+          </Button>
+          <Button onClick={handleAddNewClass} className="rounded-lg">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            学級追加
+          </Button>
+        </div>
       </div>
 
       {/* Classes Table */}
@@ -185,6 +268,19 @@ export default function ClassManagementTable() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-muted/40">
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      isAllSelected
+                        ? true
+                        : isSomeSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="全選択"
+                  />
+                </TableHead>
                 <SortableTableHead
                   sortKey="name"
                   currentSortKey={sortConfig.key as string | null}
@@ -223,12 +319,25 @@ export default function ClassManagementTable() {
             </TableHeader>
             <TableBody>
               {sortedData.map(({ original: classItem, memberCount }) => {
+                const isSelected = selectedClassIds.has(classItem.id)
+
                 return (
                   <TableRow
                     key={classItem.id}
                     onClick={() => router.push(`/classes/${classItem.id}`)}
                     className="group cursor-pointer"
+                    data-state={isSelected ? "selected" : undefined}
                   >
+                    <TableCell
+                      className="w-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectClass(classItem.id)}
+                        aria-label={`${classItem.name}を選択`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {classItem.name}
                     </TableCell>
@@ -293,7 +402,7 @@ export default function ClassManagementTable() {
               {sortedData.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-muted-foreground h-32 text-center"
                   >
                     該当する学級が見つかりません。
