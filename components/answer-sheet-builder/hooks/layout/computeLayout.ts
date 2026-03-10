@@ -625,8 +625,12 @@ export function computeLayoutFromDefinition(
       }
 
       if (isGridHorizontal(mq.subQuestions)) {
-        const gridCells = buildSubGridLayout(mq.subQuestions)
-        const height = gridTotalHeight(gridCells) * baseRowHeight
+        const height = computeMajorHeight(
+          mq,
+          baseRowHeight,
+          contentRight - (majorNumX + majorNumWidth),
+          subNumWidth
+        )
         horizontalMajorRanges.push({ top: trackY, bottom: trackY + height })
         trackY += height
       } else {
