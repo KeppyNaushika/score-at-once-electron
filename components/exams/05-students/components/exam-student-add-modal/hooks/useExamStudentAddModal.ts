@@ -96,8 +96,22 @@ export function useExamStudentAddModal({
     try {
       const selectedClasses = availableClasses.filter((cls) => cls.isSelected)
 
-      // 選択された学級の順序で生徒を追加
+      // 既存生徒の最大customOrderを取得して、その後ろに追加する
+      const existingStudentsResult =
+        await window.electronAPI.getStudentsForExam(examId)
       let currentOrder = 0
+      if (existingStudentsResult.success && existingStudentsResult.students) {
+        const maxOrder = existingStudentsResult.students.reduce(
+          (max: number, s: { customOrder?: number | null }) => {
+            if (s.customOrder !== null && s.customOrder !== undefined) {
+              return Math.max(max, s.customOrder)
+            }
+            return max
+          },
+          -1
+        )
+        currentOrder = maxOrder + 1
+      }
 
       for (const classItem of selectedClasses) {
         // 1. ExamClass(administered=true) を作成
@@ -157,7 +171,7 @@ export function useExamStudentAddModal({
           // 生徒の順序を設定（学級順→出席番号順）
           const studentOrders = studentIds.map((studentId, index) => ({
             studentId,
-            customOrder: currentOrder + index + 1,
+            customOrder: currentOrder + index,
           }))
 
           const orderResult = await window.electronAPI.updateStudentOrders(
@@ -205,6 +219,35 @@ export function useExamStudentAddModal({
       if (!result.success) {
         throw new Error(result.error || "Failed to add students")
       }
+
+      // 既存生徒の最大customOrderを取得して、末尾に追加する
+      const existingStudentsResult =
+        await window.electronAPI.getStudentsForExam(examId)
+      let startOrder = 0
+      if (existingStudentsResult.success && existingStudentsResult.students) {
+        // 今追加した生徒以外の最大customOrderを取得
+        const otherStudents = existingStudentsResult.students.filter(
+          (s: { id: string }) => !studentIds.includes(s.id)
+        )
+        const maxOrder = otherStudents.reduce(
+          (max: number, s: { customOrder?: number | null }) => {
+            if (s.customOrder !== null && s.customOrder !== undefined) {
+              return Math.max(max, s.customOrder)
+            }
+            return max
+          },
+          -1
+        )
+        startOrder = maxOrder + 1
+      }
+
+      // 追加した生徒にcustomOrderを設定
+      const studentOrders = studentIds.map((studentId, index) => ({
+        studentId,
+        customOrder: startOrder + index,
+      }))
+
+      await window.electronAPI.updateStudentOrders(examId, studentOrders)
 
       onStudentsAdded()
       handleClose()
