@@ -122,6 +122,7 @@ export async function listAsbDefinitions(
           subQuestions: {
             select: {
               points: true,
+              usesBranchPoints: true,
               branchQuestions: {
                 select: { points: true },
               },
@@ -139,8 +140,15 @@ export async function listAsbDefinitions(
     for (const mq of row.majorQuestions) {
       for (const sq of mq.subQuestions) {
         if (sq.branchQuestions.length > 0) {
-          questionCount += sq.branchQuestions.length
-          totalPoints += sq.branchQuestions.reduce((s, b) => s + b.points, 0)
+          if (sq.usesBranchPoints === false) {
+            // 完答モード: 小問の点数を使用
+            questionCount += 1
+            totalPoints += sq.points
+          } else {
+            // 枝問ごとの配点モード: 枝問の点数を合計
+            questionCount += sq.branchQuestions.length
+            totalPoints += sq.branchQuestions.reduce((s, b) => s + b.points, 0)
+          }
         } else {
           questionCount += 1
           totalPoints += sq.points
