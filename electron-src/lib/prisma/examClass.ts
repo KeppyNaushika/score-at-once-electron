@@ -163,12 +163,20 @@ export const addExamClass = async (
   const { examId, classId, administered = false, statistics = false } = options
 
   try {
+    // 現在の最大orderを取得して次の順序を決定
+    const maxOrderResult = await prisma.examClass.aggregate({
+      where: { examId },
+      _max: { order: true },
+    })
+    const nextOrder = (maxOrderResult._max.order ?? -1) + 1
+
     return await prisma.examClass.create({
       data: {
         examId,
         classId,
         administered,
         statistics,
+        order: nextOrder,
       },
       include: {
         class: true,

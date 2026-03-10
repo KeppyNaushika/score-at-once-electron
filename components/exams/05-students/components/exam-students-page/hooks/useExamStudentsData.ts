@@ -64,8 +64,14 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
           if (a.customOrder !== null && a.customOrder !== undefined) return -1
           if (b.customOrder !== null && b.customOrder !== undefined) return 1
 
-          // customOrderが未設定の場合はデフォルト順序（追加順など）
-          return 0
+          // customOrderが未設定の場合はデフォルト順（学級順→出席番号順）
+          const aClassOrder = a.examClassInfo?.classOrder ?? 99999
+          const bClassOrder = b.examClassInfo?.classOrder ?? 99999
+          if (aClassOrder !== bClassOrder) return aClassOrder - bClassOrder
+
+          const aAttendance = a.examClassInfo?.attendanceNumber ?? 99999
+          const bAttendance = b.examClassInfo?.attendanceNumber ?? 99999
+          return aAttendance - bAttendance
         }
       )
 
@@ -169,7 +175,15 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
           }
           if (a.customOrder !== null && a.customOrder !== undefined) return -1
           if (b.customOrder !== null && b.customOrder !== undefined) return 1
-          return 0
+
+          // 両方nullの場合はデフォルト順（学級順→出席番号順）
+          const aClassOrder = a.examClassInfo?.classOrder ?? 99999
+          const bClassOrder = b.examClassInfo?.classOrder ?? 99999
+          if (aClassOrder !== bClassOrder) return aClassOrder - bClassOrder
+
+          const aAttendance = a.examClassInfo?.attendanceNumber ?? 99999
+          const bAttendance = b.examClassInfo?.attendanceNumber ?? 99999
+          return aAttendance - bAttendance
         })
       })
     } catch (error) {

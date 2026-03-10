@@ -207,9 +207,9 @@ export function useSortableStudentTable({
     [onSelectAll]
   )
 
-  // リセット実行（統計学級順→出席番号順でcustomOrderを再設定）
+  // リセット実行（学級順→出席番号順でcustomOrderを振り直す）
   const handleResetOrder = useCallback(async () => {
-    // デフォルト順（統計学級順→出席番号順）でソート
+    // デフォルト順（学級順→出席番号順）でソート
     const defaultSorted = [...sortedStudents].sort((a, b) => {
       const aClassOrder = a.examClassInfo?.classOrder ?? 99999
       const bClassOrder = b.examClassInfo?.classOrder ?? 99999
@@ -223,7 +223,7 @@ export function useSortableStudentTable({
       return aAttendance - bAttendance
     })
 
-    // 新しいcustomOrderを割り当て
+    // customOrderを0からの連番で再割り当て
     const newOrders = defaultSorted.map((student, index) => ({
       studentId: student.id,
       customOrder: index,
