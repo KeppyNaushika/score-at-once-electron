@@ -3,6 +3,7 @@
 import { RotateCw, Settings2 } from "lucide-react"
 import { useEffect, useRef } from "react"
 
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -129,7 +130,7 @@ export default function InterleaveSettings({
                     {file.name}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Select
                     value={
                       transform.nUp.enabled ? transform.nUp.layout : "1in1"
@@ -174,6 +175,28 @@ export default function InterleaveSettings({
                       <SelectItem value="270">270°</SelectItem>
                     </SelectContent>
                   </Select>
+
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={transform.pagesPerGroup}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value)
+                        if (val >= 1) {
+                          handleTransformChange(transform.fileId, {
+                            pagesPerGroup: val,
+                          })
+                        }
+                      }}
+                      className="h-8 w-14 text-center"
+                      disabled={disabled}
+                    />
+                    <span className="text-muted-foreground text-xs whitespace-nowrap">
+                      頁/組
+                    </span>
+                  </div>
                 </div>
               </div>
             )
