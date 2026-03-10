@@ -199,7 +199,7 @@ export default function RegionInfoPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       <PageHeader title="採点領域の詳細情報設定" helpButton={helpButton}>
         <Button
           onClick={() => router.push(`/exams/${examId}/04-question-group`)}
@@ -297,7 +297,11 @@ export default function RegionInfoPage() {
           <div className="text-muted-foreground flex justify-between border-t p-2 text-xs">
             <span>{cropRegions.length}個の領域</span>
             <span>
-              合計 {cropRegions.reduce((sum, r) => sum + (r.points ?? 0), 0)}点
+              合計{" "}
+              {cropRegions
+                .filter((r) => r.type === "QUESTION_ANSWER")
+                .reduce((sum, r) => sum + (r.points ?? 0), 0)}
+              点
             </span>
           </div>
         </div>
@@ -322,7 +326,7 @@ export default function RegionInfoPage() {
               </p>
             </div>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <RegionDetailsTable
               regions={cropRegions}
               setRegions={handleRegionsChange}
@@ -330,6 +334,18 @@ export default function RegionInfoPage() {
               setSelectedRowIndex={setSelectedRowIndex}
               selectedMasterImageId={selectedExamPage?.id}
             />
+          </div>
+          {/* 合計点フッター（固定表示） */}
+          <div className="bg-muted/30 flex shrink-0 items-center justify-end border-t px-6 py-2">
+            <span className="text-sm font-medium">
+              合計配点：
+              <span className="text-lg font-bold">
+                {cropRegions
+                  .filter((r) => r.type === "QUESTION_ANSWER")
+                  .reduce((sum, r) => sum + (r.points ?? 0), 0)}
+              </span>
+              点
+            </span>
           </div>
         </div>
       </div>
