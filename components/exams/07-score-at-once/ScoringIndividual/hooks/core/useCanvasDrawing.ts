@@ -443,86 +443,124 @@ export function useCanvasDrawing({
         }
       }
 
+      // ページオフセット計算ヘルパー
+      const calcPageOffset = (pageIndex: number): number => {
+        let offset = 0
+        for (let i = 0; i < pageIndex && i < images.length; i++) {
+          offset +=
+            images[i].naturalHeight + (images.length > 1 ? pageSpacing : 0)
+        }
+        return offset
+      }
+
+      // cropRegionId → pageIndex のルックアップマップ
+      const cropRegionPageIndexMap = new Map<string, number>()
+      for (const { cropRegion } of allCropRegionsWithStatus) {
+        const pageNum = cropRegion.examPage?.pageNumber || 1
+        cropRegionPageIndexMap.set(
+          cropRegion.id,
+          Math.min(pageNum - 1, images.length - 1)
+        )
+      }
+
       // 描画要素の描画
       if (images.length > 0) {
-        const baseImg = images[0]
-        if (baseImg) {
-          const offsetX = (canvasWidth - baseImg.naturalWidth) / 2
-          const offsetY = 0
+        // 現在設問のページオフセットを計算
+        const currentPageNumber = currentCropRegion?.examPage?.pageNumber || 1
+        const currentPageIndex = Math.min(
+          currentPageNumber - 1,
+          images.length - 1
+        )
+        const currentPageImg = images[currentPageIndex] || images[0]
+        const currentOffsetX = (canvasWidth - currentPageImg.naturalWidth) / 2
+        const currentOffsetY = calcPageOffset(currentPageIndex)
 
-          const isAnyElementDragging =
-            isDraggingRef.current && selectedElementIds.length > 0
-          const isDragging =
-            isDrawing || isAnyElementDragging || isDrawingSelection
+        const isAnyElementDragging =
+          isDraggingRef.current && selectedElementIds.length > 0
+        const isDragging =
+          isDrawing || isAnyElementDragging || isDrawingSelection
 
-          // 他設問のアノテーション（テキスト以外）
-          if (!isDragging) {
-            for (const annotation of allAnnotations) {
-              if (
-                annotation.questionScore?.cropRegionId === currentCropRegionId
-              ) {
-                continue
-              }
-              if (annotation.type === "text") {
-                continue
-              }
-              const element = convertAnnotationToDrawingElement(annotation)
-              ctx.globalAlpha = 0.5
-              await drawSingleElement(
-                ctx,
-                element,
-                baseImg,
-                offsetX,
-                offsetY,
-                false,
-                false,
-                false
-              )
-              ctx.globalAlpha = 1.0
+        // 他設問のアノテーション（テキスト以外）
+        if (!isDragging) {
+          for (const annotation of allAnnotations) {
+            if (
+              annotation.questionScore?.cropRegionId === currentCropRegionId
+            ) {
+              continue
             }
-          }
-
-          // 現在設問の描画要素（テキスト以外）
-          for (const element of drawingElements) {
-            if (element.type === "text") {
+            if (annotation.type === "text") {
               continue
             }
 
-            const isSelected = selectedElementIds.includes(element.id)
-            ctx.globalAlpha = isDragging && !isSelected ? 0.3 : 1.0
+            // アノテーションが属するページのオフセットを計算
+            const annotPageIndex =
+              cropRegionPageIndexMap.get(
+                annotation.questionScore?.cropRegionId || ""
+              ) ?? 0
+            const annotPageImg = images[annotPageIndex] || images[0]
+            const annotOffsetX = (canvasWidth - annotPageImg.naturalWidth) / 2
+            const annotOffsetY = calcPageOffset(annotPageIndex)
+
+            const element = convertAnnotationToDrawingElement(annotation)
+            ctx.globalAlpha = 0.5
             await drawSingleElement(
               ctx,
               element,
-              baseImg,
-              offsetX,
-              offsetY,
-              isSelected,
+              annotPageImg,
+              annotOffsetX,
+              annotOffsetY,
+              false,
+              false,
               false
             )
             ctx.globalAlpha = 1.0
           }
+        }
 
-          // 選択範囲矩形の描画
-          if (isDrawingSelection && selectionRectangle) {
-            ctx.save()
-            ctx.strokeStyle = "#2563eb"
-            ctx.setLineDash([5, 5])
-            ctx.lineWidth = 1
-            ctx.globalAlpha = 0.6
-
-            const rectX = selectionRectangle.x * baseImg.naturalWidth + offsetX
-            const rectY = selectionRectangle.y * baseImg.naturalHeight + offsetY
-            const rectWidth = selectionRectangle.width * baseImg.naturalWidth
-            const rectHeight = selectionRectangle.height * baseImg.naturalHeight
-
-            ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
-
-            ctx.fillStyle = "#2563eb"
-            ctx.globalAlpha = 0.1
-            ctx.fillRect(rectX, rectY, rectWidth, rectHeight)
-
-            ctx.restore()
+        // 現在設問の描画要素（テキスト以外）
+        for (const element of drawingElements) {
+          if (element.type === "text") {
+            continue
           }
+
+          const isSelected = selectedElementIds.includes(element.id)
+          ctx.globalAlpha = isDragging && !isSelected ? 0.3 : 1.0
+          await drawSingleElement(
+            ctx,
+            element,
+            currentPageImg,
+            currentOffsetX,
+            currentOffsetY,
+            isSelected,
+            false
+          )
+          ctx.globalAlpha = 1.0
+        }
+
+        // 選択範囲矩形の描画
+        if (isDrawingSelection && selectionRectangle) {
+          ctx.save()
+          ctx.strokeStyle = "#2563eb"
+          ctx.setLineDash([5, 5])
+          ctx.lineWidth = 1
+          ctx.globalAlpha = 0.6
+
+          const rectX =
+            selectionRectangle.x * currentPageImg.naturalWidth + currentOffsetX
+          const rectY =
+            selectionRectangle.y * currentPageImg.naturalHeight + currentOffsetY
+          const rectWidth =
+            selectionRectangle.width * currentPageImg.naturalWidth
+          const rectHeight =
+            selectionRectangle.height * currentPageImg.naturalHeight
+
+          ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+
+          ctx.fillStyle = "#2563eb"
+          ctx.globalAlpha = 0.1
+          ctx.fillRect(rectX, rectY, rectWidth, rectHeight)
+
+          ctx.restore()
         }
       }
     },
@@ -572,8 +610,20 @@ export function useCanvasDrawing({
 
     ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
 
-    const offsetX = (canvasWidth - baseImg.naturalWidth) / 2
-    const offsetY = 0
+    // 現在設問のページオフセットを計算
+    const currentPageNumber = currentCropRegion?.examPage?.pageNumber || 1
+    const currentPageIndex = Math.min(
+      currentPageNumber - 1,
+      loadedImages.length - 1
+    )
+    const currentPageImg = loadedImages[currentPageIndex] || loadedImages[0]
+    const offsetX = (canvasWidth - currentPageImg.naturalWidth) / 2
+    let offsetY = 0
+    for (let i = 0; i < currentPageIndex; i++) {
+      offsetY +=
+        loadedImages[i].naturalHeight +
+        (loadedImages.length > 1 ? pageSpacing : 0)
+    }
 
     // ハンドル描画ヘルパー関数
     const drawElementHandles = (
@@ -593,8 +643,8 @@ export function useCanvasDrawing({
         case "line":
           if (element.endX !== undefined && element.endY !== undefined) {
             ctx.fillStyle = opacity < 1.0 ? fillColor : "#22c55e"
-            const startX = element.x * baseImg.naturalWidth + offsetX
-            const startY = element.y * baseImg.naturalHeight + offsetY
+            const startX = element.x * currentPageImg.naturalWidth + offsetX
+            const startY = element.y * currentPageImg.naturalHeight + offsetY
             ctx.fillRect(
               startX - halfHandle,
               startY - halfHandle,
@@ -609,8 +659,8 @@ export function useCanvasDrawing({
             )
 
             ctx.fillStyle = opacity < 1.0 ? fillColor : "#ef4444"
-            const endX = element.endX * baseImg.naturalWidth + offsetX
-            const endY = element.endY * baseImg.naturalHeight + offsetY
+            const endX = element.endX * currentPageImg.naturalWidth + offsetX
+            const endY = element.endY * currentPageImg.naturalHeight + offsetY
             ctx.fillRect(
               endX - halfHandle,
               endY - halfHandle,
@@ -628,10 +678,10 @@ export function useCanvasDrawing({
         case "rectangle":
         case "ellipse":
           if (element.width !== undefined && element.height !== undefined) {
-            const x = element.x * baseImg.naturalWidth + offsetX
-            const y = element.y * baseImg.naturalHeight + offsetY
-            const w = element.width * baseImg.naturalWidth
-            const h = element.height * baseImg.naturalHeight
+            const x = element.x * currentPageImg.naturalWidth + offsetX
+            const y = element.y * currentPageImg.naturalHeight + offsetY
+            const w = element.width * currentPageImg.naturalWidth
+            const h = element.height * currentPageImg.naturalHeight
             const corners = [
               { x, y },
               { x: x + w, y },
@@ -656,8 +706,8 @@ export function useCanvasDrawing({
           break
         case "text":
           if (element.text) {
-            const textX = element.x * baseImg.naturalWidth + offsetX
-            const textY = element.y * baseImg.naturalHeight + offsetY
+            const textX = element.x * currentPageImg.naturalWidth + offsetX
+            const textY = element.y * currentPageImg.naturalHeight + offsetY
             ctx.fillRect(
               textX - halfHandle,
               textY - halfHandle,
@@ -717,8 +767,8 @@ export function useCanvasDrawing({
         ctx.lineWidth = 2
         ctx.globalAlpha = 0.7
 
-        const anchorX = element.x * baseImg.naturalWidth + offsetX
-        const anchorY = element.y * baseImg.naturalHeight + offsetY
+        const anchorX = element.x * currentPageImg.naturalWidth + offsetX
+        const anchorY = element.y * currentPageImg.naturalHeight + offsetY
 
         const boundingWidth = element.text
           ? Math.max(element.text.length * (element.fontSize || 16) * 0.6, 50)
@@ -760,6 +810,7 @@ export function useCanvasDrawing({
     selectedElementIds,
     drawingElements,
     isDraggingElement,
+    currentCropRegion,
   ])
 
   // テキスト専用キャンバス描画
@@ -773,7 +824,6 @@ export function useCanvasDrawing({
 
     const baseImg = loadedImages[0]
     const canvasWidth = baseImg.naturalWidth
-    const canvasHeight = baseImg.naturalHeight
     const totalHeight = loadedImages.reduce(
       (total, img, index) =>
         total +
@@ -788,6 +838,37 @@ export function useCanvasDrawing({
     ctx.clearRect(0, 0, textCanvas.width, textCanvas.height)
 
     textBoundsCacheRef.current.clear()
+
+    // ページオフセット計算ヘルパー
+    const calcTextPageOffset = (pageIndex: number): number => {
+      let offset = 0
+      for (let i = 0; i < pageIndex && i < loadedImages.length; i++) {
+        offset +=
+          loadedImages[i].naturalHeight +
+          (loadedImages.length > 1 ? pageSpacing : 0)
+      }
+      return offset
+    }
+
+    // cropRegionId → pageIndex ルックアップマップ
+    const textCropRegionPageMap = new Map<string, number>()
+    for (const { cropRegion } of allCropRegionsWithStatus) {
+      const pageNum = cropRegion.examPage?.pageNumber || 1
+      textCropRegionPageMap.set(
+        cropRegion.id,
+        Math.min(pageNum - 1, loadedImages.length - 1)
+      )
+    }
+
+    // 現在設問のページ情報
+    const currentPageNumber = currentCropRegion?.examPage?.pageNumber || 1
+    const currentPageIndex = Math.min(
+      currentPageNumber - 1,
+      loadedImages.length - 1
+    )
+    const currentPageImg = loadedImages[currentPageIndex] || loadedImages[0]
+    const currentPageHeight = currentPageImg.naturalHeight
+    const currentPageOffsetY = calcTextPageOffset(currentPageIndex)
 
     const drawingElementsMap = new Map(drawingElements.map((el) => [el.id, el]))
 
@@ -817,36 +898,53 @@ export function useCanvasDrawing({
         const isSelected =
           isCurrentQuestion && selectedElementIds.includes(element.id)
 
+        // アノテーションが属するページを特定
+        const annotCropRegionId = annotation.questionScore?.cropRegionId || ""
+        const annotPageIndex = textCropRegionPageMap.get(annotCropRegionId) ?? 0
+        const annotPageImg = loadedImages[annotPageIndex] || loadedImages[0]
+        const annotPageHeight = annotPageImg.naturalHeight
+        const annotPageOffsetY = calcTextPageOffset(annotPageIndex)
+
         try {
+          // ページオフセット分だけコンテキストを平行移動して描画
+          ctx.save()
+          ctx.translate(0, annotPageOffsetY)
           const result = await renderTextElementV4(
             ctx,
             element,
             canvasWidth,
-            canvasHeight,
+            annotPageHeight,
             isSelected,
             isCurrentQuestion,
             isCurrentQuestion ? 1.0 : 0.3
           )
-          return { element, result, isCurrentQuestion }
+          ctx.restore()
+          return {
+            element,
+            result,
+            isCurrentQuestion,
+            pageHeight: annotPageHeight,
+          }
         } catch {
+          ctx.restore()
           return null
         }
       })
     )
 
-    // 現在設問のテキストをキャッシュ
+    // 現在設問のテキストをキャッシュ（ページ内正規化座標）
     for (const item of annotationResults) {
       if (item && item.isCurrentQuestion && item.result.success) {
         textBoundsCacheRef.current.set(item.element.id, {
           x: item.result.textBounds.x / canvasWidth,
-          y: item.result.textBounds.y / canvasHeight,
+          y: item.result.textBounds.y / item.pageHeight,
           width: item.result.textBounds.width / canvasWidth,
-          height: item.result.textBounds.height / canvasHeight,
+          height: item.result.textBounds.height / item.pageHeight,
         })
       }
     }
 
-    // 新規作成直後の要素
+    // 新規作成直後の要素（現在設問のページに描画）
     const newTextElements = drawingElements.filter(
       (el) => el.type === "text" && el.text && !drawnIds.has(el.id)
     )
@@ -856,17 +954,21 @@ export function useCanvasDrawing({
         newTextElements.map(async (element) => {
           const isSelected = selectedElementIds.includes(element.id)
           try {
+            ctx.save()
+            ctx.translate(0, currentPageOffsetY)
             const result = await renderTextElementV4(
               ctx,
               element,
               canvasWidth,
-              canvasHeight,
+              currentPageHeight,
               isSelected,
               true,
               1.0
             )
+            ctx.restore()
             return { element, result }
           } catch {
+            ctx.restore()
             return null
           }
         })
@@ -876,9 +978,9 @@ export function useCanvasDrawing({
         if (item && item.result.success) {
           textBoundsCacheRef.current.set(item.element.id, {
             x: item.result.textBounds.x / canvasWidth,
-            y: item.result.textBounds.y / canvasHeight,
+            y: item.result.textBounds.y / currentPageHeight,
             width: item.result.textBounds.width / canvasWidth,
-            height: item.result.textBounds.height / canvasHeight,
+            height: item.result.textBounds.height / currentPageHeight,
           })
         }
       }
@@ -891,6 +993,8 @@ export function useCanvasDrawing({
     selectedElementIds,
     allAnnotations,
     currentCropRegionId,
+    currentCropRegion,
+    allCropRegionsWithStatus,
     textBoundsCacheRef,
     convertAnnotationToDrawingElement,
   ])
