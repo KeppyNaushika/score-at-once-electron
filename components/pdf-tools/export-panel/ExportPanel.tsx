@@ -222,12 +222,22 @@ function generateOutputPages(
       filePageGroups.push(group)
     }
 
-    // インターリーブ
-    const maxLength = Math.max(...filePageGroups.map((g) => g.length), 0)
-    for (let i = 0; i < maxLength; i++) {
-      for (const group of filePageGroups) {
-        if (group[i]) {
-          pages.push(group[i])
+    // pagesPerGroupに基づいてグループ化してインターリーブ
+    const groupedPages: OutputPage[][][] = filePageGroups.map((group, idx) => {
+      const transform = interleaveConfig.transforms[idx]
+      const perGroup = transform?.pagesPerGroup || 1
+      const chunks: OutputPage[][] = []
+      for (let i = 0; i < group.length; i += perGroup) {
+        chunks.push(group.slice(i, i + perGroup))
+      }
+      return chunks
+    })
+
+    const maxChunks = Math.max(...groupedPages.map((g) => g.length), 0)
+    for (let i = 0; i < maxChunks; i++) {
+      for (const chunks of groupedPages) {
+        if (chunks[i]) {
+          pages.push(...chunks[i])
         }
       }
     }
