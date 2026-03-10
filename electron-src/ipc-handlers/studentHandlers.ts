@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client"
-import { ipcMain } from "electron"
+import { dialog, ipcMain } from "electron"
+import * as ExcelJS from "exceljs"
 
 import {
   addStudentsToExam,
@@ -29,6 +30,10 @@ import {
   getMembershipsByDateRange,
   updateStudentClassMembership,
 } from "../lib/prisma/studentClassMembership"
+import {
+  applyCellStyle,
+  autoFitColumns,
+} from "../lib/shared/utilities/excelUtilities"
 
 export function setupStudentHandlers(): void {
   ipcMain.handle("fetch-students", async () => {
@@ -314,6 +319,169 @@ export function setupStudentHandlers(): void {
       } catch (err) {
         console.error("Error getting student exam results:", err)
         throw err
+      }
+    }
+  )
+
+  // 生徒データExcelエクスポート（選択された生徒のみ）
+  ipcMain.handle(
+    "export-students-excel",
+    async (_event, selectedStudentIds: string[]) => {
+      try {
+        const allStudents = await fetchStudents()
+        const selectedSet = new Set(selectedStudentIds)
+        const students = allStudents.filter((s) => selectedSet.has(s.id))
+
+        if (students.length === 0) {
+          return { success: false, error: "出力する生徒が選択されていません" }
+        }
+
+        const dateStr = new Date().toISOString().slice(0, 10)
+        const result = await dialog.showSaveDialog({
+          title: "生徒一覧のExcel出力先を選択",
+          defaultPath: `生徒一覧_${dateStr}.xlsx`,
+          filters: [{ name: "Excelファイル", extensions: ["xlsx"] }],
+        })
+
+        if (result.canceled || !result.filePath) {
+          return { success: false, error: "出力がキャンセルされました" }
+        }
+
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet("生徒一覧")
+
+        // ヘッダー行（インポートと同じカラム・順序）
+        const headerRow = worksheet.addRow([
+          "学籍番号",
+          "姓",
+          "名",
+          "姓カナ",
+          "名カナ",
+          "入学年度",
+        ])
+        headerRow.eachCell((cell) => applyCellStyle(cell, "header"))
+
+        // データ行（学籍番号順）
+        const sorted = [...students].sort((a, b) =>
+          a.studentNumber.localeCompare(b.studentNumber, "ja")
+        )
+
+        for (const student of sorted) {
+          const row = worksheet.addRow([
+            student.studentNumber,
+            student.lastName,
+            student.firstName,
+            student.lastNameKana,
+            student.firstNameKana,
+            student.enrollmentYear ?? "",
+          ])
+          row.eachCell((cell) => applyCellStyle(cell, "data"))
+        }
+
+        autoFitColumns(worksheet)
+        await workbook.xlsx.writeFile(result.filePath)
+
+        return { success: true, outputPath: result.filePath }
+      } catch (err) {
+        console.error("Error exporting students Excel:", err)
+        return {
+          success: false,
+          error:
+            err instanceof Error ? err.message : "不明なエラーが発生しました",
+        }
+      }
+    }
+  )
+
+  // 学級データExcelエクスポート（選択された学級の所属データ）
+  ipcMain.handle(
+    "export-classes-excel",
+    async (_event, selectedClassIds: string[]) => {
+      try {
+        const { fetchClasses } = await import("../lib/prisma/student")
+        const allClasses = await fetchClasses()
+        const selectedSet = new Set(selectedClassIds)
+        const classes = allClasses.filter((c) => selectedSet.has(c.id))
+
+        if (classes.length === 0) {
+          return { success: false, error: "出力する学級が選択されていません" }
+        }
+
+        const dateStr = new Date().toISOString().slice(0, 10)
+        const result = await dialog.showSaveDialog({
+          title: "学級データのExcel出力先を選択",
+          defaultPath: `学級データ_${dateStr}.xlsx`,
+          filters: [{ name: "Excelファイル", extensions: ["xlsx"] }],
+        })
+
+        if (result.canceled || !result.filePath) {
+          return { success: false, error: "出力がキャンセルされました" }
+        }
+
+        // 全生徒を取得（学籍番号逆引き用）
+        const allStudents = await fetchStudents()
+        const studentMap = new Map(allStudents.map((s) => [s.id, s]))
+
+        const workbook = new ExcelJS.Workbook()
+
+        // 学級ごとにシートを作成
+        for (const cls of classes) {
+          const sheetName = cls.name.replace(/[\\/:*?"<>|]/g, "_").slice(0, 31)
+          const worksheet = workbook.addWorksheet(sheetName)
+
+          // ヘッダー行（学級インポートと同じカラム・順序）
+          const headerRow = worksheet.addRow([
+            "学籍番号",
+            "出席番号",
+            "開始日",
+            "終了日",
+          ])
+          headerRow.eachCell((cell) => applyCellStyle(cell, "header"))
+
+          // 所属データ（出席番号順）
+          const sortedMemberships = [...cls.memberships].sort((a, b) => {
+            const aNum = a.attendanceNumber ?? Infinity
+            const bNum = b.attendanceNumber ?? Infinity
+            return aNum - bNum
+          })
+
+          for (const m of sortedMemberships) {
+            const student = studentMap.get(m.student.id)
+            const studentNumber = student?.studentNumber ?? m.student.id
+            const row = worksheet.addRow([
+              studentNumber,
+              m.attendanceNumber ?? "",
+              m.startDate
+                ? new Date(m.startDate).toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "numeric",
+                    day: "numeric",
+                  })
+                : "",
+              m.endDate
+                ? new Date(m.endDate).toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "numeric",
+                    day: "numeric",
+                  })
+                : "",
+            ])
+            row.eachCell((cell) => applyCellStyle(cell, "data"))
+          }
+
+          autoFitColumns(worksheet)
+        }
+
+        await workbook.xlsx.writeFile(result.filePath)
+
+        return { success: true, outputPath: result.filePath }
+      } catch (err) {
+        console.error("Error exporting classes Excel:", err)
+        return {
+          success: false,
+          error:
+            err instanceof Error ? err.message : "不明なエラーが発生しました",
+        }
       }
     }
   )
