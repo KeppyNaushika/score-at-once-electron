@@ -51,7 +51,14 @@ export function calculateQuestionProgress(
         pageImage.studentId,
         cropRegion.id
       )
-      const isGraded = score && score.status !== "unscored"
+      const isGraded =
+        score &&
+        score.status !== "unscored" &&
+        // partial/pending は partialScore が入力済みの場合のみ採点済みとする
+        !(
+          (score.status === "partial" || score.status === "pending") &&
+          score.partialScore === null
+        )
 
       if (isGraded) {
         gradedAnswers++

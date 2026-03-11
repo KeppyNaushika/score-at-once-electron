@@ -107,7 +107,12 @@ export function getExamProgress(exam: ExamWithDetails): ExamProgress {
           (score) =>
             score.status !== "unscored" &&
             score.studentId !== null &&
-            participatingStudentIds.includes(score.studentId)
+            participatingStudentIds.includes(score.studentId) &&
+            // partial/pending は partialScore が入力済みの場合のみ採点済みとする
+            !(
+              (score.status === "partial" || score.status === "pending") &&
+              score.partialScore === null
+            )
         )
         return total + validQuestionScores.length
       }
