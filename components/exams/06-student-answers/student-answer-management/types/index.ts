@@ -54,6 +54,9 @@ export interface StudentAnswerUploadProps {
       toState: FileState
     }>
   ) => void
+
+  // ナビゲーションガード用: アップロード待ちファイル数の通知
+  onUploadFileCountChange?: (count: number) => void
 }
 
 export interface FileUploadZoneProps {
