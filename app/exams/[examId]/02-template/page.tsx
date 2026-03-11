@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import CropRegionEditor from "@/components/exams/02-template/components/CropRegionEditor"
 import { PageNavigation } from "@/components/exams/02-template/components/PageNavigation"
@@ -27,6 +27,8 @@ export default function TemplateStepPage() {
   const paramsExamId = params.examId
   const examId =
     typeof paramsExamId === "string" ? paramsExamId : paramsExamId?.[0]
+
+  const [defaultPoints, setDefaultPoints] = useState(10)
 
   // カスタムフックの使用
   const {
@@ -103,7 +105,8 @@ export default function TemplateStepPage() {
         type,
         coords,
         initialData.selectedMasterImage.id,
-        initialData.cropRegions
+        initialData.cropRegions,
+        defaultPoints
       )
 
       if (newRegion) {
@@ -117,6 +120,7 @@ export default function TemplateStepPage() {
       createRegion,
       updateCropRegions,
       updateLayoutId,
+      defaultPoints,
     ]
   )
 
@@ -193,6 +197,8 @@ export default function TemplateStepPage() {
             backgroundImageUrl={initialData.backgroundImageUrl}
             imageDimensions={initialData.imageDimensions}
             examPageId={initialData.selectedMasterImage?.id || null}
+            defaultPoints={defaultPoints}
+            onDefaultPointsChange={setDefaultPoints}
           />
         </div>
       </div>

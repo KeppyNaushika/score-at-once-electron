@@ -174,7 +174,8 @@ export function useCropRegionSave(
       type: AreaType,
       coords: RegionCoordinates,
       examPageId: string,
-      existingRegions: CropRegionArea[]
+      existingRegions: CropRegionArea[],
+      defaultPoints?: number
     ): Promise<CropRegionArea | null> => {
       // タイプに応じたラベルと配点を設定
       let label = ""
@@ -192,7 +193,7 @@ export function useCropRegionSave(
             existingRegions.filter((a) => a.type === "QUESTION_ANSWER").length +
             1
           }`
-          points = "10" // デフォルトポイント
+          points = String(defaultPoints ?? 10)
           break
         case "TOTAL_SCORE":
           label = "合計点"
