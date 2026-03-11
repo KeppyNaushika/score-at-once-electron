@@ -22,7 +22,7 @@ interface UseBatchScoringWithProgressParams {
     statusOrPartialScore?: ScoringStatus | number | null,
     partialScore?: number | null,
     selectedAnswers?: Set<string>
-  ) => Promise<void>
+  ) => void
   getGridAnswerData: () => ScoringDataWithSelection[]
   setSelectedAnswers: (answers: Set<string>) => void
   handleNextStudent: () => void
@@ -42,7 +42,7 @@ export function useBatchScoringWithProgress({
 }: UseBatchScoringWithProgressParams) {
   // 自動進行機能付きのhandleBatchScore（ラッパー）
   const handleBatchScoreWithProgress = useCallback(
-    async (
+    (
       statusOrAnswerIds: ScoringStatus | string | string[],
       statusOrPartialScore?: ScoringStatus | number | null,
       partialScore?: number | null
@@ -57,8 +57,8 @@ export function useBatchScoringWithProgress({
         return newSet
       })
 
-      // その後で採点実行
-      await handleBatchScore(
+      // その後で採点実行（楽観的UI更新のため同期的に完了）
+      handleBatchScore(
         statusOrAnswerIds,
         statusOrPartialScore,
         partialScore,

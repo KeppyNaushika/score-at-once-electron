@@ -7,6 +7,7 @@ import {
   finalizeQuestionScore,
   getAnswerSheetProgress,
   getExamProgress,
+  getQuestionScoreById,
   getQuestionScoreComparison,
   getQuestionScoresForExam,
   getQuestionScoresForStudent,
@@ -79,6 +80,21 @@ export function setupScoringHandlers(): void {
       }
     }
   )
+
+  ipcMain.handle("get-question-score", async (_event, id: string) => {
+    try {
+      const result = await getQuestionScoreById(id)
+
+      if (!result.success || !result.score) {
+        return result
+      }
+
+      return { success: true, score: serializeScore(result.score) }
+    } catch (err) {
+      console.error("Error getting question score:", err)
+      throw err
+    }
+  })
 
   ipcMain.handle(
     "create-question-score",

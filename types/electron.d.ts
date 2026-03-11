@@ -816,6 +816,7 @@ export interface MyAPI {
   }>
 
   // QuestionScore関連のAPI
+  getQuestionScore: (id: string) => Promise<QuestionScoreOperationResult>
   getQuestionScoresForExam: (
     examId: string,
     userId?: string

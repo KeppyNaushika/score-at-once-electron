@@ -1,5 +1,5 @@
 // import { checkForAutoFinalization } from "@/components/exams/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -29,8 +29,47 @@ export function useBatchScoring({
   questionScores,
   setQuestionScores,
 }: UseBatchScoringProps) {
+  // questionScoresの最新値をrefで保持（useCallbackの依存配列から除去するため）
+  const questionScoresRef = useRef(questionScores)
+  questionScoresRef.current = questionScores
+
+  const rollbackUpdate = useCallback(
+    async (scoreId: string) => {
+      try {
+        const result = await window.electronAPI.getQuestionScore(scoreId)
+        if (result.success && result.score) {
+          const dbScore = result.score
+          setQuestionScores((prev) =>
+            prev.map((s) =>
+              s.id === scoreId
+                ? {
+                    ...s,
+                    partialScore: dbScore.partialScore,
+                    status: dbScore.status,
+                    updatedAt: new Date(dbScore.updatedAt),
+                  }
+                : s
+            )
+          )
+        }
+      } catch {
+        // ロールバック自体が失敗 → Shift+Rでの再読み込みに委ねる
+      }
+      toast.error("採点の保存に失敗しました")
+    },
+    [setQuestionScores]
+  )
+
+  const rollbackCreate = useCallback(
+    (tempId: string) => {
+      setQuestionScores((prev) => prev.filter((s) => s.id !== tempId))
+      toast.error("採点の保存に失敗しました")
+    },
+    [setQuestionScores]
+  )
+
   const handleBatchScore = useCallback(
-    async (
+    (
       statusOrAnswerIds: ScoringStatus | string | string[],
       statusOrPartialScore?: ScoringStatus | number | null,
       partialScore?: number | null,
@@ -71,11 +110,8 @@ export function useBatchScoring({
       let effectiveUserId: string
       if (!currentUserId) {
         console.warn("No current user ID available, using default")
-        // デフォルトユーザーIDを設定（実際の実装では適切なユーザー管理が必要）
         const defaultUserId = "default-user-id"
         setCurrentUserId(defaultUserId)
-
-        // 一時的にdefaultUserIdを使用
         effectiveUserId = defaultUserId
       } else {
         effectiveUserId = currentUserId
@@ -94,36 +130,34 @@ export function useBatchScoring({
         )
         if (!studentAnswerImage) continue
 
-        if (!studentAnswerImage.studentId) continue // studentIdがnullの場合はスキップ
+        if (!studentAnswerImage.studentId) continue
 
+        // refから最新のquestionScoresを取得
         const currentScore = findQuestionScore(
-          questionScores,
+          questionScoresRef.current,
           studentAnswerImage.studentId,
           currentCropRegion.id
         )
 
         let newScore: number | null = 0
-        // Use the actual status type from the scoring action
         let scoringStatus: ScoringStatus = status
 
         switch (status) {
           case "unscored":
-            newScore = null // partialScoreはnullに設定
+            newScore = null
             scoringStatus = "unscored"
             break
           case "correct":
-            newScore = null // partialScoreはnullに設定
+            newScore = null
             break
           case "incorrect":
           case "no_answer":
-            newScore = null // partialScoreはnullに設定
+            newScore = null
             break
           case "partial":
-            // モーダルで入力された場合は具体的な値、モーダル無しの場合は現在の値を維持（ステータスのみ変更）
             if (inputPartialScore !== null && inputPartialScore !== undefined) {
               newScore = inputPartialScore
             } else {
-              // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
               newScore =
                 currentScore?.partialScore !== undefined &&
                 currentScore?.partialScore !== null
@@ -132,11 +166,9 @@ export function useBatchScoring({
             }
             break
           case "pending":
-            // モーダルで入力された場合は具体的な値、モーダル無しの場合は現在の値を維持（ステータスのみ変更）
             if (inputPartialScore !== null && inputPartialScore !== undefined) {
               newScore = inputPartialScore
             } else {
-              // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
               newScore =
                 currentScore?.partialScore !== undefined &&
                 currentScore?.partialScore !== null
@@ -146,85 +178,121 @@ export function useBatchScoring({
             break
         }
 
-        // Save to database
-        try {
-          if (currentScore?.id) {
-            // Update existing score
-            const updateData = {
-              partialScore: newScore !== null ? newScore : undefined,
-              status: scoringStatus,
-            }
-            const result = await window.electronAPI.updateQuestionScore(
-              currentScore.id,
-              updateData
+        if (currentScore?.id) {
+          // Update: 楽観的にUI更新
+          const scoreId = currentScore.id
+          const optimisticPartialScore =
+            newScore !== null
+              ? (newScore as unknown as QuestionScore["partialScore"])
+              : null
+          setQuestionScores((prev) =>
+            prev.map((s) =>
+              s.id === scoreId
+                ? {
+                    ...s,
+                    partialScore: optimisticPartialScore,
+                    status: scoringStatus,
+                  }
+                : s
             )
-
-            if (result.success && result.score) {
-              const updatedScore = result.score
-              setQuestionScores((prev) =>
-                prev.map((score) =>
-                  score.id === currentScore.id
-                    ? {
-                        ...score,
-                        partialScore: updatedScore.partialScore,
-                        status: scoringStatus,
-                        updatedAt: new Date(updatedScore.updatedAt),
-                      }
-                    : score
-                )
-              )
-            }
-          } else {
-            // Create new score
-            const scoreData = {
-              studentId: studentAnswerImage.studentId,
-              cropRegionId: currentCropRegion.id,
-              partialScore: newScore !== null ? newScore : undefined,
-              status: scoringStatus,
-              userId: effectiveUserId,
-            }
-            const result =
-              await window.electronAPI.createQuestionScore(scoreData)
-
-            if (result.success && result.score) {
-              const createdScore = result.score
-              const newQuestionScore: QuestionScore = {
-                id: createdScore.id,
-                cropRegionId: createdScore.cropRegionId,
-                studentId: createdScore.studentId,
-                partialScore: createdScore.partialScore,
-                status: createdScore.status,
-                userId: createdScore.userId,
-                createdAt: createdScore.createdAt,
-                updatedAt: createdScore.updatedAt,
-              }
-
-              setQuestionScores((prev) => [...prev, newQuestionScore])
-            }
-          }
-
-          // TODO: Check for auto-finalization in collaborative mode
-          // Temporarily disabled during QuestionScore array migration
-          // if (scoringStatus === "pending" && studentAnswerImage.studentId) {
-          //   await checkForAutoFinalization(
-          //     studentAnswerImage.studentId,
-          //     currentCropRegion.id,
-          //     currentUserId,
-          //     setQuestionScores,
-          //   )
-          // }
-
-          // TODO: Add subtotal score recalculation here
-          // After individual question scoring, we should:
-          // 1. Identify all subtotal regions that depend on this question
-          // 2. Recalculate those subtotal scores
-          // 3. Save the updated subtotal scores to database
-          // 4. Update the local scoring data state
-        } catch (error) {
-          console.error("Error in batch scoring:", error)
-          toast.error(
-            `採点中にエラーが発生しました: ${studentAnswerImage.student?.lastName || "不明な生徒"}`
           )
+          // refも同期してループ内の次の反復で最新値が見えるようにする
+          questionScoresRef.current = questionScoresRef.current.map((s) =>
+            s.id === scoreId
+              ? {
+                  ...s,
+                  partialScore: optimisticPartialScore,
+                  status: scoringStatus,
+                }
+              : s
+          )
+
+          // DB保存をfire-and-forget
+          const updateData = {
+            partialScore: newScore !== null ? newScore : undefined,
+            status: scoringStatus,
+          }
+          window.electronAPI
+            .updateQuestionScore(scoreId, updateData)
+            .then((result) => {
+              if (result.success && result.score) {
+                // 成功時: updatedAtを反映
+                const updatedScore = result.score
+                setQuestionScores((prev) =>
+                  prev.map((s) =>
+                    s.id === scoreId
+                      ? {
+                          ...s,
+                          updatedAt: new Date(updatedScore.updatedAt),
+                        }
+                      : s
+                  )
+                )
+              } else {
+                // DB保存失敗 → ロールバック
+                rollbackUpdate(scoreId)
+              }
+            })
+            .catch(() => {
+              rollbackUpdate(scoreId)
+            })
+        } else {
+          // Create: 仮IDで楽観的にUI追加
+          const tempId = crypto.randomUUID()
+          const now = new Date()
+          const optimisticScore: QuestionScore = {
+            id: tempId,
+            cropRegionId: currentCropRegion.id,
+            studentId: studentAnswerImage.studentId,
+            partialScore:
+              newScore !== null
+                ? (newScore as unknown as QuestionScore["partialScore"])
+                : null,
+            status: scoringStatus,
+            userId: effectiveUserId,
+            createdAt: now,
+            updatedAt: now,
+          }
+          setQuestionScores((prev) => [...prev, optimisticScore])
+          // refも同期してループ内の次の反復で最新値が見えるようにする
+          questionScoresRef.current = [
+            ...questionScoresRef.current,
+            optimisticScore,
+          ]
+
+          // DB保存をfire-and-forget
+          const scoreData = {
+            studentId: studentAnswerImage.studentId,
+            cropRegionId: currentCropRegion.id,
+            partialScore: newScore !== null ? newScore : undefined,
+            status: scoringStatus,
+            userId: effectiveUserId,
+          }
+          window.electronAPI
+            .createQuestionScore(scoreData)
+            .then((result) => {
+              if (result.success && result.score) {
+                // 成功時: 仮IDを本物のIDに差し替え
+                const createdScore = result.score
+                setQuestionScores((prev) =>
+                  prev.map((s) =>
+                    s.id === tempId
+                      ? {
+                          ...s,
+                          id: createdScore.id,
+                          createdAt: new Date(createdScore.createdAt),
+                          updatedAt: new Date(createdScore.updatedAt),
+                        }
+                      : s
+                  )
+                )
+              } else {
+                rollbackCreate(tempId)
+              }
+            })
+            .catch(() => {
+              rollbackCreate(tempId)
+            })
         }
       }
     },
@@ -234,8 +302,9 @@ export function useBatchScoring({
       setCurrentUserId,
       currentCropRegionId,
       studentAnswerImages,
-      questionScores,
       setQuestionScores,
+      rollbackUpdate,
+      rollbackCreate,
     ]
   )
 
