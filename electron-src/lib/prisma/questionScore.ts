@@ -468,10 +468,15 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
  */
 export const getExamProgress = async (examId: string) => {
   try {
-    // 試験に参加している生徒数を取得
-    const totalStudents = await prisma.examStudent.count({
-      where: { examId },
+    // 答案画像が存在する生徒数を取得（設問一覧の進捗計算と同じロジック）
+    const studentsWithAnswers = await prisma.studentAnswerImage.findMany({
+      where: {
+        examPage: { examId },
+      },
+      select: { studentId: true },
+      distinct: ["studentId"],
     })
+    const totalStudents = studentsWithAnswers.length
 
     // 試験の採点領域数を取得
     const totalQuestions = await prisma.cropRegion.count({
