@@ -279,6 +279,7 @@ export const SUB_QUESTION_LABEL_PRESETS = [
   Array.from({ length: N }, (_, i) => `(${i + 1})`).join(""),
   Array.from({ length: N }, (_, i) => getCircledNumber(i + 1)).join(""),
   Array.from({ length: N }, (_, i) => `〔問${toFullWidth(i + 1)}〕`).join(""),
+  Array.from({ length: N }, (_, i) => `問${i + 1}`).join(","),
   "abcdefghijklmnopqrstuvwxyz",
 ]
 
