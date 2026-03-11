@@ -112,7 +112,7 @@ export default function ExportWarningModal({
             <p className="text-sm text-gray-600">
               {hasWarnings ? (
                 <>
-                  上記の問題がある状態でExcelファイルを出力すると、該当箇所は適切に表示されない可能性があります。
+                  上記の問題がある状態で出力すると、該当箇所は適切に表示されない可能性があります。
                   それでも続行する場合は「警告を無視して続行」をクリックしてください。
                 </>
               ) : (

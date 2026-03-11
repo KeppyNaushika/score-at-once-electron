@@ -16,8 +16,42 @@ import {
   finalizeStreamingSession,
   getPdfExportData,
 } from "../lib/prisma/pdfExport"
+import { validateScoringData } from "../lib/shared/utilities/validateScoringData"
 
 export function setupExportHandlers(): void {
+  // 採点データバリデーション（全エクスポート共通）
+  ipcMain.handle(
+    "export:validateScoringData",
+    async (
+      _event,
+      options: {
+        examId: string
+        selectedStudentIds: string[]
+      }
+    ) => {
+      try {
+        const result = await fetchExportData(
+          options.examId,
+          options.selectedStudentIds
+        )
+        if (!result.success || !result.scoringData) {
+          return {
+            success: false,
+            error: result.error || "データ取得に失敗しました",
+          }
+        }
+        const validationResult = validateScoringData(result.scoringData)
+        return { success: true, ...validationResult }
+      } catch (err) {
+        console.error("Error validating scoring data:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    }
+  )
+
   // Excel Export handlers
   ipcMain.handle(
     "export-grading-data-excel",

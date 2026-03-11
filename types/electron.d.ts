@@ -917,9 +917,13 @@ export interface MyAPI {
     percentage: number
   }>
   getExamProgress: (examId: string) => Promise<{
-    totalStudentAnswers: number
-    completedStudentAnswers: number
-    percentage: number
+    totalStudents: number
+    totalQuestions: number
+    totalItems: number
+    scoredItems: number
+    finalizedItems: number
+    scoredPercentage: number
+    finalizedPercentage: number
   }>
   initializeScoringRecords: (examId: string) => Promise<{
     success: boolean
@@ -930,6 +934,21 @@ export interface MyAPI {
 
   // Canvas描画エンジン用PDF出力API
   export: {
+    // 採点データバリデーション（全エクスポート共通）
+    validateScoringData: (options: {
+      examId: string
+      selectedStudentIds: string[]
+    }) => Promise<{
+      success: boolean
+      error?: string
+      hasWarnings?: boolean
+      warnings?: {
+        noScoringData: string[]
+        ungraded: string[]
+        missingPartialScore: string[]
+      }
+    }>
+
     // PDF出力に必要なデータを取得
     getPdfExportData: (options: {
       examId: string
