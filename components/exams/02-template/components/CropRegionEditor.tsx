@@ -27,6 +27,8 @@ type CropRegionEditorProps = {
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   examPageId: string | null
+  defaultPoints: number
+  onDefaultPointsChange: (points: number) => void
 }
 
 const CropRegionEditor = ({
@@ -38,6 +40,8 @@ const CropRegionEditor = ({
   backgroundImageUrl,
   imageDimensions,
   examPageId,
+  defaultPoints,
+  onDefaultPointsChange,
 }: CropRegionEditorProps) => {
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null
@@ -173,7 +177,7 @@ const CropRegionEditor = ({
               areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
             }`,
             type: "QUESTION_ANSWER",
-            points: 10, // デフォルトポイント
+            points: defaultPoints,
           }
           break
         case "TOTAL_SCORE":
@@ -248,6 +252,22 @@ const CropRegionEditor = ({
               検出枠: {detectedRects.length}個
             </div>
           )}
+          <div className="flex items-center gap-2">
+            <label className="text-xs whitespace-nowrap text-gray-600">
+              配点の初期値
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={defaultPoints}
+              onChange={(e) => {
+                const v = parseInt(e.target.value)
+                if (!isNaN(v) && v >= 0) onDefaultPointsChange(v)
+              }}
+              className="h-7 w-16 rounded border px-2 text-right text-sm"
+            />
+            <span className="text-xs text-gray-500">点</span>
+          </div>
         </div>
 
         <CropRegionList
