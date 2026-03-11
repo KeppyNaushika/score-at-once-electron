@@ -36,6 +36,9 @@ export default function ExportMainView() {
     unscored: [] as string[],
     missingPartialScore: [] as string[],
   })
+  const [pendingExportType, setPendingExportType] = useState<
+    "scored-answers" | "grading-data" | "individual-reports" | null
+  >(null)
 
   // Canvas描画用の状態
   const [pdfExportPages, setPdfExportPages] = useState<PdfExportPageData[]>([])
@@ -213,6 +216,37 @@ export default function ExportMainView() {
    * Canvas描画ベースのPDF出力（ストリーミング処理フロー）
    * 1. データ取得 → 2. ストリーミングセッション作成 & 保存先選択 → 3. Canvas描画（完了次第PDF埋め込み） → 4. PDF保存
    */
+  /**
+   * 採点データバリデーションを実行し、警告があればモーダルを表示する
+   * @returns true: バリデーション通過（警告なし）、false: 警告あり（モーダル表示）
+   */
+  const validateBeforeExport = async (
+    exportType: "scored-answers" | "grading-data" | "individual-reports"
+  ): Promise<boolean> => {
+    const selectedStudentIds = Array.from(selectedStudents)
+    const result = await window.electronAPI.export.validateScoringData({
+      examId: exam.id,
+      selectedStudentIds,
+    })
+
+    if (!result.success) {
+      throw new Error(result.error || "バリデーションに失敗しました")
+    }
+
+    if (result.hasWarnings && result.warnings) {
+      setWarningData({
+        noScoringData: result.warnings.noScoringData,
+        unscored: result.warnings.ungraded,
+        missingPartialScore: result.warnings.missingPartialScore,
+      })
+      setPendingExportType(exportType)
+      setShowWarningModal(true)
+      return false
+    }
+
+    return true
+  }
+
   const handleExportScoredAnswers = async () => {
     if (selectedStudents.size === 0) {
       alert("出力する生徒を選択してください")
@@ -223,6 +257,21 @@ export default function ExportMainView() {
       return
     }
 
+    try {
+      // バリデーション実行
+      const isValid = await validateBeforeExport("scored-answers")
+      if (!isValid) return
+
+      await executeExportScoredAnswers()
+    } catch (error) {
+      console.error("Export error:", error)
+      alert(
+        `エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
+      )
+    }
+  }
+
+  const executeExportScoredAnswers = async () => {
     try {
       // 処理開始
       setIsExporting(true)
@@ -566,6 +615,19 @@ export default function ExportMainView() {
       return
     }
 
+    try {
+      // バリデーション実行
+      const isValid = await validateBeforeExport("grading-data")
+      if (!isValid) return
+
+      await executeExportGradingData()
+    } catch (error) {
+      console.error("Export error:", error)
+      alert("出力中にエラーが発生しました")
+    }
+  }
+
+  const executeExportGradingData = async () => {
     setIsExporting(true)
 
     try {
@@ -574,16 +636,13 @@ export default function ExportMainView() {
       const result = await window.electronAPI.exportGradingDataExcel({
         examId: exam.id,
         selectedStudentIds,
+        forceExport: true,
       })
 
       if (result.success) {
         alert(
           `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`
         )
-      } else if (result.warnings) {
-        // 警告がある場合は警告モーダルを表示
-        setWarningData(result.warnings)
-        setShowWarningModal(true)
       } else {
         alert(`出力に失敗しました: ${result.error}`)
       }
@@ -597,29 +656,15 @@ export default function ExportMainView() {
 
   const handleContinueExport = async () => {
     setShowWarningModal(false)
-    setIsExporting(true)
+    const exportType = pendingExportType
+    setPendingExportType(null)
 
-    try {
-      const selectedStudentIds = Array.from(selectedStudents)
-
-      const result = await window.electronAPI.exportGradingDataExcel({
-        examId: exam.id,
-        selectedStudentIds,
-        forceExport: true, // 警告を無視して強制実行
-      })
-
-      if (result.success) {
-        alert(
-          `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`
-        )
-      } else {
-        alert(`出力に失敗しました: ${result.error}`)
-      }
-    } catch (error) {
-      console.error("Export error:", error)
-      alert("出力中にエラーが発生しました")
-    } finally {
-      setIsExporting(false)
+    if (exportType === "grading-data") {
+      await executeExportGradingData()
+    } else if (exportType === "scored-answers") {
+      await executeExportScoredAnswers()
+    } else if (exportType === "individual-reports") {
+      await executeExportIndividualReports()
     }
   }
 
@@ -634,8 +679,23 @@ export default function ExportMainView() {
     }
 
     try {
-      setIsExporting(true)
+      // バリデーション実行
+      const isValid = await validateBeforeExport("individual-reports")
+      if (!isValid) return
 
+      await executeExportIndividualReports()
+    } catch (error) {
+      console.error("Individual report export error:", error)
+      alert(
+        `エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
+      )
+    }
+  }
+
+  const executeExportIndividualReports = async () => {
+    setIsExporting(true)
+
+    try {
       const selectedStudentIds = Array.from(selectedStudents)
 
       // 1. データ取得（統計・アドバイス含む）

@@ -3,8 +3,8 @@ import * as ExcelJS from "exceljs"
 import {
   ExportGradingDataOptions,
   ExportResult,
-  ScoringData,
 } from "../../shared/types/exportTypes"
+import { validateScoringData } from "../../shared/utilities/validateScoringData"
 import { fetchExportData } from "./dataFetcher"
 import { saveWorkbook } from "./fileSaver"
 import { createItemAnalysisSheet } from "./itemAnalysisSheetCreator"
@@ -95,62 +95,5 @@ export async function exportGradingDataExcel(
       error:
         error instanceof Error ? error.message : "不明なエラーが発生しました",
     }
-  }
-}
-
-/**
- * 採点データの検証結果
- */
-interface ValidationResult {
-  hasWarnings: boolean
-  warnings: {
-    noScoringData: string[]
-    ungraded: string[]
-    missingPartialScore: string[]
-  }
-}
-
-/**
- * 採点データを検証して警告を生成する
- */
-function validateScoringData(scoringData: ScoringData[]): ValidationResult {
-  const warnings = {
-    noScoringData: [] as string[],
-    ungraded: [] as string[],
-    missingPartialScore: [] as string[],
-  }
-
-  for (const studentData of scoringData) {
-    const studentName = studentData.studentName
-
-    for (const score of studentData.scores) {
-      const questionLabel = score.questionLabel
-      const identifier = `${studentName} - ${questionLabel}`
-
-      // 採点データが存在しない
-      if (!score.status || score.status === "unscored") {
-        if (score.score === null) {
-          warnings.noScoringData.push(identifier)
-        } else {
-          warnings.ungraded.push(identifier)
-        }
-      }
-
-      // 部分点・保留で値が入力されていない（0点は有効な値なので除外）
-      if (
-        (score.status === "partial" || score.status === "hold") &&
-        score.score === null
-      ) {
-        warnings.missingPartialScore.push(identifier)
-      }
-    }
-  }
-
-  return {
-    hasWarnings:
-      warnings.noScoringData.length > 0 ||
-      warnings.ungraded.length > 0 ||
-      warnings.missingPartialScore.length > 0,
-    warnings,
   }
 }

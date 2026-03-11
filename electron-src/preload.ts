@@ -462,6 +462,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Canvas描画エンジン用PDF出力API
   export: {
+    validateScoringData: (options: {
+      examId: string
+      selectedStudentIds: string[]
+    }) => ipcRenderer.invoke("export:validateScoringData", options),
     getPdfExportData: (options: {
       examId: string
       selectedStudentIds: string[]
