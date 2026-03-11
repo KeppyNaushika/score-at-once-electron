@@ -9,12 +9,12 @@ import { Progress } from "@/components/ui/progress"
 
 // 試験進捗の型定義
 interface ExamProgress {
-  totalAnswerSheets: number
+  totalStudents: number
   totalQuestions: number
   totalItems: number
-  gradedItems: number
+  scoredItems: number
   finalizedItems: number
-  progressPercentage: number
+  scoredPercentage: number
   finalizedPercentage: number
 }
 
@@ -41,25 +41,18 @@ export default function ExamProgressCard({
       setError(null)
       const result = await window.electronAPI.getExamProgress(examId)
 
-      if (result && typeof result.percentage === "number") {
-        setProgress({
-          totalAnswerSheets: result.totalStudentAnswers,
-          totalQuestions: 0,
-          totalItems: result.totalStudentAnswers,
-          gradedItems: result.completedStudentAnswers,
-          finalizedItems: result.completedStudentAnswers,
-          progressPercentage: result.percentage,
-          finalizedPercentage: result.percentage,
-        })
-        onProgressUpdate?.({
-          totalAnswerSheets: result.totalStudentAnswers,
-          totalQuestions: 0,
-          totalItems: result.totalStudentAnswers,
-          gradedItems: result.completedStudentAnswers,
-          finalizedItems: result.completedStudentAnswers,
-          progressPercentage: result.percentage,
-          finalizedPercentage: result.percentage,
-        })
+      if (result && typeof result.totalItems === "number") {
+        const data: ExamProgress = {
+          totalStudents: result.totalStudents,
+          totalQuestions: result.totalQuestions,
+          totalItems: result.totalItems,
+          scoredItems: result.scoredItems,
+          finalizedItems: result.finalizedItems,
+          scoredPercentage: result.scoredPercentage,
+          finalizedPercentage: result.finalizedPercentage,
+        }
+        setProgress(data)
+        onProgressUpdate?.(data)
       } else {
         setError("Failed to fetch progress")
       }
@@ -145,6 +138,9 @@ export default function ExamProgressCard({
     )
   }
 
+  const isComplete =
+    progress.totalItems > 0 && progress.finalizedItems >= progress.totalItems
+
   return (
     <Card>
       <CardHeader className="pb-1">
@@ -152,6 +148,11 @@ export default function ExamProgressCard({
           <CardTitle className="flex items-center text-xs font-medium">
             <Users className="mr-1 h-3 w-3" />
             試験進捗
+            {isComplete && (
+              <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                完了
+              </span>
+            )}
           </CardTitle>
           <div className="flex items-center space-x-1">
             <Button
@@ -171,9 +172,9 @@ export default function ExamProgressCard({
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="text-sm font-semibold">
-              {progress.totalAnswerSheets}
+              {progress.totalStudents}
             </div>
-            <div className="text-muted-foreground text-xs">答案</div>
+            <div className="text-muted-foreground text-xs">生徒</div>
           </div>
           <div>
             <div className="text-sm font-semibold">
@@ -192,13 +193,13 @@ export default function ExamProgressCard({
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium">採点進捗</span>
             <span className="text-muted-foreground text-xs">
-              {progress.gradedItems}/{progress.totalItems}
+              {progress.scoredItems}/{progress.totalItems}
             </span>
           </div>
-          <Progress value={progress.progressPercentage} className="h-1.5" />
+          <Progress value={progress.scoredPercentage} className="h-1.5" />
           <div className="text-right">
             <span className="text-muted-foreground text-xs">
-              {Math.round(progress.progressPercentage)}%
+              {Math.round(progress.scoredPercentage)}%
             </span>
           </div>
         </div>

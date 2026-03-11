@@ -469,20 +469,12 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
 export const getExamProgress = async (examId: string) => {
   try {
     // 試験に参加している生徒数を取得
-    const totalAnswerSheets = await prisma.examStudent.count({
+    const totalStudents = await prisma.examStudent.count({
       where: { examId },
     })
 
-    if (totalAnswerSheets === 0) {
-      return {
-        totalAnswerSheets: 0,
-        completedAnswerSheets: 0,
-        percentage: 0,
-      }
-    }
-
     // 試験の採点領域数を取得
-    const totalCropRegions = await prisma.cropRegion.count({
+    const totalQuestions = await prisma.cropRegion.count({
       where: {
         examPage: {
           examId,
@@ -491,59 +483,80 @@ export const getExamProgress = async (examId: string) => {
       },
     })
 
-    if (totalCropRegions === 0) {
+    const totalItems = totalStudents * totalQuestions
+
+    if (totalItems === 0) {
       return {
-        totalAnswerSheets,
-        completedAnswerSheets: 0,
-        percentage: 0,
+        totalStudents,
+        totalQuestions,
+        totalItems: 0,
+        scoredItems: 0,
+        finalizedItems: 0,
+        scoredPercentage: 0,
+        finalizedPercentage: 0,
       }
     }
 
-    // 各生徒の採点完了状況を確認
-    const examStudents = await prisma.examStudent.findMany({
-      where: { examId },
-      select: { studentId: true },
+    const cropRegionFilter = {
+      cropRegion: {
+        examPage: { examId },
+        type: "QUESTION_ANSWER" as const,
+      },
+    }
+
+    // 採点済みの項目数を取得
+    // correct/incorrect/no_answer は無条件でカウント
+    // partial/pending は partialScore が null でないもののみカウント
+    const scoredItems = await prisma.questionScore.count({
+      where: {
+        ...cropRegionFilter,
+        OR: [
+          { status: { in: ["correct", "incorrect", "no_answer"] } },
+          {
+            status: { in: ["partial", "pending"] },
+            partialScore: { not: null },
+          },
+        ],
+      },
     })
 
-    let completedAnswerSheets = 0
-
-    for (const examStudent of examStudents) {
-      // この生徒の採点済み設問数を取得
-      const completedQuestions = await prisma.questionScore.count({
-        where: {
-          studentId: examStudent.studentId,
-          cropRegion: {
-            examPage: {
-              examId,
-            },
-            type: "QUESTION_ANSWER",
+    // 最終確定の項目数を取得
+    // correct/incorrect/no_answer は無条件でカウント
+    // partial は partialScore が null でないもののみカウント（pendingは未確定なので除外）
+    const finalizedItems = await prisma.questionScore.count({
+      where: {
+        ...cropRegionFilter,
+        OR: [
+          { status: { in: ["correct", "incorrect", "no_answer"] } },
+          {
+            status: "partial",
+            partialScore: { not: null },
           },
-          OR: [{ status: "final" }, { status: "proposed" }],
-        },
-      })
-
-      // 全設問が採点済みの場合、完了とみなす
-      if (completedQuestions >= totalCropRegions) {
-        completedAnswerSheets++
-      }
-    }
-
-    const percentage =
-      totalAnswerSheets > 0
-        ? (completedAnswerSheets / totalAnswerSheets) * 100
-        : 0
+        ],
+      },
+    })
 
     return {
-      totalAnswerSheets,
-      completedAnswerSheets,
-      percentage: Math.round(percentage * 100) / 100, // 小数点2位まで
+      totalStudents,
+      totalQuestions,
+      totalItems,
+      scoredItems,
+      finalizedItems,
+      scoredPercentage:
+        Math.round((scoredItems / totalItems) * 100 * 100) / 100,
+      finalizedPercentage:
+        Math.round((finalizedItems / totalItems) * 100 * 100) / 100,
     }
   } catch (error) {
     console.error("Error getting exam progress:", error)
     return {
-      totalAnswerSheets: 0,
-      completedAnswerSheets: 0,
-      percentage: 0,
+      totalStudents: 0,
+      totalQuestions: 0,
+      totalItems: 0,
+      scoredItems: 0,
+      finalizedItems: 0,
+      scoredPercentage: 0,
+      finalizedPercentage: 0,
     }
   }
 }
