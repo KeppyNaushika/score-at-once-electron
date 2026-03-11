@@ -2,10 +2,10 @@
 
 import { Users } from "lucide-react"
 import Head from "next/head"
-import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
 import React, { useEffect, useState } from "react"
 
+import { GuardedLink } from "@/components/common/GuardedLink"
 import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
 import {
   Breadcrumb,
@@ -83,7 +83,9 @@ export default function ExamWorkflowLayout({
                         </BreadcrumbPage>
                       ) : (
                         <BreadcrumbLink asChild>
-                          <Link href={linkHref}>{step.label}</Link>
+                          <GuardedLink href={linkHref}>
+                            {step.label}
+                          </GuardedLink>
                         </BreadcrumbLink>
                       )}
                     </BreadcrumbItem>
@@ -110,13 +112,15 @@ export default function ExamWorkflowLayout({
 
             {/* 試験詳細に戻るボタン */}
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/exams/${examId}`}>試験詳細</Link>
+              <GuardedLink href={`/exams/${examId}`}>試験詳細</GuardedLink>
             </Button>
 
             {/* 戻るボタン（採点画面でのみ表示） */}
             {pathname.includes("07-score-at-once") && (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/exams/${examId}/06-student-answers`}>戻る</Link>
+                <GuardedLink href={`/exams/${examId}/06-student-answers`}>
+                  戻る
+                </GuardedLink>
               </Button>
             )}
           </div>

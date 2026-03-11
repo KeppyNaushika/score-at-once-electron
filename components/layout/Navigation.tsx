@@ -18,9 +18,9 @@ import {
   User,
   Users,
 } from "lucide-react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { GuardedLink } from "@/components/common/GuardedLink"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -96,9 +96,9 @@ export default function Navigation({
         )}
       >
         {!isSidebarMinimized && (
-          <Link href="/exams" className="text-lg font-semibold">
+          <GuardedLink href="/exams" className="text-lg font-semibold">
             一括採点
-          </Link>
+          </GuardedLink>
         )}
         <Button
           variant="ghost"
@@ -126,7 +126,7 @@ export default function Navigation({
                   isSidebarMinimized ? (
                     <Tooltip key={item.label}>
                       <TooltipTrigger asChild>
-                        <Link href={item.href} passHref>
+                        <GuardedLink href={item.href} passHref>
                           <Button
                             variant={
                               pathname === item.href ? "secondary" : "ghost"
@@ -137,14 +137,14 @@ export default function Navigation({
                           >
                             <item.icon className="h-5 w-5" />
                           </Button>
-                        </Link>
+                        </GuardedLink>
                       </TooltipTrigger>
                       <TooltipContent side="right" sideOffset={5}>
                         {item.label}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <Link key={item.label} href={item.href} passHref>
+                    <GuardedLink key={item.label} href={item.href} passHref>
                       <Button
                         variant={pathname === item.href ? "secondary" : "ghost"}
                         className="w-full justify-start"
@@ -152,7 +152,7 @@ export default function Navigation({
                         <item.icon className="mr-3 h-5 w-5" />
                         {item.label}
                       </Button>
-                    </Link>
+                    </GuardedLink>
                   )
                 )}
               </div>
@@ -221,7 +221,7 @@ export default function Navigation({
             {isSidebarMinimized ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link href="/" passHref>
+                  <GuardedLink href="/" passHref>
                     <Button
                       variant={pathname === "/" ? "secondary" : "ghost"}
                       size="icon"
@@ -230,14 +230,14 @@ export default function Navigation({
                     >
                       <LogIn className="h-5 w-5" />
                     </Button>
-                  </Link>
+                  </GuardedLink>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
                   ログイン
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <Link href="/" passHref>
+              <GuardedLink href="/" passHref>
                 <Button
                   variant={pathname === "/" ? "secondary" : "ghost"}
                   className="w-full justify-start"
@@ -245,7 +245,7 @@ export default function Navigation({
                   <LogIn className="mr-3 h-5 w-5" />
                   ログイン
                 </Button>
-              </Link>
+              </GuardedLink>
             )}
           </>
         )}

@@ -96,6 +96,7 @@ interface StudentAnswersTabContentProps {
   onCloseConfirmModal: () => void
   onApplyChanges: (option: ScoringDataOption) => Promise<void>
   onResetChanges: () => Promise<void>
+  onUploadFileCountChange?: (count: number) => void
 }
 
 export function StudentAnswersTabContent({
@@ -112,6 +113,7 @@ export function StudentAnswersTabContent({
   onCloseConfirmModal,
   onApplyChanges,
   onResetChanges,
+  onUploadFileCountChange,
 }: StudentAnswersTabContentProps) {
   return (
     <>
@@ -123,6 +125,7 @@ export function StudentAnswersTabContent({
           onUploadComplete={onUploadComplete}
           mode="upload"
           existingStudentAnswers={studentAnswers}
+          onUploadFileCountChange={onUploadFileCountChange}
         />
       </TabsContent>
 

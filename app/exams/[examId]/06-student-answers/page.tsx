@@ -1,14 +1,16 @@
 "use client"
 
 import { FileEdit } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
+import type { DirtyDetail } from "@/contexts/NavigationGuardContext"
+import { useNavigationGuard } from "@/hooks/useNavigationGuard"
 
 import {
   LoadingSpinner,
@@ -32,11 +34,11 @@ import { usePendingChanges, useStudentAnswersData } from "./hooks"
 
 export default function StudentAnswersPage() {
   const params = useParams()
-  const router = useRouter()
   const { helpButton } = usePageHelp()
   const examId = params.examId as string
 
   const [activeTab, setActiveTab] = useState<StudentAnswerTab>("new-grid")
+  const [uploadFileCount, setUploadFileCount] = useState(0)
 
   // Data loading hook
   const { students, studentAnswers, modelAnswerCount, isLoading, loadData } =
@@ -53,6 +55,17 @@ export default function StudentAnswersPage() {
     openConfirmModal,
     closeConfirmModal,
   } = usePendingChanges(loadData, students, studentAnswers)
+
+  // Navigation guard
+  const isDirty = uploadFileCount > 0 || pendingChanges.length > 0
+  const dirtyDetails = useMemo<DirtyDetail[]>(
+    () => [
+      { label: "未アップロードの画像", count: uploadFileCount },
+      { label: "配置済み答案の変更", count: pendingChanges.length },
+    ],
+    [uploadFileCount, pendingChanges.length]
+  )
+  const { guardedNavigate } = useNavigationGuard(isDirty, dirtyDetails)
 
   // Reset function will be obtained directly from components
 
@@ -98,7 +111,9 @@ export default function StudentAnswersPage() {
               </Button>
             )}
             <Button
-              onClick={() => router.push(`/exams/${examId}/07-score-at-once`)}
+              onClick={() =>
+                guardedNavigate(`/exams/${examId}/07-score-at-once`)
+              }
             >
               次へ: 一括採点
             </Button>
@@ -124,6 +139,7 @@ export default function StudentAnswersPage() {
               onCloseConfirmModal={closeConfirmModal}
               onApplyChanges={handleApplyChanges}
               onResetChanges={handleResetChanges}
+              onUploadFileCountChange={setUploadFileCount}
             />
           </StudentAnswersTabsNavigation>
         </div>

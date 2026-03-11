@@ -5,6 +5,7 @@ import { Inter } from "next/font/google"
 
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
+import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -84,7 +85,9 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <NavigationGuardProvider>
+            <AppShell>{children}</AppShell>
+          </NavigationGuardProvider>
         </AuthProvider>
       </body>
     </html>

@@ -23,6 +23,7 @@ export function StudentAnswerUpload({
   pendingChanges,
   affectedCells,
   onUpdatePendingChanges,
+  onUploadFileCountChange,
 }: StudentAnswerUploadProps) {
   const finalModelAnswerCount = modelAnswerCount
   const finalExistingAnswers = existingStudentAnswers
@@ -64,6 +65,13 @@ export function StudentAnswerUpload({
     fileOrder,
     setFiles,
   ])
+
+  // ナビゲーションガード用: アップロード待ちファイル数の通知
+  useEffect(() => {
+    if (mode === "upload" && onUploadFileCountChange) {
+      onUploadFileCountChange(files.length)
+    }
+  }, [mode, files.length, onUploadFileCountChange])
 
   // 確認モード用の配置戦略変更ハンドラー
   const handleFileOrderChangeInViewMode = useCallback(
