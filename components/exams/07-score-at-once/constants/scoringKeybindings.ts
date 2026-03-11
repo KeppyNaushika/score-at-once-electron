@@ -61,6 +61,12 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "filter.refresh": "r",
 
   // ============================================
+  // 選択 (Selection)
+  // 答案の選択操作
+  // ============================================
+  "selection.selectAll": "Ctrl+a",
+
+  // ============================================
   // 表示 (View)
   // 表示モードの切り替え
   // ============================================
@@ -124,6 +130,7 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
  */
 export const KEYBINDING_CATEGORIES = {
   scoring: "採点",
+  selection: "選択",
   navigation: "ナビゲーション",
   filter: "フィルタ",
   view: "表示",

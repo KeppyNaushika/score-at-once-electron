@@ -224,6 +224,11 @@ function ScoringMainViewContent() {
     [replaceSelection]
   )
 
+  /** 全選択：表示中（フィルタ適用後）の答案をすべて選択 */
+  const handleSelectAll = useCallback(() => {
+    replaceSelection(filteredScoringDataIds)
+  }, [replaceSelection, filteredScoringDataIds])
+
   const {
     handleNextQuestion,
     handlePrevQuestion,
@@ -355,6 +360,7 @@ function ScoringMainViewContent() {
     handlePartialScoreBackspace,
     handleScore: handleBatchScoreWithProgress,
     handleToggleFilter,
+    handleSelectAll,
   })
 
   const currentStudentId = useMemo(() => {

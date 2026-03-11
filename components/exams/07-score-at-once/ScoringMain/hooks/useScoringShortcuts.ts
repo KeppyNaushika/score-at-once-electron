@@ -44,6 +44,8 @@ interface ScoringShortcutHandlers {
   handleScore: (status: ScoringStatus) => void
   /** フィルタトグル（サイドパネル非表示でも有効にするため） */
   handleToggleFilter: (key: string) => void
+  /** 全選択（表示中の答案をすべて選択） */
+  handleSelectAll: () => void
 }
 
 /**
@@ -69,7 +71,20 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     handlePartialScoreBackspace,
     handleScore,
     handleToggleFilter,
+    handleSelectAll,
   } = handlers
+
+  // ========================================
+  // 選択コマンド
+  // ========================================
+  useCommand("selection.selectAll", handleSelectAll, {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "全選択",
+      category: "選択",
+      description: "表示中の答案をすべて選択します",
+    },
+  })
 
   // ========================================
   // 採点コマンド（サイドパネル非表示でも有効）
