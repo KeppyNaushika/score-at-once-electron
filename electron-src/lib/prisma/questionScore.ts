@@ -148,6 +148,35 @@ export const getQuestionScoresForStudent = async (
 }
 
 /**
+ * 単一の採点データをIDで取得
+ * @param id QuestionScoreのID
+ */
+export const getQuestionScoreById = async (id: string) => {
+  try {
+    const score = await prisma.questionScore.findUnique({
+      where: { id },
+      include: {
+        student: true,
+        cropRegion: true,
+        user: true,
+      },
+    })
+
+    if (!score) {
+      return { success: false, error: "Question score not found" }
+    }
+
+    return { success: true, score }
+  } catch (error) {
+    console.error("Failed to get question score by id:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
  * 採点データを作成
  */
 export const createQuestionScore = async (data: CreateQuestionScoreData) => {

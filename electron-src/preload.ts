@@ -283,6 +283,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ) => ipcRenderer.invoke("update-student-orders", examId, studentOrders),
 
   // QuestionScore related functions
+  getQuestionScore: (id: string) =>
+    ipcRenderer.invoke("get-question-score", id),
   getQuestionScoresForExam: (examId: string, userId?: string) =>
     ipcRenderer.invoke("get-question-scores-for-exam", examId, userId),
   getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
