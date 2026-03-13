@@ -1,8 +1,9 @@
 "use client"
 
 import { Scan } from "lucide-react"
-import { useCallback } from "react"
+import { useCallback, useMemo, useState } from "react"
 
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -14,23 +15,110 @@ import {
 import { Switch } from "@/components/ui/switch"
 import type { OMRCellConfig, OMRChoiceConfig } from "@/types/omr.types"
 
-/** 選択肢ラベルプリセット */
-const CHOICE_LABEL_PRESETS: { value: string; labels: string[] }[] = [
+/**
+ * 選択肢ラベルプリセット
+ *
+ * 共通テストで実際に使用される全パターンを網羅:
+ *
+ * ■ 数学（数値解答欄）
+ *   - 0〜9: 数値解答（全年度共通）
+ *   - −: 負の符号（令和7年度〜、符号はマイナスのみ）
+ *   - ±: 符号（〜令和6年度の数学①で使用、令和7年度〜廃止）
+ *   - a,b,c,d: 文字選択（〜令和6年度の数学②で使用、令和7年度〜廃止）
+ *
+ * ■ 全科目共通（選択肢番号）
+ *   - ①〜⑨: 選択肢番号（4〜9択、科目・問題により異なる）
+ *
+ * その他汎用プリセット・カスタム入力も対応。
+ */
+const CHOICE_LABEL_PRESETS: {
+  value: string
+  displayName: string
+  labels: string[]
+  /** 共通テストで使用されるプリセットかどうか */
+  isCommonTest?: boolean
+}[] = [
+  // ── 共通テスト準拠：数学 数値解答欄 ──
+  {
+    value: "digit",
+    displayName: "0〜9（数値解答）",
+    labels: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    isCommonTest: true,
+  },
+  {
+    value: "minus",
+    displayName: "−（負の符号）",
+    labels: ["−"],
+    isCommonTest: true,
+  },
+  {
+    value: "digit-minus",
+    displayName: "0〜9,−（数値+符号）",
+    labels: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "−"],
+    isCommonTest: true,
+  },
+  {
+    value: "plus-minus",
+    displayName: "+,−（符号）",
+    labels: ["+", "−"],
+    isCommonTest: true,
+  },
+  {
+    value: "plus-minus-zero",
+    displayName: "+,−,0（符号+ゼロ）",
+    labels: ["+", "−", "0"],
+    isCommonTest: true,
+  },
+  // ── 共通テスト準拠：全科目 選択肢番号 ──
+  {
+    value: "circled",
+    displayName: "①〜⑨（選択肢番号）",
+    labels: ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨"],
+    isCommonTest: true,
+  },
+  // ── 共通テスト準拠：旧課程・特定科目 ──
+  {
+    value: "alphabet-lower",
+    displayName: "a〜d（数学②〜R6）",
+    labels: ["a", "b", "c", "d"],
+    isCommonTest: true,
+  },
+  {
+    value: "plus-minus-pm",
+    displayName: "+,−,±（数学①〜R6）",
+    labels: ["+", "−", "±"],
+    isCommonTest: true,
+  },
+  // ── 汎用プリセット ──
   {
     value: "katakana",
+    displayName: "ア〜コ",
     labels: ["ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ"],
   },
   {
-    value: "alphabet",
+    value: "alphabet-upper",
+    displayName: "A〜J",
     labels: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
   },
   {
-    value: "circled",
-    labels: ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"],
+    value: "number",
+    displayName: "1〜10",
+    labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
   },
   {
-    value: "number",
-    labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+    value: "true-false",
+    displayName: "正,誤",
+    labels: ["正", "誤"],
+  },
+  {
+    value: "maru-batsu",
+    displayName: "○,×",
+    labels: ["○", "×"],
+  },
+  {
+    value: "custom",
+    displayName: "カスタム（コンマ区切り）",
+    labels: [],
   },
 ]
 
@@ -136,6 +224,20 @@ export function OMRCellConfigForm({
   )
 }
 
+/** 現在のラベルに一致するプリセットを検出 */
+function detectPreset(labels: string[]): string {
+  for (const p of CHOICE_LABEL_PRESETS) {
+    if (p.value === "custom") continue
+    if (
+      p.labels.length >= labels.length &&
+      labels.every((l, i) => p.labels[i] === l)
+    ) {
+      return p.value
+    }
+  }
+  return "custom"
+}
+
 function ChoiceConfigFields({
   config,
   onChange,
@@ -143,69 +245,120 @@ function ChoiceConfigFields({
   config: OMRChoiceConfig
   onChange: (config: OMRCellConfig) => void
 }) {
+  const currentPresetValue = useMemo(
+    () => detectPreset(config.labels),
+    [config.labels]
+  )
+  const isCustom = currentPresetValue === "custom"
+
+  // カスタム入力用のローカルステート
+  const [customInput, setCustomInput] = useState(() =>
+    isCustom ? config.labels.join(",") : ""
+  )
+
   return (
     <>
-      {/* 選択肢数 */}
-      <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-[3rem] text-xs">
-          選択肢数
-        </Label>
-        <input
-          type="number"
-          className="border-input h-7 w-14 [appearance:textfield] rounded border px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          value={config.numChoices}
-          min={2}
-          max={10}
-          onChange={(e) => {
-            const n = Math.max(2, Math.min(10, Number(e.target.value) || 4))
-            const currentPreset = CHOICE_LABEL_PRESETS.find(
-              (p) => p.labels[0] === config.labels[0]
-            )
-            const labels = (
-              currentPreset?.labels ?? CHOICE_LABEL_PRESETS[0].labels
-            ).slice(0, n)
-            onChange({
-              ...config,
-              numChoices: n,
-              labels,
-              correctAnswers: config.correctAnswers.filter((i) => i < n),
-            })
-          }}
-        />
-      </div>
-
       {/* ラベルプリセット */}
       <div className="flex items-center gap-1.5">
         <Label className="text-muted-foreground min-w-[3rem] text-xs">
           ラベル
         </Label>
         <Select
-          value={
-            CHOICE_LABEL_PRESETS.find((p) => p.labels[0] === config.labels[0])
-              ?.value ?? "katakana"
-          }
+          value={currentPresetValue}
           onValueChange={(preset) => {
+            if (preset === "custom") {
+              setCustomInput(config.labels.join(","))
+              return
+            }
             const p = CHOICE_LABEL_PRESETS.find((pr) => pr.value === preset)
             if (p) {
+              const labels = p.labels.slice(0, Math.max(2, p.labels.length))
               onChange({
                 ...config,
-                labels: p.labels.slice(0, config.numChoices),
+                numChoices: labels.length,
+                labels,
+                correctAnswers: config.correctAnswers.filter(
+                  (i) => i < labels.length
+                ),
               })
             }
           }}
         >
-          <SelectTrigger className="h-7 w-32 text-xs">
+          <SelectTrigger className="h-7 w-44 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {CHOICE_LABEL_PRESETS.map((p) => (
               <SelectItem key={p.value} value={p.value}>
-                {p.labels.slice(0, 4).join(",")}...
+                {p.displayName}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+
+      {/* カスタムラベル入力 */}
+      {isCustom && (
+        <div className="flex items-center gap-1.5">
+          <Label className="text-muted-foreground min-w-[3rem] text-xs">
+            入力
+          </Label>
+          <Input
+            className="h-7 w-44 text-xs"
+            value={customInput}
+            placeholder="例: +,-,±"
+            onChange={(e) => {
+              const val = e.target.value
+              setCustomInput(val)
+              const labels = val
+                .split(",")
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0)
+              if (labels.length >= 2) {
+                onChange({
+                  ...config,
+                  numChoices: labels.length,
+                  labels,
+                  correctAnswers: config.correctAnswers.filter(
+                    (i) => i < labels.length
+                  ),
+                })
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* 選択肢数（プリセット時のみ調整可能） */}
+      {!isCustom && (
+        <div className="flex items-center gap-1.5">
+          <Label className="text-muted-foreground min-w-[3rem] text-xs">
+            選択肢数
+          </Label>
+          <input
+            type="number"
+            className="border-input h-7 w-14 [appearance:textfield] rounded border px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            value={config.numChoices}
+            min={2}
+            max={10}
+            onChange={(e) => {
+              const n = Math.max(2, Math.min(10, Number(e.target.value) || 4))
+              const preset = CHOICE_LABEL_PRESETS.find(
+                (p) => p.value === currentPresetValue
+              )
+              const labels = (
+                preset?.labels ?? CHOICE_LABEL_PRESETS[0].labels
+              ).slice(0, n)
+              onChange({
+                ...config,
+                numChoices: n,
+                labels,
+                correctAnswers: config.correctAnswers.filter((i) => i < n),
+              })
+            }}
+          />
+        </div>
+      )}
 
       {/* 配置方向 */}
       <div className="flex items-center gap-1.5">
@@ -218,7 +371,7 @@ function ChoiceConfigFields({
             onChange({ ...config, layout: v })
           }
         >
-          <SelectTrigger className="h-7 w-32 text-xs">
+          <SelectTrigger className="h-7 w-44 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

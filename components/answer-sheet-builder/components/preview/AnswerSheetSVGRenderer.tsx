@@ -403,31 +403,33 @@ export function AnswerSheetSVGRenderer({
             })
         )}
 
-      {/* OMRバブル */}
+      {/* OMRバブル（共通テスト準拠：楕円＋内部ラベル） */}
       {cells
         .filter((c) => c.cellType === "answer" && c.omrBubbles?.length)
         .flatMap((cell, cellIdx) =>
           cell.omrBubbles!.map((bubble, bi) => {
             const cx = bubble.normalizedCx * pageWidthMm
             const cy = bubble.normalizedCy * pageHeightMm
-            const r = bubble.normalizedRadius * pageWidthMm
+            const rx = (bubble.normalizedWidth * pageWidthMm) / 2
+            const ry = (bubble.normalizedHeight * pageHeightMm) / 2
             return (
               <g key={`omr-bubble-${cellIdx}-${cell.label}-${bi}`}>
-                <circle
+                <ellipse
                   cx={cx}
                   cy={cy}
-                  r={r}
+                  rx={rx}
+                  ry={ry}
                   fill="none"
                   stroke="black"
                   strokeWidth={0.3}
                 />
                 <text
                   x={cx}
-                  y={cy + r + 2}
-                  fontSize={2.5}
+                  y={cy}
+                  fontSize={ry * 1.1}
                   fontFamily="'Noto Sans JP', sans-serif"
                   textAnchor="middle"
-                  dominantBaseline="hanging"
+                  dominantBaseline="central"
                   fill="#333"
                 >
                   {bubble.label}

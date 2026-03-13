@@ -151,8 +151,10 @@ export interface ComputedOMRBubble {
   normalizedCx: number
   /** バブル中心Y（0-1正規化） */
   normalizedCy: number
-  /** バブル半径（0-1正規化） */
-  normalizedRadius: number
+  /** バブル幅（0-1正規化）— 共通テスト準拠の横長楕円 */
+  normalizedWidth: number
+  /** バブル高さ（0-1正規化）— 共通テスト準拠の横長楕円 */
+  normalizedHeight: number
   /** 選択肢インデックス */
   choiceIndex: number
   /** ラベル（"ア", "イ" など） */

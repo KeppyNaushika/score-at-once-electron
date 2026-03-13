@@ -39,6 +39,9 @@ export function computeSubHeight(
 
 /**
  * OMR choiceセルのバブル位置を計算（0-1正規化座標）
+ *
+ * 共通テスト準拠の横長楕円（角丸長方形）形状。
+ * ラベルは楕円内部に配置される。
  */
 export function computeOMRBubbles(
   cellX: number,
@@ -52,8 +55,10 @@ export function computeOMRBubbles(
   const bubbles: ComputedOMRBubble[] = []
   const n = config.numChoices
 
-  const maxRadiusMm = Math.min(cellHeight * 0.25, cellWidth / (n * 2.5 + 1))
-  const radiusMm = Math.max(1.5, maxRadiusMm)
+  // 共通テスト準拠: 縦長楕円のサイズ計算
+  // 幅はセル幅ベースで計算、高さは幅の1.6倍（縦長楕円）
+  const bubbleWidthMm = Math.max(2.5, Math.min(cellHeight * 0.35, 4))
+  const bubbleHeightMm = Math.max(4, bubbleWidthMm * 1.6)
 
   if (config.layout === "horizontal") {
     const spacing = cellWidth / (n + 1)
@@ -64,7 +69,8 @@ export function computeOMRBubbles(
       bubbles.push({
         normalizedCx: cx / paperWidth,
         normalizedCy: cy / paperHeight,
-        normalizedRadius: radiusMm / paperWidth,
+        normalizedWidth: bubbleWidthMm / paperWidth,
+        normalizedHeight: bubbleHeightMm / paperHeight,
         choiceIndex: i,
         label: config.labels[i] ?? String(i + 1),
       })
@@ -78,7 +84,8 @@ export function computeOMRBubbles(
       bubbles.push({
         normalizedCx: cx / paperWidth,
         normalizedCy: cy / paperHeight,
-        normalizedRadius: radiusMm / paperWidth,
+        normalizedWidth: bubbleWidthMm / paperWidth,
+        normalizedHeight: bubbleHeightMm / paperHeight,
         choiceIndex: i,
         label: config.labels[i] ?? String(i + 1),
       })
