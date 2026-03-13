@@ -333,6 +333,12 @@ function ScoringMainViewContent() {
     onBatchScore: handleBatchScoreWithProgress,
   })
 
+  /** 表示モード切り替え（グリッド⇔個別） */
+  const handleToggleViewMode = useCallback(
+    () => setGradingMode((prev) => (prev === "grid" ? "individual" : "grid")),
+    [setGradingMode]
+  )
+
   /** コンテキスト値の設定 */
   useContextValue("gradingMode", gradingMode)
   useContextValue("hasSelectedAnswers", selectedStudentAnswerImageIds.size > 0)
@@ -361,6 +367,7 @@ function ScoringMainViewContent() {
     handleScore: handleBatchScoreWithProgress,
     handleToggleFilter,
     handleSelectAll,
+    handleToggleViewMode: handleToggleViewMode,
   })
 
   const currentStudentId = useMemo(() => {

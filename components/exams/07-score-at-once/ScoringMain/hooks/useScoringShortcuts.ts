@@ -46,6 +46,8 @@ interface ScoringShortcutHandlers {
   handleToggleFilter: (key: string) => void
   /** 全選択（表示中の答案をすべて選択） */
   handleSelectAll: () => void
+  /** 表示モード切り替え（グリッド⇔個別） */
+  handleToggleViewMode: () => void
 }
 
 /**
@@ -72,6 +74,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     handleScore,
     handleToggleFilter,
     handleSelectAll,
+    handleToggleViewMode,
   } = handlers
 
   // ========================================
@@ -198,6 +201,15 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ========================================
   // 表示関連ショートカット
   // ========================================
+  useCommand("view.toggleViewMode", handleToggleViewMode, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "表示モード切り替え",
+      category: "表示",
+      description: "一覧表示と個別表示を切り替えます",
+    },
+  })
+
   useCommand("view.toggleStudentNames", handleToggleStudentNames, {
     when: "!inputFocus && !modalOpen",
     metadata: {
