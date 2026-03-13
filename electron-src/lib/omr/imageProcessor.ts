@@ -148,3 +148,44 @@ export function computeCircularFillRatio(
 
   return totalPixels === 0 ? 0 : darkCount / totalPixels
 }
+
+/**
+ * 楕円形領域のピクセルの塗りつぶし率を計算
+ *
+ * 共通テスト風の横長楕円マーク認識用。
+ * (x/rx)^2 + (y/ry)^2 <= 1 の楕円内のピクセルのみを対象とする。
+ */
+export function computeEllipticalFillRatio(
+  rawData: RawImageData,
+  centerX: number,
+  centerY: number,
+  halfWidth: number,
+  halfHeight: number,
+  threshold: number
+): number {
+  const { data, width, height, channels } = rawData
+
+  let totalPixels = 0
+  let darkCount = 0
+
+  const x0 = Math.max(0, Math.floor(centerX - halfWidth))
+  const x1 = Math.min(width - 1, Math.ceil(centerX + halfWidth))
+  const y0 = Math.max(0, Math.floor(centerY - halfHeight))
+  const y1 = Math.min(height - 1, Math.ceil(centerY + halfHeight))
+
+  for (let py = y0; py <= y1; py++) {
+    for (let px = x0; px <= x1; px++) {
+      const dx = (px - centerX) / halfWidth
+      const dy = (py - centerY) / halfHeight
+      if (dx * dx + dy * dy <= 1) {
+        totalPixels++
+        const idx = (py * width + px) * channels
+        if (data[idx] < threshold) {
+          darkCount++
+        }
+      }
+    }
+  }
+
+  return totalPixels === 0 ? 0 : darkCount / totalPixels
+}

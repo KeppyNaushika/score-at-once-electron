@@ -283,12 +283,13 @@ function renderOMRBubbles(
   for (const bubble of cell.omrBubbles) {
     const cx = bubble.normalizedCx * pageWidthMm
     const cy = bubble.normalizedCy * pageHeightMm
-    const r = bubble.normalizedRadius * pageWidthMm
+    const rx = (bubble.normalizedWidth * pageWidthMm) / 2
+    const ry = (bubble.normalizedHeight * pageHeightMm) / 2
     parts.push(
-      `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="black" stroke-width="0.3"/>`
+      `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="black" stroke-width="0.3"/>`
     )
     parts.push(
-      `<text x="${cx}" y="${cy + r + 2}" font-size="2.5" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="hanging" fill="#333">${escapeXml(bubble.label)}</text>`
+      `<text x="${cx}" y="${cy}" font-size="${ry * 1.1}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central" fill="#333">${escapeXml(bubble.label)}</text>`
     )
   }
   return parts

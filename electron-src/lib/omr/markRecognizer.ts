@@ -16,7 +16,7 @@ import type {
 } from "../../../types/omr.types"
 import { normalizedToPixel } from "./coordinateTransform"
 import { recognizeDigitCell } from "./digitRecognizer"
-import { computeCircularFillRatio } from "./imageProcessor"
+import { computeEllipticalFillRatio } from "./imageProcessor"
 
 /**
  * 1つのセルのマーク認識を実行
@@ -66,14 +66,15 @@ function recognizeChoiceCell(
       bubble.normalizedCy,
       transform
     )
-    const radiusPx = bubble.normalizedRadius * rawImage.width
 
-    // 塗りつぶし率を計算
-    const ratio = computeCircularFillRatio(
+    const halfWidthPx = (bubble.normalizedWidth * rawImage.width) / 2
+    const halfHeightPx = (bubble.normalizedHeight * rawImage.height) / 2
+    const ratio = computeEllipticalFillRatio(
       rawImage,
       center.x,
       center.y,
-      radiusPx,
+      halfWidthPx,
+      halfHeightPx,
       params.colorThreshold
     )
     fillRatios.push(ratio)
