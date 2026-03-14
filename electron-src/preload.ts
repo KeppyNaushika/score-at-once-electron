@@ -323,6 +323,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-exam-progress", examId),
   initializeScoringRecords: (examId: string) =>
     ipcRenderer.invoke("initialize-scoring-records", examId),
+  batchUpdateQuestionScores: (
+    entries: Array<{
+      studentId: string
+      cropRegionId: string
+      status: string
+      partialScore: number | null
+      userId: string
+    }>
+  ) => ipcRenderer.invoke("batch-update-question-scores", entries),
 
   // SubtotalGroup related (new management API with correct parameter format)
   createSubtotalGroup: (data: {
@@ -1171,10 +1180,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }) => ipcRenderer.invoke("omr:batch-recognize", args),
     detectMasterMarkers: (examId: string, colorThreshold?: number) =>
       ipcRenderer.invoke("omr:detect-master-markers", examId, colorThreshold),
-    saveTemplate: (examId: string, template: unknown) =>
-      ipcRenderer.invoke("omr:save-template", examId, template),
-    loadTemplate: (examId: string) =>
-      ipcRenderer.invoke("omr:load-template", examId),
     onBatchProgress: (
       callback: (progress: {
         total: number
@@ -1191,6 +1196,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ipcRenderer.removeAllListeners("omr:batch-progress")
       }
     },
+  },
+
+  // =============================================================================
+  // OMR Config（CropRegion OMR設定）
+  // =============================================================================
+  omrConfig: {
+    upsert: (data: {
+      cropRegionId: string
+      type: "choice" | "handwritten-digit"
+      numChoices?: number | null
+      choiceLayout?: string | null
+      numDigits?: number | null
+      correctAnswer?: string | null
+      cellGeometryJson?: string | null
+      colorThreshold?: number | null
+      areaThreshold?: number | null
+      choiceOptions?: Array<{
+        choiceIndex: number
+        label: string
+        isCorrect: boolean
+      }>
+    }) => ipcRenderer.invoke("omr-config:upsert", data),
+    delete: (cropRegionId: string) =>
+      ipcRenderer.invoke("omr-config:delete", cropRegionId),
+    getByExam: (examId: string) =>
+      ipcRenderer.invoke("omr-config:get-by-exam", examId),
   },
 
   answerSheetBuilder: {
@@ -1230,6 +1261,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("asb:export-definition", definitionId),
     importDefinition: (filePath: string, userId: string) =>
       ipcRenderer.invoke("asb:import-definition", filePath, userId),
+    duplicateDefinition: (id: string, userId: string) =>
+      ipcRenderer.invoke("asb:duplicate-definition", id, userId),
   },
 })
 

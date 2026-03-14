@@ -449,4 +449,104 @@ export function setupAnswerSheetBuilderHandlers(): void {
       }
     }
   )
+
+  // 定義複製（画像ファイルもコピー）
+  ipcMain.handle(
+    "asb:duplicate-definition",
+    async (_event, id: string, userId: string) => {
+      try {
+        const definition = await getAsbDefinition(id)
+        if (!definition) {
+          return { success: false, error: "定義が見つかりません" }
+        }
+
+        const newId = crypto.randomUUID()
+
+        // 全子要素のIDを再生成
+        const regeneratedHeaderFields = definition.settings.headerFields.map(
+          (hf) => ({ ...hf, id: crypto.randomUUID() })
+        )
+
+        // 新定義の画像ディレクトリを作成
+        const newImagesDir = getAsbImagesDirectory(newId)
+        fs.mkdirSync(newImagesDir, { recursive: true })
+
+        // 画像コピーとパス更新を行うヘルパー
+        const copyImageElement = <T extends { id: string; imagePath: string }>(
+          ie: T
+        ): T => {
+          let newImagePath = ie.imagePath
+          if (ie.imagePath) {
+            const absoluteSrc = getAbsolutePathFromData(ie.imagePath)
+            if (fs.existsSync(absoluteSrc)) {
+              const filename = path.basename(ie.imagePath)
+              const destPath = path.join(newImagesDir, filename)
+              fs.copyFileSync(absoluteSrc, destPath)
+              newImagePath = getRelativePathFromData(destPath)
+            }
+          }
+          return { ...ie, id: crypto.randomUUID(), imagePath: newImagePath }
+        }
+
+        const regeneratedMajorQuestions = definition.majorQuestions.map(
+          (mq) => ({
+            ...mq,
+            id: crypto.randomUUID(),
+            subQuestions: mq.subQuestions.map((sq) => ({
+              ...sq,
+              id: crypto.randomUUID(),
+              textElements: sq.textElements.map((te) => ({
+                ...te,
+                id: crypto.randomUUID(),
+              })),
+              imageElements: sq.imageElements?.map(copyImageElement),
+              branchQuestions: sq.branchQuestions.map((bq) => ({
+                ...bq,
+                id: crypto.randomUUID(),
+                textElements: bq.textElements.map((te) => ({
+                  ...te,
+                  id: crypto.randomUUID(),
+                })),
+                imageElements: bq.imageElements?.map(copyImageElement),
+              })),
+            })),
+          })
+        )
+
+        // 既存の名前と重複しないようサフィックス付与
+        const existing = await listAsbDefinitions(userId)
+        const existingNames = new Set(existing.map((d) => d.name))
+        let newName = `${definition.name} (コピー)`
+        if (existingNames.has(newName)) {
+          let suffix = 2
+          while (existingNames.has(`${definition.name} (コピー ${suffix})`)) {
+            suffix++
+          }
+          newName = `${definition.name} (コピー ${suffix})`
+        }
+
+        const duplicated: AnswerSheetDefinition = {
+          ...definition,
+          id: newId,
+          name: newName,
+          settings: {
+            ...definition.settings,
+            headerFields: regeneratedHeaderFields,
+          },
+          majorQuestions: regeneratedMajorQuestions,
+          createdAt: undefined as unknown as string,
+          updatedAt: undefined as unknown as string,
+        }
+
+        await saveAsbDefinition(duplicated, userId)
+        return { success: true, definitionId: newId }
+      } catch (error) {
+        console.error("asb:duplicate-definition error:", error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "複製に失敗しました",
+        }
+      }
+    }
+  )
 }
