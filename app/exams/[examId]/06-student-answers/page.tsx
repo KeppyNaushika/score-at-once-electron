@@ -39,6 +39,9 @@ export default function StudentAnswersPage() {
 
   const [activeTab, setActiveTab] = useState<StudentAnswerTab>("new-grid")
   const [uploadFileCount, setUploadFileCount] = useState(0)
+  const [correctionStatusMap, setCorrectionStatusMap] = useState<
+    Map<string, "corrected" | "skipped">
+  >(new Map())
 
   // Data loading hook
   const { students, studentAnswers, modelAnswerCount, isLoading, loadData } =
@@ -73,6 +76,20 @@ export default function StudentAnswersPage() {
   useEffect(() => {
     loadData()
   }, [examId, loadData])
+
+  /**
+   * Handles correction status updates from upload
+   */
+  const handleCorrectionStatusUpdate = useCallback(
+    (map: Map<string, "corrected" | "skipped">) => {
+      setCorrectionStatusMap((prev) => {
+        const merged = new Map(prev)
+        map.forEach((value, key) => merged.set(key, value))
+        return merged
+      })
+    },
+    []
+  )
 
   /**
    * Handles upload completion for new uploads
@@ -140,6 +157,8 @@ export default function StudentAnswersPage() {
               onApplyChanges={handleApplyChanges}
               onResetChanges={handleResetChanges}
               onUploadFileCountChange={setUploadFileCount}
+              correctionStatusMap={correctionStatusMap}
+              onCorrectionStatusUpdate={handleCorrectionStatusUpdate}
             />
           </StudentAnswersTabsNavigation>
         </div>

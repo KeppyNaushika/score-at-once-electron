@@ -97,6 +97,8 @@ interface StudentAnswersTabContentProps {
   onApplyChanges: (option: ScoringDataOption) => Promise<void>
   onResetChanges: () => Promise<void>
   onUploadFileCountChange?: (count: number) => void
+  correctionStatusMap?: Map<string, "corrected" | "skipped">
+  onCorrectionStatusUpdate?: (map: Map<string, "corrected" | "skipped">) => void
 }
 
 export function StudentAnswersTabContent({
@@ -114,6 +116,8 @@ export function StudentAnswersTabContent({
   onApplyChanges,
   onResetChanges,
   onUploadFileCountChange,
+  correctionStatusMap,
+  onCorrectionStatusUpdate,
 }: StudentAnswersTabContentProps) {
   return (
     <>
@@ -126,6 +130,7 @@ export function StudentAnswersTabContent({
           mode="upload"
           existingStudentAnswers={studentAnswers}
           onUploadFileCountChange={onUploadFileCountChange}
+          onCorrectionStatusUpdate={onCorrectionStatusUpdate}
         />
       </TabsContent>
 
@@ -140,6 +145,7 @@ export function StudentAnswersTabContent({
           pendingChanges={pendingChanges}
           affectedCells={affectedCells}
           onUpdatePendingChanges={onUpdatePendingChanges}
+          correctionStatusMap={correctionStatusMap}
         />
       </TabsContent>
 

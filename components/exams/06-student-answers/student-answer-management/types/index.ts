@@ -57,6 +57,10 @@ export interface StudentAnswerUploadProps {
 
   // ナビゲーションガード用: アップロード待ちファイル数の通知
   onUploadFileCountChange?: (count: number) => void
+
+  // マーカー補正ステータス
+  correctionStatusMap?: Map<string, "corrected" | "skipped">
+  onCorrectionStatusUpdate?: (map: Map<string, "corrected" | "skipped">) => void
 }
 
 export interface FileUploadZoneProps {
