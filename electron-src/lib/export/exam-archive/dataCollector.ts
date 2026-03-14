@@ -64,6 +64,11 @@ export async function collectExamData(
             cropRegions: {
               include: {
                 cropSubtotals: true,
+                omrConfig: {
+                  include: {
+                    choiceOptions: true,
+                  },
+                },
                 questionScores: {
                   include: {
                     drawingAnnotations: true,
@@ -327,6 +332,39 @@ export async function collectExamData(
           createdAt: region.createdAt.toISOString(),
           updatedAt: region.updatedAt.toISOString(),
         }))
+      ),
+      // v1.7.0+: CropRegionOmrConfig
+      omrConfigs: exam.examPages.flatMap((page) =>
+        page.cropRegions
+          .filter((region) => region.omrConfig)
+          .map((region) => ({
+            id: region.omrConfig!.id,
+            cropRegionId: region.omrConfig!.cropRegionId,
+            type: region.omrConfig!.type,
+            numChoices: region.omrConfig!.numChoices,
+            choiceLayout: region.omrConfig!.choiceLayout,
+            numDigits: region.omrConfig!.numDigits,
+            correctAnswer: region.omrConfig!.correctAnswer,
+            cellGeometryJson: region.omrConfig!.cellGeometryJson,
+            colorThreshold: region.omrConfig!.colorThreshold,
+            areaThreshold: region.omrConfig!.areaThreshold,
+            createdAt: region.omrConfig!.createdAt.toISOString(),
+            updatedAt: region.omrConfig!.updatedAt.toISOString(),
+          }))
+      ),
+      // v1.7.0+: CropRegionOmrChoiceOption
+      omrChoiceOptions: exam.examPages.flatMap((page) =>
+        page.cropRegions.flatMap((region) =>
+          (region.omrConfig?.choiceOptions ?? []).map((opt) => ({
+            id: opt.id,
+            omrConfigId: opt.omrConfigId,
+            choiceIndex: opt.choiceIndex,
+            label: opt.label,
+            isCorrect: opt.isCorrect,
+            createdAt: opt.createdAt.toISOString(),
+            updatedAt: opt.updatedAt.toISOString(),
+          }))
+        )
       ),
       // v1.2.0+: pageImagesは空配列（後方互換性のため維持）
       pageImages: [],

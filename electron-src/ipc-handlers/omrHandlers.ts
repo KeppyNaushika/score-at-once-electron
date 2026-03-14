@@ -3,7 +3,6 @@
  */
 
 import { BrowserWindow, ipcMain } from "electron"
-import fs from "fs"
 import path from "path"
 
 import type { ComputedCell } from "../../types/answerSheetLayout.types"
@@ -13,7 +12,6 @@ import type {
   OMRCellConfig,
   OMRRecognitionParams,
   OMRSheetResult,
-  OMRTemplate,
 } from "../../types/omr.types"
 import { getDataDirectory } from "../lib/dataManager"
 import {
@@ -354,76 +352,6 @@ export function setupOMRHandlers(): void {
             error instanceof Error
               ? error.message
               : "マスターマーカー検出に失敗しました",
-        }
-      }
-    }
-  )
-
-  // ────────────────────────────────────────
-  // OMRテンプレート保存
-  // ────────────────────────────────────────
-  ipcMain.handle(
-    "omr:save-template",
-    async (
-      _event,
-      examId: string,
-      template: OMRTemplate
-    ): Promise<{ success: boolean; error?: string }> => {
-      try {
-        const dataDir = getDataDirectory()
-        const examDir = path.join(dataDir, "exams", examId)
-        if (!fs.existsSync(examDir)) {
-          fs.mkdirSync(examDir, { recursive: true })
-        }
-        const templatePath = path.join(examDir, "omr-template.json")
-        fs.writeFileSync(templatePath, JSON.stringify(template, null, 2))
-        return { success: true }
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "テンプレート保存に失敗しました",
-        }
-      }
-    }
-  )
-
-  // ────────────────────────────────────────
-  // OMRテンプレート読み込み
-  // ────────────────────────────────────────
-  ipcMain.handle(
-    "omr:load-template",
-    async (
-      _event,
-      examId: string
-    ): Promise<{
-      success: boolean
-      template?: OMRTemplate
-      error?: string
-    }> => {
-      try {
-        const dataDir = getDataDirectory()
-        const templatePath = path.join(
-          dataDir,
-          "exams",
-          examId,
-          "omr-template.json"
-        )
-        if (!fs.existsSync(templatePath)) {
-          return { success: false, error: "テンプレートが見つかりません" }
-        }
-        const content = fs.readFileSync(templatePath, "utf-8")
-        const template = JSON.parse(content) as OMRTemplate
-        return { success: true, template }
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "テンプレート読み込みに失敗しました",
         }
       }
     }

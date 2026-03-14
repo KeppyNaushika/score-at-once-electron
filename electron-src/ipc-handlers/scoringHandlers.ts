@@ -1,6 +1,8 @@
 import { ipcMain } from "electron"
 
 import {
+  type BatchScoreEntry,
+  batchUpdateQuestionScores,
   createQuestionScore,
   CreateQuestionScoreData,
   deleteQuestionScore,
@@ -211,6 +213,19 @@ export function setupScoringHandlers(): void {
       throw err
     }
   })
+
+  // QuestionScore 一括更新（OMR自動採点結果反映）
+  ipcMain.handle(
+    "batch-update-question-scores",
+    async (_event, entries: BatchScoreEntry[]) => {
+      try {
+        return await batchUpdateQuestionScores(entries)
+      } catch (err) {
+        console.error("Error batch updating question scores:", err)
+        throw err
+      }
+    }
+  )
 
   // Scoring initialization handler
   ipcMain.handle(

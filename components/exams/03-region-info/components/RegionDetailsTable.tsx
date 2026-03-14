@@ -8,6 +8,7 @@ import { RegionTableRow } from "@/components/exams/03-region-info/components/Reg
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
 import type { CropRegionWithDetails } from "@/types/electron"
+import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 type RegionDetailsTableProps = {
   regions: CropRegionWithDetails[]
@@ -16,6 +17,21 @@ type RegionDetailsTableProps = {
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
   selectedMasterImageId?: string
+  getOmrConfig: (cropRegionId: string) => CropRegionOmrConfigWithOptions | null
+  onOmrSave: (data: {
+    cropRegionId: string
+    type: "choice" | "handwritten-digit"
+    numChoices?: number | null
+    choiceLayout?: string | null
+    numDigits?: number | null
+    correctAnswer?: string | null
+    choiceOptions?: Array<{
+      choiceIndex: number
+      label: string
+      isCorrect: boolean
+    }>
+  }) => Promise<boolean>
+  onOmrDelete: (cropRegionId: string) => Promise<boolean>
 }
 
 const RegionDetailsTable = ({
@@ -25,6 +41,9 @@ const RegionDetailsTable = ({
   selectedRowIndex,
   setSelectedRowIndex,
   selectedMasterImageId,
+  getOmrConfig,
+  onOmrSave,
+  onOmrDelete,
 }: RegionDetailsTableProps) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
@@ -175,6 +194,9 @@ const RegionDetailsTable = ({
             <th className="border-border w-24 border px-2 py-1 text-left font-medium">
               配点
             </th>
+            <th className="border-border w-16 border px-2 py-1 text-center font-medium">
+              OMR
+            </th>
             <th className="border-border w-20 border px-2 py-1 text-center font-medium">
               操作
             </th>
@@ -195,6 +217,9 @@ const RegionDetailsTable = ({
                 isDragged={isDragged}
                 isDraggedOver={isDraggedOver}
                 disabled={disabled}
+                omrConfig={getOmrConfig(region.id)}
+                onOmrSave={onOmrSave}
+                onOmrDelete={onOmrDelete}
                 onRegionChange={handleRegionChange}
                 onKeyDown={handleKeyDown}
                 onCompositionStart={handleCompositionStart}

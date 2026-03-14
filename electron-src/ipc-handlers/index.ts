@@ -8,6 +8,7 @@ import { setupExamHandlers } from "./examHandlers"
 import { setupExportHandlers } from "./exportHandlers"
 import { setupGradeHandlers } from "./gradeHandlers"
 import { setupMiscHandlers } from "./miscHandlers"
+import { setupOmrConfigHandlers } from "./omrConfigHandlers"
 import { setupOMRHandlers } from "./omrHandlers"
 import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
 import { setupQuestionGroupHandlers } from "./questionGroupHandlers"
@@ -38,4 +39,5 @@ export function setupAllIPCHandlers(): void {
   setupGradeHandlers()
   setupAnswerSheetBuilderHandlers()
   setupOMRHandlers()
+  setupOmrConfigHandlers()
 }

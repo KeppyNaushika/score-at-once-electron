@@ -5,6 +5,7 @@ import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
+import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
 import type { ScoringBehavior } from "@/components/exams/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import {
   ShortcutProvider,
@@ -90,6 +91,9 @@ function ScoringMainViewContent() {
     setAnnotationVersionForCanvas((v) => v + 1)
     setAnnotationVersionForGrid((v) => v + 1)
   }, [])
+
+  /** OMR自動採点モーダル */
+  const [showOmrModal, setShowOmrModal] = useState(false)
 
   /** 個別表示用の状態 */
   const [scoringBehavior, setScoringBehavior] =
@@ -415,6 +419,7 @@ function ScoringMainViewContent() {
           onShowSidePanelChange={setShowSidePanel}
           modifierKeyLabel={modifierKeyLabel}
           helpButton={helpButton}
+          onOmrRecognitionClick={() => setShowOmrModal(true)}
         />
       </PageHeader>
 
@@ -503,6 +508,15 @@ function ScoringMainViewContent() {
           </div>
         </div>
       </div>
+
+      {/* OMR自動採点モーダル */}
+      <OMRAutoScoringModal
+        examId={examId}
+        userId={currentUserId ?? ""}
+        open={showOmrModal}
+        onOpenChange={setShowOmrModal}
+        onScoresApplied={handleQuestionScoreCreated}
+      />
 
       {/* モーダル類 */}
       <ScoringModals

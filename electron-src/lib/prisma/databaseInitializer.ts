@@ -767,6 +767,35 @@ CREATE TABLE "AsbOmrChoiceOption" (
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "AsbOmrChoiceOption_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "AsbOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- CreateTable
+CREATE TABLE "CropRegionOmrConfig" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "cropRegionId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "numChoices" INTEGER,
+    "choiceLayout" TEXT,
+    "numDigits" INTEGER,
+    "correctAnswer" TEXT,
+    "cellGeometryJson" TEXT,
+    "colorThreshold" INTEGER,
+    "areaThreshold" REAL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "CropRegionOmrConfig_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "CropRegionOmrChoiceOption" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "omrConfigId" TEXT NOT NULL,
+    "choiceIndex" INTEGER NOT NULL,
+    "label" TEXT NOT NULL,
+    "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "CropRegionOmrChoiceOption_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "CropRegionOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
         `
 
         // 現在のスキーマに完全準拠したインデックス作成SQL（最新マイグレーションに基づく）
@@ -1010,6 +1039,18 @@ CREATE UNIQUE INDEX "AsbOmrChoiceOption_omrConfigId_choiceIndex_key" ON "AsbOmrC
 
 -- CreateIndex
 CREATE INDEX "AsbOmrChoiceOption_omrConfigId_idx" ON "AsbOmrChoiceOption"("omrConfigId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CropRegionOmrConfig_cropRegionId_key" ON "CropRegionOmrConfig"("cropRegionId");
+
+-- CreateIndex
+CREATE INDEX "CropRegionOmrConfig_cropRegionId_idx" ON "CropRegionOmrConfig"("cropRegionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CropRegionOmrChoiceOption_omrConfigId_choiceIndex_key" ON "CropRegionOmrChoiceOption"("omrConfigId", "choiceIndex");
+
+-- CreateIndex
+CREATE INDEX "CropRegionOmrChoiceOption_omrConfigId_idx" ON "CropRegionOmrChoiceOption"("omrConfigId");
         `
 
         // SQLを複数のステートメントに分割して実行
@@ -1236,6 +1277,67 @@ export const migrateExistingDatabase = async (): Promise<void> => {
       }
     } catch (error) {
       console.warn("Migration AsbHeaderField.linkedRegionType failed:", error)
+    }
+
+    // --- Migration: CropRegionOmrConfig テーブル (20260314000000) ---
+    try {
+      if (!(await tableExists(prisma, "CropRegionOmrConfig"))) {
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE "CropRegionOmrConfig" (
+            "id" TEXT NOT NULL PRIMARY KEY,
+            "cropRegionId" TEXT NOT NULL,
+            "type" TEXT NOT NULL,
+            "numChoices" INTEGER,
+            "choiceLayout" TEXT,
+            "numDigits" INTEGER,
+            "correctAnswer" TEXT,
+            "cellGeometryJson" TEXT,
+            "colorThreshold" INTEGER,
+            "areaThreshold" REAL,
+            "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" DATETIME NOT NULL,
+            CONSTRAINT "CropRegionOmrConfig_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+          )
+        `)
+        await prisma.$executeRawUnsafe(
+          `CREATE UNIQUE INDEX IF NOT EXISTS "CropRegionOmrConfig_cropRegionId_key" ON "CropRegionOmrConfig"("cropRegionId")`
+        )
+        await prisma.$executeRawUnsafe(
+          `CREATE INDEX IF NOT EXISTS "CropRegionOmrConfig_cropRegionId_idx" ON "CropRegionOmrConfig"("cropRegionId")`
+        )
+        console.info("Migration: Created CropRegionOmrConfig table")
+      }
+    } catch (error) {
+      console.warn("Migration CropRegionOmrConfig table failed:", error)
+    }
+
+    // --- Migration: CropRegionOmrChoiceOption テーブル (20260314000001) ---
+    try {
+      if (!(await tableExists(prisma, "CropRegionOmrChoiceOption"))) {
+        if (await tableExists(prisma, "CropRegionOmrConfig")) {
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE "CropRegionOmrChoiceOption" (
+              "id" TEXT NOT NULL PRIMARY KEY,
+              "omrConfigId" TEXT NOT NULL,
+              "choiceIndex" INTEGER NOT NULL,
+              "label" TEXT NOT NULL,
+              "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+              "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              "updatedAt" DATETIME NOT NULL,
+              CONSTRAINT "CropRegionOmrChoiceOption_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "CropRegionOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          `)
+          await prisma.$executeRawUnsafe(
+            `CREATE UNIQUE INDEX IF NOT EXISTS "CropRegionOmrChoiceOption_omrConfigId_choiceIndex_key" ON "CropRegionOmrChoiceOption"("omrConfigId", "choiceIndex")`
+          )
+          await prisma.$executeRawUnsafe(
+            `CREATE INDEX IF NOT EXISTS "CropRegionOmrChoiceOption_omrConfigId_idx" ON "CropRegionOmrChoiceOption"("omrConfigId")`
+          )
+          console.info("Migration: Created CropRegionOmrChoiceOption table")
+        }
+      }
+    } catch (error) {
+      console.warn("Migration CropRegionOmrChoiceOption table failed:", error)
     }
   } catch (error) {
     console.error("Database migration failed:", error)
