@@ -2,7 +2,7 @@
  * 設定関連のIPCハンドラー
  */
 
-import { ipcMain } from "electron"
+import { BrowserWindow, ipcMain, powerSaveBlocker } from "electron"
 
 import {
   bulkUpsertCropRegionMarkingOverrides,
@@ -31,7 +31,70 @@ import {
   upsertUserScoringPreference,
 } from "../lib/prisma/userSettings"
 
+// プロジェクターモード用のpowerSaveBlocker ID
+let projectorModeBlockerId: number | null = null
+
 export function registerSettingsHandlers() {
+  // =========================================================================
+  // プロジェクターモード（スクリーンセーバー無効化）
+  // =========================================================================
+
+  ipcMain.handle(
+    "settings:setProjectorMode",
+    async (_event, enabled: boolean) => {
+      try {
+        if (enabled) {
+          if (
+            projectorModeBlockerId !== null &&
+            powerSaveBlocker.isStarted(projectorModeBlockerId)
+          ) {
+            return { success: true, active: true }
+          }
+          projectorModeBlockerId = powerSaveBlocker.start(
+            "prevent-display-sleep"
+          )
+          return { success: true, active: true }
+        } else {
+          if (
+            projectorModeBlockerId !== null &&
+            powerSaveBlocker.isStarted(projectorModeBlockerId)
+          ) {
+            powerSaveBlocker.stop(projectorModeBlockerId)
+          }
+          projectorModeBlockerId = null
+          return { success: true, active: false }
+        }
+      } catch (error) {
+        console.error("Failed to set projector mode:", error)
+        return { success: false, error: String(error) }
+      }
+    }
+  )
+
+  ipcMain.handle("settings:getProjectorMode", async () => {
+    const active =
+      projectorModeBlockerId !== null &&
+      powerSaveBlocker.isStarted(projectorModeBlockerId)
+    return { success: true, active }
+  })
+
+  // =========================================================================
+  // フルスクリーン制御
+  // =========================================================================
+
+  ipcMain.handle("settings:setFullScreen", async (event, enabled: boolean) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) {
+        win.setFullScreen(enabled)
+      }
+      return { success: true }
+    } catch (error) {
+      console.error("Failed to set fullscreen:", error)
+      return { success: false, error: String(error) }
+    }
+  })
+
   // =========================================================================
   // UserKeyboardShortcut
   // =========================================================================

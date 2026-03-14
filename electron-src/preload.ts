@@ -749,6 +749,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Settings
   settings: {
+    // プロジェクターモード（スクリーンセーバー無効化）
+    setProjectorMode: (enabled: boolean) =>
+      ipcRenderer.invoke("settings:setProjectorMode", enabled),
+    getProjectorMode: () => ipcRenderer.invoke("settings:getProjectorMode"),
+    setFullScreen: (enabled: boolean) =>
+      ipcRenderer.invoke("settings:setFullScreen", enabled),
+
     // UserKeyboardShortcut
     getUserKeyboardShortcuts: (userId: string) =>
       ipcRenderer.invoke("settings:getUserKeyboardShortcuts", userId),
@@ -1215,6 +1222,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     deleteImage: (
       args: import("../types/answerSheetBuilder.types").ASBDeleteImageArgs
     ) => ipcRenderer.invoke("asb:delete-image", args),
+    selectImportFile: () => ipcRenderer.invoke("asb:select-import-file"),
+    analyzeAsbArchive: (filePath: string) =>
+      ipcRenderer.invoke("asb:analyze-asb-archive", filePath),
+    exportDefinition: (definitionId: string) =>
+      ipcRenderer.invoke("asb:export-definition", definitionId),
+    importDefinition: (filePath: string, userId: string) =>
+      ipcRenderer.invoke("asb:import-definition", filePath, userId),
   },
 })
 

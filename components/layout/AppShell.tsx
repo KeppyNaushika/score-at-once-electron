@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation"
 import React, { useEffect, useState } from "react"
 
+import { ScreenBlackout } from "@/components/common/ScreenBlackout"
 import { ToastProvider } from "@/components/common/ToastProvider"
 import Navigation from "@/components/layout/Navigation"
 import { cn } from "@/lib/utils"
@@ -46,6 +47,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <ToastProvider />
+      <ScreenBlackout />
     </div>
   )
 }
