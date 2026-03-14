@@ -172,6 +172,7 @@ model CropRegion {
   questionScores   QuestionScore[]
   markingOverrides CropRegionMarkingOverride[]
   gradeDataSources GradeDataSource[]
+  omrConfig        CropRegionOmrConfig?
 }
 
 model SubtotalGroup {
@@ -400,6 +401,43 @@ model CropRegionMarkingOverride {
 
   @@unique([cropRegionId, markType])
   @@index([cropRegionId])
+}
+
+/// CropRegionに紐づくOMR設定（1:1）
+model CropRegionOmrConfig {
+  id               String   @id @default(uuid())
+  cropRegionId     String   @unique
+  type             String   // "choice" | "handwritten-digit"
+  numChoices       Int?     // choice: 選択肢数(2-10)
+  choiceLayout     String?  // "horizontal" | "vertical"
+  numDigits        Int?     // handwritten-digit: 桁数(1-5)
+  correctAnswer    String?  // digit正答("42") / choice正答はchoiceOptionsで管理
+  cellGeometryJson String?  // ComputedOMRBubble[] | ComputedOMRDigitBox[] のJSON
+  colorThreshold   Int?     // 認識パラメータ上書き
+  areaThreshold    Float?   // 認識パラメータ上書き
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  cropRegion    CropRegion                  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  choiceOptions CropRegionOmrChoiceOption[]
+
+  @@index([cropRegionId])
+}
+
+/// OMR選択肢オプション（choiceタイプ用）
+model CropRegionOmrChoiceOption {
+  id          String   @id @default(uuid())
+  omrConfigId String
+  choiceIndex Int
+  label       String   // "ア","イ" etc.
+  isCorrect   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  omrConfig CropRegionOmrConfig @relation(fields: [omrConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([omrConfigId, choiceIndex])
+  @@index([omrConfigId])
 }
 
 /// 成績算出プロジェクト

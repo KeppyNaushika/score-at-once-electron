@@ -19,6 +19,7 @@ import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 import { V1_5_0_to_V1_6_0_Transformer } from "./V1_5_0_to_V1_6_0"
+import { V1_6_0_to_V1_7_0_Transformer } from "./V1_6_0_to_V1_7_0"
 
 // =============================================================================
 // Transformer Registry
@@ -36,6 +37,7 @@ const TRANSFORMERS: VersionTransformer[] = [
   new V1_3_0_to_V1_4_0_Transformer(),
   new V1_4_0_to_V1_5_0_Transformer(),
   new V1_5_0_to_V1_6_0_Transformer(),
+  new V1_6_0_to_V1_7_0_Transformer(),
 ]
 
 /**
@@ -239,3 +241,4 @@ export { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 export { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 export { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 export { V1_5_0_to_V1_6_0_Transformer } from "./V1_5_0_to_V1_6_0"
+export { V1_6_0_to_V1_7_0_Transformer } from "./V1_6_0_to_V1_7_0"

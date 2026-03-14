@@ -60,6 +60,10 @@ export interface IdMappings {
   subject: Record<string, string>
   /** SubjectSubtotalGroup ID: 旧ID -> 新ID (v1.4.0+) */
   subjectSubtotalGroup: Record<string, string>
+  /** CropRegionOmrConfig ID: 旧ID -> 新ID (v1.7.0+) */
+  cropRegionOmrConfig: Record<string, string>
+  /** CropRegionOmrChoiceOption ID: 旧ID -> 新ID (v1.7.0+) */
+  cropRegionOmrChoiceOption: Record<string, string>
 }
 
 /**
@@ -96,6 +100,8 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     cropRegionMarkingOverride: {},
     subject: {},
     subjectSubtotalGroup: {},
+    cropRegionOmrConfig: {},
+    cropRegionOmrChoiceOption: {},
   }
 
   // 試験
@@ -205,6 +211,16 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   // v1.4.0+: CropRegionMarkingOverride
   for (const crmo of data.examData.cropRegionMarkingOverrides || []) {
     mappings.cropRegionMarkingOverride[crmo.id] = randomUUID()
+  }
+
+  // v1.7.0+: CropRegionOmrConfig
+  for (const cfg of data.examData.omrConfigs || []) {
+    mappings.cropRegionOmrConfig[cfg.id] = randomUUID()
+  }
+
+  // v1.7.0+: CropRegionOmrChoiceOption
+  for (const opt of data.examData.omrChoiceOptions || []) {
+    mappings.cropRegionOmrChoiceOption[opt.id] = randomUUID()
   }
 
   // v1.4.0+: Subject

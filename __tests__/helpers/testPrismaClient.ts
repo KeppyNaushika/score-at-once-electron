@@ -54,6 +54,8 @@ export async function cleanupTestDatabase(): Promise<void> {
   await prisma.drawingAnnotation.deleteMany()
   await prisma.questionScore.deleteMany()
   await prisma.cropRegionMarkingOverride.deleteMany()
+  await prisma.cropRegionOmrChoiceOption.deleteMany()
+  await prisma.cropRegionOmrConfig.deleteMany()
   await prisma.cropSubtotal.deleteMany()
   await prisma.cropRegion.deleteMany()
   await prisma.masterImage.deleteMany()

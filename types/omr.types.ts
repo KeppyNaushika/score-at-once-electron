@@ -132,17 +132,6 @@ export interface OMRBatchProgress {
 }
 
 // =====================
-// OMRテンプレート
-// =====================
-
-export interface OMRTemplate {
-  definitionId: string
-  /** セルパスキー（"0-1-2" 形式）→ OMRセル設定 */
-  cellConfigs: Record<string, OMRCellConfig>
-  recognitionParams: OMRRecognitionParams
-}
-
-// =====================
 // バブル・数字欄の計算結果（ComputedCell拡張用）
 // =====================
 
@@ -172,6 +161,36 @@ export interface ComputedOMRDigitBox {
   normalizedH: number
   /** 桁インデックス（0始まり） */
   digitIndex: number
+}
+
+// =====================
+// CropRegion OMR設定（DB管理）
+// =====================
+
+export interface CropRegionOmrChoiceOptionData {
+  id: string
+  omrConfigId: string
+  choiceIndex: number
+  label: string
+  isCorrect: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CropRegionOmrConfigWithOptions {
+  id: string
+  cropRegionId: string
+  type: string // "choice" | "handwritten-digit"
+  numChoices: number | null
+  choiceLayout: string | null
+  numDigits: number | null
+  correctAnswer: string | null
+  cellGeometryJson: string | null
+  colorThreshold: number | null
+  areaThreshold: number | null
+  createdAt: Date
+  updatedAt: Date
+  choiceOptions: CropRegionOmrChoiceOptionData[]
 }
 
 // =====================

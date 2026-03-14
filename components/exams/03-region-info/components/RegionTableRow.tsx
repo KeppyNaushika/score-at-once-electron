@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  ChevronDown,
+  ChevronRight,
   Ellipsis,
   FileText,
   GripVertical,
@@ -8,12 +10,15 @@ import {
   ListOrdered,
   MessageSquare,
   Pencil,
+  ScanLine,
   Trash2,
   Trophy,
   User,
 } from "lucide-react"
 import type { ComponentType } from "react"
+import { useState } from "react"
 
+import { OmrConfigInlineForm } from "@/components/exams/03-region-info/components/OmrConfigInlineForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -28,6 +33,7 @@ import {
   CropRegionAreaType,
 } from "@/types/common.types"
 import type { CropRegionWithDetails } from "@/types/electron"
+import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {
@@ -61,6 +67,21 @@ type RegionTableRowProps = {
   isDragged: boolean
   isDraggedOver: boolean
   disabled: boolean
+  omrConfig: CropRegionOmrConfigWithOptions | null
+  onOmrSave: (data: {
+    cropRegionId: string
+    type: "choice" | "handwritten-digit"
+    numChoices?: number | null
+    choiceLayout?: string | null
+    numDigits?: number | null
+    correctAnswer?: string | null
+    choiceOptions?: Array<{
+      choiceIndex: number
+      label: string
+      isCorrect: boolean
+    }>
+  }) => Promise<boolean>
+  onOmrDelete: (cropRegionId: string) => Promise<boolean>
   onRegionChange: (
     globalIndex: number,
     field: string,
@@ -89,6 +110,9 @@ export const RegionTableRow = ({
   isDragged,
   isDraggedOver,
   disabled,
+  omrConfig,
+  onOmrSave,
+  onOmrDelete,
   onRegionChange,
   onKeyDown,
   onCompositionStart,
@@ -101,7 +125,10 @@ export const RegionTableRow = ({
   onDrop,
   onDragEnd,
 }: RegionTableRowProps) => {
+  const [omrExpanded, setOmrExpanded] = useState(false)
   const regionType = region.type
+  const isQuestionAnswer = regionType === "QUESTION_ANSWER"
+  const hasOmrConfig = omrConfig !== null
 
   const isValidType = (type: string): type is CropRegionAreaType =>
     CROP_REGION_AREA_TYPES.includes(type as CropRegionAreaType)
@@ -117,109 +144,149 @@ export const RegionTableRow = ({
   }
 
   return (
-    <tr
-      key={region.id || `region-${globalIndex}`}
-      draggable={!disabled}
-      onDragStart={() => onDragStart(globalIndex)}
-      onDragOver={(e) => onDragOver(e, globalIndex)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, globalIndex)}
-      onDragEnd={onDragEnd}
-      className={`hover:bg-accent/50 cursor-pointer transition-colors ${
-        isSelected ? "bg-primary/10 border-primary" : ""
-      } ${isDragged ? "opacity-50" : ""} ${
-        isDraggedOver ? "border-t-4 border-t-blue-500" : ""
-      }`}
-      onClick={() => onSelect(isSelected ? null : globalIndex)}
-    >
-      <td className="border-border border px-2 py-1">
-        <div className="flex items-center justify-center">
-          <GripVertical className="text-muted-foreground h-4 w-4 cursor-grab" />
-        </div>
-      </td>
-      <td className="border-border border px-2 py-1">
-        <div className="flex items-center space-x-2">
-          <IconComponent
-            className={`h-4 w-4 shrink-0 ${
-              isSelected ? "text-primary" : "text-muted-foreground"
-            }`}
-          />
-          <span className="text-sm font-medium">{globalIndex + 1}</span>
-        </div>
-      </td>
-      <td className="border-border border px-2 py-1 text-center">
-        <div className="text-muted-foreground text-sm">
-          {region.examPage ? region.examPage.pageNumber : "?"}
-        </div>
-      </td>
-      <td className="border-border border px-2 py-1">
-        <Select
-          value={region.type}
-          onValueChange={(value) => onRegionChange(globalIndex, "type", value)}
-          disabled={disabled}
-        >
-          <SelectTrigger className="w-full" onFocus={ensureSelected}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.values(CROP_REGION_AREA_TYPES).map((type) => (
-              <SelectItem key={type} value={type}>
-                {areaTypeToJapanese[type]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-      <td className="border-border border px-2 py-1">
-        <Input
-          data-row={globalIndex}
-          data-field="label"
-          value={region.label || ""}
-          onChange={(e) => onRegionChange(globalIndex, "label", e.target.value)}
-          onKeyDown={(e) => onKeyDown(e, globalIndex, "label")}
-          onCompositionStart={onCompositionStart}
-          onCompositionEnd={onCompositionEnd}
-          onFocus={ensureSelected}
-          disabled={disabled}
-          placeholder="領域名を入力"
-          className="h-8 w-full min-w-20"
-        />
-      </td>
-      <td className="border-border border px-2 py-1">
-        {region.type === "QUESTION_ANSWER" ? (
+    <>
+      <tr
+        key={region.id || `region-${globalIndex}`}
+        draggable={!disabled}
+        onDragStart={() => onDragStart(globalIndex)}
+        onDragOver={(e) => onDragOver(e, globalIndex)}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop(e, globalIndex)}
+        onDragEnd={onDragEnd}
+        className={`hover:bg-accent/50 cursor-pointer transition-colors ${
+          isSelected ? "bg-primary/10 border-primary" : ""
+        } ${isDragged ? "opacity-50" : ""} ${
+          isDraggedOver ? "border-t-4 border-t-blue-500" : ""
+        }`}
+        onClick={() => onSelect(isSelected ? null : globalIndex)}
+      >
+        <td className="border-border border px-2 py-1">
+          <div className="flex items-center justify-center">
+            <GripVertical className="text-muted-foreground h-4 w-4 cursor-grab" />
+          </div>
+        </td>
+        <td className="border-border border px-2 py-1">
+          <div className="flex items-center space-x-2">
+            <IconComponent
+              className={`h-4 w-4 shrink-0 ${
+                isSelected ? "text-primary" : "text-muted-foreground"
+              }`}
+            />
+            <span className="text-sm font-medium">{globalIndex + 1}</span>
+          </div>
+        </td>
+        <td className="border-border border px-2 py-1 text-center">
+          <div className="text-muted-foreground text-sm">
+            {region.examPage ? region.examPage.pageNumber : "?"}
+          </div>
+        </td>
+        <td className="border-border border px-2 py-1">
+          <Select
+            value={region.type}
+            onValueChange={(value) =>
+              onRegionChange(globalIndex, "type", value)
+            }
+            disabled={disabled}
+          >
+            <SelectTrigger className="w-full" onFocus={ensureSelected}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(CROP_REGION_AREA_TYPES).map((type) => (
+                <SelectItem key={type} value={type}>
+                  {areaTypeToJapanese[type]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+        <td className="border-border border px-2 py-1">
           <Input
             data-row={globalIndex}
-            data-field="points"
-            type="number"
-            value={region.points ?? ""}
+            data-field="label"
+            value={region.label || ""}
             onChange={(e) =>
-              onRegionChange(globalIndex, "points", e.target.value)
+              onRegionChange(globalIndex, "label", e.target.value)
             }
-            onKeyDown={(e) => onKeyDown(e, globalIndex, "points")}
+            onKeyDown={(e) => onKeyDown(e, globalIndex, "label")}
             onCompositionStart={onCompositionStart}
             onCompositionEnd={onCompositionEnd}
             onFocus={ensureSelected}
             disabled={disabled}
-            placeholder="10"
+            placeholder="領域名を入力"
             className="h-8 w-full min-w-20"
           />
-        ) : (
-          <span className="text-muted-foreground text-sm">-</span>
-        )}
-      </td>
-      <td className="border-border border px-2 py-1 text-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(globalIndex)
-          }}
-          className="text-destructive hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </td>
-    </tr>
+        </td>
+        <td className="border-border border px-2 py-1">
+          {region.type === "QUESTION_ANSWER" ? (
+            <Input
+              data-row={globalIndex}
+              data-field="points"
+              type="number"
+              value={region.points ?? ""}
+              onChange={(e) =>
+                onRegionChange(globalIndex, "points", e.target.value)
+              }
+              onKeyDown={(e) => onKeyDown(e, globalIndex, "points")}
+              onCompositionStart={onCompositionStart}
+              onCompositionEnd={onCompositionEnd}
+              onFocus={ensureSelected}
+              disabled={disabled}
+              placeholder="10"
+              className="h-8 w-full min-w-20"
+            />
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          )}
+        </td>
+        {/* OMR */}
+        <td className="border-border border px-2 py-1 text-center">
+          {isQuestionAnswer && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOmrExpanded((v) => !v)
+              }}
+              className={`h-7 gap-1 ${hasOmrConfig ? "text-blue-600" : "text-muted-foreground"}`}
+            >
+              <ScanLine className="h-3.5 w-3.5" />
+              {omrExpanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </Button>
+          )}
+        </td>
+        <td className="border-border border px-2 py-1 text-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(globalIndex)
+            }}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </td>
+      </tr>
+      {/* OMR設定アコーディオン展開行 */}
+      {omrExpanded && isQuestionAnswer && (
+        <tr>
+          <td colSpan={8} className="border-border border px-4 py-2">
+            <OmrConfigInlineForm
+              cropRegionId={region.id}
+              existingConfig={omrConfig}
+              onSave={onOmrSave}
+              onDelete={onOmrDelete}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   )
 }

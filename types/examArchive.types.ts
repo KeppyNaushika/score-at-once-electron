@@ -609,6 +609,31 @@ export interface ArchiveExamData {
     createdAt: string
     updatedAt: string
   }>
+  /** v1.7.0+ CropRegionOmrConfig */
+  omrConfigs?: Array<{
+    id: string
+    cropRegionId: string
+    type: string
+    numChoices: number | null
+    choiceLayout: string | null
+    numDigits: number | null
+    correctAnswer: string | null
+    cellGeometryJson: string | null
+    colorThreshold: number | null
+    areaThreshold: number | null
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.7.0+ CropRegionOmrChoiceOption */
+  omrChoiceOptions?: Array<{
+    id: string
+    omrConfigId: string
+    choiceIndex: number
+    label: string
+    isCorrect: boolean
+    createdAt: string
+    updatedAt: string
+  }>
   /** @deprecated v1.2.0以降はmasterImages/studentAnswerImagesを使用 */
   pageImages: Array<{
     id: string

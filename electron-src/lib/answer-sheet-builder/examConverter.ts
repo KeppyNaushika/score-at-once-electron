@@ -10,14 +10,14 @@ import path from "path"
 
 import type { AnswerSheetDefinition } from "../../../types/answerSheetDefinition.types"
 import type { ComputedMultiPageLayout } from "../../../types/answerSheetLayout.types"
-import type { OMRCellConfig, OMRTemplate } from "../../../types/omr.types"
+import type { OMRCellConfig } from "../../../types/omr.types"
 import {
-  getDataDirectory,
   getMasterAnswersDirectory,
   getRelativePathFromData,
 } from "../dataManager"
 import { htmlToPngBuffer } from "../printUtils"
 import prisma from "../prisma/client"
+import { upsertOmrConfig } from "../prisma/cropRegionOmrConfig"
 import { createExam } from "../prisma/exam"
 import { createExamPage } from "../prisma/examPage"
 
@@ -130,6 +130,7 @@ export async function convertToExam(
         normalizedW: number
         normalizedH: number
         points: number
+        omrConfigKey?: string // omrCellConfigsのキー
       }> = []
       const processedKeys = new Set<string>()
 
@@ -166,12 +167,14 @@ export async function convertToExam(
               normalizedW: maxX - minX,
               normalizedH: maxY - minY,
               points: sub.points,
+              omrConfigKey: omrCellConfigs[key] ? key : undefined,
             })
             continue
           }
         }
 
         // 通常セル（枝問配点オン or 枝問なし）
+        const cellKey = cell.questionPath.join("-")
         mergedCells.push({
           label: cell.label,
           normalizedX: cell.normalizedX,
@@ -179,11 +182,12 @@ export async function convertToExam(
           normalizedW: cell.normalizedW,
           normalizedH: cell.normalizedH,
           points: cell.points,
+          omrConfigKey: omrCellConfigs[cellKey] ? cellKey : undefined,
         })
       }
 
       for (const cell of mergedCells) {
-        await prisma.cropRegion.create({
+        const cropRegion = await prisma.cropRegion.create({
           data: {
             examPageId: examPage.id,
             label: cell.label,
@@ -196,6 +200,33 @@ export async function convertToExam(
             orderIndex: globalOrderIndex++,
           },
         })
+
+        // OMR設定をDBに保存
+        if (cell.omrConfigKey) {
+          const omrCfg = omrCellConfigs[cell.omrConfigKey]
+          if (omrCfg) {
+            await upsertOmrConfig(
+              omrCfg.type === "choice"
+                ? {
+                    cropRegionId: cropRegion.id,
+                    type: "choice",
+                    numChoices: omrCfg.numChoices,
+                    choiceLayout: omrCfg.layout,
+                    choiceOptions: omrCfg.labels.map((label, idx) => ({
+                      choiceIndex: idx,
+                      label,
+                      isCorrect: omrCfg.correctAnswers.includes(idx),
+                    })),
+                  }
+                : {
+                    cropRegionId: cropRegion.id,
+                    type: "handwritten-digit",
+                    numDigits: omrCfg.numDigits,
+                    correctAnswer: omrCfg.correctAnswer ?? null,
+                  }
+            )
+          }
+        }
       }
 
       // CropRegion作成（ヘッダーフィールドのlinkedRegionType）
@@ -223,26 +254,7 @@ export async function convertToExam(
       }
     }
 
-    // 4. OMRテンプレート保存（OMR設定がある場合）
-    if (Object.keys(omrCellConfigs).length > 0) {
-      const omrTemplate: OMRTemplate = {
-        definitionId: definition.id,
-        cellConfigs: omrCellConfigs,
-        recognitionParams: {
-          colorThreshold: 25,
-          areaThreshold: 0.4,
-        },
-      }
-      const dataDir = getDataDirectory()
-      const examDir = path.join(dataDir, "exams", exam.id)
-      if (!fs.existsSync(examDir)) {
-        fs.mkdirSync(examDir, { recursive: true })
-      }
-      fs.writeFileSync(
-        path.join(examDir, "omr-template.json"),
-        JSON.stringify(omrTemplate, null, 2)
-      )
-    }
+    // OMR設定はCropRegionOmrConfigテーブルに保存済み（omr-template.json不要）
 
     return { success: true, examId: exam.id }
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { PanelRightClose, PanelRightOpen } from "lucide-react"
+import { PanelRightClose, PanelRightOpen, ScanLine } from "lucide-react"
 
 import GradingModeToggle from "@/components/exams/07-score-at-once/ScoringMain/GradingModeToggle"
 import { KeyboardHelpDialog } from "@/components/exams/07-score-at-once/ScoringMain/KeyboardHelpDialog"
@@ -16,6 +16,7 @@ interface ScoringHeaderControlsProps {
   onShowSidePanelChange: (show: boolean) => void
   modifierKeyLabel: string
   helpButton: React.ReactNode
+  onOmrRecognitionClick?: () => void
 }
 
 export function ScoringHeaderControls({
@@ -27,6 +28,7 @@ export function ScoringHeaderControls({
   onShowSidePanelChange,
   modifierKeyLabel,
   helpButton,
+  onOmrRecognitionClick,
 }: ScoringHeaderControlsProps) {
   return (
     <div className="flex items-center space-x-2">
@@ -35,6 +37,19 @@ export function ScoringHeaderControls({
         mode={gradingMode}
         onModeChange={onGradingModeChange}
       />
+
+      {/* OMR認識 */}
+      {onOmrRecognitionClick && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onOmrRecognitionClick}
+          title="OMR自動採点"
+        >
+          <ScanLine className="mr-1 h-4 w-4" />
+          OMR認識
+        </Button>
+      )}
 
       {/* キーボードヘルプ */}
       <KeyboardHelpDialog

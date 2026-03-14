@@ -356,6 +356,46 @@ export async function createImportedData(
         }
       }
 
+      // 12.7. CropRegionOmrConfigを作成 (v1.7.0+)
+      for (const cfg of data.examData.omrConfigs || []) {
+        const newCropRegionId = remapId(cfg.cropRegionId, mappings.cropRegion)
+        if (newCropRegionId) {
+          await tx.cropRegionOmrConfig.create({
+            data: {
+              id: remapIdRequired(cfg.id, mappings.cropRegionOmrConfig),
+              cropRegionId: newCropRegionId,
+              type: cfg.type,
+              numChoices: cfg.numChoices,
+              choiceLayout: cfg.choiceLayout,
+              numDigits: cfg.numDigits,
+              correctAnswer: cfg.correctAnswer,
+              cellGeometryJson: cfg.cellGeometryJson,
+              colorThreshold: cfg.colorThreshold,
+              areaThreshold: cfg.areaThreshold,
+            },
+          })
+        }
+      }
+
+      // 12.8. CropRegionOmrChoiceOptionを作成 (v1.7.0+)
+      for (const opt of data.examData.omrChoiceOptions || []) {
+        const newOmrConfigId = remapId(
+          opt.omrConfigId,
+          mappings.cropRegionOmrConfig
+        )
+        if (newOmrConfigId) {
+          await tx.cropRegionOmrChoiceOption.create({
+            data: {
+              id: remapIdRequired(opt.id, mappings.cropRegionOmrChoiceOption),
+              omrConfigId: newOmrConfigId,
+              choiceIndex: opt.choiceIndex,
+              label: opt.label,
+              isCorrect: opt.isCorrect,
+            },
+          })
+        }
+      }
+
       // 13. CropSubtotalを作成
       for (const cs of data.subtotalsData.cropSubtotals) {
         const newCropRegionId = remapId(cs.cropRegionId, mappings.cropRegion)

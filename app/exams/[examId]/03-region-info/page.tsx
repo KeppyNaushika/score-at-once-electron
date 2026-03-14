@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import RegionDetailsTable from "@/components/exams/03-region-info/components/RegionDetailsTable"
+import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConfig"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,11 @@ export default function RegionInfoPage() {
   }>({})
 
   const [isLoading, setIsLoading] = useState(true)
+
+  // OMR設定管理
+  const { getOmrConfig, upsertOmrConfig, deleteOmrConfig } = useOmrConfig(
+    examId ?? ""
+  )
 
   const loadInitialData = useCallback(async () => {
     if (!examId) {
@@ -333,6 +339,9 @@ export default function RegionInfoPage() {
               selectedRowIndex={selectedRowIndex}
               setSelectedRowIndex={setSelectedRowIndex}
               selectedMasterImageId={selectedExamPage?.id}
+              getOmrConfig={getOmrConfig}
+              onOmrSave={upsertOmrConfig}
+              onOmrDelete={deleteOmrConfig}
             />
           </div>
           {/* 合計点フッター（固定表示） */}

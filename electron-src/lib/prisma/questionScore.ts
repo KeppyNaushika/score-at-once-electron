@@ -594,3 +594,72 @@ export const getExamProgress = async (examId: string) => {
     }
   }
 }
+
+/**
+ * QuestionScoreを一括upsert（OMR自動採点結果の反映）
+ */
+export interface BatchScoreEntry {
+  studentId: string
+  cropRegionId: string
+  status: string
+  partialScore: number | null
+  userId: string
+}
+
+export async function batchUpdateQuestionScores(
+  entries: BatchScoreEntry[]
+): Promise<{ success: boolean; updatedCount: number; error?: string }> {
+  try {
+    let updatedCount = 0
+
+    // トランザクション内で一括処理
+    await prisma.$transaction(async (tx) => {
+      for (const entry of entries) {
+        // 既存レコードを検索
+        const existing = await tx.questionScore.findFirst({
+          where: {
+            studentId: entry.studentId,
+            cropRegionId: entry.cropRegionId,
+            userId: entry.userId,
+          },
+        })
+
+        if (existing) {
+          await tx.questionScore.update({
+            where: { id: existing.id },
+            data: {
+              status: entry.status,
+              partialScore:
+                entry.partialScore !== null
+                  ? new Decimal(entry.partialScore)
+                  : null,
+            },
+          })
+        } else {
+          await tx.questionScore.create({
+            data: {
+              studentId: entry.studentId,
+              cropRegionId: entry.cropRegionId,
+              userId: entry.userId,
+              status: entry.status,
+              partialScore:
+                entry.partialScore !== null
+                  ? new Decimal(entry.partialScore)
+                  : null,
+            },
+          })
+        }
+        updatedCount++
+      }
+    })
+
+    return { success: true, updatedCount }
+  } catch (error) {
+    console.error("Error batch updating question scores:", error)
+    return {
+      success: false,
+      updatedCount: 0,
+      error: error instanceof Error ? error.message : "一括更新に失敗しました",
+    }
+  }
+}
