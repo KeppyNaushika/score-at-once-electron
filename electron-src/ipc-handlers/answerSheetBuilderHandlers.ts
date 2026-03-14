@@ -22,6 +22,11 @@ import {
   getAsbImagesDirectory,
   getRelativePathFromData,
 } from "../lib/dataManager"
+import { exportAsbDefinition } from "../lib/export/asb-archive"
+import {
+  analyzeAsbArchive,
+  importAsbDefinition,
+} from "../lib/import/asb-archive"
 import { htmlToPngBuffer } from "../lib/printUtils"
 import {
   deleteAsbDefinition,
@@ -368,4 +373,80 @@ export function setupAnswerSheetBuilderHandlers(): void {
       // tempPdfPath はプレビュー中なので削除しない
     }
   })
+
+  // 定義のインポートファイル選択
+  ipcMain.handle("asb:select-import-file", async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: "解答用紙定義を読み込み",
+        filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
+        properties: ["openFile"],
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true }
+      }
+      return { success: true, filePath: result.filePaths[0] }
+    } catch (error) {
+      console.error("asb:select-import-file error:", error)
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "ファイル選択に失敗しました",
+      }
+    }
+  })
+
+  // アーカイブ分析（プレビュー用）
+  ipcMain.handle(
+    "asb:analyze-asb-archive",
+    async (_event, filePath: string) => {
+      try {
+        return await analyzeAsbArchive(filePath)
+      } catch (error) {
+        console.error("asb:analyze-asb-archive error:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "アーカイブ分析に失敗しました",
+        }
+      }
+    }
+  )
+
+  // 定義エクスポート
+  ipcMain.handle(
+    "asb:export-definition",
+    async (_event, definitionId: string) => {
+      try {
+        return await exportAsbDefinition(definitionId)
+      } catch (error) {
+        console.error("asb:export-definition error:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "書き出しに失敗しました",
+        }
+      }
+    }
+  )
+
+  // 定義インポート
+  ipcMain.handle(
+    "asb:import-definition",
+    async (_event, filePath: string, userId: string) => {
+      try {
+        return await importAsbDefinition(filePath, userId)
+      } catch (error) {
+        console.error("asb:import-definition error:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "インポートに失敗しました",
+        }
+      }
+    }
+  )
 }
