@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 import { ScreenBlackout } from "@/components/common/ScreenBlackout"
 import { ToastProvider } from "@/components/common/ToastProvider"
@@ -64,18 +64,30 @@ function getSidebarBehaviorForPath(pathname: string): SidebarBehavior | null {
   } catch {
     // ignore
   }
-  return "collapse"
+  return "none"
+}
+
+function getCurrentSectionKey(pathname: string): string | null {
+  const section = SIDEBAR_SECTIONS.find((s) => s.pathMatch(pathname))
+  return section?.key ?? null
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const pathname = usePathname()
+  const prevSectionRef = useRef<string | null>(null)
 
   const toggleSidebar = () => {
     setIsSidebarMinimized((prev) => !prev)
   }
 
   useEffect(() => {
+    const currentSection = getCurrentSectionKey(pathname)
+
+    // 同じセクション内の遷移では何もしない
+    if (currentSection === prevSectionRef.current) return
+    prevSectionRef.current = currentSection
+
     const behavior = getSidebarBehaviorForPath(pathname)
     if (behavior === null || behavior === "none") return
 
