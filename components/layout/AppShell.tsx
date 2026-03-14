@@ -8,14 +8,58 @@ import { ToastProvider } from "@/components/common/ToastProvider"
 import Navigation from "@/components/layout/Navigation"
 import { cn } from "@/lib/utils"
 
-export const SIDEBAR_BEHAVIOR_KEY = "sidebarBehaviorOnWorkPage"
 export type SidebarBehavior = "collapse" | "expand" | "none"
 
-function getSidebarBehavior(): SidebarBehavior {
+export interface SidebarSectionConfig {
+  key: string
+  label: string
+  storageKey: string
+  pathMatch: (pathname: string) => boolean
+}
+
+export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
+  {
+    key: "exams",
+    label: "試験一覧",
+    storageKey: "sidebarBehavior_exams",
+    pathMatch: (p) => p.startsWith("/exams"),
+  },
+  {
+    key: "answerSheetBuilder",
+    label: "解答用紙作成",
+    storageKey: "sidebarBehavior_answerSheetBuilder",
+    pathMatch: (p) => p.startsWith("/answer-sheet-builder"),
+  },
+  {
+    key: "pdfTools",
+    label: "PDF加工",
+    storageKey: "sidebarBehavior_pdfTools",
+    pathMatch: (p) => p.startsWith("/pdf-tools"),
+  },
+  {
+    key: "grades",
+    label: "成績算出",
+    storageKey: "sidebarBehavior_grades",
+    pathMatch: (p) => p.startsWith("/grades"),
+  },
+]
+
+// 旧キーからの移行用
+const LEGACY_SIDEBAR_BEHAVIOR_KEY = "sidebarBehaviorOnWorkPage"
+
+function getSidebarBehaviorForPath(pathname: string): SidebarBehavior | null {
+  const section = SIDEBAR_SECTIONS.find((s) => s.pathMatch(pathname))
+  if (!section) return null
+
   try {
-    const stored = localStorage.getItem(SIDEBAR_BEHAVIOR_KEY)
+    const stored = localStorage.getItem(section.storageKey)
     if (stored === "collapse" || stored === "expand" || stored === "none") {
       return stored
+    }
+    // 旧設定からの移行: セクション別設定がなければ旧設定を参照
+    const legacy = localStorage.getItem(LEGACY_SIDEBAR_BEHAVIOR_KEY)
+    if (legacy === "collapse" || legacy === "expand" || legacy === "none") {
+      return legacy
     }
   } catch {
     // ignore
@@ -32,15 +76,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    if (
-      !pathname.includes("/score") &&
-      !pathname.includes("/answer-sheet-builder")
-    ) {
-      return
-    }
-
-    const behavior = getSidebarBehavior()
-    if (behavior === "none") return
+    const behavior = getSidebarBehaviorForPath(pathname)
+    if (behavior === null || behavior === "none") return
 
     const frame = requestAnimationFrame(() => {
       setIsSidebarMinimized(behavior === "collapse")

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import {
-  SIDEBAR_BEHAVIOR_KEY,
+  SIDEBAR_SECTIONS,
   type SidebarBehavior,
 } from "@/components/layout/AppShell"
 import { Button } from "@/components/ui/button"
@@ -24,9 +24,10 @@ export function ScreenControlTab() {
   const [blackoutMinutes, setBlackoutMinutes] = useState(5)
   const [autoFullScreen, setAutoFullScreen] = useState(false)
 
-  // サイドバー動作
-  const [sidebarBehavior, setSidebarBehavior] =
-    useState<SidebarBehavior>("collapse")
+  // サイドバー動作（セクション別）
+  const [sidebarBehaviors, setSidebarBehaviors] = useState<
+    Record<string, SidebarBehavior>
+  >(() => Object.fromEntries(SIDEBAR_SECTIONS.map((s) => [s.key, "collapse"])))
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -51,16 +52,22 @@ export function ScreenControlTab() {
         // ignore
       }
 
-      // サイドバー動作の設定を読み込み
+      // サイドバー動作の設定を読み込み（セクション別）
       try {
-        const storedBehavior = localStorage.getItem(SIDEBAR_BEHAVIOR_KEY)
-        if (
-          storedBehavior === "collapse" ||
-          storedBehavior === "expand" ||
-          storedBehavior === "none"
-        ) {
-          setSidebarBehavior(storedBehavior)
+        const loaded: Record<string, SidebarBehavior> = {}
+        for (const section of SIDEBAR_SECTIONS) {
+          const stored = localStorage.getItem(section.storageKey)
+          if (
+            stored === "collapse" ||
+            stored === "expand" ||
+            stored === "none"
+          ) {
+            loaded[section.key] = stored
+          } else {
+            loaded[section.key] = "collapse"
+          }
         }
+        setSidebarBehaviors(loaded)
       } catch {
         // ignore
       }
@@ -140,17 +147,23 @@ export function ScreenControlTab() {
     [blackoutEnabled, blackoutMinutes, saveBlackoutSettings]
   )
 
-  // サイドバー動作の変更
+  // サイドバー動作の変更（セクション別）
   const handleSidebarBehaviorChange = useCallback(
-    (behavior: SidebarBehavior) => {
-      setSidebarBehavior(behavior)
-      localStorage.setItem(SIDEBAR_BEHAVIOR_KEY, behavior)
+    (sectionKey: string, behavior: SidebarBehavior) => {
+      setSidebarBehaviors((prev) => ({ ...prev, [sectionKey]: behavior }))
+      const section = SIDEBAR_SECTIONS.find((s) => s.key === sectionKey)
+      if (section) {
+        localStorage.setItem(section.storageKey, behavior)
+      }
       const labels: Record<SidebarBehavior, string> = {
         collapse: "縮小する",
         expand: "展開する",
         none: "変更しない",
       }
-      toast.success(`サイドバー動作を「${labels[behavior]}」に設定しました`)
+      const sectionLabel = section?.label ?? ""
+      toast.success(
+        `${sectionLabel}のサイドバー動作を「${labels[behavior]}」に設定しました`
+      )
     },
     []
   )
@@ -252,31 +265,43 @@ export function ScreenControlTab() {
             サイドバー動作
           </h2>
           <p className="text-muted-foreground text-sm">
-            採点・解答用紙作成画面を開いた際のサイドバーの動作を設定します
+            各画面を開いた際のサイドバーの動作をセクションごとに設定します
           </p>
         </div>
 
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center gap-2">
-            {(
-              [
-                { value: "collapse", label: "縮小する" },
-                { value: "expand", label: "展開する" },
-                { value: "none", label: "変更しない" },
-              ] as const
-            ).map((option) => (
-              <Button
-                key={option.value}
-                variant={
-                  sidebarBehavior === option.value ? "default" : "outline"
-                }
-                size="sm"
-                onClick={() => handleSidebarBehaviorChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+        <div className="space-y-3 rounded-lg border p-4">
+          {SIDEBAR_SECTIONS.map((section, index) => (
+            <div key={section.key}>
+              {index > 0 && <div className="my-3 border-t" />}
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">{section.label}</Label>
+                <div className="flex items-center gap-1.5">
+                  {(
+                    [
+                      { value: "collapse", label: "縮小する" },
+                      { value: "expand", label: "展開する" },
+                      { value: "none", label: "変更しない" },
+                    ] as const
+                  ).map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={
+                        sidebarBehaviors[section.key] === option.value
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() =>
+                        handleSidebarBehaviorChange(section.key, option.value)
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
