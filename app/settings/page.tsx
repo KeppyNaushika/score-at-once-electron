@@ -1,11 +1,12 @@
 "use client"
 
-import { Keyboard, Monitor, Users } from "lucide-react"
+import { Keyboard, Monitor, Palette, Users } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { DisplaySettingsTab } from "@/app/settings/components/DisplaySettingsTab"
 import { KeyboardShortcutSection } from "@/app/settings/components/KeyboardShortcutSection"
+import { ScreenControlTab } from "@/app/settings/components/ScreenControlTab"
 import { UserManagementTab } from "@/app/settings/components/UserManagementTab"
 import { useKeyboardSettings } from "@/app/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
@@ -91,8 +92,12 @@ export default function SettingsPage() {
               <Keyboard className="h-4 w-4" />
               キーボード
             </TabsTrigger>
-            <TabsTrigger value="display" className="gap-2">
+            <TabsTrigger value="screen" className="gap-2">
               <Monitor className="h-4 w-4" />
+              画面制御
+            </TabsTrigger>
+            <TabsTrigger value="display" className="gap-2">
+              <Palette className="h-4 w-4" />
               表示設定
             </TabsTrigger>
             <TabsTrigger value="user" className="gap-2">
@@ -113,6 +118,10 @@ export default function SettingsPage() {
               onReset={handleReset}
               getKeyDisplayName={getKeyDisplayName}
             />
+          </TabsContent>
+
+          <TabsContent value="screen">
+            <ScreenControlTab />
           </TabsContent>
 
           <TabsContent value="display">

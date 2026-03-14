@@ -8,6 +8,21 @@ import { ToastProvider } from "@/components/common/ToastProvider"
 import Navigation from "@/components/layout/Navigation"
 import { cn } from "@/lib/utils"
 
+export const SIDEBAR_BEHAVIOR_KEY = "sidebarBehaviorOnWorkPage"
+export type SidebarBehavior = "collapse" | "expand" | "none"
+
+function getSidebarBehavior(): SidebarBehavior {
+  try {
+    const stored = localStorage.getItem(SIDEBAR_BEHAVIOR_KEY)
+    if (stored === "collapse" || stored === "expand" || stored === "none") {
+      return stored
+    }
+  } catch {
+    // ignore
+  }
+  return "collapse"
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const pathname = usePathname()
@@ -24,8 +39,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return
     }
 
+    const behavior = getSidebarBehavior()
+    if (behavior === "none") return
+
     const frame = requestAnimationFrame(() => {
-      setIsSidebarMinimized(true)
+      setIsSidebarMinimized(behavior === "collapse")
     })
 
     return () => cancelAnimationFrame(frame)
