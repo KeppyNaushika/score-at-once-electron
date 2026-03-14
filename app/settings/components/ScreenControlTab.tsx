@@ -27,7 +27,7 @@ export function ScreenControlTab() {
   // サイドバー動作（セクション別）
   const [sidebarBehaviors, setSidebarBehaviors] = useState<
     Record<string, SidebarBehavior>
-  >(() => Object.fromEntries(SIDEBAR_SECTIONS.map((s) => [s.key, "collapse"])))
+  >(() => Object.fromEntries(SIDEBAR_SECTIONS.map((s) => [s.key, "none"])))
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -64,7 +64,7 @@ export function ScreenControlTab() {
           ) {
             loaded[section.key] = stored
           } else {
-            loaded[section.key] = "collapse"
+            loaded[section.key] = "none"
           }
         }
         setSidebarBehaviors(loaded)
