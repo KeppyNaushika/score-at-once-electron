@@ -10,7 +10,8 @@ import { type ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 
 export function useStudentAnswerUpload(
   examId: string,
-  onUploadComplete?: () => void
+  onUploadComplete?: () => void,
+  onCorrectionStatusUpdate?: (map: Map<string, "corrected" | "skipped">) => void
 ) {
   // State管理
   const [isUploading, setIsUploading] = useState(false)
@@ -224,6 +225,7 @@ export function useStudentAnswerUpload(
       try {
         let successCount = 0
         let overwriteCount = 0
+        const correctionMap = new Map<string, "corrected" | "skipped">()
 
         for (let i = 0; i < uploadData.length; i++) {
           const data = uploadData[i]
@@ -233,10 +235,20 @@ export function useStudentAnswerUpload(
 
           if (result.success) {
             successCount++
-            // 上書きフラグをチェック
-            // if (result.answerSheets?.[0]?.isOverwrite) {
-            //   overwriteCount++
-            // }
+            // correctionStatus収集
+            const sheet = result.studentAnswers?.[0] as
+              | (Record<string, unknown> & { correctionStatus?: string })
+              | undefined
+            if (
+              sheet?.correctionStatus &&
+              sheet.correctionStatus !== "not_requested"
+            ) {
+              const key = `${data.studentId}-${data.pageNumber}`
+              correctionMap.set(
+                key,
+                sheet.correctionStatus as "corrected" | "skipped"
+              )
+            }
           } else {
             console.error(`Upload failed for ${data.name}:`, result.error)
           }
@@ -252,6 +264,9 @@ export function useStudentAnswerUpload(
             toast.success(`${successCount}件の答案をアップロードしました`)
           }
           setFiles([]) // アップロード成功後にファイルリストをクリア
+          if (correctionMap.size > 0) {
+            onCorrectionStatusUpdate?.(correctionMap)
+          }
           onUploadComplete?.()
         }
 
@@ -267,7 +282,7 @@ export function useStudentAnswerUpload(
         setIsUploading(false)
       }
     },
-    [onUploadComplete, examId]
+    [onUploadComplete, onCorrectionStatusUpdate, examId]
   )
 
   return {

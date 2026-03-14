@@ -45,6 +45,7 @@ export interface UnifiedFile {
   color?: string // 表示色（テスト・デバッグ用）
   position?: number // table内の位置（studentIndex * maxPages + pageNumber - 1）
   imagePath?: string | null // 既存画像ファイルのパス（遅延読み込み用）
+  correctionStatus?: "corrected" | "skipped" | "not_requested" // マーカー補正結果
 }
 
 // ============================================================================

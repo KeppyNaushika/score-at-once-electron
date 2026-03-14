@@ -148,7 +148,9 @@ export function useStudentAnswerTableLogic({
         const result = await window.electronAPI.omr.detectMasterMarkers(examId)
         if (!cancelled) {
           setMarkerCorrectionAvailable(result.success)
-          if (!result.success) {
+          if (result.success) {
+            setMarkerCorrectionEnabled(true)
+          } else {
             setMarkerCorrectionEnabled(false)
           }
         }

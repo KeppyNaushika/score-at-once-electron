@@ -248,6 +248,13 @@ export function FilePreviewCell({
         <div className="pointer-events-none absolute inset-0 z-30 border-2 border-orange-500 bg-orange-500/20" />
       )}
 
+      {file.correctionStatus === "corrected" && (
+        <div className="pointer-events-none absolute inset-0 z-20 border-2 border-green-500" />
+      )}
+      {file.correctionStatus === "skipped" && (
+        <div className="pointer-events-none absolute inset-0 z-20 border-2 border-red-500" />
+      )}
+
       {renderLoadingState()}
     </div>
   )

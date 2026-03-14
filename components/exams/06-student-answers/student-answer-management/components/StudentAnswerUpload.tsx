@@ -24,6 +24,8 @@ export function StudentAnswerUpload({
   affectedCells,
   onUpdatePendingChanges,
   onUploadFileCountChange,
+  correctionStatusMap,
+  onCorrectionStatusUpdate,
 }: StudentAnswerUploadProps) {
   const finalModelAnswerCount = modelAnswerCount
   const finalExistingAnswers = existingStudentAnswers
@@ -42,18 +44,31 @@ export function StudentAnswerUpload({
     setFileOrder,
     handleDrop,
     handleUpload,
-  } = useStudentAnswerUpload(examId, onUploadComplete)
+  } = useStudentAnswerUpload(examId, onUploadComplete, onCorrectionStatusUpdate)
 
   // 確認モード用の初期化処理
   useEffect(() => {
     if (mode === "view" && finalExistingAnswers && files.length === 0) {
       // 初回のみ既存答案を配置戦略に基づいて配列構築
-      const initialFiles = buildOrderedFileArrayFromStudentAnswers(
+      let initialFiles = buildOrderedFileArrayFromStudentAnswers(
         finalExistingAnswers,
         students,
         finalModelAnswerCount,
         fileOrder
       )
+      // correctionStatusMapから補正ステータスを注入
+      if (correctionStatusMap && correctionStatusMap.size > 0) {
+        initialFiles = initialFiles.map((file) => {
+          if (file.studentId) {
+            const key = `${file.studentId}-${file.pageNumber}`
+            const status = correctionStatusMap.get(key)
+            if (status) {
+              return { ...file, correctionStatus: status }
+            }
+          }
+          return file
+        })
+      }
       setFiles(initialFiles)
     }
   }, [
@@ -64,6 +79,7 @@ export function StudentAnswerUpload({
     finalModelAnswerCount,
     fileOrder,
     setFiles,
+    correctionStatusMap,
   ])
 
   // ナビゲーションガード用: アップロード待ちファイル数の通知
