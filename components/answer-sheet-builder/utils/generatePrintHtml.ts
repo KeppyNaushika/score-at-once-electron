@@ -45,6 +45,7 @@ async function renderPageSvgHtmls(
           width: pageWidthMm,
           height: pageHeightMm,
           viewBox: `0 0 ${pageWidthMm} ${pageHeightMm}`,
+          preserveAspectRatio: "xMinYMin meet",
         },
         React.createElement(AnswerSheetSVGRenderer, {
           layout: {
