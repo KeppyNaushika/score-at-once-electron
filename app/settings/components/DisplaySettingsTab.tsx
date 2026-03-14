@@ -265,9 +265,9 @@ export function DisplaySettingsTab() {
           <p className="text-muted-foreground text-sm">
             スクリーンセーバーの無効化や、一定時間後の画面消灯を設定できます。
             <kbd className="mx-1 rounded border border-gray-300 px-1 py-0.5 text-xs">
-              Ctrl+L
+              {navigator.platform?.includes("Mac") ? "⌘" : "Ctrl"}+L
             </kbd>
-            で手動消灯できます（パスコード設定時はロック付き）
+            で手動消灯できます（数字パスコード設定時はロック付き）
           </p>
         </div>
 
@@ -295,7 +295,7 @@ export function DisplaySettingsTab() {
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">画面消灯</Label>
               <p className="text-muted-foreground text-xs">
-                操作がない場合、画面を黒くします。パスコード設定時はロック解除が必要です
+                操作がない場合、画面を黒くします。数字パスコード設定時はロック解除が必要です（再読み込みで解除可）
               </p>
             </div>
             <Switch

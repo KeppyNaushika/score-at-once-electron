@@ -753,6 +753,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     setProjectorMode: (enabled: boolean) =>
       ipcRenderer.invoke("settings:setProjectorMode", enabled),
     getProjectorMode: () => ipcRenderer.invoke("settings:getProjectorMode"),
+    getFullScreen: () => ipcRenderer.invoke("settings:getFullScreen"),
     setFullScreen: (enabled: boolean) =>
       ipcRenderer.invoke("settings:setFullScreen", enabled),
 

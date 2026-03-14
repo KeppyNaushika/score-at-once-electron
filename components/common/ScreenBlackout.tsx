@@ -39,8 +39,8 @@ export function ScreenBlackout() {
   const [uiVisible, setUiVisible] = useState(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hiddenInputRef = useRef<HTMLInputElement>(null)
   const wasFullScreenBeforeRef = useRef(false)
+  const passcodeRef = useRef("")
 
   // ユーザーのパスコードタイプを取得
   useEffect(() => {
@@ -57,9 +57,11 @@ export function ScreenBlackout() {
     loadPasscodeType()
   }, [user?.id])
 
-  const hasPasscode = passcodeType && passcodeType !== "none"
-  const maxLength =
-    passcodeType === "4digit" ? 4 : passcodeType === "6digit" ? 6 : undefined
+  // ロック対象は数字パスコード（4桁/6桁）のみ
+  // 英数字パスコードはkeydownベースのIMEバイパスと相性が悪く、ロック解除不能になるリスクがある
+  const hasDigitPasscode =
+    passcodeType === "4digit" || passcodeType === "6digit"
+  const maxLength = passcodeType === "4digit" ? 4 : 6
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -81,10 +83,13 @@ export function ScreenBlackout() {
     startFadeTimer()
   }, [startFadeTimer])
 
-  const enterFullScreenIfNeeded = useCallback(() => {
+  const enterFullScreenIfNeeded = useCallback(async () => {
     const current = getBlackoutSettings()
     if (current.autoFullScreen && window.electronAPI?.settings?.setFullScreen) {
-      wasFullScreenBeforeRef.current = !!document.fullscreenElement
+      const result = await window.electronAPI.settings.getFullScreen()
+      wasFullScreenBeforeRef.current = result.success
+        ? (result.fullScreen ?? false)
+        : false
       window.electronAPI.settings.setFullScreen(true)
     }
   }, [])
@@ -104,10 +109,10 @@ export function ScreenBlackout() {
     (minutes: number) => {
       clearTimer()
       timerRef.current = setTimeout(
-        () => {
-          enterFullScreenIfNeeded()
+        async () => {
+          await enterFullScreenIfNeeded()
           setIsBlackout(true)
-          if (hasPasscode) {
+          if (hasDigitPasscode) {
             setIsLocked(true)
             setUiVisible(true)
             startFadeTimer()
@@ -116,7 +121,7 @@ export function ScreenBlackout() {
         minutes * 60 * 1000
       )
     },
-    [clearTimer, hasPasscode, enterFullScreenIfNeeded, startFadeTimer]
+    [clearTimer, hasDigitPasscode, enterFullScreenIfNeeded, startFadeTimer]
   )
 
   const unlock = useCallback(() => {
@@ -124,6 +129,7 @@ export function ScreenBlackout() {
     setIsBlackout(false)
     setIsLocked(false)
     setUiVisible(true)
+    passcodeRef.current = ""
     setPasscode("")
     setError("")
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
@@ -135,13 +141,13 @@ export function ScreenBlackout() {
 
   // 手動ロック（Ctrl/Cmd + L）
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "l") {
         e.preventDefault()
-        enterFullScreenIfNeeded()
+        await enterFullScreenIfNeeded()
         setIsBlackout(true)
         clearTimer()
-        if (hasPasscode) {
+        if (hasDigitPasscode) {
           setIsLocked(true)
           setUiVisible(true)
           startFadeTimer()
@@ -150,7 +156,7 @@ export function ScreenBlackout() {
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [hasPasscode, clearTimer, enterFullScreenIfNeeded, startFadeTimer])
+  }, [hasDigitPasscode, clearTimer, enterFullScreenIfNeeded, startFadeTimer])
 
   // 設定変更を監視
   useEffect(() => {
@@ -189,7 +195,7 @@ export function ScreenBlackout() {
 
     const handleActivity = () => {
       if (isBlackout && !isLocked) {
-        if (!hasPasscode) {
+        if (!hasDigitPasscode) {
           unlock()
           return
         }
@@ -215,22 +221,18 @@ export function ScreenBlackout() {
     settings.timeoutMinutes,
     isBlackout,
     isLocked,
-    hasPasscode,
+    hasDigitPasscode,
     unlock,
     clearTimer,
     startTimer,
   ])
 
-  // ロック画面でのユーザー操作→フェード復帰＋隠しinputにフォーカス
+  // ロック画面でのユーザー操作→フェード復帰
   useEffect(() => {
     if (!isLocked) return
 
-    const handleLockActivity = (e: Event) => {
+    const handleLockActivity = () => {
       showUi()
-      // キーイベント以外（マウス/トラックパッド）の場合もinputにフォーカス
-      if (e.type !== "keydown") {
-        setTimeout(() => hiddenInputRef.current?.focus(), 0)
-      }
     }
 
     const events = ["mousemove", "mousedown", "keydown", "touchstart"]
@@ -245,20 +247,9 @@ export function ScreenBlackout() {
     }
   }, [isLocked, showUi])
 
-  // ロック表示時に隠しinputへフォーカス
-  useEffect(() => {
-    if (isLocked && uiVisible) {
-      setTimeout(() => hiddenInputRef.current?.focus(), 50)
-    }
-  }, [isLocked, uiVisible])
-
-  // パスコードリセット（input要素を直接操作してフォーカス・入力を途切れさせない）
   const resetPasscodeInput = useCallback(() => {
+    passcodeRef.current = ""
     setPasscode("")
-    if (hiddenInputRef.current) {
-      hiddenInputRef.current.value = ""
-      hiddenInputRef.current.focus()
-    }
   }, [])
 
   // パスコード検証
@@ -282,37 +273,44 @@ export function ScreenBlackout() {
     [user?.id, unlock, resetPasscodeInput]
   )
 
-  // 入力ハンドラー
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      let value = e.target.value
-      // 数字パスコードの場合は数字のみ
-      if (passcodeType === "4digit" || passcodeType === "6digit") {
-        value = value.replace(/\D/g, "")
+  // keydownで直接数字パスコードを構築（IMEをバイパス）
+  useEffect(() => {
+    if (!isLocked) return
+
+    const handlePasscodeKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.isComposing) return
+
+      if (e.key === "Backspace") {
+        e.preventDefault()
+        const next = passcodeRef.current.slice(0, -1)
+        passcodeRef.current = next
+        setPasscode(next)
+        setError("")
+        return
       }
-      if (maxLength && value.length > maxLength) {
-        value = value.slice(0, maxLength)
-      }
-      setPasscode(value)
+
+      // 数字のみ受け付ける
+      if (!/^[0-9]$/.test(e.key)) return
+
+      e.preventDefault()
+
+      if (passcodeRef.current.length >= maxLength) return
+
+      const next = passcodeRef.current + e.key
+      passcodeRef.current = next
+      setPasscode(next)
       setError("")
 
       // 桁数一致で自動検証
-      if (maxLength && value.length === maxLength) {
-        verifyPasscode(value)
+      if (next.length === maxLength) {
+        verifyPasscode(next)
       }
-    },
-    [passcodeType, maxLength, verifyPasscode]
-  )
+    }
 
-  const handleInputKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && passcodeType === "alphanumeric") {
-        e.preventDefault()
-        verifyPasscode(passcode)
-      }
-    },
-    [passcode, passcodeType, verifyPasscode]
-  )
+    window.addEventListener("keydown", handlePasscodeKey, true)
+    return () => window.removeEventListener("keydown", handlePasscodeKey, true)
+  }, [isLocked, maxLength, verifyPasscode])
 
   if (!isBlackout) return null
 
@@ -320,31 +318,16 @@ export function ScreenBlackout() {
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
       onClick={() => {
-        if (!isLocked && !hasPasscode) {
+        if (!isLocked && !hasDigitPasscode) {
           unlock()
         } else if (isLocked) {
           showUi()
-          setTimeout(() => hiddenInputRef.current?.focus(), 0)
         }
       }}
       role="presentation"
     >
       {isLocked && (
         <>
-          {/* 隠しinput: 常にDOMに存在しフォーカスを受ける */}
-          <input
-            ref={hiddenInputRef}
-            type={passcodeType === "alphanumeric" ? "text" : "tel"}
-            value={passcode}
-            onChange={handleInputChange}
-            onKeyDown={handleInputKeyDown}
-            className="fixed -top-20 left-0 opacity-0"
-            autoFocus
-            inputMode={passcodeType === "alphanumeric" ? "text" : "numeric"}
-            autoComplete="off"
-            aria-label="パスコード入力"
-          />
-
           {/* フェード表示UI */}
           <div
             className="flex flex-col items-center gap-6 transition-opacity duration-500"
@@ -357,39 +340,20 @@ export function ScreenBlackout() {
             </p>
 
             {/* ドット表示 */}
-            {(passcodeType === "4digit" || passcodeType === "6digit") && (
-              <div className="flex gap-3">
-                {Array.from({ length: maxLength! }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex h-4 w-4 items-center justify-center"
-                  >
-                    {i < passcode.length ? (
-                      <div className="h-3 w-3 rounded-full bg-white" />
-                    ) : (
-                      <div className="h-3 w-3 rounded-full border border-gray-600" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {passcodeType === "alphanumeric" && (
-              <div className="flex min-h-[28px] items-center gap-1">
-                {passcode.length > 0 ? (
-                  Array.from({ length: passcode.length }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-2.5 w-2.5 rounded-full bg-white"
-                    />
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-600">
-                    キーボードで入力してください
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="flex gap-3">
+              {Array.from({ length: maxLength }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex h-4 w-4 items-center justify-center"
+                >
+                  {i < passcode.length ? (
+                    <div className="h-3 w-3 rounded-full bg-white" />
+                  ) : (
+                    <div className="h-3 w-3 rounded-full border border-gray-600" />
+                  )}
+                </div>
+              ))}
+            </div>
 
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
