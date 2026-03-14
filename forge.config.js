@@ -148,6 +148,43 @@ module.exports = {
         })
       }
 
+      // bare-*パッケージの非ターゲットプリビルドバイナリを削除
+      // RPMビルド時にbrp-stripが.bareファイルをstripできず失敗するのを防止
+      const removeNonTargetBarePrebuilds = (basePath) => {
+        const bareModules = ["bare-url", "bare-os", "bare-fs"]
+        const targetPlatform =
+          options.platform === "darwin"
+            ? "darwin"
+            : options.platform === "win32"
+              ? "win32"
+              : "linux"
+        const targetArch = options.arch === "x64" ? "x64" : options.arch
+
+        bareModules.forEach((mod) => {
+          const prebuildsPath = path.join(
+            basePath,
+            "node_modules",
+            mod,
+            "prebuilds"
+          )
+          if (!fs.existsSync(prebuildsPath)) return
+
+          const entries = fs.readdirSync(prebuildsPath)
+          entries.forEach((entry) => {
+            const entryPath = path.join(prebuildsPath, entry)
+            if (!fs.statSync(entryPath).isDirectory()) return
+            // prebuilds directories are named like "linux-x64", "android-arm64"
+            const target = `${targetPlatform}-${targetArch}`
+            if (entry !== target) {
+              console.log(
+                `🧹 Removing non-target bare prebuild: ${mod}/prebuilds/${entry}`
+              )
+              fs.rmSync(entryPath, { recursive: true, force: true })
+            }
+          })
+        })
+      }
+
       // オフライン動作に必要な静的ファイルの存在確認
       const verifyOfflineFiles = (resourcesPath) => {
         const criticalFiles = [
@@ -189,10 +226,11 @@ module.exports = {
         // オフラインファイル検証
         verifyOfflineFiles(resourcesPath)
 
-        // asar.unpackedのonnxruntime非ターゲットバイナリを削除
+        // asar.unpackedの非ターゲットバイナリを削除
         const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
         if (fs.existsSync(unpackedPath)) {
           removeNonTargetOnnxruntimeBinaries(unpackedPath)
+          removeNonTargetBarePrebuilds(unpackedPath)
         }
 
         // カスタムアイコンをコピー
@@ -218,10 +256,11 @@ module.exports = {
         const resourcesPath = path.join(options.outputPaths[0], "resources")
         verifyOfflineFiles(resourcesPath)
 
-        // asar.unpackedのonnxruntime非ターゲットバイナリを削除
+        // asar.unpackedの非ターゲットバイナリを削除
         const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
         if (fs.existsSync(unpackedPath)) {
           removeNonTargetOnnxruntimeBinaries(unpackedPath)
+          removeNonTargetBarePrebuilds(unpackedPath)
         }
       }
     },
