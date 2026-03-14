@@ -1688,6 +1688,11 @@ export interface MyAPI {
       active?: boolean
       error?: string
     }>
+    getFullScreen: () => Promise<{
+      success: boolean
+      fullScreen?: boolean
+      error?: string
+    }>
     setFullScreen: (
       enabled: boolean
     ) => Promise<{ success: boolean; error?: string }>

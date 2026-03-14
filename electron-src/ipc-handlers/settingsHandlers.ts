@@ -82,6 +82,15 @@ export function registerSettingsHandlers() {
   // フルスクリーン制御
   // =========================================================================
 
+  ipcMain.handle("settings:getFullScreen", async (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      return { success: true, fullScreen: win?.isFullScreen() ?? false }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
   ipcMain.handle("settings:setFullScreen", async (event, enabled: boolean) => {
     try {
       const win = BrowserWindow.fromWebContents(event.sender)
