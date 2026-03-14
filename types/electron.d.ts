@@ -1677,6 +1677,21 @@ export interface MyAPI {
 
   // Settings
   settings: {
+    // プロジェクターモード（スクリーンセーバー無効化）
+    setProjectorMode: (enabled: boolean) => Promise<{
+      success: boolean
+      active?: boolean
+      error?: string
+    }>
+    getProjectorMode: () => Promise<{
+      success: boolean
+      active?: boolean
+      error?: string
+    }>
+    setFullScreen: (
+      enabled: boolean
+    ) => Promise<{ success: boolean; error?: string }>
+
     // UserKeyboardShortcut
     getUserKeyboardShortcuts: (userId: string) => Promise<{
       success: boolean
@@ -2247,6 +2262,29 @@ export interface MyAPI {
     deleteImage: (
       args: import("./answerSheetBuilder.types").ASBDeleteImageArgs
     ) => Promise<{ success: boolean; error?: string }>
+    selectImportFile: () => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+      error?: string
+    }>
+    analyzeAsbArchive: (filePath: string) => Promise<{
+      success: boolean
+      manifest?: import("./asbArchive.types").AsbArchiveManifest
+      error?: string
+    }>
+    exportDefinition: (
+      definitionId: string
+    ) => Promise<{ success: boolean; outputPath?: string; error?: string }>
+    importDefinition: (
+      filePath: string,
+      userId: string
+    ) => Promise<{
+      success: boolean
+      definitionId?: string
+      warnings?: string[]
+      error?: string
+    }>
   }
 
   // =============================================================================
