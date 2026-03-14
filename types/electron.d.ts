@@ -932,6 +932,19 @@ export interface MyAPI {
     message?: string
     error?: string
   }>
+  batchUpdateQuestionScores: (
+    entries: Array<{
+      studentId: string
+      cropRegionId: string
+      status: string
+      partialScore: number | null
+      userId: string
+    }>
+  ) => Promise<{
+    success: boolean
+    updatedCount: number
+    error?: string
+  }>
 
   // Canvas描画エンジン用PDF出力API
   export: {
@@ -2290,6 +2303,14 @@ export interface MyAPI {
       warnings?: string[]
       error?: string
     }>
+    duplicateDefinition: (
+      id: string,
+      userId: string
+    ) => Promise<{
+      success: boolean
+      definitionId?: string
+      error?: string
+    }>
   }
 
   // =============================================================================
@@ -2327,10 +2348,6 @@ export interface MyAPI {
       params: import("./omr.types").OMRRecognitionParams
       pageIndex?: number
     }) => Promise<import("./omr.types").OMRSheetResult[]>
-    saveTemplate: (
-      examId: string,
-      template: import("./omr.types").OMRTemplate
-    ) => Promise<{ success: boolean; error?: string }>
     detectMasterMarkers: (
       examId: string,
       colorThreshold?: number
@@ -2342,14 +2359,44 @@ export interface MyAPI {
       }>
       error?: string
     }>
-    loadTemplate: (examId: string) => Promise<{
-      success: boolean
-      template?: import("./omr.types").OMRTemplate
-      error?: string
-    }>
     onBatchProgress: (
       callback: (progress: import("./omr.types").OMRBatchProgress) => void
     ) => () => void
+  }
+
+  // =============================================================================
+  // OMR Config（CropRegion OMR設定）
+  // =============================================================================
+  omrConfig: {
+    upsert: (data: {
+      cropRegionId: string
+      type: "choice" | "handwritten-digit"
+      numChoices?: number | null
+      choiceLayout?: string | null
+      numDigits?: number | null
+      correctAnswer?: string | null
+      cellGeometryJson?: string | null
+      colorThreshold?: number | null
+      areaThreshold?: number | null
+      choiceOptions?: Array<{
+        choiceIndex: number
+        label: string
+        isCorrect: boolean
+      }>
+    }) => Promise<{
+      success: boolean
+      config?: import("./omr.types").CropRegionOmrConfigWithOptions
+      error?: string
+    }>
+    delete: (cropRegionId: string) => Promise<{
+      success: boolean
+      error?: string
+    }>
+    getByExam: (examId: string) => Promise<{
+      success: boolean
+      configs?: import("./omr.types").CropRegionOmrConfigWithOptions[]
+      error?: string
+    }>
   }
 }
 
