@@ -1,14 +1,24 @@
 "use client"
 
-import { Copy, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  Copy,
+  Download,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -32,8 +42,13 @@ type SortDir = "asc" | "desc"
 export function AnswerSheetDefinitionList() {
   const { user } = useAuth()
   const router = useRouter()
-  const { definitions, isLoading, deleteDefinition, duplicateDefinition } =
-    useAnswerSheetDefinitions(user?.id)
+  const {
+    definitions,
+    isLoading,
+    loadDefinitions,
+    deleteDefinition,
+    duplicateDefinition,
+  } = useAnswerSheetDefinitions(user?.id)
 
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
@@ -97,6 +112,45 @@ export function AnswerSheetDefinitionList() {
     [deleteDefinition]
   )
 
+  const handleExport = useCallback(async (definitionId: string) => {
+    const api = window.electronAPI?.answerSheetBuilder
+    if (!api) return
+
+    const result = await api.exportDefinition(definitionId)
+    if (result.success) {
+      toast.success("定義を書き出しました")
+    } else if (result.error !== "キャンセルされました") {
+      toast.error(result.error ?? "書き出しに失敗しました")
+    }
+  }, [])
+
+  const handleImport = useCallback(async () => {
+    if (!user?.id) return
+    const api = window.electronAPI?.answerSheetBuilder
+    if (!api) return
+
+    // 1. ファイル選択
+    const fileResult = await api.selectImportFile()
+    if (!fileResult.success || !fileResult.filePath) return
+
+    // 2. インポート実行
+    const importResult = await api.importDefinition(
+      fileResult.filePath,
+      user.id
+    )
+    if (importResult.success) {
+      toast.success("定義を読み込みました")
+      if (importResult.warnings?.length) {
+        for (const w of importResult.warnings) {
+          toast.warning(w)
+        }
+      }
+      await loadDefinitions()
+    } else {
+      toast.error(importResult.error ?? "読み込みに失敗しました")
+    }
+  }, [user?.id, loadDefinitions])
+
   const sortIndicator = (key: SortKey) => {
     if (sortKey !== key) return ""
     return sortDir === "asc" ? " ↑" : " ↓"
@@ -126,10 +180,16 @@ export function AnswerSheetDefinitionList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">解答用紙定義</h2>
-        <Button size="sm" onClick={handleCreate}>
-          <Plus className="mr-1 h-4 w-4" />
-          新規作成
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handleImport}>
+            <Download className="mr-1 h-4 w-4" />
+            読み込み
+          </Button>
+          <Button size="sm" onClick={handleCreate}>
+            <Plus className="mr-1 h-4 w-4" />
+            新規作成
+          </Button>
+        </div>
       </div>
 
       {sorted.length === 0 ? (
@@ -220,6 +280,11 @@ export function AnswerSheetDefinitionList() {
                           <Copy className="mr-2 h-4 w-4" />
                           複製
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport(def.id)}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          書き出し
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => handleDelete(def.id, def.name)}
