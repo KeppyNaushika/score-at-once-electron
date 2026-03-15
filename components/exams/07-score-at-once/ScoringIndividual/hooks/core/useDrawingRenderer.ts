@@ -269,7 +269,7 @@ function drawLineElement(
   const dy = currentEndY - currentY
   const lineLength = Math.sqrt(dx * dx + dy * dy)
   const angle = Math.atan2(dy, dx)
-  const arrowSize = Math.max(element.strokeWidth * 5, 12)
+  const arrowSize = element.strokeWidth * 5
 
   switch (element.lineStyle) {
     case "wave":
@@ -356,8 +356,8 @@ function drawWaveLine(
   angle: number,
   strokeWidth: number
 ): void {
-  const waveAmplitude = strokeWidth * 3
-  const waveHalfPeriod = strokeWidth * 6
+  const waveAmplitude = strokeWidth * 1.5
+  const waveHalfPeriod = strokeWidth * 10
 
   // 半周期の数を計算（偶数にして始点と終点が直線上に来るようにする）
   let numHalves = Math.max(Math.round(lineLength / waveHalfPeriod), 2)
@@ -412,8 +412,8 @@ function drawZigzagLine(
   _endY: number,
   strokeWidth: number
 ): void {
-  const zigAmplitude = strokeWidth * 3
-  const zigPitch = strokeWidth * 5
+  const zigAmplitude = strokeWidth * 1.5
+  const zigPitch = strokeWidth * 8
 
   // 頂点（山・谷）の数を計算
   const numPeaks = Math.max(Math.round(lineLength / zigPitch), 2)
