@@ -1387,6 +1387,56 @@ export interface MyAPI {
     }>
   }
 
+  // =============================================================================
+  // 生徒アーカイブ（エクスポート/インポート）関連
+  // =============================================================================
+  studentArchive: {
+    /**
+     * 選択した生徒・学級データを.studentsファイルとしてエクスポート
+     */
+    exportStudents: (
+      options: import("./studentArchive.types").ExportStudentsArchiveOptions
+    ) => Promise<import("./studentArchive.types").ExportStudentsArchiveResult>
+
+    /**
+     * .studentsファイル選択ダイアログ
+     */
+    selectImportFile: () => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+      error?: string
+    }>
+
+    /**
+     * アーカイブ解析（マニフェスト読み取り）
+     */
+    analyzeArchive: (options: { archivePath: string }) => Promise<{
+      success: boolean
+      manifest?: import("./studentArchive.types").StudentArchiveManifest
+      error?: string
+    }>
+
+    /**
+     * 事前照合を実行
+     */
+    preMatch: (options: { archivePath: string }) => Promise<{
+      success: boolean
+      data?: import("./studentArchive.types").StudentArchiveFileOverviewData
+      error?: string
+    }>
+
+    /**
+     * インポートを実行
+     */
+    import: (options: {
+      archivePath: string
+      preMatchResult: import("./studentArchive.types").StudentArchiveFileOverviewData
+      integrationConfig: import("./studentArchive.types").StudentArchiveIdIntegrationConfig
+      updateDecisions?: import("./examArchive.types").UpdateDecisions
+    }) => Promise<import("./studentArchive.types").StudentArchiveImportResult>
+  }
+
   // データ管理関連
   getDataDirectoryInfo: () => Promise<{
     success: boolean
@@ -1724,45 +1774,26 @@ export interface MyAPI {
       userId: string
     ) => Promise<{ success: boolean; error?: string }>
 
-    // UserScoringPreference
-    getUserScoringPreference: (userId: string) => Promise<{
-      success: boolean
-      preference?: UserScoringPreference | null
-      error?: string
-    }>
-    upsertUserScoringPreference: (
+    // UserPreference（KV方式）
+    getUserPreference: (
       userId: string,
-      data: {
-        showStudentNames?: boolean
-        autoScroll?: boolean
-        itemsPerLine?: number
-        layoutDirection?: string
-        expandMargin?: number
-        selectionBorderColor?: string | null
-        scoringStatusColors?: string | null
-        scoringColorPresetId?: string | null
-      }
+      key: string
     ) => Promise<{
       success: boolean
-      preference?: UserScoringPreference
+      value?: string | null
       error?: string
     }>
-
-    // カラム別操作（楽観的更新対応）
-    getScoringPreferenceColumn: <K extends ScoringPreferenceColumnName>(
+    setUserPreference: (
       userId: string,
-      column: K
+      key: string,
+      value: string
     ) => Promise<{
       success: boolean
-      value?: ScoringPreferenceColumns[K]
       error?: string
     }>
-    setScoringPreferenceColumn: <K extends ScoringPreferenceColumnName>(
-      userId: string,
-      column: K,
-      value: ScoringPreferenceColumns[K]
-    ) => Promise<{
+    getUserPreferences: (userId: string) => Promise<{
       success: boolean
+      preferences?: Record<string, string>
       error?: string
     }>
 
@@ -2532,51 +2563,6 @@ export interface UserExamWithExamDetails {
 // =============================================================================
 // Settings関連型
 // =============================================================================
-
-/**
- * ユーザー採点設定
- */
-export interface UserScoringPreference {
-  id: string
-  userId: string
-  showStudentNames: boolean
-  autoScroll: boolean
-  itemsPerLine: number
-  layoutDirection: string
-  expandMargin: number
-  selectionBorderColor: string | null
-  scoringStatusColors: string | null
-  scoringColorPresetId: string | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-/**
- * UserScoringPreferenceのカラム名
- */
-export type ScoringPreferenceColumnName =
-  | "showStudentNames"
-  | "autoScroll"
-  | "itemsPerLine"
-  | "layoutDirection"
-  | "expandMargin"
-  | "selectionBorderColor"
-  | "scoringStatusColors"
-  | "scoringColorPresetId"
-
-/**
- * カラム別の値の型マッピング
- */
-export interface ScoringPreferenceColumns {
-  showStudentNames: boolean
-  autoScroll: boolean
-  itemsPerLine: number
-  layoutDirection: string
-  expandMargin: number
-  selectionBorderColor: string | null
-  scoringStatusColors: string | null
-  scoringColorPresetId: string | null
-}
 
 /**
  * 試験採点記号設定

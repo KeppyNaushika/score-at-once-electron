@@ -14,6 +14,7 @@ import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
 import { setupQuestionGroupHandlers } from "./questionGroupHandlers"
 import { setupScoringHandlers } from "./scoringHandlers"
 import { registerSettingsHandlers } from "./settingsHandlers"
+import { registerStudentArchiveHandlers } from "./studentArchiveHandlers"
 import { setupStudentHandlers } from "./studentHandlers"
 import { setupSubjectHandlers } from "./subjectHandlers"
 import { setupSubtotalGroupHandlers } from "./subtotalGroupHandlers"
@@ -40,4 +41,5 @@ export function setupAllIPCHandlers(): void {
   setupAnswerSheetBuilderHandlers()
   setupOMRHandlers()
   setupOmrConfigHandlers()
+  registerStudentArchiveHandlers()
 }

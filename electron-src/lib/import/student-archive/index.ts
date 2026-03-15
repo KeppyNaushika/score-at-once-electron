@@ -1,0 +1,213 @@
+/**
+ * 生徒アーカイブ インポート機能
+ *
+ * .studentsファイルから生徒・学級データをインポート
+ * 既存の試験アーカイブインポートのマッチング・プロセッサーロジックを再利用
+ */
+
+import type { UpdateDecisions } from "../../../../types/examArchive.types"
+import type {
+  StudentArchiveFileOverviewData,
+  StudentArchiveIdIntegrationConfig,
+  StudentArchiveImportResult,
+  StudentArchiveManifest,
+} from "../../../../types/studentArchive.types"
+import prisma from "../../prisma/client"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { executeIdChanges } from "../merge/idChangeExecutor"
+import { processMemberships } from "../merge/idIntegrationImporter"
+import { preMatchClasses } from "../merge/matchers/classMatcher"
+import { preMatchStudents } from "../merge/matchers/studentMatcher"
+import {
+  processClassIdIntegration,
+  processStudentIdIntegration,
+} from "../merge/processors"
+import type { IdChangeTarget, IdMappings } from "../merge/types"
+import type { ExtractedStudentArchiveData } from "./archiveExtractor"
+
+/**
+ * ExtractedStudentArchiveData を ExtractedArchiveData 互換のオブジェクトに変換
+ *
+ * preMatchStudents/preMatchClasses は ExtractedArchiveData を受け取るため、
+ * 必要なフィールドのみを持つ互換オブジェクトを作成する
+ */
+function toCompatibleData(
+  data: ExtractedStudentArchiveData
+): Pick<ExtractedArchiveData, "studentsData" | "classesData"> {
+  return {
+    studentsData: data.studentsData,
+    classesData: data.classesData,
+  }
+}
+
+/**
+ * マニフェストを解析（Step 1）
+ */
+export function analyzeStudentArchive(manifest: StudentArchiveManifest): {
+  success: boolean
+  manifest: StudentArchiveManifest
+} {
+  return { success: true, manifest }
+}
+
+/**
+ * 事前照合を実行（Step 2）
+ */
+export async function performStudentPreMatching(
+  data: ExtractedStudentArchiveData
+): Promise<StudentArchiveFileOverviewData> {
+  const compatData = toCompatibleData(data)
+  const [studentResult, classResult] = await Promise.all([
+    preMatchStudents(compatData as ExtractedArchiveData),
+    preMatchClasses(compatData as ExtractedArchiveData),
+  ])
+
+  return {
+    student: studentResult,
+    class: classResult,
+  }
+}
+
+/**
+ * 生徒アーカイブのインポートを実行（Step 6）
+ */
+export async function executeStudentImport(
+  data: ExtractedStudentArchiveData,
+  preMatchResult: StudentArchiveFileOverviewData,
+  integrationConfig: StudentArchiveIdIntegrationConfig,
+  updateDecisions?: UpdateDecisions
+): Promise<StudentArchiveImportResult> {
+  const warnings: string[] = []
+  const counts = {
+    created: { students: 0, classes: 0, memberships: 0 },
+    updated: { students: 0, classes: 0, memberships: 0 },
+    skipped: { students: 0, classes: 0, memberships: 0 },
+    unchanged: { students: 0, classes: 0, memberships: 0 },
+  }
+
+  // ArchiveDataCounts互換のカウント（プロセッサーが使用）
+  const archiveCounts = {
+    created: createEmptyArchiveCounts(),
+    updated: createEmptyArchiveCounts(),
+    skipped: createEmptyArchiveCounts(),
+    unchanged: createEmptyArchiveCounts(),
+  }
+
+  const idMappings: IdMappings = {
+    student: {},
+    class: {},
+    subtotalGroup: {},
+    subtotal: {},
+    exam: {},
+    examPage: {},
+    cropRegion: {},
+    masterImage: {},
+    studentAnswerImage: {},
+    examStudent: {},
+    userExam: {},
+    examSubtotalGroup: {},
+    cropSubtotal: {},
+    questionScore: {},
+    drawingAnnotation: {},
+    membership: {},
+  }
+
+  const idChangeTargets: IdChangeTarget[] = []
+
+  // FileOverviewData互換に変換（プロセッサーが使用）
+  const compatPreMatch = {
+    student: preMatchResult.student,
+    class: preMatchResult.class,
+    subtotalGroup: { byId: [], noMatch: [] },
+  }
+
+  const compatData = toCompatibleData(data)
+
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        // 1. 生徒のID統合処理
+        await processStudentIdIntegration(
+          compatData as ExtractedArchiveData,
+          compatPreMatch,
+          integrationConfig.student,
+          idMappings,
+          idChangeTargets,
+          archiveCounts,
+          warnings,
+          tx,
+          updateDecisions
+        )
+
+        // 2. 学級のID統合処理
+        await processClassIdIntegration(
+          compatData as ExtractedArchiveData,
+          compatPreMatch,
+          integrationConfig.class,
+          idMappings,
+          idChangeTargets,
+          archiveCounts,
+          warnings,
+          tx,
+          updateDecisions
+        )
+
+        // 3. 学級所属の処理
+        await processMemberships(data.classesData.memberships, idMappings, tx)
+
+        // 4. ID変更処理
+        if (idChangeTargets.length > 0) {
+          await executeIdChanges(idChangeTargets, idMappings, warnings, tx)
+        }
+      },
+      { timeout: 60000 }
+    )
+
+    // archiveCounts → counts に変換
+    counts.created.students = archiveCounts.created.students
+    counts.created.classes = archiveCounts.created.classes
+    counts.updated.students = archiveCounts.updated.students
+    counts.updated.classes = archiveCounts.updated.classes
+    counts.skipped.students = archiveCounts.skipped.students
+    counts.skipped.classes = archiveCounts.skipped.classes
+    counts.unchanged.students = archiveCounts.unchanged.students
+    counts.unchanged.classes = archiveCounts.unchanged.classes
+
+    // memberships のカウントはprocessMembershipでは集計されないため
+    // idMappings.membership のサイズで推定
+    counts.created.memberships = Object.keys(idMappings.membership).length
+
+    return {
+      success: true,
+      summary: counts,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    }
+  } catch (error) {
+    console.error("Error executing student import:", error)
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "インポートに失敗しました",
+    }
+  }
+}
+
+function createEmptyArchiveCounts() {
+  return {
+    students: 0,
+    classes: 0,
+    users: 0,
+    pages: 0,
+    regions: 0,
+    scores: 0,
+    annotations: 0,
+    subtotalGroups: 0,
+    masterImages: 0,
+    answerSheetImages: 0,
+  }
+}
+
+export {
+  cleanupStudentTempDir,
+  extractStudentArchive,
+} from "./archiveExtractor"
