@@ -683,6 +683,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("archive:convertDatToScore", options),
   },
 
+  // Student Archive (Export/Import) related
+  studentArchive: {
+    exportStudents: (options: { studentIds: string[]; classIds?: string[] }) =>
+      ipcRenderer.invoke("studentArchive:exportStudents", options),
+    selectImportFile: () =>
+      ipcRenderer.invoke("studentArchive:selectImportFile"),
+    analyzeArchive: (options: { archivePath: string }) =>
+      ipcRenderer.invoke("studentArchive:analyzeArchive", options),
+    preMatch: (options: { archivePath: string }) =>
+      ipcRenderer.invoke("studentArchive:preMatch", options),
+    import: (options: {
+      archivePath: string
+      preMatchResult: import("../types/studentArchive.types").StudentArchiveFileOverviewData
+      integrationConfig: import("../types/studentArchive.types").StudentArchiveIdIntegrationConfig
+      updateDecisions?: import("../types/examArchive.types").UpdateDecisions
+    }) => ipcRenderer.invoke("studentArchive:import", options),
+  },
+
   // ExamClass
   examClass: {
     getAll: (examId: string) =>
@@ -782,57 +800,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     resetUserKeyboardShortcuts: (userId: string) =>
       ipcRenderer.invoke("settings:resetUserKeyboardShortcuts", userId),
 
-    // UserScoringPreference
-    getUserScoringPreference: (userId: string) =>
-      ipcRenderer.invoke("settings:getUserScoringPreference", userId),
-    upsertUserScoringPreference: (
-      userId: string,
-      data: {
-        showStudentNames?: boolean
-        autoScroll?: boolean
-        itemsPerLine?: number
-        layoutDirection?: string
-        expandMargin?: number
-        selectionBorderColor?: string | null
-        scoringStatusColors?: string | null
-        scoringColorPresetId?: string | null
-      }
-    ) =>
-      ipcRenderer.invoke("settings:upsertUserScoringPreference", userId, data),
-
-    // カラム別操作（楽観的更新対応）
-    getScoringPreferenceColumn: (
-      userId: string,
-      column:
-        | "showStudentNames"
-        | "autoScroll"
-        | "itemsPerLine"
-        | "layoutDirection"
-        | "expandMargin"
-        | "selectionBorderColor"
-        | "scoringStatusColors"
-        | "scoringColorPresetId"
-    ) =>
-      ipcRenderer.invoke("settings:getScoringPreferenceColumn", userId, column),
-    setScoringPreferenceColumn: (
-      userId: string,
-      column:
-        | "showStudentNames"
-        | "autoScroll"
-        | "itemsPerLine"
-        | "layoutDirection"
-        | "expandMargin"
-        | "selectionBorderColor"
-        | "scoringStatusColors"
-        | "scoringColorPresetId",
-      value: boolean | number | string | null
-    ) =>
-      ipcRenderer.invoke(
-        "settings:setScoringPreferenceColumn",
-        userId,
-        column,
-        value
-      ),
+    // UserPreference（KV方式）
+    getUserPreference: (userId: string, key: string) =>
+      ipcRenderer.invoke("settings:getUserPreference", userId, key),
+    setUserPreference: (userId: string, key: string, value: string) =>
+      ipcRenderer.invoke("settings:setUserPreference", userId, key, value),
+    getUserPreferences: (userId: string) =>
+      ipcRenderer.invoke("settings:getUserPreferences", userId),
 
     // ExamMarkingFormat
     getExamMarkingFormats: (examId: string) =>

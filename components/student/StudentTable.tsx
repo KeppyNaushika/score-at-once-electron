@@ -2,8 +2,10 @@
 
 import type { Prisma } from "@prisma/client"
 import {
+  Archive,
   Download,
   Edit,
+  FolderDown,
   PlusCircle,
   Search,
   Trash2,
@@ -14,7 +16,9 @@ import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
+import { StudentArchiveExportDialog } from "@/components/student/StudentArchiveExportDialog"
 import StudentModal from "@/components/student/StudentModal"
+import { StudentImportWizardModal } from "@/components/student-import/StudentImportWizardModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -116,6 +120,10 @@ export default function StudentTable() {
   const [studentToEdit, setStudentToEdit] =
     useState<StudentWithMemberships | null>(null)
   const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] =
+    useState(false)
+  const [isArchiveExportDialogOpen, setIsArchiveExportDialogOpen] =
+    useState(false)
+  const [isArchiveImportModalOpen, setIsArchiveImportModalOpen] =
     useState(false)
   const [isExporting, setIsExporting] = useState(false)
 
@@ -307,6 +315,17 @@ export default function StudentTable() {
     }
   }
 
+  const refreshData = async () => {
+    try {
+      const fetchedStudents = await window.electronAPI.fetchStudents()
+      const fetchedClasses = await window.electronAPI.fetchClasses()
+      setStudents(fetchedStudents || [])
+      setClasses(fetchedClasses || [])
+    } catch (error) {
+      console.error("Failed to refresh data:", error)
+    }
+  }
+
   const onStudentsImported = (importedStudents: StudentWithMemberships[]) => {
     setStudents((prevStudents) => {
       const existingStudentIds = new Set(prevStudents.map((s) => s.id))
@@ -390,12 +409,30 @@ export default function StudentTable() {
               : `Excel出力${selectedStudentIds.size > 0 ? `(${selectedStudentIds.size})` : ""}`}
           </Button>
           <Button
+            onClick={() => setIsArchiveExportDialogOpen(true)}
+            variant="outline"
+            className="rounded-lg"
+            disabled={selectedStudentIds.size === 0}
+          >
+            <Archive className="mr-2 h-4 w-4" />
+            アーカイブ書き出し
+            {selectedStudentIds.size > 0 && `(${selectedStudentIds.size})`}
+          </Button>
+          <Button
             onClick={handleAddNewStudent}
             variant="outline"
             className="rounded-lg"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             生徒追加
+          </Button>
+          <Button
+            onClick={() => setIsArchiveImportModalOpen(true)}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <FolderDown className="mr-2 h-4 w-4" />
+            アーカイブ読み込み
           </Button>
           <Button
             onClick={() => setIsSpreadsheetImportModalOpen(true)}
@@ -563,6 +600,22 @@ export default function StudentTable() {
           isOpen={isSpreadsheetImportModalOpen}
           onClose={() => setIsSpreadsheetImportModalOpen(false)}
           onImportSuccess={onStudentsImported}
+        />
+      )}
+
+      {isArchiveExportDialogOpen && (
+        <StudentArchiveExportDialog
+          isOpen={isArchiveExportDialogOpen}
+          onClose={() => setIsArchiveExportDialogOpen(false)}
+          selectedStudentIds={selectedStudentIds}
+        />
+      )}
+
+      {isArchiveImportModalOpen && (
+        <StudentImportWizardModal
+          isOpen={isArchiveImportModalOpen}
+          onClose={() => setIsArchiveImportModalOpen(false)}
+          onComplete={refreshData}
         />
       )}
     </div>

@@ -11,6 +11,7 @@
 import { randomUUID } from "crypto"
 
 import type {
+  ArchiveClassesData,
   ArchiveDataCounts,
   FileOverviewData,
   IdIntegrationConfig,
@@ -228,7 +229,7 @@ export async function executeIdIntegrationImport(
         )
 
         // 14. 学級所属
-        await processMemberships(data, idMappings, tx)
+        await processMemberships(data.classesData.memberships, idMappings, tx)
 
         // 15. ID変更処理（「書き出したPCに合わせる」を選んだ場合）
         if (idChangeTargets.length > 0) {
@@ -902,12 +903,19 @@ async function processDrawingAnnotations(
   }
 }
 
-async function processMemberships(
-  data: ExtractedArchiveData,
-  idMappings: IdMappings,
+/**
+ * 学級所属データを処理
+ *
+ * @param memberships - 所属データ配列
+ * @param idMappings - IDマッピング（student, class, membership を使用）
+ * @param tx - Prismaトランザクション
+ */
+export async function processMemberships(
+  memberships: ArchiveClassesData["memberships"],
+  idMappings: Pick<IdMappings, "student" | "class" | "membership">,
   tx: Tx
 ): Promise<void> {
-  for (const m of data.classesData.memberships) {
+  for (const m of memberships) {
     const newStudentId = idMappings.student[m.studentId]
     const newClassId = idMappings.class[m.classId]
 
