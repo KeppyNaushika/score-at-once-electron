@@ -1,6 +1,6 @@
 /**
  * @fileoverview ユーザー設定関連のPrisma操作関数
- * @description キーボードショートカット、採点画面設定のDB操作を提供
+ * @description キーボードショートカット、ユーザー設定のDB操作を提供
  */
 
 import prisma from "./client"
@@ -91,126 +91,56 @@ export async function resetUserKeyboardShortcuts(userId: string) {
 }
 
 // =============================================================================
-// UserScoringPreference（採点画面設定）
+// UserPreference（KV方式ユーザー設定）
 // =============================================================================
 
-/** 採点設定の更新用データ型（全カラムオプショナル） */
-export interface ScoringPreferenceData {
-  showStudentNames?: boolean
-  autoScroll?: boolean
-  itemsPerLine?: number
-  layoutDirection?: string
-  expandMargin?: number
-  selectionBorderColor?: string | null
-  scoringStatusColors?: string | null
-  scoringColorPresetId?: string | null
-}
-
 /**
- * カラム別の型定義
- */
-export interface ScoringPreferenceColumns {
-  showStudentNames: boolean
-  autoScroll: boolean
-  itemsPerLine: number
-  layoutDirection: string
-  expandMargin: number
-  selectionBorderColor: string | null
-  scoringStatusColors: string | null
-  scoringColorPresetId: string | null
-}
-
-export type ScoringPreferenceColumnName = keyof ScoringPreferenceColumns
-
-/**
- * ユーザーの採点設定レコードを取得
+ * ユーザー設定を取得（単一キー）
  * @param userId - ユーザーID
- * @returns 採点設定レコード（存在しない場合はnull）
+ * @param key - 設定キー
+ * @returns 設定値（JSON文字列）。存在しない場合はnull
  */
-export async function getUserScoringPreference(userId: string) {
-  return prisma.userScoringPreference.findUnique({
-    where: { userId },
+export async function getUserPreference(
+  userId: string,
+  key: string
+): Promise<string | null> {
+  const record = await prisma.userPreference.findUnique({
+    where: { userId_key: { userId, key } },
   })
+  return record?.value ?? null
 }
 
 /**
- * 採点設定をまとめて追加/更新（レコード単位）
+ * ユーザー設定を保存（単一キー）
  * @param userId - ユーザーID
- * @param data - 更新する設定データ
+ * @param key - 設定キー
+ * @param value - 設定値（JSON文字列）
  */
-export async function upsertUserScoringPreference(
+export async function setUserPreference(
   userId: string,
-  data: ScoringPreferenceData
-) {
-  return prisma.userScoringPreference.upsert({
-    where: { userId },
-    update: data,
-    create: {
-      userId,
-      showStudentNames: data.showStudentNames ?? true,
-      autoScroll: data.autoScroll ?? true,
-      itemsPerLine: data.itemsPerLine ?? 5,
-      layoutDirection: data.layoutDirection ?? "right-down",
-      expandMargin: data.expandMargin ?? 0,
-      selectionBorderColor: data.selectionBorderColor ?? null,
-      scoringStatusColors: data.scoringStatusColors ?? null,
-      scoringColorPresetId: data.scoringColorPresetId ?? null,
-    },
-  })
-}
-
-// =============================================================================
-// カラム別操作（楽観的更新対応）
-// =============================================================================
-
-/** 採点設定のデフォルト値 */
-const SCORING_PREFERENCE_DEFAULTS: ScoringPreferenceColumns = {
-  showStudentNames: true,
-  autoScroll: true,
-  itemsPerLine: 5,
-  layoutDirection: "right-down",
-  expandMargin: 0,
-  selectionBorderColor: null,
-  scoringStatusColors: null,
-  scoringColorPresetId: null,
-}
-
-/**
- * 指定したカラムの値を取得
- */
-export async function getScoringPreferenceColumn<
-  K extends ScoringPreferenceColumnName,
->(userId: string, column: K): Promise<ScoringPreferenceColumns[K]> {
-  const record = await prisma.userScoringPreference.findUnique({
-    where: { userId },
-    select: { [column]: true },
-  })
-
-  if (!record) {
-    return SCORING_PREFERENCE_DEFAULTS[column]
-  }
-
-  // Prismaのselect結果から値を取得
-  return (record as unknown as ScoringPreferenceColumns)[column]
-}
-
-/**
- * 指定したカラムの値を設定（楽観的更新用 - 単一カラムのみ更新）
- */
-export async function setScoringPreferenceColumn<
-  K extends ScoringPreferenceColumnName,
->(
-  userId: string,
-  column: K,
-  value: ScoringPreferenceColumns[K]
+  key: string,
+  value: string
 ): Promise<void> {
-  await prisma.userScoringPreference.upsert({
-    where: { userId },
-    update: { [column]: value },
-    create: {
-      userId,
-      ...SCORING_PREFERENCE_DEFAULTS,
-      [column]: value,
-    },
+  await prisma.userPreference.upsert({
+    where: { userId_key: { userId, key } },
+    update: { value },
+    create: { userId, key, value },
   })
+}
+
+/**
+ * ユーザーの全設定を取得
+ * @param userId - ユーザーID
+ * @returns key -> value のマッピング
+ */
+export async function getUserPreferences(
+  userId: string
+): Promise<Record<string, string>> {
+  const records = await prisma.userPreference.findMany({
+    where: { userId },
+  })
+  return records.reduce<Record<string, string>>((acc, r) => {
+    acc[r.key] = r.value
+    return acc
+  }, {})
 }

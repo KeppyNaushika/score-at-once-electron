@@ -20,6 +20,8 @@ export interface UseQuestionAutoScrollParams {
   pageSpacing?: number
   /** 現在の設問領域 */
   currentCropRegion?: CropRegionWithExamPage | null
+  /** split表示モード（スクロール中心の補正用） */
+  splitMode?: "horizontal" | "vertical" | null
 }
 
 /**
@@ -39,6 +41,7 @@ export function useQuestionAutoScroll({
   loadedImages,
   pageSpacing = 20,
   currentCropRegion,
+  splitMode,
 }: UseQuestionAutoScrollParams): void {
   useEffect(() => {
     if (
@@ -86,9 +89,17 @@ export function useQuestionAutoScroll({
       const questionCenterScreenX = (questionCenterX + imageOffsetX) * zoom
       const questionCenterScreenY = (questionCenterY + pageOffsetY) * zoom
 
-      // コンテナ中心座標
-      const containerCenterX = container.offsetWidth / 2
-      const containerCenterY = container.offsetHeight / 2
+      // コンテナ中心座標（split時は1セル分の中心）
+      const cellWidth =
+        splitMode === "horizontal"
+          ? (container.offsetWidth - 2) / 2
+          : container.offsetWidth
+      const cellHeight =
+        splitMode === "vertical"
+          ? (container.offsetHeight - 2) / 2
+          : container.offsetHeight
+      const containerCenterX = cellWidth / 2
+      const containerCenterY = cellHeight / 2
 
       // 理想的なスクロール位置（設問を中央に）
       const idealScrollLeft = questionCenterScreenX - containerCenterX
@@ -113,5 +124,6 @@ export function useQuestionAutoScroll({
     loadedImages,
     pageSpacing,
     zoom,
+    splitMode,
   ])
 }

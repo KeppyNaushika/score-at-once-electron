@@ -30,10 +30,10 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
   return {
     unscored: {
       icon: Circle,
-      bgStyle: { backgroundColor: colors.ungraded.bg },
-      selectedBgStyle: { backgroundColor: colors.ungraded.bg, opacity: 0.8 },
-      textStyle: { color: colors.ungraded.text },
-      iconStyle: { color: colors.ungraded.icon },
+      bgStyle: { backgroundColor: colors.unscored.bg },
+      selectedBgStyle: { backgroundColor: colors.unscored.bg, opacity: 0.8 },
+      textStyle: { color: colors.unscored.text },
+      iconStyle: { color: colors.unscored.icon },
       key: "q",
     },
     correct: {

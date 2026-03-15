@@ -1,7 +1,14 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
@@ -43,10 +50,30 @@ export default function AnswerIndividualView({
   onQuestionScoreCreated,
   onAnnotationChanged,
   annotationRefreshKey,
+  masterOverlayImageUrls,
+  masterOverlayOpacity = 50,
+  masterOverlayVisible = false,
+  masterDisplayMode = "overlay",
+  onZoomChanged,
+  scrollContainerRef,
+  onImageSizeChanged,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
-  const { zoom, position, onZoomChange, onPositionChange } =
-    useImageNavigation()
+  const {
+    zoom,
+    position,
+    onZoomChange: rawOnZoomChange,
+    onPositionChange,
+  } = useImageNavigation()
+
+  // zoom変更をラップして外部にも通知
+  const onZoomChange = useCallback(
+    (newZoom: number) => {
+      rawOnZoomChange(newZoom)
+      onZoomChanged?.(newZoom)
+    },
+    [rawOnZoomChange, onZoomChanged]
+  )
 
   // 印字設定（採点マーク・点数表示のプレビュー用）をDBからロード
   const params = useParams()
@@ -198,6 +225,26 @@ export default function AnswerIndividualView({
     scoringMarkConfig,
   })
 
+  // 画像サイズ通知（split表示のMasterパネルで参照サイズとして使用）
+  useEffect(() => {
+    if (onImageSizeChanged && loadedImages.length > 0) {
+      onImageSizeChanged({
+        width: loadedImages[0].naturalWidth,
+        heights: loadedImages.map((img) => img.naturalHeight),
+      })
+    }
+  }, [loadedImages, onImageSizeChanged])
+
+  // scrollContainerRefの同期（split表示のスクロール同期用）
+  // useLayoutEffectでDOMコミット直後に確実に設定
+  useLayoutEffect(() => {
+    if (scrollContainerRef && containerRef.current) {
+      ;(
+        scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
+      ).current = containerRef.current
+    }
+  })
+
   // Canvas・V4統合フック
   const {
     canvasWidth,
@@ -226,6 +273,7 @@ export default function AnswerIndividualView({
       loadedImages,
       pageSpacing,
       currentCropRegion,
+      splitMode: null,
     })
 
   // 描画ツールキーボードショートカット
@@ -243,6 +291,7 @@ export default function AnswerIndividualView({
     loadedImages,
     pageSpacing,
     currentCropRegion,
+    splitMode: null,
   })
 
   // イベントハンドリング
@@ -363,6 +412,61 @@ export default function AnswerIndividualView({
     [favoriteElementIds, drawingState]
   )
 
+  // 模範解答オーバーレイ用の画像読み込み（全ページ）
+  const [masterOverlayImages, setMasterOverlayImages] = useState<
+    HTMLImageElement[]
+  >([])
+  useEffect(() => {
+    if (!masterOverlayImageUrls || masterOverlayImageUrls.length === 0) {
+      setMasterOverlayImages([])
+      return
+    }
+    let cancelled = false
+    const loadAll = async () => {
+      const results = await Promise.allSettled(
+        masterOverlayImageUrls.map(
+          (url) =>
+            new Promise<HTMLImageElement>((resolve, reject) => {
+              const img = new Image()
+              img.onload = () => resolve(img)
+              img.onerror = reject
+              img.src = url
+            })
+        )
+      )
+      if (cancelled) return
+      setMasterOverlayImages(
+        results
+          .filter(
+            (r): r is PromiseFulfilledResult<HTMLImageElement> =>
+              r.status === "fulfilled"
+          )
+          .map((r) => r.value)
+      )
+    }
+    loadAll()
+    return () => {
+      cancelled = true
+    }
+  }, [masterOverlayImageUrls])
+
+  // 答案コンテンツの自然サイズ（ズーム前、ピクセル単位）
+  const answerNaturalWidth =
+    loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800
+  const answerNaturalHeight =
+    loadedImages.length > 0
+      ? loadedImages.reduce(
+          (total, img, index) =>
+            total +
+            img.naturalHeight +
+            (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
+          0
+        )
+      : 600
+
+  // overlay表示判定
+  const isOverlayMode = masterDisplayMode === "overlay"
+
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
     return (
@@ -394,24 +498,8 @@ export default function AnswerIndividualView({
         <div
           className="relative grid place-items-center"
           style={{
-            width:
-              loadedImages.length > 0
-                ? `${loadedImages[0].naturalWidth * zoom}px`
-                : `${800 * zoom}px`,
-            height:
-              loadedImages.length > 0
-                ? `${
-                    loadedImages.reduce(
-                      (total, img, index) =>
-                        total +
-                        img.naturalHeight +
-                        (index < loadedImages.length - 1
-                          ? pageSpacing || 20
-                          : 0),
-                      0
-                    ) * zoom
-                  }px`
-                : `${600 * zoom}px`,
+            width: `${answerNaturalWidth * zoom}px`,
+            height: `${answerNaturalHeight * zoom}px`,
             minWidth: "100%",
             minHeight: "100%",
           }}
@@ -538,8 +626,56 @@ export default function AnswerIndividualView({
               transform: "translateZ(0)",
             }}
           />
+          {/* 模範解答オーバーレイ画像（overlay モード時・ページごとに描画） */}
+          {isOverlayMode &&
+            masterOverlayImages.length > 0 &&
+            masterOverlayImages.map((masterImg, pageIndex) => {
+              let pageOffsetY = 0
+              for (let i = 0; i < pageIndex; i++) {
+                const srcImg = loadedImages[i] || masterOverlayImages[i]
+                if (srcImg) {
+                  pageOffsetY += srcImg.naturalHeight + (pageSpacing || 20)
+                }
+              }
+              const pageImg = loadedImages[pageIndex]
+              const pageWidth = pageImg
+                ? pageImg.naturalWidth
+                : masterImg.naturalWidth
+              const pageHeight = pageImg
+                ? pageImg.naturalHeight
+                : masterImg.naturalHeight
+
+              return (
+                <img
+                  key={`master-overlay-${pageIndex}`}
+                  src={masterImg.src}
+                  alt={`模範解答 ページ${pageIndex + 1}`}
+                  className="pointer-events-none absolute left-0 block"
+                  style={{
+                    top: `${pageOffsetY * zoom}px`,
+                    width: `${pageWidth * zoom}px`,
+                    height: `${pageHeight * zoom}px`,
+                    imageRendering: "pixelated",
+                    opacity: masterOverlayVisible
+                      ? masterOverlayOpacity / 100
+                      : 0,
+                    transition: "opacity 0.15s ease-in-out",
+                  }}
+                  draggable={false}
+                />
+              )
+            })}
         </div>
       </div>
+
+      {/* 模範解答ラベル（overlay表示時） */}
+      {isOverlayMode &&
+        masterOverlayVisible &&
+        masterOverlayImages.length > 0 && (
+          <div className="pointer-events-none absolute top-2 left-2 z-10 rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white">
+            模範解答
+          </div>
+        )}
 
       {/* 画像が読み込まれていない場合 */}
       {!imageLoaded && (

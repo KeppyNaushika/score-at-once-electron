@@ -1,32 +1,15 @@
 /**
  * @fileoverview 採点設定フック（統合版）
- * @description 機能G: ユーザー採点設定の永続化
- *
- * 各設定は独立したフックで管理され、このフックは互換性のために統合して返す。
- * 楽観的更新時のレースコンディションを防ぐため、各設定は独立したstateを持つ。
+ * @description 各設定は独立したフックで管理され、このフックは互換性のために統合して返す。
  */
 
 import { useAutoScroll } from "./useAutoScroll"
 import { useExpandMargin } from "./useExpandMargin"
 import { useItemsPerLine } from "./useItemsPerLine"
 import { useLayoutDirection } from "./useLayoutDirection"
+import { useMasterAnswerSettings } from "./useMasterAnswerSettings"
 import { useShowStudentNames } from "./useShowStudentNames"
 
-/**
- * 全採点設定を統合して返すフック
- * @description 各設定は独立したフックで管理されるため、競合なく楽観的更新が可能
- * @returns itemsPerLine - 1行あたりの表示件数（配列形式）
- * @returns autoScroll - 自動スクロール設定
- * @returns showStudentNames - 生徒名表示設定
- * @returns layoutDirection - レイアウト方向
- * @returns expandMargin - 表示領域拡張率
- * @returns setItemsPerLine - 表示件数更新関数
- * @returns setAutoScroll - 自動スクロール更新関数
- * @returns setShowStudentNames - 生徒名表示更新関数
- * @returns setLayoutDirection - レイアウト方向更新関数
- * @returns setExpandMargin - 拡張率更新関数
- * @returns isLoading - いずれかの設定が読み込み中かどうか
- */
 export function useScoringSettings() {
   const {
     itemsPerLine,
@@ -53,13 +36,23 @@ export function useScoringSettings() {
     setExpandMargin,
     isLoading: isLoadingExpandMargin,
   } = useExpandMargin()
+  const {
+    masterAnswerDisplayMode,
+    masterAnswerOpacity,
+    masterAnswerKeyBehavior,
+    setMasterAnswerDisplayMode,
+    setMasterAnswerOpacity,
+    setMasterAnswerKeyBehavior,
+    isLoading: isLoadingMasterAnswer,
+  } = useMasterAnswerSettings()
 
   const isLoading =
     isLoadingItemsPerLine ||
     isLoadingAutoScroll ||
     isLoadingShowStudentNames ||
     isLoadingLayoutDirection ||
-    isLoadingExpandMargin
+    isLoadingExpandMargin ||
+    isLoadingMasterAnswer
 
   return {
     itemsPerLine,
@@ -67,11 +60,17 @@ export function useScoringSettings() {
     showStudentNames,
     layoutDirection,
     expandMargin,
+    masterAnswerDisplayMode,
+    masterAnswerOpacity,
+    masterAnswerKeyBehavior,
     setItemsPerLine,
     setAutoScroll,
     setShowStudentNames,
     setLayoutDirection,
     setExpandMargin,
+    setMasterAnswerDisplayMode,
+    setMasterAnswerOpacity,
+    setMasterAnswerKeyBehavior,
     isLoading,
   }
 }
@@ -81,4 +80,5 @@ export { useAutoScroll } from "./useAutoScroll"
 export { useExpandMargin } from "./useExpandMargin"
 export { useItemsPerLine } from "./useItemsPerLine"
 export { useLayoutDirection } from "./useLayoutDirection"
+export { useMasterAnswerSettings } from "./useMasterAnswerSettings"
 export { useShowStudentNames } from "./useShowStudentNames"

@@ -380,20 +380,14 @@ CREATE TABLE "UserKeyboardShortcut" (
 );
 
 -- CreateTable
-CREATE TABLE "UserScoringPreference" (
+CREATE TABLE "UserPreference" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
-    "showStudentNames" BOOLEAN NOT NULL DEFAULT true,
-    "autoScroll" BOOLEAN NOT NULL DEFAULT true,
-    "itemsPerLine" INTEGER NOT NULL DEFAULT 5,
-    "layoutDirection" TEXT NOT NULL DEFAULT 'right-down',
-    "expandMargin" INTEGER NOT NULL DEFAULT 0,
-    "selectionBorderColor" TEXT,
-    "scoringStatusColors" TEXT,
-    "scoringColorPresetId" TEXT,
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "UserScoringPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "UserPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -888,7 +882,10 @@ CREATE UNIQUE INDEX "UserKeyboardShortcut_userId_action_key" ON "UserKeyboardSho
 CREATE INDEX "UserKeyboardShortcut_userId_idx" ON "UserKeyboardShortcut"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserScoringPreference_userId_key" ON "UserScoringPreference"("userId");
+CREATE UNIQUE INDEX "UserPreference_userId_key_key" ON "UserPreference"("userId", "key");
+
+-- CreateIndex
+CREATE INDEX "UserPreference_userId_idx" ON "UserPreference"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ExamMarkingFormat_examId_markType_key" ON "ExamMarkingFormat"("examId", "markType");

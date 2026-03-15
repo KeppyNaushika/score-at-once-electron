@@ -50,35 +50,36 @@ export function DisplaySettingsTab() {
     getCurrentPresetId
   )
 
-  // 初期値をロード（カラム別）
+  // 初期値をロード（KV方式）
   useEffect(() => {
-    // 同じユーザーで既に初期化済みならスキップ
     if (initializedUserIdRef.current === userId) return
-
-    // userIdがundefinedの場合は待機（refは更新しない）
     if (!userId) return
 
-    // 新しいユーザーとして初期化
     initializedUserIdRef.current = userId
 
     const loadSettings = async () => {
       if (window.electronAPI?.settings) {
         try {
-          // selectionBorderColorカラムのみ読み込み
-          const result =
-            await window.electronAPI.settings.getScoringPreferenceColumn(
-              userId,
-              "selectionBorderColor"
-            )
-          if (result.success && result.value) {
-            setSelectionBorderColor(result.value)
+          const result = await window.electronAPI.settings.getUserPreference(
+            userId,
+            "selectionBorderColor"
+          )
+          if (result.success && result.value && result.value !== "null") {
+            let parsed = result.value
+            try {
+              parsed = JSON.parse(result.value)
+            } catch {
+              // keep raw
+            }
+            if (parsed) {
+              setSelectionBorderColor(parsed)
+            }
           }
         } catch (error) {
           console.error("選択枠色の読み込みに失敗しました:", error)
         }
       }
 
-      // 採点状態色をDBから読み込み（scoringStatusColorsは内部でカラム別読み込み）
       await loadScoringStatusColors(userId)
       setScoringColors(getScoringStatusColors())
       setCurrentPresetId(getCurrentPresetId())
@@ -87,7 +88,7 @@ export function DisplaySettingsTab() {
     loadSettings()
   }, [userId])
 
-  // 選択枠色の変更（カラム別・楽観的更新）
+  // 選択枠色の変更（KV方式・楽観的更新）
   const handleSelectionBorderColorChange = useCallback(
     async (color: string) => {
       const upperColor = color.toUpperCase()
@@ -95,10 +96,10 @@ export function DisplaySettingsTab() {
 
       if (userId && window.electronAPI?.settings) {
         try {
-          await window.electronAPI.settings.setScoringPreferenceColumn(
+          await window.electronAPI.settings.setUserPreference(
             userId,
             "selectionBorderColor",
-            upperColor
+            JSON.stringify(upperColor)
           )
           window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
           toast.success("選択枠色が変更されました")

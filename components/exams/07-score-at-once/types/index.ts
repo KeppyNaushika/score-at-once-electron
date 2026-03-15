@@ -131,6 +131,20 @@ export interface ScoringData {
   customOrder: number
 }
 
+/**
+ * 模範解答表示モード
+ */
+export type MasterAnswerDisplayMode =
+  | "off"
+  | "overlay"
+  | "split-horizontal"
+  | "split-vertical"
+
+/**
+ * 模範解答キー動作モード
+ */
+export type MasterAnswerKeyBehavior = "toggle" | "hold-to-show"
+
 export type MasterStatus = "master"
 
 export interface MasterGridItem {

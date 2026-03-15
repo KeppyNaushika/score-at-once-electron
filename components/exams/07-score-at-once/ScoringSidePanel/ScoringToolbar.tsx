@@ -46,9 +46,9 @@ interface ScoringToolbarProps {
   gradingMode?: "grid" | "individual" // 採点モード
 }
 
-// ScoringStatus -> ScoringStatusType へのマッピング
+// ScoringStatus -> ScoringStatusType へのマッピング（統一済み）
 const STATUS_MAP: Record<ScoringStatus, ScoringStatusType> = {
-  unscored: "ungraded",
+  unscored: "unscored",
   correct: "correct",
   partial: "partial",
   pending: "pending",

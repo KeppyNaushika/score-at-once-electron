@@ -1,41 +1,34 @@
 /**
  * @fileoverview 自動スクロール設定フック
- * @description 機能G: ユーザー採点設定の永続化（カラム別楽観的更新）
+ * @description KV方式ユーザー設定の永続化（楽観的更新）
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
+import {
+  parsePreference,
+  serializePreference,
+  USER_PREFERENCE_SCHEMA,
+} from "@/lib/userPreferences"
 
-/** デフォルト値 */
-const DEFAULT_AUTO_SCROLL = true
+const DEFAULT = USER_PREFERENCE_SCHEMA.autoScroll.default
 
-/**
- * 自動スクロール設定を管理するフック
- * @returns autoScroll - 現在の自動スクロール設定
- * @returns setAutoScroll - 設定を更新する関数
- * @returns isLoading - 読み込み中フラグ
- */
 export function useAutoScroll() {
   const { user } = useAuth()
   const userId = user?.id
 
-  const [autoScroll, setAutoScrollState] =
-    useState<boolean>(DEFAULT_AUTO_SCROLL)
+  const [autoScroll, setAutoScrollState] = useState<boolean>(DEFAULT)
   const [isLoading, setIsLoading] = useState(true)
   const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
-    // 同じユーザーで既に初期化済みならスキップ
     if (initializedUserIdRef.current === userId) return
-
-    // userIdがundefinedの場合は待機（refは更新しない）
     if (!userId) {
       setIsLoading(false)
       return
     }
 
-    // 新しいユーザーとして初期化
     initializedUserIdRef.current = userId
     setIsLoading(true)
 
@@ -46,13 +39,14 @@ export function useAutoScroll() {
       }
 
       try {
-        const result =
-          await window.electronAPI.settings.getScoringPreferenceColumn(
-            userId,
-            "autoScroll"
+        const result = await window.electronAPI.settings.getUserPreference(
+          userId,
+          "autoScroll"
+        )
+        if (result.success) {
+          setAutoScrollState(
+            parsePreference("autoScroll", result.value ?? null)
           )
-        if (result.success && result.value !== undefined) {
-          setAutoScrollState(result.value)
         }
       } catch (error) {
         console.error("autoScrollの読み込みに失敗しました:", error)
@@ -63,16 +57,16 @@ export function useAutoScroll() {
     load()
   }, [userId])
 
-  /**
-   * 楽観的更新: UI即時更新 + DB非同期保存
-   * @param value - 新しい自動スクロール設定
-   */
   const setAutoScroll = useCallback(
     (value: boolean) => {
       setAutoScrollState(value)
       if (userId && window.electronAPI?.settings) {
         window.electronAPI.settings
-          .setScoringPreferenceColumn(userId, "autoScroll", value)
+          .setUserPreference(
+            userId,
+            "autoScroll",
+            serializePreference("autoScroll", value)
+          )
           .catch((error) =>
             console.error("autoScrollの保存に失敗しました:", error)
           )
@@ -81,9 +75,5 @@ export function useAutoScroll() {
     [userId]
   )
 
-  return {
-    autoScroll,
-    setAutoScroll,
-    isLoading,
-  }
+  return { autoScroll, setAutoScroll, isLoading }
 }
