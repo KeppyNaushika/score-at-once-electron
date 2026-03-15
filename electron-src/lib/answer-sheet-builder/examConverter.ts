@@ -113,6 +113,7 @@ export async function convertToExam(
         data: {
           examPageId: examPage.id,
           imagePath: relativeMasterPath,
+          pageSize: definition.settings.paperSize ?? "A4",
         },
       })
 

@@ -28,6 +28,8 @@ import { Button } from "@/components/ui/button"
  * @param onMoveRight - 右移動のコールバック関数
  * @returns 模範解答画像カードコンポーネント
  */
+const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
+
 const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
   ({
     answer,
@@ -39,6 +41,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
     onDelete,
     onMoveLeft,
     onMoveRight,
+    onPageSizeChange,
   }) => {
     // 移動可能性の判定
     const canMoveLeft = index > 0
@@ -89,6 +92,22 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
           <p className="text-sm font-semibold text-white">
             ページ {answer.pageNumber}
           </p>
+          <select
+            className="mt-1 rounded bg-white/20 px-1.5 py-0.5 text-xs text-white backdrop-blur-sm"
+            value={answer.pageSize ?? "A4"}
+            onChange={(e) => {
+              e.stopPropagation()
+              onPageSizeChange(e.target.value)
+            }}
+            onClick={(e) => e.stopPropagation()}
+            disabled={isDisabled}
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size} className="text-black">
+                {size}
+              </option>
+            ))}
+          </select>
           <div className="mt-2 flex space-x-1">
             <Button
               size="icon"

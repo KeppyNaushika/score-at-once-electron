@@ -344,11 +344,34 @@ export function useMasterAnswers(
     [state.answers, onAnswersChange]
   )
 
+  const updatePageSize = useCallback(
+    async (answerId: string, pageSize: string) => {
+      try {
+        await window.electronAPI.updateMasterImagePageSize(answerId, pageSize)
+        setState((prev) => ({
+          ...prev,
+          answers: prev.answers.map((a) =>
+            a.id === answerId ? { ...a, pageSize } : a
+          ),
+        }))
+        onAnswersChange(
+          state.answers.map((a) => (a.id === answerId ? { ...a, pageSize } : a))
+        )
+        toast.success("用紙サイズを変更しました")
+      } catch (error) {
+        console.error("Failed to update page size:", error)
+        toast.error("用紙サイズの変更に失敗しました")
+      }
+    },
+    [state.answers, onAnswersChange]
+  )
+
   return {
     ...state,
     uploadAnswers,
     deleteAnswer,
     moveAnswer,
+    updatePageSize,
     handlePasswordSubmit,
     handlePasswordCancel,
   }

@@ -374,6 +374,7 @@ export async function collectExamData(
           id: img.id,
           examPageId: img.examPageId,
           imagePath: img.imagePath,
+          pageSize: img.pageSize,
           createdAt: img.createdAt.toISOString(),
           updatedAt: img.updatedAt.toISOString(),
         }))

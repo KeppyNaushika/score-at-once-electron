@@ -30,6 +30,7 @@ export function MasterAnswerGallery({
   isMoving,
   onDeleteAnswer,
   onMoveAnswer,
+  onPageSizeChange,
 }: MasterAnswerGalleryProps) {
   // 画像がない場合は何も表示しない
   if (answers.length === 0) {
@@ -62,6 +63,9 @@ export function MasterAnswerGallery({
                   onDelete={() => onDeleteAnswer(answer.id)}
                   onMoveLeft={() => onMoveAnswer(index, "left")}
                   onMoveRight={() => onMoveAnswer(index, "right")}
+                  onPageSizeChange={(pageSize) =>
+                    onPageSizeChange(answer.id, pageSize)
+                  }
                 />
               ) : (
                 <div

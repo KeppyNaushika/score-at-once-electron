@@ -107,6 +107,7 @@ async function createMasterImageRecords(
           id: img.id,
           examPageId: newExamPageId,
           imagePath: newImagePath,
+          pageSize: img.pageSize ?? "A4",
         },
       })
     }

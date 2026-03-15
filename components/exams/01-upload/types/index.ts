@@ -7,6 +7,7 @@ export type MasterAnswer = {
   examId: string
   imagePath: string
   pageNumber: number
+  pageSize: string
   createdAt: Date
   updatedAt: Date
 }
@@ -41,6 +42,7 @@ export interface MasterAnswerGalleryProps {
   isMoving: boolean
   onDeleteAnswer: (answerId: string) => void
   onMoveAnswer: (fromIndex: number, direction: "left" | "right") => void
+  onPageSizeChange: (answerId: string, pageSize: string) => void
 }
 
 /**
@@ -66,6 +68,7 @@ export interface MasterAnswerCardProps {
   onDelete: () => void
   onMoveLeft: () => void
   onMoveRight: () => void
+  onPageSizeChange: (pageSize: string) => void
 }
 
 /**
