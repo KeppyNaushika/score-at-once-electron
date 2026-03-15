@@ -102,6 +102,7 @@ export interface TableHeaderProps {
   onAllowOverwriteChange?: (allow: boolean) => void
   markerCorrectionEnabled?: boolean
   markerCorrectionAvailable?: boolean
+  markerDiagnostics?: string
   onMarkerCorrectionChange?: (enabled: boolean) => void
 }
 

@@ -50,7 +50,7 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
     subNumberDividerWidth: 0.4,
     branchNumberDividerWidth: 0.3,
   },
-  omrMarkers: { enabled: false, sizeMm: 5, offsetMm: 3 },
+  omrMarkers: { enabled: false, sizeMm: 5, offsetMm: 6 },
   fonts: {
     family: "Noto Sans JP",
     defaultSize: 6,

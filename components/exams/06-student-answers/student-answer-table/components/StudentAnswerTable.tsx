@@ -41,6 +41,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
     setAllowOverwrite,
     markerCorrectionEnabled,
     markerCorrectionAvailable,
+    markerDiagnostics,
     setMarkerCorrectionEnabled,
     previewMode,
     uploadModalState,
@@ -97,6 +98,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
             onAllowOverwriteChange={setAllowOverwrite}
             markerCorrectionEnabled={markerCorrectionEnabled}
             markerCorrectionAvailable={markerCorrectionAvailable}
+            markerDiagnostics={markerDiagnostics}
             onMarkerCorrectionChange={setMarkerCorrectionEnabled}
           />
 

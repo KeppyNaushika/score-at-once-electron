@@ -12,6 +12,7 @@
  */
 
 import type {
+  CornerDiagnostics,
   DetectedCornerMarker,
   MarkerDetectionResult,
   RawImageData,
@@ -38,6 +39,12 @@ export async function detectCornerMarkers(
   return detectCornerMarkersFromRaw(rawImage, colorThreshold)
 }
 
+/** detectMarkerInRegion の内部戻り値 */
+interface DetectionAttempt {
+  marker: DetectedCornerMarker | null
+  diagnostics: CornerDiagnostics
+}
+
 /**
  * RAWイメージデータからコーナーマーカーを検出
  */
@@ -48,11 +55,13 @@ export function detectCornerMarkersFromRaw(
   const { width, height } = rawImage
   const searchRegions = computeSearchRegions(width, height)
   const markers: DetectedCornerMarker[] = []
+  const diagnostics: CornerDiagnostics[] = []
 
   for (const region of searchRegions) {
-    const marker = detectMarkerInRegion(rawImage, region, colorThreshold)
-    if (marker) {
-      markers.push(marker)
+    const attempt = detectMarkerInRegion(rawImage, region, colorThreshold)
+    diagnostics.push(attempt.diagnostics)
+    if (attempt.marker) {
+      markers.push(attempt.marker)
     }
   }
 
@@ -65,6 +74,7 @@ export function detectCornerMarkersFromRaw(
       markers.length < 4
         ? `${markers.length}/4 のマーカーのみ検出されました`
         : undefined,
+    diagnostics,
   }
 }
 
@@ -125,12 +135,14 @@ function detectMarkerInRegion(
   rawImage: RawImageData,
   region: SearchRegion,
   colorThreshold: number
-): DetectedCornerMarker | null {
+): DetectionAttempt {
   const { data, width, channels } = rawImage
   const { x: rx, y: ry, width: rw, height: rh } = region
+  const totalPixels = rw * rh
 
   // 1. 二値化マスク作成（探索領域内の黒ピクセル）
   const mask = new Uint8Array(rw * rh)
+  let darkPixels = 0
   for (let dy = 0; dy < rh; dy++) {
     for (let dx = 0; dx < rw; dx++) {
       const imgX = rx + dx
@@ -139,6 +151,7 @@ function detectMarkerInRegion(
       // R値で判定（グレースケール近似）
       if (data[idx] < colorThreshold) {
         mask[dy * rw + dx] = 1
+        darkPixels++
       }
     }
   }
@@ -241,25 +254,76 @@ function detectMarkerInRegion(
     }
   }
 
-  if (componentSizes.size === 0) return null
+  // 診断ヘルパー
+  const fail = (
+    reason: string,
+    largestSize = 0,
+    largestAspect = 0
+  ): DetectionAttempt => ({
+    marker: null,
+    diagnostics: {
+      corner: region.corner,
+      detected: false,
+      darkPixels,
+      totalPixels,
+      largestComponentSize: largestSize,
+      largestComponentAspect: largestAspect,
+      failReason: reason,
+    },
+  })
 
-  // 最大コンポーネントを選択
-  let maxRoot = -1
-  let maxSize = 0
-  for (const [root, size] of componentSizes) {
-    if (size > maxSize) {
-      maxSize = size
-      maxRoot = root
-    }
+  if (componentSizes.size === 0) {
+    return fail("探索領域内に黒ピクセルの連結成分がありません")
   }
-
-  if (maxRoot === -1) return null
 
   // 最小面積チェック（ノイズ除去）
   const minArea = Math.max(9, rw * rh * 0.001) // 探索領域の0.1%以上
-  if (maxSize < minArea) return null
 
-  const bounds = componentBounds.get(maxRoot)!
+  // 正方形に近いコンポーネントを優先的に選択
+  // 罫線などの細長い連結成分より、マーカー（正方形）を優先する
+  let bestRoot = -1
+  let bestScore = -1
+
+  // 診断用: 最大コンポーネントの情報
+  let largestSize = 0
+  let largestAspect = 0
+
+  for (const [root, compSize] of componentSizes) {
+    const b = componentBounds.get(root)!
+    const bw = b.maxX - b.minX + 1
+    const bh = b.maxY - b.minY + 1
+    const maxDim = Math.max(bw, bh)
+    const ar = Math.min(bw, bh) / maxDim
+
+    if (compSize > largestSize) {
+      largestSize = compSize
+      largestAspect = ar
+    }
+
+    if (compSize < minArea) continue
+
+    // 充填率: 実ピクセル数 / バウンディングボックス面積
+    const fillRatio = compSize / (bw * bh)
+
+    // スコア = アスペクト比(正方形性) × 充填率(密度) × 面積の重み
+    // 正方形で密に塗りつぶされたコンポーネントを優先
+    const score = ar * fillRatio * Math.sqrt(compSize)
+
+    if (score > bestScore) {
+      bestScore = score
+      bestRoot = root
+    }
+  }
+
+  if (bestRoot === -1) {
+    return fail(
+      `最小面積(${Math.round(minArea)}px)を超える成分がありません（最大成分: ${largestSize}px）`,
+      largestSize,
+      largestAspect
+    )
+  }
+
+  const bounds = componentBounds.get(bestRoot)!
   const bboxWidth = bounds.maxX - bounds.minX + 1
   const bboxHeight = bounds.maxY - bounds.minY + 1
   const size = Math.max(bboxWidth, bboxHeight)
@@ -272,11 +336,23 @@ function detectMarkerInRegion(
   const aspectRatio = Math.min(bboxWidth, bboxHeight) / size
   const confidence = aspectRatio // 正方形に近いほど高信頼
 
+  const bestSize = componentSizes.get(bestRoot) ?? 0
+
   return {
-    centerX,
-    centerY,
-    size,
-    corner: region.corner,
-    confidence,
+    marker: {
+      centerX,
+      centerY,
+      size,
+      corner: region.corner,
+      confidence,
+    },
+    diagnostics: {
+      corner: region.corner,
+      detected: true,
+      darkPixels,
+      totalPixels,
+      largestComponentSize: bestSize,
+      largestComponentAspect: aspectRatio,
+    },
   }
 }

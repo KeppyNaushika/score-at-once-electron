@@ -36,6 +36,7 @@ export function TableHeader({
   onAllowOverwriteChange,
   markerCorrectionEnabled = false,
   markerCorrectionAvailable = false,
+  markerDiagnostics,
   onMarkerCorrectionChange,
 }: TableHeaderProps) {
   const [isTrashOpen, setIsTrashOpen] = useState(false)
@@ -73,6 +74,7 @@ export function TableHeader({
             <MarkerCorrectionToggle
               enabled={markerCorrectionEnabled}
               available={markerCorrectionAvailable}
+              diagnostics={markerDiagnostics}
               onChange={onMarkerCorrectionChange}
             />
           )}

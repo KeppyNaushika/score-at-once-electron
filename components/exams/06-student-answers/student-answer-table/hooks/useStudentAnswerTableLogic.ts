@@ -94,6 +94,7 @@ export function useStudentAnswerTableLogic({
   const [markerCorrectionEnabled, setMarkerCorrectionEnabled] = useState(false)
   const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
     useState(false)
+  const [markerDiagnostics, setMarkerDiagnostics] = useState<string>("")
 
   // ============================================================================
   // 削除処理
@@ -152,6 +153,23 @@ export function useStudentAnswerTableLogic({
             setMarkerCorrectionEnabled(true)
           } else {
             setMarkerCorrectionEnabled(false)
+            // 診断情報をUIに表示するため構築
+            if (result.pages) {
+              const lines: string[] = []
+              for (const page of result.pages) {
+                if (!page.result.success && page.result.diagnostics) {
+                  lines.push(`ページ${page.pageNumber}:`)
+                  for (const d of page.result.diagnostics) {
+                    if (!d.detected) {
+                      lines.push(
+                        `  ${d.corner}: ${d.failReason ?? "不明"} (黒px: ${d.darkPixels}/${d.totalPixels})`
+                      )
+                    }
+                  }
+                }
+              }
+              setMarkerDiagnostics(lines.join("\n"))
+            }
           }
         }
       } catch {
@@ -262,6 +280,7 @@ export function useStudentAnswerTableLogic({
     setAllowOverwrite,
     markerCorrectionEnabled,
     markerCorrectionAvailable,
+    markerDiagnostics,
     setMarkerCorrectionEnabled,
 
     // ローカル状態
