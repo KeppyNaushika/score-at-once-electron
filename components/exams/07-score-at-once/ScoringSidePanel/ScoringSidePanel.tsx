@@ -5,12 +5,15 @@ import { useEffect, useRef } from "react"
 import { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types/scoringDataTypes"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
+import { MasterAnswerControls } from "@/components/exams/07-score-at-once/ScoringSidePanel/MasterAnswerControls"
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
 import QuestionNavigator from "@/components/exams/07-score-at-once/ScoringSidePanel/QuestionNavigator"
 import ScoringToolbar from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringToolbar"
 import type {
   CropRegionWithExamPage,
   LayoutDirection,
+  MasterAnswerDisplayMode,
+  MasterAnswerKeyBehavior,
   ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
@@ -91,6 +94,17 @@ interface ScoringSidePanelProps {
   annotationRefreshKey?: number
   /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
   onAnnotationAddedFromBrowser?: () => void
+  // 模範解答表示設定
+  masterAnswerDisplayMode?: MasterAnswerDisplayMode
+  masterAnswerOpacity?: number
+  masterAnswerKeyBehavior?: MasterAnswerKeyBehavior
+  onMasterAnswerDisplayModeChange?: (mode: MasterAnswerDisplayMode) => void
+  onMasterAnswerOpacityChange?: (opacity: number) => void
+  onMasterAnswerKeyBehaviorChange?: (behavior: MasterAnswerKeyBehavior) => void
+  masterAnswerVisible?: boolean
+  onToggleMasterAnswer?: () => void
+  onMasterAnswerShow?: () => void
+  onMasterAnswerHide?: () => void
 }
 
 export function ScoringSidePanel({
@@ -134,6 +148,16 @@ export function ScoringSidePanel({
   onQuestionScoreCreated,
   annotationRefreshKey,
   onAnnotationAddedFromBrowser,
+  masterAnswerDisplayMode,
+  masterAnswerOpacity,
+  masterAnswerKeyBehavior,
+  onMasterAnswerDisplayModeChange,
+  onMasterAnswerOpacityChange,
+  onMasterAnswerKeyBehaviorChange,
+  masterAnswerVisible,
+  onToggleMasterAnswer,
+  onMasterAnswerShow,
+  onMasterAnswerHide,
 }: ScoringSidePanelProps) {
   const annotationBrowser = useAnnotationBrowser()
   const { loadAnnotations: reloadBrowserAnnotations } = annotationBrowser
@@ -207,6 +231,29 @@ export function ScoringSidePanel({
                   onStudentChange={onStudentChange}
                   scoringBehavior={scoringBehavior}
                   onScoringBehaviorChange={onScoringBehaviorChange}
+                />
+              </>
+            )}
+
+          {/* 個別表示モード時：模範解答表示設定 */}
+          {gradingMode === "individual" &&
+            masterAnswerDisplayMode !== undefined &&
+            onMasterAnswerDisplayModeChange && (
+              <>
+                <Separator />
+                <MasterAnswerControls
+                  displayMode={masterAnswerDisplayMode}
+                  opacity={masterAnswerOpacity ?? 50}
+                  keyBehavior={masterAnswerKeyBehavior ?? "toggle"}
+                  masterAnswerVisible={masterAnswerVisible ?? false}
+                  onDisplayModeChange={onMasterAnswerDisplayModeChange}
+                  onOpacityChange={onMasterAnswerOpacityChange ?? (() => {})}
+                  onKeyBehaviorChange={
+                    onMasterAnswerKeyBehaviorChange ?? (() => {})
+                  }
+                  onToggleMasterAnswer={onToggleMasterAnswer ?? (() => {})}
+                  onMasterAnswerShow={onMasterAnswerShow}
+                  onMasterAnswerHide={onMasterAnswerHide}
                 />
               </>
             )}

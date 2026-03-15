@@ -2,7 +2,7 @@
 
 import Head from "next/head"
 import { useParams } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
@@ -64,12 +64,21 @@ function ScoringMainViewContent() {
     showStudentNames,
     layoutDirection,
     expandMargin,
+    masterAnswerDisplayMode,
+    masterAnswerOpacity,
+    masterAnswerKeyBehavior,
     setItemsPerLine,
     setAutoScroll,
     setShowStudentNames,
     setLayoutDirection,
     setExpandMargin,
+    setMasterAnswerDisplayMode,
+    setMasterAnswerOpacity,
+    setMasterAnswerKeyBehavior,
   } = useScoringSettings()
+
+  /** 模範解答表示状態（toggle/hold-to-show制御） */
+  const [masterAnswerVisible, setMasterAnswerVisible] = useState(false)
 
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
 
@@ -343,6 +352,52 @@ function ScoringMainViewContent() {
     [setGradingMode]
   )
 
+  /** 模範解答表示トグル */
+  const handleToggleMasterAnswer = useCallback(() => {
+    if (masterAnswerDisplayMode === "off") return
+    if (masterAnswerKeyBehavior === "toggle") {
+      setMasterAnswerVisible((prev) => !prev)
+    } else {
+      // hold-to-show: keydownでon（keyupはネイティブイベントで処理）
+      setMasterAnswerVisible(true)
+    }
+  }, [masterAnswerDisplayMode, masterAnswerKeyBehavior])
+
+  /** 模範解答を直接表示/非表示（hold-to-show用） */
+  const handleMasterAnswerShow = useCallback(() => {
+    setMasterAnswerVisible(true)
+  }, [])
+  const handleMasterAnswerHide = useCallback(() => {
+    setMasterAnswerVisible(false)
+  }, [])
+
+  /** 全ページの模範解答画像URL（ページ番号順） */
+  const allMasterImageUrls = useMemo(() => {
+    if (!exam?.examPages) return []
+    return exam.examPages
+      .slice()
+      .sort((a, b) => a.pageNumber - b.pageNumber)
+      .map((page) => {
+        const masterImage = page.masterImages?.[0]
+        return masterImage?.imagePath
+          ? `appimg:///${masterImage.imagePath}`
+          : null
+      })
+      .filter((url): url is string => url !== null)
+  }, [exam])
+
+  /** hold-to-show用: keyupイベントで模範解答を非表示 */
+  useEffect(() => {
+    if (masterAnswerKeyBehavior !== "hold-to-show") return
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "x" || e.key === "X") {
+        setMasterAnswerVisible(false)
+      }
+    }
+    window.addEventListener("keyup", handleKeyUp)
+    return () => window.removeEventListener("keyup", handleKeyUp)
+  }, [masterAnswerKeyBehavior])
+
   /** コンテキスト値の設定 */
   useContextValue("gradingMode", gradingMode)
   useContextValue("hasSelectedAnswers", selectedStudentAnswerImageIds.size > 0)
@@ -372,6 +427,7 @@ function ScoringMainViewContent() {
     handleToggleFilter,
     handleSelectAll,
     handleToggleViewMode: handleToggleViewMode,
+    handleToggleMasterAnswer,
   })
 
   const currentStudentId = useMemo(() => {
@@ -451,6 +507,10 @@ function ScoringMainViewContent() {
             onAnnotationChanged={handleCanvasAnnotationChanged}
             annotationRefreshKey={annotationVersionForCanvas}
             gridAnnotationRefreshKey={annotationVersionForGrid}
+            masterAnswerDisplayMode={masterAnswerDisplayMode}
+            masterAnswerOpacity={masterAnswerOpacity}
+            masterAnswerVisible={masterAnswerVisible}
+            allMasterImageUrls={allMasterImageUrls}
           />
         </div>
 
@@ -504,6 +564,16 @@ function ScoringMainViewContent() {
               onQuestionScoreCreated={handleQuestionScoreCreated}
               annotationRefreshKey={annotationVersionForBrowser}
               onAnnotationAddedFromBrowser={handleBrowserAnnotationAdded}
+              masterAnswerDisplayMode={masterAnswerDisplayMode}
+              masterAnswerOpacity={masterAnswerOpacity}
+              masterAnswerKeyBehavior={masterAnswerKeyBehavior}
+              onMasterAnswerDisplayModeChange={setMasterAnswerDisplayMode}
+              onMasterAnswerOpacityChange={setMasterAnswerOpacity}
+              onMasterAnswerKeyBehaviorChange={setMasterAnswerKeyBehavior}
+              masterAnswerVisible={masterAnswerVisible}
+              onToggleMasterAnswer={handleToggleMasterAnswer}
+              onMasterAnswerShow={handleMasterAnswerShow}
+              onMasterAnswerHide={handleMasterAnswerHide}
             />
           </div>
         </div>

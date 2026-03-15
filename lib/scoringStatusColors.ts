@@ -4,13 +4,12 @@
  *
  * - 4つのプリセットパターン（標準、ビビッド、ソフト、色覚多様性対応）
  * - 各状態の個別カスタマイズ
- * - DBに保存（UserScoringPreference.scoringStatusColors, scoringColorPresetId）
- * - カラム別楽観的更新対応
+ * - DBに保存（UserPreference KV方式）
  */
 
-/** 採点状態の種類（DBの値と一致） */
+/** 採点状態の種類（ScoringStatusと統一） */
 export type ScoringStatusType =
-  | "ungraded"
+  | "unscored"
   | "correct"
   | "partial"
   | "pending"
@@ -40,7 +39,7 @@ export interface ScoringColorPreset {
 
 /** 状態のラベル（日本語） */
 export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
-  ungraded: "未採点",
+  unscored: "未採点",
   correct: "正答",
   partial: "部分点",
   pending: "保留",
@@ -50,7 +49,7 @@ export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
 
 /** 状態の表示順序 */
 export const SCORING_STATUS_ORDER: ScoringStatusType[] = [
-  "ungraded",
+  "unscored",
   "correct",
   "partial",
   "pending",
@@ -67,7 +66,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
     name: "標準",
     description: "デフォルトの配色",
     colors: {
-      ungraded: { bg: "#F9FAFB", text: "#4B5563", icon: "#9CA3AF" },
+      unscored: { bg: "#F9FAFB", text: "#4B5563", icon: "#9CA3AF" },
       correct: { bg: "#DCFCE7", text: "#166534", icon: "#16A34A" },
       partial: { bg: "#FEF9C3", text: "#854D0E", icon: "#CA8A04" },
       pending: { bg: "#DBEAFE", text: "#1E40AF", icon: "#2563EB" },
@@ -80,7 +79,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
     name: "ビビッド",
     description: "より鮮やかな配色",
     colors: {
-      ungraded: { bg: "#E5E7EB", text: "#374151", icon: "#6B7280" },
+      unscored: { bg: "#E5E7EB", text: "#374151", icon: "#6B7280" },
       correct: { bg: "#BBF7D0", text: "#14532D", icon: "#22C55E" },
       partial: { bg: "#FDE047", text: "#713F12", icon: "#EAB308" },
       pending: { bg: "#93C5FD", text: "#1E3A8A", icon: "#3B82F6" },
@@ -93,7 +92,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
     name: "ソフト",
     description: "淡い配色で目に優しい",
     colors: {
-      ungraded: { bg: "#FAFAFA", text: "#737373", icon: "#A3A3A3" },
+      unscored: { bg: "#FAFAFA", text: "#737373", icon: "#A3A3A3" },
       correct: { bg: "#ECFCCB", text: "#365314", icon: "#84CC16" },
       partial: { bg: "#FEF3C7", text: "#92400E", icon: "#D97706" },
       pending: { bg: "#E0F2FE", text: "#075985", icon: "#0EA5E9" },
@@ -106,7 +105,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
     name: "色覚多様性対応",
     description: "Wong配色パレット準拠",
     colors: {
-      ungraded: { bg: "#E8E8E8", text: "#4D4D4D", icon: "#999999" },
+      unscored: { bg: "#E8E8E8", text: "#4D4D4D", icon: "#999999" },
       correct: { bg: "#C8EDE0", text: "#005C45", icon: "#009E73" },
       partial: { bg: "#FCF6C8", text: "#6B5A00", icon: "#F0E442" },
       pending: { bg: "#D0EBFA", text: "#0066A0", icon: "#56B4E9" },
@@ -124,32 +123,81 @@ let cachedPresetId: string | null = "default"
 let currentUserId: string | null = null
 
 /**
- * DBから採点状態色を読み込み（初期化用・カラム別）
+ * DBのJSON内の旧キー"ungraded"を"unscored"にマイグレーション
+ */
+function migrateUngradedKey(
+  colors: Record<string, StatusColorConfig>
+): ScoringStatusColors {
+  const result = { ...colors } as Record<string, StatusColorConfig>
+  if ("ungraded" in result && !("unscored" in result)) {
+    result.unscored = result.ungraded
+    delete result.ungraded
+  }
+  return result as ScoringStatusColors
+}
+
+/**
+ * DBから採点状態色を読み込み（初期化用・KV方式）
  */
 export async function loadScoringStatusColors(userId: string): Promise<void> {
   if (typeof window === "undefined" || !window.electronAPI?.settings) return
 
   try {
     currentUserId = userId
-    // カラム別に並列で読み込み
     const [colorsResult, presetIdResult] = await Promise.all([
-      window.electronAPI.settings.getScoringPreferenceColumn(
+      window.electronAPI.settings.getUserPreference(
         userId,
         "scoringStatusColors"
       ),
-      window.electronAPI.settings.getScoringPreferenceColumn(
+      window.electronAPI.settings.getUserPreference(
         userId,
         "scoringColorPresetId"
       ),
     ])
 
-    if (colorsResult.success && colorsResult.value) {
-      cachedColors = JSON.parse(colorsResult.value) as ScoringStatusColors
+    if (
+      colorsResult.success &&
+      colorsResult.value &&
+      colorsResult.value !== "null"
+    ) {
+      let parsed: string | null = colorsResult.value
+      try {
+        parsed = JSON.parse(colorsResult.value)
+      } catch {
+        // value is already the raw JSON string for colors
+      }
+      if (parsed && typeof parsed === "object") {
+        cachedColors = migrateUngradedKey(
+          parsed as unknown as Record<string, StatusColorConfig>
+        )
+      } else if (typeof colorsResult.value === "string") {
+        try {
+          const obj = JSON.parse(colorsResult.value) as Record<
+            string,
+            StatusColorConfig
+          >
+          cachedColors = migrateUngradedKey(obj)
+        } catch {
+          // keep default
+        }
+      }
     }
-    cachedPresetId =
-      presetIdResult.success && presetIdResult.value
-        ? presetIdResult.value
-        : null
+
+    if (
+      presetIdResult.success &&
+      presetIdResult.value &&
+      presetIdResult.value !== "null"
+    ) {
+      let parsed = presetIdResult.value
+      try {
+        parsed = JSON.parse(presetIdResult.value)
+      } catch {
+        // keep raw value
+      }
+      cachedPresetId = parsed
+    } else {
+      cachedPresetId = null
+    }
   } catch (error) {
     console.error("Failed to load scoring status colors:", error)
   }
@@ -163,7 +211,7 @@ export function getScoringStatusColors(): ScoringStatusColors {
 }
 
 /**
- * 採点状態色を保存（カラム別・楽観的更新）
+ * 採点状態色を保存（KV方式・楽観的更新）
  */
 export async function saveScoringStatusColors(
   colors: ScoringStatusColors,
@@ -181,17 +229,16 @@ export async function saveScoringStatusColors(
   if (!targetUserId || !window.electronAPI?.settings) return
 
   try {
-    // カラム別に並列で保存
     await Promise.all([
-      window.electronAPI.settings.setScoringPreferenceColumn(
+      window.electronAPI.settings.setUserPreference(
         targetUserId,
         "scoringStatusColors",
         JSON.stringify(colors)
       ),
-      window.electronAPI.settings.setScoringPreferenceColumn(
+      window.electronAPI.settings.setUserPreference(
         targetUserId,
         "scoringColorPresetId",
-        null
+        "null"
       ),
     ])
   } catch (error) {
@@ -207,7 +254,7 @@ export function getCurrentPresetId(): string | null {
 }
 
 /**
- * プリセットを適用（カラム別・楽観的更新）
+ * プリセットを適用（KV方式・楽観的更新）
  */
 export async function applyScoringColorPreset(
   presetId: string,
@@ -231,17 +278,16 @@ export async function applyScoringColorPreset(
   if (!targetUserId || !window.electronAPI?.settings) return
 
   try {
-    // カラム別に並列で保存
     await Promise.all([
-      window.electronAPI.settings.setScoringPreferenceColumn(
+      window.electronAPI.settings.setUserPreference(
         targetUserId,
         "scoringStatusColors",
         JSON.stringify(preset.colors)
       ),
-      window.electronAPI.settings.setScoringPreferenceColumn(
+      window.electronAPI.settings.setUserPreference(
         targetUserId,
         "scoringColorPresetId",
-        presetId
+        JSON.stringify(presetId)
       ),
     ])
   } catch (error) {

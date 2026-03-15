@@ -20,15 +20,11 @@ import {
 } from "../lib/prisma/examSettings"
 import {
   bulkUpsertUserKeyboardShortcuts,
-  getScoringPreferenceColumn,
   getUserKeyboardShortcuts,
-  getUserScoringPreference,
+  getUserPreference,
+  getUserPreferences,
   resetUserKeyboardShortcuts,
-  type ScoringPreferenceColumnName,
-  type ScoringPreferenceColumns,
-  type ScoringPreferenceData,
-  setScoringPreferenceColumn,
-  upsertUserScoringPreference,
+  setUserPreference,
 } from "../lib/prisma/userSettings"
 
 // プロジェクターモード用のpowerSaveBlocker ID
@@ -148,77 +144,43 @@ export function registerSettingsHandlers() {
   )
 
   // =========================================================================
-  // UserScoringPreference
+  // UserPreference（KV方式）
   // =========================================================================
 
   ipcMain.handle(
-    "settings:getUserScoringPreference",
-    async (_event, userId: string) => {
+    "settings:getUserPreference",
+    async (_event, userId: string, key: string) => {
       try {
-        const preference = await getUserScoringPreference(userId)
-        return { success: true, preference }
-      } catch (error) {
-        console.error("Failed to get scoring preference:", error)
-        return { success: false, error: String(error) }
-      }
-    }
-  )
-
-  ipcMain.handle(
-    "settings:upsertUserScoringPreference",
-    async (_event, userId: string, data: ScoringPreferenceData) => {
-      try {
-        const preference = await upsertUserScoringPreference(userId, data)
-        return { success: true, preference }
-      } catch (error) {
-        console.error("Failed to upsert scoring preference:", error)
-        return { success: false, error: String(error) }
-      }
-    }
-  )
-
-  // カラム別取得
-  ipcMain.handle(
-    "settings:getScoringPreferenceColumn",
-    async (
-      _event,
-      userId: string,
-      column: ScoringPreferenceColumnName
-    ): Promise<{
-      success: boolean
-      value?: ScoringPreferenceColumns[typeof column]
-      error?: string
-    }> => {
-      try {
-        const value = await getScoringPreferenceColumn(userId, column)
+        const value = await getUserPreference(userId, key)
         return { success: true, value }
       } catch (error) {
-        console.error(
-          `Failed to get scoring preference column [${column}]:`,
-          error
-        )
+        console.error(`Failed to get user preference [${key}]:`, error)
         return { success: false, error: String(error) }
       }
     }
   )
 
-  // カラム別設定（楽観的更新用）
   ipcMain.handle(
-    "settings:setScoringPreferenceColumn",
-    async (
-      _event,
-      userId: string,
-      column: ScoringPreferenceColumnName,
-      value: ScoringPreferenceColumns[typeof column]
-    ): Promise<{ success: boolean; error?: string }> => {
+    "settings:setUserPreference",
+    async (_event, userId: string, key: string, value: string) => {
       try {
-        await setScoringPreferenceColumn(userId, column, value)
+        await setUserPreference(userId, key, value)
         return { success: true }
       } catch (error) {
-        console.error(
-          `Failed to set scoring preference column [${column}]:`,
-          error
-        )
+        console.error(`Failed to set user preference [${key}]:`, error)
+        return { success: false, error: String(error) }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    "settings:getUserPreferences",
+    async (_event, userId: string) => {
+      try {
+        const preferences = await getUserPreferences(userId)
+        return { success: true, preferences }
+      } catch (error) {
+        console.error("Failed to get user preferences:", error)
         return { success: false, error: String(error) }
       }
     }

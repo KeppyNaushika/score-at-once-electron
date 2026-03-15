@@ -1,43 +1,37 @@
 /**
  * @fileoverview レイアウト方向設定フック
- * @description 機能G: ユーザー採点設定の永続化（カラム別楽観的更新）
+ * @description KV方式ユーザー設定の永続化（楽観的更新）
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import { useAuth } from "@/contexts/AuthContext"
+import {
+  parsePreference,
+  serializePreference,
+  USER_PREFERENCE_SCHEMA,
+} from "@/lib/userPreferences"
 
-/** デフォルト値 */
-const DEFAULT_LAYOUT_DIRECTION: LayoutDirection = "right-down"
+const DEFAULT = USER_PREFERENCE_SCHEMA.layoutDirection
+  .default as LayoutDirection
 
-/**
- * レイアウト方向設定を管理するフック
- * @returns layoutDirection - 現在のレイアウト方向（"right-down" | "down-right"）
- * @returns setLayoutDirection - レイアウト方向を更新する関数
- * @returns isLoading - 読み込み中フラグ
- */
 export function useLayoutDirection() {
   const { user } = useAuth()
   const userId = user?.id
 
-  const [layoutDirection, setLayoutDirectionState] = useState<LayoutDirection>(
-    DEFAULT_LAYOUT_DIRECTION
-  )
+  const [layoutDirection, setLayoutDirectionState] =
+    useState<LayoutDirection>(DEFAULT)
   const [isLoading, setIsLoading] = useState(true)
   const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
-    // 同じユーザーで既に初期化済みならスキップ
     if (initializedUserIdRef.current === userId) return
-
-    // userIdがundefinedの場合は待機（refは更新しない）
     if (!userId) {
       setIsLoading(false)
       return
     }
 
-    // 新しいユーザーとして初期化
     initializedUserIdRef.current = userId
     setIsLoading(true)
 
@@ -48,13 +42,17 @@ export function useLayoutDirection() {
       }
 
       try {
-        const result =
-          await window.electronAPI.settings.getScoringPreferenceColumn(
-            userId,
-            "layoutDirection"
+        const result = await window.electronAPI.settings.getUserPreference(
+          userId,
+          "layoutDirection"
+        )
+        if (result.success) {
+          setLayoutDirectionState(
+            parsePreference(
+              "layoutDirection",
+              result.value ?? null
+            ) as LayoutDirection
           )
-        if (result.success && result.value !== undefined) {
-          setLayoutDirectionState(result.value as LayoutDirection)
         }
       } catch (error) {
         console.error("layoutDirectionの読み込みに失敗しました:", error)
@@ -65,16 +63,16 @@ export function useLayoutDirection() {
     load()
   }, [userId])
 
-  /**
-   * 楽観的更新: UI即時更新 + DB非同期保存
-   * @param value - 新しいレイアウト方向
-   */
   const setLayoutDirection = useCallback(
     (value: LayoutDirection) => {
       setLayoutDirectionState(value)
       if (userId && window.electronAPI?.settings) {
         window.electronAPI.settings
-          .setScoringPreferenceColumn(userId, "layoutDirection", value)
+          .setUserPreference(
+            userId,
+            "layoutDirection",
+            serializePreference("layoutDirection", value)
+          )
           .catch((error) =>
             console.error("layoutDirectionの保存に失敗しました:", error)
           )
@@ -83,9 +81,5 @@ export function useLayoutDirection() {
     [userId]
   )
 
-  return {
-    layoutDirection,
-    setLayoutDirection,
-    isLoading,
-  }
+  return { layoutDirection, setLayoutDirection, isLoading }
 }

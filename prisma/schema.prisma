@@ -22,7 +22,7 @@ model User {
   userExams           UserExam[]
   invitedUserExams    UserExam[]             @relation("InvitedByUser")
   keyboardShortcuts   UserKeyboardShortcut[]
-  scoringPreference   UserScoringPreference?
+  preferences         UserPreference[]
   answerSheetDefinitions AsbDefinition[]
 }
 
@@ -343,21 +343,19 @@ model UserKeyboardShortcut {
   @@index([userId])
 }
 
-model UserScoringPreference {
-  id                   String   @id @default(uuid())
-  userId               String   @unique
-  showStudentNames     Boolean  @default(true)
-  autoScroll           Boolean  @default(true)
-  itemsPerLine         Int      @default(5)
-  layoutDirection      String   @default("right-down")
-  expandMargin         Int      @default(0)
-  selectionBorderColor String?
-  scoringStatusColors  String?
-  scoringColorPresetId String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+model UserPreference {
+  id     String @id @default(uuid())
+  userId String
+  key    String
+  value  String // JSON文字列で保存
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
 }
 
 model ExamMarkingFormat {

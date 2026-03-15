@@ -98,6 +98,23 @@ export interface AnswerIndividualViewProps {
   onAnnotationChanged?: () => void
   // 外部からのアノテーション追加後のリフレッシュキー（ブラウザパネル→キャンバス連携用）
   annotationRefreshKey?: number
+
+  // 模範解答表示（ズーム・スクロール同期のため内部で描画）
+  /** 全ページの模範解答画像URL（ページ番号順） */
+  masterOverlayImageUrls?: string[]
+  masterOverlayOpacity?: number
+  masterOverlayVisible?: boolean
+  /** 模範解答表示モード（overlay のみ内部描画） */
+  masterDisplayMode?: "overlay"
+  /** zoom変更通知（split表示のMasterパネルと同期するため） */
+  onZoomChanged?: (zoom: number) => void
+  /** スクロールコンテナのRef公開（split表示のscroll同期用） */
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>
+  /** 読み込み済み画像サイズ通知（split表示のMasterパネルで参照サイズとして使用） */
+  onImageSizeChanged?: (size: {
+    width: number
+    heights: number[]
+  }) => void
 }
 
 // 選択範囲矩形の型定義

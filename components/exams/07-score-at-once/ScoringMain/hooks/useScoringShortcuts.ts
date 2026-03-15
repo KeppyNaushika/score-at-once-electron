@@ -48,6 +48,8 @@ interface ScoringShortcutHandlers {
   handleSelectAll: () => void
   /** 表示モード切り替え（グリッド⇔個別） */
   handleToggleViewMode: () => void
+  /** 模範解答表示トグル（個別モード） */
+  handleToggleMasterAnswer?: () => void
 }
 
 /**
@@ -75,6 +77,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     handleToggleFilter,
     handleSelectAll,
     handleToggleViewMode,
+    handleToggleMasterAnswer,
   } = handlers
 
   // ========================================
@@ -207,6 +210,15 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
       title: "表示モード切り替え",
       category: "表示",
       description: "一覧表示と個別表示を切り替えます",
+    },
+  })
+
+  useCommand("view.toggleMasterAnswer", () => handleToggleMasterAnswer?.(), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+    metadata: {
+      title: "模範解答表示切り替え",
+      category: "表示",
+      description: "模範解答の表示を切り替えます",
     },
   })
 

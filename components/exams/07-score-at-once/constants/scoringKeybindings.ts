@@ -74,6 +74,7 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "view.toggleViewMode": "v",
   "view.fullView": "m", // 全体表示（個別モード）
   "view.questionView": "c", // 設問表示（個別モード）
+  "view.toggleMasterAnswer": "x", // 模範解答表示切り替え（個別モード）
 
   // ============================================
   // モーダル (Modal)
