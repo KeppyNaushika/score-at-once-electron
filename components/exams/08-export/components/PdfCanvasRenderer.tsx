@@ -121,6 +121,8 @@ interface PdfCanvasRendererProps {
   ) => void | Promise<void>
   /** エラー発生時のコールバック */
   onError?: (error: Error) => void
+  /** 用紙サイズ（mm→px変換基準） */
+  pageSize?: string
 }
 
 /**
@@ -138,6 +140,7 @@ export function PdfCanvasRenderer({
   onPageComplete,
   onComplete,
   onError,
+  pageSize = "A4",
 }: PdfCanvasRendererProps) {
   const [isRendering, setIsRendering] = useState(false)
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
@@ -335,7 +338,8 @@ export function PdfCanvasRenderer({
         markImages,
         subtotalDataForPdf,
         totalScoreDataForPdf,
-        page.pageNumber
+        page.pageNumber,
+        pageSize
       )
 
       const arrayBuffer = await blob.arrayBuffer()

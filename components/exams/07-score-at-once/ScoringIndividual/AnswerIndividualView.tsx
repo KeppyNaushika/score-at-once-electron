@@ -57,6 +57,7 @@ export default function AnswerIndividualView({
   onZoomChanged,
   scrollContainerRef,
   onImageSizeChanged,
+  pageSize = "A4",
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const {
@@ -223,6 +224,7 @@ export default function AnswerIndividualView({
     allCropRegionsWithStatus,
     // 印字設定（採点マーク・点数表示のプレビュー用）
     scoringMarkConfig,
+    pageSize,
   })
 
   // 画像サイズ通知（split表示のMasterパネルで参照サイズとして使用）

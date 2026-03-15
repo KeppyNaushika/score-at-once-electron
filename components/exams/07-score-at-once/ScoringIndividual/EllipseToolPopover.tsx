@@ -127,13 +127,15 @@ export function EllipseToolPopover({
 
           {/* 線幅 */}
           <div onPointerDown={(e) => e.stopPropagation()}>
-            <Label className="text-xs">線幅: {strokeWidth}px</Label>
+            <Label className="text-xs">線幅: {strokeWidth}mm</Label>
             <Slider
-              min={1}
-              max={10}
-              step={1}
+              min={0.1}
+              max={5.0}
+              step={0.1}
               value={[strokeWidth]}
-              onValueChange={(value) => onStrokeWidthChange(value[0])}
+              onValueChange={(value) =>
+                onStrokeWidthChange(Math.round(value[0] * 10) / 10)
+              }
               className="mt-2"
             />
           </div>

@@ -194,7 +194,8 @@ export function useScoredAnswerPreview({
             scoringMarkImagesRef.current!,
             subtotalDataForPdf,
             totalScoreDataForPdf,
-            page.pageNumber
+            page.pageNumber,
+            (page as { pageSize?: string }).pageSize ?? "A4"
           )
 
           if (cancelled) return

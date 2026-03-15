@@ -111,10 +111,9 @@ export interface AnswerIndividualViewProps {
   /** スクロールコンテナのRef公開（split表示のscroll同期用） */
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>
   /** 読み込み済み画像サイズ通知（split表示のMasterパネルで参照サイズとして使用） */
-  onImageSizeChanged?: (size: {
-    width: number
-    heights: number[]
-  }) => void
+  onImageSizeChanged?: (size: { width: number; heights: number[] }) => void
+  /** 模範解答の用紙サイズ（mm→px変換基準、デフォルト: "A4"） */
+  pageSize?: string
 }
 
 // 選択範囲矩形の型定義

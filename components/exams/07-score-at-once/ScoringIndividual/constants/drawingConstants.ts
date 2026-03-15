@@ -10,12 +10,12 @@ export const COLOR_PALETTE = [
   "#8000ff", // 紫
 ] as const
 
-// デフォルトの描画設定
+// デフォルトの描画設定（mm単位）
 export const DEFAULT_DRAWING_SETTINGS = {
   strokeColor: "#ef4444",
-  strokeWidth: 3,
+  strokeWidth: 0.5,
   lineStyle: "solid" as const,
-  fontSize: 16,
+  fontSize: 4.0,
 } as const
 
 // 描画時の許容誤差（正規化座標 0-1）
