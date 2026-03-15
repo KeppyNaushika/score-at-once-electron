@@ -260,14 +260,14 @@ model DrawingAnnotation {
   x               Float
   y               Float
   color           String        @default("#ef4444")
-  strokeWidth     Int           @default(3)
+  strokeWidth     Float         @default(0.5)
   width           Float         @default(0.0)
   height          Float         @default(0.0)
   endX            Float         @default(0.0)
   endY            Float         @default(0.0)
   lineStyle       String        @default("solid")
   text            String        @default("")
-  fontSize        Int           @default(16)
+  fontSize        Float         @default(4.0)
   textBoxWidth    Float         @default(0.0)
   textBoxHeight   Float         @default(0.0)
   horizontalAlign String        @default("left")

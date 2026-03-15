@@ -56,6 +56,8 @@ export interface UseImageCanvasProps {
   allCropRegionsWithStatus?: CropRegionWithStatus[]
   // 印字設定（採点マーク・点数表示のプレビュー用）
   scoringMarkConfig?: ScoringMarkConfig | null
+  // 模範解答の用紙サイズ（mm→px変換基準）
+  pageSize?: string
 }
 
 /**

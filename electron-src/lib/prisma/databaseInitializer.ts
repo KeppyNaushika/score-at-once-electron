@@ -198,6 +198,7 @@ CREATE TABLE "MasterImage" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "examPageId" TEXT NOT NULL,
     "imagePath" TEXT NOT NULL,
+    "pageSize" TEXT NOT NULL DEFAULT 'A4',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "MasterImage_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -312,14 +313,14 @@ CREATE TABLE "DrawingAnnotation" (
     "x" REAL NOT NULL,
     "y" REAL NOT NULL,
     "color" TEXT NOT NULL DEFAULT '#ef4444',
-    "strokeWidth" INTEGER NOT NULL DEFAULT 3,
+    "strokeWidth" REAL NOT NULL DEFAULT 0.5,
     "width" REAL NOT NULL DEFAULT 0.0,
     "height" REAL NOT NULL DEFAULT 0.0,
     "endX" REAL NOT NULL DEFAULT 0.0,
     "endY" REAL NOT NULL DEFAULT 0.0,
     "lineStyle" TEXT NOT NULL DEFAULT 'solid',
     "text" TEXT NOT NULL DEFAULT '',
-    "fontSize" INTEGER NOT NULL DEFAULT 16,
+    "fontSize" REAL NOT NULL DEFAULT 4.0,
     "textBoxWidth" REAL NOT NULL DEFAULT 0.0,
     "textBoxHeight" REAL NOT NULL DEFAULT 0.0,
     "horizontalAlign" TEXT NOT NULL DEFAULT 'left',
@@ -1335,6 +1336,42 @@ export const migrateExistingDatabase = async (): Promise<void> => {
       }
     } catch (error) {
       console.warn("Migration CropRegionOmrChoiceOption table failed:", error)
+    }
+
+    // --- Migration: MasterImage.pageSize (20260316000000) ---
+    try {
+      const miColumns = await getTableColumns(prisma, "MasterImage")
+      if (miColumns.length > 0 && !miColumns.includes("pageSize")) {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "MasterImage" ADD COLUMN "pageSize" TEXT NOT NULL DEFAULT 'A4'`
+        )
+        console.info("Migration: Added pageSize column to MasterImage")
+      }
+    } catch (error) {
+      console.warn("Migration MasterImage.pageSize failed:", error)
+    }
+
+    // --- Migration: DrawingAnnotation strokeWidth/fontSize px→mm変換 (20260316000001) ---
+    // A4 portrait + PDF scale=2.0 基準: 1px ≈ 210mm / 1190px ≈ 0.1765mm
+    // strokeWidth >= 1 のレコードは旧px値と判定し変換
+    try {
+      const result = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+        `SELECT COUNT(*) as cnt FROM "DrawingAnnotation" WHERE "strokeWidth" >= 1`
+      )
+      const count = result[0]?.cnt ?? 0
+      if (count > 0) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "DrawingAnnotation" SET "strokeWidth" = ROUND("strokeWidth" * 210.0 / 1190.0, 2), "fontSize" = ROUND("fontSize" * 210.0 / 1190.0, 2) WHERE "strokeWidth" >= 1`
+        )
+        console.info(
+          `Migration: Converted ${count} DrawingAnnotation strokeWidth/fontSize from px to mm`
+        )
+      }
+    } catch (error) {
+      console.warn(
+        "Migration DrawingAnnotation strokeWidth/fontSize conversion failed:",
+        error
+      )
     }
   } catch (error) {
     console.error("Database migration failed:", error)

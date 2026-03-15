@@ -173,6 +173,7 @@ interface UseCanvasDrawingProps {
   hoveredElementId?: string | null
   allCropRegionsWithStatus?: CropRegionWithStatus[]
   scoringMarkConfig?: ScoringMarkConfig | null
+  pageSize?: string
 }
 
 /**
@@ -202,6 +203,7 @@ export function useCanvasDrawing({
   hoveredElementId,
   allCropRegionsWithStatus = [],
   scoringMarkConfig,
+  pageSize = "A4",
 }: UseCanvasDrawingProps): void {
   const { convertAnnotationToDrawingElement, drawSingleElement } =
     useDrawingRenderer()
@@ -511,7 +513,8 @@ export function useCanvasDrawing({
               annotOffsetY,
               false,
               false,
-              false
+              false,
+              pageSize
             )
             ctx.globalAlpha = 1.0
           }
@@ -532,7 +535,9 @@ export function useCanvasDrawing({
             currentOffsetX,
             currentOffsetY,
             isSelected,
-            false
+            false,
+            true,
+            pageSize
           )
           ctx.globalAlpha = 1.0
         }
@@ -582,6 +587,7 @@ export function useCanvasDrawing({
       drawSingleElement,
       allCropRegionsWithStatus,
       scoringMarkConfig,
+      pageSize,
     ]
   )
 

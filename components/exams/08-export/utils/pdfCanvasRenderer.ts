@@ -8,6 +8,7 @@
 import type { AnchorDirection } from "@/app/textbox-on-canvas-v4/types"
 import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
 import { convertTextToSvg } from "@/app/textbox-on-canvas-v4/utils/textConversionUtils"
+import { mmToPixels } from "@/lib/paperSize"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /**
@@ -158,23 +159,37 @@ async function drawElement(
   imageHeight: number,
   offsetX: number = 0,
   offsetY: number = 0,
-  pageOffset: number = 0
+  pageOffset: number = 0,
+  pageSize: string = "A4"
 ): Promise<void> {
   // 座標計算（テキストも含めてelement.x/yを使用 - 一括採点個別表示と同じ）
   // pageOffsetを引くことで、複数ページキャンバスからの座標をページ内座標に変換
   const currentX = element.x * imageWidth + offsetX
   const currentY = (element.y - pageOffset) * imageHeight + offsetY
 
+  // mm → canvas pixels 変換
+  const strokeWidthPx = mmToPixels(
+    element.strokeWidth,
+    pageSize,
+    imageWidth,
+    imageHeight
+  )
+  const fontSizePx = mmToPixels(
+    element.fontSize ?? 4.0,
+    pageSize,
+    imageWidth,
+    imageHeight
+  )
+
   ctx.strokeStyle = element.color
   ctx.fillStyle = element.color
-  ctx.lineWidth = element.strokeWidth
+  ctx.lineWidth = strokeWidthPx
 
   switch (element.type) {
     case "text":
       if (element.text) {
         const anchorDir = (element.anchorDirection ||
           "top-left") as AnchorDirection
-        const fontSize = element.fontSize ?? 16
         const textColor = element.color || "#000000"
 
         try {
@@ -184,7 +199,7 @@ async function drawElement(
             imageHeight,
             "left",
             "top",
-            fontSize,
+            fontSizePx,
             textColor
           )
 
@@ -240,11 +255,11 @@ async function drawElement(
         } catch (error) {
           console.error("MathJaxテキスト描画エラー:", error)
           // フォールバック: シンプルテキスト描画
-          ctx.font = `${fontSize}px sans-serif`
+          ctx.font = `${fontSizePx}px sans-serif`
           ctx.fillStyle = textColor
           ctx.textBaseline = "top"
           const lines = element.text.split("\n")
-          const lineHeight = fontSize * 1.4
+          const lineHeight = fontSizePx * 1.4
           lines.forEach((line, index) => {
             ctx.fillText(line, currentX, currentY + index * lineHeight)
           })
@@ -260,7 +275,7 @@ async function drawElement(
         ctx.save()
         ctx.strokeStyle = element.color
         ctx.fillStyle = element.color
-        ctx.lineWidth = element.strokeWidth
+        ctx.lineWidth = strokeWidthPx
         ctx.setLineDash([])
         ctx.lineCap = "round"
         ctx.lineJoin = "round"
@@ -272,12 +287,12 @@ async function drawElement(
         const angle = Math.atan2(dy, dx)
 
         // 矢印のサイズ
-        const arrowSize = Math.max(element.strokeWidth * 5, 12)
+        const arrowSize = Math.max(strokeWidthPx * 5, 12)
 
         switch (element.lineStyle) {
           case "wave": {
-            const waveAmplitude = element.strokeWidth * 2
-            const waveLength = element.strokeWidth * 4
+            const waveAmplitude = strokeWidthPx * 2
+            const waveLength = strokeWidthPx * 4
             const segments = Math.max(Math.floor(lineLength / waveLength), 1)
 
             ctx.beginPath()
@@ -301,8 +316,8 @@ async function drawElement(
           }
 
           case "zigzag": {
-            const zigHeight = element.strokeWidth * 2
-            const zigLength = element.strokeWidth * 3
+            const zigHeight = strokeWidthPx * 2
+            const zigLength = strokeWidthPx * 3
             const segments = Math.max(Math.floor(lineLength / zigLength), 1)
 
             ctx.beginPath()
@@ -322,7 +337,7 @@ async function drawElement(
           }
 
           case "double": {
-            const offset = element.strokeWidth
+            const offset = strokeWidthPx
             const perpX = -Math.sin(angle) * offset
             const perpY = Math.cos(angle) * offset
 
@@ -730,7 +745,8 @@ export async function renderAnswerSheetToCanvas(
   scoringMarkImages: Map<string, HTMLImageElement>,
   subtotalDataList: SubtotalDataForPdf[] = [],
   totalScoreDataList: TotalScoreDataForPdf[] = [],
-  pageNumber: number = 1
+  pageNumber: number = 1,
+  pageSize: string = "A4"
 ): Promise<Blob> {
   const ctx = canvas.getContext("2d")
   if (!ctx) {
@@ -847,7 +863,16 @@ export async function renderAnswerSheetToCanvas(
     const needsPageOffset =
       element.y >= 1.0 || (element.endY !== undefined && element.endY >= 1.0)
     const pageOffset = needsPageOffset ? basePageOffset : 0
-    await drawElement(ctx, element, imageWidth, imageHeight, 0, 0, pageOffset)
+    await drawElement(
+      ctx,
+      element,
+      imageWidth,
+      imageHeight,
+      0,
+      0,
+      pageOffset,
+      pageSize
+    )
   }
 
   // Canvas結果をBlobとして取得

@@ -8,6 +8,7 @@ import { useCallback } from "react"
 
 import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
 import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import { mmToPixels } from "@/lib/paperSize"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
 import { renderTextElementV4 } from "../../utils/canvasTextRendererV4"
@@ -24,7 +25,8 @@ interface UseDrawingRendererReturn {
     offsetY: number,
     isSelected: boolean,
     isDragging: boolean,
-    showAnchor?: boolean
+    showAnchor?: boolean,
+    pageSize?: string
   ) => Promise<void>
 }
 
@@ -69,7 +71,8 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
       offsetY: number,
       isSelected: boolean,
       isDragging: boolean,
-      showAnchor: boolean = true
+      showAnchor: boolean = true,
+      pageSize: string = "A4"
     ) => {
       // テキストボックスの場合、表示用座標があればそれを使用
       const displayX =
@@ -84,13 +87,35 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
       const currentX = displayX * baseImg.naturalWidth + offsetX
       const currentY = displayY * baseImg.naturalHeight + offsetY
 
+      // mm → canvas pixels 変換
+      const strokeWidthPx = mmToPixels(
+        element.strokeWidth,
+        pageSize,
+        baseImg.naturalWidth,
+        baseImg.naturalHeight
+      )
+
+      const fontSizePx = mmToPixels(
+        element.fontSize || 4.0,
+        pageSize,
+        baseImg.naturalWidth,
+        baseImg.naturalHeight
+      )
+
+      // ピクセル変換済みの要素コピー（内部描画関数用）
+      const pxElement = {
+        ...element,
+        strokeWidth: strokeWidthPx,
+        fontSize: fontSizePx,
+      }
+
       ctx.strokeStyle = element.color
       ctx.fillStyle = element.color
-      ctx.lineWidth = element.strokeWidth
+      ctx.lineWidth = strokeWidthPx
 
       // テキスト要素のドラッグ中は軽量描画（長方形のみ）
       if (isDragging && isSelected && element.type === "text") {
-        drawLightweightTextPlaceholder(ctx, element, currentX, currentY)
+        drawLightweightTextPlaceholder(ctx, pxElement, currentX, currentY)
         return
       }
 
@@ -99,7 +124,7 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
         case "text":
           await drawTextElement(
             ctx,
-            element,
+            pxElement,
             baseImg,
             isSelected,
             showAnchor,
@@ -110,7 +135,7 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
         case "line":
           drawLineElement(
             ctx,
-            element,
+            pxElement,
             baseImg,
             offsetX,
             offsetY,
@@ -119,10 +144,10 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
           )
           break
         case "rectangle":
-          drawRectangleElement(ctx, element, baseImg, currentX, currentY)
+          drawRectangleElement(ctx, pxElement, baseImg, currentX, currentY)
           break
         case "ellipse":
-          drawEllipseElement(ctx, element, baseImg, currentX, currentY)
+          drawEllipseElement(ctx, pxElement, baseImg, currentX, currentY)
           break
       }
     },
