@@ -14,12 +14,14 @@ import {
 interface MarkerCorrectionToggleProps {
   enabled: boolean
   available: boolean
+  diagnostics?: string
   onChange: (enabled: boolean) => void
 }
 
 export function MarkerCorrectionToggle({
   enabled,
   available,
+  diagnostics,
   onChange,
 }: MarkerCorrectionToggleProps) {
   const toggle = (
@@ -53,8 +55,13 @@ export function MarkerCorrectionToggle({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>{toggle}</TooltipTrigger>
-          <TooltipContent>
-            <p>模範解答にマーカーが検出できません</p>
+          <TooltipContent className="max-w-sm">
+            <p className="font-medium">模範解答にマーカーが検出できません</p>
+            {diagnostics && (
+              <pre className="mt-1 text-xs whitespace-pre-wrap text-gray-300">
+                {diagnostics}
+              </pre>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

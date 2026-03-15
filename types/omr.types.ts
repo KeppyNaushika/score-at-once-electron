@@ -54,12 +54,30 @@ export interface DetectedCornerMarker {
   confidence: number
 }
 
+/** コーナーごとの検出診断情報 */
+export interface CornerDiagnostics {
+  corner: "TL" | "TR" | "BL" | "BR"
+  detected: boolean
+  /** 探索領域内の黒ピクセル数 */
+  darkPixels: number
+  /** 探索領域の総ピクセル数 */
+  totalPixels: number
+  /** 最大連結成分の面積（px） */
+  largestComponentSize: number
+  /** 最大連結成分のアスペクト比（0-1、1が正方形） */
+  largestComponentAspect: number
+  /** 検出失敗理由 */
+  failReason?: string
+}
+
 export interface MarkerDetectionResult {
   success: boolean
   markers: DetectedCornerMarker[]
   imageWidth: number
   imageHeight: number
   error?: string
+  /** 各コーナーの診断情報（デバッグ用） */
+  diagnostics?: CornerDiagnostics[]
 }
 
 // =====================

@@ -85,6 +85,11 @@ export function useOmrAutoScoring(examId: string) {
     }
   }, [examId])
 
+  /** マウント時にOMR設定を読み込み */
+  useEffect(() => {
+    loadOmrConfigs()
+  }, [loadOmrConfigs])
+
   /** バッチ進捗リスナー */
   useEffect(() => {
     const unsubscribe = window.electronAPI.omr.onBatchProgress((progress) => {

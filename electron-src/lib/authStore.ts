@@ -76,7 +76,6 @@ export class AuthStoreManager {
       if (existsSync(filePath)) {
         unlinkSync(filePath)
       }
-      console.log("🗑️ All auth data cleared from file")
     } catch (error) {
       console.error("Failed to clear auth data:", error)
     }
