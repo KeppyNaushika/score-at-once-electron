@@ -287,12 +287,12 @@ async function drawElement(
         const angle = Math.atan2(dy, dx)
 
         // 矢印のサイズ
-        const arrowSize = Math.max(strokeWidthPx * 5, 12)
+        const arrowSize = strokeWidthPx * 5
 
         switch (element.lineStyle) {
           case "wave": {
-            const waveAmplitude = strokeWidthPx * 2
-            const waveLength = strokeWidthPx * 4
+            const waveAmplitude = strokeWidthPx * 1.5
+            const waveLength = strokeWidthPx * 20
             const segments = Math.max(Math.floor(lineLength / waveLength), 1)
 
             ctx.beginPath()
@@ -316,8 +316,8 @@ async function drawElement(
           }
 
           case "zigzag": {
-            const zigHeight = strokeWidthPx * 2
-            const zigLength = strokeWidthPx * 3
+            const zigHeight = strokeWidthPx * 1.5
+            const zigLength = strokeWidthPx * 8
             const segments = Math.max(Math.floor(lineLength / zigLength), 1)
 
             ctx.beginPath()
