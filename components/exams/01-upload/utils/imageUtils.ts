@@ -143,6 +143,7 @@ type MinimalPageImage = {
 type MinimalMasterImage = {
   id: string
   imagePath: string
+  pageSize?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -178,6 +179,8 @@ export const convertExamPagesToMasterAnswers = <T extends MinimalExamPage>(
       examId: page.examId,
       imagePath: masterImage.imagePath,
       pageNumber: page.pageNumber,
+      pageSize:
+        "pageSize" in masterImage ? (masterImage.pageSize ?? "A4") : "A4",
       createdAt: masterImage.createdAt,
       updatedAt: masterImage.updatedAt,
     }))

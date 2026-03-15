@@ -429,6 +429,17 @@ export const getMasterAnswerByPage = async (
   return null
 }
 
+export const updateMasterImagePageSize = async (
+  id: string,
+  pageSize: string
+) => {
+  return prisma.masterImage.update({
+    where: { id },
+    data: { pageSize },
+    include: { examPage: true },
+  })
+}
+
 // For compatibility with existing code
 export type MasterAnswerPayload = MasterImage & {
   pageNumber: number

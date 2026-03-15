@@ -649,6 +649,8 @@ export interface ArchiveExamData {
     id: string
     examPageId: string
     imagePath: string
+    /** v1.8.0+ 用紙サイズ */
+    pageSize?: string
     createdAt: string
     updatedAt: string
   }>

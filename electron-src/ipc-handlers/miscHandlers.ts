@@ -19,6 +19,7 @@ import {
   deleteMasterAnswer,
   getMasterAnswersByExamId,
   updateMasterAnswersOrder,
+  updateMasterImagePageSize,
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
@@ -474,6 +475,18 @@ export function setupMiscHandlers(): void {
         return await updateMasterAnswersOrder(answerOrders)
       } catch (err) {
         console.error("Error in IPC update-master-answers-order:", err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle(
+    "update-master-image-page-size",
+    async (_event, id: string, pageSize: string) => {
+      try {
+        return await updateMasterImagePageSize(id, pageSize)
+      } catch (err) {
+        console.error("Error in IPC update-master-image-page-size:", err)
         throw err
       }
     }

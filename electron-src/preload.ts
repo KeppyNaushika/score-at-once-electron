@@ -228,6 +228,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateMasterAnswersOrder: (
     answerOrders: { id: string; pageNumber: number }[]
   ) => ipcRenderer.invoke("update-master-answers-order", answerOrders),
+  updateMasterImagePageSize: (id: string, pageSize: string) =>
+    ipcRenderer.invoke("update-master-image-page-size", id, pageSize),
 
   // New API to resolve file path for display
   resolveFileProtocolPath: (relativePath: string) =>

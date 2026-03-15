@@ -38,6 +38,7 @@ export function MasterAnswerManager({
     uploadAnswers,
     deleteAnswer,
     moveAnswer,
+    updatePageSize,
     handlePasswordSubmit,
     handlePasswordCancel,
   } = useMasterAnswers(examId, initialMasterAnswers, onMasterAnswersChange)
@@ -61,6 +62,7 @@ export function MasterAnswerManager({
         isMoving={isMoving}
         onDeleteAnswer={deleteAnswer}
         onMoveAnswer={moveAnswer}
+        onPageSizeChange={updatePageSize}
       />
 
       {/* パスワード入力ダイアログ */}

@@ -31,6 +31,7 @@ import type {
  * - 1.5.0: v0.6.x (Project→Exam, GradeProject→Grade リネーム、DBスキーマ変更)
  * - 1.6.0: v0.7.x (DrawingAnnotation.isFavorite 追加)
  * - 1.7.0: v0.8.x (CropRegionOmrConfig, CropRegionOmrChoiceOption 追加)
+ * - 1.8.0: v0.9.x (MasterImage.pageSize 追加)
  */
 export type ArchiveVersion =
   | "1.0.0"
@@ -41,9 +42,10 @@ export type ArchiveVersion =
   | "1.5.0"
   | "1.6.0"
   | "1.7.0"
+  | "1.8.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.7.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.8.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -55,6 +57,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.5.0",
   "1.6.0",
   "1.7.0",
+  "1.8.0",
 ] as const
 
 // =============================================================================

@@ -80,6 +80,7 @@ export async function createImageRecords(
           id: remapIdRequired(img.id, mappings.masterImage),
           examPageId: newExamPageId,
           imagePath: newImagePath,
+          pageSize: img.pageSize ?? "A4",
         },
       })
     }

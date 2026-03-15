@@ -477,6 +477,10 @@ export interface MyAPI {
   updateMasterAnswersOrder: (
     answerOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
+  updateMasterImagePageSize: (
+    id: string,
+    pageSize: string
+  ) => Promise<MasterImage & { examPage: ExamPage }>
   getMasterAnswersByExamId: (examId: string) => Promise<ExamPageWithDetails[]>
   getExamPagesByExamId: (examId: string) => Promise<ExamPageWithDetails[]>
 
