@@ -223,57 +223,45 @@ export function useStudentAnswerUpload(
       setIsUploading(true)
 
       try {
-        let successCount = 0
-        let overwriteCount = 0
         const correctionMap = new Map<string, "corrected" | "skipped">()
 
-        for (let i = 0; i < uploadData.length; i++) {
-          const data = uploadData[i]
-          const result = await window.electronAPI.uploadStudentAnswers(examId, [
-            data,
-          ])
+        // 全件を一括送信（バックエンドで画像補正を並列処理）
+        const result = await window.electronAPI.uploadStudentAnswers(
+          examId,
+          uploadData
+        )
 
-          if (result.success) {
-            successCount++
-            // correctionStatus収集
-            const sheet = result.studentAnswers?.[0] as
-              | (Record<string, unknown> & { correctionStatus?: string })
-              | undefined
+        if (result.success && result.answerSheets) {
+          const successCount = result.answerSheets.length
+
+          // correctionStatus収集
+          for (let i = 0; i < result.answerSheets.length; i++) {
+            const sheet = result.answerSheets[i] as Record<string, unknown> & {
+              correctionStatus?: string
+            }
             if (
               sheet?.correctionStatus &&
-              sheet.correctionStatus !== "not_requested"
+              sheet.correctionStatus !== "not_requested" &&
+              i < uploadData.length
             ) {
+              const data = uploadData[i]
               const key = `${data.studentId}-${data.pageNumber}`
               correctionMap.set(
                 key,
                 sheet.correctionStatus as "corrected" | "skipped"
               )
             }
-          } else {
-            console.error(`Upload failed for ${data.name}:`, result.error)
           }
-        }
 
-        if (successCount > 0) {
-          if (overwriteCount > 0) {
-            toast.success(`${successCount}件の答案をアップロードしました`, {
-              description: `${overwriteCount}件は既存データを上書き更新しました`,
-              style: { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
-            })
-          } else {
-            toast.success(`${successCount}件の答案をアップロードしました`)
-          }
-          setFiles([]) // アップロード成功後にファイルリストをクリア
+          toast.success(`${successCount}件の答案をアップロードしました`)
+          setFiles([])
           if (correctionMap.size > 0) {
             onCorrectionStatusUpdate?.(correctionMap)
           }
           onUploadComplete?.()
-        }
-
-        if (successCount < uploadData.length) {
-          toast.warning(
-            `${uploadData.length - successCount}件のアップロードに失敗しました`
-          )
+        } else {
+          console.error("Upload failed:", result.error)
+          toast.error(result.error || "アップロードに失敗しました")
         }
       } catch (error) {
         console.error("Upload error:", error)

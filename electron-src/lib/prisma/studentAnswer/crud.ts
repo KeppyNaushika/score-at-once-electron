@@ -104,13 +104,69 @@ export async function uploadStudentAnswers(
     // 補正用のマスターマーカーキャッシュ（ページ番号→マーカー情報）
     const masterMarkerCache = new Map<number, MasterMarkerInfo | null>()
 
-    for (const fileData of filesData) {
-      // studentIdが必須
+    // ================================================================
+    // Phase 1: 画像補正を並列実行（CPU集中処理）
+    // ================================================================
+    // マスターマーカーキャッシュの初期化（全ページ分を事前取得）
+    const pageNumbers = [...new Set(filesData.map((f) => f.pageNumber || 1))]
+    await Promise.all(
+      pageNumbers.map((pn) =>
+        getMasterMarkersForPage(examId, pn, masterMarkerCache)
+      )
+    )
+
+    // 各ファイルの補正を並列実行
+    const correctedFiles = await Promise.all(
+      filesData.map(async (fileData) => {
+        let buffer = Buffer.from(fileData.buffer)
+        let correctionStatus: "corrected" | "skipped" | "not_requested" =
+          "not_requested"
+        let correctionError: string | undefined
+
+        if (fileData.correctWithMarkers) {
+          const masterInfo = masterMarkerCache.get(fileData.pageNumber || 1)
+
+          if (masterInfo) {
+            const result = await correctImage(
+              buffer,
+              masterInfo.markers,
+              masterInfo.width,
+              masterInfo.height
+            )
+
+            if (result.success && result.correctedBuffer) {
+              buffer = Buffer.from(result.correctedBuffer)
+              correctionStatus = "corrected"
+            } else {
+              correctionStatus = "skipped"
+              correctionError = result.error
+              console.warn(
+                `画像補正スキップ (${fileData.name}): ${result.error}`
+              )
+            }
+          } else {
+            correctionStatus = "skipped"
+            correctionError = "マスター画像のマーカーが検出できませんでした"
+          }
+        }
+
+        return { fileData, buffer, correctionStatus, correctionError }
+      })
+    )
+
+    // ================================================================
+    // Phase 2: DB書き込み + ファイル保存（順次実行、SQLite制約）
+    // ================================================================
+    for (const {
+      fileData,
+      buffer,
+      correctionStatus,
+      correctionError,
+    } of correctedFiles) {
       if (!fileData.studentId) {
         throw new Error(`Student ID is required for file: ${fileData.name}`)
       }
 
-      // Find or create the appropriate ExamPage for this pageNumber
       let examPage = await prisma.examPage.findFirst({
         where: {
           examId: examId,
@@ -127,7 +183,6 @@ export async function uploadStudentAnswers(
         })
       }
 
-      // 既存レコードの確認
       const existingRecord = await prisma.studentAnswerImage.findFirst({
         where: {
           examPageId: examPage.id,
@@ -135,54 +190,16 @@ export async function uploadStudentAnswers(
         },
       })
 
-      // ファイル名を正規化
       const timestamp = Date.now()
       const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
       const fileName = `${timestamp}_${sanitizedName}`
       const filePath = path.join(examDir, fileName)
       const relativePath = getRelativePathFromData(filePath)
 
-      // 画像バッファを準備（補正の可能性あり）
-      let buffer = Buffer.from(fileData.buffer)
-      let correctionStatus: "corrected" | "skipped" | "not_requested" =
-        "not_requested"
-      let correctionError: string | undefined
-
-      if (fileData.correctWithMarkers) {
-        const masterInfo = await getMasterMarkersForPage(
-          examId,
-          fileData.pageNumber || 1,
-          masterMarkerCache
-        )
-
-        if (masterInfo) {
-          const result = await correctImage(
-            buffer,
-            masterInfo.markers,
-            masterInfo.width,
-            masterInfo.height
-          )
-
-          if (result.success && result.correctedBuffer) {
-            buffer = Buffer.from(result.correctedBuffer)
-            correctionStatus = "corrected"
-          } else {
-            correctionStatus = "skipped"
-            correctionError = result.error
-            console.warn(`画像補正スキップ (${fileData.name}): ${result.error}`)
-          }
-        } else {
-          correctionStatus = "skipped"
-          correctionError = "マスター画像のマーカーが検出できませんでした"
-        }
-      }
-
       if (existingRecord) {
         if (fileData.overwrite) {
-          // ファイルを保存
           await fs.writeFile(filePath, buffer)
 
-          // 古いファイルを削除
           try {
             const oldFilePath = getAbsolutePathFromData(
               existingRecord.imagePath
@@ -192,7 +209,6 @@ export async function uploadStudentAnswers(
             // ファイルが存在しない場合は無視
           }
 
-          // レコードを更新
           const answerSheet = await prisma.studentAnswerImage.update({
             where: { id: existingRecord.id },
             data: { imagePath: relativePath },
@@ -205,7 +221,6 @@ export async function uploadStudentAnswers(
             correctionError,
           })
         } else {
-          // 上書き無効: スキップ（既存レコードをそのまま返す）
           uploadedSheets.push({
             ...existingRecord,
             isOverwrite: false,
@@ -213,10 +228,8 @@ export async function uploadStudentAnswers(
           })
         }
       } else {
-        // ファイルを保存
         await fs.writeFile(filePath, buffer)
 
-        // 新規作成
         const answerSheet = await prisma.studentAnswerImage.create({
           data: {
             examPageId: examPage.id,

@@ -269,7 +269,13 @@ export interface MyAPI {
     filesData: UploadStudentAnswerFileData[]
   ) => Promise<{
     success: boolean
-    studentAnswers?: StudentAnswerWithDetails[]
+    answerSheets?: Array<{
+      id: string
+      imagePath: string
+      isOverwrite: boolean
+      correctionStatus: "corrected" | "skipped" | "not_requested"
+      correctionError?: string
+    }>
     error?: string
   }>
   getStudentAnswersByExamId: (examId: string) => Promise<{

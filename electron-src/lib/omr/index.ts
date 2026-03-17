@@ -14,7 +14,7 @@ export {
 } from "./cornerMarkerDetector"
 export { recognizeDigitCell } from "./digitRecognizer"
 export type { ImageCorrectionResult } from "./imageCorrector"
-export { computeSimilarityTransform, correctImage } from "./imageCorrector"
+export { computeRigidTransform, correctImage } from "./imageCorrector"
 export {
   computeCircularFillRatio,
   computeFillRatio,
