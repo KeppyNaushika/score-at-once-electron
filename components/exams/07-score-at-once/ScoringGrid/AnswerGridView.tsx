@@ -47,6 +47,8 @@ export interface AnswerGridViewProps {
   currentUserId?: string
   /** アノテーションリフレッシュキー（変更検知用） */
   annotationRefreshKey?: number
+  /** 用紙サイズ（mm→px変換基準） */
+  pageSize?: string
   className?: string
 }
 
@@ -65,6 +67,7 @@ export default function AnswerGridView({
   currentCropRegion,
   currentUserId,
   annotationRefreshKey,
+  pageSize,
   className = "",
 }: AnswerGridViewProps) {
   /** フィルタリングされた採点データ（模範解答 + 学生データ） */
@@ -250,6 +253,7 @@ export default function AnswerGridView({
               scoringColors={scoringColors}
               expandMargin={expandMargin}
               annotations={annotationsByStudent.get(answer.studentId)}
+              pageSize={pageSize}
               onMouseDown={onCellMouseDown}
             />
           )

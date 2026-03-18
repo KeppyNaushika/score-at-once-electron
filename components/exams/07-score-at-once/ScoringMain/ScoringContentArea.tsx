@@ -44,6 +44,7 @@ interface ScoringContentAreaProps {
   masterAnswerOpacity?: number
   masterAnswerVisible?: boolean
   allMasterImageUrls?: string[]
+  pageSize?: string
 }
 
 export function ScoringContentArea({
@@ -74,6 +75,7 @@ export function ScoringContentArea({
   masterAnswerOpacity = 50,
   masterAnswerVisible = false,
   allMasterImageUrls,
+  pageSize = "A4",
 }: ScoringContentAreaProps) {
   const currentScoringDataId =
     gradingMode === "individual"
@@ -178,6 +180,7 @@ export function ScoringContentArea({
         currentCropRegion={currentCropRegion}
         currentUserId={currentUserId}
         annotationRefreshKey={gridAnnotationRefreshKey}
+        pageSize={pageSize}
         className="p-4"
       />
     )
@@ -210,6 +213,7 @@ export function ScoringContentArea({
       onZoomChanged={handleZoomChanged}
       onImageSizeChanged={handleImageSizeChanged}
       scrollContainerRef={answerScrollRef}
+      pageSize={pageSize}
     />
   )
 

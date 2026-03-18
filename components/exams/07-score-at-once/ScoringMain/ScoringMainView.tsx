@@ -371,6 +371,20 @@ function ScoringMainViewContent() {
     setMasterAnswerVisible(false)
   }, [])
 
+  /** 用紙サイズ（MasterImageのpageSizeフィールドから取得、デフォルトA4） */
+  const pageSize = useMemo(() => {
+    if (!exam?.examPages) return "A4"
+    for (const page of exam.examPages) {
+      const masterImage = page.masterImages?.[0]
+      if (masterImage?.pageSize) {
+        console.log(`[pageSize] MasterImageから取得: "${masterImage.pageSize}"`)
+        return masterImage.pageSize
+      }
+    }
+    console.log("[pageSize] デフォルト: A4")
+    return "A4"
+  }, [exam])
+
   /** 全ページの模範解答画像URL（ページ番号順） */
   const allMasterImageUrls = useMemo(() => {
     if (!exam?.examPages) return []
@@ -511,6 +525,7 @@ function ScoringMainViewContent() {
             masterAnswerOpacity={masterAnswerOpacity}
             masterAnswerVisible={masterAnswerVisible}
             allMasterImageUrls={allMasterImageUrls}
+            pageSize={pageSize}
           />
         </div>
 
