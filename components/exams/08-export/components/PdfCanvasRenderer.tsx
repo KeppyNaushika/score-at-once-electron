@@ -351,7 +351,7 @@ export function PdfCanvasRenderer({
         imageData: arrayBuffer,
       }
     },
-    [loadImage, scoringMarkConfig]
+    [loadImage, scoringMarkConfig, pageSize]
   )
 
   /**

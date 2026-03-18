@@ -32,6 +32,7 @@ interface GridCellProps {
   scoringColors: ScoringStatusColors
   expandMargin?: number
   annotations?: DrawingAnnotation[]
+  pageSize?: string
   onMouseDown: (e: React.MouseEvent, answerId: string) => void
 }
 
@@ -45,6 +46,7 @@ export function GridCell({
   scoringColors,
   expandMargin,
   annotations,
+  pageSize,
   onMouseDown,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
@@ -132,6 +134,7 @@ export function GridCell({
         isSelected={isSelected}
         expandMargin={expandMargin}
         annotations={annotations}
+        pageSize={pageSize}
       />
 
       {/* 学生情報と採点状況 */}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import { PAPER_DIMENSIONS } from "@/lib/paperSize"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import type { DrawingElement } from "../ScoringIndividual/types/answerIndividualTypes"
@@ -39,6 +40,7 @@ interface CroppedAnswerImageProps {
   isSelected?: boolean
   expandMargin?: number // 表示領域拡張率 (0-50%)
   annotations?: DrawingAnnotation[] // Grid表示用アノテーション
+  pageSize?: string // 用紙サイズ（mm→px変換基準）
 }
 
 // セル内の固定オフセット（padding + gap + footer）
@@ -55,6 +57,7 @@ export default function CroppedAnswerImage({
   isSelected = false,
   expandMargin = 0,
   annotations,
+  pageSize,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -146,7 +149,9 @@ export default function CroppedAnswerImage({
           canvas.width,
           canvas.height,
           imageElement.naturalWidth,
-          () => cancelled
+          imageElement.naturalHeight,
+          () => cancelled,
+          pageSize
         )
       }
       drawAsync()
@@ -161,6 +166,7 @@ export default function CroppedAnswerImage({
     calculatedCellHeight,
     expandMargin,
     annotations,
+    pageSize,
   ])
 
   const handleImageLoad = () => {
@@ -213,9 +219,17 @@ async function drawAnnotations(
   canvasWidth: number,
   canvasHeight: number,
   imageNaturalWidth: number,
-  isCancelled: () => boolean
+  imageNaturalHeight: number,
+  isCancelled: () => boolean,
+  pageSize?: string
 ) {
-  const scaleFactor = canvasWidth / (visibleWidth * imageNaturalWidth)
+  // mm→用紙幅比率→canvasピクセルに変換するためのスケール
+  // anno.strokeWidth (mm) → anno.strokeWidth / paperWidthMm → × canvasWidth / visibleWidth
+  const paper = PAPER_DIMENSIONS[pageSize ?? "A4"] ?? PAPER_DIMENSIONS.A4
+  const isLandscape =
+    imageNaturalWidth > (imageNaturalHeight ?? imageNaturalWidth)
+  const paperWidthMm = isLandscape ? paper.height : paper.width
+  const scaleFactor = canvasWidth / (visibleWidth * paperWidthMm)
 
   for (const anno of annotations) {
     if (isCancelled()) return
