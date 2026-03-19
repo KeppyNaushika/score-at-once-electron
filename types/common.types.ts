@@ -51,6 +51,28 @@ export type ExamWithDetails = Prisma.ExamGetPayload<{
 /** @deprecated Use ExamWithDetails instead */
 export type SerializedExam = ExamWithDetails
 
+/**
+ * 試験一覧表示用の軽量型
+ * ステータスはメインプロセスで事前計算済み
+ */
+export interface ExamListItem {
+  id: string
+  examName: string
+  examDate: Date | null
+  subject: string | null
+  description: string | null
+  createdAt: Date
+  updatedAt: Date
+  status: {
+    step: number
+    action: string
+    text: string
+    url: string
+    isCompleted: boolean
+    canStart: boolean
+  }
+}
+
 // =============================================================================
 // 型ガード関数
 // =============================================================================

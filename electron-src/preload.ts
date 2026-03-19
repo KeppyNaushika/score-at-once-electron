@@ -21,6 +21,8 @@ declare global {
 
 contextBridge.exposeInMainWorld("electronAPI", {
   fetchExams: (userId: string) => ipcRenderer.invoke("fetch-exams", userId),
+  fetchExamsSummary: (userId: string) =>
+    ipcRenderer.invoke("fetch-exams-summary", userId),
   fetchExamById: (examId: string) =>
     ipcRenderer.invoke("fetch-exam-by-id", examId),
   createExam: (props: CreateExamArgs, userId: string) => {
