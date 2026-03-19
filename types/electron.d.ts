@@ -15,7 +15,11 @@ import type {
   UserExam,
 } from "@prisma/client"
 
-export type { ExamWithDetails, SerializedExam } from "./common.types"
+export type {
+  ExamListItem,
+  ExamWithDetails,
+  SerializedExam,
+} from "./common.types"
 export type {
   ClassWithMemberships,
   ClassWithStudents,
@@ -193,6 +197,7 @@ export interface MasterAnswerDeletionResult {
 
 export interface MyAPI {
   fetchExams: (userId: string) => Promise<ExamWithDetails[]>
+  fetchExamsSummary: (userId: string) => Promise<ExamListItem[]>
   fetchExamById: (examId: string) => Promise<ExamWithDetails | null>
   createExam: (
     examData: CreateExamArgs,

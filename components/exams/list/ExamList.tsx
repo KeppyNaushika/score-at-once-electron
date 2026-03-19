@@ -49,15 +49,14 @@ import {
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
 import { SortDirection, useTableSort } from "@/hooks/useTableSort"
-import { ExamWithDetails, isValidExam } from "@/types/common.types"
+import type { ExamListItem } from "@/types/common.types"
 import type { ExportMode } from "@/types/examArchive.types"
-import { getExamStatus } from "@/utils/examStatus"
 
 interface ExamSortable {
   id: string
   examName: string
   examDate: string | null
-  original: ExamWithDetails
+  original: ExamListItem
 }
 
 const SORT_OPTIONS = [
@@ -100,7 +99,7 @@ const File = () => {
 
   // ソート用データに変換
   const sortableData = useMemo<ExamSortable[]>(() => {
-    return exams.filter(isValidExam).map((exam) => ({
+    return exams.map((exam) => ({
       id: exam.id,
       examName: exam.examName,
       examDate: exam.examDate ? new Date(exam.examDate).toISOString() : null,
@@ -132,13 +131,12 @@ const File = () => {
     }
   }
 
-  const handleStartScoring = (exam: ExamWithDetails) => {
+  const handleStartScoring = (exam: ExamListItem) => {
     router.push(`/exams/${exam.id}`)
   }
 
-  const handleNextStep = (exam: ExamWithDetails) => {
-    const status = getExamStatus(exam)
-    router.push(status.url)
+  const handleNextStep = (exam: ExamListItem) => {
+    router.push(exam.status.url)
   }
 
   const handleImportComplete = (examId: string) => {
@@ -332,8 +330,6 @@ const File = () => {
               </TableHeader>
               <TableBody>
                 {sortedData.map(({ original: exam }) => {
-                  const status = getExamStatus(exam)
-
                   return (
                     <TableRow key={exam.id} className="group">
                       <TableCell className="text-center">
@@ -348,13 +344,9 @@ const File = () => {
                           <div className="font-medium">{exam.examName}</div>
                           <div className="text-muted-foreground text-sm tabular-nums">
                             {exam.examDate
-                              ? typeof exam.examDate === "string"
-                                ? new Date(exam.examDate).toLocaleDateString(
-                                    "ja-JP"
-                                  )
-                                : new Date(exam.examDate).toLocaleDateString(
-                                    "ja-JP"
-                                  )
+                              ? new Date(exam.examDate).toLocaleDateString(
+                                  "ja-JP"
+                                )
                               : "実施日未設定"}
                           </div>
                         </div>
@@ -378,31 +370,31 @@ const File = () => {
                           onClick={() => handleNextStep(exam)}
                           className="w-48 justify-start rounded-lg text-left"
                         >
-                          {status.step === 1 && (
+                          {exam.status.step === 1 && (
                             <FileImage className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 2 && (
+                          {exam.status.step === 2 && (
                             <Settings className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 3 && (
+                          {exam.status.step === 3 && (
                             <Edit className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 4 && (
+                          {exam.status.step === 4 && (
                             <Calculator className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 5 && (
+                          {exam.status.step === 5 && (
                             <Users className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 6 && (
+                          {exam.status.step === 6 && (
                             <Upload className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 7 && (
+                          {exam.status.step === 7 && (
                             <PlayCircle className="mr-1 h-4 w-4" />
                           )}
-                          {status.step === 8 && (
+                          {exam.status.step === 8 && (
                             <Download className="mr-1 h-4 w-4" />
                           )}
-                          <span className="text-xs">{status.text}</span>
+                          <span className="text-xs">{exam.status.text}</span>
                         </Button>
                       </TableCell>
                     </TableRow>

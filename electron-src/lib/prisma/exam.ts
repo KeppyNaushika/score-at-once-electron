@@ -2,7 +2,63 @@ import type { Prisma as PrismaTypes } from "@prisma/client"
 
 import prisma from "./client"
 
-// Exam一覧を取得 (ユーザーでフィルタリング)
+// Exam一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得）
+export const getExamsForList = async (userId: string) => {
+  return prisma.exam.findMany({
+    where: {
+      userExams: {
+        some: {
+          userId,
+        },
+      },
+    },
+    select: {
+      id: true,
+      examName: true,
+      examDate: true,
+      subject: true,
+      description: true,
+      createdAt: true,
+      updatedAt: true,
+      examPages: {
+        select: {
+          id: true,
+          studentAnswerImages: {
+            select: { studentId: true },
+          },
+          cropRegions: {
+            select: {
+              type: true,
+              questionScores: {
+                select: {
+                  status: true,
+                  studentId: true,
+                  partialScore: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      examSubtotalGroups: {
+        select: { id: true },
+      },
+      examStudents: {
+        select: { studentId: true, status: true },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  })
+}
+
+// getExamsForList の戻り値の型
+export type ExamForListPayload = Awaited<
+  ReturnType<typeof getExamsForList>
+>[number]
+
+// Exam一覧を取得 (ユーザーでフィルタリング) - 詳細ページ用
 export const getExams = async (userId: string) => {
   return prisma.exam.findMany({
     where: {
