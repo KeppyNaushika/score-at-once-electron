@@ -259,6 +259,30 @@ npx prisma studio
 - 楽観的ロックによる競合制御を実装すること
 - QuestionScoreのunique_final_score制約に注意
 
+#### 🔄 データベーススキーマ変更ルール（重要）
+
+**必須ワークフロー**:
+
+1. `prisma/schema.prisma` を変更
+2. `npx prisma migrate dev --name descriptive_name` を実行（マイグレーションSQL自動生成）
+3. 生成された `prisma/migrations/<timestamp>_<name>/migration.sql` をコミット
+4. アプリ起動時に自前ランナー（`migrationDeployer.ts`）が未適用マイグレーションを自動検出・適用
+
+**禁止事項**:
+
+- `migrationRunner.ts` への手書きSQL追加（**廃止済み** — `bridgeMigrations.ts` に置換）
+- `migrationSql.ts` の直接編集（**廃止予定**）
+- `PRAGMA table_info()` によるスキーマ検出（バージョン検出以外で使用しない）
+- `prisma db push` の本番使用（テスト専用）
+- nullable妥協（マイグレーションの都合で本来requiredなフィールドをnullableにしない — `prisma migrate dev` がデフォルト値を要求するのでそれに従う）
+
+**アーキテクチャ**:
+
+- `versionDetector.ts`: 既存DBのスキーマバージョン検出（S3〜S9）
+- `bridgeMigrations.ts`: v0.2.x〜v0.9.xの全バージョンからの自動アップグレード
+- `baselineMigrations.ts`: `_prisma_migrations`テーブルのベースライン作成
+- `migrationDeployer.ts`: 将来のマイグレーション自動適用（`prisma/migrations/`から読み取り）
+
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 
 **Exam-User関係の多対多化**:
