@@ -220,7 +220,7 @@ export class DatabaseSetup {
       } else {
         // 既存DBにスキーママイグレーションを適用
         const { migrateExistingDatabase } =
-          await import("./prisma/databaseInitializer")
+          await import("./prisma/schema/migrationRunner")
         await migrateExistingDatabase()
 
         const isEmpty = await this.isDatabaseEmpty()

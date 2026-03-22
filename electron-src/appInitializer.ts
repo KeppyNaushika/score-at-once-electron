@@ -2,7 +2,7 @@ import {
   initializeDataDirectory,
   migrateProjectsToExams,
 } from "./lib/dataManager"
-import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseInitializer"
+import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseHealth"
 
 // DB内の imagePath を projects/ → exams/ に一括更新（v0.6.x リネーム対応）
 async function migrateImagePathsInDatabase(): Promise<void> {
@@ -66,8 +66,7 @@ export async function initializeApp(): Promise<void> {
     await optimizeDatabaseForSharedDrive()
 
     // データベース接続テスト
-    const { checkDatabaseHealth } =
-      await import("./lib/prisma/databaseInitializer")
+    const { checkDatabaseHealth } = await import("./lib/prisma/databaseHealth")
     const isHealthy = await checkDatabaseHealth()
 
     if (!isHealthy) {
