@@ -2,7 +2,7 @@
  * ユーザーマッチングロジック
  */
 
-import type { UserMatchingMethod } from "../../../../../types/examArchive.types"
+import type { UserMatchingMethod } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type { MatchResult, UserData } from "./types"

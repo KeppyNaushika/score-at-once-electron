@@ -10,7 +10,7 @@ import type {
   GradeItemResult,
   SourceScoreResult,
   StudentGradeResult,
-} from "../../../../types/grade.types"
+} from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { calculateActualScore } from "../../prisma/questionScore"
 import {

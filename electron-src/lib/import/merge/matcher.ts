@@ -8,7 +8,7 @@ import type {
   ExamPreMatchingResult,
   FileOverviewData,
   MatchingConfig,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import {

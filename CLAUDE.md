@@ -541,7 +541,6 @@ export interface SerializedQuestionScore extends Omit<
 ## 参考資料
 
 - [docs/coding-style.md](./docs/coding-style.md) - コーディングスタイルガイド
-- [PROMPT.md](./PROMPT.md) - 詳細な仕様書
 - [Prisma Schema](./prisma/schema.prisma) - データベース設計
 - [Next.js 15 Docs](https://nextjs.org/docs)
 - [Electron Docs](https://www.electronjs.org/docs)

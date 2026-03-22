@@ -7,7 +7,7 @@ import type { Prisma } from "@prisma/client"
 import type {
   GradeArchiveData,
   GradeArchiveImportPreview,
-} from "../../../../types/gradeArchive.types"
+} from "../../../../src/types/gradeArchive.types"
 import prisma from "../../prisma/client"
 
 /**

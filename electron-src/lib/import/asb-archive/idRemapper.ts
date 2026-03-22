@@ -6,8 +6,8 @@
 
 import { randomUUID } from "crypto"
 
-import type { AnswerSheetDefinition } from "../../../../types/answerSheetDefinition.types"
-import type { AsbIdMappings } from "../../../../types/asbArchive.types"
+import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
+import type { AsbIdMappings } from "../../../../src/types/asbArchive.types"
 
 /**
  * 定義ツリー内の全IDに対するマッピングを生成

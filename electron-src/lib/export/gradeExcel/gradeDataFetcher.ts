@@ -2,7 +2,7 @@
  * 成績算出Excel出力用のデータ取得
  */
 
-import type { GradeCalculationResult } from "../../../../types/grade.types"
+import type { GradeCalculationResult } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { calculateGrades } from "../../shared/calculations/gradeCalculator"
 

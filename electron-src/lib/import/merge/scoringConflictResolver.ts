@@ -6,7 +6,7 @@ import type {
   ScoringConflict,
   ScoringConflictConfig,
   ScoringConflictResolutionStrategy,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 
 /**
  * 採点結果の競合を解決

@@ -14,7 +14,7 @@ import type {
   MatchingConfig,
   ScoringConflictConfig,
   UpdateDecisions,
-} from "../../types/examArchive.types"
+} from "../../src/types/examArchive.types"
 import { exportExam } from "../lib/export/exam-archive"
 import { generateExportFileName } from "../lib/export/exam-archive/archiveCreator"
 import {
@@ -107,7 +107,7 @@ export function registerArchiveHandlers(): void {
         examId: string
         userId: string
         outputPath?: string
-        exportMode?: import("../../types/examArchive.types").ExportMode
+        exportMode?: import("../../src/types/examArchive.types").ExportMode
       }
     ) => {
       try {

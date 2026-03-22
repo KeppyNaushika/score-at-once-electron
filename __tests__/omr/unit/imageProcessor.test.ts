@@ -11,7 +11,7 @@ import {
   computeCircularFillRatio,
   computeEllipticalFillRatio,
 } from "../../../electron-src/lib/omr/imageProcessor"
-import type { RawImageData } from "../../../types/omr.types"
+import type { RawImageData } from "../../../src/types/omr.types"
 
 /** 白背景のRawImageDataを作成 */
 function createWhiteImage(width: number, height: number): RawImageData {

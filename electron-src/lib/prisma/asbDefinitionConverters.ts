@@ -26,8 +26,11 @@ import type {
   LinkedRegionType,
   MajorQuestion,
   SubQuestion,
-} from "../../../types/answerSheetDefinition.types"
-import type { OMRCellConfig, OMRChoiceConfig } from "../../../types/omr.types"
+} from "../../../src/types/answerSheetDefinition.types"
+import type {
+  OMRCellConfig,
+  OMRChoiceConfig,
+} from "../../../src/types/omr.types"
 import type { DbDefinitionFull } from "./asbDefinition"
 
 // =============================================================================

@@ -10,11 +10,11 @@ import type {
   AsbArchiveVersion,
   AsbChainTransformResult,
   AsbVersionTransformer,
-} from "../../../../types/asbArchive.types"
+} from "../../../../src/types/asbArchive.types"
 import {
   ASB_CURRENT_VERSION,
   ASB_SUPPORTED_VERSIONS,
-} from "../../../../types/asbArchive.types"
+} from "../../../../src/types/asbArchive.types"
 
 // =============================================================================
 // Transformer Registry

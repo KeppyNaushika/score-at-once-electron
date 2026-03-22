@@ -18,7 +18,7 @@ import type {
   ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 
 /**
  * 展開されたアーカイブデータ

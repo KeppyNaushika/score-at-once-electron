@@ -6,7 +6,7 @@ import archiver from "archiver"
 import { app } from "electron"
 import * as fs from "fs"
 
-import type { GradeArchiveManifest } from "../../../../types/gradeArchive.types"
+import type { GradeArchiveManifest } from "../../../../src/types/gradeArchive.types"
 import { collectGradeArchiveData } from "./gradeArchiveDataCollector"
 
 function getAppVersion(): string {

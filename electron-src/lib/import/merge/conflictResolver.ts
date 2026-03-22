@@ -9,7 +9,7 @@ import type {
   ConflictCategory,
   ConflictItem,
   ConflictResolutions,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 
 /**
  * 解決結果

@@ -6,14 +6,14 @@
  * 塗りつぶし率からマーク状態を判定する。
  */
 
-import type { ComputedCell } from "../../../types/answerSheetLayout.types"
+import type { ComputedCell } from "../../../src/types/answerSheetLayout.types"
 import type {
   CoordinateTransform,
   OMRCellConfig,
   OMRCellResult,
   OMRRecognitionParams,
   RawImageData,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 import { normalizedToPixel } from "./coordinateTransform"
 import { recognizeDigitCell } from "./digitRecognizer"
 import { computeEllipticalFillRatio } from "./imageProcessor"

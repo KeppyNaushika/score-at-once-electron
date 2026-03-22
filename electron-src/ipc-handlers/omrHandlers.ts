@@ -5,14 +5,14 @@
 import { BrowserWindow, ipcMain } from "electron"
 import path from "path"
 
-import type { ComputedCell } from "../../types/answerSheetLayout.types"
+import type { ComputedCell } from "../../src/types/answerSheetLayout.types"
 import type {
   MarkerDetectionResult,
   OMRBatchProgress,
   OMRCellConfig,
   OMRRecognitionParams,
   OMRSheetResult,
-} from "../../types/omr.types"
+} from "../../src/types/omr.types"
 import { getDataDirectory } from "../lib/dataManager"
 import {
   createTransform,

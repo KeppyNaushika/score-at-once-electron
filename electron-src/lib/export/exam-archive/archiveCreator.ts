@@ -12,7 +12,7 @@ import * as path from "path"
 import type {
   ArchiveManifest,
   ExportMode,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import { CURRENT_VERSION } from "../../import/transformers/types"
 import type { CollectedData } from "./dataCollector"

@@ -323,7 +323,6 @@ Electron + React + TypeScriptによる、保守性と拡張性を重視した設
 ### 詳細なドキュメント
 
 - [CLAUDE.md](./CLAUDE.md) - 開発ガイド・技術詳細
-- [PROMPT.md](./PROMPT.md) - 詳細仕様書・要件定義
 
 ### 開発に参加する
 

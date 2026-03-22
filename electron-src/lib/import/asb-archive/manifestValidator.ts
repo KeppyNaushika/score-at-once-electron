@@ -2,7 +2,7 @@
  * ASBアーカイブマニフェストのバリデーション
  */
 
-import type { AsbArchiveManifest } from "../../../../types/asbArchive.types"
+import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
 import { detectAsbVersion } from "../asb-transformers"
 
 /**

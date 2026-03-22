@@ -4,7 +4,7 @@
  * 連鎖変換パターン: 1.0.0 → 1.1.0 → 1.2.0 → ...
  */
 
-import type { ArchiveManifest } from "../../../../types/examArchive.types"
+import type { ArchiveManifest } from "../../../../src/types/examArchive.types"
 import type {
   ArchiveData,
   ArchiveVersion,

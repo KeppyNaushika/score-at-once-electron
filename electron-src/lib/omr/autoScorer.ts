@@ -8,7 +8,7 @@ import type {
   CropRegionOmrConfigWithOptions,
   OMRCellConfig,
   OMRCellResult,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 
 export interface AutoScoreEntry {
   /** CropRegionラベル（QuestionScore特定用） */

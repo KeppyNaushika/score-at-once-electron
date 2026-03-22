@@ -7,8 +7,8 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 
-import type { AnswerSheetDefinition } from "../../../../types/answerSheetDefinition.types"
-import type { AsbArchiveManifest } from "../../../../types/asbArchive.types"
+import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
+import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
 
 export interface ExtractedAsbData {
   manifest: AsbArchiveManifest

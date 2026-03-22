@@ -7,8 +7,8 @@
 import type {
   ArchiveClassesData,
   ArchiveStudentsData,
-} from "../../../../types/examArchive.types"
-import type { StudentArchiveDataCounts } from "../../../../types/studentArchive.types"
+} from "../../../../src/types/examArchive.types"
+import type { StudentArchiveDataCounts } from "../../../../src/types/studentArchive.types"
 import prisma from "../../prisma/client"
 
 export interface CollectedStudentArchiveData {

@@ -27,7 +27,7 @@ import type {
   PreMatchingResult,
   ScoringConflict,
   ScoringConflictConfig,
-} from "../../types/examArchive.types"
+} from "../../src/types/examArchive.types"
 
 // =============================================================================
 // 基本ID生成

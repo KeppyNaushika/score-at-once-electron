@@ -16,14 +16,14 @@ import fs from "fs"
 import path from "path"
 import sharp from "sharp"
 
-import type { ComputedCell } from "../../../types/answerSheetLayout.types"
+import type { ComputedCell } from "../../../src/types/answerSheetLayout.types"
 import type {
   BoundingBox,
   CoordinateTransform,
   OMRCellResult,
   OMRRecognitionParams,
   RawImageData,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 import { normalizedRectToPixelRect } from "./coordinateTransform"
 
 // ONNX Runtime（遅延ロード）

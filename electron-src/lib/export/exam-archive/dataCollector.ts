@@ -14,7 +14,7 @@ import type {
   ArchiveSubtotalsData,
   ArchiveUsersData,
   ExportMode,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 
 /**

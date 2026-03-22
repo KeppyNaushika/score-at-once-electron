@@ -7,7 +7,7 @@
 
 import sharp from "sharp"
 
-import type { BoundingBox, RawImageData } from "../../../types/omr.types"
+import type { BoundingBox, RawImageData } from "../../../src/types/omr.types"
 
 /**
  * 画像をRAWピクセルバッファとして読み込む

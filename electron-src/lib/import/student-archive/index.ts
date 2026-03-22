@@ -5,13 +5,13 @@
  * 既存の試験アーカイブインポートのマッチング・プロセッサーロジックを再利用
  */
 
-import type { UpdateDecisions } from "../../../../types/examArchive.types"
+import type { UpdateDecisions } from "../../../../src/types/examArchive.types"
 import type {
   StudentArchiveFileOverviewData,
   StudentArchiveIdIntegrationConfig,
   StudentArchiveImportResult,
   StudentArchiveManifest,
-} from "../../../../types/studentArchive.types"
+} from "../../../../src/types/studentArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "../merge/idChangeExecutor"

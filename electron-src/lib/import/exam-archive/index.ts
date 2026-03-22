@@ -8,7 +8,7 @@
 import type {
   AnalyzeArchiveOptions,
   AnalyzeArchiveResult,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 import { readManifestOnly } from "./archiveExtractor"
 import { validateManifest } from "./manifestValidator"
 

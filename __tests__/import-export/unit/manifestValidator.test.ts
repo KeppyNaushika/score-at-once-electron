@@ -11,7 +11,7 @@ import {
   validateManifest,
   validateManifestFields,
 } from "../../../electron-src/lib/import/exam-archive/manifestValidator"
-import type { ArchiveManifest } from "../../../types/examArchive.types"
+import type { ArchiveManifest } from "../../../src/types/examArchive.types"
 
 function createValidManifest(
   overrides: Partial<ArchiveManifest> = {}

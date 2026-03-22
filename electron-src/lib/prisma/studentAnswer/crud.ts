@@ -8,7 +8,7 @@ import * as path from "path"
 import type {
   DetectedCornerMarker,
   MarkerDetectionResult,
-} from "../../../../types/omr.types"
+} from "../../../../src/types/omr.types"
 import {
   getAbsolutePathFromData,
   getAnswerSheetsDirectory,
