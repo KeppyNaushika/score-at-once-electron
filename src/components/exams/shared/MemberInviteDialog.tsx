@@ -22,7 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { UserExamWithUserAndInviter, UserRole } from "@/types/electron.d"
+import type {
+  UserExamWithUserAndInviter,
+  UserRole,
+} from "@/types/electron/userExamApi"
 
 interface MemberInviteDialogProps {
   isOpen: boolean

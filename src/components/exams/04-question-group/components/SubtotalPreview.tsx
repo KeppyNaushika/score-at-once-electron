@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { SubtotalGroupWithItems } from "@/types/electron"
+import { SubtotalGroupWithItems } from "@/types/prismaExtensions"
 
 interface SubtotalData {
   [subtotalGroupId: string]: {

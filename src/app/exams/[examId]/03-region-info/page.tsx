@@ -11,7 +11,7 @@ import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConf
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import type { CropRegionWithDetails } from "@/types/electron"
+import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 export default function RegionInfoPage() {
   const params = useParams()

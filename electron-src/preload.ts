@@ -8,7 +8,7 @@ import {
   QuestionScoreCreateData,
   QuestionScoreUpdateData,
 } from "../src/types/common.types"
-import { CreateExamArgs } from "../src/types/electron"
+import { CreateExamArgs } from "../src/types/electron/examApi"
 
 declare global {
   namespace NodeJS {

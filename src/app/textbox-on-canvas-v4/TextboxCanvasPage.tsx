@@ -22,16 +22,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 
-// 分離されたコンポーネントとフック
-import {
-  TextboxCanvasPreview,
-  TextboxImagePreview,
-  TextboxPreview,
-  TextboxSvgPreview,
-} from "./components"
 import { AnchorControlPanel } from "./components/AnchorControlPanel"
+// 分離されたコンポーネントとフック
+import { TextboxCanvasPreview } from "./components/TextboxCanvasPreview"
+import { TextboxImagePreview } from "./components/TextboxImagePreview"
+import { TextboxPreview } from "./components/TextboxPreview"
+import { TextboxSvgPreview } from "./components/TextboxSvgPreview"
 import { SAMPLE_IMAGE_URL } from "./constants"
-import { useCanvasManagement, useTextBoxOperations } from "./hooks"
+import { useCanvasManagement } from "./hooks/useCanvasManagement"
+import { useTextBoxOperations } from "./hooks/useTextBoxOperations"
 // 型定義
 import type { AnchorDirection } from "./types"
 
@@ -61,7 +60,6 @@ export default function TextboxCanvasPage() {
     getSelectedTextBox,
     updateTextBoxAnchorDirection,
     updateTextBoxSize,
-    setTextBoxes: _setTextBoxes,
   } = useTextBoxOperations()
 
   // 選択されたテキストボックス

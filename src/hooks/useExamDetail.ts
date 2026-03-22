@@ -4,7 +4,7 @@ import type { Exam } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import type { ExamWithDetails } from "@/types/electron"
+import type { ExamWithDetails } from "@/types/common.types"
 
 export function useExamDetail(examId: string) {
   const [exam, setExam] = useState<ExamWithDetails | null>(null)

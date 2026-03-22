@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import type {
   ExamClassWithClass,
   ExamClassWithDetails,
-} from "@/types/electron.d"
+} from "@/types/electron/examClassApi"
 
 interface UseExamClassesOptions {
   examId: string

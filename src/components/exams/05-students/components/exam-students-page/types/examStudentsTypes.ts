@@ -1,4 +1,4 @@
-import type { StudentClassInfo } from "@/types/electron.d"
+import type { StudentClassInfo } from "@/types/electron/examClassApi"
 
 // 生徒の状態を表す型
 export type StudentStatus = "participating" | "expected" | "absent"

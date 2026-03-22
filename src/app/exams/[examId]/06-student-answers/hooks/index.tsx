@@ -11,7 +11,7 @@ import type {
   PendingChange,
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamPageWithDetails } from "@/types/electron.d"
+import type { ExamPageWithDetails } from "@/types/prismaExtensions"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 import type { StudentData } from "../components"

@@ -1,6 +1,6 @@
 import { ExamClass, Prisma } from "@prisma/client"
 
-import type { StudentClassInfo } from "@/types/electron.d"
+import type { StudentClassInfo } from "@/types/electron/examClassApi"
 
 import prisma from "./client"
 
