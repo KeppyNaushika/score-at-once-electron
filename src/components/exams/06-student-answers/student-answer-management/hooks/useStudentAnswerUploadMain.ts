@@ -12,7 +12,7 @@ import {
 } from "@/components/exams/06-student-answers/student-answer-management/hooks/types"
 import { useFileProcessing } from "@/components/exams/06-student-answers/student-answer-management/hooks/useFileProcessing"
 import { useStudentManagement } from "@/components/exams/06-student-answers/student-answer-management/hooks/useStudentManagement"
-import type { UploadStudentAnswerFileData } from "@/types/electron"
+import type { UploadStudentAnswerFileData } from "@/types/electron/studentAnswerApi"
 
 export function useStudentAnswerUploadMain({
   examId,

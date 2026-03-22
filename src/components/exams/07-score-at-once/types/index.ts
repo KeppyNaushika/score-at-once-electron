@@ -6,9 +6,8 @@
 /** Prismaから基本型とPayload型をインポート */
 import type { Prisma, QuestionScore } from "@prisma/client"
 
-/** Prisma拡張型をprismaExtensions.tsからインポート・再エクスポート */
+/** Prisma拡張型をprismaExtensions.tsからインポート */
 import type { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
-export type { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
 
 /** Prisma基本型をエクスポート */
 export type {

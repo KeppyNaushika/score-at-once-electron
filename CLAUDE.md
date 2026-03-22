@@ -374,6 +374,20 @@ import { PendingChange } from "./types/answer-sheet.types"
 import { validateFile } from "./utils/file-processing"
 ```
 
+#### 🚫 re-exportとバレルファイルの方針
+
+**re-export（`export { X } from "./other"`）は原則禁止**:
+
+- 型やモジュールを移動した際、後方互換のためにre-exportを残さない
+- 代わりに全てのimport元を新しいパスに直接更新する
+- re-exportは型の本来の所在を隠し、不要な間接参照を生む
+
+**バレル `index.ts` の作成基準**:
+
+- ✅ 作成してよい: 複数の消費者が2つ以上のアイテムをまとめてimportする場合
+- ✗ 作成しない: 消費者が1つだけ、または各消費者が1アイテムしかimportしない場合
+- 既存のバレルも消費者がいなくなったら削除する
+
 #### 🎯 判断基準・チェックリスト
 
 **新しいhook・type・utilを作成する際の判断フロー**:

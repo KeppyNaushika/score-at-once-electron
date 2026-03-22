@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
-import type { ExamListItem } from "@/types/electron"
+import type { ExamListItem } from "@/types/common.types"
 
 export const useExams = () => {
   const { user } = useAuth()

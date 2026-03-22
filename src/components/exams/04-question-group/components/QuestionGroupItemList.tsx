@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { SubtotalGroupWithItems } from "@/types/electron"
+import { SubtotalGroupWithItems } from "@/types/prismaExtensions"
 
 interface QuestionGroupItemListProps {
   subtotalGroup: SubtotalGroupWithItems

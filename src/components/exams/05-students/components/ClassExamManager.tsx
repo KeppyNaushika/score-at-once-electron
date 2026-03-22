@@ -27,7 +27,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { AvailableClass, ExamClassWithClass } from "@/types/electron.d"
+import type {
+  AvailableClass,
+  ExamClassWithClass,
+} from "@/types/electron/examClassApi"
 
 interface ClassExamManagerProps {
   examId: string

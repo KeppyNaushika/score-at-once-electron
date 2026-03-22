@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { ClassWithMemberships } from "@/types/electron"
+import type { ClassWithMemberships } from "@/types/prismaExtensions"
 
 // ClassWithMembershipsのmemberships配列の要素型を抽出
 type ClassMembership = ClassWithMemberships["memberships"][number]

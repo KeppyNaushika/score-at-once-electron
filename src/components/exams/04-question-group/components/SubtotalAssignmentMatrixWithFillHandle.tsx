@@ -18,7 +18,7 @@ import {
   CropRegionWithDetails,
   CropSubtotalWithRelations,
   SubtotalGroupWithItems,
-} from "@/types/electron"
+} from "@/types/prismaExtensions"
 
 import { type FillUpdate, useFillHandleDrag } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"

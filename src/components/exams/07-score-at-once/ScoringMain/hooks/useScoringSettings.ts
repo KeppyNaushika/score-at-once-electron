@@ -44,11 +44,3 @@ export function useScoringSettings() {
     setMasterAnswerKeyBehavior,
   }
 }
-
-// 個別フックも再エクスポート
-export { useAutoScroll } from "./useAutoScroll"
-export { useExpandMargin } from "./useExpandMargin"
-export { useItemsPerLine } from "./useItemsPerLine"
-export { useLayoutDirection } from "./useLayoutDirection"
-export { useMasterAnswerSettings } from "./useMasterAnswerSettings"
-export { useShowStudentNames } from "./useShowStudentNames"

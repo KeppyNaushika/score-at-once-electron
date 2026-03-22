@@ -1,6 +1,6 @@
 "use client"
 
-import type { ExamClassWithClass } from "@/types/electron.d"
+import type { ExamClassWithClass } from "@/types/electron/examClassApi"
 
 interface ClassStatisticsCardsProps {
   examClasses: ExamClassWithClass[]

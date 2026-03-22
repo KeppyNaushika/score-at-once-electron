@@ -32,8 +32,8 @@ import {
   CROP_REGION_AREA_TYPES,
   CropRegionAreaType,
 } from "@/types/common.types"
-import type { CropRegionWithDetails } from "@/types/electron"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
+import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {

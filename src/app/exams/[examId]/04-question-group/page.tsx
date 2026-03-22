@@ -15,7 +15,7 @@ import {
   CropRegionWithDetails,
   ExamSubtotalGroupWithSubtotalGroup,
   SubtotalGroupWithItems,
-} from "@/types/electron"
+} from "@/types/prismaExtensions"
 
 export default function SubtotalGroupPage() {
   const params = useParams()
