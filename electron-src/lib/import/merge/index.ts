@@ -5,6 +5,5 @@
  */
 
 export * from "./conflictDetector"
-export * from "./conflictResolver"
 export * from "./idIntegrationImporter"
 export * from "./matcher"

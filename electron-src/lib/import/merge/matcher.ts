@@ -73,56 +73,6 @@ export async function performAllMatching(
   }
 }
 
-/**
- * IDマッピングを生成（既存データへのマッピング）
- */
-export function buildIdMappings(matchResults: AllMatchResults): {
-  student: Record<string, string>
-  class: Record<string, string>
-  user: Record<string, string>
-  subtotalGroup: Record<string, string>
-} {
-  const studentMapping: Record<string, string> = {}
-  const classMapping: Record<string, string> = {}
-  const userMapping: Record<string, string> = {}
-  const subtotalGroupMapping: Record<string, string> = {}
-
-  // 生徒のマッピング
-  for (const result of matchResults.students) {
-    if (result.existingData) {
-      studentMapping[result.importData.id] = result.existingData.id
-    }
-  }
-
-  // 学級のマッピング
-  for (const result of matchResults.classes) {
-    if (result.existingData) {
-      classMapping[result.importData.id] = result.existingData.id
-    }
-  }
-
-  // ユーザーのマッピング
-  for (const result of matchResults.users) {
-    if (result.existingData) {
-      userMapping[result.importData.id] = result.existingData.id
-    }
-  }
-
-  // 小計グループのマッピング
-  for (const result of matchResults.subtotalGroups) {
-    if (result.existingData) {
-      subtotalGroupMapping[result.importData.id] = result.existingData.id
-    }
-  }
-
-  return {
-    student: studentMapping,
-    class: classMapping,
-    user: userMapping,
-    subtotalGroup: subtotalGroupMapping,
-  }
-}
-
 // =============================================================================
 // 事前照合（Step 2: ファイル概要表示用）
 // =============================================================================

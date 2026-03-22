@@ -348,29 +348,3 @@ export function setupDrawingHandlers() {
     }
   })
 }
-
-/**
- * 描画アノテーション関連のIPCハンドラーを削除する
- */
-export function removeDrawingHandlers() {
-  const handlers = [
-    "drawing:create",
-    "drawing:getByQuestionScore",
-    "drawing:getByStudent",
-    "drawing:getByExam",
-    "drawing:getByCropRegion",
-    "drawing:update",
-    "drawing:delete",
-    "drawing:deleteByQuestionScore",
-    "drawing:batchCreate",
-    "drawing:batchUpdate",
-    "drawing:getStats",
-    "drawing:getById",
-    "drawing:toggleFavorite",
-    "drawing:getForBrowse",
-  ]
-
-  handlers.forEach((handler) => {
-    ipcMain.removeAllListeners(handler)
-  })
-}

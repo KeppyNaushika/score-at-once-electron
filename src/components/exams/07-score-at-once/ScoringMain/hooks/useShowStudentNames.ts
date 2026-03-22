@@ -20,24 +20,16 @@ export function useShowStudentNames() {
 
   const [showStudentNames, setShowStudentNamesState] =
     useState<boolean>(DEFAULT)
-  const [isLoading, setIsLoading] = useState(true)
   const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (initializedUserIdRef.current === userId) return
-    if (!userId) {
-      setIsLoading(false)
-      return
-    }
+    if (!userId) return
 
     initializedUserIdRef.current = userId
-    setIsLoading(true)
 
     const load = async () => {
-      if (!window.electronAPI?.settings) {
-        setIsLoading(false)
-        return
-      }
+      if (!window.electronAPI?.settings) return
 
       try {
         const result = await window.electronAPI.settings.getUserPreference(
@@ -52,7 +44,6 @@ export function useShowStudentNames() {
       } catch (error) {
         console.error("showStudentNamesの読み込みに失敗しました:", error)
       }
-      setIsLoading(false)
     }
 
     load()
@@ -76,5 +67,5 @@ export function useShowStudentNames() {
     [userId]
   )
 
-  return { showStudentNames, setShowStudentNames, isLoading }
+  return { showStudentNames, setShowStudentNames }
 }

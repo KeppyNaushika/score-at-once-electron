@@ -1381,7 +1381,7 @@ export const migrateExistingDatabase = async (): Promise<void> => {
 }
 
 // データベースファイルの存在確認
-export const checkDatabaseExists = async (): Promise<boolean> => {
+const checkDatabaseExists = async (): Promise<boolean> => {
   const databasePath = getDatabasePath()
 
   try {

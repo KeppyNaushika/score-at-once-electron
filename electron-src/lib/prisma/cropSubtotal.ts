@@ -268,9 +268,3 @@ export type CropSubtotalWithCropRegion = Prisma.CropSubtotalGetPayload<{
 }>
 
 export type CropSubtotalPayload = CropSubtotal
-
-// 互換性のためのエイリアス関数
-export const createSubtotalDefinition = createCropSubtotal
-export const createQuestionSubtotalAssignment = createCropSubtotal
-export const deleteSubtotalDefinition = deleteCropSubtotal
-export const deleteQuestionSubtotalAssignment = deleteCropSubtotal

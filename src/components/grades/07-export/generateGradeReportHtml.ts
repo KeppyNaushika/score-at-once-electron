@@ -10,19 +10,6 @@ import type {
 import type { GradeReportOptions } from "./types"
 
 /**
- * 単一生徒の個人成績通知書HTMLを生成
- */
-export function generateGradeReportHtml(
-  result: GradeCalculationResult,
-  studentId: string,
-  options: GradeReportOptions
-): string {
-  const student = result.students.find((s) => s.studentId === studentId)
-  if (!student) return ""
-  return renderStudentReport(result, student, options)
-}
-
-/**
  * 複数生徒分の個人成績通知書HTMLをページ区切りで結合
  */
 export function generateGradeReportBatchHtml(
