@@ -10,6 +10,7 @@ import { useLayoutDirection } from "./useLayoutDirection"
 import { useMasterAnswerSettings } from "./useMasterAnswerSettings"
 import { useShowStudentNames } from "./useShowStudentNames"
 
+/** 各種採点設定フックを統合し、採点画面全体の設定を一括提供するフック */
 export function useScoringSettings() {
   const { itemsPerLine, setItemsPerLine } = useItemsPerLine()
   const { autoScroll, setAutoScroll } = useAutoScroll()

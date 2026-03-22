@@ -126,15 +126,17 @@ export interface DrawingUpdateData {
   isFavorite?: boolean
 }
 
-// 型ガード関数
+/** アノテーションがテキスト型かどうかを判定する型ガード */
 export function isTextAnnotation(annotation: DrawingAnnotation): boolean {
   return annotation.type === "text"
 }
 
+/** アノテーションが直線型かどうかを判定する型ガード */
 export function isLineAnnotation(annotation: DrawingAnnotation): boolean {
   return annotation.type === "line"
 }
 
+/** アノテーションが図形型（長方形または楕円）かどうかを判定する型ガード */
 export function isShapeAnnotation(annotation: DrawingAnnotation): boolean {
   return annotation.type === "rectangle" || annotation.type === "ellipse"
 }

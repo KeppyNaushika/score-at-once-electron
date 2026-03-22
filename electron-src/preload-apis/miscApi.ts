@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 汎用ユーティリティのIPC API（画像取得・ファイル操作・データディレクトリ管理） */
 export function createMiscApi() {
   return {
     // File/image related

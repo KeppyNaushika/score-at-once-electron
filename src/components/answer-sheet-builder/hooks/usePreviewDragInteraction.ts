@@ -31,6 +31,7 @@ export interface PreviewDragResult {
   cursor: string
 }
 
+/** SVGプレビュー上の罫線ドラッグによる行高さ・列幅の微調整を管理するフック */
 export function usePreviewDragInteraction(
   layout: ComputedLayout,
   interactive: boolean,

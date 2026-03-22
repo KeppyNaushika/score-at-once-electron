@@ -32,6 +32,7 @@ import {
 } from "../lib/prisma/subtotalDefinition"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 設問グループ・設問項目・小計点割当・小計点定義のCRUD用IPCチャンネルを登録する */
 export function setupQuestionGroupHandlers(): void {
   // 既存のハンドラーをクリア（重複登録を防ぐ）
   ipcMain.removeHandler("create-question-group")

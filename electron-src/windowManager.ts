@@ -13,6 +13,7 @@ import menu from "./menu"
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
 
+/** メインウィンドウを作成し、Next.jsサーバーの準備完了後にURLを読み込んで表示する */
 export function createMainWindow(): BrowserWindow {
   // アイコンのパスを設定（プラットフォーム別）
   const getIconPath = () => {
@@ -148,6 +149,7 @@ export function createMainWindow(): BrowserWindow {
   return mainWindow
 }
 
+/** ウィンドウのフォーカス・ブラー時のイベントハンドラを設定する（ブラー時にforce-saveを送信） */
 export function setupWindowEvents(mainWindow: BrowserWindow): void {
   // アプリケーションフォーカス監視でバックグラウンド処理対策
   app.on("browser-window-focus", () => {

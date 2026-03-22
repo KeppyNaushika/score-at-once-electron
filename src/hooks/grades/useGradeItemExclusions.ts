@@ -9,6 +9,7 @@ interface ExclusionRecord {
   gradeItemId: string
 }
 
+/** 生徒ごとの成績評定項目除外設定の取得・トグル操作を管理するフック */
 export function useGradeItemExclusions(gradeId: string) {
   const [exclusionSet, setExclusionSet] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)

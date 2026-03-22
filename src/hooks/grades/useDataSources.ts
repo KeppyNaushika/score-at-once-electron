@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import type { GradeWithDetails } from "@/types/grade.types"
 
+/** 成績評定項目とデータソースのCRUD操作を管理するフック */
 export function useDataSources(gradeId: string) {
   const [exam, setExam] = useState<GradeWithDetails | null>(null)
   const [loading, setLoading] = useState(true)

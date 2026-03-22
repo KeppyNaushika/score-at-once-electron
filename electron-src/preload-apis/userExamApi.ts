@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** ユーザー-試験関連のIPC API（メンバー管理・権限確認・招待・オーナー移譲） */
 export function createUserExamApi() {
   return {
     // UserExam

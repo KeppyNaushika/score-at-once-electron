@@ -29,6 +29,7 @@ async function extractZip(
   return files
 }
 
+/** 成績算出アーカイブ（.grade）を展開し、マニフェスト・成績データ・手動スコア・境界値を解析する */
 export async function extractGradeArchive(
   archivePath: string
 ): Promise<{ success: boolean; data?: GradeArchiveData; error?: string }> {

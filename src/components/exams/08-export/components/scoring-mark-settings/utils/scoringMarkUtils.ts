@@ -1,6 +1,6 @@
 import type { ScoringStatus } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
-// マーク画像パスを取得
+/** 採点状態と透過設定から対応するマーク画像のパスを返す */
 export function getMarkImagePath(
   status: ScoringStatus,
   useTransparent: boolean

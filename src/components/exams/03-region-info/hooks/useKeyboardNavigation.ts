@@ -6,6 +6,7 @@ type UseKeyboardNavigationProps = {
   filteredRegions: CropRegionWithDetails[]
 }
 
+/** 領域情報テーブルのEnter/Tabキーによるセル間移動を管理するフック */
 export const useKeyboardNavigation = ({
   filteredRegions,
 }: UseKeyboardNavigationProps) => {

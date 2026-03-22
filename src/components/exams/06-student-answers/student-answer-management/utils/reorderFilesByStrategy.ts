@@ -7,9 +7,7 @@ import type {
 import type { ProcessedStudentAnswer } from "../types"
 import { convertAnswerSheetsToFiles } from "./convertStudentAnswersToFiles"
 
-/**
- * 現在のファイル配列を新しい配置戦略に基づいて再配置する
- */
+/** 配置戦略（ページ順/生徒順）に基づいてファイル配列を再配置する */
 export function reorderFilesByStrategy(
   currentFiles: UnifiedFile[],
   students: UnifiedStudent[],
@@ -81,9 +79,7 @@ export function reorderFilesByStrategy(
   return reorderedFiles
 }
 
-/**
- * 既存の答案データから配置戦略に基づく統一ファイル配列を構築
- */
+/** 既存の答案データを配置戦略に基づく統一ファイル配列に変換する */
 export function buildOrderedFileArrayFromStudentAnswers(
   studentAnswers: ProcessedStudentAnswer[],
   students: UnifiedStudent[],

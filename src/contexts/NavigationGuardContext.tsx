@@ -42,10 +42,12 @@ const NavigationGuardContext = createContext<NavigationGuardContextType>({
   requestNavigation: () => true,
 })
 
+/** ナビゲーションガードコンテキストから未保存確認・遷移制御の機能を取得するフック */
 export function useNavigationGuardContext() {
   return useContext(NavigationGuardContext)
 }
 
+/** 未保存データがある場合の離脱確認ダイアログを管理するプロバイダー */
 export function NavigationGuardProvider({
   children,
 }: {

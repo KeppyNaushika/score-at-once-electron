@@ -20,6 +20,7 @@ interface UseBatchScoringProps {
   setQuestionScores: React.Dispatch<React.SetStateAction<QuestionScore[]>>
 }
 
+/** 選択された答案に対する一括採点（楽観的UI更新+DB保存）を実行するフック */
 export function useBatchScoring({
   studentAnswerImages,
   cropRegions,

@@ -14,6 +14,7 @@ type UseDragAndDropProps = {
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
 }
 
+/** 領域情報テーブルの行ドラッグ&ドロップによる並び替えを管理するフック */
 export const useDragAndDrop = ({
   regions,
   setRegions,

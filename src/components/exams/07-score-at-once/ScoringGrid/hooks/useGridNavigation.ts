@@ -8,6 +8,7 @@ interface UseGridNavigationProps {
   externalItemsPerRow?: number[]
 }
 
+/** グリッドの1行あたり表示件数の管理とAlt+[-/+]キーによる増減操作を提供するフック */
 export function useGridNavigation({
   externalItemsPerRow,
 }: UseGridNavigationProps) {

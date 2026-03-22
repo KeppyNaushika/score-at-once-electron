@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
+/** 生徒・学級・所属管理のIPC API（生徒CRUD・学級CRUD・クラス所属・Excel出力） */
 export function createStudentApi() {
   return {
     // Student related

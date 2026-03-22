@@ -38,8 +38,7 @@ const getAppRootPath = (): string => {
   }
 }
 
-// データディレクトリのパス
-// 環境変数 SCORE_AT_ONCE_DATA_DIR が設定されている場合はそちらを優先
+/** データディレクトリのパスを取得する（環境変数 SCORE_AT_ONCE_DATA_DIR が優先） */
 export const getDataDirectory = (): string => {
   if (process.env.SCORE_AT_ONCE_DATA_DIR) {
     return path.resolve(process.env.SCORE_AT_ONCE_DATA_DIR)
@@ -48,22 +47,22 @@ export const getDataDirectory = (): string => {
   return dataPath
 }
 
-// 試験ディレクトリのパス
+/** 指定した試験IDのディレクトリパスを取得する */
 export const getExamDirectory = (examId: string): string => {
   return path.join(getDataDirectory(), "exams", examId)
 }
 
-// 答案保存ディレクトリのパス
+/** 指定した試験の答案画像保存ディレクトリのパスを取得する */
 export const getAnswerSheetsDirectory = (examId: string): string => {
   return path.join(getExamDirectory(examId), "answer-sheets")
 }
 
-// マスター解答保存ディレクトリのパス
+/** 指定した試験の模範解答画像保存ディレクトリのパスを取得する */
 export const getMasterAnswersDirectory = (examId: string): string => {
   return path.join(getExamDirectory(examId), "master-answers")
 }
 
-// ASB画像保存ディレクトリのパス
+/** 答案用紙ビルダー（ASB）の画像保存ディレクトリのパスを取得する */
 export const getAsbImagesDirectory = (definitionId: string): string => {
   return path.join(
     getDataDirectory(),
@@ -73,12 +72,12 @@ export const getAsbImagesDirectory = (definitionId: string): string => {
   )
 }
 
-// 出力ディレクトリのパス
+/** Excel・PDF等の出力ファイル保存ディレクトリのパスを取得する */
 export const getExportsDirectory = (): string => {
   return path.join(getDataDirectory(), "exports")
 }
 
-// データディレクトリの初期化
+/** データディレクトリとサブディレクトリ（exams, exports）を作成・初期化する */
 export const initializeDataDirectory = async (): Promise<void> => {
   const dataDir = getDataDirectory()
 
@@ -108,7 +107,7 @@ export const initializeDataDirectory = async (): Promise<void> => {
   }
 }
 
-// data/projects/ → data/exams/ マイグレーション（v0.6.x リネーム対応）
+/** data/projects/ を data/exams/ にマイグレーションする（v0.6.xリネーム対応、旧ディレクトリは削除される） */
 export const migrateProjectsToExams = async (): Promise<boolean> => {
   const dataDir = getDataDirectory()
   const oldProjectsDir = path.join(dataDir, "projects")
@@ -173,7 +172,7 @@ const copyDirectory = async (src: string, dest: string): Promise<void> => {
   }
 }
 
-// データディレクトリのサイズ計算
+/** データディレクトリ全体のサイズをバイト単位で再帰的に計算する */
 export const calculateDataSize = async (): Promise<number> => {
   const dataDir = getDataDirectory()
   return await getDirectorySize(dataDir)
@@ -204,13 +203,13 @@ const getDirectorySize = async (dirPath: string): Promise<number> => {
   return totalSize
 }
 
-// 絶対パスから相対パス（data/基準）への変換
+/** 絶対パスをデータディレクトリ基準の相対パスに変換する */
 export const getRelativePathFromData = (absolutePath: string): string => {
   const dataDir = getDataDirectory()
   return path.relative(dataDir, absolutePath).replace(/\\/g, "/")
 }
 
-// 相対パス（data/基準）から絶対パスへの変換
+/** データディレクトリ基準の相対パスを絶対パスに変換する */
 export const getAbsolutePathFromData = (relativePath: string): string => {
   const dataDir = getDataDirectory()
   return path.join(dataDir, relativePath)

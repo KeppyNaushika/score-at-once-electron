@@ -35,6 +35,7 @@ export function invalidateMasterMarkerCache(examId: string): void {
   }
 }
 
+/** OMR（光学マーク認識）のマーカー検出・シート認識・バッチ処理に関するIPCチャンネルを登録する */
 export function setupOMRHandlers(): void {
   // ────────────────────────────────────────
   // 単一画像のコーナーマーカー検出

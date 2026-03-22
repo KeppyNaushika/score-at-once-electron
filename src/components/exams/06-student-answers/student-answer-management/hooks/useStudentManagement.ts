@@ -18,6 +18,7 @@ interface UseStudentManagementProps {
   }>
 }
 
+/** 答案アップロード時の生徒選択状態・上書き設定を管理するフック */
 export function useStudentManagement({ students }: UseStudentManagementProps) {
   const [studentsWithAnswers, setStudentsWithAnswers] = useState<
     StudentWithAnswers[]

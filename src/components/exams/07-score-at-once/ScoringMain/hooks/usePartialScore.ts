@@ -19,6 +19,7 @@ interface UsePartialScoreProps {
   ) => void
 }
 
+/** 部分点入力モーダルの状態管理と数値入力・確定・キャンセル処理を提供するフック */
 export function usePartialScore({
   selectedAnswers,
   currentCropRegion,

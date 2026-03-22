@@ -36,6 +36,7 @@ import {
 } from "../lib/prisma/asbDefinition"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PDF/PNG出力・印刷・インポート/エクスポート）を登録する */
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
   registerSafeHandler(

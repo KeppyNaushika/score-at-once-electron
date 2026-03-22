@@ -20,6 +20,7 @@ import { setupSubjectHandlers } from "./subjectHandlers"
 import { setupSubtotalGroupHandlers } from "./subtotalGroupHandlers"
 import { setupUserExamHandlers } from "./userExamHandlers"
 
+/** 全IPCハンドラーを一括登録する */
 export function setupAllIPCHandlers(): void {
   setupExamHandlers()
   setupStudentHandlers()

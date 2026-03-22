@@ -2,7 +2,7 @@ import type { Prisma as PrismaTypes } from "@prisma/client"
 
 import prisma from "./client"
 
-// Exam一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得）
+/** 試験一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得、ユーザーでフィルタリング） */
 export const getExamsForList = async (userId: string) => {
   return prisma.exam.findMany({
     where: {
@@ -58,7 +58,7 @@ export type ExamForListPayload = Awaited<
   ReturnType<typeof getExamsForList>
 >[number]
 
-// Exam一覧を取得 (ユーザーでフィルタリング) - 詳細ページ用
+/** 試験一覧を全リレーション付きで取得する（詳細ページ用、userExams・examPages・examSubtotalGroups・examStudents含む） */
 export const getExams = async (userId: string) => {
   return prisma.exam.findMany({
     where: {
@@ -120,7 +120,7 @@ export const getExams = async (userId: string) => {
 // getExams の戻り値の型
 export type ExamPayload = PrismaTypes.PromiseReturnType<typeof getExams>[number]
 
-// IDで単一のExamを取得 (詳細情報も含む)
+/** IDで試験を取得する（全リレーション含む: userExams・examPages・examSubtotalGroups・examStudents） */
 export const getExamById = async (id: string) => {
   return prisma.exam.findUnique({
     where: { id },
@@ -186,7 +186,7 @@ export type ExamWithDetailsPayload = PrismaTypes.PromiseReturnType<
   typeof getExamById
 >
 
-// Exam作成
+/** 試験を作成し、指定ユーザーをOWNERとしてUserExamに登録する */
 export const createExam = async (
   data: Omit<PrismaTypes.ExamCreateInput, "userExams">,
   userId: string
@@ -227,7 +227,7 @@ export const createExam = async (
   })
 }
 
-// Exam更新
+/** 試験情報を更新する */
 export const updateExam = async (
   id: string,
   data: PrismaTypes.ExamUpdateInput
@@ -238,7 +238,7 @@ export const updateExam = async (
   })
 }
 
-// Exam削除
+/** 試験を削除する */
 export const deleteExam = async (id: string) => {
   return prisma.exam.delete({
     where: { id },

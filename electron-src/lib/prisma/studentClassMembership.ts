@@ -36,6 +36,7 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
   }
 }>
 
+/** 生徒の学級所属レコードを作成する（student・class含む） */
 export const createStudentClassMembership = async (
   membershipData: Prisma.StudentClassMembershipCreateInput
 ): Promise<StudentClassMembershipWithDetails> => {
@@ -53,6 +54,7 @@ export const createStudentClassMembership = async (
   }
 }
 
+/** 生徒の学級所属レコードを更新する（student・class含む） */
 export const updateStudentClassMembership = async (
   id: string,
   membershipData: Prisma.StudentClassMembershipUpdateInput
@@ -72,6 +74,7 @@ export const updateStudentClassMembership = async (
   }
 }
 
+/** 生徒の学級所属レコードを削除する */
 export const deleteStudentClassMembership = async (
   id: string
 ): Promise<void> => {
@@ -83,7 +86,7 @@ export const deleteStudentClassMembership = async (
   }
 }
 
-// 学生の現在の所属クラス一覧を取得
+/** 生徒の現在所属中の学級一覧を取得する（endDateがnullのもの、student・class含む） */
 export const getCurrentMembershipsByStudentId = async (
   studentId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
@@ -107,7 +110,7 @@ export const getCurrentMembershipsByStudentId = async (
   }
 }
 
-// 学生の全所属履歴を取得
+/** 生徒の全所属履歴を取得する（過去分含む、student・class含む） */
 export const getAllMembershipsByStudentId = async (
   studentId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
@@ -128,7 +131,7 @@ export const getAllMembershipsByStudentId = async (
   }
 }
 
-// クラスの現在の所属学生一覧を取得（出席番号順）
+/** 学級の現在所属中の生徒一覧を取得する（出席番号順、student・class含む） */
 export const getCurrentMembershipsByClassId = async (
   classId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
@@ -153,7 +156,7 @@ export const getCurrentMembershipsByClassId = async (
   }
 }
 
-// 学生をクラスに追加（新規所属）
+/** 生徒を学級に追加する（新規所属レコード作成、student・class含む） */
 export const addStudentToClass = async (
   studentId: string,
   classId: string,
@@ -177,7 +180,7 @@ export const addStudentToClass = async (
   }
 }
 
-// 学生のクラス所属を終了
+/** 生徒の学級所属を終了する（endDateを設定） */
 export const endStudentMembership = async (
   membershipId: string,
   endDate: Date = new Date()
@@ -192,7 +195,7 @@ export const endStudentMembership = async (
   }
 }
 
-// 特定期間の所属情報を取得
+/** 指定期間に有効な所属情報を取得する（期間内開始・期間をまたぐもの含む、student・class含む） */
 export const getMembershipsByDateRange = async (
   startDate: Date,
   endDate?: Date

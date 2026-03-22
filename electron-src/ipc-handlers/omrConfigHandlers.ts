@@ -10,6 +10,7 @@ import {
 } from "../lib/prisma/cropRegionOmrConfig"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
+/** OMR設定（CropRegionOmrConfig）のCRUD用IPCチャンネルを登録する */
 export function setupOmrConfigHandlers(): void {
   registerSafeHandler(
     "omr-config:upsert",

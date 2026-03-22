@@ -37,6 +37,7 @@ function compareVersions(v1: string, v2: string): number {
   return 0
 }
 
+/** マニフェストのバージョン文字列からサポート対象のASBバージョンを判定する */
 export function detectAsbVersion(
   manifest: AsbArchiveManifest
 ): AsbArchiveVersion | "unknown" {
@@ -94,6 +95,7 @@ function buildAsbTransformChain(
   return chain
 }
 
+/** ASBアーカイブデータを変換チェーンを通じて最新バージョンに変換する */
 export function transformAsbToLatest(
   data: AsbArchiveData,
   targetVersion: AsbArchiveVersion = ASB_CURRENT_VERSION

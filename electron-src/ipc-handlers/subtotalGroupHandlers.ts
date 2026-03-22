@@ -10,6 +10,7 @@ import {
 } from "../lib/prisma/subtotalGroup"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 小計点グループのCRUD・試験への紐付け管理に関するIPCチャンネルを登録する */
 export function setupSubtotalGroupHandlers(): void {
   // 小計点グループ一覧取得
   registerSafeHandler("get-subtotal-groups", async () => {

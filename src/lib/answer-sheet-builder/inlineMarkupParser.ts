@@ -45,6 +45,7 @@ const DELIMITERS = [
 
 type StyleKey = (typeof DELIMITERS)[number]["style"]
 
+/** マークアップ文字列をパースしてスタイル付きセグメント配列に変換する */
 export function parseInlineMarkup(input: string): InlineSegment[] {
   if (!input) return []
 

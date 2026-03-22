@@ -42,6 +42,7 @@ function serializeScore(score: {
   }
 }
 
+/** 採点（QuestionScore）のCRUD・進捗取得・一括更新・採点レコード初期化に関するIPCチャンネルを登録する */
 export function setupScoringHandlers(): void {
   // QuestionScore 関連のハンドラー
   registerHandler(

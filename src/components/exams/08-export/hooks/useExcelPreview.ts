@@ -54,6 +54,7 @@ interface UseExcelPreviewProps {
   enabled: boolean
 }
 
+/** Excel出力用のプレビューデータ（設問別得点・小計・合計）をデバウンス付きで取得するフック */
 export function useExcelPreview({
   examId,
   selectedStudentIds,

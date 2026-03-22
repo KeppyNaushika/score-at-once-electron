@@ -2,7 +2,7 @@ import type { ExamPage, Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
-// ExamPage を作成
+/** 試験ページを作成する（masterImages・studentAnswerImages・cropRegions リレーション含む） */
 export const createExamPage = async (
   data: Prisma.ExamPageUncheckedCreateInput
 ) => {
@@ -16,7 +16,7 @@ export const createExamPage = async (
   })
 }
 
-// 複数の ExamPage を作成
+/** 複数の試験ページを一括作成する */
 export const createManyExamPages = async (
   data: Prisma.ExamPageCreateManyInput[]
 ) => {
@@ -25,7 +25,7 @@ export const createManyExamPages = async (
   })
 }
 
-// ExamPage を更新
+/** 試験ページを更新する（masterImages・studentAnswerImages・cropRegions リレーション含む） */
 export const updateExamPage = async (
   id: string,
   data: Prisma.ExamPageUpdateInput
@@ -41,7 +41,7 @@ export const updateExamPage = async (
   })
 }
 
-// ExamPage を削除
+/** 試験ページを削除する（関連するMasterImage・StudentAnswerImage・CropRegionもCascade削除） */
 export const deleteExamPage = async (id: string) => {
   // 関連する MasterImage, StudentAnswerImage, CropRegion も削除される（onDelete: Cascade 設定済み）
   return prisma.examPage.delete({
@@ -49,7 +49,7 @@ export const deleteExamPage = async (id: string) => {
   })
 }
 
-// 試験IDで ExamPage を取得
+/** 試験IDで全ページを取得する（masterImages・studentAnswerImages.student・cropRegions リレーション含む、ページ番号順） */
 export const getExamPagesByExamId = async (examId: string) => {
   return prisma.examPage.findMany({
     where: { examId },
@@ -66,7 +66,7 @@ export const getExamPagesByExamId = async (examId: string) => {
   })
 }
 
-// IDで ExamPage を取得
+/** IDで試験ページを取得する（masterImages・studentAnswerImages.student・cropRegions リレーション含む） */
 export const getExamPageById = async (id: string) => {
   return prisma.examPage.findUnique({
     where: { id },

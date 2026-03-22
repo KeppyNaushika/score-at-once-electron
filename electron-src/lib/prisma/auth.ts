@@ -29,7 +29,7 @@ function verifyToken(token: string): AuthTokenPayload | null {
   }
 }
 
-// Login user
+/** ユーザー名とパスコードで認証し、JWTトークンを発行する */
 export async function loginUser(username: string, password: string) {
   try {
     const user = await prisma.user.findUnique({
@@ -72,7 +72,7 @@ export async function loginUser(username: string, password: string) {
   }
 }
 
-// Create new user
+/** 新規ユーザーを作成し、JWTトークンを発行する（ユーザー名の重複チェック付き） */
 export async function createUser(userData: {
   username: string
   password: string
@@ -124,7 +124,7 @@ export async function createUser(userData: {
   }
 }
 
-// Get user by token
+/** JWTトークンを検証し、対応するユーザー情報を取得する */
 export async function getUserByToken(token: string) {
   try {
     const payload = verifyToken(token)
@@ -157,7 +157,7 @@ export async function getUserByToken(token: string) {
   }
 }
 
-// Update user password
+/** ユーザーのパスコードを更新する */
 export async function updateUserPassword(userId: string, newPassword: string) {
   try {
     await prisma.user.update({

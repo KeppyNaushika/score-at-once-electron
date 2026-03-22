@@ -2,7 +2,7 @@ import type { Prisma, Subtotal } from "@prisma/client"
 
 import prisma from "./client"
 
-// Subtotal を作成
+/** 小計定義（Subtotal）を作成する（subtotalGroup・cropSubtotals含む） */
 export const createSubtotalDefinition = async (
   data: Prisma.SubtotalUncheckedCreateInput // cropRegionId と subtotalId を直接含める
 ) => {
@@ -15,7 +15,7 @@ export const createSubtotalDefinition = async (
   })
 }
 
-// 複数の Subtotal を作成 (特定の LayoutRegion に対して)
+/** 複数の小計定義（Subtotal）を一括作成する */
 export const createManySubtotalDefinitions = async (
   definitions: Prisma.SubtotalUncheckedCreateInput[]
 ) => {
@@ -24,15 +24,14 @@ export const createManySubtotalDefinitions = async (
   })
 }
 
-// Subtotal を削除 (IDで)
+/** IDで小計定義（Subtotal）を削除する */
 export const deleteSubtotalDefinition = async (id: string) => {
   return prisma.subtotal.delete({
     where: { id },
   })
 }
 
-// CropRegion ID で Subtotal を削除 (特定の採点領域の定義をすべて削除)
-// TODO: This function needs to be rewritten for new schema
+/** 採点領域IDに紐づく小計定義を全て削除する（未実装：新スキーマ対応待ち） */
 export const deleteSubtotalDefinitionsByCropRegionId = async (
   _cropRegionId: string
 ) => {
@@ -42,8 +41,7 @@ export const deleteSubtotalDefinitionsByCropRegionId = async (
   return { count: 0 }
 }
 
-// QuestionGroupItem ID で Subtotal を取得 (特定のグループ項目を参照する集計定義を取得)
-// TODO: This function needs to be rewritten for new schema
+/** 設問グループ項目IDで小計定義一覧を取得する（未実装：新スキーマ対応待ち） */
 export const getSubtotalDefinitionsByQuestionGroupItemId = async (
   _questionGroupItemId: string
 ) => {
@@ -53,8 +51,7 @@ export const getSubtotalDefinitionsByQuestionGroupItemId = async (
   return []
 }
 
-// CropRegion ID で Subtotal を取得 (特定の採点領域が持つ集計定義を取得)
-// TODO: This function needs to be rewritten for new schema
+/** 採点領域IDで小計定義一覧を取得する（未実装：新スキーマ対応待ち） */
 export const getSubtotalDefinitionsByCropRegionId = async (
   _cropRegionId: string
 ) => {

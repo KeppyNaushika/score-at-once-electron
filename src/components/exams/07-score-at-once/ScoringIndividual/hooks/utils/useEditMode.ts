@@ -7,6 +7,7 @@ import type {
   RectangleEditMode,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 
+/** 線・矩形要素の編集モード（移動・端点・リサイズ）を座標から判定するユーティリティフック */
 export function useEditModeUtils() {
   // 線の編集モード判定（開始点、終了点、移動）- PowerPointスタイル
   const getLineEditMode = useCallback(

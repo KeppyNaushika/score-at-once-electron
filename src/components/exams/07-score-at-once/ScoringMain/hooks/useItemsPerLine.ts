@@ -14,6 +14,7 @@ import {
 
 const DEFAULT = USER_PREFERENCE_SCHEMA.itemsPerLine.default
 
+/** 採点グリッドの1行あたりの表示件数をユーザー設定として永続化するフック */
 export function useItemsPerLine() {
   const { user } = useAuth()
   const userId = user?.id

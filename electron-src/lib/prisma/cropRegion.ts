@@ -2,7 +2,7 @@ import type { CropRegion, Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
-// CropRegion を作成
+/** 設問領域を作成する（orderIndex未指定時は自動採番、examPage・cropSubtotals リレーション含む） */
 export const createCropRegion = async (
   data: Prisma.CropRegionUncheckedCreateInput
 ) => {
@@ -53,7 +53,7 @@ export const createCropRegion = async (
   })
 }
 
-// 複数の CropRegion を作成
+/** 複数の設問領域を一括作成する */
 export const createManyCropRegions = async (
   data: Prisma.CropRegionCreateManyInput[]
 ) => {
@@ -62,7 +62,7 @@ export const createManyCropRegions = async (
   })
 }
 
-// CropRegion を更新
+/** 設問領域を更新する（examPage・cropSubtotals リレーション含む） */
 export const updateCropRegion = async (
   id: string,
   data: Prisma.CropRegionUpdateInput
@@ -81,14 +81,14 @@ export const updateCropRegion = async (
   })
 }
 
-// CropRegion を削除
+/** 設問領域を削除する */
 export const deleteCropRegion = async (id: string) => {
   return prisma.cropRegion.delete({
     where: { id },
   })
 }
 
-// 試験IDで CropRegion を取得
+/** 試験IDで全設問領域を取得する（orderIndexがnullの場合は自動設定、examPage・cropSubtotals・questionScores リレーション含む） */
 export const getCropRegionsByExamId = async (examId: string) => {
   const regions = await prisma.cropRegion.findMany({
     where: {
@@ -207,7 +207,7 @@ export const getQuestionAnswerRegionsByExamId = async (examId: string) => {
   return regions
 }
 
-// IDで CropRegion を取得
+/** IDで設問領域を取得する（examPage・cropSubtotals・questionScores リレーション含む） */
 export const getCropRegionById = async (id: string) => {
   return prisma.cropRegion.findUnique({
     where: { id },
@@ -223,7 +223,7 @@ export const getCropRegionById = async (id: string) => {
   })
 }
 
-// 複数の CropRegion の順序を一括更新
+/** 複数の設問領域のorderIndexを一括更新する */
 export const updateCropRegionOrders = async (
   updates: Array<{ id: string; orderIndex: number }>
 ) => {

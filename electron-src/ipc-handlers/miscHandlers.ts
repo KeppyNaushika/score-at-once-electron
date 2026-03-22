@@ -36,6 +36,7 @@ import {
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
+/** ユーザー・認証・答案・学級・模範画像・ファイル操作など汎用的なIPCチャンネルを登録する */
 export function setupMiscHandlers(): void {
   // User handlers
   registerHandler("fetch-users", async () => {

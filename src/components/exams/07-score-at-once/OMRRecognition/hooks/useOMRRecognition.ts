@@ -60,6 +60,7 @@ const DEFAULT_PARAMS: OMRRecognitionParams = {
   areaThreshold: 0.4,
 }
 
+/** OMRマークシート認識の実行・バッチ処理・進捗管理・結果保持を行うフック */
 export function useOMRRecognition(
   options: UseOMRRecognitionOptions
 ): UseOMRRecognitionReturn {

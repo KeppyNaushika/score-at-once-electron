@@ -83,6 +83,7 @@ interface UseHitTestUtilsProps {
   >
 }
 
+/** 描画要素（線・矩形・楕円・テキスト）に対するズーム対応の当たり判定ユーティリティフック */
 export function useHitTestUtils({
   zoom = 1,
   textBoundsCache,

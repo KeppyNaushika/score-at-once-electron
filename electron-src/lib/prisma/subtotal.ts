@@ -2,7 +2,7 @@ import type { Prisma, Subtotal } from "@prisma/client"
 
 import prisma from "./client"
 
-// Subtotal を作成
+/** 小計項目（Subtotal）を1件作成する */
 export const createSubtotal = async (
   data: Prisma.SubtotalUncheckedCreateInput // subtotalGroupId を直接含める
 ) => {
@@ -11,7 +11,7 @@ export const createSubtotal = async (
   })
 }
 
-// 複数の Subtotal を作成 (特定の SubtotalGroup に対して)
+/** 複数の小計項目（Subtotal）を一括作成する */
 export const createManySubtotals = async (
   items: Prisma.SubtotalUncheckedCreateInput[]
 ) => {
@@ -20,7 +20,7 @@ export const createManySubtotals = async (
   })
 }
 
-// Subtotal を更新
+/** 小計項目（Subtotal）を更新する */
 export const updateSubtotal = async (
   id: string,
   data: Prisma.SubtotalUpdateInput
@@ -31,7 +31,7 @@ export const updateSubtotal = async (
   })
 }
 
-// Subtotal を削除
+/** 小計項目（Subtotal）を削除する（関連CropSubtotalもカスケード削除） */
 export const deleteSubtotal = async (id: string) => {
   // 関連する CropSubtotal も削除される（onDelete: Cascade が設定済み）
   return prisma.subtotal.delete({
@@ -39,7 +39,7 @@ export const deleteSubtotal = async (id: string) => {
   })
 }
 
-// SubtotalGroup ID で Subtotal を取得
+/** SubtotalGroup IDで小計項目一覧を取得する（order昇順） */
 export const getSubtotalsByGroupId = async (subtotalGroupId: string) => {
   return prisma.subtotal.findMany({
     where: { subtotalGroupId },
@@ -49,7 +49,7 @@ export const getSubtotalsByGroupId = async (subtotalGroupId: string) => {
   })
 }
 
-// IDで Subtotal を取得
+/** IDで小計項目を取得する（subtotalGroup・cropSubtotals含む） */
 export const getSubtotalById = async (id: string) => {
   return prisma.subtotal.findUnique({
     where: { id },
@@ -67,7 +67,7 @@ export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
   }
 }>
 
-// Subtotal の順序を一括更新
+/** 小計項目の表示順序をトランザクション内で一括更新する */
 export const updateSubtotalOrders = async (
   orders: { id: string; order: number }[]
 ) => {

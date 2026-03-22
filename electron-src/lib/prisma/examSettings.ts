@@ -16,12 +16,14 @@ export interface MarkingFormatData {
   strokeWidth?: number | null
 }
 
+/** 試験の全採点マーク設定を取得する */
 export async function getExamMarkingFormats(examId: string) {
   return prisma.examMarkingFormat.findMany({
     where: { examId },
   })
 }
 
+/** 試験の特定マーク種別の採点マーク設定を取得する */
 export async function getExamMarkingFormat(examId: string, markType: string) {
   return prisma.examMarkingFormat.findUnique({
     where: {
@@ -30,6 +32,7 @@ export async function getExamMarkingFormat(examId: string, markType: string) {
   })
 }
 
+/** 採点マーク設定を作成または更新する（examId+markTypeで一意） */
 export async function upsertExamMarkingFormat(
   examId: string,
   data: MarkingFormatData
@@ -51,6 +54,7 @@ export async function upsertExamMarkingFormat(
   })
 }
 
+/** 複数の採点マーク設定を一括で作成または更新する（トランザクション内で実行） */
 export async function bulkUpsertExamMarkingFormats(
   examId: string,
   formats: MarkingFormatData[]
@@ -75,6 +79,7 @@ export async function bulkUpsertExamMarkingFormats(
   return prisma.$transaction(operations)
 }
 
+/** 指定マーク種別の採点マーク設定を削除する */
 export async function deleteExamMarkingFormat(
   examId: string,
   markType: string
@@ -88,6 +93,7 @@ export async function deleteExamMarkingFormat(
 // ExamExportSettings（エクスポート設定）
 // =============================================================================
 
+/** 試験のエクスポート設定をJSONパースして取得する（未設定またはパース失敗時はnull） */
 export async function getExamExportSettings(examId: string) {
   const settings = await prisma.examExportSettings.findUnique({
     where: { examId },
@@ -100,6 +106,7 @@ export async function getExamExportSettings(examId: string) {
   }
 }
 
+/** エクスポート設定をJSON文字列として作成または更新する */
 export async function upsertExamExportSettings(
   examId: string,
   settings: Record<string, unknown>
@@ -112,6 +119,7 @@ export async function upsertExamExportSettings(
   })
 }
 
+/** 試験のエクスポート設定を削除する */
 export async function deleteExamExportSettings(examId: string) {
   return prisma.examExportSettings.deleteMany({
     where: { examId },

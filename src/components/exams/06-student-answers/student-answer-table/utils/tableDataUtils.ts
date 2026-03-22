@@ -4,9 +4,7 @@ import type {
   UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
 
-/**
- * 生徒をcustomOrder順にソートする
- */
+/** 生徒をcustomOrder昇順にソートした新しい配列を返す */
 export function sortStudentsByCustomOrder(
   students: UnifiedStudent[]
 ): UnifiedStudent[] {
@@ -17,9 +15,7 @@ export function sortStudentsByCustomOrder(
   })
 }
 
-/**
- * 動的無効化計算：答案がない位置を無効化（確認モードのみ）
- */
+/** 確認モードで答案が存在しないテーブル位置を無効化するSetを返す */
 export function calculateDynamicDisabledPositions(
   files: UnifiedFile[],
   sortedStudents: UnifiedStudent[],
@@ -71,9 +67,7 @@ export function calculateDynamicDisabledPositions(
   return dynamicDisabled
 }
 
-/**
- * 既存答案がある位置の計算（警告オーバーレイ用）
- */
+/** 既存の答案が割り当てられているテーブル位置のSetを返す（警告オーバーレイ用） */
 export function calculatePositionsWithExistingAnswers(
   files: UnifiedFile[],
   sortedStudents: UnifiedStudent[],
@@ -128,9 +122,7 @@ export function calculatePositionsWithExistingAnswers(
   return positions
 }
 
-/**
- * 有効ファイルのフィルタリング
- */
+/** 無効化されていないファイルのみをフィルタリングして返す */
 export function getEnabledFiles(
   files: UnifiedFile[],
   disabledState: ExtendedDisabledState
@@ -138,9 +130,7 @@ export function getEnabledFiles(
   return files.filter((file) => !disabledState.files.has(file.id))
 }
 
-/**
- * 無効ファイルのフィルタリング
- */
+/** 無効化されたファイルのみをフィルタリングして返す */
 export function getDisabledFiles(
   files: UnifiedFile[],
   disabledState: ExtendedDisabledState
@@ -148,9 +138,7 @@ export function getDisabledFiles(
   return files.filter((file) => disabledState.files.has(file.id))
 }
 
-/**
- * ファイルの色を計算する
- */
+/** ファイルIDのハッシュからTailwind背景色クラスを決定する */
 export function getFileColor(file: UnifiedFile): string {
   const colors = [
     "bg-red-200",

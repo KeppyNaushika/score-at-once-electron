@@ -3,7 +3,7 @@ import * as fs from "fs/promises"
 
 import { getDatabasePath } from "./databaseInitializer"
 
-// テーブルのカラム情報を取得するヘルパー
+/** 指定テーブルのカラム名一覧をPRAGMA table_infoで取得する */
 export const getTableColumns = async (
   prisma: PrismaClient,
   tableName: string
@@ -18,7 +18,7 @@ export const getTableColumns = async (
   }
 }
 
-// テーブルが存在するか確認するヘルパー
+/** SQLiteのsqlite_masterを参照し、指定テーブルが存在するか確認する */
 export const tableExists = async (
   prisma: PrismaClient,
   tableName: string
@@ -29,7 +29,7 @@ export const tableExists = async (
   return result.length > 0
 }
 
-// データベースファイルの存在確認
+/** データベースファイル（database.db）がディスク上に存在するか確認する */
 export const checkDatabaseExists = async (): Promise<boolean> => {
   const databasePath = getDatabasePath()
 

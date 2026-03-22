@@ -6,6 +6,7 @@ interface UseAutoScrollProps {
   containerRef: RefObject<HTMLDivElement | null>
 }
 
+/** 選択された答案カードをグリッドコンテナ内で自動的に画面中央にスクロールするフック */
 export function useAutoScroll({
   selectedAnswers,
   autoScroll,

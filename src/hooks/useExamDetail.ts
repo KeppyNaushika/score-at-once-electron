@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import type { ExamWithDetails } from "@/types/common.types"
 
+/** 試験詳細ページ用のデータ取得・更新フック（生徒数・設問領域数・答案数等の集計を含む） */
 export function useExamDetail(examId: string) {
   const [exam, setExam] = useState<ExamWithDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)

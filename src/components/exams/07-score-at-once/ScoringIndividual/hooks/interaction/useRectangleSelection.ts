@@ -30,6 +30,7 @@ interface UseRectangleSelectionProps {
   setRectangleEditMode: (mode: RectangleEditMode) => void
 }
 
+/** 矩形ドラッグによる範囲選択の開始・更新・完了を管理するフック */
 export function useRectangleSelection({
   currentTool,
   drawingElements,

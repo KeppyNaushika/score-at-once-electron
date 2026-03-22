@@ -14,6 +14,7 @@ import {
 
 const DEFAULT = USER_PREFERENCE_SCHEMA.expandMargin.default
 
+/** 採点グリッドの表示領域拡張マージンをユーザー設定として永続化するフック */
 export function useExpandMargin() {
   const { user } = useAuth()
   const userId = user?.id

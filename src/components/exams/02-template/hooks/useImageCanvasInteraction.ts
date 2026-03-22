@@ -25,6 +25,7 @@ import {
 import { useCanvasCoordinates } from "./useCanvasCoordinates"
 import { useMouseHandlers } from "./useMouseHandlers"
 
+/** 採点領域の作成・リサイズ・移動などキャンバス上のマウス操作を管理するフック */
 export function useImageCanvasInteraction({
   disabled,
   backgroundImageUrl,

@@ -231,6 +231,7 @@ export async function deleteGrade(id: string) {
 // GradeExportSettings（エクスポート設定）
 // =============================================================================
 
+/** 成績算出試験のエクスポート設定をJSON形式で取得する */
 export async function getGradeExportSettings(gradeId: string) {
   const settings = await prisma.gradeExportSettings.findUnique({
     where: { gradeId },
@@ -243,6 +244,7 @@ export async function getGradeExportSettings(gradeId: string) {
   }
 }
 
+/** 成績算出試験のエクスポート設定を作成または更新する（JSON文字列として保存） */
 export async function upsertGradeExportSettings(
   gradeId: string,
   settings: Record<string, unknown>

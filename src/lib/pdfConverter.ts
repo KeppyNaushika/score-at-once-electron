@@ -49,6 +49,7 @@ export interface PdfConversionError {
   message: string
 }
 
+/** PDFファイルの総ページ数を取得する */
 export async function getPdfPageCount(
   file: File,
   password?: string
@@ -76,6 +77,7 @@ export async function getPdfPageCount(
   }
 }
 
+/** PDFファイルを各ページのPNG画像に変換する */
 export async function convertPdfToImages(
   file: File,
   password?: string,

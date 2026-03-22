@@ -16,6 +16,7 @@ import {
 const DEFAULT = USER_PREFERENCE_SCHEMA.layoutDirection
   .default as LayoutDirection
 
+/** 採点グリッドのレイアウト方向（右下・左下・下右・下左）をユーザー設定として永続化するフック */
 export function useLayoutDirection() {
   const { user } = useAuth()
   const userId = user?.id

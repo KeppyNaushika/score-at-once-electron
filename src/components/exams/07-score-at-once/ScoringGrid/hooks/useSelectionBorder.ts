@@ -10,6 +10,7 @@ import { parsePreference } from "@/lib/userPreferences"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316" // orange-500
 
+/** 選択枠のボーダー色をユーザー設定から読み込み、設定変更イベントを監視するフック */
 export function useSelectionBorder(): string {
   const { user } = useAuth()
   const userId = user?.id

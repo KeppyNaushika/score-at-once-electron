@@ -117,10 +117,7 @@ function generatePageCss(pageWidthMm: number, pageHeightMm: number): string {
   foreignObject svg[role="img"] { overflow: visible !important; display: inline !important; }`
 }
 
-/**
- * 解答用紙の印刷用HTMLを生成する。
- * プレビューと同じ AnswerSheetSVGRenderer を renderToStaticMarkup で使用。
- */
+/** 解答用紙の全ページを含む印刷用HTML文書を生成する */
 export async function generateAnswerSheetPrintHtml(
   definition: AnswerSheetDefinition,
   multiLayout: ComputedMultiPageLayout
@@ -155,11 +152,7 @@ ${pagesHtml}
 </html>`
 }
 
-/**
- * 解答用紙のページごとの独立HTMLを生成する。
- * BrowserWindow + capturePage でPNG化するために使用。
- * 各HTMLは1ページ分のSVGを含む完全なHTML文書。
- */
+/** 解答用紙の各ページを個別のHTML文書として生成する（PNG出力用） */
 export async function generateAnswerSheetPageHtmls(
   definition: AnswerSheetDefinition,
   multiLayout: ComputedMultiPageLayout,

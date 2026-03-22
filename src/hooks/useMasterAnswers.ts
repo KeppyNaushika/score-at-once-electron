@@ -27,6 +27,7 @@ export interface MasterAnswersState {
   }
 }
 
+/** 模範解答画像のアップロード・削除・並べ替えおよびパスワード付きPDF処理を管理するフック */
 export function useMasterAnswers(
   examId: string,
   initialAnswers: MasterAnswer[],

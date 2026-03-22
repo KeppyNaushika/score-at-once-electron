@@ -176,6 +176,7 @@ function computeExamStatus(exam: ExamForListPayload) {
   }
 }
 
+/** 試験（Exam）のCRUD・一覧取得・ステータス計算に関するIPCチャンネルを登録する */
 export function setupExamHandlers(): void {
   // 試験一覧用の軽量エンドポイント（ステータスをサーバーサイドで計算）
   registerHandler("fetch-exams-summary", async (userId: string) => {

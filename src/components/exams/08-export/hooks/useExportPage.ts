@@ -14,6 +14,7 @@ import {
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/ScoringMarkSettings"
 
+/** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */
 export function useExportPage() {
   const params = useParams()
   const examId = params.examId as string

@@ -27,6 +27,7 @@ export interface ExamStatus {
   progress: number
 }
 
+/** 試験データの取得・更新・削除およびステータス管理を提供するカスタムフック */
 export function useExam(examId?: string) {
   const [exam, setExam] = useState<ExamWithDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)

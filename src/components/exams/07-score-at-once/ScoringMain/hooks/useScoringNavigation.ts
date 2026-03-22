@@ -21,6 +21,7 @@ interface UseScoringNavigationProps {
   cropRegions?: CropRegionWithExamPage[]
 }
 
+/** 設問間の前後移動とWASDキーによるグリッド内ナビゲーションを提供するフック */
 export function useScoringNavigation({
   answerSheetsLength,
   currentCropRegionId,

@@ -16,6 +16,7 @@ import {
   USER_PREFERENCE_SCHEMA,
 } from "@/lib/userPreferences"
 
+/** 模範解答の表示モード・透明度・キー動作設定をユーザー設定として永続化するフック */
 export function useMasterAnswerSettings() {
   const { user } = useAuth()
   const userId = user?.id

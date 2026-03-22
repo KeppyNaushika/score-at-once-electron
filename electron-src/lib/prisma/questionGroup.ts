@@ -2,7 +2,7 @@ import type { Prisma, SubtotalGroup } from "@prisma/client"
 
 import prisma from "./client"
 
-// QuestionGroup を作成 (SubtotalGroup として実装)
+/** 設問グループ（SubtotalGroup）を作成する（subtotals含む） */
 export const createQuestionGroup = async (
   data: Prisma.SubtotalGroupUncheckedCreateInput
 ) => {
@@ -14,7 +14,7 @@ export const createQuestionGroup = async (
   })
 }
 
-// QuestionGroup を更新
+/** 設問グループ（SubtotalGroup）を更新する（subtotals含む） */
 export const updateQuestionGroup = async (
   id: string,
   data: Prisma.SubtotalGroupUpdateInput
@@ -28,7 +28,7 @@ export const updateQuestionGroup = async (
   })
 }
 
-// QuestionGroup を削除
+/** 設問グループ（SubtotalGroup）を削除する（関連Subtotalはカスケード削除） */
 export const deleteQuestionGroup = async (id: string) => {
   // 関連する Subtotal, CropSubtotal も削除されるか確認
   // (onDelete: Cascade が設定されていれば自動)
@@ -37,7 +37,7 @@ export const deleteQuestionGroup = async (id: string) => {
   })
 }
 
-// 試験IDで QuestionGroup を取得
+/** 試験IDで設問グループ一覧を取得する（ExamSubtotalGroup経由、subtotals含む） */
 export const getQuestionGroupsByExamId = async (examId: string) => {
   // ExamSubtotalGroup経由でSubtotalGroupを取得
   const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
@@ -66,7 +66,7 @@ export const getQuestionGroupsByExamId = async (examId: string) => {
   }))
 }
 
-// IDで QuestionGroup を取得
+/** IDで設問グループを取得する（subtotals・examSubtotalGroups含む） */
 export const getQuestionGroupById = async (id: string) => {
   const subtotalGroup = await prisma.subtotalGroup.findUnique({
     where: { id },

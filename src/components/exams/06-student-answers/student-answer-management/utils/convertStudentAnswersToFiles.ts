@@ -22,11 +22,7 @@ type AnswerSheetInput =
       }
     }
 
-/**
- * データベースから取得した答案データを、テーブル表示用のUnifiedFile形式に変換する
- * @param answerSheets データベースから取得した答案データ
- * @returns UnifiedFile配列
- */
+/** DB取得済みの答案データをテーブル表示用のUnifiedFile配列に変換する */
 export function convertAnswerSheetsToFiles(
   answerSheets: AnswerSheetInput[]
 ): UnifiedFile[] {
@@ -66,11 +62,7 @@ export function convertAnswerSheetsToFiles(
   })
 }
 
-/**
- * 生徒答案画像の遅延読み込み用関数
- * @param file UnifiedFileオブジェクト
- * @returns Base64エンコードされた画像データURL
- */
+/** UnifiedFileから答案画像をBase64データURLとして読み込む（遅延読み込み対応） */
 export async function loadStudentAnswerImage(
   file: UnifiedFile
 ): Promise<string> {

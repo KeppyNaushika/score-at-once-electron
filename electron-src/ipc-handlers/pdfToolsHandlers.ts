@@ -22,6 +22,7 @@ import { splitPdf } from "../lib/pdf-tools/pdfSplitter"
 import { exportPagesToPng } from "../lib/pdf-tools/pdfToPng"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
+/** PDFツール（結合・分割・回転・2-in-1・PNG書き出し）に関するIPCチャンネルを登録する */
 export function setupPdfToolsHandlers(): void {
   // PDF結合
   registerHandler(
