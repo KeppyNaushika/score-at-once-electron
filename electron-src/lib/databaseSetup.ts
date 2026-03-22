@@ -257,7 +257,12 @@ export class DatabaseSetup {
     }
 
     if (version === "MIGRATED") {
-      // 既にPrisma管理下 — 将来のマイグレーションのみ適用
+      // 既にPrisma管理下 — ベースラインが最新か確認
+      const { ensureBaselineUpToDate } =
+        await import("./prisma/schema/baselineMigrations")
+      await ensureBaselineUpToDate(this.prisma)
+
+      // 将来のマイグレーションのみ適用
       const { deployPendingMigrations } =
         await import("./prisma/schema/migrationDeployer")
       await deployPendingMigrations(this.prisma)
