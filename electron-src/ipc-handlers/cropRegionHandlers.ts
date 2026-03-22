@@ -78,6 +78,7 @@ import {
 } from "../lib/prisma/subtotal"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 採点領域（CropRegion）・小計点（Subtotal）・領域小計点紐付け（CropSubtotal）のCRUD用IPCチャンネルを登録する */
 export function setupCropRegionHandlers(): void {
   // --- CropRegion Handlers ---
   registerHandler(

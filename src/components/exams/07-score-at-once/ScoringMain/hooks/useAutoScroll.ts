@@ -14,6 +14,7 @@ import {
 
 const DEFAULT = USER_PREFERENCE_SCHEMA.autoScroll.default
 
+/** 採点時の自動スクロールON/OFFをユーザー設定として永続化するフック */
 export function useAutoScroll() {
   const { user } = useAuth()
   const userId = user?.id

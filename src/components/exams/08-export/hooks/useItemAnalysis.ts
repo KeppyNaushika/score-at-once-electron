@@ -42,6 +42,7 @@ function getLevel(r: number | null): DiscriminationLevel {
   return "good"
 }
 
+/** 設問ごとの正答率・得点率・識別係数を算出する項目分析フック */
 export function useItemAnalysis(
   data: ExcelPreviewData | null
 ): ItemAnalysisData[] | null {

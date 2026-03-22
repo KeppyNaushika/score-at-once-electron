@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 試験・生徒アーカイブのIPC API（エクスポート・インポート・競合検出・ID統合） */
 export function createArchiveApi() {
   return {
     // Exam Archive (Export/Import) related

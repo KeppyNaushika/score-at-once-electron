@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 解答用紙ビルダーのIPC API（定義CRUD・PDF/PNG出力・印刷・インポート/エクスポート） */
 export function createAnswerSheetBuilderApi() {
   return {
     answerSheetBuilder: {

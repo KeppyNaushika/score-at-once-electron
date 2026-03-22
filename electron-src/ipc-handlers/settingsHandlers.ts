@@ -31,6 +31,7 @@ import { registerSafeHandler } from "./ipcHandlerUtils"
 // プロジェクターモード用のpowerSaveBlocker ID
 let projectorModeBlockerId: number | null = null
 
+/** 設定（キーボードショートカット・採点マーク書式・表示設定・プロジェクターモード等）に関するIPCチャンネルを登録する */
 export function registerSettingsHandlers() {
   // =========================================================================
   // プロジェクターモード（スクリーンセーバー無効化）

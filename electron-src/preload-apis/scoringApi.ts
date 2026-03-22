@@ -5,6 +5,7 @@ import {
   QuestionScoreUpdateData,
 } from "../../src/types/common.types"
 
+/** 採点スコアのIPC API（設問スコアCRUD・一括更新・進捗取得・採点初期化） */
 export function createScoringApi() {
   return {
     // QuestionScore related functions

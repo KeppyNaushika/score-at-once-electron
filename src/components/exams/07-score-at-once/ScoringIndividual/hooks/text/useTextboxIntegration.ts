@@ -73,6 +73,7 @@ interface UseTextboxV4IntegrationReturn {
   convertToDrawingElement: (textBox: TextBox) => DrawingElement
 }
 
+/** 個別採点画面でテキストボックスの追加・編集・座標変換を統合するフック */
 export function useTextboxV4Integration({
   canvasWidth,
   canvasHeight,

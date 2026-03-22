@@ -5,9 +5,7 @@ import type {
   UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
 
-/**
- * 3つ組からDnD配列を構築する関数（戦略ベース順序）
- */
+/** FileState配列と配置戦略からDnD用の順序付きファイル配列を構築する */
 export function buildDnDArrayFromFileStates(
   fileStates: FileState[],
   strategy: PlacementStrategy,
@@ -77,9 +75,7 @@ export function buildDnDArrayFromFileStates(
   return orderedFiles
 }
 
-/**
- * DnD配列から3つ組を更新する関数（ファイル実データを直接使用）
- */
+/** DnD後のファイル配列からFileState（ファイルID・生徒ID・ページ番号の組）を再生成する */
 export function updateFileStatesFromDnDArray(
   dndArray: UnifiedFile[]
 ): FileState[] {
@@ -91,9 +87,7 @@ export function updateFileStatesFromDnDArray(
   }))
 }
 
-/**
- * ファイル状態を比較して変更されたファイルを検知する関数
- */
+/** 初期状態と現在状態を比較し、生徒IDまたはページ番号が変更されたファイルを返す */
 export function compareFileStates(
   initialStates: FileState[],
   currentStates: FileState[]

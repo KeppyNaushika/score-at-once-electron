@@ -10,6 +10,7 @@ interface SetGradeOverrideParams {
   overrideLabel: string | null
 }
 
+/** 成績評定の計算結果取得および評定上書き（オーバーライド）を管理するフック */
 export function useGradeResults(gradeId: string) {
   const [result, setResult] = useState<GradeCalculationResult | null>(null)
   const [loading, setLoading] = useState(true)

@@ -17,6 +17,7 @@ import {
 } from "../lib/prisma/examClass"
 import { registerHandler } from "./ipcHandlerUtils"
 
+/** 試験と学級の関連付け（ExamClass）に関するIPCチャンネルを登録する */
 export function setupExamClassHandlers(): void {
   // Get all classes for a exam
   registerHandler("exam-class:get-all", async (examId: string) => {

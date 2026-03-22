@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
+/** 小計グループ・小計・採点領域-小計紐付けのIPC API（CRUD・試験への割り当て管理） */
 export function createSubtotalApi() {
   return {
     // SubtotalGroup related (new management API with correct parameter format)

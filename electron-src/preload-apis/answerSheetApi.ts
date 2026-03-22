@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 答案用紙のIPC API（アップロード・生徒紐付け・配置管理・一括更新） */
 export function createAnswerSheetApi() {
   return {
     // Student answer related

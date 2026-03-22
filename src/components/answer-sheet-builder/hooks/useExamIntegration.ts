@@ -14,6 +14,7 @@ import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 import { generateAnswerSheetPageHtmls } from "../utils/generatePrintHtml"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
+/** 解答用紙定義を試験データに変換して登録するフック */
 export function useExamIntegration() {
   const [isConverting, setIsConverting] = useState(false)
   const router = useRouter()

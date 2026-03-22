@@ -7,10 +7,7 @@
 
 import type { ComputedCell } from "@/types/answerSheetLayout.types"
 
-/**
- * セル群から画像要素のパスを収集し、appimg:// → base64 data URI に変換する。
- * エクスポート時（PDF/PNG/印刷）に使用。
- */
+/** セル内の画像パスをbase64 data URIに一括変換する（エクスポート時に使用） */
 export async function resolveImageDataUris(
   cells: ComputedCell[]
 ): Promise<Map<string, string>> {

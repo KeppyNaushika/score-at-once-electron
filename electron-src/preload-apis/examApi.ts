@@ -3,6 +3,7 @@ import { ipcRenderer } from "electron"
 
 import { CreateExamArgs } from "../../src/types/electron/examApi"
 
+/** 試験管理のIPC API（CRUD・模範解答・受験生徒管理・学級連携） */
 export function createExamApi() {
   return {
     fetchExams: (userId: string) => ipcRenderer.invoke("fetch-exams", userId),

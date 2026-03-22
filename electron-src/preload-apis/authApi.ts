@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 認証・ユーザー管理のIPC API（ログイン・ユーザーCRUD・トークン永続化・パスコード） */
 export function createAuthApi() {
   return {
     // User related

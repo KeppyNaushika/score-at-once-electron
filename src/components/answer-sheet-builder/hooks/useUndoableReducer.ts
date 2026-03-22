@@ -33,6 +33,7 @@ export interface UndoableResult<S, A> {
   redo: () => void
 }
 
+/** useReducerにUndo/Redo履歴管理とデバウンスを追加する汎用フック */
 export function useUndoableReducer<S, A extends { type: string }>(
   innerReducer: (state: S, action: A) => S,
   initialState: S

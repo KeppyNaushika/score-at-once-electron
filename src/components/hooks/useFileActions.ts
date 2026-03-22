@@ -8,6 +8,7 @@ type CreateExamModal = {
   close: () => void
 }
 
+/** 試験作成モーダルの開閉状態を管理するフック */
 export const useFileActions = () => {
   const [isCreateExamModalOpen, setIsCreateExamModalOpen] = useState(false)
 

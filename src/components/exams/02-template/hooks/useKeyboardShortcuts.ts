@@ -12,6 +12,7 @@
 
 import { useEffect } from "react"
 
+/** 採点領域キャンバスのキーボードショートカット（Delete/Backspaceによる領域削除）を管理するフック */
 export function useKeyboardShortcuts(
   selectedAreaIndex: number | null,
   onDeleteArea: (index: number) => void

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { ConvertedFile } from "@/components/exams/06-student-answers/student-answer-management/hooks/types"
 import { convertPdfToImages } from "@/lib/pdfConverter"
 
+/** PDF・画像ファイルの変換処理とパスワード保護PDF対応を管理するフック */
 export function useFileProcessing() {
   const [files, setFiles] = useState<ConvertedFile[]>([])
   const [isConverting, setIsConverting] = useState(false)

@@ -18,6 +18,7 @@ interface ValidationResult {
   warnings: string[]
 }
 
+/** 生徒データの手動入力・バリデーション・一括インポートを管理するフック */
 export function useStudentImport() {
   const [studentData, setStudentData] = useState<StudentImportRow[]>([
     {

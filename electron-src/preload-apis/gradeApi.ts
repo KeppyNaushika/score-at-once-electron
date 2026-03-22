@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 成績算出のIPC API（成績CRUD・データソース・評定境界・手動点数・Excel出力） */
 export function createGradeApi() {
   return {
     // Grade（成績算出）

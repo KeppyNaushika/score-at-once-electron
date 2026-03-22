@@ -25,6 +25,7 @@ interface UseSortableStudentTableProps {
   examId: string
 }
 
+/** 生徒テーブルのドラッグ並び替え・Shift範囲選択・順序リセットを管理するフック */
 export function useSortableStudentTable({
   filteredStudents,
   selectedStudents,

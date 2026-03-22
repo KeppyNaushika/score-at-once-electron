@@ -10,6 +10,7 @@ interface UseGridDragSelectionProps {
   sortedAnswers: () => GridAnswerItem[]
 }
 
+/** マウスドラッグ・Shift/Ctrl+クリックによるグリッド上の複数答案選択を処理するフック */
 export function useGridDragSelection({
   gridRef,
   onAnswerSelect,

@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react"
 
+/** キーボード・マウスホイールによるズーム操作を管理するフック */
 export function useZoomControls() {
   const imageContainerRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)

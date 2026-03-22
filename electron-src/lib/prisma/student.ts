@@ -28,6 +28,7 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
   }
 }>
 
+/** 全生徒を取得する（学級メンバーシップ・クラス情報含む、現在・過去両方） */
 export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
   try {
     const students = await prisma.student.findMany({
@@ -50,6 +51,7 @@ export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
   }
 }
 
+/** 生徒を作成する（現在有効なメンバーシップ含む） */
 export const createStudent = async (
   studentData: Prisma.StudentCreateInput
 ): Promise<StudentWithMemberships> => {
@@ -76,6 +78,7 @@ export const createStudent = async (
   }
 }
 
+/** 生徒情報を更新する（現在有効なメンバーシップ含む） */
 export const updateStudent = async (
   id: string,
   studentData: Prisma.StudentUpdateInput
@@ -104,6 +107,7 @@ export const updateStudent = async (
   }
 }
 
+/** 生徒を削除する */
 export const deleteStudent = async (id: string): Promise<void> => {
   try {
     await prisma.student.delete({ where: { id } })
@@ -113,6 +117,7 @@ export const deleteStudent = async (id: string): Promise<void> => {
   }
 }
 
+/** 全学級を取得する（現在所属中の生徒メンバーシップ含む） */
 export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
   try {
     return await prisma.class.findMany({
@@ -133,6 +138,7 @@ export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
   }
 }
 
+/** 学級を作成する（現在所属中のメンバーシップ含む） */
 export const createClass = async (
   classData: Prisma.ClassCreateInput
 ): Promise<ClassWithMemberships> => {
@@ -156,6 +162,7 @@ export const createClass = async (
   }
 }
 
+/** 学級情報を更新する（現在所属中のメンバーシップ含む） */
 export const updateClass = async (
   id: string,
   classData: Prisma.ClassUpdateInput
@@ -181,6 +188,7 @@ export const updateClass = async (
   }
 }
 
+/** 学級を削除する（現在所属中の生徒がいる場合はエラー） */
 export const deleteClass = async (id: string): Promise<void> => {
   try {
     // Check if class has current students before deleting
@@ -208,7 +216,6 @@ export const deleteClass = async (id: string): Promise<void> => {
   }
 }
 
-// 生徒の試験成績を取得
 export interface StudentExamResult {
   examId: string
   examName: string
@@ -221,6 +228,7 @@ export interface StudentExamResult {
   status: "complete" | "partial" | "unscored"
 }
 
+/** 生徒の全試験成績を取得する（得点・配点・採点状況を集計、試験日降順） */
 export const getStudentExamResults = async (
   studentId: string
 ): Promise<StudentExamResult[]> => {

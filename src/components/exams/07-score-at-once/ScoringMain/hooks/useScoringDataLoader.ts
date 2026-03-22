@@ -13,6 +13,7 @@ interface ScoringDataLoaderResult {
   currentUserId: string | null
 }
 
+/** 試験・答案・設問領域・ユーザー情報を一括ロードして採点画面の初期データを準備するフック */
 export function useScoringDataLoader(
   examId: string,
   authUserId: string | null

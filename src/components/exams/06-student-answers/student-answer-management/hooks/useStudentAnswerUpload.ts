@@ -8,6 +8,7 @@ import type {
 } from "@/components/exams/06-student-answers/student-answer-management/types"
 import { type ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 
+/** 答案ファイルのドロップ・変換・アップロード処理を統合するフック */
 export function useStudentAnswerUpload(
   examId: string,
   onUploadComplete?: () => void,

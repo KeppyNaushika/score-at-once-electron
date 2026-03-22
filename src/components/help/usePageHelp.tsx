@@ -41,6 +41,7 @@ const pageHelpComponents: {
   students: StudentsHelpContent,
 }
 
+/** 現在のページに対応するヘルプコンテンツをDrawer表示するフック */
 export function usePageHelp() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)

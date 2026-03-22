@@ -9,6 +9,7 @@ import {
 } from "../dataManager"
 import prisma from "./client"
 
+/** 模範解答画像をアップロードし、ExamPageとMasterImageを作成する（examPage含む） */
 export const uploadMasterAnswers = async (
   examId: string,
   filesData: {
@@ -104,6 +105,7 @@ export interface DeleteMasterAnswerResult {
   examPages: ExamPageWithMasterImages[]
 }
 
+/** 模範解答画像を削除し、空のExamPageも削除する。ページ番号の再連番も行う */
 export const deleteMasterAnswer = async (
   answerId: string
 ): Promise<DeleteMasterAnswerResult> => {
@@ -203,6 +205,7 @@ export const deleteMasterAnswer = async (
   }
 }
 
+/** 模範解答のページ順序を一括更新する（一時番号経由でユニーク制約を回避） */
 export const updateMasterAnswersOrder = async (
   answerOrders: { id: string; pageNumber: number }[]
 ): Promise<Prisma.BatchPayload> => {
@@ -275,6 +278,7 @@ export const updateMasterAnswersOrder = async (
   }
 }
 
+/** 試験IDで模範解答一覧を取得する（masterImages含む、ページ番号順） */
 export const getMasterAnswersByExamId = async (examId: string) => {
   const examPages = await prisma.examPage.findMany({
     where: { examId },
@@ -301,6 +305,7 @@ export const getMasterAnswersByExamId = async (examId: string) => {
   return masterAnswers
 }
 
+/** ExamPageと模範解答画像を1件作成する */
 export const createMasterAnswer = async (data: {
   examId: string
   path: string
@@ -323,6 +328,7 @@ export const createMasterAnswer = async (data: {
   })
 }
 
+/** 複数の模範解答画像を一括作成する */
 export const createManyMasterAnswers = async (
   data: {
     examId: string
@@ -340,6 +346,7 @@ export const createManyMasterAnswers = async (
   return { count: createdAnswers.length }
 }
 
+/** 模範解答の画像パスまたはページ番号を更新する */
 export const updateMasterAnswer = async (
   id: string,
   data: { path?: string; pageNumber?: number }
@@ -376,6 +383,7 @@ export const updateMasterAnswer = async (
   })
 }
 
+/** 試験に属する全模範解答画像を削除し、空のExamPageも削除する */
 export const deleteMasterAnswersByExamId = async (examId: string) => {
   // Delete all master images for the exam
   const deletedAnswers = await prisma.masterImage.deleteMany({
@@ -404,6 +412,7 @@ export const deleteMasterAnswersByExamId = async (examId: string) => {
   return deletedAnswers
 }
 
+/** 試験IDとページ番号で模範解答画像を1件取得する */
 export const getMasterAnswerByPage = async (
   examId: string,
   pageNumber: number
@@ -429,6 +438,7 @@ export const getMasterAnswerByPage = async (
   return null
 }
 
+/** 模範解答画像のページサイズ情報を更新する（examPage含む） */
 export const updateMasterImagePageSize = async (
   id: string,
   pageSize: string

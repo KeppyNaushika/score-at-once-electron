@@ -1,6 +1,7 @@
 import { AuthStoreManager } from "../lib/authStore"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 認証トークンの保存・取得・削除に関するIPCチャンネルを登録する */
 export function setupAuthHandlers(): void {
   // 認証トークンを保存
   registerSafeHandler(

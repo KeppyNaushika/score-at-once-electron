@@ -8,9 +8,7 @@ import {
   type QuestionScore,
 } from "@/components/exams/07-score-at-once/types"
 
-/**
- * 設問別進捗を計算する関数
- */
+/** 各設問の採点進捗（採点済み件数・割合）を計算する */
 export function calculateQuestionProgress(
   cropRegions: CropRegionWithExamPage[],
   pageImages: StudentAnswerImageWithExamStudents[],

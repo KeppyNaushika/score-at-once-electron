@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react"
 
 import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
 
+/** 答案画像から氏名欄領域をクリッピングして表示するためのフック */
 export function useNameRegion(examId: string) {
   const [nameRegionAvailable, setNameRegionAvailable] = useState<
     Record<number, boolean>

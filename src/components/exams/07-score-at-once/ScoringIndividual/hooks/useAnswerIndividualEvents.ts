@@ -117,6 +117,7 @@ interface UseAnswerDisplayEventsProps {
   imageAspectRatio?: number
 }
 
+/** 個別採点キャンバスのポインタイベントを各ツール（選択・描画・ハンド）に振り分けるフック */
 export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   const { canvasRef, containerRef, imageRef, zoom, onZoomChange, imageLoaded } =
     props

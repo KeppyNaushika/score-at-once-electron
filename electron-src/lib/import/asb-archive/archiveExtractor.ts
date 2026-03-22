@@ -133,6 +133,7 @@ function isImageFile(filename: string): boolean {
   return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].includes(ext)
 }
 
+/** ASBアーカイブ展開時に作成された一時ディレクトリを削除する */
 export function cleanupAsbTempDir(tempDir: string): void {
   try {
     if (fs.existsSync(tempDir)) {

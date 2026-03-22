@@ -16,6 +16,7 @@ import {
 } from "../utils/generatePrintHtml"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
+/** 解答用紙のPDF/PNG出力・印刷機能を提供するフック */
 export function useAnswerSheetExport() {
   const [isExporting, setIsExporting] = useState(false)
 

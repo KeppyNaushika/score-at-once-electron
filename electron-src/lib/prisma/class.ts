@@ -12,6 +12,7 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
   }
 }>
 
+/** 全学級を取得する（memberships.student リレーション含む、出席番号順） */
 export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
   try {
     return await prisma.class.findMany({
@@ -34,6 +35,7 @@ export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
   }
 }
 
+/** 学級を新規作成する（memberships.student リレーション含む） */
 export const createClass = async (
   classData: Prisma.ClassCreateInput
 ): Promise<ClassWithMemberships> => {
@@ -59,6 +61,7 @@ export const createClass = async (
   }
 }
 
+/** 学級情報を更新する（memberships.student リレーション含む） */
 export const updateClass = async (
   classData: Prisma.ClassUpdateInput & { id: string }
 ): Promise<ClassWithMemberships> => {
@@ -86,6 +89,7 @@ export const updateClass = async (
   }
 }
 
+/** 学級を削除する（現在所属中の生徒がいる場合はエラー） */
 export const deleteClass = async (classId: string): Promise<Class | void> => {
   try {
     // Check for current memberships instead of students directly

@@ -7,6 +7,7 @@ import {
 } from "@/lib/pdfConverter"
 import type { ImportedFile } from "@/types/pdfTools.types"
 
+/** PDFファイルの読み込み・ページ情報取得・サムネイル生成を行うフック */
 export function useImportedFiles() {
   // Fileオブジェクトから処理（ドラッグ&ドロップ用）
   const processFiles = useCallback(

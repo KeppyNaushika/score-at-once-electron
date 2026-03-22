@@ -15,6 +15,7 @@ import {
 } from "../lib/prisma/userExam"
 import { registerHandler } from "./ipcHandlerUtils"
 
+/** ユーザーと試験の関連（UserExam）に関するメンバー管理・権限・招待のIPCチャンネルを登録する */
 export function setupUserExamHandlers(): void {
   // Get all members of a exam
   registerHandler("user-exam:get-members", async (examId: string) => {

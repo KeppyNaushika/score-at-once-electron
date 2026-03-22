@@ -6,6 +6,7 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 
+/** 採点メイン画面のUI状態（モード・選択・パネル表示等）を一括管理するフック */
 export function useScoringMainState() {
   /** 採点モード状態 */
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")

@@ -1,6 +1,7 @@
 import type { DrawingAnnotation } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
+/** 描画アノテーションのIPC API（CRUD・一括操作・お気に入り・統計取得） */
 export function createDrawingApi() {
   return {
     // Drawing Annotation related

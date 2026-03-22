@@ -19,6 +19,7 @@ import {
 import { validateScoringData } from "../lib/shared/utilities/validateScoringData"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
+/** Excel・PDF出力・個人成績表・ストリーミングPDF生成に関するIPCチャンネルを登録する */
 export function setupExportHandlers(): void {
   // 採点データバリデーション（全エクスポート共通）
   registerSafeHandler(

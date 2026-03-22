@@ -14,6 +14,7 @@ interface UseExamStudentAddModalProps {
   onClose: () => void
 }
 
+/** 試験への生徒追加モーダルの状態管理（学級一括追加・個別追加・フィルタ）を行うフック */
 export function useExamStudentAddModal({
   isOpen,
   examId,

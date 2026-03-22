@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 出力機能のIPC API（PDF/Excel出力・ストリーミング生成・個人成績表・印刷） */
 export function createExportApi() {
   return {
     // Canvas描画エンジン用PDF出力API

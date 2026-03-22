@@ -17,6 +17,7 @@ interface UseScoringDataProps {
   cropRegions: CropRegionWithExamPage[]
 }
 
+/** 採点データの取得・一括採点・進捗計算を統合的に管理するフック */
 export function useScoringData({
   currentUserId,
   setCurrentUserId,

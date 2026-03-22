@@ -12,6 +12,7 @@ export interface GradeExportData {
   classNames: string[]
 }
 
+/** 成績算出の計算結果と関連情報を取得し、Excel出力用データとして返す */
 export async function fetchGradeExportData(
   gradeId: string
 ): Promise<{ success: boolean; data?: GradeExportData; error?: string }> {

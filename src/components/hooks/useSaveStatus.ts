@@ -14,6 +14,7 @@ interface UseSaveStatusOptions {
   displayDuration?: number // ms
 }
 
+/** 保存中・保存完了のステータス表示を一定時間後に自動リセットするフック */
 export const useSaveStatus = (options?: UseSaveStatusOptions) => {
   const {
     initialMessage = SAVE_STATUS_MESSAGES[0],

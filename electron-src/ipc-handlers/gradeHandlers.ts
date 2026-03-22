@@ -67,6 +67,7 @@ import {
 import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 成績（Grade）のCRUD・生徒管理・データソース・成績算出・Excel出力・アーカイブに関するIPCチャンネルを登録する */
 export function setupGradeHandlers(): void {
   // =====================================================================
   // Grade CRUD

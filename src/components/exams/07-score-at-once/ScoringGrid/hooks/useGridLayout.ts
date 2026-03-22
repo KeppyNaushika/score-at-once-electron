@@ -9,6 +9,7 @@ interface UseGridLayoutProps {
   itemsPerRow: number[]
 }
 
+/** レイアウト方向に応じたグリッドサイズ計算と答案の並び替えを行うフック */
 export function useGridLayout({
   answers,
   layoutDirection,

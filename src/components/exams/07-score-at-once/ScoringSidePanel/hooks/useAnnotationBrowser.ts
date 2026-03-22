@@ -109,6 +109,7 @@ export interface UseAnnotationBrowserReturn {
   addToTargets: (params: AddToTargetsParams) => Promise<AddToTargetsResult>
 }
 
+/** アノテーション一覧の取得・フィルタリング・重複省略・お気に入り・一括追加を管理するフック */
 export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
   const [allAnnotations, setAllAnnotations] = useState<AnnotationWithContext[]>(
     []

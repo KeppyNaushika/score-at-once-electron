@@ -2,7 +2,7 @@ import type { CropSubtotal, Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
-// CropSubtotal を作成
+/** 設問-小計紐付けを作成する（設問領域・小計項目の存在と試験での有効化を検証、cropRegion・subtotal リレーション含む） */
 export const createCropSubtotal = async (
   data: Prisma.CropSubtotalUncheckedCreateInput
 ) => {
@@ -58,7 +58,7 @@ export const createCropSubtotal = async (
   })
 }
 
-// 複数の CropSubtotal を作成
+/** 複数の設問-小計紐付けを一括作成する（各項目のデータ整合性を検証） */
 export const createManyCropSubtotals = async (
   data: Prisma.CropSubtotalUncheckedCreateInput[]
 ) => {
@@ -114,7 +114,7 @@ export const createManyCropSubtotals = async (
   })
 }
 
-// CropSubtotal を更新
+/** 設問-小計紐付けを更新する（cropRegion・subtotal リレーション含む） */
 export const updateCropSubtotal = async (
   id: string,
   data: Prisma.CropSubtotalUpdateInput
@@ -129,14 +129,14 @@ export const updateCropSubtotal = async (
   })
 }
 
-// CropSubtotal を削除
+/** 設問-小計紐付けを削除する */
 export const deleteCropSubtotal = async (id: string) => {
   return prisma.cropSubtotal.delete({
     where: { id },
   })
 }
 
-// CropRegion ID で CropSubtotal をすべて削除
+/** 指定した設問領域に紐づく全ての設問-小計紐付けを削除する */
 export const deleteCropSubtotalsByCropRegionId = async (
   cropRegionId: string
 ) => {
@@ -145,7 +145,7 @@ export const deleteCropSubtotalsByCropRegionId = async (
   })
 }
 
-// CropRegion ID で CropSubtotal を取得
+/** 設問領域IDで設問-小計紐付けを取得する（subtotal.subtotalGroup リレーション含む） */
 export const getCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
   return prisma.cropSubtotal.findMany({
     where: { cropRegionId },
@@ -159,7 +159,7 @@ export const getCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
   })
 }
 
-// Subtotal ID で CropSubtotal を取得
+/** 小計項目IDで設問-小計紐付けを取得する（cropRegion.examPage リレーション含む） */
 export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
   return prisma.cropSubtotal.findMany({
     where: { subtotalId },
@@ -173,7 +173,7 @@ export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
   })
 }
 
-// CropRegion ID とassignmentTypeで CropSubtotal を取得（旧SubtotalDefinition互換）
+/** 設問領域IDでSUBTOTAL_DEFINITION型の紐付けを取得する（旧SubtotalDefinition互換） */
 export const getSubtotalDefinitionsByCropRegionId = async (
   cropRegionId: string
 ) => {
@@ -192,7 +192,7 @@ export const getSubtotalDefinitionsByCropRegionId = async (
   })
 }
 
-// CropRegion ID とassignmentTypeで CropSubtotal を取得（旧QuestionSubtotalAssignment互換）
+/** 設問領域IDでQUESTION_ASSIGNMENT型の紐付けを取得する（旧QuestionSubtotalAssignment互換） */
 export const getQuestionSubtotalAssignmentsByCropRegionId = async (
   cropRegionId: string
 ) => {
@@ -211,7 +211,7 @@ export const getQuestionSubtotalAssignmentsByCropRegionId = async (
   })
 }
 
-// IDで CropSubtotal を取得
+/** IDで設問-小計紐付けを取得する（cropRegion.examPage・subtotal.subtotalGroup リレーション含む） */
 export const getCropSubtotalById = async (id: string) => {
   return prisma.cropSubtotal.findUnique({
     where: { id },

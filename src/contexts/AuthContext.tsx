@@ -28,6 +28,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+/** 認証状態（ログイン・ログアウト・セッション確認）をアプリ全体に提供するプロバイダー */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -121,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+/** 認証コンテキストからユーザー情報・認証操作を取得するフック */
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {

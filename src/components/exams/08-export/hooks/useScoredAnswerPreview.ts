@@ -21,6 +21,7 @@ interface UseScoredAnswerPreviewProps {
   enabled: boolean
 }
 
+/** 採点済み答案のCanvas描画プレビューを生成するフック */
 export function useScoredAnswerPreview({
   examId,
   selectedStudentIds,

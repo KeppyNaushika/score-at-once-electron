@@ -1,5 +1,6 @@
 import { ipcRenderer, webUtils } from "electron"
 
+/** PDFツールのIPC API（結合・分割・回転・N-up・PNG出力・ファイル選択） */
 export function createPdfToolsApi() {
   return {
     // PDF Tools related

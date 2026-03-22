@@ -6,12 +6,12 @@ import { getDataDirectory } from "../dataManager"
 import { checkDatabaseExists } from "./databaseUtils"
 import { INDEX_SQL, MIGRATION_SQL } from "./schema/migrationSql"
 
-// データベースファイルのパス
+/** データベースファイル（database.db）の絶対パスを返す */
 export const getDatabasePath = (): string => {
   return path.join(getDataDirectory(), "database.db")
 }
 
-// 共有ドライブ用のPrismaクライアントを作成
+/** 共有ドライブ対応のPrismaクライアントを生成し、DATABASE_URL環境変数を上書きする */
 export const createSharedPrismaClient = (): PrismaClient => {
   const databasePath = getDatabasePath()
   // パッケージ化されたアプリでは絶対パスを使用
@@ -36,7 +36,7 @@ export const createSharedPrismaClient = (): PrismaClient => {
   })
 }
 
-// データベースの初期化（初回起動時）
+/** 初回起動時にDBファイルを作成しスキーマを適用する。既にDBが存在する場合はfalseを返す */
 export const initializeDatabase = async (): Promise<boolean> => {
   try {
     // データベースファイルの存在確認

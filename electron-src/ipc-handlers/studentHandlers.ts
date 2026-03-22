@@ -36,6 +36,7 @@ import {
 } from "../lib/shared/utilities/excelUtilities"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
+/** 生徒CRUD・学級所属・試験生徒関連・Excelエクスポートに関するIPCチャンネルを登録する */
 export function setupStudentHandlers(): void {
   registerHandler("fetch-students", async () => {
     return await fetchStudents()

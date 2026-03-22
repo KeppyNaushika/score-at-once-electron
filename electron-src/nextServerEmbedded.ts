@@ -47,6 +47,7 @@ const ensurePackagedNodePath = (basePath: string) => {
   }
 }
 
+/** パッケージ化環境でNext.jsサーバーをlocalhost:3000で起動する（開発時はスキップ） */
 export async function startEmbeddedNextServer(): Promise<void> {
   if (isDev) return // 開発時は外部サーバーを使用
 

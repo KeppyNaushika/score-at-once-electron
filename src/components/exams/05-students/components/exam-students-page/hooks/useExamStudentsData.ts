@@ -15,6 +15,7 @@ interface UseExamStudentsDataProps {
   examId: string
 }
 
+/** 試験の受験生徒一覧の取得・フィルタ・ステータス更新・並び替え・削除を管理するフック */
 export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [loading, setLoading] = useState(true)
   const [students, setStudents] = useState<Student[]>([]) // 順序付き生徒リスト

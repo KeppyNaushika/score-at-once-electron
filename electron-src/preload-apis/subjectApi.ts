@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 教科・教科-小計グループ関連のIPC API（教科CRUD・小計グループとの紐付け管理） */
 export function createSubjectApi() {
   return {
     // Subject（教科）

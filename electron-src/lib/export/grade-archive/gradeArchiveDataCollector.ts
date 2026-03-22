@@ -24,6 +24,7 @@ export interface CollectedGradeData {
   }
 }
 
+/** 指定した成績算出IDに関連する全データ（成績項目・手動スコア・境界値・生徒情報）をDBから収集する */
 export async function collectGradeArchiveData(
   gradeId: string
 ): Promise<CollectedGradeData> {

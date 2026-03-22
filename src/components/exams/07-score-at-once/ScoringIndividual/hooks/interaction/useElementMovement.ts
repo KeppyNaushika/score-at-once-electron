@@ -33,6 +33,7 @@ interface UseElementMovementProps {
   ) => string | null
 }
 
+/** 描画要素の移動・リサイズ操作を管理するフック */
 export function useElementMovement({
   currentTool,
   drawingElements,

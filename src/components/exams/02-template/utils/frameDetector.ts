@@ -48,6 +48,7 @@ const MIN_LINE_LENGTH_RATIO = 0.02
 /**
  * 感度レベル（1-5）に応じたパラメータ
  */
+/** 感度レベル（1〜5）に応じた二値化・線検出パラメータを返す */
 function getSensitivityParams(sensitivity: number) {
   // sensitivity: 1(低感度) ～ 5(高感度)
   const s = Math.max(1, Math.min(5, sensitivity))
@@ -632,4 +633,5 @@ export class FrameDetector {
 /**
  * シングルトンインスタンス
  */
+/** FrameDetectorのシングルトンインスタンス */
 export const frameDetector = new FrameDetector()

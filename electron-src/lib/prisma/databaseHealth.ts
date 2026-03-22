@@ -1,6 +1,6 @@
 import { createSharedPrismaClient } from "./databaseInitializer"
 
-// データベースの健全性チェック
+/** SELECT 1クエリでデータベース接続の健全性を確認する */
 export const checkDatabaseHealth = async (): Promise<boolean> => {
   const prisma = createSharedPrismaClient()
 
@@ -16,7 +16,7 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
   }
 }
 
-// 共有ドライブ用のSQLite最適化設定
+/** 共有ドライブ向けにWALモード・busy_timeout・キャッシュサイズ等のSQLite PRAGMAを設定する */
 export const optimizeDatabaseForSharedDrive = async (): Promise<void> => {
   const prisma = createSharedPrismaClient()
 

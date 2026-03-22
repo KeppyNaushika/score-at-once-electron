@@ -25,6 +25,7 @@ interface Membership {
   }
 }
 
+/** 学級の詳細表示・編集・所属関係の管理を提供するカスタムフック */
 export function useClassManagement(classId: string) {
   const [loading, setLoading] = useState(true)
   const [classData, setClassData] = useState<ClassWithMemberships | null>(null)

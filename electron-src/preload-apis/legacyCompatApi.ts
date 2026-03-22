@@ -6,6 +6,7 @@ import {
   CropRegionUpdateData,
 } from "../../src/types/common.types"
 
+/** 旧名称互換のIPC API（LayoutRegion・QuestionGroup等の旧名を新APIへ転送） */
 export function createLegacyCompatApi() {
   return {
     // 互換性関数（段階的移行のため古い名前も残す）

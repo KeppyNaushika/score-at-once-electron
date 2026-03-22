@@ -29,6 +29,7 @@ interface UseBatchScoringWithProgressParams {
   handleNextQuestion: () => void
 }
 
+/** 一括採点実行後に次の答案・設問への自動進行を行うラッパーフック */
 export function useBatchScoringWithProgress({
   selectedAnswers,
   gradingMode,

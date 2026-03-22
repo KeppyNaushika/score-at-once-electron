@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 設定管理のIPC API（表示設定・キーボードショートカット・採点マーク書式・出力設定） */
 export function createSettingsApi() {
   return {
     // Settings

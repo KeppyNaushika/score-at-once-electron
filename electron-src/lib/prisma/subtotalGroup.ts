@@ -402,7 +402,7 @@ export async function removeSubtotalGroupFromExam(
   }
 }
 
-// 既存の関数は互換性のために残す
+/** 試験IDで有効な小計点グループ一覧を取得する（互換性レイヤー、examIdを付与して返す） */
 export const getSubtotalGroupsByExamId = async (examId: string) => {
   const result = await getActiveSubtotalGroupsForExam(examId)
   if (result.success && result.examSubtotalGroups) {
@@ -414,6 +414,7 @@ export const getSubtotalGroupsByExamId = async (examId: string) => {
   return []
 }
 
+/** IDで小計点グループを取得する（subtotals・examSubtotalGroups含む） */
 export const getSubtotalGroupById = async (id: string) => {
   return prisma.subtotalGroup.findUnique({
     where: { id },

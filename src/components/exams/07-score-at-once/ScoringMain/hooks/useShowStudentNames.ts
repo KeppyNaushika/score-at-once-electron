@@ -14,6 +14,7 @@ import {
 
 const DEFAULT = USER_PREFERENCE_SCHEMA.showStudentNames.default
 
+/** 採点画面での生徒名表示ON/OFFをユーザー設定として永続化するフック */
 export function useShowStudentNames() {
   const { user } = useAuth()
   const userId = user?.id

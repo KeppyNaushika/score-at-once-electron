@@ -53,6 +53,7 @@ interface UseScoringFilterProps {
   manualSelectionVersion: number
 }
 
+/** 採点ステータスによるフィルタリングと表示対象の答案リスト管理を行うフック */
 export function useScoringFilter({
   studentAnswerImages,
   cropRegions,

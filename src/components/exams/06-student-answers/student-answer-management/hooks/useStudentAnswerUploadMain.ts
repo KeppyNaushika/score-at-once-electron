@@ -14,6 +14,7 @@ import { useFileProcessing } from "@/components/exams/06-student-answers/student
 import { useStudentManagement } from "@/components/exams/06-student-answers/student-answer-management/hooks/useStudentManagement"
 import type { UploadStudentAnswerFileData } from "@/types/electron/studentAnswerApi"
 
+/** 答案アップロード画面のメインフック（ファイル処理・生徒管理・アップロード実行を統合） */
 export function useStudentAnswerUploadMain({
   examId,
   students,

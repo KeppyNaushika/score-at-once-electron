@@ -6,6 +6,7 @@ export interface DragState {
   dragCurrent: { x: number; y: number } | null
 }
 
+/** グリッド上のドラッグ選択状態（開始位置・現在位置・ドラッグ中フラグ）を管理するフック */
 export function useGridSelection() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
     null

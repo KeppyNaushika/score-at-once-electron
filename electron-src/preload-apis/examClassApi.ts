@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** 試験-学級関連のIPC API（実施・統計学級の管理・生徒一括追加・並び替え） */
 export function createExamClassApi() {
   return {
     // ExamClass

@@ -72,9 +72,7 @@ function findReviewQuestions(
   return candidates
 }
 
-/**
- * 学習アドバイスデータを生成
- */
+/** 生徒の採点結果と正答率から復習すべき問題を抽出し学習アドバイスを生成する */
 export function calculateLearningAdvice(
   scores: ScoreDetail[],
   questionCorrectRates: Record<string, number>,

@@ -6,6 +6,7 @@ import {
   CropRegionUpdateData,
 } from "../../src/types/common.types"
 
+/** 採点領域（CropRegion）のIPC API（CRUD・一括作成・並び順更新） */
 export function createCropRegionApi() {
   return {
     // CropRegion functions (renamed from LayoutRegion)

@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron"
 
+/** OMR（光学マーク認識）のIPC API（マーカー検出・シート認識・一括認識・OMR設定） */
 export function createOmrApi() {
   return {
     // OMR（光学マーク認識）

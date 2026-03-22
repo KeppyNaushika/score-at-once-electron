@@ -16,6 +16,7 @@ import {
 } from "../lib/prisma/subjectSubtotalGroup"
 import { registerHandler } from "./ipcHandlerUtils"
 
+/** 教科（Subject）と教科小計点グループ紐付け（SubjectSubtotalGroup）のCRUD用IPCチャンネルを登録する */
 export function setupSubjectHandlers(): void {
   // Subject CRUD
   registerHandler("subject:getAll", async () => {

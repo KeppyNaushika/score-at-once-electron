@@ -35,6 +35,7 @@ interface UseElementSelectionProps {
   onTextElementReClick?: (element: DrawingElement) => void
 }
 
+/** 描画要素のクリック選択・複数選択・ダブルクリック検出を管理するフック */
 export function useElementSelection({
   currentTool,
   drawingElements,

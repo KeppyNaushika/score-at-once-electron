@@ -15,6 +15,7 @@ interface UseUndoRedoShortcutsOptions {
   canRedo: boolean
 }
 
+/** Ctrl+Z/Ctrl+Shift+ZによるUndo/Redoキーボードショートカットを登録するフック */
 export function useUndoRedoShortcuts({
   undo,
   redo,

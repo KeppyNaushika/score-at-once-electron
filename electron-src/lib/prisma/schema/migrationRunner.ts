@@ -1,7 +1,7 @@
 import { createSharedPrismaClient } from "../databaseInitializer"
 import { getTableColumns, tableExists } from "../databaseUtils"
 
-// 既存データベースのスキーママイグレーション
+/** 既存データベースに対して未適用のスキーマ変更（カラム追加・テーブル作成等）を順次適用する */
 export const migrateExistingDatabase = async (): Promise<void> => {
   const prisma = createSharedPrismaClient()
 
