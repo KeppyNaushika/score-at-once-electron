@@ -156,7 +156,10 @@ export const getCurrentMembershipsByClassId = async (
   }
 }
 
-/** 生徒を学級に追加する（新規所属レコード作成、student・class含む） */
+/** 生徒を学級に追加する（新規所属レコード作成、student・class含む）
+ *  同一生徒・同一学級のアクティブな所属（endDate: null）があれば
+ *  自動的に終了してから新規作成する。
+ */
 export const addStudentToClass = async (
   studentId: string,
   classId: string,
@@ -165,6 +168,17 @@ export const addStudentToClass = async (
   notes?: string
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
+    const existingActive = await prisma.studentClassMembership.findMany({
+      where: {
+        studentId,
+        classId,
+        endDate: null,
+      },
+    })
+    for (const membership of existingActive) {
+      await endStudentMembership(membership.id, startDate)
+    }
+
     const result = await createStudentClassMembership({
       student: { connect: { id: studentId } },
       class: { connect: { id: classId } },

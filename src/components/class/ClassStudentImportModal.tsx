@@ -13,10 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { ClassWithMemberships } from "@/types/prismaExtensions"
-
-// ClassWithMembershipsのmemberships配列の要素型を抽出
-type ClassMembership = ClassWithMemberships["memberships"][number]
 
 interface ClassStudentImportModalProps {
   isOpen: boolean
@@ -135,82 +131,46 @@ export default function ClassStudentImportModal({
     try {
       const validRows = studentData.filter((row) => row.studentId.trim() !== "")
 
+      // 生徒一覧を一度だけ取得（N+1問題の修正）
+      const students = await window.electronAPI.fetchStudents()
+      const studentByNumber = new Map(students.map((s) => [s.studentNumber, s]))
+
       let successCount = 0
-      let notFoundStudents: string[] = []
+      const notFoundStudents: string[] = []
 
       for (const row of validRows) {
         try {
-          const studentId = row.studentId.trim()
+          const studentNumber = row.studentId.trim()
           const attendanceNumber = row.attendanceNumber.trim()
+          const student = studentByNumber.get(studentNumber)
 
-          const students = await window.electronAPI.fetchStudents()
-          const student = students.find((s) => s.studentNumber === studentId)
-
-          if (student) {
-            // 既存のメンバーシップをチェック
-            const classes = await window.electronAPI.fetchClasses()
-            const targetClass = classes.find((c) => c.id === classId)
-            const existingMembership = targetClass?.memberships.find(
-              (m: ClassMembership) => m.student.id === student.id
-            )
-
-            if (existingMembership) {
-              // 既存のメンバーシップがある場合は終了してから新規追加
-              await window.electronAPI.endStudentMembership(
-                existingMembership.id
-              )
-            }
-
-            const startDate = row.startDate.trim()
-              ? new Date(row.startDate.trim().replace(/\//g, "-"))
-              : new Date()
-            const endDateStr = row.endDate.trim()
-
-            await window.electronAPI.addStudentToClass(
-              student.id,
-              classId,
-              startDate,
-              attendanceNumber ? parseInt(attendanceNumber) : undefined
-            )
-
-            const verifyClasses = await window.electronAPI.fetchClasses()
-            const verifyClass = verifyClasses.find((c) => c.id === classId)
-            const addedMembership = verifyClass?.memberships
-              .filter((m: ClassMembership) => m.student.id === student.id)
-              .sort(
-                (a: ClassMembership, b: ClassMembership) =>
-                  new Date(b.startDate).getTime() -
-                  new Date(a.startDate).getTime()
-              )[0]
-
-            if (!addedMembership) {
-              throw new Error("データベースへの保存に失敗しました")
-            }
-
-            // 終了日が指定されている場合は、追加後に終了処理
-            if (endDateStr) {
-              const newClasses = await window.electronAPI.fetchClasses()
-              const newTargetClass = newClasses.find((c) => c.id === classId)
-              // 最新のメンバーシップを取得（開始日でソート）
-              const newMembership = newTargetClass?.memberships
-                .filter((m: ClassMembership) => m.student.id === student.id)
-                .sort(
-                  (a: ClassMembership, b: ClassMembership) =>
-                    new Date(b.startDate).getTime() -
-                    new Date(a.startDate).getTime()
-                )[0]
-              if (newMembership) {
-                await window.electronAPI.endStudentMembership(
-                  newMembership.id,
-                  new Date(endDateStr.replace(/\//g, "-"))
-                )
-              }
-            }
-            successCount++
-          } else {
-            console.warn(`学籍番号 ${studentId} の生徒が見つかりません`)
-            notFoundStudents.push(studentId)
+          if (!student) {
+            notFoundStudents.push(studentNumber)
+            continue
           }
+
+          const startDate = row.startDate.trim()
+            ? new Date(row.startDate.trim().replace(/\//g, "-"))
+            : new Date()
+          const endDateStr = row.endDate.trim()
+
+          // バックエンド側で重複チェック・既存所属終了を処理
+          const membership = await window.electronAPI.addStudentToClass(
+            student.id,
+            classId,
+            startDate,
+            attendanceNumber ? parseInt(attendanceNumber) : undefined
+          )
+
+          // 終了日が指定されている場合は所属を終了
+          if (endDateStr) {
+            await window.electronAPI.endStudentMembership(
+              membership.id,
+              new Date(endDateStr.replace(/\//g, "-"))
+            )
+          }
+
+          successCount++
         } catch (error) {
           console.error(`学籍番号 ${row.studentId} の追加に失敗:`, error)
           alert(
@@ -313,6 +273,7 @@ export default function ClassStudentImportModal({
               onDataChange={handleDataChange}
             />
           </div>
+
           <ValidationMessages validation={validation} />
         </div>
 

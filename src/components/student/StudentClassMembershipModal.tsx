@@ -23,16 +23,19 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
-// 呼び出し元との互換性を持たせた型定義
+export interface MembershipSaveData {
+  studentId: string
+  classId: string
+  startDate?: Date
+  endDate?: Date
+  attendanceNumber?: number
+  notes?: string
+}
+
 interface StudentClassMembershipModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (membershipData: {
-    studentId: string
-    classId: string
-    attendanceNumber?: number
-    notes?: string
-  }) => void
+  onSave: (membershipData: MembershipSaveData) => void
   studentId?: string
   classId?: string
   availableStudents: Array<{
@@ -52,6 +55,8 @@ interface StudentClassMembershipModalProps {
     id: string
     studentId: string
     classId: string
+    startDate?: Date | string | null
+    endDate?: Date | string | null
     attendanceNumber?: number | null
     notes?: string | null
   } | null
@@ -70,9 +75,20 @@ export default function StudentClassMembershipModal({
   const [studentId, setStudentId] = useState(initialStudentId || "")
   const [classId, setClassId] = useState(initialClassId || "")
   const [attendanceNumber, setAttendanceNumber] = useState<string>("")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
   const [notes, setNotes] = useState("")
   const [studentSearchTerm, setStudentSearchTerm] = useState("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  const formatDateForInput = (
+    date: Date | string | null | undefined
+  ): string => {
+    if (!date) return ""
+    const d = typeof date === "string" ? new Date(date) : date
+    if (isNaN(d.getTime())) return ""
+    return d.toISOString().split("T")[0]
+  }
 
   useEffect(() => {
     let canceled = false
@@ -85,11 +101,15 @@ export default function StudentClassMembershipModal({
         setStudentId(membershipToEdit.studentId)
         setClassId(membershipToEdit.classId)
         setAttendanceNumber(membershipToEdit.attendanceNumber?.toString() || "")
+        setStartDate(formatDateForInput(membershipToEdit.startDate))
+        setEndDate(formatDateForInput(membershipToEdit.endDate))
         setNotes(membershipToEdit.notes || "")
       } else {
         setStudentId(initialStudentId || "")
         setClassId(initialClassId || "")
         setAttendanceNumber("")
+        setStartDate("")
+        setEndDate("")
         setNotes("")
       }
       setStudentSearchTerm("")
@@ -125,6 +145,8 @@ export default function StudentClassMembershipModal({
     onSave({
       studentId,
       classId,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
       attendanceNumber: attendanceNumber
         ? parseInt(attendanceNumber)
         : undefined,
@@ -239,6 +261,42 @@ export default function StudentClassMembershipModal({
                 placeholder="この学級での出席番号"
                 min="1"
               />
+            </div>
+          </div>
+
+          {/* 開始日 */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="startDate" className="text-right">
+              開始日
+            </Label>
+            <div className="col-span-3">
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <p className="text-muted-foreground mt-1 text-xs">
+                未指定の場合は今日の日付になります
+              </p>
+            </div>
+          </div>
+
+          {/* 終了日 */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="endDate" className="text-right">
+              終了日
+            </Label>
+            <div className="col-span-3">
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+              <p className="text-muted-foreground mt-1 text-xs">
+                未指定の場合は現在所属中（終了日なし）になります
+              </p>
             </div>
           </div>
 
