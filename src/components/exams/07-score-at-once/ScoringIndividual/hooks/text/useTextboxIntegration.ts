@@ -1,15 +1,15 @@
 /**
- * @fileoverview textbox-on-canvas-v4統合フック
+ * @fileoverview テキストボックスCanvas統合フック
  * @description 個別採点画面でV4のテキストボックス機能を使用するためのフック
  */
 
 import { useCallback, useState } from "react"
 
-import type { TextBox } from "@/app/textbox-on-canvas-v4/types"
 import {
   drawingElementToTextBox,
   textBoxToDrawingElement,
-} from "@/app/textbox-on-canvas-v4/utils/coordinateConversion"
+} from "@/lib/textbox-canvas/coordinateConversion"
+import type { TextBox } from "@/lib/textbox-canvas/types"
 
 import type {
   AnchorDirection,

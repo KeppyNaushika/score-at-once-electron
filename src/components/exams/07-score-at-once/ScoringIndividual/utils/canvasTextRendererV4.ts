@@ -1,11 +1,12 @@
-import type { AnchorDirection } from "../../../../../app/textbox-on-canvas-v4/types"
 import {
   drawAnchor,
   getTextPositionFromAnchor,
   isAnchorClicked,
   renderSvgToCanvas,
-} from "../../../../../app/textbox-on-canvas-v4/utils/canvasUtils"
-import { convertTextToSvg } from "../../../../../app/textbox-on-canvas-v4/utils/textConversionUtils"
+} from "@/lib/textbox-canvas/canvasUtils"
+import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
+import type { AnchorDirection } from "@/lib/textbox-canvas/types"
+
 import type { DrawingElement } from "../types/answerIndividualTypes"
 
 /** SVGキャッシュ（elementId → {text, color, fontSize, svg}） */

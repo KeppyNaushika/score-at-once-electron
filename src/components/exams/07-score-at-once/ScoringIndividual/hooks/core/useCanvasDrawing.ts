@@ -7,7 +7,6 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
-import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
 import type {
   DrawingElement,
   SelectionRectangle,
@@ -21,6 +20,7 @@ import type {
   MarkPosition,
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
 import {

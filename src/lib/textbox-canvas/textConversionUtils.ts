@@ -3,7 +3,7 @@
  * @description Discord Markdownスタイル記法とMathJaxを使用したテキスト→SVG変換機能を提供
  */
 
-import { FONT_SETTINGS } from "../constants"
+import { FONT_SETTINGS } from "./constants"
 import {
   cleanupElementStyles,
   createMathJaxSVG,

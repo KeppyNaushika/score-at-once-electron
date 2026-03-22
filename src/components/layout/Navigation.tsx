@@ -7,14 +7,11 @@ import {
   ChevronsRight,
   FileEdit,
   FileStack,
-  FlaskConical,
-  Grid2X2,
   Home,
   LogIn,
   LogOut,
   School,
   Settings,
-  TestTube2,
   User,
   Users,
 } from "lucide-react"
@@ -39,22 +36,6 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const devNavGroup: NavItem[] = [
-  { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
-  { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
-  { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
-  {
-    href: "/textbox-on-canvas-v4",
-    label: "Textbox Canvas V4",
-    icon: FlaskConical,
-  },
-  {
-    href: "/test/grid-layout-debug",
-    label: "Grid Layout Debug",
-    icon: Grid2X2,
-  },
-]
-
 const navGroups: NavItem[][] = [
   [
     { href: "/exams", label: "試験一覧", icon: Home },
@@ -67,7 +48,6 @@ const navGroups: NavItem[][] = [
     { href: "/classes", label: "学級管理", icon: School },
     { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
   ],
-  ...(process.env.NODE_ENV === "development" ? [devNavGroup] : []),
   [{ href: "/settings", label: "設定", icon: Settings }],
 ]
 

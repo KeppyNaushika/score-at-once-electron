@@ -7,12 +7,12 @@
 
 import { useEffect, useRef, useState } from "react"
 
-import type { TextBox } from "../../../../app/textbox-on-canvas-v4/types"
 import {
   drawBackgroundImage,
   renderSvgToCanvas,
-} from "../../../../app/textbox-on-canvas-v4/utils/canvasUtils"
-import { convertTextToSvg } from "../../../../app/textbox-on-canvas-v4/utils/textConversionUtils"
+} from "@/lib/textbox-canvas/canvasUtils"
+import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
+import type { TextBox } from "@/lib/textbox-canvas/types"
 
 interface EnhancedCanvasPreviewProps {
   textBox: TextBox

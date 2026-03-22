@@ -8,8 +8,8 @@ import {
   FONT_SETTINGS,
   MATHJAX_SETTINGS,
   SVG_SETTINGS,
-} from "../constants"
-import type { MeasuredSize } from "../types"
+} from "./constants"
+import type { MeasuredSize } from "./types"
 
 /**
  * ブラウザの描画完了を待機する

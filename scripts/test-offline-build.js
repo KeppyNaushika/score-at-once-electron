@@ -194,8 +194,8 @@ function generateReport() {
   console.log("  1. アプリケーション起動テスト")
   console.log("  2. ネットワーク切断状態での数式表示テスト")
   console.log("  3. PDF読み込み・変換テスト")
-  console.log("  4. /mathjax-offline-test へのアクセステスト")
-  console.log("  5. /pdf-worker-offline-test へのアクセステスト")
+  console.log("  4. 数式表示の動作確認")
+  console.log("  5. PDF読み込みの動作確認")
 
   console.log("\n🚀 推奨ビルドコマンド:")
   console.log("  npm run make          # 完全ビルド")
