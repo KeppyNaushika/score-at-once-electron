@@ -163,7 +163,9 @@ function hasDataDifference(
 /**
  * マッチング結果から競合アイテムを生成
  */
-function createConflictItems<T extends { id: string }>(
+function createConflictItems<
+  T extends Record<string, unknown> & { id: string },
+>(
   results: MatchResult<T>[],
   category: ConflictCategory,
   labelGenerator: (data: T) => string
@@ -173,18 +175,12 @@ function createConflictItems<T extends { id: string }>(
   for (const result of results) {
     if (result.existingData) {
       // データに差異があるかチェック
-      const importObj = result.importData as unknown as Record<string, unknown>
-      const existingObj = result.existingData as unknown as Record<
-        string,
-        unknown
-      >
-
-      if (hasDataDifference(importObj, existingObj)) {
+      if (hasDataDifference(result.importData, result.existingData)) {
         conflicts.push({
           id: `${category}-${result.importData.id}`,
           category,
-          importData: importObj,
-          existingData: existingObj,
+          importData: result.importData,
+          existingData: result.existingData,
           displayLabel: labelGenerator(result.importData),
         })
       }
@@ -197,9 +193,9 @@ function createConflictItems<T extends { id: string }>(
 /**
  * マッチング結果からサマリーを生成
  */
-function createMatchingSummary<T extends { id: string }>(
-  results: MatchResult<T>[]
-): MatchingSummary {
+function createMatchingSummary<
+  T extends Record<string, unknown> & { id: string },
+>(results: MatchResult<T>[]): MatchingSummary {
   let matched = 0
   let newItems = 0
   let conflicts = 0
@@ -208,13 +204,7 @@ function createMatchingSummary<T extends { id: string }>(
     if (!result.existingData) {
       newItems++
     } else {
-      const importObj = result.importData as unknown as Record<string, unknown>
-      const existingObj = result.existingData as unknown as Record<
-        string,
-        unknown
-      >
-
-      if (hasDataDifference(importObj, existingObj)) {
+      if (hasDataDifference(result.importData, result.existingData)) {
         conflicts++
       } else {
         matched++
@@ -259,7 +249,7 @@ function createIdMapping<T extends { id: string }>(
  * - hasConflict: 問題あり（学籍番号重複など）
  */
 export function createCategoryMatchingSummary<
-  T extends { id: string; updatedAt?: string },
+  T extends Record<string, unknown> & { id: string; updatedAt?: string | Date },
 >(
   results: MatchResult<T>[],
   category: ConflictCategory,
@@ -281,28 +271,22 @@ export function createCategoryMatchingSummary<
         displayLabel,
       })
     } else {
-      const importObj = result.importData as unknown as Record<string, unknown>
-      const existingObj = result.existingData as unknown as Record<
-        string,
-        unknown
-      >
-
       // データに差異があるかチェック
-      if (hasDataDifference(importObj, existingObj)) {
+      if (hasDataDifference(result.importData, result.existingData)) {
         // 差異がある場合は確認が必要
         const fieldChanges = calculateFieldChanges(
-          importObj,
-          existingObj,
+          result.importData,
+          result.existingData,
           category
         )
-        const importUpdatedAt = (importObj.updatedAt as string) || ""
-        const existingUpdatedAt = (existingObj.updatedAt as string) || ""
+        const importUpdatedAt = String(result.importData.updatedAt ?? "")
+        const existingUpdatedAt = String(result.existingData.updatedAt ?? "")
 
         const candidate: MatchingCandidate = {
           id: `${category}-${result.importData.id}`,
           category,
-          importData: importObj,
-          existingData: existingObj,
+          importData: result.importData,
+          existingData: result.existingData,
           displayLabel,
           fieldChanges,
           isImportNewer: isImportDataNewer(importUpdatedAt, existingUpdatedAt),

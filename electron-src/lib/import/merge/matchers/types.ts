@@ -5,7 +5,7 @@
 /**
  * マッチング結果
  */
-export interface MatchResult<T> {
+export interface MatchResult<T extends Record<string, unknown>> {
   /** インポートデータ */
   importData: T
   /** マッチした既存データ（なければnull） */
@@ -16,6 +16,7 @@ export interface MatchResult<T> {
 
 /** 生徒データ */
 export interface StudentData {
+  [key: string]: unknown
   id: string
   studentNumber: string
   lastName: string
@@ -28,6 +29,7 @@ export interface StudentData {
 
 /** 学級データ */
 export interface ClassData {
+  [key: string]: unknown
   id: string
   name: string
   classCode: string | null
@@ -38,6 +40,7 @@ export interface ClassData {
 
 /** ユーザーデータ */
 export interface UserData {
+  [key: string]: unknown
   id: string
   username: string
   name: string
@@ -47,6 +50,7 @@ export interface UserData {
 
 /** 小計グループデータ */
 export interface SubtotalGroupData {
+  [key: string]: unknown
   id: string
   name: string
   updatedAt: string | Date

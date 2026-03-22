@@ -186,7 +186,7 @@ export function ScoringMarkSettingsContainer({
           id="use-transparent"
           checked={config.useTransparent}
           onCheckedChange={(checked) =>
-            updateConfig({ useTransparent: checked as boolean })
+            updateConfig({ useTransparent: checked === true })
           }
         />
         <Label htmlFor="use-transparent" className="text-sm">

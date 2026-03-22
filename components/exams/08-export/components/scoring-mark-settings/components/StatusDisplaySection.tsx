@@ -35,7 +35,7 @@ export function StatusDisplaySection({
                 id={`mark-${status}`}
                 checked={showMarkForStatus[status]}
                 onCheckedChange={(checked) =>
-                  onMarkStatusChange(status, checked as boolean)
+                  onMarkStatusChange(status, checked === true)
                 }
               />
               <div className="flex items-center space-x-2">
@@ -72,7 +72,7 @@ export function StatusDisplaySection({
                 id={`score-${status}`}
                 checked={showScoreForStatus[status]}
                 onCheckedChange={(checked) =>
-                  onScoreStatusChange(status, checked as boolean)
+                  onScoreStatusChange(status, checked === true)
                 }
               />
               <div className="flex items-center space-x-2">

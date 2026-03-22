@@ -59,10 +59,15 @@ export class V1_2_0_to_V1_3_0_Transformer implements VersionTransformer {
   transform(data: ArchiveData): TransformResult {
     const warnings: string[] = []
 
-    // Student データの変換（studentId → studentNumber）
-    const transformedStudents = this.transformStudents(
-      data.studentsData.students as unknown as V1_2_0_Student[]
-    )
+    // Student データの変換（旧フォーマット配列をバリデーション）
+    const rawStudents = data.studentsData.students as unknown[]
+    const oldStudents: V1_2_0_Student[] = Array.isArray(rawStudents)
+      ? rawStudents.filter(
+          (item): item is V1_2_0_Student =>
+            typeof item === "object" && item !== null && "id" in item
+        )
+      : []
+    const transformedStudents = this.transformStudents(oldStudents)
 
     // 変換メッセージ
     warnings.push(
@@ -78,8 +83,7 @@ export class V1_2_0_to_V1_3_0_Transformer implements VersionTransformer {
           version: this.toVersion,
         },
         studentsData: {
-          students:
-            transformedStudents as unknown as typeof data.studentsData.students,
+          students: transformedStudents.map((s) => ({ ...s })),
         },
       },
       warnings,
@@ -92,10 +96,12 @@ export class V1_2_0_to_V1_3_0_Transformer implements VersionTransformer {
   private transformStudents(students: V1_2_0_Student[]): V1_3_0_Student[] {
     return students.map((student) => {
       // studentId または studentNumber のどちらかが存在する場合に対応
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const anyStudent = student as any
+      // Record型で旧新フィールド名を安全にチェック
+      const rec = { ...student } as Record<string, unknown>
       const studentNumber =
-        anyStudent.studentNumber || anyStudent.studentId || ""
+        (typeof rec.studentNumber === "string" ? rec.studentNumber : "") ||
+        (typeof rec.studentId === "string" ? rec.studentId : "") ||
+        ""
 
       return {
         id: student.id,

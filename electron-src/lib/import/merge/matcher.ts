@@ -176,8 +176,8 @@ async function preMatchExam(
       isIdMatch: true,
       importExamId: importExam.id,
       existingExamId: existingExam.id,
-      importData: importExam as unknown as Record<string, unknown>,
-      existingData: existingExam as unknown as Record<string, unknown>,
+      importData: { ...importExam },
+      existingData: { ...existingExam },
       displayLabel: importExam.examName,
     }
   }
@@ -185,7 +185,7 @@ async function preMatchExam(
   return {
     isIdMatch: false,
     importExamId: importExam.id,
-    importData: importExam as unknown as Record<string, unknown>,
+    importData: { ...importExam },
     displayLabel: importExam.examName,
   }
 }

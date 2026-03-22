@@ -22,7 +22,7 @@ export default function StudentsPage() {
   const params = useParams()
   const router = useRouter()
   const { helpButton } = usePageHelp()
-  const examId = params.examId as string
+  const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [activeTab, setActiveTab] = useState("students")
   const [showAddClassDialog, setShowAddClassDialog] = useState(false)

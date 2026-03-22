@@ -142,7 +142,7 @@ describe("edgeCases", () => {
       student: createPreMatchingResult({
         noMatch: students.map((s) => ({
           importId: s.id!,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: `${s.lastName}${s.firstName}`,
         })),
       }),

@@ -113,8 +113,8 @@ export async function preMatchSubtotalGroups(
       byId.push({
         importId: importGroup.id,
         existingId: idMatch.id,
-        importData: importGroup as unknown as Record<string, unknown>,
-        existingData: idMatch as unknown as Record<string, unknown>,
+        importData: importGroup,
+        existingData: idMatch,
         displayLabel,
         matchReason: "同じパソコンで作成されたデータ",
         additionalInfo: {
@@ -131,8 +131,8 @@ export async function preMatchSubtotalGroups(
       byName.push({
         importId: importGroup.id,
         existingId: nameMatch.id,
-        importData: importGroup as unknown as Record<string, unknown>,
-        existingData: nameMatch as unknown as Record<string, unknown>,
+        importData: importGroup,
+        existingData: nameMatch,
         displayLabel,
         matchReason: "グループ名が一致",
         additionalInfo: {
@@ -145,7 +145,7 @@ export async function preMatchSubtotalGroups(
 
     noMatch.push({
       importId: importGroup.id,
-      importData: importGroup as unknown as Record<string, unknown>,
+      importData: importGroup,
       displayLabel,
       additionalInfo: {
         importSubtotals: importSubs,

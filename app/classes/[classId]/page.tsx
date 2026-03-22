@@ -27,7 +27,7 @@ import { type Membership, useClassManagement } from "@/hooks/useClassManagement"
 export default function ClassDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const classId = params.classId as string
+  const classId = typeof params.classId === "string" ? params.classId : ""
 
   const {
     loading,

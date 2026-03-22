@@ -160,26 +160,15 @@ export async function loadScoringStatusColors(userId: string): Promise<void> {
       colorsResult.value &&
       colorsResult.value !== "null"
     ) {
-      let parsed: string | null = colorsResult.value
       try {
-        parsed = JSON.parse(colorsResult.value)
-      } catch {
-        // value is already the raw JSON string for colors
-      }
-      if (parsed && typeof parsed === "object") {
-        cachedColors = migrateUngradedKey(
-          parsed as unknown as Record<string, StatusColorConfig>
-        )
-      } else if (typeof colorsResult.value === "string") {
-        try {
-          const obj = JSON.parse(colorsResult.value) as Record<
-            string,
-            StatusColorConfig
-          >
-          cachedColors = migrateUngradedKey(obj)
-        } catch {
-          // keep default
+        const parsed: unknown = JSON.parse(colorsResult.value)
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          cachedColors = migrateUngradedKey(
+            parsed as Record<string, StatusColorConfig>
+          )
         }
+      } catch {
+        // keep default
       }
     }
 

@@ -35,7 +35,7 @@ export default function GradeWorkflowLayout({
 }) {
   const params = useParams()
   const pathname = usePathname()
-  const gradeId = params.gradeId as string
+  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
   const [examName, setExamName] = useState<string>("")
 
   useEffect(() => {

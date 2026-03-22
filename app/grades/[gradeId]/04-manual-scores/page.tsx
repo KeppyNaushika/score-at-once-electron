@@ -6,7 +6,7 @@ import { ManualScoresContainer } from "@/components/grades/04-manual-scores/Manu
 
 export default function ManualScoresPage() {
   const params = useParams()
-  const gradeId = params.gradeId as string
+  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   return <ManualScoresContainer gradeId={gradeId} />
 }

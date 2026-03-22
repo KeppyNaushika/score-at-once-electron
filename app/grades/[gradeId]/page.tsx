@@ -185,7 +185,7 @@ function buildPhases(
 export default function GradeDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const gradeId = params.gradeId as string
+  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   const [exam, setExam] = useState<GradeWithDetails | null>(null)
   const [loading, setLoading] = useState(true)

@@ -64,9 +64,12 @@ describe("manifestValidator", () => {
 
     for (const field of requiredFields) {
       const manifest = createValidManifest()
-      delete (manifest as unknown as Record<string, unknown>)[field]
+      const { [field]: _, ...incomplete } = { ...manifest } as Record<
+        string,
+        unknown
+      >
 
-      const result = validateManifestFields(manifest)
+      const result = validateManifestFields(incomplete)
       expect(result).not.toBeNull()
       expect(result).toContain(field)
     }
@@ -142,9 +145,7 @@ describe("manifestValidator", () => {
     expect(validateManifestFields(123)).toBe("マニフェストが不正です")
 
     // countsが不正
-    const manifestBadCounts = createValidManifest()
-    ;(manifestBadCounts as unknown as Record<string, unknown>).counts =
-      "invalid"
+    const manifestBadCounts = { ...createValidManifest(), counts: "invalid" }
     expect(validateManifestFields(manifestBadCounts)).toBe(
       "countsフィールドが不正です"
     )

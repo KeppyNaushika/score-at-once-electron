@@ -35,7 +35,7 @@ import { usePendingChanges, useStudentAnswersData } from "./hooks"
 export default function StudentAnswersPage() {
   const params = useParams()
   const { helpButton } = usePageHelp()
-  const examId = params.examId as string
+  const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [activeTab, setActiveTab] = useState<StudentAnswerTab>("new-grid")
   const [uploadFileCount, setUploadFileCount] = useState(0)

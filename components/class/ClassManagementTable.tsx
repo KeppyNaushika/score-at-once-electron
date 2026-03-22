@@ -258,34 +258,34 @@ export default function ClassManagementTable() {
                 </TableHead>
                 <SortableTableHead
                   sortKey="name"
-                  currentSortKey={sortConfig.key as string | null}
+                  currentSortKey={sortConfig.key}
                   currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                  onSort={(key) => requestSort(key)}
                 >
                   学級名
                 </SortableTableHead>
                 <SortableTableHead
                   sortKey="classCode"
-                  currentSortKey={sortConfig.key as string | null}
+                  currentSortKey={sortConfig.key}
                   currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                  onSort={(key) => requestSort(key)}
                 >
                   コード
                 </SortableTableHead>
                 <SortableTableHead
                   sortKey="grade"
-                  currentSortKey={sortConfig.key as string | null}
+                  currentSortKey={sortConfig.key}
                   currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                  onSort={(key) => requestSort(key)}
                 >
                   学年
                 </SortableTableHead>
                 <TableHead>説明</TableHead>
                 <SortableTableHead
                   sortKey="memberCount"
-                  currentSortKey={sortConfig.key as string | null}
+                  currentSortKey={sortConfig.key}
                   currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                  onSort={(key) => requestSort(key)}
                 >
                   所属数
                 </SortableTableHead>

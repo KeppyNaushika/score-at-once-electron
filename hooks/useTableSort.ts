@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 export type SortDirection = "asc" | "desc" | null
 
 export interface SortConfig<T> {
-  key: keyof T | null
+  key: (keyof T & string) | null
   direction: SortDirection
 }
 
@@ -28,9 +28,16 @@ function loadSortConfig<T>(storageKey: string): SortConfig<T> | null {
         parsed &&
         typeof parsed === "object" &&
         "key" in parsed &&
-        "direction" in parsed
+        "direction" in parsed &&
+        (parsed.key === null || typeof parsed.key === "string") &&
+        (parsed.direction === null ||
+          parsed.direction === "asc" ||
+          parsed.direction === "desc")
       ) {
-        return parsed as SortConfig<T>
+        return {
+          key: parsed.key as (keyof T & string) | null,
+          direction: parsed.direction,
+        }
       }
     }
   } catch {
@@ -121,7 +128,7 @@ export function useTableSort<T extends object>(
     })
   }, [data, sortConfig])
 
-  const requestSort = useCallback((key: keyof T) => {
+  const requestSort = useCallback((key: keyof T & string) => {
     setSortConfig((prev) => {
       if (prev.key !== key) {
         // 新しいキーの場合は昇順から開始
@@ -142,9 +149,12 @@ export function useTableSort<T extends object>(
   /**
    * ソート設定を直接指定する
    */
-  const setSort = useCallback((key: keyof T, direction: SortDirection) => {
-    setSortConfig({ key, direction })
-  }, [])
+  const setSort = useCallback(
+    (key: keyof T & string, direction: SortDirection) => {
+      setSortConfig({ key, direction })
+    },
+    []
+  )
 
   return {
     sortedData,

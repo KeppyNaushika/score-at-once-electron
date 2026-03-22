@@ -23,7 +23,7 @@ export default function ExamDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
-  const examId = params.examId as string
+  const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
