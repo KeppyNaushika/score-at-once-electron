@@ -80,10 +80,20 @@ export function useStudentDetail(studentId: string) {
           membershipData
         )
       } else {
-        await window.electronAPI.addStudentToClass(
+        const membership = await window.electronAPI.addStudentToClass(
           studentId,
-          membershipData.classId
+          membershipData.classId,
+          membershipData.startDate ?? undefined,
+          membershipData.attendanceNumber ?? undefined,
+          membershipData.notes ?? undefined
         )
+        // 終了日が指定されている場合は所属を終了
+        if (membershipData.endDate) {
+          await window.electronAPI.endStudentMembership(
+            membership.id,
+            new Date(membershipData.endDate)
+          )
+        }
       }
 
       // Refresh student data

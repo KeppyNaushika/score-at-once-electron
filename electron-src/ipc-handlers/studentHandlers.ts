@@ -265,7 +265,7 @@ export function setupStudentHandlers(): void {
   registerSafeHandler(
     "export-classes-excel",
     async (selectedClassIds: string[]) => {
-      const { fetchClasses } = await import("../lib/prisma/student")
+      const { fetchClasses } = await import("../lib/prisma/class")
       const allClasses = await fetchClasses()
       const selectedSet = new Set(selectedClassIds)
       const classes = allClasses.filter((c) => selectedSet.has(c.id))

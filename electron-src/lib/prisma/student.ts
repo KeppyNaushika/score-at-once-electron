@@ -15,19 +15,6 @@ type StudentWithMemberships = Prisma.StudentGetPayload<{
   }
 }>
 
-type ClassWithMemberships = Prisma.ClassGetPayload<{
-  include: {
-    memberships: {
-      include: {
-        student: true
-      }
-      where: {
-        endDate: null // 現在所属中の学生のみ
-      }
-    }
-  }
-}>
-
 /** 全生徒を取得する（学級メンバーシップ・クラス情報含む、現在・過去両方） */
 export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
   try {
@@ -113,105 +100,6 @@ export const deleteStudent = async (id: string): Promise<void> => {
     await prisma.student.delete({ where: { id } })
   } catch (error) {
     console.error("Failed to delete student:", error)
-    throw error
-  }
-}
-
-/** 全学級を取得する（現在所属中の生徒メンバーシップ含む） */
-export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
-  try {
-    return await prisma.class.findMany({
-      include: {
-        memberships: {
-          include: {
-            student: true,
-          },
-          where: {
-            endDate: null, // 現在所属中の学生のみ
-          },
-        },
-      },
-    })
-  } catch (error) {
-    console.error("Failed to fetch classes:", error)
-    throw error
-  }
-}
-
-/** 学級を作成する（現在所属中のメンバーシップ含む） */
-export const createClass = async (
-  classData: Prisma.ClassCreateInput
-): Promise<ClassWithMemberships> => {
-  try {
-    return await prisma.class.create({
-      data: classData,
-      include: {
-        memberships: {
-          include: {
-            student: true,
-          },
-          where: {
-            endDate: null,
-          },
-        },
-      },
-    })
-  } catch (error) {
-    console.error("Failed to create class:", error)
-    throw error
-  }
-}
-
-/** 学級情報を更新する（現在所属中のメンバーシップ含む） */
-export const updateClass = async (
-  id: string,
-  classData: Prisma.ClassUpdateInput
-): Promise<ClassWithMemberships> => {
-  try {
-    return await prisma.class.update({
-      where: { id },
-      data: classData,
-      include: {
-        memberships: {
-          include: {
-            student: true,
-          },
-          where: {
-            endDate: null,
-          },
-        },
-      },
-    })
-  } catch (error) {
-    console.error("Failed to update class:", error)
-    throw error
-  }
-}
-
-/** 学級を削除する（現在所属中の生徒がいる場合はエラー） */
-export const deleteClass = async (id: string): Promise<void> => {
-  try {
-    // Check if class has current students before deleting
-    const classWithMemberships = await prisma.class.findUnique({
-      where: { id },
-      include: {
-        memberships: {
-          where: {
-            endDate: null, // 現在所属中の学生をチェック
-          },
-        },
-      },
-    })
-
-    if (classWithMemberships && classWithMemberships.memberships.length > 0) {
-      throw new Error(
-        "この学級には現在も所属している生徒がいるため削除できません。"
-      )
-    }
-
-    await prisma.class.delete({ where: { id } })
-  } catch (error) {
-    console.error("Failed to delete class:", error)
     throw error
   }
 }
@@ -318,5 +206,4 @@ export const getStudentExamResults = async (
   }
 }
 
-// Export the updated types
-export { type ClassWithMemberships, type StudentWithMemberships }
+export { type StudentWithMemberships }
