@@ -1,8 +1,3 @@
-// データベース初期化用SQL定数
-// databaseInitializer.ts から抽出
-
-// 現在のPrismaスキーマに完全準拠したマイグレーションSQL（最新マイグレーションに基づく）
-export const MIGRATION_SQL = `
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -51,8 +46,8 @@ CREATE TABLE "StudentClassMembership" (
     "notes" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "StudentClassMembership_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "StudentClassMembership_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "StudentClassMembership_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "StudentClassMembership_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -75,8 +70,8 @@ CREATE TABLE "ExamStudent" (
     "customOrder" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ExamStudent_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "ExamStudent_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "ExamStudent_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ExamStudent_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -108,8 +103,8 @@ CREATE TABLE "StudentAnswerImage" (
     "imagePath" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "StudentAnswerImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "StudentAnswerImage_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "StudentAnswerImage_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "StudentAnswerImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -156,8 +151,8 @@ CREATE TABLE "CropSubtotal" (
     "assignmentType" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "CropSubtotal_subtotalId_fkey" FOREIGN KEY ("subtotalId") REFERENCES "Subtotal" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "CropSubtotal_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "CropSubtotal_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "CropSubtotal_subtotalId_fkey" FOREIGN KEY ("subtotalId") REFERENCES "Subtotal" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -170,8 +165,8 @@ CREATE TABLE "UserExam" (
     "invitedBy" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "UserExam_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
     CONSTRAINT "UserExam_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "UserExam_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
     CONSTRAINT "UserExam_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
 );
 
@@ -182,8 +177,8 @@ CREATE TABLE "ExamSubtotalGroup" (
     "subtotalGroupId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ExamSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "ExamSubtotalGroup_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "ExamSubtotalGroup_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "ExamSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -196,9 +191,9 @@ CREATE TABLE "QuestionScore" (
     "userId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "QuestionScore_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "QuestionScore_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
     CONSTRAINT "QuestionScore_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "QuestionScore_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "QuestionScore_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -224,12 +219,22 @@ CREATE TABLE "DrawingAnnotation" (
     "anchorDirection" TEXT NOT NULL DEFAULT 'top-left',
     "displayX" REAL NOT NULL DEFAULT 0.0,
     "displayY" REAL NOT NULL DEFAULT 0.0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "isFavorite" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "userId" TEXT NOT NULL,
-    CONSTRAINT "DrawingAnnotation_questionScoreId_fkey" FOREIGN KEY ("questionScoreId") REFERENCES "QuestionScore" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "DrawingAnnotation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE CASCADE
+    CONSTRAINT "DrawingAnnotation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "DrawingAnnotation_questionScoreId_fkey" FOREIGN KEY ("questionScoreId") REFERENCES "QuestionScore" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "DeletedRecord" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "tableName" TEXT NOT NULL,
+    "recordId" TEXT NOT NULL,
+    "deletedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT,
+    "examId" TEXT
 );
 
 -- CreateTable
@@ -324,7 +329,36 @@ CREATE TABLE "CropRegionMarkingOverride" (
     CONSTRAINT "CropRegionMarkingOverride_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- CreateTable (Grade)
+-- CreateTable
+CREATE TABLE "CropRegionOmrConfig" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "cropRegionId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "numChoices" INTEGER,
+    "choiceLayout" TEXT,
+    "numDigits" INTEGER,
+    "correctAnswer" TEXT,
+    "cellGeometryJson" TEXT,
+    "colorThreshold" INTEGER,
+    "areaThreshold" REAL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "CropRegionOmrConfig_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "CropRegionOmrChoiceOption" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "omrConfigId" TEXT NOT NULL,
+    "choiceIndex" INTEGER NOT NULL,
+    "label" TEXT NOT NULL,
+    "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "CropRegionOmrChoiceOption_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "CropRegionOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "Grade" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -469,7 +503,7 @@ CREATE TABLE "GradeExportSettings" (
     CONSTRAINT "GradeExportSettings_gradeId_fkey" FOREIGN KEY ("gradeId") REFERENCES "Grade" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- CreateTable (ASB)
+-- CreateTable
 CREATE TABLE "AsbDefinition" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL DEFAULT '新しい解答用紙',
@@ -659,48 +693,6 @@ CREATE TABLE "AsbOmrChoiceOption" (
     CONSTRAINT "AsbOmrChoiceOption_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "AsbOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- CreateTable
-CREATE TABLE "CropRegionOmrConfig" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "cropRegionId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "numChoices" INTEGER,
-    "choiceLayout" TEXT,
-    "numDigits" INTEGER,
-    "correctAnswer" TEXT,
-    "cellGeometryJson" TEXT,
-    "colorThreshold" INTEGER,
-    "areaThreshold" REAL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "CropRegionOmrConfig_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "CropRegionOmrChoiceOption" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "omrConfigId" TEXT NOT NULL,
-    "choiceIndex" INTEGER NOT NULL,
-    "label" TEXT NOT NULL,
-    "isCorrect" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "CropRegionOmrChoiceOption_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "CropRegionOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "DeletedRecord" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "tableName" TEXT NOT NULL,
-    "recordId" TEXT NOT NULL,
-    "deletedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "userId" TEXT,
-    "examId" TEXT
-);
-`
-
-// 現在のスキーマに完全準拠したインデックス作成SQL（最新マイグレーションに基づく）
-export const INDEX_SQL = `
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
@@ -735,13 +727,24 @@ CREATE INDEX "ExamStudent_examId_customOrder_idx" ON "ExamStudent"("examId", "cu
 CREATE UNIQUE INDEX "ExamStudent_examId_studentId_key" ON "ExamStudent"("examId", "studentId");
 
 -- CreateIndex
-CREATE INDEX "Subtotal_subtotalGroupId_idx" ON "Subtotal"("subtotalGroupId");
+CREATE INDEX "StudentAnswerImage_examPageId_idx" ON "StudentAnswerImage"("examPageId");
 
 -- CreateIndex
-CREATE INDEX "Subtotal_subtotalGroupId_order_idx" ON "Subtotal"("subtotalGroupId", "order");
+CREATE INDEX "StudentAnswerImage_studentId_idx" ON "StudentAnswerImage"("studentId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subtotal_subtotalGroupId_name_key" ON "Subtotal"("subtotalGroupId", "name");
+CREATE UNIQUE INDEX "StudentAnswerImage_examPageId_studentId_key" ON "StudentAnswerImage"("examPageId", "studentId");
+
+-- CreateIndex
+Pragma writable_schema=1;
+CREATE UNIQUE INDEX "sqlite_autoindex_Subtotal_2" ON "Subtotal"("subtotalGroupId", "name");
+Pragma writable_schema=0;
+
+-- CreateIndex
+CREATE INDEX "UserExam_examId_idx" ON "UserExam"("examId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserExam_userId_examId_key" ON "UserExam"("userId", "examId");
 
 -- CreateIndex
 CREATE INDEX "DrawingAnnotation_questionScoreId_idx" ON "DrawingAnnotation"("questionScoreId");
@@ -756,13 +759,13 @@ CREATE INDEX "DrawingAnnotation_createdAt_idx" ON "DrawingAnnotation"("createdAt
 CREATE INDEX "DrawingAnnotation_isFavorite_idx" ON "DrawingAnnotation"("isFavorite");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserExam_userId_examId_key" ON "UserExam"("userId", "examId");
+CREATE INDEX "DeletedRecord_examId_idx" ON "DeletedRecord"("examId");
 
 -- CreateIndex
-CREATE INDEX "UserExam_examId_idx" ON "UserExam"("examId");
+CREATE INDEX "DeletedRecord_deletedAt_idx" ON "DeletedRecord"("deletedAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ExamClass_examId_classId_key" ON "ExamClass"("examId", "classId");
+CREATE UNIQUE INDEX "DeletedRecord_tableName_recordId_key" ON "DeletedRecord"("tableName", "recordId");
 
 -- CreateIndex
 CREATE INDEX "ExamClass_examId_idx" ON "ExamClass"("examId");
@@ -771,10 +774,10 @@ CREATE INDEX "ExamClass_examId_idx" ON "ExamClass"("examId");
 CREATE INDEX "ExamClass_classId_idx" ON "ExamClass"("classId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subject_name_key" ON "Subject"("name");
+CREATE UNIQUE INDEX "ExamClass_examId_classId_key" ON "ExamClass"("examId", "classId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "SubjectSubtotalGroup_subjectId_subtotalGroupId_key" ON "SubjectSubtotalGroup"("subjectId", "subtotalGroupId");
+CREATE UNIQUE INDEX "Subject_name_key" ON "Subject"("name");
 
 -- CreateIndex
 CREATE INDEX "SubjectSubtotalGroup_subjectId_idx" ON "SubjectSubtotalGroup"("subjectId");
@@ -783,46 +786,49 @@ CREATE INDEX "SubjectSubtotalGroup_subjectId_idx" ON "SubjectSubtotalGroup"("sub
 CREATE INDEX "SubjectSubtotalGroup_subtotalGroupId_idx" ON "SubjectSubtotalGroup"("subtotalGroupId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserKeyboardShortcut_userId_action_key" ON "UserKeyboardShortcut"("userId", "action");
+CREATE UNIQUE INDEX "SubjectSubtotalGroup_subjectId_subtotalGroupId_key" ON "SubjectSubtotalGroup"("subjectId", "subtotalGroupId");
 
 -- CreateIndex
 CREATE INDEX "UserKeyboardShortcut_userId_idx" ON "UserKeyboardShortcut"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserPreference_userId_key_key" ON "UserPreference"("userId", "key");
+CREATE UNIQUE INDEX "UserKeyboardShortcut_userId_action_key" ON "UserKeyboardShortcut"("userId", "action");
 
 -- CreateIndex
 CREATE INDEX "UserPreference_userId_idx" ON "UserPreference"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ExamMarkingFormat_examId_markType_key" ON "ExamMarkingFormat"("examId", "markType");
+CREATE UNIQUE INDEX "UserPreference_userId_key_key" ON "UserPreference"("userId", "key");
 
 -- CreateIndex
 CREATE INDEX "ExamMarkingFormat_examId_idx" ON "ExamMarkingFormat"("examId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "ExamMarkingFormat_examId_markType_key" ON "ExamMarkingFormat"("examId", "markType");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "ExamExportSettings_examId_key" ON "ExamExportSettings"("examId");
+
+-- CreateIndex
+CREATE INDEX "CropRegionMarkingOverride_cropRegionId_idx" ON "CropRegionMarkingOverride"("cropRegionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CropRegionMarkingOverride_cropRegionId_markType_key" ON "CropRegionMarkingOverride"("cropRegionId", "markType");
 
 -- CreateIndex
-CREATE INDEX "CropRegionMarkingOverride_cropRegionId_idx" ON "CropRegionMarkingOverride"("cropRegionId");
-
--- CreateIndex (MasterImage/StudentAnswerImage)
-CREATE UNIQUE INDEX "StudentAnswerImage_examPageId_studentId_key" ON "StudentAnswerImage"("examPageId", "studentId");
+CREATE UNIQUE INDEX "CropRegionOmrConfig_cropRegionId_key" ON "CropRegionOmrConfig"("cropRegionId");
 
 -- CreateIndex
-CREATE INDEX "StudentAnswerImage_examPageId_idx" ON "StudentAnswerImage"("examPageId");
+CREATE INDEX "CropRegionOmrConfig_cropRegionId_idx" ON "CropRegionOmrConfig"("cropRegionId");
 
 -- CreateIndex
-CREATE INDEX "StudentAnswerImage_studentId_idx" ON "StudentAnswerImage"("studentId");
+CREATE INDEX "CropRegionOmrChoiceOption_omrConfigId_idx" ON "CropRegionOmrChoiceOption"("omrConfigId");
 
--- CreateIndex (Grade)
+-- CreateIndex
+CREATE UNIQUE INDEX "CropRegionOmrChoiceOption_omrConfigId_choiceIndex_key" ON "CropRegionOmrChoiceOption"("omrConfigId", "choiceIndex");
+
+-- CreateIndex
 CREATE INDEX "GradeItem_gradeId_idx" ON "GradeItem"("gradeId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "GradeClass_gradeId_classId_key" ON "GradeClass"("gradeId", "classId");
 
 -- CreateIndex
 CREATE INDEX "GradeClass_gradeId_idx" ON "GradeClass"("gradeId");
@@ -831,7 +837,7 @@ CREATE INDEX "GradeClass_gradeId_idx" ON "GradeClass"("gradeId");
 CREATE INDEX "GradeClass_classId_idx" ON "GradeClass"("classId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GradeStudent_gradeId_studentId_key" ON "GradeStudent"("gradeId", "studentId");
+CREATE UNIQUE INDEX "GradeClass_gradeId_classId_key" ON "GradeClass"("gradeId", "classId");
 
 -- CreateIndex
 CREATE INDEX "GradeStudent_gradeId_idx" ON "GradeStudent"("gradeId");
@@ -841,6 +847,9 @@ CREATE INDEX "GradeStudent_studentId_idx" ON "GradeStudent"("studentId");
 
 -- CreateIndex
 CREATE INDEX "GradeStudent_gradeId_customOrder_idx" ON "GradeStudent"("gradeId", "customOrder");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "GradeStudent_gradeId_studentId_key" ON "GradeStudent"("gradeId", "studentId");
 
 -- CreateIndex
 CREATE INDEX "GradeDataSource_gradeItemId_idx" ON "GradeDataSource"("gradeItemId");
@@ -855,16 +864,13 @@ CREATE INDEX "GradeDataSource_subtotalId_idx" ON "GradeDataSource"("subtotalId")
 CREATE INDEX "GradeDataSource_cropRegionId_idx" ON "GradeDataSource"("cropRegionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ManualScore_gradeDataSourceId_studentId_key" ON "ManualScore"("gradeDataSourceId", "studentId");
-
--- CreateIndex
 CREATE INDEX "ManualScore_gradeDataSourceId_idx" ON "ManualScore"("gradeDataSourceId");
 
 -- CreateIndex
 CREATE INDEX "ManualScore_studentId_idx" ON "ManualScore"("studentId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GradeItemExclusion_gradeId_studentId_gradeItemId_key" ON "GradeItemExclusion"("gradeId", "studentId", "gradeItemId");
+CREATE UNIQUE INDEX "ManualScore_gradeDataSourceId_studentId_key" ON "ManualScore"("gradeDataSourceId", "studentId");
 
 -- CreateIndex
 CREATE INDEX "GradeItemExclusion_gradeId_idx" ON "GradeItemExclusion"("gradeId");
@@ -876,13 +882,13 @@ CREATE INDEX "GradeItemExclusion_studentId_idx" ON "GradeItemExclusion"("student
 CREATE INDEX "GradeItemExclusion_gradeItemId_idx" ON "GradeItemExclusion"("gradeItemId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GradeBoundarySet_gradeId_targetType_gradeItemId_key" ON "GradeBoundarySet"("gradeId", "targetType", "gradeItemId");
+CREATE UNIQUE INDEX "GradeItemExclusion_gradeId_studentId_gradeItemId_key" ON "GradeItemExclusion"("gradeId", "studentId", "gradeItemId");
 
 -- CreateIndex
 CREATE INDEX "GradeBoundarySet_gradeId_idx" ON "GradeBoundarySet"("gradeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GradeOverride_gradeId_studentId_targetType_gradeItemId_key" ON "GradeOverride"("gradeId", "studentId", "targetType", "gradeItemId");
+CREATE UNIQUE INDEX "GradeBoundarySet_gradeId_targetType_gradeItemId_key" ON "GradeBoundarySet"("gradeId", "targetType", "gradeItemId");
 
 -- CreateIndex
 CREATE INDEX "GradeOverride_gradeId_idx" ON "GradeOverride"("gradeId");
@@ -894,12 +900,15 @@ CREATE INDEX "GradeOverride_studentId_idx" ON "GradeOverride"("studentId");
 CREATE INDEX "GradeOverride_gradeItemId_idx" ON "GradeOverride"("gradeItemId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "GradeOverride_gradeId_studentId_targetType_gradeItemId_key" ON "GradeOverride"("gradeId", "studentId", "targetType", "gradeItemId");
+
+-- CreateIndex
 CREATE INDEX "GradeBoundary_gradeBoundarySetId_idx" ON "GradeBoundary"("gradeBoundarySetId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "GradeExportSettings_gradeId_key" ON "GradeExportSettings"("gradeId");
 
--- CreateIndex (ASB)
+-- CreateIndex
 CREATE INDEX "AsbDefinition_userId_idx" ON "AsbDefinition"("userId");
 
 -- CreateIndex
@@ -939,29 +948,7 @@ CREATE INDEX "AsbOmrConfig_subQuestionId_idx" ON "AsbOmrConfig"("subQuestionId")
 CREATE INDEX "AsbOmrConfig_branchQuestionId_idx" ON "AsbOmrConfig"("branchQuestionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "AsbOmrChoiceOption_omrConfigId_choiceIndex_key" ON "AsbOmrChoiceOption"("omrConfigId", "choiceIndex");
-
--- CreateIndex
 CREATE INDEX "AsbOmrChoiceOption_omrConfigId_idx" ON "AsbOmrChoiceOption"("omrConfigId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CropRegionOmrConfig_cropRegionId_key" ON "CropRegionOmrConfig"("cropRegionId");
-
--- CreateIndex
-CREATE INDEX "CropRegionOmrConfig_cropRegionId_idx" ON "CropRegionOmrConfig"("cropRegionId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "CropRegionOmrChoiceOption_omrConfigId_choiceIndex_key" ON "CropRegionOmrChoiceOption"("omrConfigId", "choiceIndex");
-
--- CreateIndex
-CREATE INDEX "CropRegionOmrChoiceOption_omrConfigId_idx" ON "CropRegionOmrChoiceOption"("omrConfigId");
-
--- CreateIndex
-CREATE INDEX "DeletedRecord_examId_idx" ON "DeletedRecord"("examId");
-
--- CreateIndex
-CREATE INDEX "DeletedRecord_deletedAt_idx" ON "DeletedRecord"("deletedAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "DeletedRecord_tableName_recordId_key" ON "DeletedRecord"("tableName", "recordId");
-`
+CREATE UNIQUE INDEX "AsbOmrChoiceOption_omrConfigId_choiceIndex_key" ON "AsbOmrChoiceOption"("omrConfigId", "choiceIndex");

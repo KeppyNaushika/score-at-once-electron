@@ -204,24 +204,25 @@ export class DatabaseSetup {
       let setupPerformed = false
 
       if (!dbExists) {
-        // データベースディレクトリを確保
+        // --- 新規DB ---
         this.ensureDatabaseDirectory()
 
-        // databaseInitializerを使用してスキーマを作成
         const { initializeDatabase } =
           await import("./prisma/databaseInitializer")
         const wasCreated = await initializeDatabase()
 
         if (wasCreated) {
-          // 新しく作成されたDBにシードデータを投入
+          // ベースラインを挿入（将来のprisma migrate用）
+          const { createBaseline } =
+            await import("./prisma/schema/baselineMigrations")
+          await createBaseline(this.prisma)
+
           await this.runSeed()
           setupPerformed = true
         }
       } else {
-        // 既存DBにスキーママイグレーションを適用
-        const { migrateExistingDatabase } =
-          await import("./prisma/schema/migrationRunner")
-        await migrateExistingDatabase()
+        // --- 既存DB ---
+        await this.migrateExistingDatabase()
 
         const isEmpty = await this.isDatabaseEmpty()
         if (isEmpty) {
@@ -236,6 +237,61 @@ export class DatabaseSetup {
       throw error
     } finally {
       await this.prisma.$disconnect()
+    }
+  }
+
+  /**
+   * 既存DBのマイグレーション: バージョン検出 → ブリッジ → ベースライン → 将来マイグレーション適用
+   */
+  private async migrateExistingDatabase(): Promise<void> {
+    const { detectSchemaVersion } =
+      await import("./prisma/schema/versionDetector")
+    const version = await detectSchemaVersion(this.prisma)
+    console.info(`Detected schema version: ${version}`)
+
+    if (version === "UNKNOWN") {
+      console.warn(
+        "Unknown database schema version. Skipping migration to avoid data loss."
+      )
+      return
+    }
+
+    if (version === "MIGRATED") {
+      // 既にPrisma管理下 — 将来のマイグレーションのみ適用
+      const { deployPendingMigrations } =
+        await import("./prisma/schema/migrationDeployer")
+      await deployPendingMigrations(this.prisma)
+      return
+    }
+
+    // ブリッジマイグレーション実行（S3〜S9）
+    const { createBackup, restoreBackup, runBridgeMigration } =
+      await import("./prisma/schema/bridgeMigrations")
+
+    const backupPath = createBackup()
+    try {
+      await runBridgeMigration(this.prisma, version)
+
+      // ベースライン作成
+      const { createBaseline } =
+        await import("./prisma/schema/baselineMigrations")
+      await createBaseline(this.prisma)
+
+      // 将来のマイグレーション適用
+      const { deployPendingMigrations } =
+        await import("./prisma/schema/migrationDeployer")
+      await deployPendingMigrations(this.prisma)
+
+      console.info(
+        `Database migrated from ${version} to current schema with Prisma baseline`
+      )
+    } catch (error) {
+      console.error(`Bridge migration from ${version} failed:`, error)
+      if (backupPath) {
+        console.info("Restoring database from backup...")
+        restoreBackup(backupPath)
+      }
+      throw error
     }
   }
 
