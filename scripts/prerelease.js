@@ -235,13 +235,13 @@ function generatePrereleaseNotes(version) {
 
 ### 🚀 機能
 
-${packageJson.description || "複数教員による協調採点システム"}
+${packageJson.description || "完全無料・インストール不要・オフライン完結の採点支援ソフト"}
 
 ### 📝 使用方法
 
 1. お使いのOSに対応するZIPファイルをダウンロード
 2. 解凍してフォルダ内の実行ファイルを起動
-   - macOS: \`一括採点.app\`
+   - macOS: \`一括採点.app\`（「開発元を確認できません」と表示される場合は、appを右クリック→「フォルダに新規ターミナル」→ \`xattr -r -d com.apple.quarantine .\` を実行）
    - Windows: \`一括採点.exe\`
    - Linux: \`一括採点\`
 
