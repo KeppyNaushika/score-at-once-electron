@@ -123,7 +123,7 @@ export interface UseDrawingAnnotationsReturn {
   loadAnnotations: (
     questionScoreId: string,
     type?: DrawingType
-  ) => Promise<boolean>
+  ) => Promise<DrawingAnnotation[]>
   loadAllStudentAnnotations: (
     studentId: string,
     examId: string,
@@ -199,9 +199,13 @@ export function useDrawingAnnotations(
   /**
    * アノテーション読み込み
    * contextのcurrentUserIdを使って、ログインユーザーのアノテーションのみ取得
+   * @returns 読み込んだアノテーション配列（失敗時は空配列）
    */
   const loadAnnotations = useCallback(
-    async (questionScoreId: string, type?: DrawingType): Promise<boolean> => {
+    async (
+      questionScoreId: string,
+      type?: DrawingType
+    ): Promise<DrawingAnnotation[]> => {
       setIsLoading(true)
       setError(null)
 
@@ -213,14 +217,14 @@ export function useDrawingAnnotations(
         )
         if (result.success && result.data) {
           setAnnotations(result.data)
-          return true
+          return result.data
         } else {
           handleError(result.error || "アノテーション読み込みに失敗しました")
-          return false
+          return []
         }
       } catch (error) {
         handleError("アノテーション読み込み中にエラーが発生しました", error)
-        return false
+        return []
       } finally {
         setIsLoading(false)
       }
