@@ -163,12 +163,6 @@ export function parseInlineMarkup(input: string): InlineSegment[] {
   return segments
 }
 
-/** テキストに模範解答記法(||..||)が含まれるか判定 */
-export function hasModelAnswerContent(text: string): boolean {
-  const match = text.match(/\|\|[^|]+\|\|/)
-  return match !== null
-}
-
 /** マークアップ記法を除去してプレーンテキストを返す */
 export function stripMarkup(text: string): string {
   return text

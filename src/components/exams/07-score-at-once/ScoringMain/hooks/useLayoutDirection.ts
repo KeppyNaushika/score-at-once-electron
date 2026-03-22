@@ -22,24 +22,16 @@ export function useLayoutDirection() {
 
   const [layoutDirection, setLayoutDirectionState] =
     useState<LayoutDirection>(DEFAULT)
-  const [isLoading, setIsLoading] = useState(true)
   const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (initializedUserIdRef.current === userId) return
-    if (!userId) {
-      setIsLoading(false)
-      return
-    }
+    if (!userId) return
 
     initializedUserIdRef.current = userId
-    setIsLoading(true)
 
     const load = async () => {
-      if (!window.electronAPI?.settings) {
-        setIsLoading(false)
-        return
-      }
+      if (!window.electronAPI?.settings) return
 
       try {
         const result = await window.electronAPI.settings.getUserPreference(
@@ -57,7 +49,6 @@ export function useLayoutDirection() {
       } catch (error) {
         console.error("layoutDirectionの読み込みに失敗しました:", error)
       }
-      setIsLoading(false)
     }
 
     load()
@@ -81,5 +72,5 @@ export function useLayoutDirection() {
     [userId]
   )
 
-  return { layoutDirection, setLayoutDirection, isLoading }
+  return { layoutDirection, setLayoutDirection }
 }

@@ -72,8 +72,5 @@ export async function exportStudentsArchive(
   }
 }
 
-export {
-  createStudentArchive,
-  generateStudentExportFileName,
-} from "./archiveCreator"
+export { createStudentArchive } from "./archiveCreator"
 export { collectStudentArchiveData } from "./dataCollector"

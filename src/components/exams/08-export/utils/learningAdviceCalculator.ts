@@ -27,7 +27,7 @@ function isIncorrectAnswer(score: ScoreDetail): boolean {
  * 復習問題を抽出
  * 正答率が閾値以上の問題で、生徒が間違えたもの
  */
-export function findReviewQuestions(
+function findReviewQuestions(
   scores: ScoreDetail[],
   questionCorrectRates: Record<string, number>,
   options: AdviceOptions

@@ -131,13 +131,3 @@ export async function startEmbeddedNextServer(): Promise<void> {
     throw error
   }
 }
-
-export function stopEmbeddedNextServer(): void {
-  if (httpServer) {
-    httpServer.close()
-    httpServer = null
-  }
-  if (nextApp) {
-    nextApp = null
-  }
-}

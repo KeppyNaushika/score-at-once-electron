@@ -47,5 +47,5 @@ export async function exportAsbDefinition(
   }
 }
 
-export { createAsbArchive, generateAsbExportFileName } from "./archiveCreator"
+export { createAsbArchive } from "./archiveCreator"
 export { collectAsbData } from "./dataCollector"

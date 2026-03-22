@@ -45,7 +45,7 @@ export interface ImageCorrectionResult {
  * 剛体変換: X = cos(θ)*x - sin(θ)*y + tx, Y = sin(θ)*x + cos(θ)*y + ty
  * スケールは含まない（回転 + 平行移動のみ）
  */
-export function computeRigidTransform(
+function computeRigidTransform(
   src: Point[],
   dst: Point[]
 ): RigidTransformParams {

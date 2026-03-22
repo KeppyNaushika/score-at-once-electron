@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  hasModelAnswerContent,
   parseInlineMarkup,
   stripMarkup,
 } from "@/lib/answer-sheet-builder/inlineMarkupParser"
@@ -136,20 +135,6 @@ describe("parseInlineMarkup", () => {
     expect(result).toEqual([
       { text: "x = 5", math: true, displayMath: true, modelAnswer: true },
     ])
-  })
-})
-
-describe("hasModelAnswerContent", () => {
-  it("模範解答記法がある場合にtrueを返す", () => {
-    expect(hasModelAnswerContent("||解答||")).toBe(true)
-  })
-
-  it("模範解答記法がない場合にfalseを返す", () => {
-    expect(hasModelAnswerContent("通常テキスト")).toBe(false)
-  })
-
-  it("空の||の場合はfalseを返す", () => {
-    expect(hasModelAnswerContent("||||")).toBe(false)
   })
 })
 

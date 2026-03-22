@@ -17,5 +17,3 @@ export const KEYBOARD_SHORTCUTS = {
     PARTIAL_RESET: { key: "Backspace", label: "部分点リセット" },
   },
 } as const
-
-export const DEFAULT_LAYOUT_DIRECTION = "right-down" as const

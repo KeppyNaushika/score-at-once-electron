@@ -3,7 +3,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 
 // アプリケーションのルートディレクトリ（実行ファイルがある場所）
-export const getAppRootPath = (): string => {
+const getAppRootPath = (): string => {
   if (app.isPackaged) {
     // パッケージ化されている場合
     const exePath = app.getPath("exe")
@@ -155,60 +155,6 @@ export const migrateProjectsToExams = async (): Promise<boolean> => {
   }
 }
 
-// ApplicationSupportからの移行処理
-export const migrateFromApplicationSupport = async (): Promise<boolean> => {
-  const oldDataPath = path.join(app.getPath("userData"))
-  const newDataPath = getDataDirectory()
-
-  try {
-    // 旧データの存在確認
-    const oldExamsPath = path.join(oldDataPath, "exams")
-    const oldDbPath = path.join(oldDataPath, "database.db")
-
-    let hasMigrated = false
-
-    // 試験フォルダの移行
-    try {
-      await fs.access(oldExamsPath)
-
-      const newExamsPath = path.join(newDataPath, "exams")
-      await fs.mkdir(newExamsPath, { recursive: true })
-
-      // 試験フォルダをコピー
-      const examDirs = await fs.readdir(oldExamsPath)
-      for (const examDir of examDirs) {
-        const oldPath = path.join(oldExamsPath, examDir)
-        const newPath = path.join(newExamsPath, examDir)
-        await copyDirectory(oldPath, newPath)
-      }
-
-      // 旧フォルダを削除
-      await fs.rm(oldExamsPath, { recursive: true, force: true })
-      hasMigrated = true
-    } catch {
-      // 旧データが存在しない場合はスキップ
-    }
-
-    // データベースファイルの移行
-    try {
-      await fs.access(oldDbPath)
-
-      const newDbPath = path.join(newDataPath, "database.db")
-      await fs.copyFile(oldDbPath, newDbPath)
-      await fs.unlink(oldDbPath)
-
-      hasMigrated = true
-    } catch {
-      // 旧データベースが存在しない場合はスキップ
-    }
-
-    return hasMigrated
-  } catch (error) {
-    console.error("Migration failed:", error)
-    return false
-  }
-}
-
 // ディレクトリの再帰的コピー
 const copyDirectory = async (src: string, dest: string): Promise<void> => {
   await fs.mkdir(dest, { recursive: true })
@@ -256,17 +202,6 @@ const getDirectorySize = async (dirPath: string): Promise<number> => {
   }
 
   return totalSize
-}
-
-// ファイルサイズをフォーマット
-export const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return "0 Bytes"
-
-  const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
 
 // 絶対パスから相対パス（data/基準）への変換

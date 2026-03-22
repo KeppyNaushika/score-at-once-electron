@@ -138,14 +138,3 @@ export const KEYBINDING_CATEGORIES = {
   modal: "モーダル",
   tool: "描画ツール",
 } as const
-
-/**
- * コマンドIDからカテゴリを取得
- */
-export function getCategoryFromCommandId(commandId: string): string {
-  const prefix = commandId.split(".")[0]
-  return (
-    KEYBINDING_CATEGORIES[prefix as keyof typeof KEYBINDING_CATEGORIES] ||
-    "その他"
-  )
-}

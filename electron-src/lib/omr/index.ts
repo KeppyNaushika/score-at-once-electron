@@ -2,19 +2,17 @@
  * OMRモジュール バレルエクスポート
  */
 
-export { convertToScoreEntries } from "./autoScorer"
+export type { AutoScoreEntry } from "./autoScorer"
+export { convertToScoreEntriesFromDb } from "./autoScorer"
 export {
   createTransform,
   normalizedRectToPixelRect,
   normalizedToPixel,
 } from "./coordinateTransform"
-export {
-  detectCornerMarkers,
-  detectCornerMarkersFromRaw,
-} from "./cornerMarkerDetector"
+export { detectCornerMarkers } from "./cornerMarkerDetector"
 export { recognizeDigitCell } from "./digitRecognizer"
 export type { ImageCorrectionResult } from "./imageCorrector"
-export { computeRigidTransform, correctImage } from "./imageCorrector"
+export { correctImage } from "./imageCorrector"
 export {
   computeCircularFillRatio,
   computeFillRatio,

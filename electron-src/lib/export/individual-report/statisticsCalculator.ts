@@ -17,7 +17,7 @@ import type {
 /**
  * 配列の平均値を計算
  */
-export function calculateAverage(values: number[]): number {
+function calculateAverage(values: number[]): number {
   if (values.length === 0) return 0
   return values.reduce((sum, v) => sum + v, 0) / values.length
 }
@@ -25,7 +25,7 @@ export function calculateAverage(values: number[]): number {
 /**
  * 配列の標準偏差を計算
  */
-export function calculateStdDev(values: number[]): number {
+function calculateStdDev(values: number[]): number {
   if (values.length === 0) return 0
   const avg = calculateAverage(values)
   const squaredDiffs = values.map((v) => Math.pow(v - avg, 2))
@@ -37,7 +37,7 @@ export function calculateStdDev(values: number[]): number {
  * Tukey法: データを半分に分けて中央値を取る方法
  * 全数調査（試験の成績など）に適した計算方法
  */
-export function calculateBoxPlotData(values: number[]): BoxPlotData {
+function calculateBoxPlotData(values: number[]): BoxPlotData {
   if (values.length === 0) {
     return { min: 0, q1: 0, median: 0, q3: 0, max: 0 }
   }
@@ -82,7 +82,7 @@ function calculateMedian(sortedValues: number[]): number {
 /**
  * 偏差値を計算
  */
-export function calculateDeviation(
+function calculateDeviation(
   score: number,
   average: number,
   stdDev: number
@@ -94,7 +94,7 @@ export function calculateDeviation(
 /**
  * 順位を計算（同点は同順位）
  */
-export function calculateRank(score: number, allScores: number[]): number {
+function calculateRank(score: number, allScores: number[]): number {
   const sorted = [...allScores].sort((a, b) => b - a)
   return sorted.findIndex((s) => s <= score) + 1
 }

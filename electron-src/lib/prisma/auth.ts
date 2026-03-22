@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
 const prisma = new PrismaClient({
@@ -9,7 +8,6 @@ const prisma = new PrismaClient({
 // JWT secret - in production, this should be in environment variables
 const JWT_SECRET =
   process.env.JWT_SECRET || "your-secret-key-change-in-production"
-const SALT_ROUNDS = 10
 
 export interface AuthTokenPayload {
   userId: string
@@ -17,26 +15,13 @@ export interface AuthTokenPayload {
   role: string
 }
 
-// Hash password
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, SALT_ROUNDS)
-}
-
-// Verify password
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  return bcrypt.compare(password, hash)
-}
-
 // Generate JWT token
-export function generateToken(payload: AuthTokenPayload): string {
+function generateToken(payload: AuthTokenPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
 }
 
 // Verify JWT token
-export function verifyToken(token: string): AuthTokenPayload | null {
+function verifyToken(token: string): AuthTokenPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as AuthTokenPayload
   } catch {

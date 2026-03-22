@@ -25,7 +25,7 @@ export const PAPER_DIMENSIONS: Record<
  * @param imageHeightPx 画像の高さ（ピクセル）
  * @returns 1mmあたりのピクセル数
  */
-export function getMmToPixelRatio(
+function getMmToPixelRatio(
   pageSize: string,
   imageWidthPx: number,
   imageHeightPx: number
@@ -47,43 +47,4 @@ export function mmToPixels(
   imageHeightPx: number
 ): number {
   return mm * getMmToPixelRatio(pageSize, imageWidthPx, imageHeightPx)
-}
-
-/**
- * Canvasピクセル値をmmに変換
- */
-export function pixelsToMm(
-  px: number,
-  pageSize: string,
-  imageWidthPx: number,
-  imageHeightPx: number
-): number {
-  const ratio = getMmToPixelRatio(pageSize, imageWidthPx, imageHeightPx)
-  return ratio > 0 ? px / ratio : 0
-}
-
-/**
- * PDF scale=2.0を仮定した場合の標準画像幅ピクセル数を返す
- * （archiveインポート等、画像の実ピクセル数が不明な場合の概算用）
- *
- * PDF.js scale=2.0 では 72dpi × 2 = 144dpi 相当
- * 1mm = 144 / 25.4 ≈ 5.669px
- */
-export function getEstimatedImageWidthPx(pageSize: string): number {
-  const paper = PAPER_DIMENSIONS[pageSize] ?? PAPER_DIMENSIONS.A4
-  const pxPerMm = (72 * 2) / 25.4
-  return Math.round(paper.width * pxPerMm)
-}
-
-/**
- * 旧px値をmm値に概算変換（archive transformer用）
- *
- * PDF scale=2.0を仮定して変換する。
- * 実際の画像ピクセル数が不明な場合に使用。
- */
-export function estimatePxToMm(px: number, pageSize: string): number {
-  const imageWidthPx = getEstimatedImageWidthPx(pageSize)
-  const paper = PAPER_DIMENSIONS[pageSize] ?? PAPER_DIMENSIONS.A4
-  // portrait仮定
-  return (px * paper.width) / imageWidthPx
 }

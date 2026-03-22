@@ -129,7 +129,7 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
 }
 
 /** DBフラットカラムから GlobalSettings に復元する */
-export function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
+function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
   return {
     paperSize: row.paperSize as GlobalSettings["paperSize"],
     orientation: row.orientation as GlobalSettings["orientation"],
@@ -195,7 +195,7 @@ export function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
 // =============================================================================
 
 /** DB TextElement 行を CellTextElement 配列に変換する */
-export function dbTextElements(elements: AsbTextElement[]): CellTextElement[] {
+function dbTextElements(elements: AsbTextElement[]): CellTextElement[] {
   return elements.map((te) => ({
     id: te.id,
     text: te.text,
@@ -206,9 +206,7 @@ export function dbTextElements(elements: AsbTextElement[]): CellTextElement[] {
 }
 
 /** DB ImageElement 行を CellImageElement 配列に変換する */
-export function dbImageElements(
-  elements: AsbImageElement[]
-): CellImageElement[] {
+function dbImageElements(elements: AsbImageElement[]): CellImageElement[] {
   return elements.map((ie) => ({
     id: ie.id,
     imagePath: ie.imagePath,
@@ -225,7 +223,7 @@ export function dbImageElements(
 }
 
 /** DB OmrConfig 行を OMRCellConfig に変換する */
-export function dbToOmrConfig(
+function dbToOmrConfig(
   config: AsbOmrConfig & {
     choiceOptions: { choiceIndex: number; label: string; isCorrect: boolean }[]
   }

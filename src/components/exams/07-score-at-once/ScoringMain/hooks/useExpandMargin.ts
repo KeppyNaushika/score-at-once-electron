@@ -19,24 +19,16 @@ export function useExpandMargin() {
   const userId = user?.id
 
   const [expandMargin, setExpandMarginState] = useState<number>(DEFAULT)
-  const [isLoading, setIsLoading] = useState(true)
   const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (initializedUserIdRef.current === userId) return
-    if (!userId) {
-      setIsLoading(false)
-      return
-    }
+    if (!userId) return
 
     initializedUserIdRef.current = userId
-    setIsLoading(true)
 
     const load = async () => {
-      if (!window.electronAPI?.settings) {
-        setIsLoading(false)
-        return
-      }
+      if (!window.electronAPI?.settings) return
 
       try {
         const result = await window.electronAPI.settings.getUserPreference(
@@ -51,7 +43,6 @@ export function useExpandMargin() {
       } catch (error) {
         console.error("expandMarginの読み込みに失敗しました:", error)
       }
-      setIsLoading(false)
     }
 
     load()
@@ -75,5 +66,5 @@ export function useExpandMargin() {
     [userId]
   )
 
-  return { expandMargin, setExpandMargin, isLoading }
+  return { expandMargin, setExpandMargin }
 }

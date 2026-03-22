@@ -59,39 +59,3 @@ export async function exportPagesToPng(
     }
   }
 }
-
-/**
- * 既存の画像ファイルを回転してコピー
- */
-export async function rotateAndCopyImages(
-  inputs: { sourcePath: string; rotation: RotationDegree; outputPath: string }[]
-): Promise<PngExportResult> {
-  try {
-    const outputPaths: string[] = []
-
-    for (const { sourcePath, rotation, outputPath } of inputs) {
-      let image = sharp(sourcePath)
-
-      if (rotation !== 0) {
-        image = image.rotate(rotation)
-      }
-
-      // 出力ディレクトリを作成
-      const outputDir = path.dirname(outputPath)
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true })
-      }
-
-      await image.png().toFile(outputPath)
-      outputPaths.push(outputPath)
-    }
-
-    return { success: true, outputPaths }
-  } catch (error) {
-    console.error("Image rotate/copy error:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
