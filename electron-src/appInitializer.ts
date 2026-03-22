@@ -73,6 +73,15 @@ export async function initializeApp(): Promise<void> {
       throw new Error("Database health check failed")
     }
 
+    // NAS同期の初期化（DBが準備完了してから）
+    try {
+      const { initializeSync } = await import("./lib/sync/syncService")
+      await initializeSync()
+    } catch (syncError) {
+      // sync初期化失敗はアプリ起動を妨げない
+      console.warn("Sync initialization failed (non-critical):", syncError)
+    }
+
     console.log("Application initialization completed successfully")
   } catch (error) {
     console.error("Failed to initialize application:", error)

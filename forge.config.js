@@ -30,7 +30,7 @@ module.exports = {
   rebuildConfig: {
     buildPath: "./out",
     electronVersion: "37.1.0",
-    onlyModules: ["sharp"],
+    onlyModules: ["sharp", "better-sqlite3"],
     forceABI: true,
   },
   makers: [

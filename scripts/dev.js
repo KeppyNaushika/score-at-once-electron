@@ -17,6 +17,19 @@ async function startDev() {
     })
   })
 
+  // Bundle preload script (sandbox: true 対応)
+  console.log("Bundling preload...")
+  const bundleProcess = spawn("node", ["scripts/buildPreload.js"], {
+    stdio: "inherit",
+    shell: true,
+  })
+  await new Promise((resolve, reject) => {
+    bundleProcess.on("close", (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`Preload bundle failed with code ${code}`))
+    })
+  })
+
   console.log("Starting Next.js...")
 
   // Start Next.js
