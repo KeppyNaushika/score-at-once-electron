@@ -40,7 +40,6 @@ export function useGridAnnotations({
     // 同一cropRegionIdの重複取得を防止
     const fetchKey = `${cropRegionId}:${currentUserId ?? ""}`
     if (lastFetchedRef.current === fetchKey) return
-    lastFetchedRef.current = fetchKey
 
     setIsLoading(true)
     try {
@@ -50,6 +49,8 @@ export function useGridAnnotations({
       )
 
       if (result.success && result.data) {
+        // フェッチ成功後にキーを設定（失敗時のリトライを阻害しない）
+        lastFetchedRef.current = fetchKey
         const grouped = new Map<string, DrawingAnnotation[]>()
         for (const annotation of result.data) {
           // questionScore.studentId を使用してグループ化

@@ -125,7 +125,6 @@ export function useDrawingState(
   }
 
   const {
-    annotations,
     isLoading: isLoadingFromDB,
     error: dbError,
     saveElement,
@@ -141,9 +140,10 @@ export function useDrawingState(
   // questionScoreIdが変更された時にDBから自動読み込み
   const prevQuestionScoreIdRef = useRef<string | null | undefined>(undefined)
 
-  // ロード操作（設問変更時）でannotationsが変わった場合のみdrawingElementsを同期する
-  // CRUD操作時のannotations変更では楽観的更新に依存し、上書きしない
-  const isLoadTriggeredRef = useRef(false)
+  // ロードバージョンカウンター：非同期ロードの競合を防止
+  // 各ロード開始時にインクリメントし、完了時にバージョンが最新かチェック
+  // これによりCRUD操作のsetAnnotationsと完全に分離され、レースコンディションを回避
+  const loadVersionRef = useRef(0)
 
   // 設問変更時の同期的クリア（useLayoutEffectで描画前に確実にクリア）
   // useLayoutEffectは描画effectの前に実行されるため、古いデータで描画されることを防ぐ
@@ -153,44 +153,21 @@ export function useDrawingState(
 
       // 設問変更時は即座にdrawingElementsと選択をクリア
       // useLayoutEffectにより、描画effectが実行される前にクリアが完了する
-
       setDrawingElements([])
       setSelectedElementIds([])
 
-      // DB読み込みは非同期なので、ここでは開始のみ
+      // DB読み込みは非同期 → ロード完了時にバージョンチェックで最新のみ適用
       if (enablePersistence && questionScoreId) {
-        isLoadTriggeredRef.current = true
-        loadAnnotations(questionScoreId)
+        const thisVersion = ++loadVersionRef.current
+        loadAnnotations(questionScoreId).then((data) => {
+          // stale loadを破棄：より新しいロードが開始されていたら無視
+          if (thisVersion !== loadVersionRef.current) return
+          const elements = data.map(convertAnnotationToElement)
+          setDrawingElements(elements)
+        })
       }
     }
   }, [enablePersistence, questionScoreId, loadAnnotations])
-
-  // annotationsが更新されたらdrawingElementsに反映（ロード時のみ）
-  // CRUD操作時はsetAnnotationsによるuseEffect発火をスキップし、
-  // 楽観的更新（addDrawingElement/updateDrawingElement/removeDrawingElement）に依存する
-  // これにより、まだDBに保存されていない楽観的更新が上書きされることを防ぐ
-  //
-  // 注意: 初回マウント時、useEffect([annotations])はannotations=[]で即座に発火するが、
-  // loadAnnotationsはまだ非同期完了していない。この初回発火でisLoadTriggeredRefが
-  // 消費されると、実際のデータ到着時にスキップされてしまう。
-  // isInitialMountRefで初回発火をスキップすることでこの問題を回避する。
-  const isInitialMountRef = useRef(true)
-
-  useEffect(() => {
-    if (isInitialMountRef.current) {
-      isInitialMountRef.current = false
-      return
-    }
-    if (!isLoadTriggeredRef.current) {
-      return
-    }
-    isLoadTriggeredRef.current = false
-
-    // annotationsをdrawingElementsに変換（同期的に更新）
-    const elements = annotations.map(convertAnnotationToElement)
-
-    setDrawingElements(elements)
-  }, [annotations])
 
   // 描画要素操作（データベース統合対応）
   const addDrawingElement = useCallback(
@@ -462,10 +439,13 @@ export function useDrawingState(
     if (!enablePersistence || !questionScoreId) return
 
     try {
-      isLoadTriggeredRef.current = true
-      await loadAnnotations(questionScoreId)
+      const thisVersion = ++loadVersionRef.current
+      const data = await loadAnnotations(questionScoreId)
+      // stale loadを破棄
+      if (thisVersion !== loadVersionRef.current) return
+      const elements = data.map(convertAnnotationToElement)
+      setDrawingElements(elements)
     } catch (error) {
-      isLoadTriggeredRef.current = false
       console.error("データベース読み込みエラー:", error)
     }
   }, [enablePersistence, questionScoreId, loadAnnotations])

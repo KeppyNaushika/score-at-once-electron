@@ -63,6 +63,17 @@ export default function CroppedAnswerImage({
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
 
+  // imageUrl変更時にimageLoadedをリセット
+  // リセットしないと、新画像のonLoadでsetImageLoaded(true)がno-opとなり
+  // キャンバスの再描画が発火しない
+  const prevImageUrlRef = useRef(imageUrl)
+  if (prevImageUrlRef.current !== imageUrl) {
+    prevImageUrlRef.current = imageUrl
+    if (imageLoaded) {
+      setImageLoaded(false)
+    }
+  }
+
   useEffect(() => {
     const canvas = canvasRef.current
     const imageElement = imageRef.current
@@ -161,6 +172,7 @@ export default function CroppedAnswerImage({
     }
   }, [
     imageLoaded,
+    imageUrl,
     cropRegion,
     isColumnLayout,
     calculatedCellHeight,
