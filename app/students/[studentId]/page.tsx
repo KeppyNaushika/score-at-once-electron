@@ -20,7 +20,7 @@ import type { StudentClassMembershipWithDetails } from "@/types/prismaExtensions
 
 export default function StudentDetailPage() {
   const params = useParams()
-  const studentId = params.studentId as string
+  const studentId = typeof params.studentId === "string" ? params.studentId : ""
 
   const {
     student,

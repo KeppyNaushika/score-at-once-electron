@@ -137,7 +137,7 @@ export function EditableTable<T extends object>({
   const addRowAfter = useCallback(
     (index: number) => {
       const newRow = columns.reduce<Record<string, string>>((acc, col) => {
-        acc[col.id as string] = ""
+        if (col.id) acc[col.id] = ""
         return acc
       }, {}) as T
 
@@ -241,7 +241,7 @@ export function EditableTable<T extends object>({
 
   const addRow = () => {
     const newRow = columns.reduce<Record<string, string>>((acc, col) => {
-      acc[col.id as string] = ""
+      if (col.id) acc[col.id] = ""
       return acc
     }, {}) as T
 
@@ -255,7 +255,7 @@ export function EditableTable<T extends object>({
       { length: count },
       () =>
         columns.reduce<Record<string, string>>((acc, col) => {
-          acc[col.id as string] = ""
+          if (col.id) acc[col.id] = ""
           return acc
         }, {}) as T
     )
@@ -314,8 +314,10 @@ export function EditableTable<T extends object>({
         for (let ci = 0; ci < cells.length; ci++) {
           const targetCol = startEditableColIndex + ci
           if (targetCol >= editableCols.length) break
-          const colId = editableCols[targetCol].id as string
-          ;(updatedRow as Record<string, unknown>)[colId] = cells[ci]
+          const colId = editableCols[targetCol].id
+          if (colId) {
+            ;(updatedRow as Record<string, unknown>)[colId] = cells[ci]
+          }
         }
         newData[targetRow] = updatedRow
       }
@@ -327,7 +329,7 @@ export function EditableTable<T extends object>({
       const pastedData = rows.map((row) => {
         const cells = row.split("\t")
         return columns.reduce<Record<string, string>>((acc, col, index) => {
-          acc[col.id as string] = cells[index] || ""
+          if (col.id) acc[col.id] = cells[index] || ""
           return acc
         }, {}) as T
       })

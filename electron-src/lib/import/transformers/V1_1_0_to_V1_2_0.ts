@@ -111,28 +111,52 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
   transform(data: ArchiveData): TransformResult {
     const warnings: string[] = []
 
-    // PageImage → MasterImage / StudentAnswerImage に分離
+    // PageImage → MasterImage / StudentAnswerImage に分離（旧フォーマット配列をバリデーション）
+    const rawPageImages = data.examData.pageImages as unknown[]
+    const pageImages: V1_1_0_PageImage[] = Array.isArray(rawPageImages)
+      ? rawPageImages.filter(
+          (item): item is V1_1_0_PageImage =>
+            typeof item === "object" &&
+            item !== null &&
+            "id" in item &&
+            "imageType" in item
+        )
+      : []
     const { masterImages, studentAnswerImages, imageWarnings } =
-      this.transformPageImages(
-        data.examData.pageImages as unknown as V1_1_0_PageImage[]
-      )
+      this.transformPageImages(pageImages)
     warnings.push(...imageWarnings)
 
-    // QuestionScore の変換（フィールド名変更 + NULL除外）
-    const { questionScores, scoreWarnings } = this.transformQuestionScores(
-      data.scoresData.questionScores as unknown as V1_1_0_QuestionScore[]
-    )
+    // QuestionScore の変換（旧フォーマット配列をバリデーション）
+    const rawScores = data.scoresData.questionScores as unknown[]
+    const oldScores: V1_1_0_QuestionScore[] = Array.isArray(rawScores)
+      ? rawScores.filter(
+          (item): item is V1_1_0_QuestionScore =>
+            typeof item === "object" &&
+            item !== null &&
+            "id" in item &&
+            "cropRegionId" in item
+        )
+      : []
+    const { questionScores, scoreWarnings } =
+      this.transformQuestionScores(oldScores)
     warnings.push(...scoreWarnings)
 
-    // DrawingAnnotation の変換（フィールド名変更 + NULL除外）
-    // 注意: 親のQuestionScoreがスキップされた場合、その子もスキップする必要がある
+    // DrawingAnnotation の変換（旧フォーマット配列をバリデーション）
     const validScoreIds = new Set(questionScores.map((qs) => qs.id))
+    const rawAnnotations = data.scoresData.drawingAnnotations as unknown[]
+    const oldAnnotations: V1_1_0_DrawingAnnotation[] = Array.isArray(
+      rawAnnotations
+    )
+      ? rawAnnotations.filter(
+          (item): item is V1_1_0_DrawingAnnotation =>
+            typeof item === "object" &&
+            item !== null &&
+            "id" in item &&
+            "questionScoreId" in item
+        )
+      : []
     const { drawingAnnotations, annotationWarnings } =
-      this.transformDrawingAnnotations(
-        data.scoresData
-          .drawingAnnotations as unknown as V1_1_0_DrawingAnnotation[],
-        validScoreIds
-      )
+      this.transformDrawingAnnotations(oldAnnotations, validScoreIds)
     warnings.push(...annotationWarnings)
 
     // 警告メッセージを追加
@@ -152,19 +176,15 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         },
         examData: {
           ...data.examData,
-          // pageImagesは後方互換性のため維持（空にはしない）
-          masterImages: masterImages as unknown as NonNullable<
-            typeof data.examData.masterImages
-          >,
-          studentAnswerImages: studentAnswerImages as unknown as NonNullable<
-            typeof data.examData.studentAnswerImages
-          >,
+          masterImages: masterImages.map((m) => ({ ...m })),
+          studentAnswerImages: studentAnswerImages.map((s) => ({ ...s })),
         },
         scoresData: {
-          questionScores:
-            questionScores as unknown as typeof data.scoresData.questionScores,
-          drawingAnnotations:
-            drawingAnnotations as unknown as typeof data.scoresData.drawingAnnotations,
+          questionScores: questionScores.map((qs) => ({ ...qs })),
+          drawingAnnotations: drawingAnnotations.map((da) => ({
+            ...da,
+            isFavorite: false,
+          })),
         },
       },
       warnings,

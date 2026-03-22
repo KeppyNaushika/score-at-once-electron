@@ -156,51 +156,41 @@ export default function MembershipTable({
                     </TableHead>
                     <SortableTableHead
                       sortKey="studentId"
-                      currentSortKey={sortConfig.key as string | null}
+                      currentSortKey={sortConfig.key}
                       currentDirection={sortConfig.direction}
-                      onSort={(key) =>
-                        requestSort(key as keyof MembershipSortable)
-                      }
+                      onSort={(key) => requestSort(key)}
                     >
                       学籍番号
                     </SortableTableHead>
                     <SortableTableHead
                       sortKey="attendanceNumber"
-                      currentSortKey={sortConfig.key as string | null}
+                      currentSortKey={sortConfig.key}
                       currentDirection={sortConfig.direction}
-                      onSort={(key) =>
-                        requestSort(key as keyof MembershipSortable)
-                      }
+                      onSort={(key) => requestSort(key)}
                     >
                       出席番号
                     </SortableTableHead>
                     <SortableTableHead
                       sortKey="fullName"
-                      currentSortKey={sortConfig.key as string | null}
+                      currentSortKey={sortConfig.key}
                       currentDirection={sortConfig.direction}
-                      onSort={(key) =>
-                        requestSort(key as keyof MembershipSortable)
-                      }
+                      onSort={(key) => requestSort(key)}
                     >
                       氏名
                     </SortableTableHead>
                     <SortableTableHead
                       sortKey="startDate"
-                      currentSortKey={sortConfig.key as string | null}
+                      currentSortKey={sortConfig.key}
                       currentDirection={sortConfig.direction}
-                      onSort={(key) =>
-                        requestSort(key as keyof MembershipSortable)
-                      }
+                      onSort={(key) => requestSort(key)}
                     >
                       開始日
                     </SortableTableHead>
                     <SortableTableHead
                       sortKey="endDate"
-                      currentSortKey={sortConfig.key as string | null}
+                      currentSortKey={sortConfig.key}
                       currentDirection={sortConfig.direction}
-                      onSort={(key) =>
-                        requestSort(key as keyof MembershipSortable)
-                      }
+                      onSort={(key) => requestSort(key)}
                     >
                       終了日
                     </SortableTableHead>
@@ -221,7 +211,7 @@ export default function MembershipTable({
                         <Checkbox
                           checked={selectedIds.has(membership.id)}
                           onCheckedChange={(checked) =>
-                            handleSelectOne(membership.id, checked as boolean)
+                            handleSelectOne(membership.id, checked === true)
                           }
                         />
                       </TableCell>

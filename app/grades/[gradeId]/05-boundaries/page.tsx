@@ -6,7 +6,7 @@ import { BoundariesContainer } from "@/components/grades/05-boundaries/Boundarie
 
 export default function BoundariesPage() {
   const params = useParams()
-  const gradeId = params.gradeId as string
+  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   return <BoundariesContainer gradeId={gradeId} />
 }

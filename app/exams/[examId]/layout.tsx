@@ -42,7 +42,7 @@ export default function ExamWorkflowLayout({
   const params = useParams()
   const pathname = usePathname()
   const { user } = useAuth()
-  const examId = params.examId as string
+  const examId = typeof params.examId === "string" ? params.examId : ""
   const [examName, setExamName] = useState<string>("")
   const [showMemberDialog, setShowMemberDialog] = useState(false)
 

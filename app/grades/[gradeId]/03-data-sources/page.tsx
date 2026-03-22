@@ -6,7 +6,7 @@ import { DataSourcesContainer } from "@/components/grades/03-data-sources/DataSo
 
 export default function DataSourcesPage() {
   const params = useParams()
-  const gradeId = params.gradeId as string
+  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   return <DataSourcesContainer gradeId={gradeId} />
 }

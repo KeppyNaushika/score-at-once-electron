@@ -53,7 +53,7 @@ export function ClassSelectionTab({
                       id={`class-${classItem.id}`}
                       checked={classItem.isSelected}
                       onCheckedChange={(checked) =>
-                        onClassSelection(classItem.id, checked as boolean)
+                        onClassSelection(classItem.id, checked === true)
                       }
                     />
                     <div className="flex-1">

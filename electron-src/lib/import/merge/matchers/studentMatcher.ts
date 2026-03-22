@@ -124,7 +124,7 @@ export async function preMatchStudents(
     const displayLabel = `${importStudent.lastName}${importStudent.firstName}（${importStudent.studentNumber}）`
     const importItem: ImportItem = {
       importId: importStudent.id,
-      importData: importStudent as unknown as Record<string, unknown>,
+      importData: importStudent,
       displayLabel,
     }
 
@@ -134,8 +134,8 @@ export async function preMatchStudents(
       byId.push({
         importId: importStudent.id,
         existingId: idMatch.id,
-        importData: importStudent as unknown as Record<string, unknown>,
-        existingData: idMatch as unknown as Record<string, unknown>,
+        importData: importStudent,
+        existingData: idMatch,
         displayLabel,
         matchReason: "同じパソコンで作成されたデータ",
       })
@@ -150,8 +150,8 @@ export async function preMatchStudents(
       byStudentNumber.push({
         importId: importStudent.id,
         existingId: studentNumberMatch.id,
-        importData: importStudent as unknown as Record<string, unknown>,
-        existingData: studentNumberMatch as unknown as Record<string, unknown>,
+        importData: importStudent,
+        existingData: studentNumberMatch,
         displayLabel,
         matchReason: "学籍番号が一致",
       })
@@ -165,8 +165,8 @@ export async function preMatchStudents(
       byName.push({
         importId: importStudent.id,
         existingId: nameMatch.id,
-        importData: importStudent as unknown as Record<string, unknown>,
-        existingData: nameMatch as unknown as Record<string, unknown>,
+        importData: importStudent,
+        existingData: nameMatch,
         displayLabel,
         matchReason: "氏名が一致",
       })

@@ -22,7 +22,7 @@ export class V1_5_0_to_V1_6_0_Transformer implements VersionTransformer {
     // DrawingAnnotation に isFavorite を追加
     const drawingAnnotations = data.scoresData.drawingAnnotations.map((da) => ({
       ...da,
-      isFavorite: (da as Record<string, unknown>).isFavorite === true,
+      isFavorite: "isFavorite" in da && da.isFavorite === true,
     }))
 
     const annotationCount = drawingAnnotations.length

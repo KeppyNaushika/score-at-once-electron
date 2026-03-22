@@ -93,7 +93,7 @@ export async function preMatchClasses(
     const displayLabel = importClass.name
     const importItem: ImportItem = {
       importId: importClass.id,
-      importData: importClass as unknown as Record<string, unknown>,
+      importData: importClass,
       displayLabel,
     }
 
@@ -103,8 +103,8 @@ export async function preMatchClasses(
       byId.push({
         importId: importClass.id,
         existingId: idMatch.id,
-        importData: importClass as unknown as Record<string, unknown>,
-        existingData: idMatch as unknown as Record<string, unknown>,
+        importData: importClass,
+        existingData: idMatch,
         displayLabel,
         matchReason: "同じパソコンで作成されたデータ",
       })
@@ -117,8 +117,8 @@ export async function preMatchClasses(
       byName.push({
         importId: importClass.id,
         existingId: nameMatch.id,
-        importData: importClass as unknown as Record<string, unknown>,
-        existingData: nameMatch as unknown as Record<string, unknown>,
+        importData: importClass,
+        existingData: nameMatch,
         displayLabel,
         matchReason: "学級名が一致",
       })

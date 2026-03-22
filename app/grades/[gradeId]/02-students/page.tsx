@@ -6,7 +6,7 @@ import { StudentsContainer } from "@/components/grades/02-students/StudentsConta
 
 export default function StudentsPage() {
   const params = useParams()
-  const gradeId = params.gradeId as string
+  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   return <StudentsContainer gradeId={gradeId} />
 }

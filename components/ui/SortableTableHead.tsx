@@ -6,11 +6,13 @@ import * as React from "react"
 import type { SortDirection } from "@/hooks/useTableSort"
 import { cn } from "@/lib/utils"
 
-interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
-  sortKey: string
+interface SortableTableHeadProps<
+  K extends string = string,
+> extends React.ThHTMLAttributes<HTMLTableCellElement> {
+  sortKey: K
   currentSortKey: string | null
   currentDirection: SortDirection
-  onSort: (key: string) => void
+  onSort: (key: K) => void
   children: React.ReactNode
 }
 
@@ -18,7 +20,7 @@ interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellEle
  * ソート可能なテーブルヘッダーセル
  * クリックでソート方向を切り替え、矢印アイコンで状態を表示
  */
-export function SortableTableHead({
+export function SortableTableHead<K extends string = string>({
   sortKey,
   currentSortKey,
   currentDirection,
@@ -26,7 +28,7 @@ export function SortableTableHead({
   children,
   className,
   ...props
-}: SortableTableHeadProps) {
+}: SortableTableHeadProps<K>) {
   const isActive = currentSortKey === sortKey
   const direction = isActive ? currentDirection : null
 

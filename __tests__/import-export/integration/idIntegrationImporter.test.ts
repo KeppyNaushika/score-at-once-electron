@@ -193,21 +193,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -246,21 +246,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -292,21 +292,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -340,21 +340,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -419,21 +419,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -530,21 +530,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -636,21 +636,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -771,14 +771,14 @@ describe("executeIdIntegrationImport", () => {
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -845,14 +845,14 @@ describe("executeIdIntegrationImport", () => {
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -908,14 +908,14 @@ describe("executeIdIntegrationImport", () => {
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -973,21 +973,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1031,21 +1031,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1094,21 +1094,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1165,21 +1165,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1221,21 +1221,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1304,21 +1304,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1384,21 +1384,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),
@@ -1457,21 +1457,21 @@ describe("executeIdIntegrationImport", () => {
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((s) => ({
           importId: s.id,
-          importData: s as unknown as Record<string, unknown>,
+          importData: { ...s },
           displayLabel: s.lastName,
         })),
       }),
       class: createPreMatchingResult({
         noMatch: data.classesData.classes.map((c) => ({
           importId: c.id,
-          importData: c as unknown as Record<string, unknown>,
+          importData: { ...c },
           displayLabel: c.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
         noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
           importId: g.id,
-          importData: g as unknown as Record<string, unknown>,
+          importData: { ...g },
           displayLabel: g.name,
         })),
       }),

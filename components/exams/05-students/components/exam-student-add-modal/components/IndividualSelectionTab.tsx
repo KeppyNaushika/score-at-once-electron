@@ -102,7 +102,7 @@ export function IndividualSelectionTab({
                       id={`student-${student.id}`}
                       checked={student.isSelected}
                       onCheckedChange={(checked) =>
-                        onStudentSelection(student.id, checked as boolean)
+                        onStudentSelection(student.id, checked === true)
                       }
                     />
                     <div className="flex-1">

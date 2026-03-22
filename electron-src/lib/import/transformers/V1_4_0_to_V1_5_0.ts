@@ -38,12 +38,14 @@ export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
 
     // projectId → examId (旧アーカイブ対応)
     if ("projectId" in manifestAny && !manifest.examId) {
-      manifest.examId = manifestAny.projectId as string
+      const projectId = manifestAny.projectId
+      if (typeof projectId === "string") manifest.examId = projectId
       delete manifestAny.projectId
     }
     // projectName → examName (旧アーカイブ対応)
     if ("projectName" in manifestAny && !manifest.examName) {
-      manifest.examName = manifestAny.projectName as string
+      const projectName = manifestAny.projectName
+      if (typeof projectName === "string") manifest.examName = projectName
       delete manifestAny.projectName
     }
 
@@ -133,9 +135,10 @@ export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
     if (examData.examExportSettings) {
       const ees = examData.examExportSettings as Record<string, unknown>
       if ("projectId" in ees && !("examId" in ees)) {
+        const projectId = ees.projectId
         examData.examExportSettings = {
           ...examData.examExportSettings,
-          examId: ees.projectId as string,
+          ...(typeof projectId === "string" ? { examId: projectId } : {}),
         }
       }
     }

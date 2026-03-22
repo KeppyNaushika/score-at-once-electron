@@ -417,25 +417,25 @@ export default function StudentTable() {
               </TableHead>
               <SortableTableHead
                 sortKey="studentNumber"
-                currentSortKey={sortConfig.key as string | null}
+                currentSortKey={sortConfig.key}
                 currentDirection={sortConfig.direction}
-                onSort={(key) => requestSort(key as keyof StudentSortable)}
+                onSort={(key) => requestSort(key)}
               >
                 学籍番号
               </SortableTableHead>
               <SortableTableHead
                 sortKey="fullName"
-                currentSortKey={sortConfig.key as string | null}
+                currentSortKey={sortConfig.key}
                 currentDirection={sortConfig.direction}
-                onSort={(key) => requestSort(key as keyof StudentSortable)}
+                onSort={(key) => requestSort(key)}
               >
                 氏名
               </SortableTableHead>
               <SortableTableHead
                 sortKey="enrollmentYear"
-                currentSortKey={sortConfig.key as string | null}
+                currentSortKey={sortConfig.key}
                 currentDirection={sortConfig.direction}
-                onSort={(key) => requestSort(key as keyof StudentSortable)}
+                onSort={(key) => requestSort(key)}
               >
                 入学年度
               </SortableTableHead>

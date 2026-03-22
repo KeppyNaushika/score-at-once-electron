@@ -54,10 +54,20 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
   transform(data: ArchiveData): TransformResult {
     const warnings: string[] = []
 
-    // UserExam の変換
-    const transformedUserExams = this.transformUserExams(
-      data.examData.userExams as unknown as V1_0_0_UserExam[]
-    )
+    // UserExam の変換（旧フォーマットからの配列をバリデーション）
+    const rawUserExams = data.examData.userExams as unknown[]
+    const oldUserExams: V1_0_0_UserExam[] = Array.isArray(rawUserExams)
+      ? rawUserExams.filter(
+          (item): item is V1_0_0_UserExam =>
+            typeof item === "object" &&
+            item !== null &&
+            "id" in item &&
+            "userId" in item &&
+            "examId" in item
+        )
+      : []
+
+    const transformedUserExams = this.transformUserExams(oldUserExams)
 
     // examClasses が存在しない場合は空配列で初期化
     const examClasses = data.examData.examClasses ?? []
@@ -77,8 +87,7 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
         },
         examData: {
           ...data.examData,
-          userExams:
-            transformedUserExams as unknown as typeof data.examData.userExams,
+          userExams: transformedUserExams,
           examClasses,
         },
       },
