@@ -48,6 +48,38 @@ export const createBaseline = async (prisma: PrismaClient): Promise<void> => {
   )
 }
 
+/**
+ * _prisma_migrationsテーブルが存在するが、現在のベースラインが未登録の場合に修復する。
+ * 旧ベースライン（20件）や不整合な状態から、現在の正しいベースラインに更新する。
+ */
+export const ensureBaselineUpToDate = async (
+  prisma: PrismaClient
+): Promise<void> => {
+  if (!(await tableExists(prisma, "_prisma_migrations"))) return
+
+  const baselineName = MIGRATION_CHECKSUMS[0].name
+  const result = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+    `SELECT COUNT(*) as cnt FROM "_prisma_migrations" WHERE "migration_name" = '${baselineName}'`
+  )
+
+  if (Number(result[0]?.cnt) > 0) return // ベースライン登録済み
+
+  // 旧エントリを削除して現在のベースラインに置換
+  console.info("Updating _prisma_migrations baseline to current version...")
+  await prisma.$executeRawUnsafe(`DELETE FROM "_prisma_migrations"`)
+
+  const now = new Date().toISOString()
+  for (const { name, checksum } of MIGRATION_CHECKSUMS) {
+    const id = generateUuid()
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "started_at", "applied_steps_count")
+       VALUES ('${id}', '${checksum}', '${now}', '${name}', '${now}', 1)`
+    )
+  }
+
+  console.info("Baseline updated successfully")
+}
+
 /** UUID v4を生成する */
 const generateUuid = (): string => {
   const hex = (n: number) =>
