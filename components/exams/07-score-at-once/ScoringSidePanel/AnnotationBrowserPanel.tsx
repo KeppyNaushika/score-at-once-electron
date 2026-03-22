@@ -8,7 +8,8 @@ import {
   Star,
   Type,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,6 +25,7 @@ import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 import type { CropRegionWithExamPage } from "../types"
 import type {
   AddToTargetsParams,
+  AddToTargetsResult,
   AnnotationDisplayItem,
   AnnotationFilters,
 } from "./hooks/useAnnotationBrowser"
@@ -42,7 +44,7 @@ interface AnnotationBrowserPanelProps {
   onFiltersChange: (partial: Partial<AnnotationFilters>) => void
   onLoadAnnotations: (examId: string) => Promise<void>
   onToggleFavorite: (id: string, currentFavorite: boolean) => Promise<void>
-  onAddToTargets: (params: AddToTargetsParams) => Promise<void>
+  onAddToTargets: (params: AddToTargetsParams) => Promise<AddToTargetsResult>
   // QuestionScore確保用
   questionScores: Array<{
     id: string
@@ -175,64 +177,85 @@ export function AnnotationBrowserPanel({
     [questionScores, currentUserId, onQuestionScoreCreated]
   )
 
+  // 連打防止用フラグ
+  const isAddingRef = useRef(false)
+
   // 「追加」ボタンハンドラ
   const handleAdd = useCallback(
     async (item: AnnotationDisplayItem) => {
       if (!currentUserId) return
+      if (isAddingRef.current) return
+      isAddingRef.current = true
 
-      const source = item.representative
-      const sourceCropRegionId = source.questionScore?.cropRegionId ?? ""
+      try {
+        const source = item.representative
+        const sourceCropRegionId = source.questionScore?.cropRegionId ?? ""
 
-      if (gradingMode === "individual") {
-        // 個別モード: 現在の生徒+設問に追加
-        if (!currentStudentId || !currentCropRegionId) return
-        const qsId = await ensureQuestionScore(
-          currentStudentId,
-          currentCropRegionId
-        )
-        if (!qsId) return
+        let result: AddToTargetsResult | undefined
 
-        await onAddToTargets({
-          sourceAnnotation: source,
-          targetQuestionScoreIds: [qsId],
-          targetCropRegionId: currentCropRegionId,
-          sourceCropRegionId,
-          userId: currentUserId,
-        })
-      } else {
-        // 一覧モード: 選択中の全生徒に追加
-        if (selectedScoringDataIds.length === 0 || !currentCropRegionId) return
+        if (gradingMode === "individual") {
+          // 個別モード: 現在の生徒+設問に追加
+          if (!currentStudentId || !currentCropRegionId) return
+          const qsId = await ensureQuestionScore(
+            currentStudentId,
+            currentCropRegionId
+          )
+          if (!qsId) return
 
-        // selectedScoringDataIdsからstudentIdをマッピング
-        const targetStudentIds = selectedScoringDataIds
-          .map((sdId) => {
-            const sd = allScoringData.find((s) => s.id === sdId)
-            return sd?.studentId
+          result = await onAddToTargets({
+            sourceAnnotation: source,
+            targetQuestionScoreIds: [qsId],
+            targetCropRegionId: currentCropRegionId,
+            sourceCropRegionId,
+            userId: currentUserId,
           })
-          .filter((id): id is string => !!id)
+        } else {
+          // 一覧モード: 選択中の全生徒に追加
+          if (selectedScoringDataIds.length === 0 || !currentCropRegionId)
+            return
 
-        // 各生徒のQuestionScoreを確保
-        const targetQsIds: string[] = []
-        for (const studentId of targetStudentIds) {
-          const qsId = await ensureQuestionScore(studentId, currentCropRegionId)
-          if (qsId) targetQsIds.push(qsId)
+          // selectedScoringDataIdsからstudentIdをマッピング
+          const targetStudentIds = selectedScoringDataIds
+            .map((sdId) => {
+              const sd = allScoringData.find((s) => s.id === sdId)
+              return sd?.studentId
+            })
+            .filter((id): id is string => !!id)
+
+          // 各生徒のQuestionScoreを確保
+          const targetQsIds: string[] = []
+          for (const studentId of targetStudentIds) {
+            const qsId = await ensureQuestionScore(
+              studentId,
+              currentCropRegionId
+            )
+            if (qsId) targetQsIds.push(qsId)
+          }
+
+          if (targetQsIds.length === 0) return
+
+          result = await onAddToTargets({
+            sourceAnnotation: source,
+            targetQuestionScoreIds: targetQsIds,
+            targetCropRegionId: currentCropRegionId,
+            sourceCropRegionId,
+            userId: currentUserId,
+          })
         }
 
-        if (targetQsIds.length === 0) return
+        // 結果に応じたフィードバック
+        if (result && result.created === 0 && result.skipped > 0) {
+          toast.info("既に追加済みのアノテーションです")
+          return
+        }
 
-        await onAddToTargets({
-          sourceAnnotation: source,
-          targetQuestionScoreIds: targetQsIds,
-          targetCropRegionId: currentCropRegionId,
-          sourceCropRegionId,
-          userId: currentUserId,
-        })
+        // 追加後にアノテーション一覧を再ロード
+        await onLoadAnnotations(examId)
+        // キャンバスプレビューにも即時反映
+        onAnnotationAddedFromBrowser?.()
+      } finally {
+        isAddingRef.current = false
       }
-
-      // 追加後にアノテーション一覧を再ロード
-      await onLoadAnnotations(examId)
-      // キャンバスプレビューにも即時反映
-      onAnnotationAddedFromBrowser?.()
     },
     [
       currentUserId,

@@ -53,37 +53,89 @@ export async function createDrawingAnnotation(
       throw new Error(`User not found: ${data.userId}`)
     }
 
+    const createData = {
+      questionScoreId: data.questionScoreId,
+      type: data.type,
+      x: data.x,
+      y: data.y,
+      color: data.color || "#ef4444",
+      strokeWidth: data.strokeWidth || 3,
+      width: data.width || 0.0,
+      height: data.height || 0.0,
+      endX: data.endX || 0.0,
+      endY: data.endY || 0.0,
+      lineStyle: data.lineStyle || "solid",
+      text: data.text || "",
+      fontSize: data.fontSize || 16,
+      textBoxWidth: data.textBoxWidth || 0.0,
+      textBoxHeight: data.textBoxHeight || 0.0,
+      horizontalAlign: data.horizontalAlign || "left",
+      verticalAlign: data.verticalAlign || "top",
+      anchorDirection: data.anchorDirection || "top-left",
+      displayX: data.displayX || 0.0,
+      displayY: data.displayY || 0.0,
+      userId: data.userId,
+    }
+
+    // 重複チェック: 全プロパティが完全一致するアノテーションが既に存在する場合はそれを返す。
+    // アノテーションのコピー時は値を直接コピーするため、浮動小数点の丸め誤差は発生しない。
+    // SQLite (IEEE 754 double) と JavaScript (IEEE 754 double) 間で値は保持される。
+    const duplicate = await prisma.drawingAnnotation.findFirst({
+      where: {
+        questionScoreId: createData.questionScoreId,
+        type: createData.type,
+        x: createData.x,
+        y: createData.y,
+        color: createData.color,
+        strokeWidth: createData.strokeWidth,
+        width: createData.width,
+        height: createData.height,
+        endX: createData.endX,
+        endY: createData.endY,
+        lineStyle: createData.lineStyle,
+        text: createData.text,
+        fontSize: createData.fontSize,
+        textBoxWidth: createData.textBoxWidth,
+        textBoxHeight: createData.textBoxHeight,
+        horizontalAlign: createData.horizontalAlign,
+        verticalAlign: createData.verticalAlign,
+        anchorDirection: createData.anchorDirection,
+        displayX: createData.displayX,
+        displayY: createData.displayY,
+        userId: createData.userId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (duplicate) {
+      return duplicate as DrawingAnnotation
+    }
+
     const result = await prisma.drawingAnnotation.create({
       data: {
         // フロントエンドで生成したIDがあれば使用、なければPrismaが自動生成
         ...(data.id && { id: data.id }),
-        questionScoreId: data.questionScoreId,
-        type: data.type,
-        x: data.x,
-        y: data.y,
-        color: data.color || "#ef4444",
-        strokeWidth: data.strokeWidth || 3,
-        // サイズプロパティ
-        width: data.width || 0.0,
-        height: data.height || 0.0,
-        // 直線プロパティ
-        endX: data.endX || 0.0,
-        endY: data.endY || 0.0,
-        lineStyle: data.lineStyle || "solid",
-        // テキストプロパティ
-        text: data.text || "",
-        fontSize: data.fontSize || 16,
-        textBoxWidth: data.textBoxWidth || 0.0,
-        textBoxHeight: data.textBoxHeight || 0.0,
-        horizontalAlign: data.horizontalAlign || "left",
-        verticalAlign: data.verticalAlign || "top",
-        // V4統合フィールド
-        anchorDirection: data.anchorDirection || "top-left",
-        // 表示プロパティ
-        displayX: data.displayX || 0.0,
-        displayY: data.displayY || 0.0,
-        // メタデータ
-        userId: data.userId,
+        ...createData,
       },
       // 透明度制御に必要なquestionScore情報を含める
       include: {

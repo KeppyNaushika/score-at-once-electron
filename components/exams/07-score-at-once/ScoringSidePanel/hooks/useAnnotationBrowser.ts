@@ -90,6 +90,14 @@ function centerPosition(
   }
 }
 
+// addToTargetsの結果
+export interface AddToTargetsResult {
+  /** 実際に作成されたアノテーション数 */
+  created: number
+  /** 重複としてスキップされた数 */
+  skipped: number
+}
+
 export interface UseAnnotationBrowserReturn {
   allAnnotations: AnnotationWithContext[]
   displayItems: AnnotationDisplayItem[]
@@ -98,7 +106,7 @@ export interface UseAnnotationBrowserReturn {
   setFilters: (partial: Partial<AnnotationFilters>) => void
   loadAnnotations: (examId: string) => Promise<void>
   toggleFavorite: (id: string, currentFavorite: boolean) => Promise<void>
-  addToTargets: (params: AddToTargetsParams) => Promise<void>
+  addToTargets: (params: AddToTargetsParams) => Promise<AddToTargetsResult>
 }
 
 export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
@@ -214,23 +222,79 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
     []
   )
 
-  const addToTargets = useCallback(async (params: AddToTargetsParams) => {
-    const {
-      sourceAnnotation,
-      targetQuestionScoreIds,
-      targetCropRegionId,
-      sourceCropRegionId,
-      userId,
-    } = params
+  const addToTargets = useCallback(
+    async (params: AddToTargetsParams): Promise<AddToTargetsResult> => {
+      const {
+        sourceAnnotation,
+        targetQuestionScoreIds,
+        targetCropRegionId,
+        sourceCropRegionId,
+        userId,
+      } = params
 
-    // 位置計算: 同一設問→同位置、異設問→中央配置
-    const isSameQuestion = sourceCropRegionId === targetCropRegionId
-    const positionOverride = isSameQuestion
-      ? {}
-      : centerPosition(sourceAnnotation)
+      // 位置計算: 同一設問→同位置、異設問→中央配置
+      const isSameQuestion = sourceCropRegionId === targetCropRegionId
+      const positionOverride = isSameQuestion
+        ? {}
+        : centerPosition(sourceAnnotation)
 
-    const createDataList: DrawingCreateData[] = targetQuestionScoreIds.map(
-      (qsId) => ({
+      // フロントエンド側重複チェック: allAnnotationsを使ってローカルで判定
+      // 既に同一プロパティのアノテーションが存在するquestionScoreIdを除外する
+      const newQsIds = targetQuestionScoreIds.filter((qsId) => {
+        // このqsIdに紐づく既存アノテーションの中で、ソースと同一のものがあるか
+        return !allAnnotations.some((existing) => {
+          if (existing.questionScore?.id !== qsId) return false
+          // 位置はpositionOverrideを適用した値と比較
+          const targetX =
+            (positionOverride as { x?: number }).x ?? sourceAnnotation.x
+          const targetY =
+            (positionOverride as { y?: number }).y ?? sourceAnnotation.y
+          const targetEndX =
+            (positionOverride as { endX?: number }).endX ??
+            sourceAnnotation.endX
+          const targetEndY =
+            (positionOverride as { endY?: number }).endY ??
+            sourceAnnotation.endY
+          const targetDisplayX =
+            (positionOverride as { displayX?: number }).displayX ??
+            sourceAnnotation.displayX
+          const targetDisplayY =
+            (positionOverride as { displayY?: number }).displayY ??
+            sourceAnnotation.displayY
+
+          return (
+            existing.type === sourceAnnotation.type &&
+            existing.x === targetX &&
+            existing.y === targetY &&
+            existing.color === sourceAnnotation.color &&
+            existing.strokeWidth === sourceAnnotation.strokeWidth &&
+            existing.width === sourceAnnotation.width &&
+            existing.height === sourceAnnotation.height &&
+            existing.endX === targetEndX &&
+            existing.endY === targetEndY &&
+            existing.lineStyle === sourceAnnotation.lineStyle &&
+            existing.text === sourceAnnotation.text &&
+            existing.fontSize === sourceAnnotation.fontSize &&
+            existing.textBoxWidth === sourceAnnotation.textBoxWidth &&
+            existing.textBoxHeight === sourceAnnotation.textBoxHeight &&
+            existing.horizontalAlign === sourceAnnotation.horizontalAlign &&
+            existing.verticalAlign === sourceAnnotation.verticalAlign &&
+            existing.anchorDirection === sourceAnnotation.anchorDirection &&
+            existing.displayX === targetDisplayX &&
+            existing.displayY === targetDisplayY &&
+            existing.userId === userId
+          )
+        })
+      })
+
+      const skipped = targetQuestionScoreIds.length - newQsIds.length
+
+      // 全て重複の場合はIPCリクエストを送らない
+      if (newQsIds.length === 0) {
+        return { created: 0, skipped }
+      }
+
+      const createDataList: DrawingCreateData[] = newQsIds.map((qsId) => ({
         questionScoreId: qsId,
         type: sourceAnnotation.type,
         x: sourceAnnotation.x,
@@ -253,34 +317,37 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
         displayY: sourceAnnotation.displayY,
         userId,
         ...positionOverride,
-      })
-    )
+      }))
 
-    try {
-      if (createDataList.length === 1) {
-        const result = await window.electronAPI.drawing.create(
-          createDataList[0]
-        )
-        if (result.success && result.data) {
-          setAllAnnotations((prev) => [
-            result.data as AnnotationWithContext,
-            ...prev,
-          ])
+      try {
+        if (createDataList.length === 1) {
+          const result = await window.electronAPI.drawing.create(
+            createDataList[0]
+          )
+          if (result.success && result.data) {
+            setAllAnnotations((prev) => [
+              result.data as AnnotationWithContext,
+              ...prev,
+            ])
+          }
+        } else if (createDataList.length > 1) {
+          const result =
+            await window.electronAPI.drawing.batchCreate(createDataList)
+          if (result.success && result.data) {
+            setAllAnnotations((prev) => [
+              ...(result.data as AnnotationWithContext[]),
+              ...prev,
+            ])
+          }
         }
-      } else if (createDataList.length > 1) {
-        const result =
-          await window.electronAPI.drawing.batchCreate(createDataList)
-        if (result.success && result.data) {
-          setAllAnnotations((prev) => [
-            ...(result.data as AnnotationWithContext[]),
-            ...prev,
-          ])
-        }
+        return { created: createDataList.length, skipped }
+      } catch (error) {
+        console.error("アノテーション追加エラー:", error)
+        return { created: 0, skipped }
       }
-    } catch (error) {
-      console.error("アノテーション追加エラー:", error)
-    }
-  }, [])
+    },
+    [allAnnotations]
+  )
 
   return {
     allAnnotations,
