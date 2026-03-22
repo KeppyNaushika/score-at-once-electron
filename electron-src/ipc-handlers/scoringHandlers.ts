@@ -1,5 +1,3 @@
-import { ipcMain } from "electron"
-
 import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
@@ -17,6 +15,7 @@ import {
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
 import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /**
  * QuestionScoreをIPC用に変換（DecimalをnumberにDateはそのまま）
@@ -45,125 +44,88 @@ function serializeScore(score: {
 
 export function setupScoringHandlers(): void {
   // QuestionScore 関連のハンドラー
-  ipcMain.handle(
+  registerHandler(
     "get-question-scores-for-exam",
-    async (_event, examId: string, userId?: string) => {
-      try {
-        const result = await getQuestionScoresForExam(examId, userId)
+    async (examId: string, userId?: string) => {
+      const result = await getQuestionScoresForExam(examId, userId)
 
-        if (!result.success) {
-          return result
-        }
-
-        const scores = result.scores?.map(serializeScore) || []
-        return { success: true, scores }
-      } catch (err) {
-        console.error("Error getting question scores for exam:", err)
-        throw err
+      if (!result.success) {
+        return result
       }
+
+      const scores = result.scores?.map(serializeScore) || []
+      return { success: true, scores }
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "get-question-scores-for-student",
-    async (_event, studentId: string, userId?: string) => {
-      try {
-        const result = await getQuestionScoresForStudent(studentId, userId)
+    async (studentId: string, userId?: string) => {
+      const result = await getQuestionScoresForStudent(studentId, userId)
 
-        if (!result.success) {
-          return result
-        }
-
-        const scores = result.scores?.map(serializeScore) || []
-        return { success: true, scores }
-      } catch (err) {
-        console.error("Error getting question scores for student:", err)
-        throw err
+      if (!result.success) {
+        return result
       }
+
+      const scores = result.scores?.map(serializeScore) || []
+      return { success: true, scores }
     }
   )
 
-  ipcMain.handle("get-question-score", async (_event, id: string) => {
-    try {
-      const result = await getQuestionScoreById(id)
+  registerHandler("get-question-score", async (id: string) => {
+    const result = await getQuestionScoreById(id)
+
+    if (!result.success || !result.score) {
+      return result
+    }
+
+    return { success: true, score: serializeScore(result.score) }
+  })
+
+  registerHandler(
+    "create-question-score",
+    async (data: CreateQuestionScoreData) => {
+      const result = await createQuestionScore(data)
 
       if (!result.success || !result.score) {
         return result
       }
 
       return { success: true, score: serializeScore(result.score) }
-    } catch (err) {
-      console.error("Error getting question score:", err)
-      throw err
-    }
-  })
-
-  ipcMain.handle(
-    "create-question-score",
-    async (_event, data: CreateQuestionScoreData) => {
-      try {
-        const result = await createQuestionScore(data)
-
-        if (!result.success || !result.score) {
-          return result
-        }
-
-        return { success: true, score: serializeScore(result.score) }
-      } catch (err) {
-        console.error("Error creating question score:", err)
-        throw err
-      }
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "update-question-score",
     async (
-      _event,
       id: string,
       data: UpdateQuestionScoreData,
       expectedVersion?: number
     ) => {
-      try {
-        const result = await updateQuestionScore(id, data, expectedVersion)
+      const result = await updateQuestionScore(id, data, expectedVersion)
 
-        if (!result.success || !result.score) {
-          return result
-        }
-
-        return { success: true, score: serializeScore(result.score) }
-      } catch (err) {
-        console.error("Error updating question score:", err)
-        throw err
+      if (!result.success || !result.score) {
+        return result
       }
+
+      return { success: true, score: serializeScore(result.score) }
     }
   )
 
-  ipcMain.handle("delete-question-score", async (_event, id: string) => {
-    try {
-      return await deleteQuestionScore(id)
-    } catch (err) {
-      console.error("Error deleting question score:", err)
-      throw err
-    }
+  registerHandler("delete-question-score", async (id: string) => {
+    return await deleteQuestionScore(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "get-question-score-comparison",
-    async (_event, studentId: string, cropRegionId: string) => {
-      try {
-        return await getQuestionScoreComparison(studentId, cropRegionId)
-      } catch (err) {
-        console.error("Error getting question score comparison:", err)
-        throw err
-      }
+    async (studentId: string, cropRegionId: string) => {
+      return await getQuestionScoreComparison(studentId, cropRegionId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "finalize-question-score",
     async (
-      _event,
       studentId: string,
       cropRegionId: string,
       userId: string,
@@ -173,70 +135,42 @@ export function setupScoringHandlers(): void {
         comment?: string
       }
     ) => {
-      try {
-        const result = await finalizeQuestionScore(
-          studentId,
-          cropRegionId,
-          userId,
-          scoreData
-        )
+      const result = await finalizeQuestionScore(
+        studentId,
+        cropRegionId,
+        userId,
+        scoreData
+      )
 
-        if (!result.success || !("score" in result)) {
-          return result
-        }
-
-        return { success: true, score: serializeScore(result.score) }
-      } catch (err) {
-        console.error("Error finalizing question score:", err)
-        throw err
+      if (!result.success || !("score" in result)) {
+        return result
       }
+
+      return { success: true, score: serializeScore(result.score) }
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "get-answer-sheet-progress",
-    async (_event, answerSheetId: string) => {
-      try {
-        return await getAnswerSheetProgress(answerSheetId)
-      } catch (err) {
-        console.error("Error getting answer sheet progress:", err)
-        throw err
-      }
+    async (answerSheetId: string) => {
+      return await getAnswerSheetProgress(answerSheetId)
     }
   )
 
-  ipcMain.handle("get-exam-progress", async (_event, examId: string) => {
-    try {
-      return await getExamProgress(examId)
-    } catch (err) {
-      console.error("Error getting exam progress:", err)
-      throw err
-    }
+  registerHandler("get-exam-progress", async (examId: string) => {
+    return await getExamProgress(examId)
   })
 
   // QuestionScore 一括更新（OMR自動採点結果反映）
-  ipcMain.handle(
+  registerHandler(
     "batch-update-question-scores",
-    async (_event, entries: BatchScoreEntry[]) => {
-      try {
-        return await batchUpdateQuestionScores(entries)
-      } catch (err) {
-        console.error("Error batch updating question scores:", err)
-        throw err
-      }
+    async (entries: BatchScoreEntry[]) => {
+      return await batchUpdateQuestionScores(entries)
     }
   )
 
   // Scoring initialization handler
-  ipcMain.handle(
-    "initialize-scoring-records",
-    async (_event, examId: string) => {
-      try {
-        return await initializeScoringRecords(examId)
-      } catch (err) {
-        console.error("Error initializing scoring records:", err)
-        throw err
-      }
-    }
-  )
+  registerHandler("initialize-scoring-records", async (examId: string) => {
+    return await initializeScoringRecords(examId)
+  })
 }

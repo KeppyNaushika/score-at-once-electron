@@ -21,6 +21,7 @@ import {
   recognizeCells,
 } from "../lib/omr"
 import prisma from "../lib/prisma/client"
+import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 /** マスターマーカー検出キャッシュ (キー: "examId:pageNumber") */
 const masterMarkerCache = new Map<string, MarkerDetectionResult>()
@@ -38,10 +39,9 @@ export function setupOMRHandlers(): void {
   // ────────────────────────────────────────
   // 単一画像のコーナーマーカー検出
   // ────────────────────────────────────────
-  ipcMain.handle(
+  registerHandler(
     "omr:detect-markers",
     async (
-      _event,
       imagePath: string,
       colorThreshold?: number
     ): Promise<MarkerDetectionResult> => {
@@ -51,6 +51,7 @@ export function setupOMRHandlers(): void {
 
   // ────────────────────────────────────────
   // 1枚の答案シート認識
+  // NOTE: Has custom error return format (OMRSheetResult), kept as manual ipcMain.handle
   // ────────────────────────────────────────
   ipcMain.handle(
     "omr:recognize-sheet",
@@ -127,6 +128,7 @@ export function setupOMRHandlers(): void {
           cellResults,
         }
       } catch (error) {
+        console.error("Error in IPC handler [omr:recognize-sheet]:", error)
         return {
           success: false,
           pageIndex: args.pageIndex ?? 0,
@@ -147,6 +149,7 @@ export function setupOMRHandlers(): void {
 
   // ────────────────────────────────────────
   // バッチ認識（試験全答案）
+  // NOTE: Has complex loop with progress reporting via BrowserWindow.send, kept as manual ipcMain.handle
   // ────────────────────────────────────────
   ipcMain.handle(
     "omr:batch-recognize",
@@ -278,10 +281,9 @@ export function setupOMRHandlers(): void {
   // ────────────────────────────────────────
   // マスター画像のコーナーマーカー一括検出
   // ────────────────────────────────────────
-  ipcMain.handle(
+  registerSafeHandler(
     "omr:detect-master-markers",
     async (
-      _event,
       examId: string,
       colorThreshold?: number
     ): Promise<{
@@ -289,71 +291,61 @@ export function setupOMRHandlers(): void {
       pages: Array<{ pageNumber: number; result: MarkerDetectionResult }>
       error?: string
     }> => {
-      try {
-        // マスター画像を取得
-        const masterImages = await prisma.masterImage.findMany({
-          where: {
-            examPage: { examId },
-          },
-          include: { examPage: true },
-          orderBy: { examPage: { pageNumber: "asc" } },
-        })
+      // マスター画像を取得
+      const masterImages = await prisma.masterImage.findMany({
+        where: {
+          examPage: { examId },
+        },
+        include: { examPage: true },
+        orderBy: { examPage: { pageNumber: "asc" } },
+      })
 
-        if (masterImages.length === 0) {
-          return {
-            success: false,
-            pages: [],
-            error: "マスター画像が見つかりません",
-          }
-        }
-
-        const pages: Array<{
-          pageNumber: number
-          result: MarkerDetectionResult
-        }> = []
-
-        const dataDir = getDataDirectory()
-
-        for (const mi of masterImages) {
-          const pageNumber = mi.examPage.pageNumber
-          const cacheKey = `${examId}:${pageNumber}`
-
-          // キャッシュチェック
-          const cached = masterMarkerCache.get(cacheKey)
-          if (cached) {
-            pages.push({ pageNumber, result: cached })
-            continue
-          }
-
-          // 画像パスを解決してマーカー検出
-          const imagePath = path.join(dataDir, mi.imagePath)
-          const result = await detectCornerMarkers(imagePath, colorThreshold)
-
-          // キャッシュに保存
-          masterMarkerCache.set(cacheKey, result)
-          pages.push({ pageNumber, result })
-        }
-
-        // 全ページで4マーカー検出できたか
-        const allSuccess = pages.every((p) => p.result.success)
-
-        return {
-          success: allSuccess,
-          pages,
-          error: allSuccess
-            ? undefined
-            : "一部のページでマーカーを検出できませんでした",
-        }
-      } catch (error) {
+      if (masterImages.length === 0) {
         return {
           success: false,
           pages: [],
-          error:
-            error instanceof Error
-              ? error.message
-              : "マスターマーカー検出に失敗しました",
+          error: "マスター画像が見つかりません",
         }
       }
-    }
+
+      const pages: Array<{
+        pageNumber: number
+        result: MarkerDetectionResult
+      }> = []
+
+      const dataDir = getDataDirectory()
+
+      for (const mi of masterImages) {
+        const pageNumber = mi.examPage.pageNumber
+        const cacheKey = `${examId}:${pageNumber}`
+
+        // キャッシュチェック
+        const cached = masterMarkerCache.get(cacheKey)
+        if (cached) {
+          pages.push({ pageNumber, result: cached })
+          continue
+        }
+
+        // 画像パスを解決してマーカー検出
+        const imagePath = path.join(dataDir, mi.imagePath)
+        const result = await detectCornerMarkers(imagePath, colorThreshold)
+
+        // キャッシュに保存
+        masterMarkerCache.set(cacheKey, result)
+        pages.push({ pageNumber, result })
+      }
+
+      // 全ページで4マーカー検出できたか
+      const allSuccess = pages.every((p) => p.result.success)
+
+      return {
+        success: allSuccess,
+        pages,
+        error: allSuccess
+          ? undefined
+          : "一部のページでマーカーを検出できませんでした",
+      }
+    },
+    "マスターマーカー検出に失敗しました"
   )
 }

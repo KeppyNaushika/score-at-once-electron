@@ -1,5 +1,3 @@
-import { ipcMain } from "electron"
-
 import {
   addExamClass,
   AddExamClassOptions,
@@ -17,155 +15,84 @@ import {
   updateExamClass,
   UpdateExamClassOptions,
 } from "../lib/prisma/examClass"
+import { registerHandler } from "./ipcHandlerUtils"
 
 export function setupExamClassHandlers(): void {
   // Get all classes for a exam
-  ipcMain.handle("exam-class:get-all", async (_event, examId: string) => {
-    try {
-      return await getExamClasses(examId)
-    } catch (error) {
-      console.error("IPC exam-class:get-all error:", error)
-      throw error
-    }
+  registerHandler("exam-class:get-all", async (examId: string) => {
+    return await getExamClasses(examId)
   })
 
   // Get administered classes (for adding students)
-  ipcMain.handle(
-    "exam-class:get-administered",
-    async (_event, examId: string) => {
-      try {
-        return await getAdministeredClasses(examId)
-      } catch (error) {
-        console.error("IPC exam-class:get-administered error:", error)
-        throw error
-      }
-    }
-  )
+  registerHandler("exam-class:get-administered", async (examId: string) => {
+    return await getAdministeredClasses(examId)
+  })
 
   // Get statistics classes (for aggregation)
-  ipcMain.handle(
-    "exam-class:get-statistics",
-    async (_event, examId: string) => {
-      try {
-        return await getStatisticsClasses(examId)
-      } catch (error) {
-        console.error("IPC exam-class:get-statistics error:", error)
-        throw error
-      }
-    }
-  )
+  registerHandler("exam-class:get-statistics", async (examId: string) => {
+    return await getStatisticsClasses(examId)
+  })
 
   // Add a class to a exam
-  ipcMain.handle(
-    "exam-class:add",
-    async (_event, options: AddExamClassOptions) => {
-      try {
-        return await addExamClass(options)
-      } catch (error) {
-        console.error("IPC exam-class:add error:", error)
-        throw error
-      }
-    }
-  )
+  registerHandler("exam-class:add", async (options: AddExamClassOptions) => {
+    return await addExamClass(options)
+  })
 
   // Update a exam class
-  ipcMain.handle(
+  registerHandler(
     "exam-class:update",
-    async (_event, options: UpdateExamClassOptions) => {
-      try {
-        return await updateExamClass(options)
-      } catch (error) {
-        console.error("IPC exam-class:update error:", error)
-        throw error
-      }
+    async (options: UpdateExamClassOptions) => {
+      return await updateExamClass(options)
     }
   )
 
   // Remove a exam class by id
-  ipcMain.handle("exam-class:remove", async (_event, id: string) => {
-    try {
-      return await removeExamClass(id)
-    } catch (error) {
-      console.error("IPC exam-class:remove error:", error)
-      throw error
-    }
+  registerHandler("exam-class:remove", async (id: string) => {
+    return await removeExamClass(id)
   })
 
   // Remove a exam class by examId and classId
-  ipcMain.handle(
+  registerHandler(
     "exam-class:remove-by-ids",
-    async (_event, examId: string, classId: string) => {
-      try {
-        return await removeExamClassByIds(examId, classId)
-      } catch (error) {
-        console.error("IPC exam-class:remove-by-ids error:", error)
-        throw error
-      }
+    async (examId: string, classId: string) => {
+      return await removeExamClassByIds(examId, classId)
     }
   )
 
   // Get available classes (not yet in ExamClass)
-  ipcMain.handle("exam-class:get-available", async (_event, examId: string) => {
-    try {
-      return await getAvailableClassesForExam(examId)
-    } catch (error) {
-      console.error("IPC exam-class:get-available error:", error)
-      throw error
-    }
+  registerHandler("exam-class:get-available", async (examId: string) => {
+    return await getAvailableClassesForExam(examId)
   })
 
   // Add students from class (B案: 統合型フロー)
-  ipcMain.handle(
+  registerHandler(
     "exam-class:add-students-from-class",
-    async (_event, examId: string, classId: string) => {
-      try {
-        return await addStudentsFromClass(examId, classId)
-      } catch (error) {
-        console.error("IPC exam-class:add-students-from-class error:", error)
-        throw error
-      }
+    async (examId: string, classId: string) => {
+      return await addStudentsFromClass(examId, classId)
     }
   )
 
   // Get class info for all students in a exam
-  ipcMain.handle(
+  registerHandler(
     "exam-class:get-student-class-info",
-    async (_event, examId: string) => {
-      try {
-        return await getStudentClassInfoForExam(examId)
-      } catch (error) {
-        console.error("IPC exam-class:get-student-class-info error:", error)
-        throw error
-      }
+    async (examId: string) => {
+      return await getStudentClassInfoForExam(examId)
     }
   )
 
   // Get class info for a single student
-  ipcMain.handle(
+  registerHandler(
     "exam-class:get-student-class-info-single",
-    async (_event, examId: string, studentId: string) => {
-      try {
-        return await getStudentClassInfo(examId, studentId)
-      } catch (error) {
-        console.error(
-          "IPC exam-class:get-student-class-info-single error:",
-          error
-        )
-        throw error
-      }
+    async (examId: string, studentId: string) => {
+      return await getStudentClassInfo(examId, studentId)
     }
   )
 
   // Reorder exam classes
-  ipcMain.handle(
+  registerHandler(
     "exam-class:reorder",
-    async (_event, options: ReorderExamClassesOptions) => {
-      try {
-        return await reorderExamClasses(options)
-      } catch (error) {
-        console.error("IPC exam-class:reorder error:", error)
-        throw error
-      }
+    async (options: ReorderExamClassesOptions) => {
+      return await reorderExamClasses(options)
     }
   )
 }

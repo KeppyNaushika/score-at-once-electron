@@ -34,64 +34,46 @@ import {
   listAsbDefinitions,
   saveAsbDefinition,
 } from "../lib/prisma/asbDefinition"
+import { registerSafeHandler } from "./ipcHandlerUtils"
 
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
-  ipcMain.handle("asb:list-definitions", async (_event, userId: string) => {
-    try {
+  registerSafeHandler(
+    "asb:list-definitions",
+    async (userId: string) => {
       const data = await listAsbDefinitions(userId)
       return { success: true, data }
-    } catch (error) {
-      console.error("asb:list-definitions error:", error)
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "定義一覧の取得に失敗しました",
-      }
-    }
-  })
+    },
+    "定義一覧の取得に失敗しました"
+  )
 
   // 定義読込
-  ipcMain.handle("asb:load-definition", async (_event, id: string) => {
-    try {
+  registerSafeHandler(
+    "asb:load-definition",
+    async (id: string) => {
       const definition = await getAsbDefinition(id)
       if (!definition) {
         return { success: false, error: "定義が見つかりません" }
       }
       return { success: true, data: definition }
-    } catch (error) {
-      console.error("asb:load-definition error:", error)
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "定義の読込に失敗しました",
-      }
-    }
-  })
+    },
+    "定義の読込に失敗しました"
+  )
 
   // 定義保存
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:save-definition",
-    async (_event, definition: AnswerSheetDefinition, userId: string) => {
-      try {
-        await saveAsbDefinition(definition, userId)
-        return { success: true }
-      } catch (error) {
-        console.error("asb:save-definition error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "定義の保存に失敗しました",
-        }
-      }
-    }
+    async (definition: AnswerSheetDefinition, userId: string) => {
+      await saveAsbDefinition(definition, userId)
+      return { success: true }
+    },
+    "定義の保存に失敗しました"
   )
 
   // 定義削除（画像ディレクトリも削除）
-  ipcMain.handle("asb:delete-definition", async (_event, id: string) => {
-    try {
+  registerSafeHandler(
+    "asb:delete-definition",
+    async (id: string) => {
       const deleted = await deleteAsbDefinition(id)
       if (deleted) {
         // 画像ディレクトリの削除
@@ -110,73 +92,50 @@ export function setupAnswerSheetBuilderHandlers(): void {
         }
       }
       return { success: deleted }
-    } catch (error) {
-      console.error("asb:delete-definition error:", error)
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "定義の削除に失敗しました",
-      }
-    }
-  })
+    },
+    "定義の削除に失敗しました"
+  )
 
   // 画像アップロード
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:upload-image",
-    async (_event, args: ASBUploadImageArgs) => {
-      try {
-        const imagesDir = getAsbImagesDirectory(args.definitionId)
-        if (!fs.existsSync(imagesDir)) {
-          fs.mkdirSync(imagesDir, { recursive: true })
-        }
-
-        // ユニークなファイル名を生成
-        const ext = path.extname(args.originalName)
-        const baseName = path.basename(args.originalName, ext)
-        const uniqueName = `${baseName}_${Date.now()}${ext}`
-        const destPath = path.join(imagesDir, uniqueName)
-
-        // ファイルコピー
-        fs.copyFileSync(args.filePath, destPath)
-
-        // data/ からの相対パスを返す
-        const relativePath = getRelativePathFromData(destPath)
-        return { success: true, imagePath: relativePath }
-      } catch (error) {
-        console.error("asb:upload-image error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "画像のアップロードに失敗しました",
-        }
+    async (args: ASBUploadImageArgs) => {
+      const imagesDir = getAsbImagesDirectory(args.definitionId)
+      if (!fs.existsSync(imagesDir)) {
+        fs.mkdirSync(imagesDir, { recursive: true })
       }
-    }
+
+      // ユニークなファイル名を生成
+      const ext = path.extname(args.originalName)
+      const baseName = path.basename(args.originalName, ext)
+      const uniqueName = `${baseName}_${Date.now()}${ext}`
+      const destPath = path.join(imagesDir, uniqueName)
+
+      // ファイルコピー
+      fs.copyFileSync(args.filePath, destPath)
+
+      // data/ からの相対パスを返す
+      const relativePath = getRelativePathFromData(destPath)
+      return { success: true, imagePath: relativePath }
+    },
+    "画像のアップロードに失敗しました"
   )
 
   // 画像削除
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:delete-image",
-    async (_event, args: ASBDeleteImageArgs) => {
-      try {
-        const absolutePath = getAbsolutePathFromData(args.imagePath)
-        if (fs.existsSync(absolutePath)) {
-          fs.unlinkSync(absolutePath)
-        }
-        return { success: true }
-      } catch (error) {
-        console.error("asb:delete-image error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "画像の削除に失敗しました",
-        }
+    async (args: ASBDeleteImageArgs) => {
+      const absolutePath = getAbsolutePathFromData(args.imagePath)
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath)
       }
-    }
+      return { success: true }
+    },
+    "画像の削除に失敗しました"
   )
 
   // PDF出力: HTMLを受け取り → 一時ファイル → BrowserWindow → printToPDF
+  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle("asb:export-pdf", async (_event, args: ASBExportPdfArgs) => {
     let tempHtmlPath: string | null = null
     let win: BrowserWindow | null = null
@@ -210,7 +169,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
 
       return { success: true, filePath: args.outputPath }
     } catch (error) {
-      console.error("asb:export-pdf error:", error)
+      console.error("Error in IPC handler [asb:export-pdf]:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "PDF出力に失敗しました",
@@ -228,8 +187,9 @@ export function setupAnswerSheetBuilderHandlers(): void {
   })
 
   // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
-  ipcMain.handle("asb:export-png", async (_event, args: ASBExportPngArgs) => {
-    try {
+  registerSafeHandler(
+    "asb:export-png",
+    async (args: ASBExportPngArgs) => {
       const outputDir = path.dirname(args.outputPath)
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true })
@@ -259,71 +219,51 @@ export function setupAnswerSheetBuilderHandlers(): void {
       }
 
       return { success: true, filePath: args.outputPath }
-    } catch (error) {
-      console.error("asb:export-png error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "PNG出力に失敗しました",
-      }
-    }
-  })
+    },
+    "PNG出力に失敗しました"
+  )
 
   // 保存先ダイアログ
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:select-save-path",
-    async (_event, options: { type: "pdf" | "png"; defaultName?: string }) => {
-      try {
-        const filters =
-          options.type === "pdf"
-            ? [{ name: "PDF", extensions: ["pdf"] }]
-            : [{ name: "PNG", extensions: ["png"] }]
+    async (options: { type: "pdf" | "png"; defaultName?: string }) => {
+      const filters =
+        options.type === "pdf"
+          ? [{ name: "PDF", extensions: ["pdf"] }]
+          : [{ name: "PNG", extensions: ["png"] }]
 
-        const result = await dialog.showSaveDialog({
-          title: `解答用紙を${options.type.toUpperCase()}として保存`,
-          defaultPath: options.defaultName,
-          filters,
-        })
+      const result = await dialog.showSaveDialog({
+        title: `解答用紙を${options.type.toUpperCase()}として保存`,
+        defaultPath: options.defaultName,
+        filters,
+      })
 
-        if (result.canceled || !result.filePath) {
-          return { success: false, canceled: true }
-        }
-        return { success: true, filePath: result.filePath }
-      } catch (error) {
-        console.error("asb:select-save-path error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "保存先選択に失敗しました",
-        }
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true }
       }
-    }
+      return { success: true, filePath: result.filePath }
+    },
+    "保存先選択に失敗しました"
   )
 
   // 試験変換: multiPageLayout + HTML文字列を受け取り
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:convert-to-exam",
-    async (_event, args: ASBConvertToExamArgs) => {
-      try {
-        const result = await convertToExam(
-          args.definition,
-          args.userId,
-          args.multiPageLayout,
-          args.answerSheetHtmlPages,
-          args.modelAnswerHtmlPages
-        )
-        return result
-      } catch (error) {
-        console.error("asb:convert-to-exam error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "試験変換に失敗しました",
-        }
-      }
-    }
+    async (args: ASBConvertToExamArgs) => {
+      const result = await convertToExam(
+        args.definition,
+        args.userId,
+        args.multiPageLayout,
+        args.answerSheetHtmlPages,
+        args.modelAnswerHtmlPages
+      )
+      return result
+    },
+    "試験変換に失敗しました"
   )
 
   // 印刷: HTMLを受け取り → printToPDF → プレビューで開く
+  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle("asb:print", async (_event, args: ASBPrintArgs) => {
     let tempHtmlPath: string | null = null
     let tempPdfPath: string | null = null
@@ -356,7 +296,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
 
       return { success: true }
     } catch (error) {
-      console.error("asb:print error:", error)
+      console.error("Error in IPC handler [asb:print]:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "印刷に失敗しました",
@@ -375,8 +315,9 @@ export function setupAnswerSheetBuilderHandlers(): void {
   })
 
   // 定義のインポートファイル選択
-  ipcMain.handle("asb:select-import-file", async () => {
-    try {
+  registerSafeHandler(
+    "asb:select-import-file",
+    async () => {
       const result = await dialog.showOpenDialog({
         title: "解答用紙定義を読み込み",
         filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
@@ -387,166 +328,125 @@ export function setupAnswerSheetBuilderHandlers(): void {
         return { success: false, canceled: true }
       }
       return { success: true, filePath: result.filePaths[0] }
-    } catch (error) {
-      console.error("asb:select-import-file error:", error)
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "ファイル選択に失敗しました",
-      }
-    }
-  })
+    },
+    "ファイル選択に失敗しました"
+  )
 
   // アーカイブ分析（プレビュー用）
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:analyze-asb-archive",
-    async (_event, filePath: string) => {
-      try {
-        return await analyzeAsbArchive(filePath)
-      } catch (error) {
-        console.error("asb:analyze-asb-archive error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "アーカイブ分析に失敗しました",
-        }
-      }
-    }
+    async (filePath: string) => {
+      return await analyzeAsbArchive(filePath)
+    },
+    "アーカイブ分析に失敗しました"
   )
 
   // 定義エクスポート
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:export-definition",
-    async (_event, definitionId: string) => {
-      try {
-        return await exportAsbDefinition(definitionId)
-      } catch (error) {
-        console.error("asb:export-definition error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "書き出しに失敗しました",
-        }
-      }
-    }
+    async (definitionId: string) => {
+      return await exportAsbDefinition(definitionId)
+    },
+    "書き出しに失敗しました"
   )
 
   // 定義インポート
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:import-definition",
-    async (_event, filePath: string, userId: string) => {
-      try {
-        return await importAsbDefinition(filePath, userId)
-      } catch (error) {
-        console.error("asb:import-definition error:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "インポートに失敗しました",
-        }
-      }
-    }
+    async (filePath: string, userId: string) => {
+      return await importAsbDefinition(filePath, userId)
+    },
+    "インポートに失敗しました"
   )
 
   // 定義複製（画像ファイルもコピー）
-  ipcMain.handle(
+  registerSafeHandler(
     "asb:duplicate-definition",
-    async (_event, id: string, userId: string) => {
-      try {
-        const definition = await getAsbDefinition(id)
-        if (!definition) {
-          return { success: false, error: "定義が見つかりません" }
-        }
-
-        const newId = crypto.randomUUID()
-
-        // 全子要素のIDを再生成
-        const regeneratedHeaderFields = definition.settings.headerFields.map(
-          (hf) => ({ ...hf, id: crypto.randomUUID() })
-        )
-
-        // 新定義の画像ディレクトリを作成
-        const newImagesDir = getAsbImagesDirectory(newId)
-        fs.mkdirSync(newImagesDir, { recursive: true })
-
-        // 画像コピーとパス更新を行うヘルパー
-        const copyImageElement = <T extends { id: string; imagePath: string }>(
-          ie: T
-        ): T => {
-          let newImagePath = ie.imagePath
-          if (ie.imagePath) {
-            const absoluteSrc = getAbsolutePathFromData(ie.imagePath)
-            if (fs.existsSync(absoluteSrc)) {
-              const filename = path.basename(ie.imagePath)
-              const destPath = path.join(newImagesDir, filename)
-              fs.copyFileSync(absoluteSrc, destPath)
-              newImagePath = getRelativePathFromData(destPath)
-            }
-          }
-          return { ...ie, id: crypto.randomUUID(), imagePath: newImagePath }
-        }
-
-        const regeneratedMajorQuestions = definition.majorQuestions.map(
-          (mq) => ({
-            ...mq,
-            id: crypto.randomUUID(),
-            subQuestions: mq.subQuestions.map((sq) => ({
-              ...sq,
-              id: crypto.randomUUID(),
-              textElements: sq.textElements.map((te) => ({
-                ...te,
-                id: crypto.randomUUID(),
-              })),
-              imageElements: sq.imageElements?.map(copyImageElement),
-              branchQuestions: sq.branchQuestions.map((bq) => ({
-                ...bq,
-                id: crypto.randomUUID(),
-                textElements: bq.textElements.map((te) => ({
-                  ...te,
-                  id: crypto.randomUUID(),
-                })),
-                imageElements: bq.imageElements?.map(copyImageElement),
-              })),
-            })),
-          })
-        )
-
-        // 既存の名前と重複しないようサフィックス付与
-        const existing = await listAsbDefinitions(userId)
-        const existingNames = new Set(existing.map((d) => d.name))
-        let newName = `${definition.name} (コピー)`
-        if (existingNames.has(newName)) {
-          let suffix = 2
-          while (existingNames.has(`${definition.name} (コピー ${suffix})`)) {
-            suffix++
-          }
-          newName = `${definition.name} (コピー ${suffix})`
-        }
-
-        const duplicated: AnswerSheetDefinition = {
-          ...definition,
-          id: newId,
-          name: newName,
-          settings: {
-            ...definition.settings,
-            headerFields: regeneratedHeaderFields,
-          },
-          majorQuestions: regeneratedMajorQuestions,
-          createdAt: undefined as unknown as string,
-          updatedAt: undefined as unknown as string,
-        }
-
-        await saveAsbDefinition(duplicated, userId)
-        return { success: true, definitionId: newId }
-      } catch (error) {
-        console.error("asb:duplicate-definition error:", error)
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "複製に失敗しました",
-        }
+    async (id: string, userId: string) => {
+      const definition = await getAsbDefinition(id)
+      if (!definition) {
+        return { success: false, error: "定義が見つかりません" }
       }
-    }
+
+      const newId = crypto.randomUUID()
+
+      // 全子要素のIDを再生成
+      const regeneratedHeaderFields = definition.settings.headerFields.map(
+        (hf) => ({ ...hf, id: crypto.randomUUID() })
+      )
+
+      // 新定義の画像ディレクトリを作成
+      const newImagesDir = getAsbImagesDirectory(newId)
+      fs.mkdirSync(newImagesDir, { recursive: true })
+
+      // 画像コピーとパス更新を行うヘルパー
+      const copyImageElement = <T extends { id: string; imagePath: string }>(
+        ie: T
+      ): T => {
+        let newImagePath = ie.imagePath
+        if (ie.imagePath) {
+          const absoluteSrc = getAbsolutePathFromData(ie.imagePath)
+          if (fs.existsSync(absoluteSrc)) {
+            const filename = path.basename(ie.imagePath)
+            const destPath = path.join(newImagesDir, filename)
+            fs.copyFileSync(absoluteSrc, destPath)
+            newImagePath = getRelativePathFromData(destPath)
+          }
+        }
+        return { ...ie, id: crypto.randomUUID(), imagePath: newImagePath }
+      }
+
+      const regeneratedMajorQuestions = definition.majorQuestions.map((mq) => ({
+        ...mq,
+        id: crypto.randomUUID(),
+        subQuestions: mq.subQuestions.map((sq) => ({
+          ...sq,
+          id: crypto.randomUUID(),
+          textElements: sq.textElements.map((te) => ({
+            ...te,
+            id: crypto.randomUUID(),
+          })),
+          imageElements: sq.imageElements?.map(copyImageElement),
+          branchQuestions: sq.branchQuestions.map((bq) => ({
+            ...bq,
+            id: crypto.randomUUID(),
+            textElements: bq.textElements.map((te) => ({
+              ...te,
+              id: crypto.randomUUID(),
+            })),
+            imageElements: bq.imageElements?.map(copyImageElement),
+          })),
+        })),
+      }))
+
+      // 既存の名前と重複しないようサフィックス付与
+      const existing = await listAsbDefinitions(userId)
+      const existingNames = new Set(existing.map((d) => d.name))
+      let newName = `${definition.name} (コピー)`
+      if (existingNames.has(newName)) {
+        let suffix = 2
+        while (existingNames.has(`${definition.name} (コピー ${suffix})`)) {
+          suffix++
+        }
+        newName = `${definition.name} (コピー ${suffix})`
+      }
+
+      const duplicated: AnswerSheetDefinition = {
+        ...definition,
+        id: newId,
+        name: newName,
+        settings: {
+          ...definition.settings,
+          headerFields: regeneratedHeaderFields,
+        },
+        majorQuestions: regeneratedMajorQuestions,
+        createdAt: undefined as unknown as string,
+        updatedAt: undefined as unknown as string,
+      }
+
+      await saveAsbDefinition(duplicated, userId)
+      return { success: true, definitionId: newId }
+    },
+    "複製に失敗しました"
   )
 }

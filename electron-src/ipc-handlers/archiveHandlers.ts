@@ -31,6 +31,7 @@ import {
   performPreMatching,
 } from "../lib/import/merge"
 import { getExamById } from "../lib/prisma/exam"
+import { registerSafeHandler } from "./ipcHandlerUtils"
 
 /**
  * 一括エクスポートのコアロジック
@@ -99,35 +100,23 @@ export async function executeBulkExport(
  */
 export function registerArchiveHandlers(): void {
   // エクスポート
-  ipcMain.handle(
+  registerSafeHandler(
     "archive:exportExam",
-    async (
-      _event,
-      options: {
-        examId: string
-        userId: string
-        outputPath?: string
-        exportMode?: import("../../src/types/examArchive.types").ExportMode
-      }
-    ) => {
-      try {
-        return await exportExam(options)
-      } catch (error) {
-        console.error("Error in archive:exportExam:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "エクスポートに失敗しました",
-        }
-      }
-    }
+    async (options: {
+      examId: string
+      userId: string
+      outputPath?: string
+      exportMode?: import("../../src/types/examArchive.types").ExportMode
+    }) => {
+      return await exportExam(options)
+    },
+    "エクスポートに失敗しました"
   )
 
   // インポートファイル選択ダイアログ
-  ipcMain.handle("archive:selectImportFile", async () => {
-    try {
+  registerSafeHandler(
+    "archive:selectImportFile",
+    async () => {
       const result = await dialog.showOpenDialog({
         title: "試験をインポート",
         filters: [
@@ -179,76 +168,39 @@ export function registerArchiveHandlers(): void {
       }
 
       return { success: true, filePath, sourceFormat }
-    } catch (error) {
-      console.error("Error in archive:selectImportFile:", error)
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "ダイアログ表示に失敗しました",
-      }
-    }
-  })
+    },
+    "ダイアログ表示に失敗しました"
+  )
 
   // .hsz → .score 変換
-  ipcMain.handle(
+  registerSafeHandler(
     "archive:convertHszToScore",
-    async (_event, options: { hszPath: string }) => {
-      try {
-        return await convertHszToScore(options.hszPath)
-      } catch (error) {
-        console.error("Error in archive:convertHszToScore:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : ".hsz ファイルの変換に失敗しました",
-        }
-      }
-    }
+    async (options: { hszPath: string }) => {
+      return await convertHszToScore(options.hszPath)
+    },
+    ".hsz ファイルの変換に失敗しました"
   )
 
   // .dat → .score 変換
-  ipcMain.handle(
+  registerSafeHandler(
     "archive:convertDatToScore",
-    async (_event, options: { datPath: string }) => {
-      try {
-        return await convertDatToScore(options.datPath)
-      } catch (error) {
-        console.error("Error in archive:convertDatToScore:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : ".dat ファイルの変換に失敗しました",
-        }
-      }
-    }
+    async (options: { datPath: string }) => {
+      return await convertDatToScore(options.datPath)
+    },
+    ".dat ファイルの変換に失敗しました"
   )
 
   // アーカイブ解析（プレビュー用）
-  ipcMain.handle(
+  registerSafeHandler(
     "archive:analyzeArchive",
-    async (_event, options: { archivePath: string }) => {
-      try {
-        return await analyzeArchive(options)
-      } catch (error) {
-        console.error("Error in archive:analyzeArchive:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "アーカイブ解析に失敗しました",
-        }
-      }
-    }
+    async (options: { archivePath: string }) => {
+      return await analyzeArchive(options)
+    },
+    "アーカイブ解析に失敗しました"
   )
 
   // 事前照合（Step 2: ファイル概要表示用）
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "archive:preMatch",
     async (_event, options: { archivePath: string }) => {
@@ -267,7 +219,7 @@ export function registerArchiveHandlers(): void {
 
         return { success: true, data: fileOverviewData }
       } catch (error) {
-        console.error("Error in archive:preMatch:", error)
+        console.error("Error in IPC handler [archive:preMatch]:", error)
         return {
           success: false,
           error:
@@ -282,6 +234,7 @@ export function registerArchiveHandlers(): void {
   )
 
   // 競合検出
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "archive:detectConflicts",
     async (
@@ -306,7 +259,7 @@ export function registerArchiveHandlers(): void {
 
         return result
       } catch (error) {
-        console.error("Error in archive:detectConflicts:", error)
+        console.error("Error in IPC handler [archive:detectConflicts]:", error)
         return {
           success: false,
           results: [],
@@ -322,6 +275,7 @@ export function registerArchiveHandlers(): void {
   )
 
   // 採点競合検出（ユーザーの判断に基づく）
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "archive:detectScoringConflicts",
     async (
@@ -351,7 +305,10 @@ export function registerArchiveHandlers(): void {
 
         return { success: true, data: scoringConflicts }
       } catch (error) {
-        console.error("Error in archive:detectScoringConflicts:", error)
+        console.error(
+          "Error in IPC handler [archive:detectScoringConflicts]:",
+          error
+        )
         return {
           success: false,
           error:
@@ -368,6 +325,7 @@ export function registerArchiveHandlers(): void {
   )
 
   // ID統合インポート（新しいフロー）
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "archive:idIntegrationImport",
     async (
@@ -403,7 +361,10 @@ export function registerArchiveHandlers(): void {
 
         return result
       } catch (error) {
-        console.error("Error in archive:idIntegrationImport:", error)
+        console.error(
+          "Error in IPC handler [archive:idIntegrationImport]:",
+          error
+        )
         return {
           success: false,
           error:
@@ -418,44 +379,30 @@ export function registerArchiveHandlers(): void {
   )
 
   // 一括エクスポート
-  ipcMain.handle(
+  registerSafeHandler(
     "archive:bulkExportExams",
-    async (
-      _event,
-      options: {
-        examIds: string[]
-        userId: string
-        exportMode?: ExportMode
-      }
-    ): Promise<BulkExportExamsResult> => {
-      try {
-        // フォルダ選択ダイアログを表示
-        const dialogResult = await dialog.showOpenDialog({
-          title: "一括書き出し先フォルダを選択",
-          properties: ["openDirectory", "createDirectory"],
-        })
+    async (options: {
+      examIds: string[]
+      userId: string
+      exportMode?: ExportMode
+    }): Promise<BulkExportExamsResult> => {
+      // フォルダ選択ダイアログを表示
+      const dialogResult = await dialog.showOpenDialog({
+        title: "一括書き出し先フォルダを選択",
+        properties: ["openDirectory", "createDirectory"],
+      })
 
-        if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-          return { success: false, results: [], error: "canceled" }
-        }
-
-        return await executeBulkExport(
-          options.examIds,
-          options.userId,
-          dialogResult.filePaths[0],
-          options.exportMode
-        )
-      } catch (error) {
-        console.error("Error in archive:bulkExportExams:", error)
-        return {
-          success: false,
-          results: [],
-          error:
-            error instanceof Error
-              ? error.message
-              : "一括エクスポートに失敗しました",
-        }
+      if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+        return { success: false, results: [], error: "canceled" }
       }
-    }
+
+      return await executeBulkExport(
+        options.examIds,
+        options.userId,
+        dialogResult.filePaths[0],
+        options.exportMode
+      )
+    },
+    "一括エクスポートに失敗しました"
   )
 }

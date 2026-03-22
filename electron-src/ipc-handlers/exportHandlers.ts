@@ -17,228 +17,158 @@ import {
   getPdfExportData,
 } from "../lib/prisma/pdfExport"
 import { validateScoringData } from "../lib/shared/utilities/validateScoringData"
+import { registerSafeHandler } from "./ipcHandlerUtils"
 
 export function setupExportHandlers(): void {
   // 採点データバリデーション（全エクスポート共通）
-  ipcMain.handle(
+  registerSafeHandler(
     "export:validateScoringData",
-    async (
-      _event,
-      options: {
-        examId: string
-        selectedStudentIds: string[]
-      }
-    ) => {
-      try {
-        const result = await fetchExportData(
-          options.examId,
-          options.selectedStudentIds
-        )
-        if (!result.success || !result.scoringData) {
-          return {
-            success: false,
-            error: result.error || "データ取得に失敗しました",
-          }
-        }
-        const validationResult = validateScoringData(result.scoringData)
-        return { success: true, ...validationResult }
-      } catch (err) {
-        console.error("Error validating scoring data:", err)
+    async (options: { examId: string; selectedStudentIds: string[] }) => {
+      const result = await fetchExportData(
+        options.examId,
+        options.selectedStudentIds
+      )
+      if (!result.success || !result.scoringData) {
         return {
           success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
+          error: result.error || "データ取得に失敗しました",
         }
       }
+      const validationResult = validateScoringData(result.scoringData)
+      return { success: true, ...validationResult }
     }
   )
 
   // Excel Export handlers
-  ipcMain.handle(
+  registerSafeHandler(
     "export-grading-data-excel",
-    async (
-      _event,
-      options: {
-        examId: string
-        selectedStudentIds: string[]
-        outputPath?: string
-      }
-    ) => {
-      try {
-        return await exportGradingDataExcel(options)
-      } catch (err) {
-        console.error("Error exporting grading data Excel:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: {
+      examId: string
+      selectedStudentIds: string[]
+      outputPath?: string
+    }) => {
+      return await exportGradingDataExcel(options)
     }
   )
 
   // Excelプレビュー用データ取得
-  ipcMain.handle(
+  registerSafeHandler(
     "export:getExcelPreviewData",
-    async (
-      _event,
-      options: {
-        examId: string
-        selectedStudentIds: string[]
+    async (options: { examId: string; selectedStudentIds: string[] }) => {
+      const result = await fetchExportData(
+        options.examId,
+        options.selectedStudentIds
+      )
+      if (!result.success) {
+        return { success: false, error: result.error }
       }
-    ) => {
-      try {
-        const result = await fetchExportData(
-          options.examId,
-          options.selectedStudentIds
-        )
-        if (!result.success) {
-          return { success: false, error: result.error }
-        }
-        // Prismaの Decimal/Date 型はIPC経由でcloneできないため、
-        // プレーンなJSオブジェクトに変換して返す
-        const questionRegions = result.questionRegions?.map((r) => ({
-          id: r.id,
-          label: r.label,
-          points: r.points != null ? Number(r.points) : null,
-          orderIndex: r.orderIndex != null ? Number(r.orderIndex) : null,
-        }))
+      // Prismaの Decimal/Date 型はIPC経由でcloneできないため、
+      // プレーンなJSオブジェクトに変換して返す
+      const questionRegions = result.questionRegions?.map((r) => ({
+        id: r.id,
+        label: r.label,
+        points: r.points != null ? Number(r.points) : null,
+        orderIndex: r.orderIndex != null ? Number(r.orderIndex) : null,
+      }))
 
-        const scoringData = result.scoringData?.map((sd) => ({
-          studentId: sd.studentId,
-          studentName: sd.studentName,
-          studentNumber: sd.studentNumber,
-          grade: sd.grade,
-          className: sd.className,
-          attendanceNumber:
-            sd.attendanceNumber != null ? Number(sd.attendanceNumber) : null,
-          status: sd.status,
-          scores: sd.scores.map((s) => ({
-            questionId: s.questionId,
-            questionLabel: s.questionLabel,
-            score: s.score != null ? Number(s.score) : null,
-            maxScore: Number(s.maxScore),
-            status: s.status,
-          })),
-          totalScore: sd.totalScore != null ? Number(sd.totalScore) : null,
-          totalMaxScore: Number(sd.totalMaxScore),
-          subtotalScores: sd.subtotalScores.map((ss) => ({
-            subtotalId: ss.subtotalId,
-            subtotalLabel: ss.subtotalLabel,
-            score: ss.score != null ? Number(ss.score) : null,
-            maxScore: Number(ss.maxScore),
-          })),
-        }))
+      const scoringData = result.scoringData?.map((sd) => ({
+        studentId: sd.studentId,
+        studentName: sd.studentName,
+        studentNumber: sd.studentNumber,
+        grade: sd.grade,
+        className: sd.className,
+        attendanceNumber:
+          sd.attendanceNumber != null ? Number(sd.attendanceNumber) : null,
+        status: sd.status,
+        scores: sd.scores.map((s) => ({
+          questionId: s.questionId,
+          questionLabel: s.questionLabel,
+          score: s.score != null ? Number(s.score) : null,
+          maxScore: Number(s.maxScore),
+          status: s.status,
+        })),
+        totalScore: sd.totalScore != null ? Number(sd.totalScore) : null,
+        totalMaxScore: Number(sd.totalMaxScore),
+        subtotalScores: sd.subtotalScores.map((ss) => ({
+          subtotalId: ss.subtotalId,
+          subtotalLabel: ss.subtotalLabel,
+          score: ss.score != null ? Number(ss.score) : null,
+          maxScore: Number(ss.maxScore),
+        })),
+      }))
 
-        return {
-          success: true,
-          questionRegions,
-          subtotalColumns: result.subtotalColumns,
-          scoringData,
-        }
-      } catch (err) {
-        console.error("Error getting Excel preview data:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
+      return {
+        success: true,
+        questionRegions,
+        subtotalColumns: result.subtotalColumns,
+        scoringData,
       }
     }
   )
 
   // Canvas描画用PDF出力データ取得
-  ipcMain.handle(
+  registerSafeHandler(
     "export:getPdfExportData",
-    async (
-      _event,
-      options: {
-        examId: string
-        selectedStudentIds: string[]
-      }
-    ) => {
-      try {
-        return await getPdfExportData(options)
-      } catch (err) {
-        console.error("Error getting PDF export data:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: { examId: string; selectedStudentIds: string[] }) => {
+      return await getPdfExportData(options)
     }
   )
 
   // Canvas描画済み画像からPDF作成
-  ipcMain.handle(
+  registerSafeHandler(
     "export:createPdfFromRenderedImages",
-    async (
-      _event,
-      options: {
-        examId: string
-        renderedPages: Array<{
-          studentId: string
-          pageNumber: number
-          imageData: ArrayBuffer
-        }>
-        pdfOrientation?: "portrait" | "landscape"
-      }
-    ) => {
-      try {
-        // プログレスコールバックは渡さない（React側で管理するため）
-        // Electron側のprogressCallbackはReact側のプログレス更新と競合し、
-        // プログレスバーが0%にリセットされて2周するように見える問題を引き起こしていた
-        return await createPdfFromRenderedImages({
-          ...options,
-        })
-      } catch (err) {
-        console.error("Error creating PDF from rendered images:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: {
+      examId: string
+      renderedPages: Array<{
+        studentId: string
+        pageNumber: number
+        imageData: ArrayBuffer
+      }>
+      pdfOrientation?: "portrait" | "landscape"
+    }) => {
+      // プログレスコールバックは渡さない（React側で管理するため）
+      // Electron側のprogressCallbackはReact側のプログレス更新と競合し、
+      // プログレスバーが0%にリセットされて2周するように見える問題を引き起こしていた
+      return await createPdfFromRenderedImages({
+        ...options,
+      })
     }
   )
 
   // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
-  ipcMain.handle(
+  registerSafeHandler(
     "export:selectPdfSavePath",
-    async (
-      _event,
-      options: {
-        examName?: string
+    async (options: {
+      examName?: string
+    }): Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+    }> => {
+      const dateStr = new Date().toISOString().split("T")[0]
+      const safeExamName = options.examName
+        ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
+        : null
+      const defaultFileName = safeExamName
+        ? `採点済み答案_${safeExamName}_${dateStr}.pdf`
+        : `採点済み答案_${dateStr}.pdf`
+
+      const result = await dialog.showSaveDialog({
+        title: "採点済み答案PDFの保存先",
+        defaultPath: defaultFileName,
+        filters: [{ name: "PDF Files", extensions: ["pdf"] }],
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true }
       }
-    ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
-      try {
-        const { dialog } = require("electron")
-        const dateStr = new Date().toISOString().split("T")[0]
-        const safeExamName = options.examName
-          ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
-          : null
-        const defaultFileName = safeExamName
-          ? `採点済み答案_${safeExamName}_${dateStr}.pdf`
-          : `採点済み答案_${dateStr}.pdf`
 
-        const result = await dialog.showSaveDialog({
-          title: "採点済み答案PDFの保存先",
-          defaultPath: defaultFileName,
-          filters: [{ name: "PDF Files", extensions: ["pdf"] }],
-        })
-
-        if (result.canceled || !result.filePath) {
-          return { success: false, canceled: true }
-        }
-
-        return { success: true, filePath: result.filePath }
-      } catch (err) {
-        console.error("Error selecting PDF save path:", err)
-        return {
-          success: false,
-          canceled: false,
-        }
-      }
+      return { success: true, filePath: result.filePath }
     }
   )
 
   // SVG→PNG変換ハンドラ（MathJaxテキストのtaint問題回避用）
+  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "export:convertSvgToPng",
     async (
@@ -316,7 +246,7 @@ export function setupExportHandlers(): void {
           win.destroy()
         }
       } catch (err) {
-        console.error("Error converting SVG to PNG:", err)
+        console.error("Error in IPC handler [export:convertSvgToPng]:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error occurred",
@@ -330,86 +260,42 @@ export function setupExportHandlers(): void {
   // ============================================================
 
   // ストリーミングセッション作成
-  ipcMain.handle(
+  registerSafeHandler(
     "export:createPdfStreamingSession",
-    async (
-      _event,
-      options: {
-        totalPages: number
-        pdfOrientation?: "portrait" | "landscape"
-      }
-    ) => {
-      try {
-        return await createPdfStreamingSession(options)
-      } catch (err) {
-        console.error("Error creating PDF streaming session:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: {
+      totalPages: number
+      pdfOrientation?: "portrait" | "landscape"
+    }) => {
+      return await createPdfStreamingSession(options)
     }
   )
 
   // ストリーミングセッションにページを追加
-  ipcMain.handle(
+  registerSafeHandler(
     "export:addPageToStreamingSession",
-    async (
-      _event,
-      options: {
-        sessionId: string
-        pageIndex: number
-        imageData: ArrayBuffer
-      }
-    ) => {
-      try {
-        return await addPageToStreamingSession(options)
-      } catch (err) {
-        console.error("Error adding page to streaming session:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: {
+      sessionId: string
+      pageIndex: number
+      imageData: ArrayBuffer
+    }) => {
+      return await addPageToStreamingSession(options)
     }
   )
 
   // ストリーミングセッションを完了してPDF保存
-  ipcMain.handle(
+  registerSafeHandler(
     "export:finalizeStreamingSession",
-    async (
-      _event,
-      options: {
-        sessionId: string
-        outputPath: string
-      }
-    ) => {
-      try {
-        return await finalizeStreamingSession(options)
-      } catch (err) {
-        console.error("Error finalizing streaming session:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: { sessionId: string; outputPath: string }) => {
+      return await finalizeStreamingSession(options)
     }
   )
 
   // ストリーミングセッションをキャンセル
-  ipcMain.handle(
+  registerSafeHandler(
     "export:cancelStreamingSession",
-    async (_event, sessionId: string) => {
-      try {
-        cancelStreamingSession(sessionId)
-        return { success: true }
-      } catch (err) {
-        console.error("Error canceling streaming session:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (sessionId: string) => {
+      cancelStreamingSession(sessionId)
+      return { success: true }
     }
   )
 
@@ -418,102 +304,69 @@ export function setupExportHandlers(): void {
   // ============================================================
 
   // 個人成績表用データ取得
-  ipcMain.handle(
+  registerSafeHandler(
     "export:getIndividualReportData",
-    async (_event, options: GetIndividualReportDataOptions) => {
-      try {
-        return await fetchIndividualReportData(options)
-      } catch (err) {
-        console.error("Error getting individual report data:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (options: GetIndividualReportDataOptions) => {
+      return await fetchIndividualReportData(options)
     }
   )
 
   // 個人成績表用小計点グループ一覧取得
-  ipcMain.handle(
+  registerSafeHandler(
     "export:getSubtotalGroupsForReport",
-    async (_event, examId: string) => {
-      try {
-        return await fetchSubtotalGroupsForReport(examId)
-      } catch (err) {
-        console.error("Error getting subtotal groups for report:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+    async (examId: string) => {
+      return await fetchSubtotalGroupsForReport(examId)
     }
   )
 
   // 個人成績表PDF保存先選択ダイアログ
-  ipcMain.handle(
+  registerSafeHandler(
     "export:selectIndividualReportSavePath",
-    async (
-      _event,
-      options: {
-        examName?: string
+    async (options: {
+      examName?: string
+    }): Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+    }> => {
+      const dateStr = new Date().toISOString().split("T")[0]
+      const safeExamName = options.examName
+        ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
+        : null
+      const defaultFileName = safeExamName
+        ? `個人成績表_${safeExamName}_${dateStr}.pdf`
+        : `個人成績表_${dateStr}.pdf`
+
+      const result = await dialog.showSaveDialog({
+        title: "個人成績表PDFの保存先",
+        defaultPath: defaultFileName,
+        filters: [{ name: "PDF Files", extensions: ["pdf"] }],
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true }
       }
-    ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
-      try {
-        const dateStr = new Date().toISOString().split("T")[0]
-        const safeExamName = options.examName
-          ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
-          : null
-        const defaultFileName = safeExamName
-          ? `個人成績表_${safeExamName}_${dateStr}.pdf`
-          : `個人成績表_${dateStr}.pdf`
 
-        const result = await dialog.showSaveDialog({
-          title: "個人成績表PDFの保存先",
-          defaultPath: defaultFileName,
-          filters: [{ name: "PDF Files", extensions: ["pdf"] }],
-        })
-
-        if (result.canceled || !result.filePath) {
-          return { success: false, canceled: true }
-        }
-
-        return { success: true, filePath: result.filePath }
-      } catch (err) {
-        console.error("Error selecting individual report save path:", err)
-        return {
-          success: false,
-          canceled: false,
-        }
-      }
+      return { success: true, filePath: result.filePath }
     }
   )
 
   // 個人成績表PDFバッファを保存
-  ipcMain.handle(
+  registerSafeHandler(
     "export:saveIndividualReportPdf",
-    async (
-      _event,
-      options: {
-        filePath: string
-        pdfBuffer: ArrayBuffer
-      }
-    ): Promise<{ success: boolean; error?: string }> => {
-      try {
-        const fs = require("fs").promises
-        await fs.writeFile(options.filePath, Buffer.from(options.pdfBuffer))
-        return { success: true }
-      } catch (err) {
-        console.error("Error saving individual report PDF:", err)
-        return {
-          success: false,
-          error:
-            err instanceof Error ? err.message : "ファイル保存に失敗しました",
-        }
-      }
-    }
+    async (options: {
+      filePath: string
+      pdfBuffer: ArrayBuffer
+    }): Promise<{ success: boolean; error?: string }> => {
+      const fs = require("fs").promises
+      await fs.writeFile(options.filePath, Buffer.from(options.pdfBuffer))
+      return { success: true }
+    },
+    "ファイル保存に失敗しました"
   )
 
   // HTMLからPDFを生成（ブラウザ印刷機能を使用）
+  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "export:printHtmlToPdf",
     async (
@@ -594,7 +447,7 @@ export function setupExportHandlers(): void {
 
         return { success: true }
       } catch (err) {
-        console.error("Error printing HTML to PDF:", err)
+        console.error("Error in IPC handler [export:printHtmlToPdf]:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "PDF生成に失敗しました",
@@ -612,6 +465,7 @@ export function setupExportHandlers(): void {
   )
 
   // 複数のHTMLページからPDFを生成（バッチ処理）
+  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "export:printMultipleHtmlToPdf",
     async (
@@ -686,7 +540,10 @@ export function setupExportHandlers(): void {
 
         return { success: true }
       } catch (err) {
-        console.error("Error printing multiple HTML to PDF:", err)
+        console.error(
+          "Error in IPC handler [export:printMultipleHtmlToPdf]:",
+          err
+        )
         return {
           success: false,
           error: err instanceof Error ? err.message : "PDF生成に失敗しました",
@@ -702,6 +559,7 @@ export function setupExportHandlers(): void {
   // ============================================================
 
   // HTMLからPDFを生成してプレビューで開く
+  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "export:openPrintDialog",
     async (
@@ -780,7 +638,7 @@ export function setupExportHandlers(): void {
 
         return { success: true }
       } catch (err) {
-        console.error("Error generating PDF:", err)
+        console.error("Error in IPC handler [export:openPrintDialog]:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "PDF生成に失敗しました",

@@ -2,7 +2,7 @@
  * Grade（成績算出）IPC ハンドラー
  */
 
-import { dialog, ipcMain } from "electron"
+import { dialog } from "electron"
 
 import { createGradeArchive } from "../lib/export/grade-archive"
 import { exportGradeExcel } from "../lib/export/gradeExcel"
@@ -65,38 +65,35 @@ import {
   getManualScoresByDataSourceId,
 } from "../lib/prisma/manualScore"
 import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
+import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 export function setupGradeHandlers(): void {
   // =====================================================================
   // Grade CRUD
   // =====================================================================
 
-  ipcMain.handle("grade:getAll", async () => {
+  registerHandler("grade:getAll", async () => {
     return getAllGrades()
   })
 
-  ipcMain.handle("grade:getById", async (_event, id: string) => {
+  registerHandler("grade:getById", async (id: string) => {
     return getGradeById(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:create",
-    async (
-      _event,
-      data: {
-        name: string
-        description?: string
-        referenceDate?: string | null
-      }
-    ) => {
+    async (data: {
+      name: string
+      description?: string
+      referenceDate?: string | null
+    }) => {
       return createGrade(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:update",
     async (
-      _event,
       id: string,
       data: {
         name?: string
@@ -108,34 +105,20 @@ export function setupGradeHandlers(): void {
     }
   )
 
-  ipcMain.handle("grade:delete", async (_event, id: string) => {
+  registerHandler("grade:delete", async (id: string) => {
     return deleteGrade(id)
   })
 
-  ipcMain.handle("grade:getExportSettings", async (_event, gradeId: string) => {
-    try {
-      const settings = await getGradeExportSettings(gradeId)
-      return { success: true, settings }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }
-    }
+  registerSafeHandler("grade:getExportSettings", async (gradeId: string) => {
+    const settings = await getGradeExportSettings(gradeId)
+    return { success: true, settings }
   })
 
-  ipcMain.handle(
+  registerSafeHandler(
     "grade:saveExportSettings",
-    async (_event, gradeId: string, settings: Record<string, unknown>) => {
-      try {
-        await upsertGradeExportSettings(gradeId, settings)
-        return { success: true }
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        }
-      }
+    async (gradeId: string, settings: Record<string, unknown>) => {
+      await upsertGradeExportSettings(gradeId, settings)
+      return { success: true }
     }
   )
 
@@ -143,39 +126,35 @@ export function setupGradeHandlers(): void {
   // Grade 生徒・学級管理
   // =====================================================================
 
-  ipcMain.handle("grade:getStudents", async (_event, gradeId: string) => {
+  registerHandler("grade:getStudents", async (gradeId: string) => {
     return getStudentsByGradeId(gradeId)
   })
 
-  ipcMain.handle("grade:getClasses", async (_event, gradeId: string) => {
+  registerHandler("grade:getClasses", async (gradeId: string) => {
     return getGradeClasses(gradeId)
   })
 
-  ipcMain.handle(
-    "grade:getAvailableClasses",
-    async (_event, gradeId: string) => {
-      return getAvailableClassesForGrade(gradeId)
-    }
-  )
+  registerHandler("grade:getAvailableClasses", async (gradeId: string) => {
+    return getAvailableClassesForGrade(gradeId)
+  })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:addStudentsFromClass",
-    async (_event, gradeId: string, classId: string) => {
+    async (gradeId: string, classId: string) => {
       return addStudentsFromClassToGrade(gradeId, classId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:removeClass",
-    async (_event, gradeId: string, classId: string) => {
+    async (gradeId: string, classId: string) => {
       return removeClassFromGrade(gradeId, classId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:updateStudentOrders",
     async (
-      _event,
       gradeId: string,
       studentOrders: { studentId: string; customOrder: number }[]
     ) => {
@@ -187,31 +166,31 @@ export function setupGradeHandlers(): void {
   // GradeItem
   // =====================================================================
 
-  ipcMain.handle("grade:getGradeItems", async (_event, gradeId: string) => {
+  registerHandler("grade:getGradeItems", async (gradeId: string) => {
     return getGradeItemsByExamId(gradeId)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:createGradeItem",
-    async (_event, data: { gradeId: string; name: string }) => {
+    async (data: { gradeId: string; name: string }) => {
       return createGradeItem(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:updateGradeItem",
-    async (_event, id: string, data: { name?: string }) => {
+    async (id: string, data: { name?: string }) => {
       return updateGradeItem(id, data)
     }
   )
 
-  ipcMain.handle("grade:deleteGradeItem", async (_event, id: string) => {
+  registerHandler("grade:deleteGradeItem", async (id: string) => {
     return deleteGradeItem(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:reorderGradeItems",
-    async (_event, items: { id: string; order: number }[]) => {
+    async (items: { id: string; order: number }[]) => {
       return reorderGradeItems(items)
     }
   )
@@ -220,35 +199,31 @@ export function setupGradeHandlers(): void {
   // GradeDataSource
   // =====================================================================
 
-  ipcMain.handle(
+  registerHandler(
     "grade:createDataSource",
-    async (
-      _event,
-      data: {
-        gradeItemId: string
-        type: string
-        examId?: string
-        subtotalId?: string
-        cropRegionId?: string
-        name: string
-        maxScore: number
-        weight: number
-        absentMethod?: string
-        absentRatio?: number
-        absentOffset?: number
-        treatExpectedAsMissing?: boolean
-        estimationMode?: string
-        estimationSourceIds?: string[]
-      }
-    ) => {
+    async (data: {
+      gradeItemId: string
+      type: string
+      examId?: string
+      subtotalId?: string
+      cropRegionId?: string
+      name: string
+      maxScore: number
+      weight: number
+      absentMethod?: string
+      absentRatio?: number
+      absentOffset?: number
+      treatExpectedAsMissing?: boolean
+      estimationMode?: string
+      estimationSourceIds?: string[]
+    }) => {
       return createDataSource(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:updateDataSource",
     async (
-      _event,
       id: string,
       data: {
         name?: string
@@ -266,21 +241,20 @@ export function setupGradeHandlers(): void {
     }
   )
 
-  ipcMain.handle("grade:deleteDataSource", async (_event, id: string) => {
+  registerHandler("grade:deleteDataSource", async (id: string) => {
     return deleteDataSource(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:reorderDataSources",
-    async (_event, items: { id: string; order: number }[]) => {
+    async (items: { id: string; order: number }[]) => {
       return reorderDataSources(items)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:batchUpdateAbsentPolicy",
     async (
-      _event,
       dataSourceIds: string[],
       policy: {
         absentMethod: string
@@ -299,32 +273,26 @@ export function setupGradeHandlers(): void {
   // 補助: 候補取得・計算
   // =====================================================================
 
-  ipcMain.handle("grade:getExamCandidates", async () => {
+  registerHandler("grade:getExamCandidates", async () => {
     return getExamCandidates()
   })
 
-  ipcMain.handle(
-    "grade:getExamSubtotalGroups",
-    async (_event, examId: string) => {
-      return getExamSubtotalGroups(examId)
-    }
-  )
+  registerHandler("grade:getExamSubtotalGroups", async (examId: string) => {
+    return getExamSubtotalGroups(examId)
+  })
 
-  ipcMain.handle("grade:getExamCropRegions", async (_event, examId: string) => {
+  registerHandler("grade:getExamCropRegions", async (examId: string) => {
     return getExamCropRegions(examId)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:calculateSourceMaxScore",
-    async (
-      _event,
-      data: {
-        type: string
-        examId?: string
-        subtotalId?: string
-        cropRegionId?: string
-      }
-    ) => {
+    async (data: {
+      type: string
+      examId?: string
+      subtotalId?: string
+      cropRegionId?: string
+    }) => {
       return calculateSourceMaxScore(data)
     }
   )
@@ -333,17 +301,16 @@ export function setupGradeHandlers(): void {
   // ManualScore
   // =====================================================================
 
-  ipcMain.handle(
+  registerHandler(
     "grade:getManualScores",
-    async (_event, gradeDataSourceId: string) => {
+    async (gradeDataSourceId: string) => {
       return getManualScoresByDataSourceId(gradeDataSourceId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:batchUpsertManualScores",
     async (
-      _event,
       scores: {
         gradeDataSourceId: string
         studentId: string
@@ -358,26 +325,23 @@ export function setupGradeHandlers(): void {
   // GradeBoundary
   // =====================================================================
 
-  ipcMain.handle("grade:getBoundarySets", async (_event, gradeId: string) => {
+  registerHandler("grade:getBoundarySets", async (gradeId: string) => {
     return getBoundarySetsByGradeId(gradeId)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:upsertBoundarySet",
-    async (
-      _event,
-      data: {
-        gradeId: string
-        targetType: string
-        gradeItemId: string | null
-        boundaries: { label: string; minPercentage: number; order: number }[]
-      }
-    ) => {
+    async (data: {
+      gradeId: string
+      targetType: string
+      gradeItemId: string | null
+      boundaries: { label: string; minPercentage: number; order: number }[]
+    }) => {
       return upsertBoundarySet(data)
     }
   )
 
-  ipcMain.handle("grade:deleteBoundarySet", async (_event, id: string) => {
+  registerHandler("grade:deleteBoundarySet", async (id: string) => {
     return deleteBoundarySet(id)
   })
 
@@ -385,33 +349,27 @@ export function setupGradeHandlers(): void {
   // GradeOverride
   // =====================================================================
 
-  ipcMain.handle(
+  registerHandler(
     "grade:upsertGradeOverride",
-    async (
-      _event,
-      data: {
-        gradeId: string
-        studentId: string
-        targetType: string
-        gradeItemId: string | null
-        overrideLabel: string
-      }
-    ) => {
+    async (data: {
+      gradeId: string
+      studentId: string
+      targetType: string
+      gradeItemId: string | null
+      overrideLabel: string
+    }) => {
       return upsertGradeOverride(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:deleteGradeOverride",
-    async (
-      _event,
-      data: {
-        gradeId: string
-        studentId: string
-        targetType: string
-        gradeItemId: string | null
-      }
-    ) => {
+    async (data: {
+      gradeId: string
+      studentId: string
+      targetType: string
+      gradeItemId: string | null
+    }) => {
       return deleteGradeOverride(data)
     }
   )
@@ -420,32 +378,25 @@ export function setupGradeHandlers(): void {
   // GradeItemExclusion
   // =====================================================================
 
-  ipcMain.handle(
-    "grade:getGradeItemExclusions",
-    async (_event, gradeId: string) => {
-      return getGradeItemExclusions(gradeId)
-    }
-  )
+  registerHandler("grade:getGradeItemExclusions", async (gradeId: string) => {
+    return getGradeItemExclusions(gradeId)
+  })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:setGradeItemExclusion",
-    async (
-      _event,
-      data: {
-        gradeId: string
-        studentId: string
-        gradeItemId: string
-        excluded: boolean
-      }
-    ) => {
+    async (data: {
+      gradeId: string
+      studentId: string
+      gradeItemId: string
+      excluded: boolean
+    }) => {
       return setGradeItemExclusion(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "grade:batchUpdateGradeItemExclusions",
     async (
-      _event,
       gradeId: string,
       updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
     ) => {
@@ -457,7 +408,7 @@ export function setupGradeHandlers(): void {
   // 成績算出
   // =====================================================================
 
-  ipcMain.handle("grade:calculateGrades", async (_event, gradeId: string) => {
+  registerHandler("grade:calculateGrades", async (gradeId: string) => {
     return calculateGrades(gradeId)
   })
 
@@ -465,9 +416,9 @@ export function setupGradeHandlers(): void {
   // Excel出力
   // =====================================================================
 
-  ipcMain.handle(
+  registerHandler(
     "grade:exportExcel",
-    async (_event, gradeId: string, options?: { studentIds?: string[] }) => {
+    async (gradeId: string, options?: { studentIds?: string[] }) => {
       return exportGradeExcel(gradeId, {
         studentIds: options?.studentIds,
       })
@@ -478,7 +429,7 @@ export function setupGradeHandlers(): void {
   // アーカイブ Export/Import
   // =====================================================================
 
-  ipcMain.handle("grade:exportArchive", async (_event, gradeId: string) => {
+  registerHandler("grade:exportArchive", async (gradeId: string) => {
     const result = await dialog.showSaveDialog({
       title: "成績アーカイブの保存先",
       defaultPath: `grade-exam.grade`,
@@ -490,7 +441,7 @@ export function setupGradeHandlers(): void {
     return createGradeArchive(gradeId, result.filePath)
   })
 
-  ipcMain.handle("grade:importArchive", async (_event) => {
+  registerHandler("grade:importArchive", async () => {
     const result = await dialog.showOpenDialog({
       title: "成績アーカイブを選択",
       filters: [{ name: "成績アーカイブ", extensions: ["grade"] }],
@@ -509,10 +460,9 @@ export function setupGradeHandlers(): void {
     return { success: true, preview, archiveData: extractResult.data }
   })
 
-  ipcMain.handle(
+  registerHandler(
     "grade:executeImport",
     async (
-      _event,
       archiveData: Parameters<typeof importGradeArchive>[0],
       examMapping?: Record<string, string>
     ) => {

@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client"
-import { ipcMain } from "electron"
 
 import {
   createCropRegion as dbCreateCropRegion,
@@ -77,306 +76,157 @@ import {
   getSubtotalsByGroupId as dbGetSubtotalsByGroupId,
   updateSubtotal as dbUpdateSubtotal,
 } from "../lib/prisma/subtotal"
+import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 export function setupCropRegionHandlers(): void {
   // --- CropRegion Handlers ---
-  ipcMain.handle(
+  registerHandler(
     "create-crop-region",
-    async (_event, data: Prisma.CropRegionUncheckedCreateInput) => {
-      try {
-        const result = await dbCreateCropRegion(data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-crop-region error:", error)
-        throw error
-      }
+    async (data: Prisma.CropRegionUncheckedCreateInput) => {
+      return await dbCreateCropRegion(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "create-many-crop-regions",
-    async (_event, data: Prisma.CropRegionCreateManyInput[]) => {
-      try {
-        const result = await dbCreateManyCropRegions(data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-many-crop-regions error:", error)
-        throw error
-      }
+    async (data: Prisma.CropRegionCreateManyInput[]) => {
+      return await dbCreateManyCropRegions(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "update-crop-region",
-    async (_event, id: string, data: Prisma.CropRegionUpdateInput) => {
-      try {
-        const result = await dbUpdateCropRegion(id, data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: update-crop-region error:", error)
-        throw error
-      }
+    async (id: string, data: Prisma.CropRegionUpdateInput) => {
+      return await dbUpdateCropRegion(id, data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "update-crop-region-orders",
-    async (_event, updates: Array<{ id: string; orderIndex: number }>) => {
-      try {
-        const result = await dbUpdateCropRegionOrders(updates)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: update-crop-region-orders error:", error)
-        throw error
-      }
+    async (updates: Array<{ id: string; orderIndex: number }>) => {
+      return await dbUpdateCropRegionOrders(updates)
     }
   )
 
-  ipcMain.handle("delete-crop-region", async (_event, id: string) => {
-    try {
-      const result = await dbDeleteCropRegion(id)
-      return result
-    } catch (error) {
-      console.error("❌ IPC: delete-crop-region error:", error)
-      throw error
-    }
+  registerHandler("delete-crop-region", async (id: string) => {
+    return await dbDeleteCropRegion(id)
   })
 
-  ipcMain.handle(
-    "get-crop-regions-by-exam-id",
-    async (_event, examId: string) => {
-      try {
-        const result = await dbGetCropRegionsByExamId(examId)
-        // questionScoresのDecimalをnumberに変換
-        return result?.map(serializeCropRegion) || []
-      } catch (error) {
-        console.error("❌ IPC: get-crop-regions-by-exam-id error:", error)
-        throw error
-      }
-    }
-  )
+  registerHandler("get-crop-regions-by-exam-id", async (examId: string) => {
+    const result = await dbGetCropRegionsByExamId(examId)
+    // questionScoresのDecimalをnumberに変換
+    return result?.map(serializeCropRegion) || []
+  })
 
-  ipcMain.handle(
+  registerHandler(
     "get-question-answer-regions-by-exam-id",
-    async (_event, examId: string) => {
-      try {
-        const result = await dbGetQuestionAnswerRegionsByExamId(examId)
-        // questionScoresのDecimalをnumberに変換
-        return result?.map(serializeCropRegion) || []
-      } catch (error) {
-        console.error(
-          "❌ IPC: get-question-answer-regions-by-exam-id error:",
-          error
-        )
-        throw error
-      }
+    async (examId: string) => {
+      const result = await dbGetQuestionAnswerRegionsByExamId(examId)
+      // questionScoresのDecimalをnumberに変換
+      return result?.map(serializeCropRegion) || []
     }
   )
 
-  ipcMain.handle("get-crop-region-by-id", async (_event, id: string) => {
-    try {
-      const result = await dbGetCropRegionById(id)
-      // questionScoresのDecimalをnumberに変換
-      return result ? serializeCropRegion(result) : null
-    } catch (error) {
-      console.error("❌ IPC: get-crop-region-by-id error:", error)
-      throw error
-    }
+  registerHandler("get-crop-region-by-id", async (id: string) => {
+    const result = await dbGetCropRegionById(id)
+    // questionScoresのDecimalをnumberに変換
+    return result ? serializeCropRegion(result) : null
   })
 
   // --- Subtotal Handlers ---
-  ipcMain.handle(
+  registerHandler(
     "create-subtotal",
-    async (_event, data: Prisma.SubtotalUncheckedCreateInput) => {
-      try {
-        const result = await dbCreateSubtotal(data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-subtotal error:", error)
-        throw error
-      }
+    async (data: Prisma.SubtotalUncheckedCreateInput) => {
+      return await dbCreateSubtotal(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "create-many-subtotals",
-    async (_event, data: Prisma.SubtotalUncheckedCreateInput[]) => {
-      try {
-        const result = await dbCreateManySubtotals(data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-many-subtotals error:", error)
-        throw error
-      }
+    async (data: Prisma.SubtotalUncheckedCreateInput[]) => {
+      return await dbCreateManySubtotals(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "update-subtotal",
-    async (_event, id: string, data: Prisma.SubtotalUpdateInput) => {
-      try {
-        const result = await dbUpdateSubtotal(id, data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: update-subtotal error:", error)
-        throw error
-      }
+    async (id: string, data: Prisma.SubtotalUpdateInput) => {
+      return await dbUpdateSubtotal(id, data)
     }
   )
 
-  ipcMain.handle("delete-subtotal", async (_event, id: string) => {
-    try {
-      const result = await dbDeleteSubtotal(id)
-      return result
-    } catch (error) {
-      console.error("❌ IPC: delete-subtotal error:", error)
-      throw error
-    }
+  registerHandler("delete-subtotal", async (id: string) => {
+    return await dbDeleteSubtotal(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "get-subtotals-by-group-id",
-    async (_event, subtotalGroupId: string) => {
-      try {
-        const result = await dbGetSubtotalsByGroupId(subtotalGroupId)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: get-subtotals-by-group-id error:", error)
-        throw error
-      }
+    async (subtotalGroupId: string) => {
+      return await dbGetSubtotalsByGroupId(subtotalGroupId)
     }
   )
 
-  ipcMain.handle("get-subtotal-by-id", async (_event, id: string) => {
-    try {
-      const result = await dbGetSubtotalById(id)
-      return result
-    } catch (error) {
-      console.error("❌ IPC: get-subtotal-by-id error:", error)
-      throw error
-    }
+  registerHandler("get-subtotal-by-id", async (id: string) => {
+    return await dbGetSubtotalById(id)
   })
 
   // --- CropSubtotal Handlers ---
-  ipcMain.handle(
+  registerHandler(
     "create-crop-subtotal",
-    async (_event, data: Prisma.CropSubtotalUncheckedCreateInput) => {
-      try {
-        const result = await dbCreateCropSubtotal(data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-crop-subtotal error:", error)
-        throw error
-      }
+    async (data: Prisma.CropSubtotalUncheckedCreateInput) => {
+      return await dbCreateCropSubtotal(data)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "create-many-crop-subtotals",
-    async (_event, data: Prisma.CropSubtotalUncheckedCreateInput[]) => {
-      try {
-        const result = await dbCreateManyCropSubtotals(data)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-many-crop-subtotals error:", error)
-        throw error
-      }
+    async (data: Prisma.CropSubtotalUncheckedCreateInput[]) => {
+      return await dbCreateManyCropSubtotals(data)
     }
   )
 
-  ipcMain.handle("delete-crop-subtotal", async (_event, id: string) => {
-    try {
-      const result = await dbDeleteCropSubtotal(id)
-      return result
-    } catch (error) {
-      console.error("❌ IPC: delete-crop-subtotal error:", error)
-      throw error
-    }
+  registerHandler("delete-crop-subtotal", async (id: string) => {
+    return await dbDeleteCropSubtotal(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "delete-crop-subtotals-by-crop-region-id",
-    async (_event, cropRegionId: string) => {
-      try {
-        const result = await dbDeleteCropSubtotalsByCropRegionId(cropRegionId)
-        return result
-      } catch (error) {
-        console.error(
-          "❌ IPC: delete-crop-subtotals-by-crop-region-id error:",
-          error
-        )
-        throw error
-      }
+    async (cropRegionId: string) => {
+      return await dbDeleteCropSubtotalsByCropRegionId(cropRegionId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "get-crop-subtotals-by-crop-region-id",
-    async (_event, cropRegionId: string) => {
-      try {
-        const result = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
-        return result
-      } catch (error) {
-        console.error(
-          "❌ IPC: get-crop-subtotals-by-crop-region-id error:",
-          error
-        )
-        throw error
-      }
+    async (cropRegionId: string) => {
+      return await dbGetCropSubtotalsByCropRegionId(cropRegionId)
     }
   )
 
   // 互換性のあるレスポンス形式での取得（QuestionAssignmentMatrix専用）
-  ipcMain.handle(
+  registerSafeHandler(
     "get-assignments-by-question-crop-region-id",
-    async (_event, cropRegionId: string) => {
-      try {
-        const assignments = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
-        return {
-          success: true,
-          assignments: assignments || [],
-        }
-      } catch (error) {
-        console.error(
-          "❌ IPC: get-assignments-by-question-crop-region-id error:",
-          error
-        )
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-          assignments: [],
-        }
+    async (cropRegionId: string) => {
+      const assignments = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
+      return {
+        success: true,
+        assignments: assignments || [],
       }
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "get-crop-subtotals-by-subtotal-id",
-    async (_event, subtotalId: string) => {
-      try {
-        const result = await dbGetCropSubtotalsBySubtotalId(subtotalId)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: get-crop-subtotals-by-subtotal-id error:", error)
-        throw error
-      }
+    async (subtotalId: string) => {
+      return await dbGetCropSubtotalsBySubtotalId(subtotalId)
     }
   )
 
   // 互換性のためのエイリアス
-  ipcMain.handle(
+  registerHandler(
     "get-subtotal-definitions-by-crop-region-id",
-    async (_event, cropRegionId: string) => {
-      try {
-        const result = await dbGetSubtotalDefsByCropRegionId(cropRegionId)
-        return result
-      } catch (error) {
-        console.error(
-          "❌ IPC: get-subtotal-definitions-by-crop-region-id error:",
-          error
-        )
-        throw error
-      }
+    async (cropRegionId: string) => {
+      return await dbGetSubtotalDefsByCropRegionId(cropRegionId)
     }
   )
 }

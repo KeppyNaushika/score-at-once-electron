@@ -1,5 +1,3 @@
-import { ipcMain } from "electron"
-
 import {
   getExamMembers,
   getExamOwner,
@@ -15,144 +13,79 @@ import {
   SetOwnerOptions,
   transferOwnership,
 } from "../lib/prisma/userExam"
+import { registerHandler } from "./ipcHandlerUtils"
 
 export function setupUserExamHandlers(): void {
   // Get all members of a exam
-  ipcMain.handle("user-exam:get-members", async (_event, examId: string) => {
-    try {
-      return await getExamMembers(examId)
-    } catch (error) {
-      console.error("IPC user-exam:get-members error:", error)
-      throw error
-    }
+  registerHandler("user-exam:get-members", async (examId: string) => {
+    return await getExamMembers(examId)
   })
 
   // Get user's role in a exam
-  ipcMain.handle(
+  registerHandler(
     "user-exam:get-role",
-    async (_event, userId: string, examId: string) => {
-      try {
-        return await getUserRoleInExam(userId, examId)
-      } catch (error) {
-        console.error("IPC user-exam:get-role error:", error)
-        throw error
-      }
+    async (userId: string, examId: string) => {
+      return await getUserRoleInExam(userId, examId)
     }
   )
 
   // Check if user is exam owner
-  ipcMain.handle(
+  registerHandler(
     "user-exam:is-owner",
-    async (_event, userId: string, examId: string) => {
-      try {
-        return await isExamOwner(userId, examId)
-      } catch (error) {
-        console.error("IPC user-exam:is-owner error:", error)
-        throw error
-      }
+    async (userId: string, examId: string) => {
+      return await isExamOwner(userId, examId)
     }
   )
 
   // Check if user is exam member
-  ipcMain.handle(
+  registerHandler(
     "user-exam:is-member",
-    async (_event, userId: string, examId: string) => {
-      try {
-        return await isExamMember(userId, examId)
-      } catch (error) {
-        console.error("IPC user-exam:is-member error:", error)
-        throw error
-      }
+    async (userId: string, examId: string) => {
+      return await isExamMember(userId, examId)
     }
   )
 
   // Set exam owner (when creating exam)
-  ipcMain.handle(
-    "user-exam:set-owner",
-    async (_event, options: SetOwnerOptions) => {
-      try {
-        return await setExamOwner(options)
-      } catch (error) {
-        console.error("IPC user-exam:set-owner error:", error)
-        throw error
-      }
-    }
-  )
+  registerHandler("user-exam:set-owner", async (options: SetOwnerOptions) => {
+    return await setExamOwner(options)
+  })
 
   // Invite a member to exam
-  ipcMain.handle(
-    "user-exam:invite",
-    async (_event, options: InviteMemberOptions) => {
-      try {
-        return await inviteExamMember(options)
-      } catch (error) {
-        console.error("IPC user-exam:invite error:", error)
-        throw error
-      }
-    }
-  )
+  registerHandler("user-exam:invite", async (options: InviteMemberOptions) => {
+    return await inviteExamMember(options)
+  })
 
   // Remove a member from exam
-  ipcMain.handle(
+  registerHandler(
     "user-exam:remove",
-    async (_event, examId: string, userId: string, removedBy: string) => {
-      try {
-        return await removeExamMember(examId, userId, removedBy)
-      } catch (error) {
-        console.error("IPC user-exam:remove error:", error)
-        throw error
-      }
+    async (examId: string, userId: string, removedBy: string) => {
+      return await removeExamMember(examId, userId, removedBy)
     }
   )
 
   // Transfer exam ownership
-  ipcMain.handle(
+  registerHandler(
     "user-exam:transfer-ownership",
-    async (
-      _event,
-      examId: string,
-      newOwnerId: string,
-      currentOwnerId: string
-    ) => {
-      try {
-        return await transferOwnership(examId, newOwnerId, currentOwnerId)
-      } catch (error) {
-        console.error("IPC user-exam:transfer-ownership error:", error)
-        throw error
-      }
+    async (examId: string, newOwnerId: string, currentOwnerId: string) => {
+      return await transferOwnership(examId, newOwnerId, currentOwnerId)
     }
   )
 
   // Get all exams for a user
-  ipcMain.handle("user-exam:get-user-exams", async (_event, userId: string) => {
-    try {
-      return await getUserExams(userId)
-    } catch (error) {
-      console.error("IPC user-exam:get-user-exams error:", error)
-      throw error
-    }
+  registerHandler("user-exam:get-user-exams", async (userId: string) => {
+    return await getUserExams(userId)
   })
 
   // Get exam owner
-  ipcMain.handle("user-exam:get-owner", async (_event, examId: string) => {
-    try {
-      return await getExamOwner(examId)
-    } catch (error) {
-      console.error("IPC user-exam:get-owner error:", error)
-      throw error
-    }
+  registerHandler("user-exam:get-owner", async (examId: string) => {
+    return await getExamOwner(examId)
   })
 
   // Search users for invitation
-  ipcMain.handle(
+  registerHandler(
     "user-exam:search-users",
-    async (_event, examId: string, query: string) => {
-      try {
-        return await searchUsersForInvitation(examId, query)
-      } catch (error) {
-        console.error("IPC user-exam:search-users error:", error)
-        throw error
-      }
+    async (examId: string, query: string) => {
+      return await searchUsersForInvitation(examId, query)
     }
   )
 }

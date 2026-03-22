@@ -26,6 +26,7 @@ import {
   resetUserKeyboardShortcuts,
   setUserPreference,
 } from "../lib/prisma/userSettings"
+import { registerSafeHandler } from "./ipcHandlerUtils"
 
 // プロジェクターモード用のpowerSaveBlocker ID
 let projectorModeBlockerId: number | null = null
@@ -35,39 +36,29 @@ export function registerSettingsHandlers() {
   // プロジェクターモード（スクリーンセーバー無効化）
   // =========================================================================
 
-  ipcMain.handle(
-    "settings:setProjectorMode",
-    async (_event, enabled: boolean) => {
-      try {
-        if (enabled) {
-          if (
-            projectorModeBlockerId !== null &&
-            powerSaveBlocker.isStarted(projectorModeBlockerId)
-          ) {
-            return { success: true, active: true }
-          }
-          projectorModeBlockerId = powerSaveBlocker.start(
-            "prevent-display-sleep"
-          )
-          return { success: true, active: true }
-        } else {
-          if (
-            projectorModeBlockerId !== null &&
-            powerSaveBlocker.isStarted(projectorModeBlockerId)
-          ) {
-            powerSaveBlocker.stop(projectorModeBlockerId)
-          }
-          projectorModeBlockerId = null
-          return { success: true, active: false }
-        }
-      } catch (error) {
-        console.error("Failed to set projector mode:", error)
-        return { success: false, error: String(error) }
+  registerSafeHandler("settings:setProjectorMode", async (enabled: boolean) => {
+    if (enabled) {
+      if (
+        projectorModeBlockerId !== null &&
+        powerSaveBlocker.isStarted(projectorModeBlockerId)
+      ) {
+        return { success: true, active: true }
       }
+      projectorModeBlockerId = powerSaveBlocker.start("prevent-display-sleep")
+      return { success: true, active: true }
+    } else {
+      if (
+        projectorModeBlockerId !== null &&
+        powerSaveBlocker.isStarted(projectorModeBlockerId)
+      ) {
+        powerSaveBlocker.stop(projectorModeBlockerId)
+      }
+      projectorModeBlockerId = null
+      return { success: true, active: false }
     }
-  )
+  })
 
-  ipcMain.handle("settings:getProjectorMode", async () => {
+  registerSafeHandler("settings:getProjectorMode", async () => {
     const active =
       projectorModeBlockerId !== null &&
       powerSaveBlocker.isStarted(projectorModeBlockerId)
@@ -76,6 +67,8 @@ export function registerSettingsHandlers() {
 
   // =========================================================================
   // フルスクリーン制御
+  // NOTE: These handlers use event.sender to get the BrowserWindow,
+  //       so they cannot use the registerHandler wrapper.
   // =========================================================================
 
   ipcMain.handle("settings:getFullScreen", async (event) => {
@@ -95,7 +88,7 @@ export function registerSettingsHandlers() {
       }
       return { success: true }
     } catch (error) {
-      console.error("Failed to set fullscreen:", error)
+      console.error("Error in IPC handler [settings:setFullScreen]:", error)
       return { success: false, error: String(error) }
     }
   })
@@ -104,42 +97,27 @@ export function registerSettingsHandlers() {
   // UserKeyboardShortcut
   // =========================================================================
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:getUserKeyboardShortcuts",
-    async (_event, userId: string) => {
-      try {
-        const shortcuts = await getUserKeyboardShortcuts(userId)
-        return { success: true, shortcuts }
-      } catch (error) {
-        console.error("Failed to get keyboard shortcuts:", error)
-        return { success: false, error: String(error) }
-      }
+    async (userId: string) => {
+      const shortcuts = await getUserKeyboardShortcuts(userId)
+      return { success: true, shortcuts }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:saveUserKeyboardShortcuts",
-    async (_event, userId: string, shortcuts: Record<string, string>) => {
-      try {
-        await bulkUpsertUserKeyboardShortcuts(userId, shortcuts)
-        return { success: true }
-      } catch (error) {
-        console.error("Failed to save keyboard shortcuts:", error)
-        return { success: false, error: String(error) }
-      }
+    async (userId: string, shortcuts: Record<string, string>) => {
+      await bulkUpsertUserKeyboardShortcuts(userId, shortcuts)
+      return { success: true }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:resetUserKeyboardShortcuts",
-    async (_event, userId: string) => {
-      try {
-        await resetUserKeyboardShortcuts(userId)
-        return { success: true }
-      } catch (error) {
-        console.error("Failed to reset keyboard shortcuts:", error)
-        return { success: false, error: String(error) }
-      }
+    async (userId: string) => {
+      await resetUserKeyboardShortcuts(userId)
+      return { success: true }
     }
   )
 
@@ -147,72 +125,44 @@ export function registerSettingsHandlers() {
   // UserPreference（KV方式）
   // =========================================================================
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:getUserPreference",
-    async (_event, userId: string, key: string) => {
-      try {
-        const value = await getUserPreference(userId, key)
-        return { success: true, value }
-      } catch (error) {
-        console.error(`Failed to get user preference [${key}]:`, error)
-        return { success: false, error: String(error) }
-      }
+    async (userId: string, key: string) => {
+      const value = await getUserPreference(userId, key)
+      return { success: true, value }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:setUserPreference",
-    async (_event, userId: string, key: string, value: string) => {
-      try {
-        await setUserPreference(userId, key, value)
-        return { success: true }
-      } catch (error) {
-        console.error(`Failed to set user preference [${key}]:`, error)
-        return { success: false, error: String(error) }
-      }
+    async (userId: string, key: string, value: string) => {
+      await setUserPreference(userId, key, value)
+      return { success: true }
     }
   )
 
-  ipcMain.handle(
-    "settings:getUserPreferences",
-    async (_event, userId: string) => {
-      try {
-        const preferences = await getUserPreferences(userId)
-        return { success: true, preferences }
-      } catch (error) {
-        console.error("Failed to get user preferences:", error)
-        return { success: false, error: String(error) }
-      }
-    }
-  )
+  registerSafeHandler("settings:getUserPreferences", async (userId: string) => {
+    const preferences = await getUserPreferences(userId)
+    return { success: true, preferences }
+  })
 
   // =========================================================================
   // ExamMarkingFormat
   // =========================================================================
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:getExamMarkingFormats",
-    async (_event, examId: string) => {
-      try {
-        const formats = await getExamMarkingFormats(examId)
-        return { success: true, formats }
-      } catch (error) {
-        console.error("Failed to get marking formats:", error)
-        return { success: false, error: String(error) }
-      }
+    async (examId: string) => {
+      const formats = await getExamMarkingFormats(examId)
+      return { success: true, formats }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:saveExamMarkingFormats",
-    async (_event, examId: string, formats: MarkingFormatData[]) => {
-      try {
-        await bulkUpsertExamMarkingFormats(examId, formats)
-        return { success: true }
-      } catch (error) {
-        console.error("Failed to save marking formats:", error)
-        return { success: false, error: String(error) }
-      }
+    async (examId: string, formats: MarkingFormatData[]) => {
+      await bulkUpsertExamMarkingFormats(examId, formats)
+      return { success: true }
     }
   )
 
@@ -220,29 +170,19 @@ export function registerSettingsHandlers() {
   // ExamExportSettings
   // =========================================================================
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:getExamExportSettings",
-    async (_event, examId: string) => {
-      try {
-        const settings = await getExamExportSettings(examId)
-        return { success: true, settings }
-      } catch (error) {
-        console.error("Failed to get export settings:", error)
-        return { success: false, error: String(error) }
-      }
+    async (examId: string) => {
+      const settings = await getExamExportSettings(examId)
+      return { success: true, settings }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:saveExamExportSettings",
-    async (_event, examId: string, settings: Record<string, unknown>) => {
-      try {
-        await upsertExamExportSettings(examId, settings)
-        return { success: true }
-      } catch (error) {
-        console.error("Failed to save export settings:", error)
-        return { success: false, error: String(error) }
-      }
+    async (examId: string, settings: Record<string, unknown>) => {
+      await upsertExamExportSettings(examId, settings)
+      return { success: true }
     }
   )
 
@@ -250,55 +190,35 @@ export function registerSettingsHandlers() {
   // CropRegionMarkingOverride (機能H)
   // =========================================================================
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:getCropRegionMarkingOverrides",
-    async (_event, cropRegionId: string) => {
-      try {
-        const overrides = await getCropRegionMarkingOverrides(cropRegionId)
-        return { success: true, overrides }
-      } catch (error) {
-        console.error("Failed to get marking overrides:", error)
-        return { success: false, error: String(error) }
-      }
+    async (cropRegionId: string) => {
+      const overrides = await getCropRegionMarkingOverrides(cropRegionId)
+      return { success: true, overrides }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:saveCropRegionMarkingOverrides",
-    async (_event, cropRegionId: string, overrides: MarkingOverrideData[]) => {
-      try {
-        await bulkUpsertCropRegionMarkingOverrides(cropRegionId, overrides)
-        return { success: true }
-      } catch (error) {
-        console.error("Failed to save marking overrides:", error)
-        return { success: false, error: String(error) }
-      }
+    async (cropRegionId: string, overrides: MarkingOverrideData[]) => {
+      await bulkUpsertCropRegionMarkingOverrides(cropRegionId, overrides)
+      return { success: true }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:resetCropRegionMarkingOverrides",
-    async (_event, cropRegionId: string) => {
-      try {
-        await resetCropRegionMarkingOverrides(cropRegionId)
-        return { success: true }
-      } catch (error) {
-        console.error("Failed to reset marking overrides:", error)
-        return { success: false, error: String(error) }
-      }
+    async (cropRegionId: string) => {
+      await resetCropRegionMarkingOverrides(cropRegionId)
+      return { success: true }
     }
   )
 
-  ipcMain.handle(
+  registerSafeHandler(
     "settings:getExamCropRegionMarkingOverrides",
-    async (_event, examId: string) => {
-      try {
-        const overrides = await getExamCropRegionMarkingOverrides(examId)
-        return { success: true, overrides }
-      } catch (error) {
-        console.error("Failed to get exam marking overrides:", error)
-        return { success: false, error: String(error) }
-      }
+    async (examId: string) => {
+      const overrides = await getExamCropRegionMarkingOverrides(examId)
+      return { success: true, overrides }
     }
   )
 }

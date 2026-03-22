@@ -20,41 +20,36 @@ import {
 } from "../lib/pdf-tools/pdfRotator"
 import { splitPdf } from "../lib/pdf-tools/pdfSplitter"
 import { exportPagesToPng } from "../lib/pdf-tools/pdfToPng"
+import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 export function setupPdfToolsHandlers(): void {
   // PDF結合
-  ipcMain.handle(
+  registerHandler(
     "pdf-tools:merge-pdfs",
-    async (
-      _event,
-      options: {
-        pages: MergePageInput[]
-        outputPath: string
-      }
-    ): Promise<PdfToolsResult> => {
+    async (options: {
+      pages: MergePageInput[]
+      outputPath: string
+    }): Promise<PdfToolsResult> => {
       return await mergePdfs(options.pages, options.outputPath)
     }
   )
 
   // PDF分割
-  ipcMain.handle(
+  registerHandler(
     "pdf-tools:split-pdf",
-    async (
-      _event,
-      options: {
-        filePath: string
-        outputDir: string
-        prefix?: string
-      }
-    ): Promise<PdfToolsResult> => {
+    async (options: {
+      filePath: string
+      outputDir: string
+      prefix?: string
+    }): Promise<PdfToolsResult> => {
       return await splitPdf(options.filePath, options.outputDir, options.prefix)
     }
   )
 
   // 2-in-1変換
-  ipcMain.handle(
+  registerHandler(
     "pdf-tools:apply-nup",
-    async (_event, options: NUpOptions): Promise<PdfToolsResult> => {
+    async (options: NUpOptions): Promise<PdfToolsResult> => {
       return await applyNUp(
         options.filePath,
         options.layout,
@@ -65,16 +60,13 @@ export function setupPdfToolsHandlers(): void {
   )
 
   // ページ回転
-  ipcMain.handle(
+  registerHandler(
     "pdf-tools:rotate-pages",
-    async (
-      _event,
-      options: {
-        filePath: string
-        rotations: RotatePageInput[]
-        outputPath: string
-      }
-    ): Promise<PdfToolsResult> => {
+    async (options: {
+      filePath: string
+      rotations: RotatePageInput[]
+      outputPath: string
+    }): Promise<PdfToolsResult> => {
       return await rotatePdfPages(
         options.filePath,
         options.rotations,
@@ -84,24 +76,22 @@ export function setupPdfToolsHandlers(): void {
   )
 
   // PNG書き出し
-  ipcMain.handle(
+  registerHandler(
     "pdf-tools:export-as-png",
-    async (
-      _event,
-      options: {
-        imageBuffers: {
-          buffer: Buffer
-          name: string
-          rotation?: RotationDegree
-        }[]
-        outputDir: string
-      }
-    ): Promise<PdfToolsResult> => {
+    async (options: {
+      imageBuffers: {
+        buffer: Buffer
+        name: string
+        rotation?: RotationDegree
+      }[]
+      outputDir: string
+    }): Promise<PdfToolsResult> => {
       return await exportPagesToPng(options.imageBuffers, options.outputDir)
     }
   )
 
   // ファイル選択ダイアログ（インポート用）
+  // NOTE: Uses BrowserWindow.getFocusedWindow(), kept as manual ipcMain.handle
   ipcMain.handle(
     "pdf-tools:select-files",
     async (): Promise<{
@@ -123,17 +113,16 @@ export function setupPdfToolsHandlers(): void {
 
         return { success: true, filePaths: result.filePaths }
       } catch (error) {
-        console.error("File select dialog error:", error)
+        console.error("Error in IPC handler [pdf-tools:select-files]:", error)
         return { success: false }
       }
     }
   )
 
   // PDFファイル情報を取得
-  ipcMain.handle(
+  registerSafeHandler(
     "pdf-tools:get-pdf-info",
     async (
-      _event,
       filePath: string
     ): Promise<{
       success: boolean
@@ -141,28 +130,21 @@ export function setupPdfToolsHandlers(): void {
       name?: string
       error?: string
     }> => {
-      try {
-        if (!fs.existsSync(filePath)) {
-          return { success: false, error: `File not found: ${filePath}` }
-        }
-
-        const fileBuffer = fs.readFileSync(filePath)
-        const pdfDoc = await PDFDocument.load(fileBuffer)
-        const pageCount = pdfDoc.getPageCount()
-        const name = path.basename(filePath)
-
-        return { success: true, pageCount, name }
-      } catch (error) {
-        console.error("PDF info error:", error)
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        }
+      if (!fs.existsSync(filePath)) {
+        return { success: false, error: `File not found: ${filePath}` }
       }
+
+      const fileBuffer = fs.readFileSync(filePath)
+      const pdfDoc = await PDFDocument.load(fileBuffer)
+      const pageCount = pdfDoc.getPageCount()
+      const name = path.basename(filePath)
+
+      return { success: true, pageCount, name }
     }
   )
 
   // 保存パス選択ダイアログ
+  // NOTE: Uses BrowserWindow.getFocusedWindow(), kept as manual ipcMain.handle
   ipcMain.handle(
     "pdf-tools:select-save-path",
     async (
@@ -200,7 +182,10 @@ export function setupPdfToolsHandlers(): void {
           return { success: true, path: result.filePaths[0] }
         }
       } catch (error) {
-        console.error("Dialog error:", error)
+        console.error(
+          "Error in IPC handler [pdf-tools:select-save-path]:",
+          error
+        )
         return {
           success: false,
           canceled: false,
