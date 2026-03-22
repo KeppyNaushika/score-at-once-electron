@@ -51,8 +51,16 @@ function broadcastSyncStatus(): void {
   }
 }
 
+/** enforceTombstonesの対象テーブル名（SYNC_TABLESからDeletedRecord自身を除外） */
+const TOMBSTONE_TARGET_TABLES = new Set(
+  SYNC_TABLES.filter((t) => t.name !== "DeletedRecord").map((t) => t.name)
+)
+
 /**
  * sync後のtombstone適用
+ *
+ * DeletedRecordに記録された全テーブルの削除済みレコードを物理削除する。
+ * SQLインジェクション防止のため、SYNC_TABLESに含まれるテーブル名のみ許可。
  */
 function enforceTombstones(db: Database.Database): void {
   try {
@@ -63,11 +71,10 @@ function enforceTombstones(db: Database.Database): void {
       .all() as Array<{ recordId: string; tableName: string }>
 
     for (const { recordId, tableName } of tombstones) {
-      if (tableName === "DrawingAnnotation") {
-        db.prepare(`DELETE FROM "DrawingAnnotation" WHERE "id" = ?`).run(
-          recordId
-        )
-      }
+      if (!TOMBSTONE_TARGET_TABLES.has(tableName)) continue
+
+      // テーブル名はSYNC_TABLESのホワイトリストで検証済みのため安全
+      db.prepare(`DELETE FROM "${tableName}" WHERE "id" = ?`).run(recordId)
     }
   } catch (error) {
     console.error("Failed to enforce tombstones:", error)

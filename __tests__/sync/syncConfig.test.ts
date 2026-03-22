@@ -6,18 +6,21 @@ import * as fs from "fs"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+// テスト用ディレクトリ
+const TEST_DATA_DIR = path.join("/tmp", `sync-test-${Date.now()}`)
+const TEST_USER_DATA_DIR = path.join("/tmp", `sync-test-userdata-${Date.now()}`)
+
 // electronのapp.getPathをモック
 vi.mock("electron", () => ({
   app: {
     getPath: (name: string) => {
-      if (name === "userData") return "/tmp/test-userdata"
+      if (name === "userData") return TEST_USER_DATA_DIR
       return "/tmp/test"
     },
   },
 }))
 
 // dataManagerをモック（テスト用データディレクトリ）
-const TEST_DATA_DIR = path.join("/tmp", `sync-test-${Date.now()}`)
 vi.mock("../../electron-src/lib/dataManager", () => ({
   getDataDirectory: () => TEST_DATA_DIR,
 }))
@@ -39,11 +42,17 @@ describe("syncConfig", () => {
     if (!fs.existsSync(TEST_DATA_DIR)) {
       fs.mkdirSync(TEST_DATA_DIR, { recursive: true })
     }
+    if (!fs.existsSync(TEST_USER_DATA_DIR)) {
+      fs.mkdirSync(TEST_USER_DATA_DIR, { recursive: true })
+    }
   })
 
   afterEach(() => {
     if (fs.existsSync(TEST_DATA_DIR)) {
       fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true })
+    }
+    if (fs.existsSync(TEST_USER_DATA_DIR)) {
+      fs.rmSync(TEST_USER_DATA_DIR, { recursive: true, force: true })
     }
   })
 
@@ -57,12 +66,14 @@ describe("syncConfig", () => {
     })
 
     it("getLocalDbDirectoryがuserData/score-at-onceを返す", () => {
-      expect(getLocalDbDirectory()).toBe("/tmp/test-userdata/score-at-once")
+      expect(getLocalDbDirectory()).toBe(
+        path.join(TEST_USER_DATA_DIR, "score-at-once")
+      )
     })
 
     it("getLocalDbPathがuserData/score-at-once/database.dbを返す", () => {
       expect(getLocalDbPath()).toBe(
-        "/tmp/test-userdata/score-at-once/database.db"
+        path.join(TEST_USER_DATA_DIR, "score-at-once", "database.db")
       )
     })
   })
@@ -87,7 +98,7 @@ describe("syncConfig", () => {
     })
 
     it("不正なJSONの場合はデフォルトを返す", () => {
-      const configPath = path.join(TEST_DATA_DIR, "sync-config.json")
+      const configPath = path.join(TEST_USER_DATA_DIR, "sync-config.json")
       fs.writeFileSync(configPath, "invalid json", "utf-8")
 
       const config = loadSyncConfig()
