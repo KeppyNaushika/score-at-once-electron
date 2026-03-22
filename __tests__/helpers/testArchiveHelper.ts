@@ -210,6 +210,7 @@ export function createMinimalCollectedData(
     subtotalsData: { subtotalGroups: [], subtotals: [], cropSubtotals: [] },
     scoresData: { questionScores: [], drawingAnnotations: [] },
     subjectsData: { subjects: [], subjectSubtotalGroups: [] },
+    deletedRecordsData: { deletedRecords: [] },
     counts: {
       students: 0,
       classes: 0,

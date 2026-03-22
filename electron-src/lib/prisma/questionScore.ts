@@ -1,6 +1,7 @@
 import { Decimal } from "@prisma/client/runtime/library"
 
 import prisma from "./client"
+import { recordDrawingAnnotationDeletionsForQuestionScores } from "./deletedRecord"
 
 /**
  * 実際の得点を計算する関数
@@ -302,6 +303,9 @@ export const updateQuestionScore = async (
  */
 export const deleteQuestionScore = async (id: string) => {
   try {
+    // cascade削除前にDrawingAnnotationのtombstoneを記録
+    await recordDrawingAnnotationDeletionsForQuestionScores([id])
+
     await prisma.questionScore.delete({
       where: { id },
     })
@@ -372,6 +376,22 @@ export const finalizeQuestionScore = async (
 ) => {
   try {
     return await prisma.$transaction(async (tx) => {
+      // 既存の最終決定レコードのIDを取得してtombstone記録
+      const existingFinals = await tx.questionScore.findMany({
+        where: {
+          studentId: studentId,
+          cropRegionId: cropRegionId,
+          status: "final",
+        },
+        select: { id: true },
+      })
+      if (existingFinals.length > 0) {
+        await recordDrawingAnnotationDeletionsForQuestionScores(
+          existingFinals.map((s) => s.id),
+          { tx }
+        )
+      }
+
       // 既存の最終決定レコードを削除
       await tx.questionScore.deleteMany({
         where: {
@@ -527,9 +547,6 @@ export const getExamProgress = async (examId: string) => {
   }
 }
 
-/**
- * QuestionScoreを一括upsert（OMR自動採点結果の反映）
- */
 export interface BatchScoreEntry {
   studentId: string
   cropRegionId: string
@@ -538,6 +555,7 @@ export interface BatchScoreEntry {
   userId: string
 }
 
+/** 採点データをトランザクション内で一括upsertする（OMR自動採点結果の反映用） */
 export async function batchUpdateQuestionScores(
   entries: BatchScoreEntry[]
 ): Promise<{ success: boolean; updatedCount: number; error?: string }> {

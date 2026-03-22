@@ -292,6 +292,7 @@ export function createExtractedArchiveData(
     subtotalsData: overrides.subtotalsData ?? createArchiveSubtotalsData(),
     scoresData: overrides.scoresData ?? createArchiveScoresData(),
     subjectsData: overrides.subjectsData ?? createArchiveSubjectsData(),
+    deletedRecordsData: { deletedRecords: [] },
     tempDir: "/tmp/test-archive",
     masterImagePaths: [],
     answerSheetPaths: [],

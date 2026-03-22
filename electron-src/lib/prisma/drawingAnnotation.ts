@@ -12,6 +12,10 @@ import type {
   DrawingUpdateData,
 } from "../../../src/types/drawingAnnotation.types"
 import prisma from "./client"
+import {
+  recordDeletion,
+  recordDrawingAnnotationDeletionsBeforeDelete,
+} from "./deletedRecord"
 
 /**
  * 描画アノテーションを作成する
@@ -447,9 +451,34 @@ export async function updateDrawingAnnotation(
  */
 export async function deleteDrawingAnnotation(id: string): Promise<void> {
   try {
+    // 削除前にtombstone記録用の情報を取得
+    const annotation = await prisma.drawingAnnotation.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        questionScore: {
+          select: {
+            cropRegion: {
+              select: {
+                examPage: {
+                  select: { examId: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
     await prisma.drawingAnnotation.delete({
       where: { id },
     })
+
+    // tombstone記録（削除成功後）
+    if (annotation) {
+      const examId = annotation.questionScore.cropRegion.examPage.examId
+      await recordDeletion("DrawingAnnotation", id, { examId })
+    }
   } catch (error) {
     console.error("描画アノテーション削除エラー:", error)
     throw error
@@ -467,12 +496,15 @@ export async function deleteDrawingAnnotationsByQuestionScore(
   type?: DrawingType
 ): Promise<void> {
   try {
-    await prisma.drawingAnnotation.deleteMany({
-      where: {
-        questionScoreId,
-        ...(type && { type }),
-      },
-    })
+    const where = {
+      questionScoreId,
+      ...(type && { type }),
+    }
+
+    // 削除前にtombstone記録
+    await recordDrawingAnnotationDeletionsBeforeDelete(where)
+
+    await prisma.drawingAnnotation.deleteMany({ where })
   } catch (error) {
     console.error("描画アノテーション一括削除エラー:", error)
     throw error

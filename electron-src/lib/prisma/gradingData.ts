@@ -1,4 +1,5 @@
 import prisma from "./client"
+import { recordDrawingAnnotationDeletionsForQuestionScores } from "./deletedRecord"
 
 export interface GradingDataInfo {
   hasData: boolean
@@ -96,6 +97,21 @@ export const deleteAllGradingDataForStudent = async (
 ): Promise<void> => {
   try {
     await prisma.$transaction(async (tx) => {
+      // cascade削除前にDrawingAnnotationのtombstoneを記録
+      const affectedScores = await tx.questionScore.findMany({
+        where: {
+          studentId,
+          cropRegion: { examPage: { examId } },
+        },
+        select: { id: true },
+      })
+      if (affectedScores.length > 0) {
+        await recordDrawingAnnotationDeletionsForQuestionScores(
+          affectedScores.map((s) => s.id),
+          { tx }
+        )
+      }
+
       // 1. 設問別採点結果を削除
       await tx.questionScore.deleteMany({
         where: {
