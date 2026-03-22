@@ -7,6 +7,7 @@
 import type {
   ArchiveClassesData,
   ArchiveDataCounts,
+  ArchiveDeletedRecordsData,
   ArchiveExamData,
   ArchiveScoresData,
   ArchiveStudentsData,
@@ -28,6 +29,7 @@ export interface CollectedData {
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
   subjectsData: ArchiveSubjectsData
+  deletedRecordsData: ArchiveDeletedRecordsData
   counts: ArchiveDataCounts
   /** マスター画像の相対パス一覧 */
   masterImagePaths: string[]
@@ -555,7 +557,22 @@ export async function collectExamData(
       })),
     }
 
-    // 11. 件数を集計
+    // 11. 削除記録を取得
+    const deletedRecords = await prisma.deletedRecord.findMany({
+      where: { examId },
+    })
+    const deletedRecordsData: ArchiveDeletedRecordsData = {
+      deletedRecords: deletedRecords.map((dr) => ({
+        id: dr.id,
+        tableName: dr.tableName,
+        recordId: dr.recordId,
+        deletedAt: dr.deletedAt.toISOString(),
+        userId: dr.userId,
+        examId: dr.examId,
+      })),
+    }
+
+    // 12. 件数を集計
     const counts: ArchiveDataCounts = {
       students: students.length,
       classes: classes.length,
@@ -579,6 +596,7 @@ export async function collectExamData(
         subtotalsData,
         scoresData,
         subjectsData,
+        deletedRecordsData,
         counts,
         masterImagePaths,
         answerSheetPaths,

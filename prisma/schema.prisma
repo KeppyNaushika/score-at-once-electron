@@ -288,6 +288,19 @@ model DrawingAnnotation {
   @@index([isFavorite])
 }
 
+model DeletedRecord {
+  id        String   @id @default(uuid())
+  tableName String
+  recordId  String
+  deletedAt DateTime @default(now())
+  userId    String?
+  examId    String?
+
+  @@unique([tableName, recordId])
+  @@index([examId])
+  @@index([deletedAt])
+}
+
 model ExamClass {
   id           String   @id @default(uuid())
   examId       String

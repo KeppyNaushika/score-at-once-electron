@@ -882,6 +882,20 @@ export interface ArchiveSubjectsData {
   }>
 }
 
+/**
+ * 削除記録データ (deleted-records.json) - v1.9.0+
+ */
+export interface ArchiveDeletedRecordsData {
+  deletedRecords: Array<{
+    id: string
+    tableName: string
+    recordId: string
+    deletedAt: string
+    userId: string | null
+    examId: string | null
+  }>
+}
+
 // =============================================================================
 // Import Wizard State
 // =============================================================================

@@ -6,6 +6,7 @@
 import type { QuestionScore } from "@prisma/client"
 
 import prisma from "../client"
+import { recordDrawingAnnotationDeletionsForQuestionScores } from "../deletedRecord"
 
 /**
  * 複数の答案の配置を一括で変更（採点情報の移行も対応）
@@ -64,6 +65,14 @@ export async function batchUpdateStudentAnswerPlacements(
               studentId: { in: studentIds },
             },
           })
+
+          // cascade削除前にDrawingAnnotationのtombstoneを記録
+          const scoreIds = allQuestionScores.map((s) => s.id)
+          if (scoreIds.length > 0) {
+            await recordDrawingAnnotationDeletionsForQuestionScores(scoreIds, {
+              tx,
+            })
+          }
 
           // 一時的に採点データを削除（制約回避）
           await tx.questionScore.deleteMany({
@@ -196,6 +205,17 @@ export async function swapStudentAnswerPlacementsWithScoring(
           where: { studentId: answerSheet2.studentId },
         }),
       ])
+
+      // cascade削除前にDrawingAnnotationのtombstoneを記録
+      const allScoreIds = [
+        ...questionScores1.map((s) => s.id),
+        ...questionScores2.map((s) => s.id),
+      ]
+      if (allScoreIds.length > 0) {
+        await recordDrawingAnnotationDeletionsForQuestionScores(allScoreIds, {
+          tx,
+        })
+      }
 
       // 採点データを一時的に削除（制約回避のため）
       await Promise.all([

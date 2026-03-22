@@ -11,6 +11,7 @@ import * as path from "path"
 
 import type {
   ArchiveClassesData,
+  ArchiveDeletedRecordsData,
   ArchiveExamData,
   ArchiveManifest,
   ArchiveScoresData,
@@ -40,6 +41,8 @@ export interface ExtractedArchiveData {
   scoresData: ArchiveScoresData
   /** 教科データ (v1.4.0+) */
   subjectsData: ArchiveSubjectsData
+  /** 削除記録データ (v1.9.0+) */
+  deletedRecordsData: ArchiveDeletedRecordsData
   /** 一時展開ディレクトリパス */
   tempDir: string
   /** マスター画像のパス一覧 (展開後のフルパス) */
@@ -111,6 +114,12 @@ export async function extractArchive(archivePath: string): Promise<{
       "subjects.json"
     ) ?? { subjects: [], subjectSubtotalGroups: [] }
 
+    // v1.9.0+: 削除記録データ（存在しない場合はデフォルト値）
+    const deletedRecordsData = readJsonFile<ArchiveDeletedRecordsData>(
+      tempDir,
+      "deleted-records.json"
+    ) ?? { deletedRecords: [] }
+
     if (
       !examData ||
       !studentsData ||
@@ -141,6 +150,7 @@ export async function extractArchive(archivePath: string): Promise<{
         subtotalsData,
         scoresData,
         subjectsData,
+        deletedRecordsData,
         tempDir,
         masterImagePaths,
         answerSheetPaths,

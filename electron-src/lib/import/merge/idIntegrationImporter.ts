@@ -219,7 +219,10 @@ export async function executeIdIntegrationImport(
           tx
         )
 
-        // 13. DrawingAnnotation
+        // 12a. 削除記録の処理（tombstone伝搬）
+        await processDeletedRecords(data, tx)
+
+        // 13. DrawingAnnotation（tombstoneチェック付き）
         await processDrawingAnnotations(
           data,
           currentUserId,
@@ -851,6 +854,41 @@ async function processQuestionScores(
   }
 }
 
+async function processDeletedRecords(
+  data: ExtractedArchiveData,
+  tx: Tx
+): Promise<void> {
+  const deletedRecords = data.deletedRecordsData?.deletedRecords ?? []
+  if (deletedRecords.length === 0) return
+
+  for (const dr of deletedRecords) {
+    // tombstoneをローカルDBにupsert
+    await tx.deletedRecord.upsert({
+      where: {
+        tableName_recordId: {
+          tableName: dr.tableName,
+          recordId: dr.recordId,
+        },
+      },
+      update: {},
+      create: {
+        tableName: dr.tableName,
+        recordId: dr.recordId,
+        deletedAt: new Date(dr.deletedAt),
+        userId: dr.userId,
+        examId: dr.examId,
+      },
+    })
+
+    // ローカルに該当レコードが残っていれば削除（削除の伝搬）
+    if (dr.tableName === "DrawingAnnotation") {
+      await tx.drawingAnnotation.deleteMany({
+        where: { id: dr.recordId },
+      })
+    }
+  }
+}
+
 async function processDrawingAnnotations(
   data: ExtractedArchiveData,
   currentUserId: string,
@@ -858,10 +896,23 @@ async function processDrawingAnnotations(
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
+  // tombstoneを一括取得してSetに格納
+  const localTombstones = await tx.deletedRecord.findMany({
+    where: { tableName: "DrawingAnnotation" },
+    select: { recordId: true },
+  })
+  const deletedIds = new Set(localTombstones.map((t) => t.recordId))
+
   for (const da of data.scoresData.drawingAnnotations) {
     const newScoreId = idMappings.questionScore[da.questionScoreId]
 
     if (newScoreId) {
+      // tombstoneチェック: 削除済みならスキップ
+      if (deletedIds.has(da.id)) {
+        counts.skipped.annotations++
+        continue
+      }
+
       const existingById = await tx.drawingAnnotation.findUnique({
         where: { id: da.id },
       })
