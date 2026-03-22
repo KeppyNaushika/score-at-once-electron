@@ -1,26 +1,6 @@
 import { useState } from "react"
 
-interface StudentWithMemberships {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    attendanceNumber?: number | null
-    notes?: string | null
-    class: {
-      id: string
-      name: string
-      classCode?: string | null
-    }
-  }>
-}
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentImportRow {
   studentNumber: string

@@ -20,32 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
-
-interface ClassWithMemberships {
-  id: string
-  name: string
-  classCode?: string | null
-  grade?: number | null
-  description?: string | null
-  subject?: string | null
-  isVisible?: boolean
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    subject?: string | null
-    notes?: string | null
-    attendanceNumber?: number | null
-    student: {
-      id: string
-      studentId: string
-      lastName: string
-      firstName: string
-      lastNameKana: string
-      firstNameKana: string
-    }
-  }>
-}
+import type { ClassWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
 interface ClassSortable {

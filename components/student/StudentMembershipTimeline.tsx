@@ -5,6 +5,7 @@ import { Calendar, Clock, Edit, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { StudentClassMembershipWithDetails } from "@/types/prismaExtensions"
 
 const formatDate = (date: Date) => {
   return new Date(date).toLocaleDateString("ja-JP", {
@@ -14,33 +15,9 @@ const formatDate = (date: Date) => {
   })
 }
 
-interface Membership {
-  id: string
-  studentId: string
-  classId: string
-  startDate: Date
-  endDate?: Date | null
-  attendanceNumber?: number | null
-  notes?: string | null
-  student: {
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-    lastNameKana: string
-    firstNameKana: string
-  }
-  class: {
-    id: string
-    name: string
-    classCode?: string | null
-    isVisible?: boolean
-  }
-}
-
 interface StudentMembershipTimelineProps {
-  memberships: Membership[]
-  onEditMembership: (membership: Membership) => void
+  memberships: StudentClassMembershipWithDetails[]
+  onEditMembership: (membership: StudentClassMembershipWithDetails) => void
   onEndMembership: (membershipId: string) => void
   showActions?: boolean
 }

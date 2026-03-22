@@ -2,18 +2,18 @@
 
 import { BookOpen, Calendar, Clock, Edit, PlusCircle } from "lucide-react"
 
-import {
-  Membership,
-  StudentWithMemberships,
-} from "@/app/students/[studentId]/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type {
+  StudentClassMembershipWithDetails,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
 
 interface CurrentMembershipsCardProps {
   student: StudentWithMemberships
   onAddMembership: () => void
-  onEditMembership: (membership: Membership) => void
+  onEditMembership: (membership: StudentClassMembershipWithDetails) => void
   onEndMembership: (membershipId: string) => void
 }
 
@@ -96,20 +96,10 @@ export function CurrentMembershipsCard({
                       size="icon"
                       className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
                       onClick={() => {
-                        const membershipWithIds: Membership = {
+                        onEditMembership({
                           ...membership,
-                          studentId: student.id,
-                          classId: membership.class.id,
-                          student: {
-                            id: student.id,
-                            studentNumber: student.studentNumber,
-                            lastName: student.lastName,
-                            firstName: student.firstName,
-                            lastNameKana: student.lastNameKana,
-                            firstNameKana: student.firstNameKana,
-                          },
-                        }
-                        onEditMembership(membershipWithIds)
+                          student,
+                        } as StudentClassMembershipWithDetails)
                       }}
                     >
                       <Edit className="h-4 w-4" />

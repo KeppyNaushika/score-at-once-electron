@@ -40,57 +40,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
-
-interface StudentWithMemberships {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    subject?: string | null
-    notes?: string | null
-    attendanceNumber?: number | null
-    class: {
-      id: string
-      name: string
-      classCode?: string | null
-      subject?: string | null
-      isVisible?: boolean
-    }
-  }>
-}
-
-interface ClassWithMemberships {
-  id: string
-  name: string
-  classCode?: string | null
-  grade?: number | null
-  description?: string | null
-  subject?: string | null
-  isVisible?: boolean
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    subject?: string | null
-    notes?: string | null
-    attendanceNumber?: number | null
-    student: {
-      id: string
-      studentId: string
-      lastName: string
-      firstName: string
-      lastNameKana: string
-      firstNameKana: string
-    }
-  }>
-}
+import type {
+  ClassWithMemberships,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
 
 // ソート用の型
 interface StudentSortable {

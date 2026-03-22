@@ -2,16 +2,16 @@
 
 import { Clock } from "lucide-react"
 
-import {
-  Membership,
-  StudentWithMemberships,
-} from "@/app/students/[studentId]/types"
 import StudentMembershipTimeline from "@/components/student/StudentMembershipTimeline"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type {
+  StudentClassMembershipWithDetails,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
 
 interface MembershipHistoryCardProps {
   student: StudentWithMemberships
-  onEditMembership: (membership: Membership) => void
+  onEditMembership: (membership: StudentClassMembershipWithDetails) => void
   onEndMembership: (membershipId: string) => void
 }
 
@@ -30,19 +30,13 @@ export function MembershipHistoryCard({
       </CardHeader>
       <CardContent>
         <StudentMembershipTimeline
-          memberships={student.memberships.map((m) => ({
-            ...m,
-            studentId: student.id,
-            classId: m.class.id,
-            student: {
-              id: student.id,
-              studentNumber: student.studentNumber,
-              lastName: student.lastName,
-              firstName: student.firstName,
-              lastNameKana: student.lastNameKana,
-              firstNameKana: student.firstNameKana,
-            },
-          }))}
+          memberships={student.memberships.map(
+            (m) =>
+              ({
+                ...m,
+                student,
+              }) as StudentClassMembershipWithDetails
+          )}
           onEditMembership={onEditMembership}
           onEndMembership={onEndMembership}
           showActions={true}

@@ -62,7 +62,7 @@ export const getQuestionGroupItemById = async (id: string) => {
   })
 }
 
-export type QuestionGroupItemWithDetails = Prisma.SubtotalGetPayload<{
+export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
   include: {
     subtotalGroup: true
     cropSubtotals: true

@@ -31,10 +31,6 @@ export interface SubtotalScoreResult {
   hasQuestionAssignments: boolean
 }
 
-export interface SubtotalTargetMap {
-  [subtotalRegionId: string]: number[]
-}
-
 /**
  * 生徒の小計点を計算する関数（PDFエクスポートと同じロジック）
  * GROUP内OR、GROUP間ANDのロジックを完全実装
@@ -293,19 +289,4 @@ export async function calculateSubtotalScoreBySubtotalId(
     )
     return { score: null, maxScore: 0, hasQuestionAssignments: false }
   }
-}
-
-/**
- * 小計点の対象設問インデックスを事前に構築する関数
- * @deprecated This function is deprecated as it depends on old schema logic
- */
-export async function buildSubtotalTargetMap(
-  _subtotalRegions: CropRegion[],
-  _questionRegions: CropRegion[]
-): Promise<SubtotalTargetMap> {
-  // 正誤一覧シートの互換性のため維持（点数一覧では使用されない）
-  console.warn(
-    "buildSubtotalTargetMap is deprecated and returns empty map - subtotal scores are now calculated directly"
-  )
-  return {}
 }

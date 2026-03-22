@@ -276,28 +276,3 @@ export type ExamSubtotalGroupWithSubtotalGroup =
 export type ExamSubtotalGroupWithExam = Prisma.ExamSubtotalGroupGetPayload<{
   include: { exam: true }
 }>
-
-// =============================================================================
-// 後方互換エイリアス
-// =============================================================================
-
-/** @deprecated Use ClassWithMemberships instead */
-export type ClassWithStudents = ClassWithMemberships
-
-/** @deprecated Use StudentWithMemberships instead */
-export type StudentWithClass = StudentWithMemberships
-
-/** @deprecated Use SubtotalGroupWithItems instead */
-export type QuestionGroupWithItems = SubtotalGroupWithItems
-
-/** @deprecated Use SubtotalWithDetails instead */
-export type QuestionGroupItemWithDetails = SubtotalWithDetails
-
-/** @deprecated Use CropSubtotalWithRelations instead */
-export type SubtotalDefinitionWithRelations = CropSubtotalWithRelations
-
-/** @deprecated Use CropSubtotalWithRelations instead */
-export type QuestionSubtotalAssignmentWithRelations = CropSubtotalWithRelations
-
-/** @deprecated Use ExamPageWithDetails instead */
-export type MasterAnswerPayload = ExamPageWithDetails
