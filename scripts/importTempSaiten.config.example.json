@@ -1,0 +1,24 @@
+{
+  "sourceBase": "/path/to/source/base",
+  "userId": "your-user-uuid",
+  "subject": "教科名",
+  "classMap": {
+    "1": "クラス名1",
+    "2": "クラス名2"
+  },
+  "examGroups": [
+    {
+      "name": "試験名",
+      "comment": "sourceBase + path + .temp_saiten/ でデータディレクトリを解決",
+      "pages": [{ "path": "relative/path/to/exam" }]
+    },
+    {
+      "name": "試験名2",
+      "comment": "dir で絶対パスを直接指定（sourceBase不要）",
+      "pages": [
+        { "dir": "/absolute/path/to/page1/data" },
+        { "dir": "/absolute/path/to/page2/data" }
+      ]
+    }
+  ]
+}

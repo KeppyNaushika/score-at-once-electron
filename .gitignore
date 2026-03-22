@@ -76,3 +76,7 @@ release-files/
 __tests__/screenshots/data/
 __tests__/screenshots/output/
 __tests__/screenshots/artifacts/
+
+# スクリプト設定ファイル（個人情報を含む）
+scripts/*.config.json
+!scripts/*.config.example.json
