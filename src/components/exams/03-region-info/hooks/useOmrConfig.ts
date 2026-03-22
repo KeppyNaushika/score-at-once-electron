@@ -11,12 +11,9 @@ export function useOmrConfig(examId: string) {
   const [omrConfigs, setOmrConfigs] = useState<
     Map<string, CropRegionOmrConfigWithOptions>
   >(new Map())
-  const [loading, setLoading] = useState(false)
-
   /** OMR設定をDBから読み込み */
   const loadOmrConfigs = useCallback(async () => {
     if (!examId) return
-    setLoading(true)
     try {
       const result = await window.electronAPI.omrConfig.getByExam(examId)
       if (result.success && result.configs) {
@@ -28,8 +25,6 @@ export function useOmrConfig(examId: string) {
       }
     } catch (error) {
       console.error("Failed to load OMR configs:", error)
-    } finally {
-      setLoading(false)
     }
   }, [examId])
 
@@ -96,16 +91,9 @@ export function useOmrConfig(examId: string) {
     [omrConfigs]
   )
 
-  /** OMR設定を持つCropRegionIDの集合 */
-  const omrCropRegionIds = new Set(omrConfigs.keys())
-
   return {
-    omrConfigs,
-    omrCropRegionIds,
-    loading,
     getOmrConfig,
     upsertOmrConfig,
     deleteOmrConfig,
-    loadOmrConfigs,
   }
 }

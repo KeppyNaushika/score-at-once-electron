@@ -21,7 +21,7 @@ interface StudentScore {
  * 生徒ごとのスコアデータをロードし、個別更新・一括更新をデバウンス付きで提供する。
  *
  * @param gradeId - 対象の成績試験ID
- * @returns manualDataSources, studentScores, loading, updateScore, bulkUpdateScores
+ * @returns manualDataSources, studentScores, loading, bulkUpdateScores
  */
 export function useManualScores(gradeId: string) {
   const [manualDataSources, setManualDataSources] = useState<
@@ -107,43 +107,6 @@ export function useManualScores(gradeId: string) {
     loadData()
   }, [loadData])
 
-  const updateScore = useCallback(
-    (dataSourceId: string, studentId: string, score: number | null) => {
-      // ローカル状態を即座に更新
-      setStudentScores((prev) =>
-        prev.map((student) =>
-          student.studentId === studentId
-            ? {
-                ...student,
-                scores: { ...student.scores, [dataSourceId]: score },
-              }
-            : student
-        )
-      )
-
-      // 変更をバッファに追加
-      const key = `${dataSourceId}:${studentId}`
-      pendingChanges.current.set(key, {
-        gradeDataSourceId: dataSourceId,
-        studentId,
-        score,
-      })
-
-      // デバウンスして保存
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-      saveTimeoutRef.current = setTimeout(async () => {
-        const changes = Array.from(pendingChanges.current.values())
-        pendingChanges.current.clear()
-        if (changes.length > 0) {
-          await window.electronAPI.grade.batchUpsertManualScores(changes)
-        }
-      }, 500)
-    },
-    []
-  )
-
   const bulkUpdateScores = useCallback(
     (
       changes: {
@@ -213,7 +176,6 @@ export function useManualScores(gradeId: string) {
     manualDataSources,
     studentScores,
     loading,
-    updateScore,
     bulkUpdateScores,
   }
 }

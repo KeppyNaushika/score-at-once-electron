@@ -11,31 +11,11 @@ import { useMasterAnswerSettings } from "./useMasterAnswerSettings"
 import { useShowStudentNames } from "./useShowStudentNames"
 
 export function useScoringSettings() {
-  const {
-    itemsPerLine,
-    setItemsPerLine,
-    isLoading: isLoadingItemsPerLine,
-  } = useItemsPerLine()
-  const {
-    autoScroll,
-    setAutoScroll,
-    isLoading: isLoadingAutoScroll,
-  } = useAutoScroll()
-  const {
-    showStudentNames,
-    setShowStudentNames,
-    isLoading: isLoadingShowStudentNames,
-  } = useShowStudentNames()
-  const {
-    layoutDirection,
-    setLayoutDirection,
-    isLoading: isLoadingLayoutDirection,
-  } = useLayoutDirection()
-  const {
-    expandMargin,
-    setExpandMargin,
-    isLoading: isLoadingExpandMargin,
-  } = useExpandMargin()
+  const { itemsPerLine, setItemsPerLine } = useItemsPerLine()
+  const { autoScroll, setAutoScroll } = useAutoScroll()
+  const { showStudentNames, setShowStudentNames } = useShowStudentNames()
+  const { layoutDirection, setLayoutDirection } = useLayoutDirection()
+  const { expandMargin, setExpandMargin } = useExpandMargin()
   const {
     masterAnswerDisplayMode,
     masterAnswerOpacity,
@@ -43,16 +23,7 @@ export function useScoringSettings() {
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
     setMasterAnswerKeyBehavior,
-    isLoading: isLoadingMasterAnswer,
   } = useMasterAnswerSettings()
-
-  const isLoading =
-    isLoadingItemsPerLine ||
-    isLoadingAutoScroll ||
-    isLoadingShowStudentNames ||
-    isLoadingLayoutDirection ||
-    isLoadingExpandMargin ||
-    isLoadingMasterAnswer
 
   return {
     itemsPerLine,
@@ -71,7 +42,6 @@ export function useScoringSettings() {
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
     setMasterAnswerKeyBehavior,
-    isLoading,
   }
 }
 

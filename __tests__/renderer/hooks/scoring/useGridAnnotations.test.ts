@@ -17,7 +17,7 @@
  *   - 取得結果をstudentIdでグループ化してMapに格納
  */
 
-import { act, renderHook, waitFor } from "@testing-library/react"
+import { renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useGridAnnotations } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridAnnotations"
@@ -209,36 +209,6 @@ describe("useGridAnnotations", () => {
     })
   })
 
-  describe("isLoading状態", () => {
-    it("取得中にisLoadingがtrueになる", async () => {
-      let resolvePromise: (value: unknown) => void
-      mockAPI.getByCropRegion.mockReturnValue(
-        new Promise((resolve) => {
-          resolvePromise = resolve
-        })
-      )
-
-      const { result } = renderHook(() =>
-        useGridAnnotations({
-          cropRegionId: "cr-1",
-          currentUserId: "user-1",
-        })
-      )
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(true)
-      })
-
-      await act(async () => {
-        resolvePromise!({ success: true, data: [] })
-      })
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-    })
-  })
-
   describe("API失敗時", () => {
     it("失敗時に空のMapを返す", async () => {
       mockAPI.getByCropRegion.mockResolvedValue({
@@ -254,10 +224,8 @@ describe("useGridAnnotations", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
+        expect(result.current.annotationsByStudent.size).toBe(0)
       })
-
-      expect(result.current.annotationsByStudent.size).toBe(0)
     })
   })
 })

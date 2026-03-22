@@ -343,66 +343,7 @@ describe("useDrawingAnnotations", () => {
   })
 
   // =========================================================================
-  // 5. deleteByType — タイプ別一括削除
-  // =========================================================================
-  describe("deleteByType（タイプ別一括削除）", () => {
-    it("指定タイプのアノテーションのみ削除される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({
-            id: "t1",
-            type: "text",
-            questionScoreId: "qs-1",
-          }),
-          createMockAnnotation({
-            id: "l1",
-            type: "line",
-            questionScoreId: "qs-1",
-          }),
-        ],
-      })
-
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
-      await act(async () => {
-        await result.current.loadAnnotations("qs-1")
-      })
-
-      await act(async () => {
-        await result.current.deleteByType("qs-1", "text")
-      })
-
-      expect(result.current.annotations).toHaveLength(1)
-      expect(result.current.annotations[0].type).toBe("line")
-    })
-
-    it("タイプ未指定で全削除される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "a1", questionScoreId: "qs-1" }),
-          createMockAnnotation({ id: "a2", questionScoreId: "qs-1" }),
-        ],
-      })
-
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
-      await act(async () => {
-        await result.current.loadAnnotations("qs-1")
-      })
-      await act(async () => {
-        await result.current.deleteByType("qs-1")
-      })
-
-      expect(result.current.annotations).toHaveLength(0)
-    })
-  })
-
-  // =========================================================================
-  // 6. syncElements — 全要素同期（clearDrawingから呼ばれる）
+  // 5. syncElements — 全要素同期（clearDrawingから呼ばれる）
   // =========================================================================
   describe("syncElements（全要素同期）", () => {
     it("空配列で同期するとannotationsがクリアされる", async () => {
@@ -451,70 +392,7 @@ describe("useDrawingAnnotations", () => {
   })
 
   // =========================================================================
-  // 7. loadAllStudentAnnotations — 透明度制御用の全設問読み込み
-  // =========================================================================
-  describe("loadAllStudentAnnotations（透明度制御用）", () => {
-    it("学生IDと試験IDで全アノテーションを取得する", async () => {
-      const allAnnotations = [
-        createMockAnnotation({ id: "a1", questionScoreId: "qs-1" }),
-        createMockAnnotation({ id: "a2", questionScoreId: "qs-2" }),
-      ]
-      mockAPI.getByStudent.mockResolvedValue({
-        success: true,
-        data: allAnnotations,
-      })
-
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
-
-      let loaded: unknown[] = []
-      await act(async () => {
-        loaded = await result.current.loadAllStudentAnnotations(
-          "student-1",
-          "exam-1"
-        )
-      })
-
-      expect(mockAPI.getByStudent).toHaveBeenCalledWith(
-        "student-1",
-        "exam-1",
-        undefined,
-        "user-1"
-      )
-      expect(loaded).toHaveLength(2)
-    })
-  })
-
-  // =========================================================================
-  // 8. clearCache — キャッシュクリア
-  // =========================================================================
-  describe("clearCache（キャッシュクリア）", () => {
-    it("annotations・stats・errorがすべてクリアされる", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation()],
-      })
-
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
-      await act(async () => {
-        await result.current.loadAnnotations("qs-1")
-      })
-      expect(result.current.annotations).toHaveLength(1)
-
-      act(() => {
-        result.current.clearCache()
-      })
-
-      expect(result.current.annotations).toHaveLength(0)
-      expect(result.current.error).toBeNull()
-    })
-  })
-
-  // =========================================================================
-  // 9. isLoading状態の遷移
+  // 7. isLoading状態の遷移
   // =========================================================================
   describe("isLoading状態", () => {
     it("読み込み中にisLoadingがtrueになる", async () => {

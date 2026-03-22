@@ -12,8 +12,6 @@ interface UseGridAnnotationsProps {
 interface UseGridAnnotationsReturn {
   /** studentId → DrawingAnnotation[] のマップ */
   annotationsByStudent: Map<string, DrawingAnnotation[]>
-  /** データ読み込み中フラグ */
-  isLoading: boolean
 }
 
 /**
@@ -28,7 +26,6 @@ export function useGridAnnotations({
   const [annotationsByStudent, setAnnotationsByStudent] = useState<
     Map<string, DrawingAnnotation[]>
   >(new Map())
-  const [isLoading, setIsLoading] = useState(false)
   const lastFetchedRef = useRef<string>("")
 
   const fetchAnnotations = useCallback(async () => {
@@ -41,7 +38,6 @@ export function useGridAnnotations({
     const fetchKey = `${cropRegionId}:${currentUserId ?? ""}`
     if (lastFetchedRef.current === fetchKey) return
 
-    setIsLoading(true)
     try {
       const result = await window.electronAPI.drawing.getByCropRegion(
         cropRegionId,
@@ -72,8 +68,6 @@ export function useGridAnnotations({
     } catch (error) {
       console.error("Grid用アノテーション取得エラー:", error)
       setAnnotationsByStudent(new Map())
-    } finally {
-      setIsLoading(false)
     }
   }, [cropRegionId, currentUserId])
 
@@ -83,5 +77,5 @@ export function useGridAnnotations({
     fetchAnnotations()
   }, [fetchAnnotations, refreshKey])
 
-  return { annotationsByStudent, isLoading }
+  return { annotationsByStudent }
 }

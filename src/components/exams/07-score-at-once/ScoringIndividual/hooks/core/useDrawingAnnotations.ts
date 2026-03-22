@@ -5,14 +5,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-// textbox-on-canvas-v3のMathJax処理を統合
-import {
-  createMathJaxSVG,
-  measureMathJaxContentSize,
-} from "@/app/textbox-on-canvas-v3/utils/mathJaxUtils"
 import type {
   DrawingAnnotation,
-  DrawingAnnotationStats,
   DrawingCreateData,
   DrawingType,
   DrawingUpdateData,
@@ -117,16 +111,10 @@ export interface UseDrawingAnnotationsReturn {
   annotations: DrawingAnnotation[]
   isLoading: boolean
   error: string | null
-  stats: DrawingAnnotationStats | null
 
   // CRUD操作
   loadAnnotations: (
     questionScoreId: string,
-    type?: DrawingType
-  ) => Promise<DrawingAnnotation[]>
-  loadAllStudentAnnotations: (
-    studentId: string,
-    examId: string,
     type?: DrawingType
   ) => Promise<DrawingAnnotation[]>
   saveElement: (
@@ -135,32 +123,12 @@ export interface UseDrawingAnnotationsReturn {
   ) => Promise<DrawingAnnotation | null>
   updateElement: (element: DrawingElement) => Promise<DrawingAnnotation | null>
   deleteElement: (elementId: string) => Promise<boolean>
-  deleteByType: (
-    questionScoreId: string,
-    type?: DrawingType
-  ) => Promise<boolean>
 
   // バッチ操作
   syncElements: (
     elements: DrawingElement[],
     questionScoreId: string
   ) => Promise<DrawingAnnotation[]>
-
-  // MathJax処理（textbox-on-canvas-v3統合）
-  processMathJaxText: (
-    htmlContent: string,
-    width?: number,
-    height?: number
-  ) => Promise<SVGSVGElement>
-  measureTextSize: (
-    htmlContent: string,
-    width?: number,
-    height?: number
-  ) => Promise<{ width: number; height: number }>
-
-  // ユーティリティ
-  getStats: (questionScoreId: string) => Promise<void>
-  clearCache: () => void
 }
 
 /**
@@ -174,8 +142,6 @@ export function useDrawingAnnotations(
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [stats, setStats] = useState<DrawingAnnotationStats | null>(null)
-
   // 参照
   const callbacksRef = useRef<DrawingPersistenceCallbacks>(callbacks || {})
 
@@ -224,47 +190,6 @@ export function useDrawingAnnotations(
         }
       } catch (error) {
         handleError("アノテーション読み込み中にエラーが発生しました", error)
-        return []
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [handleError, context?.currentUserId]
-  )
-
-  /**
-   * 学生の全設問のアノテーションを読み込み（透明度制御用）
-   * contextのcurrentUserIdを使って、ログインユーザーのアノテーションのみ取得
-   */
-  const loadAllStudentAnnotations = useCallback(
-    async (
-      studentId: string,
-      examId: string,
-      type?: DrawingType
-    ): Promise<DrawingAnnotation[]> => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const result = await window.electronAPI.drawing.getByStudent(
-          studentId,
-          examId,
-          type,
-          context?.currentUserId
-        )
-        if (result.success && result.data) {
-          return result.data
-        } else {
-          handleError(
-            result.error || "全設問アノテーション読み込みに失敗しました"
-          )
-          return []
-        }
-      } catch (error) {
-        handleError(
-          "全設問アノテーション読み込み中にエラーが発生しました",
-          error
-        )
         return []
       } finally {
         setIsLoading(false)
@@ -504,97 +429,19 @@ export function useDrawingAnnotations(
     [handleError, deleteByType, context]
   )
 
-  /**
-   * MathJax処理（textbox-on-canvas-v3統合）
-   */
-  const processMathJaxText = useCallback(
-    async (
-      htmlContent: string,
-      width: number = 200,
-      height: number = 50
-    ): Promise<SVGSVGElement> => {
-      try {
-        return await createMathJaxSVG(htmlContent, width, height)
-      } catch (error) {
-        handleError("MathJax処理に失敗しました", error)
-        throw error
-      }
-    },
-    [handleError]
-  )
-
-  /**
-   * テキストサイズ測定（textbox-on-canvas-v3統合）
-   */
-  const measureTextSize = useCallback(
-    async (
-      htmlContent: string,
-      width: number = 200,
-      height: number = 50
-    ): Promise<{ width: number; height: number }> => {
-      try {
-        return await measureMathJaxContentSize(htmlContent, width, height)
-      } catch (error) {
-        handleError("テキストサイズ測定に失敗しました", error)
-        return { width, height }
-      }
-    },
-    [handleError]
-  )
-
-  /**
-   * 統計情報取得
-   */
-  const getStats = useCallback(
-    async (questionScoreId: string): Promise<void> => {
-      try {
-        const result =
-          await window.electronAPI.drawing.getStats(questionScoreId)
-        if (result.success && result.data) {
-          setStats(result.data)
-        } else {
-          handleError(result.error || "統計情報取得に失敗しました")
-        }
-      } catch (error) {
-        handleError("統計情報取得中にエラーが発生しました", error)
-      }
-    },
-    [handleError]
-  )
-
-  /**
-   * キャッシュクリア
-   */
-  const clearCache = useCallback((): void => {
-    setAnnotations([])
-    setStats(null)
-    setError(null)
-  }, [])
-
   return {
     // 状態
     annotations,
     isLoading,
     error,
-    stats,
 
     // CRUD操作
     loadAnnotations,
-    loadAllStudentAnnotations,
     saveElement,
     updateElement,
     deleteElement,
-    deleteByType,
 
     // バッチ操作
     syncElements,
-
-    // MathJax処理
-    processMathJaxText,
-    measureTextSize,
-
-    // ユーティリティ
-    getStats,
-    clearCache,
   }
 }

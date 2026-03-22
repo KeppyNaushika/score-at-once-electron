@@ -5,10 +5,10 @@
 
 import { useCallback, useRef, useState } from "react"
 
-import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
 import type {
   DrawingAnnotation,
   DrawingCreateData,
+  DrawingTool,
   DrawingType,
   DrawingUpdateData,
 } from "@/types/drawingAnnotation.types"
