@@ -2,7 +2,7 @@
  * NAS同期設定の永続化
  *
  * sync設定はマシン固有（clientId）のため、
- * 同期対象DBではなくローカルJSONファイルに保存する。
+ * 同期対象DBではなくElectronのuserDataディレクトリに保存する。
  * NAS syncパスはデータディレクトリから自動導出（{dataDir}/sync/）。
  */
 
@@ -15,7 +15,7 @@ import { getDataDirectory } from "../dataManager"
 import { DEFAULT_SYNC_CONFIG, SyncAppConfig } from "./types"
 
 function getConfigPath(): string {
-  return path.join(getDataDirectory(), "sync-config.json")
+  return path.join(app.getPath("userData"), "sync-config.json")
 }
 
 /** sqlite-nas-syncが使用するNAS上のsyncディレクトリパスを返す */
