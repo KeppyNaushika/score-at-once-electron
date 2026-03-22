@@ -6,8 +6,21 @@ import { getDataDirectory } from "../dataManager"
 import { checkDatabaseExists } from "./databaseUtils"
 import { INDEX_SQL, MIGRATION_SQL } from "./schema/migrationSql"
 
-/** データベースファイル（database.db）の絶対パスを返す */
+/**
+ * データベースファイルの絶対パスを返す
+ *
+ * sync有効時はローカルDBパス、無効時はデータディレクトリ内のDBパスを返す。
+ */
 export const getDatabasePath = (): string => {
+  try {
+    const { getLocalDbPath, loadSyncConfig } = require("../sync/syncConfig")
+    const config = loadSyncConfig()
+    if (config?.enabled) {
+      return getLocalDbPath()
+    }
+  } catch {
+    // sync未初期化時（初回起動等）は従来パスにフォールバック
+  }
   return path.join(getDataDirectory(), "database.db")
 }
 

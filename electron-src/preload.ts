@@ -19,6 +19,7 @@ import { createSettingsApi } from "./preload-apis/settingsApi"
 import { createStudentApi } from "./preload-apis/studentApi"
 import { createSubjectApi } from "./preload-apis/subjectApi"
 import { createSubtotalApi } from "./preload-apis/subtotalApi"
+import { createSyncApi } from "./preload-apis/syncApi"
 import { createUserExamApi } from "./preload-apis/userExamApi"
 
 declare global {
@@ -51,6 +52,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createOmrApi(),
   ...createAnswerSheetBuilderApi(),
   ...createMiscApi(),
+  ...createSyncApi(),
 })
 
 process.once("loaded", () => {

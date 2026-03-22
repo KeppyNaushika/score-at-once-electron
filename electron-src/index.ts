@@ -130,6 +130,14 @@ process.on("unhandledRejection", (reason, promise) => {
 
 // アプリが異常終了する前にログを出力とクリーンアップ
 app.on("before-quit", async (_event) => {
+  // NAS同期の停止
+  try {
+    const { stopSync } = await import("./lib/sync/syncService")
+    await stopSync()
+  } catch (error) {
+    console.warn("Failed to stop sync service:", error)
+  }
+
   // Prismaクライアントのクリーンアップ
   try {
     const { getPrismaClient } = await import("./lib/prisma/client")

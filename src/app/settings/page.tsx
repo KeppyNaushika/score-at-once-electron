@@ -1,12 +1,13 @@
 "use client"
 
-import { Keyboard, Monitor, Palette, Users } from "lucide-react"
+import { FolderSync, Keyboard, Monitor, Palette, Users } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { DisplaySettingsTab } from "@/app/settings/components/DisplaySettingsTab"
 import { KeyboardShortcutSection } from "@/app/settings/components/KeyboardShortcutSection"
 import { ScreenControlTab } from "@/app/settings/components/ScreenControlTab"
+import { SyncSettingsTab } from "@/app/settings/components/SyncSettingsTab"
 import { UserManagementTab } from "@/app/settings/components/UserManagementTab"
 import { useKeyboardSettings } from "@/app/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
@@ -104,6 +105,10 @@ export default function SettingsPage() {
               <Users className="h-4 w-4" />
               ユーザー管理
             </TabsTrigger>
+            <TabsTrigger value="sync" className="gap-2">
+              <FolderSync className="h-4 w-4" />
+              同期設定
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="keyboard">
@@ -134,6 +139,10 @@ export default function SettingsPage() {
               onEditUser={handleEditUser}
               onEditPasscode={handleEditPasscode}
             />
+          </TabsContent>
+
+          <TabsContent value="sync">
+            <SyncSettingsTab />
           </TabsContent>
         </Tabs>
 
