@@ -55,7 +55,7 @@ export function convertAnswerSheetsToFiles(
       // 既存画像の場合は遅延読み込み用のパス情報を保持
       imagePath: imagePath,
 
-      // table-dnd-kit-test統合用
+      // テーブルDnD統合用
       color: undefined,
       position: undefined,
     }

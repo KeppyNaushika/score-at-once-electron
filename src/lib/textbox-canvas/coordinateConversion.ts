@@ -8,7 +8,7 @@ import type {
   CoordinateConversionUtils,
   Point,
   TextBox,
-} from "../types"
+} from "./types"
 
 /**
  * 相対座標を絶対座標に変換

@@ -1,5 +1,5 @@
 /**
- * table-dnd-kit-test準拠の型定義
+ * テーブルDnD準拠の型定義
  * 06-student-answersページ専用の統一型定義
  * レポート分析に基づき6つのStudent型と4つのStudentAnswer型を1つに統合
  */
@@ -41,7 +41,7 @@ export interface UnifiedFile {
   originalFileName: string // 元ファイル名保持
   pageLabel?: string // 表示用ラベル
 
-  // table-dnd-kit-test統合用
+  // テーブルDnD統合用
   color?: string // 表示色（テスト・デバッグ用）
   position?: number // table内の位置（studentIndex * maxPages + pageNumber - 1）
   imagePath?: string | null // 既存画像ファイルのパス（遅延読み込み用）
@@ -49,18 +49,18 @@ export interface UnifiedFile {
 }
 
 // ============================================================================
-// table-dnd-kit-test互換の型定義
+// テーブルDnD互換の型定義
 // ============================================================================
 
 /**
  * 配置戦略
- * table-dnd-kit-testと同じ定義
+ * テーブルDnDと同じ定義
  */
 export type PlacementStrategy = "page-first" | "student-first" | "filename-auto"
 
 /**
  * 無効化状態管理
- * table-dnd-kit-testのDisabledStateと互換
+ * テーブルDnDのDisabledStateと互換
  */
 export interface DisabledState {
   rows: Set<number> // 生徒レベル無効化（studentIndex）
@@ -141,7 +141,7 @@ export interface NameFieldRegion {
 // ============================================================================
 
 /**
- * table-dnd-kit-testのgetTableData相当の戻り値
+ * テーブルDnDのgetTableData相当の戻り値
  */
 export interface TableCell {
   studentIndex: number

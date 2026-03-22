@@ -5,10 +5,10 @@
  * PDF出力に適した形式でCanvas上に描画を行う。
  */
 
-import type { AnchorDirection } from "@/app/textbox-on-canvas-v4/types"
-import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
-import { convertTextToSvg } from "@/app/textbox-on-canvas-v4/utils/textConversionUtils"
 import { mmToPixels } from "@/lib/paperSize"
+import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
+import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
+import type { AnchorDirection } from "@/lib/textbox-canvas/types"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /**

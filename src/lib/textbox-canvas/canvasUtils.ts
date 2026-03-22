@@ -3,8 +3,8 @@
  * @description SVG-Canvas変換、アスペクト比維持スケーリング、デバッグ機能
  */
 
-import { CANVAS_SETTINGS } from "../constants"
-import type { AnchorDirection, Point, SvgRenderResult } from "../types"
+import { CANVAS_SETTINGS } from "./constants"
+import type { AnchorDirection, Point, SvgRenderResult } from "./types"
 
 /**
  * デバッグプレビュー設定用の状態管理インターフェース

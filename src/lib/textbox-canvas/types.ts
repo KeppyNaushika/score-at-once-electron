@@ -1,5 +1,5 @@
 /**
- * @fileoverview Type definitions for textbox-on-canvas-v4 functionality
+ * @fileoverview テキストボックスCanvas機能の型定義
  * @description 数学式対応テキストボックス Canvas システムの型定義（リファクタリング版）
  *
  * ## 型分類
