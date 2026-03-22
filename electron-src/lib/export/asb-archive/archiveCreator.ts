@@ -7,8 +7,8 @@ import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 
-import type { AsbArchiveManifest } from "../../../../types/asbArchive.types"
-import { ASB_CURRENT_VERSION } from "../../../../types/asbArchive.types"
+import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
+import { ASB_CURRENT_VERSION } from "../../../../src/types/asbArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import type { CollectedAsbData } from "./dataCollector"
 

@@ -12,8 +12,8 @@ import * as path from "path"
 import type {
   ArchiveClassesData,
   ArchiveStudentsData,
-} from "../../../../types/examArchive.types"
-import type { StudentArchiveManifest } from "../../../../types/studentArchive.types"
+} from "../../../../src/types/examArchive.types"
+import type { StudentArchiveManifest } from "../../../../src/types/studentArchive.types"
 
 /**
  * 展開された生徒アーカイブデータ

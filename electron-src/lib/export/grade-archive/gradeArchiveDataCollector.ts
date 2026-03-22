@@ -6,7 +6,7 @@ import type {
   ArchiveBoundariesData,
   ArchiveGradeData,
   ArchiveManualScoresData,
-} from "../../../../types/gradeArchive.types"
+} from "../../../../src/types/gradeArchive.types"
 import prisma from "../../prisma/client"
 
 export interface CollectedGradeData {

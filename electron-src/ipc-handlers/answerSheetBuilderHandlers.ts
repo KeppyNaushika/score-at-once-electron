@@ -14,8 +14,8 @@ import type {
   ASBExportPngArgs,
   ASBPrintArgs,
   ASBUploadImageArgs,
-} from "../../types/answerSheetBuilder.types"
-import type { AnswerSheetDefinition } from "../../types/answerSheetDefinition.types"
+} from "../../src/types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "../../src/types/answerSheetDefinition.types"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
 import {
   getAbsolutePathFromData,

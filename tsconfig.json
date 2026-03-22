@@ -17,7 +17,9 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"],
+      "@/electron-src/*": ["./electron-src/*"],
+      "@/__tests__/*": ["./__tests__/*"]
     },
     "plugins": [
       {
@@ -33,7 +35,7 @@
     "./tailwind.config.js",
     "./electron-src/prisma.ts",
     ".next/types/**/*.ts",
-    "types/**/*.d.ts",
+    "src/types/**/*.d.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

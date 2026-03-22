@@ -10,7 +10,7 @@ import { convertToScoreEntriesFromDb } from "../../../electron-src/lib/omr/autoS
 import type {
   CropRegionOmrConfigWithOptions,
   OMRCellResult,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 
 // テストヘルパー: OMR設定を構築
 function makeChoiceConfig(

@@ -2,7 +2,7 @@
  * ASB定義インポート機能
  */
 
-import type { AsbArchiveManifest } from "../../../../types/asbArchive.types"
+import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
 import { transformAsbToLatest } from "../asb-transformers"
 import {
   cleanupAsbTempDir,

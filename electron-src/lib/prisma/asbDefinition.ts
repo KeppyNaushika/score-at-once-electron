@@ -16,8 +16,8 @@ import type {
   AsbTextElement,
 } from "@prisma/client"
 
-import type { ASBDefinitionListItem } from "../../../types/answerSheetBuilder.types"
-import type { AnswerSheetDefinition } from "../../../types/answerSheetDefinition.types"
+import type { ASBDefinitionListItem } from "../../../src/types/answerSheetBuilder.types"
+import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefinition.types"
 import {
   createOmrConfig,
   dbToDefinition,

@@ -10,7 +10,7 @@ import type {
   BoundingBox,
   CoordinateTransform,
   Point,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 
 /**
  * CoordinateTransform を構築する

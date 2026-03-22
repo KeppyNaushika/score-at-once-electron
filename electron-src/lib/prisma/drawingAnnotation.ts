@@ -10,7 +10,7 @@ import type {
   DrawingCreateData,
   DrawingType,
   DrawingUpdateData,
-} from "../../../types/drawingAnnotation.types"
+} from "../../../src/types/drawingAnnotation.types"
 import prisma from "./client"
 
 /**

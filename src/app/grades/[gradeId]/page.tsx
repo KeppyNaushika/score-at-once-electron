@@ -27,11 +27,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
+import { getGradeCompletion, type GradeStepCompletion } from "@/lib/gradeStatus"
 import type { GradeWithDetails } from "@/types/grade.types"
-import {
-  getGradeCompletion,
-  type GradeStepCompletion,
-} from "@/utils/gradeStatus"
 
 interface WorkflowStep {
   id: string

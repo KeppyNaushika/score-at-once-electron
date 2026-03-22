@@ -4,12 +4,12 @@
 
 import { dialog, ipcMain } from "electron"
 
-import type { UpdateDecisions } from "../../types/examArchive.types"
+import type { UpdateDecisions } from "../../src/types/examArchive.types"
 import type {
   ExportStudentsArchiveOptions,
   StudentArchiveFileOverviewData,
   StudentArchiveIdIntegrationConfig,
-} from "../../types/studentArchive.types"
+} from "../../src/types/studentArchive.types"
 import { exportStudentsArchive } from "../lib/export/student-archive"
 import {
   cleanupStudentTempDir,

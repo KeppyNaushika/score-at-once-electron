@@ -8,7 +8,7 @@ import type {
   ArchiveManualScoresData,
   GradeArchiveData,
   GradeArchiveManifest,
-} from "../../../../types/gradeArchive.types"
+} from "../../../../src/types/gradeArchive.types"
 
 // archiver で作った ZIP を展開するために unzipper を使用
 // 試験に unzipper がない場合は adm-zip を使用

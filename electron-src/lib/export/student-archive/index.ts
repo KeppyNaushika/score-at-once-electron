@@ -9,7 +9,7 @@ import { dialog } from "electron"
 import type {
   ExportStudentsArchiveOptions,
   ExportStudentsArchiveResult,
-} from "../../../../types/studentArchive.types"
+} from "../../../../src/types/studentArchive.types"
 import {
   createStudentArchive,
   generateStudentExportFileName,

@@ -4,7 +4,7 @@
  * アーカイブのバージョン互換性をチェック
  */
 
-import type { ArchiveManifest } from "../../../../types/examArchive.types"
+import type { ArchiveManifest } from "../../../../src/types/examArchive.types"
 import { CURRENT_VERSION } from "../transformers/types"
 
 /** 現在のアーカイブ形式バージョン (transformers/types.tsから参照) */

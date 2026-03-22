@@ -16,7 +16,7 @@ import type {
   DetectedCornerMarker,
   MarkerDetectionResult,
   Point,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 import { detectCornerMarkersFromRaw } from "./cornerMarkerDetector"
 import { loadImageRawFromBuffer } from "./imageProcessor"
 

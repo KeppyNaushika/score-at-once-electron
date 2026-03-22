@@ -15,14 +15,14 @@
 import { describe, expect, it } from "vitest"
 
 import { recognizeCell } from "../../../electron-src/lib/omr/markRecognizer"
-import type { ComputedCell } from "../../../types/answerSheetLayout.types"
+import type { ComputedCell } from "../../../src/types/answerSheetLayout.types"
 import type {
   ComputedOMRBubble,
   CoordinateTransform,
   OMRCellConfig,
   OMRRecognitionParams,
   RawImageData,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 
 // =====================
 // テストヘルパー

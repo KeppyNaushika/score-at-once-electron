@@ -8,9 +8,9 @@
 import fs from "fs"
 import path from "path"
 
-import type { AnswerSheetDefinition } from "../../../types/answerSheetDefinition.types"
-import type { ComputedMultiPageLayout } from "../../../types/answerSheetLayout.types"
-import type { OMRCellConfig } from "../../../types/omr.types"
+import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefinition.types"
+import type { ComputedMultiPageLayout } from "../../../src/types/answerSheetLayout.types"
+import type { OMRCellConfig } from "../../../src/types/omr.types"
 import {
   getMasterAnswersDirectory,
   getRelativePathFromData,

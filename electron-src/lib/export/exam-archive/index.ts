@@ -9,7 +9,7 @@ import { app, dialog } from "electron"
 import type {
   ExportExamOptions,
   ExportExamResult,
-} from "../../../../types/examArchive.types"
+} from "../../../../src/types/examArchive.types"
 import { getExamById } from "../../prisma/exam"
 import { createArchive, generateExportFileName } from "./archiveCreator"
 import { collectExamData } from "./dataCollector"

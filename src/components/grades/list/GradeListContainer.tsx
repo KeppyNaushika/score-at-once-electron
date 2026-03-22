@@ -31,8 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getGradeStatus } from "@/lib/gradeStatus"
 import type { GradeWithDetails } from "@/types/grade.types"
-import { getGradeStatus } from "@/utils/gradeStatus"
 
 import { GradeCreateDialog } from "./GradeCreateDialog"
 

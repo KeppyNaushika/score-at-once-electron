@@ -21,9 +21,9 @@
     "rootDir": "..",
     "outDir": "../main",
     "paths": {
-      "@/*": ["../*"]
+      "@/*": ["../src/*"]
     }
   },
   "exclude": ["node_modules", "../node_modules"],
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "../types/**/*.ts"]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "../src/types/**/*.ts"]
 }

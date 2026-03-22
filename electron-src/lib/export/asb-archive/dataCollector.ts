@@ -2,8 +2,8 @@
  * ASB定義エクスポート用データ収集
  */
 
-import type { AnswerSheetDefinition } from "../../../../types/answerSheetDefinition.types"
-import type { AsbArchiveDataCounts } from "../../../../types/asbArchive.types"
+import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
+import type { AsbArchiveDataCounts } from "../../../../src/types/asbArchive.types"
 
 export interface CollectedAsbData {
   definition: AnswerSheetDefinition

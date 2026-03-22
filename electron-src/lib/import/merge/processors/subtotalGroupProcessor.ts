@@ -9,7 +9,7 @@ import type {
   IdIntegrationConfig,
   IdIntegrationDecision,
   UpdateDecisions,
-} from "../../../../../types/examArchive.types"
+} from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type {
   IdChangeTarget,

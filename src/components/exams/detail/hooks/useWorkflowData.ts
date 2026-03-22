@@ -6,8 +6,8 @@ import type {
   WorkflowStats,
   WorkflowStep,
 } from "@/components/exams/detail/types"
+import { getExamProgress } from "@/lib/examStatus"
 import type { ExamWithDetails } from "@/types/common.types"
-import { getExamProgress } from "@/utils/examStatus"
 
 /**
  * ワークフローデータを生成するカスタムフック

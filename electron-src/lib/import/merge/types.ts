@@ -2,7 +2,7 @@
  * ID統合インポート共通型定義
  */
 
-import type { ArchiveDataCounts } from "../../../../types/examArchive.types"
+import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import type prisma from "../../prisma/client"
 
 /** IDマッピング */

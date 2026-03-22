@@ -9,7 +9,7 @@ import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 
-import type { StudentArchiveManifest } from "../../../../types/studentArchive.types"
+import type { StudentArchiveManifest } from "../../../../src/types/studentArchive.types"
 import type { CollectedStudentArchiveData } from "./dataCollector"
 
 /**

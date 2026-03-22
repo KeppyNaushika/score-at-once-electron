@@ -16,7 +16,7 @@ import type {
   DetectedCornerMarker,
   MarkerDetectionResult,
   RawImageData,
-} from "../../../types/omr.types"
+} from "../../../src/types/omr.types"
 import { loadImageRaw } from "./imageProcessor"
 
 /** 探索領域設定 */

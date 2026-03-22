@@ -6,7 +6,7 @@
 
 import { randomUUID } from "crypto"
 
-import type { ArchiveDataCounts } from "../../../../types/examArchive.types"
+import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { IdMappings } from "./idRemapper"

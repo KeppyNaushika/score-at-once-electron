@@ -2,9 +2,8 @@
 
 module.exports = {
   content: [
-    "./renderer/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./renderer/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./renderer/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
     {

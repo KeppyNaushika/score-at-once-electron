@@ -7,7 +7,7 @@
 import * as fs from "fs"
 import * as path from "path"
 
-import type { AnswerSheetDefinition } from "../../../../types/answerSheetDefinition.types"
+import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
 import {
   getAsbImagesDirectory,
   getRelativePathFromData,

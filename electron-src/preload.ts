@@ -7,8 +7,8 @@ import {
   CropRegionUpdateData,
   QuestionScoreCreateData,
   QuestionScoreUpdateData,
-} from "../types/common.types"
-import { CreateExamArgs } from "../types/electron"
+} from "../src/types/common.types"
+import { CreateExamArgs } from "../src/types/electron"
 
 declare global {
   namespace NodeJS {
@@ -652,7 +652,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("../types/examArchive.types").ExportMode
+      exportMode?: import("../src/types/examArchive.types").ExportMode
     }) => ipcRenderer.invoke("archive:exportExam", options),
     analyzeArchive: (options: { archivePath: string }) =>
       ipcRenderer.invoke("archive:analyzeArchive", options),
@@ -660,25 +660,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("archive:preMatch", options),
     detectConflicts: (options: {
       archivePath: string
-      matchingConfig: import("../types/examArchive.types").MatchingConfig
+      matchingConfig: import("../src/types/examArchive.types").MatchingConfig
     }) => ipcRenderer.invoke("archive:detectConflicts", options),
     idIntegrationImport: (options: {
       archivePath: string
-      preMatchResult: import("../types/examArchive.types").FileOverviewData
-      integrationConfig: import("../types/examArchive.types").IdIntegrationConfig
+      preMatchResult: import("../src/types/examArchive.types").FileOverviewData
+      integrationConfig: import("../src/types/examArchive.types").IdIntegrationConfig
       currentUserId: string
-      scoringConflictConfig?: import("../types/examArchive.types").ScoringConflictConfig
-      updateDecisions?: import("../types/examArchive.types").UpdateDecisions
+      scoringConflictConfig?: import("../src/types/examArchive.types").ScoringConflictConfig
+      updateDecisions?: import("../src/types/examArchive.types").UpdateDecisions
     }) => ipcRenderer.invoke("archive:idIntegrationImport", options),
     detectScoringConflicts: (options: {
       archivePath: string
-      preMatchResult: import("../types/examArchive.types").FileOverviewData
-      integrationConfig: import("../types/examArchive.types").IdIntegrationConfig
+      preMatchResult: import("../src/types/examArchive.types").FileOverviewData
+      integrationConfig: import("../src/types/examArchive.types").IdIntegrationConfig
     }) => ipcRenderer.invoke("archive:detectScoringConflicts", options),
     bulkExportExams: (options: {
       examIds: string[]
       userId: string
-      exportMode?: import("../types/examArchive.types").ExportMode
+      exportMode?: import("../src/types/examArchive.types").ExportMode
     }) => ipcRenderer.invoke("archive:bulkExportExams", options),
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
     convertHszToScore: (options: { hszPath: string }) =>
@@ -699,9 +699,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("studentArchive:preMatch", options),
     import: (options: {
       archivePath: string
-      preMatchResult: import("../types/studentArchive.types").StudentArchiveFileOverviewData
-      integrationConfig: import("../types/studentArchive.types").StudentArchiveIdIntegrationConfig
-      updateDecisions?: import("../types/examArchive.types").UpdateDecisions
+      preMatchResult: import("../src/types/studentArchive.types").StudentArchiveFileOverviewData
+      integrationConfig: import("../src/types/studentArchive.types").StudentArchiveIdIntegrationConfig
+      updateDecisions?: import("../src/types/examArchive.types").UpdateDecisions
     }) => ipcRenderer.invoke("studentArchive:import", options),
   },
 
@@ -1209,29 +1209,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
     loadDefinition: (id: string) =>
       ipcRenderer.invoke("asb:load-definition", id),
     saveDefinition: (
-      definition: import("../types/answerSheetDefinition.types").AnswerSheetDefinition,
+      definition: import("../src/types/answerSheetDefinition.types").AnswerSheetDefinition,
       userId: string
     ) => ipcRenderer.invoke("asb:save-definition", definition, userId),
     deleteDefinition: (id: string) =>
       ipcRenderer.invoke("asb:delete-definition", id),
     exportPdf: (
-      args: import("../types/answerSheetBuilder.types").ASBExportPdfArgs
+      args: import("../src/types/answerSheetBuilder.types").ASBExportPdfArgs
     ) => ipcRenderer.invoke("asb:export-pdf", args),
     exportPng: (
-      args: import("../types/answerSheetBuilder.types").ASBExportPngArgs
+      args: import("../src/types/answerSheetBuilder.types").ASBExportPngArgs
     ) => ipcRenderer.invoke("asb:export-png", args),
     selectSavePath: (options: { type: "pdf" | "png"; defaultName?: string }) =>
       ipcRenderer.invoke("asb:select-save-path", options),
     convertToExam: (
-      args: import("../types/answerSheetBuilder.types").ASBConvertToExamArgs
+      args: import("../src/types/answerSheetBuilder.types").ASBConvertToExamArgs
     ) => ipcRenderer.invoke("asb:convert-to-exam", args),
-    print: (args: import("../types/answerSheetBuilder.types").ASBPrintArgs) =>
-      ipcRenderer.invoke("asb:print", args),
+    print: (
+      args: import("../src/types/answerSheetBuilder.types").ASBPrintArgs
+    ) => ipcRenderer.invoke("asb:print", args),
     uploadImage: (
-      args: import("../types/answerSheetBuilder.types").ASBUploadImageArgs
+      args: import("../src/types/answerSheetBuilder.types").ASBUploadImageArgs
     ) => ipcRenderer.invoke("asb:upload-image", args),
     deleteImage: (
-      args: import("../types/answerSheetBuilder.types").ASBDeleteImageArgs
+      args: import("../src/types/answerSheetBuilder.types").ASBDeleteImageArgs
     ) => ipcRenderer.invoke("asb:delete-image", args),
     selectImportFile: () => ipcRenderer.invoke("asb:select-import-file"),
     analyzeAsbArchive: (filePath: string) =>

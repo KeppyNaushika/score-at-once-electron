@@ -5,7 +5,7 @@ import {
   normalizedRectToPixelRect,
   normalizedToPixel,
 } from "../../../electron-src/lib/omr/coordinateTransform"
-import type { Point } from "../../../types/omr.types"
+import type { Point } from "../../../src/types/omr.types"
 
 describe("coordinateTransform", () => {
   // 完全に歪みなしの場合（検出コーナー = 期待コーナー * 画像サイズ）
