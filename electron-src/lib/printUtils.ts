@@ -77,6 +77,7 @@ export async function htmlToPngBuffer(
       height: heightPx,
       frame: false,
       useContentSize: true,
+      enableLargerThanScreen: true,
       webPreferences: { offscreen: true },
     })
     await win.loadFile(tempHtmlPath)
