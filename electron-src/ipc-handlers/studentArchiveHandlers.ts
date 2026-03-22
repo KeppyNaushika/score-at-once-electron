@@ -17,33 +17,25 @@ import {
   extractStudentArchive,
   performStudentPreMatching,
 } from "../lib/import/student-archive"
+import { registerSafeHandler } from "./ipcHandlerUtils"
 
 /**
  * 生徒アーカイブ関連のIPCハンドラーを登録
  */
 export function registerStudentArchiveHandlers(): void {
   // エクスポート
-  ipcMain.handle(
+  registerSafeHandler(
     "studentArchive:exportStudents",
-    async (_event, options: ExportStudentsArchiveOptions) => {
-      try {
-        return await exportStudentsArchive(options)
-      } catch (error) {
-        console.error("Error in studentArchive:exportStudents:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "エクスポートに失敗しました",
-        }
-      }
-    }
+    async (options: ExportStudentsArchiveOptions) => {
+      return await exportStudentsArchive(options)
+    },
+    "エクスポートに失敗しました"
   )
 
   // インポートファイル選択ダイアログ
-  ipcMain.handle("studentArchive:selectImportFile", async () => {
-    try {
+  registerSafeHandler(
+    "studentArchive:selectImportFile",
+    async () => {
       const result = await dialog.showOpenDialog({
         title: "生徒データをインポート",
         filters: [
@@ -58,19 +50,12 @@ export function registerStudentArchiveHandlers(): void {
       }
 
       return { success: true, filePath: result.filePaths[0] }
-    } catch (error) {
-      console.error("Error in studentArchive:selectImportFile:", error)
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "ダイアログ表示に失敗しました",
-      }
-    }
-  })
+    },
+    "ダイアログ表示に失敗しました"
+  )
 
   // アーカイブ解析（マニフェスト読み取り）
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "studentArchive:analyzeArchive",
     async (_event, options: { archivePath: string }) => {
@@ -83,7 +68,10 @@ export function registerStudentArchiveHandlers(): void {
         tempDir = extractResult.data.tempDir
         return { success: true, manifest: extractResult.data.manifest }
       } catch (error) {
-        console.error("Error in studentArchive:analyzeArchive:", error)
+        console.error(
+          "Error in IPC handler [studentArchive:analyzeArchive]:",
+          error
+        )
         return {
           success: false,
           error:
@@ -98,6 +86,7 @@ export function registerStudentArchiveHandlers(): void {
   )
 
   // 事前照合
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "studentArchive:preMatch",
     async (_event, options: { archivePath: string }) => {
@@ -115,7 +104,7 @@ export function registerStudentArchiveHandlers(): void {
 
         return { success: true, data: fileOverviewData }
       } catch (error) {
-        console.error("Error in studentArchive:preMatch:", error)
+        console.error("Error in IPC handler [studentArchive:preMatch]:", error)
         return {
           success: false,
           error:
@@ -128,6 +117,7 @@ export function registerStudentArchiveHandlers(): void {
   )
 
   // インポート実行
+  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
     "studentArchive:import",
     async (
@@ -156,7 +146,7 @@ export function registerStudentArchiveHandlers(): void {
 
         return result
       } catch (error) {
-        console.error("Error in studentArchive:import:", error)
+        console.error("Error in IPC handler [studentArchive:import]:", error)
         return {
           success: false,
           error:

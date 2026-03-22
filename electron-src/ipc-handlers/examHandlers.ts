@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client"
-import { ipcMain } from "electron"
 
 import {
   createExam as dbCreateExam,
@@ -11,6 +10,7 @@ import {
   updateExam as dbUpdateExam,
 } from "../lib/prisma/exam"
 import { getExamPagesByExamId as dbGetExamPagesByExamId } from "../lib/prisma/examPage"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /**
  * QuestionScoreをIPC用にシリアライズ（DecimalをnumberにDateはそのまま）
@@ -178,182 +178,140 @@ function computeExamStatus(exam: ExamForListPayload) {
 
 export function setupExamHandlers(): void {
   // 試験一覧用の軽量エンドポイント（ステータスをサーバーサイドで計算）
-  ipcMain.handle("fetch-exams-summary", async (_event, userId: string) => {
-    try {
-      const exams = await dbFetchExamsForList(userId)
-      return exams.map((exam) => ({
-        id: exam.id,
-        examName: exam.examName,
-        examDate: exam.examDate,
-        subject: exam.subject,
-        description: exam.description,
-        createdAt: exam.createdAt,
-        updatedAt: exam.updatedAt,
-        status: computeExamStatus(exam),
-      }))
-    } catch (err) {
-      console.error("Error fetching exams summary:", err)
-      throw err
+  registerHandler("fetch-exams-summary", async (userId: string) => {
+    const exams = await dbFetchExamsForList(userId)
+    return exams.map((exam) => ({
+      id: exam.id,
+      examName: exam.examName,
+      examDate: exam.examDate,
+      subject: exam.subject,
+      description: exam.description,
+      createdAt: exam.createdAt,
+      updatedAt: exam.updatedAt,
+      status: computeExamStatus(exam),
+    }))
+  })
+
+  registerHandler("fetch-exams", async (userId: string) => {
+    const exams = await dbFetchExams(userId)
+
+    // Dateオブジェクトをそのまま返す（Structured Clone AlgorithmでDate対応）
+    // Decimalオブジェクトはnumberに変換（Structured Clone非対応のため）
+    const examsWithFlattenedData = exams.map((exam) => ({
+      ...exam,
+      // examPagesのcropRegionsのquestionScoresをシリアライズ
+      examPages:
+        exam.examPages?.map((page) => ({
+          ...page,
+          cropRegions:
+            page.cropRegions?.map((region) => ({
+              ...region,
+              questionScores:
+                region.questionScores?.map(serializeQuestionScore) || [],
+            })) || [],
+        })) || [],
+      // cropRegionsを平坦化（シリアライズ済み）
+      cropRegions:
+        exam.examPages?.flatMap(
+          (page) =>
+            page.cropRegions?.map((region) => ({
+              ...region,
+              questionScores:
+                region.questionScores?.map(serializeQuestionScore) || [],
+            })) || []
+        ) || [],
+      // answerImagesを抽出
+      answerImages:
+        exam.examPages?.flatMap(
+          (page) =>
+            page.studentAnswerImages?.map((image) => ({
+              ...image,
+              pageNumber: page.pageNumber,
+            })) || []
+        ) || [],
+    }))
+
+    return examsWithFlattenedData
+  })
+
+  registerHandler("fetch-exam-by-id", async (examId: string) => {
+    const exam = await dbFetchExamById(examId)
+    if (!exam) {
+      return null
+    }
+
+    // Dateオブジェクトをそのまま返す
+    // Decimalオブジェクトはnumberに変換（Structured Clone非対応のため）
+    return {
+      ...exam,
+      // examPagesのcropRegionsのquestionScoresをシリアライズ
+      examPages:
+        exam.examPages?.map((page) => ({
+          ...page,
+          cropRegions:
+            page.cropRegions?.map((region) => ({
+              ...region,
+              questionScores:
+                region.questionScores?.map(serializeQuestionScore) || [],
+            })) || [],
+        })) || [],
+      // cropRegionsを平坦化（シリアライズ済み）
+      cropRegions:
+        exam.examPages?.flatMap(
+          (page) =>
+            page.cropRegions?.map((region) => ({
+              ...region,
+              questionScores:
+                region.questionScores?.map(serializeQuestionScore) || [],
+            })) || []
+        ) || [],
+      // answerImagesを抽出
+      answerImages:
+        exam.examPages?.flatMap(
+          (page) =>
+            page.studentAnswerImages?.map((image) => ({
+              ...image,
+              pageNumber: page.pageNumber,
+            })) || []
+        ) || [],
     }
   })
 
-  ipcMain.handle("fetch-exams", async (_event, userId: string) => {
-    try {
-      const exams = await dbFetchExams(userId)
-
-      // Dateオブジェクトをそのまま返す（Structured Clone AlgorithmでDate対応）
-      // Decimalオブジェクトはnumberに変換（Structured Clone非対応のため）
-      const examsWithFlattenedData = exams.map((exam) => ({
-        ...exam,
-        // examPagesのcropRegionsのquestionScoresをシリアライズ
-        examPages:
-          exam.examPages?.map((page) => ({
-            ...page,
-            cropRegions:
-              page.cropRegions?.map((region) => ({
-                ...region,
-                questionScores:
-                  region.questionScores?.map(serializeQuestionScore) || [],
-              })) || [],
-          })) || [],
-        // cropRegionsを平坦化（シリアライズ済み）
-        cropRegions:
-          exam.examPages?.flatMap(
-            (page) =>
-              page.cropRegions?.map((region) => ({
-                ...region,
-                questionScores:
-                  region.questionScores?.map(serializeQuestionScore) || [],
-              })) || []
-          ) || [],
-        // answerImagesを抽出
-        answerImages:
-          exam.examPages?.flatMap(
-            (page) =>
-              page.studentAnswerImages?.map((image) => ({
-                ...image,
-                pageNumber: page.pageNumber,
-              })) || []
-          ) || [],
-      }))
-
-      return examsWithFlattenedData
-    } catch (err) {
-      console.error("Error fetching exams:", err)
-      throw err
-    }
-  })
-
-  ipcMain.handle("fetch-exam-by-id", async (_event, examId: string) => {
-    try {
-      const exam = await dbFetchExamById(examId)
-      if (!exam) {
-        return null
-      }
+  registerHandler(
+    "create-exam",
+    async (examData: Omit<Prisma.ExamCreateInput, "user">, userId: string) => {
+      if (!userId) throw new Error("User ID is required to create a exam.")
+      const exam = await dbCreateExam(examData, userId)
 
       // Dateオブジェクトをそのまま返す
-      // Decimalオブジェクトはnumberに変換（Structured Clone非対応のため）
       return {
         ...exam,
-        // examPagesのcropRegionsのquestionScoresをシリアライズ
-        examPages:
-          exam.examPages?.map((page) => ({
-            ...page,
-            cropRegions:
-              page.cropRegions?.map((region) => ({
-                ...region,
-                questionScores:
-                  region.questionScores?.map(serializeQuestionScore) || [],
-              })) || [],
-          })) || [],
-        // cropRegionsを平坦化（シリアライズ済み）
         cropRegions:
           exam.examPages?.flatMap(
-            (page) =>
-              page.cropRegions?.map((region) => ({
-                ...region,
-                questionScores:
-                  region.questionScores?.map(serializeQuestionScore) || [],
-              })) || []
+            (page) => page.cropRegions?.map((region) => region) || []
           ) || [],
-        // answerImagesを抽出
-        answerImages:
-          exam.examPages?.flatMap(
-            (page) =>
-              page.studentAnswerImages?.map((image) => ({
-                ...image,
-                pageNumber: page.pageNumber,
-              })) || []
-          ) || [],
-      }
-    } catch (err) {
-      console.error("Error fetching exam by ID:", err)
-      throw err
-    }
-  })
-
-  ipcMain.handle(
-    "create-exam",
-    async (
-      _event,
-      examData: Omit<Prisma.ExamCreateInput, "user">,
-      userId: string
-    ) => {
-      try {
-        if (!userId) throw new Error("User ID is required to create a exam.")
-        const exam = await dbCreateExam(examData, userId)
-
-        // Dateオブジェクトをそのまま返す
-        return {
-          ...exam,
-          cropRegions:
-            exam.examPages?.flatMap(
-              (page) => page.cropRegions?.map((region) => region) || []
-            ) || [],
-        }
-      } catch (err) {
-        console.error("Error creating exam:", err)
-        throw err
       }
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "update-exam",
-    async (_event, examId: string, data: Prisma.ExamUpdateInput) => {
-      try {
-        const exam = await dbUpdateExam(examId, data)
-        // Dateオブジェクトをそのまま返す
-        return exam
-      } catch (err) {
-        console.error("Error updating exam:", err)
-        throw err
-      }
-    }
-  )
-
-  ipcMain.handle("delete-exam", async (_event, examId: string) => {
-    try {
-      const exam = await dbDeleteExam(examId)
+    async (examId: string, data: Prisma.ExamUpdateInput) => {
+      const exam = await dbUpdateExam(examId, data)
       // Dateオブジェクトをそのまま返す
       return exam
-    } catch (err) {
-      console.error("Error deleting exam:", err)
-      throw err
-    }
-  })
-
-  ipcMain.handle(
-    "get-exam-pages-by-exam-id",
-    async (_event, examId: string) => {
-      try {
-        const examPages = await dbGetExamPagesByExamId(examId)
-        // Dateオブジェクトをそのまま返す
-        return examPages
-      } catch (err) {
-        console.error("Error fetching exam pages by exam ID:", err)
-        throw err
-      }
     }
   )
+
+  registerHandler("delete-exam", async (examId: string) => {
+    const exam = await dbDeleteExam(examId)
+    // Dateオブジェクトをそのまま返す
+    return exam
+  })
+
+  registerHandler("get-exam-pages-by-exam-id", async (examId: string) => {
+    const examPages = await dbGetExamPagesByExamId(examId)
+    // Dateオブジェクトをそのまま返す
+    return examPages
+  })
 }

@@ -30,6 +30,7 @@ import {
   deleteSubtotalDefinitionsByCropRegionId,
   getSubtotalDefinitionsByQuestionGroupItemId,
 } from "../lib/prisma/subtotalDefinition"
+import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 export function setupQuestionGroupHandlers(): void {
   // 既存のハンドラーをクリア（重複登録を防ぐ）
@@ -60,258 +61,124 @@ export function setupQuestionGroupHandlers(): void {
   ipcMain.removeHandler("get-subtotal-definitions-by-question-group-item-id")
 
   // QuestionGroup handlers
-  ipcMain.handle("create-question-group", async (_event, data) => {
-    try {
-      return await createQuestionGroup(data)
-    } catch (err) {
-      console.error("Error creating question group:", err)
-      throw err
-    }
+  registerHandler("create-question-group", async (data) => {
+    return await createQuestionGroup(data)
   })
 
-  ipcMain.handle("update-question-group", async (_event, id, data) => {
-    try {
-      return await updateQuestionGroup(id, data)
-    } catch (err) {
-      console.error("Error updating question group:", err)
-      throw err
-    }
+  registerHandler("update-question-group", async (id, data) => {
+    return await updateQuestionGroup(id, data)
   })
 
-  ipcMain.handle("delete-question-group", async (_event, id) => {
-    try {
-      return await deleteQuestionGroup(id)
-    } catch (err) {
-      console.error("Error deleting question group:", err)
-      throw err
-    }
+  registerHandler("delete-question-group", async (id) => {
+    return await deleteQuestionGroup(id)
   })
 
-  ipcMain.handle("get-question-groups-by-exam-id", async (_event, examId) => {
-    try {
-      return await getQuestionGroupsByExamId(examId)
-    } catch (err) {
-      console.error("Error getting question groups by exam id:", err)
-      throw err
-    }
+  registerHandler("get-question-groups-by-exam-id", async (examId) => {
+    return await getQuestionGroupsByExamId(examId)
   })
 
-  ipcMain.handle("get-question-group-by-id", async (_event, id) => {
-    try {
-      return await getQuestionGroupById(id)
-    } catch (err) {
-      console.error("Error getting question group by id:", err)
-      throw err
-    }
+  registerHandler("get-question-group-by-id", async (id) => {
+    return await getQuestionGroupById(id)
   })
 
   // QuestionGroupItem handlers
-  ipcMain.handle("create-question-group-item", async (_event, data) => {
-    try {
-      return await createQuestionGroupItem(data)
-    } catch (err) {
-      console.error("Error creating question group item:", err)
-      throw err
-    }
+  registerHandler("create-question-group-item", async (data) => {
+    return await createQuestionGroupItem(data)
   })
 
-  ipcMain.handle("create-many-question-group-items", async (_event, items) => {
-    try {
-      return await createManyQuestionGroupItems(items)
-    } catch (err) {
-      console.error("Error creating many question group items:", err)
-      throw err
-    }
+  registerHandler("create-many-question-group-items", async (items) => {
+    return await createManyQuestionGroupItems(items)
   })
 
-  ipcMain.handle("update-question-group-item", async (_event, id, data) => {
-    try {
-      return await updateQuestionGroupItem(id, data)
-    } catch (err) {
-      console.error("Error updating question group item:", err)
-      throw err
-    }
+  registerHandler("update-question-group-item", async (id, data) => {
+    return await updateQuestionGroupItem(id, data)
   })
 
-  ipcMain.handle("delete-question-group-item", async (_event, id) => {
-    try {
-      return await deleteQuestionGroupItem(id)
-    } catch (err) {
-      console.error("Error deleting question group item:", err)
-      throw err
-    }
+  registerHandler("delete-question-group-item", async (id) => {
+    return await deleteQuestionGroupItem(id)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "get-question-group-items-by-group-id",
-    async (_event, questionGroupId) => {
-      try {
-        return await getQuestionGroupItemsByGroupId(questionGroupId)
-      } catch (err) {
-        console.error("Error getting question group items by group id:", err)
-        throw err
-      }
+    async (questionGroupId) => {
+      return await getQuestionGroupItemsByGroupId(questionGroupId)
     }
   )
 
-  ipcMain.handle("get-question-group-item-by-id", async (_event, id) => {
-    try {
-      return await getQuestionGroupItemById(id)
-    } catch (err) {
-      console.error("Error getting question group item by id:", err)
-      throw err
-    }
+  registerHandler("get-question-group-item-by-id", async (id) => {
+    return await getQuestionGroupItemById(id)
   })
 
-  ipcMain.handle(
-    "update-question-group-item-orders",
-    async (_event, orders) => {
-      try {
-        const result = await updateQuestionGroupItemOrders(orders)
-        return result
-      } catch (err) {
-        console.error("Error updating question group item orders:", err)
-        throw err
-      }
-    }
-  )
+  registerHandler("update-question-group-item-orders", async (orders) => {
+    const result = await updateQuestionGroupItemOrders(orders)
+    return result
+  })
 
   // QuestionSubtotalAssignment handlers
-  ipcMain.handle(
-    "create-question-subtotal-assignment",
-    async (_event, data) => {
-      try {
-        return await createQuestionSubtotalAssignment(data)
-      } catch (err) {
-        console.error("Error creating question subtotal assignment:", err)
-        throw err
-      }
-    }
-  )
+  registerHandler("create-question-subtotal-assignment", async (data) => {
+    return await createQuestionSubtotalAssignment(data)
+  })
 
-  ipcMain.handle(
+  registerHandler(
     "create-many-question-subtotal-assignments",
-    async (_event, assignments) => {
-      try {
-        return await createManyQuestionSubtotalAssignments(assignments)
-      } catch (err) {
-        console.error("Error creating many question subtotal assignments:", err)
-        throw err
-      }
+    async (assignments) => {
+      return await createManyQuestionSubtotalAssignments(assignments)
     }
   )
 
-  ipcMain.handle("delete-question-subtotal-assignment", async (_event, id) => {
-    try {
-      return await deleteQuestionSubtotalAssignment(id)
-    } catch (err) {
-      console.error("Error deleting question subtotal assignment:", err)
-      throw err
-    }
+  registerHandler("delete-question-subtotal-assignment", async (id) => {
+    return await deleteQuestionSubtotalAssignment(id)
   })
 
   // Note: delete-assignments-by-question-crop-region-id handler moved to crop-region-handlers.ts
 
-  ipcMain.handle(
+  registerHandler(
     "delete-assignments-by-question-group-item-id",
-    async (_event, questionGroupItemId) => {
-      try {
-        return await deleteAssignmentsByQuestionGroupItemId(questionGroupItemId)
-      } catch (err) {
-        console.error(
-          "Error deleting assignments by question group item id:",
-          err
-        )
-        throw err
-      }
+    async (questionGroupItemId) => {
+      return await deleteAssignmentsByQuestionGroupItemId(questionGroupItemId)
     }
   )
 
   // Note: get-assignments-by-question-crop-region-id handler moved to crop-region-handlers.ts
 
-  ipcMain.handle(
+  registerSafeHandler(
     "get-assignments-by-question-group-item-id",
-    async (_event, questionGroupItemId) => {
-      try {
-        const assignments =
-          await getAssignmentsByQuestionGroupItemId(questionGroupItemId)
-        return {
-          success: true,
-          assignments,
-        }
-      } catch (err) {
-        console.error(
-          "Error getting assignments by question group item id:",
-          err
-        )
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error",
-        }
+    async (questionGroupItemId) => {
+      const assignments =
+        await getAssignmentsByQuestionGroupItemId(questionGroupItemId)
+      return {
+        success: true,
+        assignments,
       }
     }
   )
 
   // SubtotalDefinition handlers
-  ipcMain.handle("create-subtotal-definition", async (_event, data) => {
-    try {
-      return await createSubtotalDefinition(data)
-    } catch (err) {
-      console.error("Error creating subtotal definition:", err)
-      throw err
-    }
+  registerHandler("create-subtotal-definition", async (data) => {
+    return await createSubtotalDefinition(data)
   })
 
-  ipcMain.handle(
-    "create-many-subtotal-definitions",
-    async (_event, definitions) => {
-      try {
-        return await createManySubtotalDefinitions(definitions)
-      } catch (err) {
-        console.error("Error creating many subtotal definitions:", err)
-        throw err
-      }
-    }
-  )
-
-  ipcMain.handle("delete-subtotal-definition", async (_event, id) => {
-    try {
-      return await deleteSubtotalDefinition(id)
-    } catch (err) {
-      console.error("Error deleting subtotal definition:", err)
-      throw err
-    }
+  registerHandler("create-many-subtotal-definitions", async (definitions) => {
+    return await createManySubtotalDefinitions(definitions)
   })
 
-  ipcMain.handle(
+  registerHandler("delete-subtotal-definition", async (id) => {
+    return await deleteSubtotalDefinition(id)
+  })
+
+  registerHandler(
     "delete-subtotal-definitions-by-crop-region-id",
-    async (_event, cropRegionId) => {
-      try {
-        return await deleteSubtotalDefinitionsByCropRegionId(cropRegionId)
-      } catch (err) {
-        console.error(
-          "Error deleting subtotal definitions by layout region id:",
-          err
-        )
-        throw err
-      }
+    async (cropRegionId) => {
+      return await deleteSubtotalDefinitionsByCropRegionId(cropRegionId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "get-subtotal-definitions-by-question-group-item-id",
-    async (_event, questionGroupItemId) => {
-      try {
-        return await getSubtotalDefinitionsByQuestionGroupItemId(
-          questionGroupItemId
-        )
-      } catch (err) {
-        console.error(
-          "Error getting subtotal definitions by question group item id:",
-          err
-        )
-        throw err
-      }
+    async (questionGroupItemId) => {
+      return await getSubtotalDefinitionsByQuestionGroupItemId(
+        questionGroupItemId
+      )
     }
   )
 }

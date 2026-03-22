@@ -2,8 +2,6 @@
  * Subject/SubjectSubtotalGroup IPC ハンドラー
  */
 
-import { ipcMain } from "electron"
-
 import {
   createSubject,
   deleteSubject,
@@ -16,48 +14,49 @@ import {
   deleteSubjectSubtotalGroup,
   getSubjectSubtotalGroups,
 } from "../lib/prisma/subjectSubtotalGroup"
+import { registerHandler } from "./ipcHandlerUtils"
 
 export function setupSubjectHandlers(): void {
   // Subject CRUD
-  ipcMain.handle("subject:getAll", async () => {
+  registerHandler("subject:getAll", async () => {
     return getAllSubjects()
   })
 
-  ipcMain.handle("subject:getById", async (_event, id: string) => {
+  registerHandler("subject:getById", async (id: string) => {
     return getSubjectById(id)
   })
 
-  ipcMain.handle("subject:create", async (_event, data: { name: string }) => {
+  registerHandler("subject:create", async (data: { name: string }) => {
     return createSubject(data)
   })
 
-  ipcMain.handle(
+  registerHandler(
     "subject:update",
-    async (_event, id: string, data: { name: string }) => {
+    async (id: string, data: { name: string }) => {
       return updateSubject(id, data)
     }
   )
 
-  ipcMain.handle("subject:delete", async (_event, id: string) => {
+  registerHandler("subject:delete", async (id: string) => {
     return deleteSubject(id)
   })
 
   // SubjectSubtotalGroup CRUD
-  ipcMain.handle(
+  registerHandler(
     "subjectSubtotalGroup:getBySubjectId",
-    async (_event, subjectId: string) => {
+    async (subjectId: string) => {
       return getSubjectSubtotalGroups(subjectId)
     }
   )
 
-  ipcMain.handle(
+  registerHandler(
     "subjectSubtotalGroup:create",
-    async (_event, data: { subjectId: string; subtotalGroupId: string }) => {
+    async (data: { subjectId: string; subtotalGroupId: string }) => {
       return createSubjectSubtotalGroup(data)
     }
   )
 
-  ipcMain.handle("subjectSubtotalGroup:delete", async (_event, id: string) => {
+  registerHandler("subjectSubtotalGroup:delete", async (id: string) => {
     return deleteSubjectSubtotalGroup(id)
   })
 }
