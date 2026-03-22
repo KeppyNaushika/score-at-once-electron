@@ -15,10 +15,7 @@ import {
   DragSelectionResult,
 } from "../types"
 import { frameDetector } from "../utils/frameDetector"
-import {
-  findIntersectingRects,
-  findSmallestContainingRect,
-} from "../utils/rectUtils"
+import { findIntersectingRects } from "../utils/rectUtils"
 
 interface UseFrameDetectionProps {
   imageUrl: string | null
@@ -41,8 +38,6 @@ interface UseFrameDetectionReturn {
   resetSettings: () => void
   /** 画像全体から一括検出 */
   detectAll: () => Promise<void>
-  /** クリック位置の枠を検出 */
-  detectAtPoint: (x: number, y: number) => DetectedRect | null
   /** ドラッグ後にスナップする矩形を取得 */
   findSnappedRects: (dragRect: {
     x: number
@@ -130,16 +125,6 @@ export function useFrameDetection({
   }, [imageUrl, settings])
 
   /**
-   * クリック位置の枠を検出
-   */
-  const detectAtPoint = useCallback(
-    (x: number, y: number): DetectedRect | null => {
-      return findSmallestContainingRect(x, y, detectedRects)
-    },
-    [detectedRects]
-  )
-
-  /**
    * ドラッグ後にスナップする矩形を取得
    */
   const findSnappedRects = useCallback(
@@ -171,7 +156,6 @@ export function useFrameDetection({
     updateSettings,
     resetSettings,
     detectAll,
-    detectAtPoint,
     findSnappedRects,
     clearDetectedRects,
   }

@@ -4,10 +4,10 @@
  */
 
 import { CANVAS_SETTINGS } from "@/app/textbox-on-canvas-v3/constants"
-import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
 import type {
   DrawingAnnotation,
   DrawingCreateData,
+  DrawingTool,
   DrawingType,
 } from "@/types/drawingAnnotation.types"
 

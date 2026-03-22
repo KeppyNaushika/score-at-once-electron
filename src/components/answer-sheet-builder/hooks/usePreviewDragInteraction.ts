@@ -22,8 +22,6 @@ interface DragState {
 export interface PreviewDragResult {
   /** ホバー中の線のdragInfo */
   hoveredDragInfo: DragInfo | null
-  /** ドラッグ中かどうか */
-  isDragging: boolean
   /** SVG要素のマウスイベントハンドラ */
   onMouseDown: (e: React.MouseEvent<SVGSVGElement>) => void
   onMouseMove: (e: React.MouseEvent<SVGSVGElement>) => void
@@ -200,8 +198,6 @@ export function usePreviewDragInteraction(
     setHoveredDragInfo(null)
   }, [])
 
-  const isDragging = dragStateRef.current !== null
-
   let cursor = "default"
   if (interactive && hoveredDragInfo) {
     cursor = hoveredDragInfo.axis === "horizontal" ? "ns-resize" : "ew-resize"
@@ -209,7 +205,6 @@ export function usePreviewDragInteraction(
 
   return {
     hoveredDragInfo,
-    isDragging,
     onMouseDown,
     onMouseMove,
     onMouseUp,

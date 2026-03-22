@@ -54,5 +54,5 @@ export function useBoundaries(gradeId: string) {
     [gradeId, loadData]
   )
 
-  return { exam, boundarySets, loading, saveBoundarySet, reload: loadData }
+  return { exam, boundarySets, loading, saveBoundarySet }
 }

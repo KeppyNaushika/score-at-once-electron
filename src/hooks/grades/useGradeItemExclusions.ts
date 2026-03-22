@@ -99,46 +99,10 @@ export function useGradeItemExclusions(gradeId: string) {
     [exclusionSet, gradeId]
   )
 
-  const batchUpdate = useCallback(
-    async (
-      updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
-    ) => {
-      // 楽観的更新
-      setExclusionSet((prev) => {
-        const next = new Set(prev)
-        for (const u of updates) {
-          const key = buildKey(u.studentId, u.gradeItemId)
-          if (u.excluded) {
-            next.add(key)
-          } else {
-            next.delete(key)
-          }
-        }
-        return next
-      })
-
-      try {
-        const result =
-          await window.electronAPI.grade.batchUpdateGradeItemExclusions(
-            gradeId,
-            updates
-          )
-        if (!result.success) {
-          await loadExclusions()
-        }
-      } catch {
-        await loadExclusions()
-      }
-    },
-    [gradeId, loadExclusions]
-  )
-
   return {
     exclusionSet,
     loading,
     isExcluded,
     toggleExclusion,
-    batchUpdate,
-    reload: loadExclusions,
   }
 }

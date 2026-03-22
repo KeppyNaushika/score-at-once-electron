@@ -45,14 +45,6 @@ export const useSaveStatus = (options?: UseSaveStatusOptions) => {
     }, displayDuration)
   }, [savedMessage, initialMessage, displayDuration])
 
-  const resetSaveStatus = useCallback(() => {
-    if (timeoutId.current !== null) {
-      clearTimeout(timeoutId.current)
-      timeoutId.current = null
-    }
-    setSaveStatus(initialMessage)
-  }, [initialMessage])
-
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -66,8 +58,5 @@ export const useSaveStatus = (options?: UseSaveStatusOptions) => {
     saveStatus,
     showSaving,
     showSaved,
-    resetSaveStatus,
-    // 以前の setSaveStatusState のような直接的なセッターが必要な場合は追加
-    // setSaveStatusDirectly: setSaveStatus,
   }
 }

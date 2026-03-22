@@ -58,7 +58,6 @@ const CropRegionEditor = ({
     updateSettings,
     resetSettings,
     detectAll,
-    detectAtPoint: _detectAtPoint, // 将来のクリック検出モードで使用予定
     findSnappedRects,
     clearDetectedRects,
   } = useFrameDetection({ imageUrl: backgroundImageUrl })

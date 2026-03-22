@@ -16,7 +16,6 @@ interface UseIndividualReportPreviewResult {
   previewData: IndividualReportData | null
   isLoading: boolean
   error: string | null
-  refetch: () => Promise<void>
   previewStudentId: string | null
   setPreviewStudentId: (id: string | null) => void
 }
@@ -98,7 +97,6 @@ export function useIndividualReportPreview({
     previewData,
     isLoading,
     error,
-    refetch: fetchPreviewData,
     previewStudentId,
     setPreviewStudentId,
   }
