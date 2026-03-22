@@ -5,6 +5,7 @@
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type {
   ClassMatchingStrategy,
+  ExistingItemInfo,
   IdChoice,
   MatchedItem,
   StudentMatchingStrategy,
@@ -81,6 +82,10 @@ export interface DetailPanelProps {
   noMatch: Array<{ importId: string; displayLabel: string }>
   showIndividualMessage: boolean
   onBatchIdChoice?: (idChoice: IdChoice) => void
+  /** 全既存アイテム一覧（手動紐づけ用、小計グループで使用） */
+  allExistingItems?: ExistingItemInfo[]
+  /** noMatchアイテムの一括決定コールバック */
+  onBatchNoMatchDecision?: (decision: NoMatchDecisionType) => void
 }
 
 /** マッチしたアイテム行のProps */
@@ -97,7 +102,19 @@ export interface MatchedItemRowProps {
 /** マッチしなかったアイテム行のProps */
 export interface NoMatchItemRowProps {
   item: { importId: string; displayLabel: string }
-  onDecisionChange: (decision: NoMatchDecisionType) => void
+  onDecisionChange: (
+    decision: NoMatchDecisionType | DecisionType,
+    existingId?: string,
+    idChoice?: IdChoice
+  ) => void
+  /** エンティティ種別（subtotalGroupの場合、手動紐づけを許可） */
+  entityType?: EntityType
+  /** 全既存アイテム一覧（手動紐づけ用） */
+  allExistingItems?: ExistingItemInfo[]
+  /** wizardインスタンス（subtotalGroupの小計項目マッピング用） */
+  wizard?: UseImportWizardReturn
+  /** 既にマッチ済みの既存ID一覧（重複防止） */
+  alreadyMatchedExistingIds?: Set<string>
 }
 
 /** 方針選択オプションProps */

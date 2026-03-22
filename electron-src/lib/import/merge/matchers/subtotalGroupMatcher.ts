@@ -153,10 +153,18 @@ export async function preMatchSubtotalGroups(
     })
   }
 
+  // 全既存グループ情報を返す（手動紐づけ用）
+  const allExistingItems = existingGroups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    subtotals: existingSubtotalsByGroup.get(g.id),
+  }))
+
   return {
     byId,
     byName,
     noMatch,
+    allExistingItems,
   }
 }
 

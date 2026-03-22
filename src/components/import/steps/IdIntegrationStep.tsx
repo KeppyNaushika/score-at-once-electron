@@ -43,6 +43,18 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     state.fileOverviewData.subtotalGroup.byId.length <
       (state.manifest?.counts.subtotalGroups ?? 0)
 
+  // 小計グループnoMatchに未決定のアイテムがあるか
+  const hasUndecidedSubtotalGroupNoMatch = (() => {
+    if (!state.fileOverviewData) return false
+    const noMatch = state.fileOverviewData.subtotalGroup.noMatch
+    if (noMatch.length === 0) return false
+    const strategy = state.idIntegrationConfig.subtotalGroup.strategy
+    if (strategy === "all_new") return false // all_newなら決定不要
+    const decisions = state.idIntegrationConfig.subtotalGroup.decisions
+    const decidedIds = new Set(decisions.map((d) => d.importId))
+    return noMatch.some((item) => !decidedIds.has(item.importId))
+  })()
+
   // 何も判断が必要ない場合はスキップ可能
   const canSkip =
     !hasStudentDecisions && !hasClassDecisions && !hasSubtotalGroupDecisions
@@ -159,10 +171,15 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       </Tabs>
 
       {/* 次へボタン */}
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex flex-col items-center gap-2">
+        {hasUndecidedSubtotalGroupNoMatch && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            小計グループタブに未決定の項目があります
+          </p>
+        )}
         <Button
           onClick={goToNextStep}
-          disabled={state.isProcessing}
+          disabled={state.isProcessing || hasUndecidedSubtotalGroupNoMatch}
           size="lg"
           className="px-8"
         >
