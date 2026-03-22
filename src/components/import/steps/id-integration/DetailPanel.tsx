@@ -1,5 +1,7 @@
 "use client"
 
+import { useMemo } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -24,8 +26,44 @@ export function DetailPanel({
   noMatch,
   showIndividualMessage,
   onBatchIdChoice,
+  allExistingItems,
+  onBatchNoMatchDecision,
 }: DetailPanelProps) {
   const { updateIdIntegrationDecision } = wizard
+
+  // 既にマッチ済みの既存IDを収集（重複紐づけ防止）
+  const alreadyMatchedExistingIds = useMemo(() => {
+    if (entityType !== "subtotalGroup") return undefined
+    const ids = new Set<string>()
+    // byId items（自動マッチ、常にリンク済み）
+    const overview = wizard.state.fileOverviewData?.subtotalGroup
+    if (overview?.byId) {
+      for (const item of overview.byId) ids.add(item.existingId)
+    }
+    const config = wizard.state.idIntegrationConfig.subtotalGroup
+    const decisionByImportId = new Map(
+      config.decisions.map((d) => [d.importId, d])
+    )
+    // byName items: 決定未設定（デフォルトsame_person）またはsame_personの場合のみ
+    for (const item of byName) {
+      const d = decisionByImportId.get(item.importId)
+      if (!d || d.decisionType === "same_person") {
+        ids.add(item.existingId)
+      }
+    }
+    // 全same_person決定（noMatchの手動紐づけ含む）
+    for (const d of config.decisions) {
+      if (d.decisionType === "same_person" && d.existingId) {
+        ids.add(d.existingId)
+      }
+    }
+    return ids
+  }, [
+    entityType,
+    wizard.state.fileOverviewData,
+    wizard.state.idIntegrationConfig,
+    byName,
+  ])
 
   if (byName.length === 0 && noMatch.length === 0) {
     return null
@@ -92,15 +130,42 @@ export function DetailPanel({
             )
           })}
 
+          {/* noMatchアイテムの一括設定ボタン */}
+          {noMatch.length > 0 && onBatchNoMatchDecision && (
+            <div className="bg-muted/30 mb-1 flex items-center gap-2 rounded-lg border p-3">
+              <span className="text-sm font-medium">未照合の一括設定:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onBatchNoMatchDecision("create_new")}
+              >
+                すべて新規作成
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onBatchNoMatchDecision("skip")}
+              >
+                すべて取り込まない
+              </Button>
+            </div>
+          )}
+
           {/* マッチしなかったアイテム */}
           {noMatch.map((item) => (
             <NoMatchItemRow
               key={item.importId}
               item={item}
-              onDecisionChange={(decision) =>
+              entityType={entityType}
+              allExistingItems={allExistingItems}
+              wizard={entityType === "subtotalGroup" ? wizard : undefined}
+              alreadyMatchedExistingIds={alreadyMatchedExistingIds}
+              onDecisionChange={(decision, existingId, idChoice) =>
                 updateIdIntegrationDecision(entityType, item.importId, {
                   importId: item.importId,
                   decisionType: decision,
+                  existingId,
+                  idChoice,
                 })
               }
             />

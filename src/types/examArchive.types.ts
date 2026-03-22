@@ -106,6 +106,17 @@ export interface PreMatchingResult {
   byName?: MatchedItem[]
   /** どれにも一致しない */
   noMatch: ImportItem[]
+  /** 全既存アイテム一覧（手動紐づけ用、小計グループで使用） */
+  allExistingItems?: ExistingItemInfo[]
+}
+
+/**
+ * 既存アイテムの概要情報（手動紐づけ用）
+ */
+export interface ExistingItemInfo {
+  id: string
+  name: string
+  subtotals?: SubtotalInfo[]
 }
 
 /**

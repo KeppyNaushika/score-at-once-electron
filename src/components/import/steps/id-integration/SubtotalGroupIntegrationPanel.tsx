@@ -103,6 +103,7 @@ export function SubtotalGroupIntegrationPanel({
           byName={overview.byName ?? []}
           noMatch={overview.noMatch}
           showIndividualMessage={strategy === "individual"}
+          allExistingItems={overview.allExistingItems}
           onBatchIdChoice={(idChoice) => {
             const items = (overview.byName ?? []).map((item) => ({
               importId: item.importId,
@@ -114,6 +115,18 @@ export function SubtotalGroupIntegrationPanel({
               "same_person",
               idChoice
             )
+          }}
+          onBatchNoMatchDecision={(decision) => {
+            for (const item of overview.noMatch) {
+              wizard.updateIdIntegrationDecision(
+                "subtotalGroup",
+                item.importId,
+                {
+                  importId: item.importId,
+                  decisionType: decision,
+                }
+              )
+            }
           }}
         />
       )}
