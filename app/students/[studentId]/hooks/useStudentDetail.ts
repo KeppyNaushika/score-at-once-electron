@@ -2,11 +2,11 @@ import type { Student, StudentClassMembership } from "@prisma/client"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import {
+import type {
   ClassWithMemberships,
-  Membership,
+  StudentClassMembershipWithDetails,
   StudentWithMemberships,
-} from "@/app/students/[studentId]/types"
+} from "@/types/prismaExtensions"
 
 export function useStudentDetail(studentId: string) {
   const router = useRouter()
@@ -18,38 +18,12 @@ export function useStudentDetail(studentId: string) {
     const fetchData = async () => {
       try {
         setLoading(true)
-        // Fetch all students and find the one we need
         const students = await window.electronAPI.fetchStudents()
         const targetStudent = students.find((s) => s.id === studentId)
         if (targetStudent) {
-          // Transform the student data to match the expected interface
-          const transformedStudent = {
-            ...targetStudent,
-            memberships: targetStudent.memberships.map(
-              (
-                membership: StudentClassMembership & {
-                  class: {
-                    id: string
-                    name: string
-                    grade?: number | null
-                    classCode?: string | null
-                  }
-                }
-              ) => ({
-                ...membership,
-                startDate: new Date(
-                  membership.startDate || membership.createdAt
-                ),
-                endDate: membership.endDate
-                  ? new Date(membership.endDate)
-                  : null,
-              })
-            ),
-          }
-          setStudent(transformedStudent)
+          setStudent(targetStudent)
         }
 
-        // Fetch all classes for membership management
         const fetchedClasses = await window.electronAPI.fetchClasses()
         setClasses(fetchedClasses || [])
       } catch (error) {
@@ -67,28 +41,7 @@ export function useStudentDetail(studentId: string) {
         studentId,
         studentData
       )
-      // Transform the updated student data to match the expected interface
-      const transformedStudent = {
-        ...updatedStudent,
-        memberships:
-          updatedStudent.memberships?.map(
-            (
-              membership: StudentClassMembership & {
-                class: {
-                  id: string
-                  name: string
-                  grade?: number | null
-                  classCode?: string | null
-                }
-              }
-            ) => ({
-              ...membership,
-              startDate: new Date(membership.startDate || membership.createdAt),
-              endDate: membership.endDate ? new Date(membership.endDate) : null,
-            })
-          ) || [],
-      }
-      setStudent(transformedStudent)
+      setStudent(updatedStudent)
       return true
     } catch (error) {
       console.error("Failed to update student:", error)
@@ -118,7 +71,7 @@ export function useStudentDetail(studentId: string) {
 
   const handleSaveMembership = async (
     membershipData: Partial<StudentClassMembership> & { classId: string },
-    membershipToEdit?: Membership | null
+    membershipToEdit?: StudentClassMembershipWithDetails | null
   ) => {
     try {
       if (membershipToEdit) {
@@ -137,32 +90,7 @@ export function useStudentDetail(studentId: string) {
       const students = await window.electronAPI.fetchStudents()
       const updatedStudent = students.find((s) => s.id === studentId)
       if (updatedStudent) {
-        // Transform the updated student data to match the expected interface
-        const transformedStudent = {
-          ...updatedStudent,
-          memberships:
-            updatedStudent.memberships?.map(
-              (
-                membership: StudentClassMembership & {
-                  class: {
-                    id: string
-                    name: string
-                    grade?: number | null
-                    classCode?: string | null
-                  }
-                }
-              ) => ({
-                ...membership,
-                startDate: new Date(
-                  membership.startDate || membership.createdAt
-                ),
-                endDate: membership.endDate
-                  ? new Date(membership.endDate)
-                  : null,
-              })
-            ) || [],
-        }
-        setStudent(transformedStudent)
+        setStudent(updatedStudent)
       }
       return true
     } catch (error) {
@@ -181,32 +109,7 @@ export function useStudentDetail(studentId: string) {
         const students = await window.electronAPI.fetchStudents()
         const updatedStudent = students.find((s) => s.id === studentId)
         if (updatedStudent) {
-          // Transform the updated student data to match the expected interface
-          const transformedStudent = {
-            ...updatedStudent,
-            memberships:
-              updatedStudent.memberships?.map(
-                (
-                  membership: StudentClassMembership & {
-                    class: {
-                      id: string
-                      name: string
-                      grade?: number | null
-                      classCode?: string | null
-                    }
-                  }
-                ) => ({
-                  ...membership,
-                  startDate: new Date(
-                    membership.startDate || membership.createdAt
-                  ),
-                  endDate: membership.endDate
-                    ? new Date(membership.endDate)
-                    : null,
-                })
-              ) || [],
-          }
-          setStudent(transformedStudent)
+          setStudent(updatedStudent)
         }
         return true
       } catch (error) {

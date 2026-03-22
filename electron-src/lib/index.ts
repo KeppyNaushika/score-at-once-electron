@@ -2,10 +2,7 @@
 // 新しい階層構造による統合エクスポート
 
 // === 共通機能 ===
-export {
-  buildSubtotalTargetMap,
-  calculateSubtotalScoreForStudent,
-} from "./shared/calculations/subtotalCalculator"
+export { calculateSubtotalScoreForStudent } from "./shared/calculations/subtotalCalculator"
 export type {
   ExportGradingDataOptions,
   ExportResult,

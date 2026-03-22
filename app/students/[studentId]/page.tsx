@@ -14,9 +14,9 @@ import { MembershipHistoryCard } from "@/app/students/[studentId]/components/Mem
 import { StudentDetailHeader } from "@/app/students/[studentId]/components/StudentDetailHeader"
 import { StudentInfoCard } from "@/app/students/[studentId]/components/StudentInfoCard"
 import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
-import { Membership } from "@/app/students/[studentId]/types"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
+import type { StudentClassMembershipWithDetails } from "@/types/prismaExtensions"
 
 export default function StudentDetailPage() {
   const params = useParams()
@@ -34,9 +34,8 @@ export default function StudentDetailPage() {
 
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
-  const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(
-    null
-  )
+  const [membershipToEdit, setMembershipToEdit] =
+    useState<StudentClassMembershipWithDetails | null>(null)
 
   const handleEditStudentClick = () => {
     setIsStudentModalOpen(true)
@@ -57,7 +56,9 @@ export default function StudentDetailPage() {
     setIsMembershipModalOpen(true)
   }
 
-  const handleEditMembership = (membership: Membership) => {
+  const handleEditMembership = (
+    membership: StudentClassMembershipWithDetails
+  ) => {
     setMembershipToEdit(membership)
     setIsMembershipModalOpen(true)
   }

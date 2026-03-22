@@ -2,9 +2,9 @@
 
 import { Edit, Trash2 } from "lucide-react"
 
-import { StudentWithMemberships } from "@/app/students/[studentId]/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentInfoCardProps {
   student: StudentWithMemberships

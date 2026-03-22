@@ -440,8 +440,7 @@ export const updateMasterImagePageSize = async (
   })
 }
 
-// For compatibility with existing code
-export type MasterAnswerPayload = MasterImage & {
+export type ExamPageWithDetails = MasterImage & {
   pageNumber: number
   examId: string
   path: string

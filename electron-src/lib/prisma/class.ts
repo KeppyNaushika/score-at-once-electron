@@ -2,7 +2,7 @@ import { Class, Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
-type ClassWithStudents = Prisma.ClassGetPayload<{
+type ClassWithMemberships = Prisma.ClassGetPayload<{
   include: {
     memberships: {
       include: {
@@ -12,7 +12,7 @@ type ClassWithStudents = Prisma.ClassGetPayload<{
   }
 }>
 
-export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
+export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
   try {
     return await prisma.class.findMany({
       include: {
@@ -36,7 +36,7 @@ export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
 
 export const createClass = async (
   classData: Prisma.ClassCreateInput
-): Promise<ClassWithStudents> => {
+): Promise<ClassWithMemberships> => {
   try {
     return await prisma.class.create({
       data: classData,
@@ -61,7 +61,7 @@ export const createClass = async (
 
 export const updateClass = async (
   classData: Prisma.ClassUpdateInput & { id: string }
-): Promise<ClassWithStudents> => {
+): Promise<ClassWithMemberships> => {
   const { id, ...data } = classData
   try {
     return await prisma.class.update({

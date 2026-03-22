@@ -96,7 +96,7 @@ export const getQuestionGroupById = async (id: string) => {
   }
 }
 
-export type QuestionGroupWithItems = {
+export type SubtotalGroupWithItems = {
   id: string
   name: string
   createdAt: Date

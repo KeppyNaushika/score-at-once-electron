@@ -414,81 +414,13 @@ export const finalizeQuestionScore = async (
 
 /**
  * 答案シートの採点進捗を取得
+ * TODO: 新スキーマに合わせて再実装が必要
  */
 export const getAnswerSheetProgress = async (_answerSheetId: string) => {
-  try {
-    // TODO: This function needs to be rewritten for new schema
-    // In new schema, there's no direct answerSheet table
-    // Need to get student and exam info differently
-    console.warn(
-      "getAnswerSheetProgress function needs rewriting for new schema"
-    )
-    return {
-      success: false,
-      error: "Function not yet updated for new schema",
-    }
-
-    /* Old code - needs rewriting:
-    const answerSheet = await prisma.pageImage.findUnique({
-      where: { id: answerSheetId },
-      include: {
-        examPage: {
-          include: {
-            exam: {
-          include: {
-            cropRegions: {
-              where: {
-                type: "QUESTION_ANSWER",
-              },
-            },
-          },
-        },
-      },
-    })
-
-    if (!answerSheet) {
-      return { success: false, error: "Answer sheet not found" }
-    }
-
-    const totalQuestions = answerSheet.exam.cropRegions.length
-
-    // 採点済み設問数を取得（finalまたはproposedステータス）
-    const gradedQuestionsCount = await prisma.questionScore.groupBy({
-      by: ["cropRegionId"],
-      where: {
-        answerSheetId,
-        OR: [{ status: "final" }, { status: "proposed" }],
-      },
-    })
-    const gradedQuestions = gradedQuestionsCount.length
-
-    // 最終決定済み設問数を取得
-    const finalizedQuestions = await prisma.questionScore.count({
-      where: {
-        answerSheetId,
-        status: "final",
-      },
-    })
-
-    return {
-      success: true,
-      progress: {
-        totalQuestions,
-        gradedQuestions,
-        finalizedQuestions,
-        progressPercentage:
-          totalQuestions > 0 ? (gradedQuestions / totalQuestions) * 100 : 0,
-        finalizedPercentage:
-          totalQuestions > 0 ? (finalizedQuestions / totalQuestions) * 100 : 0,
-      },
-    }
-    */
-  } catch (error) {
-    console.error("Failed to get answer sheet progress:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  console.warn("getAnswerSheetProgress function needs rewriting for new schema")
+  return {
+    success: false as const,
+    error: "Function not yet updated for new schema",
   }
 }
 

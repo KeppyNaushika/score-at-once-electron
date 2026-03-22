@@ -15,32 +15,21 @@ import type {
   UserExam,
 } from "@prisma/client"
 
-export type {
-  ExamListItem,
-  ExamWithDetails,
-  SerializedExam,
-} from "./common.types"
+export type { ExamListItem, ExamWithDetails } from "./common.types"
 export type {
   ClassWithMemberships,
-  ClassWithStudents,
   CropRegionWithDetails,
   CropSubtotalWithRelations,
   ExamPageWithDetails,
   ExamSubtotalGroupWithExam,
   ExamSubtotalGroupWithSubtotalGroup,
-  MasterAnswerPayload,
   MasterImageWithDetails,
-  QuestionGroupItemWithDetails,
-  QuestionGroupWithItems,
   QuestionScoreWithRelations,
   QuestionScoreWithUser,
-  QuestionSubtotalAssignmentWithRelations,
   StudentAnswerImageWithDetails,
   StudentAnswerWithDetails,
   StudentClassMembershipWithDetails,
-  StudentWithClass,
   StudentWithMemberships,
-  SubtotalDefinitionWithRelations,
   SubtotalGroupWithItems,
   SubtotalWithDetails,
   UserExamWithDetails,
@@ -361,10 +350,10 @@ export interface MyAPI {
   }>
 
   // Class related
-  fetchClasses: () => Promise<ClassWithStudents[]>
+  fetchClasses: () => Promise<ClassWithMemberships[]>
   getClassesNotInExam: (examId: string) => Promise<{
     success: boolean
-    classes?: (ClassWithStudents & { studentCount: number })[]
+    classes?: (ClassWithMemberships & { studentCount: number })[]
     error?: string
   }>
   getStudentsNotInExam: (examId: string) => Promise<{
@@ -374,10 +363,10 @@ export interface MyAPI {
   }>
   createClass: (
     classData: Prisma.ClassCreateWithoutTeachersInput
-  ) => Promise<ClassWithStudents>
+  ) => Promise<ClassWithMemberships>
   updateClass: (
     classData: Prisma.ClassUpdateInput & { id: string }
-  ) => Promise<ClassWithStudents> // Ensure id is part of update
+  ) => Promise<ClassWithMemberships> // Ensure id is part of update
   deleteClass: (classId: string) => Promise<Class | void>
 
   // Student related
@@ -2502,37 +2491,6 @@ export interface StudentClassInfo {
   attendanceNumber: number | null
   /** ExamClass の並び順 */
   classOrder: number | null
-}
-
-/**
- * Class with current memberships
- */
-export interface ClassWithMemberships {
-  id: string
-  name: string
-  classCode: string | null
-  grade: number | null
-  description: string | null
-  isVisible: boolean
-  createdAt: Date
-  updatedAt: Date
-  memberships: StudentClassMembershipWithStudent[]
-}
-
-/**
- * StudentClassMembership with student details
- */
-export interface StudentClassMembershipWithStudent {
-  id: string
-  studentId: string
-  classId: string
-  startDate: Date
-  endDate: Date | null
-  attendanceNumber: number | null
-  notes: string | null
-  createdAt: Date
-  updatedAt: Date
-  student: Student
 }
 
 // =============================================================================

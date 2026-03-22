@@ -132,14 +132,6 @@ export const generatePageNumberUpdateRequests = (
  * @param {ExamPageWithDetails[]} examPages - 試験ページ一覧
  * @returns {MasterAnswer[]} MasterAnswer形式の配列
  */
-type MinimalPageImage = {
-  id: string
-  imagePath: string
-  imageType: string
-  createdAt: Date
-  updatedAt: Date
-}
-
 type MinimalMasterImage = {
   id: string
   imagePath: string
@@ -153,24 +145,16 @@ type MinimalExamPage = {
   examId: string
   pageNumber: number
   masterImages?: MinimalMasterImage[]
-  pageImages?: MinimalPageImage[]
 }
 
 export const convertExamPagesToMasterAnswers = <T extends MinimalExamPage>(
   examPages: T[]
 ): MasterAnswer[] => {
   return examPages.flatMap((page) => {
-    // 新スキーマでは masterImages、旧スキーマでは pageImages(MODEL_ANSWER) を参照する
-    const masterImages =
-      page.masterImages && page.masterImages.length > 0
-        ? page.masterImages
-        : page.pageImages?.filter((img) => img.imageType === "MODEL_ANSWER") ||
-          []
+    const masterImages = page.masterImages || []
 
     if (masterImages.length === 0) {
-      console.warn(
-        `Exam page ${page.id} has no master images (masterImages/pageImages MODEL_ANSWER not found).`
-      )
+      console.warn(`Exam page ${page.id} has no master images.`)
       return []
     }
 
@@ -179,8 +163,7 @@ export const convertExamPagesToMasterAnswers = <T extends MinimalExamPage>(
       examId: page.examId,
       imagePath: masterImage.imagePath,
       pageNumber: page.pageNumber,
-      pageSize:
-        "pageSize" in masterImage ? (masterImage.pageSize ?? "A4") : "A4",
+      pageSize: masterImage.pageSize ?? "A4",
       createdAt: masterImage.createdAt,
       updatedAt: masterImage.updatedAt,
     }))

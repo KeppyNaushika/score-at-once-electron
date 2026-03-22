@@ -48,9 +48,6 @@ export type ExamWithDetails = Prisma.ExamGetPayload<{
   })[]
 }
 
-/** @deprecated Use ExamWithDetails instead */
-export type SerializedExam = ExamWithDetails
-
 /**
  * 試験一覧表示用の軽量型
  * ステータスはメインプロセスで事前計算済み

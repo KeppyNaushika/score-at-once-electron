@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useStudentImport } from "@/hooks/useStudentImport"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 function ValidationMessages({
   validation,
@@ -66,28 +67,6 @@ function ValidationMessages({
       )}
     </div>
   )
-}
-
-interface StudentWithMemberships {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    attendanceNumber?: number | null
-    notes?: string | null
-    class: {
-      id: string
-      name: string
-      classCode?: string | null
-    }
-  }>
 }
 
 interface SpreadsheetImportModalProps {

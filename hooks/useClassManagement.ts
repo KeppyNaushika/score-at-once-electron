@@ -3,29 +3,12 @@
 import type { Prisma } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 
-/** 生徒情報（membershipsなし） */
-interface StudentWithMemberships {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-}
+import type {
+  ClassWithMemberships,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
 
-/** 学級情報（memberships含む） */
-interface ClassWithMemberships {
-  id: string
-  name: string
-  classCode?: string | null
-  grade?: number | null
-  description?: string | null
-  isVisible?: boolean
-  memberships: Membership[]
-}
-
-/** 所属関係情報 */
+/** 所属関係情報（UI用 — 新規作成時のstudentId指定を含む） */
 interface Membership {
   id: string
   startDate: Date
@@ -33,25 +16,6 @@ interface Membership {
   attendanceNumber?: number | null
   notes?: string | null
   studentId?: string // 新規作成時に使用
-  student: {
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-    firstNameKana: string
-  }
-}
-
-/** IPC経由で受け取る生の所属関係データ（Dateがstringでシリアライズされている） */
-interface RawMembership {
-  id: string
-  studentId: string
-  classId: string
-  startDate: string | Date
-  endDate?: string | Date | null
-  attendanceNumber?: number | null
-  notes?: string | null
-  createdAt?: string | Date
   student: {
     id: string
     studentNumber: string
@@ -73,38 +37,15 @@ export function useClassManagement(classId: string) {
     null
   )
 
-  /** APIレスポンスをUI用の型に変換 */
-  const transformClassData = (
-    rawClassData: Omit<ClassWithMemberships, "memberships"> & {
-      memberships: RawMembership[]
-    }
-  ): ClassWithMemberships => ({
-    ...rawClassData,
-    memberships:
-      rawClassData.memberships?.map((membership) => ({
-        id: membership.id,
-        startDate: new Date(
-          membership.startDate || membership.createdAt || new Date()
-        ),
-        endDate: membership.endDate ? new Date(membership.endDate) : null,
-        attendanceNumber: membership.attendanceNumber,
-        notes: membership.notes,
-        studentId: membership.studentId,
-        student: membership.student,
-      })) || [],
-  })
-
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      // Fetch all classes and find the one we need
       const classes = await window.electronAPI.fetchClasses()
       const targetClass = classes.find((c) => c.id === classId)
       if (targetClass) {
-        setClassData(transformClassData(targetClass))
+        setClassData(targetClass)
       }
 
-      // Fetch all students for membership management
       const fetchedStudents = await window.electronAPI.fetchStudents()
       setStudents(fetchedStudents || [])
     } catch (error) {
@@ -135,7 +76,7 @@ export function useClassManagement(classId: string) {
         isVisible: classUpdateData.isVisible,
       }
       const updatedClass = await window.electronAPI.updateClass(updateInput)
-      setClassData(transformClassData(updatedClass))
+      setClassData(updatedClass)
       setIsClassModalOpen(false)
     } catch (error) {
       console.error("Failed to update class:", error)
@@ -175,7 +116,7 @@ export function useClassManagement(classId: string) {
       const classes = await window.electronAPI.fetchClasses()
       const updatedClass = classes.find((c) => c.id === classId)
       if (updatedClass) {
-        setClassData(transformClassData(updatedClass))
+        setClassData(updatedClass)
       }
       setIsMembershipModalOpen(false)
     } catch (error) {
@@ -193,7 +134,7 @@ export function useClassManagement(classId: string) {
         const classes = await window.electronAPI.fetchClasses()
         const updatedClass = classes.find((c) => c.id === classId)
         if (updatedClass) {
-          setClassData(transformClassData(updatedClass))
+          setClassData(updatedClass)
         }
       } catch (error) {
         console.error("Failed to delete membership:", error)
@@ -213,7 +154,7 @@ export function useClassManagement(classId: string) {
       const classes = await window.electronAPI.fetchClasses()
       const updatedClass = classes.find((c) => c.id === classId)
       if (updatedClass) {
-        setClassData(transformClassData(updatedClass))
+        setClassData(updatedClass)
       }
     } catch (error) {
       console.error("Failed to delete memberships:", error)
@@ -253,4 +194,4 @@ export function useClassManagement(classId: string) {
   }
 }
 
-export type { ClassWithMemberships, Membership, StudentWithMemberships }
+export type { Membership }
