@@ -277,4 +277,48 @@ export const getStudentExamResults = async (
   }
 }
 
+export interface ClassStudentExamResult {
+  studentId: string
+  studentNumber: string
+  studentName: string
+  attendanceNumber: number | null
+  examResults: StudentExamResult[]
+}
+
+/** 学級に所属する全生徒の試験成績を一括取得する */
+export const getClassExamResults = async (
+  classId: string
+): Promise<ClassStudentExamResult[]> => {
+  try {
+    const memberships = await prisma.studentClassMembership.findMany({
+      where: {
+        classId,
+        OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
+      },
+      include: {
+        student: true,
+      },
+      orderBy: [{ attendanceNumber: "asc" }, { student: { lastName: "asc" } }],
+    })
+
+    const results: ClassStudentExamResult[] = []
+
+    for (const m of memberships) {
+      const examResults = await getStudentExamResults(m.student.id)
+      results.push({
+        studentId: m.student.id,
+        studentNumber: m.student.studentNumber,
+        studentName: `${m.student.lastName} ${m.student.firstName}`,
+        attendanceNumber: m.attendanceNumber,
+        examResults,
+      })
+    }
+
+    return results
+  } catch (error) {
+    console.error("Failed to get class exam results:", error)
+    throw error
+  }
+}
+
 export { type StudentWithMemberships }

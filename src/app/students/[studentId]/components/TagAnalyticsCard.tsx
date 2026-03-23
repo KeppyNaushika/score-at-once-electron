@@ -1,7 +1,7 @@
 "use client"
 
 import { BarChart3, ChevronDown, Plus, X } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -57,12 +57,6 @@ const SERIES_COLORS = [
   "hsl(330, 60%, 55%)",
 ]
 
-let nextBarSeriesId = 1
-
-function createBarSeriesId(): string {
-  return `b${nextBarSeriesId++}`
-}
-
 // ── コンポーネント ──
 
 interface TagAnalyticsCardProps {
@@ -70,6 +64,9 @@ interface TagAnalyticsCardProps {
 }
 
 export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
+  const nextIdRef = useRef(1)
+  const createId = useCallback(() => `b${nextIdRef.current++}`, [])
+
   // 初期状態：タグが1つ以上あれば各タグを系列に、なければ合計1つ
   const [seriesList, setSeriesList] = useState<BarSeriesConfig[]>(() => {
     const tagSet = new Set<string>()
@@ -78,7 +75,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
 
     if (tags.length > 0) {
       return tags.map((tag, i) => ({
-        id: createBarSeriesId(),
+        id: `b${nextIdRef.current++}`,
         label: tag,
         tags: new Set([tag]),
         subtotalId: "__total__",
@@ -87,7 +84,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
     }
     return [
       {
-        id: createBarSeriesId(),
+        id: createId(),
         label: "合計",
         tags: new Set<string>(),
         subtotalId: "__total__",
@@ -159,7 +156,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
       return [
         ...prev,
         {
-          id: createBarSeriesId(),
+          id: createId(),
           label: "合計",
           tags: new Set<string>(),
           subtotalId: "__total__",
@@ -167,7 +164,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
         },
       ]
     })
-  }, [])
+  }, [createId])
 
   const removeSeries = useCallback((seriesId: string) => {
     setSeriesList((prev) => {

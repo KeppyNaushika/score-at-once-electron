@@ -3,6 +3,10 @@
 import { ArrowLeft, Edit, Plus, Trash2, Upload } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
+import { ClassScoreTrendChart } from "@/app/classes/[classId]/components/ClassScoreTrendChart"
+import { ClassSummaryCards } from "@/app/classes/[classId]/components/ClassSummaryCards"
+import { StudentInsightsCard } from "@/app/classes/[classId]/components/StudentInsightsCard"
+import { useClassExamResults } from "@/app/classes/[classId]/hooks/useClassExamResults"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import ClassModal from "@/components/class/ClassModal"
 import ClassStudentImportModal from "@/components/class/ClassStudentImportModal"
@@ -37,6 +41,9 @@ export default function ClassDetailPage() {
     handleBulkDeleteMemberships,
     handleDeleteClass,
   } = useClassManagement(classId)
+
+  const { studentResults, loading: analyticsLoading } =
+    useClassExamResults(classId)
 
   const handleEditMembership = (membership: Membership) => {
     router.push(`/students/${membership.student.id}`)
@@ -227,6 +234,15 @@ export default function ClassDetailPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* 成績分析 */}
+            {!analyticsLoading && studentResults.length > 0 && (
+              <>
+                <ClassSummaryCards studentResults={studentResults} />
+                <ClassScoreTrendChart studentResults={studentResults} />
+                <StudentInsightsCard studentResults={studentResults} />
+              </>
+            )}
 
             {/* 所属一覧 */}
             <MembershipTable

@@ -199,6 +199,11 @@ export function setupStudentHandlers(): void {
     return await getStudentExamResults(studentId)
   })
 
+  registerHandler("get-class-exam-results", async (classId: string) => {
+    const { getClassExamResults } = await import("../lib/prisma/student")
+    return await getClassExamResults(classId)
+  })
+
   // 生徒データExcelエクスポート（選択された生徒のみ）
   registerSafeHandler(
     "export-students-excel",

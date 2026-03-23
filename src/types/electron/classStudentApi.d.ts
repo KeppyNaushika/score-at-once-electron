@@ -29,6 +29,14 @@ interface StudentExamResult {
   subtotalScores: SubtotalScoreResult[]
 }
 
+interface ClassStudentExamResult {
+  studentId: string
+  studentNumber: string
+  studentName: string
+  attendanceNumber: number | null
+  examResults: StudentExamResult[]
+}
+
 /**
  * 学級・生徒・所属関連API
  */
@@ -64,6 +72,7 @@ export interface ClassStudentAPI {
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
   getStudentExamResults: (studentId: string) => Promise<StudentExamResult[]>
+  getClassExamResults: (classId: string) => Promise<ClassStudentExamResult[]>
   exportStudentsExcel: (selectedStudentIds: string[]) => Promise<{
     success: boolean
     outputPath?: string
