@@ -191,6 +191,23 @@ export interface CropRegionOmrChoiceOptionData {
   choiceIndex: number
   label: string
   isCorrect: boolean
+  shape: string | null
+  normalizedCx: number | null
+  normalizedCy: number | null
+  normalizedWidth: number | null
+  normalizedHeight: number | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CropRegionOmrDigitBoxData {
+  id: string
+  omrConfigId: string
+  digitIndex: number
+  normalizedX: number
+  normalizedY: number
+  normalizedW: number
+  normalizedH: number
   createdAt: Date
   updatedAt: Date
 }
@@ -203,12 +220,12 @@ export interface CropRegionOmrConfigWithOptions {
   choiceLayout: string | null
   numDigits: number | null
   correctAnswer: string | null
-  cellGeometryJson: string | null
   colorThreshold: number | null
   areaThreshold: number | null
   createdAt: Date
   updatedAt: Date
   choiceOptions: CropRegionOmrChoiceOptionData[]
+  digitBoxes: CropRegionOmrDigitBoxData[]
 }
 
 // =====================

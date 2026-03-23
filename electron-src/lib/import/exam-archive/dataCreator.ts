@@ -390,7 +390,6 @@ export async function createImportedData(
               choiceLayout: cfg.choiceLayout,
               numDigits: cfg.numDigits,
               correctAnswer: cfg.correctAnswer,
-              cellGeometryJson: cfg.cellGeometryJson,
               colorThreshold: cfg.colorThreshold,
               areaThreshold: cfg.areaThreshold,
             },
@@ -412,6 +411,31 @@ export async function createImportedData(
               choiceIndex: opt.choiceIndex,
               label: opt.label,
               isCorrect: opt.isCorrect,
+              shape: opt.shape ?? null,
+              normalizedCx: opt.normalizedCx ?? null,
+              normalizedCy: opt.normalizedCy ?? null,
+              normalizedWidth: opt.normalizedWidth ?? null,
+              normalizedHeight: opt.normalizedHeight ?? null,
+            },
+          })
+        }
+      }
+
+      // 12.9. CropRegionOmrDigitBoxを作成 (v1.11.0+)
+      for (const box of data.examData.omrDigitBoxes || []) {
+        const newOmrConfigId = remapId(
+          box.omrConfigId,
+          mappings.cropRegionOmrConfig
+        )
+        if (newOmrConfigId) {
+          await tx.cropRegionOmrDigitBox.create({
+            data: {
+              omrConfigId: newOmrConfigId,
+              digitIndex: box.digitIndex,
+              normalizedX: box.normalizedX,
+              normalizedY: box.normalizedY,
+              normalizedW: box.normalizedW,
+              normalizedH: box.normalizedH,
             },
           })
         }

@@ -26,7 +26,7 @@ function makeChoiceConfig(
     choiceLayout: "horizontal",
     numDigits: null,
     correctAnswer: null,
-    cellGeometryJson: null,
+
     colorThreshold: null,
     areaThreshold: null,
     createdAt: new Date(),
@@ -37,9 +37,15 @@ function makeChoiceConfig(
       choiceIndex: idx,
       label,
       isCorrect: correctIndices.includes(idx),
+      shape: null,
+      normalizedCx: null,
+      normalizedCy: null,
+      normalizedWidth: null,
+      normalizedHeight: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     })),
+    digitBoxes: [],
   }
 }
 
@@ -56,12 +62,13 @@ function makeDigitConfig(
     choiceLayout: null,
     numDigits,
     correctAnswer,
-    cellGeometryJson: null,
+
     colorThreshold: null,
     areaThreshold: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     choiceOptions: [],
+    digitBoxes: [],
   }
 }
 

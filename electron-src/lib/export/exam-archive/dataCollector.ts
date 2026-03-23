@@ -69,6 +69,7 @@ export async function collectExamData(
                 omrConfig: {
                   include: {
                     choiceOptions: true,
+                    digitBoxes: true,
                   },
                 },
                 questionScores: {
@@ -347,7 +348,6 @@ export async function collectExamData(
             choiceLayout: region.omrConfig!.choiceLayout,
             numDigits: region.omrConfig!.numDigits,
             correctAnswer: region.omrConfig!.correctAnswer,
-            cellGeometryJson: region.omrConfig!.cellGeometryJson,
             colorThreshold: region.omrConfig!.colorThreshold,
             areaThreshold: region.omrConfig!.areaThreshold,
             createdAt: region.omrConfig!.createdAt.toISOString(),
@@ -363,8 +363,29 @@ export async function collectExamData(
             choiceIndex: opt.choiceIndex,
             label: opt.label,
             isCorrect: opt.isCorrect,
+            shape: opt.shape,
+            normalizedCx: opt.normalizedCx,
+            normalizedCy: opt.normalizedCy,
+            normalizedWidth: opt.normalizedWidth,
+            normalizedHeight: opt.normalizedHeight,
             createdAt: opt.createdAt.toISOString(),
             updatedAt: opt.updatedAt.toISOString(),
+          }))
+        )
+      ),
+      // v1.11.0+: CropRegionOmrDigitBox
+      omrDigitBoxes: exam.examPages.flatMap((page) =>
+        page.cropRegions.flatMap((region) =>
+          (region.omrConfig?.digitBoxes ?? []).map((box) => ({
+            id: box.id,
+            omrConfigId: box.omrConfigId,
+            digitIndex: box.digitIndex,
+            normalizedX: box.normalizedX,
+            normalizedY: box.normalizedY,
+            normalizedW: box.normalizedW,
+            normalizedH: box.normalizedH,
+            createdAt: box.createdAt.toISOString(),
+            updatedAt: box.updatedAt.toISOString(),
           }))
         )
       ),

@@ -24,6 +24,7 @@ model User {
   keyboardShortcuts   UserKeyboardShortcut[]
   preferences         UserPreference[]
   answerSheetDefinitions AsbDefinition[]
+  compoundAnswerScores   CompoundAnswerScore[]
 }
 
 model Class {
@@ -59,7 +60,8 @@ model Student {
   manualScores        ManualScore[]
   gradeStudents       GradeStudent[]
   gradeOverrides      GradeOverride[]
-  gradeItemExclusions GradeItemExclusion[]
+  gradeItemExclusions  GradeItemExclusion[]
+  compoundAnswerScores CompoundAnswerScore[]
 }
 
 model StudentClassMembership {
@@ -125,6 +127,7 @@ model ExamPage {
   cropRegions         CropRegion[]
   masterImages        MasterImage[]
   studentAnswerImages StudentAnswerImage[]
+  compoundAnswers     CompoundAnswer[]
   exam                Exam                 @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -173,7 +176,8 @@ model CropRegion {
   questionScores   QuestionScore[]
   markingOverrides CropRegionMarkingOverride[]
   gradeDataSources GradeDataSource[]
-  omrConfig        CropRegionOmrConfig?
+  omrConfig            CropRegionOmrConfig?
+  compoundMembership   CompoundAnswerMember?
 }
 
 model SubtotalGroup {
@@ -435,39 +439,122 @@ model CropRegionMarkingOverride {
 
 /// CropRegionに紐づくOMR設定（1:1）
 model CropRegionOmrConfig {
-  id               String   @id @default(uuid())
-  cropRegionId     String   @unique
-  type             String   // "choice" | "handwritten-digit"
-  numChoices       Int?     // choice: 選択肢数(2-10)
-  choiceLayout     String?  // "horizontal" | "vertical"
-  numDigits        Int?     // handwritten-digit: 桁数(1-5)
-  correctAnswer    String?  // digit正答("42") / choice正答はchoiceOptionsで管理
-  cellGeometryJson String?  // ComputedOMRBubble[] | ComputedOMRDigitBox[] のJSON
-  colorThreshold   Int?     // 認識パラメータ上書き
-  areaThreshold    Float?   // 認識パラメータ上書き
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id             String   @id @default(uuid())
+  cropRegionId   String   @unique
+  type           String   // "choice" | "handwritten-digit"
+  numChoices     Int?     // choice: 選択肢数(2-10)
+  choiceLayout   String?  // "horizontal" | "vertical"
+  numDigits      Int?     // handwritten-digit: 桁数(1-5)
+  correctAnswer  String?  // digit正答("42") / choice正答はchoiceOptionsで管理
+  colorThreshold Int?     // 認識パラメータ上書き
+  areaThreshold  Float?   // 認識パラメータ上書き
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   cropRegion    CropRegion                  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
   choiceOptions CropRegionOmrChoiceOption[]
+  digitBoxes    CropRegionOmrDigitBox[]
 
   @@index([cropRegionId])
 }
 
-/// OMR選択肢オプション（choiceタイプ用）
+/// OMR選択肢オプション（choiceタイプ用）— バブル位置情報を含む
 model CropRegionOmrChoiceOption {
-  id          String   @id @default(uuid())
-  omrConfigId String
-  choiceIndex Int
-  label       String   // "ア","イ" etc.
-  isCorrect   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(uuid())
+  omrConfigId      String
+  choiceIndex      Int
+  label            String   // "ア","イ" etc.
+  isCorrect        Boolean  @default(false)
+  shape            String?  @default("ellipse") // "ellipse" | "rectangle" | "circle"
+  normalizedCx     Float?   // バブル中心X (0-1正規化)
+  normalizedCy     Float?   // バブル中心Y (0-1正規化)
+  normalizedWidth  Float?   // バブル幅 (0-1正規化)
+  normalizedHeight Float?   // バブル高さ (0-1正規化)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   omrConfig CropRegionOmrConfig @relation(fields: [omrConfigId], references: [id], onDelete: Cascade)
 
   @@unique([omrConfigId, choiceIndex])
   @@index([omrConfigId])
+}
+
+/// OMR数字欄位置（handwritten-digitタイプ用）
+model CropRegionOmrDigitBox {
+  id          String   @id @default(uuid())
+  omrConfigId String
+  digitIndex  Int      // 0-based桁位置
+  normalizedX Float    // 左端 (0-1正規化)
+  normalizedY Float    // 上端 (0-1正規化)
+  normalizedW Float    // 幅 (0-1正規化)
+  normalizedH Float    // 高さ (0-1正規化)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  omrConfig CropRegionOmrConfig @relation(fields: [omrConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([omrConfigId, digitIndex])
+  @@index([omrConfigId])
+}
+
+/// 複合回答グループ（共通テスト数学の分数、SAT Grid-Inなど）
+/// 複数のCropRegionを1つの論理的な回答としてグループ化
+model CompoundAnswer {
+  id                 String   @id @default(uuid())
+  examPageId         String
+  label              String   // "アイ/ウエ", "Grid-In #1"
+  answerFormat       String   // "fraction" | "multi-digit" | "grid-in"
+  correctAnswer      String   // "-3/14", "42"
+  points             Int      @default(0)
+  orderIndex         Int?
+  alternativeAnswers String?  // カンマ区切りの別解 (.667,.6667)
+  requireReduced     Boolean  @default(false) // 約分必須か（共通テスト: true）
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+
+  examPage ExamPage               @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  members  CompoundAnswerMember[]
+  scores   CompoundAnswerScore[]
+
+  @@index([examPageId])
+}
+
+/// 複合回答のメンバー（CompoundAnswer と CropRegion の紐付け）
+model CompoundAnswerMember {
+  id               String   @id @default(uuid())
+  compoundAnswerId String
+  cropRegionId     String   @unique // 1つのCropRegionは最大1つのCompoundAnswerに所属
+  order            Int      // グループ内での連結順序
+  roleLabel        String?  // "ア", "分子1桁目" 等
+  separator        String?  // この列の後に挿入する文字 ("/" 等)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+
+  compoundAnswer CompoundAnswer @relation(fields: [compoundAnswerId], references: [id], onDelete: Cascade)
+  cropRegion     CropRegion     @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+
+  @@index([compoundAnswerId])
+}
+
+/// 複合回答の採点結果（CompoundAnswer単位で1生徒1スコア）
+model CompoundAnswerScore {
+  id               String   @id @default(uuid())
+  compoundAnswerId String
+  studentId        String
+  userId           String
+  recognizedAnswer String?  // 組み立てた回答文字列
+  status           String   @default("unscored")
+  partialScore     Decimal?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+
+  compoundAnswer CompoundAnswer @relation(fields: [compoundAnswerId], references: [id], onDelete: Cascade)
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user           User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([compoundAnswerId, studentId])
+  @@index([compoundAnswerId])
+  @@index([studentId])
 }
 
 /// 成績算出プロジェクト
