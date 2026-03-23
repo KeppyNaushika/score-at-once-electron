@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react"
 
+import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type {
+  ComputedOMRBubble,
+  ComputedOMRDigitBox,
   CropRegionOmrConfigWithOptions,
   OMRBatchProgress,
   OMRCellConfig,
   OMRCellResult,
   OMRSheetResult,
 } from "@/types/omr.types"
+import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 /** 自動採点エントリ（rendererプロセス用） */
 interface AutoScoreEntry {
@@ -235,34 +239,23 @@ export function useOmrAutoScoring(examId: string) {
         return
       }
 
-      // 画像パスを解決
-      const imagePaths: {
-        path: string
-        studentId?: string
-        studentName?: string
-      }[] = []
-      for (const img of answerImages) {
-        const resolvedPath = await window.electronAPI.resolveFileProtocolPath(
-          img.imagePath
-        )
-        imagePaths.push({
-          path: resolvedPath,
-          studentId: img.studentId,
-          studentName: img.student
-            ? `${img.student.lastName} ${img.student.firstName}`
-            : undefined,
-        })
-      }
+      // 画像パス（DB相対パス）を収集 — メインプロセス側で絶対パスに解決
+      const imagePaths = answerImages.map((img) => ({
+        path: img.imagePath,
+        studentId: img.studentId,
+        studentName: img.student
+          ? `${img.student.lastName} ${img.student.firstName}`
+          : undefined,
+      }))
 
       // 6. バッチ認識実行
-      // ComputedCell（セルジオメトリ）をcellGeometryJsonから構築
-      // TODO: cellGeometryJsonがある場合のみ利用。現在は空のcellsでバッチ認識
-      const cells: unknown[] = []
+      // CropRegion座標 + OMR設定からComputedCellを構築
+      const cells = buildCellsFromRegions(page1Regions, configs, cellConfigs)
 
       const results = await window.electronAPI.omr.batchRecognize({
         imagePaths,
         cells,
-        cellConfigs: cellConfigs as Record<string, OMRCellConfig>,
+        cellConfigs,
         expectedCorners,
         params: recognitionParams,
         pageIndex: 0,
@@ -282,6 +275,27 @@ export function useOmrAutoScoring(examId: string) {
         if (r.points != null) {
           pointsMap[r.id] = r.points
         }
+      }
+
+      // マーカー検出失敗の診断
+      const failedSheets = results.filter((r) => !r.success)
+      if (failedSheets.length > 0) {
+        console.warn(
+          `OMR: ${failedSheets.length}/${results.length} 枚でマーカー検出失敗`,
+          failedSheets.map((r) => ({
+            studentId: r.studentId,
+            error: r.error,
+          }))
+        )
+      }
+      const emptyResultSheets = results.filter(
+        (r) => r.success && r.cellResults.length === 0
+      )
+      if (emptyResultSheets.length > 0) {
+        console.warn(
+          `OMR: ${emptyResultSheets.length}/${results.length} 枚でセル認識結果が空`,
+          { cellCount: cells.length, configKeys: Object.keys(cellConfigs) }
+        )
       }
 
       for (const sheetResult of results) {
@@ -455,4 +469,119 @@ export function useOmrAutoScoring(examId: string) {
     runRecognition,
     applyScores,
   }
+}
+
+/**
+ * CropRegion座標 + OMR設定からComputedCellを構築
+ * DBの正規化座標（0-1）を直接使用し、バブル/数字欄の位置を計算する
+ */
+function buildCellsFromRegions(
+  regions: CropRegionWithDetails[],
+  configs: CropRegionOmrConfigWithOptions[],
+  cellConfigs: Record<string, OMRCellConfig>
+): ComputedCell[] {
+  const cells: ComputedCell[] = []
+
+  for (const cfg of configs) {
+    const region = regions.find((r) => r.id === cfg.cropRegionId)
+    if (!region) continue
+
+    const config = cellConfigs[cfg.cropRegionId]
+    if (!config) continue
+
+    const cell: ComputedCell = {
+      questionPath: [],
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      normalizedX: region.x,
+      normalizedY: region.y,
+      normalizedW: region.width,
+      normalizedH: region.height,
+      label: cfg.cropRegionId,
+      points: region.points ?? 0,
+      cellType: "answer",
+      pageIndex: 0,
+      textElements: [],
+    }
+
+    if (config.type === "choice") {
+      cell.omrBubbles = computeBubblesFromRegion(region, config)
+    } else if (config.type === "handwritten-digit") {
+      cell.omrDigitBoxes = computeDigitBoxesFromRegion(region, config)
+    }
+
+    cells.push(cell)
+  }
+
+  return cells
+}
+
+/** CropRegionの正規化座標内にバブル位置を等間隔配置 */
+function computeBubblesFromRegion(
+  region: CropRegionWithDetails,
+  config: OMRCellConfig & { type: "choice" }
+): ComputedOMRBubble[] {
+  const n = config.numChoices
+  const bubbles: ComputedOMRBubble[] = []
+
+  // バブルサイズ: 間隔の60%幅、高さは領域高さの70%（実際の印刷バブルに近似）
+  const spacing =
+    config.layout === "horizontal"
+      ? region.width / (n + 1)
+      : region.height / (n + 1)
+  const bubbleW = spacing * 0.6
+  const bubbleH = Math.min(bubbleW * 1.6, region.height * 0.7)
+
+  if (config.layout === "horizontal") {
+    const spacing = region.width / (n + 1)
+    const cy = region.y + region.height / 2
+    for (let i = 0; i < n; i++) {
+      bubbles.push({
+        normalizedCx: region.x + spacing * (i + 1),
+        normalizedCy: cy,
+        normalizedWidth: bubbleW,
+        normalizedHeight: bubbleH,
+        choiceIndex: i,
+        label: config.labels[i] ?? String(i + 1),
+      })
+    }
+  } else {
+    const spacing = region.height / (n + 1)
+    const cx = region.x + region.width / 2
+    for (let i = 0; i < n; i++) {
+      bubbles.push({
+        normalizedCx: cx,
+        normalizedCy: region.y + spacing * (i + 1),
+        normalizedWidth: bubbleW,
+        normalizedHeight: bubbleH,
+        choiceIndex: i,
+        label: config.labels[i] ?? String(i + 1),
+      })
+    }
+  }
+
+  return bubbles
+}
+
+/** CropRegionの正規化座標内に数字欄を等間隔配置 */
+function computeDigitBoxesFromRegion(
+  region: CropRegionWithDetails,
+  config: OMRCellConfig & { type: "handwritten-digit" }
+): ComputedOMRDigitBox[] {
+  const n = config.numDigits
+  const boxH = region.height * 0.8
+  const boxW = Math.min(boxH, region.width / (n + 0.5))
+  const totalW = boxW * n
+  const startX = region.x + (region.width - totalW) / 2
+  const startY = region.y + (region.height - boxH) / 2
+
+  return Array.from({ length: n }, (_, i) => ({
+    normalizedX: startX + boxW * i,
+    normalizedY: startY,
+    normalizedW: boxW,
+    normalizedH: boxH,
+    digitIndex: i,
+  }))
 }

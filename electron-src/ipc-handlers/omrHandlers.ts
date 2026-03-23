@@ -191,8 +191,13 @@ export function setupOMRHandlers(): void {
         }
 
         try {
+          // 相対パスを絶対パスに解決
+          const absolutePath = path.isAbsolute(entry.path)
+            ? entry.path
+            : path.join(getDataDirectory(), entry.path)
+
           const markerResult = await detectCornerMarkers(
-            entry.path,
+            absolutePath,
             args.params.colorThreshold
           )
 
@@ -226,7 +231,7 @@ export function setupOMRHandlers(): void {
               markerResult.imageHeight
             )
 
-            const rawImage = await loadImageRaw(entry.path)
+            const rawImage = await loadImageRaw(absolutePath)
             const cellResults = await recognizeCells(
               args.cells,
               args.cellConfigs,
