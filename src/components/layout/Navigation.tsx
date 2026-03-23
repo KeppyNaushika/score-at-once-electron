@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { Fragment } from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
 import { Button } from "@/components/ui/button"
@@ -42,8 +43,8 @@ const navGroups: NavItem[][] = [
     { href: "/exams", label: "試験一覧", icon: Home },
     { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
     { href: "/grades", label: "成績算出", icon: BarChart3 },
-    { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
   ],
+  [{ href: "/pdf-tools", label: "PDF加工", icon: FileStack }],
   [
     { href: "/students", label: "生徒管理", icon: Users },
     { href: "/classes", label: "学級管理", icon: School },
@@ -104,8 +105,8 @@ export default function Navigation({
         <TooltipProvider delayDuration={0}>
           <nav className="grid items-start gap-1 px-2">
             {navGroups.map((group, groupIndex) => (
-              <div key={groupIndex}>
-                {groupIndex > 0 && <Separator className="my-2" />}
+              <Fragment key={groupIndex}>
+                {groupIndex > 0 && <Separator className="my-1" />}
                 {group.map((item) =>
                   isSidebarMinimized ? (
                     <Tooltip key={item.label}>
@@ -139,7 +140,7 @@ export default function Navigation({
                     </GuardedLink>
                   )
                 )}
-              </div>
+              </Fragment>
             ))}
           </nav>
         </TooltipProvider>
