@@ -1,6 +1,14 @@
 "use client"
 
-import { ArrowLeft, Edit, Plus, Trash2, Upload } from "lucide-react"
+import {
+  ArrowLeft,
+  BarChart3,
+  Edit,
+  Plus,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
 import { ClassScoreTrendChart } from "@/app/classes/[classId]/components/ClassScoreTrendChart"
@@ -11,11 +19,12 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import ClassModal from "@/components/class/ClassModal"
 import ClassStudentImportModal from "@/components/class/ClassStudentImportModal"
 import MembershipTable from "@/components/class/MembershipTable"
+import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { type Membership, useClassManagement } from "@/hooks/useClassManagement"
 
 export default function ClassDetailPage() {
@@ -59,11 +68,6 @@ export default function ClassDetailPage() {
     router.push("/classes")
   }
 
-  const isCurrentMembership = (m: { endDate?: Date | null }) => {
-    if (!m.endDate) return true
-    return new Date(m.endDate) >= new Date()
-  }
-
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -99,7 +103,27 @@ export default function ClassDetailPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-full flex-col">
-        <PageHeader title={classData.name}>
+        <PageHeader
+          title={classData.name}
+          subtitle={
+            <>
+              {classData.classCode && (
+                <Badge
+                  variant="outline"
+                  className="rounded-full px-2 py-0.5 text-xs font-normal"
+                >
+                  {classData.classCode}
+                </Badge>
+              )}
+              {classData.grade && (
+                <span className="bg-muted/50 rounded px-2 py-0.5 text-xs">
+                  {classData.grade}年
+                </span>
+              )}
+              {classData.description && <span>{classData.description}</span>}
+            </>
+          }
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -143,114 +167,47 @@ export default function ClassDetailPage() {
           </Button>
         </PageHeader>
 
-        <div className="flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <div className="container mx-auto max-w-6xl px-6 py-6">
-            {/* 学級情報 */}
-            <Card className="border-border/50 mb-8 shadow-sm">
-              <CardHeader>
-                <div>
-                  <CardTitle className="text-2xl font-semibold tracking-tight">
-                    {classData.name}
-                  </CardTitle>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {classData.classCode && (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full px-2.5 py-0.5 text-xs font-normal"
-                      >
-                        {classData.classCode}
-                      </Badge>
-                    )}
-                    {classData.grade && (
-                      <span className="bg-muted/50 rounded-lg px-2.5 py-1 text-sm">
-                        {classData.grade}年
-                      </span>
-                    )}
+            <Tabs defaultValue="analytics">
+              <TabsList className="mb-6 w-full">
+                <TabsTrigger value="analytics" className="flex-1">
+                  <BarChart3 className="mr-1.5 h-4 w-4" />
+                  成績分析
+                </TabsTrigger>
+                <TabsTrigger value="membership" className="flex-1">
+                  <Users className="mr-1.5 h-4 w-4" />
+                  所属管理
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="analytics">
+                {analyticsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <LoadingSpinner />
                   </div>
-                  {classData.description && (
-                    <p className="text-muted-foreground mt-3">
-                      {classData.description}
-                    </p>
-                  )}
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* 統計カード */}
-            <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-              <Card className="border-border/50 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-muted-foreground text-sm font-medium">
-                    総生徒数
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold tabular-nums">
-                    {classData.memberships.length}
-                    <span className="text-muted-foreground ml-1 text-lg font-normal">
-                      名
-                    </span>
+                ) : studentResults.length > 0 ? (
+                  <>
+                    <ClassSummaryCards studentResults={studentResults} />
+                    <ClassScoreTrendChart studentResults={studentResults} />
+                    <StudentInsightsCard studentResults={studentResults} />
+                  </>
+                ) : (
+                  <div className="text-muted-foreground py-16 text-center text-sm">
+                    所属生徒がいないか、採点済みの試験がありません
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </TabsContent>
 
-              <Card className="border-border/50 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-muted-foreground text-sm font-medium">
-                    現在の所属
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600 tabular-nums">
-                    {
-                      classData.memberships.filter((m) =>
-                        isCurrentMembership(m)
-                      ).length
-                    }
-                    <span className="ml-1 text-lg font-normal text-green-600/70">
-                      名
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/50 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-muted-foreground text-sm font-medium">
-                    終了した所属
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-500 tabular-nums">
-                    {
-                      classData.memberships.filter(
-                        (m) => !isCurrentMembership(m)
-                      ).length
-                    }
-                    <span className="ml-1 text-lg font-normal text-gray-400">
-                      名
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 成績分析 */}
-            {!analyticsLoading && studentResults.length > 0 && (
-              <>
-                <ClassSummaryCards studentResults={studentResults} />
-                <ClassScoreTrendChart studentResults={studentResults} />
-                <StudentInsightsCard studentResults={studentResults} />
-              </>
-            )}
-
-            {/* 所属一覧 */}
-            <MembershipTable
-              memberships={classData.memberships}
-              onEdit={handleEditMembership}
-              onDelete={handleDeleteMembership}
-              onBulkDelete={handleBulkDeleteMemberships}
-            />
+              <TabsContent value="membership">
+                <MembershipTable
+                  memberships={classData.memberships}
+                  onEdit={handleEditMembership}
+                  onDelete={handleDeleteMembership}
+                  onBulkDelete={handleBulkDeleteMemberships}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 "use client"
 
 import type { StudentClassMembership } from "@prisma/client"
-import { ArrowLeft, Edit, Trash2 } from "lucide-react"
+import { ArrowLeft, BarChart3, Edit, Trash2, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -13,15 +13,16 @@ import {
 } from "@/app/students/[studentId]/components/LoadingState"
 import { MembershipsCard } from "@/app/students/[studentId]/components/MembershipsCard"
 import { ScoreTrendChart } from "@/app/students/[studentId]/components/ScoreTrendChart"
-import { StudentInfoCard } from "@/app/students/[studentId]/components/StudentInfoCard"
 import { TagAnalyticsCard } from "@/app/students/[studentId]/components/TagAnalyticsCard"
 import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
 import { useStudentExamResults } from "@/app/students/[studentId]/hooks/useStudentExamResults"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { StudentClassMembershipWithDetails } from "@/types/prismaExtensions"
 
 export default function StudentDetailPage() {
@@ -95,7 +96,24 @@ export default function StudentDetailPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-full flex-col">
-        <PageHeader title={studentName}>
+        <PageHeader
+          title={studentName}
+          subtitle={
+            <>
+              <span className="text-muted-foreground">
+                {student.lastNameKana} {student.firstNameKana}
+              </span>
+              <span className="bg-muted/50 rounded px-2 py-0.5 font-mono text-xs">
+                {student.studentNumber}
+              </span>
+              {student.enrollmentYear && (
+                <span className="bg-muted/50 rounded px-2 py-0.5 text-xs tabular-nums">
+                  {student.enrollmentYear}年入学
+                </span>
+              )}
+            </>
+          }
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -123,32 +141,44 @@ export default function StudentDetailPage() {
           </Button>
         </PageHeader>
 
-        <div className="flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <div className="container mx-auto max-w-6xl px-6 py-6">
-            <StudentInfoCard student={student} />
+            <Tabs defaultValue="analytics">
+              <TabsList className="mb-6 w-full">
+                <TabsTrigger value="analytics" className="flex-1">
+                  <BarChart3 className="mr-1.5 h-4 w-4" />
+                  成績分析
+                </TabsTrigger>
+                <TabsTrigger value="membership" className="flex-1">
+                  <Users className="mr-1.5 h-4 w-4" />
+                  学級所属
+                </TabsTrigger>
+              </TabsList>
 
-            {examResultsLoading ? (
-              <div className="text-muted-foreground mb-8 py-8 text-center">
-                読み込み中...
-              </div>
-            ) : (
-              <>
-                <ExamSummaryCards results={examResults} />
+              <TabsContent value="analytics">
+                {examResultsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <LoadingSpinner />
+                  </div>
+                ) : (
+                  <>
+                    <ExamSummaryCards results={examResults} />
+                    <ScoreTrendChart results={examResults} />
+                    <TagAnalyticsCard results={examResults} />
+                    <ExamResultsCard results={examResults} />
+                  </>
+                )}
+              </TabsContent>
 
-                <ScoreTrendChart results={examResults} />
-
-                <TagAnalyticsCard results={examResults} />
-
-                <ExamResultsCard results={examResults} />
-              </>
-            )}
-
-            <MembershipsCard
-              student={student}
-              onAddMembership={handleAddMembership}
-              onEditMembership={handleEditMembership}
-              onEndMembership={handleEndMembership}
-            />
+              <TabsContent value="membership">
+                <MembershipsCard
+                  student={student}
+                  onAddMembership={handleAddMembership}
+                  onEditMembership={handleEditMembership}
+                  onEndMembership={handleEndMembership}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 
