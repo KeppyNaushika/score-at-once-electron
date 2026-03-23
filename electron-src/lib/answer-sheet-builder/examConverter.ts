@@ -173,6 +173,7 @@ export async function convertToExam(
               normalizedH: maxY - minY,
               points: sub.points,
               omrConfigKey: omrCellConfigs[key] ? key : undefined,
+              sourceCell: siblings[0], // バブル位置取得用（最初の枝問セル）
             })
             continue
           }
