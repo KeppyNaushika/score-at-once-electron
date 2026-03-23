@@ -4,6 +4,7 @@ import {
   BarChart3,
   ChevronRight,
   ClipboardEdit,
+  Download,
   Edit,
   FolderOutput,
   MoreVertical,
@@ -106,13 +107,16 @@ function buildPhases(
       isCompleted: completion.hasBoundaries,
       canStart: completion.hasDataSources,
     },
+  ]
+
+  const phase3Steps: WorkflowStep[] = [
     {
       id: "06-results",
       title: "結果",
       description: "成績算出結果の確認",
       path: `/grades/${examId}/06-results`,
       icon: BarChart3,
-      isCompleted: false, // 結果は常にアクセス可能
+      isCompleted: false,
       canStart: completion.hasDataSources && completion.hasBoundaries,
     },
     {
@@ -126,22 +130,22 @@ function buildPhases(
     },
   ]
 
-  const phase1Completed = phase1Steps
-    .slice(0, -1)
-    .every((step) => step.isCompleted) // setupとstudentsが完了
   const phase1CompletedCount = phase1Steps.filter(
     (step) => step.isCompleted
   ).length
+  const phase1Completed = phase1CompletedCount === phase1Steps.length
+
   const phase2CompletedCount = phase2Steps.filter(
     (step) => step.isCompleted
   ).length
+  const phase2Completed = phase2CompletedCount === phase2Steps.length
 
-  // Phase 2 は結果・出力を除いた完了判定
-  const phase2DoneSteps = phase2Steps.slice(0, -2)
-  const phase2AllDone = phase2DoneSteps.every((step) => step.isCompleted)
-
-  const phase1IsActive = !phase1Completed
-  const phase2IsActive = phase1Completed && !phase2AllDone
+  let currentPhase: 1 | 2 | 3 = 1
+  if (phase1Completed && !phase2Completed) {
+    currentPhase = 2
+  } else if (phase1Completed && phase2Completed) {
+    currentPhase = 3
+  }
 
   function findNextStep(steps: WorkflowStep[]) {
     const next = steps.find((step) => !step.isCompleted && step.canStart)
@@ -150,6 +154,7 @@ function buildPhases(
 
   const phase1Next = findNextStep(phase1Steps)
   const phase2Next = findNextStep(phase2Steps)
+  const phase3Next = findNextStep(phase3Steps)
 
   return [
     {
@@ -157,7 +162,7 @@ function buildPhases(
       title: "設定・準備",
       emoji: "🛠️",
       steps: phase1Steps,
-      isActive: phase1IsActive,
+      isActive: currentPhase === 1,
       isCompleted: phase1Completed,
       completedSteps: phase1CompletedCount,
       totalSteps: phase1Steps.length,
@@ -169,12 +174,24 @@ function buildPhases(
       title: "成績算出",
       emoji: "📊",
       steps: phase2Steps,
-      isActive: phase2IsActive,
-      isCompleted: phase2AllDone,
+      isActive: currentPhase === 2,
+      isCompleted: phase2Completed,
       completedSteps: phase2CompletedCount,
       totalSteps: phase2Steps.length,
       nextStepPath: phase2Next?.path ?? null,
       nextStepTitle: phase2Next?.title ?? null,
+    },
+    {
+      id: 3,
+      title: "出力",
+      emoji: "📤",
+      steps: phase3Steps,
+      isActive: currentPhase === 3,
+      isCompleted: false,
+      completedSteps: 0,
+      totalSteps: phase3Steps.length,
+      nextStepPath: phase3Next?.path ?? null,
+      nextStepTitle: phase3Next?.title ?? null,
     },
   ]
 }
@@ -321,7 +338,7 @@ export default function GradeDetailPage() {
           </CardHeader>
           <CardContent>
             <Progress value={overallProgress} className="mb-4 h-3" />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {phases.map((phase) => (
                 <div
                   key={phase.id}
@@ -360,7 +377,7 @@ export default function GradeDetailPage() {
         </Card>
 
         {/* フェーズカード */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {phases.map((phase) => (
             <Card
               key={phase.id}
