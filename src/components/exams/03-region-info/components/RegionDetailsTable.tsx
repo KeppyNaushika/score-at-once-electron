@@ -121,10 +121,10 @@ const RegionDetailsTable = ({
             .filter((update) => update.id) // IDがあるもののみ
 
           if (
-            window.electronAPI?.updateLayoutRegionOrders &&
+            window.electronAPI?.updateCropRegionOrders &&
             updates.length > 0
           ) {
-            await window.electronAPI.updateLayoutRegionOrders(updates)
+            await window.electronAPI.updateCropRegionOrders(updates)
           }
         } catch (orderError) {
           console.error(

@@ -20,7 +20,6 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (username: string, password: string) => Promise<boolean>
   quickLogin: (user: User) => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
@@ -68,30 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = async (
-    username: string,
-    password: string
-  ): Promise<boolean> => {
-    try {
-      const result = await window.electronAPI.loginUser(username, password)
-
-      if (result.success && result.user && result.token) {
-        await window.electronAPI.saveAuthToken(result.token)
-        setUser(result.user)
-        toast.success("ログインしました")
-        router.push("/exams")
-        return true
-      } else {
-        toast.error(result.error || "ログインに失敗しました")
-        return false
-      }
-    } catch (error) {
-      console.error("Login failed:", error)
-      toast.error("ログインに失敗しました")
-      return false
-    }
-  }
-
   const quickLogin = async (selectedUser: User) => {
     try {
       // パスワード不要のクイックログイン
@@ -115,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, quickLogin, logout, checkAuth }}
+      value={{ user, isLoading, quickLogin, logout, checkAuth }}
     >
       {children}
     </AuthContext.Provider>

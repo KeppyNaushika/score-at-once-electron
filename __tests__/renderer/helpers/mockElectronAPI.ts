@@ -67,7 +67,6 @@ export function createMockElectronAPI() {
     fetchUsers: vi.fn().mockResolvedValue([]),
     clearAuthToken: vi.fn().mockResolvedValue({ success: true }),
     saveAuthToken: vi.fn().mockResolvedValue({ success: true }),
-    loginUser: vi.fn().mockResolvedValue({ success: false }),
   }
 
   Object.defineProperty(window, "electronAPI", {

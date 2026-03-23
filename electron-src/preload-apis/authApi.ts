@@ -7,23 +7,17 @@ export function createAuthApi() {
     fetchUsers: () => ipcRenderer.invoke("fetch-users"),
     getCurrentUser: () => ipcRenderer.invoke("get-current-user"),
 
-    // Authentication related
-    loginUser: (username: string, password: string) =>
-      ipcRenderer.invoke("login-user", username, password),
+    // User management
     createUser: (userData: {
       username: string
-      password: string
       name: string
-      role?: string
+      passcode?: string
+      passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
     }) => ipcRenderer.invoke("create-user", userData),
-    getUserByToken: (token: string) =>
-      ipcRenderer.invoke("get-user-by-token", token),
     updateUser: (
       userId: string,
       userData: { username?: string; name?: string }
     ) => ipcRenderer.invoke("update-user", userId, userData),
-    updateUserPassword: (userId: string, newPassword: string) =>
-      ipcRenderer.invoke("update-user-password", userId, newPassword),
     updateUserPasscode: (
       userId: string,
       passcode?: string,
