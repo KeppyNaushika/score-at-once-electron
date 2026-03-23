@@ -1481,4 +1481,101 @@ const migrateS8toS9 = async (prisma: PrismaClient): Promise<void> => {
       `CREATE UNIQUE INDEX "DeletedRecord_tableName_recordId_key" ON "DeletedRecord"("tableName", "recordId")`
     )
   }
+
+  // v0.10.x: OMRバブル位置カラム追加 + CropRegionOmrDigitBox + CompoundAnswer
+  if (await tableExists(prisma, "CropRegionOmrChoiceOption")) {
+    const columns = await getTableColumns(prisma, "CropRegionOmrChoiceOption")
+    if (!columns.includes("normalizedCx")) {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "CropRegionOmrChoiceOption" ADD COLUMN "shape" TEXT DEFAULT 'ellipse'`
+      )
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "CropRegionOmrChoiceOption" ADD COLUMN "normalizedCx" REAL`
+      )
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "CropRegionOmrChoiceOption" ADD COLUMN "normalizedCy" REAL`
+      )
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "CropRegionOmrChoiceOption" ADD COLUMN "normalizedWidth" REAL`
+      )
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "CropRegionOmrChoiceOption" ADD COLUMN "normalizedHeight" REAL`
+      )
+    }
+  }
+
+  if (!(await tableExists(prisma, "CropRegionOmrDigitBox"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "CropRegionOmrDigitBox" (
+        "id" TEXT NOT NULL PRIMARY KEY, "omrConfigId" TEXT NOT NULL, "digitIndex" INTEGER NOT NULL,
+        "normalizedX" REAL NOT NULL, "normalizedY" REAL NOT NULL, "normalizedW" REAL NOT NULL, "normalizedH" REAL NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL,
+        CONSTRAINT "CropRegionOmrDigitBox_omrConfigId_fkey" FOREIGN KEY ("omrConfigId") REFERENCES "CropRegionOmrConfig" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `)
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "CropRegionOmrDigitBox_omrConfigId_idx" ON "CropRegionOmrDigitBox"("omrConfigId")`
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "CropRegionOmrDigitBox_omrConfigId_digitIndex_key" ON "CropRegionOmrDigitBox"("omrConfigId", "digitIndex")`
+    )
+  }
+
+  if (!(await tableExists(prisma, "CompoundAnswer"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "CompoundAnswer" (
+        "id" TEXT NOT NULL PRIMARY KEY, "examPageId" TEXT NOT NULL,
+        "label" TEXT NOT NULL, "answerFormat" TEXT NOT NULL, "correctAnswer" TEXT NOT NULL,
+        "points" INTEGER NOT NULL DEFAULT 0, "orderIndex" INTEGER,
+        "alternativeAnswers" TEXT, "requireReduced" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CompoundAnswer_examPageId_fkey" FOREIGN KEY ("examPageId") REFERENCES "ExamPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+      )
+    `)
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "CompoundAnswer_examPageId_idx" ON "CompoundAnswer"("examPageId")`
+    )
+  }
+
+  if (!(await tableExists(prisma, "CompoundAnswerMember"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "CompoundAnswerMember" (
+        "id" TEXT NOT NULL PRIMARY KEY, "compoundAnswerId" TEXT NOT NULL,
+        "cropRegionId" TEXT NOT NULL, "order" INTEGER NOT NULL,
+        "roleLabel" TEXT, "separator" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CompoundAnswerMember_compoundAnswerId_fkey" FOREIGN KEY ("compoundAnswerId") REFERENCES "CompoundAnswer" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "CompoundAnswerMember_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `)
+    await prisma.$executeRawUnsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "CompoundAnswerMember_cropRegionId_key" ON "CompoundAnswerMember"("cropRegionId")`
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "CompoundAnswerMember_compoundAnswerId_idx" ON "CompoundAnswerMember"("compoundAnswerId")`
+    )
+  }
+
+  if (!(await tableExists(prisma, "CompoundAnswerScore"))) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "CompoundAnswerScore" (
+        "id" TEXT NOT NULL PRIMARY KEY, "compoundAnswerId" TEXT NOT NULL,
+        "studentId" TEXT NOT NULL, "userId" TEXT NOT NULL,
+        "recognizedAnswer" TEXT, "status" TEXT NOT NULL DEFAULT 'unscored', "partialScore" DECIMAL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CompoundAnswerScore_compoundAnswerId_fkey" FOREIGN KEY ("compoundAnswerId") REFERENCES "CompoundAnswer" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "CompoundAnswerScore_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+        CONSTRAINT "CompoundAnswerScore_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+      )
+    `)
+    await prisma.$executeRawUnsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "CompoundAnswerScore_compoundAnswerId_studentId_key" ON "CompoundAnswerScore"("compoundAnswerId", "studentId")`
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "CompoundAnswerScore_compoundAnswerId_idx" ON "CompoundAnswerScore"("compoundAnswerId")`
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "CompoundAnswerScore_studentId_idx" ON "CompoundAnswerScore"("studentId")`
+    )
+  }
 }

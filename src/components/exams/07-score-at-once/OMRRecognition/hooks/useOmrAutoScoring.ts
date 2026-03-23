@@ -507,9 +507,37 @@ function buildCellsFromRegions(
     }
 
     if (config.type === "choice") {
-      cell.omrBubbles = computeBubblesFromRegion(region, config)
+      // DB保存済みバブル位置を優先、なければ推定計算にフォールバック
+      const hasSavedPositions = cfg.choiceOptions.some(
+        (opt) => opt.normalizedCx != null
+      )
+      if (hasSavedPositions) {
+        cell.omrBubbles = cfg.choiceOptions
+          .filter((opt) => opt.normalizedCx != null)
+          .map((opt) => ({
+            normalizedCx: opt.normalizedCx!,
+            normalizedCy: opt.normalizedCy!,
+            normalizedWidth: opt.normalizedWidth!,
+            normalizedHeight: opt.normalizedHeight!,
+            choiceIndex: opt.choiceIndex,
+            label: opt.label,
+          }))
+      } else {
+        cell.omrBubbles = computeBubblesFromRegion(region, config)
+      }
     } else if (config.type === "handwritten-digit") {
-      cell.omrDigitBoxes = computeDigitBoxesFromRegion(region, config)
+      // DB保存済み数字欄位置を優先、なければ推定計算にフォールバック
+      if (cfg.digitBoxes && cfg.digitBoxes.length > 0) {
+        cell.omrDigitBoxes = cfg.digitBoxes.map((box) => ({
+          normalizedX: box.normalizedX,
+          normalizedY: box.normalizedY,
+          normalizedW: box.normalizedW,
+          normalizedH: box.normalizedH,
+          digitIndex: box.digitIndex,
+        }))
+      } else {
+        cell.omrDigitBoxes = computeDigitBoxesFromRegion(region, config)
+      }
     }
 
     cells.push(cell)

@@ -9,7 +9,10 @@ import fs from "fs"
 import path from "path"
 
 import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefinition.types"
-import type { ComputedMultiPageLayout } from "../../../src/types/answerSheetLayout.types"
+import type {
+  ComputedCell,
+  ComputedMultiPageLayout,
+} from "../../../src/types/answerSheetLayout.types"
 import type { OMRCellConfig } from "../../../src/types/omr.types"
 import {
   getMasterAnswersDirectory,
@@ -132,6 +135,7 @@ export async function convertToExam(
         normalizedH: number
         points: number
         omrConfigKey?: string // omrCellConfigsのキー
+        sourceCell?: ComputedCell // バブル位置取得用
       }> = []
       const processedKeys = new Set<string>()
 
@@ -184,6 +188,7 @@ export async function convertToExam(
           normalizedH: cell.normalizedH,
           points: cell.points,
           omrConfigKey: omrCellConfigs[cellKey] ? cellKey : undefined,
+          sourceCell: cell,
         })
       }
 
@@ -202,10 +207,13 @@ export async function convertToExam(
           },
         })
 
-        // OMR設定をDBに保存
+        // OMR設定をDBに保存（バブル/数字欄の位置情報含む）
         if (cell.omrConfigKey) {
           const omrCfg = omrCellConfigs[cell.omrConfigKey]
           if (omrCfg) {
+            const bubbles = cell.sourceCell?.omrBubbles
+            const digitBoxes = cell.sourceCell?.omrDigitBoxes
+
             await upsertOmrConfig(
               omrCfg.type === "choice"
                 ? {
@@ -217,6 +225,11 @@ export async function convertToExam(
                       choiceIndex: idx,
                       label,
                       isCorrect: omrCfg.correctAnswers.includes(idx),
+                      normalizedCx: bubbles?.[idx]?.normalizedCx ?? null,
+                      normalizedCy: bubbles?.[idx]?.normalizedCy ?? null,
+                      normalizedWidth: bubbles?.[idx]?.normalizedWidth ?? null,
+                      normalizedHeight:
+                        bubbles?.[idx]?.normalizedHeight ?? null,
                     })),
                   }
                 : {
@@ -224,6 +237,13 @@ export async function convertToExam(
                     type: "handwritten-digit",
                     numDigits: omrCfg.numDigits,
                     correctAnswer: omrCfg.correctAnswer ?? null,
+                    digitBoxes: digitBoxes?.map((box) => ({
+                      digitIndex: box.digitIndex,
+                      normalizedX: box.normalizedX,
+                      normalizedY: box.normalizedY,
+                      normalizedW: box.normalizedW,
+                      normalizedH: box.normalizedH,
+                    })),
                   }
             )
           }

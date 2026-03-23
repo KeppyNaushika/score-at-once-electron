@@ -58,13 +58,24 @@ export interface OmrAPI {
       choiceLayout?: string | null
       numDigits?: number | null
       correctAnswer?: string | null
-      cellGeometryJson?: string | null
       colorThreshold?: number | null
       areaThreshold?: number | null
       choiceOptions?: Array<{
         choiceIndex: number
         label: string
         isCorrect: boolean
+        shape?: string | null
+        normalizedCx?: number | null
+        normalizedCy?: number | null
+        normalizedWidth?: number | null
+        normalizedHeight?: number | null
+      }>
+      digitBoxes?: Array<{
+        digitIndex: number
+        normalizedX: number
+        normalizedY: number
+        normalizedW: number
+        normalizedH: number
       }>
     }) => Promise<{
       success: boolean

@@ -5,12 +5,14 @@
 import type {
   CropRegionOmrChoiceOption,
   CropRegionOmrConfig,
+  CropRegionOmrDigitBox,
 } from "@prisma/client"
 
 import prisma from "./client"
 
 export type CropRegionOmrConfigWithOptions = CropRegionOmrConfig & {
   choiceOptions: CropRegionOmrChoiceOption[]
+  digitBoxes: CropRegionOmrDigitBox[]
 }
 
 export interface UpsertOmrConfigData {
@@ -20,13 +22,24 @@ export interface UpsertOmrConfigData {
   choiceLayout?: string | null
   numDigits?: number | null
   correctAnswer?: string | null
-  cellGeometryJson?: string | null
   colorThreshold?: number | null
   areaThreshold?: number | null
   choiceOptions?: Array<{
     choiceIndex: number
     label: string
     isCorrect: boolean
+    shape?: string | null
+    normalizedCx?: number | null
+    normalizedCy?: number | null
+    normalizedWidth?: number | null
+    normalizedHeight?: number | null
+  }>
+  digitBoxes?: Array<{
+    digitIndex: number
+    normalizedX: number
+    normalizedY: number
+    normalizedW: number
+    normalizedH: number
   }>
 }
 
@@ -54,14 +67,16 @@ export async function upsertOmrConfig(
           choiceLayout: data.choiceLayout ?? null,
           numDigits: data.numDigits ?? null,
           correctAnswer: data.correctAnswer ?? null,
-          cellGeometryJson: data.cellGeometryJson ?? null,
           colorThreshold: data.colorThreshold ?? null,
           areaThreshold: data.areaThreshold ?? null,
         },
       })
 
-      // 既存のchoiceOptionsを削除して再作成
+      // 既存のchoiceOptions/digitBoxesを削除して再作成
       await tx.cropRegionOmrChoiceOption.deleteMany({
+        where: { omrConfigId: config.id },
+      })
+      await tx.cropRegionOmrDigitBox.deleteMany({
         where: { omrConfigId: config.id },
       })
     } else {
@@ -74,14 +89,13 @@ export async function upsertOmrConfig(
           choiceLayout: data.choiceLayout ?? null,
           numDigits: data.numDigits ?? null,
           correctAnswer: data.correctAnswer ?? null,
-          cellGeometryJson: data.cellGeometryJson ?? null,
           colorThreshold: data.colorThreshold ?? null,
           areaThreshold: data.areaThreshold ?? null,
         },
       })
     }
 
-    // choiceOptionsを作成
+    // choiceOptionsを作成（バブル位置含む）
     if (data.choiceOptions && data.choiceOptions.length > 0) {
       await tx.cropRegionOmrChoiceOption.createMany({
         data: data.choiceOptions.map((opt) => ({
@@ -89,6 +103,25 @@ export async function upsertOmrConfig(
           choiceIndex: opt.choiceIndex,
           label: opt.label,
           isCorrect: opt.isCorrect,
+          shape: opt.shape ?? null,
+          normalizedCx: opt.normalizedCx ?? null,
+          normalizedCy: opt.normalizedCy ?? null,
+          normalizedWidth: opt.normalizedWidth ?? null,
+          normalizedHeight: opt.normalizedHeight ?? null,
+        })),
+      })
+    }
+
+    // digitBoxesを作成
+    if (data.digitBoxes && data.digitBoxes.length > 0) {
+      await tx.cropRegionOmrDigitBox.createMany({
+        data: data.digitBoxes.map((box) => ({
+          omrConfigId: config.id,
+          digitIndex: box.digitIndex,
+          normalizedX: box.normalizedX,
+          normalizedY: box.normalizedY,
+          normalizedW: box.normalizedW,
+          normalizedH: box.normalizedH,
         })),
       })
     }
@@ -96,7 +129,10 @@ export async function upsertOmrConfig(
     // リレーション込みで返す
     return tx.cropRegionOmrConfig.findUniqueOrThrow({
       where: { id: config.id },
-      include: { choiceOptions: { orderBy: { choiceIndex: "asc" } } },
+      include: {
+        choiceOptions: { orderBy: { choiceIndex: "asc" } },
+        digitBoxes: { orderBy: { digitIndex: "asc" } },
+      },
     })
   })
 }
@@ -124,6 +160,7 @@ export async function getOmrConfigsByExamId(
     },
     include: {
       choiceOptions: { orderBy: { choiceIndex: "asc" } },
+      digitBoxes: { orderBy: { digitIndex: "asc" } },
     },
     orderBy: {
       cropRegion: { orderIndex: "asc" },
@@ -141,6 +178,7 @@ export async function getOmrConfigByCropRegionId(
     where: { cropRegionId },
     include: {
       choiceOptions: { orderBy: { choiceIndex: "asc" } },
+      digitBoxes: { orderBy: { digitIndex: "asc" } },
     },
   })
 }

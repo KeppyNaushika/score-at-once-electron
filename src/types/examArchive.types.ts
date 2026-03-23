@@ -630,7 +630,7 @@ export interface ArchiveExamData {
     choiceLayout: string | null
     numDigits: number | null
     correctAnswer: string | null
-    cellGeometryJson: string | null
+    cellGeometryJson?: string | null // v1.10.0以前の互換用（現在未使用）
     colorThreshold: number | null
     areaThreshold: number | null
     createdAt: string
@@ -643,6 +643,24 @@ export interface ArchiveExamData {
     choiceIndex: number
     label: string
     isCorrect: boolean
+    /** v1.11.0+ バブル位置 */
+    shape?: string | null
+    normalizedCx?: number | null
+    normalizedCy?: number | null
+    normalizedWidth?: number | null
+    normalizedHeight?: number | null
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.11.0+ CropRegionOmrDigitBox */
+  omrDigitBoxes?: Array<{
+    id: string
+    omrConfigId: string
+    digitIndex: number
+    normalizedX: number
+    normalizedY: number
+    normalizedW: number
+    normalizedH: number
     createdAt: string
     updatedAt: string
   }>
