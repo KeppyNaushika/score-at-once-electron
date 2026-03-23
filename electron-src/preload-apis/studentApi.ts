@@ -13,6 +13,8 @@ export function createStudentApi() {
     deleteStudent: (id: string) => ipcRenderer.invoke("delete-student", id),
     getStudentExamResults: (studentId: string) =>
       ipcRenderer.invoke("get-student-exam-results", studentId),
+    getClassExamResults: (classId: string) =>
+      ipcRenderer.invoke("get-class-exam-results", classId),
     exportStudentsExcel: (selectedStudentIds: string[]) =>
       ipcRenderer.invoke(
         "export-students-excel",
