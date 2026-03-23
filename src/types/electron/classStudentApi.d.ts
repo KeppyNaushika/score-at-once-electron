@@ -6,6 +6,15 @@ import type {
   StudentWithMemberships,
 } from "../prismaExtensions"
 
+interface SubtotalScoreResult {
+  subtotalId: string
+  subtotalName: string
+  subtotalGroupId: string
+  subtotalGroupName: string
+  score: number
+  maxScore: number
+}
+
 // Student exam result type
 interface StudentExamResult {
   examId: string
@@ -17,6 +26,7 @@ interface StudentExamResult {
   scoredCount: number
   totalQuestions: number
   status: "complete" | "partial" | "unscored"
+  subtotalScores: SubtotalScoreResult[]
 }
 
 /**
