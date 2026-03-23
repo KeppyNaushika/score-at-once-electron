@@ -12,7 +12,7 @@ export default function StudentsPage() {
     <ProtectedRoute>
       <div className="flex h-full flex-col">
         <PageHeader title="生徒管理" helpButton={helpButton} />
-        <div className="flex-1 overflow-hidden p-6">
+        <div className="flex-1 overflow-hidden">
           <StudentTable />
         </div>
       </div>

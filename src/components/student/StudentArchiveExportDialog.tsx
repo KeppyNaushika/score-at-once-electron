@@ -1,6 +1,6 @@
 "use client"
 
-import { Download, Loader2 } from "lucide-react"
+import { FolderOutput, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -198,7 +198,7 @@ export function StudentArchiveExportDialog({
               </>
             ) : (
               <>
-                <Download className="mr-2 h-4 w-4" />
+                <FolderOutput className="mr-2 h-4 w-4" />
                 書き出し
               </>
             )}

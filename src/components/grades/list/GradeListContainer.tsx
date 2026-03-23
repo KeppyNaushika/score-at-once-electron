@@ -3,9 +3,9 @@
 import {
   BarChart3,
   ClipboardEdit,
-  Download,
   Eye,
   FolderInput,
+  FolderOutput,
   MoreHorizontal,
   Plus,
   Settings,
@@ -129,7 +129,7 @@ export function GradeListContainer() {
             className="rounded-lg"
           >
             <FolderInput className="mr-2 h-4 w-4" />
-            インポート
+            .grade 読み込み
           </Button>
         </div>
       </div>
@@ -223,8 +223,8 @@ export function GradeListContainer() {
                                 window.electronAPI.grade.exportArchive(grade.id)
                               }
                             >
-                              <Download className="mr-2 h-4 w-4" />
-                              エクスポート
+                              <FolderOutput className="mr-2 h-4 w-4" />
+                              .grade 書き出し
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"

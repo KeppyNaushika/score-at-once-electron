@@ -48,14 +48,14 @@ export default function ExportModeModal({
     <BaseModal
       open={open}
       onOpenChange={onOpenChange}
-      title="エクスポート"
-      description="エクスポートするデータの範囲を選択してください。"
+      title=".score 書き出し"
+      description="書き出すデータの範囲を選択してください。"
       variant="default"
       size="md"
       actions={{
         cancel: { label: "キャンセル" },
         primary: {
-          label: "エクスポート",
+          label: "書き出し",
           onClick: () => onExport(selectedMode),
           loading: isExporting,
           disabled: isExporting,

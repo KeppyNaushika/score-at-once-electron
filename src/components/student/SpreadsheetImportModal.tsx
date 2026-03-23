@@ -113,7 +113,7 @@ export default function SpreadsheetImportModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           <div className="overflow-x-auto">
             <StudentImportTable
               data={studentData}

@@ -2,10 +2,10 @@
 
 import type { Prisma } from "@prisma/client"
 import {
-  Archive,
   Download,
   Edit,
-  FolderDown,
+  FolderInput,
+  FolderOutput,
   PlusCircle,
   Search,
   Trash2,
@@ -299,21 +299,71 @@ export default function StudentTable() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-5">
-      {/* Controls */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
-        <div className="border-border/50 bg-card flex flex-wrap items-center gap-4 rounded-xl border p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Search className="text-muted-foreground h-4 w-4" />
+    <div className="flex h-full min-w-full flex-col">
+      {/* Action Bar */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={handleAddNewStudent}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            生徒追加
+          </Button>
+          <Button
+            onClick={() => setIsSpreadsheetImportModalOpen(true)}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Excel 貼付一括追加
+          </Button>
+          <Button
+            onClick={() => setIsArchiveImportModalOpen(true)}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <FolderInput className="mr-2 h-4 w-4" />
+            .students 読み込み
+          </Button>
+          {selectedStudentIds.size > 0 && (
+            <>
+              <span className="text-muted-foreground ml-2 text-sm tabular-nums">
+                {selectedStudentIds.size}名選択中
+              </span>
+              <Button
+                onClick={handleExportExcel}
+                variant="outline"
+                className="rounded-lg"
+                disabled={isExporting}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "出力中..." : "Excel出力"}
+              </Button>
+              <Button
+                onClick={() => setIsArchiveExportDialogOpen(true)}
+                variant="outline"
+                className="rounded-lg"
+              >
+                <FolderOutput className="mr-2 h-4 w-4" />
+                .students 書き出し
+              </Button>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="生徒名・学籍番号で検索"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-border/50 bg-muted/20 focus:bg-background h-9 w-64 rounded-lg transition-colors"
+              className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
           <Select value={filterClassId} onValueChange={setFilterClassId}>
-            <SelectTrigger className="h-9 w-44 rounded-lg">
+            <SelectTrigger className="h-9 w-40 rounded-lg">
               <SelectValue placeholder="学級フィルタ" />
             </SelectTrigger>
             <SelectContent>
@@ -343,198 +393,151 @@ export default function StudentTable() {
             </SelectContent>
           </Select>
           <span className="text-muted-foreground text-sm tabular-nums">
-            {selectedStudentIds.size > 0
-              ? `${selectedStudentIds.size}名選択中 / `
-              : ""}
             {sortedData.length}名
           </span>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={handleExportExcel}
-            variant="outline"
-            className="rounded-lg"
-            disabled={isExporting || selectedStudentIds.size === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting
-              ? "出力中..."
-              : `Excel出力${selectedStudentIds.size > 0 ? `(${selectedStudentIds.size})` : ""}`}
-          </Button>
-          <Button
-            onClick={() => setIsArchiveExportDialogOpen(true)}
-            variant="outline"
-            className="rounded-lg"
-            disabled={selectedStudentIds.size === 0}
-          >
-            <Archive className="mr-2 h-4 w-4" />
-            アーカイブ書き出し
-            {selectedStudentIds.size > 0 && `(${selectedStudentIds.size})`}
-          </Button>
-          <Button
-            onClick={handleAddNewStudent}
-            variant="outline"
-            className="rounded-lg"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            生徒追加
-          </Button>
-          <Button
-            onClick={() => setIsArchiveImportModalOpen(true)}
-            variant="outline"
-            className="rounded-lg"
-          >
-            <FolderDown className="mr-2 h-4 w-4" />
-            アーカイブ読み込み
-          </Button>
-          <Button
-            onClick={() => setIsSpreadsheetImportModalOpen(true)}
-            className="rounded-lg"
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            表形式インポート
-          </Button>
         </div>
       </div>
 
       {/* Students Table */}
-      <div className="border-border/50 bg-card min-h-0 flex-1 overflow-hidden rounded-xl border shadow-sm">
-        <Table wrapperClassName="h-full">
-          <TableHeader className="bg-card sticky top-0 z-10 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
-            <TableRow className="hover:bg-muted/40">
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={
-                    isAllSelected
-                      ? true
-                      : isSomeSelected
-                        ? "indeterminate"
-                        : false
-                  }
-                  onCheckedChange={toggleSelectAll}
-                  aria-label="全選択"
-                />
-              </TableHead>
-              <SortableTableHead
-                sortKey="studentNumber"
-                currentSortKey={sortConfig.key}
-                currentDirection={sortConfig.direction}
-                onSort={(key) => requestSort(key)}
-              >
-                学籍番号
-              </SortableTableHead>
-              <SortableTableHead
-                sortKey="fullName"
-                currentSortKey={sortConfig.key}
-                currentDirection={sortConfig.direction}
-                onSort={(key) => requestSort(key)}
-              >
-                氏名
-              </SortableTableHead>
-              <SortableTableHead
-                sortKey="enrollmentYear"
-                currentSortKey={sortConfig.key}
-                currentDirection={sortConfig.direction}
-                onSort={(key) => requestSort(key)}
-              >
-                入学年度
-              </SortableTableHead>
-              <TableHead>所属学級</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedData.map(({ original: student }) => {
-              const currentClasses = getCurrentClasses(student)
-              const isSelected = selectedStudentIds.has(student.id)
-
-              return (
-                <TableRow
-                  key={student.id}
-                  onClick={() => router.push(`/students/${student.id}`)}
-                  className="group cursor-pointer"
-                  data-state={isSelected ? "selected" : undefined}
+      <div className="min-h-0 flex-1 p-4">
+        <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+          <Table wrapperClassName="h-full">
+            <TableHeader className="bg-card sticky top-0 z-10">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      isAllSelected
+                        ? true
+                        : isSomeSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="全選択"
+                  />
+                </TableHead>
+                <SortableTableHead
+                  sortKey="studentNumber"
+                  currentSortKey={sortConfig.key}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key)}
                 >
-                  <TableCell
-                    className="w-10"
-                    onClick={(e) => e.stopPropagation()}
+                  学籍番号
+                </SortableTableHead>
+                <SortableTableHead
+                  sortKey="fullName"
+                  currentSortKey={sortConfig.key}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key)}
+                >
+                  氏名
+                </SortableTableHead>
+                <SortableTableHead
+                  sortKey="enrollmentYear"
+                  currentSortKey={sortConfig.key}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key)}
+                >
+                  入学年度
+                </SortableTableHead>
+                <TableHead>所属学級</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedData.map(({ original: student }) => {
+                const currentClasses = getCurrentClasses(student)
+                const isSelected = selectedStudentIds.has(student.id)
+
+                return (
+                  <TableRow
+                    key={student.id}
+                    onClick={() => router.push(`/students/${student.id}`)}
+                    className="group cursor-pointer"
+                    data-state={isSelected ? "selected" : undefined}
                   >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSelectStudent(student.id)}
-                      aria-label={`${student.lastName} ${student.firstName}を選択`}
-                    />
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {student.studentNumber}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {student.lastName} {student.firstName}
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {student.enrollmentYear || (
-                      <span className="text-muted-foreground">未設定</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentClasses.map((cls, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="secondary"
-                          className="rounded-full px-2.5 py-0.5 text-xs font-normal"
-                        >
-                          {cls.name}
-                        </Badge>
-                      ))}
-                      {currentClasses.length === 0 && (
-                        <span className="text-muted-foreground text-sm">
-                          未所属
-                        </span>
+                    <TableCell
+                      className="w-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectStudent(student.id)}
+                        aria-label={`${student.lastName} ${student.firstName}を選択`}
+                      />
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {student.studentNumber}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {student.lastName} {student.firstName}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {student.enrollmentYear || (
+                        <span className="text-muted-foreground">未設定</span>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEditStudent(student)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteStudent(student.id)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1.5">
+                        {currentClasses.map((cls, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="secondary"
+                            className="rounded-full px-2.5 py-0.5 text-xs font-normal"
+                          >
+                            {cls.name}
+                          </Badge>
+                        ))}
+                        {currentClasses.length === 0 && (
+                          <span className="text-muted-foreground text-sm">
+                            未所属
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditStudent(student)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteStudent(student.id)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {sortedData.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-muted-foreground h-32 text-center"
+                  >
+                    該当する生徒が見つかりません。
                   </TableCell>
                 </TableRow>
-              )
-            })}
-            {sortedData.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-muted-foreground h-32 text-center"
-                >
-                  該当する生徒が見つかりません。
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Modals */}
