@@ -50,6 +50,7 @@ export const defaultConfig: ScoringMarkConfig = {
     partial: true,
     pending: true,
     no_answer: true,
+    double_mark: true,
   },
   showScoreForStatus: {
     unscored: false,
@@ -58,6 +59,7 @@ export const defaultConfig: ScoringMarkConfig = {
     partial: true,
     pending: true,
     no_answer: true,
+    double_mark: true,
   },
   // 採点マーク設定
   markPosition: "middle-center",
@@ -108,4 +110,5 @@ export const statusLabels: Record<ScoringStatus, string> = {
   partial: "部分点",
   pending: "処理中",
   no_answer: "無答",
+  double_mark: "Wマーク",
 }

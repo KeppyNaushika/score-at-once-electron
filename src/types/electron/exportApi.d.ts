@@ -273,6 +273,7 @@ export interface ExportAPI {
             | "hold"
             | "incorrect"
             | "no_answer"
+            | "double_mark"
         }>
         totalScore: number | null
         totalMaxScore: number

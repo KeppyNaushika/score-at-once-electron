@@ -816,7 +816,8 @@ export async function renderAnswerSheetToCanvas(
       const markKey =
         scoringData.status === "pending"
           ? "hold"
-          : scoringData.status === "no_answer"
+          : scoringData.status === "no_answer" ||
+              scoringData.status === "double_mark"
             ? "incorrect"
             : scoringData.status
       const markImage = scoringMarkImages.get(markKey)
@@ -850,9 +851,10 @@ export async function renderAnswerSheetToCanvas(
         scoreToDisplay = scoringData.partialScore ?? null
       } else if (
         scoringData.status === "incorrect" ||
-        scoringData.status === "no_answer"
+        scoringData.status === "no_answer" ||
+        scoringData.status === "double_mark"
       ) {
-        // 誤答/無答: 0点を表示
+        // 誤答/無答/Wマーク: 0点を表示
         scoreToDisplay = 0
       }
 

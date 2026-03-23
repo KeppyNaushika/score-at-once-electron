@@ -19,7 +19,8 @@ export const calculateActualScore = (
       return maxScore
     case "incorrect":
     case "no_answer":
-      return 0 // 誤答・無答は 0/配点 と表示
+    case "double_mark":
+      return 0 // 誤答・無答・Wマークは 0/配点 と表示
     case "unscored":
       return null // 未採点は null を返して -/配点 と表示
     case "partial":
@@ -48,6 +49,7 @@ export interface CreateQuestionScoreData {
     | "no_answer"
     | "proposed"
     | "final"
+    | "double_mark"
   comment?: string
   userId: string
 }
@@ -63,6 +65,7 @@ export interface UpdateQuestionScoreData {
     | "no_answer"
     | "proposed"
     | "final"
+    | "double_mark"
   comment?: string
   version?: number
 }
@@ -491,13 +494,17 @@ export const getExamProgress = async (examId: string) => {
     }
 
     // 採点済みの項目数を取得
-    // correct/incorrect/no_answer は無条件でカウント
+    // correct/incorrect/no_answer/double_mark は無条件でカウント
     // partial/pending は partialScore が null でないもののみカウント
     const scoredItems = await prisma.questionScore.count({
       where: {
         ...cropRegionFilter,
         OR: [
-          { status: { in: ["correct", "incorrect", "no_answer"] } },
+          {
+            status: {
+              in: ["correct", "incorrect", "no_answer", "double_mark"],
+            },
+          },
           {
             status: { in: ["partial", "pending"] },
             partialScore: { not: null },
@@ -507,13 +514,17 @@ export const getExamProgress = async (examId: string) => {
     })
 
     // 最終確定の項目数を取得
-    // correct/incorrect/no_answer は無条件でカウント
+    // correct/incorrect/no_answer/double_mark は無条件でカウント
     // partial は partialScore が null でないもののみカウント（pendingは未確定なので除外）
     const finalizedItems = await prisma.questionScore.count({
       where: {
         ...cropRegionFilter,
         OR: [
-          { status: { in: ["correct", "incorrect", "no_answer"] } },
+          {
+            status: {
+              in: ["correct", "incorrect", "no_answer", "double_mark"],
+            },
+          },
           {
             status: "partial",
             partialScore: { not: null },

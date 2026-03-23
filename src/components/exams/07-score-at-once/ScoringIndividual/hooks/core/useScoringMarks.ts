@@ -67,6 +67,7 @@ export function getScoringMarkKey(status: string): MarkType | null {
     case "pending":
       return "hold"
     case "no_answer":
+    case "double_mark":
       return "incorrect"
     case "correct":
     case "incorrect":

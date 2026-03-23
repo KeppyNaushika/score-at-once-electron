@@ -19,6 +19,7 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "scoring.pending": "j", // モーダル内でも確定キーとして機能
   "scoring.incorrect": "o",
   "scoring.noAnswer": "p",
+  "scoring.doubleMark": "t",
 
   // ============================================
   // ナビゲーション (Navigation)
@@ -56,6 +57,7 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "filter.togglePending": "Alt+j",
   "filter.toggleIncorrect": "Alt+o",
   "filter.toggleNoAnswer": "Alt+p",
+  "filter.toggleDoubleMark": "Alt+t",
 
   // 更新
   "filter.refresh": "r",

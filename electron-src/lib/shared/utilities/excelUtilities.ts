@@ -30,6 +30,8 @@ export function getStatusSymbol(status: string, score?: number): string {
       return "×"
     case "no_answer":
       return "-"
+    case "double_mark":
+      return "W"
     default:
       return "-"
   }

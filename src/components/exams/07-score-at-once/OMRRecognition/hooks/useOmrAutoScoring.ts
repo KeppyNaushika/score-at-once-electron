@@ -24,7 +24,7 @@ interface AutoScoreEntry {
     | "incorrect"
     | "partial"
     | "no_answer"
-    | "ambiguous"
+    | "double_mark"
     | "pending"
   score: number
   maxPoints: number
@@ -49,7 +49,7 @@ export interface OmrAutoScoringState {
     correct: number
     incorrect: number
     noAnswer: number
-    ambiguous: number
+    doubleMark: number
     partial: number
     pending: number
     total: number
@@ -274,7 +274,7 @@ export function useOmrAutoScoring(examId: string) {
       let correct = 0,
         incorrect = 0,
         noAnswer = 0,
-        ambiguous = 0,
+        doubleMark = 0,
         partial = 0,
         pending = 0
 
@@ -336,9 +336,9 @@ export function useOmrAutoScoring(examId: string) {
                 noAnswer++
                 break
               case "ambiguous":
-                status = "ambiguous"
+                status = "double_mark"
                 score = 0
-                ambiguous++
+                doubleMark++
                 break
               default:
                 status = "no_answer"
@@ -376,7 +376,7 @@ export function useOmrAutoScoring(examId: string) {
             if (
               cellResult.confidence < confidenceThreshold &&
               status !== "no_answer" &&
-              status !== "ambiguous"
+              status !== "double_mark"
             ) {
               // カウンターを元に戻してpendingに振り替え
               if (status === "correct") correct--
@@ -411,10 +411,11 @@ export function useOmrAutoScoring(examId: string) {
           correct,
           incorrect,
           noAnswer,
-          ambiguous,
+          doubleMark,
           partial,
           pending,
-          total: correct + incorrect + noAnswer + ambiguous + partial + pending,
+          total:
+            correct + incorrect + noAnswer + doubleMark + partial + pending,
         },
       }))
     } catch (error) {
@@ -443,7 +444,6 @@ export function useOmrAutoScoring(examId: string) {
 
         for (const [studentId, scoreEntries] of state.scoreEntries) {
           for (const entry of scoreEntries) {
-            if (entry.status === "ambiguous") continue // 曖昧な結果はスキップ
             entries.push({
               studentId,
               cropRegionId: entry.cropRegionId!,

@@ -6,6 +6,7 @@ export type ScoringStatus =
   | "partial" // 部分点
   | "pending" // 処理中
   | "no_answer" // 無答
+  | "double_mark" // ダブルマーク
 
 // 位置の型定義
 export type MarkPosition =
