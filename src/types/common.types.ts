@@ -33,7 +33,7 @@ export type ExamWithDetails = Prisma.ExamGetPayload<{
     }
     examStudents: true
     examTags: {
-      select: { tag: { select: { id: true; name: true } } }
+      select: { tag: { select: { id: true; name: true; color: true } } }
     }
   }
 }> & {
@@ -59,7 +59,7 @@ export interface ExamListItem {
   id: string
   examName: string
   examDate: Date | null
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string; color: string | null }[]
   description: string | null
   createdAt: Date
   updatedAt: Date

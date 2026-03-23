@@ -40,7 +40,7 @@ export interface ExtractedArchiveData {
   subtotalsData: ArchiveSubtotalsData
   /** 採点データ */
   scoresData: ArchiveScoresData
-  /** 教科データ (v1.4.0-v1.9.0, deprecated) */
+  /** タグデータ (v1.4.0-v1.9.0, deprecated) */
   subjectsData: ArchiveSubjectsData
   /** タグデータ (v1.10.0+) */
   tagsData: ArchiveTagsData
@@ -111,7 +111,7 @@ export async function extractArchive(archivePath: string): Promise<{
     )
     const scoresData = readJsonFile<ArchiveScoresData>(tempDir, "scores.json")
 
-    // v1.4.0-v1.9.0: 教科データ（存在しない場合はデフォルト値）
+    // v1.4.0-v1.9.0: タグデータ（存在しない場合はデフォルト値）
     const subjectsData = readJsonFile<ArchiveSubjectsData>(
       tempDir,
       "subjects.json"

@@ -322,6 +322,8 @@ model ExamClass {
 model Tag {
   id        String   @id @default(uuid())
   name      String   @unique
+  order     Int      @default(0)
+  color     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

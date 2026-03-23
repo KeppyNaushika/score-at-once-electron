@@ -361,18 +361,19 @@ export class V1_9_0_to_V1_10_0_Transformer implements VersionTransformer {
 - ExamSubtotalGroupテーブルによる中間テーブル管理
 - 同一設問構成の試験における集計設定の統一化
 
-**新規Subject（教科）テーブルの追加**:
+**Tag（タグ）テーブル**:
 
-- Subject (id, name) テーブルの新設
-- SubjectSubtotalGroupテーブルによるSubject-SubtotalGroup多対多関係
-- 教科別フィルタリング・分析機能の基盤
+- Tag (id, name) テーブル（教科名・試験種別など汎用タグ）
+- TagSubtotalGroupテーブルによるTag-SubtotalGroup多対多関係
+- ExamTagテーブルによるExam-Tag多対多関係
+- タグ別フィルタリング・分析機能の基盤
 
 #### 🎯 期待される機能向上
 
 **個人成績の横断分析**:
 
 - 複数Exam間でのSubtotal推移追跡
-- 教科別成績分析とフィルタリング表示
+- タグ別成績分析とフィルタリング表示
 - 長期的な学習進度の可視化
 
 **協調採点機能の完全実現**:

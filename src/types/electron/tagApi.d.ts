@@ -1,24 +1,27 @@
 /**
  * Tag（タグ）・TagSubtotalGroup・ExamTag関連API
  */
+
+interface TagRecord {
+  id: string
+  name: string
+  order: number
+  color: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface TagAPI {
-  tagGetAll: () => Promise<
-    Array<{ id: string; name: string; createdAt: Date; updatedAt: Date }>
-  >
-  tagGetById: (id: string) => Promise<{
-    id: string
-    name: string
-    createdAt: Date
-    updatedAt: Date
-  } | null>
-  tagCreate: (data: {
-    name: string
-  }) => Promise<{ id: string; name: string; createdAt: Date; updatedAt: Date }>
+  tagGetAll: () => Promise<TagRecord[]>
+  tagGetById: (id: string) => Promise<TagRecord | null>
+  tagCreate: (data: { name: string; color?: string }) => Promise<TagRecord>
   tagUpdate: (
     id: string,
-    data: { name: string }
-  ) => Promise<{ id: string; name: string; createdAt: Date; updatedAt: Date }>
+    data: { name?: string; color?: string | null }
+  ) => Promise<TagRecord>
   tagDelete: (id: string) => Promise<void>
+  tagFindOrCreate: (name: string) => Promise<TagRecord>
+  tagReorder: (tagIds: string[]) => Promise<TagRecord[]>
 
   tagSubtotalGroupGetByTagId: (tagId: string) => Promise<
     Array<{
@@ -46,7 +49,7 @@ export interface TagAPI {
       id: string
       examId: string
       tagId: string
-      tag: { id: string; name: string; createdAt: Date; updatedAt: Date }
+      tag: TagRecord
       createdAt: Date
       updatedAt: Date
     }>
@@ -67,7 +70,7 @@ export interface TagAPI {
       id: string
       examId: string
       tagId: string
-      tag: { id: string; name: string; createdAt: Date; updatedAt: Date }
+      tag: TagRecord
       createdAt: Date
       updatedAt: Date
     }>

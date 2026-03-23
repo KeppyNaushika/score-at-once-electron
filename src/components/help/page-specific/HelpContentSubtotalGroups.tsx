@@ -152,13 +152,13 @@ export function HelpContentSubtotalGroups() {
           <div className="space-y-3">
             <TipItem type="success">
               <strong>命名規則：</strong>
-              「教科名 +
+              「タグ名 +
               種別」で命名（例：数学標準、英語応用）。学年情報も含めると分かりやすいです。
             </TipItem>
 
             <TipItem type="success">
               <strong>効率的な運用：</strong>
-              教科別に標準構成を事前定義し、特別な試験用の専用構成も別途作成しましょう。
+              タグ別に標準構成を事前定義し、特別な試験用の専用構成も別途作成しましょう。
             </TipItem>
 
             <TipItem type="success">

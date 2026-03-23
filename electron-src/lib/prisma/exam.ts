@@ -20,9 +20,10 @@ export const getExamsForList = async (userId: string) => {
       examTags: {
         select: {
           tag: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, color: true },
           },
         },
+        orderBy: { tag: { order: "asc" } },
       },
       createdAt: true,
       updatedAt: true,
@@ -119,9 +120,10 @@ export const getExams = async (userId: string) => {
       examTags: {
         select: {
           tag: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, color: true },
           },
         },
+        orderBy: { tag: { order: "asc" } },
       },
     },
     orderBy: {
@@ -193,9 +195,10 @@ export const getExamById = async (id: string) => {
       examTags: {
         select: {
           tag: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, color: true },
           },
         },
+        orderBy: { tag: { order: "asc" } },
       },
     },
   })
@@ -247,9 +250,10 @@ export const createExam = async (
       examTags: {
         select: {
           tag: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, color: true },
           },
         },
+        orderBy: { tag: { order: "asc" } },
       },
     },
   })

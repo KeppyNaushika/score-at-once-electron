@@ -6,11 +6,14 @@ export function createTagApi() {
     // Tag（タグ）
     tagGetAll: () => ipcRenderer.invoke("tag:getAll"),
     tagGetById: (id: string) => ipcRenderer.invoke("tag:getById", id),
-    tagCreate: (data: { name: string }) =>
+    tagCreate: (data: { name: string; color?: string }) =>
       ipcRenderer.invoke("tag:create", data),
-    tagUpdate: (id: string, data: { name: string }) =>
+    tagUpdate: (id: string, data: { name?: string; color?: string | null }) =>
       ipcRenderer.invoke("tag:update", id, data),
     tagDelete: (id: string) => ipcRenderer.invoke("tag:delete", id),
+    tagFindOrCreate: (name: string) =>
+      ipcRenderer.invoke("tag:findOrCreate", name),
+    tagReorder: (tagIds: string[]) => ipcRenderer.invoke("tag:reorder", tagIds),
 
     // TagSubtotalGroup（タグ-小計グループ関連）
     tagSubtotalGroupGetByTagId: (tagId: string) =>
