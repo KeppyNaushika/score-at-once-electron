@@ -21,6 +21,12 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface TagItem {
   id: string
@@ -64,10 +70,19 @@ function SortableTagRow({
     >
       <DragHandle dragHandleProps={dragHandleProps} />
       {tag.color && (
-        <div
-          className="h-4 w-4 shrink-0 rounded-full border"
-          style={{ backgroundColor: tag.color }}
-        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="h-4 w-4 shrink-0 cursor-pointer rounded-full border transition-transform hover:scale-125"
+              style={{ backgroundColor: tag.color }}
+              onClick={() => onEdit(tag)}
+            />
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={5}>
+            クリックして色を変更
+          </TooltipContent>
+        </Tooltip>
       )}
       <span className="min-w-0 flex-1 truncate font-medium">{tag.name}</span>
       <Badge
@@ -327,21 +342,23 @@ export function TagsPageContainer() {
               </p>
             </div>
           ) : (
-            <div className="mx-auto max-w-xl space-y-2">
-              <SortableTableProvider
-                items={tags.map((t) => t.id)}
-                onDragEnd={handleDragEnd}
-              >
-                {tags.map((tag) => (
-                  <SortableTagRow
-                    key={tag.id}
-                    tag={tag}
-                    onEdit={handleEdit}
-                    onDelete={(t) => void handleDelete(t)}
-                  />
-                ))}
-              </SortableTableProvider>
-            </div>
+            <TooltipProvider delayDuration={300}>
+              <div className="mx-auto max-w-xl space-y-2">
+                <SortableTableProvider
+                  items={tags.map((t) => t.id)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {tags.map((tag) => (
+                    <SortableTagRow
+                      key={tag.id}
+                      tag={tag}
+                      onEdit={handleEdit}
+                      onDelete={(t) => void handleDelete(t)}
+                    />
+                  ))}
+                </SortableTableProvider>
+              </div>
+            </TooltipProvider>
           )}
         </div>
       </div>
