@@ -251,7 +251,7 @@ const File = () => {
               className="rounded-lg"
             >
               <FolderInput className="mr-2 h-4 w-4" />
-              インポート
+              .score 読み込み
             </Button>
             {selectedExamIds.size > 0 && (
               <>
@@ -265,7 +265,7 @@ const File = () => {
                   disabled={isBulkExporting}
                 >
                   <FolderOutput className="mr-2 h-4 w-4" />
-                  一括書き出し
+                  .score 一括書き出し
                 </Button>
               </>
             )}

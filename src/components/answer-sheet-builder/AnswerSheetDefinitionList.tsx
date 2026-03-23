@@ -2,12 +2,12 @@
 
 import {
   Copy,
-  Download,
+  FolderInput,
+  FolderOutput,
   MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
-  Upload,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
@@ -177,130 +177,143 @@ export function AnswerSheetDefinitionList() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">解答用紙定義</h2>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleImport}>
-            <Download className="mr-1 h-4 w-4" />
-            読み込み
-          </Button>
-          <Button size="sm" onClick={handleCreate}>
-            <Plus className="mr-1 h-4 w-4" />
+    <div className="flex h-full min-w-full flex-col">
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleCreate}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <Plus className="mr-2 h-4 w-4" />
             新規作成
+          </Button>
+          <Button
+            onClick={handleImport}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <FolderInput className="mr-2 h-4 w-4" />
+            .asb 読み込み
           </Button>
         </div>
       </div>
 
-      {sorted.length === 0 ? (
-        <div className="text-muted-foreground rounded-lg border border-dashed p-12 text-center">
-          <p className="mb-2">解答用紙定義がありません</p>
-          <Button variant="outline" size="sm" onClick={handleCreate}>
-            <Plus className="mr-1 h-4 w-4" />
-            最初の定義を作成
-          </Button>
-        </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead
-                  className="cursor-pointer select-none"
-                  onClick={() => toggleSort("name")}
-                >
-                  名前{sortIndicator("name")}
-                </TableHead>
-                <TableHead className="w-24">用紙</TableHead>
-                <TableHead
-                  className="w-20 cursor-pointer text-right select-none"
-                  onClick={() => toggleSort("questionCount")}
-                >
-                  設問数{sortIndicator("questionCount")}
-                </TableHead>
-                <TableHead
-                  className="w-24 cursor-pointer text-right select-none"
-                  onClick={() => toggleSort("totalPoints")}
-                >
-                  合計配点{sortIndicator("totalPoints")}
-                </TableHead>
-                <TableHead
-                  className="w-40 cursor-pointer select-none"
-                  onClick={() => toggleSort("updatedAt")}
-                >
-                  更新日時{sortIndicator("updatedAt")}
-                </TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sorted.map((def) => (
-                <TableRow
-                  key={def.id}
-                  className="cursor-pointer"
-                  onClick={() => handleEdit(def.id)}
-                >
-                  <TableCell className="font-medium">{def.name}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {def.paperSize ?? "-"}{" "}
-                    {def.orientation === "landscape" ? "横" : "縦"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {def.questionCount ?? "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {def.totalPoints != null ? `${def.totalPoints}点` : "-"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {formatDate(def.updatedAt)}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
+      <div className="min-h-0 flex-1 p-4">
+        {sorted.length === 0 ? (
+          <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
+            <p className="text-muted-foreground mb-2">
+              解答用紙定義がありません
+            </p>
+            <Button variant="outline" onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              最初の定義を作成
+            </Button>
+          </div>
+        ) : (
+          <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+            <Table wrapperClassName="h-full">
+              <TableHeader className="bg-card sticky top-0 z-10">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead
+                    className="cursor-pointer select-none"
+                    onClick={() => toggleSort("name")}
+                  >
+                    名前{sortIndicator("name")}
+                  </TableHead>
+                  <TableHead className="w-24">用紙</TableHead>
+                  <TableHead
+                    className="w-20 cursor-pointer text-right select-none"
+                    onClick={() => toggleSort("questionCount")}
+                  >
+                    設問数{sortIndicator("questionCount")}
+                  </TableHead>
+                  <TableHead
+                    className="w-24 cursor-pointer text-right select-none"
+                    onClick={() => toggleSort("totalPoints")}
+                  >
+                    合計配点{sortIndicator("totalPoints")}
+                  </TableHead>
+                  <TableHead
+                    className="w-40 cursor-pointer select-none"
+                    onClick={() => toggleSort("updatedAt")}
+                  >
+                    更新日時{sortIndicator("updatedAt")}
+                  </TableHead>
+                  <TableHead className="w-12" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sorted.map((def) => (
+                  <TableRow
+                    key={def.id}
+                    className="group cursor-pointer"
+                    onClick={() => handleEdit(def.id)}
+                  >
+                    <TableCell className="font-medium">{def.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {def.paperSize ?? "-"}{" "}
+                      {def.orientation === "landscape" ? "横" : "縦"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {def.questionCount ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {def.totalPoints != null ? `${def.totalPoints}点` : "-"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {formatDate(def.updatedAt)}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DropdownMenuItem onClick={() => handleEdit(def.id)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          編集
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => duplicateDefinition(def.id)}
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          複製
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(def.id)}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          書き出し
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(def.id, def.name)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          削除
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                          <DropdownMenuItem onClick={() => handleEdit(def.id)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            編集
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => duplicateDefinition(def.id)}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            複製
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleExport(def.id)}
+                          >
+                            <FolderOutput className="mr-2 h-4 w-4" />
+                            .asb 書き出し
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDelete(def.id, def.name)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            削除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -151,33 +151,38 @@ export function SubtotalGroupsPageContainer() {
   }
 
   return (
-    <div className="flex h-full flex-col p-6">
-      {/* ヘッダーアクション */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {/* 検索 */}
+    <div className="flex h-full min-w-full flex-col">
+      {/* Action Bar */}
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleCreate}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            新規作成
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
-              placeholder="グループ名、小計項目名で検索..."
+              placeholder="グループ名、小計項目名で検索"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-80 pl-10"
+              className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
-          <div className="text-muted-foreground text-sm">
-            {filteredGroups.length}件表示
-          </div>
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {filteredGroups.length}件
+          </span>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          新規作成
-        </Button>
       </div>
 
       {/* エラーメッセージ */}
       {ipcError && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="mb-2 font-medium text-red-800">接続エラー</div>
           <div className="text-sm text-red-700">{ipcError}</div>
           <Button
@@ -192,22 +197,20 @@ export function SubtotalGroupsPageContainer() {
       )}
 
       {/* グループ一覧 */}
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto p-4">
         {!ipcError && filteredGroups.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <div className="text-muted-foreground mb-4">
-                {searchTerm
-                  ? "検索結果が見つかりません"
-                  : "小計点グループがありません"}
-              </div>
-              {!searchTerm && (
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  最初のグループを作成
-                </Button>
-              )}
-            </div>
+          <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
+            <p className="text-muted-foreground mb-2">
+              {searchTerm
+                ? "検索結果が見つかりません"
+                : "小計点グループがありません"}
+            </p>
+            {!searchTerm && (
+              <Button variant="outline" onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                最初のグループを作成
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

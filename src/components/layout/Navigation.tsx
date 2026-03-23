@@ -40,8 +40,8 @@ const navGroups: NavItem[][] = [
   [
     { href: "/exams", label: "試験一覧", icon: Home },
     { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
-    { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
     { href: "/grades", label: "成績算出", icon: BarChart3 },
+    { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
   ],
   [
     { href: "/students", label: "生徒管理", icon: Users },

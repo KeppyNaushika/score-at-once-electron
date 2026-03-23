@@ -198,51 +198,57 @@ export default function ClassManagementTable() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-5">
-      {/* Controls */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
-        <div className="border-border/50 bg-card flex flex-wrap items-center gap-4 rounded-xl border p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Search className="text-muted-foreground h-4 w-4" />
+    <div className="flex h-full min-w-full flex-col">
+      {/* Action Bar */}
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleAddNewClass}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            学級追加
+          </Button>
+          {selectedClassIds.size > 0 && (
+            <>
+              <span className="text-muted-foreground ml-2 text-sm tabular-nums">
+                {selectedClassIds.size}学級選択中
+              </span>
+              <Button
+                onClick={handleExportExcel}
+                variant="outline"
+                className="rounded-lg"
+                disabled={isExporting}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "出力中..." : "Excel出力"}
+              </Button>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="学級名で検索"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-border/50 bg-muted/20 focus:bg-background h-9 w-64 rounded-lg transition-colors"
+              className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
           <span className="text-muted-foreground text-sm tabular-nums">
-            {selectedClassIds.size > 0
-              ? `${selectedClassIds.size}学級選択中 / `
-              : ""}
             {sortedData.length}学級
           </span>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={handleExportExcel}
-            variant="outline"
-            className="rounded-lg"
-            disabled={isExporting || selectedClassIds.size === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting
-              ? "出力中..."
-              : `Excel出力${selectedClassIds.size > 0 ? `(${selectedClassIds.size})` : ""}`}
-          </Button>
-          <Button onClick={handleAddNewClass} className="rounded-lg">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            学級追加
-          </Button>
         </div>
       </div>
 
       {/* Classes Table */}
-      <div className="border-border/50 bg-card min-h-0 flex-1 overflow-hidden rounded-xl border shadow-sm">
-        <div className="h-full overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-muted/40">
+      <div className="min-h-0 flex-1 p-4">
+        <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+          <Table wrapperClassName="h-full">
+            <TableHeader className="bg-card sticky top-0 z-10">
+              <TableRow className="hover:bg-transparent">
                 <TableHead className="w-10">
                   <Checkbox
                     checked={

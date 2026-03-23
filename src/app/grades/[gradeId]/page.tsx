@@ -4,8 +4,8 @@ import {
   BarChart3,
   ChevronRight,
   ClipboardEdit,
-  Download,
   Edit,
+  FolderOutput,
   MoreVertical,
   Settings,
   Sliders,
@@ -292,8 +292,8 @@ export default function GradeDetailPage() {
                       window.electronAPI.grade.exportArchive(gradeId)
                     }
                   >
-                    <Download className="mr-2 h-4 w-4" />
-                    エクスポート
+                    <FolderOutput className="mr-2 h-4 w-4" />
+                    .grade 書き出し
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

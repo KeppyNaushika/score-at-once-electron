@@ -2,8 +2,8 @@
 
 import {
   Calendar,
-  Download,
   Edit,
+  FolderOutput,
   Info,
   MoreVertical,
   Tag,
@@ -52,7 +52,8 @@ export default function ExamHeader({
             <p className="text-muted-foreground mt-2">{exam.description}</p>
           )}
           <div className="mt-3 flex items-center gap-4">
-            {exam.examTags && exam.examTags.length > 0 &&
+            {exam.examTags &&
+              exam.examTags.length > 0 &&
               exam.examTags.map((et) => (
                 <Badge key={et.tag.id} variant="outline">
                   <Tag className="mr-1 h-3 w-3" />
@@ -94,8 +95,8 @@ export default function ExamHeader({
               </DropdownMenuItem>
               {onExport && (
                 <DropdownMenuItem onClick={onExport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  エクスポート
+                  <FolderOutput className="mr-2 h-4 w-4" />
+                  .score 書き出し
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

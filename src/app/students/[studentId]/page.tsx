@@ -1,7 +1,8 @@
 "use client"
 
 import type { StudentClassMembership } from "@prisma/client"
-import { useParams } from "next/navigation"
+import { ArrowLeft, Edit, Trash2 } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { CurrentMembershipsCard } from "@/app/students/[studentId]/components/CurrentMembershipsCard"
@@ -11,15 +12,18 @@ import {
   StudentNotFoundState,
 } from "@/app/students/[studentId]/components/LoadingState"
 import { MembershipHistoryCard } from "@/app/students/[studentId]/components/MembershipHistoryCard"
-import { StudentDetailHeader } from "@/app/students/[studentId]/components/StudentDetailHeader"
 import { StudentInfoCard } from "@/app/students/[studentId]/components/StudentInfoCard"
 import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import PageHeader from "@/components/layout/PageHeader"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
+import { Button } from "@/components/ui/button"
 import type { StudentClassMembershipWithDetails } from "@/types/prismaExtensions"
 
 export default function StudentDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const studentId = typeof params.studentId === "string" ? params.studentId : ""
 
   const {
@@ -80,63 +84,93 @@ export default function StudentDetailPage() {
     return <StudentNotFoundState />
   }
 
+  const studentName = `${student.lastName} ${student.firstName}`
+
   return (
-    <div className="container mx-auto max-w-6xl p-6">
-      <StudentDetailHeader />
+    <ProtectedRoute>
+      <div className="flex h-full flex-col">
+        <PageHeader title={studentName}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => router.push("/students")}
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            一覧に戻る
+          </Button>
+          <Button
+            onClick={handleEditStudentClick}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            編集
+          </Button>
+          <Button
+            onClick={handleDeleteStudent}
+            variant="ghost"
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            削除
+          </Button>
+        </PageHeader>
 
-      <StudentInfoCard
-        student={student}
-        onEditStudent={handleEditStudentClick}
-        onDeleteStudent={handleDeleteStudent}
-      />
+        <div className="flex-1 overflow-auto">
+          <div className="container mx-auto max-w-6xl px-6 py-6">
+            <StudentInfoCard student={student} />
 
-      <ExamResultsCard studentId={studentId} />
+            <ExamResultsCard studentId={studentId} />
 
-      <CurrentMembershipsCard
-        student={student}
-        onAddMembership={handleAddMembership}
-        onEditMembership={handleEditMembership}
-        onEndMembership={handleEndMembership}
-      />
+            <CurrentMembershipsCard
+              student={student}
+              onAddMembership={handleAddMembership}
+              onEditMembership={handleEditMembership}
+              onEndMembership={handleEndMembership}
+            />
 
-      <MembershipHistoryCard
-        student={student}
-        onEditMembership={handleEditMembership}
-        onEndMembership={handleEndMembership}
-      />
+            <MembershipHistoryCard
+              student={student}
+              onEditMembership={handleEditMembership}
+              onEndMembership={handleEndMembership}
+            />
+          </div>
+        </div>
 
-      {/* Modals */}
-      {isStudentModalOpen && (
-        <StudentModal
-          isOpen={isStudentModalOpen}
-          onClose={() => setIsStudentModalOpen(false)}
-          onSave={() => {}} // Not used for editing
-          onUpdate={handleSaveStudentData}
-          studentToEdit={student}
-        />
-      )}
+        {/* Modals */}
+        {isStudentModalOpen && (
+          <StudentModal
+            isOpen={isStudentModalOpen}
+            onClose={() => setIsStudentModalOpen(false)}
+            onSave={() => {}} // Not used for editing
+            onUpdate={handleSaveStudentData}
+            studentToEdit={student}
+          />
+        )}
 
-      {isMembershipModalOpen && (
-        <StudentClassMembershipModal
-          isOpen={isMembershipModalOpen}
-          onClose={() => setIsMembershipModalOpen(false)}
-          onSave={handleSaveMembershipData}
-          studentId={student.id}
-          classId={undefined}
-          availableStudents={[
-            {
-              id: student.id,
-              studentNumber: student.studentNumber,
-              lastName: student.lastName,
-              firstName: student.firstName,
-              lastNameKana: student.lastNameKana,
-              firstNameKana: student.firstNameKana,
-            },
-          ]}
-          availableClasses={classes}
-          membershipToEdit={membershipToEdit}
-        />
-      )}
-    </div>
+        {isMembershipModalOpen && (
+          <StudentClassMembershipModal
+            isOpen={isMembershipModalOpen}
+            onClose={() => setIsMembershipModalOpen(false)}
+            onSave={handleSaveMembershipData}
+            studentId={student.id}
+            classId={undefined}
+            availableStudents={[
+              {
+                id: student.id,
+                studentNumber: student.studentNumber,
+                lastName: student.lastName,
+                firstName: student.firstName,
+                lastNameKana: student.lastNameKana,
+                firstNameKana: student.firstNameKana,
+              },
+            ]}
+            availableClasses={classes}
+            membershipToEdit={membershipToEdit}
+          />
+        )}
+      </div>
+    </ProtectedRoute>
   )
 }
