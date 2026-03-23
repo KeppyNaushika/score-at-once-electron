@@ -217,7 +217,11 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
                       {result.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {result.tags.map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
+                            <Badge
+                              key={tag}
+                              variant="outline"
+                              className="text-xs"
+                            >
                               {tag}
                             </Badge>
                           ))}

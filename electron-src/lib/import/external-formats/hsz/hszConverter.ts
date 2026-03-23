@@ -225,7 +225,11 @@ export async function convertHszToScore(
     scoreZip.addFile(
       "tags.json",
       Buffer.from(
-        JSON.stringify({ tags: [], tagSubtotalGroups: [], examTags: [] }, null, 2)
+        JSON.stringify(
+          { tags: [], tagSubtotalGroups: [], examTags: [] },
+          null,
+          2
+        )
       )
     )
 

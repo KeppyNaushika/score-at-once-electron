@@ -25,9 +25,7 @@ export async function getTagById(id: string) {
 /**
  * SubtotalGroup IDリストに関連するTagを取得
  */
-export async function getTagsBySubtotalGroupIds(
-  subtotalGroupIds: string[]
-) {
+export async function getTagsBySubtotalGroupIds(subtotalGroupIds: string[]) {
   return prisma.tag.findMany({
     where: {
       tagSubtotalGroups: {

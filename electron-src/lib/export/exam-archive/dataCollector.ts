@@ -191,9 +191,7 @@ export async function collectExamData(
           where: { subtotalGroupId: { in: subtotalGroupIdArray } },
         })
       : []
-    const tagIds = [
-      ...new Set(tagSubtotalGroups.map((tsg) => tsg.tagId)),
-    ]
+    const tagIds = [...new Set(tagSubtotalGroups.map((tsg) => tsg.tagId))]
     const tags = includeSubtotals
       ? await prisma.tag.findMany({
           where: { id: { in: tagIds } },

@@ -168,9 +168,7 @@ export async function createImportedData(
           )
           if (newTagId && newSubtotalGroupId) {
             // tagのIDがupsertで変わっている可能性があるため、名前で実際のIDを取得
-            const originalTag = tagsData.tags.find(
-              (t) => t.id === tsg.tagId
-            )
+            const originalTag = tagsData.tags.find((t) => t.id === tsg.tagId)
             if (originalTag) {
               const actualTag = await tx.tag.findUnique({
                 where: { name: originalTag.name },
@@ -188,10 +186,7 @@ export async function createImportedData(
                 if (!existing) {
                   await tx.tagSubtotalGroup.create({
                     data: {
-                      id: remapIdRequired(
-                        tsg.id,
-                        mappings.tagSubtotalGroup
-                      ),
+                      id: remapIdRequired(tsg.id, mappings.tagSubtotalGroup),
                       tagId: actualTag.id,
                       subtotalGroupId: newSubtotalGroupId,
                     },
@@ -206,9 +201,7 @@ export async function createImportedData(
         for (const et of tagsData.examTags) {
           const newTagId = remapId(et.tagId, mappings.tag)
           if (newTagId) {
-            const originalTag = tagsData.tags.find(
-              (t) => t.id === et.tagId
-            )
+            const originalTag = tagsData.tags.find((t) => t.id === et.tagId)
             if (originalTag) {
               const actualTag = await tx.tag.findUnique({
                 where: { name: originalTag.name },

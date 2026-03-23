@@ -31,10 +31,7 @@ export async function getExamsByTagId(tagId: string) {
 /**
  * 試験-タグ関連を作成
  */
-export async function createExamTag(data: {
-  examId: string
-  tagId: string
-}) {
+export async function createExamTag(data: { examId: string; tagId: string }) {
   return prisma.examTag.create({
     data,
   })

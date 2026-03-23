@@ -118,10 +118,11 @@ export async function extractArchive(archivePath: string): Promise<{
     ) ?? { subjects: [], subjectSubtotalGroups: [] }
 
     // v1.10.0+: タグデータ（存在しない場合はデフォルト値）
-    const tagsData = readJsonFile<ArchiveTagsData>(
-      tempDir,
-      "tags.json"
-    ) ?? { tags: [], tagSubtotalGroups: [], examTags: [] }
+    const tagsData = readJsonFile<ArchiveTagsData>(tempDir, "tags.json") ?? {
+      tags: [],
+      tagSubtotalGroups: [],
+      examTags: [],
+    }
 
     // v1.9.0+: 削除記録データ（存在しない場合はデフォルト値）
     const deletedRecordsData = readJsonFile<ArchiveDeletedRecordsData>(

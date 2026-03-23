@@ -41,10 +41,14 @@ export class V1_9_0_to_V1_10_0_Transformer implements VersionTransformer {
         manifest: { ...data.manifest, version: this.toVersion },
         tagsData: {
           tags: oldSubjectsData.subjects ?? [],
-          tagSubtotalGroups: (
-            oldSubjectsData.subjectSubtotalGroups ?? []
-          ).map(
-            (ssg: { id: string; subjectId: string; subtotalGroupId: string; createdAt: string; updatedAt: string }) => ({
+          tagSubtotalGroups: (oldSubjectsData.subjectSubtotalGroups ?? []).map(
+            (ssg: {
+              id: string
+              subjectId: string
+              subtotalGroupId: string
+              createdAt: string
+              updatedAt: string
+            }) => ({
               id: ssg.id,
               tagId: ssg.subjectId,
               subtotalGroupId: ssg.subtotalGroupId,

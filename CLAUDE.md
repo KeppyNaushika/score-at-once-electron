@@ -340,12 +340,12 @@ export class V1_9_0_to_V1_10_0_Transformer implements VersionTransformer {
 
 **バージョン履歴**（`types.ts` 内に記録）:
 
-| バージョン | 対応アプリ | 変更内容 |
-|-----------|-----------|---------|
-| 1.0.0 | v0.2.x | 初期バージョン |
-| 1.4.0 | v0.5.x | Subject, ExamMarkingFormat等追加 |
-| 1.5.0 | v0.6.x | Project→Examリネーム |
-| 1.9.0 | v0.9.x | DeletedRecord tombstone追加 |
+| バージョン | 対応アプリ | 変更内容                         |
+| ---------- | ---------- | -------------------------------- |
+| 1.0.0      | v0.2.x     | 初期バージョン                   |
+| 1.4.0      | v0.5.x     | Subject, ExamMarkingFormat等追加 |
+| 1.5.0      | v0.6.x     | Project→Examリネーム             |
+| 1.9.0      | v0.9.x     | DeletedRecord tombstone追加      |
 
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 

@@ -57,9 +57,7 @@ export function useExamDetail(examId: string) {
 
   const updateExam = useCallback(
     async (
-      examData: Partial<
-        Pick<Exam, "examName" | "description" | "examDate">
-      >
+      examData: Partial<Pick<Exam, "examName" | "description" | "examDate">>
     ) => {
       if (!exam) return false
 

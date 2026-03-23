@@ -37,24 +37,18 @@ export function setupTagHandlers(): void {
     return createTag(data)
   })
 
-  registerHandler(
-    "tag:update",
-    async (id: string, data: { name: string }) => {
-      return updateTag(id, data)
-    }
-  )
+  registerHandler("tag:update", async (id: string, data: { name: string }) => {
+    return updateTag(id, data)
+  })
 
   registerHandler("tag:delete", async (id: string) => {
     return deleteTag(id)
   })
 
   // TagSubtotalGroup CRUD
-  registerHandler(
-    "tagSubtotalGroup:getByTagId",
-    async (tagId: string) => {
-      return getTagSubtotalGroups(tagId)
-    }
-  )
+  registerHandler("tagSubtotalGroup:getByTagId", async (tagId: string) => {
+    return getTagSubtotalGroups(tagId)
+  })
 
   registerHandler(
     "tagSubtotalGroup:create",

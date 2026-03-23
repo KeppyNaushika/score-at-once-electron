@@ -27,8 +27,7 @@ export function createTagApi() {
       ipcRenderer.invoke("examTag:getByExamId", examId),
     examTagCreate: (data: { examId: string; tagId: string }) =>
       ipcRenderer.invoke("examTag:create", data),
-    examTagDelete: (id: string) =>
-      ipcRenderer.invoke("examTag:delete", id),
+    examTagDelete: (id: string) => ipcRenderer.invoke("examTag:delete", id),
     examTagSetExamTags: (examId: string, tagIds: string[]) =>
       ipcRenderer.invoke("examTag:setExamTags", examId, tagIds),
   }

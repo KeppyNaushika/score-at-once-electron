@@ -51,10 +51,7 @@ export interface TagAPI {
       updatedAt: Date
     }>
   >
-  examTagCreate: (data: {
-    examId: string
-    tagId: string
-  }) => Promise<{
+  examTagCreate: (data: { examId: string; tagId: string }) => Promise<{
     id: string
     examId: string
     tagId: string
