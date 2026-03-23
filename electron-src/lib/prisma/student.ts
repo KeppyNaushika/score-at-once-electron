@@ -104,6 +104,15 @@ export const deleteStudent = async (id: string): Promise<void> => {
   }
 }
 
+export interface SubtotalScoreResult {
+  subtotalId: string
+  subtotalName: string
+  subtotalGroupId: string
+  subtotalGroupName: string
+  score: number
+  maxScore: number
+}
+
 export interface StudentExamResult {
   examId: string
   examName: string
@@ -114,6 +123,7 @@ export interface StudentExamResult {
   scoredCount: number
   totalQuestions: number
   status: "complete" | "partial" | "unscored"
+  subtotalScores: SubtotalScoreResult[]
 }
 
 /** 生徒の全試験成績を取得する（得点・配点・採点状況を集計、試験日降順） */
@@ -142,6 +152,16 @@ export const getStudentExamResults = async (
                     questionScores: {
                       where: { studentId },
                     },
+                    cropSubtotals: {
+                      where: { assignmentType: "QUESTION_ASSIGNMENT" },
+                      include: {
+                        subtotal: {
+                          include: {
+                            subtotalGroup: true,
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -160,20 +180,56 @@ export const getStudentExamResults = async (
       let scoredCount = 0
       let totalQuestions = 0
 
+      // 小計スコア集計用
+      const subtotalMap = new Map<
+        string,
+        {
+          subtotalName: string
+          subtotalGroupId: string
+          subtotalGroupName: string
+          score: number
+          maxScore: number
+        }
+      >()
+
       for (const page of exam.examPages) {
         for (const region of page.cropRegions) {
           totalQuestions++
-          maxScore += region.points || 0
+          const regionPoints = region.points || 0
+          maxScore += regionPoints
 
-          const score = region.questionScores[0]
-          if (score && score.status !== "unscored") {
+          const qs = region.questionScores[0]
+          let questionScore = 0
+          let isScored = false
+
+          if (qs && qs.status !== "unscored") {
+            isScored = true
             scoredCount++
-            if (score.status === "correct") {
-              totalScore += region.points || 0
-            } else if (score.status === "partial" && score.partialScore) {
-              totalScore += Number(score.partialScore)
+            if (qs.status === "correct") {
+              questionScore = regionPoints
+            } else if (qs.status === "partial" && qs.partialScore) {
+              questionScore = Number(qs.partialScore)
             }
-            // incorrect の場合は 0 点
+          }
+
+          totalScore += questionScore
+
+          // 小計への振り分け
+          for (const cs of region.cropSubtotals) {
+            const sid = cs.subtotal.id
+            const existing = subtotalMap.get(sid)
+            if (existing) {
+              existing.maxScore += regionPoints
+              if (isScored) existing.score += questionScore
+            } else {
+              subtotalMap.set(sid, {
+                subtotalName: cs.subtotal.name,
+                subtotalGroupId: cs.subtotal.subtotalGroup.id,
+                subtotalGroupName: cs.subtotal.subtotalGroup.name,
+                score: isScored ? questionScore : 0,
+                maxScore: regionPoints,
+              })
+            }
           }
         }
       }
@@ -185,6 +241,13 @@ export const getStudentExamResults = async (
         status = "partial"
       }
 
+      const subtotalScores: SubtotalScoreResult[] = Array.from(
+        subtotalMap.entries()
+      ).map(([subtotalId, data]) => ({
+        subtotalId,
+        ...data,
+      }))
+
       results.push({
         examId: exam.id,
         examName: exam.examName,
@@ -195,6 +258,7 @@ export const getStudentExamResults = async (
         scoredCount,
         totalQuestions,
         status,
+        subtotalScores,
       })
     }
 

@@ -5,15 +5,18 @@ import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { CurrentMembershipsCard } from "@/app/students/[studentId]/components/CurrentMembershipsCard"
 import { ExamResultsCard } from "@/app/students/[studentId]/components/ExamResultsCard"
+import { ExamSummaryCards } from "@/app/students/[studentId]/components/ExamSummaryCards"
 import {
   LoadingState,
   StudentNotFoundState,
 } from "@/app/students/[studentId]/components/LoadingState"
-import { MembershipHistoryCard } from "@/app/students/[studentId]/components/MembershipHistoryCard"
+import { MembershipsCard } from "@/app/students/[studentId]/components/MembershipsCard"
+import { ScoreTrendChart } from "@/app/students/[studentId]/components/ScoreTrendChart"
 import { StudentInfoCard } from "@/app/students/[studentId]/components/StudentInfoCard"
+import { TagAnalyticsCard } from "@/app/students/[studentId]/components/TagAnalyticsCard"
 import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
+import { useStudentExamResults } from "@/app/students/[studentId]/hooks/useStudentExamResults"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
@@ -35,6 +38,9 @@ export default function StudentDetailPage() {
     handleSaveMembership,
     handleEndMembership,
   } = useStudentDetail(studentId)
+
+  const { results: examResults, loading: examResultsLoading } =
+    useStudentExamResults(studentId)
 
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
@@ -121,17 +127,25 @@ export default function StudentDetailPage() {
           <div className="container mx-auto max-w-6xl px-6 py-6">
             <StudentInfoCard student={student} />
 
-            <ExamResultsCard studentId={studentId} />
+            {examResultsLoading ? (
+              <div className="text-muted-foreground mb-8 py-8 text-center">
+                読み込み中...
+              </div>
+            ) : (
+              <>
+                <ExamSummaryCards results={examResults} />
 
-            <CurrentMembershipsCard
+                <ScoreTrendChart results={examResults} />
+
+                <TagAnalyticsCard results={examResults} />
+
+                <ExamResultsCard results={examResults} />
+              </>
+            )}
+
+            <MembershipsCard
               student={student}
               onAddMembership={handleAddMembership}
-              onEditMembership={handleEditMembership}
-              onEndMembership={handleEndMembership}
-            />
-
-            <MembershipHistoryCard
-              student={student}
               onEditMembership={handleEditMembership}
               onEndMembership={handleEndMembership}
             />

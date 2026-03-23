@@ -2,7 +2,7 @@
 
 import { ClipboardList } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,17 +17,7 @@ import {
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
 
-interface ExamResult {
-  examId: string
-  examName: string
-  examDate: Date | null
-  tags: string[]
-  totalScore: number
-  maxScore: number
-  scoredCount: number
-  totalQuestions: number
-  status: "complete" | "partial" | "unscored"
-}
+import type { ExamResult } from "../hooks/useStudentExamResults"
 
 interface ExamResultSortable {
   examId: string
@@ -39,29 +29,12 @@ interface ExamResultSortable {
 }
 
 interface ExamResultsCardProps {
-  studentId: string
+  results: ExamResult[]
 }
 
-export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
+export function ExamResultsCard({ results }: ExamResultsCardProps) {
   const router = useRouter()
-  const [results, setResults] = useState<ExamResult[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        const data = await window.electronAPI.getStudentExamResults(studentId)
-        setResults(data)
-      } catch (error) {
-        console.error("Failed to fetch exam results:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchResults()
-  }, [studentId])
-
-  // ソート用のデータ変換
   const sortableData = useMemo<ExamResultSortable[]>(() => {
     return results.map((result) => ({
       examId: result.examId,
@@ -75,7 +48,6 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
     }))
   }, [results])
 
-  // ソート機能
   const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
     defaultSort: { key: "examDate", direction: "desc" },
   })
@@ -132,30 +104,12 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
     )
   }
 
-  if (loading) {
-    return (
-      <Card className="border-border/50 mb-8 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            試験成績
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground py-8 text-center">
-            読み込み中...
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <Card className="border-border/50 mb-8 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ClipboardList className="h-5 w-5" />
-          試験成績
+          試験成績一覧
           <span className="text-muted-foreground ml-1 text-lg font-normal tabular-nums">
             ({results.length}件)
           </span>
@@ -165,8 +119,8 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
         {sortedData.length > 0 ? (
           <div className="border-border/50 overflow-hidden rounded-xl border">
             <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-muted/40">
+              <TableHeader className="bg-card">
+                <TableRow className="hover:bg-transparent">
                   <SortableTableHead
                     sortKey="examName"
                     currentSortKey={sortConfig.key as string | null}
