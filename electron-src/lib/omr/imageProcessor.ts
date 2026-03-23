@@ -139,7 +139,11 @@ export function computeCircularFillRatio(
       if (dx * dx + dy * dy <= r2) {
         totalPixels++
         const idx = (py * width + px) * channels
-        if (data[idx] < threshold) {
+        const luminance =
+          channels >= 3
+            ? 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
+            : data[idx]
+        if (luminance < threshold) {
           darkCount++
         }
       }
@@ -180,7 +184,12 @@ export function computeEllipticalFillRatio(
       if (dx * dx + dy * dy <= 1) {
         totalPixels++
         const idx = (py * width + px) * channels
-        if (data[idx] < threshold) {
+        // グレースケール輝度で判定（RGB加重平均）
+        const luminance =
+          channels >= 3
+            ? 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
+            : data[idx]
+        if (luminance < threshold) {
           darkCount++
         }
       }

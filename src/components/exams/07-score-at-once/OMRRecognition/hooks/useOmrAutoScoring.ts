@@ -173,7 +173,7 @@ export function useOmrAutoScoring(examId: string) {
         }
       }
       const recognitionParams = {
-        colorThreshold: configs[0].colorThreshold ?? 25,
+        colorThreshold: configs[0].colorThreshold ?? 128,
         areaThreshold: configs[0].areaThreshold ?? 0.4,
         confidenceThreshold: 0.7,
       }

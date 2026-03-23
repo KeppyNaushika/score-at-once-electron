@@ -56,7 +56,7 @@ interface UseOMRRecognitionReturn extends OMRRecognitionState {
 }
 
 const DEFAULT_PARAMS: OMRRecognitionParams = {
-  colorThreshold: 25,
+  colorThreshold: 128,
   areaThreshold: 0.4,
 }
 

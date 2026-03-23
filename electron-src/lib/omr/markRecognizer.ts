@@ -79,13 +79,6 @@ function recognizeChoiceCell(
     )
     fillRatios.push(ratio)
 
-    // 診断ログ（最初の数セルのみ）
-    if (cell.label && bubble.choiceIndex === 0) {
-      console.log(
-        `OMR diag [${cell.label}]: center=(${center.x.toFixed(0)},${center.y.toFixed(0)}) size=(${(halfWidthPx * 2).toFixed(1)}x${(halfHeightPx * 2).toFixed(1)}px) fillRatios=[${fillRatios.map((r) => r.toFixed(3)).join(",")}] threshold=${params.areaThreshold} imgSize=${rawImage.width}x${rawImage.height}`
-      )
-    }
-
     if (ratio >= params.areaThreshold) {
       markedIndices.push(bubble.choiceIndex)
     }
