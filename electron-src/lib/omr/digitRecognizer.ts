@@ -122,7 +122,11 @@ async function prepareDigitInput(
     },
   })
     .greyscale()
-    .resize(28, 28, { fit: "contain", background: { r: 255, g: 255, b: 255 } })
+    .resize(28, 28, {
+      fit: "contain",
+      kernel: sharp.kernel.lanczos3,
+      background: { r: 255, g: 255, b: 255 },
+    })
     .raw()
     .toBuffer()
 

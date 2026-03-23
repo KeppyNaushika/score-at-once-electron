@@ -124,6 +124,14 @@ export function OMRAutoScoringModal({
                     {summary.ambiguous}
                   </span>
                 </div>
+                {summary.pending > 0 && (
+                  <div className="flex items-center justify-between rounded border border-orange-200 bg-orange-50 p-2">
+                    <span>保留（低信頼）</span>
+                    <span className="font-bold text-orange-600">
+                      {summary.pending}
+                    </span>
+                  </div>
+                )}
                 {summary.partial > 0 && (
                   <div className="col-span-2 flex items-center justify-between rounded border p-2">
                     <span>部分正解</span>
@@ -134,7 +142,8 @@ export function OMRAutoScoringModal({
                 )}
               </div>
               <div className="text-muted-foreground text-xs">
-                合計 {summary.total} 件（曖昧な結果は反映されません）
+                合計 {summary.total}{" "}
+                件（曖昧な結果はスキップ、低信頼は保留として反映）
               </div>
             </div>
           )}
