@@ -10,7 +10,6 @@ import { createExamApi } from "./preload-apis/examApi"
 import { createExamClassApi } from "./preload-apis/examClassApi"
 import { createExportApi } from "./preload-apis/exportApi"
 import { createGradeApi } from "./preload-apis/gradeApi"
-import { createLegacyCompatApi } from "./preload-apis/legacyCompatApi"
 import { createMiscApi } from "./preload-apis/miscApi"
 import { createOmrApi } from "./preload-apis/omrApi"
 import { createPdfToolsApi } from "./preload-apis/pdfToolsApi"
@@ -39,7 +38,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createCropRegionApi(),
   ...createScoringApi(),
   ...createSubtotalApi(),
-  ...createLegacyCompatApi(),
   ...createExportApi(),
   ...createDrawingApi(),
   ...createArchiveApi(),

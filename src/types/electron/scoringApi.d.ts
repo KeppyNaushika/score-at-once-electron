@@ -36,7 +36,7 @@ export interface ScoringAPI {
     scores?: QuestionScore[]
     error?: string
   }>
-  getQuestionScoresForStudentAnswer: (studentAnswerId: string) => Promise<{
+  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<{
     success: boolean
     scores?: QuestionScore[]
     error?: string
@@ -57,23 +57,6 @@ export interface ScoringAPI {
     userId: string // v0.4.0+: required
   }) => Promise<QuestionScoreOperationResult>
 
-  // Backward compatibility alias
-  createQuestionScoreLegacy: (data: {
-    studentAnswerId: string
-    cropRegionId: string
-    partialScore?: number
-    status:
-      | "unscored"
-      | "correct"
-      | "incorrect"
-      | "partial"
-      | "pending"
-      | "no_answer"
-      | "proposed"
-      | "final"
-    comment?: string
-    userId: string
-  }) => Promise<QuestionScore>
   updateQuestionScore: (
     id: string,
     data: {
@@ -108,22 +91,7 @@ export interface ScoringAPI {
     }
   ) => Promise<QuestionScoreOperationResult>
 
-  // Backward compatibility aliases
-  getQuestionScoreComparisonLegacy: (
-    studentAnswerId: string,
-    layoutRegionId: string
-  ) => Promise<QuestionScoreComparisonResult>
-  finalizeQuestionScoreLegacy: (
-    studentAnswerId: string,
-    layoutRegionId: string,
-    userId: string,
-    scoreData: {
-      partialScore?: number
-      status: string
-      comments?: string
-    }
-  ) => Promise<QuestionScore>
-  getStudentAnswerProgress: (studentAnswerId: string) => Promise<{
+  getAnswerSheetProgress: (answerSheetId: string) => Promise<{
     totalQuestions: number
     completedQuestions: number
     percentage: number

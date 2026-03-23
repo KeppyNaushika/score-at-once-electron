@@ -68,8 +68,8 @@ export const useDragAndDrop = ({
           }))
           .filter((update) => update.id)
 
-        if (window.electronAPI?.updateLayoutRegionOrders) {
-          await window.electronAPI.updateLayoutRegionOrders(updates)
+        if (window.electronAPI?.updateCropRegionOrders) {
+          await window.electronAPI.updateCropRegionOrders(updates)
         }
       } catch (error) {
         console.error("Failed to update region order:", error)

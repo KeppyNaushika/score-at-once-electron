@@ -3,12 +3,6 @@ import * as fs from "fs/promises"
 
 import { getAbsolutePathFromData } from "../lib/dataManager"
 import {
-  createUser,
-  getUserByToken,
-  loginUser,
-  updateUserPassword,
-} from "../lib/prisma/auth"
-import {
   createClass,
   deleteClass,
   fetchClasses,
@@ -33,7 +27,11 @@ import {
   updateStudentAnswerPlacement,
   uploadStudentAnswers,
 } from "../lib/prisma/studentAnswer"
-import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
+import {
+  createUser as createUserWithPasscode,
+  fetchUsers,
+  getCurrentUser,
+} from "../lib/prisma/user"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 /** ユーザー・認証・答案・学級・模範画像・ファイル操作など汎用的なIPCチャンネルを登録する */
@@ -47,11 +45,7 @@ export function setupMiscHandlers(): void {
     return await getCurrentUser()
   })
 
-  // Authentication handlers
-  registerHandler("login-user", async (username: string, password: string) => {
-    return await loginUser(username, password)
-  })
-
+  // User creation handler
   registerHandler(
     "create-user",
     async (userData: {
@@ -59,44 +53,13 @@ export function setupMiscHandlers(): void {
       name: string
       passcode?: string
       passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
-      password?: string // Legacy support
-      role?: string
     }) => {
-      if (
-        userData.passcode !== undefined ||
-        userData.passcodeType !== undefined
-      ) {
-        // New passcode-based user creation
-        const { createUser: createUserWithPasscode } =
-          await import("../lib/prisma/user")
-        return await createUserWithPasscode({
-          username: userData.username,
-          name: userData.name,
-          passcode: userData.passcode,
-          passcodeType: userData.passcodeType,
-        })
-      } else if (userData.password) {
-        // Legacy password-based user creation
-        return await createUser({
-          username: userData.username,
-          password: userData.password,
-          name: userData.name,
-          role: userData.role,
-        })
-      } else {
-        throw new Error("Either passcode or password must be provided")
-      }
-    }
-  )
-
-  registerHandler("get-user-by-token", async (token: string) => {
-    return await getUserByToken(token)
-  })
-
-  registerHandler(
-    "update-user-password",
-    async (userId: string, newPassword: string) => {
-      return await updateUserPassword(userId, newPassword)
+      return await createUserWithPasscode({
+        username: userData.username,
+        name: userData.name,
+        passcode: userData.passcode,
+        passcodeType: userData.passcodeType,
+      })
     }
   )
 
@@ -381,6 +344,14 @@ export function setupMiscHandlers(): void {
       mimeType,
     }
   })
+
+  registerHandler(
+    "get-student-answer-images-by-exam-id",
+    async (examId: string) => {
+      const result = await getStudentAnswersByExamId(examId)
+      return result.success ? (result.studentAnswerImages ?? []) : []
+    }
+  )
 
   registerHandler("get-master-images-by-exam-id", async (examId: string) => {
     const masterAnswers = await getMasterAnswersByExamId(examId)

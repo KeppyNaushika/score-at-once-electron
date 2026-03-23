@@ -23,29 +23,6 @@ export interface UserAuthAPI {
     passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
   ) => Promise<User>
 
-  // Authentication related (legacy - may be deprecated)
-  loginUser: (
-    username: string,
-    password: string
-  ) => Promise<{
-    success: boolean
-    user?: { id: string; username: string; name: string; role: string }
-    token?: string
-    error?: string
-  }>
-  getUserByToken: (token: string) => Promise<{
-    success: boolean
-    user?: { id: string; username: string; name: string; role: string }
-    error?: string
-  }>
-  updateUserPassword: (
-    userId: string,
-    newPassword: string
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
-
   // Auth token persistence (electron-store)
   saveAuthToken: (
     token: string

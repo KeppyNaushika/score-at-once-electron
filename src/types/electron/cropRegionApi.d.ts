@@ -4,7 +4,6 @@ import type {
   ExamSubtotalGroup,
   Prisma,
   Subtotal,
-  SubtotalGroup,
   UserExam,
 } from "@prisma/client"
 
@@ -37,21 +36,11 @@ export type CreateSubtotalArgs = Omit<
 >
 export type UpdateSubtotalArgs = Partial<CreateSubtotalArgs> & { id: string }
 
-// Backward compatibility aliases for args types
-export type CreateQuestionGroupArgs = CreateSubtotalGroupArgs
-export type UpdateQuestionGroupArgs = UpdateSubtotalGroupArgs
-export type CreateQuestionGroupItemArgs = CreateSubtotalArgs
-export type UpdateQuestionGroupItemArgs = UpdateSubtotalArgs
-
 // CropSubtotal作成用の引数型
 export type CreateCropSubtotalArgs = Omit<
   Prisma.CropSubtotalUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
 >
-
-// Backward compatibility aliases for args types
-export type CreateSubtotalDefinitionArgs = CreateCropSubtotalArgs
-export type CreateQuestionSubtotalAssignmentArgs = CreateCropSubtotalArgs
 
 /**
  * CropRegion・SubtotalGroup・Subtotal・CropSubtotal・UserExam・ExamSubtotalGroup関連API
@@ -78,25 +67,7 @@ export interface CropRegionAPI {
     updates: Array<{ id: string; orderIndex: number }>
   ) => Promise<CropRegion[]>
 
-  // Backward compatibility aliases
-  createLayoutRegion: (
-    data: Prisma.CropRegionUncheckedCreateInput
-  ) => Promise<CropRegionWithDetails>
-  createManyLayoutRegions: (
-    data: Prisma.CropRegionCreateManyInput[]
-  ) => Promise<Prisma.BatchPayload>
-  updateLayoutRegion: (
-    id: string,
-    data: Prisma.CropRegionUpdateInput
-  ) => Promise<CropRegionWithDetails>
-  deleteLayoutRegion: (id: string) => Promise<CropRegion | void>
-  getLayoutRegionsByExamId: (examId: string) => Promise<CropRegionWithDetails[]>
-  getLayoutRegionById: (id: string) => Promise<CropRegionWithDetails | null>
-  updateLayoutRegionOrders: (
-    updates: Array<{ id: string; orderIndex: number }>
-  ) => Promise<CropRegion[]>
-
-  // SubtotalGroup related (updated from QuestionGroup)
+  // SubtotalGroup related
   getSubtotalGroups: () => Promise<{
     success: boolean
     subtotalGroups?: SubtotalGroupWithItems[]
@@ -177,21 +148,7 @@ export interface CropRegionAPI {
     error?: string
   }>
 
-  // Backward compatibility aliases
-  createQuestionGroup: (
-    data: Prisma.SubtotalGroupUncheckedCreateInput
-  ) => Promise<SubtotalGroupWithItems>
-  updateQuestionGroup: (
-    id: string,
-    data: Prisma.SubtotalGroupUpdateInput
-  ) => Promise<SubtotalGroupWithItems>
-  deleteQuestionGroup: (id: string) => Promise<SubtotalGroup | void>
-  getQuestionGroupsByExamId: (
-    examId: string
-  ) => Promise<SubtotalGroupWithItems[]>
-  getQuestionGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
-
-  // Subtotal related (updated from QuestionGroupItem)
+  // Subtotal related
   createSubtotal: (
     data: Prisma.SubtotalUncheckedCreateInput
   ) => Promise<SubtotalWithDetails>
@@ -211,27 +168,7 @@ export interface CropRegionAPI {
     orders: { id: string; order: number }[]
   ) => Promise<Prisma.BatchPayload>
 
-  // Backward compatibility aliases
-  createQuestionGroupItem: (
-    data: Prisma.SubtotalUncheckedCreateInput
-  ) => Promise<SubtotalWithDetails>
-  createManyQuestionGroupItems: (
-    items: Prisma.SubtotalUncheckedCreateInput[]
-  ) => Promise<Prisma.BatchPayload>
-  updateQuestionGroupItem: (
-    id: string,
-    data: Prisma.SubtotalUpdateInput
-  ) => Promise<SubtotalWithDetails>
-  deleteQuestionGroupItem: (id: string) => Promise<Subtotal | void>
-  getQuestionGroupItemsByGroupId: (
-    questionGroupId: string
-  ) => Promise<SubtotalWithDetails[]>
-  getQuestionGroupItemById: (id: string) => Promise<SubtotalWithDetails | null>
-  updateQuestionGroupItemOrders: (
-    orders: { id: string; order: number }[]
-  ) => Promise<Prisma.BatchPayload>
-
-  // CropSubtotal related (unified from SubtotalDefinition)
+  // CropSubtotal related
   createCropSubtotal: (
     data: Prisma.CropSubtotalUncheckedCreateInput
   ) => Promise<CropSubtotalWithRelations>
@@ -249,30 +186,7 @@ export interface CropRegionAPI {
     subtotalId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
-  // Backward compatibility aliases
-  createSubtotalDefinition: (
-    data: Prisma.CropSubtotalUncheckedCreateInput
-  ) => Promise<CropSubtotalWithRelations>
-  createManySubtotalDefinitions: (
-    definitions: Prisma.CropSubtotalUncheckedCreateInput[]
-  ) => Promise<Prisma.BatchPayload>
-  deleteSubtotalDefinition: (id: string) => Promise<CropSubtotal | void>
-  deleteSubtotalDefinitionsByCropRegionId: (
-    cropRegionId: string
-  ) => Promise<Prisma.BatchPayload>
-  getSubtotalDefinitionsByCropRegionId: (
-    cropRegionId: string
-  ) => Promise<CropSubtotalWithRelations[]>
-
-  // Backward compatibility aliases
-  deleteSubtotalDefinitionsByLayoutRegionId: (
-    cropRegionId: string
-  ) => Promise<Prisma.BatchPayload>
-  getSubtotalDefinitionsByQuestionGroupItemId: (
-    questionGroupItemId: string
-  ) => Promise<CropSubtotalWithRelations[]>
-
-  // UserExam and ExamSubtotalGroup related (new many-to-many relations)
+  // UserExam and ExamSubtotalGroup related
   createUserExam: (
     data: Prisma.UserExamUncheckedCreateInput
   ) => Promise<
@@ -299,30 +213,4 @@ export interface CropRegionAPI {
       include: { subtotalGroup: { include: { subtotals: true } } }
     }>[]
   >
-
-  // Backward compatibility aliases (redirects to CropSubtotal)
-  createQuestionSubtotalAssignment: (
-    data: Prisma.CropSubtotalUncheckedCreateInput
-  ) => Promise<CropSubtotalWithRelations>
-  createManyQuestionSubtotalAssignments: (
-    assignments: Prisma.CropSubtotalUncheckedCreateInput[]
-  ) => Promise<Prisma.BatchPayload>
-  deleteQuestionSubtotalAssignment: (id: string) => Promise<CropSubtotal | void>
-  deleteAssignmentsByQuestionCropRegionId: (
-    questionCropRegionId: string
-  ) => Promise<Prisma.BatchPayload>
-
-  // Backward compatibility alias
-  deleteAssignmentsByQuestionLayoutRegionId: (
-    questionLayoutRegionId: string
-  ) => Promise<Prisma.BatchPayload>
-  deleteAssignmentsByQuestionGroupItemId: (
-    questionGroupItemId: string
-  ) => Promise<Prisma.BatchPayload>
-  getAssignmentsByQuestionCropRegionId: (
-    questionCropRegionId: string
-  ) => Promise<CropSubtotalWithRelations[]>
-  getAssignmentsByQuestionGroupItemId: (
-    questionGroupItemId: string
-  ) => Promise<CropSubtotalWithRelations[]>
 }

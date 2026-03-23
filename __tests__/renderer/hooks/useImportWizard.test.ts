@@ -57,7 +57,6 @@ describe("useImportWizard", () => {
         role: "admin",
       },
       isLoading: false,
-      login: vi.fn().mockResolvedValue(true),
       quickLogin: vi.fn(),
       logout: vi.fn(),
       checkAuth: vi.fn(),
@@ -773,7 +772,6 @@ describe("useImportWizard", () => {
       mockUseAuth.mockReturnValue({
         user: null,
         isLoading: false,
-        login: vi.fn().mockResolvedValue(true),
         quickLogin: vi.fn(),
         logout: vi.fn(),
         checkAuth: vi.fn(),

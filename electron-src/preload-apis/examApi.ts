@@ -37,6 +37,8 @@ export function createExamApi() {
       ipcRenderer.invoke("get-master-images-by-exam-id", examId),
     getExamPagesByExamId: (examId: string) =>
       ipcRenderer.invoke("get-exam-pages-by-exam-id", examId),
+    getStudentAnswerImagesByExamId: (examId: string) =>
+      ipcRenderer.invoke("get-student-answer-images-by-exam-id", examId),
 
     // Exam-Student relationship
     getStudentsForExam: (examId: string) =>
