@@ -217,6 +217,11 @@ export class DatabaseSetup {
             await import("./prisma/schema/baselineMigrations")
           await createBaseline(this.prisma)
 
+          // 初期スキーマ以降の未適用マイグレーションを適用
+          const { deployPendingMigrations } =
+            await import("./prisma/schema/migrationDeployer")
+          await deployPendingMigrations(this.prisma)
+
           await this.runSeed()
           setupPerformed = true
         }

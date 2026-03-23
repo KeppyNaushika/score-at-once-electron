@@ -54,10 +54,19 @@ export const deployPendingMigrations = async (
 
     try {
       // SQLを文単位で分割して実行
+      // コメント行を除去してからSQL本体の有無を判定する
       const statements = sql
         .split(";")
         .map((s) => s.trim())
-        .filter((s) => s.length > 0 && !s.startsWith("--"))
+        .filter((s) => {
+          if (s.length === 0) return false
+          // ブロックコメント・行コメントを除去した後に実行可能なSQLが残るか判定
+          const stripped = s
+            .replace(/\/\*[\s\S]*?\*\//g, "") // ブロックコメント除去
+            .replace(/--[^\n]*/g, "") // 行コメント除去
+            .trim()
+          return stripped.length > 0
+        })
 
       for (const stmt of statements) {
         await prisma.$executeRawUnsafe(stmt)
