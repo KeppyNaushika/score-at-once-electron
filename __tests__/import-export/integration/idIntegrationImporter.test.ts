@@ -1136,29 +1136,30 @@ describe("executeIdIntegrationImport", () => {
     expect(overrides[0].markType).toBe("correct")
   })
 
-  // II-15: v1.4.0: Subject/SubjectSubtotalGroup作成
-  it("II-15: v1.4.0のSubject/SubjectSubtotalGroupが作成される", async () => {
+  // II-15: Tag/TagSubtotalGroup作成
+  it("II-15: Tag/TagSubtotalGroupが作成される", async () => {
     const { data, examId, groupId } = createBasicTestData()
 
-    const subjectId = generateId()
-    data.subjectsData = {
-      subjects: [
+    const tagId = generateId()
+    data.tagsData = {
+      tags: [
         {
-          id: subjectId,
+          id: tagId,
           name: `数学_${Date.now()}`,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
       ],
-      subjectSubtotalGroups: [
+      tagSubtotalGroups: [
         {
           id: generateId(),
-          subjectId,
+          tagId,
           subtotalGroupId: groupId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
       ],
+      examTags: [],
     }
 
     const preMatch = createFileOverviewData({
@@ -1200,15 +1201,15 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const subjects = await prisma.subject.findMany({
-      where: { id: subjectId },
+    const tags = await prisma.tag.findMany({
+      where: { id: tagId },
     })
-    expect(subjects.length).toBe(1)
+    expect(tags.length).toBe(1)
 
-    const ssg = await prisma.subjectSubtotalGroup.findMany({
-      where: { subjectId },
+    const tsg = await prisma.tagSubtotalGroup.findMany({
+      where: { tagId },
     })
-    expect(ssg.length).toBe(1)
+    expect(tsg.length).toBe(1)
   })
 
   // II-16: QuestionScore重複回避 (B11)

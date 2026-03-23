@@ -81,168 +81,167 @@ npx prisma studio
 
 ```
 /score-at-once-electron
-├── /app                     # Next.js App Router
-│   ├── /classes             # 学級管理
-│   │   ├── /[classId]       # 個別学級管理
-│   │   └── page.tsx         # 学級一覧
-│   ├── /dashboard           # ダッシュボード
-│   ├── /login               # ログイン
-│   ├── /signup              # サインアップ
-│   ├── /exams            # 試験管理
-│   │   └── /[examId]     # 個別試験（8段階ワークフロー）
+├── /src/app                     # Next.js App Router
+│   ├── /answer-sheet-builder    # 答案用紙ビルダー
+│   │   └── /[definitionId]      # 個別定義
+│   ├── /classes                 # 学級管理
+│   │   └── /[classId]           # 個別学級管理
+│   ├── /dashboard               # ダッシュボード
+│   ├── /exams                   # 試験管理
+│   │   └── /[examId]            # 個別試験（8段階ワークフロー）
 │   │       ├── /01-upload           # 模範解答アップロード
 │   │       ├── /02-template         # 採点領域作成
 │   │       ├── /03-region-info      # 領域情報
+│   │       ├── /04-question-group   # 設問グループ
 │   │       ├── /05-students         # 受験生徒管理
-│   │       ├── /06-answer-sheets    # 答案アップロード
+│   │       ├── /06-student-answers  # 生徒答案管理
 │   │       ├── /07-score-at-once    # 採点実行
-│   │       ├── /08-export           # 結果出力
-│   │       ├── layout.tsx           # 試験共通レイアウト
-│   │       └── page.tsx             # 試験詳細
-│   ├── /settings            # 設定
-│   │   ├── /components      # 設定関連コンポーネント
-│   │   ├── /hooks           # 設定専用フック
-│   │   ├── constants.ts     # 設定定数
-│   │   └── page.tsx         # 設定ページ
-│   ├── /students            # 生徒管理
-│   │   ├── /[studentId]     # 個別生徒詳細
-│   │   │   ├── /components  # 生徒詳細専用コンポーネント
-│   │   │   ├── /hooks       # 生徒詳細専用フック
-│   │   │   ├── types.ts     # 生徒詳細型定義
-│   │   │   └── page.tsx     # 生徒詳細ページ
-│   │   └── page.tsx         # 生徒一覧
-│   └── /test pages          # 開発用テストページ
-├── /components              # Reactコンポーネント
-│   ├── /auth                # 認証コンポーネント
-│   ├── /class               # 学級管理コンポーネント
-│   ├── /common              # 共通コンポーネント
-│   │   ├── BaseModal.tsx            # モーダルベース
-│   │   ├── FileUploadDropzone.tsx   # ファイルアップロード
-│   │   ├── LoadingSpinner.tsx       # 再利用可能なローディング
-│   │   └── ToastProvider.tsx        # 通知プロバイダー
-│   ├── /help                # ヘルプ・ガイダンス
-│   │   ├── /common          # 共通ヘルプコンポーネント
-│   │   ├── /page-specific   # ページ別ヘルプコンテンツ
-│   │   └── PageHelpContent.tsx
-│   ├── /hooks               # コンポーネント固有のカスタムフック
-│   ├── /layout              # レイアウト関連
-│   ├── /exams            # 試験関連（8段階ワークフロー対応）
-│   │   ├── /01-upload       # 模範解答アップロード
-│   │   ├── /02-template     # 採点領域作成
-│   │   ├── /03-region-info  # 領域情報
-│   │   ├── /05-students     # 受験生徒管理
-│   │   ├── /06-answer-sheets # 答案アップロード（高度な機能特化構造）
-│   │   │   ├── /answer-sheet-management    # 答案管理システム
-│   │   │   │   ├── /components      # 専用コンポーネント
-│   │   │   │   ├── /hooks          # 専用カスタムフック
-│   │   │   │   ├── /types          # 専用型定義
-│   │   │   │   └── /utils          # 専用ユーティリティ
-│   │   │   └── /answer-sheet-table # 答案テーブル管理
-│   │   │       ├── /components     # テーブル専用コンポーネント
-│   │   │       ├── /hooks         # テーブル専用フック
-│   │   │       └── /types         # テーブル専用型定義
-│   │   ├── /07-score-at-once # 採点実行
-│   │   ├── /08-export       # 結果出力
-│   │   │   ├── ExportProgressModal.tsx   # 出力プログレス表示
-│   │   │   └── ScoringMarkSettings.tsx   # 採点マーク設定
-│   │   ├── /detail          # 試験詳細
-│   │   ├── /forms           # 試験作成・編集
-│   │   ├── /list            # 試験一覧
-│   │   └── /shared          # 共有コンポーネント
-│   ├── /settings            # 設定
-│   ├── /student             # 生徒関連
-│   └── /ui                  # 基礎UIコンポーネント（shadcn/ui）
-├── /hooks                   # グローバルカスタムフック
-│   ├── /02-template         # 採点領域作成専用
-│   ├── /07-score-at-once    # 採点実行専用
-│   ├── /08-export           # 出力専用
-│   ├── /answer-sheet-upload # 答案アップロード専用
-│   ├── /exam-detail      # 試験詳細専用
-│   ├── useFileUpload.ts     # ファイルアップロード
-│   ├── useMasterImages.ts   # マスター画像管理
-│   ├── useExam.ts        # 試験管理
-│   └── useLayoutRegions.ts  # レイアウト領域管理
-├── /lib                     # グローバルユーティリティ
-│   ├── pdfConverter.ts      # PDF変換ユーティリティ
-│   └── utils.ts             # 汎用ユーティリティ
-├── /types                   # グローバル型定義
-│   ├── answer-sheet.types.ts    # 答案関連型定義
-│   ├── common.types.ts          # 共通型定義（LayoutRegionArea、ExamWithDetails等）
-│   └── electron.d.ts            # Electron API型定義
-├── /utils                   # 特殊ユーティリティ
-│   ├── answerSheetConverter.ts  # 答案変換
-│   └── studentOrderUtils.ts     # 生徒順序管理
-├── /contexts                # Reactコンテキスト
-│   └── AuthContext.tsx      # 認証コンテキスト
-├── /prisma                  # データベース関連
-│   ├── schema.prisma        # データベーススキーマ
-│   ├── /migrations          # マイグレーションファイル
-│   └── /data                # データベースファイル
-├── /electron-src            # Electronメインプロセス
-│   ├── /ipc-handlers        # IPC通信ハンドラー
-│   │   ├── export-handlers.ts
-│   │   ├── exam-handlers.ts
-│   │   ├── scoring-handlers.ts
-│   │   └── student-handlers.ts
-│   ├── /lib                 # Electronライブラリ
-│   │   ├── dataManager.ts
-│   │   ├── /export          # 出力機能の専用ディレクトリ
-│   │   │   └── /excel       # Excel出力モジュール（関数別分割済み）
-│   │   │       ├── excel-export-main.ts  # Excel出力メイン（TypeDoc対応）
-│   │   │       ├── data-fetcher.ts       # データ取得・構造化
-│   │   │       ├── sheet-creators.ts     # シート作成ロジック
-│   │   │       ├── header-creators.ts    # ヘッダー作成
-│   │   │       ├── row-creators.ts       # データ行作成
-│   │   │       ├── file-saver.ts         # ファイル保存処理
-│   │   │       └── index.ts              # 統合エクスポート
-│   │   └── /prisma          # データベース操作
-│   │       ├── pdfExport.ts     # PDF出力（プログレス対応）
-│   │       ├── excelExport.ts   # Excel出力（互換性レイヤー）
-│   │       └── [その他多数のデータベース操作]
-│   ├── index.ts             # メインプロセス
-│   ├── preload.ts           # プリロードスクリプト
-│   └── window-manager.ts    # ウィンドウ管理
-├── /public                  # 静的ファイル
-│   ├── /js                  # JavaScript静的ファイル
-│   └── /score-assets        # 採点マーク画像素材
-├── /data                    # アプリケーションデータ
-│   ├── /exports             # 出力ファイル保存先
-│   └── /exams            # 試験ファイル
-│       └── [試験ID]/
-│           ├── /master-images    # マスター画像
-│           └── /answer-sheets    # 答案画像
-├── /docs                    # ドキュメント
-├── /main                    # ビルド済みElectronファイル
-└── /scripts                 # 開発スクリプト
+│   │       └── /08-export           # 結果出力
+│   ├── /grades                  # 成績管理（7段階ワークフロー）
+│   │   └── /[gradeId]
+│   │       ├── /01-setup            # 初期設定
+│   │       ├── /02-students         # 生徒管理
+│   │       ├── /03-data-sources     # データソース
+│   │       ├── /04-manual-scores    # 手動スコア
+│   │       ├── /05-boundaries       # 境界設定
+│   │       ├── /06-results          # 結果
+│   │       └── /07-export           # 出力
+│   ├── /login                   # ログイン
+│   ├── /pdf-tools               # PDFツール
+│   ├── /settings                # 設定
+│   ├── /students                # 生徒管理
+│   │   └── /[studentId]         # 個別生徒詳細
+│   └── /subtotal-groups         # 小計グループ管理
+├── /src/components              # Reactコンポーネント
+│   ├── /answer-sheet-builder    # 答案用紙ビルダー
+│   ├── /auth                    # 認証コンポーネント
+│   ├── /class                   # 学級管理コンポーネント
+│   ├── /common                  # 共通コンポーネント
+│   ├── /drawing                 # 描画・アノテーション
+│   ├── /exams                   # 試験関連（8段階ワークフロー対応）
+│   │   ├── /01-upload           # 模範解答アップロード
+│   │   ├── /02-template         # 採点領域作成
+│   │   ├── /03-region-info      # 領域情報
+│   │   ├── /04-question-group   # 設問グループ
+│   │   ├── /05-students         # 受験生徒管理
+│   │   ├── /06-student-answers  # 生徒答案管理
+│   │   │   ├── /student-answer-management  # 答案管理システム
+│   │   │   └── /student-answer-table       # 答案テーブル管理
+│   │   ├── /07-score-at-once    # 採点実行
+│   │   ├── /08-export           # 結果出力
+│   │   ├── /detail              # 試験詳細
+│   │   ├── /forms               # 試験作成・編集
+│   │   ├── /list                # 試験一覧
+│   │   └── /shared              # 共有コンポーネント
+│   ├── /grades                  # 成績管理コンポーネント
+│   │   ├── /01-setup 〜 /07-export  # 各段階のコンポーネント
+│   │   └── /list                # 成績一覧
+│   ├── /help                    # ヘルプ・ガイダンス
+│   ├── /hooks                   # コンポーネント固有のカスタムフック
+│   ├── /import                  # インポート機能
+│   ├── /layout                  # レイアウト関連
+│   ├── /pdf-tools               # PDFツール
+│   ├── /settings                # 設定
+│   ├── /student                 # 生徒関連
+│   ├── /student-import          # 生徒インポート
+│   ├── /subtotal-groups         # 小計グループ
+│   └── /ui                      # 基礎UIコンポーネント（shadcn/ui）
+├── /src/hooks                   # グローバルカスタムフック
+│   ├── /07-score-at-once        # 採点実行専用
+│   ├── /grades                  # 成績管理専用
+│   ├── /import                  # インポート専用
+│   ├── /student-import          # 生徒インポート専用
+│   ├── useExam.ts               # 試験管理
+│   ├── useExamDetail.ts         # 試験詳細
+│   ├── useMasterAnswers.ts      # マスター解答管理
+│   ├── useNavigationGuard.ts    # ナビゲーションガード
+│   └── useTableSort.ts          # テーブルソート
+├── /src/lib                     # グローバルユーティリティ
+│   ├── pdfConverter.ts          # PDF変換ユーティリティ
+│   └── utils.ts                 # 汎用ユーティリティ
+├── /src/types                   # グローバル型定義
+│   ├── common.types.ts          # 共通型定義
+│   ├── examArchive.types.ts     # 試験アーカイブ型
+│   ├── grade.types.ts           # 成績型定義
+│   ├── electron.d.ts            # Electron API型定義
+│   └── electron/                # Electron API型定義（分割）
+├── /src/contexts                # Reactコンテキスト
+│   ├── AuthContext.tsx          # 認証コンテキスト
+│   └── NavigationGuardContext.tsx # ナビゲーションガード
+├── /prisma                      # データベース関連
+│   ├── schema.prisma            # データベーススキーマ
+│   ├── /migrations              # マイグレーションファイル
+│   └── /data                    # データベースファイル
+├── /electron-src                # Electronメインプロセス
+│   ├── /ipc-handlers            # IPC通信ハンドラー（機能別に分割）
+│   ├── /preload-apis            # プリロードAPI（機能別に分割）
+│   ├── /lib                     # Electronライブラリ
+│   │   ├── /answer-sheet-builder # 答案用紙ビルダー
+│   │   ├── /export              # 出力機能
+│   │   │   ├── /exam-archive    # 試験アーカイブ出力
+│   │   │   ├── /excel           # Excel出力モジュール
+│   │   │   ├── /grade-archive   # 成績アーカイブ出力
+│   │   │   ├── /gradeExcel      # 成績Excel出力
+│   │   │   ├── /individual-report # 個人レポート出力
+│   │   │   ├── /asb-archive     # 答案用紙アーカイブ出力
+│   │   │   └── /student-archive # 生徒アーカイブ出力
+│   │   ├── /import              # インポート機能
+│   │   │   ├── /exam-archive    # 試験アーカイブ読込
+│   │   │   ├── /grade-archive   # 成績アーカイブ読込
+│   │   │   ├── /asb-archive     # 答案用紙アーカイブ読込
+│   │   │   ├── /student-archive # 生徒アーカイブ読込
+│   │   │   ├── /external-formats # 外部フォーマット読込
+│   │   │   ├── /merge           # マージ処理
+│   │   │   └── /transformers    # バージョントランスフォーマー
+│   │   ├── /omr                 # OMR（光学マーク認識）
+│   │   ├── /pdf-tools           # PDFツール
+│   │   ├── /prisma              # データベース操作（多数のモジュール）
+│   │   ├── /shared              # 共有ライブラリ
+│   │   └── /sync                # データ同期
+│   ├── index.ts                 # メインプロセス
+│   ├── preload.ts               # プリロードスクリプト
+│   └── window-manager.ts        # ウィンドウ管理
+├── /public                      # 静的ファイル
+├── /data                        # アプリケーションデータ
+├── /docs                        # ドキュメント
+├── /main                        # ビルド済みElectronファイル
+└── /scripts                     # 開発スクリプト
 ```
 
 ## 確立済みワークフロー
 
-### 📋 6段階採点ワークフロー
+### 📋 8段階採点ワークフロー
 
-1. **模範解答アップロード** (`/exams/[id]/score`)
+1. **模範解答アップロード** (`/exams/[examId]/01-upload`)
    - PDF・画像ファイルの高品質変換
    - ページ順序管理
 
-2. **採点領域作成** (`/exams/[id]/score/template`)
+2. **採点領域作成** (`/exams/[examId]/02-template`)
    - ドラッグ&ドロップによる視覚的領域定義
    - マルチページ対応、自動保存
 
-3. **領域情報** (`/exams/[id]/score/region-info`)
+3. **領域情報** (`/exams/[examId]/03-region-info`)
    - 表形式による効率的な設定編集
    - 設問番号・配点・ラベル管理
 
-4. **受験生徒管理** (`/exams/[id]/score/students`)
+4. **設問グループ** (`/exams/[examId]/04-question-group`)
+   - 設問のグループ化・小計設定
+
+5. **受験生徒管理** (`/exams/[examId]/05-students`)
    - 学級単位・個別生徒の追加削除
    - 受験状態管理（受験・見込・欠席）
 
-5. **答案アップロード** (`/exams/[id]/answer-sheets`)
+6. **生徒答案管理** (`/exams/[examId]/06-student-answers`)
    - ファイル名による自動生徒推測
    - 答案状態管理
 
-6. **採点実行** (`/exams/[id]/score/grading`)
+7. **採点実行** (`/exams/[examId]/07-score-at-once`)
    - キーボードファースト採点UI
    - 複数教員協調採点、競合解決
+
+8. **結果出力** (`/exams/[examId]/08-export`)
+   - Excel/PDF出力
+   - 採点マーク設定
 
 ### 🔄 ナビゲーション統一原則
 
@@ -282,6 +281,71 @@ npx prisma studio
 - `bridgeMigrations.ts`: v0.2.x〜v0.9.xの全バージョンからの自動アップグレード
 - `baselineMigrations.ts`: `_prisma_migrations`テーブルのベースライン作成
 - `migrationDeployer.ts`: 将来のマイグレーション自動適用（`prisma/migrations/`から読み取り）
+
+#### 📦 スキーマ変更時のImport/Export対応ルール（重要）
+
+データベーススキーマを変更した場合、試験アーカイブ（Import/Export）の互換性も対応が必要です。
+
+**対応が必要なケース**:
+
+- テーブルの追加・削除・リネーム
+- フィールドの追加・削除・リネーム
+- リレーションの変更（中間テーブルの追加等）
+
+**必須ワークフロー**:
+
+1. **アーカイブバージョンを上げる**
+   - `electron-src/lib/import/transformers/types.ts` の `CURRENT_ARCHIVE_VERSION` を更新
+   - バージョンは semver 形式（例: `1.9.0` → `1.10.0`）
+
+2. **バージョントランスフォーマーを作成**
+   - `electron-src/lib/import/transformers/` に `V<FROM>_to_V<TO>.ts` を追加
+   - `VersionTransformer` インターフェースを実装
+   - 旧バージョンのアーカイブを新バージョンの形式に変換するロジックを記述
+   - 新規フィールドにはデフォルト値（`[]`, `null`, `""` 等）を設定
+   - トランスフォーマー配列（`TRANSFORMERS`）に登録してチェーンに組み込む
+
+3. **アーカイブ型定義を更新**
+   - `src/types/examArchive.types.ts` の `ArchiveData` や関連型にフィールドを追加・変更
+
+4. **Export側を更新**
+   - `electron-src/lib/export/exam-archive/dataCollector.ts` で新データを収集
+   - `electron-src/lib/export/exam-archive/archiveCreator.ts` でアーカイブに含める
+
+5. **Import側を更新**
+   - `electron-src/lib/import/exam-archive/dataCreator.ts` で新データをDB挿入
+   - `electron-src/lib/import/exam-archive/idRemapper.ts` でID再マッピング対応
+   - `electron-src/lib/import/exam-archive/archiveExtractor.ts` でデータ抽出対応
+
+**トランスフォーマーの実装パターン**（参考: `V1_3_0_to_V1_4_0.ts`）:
+
+```typescript
+export class V1_9_0_to_V1_10_0_Transformer implements VersionTransformer {
+  readonly fromVersion: ArchiveVersion = "1.9.0"
+  readonly toVersion: ArchiveVersion = "1.10.0"
+
+  transform(data: ArchiveData): TransformResult {
+    return {
+      data: {
+        ...data,
+        manifest: { ...data.manifest, version: this.toVersion },
+        // 新規データにデフォルト値を設定
+        newData: data.newData ?? { items: [] },
+      },
+      warnings: ["1.9.0→1.10.0: 新機能Xのデータはデフォルト値で補完されました"],
+    }
+  }
+}
+```
+
+**バージョン履歴**（`types.ts` 内に記録）:
+
+| バージョン | 対応アプリ | 変更内容 |
+|-----------|-----------|---------|
+| 1.0.0 | v0.2.x | 初期バージョン |
+| 1.4.0 | v0.5.x | Subject, ExamMarkingFormat等追加 |
+| 1.5.0 | v0.6.x | Project→Examリネーム |
+| 1.9.0 | v0.9.x | DeletedRecord tombstone追加 |
 
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 
@@ -359,7 +423,7 @@ npx prisma studio
 /lib/utils.ts             # 日付フォーマット、バリデーション等の汎用関数
 ```
 
-#### 🎯 機能内配置（`/components/exams/06-answer-sheets/hooks` 等）
+#### 🎯 機能内配置（`/components/exams/06-student-answers/hooks` 等）
 
 **対象**: 特定機能専用の要素
 
@@ -374,9 +438,9 @@ npx prisma studio
 
 ```typescript
 // 機能内配置の例
-/components/exams/06-answer-sheets/
-├── hooks/useAnswerSheetUpload.ts     # 答案アップロード専用ロジック
-├── types/answer-sheet.types.ts      # PendingChange, ScoringDataOption等
+/components/exams/06-student-answers/
+├── hooks/useStudentAnswerUpload.ts   # 答案アップロード専用ロジック
+├── types/student-answer.types.ts    # PendingChange, ScoringDataOption等
 └── utils/file-processing.ts         # ファイル変換・検証の専用関数
 ```
 

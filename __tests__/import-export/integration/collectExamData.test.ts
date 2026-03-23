@@ -255,8 +255,8 @@ describe("collectExamData", () => {
     expect(data.examData.cropRegionMarkingOverrides!.length).toBeGreaterThan(0)
   })
 
-  // DC-10: Subject/SubjectSubtotalGroupデータの収集
-  it("DC-10: Subject/SubjectSubtotalGroupデータが収集される", async () => {
+  // DC-10: Tag/TagSubtotalGroupデータの収集
+  it("DC-10: Tag/TagSubtotalGroupデータが収集される", async () => {
     testExam = await createFullTestExam(prisma, {
       includeV140Data: true,
     })
@@ -266,8 +266,8 @@ describe("collectExamData", () => {
     expect(result.success).toBe(true)
     const data = result.data!
 
-    expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
-    expect(data.subjectsData.subjectSubtotalGroups.length).toBeGreaterThan(0)
+    expect(data.tagsData.tags.length).toBeGreaterThan(0)
+    expect(data.tagsData.tagSubtotalGroups.length).toBeGreaterThan(0)
   })
 
   // DC-11: 画像パスが相対パスで取得される

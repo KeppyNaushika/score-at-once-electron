@@ -197,7 +197,7 @@ async function changeClassId(
 /**
  * 小計グループIDの変更
  * FK: ExamSubtotalGroup.subtotalGroupId, Subtotal.subtotalGroupId,
- *     SubjectSubtotalGroup.subtotalGroupId
+ *     TagSubtotalGroup.subtotalGroupId
  */
 async function changeSubtotalGroupId(
   tx: PrismaTransaction,
@@ -230,7 +230,7 @@ async function changeSubtotalGroupId(
     data: { subtotalGroupId: target.newId },
   })
 
-  await tx.subjectSubtotalGroup.updateMany({
+  await tx.tagSubtotalGroup.updateMany({
     where: { subtotalGroupId: target.existingId },
     data: { subtotalGroupId: target.newId },
   })

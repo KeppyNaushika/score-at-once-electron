@@ -17,9 +17,9 @@ import { createPdfToolsApi } from "./preload-apis/pdfToolsApi"
 import { createScoringApi } from "./preload-apis/scoringApi"
 import { createSettingsApi } from "./preload-apis/settingsApi"
 import { createStudentApi } from "./preload-apis/studentApi"
-import { createSubjectApi } from "./preload-apis/subjectApi"
 import { createSubtotalApi } from "./preload-apis/subtotalApi"
 import { createSyncApi } from "./preload-apis/syncApi"
+import { createTagApi } from "./preload-apis/tagApi"
 import { createUserExamApi } from "./preload-apis/userExamApi"
 
 declare global {
@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createSettingsApi(),
   ...createPdfToolsApi(),
   ...createGradeApi(),
-  ...createSubjectApi(),
+  ...createTagApi(),
   ...createOmrApi(),
   ...createAnswerSheetBuilderApi(),
   ...createMiscApi(),

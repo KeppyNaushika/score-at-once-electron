@@ -21,7 +21,7 @@ interface ExamResult {
   examId: string
   examName: string
   examDate: Date | null
-  subject: string | null
+  tags: string[]
   totalScore: number
   maxScore: number
   scoredCount: number
@@ -32,7 +32,7 @@ interface ExamResult {
 interface ExamResultSortable {
   examId: string
   examName: string
-  subject: string | null
+  tags: string[]
   examDate: string | null
   totalScore: number
   original: ExamResult
@@ -66,7 +66,7 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
     return results.map((result) => ({
       examId: result.examId,
       examName: result.examName,
-      subject: result.subject,
+      tags: result.tags,
       examDate: result.examDate
         ? new Date(result.examDate).toISOString()
         : null,
@@ -177,16 +177,7 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
                   >
                     試験名
                   </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="subject"
-                    currentSortKey={sortConfig.key as string | null}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) =>
-                      requestSort(key as keyof ExamResultSortable)
-                    }
-                  >
-                    教科
-                  </SortableTableHead>
+                  <TableHead>タグ</TableHead>
                   <SortableTableHead
                     sortKey="examDate"
                     currentSortKey={sortConfig.key as string | null}
@@ -223,7 +214,15 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
                       {result.examName}
                     </TableCell>
                     <TableCell>
-                      {result.subject || (
+                      {result.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {result.tags.map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>

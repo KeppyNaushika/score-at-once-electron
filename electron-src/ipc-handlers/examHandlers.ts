@@ -185,7 +185,7 @@ export function setupExamHandlers(): void {
       id: exam.id,
       examName: exam.examName,
       examDate: exam.examDate,
-      subject: exam.subject,
+      tags: exam.examTags.map((et) => et.tag),
       description: exam.description,
       createdAt: exam.createdAt,
       updatedAt: exam.updatedAt,

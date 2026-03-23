@@ -37,7 +37,7 @@ export function HeaderView({ report, fontScale }: HeaderViewProps) {
         >
           {report.examInfo.examName}
         </h1>
-        {report.examInfo.subject && (
+        {report.examInfo.tags.length > 0 && (
           <p
             style={{
               fontSize: `${12 * fontScale}px`,
@@ -45,7 +45,7 @@ export function HeaderView({ report, fontScale }: HeaderViewProps) {
               margin: "2mm 0 0 0",
             }}
           >
-            {report.examInfo.subject}
+            {report.examInfo.tags.join(", ")}
           </p>
         )}
       </div>

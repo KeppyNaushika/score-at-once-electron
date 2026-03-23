@@ -40,8 +40,9 @@ export const SYNC_TABLES: TableConfig[] = [
   std("Subtotal"),
   std("CropSubtotal"),
   std("ExamSubtotalGroup"),
-  std("Subject"),
-  std("SubjectSubtotalGroup"),
+  std("Tag"),
+  std("TagSubtotalGroup"),
+  std("ExamTag"),
 
   // 試験設定
   std("ExamMarkingFormat"),

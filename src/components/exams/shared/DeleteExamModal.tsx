@@ -11,6 +11,7 @@ interface DeleteExamModalProps {
     masterImages?: unknown[]
     answerSheets?: unknown[]
     cropRegions?: unknown[]
+    examTags?: { tag: { id: string; name: string } }[]
   }
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -73,9 +74,10 @@ export default function DeleteExamModal({
           id: exam.id,
           display: exam.examName,
           badges: [
-            ...(exam.subject
-              ? [{ label: exam.subject, variant: "outline" as const }]
-              : []),
+            ...(exam.examTags ?? []).map((et) => ({
+              label: et.tag.name,
+              variant: "outline" as const,
+            })),
             ...(exam.examDate
               ? [
                   {

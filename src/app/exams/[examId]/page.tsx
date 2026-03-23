@@ -55,7 +55,7 @@ export default function ExamDetailPage() {
 
   const handleExamUpdated = async (
     updatedExamData: Partial<
-      Pick<Exam, "examName" | "description" | "examDate" | "subject">
+      Pick<Exam, "examName" | "description" | "examDate">
     >
   ) => {
     const success = await updateExam(updatedExamData)

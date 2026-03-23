@@ -85,7 +85,6 @@ model Exam {
   id                 String               @id @default(uuid())
   examName           String
   examDate           DateTime?
-  subject            String?
   description        String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @default(now()) @updatedAt
@@ -97,6 +96,7 @@ model Exam {
   markingFormats     ExamMarkingFormat[]
   exportSettings     ExamExportSettings?
   gradeDataSources   GradeDataSource[]
+  examTags           ExamTag[]
 }
 
 model ExamStudent {
@@ -183,7 +183,7 @@ model SubtotalGroup {
   updatedAt             DateTime               @default(now()) @updatedAt
   examSubtotalGroups    ExamSubtotalGroup[]
   subtotals             Subtotal[]
-  subjectSubtotalGroups SubjectSubtotalGroup[]
+  tagSubtotalGroups TagSubtotalGroup[]
 }
 
 model Subtotal {
@@ -319,28 +319,44 @@ model ExamClass {
   @@index([classId])
 }
 
-model Subject {
+model Tag {
   id        String   @id @default(uuid())
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  subjectSubtotalGroups SubjectSubtotalGroup[]
+  tagSubtotalGroups TagSubtotalGroup[]
+  examTags          ExamTag[]
 }
 
-model SubjectSubtotalGroup {
+model TagSubtotalGroup {
   id              String   @id @default(uuid())
-  subjectId       String
+  tagId           String
   subtotalGroupId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  subject       Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  tag           Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
   subtotalGroup SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
 
-  @@unique([subjectId, subtotalGroupId])
-  @@index([subjectId])
+  @@unique([tagId, subtotalGroupId])
+  @@index([tagId])
   @@index([subtotalGroupId])
+}
+
+model ExamTag {
+  id        String   @id @default(uuid())
+  examId    String
+  tagId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, tagId])
+  @@index([examId])
+  @@index([tagId])
 }
 
 model UserKeyboardShortcut {

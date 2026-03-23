@@ -8,7 +8,6 @@ export interface CreateExamArgs {
   examName: string
   description?: string | null
   examDate?: Date | null
-  subject?: string | null
 }
 
 export interface UpdateExamArgs extends Partial<CreateExamArgs> {

@@ -17,8 +17,8 @@ import type {
   ArchiveExamData,
   ArchiveScoresData,
   ArchiveStudentsData,
-  ArchiveSubjectsData,
   ArchiveSubtotalsData,
+  ArchiveTagsData,
   ArchiveUsersData,
   FileOverviewData,
   IdIntegrationConfig,
@@ -168,7 +168,6 @@ export function createArchiveExamData(
       id: examId,
       examName: overrides.examName ?? "テスト試験",
       examDate: new Date().toISOString(),
-      subject: "数学",
       description: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -242,10 +241,11 @@ export function createArchiveScoresData(
   }
 }
 
-export function createArchiveSubjectsData(): ArchiveSubjectsData {
+export function createArchiveTagsData(): ArchiveTagsData {
   return {
-    subjects: [],
-    subjectSubtotalGroups: [],
+    tags: [],
+    tagSubtotalGroups: [],
+    examTags: [],
   }
 }
 
@@ -261,12 +261,12 @@ export function createExtractedArchiveData(
     usersData?: ArchiveUsersData
     subtotalsData?: ArchiveSubtotalsData
     scoresData?: ArchiveScoresData
-    subjectsData?: ArchiveSubjectsData
+    tagsData?: ArchiveTagsData
   } = {}
 ): ExtractedArchiveData {
   return {
     manifest: {
-      version: "1.4.0",
+      version: "1.10.0",
       schemaVersion: "test",
       appVersion: "0.4.9-alpha.0",
       exportedAt: new Date().toISOString(),
@@ -291,7 +291,8 @@ export function createExtractedArchiveData(
     usersData: overrides.usersData ?? createArchiveUsersData(),
     subtotalsData: overrides.subtotalsData ?? createArchiveSubtotalsData(),
     scoresData: overrides.scoresData ?? createArchiveScoresData(),
-    subjectsData: overrides.subjectsData ?? createArchiveSubjectsData(),
+    subjectsData: { subjects: [], subjectSubtotalGroups: [] },
+    tagsData: overrides.tagsData ?? createArchiveTagsData(),
     deletedRecordsData: { deletedRecords: [] },
     tempDir: "/tmp/test-archive",
     masterImagePaths: [],

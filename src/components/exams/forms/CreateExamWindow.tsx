@@ -45,7 +45,6 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
         examName: examName.trim(),
         examDate: examDate,
         description: description.trim() || undefined,
-        subject: tagTexts.length > 0 ? tagTexts.join(", ") : undefined,
       })
       onExamCreated?.() // 試験作成成功時のコールバック
       onClose()

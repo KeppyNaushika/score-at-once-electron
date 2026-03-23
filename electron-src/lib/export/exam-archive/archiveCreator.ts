@@ -196,8 +196,8 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
       archive.append(JSON.stringify(collectedData.scoresData, null, 2), {
         name: "scores.json",
       })
-      archive.append(JSON.stringify(collectedData.subjectsData, null, 2), {
-        name: "subjects.json",
+      archive.append(JSON.stringify(collectedData.tagsData, null, 2), {
+        name: "tags.json",
       })
       archive.append(
         JSON.stringify(collectedData.deletedRecordsData, null, 2),

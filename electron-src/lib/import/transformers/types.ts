@@ -14,6 +14,7 @@ import type {
   ArchiveStudentsData,
   ArchiveSubjectsData,
   ArchiveSubtotalsData,
+  ArchiveTagsData,
   ArchiveUsersData,
 } from "../../../../src/types/examArchive.types"
 
@@ -34,6 +35,7 @@ import type {
  * - 1.7.0: v0.8.x (CropRegionOmrConfig, CropRegionOmrChoiceOption 追加)
  * - 1.8.0: v0.9.x (MasterImage.pageSize 追加)
  * - 1.9.0: v0.9.x (DeletedRecord tombstone 追加)
+ * - 1.10.0: v0.9.x (Subject→Tag リネーム, ExamTag 追加, Exam.subject 削除)
  */
 export type ArchiveVersion =
   | "1.0.0"
@@ -46,9 +48,10 @@ export type ArchiveVersion =
   | "1.7.0"
   | "1.8.0"
   | "1.9.0"
+  | "1.10.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.9.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.10.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -62,6 +65,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.7.0",
   "1.8.0",
   "1.9.0",
+  "1.10.0",
 ] as const
 
 // =============================================================================
@@ -79,8 +83,10 @@ export interface ArchiveData {
   usersData: ArchiveUsersData
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
-  /** v1.4.0+ 教科データ */
+  /** v1.4.0-v1.9.0 教科データ (deprecated, v1.10.0でtagsDataに移行) */
   subjectsData?: ArchiveSubjectsData
+  /** v1.10.0+ タグデータ (v1.10.0でSubject→Tagにリネーム) */
+  tagsData?: ArchiveTagsData
   /** v1.9.0+ 削除記録データ */
   deletedRecordsData?: ArchiveDeletedRecordsData
 }

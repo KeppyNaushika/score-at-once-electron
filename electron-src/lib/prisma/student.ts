@@ -108,7 +108,7 @@ export interface StudentExamResult {
   examId: string
   examName: string
   examDate: Date | null
-  subject: string | null
+  tags: string[]
   totalScore: number
   maxScore: number
   scoredCount: number
@@ -127,6 +127,13 @@ export const getStudentExamResults = async (
       include: {
         exam: {
           include: {
+            examTags: {
+              select: {
+                tag: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
             examPages: {
               include: {
                 cropRegions: {
@@ -182,7 +189,7 @@ export const getStudentExamResults = async (
         examId: exam.id,
         examName: exam.examName,
         examDate: exam.examDate,
-        subject: exam.subject,
+        tags: exam.examTags.map((et) => et.tag.name),
         totalScore,
         maxScore,
         scoredCount,

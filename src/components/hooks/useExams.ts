@@ -39,7 +39,6 @@ export const useExams = () => {
     examName: string
     examDate?: Date | null
     description?: string
-    subject?: string
   }) => {
     if (!user) {
       throw new Error("ユーザーがログインしていません")

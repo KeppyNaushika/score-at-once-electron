@@ -16,9 +16,9 @@ import { setupScoringHandlers } from "./scoringHandlers"
 import { registerSettingsHandlers } from "./settingsHandlers"
 import { registerStudentArchiveHandlers } from "./studentArchiveHandlers"
 import { setupStudentHandlers } from "./studentHandlers"
-import { setupSubjectHandlers } from "./subjectHandlers"
 import { setupSubtotalGroupHandlers } from "./subtotalGroupHandlers"
 import { setupSyncHandlers } from "./syncHandlers"
+import { setupTagHandlers } from "./tagHandlers"
 import { setupUserExamHandlers } from "./userExamHandlers"
 
 /** 全IPCハンドラーを一括登録する */
@@ -38,7 +38,7 @@ export function setupAllIPCHandlers(): void {
   setupUserExamHandlers()
   registerSettingsHandlers()
   setupPdfToolsHandlers()
-  setupSubjectHandlers()
+  setupTagHandlers()
   setupGradeHandlers()
   setupAnswerSheetBuilderHandlers()
   setupOMRHandlers()

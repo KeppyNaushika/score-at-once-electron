@@ -296,8 +296,8 @@ describe("exportImportRoundTrip", () => {
     expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
     expect(data.examData.examExportSettings).not.toBeNull()
     expect(data.examData.cropRegionMarkingOverrides!.length).toBeGreaterThan(0)
-    expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
-    expect(data.subjectsData.subjectSubtotalGroups.length).toBeGreaterThan(0)
+    expect(data.tagsData.tags.length).toBeGreaterThan(0)
+    expect(data.tagsData.tagSubtotalGroups.length).toBeGreaterThan(0)
 
     // アーカイブ作成→抽出
     const archivePath = path.join(tmpDir, "v140.score")
@@ -337,8 +337,8 @@ describe("exportImportRoundTrip", () => {
     })
     expect(settings).not.toBeNull()
 
-    const subjects = await prisma.subject.findMany()
-    expect(subjects.length).toBeGreaterThan(0)
+    const tags = await prisma.tag.findMany()
+    expect(tags.length).toBeGreaterThan(0)
 
     cleanupTempDir(extractResult.data!.tempDir)
   })

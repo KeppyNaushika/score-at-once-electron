@@ -28,7 +28,7 @@ import {
   seedGradeProject,
   seedSimpleExam,
   seedStudents,
-  seedSubtotalAndSubject,
+  seedSubtotalAndTag,
 } from "./helpers/seed-in-test"
 
 // ---------------------------------------------------------------------------
@@ -394,7 +394,7 @@ test.describe.serial("第1章: 初期設定", () => {
     }
 
     // (C) DB直接操作で小計グループ + 教科を追加
-    const subtotalResult = await seedSubtotalAndSubject()
+    const subtotalResult = await seedSubtotalAndTag()
     subtotalGroupId = subtotalResult.subtotalGroupId
     subtotalIds = subtotalResult.subtotalIds
 

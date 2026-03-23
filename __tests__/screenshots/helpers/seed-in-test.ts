@@ -352,7 +352,7 @@ export async function seedClasses(
 // ---------------------------------------------------------------------------
 // 小計グループ + 教科
 // ---------------------------------------------------------------------------
-export async function seedSubtotalAndSubject(): Promise<{
+export async function seedSubtotalAndTag(): Promise<{
   subtotalGroupId: string
   subtotalIds: string[]
 }> {
@@ -377,13 +377,13 @@ export async function seedSubtotalAndSubject(): Promise<{
     })
     subtotalIds.push(st.id)
   }
-  const subject = await db.subject.create({
+  const tag = await db.tag.create({
     data: { id: randomUUID(), name: "数学" },
   })
-  await db.subjectSubtotalGroup.create({
+  await db.tagSubtotalGroup.create({
     data: {
       id: randomUUID(),
-      subjectId: subject.id,
+      tagId: tag.id,
       subtotalGroupId: subtotalGroup.id,
     },
   })
@@ -412,7 +412,6 @@ export async function seedExamWithScoring(
       id: examId,
       examName: "第２回定期テスト 中２数学",
       examDate: new Date("2025-10-15"),
-      subject: "数学",
       description: "一次関数・連立方程式",
     },
   })
@@ -721,7 +720,6 @@ export async function seedSimpleExam(
       id: examId,
       examName: "第１回実力テスト 中２英語",
       examDate: new Date("2025-07-10"),
-      subject: "英語",
       description: "Lesson 1-4 まとめ",
     },
   })

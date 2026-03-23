@@ -16,8 +16,14 @@ export const getExamsForList = async (userId: string) => {
       id: true,
       examName: true,
       examDate: true,
-      subject: true,
       description: true,
+      examTags: {
+        select: {
+          tag: {
+            select: { id: true, name: true },
+          },
+        },
+      },
       createdAt: true,
       updatedAt: true,
       examPages: {
@@ -110,6 +116,13 @@ export const getExams = async (userId: string) => {
         },
       },
       examStudents: true,
+      examTags: {
+        select: {
+          tag: {
+            select: { id: true, name: true },
+          },
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -177,6 +190,13 @@ export const getExamById = async (id: string) => {
           customOrder: "asc",
         },
       },
+      examTags: {
+        select: {
+          tag: {
+            select: { id: true, name: true },
+          },
+        },
+      },
     },
   })
 }
@@ -220,6 +240,14 @@ export const createExam = async (
             include: {
               subtotals: true,
             },
+          },
+        },
+      },
+      examStudents: true,
+      examTags: {
+        select: {
+          tag: {
+            select: { id: true, name: true },
           },
         },
       },
