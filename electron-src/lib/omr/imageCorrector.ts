@@ -317,7 +317,7 @@ export async function correctImage(
       const scaledH = Math.round(H * scale)
 
       const scaled = await sharp(translated)
-        .resize(scaledW, scaledH)
+        .resize(scaledW, scaledH, { kernel: sharp.kernel.lanczos3 })
         .png()
         .toBuffer()
 

@@ -19,7 +19,13 @@ interface AutoScoreEntry {
   label: string
   cropRegionId?: string
   questionPath: number[]
-  status: "correct" | "incorrect" | "partial" | "no_answer" | "ambiguous"
+  status:
+    | "correct"
+    | "incorrect"
+    | "partial"
+    | "no_answer"
+    | "ambiguous"
+    | "pending"
   score: number
   maxPoints: number
   recognizedValues: string[]
@@ -45,6 +51,7 @@ export interface OmrAutoScoringState {
     noAnswer: number
     ambiguous: number
     partial: number
+    pending: number
     total: number
   } | null
   /** エラー */
@@ -168,6 +175,7 @@ export function useOmrAutoScoring(examId: string) {
       const recognitionParams = {
         colorThreshold: configs[0].colorThreshold ?? 25,
         areaThreshold: configs[0].areaThreshold ?? 0.4,
+        confidenceThreshold: 0.7,
       }
 
       // 4. 答案画像を取得（全生徒分）
@@ -267,7 +275,8 @@ export function useOmrAutoScoring(examId: string) {
         incorrect = 0,
         noAnswer = 0,
         ambiguous = 0,
-        partial = 0
+        partial = 0,
+        pending = 0
 
       // CropRegionの配点マップ
       const pointsMap: Record<string, number> = {}
@@ -361,6 +370,23 @@ export function useOmrAutoScoring(examId: string) {
               }
             }
 
+            // 低信頼チェック: 閾値未満は保留にしてレビュー対象にする
+            const confidenceThreshold =
+              recognitionParams.confidenceThreshold ?? 0.7
+            if (
+              cellResult.confidence < confidenceThreshold &&
+              status !== "no_answer" &&
+              status !== "ambiguous"
+            ) {
+              // カウンターを元に戻してpendingに振り替え
+              if (status === "correct") correct--
+              else if (status === "incorrect") incorrect--
+              else if (status === "partial") partial--
+              status = "pending"
+              score = 0
+              pending++
+            }
+
             return {
               label: cellResult.label,
               cropRegionId,
@@ -387,7 +413,8 @@ export function useOmrAutoScoring(examId: string) {
           noAnswer,
           ambiguous,
           partial,
-          total: correct + incorrect + noAnswer + ambiguous + partial,
+          pending,
+          total: correct + incorrect + noAnswer + ambiguous + partial + pending,
         },
       }))
     } catch (error) {

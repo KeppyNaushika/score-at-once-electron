@@ -102,6 +102,8 @@ export interface OMRRecognitionParams {
   colorThreshold: number
   /** 塗りつぶし面積閾値（0-1、デフォルト0.4） */
   areaThreshold: number
+  /** 信頼度閾値（この値未満は low_confidence としてフラグ、デフォルト0.7） */
+  confidenceThreshold?: number
 }
 
 export const DEFAULT_OMR_RECOGNITION_PARAMS: OMRRecognitionParams = {
