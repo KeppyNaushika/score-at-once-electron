@@ -9,27 +9,16 @@ import type {
   CropRegionOmrConfigWithOptions,
   OMRBatchProgress,
   OMRCellConfig,
-  OMRCellResult,
   OMRSheetResult,
 } from "@/types/omr.types"
 import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
-/** 自動採点エントリ（rendererプロセス用） */
-interface AutoScoreEntry {
-  label: string
-  cropRegionId?: string
-  questionPath: number[]
-  status:
-    | "correct"
-    | "incorrect"
-    | "partial"
-    | "no_answer"
-    | "double_mark"
-    | "pending"
-  score: number
-  maxPoints: number
-  recognizedValues: string[]
-}
+import {
+  type AutoScoreEntry,
+  recommendAreaThreshold,
+  reevaluateWithThreshold,
+  type ScoringResultSummary,
+} from "../utils/reevaluateResults"
 
 export interface OmrAutoScoringState {
   /** OMR設定リスト */
@@ -42,20 +31,22 @@ export interface OmrAutoScoringState {
   progress: OMRBatchProgress | null
   /** 認識結果（生徒ごと） */
   sheetResults: OMRSheetResult[]
+  /** 初回バッチの不変コピー（閾値再評価のソース） */
+  originalSheetResults: OMRSheetResult[]
   /** 自動採点エントリ（全生徒分） */
   scoreEntries: Map<string, AutoScoreEntry[]>
   /** 結果サマリー */
-  summary: {
-    correct: number
-    incorrect: number
-    noAnswer: number
-    doubleMark: number
-    partial: number
-    pending: number
-    total: number
-  } | null
+  summary: ScoringResultSummary | null
   /** エラー */
   error: string | null
+  /** 塗りつぶし判定閾値 */
+  areaThreshold: number
+  /** 信頼度閾値 */
+  confidenceThreshold: number
+  /** 配点マップ（cropRegionId → points） */
+  pointsMap: Record<string, number>
+  /** 推奨areaThreshold */
+  recommendedAreaThreshold: number | null
 }
 
 /**
@@ -68,9 +59,14 @@ export function useOmrAutoScoring(examId: string) {
     isApplying: false,
     progress: null,
     sheetResults: [],
+    originalSheetResults: [],
     scoreEntries: new Map(),
     summary: null,
     error: null,
+    areaThreshold: 0.4,
+    confidenceThreshold: 0.7,
+    pointsMap: {},
+    recommendedAreaThreshold: null,
   })
 
   /** OMR設定をDBから読み込み */
@@ -269,16 +265,7 @@ export function useOmrAutoScoring(examId: string) {
         pageIndex: 0,
       })
 
-      // 7. 自動採点エントリの構築
-      const allEntries = new Map<string, AutoScoreEntry[]>()
-      let correct = 0,
-        incorrect = 0,
-        noAnswer = 0,
-        doubleMark = 0,
-        partial = 0,
-        pending = 0
-
-      // CropRegionの配点マップ
+      // 7. 配点マップ構築
       const pointsMap: Record<string, number> = {}
       for (const r of page1Regions) {
         if (r.points != null) {
@@ -307,116 +294,34 @@ export function useOmrAutoScoring(examId: string) {
         )
       }
 
-      for (const sheetResult of results) {
-        if (!sheetResult.success || !sheetResult.studentId) continue
+      // 再評価ユーティリティで採点結果を構築
+      const initialAreaThreshold = recognitionParams.areaThreshold
+      const initialConfidenceThreshold =
+        recognitionParams.confidenceThreshold ?? 0.7
 
-        const entries: AutoScoreEntry[] = sheetResult.cellResults.map(
-          (cellResult: OMRCellResult) => {
-            const cropRegionId = cellResult.label
-            const maxPoints = pointsMap[cropRegionId] ?? 0
-            const cfg = configs.find((c) => c.cropRegionId === cropRegionId)
+      const { updatedSheetResults, scoreEntries, summary } =
+        reevaluateWithThreshold({
+          sheetResults: results,
+          omrConfigs: configs,
+          pointsMap,
+          areaThreshold: initialAreaThreshold,
+          confidenceThreshold: initialConfidenceThreshold,
+        })
 
-            let status: AutoScoreEntry["status"]
-            let score: number
-
-            switch (cellResult.autoScoreStatus) {
-              case "correct":
-                status = "correct"
-                score = maxPoints
-                correct++
-                break
-              case "incorrect":
-                status = "incorrect"
-                score = 0
-                incorrect++
-                break
-              case "no_answer":
-                status = "no_answer"
-                score = 0
-                noAnswer++
-                break
-              case "ambiguous":
-                status = "double_mark"
-                score = 0
-                doubleMark++
-                break
-              default:
-                status = "no_answer"
-                score = 0
-                noAnswer++
-            }
-
-            // 部分点チェック
-            if (
-              cfg?.type === "choice" &&
-              status === "incorrect" &&
-              cellResult.recognizedValues.length > 0
-            ) {
-              const correctLabels = cfg.choiceOptions
-                .filter((o) => o.isCorrect)
-                .map((o) => o.label)
-              if (correctLabels.length > 1) {
-                const correctCount = cellResult.recognizedValues.filter((v) =>
-                  correctLabels.includes(v)
-                ).length
-                if (correctCount > 0 && correctCount < correctLabels.length) {
-                  status = "partial"
-                  score = Math.floor(
-                    (maxPoints * correctCount) / correctLabels.length
-                  )
-                  incorrect--
-                  partial++
-                }
-              }
-            }
-
-            // 低信頼チェック: 閾値未満は保留にしてレビュー対象にする
-            const confidenceThreshold =
-              recognitionParams.confidenceThreshold ?? 0.7
-            if (
-              cellResult.confidence < confidenceThreshold &&
-              status !== "no_answer" &&
-              status !== "double_mark"
-            ) {
-              // カウンターを元に戻してpendingに振り替え
-              if (status === "correct") correct--
-              else if (status === "incorrect") incorrect--
-              else if (status === "partial") partial--
-              status = "pending"
-              score = 0
-              pending++
-            }
-
-            return {
-              label: cellResult.label,
-              cropRegionId,
-              questionPath: cellResult.questionPath,
-              status,
-              score,
-              maxPoints,
-              recognizedValues: cellResult.recognizedValues,
-            }
-          }
-        )
-
-        allEntries.set(sheetResult.studentId, entries)
-      }
+      // 推奨閾値を算出
+      const recommended = recommendAreaThreshold(results)
 
       setState((s) => ({
         ...s,
         isRecognizing: false,
-        sheetResults: results,
-        scoreEntries: allEntries,
-        summary: {
-          correct,
-          incorrect,
-          noAnswer,
-          doubleMark,
-          partial,
-          pending,
-          total:
-            correct + incorrect + noAnswer + doubleMark + partial + pending,
-        },
+        sheetResults: updatedSheetResults,
+        originalSheetResults: results,
+        scoreEntries,
+        summary,
+        pointsMap,
+        areaThreshold: initialAreaThreshold,
+        confidenceThreshold: initialConfidenceThreshold,
+        recommendedAreaThreshold: recommended,
       }))
     } catch (error) {
       setState((s) => ({
@@ -490,11 +395,77 @@ export function useOmrAutoScoring(examId: string) {
     [state.scoreEntries]
   )
 
+  /** areaThresholdを変更し、キャッシュ済みfillRatiosから即座に再判定 */
+  const updateAreaThreshold = useCallback(
+    (newThreshold: number) => {
+      if (state.originalSheetResults.length === 0) return
+      const { updatedSheetResults, scoreEntries, summary } =
+        reevaluateWithThreshold({
+          sheetResults: state.originalSheetResults,
+          omrConfigs: state.omrConfigs,
+          pointsMap: state.pointsMap,
+          areaThreshold: newThreshold,
+          confidenceThreshold: state.confidenceThreshold,
+        })
+      setState((s) => ({
+        ...s,
+        areaThreshold: newThreshold,
+        sheetResults: updatedSheetResults,
+        scoreEntries,
+        summary,
+      }))
+    },
+    [
+      state.originalSheetResults,
+      state.omrConfigs,
+      state.pointsMap,
+      state.confidenceThreshold,
+    ]
+  )
+
+  /** confidenceThresholdを変更し、即座に再判定 */
+  const updateConfidenceThreshold = useCallback(
+    (newThreshold: number) => {
+      if (state.originalSheetResults.length === 0) return
+      const { updatedSheetResults, scoreEntries, summary } =
+        reevaluateWithThreshold({
+          sheetResults: state.originalSheetResults,
+          omrConfigs: state.omrConfigs,
+          pointsMap: state.pointsMap,
+          areaThreshold: state.areaThreshold,
+          confidenceThreshold: newThreshold,
+        })
+      setState((s) => ({
+        ...s,
+        confidenceThreshold: newThreshold,
+        sheetResults: updatedSheetResults,
+        scoreEntries,
+        summary,
+      }))
+    },
+    [
+      state.originalSheetResults,
+      state.omrConfigs,
+      state.pointsMap,
+      state.areaThreshold,
+    ]
+  )
+
+  /** 推奨areaThresholdを適用 */
+  const applyRecommendedThreshold = useCallback(() => {
+    if (state.recommendedAreaThreshold != null) {
+      updateAreaThreshold(state.recommendedAreaThreshold)
+    }
+  }, [state.recommendedAreaThreshold, updateAreaThreshold])
+
   return {
     ...state,
     hasOmrConfigs: state.omrConfigs.length > 0,
     runRecognition,
     applyScores,
+    updateAreaThreshold,
+    updateConfidenceThreshold,
+    applyRecommendedThreshold,
   }
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Loader2, ScanLine, XCircle } from "lucide-react"
+import { CheckCircle, Loader2, ScanLine, Sparkles, XCircle } from "lucide-react"
 import { useCallback } from "react"
 
 import { useOmrAutoScoring } from "@/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring"
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
+import { Slider } from "@/components/ui/slider"
 
 interface OMRAutoScoringModalProps {
   examId: string
@@ -36,8 +37,14 @@ export function OMRAutoScoringModal({
     summary,
     error,
     hasOmrConfigs,
+    areaThreshold,
+    confidenceThreshold,
+    recommendedAreaThreshold,
     runRecognition,
     applyScores,
+    updateAreaThreshold,
+    updateConfidenceThreshold,
+    applyRecommendedThreshold,
   } = useOmrAutoScoring(examId)
 
   const handleApply = useCallback(async () => {
@@ -143,6 +150,53 @@ export function OMRAutoScoringModal({
               </div>
               <div className="text-muted-foreground text-xs">
                 合計 {summary.total} 件（低信頼は保留として反映）
+              </div>
+
+              {/* 閾値調整 */}
+              <div className="space-y-3 border-t pt-3">
+                <div className="text-sm font-medium">閾値調整</div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>塗りつぶし判定閾値</span>
+                    <span className="font-medium tabular-nums">
+                      {Math.round(areaThreshold * 100)}%
+                    </span>
+                  </div>
+                  <Slider
+                    min={5}
+                    max={90}
+                    step={1}
+                    value={[Math.round(areaThreshold * 100)]}
+                    onValueChange={([v]) => updateAreaThreshold(v / 100)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>信頼度閾値（保留判定）</span>
+                    <span className="font-medium tabular-nums">
+                      {Math.round(confidenceThreshold * 100)}%
+                    </span>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={[Math.round(confidenceThreshold * 100)]}
+                    onValueChange={([v]) => updateConfidenceThreshold(v / 100)}
+                  />
+                </div>
+                {recommendedAreaThreshold != null && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={applyRecommendedThreshold}
+                  >
+                    <Sparkles className="mr-1 h-3.5 w-3.5" />
+                    推奨塗りつぶし閾値を適用（
+                    {Math.round(recommendedAreaThreshold * 100)}%）
+                  </Button>
+                )}
               </div>
             </div>
           )}
