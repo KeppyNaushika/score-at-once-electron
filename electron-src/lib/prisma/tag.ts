@@ -5,11 +5,11 @@
 import prisma from "./client"
 
 /**
- * 全タグを取得
+ * 全タグを取得（order昇順、同orderはname昇順）
  */
 export async function getAllTags() {
   return prisma.tag.findMany({
-    orderBy: { name: "asc" },
+    orderBy: [{ order: "asc" }, { name: "asc" }],
   })
 }
 
@@ -41,21 +41,30 @@ export async function getTagsBySubtotalGroupIds(subtotalGroupIds: string[]) {
 }
 
 /**
- * タグを作成
+ * タグを作成（orderは自動採番）
  */
-export async function createTag(data: { name: string }) {
+export async function createTag(data: { name: string; color?: string }) {
+  const maxOrder = await prisma.tag.aggregate({ _max: { order: true } })
+  const nextOrder = (maxOrder._max.order ?? -1) + 1
   return prisma.tag.create({
-    data: { name: data.name },
+    data: {
+      name: data.name,
+      color: data.color ?? null,
+      order: nextOrder,
+    },
   })
 }
 
 /**
  * タグを更新
  */
-export async function updateTag(id: string, data: { name: string }) {
+export async function updateTag(
+  id: string,
+  data: { name?: string; color?: string | null }
+) {
   return prisma.tag.update({
     where: { id },
-    data: { name: data.name },
+    data,
   })
 }
 
@@ -77,7 +86,23 @@ export async function findOrCreateTag(name: string) {
   })
   if (existing) return existing
 
+  const maxOrder = await prisma.tag.aggregate({ _max: { order: true } })
+  const nextOrder = (maxOrder._max.order ?? -1) + 1
   return prisma.tag.create({
-    data: { name },
+    data: { name, order: nextOrder },
   })
+}
+
+/**
+ * タグの並び順を一括更新
+ */
+export async function reorderTags(tagIds: string[]) {
+  return prisma.$transaction(
+    tagIds.map((id, index) =>
+      prisma.tag.update({
+        where: { id },
+        data: { order: index },
+      })
+    )
+  )
 }

@@ -1,27 +1,25 @@
 "use client"
 
 import {
-  ArrowDownAZ,
-  ArrowUpAZ,
   Calculator,
-  CalendarArrowDown,
-  CalendarArrowUp,
-  Check,
   Download,
   Edit,
   Eye,
   FileImage,
+  Filter,
   FolderInput,
   FolderOutput,
   PlayCircle,
   PlusCircle,
+  Search,
   Settings,
-  SortDesc,
+  Tag,
   Upload,
   Users,
+  X as XIcon,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import ExportModeModal from "@/components/exams/detail/ExportModeModal"
@@ -29,16 +27,16 @@ import CreateExamWindow from "@/components/exams/forms/CreateExamWindow"
 import { useExams } from "@/components/hooks/useExams"
 import { useFileActions } from "@/components/hooks/useFileActions"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
@@ -48,7 +46,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { SortDirection, useTableSort } from "@/hooks/useTableSort"
+import { useTableSort } from "@/hooks/useTableSort"
 import type { ExamListItem } from "@/types/common.types"
 import type { ExportMode } from "@/types/examArchive.types"
 
@@ -59,33 +57,6 @@ interface ExamSortable {
   original: ExamListItem
 }
 
-const SORT_OPTIONS = [
-  {
-    key: "examDate",
-    direction: "desc",
-    label: "実施日（新しい順）",
-    icon: CalendarArrowDown,
-  },
-  {
-    key: "examDate",
-    direction: "asc",
-    label: "実施日（古い順）",
-    icon: CalendarArrowUp,
-  },
-  {
-    key: "examName",
-    direction: "asc",
-    label: "試験名（A→Z）",
-    icon: ArrowDownAZ,
-  },
-  {
-    key: "examName",
-    direction: "desc",
-    label: "試験名（Z→A）",
-    icon: ArrowUpAZ,
-  },
-] as const
-
 const File = () => {
   const { exams, loadExams } = useExams()
   const { user } = useAuth()
@@ -94,42 +65,67 @@ const File = () => {
   const [isBulkExporting, setIsBulkExporting] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)
 
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
+  const [bulkTagInput, setBulkTagInput] = useState("")
+  const [showBulkTagPopover, setShowBulkTagPopover] = useState(false)
+  const bulkTagInputRef = useRef<HTMLInputElement>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterTagIds, setFilterTagIds] = useState<Set<string>>(new Set())
+
   const { createExamModal } = useFileActions()
   const router = useRouter()
 
+  // 既存タグ一覧を取得
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await window.electronAPI.tagGetAll()
+        setAllTags(tags)
+      } catch {
+        // ignore
+      }
+    }
+    void loadTags()
+  }, [])
+
+  // フィルタリング
+  const filteredExams = useMemo(() => {
+    return exams.filter((exam) => {
+      // テキスト検索
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase()
+        const nameMatch = exam.examName.toLowerCase().includes(term)
+        const descMatch = exam.description?.toLowerCase().includes(term)
+        const tagMatch = exam.tags.some((t) =>
+          t.name.toLowerCase().includes(term)
+        )
+        if (!nameMatch && !descMatch && !tagMatch) return false
+      }
+      // タグフィルタ
+      if (filterTagIds.size > 0) {
+        const examTagIds = new Set(exam.tags.map((t) => t.id))
+        const hasMatch = [...filterTagIds].some((id) => examTagIds.has(id))
+        if (!hasMatch) return false
+      }
+      return true
+    })
+  }, [exams, searchTerm, filterTagIds])
+
   // ソート用データに変換
   const sortableData = useMemo<ExamSortable[]>(() => {
-    return exams.map((exam) => ({
+    return filteredExams.map((exam) => ({
       id: exam.id,
       examName: exam.examName,
       examDate: exam.examDate ? new Date(exam.examDate).toISOString() : null,
       original: exam,
     }))
-  }, [exams])
+  }, [filteredExams])
 
   // ソート機能（localStorage永続化、既定: 実施日降順）
-  const { sortedData, sortConfig, setSort } = useTableSort(sortableData, {
+  const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
     defaultSort: { key: "examDate", direction: "desc" },
     storageKey: "examList-sort",
   })
-
-  // 現在のソート設定に一致するオプションを取得
-  const currentSortLabel = useMemo(() => {
-    const option = SORT_OPTIONS.find(
-      (opt) =>
-        opt.key === sortConfig.key && opt.direction === sortConfig.direction
-    )
-    return option?.label || "並び替え"
-  }, [sortConfig])
-
-  const handleSortSelect = (
-    key: keyof ExamSortable,
-    direction: SortDirection
-  ) => {
-    if (direction) {
-      setSort(key, direction)
-    }
-  }
 
   const handleStartScoring = (exam: ExamListItem) => {
     router.push(`/exams/${exam.id}`)
@@ -164,6 +160,39 @@ const File = () => {
       return new Set(sortedData.map((d) => d.id))
     })
   }, [sortedData])
+
+  const handleBulkAddTag = useCallback(
+    async (tagName: string) => {
+      if (!tagName.trim() || selectedExamIds.size === 0) return
+      try {
+        const tag = await window.electronAPI.tagFindOrCreate(tagName.trim())
+        for (const examId of selectedExamIds) {
+          try {
+            await window.electronAPI.examTagCreate({
+              examId,
+              tagId: tag.id,
+            })
+          } catch {
+            // 既に紐づいている場合はunique制約で失敗するが無視
+          }
+        }
+        toast.success("タグを追加しました", {
+          description: `${selectedExamIds.size}件の試験に「${tagName.trim()}」を追加`,
+        })
+        setBulkTagInput("")
+        setShowBulkTagPopover(false)
+        setSelectedExamIds(new Set())
+        // タグ一覧を再取得
+        const tags = await window.electronAPI.tagGetAll()
+        setAllTags(tags)
+        loadExams()
+      } catch (error) {
+        toast.error("タグの追加に失敗しました")
+        console.error(error)
+      }
+    },
+    [selectedExamIds, loadExams]
+  )
 
   const handleBulkExport = useCallback(
     async (exportMode: ExportMode) => {
@@ -258,6 +287,62 @@ const File = () => {
                 <span className="text-muted-foreground ml-2 text-sm">
                   {selectedExamIds.size}件選択中
                 </span>
+                <Popover
+                  open={showBulkTagPopover}
+                  onOpenChange={setShowBulkTagPopover}
+                >
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="rounded-lg">
+                      <Tag className="mr-2 h-4 w-4" />
+                      タグを一括追加
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3" align="start">
+                    <div className="space-y-2">
+                      <p className="text-muted-foreground text-xs">
+                        選択中の{selectedExamIds.size}
+                        件にタグを追加
+                      </p>
+                      <Input
+                        ref={bulkTagInputRef}
+                        value={bulkTagInput}
+                        onChange={(e) => setBulkTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                            e.preventDefault()
+                            void handleBulkAddTag(bulkTagInput)
+                          }
+                        }}
+                        placeholder="タグ名を入力してEnter"
+                        className="h-8 text-sm"
+                        autoFocus
+                      />
+                      {allTags.length > 0 && (
+                        <div className="max-h-28 overflow-y-auto">
+                          {allTags
+                            .filter(
+                              (t) =>
+                                !bulkTagInput.trim() ||
+                                t.name
+                                  .toLowerCase()
+                                  .includes(bulkTagInput.trim().toLowerCase())
+                            )
+                            .map((tag) => (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm"
+                                onClick={() => void handleBulkAddTag(tag.name)}
+                              >
+                                <Tag className="h-3 w-3 opacity-50" />
+                                {tag.name}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Button
                   onClick={() => setShowBulkExportModal(true)}
                   variant="outline"
@@ -271,38 +356,84 @@ const File = () => {
             )}
           </div>
 
-          {/* ソート選択 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 rounded-lg">
-                <SortDesc className="h-4 w-4" />
-                {currentSortLabel}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>並び替え</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {SORT_OPTIONS.map((option) => {
-                const Icon = option.icon
-                const isSelected =
-                  sortConfig.key === option.key &&
-                  sortConfig.direction === option.direction
-                return (
-                  <DropdownMenuItem
-                    key={`${option.key}-${option.direction}`}
-                    onClick={() =>
-                      handleSortSelect(option.key, option.direction)
+          {/* 検索・フィルタ */}
+          <div className="ml-auto flex items-center gap-2">
+            <div className="relative">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="試験名・タグで検索"
+                className="h-8 w-48 pl-8 text-sm"
+              />
+            </div>
+            {allTags.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={
+                      filterTagIds.size > 0 ? "border-primary text-primary" : ""
                     }
-                    className="gap-2"
                   >
-                    <Icon className="h-4 w-4" />
-                    {option.label}
-                    {isSelected && <Check className="ml-auto h-4 w-4" />}
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                    <Filter className="mr-1.5 h-3.5 w-3.5" />
+                    タグ
+                    {filterTagIds.size > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-1.5 h-5 min-w-5 px-1 text-xs"
+                      >
+                        {filterTagIds.size}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2" align="start">
+                  <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {allTags.map((tag) => (
+                      <label
+                        key={tag.id}
+                        className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
+                      >
+                        <Checkbox
+                          checked={filterTagIds.has(tag.id)}
+                          onCheckedChange={(checked) => {
+                            setFilterTagIds((prev) => {
+                              const next = new Set(prev)
+                              if (checked) {
+                                next.add(tag.id)
+                              } else {
+                                next.delete(tag.id)
+                              }
+                              return next
+                            })
+                          }}
+                        />
+                        {tag.name}
+                      </label>
+                    ))}
+                  </div>
+                  {filterTagIds.size > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 w-full text-xs"
+                      onClick={() => setFilterTagIds(new Set())}
+                    >
+                      <XIcon className="mr-1 h-3 w-3" />
+                      フィルタをクリア
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
+            <span className="text-muted-foreground text-xs">
+              {filteredExams.length === exams.length
+                ? `${exams.length}件`
+                : `${filteredExams.length} / ${exams.length}件`}
+            </span>
+          </div>
         </div>
 
         {/* テーブルエリア */}
@@ -321,7 +452,23 @@ const File = () => {
                       aria-label="全選択"
                     />
                   </TableHead>
-                  <TableHead>試験名</TableHead>
+                  <SortableTableHead
+                    sortKey="examName"
+                    currentSortKey={sortConfig.key}
+                    currentDirection={sortConfig.direction}
+                    onSort={requestSort}
+                  >
+                    試験名
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="examDate"
+                    currentSortKey={sortConfig.key}
+                    currentDirection={sortConfig.direction}
+                    onSort={requestSort}
+                    className="w-28 text-center"
+                  >
+                    試験日
+                  </SortableTableHead>
                   <TableHead className="w-32 text-center">詳細</TableHead>
                   <TableHead className="w-40 text-center">
                     次のステップ
@@ -331,28 +478,55 @@ const File = () => {
               <TableBody>
                 {sortedData.map(({ original: exam }) => {
                   return (
-                    <TableRow key={exam.id} className="group">
+                    <TableRow
+                      key={exam.id}
+                      className="group cursor-pointer"
+                      onClick={() => handleToggleSelect(exam.id)}
+                    >
                       <TableCell className="text-center">
                         <Checkbox
                           checked={selectedExamIds.has(exam.id)}
                           onCheckedChange={() => handleToggleSelect(exam.id)}
+                          onClick={(e) => e.stopPropagation()}
                           aria-label={`${exam.examName}を選択`}
                         />
                       </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{exam.examName}</div>
-                          <div className="text-muted-foreground text-sm tabular-nums">
-                            {exam.examDate
-                              ? new Date(exam.examDate).toLocaleDateString(
-                                  "ja-JP"
-                                )
-                              : "実施日未設定"}
-                          </div>
+                          {exam.tags.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {exam.tags.map((tag) => (
+                                <Badge
+                                  key={tag.id}
+                                  variant="outline"
+                                  className="text-xs font-normal"
+                                  style={
+                                    tag.color
+                                      ? {
+                                          borderColor: tag.color,
+                                          color: tag.color,
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-muted-foreground text-center text-sm tabular-nums">
+                        {exam.examDate
+                          ? new Date(exam.examDate).toLocaleDateString("ja-JP")
+                          : "—"}
+                      </TableCell>
 
-                      <TableCell className="text-center">
+                      <TableCell
+                        className="text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="outline"
                           size="sm"
@@ -364,7 +538,10 @@ const File = () => {
                         </Button>
                       </TableCell>
 
-                      <TableCell className="text-center">
+                      <TableCell
+                        className="text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           size="sm"
                           onClick={() => handleNextStep(exam)}

@@ -1,7 +1,7 @@
 "use client"
 
-import { X as XIcon } from "lucide-react"
-import React, { useState } from "react"
+import { Tag as TagIcon, X as XIcon } from "lucide-react"
+import React, { useCallback, useEffect, useState } from "react"
 
 import { useExams } from "@/components/hooks/useExams"
 import { Badge } from "@/components/ui/badge"
@@ -30,9 +30,24 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   const [examName, setExamName] = useState("")
   const [examDate, setExamDate] = useState<Date | null>(null)
   const [description, setDescription] = useState("")
-  const [tagTexts, setTagTexts] = useState<string[]>([]) // タグの文字列配列
-  const [currentTagInput, setCurrentTagInput] = useState("") // 現在のタグ入力値
-  const { createExam } = useExams() // addExam から createExam に変更
+  const [tagTexts, setTagTexts] = useState<string[]>([])
+  const [currentTagInput, setCurrentTagInput] = useState("")
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const { createExam } = useExams()
+
+  // 既存タグを取得
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await window.electronAPI.tagGetAll()
+        setAllTags(tags)
+      } catch {
+        // ignore
+      }
+    }
+    void loadTags()
+  }, [])
 
   const handleSubmit = async () => {
     if (!examName.trim()) {
@@ -40,26 +55,40 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
       return
     }
     try {
-      // createExam の引数をPrismaの型に合わせる
-      await createExam({
+      const createdExam = await createExam({
         examName: examName.trim(),
         examDate: examDate,
         description: description.trim() || undefined,
       })
-      onExamCreated?.() // 試験作成成功時のコールバック
+
+      // タグを保存
+      if (tagTexts.length > 0 && createdExam?.id) {
+        const tagIds: string[] = []
+        for (const tagName of tagTexts) {
+          const tag = await window.electronAPI.tagFindOrCreate(tagName)
+          tagIds.push(tag.id)
+        }
+        await window.electronAPI.examTagSetExamTags(createdExam.id, tagIds)
+      }
+
+      onExamCreated?.()
       onClose()
     } catch (error) {
       console.error("Failed to create exam:", error)
-      // Handle error display to user
     }
   }
 
-  const handleAddTag = () => {
-    if (currentTagInput.trim() && !tagTexts.includes(currentTagInput.trim())) {
-      setTagTexts([...tagTexts, currentTagInput.trim()])
+  const handleAddTag = useCallback(
+    (tagName?: string) => {
+      const name = (tagName ?? currentTagInput).trim()
+      if (name && !tagTexts.includes(name)) {
+        setTagTexts([...tagTexts, name])
+      }
       setCurrentTagInput("")
-    }
-  }
+      setShowSuggestions(false)
+    },
+    [currentTagInput, tagTexts]
+  )
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTagTexts(tagTexts.filter((tag) => tag !== tagToRemove))
@@ -72,20 +101,24 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
     }
   }
 
+  // サジェスト候補（入力中のテキストでフィルタ、既に追加済みは除外）
+  const suggestions = allTags.filter(
+    (t) =>
+      !tagTexts.includes(t.name) &&
+      (currentTagInput.trim() === "" ||
+        t.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
+  )
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
-        {" "}
-        {/* sm:max-w-md に変更 */}
         <DialogHeader>
           <DialogTitle>新規試験作成</DialogTitle>
           <DialogDescription>
-            新しい試験試験の詳細情報を入力してください。
+            新しい試験の詳細情報を入力してください。
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
-          {" "}
-          {/* gap-6 に変更 */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="examName" className="text-right">
               試験名
@@ -117,31 +150,61 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
             <Label htmlFor="description" className="pt-2 text-right">
               説明
             </Label>
-            <Textarea // textarea を Textarea コンポーネントに変更
+            <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3 min-h-20" // クラス名を調整
+              className="col-span-3 min-h-20"
               placeholder="試験の説明（任意）"
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="tagTexts" className="pt-2 text-right">
-              科目
+              タグ
             </Label>
             <div className="col-span-3">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="relative mb-2 flex items-center gap-2">
                 <Input
                   id="tagTexts"
                   value={currentTagInput}
-                  onChange={(e) => setCurrentTagInput(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentTagInput(e.target.value)
+                    setShowSuggestions(true)
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => {
+                    // blurを少し遅延させてクリックイベントを拾えるようにする
+                    setTimeout(() => setShowSuggestions(false), 200)
+                  }}
                   onKeyDown={handleTagInputKeyDown}
                   className="grow"
-                  placeholder="科目を入力してEnter"
+                  placeholder="教科名や試験種別などのタグを入力"
                 />
-                <Button type="button" onClick={handleAddTag} variant="outline">
+                <Button
+                  type="button"
+                  onClick={() => handleAddTag()}
+                  variant="outline"
+                >
                   追加
                 </Button>
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="bg-popover border-border absolute top-full right-10 left-0 z-50 mt-1 max-h-32 overflow-y-auto rounded-md border shadow-md">
+                    {suggestions.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className="hover:bg-accent flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          handleAddTag(tag.name)
+                        }}
+                      >
+                        <TagIcon className="h-3 w-3 opacity-50" />
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 {tagTexts.map((tagText, index) => (

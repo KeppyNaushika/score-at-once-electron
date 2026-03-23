@@ -11,8 +11,10 @@ import {
 import {
   createTag,
   deleteTag,
+  findOrCreateTag,
   getAllTags,
   getTagById,
+  reorderTags,
   updateTag,
 } from "../lib/prisma/tag"
 import {
@@ -33,16 +35,30 @@ export function setupTagHandlers(): void {
     return getTagById(id)
   })
 
-  registerHandler("tag:create", async (data: { name: string }) => {
-    return createTag(data)
-  })
+  registerHandler(
+    "tag:create",
+    async (data: { name: string; color?: string }) => {
+      return createTag(data)
+    }
+  )
 
-  registerHandler("tag:update", async (id: string, data: { name: string }) => {
-    return updateTag(id, data)
+  registerHandler(
+    "tag:update",
+    async (id: string, data: { name?: string; color?: string | null }) => {
+      return updateTag(id, data)
+    }
+  )
+
+  registerHandler("tag:reorder", async (tagIds: string[]) => {
+    return reorderTags(tagIds)
   })
 
   registerHandler("tag:delete", async (id: string) => {
     return deleteTag(id)
+  })
+
+  registerHandler("tag:findOrCreate", async (name: string) => {
+    return findOrCreateTag(name)
   })
 
   // TagSubtotalGroup CRUD

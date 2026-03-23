@@ -3,7 +3,7 @@
  *
  * 主な変更点:
  * - ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride を試験データに追加
- * - Subject, SubjectSubtotalGroup を教科データとして追加
+ * - Subject, SubjectSubtotalGroup をタグデータとして追加
  *
  * v1.3.0形式のアーカイブにはこれらのフィールドが存在しないため、
  * デフォルト値（空配列/null）を設定する
@@ -25,7 +25,7 @@ export class V1_3_0_to_V1_4_0_Transformer implements VersionTransformer {
 
     warnings.push(
       `アーカイブはv0.5.x形式(archive v${this.fromVersion})で作成されています。` +
-        `採点マーク設定・エクスポート設定・設問別マークオーバーライド・教科データが追加されます。`
+        `採点マーク設定・エクスポート設定・設問別マークオーバーライド・タグデータが追加されます。`
     )
 
     return {

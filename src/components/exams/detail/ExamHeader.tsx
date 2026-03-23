@@ -26,7 +26,7 @@ interface ExamData {
   examName: string
   description: string | null
   examDate: Date | null
-  examTags?: { tag: { id: string; name: string } }[]
+  examTags?: { tag: { id: string; name: string; color: string | null } }[]
   createdAt: Date
 }
 
@@ -55,7 +55,15 @@ export default function ExamHeader({
             {exam.examTags &&
               exam.examTags.length > 0 &&
               exam.examTags.map((et) => (
-                <Badge key={et.tag.id} variant="outline">
+                <Badge
+                  key={et.tag.id}
+                  variant="outline"
+                  style={
+                    et.tag.color
+                      ? { borderColor: et.tag.color, color: et.tag.color }
+                      : undefined
+                  }
+                >
                   <Tag className="mr-1 h-3 w-3" />
                   {et.tag.name}
                 </Badge>

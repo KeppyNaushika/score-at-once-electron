@@ -876,7 +876,7 @@ export interface ArchiveScoresData {
 }
 
 /**
- * 教科データ (subjects.json) - v1.4.0-v1.9.0
+ * タグデータ (subjects.json) - v1.4.0-v1.9.0
  * @deprecated v1.10.0以降は ArchiveTagsData を使用
  */
 export interface ArchiveSubjectsData {

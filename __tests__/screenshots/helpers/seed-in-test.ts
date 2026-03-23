@@ -350,7 +350,7 @@ export async function seedClasses(
 }
 
 // ---------------------------------------------------------------------------
-// 小計グループ + 教科
+// 小計グループ + タグ
 // ---------------------------------------------------------------------------
 export async function seedSubtotalAndTag(): Promise<{
   subtotalGroupId: string

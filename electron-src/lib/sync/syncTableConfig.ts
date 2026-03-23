@@ -35,7 +35,7 @@ export const SYNC_TABLES: TableConfig[] = [
   std("QuestionScore"),
   std("DrawingAnnotation"),
 
-  // 小計・教科
+  // 小計・タグ
   std("SubtotalGroup"),
   std("Subtotal"),
   std("CropSubtotal"),

@@ -1,7 +1,7 @@
 "use client"
 
-import { CheckIcon, Edit2Icon, Trash2Icon, X as XIcon } from "lucide-react"
-import React, { useState } from "react"
+import { Tag as TagIcon, X as XIcon } from "lucide-react"
+import React, { useCallback, useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,11 +18,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { ExamWithDetails } from "@/types/common.types"
 
-type Tag = {
-  id: string
-  text: string
-}
-
 interface EditExamWindowProps {
   examToEdit: ExamWithDetails
   setIsShowEditExamWindow: (isOpen: boolean) => void
@@ -37,7 +32,6 @@ const EditExamWindow = ({
   const [examName, setExamName] = useState(examToEdit.examName)
   const [examDate, setExamDate] = useState<Date | undefined>(() => {
     if (!examToEdit.examDate) return undefined
-    // examDateが文字列の場合はDateオブジェクトに変換
     return examToEdit.examDate instanceof Date
       ? examToEdit.examDate
       : new Date(examToEdit.examDate)
@@ -45,17 +39,46 @@ const EditExamWindow = ({
   const [description, setDescription] = useState<string | null>(
     examToEdit.description ?? null
   )
-  // タグ機能は未実装のため、空の配列で初期化
-  const [tags, setTags] = useState<Tag[]>([])
+  const [tagNames, setTagNames] = useState<string[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
-  const [editingTagId, setEditingTagId] = useState<string | null>(null)
-  const [editingTagText, setEditingTagText] = useState<string>("")
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // 既存タグと全タグ一覧を取得
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const [examTags, tags] = await Promise.all([
+          window.electronAPI.examTagGetByExamId(examToEdit.id),
+          window.electronAPI.tagGetAll(),
+        ])
+        setTagNames(examTags.map((et) => et.tag.name))
+        setAllTags(tags)
+      } catch {
+        // ignore
+      }
+    }
+    void loadTags()
+  }, [examToEdit.id])
 
   const handleSave = async () => {
     if (!examName.trim()) {
       alert("試験名は必須です。")
       return
     }
+
+    // タグを保存
+    try {
+      const tagIds: string[] = []
+      for (const name of tagNames) {
+        const tag = await window.electronAPI.tagFindOrCreate(name)
+        tagIds.push(tag.id)
+      }
+      await window.electronAPI.examTagSetExamTags(examToEdit.id, tagIds)
+    } catch (error) {
+      console.error("Failed to save tags:", error)
+    }
+
     const updatedExamPayload: ExamWithDetails = {
       ...examToEdit,
       examName: examName.trim(),
@@ -66,71 +89,20 @@ const EditExamWindow = ({
     await onSave(updatedExamPayload)
   }
 
-  const handleAddTag = async () => {
-    if (
-      currentTagInput.trim() &&
-      !tags.find((tag) => tag.text === currentTagInput.trim())
-    ) {
-      try {
-        // Tag functionality is not implemented yet
-        const newTag = {
-          id: Date.now().toString(),
-          text: currentTagInput.trim(),
-        }
-        if (newTag) {
-          setTags([...tags, newTag])
-        }
-        setCurrentTagInput("")
-      } catch (error) {
-        console.error("Failed to create tag:", error)
-        alert("タグの作成に失敗しました。")
+  const handleAddTag = useCallback(
+    (tagName?: string) => {
+      const name = (tagName ?? currentTagInput).trim()
+      if (name && !tagNames.includes(name)) {
+        setTagNames([...tagNames, name])
       }
-    }
-  }
+      setCurrentTagInput("")
+      setShowSuggestions(false)
+    },
+    [currentTagInput, tagNames]
+  )
 
-  const handleRemoveTagFromExam = (tagIdToRemove: string) => {
-    setTags(tags.filter((tag) => tag.id !== tagIdToRemove))
-  }
-
-  const handleDeleteTagFromDb = async (_tagIdToDelete: string) => {
-    if (
-      window.confirm(
-        "このタグをデータベースから完全に削除しますか？関連する他の試験からも削除されます。"
-      )
-    ) {
-      try {
-        // Tag deletion functionality is not implemented yet
-        alert("タグ削除機能は未実装です。")
-        // await window.electronAPI.deleteTag(tagIdToDelete)
-        // setTags(tags.filter((tag) => tag.id !== tagIdToDelete))
-      } catch (error) {
-        console.error("Failed to delete tag from DB:", error)
-        alert("タグの削除に失敗しました。")
-      }
-    }
-  }
-
-  const handleEditTag = (tag: Tag) => {
-    setEditingTagId(tag.id)
-    setEditingTagText(tag.text)
-  }
-
-  const handleSaveEditedTag = async () => {
-    if (!editingTagId || !editingTagText.trim()) return
-    try {
-      // Tag update functionality is not implemented yet
-      alert("タグ更新機能は未実装です。")
-      // const updatedTag = await window.electronAPI.updateTag(
-      //   editingTagId,
-      //   editingTagText.trim(),
-      // )
-      // setTags(tags.map((tag) => (tag.id === editingTagId ? updatedTag : tag)))
-      setEditingTagId(null)
-      setEditingTagText("")
-    } catch (error) {
-      console.error("Failed to update tag:", error)
-      alert("タグの更新に失敗しました。")
-    }
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTagNames(tagNames.filter((t) => t !== tagToRemove))
   }
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -140,25 +112,17 @@ const EditExamWindow = ({
     }
   }
 
-  const handleEditingTagInputKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-      e.preventDefault()
-      handleSaveEditedTag()
-    }
-    if (e.key === "Escape") {
-      e.preventDefault()
-      setEditingTagId(null)
-      setEditingTagText("")
-    }
-  }
+  // サジェスト候補
+  const suggestions = allTags.filter(
+    (t) =>
+      !tagNames.includes(t.name) &&
+      (currentTagInput.trim() === "" ||
+        t.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
+  )
 
   return (
     <Dialog open onOpenChange={setIsShowEditExamWindow}>
       <DialogContent className="sm:max-w-md">
-        {" "}
-        {/* sm:max-w-md に変更 */}
         <DialogHeader>
           <DialogTitle>試験情報を編集</DialogTitle>
           <DialogDescription>
@@ -166,8 +130,6 @@ const EditExamWindow = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
-          {" "}
-          {/* gap-6 に変更 */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="examName" className="text-right">
               試験名
@@ -196,7 +158,6 @@ const EditExamWindow = ({
               className="col-span-3"
             />
           </div>
-          {/* Description の編集機能がなかったので追加 */}
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="edit-description" className="pt-2 text-right">
               説明
@@ -211,80 +172,63 @@ const EditExamWindow = ({
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="tags" className="pt-2 text-right">
-              科目
+              タグ
             </Label>
             <div className="col-span-3">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="relative mb-2 flex items-center gap-2">
                 <Input
                   id="tags"
                   value={currentTagInput}
-                  onChange={(e) => setCurrentTagInput(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentTagInput(e.target.value)
+                    setShowSuggestions(true)
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => {
+                    setTimeout(() => setShowSuggestions(false), 200)
+                  }}
                   onKeyDown={handleTagInputKeyDown}
                   className="grow"
-                  placeholder="科目を入力してEnter"
+                  placeholder="教科名や試験種別などのタグを入力"
                 />
-                <Button type="button" onClick={handleAddTag} variant="outline">
+                <Button
+                  type="button"
+                  onClick={() => handleAddTag()}
+                  variant="outline"
+                >
                   追加
                 </Button>
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="bg-popover border-border absolute top-full right-10 left-0 z-50 mt-1 max-h-32 overflow-y-auto rounded-md border shadow-md">
+                    {suggestions.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className="hover:bg-accent flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          handleAddTag(tag.name)
+                        }}
+                      >
+                        <TagIcon className="h-3 w-3 opacity-50" />
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="secondary"
-                    className="group relative flex items-center pr-2" // pr-2 に変更し、items-center を追加
-                  >
-                    {editingTagId === tag.id ? (
-                      <Input
-                        type="text"
-                        value={editingTagText}
-                        onChange={(e) => setEditingTagText(e.target.value)}
-                        onKeyDown={handleEditingTagInputKeyDown}
-                        onBlur={() => {
-                          // 編集中のタグからフォーカスが外れたら保存するか、キャンセルするか検討
-                          // ここでは一旦何もしない (Enterキーでの保存を促す)
-                          // もし自動保存したい場合は handleSaveEditedTag() を呼ぶ
-                          // もしキャンセルしたい場合は setEditingTagId(null) を呼ぶ
-                        }}
-                        className="mr-1 h-6 grow px-1 text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      <span className="mr-1">{tag.text}</span> // mr-1 を追加
-                    )}
-                    <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
-                      {" "}
-                      {/* absolute を削除し、flex items-center を適用 */}
-                      {editingTagId === tag.id ? (
-                        <CheckIcon
-                          size={16} // サイズを少し大きく
-                          className="cursor-pointer text-green-600 hover:text-green-800"
-                          onClick={handleSaveEditedTag}
-                        />
-                      ) : (
-                        <Edit2Icon
-                          size={16} // サイズを少し大きく
-                          className="mr-1 cursor-pointer text-blue-600 hover:text-blue-800"
-                          onClick={() => handleEditTag(tag)}
-                        />
-                      )}
-                      {/* 試験からタグを外すボタン (XIcon) を追加 */}
-                      <div title="この試験から科目を削除">
-                        <XIcon
-                          size={16}
-                          className="ml-1 cursor-pointer text-gray-500 hover:text-gray-700"
-                          onClick={() => handleRemoveTagFromExam(tag.id)}
-                        />
-                      </div>
-                      {/* DBからタグ自体を削除するボタン (TrashIcon) はより危険な操作なので、アイコンを分けるか、別の場所に配置することを検討 */}
-                      <div title="データベースから科目を完全に削除">
-                        <Trash2Icon
-                          size={16}
-                          className="ml-1 cursor-pointer text-red-600 hover:text-red-800"
-                          onClick={() => handleDeleteTagFromDb(tag.id)}
-                        />
-                      </div>
-                    </div>
+                {tagNames.map((name, index) => (
+                  <Badge key={index} variant="secondary">
+                    {name}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(name)}
+                      className="text-secondary-foreground hover:text-destructive ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0"
+                      aria-label={`Remove ${name}`}
+                    >
+                      <XIcon size={14} />
+                    </button>
                   </Badge>
                 ))}
               </div>
