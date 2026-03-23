@@ -146,54 +146,83 @@ export async function createImportedData(
         })
       }
 
-      // 6.5. Subject/SubjectSubtotalGroupを作成 (v1.4.0+)
-      const subjectsData = data.subjectsData
-      if (subjectsData) {
-        for (const subject of subjectsData.subjects) {
-          await tx.subject.upsert({
-            where: { name: subject.name },
+      // 6.5. Tag/TagSubtotalGroup/ExamTagを作成 (v1.10.0+, 旧Subject)
+      const tagsData = data.tagsData
+      if (tagsData) {
+        for (const tag of tagsData.tags) {
+          await tx.tag.upsert({
+            where: { name: tag.name },
             update: {},
             create: {
-              id: remapIdRequired(subject.id, mappings.subject),
-              name: subject.name,
+              id: remapIdRequired(tag.id, mappings.tag),
+              name: tag.name,
             },
           })
         }
 
-        for (const ssg of subjectsData.subjectSubtotalGroups) {
-          const newSubjectId = remapId(ssg.subjectId, mappings.subject)
+        for (const tsg of tagsData.tagSubtotalGroups) {
+          const newTagId = remapId(tsg.tagId, mappings.tag)
           const newSubtotalGroupId = remapId(
-            ssg.subtotalGroupId,
+            tsg.subtotalGroupId,
             mappings.subtotalGroup
           )
-          if (newSubjectId && newSubtotalGroupId) {
-            // subjectのIDがupsertで変わっている可能性があるため、名前で実際のIDを取得
-            const originalSubject = subjectsData.subjects.find(
-              (s) => s.id === ssg.subjectId
+          if (newTagId && newSubtotalGroupId) {
+            // tagのIDがupsertで変わっている可能性があるため、名前で実際のIDを取得
+            const originalTag = tagsData.tags.find(
+              (t) => t.id === tsg.tagId
             )
-            if (originalSubject) {
-              const actualSubject = await tx.subject.findUnique({
-                where: { name: originalSubject.name },
+            if (originalTag) {
+              const actualTag = await tx.tag.findUnique({
+                where: { name: originalTag.name },
               })
-              if (actualSubject) {
+              if (actualTag) {
                 // 重複チェック
-                const existing = await tx.subjectSubtotalGroup.findUnique({
+                const existing = await tx.tagSubtotalGroup.findUnique({
                   where: {
-                    subjectId_subtotalGroupId: {
-                      subjectId: actualSubject.id,
+                    tagId_subtotalGroupId: {
+                      tagId: actualTag.id,
                       subtotalGroupId: newSubtotalGroupId,
                     },
                   },
                 })
                 if (!existing) {
-                  await tx.subjectSubtotalGroup.create({
+                  await tx.tagSubtotalGroup.create({
                     data: {
                       id: remapIdRequired(
-                        ssg.id,
-                        mappings.subjectSubtotalGroup
+                        tsg.id,
+                        mappings.tagSubtotalGroup
                       ),
-                      subjectId: actualSubject.id,
+                      tagId: actualTag.id,
                       subtotalGroupId: newSubtotalGroupId,
+                    },
+                  })
+                }
+              }
+            }
+          }
+        }
+
+        // ExamTag作成
+        for (const et of tagsData.examTags) {
+          const newTagId = remapId(et.tagId, mappings.tag)
+          if (newTagId) {
+            const originalTag = tagsData.tags.find(
+              (t) => t.id === et.tagId
+            )
+            if (originalTag) {
+              const actualTag = await tx.tag.findUnique({
+                where: { name: originalTag.name },
+              })
+              if (actualTag) {
+                const existing = await tx.examTag.findFirst({
+                  where: { examId: newExamId, tagId: actualTag.id },
+                })
+                if (!existing) {
+                  await tx.examTag.create({
+                    data: {
+                      id: remapIdRequired(et.id, mappings.examTag),
+                      examId: newExamId,
+                      tagId: actualTag.id,
                     },
                   })
                 }
@@ -210,7 +239,6 @@ export async function createImportedData(
           id: newExamId,
           examName: exam.examName,
           examDate: exam.examDate ? new Date(exam.examDate) : null,
-          subject: exam.subject,
           description: exam.description,
         },
       })

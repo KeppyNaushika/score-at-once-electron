@@ -11,7 +11,7 @@ interface StudentExamResult {
   examId: string
   examName: string
   examDate: Date | null
-  subject: string | null
+  tags: string[]
   totalScore: number
   maxScore: number
   scoredCount: number

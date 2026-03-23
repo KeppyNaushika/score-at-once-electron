@@ -11,8 +11,8 @@ import type {
   ArchiveExamData,
   ArchiveScoresData,
   ArchiveStudentsData,
-  ArchiveSubjectsData,
   ArchiveSubtotalsData,
+  ArchiveTagsData,
   ArchiveUsersData,
   ExportMode,
 } from "../../../../src/types/examArchive.types"
@@ -28,7 +28,7 @@ export interface CollectedData {
   usersData: ArchiveUsersData
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
-  subjectsData: ArchiveSubjectsData
+  tagsData: ArchiveTagsData
   deletedRecordsData: ArchiveDeletedRecordsData
   counts: ArchiveDataCounts
   /** マスター画像の相対パス一覧 */
@@ -184,21 +184,24 @@ export async function collectExamData(
         where: { cropRegionId: { in: cropRegionIds } },
       })
 
-    // 7.8. Subject/SubjectSubtotalGroupを取得（subtotalGroup経由、templateモードでは空）
+    // 7.8. Tag/TagSubtotalGroup/ExamTagを取得（subtotalGroup経由、templateモードでは空）
     const subtotalGroupIdArray = Array.from(subtotalGroupIds)
-    const subjectSubtotalGroups = includeSubtotals
-      ? await prisma.subjectSubtotalGroup.findMany({
+    const tagSubtotalGroups = includeSubtotals
+      ? await prisma.tagSubtotalGroup.findMany({
           where: { subtotalGroupId: { in: subtotalGroupIdArray } },
         })
       : []
-    const subjectIds = [
-      ...new Set(subjectSubtotalGroups.map((ssg) => ssg.subjectId)),
+    const tagIds = [
+      ...new Set(tagSubtotalGroups.map((tsg) => tsg.tagId)),
     ]
-    const subjects = includeSubtotals
-      ? await prisma.subject.findMany({
-          where: { id: { in: subjectIds } },
+    const tags = includeSubtotals
+      ? await prisma.tag.findMany({
+          where: { id: { in: tagIds } },
         })
       : []
+    const examTags = await prisma.examTag.findMany({
+      where: { examId },
+    })
 
     // CropSubtotalを収集（templateモードでは空）
     const cropSubtotals: Array<{
@@ -307,7 +310,6 @@ export async function collectExamData(
         id: exam.id,
         examName: exam.examName,
         examDate: exam.examDate?.toISOString() ?? null,
-        subject: exam.subject,
         description: exam.description,
         createdAt: exam.createdAt.toISOString(),
         updatedAt: exam.updatedAt.toISOString(),
@@ -541,19 +543,26 @@ export async function collectExamData(
       drawingAnnotations,
     }
 
-    const subjectsData: ArchiveSubjectsData = {
-      subjects: subjects.map((s) => ({
-        id: s.id,
-        name: s.name,
-        createdAt: s.createdAt.toISOString(),
-        updatedAt: s.updatedAt.toISOString(),
+    const tagsData: ArchiveTagsData = {
+      tags: tags.map((t) => ({
+        id: t.id,
+        name: t.name,
+        createdAt: t.createdAt.toISOString(),
+        updatedAt: t.updatedAt.toISOString(),
       })),
-      subjectSubtotalGroups: subjectSubtotalGroups.map((ssg) => ({
-        id: ssg.id,
-        subjectId: ssg.subjectId,
-        subtotalGroupId: ssg.subtotalGroupId,
-        createdAt: ssg.createdAt.toISOString(),
-        updatedAt: ssg.updatedAt.toISOString(),
+      tagSubtotalGroups: tagSubtotalGroups.map((tsg) => ({
+        id: tsg.id,
+        tagId: tsg.tagId,
+        subtotalGroupId: tsg.subtotalGroupId,
+        createdAt: tsg.createdAt.toISOString(),
+        updatedAt: tsg.updatedAt.toISOString(),
+      })),
+      examTags: examTags.map((et) => ({
+        id: et.id,
+        examId: et.examId,
+        tagId: et.tagId,
+        createdAt: et.createdAt.toISOString(),
+        updatedAt: et.updatedAt.toISOString(),
       })),
     }
 
@@ -595,7 +604,7 @@ export async function collectExamData(
         usersData,
         subtotalsData,
         scoresData,
-        subjectsData,
+        tagsData,
         deletedRecordsData,
         counts,
         masterImagePaths,

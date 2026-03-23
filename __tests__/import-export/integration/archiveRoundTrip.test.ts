@@ -340,9 +340,9 @@ describe("archiveRoundTrip", () => {
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
-    expect(result.data!.subjectsData).toBeDefined()
-    expect(result.data!.subjectsData.subjects).toHaveLength(0)
-    expect(result.data!.subjectsData.subjectSubtotalGroups).toHaveLength(0)
+    expect(result.data!.tagsData).toBeDefined()
+    expect(result.data!.tagsData.tags).toHaveLength(0)
+    expect(result.data!.tagsData.tagSubtotalGroups).toHaveLength(0)
 
     cleanupTempDir(result.data!.tempDir)
   })

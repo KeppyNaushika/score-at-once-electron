@@ -195,7 +195,7 @@ describe("アーカイブデータ構造", () => {
       expect(data.usersData).toBeTruthy()
       expect(data.subtotalsData).toBeTruthy()
       expect(data.scoresData).toBeTruthy()
-      expect(data.subjectsData).toBeTruthy()
+      expect(data.tagsData).toBeTruthy()
       expect(data.tempDir).toBeTruthy()
     })
 

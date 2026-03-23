@@ -283,8 +283,7 @@ export async function convertDatToScore(
         id: examId,
         examName: examTitle,
         examDate: null,
-        subject: subjectName,
-        description: `リアテンダントからインポート`,
+        description: `リアテンダントからインポート（${subjectName}）`,
         createdAt: now,
         updatedAt: now,
       },
@@ -370,9 +369,9 @@ export async function convertDatToScore(
       )
     )
     scoreZip.addFile(
-      "subjects.json",
+      "tags.json",
       Buffer.from(
-        JSON.stringify({ subjects: [], subjectSubtotalGroups: [] }, null, 2)
+        JSON.stringify({ tags: [], tagSubtotalGroups: [], examTags: [] }, null, 2)
       )
     )
 

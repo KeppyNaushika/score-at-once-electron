@@ -136,8 +136,7 @@ export async function convertHszToScore(
         id: examId,
         examName: sheets.title_name,
         examDate: null,
-        subject: subjectName,
-        description: `百問繚乱からインポート（${sheets.course}）`,
+        description: `百問繚乱からインポート（${subjectName}・${sheets.course}）`,
         createdAt: now,
         updatedAt: now,
       },
@@ -224,9 +223,9 @@ export async function convertHszToScore(
       )
     )
     scoreZip.addFile(
-      "subjects.json",
+      "tags.json",
       Buffer.from(
-        JSON.stringify({ subjects: [], subjectSubtotalGroups: [] }, null, 2)
+        JSON.stringify({ tags: [], tagSubtotalGroups: [], examTags: [] }, null, 2)
       )
     )
 

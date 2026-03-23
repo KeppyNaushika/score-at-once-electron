@@ -64,7 +64,7 @@ function createMinimalReport(
     examInfo: {
       examName: "テスト試験",
       examDate: null,
-      subject: null,
+      tags: [],
     },
     scoringData: {
       studentId: "s1",

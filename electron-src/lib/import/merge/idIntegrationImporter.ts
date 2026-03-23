@@ -193,8 +193,8 @@ export async function executeIdIntegrationImport(
         // 10c. CropRegionMarkingOverride (v1.4.0+)
         await processCropRegionMarkingOverrides(data, idMappings, tx)
 
-        // 10d. Subject & SubjectSubtotalGroup (v1.4.0+)
-        await processSubjects(data, idMappings, tx)
+        // 10d. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
+        await processTags(data, idMappings, tx)
 
         // 10e. ExamClass (v1.1.0+)
         await processExamClasses(data, newExamId, idMappings, tx)
@@ -432,7 +432,6 @@ async function processExam(
       id: exam.id,
       examName: exam.examName,
       examDate: exam.examDate ? new Date(exam.examDate) : null,
-      subject: exam.subject,
       description: exam.description,
     },
   })
@@ -1093,57 +1092,84 @@ async function processCropRegionMarkingOverrides(
   }
 }
 
-async function processSubjects(
+async function processTags(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  if (!data.subjectsData) return
-  const subjectIdMapping: Record<string, string> = {}
+  if (!data.tagsData) return
+  const tagIdMapping: Record<string, string> = {}
 
-  for (const subj of data.subjectsData.subjects) {
-    const existingByName = await tx.subject.findUnique({
-      where: { name: subj.name },
+  for (const tag of data.tagsData.tags) {
+    const existingByName = await tx.tag.findUnique({
+      where: { name: tag.name },
     })
     if (existingByName) {
-      subjectIdMapping[subj.id] = existingByName.id
+      tagIdMapping[tag.id] = existingByName.id
       continue
     }
 
-    const existingById = await tx.subject.findUnique({
-      where: { id: subj.id },
+    const existingById = await tx.tag.findUnique({
+      where: { id: tag.id },
     })
     if (existingById) {
-      subjectIdMapping[subj.id] = subj.id
+      tagIdMapping[tag.id] = tag.id
     } else {
-      await tx.subject.create({
-        data: { id: subj.id, name: subj.name },
+      await tx.tag.create({
+        data: { id: tag.id, name: tag.name },
       })
-      subjectIdMapping[subj.id] = subj.id
+      tagIdMapping[tag.id] = tag.id
     }
   }
 
-  for (const ssg of data.subjectsData.subjectSubtotalGroups) {
-    const newSubjectId = subjectIdMapping[ssg.subjectId]
-    const newGroupId = idMappings.subtotalGroup[ssg.subtotalGroupId]
-    if (!newSubjectId || !newGroupId) continue
+  for (const tsg of data.tagsData.tagSubtotalGroups) {
+    const newTagId = tagIdMapping[tsg.tagId]
+    const newGroupId = idMappings.subtotalGroup[tsg.subtotalGroupId]
+    if (!newTagId || !newGroupId) continue
 
-    const existing = await tx.subjectSubtotalGroup.findFirst({
-      where: { subjectId: newSubjectId, subtotalGroupId: newGroupId },
+    const existing = await tx.tagSubtotalGroup.findFirst({
+      where: { tagId: newTagId, subtotalGroupId: newGroupId },
     })
     if (existing) continue
 
-    const existingById = await tx.subjectSubtotalGroup.findUnique({
-      where: { id: ssg.id },
+    const existingById = await tx.tagSubtotalGroup.findUnique({
+      where: { id: tsg.id },
     })
     if (!existingById) {
-      await tx.subjectSubtotalGroup.create({
+      await tx.tagSubtotalGroup.create({
         data: {
-          id: ssg.id,
-          subjectId: newSubjectId,
+          id: tsg.id,
+          tagId: newTagId,
           subtotalGroupId: newGroupId,
         },
       })
+    }
+  }
+
+  // ExamTag処理
+  const newExamId = idMappings.exam[data.examData.exam.id]
+  if (newExamId) {
+    for (const et of data.tagsData.examTags) {
+      const newTagId = tagIdMapping[et.tagId]
+      if (!newTagId) continue
+
+      const existing = await tx.examTag.findFirst({
+        where: { examId: newExamId, tagId: newTagId },
+      })
+      if (existing) continue
+
+      const existingById = await tx.examTag.findUnique({
+        where: { id: et.id },
+      })
+      if (!existingById) {
+        await tx.examTag.create({
+          data: {
+            id: et.id,
+            examId: newExamId,
+            tagId: newTagId,
+          },
+        })
+      }
     }
   }
 }

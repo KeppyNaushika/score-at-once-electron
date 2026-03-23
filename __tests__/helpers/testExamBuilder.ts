@@ -112,10 +112,10 @@ export interface FullTestExam {
     cropRegionId: string
     markType: string
   }>
-  subject: { id: string; name: string } | null
-  subjectSubtotalGroup: {
+  tag: { id: string; name: string } | null
+  tagSubtotalGroup: {
     id: string
-    subjectId: string
+    tagId: string
     subtotalGroupId: string
   } | null
 }
@@ -156,7 +156,6 @@ export async function createFullTestExam(
       id: randomUUID(),
       examName,
       examDate: new Date("2025-07-01"),
-      subject: "数学",
     },
   })
 
@@ -393,8 +392,8 @@ export async function createFullTestExam(
   const examMarkingFormats = []
   let examExportSettings = null
   const cropRegionMarkingOverrides = []
-  let subject = null
-  let subjectSubtotalGroup = null
+  let tag = null
+  let tagSubtotalGroup = null
 
   if (includeV140Data) {
     // ExamMarkingFormat
@@ -435,18 +434,18 @@ export async function createFullTestExam(
       cropRegionMarkingOverrides.push(crmo)
     }
 
-    // Subject + SubjectSubtotalGroup
-    subject = await prisma.subject.create({
+    // Tag + TagSubtotalGroup
+    tag = await prisma.tag.create({
       data: {
         id: randomUUID(),
         name: `数学_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       },
     })
 
-    subjectSubtotalGroup = await prisma.subjectSubtotalGroup.create({
+    tagSubtotalGroup = await prisma.tagSubtotalGroup.create({
       data: {
         id: randomUUID(),
-        subjectId: subject.id,
+        tagId: tag.id,
         subtotalGroupId: subtotalGroup.id,
       },
     })
@@ -536,12 +535,12 @@ export async function createFullTestExam(
       cropRegionId: crmo.cropRegionId,
       markType: crmo.markType,
     })),
-    subject: subject ? { id: subject.id, name: subject.name } : null,
-    subjectSubtotalGroup: subjectSubtotalGroup
+    tag: tag ? { id: tag.id, name: tag.name } : null,
+    tagSubtotalGroup: tagSubtotalGroup
       ? {
-          id: subjectSubtotalGroup.id,
-          subjectId: subjectSubtotalGroup.subjectId,
-          subtotalGroupId: subjectSubtotalGroup.subtotalGroupId,
+          id: tagSubtotalGroup.id,
+          tagId: tagSubtotalGroup.tagId,
+          subtotalGroupId: tagSubtotalGroup.subtotalGroupId,
         }
       : null,
   }

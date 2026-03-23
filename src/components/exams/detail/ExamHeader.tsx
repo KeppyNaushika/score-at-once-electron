@@ -26,7 +26,7 @@ interface ExamData {
   examName: string
   description: string | null
   examDate: Date | null
-  subject: string | null
+  examTags?: { tag: { id: string; name: string } }[]
   createdAt: Date
 }
 
@@ -52,12 +52,13 @@ export default function ExamHeader({
             <p className="text-muted-foreground mt-2">{exam.description}</p>
           )}
           <div className="mt-3 flex items-center gap-4">
-            {exam.subject && (
-              <Badge variant="outline">
-                <Tag className="mr-1 h-3 w-3" />
-                {exam.subject}
-              </Badge>
-            )}
+            {exam.examTags && exam.examTags.length > 0 &&
+              exam.examTags.map((et) => (
+                <Badge key={et.tag.id} variant="outline">
+                  <Tag className="mr-1 h-3 w-3" />
+                  {et.tag.name}
+                </Badge>
+              ))}
             {exam.examDate && (
               <Badge variant="outline">
                 <Calendar className="mr-1 h-3 w-3" />

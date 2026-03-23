@@ -15,8 +15,8 @@ import type {
   ArchiveManifest,
   ArchiveScoresData,
   ArchiveStudentsData,
-  ArchiveSubjectsData,
   ArchiveSubtotalsData,
+  ArchiveTagsData,
   ArchiveUsersData,
 } from "../../src/types/examArchive.types"
 
@@ -79,8 +79,8 @@ export function createTestArchive(
     Buffer.from(JSON.stringify(collectedData.scoresData, null, 2))
   )
   zip.addFile(
-    "subjects.json",
-    Buffer.from(JSON.stringify(collectedData.subjectsData, null, 2))
+    "tags.json",
+    Buffer.from(JSON.stringify(collectedData.tagsData, null, 2))
   )
 
   // 画像ファイル
@@ -109,7 +109,7 @@ export function verifyArchiveContents(archivePath: string): {
   usersData: ArchiveUsersData
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
-  subjectsData: ArchiveSubjectsData | null
+  tagsData: ArchiveTagsData | null
   imageEntries: string[]
 } {
   const zip = new AdmZip(archivePath)
@@ -141,7 +141,7 @@ export function verifyArchiveContents(archivePath: string): {
   const scoresData = readJson<ArchiveScoresData>("scores.json")
   if (!scoresData) throw new Error("scores.json not found in archive")
 
-  const subjectsData = readJson<ArchiveSubjectsData>("subjects.json")
+  const tagsData = readJson<ArchiveTagsData>("tags.json")
 
   // 画像エントリを収集
   const imageEntries = zip
@@ -161,7 +161,7 @@ export function verifyArchiveContents(archivePath: string): {
     usersData,
     subtotalsData,
     scoresData,
-    subjectsData,
+    tagsData,
     imageEntries,
   }
 }
@@ -186,7 +186,6 @@ export function createMinimalCollectedData(
         id: examId,
         examName: overrides.examName ?? "テスト試験",
         examDate: now,
-        subject: "数学",
         description: null,
         createdAt: now,
         updatedAt: now,
@@ -209,7 +208,7 @@ export function createMinimalCollectedData(
     usersData: { users: [] },
     subtotalsData: { subtotalGroups: [], subtotals: [], cropSubtotals: [] },
     scoresData: { questionScores: [], drawingAnnotations: [] },
-    subjectsData: { subjects: [], subjectSubtotalGroups: [] },
+    tagsData: { tags: [], tagSubtotalGroups: [], examTags: [] },
     deletedRecordsData: { deletedRecords: [] },
     counts: {
       students: 0,

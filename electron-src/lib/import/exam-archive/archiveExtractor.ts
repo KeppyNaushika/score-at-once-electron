@@ -18,6 +18,7 @@ import type {
   ArchiveStudentsData,
   ArchiveSubjectsData,
   ArchiveSubtotalsData,
+  ArchiveTagsData,
   ArchiveUsersData,
 } from "../../../../src/types/examArchive.types"
 
@@ -39,8 +40,10 @@ export interface ExtractedArchiveData {
   subtotalsData: ArchiveSubtotalsData
   /** 採点データ */
   scoresData: ArchiveScoresData
-  /** 教科データ (v1.4.0+) */
+  /** 教科データ (v1.4.0-v1.9.0, deprecated) */
   subjectsData: ArchiveSubjectsData
+  /** タグデータ (v1.10.0+) */
+  tagsData: ArchiveTagsData
   /** 削除記録データ (v1.9.0+) */
   deletedRecordsData: ArchiveDeletedRecordsData
   /** 一時展開ディレクトリパス */
@@ -108,11 +111,17 @@ export async function extractArchive(archivePath: string): Promise<{
     )
     const scoresData = readJsonFile<ArchiveScoresData>(tempDir, "scores.json")
 
-    // v1.4.0+: 教科データ（存在しない場合はデフォルト値）
+    // v1.4.0-v1.9.0: 教科データ（存在しない場合はデフォルト値）
     const subjectsData = readJsonFile<ArchiveSubjectsData>(
       tempDir,
       "subjects.json"
     ) ?? { subjects: [], subjectSubtotalGroups: [] }
+
+    // v1.10.0+: タグデータ（存在しない場合はデフォルト値）
+    const tagsData = readJsonFile<ArchiveTagsData>(
+      tempDir,
+      "tags.json"
+    ) ?? { tags: [], tagSubtotalGroups: [], examTags: [] }
 
     // v1.9.0+: 削除記録データ（存在しない場合はデフォルト値）
     const deletedRecordsData = readJsonFile<ArchiveDeletedRecordsData>(
@@ -150,6 +159,7 @@ export async function extractArchive(archivePath: string): Promise<{
         subtotalsData,
         scoresData,
         subjectsData,
+        tagsData,
         deletedRecordsData,
         tempDir,
         masterImagePaths,

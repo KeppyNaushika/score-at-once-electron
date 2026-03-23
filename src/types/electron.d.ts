@@ -26,8 +26,8 @@ import type { PdfToolsAPI } from "./electron/pdfToolsApi"
 import type { ScoringAPI } from "./electron/scoringApi"
 import type { SettingsAPI } from "./electron/settingsApi"
 import type { StudentAnswerAPI } from "./electron/studentAnswerApi"
-import type { SubjectAPI } from "./electron/subjectApi"
 import type { SyncAPI } from "./electron/syncApi"
+import type { TagAPI } from "./electron/tagApi"
 import type { UserAuthAPI } from "./electron/userAuthApi"
 import type { UserExamAPI } from "./electron/userExamApi"
 
@@ -86,7 +86,7 @@ export interface MyAPI
     SettingsAPI,
     PdfToolsAPI,
     GradeAPI,
-    SubjectAPI,
+    TagAPI,
     AnswerSheetBuilderAPI,
     OmrAPI,
     DataManagementAPI,

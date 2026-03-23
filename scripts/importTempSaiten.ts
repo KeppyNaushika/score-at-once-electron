@@ -368,7 +368,6 @@ async function importExam(
     data: {
       id: examId,
       examName: group.name,
-      subject: SUBJECT,
       examDate,
       createdAt: now,
       updatedAt: now,

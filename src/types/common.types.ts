@@ -32,6 +32,9 @@ export type ExamWithDetails = Prisma.ExamGetPayload<{
       include: { subtotalGroup: { include: { subtotals: true } } }
     }
     examStudents: true
+    examTags: {
+      select: { tag: { select: { id: true; name: true } } }
+    }
   }
 }> & {
   /** IPCハンドラーで平坦化されるcropRegions */
@@ -56,7 +59,7 @@ export interface ExamListItem {
   id: string
   examName: string
   examDate: Date | null
-  subject: string | null
+  tags: { id: string; name: string }[]
   description: string | null
   createdAt: Date
   updatedAt: Date
@@ -92,9 +95,6 @@ export function isValidExam(data: unknown): data is ExamWithDetails {
     typeof obj.id === "string" &&
     typeof obj.examName === "string" &&
     (obj.examDate === null || isValidDate(obj.examDate)) &&
-    (obj.subject === undefined ||
-      obj.subject === null ||
-      typeof obj.subject === "string") &&
     (obj.description === undefined ||
       obj.description === null ||
       typeof obj.description === "string") &&

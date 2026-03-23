@@ -112,7 +112,7 @@ describe("collectExamData - エクスポートモード", () => {
       expect(data.examData.examStudents.length).toBe(3)
       expect(data.examData.examClasses.length).toBeGreaterThanOrEqual(1)
       expect(data.examData.examSubtotalGroups.length).toBe(1)
-      expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
+      expect(data.tagsData.tags.length).toBeGreaterThan(0)
     })
   })
 
@@ -210,8 +210,8 @@ describe("collectExamData - エクスポートモード", () => {
       expect(result.success).toBe(true)
       const data = result.data!
 
-      expect(data.subjectsData.subjects).toEqual([])
-      expect(data.subjectsData.subjectSubtotalGroups).toEqual([])
+      expect(data.tagsData.tags).toEqual([])
+      expect(data.tagsData.tagSubtotalGroups).toEqual([])
     })
 
     it("EM-T7: 試験基本データ・ページ・領域・模範解答画像は保持される", async () => {
@@ -319,8 +319,8 @@ describe("collectExamData - エクスポートモード", () => {
       expect(result.success).toBe(true)
       const data = result.data!
 
-      expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
-      expect(data.subjectsData.subjectSubtotalGroups.length).toBeGreaterThan(0)
+      expect(data.tagsData.tags.length).toBeGreaterThan(0)
+      expect(data.tagsData.tagSubtotalGroups.length).toBeGreaterThan(0)
     })
 
     it("EM-S4: 試験基本データ・ページ・領域・模範解答画像は保持される", async () => {

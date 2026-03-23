@@ -594,7 +594,8 @@ export interface ArchiveExamData {
     id: string
     examName: string
     examDate: string | null
-    subject: string | null
+    /** @deprecated v1.10.0で削除。ExamTagに移行 */
+    subject?: string | null
     description: string | null
     createdAt: string
     updatedAt: string
@@ -875,7 +876,8 @@ export interface ArchiveScoresData {
 }
 
 /**
- * 教科データ (subjects.json) - v1.4.0+
+ * 教科データ (subjects.json) - v1.4.0-v1.9.0
+ * @deprecated v1.10.0以降は ArchiveTagsData を使用
  */
 export interface ArchiveSubjectsData {
   subjects: Array<{
@@ -888,6 +890,33 @@ export interface ArchiveSubjectsData {
     id: string
     subjectId: string
     subtotalGroupId: string
+    createdAt: string
+    updatedAt: string
+  }>
+}
+
+/**
+ * タグデータ (tags.json) - v1.10.0+
+ * Subject→Tagリネーム後の新形式
+ */
+export interface ArchiveTagsData {
+  tags: Array<{
+    id: string
+    name: string
+    createdAt: string
+    updatedAt: string
+  }>
+  tagSubtotalGroups: Array<{
+    id: string
+    tagId: string
+    subtotalGroupId: string
+    createdAt: string
+    updatedAt: string
+  }>
+  examTags: Array<{
+    id: string
+    examId: string
+    tagId: string
     createdAt: string
     updatedAt: string
   }>

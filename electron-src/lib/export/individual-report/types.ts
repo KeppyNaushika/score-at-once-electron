@@ -129,7 +129,7 @@ export interface StudentInfoForReport {
 export interface ExamInfoForReport {
   examName: string
   examDate: Date | null
-  subject: string | null
+  tags: string[]
 }
 
 /** 箱ひげ図用統計データ */

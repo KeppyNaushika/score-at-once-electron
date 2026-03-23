@@ -4,6 +4,7 @@
 
 import type { CropRegion, QuestionScore } from "@prisma/client"
 
+import prisma from "../../prisma/client"
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
@@ -61,11 +62,17 @@ export async function fetchIndividualReportData(
     const allScoringDataFromExcel = allDataResult.scoringData || []
     const selectedScoringDataFromExcel = selectedDataResult.scoringData || []
 
+    // 試験に紐づくタグを取得
+    const examTags = await prisma.examTag.findMany({
+      where: { examId },
+      select: { tag: { select: { name: true } } },
+    })
+
     // 試験情報
     const examInfo: ExamInfoForReport = {
       examName: exam.examName,
       examDate: exam.examDate,
-      subject: exam.subject,
+      tags: examTags.map((et) => et.tag.name),
     }
 
     // 試験のactiveなSubtotalGroupsとSubtotalsを取得

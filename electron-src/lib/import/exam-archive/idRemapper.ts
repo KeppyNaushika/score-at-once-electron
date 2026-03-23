@@ -56,10 +56,12 @@ export interface IdMappings {
   examExportSettings: Record<string, string>
   /** CropRegionMarkingOverride ID: 旧ID -> 新ID (v1.4.0+) */
   cropRegionMarkingOverride: Record<string, string>
-  /** Subject ID: 旧ID -> 新ID (v1.4.0+) */
-  subject: Record<string, string>
-  /** SubjectSubtotalGroup ID: 旧ID -> 新ID (v1.4.0+) */
-  subjectSubtotalGroup: Record<string, string>
+  /** Tag ID: 旧ID -> 新ID (v1.10.0+, 旧Subject) */
+  tag: Record<string, string>
+  /** TagSubtotalGroup ID: 旧ID -> 新ID (v1.10.0+, 旧SubjectSubtotalGroup) */
+  tagSubtotalGroup: Record<string, string>
+  /** ExamTag ID: 旧ID -> 新ID (v1.10.0+) */
+  examTag: Record<string, string>
   /** CropRegionOmrConfig ID: 旧ID -> 新ID (v1.7.0+) */
   cropRegionOmrConfig: Record<string, string>
   /** CropRegionOmrChoiceOption ID: 旧ID -> 新ID (v1.7.0+) */
@@ -98,8 +100,9 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     examMarkingFormat: {},
     examExportSettings: {},
     cropRegionMarkingOverride: {},
-    subject: {},
-    subjectSubtotalGroup: {},
+    tag: {},
+    tagSubtotalGroup: {},
+    examTag: {},
     cropRegionOmrConfig: {},
     cropRegionOmrChoiceOption: {},
   }
@@ -223,16 +226,21 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     mappings.cropRegionOmrChoiceOption[opt.id] = randomUUID()
   }
 
-  // v1.4.0+: Subject
-  const subjectsData = data.subjectsData
-  if (subjectsData) {
-    for (const subject of subjectsData.subjects) {
-      mappings.subject[subject.id] = randomUUID()
+  // v1.10.0+: Tag (旧Subject)
+  const tagsData = data.tagsData
+  if (tagsData) {
+    for (const tag of tagsData.tags) {
+      mappings.tag[tag.id] = randomUUID()
     }
 
-    // SubjectSubtotalGroup
-    for (const ssg of subjectsData.subjectSubtotalGroups) {
-      mappings.subjectSubtotalGroup[ssg.id] = randomUUID()
+    // TagSubtotalGroup (旧SubjectSubtotalGroup)
+    for (const tsg of tagsData.tagSubtotalGroups) {
+      mappings.tagSubtotalGroup[tsg.id] = randomUUID()
+    }
+
+    // ExamTag
+    for (const et of tagsData.examTags) {
+      mappings.examTag[et.id] = randomUUID()
     }
   }
 
