@@ -54,6 +54,7 @@ export interface ScoringAPI {
       | "no_answer"
       | "proposed"
       | "final"
+      | "double_mark"
     userId: string // v0.4.0+: required
   }) => Promise<QuestionScoreOperationResult>
 
@@ -70,6 +71,7 @@ export interface ScoringAPI {
         | "no_answer"
         | "proposed"
         | "final"
+        | "double_mark"
       comment?: string
       version?: number
     },

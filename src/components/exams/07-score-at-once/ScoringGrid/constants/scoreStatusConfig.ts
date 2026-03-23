@@ -3,6 +3,7 @@ import {
   CheckCircle,
   Circle,
   Clock,
+  CopyX,
   Minus,
   X,
 } from "lucide-react"
@@ -64,6 +65,14 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
       textStyle: { color: colors.no_answer.text },
       iconStyle: { color: colors.no_answer.icon },
       key: "p",
+    },
+    double_mark: {
+      icon: CopyX,
+      bgStyle: { backgroundColor: colors.double_mark.bg },
+      selectedBgStyle: { backgroundColor: colors.double_mark.bg, opacity: 0.8 },
+      textStyle: { color: colors.double_mark.text },
+      iconStyle: { color: colors.double_mark.icon },
+      key: "t",
     },
     master: {
       icon: CheckCircle,

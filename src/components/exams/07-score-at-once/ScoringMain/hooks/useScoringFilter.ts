@@ -38,6 +38,7 @@ interface FilterSettings {
   partial: boolean
   pending: boolean
   no_answer: boolean
+  double_mark: boolean
 }
 
 interface UseScoringFilterProps {
@@ -73,6 +74,7 @@ export function useScoringFilter({
     partial: false,
     pending: false,
     no_answer: false,
+    double_mark: false,
   })
 
   const [visibleAnswers, setVisibleAnswers] = useState<string[]>([])

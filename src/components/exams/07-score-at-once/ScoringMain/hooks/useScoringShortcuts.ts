@@ -149,6 +149,15 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
+  useCommand("scoring.doubleMark", () => handleScore("double_mark"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "Wマークとして採点",
+      category: "採点",
+      description: "選択中の答案をダブルマークとして採点します",
+    },
+  })
+
   // ========================================
   // フィルタトグルコマンド（サイドパネル非表示でも有効、グリッドモードのみ）
   // ========================================
@@ -200,6 +209,18 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
       category: "フィルタ",
     },
   })
+
+  useCommand(
+    "filter.toggleDoubleMark",
+    () => handleToggleFilter("double_mark"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "Wマークフィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
 
   // ========================================
   // 表示関連ショートカット

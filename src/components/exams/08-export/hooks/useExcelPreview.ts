@@ -14,6 +14,7 @@ interface ExcelPreviewScore {
     | "hold"
     | "incorrect"
     | "no_answer"
+    | "double_mark"
 }
 
 interface ExcelPreviewSubtotalScore {

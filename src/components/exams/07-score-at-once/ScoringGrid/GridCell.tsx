@@ -16,6 +16,7 @@ const VALID_STATUS_KEYS: ScoreStatusKey[] = [
   "pending",
   "incorrect",
   "no_answer",
+  "double_mark",
   "master",
 ]
 

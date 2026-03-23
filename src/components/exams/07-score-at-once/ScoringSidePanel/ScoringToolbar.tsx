@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Circle,
   Clock,
+  CopyX,
   Minus,
   RefreshCw,
   Target,
@@ -54,6 +55,7 @@ const STATUS_MAP: Record<ScoringStatus, ScoringStatusType> = {
   pending: "pending",
   incorrect: "incorrect",
   no_answer: "no_answer",
+  double_mark: "double_mark",
 }
 
 // 採点ボタン設定（色はuseScoringStatusColorsから動的取得）
@@ -94,6 +96,12 @@ const SCORING_BUTTONS = [
     icon: Minus,
     description: "無答にする",
   },
+  {
+    status: "double_mark" as ScoringStatus,
+    label: "Wマーク",
+    icon: CopyX,
+    description: "ダブルマークにする",
+  },
 ] as const
 
 // フィルターボタン設定（色はuseScoringStatusColorsから動的取得）
@@ -109,6 +117,12 @@ const FILTER_BUTTONS = [
   { key: "pending", filterKey: "pending", label: "保留", icon: Clock },
   { key: "incorrect", filterKey: "incorrect", label: "誤答", icon: X },
   { key: "no_answer", filterKey: "no_answer", label: "無答", icon: Minus },
+  {
+    key: "double_mark",
+    filterKey: "double_mark",
+    label: "Wマーク",
+    icon: CopyX,
+  },
 ] as const
 
 export default function ScoringToolbar({

@@ -28,6 +28,7 @@ export type ScoringStatus =
   | "partial"
   | "pending"
   | "no_answer"
+  | "double_mark"
 
 /**
  * StudentAnswerImageを学生とExamStudents情報で拡張した型
@@ -93,6 +94,7 @@ export function calculateActualScore(
       return maxScore
     case "incorrect":
     case "no_answer":
+    case "double_mark":
       return 0
     case "unscored":
       return null

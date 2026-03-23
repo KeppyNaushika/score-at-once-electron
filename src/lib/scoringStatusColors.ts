@@ -15,6 +15,7 @@ export type ScoringStatusType =
   | "pending"
   | "incorrect"
   | "no_answer"
+  | "double_mark"
 
 /** 各状態の色設定 */
 export interface StatusColorConfig {
@@ -45,6 +46,7 @@ export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
   pending: "保留",
   incorrect: "誤答",
   no_answer: "無答",
+  double_mark: "Wマーク",
 }
 
 /** 状態の表示順序 */
@@ -55,6 +57,7 @@ export const SCORING_STATUS_ORDER: ScoringStatusType[] = [
   "pending",
   "incorrect",
   "no_answer",
+  "double_mark",
 ]
 
 /**
@@ -72,6 +75,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       pending: { bg: "#DBEAFE", text: "#1E40AF", icon: "#2563EB" },
       incorrect: { bg: "#FEE2E2", text: "#991B1B", icon: "#DC2626" },
       no_answer: { bg: "#EDE9FE", text: "#5B21B6", icon: "#7C3AED" },
+      double_mark: { bg: "#FFF7ED", text: "#9A3412", icon: "#EA580C" },
     },
   },
   {
@@ -85,6 +89,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       pending: { bg: "#93C5FD", text: "#1E3A8A", icon: "#3B82F6" },
       incorrect: { bg: "#FECACA", text: "#7F1D1D", icon: "#EF4444" },
       no_answer: { bg: "#DDD6FE", text: "#4C1D95", icon: "#8B5CF6" },
+      double_mark: { bg: "#FFEDD5", text: "#7C2D12", icon: "#F97316" },
     },
   },
   {
@@ -98,6 +103,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       pending: { bg: "#E0F2FE", text: "#075985", icon: "#0EA5E9" },
       incorrect: { bg: "#FFE4E6", text: "#9F1239", icon: "#F43F5E" },
       no_answer: { bg: "#F3E8FF", text: "#6B21A8", icon: "#A855F7" },
+      double_mark: { bg: "#FEF3C7", text: "#78350F", icon: "#D97706" },
     },
   },
   {
@@ -111,6 +117,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       pending: { bg: "#D0EBFA", text: "#0066A0", icon: "#56B4E9" },
       incorrect: { bg: "#FADDC8", text: "#8B3A00", icon: "#D55E00" },
       no_answer: { bg: "#F5E0EC", text: "#7A3F66", icon: "#CC79A7" },
+      double_mark: { bg: "#FAE8D0", text: "#8B4513", icon: "#E69F00" },
     },
   },
 ]

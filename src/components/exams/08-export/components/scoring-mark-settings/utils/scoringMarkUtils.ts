@@ -19,6 +19,8 @@ export function getMarkImagePath(
       return `/score-assets/${prefix}partial.png` // 処理中は部分点マークを使用
     case "no_answer":
       return `/score-assets/${prefix}incorrect.png` // 無答も誤答マークを使用
+    case "double_mark":
+      return `/score-assets/${prefix}incorrect.png` // Wマークも誤答マークを使用
     default:
       return `/score-assets/${prefix}unscored.png`
   }

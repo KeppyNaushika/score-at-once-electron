@@ -1,6 +1,12 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2, MinusCircle, XCircle } from "lucide-react"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CopyX,
+  MinusCircle,
+  XCircle,
+} from "lucide-react"
 
 import type { OMRCellResult, OMRSheetResult } from "@/types/omr.types"
 
@@ -20,7 +26,7 @@ function StatusIcon({ status }: { status: OMRCellResult["autoScoreStatus"] }) {
     case "incorrect":
       return <XCircle className="h-4 w-4 text-red-500" />
     case "ambiguous":
-      return <AlertTriangle className="h-4 w-4 text-yellow-500" />
+      return <CopyX className="h-4 w-4 text-orange-500" />
     case "no_answer":
       return <MinusCircle className="text-muted-foreground h-4 w-4" />
     default:

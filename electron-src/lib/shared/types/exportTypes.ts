@@ -53,6 +53,7 @@ export interface ScoreDetail {
     | "hold"
     | "incorrect"
     | "no_answer"
+    | "double_mark"
 }
 
 export interface ExportResult {
