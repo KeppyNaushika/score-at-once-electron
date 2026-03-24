@@ -66,6 +66,12 @@ export interface IdMappings {
   cropRegionOmrConfig: Record<string, string>
   /** CropRegionOmrChoiceOption ID: 旧ID -> 新ID (v1.7.0+) */
   cropRegionOmrChoiceOption: Record<string, string>
+  /** CompoundAnswer ID: 旧ID -> 新ID (v1.11.0+) */
+  compoundAnswer: Record<string, string>
+  /** CompoundAnswerMember ID: 旧ID -> 新ID (v1.11.0+) */
+  compoundAnswerMember: Record<string, string>
+  /** CompoundAnswerScore ID: 旧ID -> 新ID (v1.11.0+) */
+  compoundAnswerScore: Record<string, string>
 }
 
 /**
@@ -105,6 +111,9 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     examTag: {},
     cropRegionOmrConfig: {},
     cropRegionOmrChoiceOption: {},
+    compoundAnswer: {},
+    compoundAnswerMember: {},
+    compoundAnswerScore: {},
   }
 
   // 試験
@@ -224,6 +233,21 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   // v1.7.0+: CropRegionOmrChoiceOption
   for (const opt of data.examData.omrChoiceOptions || []) {
     mappings.cropRegionOmrChoiceOption[opt.id] = randomUUID()
+  }
+
+  // v1.11.0+: CompoundAnswer
+  for (const ca of data.examData.compoundAnswers || []) {
+    mappings.compoundAnswer[ca.id] = randomUUID()
+  }
+
+  // v1.11.0+: CompoundAnswerMember
+  for (const cam of data.examData.compoundAnswerMembers || []) {
+    mappings.compoundAnswerMember[cam.id] = randomUUID()
+  }
+
+  // v1.11.0+: CompoundAnswerScore
+  for (const cas of data.examData.compoundAnswerScores || []) {
+    mappings.compoundAnswerScore[cas.id] = randomUUID()
   }
 
   // v1.10.0+: Tag (旧Subject)

@@ -156,6 +156,8 @@ export async function createImportedData(
             create: {
               id: remapIdRequired(tag.id, mappings.tag),
               name: tag.name,
+              order: tag.order ?? 0,
+              color: tag.color ?? null,
             },
           })
         }
@@ -436,6 +438,71 @@ export async function createImportedData(
               normalizedY: box.normalizedY,
               normalizedW: box.normalizedW,
               normalizedH: box.normalizedH,
+            },
+          })
+        }
+      }
+
+      // 12.10. CompoundAnswerを作成 (v1.11.0+)
+      for (const ca of data.examData.compoundAnswers || []) {
+        const newExamPageId = remapId(ca.examPageId, mappings.examPage)
+        if (newExamPageId) {
+          await tx.compoundAnswer.create({
+            data: {
+              id: remapIdRequired(ca.id, mappings.compoundAnswer),
+              examPageId: newExamPageId,
+              label: ca.label,
+              answerFormat: ca.answerFormat,
+              correctAnswer: ca.correctAnswer,
+              points: ca.points,
+              orderIndex: ca.orderIndex,
+              alternativeAnswers: ca.alternativeAnswers,
+              requireReduced: ca.requireReduced,
+            },
+          })
+        }
+      }
+
+      // 12.11. CompoundAnswerMemberを作成 (v1.11.0+)
+      for (const cam of data.examData.compoundAnswerMembers || []) {
+        const newCompoundAnswerId = remapId(
+          cam.compoundAnswerId,
+          mappings.compoundAnswer
+        )
+        const newCropRegionId = remapId(cam.cropRegionId, mappings.cropRegion)
+        if (newCompoundAnswerId && newCropRegionId) {
+          await tx.compoundAnswerMember.create({
+            data: {
+              id: remapIdRequired(cam.id, mappings.compoundAnswerMember),
+              compoundAnswerId: newCompoundAnswerId,
+              cropRegionId: newCropRegionId,
+              order: cam.order,
+              roleLabel: cam.roleLabel,
+              separator: cam.separator,
+            },
+          })
+        }
+      }
+
+      // 12.12. CompoundAnswerScoreを作成 (v1.11.0+)
+      for (const cas of data.examData.compoundAnswerScores || []) {
+        const newCompoundAnswerId = remapId(
+          cas.compoundAnswerId,
+          mappings.compoundAnswer
+        )
+        const newStudentId = remapId(cas.studentId, mappings.student)
+        if (newCompoundAnswerId && newStudentId) {
+          await tx.compoundAnswerScore.create({
+            data: {
+              id: remapIdRequired(cas.id, mappings.compoundAnswerScore),
+              compoundAnswerId: newCompoundAnswerId,
+              studentId: newStudentId,
+              userId: currentUserId,
+              recognizedAnswer: cas.recognizedAnswer,
+              status: cas.status,
+              partialScore: cas.partialScore
+                ? parseFloat(cas.partialScore)
+                : null,
             },
           })
         }

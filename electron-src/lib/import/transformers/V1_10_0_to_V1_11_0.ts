@@ -54,12 +54,28 @@ export class V1_10_0_to_V1_11_0_Transformer implements VersionTransformer {
 
     // 新規フィールドをデフォルト空配列で追加
     examData.omrDigitBoxes = []
+    examData.compoundAnswers = []
+    examData.compoundAnswerMembers = []
+    examData.compoundAnswerScores = []
+
+    // Tag に order/color フィールドを追加（デフォルト値）
+    const tagsData = data.tagsData
+      ? {
+          ...data.tagsData,
+          tags: data.tagsData.tags.map((tag) => ({
+            ...tag,
+            order: 0,
+            color: null,
+          })),
+        }
+      : undefined
 
     return {
       data: {
         ...data,
         manifest: { ...data.manifest, version: this.toVersion },
         examData,
+        ...(tagsData ? { tagsData } : {}),
       },
       warnings,
     }

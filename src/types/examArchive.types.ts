@@ -664,6 +664,43 @@ export interface ArchiveExamData {
     createdAt: string
     updatedAt: string
   }>
+  /** v1.11.0+ CompoundAnswer（複合回答グループ） */
+  compoundAnswers?: Array<{
+    id: string
+    examPageId: string
+    label: string
+    answerFormat: string
+    correctAnswer: string
+    points: number
+    orderIndex: number | null
+    alternativeAnswers: string | null
+    requireReduced: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.11.0+ CompoundAnswerMember（複合回答メンバー） */
+  compoundAnswerMembers?: Array<{
+    id: string
+    compoundAnswerId: string
+    cropRegionId: string
+    order: number
+    roleLabel: string | null
+    separator: string | null
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.11.0+ CompoundAnswerScore（複合回答スコア） */
+  compoundAnswerScores?: Array<{
+    id: string
+    compoundAnswerId: string
+    studentId: string
+    userId: string
+    recognizedAnswer: string | null
+    status: string
+    partialScore: string | null
+    createdAt: string
+    updatedAt: string
+  }>
   /** @deprecated v1.2.0以降はmasterImages/studentAnswerImagesを使用 */
   pageImages: Array<{
     id: string
@@ -921,6 +958,10 @@ export interface ArchiveTagsData {
   tags: Array<{
     id: string
     name: string
+    /** v1.11.0+ 表示順 */
+    order?: number
+    /** v1.11.0+ 表示色 */
+    color?: string | null
     createdAt: string
     updatedAt: string
   }>
