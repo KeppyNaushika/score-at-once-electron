@@ -77,6 +77,13 @@ export async function collectExamData(
                     drawingAnnotations: true,
                   },
                 },
+                compoundMembership: true,
+              },
+            },
+            compoundAnswers: {
+              include: {
+                members: true,
+                scores: true,
               },
             },
           },
@@ -389,6 +396,57 @@ export async function collectExamData(
           }))
         )
       ),
+      // v1.11.0+: CompoundAnswer
+      compoundAnswers: exam.examPages.flatMap((page) =>
+        page.compoundAnswers.map((ca) => ({
+          id: ca.id,
+          examPageId: ca.examPageId,
+          label: ca.label,
+          answerFormat: ca.answerFormat,
+          correctAnswer: ca.correctAnswer,
+          points: ca.points,
+          orderIndex: ca.orderIndex,
+          alternativeAnswers: ca.alternativeAnswers,
+          requireReduced: ca.requireReduced,
+          createdAt: ca.createdAt.toISOString(),
+          updatedAt: ca.updatedAt.toISOString(),
+        }))
+      ),
+      // v1.11.0+: CompoundAnswerMember
+      compoundAnswerMembers: exam.examPages.flatMap((page) =>
+        page.compoundAnswers.flatMap((ca) =>
+          ca.members.map((m) => ({
+            id: m.id,
+            compoundAnswerId: m.compoundAnswerId,
+            cropRegionId: m.cropRegionId,
+            order: m.order,
+            roleLabel: m.roleLabel,
+            separator: m.separator,
+            createdAt: m.createdAt.toISOString(),
+            updatedAt: m.updatedAt.toISOString(),
+          }))
+        )
+      ),
+      // v1.11.0+: CompoundAnswerScore (ログインユーザーのみ)
+      compoundAnswerScores: isTemplate
+        ? []
+        : exam.examPages.flatMap((page) =>
+            page.compoundAnswers.flatMap((ca) =>
+              ca.scores
+                .filter((s) => s.userId === userId)
+                .map((s) => ({
+                  id: s.id,
+                  compoundAnswerId: s.compoundAnswerId,
+                  studentId: s.studentId,
+                  userId: s.userId,
+                  recognizedAnswer: s.recognizedAnswer,
+                  status: s.status,
+                  partialScore: s.partialScore?.toString() ?? null,
+                  createdAt: s.createdAt.toISOString(),
+                  updatedAt: s.updatedAt.toISOString(),
+                }))
+            )
+          ),
       // v1.2.0+: pageImagesは空配列（後方互換性のため維持）
       pageImages: [],
       // v1.2.0+: 新形式
@@ -566,6 +624,8 @@ export async function collectExamData(
       tags: tags.map((t) => ({
         id: t.id,
         name: t.name,
+        order: t.order,
+        color: t.color,
         createdAt: t.createdAt.toISOString(),
         updatedAt: t.updatedAt.toISOString(),
       })),
