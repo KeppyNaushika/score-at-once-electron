@@ -1,12 +1,6 @@
 "use client"
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  CopyX,
-  MinusCircle,
-  XCircle,
-} from "lucide-react"
+import { CheckCircle2, CopyX, MinusCircle, XCircle } from "lucide-react"
 
 import type { OMRCellResult, OMRSheetResult } from "@/types/omr.types"
 
