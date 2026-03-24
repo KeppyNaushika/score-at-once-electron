@@ -22,14 +22,15 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         // },
         {
           label: "Toggle Full Screen",
-          accelerator: "Ctrl+Command+F",
+          accelerator: process.platform === "darwin" ? "Ctrl+Command+F" : "F11",
           click: () => {
             mainWindow.setFullScreen(!mainWindow.isFullScreen())
           },
         },
         {
           label: "Toggle Developer Tools",
-          accelerator: "Alt+Command+I",
+          accelerator:
+            process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
           click: () => {
             mainWindow.webContents.toggleDevTools()
           },
