@@ -14,6 +14,23 @@ import * as path from "path"
 import { getDataDirectory } from "../dataManager"
 import { DEFAULT_SYNC_CONFIG, SyncAppConfig } from "./types"
 
+/** prisma/migrationsから最新マイグレーション名を取得し、schemaVersionとして返す */
+export function getSchemaVersion(): string {
+  try {
+    const migrationsDir = path.join(app.getAppPath(), "prisma", "migrations")
+    if (!fs.existsSync(migrationsDir)) return "unknown"
+
+    const entries = fs
+      .readdirSync(migrationsDir)
+      .filter((e) => /^\d{14}_/.test(e))
+      .sort()
+
+    return entries.length > 0 ? entries[entries.length - 1] : "unknown"
+  } catch {
+    return "unknown"
+  }
+}
+
 function getConfigPath(): string {
   return path.join(app.getPath("userData"), "sync-config.json")
 }

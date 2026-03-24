@@ -21,6 +21,7 @@ import {
   getLocalDbPath,
   getNasDbPath,
   getNasSyncPath,
+  getSchemaVersion,
   loadSyncConfig,
   saveSyncConfig,
 } from "./syncConfig"
@@ -167,6 +168,7 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
     tables: SYNC_TABLES,
     intervalMs: config.intervalMs,
     changelogRetentionDays: config.changelogRetentionDays,
+    schemaVersion: getSchemaVersion(),
     onAfterSync: (db: Database.Database, _result: SyncResult) => {
       enforceTombstones(db)
       updateStatus({
