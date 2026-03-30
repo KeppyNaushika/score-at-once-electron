@@ -264,8 +264,8 @@ const File = () => {
         isExporting={isBulkExporting}
       />
       <div className="flex h-full min-w-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={createExamModal.open}
               variant="outline"
@@ -284,7 +284,7 @@ const File = () => {
             </Button>
             {selectedExamIds.size > 0 && (
               <>
-                <span className="text-muted-foreground ml-2 text-sm">
+                <span className="text-muted-foreground text-sm">
                   {selectedExamIds.size}件選択中
                 </span>
                 <Popover
@@ -357,7 +357,7 @@ const File = () => {
           </div>
 
           {/* 検索・フィルタ */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
               <Input
