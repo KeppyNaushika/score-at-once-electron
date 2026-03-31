@@ -24,6 +24,9 @@ export function useGridDragSelection({
       return
     }
 
+    // ダブルクリック以上はAnswerGridView側で処理（採点・部分点モーダル等）
+    if (event.detail >= 2) return
+
     if (event.ctrlKey) {
       event.preventDefault()
       onAnswerSelect(answerId, !selectedAnswers.has(answerId))

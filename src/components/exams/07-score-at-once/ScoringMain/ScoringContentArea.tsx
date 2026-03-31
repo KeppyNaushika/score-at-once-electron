@@ -45,6 +45,8 @@ interface ScoringContentAreaProps {
   masterAnswerVisible?: boolean
   allMasterImageUrls?: string[]
   pageSize?: string
+  onClickScoring?: (answerId: string, clickCount: number) => void
+  clickScoringDebounceMs?: number
 }
 
 export function ScoringContentArea({
@@ -76,6 +78,8 @@ export function ScoringContentArea({
   masterAnswerVisible = false,
   allMasterImageUrls,
   pageSize = "A4",
+  onClickScoring,
+  clickScoringDebounceMs,
 }: ScoringContentAreaProps) {
   const currentScoringDataId =
     gradingMode === "individual"
@@ -181,6 +185,8 @@ export function ScoringContentArea({
         currentUserId={currentUserId}
         annotationRefreshKey={gridAnnotationRefreshKey}
         pageSize={pageSize}
+        onClickScoring={onClickScoring}
+        clickScoringDebounceMs={clickScoringDebounceMs}
         className="p-4"
       />
     )

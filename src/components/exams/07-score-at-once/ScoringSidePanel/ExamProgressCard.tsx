@@ -1,13 +1,11 @@
 "use client"
 
-import { AlertCircle, RefreshCw, Users } from "lucide-react"
+import { AlertCircle, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
-// 試験進捗の型定義
 interface ExamProgress {
   totalStudents: number
   totalQuestions: number
@@ -21,21 +19,20 @@ interface ExamProgress {
 interface ExamProgressCardProps {
   examId: string
   autoRefresh?: boolean
-  refreshInterval?: number // ミリ秒
+  refreshInterval?: number
   onProgressUpdate?: (progress: ExamProgress) => void
 }
 
 export default function ExamProgressCard({
   examId,
   autoRefresh = true,
-  refreshInterval = 30000, // 30秒
+  refreshInterval = 30000,
   onProgressUpdate,
 }: ExamProgressCardProps) {
   const [progress, setProgress] = useState<ExamProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // 進捗データを取得する関数
   const fetchProgress = useCallback(async () => {
     try {
       setError(null)
@@ -64,77 +61,41 @@ export default function ExamProgressCard({
     }
   }, [examId, onProgressUpdate])
 
-  // 初回読み込み
   useEffect(() => {
     fetchProgress()
   }, [fetchProgress])
 
-  // 自動リフレッシュの設定
   useEffect(() => {
     if (!autoRefresh) return
-
     const interval = setInterval(fetchProgress, refreshInterval)
     return () => clearInterval(interval)
   }, [autoRefresh, refreshInterval, fetchProgress])
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-sm font-medium">
-            <Users className="mr-2 h-4 w-4" />
-            試験進捗
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-3">
-            <div className="h-4 rounded bg-gray-200"></div>
-            <div className="h-2 rounded bg-gray-200"></div>
-            <div className="h-2 rounded bg-gray-200"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="animate-pulse space-y-2">
+        <div className="h-3 rounded bg-gray-200"></div>
+        <div className="h-1.5 rounded bg-gray-200"></div>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-sm font-medium">
-            <Users className="mr-2 h-4 w-4" />
-            試験進捗
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-center">
-            <AlertCircle className="mx-auto h-8 w-8 text-red-500" />
-            <p className="text-sm text-red-600">{error}</p>
-            <Button size="sm" variant="outline" onClick={fetchProgress}>
-              <RefreshCw className="mr-1 h-4 w-4" />
-              再試行
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2 text-center">
+        <AlertCircle className="mx-auto h-5 w-5 text-red-400" />
+        <p className="text-xs text-red-500">{error}</p>
+        <Button size="sm" variant="outline" onClick={fetchProgress}>
+          <RefreshCw className="mr-1 h-3 w-3" />
+          再試行
+        </Button>
+      </div>
     )
   }
 
   if (!progress) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-sm font-medium">
-            <Users className="mr-2 h-4 w-4" />
-            試験進捗
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            進捗データがありません
-          </p>
-        </CardContent>
-      </Card>
+      <p className="text-muted-foreground text-xs">進捗データがありません</p>
     )
   }
 
@@ -142,84 +103,52 @@ export default function ExamProgressCard({
     progress.totalItems > 0 && progress.finalizedItems >= progress.totalItems
 
   return (
-    <Card>
-      <CardHeader className="pb-1">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center text-xs font-medium">
-            <Users className="mr-1 h-3 w-3" />
-            試験進捗
-            {isComplete && (
-              <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
-                完了
-              </span>
-            )}
-          </CardTitle>
-          <div className="flex items-center space-x-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={fetchProgress}
-              className="h-4 w-4 p-0"
-              title="進捗を更新"
-            >
-              <RefreshCw className="h-2 w-2" />
-            </Button>
-          </div>
+    <div className="space-y-2">
+      {/* 基本統計 */}
+      <div className="flex items-center justify-between text-xs text-gray-600">
+        <span>
+          生徒 {progress.totalStudents} / 設問 {progress.totalQuestions} / 計{" "}
+          {progress.totalItems}項目
+        </span>
+        <div className="flex items-center gap-1">
+          {isComplete && (
+            <span className="rounded bg-green-100 px-1 py-0.5 text-[10px] font-medium text-green-700">
+              完了
+            </span>
+          )}
+          <button
+            onClick={fetchProgress}
+            className="text-gray-400 hover:text-gray-600"
+            title="進捗を更新"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {/* 基本統計 */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <div className="text-sm font-semibold">
-              {progress.totalStudents}
-            </div>
-            <div className="text-muted-foreground text-xs">生徒</div>
-          </div>
-          <div>
-            <div className="text-sm font-semibold">
-              {progress.totalQuestions}
-            </div>
-            <div className="text-muted-foreground text-xs">設問</div>
-          </div>
-          <div>
-            <div className="text-sm font-semibold">{progress.totalItems}</div>
-            <div className="text-muted-foreground text-xs">採点項目</div>
-          </div>
-        </div>
+      </div>
 
-        {/* 採点進捗 */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium">採点進捗</span>
-            <span className="text-muted-foreground text-xs">
-              {progress.scoredItems}/{progress.totalItems}
-            </span>
-          </div>
-          <Progress value={progress.scoredPercentage} className="h-1.5" />
-          <div className="text-right">
-            <span className="text-muted-foreground text-xs">
-              {Math.round(progress.scoredPercentage)}%
-            </span>
-          </div>
+      {/* 採点進捗 */}
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between text-[10px] text-gray-500">
+          <span>採点</span>
+          <span>
+            {progress.scoredItems}/{progress.totalItems} (
+            {Math.round(progress.scoredPercentage)}%)
+          </span>
         </div>
+        <Progress value={progress.scoredPercentage} className="h-1" />
+      </div>
 
-        {/* 最終確定進捗 */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium">最終確定</span>
-            <span className="text-muted-foreground text-xs">
-              {progress.finalizedItems}/{progress.totalItems}
-            </span>
-          </div>
-          <Progress value={progress.finalizedPercentage} className="h-1.5" />
-          <div className="text-right">
-            <span className="text-muted-foreground text-xs">
-              {Math.round(progress.finalizedPercentage)}%
-            </span>
-          </div>
+      {/* 最終確定進捗 */}
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between text-[10px] text-gray-500">
+          <span>確定</span>
+          <span>
+            {progress.finalizedItems}/{progress.totalItems} (
+            {Math.round(progress.finalizedPercentage)}%)
+          </span>
         </div>
-      </CardContent>
-    </Card>
+        <Progress value={progress.finalizedPercentage} className="h-1" />
+      </div>
+    </div>
   )
 }

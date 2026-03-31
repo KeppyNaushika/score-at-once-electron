@@ -4,6 +4,7 @@
  */
 
 import { useAutoScroll } from "./useAutoScroll"
+import { useClickScoringConfig } from "./useClickScoringConfig"
 import { useExpandMargin } from "./useExpandMargin"
 import { useItemsPerLine } from "./useItemsPerLine"
 import { useLayoutDirection } from "./useLayoutDirection"
@@ -17,6 +18,12 @@ export function useScoringSettings() {
   const { showStudentNames, setShowStudentNames } = useShowStudentNames()
   const { layoutDirection, setLayoutDirection } = useLayoutDirection()
   const { expandMargin, setExpandMargin } = useExpandMargin()
+  const {
+    clickScoringConfig,
+    clickScoringDebounceMs,
+    setClickAction,
+    setClickScoringDebounceMs,
+  } = useClickScoringConfig()
   const {
     masterAnswerDisplayMode,
     masterAnswerOpacity,
@@ -32,6 +39,8 @@ export function useScoringSettings() {
     showStudentNames,
     layoutDirection,
     expandMargin,
+    clickScoringConfig,
+    clickScoringDebounceMs,
     masterAnswerDisplayMode,
     masterAnswerOpacity,
     masterAnswerKeyBehavior,
@@ -40,6 +49,8 @@ export function useScoringSettings() {
     setShowStudentNames,
     setLayoutDirection,
     setExpandMargin,
+    setClickAction,
+    setClickScoringDebounceMs,
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
     setMasterAnswerKeyBehavior,
