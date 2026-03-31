@@ -38,6 +38,8 @@ interface PartialScoreModalProps {
   onChange?: (value: string) => void
   onConfirmPartial?: () => void
   onConfirmPending?: () => void
+  onDigit?: (key: string) => void
+  onBackspace?: () => void
   keyBindings?: KeyBindings
 }
 
@@ -50,6 +52,8 @@ export default function PartialScoreModal({
   onChange,
   onConfirmPartial,
   onConfirmPending,
+  onDigit,
+  onBackspace,
   keyBindings,
 }: PartialScoreModalProps) {
   // デフォルト値を設定
@@ -169,6 +173,37 @@ export default function PartialScoreModal({
               </div>
             </div>
           </div>
+
+          {/* NumPad（マウス操作用） */}
+          {onDigit && onBackspace && (
+            <div className="grid grid-cols-3 gap-2">
+              {["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", "."].map(
+                (key) => (
+                  <Button
+                    key={key}
+                    variant="outline"
+                    className="h-10 font-mono text-lg"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      onDigit(key)
+                    }}
+                  >
+                    {key}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                className="h-10 text-lg"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onBackspace()
+                }}
+              >
+                ⌫
+              </Button>
+            </div>
+          )}
 
           {/* 確認ボタン（マウス操作用） */}
           <div className="flex justify-end gap-2">

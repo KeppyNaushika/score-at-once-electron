@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { DragSelectionOverlay } from "@/components/exams/07-score-at-once/ScoringGrid/DragSelectionOverlay"
 import { GridCell } from "@/components/exams/07-score-at-once/ScoringGrid/GridCell"
@@ -49,6 +49,10 @@ export interface AnswerGridViewProps {
   annotationRefreshKey?: number
   /** 用紙サイズ（mm→px変換基準） */
   pageSize?: string
+  /** クリック採点コールバック（answerId, 最終クリック回数） */
+  onClickScoring?: (answerId: string, clickCount: number) => void
+  /** クリック採点のデバウンス時間（ms） */
+  clickScoringDebounceMs?: number
   className?: string
 }
 
@@ -68,6 +72,8 @@ export default function AnswerGridView({
   currentUserId,
   annotationRefreshKey,
   pageSize,
+  onClickScoring,
+  clickScoringDebounceMs = 300,
   className = "",
 }: AnswerGridViewProps) {
   /** フィルタリングされた採点データ（模範解答 + 学生データ） */
@@ -182,14 +188,46 @@ export default function AnswerGridView({
     endDrag()
   }
 
-  const onCellMouseDown = (event: React.MouseEvent, answerId: string) => {
-    if (gridRef.current) {
-      const gridRect = gridRef.current.getBoundingClientRect()
-      startDrag(event.clientX - gridRect.left, event.clientY - gridRect.top)
-    }
+  /** 生徒答案ごとの独立デバウンスタイマー管理 */
+  const clickTimersRef = useRef<
+    Map<string, { timerId: ReturnType<typeof setTimeout>; clickCount: number }>
+  >(new Map())
 
-    handleMouseDown(event, answerId)
-  }
+  const onCellMouseDown = useCallback(
+    (event: React.MouseEvent, answerId: string) => {
+      if (answerId.startsWith("master-")) return
+
+      if (event.detail >= 2 && onClickScoring) {
+        // ダブルクリック以上: ドラッグ開始せず、クリック採点デバウンスに委譲
+        const timers = clickTimersRef.current
+        const existing = timers.get(answerId)
+
+        // 既存タイマーがあればクリア（有効時間を延長）
+        if (existing) {
+          clearTimeout(existing.timerId)
+        }
+
+        const clickCount = Math.max(event.detail, existing?.clickCount ?? 0)
+
+        // 新しいタイマーを設定（有効時間終了後に確定）
+        const timerId = setTimeout(() => {
+          timers.delete(answerId)
+          onClickScoring(answerId, clickCount)
+        }, clickScoringDebounceMs)
+
+        timers.set(answerId, { timerId, clickCount })
+        return
+      }
+
+      // シングルクリック: ドラッグ開始 + 通常の選択処理
+      if (gridRef.current) {
+        const gridRect = gridRef.current.getBoundingClientRect()
+        startDrag(event.clientX - gridRect.left, event.clientY - gridRect.top)
+      }
+      handleMouseDown(event, answerId)
+    },
+    [startDrag, handleMouseDown, onClickScoring, clickScoringDebounceMs]
+  )
 
   const isColumnLayout =
     layoutDirection === "down-right" || layoutDirection === "down-left"

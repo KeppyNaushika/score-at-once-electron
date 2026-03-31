@@ -39,6 +39,15 @@ export const USER_PREFERENCE_SCHEMA = {
     default: "toggle",
     validate: (v: string) => ["toggle", "hold-to-show"].includes(v),
   },
+  clickScoringConfig: {
+    type: "string?" as const,
+    default: null as string | null,
+  },
+  clickScoringDebounceMs: { type: "number" as const, default: 300 },
+  sidePanelCollapsedSections: {
+    type: "string?" as const,
+    default: null as string | null,
+  },
 } as const
 
 /** 設定キーの型 */
@@ -57,6 +66,9 @@ export type PreferenceValueType = {
   masterAnswerDisplayMode: string
   masterAnswerOpacity: number
   masterAnswerKeyBehavior: string
+  clickScoringConfig: string | null
+  clickScoringDebounceMs: number
+  sidePanelCollapsedSections: string | null
 }
 
 /**

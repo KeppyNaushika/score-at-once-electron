@@ -40,6 +40,9 @@ interface QuestionNavigatorProps {
       percentage: number
     }
   }
+  collapsible?: boolean
+  isOpen?: boolean
+  onToggle?: () => void
 }
 
 export default function QuestionNavigator({
@@ -49,6 +52,9 @@ export default function QuestionNavigator({
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
+  collapsible = false,
+  isOpen = true,
+  onToggle,
 }: QuestionNavigatorProps) {
   const currentIndex = currentCropRegion
     ? questionRegions.findIndex((q) => q.id === currentCropRegion.id)
@@ -75,7 +81,13 @@ export default function QuestionNavigator({
   }
   return (
     <TooltipProvider delayDuration={300}>
-      <SidePanelSection icon={FileText} title="設問">
+      <SidePanelSection
+        icon={FileText}
+        title="設問"
+        collapsible={collapsible}
+        isOpen={isOpen}
+        onToggle={onToggle}
+      >
         {/* ナビゲーション: [前] [設問プルダウン] [次] */}
         <div className="flex items-center gap-2">
           <Tooltip>

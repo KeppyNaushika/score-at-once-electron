@@ -23,6 +23,8 @@ interface ScoringModalsProps {
   onPartialScoreChange: (value: string) => void
   onPartialScoreConfirmPartial?: () => void
   onPartialScoreConfirmPending?: () => void
+  onPartialScoreDigit?: (key: string) => void
+  onPartialScoreBackspace?: () => void
   keyBindings?: ModalKeyBindings
   // Score Comparison Modal props
   showScoreComparison: boolean
@@ -38,6 +40,8 @@ export function ScoringModals({
   onPartialScoreChange,
   onPartialScoreConfirmPartial,
   onPartialScoreConfirmPending,
+  onPartialScoreDigit,
+  onPartialScoreBackspace,
   keyBindings,
   showScoreComparison,
   onScoreComparisonClose,
@@ -57,6 +61,8 @@ export function ScoringModals({
         onChange={onPartialScoreChange}
         onConfirmPartial={onPartialScoreConfirmPartial}
         onConfirmPending={onPartialScoreConfirmPending}
+        onDigit={onPartialScoreDigit}
+        onBackspace={onPartialScoreBackspace}
         keyBindings={keyBindings}
       />
 

@@ -31,6 +31,7 @@ import {
   ScoringLoadingState,
 } from "@/components/exams/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
+import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
@@ -64,6 +65,8 @@ function ScoringMainViewContent() {
     showStudentNames,
     layoutDirection,
     expandMargin,
+    clickScoringConfig,
+    clickScoringDebounceMs,
     masterAnswerDisplayMode,
     masterAnswerOpacity,
     masterAnswerKeyBehavior,
@@ -72,6 +75,8 @@ function ScoringMainViewContent() {
     setShowStudentNames,
     setLayoutDirection,
     setExpandMargin,
+    setClickAction,
+    setClickScoringDebounceMs,
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
     setMasterAnswerKeyBehavior,
@@ -242,24 +247,48 @@ function ScoringMainViewContent() {
     replaceSelection(filteredScoringDataIds)
   }, [replaceSelection, filteredScoringDataIds])
 
-  const {
-    handleNextQuestion,
-    handlePrevQuestion,
-    handleZoomIn,
-    handleZoomOut,
-    handleResetZoom,
-    handleGridNavigation,
-  } = useScoringNavigation({
-    answerSheetsLength: studentAnswerImages.length,
-    currentCropRegionId: currentCropRegionId,
-    setCurrentCropRegionId: setCurrentCropRegionId,
-    selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
-    setSelectedPageImageIds: setSelectedPageImageIds,
-    layoutDirection: layoutDirection,
-    getGridAnswerData,
-    effectiveColumns: itemsPerLine[0],
-    cropRegions: cropRegions,
-  })
+  /** 未採点の生徒を全て選択（フィルターで非表示なら強制表示） */
+  const handleSelectUnscored = useCallback(() => {
+    // 未採点フィルターが無効なら有効にする
+    if (!filterSettings.unscored) {
+      handleToggleFilter("unscored")
+    }
+    // 次のレンダー後に選択するためqueueMicrotaskで遅延
+    queueMicrotask(() => {
+      const unscoredIds = allScoringData
+        .filter((d) => d.status === "unscored")
+        .map((d) => d.id)
+      replaceSelection(unscoredIds)
+    })
+  }, [allScoringData, replaceSelection, filterSettings, handleToggleFilter])
+
+  const { handleNextQuestion, handlePrevQuestion, handleGridNavigation } =
+    useScoringNavigation({
+      answerSheetsLength: studentAnswerImages.length,
+      currentCropRegionId: currentCropRegionId,
+      setCurrentCropRegionId: setCurrentCropRegionId,
+      selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
+      setSelectedPageImageIds: setSelectedPageImageIds,
+      layoutDirection: layoutDirection,
+      getGridAnswerData,
+      effectiveColumns: itemsPerLine[0],
+      cropRegions: cropRegions,
+    })
+
+  /** 1行あたりの表示件数を増減（ショートカットキー =/-） */
+  const handleZoomIn = useCallback(() => {
+    const next = Math.min(itemsPerLine[0] + 1, 10)
+    setItemsPerLine([next])
+  }, [itemsPerLine, setItemsPerLine])
+
+  const handleZoomOut = useCallback(() => {
+    const next = Math.max(itemsPerLine[0] - 1, 1)
+    setItemsPerLine([next])
+  }, [itemsPerLine, setItemsPerLine])
+
+  const handleResetZoom = useCallback(() => {
+    setItemsPerLine([5])
+  }, [setItemsPerLine])
 
   /**
    * 個別モード用ナビゲーション
@@ -335,6 +364,7 @@ function ScoringMainViewContent() {
   const {
     partialScoreInput,
     showPartialScoreModal,
+    openPartialScoreModal,
     handlePartialScoreInput,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
@@ -345,6 +375,44 @@ function ScoringMainViewContent() {
     currentCropRegion,
     onBatchScore: handleBatchScoreWithProgress,
   })
+
+  /** クリック採点：デバウンス後にクリック回数に応じたアクションを実行 */
+  const handleClickScoring = useCallback(
+    (answerId: string, clickCount: number) => {
+      if (answerId.startsWith("master-")) return
+      const action = clickScoringConfig[clickCount as 2 | 3 | 4] ?? "none"
+      if (action === "none") return
+
+      if (action === "individual") {
+        replaceSelection([answerId])
+        setGradingMode("individual")
+        return
+      }
+
+      if (action === "partial_modal") {
+        replaceSelection([answerId])
+        openPartialScoreModal()
+        return
+      }
+
+      // 採点ステータスを直接適用
+      const targetSet = new Set([answerId])
+      handleBatchScore(action as ScoringStatus, null, null, targetSet)
+      setRecentlyScoredAnswers((prev) => {
+        const newSet = new Set(prev)
+        newSet.add(answerId)
+        return newSet
+      })
+    },
+    [
+      clickScoringConfig,
+      replaceSelection,
+      setGradingMode,
+      openPartialScoreModal,
+      handleBatchScore,
+      setRecentlyScoredAnswers,
+    ]
+  )
 
   /** 表示モード切り替え（グリッド⇔個別） */
   const handleToggleViewMode = useCallback(
@@ -526,6 +594,8 @@ function ScoringMainViewContent() {
             masterAnswerVisible={masterAnswerVisible}
             allMasterImageUrls={allMasterImageUrls}
             pageSize={pageSize}
+            onClickScoring={handleClickScoring}
+            clickScoringDebounceMs={clickScoringDebounceMs}
           />
         </div>
 
@@ -551,13 +621,18 @@ function ScoringMainViewContent() {
               onScore={handleBatchScoreWithProgress}
               onToggleFilter={handleToggleFilter}
               onRefreshFilter={handleRefreshFilter}
+              onSelectAll={handleSelectAll}
+              onSelectUnscored={handleSelectUnscored}
               partialScoreInput={partialScoreInput}
+              clickScoringConfig={clickScoringConfig}
+              clickScoringDebounceMs={clickScoringDebounceMs}
+              onClickActionChange={setClickAction}
+              onClickScoringDebounceMsChange={setClickScoringDebounceMs}
               layoutDirection={layoutDirection}
               visibleAnswersCount={visibleAnswers.length}
               totalAnswersCount={studentAnswerImages.length}
               onLayoutDirectionChange={setLayoutDirection}
               onGridNavigation={handleGridNavigation}
-              onRefreshView={handleRefreshFilter}
               itemsPerLine={itemsPerLine}
               onItemsPerLineChange={handleItemsPerLineChange}
               autoScroll={autoScroll}
@@ -616,6 +691,8 @@ function ScoringMainViewContent() {
         onPartialScoreConfirmPending={() =>
           handlePartialScoreConfirm("pending")
         }
+        onPartialScoreDigit={handlePartialScoreInput}
+        onPartialScoreBackspace={handlePartialScoreBackspace}
         keyBindings={modalKeyBindings}
         showScoreComparison={showScoreComparison}
         onScoreComparisonClose={() => setShowScoreComparison(false)}

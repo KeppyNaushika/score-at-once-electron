@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
 import { useAuth } from "@/contexts/AuthContext"
 import {
   applyScoringColorPreset,
@@ -20,6 +21,11 @@ import {
   type ScoringStatusColors,
   type ScoringStatusType,
 } from "@/lib/scoringStatusColors"
+import {
+  parsePreference,
+  serializePreference,
+  USER_PREFERENCE_SCHEMA,
+} from "@/lib/userPreferences"
 import { cn } from "@/lib/utils"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316"
@@ -40,6 +46,16 @@ export function DisplaySettingsTab() {
   // 選択枠色の状態
   const [selectionBorderColor, setSelectionBorderColor] = useState(
     DEFAULT_SELECTION_BORDER_COLOR
+  )
+
+  // クリック採点設定の状態
+  const [clickScoringConfig, setClickScoringConfig] = useState({
+    2: "incorrect" as string,
+    3: "partial_modal" as string,
+    4: "individual" as string,
+  })
+  const [clickScoringDebounceMs, setClickScoringDebounceMs] = useState<number>(
+    USER_PREFERENCE_SCHEMA.clickScoringDebounceMs.default
   )
 
   // 採点状態色の状態
@@ -80,6 +96,44 @@ export function DisplaySettingsTab() {
         }
       }
 
+      // クリック採点設定の読み込み
+      try {
+        const [configResult, debounceResult] = await Promise.all([
+          window.electronAPI.settings.getUserPreference(
+            userId,
+            "clickScoringConfig"
+          ),
+          window.electronAPI.settings.getUserPreference(
+            userId,
+            "clickScoringDebounceMs"
+          ),
+        ])
+        if (configResult.success) {
+          const raw = parsePreference(
+            "clickScoringConfig",
+            configResult.value ?? null
+          )
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw)
+              setClickScoringConfig((prev) => ({ ...prev, ...parsed }))
+            } catch {
+              // keep default
+            }
+          }
+        }
+        if (debounceResult.success) {
+          setClickScoringDebounceMs(
+            parsePreference(
+              "clickScoringDebounceMs",
+              debounceResult.value ?? null
+            )
+          )
+        }
+      } catch (error) {
+        console.error("クリック採点設定の読み込みに失敗しました:", error)
+      }
+
       await loadScoringStatusColors(userId)
       setScoringColors(getScoringStatusColors())
       setCurrentPresetId(getCurrentPresetId())
@@ -106,6 +160,45 @@ export function DisplaySettingsTab() {
         } catch (error) {
           console.error("選択枠色の保存に失敗しました:", error)
           toast.error("選択枠色の保存に失敗しました")
+        }
+      }
+    },
+    [userId]
+  )
+
+  // クリック採点アクション変更
+  const handleClickActionChange = useCallback(
+    async (clickCount: 2 | 3 | 4, action: string) => {
+      const next = { ...clickScoringConfig, [clickCount]: action }
+      setClickScoringConfig(next)
+      if (userId && window.electronAPI?.settings) {
+        try {
+          await window.electronAPI.settings.setUserPreference(
+            userId,
+            "clickScoringConfig",
+            serializePreference("clickScoringConfig", JSON.stringify(next))
+          )
+        } catch (error) {
+          console.error("クリック採点設定の保存に失敗しました:", error)
+        }
+      }
+    },
+    [userId, clickScoringConfig]
+  )
+
+  // クリック採点デバウンス時間変更
+  const handleDebounceMsChange = useCallback(
+    async (value: number) => {
+      setClickScoringDebounceMs(value)
+      if (userId && window.electronAPI?.settings) {
+        try {
+          await window.electronAPI.settings.setUserPreference(
+            userId,
+            "clickScoringDebounceMs",
+            serializePreference("clickScoringDebounceMs", value)
+          )
+        } catch (error) {
+          console.error("デバウンス時間の保存に失敗しました:", error)
         }
       }
     },
@@ -153,6 +246,86 @@ export function DisplaySettingsTab() {
 
   return (
     <div className="space-y-8">
+      {/* クリックで採点 */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">クリックで採点</h2>
+          <p className="text-muted-foreground text-sm">
+            一括採点でのマウスクリック操作を設定できます
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {([2, 3, 4] as const).map((clickCount) => {
+            const labels = {
+              2: "ダブルクリック",
+              3: "トリプルクリック",
+              4: "クアトロクリック",
+            }
+            const actionOptions = [
+              { value: "none", label: "なし" },
+              { value: "correct", label: "正答" },
+              { value: "incorrect", label: "誤答" },
+              { value: "partial_modal", label: "部分点入力" },
+              { value: "partial", label: "部分点（非推奨）" },
+              { value: "pending", label: "保留（非推奨）" },
+              { value: "unscored", label: "未採点" },
+              { value: "no_answer", label: "無答" },
+              { value: "double_mark", label: "Wマーク" },
+              { value: "individual", label: "個別表示" },
+            ]
+            return (
+              <div key={clickCount} className="flex items-center gap-3">
+                <Label className="w-36 shrink-0 text-sm">
+                  {labels[clickCount]}
+                </Label>
+                <select
+                  className="border-input bg-background flex-1 rounded-md border px-3 py-1.5 text-sm"
+                  value={
+                    clickScoringConfig[
+                      clickCount as keyof typeof clickScoringConfig
+                    ]
+                  }
+                  onChange={(e) =>
+                    handleClickActionChange(clickCount, e.target.value)
+                  }
+                >
+                  {actionOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )
+          })}
+
+          {/* デバウンス時間 */}
+          <div className="space-y-1 pt-2">
+            <Label className="text-sm">クリック判定の待ち時間</Label>
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 text-lg" title="速い">
+                🐇
+              </span>
+              <Slider
+                className="flex-1"
+                value={[clickScoringDebounceMs]}
+                min={100}
+                max={800}
+                step={50}
+                onValueChange={([v]) => handleDebounceMsChange(v)}
+              />
+              <span className="shrink-0 text-lg" title="遅い">
+                🐢
+              </span>
+              <span className="text-muted-foreground w-14 shrink-0 text-right text-sm">
+                {clickScoringDebounceMs}ms
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 選択枠の色 */}
       <section className="space-y-4">
         <div>

@@ -62,19 +62,6 @@ export function useScoringNavigation({
     }
   }, [currentCropRegionId, cropRegions, setCurrentCropRegionId])
 
-  // プレースホルダー関数（Individual View内で実装される）
-  const handleZoomIn = useCallback(() => {
-    // Individual View内で実装される
-  }, [])
-
-  const handleZoomOut = useCallback(() => {
-    // Individual View内で実装される
-  }, [])
-
-  const handleResetZoom = useCallback(() => {
-    // Individual View内で実装される
-  }, [])
-
   // 模範解答をスキップして次の有効な答案を見つける関数
   const findNextValidAnswer = useCallback(
     (
@@ -272,9 +259,6 @@ export function useScoringNavigation({
   return {
     handleNextQuestion,
     handlePrevQuestion,
-    handleZoomIn,
-    handleZoomOut,
-    handleResetZoom,
     handleGridNavigation,
   }
 }

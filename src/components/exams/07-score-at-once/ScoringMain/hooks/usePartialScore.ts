@@ -42,6 +42,16 @@ export function usePartialScore({
     }
   }, [])
 
+  /** 部分点モーダルを開く（マウストリプルクリック等から呼び出し用） */
+  const openPartialScoreModal = useCallback(() => {
+    if (selectedAnswers.size === 0 || !currentCropRegion) return
+
+    setPartialScoreInput("")
+    setShowPartialScoreModal(true)
+    setContextValue("partialScoreModalOpen", true)
+    setContextValue("modalOpen", true)
+  }, [selectedAnswers, currentCropRegion, setContextValue])
+
   // 部分点入力開始（数字キー・小数点対応）
   const handlePartialScoreInput = useCallback(
     (key: string) => {
@@ -215,6 +225,7 @@ export function usePartialScore({
   return {
     partialScoreInput,
     showPartialScoreModal,
+    openPartialScoreModal,
     handlePartialScoreInput,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
