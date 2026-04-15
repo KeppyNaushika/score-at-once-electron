@@ -15,7 +15,7 @@ export const DEFAULT_DRAWING_SETTINGS = {
   strokeColor: "#ef4444",
   strokeWidth: 0.5,
   lineStyle: "solid" as const,
-  fontSize: 4.0,
+  fontSize: 5.0,
 } as const
 
 // 描画時の許容誤差（正規化座標 0-1）

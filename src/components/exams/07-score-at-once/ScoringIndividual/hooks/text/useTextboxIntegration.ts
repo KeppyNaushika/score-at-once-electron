@@ -11,6 +11,7 @@ import {
 } from "@/lib/textbox-canvas/coordinateConversion"
 import type { TextBox } from "@/lib/textbox-canvas/types"
 
+import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
 import type {
   AnchorDirection,
   DrawingElement,
@@ -87,7 +88,9 @@ export function useTextboxV4Integration({
   const [currentTextValue, setCurrentTextValue] = useState("")
   const [currentTextColor, setCurrentTextColor] = useState("#ef4444")
   const [currentPosition, setCurrentPosition] = useState({ x: 0.5, y: 0.5 })
-  const [currentFontSize, setCurrentFontSize] = useState(16)
+  const [currentFontSize, setCurrentFontSize] = useState<number>(
+    DEFAULT_DRAWING_SETTINGS.fontSize
+  )
   const [currentAnchorDirection, setCurrentAnchorDirection] =
     useState<AnchorDirection>("top-left")
   const [editingElementId, setEditingElementId] = useState<string | null>(null)
@@ -109,14 +112,16 @@ export function useTextboxV4Integration({
           (el) => el.id === elementId
         )
         if (existingElement && existingElement.type === "text") {
-          setCurrentFontSize(existingElement.fontSize ?? 16)
+          setCurrentFontSize(
+            existingElement.fontSize ?? DEFAULT_DRAWING_SETTINGS.fontSize
+          )
           setCurrentAnchorDirection(
             existingElement.anchorDirection ?? "top-left"
           )
         }
       } else {
         // 新規の場合はデフォルト値
-        setCurrentFontSize(16)
+        setCurrentFontSize(DEFAULT_DRAWING_SETTINGS.fontSize)
         setCurrentAnchorDirection("top-left")
       }
 
@@ -130,7 +135,7 @@ export function useTextboxV4Integration({
     setShowV4Modal(false)
     setCurrentTextValue("")
     setCurrentTextColor("#000000")
-    setCurrentFontSize(16)
+    setCurrentFontSize(DEFAULT_DRAWING_SETTINGS.fontSize)
     setCurrentAnchorDirection("top-left")
     setEditingElementId(null)
   }, [])

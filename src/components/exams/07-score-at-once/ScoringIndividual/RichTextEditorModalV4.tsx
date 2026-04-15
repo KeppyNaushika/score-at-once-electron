@@ -69,7 +69,7 @@ export function RichTextEditorModalV4({
   canvasWidth = 800,
   canvasHeight = 600,
   backgroundImageUrl,
-  fontSize: initialFontSize = 16,
+  fontSize: initialFontSize = 5,
   onFontSizeChange,
   anchorDirection: initialAnchorDirection = "top-left",
   onAnchorDirectionChange,
@@ -202,13 +202,13 @@ export function RichTextEditorModalV4({
     insertFormatting("$$\n", "\n$$")
   }, [insertFormatting])
 
-  // フォントサイズ調整
+  // フォントサイズ調整 (mm単位)
   const handleFontSizeIncrease = useCallback(() => {
-    setFontSize(Math.min(fontSize + 2, 48))
+    setFontSize(Math.min(fontSize + 1, 20))
   }, [fontSize, setFontSize])
 
   const handleFontSizeDecrease = useCallback(() => {
-    setFontSize(Math.max(fontSize - 2, 8))
+    setFontSize(Math.max(fontSize - 1, 2))
   }, [fontSize, setFontSize])
 
   // アンカー方向の取得関数
@@ -506,7 +506,7 @@ export function RichTextEditorModalV4({
               rows={6}
               className="mt-2 resize-none"
               style={{
-                fontSize: `${fontSize}px`,
+                fontSize: "16px",
                 color: color,
               }}
             />
