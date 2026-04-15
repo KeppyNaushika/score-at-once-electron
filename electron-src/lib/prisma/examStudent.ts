@@ -26,20 +26,31 @@ export async function getStudentsForExam(examId: string) {
                 startDate: "desc",
               },
             },
+            _count: {
+              select: {
+                studentAnswerImages: {
+                  where: { examPage: { examId } },
+                },
+              },
+            },
           },
         },
       },
     })
 
-    const studentsWithStatus = examStudents.map((examStudent) => ({
-      ...examStudent.student,
-      status: examStudent.status.toLowerCase() as
-        | "participating"
-        | "expected"
-        | "absent",
-      isInExam: true,
-      customOrder: examStudent.customOrder,
-    }))
+    const studentsWithStatus = examStudents.map((examStudent) => {
+      const { _count, ...studentRest } = examStudent.student
+      return {
+        ...studentRest,
+        status: examStudent.status.toLowerCase() as
+          | "participating"
+          | "expected"
+          | "absent",
+        isInExam: true,
+        customOrder: examStudent.customOrder,
+        answerSheetCount: _count.studentAnswerImages,
+      }
+    })
 
     return {
       success: true,

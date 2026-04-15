@@ -38,6 +38,7 @@ export interface ExamAPI {
       status: "participating" | "expected" | "absent"
       isInExam: boolean
       customOrder: number | null
+      answerSheetCount: number
     })[]
     error?: string
   }>

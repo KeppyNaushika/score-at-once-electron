@@ -37,6 +37,7 @@ export function TableHeaderRow({
         <TableHead>氏名</TableHead>
         <TableHead>ふりがな</TableHead>
         <TableHead>学級</TableHead>
+        <TableHead className="w-24 text-center">答案枚数</TableHead>
         <TableHead>受験状態</TableHead>
       </TableRow>
     </TableHeader>
