@@ -40,6 +40,19 @@ export function createOmrApi() {
       }) => ipcRenderer.invoke("omr:batch-recognize", args),
       detectMasterMarkers: (examId: string, colorThreshold?: number) =>
         ipcRenderer.invoke("omr:detect-master-markers", examId, colorThreshold),
+      correctImage: (
+        examId: string,
+        pageNumber: number,
+        buffer: Uint8Array,
+        colorThreshold?: number
+      ) =>
+        ipcRenderer.invoke(
+          "omr:correct-image",
+          examId,
+          pageNumber,
+          buffer,
+          colorThreshold
+        ),
       onBatchProgress: (
         callback: (progress: {
           total: number

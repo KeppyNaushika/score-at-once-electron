@@ -39,12 +39,24 @@ export function StudentAnswerUpload({
     passwordDialog,
     observerRef,
 
+    // Marker correction
+    markerCorrectionEnabled,
+    markerCorrectionAvailable,
+    markerDiagnostics,
+    markerAvailablePages,
+    setMarkerCorrectionEnabled,
+
     // Actions
     setFiles,
     setFileOrder,
     handleDrop,
     handleUpload,
-  } = useStudentAnswerUpload(examId, onUploadComplete, onCorrectionStatusUpdate)
+  } = useStudentAnswerUpload(
+    examId,
+    onUploadComplete,
+    onCorrectionStatusUpdate,
+    mode
+  )
 
   // 確認モード用の初期化処理
   useEffect(() => {
@@ -158,6 +170,11 @@ export function StudentAnswerUpload({
           mode={mode}
           onReloadData={onUploadComplete}
           existingStudentAnswers={finalExistingAnswers}
+          markerCorrectionEnabled={markerCorrectionEnabled}
+          markerCorrectionAvailable={markerCorrectionAvailable}
+          markerDiagnostics={markerDiagnostics}
+          markerAvailablePages={markerAvailablePages}
+          onMarkerCorrectionChange={setMarkerCorrectionEnabled}
         />
       </div>
 

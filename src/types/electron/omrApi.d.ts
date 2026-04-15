@@ -45,6 +45,17 @@ export interface OmrAPI {
       }>
       error?: string
     }>
+    correctImage: (
+      examId: string,
+      pageNumber: number,
+      buffer: Uint8Array,
+      colorThreshold?: number
+    ) => Promise<{
+      success: boolean
+      correctedBuffer?: Uint8Array
+      status: "corrected" | "skipped"
+      error?: string
+    }>
     onBatchProgress: (
       callback: (progress: import("../omr.types").OMRBatchProgress) => void
     ) => () => void

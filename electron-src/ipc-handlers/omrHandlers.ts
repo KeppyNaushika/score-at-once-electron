@@ -15,6 +15,7 @@ import type {
 } from "../../src/types/omr.types"
 import { getDataDirectory } from "../lib/dataManager"
 import {
+  correctImage,
   createTransform,
   detectCornerMarkers,
   loadImageRaw,
@@ -353,5 +354,74 @@ export function setupOMRHandlers(): void {
       }
     },
     "マスターマーカー検出に失敗しました"
+  )
+
+  // ────────────────────────────────────────
+  // 単一画像補正（クライアント側プレビュー用）
+  // ────────────────────────────────────────
+  registerSafeHandler(
+    "omr:correct-image",
+    async (
+      examId: string,
+      pageNumber: number,
+      buffer: Uint8Array,
+      colorThreshold?: number
+    ): Promise<{
+      success: boolean
+      correctedBuffer?: Uint8Array
+      status: "corrected" | "skipped"
+      error?: string
+    }> => {
+      const cacheKey = `${examId}:${pageNumber}`
+      let masterResult = masterMarkerCache.get(cacheKey)
+
+      if (!masterResult) {
+        const masterImage = await prisma.masterImage.findFirst({
+          where: { examPage: { examId, pageNumber } },
+          include: { examPage: true },
+        })
+        if (!masterImage) {
+          return {
+            success: false,
+            status: "skipped",
+            error: "マスター画像が見つかりません",
+          }
+        }
+        const dataDir = getDataDirectory()
+        const imagePath = path.join(dataDir, masterImage.imagePath)
+        masterResult = await detectCornerMarkers(imagePath, colorThreshold)
+        masterMarkerCache.set(cacheKey, masterResult)
+      }
+
+      if (!masterResult.success) {
+        return {
+          success: false,
+          status: "skipped",
+          error: "マスター画像のマーカーが検出できませんでした",
+        }
+      }
+
+      const result = await correctImage(
+        Buffer.from(buffer),
+        masterResult.markers,
+        masterResult.imageWidth,
+        masterResult.imageHeight,
+        colorThreshold ?? 128
+      )
+
+      if (result.success && result.correctedBuffer) {
+        return {
+          success: true,
+          correctedBuffer: new Uint8Array(result.correctedBuffer),
+          status: "corrected",
+        }
+      }
+      return {
+        success: false,
+        status: "skipped",
+        error: result.error,
+      }
+    },
+    "画像補正に失敗しました"
   )
 }

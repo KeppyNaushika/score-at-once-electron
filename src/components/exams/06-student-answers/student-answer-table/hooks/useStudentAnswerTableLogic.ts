@@ -3,6 +3,7 @@ import { toast } from "sonner"
 
 import { useDisabledState } from "@/components/exams/06-student-answers/student-answer-table/hooks/useDisabledState"
 import { useDragDrop } from "@/components/exams/06-student-answers/student-answer-table/hooks/useDragDrop"
+import { useMarkerCorrection } from "@/components/exams/06-student-answers/student-answer-table/hooks/useMarkerCorrection"
 import { useNameRegion } from "@/components/exams/06-student-answers/student-answer-table/hooks/useNameRegion"
 import { useTableData } from "@/components/exams/06-student-answers/student-answer-table/hooks/useTableData"
 import type { PreviewMode } from "@/components/exams/06-student-answers/student-answer-table/types"
@@ -27,6 +28,11 @@ export function useStudentAnswerTableLogic({
   onReloadData,
   onUpdatePendingChanges,
   existingStudentAnswers = [],
+  markerCorrectionEnabled: markerCorrectionEnabledProp,
+  markerCorrectionAvailable: markerCorrectionAvailableProp,
+  markerDiagnostics: markerDiagnosticsProp,
+  markerAvailablePages: markerAvailablePagesProp,
+  onMarkerCorrectionChange,
 }: StudentAnswerTableProps) {
   // ============================================================================
   // カスタムフック
@@ -91,10 +97,22 @@ export function useStudentAnswerTableLogic({
   const [uploadModalState, setUploadModalState] = useState<UploadModalState>({
     isOpen: false,
   })
-  const [markerCorrectionEnabled, setMarkerCorrectionEnabled] = useState(false)
-  const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
-    useState(false)
-  const [markerDiagnostics, setMarkerDiagnostics] = useState<string>("")
+  // マーカー補正状態は親フック（useStudentAnswerUpload）から注入される
+  const markerCorrectionEnabled = markerCorrectionEnabledProp ?? false
+  const markerCorrectionAvailable = markerCorrectionAvailableProp ?? false
+  const markerDiagnostics = markerDiagnosticsProp ?? ""
+  const markerAvailablePages = markerAvailablePagesProp ?? new Set<number>()
+  const setMarkerCorrectionEnabled = onMarkerCorrectionChange ?? (() => {})
+
+  // 配置戦略に応じた動的マーカー補正
+  const { correctingFileIds } = useMarkerCorrection({
+    examId,
+    files,
+    tableData,
+    markerCorrectionEnabled,
+    markerAvailablePages,
+    onFilesChange,
+  })
 
   // ============================================================================
   // 削除処理
@@ -139,51 +157,6 @@ export function useStudentAnswerTableLogic({
     initializeStudentsWithoutAnswers(students)
   }, [students, initializeStudentsWithoutAnswers])
 
-  // マスター画像のマーカー検出（マーカー補正の利用可否判定）
-  useEffect(() => {
-    if (mode !== "upload" || !examId) return
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const result = await window.electronAPI.omr.detectMasterMarkers(examId)
-        if (!cancelled) {
-          setMarkerCorrectionAvailable(result.success)
-          if (result.success) {
-            setMarkerCorrectionEnabled(true)
-          } else {
-            setMarkerCorrectionEnabled(false)
-            // 診断情報をUIに表示するため構築
-            if (result.pages) {
-              const lines: string[] = []
-              for (const page of result.pages) {
-                if (!page.result.success && page.result.diagnostics) {
-                  lines.push(`ページ${page.pageNumber}:`)
-                  for (const d of page.result.diagnostics) {
-                    if (!d.detected) {
-                      lines.push(
-                        `  ${d.corner}: ${d.failReason ?? "不明"} (黒px: ${d.darkPixels}/${d.totalPixels})`
-                      )
-                    }
-                  }
-                }
-              }
-              setMarkerDiagnostics(lines.join("\n"))
-            }
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setMarkerCorrectionAvailable(false)
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [examId, mode])
-
   // ============================================================================
   // イベントハンドラー
   // ============================================================================
@@ -213,7 +186,8 @@ export function useStudentAnswerTableLogic({
             studentId: cell.student.id,
             pageNumber: cell.pageNumber,
             overwrite: allowOverwrite,
-            correctWithMarkers: markerCorrectionEnabled,
+            correctWithMarkers: false, // クライアント側で補正済み
+            correctionStatus: cell.file.correctionStatus,
           })
         }
       })
@@ -282,6 +256,7 @@ export function useStudentAnswerTableLogic({
     markerCorrectionAvailable,
     markerDiagnostics,
     setMarkerCorrectionEnabled,
+    correctingFileIds,
 
     // ローカル状態
     previewMode,
