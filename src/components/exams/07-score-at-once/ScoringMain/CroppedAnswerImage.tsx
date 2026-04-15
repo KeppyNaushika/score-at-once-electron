@@ -249,7 +249,7 @@ async function drawAnnotations(
     ctx.save()
     ctx.strokeStyle = anno.color
     ctx.fillStyle = anno.color
-    ctx.lineWidth = Math.max(1, anno.strokeWidth * scaleFactor)
+    ctx.lineWidth = anno.strokeWidth * scaleFactor
     ctx.lineCap = "round"
     ctx.lineJoin = "round"
 
@@ -357,7 +357,7 @@ async function drawGridTextV4(
     color: anno.color,
     strokeWidth: anno.strokeWidth,
     text: anno.text,
-    fontSize: Math.max(2, anno.fontSize * scaleFactor),
+    fontSize: anno.fontSize * scaleFactor,
     anchorDirection: anno.anchorDirection || "top-left",
   }
 
@@ -393,8 +393,8 @@ function drawGridLine(
   const dy = endY - startY
   const lineLength = Math.sqrt(dx * dx + dy * dy)
   const angle = Math.atan2(dy, dx)
-  const sw = Math.max(1, anno.strokeWidth * scaleFactor)
-  const arrowSize = Math.max(sw * 5, 8)
+  const sw = anno.strokeWidth * scaleFactor
+  const arrowSize = sw * 5
 
   ctx.lineWidth = sw
   ctx.setLineDash([])

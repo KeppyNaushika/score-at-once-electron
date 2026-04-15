@@ -11,6 +11,7 @@ import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
+import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
 import { renderTextElementV4 } from "../../utils/canvasTextRendererV4"
 
 interface UseDrawingRendererReturn {
@@ -96,7 +97,7 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
       )
 
       const fontSizePx = mmToPixels(
-        element.fontSize || 4.0,
+        element.fontSize || DEFAULT_DRAWING_SETTINGS.fontSize,
         pageSize,
         baseImg.naturalWidth,
         baseImg.naturalHeight

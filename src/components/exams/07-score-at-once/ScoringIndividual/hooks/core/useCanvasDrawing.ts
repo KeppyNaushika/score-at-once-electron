@@ -20,6 +20,7 @@ import type {
   MarkPosition,
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
@@ -915,9 +916,16 @@ export function useCanvasDrawing({
           // ページオフセット分だけコンテキストを平行移動して描画
           ctx.save()
           ctx.translate(0, annotPageOffsetY)
+          const fontSizePx = mmToPixels(
+            element.fontSize || 4.0,
+            pageSize,
+            canvasWidth,
+            annotPageHeight
+          )
+          const pxElement = { ...element, fontSize: fontSizePx }
           const result = await renderTextElementV4(
             ctx,
-            element,
+            pxElement,
             canvasWidth,
             annotPageHeight,
             isSelected,
@@ -962,9 +970,16 @@ export function useCanvasDrawing({
           try {
             ctx.save()
             ctx.translate(0, currentPageOffsetY)
+            const fontSizePx = mmToPixels(
+              element.fontSize || 4.0,
+              pageSize,
+              canvasWidth,
+              currentPageHeight
+            )
+            const pxElement = { ...element, fontSize: fontSizePx }
             const result = await renderTextElementV4(
               ctx,
-              element,
+              pxElement,
               canvasWidth,
               currentPageHeight,
               isSelected,
@@ -1003,6 +1018,7 @@ export function useCanvasDrawing({
     allCropRegionsWithStatus,
     textBoundsCacheRef,
     convertAnnotationToDrawingElement,
+    pageSize,
   ])
 
   // オーバーレイキャンバスの描画
