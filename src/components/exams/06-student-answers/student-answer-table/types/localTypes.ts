@@ -51,6 +51,13 @@ export interface StudentAnswerTableProps {
     studentId: string | null
     pageNumber: number
   }>
+
+  // マーカー補正状態（親フックから注入）
+  markerCorrectionEnabled?: boolean
+  markerCorrectionAvailable?: boolean
+  markerDiagnostics?: string
+  markerAvailablePages?: Set<number>
+  onMarkerCorrectionChange?: (enabled: boolean) => void
 }
 
 export type DisabledReason =

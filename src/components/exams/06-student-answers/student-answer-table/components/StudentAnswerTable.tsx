@@ -43,6 +43,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
     markerCorrectionAvailable,
     markerDiagnostics,
     setMarkerCorrectionEnabled,
+    correctingFileIds,
     previewMode,
     uploadModalState,
     handlePreviewModeChange,
@@ -118,6 +119,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
                 affectedCells={affectedCells}
                 imageLoadStates={imageLoadStates}
                 observerRef={observerRef}
+                correctingFileIds={correctingFileIds}
                 getEnabledFiles={getEnabledFiles}
                 getFileColor={getFileColor}
                 drawNameRegionCanvas={drawNameRegionCanvas}

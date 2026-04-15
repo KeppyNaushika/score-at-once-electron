@@ -6,6 +6,12 @@ import { useEffect, useRef, useState } from "react"
 
 import { loadStudentAnswerImage } from "@/components/exams/06-student-answers/student-answer-management/utils/convertStudentAnswersToFiles"
 import type { FilePreviewCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 /**
  * ファイルプレビューセルコンポーネント
@@ -28,10 +34,12 @@ export function FilePreviewCell({
   isPendingChange = false,
   hasExistingAnswer = false,
   allowOverwrite = false,
+  isCorrecting = false,
 }: FilePreviewCellProps & {
   isPendingChange?: boolean
   hasExistingAnswer?: boolean
   allowOverwrite?: boolean
+  isCorrecting?: boolean
 }) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
     null
@@ -249,13 +257,43 @@ export function FilePreviewCell({
       )}
 
       {file.correctionStatus === "corrected" && (
-        <div className="pointer-events-none absolute inset-0 z-20 border-2 border-green-500" />
+        <div
+          className={`pointer-events-none absolute z-20 border-2 border-blue-500 ${
+            hasExistingAnswer && allowOverwrite ? "inset-[3px]" : "inset-0"
+          }`}
+        />
       )}
       {file.correctionStatus === "skipped" && (
-        <div className="pointer-events-none absolute inset-0 z-20 border-2 border-red-500" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={`absolute z-20 border-2 border-amber-500 ${
+                  hasExistingAnswer && allowOverwrite
+                    ? "inset-[3px]"
+                    : "inset-0"
+                }`}
+              />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm">
+              <p className="font-medium">マーカー補正スキップ</p>
+              {file.correctionError && (
+                <p className="mt-1 text-xs text-gray-300">
+                  {file.correctionError}
+                </p>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
 
       {renderLoadingState()}
+
+      {isCorrecting && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-white/60">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -12,7 +12,10 @@ import { type ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 export function useStudentAnswerUpload(
   examId: string,
   onUploadComplete?: () => void,
-  onCorrectionStatusUpdate?: (map: Map<string, "corrected" | "skipped">) => void
+  onCorrectionStatusUpdate?: (
+    map: Map<string, "corrected" | "skipped">
+  ) => void,
+  mode: "upload" | "view" = "upload"
 ) {
   // State管理
   const [isUploading, setIsUploading] = useState(false)
@@ -20,6 +23,40 @@ export function useStudentAnswerUpload(
   const [files, setFiles] = useState<UnifiedFile[]>([])
   const [pdfProcessingProgress, setPdfProcessingProgress] = useState(0)
   const [fileOrder, setFileOrder] = useState<PlacementStrategy>("page-first")
+
+  // マーカー補正
+  const [markerCorrectionEnabled, setMarkerCorrectionEnabled] = useState(false)
+  const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
+    useState(false)
+  const [markerDiagnostics, setMarkerDiagnostics] = useState("")
+  const [markerAvailablePages, setMarkerAvailablePages] = useState<Set<number>>(
+    new Set()
+  )
+  const filesRef = useRef<UnifiedFile[]>([])
+  const prevFilesRef = useRef<UnifiedFile[]>([])
+
+  // 前回描画と比較し、削除されたファイルのblob URLを解放
+  useEffect(() => {
+    const currentIds = new Set(files.map((f) => f.id))
+    for (const prev of prevFilesRef.current) {
+      if (!currentIds.has(prev.id) && prev.preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(prev.preview)
+      }
+    }
+    prevFilesRef.current = files
+    filesRef.current = files
+  }, [files])
+
+  // アンマウント時に全blob URLを解放
+  useEffect(() => {
+    return () => {
+      for (const f of prevFilesRef.current) {
+        if (f.preview?.startsWith("blob:")) {
+          URL.revokeObjectURL(f.preview)
+        }
+      }
+    }
+  }, [])
 
   // PDFパスワード処理
   const [passwordDialog, setPasswordDialog] = useState<{
@@ -187,6 +224,64 @@ export function useStudentAnswerUpload(
     [convertPdfWithRetry]
   )
 
+  // マスターマーカー検出（補正可否判定）
+  useEffect(() => {
+    if (mode !== "upload" || !examId) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const result = await window.electronAPI.omr.detectMasterMarkers(examId)
+        if (cancelled) return
+        // マスターマーカーを検出できたページを記録
+        const availablePages = new Set<number>()
+        if (result.pages) {
+          for (const page of result.pages) {
+            if (page.result.success) {
+              availablePages.add(page.pageNumber)
+            }
+          }
+        }
+        // 内容が同じなら既存参照を維持（effect誤発火防止）
+        setMarkerAvailablePages((prev) => {
+          if (
+            prev.size === availablePages.size &&
+            [...prev].every((p) => availablePages.has(p))
+          ) {
+            return prev
+          }
+          return availablePages
+        })
+        setMarkerCorrectionAvailable(availablePages.size > 0)
+        setMarkerCorrectionEnabled(availablePages.size > 0)
+        if (!result.success && result.pages) {
+          const lines: string[] = []
+          for (const page of result.pages) {
+            if (!page.result.success && page.result.diagnostics) {
+              lines.push(`ページ${page.pageNumber}:`)
+              for (const d of page.result.diagnostics) {
+                if (!d.detected) {
+                  lines.push(
+                    `  ${d.corner}: ${d.failReason ?? "不明"} (黒px: ${d.darkPixels}/${d.totalPixels})`
+                  )
+                }
+              }
+            }
+          }
+          setMarkerDiagnostics(lines.join("\n"))
+        }
+      } catch {
+        if (!cancelled) {
+          setMarkerCorrectionAvailable(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [examId, mode])
+
   // ファイルドロップ処理
   const handleDrop = useCallback(
     async (rawFiles: File[]) => {
@@ -224,9 +319,22 @@ export function useStudentAnswerUpload(
       setIsUploading(true)
 
       try {
+        // クライアント側補正結果からマップ構築（uploadDataの(studentId,pageNumber)=生徒×マスターページ）
         const correctionMap = new Map<string, "corrected" | "skipped">()
+        for (const d of uploadData) {
+          if (
+            d.correctionStatus &&
+            d.correctionStatus !== "not_requested" &&
+            d.studentId
+          ) {
+            const key = `${d.studentId}-${d.pageNumber}`
+            correctionMap.set(
+              key,
+              d.correctionStatus as "corrected" | "skipped"
+            )
+          }
+        }
 
-        // 全件を一括送信（バックエンドで画像補正を並列処理）
         const result = await window.electronAPI.uploadStudentAnswers(
           examId,
           uploadData
@@ -234,25 +342,6 @@ export function useStudentAnswerUpload(
 
         if (result.success && result.answerSheets) {
           const successCount = result.answerSheets.length
-
-          // correctionStatus収集
-          for (let i = 0; i < result.answerSheets.length; i++) {
-            const sheet = result.answerSheets[i] as Record<string, unknown> & {
-              correctionStatus?: string
-            }
-            if (
-              sheet?.correctionStatus &&
-              sheet.correctionStatus !== "not_requested" &&
-              i < uploadData.length
-            ) {
-              const data = uploadData[i]
-              const key = `${data.studentId}-${data.pageNumber}`
-              correctionMap.set(
-                key,
-                sheet.correctionStatus as "corrected" | "skipped"
-              )
-            }
-          }
 
           toast.success(`${successCount}件の答案をアップロードしました`)
           setFiles([])
@@ -283,6 +372,13 @@ export function useStudentAnswerUpload(
     fileOrder,
     passwordDialog,
     observerRef,
+
+    // Marker correction
+    markerCorrectionEnabled,
+    markerCorrectionAvailable,
+    markerDiagnostics,
+    markerAvailablePages,
+    setMarkerCorrectionEnabled,
 
     // Actions
     setFiles,

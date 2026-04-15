@@ -44,6 +44,7 @@ interface TableContentProps {
   affectedCells?: Set<string>
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   observerRef?: React.RefObject<IntersectionObserver | null>
+  correctingFileIds?: Set<string>
   getEnabledFiles: () => UnifiedFile[]
   getFileColor: (file: UnifiedFile) => string
   drawNameRegionCanvas: (
@@ -76,6 +77,7 @@ export function TableContent({
   affectedCells,
   imageLoadStates = {},
   observerRef,
+  correctingFileIds,
   getEnabledFiles,
   getFileColor,
   drawNameRegionCanvas,
@@ -235,6 +237,7 @@ export function TableContent({
                       isPendingChange={affectedCells?.has(file.id) || false}
                       hasExistingAnswer={hasExistingAnswer}
                       allowOverwrite={allowOverwrite}
+                      isCorrecting={correctingFileIds?.has(file.id) || false}
                     />
                   </SortableTableCell>
                 )
