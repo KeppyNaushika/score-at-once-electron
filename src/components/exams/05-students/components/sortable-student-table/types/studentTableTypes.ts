@@ -25,6 +25,7 @@ export interface Student {
   status: StudentStatus
   isInExam: boolean
   customOrder?: number | null
+  answerSheetCount: number
 }
 
 // クラスデータの型

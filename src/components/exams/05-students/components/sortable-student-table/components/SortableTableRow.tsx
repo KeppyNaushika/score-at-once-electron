@@ -4,6 +4,7 @@ import { UserCheck, Users, UserX } from "lucide-react"
 
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
 import type { SortableTableRowProps } from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
@@ -56,6 +57,15 @@ export function SortableTableRow({
         {student.lastNameKana} {student.firstNameKana}
       </TableCell>
       <TableCell>{student.examClassInfo?.className ?? "-"}</TableCell>
+      <TableCell className="text-center">
+        {student.answerSheetCount > 0 ? (
+          <Badge variant="secondary" className="tabular-nums">
+            {student.answerSheetCount}枚
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </TableCell>
       <TableCell>
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <Button
