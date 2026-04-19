@@ -2,6 +2,7 @@
 
 import {
   Circle,
+  Eye,
   Minus,
   Plus,
   RectangleHorizontal,
@@ -12,6 +13,12 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import {
   Select,
   SelectContent,
@@ -56,6 +63,10 @@ interface AnnotationBrowserPanelProps {
   onQuestionScoreCreated?: () => void
   /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
   onAnnotationAddedFromBrowser?: () => void
+  /** アノテーションの生徒・設問に移動 */
+  onNavigateTo?: (studentId: string, cropRegionId: string) => void
+  /** グループ内全アノテーション参照用 */
+  allAnnotations?: AnnotationWithContext[]
 }
 
 // アノテーションタイプのアイコン
@@ -120,6 +131,8 @@ export function AnnotationBrowserPanel({
   allScoringData,
   onQuestionScoreCreated,
   onAnnotationAddedFromBrowser,
+  onNavigateTo,
+  allAnnotations = [],
 }: AnnotationBrowserPanelProps) {
   // 初回ロード
   useEffect(() => {
@@ -421,6 +434,81 @@ export function AnnotationBrowserPanel({
                     )}
                   />
                 </button>
+
+                {/* 移動ボタン（左クリック: 代表に移動, 右クリック: 生徒選択メニュー） */}
+                {onNavigateTo &&
+                  item.representative.questionScore?.studentId &&
+                  item.representative.questionScore?.cropRegionId &&
+                  (item.count > 1 ? (
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
+                          title="クリック: 移動 / 右クリック: 生徒選択"
+                          onClick={() =>
+                            onNavigateTo(
+                              item.representative.questionScore!.studentId!,
+                              item.representative.questionScore!.cropRegionId!
+                            )
+                          }
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        {item.allIds
+                          .map((id) => allAnnotations.find((a) => a.id === id))
+                          .filter(
+                            (a): a is AnnotationWithContext =>
+                              !!a?.questionScore?.studentId &&
+                              !!a?.questionScore?.cropRegionId
+                          )
+                          .map((a) => {
+                            const s = a.questionScore!.student
+                            const label = s
+                              ? `${s.studentNumber} ${s.lastName}${s.firstName}`
+                              : a.questionScore!.studentId!.slice(0, 8)
+                            const question =
+                              a.questionScore!.cropRegion?.label ?? ""
+                            return (
+                              <ContextMenuItem
+                                key={a.id}
+                                onClick={() =>
+                                  onNavigateTo(
+                                    a.questionScore!.studentId!,
+                                    a.questionScore!.cropRegionId!
+                                  )
+                                }
+                              >
+                                {label}
+                                {question && (
+                                  <span className="ml-2 text-xs text-gray-400">
+                                    {question}
+                                  </span>
+                                )}
+                              </ContextMenuItem>
+                            )
+                          })}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
+                      title="この生徒・設問に移動"
+                      onClick={() =>
+                        onNavigateTo(
+                          item.representative.questionScore!.studentId!,
+                          item.representative.questionScore!.cropRegionId!
+                        )
+                      }
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  ))}
 
                 {/* 追加ボタン */}
                 <Button

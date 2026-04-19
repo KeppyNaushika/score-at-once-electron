@@ -13,7 +13,7 @@ import {
   User,
   X,
 } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types/scoringDataTypes"
@@ -240,6 +240,20 @@ export function ScoringSidePanel({
     }
     prevRefreshKeyRef.current = annotationRefreshKey
   }, [annotationRefreshKey, reloadBrowserAnnotations, examId])
+
+  // アノテーションの生徒・設問に移動
+  const handleNavigateTo = useCallback(
+    (studentId: string, cropRegionId: string) => {
+      const targetCropRegion = cropRegions.find((cr) => cr.id === cropRegionId)
+      if (targetCropRegion) {
+        onCropRegionChange(targetCropRegion)
+      }
+      if (onStudentChange) {
+        onStudentChange(studentId)
+      }
+    },
+    [cropRegions, onCropRegionChange, onStudentChange]
+  )
 
   // 現在のstudentIdを取得
   const currentStudentId = (() => {
@@ -483,6 +497,8 @@ export function ScoringSidePanel({
             allScoringData={allScoringData ?? []}
             onQuestionScoreCreated={onQuestionScoreCreated}
             onAnnotationAddedFromBrowser={onAnnotationAddedFromBrowser}
+            onNavigateTo={handleNavigateTo}
+            allAnnotations={annotationBrowser.allAnnotations}
           />
         </TabsContent>
       </Tabs>

@@ -896,7 +896,8 @@ export function useCanvasDrawing({
           if (localElement) {
             element = localElement
           } else {
-            element = convertAnnotationToDrawingElement(annotation)
+            // drawingElementsに存在しない = ローカルで削除済み → 描画スキップ
+            return null
           }
         } else {
           element = convertAnnotationToDrawingElement(annotation)
