@@ -25,7 +25,7 @@ import {
   loadSyncConfig,
   saveSyncConfig,
 } from "./syncConfig"
-import { SYNC_TABLES } from "./syncTableConfig"
+import { SYNC_EXCLUDE_TABLES, SYNC_TABLE_OPTIONS } from "./syncTableConfig"
 import type { SyncAppConfig, SyncAppStatus } from "./types"
 
 let syncInstance: SyncInstance | null = null
@@ -52,19 +52,23 @@ function broadcastSyncStatus(): void {
   }
 }
 
-/** enforceTombstonesの対象テーブル名（SYNC_TABLESからDeletedRecord自身を除外） */
-const TOMBSTONE_TARGET_TABLES = new Set(
-  SYNC_TABLES.filter((t) => t.name !== "DeletedRecord").map((t) => t.name)
-)
+/** enforceTombstonesの対象テーブル名を取得（DeletedRecord自身を除外） */
+function getTombstoneTargetTables(): Set<string> {
+  if (!syncInstance) return new Set()
+  return new Set(
+    syncInstance.getSyncedTables().filter((t) => t !== "DeletedRecord")
+  )
+}
 
 /**
  * sync後のtombstone適用
  *
  * DeletedRecordに記録された全テーブルの削除済みレコードを物理削除する。
- * SQLインジェクション防止のため、SYNC_TABLESに含まれるテーブル名のみ許可。
+ * SQLインジェクション防止のため、同期対象テーブル名のみ許可。
  */
 function enforceTombstones(db: Database.Database): void {
   try {
+    const targetTables = getTombstoneTargetTables()
     const tombstones = db
       .prepare(
         `SELECT recordId, tableName FROM "DeletedRecord" GROUP BY tableName, recordId`
@@ -72,9 +76,8 @@ function enforceTombstones(db: Database.Database): void {
       .all() as Array<{ recordId: string; tableName: string }>
 
     for (const { recordId, tableName } of tombstones) {
-      if (!TOMBSTONE_TARGET_TABLES.has(tableName)) continue
+      if (!targetTables.has(tableName)) continue
 
-      // テーブル名はSYNC_TABLESのホワイトリストで検証済みのため安全
       db.prepare(`DELETE FROM "${tableName}" WHERE "id" = ?`).run(recordId)
     }
   } catch (error) {
@@ -165,7 +168,8 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
     dbPath,
     nasPath,
     clientId: config.clientId,
-    tables: SYNC_TABLES,
+    excludeTables: SYNC_EXCLUDE_TABLES,
+    tableOptions: SYNC_TABLE_OPTIONS,
     intervalMs: config.intervalMs,
     changelogRetentionDays: config.changelogRetentionDays,
     schemaVersion: getSchemaVersion(),
