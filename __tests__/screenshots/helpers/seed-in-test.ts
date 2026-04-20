@@ -11,6 +11,7 @@ import * as fs from "fs"
 import * as path from "path"
 import sharp from "sharp"
 
+import { createPrismaClientForPath } from "../../helpers/testPrismaClient"
 import {
   computeRegionDefinitions,
   computeTotalPoints,
@@ -29,10 +30,7 @@ let prisma: PrismaClient
 
 function getPrisma(): PrismaClient {
   if (!prisma) {
-    prisma = new PrismaClient({
-      datasources: { db: { url: `file:${DB_PATH}` } },
-      log: ["error"],
-    })
+    prisma = createPrismaClientForPath(DB_PATH)
   }
   return prisma
 }

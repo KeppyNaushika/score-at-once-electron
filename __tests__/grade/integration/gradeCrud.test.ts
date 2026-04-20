@@ -4,24 +4,23 @@
  * grade.ts の全関数（getAll, getById, create, update, delete）を検証
  */
 
-import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
 vi.mock("@/electron-src/lib/prisma/client", () => {
-  const { PrismaClient: PC } = require("@prisma/client")
   const p = path.resolve(__dirname, "../../../data/test-database.db")
-  const client = new PC({
-    datasources: { db: { url: `file:${p}` } },
-    log: ["error"],
-  })
+  const {
+    createPrismaClientForPath,
+  } = require("@/__tests__/helpers/testPrismaClient")
+  const client = createPrismaClientForPath(p)
   return { default: client }
 })
 
 import {
   cleanupTestDatabase,
+  createPrismaClientForPath,
   disconnectTestPrisma,
 } from "@/__tests__/helpers/testPrismaClient"
 import {
@@ -32,10 +31,7 @@ import {
   updateGrade,
 } from "@/electron-src/lib/prisma/grade"
 
-const testPrisma = new PrismaClient({
-  datasources: { db: { url: `file:${TEST_DB_PATH}` } },
-  log: ["error"],
-})
+const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
 describe("Grade CRUD", () => {
   beforeEach(async () => {

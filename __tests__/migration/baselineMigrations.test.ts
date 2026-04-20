@@ -4,18 +4,14 @@ import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
 import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
+import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_DB_DIR = path.resolve(__dirname, "../../data")
 const TEST_DB_PATH = path.join(TEST_DB_DIR, "test-baseline.db")
-const TEST_DB_URL = `file:${TEST_DB_PATH}`
 
 let prisma: PrismaClient
 
-const createPrisma = () =>
-  new PrismaClient({
-    datasources: { db: { url: TEST_DB_URL } },
-    log: ["error"],
-  })
+const createPrisma = () => createPrismaClientForPath(TEST_DB_PATH)
 
 const resetDb = async () => {
   await prisma.$disconnect()

@@ -18,7 +18,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/electron-src/*": ["./electron-src/*"],
-      "@/__tests__/*": ["./__tests__/*"]
+      "@/__tests__/*": ["./__tests__/*"],
+      "@prisma/client": ["./generated/prisma/client"]
     },
     "plugins": [
       {

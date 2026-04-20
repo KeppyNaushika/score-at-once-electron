@@ -11,6 +11,7 @@
  *   npx tsx scripts/importTempSaiten.ts --config path/to/config  # 設定ファイル指定
  */
 
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
 import * as fs from "fs"
@@ -153,10 +154,8 @@ function buildLabel(q: QuestionEntry): string {
 // =============================================================================
 
 async function main() {
-  const prisma = new PrismaClient({
-    datasources: { db: { url: `file:${DB_PATH}` } },
-    log: ["error"],
-  })
+  const adapter = new PrismaBetterSqlite3({ url: DB_PATH })
+  const prisma = new PrismaClient({ adapter, log: ["error"] })
 
   try {
     await prisma.$connect()

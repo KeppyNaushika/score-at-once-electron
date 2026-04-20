@@ -19,18 +19,14 @@ import {
   detectSchemaVersion,
   SchemaVersion,
 } from "../../electron-src/lib/prisma/schema/versionDetector"
+import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_DB_DIR = path.resolve(__dirname, "../../data")
 const TEST_DB_PATH = path.join(TEST_DB_DIR, "test-bridge-integration.db")
-const TEST_DB_URL = `file:${TEST_DB_PATH}`
 
 let prisma: PrismaClient
 
-const createPrisma = () =>
-  new PrismaClient({
-    datasources: { db: { url: TEST_DB_URL } },
-    log: ["error"],
-  })
+const createPrisma = () => createPrismaClientForPath(TEST_DB_PATH)
 
 const resetDb = async () => {
   if (prisma) await prisma.$disconnect()

@@ -4,24 +4,23 @@
  * 学級登録・生徒一括追加・並び順変更・学級削除を検証
  */
 
-import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
 vi.mock("@/electron-src/lib/prisma/client", () => {
-  const { PrismaClient: PC } = require("@prisma/client")
   const p = path.resolve(__dirname, "../../../data/test-database.db")
-  const client = new PC({
-    datasources: { db: { url: `file:${p}` } },
-    log: ["error"],
-  })
+  const {
+    createPrismaClientForPath,
+  } = require("@/__tests__/helpers/testPrismaClient")
+  const client = createPrismaClientForPath(p)
   return { default: client }
 })
 
 import {
   cleanupTestDatabase,
+  createPrismaClientForPath,
   disconnectTestPrisma,
 } from "@/__tests__/helpers/testPrismaClient"
 import {
@@ -33,10 +32,7 @@ import {
   updateGradeStudentOrders,
 } from "@/electron-src/lib/prisma/gradeStudent"
 
-const testPrisma = new PrismaClient({
-  datasources: { db: { url: `file:${TEST_DB_PATH}` } },
-  log: ["error"],
-})
+const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
 /** テスト用のGrade + Class + Students を作成するヘルパー */
 async function createTestData() {
