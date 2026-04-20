@@ -4,24 +4,23 @@
  * Electron依存のdataManagerを回避し、テスト用SQLiteファイルに直接接続する
  */
 
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 
 const TEST_DB_PATH = path.resolve(__dirname, "../../data/test-database.db")
-const TEST_DATABASE_URL = `file:${TEST_DB_PATH}`
+
+/** 任意のSQLiteファイルパスからPrismaClientを生成する */
+export function createPrismaClientForPath(dbPath: string): PrismaClient {
+  const adapter = new PrismaBetterSqlite3({ url: dbPath })
+  return new PrismaClient({ adapter, log: ["error"] })
+}
 
 let _testPrisma: PrismaClient | null = null
 
 export function getTestPrismaClient(): PrismaClient {
   if (!_testPrisma) {
-    _testPrisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: TEST_DATABASE_URL,
-        },
-      },
-      log: ["error"],
-    })
+    _testPrisma = createPrismaClientForPath(TEST_DB_PATH)
   }
   return _testPrisma
 }

@@ -5,7 +5,6 @@
  * Electronの`app`依存を回避するため、prisma/clientをモックしてテスト用クライアントを注入
  */
 
-import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -13,17 +12,17 @@ const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
 // prisma/clientをテスト用クライアントでモック（vi.mockはホイスティングされるため内部で生成）
 vi.mock("@/electron-src/lib/prisma/client", () => {
-  const { PrismaClient: PC } = require("@prisma/client")
   const p = path.resolve(__dirname, "../../../data/test-database.db")
-  const client = new PC({
-    datasources: { db: { url: `file:${p}` } },
-    log: ["error"],
-  })
+  const {
+    createPrismaClientForPath,
+  } = require("@/__tests__/helpers/testPrismaClient")
+  const client = createPrismaClientForPath(p)
   return { default: client }
 })
 
 import {
   cleanupTestDatabase,
+  createPrismaClientForPath,
   disconnectTestPrisma,
 } from "@/__tests__/helpers/testPrismaClient"
 import {
@@ -45,10 +44,7 @@ import {
 } from "@/electron-src/lib/prisma/gradeItem"
 
 // テスト用Grade作成ヘルパー（テスト用クライアントを直接使用）
-const testPrisma = new PrismaClient({
-  datasources: { db: { url: `file:${TEST_DB_PATH}` } },
-  log: ["error"],
-})
+const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
 async function createTestGrade(name = "テスト成績PJ") {
   return testPrisma.grade.create({

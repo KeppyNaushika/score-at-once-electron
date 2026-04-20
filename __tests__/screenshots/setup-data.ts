@@ -15,10 +15,11 @@
  *   npx tsx __tests__/screenshots/setup-data.ts
  */
 
-import { PrismaClient } from "@prisma/client"
 import { randomUUID } from "crypto"
 import * as fs from "fs"
 import * as path from "path"
+
+import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 // ---------------------------------------------------------------------------
 // パス設定
@@ -30,10 +31,7 @@ const DB_PATH = path.join(TEST_DATA_DIR, "database.db")
 // ---------------------------------------------------------------------------
 // Prisma Client（専用DB）
 // ---------------------------------------------------------------------------
-const prisma = new PrismaClient({
-  datasources: { db: { url: `file:${DB_PATH}` } },
-  log: ["error"],
-})
+const prisma = createPrismaClientForPath(DB_PATH)
 
 // ---------------------------------------------------------------------------
 // メイン処理

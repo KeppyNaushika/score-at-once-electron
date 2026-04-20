@@ -21,7 +21,8 @@
     "rootDir": "..",
     "outDir": "../main",
     "paths": {
-      "@/*": ["../src/*"]
+      "@/*": ["../src/*"],
+      "@prisma/client": ["../generated/prisma/client"]
     }
   },
   "exclude": ["node_modules", "../node_modules"],

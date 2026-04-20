@@ -133,7 +133,7 @@ export const getExams = async (userId: string) => {
 }
 
 // getExams の戻り値の型
-export type ExamPayload = PrismaTypes.PromiseReturnType<typeof getExams>[number]
+export type ExamPayload = Awaited<ReturnType<typeof getExams>>[number]
 
 /** IDで試験を取得する（全リレーション含む: userExams・examPages・examSubtotalGroups・examStudents） */
 export const getExamById = async (id: string) => {
@@ -205,9 +205,7 @@ export const getExamById = async (id: string) => {
 }
 
 // getExamById の戻り値の型
-export type ExamWithDetailsPayload = PrismaTypes.PromiseReturnType<
-  typeof getExamById
->
+export type ExamWithDetailsPayload = Awaited<ReturnType<typeof getExamById>>
 
 /** 試験を作成し、指定ユーザーをOWNERとしてUserExamに登録する */
 export const createExam = async (

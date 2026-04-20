@@ -5,8 +5,8 @@ const sleep = promisify(setTimeout)
 async function startDev() {
   console.log("Building Electron...")
 
-  // Build Electron
-  const buildProcess = spawn("npx", ["tsc", "-p", "electron-src"], {
+  // Build Electron (esbuild for ESM→CJS Prisma 7 compatibility)
+  const buildProcess = spawn("node", ["scripts/buildMain.js"], {
     stdio: "inherit",
     shell: true,
   })

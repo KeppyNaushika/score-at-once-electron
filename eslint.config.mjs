@@ -16,6 +16,7 @@ export default [
       "**/out/**",
       "**/public/**",
       "**/scripts/**",
+      "**/generated/**",
     ],
   },
   js.configs.recommended,

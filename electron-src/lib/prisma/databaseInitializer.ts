@@ -1,3 +1,4 @@
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as fs from "fs/promises"
 import * as path from "path"
@@ -24,29 +25,20 @@ export const getDatabasePath = (): string => {
   return path.join(getDataDirectory(), "database.db")
 }
 
-/** 共有ドライブ対応のPrismaクライアントを生成し、DATABASE_URL環境変数を上書きする */
-export const createSharedPrismaClient = (): PrismaClient => {
-  const databasePath = getDatabasePath()
-  // パッケージ化されたアプリでは絶対パスを使用
-  const absolutePath = path.resolve(databasePath)
-
-  // Windowsパスの正規化（バックスラッシュをスラッシュに）
-  const normalizedPath = absolutePath.replace(/\\/g, "/")
-  const databaseUrl = `file:${normalizedPath}`
-
-  // 環境変数を動的にオーバーライド
-  process.env.DATABASE_URL = databaseUrl
+/** 指定パスのSQLiteファイルに接続するPrismaClientを生成する */
+export const createPrismaClientForPath = (dbPath: string): PrismaClient => {
+  const absolutePath = path.resolve(dbPath)
+  const adapter = new PrismaBetterSqlite3({ url: absolutePath })
 
   return new PrismaClient({
-    datasources: {
-      db: {
-        url: databaseUrl,
-      },
-    },
-    // パッケージ化されたアプリでの設定を強化
+    adapter,
     log: ["error", "warn", "info"],
-    errorFormat: "pretty",
   })
+}
+
+/** 共有ドライブ対応のPrismaクライアントをドライバーアダプター経由で生成する */
+export const createSharedPrismaClient = (): PrismaClient => {
+  return createPrismaClientForPath(getDatabasePath())
 }
 
 /** 初回起動時にDBファイルを作成しスキーマを適用する。既にDBが存在する場合はfalseを返す */

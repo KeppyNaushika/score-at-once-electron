@@ -1,15 +1,9 @@
 module.exports = {
   packagerConfig: {
     asar: {
-      unpack: "**/{node_modules,.next,main,sharp,@prisma,.prisma}/**/*",
+      unpack: "**/{node_modules,.next,main,sharp}/**/*",
     },
-    asarUnpack: [
-      "**/.next/**/*",
-      "**/node_modules/**/*",
-      "**/main/**/*",
-      "**/@prisma/**/*",
-      "**/.prisma/**/*",
-    ],
+    asarUnpack: ["**/.next/**/*", "**/node_modules/**/*", "**/main/**/*"],
     name: "一括採点",
     executableName: "score-at-once",
     icon: "./public/icons/icon.icns", // macOS用に明示的に指定
