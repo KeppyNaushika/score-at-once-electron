@@ -28,6 +28,9 @@ export interface ScoringContextState {
 
   /** 答案が選択されている状態 */
   hasSelectedAnswers: boolean
+
+  /** 採点操作モード */
+  scoringOperationMode: "keyboard" | "mouse"
 }
 
 /**

@@ -133,6 +133,18 @@ export interface ScoringData {
 }
 
 /**
+ * 採点操作モード
+ * - "keyboard": キーボードモード（選択→キーで採点）
+ * - "mouse": マウスモード（クリックで直接採点、選択概念なし）
+ */
+export type ScoringOperationMode = "keyboard" | "mouse"
+
+/**
+ * マウスモード時のブラシ（クリック時に適用する採点ステータス）
+ */
+export type MouseBrushAction = Exclude<ScoringStatus, "unscored">
+
+/**
  * 模範解答表示モード
  */
 export type MasterAnswerDisplayMode =
