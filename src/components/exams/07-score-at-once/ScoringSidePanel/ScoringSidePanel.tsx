@@ -28,6 +28,8 @@ import type {
   LayoutDirection,
   MasterAnswerDisplayMode,
   MasterAnswerKeyBehavior,
+  MouseBrushAction,
+  ScoringOperationMode,
   ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
@@ -163,6 +165,14 @@ interface ScoringSidePanelProps {
   onToggleMasterAnswer?: () => void
   onMasterAnswerShow?: () => void
   onMasterAnswerHide?: () => void
+  // 操作モード関連
+  scoringOperationMode?: ScoringOperationMode
+  onScoringOperationModeChange?: (mode: ScoringOperationMode) => void
+  mouseBrush?: MouseBrushAction
+  onMouseBrushChange?: (brush: MouseBrushAction) => void
+  visibleUnscoredCount?: number
+  hiddenUnscoredCount?: number
+  onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
 }
 
 export function ScoringSidePanel({
@@ -221,6 +231,13 @@ export function ScoringSidePanel({
   onToggleMasterAnswer,
   onMasterAnswerShow,
   onMasterAnswerHide,
+  scoringOperationMode,
+  onScoringOperationModeChange,
+  mouseBrush,
+  onMouseBrushChange,
+  visibleUnscoredCount,
+  hiddenUnscoredCount,
+  onBatchScoreVisibleUnscored,
 }: ScoringSidePanelProps) {
   const annotationBrowser = useAnnotationBrowser()
   const { keyBindings } = useKeyBindings()
@@ -422,6 +439,13 @@ export function ScoringSidePanel({
             onGridNavigation={onGridNavigation}
             isSectionOpen={isSectionOpen}
             onToggleSection={toggleSection}
+            scoringOperationMode={scoringOperationMode}
+            onScoringOperationModeChange={onScoringOperationModeChange}
+            mouseBrush={mouseBrush}
+            onMouseBrushChange={onMouseBrushChange}
+            visibleUnscoredCount={visibleUnscoredCount}
+            hiddenUnscoredCount={hiddenUnscoredCount}
+            onBatchScoreVisibleUnscored={onBatchScoreVisibleUnscored}
           />
 
           {/* 個別表示モード時：生徒選択パネル */}

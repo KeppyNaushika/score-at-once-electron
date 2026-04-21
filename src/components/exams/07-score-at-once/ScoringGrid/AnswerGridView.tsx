@@ -15,7 +15,9 @@ import type {
   CropRegionWithExamPage,
   LayoutDirection,
   MasterGridItem,
+  MouseBrushAction,
   ScoringData,
+  ScoringOperationMode,
 } from "@/components/exams/07-score-at-once/types"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 
@@ -53,6 +55,16 @@ export interface AnswerGridViewProps {
   onClickScoring?: (answerId: string, clickCount: number) => void
   /** クリック採点のデバウンス時間（ms） */
   clickScoringDebounceMs?: number
+  /** 採点操作モード */
+  scoringOperationMode?: ScoringOperationMode
+  /** マウスモード時のブラシ */
+  mouseBrush?: MouseBrushAction
+  /** マウスモード時のクリック採点コールバック */
+  onMouseScoring?: (
+    answerId: string,
+    status: MouseBrushAction,
+    isToggle: boolean
+  ) => void
   className?: string
 }
 
@@ -74,8 +86,12 @@ export default function AnswerGridView({
   pageSize,
   onClickScoring,
   clickScoringDebounceMs = 300,
+  scoringOperationMode,
+  mouseBrush,
+  onMouseScoring,
   className = "",
 }: AnswerGridViewProps) {
+  const isMouseMode = scoringOperationMode === "mouse"
   /** フィルタリングされた採点データ（模範解答 + 学生データ） */
   const masterAnswers = masterAnswerData
     ? [
@@ -162,6 +178,7 @@ export default function AnswerGridView({
 
   /** ドラッグ中のマウス移動ハンドラー */
   const handleMouseMove = (event: React.MouseEvent) => {
+    if (isMouseMode) return // マウスモードではドラッグ無効
     if (dragStart && gridRef.current) {
       const gridRect = gridRef.current.getBoundingClientRect()
       const currentX = event.clientX - gridRect.left
@@ -182,6 +199,7 @@ export default function AnswerGridView({
   }
 
   const handleMouseUp = (event: React.MouseEvent) => {
+    if (isMouseMode) return // マウスモードではドラッグ無効
     if (isDragging) {
       handleDragSelection(event, dragStart)
     }
@@ -197,19 +215,51 @@ export default function AnswerGridView({
     (event: React.MouseEvent, answerId: string) => {
       if (answerId.startsWith("master-")) return
 
+      // マウスモード: シングルクリックでブラシ適用（トグル付き）、ダブル以上はonClickScoring
+      if (isMouseMode) {
+        if (event.detail >= 2 && onClickScoring) {
+          const timers = clickTimersRef.current
+          const existing = timers.get(answerId)
+          if (existing) {
+            clearTimeout(existing.timerId)
+          }
+          const clickCount = Math.max(event.detail, existing?.clickCount ?? 0)
+          const timerId = setTimeout(() => {
+            timers.delete(answerId)
+            onClickScoring(answerId, clickCount)
+          }, clickScoringDebounceMs)
+          timers.set(answerId, { timerId, clickCount })
+          return
+        }
+
+        // シングルクリック: ブラシで採点
+        if (event.detail === 1 && onMouseScoring && mouseBrush) {
+          // デバウンスでダブルクリックを待つ
+          const timers = clickTimersRef.current
+          const existing = timers.get(answerId)
+          if (existing) {
+            clearTimeout(existing.timerId)
+          }
+          const timerId = setTimeout(() => {
+            timers.delete(answerId)
+            onMouseScoring(answerId, mouseBrush, true)
+          }, clickScoringDebounceMs)
+          timers.set(answerId, { timerId, clickCount: 1 })
+        }
+        return
+      }
+
+      // キーボードモード: 従来動作
       if (event.detail >= 2 && onClickScoring) {
-        // ダブルクリック以上: ドラッグ開始せず、クリック採点デバウンスに委譲
         const timers = clickTimersRef.current
         const existing = timers.get(answerId)
 
-        // 既存タイマーがあればクリア（有効時間を延長）
         if (existing) {
           clearTimeout(existing.timerId)
         }
 
         const clickCount = Math.max(event.detail, existing?.clickCount ?? 0)
 
-        // 新しいタイマーを設定（有効時間終了後に確定）
         const timerId = setTimeout(() => {
           timers.delete(answerId)
           onClickScoring(answerId, clickCount)
@@ -226,7 +276,15 @@ export default function AnswerGridView({
       }
       handleMouseDown(event, answerId)
     },
-    [startDrag, handleMouseDown, onClickScoring, clickScoringDebounceMs]
+    [
+      isMouseMode,
+      startDrag,
+      handleMouseDown,
+      onClickScoring,
+      clickScoringDebounceMs,
+      onMouseScoring,
+      mouseBrush,
+    ]
   )
 
   const isColumnLayout =

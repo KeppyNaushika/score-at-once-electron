@@ -6,7 +6,10 @@
  */
 
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
-import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
+import type {
+  ScoringOperationMode,
+  ScoringStatus,
+} from "@/components/exams/07-score-at-once/types"
 
 /**
  * ショートカットハンドラーの型定義
@@ -50,6 +53,8 @@ interface ScoringShortcutHandlers {
   handleToggleViewMode: () => void
   /** 模範解答表示トグル（個別モード） */
   handleToggleMasterAnswer?: () => void
+  /** 採点操作モード（キーボード専用コマンドの制御用） */
+  scoringOperationMode?: ScoringOperationMode
 }
 
 /**
@@ -78,13 +83,17 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     handleSelectAll,
     handleToggleViewMode,
     handleToggleMasterAnswer,
+    scoringOperationMode: _scoringOperationMode,
   } = handlers
+
+  // キーボードモード専用コマンドのwhen句サフィックス
+  const kbOnly = " && scoringOperationMode == 'keyboard'"
 
   // ========================================
   // 選択コマンド
   // ========================================
   useCommand("selection.selectAll", handleSelectAll, {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "全選択",
       category: "選択",
@@ -96,7 +105,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // 採点コマンド（サイドパネル非表示でも有効）
   // ========================================
   useCommand("scoring.unscored", () => handleScore("unscored"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "未採点として採点",
       category: "採点",
@@ -105,7 +114,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.correct", () => handleScore("correct"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "正答として採点",
       category: "採点",
@@ -114,7 +123,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.partial", () => handleScore("partial"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "部分点として採点",
       category: "採点",
@@ -123,7 +132,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.pending", () => handleScore("pending"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "保留として採点",
       category: "採点",
@@ -132,7 +141,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.incorrect", () => handleScore("incorrect"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "誤答として採点",
       category: "採点",
@@ -141,7 +150,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.noAnswer", () => handleScore("no_answer"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "無答として採点",
       category: "採点",
@@ -150,7 +159,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.doubleMark", () => handleScore("double_mark"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "Wマークとして採点",
       category: "採点",
@@ -297,7 +306,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveUp", () => handleGridNavigation("w"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "上に移動",
       category: "ナビゲーション",
@@ -305,7 +314,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveDown", () => handleGridNavigation("s"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "下に移動",
       category: "ナビゲーション",
@@ -313,7 +322,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveLeft", () => handleGridNavigation("a"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "左に移動",
       category: "ナビゲーション",
@@ -321,7 +330,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveRight", () => handleGridNavigation("d"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "右に移動",
       category: "ナビゲーション",
@@ -514,57 +523,57 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // 部分点入力ショートカット（グリッド・個別共通）
   // ========================================
   useCommand("scoring.openPartialWith0", () => handlePartialScoreInput("0"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "0キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith1", () => handlePartialScoreInput("1"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "1キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith2", () => handlePartialScoreInput("2"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "2キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith3", () => handlePartialScoreInput("3"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "3キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith4", () => handlePartialScoreInput("4"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "4キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith5", () => handlePartialScoreInput("5"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "5キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith6", () => handlePartialScoreInput("6"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "6キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith7", () => handlePartialScoreInput("7"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "7キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith8", () => handlePartialScoreInput("8"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "8キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith9", () => handlePartialScoreInput("9"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: "9キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWithDot", () => handlePartialScoreInput("."), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: { title: ".キーで部分点入力", category: "採点" },
   })
 }

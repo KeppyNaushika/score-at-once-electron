@@ -11,8 +11,10 @@ import type {
   LayoutDirection,
   MasterAnswerDisplayMode,
   MasterGridItem,
+  MouseBrushAction,
   QuestionScore,
   ScoringData,
+  ScoringOperationMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 
@@ -47,6 +49,13 @@ interface ScoringContentAreaProps {
   pageSize?: string
   onClickScoring?: (answerId: string, clickCount: number) => void
   clickScoringDebounceMs?: number
+  scoringOperationMode?: ScoringOperationMode
+  mouseBrush?: MouseBrushAction
+  onMouseScoring?: (
+    answerId: string,
+    status: MouseBrushAction,
+    isToggle: boolean
+  ) => void
 }
 
 export function ScoringContentArea({
@@ -80,6 +89,9 @@ export function ScoringContentArea({
   pageSize = "A4",
   onClickScoring,
   clickScoringDebounceMs,
+  scoringOperationMode,
+  mouseBrush,
+  onMouseScoring,
 }: ScoringContentAreaProps) {
   const currentScoringDataId =
     gradingMode === "individual"
@@ -187,6 +199,9 @@ export function ScoringContentArea({
         pageSize={pageSize}
         onClickScoring={onClickScoring}
         clickScoringDebounceMs={clickScoringDebounceMs}
+        scoringOperationMode={scoringOperationMode}
+        mouseBrush={mouseBrush}
+        onMouseScoring={onMouseScoring}
         className="p-4"
       />
     )

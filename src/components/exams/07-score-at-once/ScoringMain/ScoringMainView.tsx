@@ -19,6 +19,7 @@ import { useScoringDataLoader } from "@/components/exams/07-score-at-once/Scorin
 import { useScoringEffects } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringEffects"
 import { useScoringFilter } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringFilter"
 import { useScoringMainState } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMainState"
+import { useScoringMode } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMode"
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { useScoringSettings } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringSettings"
 import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
@@ -26,12 +27,16 @@ import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/
 import { ScoringContentArea } from "@/components/exams/07-score-at-once/ScoringMain/ScoringContentArea"
 import { ScoringHeaderControls } from "@/components/exams/07-score-at-once/ScoringMain/ScoringHeaderControls"
 import { ScoringModals } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModals"
+import { ScoringModeModal } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModeModal"
 import {
   ScoringErrorState,
   ScoringLoadingState,
 } from "@/components/exams/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
-import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
+import type {
+  MouseBrushAction,
+  ScoringStatus,
+} from "@/components/exams/07-score-at-once/types"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
@@ -43,6 +48,18 @@ function ScoringMainViewContent() {
   const { user: authUser } = useAuth()
   const { helpButton } = usePageHelp()
   const { keyBindings } = useShortcutContext()
+
+  /** 操作モード管理 */
+  const {
+    scoringOperationMode,
+    showModeSelectionModal,
+    selectMode,
+    setScoringOperationMode,
+    closeModeSelectionModal,
+    mouseBrush,
+    setMouseBrush,
+  } = useScoringMode()
+  const effectiveMode = scoringOperationMode ?? "keyboard"
 
   /** モーダル用のキーバインディング */
   const modalKeyBindings = useMemo(
@@ -414,6 +431,78 @@ function ScoringMainViewContent() {
     ]
   )
 
+  /** マウスモード: クリック採点（トグル付き） */
+  const handleMouseScoring = useCallback(
+    (answerId: string, status: MouseBrushAction, isToggle: boolean) => {
+      if (answerId.startsWith("master-")) return
+
+      // トグル: 同じステータスなら未採点に戻す
+      if (isToggle) {
+        const currentData = allScoringData.find((d) => d.id === answerId)
+        if (currentData?.status === status) {
+          const targetSet = new Set([answerId])
+          handleBatchScore("unscored" as ScoringStatus, null, null, targetSet)
+          setRecentlyScoredAnswers((prev) => {
+            const newSet = new Set(prev)
+            newSet.add(answerId)
+            return newSet
+          })
+          return
+        }
+      }
+
+      const targetSet = new Set([answerId])
+      handleBatchScore(status as ScoringStatus, null, null, targetSet)
+      setRecentlyScoredAnswers((prev) => {
+        const newSet = new Set(prev)
+        newSet.add(answerId)
+        return newSet
+      })
+    },
+    [allScoringData, handleBatchScore, setRecentlyScoredAnswers]
+  )
+
+  /** マウスモード: 表示中の未採点を一括採点 */
+  const handleBatchScoreVisibleUnscored = useCallback(
+    (status: MouseBrushAction) => {
+      const unscoredVisible = allScoringData.filter(
+        (d) => d.status === "unscored" && filteredScoringDataIds.includes(d.id)
+      )
+      if (unscoredVisible.length === 0) return
+      const targetSet = new Set(unscoredVisible.map((d) => d.id))
+      handleBatchScore(status as ScoringStatus, null, null, targetSet)
+      setRecentlyScoredAnswers((prev) => {
+        const newSet = new Set(prev)
+        unscoredVisible.forEach((d) => newSet.add(d.id))
+        return newSet
+      })
+    },
+    [
+      allScoringData,
+      filteredScoringDataIds,
+      handleBatchScore,
+      setRecentlyScoredAnswers,
+    ]
+  )
+
+  /** 表示中の未採点件数 */
+  const visibleUnscoredCount = useMemo(
+    () =>
+      allScoringData.filter(
+        (d) => d.status === "unscored" && filteredScoringDataIds.includes(d.id)
+      ).length,
+    [allScoringData, filteredScoringDataIds]
+  )
+
+  /** 非表示の未採点件数 */
+  const hiddenUnscoredCount = useMemo(
+    () =>
+      allScoringData.filter(
+        (d) => d.status === "unscored" && !filteredScoringDataIds.includes(d.id)
+      ).length,
+    [allScoringData, filteredScoringDataIds]
+  )
+
   /** 表示モード切り替え（グリッド⇔個別） */
   const handleToggleViewMode = useCallback(
     () => setGradingMode((prev) => (prev === "grid" ? "individual" : "grid")),
@@ -486,6 +575,7 @@ function ScoringMainViewContent() {
   useContextValue("sidePanelVisible", showSidePanel)
   useContextValue("partialScoreModalOpen", showPartialScoreModal)
   useContextValue("modalOpen", showPartialScoreModal || showScoreComparison)
+  useContextValue("scoringOperationMode", effectiveMode)
 
   /** キーボードショートカット登録 */
   useScoringShortcuts({
@@ -510,6 +600,7 @@ function ScoringMainViewContent() {
     handleSelectAll,
     handleToggleViewMode: handleToggleViewMode,
     handleToggleMasterAnswer,
+    scoringOperationMode: effectiveMode,
   })
 
   const currentStudentId = useMemo(() => {
@@ -596,6 +687,9 @@ function ScoringMainViewContent() {
             pageSize={pageSize}
             onClickScoring={handleClickScoring}
             clickScoringDebounceMs={clickScoringDebounceMs}
+            scoringOperationMode={effectiveMode}
+            mouseBrush={mouseBrush}
+            onMouseScoring={handleMouseScoring}
           />
         </div>
 
@@ -664,6 +758,13 @@ function ScoringMainViewContent() {
               onToggleMasterAnswer={handleToggleMasterAnswer}
               onMasterAnswerShow={handleMasterAnswerShow}
               onMasterAnswerHide={handleMasterAnswerHide}
+              scoringOperationMode={effectiveMode}
+              onScoringOperationModeChange={setScoringOperationMode}
+              mouseBrush={mouseBrush}
+              onMouseBrushChange={setMouseBrush}
+              visibleUnscoredCount={visibleUnscoredCount}
+              hiddenUnscoredCount={hiddenUnscoredCount}
+              onBatchScoreVisibleUnscored={handleBatchScoreVisibleUnscored}
             />
           </div>
         </div>
@@ -676,6 +777,13 @@ function ScoringMainViewContent() {
         open={showOmrModal}
         onOpenChange={setShowOmrModal}
         onScoresApplied={handleQuestionScoreCreated}
+      />
+
+      {/* モード選択モーダル */}
+      <ScoringModeModal
+        open={showModeSelectionModal}
+        onSelect={selectMode}
+        onClose={closeModeSelectionModal}
       />
 
       {/* モーダル類 */}
