@@ -25,12 +25,9 @@ export async function setup() {
 
   // prisma db pushでテスト用DBを作成（スキーマ全体を反映）
   // migrate deployではマイグレーション未作成のテーブルが欠落するため、db pushを使用
-  execSync("npx prisma db push --skip-generate --accept-data-loss", {
+  // Prisma 7では DATABASE_URL 環境変数が自動参照されないため --url で明示
+  execSync(`npx prisma db push --url=file:${TEST_DB_PATH} --accept-data-loss`, {
     cwd: path.resolve(__dirname, ".."),
-    env: {
-      ...process.env,
-      DATABASE_URL: `file:${TEST_DB_PATH}`,
-    },
     stdio: "pipe",
   })
 }

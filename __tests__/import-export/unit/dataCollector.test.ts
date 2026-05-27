@@ -188,7 +188,7 @@ describe("アーカイブデータ構造", () => {
       const data = createExtractedArchiveData()
 
       expect(data.manifest).toBeTruthy()
-      expect(data.manifest.version).toBe("1.4.0")
+      expect(data.manifest.version).toBe("1.10.0")
       expect(data.examData).toBeTruthy()
       expect(data.studentsData).toBeTruthy()
       expect(data.classesData).toBeTruthy()

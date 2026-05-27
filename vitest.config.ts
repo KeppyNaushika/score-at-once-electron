@@ -12,9 +12,17 @@ export default defineConfig({
     fileParallelism: false,
   },
   resolve: {
-    alias: {
-      "@/electron-src": path.resolve(__dirname, "./electron-src"),
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      {
+        find: "@/electron-src",
+        replacement: path.resolve(__dirname, "./electron-src"),
+      },
+      { find: /^@\/(.*)$/, replacement: path.resolve(__dirname, "./src/$1") },
+      // Prisma 7: @prisma/client（exact match のみ）を生成済みクライアントへ
+      {
+        find: /^@prisma\/client$/,
+        replacement: path.resolve(__dirname, "./generated/prisma/client"),
+      },
+    ],
   },
 })
