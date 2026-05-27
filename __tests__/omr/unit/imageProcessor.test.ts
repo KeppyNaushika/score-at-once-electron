@@ -197,14 +197,14 @@ describe("computeEllipticalFillRatio", () => {
       channels,
     }
 
-    // 閾値128では「暗い」にならない（128 < 128 は false）
+    // 閾値100なら「暗い」にならない（luminance≈128 > 100）
     const ratioLow = computeEllipticalFillRatio(
       img,
       100,
       100,
       halfW,
       halfH,
-      128
+      100
     )
     expect(ratioLow).toBe(0)
 

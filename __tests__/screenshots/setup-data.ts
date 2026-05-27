@@ -51,9 +51,9 @@ async function main() {
   // Prisma db push でスキーマ作成
   console.log("[0/2] スキーマ作成 (prisma db push)...")
   const { execSync } = await import("child_process")
-  execSync(`npx prisma db push --skip-generate --accept-data-loss`, {
+  // Prisma 7では DATABASE_URL 環境変数が自動参照されないため --url で明示
+  execSync(`npx prisma db push --url=file:${DB_PATH} --accept-data-loss`, {
     cwd: PROJECT_ROOT,
-    env: { ...process.env, DATABASE_URL: `file:${DB_PATH}` },
     stdio: "pipe",
   })
   console.log("  -> スキーマ作成完了")
