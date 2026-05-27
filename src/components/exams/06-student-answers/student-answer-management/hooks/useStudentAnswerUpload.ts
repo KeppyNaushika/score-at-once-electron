@@ -25,7 +25,8 @@ export function useStudentAnswerUpload(
   const [fileOrder, setFileOrder] = useState<PlacementStrategy>("page-first")
 
   // マーカー補正
-  const [markerCorrectionEnabled, setMarkerCorrectionEnabled] = useState(false)
+  const [markerCorrectionEnabled, setMarkerCorrectionEnabledState] =
+    useState(false)
   const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
     useState(false)
   const [markerDiagnostics, setMarkerDiagnostics] = useState("")
@@ -224,7 +225,39 @@ export function useStudentAnswerUpload(
     [convertPdfWithRetry]
   )
 
-  // マスターマーカー検出（補正可否判定）
+  // 試験のmarkerCorrectionEnabled設定をトグルの初期値として読み込む
+  useEffect(() => {
+    if (mode !== "upload" || !examId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const exam = await window.electronAPI.fetchExamById(examId)
+        if (cancelled || !exam) return
+        setMarkerCorrectionEnabledState(exam.markerCorrectionEnabled)
+      } catch {
+        // 取得失敗時は既定のfalseを維持
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [examId, mode])
+
+  // トグル変更時はDBにも反映（次回アップロード時の初期値となる）
+  const setMarkerCorrectionEnabled = useCallback(
+    (enabled: boolean) => {
+      setMarkerCorrectionEnabledState(enabled)
+      if (!examId) return
+      window.electronAPI
+        .updateExam(examId, { markerCorrectionEnabled: enabled })
+        .catch((error) => {
+          console.error("Failed to persist markerCorrectionEnabled:", error)
+        })
+    },
+    [examId]
+  )
+
+  // マスターマーカー検出（補正可否判定のみ。トグル状態は試験設定に従う）
   useEffect(() => {
     if (mode !== "upload" || !examId) return
 
@@ -253,7 +286,6 @@ export function useStudentAnswerUpload(
           return availablePages
         })
         setMarkerCorrectionAvailable(availablePages.size > 0)
-        setMarkerCorrectionEnabled(availablePages.size > 0)
         if (!result.success && result.pages) {
           const lines: string[] = []
           for (const page of result.pages) {

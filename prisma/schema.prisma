@@ -87,6 +87,8 @@ model Exam {
   examName           String
   examDate           DateTime?
   description        String?
+  /// 答案アップロード時にOMRマーカーによる位置補正を既定でONにするか（ASB由来かつomrMarkers有効な試験はtrue）
+  markerCorrectionEnabled Boolean         @default(false)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @default(now()) @updatedAt
   examPages          ExamPage[]

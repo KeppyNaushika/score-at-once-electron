@@ -597,6 +597,8 @@ export interface ArchiveExamData {
     /** @deprecated v1.10.0で削除。ExamTagに移行 */
     subject?: string | null
     description: string | null
+    /** v1.12.0+ 答案アップロード時のマーク補正既定ON設定（古いアーカイブではundefined） */
+    markerCorrectionEnabled?: boolean
     createdAt: string
     updatedAt: string
   }
