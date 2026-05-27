@@ -235,6 +235,7 @@ export async function createImportedData(
           examName: exam.examName,
           examDate: exam.examDate ? new Date(exam.examDate) : null,
           description: exam.description,
+          markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
         },
       })
 

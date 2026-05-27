@@ -37,6 +37,7 @@ import type {
  * - 1.9.0: v0.9.x (DeletedRecord tombstone 追加)
  * - 1.10.0: v0.9.x (Subject→Tag リネーム, ExamTag 追加, Exam.subject 削除)
  * - 1.11.0: v0.10.x (OMRバブル位置永続化, CropRegionOmrDigitBox追加, CompoundAnswer追加, cellGeometryJson削除)
+ * - 1.12.0: v0.12.x (Exam.markerCorrectionEnabled 追加 — ASB由来試験のマーク補正既定ONフラグ)
  */
 export type ArchiveVersion =
   | "1.0.0"
@@ -51,9 +52,10 @@ export type ArchiveVersion =
   | "1.9.0"
   | "1.10.0"
   | "1.11.0"
+  | "1.12.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.11.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.12.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -69,6 +71,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.9.0",
   "1.10.0",
   "1.11.0",
+  "1.12.0",
 ] as const
 
 // =============================================================================

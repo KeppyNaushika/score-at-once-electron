@@ -317,6 +317,7 @@ export async function collectExamData(
         examName: exam.examName,
         examDate: exam.examDate?.toISOString() ?? null,
         description: exam.description,
+        markerCorrectionEnabled: exam.markerCorrectionEnabled,
         createdAt: exam.createdAt.toISOString(),
         updatedAt: exam.updatedAt.toISOString(),
       },

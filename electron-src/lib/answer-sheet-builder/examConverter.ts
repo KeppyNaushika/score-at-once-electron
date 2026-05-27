@@ -62,6 +62,7 @@ export async function convertToExam(
       {
         examName: definition.name,
         description: `解答用紙ビルダーから生成（${definition.settings.paperSize} ${definition.settings.orientation}、${multiPageLayout.totalPages}ページ）`,
+        markerCorrectionEnabled: definition.settings.omrMarkers.enabled,
       },
       userId
     )
