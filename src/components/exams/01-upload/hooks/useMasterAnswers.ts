@@ -7,6 +7,7 @@ import {
   MasterAnswer,
   MasterAnswersState,
 } from "@/components/exams/01-upload/types"
+import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 import { ConvertedImage } from "@/lib/pdfConverter"
 
 import {
@@ -18,16 +19,6 @@ import {
   moveImageInList,
   sortImagesByPageNumber,
 } from "../utils/imageUtils"
-import {
-  clearPasswordGlobals,
-  convertPdfWithPassword,
-  createClosedPasswordDialogState,
-  createPasswordDialogState,
-  createPasswordErrorState,
-  createPasswordLoadingState,
-  getPasswordGlobals,
-  setPasswordGlobals,
-} from "../utils/passwordUtils"
 
 /**
  * マスター解答管理フック
@@ -49,10 +40,15 @@ export function useMasterAnswers(
     uploadProgress: 0,
     isDeleting: {},
     isMoving: false,
-    passwordDialog: createClosedPasswordDialogState(),
   })
 
-  // パスワード処理用の状態（削除済み - 未使用のため）
+  // パスワード保護PDFの変換は共通フックに委譲
+  const {
+    passwordDialog,
+    convertPdfWithRetry,
+    handlePasswordSubmit,
+    handlePasswordCancel,
+  } = usePdfPasswordConversion()
 
   /**
    * 初期解答とURLの設定
@@ -72,50 +68,6 @@ export function useMasterAnswers(
 
     fetchUrls()
   }, [initialAnswers])
-
-  /**
-   * パスワード付きPDF変換処理
-   * @param {File} file - 変換対象のPDFファイル
-   * @returns {Promise<ConvertedImage[]>} 変換された画像データ
-   */
-  const convertPdfToImagesWithPassword = useCallback(
-    async (file: File): Promise<ConvertedImage[]> => {
-      try {
-        // まずパスワードなしで試行
-        return await convertPdfWithPassword(file)
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error)
-
-        if (
-          errorMessage === "password-required" ||
-          errorMessage === "invalid-password"
-        ) {
-          // パスワードが必要な場合、ダイアログを表示してPromiseを返す
-          return new Promise((resolve, reject) => {
-            const isInvalidPassword = errorMessage === "invalid-password"
-            const dialogState = createPasswordDialogState(
-              file.name,
-              isInvalidPassword,
-              state.passwordDialog.attempts
-            )
-
-            setState((prev) => ({
-              ...prev,
-              passwordDialog: dialogState,
-            }))
-
-            // グローバルスコープで解決関数を保存
-            setPasswordGlobals(resolve, reject, file)
-          })
-        } else {
-          // その他のエラーはそのまま投げる
-          throw error
-        }
-      }
-    },
-    [state.passwordDialog.attempts]
-  )
 
   /**
    * 画像アップロード処理
@@ -143,21 +95,13 @@ export function useMasterAnswers(
           const file = files[i]
 
           if (file.type === "application/pdf") {
-            try {
-              // Convert PDF to individual page images with password handling
-              const pdfImages = await convertPdfToImagesWithPassword(file)
-              allFilesData.push(...pdfImages)
-            } catch (error) {
-              if (
-                error instanceof Error &&
-                error.message === "Password input cancelled"
-              ) {
-                // ユーザーがパスワード入力をキャンセルした場合
-                return // アップロード処理を中断
-              } else {
-                throw error // その他のエラーは再投げ
-              }
+            // Convert PDF to individual page images with password handling
+            const pdfImages = await convertPdfWithRetry(file)
+            if (pdfImages === null) {
+              // ユーザーがパスワード入力をキャンセルした場合はアップロードを中断
+              return
             }
+            allFilesData.push(...pdfImages)
           } else {
             // Handle regular image files
             const imageData = await createUploadData(file)
@@ -207,75 +151,8 @@ export function useMasterAnswers(
         setState((prev) => ({ ...prev, isUploading: false }))
       }
     },
-    [examId, onAnswersChange, convertPdfToImagesWithPassword]
+    [examId, onAnswersChange, convertPdfWithRetry]
   )
-
-  /**
-   * パスワード送信処理
-   * @param {string} password - 入力されたパスワード
-   */
-  const handlePasswordSubmit = useCallback(async (password: string) => {
-    const { resolve, reject, file } = getPasswordGlobals()
-
-    if (!file || !resolve || !reject) {
-      return
-    }
-
-    setState((prev) => ({
-      ...prev,
-      passwordDialog: createPasswordLoadingState(prev.passwordDialog),
-    }))
-
-    try {
-      const pdfImages = await convertPdfWithPassword(file, password)
-
-      // パスワード成功時の処理
-      setState((prev) => ({
-        ...prev,
-        passwordDialog: createClosedPasswordDialogState(),
-      }))
-
-      clearPasswordGlobals()
-      resolve(pdfImages)
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
-      if (errorMessage === "invalid-password") {
-        setState((prev) => ({
-          ...prev,
-          passwordDialog: createPasswordErrorState(prev.passwordDialog),
-        }))
-      } else {
-        setState((prev) => ({
-          ...prev,
-          passwordDialog: createClosedPasswordDialogState(),
-        }))
-
-        clearPasswordGlobals()
-        reject(error)
-      }
-    }
-  }, [])
-
-  /**
-   * パスワードダイアログキャンセル処理
-   */
-  const handlePasswordCancel = useCallback(() => {
-    const { reject } = getPasswordGlobals()
-
-    setState((prev) => ({
-      ...prev,
-      passwordDialog: createClosedPasswordDialogState(),
-      isUploading: false,
-    }))
-
-    clearPasswordGlobals()
-
-    // Promise を拒否
-    if (reject) {
-      reject(new Error("Password input cancelled"))
-    }
-  }, [])
 
   /**
    * 画像削除処理
@@ -368,6 +245,7 @@ export function useMasterAnswers(
 
   return {
     ...state,
+    passwordDialog,
     uploadAnswers,
     deleteAnswer,
     moveAnswer,

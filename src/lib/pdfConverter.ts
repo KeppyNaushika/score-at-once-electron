@@ -49,6 +49,18 @@ export interface PdfConversionError {
   message: string
 }
 
+// PDF.js 6.x は JBIG2 / JPEG2000 画像のデコードに WASM モジュールを使う。
+// スキャナ生成PDF（JBIG2/CCITT等）はこれが無いとデコードに失敗し白紙になる
+// （"JBig2 failed to initialize" → "Dependent image isn't ready yet" → 白紙）。
+// wasmUrl で配信済みWASM（public/js/wasm/）を指す必要がある。
+// あわせて OffscreenCanvas / ImageDecoder 経路を無効化し、Electronで安定する
+// 同期フォールバック経路を強制する。
+const PDFJS_OPTIONS = {
+  wasmUrl: "/js/wasm/",
+  isOffscreenCanvasSupported: false,
+  isImageDecoderSupported: false,
+} as const
+
 /** PDFファイルの総ページ数を取得する */
 export async function getPdfPageCount(
   file: File,
@@ -61,6 +73,7 @@ export async function getPdfPageCount(
     const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
       password: password,
+      ...PDFJS_OPTIONS,
     })
     const pdf = await loadingTask.promise
     return pdf.numPages
@@ -91,6 +104,7 @@ export async function convertPdfToImages(
     const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
       password: password,
+      ...PDFJS_OPTIONS,
     })
     const pdf = await loadingTask.promise
     const images: ConvertedImage[] = []

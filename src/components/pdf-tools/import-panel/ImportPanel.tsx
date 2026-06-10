@@ -39,7 +39,7 @@ export default function ImportPanel({
           isProcessing={isProcessing}
         />
       </div>
-      <ScrollArea className="flex-1 px-4 pb-4">
+      <ScrollArea className="min-h-0 flex-1 px-4 pb-4">
         <ImportedFileList
           files={importedFiles}
           excludedPages={excludedPages}

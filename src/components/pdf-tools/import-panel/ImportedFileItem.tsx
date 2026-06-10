@@ -207,8 +207,8 @@ export default function ImportedFileItem({
               </div>
             </div>
 
-            {/* ページサムネイル */}
-            <div className="grid grid-cols-4 gap-2">
+            {/* ページサムネイル（多ページ時は縦スクロール） */}
+            <div className="grid max-h-80 grid-cols-4 gap-2 overflow-x-hidden overflow-y-auto">
               {file.thumbnails.map((thumbnail, index) => {
                 const pageNumber = index + 1
                 const isSelected = file.selectedPages.has(pageNumber)

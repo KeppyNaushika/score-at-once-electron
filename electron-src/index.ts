@@ -62,7 +62,7 @@ app.on("ready", async () => {
   try {
     // appimg:// プロトコルハンドラを登録
     // appimg:///path/to/file → file:///path/to/file としてローカルファイルを読み込む
-    protocol.handle("appimg", (request) => {
+    protocol.handle("appimg", async (request) => {
       try {
         // new URL() を使わず文字列操作でパスを抽出
         // appimg://exams/... や appimg:///exams/... の両方に対応
@@ -81,7 +81,19 @@ app.on("ready", async () => {
         }
 
         const fileUrl = pathToFileURL(filePath).href
-        return net.fetch(fileUrl)
+        const response = await net.fetch(fileUrl)
+
+        // CORSヘッダーを付与する。
+        // フレーム検出（02-template）は img.crossOrigin="anonymous" で画像を読み込み
+        // getImageData でピクセルを解析するため、Access-Control-Allow-Origin が無いと
+        // ブラウザのCORSチェックで読み込みが拒否される（img.onerror → "Failed to load image"）。
+        const headers = new Headers(response.headers)
+        headers.set("Access-Control-Allow-Origin", "*")
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        })
       } catch (error) {
         console.error("appimg:// protocol error:", error)
         return new Response("File not found", { status: 404 })

@@ -4,6 +4,7 @@ import { FileUp, Loader2 } from "lucide-react"
 import { type DragEvent, useCallback, useState } from "react"
 import { toast } from "sonner"
 
+import { PasswordDialog } from "@/components/ui/password-dialog"
 import { cn } from "@/lib/utils"
 import type { ImportedFile } from "@/types/pdfTools.types"
 
@@ -20,7 +21,13 @@ export default function FileDropzone({
 }: FileDropzoneProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
-  const { processFiles, processFilePaths } = useImportedFiles()
+  const {
+    processFiles,
+    processFilePaths,
+    passwordDialog,
+    handlePasswordSubmit,
+    handlePasswordCancel,
+  } = useImportedFiles()
 
   // Electronダイアログでファイル選択
   const handleClick = useCallback(async () => {
@@ -93,31 +100,46 @@ export default function FileDropzone({
   }, [])
 
   return (
-    <div
-      onClick={handleClick}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      className={cn(
-        "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
-        "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
-        isDragOver && "border-primary bg-primary/10",
-        (isProcessing || isLoading) && "cursor-not-allowed opacity-50"
-      )}
-    >
-      {isLoading ? (
-        <>
-          <Loader2 className="text-muted-foreground mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">処理中...</p>
-        </>
-      ) : (
-        <>
-          <FileUp className="text-muted-foreground mb-2 h-8 w-8" />
-          <p className="text-muted-foreground text-center text-sm">
-            ドラッグ&ドロップ または クリックしてPDFファイルを選択
-          </p>
-        </>
-      )}
-    </div>
+    <>
+      <div
+        onClick={handleClick}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={cn(
+          "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
+          "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
+          isDragOver && "border-primary bg-primary/10",
+          (isProcessing || isLoading) && "cursor-not-allowed opacity-50"
+        )}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="text-muted-foreground mb-2 h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground text-sm">処理中...</p>
+          </>
+        ) : (
+          <>
+            <FileUp className="text-muted-foreground mb-2 h-8 w-8" />
+            <p className="text-muted-foreground text-center text-sm">
+              ドラッグ&ドロップ または クリックしてPDFファイルを選択
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* パスワード保護PDFの入力ダイアログ */}
+      <PasswordDialog
+        isOpen={passwordDialog.isOpen}
+        onClose={handlePasswordCancel}
+        onSubmit={handlePasswordSubmit}
+        fileName={passwordDialog.fileName}
+        error={
+          passwordDialog.hasError ? "パスワードが正しくありません" : undefined
+        }
+        isLoading={passwordDialog.isLoading}
+        isFirstAttempt={!passwordDialog.hasError}
+      />
+    </>
   )
 }

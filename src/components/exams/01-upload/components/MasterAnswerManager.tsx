@@ -70,12 +70,12 @@ export function MasterAnswerManager({
         isOpen={passwordDialog.isOpen}
         onClose={handlePasswordCancel}
         onSubmit={handlePasswordSubmit}
-        fileName={passwordDialog.fileName || ""}
+        fileName={passwordDialog.fileName}
         error={
           passwordDialog.hasError ? "パスワードが正しくありません" : undefined
         }
         isLoading={passwordDialog.isLoading}
-        isFirstAttempt={passwordDialog.attempts === 0}
+        isFirstAttempt={!passwordDialog.hasError}
       />
     </div>
   )
