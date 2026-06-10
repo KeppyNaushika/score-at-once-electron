@@ -90,9 +90,9 @@ export default function ExportPanel({
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         <h3 className="mb-2 text-sm font-medium">出力プレビュー</h3>
-        <ScrollArea className="bg-muted/30 h-full rounded-lg border p-2">
+        <ScrollArea className="bg-muted/30 min-h-0 flex-1 rounded-lg border p-2">
           <OutputPreview
             pages={outputPages}
             onPagesChange={onOutputPagesChange}

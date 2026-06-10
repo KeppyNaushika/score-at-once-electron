@@ -72,23 +72,6 @@ export interface MasterAnswerCardProps {
 }
 
 /**
- * パスワードダイアログの状態
- * @interface PasswordDialogState
- * @property {boolean} isOpen - ダイアログが開いているかどうか
- * @property {string} fileName - 処理中のファイル名
- * @property {number} attempts - パスワード入力試行回数
- * @property {boolean} hasError - エラーが発生しているかどうか
- * @property {boolean} isLoading - 処理中かどうか
- */
-export interface PasswordDialogState {
-  isOpen: boolean
-  fileName?: string
-  attempts: number
-  hasError: boolean
-  isLoading: boolean
-}
-
-/**
  * マスター解答管理の状態
  * @interface MasterAnswersState
  * @property {MasterAnswer[]} answers - 解答リスト
@@ -96,7 +79,6 @@ export interface PasswordDialogState {
  * @property {boolean} isUploading - アップロード中かどうか
  * @property {Record<string, boolean>} isDeleting - 削除中マップ
  * @property {boolean} isMoving - 移動中かどうか
- * @property {PasswordDialogState} passwordDialog - パスワードダイアログ状態
  */
 export interface MasterAnswersState {
   answers: MasterAnswer[]
@@ -105,7 +87,6 @@ export interface MasterAnswersState {
   uploadProgress: number
   isDeleting: Record<string, boolean>
   isMoving: boolean
-  passwordDialog: PasswordDialogState
 }
 
 /**

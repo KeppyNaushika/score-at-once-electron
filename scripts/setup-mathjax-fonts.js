@@ -70,10 +70,14 @@ copyRecursive(sourceDir, targetDir)
 console.log("✓ MathJax woff-v2 fonts copied to public assets")
 
 // PDF.js workerファイルのセットアップ
+// NOTE: src/lib/pdfConverter.ts は legacy ビルド (pdfjs-dist/legacy/build/pdf.min.mjs)
+// を読み込むため、worker も必ず legacy ビルドを使うこと。
+// 非legacy (build/) を混在させると画像系PDFのデコードが失敗し空白描画になる。
 const pdfWorkerSource = path.join(
   repoRoot,
   "node_modules",
   "pdfjs-dist",
+  "legacy",
   "build",
   "pdf.worker.min.mjs"
 )
@@ -90,6 +94,34 @@ fs.copyFileSync(pdfWorkerSource, pdfWorkerDest)
 
 console.log(`✓ PDF.js worker file copied from ${pdfWorkerSource}`)
 console.log(`  to ${pdfWorkerDest}`)
+
+// PDF.js WASM デコーダのセットアップ
+// PDF.js 6.x は JBIG2 / JPEG2000 画像のデコードに WASM を使う。これが配信されていないと
+// スキャナ生成PDF（JBIG2/CCITT等）が白紙になる。pdfConverter.ts の wasmUrl="/js/wasm/" が
+// 参照するため、public/js/wasm/ に配置する。
+const pdfWasmSourceDir = path.join(
+  repoRoot,
+  "node_modules",
+  "pdfjs-dist",
+  "wasm"
+)
+const pdfWasmDestDir = path.join(repoRoot, "public", "js", "wasm")
+
+if (!fs.existsSync(pdfWasmSourceDir)) {
+  console.error("PDF.js WASMディレクトリが見つかりません: " + pdfWasmSourceDir)
+  process.exit(1)
+}
+
+ensureDir(pdfWasmDestDir)
+let wasmCount = 0
+for (const entry of fs.readdirSync(pdfWasmSourceDir)) {
+  const src = path.join(pdfWasmSourceDir, entry)
+  if (fs.statSync(src).isFile()) {
+    fs.copyFileSync(src, path.join(pdfWasmDestDir, entry))
+    wasmCount++
+  }
+}
+console.log(`✓ PDF.js WASM files copied (${wasmCount}) to ${pdfWasmDestDir}`)
 
 // Noto Sans JP フォントのセットアップ（個人成績表PDF用）
 const notoSansJpFontsDir = path.join(

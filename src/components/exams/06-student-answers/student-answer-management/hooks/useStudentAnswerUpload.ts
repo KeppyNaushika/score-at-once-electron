@@ -6,7 +6,7 @@ import type {
   UnifiedFile,
   UploadData,
 } from "@/components/exams/06-student-answers/student-answer-management/types"
-import { type ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
+import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 
 /** 答案ファイルのドロップ・変換・アップロード処理を統合するフック */
 export function useStudentAnswerUpload(
@@ -59,110 +59,16 @@ export function useStudentAnswerUpload(
     }
   }, [])
 
-  // PDFパスワード処理
-  const [passwordDialog, setPasswordDialog] = useState<{
-    isOpen: boolean
-    filename: string
-    hasError: boolean
-    isLoading: boolean
-    onSubmit: (password: string) => void
-    onCancel: () => void
-  }>({
-    isOpen: false,
-    filename: "",
-    hasError: false,
-    isLoading: false,
-    onSubmit: () => {},
-    onCancel: () => {},
-  })
+  // PDFパスワード処理は共通フックに委譲
+  const {
+    passwordDialog,
+    convertPdfWithRetry,
+    handlePasswordSubmit,
+    handlePasswordCancel,
+  } = usePdfPasswordConversion()
 
   // Intersection Observer for lazy loading (無効化)
   const observerRef = useRef<IntersectionObserver | null>(null)
-
-  // パスワード付きPDF変換（リトライ対応）
-  const convertPdfWithRetry = useCallback(
-    async (file: File): Promise<ConvertedImage[] | null> => {
-      let hasError = false
-
-      // まずパスワードなしで試行
-      try {
-        return await convertPdfToImages(file)
-      } catch (error) {
-        if (
-          !(error instanceof Error) ||
-          error.message !== "password-required"
-        ) {
-          toast.error(`${file.name}: PDF変換に失敗しました`)
-          return null
-        }
-      }
-
-      // パスワード入力ループ（キャンセルまたは成功まで）
-      while (true) {
-        const password = await new Promise<string | null>((resolve) => {
-          setPasswordDialog({
-            isOpen: true,
-            filename: file.name,
-            hasError,
-            isLoading: false,
-            onSubmit: (pwd) => {
-              setPasswordDialog((prev) => ({
-                ...prev,
-                isLoading: true,
-                hasError: false,
-              }))
-              resolve(pwd)
-            },
-            onCancel: () => {
-              setPasswordDialog((prev) => ({
-                ...prev,
-                isOpen: false,
-                hasError: false,
-                isLoading: false,
-              }))
-              resolve(null)
-            },
-          })
-        })
-
-        if (!password) {
-          // キャンセルされた
-          return null
-        }
-
-        try {
-          const images = await convertPdfToImages(file, password)
-          setPasswordDialog((prev) => ({
-            ...prev,
-            isOpen: false,
-            hasError: false,
-            isLoading: false,
-          }))
-          return images
-        } catch (retryError) {
-          if (
-            retryError instanceof Error &&
-            (retryError.message === "password-required" ||
-              retryError.message === "invalid-password")
-          ) {
-            // パスワードが間違っている → リトライ
-            hasError = true
-            continue
-          }
-          // その他のエラー
-          setPasswordDialog((prev) => ({
-            ...prev,
-            isOpen: false,
-            hasError: false,
-            isLoading: false,
-          }))
-          toast.error(`${file.name}: PDF変換に失敗しました`)
-          return null
-        }
-      }
-    },
-    []
-  )
 
   // ファイル変換処理
   const convertFiles = useCallback(
@@ -403,6 +309,8 @@ export function useStudentAnswerUpload(
     pdfProcessingProgress,
     fileOrder,
     passwordDialog,
+    handlePasswordSubmit,
+    handlePasswordCancel,
     observerRef,
 
     // Marker correction

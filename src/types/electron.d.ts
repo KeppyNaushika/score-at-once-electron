@@ -96,13 +96,6 @@ export interface MyAPI
 // Global Window declarations
 // ---------------------------------------------------------------------------
 
-// パスワード保護PDF変換用のコールバック型
-interface ConvertedImage {
-  name: string
-  type: string
-  buffer: ArrayBuffer
-}
-
 // MathJax 3 ブラウザ版の型定義
 interface MathJaxObject {
   startup?: {
@@ -119,13 +112,5 @@ declare global {
     electronAPI: MyAPI
     mathJaxReady?: boolean
     MathJax?: MathJaxObject
-    // パスワード保護PDF変換用のグローバルコールバック（01-upload/utils/password-utils.ts用）
-    __masterImagePasswordResolve?: ((images: ConvertedImage[]) => void) | null
-    __masterImagePasswordReject?: ((reason?: unknown) => void) | null
-    __masterImagePasswordFile?: File | null
-    // パスワード保護PDF変換用のグローバルコールバック（hooks/useMasterAnswers.ts用）
-    __masterAnswerPasswordResolve?: ((images: ConvertedImage[]) => void) | null
-    __masterAnswerPasswordReject?: ((error: Error) => void) | null
-    __masterAnswerPasswordFile?: File | null
   }
 }

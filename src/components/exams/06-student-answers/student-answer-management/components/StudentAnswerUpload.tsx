@@ -37,6 +37,8 @@ export function StudentAnswerUpload({
     pdfProcessingProgress,
     fileOrder,
     passwordDialog,
+    handlePasswordSubmit,
+    handlePasswordCancel,
     observerRef,
 
     // Marker correction
@@ -181,9 +183,9 @@ export function StudentAnswerUpload({
       {/* PDFパスワードダイアログ */}
       <PasswordDialog
         isOpen={passwordDialog.isOpen}
-        onClose={passwordDialog.onCancel}
-        onSubmit={passwordDialog.onSubmit}
-        fileName={passwordDialog.filename}
+        onClose={handlePasswordCancel}
+        onSubmit={handlePasswordSubmit}
+        fileName={passwordDialog.fileName}
         error={passwordDialog.hasError ? "invalid-password" : undefined}
         isLoading={passwordDialog.isLoading}
         isFirstAttempt={!passwordDialog.hasError}
