@@ -26,7 +26,33 @@ import {
   saveSyncConfig,
 } from "./syncConfig"
 import { SYNC_EXCLUDE_TABLES, SYNC_TABLE_OPTIONS } from "./syncTableConfig"
-import type { SyncAppConfig, SyncAppStatus } from "./types"
+import type {
+  SyncAppConfig,
+  SyncAppStatus,
+  VersionMismatchRemote,
+} from "./types"
+
+/**
+ * sqlite-nas-sync@0.10.0 で追加された SyncResult.skippedRemotes の型。
+ * 依存を ^0.10.0 に更新したらライブラリの SkippedRemote 型に置き換えてキャストを除去する。
+ */
+interface SkippedRemoteInfo {
+  clientId: string
+  remoteVersion: string | null
+  localVersion: string
+}
+
+/** SyncResultからバージョン不一致リモートの一覧を抽出する */
+function extractVersionMismatches(result: SyncResult): VersionMismatchRemote[] {
+  const skippedRemotes =
+    (result as SyncResult & { skippedRemotes?: SkippedRemoteInfo[] })
+      .skippedRemotes ?? []
+  return skippedRemotes.map((s) => ({
+    clientId: s.clientId,
+    remoteVersion: s.remoteVersion,
+    remoteIsNewer: s.remoteVersion !== null && s.remoteVersion > s.localVersion,
+  }))
+}
 
 let syncInstance: SyncInstance | null = null
 
@@ -35,6 +61,7 @@ let currentStatus: SyncAppStatus = {
   lastSyncTime: null,
   lastError: null,
   syncCount: 0,
+  versionMismatches: [],
 }
 
 function updateStatus(partial: Partial<SyncAppStatus>): void {
@@ -173,13 +200,14 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
     intervalMs: config.intervalMs,
     changelogRetentionDays: config.changelogRetentionDays,
     schemaVersion: getSchemaVersion(),
-    onAfterSync: (db: Database.Database, _result: SyncResult) => {
+    onAfterSync: (db: Database.Database, result: SyncResult) => {
       enforceTombstones(db)
       updateStatus({
         state: "idle",
         lastSyncTime: new Date().toISOString(),
         lastError: null,
         syncCount: currentStatus.syncCount + 1,
+        versionMismatches: extractVersionMismatches(result),
       })
     },
   })

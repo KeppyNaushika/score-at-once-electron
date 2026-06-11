@@ -150,6 +150,30 @@ export function SyncSettingsTab() {
         <StateIndicator state={status.state} />
       </div>
 
+      {/* スキーマバージョン不一致の通知 */}
+      {(status.versionMismatches ?? []).length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div className="space-y-1 text-sm text-amber-800">
+              {status.versionMismatches.some((m) => m.remoteIsNewer) ? (
+                <p className="font-medium">
+                  他のPCがより新しいバージョンのアプリを使用しています。このPCのアプリを更新するまで、そのPCとの同期は保留されます。
+                </p>
+              ) : (
+                <p className="font-medium">
+                  他のPCが古いバージョンのアプリを使用しています。そのPCのアプリが更新されるまで、そのPCとの同期は保留されます。
+                </p>
+              )}
+              <p className="text-xs text-amber-700">
+                保留中: {status.versionMismatches.length}台
+                （このPC以外のデータが失われることはありません）
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ステータス */}
       <div className="rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-medium">同期ステータス</h3>
