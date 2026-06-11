@@ -21,7 +21,29 @@ interface UseScoredAnswerPreviewProps {
   enabled: boolean
 }
 
-/** 採点済み答案のCanvas描画プレビューを生成するフック */
+/** getPdfExportData が返す1ページ分のデータ型 */
+type PreviewPage = NonNullable<
+  Awaited<
+    ReturnType<typeof window.electronAPI.export.getPdfExportData>
+  >["pages"]
+>[number]
+
+/** 画像デコード済みのページ（IPC再取得せずに再描画するためのキャッシュ） */
+interface LoadedPage {
+  page: PreviewPage
+  img: HTMLImageElement
+}
+
+/** 設定変更をプレビューへ反映する際のデバウンス時間（ms） */
+const RENDER_DEBOUNCE_MS = 150
+
+/**
+ * 採点済み答案のCanvas描画プレビューを生成するフック
+ *
+ * - 答案データ取得と画像デコードは生徒切替時のみ実行（重い処理）
+ * - 採点マーク設定（色・不透明度・位置・サイズ等）の変更は、
+ *   キャッシュ済み画像を使ったCanvas再描画のみで反映する（デバウンス付き）
+ */
 export function useScoredAnswerPreview({
   examId,
   selectedStudentIds,
@@ -32,13 +54,16 @@ export function useScoredAnswerPreview({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewStudentId, setPreviewStudentId] = useState<string | null>(null)
+  const [loadedPages, setLoadedPages] = useState<LoadedPage[] | null>(null)
+
+  // 設定変更をデバウンスして再描画用configに反映
+  const [renderConfig, setRenderConfig] =
+    useState<ScoringMarkConfigForPdf>(scoringMarkConfig)
+
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
     null
   )
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  // refでconfigを保持し、useEffect依存配列にオブジェクト直接を入れない
-  const scoringMarkConfigRef = useRef(scoringMarkConfig)
-  scoringMarkConfigRef.current = scoringMarkConfig
 
   // 選択生徒が変更されたときにpreviewStudentIdを初期化
   useEffect(() => {
@@ -61,20 +86,28 @@ export function useScoredAnswerPreview({
     }
   }, [enabled])
 
-  // previewStudentId変更時にCanvas描画
+  // 設定変更をデバウンスして renderConfig に反映
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRenderConfig(scoringMarkConfig)
+    }, RENDER_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [scoringMarkConfig])
+
+  // 答案データ取得＋画像デコード（生徒切替時のみ）
   useEffect(() => {
     if (!enabled || !examId || !previewStudentId) {
+      setLoadedPages(null)
       return
     }
 
     let cancelled = false
 
-    const render = async () => {
+    const load = async () => {
       setIsLoading(true)
       setError(null)
 
       try {
-        // 1. データ取得
         const dataResult = await window.electronAPI.export.getPdfExportData({
           examId,
           selectedStudentIds: [previewStudentId],
@@ -84,36 +117,19 @@ export function useScoredAnswerPreview({
 
         if (!dataResult.success || !dataResult.pages) {
           setError(dataResult.error || "データの取得に失敗しました")
-          setPreviewImageUrls([])
+          setLoadedPages(null)
           return
         }
 
         if (dataResult.pages.length === 0) {
           setError("この生徒の答案データがありません")
-          setPreviewImageUrls([])
+          setLoadedPages([])
           return
         }
 
-        // 2. 採点マーク画像のプリロード
-        const config = scoringMarkConfigRef.current
-        if (!scoringMarkImagesRef.current) {
-          scoringMarkImagesRef.current = await preloadScoringMarkImages(
-            config.useTransparent
-          )
-        }
-
-        if (cancelled) return
-
-        // 3. Canvas要素の作成（非表示）
-        if (!canvasRef.current) {
-          canvasRef.current = document.createElement("canvas")
-        }
-        const canvas = canvasRef.current
-
-        // 4. 各ページを描画してdata URLに変換
-        const urls: string[] = []
+        // 各ページの画像をデコード
+        const loaded: LoadedPage[] = []
         for (const page of dataResult.pages) {
-          // 画像の読み込み
           const img = new Image()
           img.crossOrigin = "anonymous"
           img.src = page.imageUrl
@@ -124,8 +140,59 @@ export function useScoredAnswerPreview({
           })
 
           if (cancelled) return
+          loaded.push({ page, img })
+        }
 
-          // scoringDataをScoringDataForPdf形式に変換
+        if (!cancelled) setLoadedPages(loaded)
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Scored answer preview data load error:", err)
+          setError(
+            err instanceof Error
+              ? err.message
+              : "プレビューの生成に失敗しました"
+          )
+          setLoadedPages(null)
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [examId, previewStudentId, enabled])
+
+  // Canvas描画（取得済みデータ or 設定変更時）
+  useEffect(() => {
+    if (!enabled || !loadedPages) return
+
+    if (loadedPages.length === 0) {
+      setPreviewImageUrls([])
+      return
+    }
+
+    let cancelled = false
+
+    const render = async () => {
+      try {
+        // 採点マーク画像のプリロード
+        if (!scoringMarkImagesRef.current) {
+          scoringMarkImagesRef.current = await preloadScoringMarkImages()
+        }
+
+        if (cancelled) return
+
+        if (!canvasRef.current) {
+          canvasRef.current = document.createElement("canvas")
+        }
+        const canvas = canvasRef.current
+
+        const urls: string[] = []
+        for (const { page, img } of loadedPages) {
           const scoringDataForPdf = page.scoringData.map((sd) => ({
             questionScoreId: sd.questionScoreId,
             status: sd.status,
@@ -144,7 +211,6 @@ export function useScoredAnswerPreview({
             },
           }))
 
-          // subtotalDataをSubtotalDataForPdf形式に変換
           const subtotalDataForPdf: SubtotalDataForPdf[] = (
             page.subtotalData || []
           )
@@ -162,7 +228,6 @@ export function useScoredAnswerPreview({
               pageNumber: sd.pageNumber,
             }))
 
-          // totalScoreDataをTotalScoreDataForPdf形式に変換
           const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
             page.totalScoreData || []
           )
@@ -185,13 +250,12 @@ export function useScoredAnswerPreview({
           // renderAnswerSheetToCanvasが使用するフィールドは全て含まれている
           const annotations = page.annotations as unknown as DrawingAnnotation[]
 
-          // Canvas描画
           await renderAnswerSheetToCanvas(
             canvas,
             img,
             scoringDataForPdf,
             annotations,
-            config,
+            renderConfig,
             scoringMarkImagesRef.current!,
             subtotalDataForPdf,
             totalScoreDataForPdf,
@@ -201,24 +265,19 @@ export function useScoredAnswerPreview({
 
           if (cancelled) return
 
-          // data URLに変換
           urls.push(canvas.toDataURL("image/png"))
         }
 
-        setPreviewImageUrls(urls)
+        if (!cancelled) setPreviewImageUrls(urls)
       } catch (err) {
         if (!cancelled) {
-          console.error("Scored answer preview error:", err)
+          console.error("Scored answer preview render error:", err)
           setError(
             err instanceof Error
               ? err.message
               : "プレビューの生成に失敗しました"
           )
           setPreviewImageUrls([])
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
         }
       }
     }
@@ -228,8 +287,7 @@ export function useScoredAnswerPreview({
     return () => {
       cancelled = true
     }
-    // scoringMarkConfigはrefで参照するため依存配列に含めない
-  }, [examId, previewStudentId, enabled])
+  }, [loadedPages, renderConfig, enabled])
 
   return {
     previewImageUrls,

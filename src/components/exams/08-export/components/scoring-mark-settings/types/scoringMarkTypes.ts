@@ -34,6 +34,8 @@ export interface ScoreTextConfig {
   offsetY: number // Y軸オフセット（-100 to 100）
   size: number // 点数サイズ（8 to 48）
   alignment: TextAlignment
+  color: string // 文字色（HEX形式 #RRGGBB）
+  opacity: number // 不透明度（0 to 100）
 }
 
 // 採点マーク設定の型定義
@@ -47,6 +49,8 @@ export interface ScoringMarkConfig {
   markOffsetX: number // X軸オフセット（-100 to 100）
   markOffsetY: number // Y軸オフセット（-100 to 100）
   markSize: number // マークサイズ（20 to 200）
+  markColor: string // 採点記号マークの色（HEX形式 #RRGGBB、source-inで着色）
+  markOpacity: number // 採点記号マークの不透明度（0 to 100）
 
   // 点数テキスト用設定（後方互換性のために維持）
   scorePosition: MarkPosition
@@ -69,9 +73,6 @@ export interface ScoringMarkConfig {
 
   // 合計点用設定
   totalScore: ScoreTextConfig
-
-  // 透明度設定
-  useTransparent: boolean
 
   // PDF設定
   pageSize: PageSize

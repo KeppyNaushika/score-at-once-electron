@@ -146,6 +146,8 @@ export default function ExportMainView() {
               size: scoringMarkConfig.scoreSize || 14,
               offsetX: scoringMarkConfig.scoreOffsetX || 0,
               offsetY: scoringMarkConfig.scoreOffsetY || 0,
+              color: "#ef4444",
+              opacity: 100,
             }
 
       // 小計点設定を取得（subtotalScore → summaryScore → デフォルトの順でフォールバック）
@@ -155,6 +157,8 @@ export default function ExportMainView() {
           size: 18,
           offsetX: 0,
           offsetY: 0,
+          color: "#2563eb",
+          opacity: 100,
         }
 
       // 合計点設定を取得（totalScore → summaryScore → デフォルトの順でフォールバック）
@@ -164,27 +168,36 @@ export default function ExportMainView() {
           size: 18,
           offsetX: 0,
           offsetY: 0,
+          color: "#2563eb",
+          opacity: 100,
         }
 
       return {
         markPosition: scoringMarkConfig.markPosition,
         markSize: scoringMarkConfig.markSize,
-        useTransparent: scoringMarkConfig.useTransparent,
+        markColor: scoringMarkConfig.markColor ?? "#ef4444",
+        markOpacity: scoringMarkConfig.markOpacity ?? 100,
         showPartialScore: true,
         partialScorePosition: partialScoreConfig.position || "middle-center",
         partialScoreSize: partialScoreConfig.size || 14,
         partialScoreOffsetX: partialScoreConfig.offsetX || 0,
         partialScoreOffsetY: partialScoreConfig.offsetY || 0,
+        partialScoreColor: partialScoreConfig.color ?? "#ef4444",
+        partialScoreOpacity: partialScoreConfig.opacity ?? 100,
         // 小計点用設定
         subtotalScorePosition: subtotalScoreConfig.position || "middle-center",
         subtotalScoreSize: subtotalScoreConfig.size || 18,
         subtotalScoreOffsetX: subtotalScoreConfig.offsetX || 0,
         subtotalScoreOffsetY: subtotalScoreConfig.offsetY || 0,
+        subtotalScoreColor: subtotalScoreConfig.color ?? "#2563eb",
+        subtotalScoreOpacity: subtotalScoreConfig.opacity ?? 100,
         // 合計点用設定
         totalScorePosition: totalScoreConfig.position || "middle-center",
         totalScoreSize: totalScoreConfig.size || 18,
         totalScoreOffsetX: totalScoreConfig.offsetX || 0,
         totalScoreOffsetY: totalScoreConfig.offsetY || 0,
+        totalScoreColor: totalScoreConfig.color ?? "#2563eb",
+        totalScoreOpacity: totalScoreConfig.opacity ?? 100,
         // ステータスごとの表示設定
         showMarkForStatus: scoringMarkConfig.showMarkForStatus,
         showScoreForStatus: scoringMarkConfig.showScoreForStatus,

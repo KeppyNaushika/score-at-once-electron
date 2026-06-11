@@ -38,22 +38,30 @@ export interface ScoringDataForPdf {
 export interface ScoringMarkConfigForPdf {
   markPosition: string
   markSize: number
-  useTransparent: boolean
+  // 採点記号マークの色・不透明度（markColor未指定時は元画像の色を使用）
+  markColor?: string
+  markOpacity?: number // 0 to 100
   showPartialScore: boolean
   partialScorePosition: string
   partialScoreSize: number
   partialScoreOffsetX: number
   partialScoreOffsetY: number
+  partialScoreColor: string
+  partialScoreOpacity: number // 0 to 100
   // 小計点用設定
   subtotalScorePosition: string
   subtotalScoreSize: number
   subtotalScoreOffsetX: number
   subtotalScoreOffsetY: number
+  subtotalScoreColor: string
+  subtotalScoreOpacity: number // 0 to 100
   // 合計点用設定
   totalScorePosition: string
   totalScoreSize: number
   totalScoreOffsetX: number
   totalScoreOffsetY: number
+  totalScoreColor: string
+  totalScoreOpacity: number // 0 to 100
   // ステータスごとの表示設定
   showMarkForStatus?: Record<string, boolean>
   showScoreForStatus?: Record<string, boolean>
@@ -482,6 +490,43 @@ async function drawElement(
 }
 
 /**
+ * 着色済みマーク画像のキャッシュ（画像src + 色 をキーに再利用）
+ */
+const tintedMarkCache = new Map<string, HTMLCanvasElement>()
+
+/**
+ * 単色シルエットのマーク画像を任意の色に着色する。
+ *
+ * `source-in` 合成により元画像のアルファ（アンチエイリアスの縁・半透明）を
+ * そのまま保ったまま、RGBだけを指定色に置き換える。
+ */
+function getTintedMark(
+  markImage: HTMLImageElement,
+  color: string
+): HTMLCanvasElement {
+  const width = markImage.naturalWidth || markImage.width
+  const height = markImage.naturalHeight || markImage.height
+  const cacheKey = `${markImage.src}__${color}__${width}x${height}`
+
+  const cached = tintedMarkCache.get(cacheKey)
+  if (cached) return cached
+
+  const offscreen = document.createElement("canvas")
+  offscreen.width = width
+  offscreen.height = height
+  const octx = offscreen.getContext("2d")
+  if (octx) {
+    octx.drawImage(markImage, 0, 0, width, height)
+    octx.globalCompositeOperation = "source-in"
+    octx.fillStyle = color
+    octx.fillRect(0, 0, width, height)
+  }
+
+  tintedMarkCache.set(cacheKey, offscreen)
+  return offscreen
+}
+
+/**
  * 採点マークの位置を計算
  */
 function calculateMarkPosition(
@@ -638,11 +683,20 @@ function drawScoringMark(
     config.markPosition
   )
 
-  ctx.drawImage(markImage, x, y, markSize, markSize)
+  const opacity = (config.markOpacity ?? 100) / 100
+  // markColor指定時は単色シルエットを着色（未指定なら元画像をそのまま使用）
+  const drawable = config.markColor
+    ? getTintedMark(markImage, config.markColor)
+    : markImage
+
+  ctx.save()
+  ctx.globalAlpha = opacity
+  ctx.drawImage(drawable, x, y, markSize, markSize)
+  ctx.restore()
 }
 
 /**
- * 点数テキストを描画（赤色）
+ * 部分点テキストを描画（色・不透明度は config に従う）
  * @param score - 表示する点数
  */
 function drawScoreText(
@@ -671,8 +725,9 @@ function drawScoreText(
   )
 
   ctx.save()
+  ctx.globalAlpha = (config.partialScoreOpacity ?? 100) / 100
   ctx.font = `bold ${config.partialScoreSize}px sans-serif`
-  ctx.fillStyle = "#ef4444" // 点数は全て赤色
+  ctx.fillStyle = config.partialScoreColor || "#ef4444"
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   ctx.fillText(String(score), x, y)
@@ -680,7 +735,7 @@ function drawScoreText(
 }
 
 /**
- * 小計点テキストを描画（青色）
+ * 小計点テキストを描画（色・不透明度は config に従う）
  */
 function drawSubtotalScoreText(
   ctx: CanvasRenderingContext2D,
@@ -705,8 +760,9 @@ function drawSubtotalScoreText(
   )
 
   ctx.save()
+  ctx.globalAlpha = (config.subtotalScoreOpacity ?? 100) / 100
   ctx.font = `bold ${config.subtotalScoreSize}px sans-serif`
-  ctx.fillStyle = "#2563eb" // 小計点は青色
+  ctx.fillStyle = config.subtotalScoreColor || "#2563eb"
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   ctx.fillText(String(subtotalData.score), x, y)
@@ -714,7 +770,7 @@ function drawSubtotalScoreText(
 }
 
 /**
- * 合計点テキストを描画（青色）
+ * 合計点テキストを描画（色・不透明度は config に従う）
  */
 function drawTotalScoreText(
   ctx: CanvasRenderingContext2D,
@@ -739,8 +795,9 @@ function drawTotalScoreText(
   )
 
   ctx.save()
+  ctx.globalAlpha = (config.totalScoreOpacity ?? 100) / 100
   ctx.font = `bold ${config.totalScoreSize}px sans-serif`
-  ctx.fillStyle = "#2563eb" // 合計点も青色
+  ctx.fillStyle = config.totalScoreColor || "#2563eb"
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   ctx.fillText(String(totalScoreData.score), x, y)
@@ -927,10 +984,9 @@ export async function renderAnswerSheetToCanvas(
  *
  * fetchしてBlobからObjectURLを作成することで、Canvasのtainted問題を回避
  */
-export async function preloadScoringMarkImages(
-  useTransparent: boolean
-): Promise<Map<string, HTMLImageElement>> {
-  const prefix = useTransparent ? "tp_" : ""
+export async function preloadScoringMarkImages(): Promise<
+  Map<string, HTMLImageElement>
+> {
   const markTypes = ["correct", "partial", "hold", "incorrect"]
   const images = new Map<string, HTMLImageElement>()
 
@@ -938,7 +994,7 @@ export async function preloadScoringMarkImages(
     markTypes.map(async (type) => {
       try {
         // fetchしてBlobとして取得
-        const response = await fetch(`/score-assets/${prefix}${type}.png`)
+        const response = await fetch(`/score-assets/${type}.png`)
         const blob = await response.blob()
         const objectUrl = URL.createObjectURL(blob)
 
@@ -961,7 +1017,7 @@ export async function preloadScoringMarkImages(
         // フォールバック: 直接読み込み
         const img = new Image()
         img.crossOrigin = "anonymous"
-        img.src = `/score-assets/${prefix}${type}.png`
+        img.src = `/score-assets/${type}.png`
         await new Promise<void>((resolve, reject) => {
           img.onload = () => resolve()
           img.onerror = () =>

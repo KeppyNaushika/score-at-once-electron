@@ -4,11 +4,13 @@ import { Settings } from "lucide-react"
 
 import { StatusDisplaySection } from "@/components/exams/08-export/components/scoring-mark-settings/components/StatusDisplaySection"
 import {
+  DEFAULT_MARK_COLOR,
   defaultConfig,
   defaultPartialScoreConfig,
   defaultSubtotalScoreConfig,
   defaultTotalScoreConfig,
   positionLabels,
+  SCORE_COLOR_PRESETS,
 } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 import type {
   MarkPosition,
@@ -18,7 +20,7 @@ import type {
   TextAlignment,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { InlineColorPicker } from "@/components/ui/color-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -41,12 +43,21 @@ export function ScoringMarkSettingsContainer({
   config,
   onChange,
 }: ScoringMarkSettingsContainerProps) {
-  const partialScore: ScoreTextConfig =
-    config.partialScore || defaultPartialScoreConfig
-  const subtotalScore: ScoreTextConfig =
-    config.subtotalScore || defaultSubtotalScoreConfig
-  const totalScore: ScoreTextConfig =
-    config.totalScore || defaultTotalScoreConfig
+  // 旧形式の保存データ（color/opacity未設定）でも欠落値を既定で補完する
+  const partialScore: ScoreTextConfig = {
+    ...defaultPartialScoreConfig,
+    ...config.partialScore,
+  }
+  const subtotalScore: ScoreTextConfig = {
+    ...defaultSubtotalScoreConfig,
+    ...config.subtotalScore,
+  }
+  const totalScore: ScoreTextConfig = {
+    ...defaultTotalScoreConfig,
+    ...config.totalScore,
+  }
+  const markColor = config.markColor ?? DEFAULT_MARK_COLOR
+  const markOpacity = config.markOpacity ?? 100
   const useSeparateSettings = config.useSeparateScoreSettings ?? false
 
   const updateConfig = (updates: Partial<ScoringMarkConfig>) => {
@@ -95,73 +106,107 @@ export function ScoringMarkSettingsContainer({
     scoreConfig: ScoreTextConfig,
     onUpdate: (updates: Partial<ScoreTextConfig>) => void
   ) => (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-      <div className="space-y-1">
-        <Label className="text-muted-foreground text-xs">位置</Label>
-        <Select
-          value={scoreConfig.position}
-          onValueChange={(v: MarkPosition) => onUpdate({ position: v })}
-        >
-          <SelectTrigger className="h-9 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(positionLabels) as MarkPosition[]).map((pos) => (
-              <SelectItem key={pos} value={pos}>
-                {positionLabels[pos]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">位置</Label>
+          <Select
+            value={scoreConfig.position}
+            onValueChange={(v: MarkPosition) => onUpdate({ position: v })}
+          >
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(positionLabels) as MarkPosition[]).map((pos) => (
+                <SelectItem key={pos} value={pos}>
+                  {positionLabels[pos]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">左右</Label>
+          <Input
+            type="number"
+            value={scoreConfig.offsetX}
+            onChange={(e) =>
+              onUpdate({ offsetX: parseInt(e.target.value) || 0 })
+            }
+            min={-100}
+            max={100}
+            className="h-9 w-full"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">上下</Label>
+          <Input
+            type="number"
+            value={scoreConfig.offsetY}
+            onChange={(e) =>
+              onUpdate({ offsetY: parseInt(e.target.value) || 0 })
+            }
+            min={-100}
+            max={100}
+            className="h-9 w-full"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">サイズ</Label>
+          <Input
+            type="number"
+            value={scoreConfig.size}
+            onChange={(e) => onUpdate({ size: parseInt(e.target.value) || 14 })}
+            min={8}
+            max={200}
+            className="h-9 w-full"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">配置</Label>
+          <Select
+            value={scoreConfig.alignment}
+            onValueChange={(v: TextAlignment) => onUpdate({ alignment: v })}
+          >
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">左揃え</SelectItem>
+              <SelectItem value="center">中央揃え</SelectItem>
+              <SelectItem value="right">右揃え</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="space-y-1">
-        <Label className="text-muted-foreground text-xs">左右</Label>
-        <Input
-          type="number"
-          value={scoreConfig.offsetX}
-          onChange={(e) => onUpdate({ offsetX: parseInt(e.target.value) || 0 })}
-          min={-100}
-          max={100}
-          className="h-9 w-full"
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-muted-foreground text-xs">上下</Label>
-        <Input
-          type="number"
-          value={scoreConfig.offsetY}
-          onChange={(e) => onUpdate({ offsetY: parseInt(e.target.value) || 0 })}
-          min={-100}
-          max={100}
-          className="h-9 w-full"
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-muted-foreground text-xs">サイズ</Label>
-        <Input
-          type="number"
-          value={scoreConfig.size}
-          onChange={(e) => onUpdate({ size: parseInt(e.target.value) || 14 })}
-          min={8}
-          max={200}
-          className="h-9 w-full"
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-muted-foreground text-xs">配置</Label>
-        <Select
-          value={scoreConfig.alignment}
-          onValueChange={(v: TextAlignment) => onUpdate({ alignment: v })}
-        >
-          <SelectTrigger className="h-9 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="left">左揃え</SelectItem>
-            <SelectItem value="center">中央揃え</SelectItem>
-            <SelectItem value="right">右揃え</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">色</Label>
+          <InlineColorPicker
+            value={scoreConfig.color}
+            onChange={(color) => onUpdate({ color })}
+            presets={[...SCORE_COLOR_PRESETS]}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-muted-foreground text-xs">不透明度(%)</Label>
+          <Input
+            type="number"
+            value={scoreConfig.opacity}
+            onChange={(e) =>
+              onUpdate({
+                opacity: Math.min(
+                  100,
+                  Math.max(0, parseInt(e.target.value) || 0)
+                ),
+              })
+            }
+            min={0}
+            max={100}
+            className="h-9 w-24"
+          />
+        </div>
       </div>
     </div>
   )
@@ -176,23 +221,9 @@ export function ScoringMarkSettingsContainer({
       <StatusDisplaySection
         showMarkForStatus={config.showMarkForStatus}
         showScoreForStatus={config.showScoreForStatus}
-        useTransparent={config.useTransparent}
         onMarkStatusChange={updateMarkStatusDisplay}
         onScoreStatusChange={updateScoreStatusDisplay}
       />
-
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="use-transparent"
-          checked={config.useTransparent}
-          onCheckedChange={(checked) =>
-            updateConfig({ useTransparent: checked === true })
-          }
-        />
-        <Label htmlFor="use-transparent" className="text-sm">
-          透明マークを使用
-        </Label>
-      </div>
 
       <Separator />
 
@@ -260,6 +291,34 @@ export function ScoringMarkSettingsContainer({
             />
           </div>
         </div>
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1">
+            <Label className="text-muted-foreground text-xs">色</Label>
+            <InlineColorPicker
+              value={markColor}
+              onChange={(color) => updateConfig({ markColor: color })}
+              presets={[...SCORE_COLOR_PRESETS]}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-muted-foreground text-xs">不透明度(%)</Label>
+            <Input
+              type="number"
+              value={markOpacity}
+              onChange={(e) =>
+                updateConfig({
+                  markOpacity: Math.min(
+                    100,
+                    Math.max(0, parseInt(e.target.value) || 0)
+                  ),
+                })
+              }
+              min={0}
+              max={100}
+              className="h-9 w-24"
+            />
+          </div>
+        </div>
       </div>
 
       <Separator />
@@ -288,13 +347,25 @@ export function ScoringMarkSettingsContainer({
         {useSeparateSettings ? (
           <Tabs defaultValue="partial" className="w-full">
             <TabsList className="grid h-8 w-full grid-cols-3">
-              <TabsTrigger value="partial" className="text-xs text-red-600">
+              <TabsTrigger
+                value="partial"
+                className="text-xs"
+                style={{ color: partialScore.color }}
+              >
                 設問部分点
               </TabsTrigger>
-              <TabsTrigger value="subtotal" className="text-xs text-blue-600">
+              <TabsTrigger
+                value="subtotal"
+                className="text-xs"
+                style={{ color: subtotalScore.color }}
+              >
                 小計点
               </TabsTrigger>
-              <TabsTrigger value="total" className="text-xs text-blue-600">
+              <TabsTrigger
+                value="total"
+                className="text-xs"
+                style={{ color: totalScore.color }}
+              >
                 合計点
               </TabsTrigger>
             </TabsList>

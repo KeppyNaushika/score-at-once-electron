@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 interface StatusDisplaySectionProps {
   showMarkForStatus: Record<ScoringStatus, boolean>
   showScoreForStatus: Record<ScoringStatus, boolean>
-  useTransparent: boolean
   onMarkStatusChange: (status: ScoringStatus, show: boolean) => void
   onScoreStatusChange: (status: ScoringStatus, show: boolean) => void
 }
@@ -19,7 +18,6 @@ interface StatusDisplaySectionProps {
 export function StatusDisplaySection({
   showMarkForStatus,
   showScoreForStatus,
-  useTransparent,
   onMarkStatusChange,
   onScoreStatusChange,
 }: StatusDisplaySectionProps) {
@@ -40,7 +38,7 @@ export function StatusDisplaySection({
               />
               <div className="flex items-center space-x-2">
                 <Image
-                  src={getMarkImagePath(status, useTransparent)}
+                  src={getMarkImagePath(status)}
                   alt={statusLabels[status]}
                   className="h-6 w-6"
                   width={24}

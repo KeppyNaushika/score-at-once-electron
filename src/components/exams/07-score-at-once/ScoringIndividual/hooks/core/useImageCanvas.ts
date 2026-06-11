@@ -59,10 +59,9 @@ export function useImageCanvas({
     imageRef,
   })
 
-  // 採点記号画像のプリロード（印字設定の透過設定を反映）
+  // 採点記号画像のプリロード
   useScoringMarks({
     scoringMarkImagesRef,
-    useTransparent: scoringMarkConfig?.useTransparent ?? false,
   })
 
   // Canvas描画ロジック
