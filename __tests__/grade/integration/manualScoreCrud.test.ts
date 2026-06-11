@@ -10,20 +10,14 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
-vi.mock("@/electron-src/lib/prisma/client", () => {
-  const p = path.resolve(__dirname, "../../../data/test-database.db")
-  const {
-    createPrismaClientForPath,
-  } = require("@/__tests__/helpers/testPrismaClient")
-  const client = createPrismaClientForPath(p)
-  return { default: client }
+vi.mock("../../../electron-src/lib/prisma/client", async () => {
+  const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
+  return {
+    default: getTestPrismaClient(),
+    getPrismaClient: () => getTestPrismaClient(),
+  }
 })
 
-import {
-  cleanupTestDatabase,
-  createPrismaClientForPath,
-  disconnectTestPrisma,
-} from "@/__tests__/helpers/testPrismaClient"
 import {
   deleteBoundarySet,
   upsertBoundarySet,
@@ -38,6 +32,12 @@ import {
   batchUpsertManualScores,
   getManualScoresByDataSourceId,
 } from "@/electron-src/lib/prisma/manualScore"
+
+import {
+  cleanupTestDatabase,
+  createPrismaClientForPath,
+  disconnectTestPrisma,
+} from "../../helpers/testPrismaClient"
 
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 

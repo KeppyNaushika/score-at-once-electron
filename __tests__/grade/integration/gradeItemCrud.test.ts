@@ -11,20 +11,14 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
 // prisma/clientをテスト用クライアントでモック（vi.mockはホイスティングされるため内部で生成）
-vi.mock("@/electron-src/lib/prisma/client", () => {
-  const p = path.resolve(__dirname, "../../../data/test-database.db")
-  const {
-    createPrismaClientForPath,
-  } = require("@/__tests__/helpers/testPrismaClient")
-  const client = createPrismaClientForPath(p)
-  return { default: client }
+vi.mock("../../../electron-src/lib/prisma/client", async () => {
+  const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
+  return {
+    default: getTestPrismaClient(),
+    getPrismaClient: () => getTestPrismaClient(),
+  }
 })
 
-import {
-  cleanupTestDatabase,
-  createPrismaClientForPath,
-  disconnectTestPrisma,
-} from "@/__tests__/helpers/testPrismaClient"
 import {
   getBoundarySetsByGradeId,
   upsertBoundarySet,
@@ -42,6 +36,12 @@ import {
   reorderGradeItems,
   updateGradeItem,
 } from "@/electron-src/lib/prisma/gradeItem"
+
+import {
+  cleanupTestDatabase,
+  createPrismaClientForPath,
+  disconnectTestPrisma,
+} from "../../helpers/testPrismaClient"
 
 // テスト用Grade作成ヘルパー（テスト用クライアントを直接使用）
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)

@@ -2,7 +2,7 @@
  * 成績算出アーカイブ (.grade) 作成
  */
 
-import archiver from "archiver"
+import { ZipArchive } from "archiver"
 import { app } from "electron"
 import * as fs from "fs"
 
@@ -34,7 +34,7 @@ export async function createGradeArchive(
     }
 
     const output = fs.createWriteStream(outputPath)
-    const archive = archiver("zip", { zlib: { level: 9 } })
+    const archive = new ZipArchive({ zlib: { level: 9 } })
 
     return new Promise((resolve, reject) => {
       output.on("close", () => {
