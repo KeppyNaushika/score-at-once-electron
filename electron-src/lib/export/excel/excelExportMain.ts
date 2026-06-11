@@ -4,7 +4,10 @@ import {
   ExportGradingDataOptions,
   ExportResult,
 } from "../../shared/types/exportTypes"
-import { validateScoringData } from "../../shared/utilities/validateScoringData"
+import {
+  buildConflictIdentifiers,
+  validateScoringData,
+} from "../../shared/utilities/validateScoringData"
 import { fetchExportData } from "./dataFetcher"
 import { saveWorkbook } from "./fileSaver"
 import { createItemAnalysisSheet } from "./itemAnalysisSheetCreator"
@@ -39,7 +42,13 @@ export async function exportGradingDataExcel(
 
     // 採点データの検証と警告の生成（強制実行でない場合のみ）
     if (!options.forceExport) {
-      const validationResult = validateScoringData(dataResult.scoringData)
+      const validationResult = validateScoringData(
+        dataResult.scoringData,
+        buildConflictIdentifiers(
+          dataResult.scoringData,
+          dataResult.scoreConflicts ?? []
+        )
+      )
       if (validationResult.hasWarnings) {
         return {
           success: false,

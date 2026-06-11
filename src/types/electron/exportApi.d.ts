@@ -22,6 +22,7 @@ export interface ExportAPI {
         noScoringData: string[]
         ungraded: string[]
         missingPartialScore: string[]
+        conflicted: string[]
       }
     }>
 
@@ -313,6 +314,7 @@ export interface ExportAPI {
       noScoringData: string[]
       unscored: string[]
       missingPartialScore: string[]
+      conflicted?: string[]
     }
     validationResult?: {
       hasWarnings: boolean
@@ -320,6 +322,7 @@ export interface ExportAPI {
         noScoringData: string[]
         unscored: string[]
         missingPartialScore: string[]
+        conflicted?: string[]
       }
     }
   }>

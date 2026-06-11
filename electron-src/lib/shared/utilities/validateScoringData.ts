@@ -1,6 +1,22 @@
 import type { ScoringData } from "../types/exportTypes"
 
 /**
+ * リゾルバの競合一覧を「生徒名 - 設問ラベル」の識別子に変換する
+ */
+export function buildConflictIdentifiers(
+  scoringData: ScoringData[],
+  scoreConflicts: Array<{ studentId: string; cropRegionId: string }>
+): string[] {
+  return scoreConflicts.map((c) => {
+    const student = scoringData.find((s) => s.studentId === c.studentId)
+    const question = student?.scores.find(
+      (q) => q.questionId === c.cropRegionId
+    )
+    return `${student?.studentName ?? c.studentId} - ${question?.questionLabel ?? c.cropRegionId}`
+  })
+}
+
+/**
  * 採点データの検証結果
  */
 export interface ValidationResult {
@@ -9,6 +25,8 @@ export interface ValidationResult {
     noScoringData: string[]
     ungraded: string[]
     missingPartialScore: string[]
+    /** 複数採点者の値が食い違い、確定もされていない（出力上は未採点扱い） */
+    conflicted: string[]
   }
 }
 
@@ -18,14 +36,17 @@ export interface ValidationResult {
  * - 🔴 noScoringData: 採点データが存在しない（status=unscored, score=null）
  * - 🟠 ungraded: 未採点（status=unscored, score≠null）
  * - 🟡 missingPartialScore: 部分点・保留で値が未入力（status=partial|hold, score=null）
+ * - 🟣 conflicted: 採点の競合（呼び出し元がリゾルバの競合一覧から識別子を渡す）
  */
 export function validateScoringData(
-  scoringData: ScoringData[]
+  scoringData: ScoringData[],
+  conflictIdentifiers: string[] = []
 ): ValidationResult {
   const warnings = {
     noScoringData: [] as string[],
     ungraded: [] as string[],
     missingPartialScore: [] as string[],
+    conflicted: conflictIdentifiers,
   }
 
   for (const studentData of scoringData) {
@@ -58,7 +79,8 @@ export function validateScoringData(
     hasWarnings:
       warnings.noScoringData.length > 0 ||
       warnings.ungraded.length > 0 ||
-      warnings.missingPartialScore.length > 0,
+      warnings.missingPartialScore.length > 0 ||
+      warnings.conflicted.length > 0,
     warnings,
   }
 }

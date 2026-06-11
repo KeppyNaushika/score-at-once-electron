@@ -194,23 +194,13 @@ export function useBatchScoring({
             }
           }
 
-          // TODO: Check for auto-finalization in collaborative mode
-          // Temporarily disabled during QuestionScore array migration
-          // if (scoringStatus === "pending" && pageImage.studentId) {
-          //   await checkForAutoFinalization(
-          //     pageImage.studentId,
-          //     currentCropRegion.id,
-          //     currentUserId,
-          //     setQuestionScores,
-          //   )
-          // }
+          // 注: 自動確定処理は不要。有効スコアは読み取り時に
+          // resolveEffectiveScores（確定 > 提案全員一致 > 競合）で導出されるため、
+          // 提案が一致していれば確定操作なしで集計に反映される。
+          // 食い違いはOWNERがScoreComparisonModalで裁定（ScoreDecision）する。
 
-          // TODO: Add subtotal score recalculation here
-          // After individual question scoring, we should:
-          // 1. Identify all subtotal regions that depend on this question
-          // 2. Recalculate those subtotal scores
-          // 3. Save the updated subtotal scores to database
-          // 4. Update the local scoring data state
+          // 注: 小計の再計算・保存も不要。小計はDBに保存せず、
+          // 出力・集計時に有効スコアから毎回計算する（subtotalCalculator）。
         } catch (error) {
           console.error("Error in batch scoring:", error)
           toast.error(

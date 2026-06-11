@@ -19,6 +19,7 @@ interface ExportWarningModalProps {
     noScoringData: string[]
     unscored: string[]
     missingPartialScore: string[]
+    conflicted?: string[]
   }
 }
 
@@ -31,7 +32,8 @@ export default function ExportWarningModal({
   const hasWarnings =
     (warnings?.noScoringData?.length ?? 0) > 0 ||
     (warnings?.unscored?.length ?? 0) > 0 ||
-    (warnings?.missingPartialScore?.length ?? 0) > 0
+    (warnings?.missingPartialScore?.length ?? 0) > 0 ||
+    (warnings?.conflicted?.length ?? 0) > 0
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -71,6 +73,28 @@ export default function ExportWarningModal({
                 <div className="mb-2 font-medium">次の設問答案が未採点です</div>
                 <div className="space-y-1 text-sm">
                   {(warnings?.unscored ?? []).map((item, index) => (
+                    <div key={index} className="pl-2">
+                      • {item}
+                    </div>
+                  ))}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* 採点の競合（複数採点者の値が食い違い、未確定） */}
+          {(warnings?.conflicted?.length ?? 0) > 0 && (
+            <Alert className="border-purple-200 bg-purple-50">
+              <AlertTriangle className="h-4 w-4 text-purple-600" />
+              <AlertDescription className="text-purple-800">
+                <div className="mb-2 font-medium">
+                  次の設問答案は採点者間で結果が食い違っています（未採点として出力されます）
+                </div>
+                <div className="mb-2 text-sm">
+                  採点画面の比較モーダルから、試験の所有者が結果を確定してください。
+                </div>
+                <div className="space-y-1 text-sm">
+                  {(warnings?.conflicted ?? []).map((item, index) => (
                     <div key={index} className="pl-2">
                       • {item}
                     </div>

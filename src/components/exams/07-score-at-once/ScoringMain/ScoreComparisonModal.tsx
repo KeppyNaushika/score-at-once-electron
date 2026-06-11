@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,8 @@ export default function ScoreComparisonModal({
   const [finalizing, setFinalizing] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
   const [finalComment, setFinalComment] = useState("")
+  // 「この結果を採用」で選んだ提案のID（手入力で変更したらリセット）
+  const [sourceScoreId, setSourceScoreId] = useState<string | null>(null)
 
   // 採点比較データを取得
   const fetchComparison = useCallback(async () => {
@@ -116,6 +119,7 @@ export default function ScoreComparisonModal({
         partialScore: finalScore,
         status: "final",
         comments: finalComment,
+        sourceQuestionScoreId: sourceScoreId ?? undefined,
       }
       const result = await window.electronAPI.finalizeQuestionScore(
         studentId,
@@ -125,13 +129,16 @@ export default function ScoreComparisonModal({
       )
 
       if (result.success && result.decision) {
+        toast.success("採点結果を確定しました")
         onScoreFinalized?.()
         onClose()
       } else {
-        console.error("Failed to finalize score:", result.error)
+        // OWNER以外による確定の拒否など、理由をユーザーに通知する
+        toast.error(result.error ?? "採点結果の確定に失敗しました")
       }
     } catch (error) {
       console.error("Failed to finalize score:", error)
+      toast.error("採点結果の確定に失敗しました")
     } finally {
       setFinalizing(false)
     }
@@ -267,6 +274,7 @@ export default function ScoreComparisonModal({
                               onClick={() => {
                                 setFinalScore(Number(score.partialScore) || 0)
                                 setFinalComment("")
+                                setSourceScoreId(score.id)
                               }}
                             >
                               この結果を採用
@@ -284,12 +292,30 @@ export default function ScoreComparisonModal({
               <div className="flex items-center rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                 <AlertTriangle className="mr-3 h-5 w-5 text-yellow-600" />
                 <div>
-                  <div className="font-medium text-yellow-800">
-                    採点結果に相違があります
-                  </div>
-                  <div className="text-sm text-yellow-700">
-                    複数の教員が異なる採点結果を提案しています。最終結果を決定してください。
-                  </div>
+                  {comparison.decision &&
+                  comparison.proposedScores?.some(
+                    (s) =>
+                      new Date(s.updatedAt) >
+                      new Date(comparison.decision!.decidedAt)
+                  ) ? (
+                    <>
+                      <div className="font-medium text-yellow-800">
+                        確定後に新しい採点が追加されています
+                      </div>
+                      <div className="text-sm text-yellow-700">
+                        内容を確認し、必要であれば再確定してください。
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-medium text-yellow-800">
+                        採点結果に相違があります
+                      </div>
+                      <div className="text-sm text-yellow-700">
+                        複数の教員が異なる採点結果を提案しています。最終結果を決定してください。
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -312,9 +338,11 @@ export default function ScoreComparisonModal({
                       min="0"
                       max={maxScore}
                       value={finalScore}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFinalScore(parseInt(e.target.value) || 0)
-                      }
+                        // 手入力に切り替わったら採用元の紐付けを解除
+                        setSourceScoreId(null)
+                      }}
                     />
                   </div>
                   <div>

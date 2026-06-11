@@ -16,7 +16,10 @@ import {
   finalizeStreamingSession,
   getPdfExportData,
 } from "../lib/prisma/pdfExport"
-import { validateScoringData } from "../lib/shared/utilities/validateScoringData"
+import {
+  buildConflictIdentifiers,
+  validateScoringData,
+} from "../lib/shared/utilities/validateScoringData"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
 /** Excel・PDF出力・個人成績表・ストリーミングPDF生成に関するIPCチャンネルを登録する */
@@ -35,7 +38,13 @@ export function setupExportHandlers(): void {
           error: result.error || "データ取得に失敗しました",
         }
       }
-      const validationResult = validateScoringData(result.scoringData)
+      const validationResult = validateScoringData(
+        result.scoringData,
+        buildConflictIdentifiers(
+          result.scoringData,
+          result.scoreConflicts ?? []
+        )
+      )
       return { success: true, ...validationResult }
     }
   )
