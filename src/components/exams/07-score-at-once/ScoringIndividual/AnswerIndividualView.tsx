@@ -26,7 +26,6 @@ import {
   useCanvasV4Integration,
   useDrawingToolShortcuts,
   useQuestionAutoScroll,
-  useTextInputStateNotifier,
   useZoomAndScroll,
 } from "./hooks/view"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
@@ -43,7 +42,6 @@ export default function AnswerIndividualView({
   studentAnswerImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
-  onTextInputStateChange,
   currentStudentId,
   currentUserId,
   questionScores,
@@ -179,12 +177,6 @@ export default function AnswerIndividualView({
     refreshKey: annotationRefreshKey,
   })
 
-  // テキスト入力状態変更の通知
-  useTextInputStateNotifier({
-    showTextInput: drawingState.showTextInput,
-    onTextInputStateChange,
-  })
-
   // 画像とキャンバス管理（透明度制御統合）
   const {
     canvasRef,
@@ -204,7 +196,6 @@ export default function AnswerIndividualView({
     drawingElements: drawingState.drawingElements,
     currentDrawing: drawingState.currentDrawing,
     isDrawing: drawingState.isDrawing,
-    isCreatingTextBox: drawingState.isCreatingTextBox,
     strokeColor: drawingState.strokeColor,
     strokeWidth: drawingState.strokeWidth,
     lineStyle: drawingState.lineStyle,
@@ -329,11 +320,8 @@ export default function AnswerIndividualView({
       // その他
       lineEditMode: drawingState.lineEditMode,
       rectangleEditMode: drawingState.rectangleEditMode,
-      // テキストボックス関連の状態
-      isCreatingTextBox: drawingState.isCreatingTextBox,
-      showTextInput: drawingState.showTextInput,
-      textInputPosition: drawingState.textInputPosition,
-      textInputValue: drawingState.textInputValue,
+      // テキスト編集モーダル表示中はキーボードショートカットを無効化
+      isTextEditing: v4Integration.showV4Modal,
       isDraggingHandle: drawingState.isDraggingHandle,
       currentHandle: drawingState.currentHandle,
       hoveredElementId: drawingState.hoveredElementId,
@@ -354,10 +342,6 @@ export default function AnswerIndividualView({
       setDragElementOffset: drawingState.setDragElementOffset,
       setLineEditMode: drawingState.setLineEditMode,
       setRectangleEditMode: drawingState.setRectangleEditMode,
-      setIsCreatingTextBox: drawingState.setIsCreatingTextBox,
-      setShowTextInput: drawingState.setShowTextInput,
-      setTextInputPosition: drawingState.setTextInputPosition,
-      setTextInputValue: drawingState.setTextInputValue,
       setIsShiftPressed: drawingState.setIsShiftPressed,
       setIsCtrlPressed: drawingState.setIsCtrlPressed,
       setIsDraggingHandle: drawingState.setIsDraggingHandle,

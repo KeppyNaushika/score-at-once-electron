@@ -34,7 +34,6 @@ interface ScoringContentAreaProps {
   showStudentNames: boolean
   expandMargin?: number
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
-  onTextInputStateChange?: (showTextInput: boolean) => void
   currentStudentId?: string
   currentUserId?: string
   questionScores?: QuestionScore[]
@@ -74,7 +73,6 @@ export function ScoringContentArea({
   showStudentNames,
   expandMargin,
   studentAnswerImages,
-  onTextInputStateChange,
   currentStudentId,
   currentUserId,
   questionScores,
@@ -218,7 +216,6 @@ export function ScoringContentArea({
       currentCropRegion={currentCropRegion}
       cropRegions={cropRegions}
       studentAnswerImages={studentAnswerImages}
-      onTextInputStateChange={onTextInputStateChange}
       currentStudentId={currentStudentId}
       currentUserId={currentUserId}
       questionScores={questionScores}

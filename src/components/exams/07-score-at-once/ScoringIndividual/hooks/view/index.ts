@@ -20,8 +20,6 @@ export type { UseDrawingToolShortcutsParams } from "./useDrawingToolShortcuts"
 export { useDrawingToolShortcuts } from "./useDrawingToolShortcuts"
 export type { UseQuestionAutoScrollParams } from "./useQuestionAutoScroll"
 export { useQuestionAutoScroll } from "./useQuestionAutoScroll"
-export type { UseTextInputStateNotifierParams } from "./useTextInputStateNotifier"
-export { useTextInputStateNotifier } from "./useTextInputStateNotifier"
 export type {
   UseZoomAndScrollParams,
   UseZoomAndScrollReturn,

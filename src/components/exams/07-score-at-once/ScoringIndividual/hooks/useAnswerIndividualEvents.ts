@@ -50,11 +50,8 @@ interface UseAnswerDisplayEventsProps {
   selectionRectangle: SelectionRectangle | null
   lineEditMode: LineEditMode
   rectangleEditMode: RectangleEditMode
-  // テキストボックス関連の状態
-  isCreatingTextBox: boolean
-  showTextInput: boolean
-  textInputPosition: { x: number; y: number }
-  textInputValue: string
+  // テキスト編集モーダル表示中フラグ（キーボードショートカット無効化用）
+  isTextEditing: boolean
   // V4統合: テキストアンカー処理
   onTextAnchorClick?: (position: { x: number; y: number }) => void
   isDraggingHandle: boolean
@@ -94,10 +91,6 @@ interface UseAnswerDisplayEventsProps {
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
   setRectangleEditMode: (mode: RectangleEditMode) => void
-  setIsCreatingTextBox: (creating: boolean) => void
-  setShowTextInput: (show: boolean) => void
-  setTextInputPosition: (position: { x: number; y: number }) => void
-  setTextInputValue: (value: string) => void
   setIsShiftPressed: (pressed: boolean) => void
   setIsCtrlPressed: (pressed: boolean) => void
   setIsDraggingHandle: (dragging: boolean) => void
@@ -151,7 +144,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   // Initialize keyboard handlers
   useKeyboard({
     selectedElementIds: props.selectedElementIds,
-    showTextInput: props.showTextInput,
+    isTextEditing: props.isTextEditing,
     setIsShiftPressed: props.setIsShiftPressed,
     setIsCtrlPressed: props.setIsCtrlPressed,
     removeDrawingElement: props.removeDrawingElement,

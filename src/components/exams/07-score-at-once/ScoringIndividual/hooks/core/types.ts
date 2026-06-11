@@ -35,7 +35,6 @@ export interface UseImageCanvasProps {
   drawingElements: DrawingElement[]
   currentDrawing: Partial<DrawingElement> | null
   isDrawing: boolean
-  isCreatingTextBox: boolean
   strokeColor: string
   strokeWidth: number
   lineStyle: string
