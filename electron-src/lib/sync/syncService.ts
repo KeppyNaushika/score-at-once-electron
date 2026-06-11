@@ -32,22 +32,9 @@ import type {
   VersionMismatchRemote,
 } from "./types"
 
-/**
- * sqlite-nas-sync@0.10.0 で追加された SyncResult.skippedRemotes の型。
- * 依存を ^0.10.0 に更新したらライブラリの SkippedRemote 型に置き換えてキャストを除去する。
- */
-interface SkippedRemoteInfo {
-  clientId: string
-  remoteVersion: string | null
-  localVersion: string
-}
-
 /** SyncResultからバージョン不一致リモートの一覧を抽出する */
 function extractVersionMismatches(result: SyncResult): VersionMismatchRemote[] {
-  const skippedRemotes =
-    (result as SyncResult & { skippedRemotes?: SkippedRemoteInfo[] })
-      .skippedRemotes ?? []
-  return skippedRemotes.map((s) => ({
+  return result.skippedRemotes.map((s) => ({
     clientId: s.clientId,
     remoteVersion: s.remoteVersion,
     remoteIsNewer: s.remoteVersion !== null && s.remoteVersion > s.localVersion,
