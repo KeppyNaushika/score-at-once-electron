@@ -13,6 +13,7 @@ import type {
 } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { calculateActualScore } from "../../prisma/questionScore"
+import { resolveEffectiveScores } from "./scoreResolution"
 import {
   calculateSubtotalScoreBySubtotalId,
   type QuestionScoreData,
@@ -129,14 +130,27 @@ export async function calculateGrades(gradeId: string): Promise<{
     const examDataCache = new Map<string, ExamDataCache>()
 
     for (const examId of examIds) {
-      const [questionScores, examPages] = await Promise.all([
+      const [questionScores, scoreDecisions, examPages] = await Promise.all([
         prisma.questionScore.findMany({
           where: { cropRegion: { examPage: { examId: examId } } },
           select: {
+            id: true,
             studentId: true,
             cropRegionId: true,
             status: true,
             partialScore: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.scoreDecision.findMany({
+          where: { cropRegion: { examPage: { examId: examId } } },
+          select: {
+            studentId: true,
+            cropRegionId: true,
+            verdict: true,
+            score: true,
+            decidedAt: true,
+            sourceQuestionScoreId: true,
           },
         }),
         prisma.examPage.findMany({
@@ -145,12 +159,17 @@ export async function calculateGrades(gradeId: string): Promise<{
         }),
       ])
       const cropRegions = examPages.flatMap((pp) => pp.cropRegions)
+      // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+      const { resolved: resolvedScores } = resolveEffectiveScores(
+        questionScores,
+        scoreDecisions
+      )
       examDataCache.set(examId, {
-        questionScores: questionScores.map((qs) => ({
+        questionScores: resolvedScores.map((qs) => ({
           studentId: qs.studentId,
           cropRegionId: qs.cropRegionId,
           status: qs.status,
-          partialScore: qs.partialScore ? Number(qs.partialScore) : null,
+          partialScore: qs.partialScore,
         })),
         cropRegions: cropRegions.map((cr) => ({
           id: cr.id,

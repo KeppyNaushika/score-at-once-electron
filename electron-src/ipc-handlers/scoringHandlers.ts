@@ -4,7 +4,6 @@ import {
   createQuestionScore,
   CreateQuestionScoreData,
   deleteQuestionScore,
-  finalizeQuestionScore,
   getAnswerSheetProgress,
   getExamProgress,
   getQuestionScoreById,
@@ -14,6 +13,7 @@ import {
   updateQuestionScore,
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
+import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
 import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
 import { registerHandler } from "./ipcHandlerUtils"
 
@@ -120,7 +120,19 @@ export function setupScoringHandlers(): void {
   registerHandler(
     "get-question-score-comparison",
     async (studentId: string, cropRegionId: string) => {
-      return await getQuestionScoreComparison(studentId, cropRegionId)
+      const result = await getQuestionScoreComparison(studentId, cropRegionId)
+      if (!result.success || !("decision" in result)) return result
+      return {
+        ...result,
+        decision: result.decision
+          ? {
+              ...result.decision,
+              score: result.decision.score
+                ? Number(result.decision.score)
+                : null,
+            }
+          : null,
+      }
     }
   )
 
@@ -134,20 +146,39 @@ export function setupScoringHandlers(): void {
         partialScore?: number
         status: string
         comment?: string
+        sourceQuestionScoreId?: string
       }
     ) => {
-      const result = await finalizeQuestionScore(
-        studentId,
-        cropRegionId,
-        userId,
-        scoreData
-      )
+      // 旧API互換: status="final" は点数有無からverdictを導出する
+      const verdict =
+        scoreData.status === "final"
+          ? scoreData.partialScore === null ||
+            scoreData.partialScore === undefined
+            ? "correct"
+            : "partial"
+          : scoreData.status
 
-      if (!result.success || !("score" in result)) {
-        return result
+      const result = await upsertScoreDecision({
+        cropRegionId,
+        studentId,
+        verdict,
+        score: scoreData.partialScore ?? null,
+        comment: scoreData.comment ?? null,
+        decidedByUserId: userId,
+        sourceQuestionScoreId: scoreData.sourceQuestionScoreId ?? null,
+      })
+
+      if (!result.success || !result.decision) {
+        return { success: false, error: result.error }
       }
 
-      return { success: true, score: serializeScore(result.score) }
+      return {
+        success: true,
+        decision: {
+          ...result.decision,
+          score: result.decision.score ? Number(result.decision.score) : null,
+        },
+      }
     }
   )
 
