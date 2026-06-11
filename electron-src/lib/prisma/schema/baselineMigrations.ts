@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 
 import { tableExists } from "../databaseUtils"
+import { listLocalMigrationNames } from "./migrationDeployer"
 
 /** ベースラインマイグレーション（現行スキーマの完全な初期マイグレーション） */
 const MIGRATION_CHECKSUMS: ReadonlyArray<{ name: string; checksum: string }> = [
@@ -64,9 +65,21 @@ export const ensureBaselineUpToDate = async (
 
   if (Number(result[0]?.cnt) > 0) return // ベースライン登録済み
 
-  // 旧エントリを削除して現在のベースラインに置換
+  // 旧カスタムシステム由来のエントリのみ削除して現在のベースラインに置換する。
+  // アプリ同梱のマイグレーションに対応する適用記録は保持する
+  // （全削除すると適用済みマイグレーションが再実行されDBが壊れる）
+  const localNames = listLocalMigrationNames()
+  if (localNames.length === 0) {
+    console.warn(
+      "ensureBaselineUpToDate: no local migrations found, skipping baseline update"
+    )
+    return
+  }
   console.info("Updating _prisma_migrations baseline to current version...")
-  await prisma.$executeRawUnsafe(`DELETE FROM "_prisma_migrations"`)
+  const quotedNames = localNames.map((n) => `'${n}'`).join(", ")
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM "_prisma_migrations" WHERE "migration_name" NOT IN (${quotedNames})`
+  )
 
   const now = new Date().toISOString()
   for (const { name, checksum } of MIGRATION_CHECKSUMS) {

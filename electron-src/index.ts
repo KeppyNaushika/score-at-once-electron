@@ -1,10 +1,11 @@
-import { app, net, protocol } from "electron"
+import { app, dialog, net, protocol } from "electron"
 import * as path from "path"
 import { pathToFileURL } from "url"
 
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { getAbsolutePathFromData } from "./lib/dataManager"
+import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
@@ -128,6 +129,13 @@ app.on("ready", async () => {
   } catch (error) {
     console.error("Critical error during application startup:", error)
     console.error("Error stack:", error instanceof Error ? error.stack : error)
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.includes(DB_NEWER_THAN_APP_MARKER)) {
+      dialog.showErrorBox(
+        "アプリの更新が必要です",
+        message.replace(`[${DB_NEWER_THAN_APP_MARKER}] `, "")
+      )
+    }
     app.quit()
   }
 })

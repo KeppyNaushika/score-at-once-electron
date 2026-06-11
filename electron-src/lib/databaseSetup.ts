@@ -262,6 +262,11 @@ export class DatabaseSetup {
     }
 
     if (version === "MIGRATED") {
+      // DBがアプリより新しい場合は書き込み前に起動を中止する
+      const { assertDatabaseNotNewerThanApp } =
+        await import("./prisma/schema/migrationGuard")
+      await assertDatabaseNotNewerThanApp(this.prisma)
+
       // 既にPrisma管理下 — ベースラインが最新か確認
       const { ensureBaselineUpToDate } =
         await import("./prisma/schema/baselineMigrations")
