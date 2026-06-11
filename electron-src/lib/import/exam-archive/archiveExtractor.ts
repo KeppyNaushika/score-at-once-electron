@@ -21,6 +21,7 @@ import type {
   ArchiveTagsData,
   ArchiveUsersData,
 } from "../../../../src/types/examArchive.types"
+import { convertScoresDataToV1_13 } from "../transformers/V1_12_0_to_V1_13_0"
 
 /**
  * 展開されたアーカイブデータ
@@ -109,7 +110,14 @@ export async function extractArchive(archivePath: string): Promise<{
       tempDir,
       "subtotals.json"
     )
-    const scoresData = readJsonFile<ArchiveScoresData>(tempDir, "scores.json")
+    // v1.13.0+: scoreDecisions（旧形式の final/proposed 行は読み込み時に変換）
+    const rawScoresData = readJsonFile<ArchiveScoresData>(
+      tempDir,
+      "scores.json"
+    )
+    const scoresData = rawScoresData
+      ? convertScoresDataToV1_13(rawScoresData).scoresData
+      : null
 
     // v1.4.0-v1.9.0: タグデータ（存在しない場合はデフォルト値）
     const subjectsData = readJsonFile<ArchiveSubjectsData>(

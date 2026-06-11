@@ -26,3 +26,7 @@ export { V1_8_0_to_V1_9_0_Transformer } from "./V1_8_0_to_V1_9_0"
 export { V1_9_0_to_V1_10_0_Transformer } from "./V1_9_0_to_V1_10_0"
 export { V1_10_0_to_V1_11_0_Transformer } from "./V1_10_0_to_V1_11_0"
 export { V1_11_0_to_V1_12_0_Transformer } from "./V1_11_0_to_V1_12_0"
+export {
+  convertScoresDataToV1_13,
+  V1_12_0_to_V1_13_0_Transformer,
+} from "./V1_12_0_to_V1_13_0"

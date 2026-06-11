@@ -930,6 +930,20 @@ export interface ArchiveScoresData {
     createdAt: string
     updatedAt: string
   }>
+  /** v1.13.0+ OWNERによる確定スコア（生徒×設問ごとに高々1件）。旧バージョンのアーカイブには存在しない */
+  scoreDecisions?: Array<{
+    id: string
+    cropRegionId: string
+    studentId: string
+    verdict: string
+    score: string | null // Decimal as string
+    comment: string | null
+    decidedByUserId: string
+    decidedAt: string
+    sourceQuestionScoreId: string | null
+    createdAt: string
+    updatedAt: string
+  }>
 }
 
 /**

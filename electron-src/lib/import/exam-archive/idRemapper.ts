@@ -48,6 +48,8 @@ export interface IdMappings {
   cropSubtotal: Record<string, string>
   /** QuestionScore ID: 旧ID -> 新ID */
   questionScore: Record<string, string>
+  /** ScoreDecision ID: 旧ID -> 新ID (v1.13.0+) */
+  scoreDecision: Record<string, string>
   /** DrawingAnnotation ID: 旧ID -> 新ID */
   drawingAnnotation: Record<string, string>
   /** ExamMarkingFormat ID: 旧ID -> 新ID (v1.4.0+) */
@@ -102,6 +104,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     subtotal: {},
     cropSubtotal: {},
     questionScore: {},
+    scoreDecision: {},
     drawingAnnotation: {},
     examMarkingFormat: {},
     examExportSettings: {},
@@ -202,6 +205,11 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   // QuestionScore
   for (const qs of data.scoresData.questionScores) {
     mappings.questionScore[qs.id] = randomUUID()
+  }
+
+  // v1.13.0+: ScoreDecision
+  for (const sd of data.scoresData.scoreDecisions || []) {
+    mappings.scoreDecision[sd.id] = randomUUID()
   }
 
   // DrawingAnnotation
