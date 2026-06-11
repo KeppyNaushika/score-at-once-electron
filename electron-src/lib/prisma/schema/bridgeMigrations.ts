@@ -20,14 +20,45 @@ const executeSqlStatements = async (
   }
 }
 
-/** ブリッジマイグレーション前にDBファイルをバックアップする */
+const BACKUP_SUFFIX = ".pre-migration-backup"
+const BACKUP_KEEP_COUNT = 5
+
+/** 古いバックアップを削除し、直近のBACKUP_KEEP_COUNT世代のみ保持する */
+const pruneOldBackups = (absolutePath: string): void => {
+  try {
+    const dir = path.dirname(absolutePath)
+    const prefix = `${path.basename(absolutePath)}${BACKUP_SUFFIX}`
+    const backups = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith(prefix))
+      .sort()
+    for (const f of backups.slice(
+      0,
+      Math.max(0, backups.length - BACKUP_KEEP_COUNT)
+    )) {
+      fs.unlinkSync(path.join(dir, f))
+    }
+  } catch (error) {
+    console.warn("Failed to prune old migration backups:", error)
+  }
+}
+
+/**
+ * マイグレーション前にDBファイルをバックアップする。
+ * NAS共有時に他クライアントのバックアップを上書きしないようタイムスタンプを付与する。
+ */
 export const createBackup = (): string | null => {
   try {
     const dbPath = getDatabasePath()
     const absolutePath = path.resolve(dbPath)
     if (!fs.existsSync(absolutePath)) return null
-    const backupPath = `${absolutePath}.pre-migration-backup`
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:T]/g, "")
+      .slice(0, 14)
+    const backupPath = `${absolutePath}${BACKUP_SUFFIX}-${timestamp}`
     fs.copyFileSync(absolutePath, backupPath)
+    pruneOldBackups(absolutePath)
     console.info(`Migration backup created: ${backupPath}`)
     return backupPath
   } catch (error) {

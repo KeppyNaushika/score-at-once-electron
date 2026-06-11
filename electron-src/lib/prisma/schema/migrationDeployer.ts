@@ -4,10 +4,12 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { tableExists } from "../databaseUtils"
+import { createBackup, restoreBackup } from "./bridgeMigrations"
 
 /**
  * prisma/migrations/ ディレクトリから未適用のマイグレーションを検出し、順番に適用する。
  * _prisma_migrationsテーブルを参照・更新して適用状態を管理する。
+ * 適用前にDBファイルをバックアップし、失敗時は復元する。
  */
 export const deployPendingMigrations = async (
   prisma: PrismaClient
@@ -31,21 +33,22 @@ export const deployPendingMigrations = async (
   )
   const appliedNames = new Set(applied.map((r) => r.migration_name))
 
-  // マイグレーションディレクトリをスキャン
-  const dirs = fs
-    .readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && d.name !== "migration_lock.toml")
-    .map((d) => d.name)
-    .sort()
+  // 未適用のマイグレーションを抽出
+  const pendingDirs = listLocalMigrationNames().filter((dirName) => {
+    if (appliedNames.has(dirName)) return false
+    return fs.existsSync(path.join(migrationsDir, dirName, "migration.sql"))
+  })
+
+  if (pendingDirs.length === 0) return 0
+
+  // 適用前にバックアップを作成（PRAGMAを含むSQLはトランザクション化できないため、
+  // 失敗時はファイルレベルで復元する）
+  const backupPath = createBackup()
 
   let appliedCount = 0
 
-  for (const dirName of dirs) {
-    if (appliedNames.has(dirName)) continue
-
+  for (const dirName of pendingDirs) {
     const sqlPath = path.join(migrationsDir, dirName, "migration.sql")
-    if (!fs.existsSync(sqlPath)) continue
-
     const sql = fs.readFileSync(sqlPath, "utf-8")
     const checksum = crypto.createHash("sha256").update(sql).digest("hex")
 
@@ -84,6 +87,10 @@ export const deployPendingMigrations = async (
       console.info(`Migration applied: ${dirName}`)
     } catch (error) {
       console.error(`Migration failed: ${dirName}`, error)
+      if (backupPath) {
+        console.info("Restoring database from pre-migration backup...")
+        restoreBackup(backupPath)
+      }
       throw new Error(
         `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`
       )
@@ -95,6 +102,17 @@ export const deployPendingMigrations = async (
   }
 
   return appliedCount
+}
+
+/** prisma/migrations/ に同梱されているマイグレーション名を昇順で返す */
+export const listLocalMigrationNames = (): string[] => {
+  const migrationsDir = getMigrationsDir()
+  if (!migrationsDir || !fs.existsSync(migrationsDir)) return []
+  return fs
+    .readdirSync(migrationsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort()
 }
 
 /** prisma/migrations/ ディレクトリのパスを解決する */
