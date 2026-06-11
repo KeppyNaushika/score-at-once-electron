@@ -35,6 +35,7 @@ export default function ExportMainView() {
     noScoringData: [] as string[],
     unscored: [] as string[],
     missingPartialScore: [] as string[],
+    conflicted: [] as string[],
   })
   const [pendingExportType, setPendingExportType] = useState<
     "scored-answers" | "grading-data" | "individual-reports" | null
@@ -251,6 +252,7 @@ export default function ExportMainView() {
         noScoringData: result.warnings.noScoringData,
         unscored: result.warnings.ungraded,
         missingPartialScore: result.warnings.missingPartialScore,
+        conflicted: result.warnings.conflicted ?? [],
       })
       setPendingExportType(exportType)
       setShowWarningModal(true)
