@@ -8,8 +8,8 @@ import { useEffect } from "react"
 interface UseKeyboardHandlersProps {
   /** 選択中の要素ID配列 */
   selectedElementIds: string[]
-  /** テキスト入力中フラグ */
-  showTextInput: boolean
+  /** テキスト編集モーダル表示中フラグ */
+  isTextEditing: boolean
   /** Shiftキー状態設定関数 */
   setIsShiftPressed: (pressed: boolean) => void
   /** Ctrlキー状態設定関数 */
@@ -24,13 +24,14 @@ interface UseKeyboardHandlersProps {
  * @description
  * グローバルなキーボードイベントを監視し、
  * 修飾キーの状態追跡と要素削除ショートカットを提供する。
- * テキスト入力中は修飾キーのみ追跡し、他のショートカットは無効化する。
+ * テキスト編集モーダル表示中は、フォーカス位置に関わらず全ショートカットを
+ * 無効化する（モーダル内編集中のBackspaceでアノテーションが削除されるのを防ぐ）。
  *
  * @param props - フックのプロパティ
  */
 export function useKeyboard({
   selectedElementIds,
-  showTextInput,
+  isTextEditing,
   setIsShiftPressed,
   setIsCtrlPressed,
   removeDrawingElement,
@@ -38,16 +39,8 @@ export function useKeyboard({
   // キーボードイベント
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // テキスト入力モード中は修飾キーのみ処理し、他のショートカットは無効化
-      if (showTextInput) {
-        // Shift/Ctrl/Metaの状態のみ追跡（書式設定で必要）
-        if (e.key === "Shift") {
-          setIsShiftPressed(true)
-        }
-        if (e.key === "Control" || e.key === "Meta") {
-          setIsCtrlPressed(true)
-        }
-        // テキスト入力中は他のキーイベントを無視
+      // テキスト編集モーダル表示中は全ショートカットを無効化（フォーカス非依存）
+      if (isTextEditing) {
         return
       }
 
@@ -103,7 +96,7 @@ export function useKeyboard({
     }
   }, [
     selectedElementIds,
-    showTextInput,
+    isTextEditing,
     setIsShiftPressed,
     setIsCtrlPressed,
     removeDrawingElement,

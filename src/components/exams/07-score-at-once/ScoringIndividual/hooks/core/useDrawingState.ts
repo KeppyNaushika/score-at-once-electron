@@ -83,12 +83,6 @@ export function useDrawingState(
   const [isDraggingHandle, setIsDraggingHandle] = useState(false)
   const [currentHandle, setCurrentHandle] = useState<string | null>(null)
 
-  // テキスト入力
-  const [isCreatingTextBox, setIsCreatingTextBox] = useState(false)
-  const [showTextInput, setShowTextInput] = useState(false)
-  const [textInputPosition, setTextInputPosition] = useState({ x: 0, y: 0 })
-  const [textInputValue, setTextInputValue] = useState("")
-
   // テキスト再編集
   const [isEditingExistingText, setIsEditingExistingText] = useState(false)
   const [editingTextElementId, setEditingTextElementId] = useState<
@@ -470,10 +464,6 @@ export function useDrawingState(
     // その他
     lineEditMode,
     rectangleEditMode,
-    isCreatingTextBox,
-    showTextInput,
-    textInputPosition,
-    textInputValue,
     // テキスト再編集
     isEditingExistingText,
     editingTextElementId,
@@ -513,10 +503,6 @@ export function useDrawingState(
     setDragElementOffset,
     setLineEditMode,
     setRectangleEditMode,
-    setIsCreatingTextBox,
-    setShowTextInput,
-    setTextInputPosition,
-    setTextInputValue,
     // テキスト再編集用
     setIsEditingExistingText,
     setEditingTextElementId,

@@ -91,9 +91,6 @@ export interface AnswerIndividualViewProps {
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
   pageSpacing?: number // ページ間の余白（ピクセル）
 
-  // テキスト入力状態変更のコールバック
-  onTextInputStateChange?: (showTextInput: boolean) => void
-
   // アノテーション変更通知（キャンバス→ブラウザパネル連携用）
   onAnnotationChanged?: () => void
   // 外部からのアノテーション追加後のリフレッシュキー（ブラウザパネル→キャンバス連携用）
@@ -144,10 +141,6 @@ export interface DrawingState {
   // その他の状態
   lineEditMode: LineEditMode
   rectangleEditMode: RectangleEditMode
-  isCreatingTextBox: boolean
-  showTextInput: boolean
-  textInputPosition: { x: number; y: number }
-  textInputValue: string
   // テキスト再編集用
   isEditingExistingText: boolean
   editingTextElementId: string | null
@@ -209,10 +202,6 @@ export interface DrawingActions {
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
   setRectangleEditMode: (mode: RectangleEditMode) => void
-  setIsCreatingTextBox: (creating: boolean) => void
-  setShowTextInput: (show: boolean) => void
-  setTextInputPosition: (position: { x: number; y: number }) => void
-  setTextInputValue: (value: string) => void
   // テキスト再編集用
   setIsEditingExistingText: (editing: boolean) => void
   setEditingTextElementId: (id: string | null) => void
