@@ -26,7 +26,6 @@
 ```bash
 # チェック
 npm run lint        # ESLint + Prettier チェック
-npm run lint:strict # 警告も含めた厳格チェック
 
 # 自動修正
 npm run lint:fix    # ESLint --fix + Prettier --write
@@ -177,9 +176,6 @@ const newImplementation = () => { ... }
 ```bash
 # 未使用変数・引数の検出
 npm run lint
-
-# 厳格チェック（警告も含む）
-npm run lint:strict
 ```
 
 > **Note**: ESLint の `@typescript-eslint/no-unused-vars` ルールで検出。`_` で始まる変数は許可されているが、必要ない場合は削除を優先。
