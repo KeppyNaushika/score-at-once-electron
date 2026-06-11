@@ -523,57 +523,57 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // 部分点入力ショートカット（グリッド・個別共通）
   // ========================================
   useCommand("scoring.openPartialWith0", () => handlePartialScoreInput("0"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "0キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith1", () => handlePartialScoreInput("1"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "1キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith2", () => handlePartialScoreInput("2"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "2キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith3", () => handlePartialScoreInput("3"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "3キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith4", () => handlePartialScoreInput("4"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "4キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith5", () => handlePartialScoreInput("5"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "5キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith6", () => handlePartialScoreInput("6"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "6キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith7", () => handlePartialScoreInput("7"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "7キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith8", () => handlePartialScoreInput("8"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "8キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWith9", () => handlePartialScoreInput("9"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: "9キーで部分点入力", category: "採点" },
   })
 
   useCommand("scoring.openPartialWithDot", () => handlePartialScoreInput("."), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
     metadata: { title: ".キーで部分点入力", category: "採点" },
   })
 }

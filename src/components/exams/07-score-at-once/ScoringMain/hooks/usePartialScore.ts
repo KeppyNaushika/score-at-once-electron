@@ -42,15 +42,25 @@ export function usePartialScore({
     }
   }, [])
 
-  /** 部分点モーダルを開く（マウストリプルクリック等から呼び出し用） */
-  const openPartialScoreModal = useCallback(() => {
-    if (selectedAnswers.size === 0 || !currentCropRegion) return
+  /**
+   * 部分点モーダルを開く（マウスクリック等から呼び出し用）
+   *
+   * @param targetAnswers - 対象答案を明示指定する場合に渡す。
+   *   replaceSelection直後など、selectedAnswersの反映がまだの場合に使用する。
+   *   省略時は現在の選択（selectedAnswers）を対象とする。
+   */
+  const openPartialScoreModal = useCallback(
+    (targetAnswers?: Set<string>) => {
+      const answers = targetAnswers ?? selectedAnswers
+      if (answers.size === 0 || !currentCropRegion) return
 
-    setPartialScoreInput("")
-    setShowPartialScoreModal(true)
-    setContextValue("partialScoreModalOpen", true)
-    setContextValue("modalOpen", true)
-  }, [selectedAnswers, currentCropRegion, setContextValue])
+      setPartialScoreInput("")
+      setShowPartialScoreModal(true)
+      setContextValue("partialScoreModalOpen", true)
+      setContextValue("modalOpen", true)
+    },
+    [selectedAnswers, currentCropRegion, setContextValue]
+  )
 
   // 部分点入力開始（数字キー・小数点対応）
   const handlePartialScoreInput = useCallback(

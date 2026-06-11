@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Calculator,
   CheckCircle,
   Circle,
   Clock,
@@ -13,6 +14,7 @@ import {
   Keyboard,
   Minus,
   Mouse,
+  MousePointerClick,
   Target,
   X,
 } from "lucide-react"
@@ -69,6 +71,7 @@ interface ScoringToolbarProps {
   onScore: (status: ScoringStatus) => void
   onSelectAll?: () => void
   onSelectUnscored?: () => void
+  onOpenPartialScoreModal?: () => void
   onRefreshFilter?: () => void
   partialScoreInput: string
   gradingMode?: "grid" | "individual"
@@ -158,6 +161,27 @@ const BRUSH_BUTTONS = SCORING_BUTTONS.filter(
   description: string
 }>
 
+/** マウスモード用の特殊ブラシ（採点せず選択／モーダル展開） */
+const SPECIAL_BRUSH_BUTTONS: Array<{
+  status: MouseBrushAction
+  label: string
+  icon: typeof CheckCircle
+  description: string
+}> = [
+  {
+    status: "select",
+    label: "選択",
+    icon: MousePointerClick,
+    description: "クリックで選択（複数選択可）",
+  },
+  {
+    status: "partial_modal",
+    label: "部分点入力",
+    icon: Calculator,
+    description: "クリックで部分点入力モーダルを開く",
+  },
+]
+
 const CLICK_ACTION_OPTIONS: { value: ClickScoringAction; label: string }[] = [
   { value: "none", label: "なし" },
   { value: "correct", label: "正答" },
@@ -182,6 +206,7 @@ export default function ScoringToolbar({
   onScore,
   onSelectAll,
   onSelectUnscored,
+  onOpenPartialScoreModal,
   onRefreshFilter,
   partialScoreInput,
   gradingMode = "grid",
@@ -257,6 +282,34 @@ export default function ScoringToolbar({
             </div>
           )}
 
+          {/* 部分点入力モーダルを開くボタン（キーボード・マウス共通） */}
+          {onOpenPartialScoreModal && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`w-full text-xs ${
+                    selectedAnswersCount === 0
+                      ? "cursor-not-allowed opacity-50"
+                      : ""
+                  }`}
+                  onClick={onOpenPartialScoreModal}
+                  disabled={selectedAnswersCount === 0}
+                >
+                  <Calculator className="mr-1 h-3.5 w-3.5" />
+                  部分点入力
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-medium">選択中の答案に部分点を入力</div>
+                  <KeyHint label="0〜9" />
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {/* マウスモード用UI（グリッドモードのみ） */}
           {scoringOperationMode === "mouse" && gradingMode === "grid" && (
             <>
@@ -266,68 +319,81 @@ export default function ScoringToolbar({
                   クリック時の採点ブラシ
                 </div>
                 <div style={GRID_4_3_STYLE}>
-                  {BRUSH_BUTTONS.map((button) => {
-                    const Icon = button.icon
-                    const statusType = STATUS_MAP[button.status]
-                    const colors = scoringColors[statusType]
-                    const isActive = mouseBrush === button.status
-                    return (
-                      <Tooltip key={button.status}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`flex h-12 flex-col gap-1 border-2 ${
-                              isActive
-                                ? "ring-2 ring-blue-500 ring-offset-1"
-                                : "opacity-60 hover:opacity-80"
-                            }`}
-                            style={{
-                              backgroundColor: colors.bg,
-                              color: colors.text,
-                              borderColor: colors.bg,
-                            }}
-                            onClick={() => onMouseBrushChange?.(button.status)}
-                          >
-                            <Icon className="h-4 w-4" />
-                            <div className="text-xs">{button.label}</div>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-center">
-                            <div className="font-medium">
-                              {button.description}
+                  {[...SPECIAL_BRUSH_BUTTONS, ...BRUSH_BUTTONS].map(
+                    (button) => {
+                      const Icon = button.icon
+                      const colors =
+                        button.status === "select"
+                          ? { bg: "#e5e7eb", text: "#374151" }
+                          : button.status === "partial_modal"
+                            ? scoringColors[STATUS_MAP.partial]
+                            : scoringColors[
+                                STATUS_MAP[button.status as ScoringStatus]
+                              ]
+                      const isActive = mouseBrush === button.status
+                      return (
+                        <Tooltip key={button.status}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`flex h-12 flex-col gap-1 border-2 ${
+                                isActive
+                                  ? "ring-2 ring-blue-500 ring-offset-1"
+                                  : "opacity-60 hover:opacity-80"
+                              }`}
+                              style={{
+                                backgroundColor: colors.bg,
+                                color: colors.text,
+                                borderColor: colors.bg,
+                              }}
+                              onClick={() =>
+                                onMouseBrushChange?.(button.status)
+                              }
+                            >
+                              <Icon className="h-4 w-4" />
+                              <div className="text-xs">{button.label}</div>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-center">
+                              <div className="font-medium">
+                                {button.description}
+                              </div>
                             </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
+                          </TooltipContent>
+                        </Tooltip>
+                      )
+                    }
+                  )}
                 </div>
               </div>
 
-              {/* 一括採点ボタン */}
-              {onBatchScoreVisibleUnscored && visibleUnscoredCount > 0 && (
-                <div className="space-y-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={() => onBatchScoreVisibleUnscored(mouseBrush)}
-                  >
-                    表示中の未採点{visibleUnscoredCount}件を
-                    {BRUSH_BUTTONS.find((b) => b.status === mouseBrush)
-                      ?.label ?? mouseBrush}
-                    にする
-                  </Button>
-                  {hiddenUnscoredCount > 0 && (
-                    <div className="flex items-center gap-1 text-[10px] text-amber-600">
-                      <AlertTriangle className="h-3 w-3" />
-                      非表示の未採点が{hiddenUnscoredCount}件あります
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* 一括採点ボタン（採点ブラシ選択時のみ） */}
+              {onBatchScoreVisibleUnscored &&
+                visibleUnscoredCount > 0 &&
+                mouseBrush !== "select" &&
+                mouseBrush !== "partial_modal" && (
+                  <div className="space-y-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => onBatchScoreVisibleUnscored(mouseBrush)}
+                    >
+                      表示中の未採点{visibleUnscoredCount}件を
+                      {BRUSH_BUTTONS.find((b) => b.status === mouseBrush)
+                        ?.label ?? mouseBrush}
+                      にする
+                    </Button>
+                    {hiddenUnscoredCount > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-amber-600">
+                        <AlertTriangle className="h-3 w-3" />
+                        非表示の未採点が{hiddenUnscoredCount}件あります
+                      </div>
+                    )}
+                  </div>
+                )}
 
               {/* フィルタ更新 */}
               {onRefreshFilter && (
