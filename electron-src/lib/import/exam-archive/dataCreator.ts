@@ -549,6 +549,32 @@ export async function createImportedData(
         }
       }
 
+      // 14.5. ScoreDecisionを作成 (v1.13.0+)
+      // decidedByUserIdは現在のログインユーザーで上書き
+      for (const sd of data.scoresData.scoreDecisions || []) {
+        const newCropRegionId = remapId(sd.cropRegionId, mappings.cropRegion)
+        const newStudentId = remapId(sd.studentId, mappings.student)
+
+        if (newCropRegionId && newStudentId) {
+          await tx.scoreDecision.create({
+            data: {
+              id: remapIdRequired(sd.id, mappings.scoreDecision),
+              cropRegionId: newCropRegionId,
+              studentId: newStudentId,
+              verdict: sd.verdict,
+              score: sd.score ? parseFloat(sd.score) : null,
+              comment: sd.comment,
+              decidedByUserId: currentUserId,
+              decidedAt: new Date(sd.decidedAt),
+              sourceQuestionScoreId: remapId(
+                sd.sourceQuestionScoreId,
+                mappings.questionScore
+              ),
+            },
+          })
+        }
+      }
+
       // 15. DrawingAnnotationを作成
       // v0.3.0以降: userIdを現在のログインユーザーで上書き
       for (const da of data.scoresData.drawingAnnotations) {

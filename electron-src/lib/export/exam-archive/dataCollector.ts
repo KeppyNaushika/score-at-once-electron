@@ -250,6 +250,7 @@ export async function collectExamData(
     // v0.3.0以降: ログインユーザーのデータのみをエクスポート
     const questionScores: ArchiveScoresData["questionScores"] = []
     const drawingAnnotations: ArchiveScoresData["drawingAnnotations"] = []
+    const scoreDecisions: ArchiveScoresData["scoreDecisions"] = []
 
     if (!isTemplate) {
       for (const page of exam.examPages) {
@@ -307,6 +308,27 @@ export async function collectExamData(
             }
           }
         }
+      }
+
+      // 9.5. ScoreDecisionを収集 (v1.13.0+)
+      // 確定は試験ごとに1セットなので採点者によるフィルタはしない
+      const decisions = await prisma.scoreDecision.findMany({
+        where: { cropRegion: { examPage: { examId } } },
+      })
+      for (const d of decisions) {
+        scoreDecisions.push({
+          id: d.id,
+          cropRegionId: d.cropRegionId,
+          studentId: d.studentId,
+          verdict: d.verdict,
+          score: d.score?.toString() ?? null,
+          comment: d.comment,
+          decidedByUserId: d.decidedByUserId,
+          decidedAt: d.decidedAt.toISOString(),
+          sourceQuestionScoreId: d.sourceQuestionScoreId,
+          createdAt: d.createdAt.toISOString(),
+          updatedAt: d.updatedAt.toISOString(),
+        })
       }
     }
 
@@ -619,6 +641,7 @@ export async function collectExamData(
     const scoresData: ArchiveScoresData = {
       questionScores,
       drawingAnnotations,
+      scoreDecisions,
     }
 
     const tagsData: ArchiveTagsData = {
