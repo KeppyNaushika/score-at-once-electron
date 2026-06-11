@@ -3,6 +3,7 @@
  */
 
 import { BrowserWindow, ipcMain } from "electron"
+import fs from "fs"
 import path from "path"
 
 import type { ComputedCell } from "../../src/types/answerSheetLayout.types"
@@ -24,8 +25,38 @@ import {
 import prisma from "../lib/prisma/client"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
-/** マスターマーカー検出キャッシュ (キー: "examId:pageNumber") */
-const masterMarkerCache = new Map<string, MarkerDetectionResult>()
+/**
+ * マスターマーカー検出キャッシュ (キー: "examId:pageNumber:colorThreshold")
+ *
+ * 画像ファイルのmtimeを保持し、ファイルが差し替えられた場合は
+ * キャッシュを無効とみなして再検出する（アプリ外でのファイル差し替えにも追従）。
+ */
+const masterMarkerCache = new Map<
+  string,
+  { mtimeMs: number; result: MarkerDetectionResult }
+>()
+
+/** 画像のmtimeを取得（取得できない場合はnull＝キャッシュ不使用） */
+function getMtimeMs(imagePath: string): number | null {
+  try {
+    return fs.statSync(imagePath).mtimeMs
+  } catch {
+    return null
+  }
+}
+
+/** キャッシュが現在のファイル状態に対して有効なら検出結果を返す */
+function getCachedMarkerResult(
+  cacheKey: string,
+  mtimeMs: number | null
+): MarkerDetectionResult | null {
+  if (mtimeMs === null) return null
+  const cached = masterMarkerCache.get(cacheKey)
+  if (cached && cached.mtimeMs === mtimeMs) {
+    return cached.result
+  }
+  return null
+}
 
 /** キャッシュ無効化（マスター画像変更時に呼び出す） */
 export function invalidateMasterMarkerCache(examId: string): void {
@@ -324,21 +355,22 @@ export function setupOMRHandlers(): void {
 
       for (const mi of masterImages) {
         const pageNumber = mi.examPage.pageNumber
-        const cacheKey = `${examId}:${pageNumber}`
+        const cacheKey = `${examId}:${pageNumber}:${colorThreshold ?? 128}`
+        const imagePath = path.join(dataDir, mi.imagePath)
+        const mtimeMs = getMtimeMs(imagePath)
 
-        // キャッシュチェック
-        const cached = masterMarkerCache.get(cacheKey)
+        // キャッシュチェック（ファイル差し替えを検知したら再検出）
+        const cached = getCachedMarkerResult(cacheKey, mtimeMs)
         if (cached) {
           pages.push({ pageNumber, result: cached })
           continue
         }
 
-        // 画像パスを解決してマーカー検出
-        const imagePath = path.join(dataDir, mi.imagePath)
         const result = await detectCornerMarkers(imagePath, colorThreshold)
 
-        // キャッシュに保存
-        masterMarkerCache.set(cacheKey, result)
+        if (mtimeMs !== null) {
+          masterMarkerCache.set(cacheKey, { mtimeMs, result })
+        }
         pages.push({ pageNumber, result })
       }
 
@@ -372,25 +404,28 @@ export function setupOMRHandlers(): void {
       status: "corrected" | "skipped"
       error?: string
     }> => {
-      const cacheKey = `${examId}:${pageNumber}`
-      let masterResult = masterMarkerCache.get(cacheKey)
-
-      if (!masterResult) {
-        const masterImage = await prisma.masterImage.findFirst({
-          where: { examPage: { examId, pageNumber } },
-          include: { examPage: true },
-        })
-        if (!masterImage) {
-          return {
-            success: false,
-            status: "skipped",
-            error: "マスター画像が見つかりません",
-          }
+      const cacheKey = `${examId}:${pageNumber}:${colorThreshold ?? 128}`
+      const masterImage = await prisma.masterImage.findFirst({
+        where: { examPage: { examId, pageNumber } },
+        include: { examPage: true },
+      })
+      if (!masterImage) {
+        return {
+          success: false,
+          status: "skipped",
+          error: "マスター画像が見つかりません",
         }
-        const dataDir = getDataDirectory()
-        const imagePath = path.join(dataDir, masterImage.imagePath)
+      }
+      const dataDir = getDataDirectory()
+      const imagePath = path.join(dataDir, masterImage.imagePath)
+      const mtimeMs = getMtimeMs(imagePath)
+
+      let masterResult = getCachedMarkerResult(cacheKey, mtimeMs)
+      if (!masterResult) {
         masterResult = await detectCornerMarkers(imagePath, colorThreshold)
-        masterMarkerCache.set(cacheKey, masterResult)
+        if (mtimeMs !== null) {
+          masterMarkerCache.set(cacheKey, { mtimeMs, result: masterResult })
+        }
       }
 
       if (!masterResult.success) {
