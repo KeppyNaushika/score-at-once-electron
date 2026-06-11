@@ -8,14 +8,14 @@
  */
 
 import { renderHook } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, type Mock, vi } from "vitest"
 
 import { useKeyboard } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/interaction/useKeyboard"
 
 interface Handlers {
-  setIsShiftPressed: ReturnType<typeof vi.fn>
-  setIsCtrlPressed: ReturnType<typeof vi.fn>
-  removeDrawingElement: ReturnType<typeof vi.fn>
+  setIsShiftPressed: Mock<(pressed: boolean) => void>
+  setIsCtrlPressed: Mock<(pressed: boolean) => void>
+  removeDrawingElement: Mock<(id: string) => void>
 }
 
 function mountKeyboard(opts: {
@@ -23,9 +23,9 @@ function mountKeyboard(opts: {
   isTextEditing: boolean
 }): Handlers {
   const handlers: Handlers = {
-    setIsShiftPressed: vi.fn(),
-    setIsCtrlPressed: vi.fn(),
-    removeDrawingElement: vi.fn(),
+    setIsShiftPressed: vi.fn<(pressed: boolean) => void>(),
+    setIsCtrlPressed: vi.fn<(pressed: boolean) => void>(),
+    removeDrawingElement: vi.fn<(id: string) => void>(),
   }
   renderHook(() =>
     useKeyboard({
