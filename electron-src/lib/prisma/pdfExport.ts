@@ -6,12 +6,14 @@ import path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 
 import { getAbsolutePathFromData } from "../dataManager"
+import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
 import { getCropRegionsByExamId } from "./cropRegion"
 import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 import { getExamById } from "./exam"
 import { getStudentsForExam } from "./examStudent"
 import { calculateActualScore, getQuestionScoresForExam } from "./questionScore"
+import { getScoreDecisionsForExam } from "./scoreDecision"
 import { getStudentAnswersByExamId } from "./studentAnswer"
 
 /**
@@ -150,9 +152,13 @@ export async function getPdfExportData(options: {
     // 採点領域を取得
     const cropRegions = await getCropRegionsByExamId(examId)
 
-    // 採点スコアを取得
+    // 採点スコアと確定を取得し、生徒×設問ごとに有効スコア1件へ解決
     const scoresResult = await getQuestionScoresForExam(examId)
-    const allScores = scoresResult.scores || []
+    const decisionsResult = await getScoreDecisionsForExam(examId)
+    const { resolved: allScores } = resolveEffectiveScores(
+      scoresResult.scores ?? [],
+      decisionsResult.success ? (decisionsResult.decisions ?? []) : []
+    )
 
     // 生徒情報を取得
     const studentsResult = await getStudentsForExam(examId)
@@ -233,12 +239,9 @@ export async function getPdfExportData(options: {
               (s) => s.cropRegionId === region.id && s.studentId === student.id
             )
             return {
-              questionScoreId: score?.id || "",
+              questionScoreId: score?.questionScoreId || "",
               status: score?.status || "unscored",
-              partialScore:
-                score?.partialScore !== null
-                  ? Number(score?.partialScore)
-                  : null,
+              partialScore: score?.partialScore ?? null,
               cropRegion: {
                 id: region.id,
                 x: region.x,
@@ -252,8 +255,10 @@ export async function getPdfExportData(options: {
             }
           })
           .filter(
+            // 提案行が無くても確定（decision）で採点済みのセルはマークを描画する
             (sd): sd is NonNullable<typeof sd> =>
-              sd !== null && sd.questionScoreId !== ""
+              sd !== null &&
+              (sd.questionScoreId !== "" || sd.status !== "unscored")
           )
 
         // アノテーションを取得
@@ -318,15 +323,12 @@ export async function getPdfExportData(options: {
           const subtotalResult = await calculateSubtotalScoreForStudent(
             student.id,
             subtotalRegion.id,
-            allScores
-              .filter((s) => s.studentId !== null)
-              .map((s) => ({
-                studentId: s.studentId as string,
-                cropRegionId: s.cropRegionId,
-                status: s.status,
-                partialScore:
-                  s.partialScore !== null ? Number(s.partialScore) : null,
-              })),
+            allScores.map((s) => ({
+              studentId: s.studentId,
+              cropRegionId: s.cropRegionId,
+              status: s.status,
+              partialScore: s.partialScore,
+            })),
             cropRegions as CropRegion[]
           )
 

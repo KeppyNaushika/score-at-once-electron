@@ -1,19 +1,17 @@
-import type {
-  CropRegion,
-  Exam,
-  ExamStudent,
-  QuestionScore,
-  Student,
-} from "@prisma/client"
+import type { CropRegion, Exam, ExamStudent, Student } from "@prisma/client"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getExamById } from "../../prisma/exam"
 import { getStudentsForExam } from "../../prisma/examStudent"
-import {
-  calculateActualScore,
-  getQuestionScoresForExam,
-} from "../../prisma/questionScore"
+import { getQuestionScoresForExam } from "../../prisma/questionScore"
+import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
 import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
+import {
+  calculateEffectiveScoreValue,
+  EffectiveScore,
+  resolveEffectiveScores,
+  ScoreConflict,
+} from "../../shared/calculations/scoreResolution"
 import {
   calculateSubtotalScoreBySubtotalId,
   QuestionScoreData,
@@ -53,6 +51,8 @@ export interface ExportDataResult {
   subtotalRegions?: CropRegion[]
   subtotalColumns?: SubtotalColumn[]
   scoringData?: ScoringData[]
+  /** 複数採点者の値が食い違い解決できなかった生徒×設問（出力上は未採点扱い） */
+  scoreConflicts?: ScoreConflict[]
 }
 
 /**
@@ -79,7 +79,21 @@ export async function fetchExportData(
     }
 
     const cropRegions = await getCropRegionsByExamId(examId)
-    const questionScores = await getQuestionScoresForExam(examId)
+    const questionScoresResult = await getQuestionScoresForExam(examId)
+    const decisionsResult = await getScoreDecisionsForExam(examId)
+
+    // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+    const { resolved: questionScores, conflicts: scoreConflicts } =
+      resolveEffectiveScores(
+        questionScoresResult.success ? (questionScoresResult.scores ?? []) : [],
+        decisionsResult.success ? (decisionsResult.decisions ?? []) : []
+      )
+    if (scoreConflicts.length > 0) {
+      console.warn(
+        `Export: ${scoreConflicts.length}件の採点競合を検出しました（未採点として出力されます）`,
+        scoreConflicts
+      )
+    }
 
     // 選択された生徒のフィルタリングとソート
     // 空配列の場合は全生徒を取得（統計計算用）
@@ -181,6 +195,7 @@ export async function fetchExportData(
       subtotalRegions,
       subtotalColumns,
       scoringData,
+      scoreConflicts,
     }
   } catch (error) {
     console.error("Error fetching export data:", error)
@@ -211,22 +226,20 @@ async function buildScoringData(
   })[],
   questionRegions: CropRegion[],
   subtotalGroups: SubtotalGroupData[],
-  questionScores: { success: boolean; scores?: QuestionScore[] }
+  questionScores: EffectiveScore[]
 ): Promise<ScoringData[]> {
   return Promise.all(
     selectedStudents.map(async (student) => {
-      const studentScores = questionScores.success
-        ? questionScores.scores?.filter(
-            (score: QuestionScore) => score.studentId === student.id
-          ) || []
-        : []
+      const studentScores = questionScores.filter(
+        (score) => score.studentId === student.id
+      )
 
       const scores = buildScoreDetails(studentScores, questionRegions)
       const subtotalScores = await buildSubtotalScores(
         student.id,
         subtotalGroups,
         questionRegions,
-        questionScores.scores || []
+        questionScores
       )
 
       const allUnscored = scores.every((s) => s.status === "unscored")
@@ -263,25 +276,15 @@ async function buildScoringData(
  * @returns 設問別スコア詳細配列
  */
 function buildScoreDetails(
-  studentScores: QuestionScore[],
+  studentScores: EffectiveScore[],
   questionRegions: CropRegion[]
 ): ScoreDetail[] {
   return questionRegions.map((region: CropRegion) => {
     const scoreRecord = studentScores.find(
-      (score: QuestionScore) => score.cropRegionId === region.id
+      (score) => score.cropRegionId === region.id
     )
     const actualScore = scoreRecord
-      ? calculateActualScore(
-          {
-            status: scoreRecord.status,
-            partialScore:
-              scoreRecord.partialScore !== null &&
-              scoreRecord.partialScore !== undefined
-                ? Number(scoreRecord.partialScore)
-                : null,
-          },
-          region.points || 0
-        )
+      ? calculateEffectiveScoreValue(scoreRecord, region.points || 0)
       : null
 
     return {
@@ -314,17 +317,17 @@ async function buildSubtotalScores(
   studentId: string,
   subtotalGroups: SubtotalGroupData[],
   questionRegions: CropRegion[],
-  allQuestionScores: QuestionScore[]
+  allQuestionScores: EffectiveScore[]
 ): Promise<SubtotalScore[]> {
   // 設問スコアデータを変換
-  const questionScoreData: QuestionScoreData[] = allQuestionScores
-    .filter((score) => score.studentId !== null)
-    .map((score) => ({
-      studentId: score.studentId!,
+  const questionScoreData: QuestionScoreData[] = allQuestionScores.map(
+    (score) => ({
+      studentId: score.studentId,
       cropRegionId: score.cropRegionId,
       status: score.status,
-      partialScore: score.partialScore ? Number(score.partialScore) : null,
-    }))
+      partialScore: score.partialScore,
+    })
+  )
 
   const results: SubtotalScore[] = []
 

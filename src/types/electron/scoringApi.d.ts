@@ -5,10 +5,26 @@ import type {
   QuestionScoreWithUser,
 } from "../prismaExtensions"
 
+// OWNERによる確定スコア（IPC経由でscoreはnumberに変換済み）
+export interface ScoreDecisionForComparison {
+  id: string
+  cropRegionId: string
+  studentId: string
+  verdict: string
+  score: number | null
+  comment: string | null
+  decidedByUserId: string
+  decidedAt: Date | string
+  sourceQuestionScoreId: string | null
+  decidedBy: { id: string; name: string; username: string }
+}
+
 // QuestionScore comparison result type
 export interface QuestionScoreComparisonResult {
   success: boolean
-  finalScore?: QuestionScoreWithUser
+  /** OWNERによる確定。未確定の場合はnull */
+  decision?: ScoreDecisionForComparison | null
+  /** 採点者ごとの提案（unscoredを除く） */
   proposedScores?: QuestionScoreWithUser[]
   hasConflict?: boolean
   error?: string
@@ -52,8 +68,6 @@ export interface ScoringAPI {
       | "partial"
       | "pending"
       | "no_answer"
-      | "proposed"
-      | "final"
       | "double_mark"
     userId: string // v0.4.0+: required
   }) => Promise<QuestionScoreOperationResult>
@@ -69,8 +83,6 @@ export interface ScoringAPI {
         | "partial"
         | "pending"
         | "no_answer"
-        | "proposed"
-        | "final"
         | "double_mark"
       comment?: string
       version?: number
@@ -90,8 +102,13 @@ export interface ScoringAPI {
       partialScore?: number
       status: string
       comments?: string
+      sourceQuestionScoreId?: string
     }
-  ) => Promise<QuestionScoreOperationResult>
+  ) => Promise<{
+    success: boolean
+    decision?: ScoreDecisionForComparison
+    error?: string
+  }>
 
   getAnswerSheetProgress: (answerSheetId: string) => Promise<{
     totalQuestions: number

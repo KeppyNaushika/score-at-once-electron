@@ -2,12 +2,17 @@
  * 個人成績表用データ取得・統合ロジック
  */
 
-import type { CropRegion, QuestionScore } from "@prisma/client"
+import type { CropRegion } from "@prisma/client"
 
 import prisma from "../../prisma/client"
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
+import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
 import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
+import {
+  EffectiveScore,
+  resolveEffectiveScores,
+} from "../../shared/calculations/scoreResolution"
 import {
   calculateSubtotalScoreBySubtotalId,
   type QuestionScoreData,
@@ -84,9 +89,12 @@ export async function fetchIndividualReportData(
       (r) => r.type === "QUESTION_ANSWER"
     )
     const questionScoresResult = await getQuestionScoresForExam(examId)
-    const allQuestionScores = questionScoresResult.success
-      ? questionScoresResult.scores || []
-      : []
+    const decisionsResult = await getScoreDecisionsForExam(examId)
+    // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+    const { resolved: allQuestionScores } = resolveEffectiveScores(
+      questionScoresResult.success ? (questionScoresResult.scores ?? []) : [],
+      decisionsResult.success ? (decisionsResult.decisions ?? []) : []
+    )
 
     // 全生徒の小計点を計算（Subtotal単位）
     const allScoringData = await Promise.all(
@@ -223,18 +231,18 @@ async function getSubtotalGroupsWithSubtotals(
 async function buildSubtotalScoresFromGroups(
   studentId: string,
   subtotalGroups: SubtotalGroupData[],
-  allQuestionScores: QuestionScore[],
+  allQuestionScores: EffectiveScore[],
   questionRegions: CropRegion[]
 ): Promise<SubtotalScore[]> {
   // 採点データを変換
-  const questionScoreData: QuestionScoreData[] = allQuestionScores
-    .filter((score) => score.studentId !== null)
-    .map((score) => ({
-      studentId: score.studentId!,
+  const questionScoreData: QuestionScoreData[] = allQuestionScores.map(
+    (score) => ({
+      studentId: score.studentId,
       cropRegionId: score.cropRegionId,
       status: score.status,
-      partialScore: score.partialScore ? Number(score.partialScore) : null,
-    }))
+      partialScore: score.partialScore,
+    })
+  )
 
   const results: SubtotalScore[] = []
 

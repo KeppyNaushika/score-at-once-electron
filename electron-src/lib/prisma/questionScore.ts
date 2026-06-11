@@ -15,8 +15,14 @@ export const calculateActualScore = (
 ): number | null => {
   switch (questionScore.status) {
     case "correct":
-    case "final":
       return maxScore
+    case "final":
+      // 廃止済みstatus。未変換の旧データへの耐性として残す
+      // （確定値は partialScore、満点確定時は null のことがある）
+      return questionScore.partialScore !== null &&
+        questionScore.partialScore !== undefined
+        ? Number(questionScore.partialScore)
+        : maxScore
     case "incorrect":
     case "no_answer":
     case "double_mark":
@@ -25,7 +31,7 @@ export const calculateActualScore = (
       return null // 未採点は null を返して -/配点 と表示
     case "partial":
     case "pending":
-    case "proposed":
+    case "proposed": // 廃止済みstatus（旧データ耐性）
       return questionScore.partialScore !== null &&
         questionScore.partialScore !== undefined
         ? Number(questionScore.partialScore)
@@ -36,6 +42,8 @@ export const calculateActualScore = (
 }
 
 // 採点データの型定義
+// 注: "proposed"/"final" は廃止済み。QuestionScoreは常に採点者ごとの「提案」であり、
+// 確定はScoreDecision（scoreDecision.ts）で表現する。
 export interface CreateQuestionScoreData {
   studentId: string
   cropRegionId: string
@@ -47,8 +55,6 @@ export interface CreateQuestionScoreData {
     | "partial"
     | "pending"
     | "no_answer"
-    | "proposed"
-    | "final"
     | "double_mark"
   comment?: string
   userId: string
@@ -63,8 +69,6 @@ export interface UpdateQuestionScoreData {
     | "partial"
     | "pending"
     | "no_answer"
-    | "proposed"
-    | "final"
     | "double_mark"
   comment?: string
   version?: number
@@ -325,109 +329,61 @@ export const deleteQuestionScore = async (id: string) => {
 
 /**
  * 複数教員の採点結果を比較するためのデータを取得
+ *
+ * - proposedScores: 採点者ごとの提案（unscored を除く全行）
+ * - decision: OWNER による確定（ScoreDecision）
+ * - hasConflict: 提案同士の値が食い違っている、または確定後に新しい提案がある
  */
 export const getQuestionScoreComparison = async (
   studentId: string,
   cropRegionId: string
 ) => {
   try {
-    const scores = await prisma.questionScore.findMany({
-      where: {
-        studentId: studentId,
-        cropRegionId: cropRegionId,
-      },
-      include: {
-        user: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    })
+    const [scores, decision] = await Promise.all([
+      prisma.questionScore.findMany({
+        where: {
+          studentId: studentId,
+          cropRegionId: cropRegionId,
+        },
+        include: {
+          user: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      }),
+      prisma.scoreDecision.findUnique({
+        where: {
+          cropRegionId_studentId: { cropRegionId, studentId },
+        },
+        include: {
+          decidedBy: true,
+        },
+      }),
+    ])
 
-    // finalとproposedに分類
-    const finalScore = scores.find((s) => s.status === "final")
-    const proposedScores = scores.filter((s) => s.status === "proposed")
+    const proposedScores = scores.filter((s) => s.status !== "unscored")
+
+    const first = proposedScores[0]
+    const proposalsDisagree =
+      proposedScores.length > 1 &&
+      proposedScores.some(
+        (s) =>
+          s.status !== first.status ||
+          Number(s.partialScore ?? NaN) !== Number(first.partialScore ?? NaN)
+      )
+    const decisionIsStale =
+      decision !== null &&
+      proposedScores.some((s) => s.updatedAt > decision.decidedAt)
 
     return {
       success: true,
-      finalScore,
+      decision,
       proposedScores,
-      hasConflict:
-        proposedScores.length > 1 || (finalScore && proposedScores.length > 0),
+      hasConflict: proposalsDisagree || decisionIsStale,
     }
   } catch (error) {
     console.error("Failed to get question score comparison:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/**
- * 採点結果を最終決定として確定
- */
-export const finalizeQuestionScore = async (
-  studentId: string,
-  cropRegionId: string,
-  userId: string,
-  scoreData: {
-    partialScore?: number // 部分点・保留の場合のみ
-    status: string
-    comment?: string
-  }
-) => {
-  try {
-    return await prisma.$transaction(async (tx) => {
-      // 既存の最終決定レコードのIDを取得してtombstone記録
-      const existingFinals = await tx.questionScore.findMany({
-        where: {
-          studentId: studentId,
-          cropRegionId: cropRegionId,
-          status: "final",
-        },
-        select: { id: true },
-      })
-      if (existingFinals.length > 0) {
-        await recordDrawingAnnotationDeletionsForQuestionScores(
-          existingFinals.map((s) => s.id),
-          { tx }
-        )
-      }
-
-      // 既存の最終決定レコードを削除
-      await tx.questionScore.deleteMany({
-        where: {
-          studentId: studentId,
-          cropRegionId: cropRegionId,
-          status: "final",
-        },
-      })
-
-      // 新しい最終決定レコードを作成
-      const finalScore = await tx.questionScore.create({
-        data: {
-          studentId: studentId,
-          cropRegionId: cropRegionId,
-          partialScore:
-            scoreData.partialScore !== null &&
-            scoreData.partialScore !== undefined
-              ? new Decimal(scoreData.partialScore)
-              : null,
-          status: scoreData.status,
-          userId,
-        },
-        include: {
-          student: true,
-          cropRegion: true,
-          user: true,
-        },
-      })
-
-      return { success: true, score: finalScore }
-    })
-  } catch (error) {
-    console.error("Failed to finalize question score:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

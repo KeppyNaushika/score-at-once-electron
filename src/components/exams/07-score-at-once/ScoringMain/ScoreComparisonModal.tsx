@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/AuthContext"
 import type { QuestionScoreComparisonResult } from "@/types/electron/scoringApi"
 import type { QuestionScoreWithUser } from "@/types/prismaExtensions"
 
@@ -52,6 +53,7 @@ export default function ScoreComparisonModal({
   studentName,
   onScoreFinalized,
 }: ScoreComparisonModalProps) {
+  const { user } = useAuth()
   const [comparison, setComparison] =
     useState<QuestionScoreComparisonResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -74,10 +76,10 @@ export default function ScoreComparisonModal({
       if (result.success) {
         setComparison(result)
 
-        // 既存の最終結果がある場合はフォームに設定
-        if (result.finalScore) {
-          setFinalScore(Number(result.finalScore.partialScore) || 0)
-          setFinalComment("")
+        // 既存の確定がある場合はフォームに設定
+        if (result.decision) {
+          setFinalScore(result.decision.score ?? 0)
+          setFinalComment(result.decision.comment ?? "")
         } else if (result.proposedScores?.length === 1) {
           // 採点結果が1つだけの場合は自動で設定
           setFinalScore(Number(result.proposedScores[0].partialScore) || 0)
@@ -103,6 +105,10 @@ export default function ScoreComparisonModal({
   // 採点結果を最終決定
   const handleFinalize = async () => {
     if (!studentId || !cropRegionId) return
+    if (!user) {
+      console.error("Cannot finalize score: no authenticated user")
+      return
+    }
 
     setFinalizing(true)
     try {
@@ -114,11 +120,11 @@ export default function ScoreComparisonModal({
       const result = await window.electronAPI.finalizeQuestionScore(
         studentId,
         cropRegionId,
-        "current-user", // TODO: 認証システムと連携
+        user.id,
         finalizeData
       )
 
-      if (result.success && result.score) {
+      if (result.success && result.decision) {
         onScoreFinalized?.()
         onClose()
       } else {
@@ -192,35 +198,32 @@ export default function ScoreComparisonModal({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* 最終結果が既にある場合 */}
-            {comparison?.finalScore && (
+            {/* 確定済みの場合 */}
+            {comparison?.decision && (
               <Card className="border-purple-200 bg-purple-50">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-sm">
                     <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
-                    最終決定済み
+                    確定済み
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-lg font-semibold">
-                        {Number(comparison.finalScore.partialScore) || 0} /{" "}
-                        {maxScore} 点
+                        {comparison.decision.score ?? maxScore} / {maxScore} 点
                       </div>
-                      {comparison.finalScore.user && (
-                        <div className="text-muted-foreground text-sm">
-                          決定者: {comparison.finalScore.user.name}
-                        </div>
-                      )}
                       <div className="text-muted-foreground text-sm">
-                        決定日時:{" "}
+                        確定者: {comparison.decision.decidedBy.name}
+                      </div>
+                      <div className="text-muted-foreground text-sm">
+                        確定日時:{" "}
                         {new Date(
-                          comparison.finalScore.updatedAt
+                          comparison.decision.decidedAt
                         ).toLocaleString()}
                       </div>
                     </div>
-                    {getStatusBadge(comparison.finalScore.status)}
+                    {getStatusBadge(comparison.decision.verdict)}
                   </div>
                 </CardContent>
               </Card>
