@@ -8,6 +8,7 @@
   "productName": "一括採点",
   "version": "0.11.2-alpha.0",
   "scripts": {
+    "predev": "node scripts/ensure-sqlite-abi.js electron",
     "dev": "node scripts/dev.js",
     "build": "prisma generate && next build && node scripts/buildMain.js && node scripts/buildPreload.js",
     "dist": "npm run build && electron-forge package --platform=darwin",
@@ -45,7 +46,7 @@
     "github:prerelease:alpha": "node scripts/github-release.js patch alpha",
     "github:prerelease:beta": "node scripts/github-release.js patch beta",
     "github:prerelease:rc": "node scripts/github-release.js patch rc",
-    "postinstall": "prisma generate && electron-rebuild --only better-sqlite3 && node scripts/setup-mathjax-fonts.js",
+    "postinstall": "prisma generate && node scripts/ensure-sqlite-abi.js electron && node scripts/setup-mathjax-fonts.js",
     "setup-assets": "node scripts/setup-mathjax-fonts.js",
     "screenshot:setup": "npx tsx __tests__/screenshots/setup-data.ts",
     "screenshot:test": "npx playwright test --config=__tests__/playwright.screenshot.config.ts",
