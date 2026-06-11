@@ -204,51 +204,53 @@ npm run make:mac:x64     # Intel
 
 ```
 score-at-once-electron/
-├── app/                     # Next.js App Router
-│   ├── dashboard/           # ダッシュボード
-│   ├── exams/               # 試験管理
-│   │   └── [examId]/        # 個別試験（8段階ワークフロー）
-│   │       ├── 01-upload/           # 模範解答アップロード
-│   │       ├── 02-template/         # 採点領域作成
-│   │       ├── 03-region-info/      # 領域情報
-│   │       ├── 04-question-group/   # 問題・グループ項目の関連付け
-│   │       ├── 05-students/         # 受験生徒管理
-│   │       ├── 06-student-answers/  # 答案アップロード
-│   │       ├── 07-score-at-once/    # 採点実行
-│   │       └── 08-export/           # 結果出力
-│   ├── grades/              # 成績評定
-│   │   └── [gradeId]/       # 個別成績評定（7段階ワークフロー）
-│   │       ├── 01-setup/           # 基本設定
-│   │       ├── 02-students/        # 対象生徒管理
-│   │       ├── 03-data-sources/    # データソース定義
-│   │       ├── 04-manual-scores/   # 手動スコア入力
-│   │       ├── 05-boundaries/      # 成績境界設定
-│   │       ├── 06-results/         # 結果表示
-│   │       └── 07-export/          # エクスポート
-│   ├── classes/             # 学級管理
-│   ├── students/            # 生徒管理
-│   ├── subtotal-groups/     # 小計グループ管理
-│   ├── settings/            # 設定
-│   └── login/               # ログイン
-├── components/              # Reactコンポーネント
-│   ├── ui/                  # 基礎UIコンポーネント（shadcn/ui）
-│   ├── exams/               # 試験関連（ステップ別）
-│   ├── grades/              # 成績評定関連
-│   ├── student/             # 生徒関連
-│   ├── class/               # 学級関連
-│   ├── auth/                # 認証関連
-│   ├── common/              # 共通コンポーネント
-│   ├── drawing/             # 描画関連
-│   ├── help/                # ヘルプ・ガイダンス
-│   ├── import/              # インポート関連
-│   ├── layout/              # レイアウト関連
-│   ├── subtotal-groups/     # 小計グループ関連
-│   ├── answer-sheet-builder/ # 答案シートビルダー
-│   ├── pdf-tools/           # PDFツール
-│   └── student-import/      # 生徒インポート
-├── hooks/                   # グローバルカスタムフック
-├── lib/                     # ユーティリティ
-├── types/                   # TypeScript型定義
+├── src/                     # アプリケーションソース
+│   ├── app/                 # Next.js App Router
+│   │   ├── dashboard/       # ダッシュボード
+│   │   ├── exams/           # 試験管理
+│   │   │   └── [examId]/    # 個別試験（8段階ワークフロー）
+│   │   │       ├── 01-upload/           # 模範解答アップロード
+│   │   │       ├── 02-template/         # 採点領域作成
+│   │   │       ├── 03-region-info/      # 領域情報
+│   │   │       ├── 04-question-group/   # 問題・グループ項目の関連付け
+│   │   │       ├── 05-students/         # 受験生徒管理
+│   │   │       ├── 06-student-answers/  # 答案アップロード
+│   │   │       ├── 07-score-at-once/    # 採点実行
+│   │   │       └── 08-export/           # 結果出力
+│   │   ├── grades/          # 成績評定
+│   │   │   └── [gradeId]/   # 個別成績評定（7段階ワークフロー）
+│   │   │       ├── 01-setup/           # 基本設定
+│   │   │       ├── 02-students/        # 対象生徒管理
+│   │   │       ├── 03-data-sources/    # データソース定義
+│   │   │       ├── 04-manual-scores/   # 手動スコア入力
+│   │   │       ├── 05-boundaries/      # 成績境界設定
+│   │   │       ├── 06-results/         # 結果表示
+│   │   │       └── 07-export/          # エクスポート
+│   │   ├── classes/         # 学級管理
+│   │   ├── students/        # 生徒管理
+│   │   ├── subtotal-groups/ # 小計グループ管理
+│   │   ├── settings/        # 設定
+│   │   └── login/           # ログイン
+│   ├── components/          # Reactコンポーネント
+│   │   ├── ui/              # 基礎UIコンポーネント（shadcn/ui）
+│   │   ├── exams/           # 試験関連（ステップ別）
+│   │   ├── grades/          # 成績評定関連
+│   │   ├── student/         # 生徒関連
+│   │   ├── class/           # 学級関連
+│   │   ├── auth/            # 認証関連
+│   │   ├── common/          # 共通コンポーネント
+│   │   ├── drawing/         # 描画関連
+│   │   ├── help/            # ヘルプ・ガイダンス
+│   │   ├── import/          # インポート関連
+│   │   ├── layout/          # レイアウト関連
+│   │   ├── subtotal-groups/ # 小計グループ関連
+│   │   ├── answer-sheet-builder/ # 答案シートビルダー
+│   │   ├── pdf-tools/       # PDFツール
+│   │   └── student-import/  # 生徒インポート
+│   ├── hooks/               # グローバルカスタムフック
+│   ├── contexts/            # Reactコンテキスト
+│   ├── lib/                 # ユーティリティ
+│   └── types/               # TypeScript型定義
 ├── electron-src/            # Electronメインプロセス
 │   ├── ipc-handlers/        # IPC通信ハンドラー
 │   └── lib/                 # Electronライブラリ

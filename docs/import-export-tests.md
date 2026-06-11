@@ -656,8 +656,8 @@ Stage 2のID変更処理（レコード再作成 + FK更新 + 旧レコード削
 ## テスト実行方法
 
 ```bash
-# 全テスト実行
-npm test
+# 全テスト実行（test scriptは未定義のため直接実行）
+npx vitest run
 
 # インポート/エクスポートのテストのみ（メインプロセス側）
 npx vitest run __tests__/import-export/

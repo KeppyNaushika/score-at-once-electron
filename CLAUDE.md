@@ -49,26 +49,25 @@ npm run dev
 # ビルド
 npm run build
 
-# Lintチェック
+# Lintチェック（eslint + prettier --check）
 npm run lint
 
-# 厳密なLint（警告ゼロ）
-npm run lint:strict
+# Lint自動修正（eslint --fix + prettier --write）
+npm run lint:fix
 
-# 型チェック（ビルド時に実行）
+# フォーマット（prettier --write）
+npm run format
+
+# 型チェック（Next.js + electron-src 両方）
 npm run typecheck
-
-# 厳密な型チェック（未使用変数・関数も検出）
-npm run typecheck:strict
 
 # 全チェック（型・lint）
 npm run check-all
 
-# テスト実行 (未実装の場合は追加予定)
-npm test
-
-# Electronアプリ起動
-npm run electron:dev
+# テスト実行（Vitest。npm scriptは未定義なので直接実行）
+npx vitest run              # 全テスト
+npx vitest run __tests__/import-export/   # 特定ディレクトリのみ
+npx vitest                 # ウォッチモード
 
 # データベースマイグレーション
 npx prisma migrate dev
@@ -153,9 +152,12 @@ npx prisma studio
 │   ├── /student-import          # 生徒インポート専用
 │   ├── useExam.ts               # 試験管理
 │   ├── useExamDetail.ts         # 試験詳細
-│   ├── useMasterAnswers.ts      # マスター解答管理
+│   ├── useClassManagement.ts    # 学級管理
+│   ├── useStudentImport.ts      # 生徒インポート
+│   ├── usePdfPasswordConversion.ts # PDFパスワード変換
 │   ├── useNavigationGuard.ts    # ナビゲーションガード
 │   └── useTableSort.ts          # テーブルソート
+│   # 注: useMasterAnswers.ts は機能内配置（components/exams/01-upload/hooks/）
 ├── /src/lib                     # グローバルユーティリティ
 │   ├── pdfConverter.ts          # PDF変換ユーティリティ
 │   └── utils.ts                 # 汎用ユーティリティ
