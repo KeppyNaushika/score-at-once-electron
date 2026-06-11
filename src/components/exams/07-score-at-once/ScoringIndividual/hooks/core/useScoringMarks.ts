@@ -2,9 +2,8 @@
  * 採点記号画像管理フック
  * - 採点記号画像のプリロード
  * - キャッシュ管理
- * - 透過マーク切替対応
  */
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 
 const MARK_TYPES = [
   "correct",
@@ -17,7 +16,6 @@ type MarkType = (typeof MARK_TYPES)[number]
 
 interface UseScoringMarksProps {
   scoringMarkImagesRef: React.MutableRefObject<Map<string, HTMLImageElement>>
-  useTransparent?: boolean
 }
 
 /**
@@ -25,20 +23,12 @@ interface UseScoringMarksProps {
  */
 export function useScoringMarks({
   scoringMarkImagesRef,
-  useTransparent = false,
 }: UseScoringMarksProps): void {
-  const prevTransparentRef = useRef(useTransparent)
-
-  // 採点記号画像のプリロード（透過設定変更時は再ロード）
+  // 採点記号画像のプリロード
   useEffect(() => {
-    const transparentChanged = prevTransparentRef.current !== useTransparent
-    prevTransparentRef.current = useTransparent
-    const prefix = useTransparent ? "tp_" : ""
-
     const loadPromises = MARK_TYPES.map((type) => {
       return new Promise<void>((resolve) => {
-        // 透過設定が変わった場合はキャッシュをクリアして再ロード
-        if (!transparentChanged && scoringMarkImagesRef.current.has(type)) {
+        if (scoringMarkImagesRef.current.has(type)) {
           resolve()
           return
         }
@@ -48,15 +38,15 @@ export function useScoringMarks({
           resolve()
         }
         img.onerror = () => {
-          console.warn(`Failed to load scoring mark: ${prefix}${type}`)
+          console.warn(`Failed to load scoring mark: ${type}`)
           resolve()
         }
         // Next.jsのpublicフォルダからロード
-        img.src = `/score-assets/${prefix}${type}.png`
+        img.src = `/score-assets/${type}.png`
       })
     })
     Promise.all(loadPromises)
-  }, [scoringMarkImagesRef, useTransparent])
+  }, [scoringMarkImagesRef])
 }
 
 /**

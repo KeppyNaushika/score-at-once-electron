@@ -1,27 +1,23 @@
 import type { ScoringStatus } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
-/** 採点状態と透過設定から対応するマーク画像のパスを返す */
-export function getMarkImagePath(
-  status: ScoringStatus,
-  useTransparent: boolean
-): string {
-  const prefix = useTransparent ? "tranceparent_" : ""
+/** 採点状態から対応するマーク画像のパスを返す */
+export function getMarkImagePath(status: ScoringStatus): string {
   switch (status) {
     case "unscored":
-      return `/score-assets/${prefix}unscored.png`
+      return `/score-assets/unscored.png`
     case "correct":
-      return `/score-assets/${prefix}correct.png`
+      return `/score-assets/correct.png`
     case "incorrect":
-      return `/score-assets/${prefix}incorrect.png`
+      return `/score-assets/incorrect.png`
     case "partial":
-      return `/score-assets/${prefix}partial.png`
+      return `/score-assets/partial.png`
     case "pending":
-      return `/score-assets/${prefix}partial.png` // 処理中は部分点マークを使用
+      return `/score-assets/partial.png` // 処理中は部分点マークを使用
     case "no_answer":
-      return `/score-assets/${prefix}incorrect.png` // 無答も誤答マークを使用
+      return `/score-assets/incorrect.png` // 無答も誤答マークを使用
     case "double_mark":
-      return `/score-assets/${prefix}incorrect.png` // Wマークも誤答マークを使用
+      return `/score-assets/incorrect.png` // Wマークも誤答マークを使用
     default:
-      return `/score-assets/${prefix}unscored.png`
+      return `/score-assets/unscored.png`
   }
 }

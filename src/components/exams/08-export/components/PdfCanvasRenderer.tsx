@@ -379,9 +379,7 @@ export function PdfCanvasRenderer({
           inProgress: 0,
           currentPages: [],
         })
-        scoringMarkImagesRef.current = await preloadScoringMarkImages(
-          scoringMarkConfig.useTransparent
-        )
+        scoringMarkImagesRef.current = await preloadScoringMarkImages()
       }
 
       const markImages = scoringMarkImagesRef.current
@@ -488,7 +486,6 @@ export function PdfCanvasRenderer({
   }, [
     pages,
     poolSize,
-    scoringMarkConfig,
     initCanvasPool,
     cleanupCanvasPool,
     renderSinglePage,

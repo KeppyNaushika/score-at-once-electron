@@ -5,6 +5,23 @@ import type {
   ScoringStatus,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
+// 既定色（点数印字・採点記号マーク）
+export const DEFAULT_PARTIAL_SCORE_COLOR = "#ef4444" // 部分点・配点（赤）
+export const DEFAULT_SUMMARY_SCORE_COLOR = "#2563eb" // 小計・合計（青）
+export const DEFAULT_MARK_COLOR = "#ef4444" // 採点記号マーク（赤）
+
+// カラーパレット（一括採点アノテーションと同じ基本色）+ 任意のRGBを追加で選択可能
+export const SCORE_COLOR_PRESETS = [
+  "#000000", // 黒
+  "#ef4444", // 赤
+  "#ff8000", // オレンジ
+  "#ffd700", // 金
+  "#16a34a", // 緑
+  "#00bcd4", // シアン
+  "#2563eb", // 青
+  "#8000ff", // 紫
+] as const
+
 // 部分点用デフォルト設定
 export const defaultPartialScoreConfig: ScoreTextConfig = {
   position: "middle-center",
@@ -12,6 +29,8 @@ export const defaultPartialScoreConfig: ScoreTextConfig = {
   offsetY: 0,
   size: 14,
   alignment: "center",
+  color: DEFAULT_PARTIAL_SCORE_COLOR,
+  opacity: 100,
 }
 
 // 小計・合計点用デフォルト設定（後方互換性のため維持）
@@ -21,6 +40,8 @@ export const defaultSummaryScoreConfig: ScoreTextConfig = {
   offsetY: 0,
   size: 18, // 小計・合計点はやや大きめ
   alignment: "center",
+  color: DEFAULT_SUMMARY_SCORE_COLOR,
+  opacity: 100,
 }
 
 // 小計点用デフォルト設定
@@ -30,6 +51,8 @@ export const defaultSubtotalScoreConfig: ScoreTextConfig = {
   offsetY: 0,
   size: 18,
   alignment: "center",
+  color: DEFAULT_SUMMARY_SCORE_COLOR,
+  opacity: 100,
 }
 
 // 合計点用デフォルト設定
@@ -39,6 +62,8 @@ export const defaultTotalScoreConfig: ScoreTextConfig = {
   offsetY: 0,
   size: 18,
   alignment: "center",
+  color: DEFAULT_SUMMARY_SCORE_COLOR,
+  opacity: 100,
 }
 
 // デフォルト設定
@@ -66,6 +91,8 @@ export const defaultConfig: ScoringMarkConfig = {
   markOffsetX: 0,
   markOffsetY: 0,
   markSize: 50,
+  markColor: DEFAULT_MARK_COLOR,
+  markOpacity: 100,
   // 点数テキスト設定（後方互換性のために維持）
   scorePosition: "middle-center",
   scoreOffsetX: 0,
@@ -82,7 +109,6 @@ export const defaultConfig: ScoringMarkConfig = {
   subtotalScore: { ...defaultSubtotalScoreConfig },
   // 合計点設定
   totalScore: { ...defaultTotalScoreConfig },
-  useTransparent: false,
   // PDF設定
   pageSize: "A4",
   pageOrientation: "portrait",
