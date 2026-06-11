@@ -408,7 +408,7 @@ function ScoringMainViewContent() {
 
       if (action === "partial_modal") {
         replaceSelection([answerId])
-        openPartialScoreModal()
+        openPartialScoreModal(new Set([answerId]))
         return
       }
 
@@ -436,6 +436,14 @@ function ScoringMainViewContent() {
     (answerId: string, status: MouseBrushAction, isToggle: boolean) => {
       if (answerId.startsWith("master-")) return
 
+      // 「部分点入力」ブラシ: クリックした答案の部分点入力モーダルを開く
+      // （ダブルクリックの「部分点入力」動作と同じ）
+      if (status === "partial_modal") {
+        replaceSelection([answerId])
+        openPartialScoreModal(new Set([answerId]))
+        return
+      }
+
       // トグル: 同じステータスなら未採点に戻す
       if (isToggle) {
         const currentData = allScoringData.find((d) => d.id === answerId)
@@ -459,7 +467,13 @@ function ScoringMainViewContent() {
         return newSet
       })
     },
-    [allScoringData, handleBatchScore, setRecentlyScoredAnswers]
+    [
+      allScoringData,
+      handleBatchScore,
+      setRecentlyScoredAnswers,
+      replaceSelection,
+      openPartialScoreModal,
+    ]
   )
 
   /** マウスモード: 表示中の未採点を一括採点 */
@@ -717,6 +731,7 @@ function ScoringMainViewContent() {
               onRefreshFilter={handleRefreshFilter}
               onSelectAll={handleSelectAll}
               onSelectUnscored={handleSelectUnscored}
+              onOpenPartialScoreModal={openPartialScoreModal}
               partialScoreInput={partialScoreInput}
               clickScoringConfig={clickScoringConfig}
               clickScoringDebounceMs={clickScoringDebounceMs}

@@ -60,9 +60,20 @@ export function useKeyboard({
         setIsCtrlPressed(true)
       }
 
+      // 入力欄（テキスト編集モーダルのtextarea等）にフォーカスがある場合は
+      // 削除ショートカットを抑制する（モーダルでテキスト編集中のBackspaceで
+      // アノテーションごと削除されるのを防ぐ）
+      const target = e.target as HTMLElement | null
+      const isEditableTarget =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+
       // Delete/Backspaceで選択要素を削除（複数選択対応）
       if (
         (e.key === "Delete" || e.key === "Backspace") &&
+        !isEditableTarget &&
         selectedElementIds.length > 0
       ) {
         e.preventDefault()

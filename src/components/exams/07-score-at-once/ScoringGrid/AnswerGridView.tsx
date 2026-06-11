@@ -217,6 +217,14 @@ export default function AnswerGridView({
 
       // マウスモード: シングルクリックでブラシ適用（トグル付き）、ダブル以上はonClickScoring
       if (isMouseMode) {
+        // 「選択」ブラシ: 採点せず即時に選択トグル
+        if (mouseBrush === "select") {
+          if (event.detail === 1) {
+            onScoringDataSelect(answerId, !selectedScoringDataIds.has(answerId))
+          }
+          return
+        }
+
         if (event.detail >= 2 && onClickScoring) {
           const timers = clickTimersRef.current
           const existing = timers.get(answerId)
@@ -284,6 +292,8 @@ export default function AnswerGridView({
       clickScoringDebounceMs,
       onMouseScoring,
       mouseBrush,
+      onScoringDataSelect,
+      selectedScoringDataIds,
     ]
   )
 

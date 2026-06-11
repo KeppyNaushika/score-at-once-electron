@@ -140,9 +140,15 @@ export interface ScoringData {
 export type ScoringOperationMode = "keyboard" | "mouse"
 
 /**
- * マウスモード時のブラシ（クリック時に適用する採点ステータス）
+ * マウスモード時のブラシ（シングルクリック時の動作）
+ * - 採点ステータス: クリックで該当ステータスを適用
+ * - "select": クリックで選択トグル（採点しない）
+ * - "partial_modal": クリックで部分点入力モーダルを開く
  */
-export type MouseBrushAction = Exclude<ScoringStatus, "unscored">
+export type MouseBrushAction =
+  | Exclude<ScoringStatus, "unscored">
+  | "select"
+  | "partial_modal"
 
 /**
  * 模範解答表示モード

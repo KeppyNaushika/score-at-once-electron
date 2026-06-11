@@ -103,6 +103,7 @@ interface ScoringSidePanelProps {
   onRefreshFilter: () => void
   onSelectAll?: () => void
   onSelectUnscored?: () => void
+  onOpenPartialScoreModal?: () => void
   partialScoreInput: string
   clickScoringConfig?: import("@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig").ClickScoringConfig
   clickScoringDebounceMs?: number
@@ -190,6 +191,7 @@ export function ScoringSidePanel({
   onRefreshFilter,
   onSelectAll,
   onSelectUnscored,
+  onOpenPartialScoreModal,
   partialScoreInput,
   clickScoringConfig,
   clickScoringDebounceMs,
@@ -427,6 +429,7 @@ export function ScoringSidePanel({
             onScore={onScore}
             onSelectAll={onSelectAll}
             onSelectUnscored={onSelectUnscored}
+            onOpenPartialScoreModal={onOpenPartialScoreModal}
             onRefreshFilter={onRefreshFilter}
             partialScoreInput={partialScoreInput}
             gradingMode={gradingMode}
