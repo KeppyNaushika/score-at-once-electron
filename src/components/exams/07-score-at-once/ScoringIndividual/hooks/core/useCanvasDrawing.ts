@@ -384,16 +384,15 @@ export function useCanvasDrawing({
 
         if (shouldShowScore && actualScore !== null) {
           ctx.save()
-          // 印字設定からスコア表示設定を取得
-          const scoreConfig = scoringMarkConfig?.useSeparateScoreSettings
-            ? scoringMarkConfig.partialScore
-            : {
-                position: scoringMarkConfig?.scorePosition ?? "bottom-right",
-                offsetX: scoringMarkConfig?.scoreOffsetX ?? 0,
-                offsetY: scoringMarkConfig?.scoreOffsetY ?? 0,
-                size: scoringMarkConfig?.scoreSize ?? 14,
-                alignment: scoringMarkConfig?.scoreAlignment ?? "center",
-              }
+          // 印字設定からスコア表示設定を取得（設問ごとの点数は部分点設定を使用、
+          // 旧データで未設定の場合はレガシーフィールドへフォールバック）
+          const scoreConfig = scoringMarkConfig?.partialScore ?? {
+            position: scoringMarkConfig?.scorePosition ?? "bottom-right",
+            offsetX: scoringMarkConfig?.scoreOffsetX ?? 0,
+            offsetY: scoringMarkConfig?.scoreOffsetY ?? 0,
+            size: scoringMarkConfig?.scoreSize ?? 14,
+            alignment: scoringMarkConfig?.scoreAlignment ?? "center",
+          }
 
           const fontSize = scoreConfig.size
           ctx.font = `bold ${fontSize}px sans-serif`

@@ -7,7 +7,8 @@ import type {
 
 // 既定色（点数印字・採点記号マーク）
 export const DEFAULT_PARTIAL_SCORE_COLOR = "#ef4444" // 部分点・配点（赤）
-export const DEFAULT_SUMMARY_SCORE_COLOR = "#2563eb" // 小計・合計（青）
+export const DEFAULT_SUMMARY_SCORE_COLOR = "#2563eb" // 小計（青）
+export const DEFAULT_TOTAL_SCORE_COLOR = "#16a34a" // 合計（緑）
 export const DEFAULT_MARK_COLOR = "#ef4444" // 採点記号マーク（赤）
 
 // カラーパレット（一括採点アノテーションと同じ基本色）+ 任意のRGBを追加で選択可能
@@ -62,7 +63,7 @@ export const defaultTotalScoreConfig: ScoreTextConfig = {
   offsetY: 0,
   size: 18,
   alignment: "center",
-  color: DEFAULT_SUMMARY_SCORE_COLOR,
+  color: DEFAULT_TOTAL_SCORE_COLOR,
   opacity: 100,
 }
 
@@ -99,8 +100,6 @@ export const defaultConfig: ScoringMarkConfig = {
   scoreOffsetY: 0,
   scoreSize: 14,
   scoreAlignment: "center",
-  // 部分点と小計・合計点を別々に設定するかどうか
-  useSeparateScoreSettings: false,
   // 部分点設定
   partialScore: { ...defaultPartialScoreConfig },
   // 小計・合計点設定（後方互換性のため維持）

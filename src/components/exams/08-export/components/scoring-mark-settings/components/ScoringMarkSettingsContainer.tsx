@@ -31,8 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface ScoringMarkSettingsContainerProps {
   config: ScoringMarkConfig
@@ -58,7 +56,6 @@ export function ScoringMarkSettingsContainer({
   }
   const markColor = config.markColor ?? DEFAULT_MARK_COLOR
   const markOpacity = config.markOpacity ?? 100
-  const useSeparateSettings = config.useSeparateScoreSettings ?? false
 
   const updateConfig = (updates: Partial<ScoringMarkConfig>) => {
     const newConfig = { ...config, ...updates }
@@ -77,15 +74,6 @@ export function ScoringMarkSettingsContainer({
     updateConfig({ totalScore: { ...totalScore, ...updates } })
   }
 
-  const updateAllScores = (updates: Partial<ScoreTextConfig>) => {
-    updateConfig({
-      partialScore: { ...partialScore, ...updates },
-      summaryScore: { ...partialScore, ...updates },
-      subtotalScore: { ...subtotalScore, ...updates },
-      totalScore: { ...totalScore, ...updates },
-    })
-  }
-
   const updateMarkStatusDisplay = (status: ScoringStatus, show: boolean) => {
     updateConfig({
       showMarkForStatus: { ...config.showMarkForStatus, [status]: show },
@@ -101,6 +89,41 @@ export function ScoringMarkSettingsContainer({
   const resetToDefaults = () => {
     onChange(defaultConfig)
   }
+
+  // 見出し右側に並べる色・不透明度
+  const renderColorOpacity = (
+    scoreConfig: ScoreTextConfig,
+    onUpdate: (updates: Partial<ScoreTextConfig>) => void
+  ) => (
+    <div className="flex flex-wrap items-end justify-end gap-3">
+      <div className="space-y-1">
+        <Label className="text-muted-foreground text-xs">色</Label>
+        <InlineColorPicker
+          value={scoreConfig.color}
+          onChange={(color) => onUpdate({ color })}
+          presets={[...SCORE_COLOR_PRESETS]}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-muted-foreground text-xs">不透明度(%)</Label>
+        <Input
+          type="number"
+          value={scoreConfig.opacity}
+          onChange={(e) =>
+            onUpdate({
+              opacity: Math.min(
+                100,
+                Math.max(0, parseInt(e.target.value) || 0)
+              ),
+            })
+          }
+          min={0}
+          max={100}
+          className="h-9 w-24"
+        />
+      </div>
+    </div>
+  )
 
   const renderScoreSettings = (
     scoreConfig: ScoreTextConfig,
@@ -180,34 +203,6 @@ export function ScoringMarkSettingsContainer({
           </Select>
         </div>
       </div>
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">色</Label>
-          <InlineColorPicker
-            value={scoreConfig.color}
-            onChange={(color) => onUpdate({ color })}
-            presets={[...SCORE_COLOR_PRESETS]}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">不透明度(%)</Label>
-          <Input
-            type="number"
-            value={scoreConfig.opacity}
-            onChange={(e) =>
-              onUpdate({
-                opacity: Math.min(
-                  100,
-                  Math.max(0, parseInt(e.target.value) || 0)
-                ),
-              })
-            }
-            min={0}
-            max={100}
-            className="h-9 w-24"
-          />
-        </div>
-      </div>
     </div>
   )
 
@@ -229,7 +224,39 @@ export function ScoringMarkSettingsContainer({
 
       {/* 採点マーク設定 */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">採点マーク</Label>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <Label className="text-sm font-medium">採点マーク</Label>
+          <div className="flex flex-wrap items-end justify-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-muted-foreground text-xs">色</Label>
+              <InlineColorPicker
+                value={markColor}
+                onChange={(color) => updateConfig({ markColor: color })}
+                presets={[...SCORE_COLOR_PRESETS]}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-muted-foreground text-xs">
+                不透明度(%)
+              </Label>
+              <Input
+                type="number"
+                value={markOpacity}
+                onChange={(e) =>
+                  updateConfig({
+                    markOpacity: Math.min(
+                      100,
+                      Math.max(0, parseInt(e.target.value) || 0)
+                    ),
+                  })
+                }
+                min={0}
+                max={100}
+                className="h-9 w-24"
+              />
+            </div>
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <div className="space-y-1">
             <Label className="text-muted-foreground text-xs">位置</Label>
@@ -291,97 +318,39 @@ export function ScoringMarkSettingsContainer({
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1">
-            <Label className="text-muted-foreground text-xs">色</Label>
-            <InlineColorPicker
-              value={markColor}
-              onChange={(color) => updateConfig({ markColor: color })}
-              presets={[...SCORE_COLOR_PRESETS]}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-muted-foreground text-xs">不透明度(%)</Label>
-            <Input
-              type="number"
-              value={markOpacity}
-              onChange={(e) =>
-                updateConfig({
-                  markOpacity: Math.min(
-                    100,
-                    Math.max(0, parseInt(e.target.value) || 0)
-                  ),
-                })
-              }
-              min={0}
-              max={100}
-              className="h-9 w-24"
-            />
-          </div>
-        </div>
       </div>
 
       <Separator />
 
-      {/* 点数表示設定 */}
+      {/* 設問部分点数設定 */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">点数表示</Label>
-          <div className="flex items-center gap-2">
-            <Label
-              htmlFor="separate-settings"
-              className="text-muted-foreground text-xs"
-            >
-              別々に設定
-            </Label>
-            <Switch
-              id="separate-settings"
-              checked={useSeparateSettings}
-              onCheckedChange={(checked) =>
-                updateConfig({ useSeparateScoreSettings: checked })
-              }
-            />
-          </div>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <Label className="text-sm font-medium">設問部分点数</Label>
+          {renderColorOpacity(partialScore, updatePartialScore)}
         </div>
+        {renderScoreSettings(partialScore, updatePartialScore)}
+      </div>
 
-        {useSeparateSettings ? (
-          <Tabs defaultValue="partial" className="w-full">
-            <TabsList className="grid h-8 w-full grid-cols-3">
-              <TabsTrigger
-                value="partial"
-                className="text-xs"
-                style={{ color: partialScore.color }}
-              >
-                設問部分点
-              </TabsTrigger>
-              <TabsTrigger
-                value="subtotal"
-                className="text-xs"
-                style={{ color: subtotalScore.color }}
-              >
-                小計点
-              </TabsTrigger>
-              <TabsTrigger
-                value="total"
-                className="text-xs"
-                style={{ color: totalScore.color }}
-              >
-                合計点
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="partial" className="mt-2">
-              {renderScoreSettings(partialScore, updatePartialScore)}
-            </TabsContent>
-            <TabsContent value="subtotal" className="mt-2">
-              {renderScoreSettings(subtotalScore, updateSubtotalScore)}
-            </TabsContent>
-            <TabsContent value="total" className="mt-2">
-              {renderScoreSettings(totalScore, updateTotalScore)}
-            </TabsContent>
-          </Tabs>
-        ) : (
-          renderScoreSettings(partialScore, updateAllScores)
-        )}
+      <Separator />
+
+      {/* 小計点数設定 */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <Label className="text-sm font-medium">小計点数</Label>
+          {renderColorOpacity(subtotalScore, updateSubtotalScore)}
+        </div>
+        {renderScoreSettings(subtotalScore, updateSubtotalScore)}
+      </div>
+
+      <Separator />
+
+      {/* 合計点数設定 */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <Label className="text-sm font-medium">合計点数</Label>
+          {renderColorOpacity(totalScore, updateTotalScore)}
+        </div>
+        {renderScoreSettings(totalScore, updateTotalScore)}
       </div>
 
       <Separator />

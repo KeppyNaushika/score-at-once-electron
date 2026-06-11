@@ -59,9 +59,6 @@ export interface ScoringMarkConfig {
   scoreSize: number // 点数サイズ（8 to 48）
   scoreAlignment: TextAlignment
 
-  // 部分点と小計・合計点を別々に設定するかどうか
-  useSeparateScoreSettings: boolean
-
   // 部分点（設問ごとの点数）用設定
   partialScore: ScoreTextConfig
 
