@@ -4,7 +4,7 @@
  * 収集したデータと画像ファイルをZIPアーカイブにパッケージング
  */
 
-import archiver from "archiver"
+import { ZipArchive } from "archiver"
 import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
@@ -133,7 +133,7 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
 
       // ZIPストリームを作成
       const output = fs.createWriteStream(outputPath)
-      const archive = archiver("zip", {
+      const archive = new ZipArchive({
         zlib: { level: 9 }, // 最高圧縮率
       })
 

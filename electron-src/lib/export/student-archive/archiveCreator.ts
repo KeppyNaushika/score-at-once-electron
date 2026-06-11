@@ -4,7 +4,7 @@
  * 収集した生徒・学級データをZIPアーカイブにパッケージング
  */
 
-import archiver from "archiver"
+import { ZipArchive } from "archiver"
 import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
@@ -58,7 +58,7 @@ export async function createStudentArchive(
       }
 
       const output = fs.createWriteStream(outputPath)
-      const archive = archiver("zip", {
+      const archive = new ZipArchive({
         zlib: { level: 9 },
       })
 

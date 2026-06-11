@@ -2,7 +2,7 @@
  * ASBアーカイブ (.asb) ZIP作成
  */
 
-import archiver from "archiver"
+import { ZipArchive } from "archiver"
 import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
@@ -47,7 +47,7 @@ export async function createAsbArchive(
       }
 
       const output = fs.createWriteStream(outputPath)
-      const archive = archiver("zip", { zlib: { level: 9 } })
+      const archive = new ZipArchive({ zlib: { level: 9 } })
       const missingFiles: string[] = []
 
       output.on("close", () => {
