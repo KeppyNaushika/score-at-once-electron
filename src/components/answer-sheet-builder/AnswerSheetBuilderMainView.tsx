@@ -351,6 +351,7 @@ export function AnswerSheetBuilderMainView({
           onRenderModeChange={handleRenderModeChange}
           dispatch={dispatch}
           baseRowHeight={definition.settings.baseRowHeight}
+          borderConfig={definition.settings.borderConfig}
         />
       </div>
 

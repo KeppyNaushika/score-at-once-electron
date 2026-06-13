@@ -268,6 +268,7 @@ export async function saveAsbDefinition(
               : null,
             manuscriptGuideFontSize: sq.manuscriptPaper?.guideFontSize ?? null,
             manuscriptGuidePosition: sq.manuscriptPaper?.guidePosition ?? null,
+            manuscriptGuidePadding: sq.manuscriptPaper?.guidePadding ?? null,
             borderStyleTop: sq.borderStyles?.top ?? null,
             borderStyleBottom: sq.borderStyles?.bottom ?? null,
             borderStyleLeft: sq.borderStyles?.left ?? null,

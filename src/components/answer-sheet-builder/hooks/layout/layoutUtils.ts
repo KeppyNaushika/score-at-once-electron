@@ -10,7 +10,11 @@ import type {
   GlobalSettings,
 } from "@/types/answerSheetDefinition.types"
 
-import { PAPER_SIZES } from "../../constants"
+import {
+  DEFAULT_DASH_RATIO,
+  DEFAULT_GAP_RATIO,
+  PAPER_SIZES,
+} from "../../constants"
 
 /** lineType から BorderConfig の線幅を取得するヘルパー */
 export function getLineWidth(
@@ -35,6 +39,63 @@ export function getLineWidth(
       return borderConfig.branchNumberDividerWidth ?? 0.3
     default:
       return 0.4
+  }
+}
+
+/**
+ * lineType から破線/点線のダッシュ長・間隔倍率（線幅に対する倍率）を取得する。
+ * 罫線種別ごとに BorderConfig で個別設定でき、未指定時は既定値を返す。
+ */
+export function getLineDashRatio(
+  lineType: string,
+  borderConfig: BorderConfig
+): { dashRatio: number; gapRatio: number } {
+  const pick = (
+    dash: number | undefined,
+    gap: number | undefined
+  ): { dashRatio: number; gapRatio: number } => ({
+    dashRatio: dash ?? DEFAULT_DASH_RATIO,
+    gapRatio: gap ?? DEFAULT_GAP_RATIO,
+  })
+  switch (lineType) {
+    case "outer":
+      return pick(
+        borderConfig.outerBorderDashRatio,
+        borderConfig.outerBorderGapRatio
+      )
+    case "major":
+      return pick(
+        borderConfig.majorDividerDashRatio,
+        borderConfig.majorDividerGapRatio
+      )
+    case "sub":
+    case "subHorizontalDivider":
+      return pick(
+        borderConfig.subDividerDashRatio,
+        borderConfig.subDividerGapRatio
+      )
+    case "branch":
+      return pick(
+        borderConfig.branchDividerDashRatio,
+        borderConfig.branchDividerGapRatio
+      )
+    case "majorNumberColumn":
+      return pick(
+        borderConfig.majorNumberDividerDashRatio,
+        borderConfig.majorNumberDividerGapRatio
+      )
+    case "subNumberColumn":
+      return pick(
+        borderConfig.subNumberDividerDashRatio,
+        borderConfig.subNumberDividerGapRatio
+      )
+    case "branchNumberColumn":
+      return pick(
+        borderConfig.branchNumberDividerDashRatio,
+        borderConfig.branchNumberDividerGapRatio
+      )
+    default:
+      return pick(undefined, undefined)
   }
 }
 

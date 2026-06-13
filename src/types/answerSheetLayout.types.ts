@@ -65,6 +65,8 @@ export interface ManuscriptGrid {
   guideFontSize: number
   /** ガイド表示位置（マスの隅） */
   guidePosition: ManuscriptGuidePosition
+  /** ガイドの隅からの余白（mm） */
+  guidePadding: number
 }
 
 // =====================
