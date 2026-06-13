@@ -65,10 +65,31 @@ export interface BorderStyles {
 // 原稿用紙設定
 // =====================
 
+/** 文字数ガイドを表示するマスの隅 */
+export type ManuscriptGuidePosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+
+/** 原稿用紙の文字数ガイド（先頭からN文字目のマスに小さく表示する目印） */
+export interface ManuscriptCharGuide {
+  /** 先頭からの文字数（1始まり）。このマスにガイドを表示する */
+  atChar: number
+  /** 表示テキスト（既定は atChar の数値） */
+  label: string
+}
+
 export interface ManuscriptPaperConfig {
   enabled: boolean
   columns: number
   rows: number
+  /** 文字数ガイド（任意マスに先頭からの文字数を小さく表示） */
+  charGuides?: ManuscriptCharGuide[]
+  /** ガイド文字サイズ（mm）。未指定 = 既定 */
+  guideFontSize?: number
+  /** ガイド表示位置（マスの隅）。未指定 = "bottom-left" */
+  guidePosition?: ManuscriptGuidePosition
 }
 
 // =====================
@@ -172,6 +193,12 @@ export interface BorderConfig {
   majorNumberDividerWidth?: number
   subNumberDividerWidth?: number
   branchNumberDividerWidth?: number
+  /** 原稿用紙: 文字を区切る罫線（行方向＝字間）。既定 dashed */
+  manuscriptCharDivider?: LineStyle
+  /** 原稿用紙: 行を区切る罫線（行間）。既定 solid */
+  manuscriptLineDivider?: LineStyle
+  manuscriptCharDividerWidth?: number
+  manuscriptLineDividerWidth?: number
 }
 
 // =====================
@@ -243,6 +270,8 @@ export interface HeaderFieldDefinition {
 export interface GlobalSettings {
   paperSize: PaperSize
   orientation: Orientation
+  /** 用紙全体を縦組み（右→左）にする。未指定 = false（横組み・左→右） */
+  verticalLayout?: boolean
   margins: Margins
   baseRowHeight: number
   columnWidths: ColumnWidths

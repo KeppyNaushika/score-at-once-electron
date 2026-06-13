@@ -11,6 +11,8 @@ import type {
   CellTextElement,
   LineStyle,
   MajorNumberDisplayMode,
+  ManuscriptCharGuide,
+  ManuscriptGuidePosition,
   SubQuestion,
 } from "./answerSheetDefinition.types"
 import type { ComputedOMRBubble, ComputedOMRDigitBox } from "./omr.types"
@@ -47,6 +49,22 @@ export interface ManuscriptGrid {
   gridWidth: number
   /** = rows * cellSizeMm */
   gridHeight: number
+  /** 縦書き（縦組み・右→左）か。false = 横書き */
+  vertical: boolean
+  /** 文字を区切る罫線（行方向＝字間）の線種 */
+  charDividerStyle: LineStyle
+  /** 文字を区切る罫線の太さ（mm） */
+  charDividerWidth: number
+  /** 行を区切る罫線（行間）の線種 */
+  lineDividerStyle: LineStyle
+  /** 行を区切る罫線の太さ（mm） */
+  lineDividerWidth: number
+  /** 文字数ガイド（先頭からN文字目のマスに表示） */
+  charGuides: ManuscriptCharGuide[]
+  /** ガイド文字サイズ（mm） */
+  guideFontSize: number
+  /** ガイド表示位置（マスの隅） */
+  guidePosition: ManuscriptGuidePosition
 }
 
 // =====================
@@ -172,6 +190,8 @@ export interface ComputedLayout {
   overflow: boolean
   /** 使用した高さ（mm） */
   contentHeightMm: number
+  /** 縦書き（縦組み・右→左）レイアウトか。レンダラのテキスト描画方向に使う */
+  vertical?: boolean
 }
 
 // =====================
@@ -186,6 +206,8 @@ export interface ComputedPageLayout {
   omrMarkerPositions: ComputedOMRMarker[]
   headerFields: ComputedHeaderField[]
   contentHeightMm: number
+  /** 縦書き（縦組み・右→左）レイアウトか */
+  vertical?: boolean
 }
 
 export interface ComputedMultiPageLayout {

@@ -25,6 +25,8 @@ import type {
   LineStyle,
   LinkedRegionType,
   MajorQuestion,
+  ManuscriptCharGuide,
+  ManuscriptGuidePosition,
   SubQuestion,
 } from "../../../src/types/answerSheetDefinition.types"
 import type {
@@ -40,6 +42,7 @@ import type { DbDefinitionFull } from "./asbDefinition"
 export type FlatGlobalSettings = {
   paperSize: string
   orientation: string
+  verticalLayout: boolean
   baseRowHeight: number
   numberDisplayMode: string
   marginTop: number
@@ -65,6 +68,10 @@ export type FlatGlobalSettings = {
   borderMajorNumberDividerWidth: number | null
   borderSubNumberDividerWidth: number | null
   borderBranchNumberDividerWidth: number | null
+  borderManuscriptCharDivider: string
+  borderManuscriptLineDivider: string
+  borderManuscriptCharDividerWidth: number | null
+  borderManuscriptLineDividerWidth: number | null
   omrMarkersEnabled: boolean
   omrMarkersSizeMm: number
   omrMarkersOffsetMm: number
@@ -85,6 +92,7 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
   return {
     paperSize: s.paperSize,
     orientation: s.orientation,
+    verticalLayout: s.verticalLayout ?? false,
     baseRowHeight: s.baseRowHeight,
     numberDisplayMode: s.numberDisplayMode,
     marginTop: s.margins.top,
@@ -112,6 +120,14 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
     borderSubNumberDividerWidth: s.borderConfig.subNumberDividerWidth ?? null,
     borderBranchNumberDividerWidth:
       s.borderConfig.branchNumberDividerWidth ?? null,
+    borderManuscriptCharDivider:
+      s.borderConfig.manuscriptCharDivider ?? "dashed",
+    borderManuscriptLineDivider:
+      s.borderConfig.manuscriptLineDivider ?? "solid",
+    borderManuscriptCharDividerWidth:
+      s.borderConfig.manuscriptCharDividerWidth ?? null,
+    borderManuscriptLineDividerWidth:
+      s.borderConfig.manuscriptLineDividerWidth ?? null,
     omrMarkersEnabled: s.omrMarkers.enabled,
     omrMarkersSizeMm: s.omrMarkers.sizeMm,
     omrMarkersOffsetMm: s.omrMarkers.offsetMm,
@@ -128,11 +144,35 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
   }
 }
 
+/** DB の JSON文字列から文字数ガイド配列を復元する（壊れていれば空配列） */
+function parseCharGuides(
+  json: string | null
+): ManuscriptCharGuide[] | undefined {
+  if (!json) return undefined
+  try {
+    const parsed: unknown = JSON.parse(json)
+    if (!Array.isArray(parsed)) return undefined
+    const guides = parsed
+      .filter(
+        (g): g is ManuscriptCharGuide =>
+          typeof g === "object" &&
+          g !== null &&
+          typeof (g as ManuscriptCharGuide).atChar === "number" &&
+          typeof (g as ManuscriptCharGuide).label === "string"
+      )
+      .map((g) => ({ atChar: g.atChar, label: g.label }))
+    return guides.length > 0 ? guides : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** DBフラットカラムから GlobalSettings に復元する */
 function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
   return {
     paperSize: row.paperSize as GlobalSettings["paperSize"],
     orientation: row.orientation as GlobalSettings["orientation"],
+    verticalLayout: row.verticalLayout,
     baseRowHeight: row.baseRowHeight,
     numberDisplayMode:
       row.numberDisplayMode as GlobalSettings["numberDisplayMode"],
@@ -166,6 +206,16 @@ function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
       majorNumberDividerWidth: row.borderMajorNumberDividerWidth ?? undefined,
       subNumberDividerWidth: row.borderSubNumberDividerWidth ?? undefined,
       branchNumberDividerWidth: row.borderBranchNumberDividerWidth ?? undefined,
+      manuscriptCharDivider:
+        (row.borderManuscriptCharDivider as BorderConfig["manuscriptCharDivider"]) ??
+        undefined,
+      manuscriptLineDivider:
+        (row.borderManuscriptLineDivider as BorderConfig["manuscriptLineDivider"]) ??
+        undefined,
+      manuscriptCharDividerWidth:
+        row.borderManuscriptCharDividerWidth ?? undefined,
+      manuscriptLineDividerWidth:
+        row.borderManuscriptLineDividerWidth ?? undefined,
     } as BorderConfig,
     omrMarkers: {
       enabled: row.omrMarkersEnabled,
@@ -279,6 +329,11 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
             enabled: true as const,
             columns: sq.manuscriptColumns,
             rows: sq.manuscriptRows,
+            charGuides: parseCharGuides(sq.manuscriptCharGuides),
+            guideFontSize: sq.manuscriptGuideFontSize ?? undefined,
+            guidePosition:
+              (sq.manuscriptGuidePosition as ManuscriptGuidePosition | null) ??
+              undefined,
           }
         : undefined
       const borderStyles =

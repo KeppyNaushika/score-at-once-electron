@@ -3,10 +3,28 @@ import type {
   BranchQuestion,
   GlobalSettings,
   HeaderFieldDefinition,
+  LineStyle,
   MajorQuestion,
+  ManuscriptGuidePosition,
   PaperSize,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
+
+// =====================
+// 原稿用紙の既定値
+// =====================
+
+/** 行方向（字間）の罫線は破線が一般的 */
+export const DEFAULT_MANUSCRIPT_CHAR_DIVIDER: LineStyle = "dashed"
+/** 行間（行の区切り）の罫線は実線 */
+export const DEFAULT_MANUSCRIPT_LINE_DIVIDER: LineStyle = "solid"
+/** 原稿用紙マス罫線の太さ（mm）。輪転印刷でかすれないよう黒・実用太さ */
+export const DEFAULT_MANUSCRIPT_DIVIDER_WIDTH = 0.2
+/** 文字数ガイドの既定文字サイズ（mm） */
+export const DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE = 2.2
+/** 文字数ガイドの既定表示位置（左下が一般的） */
+export const DEFAULT_MANUSCRIPT_GUIDE_POSITION: ManuscriptGuidePosition =
+  "bottom-left"
 
 // =====================
 // 用紙サイズ定数（mm）
@@ -30,6 +48,7 @@ export const MM_TO_PT = 2.835
 export const DEFAULT_SETTINGS: GlobalSettings = {
   paperSize: "A4",
   orientation: "portrait",
+  verticalLayout: false,
   margins: { top: 15, bottom: 15, left: 10, right: 10 },
   baseRowHeight: 12,
   columnWidths: { majorNumber: 10, subNumber: 10, branchNumber: 10 },
@@ -49,6 +68,10 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
     majorNumberDividerWidth: 0.4,
     subNumberDividerWidth: 0.4,
     branchNumberDividerWidth: 0.3,
+    manuscriptCharDivider: DEFAULT_MANUSCRIPT_CHAR_DIVIDER,
+    manuscriptLineDivider: DEFAULT_MANUSCRIPT_LINE_DIVIDER,
+    manuscriptCharDividerWidth: DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
+    manuscriptLineDividerWidth: DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
   },
   omrMarkers: { enabled: false, sizeMm: 5, offsetMm: 6 },
   fonts: {

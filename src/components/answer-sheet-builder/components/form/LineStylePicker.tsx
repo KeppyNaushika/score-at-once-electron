@@ -25,6 +25,8 @@ interface BorderField {
   widthKey: keyof BorderConfig
   label: string
   defaultWidth: number
+  /** 値未設定時に選択表示する線種（任意フィールド用） */
+  defaultStyle?: LineStyle
 }
 
 const DIVIDER_FIELDS: BorderField[] = [
@@ -51,6 +53,23 @@ const DIVIDER_FIELDS: BorderField[] = [
     widthKey: "branchDividerWidth",
     label: "枝問",
     defaultWidth: 0.3,
+  },
+]
+
+const MANUSCRIPT_FIELDS: BorderField[] = [
+  {
+    styleKey: "manuscriptCharDivider",
+    widthKey: "manuscriptCharDividerWidth",
+    label: "字間",
+    defaultWidth: 0.2,
+    defaultStyle: "dashed",
+  },
+  {
+    styleKey: "manuscriptLineDivider",
+    widthKey: "manuscriptLineDividerWidth",
+    label: "行間",
+    defaultWidth: 0.2,
+    defaultStyle: "solid",
   },
 ]
 
@@ -192,6 +211,9 @@ function BorderFieldRow({
 }) {
   const width =
     (borderConfig[field.widthKey] as number | undefined) ?? field.defaultWidth
+  const activeStyle =
+    (borderConfig[field.styleKey] as LineStyle | undefined) ??
+    field.defaultStyle
   return (
     <div className="flex min-h-6 items-center gap-2">
       <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
@@ -205,7 +227,7 @@ function BorderFieldRow({
             title={ls.title}
             className={cn(
               "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
-              borderConfig[field.styleKey] === ls.value
+              activeStyle === ls.value
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground"
             )}
@@ -256,6 +278,19 @@ export function LineStylePicker({
       <div className="space-y-1.5">
         <span className="text-muted-foreground text-[10px]">番号列</span>
         {NUMBER_FIELDS.map((field) => (
+          <BorderFieldRow
+            key={field.styleKey}
+            field={field}
+            borderConfig={borderConfig}
+            onUpdate={onUpdate}
+          />
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <span className="text-muted-foreground text-[10px]">
+          原稿用紙マス目
+        </span>
+        {MANUSCRIPT_FIELDS.map((field) => (
           <BorderFieldRow
             key={field.styleKey}
             field={field}

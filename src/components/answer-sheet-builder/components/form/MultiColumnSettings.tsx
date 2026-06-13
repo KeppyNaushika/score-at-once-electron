@@ -20,11 +20,14 @@ import { SliderWithInput } from "./SliderWithInput"
 interface MultiColumnSettingsProps {
   settings: GlobalSettings
   onUpdate: (settings: Partial<GlobalSettings>) => void
+  /** 縦組みレイアウトか（段が上下方向に分割される旨を案内する） */
+  vertical?: boolean
 }
 
 export function MultiColumnSettings({
   settings,
   onUpdate,
+  vertical = false,
 }: MultiColumnSettingsProps) {
   const mc = settings.multiColumn
 
@@ -44,6 +47,11 @@ export function MultiColumnSettings({
 
       {mc.enabled && (
         <div className="space-y-2 pl-1">
+          {vertical && (
+            <p className="text-muted-foreground text-[10px] leading-snug">
+              縦組みでは段が上下方向に分割されます（例: 2段＝上下2段）。
+            </p>
+          )}
           <div>
             <Label className="text-xs">段数</Label>
             <Select

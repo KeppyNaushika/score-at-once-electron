@@ -21,6 +21,8 @@ interface BranchQuestionFormProps {
   onDelete: () => void
   onMoveUp?: () => void
   onMoveDown?: () => void
+  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
+  vertical?: boolean
 }
 
 export function BranchQuestionForm({
@@ -32,7 +34,11 @@ export function BranchQuestionForm({
   onDelete,
   onMoveUp,
   onMoveDown,
+  vertical = false,
 }: BranchQuestionFormProps) {
+  // 縦書きでは見た目の高さ/幅が入れ替わるためラベルだけ入れ替える（内部値は不変）
+  const heightLabel = vertical ? "幅" : "高さ"
+  const widthLabel = vertical ? "高さ" : "幅"
   const [detailOpen, setDetailOpen] = useState(false)
 
   const hasDetailContent =
@@ -80,9 +86,10 @@ export function BranchQuestionForm({
             </div>
           )}
           <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">高さ</span>
+            <span className="text-muted-foreground">{heightLabel}</span>
             <input
               type="number"
+              aria-label={heightLabel}
               className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               value={branch.heightMultiplier}
               min={1}
@@ -98,8 +105,9 @@ export function BranchQuestionForm({
           </div>
           {/* 幅 (layoutWidth) */}
           <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">幅</span>
+            <span className="text-muted-foreground">{widthLabel}</span>
             <input
+              aria-label={widthLabel}
               className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
               value={branch.layoutWidth ?? ""}
               onChange={(e) => {
@@ -254,6 +262,7 @@ export function BranchQuestionForm({
           <TextElementEditor
             textElements={branch.textElements}
             onUpdate={(elements) => onUpdate({ textElements: elements })}
+            vertical={vertical}
           />
           <ImageElementEditor
             imageElements={branch.imageElements ?? []}

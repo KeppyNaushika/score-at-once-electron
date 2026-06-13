@@ -46,6 +46,7 @@ import {
   renderGridCompletionLines,
   renderGridDividerLines,
 } from "./lineRenderer"
+import { transformPageToVertical } from "./verticalTransform"
 
 /** 段組みの各段の座標範囲 */
 interface ColBounds {
@@ -60,8 +61,14 @@ interface ColBounds {
 export function computeMultiPageLayoutFromDefinition(
   definition: AnswerSheetDefinition
 ): ComputedMultiPageLayout {
+  // 縦書きでは論理（横組み）の左右段が、最終段の transpose により上下段になる
+  const vertical = definition.settings.verticalLayout ?? false
   const { settings, majorQuestions } = definition
-  const paper = getPaperDimensions(settings)
+  // 縦組みは「幅高さを入れ替えた論理ページ」で計算し、最終段で transpose して実寸へ写す
+  const realPaper = getPaperDimensions(settings)
+  const paper = vertical
+    ? { width: realPaper.height, height: realPaper.width }
+    : realPaper
   const { margins, baseRowHeight, columnWidths, spacing } = settings
 
   const contentLeft = margins.left
@@ -293,7 +300,14 @@ export function computeMultiPageLayoutFromDefinition(
               sub.textElements,
               "answer",
               pageIdx,
-              computeManuscriptGrid(sub, ansX, cellY, ansW, cellHeight),
+              computeManuscriptGrid(
+                sub,
+                ansX,
+                cellY,
+                ansW,
+                cellHeight,
+                settings.borderConfig
+              ),
               sub.omrConfig,
               sub.imageElements
             )
@@ -565,7 +579,8 @@ export function computeMultiPageLayoutFromDefinition(
                 effAnswerX,
                 subStartY,
                 ansW,
-                subHeight
+                subHeight,
+                settings.borderConfig
               ),
               sub.omrConfig,
               sub.imageElements
@@ -937,6 +952,17 @@ export function computeMultiPageLayoutFromDefinition(
       contentHeightMm: pageContentBottom - margins.top,
     }
   })
+
+  if (vertical) {
+    return {
+      pages: pages.map((p) =>
+        transformPageToVertical(p, realPaper.width, realPaper.height)
+      ),
+      totalPages: pages.length,
+      pageWidthMm: realPaper.width,
+      pageHeightMm: realPaper.height,
+    }
+  }
 
   return {
     pages,

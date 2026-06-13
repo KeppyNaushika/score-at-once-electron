@@ -34,6 +34,8 @@ interface HeaderFieldEditorProps {
   onUpdate: (fieldId: string, data: Partial<HeaderFieldDefinition>) => void
   onDelete: (fieldId: string) => void
   onReorder: (fromIndex: number, toIndex: number) => void
+  /** 縦書きレイアウトか（幅/高さラベルの表示を入れ替える） */
+  vertical?: boolean
 }
 
 const TYPE_LABELS: Record<HeaderFieldType, string> = {
@@ -56,7 +58,11 @@ export function HeaderFieldEditor({
   onUpdate,
   onDelete,
   onReorder,
+  vertical = false,
 }: HeaderFieldEditorProps) {
+  // 縦書きでは見た目の幅/高さが入れ替わるためラベルだけ入れ替える（内部値は不変）
+  const widthLabel = vertical ? "高さ" : "幅"
+  const heightLabel = vertical ? "幅" : "高さ"
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -174,19 +180,21 @@ export function HeaderFieldEditor({
               )}
             </div>
 
-            {/* field / label: 幅・高さ */}
+            {/* field / label: 幅・高さ（縦書き時はラベルのみ入れ替え） */}
             {fieldType !== "hfill" && (
               <div className="grid grid-cols-2 gap-2">
                 <SliderWithInput
-                  label="幅"
+                  label={widthLabel}
                   value={field.widthMm}
                   min={10}
-                  max={100}
+                  max={200}
                   step={1}
+                  inputMin={-10000}
+                  inputMax={10000}
                   onChange={(v) => onUpdate(field.id, { widthMm: v })}
                 />
                 <SliderWithInput
-                  label="高さ"
+                  label={heightLabel}
                   value={field.heightMm}
                   min={4}
                   max={20}

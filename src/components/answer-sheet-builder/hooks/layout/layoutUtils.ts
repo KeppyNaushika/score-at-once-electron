@@ -67,6 +67,34 @@ export function clipRangeToMajorLayouts(
   return result.length > 0 ? result : [range]
 }
 
+/**
+ * 原稿用紙でN文字目（0-indexed）が入るマス位置 (col, row) を返す。
+ * グリッド外（マス数を超える）の場合は null。
+ *
+ * - 横書き: 左→右、行は上→下。 col = i % columns, row = floor(i / columns)
+ * - 縦書き: 上→下、列は右→左。 row = i % rows, col = (columns-1) - floor(i / rows)
+ *
+ * col/row はいずれも 0-indexed。cx/cy 中心座標の計算式は方向に依らず共通
+ * （gridX + col*cellSize + cellSize/2 等）。
+ */
+export function manuscriptCharPosition(
+  index: number,
+  columns: number,
+  rows: number,
+  vertical: boolean
+): { col: number; row: number } | null {
+  if (vertical) {
+    const row = index % rows
+    const colFromRight = Math.floor(index / rows)
+    if (colFromRight >= columns) return null
+    return { col: columns - 1 - colFromRight, row }
+  }
+  const col = index % columns
+  const row = Math.floor(index / columns)
+  if (row >= rows) return null
+  return { col, row }
+}
+
 /** 分数文字列 (e.g. "1/4", "3/4") を 0〜1 の数値に変換 */
 export function parseFraction(s: string): number {
   const m = s.match(/^(\d+)\/(\d+)$/)

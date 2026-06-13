@@ -9,6 +9,7 @@ import type {
   DragInfo,
 } from "@/types/answerSheetLayout.types"
 
+import { manuscriptCharPosition } from "../../hooks/layout/layoutUtils"
 import {
   getDashProps,
   isDragInfoEqual,
@@ -16,6 +17,7 @@ import {
   renderSegmentsHtmlForPrint,
   renderSegmentsTspan,
 } from "./svgRenderUtils"
+import { verticalGlyphAdjust } from "./verticalGlyph"
 
 interface AnswerSheetSVGRendererProps {
   layout: ComputedLayout
@@ -51,6 +53,8 @@ export function AnswerSheetSVGRenderer({
   const omrMarkerPositions =
     pageLayout?.omrMarkerPositions ?? layout.omrMarkerPositions
   const headerFields = pageLayout?.headerFields ?? layout.headerFields
+  // 縦書きレイアウトか（テキストの描画方向に使う）
+  const vertical = (pageLayout ?? layout).vertical ?? false
 
   return (
     <>
@@ -76,12 +80,42 @@ export function AnswerSheetSVGRenderer({
 
         // label タイプ: ボックスなしのテキスト表示
         if (field.type === "label") {
+          const fLabelSize = field.fontSize ?? 5
+          // 縦書き: foreignObject + writing-mode（番号ラベルと同方式）
+          if (vertical) {
+            return (
+              <foreignObject
+                key={`hf-${field.fieldId}`}
+                x={field.x}
+                y={field.y}
+                width={field.width}
+                height={field.height}
+              >
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    writingMode: "vertical-rl",
+                    fontSize: `${fLabelSize}px`,
+                    fontFamily: "'Noto Sans JP', sans-serif",
+                    color: "#333",
+                    lineHeight: 1,
+                  }}
+                >
+                  {field.label}
+                </div>
+              </foreignObject>
+            )
+          }
           return (
             <text
               key={`hf-${field.fieldId}`}
               x={field.x + field.width / 2}
               y={field.y + field.height / 2}
-              fontSize={field.fontSize ?? 5}
+              fontSize={fLabelSize}
               fontFamily="'Noto Sans JP', sans-serif"
               textAnchor="middle"
               dominantBaseline="central"
@@ -186,7 +220,7 @@ export function AnswerSheetSVGRenderer({
         )
       })}
 
-      {/* 番号ラベル */}
+      {/* 番号ラベル（横書き） */}
       {numberLabels.map((label, i) => (
         <text
           key={`label-${i}`}
@@ -223,16 +257,32 @@ export function AnswerSheetSVGRenderer({
             }
             return chars
               .map(({ char, seg }, ci) => {
-                const col = ci % g.columns
-                const row = Math.floor(ci / g.columns)
-                if (row >= g.rows) return null
-                const cx = g.gridX + col * g.cellSizeMm + g.cellSizeMm / 2
-                const cy = g.gridY + row * g.cellSizeMm + g.cellSizeMm / 2
+                const pos = manuscriptCharPosition(
+                  ci,
+                  g.columns,
+                  g.rows,
+                  g.vertical
+                )
+                if (!pos) return null
+                const { col, row } = pos
+                const cellCx = g.gridX + col * g.cellSizeMm + g.cellSizeMm / 2
+                const cellCy = g.gridY + row * g.cellSizeMm + g.cellSizeMm / 2
+                // 縦書きのみ約物の回転・右上寄せを適用
+                const adj = g.vertical
+                  ? verticalGlyphAdjust(char)
+                  : { rotate: 0, dxRatio: 0, dyRatio: 0 }
+                const cx = cellCx + adj.dxRatio * g.cellSizeMm
+                const cy = cellCy + adj.dyRatio * g.cellSizeMm
                 return (
                   <text
                     key={`mc-${cellIdx}-${cell.label}-${ci}`}
                     x={cx}
                     y={cy}
+                    transform={
+                      adj.rotate
+                        ? `rotate(${adj.rotate} ${cx} ${cy})`
+                        : undefined
+                    }
                     fontSize={fontSize}
                     fontFamily="'Noto Sans JP', sans-serif"
                     textAnchor="middle"
@@ -268,6 +318,41 @@ export function AnswerSheetSVGRenderer({
             const segments = parseInlineMarkup(te.text)
             const hasMath = segments.some((s) => s.math)
             const hasNewline = te.text.includes("\n")
+
+            // 縦書き: foreignObject + writing-mode:vertical-rl 方式（デバッグで縦書き実証済み）。
+            // インラインマークアップ（太字/斜体/模範解答色）も renderSegmentsHtml で保持する。
+            // 括弧回転・拗促音/句読点はブラウザの縦書きエンジンが処理する。
+            if (vertical) {
+              return (
+                <foreignObject
+                  key={`te-${cellIdx}-${cell.label}-${ti}`}
+                  x={cell.x + 1}
+                  y={cell.y + 1}
+                  width={cell.width - 2}
+                  height={cell.height - 2}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      writingMode: "vertical-rl",
+                      fontSize: `${te.fontSize}px`,
+                      fontFamily: "'Noto Sans JP', sans-serif",
+                      color: "#000",
+                      lineHeight: 1,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {forPrint
+                      ? renderSegmentsHtmlForPrint(segments, renderMode)
+                      : renderSegmentsHtml(segments, renderMode, te.fontSize)}
+                  </div>
+                </foreignObject>
+              )
+            }
 
             // foreignObject: 数式 or 改行テキスト
             if (hasMath || hasNewline) {
@@ -468,6 +553,12 @@ export function AnswerSheetSVGRenderer({
         .filter((c) => c.cellType === "answer" && c.manuscriptGrid)
         .map((cell, cellIdx) => {
           const g = cell.manuscriptGrid!
+          // 縦線(col)/横線(row)への線種割当は書字方向で決まる。
+          // 行方向（字間）= 縦書きなら横線・横書きなら縦線。輪転印刷でかすれぬよう黒。
+          const colStyle = g.vertical ? g.lineDividerStyle : g.charDividerStyle
+          const colWidth = g.vertical ? g.lineDividerWidth : g.charDividerWidth
+          const rowStyle = g.vertical ? g.charDividerStyle : g.lineDividerStyle
+          const rowWidth = g.vertical ? g.charDividerWidth : g.lineDividerWidth
           const gridLines: React.ReactNode[] = []
           for (let col = 1; col < g.columns; col++) {
             const x = g.gridX + col * g.cellSizeMm
@@ -478,8 +569,9 @@ export function AnswerSheetSVGRenderer({
                 y1={g.gridY}
                 x2={x}
                 y2={g.gridY + g.gridHeight}
-                stroke="#ccc"
-                strokeWidth={0.2}
+                stroke="#000"
+                strokeWidth={colWidth}
+                {...getDashProps(colStyle, colWidth, g.gridHeight)}
               />
             )
           }
@@ -492,12 +584,51 @@ export function AnswerSheetSVGRenderer({
                 y1={y}
                 x2={g.gridX + g.gridWidth}
                 y2={y}
-                stroke="#ccc"
-                strokeWidth={0.2}
+                stroke="#000"
+                strokeWidth={rowWidth}
+                {...getDashProps(rowStyle, rowWidth, g.gridWidth)}
               />
             )
           }
-          return <g key={`mg-${cellIdx}-${cell.label}`}>{gridLines}</g>
+          // 文字数ガイド: 先頭からN文字目のマスの隅に小さく番号を表示
+          const guides: React.ReactNode[] = []
+          const pad = g.cellSizeMm * 0.12
+          for (let gi = 0; gi < g.charGuides.length; gi++) {
+            const guide = g.charGuides[gi]
+            const pos = manuscriptCharPosition(
+              guide.atChar - 1,
+              g.columns,
+              g.rows,
+              g.vertical
+            )
+            if (!pos) continue
+            const cellX0 = g.gridX + pos.col * g.cellSizeMm
+            const cellY0 = g.gridY + pos.row * g.cellSizeMm
+            const left = g.guidePosition.endsWith("left")
+            const top = g.guidePosition.startsWith("top")
+            const gx = left ? cellX0 + pad : cellX0 + g.cellSizeMm - pad
+            const gy = top ? cellY0 + pad : cellY0 + g.cellSizeMm - pad
+            guides.push(
+              <text
+                key={`mguide-${cellIdx}-${cell.label}-${gi}`}
+                x={gx}
+                y={gy}
+                fontSize={g.guideFontSize}
+                fontFamily="'Noto Sans JP', sans-serif"
+                textAnchor={left ? "start" : "end"}
+                dominantBaseline={top ? "hanging" : "alphabetic"}
+                fill="#000"
+              >
+                {guide.label}
+              </text>
+            )
+          }
+          return (
+            <g key={`mg-${cellIdx}-${cell.label}`}>
+              {gridLines}
+              {guides}
+            </g>
+          )
         })}
 
       {/* 溢れ警告（単一ページモード時のみ表示） */}

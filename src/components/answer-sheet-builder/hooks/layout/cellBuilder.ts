@@ -4,7 +4,10 @@
  * ComputedCell の生成・原稿用紙グリッド計算・OMRバブル/数字欄の座標計算を行う。
  */
 
-import type { SubQuestion } from "@/types/answerSheetDefinition.types"
+import type {
+  BorderConfig,
+  SubQuestion,
+} from "@/types/answerSheetDefinition.types"
 import type {
   ComputedCell,
   ManuscriptGrid,
@@ -15,6 +18,13 @@ import type {
   OMRCellConfig,
 } from "@/types/omr.types"
 
+import {
+  DEFAULT_MANUSCRIPT_CHAR_DIVIDER,
+  DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
+  DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE,
+  DEFAULT_MANUSCRIPT_GUIDE_POSITION,
+  DEFAULT_MANUSCRIPT_LINE_DIVIDER,
+} from "../../constants"
 import {
   buildBranchGridLayout,
   buildSubGridLayout,
@@ -198,10 +208,13 @@ export function computeManuscriptGrid(
   cellX: number,
   cellY: number,
   cellWidth: number,
-  cellHeight: number
+  cellHeight: number,
+  borderConfig?: BorderConfig
 ): ManuscriptGrid | undefined {
   if (!sub.manuscriptPaper?.enabled) return undefined
   const { columns, rows } = sub.manuscriptPaper
+  // 0以下はゼロ除算・剰余0でNaNになるため描画しない（防御）
+  if (columns < 1 || rows < 1) return undefined
   const cellSizeMm = cellHeight / rows
   const gridWidth = columns * cellSizeMm
   const gridHeight = rows * cellSizeMm
@@ -213,6 +226,25 @@ export function computeManuscriptGrid(
     gridY: cellY,
     gridWidth,
     gridHeight,
+    // 論理（横組み）座標で計算。縦組みは verticalTransform で後段変換する。
+    vertical: false,
+    // 罫線スタイルはグローバル設定（罫線タブ）から解決。行方向（字間）は破線が既定。
+    charDividerStyle:
+      borderConfig?.manuscriptCharDivider ?? DEFAULT_MANUSCRIPT_CHAR_DIVIDER,
+    charDividerWidth:
+      borderConfig?.manuscriptCharDividerWidth ??
+      DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
+    lineDividerStyle:
+      borderConfig?.manuscriptLineDivider ?? DEFAULT_MANUSCRIPT_LINE_DIVIDER,
+    lineDividerWidth:
+      borderConfig?.manuscriptLineDividerWidth ??
+      DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
+    // 文字数ガイドは小問ごとの設定。
+    charGuides: sub.manuscriptPaper.charGuides ?? [],
+    guideFontSize:
+      sub.manuscriptPaper.guideFontSize ?? DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE,
+    guidePosition:
+      sub.manuscriptPaper.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION,
   }
 }
 

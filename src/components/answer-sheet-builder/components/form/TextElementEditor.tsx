@@ -47,9 +47,23 @@ const V_ALIGN_TITLE: Record<VerticalAlign, string> = {
   bottom: "下揃え",
 }
 
+// 縦書き時のタイトル（軸が入れ替わるため表示文言も入れ替える。内部の編集対象プロパティは不変）
+const H_ALIGN_TITLE_VERTICAL: Record<HorizontalAlign, string> = {
+  left: "上揃え",
+  center: "中央",
+  right: "下揃え",
+}
+const V_ALIGN_TITLE_VERTICAL: Record<VerticalAlign, string> = {
+  top: "右揃え",
+  middle: "中央",
+  bottom: "左揃え",
+}
+
 interface TextElementEditorProps {
   textElements: CellTextElement[]
   onUpdate: (elements: CellTextElement[]) => void
+  /** 縦書きレイアウトか（揃えコントロールの左右↔上下を入れ替え、アイコンを90°回転） */
+  vertical?: boolean
 }
 
 function createDefaultTextElement(): CellTextElement {
@@ -69,6 +83,7 @@ function createDefaultTextElement(): CellTextElement {
 export function TextElementEditor({
   textElements,
   onUpdate,
+  vertical = false,
 }: TextElementEditorProps) {
   const handleAdd = () => {
     onUpdate([...textElements, createDefaultTextElement()])
@@ -143,7 +158,8 @@ export function TextElementEditor({
               values={H_ALIGNS}
               current={el.horizontalAlign}
               icons={H_ALIGN_ICON}
-              titles={H_ALIGN_TITLE}
+              titles={vertical ? H_ALIGN_TITLE_VERTICAL : H_ALIGN_TITLE}
+              rotate={vertical}
               onChange={(v) => handleChange(i, { horizontalAlign: v })}
             />
 
@@ -151,7 +167,8 @@ export function TextElementEditor({
               values={V_ALIGNS}
               current={el.verticalAlign}
               icons={V_ALIGN_ICON}
-              titles={V_ALIGN_TITLE}
+              titles={vertical ? V_ALIGN_TITLE_VERTICAL : V_ALIGN_TITLE}
+              rotate={vertical}
               onChange={(v) => handleChange(i, { verticalAlign: v })}
             />
           </div>
@@ -173,12 +190,15 @@ function CycleButton<T extends string>({
   current,
   icons,
   titles,
+  rotate = false,
   onChange,
 }: {
   values: T[]
   current: T
   icons: Record<T, LucideIcon>
   titles: Record<T, string>
+  /** 縦書き時にアイコンを90°回転する */
+  rotate?: boolean
   onChange: (v: T) => void
 }) {
   const idx = values.indexOf(current)
@@ -197,7 +217,7 @@ function CycleButton<T extends string>({
       onClick={handleClick}
       title={titles[current]}
     >
-      <Icon className="h-3.5 w-3.5" />
+      <Icon className={rotate ? "h-3.5 w-3.5 rotate-90" : "h-3.5 w-3.5"} />
     </Button>
   )
 }

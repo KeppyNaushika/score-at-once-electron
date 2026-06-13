@@ -43,16 +43,18 @@ import {
   renderGridCompletionLines,
   renderGridDividerLines,
 } from "./lineRenderer"
+import { transformLayoutToVertical } from "./verticalTransform"
 
 /** AnswerSheetDefinition から単一ページの ComputedLayout を計算する */
 export function computeLayoutFromDefinition(
   definition: AnswerSheetDefinition
 ): ComputedLayout {
+  const vertical = definition.settings.verticalLayout ?? false
+  const settings = definition.settings
+
   // 段組みが有効な場合はマルチページレイアウトに委譲
-  if (
-    definition.settings.multiColumn.enabled &&
-    definition.settings.multiColumn.columnCount > 1
-  ) {
+  // （縦書きでは論理の左右段が transpose により上下段になる）
+  if (settings.multiColumn.enabled && settings.multiColumn.columnCount > 1) {
     const multiPage = computeMultiPageLayoutFromDefinition(definition)
     const page = multiPage.pages[0]
     if (!page) {
@@ -66,6 +68,7 @@ export function computeLayoutFromDefinition(
         headerFields: [],
         overflow: false,
         contentHeightMm: 0,
+        vertical,
       }
     }
     return {
@@ -78,11 +81,16 @@ export function computeLayoutFromDefinition(
       headerFields: page.headerFields,
       overflow: multiPage.totalPages > 1,
       contentHeightMm: page.contentHeightMm,
+      vertical: page.vertical,
     }
   }
 
-  const { settings, majorQuestions } = definition
-  const paper = getPaperDimensions(settings)
+  const { majorQuestions } = definition
+  // 縦組みは「幅高さを入れ替えた論理ページ」で計算し、最終段で transpose して実寸へ写す
+  const realPaper = getPaperDimensions(settings)
+  const paper = vertical
+    ? { width: realPaper.height, height: realPaper.width }
+    : realPaper
   const { margins, baseRowHeight, columnWidths, spacing } = settings
 
   const contentLeft = margins.left
@@ -249,7 +257,14 @@ export function computeLayoutFromDefinition(
               sub.textElements,
               "answer",
               0,
-              computeManuscriptGrid(sub, ansX, cellY, ansW, cellHeight),
+              computeManuscriptGrid(
+                sub,
+                ansX,
+                cellY,
+                ansW,
+                cellHeight,
+                settings.borderConfig
+              ),
               sub.omrConfig,
               sub.imageElements
             )
@@ -485,7 +500,8 @@ export function computeLayoutFromDefinition(
                 effAnswerX,
                 subStartY,
                 ansW,
-                subHeight
+                subHeight,
+                settings.borderConfig
               ),
               sub.omrConfig,
               sub.imageElements
@@ -828,7 +844,7 @@ export function computeLayoutFromDefinition(
   // OMRマーカー
   const omrMarkerPositions = computeOMRMarkers(settings, paper)
 
-  return {
+  const layout: ComputedLayout = {
     pageWidthMm: paper.width,
     pageHeightMm: paper.height,
     cells,
@@ -839,4 +855,8 @@ export function computeLayoutFromDefinition(
     overflow: contentBottom > paper.height - margins.bottom,
     contentHeightMm: contentBottom - margins.top,
   }
+
+  return vertical
+    ? transformLayoutToVertical(layout, realPaper.width, realPaper.height)
+    : layout
 }
