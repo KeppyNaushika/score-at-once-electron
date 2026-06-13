@@ -177,6 +177,34 @@ export function ScoringContentArea({
     return () => cancelAnimationFrame(rafIdRef.current)
   }, [showSplit])
 
+  // ===== split表示の表示前後で答案ビューの中心を維持 =====
+  // 模範解答パネルの表示/非表示で答案パネルの幅（左右分割）または高さ（上下分割）が
+  // 変化する。サイズ変化に追従して、変化前にビューポート中心にあったコンテンツ点を
+  // 変化後も中心に保つ（補正量はサイズ差のみに依存し、ズームに非依存）。
+  // CSS transition の各フレームで ResizeObserver が発火するため滑らかに追従し、
+  // 非表示に戻す際は対称的な補正で元の中心へ復帰する。
+  useEffect(() => {
+    if (gradingMode !== "individual") return
+    const el = answerScrollRef.current
+    if (!el) return
+
+    let prevW = el.clientWidth
+    let prevH = el.clientHeight
+
+    const observer = new ResizeObserver(() => {
+      const newW = el.clientWidth
+      const newH = el.clientHeight
+      if (newW === prevW && newH === prevH) return
+      // 旧サイズで中心にあったコンテンツ点を、新サイズでも中心に保つ
+      el.scrollLeft += (prevW - newW) / 2
+      el.scrollTop += (prevH - newH) / 2
+      prevW = newW
+      prevH = newH
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [gradingMode])
+
   if (gradingMode !== "individual") {
     return (
       <AnswerGridView
