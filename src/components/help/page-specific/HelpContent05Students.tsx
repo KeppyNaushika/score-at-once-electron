@@ -15,7 +15,7 @@ export function HelpContent05Students() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Users className="h-6 w-6 text-blue-600" />
-          受験生徒の管理 - 使い方
+          受験生徒の管理
         </h2>
         <p className="text-muted-foreground">
           採点する生徒を登録して、受験状態を設定しましょう。
@@ -118,7 +118,7 @@ export function HelpContent05Students() {
             <TipItem type="warning">
               <strong>欠席者がいる：</strong>
               欠席が分かっている生徒は先に「欠席」に設定しておくと、
-              答案アップロード時にエラーが出ません。
+              答案アップロードの表で自動的に無効化され、誤って答案を割り当てるのを防げます。
             </TipItem>
           </div>
         </HelpSection>

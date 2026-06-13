@@ -2,6 +2,7 @@
 
 import {
   CheckCircle,
+  ClipboardList,
   Download,
   FileSpreadsheet,
   FileText,
@@ -21,7 +22,7 @@ export function HelpContent08Export() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Download className="h-6 w-6 text-blue-600" />
-          採点結果のファイル出力 - 使い方
+          採点結果のファイル出力
         </h2>
         <p className="text-muted-foreground">
           採点が完了したら、PDFファイルやExcelファイルで結果を保存しましょう。
@@ -41,7 +42,7 @@ export function HelpContent08Export() {
           <StepItem
             number={2}
             title="出力形式を選ぶ"
-            description="右側のタブで「採点済み答案PDF」「採点データExcel」から選択"
+            description="右側のタブで「採点済み答案PDF」「採点データExcel」「個人成績表PDF」から選択"
             isImportant
           />
           <StepItem
@@ -52,7 +53,7 @@ export function HelpContent08Export() {
           <StepItem
             number={4}
             title="ダウンロード"
-            description="「ダウンロード」ボタンを押して保存場所を選択"
+            description="選んだ形式の「○○をダウンロード」ボタンを押して保存場所を選択"
           />
         </div>
       </HelpSection>
@@ -82,7 +83,8 @@ export function HelpContent08Export() {
               <div className="space-y-1 text-sm">
                 <p>• 用紙の向き（A4縦・A4横）</p>
                 <p>• 採点マークの位置・大きさ</p>
-                <p>• 透明マークか通常マークか</p>
+                <p>• マークや点数の色・不透明度（濃さ）</p>
+                <p>• 採点状態ごとの表示・非表示</p>
               </div>
             </div>
           </div>
@@ -116,6 +118,23 @@ export function HelpContent08Export() {
           </div>
         </HelpSection>
       </div>
+
+      <div className="my-4 border-t border-gray-200" />
+
+      <HelpSection
+        icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
+        title="個人成績表PDF"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">🧑 生徒ごとに1枚</Badge>
+          <Badge variant="outline">📊 得点と講評</Badge>
+        </div>
+        <p className="text-muted-foreground text-sm">
+          生徒一人ひとりの成績をまとめた個人向けのPDFです。
+          設問ごとの得点や合計点を1枚にまとめて、生徒や保護者への配付に使えます。
+          設定パネルで表示する項目を調整できます。
+        </p>
+      </HelpSection>
 
       <div className="my-4 border-t border-gray-200" />
 
@@ -158,7 +177,7 @@ export function HelpContent08Export() {
             </TipItem>
 
             <TipItem type="success">
-              透明マークは答案が見やすく、通常マークは採点結果が明確です。用途に合わせて選択してください。
+              採点マークの不透明度を下げると答案が見やすく、上げると採点結果がはっきりします。用途に合わせて調整してください。
             </TipItem>
           </div>
         </HelpSection>

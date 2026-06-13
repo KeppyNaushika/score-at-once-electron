@@ -15,7 +15,7 @@ export function HelpContent01Upload() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <FileImage className="h-6 w-6 text-blue-600" />
-          模範解答画像の管理 - 使い方
+          模範解答画像の管理
         </h2>
         <p className="text-muted-foreground">
           試験問題の模範解答をアップロードして、採点の準備をしましょう。
@@ -45,7 +45,7 @@ export function HelpContent01Upload() {
           <StepItem
             number={4}
             title="順番を整える"
-            description="ページをドラッグして正しい順番に並び替える"
+            description="各ページの左右にある矢印ボタンで正しい順番に並び替える"
             isImportant
           />
         </div>
@@ -113,13 +113,13 @@ export function HelpContent01Upload() {
           <div className="space-y-3">
             <TipItem type="success">
               <strong>順番を間違えた：</strong>
-              ページをマウスでドラッグすれば順番を変えられます。
-              不要なページは右上の「×」ボタンで削除できます。
+              各ページの左右にある矢印ボタンで順番を変えられます。
+              不要なページはゴミ箱アイコンで削除できます。
             </TipItem>
 
             <TipItem type="success">
               アップロードが終わったら、「次へ:
-              採点領域作成」ボタンが表示されます。
+              答案の採点領域作成」ボタンが表示されます。
               全てのページが正しい順番になっていることを確認してから次に進みましょう。
             </TipItem>
           </div>
