@@ -129,7 +129,11 @@ export function AddDataSourceInline({
         await window.electronAPI.grade.calculateSourceMaxScore(data)
       if (result.success && result.maxScore !== undefined) {
         setMaxScore(String(result.maxScore))
-        if (!weight) setWeight(String(result.maxScore))
+        // 満点が未確定（0）の段階では weight を埋めない。
+        // subtotal/crop_region 選択前に maxScore=0 が返ると weight が "0" に
+        // 固定され、その後 maxScore が確定しても !weight が false になり
+        // 換算満点が 0 のまま（→ 換算点が常に0）になるのを防ぐ。
+        if (!weight && result.maxScore > 0) setWeight(String(result.maxScore))
       }
     }
   }, [type, selectedExamId, selectedSubtotalId, selectedCropRegionId, weight])
