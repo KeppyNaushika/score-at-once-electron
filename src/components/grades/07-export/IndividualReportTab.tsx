@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import type { GradeCalculationResult } from "@/types/grade.types"
 
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
@@ -187,7 +188,7 @@ export function IndividualReportTab({
                     variant="sub"
                   />
                   <OptionCard
-                    label="換算満点"
+                    label="換算得点"
                     checked={options.sourceBreakdownColumns.weight}
                     onChange={(v) =>
                       updateOption("sourceBreakdownColumns", {
@@ -258,9 +259,9 @@ export function IndividualReportTab({
       {/* フッター */}
       <Section title="フッター">
         <div className="flex flex-col gap-2">
-          <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
-            <Label className="w-6 shrink-0 text-xs">左</Label>
-            <Input
+          <div className="bg-muted/50 flex items-start gap-2 rounded-lg border p-2">
+            <Label className="w-6 shrink-0 pt-1 text-xs">左</Label>
+            <Textarea
               value={options.footer.left}
               onChange={(e) =>
                 updateOption("footer", {
@@ -268,12 +269,13 @@ export function IndividualReportTab({
                   left: e.target.value,
                 })
               }
-              className="h-6 flex-1 text-xs"
+              rows={2}
+              className="min-h-0 flex-1 resize-y text-xs"
             />
           </div>
-          <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
-            <Label className="w-6 shrink-0 text-xs">中</Label>
-            <Input
+          <div className="bg-muted/50 flex items-start gap-2 rounded-lg border p-2">
+            <Label className="w-6 shrink-0 pt-1 text-xs">中</Label>
+            <Textarea
               value={options.footer.center}
               onChange={(e) =>
                 updateOption("footer", {
@@ -281,12 +283,13 @@ export function IndividualReportTab({
                   center: e.target.value,
                 })
               }
-              className="h-6 flex-1 text-xs"
+              rows={2}
+              className="min-h-0 flex-1 resize-y text-xs"
             />
           </div>
-          <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
-            <Label className="w-6 shrink-0 text-xs">右</Label>
-            <Input
+          <div className="bg-muted/50 flex items-start gap-2 rounded-lg border p-2">
+            <Label className="w-6 shrink-0 pt-1 text-xs">右</Label>
+            <Textarea
               value={options.footer.right}
               onChange={(e) =>
                 updateOption("footer", {
@@ -294,7 +297,8 @@ export function IndividualReportTab({
                   right: e.target.value,
                 })
               }
-              className="h-6 flex-1 text-xs"
+              rows={2}
+              className="min-h-0 flex-1 resize-y text-xs"
             />
           </div>
         </div>

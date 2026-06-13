@@ -28,6 +28,7 @@ import { useGradeResults } from "@/hooks/grades/useGradeResults"
 
 import { ExcelExportTab } from "./ExcelExportTab"
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
+import { GradeExcelPreview } from "./GradeExcelPreview"
 import { IndividualReportTab } from "./IndividualReportTab"
 import { PreviewPane } from "./PreviewPane"
 import {
@@ -370,12 +371,21 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                 value="preview"
                 className="mt-0 flex min-h-0 flex-1 flex-col"
               >
-                {exportTab !== "individual-report" ? (
-                  <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-gray-100">
-                    <p className="text-muted-foreground text-sm">
-                      個人成績通知書タブでプレビューを確認できます
-                    </p>
-                  </div>
+                {exportTab === "excel" ? (
+                  selectedStudentIds.length === 0 ? (
+                    <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-gray-100">
+                      <p className="text-muted-foreground text-sm">
+                        生徒を選択してください
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="min-h-0 flex-1 overflow-auto rounded-md border p-2">
+                      <GradeExcelPreview
+                        result={result}
+                        selectedStudentIds={selectedStudentIds}
+                      />
+                    </div>
+                  )
                 ) : selectedStudentIds.length === 0 ? (
                   <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-gray-100">
                     <p className="text-muted-foreground text-sm">

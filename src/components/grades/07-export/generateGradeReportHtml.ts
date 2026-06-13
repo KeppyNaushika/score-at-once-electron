@@ -201,9 +201,9 @@ function renderStudentReport(
   const hasFooter = footer.left || footer.center || footer.right
   const footerHtml = hasFooter
     ? `<div class="report-footer">
-        <div class="report-footer-left">${escapeHtml(footer.left)}</div>
-        <div class="report-footer-center">${escapeHtml(footer.center)}</div>
-        <div class="report-footer-right">${escapeHtml(footer.right)}</div>
+        <div class="report-footer-left">${escapeHtmlMultiline(footer.left)}</div>
+        <div class="report-footer-center">${escapeHtmlMultiline(footer.center)}</div>
+        <div class="report-footer-right">${escapeHtmlMultiline(footer.right)}</div>
       </div>`
     : ""
 
@@ -293,6 +293,7 @@ function renderSourceBreakdownSection(
     rawScore: number | null
     maxScore: number
     isEstimated: boolean
+    weightedScore: number | null
     weight: number
   }
 
@@ -309,6 +310,7 @@ function renderSourceBreakdownSection(
         rawScore: source.rawScore,
         maxScore: source.maxScore,
         isEstimated: source.isEstimated,
+        weightedScore: source.weightedScore,
         weight: source.weight,
       })
     }
@@ -319,7 +321,7 @@ function renderSourceBreakdownSection(
   const buildHeaderRow = (): string => {
     const headerCols = [`<th>項目</th>`, `<th>${escapeHtml(label)}</th>`]
     if (srcCols.score) headerCols.push("<th>得点</th>")
-    if (srcCols.weight) headerCols.push("<th>換算満点</th>")
+    if (srcCols.weight) headerCols.push("<th>換算得点</th>")
     return `<tr>${headerCols.join("")}</tr>`
   }
 
@@ -340,7 +342,9 @@ function renderSourceBreakdownSection(
       cells.push(`<td>${score}${estimated} / ${row.maxScore.toFixed(1)}</td>`)
     }
     if (srcCols.weight) {
-      cells.push(`<td>${row.weight.toFixed(2)}</td>`)
+      const weighted =
+        row.weightedScore !== null ? row.weightedScore.toFixed(2) : "-"
+      cells.push(`<td>${weighted} / ${row.weight.toFixed(2)}</td>`)
     }
     return `<tr>${cells.join("")}</tr>`
   }
@@ -400,4 +404,9 @@ function escapeHtml(str: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
+}
+
+/** HTMLエスケープし、改行を <br> に変換する（フッター等の複数行テキスト用） */
+function escapeHtmlMultiline(str: string): string {
+  return escapeHtml(str).replace(/\r?\n/g, "<br>")
 }

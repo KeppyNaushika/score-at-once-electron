@@ -152,6 +152,16 @@ export function createDetailSheet(
     }
   })
 
+  // 番号・氏名以外のヘッダー（データソース名・各観点の合計・総合）はすべて縦書きに
+  // （名前が長く横幅を取るため）
+  for (let i = 3; i <= headers.length; i++) {
+    headerRow.getCell(i).alignment = {
+      textRotation: "vertical",
+      vertical: "middle",
+      horizontal: "center",
+    }
+  }
+
   for (const student of result.students) {
     const row: (string | number | null)[] = [
       student.attendanceNumber,
