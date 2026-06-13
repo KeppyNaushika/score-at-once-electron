@@ -242,6 +242,7 @@ export function AnswerSheetBuilderMainView({
                   majorQuestions={definition.majorQuestions}
                   labelPresets={definition.labelPresets}
                   definitionId={definition.id}
+                  vertical={definition.settings.verticalLayout ?? false}
                   onSetLabelPreset={setLabelPreset}
                   onAddMajor={addMajorQuestion}
                   onUpdateMajor={updateMajorQuestion}
@@ -271,6 +272,7 @@ export function AnswerSheetBuilderMainView({
                 <MultiColumnSettings
                   settings={definition.settings}
                   onUpdate={updateSettings}
+                  vertical={definition.settings.verticalLayout ?? false}
                 />
               </div>
             </ScrollArea>
@@ -285,6 +287,7 @@ export function AnswerSheetBuilderMainView({
                   onUpdate={updateHeaderField}
                   onDelete={deleteHeaderField}
                   onReorder={reorderHeaderFields}
+                  vertical={definition.settings.verticalLayout ?? false}
                 />
               </div>
             </ScrollArea>

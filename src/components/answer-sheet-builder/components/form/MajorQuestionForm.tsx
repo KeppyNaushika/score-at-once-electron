@@ -86,6 +86,8 @@ interface MajorQuestionFormProps {
     fromIndex: number,
     toIndex: number
   ) => void
+  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
+  vertical?: boolean
 }
 
 export function MajorQuestionForm({
@@ -104,6 +106,7 @@ export function MajorQuestionForm({
   onUpdateBranch,
   onDeleteBranch,
   onReorderBranch,
+  vertical = false,
 }: MajorQuestionFormProps) {
   const [isOpen, setIsOpen] = useState(true)
 
@@ -209,6 +212,7 @@ export function MajorQuestionForm({
                   onUpdateBranch={(bi, data) => onUpdateBranch(si, bi, data)}
                   onDeleteBranch={(bi) => onDeleteBranch(si, bi)}
                   onReorderBranch={(from, to) => onReorderBranch(si, from, to)}
+                  vertical={vertical}
                 />
               ))}
             </div>

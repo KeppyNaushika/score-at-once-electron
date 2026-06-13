@@ -12,6 +12,10 @@ interface SliderWithInputProps {
   step: number
   /** 表示小数桁数 (デフォルト: step < 1 なら1、それ以外は0) */
   decimals?: number
+  /** 数値入力欄の下限（スライダーとは別。未指定 = min）。負値・-Infinity 可 */
+  inputMin?: number
+  /** 数値入力欄の上限（スライダーとは別。未指定 = max）。Infinity 可 */
+  inputMax?: number
   onChange: (value: number) => void
 }
 
@@ -22,8 +26,13 @@ export function SliderWithInput({
   max,
   step,
   decimals,
+  inputMin,
+  inputMax,
   onChange,
 }: SliderWithInputProps) {
+  // 入力欄の許容範囲はスライダーと独立に設定できる（既定はスライダーと同じ）
+  const lo = inputMin ?? min
+  const hi = inputMax ?? max
   const displayDecimals = decimals ?? (step < 1 ? 1 : 0)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
@@ -40,11 +49,11 @@ export function SliderWithInput({
     (raw: string) => {
       setEditValue(raw)
       const parsed = parseFloat(raw)
-      if (!isNaN(parsed) && parsed >= min && parsed <= max) {
+      if (!isNaN(parsed) && parsed >= lo && parsed <= hi) {
         onChange(parsed)
       }
     },
-    [min, max, onChange]
+    [lo, hi, onChange]
   )
 
   const startEdit = useCallback(() => {
@@ -72,8 +81,8 @@ export function SliderWithInput({
           aria-label={label}
           className="border-input bg-background box-border h-5 w-10 shrink-0 rounded border text-center text-[10px] outline-none"
           value={editValue}
-          min={min}
-          max={max}
+          min={Number.isFinite(lo) ? lo : undefined}
+          max={Number.isFinite(hi) ? hi : undefined}
           step={step}
           onChange={(e) => handleChange(e.target.value)}
           onBlur={() => setEditing(false)}

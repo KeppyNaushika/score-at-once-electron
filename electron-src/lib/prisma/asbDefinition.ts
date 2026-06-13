@@ -263,6 +263,11 @@ export async function saveAsbDefinition(
             manuscriptColumns: sq.manuscriptPaper?.columns ?? 20,
             manuscriptRows: sq.manuscriptPaper?.rows ?? 10,
             manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
+            manuscriptCharGuides: sq.manuscriptPaper?.charGuides
+              ? JSON.stringify(sq.manuscriptPaper.charGuides)
+              : null,
+            manuscriptGuideFontSize: sq.manuscriptPaper?.guideFontSize ?? null,
+            manuscriptGuidePosition: sq.manuscriptPaper?.guidePosition ?? null,
             borderStyleTop: sq.borderStyles?.top ?? null,
             borderStyleBottom: sq.borderStyles?.bottom ?? null,
             borderStyleLeft: sq.borderStyles?.left ?? null,

@@ -70,12 +70,15 @@ interface QuestionListEditorProps {
     fromIndex: number,
     toIndex: number
   ) => void
+  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
+  vertical?: boolean
 }
 
 export function QuestionListEditor({
   majorQuestions,
   labelPresets,
   definitionId,
+  vertical = false,
   onSetLabelPreset,
   onAddMajor,
   onUpdateMajor,
@@ -178,6 +181,7 @@ export function QuestionListEditor({
             majorIndex={mi}
             totalMajorCount={majorQuestions.length}
             definitionId={definitionId}
+            vertical={vertical}
             onUpdate={(data) => onUpdateMajor(mi, data)}
             onDelete={() => onDeleteMajor(mi)}
             onMoveUp={mi > 0 ? () => onReorderMajor(mi, mi - 1) : undefined}

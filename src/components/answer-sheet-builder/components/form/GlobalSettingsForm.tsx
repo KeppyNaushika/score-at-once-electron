@@ -35,15 +35,15 @@ export function GlobalSettingsForm({
     <div className="space-y-4">
       <h3 className="text-muted-foreground text-sm font-semibold">用紙設定</h3>
 
-      {/* 用紙サイズ・向き・大問番号表示 */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* 用紙サイズ・向き・大問番号・組み方向（2×2で等幅に統一） */}
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">用紙サイズ</Label>
           <Select
             value={settings.paperSize}
             onValueChange={(v) => onUpdate({ paperSize: v as PaperSize })}
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-8 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -61,7 +61,7 @@ export function GlobalSettingsForm({
             value={settings.orientation}
             onValueChange={(v) => onUpdate({ orientation: v as Orientation })}
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-8 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -78,7 +78,7 @@ export function GlobalSettingsForm({
               onUpdate({ numberDisplayMode: v as MajorNumberDisplayMode })
             }
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-8 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -87,7 +87,32 @@ export function GlobalSettingsForm({
             </SelectContent>
           </Select>
         </div>
+        <div>
+          <Label className="text-xs">書字方向</Label>
+          <Select
+            value={settings.verticalLayout ? "vertical" : "horizontal"}
+            onValueChange={(v) =>
+              onUpdate({ verticalLayout: v === "vertical" })
+            }
+          >
+            <SelectTrigger className="h-8 w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="horizontal">横書き</SelectItem>
+              <SelectItem value="vertical">縦書き（国語向け）</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {/* 縦書き時の補足：段組みは上下方向になる */}
+      {settings.verticalLayout && settings.multiColumn.enabled && (
+        <p className="text-muted-foreground text-[10px]">
+          縦書きでは段組みが上下方向（上下{settings.multiColumn.columnCount}
+          段）になります。
+        </p>
+      )}
 
       {/* マージン */}
       <div className="space-y-2">

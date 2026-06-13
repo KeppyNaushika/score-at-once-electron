@@ -79,6 +79,8 @@ interface SubQuestionFormProps {
   onUpdateBranch: (branchIndex: number, data: Partial<BranchQuestion>) => void
   onDeleteBranch: (branchIndex: number) => void
   onReorderBranch: (fromIndex: number, toIndex: number) => void
+  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
+  vertical?: boolean
 }
 
 export function SubQuestionForm({
@@ -93,9 +95,13 @@ export function SubQuestionForm({
   onUpdateBranch,
   onDeleteBranch,
   onReorderBranch,
+  vertical = false,
 }: SubQuestionFormProps) {
   const hasBranches = sub.branchQuestions.length > 0
   const [detailOpen, setDetailOpen] = useState(false)
+  // 縦書きでは見た目の高さ/幅が入れ替わるためラベルだけ入れ替える（内部値は不変）
+  const heightLabel = vertical ? "幅" : "高さ"
+  const widthLabel = vertical ? "高さ" : "幅"
 
   const hasDetailContent =
     sub.textElements.length > 0 ||
@@ -151,13 +157,13 @@ export function SubQuestionForm({
               />
             </div>
           )}
-          {/* 高さ: 枝問なしの時のみ */}
+          {/* 高さ: 枝問なしの時のみ（縦書き時はラベルを「幅」に） */}
           {!hasBranches && (
             <div className="flex items-center gap-0.5 px-1.5">
-              <span className="text-muted-foreground">高さ</span>
+              <span className="text-muted-foreground">{heightLabel}</span>
               <input
                 type="number"
-                aria-label="高さ"
+                aria-label={heightLabel}
                 className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={sub.heightMultiplier}
                 min={1}
@@ -172,11 +178,12 @@ export function SubQuestionForm({
               />
             </div>
           )}
-          {/* 幅 (layoutWidth) - 原稿用紙有効時は列数から自動計算のため非表示 */}
+          {/* 幅 (layoutWidth) - 原稿用紙有効時は列数から自動計算のため非表示。縦書き時はラベルを「高さ」に */}
           {!isManuscriptPaper && (
             <div className="flex items-center gap-0.5 px-1.5">
-              <span className="text-muted-foreground">幅</span>
+              <span className="text-muted-foreground">{widthLabel}</span>
               <input
+                aria-label={widthLabel}
                 className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
                 value={sub.layoutWidth ?? ""}
                 onChange={(e) => {
@@ -192,7 +199,6 @@ export function SubQuestionForm({
                   }
                 }}
                 placeholder="—"
-                aria-label="幅"
               />
             </div>
           )}
@@ -360,6 +366,7 @@ export function SubQuestionForm({
           <TextElementEditor
             textElements={sub.textElements}
             onUpdate={(elements) => onUpdate({ textElements: elements })}
+            vertical={vertical}
           />
           <ImageElementEditor
             imageElements={sub.imageElements ?? []}
@@ -404,6 +411,7 @@ export function SubQuestionForm({
                   ? () => onReorderBranch(bi, bi + 1)
                   : undefined
               }
+              vertical={vertical}
             />
           ))}
         </div>

@@ -809,6 +809,7 @@ model AsbDefinition {
   // GlobalSettings (フラット化)
   paperSize            String  @default("A4")
   orientation          String  @default("portrait")
+  verticalLayout       Boolean @default(false)
   baseRowHeight        Float   @default(12)
   numberDisplayMode    String  @default("multirow")
   marginTop            Float   @default(15)
@@ -835,6 +836,11 @@ model AsbDefinition {
   borderMajorNumberDividerWidth  Float? @default(0.4)
   borderSubNumberDividerWidth    Float? @default(0.4)
   borderBranchNumberDividerWidth Float? @default(0.3)
+  // 原稿用紙マス目罫線（字間=行方向は破線、行間は実線が既定。色は常に黒）
+  borderManuscriptCharDivider      String  @default("dashed")
+  borderManuscriptLineDivider      String  @default("solid")
+  borderManuscriptCharDividerWidth Float?  @default(0.2)
+  borderManuscriptLineDividerWidth Float?  @default(0.2)
   // OMRMarkers
   omrMarkersEnabled Boolean @default(false)
   omrMarkersSizeMm  Float   @default(5)
@@ -916,6 +922,10 @@ model AsbSubQuestion {
   manuscriptColumns  Int     @default(20)
   manuscriptRows     Int     @default(10)
   manuscriptCellSizeMm Float @default(8)
+  // 文字数ガイド: JSON配列 [{atChar,label}]、表示位置・文字サイズ
+  manuscriptCharGuides    String?
+  manuscriptGuideFontSize Float?
+  manuscriptGuidePosition String?
   // BorderStyles (per-side)
   borderStyleTop    String?
   borderStyleBottom String?
