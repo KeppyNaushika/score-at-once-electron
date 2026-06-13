@@ -15,7 +15,7 @@ export function HelpContent06StudentAnswers() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Upload className="h-6 w-6 text-blue-600" />
-          生徒答案の追加と関連付け
+          生徒答案の追加と関連付け - 使い方
         </h2>
         <p className="text-muted-foreground">
           生徒の答案画像をアップロードして、それぞれの生徒に正しく関連付けましょう。
@@ -35,7 +35,7 @@ export function HelpContent06StudentAnswers() {
           <StepItem
             number={2}
             title="並べ方を決める"
-            description="配置戦略で「ページ順」か「生徒順」かを選びます"
+            description="「ページごと」か「生徒ごと」かを選んでください"
             isImportant
           />
           <StepItem
@@ -81,13 +81,17 @@ export function HelpContent06StudentAnswers() {
         >
           <div className="space-y-3">
             <div className="border-l-4 border-green-500 pl-3">
-              <h4 className="text-sm font-medium text-green-700">ページ順</h4>
+              <h4 className="text-sm font-medium text-green-700">
+                ページごと並べる
+              </h4>
               <p className="text-xs text-green-600">
                 1ページ目をまとめて、次に2ページ目をまとめてスキャンした場合
               </p>
             </div>
             <div className="border-l-4 border-blue-500 pl-3">
-              <h4 className="text-sm font-medium text-blue-700">生徒順</h4>
+              <h4 className="text-sm font-medium text-blue-700">
+                生徒ごと並べる
+              </h4>
               <p className="text-xs text-blue-600">
                 生徒Aの全ページ、次に生徒Bの全ページという順でスキャンした場合
               </p>
@@ -132,12 +136,6 @@ export function HelpContent06StudentAnswers() {
             <TipItem type="success">
               答案を移動するときは、採点情報も一緒に移動することをお勧めします。
               答案と採点結果がずれてしまうのを防げます。
-            </TipItem>
-
-            <TipItem type="info">
-              <strong>便利な切り替え：</strong>
-              プレビューを「氏名欄のみ」にすると名前の確認がしやすくなります。
-              すでにある答案を差し替えたいときは「既存答案上書き」をオンにしてください。
             </TipItem>
           </div>
         </HelpSection>

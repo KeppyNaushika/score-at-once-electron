@@ -23,7 +23,7 @@ export function HelpContent04QuestionGroup() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Calculator className="h-6 w-6 text-blue-600" />
-          小計点の設定
+          小計点の設定 - 使い方
         </h2>
         <p className="text-muted-foreground">
           設問の点数を項目別に分けて集計できるよう、関連付けを設定しましょう。
@@ -42,8 +42,8 @@ export function HelpContent04QuestionGroup() {
           />
           <StepItem
             number={2}
-            title="設問と小計項目を関連付け"
-            description="チェックボックスで、各設問がどの小計項目に含まれるかを設定します"
+            title="設問と項目を関連付け"
+            description="チェックボックスで、各設問がどの項目に含まれるかを設定します"
           />
           <StepItem
             number={3}
@@ -81,8 +81,8 @@ export function HelpContent04QuestionGroup() {
             <div>
               <h4 className="mb-2 font-medium">計算のしくみ</h4>
               <p className="text-muted-foreground text-sm">
-                同じグループ内の項目は「どれか1つに該当（OR）」、
-                別々のグループは「すべてに該当（AND）」した設問の点数を合計します
+                同じグループ内の項目は「どれか」、
+                異なるグループ間は「すべて」の条件で計算されます
               </p>
             </div>
           </div>
@@ -101,10 +101,7 @@ export function HelpContent04QuestionGroup() {
               keys="ドラッグ"
               description="まとめてチェック/解除する"
             />
-            <ShortcutItem
-              keys="リセット"
-              description="今回の編集を取り消して直前の状態に戻す"
-            />
+            <ShortcutItem keys="リセット" description="変更を元に戻す" />
           </div>
           <div className="mt-3 rounded-lg bg-blue-50 p-3">
             <p className="text-sm text-blue-800">
@@ -136,8 +133,8 @@ export function HelpContent04QuestionGroup() {
 
             <TipItem type="warning">
               <strong>グループが見つからない：</strong>
-              「グループを追加」を押すと選択画面が開きます。
-              必要なグループがなければ、その中の「新規作成」から作成できます。
+              必要な項目グループがない場合は、
+              「新規作成」で別ページを開いて作成してください。
             </TipItem>
           </div>
         </HelpSection>
@@ -149,8 +146,8 @@ export function HelpContent04QuestionGroup() {
           <div className="space-y-3">
             <TipItem type="success">
               <strong>グループ作成：</strong>
-              新しいグループは「小計点グループ管理」ページで作成・編集でき、
-              複数の試験で使い回せます。
+              新しい項目グループが必要な場合は、
+              「新規作成」ボタンで別ページで作成できます。
             </TipItem>
 
             <TipItem type="success">

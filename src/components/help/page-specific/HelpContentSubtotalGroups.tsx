@@ -14,7 +14,7 @@ export function HelpContentSubtotalGroups() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Settings className="h-6 w-6 text-blue-600" />
-          小計点グループ管理
+          小計点グループ管理 - 使い方
         </h2>
         <p className="text-muted-foreground">
           複数の試験で再利用できる小計項目グループを作成・管理しましょう。
@@ -45,7 +45,7 @@ export function HelpContentSubtotalGroups() {
           <StepItem
             number={4}
             title="保存・利用"
-            description="保存後、試験の「小計点の設定」ページで使えます"
+            description="保存後、試験の04-question-groupページで利用可能"
           />
         </div>
         <TipItem type="info">
@@ -64,7 +64,7 @@ export function HelpContentSubtotalGroups() {
             <StepItem
               number={1}
               title="試験ページに移動"
-              description="各試験の「小計点の設定」ページに移動"
+              description="各試験の「04-question-group」ページに移動"
             />
             <StepItem
               number={2}
@@ -130,7 +130,7 @@ export function HelpContentSubtotalGroups() {
           <div className="space-y-3">
             <TipItem type="warning">
               <strong>削除できない：</strong>
-              設問と関連付け中のグループは削除不可です。試験の「小計点の設定」ページで関連付けを解除してください。
+              設問と関連付け中のグループは削除不可です。04-question-groupページで関連付けを解除してください。
             </TipItem>
 
             <TipItem type="info">
