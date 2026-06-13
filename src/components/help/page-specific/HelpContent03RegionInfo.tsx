@@ -23,7 +23,7 @@ export function HelpContent03RegionInfo() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Settings className="h-6 w-6 text-blue-600" />
-          採点領域の詳細情報設定 - 使い方
+          採点領域の詳細情報設定
         </h2>
         <p className="text-muted-foreground">
           採点する場所に設問番号や配点などの詳しい情報を設定しましょう。
@@ -82,9 +82,17 @@ export function HelpContent03RegionInfo() {
             </div>
             <div>
               <h4 className="mb-2 font-medium">点数の表示場所</h4>
-              <div className="flex flex-wrap gap-2">
+              <div className="mb-3 flex flex-wrap gap-2">
                 <Badge variant="secondary">🏆 合計点</Badge>
                 <Badge variant="secondary">🔢 小計</Badge>
+              </div>
+            </div>
+            <div>
+              <h4 className="mb-2 font-medium">その他</h4>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">✏️ マーク</Badge>
+                <Badge variant="secondary">💬 コメント</Badge>
+                <Badge variant="secondary">⋯ その他</Badge>
               </div>
             </div>
           </div>
@@ -142,9 +150,14 @@ export function HelpContent03RegionInfo() {
             </TipItem>
 
             <TipItem type="success">
-              すべての設定が終わったら、「次へ:
-              小計点の設定」ボタンが表示されます。
-              配点に間違いがないか確認してから次に進みましょう。
+              <strong>マークシート採点：</strong>
+              「設問解答」の行にある「OMR」ボタンから、
+              マークシートを自動で読み取る設定ができます。
+            </TipItem>
+
+            <TipItem type="success">
+              設定が終わったら、「次へ: 小計点の設定」ボタンから次に進めます。
+              配点に間違いがないか確認してから進みましょう。
             </TipItem>
           </div>
         </HelpSection>
