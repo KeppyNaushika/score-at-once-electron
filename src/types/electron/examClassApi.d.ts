@@ -124,7 +124,8 @@ export interface ExamClassAPI {
      */
     addStudentsFromClass: (
       examId: string,
-      classId: string
+      classId: string,
+      activeOnly?: boolean
     ) => Promise<{
       added: number
       skipped: number

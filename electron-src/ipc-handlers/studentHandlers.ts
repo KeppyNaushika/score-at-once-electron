@@ -169,13 +169,19 @@ export function setupStudentHandlers(): void {
     }
   )
 
-  registerHandler("get-classes-not-in-exam", async (examId: string) => {
-    return await getClassesNotInExam(examId)
-  })
+  registerHandler(
+    "get-classes-not-in-exam",
+    async (examId: string, activeOnly = true) => {
+      return await getClassesNotInExam(examId, activeOnly)
+    }
+  )
 
-  registerHandler("get-students-not-in-exam", async (examId: string) => {
-    return await getStudentsNotInExam(examId)
-  })
+  registerHandler(
+    "get-students-not-in-exam",
+    async (examId: string, activeOnly = true) => {
+      return await getStudentsNotInExam(examId, activeOnly)
+    }
+  )
 
   registerSafeHandler(
     "check-grading-data-for-students",

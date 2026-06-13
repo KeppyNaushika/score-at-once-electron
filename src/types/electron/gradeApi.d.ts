@@ -76,8 +76,19 @@ export interface GradeAPI {
       classes?: Array<{
         id: string
         name: string
+        classCode: string | null
+        grade: number | null
         studentCount: number
+        studentNames: string[]
       }>
+      error?: string
+    }>
+    getAvailableStudents: (
+      gradeId: string,
+      activeOnly?: boolean
+    ) => Promise<{
+      success: boolean
+      students?: import("../prismaExtensions").StudentWithMemberships[]
       error?: string
     }>
     addStudentsFromClass: (
@@ -88,6 +99,15 @@ export interface GradeAPI {
       success: boolean
       added?: number
       skipped?: number
+      error?: string
+    }>
+    addStudentsToGrade: (
+      gradeId: string,
+      studentIds: string[]
+    ) => Promise<{
+      success: boolean
+      addedCount?: number
+      skippedCount?: number
       error?: string
     }>
     removeClass: (

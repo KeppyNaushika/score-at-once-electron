@@ -2,36 +2,28 @@
 
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { Plus, RotateCcw, Trash2, Users } from "lucide-react"
+import { RotateCcw, Trash2, Users } from "lucide-react"
 import Link from "next/link"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
   DragHandle,
   SortableTableProvider,
   useSortableRow,
 } from "@/components/common/sortable-table"
+import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
+import type {
+  AddPanelClassItem,
+  AddPanelStudentItem,
+  StudentAddPanelAdapter,
+} from "@/components/common/student-add-panel/types/studentAddPanelTypes"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 
 interface GradeClass {
   id: string
   classId: string
   className: string
   order: number
-  studentCount: number
-}
-
-interface AvailableClass {
-  id: string
-  name: string
   studentCount: number
 }
 
@@ -101,20 +93,14 @@ function SortableRow({
 export function StudentsContainer({ gradeId }: StudentsContainerProps) {
   const [classes, setClasses] = useState<GradeClass[]>([])
   const [students, setStudents] = useState<ExamStudent[]>([])
-  const [availableClasses, setAvailableClasses] = useState<AvailableClass[]>([])
-  const [selectedClassId, setSelectedClassId] = useState("")
   const [loading, setLoading] = useState(true)
-  const [adding, setAdding] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
-  // true: 基準日時点で在籍中の生徒のみ対象（既定） / false: 在籍期間外の生徒も対象
-  const [activeOnly, setActiveOnly] = useState(true)
 
   const loadData = useCallback(async () => {
     try {
-      const [classResult, studentResult, availableResult] = await Promise.all([
+      const [classResult, studentResult] = await Promise.all([
         window.electronAPI.grade.getClasses(gradeId),
         window.electronAPI.grade.getStudents(gradeId),
-        window.electronAPI.grade.getAvailableClasses(gradeId, activeOnly),
       ])
       if (classResult.success && classResult.classes) {
         setClasses(classResult.classes)
@@ -122,39 +108,81 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       if (studentResult.success && studentResult.students) {
         setStudents(studentResult.students)
       }
-      if (availableResult.success && availableResult.classes) {
-        setAvailableClasses(availableResult.classes)
-      }
     } catch (error) {
       console.error("Error loading students data:", error)
     } finally {
       setLoading(false)
     }
-  }, [gradeId, activeOnly])
+  }, [gradeId])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  const handleAddClass = async () => {
-    if (!selectedClassId) return
-    setAdding(true)
-    try {
-      const result = await window.electronAPI.grade.addStudentsFromClass(
-        gradeId,
-        selectedClassId,
-        activeOnly
-      )
-      if (result.success) {
-        setSelectedClassId("")
-        await loadData()
-      }
-    } catch (error) {
-      console.error("Error adding class:", error)
-    } finally {
-      setAdding(false)
-    }
-  }
+  const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
+    () => ({
+      fetchAvailableClasses: async (activeOnly) => {
+        const result = await window.electronAPI.grade.getAvailableClasses(
+          gradeId,
+          activeOnly
+        )
+        if (!result.success || !result.classes) return []
+        return result.classes.map(
+          (c): AddPanelClassItem => ({
+            id: c.id,
+            name: c.name,
+            studentCount: c.studentCount,
+            studentNames: c.studentNames,
+          })
+        )
+      },
+      fetchAvailableStudents: async (activeOnly) => {
+        const result = await window.electronAPI.grade.getAvailableStudents(
+          gradeId,
+          activeOnly
+        )
+        if (!result.success || !result.students) return []
+        return result.students.map(
+          (s): AddPanelStudentItem => ({
+            id: s.id,
+            studentNumber: s.studentNumber,
+            lastName: s.lastName,
+            firstName: s.firstName,
+            lastNameKana: s.lastNameKana,
+            firstNameKana: s.firstNameKana,
+            memberships: s.memberships.map((m) => ({
+              attendanceNumber: m.attendanceNumber,
+              class: { id: m.class.id, name: m.class.name },
+            })),
+          })
+        )
+      },
+      addClasses: async (orderedClassIds, activeOnly) => {
+        for (const classId of orderedClassIds) {
+          const result = await window.electronAPI.grade.addStudentsFromClass(
+            gradeId,
+            classId,
+            activeOnly
+          )
+          if (!result.success) {
+            throw new Error(
+              result.error || `学級 ${classId} の追加に失敗しました`
+            )
+          }
+        }
+      },
+      addStudents: async (studentIds) => {
+        const result = await window.electronAPI.grade.addStudentsToGrade(
+          gradeId,
+          studentIds
+        )
+        if (!result.success) {
+          throw new Error(result.error || "生徒の追加に失敗しました")
+        }
+      },
+    }),
+    [gradeId]
+  )
 
   const handleRemoveClass = async (classId: string) => {
     try {
@@ -254,49 +282,10 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         成績算出の対象生徒を学級単位で追加してください。ドラッグで並び替えできます。
       </p>
 
-      {/* 学級追加 */}
+      {/* 生徒追加（学級まるごと・個別） */}
       <div className="mb-6 rounded-lg border p-4">
-        <h3 className="mb-3 text-sm font-medium">学級を追加</h3>
-        <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-sm">
-          <Switch
-            checked={activeOnly}
-            onCheckedChange={(checked) => {
-              setActiveOnly(checked)
-              setSelectedClassId("")
-            }}
-          />
-          <span>在籍期間内の生徒のみ追加</span>
-          <span className="text-muted-foreground text-xs">
-            （オフにすると在籍期間外の生徒も対象になります）
-          </span>
-        </label>
-        <div className="flex items-center gap-3">
-          <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="学級を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableClasses.map((availableClass) => (
-                <SelectItem key={availableClass.id} value={availableClass.id}>
-                  {availableClass.name}（{availableClass.studentCount}名）
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            onClick={handleAddClass}
-            disabled={!selectedClassId || adding}
-            size="sm"
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            {adding ? "追加中..." : "追加"}
-          </Button>
-        </div>
-        {availableClasses.length === 0 && classes.length > 0 && (
-          <p className="text-muted-foreground mt-2 text-xs">
-            全ての学級が登録済みです
-          </p>
-        )}
+        <h3 className="mb-3 text-sm font-medium">生徒を追加</h3>
+        <StudentAddPanel adapter={addPanelAdapter} onAdded={loadData} />
       </div>
 
       {/* 登録済み学級 */}
