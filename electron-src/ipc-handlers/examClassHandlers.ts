@@ -68,8 +68,8 @@ export function setupExamClassHandlers(): void {
   // Add students from class (B案: 統合型フロー)
   registerHandler(
     "exam-class:add-students-from-class",
-    async (examId: string, classId: string) => {
-      return await addStudentsFromClass(examId, classId)
+    async (examId: string, classId: string, activeOnly = true) => {
+      return await addStudentsFromClass(examId, classId, activeOnly)
     }
   )
 

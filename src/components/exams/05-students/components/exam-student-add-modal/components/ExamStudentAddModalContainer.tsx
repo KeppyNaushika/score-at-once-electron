@@ -1,10 +1,13 @@
 "use client"
 
-import { Plus, UserPlus } from "lucide-react"
+import { useMemo } from "react"
 
-import { ClassSelectionTab } from "@/components/exams/05-students/components/exam-student-add-modal/components/ClassSelectionTab"
-import { IndividualSelectionTab } from "@/components/exams/05-students/components/exam-student-add-modal/components/IndividualSelectionTab"
-import { useExamStudentAddModal } from "@/components/exams/05-students/components/exam-student-add-modal/hooks/useExamStudentAddModal"
+import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
+import type {
+  AddPanelClassItem,
+  AddPanelStudentItem,
+  StudentAddPanelAdapter,
+} from "@/components/common/student-add-panel/types/studentAddPanelTypes"
 import type { ExamStudentAddModalProps } from "@/components/exams/05-students/components/exam-student-add-modal/types/examStudentAddTypes"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,43 +18,107 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+/**
+ * 試験への生徒追加モーダル
+ *
+ * 共通 StudentAddPanel を試験用 adapter で駆動する。学級追加はサーバ集約の
+ * examClass.addStudentsFromClass（ExamClass作成＋customOrder連番）に委譲する。
+ */
 export function ExamStudentAddModalContainer({
   isOpen,
   onClose,
   examId,
   onStudentsAdded,
 }: ExamStudentAddModalProps) {
-  const {
-    activeTab,
-    setActiveTab,
-    availableClasses,
-    searchTerm,
-    setSearchTerm,
-    filterClassId,
-    setFilterClassId,
-    loading,
-    isAdding,
-    filteredStudents,
-    selectedClassCount,
-    selectedStudentCount,
-    handleClassSelection,
-    handleClassReorder,
-    handleStudentSelection,
-    handleAddClassStudents,
-    handleAddIndividualStudents,
-    handleClose,
-  } = useExamStudentAddModal({
-    isOpen,
-    examId,
-    onStudentsAdded,
-    onClose,
-  })
+  const adapter = useMemo<StudentAddPanelAdapter>(
+    () => ({
+      fetchAvailableClasses: async (activeOnly) => {
+        const result = await window.electronAPI.getClassesNotInExam(
+          examId,
+          activeOnly
+        )
+        if (!result.success || !result.classes) return []
+        return result.classes.map(
+          (c): AddPanelClassItem => ({
+            id: c.id,
+            name: c.name,
+            studentCount: c.studentCount,
+            studentNames: c.studentNames,
+          })
+        )
+      },
+      fetchAvailableStudents: async (activeOnly) => {
+        const result = await window.electronAPI.getStudentsNotInExam(
+          examId,
+          activeOnly
+        )
+        if (!result.success || !result.students) return []
+        return result.students.map(
+          (s): AddPanelStudentItem => ({
+            id: s.id,
+            studentNumber: s.studentNumber,
+            lastName: s.lastName,
+            firstName: s.firstName,
+            lastNameKana: s.lastNameKana,
+            firstNameKana: s.firstNameKana,
+            memberships: s.memberships.map((m) => ({
+              attendanceNumber: m.attendanceNumber,
+              class: { id: m.class.id, name: m.class.name },
+            })),
+          })
+        )
+      },
+      addClasses: async (orderedClassIds, activeOnly) => {
+        // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）
+        for (const classId of orderedClassIds) {
+          const result =
+            await window.electronAPI.examClass.addStudentsFromClass(
+              examId,
+              classId,
+              activeOnly
+            )
+          if (!result) {
+            throw new Error(`学級 ${classId} の追加に失敗しました`)
+          }
+        }
+      },
+      addStudents: async (studentIds) => {
+        const result = await window.electronAPI.addStudentsToExam(
+          examId,
+          studentIds
+        )
+        if (!result.success) {
+          throw new Error(result.error || "生徒の追加に失敗しました")
+        }
+
+        // 既存生徒の末尾に customOrder を付与
+        const existing = await window.electronAPI.getStudentsForExam(examId)
+        let startOrder = 0
+        if (existing.success && existing.students) {
+          const others = existing.students.filter(
+            (s) => !studentIds.includes(s.id)
+          )
+          const maxOrder = others.reduce(
+            (max, s) =>
+              s.customOrder != null ? Math.max(max, s.customOrder) : max,
+            -1
+          )
+          startOrder = maxOrder + 1
+        }
+        const studentOrders = studentIds.map((studentId, index) => ({
+          studentId,
+          customOrder: startOrder + index,
+        }))
+        await window.electronAPI.updateStudentOrders(examId, studentOrders)
+      },
+    }),
+    [examId]
+  )
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl overflow-hidden sm:max-w-4xl">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="flex h-[85vh] w-[92vw] max-w-5xl flex-col overflow-hidden sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>受験生徒の追加</DialogTitle>
           <DialogDescription>
@@ -59,62 +126,18 @@ export function ExamStudentAddModalContainer({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="h-full"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="classes">学級で追加</TabsTrigger>
-              <TabsTrigger value="individuals">個別で追加</TabsTrigger>
-            </TabsList>
-
-            <ClassSelectionTab
-              availableClasses={availableClasses}
-              loading={loading}
-              onClassSelection={handleClassSelection}
-              onClassReorder={handleClassReorder}
-            />
-
-            <IndividualSelectionTab
-              availableClasses={availableClasses}
-              searchTerm={searchTerm}
-              filterClassId={filterClassId}
-              loading={loading}
-              filteredStudents={filteredStudents}
-              onSearchChange={setSearchTerm}
-              onFilterClassChange={setFilterClassId}
-              onStudentSelection={handleStudentSelection}
-            />
-          </Tabs>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <StudentAddPanel
+            adapter={adapter}
+            onAdded={onStudentsAdded}
+            fillHeight
+          />
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isAdding}>
-            キャンセル
+          <Button variant="outline" onClick={onClose}>
+            閉じる
           </Button>
-          {activeTab === "classes" ? (
-            <Button
-              onClick={handleAddClassStudents}
-              disabled={selectedClassCount === 0 || isAdding}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {isAdding
-                ? "追加中..."
-                : `選択した学級を追加 (${selectedClassCount}学級)`}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleAddIndividualStudents}
-              disabled={selectedStudentCount === 0 || isAdding}
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              {isAdding
-                ? "追加中..."
-                : `選択した生徒を追加 (${selectedStudentCount}名)`}
-            </Button>
-          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

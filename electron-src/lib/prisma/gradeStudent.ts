@@ -2,15 +2,10 @@
  * GradeStudent / GradeClass のPrisma操作関数
  */
 
+import { getAvailableClassesForTarget } from "./availableClasses"
+import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
-
-/** 基準日時点で有効なmembershipの条件（endDateがnull、または基準日以降） */
-function membershipFilterAt(referenceDate?: Date | null) {
-  const date = referenceDate ?? new Date()
-  return {
-    OR: [{ endDate: null }, { endDate: { gte: date } }],
-  }
-}
+import { membershipFilterAt } from "./membershipFilter"
 
 /** GradeのreferenceDateを取得 */
 async function getExamReferenceDate(gradeId: string): Promise<Date | null> {
@@ -101,39 +96,59 @@ export async function getAvailableClassesForGrade(
 ) {
   try {
     const referenceDate = await getExamReferenceDate(gradeId)
-    const existing = await prisma.gradeClass.findMany({
-      where: { gradeId },
-      select: { classId: true },
-    })
-    const existingIds = existing.map((e) => e.classId)
+    const [existing, gradeStudents] = await Promise.all([
+      prisma.gradeClass.findMany({
+        where: { gradeId },
+        select: { classId: true },
+      }),
+      prisma.gradeStudent.findMany({
+        where: { gradeId },
+        select: { studentId: true },
+      }),
+    ])
 
-    const classes = await prisma.class.findMany({
-      where: {
-        id: existingIds.length > 0 ? { notIn: existingIds } : undefined,
-      },
-      include: {
-        memberships: {
-          where: activeOnly ? membershipFilterAt(referenceDate) : undefined,
-          select: { studentId: true },
-        },
-      },
-      orderBy: [{ grade: "asc" }, { name: "asc" }],
+    const classes = await getAvailableClassesForTarget({
+      existingClassIds: existing.map((e) => e.classId),
+      excludeStudentIds: gradeStudents.map((g) => g.studentId),
+      referenceDate,
+      activeOnly,
     })
 
-    return {
-      success: true,
-      classes: classes
-        .map((c) => ({
-          id: c.id,
-          name: c.name,
-          // 同一生徒の複数在籍歴を重複カウントしないようdistinct
-          studentCount: new Set(c.memberships.map((m) => m.studentId)).size,
-        }))
-        // 対象生徒が0名の学級は非表示（activeOnlyスイッチの状態に連動）
-        .filter((c) => c.studentCount > 0),
-    }
+    return { success: true, classes }
   } catch (error) {
     console.error("Error getting available classes:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * まだ追加されていない生徒一覧を取得（個別追加用）
+ *
+ * @param activeOnly trueなら「終了していない所属が1件以上ある生徒」のみ。
+ */
+export async function getAvailableStudentsForGrade(
+  gradeId: string,
+  activeOnly = true
+) {
+  try {
+    const referenceDate = await getExamReferenceDate(gradeId)
+    const gradeStudents = await prisma.gradeStudent.findMany({
+      where: { gradeId },
+      select: { studentId: true },
+    })
+
+    const students = await getAvailableStudentsForTarget({
+      excludeStudentIds: gradeStudents.map((g) => g.studentId),
+      referenceDate,
+      activeOnly,
+    })
+
+    return { success: true, students }
+  } catch (error) {
+    console.error("Error getting available students:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -223,6 +238,54 @@ export async function addStudentsFromClassToGrade(
     }
   } catch (error) {
     console.error("Error adding students from class:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * 生徒を個別に成績へ追加（学級を介さない）
+ *
+ * 既存の対象生徒を除外し、末尾の customOrder 連番を付与して追加する。
+ * GradeStudent は status を持たない点が ExamStudent との差。
+ */
+export async function addStudentsToGrade(
+  gradeId: string,
+  studentIds: string[]
+) {
+  try {
+    const existing = await prisma.gradeStudent.findMany({
+      where: { gradeId },
+      select: { studentId: true, customOrder: true },
+    })
+    const existingIds = new Set(existing.map((e) => e.studentId))
+    const maxCustomOrder = existing.reduce(
+      (max, e) => Math.max(max, e.customOrder ?? 0),
+      0
+    )
+
+    const newStudentIds = studentIds.filter((id) => !existingIds.has(id))
+    let orderOffset = maxCustomOrder + 1
+
+    if (newStudentIds.length > 0) {
+      await prisma.gradeStudent.createMany({
+        data: newStudentIds.map((studentId) => ({
+          gradeId,
+          studentId,
+          customOrder: orderOffset++,
+        })),
+      })
+    }
+
+    return {
+      success: true,
+      addedCount: newStudentIds.length,
+      skippedCount: studentIds.length - newStudentIds.length,
+    }
+  } catch (error) {
+    console.error("Error adding students to grade:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

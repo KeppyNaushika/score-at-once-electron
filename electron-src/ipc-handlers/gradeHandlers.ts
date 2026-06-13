@@ -54,7 +54,9 @@ import {
 } from "../lib/prisma/gradeOverride"
 import {
   addStudentsFromClassToGrade,
+  addStudentsToGrade,
   getAvailableClassesForGrade,
+  getAvailableStudentsForGrade,
   getGradeClasses,
   getStudentsByGradeId,
   removeClassFromGrade,
@@ -143,9 +145,23 @@ export function setupGradeHandlers(): void {
   )
 
   registerHandler(
+    "grade:getAvailableStudents",
+    async (gradeId: string, activeOnly = true) => {
+      return getAvailableStudentsForGrade(gradeId, activeOnly)
+    }
+  )
+
+  registerHandler(
     "grade:addStudentsFromClass",
     async (gradeId: string, classId: string, activeOnly = true) => {
       return addStudentsFromClassToGrade(gradeId, classId, activeOnly)
+    }
+  )
+
+  registerHandler(
+    "grade:addStudentsToGrade",
+    async (gradeId: string, studentIds: string[]) => {
+      return addStudentsToGrade(gradeId, studentIds)
     }
   )
 

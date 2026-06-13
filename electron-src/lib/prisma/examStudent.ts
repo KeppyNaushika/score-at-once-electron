@@ -1,6 +1,19 @@
+import { getAvailableClassesForTarget } from "./availableClasses"
+import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
 // ExamStudentStatus enum は削除されたため、文字列として定義
 type ExamStudentStatus = "PARTICIPATING" | "EXPECTED" | "ABSENT"
+
+/** Exam.examDate を在籍判定の基準日として取得（未設定なら null → 現在日時扱い） */
+export async function getExamReferenceDate(
+  examId: string
+): Promise<Date | null> {
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    select: { examDate: true },
+  })
+  return exam?.examDate ?? null
+}
 
 /**
  * 試験に関連する生徒を取得
@@ -224,50 +237,28 @@ export async function updateStudentOrders(
 }
 
 /**
- * 試験に参加していない学級を取得
+ * 試験に追加できる学級候補を取得
+ *
+ * 既に参加している生徒を除いた在籍生徒数で 0名学級を非表示にする。
+ * @param activeOnly true なら基準日(examDate)時点で在籍中の生徒のみ数える（既定）。
+ *   false なら過去所属も含めて数える。
  */
-export async function getClassesNotInExam(examId: string) {
+export async function getClassesNotInExam(examId: string, activeOnly = true) {
   try {
-    // 全ての学級を取得（所属期限を無視）
-    const allClasses = await prisma.class.findMany({
-      include: {
-        memberships: {
-          include: {
-            student: true,
-          },
-          // endDate条件を削除 - 期限切れでも採点できるべき
-        },
-      },
-    })
-
-    // 試験に既に参加している生徒IDを取得
+    const referenceDate = await getExamReferenceDate(examId)
     const examStudents = await prisma.examStudent.findMany({
       where: { examId },
       select: { studentId: true },
     })
-    const participatingStudentIds = new Set(
-      examStudents.map((ps) => ps.studentId)
-    )
 
-    // 試験に参加していない学級を抽出
-    const availableClasses = allClasses
-      .map((cls) => {
-        const allStudents = cls.memberships.map((m) => m.student)
-        const nonParticipatingStudents = allStudents.filter(
-          (student) => !participatingStudentIds.has(student.id)
-        )
+    const classes = await getAvailableClassesForTarget({
+      existingClassIds: [],
+      excludeStudentIds: examStudents.map((ps) => ps.studentId),
+      referenceDate,
+      activeOnly,
+    })
 
-        return {
-          ...cls,
-          studentCount: nonParticipatingStudents.length,
-        }
-      })
-      .filter((cls) => cls.studentCount > 0)
-
-    return {
-      success: true,
-      classes: availableClasses,
-    }
+    return { success: true, classes }
   } catch (error) {
     console.error("Error fetching classes not in exam:", error)
     return {
@@ -278,42 +269,25 @@ export async function getClassesNotInExam(examId: string) {
 }
 
 /**
- * 試験に参加していない生徒を取得（検索・フィルタ機能付き）
+ * 試験に追加できる生徒候補を取得（個別追加用）
+ *
+ * @param activeOnly true なら「終了していない所属が1件以上ある生徒」のみ（既定）。
  */
-export async function getStudentsNotInExam(examId: string) {
+export async function getStudentsNotInExam(examId: string, activeOnly = true) {
   try {
-    // 試験に既に参加している生徒IDを取得
+    const referenceDate = await getExamReferenceDate(examId)
     const examStudents = await prisma.examStudent.findMany({
       where: { examId },
       select: { studentId: true },
     })
-    const participatingStudentIds = new Set(
-      examStudents.map((ps) => ps.studentId)
-    )
 
-    // 試験に参加していない生徒を取得
-    const availableStudents = await prisma.student.findMany({
-      where: {
-        id: {
-          notIn: Array.from(participatingStudentIds),
-        },
-      },
-      include: {
-        memberships: {
-          include: {
-            class: true,
-          },
-          orderBy: {
-            startDate: "desc",
-          },
-        },
-      },
+    const students = await getAvailableStudentsForTarget({
+      excludeStudentIds: examStudents.map((ps) => ps.studentId),
+      referenceDate,
+      activeOnly,
     })
 
-    return {
-      success: true,
-      students: availableStudents,
-    }
+    return { success: true, students }
   } catch (error) {
     console.error("Error fetching students not in exam:", error)
     return {

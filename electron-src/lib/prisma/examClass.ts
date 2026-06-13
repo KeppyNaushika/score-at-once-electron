@@ -3,6 +3,8 @@ import { ExamClass, Prisma } from "@prisma/client"
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
 
 import prisma from "./client"
+import { getExamReferenceDate } from "./examStudent"
+import { membershipFilterAt } from "./membershipFilter"
 
 /**
  * 試験内の全生徒の学級・出席番号情報
@@ -334,13 +336,16 @@ export const getAvailableClassesForExam = async (
  */
 export const addStudentsFromClass = async (
   examId: string,
-  classId: string
+  classId: string,
+  activeOnly = true
 ): Promise<{
   added: number
   skipped: number
   examClass: ExamClass
 }> => {
   try {
+    const referenceDate = await getExamReferenceDate(examId)
+
     // 1. 現在の ExamClass の最大 order を取得
     const maxOrderResult = await prisma.examClass.aggregate({
       where: { examId },
@@ -365,9 +370,12 @@ export const addStudentsFromClass = async (
       },
     })
 
-    // 3. クラスの生徒を出席番号順で取得
+    // 3. クラスの生徒を出席番号順で取得（activeOnlyなら基準日時点で在籍中のみ）
     const memberships = await prisma.studentClassMembership.findMany({
-      where: { classId },
+      where: {
+        classId,
+        ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
+      },
       orderBy: [{ attendanceNumber: "asc" }],
       include: { student: true },
     })

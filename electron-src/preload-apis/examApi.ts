@@ -60,10 +60,10 @@ export function createExamApi() {
       ),
     checkGradingDataForStudents: (examId: string, studentIds: string[]) =>
       ipcRenderer.invoke("check-grading-data-for-students", examId, studentIds),
-    getClassesNotInExam: (examId: string) =>
-      ipcRenderer.invoke("get-classes-not-in-exam", examId),
-    getStudentsNotInExam: (examId: string) =>
-      ipcRenderer.invoke("get-students-not-in-exam", examId),
+    getClassesNotInExam: (examId: string, activeOnly?: boolean) =>
+      ipcRenderer.invoke("get-classes-not-in-exam", examId, activeOnly),
+    getStudentsNotInExam: (examId: string, activeOnly?: boolean) =>
+      ipcRenderer.invoke("get-students-not-in-exam", examId, activeOnly),
     updateStudentOrders: (
       examId: string,
       studentOrders: { studentId: string; customOrder: number }[]

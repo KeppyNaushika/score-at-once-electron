@@ -43,12 +43,25 @@ interface ClassStudentExamResult {
 export interface ClassStudentAPI {
   // Class related
   fetchClasses: () => Promise<ClassWithMemberships[]>
-  getClassesNotInExam: (examId: string) => Promise<{
+  getClassesNotInExam: (
+    examId: string,
+    activeOnly?: boolean
+  ) => Promise<{
     success: boolean
-    classes?: (ClassWithMemberships & { studentCount: number })[]
+    classes?: Array<{
+      id: string
+      name: string
+      classCode: string | null
+      grade: number | null
+      studentCount: number
+      studentNames: string[]
+    }>
     error?: string
   }>
-  getStudentsNotInExam: (examId: string) => Promise<{
+  getStudentsNotInExam: (
+    examId: string,
+    activeOnly?: boolean
+  ) => Promise<{
     success: boolean
     students?: StudentWithMemberships[]
     error?: string

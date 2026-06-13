@@ -30,11 +30,16 @@ export function createExamClassApi() {
         ipcRenderer.invoke("exam-class:reorder", options),
       removeByIds: (examId: string, classId: string) =>
         ipcRenderer.invoke("exam-class:remove-by-ids", examId, classId),
-      addStudentsFromClass: (examId: string, classId: string) =>
+      addStudentsFromClass: (
+        examId: string,
+        classId: string,
+        activeOnly?: boolean
+      ) =>
         ipcRenderer.invoke(
           "exam-class:add-students-from-class",
           examId,
-          classId
+          classId,
+          activeOnly
         ),
       getStudentClassInfo: (examId: string) =>
         ipcRenderer.invoke("exam-class:get-student-class-info", examId),

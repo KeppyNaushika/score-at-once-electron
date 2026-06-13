@@ -10,20 +10,22 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 
-interface AvailableClass {
+interface SortableClassItemData {
   id: string
   name: string
   studentCount: number
-  isSelected: boolean
-  order?: number
 }
 
 interface SortableClassListProps {
-  selectedClasses: AvailableClass[]
-  onReorder: (reorderedClasses: AvailableClass[]) => void
+  selectedClasses: SortableClassItemData[]
+  onReorder: (orderedIds: string[]) => void
 }
 
-function SortableClassItem({ classItem }: { classItem: AvailableClass }) {
+function SortableClassItem({
+  classItem,
+}: {
+  classItem: SortableClassItemData
+}) {
   const { setNodeRef, style, isDragging, dragHandleProps } = useSortableRow(
     classItem.id
   )
@@ -47,7 +49,10 @@ function SortableClassItem({ classItem }: { classItem: AvailableClass }) {
   )
 }
 
-export default function SortableClassList({
+/**
+ * 選択済み学級の追加順をドラッグで並び替えるリスト
+ */
+export function SortableClassList({
   selectedClasses,
   onReorder,
 }: SortableClassListProps) {
@@ -84,10 +89,10 @@ export default function SortableClassList({
 
         if (oldIndex === -1 || newIndex === -1) return
 
-        const reorderedClasses = [...selectedClasses]
-        const [removed] = reorderedClasses.splice(oldIndex, 1)
-        reorderedClasses.splice(newIndex, 0, removed)
-        onReorder(reorderedClasses)
+        const reordered = [...selectedClasses]
+        const [removed] = reordered.splice(oldIndex, 1)
+        reordered.splice(newIndex, 0, removed)
+        onReorder(reordered.map((classItem) => classItem.id))
       }}
       dragOverlay={
         activeClass ? (

@@ -28,6 +28,10 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:getClasses", gradeId),
       getAvailableClasses: (gradeId: string, activeOnly?: boolean) =>
         ipcRenderer.invoke("grade:getAvailableClasses", gradeId, activeOnly),
+      getAvailableStudents: (gradeId: string, activeOnly?: boolean) =>
+        ipcRenderer.invoke("grade:getAvailableStudents", gradeId, activeOnly),
+      addStudentsToGrade: (gradeId: string, studentIds: string[]) =>
+        ipcRenderer.invoke("grade:addStudentsToGrade", gradeId, studentIds),
       addStudentsFromClass: (
         gradeId: string,
         classId: string,

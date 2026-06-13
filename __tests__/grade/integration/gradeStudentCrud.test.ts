@@ -19,7 +19,9 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 
 import {
   addStudentsFromClassToGrade,
+  addStudentsToGrade,
   getAvailableClassesForGrade,
+  getAvailableStudentsForGrade,
   getGradeClasses,
   getStudentsByGradeId,
   removeClassFromGrade,
@@ -247,6 +249,155 @@ describe("GradeStudent / GradeClass", () => {
 
       expect(result.success).toBe(true)
       expect(result.classes).toHaveLength(0)
+    })
+  })
+
+  describe("addStudentsToGrade（個別追加）", () => {
+    it("生徒を個別に追加できる", async () => {
+      const { grade, student3 } = await createTestData()
+
+      const result = await addStudentsToGrade(grade.id, [student3.id])
+
+      expect(result.success).toBe(true)
+      expect(result.addedCount).toBe(1)
+      expect(result.skippedCount).toBe(0)
+
+      const students = await getStudentsByGradeId(grade.id)
+      expect(students.students).toHaveLength(1)
+      expect(students.students![0].student.lastName).toBe("鈴木")
+    })
+
+    it("既に追加済みの生徒はスキップされる", async () => {
+      const { grade, student3 } = await createTestData()
+
+      await addStudentsToGrade(grade.id, [student3.id])
+      const result = await addStudentsToGrade(grade.id, [student3.id])
+
+      expect(result.addedCount).toBe(0)
+      expect(result.skippedCount).toBe(1)
+    })
+
+    it("customOrderが既存の末尾に連番で付与される", async () => {
+      const { grade, classA, student3 } = await createTestData()
+
+      // 学級から2名追加（customOrder 1,2）
+      await addStudentsFromClassToGrade(grade.id, classA.id)
+      // 個別で student3 を追加 → customOrder 3
+      await addStudentsToGrade(grade.id, [student3.id])
+
+      const students = await getStudentsByGradeId(grade.id)
+      const target = students.students!.find((s) => s.studentId === student3.id)
+      expect(target?.customOrder).toBe(3)
+    })
+  })
+
+  describe("getAvailableStudentsForGrade（個別追加候補）", () => {
+    /** 未所属の生徒と、所属が終了済みの生徒を追加する */
+    async function addEdgeCaseStudents(classId: string) {
+      const noMembership = await testPrisma.student.create({
+        data: {
+          studentNumber: "S100",
+          lastName: "未所属",
+          firstName: "太郎",
+          lastNameKana: "ミショゾク",
+          firstNameKana: "タロウ",
+        },
+      })
+      const ended = await testPrisma.student.create({
+        data: {
+          studentNumber: "S101",
+          lastName: "卒業",
+          firstName: "花子",
+          lastNameKana: "ソツギョウ",
+          firstNameKana: "ハナコ",
+        },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: {
+          studentId: ended.id,
+          classId,
+          attendanceNumber: 50,
+          startDate: new Date("2019-04-01"),
+          endDate: new Date("2020-03-31"),
+        },
+      })
+      return { noMembership, ended }
+    }
+
+    it("activeOnly=true は在籍中の所属がある生徒のみ返す", async () => {
+      const { grade, classA } = await createTestData()
+      await addEdgeCaseStudents(classA.id)
+
+      const result = await getAvailableStudentsForGrade(grade.id, true)
+
+      expect(result.success).toBe(true)
+      // student1,2,3 のみ（未所属・卒業済みは除外）
+      expect(result.students).toHaveLength(3)
+      const numbers = result.students!.map((s) => s.studentNumber).sort()
+      expect(numbers).toEqual(["S001", "S002", "S003"])
+    })
+
+    it("activeOnly=false は未所属・在籍終了の生徒も含む", async () => {
+      const { grade, classA } = await createTestData()
+      await addEdgeCaseStudents(classA.id)
+
+      const result = await getAvailableStudentsForGrade(grade.id, false)
+
+      expect(result.success).toBe(true)
+      // 3 + 未所属 + 卒業済み = 5
+      expect(result.students).toHaveLength(5)
+    })
+
+    it("既に成績へ追加済みの生徒は候補から除外される", async () => {
+      const { grade, classA } = await createTestData()
+      // classAの student1,2 を追加
+      await addStudentsFromClassToGrade(grade.id, classA.id)
+
+      const result = await getAvailableStudentsForGrade(grade.id, true)
+
+      // 残りは student3 のみ
+      expect(result.students).toHaveLength(1)
+      expect(result.students![0].studentNumber).toBe("S003")
+    })
+  })
+
+  describe("getAvailableClassesForGrade（在籍フィルタ）", () => {
+    it("在籍中の生徒が0名の学級は activeOnly=true で非表示", async () => {
+      const { grade } = await createTestData()
+
+      // 在籍終了済みの生徒だけが所属する学級C
+      const classC = await testPrisma.class.create({
+        data: { name: "1年C組", grade: 1 },
+      })
+      const alum = await testPrisma.student.create({
+        data: {
+          studentNumber: "S200",
+          lastName: "退学",
+          firstName: "次郎",
+          lastNameKana: "タイガク",
+          firstNameKana: "ジロウ",
+        },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: {
+          studentId: alum.id,
+          classId: classC.id,
+          attendanceNumber: 1,
+          startDate: new Date("2019-04-01"),
+          endDate: new Date("2020-03-31"),
+        },
+      })
+
+      const activeResult = await getAvailableClassesForGrade(grade.id, true)
+      const activeNames = activeResult.classes!.map((c) => c.name)
+      // classC は在籍中0名なので非表示（classA, classB は表示）
+      expect(activeNames).not.toContain("1年C組")
+      expect(activeNames).toEqual(expect.arrayContaining(["1年A組", "1年B組"]))
+
+      const allResult = await getAvailableClassesForGrade(grade.id, false)
+      const allNames = allResult.classes!.map((c) => c.name)
+      // activeOnly=false なら在籍終了の生徒も数えるので classC も表示
+      expect(allNames).toContain("1年C組")
     })
   })
 
