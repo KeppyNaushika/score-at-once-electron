@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen } from "lucide-react"
+import { Info } from "lucide-react"
 import { usePathname } from "next/navigation"
 import React, { useState } from "react"
 
@@ -13,17 +13,16 @@ import { HelpContent06StudentAnswers as StudentAnswersHelpContent } from "@/comp
 import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent07Scoring"
 import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent08Export"
 import { HelpContentClasses as ClassesHelpContent } from "@/components/help/page-specific/HelpContentClasses"
-import { HelpContentStudents as StudentsMasterHelpContent } from "@/components/help/page-specific/HelpContentStudents"
 import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 
 // ページごとのヘルプコンポーネント
 const pageHelpComponents: {
@@ -39,10 +38,10 @@ const pageHelpComponents: {
   "08-export": ExportHelpContent,
   "subtotal-groups": SubtotalGroupsHelpContent,
   classes: ClassesHelpContent,
-  students: StudentsMasterHelpContent,
+  students: StudentsHelpContent,
 }
 
-/** 現在のページに対応するヘルプコンテンツを全画面モーダルで表示するフック */
+/** 現在のページに対応するヘルプコンテンツをDrawer表示するフック */
 export function usePageHelp() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
@@ -91,40 +90,32 @@ export function usePageHelp() {
       "07-score-at-once": "一括採点",
       "08-export": "結果出力",
       "subtotal-groups": "小計点グループ管理",
-      classes: "学級管理",
-      students: "生徒管理",
     }
-    return (currentPageId && titles[currentPageId]) || "ヘルプ"
+    return currentPageId ? titles[currentPageId] : "ヘルプ"
   }
 
   const createHelpButton = () => {
     if (!CurrentHelpComponent) return null
 
     return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5 text-gray-600">
-            <BookOpen className="h-4 w-4" />
-            使い方
+      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+        <DrawerTrigger asChild>
+          <Button variant="ghost" size="sm" className="relative">
+            <Info className="h-4 w-4" />
           </Button>
-        </DialogTrigger>
-        <DialogContent className="flex h-[92vh] w-[95vw] max-w-[1400px] flex-col gap-0 overflow-hidden border-gray-200 bg-white p-0 sm:max-w-[1400px]">
-          <DialogHeader className="shrink-0 border-b border-gray-100 px-6 py-4 text-left lg:px-10">
-            <DialogTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
-              <BookOpen className="h-4 w-4 text-blue-600" />
-              使い方ガイド
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              {getPageTitle()}の操作方法とヒントを確認できます
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-x-hidden overflow-y-auto bg-white">
-            <article className="mx-auto w-full max-w-4xl px-6 py-10 sm:px-10 lg:px-14">
-              <CurrentHelpComponent />
-            </article>
+        </DrawerTrigger>
+        <DrawerContent className="h-[80vh]">
+          <DrawerHeader>
+            <DrawerTitle>{getPageTitle()}の使い方</DrawerTitle>
+            <DrawerDescription>
+              このページの操作方法とヒントを確認できます
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <CurrentHelpComponent />
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     )
   }
 

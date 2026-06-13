@@ -15,7 +15,7 @@ export function HelpContent02Template() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Target className="h-6 w-6 text-blue-600" />
-          答案の採点領域作成
+          答案の採点領域作成 - 使い方
         </h2>
         <p className="text-muted-foreground">
           模範解答の上に採点したい範囲を四角で囲んで、採点の準備をしましょう。
@@ -45,7 +45,7 @@ export function HelpContent02Template() {
           <StepItem
             number={4}
             title="自動で保存"
-            description="範囲を作成・移動・削除すると自動的に保存されます"
+            description="設定は自動的に保存されます"
             isImportant
           />
         </div>
@@ -85,7 +85,7 @@ export function HelpContent02Template() {
             <ul className="space-y-1 text-sm text-blue-800">
               <li>• 解答が書かれる範囲より少し大きめに囲みましょう</li>
               <li>• 問題文は囲まず、解答部分だけを囲みます</li>
-              <li>• Delete または Backspace キーで選んだ範囲を削除できます</li>
+              <li>• Deleteキーで選んだ範囲を削除できます</li>
             </ul>
           </div>
         </HelpSection>
@@ -101,8 +101,7 @@ export function HelpContent02Template() {
           <div className="space-y-3">
             <TipItem type="info">
               <strong>範囲を間違えた：</strong>
-              間違えた範囲をクリックして選んでから、Delete または Backspace
-              キーを押すと削除できます。
+              間違えた範囲をクリックして選んでから、Deleteキーを押すと削除できます。
               もう一度正しい範囲をドラッグして囲み直してください。
             </TipItem>
 
@@ -126,9 +125,9 @@ export function HelpContent02Template() {
             </TipItem>
 
             <TipItem type="success">
-              表示中のページに採点範囲を1つ以上作ると、「次へ:
+              すべてのページで採点範囲を囲み終わると、 「次へ:
               採点領域の詳細情報設定」ボタンが表示されます。
-              複数ページがある場合は、すべてのページで囲んでから次に進みましょう。
+              全部終わってから次に進みましょう。
             </TipItem>
           </div>
         </HelpSection>
