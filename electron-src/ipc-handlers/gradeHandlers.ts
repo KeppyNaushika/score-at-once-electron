@@ -135,14 +135,17 @@ export function setupGradeHandlers(): void {
     return getGradeClasses(gradeId)
   })
 
-  registerHandler("grade:getAvailableClasses", async (gradeId: string) => {
-    return getAvailableClassesForGrade(gradeId)
-  })
+  registerHandler(
+    "grade:getAvailableClasses",
+    async (gradeId: string, activeOnly = true) => {
+      return getAvailableClassesForGrade(gradeId, activeOnly)
+    }
+  )
 
   registerHandler(
     "grade:addStudentsFromClass",
-    async (gradeId: string, classId: string) => {
-      return addStudentsFromClassToGrade(gradeId, classId)
+    async (gradeId: string, classId: string, activeOnly = true) => {
+      return addStudentsFromClassToGrade(gradeId, classId, activeOnly)
     }
   )
 
