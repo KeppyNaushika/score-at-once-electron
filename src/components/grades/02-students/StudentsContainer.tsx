@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 interface GradeClass {
   id: string
@@ -105,13 +106,15 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
+  // true: 基準日時点で在籍中の生徒のみ対象（既定） / false: 在籍期間外の生徒も対象
+  const [activeOnly, setActiveOnly] = useState(true)
 
   const loadData = useCallback(async () => {
     try {
       const [classResult, studentResult, availableResult] = await Promise.all([
         window.electronAPI.grade.getClasses(gradeId),
         window.electronAPI.grade.getStudents(gradeId),
-        window.electronAPI.grade.getAvailableClasses(gradeId),
+        window.electronAPI.grade.getAvailableClasses(gradeId, activeOnly),
       ])
       if (classResult.success && classResult.classes) {
         setClasses(classResult.classes)
@@ -127,7 +130,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
     } finally {
       setLoading(false)
     }
-  }, [gradeId])
+  }, [gradeId, activeOnly])
 
   useEffect(() => {
     loadData()
@@ -139,7 +142,8 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
     try {
       const result = await window.electronAPI.grade.addStudentsFromClass(
         gradeId,
-        selectedClassId
+        selectedClassId,
+        activeOnly
       )
       if (result.success) {
         setSelectedClassId("")
@@ -253,6 +257,19 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       {/* 学級追加 */}
       <div className="mb-6 rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-medium">学級を追加</h3>
+        <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-sm">
+          <Switch
+            checked={activeOnly}
+            onCheckedChange={(checked) => {
+              setActiveOnly(checked)
+              setSelectedClassId("")
+            }}
+          />
+          <span>在籍期間内の生徒のみ追加</span>
+          <span className="text-muted-foreground text-xs">
+            （オフにすると在籍期間外の生徒も対象になります）
+          </span>
+        </label>
         <div className="flex items-center gap-3">
           <Select value={selectedClassId} onValueChange={setSelectedClassId}>
             <SelectTrigger className="w-64">

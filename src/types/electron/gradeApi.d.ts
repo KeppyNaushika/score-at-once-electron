@@ -68,7 +68,10 @@ export interface GradeAPI {
       }>
       error?: string
     }>
-    getAvailableClasses: (gradeId: string) => Promise<{
+    getAvailableClasses: (
+      gradeId: string,
+      activeOnly?: boolean
+    ) => Promise<{
       success: boolean
       classes?: Array<{
         id: string
@@ -79,7 +82,8 @@ export interface GradeAPI {
     }>
     addStudentsFromClass: (
       gradeId: string,
-      classId: string
+      classId: string,
+      activeOnly?: boolean
     ) => Promise<{
       success: boolean
       added?: number

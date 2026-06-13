@@ -90,8 +90,15 @@ export async function getGradeClasses(gradeId: string) {
 
 /**
  * まだ登録されていない学級一覧を取得
+ *
+ * @param activeOnly trueなら基準日時点で在籍中の生徒のみを数える（既定）。
+ *   falseなら在籍期間に関わらず学級に在籍歴のある全生徒を数える。
+ *   いずれの場合も、対象生徒が0名の学級は候補から除外する。
  */
-export async function getAvailableClassesForGrade(gradeId: string) {
+export async function getAvailableClassesForGrade(
+  gradeId: string,
+  activeOnly = true
+) {
   try {
     const referenceDate = await getExamReferenceDate(gradeId)
     const existing = await prisma.gradeClass.findMany({
@@ -106,8 +113,8 @@ export async function getAvailableClassesForGrade(gradeId: string) {
       },
       include: {
         memberships: {
-          where: membershipFilterAt(referenceDate),
-          select: { id: true },
+          where: activeOnly ? membershipFilterAt(referenceDate) : undefined,
+          select: { studentId: true },
         },
       },
       orderBy: [{ grade: "asc" }, { name: "asc" }],
@@ -115,11 +122,15 @@ export async function getAvailableClassesForGrade(gradeId: string) {
 
     return {
       success: true,
-      classes: classes.map((c) => ({
-        id: c.id,
-        name: c.name,
-        studentCount: c.memberships.length,
-      })),
+      classes: classes
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          // 同一生徒の複数在籍歴を重複カウントしないようdistinct
+          studentCount: new Set(c.memberships.map((m) => m.studentId)).size,
+        }))
+        // 対象生徒が0名の学級は非表示（activeOnlyスイッチの状態に連動）
+        .filter((c) => c.studentCount > 0),
     }
   } catch (error) {
     console.error("Error getting available classes:", error)
@@ -132,10 +143,14 @@ export async function getAvailableClassesForGrade(gradeId: string) {
 
 /**
  * 学級から生徒を一括追加
+ *
+ * @param activeOnly trueなら基準日時点で在籍中の生徒のみ追加する（既定）。
+ *   falseなら在籍期間に関わらず学級に在籍歴のある全生徒を追加する。
  */
 export async function addStudentsFromClassToGrade(
   gradeId: string,
-  classId: string
+  classId: string,
+  activeOnly = true
 ) {
   try {
     const referenceDate = await getExamReferenceDate(gradeId)
@@ -156,9 +171,12 @@ export async function addStudentsFromClassToGrade(
       update: {},
     })
 
-    // 3. 基準日時点で有効な生徒を出席番号順で取得
+    // 3. 対象生徒を出席番号順で取得（activeOnlyなら基準日時点で在籍中のみ）
     const memberships = await prisma.studentClassMembership.findMany({
-      where: { classId, ...membershipFilterAt(referenceDate) },
+      where: {
+        classId,
+        ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
+      },
       orderBy: [
         { attendanceNumber: "asc" },
         { student: { studentNumber: "asc" } },

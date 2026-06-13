@@ -26,10 +26,19 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:getStudents", gradeId),
       getClasses: (gradeId: string) =>
         ipcRenderer.invoke("grade:getClasses", gradeId),
-      getAvailableClasses: (gradeId: string) =>
-        ipcRenderer.invoke("grade:getAvailableClasses", gradeId),
-      addStudentsFromClass: (gradeId: string, classId: string) =>
-        ipcRenderer.invoke("grade:addStudentsFromClass", gradeId, classId),
+      getAvailableClasses: (gradeId: string, activeOnly?: boolean) =>
+        ipcRenderer.invoke("grade:getAvailableClasses", gradeId, activeOnly),
+      addStudentsFromClass: (
+        gradeId: string,
+        classId: string,
+        activeOnly?: boolean
+      ) =>
+        ipcRenderer.invoke(
+          "grade:addStudentsFromClass",
+          gradeId,
+          classId,
+          activeOnly
+        ),
       removeClass: (gradeId: string, classId: string) =>
         ipcRenderer.invoke("grade:removeClass", gradeId, classId),
       updateStudentOrders: (
