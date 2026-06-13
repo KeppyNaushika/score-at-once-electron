@@ -11,11 +11,21 @@ import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParse
 import type { LineStyle, RenderMode } from "@/types/answerSheetDefinition.types"
 import type { DragInfo } from "@/types/answerSheetLayout.types"
 
-/** LineStyle に応じた SVG strokeDasharray / offset / linecap を返す */
+import { DEFAULT_DASH_RATIO, DEFAULT_GAP_RATIO } from "../../constants"
+
+/**
+ * LineStyle に応じた SVG strokeDasharray / offset / linecap を返す。
+ *
+ * dashRatio / gapRatio は線幅に対する倍率。罫線種別ごとに任意の
+ * ダッシュ長・間隔を指定できる（未指定時は既定 dash=3倍 / gap=2倍）。
+ * 点線（dotted）のダッシュ長は固定（ほぼ点）で、gapRatio のみ反映する。
+ */
 export function getDashProps(
   style: LineStyle,
   strokeWidth: number,
-  lineLength: number
+  lineLength: number,
+  dashRatio: number = DEFAULT_DASH_RATIO,
+  gapRatio: number = DEFAULT_GAP_RATIO
 ): {
   strokeDasharray?: string
   strokeDashoffset?: number
@@ -24,12 +34,12 @@ export function getDashProps(
   let dash: number, gap: number
   switch (style) {
     case "dashed":
-      dash = strokeWidth * 3
-      gap = strokeWidth * 2
+      dash = strokeWidth * dashRatio
+      gap = strokeWidth * gapRatio
       break
     case "dotted":
       dash = 0.01
-      gap = strokeWidth * 2
+      gap = strokeWidth * gapRatio
       break
     default:
       return {}

@@ -21,7 +21,8 @@ import type {
 import {
   DEFAULT_MANUSCRIPT_CHAR_DIVIDER,
   DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
-  DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE,
+  DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO,
+  DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO,
   DEFAULT_MANUSCRIPT_GUIDE_POSITION,
   DEFAULT_MANUSCRIPT_LINE_DIVIDER,
 } from "../../constants"
@@ -241,10 +242,15 @@ export function computeManuscriptGrid(
       DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
     // 文字数ガイドは小問ごとの設定。
     charGuides: sub.manuscriptPaper.charGuides ?? [],
+    // guideFontSize/guidePadding はマス比（1マス=1）で保存。cellSizeMm 倍して絶対mmへ。
     guideFontSize:
-      sub.manuscriptPaper.guideFontSize ?? DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE,
+      (sub.manuscriptPaper.guideFontSize ??
+        DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO) * cellSizeMm,
     guidePosition:
       sub.manuscriptPaper.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION,
+    guidePadding:
+      (sub.manuscriptPaper.guidePadding ??
+        DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO) * cellSizeMm,
   }
 }
 

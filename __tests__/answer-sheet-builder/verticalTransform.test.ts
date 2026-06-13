@@ -126,9 +126,13 @@ describe("transformLayoutToVertical", () => {
         charDividerWidth: 0.2,
         lineDividerStyle: "solid",
         lineDividerWidth: 0.2,
-        charGuides: [{ atChar: 80, label: "80" }],
+        charGuides: [
+          { atChar: 80, label: "80" },
+          { atChar: 100, label: "", boundary: "solid" },
+        ],
         guideFontSize: 2.2,
         guidePosition: "bottom-left",
+        guidePadding: 0.8,
       },
     })
     const out = transformLayoutToVertical(makeLayout([cell]), W, H)
@@ -143,7 +147,10 @@ describe("transformLayoutToVertical", () => {
     // 罫線スタイル・ガイドは方向セマンティック/atChar基準のため転置不変で素通り
     expect(g.charDividerStyle).toBe("dashed")
     expect(g.lineDividerStyle).toBe("solid")
-    expect(g.charGuides).toEqual([{ atChar: 80, label: "80" }])
+    expect(g.charGuides).toEqual([
+      { atChar: 80, label: "80" },
+      { atChar: 100, label: "", boundary: "solid" },
+    ])
     expect(g.guidePosition).toBe("bottom-left")
   })
 

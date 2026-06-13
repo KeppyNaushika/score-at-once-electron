@@ -20,11 +20,24 @@ export const DEFAULT_MANUSCRIPT_CHAR_DIVIDER: LineStyle = "dashed"
 export const DEFAULT_MANUSCRIPT_LINE_DIVIDER: LineStyle = "solid"
 /** 原稿用紙マス罫線の太さ（mm）。輪転印刷でかすれないよう黒・実用太さ */
 export const DEFAULT_MANUSCRIPT_DIVIDER_WIDTH = 0.2
-/** 文字数ガイドの既定文字サイズ（mm） */
-export const DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE = 2.2
+/** 文字数ガイドの既定文字サイズ（1マス＝1とした相対値。マス比） */
+export const DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO = 0.3
+/** 文字数ガイドの隅からの既定余白（1マス＝1とした相対値。マス比） */
+export const DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO = 0.05
+/** 区切り罫線（○字以内/以上の目印）の既定太さ（mm） */
+export const DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH = 0.5
 /** 文字数ガイドの既定表示位置（左下が一般的） */
 export const DEFAULT_MANUSCRIPT_GUIDE_POSITION: ManuscriptGuidePosition =
   "bottom-left"
+
+// =====================
+// 破線/点線パターンの既定値
+// =====================
+
+/** 破線のダッシュ長の既定倍率（線幅に対する倍率） */
+export const DEFAULT_DASH_RATIO = 3
+/** 破線/点線の間隔の既定倍率（線幅に対する倍率） */
+export const DEFAULT_GAP_RATIO = 2
 
 // =====================
 // 用紙サイズ定数（mm）

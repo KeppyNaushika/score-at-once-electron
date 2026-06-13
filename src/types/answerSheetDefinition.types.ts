@@ -72,24 +72,39 @@ export type ManuscriptGuidePosition =
   | "bottom-left"
   | "bottom-right"
 
-/** 原稿用紙の文字数ガイド（先頭からN文字目のマスに小さく表示する目印） */
+/**
+ * 原稿用紙の文字位置マーカー（先頭からN文字目に紐づく目印）。
+ * 数字ガイド（label）と区切り罫線（boundary）を1エントリに統合する。
+ * - label が空文字列なら数字は表示しない（区切り罫線のみ使う場合）。
+ * - boundary が未指定なら区切り罫線は引かない（数字ガイドのみ使う場合）。
+ */
 export interface ManuscriptCharGuide {
-  /** 先頭からの文字数（1始まり）。このマスにガイドを表示する */
+  /** 先頭からの文字数（1始まり） */
   atChar: number
-  /** 表示テキスト（既定は atChar の数値） */
+  /** 表示テキスト（空文字列 = 数字非表示） */
   label: string
+  /** 区切り罫線の線種。未指定 = 罫線なし。N文字目の「次」の境界を置き換える */
+  boundary?: LineStyle
+  /** 区切り罫線の太さ（mm）。未指定 = 既定 */
+  boundaryWidth?: number
+  /** 破線のダッシュ長（線幅に対する倍率）。未指定 = 既定 */
+  boundaryDashRatio?: number
+  /** 破線/点線の間隔（線幅に対する倍率）。未指定 = 既定 */
+  boundaryGapRatio?: number
 }
 
 export interface ManuscriptPaperConfig {
   enabled: boolean
   columns: number
   rows: number
-  /** 文字数ガイド（任意マスに先頭からの文字数を小さく表示） */
+  /** 文字位置マーカー（数字ガイド＋区切り罫線の統合リスト） */
   charGuides?: ManuscriptCharGuide[]
-  /** ガイド文字サイズ（mm）。未指定 = 既定 */
+  /** ガイド文字サイズ（1マス＝1とした相対値。マス比）。未指定 = 既定 */
   guideFontSize?: number
   /** ガイド表示位置（マスの隅）。未指定 = "bottom-left" */
   guidePosition?: ManuscriptGuidePosition
+  /** ガイドの隅からの余白（1マス＝1とした相対値。マス比）。未指定 = 既定 */
+  guidePadding?: number
 }
 
 // =====================
@@ -199,6 +214,26 @@ export interface BorderConfig {
   manuscriptLineDivider?: LineStyle
   manuscriptCharDividerWidth?: number
   manuscriptLineDividerWidth?: number
+  // 破線/点線のダッシュ長・間隔（いずれも線幅に対する倍率）。
+  // 未指定時は既定（dash=3倍, gap=2倍）。罫線種別ごとに個別設定できる。
+  outerBorderDashRatio?: number
+  outerBorderGapRatio?: number
+  majorDividerDashRatio?: number
+  majorDividerGapRatio?: number
+  subDividerDashRatio?: number
+  subDividerGapRatio?: number
+  branchDividerDashRatio?: number
+  branchDividerGapRatio?: number
+  majorNumberDividerDashRatio?: number
+  majorNumberDividerGapRatio?: number
+  subNumberDividerDashRatio?: number
+  subNumberDividerGapRatio?: number
+  branchNumberDividerDashRatio?: number
+  branchNumberDividerGapRatio?: number
+  manuscriptCharDividerDashRatio?: number
+  manuscriptCharDividerGapRatio?: number
+  manuscriptLineDividerDashRatio?: number
+  manuscriptLineDividerGapRatio?: number
 }
 
 // =====================

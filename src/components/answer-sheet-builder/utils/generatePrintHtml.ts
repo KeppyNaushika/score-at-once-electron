@@ -63,6 +63,7 @@ async function renderPageSvgHtmls(
           renderMode: effectiveRenderMode,
           forPrint: true,
           imageDataUris,
+          borderConfig: definition.settings.borderConfig,
         })
       )
     )

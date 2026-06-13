@@ -9,6 +9,8 @@ import type {
   LineStyle,
 } from "@/types/answerSheetDefinition.types"
 
+import { DEFAULT_DASH_RATIO, DEFAULT_GAP_RATIO } from "../../constants"
+
 interface LineStylePickerProps {
   borderConfig: BorderConfig
   onUpdate: (config: Partial<BorderConfig>) => void
@@ -23,6 +25,10 @@ const LINE_STYLES: { value: LineStyle; title: string }[] = [
 interface BorderField {
   styleKey: keyof BorderConfig
   widthKey: keyof BorderConfig
+  /** 破線ダッシュ長の倍率キー（線幅に対する倍率） */
+  dashRatioKey: keyof BorderConfig
+  /** 破線/点線の間隔の倍率キー（線幅に対する倍率） */
+  gapRatioKey: keyof BorderConfig
   label: string
   defaultWidth: number
   /** 値未設定時に選択表示する線種（任意フィールド用） */
@@ -33,24 +39,32 @@ const DIVIDER_FIELDS: BorderField[] = [
   {
     styleKey: "outerBorder",
     widthKey: "outerBorderWidth",
+    dashRatioKey: "outerBorderDashRatio",
+    gapRatioKey: "outerBorderGapRatio",
     label: "外枠",
     defaultWidth: 0.7,
   },
   {
     styleKey: "majorDivider",
     widthKey: "majorDividerWidth",
+    dashRatioKey: "majorDividerDashRatio",
+    gapRatioKey: "majorDividerGapRatio",
     label: "大問",
     defaultWidth: 0.5,
   },
   {
     styleKey: "subDivider",
     widthKey: "subDividerWidth",
+    dashRatioKey: "subDividerDashRatio",
+    gapRatioKey: "subDividerGapRatio",
     label: "小問",
     defaultWidth: 0.4,
   },
   {
     styleKey: "branchDivider",
     widthKey: "branchDividerWidth",
+    dashRatioKey: "branchDividerDashRatio",
+    gapRatioKey: "branchDividerGapRatio",
     label: "枝問",
     defaultWidth: 0.3,
   },
@@ -60,6 +74,8 @@ const MANUSCRIPT_FIELDS: BorderField[] = [
   {
     styleKey: "manuscriptCharDivider",
     widthKey: "manuscriptCharDividerWidth",
+    dashRatioKey: "manuscriptCharDividerDashRatio",
+    gapRatioKey: "manuscriptCharDividerGapRatio",
     label: "字間",
     defaultWidth: 0.2,
     defaultStyle: "dashed",
@@ -67,6 +83,8 @@ const MANUSCRIPT_FIELDS: BorderField[] = [
   {
     styleKey: "manuscriptLineDivider",
     widthKey: "manuscriptLineDividerWidth",
+    dashRatioKey: "manuscriptLineDividerDashRatio",
+    gapRatioKey: "manuscriptLineDividerGapRatio",
     label: "行間",
     defaultWidth: 0.2,
     defaultStyle: "solid",
@@ -77,18 +95,24 @@ const NUMBER_FIELDS: BorderField[] = [
   {
     styleKey: "majorNumberDivider",
     widthKey: "majorNumberDividerWidth",
+    dashRatioKey: "majorNumberDividerDashRatio",
+    gapRatioKey: "majorNumberDividerGapRatio",
     label: "大問",
     defaultWidth: 0.4,
   },
   {
     styleKey: "subNumberDivider",
     widthKey: "subNumberDividerWidth",
+    dashRatioKey: "subNumberDividerDashRatio",
+    gapRatioKey: "subNumberDividerGapRatio",
     label: "小問",
     defaultWidth: 0.4,
   },
   {
     styleKey: "branchNumberDivider",
     widthKey: "branchNumberDividerWidth",
+    dashRatioKey: "branchNumberDividerDashRatio",
+    gapRatioKey: "branchNumberDividerGapRatio",
     label: "枝問",
     defaultWidth: 0.3,
   },
@@ -214,46 +238,108 @@ function BorderFieldRow({
   const activeStyle =
     (borderConfig[field.styleKey] as LineStyle | undefined) ??
     field.defaultStyle
+  const dashRatio =
+    (borderConfig[field.dashRatioKey] as number | undefined) ??
+    DEFAULT_DASH_RATIO
+  const gapRatio =
+    (borderConfig[field.gapRatioKey] as number | undefined) ?? DEFAULT_GAP_RATIO
+  // 破線はダッシュ長・間隔の両方、点線は間隔のみ調整できる
+  const showDash = activeStyle === "dashed"
+  const showGap = activeStyle === "dashed" || activeStyle === "dotted"
   return (
-    <div className="flex min-h-6 items-center gap-2">
-      <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
-        {field.label}
-      </span>
-      <div className="border-input flex shrink-0 rounded-md border">
-        {LINE_STYLES.map((ls) => (
-          <button
-            key={ls.value}
-            type="button"
-            title={ls.title}
-            className={cn(
-              "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
-              activeStyle === ls.value
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground"
-            )}
-            onClick={() =>
-              onUpdate({ [field.styleKey]: ls.value as LineStyle })
-            }
-          >
-            <LineIcon style={ls.value} />
-          </button>
-        ))}
+    <div className="space-y-1">
+      <div className="flex min-h-6 items-center gap-2">
+        <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+          {field.label}
+        </span>
+        <div className="border-input flex shrink-0 rounded-md border">
+          {LINE_STYLES.map((ls) => (
+            <button
+              key={ls.value}
+              type="button"
+              title={ls.title}
+              className={cn(
+                "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
+                activeStyle === ls.value
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground"
+              )}
+              onClick={() =>
+                onUpdate({ [field.styleKey]: ls.value as LineStyle })
+              }
+            >
+              <LineIcon style={ls.value} />
+            </button>
+          ))}
+        </div>
+        <Slider
+          className="min-w-12 flex-1"
+          value={[width]}
+          min={0.1}
+          max={1.5}
+          step={0.1}
+          onValueChange={([v]) => onUpdate({ [field.widthKey]: v })}
+        />
+        <EditableValue
+          value={width}
+          min={0.1}
+          max={1.5}
+          step={0.1}
+          onChange={(v) => onUpdate({ [field.widthKey]: v })}
+        />
       </div>
-      <Slider
-        className="min-w-12 flex-1"
-        value={[width]}
-        min={0.1}
-        max={1.5}
-        step={0.1}
-        onValueChange={([v]) => onUpdate({ [field.widthKey]: v })}
-      />
-      <EditableValue
-        value={width}
-        min={0.1}
-        max={1.5}
-        step={0.1}
-        onChange={(v) => onUpdate({ [field.widthKey]: v })}
-      />
+      {showGap && (
+        <div className="flex items-center gap-2 pl-10">
+          {showDash && (
+            <div className="flex flex-1 items-center gap-1.5">
+              <span
+                className="text-muted-foreground w-7 shrink-0 text-[9px]"
+                title="ダッシュ長（線幅に対する倍率）"
+              >
+                破線
+              </span>
+              <Slider
+                className="min-w-10 flex-1"
+                value={[dashRatio]}
+                min={0.5}
+                max={10}
+                step={0.5}
+                onValueChange={([v]) => onUpdate({ [field.dashRatioKey]: v })}
+              />
+              <EditableValue
+                value={dashRatio}
+                min={0.5}
+                max={10}
+                step={0.5}
+                onChange={(v) => onUpdate({ [field.dashRatioKey]: v })}
+              />
+            </div>
+          )}
+          <div className="flex flex-1 items-center gap-1.5">
+            <span
+              className="text-muted-foreground w-7 shrink-0 text-[9px]"
+              title="間隔（線幅に対する倍率）"
+            >
+              間隔
+            </span>
+            <Slider
+              className="min-w-10 flex-1"
+              value={[gapRatio]}
+              min={0.5}
+              max={10}
+              step={0.5}
+              onValueChange={([v]) => onUpdate({ [field.gapRatioKey]: v })}
+            />
+            <EditableValue
+              value={gapRatio}
+              min={0.5}
+              max={10}
+              step={0.5}
+              onChange={(v) => onUpdate({ [field.gapRatioKey]: v })}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

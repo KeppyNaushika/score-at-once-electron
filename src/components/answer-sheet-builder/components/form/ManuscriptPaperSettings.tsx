@@ -14,13 +14,18 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import type {
+  LineStyle,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
   ManuscriptPaperConfig,
 } from "@/types/answerSheetDefinition.types"
 
 import {
-  DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE,
+  DEFAULT_DASH_RATIO,
+  DEFAULT_GAP_RATIO,
+  DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH,
+  DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO,
+  DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO,
   DEFAULT_MANUSCRIPT_GUIDE_POSITION,
 } from "../../constants"
 import { SliderWithInput } from "./SliderWithInput"
@@ -42,6 +47,15 @@ const GUIDE_POSITION_LABELS: Record<ManuscriptGuidePosition, string> = {
   "top-left": "左上",
   "top-right": "右上",
 }
+
+/** 区切り罫線の選択肢（先頭は「なし」＝罫線なし） */
+const BOUNDARY_NONE = "none"
+const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
+  { value: BOUNDARY_NONE, label: "なし" },
+  { value: "solid", label: "実線" },
+  { value: "dashed", label: "破線" },
+  { value: "dotted", label: "点線" },
+]
 
 export function ManuscriptPaperSettings({
   config,
@@ -140,7 +154,7 @@ export function ManuscriptPaperSettings({
         <div className="space-y-2 rounded border p-2">
           <div className="flex items-center justify-between">
             <Label className="text-muted-foreground text-[10px]">
-              文字数ガイド
+              文字位置マーカー（数字ガイド・区切り罫線）
             </Label>
             <Button
               variant="outline"
@@ -157,7 +171,7 @@ export function ManuscriptPaperSettings({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-muted-foreground text-[10px]">
-                  表示位置
+                  数字の表示位置
                 </Label>
                 <Select
                   value={
@@ -185,56 +199,153 @@ export function ManuscriptPaperSettings({
               </div>
               <div className="flex items-end">
                 <SliderWithInput
-                  label="文字サイズ"
+                  label="文字サイズ(マス比)"
                   value={
-                    current.guideFontSize ?? DEFAULT_MANUSCRIPT_GUIDE_FONT_SIZE
+                    current.guideFontSize ?? DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO
                   }
-                  min={1}
-                  max={6}
-                  step={0.1}
+                  min={0.05}
+                  max={1}
+                  step={0.05}
                   onChange={(v) => handleChange({ guideFontSize: v })}
+                />
+              </div>
+              <div className="col-span-2">
+                <SliderWithInput
+                  label="余白(マス比)"
+                  value={
+                    current.guidePadding ??
+                    DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO
+                  }
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={(v) => handleChange({ guidePadding: v })}
                 />
               </div>
             </div>
           )}
 
           {guides.map((guide, index) => (
-            <div key={index} className="flex items-center gap-1">
-              <Input
-                type="number"
-                className="h-7 w-16 text-xs"
-                value={guide.atChar}
-                min={1}
-                max={capacity}
-                title="先頭からの文字数"
-                onChange={(e) =>
-                  updateGuide(index, {
-                    atChar: clampInt(e.target.value, 1, capacity, guide.atChar),
-                  })
-                }
-              />
-              <span className="text-muted-foreground text-[10px]">字目</span>
-              <Input
-                className="h-7 flex-1 text-xs"
-                value={guide.label}
-                placeholder="表示文字"
-                onChange={(e) => updateGuide(index, { label: e.target.value })}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive h-6 w-6"
-                onClick={() => removeGuide(index)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
+            <div key={index} className="space-y-1 rounded border p-1.5">
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  className="h-7 w-16 text-xs"
+                  value={guide.atChar}
+                  min={1}
+                  max={capacity}
+                  title="先頭からの文字数"
+                  onChange={(e) =>
+                    updateGuide(index, {
+                      atChar: clampInt(
+                        e.target.value,
+                        1,
+                        capacity,
+                        guide.atChar
+                      ),
+                    })
+                  }
+                />
+                <span className="text-muted-foreground text-[10px]">字目</span>
+                <Input
+                  className="h-7 flex-1 text-xs"
+                  value={guide.label}
+                  placeholder="数字(空欄=罫線のみ)"
+                  onChange={(e) =>
+                    updateGuide(index, { label: e.target.value })
+                  }
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive h-6 w-6"
+                  onClick={() => removeGuide(index)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground shrink-0 text-[10px]">
+                  次の罫線
+                </span>
+                <Select
+                  value={guide.boundary ?? BOUNDARY_NONE}
+                  onValueChange={(v) =>
+                    updateGuide(
+                      index,
+                      v === BOUNDARY_NONE
+                        ? { boundary: undefined }
+                        : { boundary: v as LineStyle }
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-7 w-20 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOUNDARY_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {guide.boundary && (
+                  <div className="flex-1">
+                    <SliderWithInput
+                      label="太さ(mm)"
+                      value={
+                        guide.boundaryWidth ?? DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH
+                      }
+                      min={0.1}
+                      max={1.5}
+                      step={0.1}
+                      onChange={(v) => updateGuide(index, { boundaryWidth: v })}
+                    />
+                  </div>
+                )}
+              </div>
+              {(guide.boundary === "dashed" || guide.boundary === "dotted") && (
+                <div className="flex items-center gap-2 pl-2">
+                  {guide.boundary === "dashed" && (
+                    <div className="flex-1">
+                      <SliderWithInput
+                        label="破線長"
+                        value={guide.boundaryDashRatio ?? DEFAULT_DASH_RATIO}
+                        min={0.5}
+                        max={10}
+                        step={0.5}
+                        onChange={(v) =>
+                          updateGuide(index, { boundaryDashRatio: v })
+                        }
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <SliderWithInput
+                      label="間隔"
+                      value={guide.boundaryGapRatio ?? DEFAULT_GAP_RATIO}
+                      min={0.5}
+                      max={10}
+                      step={0.5}
+                      onChange={(v) =>
+                        updateGuide(index, { boundaryGapRatio: v })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
-          {guides.length === 0 && (
+          {guides.length === 0 ? (
             <p className="text-muted-foreground text-[10px]">
-              「追加」で先頭からの文字数の目印（例: 80,
-              100）をマスに表示できます。
+              「追加」で先頭からの文字数の目印を作成。数字（例:
+              80）と区切り罫線（○字以内/以上）を組み合わせられます。罫線のみ使うときは数字を空欄に。
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-[10px]">
+              区切り罫線は、行末にある小計・大問罫線を置き換えません。
             </p>
           )}
         </div>

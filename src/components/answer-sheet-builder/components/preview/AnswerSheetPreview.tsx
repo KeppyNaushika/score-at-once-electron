@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 
 import type {
   AnswerSheetAction,
+  BorderConfig,
   RenderMode,
 } from "@/types/answerSheetDefinition.types"
 import type {
@@ -22,6 +23,8 @@ interface AnswerSheetPreviewProps {
   onRenderModeChange: (mode: RenderMode) => void
   dispatch: (action: AnswerSheetAction) => void
   baseRowHeight: number
+  /** 罫線種別ごとの破線ダッシュ長/間隔の解決に使う */
+  borderConfig: BorderConfig
 }
 
 /**
@@ -35,6 +38,7 @@ export function AnswerSheetPreview({
   onRenderModeChange,
   dispatch,
   baseRowHeight,
+  borderConfig,
 }: AnswerSheetPreviewProps) {
   const [zoom, setZoom] = useState(100)
   const [interactive, setInteractive] = useState(false)
@@ -105,6 +109,7 @@ export function AnswerSheetPreview({
               renderMode={renderMode}
               interactive={interactive}
               hoveredDragInfo={hoveredDragInfo}
+              borderConfig={borderConfig}
             />
           </svg>
         </div>

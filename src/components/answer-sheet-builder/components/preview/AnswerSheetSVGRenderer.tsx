@@ -2,14 +2,26 @@
 
 import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import { parseInlineMarkup } from "@/lib/answer-sheet-builder/inlineMarkupParser"
-import type { RenderMode } from "@/types/answerSheetDefinition.types"
+import type {
+  BorderConfig,
+  LineStyle,
+  RenderMode,
+} from "@/types/answerSheetDefinition.types"
 import type {
   ComputedLayout,
   ComputedPageLayout,
   DragInfo,
 } from "@/types/answerSheetLayout.types"
 
-import { manuscriptCharPosition } from "../../hooks/layout/layoutUtils"
+import {
+  DEFAULT_DASH_RATIO,
+  DEFAULT_GAP_RATIO,
+  DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH,
+} from "../../constants"
+import {
+  getLineDashRatio,
+  manuscriptCharPosition,
+} from "../../hooks/layout/layoutUtils"
 import {
   getDashProps,
   isDragInfoEqual,
@@ -30,6 +42,8 @@ interface AnswerSheetSVGRendererProps {
   forPrint?: boolean
   /** 印刷用: 画像パス → data URI のマップ */
   imageDataUris?: Map<string, string>
+  /** 罫線種別ごとの破線ダッシュ長/間隔の解決に使う。未指定時は既定倍率 */
+  borderConfig?: BorderConfig
 }
 
 /**
@@ -44,6 +58,7 @@ export function AnswerSheetSVGRenderer({
   hoveredDragInfo,
   forPrint,
   imageDataUris,
+  borderConfig,
 }: AnswerSheetSVGRendererProps) {
   const { pageWidthMm, pageHeightMm } = layout
   // pageLayoutが指定されている場合はそちらのデータを使用
@@ -177,7 +192,10 @@ export function AnswerSheetSVGRenderer({
           interactive && isDragInfoEqual(line.dragInfo, hoveredDragInfo)
         const sw = line.strokeWidth ?? (line.lineType === "outer" ? 0.7 : 0.4)
         const len = Math.hypot(line.x2 - line.x1, line.y2 - line.y1)
-        const dashProps = getDashProps(line.style, sw, len)
+        const { dashRatio, gapRatio } = borderConfig
+          ? getLineDashRatio(line.lineType, borderConfig)
+          : { dashRatio: DEFAULT_DASH_RATIO, gapRatio: DEFAULT_GAP_RATIO }
+        const dashProps = getDashProps(line.style, sw, len, dashRatio, gapRatio)
         return (
           <g key={`line-${i}`}>
             <line
@@ -249,7 +267,9 @@ export function AnswerSheetSVGRenderer({
             for (const te of cell.textElements) {
               const segments = parseInlineMarkup(te.text)
               for (const seg of segments) {
-                if (seg.modelAnswer && renderMode !== "model-answer") continue
+                // 模範解答セグメントもマス位置は確保する（空送り）。
+                // 非表示時は下の fill="transparent" で見えなくするだけにし、
+                // スキップして後続文字を詰めない。
                 for (const ch of seg.text) {
                   chars.push({ char: ch, seg })
                 }
@@ -559,42 +579,36 @@ export function AnswerSheetSVGRenderer({
           const colWidth = g.vertical ? g.lineDividerWidth : g.charDividerWidth
           const rowStyle = g.vertical ? g.charDividerStyle : g.lineDividerStyle
           const rowWidth = g.vertical ? g.charDividerWidth : g.lineDividerWidth
-          const gridLines: React.ReactNode[] = []
-          for (let col = 1; col < g.columns; col++) {
-            const x = g.gridX + col * g.cellSizeMm
-            gridLines.push(
-              <line
-                key={`mg-v-${cellIdx}-${cell.label}-${col}`}
-                x1={x}
-                y1={g.gridY}
-                x2={x}
-                y2={g.gridY + g.gridHeight}
-                stroke="#000"
-                strokeWidth={colWidth}
-                {...getDashProps(colStyle, colWidth, g.gridHeight)}
-              />
-            )
+          // 字間（char）/行間（line）罫線の破線倍率。縦書きは縦線=行間・横線=字間。
+          const charDash = {
+            dashRatio:
+              borderConfig?.manuscriptCharDividerDashRatio ??
+              DEFAULT_DASH_RATIO,
+            gapRatio:
+              borderConfig?.manuscriptCharDividerGapRatio ?? DEFAULT_GAP_RATIO,
           }
-          for (let row = 1; row < g.rows; row++) {
-            const y = g.gridY + row * g.cellSizeMm
-            gridLines.push(
-              <line
-                key={`mg-h-${cellIdx}-${cell.label}-${row}`}
-                x1={g.gridX}
-                y1={y}
-                x2={g.gridX + g.gridWidth}
-                y2={y}
-                stroke="#000"
-                strokeWidth={rowWidth}
-                {...getDashProps(rowStyle, rowWidth, g.gridWidth)}
-              />
-            )
+          const lineDash = {
+            dashRatio:
+              borderConfig?.manuscriptLineDividerDashRatio ??
+              DEFAULT_DASH_RATIO,
+            gapRatio:
+              borderConfig?.manuscriptLineDividerGapRatio ?? DEFAULT_GAP_RATIO,
           }
-          // 文字数ガイド: 先頭からN文字目のマスの隅に小さく番号を表示
-          const guides: React.ReactNode[] = []
-          const pad = g.cellSizeMm * 0.12
-          for (let gi = 0; gi < g.charGuides.length; gi++) {
-            const guide = g.charGuides[gi]
+          const colDash = g.vertical ? lineDash : charDash
+          const rowDash = g.vertical ? charDash : lineDash
+          const cs = g.cellSizeMm
+          // 区切り罫線を「置き換え」るため、どの内部罫線セグメントを差し替えるか先に収集。
+          // 縦線セグメント: key `${ci}:${row}` / 横線セグメント: key `${ri}:${col}`
+          type BoundarySpec = {
+            style: LineStyle
+            width: number
+            dashRatio: number
+            gapRatio: number
+          }
+          const vOverride = new Map<string, BoundarySpec>()
+          const hOverride = new Map<string, BoundarySpec>()
+          for (const guide of g.charGuides) {
+            if (!guide.boundary) continue
             const pos = manuscriptCharPosition(
               guide.atChar - 1,
               g.columns,
@@ -602,21 +616,160 @@ export function AnswerSheetSVGRenderer({
               g.vertical
             )
             if (!pos) continue
-            const cellX0 = g.gridX + pos.col * g.cellSizeMm
-            const cellY0 = g.gridY + pos.row * g.cellSizeMm
+            const bw = guide.boundaryWidth ?? DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH
+            const spec: BoundarySpec = {
+              style: guide.boundary,
+              width: bw,
+              dashRatio: guide.boundaryDashRatio ?? DEFAULT_DASH_RATIO,
+              gapRatio: guide.boundaryGapRatio ?? DEFAULT_GAP_RATIO,
+            }
+            // 行末（折り返し位置）は内部罫線が無く、置き換え対象は構造罫線
+            // （小計/大問罫線）になるため、ここでは描画しない。
+            if (g.vertical) {
+              // 縦書き: 文字は上→下。トレーリング側＝マス下辺（横罫線 ri=row+1）
+              if (pos.row < g.rows - 1) {
+                hOverride.set(`${pos.row + 1}:${pos.col}`, spec)
+              }
+            } else {
+              // 横書き: 文字は左→右。トレーリング側＝マス右辺（縦罫線 ci=col+1）
+              if (pos.col < g.columns - 1) {
+                vOverride.set(`${pos.col + 1}:${pos.row}`, spec)
+              }
+            }
+          }
+          const gridLines: React.ReactNode[] = []
+          // 縦罫線（内部）: 置き換え区間を除いて連続ランで描き、区間は境界線で差し替え
+          for (let ci = 1; ci < g.columns; ci++) {
+            const x = g.gridX + ci * cs
+            const flushRun = (r0: number, r1: number) => {
+              if (r1 <= r0) return
+              gridLines.push(
+                <line
+                  key={`mg-v-${cellIdx}-${cell.label}-${ci}-${r0}`}
+                  x1={x}
+                  y1={g.gridY + r0 * cs}
+                  x2={x}
+                  y2={g.gridY + r1 * cs}
+                  stroke="#000"
+                  strokeWidth={colWidth}
+                  {...getDashProps(
+                    colStyle,
+                    colWidth,
+                    (r1 - r0) * cs,
+                    colDash.dashRatio,
+                    colDash.gapRatio
+                  )}
+                />
+              )
+            }
+            let runStart = 0
+            for (let row = 0; row < g.rows; row++) {
+              const ov = vOverride.get(`${ci}:${row}`)
+              if (!ov) continue
+              flushRun(runStart, row)
+              gridLines.push(
+                <line
+                  key={`mg-vb-${cellIdx}-${cell.label}-${ci}-${row}`}
+                  x1={x}
+                  y1={g.gridY + row * cs}
+                  x2={x}
+                  y2={g.gridY + (row + 1) * cs}
+                  stroke="#000"
+                  strokeWidth={ov.width}
+                  {...getDashProps(
+                    ov.style,
+                    ov.width,
+                    cs,
+                    ov.dashRatio,
+                    ov.gapRatio
+                  )}
+                />
+              )
+              runStart = row + 1
+            }
+            flushRun(runStart, g.rows)
+          }
+          // 横罫線（内部）: 同様に置き換え区間を差し替え
+          for (let ri = 1; ri < g.rows; ri++) {
+            const y = g.gridY + ri * cs
+            const flushRun = (c0: number, c1: number) => {
+              if (c1 <= c0) return
+              gridLines.push(
+                <line
+                  key={`mg-h-${cellIdx}-${cell.label}-${ri}-${c0}`}
+                  x1={g.gridX + c0 * cs}
+                  y1={y}
+                  x2={g.gridX + c1 * cs}
+                  y2={y}
+                  stroke="#000"
+                  strokeWidth={rowWidth}
+                  {...getDashProps(
+                    rowStyle,
+                    rowWidth,
+                    (c1 - c0) * cs,
+                    rowDash.dashRatio,
+                    rowDash.gapRatio
+                  )}
+                />
+              )
+            }
+            let runStart = 0
+            for (let col = 0; col < g.columns; col++) {
+              const ov = hOverride.get(`${ri}:${col}`)
+              if (!ov) continue
+              flushRun(runStart, col)
+              gridLines.push(
+                <line
+                  key={`mg-hb-${cellIdx}-${cell.label}-${ri}-${col}`}
+                  x1={g.gridX + col * cs}
+                  y1={y}
+                  x2={g.gridX + (col + 1) * cs}
+                  y2={y}
+                  stroke="#000"
+                  strokeWidth={ov.width}
+                  {...getDashProps(
+                    ov.style,
+                    ov.width,
+                    cs,
+                    ov.dashRatio,
+                    ov.gapRatio
+                  )}
+                />
+              )
+              runStart = col + 1
+            }
+            flushRun(runStart, g.columns)
+          }
+          // 数字ガイド: 先頭からN文字目のマスの隅に小さく表示（空ラベルは描かない）
+          const guides: React.ReactNode[] = []
+          for (let gi = 0; gi < g.charGuides.length; gi++) {
+            const guide = g.charGuides[gi]
+            if (!guide.label) continue
+            const pos = manuscriptCharPosition(
+              guide.atChar - 1,
+              g.columns,
+              g.rows,
+              g.vertical
+            )
+            if (!pos) continue
+            const fs = g.guideFontSize
+            const cellX0 = g.gridX + pos.col * cs
+            const cellY0 = g.gridY + pos.row * cs
             const left = g.guidePosition.endsWith("left")
             const top = g.guidePosition.startsWith("top")
-            const gx = left ? cellX0 + pad : cellX0 + g.cellSizeMm - pad
-            const gy = top ? cellY0 + pad : cellY0 + g.cellSizeMm - pad
+            // アンカー点 = マスの該当隅から余白分だけ内側へ
+            const gpad = g.guidePadding
+            const px = left ? cellX0 + gpad : cellX0 + cs - gpad
+            const py = top ? cellY0 + gpad : cellY0 + cs - gpad
             guides.push(
               <text
                 key={`mguide-${cellIdx}-${cell.label}-${gi}`}
-                x={gx}
-                y={gy}
-                fontSize={g.guideFontSize}
+                x={px}
+                y={py}
+                fontSize={fs}
                 fontFamily="'Noto Sans JP', sans-serif"
                 textAnchor={left ? "start" : "end"}
-                dominantBaseline={top ? "hanging" : "alphabetic"}
+                dominantBaseline={top ? "text-before-edge" : "text-after-edge"}
                 fill="#000"
               >
                 {guide.label}

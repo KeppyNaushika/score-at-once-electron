@@ -72,6 +72,24 @@ export type FlatGlobalSettings = {
   borderManuscriptLineDivider: string
   borderManuscriptCharDividerWidth: number | null
   borderManuscriptLineDividerWidth: number | null
+  borderOuterBorderDashRatio: number | null
+  borderOuterBorderGapRatio: number | null
+  borderMajorDividerDashRatio: number | null
+  borderMajorDividerGapRatio: number | null
+  borderSubDividerDashRatio: number | null
+  borderSubDividerGapRatio: number | null
+  borderBranchDividerDashRatio: number | null
+  borderBranchDividerGapRatio: number | null
+  borderMajorNumberDividerDashRatio: number | null
+  borderMajorNumberDividerGapRatio: number | null
+  borderSubNumberDividerDashRatio: number | null
+  borderSubNumberDividerGapRatio: number | null
+  borderBranchNumberDividerDashRatio: number | null
+  borderBranchNumberDividerGapRatio: number | null
+  borderManuscriptCharDividerDashRatio: number | null
+  borderManuscriptCharDividerGapRatio: number | null
+  borderManuscriptLineDividerDashRatio: number | null
+  borderManuscriptLineDividerGapRatio: number | null
   omrMarkersEnabled: boolean
   omrMarkersSizeMm: number
   omrMarkersOffsetMm: number
@@ -128,6 +146,34 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
       s.borderConfig.manuscriptCharDividerWidth ?? null,
     borderManuscriptLineDividerWidth:
       s.borderConfig.manuscriptLineDividerWidth ?? null,
+    borderOuterBorderDashRatio: s.borderConfig.outerBorderDashRatio ?? null,
+    borderOuterBorderGapRatio: s.borderConfig.outerBorderGapRatio ?? null,
+    borderMajorDividerDashRatio: s.borderConfig.majorDividerDashRatio ?? null,
+    borderMajorDividerGapRatio: s.borderConfig.majorDividerGapRatio ?? null,
+    borderSubDividerDashRatio: s.borderConfig.subDividerDashRatio ?? null,
+    borderSubDividerGapRatio: s.borderConfig.subDividerGapRatio ?? null,
+    borderBranchDividerDashRatio: s.borderConfig.branchDividerDashRatio ?? null,
+    borderBranchDividerGapRatio: s.borderConfig.branchDividerGapRatio ?? null,
+    borderMajorNumberDividerDashRatio:
+      s.borderConfig.majorNumberDividerDashRatio ?? null,
+    borderMajorNumberDividerGapRatio:
+      s.borderConfig.majorNumberDividerGapRatio ?? null,
+    borderSubNumberDividerDashRatio:
+      s.borderConfig.subNumberDividerDashRatio ?? null,
+    borderSubNumberDividerGapRatio:
+      s.borderConfig.subNumberDividerGapRatio ?? null,
+    borderBranchNumberDividerDashRatio:
+      s.borderConfig.branchNumberDividerDashRatio ?? null,
+    borderBranchNumberDividerGapRatio:
+      s.borderConfig.branchNumberDividerGapRatio ?? null,
+    borderManuscriptCharDividerDashRatio:
+      s.borderConfig.manuscriptCharDividerDashRatio ?? null,
+    borderManuscriptCharDividerGapRatio:
+      s.borderConfig.manuscriptCharDividerGapRatio ?? null,
+    borderManuscriptLineDividerDashRatio:
+      s.borderConfig.manuscriptLineDividerDashRatio ?? null,
+    borderManuscriptLineDividerGapRatio:
+      s.borderConfig.manuscriptLineDividerGapRatio ?? null,
     omrMarkersEnabled: s.omrMarkers.enabled,
     omrMarkersSizeMm: s.omrMarkers.sizeMm,
     omrMarkersOffsetMm: s.omrMarkers.offsetMm,
@@ -144,11 +190,15 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
   }
 }
 
-/** DB の JSON文字列から文字数ガイド配列を復元する（壊れていれば空配列） */
+/**
+ * DB の JSON文字列から文字位置マーカー配列（数字ガイド＋区切り罫線の統合）を復元する。
+ * 旧形式 {atChar,label} も互換で読める（boundary 等は欠落＝未設定）。
+ */
 function parseCharGuides(
   json: string | null
 ): ManuscriptCharGuide[] | undefined {
   if (!json) return undefined
+  const VALID_STYLES = new Set<LineStyle>(["solid", "dashed", "dotted"])
   try {
     const parsed: unknown = JSON.parse(json)
     if (!Array.isArray(parsed)) return undefined
@@ -160,7 +210,28 @@ function parseCharGuides(
           typeof (g as ManuscriptCharGuide).atChar === "number" &&
           typeof (g as ManuscriptCharGuide).label === "string"
       )
-      .map((g) => ({ atChar: g.atChar, label: g.label }))
+      .map((g): ManuscriptCharGuide => {
+        const boundary =
+          typeof g.boundary === "string" &&
+          VALID_STYLES.has(g.boundary as LineStyle)
+            ? (g.boundary as LineStyle)
+            : undefined
+        return {
+          atChar: g.atChar,
+          label: g.label,
+          boundary,
+          boundaryWidth:
+            typeof g.boundaryWidth === "number" ? g.boundaryWidth : undefined,
+          boundaryDashRatio:
+            typeof g.boundaryDashRatio === "number"
+              ? g.boundaryDashRatio
+              : undefined,
+          boundaryGapRatio:
+            typeof g.boundaryGapRatio === "number"
+              ? g.boundaryGapRatio
+              : undefined,
+        }
+      })
     return guides.length > 0 ? guides : undefined
   } catch {
     return undefined
@@ -216,6 +287,33 @@ function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
         row.borderManuscriptCharDividerWidth ?? undefined,
       manuscriptLineDividerWidth:
         row.borderManuscriptLineDividerWidth ?? undefined,
+      outerBorderDashRatio: row.borderOuterBorderDashRatio ?? undefined,
+      outerBorderGapRatio: row.borderOuterBorderGapRatio ?? undefined,
+      majorDividerDashRatio: row.borderMajorDividerDashRatio ?? undefined,
+      majorDividerGapRatio: row.borderMajorDividerGapRatio ?? undefined,
+      subDividerDashRatio: row.borderSubDividerDashRatio ?? undefined,
+      subDividerGapRatio: row.borderSubDividerGapRatio ?? undefined,
+      branchDividerDashRatio: row.borderBranchDividerDashRatio ?? undefined,
+      branchDividerGapRatio: row.borderBranchDividerGapRatio ?? undefined,
+      majorNumberDividerDashRatio:
+        row.borderMajorNumberDividerDashRatio ?? undefined,
+      majorNumberDividerGapRatio:
+        row.borderMajorNumberDividerGapRatio ?? undefined,
+      subNumberDividerDashRatio:
+        row.borderSubNumberDividerDashRatio ?? undefined,
+      subNumberDividerGapRatio: row.borderSubNumberDividerGapRatio ?? undefined,
+      branchNumberDividerDashRatio:
+        row.borderBranchNumberDividerDashRatio ?? undefined,
+      branchNumberDividerGapRatio:
+        row.borderBranchNumberDividerGapRatio ?? undefined,
+      manuscriptCharDividerDashRatio:
+        row.borderManuscriptCharDividerDashRatio ?? undefined,
+      manuscriptCharDividerGapRatio:
+        row.borderManuscriptCharDividerGapRatio ?? undefined,
+      manuscriptLineDividerDashRatio:
+        row.borderManuscriptLineDividerDashRatio ?? undefined,
+      manuscriptLineDividerGapRatio:
+        row.borderManuscriptLineDividerGapRatio ?? undefined,
     } as BorderConfig,
     omrMarkers: {
       enabled: row.omrMarkersEnabled,
@@ -334,6 +432,7 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
             guidePosition:
               (sq.manuscriptGuidePosition as ManuscriptGuidePosition | null) ??
               undefined,
+            guidePadding: sq.manuscriptGuidePadding ?? undefined,
           }
         : undefined
       const borderStyles =
