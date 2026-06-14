@@ -110,6 +110,12 @@ export async function executeStudentImport(
     questionScore: {},
     drawingAnnotation: {},
     membership: {},
+    cropRegionOmrConfig: {},
+    cropRegionOmrChoiceOption: {},
+    compoundAnswer: {},
+    compoundAnswerMember: {},
+    compoundAnswerScore: {},
+    scoreDecision: {},
   }
 
   const idChangeTargets: IdChangeTarget[] = []

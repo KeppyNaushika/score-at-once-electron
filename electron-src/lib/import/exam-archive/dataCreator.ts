@@ -433,6 +433,7 @@ export async function createImportedData(
         if (newOmrConfigId) {
           await tx.cropRegionOmrDigitBox.create({
             data: {
+              id: remapIdRequired(box.id, mappings.cropRegionOmrDigitBox),
               omrConfigId: newOmrConfigId,
               digitIndex: box.digitIndex,
               normalizedX: box.normalizedX,

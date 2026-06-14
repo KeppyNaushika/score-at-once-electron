@@ -30,7 +30,11 @@ export interface ArchiveGradeData {
   grade: {
     name: string
     description: string | null
+    /** 基準日（後方互換: v1.2.0+。古いアーカイブではundefined） */
+    referenceDate?: string | null
   }
+  /** 成績出力設定（後方互換: v1.2.0+。GradeExportSettingsと1:1） */
+  exportSettings?: { settingsJson: string } | null
   gradeItems: ArchiveGradeItem[]
   classRefs: { name: string }[]
   examRefs: {

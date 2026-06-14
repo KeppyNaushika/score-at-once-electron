@@ -81,6 +81,7 @@ export async function collectGradeArchiveData(
           gradeItem: { select: { name: true } },
         },
       },
+      exportSettings: true,
     },
   })
 
@@ -197,7 +198,11 @@ export async function collectGradeArchiveData(
       grade: {
         name: gp.name,
         description: gp.description,
+        referenceDate: gp.referenceDate?.toISOString() ?? null,
       },
+      exportSettings: gp.exportSettings
+        ? { settingsJson: gp.exportSettings.settingsJson }
+        : null,
       gradeItems,
       classRefs,
       examRefs,

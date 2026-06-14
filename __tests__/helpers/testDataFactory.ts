@@ -393,6 +393,12 @@ export function createEmptyIdMappings(): IdMappings {
     questionScore: {},
     drawingAnnotation: {},
     membership: {},
+    cropRegionOmrConfig: {},
+    cropRegionOmrChoiceOption: {},
+    compoundAnswer: {},
+    compoundAnswerMember: {},
+    compoundAnswerScore: {},
+    scoreDecision: {},
   }
 }
 
