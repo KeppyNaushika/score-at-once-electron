@@ -4,6 +4,8 @@
 
 import type { Prisma } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
 
 /** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
@@ -94,6 +96,16 @@ export async function upsertBoundarySet(data: {
         })
       }
     )
+
+    const scope = await resolveGradeScope(data.gradeId)
+    await recordAuditLog({
+      action: "grade.boundary.update",
+      entityType: "GradeBoundarySet",
+      entityId: result?.id ?? data.gradeId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+    })
+
     return { success: true, boundarySet: serialize(result) }
   } catch (error) {
     console.error("Error upserting boundary set:", error)
@@ -109,7 +121,22 @@ export async function upsertBoundarySet(data: {
  */
 export async function deleteBoundarySet(id: string) {
   try {
+    const before = await prisma.gradeBoundarySet.findUnique({
+      where: { id },
+      select: { gradeId: true },
+    })
+
     await prisma.gradeBoundarySet.delete({ where: { id } })
+
+    const scope = before ? await resolveGradeScope(before.gradeId) : null
+    await recordAuditLog({
+      action: "grade.boundary.delete",
+      entityType: "GradeBoundarySet",
+      entityId: id,
+      scopeId: scope?.scopeId ?? null,
+      scopeLabel: scope?.scopeLabel ?? null,
+    })
+
     return { success: true }
   } catch (error) {
     console.error("Error deleting boundary set:", error)

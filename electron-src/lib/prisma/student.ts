@@ -1,6 +1,10 @@
 import { Prisma } from "@prisma/client"
 
+import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
+
+const studentLabel = (s: { lastName: string; firstName: string }): string =>
+  `${s.lastName} ${s.firstName}`.trim()
 
 type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
@@ -43,7 +47,7 @@ export const createStudent = async (
   studentData: Prisma.StudentCreateInput
 ): Promise<StudentWithMemberships> => {
   try {
-    return await prisma.student.create({
+    const student = await prisma.student.create({
       data: studentData,
       include: {
         memberships: {
@@ -59,6 +63,15 @@ export const createStudent = async (
         },
       },
     })
+
+    await recordAuditLog({
+      action: "student.create",
+      entityType: "Student",
+      entityId: student.id,
+      target: studentLabel(student),
+    })
+
+    return student
   } catch (error) {
     console.error("Failed to create student:", error)
     throw error
@@ -71,7 +84,19 @@ export const updateStudent = async (
   studentData: Prisma.StudentUpdateInput
 ): Promise<StudentWithMemberships> => {
   try {
-    return await prisma.student.update({
+    const before = await prisma.student.findUnique({
+      where: { id },
+      select: {
+        lastName: true,
+        firstName: true,
+        lastNameKana: true,
+        firstNameKana: true,
+        studentNumber: true,
+        enrollmentYear: true,
+      },
+    })
+
+    const student = await prisma.student.update({
       where: { id },
       data: studentData,
       include: {
@@ -88,6 +113,34 @@ export const updateStudent = async (
         },
       },
     })
+
+    await recordAuditLog({
+      action: "student.update",
+      entityType: "Student",
+      entityId: student.id,
+      target: studentLabel(student),
+      changes: diffFields(
+        before ?? undefined,
+        {
+          lastName: student.lastName,
+          firstName: student.firstName,
+          lastNameKana: student.lastNameKana,
+          firstNameKana: student.firstNameKana,
+          studentNumber: student.studentNumber,
+          enrollmentYear: student.enrollmentYear,
+        },
+        [
+          { field: "lastName", label: "姓" },
+          { field: "firstName", label: "名" },
+          { field: "lastNameKana", label: "姓（かな）" },
+          { field: "firstNameKana", label: "名（かな）" },
+          { field: "studentNumber", label: "学籍番号" },
+          { field: "enrollmentYear", label: "入学年度" },
+        ]
+      ),
+    })
+
+    return student
   } catch (error) {
     console.error("Failed to update student:", error)
     throw error
@@ -97,7 +150,19 @@ export const updateStudent = async (
 /** 生徒を削除する */
 export const deleteStudent = async (id: string): Promise<void> => {
   try {
+    const before = await prisma.student.findUnique({
+      where: { id },
+      select: { lastName: true, firstName: true },
+    })
+
     await prisma.student.delete({ where: { id } })
+
+    await recordAuditLog({
+      action: "student.delete",
+      entityType: "Student",
+      entityId: id,
+      target: before ? studentLabel(before) : null,
+    })
   } catch (error) {
     console.error("Failed to delete student:", error)
     throw error

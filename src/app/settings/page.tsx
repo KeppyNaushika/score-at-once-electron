@@ -1,9 +1,17 @@
 "use client"
 
-import { FolderSync, Keyboard, Monitor, Palette, Users } from "lucide-react"
+import {
+  FolderSync,
+  History,
+  Keyboard,
+  Monitor,
+  Palette,
+  Users,
+} from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
+import { AuditLogsTab } from "@/app/settings/components/AuditLogsTab"
 import { DisplaySettingsTab } from "@/app/settings/components/DisplaySettingsTab"
 import { KeyboardShortcutSection } from "@/app/settings/components/KeyboardShortcutSection"
 import { ScreenControlTab } from "@/app/settings/components/ScreenControlTab"
@@ -109,6 +117,10 @@ export default function SettingsPage() {
               <FolderSync className="h-4 w-4" />
               同期設定
             </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <History className="h-4 w-4" />
+              監査ログ
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="keyboard">
@@ -143,6 +155,10 @@ export default function SettingsPage() {
 
           <TabsContent value="sync">
             <SyncSettingsTab />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AuditLogsTab />
           </TabsContent>
         </Tabs>
 

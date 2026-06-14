@@ -2,6 +2,8 @@
  * GradeItem（評価項目）のPrisma操作関数
  */
 
+import { recordAuditLog } from "./auditLog"
+import { resolveGradeScope, resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
 
 /** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
@@ -71,6 +73,17 @@ export async function createGradeItem(data: { gradeId: string; name: string }) {
         },
       },
     })
+
+    const scope = await resolveGradeScope(data.gradeId)
+    await recordAuditLog({
+      action: "grade.item.create",
+      entityType: "GradeItem",
+      entityId: gradeItem.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: gradeItem.name,
+    })
+
     return { success: true, gradeItem: serialize(gradeItem) }
   } catch (error) {
     console.error("Error creating grade item:", error)
@@ -102,6 +115,17 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
         },
       },
     })
+
+    const scope = await resolveGradeScope(gradeItem.gradeId)
+    await recordAuditLog({
+      action: "grade.item.update",
+      entityType: "GradeItem",
+      entityId: gradeItem.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: gradeItem.name,
+    })
+
     return { success: true, gradeItem: serialize(gradeItem) }
   } catch (error) {
     console.error("Error updating grade item:", error)
@@ -117,7 +141,23 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
  */
 export async function deleteGradeItem(id: string) {
   try {
+    const before = await prisma.gradeItem.findUnique({
+      where: { id },
+      select: { name: true, gradeId: true },
+    })
+
     await prisma.gradeItem.delete({ where: { id } })
+
+    const scope = before ? await resolveGradeScope(before.gradeId) : null
+    await recordAuditLog({
+      action: "grade.item.delete",
+      entityType: "GradeItem",
+      entityId: id,
+      scopeId: scope?.scopeId ?? null,
+      scopeLabel: scope?.scopeLabel ?? null,
+      target: before?.name ?? null,
+    })
+
     return { success: true }
   } catch (error) {
     console.error("Error deleting grade item:", error)
@@ -143,6 +183,19 @@ export async function reorderGradeItems(
         })
       )
     )
+
+    if (items.length > 0) {
+      const scope = await resolveGradeScopeByItem(items[0].id)
+      await recordAuditLog({
+        action: "grade.item.reorder",
+        entityType: "GradeItem",
+        entityId: scope.scopeId ?? items[0].id,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        coalesceKey: `grade_item_reorder:${scope.scopeId ?? items[0].id}`,
+      })
+    }
+
     return { success: true }
   } catch (error) {
     console.error("Error reordering grade items:", error)

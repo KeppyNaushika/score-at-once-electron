@@ -1,6 +1,7 @@
 import { User } from "@prisma/client"
 import bcrypt from "bcrypt"
 
+import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 export const fetchUsers = async (): Promise<User[]> => {
@@ -35,7 +36,7 @@ export const createUser = async (userData: {
         ? await bcrypt.hash(userData.passcode, 10)
         : null
 
-    return await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         username: userData.username,
         name: userData.name,
@@ -43,6 +44,15 @@ export const createUser = async (userData: {
         passcodeType: userData.passcodeType || "none",
       },
     })
+
+    await recordAuditLog({
+      action: "user.create",
+      entityType: "User",
+      entityId: user.id,
+      target: user.name,
+    })
+
+    return user
   } catch (error) {
     console.error("Failed to create user:", error)
     throw error
@@ -77,13 +87,35 @@ export const updateUser = async (
   }
 ): Promise<User> => {
   try {
-    return await prisma.user.update({
+    const before = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true, name: true },
+    })
+
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         ...(userData.username && { username: userData.username }),
         ...(userData.name && { name: userData.name }),
       },
     })
+
+    await recordAuditLog({
+      action: "user.update",
+      entityType: "User",
+      entityId: user.id,
+      target: user.name,
+      changes: diffFields(
+        before ?? undefined,
+        { username: user.username, name: user.name },
+        [
+          { field: "name", label: "名前" },
+          { field: "username", label: "ユーザー名" },
+        ]
+      ),
+    })
+
+    return user
   } catch (error) {
     console.error("Failed to update user:", error)
     throw error
@@ -101,13 +133,24 @@ export const updateUserPasscode = async (
         ? await bcrypt.hash(passcode, 10)
         : null
 
-    return await prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         passcode: hashedPasscode,
         passcodeType: passcodeType || "none",
       },
     })
+
+    // 監査ログ: パスコード変更（パスコード値そのものは記録しない）
+    await recordAuditLog({
+      action: "user.update",
+      entityType: "User",
+      entityId: user.id,
+      target: user.name,
+      summary: `ユーザー「${user.name}」のパスコードを変更しました`,
+    })
+
+    return user
   } catch (error) {
     console.error("Failed to update user passcode:", error)
     throw error

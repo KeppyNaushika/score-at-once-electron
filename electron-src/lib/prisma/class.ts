@@ -1,5 +1,6 @@
 import { Class, Prisma } from "@prisma/client"
 
+import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 type ClassWithMemberships = Prisma.ClassGetPayload<{
@@ -40,7 +41,7 @@ export const createClass = async (
   classData: Prisma.ClassCreateInput
 ): Promise<ClassWithMemberships> => {
   try {
-    return await prisma.class.create({
+    const created = await prisma.class.create({
       data: classData,
       include: {
         memberships: {
@@ -55,6 +56,15 @@ export const createClass = async (
         },
       },
     })
+
+    await recordAuditLog({
+      action: "class.create",
+      entityType: "Class",
+      entityId: created.id,
+      target: created.name,
+    })
+
+    return created
   } catch (error) {
     console.error("Failed to create class:", error)
     throw error
@@ -67,7 +77,12 @@ export const updateClass = async (
 ): Promise<ClassWithMemberships> => {
   const { id, ...data } = classData
   try {
-    return await prisma.class.update({
+    const before = await prisma.class.findUnique({
+      where: { id },
+      select: { name: true, grade: true, classCode: true, description: true },
+    })
+
+    const updated = await prisma.class.update({
       where: { id },
       data,
       include: {
@@ -83,6 +98,30 @@ export const updateClass = async (
         },
       },
     })
+
+    await recordAuditLog({
+      action: "class.update",
+      entityType: "Class",
+      entityId: updated.id,
+      target: updated.name,
+      changes: diffFields(
+        before ?? undefined,
+        {
+          name: updated.name,
+          grade: updated.grade,
+          classCode: updated.classCode,
+          description: updated.description,
+        },
+        [
+          { field: "name", label: "学級名" },
+          { field: "grade", label: "学年" },
+          { field: "classCode", label: "学級コード" },
+          { field: "description", label: "説明" },
+        ]
+      ),
+    })
+
+    return updated
   } catch (error) {
     console.error(`Failed to update class ${id}:`, error)
     throw error
@@ -104,7 +143,16 @@ export const deleteClass = async (classId: string): Promise<Class | void> => {
         `学級を削除できません: ${membershipCount} 人の生徒がまだ所属しています。`
       )
     }
-    return await prisma.class.delete({ where: { id: classId } })
+    const deleted = await prisma.class.delete({ where: { id: classId } })
+
+    await recordAuditLog({
+      action: "class.delete",
+      entityType: "Class",
+      entityId: classId,
+      target: deleted.name,
+    })
+
+    return deleted
   } catch (error) {
     console.error(`Failed to delete class ${classId}:`, error)
     throw error

@@ -2,6 +2,8 @@
  * GradeDataSource（成績データソース）のPrisma操作関数
  */
 
+import { recordAuditLog } from "./auditLog"
+import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
 
 /** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
@@ -97,6 +99,17 @@ export async function createDataSource(data: {
         cropRegion: { select: { id: true, label: true, points: true } },
       },
     })
+
+    const scope = await resolveGradeScopeByItem(data.gradeItemId)
+    await recordAuditLog({
+      action: "grade.data_source.add",
+      entityType: "GradeDataSource",
+      entityId: dataSource.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: data.name,
+    })
+
     return { success: true, dataSource: serialize(dataSource) }
   } catch (error) {
     console.error("Error creating data source:", error)
@@ -139,6 +152,17 @@ export async function updateDataSource(
         cropRegion: { select: { id: true, label: true, points: true } },
       },
     })
+
+    const scope = await resolveGradeScopeByItem(dataSource.gradeItemId)
+    await recordAuditLog({
+      action: "grade.data_source.update",
+      entityType: "GradeDataSource",
+      entityId: dataSource.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: dataSource.name,
+    })
+
     return { success: true, dataSource: serialize(dataSource) }
   } catch (error) {
     console.error("Error updating data source:", error)
@@ -154,7 +178,25 @@ export async function updateDataSource(
  */
 export async function deleteDataSource(id: string) {
   try {
+    const before = await prisma.gradeDataSource.findUnique({
+      where: { id },
+      select: { name: true, gradeItemId: true },
+    })
+
     await prisma.gradeDataSource.delete({ where: { id } })
+
+    const scope = before
+      ? await resolveGradeScopeByItem(before.gradeItemId)
+      : null
+    await recordAuditLog({
+      action: "grade.data_source.remove",
+      entityType: "GradeDataSource",
+      entityId: id,
+      scopeId: scope?.scopeId ?? null,
+      scopeLabel: scope?.scopeLabel ?? null,
+      target: before?.name ?? null,
+    })
+
     return { success: true }
   } catch (error) {
     console.error("Error deleting data source:", error)

@@ -10,6 +10,8 @@ import type {
   Prisma,
 } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScopeByPage } from "./auditScope"
 import prisma from "./client"
 
 export type CompoundAnswerWithMembers = CompoundAnswer & {
@@ -45,7 +47,7 @@ export interface CreateCompoundAnswerData {
 export async function createCompoundAnswer(
   data: CreateCompoundAnswerData
 ): Promise<CompoundAnswerWithMembers> {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const compoundAnswer = await tx.compoundAnswer.create({
       data: {
         examPageId: data.examPageId,
@@ -79,13 +81,42 @@ export async function createCompoundAnswer(
       },
     })
   })
+
+  const scope = await resolveExamScopeByPage(data.examPageId)
+  await recordAuditLog({
+    action: "exam.compound_answer.update",
+    entityType: "CompoundAnswer",
+    entityId: result.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: result.label,
+  })
+
+  return result
 }
 
 /**
  * 複合回答を削除
  */
 export async function deleteCompoundAnswer(id: string): Promise<void> {
+  const before = await prisma.compoundAnswer.findUnique({
+    where: { id },
+    select: { examPageId: true, label: true },
+  })
+
   await prisma.compoundAnswer.delete({ where: { id } })
+
+  if (before) {
+    const scope = await resolveExamScopeByPage(before.examPageId)
+    await recordAuditLog({
+      action: "exam.compound_answer.update",
+      entityType: "CompoundAnswer",
+      entityId: id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `複合解答「${before.label}」を削除しました`,
+    })
+  }
 }
 
 /**
@@ -135,7 +166,7 @@ export async function upsertCompoundAnswerScore(data: {
   status: string
   partialScore?: Prisma.Decimal | null
 }): Promise<CompoundAnswerScore> {
-  return prisma.compoundAnswerScore.upsert({
+  const result = await prisma.compoundAnswerScore.upsert({
     where: {
       compoundAnswerId_studentId: {
         compoundAnswerId: data.compoundAnswerId,
@@ -157,4 +188,25 @@ export async function upsertCompoundAnswerScore(data: {
       partialScore: data.partialScore ?? null,
     },
   })
+
+  // 採点（複合解答）。同じ複合解答×操作者の連続採点を集約する。
+  const ca = await prisma.compoundAnswer.findUnique({
+    where: { id: data.compoundAnswerId },
+    select: { examPageId: true },
+  })
+  const scope = ca
+    ? await resolveExamScopeByPage(ca.examPageId)
+    : { scopeId: null, scopeLabel: null }
+  await recordAuditLog({
+    action: "exam.compound_answer.update",
+    userId: data.userId,
+    entityType: "CompoundAnswerScore",
+    entityId: result.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: "複合解答を採点しました",
+    coalesceKey: `compound_score:${data.compoundAnswerId}:${data.userId}`,
+  })
+
+  return result
 }

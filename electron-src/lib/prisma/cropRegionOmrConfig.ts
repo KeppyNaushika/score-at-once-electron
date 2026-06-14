@@ -8,6 +8,8 @@ import type {
   CropRegionOmrDigitBox,
 } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScopeByCropRegion } from "./auditScope"
 import prisma from "./client"
 
 export type CropRegionOmrConfigWithOptions = CropRegionOmrConfig & {
@@ -49,7 +51,7 @@ export interface UpsertOmrConfigData {
 export async function upsertOmrConfig(
   data: UpsertOmrConfigData
 ): Promise<CropRegionOmrConfigWithOptions> {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // 既存のconfigを検索
     const existing = await tx.cropRegionOmrConfig.findUnique({
       where: { cropRegionId: data.cropRegionId },
@@ -135,6 +137,18 @@ export async function upsertOmrConfig(
       },
     })
   })
+
+  const scope = await resolveExamScopeByCropRegion(data.cropRegionId)
+  await recordAuditLog({
+    action: "exam.omr_config.update",
+    entityType: "CropRegionOmrConfig",
+    entityId: result.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    coalesceKey: `omr_config:${data.cropRegionId}`,
+  })
+
+  return result
 }
 
 /**
@@ -143,6 +157,16 @@ export async function upsertOmrConfig(
 export async function deleteOmrConfig(cropRegionId: string): Promise<void> {
   await prisma.cropRegionOmrConfig.deleteMany({
     where: { cropRegionId },
+  })
+
+  const scope = await resolveExamScopeByCropRegion(cropRegionId)
+  await recordAuditLog({
+    action: "exam.omr_config.update",
+    entityType: "CropRegionOmrConfig",
+    entityId: cropRegionId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: "OMR設定を削除しました",
   })
 }
 

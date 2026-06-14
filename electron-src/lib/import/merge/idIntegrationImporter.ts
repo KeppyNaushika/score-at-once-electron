@@ -18,6 +18,7 @@ import type {
   ScoringConflictConfig,
   UpdateDecisions,
 } from "../../../../src/types/examArchive.types"
+import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { isNewerByLww } from "./decisionMergePolicy"
@@ -282,6 +283,18 @@ export async function executeIdIntegrationImport(
       )
       console.error("Image copy failed:", copyError)
     }
+
+    // 監査ログ: 試験インポート
+    const importedExamName = data.examData.exam.examName
+    await recordAuditLog({
+      action: "exam.import",
+      userId: currentUserId,
+      entityType: "Exam",
+      entityId: newExamId,
+      scopeId: newExamId,
+      scopeLabel: importedExamName,
+      target: importedExamName,
+    })
 
     return {
       success: true,

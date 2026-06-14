@@ -2,6 +2,7 @@
  * Tag（タグ）のPrisma操作関数
  */
 
+import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 /**
@@ -46,13 +47,22 @@ export async function getTagsBySubtotalGroupIds(subtotalGroupIds: string[]) {
 export async function createTag(data: { name: string; color?: string }) {
   const maxOrder = await prisma.tag.aggregate({ _max: { order: true } })
   const nextOrder = (maxOrder._max.order ?? -1) + 1
-  return prisma.tag.create({
+  const tag = await prisma.tag.create({
     data: {
       name: data.name,
       color: data.color ?? null,
       order: nextOrder,
     },
   })
+
+  await recordAuditLog({
+    action: "tag.create",
+    entityType: "Tag",
+    entityId: tag.id,
+    target: tag.name,
+  })
+
+  return tag
 }
 
 /**
@@ -62,19 +72,42 @@ export async function updateTag(
   id: string,
   data: { name?: string; color?: string | null }
 ) {
-  return prisma.tag.update({
+  const tag = await prisma.tag.update({
     where: { id },
     data,
   })
+
+  await recordAuditLog({
+    action: "tag.update",
+    entityType: "Tag",
+    entityId: tag.id,
+    target: tag.name,
+  })
+
+  return tag
 }
 
 /**
  * タグを削除
  */
 export async function deleteTag(id: string) {
-  return prisma.tag.delete({
+  const before = await prisma.tag.findUnique({
+    where: { id },
+    select: { name: true },
+  })
+
+  const tag = await prisma.tag.delete({
     where: { id },
   })
+
+  await recordAuditLog({
+    action: "tag.delete",
+    entityType: "Tag",
+    entityId: id,
+    target: before?.name ?? null,
+  })
+
+  return tag
 }
 
 /**
@@ -97,7 +130,7 @@ export async function findOrCreateTag(name: string) {
  * タグの並び順を一括更新
  */
 export async function reorderTags(tagIds: string[]) {
-  return prisma.$transaction(
+  const result = await prisma.$transaction(
     tagIds.map((id, index) =>
       prisma.tag.update({
         where: { id },
@@ -105,4 +138,13 @@ export async function reorderTags(tagIds: string[]) {
       })
     )
   )
+
+  await recordAuditLog({
+    action: "tag.reorder",
+    entityType: "Tag",
+    entityId: "tag-order",
+    coalesceKey: "tag_reorder",
+  })
+
+  return result
 }

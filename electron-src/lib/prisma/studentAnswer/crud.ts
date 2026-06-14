@@ -17,6 +17,8 @@ import {
 } from "../../dataManager"
 import { detectCornerMarkers } from "../../omr/cornerMarkerDetector"
 import { correctImage } from "../../omr/imageCorrector"
+import { recordAuditLog } from "../auditLog"
+import { resolveExamScope, resolveExamScopeByPage } from "../auditScope"
 import prisma from "../client"
 
 /** ページごとのマスターマーカーキャッシュ */
@@ -247,6 +249,19 @@ export async function uploadStudentAnswers(
       }
     }
 
+    if (uploadedSheets.length > 0) {
+      const scope = await resolveExamScope(examId)
+      await recordAuditLog({
+        action: "exam.answer.upload",
+        entityType: "StudentAnswerImage",
+        entityId: examId,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        summary: `生徒答案を${uploadedSheets.length}件アップロードしました`,
+        extra: { count: uploadedSheets.length },
+      })
+    }
+
     return { success: true, answerSheets: uploadedSheets }
   } catch (error) {
     console.error("Error uploading answer sheets:", error)
@@ -335,6 +350,15 @@ export async function deleteStudentAnswer(answerSheetId: string) {
       where: { id: answerSheetId },
     })
 
+    const scope = await resolveExamScopeByPage(answerSheet.examPageId)
+    await recordAuditLog({
+      action: "exam.answer.delete",
+      entityType: "StudentAnswerImage",
+      entityId: answerSheetId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+    })
+
     return { success: true }
   } catch (error) {
     console.error("Error deleting answer sheet:", error)
@@ -365,6 +389,18 @@ export async function associateStudentAnswerWithStudent(
           },
         },
       },
+    })
+
+    const studentName = answerSheet.student
+      ? `${answerSheet.student.lastName} ${answerSheet.student.firstName}`.trim()
+      : null
+    await recordAuditLog({
+      action: "exam.answer.assign",
+      entityType: "StudentAnswerImage",
+      entityId: answerSheetId,
+      scopeId: answerSheet.examPage.examId,
+      scopeLabel: answerSheet.examPage.exam?.examName ?? null,
+      target: studentName,
     })
 
     return { success: true, answerSheet }

@@ -2,6 +2,7 @@
  * Grade（成績算出試験）のPrisma操作関数
  */
 
+import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 /** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
@@ -150,6 +151,16 @@ export async function createGrade(data: {
         },
       },
     })
+
+    await recordAuditLog({
+      action: "grade.create",
+      entityType: "Grade",
+      entityId: grade.id,
+      scopeId: grade.id,
+      scopeLabel: grade.name,
+      target: grade.name,
+    })
+
     return {
       success: true,
       grade: deserializeDataSources(serialize(grade)),
@@ -184,6 +195,10 @@ export async function updateGrade(
         ? new Date(data.referenceDate)
         : null
     }
+    const before = await prisma.grade.findUnique({
+      where: { id },
+      select: { name: true, description: true },
+    })
     const grade = await prisma.grade.update({
       where: { id },
       data: updateData,
@@ -198,6 +213,24 @@ export async function updateGrade(
         },
       },
     })
+
+    await recordAuditLog({
+      action: "grade.update",
+      entityType: "Grade",
+      entityId: grade.id,
+      scopeId: grade.id,
+      scopeLabel: grade.name,
+      target: grade.name,
+      changes: diffFields(
+        before ?? undefined,
+        { name: grade.name, description: grade.description },
+        [
+          { field: "name", label: "成績名" },
+          { field: "description", label: "説明" },
+        ]
+      ),
+    })
+
     return {
       success: true,
       grade: deserializeDataSources(serialize(grade)),
@@ -216,7 +249,21 @@ export async function updateGrade(
  */
 export async function deleteGrade(id: string) {
   try {
+    const before = await prisma.grade.findUnique({
+      where: { id },
+      select: { name: true },
+    })
     await prisma.grade.delete({ where: { id } })
+
+    await recordAuditLog({
+      action: "grade.delete",
+      entityType: "Grade",
+      entityId: id,
+      scopeId: id,
+      scopeLabel: before?.name ?? null,
+      target: before?.name ?? null,
+    })
+
     return { success: true }
   } catch (error) {
     console.error("Error deleting grade exam:", error)

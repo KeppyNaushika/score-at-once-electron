@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 /**
@@ -64,6 +65,13 @@ export async function createSubtotalGroup(data: {
       },
     })
 
+    await recordAuditLog({
+      action: "subtotal_group.create",
+      entityType: "SubtotalGroup",
+      entityId: subtotalGroup.id,
+      target: subtotalGroup.name,
+    })
+
     return {
       success: true,
       subtotalGroup,
@@ -116,6 +124,13 @@ export async function updateSubtotalGroup(
         })
       }
     )
+
+    await recordAuditLog({
+      action: "subtotal_group.update",
+      entityType: "SubtotalGroup",
+      entityId: subtotalGroup.id,
+      target: subtotalGroup.name,
+    })
 
     return {
       success: true,
@@ -198,6 +213,11 @@ export async function deleteSubtotalGroup(id: string) {
       }
     }
 
+    const before = await prisma.subtotalGroup.findUnique({
+      where: { id },
+      select: { name: true },
+    })
+
     // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
     await prisma.$transaction(async (tx) => {
       // ExamSubtotalGroupを削除
@@ -209,6 +229,13 @@ export async function deleteSubtotalGroup(id: string) {
       await tx.subtotalGroup.delete({
         where: { id },
       })
+    })
+
+    await recordAuditLog({
+      action: "subtotal_group.delete",
+      entityType: "SubtotalGroup",
+      entityId: id,
+      target: before?.name ?? null,
     })
 
     return {

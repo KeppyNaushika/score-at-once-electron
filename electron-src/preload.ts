@@ -3,6 +3,7 @@ import { contextBridge, IpcRenderer, ipcRenderer } from "electron"
 import { createAnswerSheetApi } from "./preload-apis/answerSheetApi"
 import { createAnswerSheetBuilderApi } from "./preload-apis/answerSheetBuilderApi"
 import { createArchiveApi } from "./preload-apis/archiveApi"
+import { createAuditLogApi } from "./preload-apis/auditLogApi"
 import { createAuthApi } from "./preload-apis/authApi"
 import { createCropRegionApi } from "./preload-apis/cropRegionApi"
 import { createDrawingApi } from "./preload-apis/drawingApi"
@@ -51,6 +52,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createAnswerSheetBuilderApi(),
   ...createMiscApi(),
   ...createSyncApi(),
+  ...createAuditLogApi(),
 })
 
 process.once("loaded", () => {

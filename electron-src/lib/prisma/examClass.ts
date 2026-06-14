@@ -2,6 +2,8 @@ import { ExamClass, Prisma } from "@prisma/client"
 
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 import { getExamReferenceDate } from "./examStudent"
 import { membershipFilterAt } from "./membershipFilter"
@@ -172,7 +174,7 @@ export const addExamClass = async (
     })
     const nextOrder = (maxOrderResult._max.order ?? -1) + 1
 
-    return await prisma.examClass.create({
+    const examClass = await prisma.examClass.create({
       data: {
         examId,
         classId,
@@ -185,6 +187,17 @@ export const addExamClass = async (
         exam: true,
       },
     })
+
+    await recordAuditLog({
+      action: "exam.class.assign",
+      entityType: "ExamClass",
+      entityId: examClass.id,
+      scopeId: examId,
+      scopeLabel: examClass.exam?.examName ?? null,
+      target: examClass.class?.name ?? null,
+    })
+
+    return examClass
   } catch (error) {
     console.error(`Failed to add class ${classId} to exam ${examId}:`, error)
     throw error
@@ -246,9 +259,26 @@ export const reorderExamClasses = async (
  */
 export const removeExamClass = async (id: string): Promise<ExamClass> => {
   try {
-    return await prisma.examClass.delete({
+    const before = await prisma.examClass.findUnique({
+      where: { id },
+      select: { examId: true, class: { select: { name: true } } },
+    })
+
+    const deleted = await prisma.examClass.delete({
       where: { id },
     })
+
+    const scope = before ? await resolveExamScope(before.examId) : null
+    await recordAuditLog({
+      action: "exam.class.unassign",
+      entityType: "ExamClass",
+      entityId: id,
+      scopeId: scope?.scopeId ?? null,
+      scopeLabel: scope?.scopeLabel ?? null,
+      target: before?.class.name ?? null,
+    })
+
+    return deleted
   } catch (error) {
     console.error(`Failed to remove exam class ${id}:`, error)
     throw error
@@ -263,11 +293,28 @@ export const removeExamClassByIds = async (
   classId: string
 ): Promise<ExamClass> => {
   try {
-    return await prisma.examClass.delete({
+    const cls = await prisma.class.findUnique({
+      where: { id: classId },
+      select: { name: true },
+    })
+
+    const deleted = await prisma.examClass.delete({
       where: {
         examId_classId: { examId, classId },
       },
     })
+
+    const scope = await resolveExamScope(examId)
+    await recordAuditLog({
+      action: "exam.class.unassign",
+      entityType: "ExamClass",
+      entityId: deleted.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: cls?.name ?? null,
+    })
+
+    return deleted
   } catch (error) {
     console.error(
       `Failed to remove class ${classId} from exam ${examId}:`,

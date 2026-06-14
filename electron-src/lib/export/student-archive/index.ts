@@ -10,6 +10,7 @@ import type {
   ExportStudentsArchiveOptions,
   ExportStudentsArchiveResult,
 } from "../../../../src/types/studentArchive.types"
+import { recordAuditLog } from "../../prisma/auditLog"
 import {
   createStudentArchive,
   generateStudentExportFileName,
@@ -56,6 +57,18 @@ export async function exportStudentsArchive(
     if (!archiveResult.success) {
       return { success: false, error: archiveResult.error }
     }
+
+    await recordAuditLog({
+      action: "student.export",
+      entityType: "Student",
+      entityId: "student-archive",
+      summary: `生徒を${studentIds.length}名エクスポートしました`,
+      extra: {
+        studentCount: studentIds.length,
+        classCount: classIds?.length ?? 0,
+        outputPath: archiveResult.outputPath,
+      },
+    })
 
     return {
       success: true,

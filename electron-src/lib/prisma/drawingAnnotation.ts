@@ -11,6 +11,8 @@ import type {
   DrawingType,
   DrawingUpdateData,
 } from "../../../src/types/drawingAnnotation.types"
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScope, resolveExamScopeByQuestionScore } from "./auditScope"
 import prisma from "./client"
 import {
   recordDeletion,
@@ -163,6 +165,19 @@ export async function createDrawingAnnotation(
           },
         },
       },
+    })
+
+    // 監査ログ: 採点マーク追加（マークごとに個別記録。集約は同一idの連続操作のみ）
+    const scope = await resolveExamScopeByQuestionScore(
+      createData.questionScoreId
+    )
+    await recordAuditLog({
+      action: "exam.annotation.create",
+      userId: createData.userId,
+      entityType: "DrawingAnnotation",
+      entityId: result.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
     })
 
     return result as DrawingAnnotation
@@ -437,6 +452,31 @@ export async function updateDrawingAnnotation(
       },
     })
 
+    // 監査ログ: 採点マーク編集。同じマークの連続編集（移動・色変更等）は集約する。
+    const scope = await resolveExamScopeByQuestionScore(result.questionScore.id)
+    await recordAuditLog({
+      action: "exam.annotation.update",
+      userId: result.userId,
+      entityType: "DrawingAnnotation",
+      entityId: result.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      coalesceKey: `annotation.update:${result.id}`,
+      // テキスト注釈は after（最新テキスト）を上書き表示
+      ...(typeof data.text === "string"
+        ? {
+            changes: [
+              {
+                field: "text",
+                label: "テキスト",
+                before: null,
+                after: data.text,
+              },
+            ],
+          }
+        : {}),
+    })
+
     return result as DrawingAnnotation
   } catch (error) {
     console.error("描画アノテーション更新エラー:", error)
@@ -478,6 +518,16 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
     if (annotation) {
       const examId = annotation.questionScore.cropRegion.examPage.examId
       await recordDeletion("DrawingAnnotation", id, { examId })
+
+      // 監査ログ: 採点マーク削除（個別記録）
+      const scope = await resolveExamScope(examId)
+      await recordAuditLog({
+        action: "exam.annotation.delete",
+        entityType: "DrawingAnnotation",
+        entityId: id,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+      })
     }
   } catch (error) {
     console.error("描画アノテーション削除エラー:", error)
@@ -577,6 +627,22 @@ export async function batchUpdateDrawingAnnotations(
         })
       })
     )
+
+    // 監査ログ: 各マークの編集を同一id単位で集約（連続するドラッグ等をまとめる）
+    for (const result of results) {
+      const scope = await resolveExamScopeByQuestionScore(
+        result.questionScore.id
+      )
+      await recordAuditLog({
+        action: "exam.annotation.update",
+        userId: result.userId,
+        entityType: "DrawingAnnotation",
+        entityId: result.id,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        coalesceKey: `annotation.update:${result.id}`,
+      })
+    }
 
     return results as DrawingAnnotation[]
   } catch (error) {

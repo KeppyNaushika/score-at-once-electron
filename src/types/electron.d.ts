@@ -12,6 +12,7 @@
 
 import type { AnswerSheetBuilderAPI } from "./electron/answerSheetBuilderApi"
 import type { ArchiveAPI } from "./electron/archiveApi"
+import type { AuditLogAPI } from "./electron/auditLogApi"
 import type { ClassStudentAPI } from "./electron/classStudentApi"
 import type { CropRegionAPI } from "./electron/cropRegionApi"
 import type { DataManagementAPI } from "./electron/dataManagementApi"
@@ -90,7 +91,8 @@ export interface MyAPI
     AnswerSheetBuilderAPI,
     OmrAPI,
     DataManagementAPI,
-    SyncAPI {}
+    SyncAPI,
+    AuditLogAPI {}
 
 // ---------------------------------------------------------------------------
 // Global Window declarations

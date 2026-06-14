@@ -2,6 +2,8 @@
  * GradeStudent / GradeClass のPrisma操作関数
  */
 
+import { recordAuditLog } from "./auditLog"
+import { resolveGradeScope } from "./auditScope"
 import { getAvailableClassesForTarget } from "./availableClasses"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
@@ -229,6 +231,17 @@ export async function addStudentsFromClassToGrade(
           customOrder,
         })),
       })
+
+      const scope = await resolveGradeScope(gradeId)
+      await recordAuditLog({
+        action: "grade.student.add",
+        entityType: "GradeStudent",
+        entityId: gradeId,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        summary: `学級から成績対象生徒を${toAdd.length}名追加しました`,
+        extra: { count: toAdd.length, classId },
+      })
     }
 
     return {
@@ -277,6 +290,17 @@ export async function addStudentsToGrade(
           customOrder: orderOffset++,
         })),
       })
+
+      const scope = await resolveGradeScope(gradeId)
+      await recordAuditLog({
+        action: "grade.student.add",
+        entityType: "GradeStudent",
+        entityId: gradeId,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        summary: `成績対象生徒を${newStudentIds.length}名追加しました`,
+        extra: { count: newStudentIds.length },
+      })
     }
 
     return {
@@ -307,6 +331,17 @@ export async function updateGradeStudentOrders(
         data: { customOrder },
       })
     }
+
+    const scope = await resolveGradeScope(gradeId)
+    await recordAuditLog({
+      action: "grade.student.reorder",
+      entityType: "GradeStudent",
+      entityId: gradeId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      coalesceKey: `grade_student_reorder:${gradeId}`,
+    })
+
     return { success: true }
   } catch (error) {
     console.error("Error updating grade exam student orders:", error)
@@ -357,6 +392,17 @@ export async function removeClassFromGrade(gradeId: string, classId: string) {
         where: { gradeId_classId: { gradeId, classId } },
       }),
     ])
+
+    const scope = await resolveGradeScope(gradeId)
+    await recordAuditLog({
+      action: "grade.student.remove",
+      entityType: "GradeClass",
+      entityId: gradeId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `学級を成績から外し、生徒${studentsToRemove.length}名を削除しました`,
+      extra: { removedStudents: studentsToRemove.length, classId },
+    })
 
     return { success: true, removedStudents: studentsToRemove.length }
   } catch (error) {

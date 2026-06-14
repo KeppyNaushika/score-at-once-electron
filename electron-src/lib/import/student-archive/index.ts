@@ -12,6 +12,7 @@ import type {
   StudentArchiveImportResult,
   StudentArchiveManifest,
 } from "../../../../src/types/studentArchive.types"
+import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "../merge/idChangeExecutor"
@@ -182,6 +183,15 @@ export async function executeStudentImport(
     // memberships のカウントはprocessMembershipでは集計されないため
     // idMappings.membership のサイズで推定
     counts.created.memberships = Object.keys(idMappings.membership).length
+
+    const importedStudents = counts.created.students + counts.updated.students
+    await recordAuditLog({
+      action: "student.import",
+      entityType: "Student",
+      entityId: "student-archive",
+      summary: `生徒を${importedStudents}名インポートしました`,
+      extra: { counts },
+    })
 
     return {
       success: true,

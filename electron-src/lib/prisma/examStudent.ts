@@ -1,3 +1,5 @@
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScope, resolveStudentLabel } from "./auditScope"
 import { getAvailableClassesForTarget } from "./availableClasses"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
@@ -108,6 +110,23 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
       await prisma.examStudent.createMany({
         data: createData,
       })
+
+      // 監査ログ: 受験生徒の追加（追加分をまとめて1件）
+      const scope = await resolveExamScope(examId)
+      const firstLabel = await resolveStudentLabel(newStudentIds[0])
+      const summary =
+        newStudentIds.length === 1 && firstLabel
+          ? `受験生徒「${firstLabel}」を追加しました`
+          : `受験生徒を${newStudentIds.length}名追加しました`
+      await recordAuditLog({
+        action: "exam.student.add",
+        entityType: "ExamStudent",
+        entityId: examId,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        summary,
+        extra: { studentIds: newStudentIds, count: newStudentIds.length },
+      })
     }
     return {
       success: true,
@@ -154,6 +173,23 @@ export async function removeStudentsFromExam(
       },
     })
 
+    // 監査ログ: 受験生徒の削除
+    const scope = await resolveExamScope(examId)
+    const firstLabel = await resolveStudentLabel(studentIds[0])
+    const summary =
+      studentIds.length === 1 && firstLabel
+        ? `受験生徒「${firstLabel}」を削除しました`
+        : `受験生徒を${studentIds.length}名削除しました`
+    await recordAuditLog({
+      action: "exam.student.remove",
+      entityType: "ExamStudent",
+      entityId: examId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary,
+      extra: { studentIds, count: studentIds.length },
+    })
+
     return {
       success: true,
     }
@@ -186,6 +222,26 @@ export async function updateStudentExamStatus(
       data: {
         status: enumStatus,
       },
+    })
+
+    // 監査ログ: 受験状態の変更
+    const scope = await resolveExamScope(examId)
+    const studentLabel = await resolveStudentLabel(studentId)
+    const statusJa: Record<string, string> = {
+      participating: "受験",
+      expected: "見込",
+      absent: "欠席",
+    }
+    await recordAuditLog({
+      action: "exam.student.attendance_update",
+      entityType: "ExamStudent",
+      entityId: examId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: studentLabel,
+      summary: studentLabel
+        ? `「${studentLabel}」の受験状態を「${statusJa[status] ?? status}」に変更しました`
+        : `受験状態を「${statusJa[status] ?? status}」に変更しました`,
     })
 
     return {
@@ -223,6 +279,16 @@ export async function updateStudentOrders(
         },
       })
     }
+
+    const scope = await resolveExamScope(examId)
+    await recordAuditLog({
+      action: "exam.student.reorder",
+      entityType: "ExamStudent",
+      entityId: examId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      coalesceKey: `student_reorder:${examId}`,
+    })
 
     return {
       success: true,
