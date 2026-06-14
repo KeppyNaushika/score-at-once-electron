@@ -23,6 +23,12 @@ export interface IdMappings {
   questionScore: Record<string, string>
   drawingAnnotation: Record<string, string>
   membership: Record<string, string>
+  cropRegionOmrConfig: Record<string, string>
+  cropRegionOmrChoiceOption: Record<string, string>
+  compoundAnswer: Record<string, string>
+  compoundAnswerMember: Record<string, string>
+  compoundAnswerScore: Record<string, string>
+  scoreDecision: Record<string, string>
 }
 
 /** ID変更対象 */

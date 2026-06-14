@@ -25,7 +25,8 @@ export async function createGradeArchive(
     const data = await collectGradeArchiveData(gradeId)
 
     const manifest: GradeArchiveManifest = {
-      version: "1.1.0",
+      // v1.2.0: Grade.referenceDate と GradeExportSettings を追加
+      version: "1.2.0",
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
       gradeId,

@@ -85,8 +85,22 @@ export async function importGradeArchive(
         data: {
           name: gradeData.grade.name,
           description: gradeData.grade.description,
+          // v1.2.0+: 基準日（古いアーカイブではundefined → null）
+          referenceDate: gradeData.grade.referenceDate
+            ? new Date(gradeData.grade.referenceDate)
+            : null,
         },
       })
+
+      // 1.5. GradeExportSettings作成 (v1.2.0+、Gradeと1:1)
+      if (gradeData.exportSettings) {
+        await tx.gradeExportSettings.create({
+          data: {
+            gradeId: gp.id,
+            settingsJson: gradeData.exportSettings.settingsJson,
+          },
+        })
+      }
 
       // 2. Class照合→GradeClass作成
       for (let i = 0; i < gradeData.classRefs.length; i++) {

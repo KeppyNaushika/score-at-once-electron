@@ -20,6 +20,7 @@ import type {
 } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { isNewerByLww } from "./decisionMergePolicy"
 import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
 import {
@@ -89,6 +90,12 @@ export async function executeIdIntegrationImport(
     questionScore: {},
     drawingAnnotation: {},
     membership: {},
+    cropRegionOmrConfig: {},
+    cropRegionOmrChoiceOption: {},
+    compoundAnswer: {},
+    compoundAnswerMember: {},
+    compoundAnswerScore: {},
+    scoreDecision: {},
   }
 
   // ID変更が必要なもの（Stage 2で処理）
@@ -199,6 +206,12 @@ export async function executeIdIntegrationImport(
         // 10e. ExamClass (v1.1.0+)
         await processExamClasses(data, newExamId, idMappings, tx)
 
+        // 10f. OMR設定（CropRegionOmrConfig/ChoiceOption/DigitBox） (v1.7.0+/v1.11.0+)
+        await processOmrConfigs(data, idMappings, tx)
+
+        // 10g. 複合解答（CompoundAnswer/Member） (v1.11.0+)
+        await processCompoundAnswers(data, idMappings, tx)
+
         // 11. CropSubtotal
         await processCropSubtotals(
           data,
@@ -216,6 +229,18 @@ export async function executeIdIntegrationImport(
           idMappings,
           counts,
           scoringConflictConfig,
+          tx
+        )
+
+        // 12b. ScoreDecision（OWNER確定スコア。decidedAt LWWで競合解決） (v1.13.0+)
+        await processScoreDecisions(data, currentUserId, idMappings, counts, tx)
+
+        // 12c. CompoundAnswerScore（複合解答スコア。updatedAt LWWで競合解決） (v1.11.0+)
+        await processCompoundAnswerScores(
+          data,
+          currentUserId,
+          idMappings,
+          counts,
           tx
         )
 
@@ -1204,5 +1229,306 @@ async function processExamClasses(
         },
       })
     }
+  }
+}
+
+/**
+ * OMR設定（CropRegionOmrConfig＋ChoiceOption＋DigitBox）を処理
+ *
+ * CropRegionが新規作成された場合のみ作成する。既存リージョンにマッチした場合は
+ * 対象側に既にOMR設定が存在するため作成しない（重複防止）。
+ * 子（ChoiceOption/DigitBox）は親configを新規作成したときだけ併せて作成する。
+ */
+async function processOmrConfigs(
+  data: ExtractedArchiveData,
+  idMappings: IdMappings,
+  tx: Tx
+): Promise<void> {
+  for (const cfg of data.examData.omrConfigs ?? []) {
+    const newCropRegionId = idMappings.cropRegion[cfg.cropRegionId]
+    if (!newCropRegionId) continue
+
+    // 対象リージョンに既にOMR設定があればスキップ（リージョンは1:1）
+    const existingForRegion = await tx.cropRegionOmrConfig.findFirst({
+      where: { cropRegionId: newCropRegionId },
+    })
+    if (existingForRegion) {
+      idMappings.cropRegionOmrConfig[cfg.id] = existingForRegion.id
+      continue
+    }
+
+    const existingById = await tx.cropRegionOmrConfig.findUnique({
+      where: { id: cfg.id },
+    })
+    if (existingById) {
+      idMappings.cropRegionOmrConfig[cfg.id] = cfg.id
+      continue
+    }
+
+    await tx.cropRegionOmrConfig.create({
+      data: {
+        id: cfg.id,
+        cropRegionId: newCropRegionId,
+        type: cfg.type,
+        numChoices: cfg.numChoices,
+        choiceLayout: cfg.choiceLayout,
+        numDigits: cfg.numDigits,
+        correctAnswer: cfg.correctAnswer,
+        colorThreshold: cfg.colorThreshold,
+        areaThreshold: cfg.areaThreshold,
+      },
+    })
+    idMappings.cropRegionOmrConfig[cfg.id] = cfg.id
+
+    // 新規作成したconfig配下のChoiceOptionを作成
+    for (const opt of data.examData.omrChoiceOptions ?? []) {
+      if (opt.omrConfigId !== cfg.id) continue
+      await tx.cropRegionOmrChoiceOption.create({
+        data: {
+          id: opt.id,
+          omrConfigId: cfg.id,
+          choiceIndex: opt.choiceIndex,
+          label: opt.label,
+          isCorrect: opt.isCorrect,
+          shape: opt.shape ?? null,
+          normalizedCx: opt.normalizedCx ?? null,
+          normalizedCy: opt.normalizedCy ?? null,
+          normalizedWidth: opt.normalizedWidth ?? null,
+          normalizedHeight: opt.normalizedHeight ?? null,
+        },
+      })
+      idMappings.cropRegionOmrChoiceOption[opt.id] = opt.id
+    }
+
+    // 新規作成したconfig配下のDigitBoxを作成
+    for (const box of data.examData.omrDigitBoxes ?? []) {
+      if (box.omrConfigId !== cfg.id) continue
+      await tx.cropRegionOmrDigitBox.create({
+        data: {
+          id: box.id,
+          omrConfigId: cfg.id,
+          digitIndex: box.digitIndex,
+          normalizedX: box.normalizedX,
+          normalizedY: box.normalizedY,
+          normalizedW: box.normalizedW,
+          normalizedH: box.normalizedH,
+        },
+      })
+    }
+  }
+}
+
+/**
+ * 複合解答（CompoundAnswer＋Member）を処理
+ *
+ * ExamPageが新規作成された場合のみ作成する。既存（同一ID）があればスキップ。
+ * Memberは親CompoundAnswerを新規作成したときだけ併せて作成する。
+ */
+async function processCompoundAnswers(
+  data: ExtractedArchiveData,
+  idMappings: IdMappings,
+  tx: Tx
+): Promise<void> {
+  for (const ca of data.examData.compoundAnswers ?? []) {
+    const newExamPageId = idMappings.examPage[ca.examPageId]
+    if (!newExamPageId) continue
+
+    const existingById = await tx.compoundAnswer.findUnique({
+      where: { id: ca.id },
+    })
+    if (existingById) {
+      idMappings.compoundAnswer[ca.id] = ca.id
+      continue
+    }
+
+    await tx.compoundAnswer.create({
+      data: {
+        id: ca.id,
+        examPageId: newExamPageId,
+        label: ca.label,
+        answerFormat: ca.answerFormat,
+        correctAnswer: ca.correctAnswer,
+        points: ca.points,
+        orderIndex: ca.orderIndex,
+        alternativeAnswers: ca.alternativeAnswers,
+        requireReduced: ca.requireReduced,
+      },
+    })
+    idMappings.compoundAnswer[ca.id] = ca.id
+
+    // 新規作成したCompoundAnswer配下のMemberを作成
+    for (const cam of data.examData.compoundAnswerMembers ?? []) {
+      if (cam.compoundAnswerId !== ca.id) continue
+      const newCropRegionId = idMappings.cropRegion[cam.cropRegionId]
+      if (!newCropRegionId) continue
+      await tx.compoundAnswerMember.create({
+        data: {
+          id: cam.id,
+          compoundAnswerId: ca.id,
+          cropRegionId: newCropRegionId,
+          order: cam.order,
+          roleLabel: cam.roleLabel,
+          separator: cam.separator,
+        },
+      })
+      idMappings.compoundAnswerMember[cam.id] = cam.id
+    }
+  }
+}
+
+/**
+ * ScoreDecision（OWNER確定スコア）を処理
+ *
+ * 設問×生徒で高々1件（@@unique）。同一キーがローカルに既存の場合は
+ * decidedAt の新しい方を採用（LWW）。userIdは現在のユーザーで上書き。
+ */
+async function processScoreDecisions(
+  data: ExtractedArchiveData,
+  currentUserId: string,
+  idMappings: IdMappings,
+  counts: ImportCounts,
+  tx: Tx
+): Promise<void> {
+  for (const sd of data.scoresData.scoreDecisions ?? []) {
+    const newRegionId = idMappings.cropRegion[sd.cropRegionId]
+    const newStudentId = idMappings.student[sd.studentId]
+    if (!newRegionId || !newStudentId) continue
+
+    const newSourceQsId = sd.sourceQuestionScoreId
+      ? (idMappings.questionScore[sd.sourceQuestionScoreId] ?? null)
+      : null
+    const incomingDecidedAt = new Date(sd.decidedAt)
+
+    const existing = await tx.scoreDecision.findUnique({
+      where: {
+        cropRegionId_studentId: {
+          cropRegionId: newRegionId,
+          studentId: newStudentId,
+        },
+      },
+    })
+
+    if (existing) {
+      // 確定レイヤーの競合解決はLWW（decisionMergePolicy参照）
+      if (isNewerByLww(incomingDecidedAt, existing.decidedAt)) {
+        await tx.scoreDecision.update({
+          where: { id: existing.id },
+          data: {
+            verdict: sd.verdict,
+            score: sd.score ? parseFloat(sd.score) : null,
+            comment: sd.comment,
+            decidedByUserId: currentUserId,
+            decidedAt: incomingDecidedAt,
+            sourceQuestionScoreId: newSourceQsId,
+          },
+        })
+        counts.updated.scores++
+      } else {
+        counts.skipped.scores++
+      }
+      idMappings.scoreDecision[sd.id] = existing.id
+      continue
+    }
+
+    const existingById = await tx.scoreDecision.findUnique({
+      where: { id: sd.id },
+    })
+    if (existingById) {
+      idMappings.scoreDecision[sd.id] = sd.id
+      counts.unchanged.scores++
+      continue
+    }
+
+    await tx.scoreDecision.create({
+      data: {
+        id: sd.id,
+        cropRegionId: newRegionId,
+        studentId: newStudentId,
+        verdict: sd.verdict,
+        score: sd.score ? parseFloat(sd.score) : null,
+        comment: sd.comment,
+        decidedByUserId: currentUserId,
+        decidedAt: incomingDecidedAt,
+        sourceQuestionScoreId: newSourceQsId,
+      },
+    })
+    idMappings.scoreDecision[sd.id] = sd.id
+    counts.created.scores++
+  }
+}
+
+/**
+ * CompoundAnswerScore（複合解答スコア）を処理
+ *
+ * 複合解答×生徒で高々1件（@@unique）。同一キーがローカルに既存の場合は
+ * updatedAt の新しい方を採用（LWW）。userIdは現在のユーザーで上書き。
+ */
+async function processCompoundAnswerScores(
+  data: ExtractedArchiveData,
+  currentUserId: string,
+  idMappings: IdMappings,
+  counts: ImportCounts,
+  tx: Tx
+): Promise<void> {
+  for (const cas of data.examData.compoundAnswerScores ?? []) {
+    const newCompoundAnswerId = idMappings.compoundAnswer[cas.compoundAnswerId]
+    const newStudentId = idMappings.student[cas.studentId]
+    if (!newCompoundAnswerId || !newStudentId) continue
+
+    const incomingUpdatedAt = new Date(cas.updatedAt)
+
+    const existing = await tx.compoundAnswerScore.findUnique({
+      where: {
+        compoundAnswerId_studentId: {
+          compoundAnswerId: newCompoundAnswerId,
+          studentId: newStudentId,
+        },
+      },
+    })
+
+    if (existing) {
+      // 確定レイヤーの競合解決はLWW（decisionMergePolicy参照）
+      if (isNewerByLww(incomingUpdatedAt, existing.updatedAt)) {
+        await tx.compoundAnswerScore.update({
+          where: { id: existing.id },
+          data: {
+            userId: currentUserId,
+            recognizedAnswer: cas.recognizedAnswer,
+            status: cas.status,
+            partialScore: cas.partialScore
+              ? parseFloat(cas.partialScore)
+              : null,
+          },
+        })
+        counts.updated.scores++
+      } else {
+        counts.skipped.scores++
+      }
+      idMappings.compoundAnswerScore[cas.id] = existing.id
+      continue
+    }
+
+    const existingById = await tx.compoundAnswerScore.findUnique({
+      where: { id: cas.id },
+    })
+    if (existingById) {
+      idMappings.compoundAnswerScore[cas.id] = cas.id
+      counts.unchanged.scores++
+      continue
+    }
+
+    await tx.compoundAnswerScore.create({
+      data: {
+        id: cas.id,
+        compoundAnswerId: newCompoundAnswerId,
+        studentId: newStudentId,
+        userId: currentUserId,
+        recognizedAnswer: cas.recognizedAnswer,
+        status: cas.status,
+        partialScore: cas.partialScore ? parseFloat(cas.partialScore) : null,
+      },
+    })
+    idMappings.compoundAnswerScore[cas.id] = cas.id
+    counts.created.scores++
   }
 }

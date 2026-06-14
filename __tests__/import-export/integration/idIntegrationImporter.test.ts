@@ -1500,4 +1500,541 @@ describe("executeIdIntegrationImport", () => {
     expect(afterStudents).toBe(beforeStudents)
     expect(afterExams).toBe(beforeExams)
   })
+
+  /**
+   * 全件noMatchのpreMatchを作るヘルパー（新規インポート用）
+   */
+  function buildNoMatchPreMatch(
+    data: ReturnType<typeof createBasicTestData>["data"],
+    examId: string
+  ) {
+    return createFileOverviewData({
+      student: createPreMatchingResult({
+        noMatch: data.studentsData.students.map((s) => ({
+          importId: s.id,
+          importData: { ...s },
+          displayLabel: s.lastName,
+        })),
+      }),
+      class: createPreMatchingResult({
+        noMatch: data.classesData.classes.map((c) => ({
+          importId: c.id,
+          importData: { ...c },
+          displayLabel: c.name,
+        })),
+      }),
+      subtotalGroup: createPreMatchingResult({
+        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
+          importId: g.id,
+          importData: { ...g },
+          displayLabel: g.name,
+        })),
+      }),
+      exam: {
+        isIdMatch: false,
+        importExamId: examId,
+        importData: {},
+        displayLabel: "テスト",
+      },
+    })
+  }
+
+  // II-20: v1.7.0/v1.11.0: OMR設定（Config/ChoiceOption/DigitBox）が作成される
+  it("II-20: OMR設定一式がmerge経路で作成される", async () => {
+    const { data, examId, regionId } = createBasicTestData()
+
+    const cfgId = generateId()
+    const now = new Date().toISOString()
+    data.examData.omrConfigs = [
+      {
+        id: cfgId,
+        cropRegionId: regionId,
+        type: "choice",
+        numChoices: 4,
+        choiceLayout: "horizontal",
+        numDigits: null,
+        correctAnswer: "1",
+        colorThreshold: null,
+        areaThreshold: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.omrChoiceOptions = [
+      {
+        id: generateId(),
+        omrConfigId: cfgId,
+        choiceIndex: 0,
+        label: "1",
+        isCorrect: true,
+        shape: "circle",
+        normalizedCx: 0.5,
+        normalizedCy: 0.5,
+        normalizedWidth: 0.1,
+        normalizedHeight: 0.1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.omrDigitBoxes = [
+      {
+        id: generateId(),
+        omrConfigId: cfgId,
+        digitIndex: 0,
+        normalizedX: 0.1,
+        normalizedY: 0.1,
+        normalizedW: 0.1,
+        normalizedH: 0.1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    const result = await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result.success).toBe(true)
+
+    const configs = await prisma.cropRegionOmrConfig.findMany({
+      where: { cropRegionId: regionId },
+    })
+    expect(configs.length).toBe(1)
+    const options = await prisma.cropRegionOmrChoiceOption.findMany({
+      where: { omrConfigId: configs[0].id },
+    })
+    expect(options.length).toBe(1)
+    expect(options[0].shape).toBe("circle")
+    const boxes = await prisma.cropRegionOmrDigitBox.findMany({
+      where: { omrConfigId: configs[0].id },
+    })
+    expect(boxes.length).toBe(1)
+  })
+
+  // II-21: v1.11.0: 複合解答（CompoundAnswer/Member/Score）が作成される
+  it("II-21: 複合解答一式がmerge経路で作成される", async () => {
+    const { data, examId, regionId, studentId } = createBasicTestData()
+
+    const pageId = data.examData.examPages[0].id
+    const caId = generateId()
+    const now = new Date().toISOString()
+    data.examData.compoundAnswers = [
+      {
+        id: caId,
+        examPageId: pageId,
+        label: "複合1",
+        answerFormat: "fraction",
+        correctAnswer: "1/2",
+        points: 5,
+        orderIndex: 0,
+        alternativeAnswers: null,
+        requireReduced: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.compoundAnswerMembers = [
+      {
+        id: generateId(),
+        compoundAnswerId: caId,
+        cropRegionId: regionId,
+        order: 0,
+        roleLabel: "分子",
+        separator: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.compoundAnswerScores = [
+      {
+        id: generateId(),
+        compoundAnswerId: caId,
+        studentId,
+        userId: currentUser.id,
+        recognizedAnswer: "1/2",
+        status: "correct",
+        partialScore: "5",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    const result = await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result.success).toBe(true)
+
+    const cas = await prisma.compoundAnswer.findMany({ where: { id: caId } })
+    expect(cas.length).toBe(1)
+    const members = await prisma.compoundAnswerMember.findMany({
+      where: { compoundAnswerId: caId },
+    })
+    expect(members.length).toBe(1)
+    const scores = await prisma.compoundAnswerScore.findMany({
+      where: { compoundAnswerId: caId, studentId },
+    })
+    expect(scores.length).toBe(1)
+    // userIdは現在のユーザーで上書きされる
+    expect(scores[0].userId).toBe(currentUser.id)
+  })
+
+  // II-22: v1.13.0: ScoreDecisionが作成される
+  it("II-22: ScoreDecisionがmerge経路で作成される", async () => {
+    const { data, examId, regionId, studentId } = createBasicTestData()
+
+    const sdId = generateId()
+    const now = new Date().toISOString()
+    data.scoresData.scoreDecisions = [
+      {
+        id: sdId,
+        cropRegionId: regionId,
+        studentId,
+        verdict: "correct",
+        score: "10",
+        comment: null,
+        decidedByUserId: currentUser.id,
+        decidedAt: now,
+        sourceQuestionScoreId: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    const result = await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result.success).toBe(true)
+
+    const decisions = await prisma.scoreDecision.findMany({
+      where: { cropRegionId: regionId, studentId },
+    })
+    expect(decisions.length).toBe(1)
+    expect(decisions[0].verdict).toBe("correct")
+    expect(decisions[0].decidedByUserId).toBe(currentUser.id)
+  })
+
+  // II-23: ScoreDecisionのLWW競合解決（decidedAtが新しい方を採用）
+  it("II-23: ScoreDecision競合はdecidedAtが新しい方を採用する（LWW）", async () => {
+    const { data, examId, studentId, regionId, classId, groupId } =
+      createBasicTestData()
+
+    const sdId = generateId()
+    const oldDate = new Date("2025-06-01T00:00:00.000Z").toISOString()
+    data.scoresData.scoreDecisions = [
+      {
+        id: sdId,
+        cropRegionId: regionId,
+        studentId,
+        verdict: "incorrect",
+        score: "0",
+        comment: "旧",
+        decidedByUserId: currentUser.id,
+        decidedAt: oldDate,
+        sourceQuestionScoreId: null,
+        createdAt: oldDate,
+        updatedAt: oldDate,
+      },
+    ]
+
+    // 初回インポート（古い確定）
+    await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    // 2回目: 新しいdecidedAtの確定で同一試験に再インポート
+    const newDate = new Date("2025-12-01T00:00:00.000Z").toISOString()
+    data.scoresData.scoreDecisions[0].verdict = "correct"
+    data.scoresData.scoreDecisions[0].score = "10"
+    data.scoresData.scoreDecisions[0].comment = "新"
+    data.scoresData.scoreDecisions[0].decidedAt = newDate
+
+    const preMatch2 = createFileOverviewData({
+      student: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: studentId, existingId: studentId }),
+        ],
+      }),
+      class: createPreMatchingResult({
+        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      }),
+      subtotalGroup: createPreMatchingResult({
+        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
+      }),
+      exam: {
+        isIdMatch: true,
+        importExamId: examId,
+        existingExamId: examId,
+        importData: {},
+        existingData: {},
+        displayLabel: "テスト",
+      },
+    })
+
+    const result2 = await executeIdIntegrationImport(
+      data,
+      preMatch2,
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result2.success).toBe(true)
+
+    // 確定は1件のまま（重複なし）、新しい方が採用される
+    const decisions = await prisma.scoreDecision.findMany({
+      where: { cropRegionId: regionId, studentId },
+    })
+    expect(decisions.length).toBe(1)
+    expect(decisions[0].verdict).toBe("correct")
+    expect(decisions[0].comment).toBe("新")
+  })
+
+  // II-24: ScoreDecisionのLWW（既存が新しい場合は上書きしない）
+  it("II-24: ScoreDecision競合で既存が新しければ上書きしない（LWW）", async () => {
+    const { data, examId, studentId, regionId, classId, groupId } =
+      createBasicTestData()
+
+    const sdId = generateId()
+    const newDate = new Date("2025-12-01T00:00:00.000Z").toISOString()
+    data.scoresData.scoreDecisions = [
+      {
+        id: sdId,
+        cropRegionId: regionId,
+        studentId,
+        verdict: "correct",
+        score: "10",
+        comment: "新しい既存",
+        decidedByUserId: currentUser.id,
+        decidedAt: newDate,
+        sourceQuestionScoreId: null,
+        createdAt: newDate,
+        updatedAt: newDate,
+      },
+    ]
+
+    await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    // 2回目: 古いdecidedAtの確定 → 上書きされないはず
+    const oldDate = new Date("2025-06-01T00:00:00.000Z").toISOString()
+    data.scoresData.scoreDecisions[0].verdict = "incorrect"
+    data.scoresData.scoreDecisions[0].comment = "古い取り込み"
+    data.scoresData.scoreDecisions[0].decidedAt = oldDate
+
+    const preMatch2 = createFileOverviewData({
+      student: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: studentId, existingId: studentId }),
+        ],
+      }),
+      class: createPreMatchingResult({
+        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      }),
+      subtotalGroup: createPreMatchingResult({
+        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
+      }),
+      exam: {
+        isIdMatch: true,
+        importExamId: examId,
+        existingExamId: examId,
+        importData: {},
+        existingData: {},
+        displayLabel: "テスト",
+      },
+    })
+
+    const result2 = await executeIdIntegrationImport(
+      data,
+      preMatch2,
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result2.success).toBe(true)
+
+    const decisions = await prisma.scoreDecision.findMany({
+      where: { cropRegionId: regionId, studentId },
+    })
+    expect(decisions.length).toBe(1)
+    // 既存（新しい方）が維持される
+    expect(decisions[0].verdict).toBe("correct")
+    expect(decisions[0].comment).toBe("新しい既存")
+  })
+
+  // II-25: 新しめモデル全部入りのアーカイブが1回のmergeで全て復元される
+  // （merge経路が将来モデルをサイレントに取りこぼさないことの網羅regression）
+  it("II-25: OMR・複合解答・確定スコアを含む全モデルがmergeで復元される", async () => {
+    const { data, examId, regionId, studentId } = createBasicTestData()
+    const now = new Date().toISOString()
+    const pageId = data.examData.examPages[0].id
+
+    // OMR一式
+    const cfgId = generateId()
+    data.examData.omrConfigs = [
+      {
+        id: cfgId,
+        cropRegionId: regionId,
+        type: "choice",
+        numChoices: 4,
+        choiceLayout: "horizontal",
+        numDigits: null,
+        correctAnswer: "1",
+        colorThreshold: null,
+        areaThreshold: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.omrChoiceOptions = [
+      {
+        id: generateId(),
+        omrConfigId: cfgId,
+        choiceIndex: 0,
+        label: "1",
+        isCorrect: true,
+        shape: "circle",
+        normalizedCx: 0.5,
+        normalizedCy: 0.5,
+        normalizedWidth: 0.1,
+        normalizedHeight: 0.1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.omrDigitBoxes = [
+      {
+        id: generateId(),
+        omrConfigId: cfgId,
+        digitIndex: 0,
+        normalizedX: 0.1,
+        normalizedY: 0.1,
+        normalizedW: 0.1,
+        normalizedH: 0.1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    // 複合解答一式
+    const caId = generateId()
+    data.examData.compoundAnswers = [
+      {
+        id: caId,
+        examPageId: pageId,
+        label: "複合1",
+        answerFormat: "fraction",
+        correctAnswer: "1/2",
+        points: 5,
+        orderIndex: 0,
+        alternativeAnswers: null,
+        requireReduced: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.compoundAnswerMembers = [
+      {
+        id: generateId(),
+        compoundAnswerId: caId,
+        cropRegionId: regionId,
+        order: 0,
+        roleLabel: "分子",
+        separator: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+    data.examData.compoundAnswerScores = [
+      {
+        id: generateId(),
+        compoundAnswerId: caId,
+        studentId,
+        userId: currentUser.id,
+        recognizedAnswer: "1/2",
+        status: "correct",
+        partialScore: "5",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    // 確定スコア
+    data.scoresData.scoreDecisions = [
+      {
+        id: generateId(),
+        cropRegionId: regionId,
+        studentId,
+        verdict: "correct",
+        score: "10",
+        comment: null,
+        decidedByUserId: currentUser.id,
+        decidedAt: now,
+        sourceQuestionScoreId: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    const result = await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result.success).toBe(true)
+
+    // 全7モデルが復元されていること
+    expect(
+      await prisma.cropRegionOmrConfig.count({
+        where: { cropRegionId: regionId },
+      })
+    ).toBe(1)
+    const cfg = await prisma.cropRegionOmrConfig.findFirst({
+      where: { cropRegionId: regionId },
+    })
+    expect(
+      await prisma.cropRegionOmrChoiceOption.count({
+        where: { omrConfigId: cfg!.id },
+      })
+    ).toBe(1)
+    expect(
+      await prisma.cropRegionOmrDigitBox.count({
+        where: { omrConfigId: cfg!.id },
+      })
+    ).toBe(1)
+    expect(await prisma.compoundAnswer.count({ where: { id: caId } })).toBe(1)
+    expect(
+      await prisma.compoundAnswerMember.count({
+        where: { compoundAnswerId: caId },
+      })
+    ).toBe(1)
+    expect(
+      await prisma.compoundAnswerScore.count({
+        where: { compoundAnswerId: caId, studentId },
+      })
+    ).toBe(1)
+    expect(
+      await prisma.scoreDecision.count({
+        where: { cropRegionId: regionId, studentId },
+      })
+    ).toBe(1)
+  })
 })

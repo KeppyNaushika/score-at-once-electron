@@ -68,6 +68,8 @@ export interface IdMappings {
   cropRegionOmrConfig: Record<string, string>
   /** CropRegionOmrChoiceOption ID: 旧ID -> 新ID (v1.7.0+) */
   cropRegionOmrChoiceOption: Record<string, string>
+  /** CropRegionOmrDigitBox ID: 旧ID -> 新ID (v1.11.0+) */
+  cropRegionOmrDigitBox: Record<string, string>
   /** CompoundAnswer ID: 旧ID -> 新ID (v1.11.0+) */
   compoundAnswer: Record<string, string>
   /** CompoundAnswerMember ID: 旧ID -> 新ID (v1.11.0+) */
@@ -114,6 +116,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     examTag: {},
     cropRegionOmrConfig: {},
     cropRegionOmrChoiceOption: {},
+    cropRegionOmrDigitBox: {},
     compoundAnswer: {},
     compoundAnswerMember: {},
     compoundAnswerScore: {},
@@ -241,6 +244,11 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   // v1.7.0+: CropRegionOmrChoiceOption
   for (const opt of data.examData.omrChoiceOptions || []) {
     mappings.cropRegionOmrChoiceOption[opt.id] = randomUUID()
+  }
+
+  // v1.11.0+: CropRegionOmrDigitBox
+  for (const box of data.examData.omrDigitBoxes || []) {
+    mappings.cropRegionOmrDigitBox[box.id] = randomUUID()
   }
 
   // v1.11.0+: CompoundAnswer

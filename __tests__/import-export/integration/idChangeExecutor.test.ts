@@ -311,6 +311,110 @@ describe("executeIdChanges", () => {
       // 警告なし
       expect(warnings).toHaveLength(0)
     })
+
+    it("ScoreDecision/CompoundAnswerScore がカスケード削除されず新IDへ移し替えられる", async () => {
+      const existingStudentId = generateId()
+      const newStudentId = generateId()
+      const examId = generateId()
+      const pageId = generateId()
+      const regionId = generateId()
+      const userId = generateId()
+      const compoundId = generateId()
+
+      await prisma.user.create({
+        data: { id: userId, username: `u_${Date.now()}`, name: "採点者" },
+      })
+      await prisma.student.create({
+        data: {
+          id: existingStudentId,
+          studentNumber: "SD001",
+          lastName: "佐藤",
+          firstName: "花子",
+          lastNameKana: "サトウ",
+          firstNameKana: "ハナコ",
+          enrollmentYear: 2024,
+        },
+      })
+      await prisma.exam.create({ data: { id: examId, examName: "確定テスト" } })
+      await prisma.examPage.create({
+        data: { id: pageId, examId, pageNumber: 1 },
+      })
+      await prisma.cropRegion.create({
+        data: {
+          id: regionId,
+          examPageId: pageId,
+          label: "問1",
+          type: "rectangle",
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 10,
+        },
+      })
+
+      // ScoreDecision（student に onDelete:Cascade）
+      const decisionId = generateId()
+      await prisma.scoreDecision.create({
+        data: {
+          id: decisionId,
+          cropRegionId: regionId,
+          studentId: existingStudentId,
+          verdict: "correct",
+          score: 10,
+          decidedByUserId: userId,
+        },
+      })
+
+      // CompoundAnswer + CompoundAnswerScore（student に onDelete:Cascade）
+      await prisma.compoundAnswer.create({
+        data: {
+          id: compoundId,
+          examPageId: pageId,
+          label: "複合",
+          answerFormat: "fraction",
+          correctAnswer: "1/2",
+          points: 5,
+        },
+      })
+      const casId = generateId()
+      await prisma.compoundAnswerScore.create({
+        data: {
+          id: casId,
+          compoundAnswerId: compoundId,
+          studentId: existingStudentId,
+          userId,
+          status: "correct",
+        },
+      })
+
+      const targets: IdChangeTarget[] = [
+        {
+          category: "student",
+          existingId: existingStudentId,
+          newId: newStudentId,
+        },
+      ]
+      const idMappings = createEmptyIdMappings()
+      const warnings: string[] = []
+
+      await prisma.$transaction(async (tx) => {
+        await executeIdChanges(targets, idMappings, warnings, tx)
+      })
+
+      // ScoreDecision は削除されず、新IDへ移し替えられている
+      const decision = await prisma.scoreDecision.findUnique({
+        where: { id: decisionId },
+      })
+      expect(decision).not.toBeNull()
+      expect(decision!.studentId).toBe(newStudentId)
+
+      // CompoundAnswerScore も同様
+      const cas = await prisma.compoundAnswerScore.findUnique({
+        where: { id: casId },
+      })
+      expect(cas).not.toBeNull()
+      expect(cas!.studentId).toBe(newStudentId)
+    })
   })
 
   // =========================================================================
