@@ -1,5 +1,6 @@
 import { setupAnswerSheetBuilderHandlers } from "./answerSheetBuilderHandlers"
 import { registerArchiveHandlers } from "./archiveHandlers"
+import { setupAuditLogHandlers } from "./auditLogHandlers"
 import { setupAuthHandlers } from "./authHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
 import { setupDrawingHandlers } from "./drawingHandlers"
@@ -45,4 +46,5 @@ export function setupAllIPCHandlers(): void {
   setupOmrConfigHandlers()
   registerStudentArchiveHandlers()
   setupSyncHandlers()
+  setupAuditLogHandlers()
 }

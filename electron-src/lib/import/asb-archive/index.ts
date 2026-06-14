@@ -3,6 +3,7 @@
  */
 
 import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
+import { recordAuditLog } from "../../prisma/auditLog"
 import { transformAsbToLatest } from "../asb-transformers"
 import {
   cleanupAsbTempDir,
@@ -75,6 +76,16 @@ export async function importAsbDefinition(
 
     // 7. DB保存
     await createImportedAsbDefinition(remapped, userId)
+
+    await recordAuditLog({
+      action: "answer_sheet.import",
+      userId,
+      entityType: "AsbDefinition",
+      entityId: remapped.id,
+      scopeId: remapped.id,
+      scopeLabel: remapped.name,
+      target: remapped.name,
+    })
 
     return {
       success: true,

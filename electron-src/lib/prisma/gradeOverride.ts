@@ -4,6 +4,8 @@
 
 import type { Prisma } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
 
 /**
@@ -64,6 +66,16 @@ export async function upsertGradeOverride(data: {
         }
       }
     )
+
+    const scope = await resolveGradeScope(data.gradeId)
+    await recordAuditLog({
+      action: "grade.override.update",
+      entityType: "GradeOverride",
+      entityId: result.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+    })
+
     return { success: true, override: result }
   } catch (error) {
     console.error("Error upserting grade override:", error)
@@ -94,6 +106,15 @@ export async function deleteGradeOverride(data: {
     })
     if (existing) {
       await prisma.gradeOverride.delete({ where: { id: existing.id } })
+
+      const scope = await resolveGradeScope(data.gradeId)
+      await recordAuditLog({
+        action: "grade.override.delete",
+        entityType: "GradeOverride",
+        entityId: existing.id,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+      })
     }
     return { success: true }
   } catch (error) {

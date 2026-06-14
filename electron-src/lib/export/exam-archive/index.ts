@@ -10,6 +10,7 @@ import type {
   ExportExamOptions,
   ExportExamResult,
 } from "../../../../src/types/examArchive.types"
+import { recordAuditLog } from "../../prisma/auditLog"
 import { getExamById } from "../../prisma/exam"
 import { createArchive, generateExportFileName } from "./archiveCreator"
 import { collectExamData } from "./dataCollector"
@@ -66,6 +67,17 @@ export async function exportExam(
     if (!archiveResult.success) {
       return { success: false, error: archiveResult.error }
     }
+
+    // 監査ログ: 試験エクスポート（操作者は認証ストアから自動補完。userIdは対象データの絞り込み用）
+    await recordAuditLog({
+      action: "exam.export",
+      entityType: "Exam",
+      entityId: examId,
+      scopeId: examId,
+      scopeLabel: exam.examName,
+      target: exam.examName,
+      extra: { exportMode, outputPath: archiveResult.outputPath },
+    })
 
     // 5. マニフェストを返す
     return {

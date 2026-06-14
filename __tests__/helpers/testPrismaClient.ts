@@ -78,6 +78,8 @@ export async function cleanupTestDatabase(): Promise<void> {
   await prisma.userKeyboardShortcut.deleteMany()
   await prisma.userPreference.deleteMany()
   await prisma.user.deleteMany()
+  // 監査ログ（FKなし・追記専用）。テスト間の混入を防ぐため最後に削除
+  await prisma.auditLog.deleteMany()
 }
 
 /**

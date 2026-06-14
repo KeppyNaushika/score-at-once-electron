@@ -1,6 +1,28 @@
 import { Decimal } from "@prisma/client/runtime/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScopeByCropRegion, resolveStudentLabel } from "./auditScope"
 import prisma from "./client"
+
+/** verdict コードを日本語表示に変換（監査ログ差分用） */
+const verdictLabel = (v: string | null | undefined): string => {
+  switch (v) {
+    case "correct":
+      return "正解"
+    case "incorrect":
+      return "不正解"
+    case "partial":
+      return "部分点"
+    case "pending":
+      return "保留"
+    case "no_answer":
+      return "無答"
+    case "double_mark":
+      return "複数マーク"
+    default:
+      return v ?? "（なし）"
+  }
+}
 
 export interface UpsertScoreDecisionData {
   cropRegionId: string
@@ -68,6 +90,17 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
         ? new Decimal(data.score)
         : null
 
+    // 差分記録用に変更前の確定を取得
+    const previous = await prisma.scoreDecision.findUnique({
+      where: {
+        cropRegionId_studentId: {
+          cropRegionId: data.cropRegionId,
+          studentId: data.studentId,
+        },
+      },
+      select: { verdict: true, score: true },
+    })
+
     const decision = await prisma.scoreDecision.upsert({
       where: {
         cropRegionId_studentId: {
@@ -96,6 +129,32 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
       include: {
         decidedBy: true,
       },
+    })
+
+    // 監査ログ: 採点確定（OWNERによる確定。提案連打は記録しない）
+    const scope = await resolveExamScopeByCropRegion(data.cropRegionId)
+    const studentLabel = await resolveStudentLabel(data.studentId)
+    const prevScore = previous?.score != null ? Number(previous.score) : null
+    const newScore = score != null ? Number(score) : null
+    await recordAuditLog({
+      action: "exam.score.decide",
+      userId: data.decidedByUserId,
+      entityType: "ScoreDecision",
+      entityId: decision.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: studentLabel
+        ? `「${studentLabel}」の採点を確定しました`
+        : "採点を確定しました",
+      changes: [
+        {
+          field: "verdict",
+          label: "判定",
+          before: previous ? verdictLabel(previous.verdict) : null,
+          after: verdictLabel(data.verdict),
+        },
+        { field: "score", label: "得点", before: prevScore, after: newScore },
+      ],
     })
 
     return { success: true, decision }

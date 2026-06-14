@@ -7,6 +7,7 @@ import { app } from "electron"
 import * as fs from "fs"
 
 import type { GradeArchiveManifest } from "../../../../src/types/gradeArchive.types"
+import { recordAuditLog } from "../../prisma/auditLog"
 import { collectGradeArchiveData } from "./gradeArchiveDataCollector"
 
 function getAppVersion(): string {
@@ -39,6 +40,16 @@ export async function createGradeArchive(
 
     return new Promise((resolve, reject) => {
       output.on("close", () => {
+        // 監査ログ: 成績エクスポート（ベストエフォート）
+        void recordAuditLog({
+          action: "grade.export",
+          entityType: "Grade",
+          entityId: gradeId,
+          scopeId: gradeId,
+          scopeLabel: data.gradeData.grade.name,
+          target: data.gradeData.grade.name,
+          extra: { outputPath },
+        })
         resolve({ success: true })
       })
 

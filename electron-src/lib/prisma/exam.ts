@@ -1,5 +1,6 @@
 import type { Prisma as PrismaTypes } from "@prisma/client"
 
+import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 /** 試験一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得、ユーザーでフィルタリング） */
@@ -212,7 +213,7 @@ export const createExam = async (
   data: Omit<PrismaTypes.ExamCreateInput, "userExams">,
   userId: string
 ) => {
-  return prisma.exam.create({
+  const exam = await prisma.exam.create({
     data: {
       ...data,
       userExams: {
@@ -255,6 +256,19 @@ export const createExam = async (
       },
     },
   })
+
+  // 監査ログ（リファレンス計装）。失敗しても主操作は壊さない。
+  await recordAuditLog({
+    action: "exam.create",
+    userId,
+    entityType: "Exam",
+    entityId: exam.id,
+    scopeId: exam.id,
+    scopeLabel: exam.examName,
+    target: exam.examName,
+  })
+
+  return exam
 }
 
 /** 試験情報を更新する */
@@ -262,15 +276,61 @@ export const updateExam = async (
   id: string,
   data: PrismaTypes.ExamUpdateInput
 ) => {
-  return prisma.exam.update({
+  // 差分記録用に変更前を取得
+  const before = await prisma.exam.findUnique({
+    where: { id },
+    select: { examName: true, examDate: true, description: true },
+  })
+
+  const exam = await prisma.exam.update({
     where: { id },
     data,
   })
+
+  await recordAuditLog({
+    action: "exam.update",
+    entityType: "Exam",
+    entityId: exam.id,
+    scopeId: exam.id,
+    scopeLabel: exam.examName,
+    target: exam.examName,
+    changes: diffFields(
+      before ?? undefined,
+      {
+        examName: exam.examName,
+        examDate: exam.examDate,
+        description: exam.description,
+      },
+      [
+        { field: "examName", label: "試験名" },
+        { field: "examDate", label: "試験日" },
+        { field: "description", label: "説明" },
+      ]
+    ),
+  })
+
+  return exam
 }
 
 /** 試験を削除する */
 export const deleteExam = async (id: string) => {
-  return prisma.exam.delete({
+  const before = await prisma.exam.findUnique({
+    where: { id },
+    select: { examName: true },
+  })
+
+  const exam = await prisma.exam.delete({
     where: { id },
   })
+
+  await recordAuditLog({
+    action: "exam.delete",
+    entityType: "Exam",
+    entityId: id,
+    scopeId: id,
+    scopeLabel: before?.examName ?? null,
+    target: before?.examName ?? null,
+  })
+
+  return exam
 }

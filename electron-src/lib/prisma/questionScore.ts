@@ -1,7 +1,62 @@
 import { Decimal } from "@prisma/client/runtime/client"
 
+import { type AuditChange, recordAuditLog } from "./auditLog"
+import { resolveExamScopeByCropRegion, resolveStudentLabel } from "./auditScope"
 import prisma from "./client"
 import { recordDrawingAnnotationDeletionsForQuestionScores } from "./deletedRecord"
+
+/** QuestionScore.status を日本語表示に変換（監査ログ差分用） */
+const scoreStatusLabel = (s: string | null | undefined): string => {
+  switch (s) {
+    case "correct":
+      return "正解"
+    case "incorrect":
+      return "不正解"
+    case "partial":
+      return "部分点"
+    case "pending":
+      return "保留"
+    case "no_answer":
+      return "無答"
+    case "double_mark":
+      return "複数マーク"
+    case "unscored":
+      return "未採点"
+    default:
+      return s ?? "（なし）"
+  }
+}
+
+/** 採点提案の監査ログを記録（ベストエフォート） */
+async function recordScoreAudit(opts: {
+  action: "exam.score.propose" | "exam.score.update" | "exam.score.delete"
+  scoreId: string
+  cropRegionId: string
+  studentId: string
+  userId: string
+  changes?: AuditChange[]
+}): Promise<void> {
+  const scope = await resolveExamScopeByCropRegion(opts.cropRegionId)
+  const studentLabel = await resolveStudentLabel(opts.studentId)
+  const verb =
+    opts.action === "exam.score.propose"
+      ? "提案しました"
+      : opts.action === "exam.score.delete"
+        ? "削除しました"
+        : "変更しました"
+  await recordAuditLog({
+    action: opts.action,
+    userId: opts.userId,
+    entityType: "QuestionScore",
+    entityId: opts.scoreId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: studentLabel
+      ? `「${studentLabel}」の採点を${verb}`
+      : `採点を${verb}`,
+    changes: opts.changes,
+  })
+}
 
 /**
  * 実際の得点を計算する関数
@@ -215,6 +270,35 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
           user: true,
         },
       })
+
+      await recordScoreAudit({
+        action: "exam.score.update",
+        scoreId: updated.id,
+        cropRegionId: data.cropRegionId,
+        studentId: data.studentId,
+        userId: data.userId,
+        changes: [
+          {
+            field: "status",
+            label: "採点",
+            before: scoreStatusLabel(existing.status),
+            after: scoreStatusLabel(data.status),
+          },
+          {
+            field: "partialScore",
+            label: "部分点",
+            before:
+              existing.partialScore != null
+                ? Number(existing.partialScore)
+                : null,
+            after:
+              data.partialScore != null && data.partialScore !== undefined
+                ? data.partialScore
+                : null,
+          },
+        ],
+      })
+
       return { success: true, score: updated }
     } else {
       // 新規作成
@@ -235,6 +319,23 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
           user: true,
         },
       })
+
+      await recordScoreAudit({
+        action: "exam.score.propose",
+        scoreId: created.id,
+        cropRegionId: data.cropRegionId,
+        studentId: data.studentId,
+        userId: data.userId,
+        changes: [
+          {
+            field: "status",
+            label: "採点",
+            before: null,
+            after: scoreStatusLabel(data.status),
+          },
+        ],
+      })
+
       return { success: true, score: created }
     }
   } catch (error) {
@@ -279,6 +380,12 @@ export const updateQuestionScore = async (
       */
     }
 
+    // 差分記録用に変更前を取得
+    const before = await prisma.questionScore.findUnique({
+      where: { id },
+      select: { status: true, partialScore: true },
+    })
+
     const updated = await prisma.questionScore.update({
       where: { id },
       data: {
@@ -293,6 +400,30 @@ export const updateQuestionScore = async (
         cropRegion: true,
         user: true,
       },
+    })
+
+    await recordScoreAudit({
+      action: "exam.score.update",
+      scoreId: updated.id,
+      cropRegionId: updated.cropRegionId,
+      studentId: updated.studentId,
+      userId: updated.userId,
+      changes: [
+        {
+          field: "status",
+          label: "採点",
+          before: scoreStatusLabel(before?.status),
+          after: scoreStatusLabel(updated.status),
+        },
+        {
+          field: "partialScore",
+          label: "部分点",
+          before:
+            before?.partialScore != null ? Number(before.partialScore) : null,
+          after:
+            updated.partialScore != null ? Number(updated.partialScore) : null,
+        },
+      ],
     })
 
     return { success: true, score: updated }
@@ -310,12 +441,41 @@ export const updateQuestionScore = async (
  */
 export const deleteQuestionScore = async (id: string) => {
   try {
+    // 監査ログ用に削除前の情報を取得
+    const before = await prisma.questionScore.findUnique({
+      where: { id },
+      select: {
+        cropRegionId: true,
+        studentId: true,
+        userId: true,
+        status: true,
+      },
+    })
+
     // cascade削除前にDrawingAnnotationのtombstoneを記録
     await recordDrawingAnnotationDeletionsForQuestionScores([id])
 
     await prisma.questionScore.delete({
       where: { id },
     })
+
+    if (before) {
+      await recordScoreAudit({
+        action: "exam.score.delete",
+        scoreId: id,
+        cropRegionId: before.cropRegionId,
+        studentId: before.studentId,
+        userId: before.userId,
+        changes: [
+          {
+            field: "status",
+            label: "採点",
+            before: scoreStatusLabel(before.status),
+            after: null,
+          },
+        ],
+      })
+    }
 
     return { success: true }
   } catch (error) {
@@ -569,6 +729,21 @@ export async function batchUpdateQuestionScores(
         updatedCount++
       }
     })
+
+    // 監査ログ: 一括反映（OMR自動採点等）。1件にまとめて記録する。
+    if (entries.length > 0) {
+      const scope = await resolveExamScopeByCropRegion(entries[0].cropRegionId)
+      await recordAuditLog({
+        action: "exam.score.batch",
+        userId: entries[0].userId,
+        entityType: "QuestionScore",
+        entityId: entries[0].cropRegionId,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        summary: `採点を一括反映しました（${updatedCount}件）`,
+        extra: { count: updatedCount },
+      })
+    }
 
     return { success: true, updatedCount }
   } catch (error) {

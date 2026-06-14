@@ -1,12 +1,14 @@
 import type { ExamPage, Prisma } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScope, resolveExamScopeByPage } from "./auditScope"
 import prisma from "./client"
 
 /** 試験ページを作成する（masterImages・studentAnswerImages・cropRegions リレーション含む） */
 export const createExamPage = async (
   data: Prisma.ExamPageUncheckedCreateInput
 ) => {
-  return prisma.examPage.create({
+  const page = await prisma.examPage.create({
     data,
     include: {
       masterImages: true,
@@ -14,15 +16,41 @@ export const createExamPage = async (
       cropRegions: true,
     },
   })
+
+  const scope = await resolveExamScope(page.examId)
+  await recordAuditLog({
+    action: "exam.page.upload",
+    entityType: "ExamPage",
+    entityId: page.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+  })
+
+  return page
 }
 
 /** 複数の試験ページを一括作成する */
 export const createManyExamPages = async (
   data: Prisma.ExamPageCreateManyInput[]
 ) => {
-  return prisma.examPage.createMany({
+  const result = await prisma.examPage.createMany({
     data,
   })
+
+  if (data.length > 0) {
+    const scope = await resolveExamScope(data[0].examId)
+    await recordAuditLog({
+      action: "exam.page.upload",
+      entityType: "ExamPage",
+      entityId: data[0].examId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `模範解答ページを${data.length}枚アップロードしました`,
+      extra: { count: data.length },
+    })
+  }
+
+  return result
 }
 
 /** 試験ページを更新する（masterImages・studentAnswerImages・cropRegions リレーション含む） */
@@ -43,10 +71,22 @@ export const updateExamPage = async (
 
 /** 試験ページを削除する（関連するMasterImage・StudentAnswerImage・CropRegionもCascade削除） */
 export const deleteExamPage = async (id: string) => {
+  const scope = await resolveExamScopeByPage(id)
+
   // 関連する MasterImage, StudentAnswerImage, CropRegion も削除される（onDelete: Cascade 設定済み）
-  return prisma.examPage.delete({
+  const page = await prisma.examPage.delete({
     where: { id },
   })
+
+  await recordAuditLog({
+    action: "exam.page.delete",
+    entityType: "ExamPage",
+    entityId: id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+  })
+
+  return page
 }
 
 /** 試験IDで全ページを取得する（masterImages・studentAnswerImages.student・cropRegions リレーション含む、ページ番号順） */

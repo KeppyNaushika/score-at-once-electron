@@ -2,6 +2,8 @@
  * 試験設定関連のPrisma操作関数
  */
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 
 // =============================================================================
@@ -37,7 +39,7 @@ export async function upsertExamMarkingFormat(
   examId: string,
   data: MarkingFormatData
 ) {
-  return prisma.examMarkingFormat.upsert({
+  const format = await prisma.examMarkingFormat.upsert({
     where: {
       examId_markType: { examId, markType: data.markType },
     },
@@ -52,6 +54,18 @@ export async function upsertExamMarkingFormat(
       ...data,
     },
   })
+
+  const scope = await resolveExamScope(examId)
+  await recordAuditLog({
+    action: "exam.marking_format.update",
+    entityType: "ExamMarkingFormat",
+    entityId: format.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    coalesceKey: `marking_format:${examId}`,
+  })
+
+  return format
 }
 
 /** 複数の採点マーク設定を一括で作成または更新する（トランザクション内で実行） */
@@ -76,7 +90,20 @@ export async function bulkUpsertExamMarkingFormats(
       },
     })
   )
-  return prisma.$transaction(operations)
+  const result = await prisma.$transaction(operations)
+
+  const scope = await resolveExamScope(examId)
+  await recordAuditLog({
+    action: "exam.marking_format.update",
+    entityType: "ExamMarkingFormat",
+    entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: `採点マーク設定を更新しました（${formats.length}種別）`,
+    extra: { count: formats.length },
+  })
+
+  return result
 }
 
 /** 指定マーク種別の採点マーク設定を削除する */
@@ -112,11 +139,23 @@ export async function upsertExamExportSettings(
   settings: Record<string, unknown>
 ) {
   const settingsJson = JSON.stringify(settings)
-  return prisma.examExportSettings.upsert({
+  const result = await prisma.examExportSettings.upsert({
     where: { examId },
     update: { settingsJson },
     create: { examId, settingsJson },
   })
+
+  const scope = await resolveExamScope(examId)
+  await recordAuditLog({
+    action: "exam.export_settings.update",
+    entityType: "ExamExportSettings",
+    entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    coalesceKey: `export_settings:${examId}`,
+  })
+
+  return result
 }
 
 /** 試験のエクスポート設定を削除する */

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 type StudentClassMembershipWithDetails =
@@ -79,7 +80,27 @@ export const deleteStudentClassMembership = async (
   id: string
 ): Promise<void> => {
   try {
+    const before = await prisma.studentClassMembership.findUnique({
+      where: { id },
+      select: {
+        classId: true,
+        class: { select: { name: true } },
+        student: { select: { lastName: true, firstName: true } },
+      },
+    })
+
     await prisma.studentClassMembership.delete({ where: { id } })
+
+    await recordAuditLog({
+      action: "class.membership.remove",
+      entityType: "StudentClassMembership",
+      entityId: id,
+      scopeId: before?.classId ?? null,
+      scopeLabel: before?.class.name ?? null,
+      target: before
+        ? `${before.student.lastName} ${before.student.firstName}`.trim()
+        : null,
+    })
   } catch (error) {
     console.error("Failed to delete student class membership:", error)
     throw error
@@ -185,6 +206,15 @@ export const addStudentToClass = async (
       startDate,
       attendanceNumber,
       notes,
+    })
+
+    await recordAuditLog({
+      action: "class.membership.add",
+      entityType: "StudentClassMembership",
+      entityId: result.id,
+      scopeId: classId,
+      scopeLabel: result.class?.name ?? null,
+      target: `${result.student.lastName} ${result.student.firstName}`.trim(),
     })
 
     return result

@@ -335,6 +335,33 @@ model DeletedRecord {
   @@index([deletedAt])
 }
 
+/// 監査ログ（Discord風の操作履歴）。
+/// 追記専用・不変。状態を変える全操作とエクスポートを記録する（閲覧は対象外）。
+/// userIdはFKを張らず素の文字列とし、ユーザー削除後もログが残るようにする（DeletedRecord同様）。
+model AuditLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) // 初回操作日時（ISO text）
+  updatedAt  DateTime @updatedAt // 最終更新日時。連続操作の集約時に上書きされる（LWW同期のタイムスタンプ列）
+  userId     String? // 操作者。システム操作はnull
+  action     String // "exam.update" / "grade.boundary.update" 等の名前空間付きアクション
+  category   String // "exam" | "grade" | "answer_sheet" | "student" | "user" | "system"
+  scopeId    String? // 絞り込み用の親エンティティID（examId / gradeId / definitionId 等）
+  scopeLabel String? // 表示用スナップショット（対象が消えても残す。"数学 期末" 等）
+  entityType  String // 変更対象のテーブル名（"Exam" 等）
+  entityId    String // 変更対象のレコードID
+  summary     String // 人間可読の要約（構造化レンダリングのフォールバック）
+  metadata    String? // JSON: { changes:[{field,label,before,after}], occurrences, target:{...} }
+  coalesceKey String? // 連続操作の集約キー（同一キーの行を窓内で上書き更新）。indexで高速一致
+
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([userId])
+  @@index([category])
+  @@index([scopeId])
+  @@index([action])
+  @@index([coalesceKey])
+}
+
 model ExamClass {
   id           String   @id @default(uuid())
   examId       String

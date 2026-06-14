@@ -1,5 +1,11 @@
 import type { CropRegion, Prisma } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import {
+  resolveExamScope,
+  resolveExamScopeByCropRegion,
+  resolveExamScopeByPage,
+} from "./auditScope"
 import prisma from "./client"
 
 /** 設問領域を作成する（orderIndex未指定時は自動採番、examPage・cropSubtotals リレーション含む） */
@@ -37,7 +43,7 @@ export const createCropRegion = async (
     orderIndex = currentMax + 1
   }
 
-  return prisma.cropRegion.create({
+  const region = await prisma.cropRegion.create({
     data: {
       ...data,
       orderIndex,
@@ -51,15 +57,42 @@ export const createCropRegion = async (
       },
     },
   })
+
+  const scope = await resolveExamScope(examPage.examId)
+  await recordAuditLog({
+    action: "exam.region.create",
+    entityType: "CropRegion",
+    entityId: region.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: region.label || null,
+  })
+
+  return region
 }
 
 /** 複数の設問領域を一括作成する */
 export const createManyCropRegions = async (
   data: Prisma.CropRegionCreateManyInput[]
 ) => {
-  return prisma.cropRegion.createMany({
+  const result = await prisma.cropRegion.createMany({
     data,
   })
+
+  if (data.length > 0) {
+    const scope = await resolveExamScopeByPage(data[0].examPageId)
+    await recordAuditLog({
+      action: "exam.region.create",
+      entityType: "CropRegion",
+      entityId: data[0].examPageId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `採点領域を${data.length}個作成しました`,
+      extra: { count: data.length },
+    })
+  }
+
+  return result
 }
 
 /** 設問領域を更新する（examPage・cropSubtotals リレーション含む） */
@@ -67,7 +100,7 @@ export const updateCropRegion = async (
   id: string,
   data: Prisma.CropRegionUpdateInput
 ) => {
-  return prisma.cropRegion.update({
+  const region = await prisma.cropRegion.update({
     where: { id },
     data,
     include: {
@@ -79,13 +112,42 @@ export const updateCropRegion = async (
       },
     },
   })
+
+  const scope = await resolveExamScope(region.examPage.examId)
+  await recordAuditLog({
+    action: "exam.region.update",
+    entityType: "CropRegion",
+    entityId: region.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: region.label || null,
+  })
+
+  return region
 }
 
 /** 設問領域を削除する */
 export const deleteCropRegion = async (id: string) => {
-  return prisma.cropRegion.delete({
+  const scope = await resolveExamScopeByCropRegion(id)
+  const before = await prisma.cropRegion.findUnique({
+    where: { id },
+    select: { label: true },
+  })
+
+  const region = await prisma.cropRegion.delete({
     where: { id },
   })
+
+  await recordAuditLog({
+    action: "exam.region.delete",
+    entityType: "CropRegion",
+    entityId: id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: before?.label || null,
+  })
+
+  return region
 }
 
 /** 試験IDで全設問領域を取得する（orderIndexがnullの場合は自動設定、examPage・cropSubtotals・questionScores リレーション含む） */
@@ -234,7 +296,21 @@ export const updateCropRegionOrders = async (
     })
   )
 
-  return Promise.all(updatePromises)
+  const result = await Promise.all(updatePromises)
+
+  if (updates.length > 0) {
+    const scope = await resolveExamScopeByCropRegion(updates[0].id)
+    await recordAuditLog({
+      action: "exam.region.reorder",
+      entityType: "CropRegion",
+      entityId: scope.scopeId ?? updates[0].id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      coalesceKey: `region_reorder:${scope.scopeId ?? updates[0].id}`,
+    })
+  }
+
+  return result
 }
 
 export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{

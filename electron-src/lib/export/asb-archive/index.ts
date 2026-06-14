@@ -5,6 +5,7 @@
 import { dialog } from "electron"
 
 import { getAsbDefinition } from "../../prisma/asbDefinition"
+import { recordAuditLog } from "../../prisma/auditLog"
 import { createAsbArchive, generateAsbExportFileName } from "./archiveCreator"
 import { collectAsbData } from "./dataCollector"
 
@@ -37,7 +38,21 @@ export async function exportAsbDefinition(
     }
 
     // 4. アーカイブを作成
-    return await createAsbArchive(collected, result.filePath)
+    const archiveResult = await createAsbArchive(collected, result.filePath)
+
+    if (archiveResult.success) {
+      await recordAuditLog({
+        action: "answer_sheet.export",
+        entityType: "AsbDefinition",
+        entityId: definitionId,
+        scopeId: definitionId,
+        scopeLabel: definition.name,
+        target: definition.name,
+        extra: { outputPath: archiveResult.outputPath },
+      })
+    }
+
+    return archiveResult
   } catch (error) {
     console.error("Error exporting ASB definition:", error)
     return {

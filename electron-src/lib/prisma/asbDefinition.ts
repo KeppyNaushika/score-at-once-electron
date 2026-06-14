@@ -23,6 +23,7 @@ import {
   dbToDefinition,
   flattenGlobalSettings,
 } from "./asbDefinitionConverters"
+import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 // =============================================================================
@@ -193,6 +194,10 @@ export async function saveAsbDefinition(
   definition: AnswerSheetDefinition,
   userId: string
 ): Promise<void> {
+  // 新規/更新の判定（saveは delete→recreate のため、事前に存在確認）
+  const existed =
+    (await prisma.asbDefinition.count({ where: { id: definition.id } })) > 0
+
   await prisma.$transaction(async (tx) => {
     // 既存があれば子テーブルごと削除（Cascade）
     await tx.asbDefinition.deleteMany({ where: { id: definition.id } })
@@ -384,6 +389,17 @@ export async function saveAsbDefinition(
       }
     }
   })
+
+  // 監査ログ: 解答用紙の作成/更新
+  await recordAuditLog({
+    action: existed ? "answer_sheet.update" : "answer_sheet.create",
+    userId,
+    entityType: "AsbDefinition",
+    entityId: definition.id,
+    scopeId: definition.id,
+    scopeLabel: definition.name,
+    target: definition.name,
+  })
 }
 
 // =============================================================================
@@ -393,7 +409,21 @@ export async function saveAsbDefinition(
 /** 解答用紙定義を削除する */
 export async function deleteAsbDefinition(id: string): Promise<boolean> {
   try {
+    const before = await prisma.asbDefinition.findUnique({
+      where: { id },
+      select: { name: true },
+    })
     await prisma.asbDefinition.delete({ where: { id } })
+
+    await recordAuditLog({
+      action: "answer_sheet.delete",
+      entityType: "AsbDefinition",
+      entityId: id,
+      scopeId: id,
+      scopeLabel: before?.name ?? null,
+      target: before?.name ?? null,
+    })
+
     return true
   } catch {
     return false

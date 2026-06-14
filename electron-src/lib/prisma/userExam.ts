@@ -1,5 +1,7 @@
 import { Prisma, UserExam } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { resolveExamScope, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
 
 // Types for UserExam with relations
@@ -150,7 +152,7 @@ export const inviteExamMember = async (
       throw new Error("User is already a member of this exam")
     }
 
-    return await prisma.userExam.create({
+    const created = await prisma.userExam.create({
       data: {
         examId,
         userId,
@@ -162,6 +164,20 @@ export const inviteExamMember = async (
         inviter: true,
       },
     })
+
+    // 監査ログ: 試験への招待
+    const scope = await resolveExamScope(examId)
+    await recordAuditLog({
+      action: "exam.user.invite",
+      userId: invitedBy,
+      entityType: "UserExam",
+      entityId: created.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: created.user?.name ?? null,
+    })
+
+    return created
   } catch (error) {
     console.error(`Failed to invite member ${userId} to ${examId}:`, error)
     throw error
@@ -199,11 +215,26 @@ export const removeExamMember = async (
       throw new Error("Exam owner cannot be removed")
     }
 
-    return await prisma.userExam.delete({
+    const removed = await prisma.userExam.delete({
       where: {
         userId_examId: { userId, examId },
       },
     })
+
+    // 監査ログ: 試験メンバーの削除
+    const scope = await resolveExamScope(examId)
+    const targetName = await resolveUserLabel(userId)
+    await recordAuditLog({
+      action: "exam.user.remove",
+      userId: removedBy,
+      entityType: "UserExam",
+      entityId: removed.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: targetName,
+    })
+
+    return removed
   } catch (error) {
     console.error(`Failed to remove member ${userId} from ${examId}:`, error)
     throw error
@@ -253,6 +284,25 @@ export const transferOwnership = async (
         data: { role: "OWNER", invitedBy: null },
       }),
     ])
+
+    // 監査ログ: 所有権の移譲（ロール変更）
+    const scope = await resolveExamScope(examId)
+    const newOwnerName = await resolveUserLabel(newOwnerId)
+    await recordAuditLog({
+      action: "exam.user.role_update",
+      userId: currentOwnerId,
+      entityType: "UserExam",
+      entityId: newOwner.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: newOwnerName,
+      summary: newOwnerName
+        ? `「${newOwnerName}」に試験の所有権を移譲しました`
+        : "試験の所有権を移譲しました",
+      changes: [
+        { field: "role", label: "権限", before: "GRADER", after: "OWNER" },
+      ],
+    })
 
     return { previousOwner, newOwner }
   } catch (error) {

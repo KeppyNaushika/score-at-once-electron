@@ -30,4 +30,10 @@ export const SYNC_TABLE_OPTIONS: Record<string, TableOptions> = {
     timestampColumn: "deletedAt",
     deleteProtected: true,
   },
+  // 監査ログ。連続操作の集約で既存行を上書きするため、LWWは updatedAt で収束させる。
+  // 削除はされない（deleteProtected）。
+  AuditLog: {
+    timestampColumn: "updatedAt",
+    deleteProtected: true,
+  },
 }

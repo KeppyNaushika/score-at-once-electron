@@ -236,6 +236,14 @@ export class DatabaseSetup {
         }
       }
 
+      // 監査ログの保持期間プルーニング（ベストエフォート。失敗しても起動を妨げない）
+      try {
+        const { pruneAuditLogs } = await import("./prisma/auditQuery")
+        await pruneAuditLogs()
+      } catch (pruneError) {
+        console.error("Audit log pruning skipped:", pruneError)
+      }
+
       return setupPerformed
     } catch (error) {
       console.error("❌ Database setup failed:", error)
