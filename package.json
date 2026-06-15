@@ -141,7 +141,7 @@
     "concurrently": "^10.0.3",
     "dotenv": "^17.4.2",
     "electron": "^42.4.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.2.6",
     "eslint-config-prettier": "^10.1.8",
