@@ -414,11 +414,14 @@ export async function getPdfExportData(options: {
       }
     }
 
-    // ページを生徒順・ページ番号順でソート
+    // ページを生徒順（customOrder順）・ページ番号順でソート
+    // selectedStudents は getStudentsForExam が customOrder 順で返すため、
+    // その順序を生徒の並び順として使う（選択操作の順序には依存させない）
+    const orderedStudentIds = selectedStudents.map((s) => s.id)
     pages.sort((a, b) => {
       const studentCompare =
-        selectedStudentIds.indexOf(a.studentId) -
-        selectedStudentIds.indexOf(b.studentId)
+        orderedStudentIds.indexOf(a.studentId) -
+        orderedStudentIds.indexOf(b.studentId)
       if (studentCompare !== 0) return studentCompare
       return a.pageNumber - b.pageNumber
     })
