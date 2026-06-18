@@ -3,7 +3,6 @@
 import { FileEdit } from "lucide-react"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
@@ -99,13 +98,12 @@ export default function StudentAnswersPage() {
   }, [loadData])
 
   /**
-   * Handles student answer updates in view mode
+   * Handles student answer updates in view mode (e.g. deletion).
+   * Reloads data so the table reflects the current DB state.
    */
   const handleStudentAnswerUpdate = useCallback(() => {
-    toast.info("変更が保存されました", {
-      description: "「変更を反映」ボタンで最新データを確認してください",
-    })
-  }, [])
+    loadData()
+  }, [loadData])
 
   // Show loading spinner while data is loading
   if (isLoading) {

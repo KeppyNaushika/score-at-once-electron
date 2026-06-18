@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useRef } from "react"
 
 import { FileUploadZone } from "@/components/exams/06-student-answers/student-answer-management/components/FileUploadZone"
 import { useStudentAnswerUpload } from "@/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload"
@@ -61,34 +61,39 @@ export function StudentAnswerUpload({
   )
 
   // 確認モード用の初期化処理
+  // existingStudentAnswers の参照が変わったとき（初回・削除/反映後の再読み込み）に
+  // files を再構築する。ドラッグ操作では existingStudentAnswers は変化しないため、
+  // 配置中の並び替えを巻き込んで再構築することはない。
+  const syncedAnswersRef = useRef<typeof finalExistingAnswers | null>(null)
   useEffect(() => {
-    if (mode === "view" && finalExistingAnswers && files.length === 0) {
-      // 初回のみ既存答案を配置戦略に基づいて配列構築
-      let initialFiles = buildOrderedFileArrayFromStudentAnswers(
-        finalExistingAnswers,
-        students,
-        finalModelAnswerCount,
-        fileOrder
-      )
-      // correctionStatusMapから補正ステータスを注入
-      if (correctionStatusMap && correctionStatusMap.size > 0) {
-        initialFiles = initialFiles.map((file) => {
-          if (file.studentId) {
-            const key = `${file.studentId}-${file.pageNumber}`
-            const status = correctionStatusMap.get(key)
-            if (status) {
-              return { ...file, correctionStatus: status }
-            }
+    if (mode !== "view" || !finalExistingAnswers) return
+    if (syncedAnswersRef.current === finalExistingAnswers) return
+    syncedAnswersRef.current = finalExistingAnswers
+
+    // 既存答案を配置戦略に基づいて配列構築
+    let initialFiles = buildOrderedFileArrayFromStudentAnswers(
+      finalExistingAnswers,
+      students,
+      finalModelAnswerCount,
+      fileOrder
+    )
+    // correctionStatusMapから補正ステータスを注入
+    if (correctionStatusMap && correctionStatusMap.size > 0) {
+      initialFiles = initialFiles.map((file) => {
+        if (file.studentId) {
+          const key = `${file.studentId}-${file.pageNumber}`
+          const status = correctionStatusMap.get(key)
+          if (status) {
+            return { ...file, correctionStatus: status }
           }
-          return file
-        })
-      }
-      setFiles(initialFiles)
+        }
+        return file
+      })
     }
+    setFiles(initialFiles)
   }, [
     mode,
     finalExistingAnswers,
-    files.length,
     students,
     finalModelAnswerCount,
     fileOrder,
