@@ -2,7 +2,7 @@
  * Hooks for 06-student-answers page - quick inline version
  */
 
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type { ProcessedStudentAnswer } from "@/components/exams/06-student-answers/student-answer-management/types"
@@ -30,12 +30,17 @@ export function useStudentAnswersData(examId: string) {
   >([])
   const [modelAnswerCount, setModelAnswerCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
+  // 初回ロードのみ全画面スピナーを表示する。削除・反映後の再取得は
+  // バックグラウンドで差し替え、画面のチラつきを防ぐ。
+  const hasLoadedRef = useRef(false)
 
   const loadData = useCallback(async () => {
     if (!examId) return
 
     try {
-      setIsLoading(true)
+      if (!hasLoadedRef.current) {
+        setIsLoading(true)
+      }
 
       // Load students
       const examStudentsResult =
@@ -133,6 +138,7 @@ export function useStudentAnswersData(examId: string) {
       console.error("Error loading data:", error)
       toast.error("データの読み込みに失敗しました")
     } finally {
+      hasLoadedRef.current = true
       setIsLoading(false)
     }
   }, [examId])
