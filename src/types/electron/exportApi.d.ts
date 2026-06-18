@@ -39,6 +39,7 @@ export interface ExportAPI {
         pageNumber: number
         imagePath: string
         imageUrl: string
+        pageSize: string
         scoringData: Array<{
           questionScoreId: string
           status: string

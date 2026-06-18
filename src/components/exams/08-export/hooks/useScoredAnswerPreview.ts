@@ -260,7 +260,7 @@ export function useScoredAnswerPreview({
             subtotalDataForPdf,
             totalScoreDataForPdf,
             page.pageNumber,
-            (page as { pageSize?: string }).pageSize ?? "A4"
+            page.pageSize ?? "A4"
           )
 
           if (cancelled) return
