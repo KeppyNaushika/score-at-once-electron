@@ -26,6 +26,8 @@ export interface PdfExportPageData {
   pageNumber: number
   imagePath: string
   imageUrl: string
+  /** 用紙サイズ（mm→px変換基準。個別表示と一致させるため getPdfExportData が付与） */
+  pageSize: string
   scoringData: Array<{
     questionScoreId: string
     status: string
@@ -339,7 +341,7 @@ export function PdfCanvasRenderer({
         subtotalDataForPdf,
         totalScoreDataForPdf,
         page.pageNumber,
-        pageSize
+        page.pageSize ?? pageSize
       )
 
       const arrayBuffer = await blob.arrayBuffer()
