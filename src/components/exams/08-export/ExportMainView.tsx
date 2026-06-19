@@ -18,6 +18,7 @@ import {
   PdfCanvasRenderer,
   type PdfExportPageData,
 } from "@/components/exams/08-export/components/PdfCanvasRenderer"
+import { ReturnDiffPanel } from "@/components/exams/08-export/components/ReturnDiffPanel"
 import { StudentSelectionCard } from "@/components/exams/08-export/components/StudentSelectionCard"
 import { useExcelPreview } from "@/components/exams/08-export/hooks/useExcelPreview"
 import { useExportPage } from "@/components/exams/08-export/hooks/useExportPage"
@@ -762,8 +763,15 @@ export default function ExportMainView() {
     <div className="flex h-full flex-col">
       <PageHeader title="採点結果のファイル出力" helpButton={helpButton} />
 
-      <div className="container mx-auto min-h-0 flex-1 px-4 py-6">
-        <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="container mx-auto flex min-h-0 flex-1 flex-col gap-6 px-4 py-6">
+        <ReturnDiffPanel
+          examId={exam?.id ?? ""}
+          students={students}
+          selectedStudents={selectedStudents}
+          setSelectedStudents={setSelectedStudents}
+        />
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="h-full min-h-0">
             <StudentSelectionCard
               students={students} // 受験生徒順（customOrder）でソート済み

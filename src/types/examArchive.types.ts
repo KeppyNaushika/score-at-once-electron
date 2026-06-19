@@ -944,6 +944,18 @@ export interface ArchiveScoresData {
     createdAt: string
     updatedAt: string
   }>
+  /** v1.14.0+ 答案返却版スナップショット（生徒×試験で1行）。旧バージョンのアーカイブには存在しない */
+  returnSnapshots?: Array<{
+    id: string
+    examId: string
+    studentId: string
+    scoresJson: string
+    totalScore: string | null // Decimal as string
+    capturedByUserId: string | null
+    capturedAt: string
+    createdAt: string
+    updatedAt: string
+  }>
 }
 
 /**
