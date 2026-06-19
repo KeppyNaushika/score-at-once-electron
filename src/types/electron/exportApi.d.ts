@@ -3,6 +3,10 @@ import type {
   IndividualReportOptions,
   SubtotalGroupsForReportResult,
 } from "@/electron-src/lib/export/individual-report/types"
+import type {
+  CaptureReturnSnapshotResult,
+  ReturnDiffResult,
+} from "@/electron-src/lib/prisma/returnSnapshot"
 
 /**
  * エクスポート（PDF/Excel/印刷）関連API
@@ -299,6 +303,15 @@ export interface ExportAPI {
       success: boolean
       error?: string
     }>
+
+    // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録
+    captureReturnSnapshot: (options: {
+      examId: string
+      studentIds: string[]
+    }) => Promise<CaptureReturnSnapshotResult>
+
+    // 返却版と現在状態の差分（変更があった生徒の検出）
+    getReturnDiff: (examId: string) => Promise<ReturnDiffResult>
   }
 
   // Excel Export related

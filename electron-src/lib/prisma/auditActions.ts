@@ -200,6 +200,12 @@ export const AUDIT_ACTIONS = {
     label: "採点マークを削除しました",
   },
 
+  "exam.return.capture": {
+    category: "exam",
+    verb: "export",
+    label: "返却版として記録しました",
+  },
+
   "exam.marking_format.update": {
     category: "exam",
     verb: "update",

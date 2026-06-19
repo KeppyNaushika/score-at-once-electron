@@ -17,6 +17,10 @@ import {
   getPdfExportData,
 } from "../lib/prisma/pdfExport"
 import {
+  captureReturnSnapshot,
+  getReturnDiff,
+} from "../lib/prisma/returnSnapshot"
+import {
   buildConflictIdentifiers,
   validateScoringData,
 } from "../lib/shared/utilities/validateScoringData"
@@ -665,4 +669,20 @@ export function setupExportHandlers(): void {
       }
     }
   )
+
+  // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録する
+  registerSafeHandler(
+    "export:captureReturnSnapshot",
+    async (options: { examId: string; studentIds: string[] }) => {
+      return await captureReturnSnapshot({
+        examId: options.examId,
+        studentIds: options.studentIds,
+      })
+    }
+  )
+
+  // 返却版と現在状態の差分（変更があった生徒の検出）
+  registerSafeHandler("export:getReturnDiff", async (examId: string) => {
+    return await getReturnDiff(examId)
+  })
 }

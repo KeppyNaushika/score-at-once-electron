@@ -91,6 +91,14 @@ export function createExportApi() {
         pageSize?: "A4" | "Letter" | { width: number; height: number }
         landscape?: boolean
       }) => ipcRenderer.invoke("export:openPrintDialog", options),
+      // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録
+      captureReturnSnapshot: (options: {
+        examId: string
+        studentIds: string[]
+      }) => ipcRenderer.invoke("export:captureReturnSnapshot", options),
+      // 返却版と現在状態の差分（変更があった生徒の検出）
+      getReturnDiff: (examId: string) =>
+        ipcRenderer.invoke("export:getReturnDiff", examId),
     },
 
     // Excel Export related

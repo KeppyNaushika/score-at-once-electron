@@ -251,6 +251,7 @@ export async function collectExamData(
     const questionScores: ArchiveScoresData["questionScores"] = []
     const drawingAnnotations: ArchiveScoresData["drawingAnnotations"] = []
     const scoreDecisions: ArchiveScoresData["scoreDecisions"] = []
+    const returnSnapshots: ArchiveScoresData["returnSnapshots"] = []
 
     if (!isTemplate) {
       for (const page of exam.examPages) {
@@ -328,6 +329,25 @@ export async function collectExamData(
           sourceQuestionScoreId: d.sourceQuestionScoreId,
           createdAt: d.createdAt.toISOString(),
           updatedAt: d.updatedAt.toISOString(),
+        })
+      }
+
+      // 9.6. ReturnSnapshot（返却版スナップショット）を収集 (v1.14.0+)
+      // 返却版は試験ごとに1セット（生徒×試験で1行）なので採点者フィルタはしない
+      const snapshots = await prisma.returnSnapshot.findMany({
+        where: { examId },
+      })
+      for (const s of snapshots) {
+        returnSnapshots.push({
+          id: s.id,
+          examId: s.examId,
+          studentId: s.studentId,
+          scoresJson: s.scoresJson,
+          totalScore: s.totalScore?.toString() ?? null,
+          capturedByUserId: s.capturedByUserId,
+          capturedAt: s.capturedAt.toISOString(),
+          createdAt: s.createdAt.toISOString(),
+          updatedAt: s.updatedAt.toISOString(),
         })
       }
     }
@@ -642,6 +662,7 @@ export async function collectExamData(
       questionScores,
       drawingAnnotations,
       scoreDecisions,
+      returnSnapshots,
     }
 
     const tagsData: ArchiveTagsData = {

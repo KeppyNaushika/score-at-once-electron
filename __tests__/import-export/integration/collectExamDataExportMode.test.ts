@@ -114,6 +114,31 @@ describe("collectExamData - エクスポートモード", () => {
       expect(data.examData.examSubtotalGroups.length).toBe(1)
       expect(data.tagsData.tags.length).toBeGreaterThan(0)
     })
+
+    it("EM-F3: ReturnSnapshot（返却版）がfullモードで収集される", async () => {
+      // 返却版スナップショットを1件作成
+      await getTestPrismaClient().returnSnapshot.create({
+        data: {
+          examId: testExam.exam.id,
+          studentId: testExam.students[0].id,
+          scoresJson: JSON.stringify({ v: 1, scores: [], annotations: [] }),
+          totalScore: 42,
+          capturedByUserId: testExam.user.id,
+        },
+      })
+
+      const result = await collectExamData(
+        testExam.exam.id,
+        testExam.user.id,
+        "full"
+      )
+
+      expect(result.success).toBe(true)
+      const snapshots = result.data!.scoresData.returnSnapshots ?? []
+      expect(snapshots).toHaveLength(1)
+      expect(snapshots[0].studentId).toBe(testExam.students[0].id)
+      expect(snapshots[0].totalScore).toBe("42")
+    })
   })
 
   // ==========================================================================
@@ -166,6 +191,27 @@ describe("collectExamData - エクスポートモード", () => {
       expect(data.scoresData.drawingAnnotations).toEqual([])
       expect(data.counts.scores).toBe(0)
       expect(data.counts.annotations).toBe(0)
+    })
+
+    it("EM-T3b: ReturnSnapshot（返却版）もtemplateモードで空になる", async () => {
+      await getTestPrismaClient().returnSnapshot.create({
+        data: {
+          examId: testExam.exam.id,
+          studentId: testExam.students[0].id,
+          scoresJson: JSON.stringify({ v: 1, scores: [], annotations: [] }),
+          totalScore: 42,
+          capturedByUserId: testExam.user.id,
+        },
+      })
+
+      const result = await collectExamData(
+        testExam.exam.id,
+        testExam.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.data!.scoresData.returnSnapshots).toEqual([])
     })
 
     it("EM-T4: 答案画像が空になる", async () => {

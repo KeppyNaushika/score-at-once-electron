@@ -576,6 +576,27 @@ export async function createImportedData(
         }
       }
 
+      // 14.6. ReturnSnapshot（返却版スナップショット）を作成 (v1.14.0+)
+      // capturedByUserId は現在のログインユーザーで上書き
+      for (const rs of data.scoresData.returnSnapshots || []) {
+        const newExamId = remapId(rs.examId, mappings.exam)
+        const newStudentId = remapId(rs.studentId, mappings.student)
+
+        if (newExamId && newStudentId) {
+          await tx.returnSnapshot.create({
+            data: {
+              id: remapIdRequired(rs.id, mappings.returnSnapshot),
+              examId: newExamId,
+              studentId: newStudentId,
+              scoresJson: rs.scoresJson,
+              totalScore: rs.totalScore ? parseFloat(rs.totalScore) : null,
+              capturedByUserId: currentUserId,
+              capturedAt: new Date(rs.capturedAt),
+            },
+          })
+        }
+      }
+
       // 15. DrawingAnnotationを作成
       // v0.3.0以降: userIdを現在のログインユーザーで上書き
       for (const da of data.scoresData.drawingAnnotations) {
