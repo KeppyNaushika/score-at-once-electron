@@ -66,7 +66,12 @@ async function createTestData() {
   })
 
   await testPrisma.studentClassMembership.create({
-    data: { studentId: active.id, classId: classA.id, attendanceNumber: 1 },
+    data: {
+      studentId: active.id,
+      classId: classA.id,
+      attendanceNumber: 1,
+      startDate: new Date("2024-04-01"), // examDate(2024-04-10)より前に開始
+    },
   })
   await testPrisma.studentClassMembership.create({
     data: {
@@ -129,6 +134,62 @@ describe("Exam 在籍フィルタ", () => {
 
       const allResult = await getClassesNotInExam(exam.id, false)
       expect(allResult.classes!.map((c) => c.name)).toContain("3年A組")
+    })
+  })
+
+  describe("将来始まる所属（基準日より後に入学/転入）", () => {
+    /** examDate(2024-04-10) より後に始まる所属を持つ生徒を classA に追加 */
+    async function addFutureStudent(classId: string) {
+      const future = await testPrisma.student.create({
+        data: {
+          studentNumber: "E003",
+          lastName: "転入",
+          firstName: "次郎",
+          lastNameKana: "テンニュウ",
+          firstNameKana: "ジロウ",
+        },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: {
+          studentId: future.id,
+          classId,
+          attendanceNumber: 3,
+          startDate: new Date("2024-05-01"), // examDate より後に開始
+          endDate: null,
+        },
+      })
+      return { future }
+    }
+
+    it("activeOnly=true は将来始まる所属の生徒を追加しない", async () => {
+      const { exam, classA } = await createTestData()
+      await addFutureStudent(classA.id)
+
+      const result = await addStudentsFromClass(exam.id, classA.id, true)
+
+      // 在籍中の active のみ。転入予定(E003)も転出済み(E002)も除外
+      expect(result.added).toBe(1)
+      const students = await getStudentsForExam(exam.id)
+      expect(students.students!.map((s) => s.studentNumber)).toEqual(["E001"])
+    })
+
+    it("activeOnly=true の個別追加候補に将来始まる所属の生徒は含まれない", async () => {
+      const { exam, classA } = await createTestData()
+      await addFutureStudent(classA.id)
+
+      const result = await getStudentsNotInExam(exam.id, true)
+
+      expect(result.students!.map((s) => s.studentNumber)).toEqual(["E001"])
+    })
+
+    it("activeOnly=false なら将来始まる所属の生徒も対象になる", async () => {
+      const { exam, classA } = await createTestData()
+      await addFutureStudent(classA.id)
+
+      const result = await getStudentsNotInExam(exam.id, false)
+
+      const numbers = result.students!.map((s) => s.studentNumber).sort()
+      expect(numbers).toEqual(["E001", "E002", "E003"])
     })
   })
 
