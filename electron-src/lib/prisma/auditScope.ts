@@ -36,6 +36,42 @@ export async function resolveGradeScope(
   }
 }
 
+/** courseworkId から監査ログ用スコープを解決（資料名スナップショット付き） */
+export async function resolveCourseworkScope(
+  courseworkId: string
+): Promise<{ scopeId: string; scopeLabel: string | null }> {
+  try {
+    const cw = await prisma.coursework.findUnique({
+      where: { id: courseworkId },
+      select: { name: true },
+    })
+    return { scopeId: courseworkId, scopeLabel: cw?.name ?? null }
+  } catch {
+    return { scopeId: courseworkId, scopeLabel: null }
+  }
+}
+
+/** courseworkItemId から資料スコープを解決 */
+export async function resolveCourseworkScopeByItem(
+  courseworkItemId: string
+): Promise<{ scopeId: string | null; scopeLabel: string | null }> {
+  try {
+    const item = await prisma.courseworkItem.findUnique({
+      where: { id: courseworkItemId },
+      select: {
+        courseworkId: true,
+        coursework: { select: { name: true } },
+      },
+    })
+    return {
+      scopeId: item?.courseworkId ?? null,
+      scopeLabel: item?.coursework?.name ?? null,
+    }
+  } catch {
+    return { scopeId: null, scopeLabel: null }
+  }
+}
+
 /** gradeItemId から成績スコープを解決 */
 export async function resolveGradeScopeByItem(
   gradeItemId: string

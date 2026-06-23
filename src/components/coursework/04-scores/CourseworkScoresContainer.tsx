@@ -1,0 +1,303 @@
+"use client"
+
+import type { ColumnDef } from "@tanstack/react-table"
+import Link from "next/link"
+import { useCallback, useMemo, useRef } from "react"
+
+import { EditableTable } from "@/components/common/EditableTable"
+import { Button } from "@/components/ui/button"
+import type { CourseworkItemWithDetails } from "@/types/coursework.types"
+
+import {
+  type CourseworkCellPatch,
+  useCourseworkScores,
+} from "./hooks/useCourseworkScores"
+
+interface CourseworkScoresContainerProps {
+  courseworkId: string
+}
+
+interface ScoreRow {
+  _studentId: string
+  attendanceNumber: string
+  className: string
+  studentName: string
+  [key: string]: string
+}
+
+/** 評価項目ごとの列ID（value列はitem.id、補助列は接尾辞付き） */
+const adjColId = (itemId: string) => `${itemId}::adj`
+const reasonColId = (itemId: string) => `${itemId}::reason`
+const commentColId = (itemId: string) => `${itemId}::comment`
+
+/**
+ * 試験外成績資料の点数入力コンテナ
+ *
+ * EditableTable を用い、行＝名簿生徒・列＝評価項目（value／加減点／理由／コメント）で
+ * Excelコピペ対応の一括入力を提供する。文字評価項目は変換表のラベルで検証する。
+ * 変更はデバウンスで自動保存される。
+ */
+export function CourseworkScoresContainer({
+  courseworkId,
+}: CourseworkScoresContainerProps) {
+  const { items, studentRows, loading, bulkUpdateCells } =
+    useCourseworkScores(courseworkId)
+
+  // 前回のテーブルデータを保持（diff検出用）
+  const prevDataRef = useRef<ScoreRow[]>([])
+
+  const tableData = useMemo(() => {
+    const data = studentRows.map((row): ScoreRow => {
+      const tableRow: ScoreRow = {
+        _studentId: row.studentId,
+        attendanceNumber:
+          row.attendanceNumber != null ? String(row.attendanceNumber) : "-",
+        className: row.className ?? "-",
+        studentName: `${row.lastName} ${row.firstName}`,
+      }
+      for (const item of items) {
+        const cell = row.cells[item.id]
+        if (item.inputMode === "letter") {
+          tableRow[item.id] = cell?.letterValue ?? ""
+        } else {
+          tableRow[item.id] = cell?.score != null ? String(cell.score) : ""
+        }
+        tableRow[adjColId(item.id)] =
+          cell?.adjustment != null ? String(cell.adjustment) : ""
+        tableRow[reasonColId(item.id)] = cell?.adjustmentReason ?? ""
+        tableRow[commentColId(item.id)] = cell?.comment ?? ""
+      }
+      return tableRow
+    })
+    prevDataRef.current = data
+    return data
+  }, [studentRows, items])
+
+  const columns = useMemo((): ColumnDef<ScoreRow>[] => {
+    const readOnlyCols: ColumnDef<ScoreRow>[] = [
+      {
+        id: "attendanceNumber",
+        header: "出席番号",
+        accessorKey: "attendanceNumber",
+        size: 70,
+        meta: { readOnly: true },
+        cell: ({ getValue }) => (
+          <span className="text-sm">{String(getValue())}</span>
+        ),
+      },
+      {
+        id: "className",
+        header: "学級",
+        accessorKey: "className",
+        size: 80,
+        meta: { readOnly: true },
+        cell: ({ getValue }) => (
+          <span className="text-sm">{String(getValue())}</span>
+        ),
+      },
+      {
+        id: "studentName",
+        header: "氏名",
+        accessorKey: "studentName",
+        size: 120,
+        meta: { readOnly: true },
+        cell: ({ getValue }) => (
+          <span className="text-sm">{String(getValue())}</span>
+        ),
+      },
+    ]
+
+    const scoreCols: ColumnDef<ScoreRow>[] = items.flatMap(
+      (item): ColumnDef<ScoreRow>[] => {
+        const isLetter = item.inputMode === "letter"
+        const validLabels = item.letterScales.map((ls) => ls.label).join("/")
+        return [
+          {
+            id: item.id,
+            header: isLetter
+              ? `${item.name} (評価)`
+              : `${item.name} (/${item.maxScore})`,
+            accessorKey: item.id,
+            size: 110,
+            meta: {
+              placeholder: isLetter
+                ? validLabels || "評価記号"
+                : `0-${item.maxScore}`,
+            },
+          },
+          {
+            id: adjColId(item.id),
+            header: `${item.name}·加減点`,
+            accessorKey: adjColId(item.id),
+            size: 90,
+            meta: { placeholder: "±0" },
+          },
+          {
+            id: reasonColId(item.id),
+            header: `${item.name}·理由`,
+            accessorKey: reasonColId(item.id),
+            size: 120,
+            meta: { placeholder: "期限超過 等" },
+          },
+          {
+            id: commentColId(item.id),
+            header: `${item.name}·コメント`,
+            accessorKey: commentColId(item.id),
+            size: 160,
+            meta: { placeholder: "通知書に表示" },
+          },
+        ]
+      }
+    )
+
+    return [...readOnlyCols, ...scoreCols]
+  }, [items])
+
+  const handleDataChange = useCallback(
+    (newData: ScoreRow[]) => {
+      const prev = prevDataRef.current
+      const changes: {
+        courseworkItemId: string
+        studentId: string
+        patch: CourseworkCellPatch
+      }[] = []
+
+      const pushPatch = (
+        item: CourseworkItemWithDetails,
+        studentId: string,
+        patch: CourseworkCellPatch
+      ) => {
+        changes.push({ courseworkItemId: item.id, studentId, patch })
+      }
+
+      for (let i = 0; i < newData.length; i++) {
+        const newRow = newData[i]
+        const oldRow = prev[i]
+        if (!oldRow || !newRow) continue
+
+        const studentId = newRow._studentId
+        for (const item of items) {
+          const validLabels = new Set(item.letterScales.map((ls) => ls.label))
+
+          // value列（数値 or 文字評価）
+          const valId = item.id
+          if (newRow[valId] !== oldRow[valId]) {
+            const trimmed = (newRow[valId] ?? "").trim()
+            if (item.inputMode === "letter") {
+              if (trimmed === "") {
+                pushPatch(item, studentId, { letterValue: null })
+              } else if (validLabels.has(trimmed)) {
+                pushPatch(item, studentId, { letterValue: trimmed })
+              }
+              // 未定義の評価記号は無視
+            } else {
+              if (trimmed === "") {
+                pushPatch(item, studentId, { score: null })
+              } else {
+                const num = Number(trimmed)
+                if (!isNaN(num) && num >= 0 && num <= item.maxScore) {
+                  pushPatch(item, studentId, { score: num })
+                }
+                // 範囲外・無効値は無視
+              }
+            }
+          }
+
+          // 加減点列
+          const adjId = adjColId(item.id)
+          if (newRow[adjId] !== oldRow[adjId]) {
+            const trimmed = (newRow[adjId] ?? "").trim()
+            if (trimmed === "") {
+              pushPatch(item, studentId, { adjustment: null })
+            } else {
+              const num = Number(trimmed)
+              if (!isNaN(num) && isFinite(num)) {
+                pushPatch(item, studentId, { adjustment: num })
+              }
+              // 無効値は無視
+            }
+          }
+
+          // 理由列
+          const rsnId = reasonColId(item.id)
+          if (newRow[rsnId] !== oldRow[rsnId]) {
+            const val = (newRow[rsnId] ?? "").trim()
+            pushPatch(item, studentId, {
+              adjustmentReason: val === "" ? null : val,
+            })
+          }
+
+          // コメント列
+          const cmtId = commentColId(item.id)
+          if (newRow[cmtId] !== oldRow[cmtId]) {
+            const val = (newRow[cmtId] ?? "").trim()
+            pushPatch(item, studentId, {
+              comment: val === "" ? null : val,
+            })
+          }
+        }
+      }
+
+      if (changes.length > 0) {
+        bulkUpdateCells(changes)
+      }
+    },
+    [items, bulkUpdateCells]
+  )
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
+          <p className="text-muted-foreground mb-2">評価項目がありません</p>
+          <p className="text-muted-foreground text-sm">
+            「評価項目」ステップで評価項目を追加してください
+          </p>
+        </div>
+        <div className="mt-6 flex justify-end">
+          <Button asChild>
+            <Link href={`/coursework/${courseworkId}/03-items`}>
+              評価項目へ
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <h2 className="mb-4 text-lg font-semibold">点数入力</h2>
+      <p className="text-muted-foreground mb-4 text-sm">
+        各生徒の評価項目ごとの点数を入力してください。文字評価の項目は評価記号（例:
+        A/B/C）で入力します。加減点・理由・コメントも記入できます。変更は自動保存されます。
+      </p>
+
+      <div className="overflow-x-auto">
+        <EditableTable
+          data={tableData}
+          columns={columns}
+          onDataChange={handleDataChange}
+          allowInsertRow={false}
+          allowDeleteRow={false}
+        />
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <Button asChild>
+          <Link href={`/coursework/${courseworkId}/05-results`}>
+            次へ: 結果
+          </Link>
+        </Button>
+      </div>
+    </div>
+  )
+}

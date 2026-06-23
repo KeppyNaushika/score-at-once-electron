@@ -5,6 +5,7 @@ import {
   Calculator,
   ChevronsLeft,
   ChevronsRight,
+  ClipboardList,
   FileEdit,
   FileStack,
   Home,
@@ -40,8 +41,9 @@ interface NavItem {
 
 const navGroups: NavItem[][] = [
   [
-    { href: "/exams", label: "試験一覧", icon: Home },
     { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
+    { href: "/exams", label: "試験一覧", icon: Home },
+    { href: "/coursework", label: "試験外成績資料", icon: ClipboardList },
     { href: "/grades", label: "成績算出", icon: BarChart3 },
   ],
   [{ href: "/pdf-tools", label: "PDF加工", icon: FileStack }],

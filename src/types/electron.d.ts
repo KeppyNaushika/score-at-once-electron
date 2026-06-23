@@ -14,6 +14,7 @@ import type { AnswerSheetBuilderAPI } from "./electron/answerSheetBuilderApi"
 import type { ArchiveAPI } from "./electron/archiveApi"
 import type { AuditLogAPI } from "./electron/auditLogApi"
 import type { ClassStudentAPI } from "./electron/classStudentApi"
+import type { CourseworkAPI } from "./electron/courseworkApi"
 import type { CropRegionAPI } from "./electron/cropRegionApi"
 import type { DataManagementAPI } from "./electron/dataManagementApi"
 import type { DrawingAPI } from "./electron/drawingApi"
@@ -87,6 +88,7 @@ export interface MyAPI
     SettingsAPI,
     PdfToolsAPI,
     GradeAPI,
+    CourseworkAPI,
     TagAPI,
     AnswerSheetBuilderAPI,
     OmrAPI,

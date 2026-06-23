@@ -1,14 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { UserCheck, Users, UserX } from "lucide-react"
+import { useMemo, useState } from "react"
 
+import type {
+  RosterColumn,
+  RosterFilter,
+  RosterRow,
+  RosterTableSlots,
+} from "@/components/common/roster-table"
+import {
+  RosterDragOverlay,
+  RosterTableFilters,
+  RosterTableHeader,
+  RosterTableRow,
+  useRosterTable,
+} from "@/components/common/roster-table"
 import { SortableTableProvider } from "@/components/common/sortable-table"
-import { DragOverlayContent } from "@/components/exams/05-students/components/sortable-student-table/components/DragOverlayContent"
-import { SortableTableRow } from "@/components/exams/05-students/components/sortable-student-table/components/SortableTableRow"
-import { TableFilters } from "@/components/exams/05-students/components/sortable-student-table/components/TableFilters"
-import { TableHeaderRow } from "@/components/exams/05-students/components/sortable-student-table/components/TableHeaderRow"
-import { useSortableStudentTable } from "@/components/exams/05-students/components/sortable-student-table/hooks/useSortableStudentTable"
-import type { SortableStudentTableProps } from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
+import type {
+  SortableStudentTableProps,
+  Student,
+  StudentStatus,
+} from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,13 +32,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
 
+/** 試験名簿の Student を共通の RosterRow へ変換 */
+function toRosterRow(student: Student): RosterRow {
+  return {
+    id: student.id,
+    studentNumber: student.studentNumber,
+    lastName: student.lastName,
+    firstName: student.firstName,
+    kana: `${student.lastNameKana} ${student.firstNameKana}`,
+    classInfo: {
+      className: student.examClassInfo?.className ?? null,
+      classCode: student.examClassInfo?.classCode ?? null,
+      grade: student.examClassInfo?.grade ?? null,
+      attendanceNumber: student.examClassInfo?.attendanceNumber ?? null,
+      classOrder: student.examClassInfo?.classOrder ?? null,
+    },
+    customOrder: student.customOrder,
+    extras: {
+      status: student.status,
+      answerSheetCount: student.answerSheetCount,
+    },
+  }
+}
+
 /**
- * 生徒テーブルコンテナ
+ * 受験生徒管理テーブル
  *
- * フィルタ・ドラッグ並び替え・選択・並び順リセットを統合した受験生徒管理テーブル。
+ * 共通 roster-table の表示部品（ヘッダー/行/フィルタ/ドラッグ）を用い、
+ * 試験固有の「答案枚数列」「受験状態列」「受験状態フィルタ」をスロットで差し込む。
+ * 状態・選択・フィルタは従来どおりページ側フック（props）で制御する。
  */
 export function SortableStudentTableContainer(
   props: SortableStudentTableProps
@@ -33,6 +79,12 @@ export function SortableStudentTableContainer(
   const {
     classes,
     selectedStudents,
+    onStudentSelectionChange,
+    onSelectAll,
+    onStudentStatusUpdate,
+    onStudentOrderUpdate,
+    filteredStudents,
+    examId,
     searchTerm,
     onSearchChange,
     selectedClassId,
@@ -44,16 +96,121 @@ export function SortableStudentTableContainer(
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
 
+  const filteredRows = useMemo(
+    () => filteredStudents.map(toRosterRow),
+    [filteredStudents]
+  )
+
   const {
-    sortedStudents,
-    activeStudent,
+    sortedRows,
+    activeRow,
     handleDragStart,
     handleDragEnd,
-    handleStudentToggle,
+    handleToggleSelection,
     handleSelectAll,
     handleResetOrder,
-    onStudentStatusUpdate,
-  } = useSortableStudentTable(props)
+  } = useRosterTable({
+    filteredRows,
+    selectedIds: selectedStudents,
+    onSelectionChange: onStudentSelectionChange,
+    onSelectAll,
+    onOrderUpdate: (rowOrders) => onStudentOrderUpdate(examId, rowOrders),
+  })
+
+  // 答案枚数列（スロット）
+  const additionalColumns: RosterColumn[] = useMemo(
+    () => [
+      {
+        key: "answerSheetCount",
+        header: "答案枚数",
+        headerClassName: "w-24 text-center",
+        cellClassName: "text-center",
+        cell: (row) => {
+          const count =
+            (row.extras?.answerSheetCount as number | undefined) ?? 0
+          return count > 0 ? (
+            <Badge variant="secondary" className="tabular-nums">
+              {count}枚
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )
+        },
+      },
+    ],
+    []
+  )
+
+  // 受験状態フィルタ（スロット）
+  const additionalFilters: RosterFilter[] = useMemo(
+    () => [
+      {
+        render: () => (
+          <Select value={statusFilter} onValueChange={onStatusChange}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべての受験状態</SelectItem>
+              <SelectItem value="participating">受験</SelectItem>
+              <SelectItem value="expected">見込</SelectItem>
+              <SelectItem value="absent">欠席</SelectItem>
+            </SelectContent>
+          </Select>
+        ),
+        // フィルタはページ側 filteredStudents で適用済みのため常に true
+        predicate: () => true,
+      },
+    ],
+    [statusFilter, onStatusChange]
+  )
+
+  // 受験状態ボタン列（スロット）
+  const rowActionButtons: RosterTableSlots["rowActionButtons"] = useMemo(
+    () => ({
+      header: "受験状態",
+      render: (row) => {
+        const status = row.extras?.status as StudentStatus | undefined
+        return (
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={status === "participating" ? "default" : "outline"}
+              onClick={() => onStudentStatusUpdate(row.id, "participating")}
+              className="gap-1"
+            >
+              <UserCheck className="h-3 w-3" />
+              受験
+            </Button>
+            <Button
+              size="sm"
+              variant={status === "expected" ? "secondary" : "outline"}
+              onClick={() => onStudentStatusUpdate(row.id, "expected")}
+              className="gap-1"
+            >
+              <Users className="h-3 w-3" />
+              見込
+            </Button>
+            <Button
+              size="sm"
+              variant={status === "absent" ? "destructive" : "outline"}
+              onClick={() => onStudentStatusUpdate(row.id, "absent")}
+              className="gap-1"
+            >
+              <UserX className="h-3 w-3" />
+              欠席
+            </Button>
+          </div>
+        )
+      },
+    }),
+    [onStudentStatusUpdate]
+  )
+
+  const classOptions = useMemo(
+    () => classes.map((cls) => ({ id: cls.id, name: cls.name })),
+    [classes]
+  )
 
   const handleConfirmReset = async () => {
     setIsResetting(true)
@@ -69,14 +226,13 @@ export function SortableStudentTableContainer(
     <div className="space-y-4">
       {/* フィルター行 */}
       <div className="flex items-center gap-3">
-        <TableFilters
+        <RosterTableFilters
           searchTerm={searchTerm}
           onSearchChange={onSearchChange}
           selectedClassId={selectedClassId}
           onClassChange={onClassChange}
-          statusFilter={statusFilter}
-          onStatusChange={onStatusChange}
-          classes={classes}
+          classes={classOptions}
+          additionalFilters={additionalFilters}
         />
         <Button
           variant="outline"
@@ -90,32 +246,35 @@ export function SortableStudentTableContainer(
       {/* テーブル */}
       <div className="min-h-96 rounded-md border">
         <SortableTableProvider
-          items={sortedStudents.map((student) => student.id)}
+          items={sortedRows.map((row) => row.id)}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           dragOverlay={
-            <DragOverlayContent
-              activeStudent={activeStudent}
-              selectedStudents={selectedStudents}
+            <RosterDragOverlay
+              activeRow={activeRow}
+              selectedIds={selectedStudents}
             />
           }
         >
           <Table>
-            <TableHeaderRow
-              sortedStudents={sortedStudents}
-              selectedStudents={selectedStudents}
+            <RosterTableHeader
+              sortedRows={sortedRows}
+              selectedIds={selectedStudents}
               onSelectAll={handleSelectAll}
+              additionalColumns={additionalColumns}
+              rowActionButtons={rowActionButtons}
             />
             <TableBody>
-              {sortedStudents.map((student) => (
-                <SortableTableRow
-                  key={student.id}
-                  student={student}
-                  isSelected={selectedStudents.has(student.id)}
+              {sortedRows.map((row) => (
+                <RosterTableRow
+                  key={row.id}
+                  row={row}
+                  isSelected={selectedStudents.has(row.id)}
                   onToggleSelection={(studentId) =>
-                    handleStudentToggle(studentId)
+                    handleToggleSelection(studentId)
                   }
-                  onStatusUpdate={onStudentStatusUpdate}
+                  additionalColumns={additionalColumns}
+                  rowActionButtons={rowActionButtons}
                 />
               ))}
             </TableBody>

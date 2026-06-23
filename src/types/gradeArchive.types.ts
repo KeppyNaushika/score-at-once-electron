@@ -22,7 +22,14 @@ export interface GradeArchiveManifest {
 export interface GradeArchiveData {
   manifest: GradeArchiveManifest
   gradeData: ArchiveGradeData
-  manualScoresData: ArchiveManualScoresData
+  /**
+   * 旧 v1.3.0 以前の外部成績(manual型 DataSource)の点数。
+   * v1.4.0 以降は Coursework に昇格したため新規 export では書かない（空配列）。
+   * 旧アーカイブ読込時の後方互換フォールバック用に optional で残す。
+   */
+  manualScoresData?: ArchiveManualScoresData
+  /** v1.4.0+: 参照中の試験外成績資料（Coursework）を自己完結で埋め込む */
+  courseworks?: ArchiveCoursework[]
   boundariesData: ArchiveBoundariesData
 }
 
@@ -68,7 +75,7 @@ export interface ArchiveGradeItem {
 }
 
 export interface ArchiveDataSource {
-  type: string // "exam_total" | "subtotal" | "crop_region" | "manual"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"（旧: "manual"）
   name: string
   maxScore: number
   weight: number
@@ -82,10 +89,88 @@ export interface ArchiveDataSource {
   treatExpectedAsMissing?: boolean
   estimationMode?: string
   estimationSourceIds?: string[]
-  /** 入力モード（後方互換: v1.3.0+。"numeric" | "letter"） */
+  /** v1.4.0+: type==="coursework" の参照先資料uuid（照合の一次キー） */
+  courseworkId?: string | null
+  /** v1.4.0+: type==="coursework" の参照先評価項目uuid（照合の一次キー） */
+  courseworkItemId?: string | null
+  /** v1.4.0+: type==="coursework" の参照先資料名（uuid不一致時の二次フォールバック） */
+  courseworkName?: string | null
+  /** v1.4.0+: type==="coursework" の参照先評価項目名（名前フォールバック） */
+  courseworkItemName?: string | null
+  /**
+   * 旧 v1.3.0 の入力モード（"numeric" | "letter"）。読取専用の後方互換用。
+   * v1.4.0 以降は CourseworkItem.inputMode が保持する。
+   */
   inputMode?: string
-  /** 文字評価→点数の変換表（後方互換: v1.3.0+） */
+  /**
+   * 旧 v1.3.0 の文字評価→点数の変換表。読取専用の後方互換用。
+   * v1.4.0 以降は CourseworkItem.letterScales が保持する。
+   */
   letterScales?: { label: string; score: number; order: number }[]
+}
+
+/**
+ * v1.4.0+: 試験外成績資料（Coursework）の埋め込みデータ。
+ * 点数を失わないため自己完結。外部参照は名前ベース
+ * （生徒=学籍番号 / 学級=学級名 / タグ=タグ名）。
+ */
+export interface ArchiveCoursework {
+  /** v1.4.0+: export元の資料uuid（照合の一次キー） */
+  id: string
+  name: string
+  description: string | null
+  date: string | null
+  classes: { className: string; order: number }[]
+  tags: { tagName: string }[]
+  students: { studentNumber: string; customOrder: number | null }[]
+  items: ArchiveCourseworkItem[]
+}
+
+export interface ArchiveCourseworkItem {
+  /** v1.4.0+: export元の評価項目uuid（照合の一次キー） */
+  id: string
+  name: string
+  order: number
+  maxScore: number
+  inputMode: string
+  letterScales: { label: string; score: number; order: number }[]
+  scores: {
+    studentNumber: string
+    score: number | null
+    letterValue: string | null
+    adjustment: number | null
+    adjustmentReason: string | null
+    comment: string | null
+  }[]
+}
+
+/** v1.4.0+: インポート時に資料ごとにユーザーが選ぶ取り込み方法 */
+export type CourseworkImportDecision =
+  | { action: "reuse"; existingId: string }
+  | { action: "new" }
+
+/** アーカイブ内の資料uuid → ユーザー決定 */
+export type CourseworkImportDecisions = Record<string, CourseworkImportDecision>
+
+/** インポート実行時のオプション */
+export interface GradeArchiveImportOptions {
+  /** 試験参照のマッピング（examName → 既存examId） */
+  examMapping?: Record<string, string>
+  /** 資料ごとの取り込み判断（archiveCourseworkId → 決定）。未指定の資料はuuid一致なら流用、無ければ新規 */
+  courseworkDecisions?: CourseworkImportDecisions
+}
+
+/** v1.4.0+: 資料1件分のマッチング候補（ウィザードでユーザーに提示） */
+export interface GradeArchiveCourseworkMatch {
+  /** アーカイブ内の資料uuid（決定マップのキー） */
+  archiveId: string
+  name: string
+  itemCount: number
+  studentCount: number
+  /** uuid完全一致した既存資料（同一PC由来） */
+  uuidMatch: { id: string; name: string } | null
+  /** 名前一致した既存資料の候補（名前は非ユニークなので複数あり得る） */
+  nameCandidates: { id: string; name: string }[]
 }
 
 export interface ArchiveManualScoresData {
@@ -127,4 +212,6 @@ export interface GradeArchiveImportPreview {
   }[]
   studentMatchCount: number
   studentMissingCount: number
+  /** v1.4.0+: 埋め込み資料ごとのマッチング候補（ユーザー判断用） */
+  courseworkMatches: GradeArchiveCourseworkMatch[]
 }

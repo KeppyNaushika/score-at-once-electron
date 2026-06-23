@@ -4,6 +4,7 @@
 
 import type {
   ArchiveBoundariesData,
+  ArchiveCoursework,
   ArchiveGradeData,
   ArchiveManualScoresData,
   GradeArchiveData,
@@ -45,16 +46,31 @@ export async function extractGradeArchive(
     const gradeData: ArchiveGradeData = JSON.parse(
       files["grade-exam.json"] ?? "{}"
     )
-    const manualScoresData: ArchiveManualScoresData = JSON.parse(
-      files["manual-scores.json"] ?? '{"manualScores":[]}'
-    )
     const boundariesData: ArchiveBoundariesData = JSON.parse(
       files["boundaries.json"] ?? '{"boundarySets":[]}'
     )
+    // v1.4.0+: 試験外成績資料の埋め込み
+    const courseworks: ArchiveCoursework[] | undefined = files[
+      "courseworks.json"
+    ]
+      ? JSON.parse(files["courseworks.json"])
+      : undefined
+    // 旧 v1.3.0 以前: manual-scores.json があれば後方互換用に読む
+    const manualScoresData: ArchiveManualScoresData | undefined = files[
+      "manual-scores.json"
+    ]
+      ? JSON.parse(files["manual-scores.json"])
+      : undefined
 
     return {
       success: true,
-      data: { manifest, gradeData, manualScoresData, boundariesData },
+      data: {
+        manifest,
+        gradeData,
+        boundariesData,
+        courseworks,
+        manualScoresData,
+      },
     }
   } catch (error) {
     console.error("Error extracting grade archive:", error)

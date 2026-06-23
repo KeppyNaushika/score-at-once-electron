@@ -2,12 +2,18 @@
  * GradeStudent / GradeClass のPrisma操作関数
  */
 
-import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import { getAvailableClassesForTarget } from "./availableClasses"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
+import {
+  type RosterAdapter,
+  rosterAddStudents,
+  rosterAddStudentsFromClass,
+  rosterRemoveClass,
+  rosterUpdateStudentOrders,
+} from "./rosterManager"
 
 /** GradeのreferenceDateを取得 */
 async function getExamReferenceDate(gradeId: string): Promise<Date | null> {
@@ -159,257 +165,111 @@ export async function getAvailableStudentsForGrade(
 }
 
 /**
+ * 成績名簿の I/O・監査メタデータ（共通ロジック rosterManager へ供給）
+ */
+const gradeRosterAdapter: RosterAdapter = {
+  getReferenceDate: (targetId) => getExamReferenceDate(targetId),
+  listExistingStudents: (targetId) =>
+    prisma.gradeStudent.findMany({
+      where: { gradeId: targetId },
+      select: { studentId: true, customOrder: true },
+    }),
+  createStudents: async (targetId, rows) => {
+    await prisma.gradeStudent.createMany({
+      data: rows.map((r) => ({
+        gradeId: targetId,
+        studentId: r.studentId,
+        customOrder: r.customOrder,
+      })),
+    })
+  },
+  setStudentOrders: async (targetId, orders) => {
+    await prisma.$transaction(
+      orders.map((o) =>
+        prisma.gradeStudent.updateMany({
+          where: { gradeId: targetId, studentId: o.studentId },
+          data: { customOrder: o.customOrder },
+        })
+      )
+    )
+  },
+  classMaxOrder: async (targetId) => {
+    const result = await prisma.gradeClass.aggregate({
+      where: { gradeId: targetId },
+      _max: { order: true },
+    })
+    return result._max.order
+  },
+  upsertClass: async (targetId, classId, order) => {
+    await prisma.gradeClass.upsert({
+      where: { gradeId_classId: { gradeId: targetId, classId } },
+      create: { gradeId: targetId, classId, order },
+      update: {},
+    })
+  },
+  listOtherClassIds: async (targetId, exceptClassId) => {
+    const rows = await prisma.gradeClass.findMany({
+      where: { gradeId: targetId, classId: { not: exceptClassId } },
+      select: { classId: true },
+    })
+    return rows.map((c) => c.classId)
+  },
+  removeClassAndStudents: async (targetId, classId, studentIds) => {
+    await prisma.$transaction([
+      prisma.gradeStudent.deleteMany({
+        where: { gradeId: targetId, studentId: { in: studentIds } },
+      }),
+      prisma.gradeClass.delete({
+        where: { gradeId_classId: { gradeId: targetId, classId } },
+      }),
+    ])
+  },
+  scope: (targetId) => resolveGradeScope(targetId),
+  audit: {
+    studentEntity: "GradeStudent",
+    classEntity: "GradeClass",
+    addAction: "grade.student.add",
+    removeAction: "grade.student.remove",
+    reorderAction: "grade.student.reorder",
+    reorderCoalescePrefix: "grade_student_reorder",
+    addFromClassSummary: (n) => `学級から成績対象生徒を${n}名追加しました`,
+    addIndividualSummary: (n) => `成績対象生徒を${n}名追加しました`,
+    removeClassSummary: (n) => `学級を成績から外し、生徒${n}名を削除しました`,
+  },
+}
+
+/**
  * 学級から生徒を一括追加
  *
  * @param activeOnly trueなら基準日時点で在籍中の生徒のみ追加する（既定）。
- *   falseなら在籍期間に関わらず学級に在籍歴のある全生徒を追加する。
  */
-export async function addStudentsFromClassToGrade(
+export function addStudentsFromClassToGrade(
   gradeId: string,
   classId: string,
   activeOnly = true
 ) {
-  try {
-    const referenceDate = await getExamReferenceDate(gradeId)
-
-    // 1. 現在の最大order取得
-    const maxOrderResult = await prisma.gradeClass.aggregate({
-      where: { gradeId },
-      _max: { order: true },
-    })
-    const nextOrder = (maxOrderResult._max.order ?? -1) + 1
-
-    // 2. GradeClass作成
-    await prisma.gradeClass.upsert({
-      where: {
-        gradeId_classId: { gradeId, classId },
-      },
-      create: { gradeId, classId, order: nextOrder },
-      update: {},
-    })
-
-    // 3. 対象生徒を出席番号順で取得（activeOnlyなら基準日時点で在籍中のみ）
-    const memberships = await prisma.studentClassMembership.findMany({
-      where: {
-        classId,
-        ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
-      },
-      orderBy: [
-        { attendanceNumber: "asc" },
-        { student: { studentNumber: "asc" } },
-      ],
-      include: { student: true },
-    })
-
-    // 4. 既存の GradeStudent を取得
-    const existing = await prisma.gradeStudent.findMany({
-      where: { gradeId },
-      select: { studentId: true, customOrder: true },
-    })
-    const existingIds = new Set(existing.map((e) => e.studentId))
-    const maxCustomOrder = existing.reduce(
-      (max, e) => Math.max(max, e.customOrder ?? 0),
-      0
-    )
-
-    // 5. 新規生徒を追加
-    const toAdd: { studentId: string; customOrder: number }[] = []
-    let orderOffset = maxCustomOrder + 1
-
-    for (const m of memberships) {
-      if (!existingIds.has(m.studentId)) {
-        toAdd.push({ studentId: m.studentId, customOrder: orderOffset++ })
-        existingIds.add(m.studentId)
-      }
-    }
-
-    if (toAdd.length > 0) {
-      await prisma.gradeStudent.createMany({
-        data: toAdd.map(({ studentId, customOrder }) => ({
-          gradeId,
-          studentId,
-          customOrder,
-        })),
-      })
-
-      const scope = await resolveGradeScope(gradeId)
-      await recordAuditLog({
-        action: "grade.student.add",
-        entityType: "GradeStudent",
-        entityId: gradeId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: `学級から成績対象生徒を${toAdd.length}名追加しました`,
-        extra: { count: toAdd.length, classId },
-      })
-    }
-
-    return {
-      success: true,
-      added: toAdd.length,
-      skipped: memberships.length - toAdd.length,
-    }
-  } catch (error) {
-    console.error("Error adding students from class:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return rosterAddStudentsFromClass(
+    gradeRosterAdapter,
+    gradeId,
+    classId,
+    activeOnly
+  )
 }
 
-/**
- * 生徒を個別に成績へ追加（学級を介さない）
- *
- * 既存の対象生徒を除外し、末尾の customOrder 連番を付与して追加する。
- * GradeStudent は status を持たない点が ExamStudent との差。
- */
-export async function addStudentsToGrade(
-  gradeId: string,
-  studentIds: string[]
-) {
-  try {
-    const existing = await prisma.gradeStudent.findMany({
-      where: { gradeId },
-      select: { studentId: true, customOrder: true },
-    })
-    const existingIds = new Set(existing.map((e) => e.studentId))
-    const maxCustomOrder = existing.reduce(
-      (max, e) => Math.max(max, e.customOrder ?? 0),
-      0
-    )
-
-    const newStudentIds = studentIds.filter((id) => !existingIds.has(id))
-    let orderOffset = maxCustomOrder + 1
-
-    if (newStudentIds.length > 0) {
-      await prisma.gradeStudent.createMany({
-        data: newStudentIds.map((studentId) => ({
-          gradeId,
-          studentId,
-          customOrder: orderOffset++,
-        })),
-      })
-
-      const scope = await resolveGradeScope(gradeId)
-      await recordAuditLog({
-        action: "grade.student.add",
-        entityType: "GradeStudent",
-        entityId: gradeId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: `成績対象生徒を${newStudentIds.length}名追加しました`,
-        extra: { count: newStudentIds.length },
-      })
-    }
-
-    return {
-      success: true,
-      addedCount: newStudentIds.length,
-      skippedCount: studentIds.length - newStudentIds.length,
-    }
-  } catch (error) {
-    console.error("Error adding students to grade:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+/** 生徒を個別に成績へ追加（学級を介さない） */
+export function addStudentsToGrade(gradeId: string, studentIds: string[]) {
+  return rosterAddStudents(gradeRosterAdapter, gradeId, studentIds)
 }
 
-/**
- * 生徒の並び順を更新
- */
-export async function updateGradeStudentOrders(
+/** 生徒の並び順を更新 */
+export function updateGradeStudentOrders(
   gradeId: string,
   studentOrders: { studentId: string; customOrder: number }[]
 ) {
-  try {
-    for (const { studentId, customOrder } of studentOrders) {
-      await prisma.gradeStudent.updateMany({
-        where: { gradeId, studentId },
-        data: { customOrder },
-      })
-    }
-
-    const scope = await resolveGradeScope(gradeId)
-    await recordAuditLog({
-      action: "grade.student.reorder",
-      entityType: "GradeStudent",
-      entityId: gradeId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      coalesceKey: `grade_student_reorder:${gradeId}`,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error updating grade exam student orders:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return rosterUpdateStudentOrders(gradeRosterAdapter, gradeId, studentOrders)
 }
 
-/**
- * 学級を削除（その学級由来の生徒も削除）
- */
-export async function removeClassFromGrade(gradeId: string, classId: string) {
-  try {
-    // 学級の生徒IDを取得
-    const memberships = await prisma.studentClassMembership.findMany({
-      where: { classId },
-      select: { studentId: true },
-    })
-    const classStudentIds = memberships.map((m) => m.studentId)
-
-    // 他の学級にも属している生徒は残す
-    const otherClasses = await prisma.gradeClass.findMany({
-      where: { gradeId, classId: { not: classId } },
-      select: { classId: true },
-    })
-    const otherClassIds = otherClasses.map((c) => c.classId)
-    const otherMemberships = await prisma.studentClassMembership.findMany({
-      where: { classId: { in: otherClassIds } },
-      select: { studentId: true },
-    })
-    const otherStudentIds = new Set(otherMemberships.map((m) => m.studentId))
-
-    const studentsToRemove = classStudentIds.filter(
-      (id) => !otherStudentIds.has(id)
-    )
-
-    // トランザクションで削除
-    await prisma.$transaction([
-      prisma.gradeStudent.deleteMany({
-        where: {
-          gradeId,
-          studentId: { in: studentsToRemove },
-        },
-      }),
-      prisma.gradeClass.delete({
-        where: { gradeId_classId: { gradeId, classId } },
-      }),
-    ])
-
-    const scope = await resolveGradeScope(gradeId)
-    await recordAuditLog({
-      action: "grade.student.remove",
-      entityType: "GradeClass",
-      entityId: gradeId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary: `学級を成績から外し、生徒${studentsToRemove.length}名を削除しました`,
-      extra: { removedStudents: studentsToRemove.length, classId },
-    })
-
-    return { success: true, removedStudents: studentsToRemove.length }
-  } catch (error) {
-    console.error("Error removing class from grade exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+/** 学級を削除（その学級由来の生徒も削除） */
+export function removeClassFromGrade(gradeId: string, classId: string) {
+  return rosterRemoveClass(gradeRosterAdapter, gradeId, classId)
 }

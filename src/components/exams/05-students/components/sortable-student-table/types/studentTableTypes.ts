@@ -57,10 +57,3 @@ export interface SortableStudentTableProps {
   statusFilter: StudentStatus | "all"
   onStatusChange: (value: StudentStatus | "all") => void
 }
-
-export interface SortableTableRowProps {
-  student: Student
-  isSelected: boolean
-  onToggleSelection: (studentId: string, event?: React.MouseEvent) => void
-  onStatusUpdate: (studentId: string, status: StudentStatus) => void
-}

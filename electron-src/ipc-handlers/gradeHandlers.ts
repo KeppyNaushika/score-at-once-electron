@@ -62,10 +62,6 @@ import {
   removeClassFromGrade,
   updateGradeStudentOrders,
 } from "../lib/prisma/gradeStudent"
-import {
-  batchUpsertManualScores,
-  getManualScoresByDataSourceId,
-} from "../lib/prisma/manualScore"
 import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
@@ -227,6 +223,7 @@ export function setupGradeHandlers(): void {
       examId?: string
       subtotalId?: string
       cropRegionId?: string
+      courseworkItemId?: string
       name: string
       maxScore: number
       weight: number
@@ -236,8 +233,6 @@ export function setupGradeHandlers(): void {
       treatExpectedAsMissing?: boolean
       estimationMode?: string
       estimationSourceIds?: string[]
-      inputMode?: string
-      letterScales?: { label: string; score: number; order: number }[]
     }) => {
       return createDataSource(data)
     }
@@ -257,8 +252,6 @@ export function setupGradeHandlers(): void {
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string[]
-        inputMode?: string
-        letterScales?: { label: string; score: number; order: number }[]
       }
     ) => {
       return updateDataSource(id, data)
@@ -316,36 +309,9 @@ export function setupGradeHandlers(): void {
       examId?: string
       subtotalId?: string
       cropRegionId?: string
+      courseworkItemId?: string
     }) => {
       return calculateSourceMaxScore(data)
-    }
-  )
-
-  // =====================================================================
-  // ManualScore
-  // =====================================================================
-
-  registerHandler(
-    "grade:getManualScores",
-    async (gradeDataSourceId: string) => {
-      return getManualScoresByDataSourceId(gradeDataSourceId)
-    }
-  )
-
-  registerHandler(
-    "grade:batchUpsertManualScores",
-    async (
-      scores: {
-        gradeDataSourceId: string
-        studentId: string
-        score?: number | null
-        letterValue?: string | null
-        adjustment?: number | null
-        adjustmentReason?: string | null
-        comment?: string | null
-      }[]
-    ) => {
-      return batchUpsertManualScores(scores)
     }
   )
 
@@ -492,9 +458,9 @@ export function setupGradeHandlers(): void {
     "grade:executeImport",
     async (
       archiveData: Parameters<typeof importGradeArchive>[0],
-      examMapping?: Record<string, string>
+      options?: Parameters<typeof importGradeArchive>[1]
     ) => {
-      return importGradeArchive(archiveData, examMapping)
+      return importGradeArchive(archiveData, options)
     }
   )
 }

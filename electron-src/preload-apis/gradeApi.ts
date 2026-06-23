@@ -68,6 +68,7 @@ export function createGradeApi() {
         examId?: string
         subtotalId?: string
         cropRegionId?: string
+        courseworkItemId?: string
         name: string
         maxScore: number
         weight: number
@@ -77,8 +78,6 @@ export function createGradeApi() {
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string[]
-        inputMode?: string
-        letterScales?: { label: string; score: number; order: number }[]
       }) => ipcRenderer.invoke("grade:createDataSource", data),
       updateDataSource: (
         id: string,
@@ -92,8 +91,6 @@ export function createGradeApi() {
           treatExpectedAsMissing?: boolean
           estimationMode?: string
           estimationSourceIds?: string[]
-          inputMode?: string
-          letterScales?: { label: string; score: number; order: number }[]
         }
       ) => ipcRenderer.invoke("grade:updateDataSource", id, data),
       deleteDataSource: (id: string) =>
@@ -116,19 +113,6 @@ export function createGradeApi() {
           dataSourceIds,
           policy
         ),
-      getManualScores: (gradeDataSourceId: string) =>
-        ipcRenderer.invoke("grade:getManualScores", gradeDataSourceId),
-      batchUpsertManualScores: (
-        scores: {
-          gradeDataSourceId: string
-          studentId: string
-          score?: number | null
-          letterValue?: string | null
-          adjustment?: number | null
-          adjustmentReason?: string | null
-          comment?: string | null
-        }[]
-      ) => ipcRenderer.invoke("grade:batchUpsertManualScores", scores),
       getBoundarySets: (gradeId: string) =>
         ipcRenderer.invoke("grade:getBoundarySets", gradeId),
       upsertBoundarySet: (data: {
@@ -189,6 +173,7 @@ export function createGradeApi() {
         examId?: string
         subtotalId?: string
         cropRegionId?: string
+        courseworkItemId?: string
       }) => ipcRenderer.invoke("grade:calculateSourceMaxScore", data),
       exportExcel: (gradeId: string, options?: { studentIds?: string[] }) =>
         ipcRenderer.invoke("grade:exportExcel", gradeId, options),
@@ -203,8 +188,8 @@ export function createGradeApi() {
       importArchive: () => ipcRenderer.invoke("grade:importArchive"),
       executeImport: (
         archiveData: unknown,
-        examMapping?: Record<string, string>
-      ) => ipcRenderer.invoke("grade:executeImport", archiveData, examMapping),
+        options?: import("../../src/types/gradeArchive.types").GradeArchiveImportOptions
+      ) => ipcRenderer.invoke("grade:executeImport", archiveData, options),
     },
   }
 }

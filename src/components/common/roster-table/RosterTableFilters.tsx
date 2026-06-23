@@ -3,9 +3,9 @@
 import { Search } from "lucide-react"
 
 import type {
-  ClassGroup,
-  StudentStatus,
-} from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
+  RosterClassOption,
+  RosterFilter,
+} from "@/components/common/roster-table/types"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -15,25 +15,24 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface TableFiltersProps {
+interface RosterTableFiltersProps {
   searchTerm: string
   onSearchChange: (value: string) => void
   selectedClassId: string
   onClassChange: (value: string) => void
-  statusFilter: StudentStatus | "all"
-  onStatusChange: (value: StudentStatus | "all") => void
-  classes: ClassGroup[]
+  classes: RosterClassOption[]
+  additionalFilters: RosterFilter[]
 }
 
-export function TableFilters({
+/** 検索 + 学級セレクト + 追加フィルタ（スロット）を描画する共通フィルタ行 */
+export function RosterTableFilters({
   searchTerm,
   onSearchChange,
   selectedClassId,
   onClassChange,
-  statusFilter,
-  onStatusChange,
   classes,
-}: TableFiltersProps) {
+  additionalFilters,
+}: RosterTableFiltersProps) {
   return (
     <div className="flex flex-1 items-center gap-3">
       <div className="relative flex-1">
@@ -60,17 +59,9 @@ export function TableFilters({
         </SelectContent>
       </Select>
 
-      <Select value={statusFilter} onValueChange={onStatusChange}>
-        <SelectTrigger className="w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">すべての受験状態</SelectItem>
-          <SelectItem value="participating">受験</SelectItem>
-          <SelectItem value="expected">見込</SelectItem>
-          <SelectItem value="absent">欠席</SelectItem>
-        </SelectContent>
-      </Select>
+      {additionalFilters.map((filter, index) => (
+        <div key={index}>{filter.render()}</div>
+      ))}
     </div>
   )
 }

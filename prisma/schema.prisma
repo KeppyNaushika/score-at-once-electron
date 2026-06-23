@@ -39,6 +39,7 @@ model Class {
   memberships         StudentClassMembership[]
   examClasses         ExamClass[]
   gradeClasses        GradeClass[]
+  courseworkClasses   CourseworkClass[]
 
   @@map("classes")
 }
@@ -57,13 +58,14 @@ model Student {
   examStudents        ExamStudent[]
   questionScores      QuestionScore[]
   memberships         StudentClassMembership[]
-  manualScores        ManualScore[]
   gradeStudents       GradeStudent[]
   gradeOverrides      GradeOverride[]
   gradeItemExclusions  GradeItemExclusion[]
   compoundAnswerScores CompoundAnswerScore[]
   scoreDecisions       ScoreDecision[]
   returnSnapshots      ReturnSnapshot[]
+  courseworkStudents   CourseworkStudent[]
+  courseworkScores     CourseworkScore[]
 }
 
 model StudentClassMembership {
@@ -418,6 +420,7 @@ model Tag {
 
   tagSubtotalGroups TagSubtotalGroup[]
   examTags          ExamTag[]
+  courseworkTags    CourseworkTag[]
 }
 
 model TagSubtotalGroup {
@@ -713,14 +716,16 @@ model GradeStudent {
   @@index([gradeId, customOrder])
 }
 
-/// 成績データソース（4種: exam_total / subtotal / crop_region / manual）
+/// 成績データソース（5種: exam_total / subtotal / crop_region / coursework）
+/// coursework型は CourseworkItem（試験外成績資料の評価項目）を参照する
 model GradeDataSource {
   id                     String   @id @default(uuid())
   gradeItemId            String
-  type                   String // "exam_total" | "subtotal" | "crop_region" | "manual"
+  type                   String // "exam_total" | "subtotal" | "crop_region" | "coursework"
   examId                 String?
   subtotalId             String?
   cropRegionId           String?
+  courseworkItemId       String?
   name                   String
   maxScore               Decimal
   weight                 Decimal
@@ -731,58 +736,20 @@ model GradeDataSource {
   treatExpectedAsMissing Boolean  @default(false)
   estimationMode         String   @default("all") // "all" | "selected"
   estimationSourceIds    String   @default("[]") // JSON array of DataSource IDs
-  inputMode              String   @default("numeric") // "numeric" | "letter"（manual型のみ有効）
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
-  exam         Exam?        @relation(fields: [examId], references: [id], onDelete: SetNull)
-  subtotal     Subtotal?    @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
-  cropRegion   CropRegion?  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
-  manualScores ManualScore[]
-  letterScales GradeLetterScale[]
+  gradeItem      GradeItem       @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  exam           Exam?           @relation(fields: [examId], references: [id], onDelete: SetNull)
+  subtotal       Subtotal?       @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
+  cropRegion     CropRegion?     @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  courseworkItem CourseworkItem? @relation(fields: [courseworkItemId], references: [id], onDelete: SetNull)
 
   @@index([gradeItemId])
   @@index([examId])
   @@index([subtotalId])
   @@index([cropRegionId])
-}
-
-/// 文字評価→点数の変換表（manual型データソース単位。例: A=100, B=80, C=60）
-model GradeLetterScale {
-  id                String   @id @default(uuid())
-  gradeDataSourceId String
-  label             String
-  score             Decimal
-  order             Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  gradeDataSource GradeDataSource @relation(fields: [gradeDataSourceId], references: [id], onDelete: Cascade)
-
-  @@unique([gradeDataSourceId, label])
-  @@index([gradeDataSourceId])
-}
-
-/// 外部成績（手動入力スコア）
-model ManualScore {
-  id                String   @id @default(uuid())
-  gradeDataSourceId String
-  studentId         String
-  score             Decimal?
-  letterValue       String? // 文字モード時の評価記号（"A"/"B"/"C" 等）
-  adjustment        Decimal? @default(0) // 加点・減点（期限超過等）
-  adjustmentReason  String? // 加減点の理由
-  comment           String? // 成績通知書に表示するコメント
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  gradeDataSource GradeDataSource @relation(fields: [gradeDataSourceId], references: [id], onDelete: Cascade)
-  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@unique([gradeDataSourceId, studentId])
-  @@index([gradeDataSourceId])
-  @@index([studentId])
+  @@index([courseworkItemId])
 }
 
 /// 評価項目ごとの対象生徒除外設定
@@ -866,6 +833,133 @@ model GradeExportSettings {
   updatedAt    DateTime @updatedAt
 
   grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+}
+
+// =============================================================================
+// 試験外成績資料（Coursework）— Exam / SubtotalGroup と同階層のトップレベル実体
+// =============================================================================
+
+/// 試験外成績資料（例「第2回レポート」）。評価項目を複数持ち、点数を自分で保持する。
+/// 成績算出（Grade）からは CourseworkItem 単位で参照され、点数そのものを共有・再利用する。
+model Coursework {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  date        DateTime? // 実施日（任意）: 在籍判定・並びに使用
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  classes  CourseworkClass[]
+  students CourseworkStudent[]
+  tags     CourseworkTag[]
+  items    CourseworkItem[]
+}
+
+/// 試験外成績資料の対象学級
+model CourseworkClass {
+  id           String   @id @default(uuid())
+  courseworkId String
+  classId      String
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coursework Coursework @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
+  class      Class      @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([courseworkId, classId])
+  @@index([courseworkId])
+  @@index([classId])
+}
+
+/// 試験外成績資料の対象生徒（名簿）。点数が項目ごとに複数つくため名簿は独立テーブル。
+model CourseworkStudent {
+  id           String   @id @default(uuid())
+  courseworkId String
+  studentId    String
+  customOrder  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coursework Coursework @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseworkId, studentId])
+  @@index([courseworkId])
+  @@index([studentId])
+  @@index([courseworkId, customOrder])
+}
+
+/// 試験外成績資料のタグ（既存 Tag と多対多）
+model CourseworkTag {
+  id           String   @id @default(uuid())
+  courseworkId String
+  tagId        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coursework Coursework @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
+  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([courseworkId, tagId])
+  @@index([courseworkId])
+  @@index([tagId])
+}
+
+/// 試験外成績資料の評価項目（知識/思考…）。各項目が満点・数値/文字・変換表を持つ。
+model CourseworkItem {
+  id           String   @id @default(uuid())
+  courseworkId String
+  name         String
+  order        Int      @default(0)
+  maxScore     Decimal
+  inputMode    String   @default("numeric") // "numeric" | "letter"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coursework       Coursework             @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
+  scores           CourseworkScore[]
+  letterScales     CourseworkLetterScale[]
+  gradeDataSources GradeDataSource[]
+
+  @@index([courseworkId])
+}
+
+/// 生徒×評価項目の点数（加減点・コメント含む）
+model CourseworkScore {
+  id               String   @id @default(uuid())
+  courseworkItemId String
+  studentId        String
+  score            Decimal?
+  letterValue      String? // 文字モード時の評価記号（"A"/"B"/"C" 等）
+  adjustment       Decimal? @default(0) // 加点・減点（期限超過等）
+  adjustmentReason String? // 加減点の理由
+  comment          String? // 成績通知書に表示するコメント
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  item    CourseworkItem @relation(fields: [courseworkItemId], references: [id], onDelete: Cascade)
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseworkItemId, studentId])
+  @@index([courseworkItemId])
+  @@index([studentId])
+}
+
+/// 文字評価→点数の変換表（評価項目単位。例: A=100, B=80, C=60）
+model CourseworkLetterScale {
+  id               String   @id @default(uuid())
+  courseworkItemId String
+  label            String
+  score            Decimal
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  item CourseworkItem @relation(fields: [courseworkItemId], references: [id], onDelete: Cascade)
+
+  @@unique([courseworkItemId, label])
+  @@index([courseworkItemId])
 }
 
 // =============================================================================

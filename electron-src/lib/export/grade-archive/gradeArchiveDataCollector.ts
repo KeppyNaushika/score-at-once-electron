@@ -4,14 +4,15 @@
 
 import type {
   ArchiveBoundariesData,
+  ArchiveCoursework,
   ArchiveGradeData,
-  ArchiveManualScoresData,
 } from "../../../../src/types/gradeArchive.types"
 import prisma from "../../prisma/client"
 
 export interface CollectedGradeData {
   gradeData: ArchiveGradeData
-  manualScoresData: ArchiveManualScoresData
+  /** v1.4.0+: 参照中の試験外成績資料（Coursework）を自己完結で埋め込む */
+  courseworksData: ArchiveCoursework[]
   boundariesData: ArchiveBoundariesData
   counts: {
     gradeItems: number
@@ -38,10 +39,7 @@ export async function collectGradeArchiveData(
               exam: { select: { examName: true, examDate: true } },
               subtotal: true,
               cropRegion: true,
-              manualScores: {
-                include: { student: { select: { studentNumber: true } } },
-              },
-              letterScales: { orderBy: { order: "asc" } },
+              courseworkItem: { include: { coursework: true } },
             },
             orderBy: { order: "asc" },
           },
@@ -115,12 +113,18 @@ export async function collectGradeArchiveData(
         }
         return []
       })(),
-      inputMode: ds.inputMode,
-      letterScales: ds.letterScales.map((ls) => ({
-        label: ls.label,
-        score: Number(ls.score),
-        order: ls.order,
-      })),
+      courseworkId:
+        ds.type === "coursework"
+          ? (ds.courseworkItem?.coursework?.id ?? null)
+          : null,
+      courseworkItemId:
+        ds.type === "coursework" ? (ds.courseworkItem?.id ?? null) : null,
+      courseworkName:
+        ds.type === "coursework"
+          ? (ds.courseworkItem?.coursework?.name ?? null)
+          : null,
+      courseworkItemName:
+        ds.type === "coursework" ? (ds.courseworkItem?.name ?? null) : null,
     })),
   }))
 
@@ -155,21 +159,76 @@ export async function collectGradeArchiveData(
     }
   })
 
-  const manualScores = gp.gradeItems.flatMap((gi) =>
-    gi.dataSources
-      .filter((ds) => ds.type === "manual")
-      .flatMap((ds) =>
-        ds.manualScores.map((ms) => ({
-          gradeItemName: gi.name,
-          dataSourceName: ds.name,
-          studentNumber: ms.student.studentNumber,
-          score: ms.score !== null ? Number(ms.score) : null,
-          letterValue: ms.letterValue,
-          adjustment: ms.adjustment !== null ? Number(ms.adjustment) : null,
-          adjustmentReason: ms.adjustmentReason,
-          comment: ms.comment,
-        }))
-      )
+  // v1.4.0+: 参照中の試験外成績資料（Coursework）を一意に集めて埋め込む
+  const courseworkIds = new Set(
+    allDataSources
+      .filter((ds) => ds.type === "coursework" && ds.courseworkItem)
+      .map((ds) => ds.courseworkItem!.courseworkId)
+  )
+
+  const courseworkRows = await prisma.coursework.findMany({
+    where: { id: { in: [...courseworkIds] } },
+    include: {
+      classes: {
+        include: { class: { select: { name: true } } },
+        orderBy: { order: "asc" },
+      },
+      tags: { include: { tag: { select: { name: true } } } },
+      students: {
+        include: { student: { select: { studentNumber: true } } },
+        orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
+      },
+      items: {
+        include: {
+          letterScales: { orderBy: { order: "asc" } },
+          scores: {
+            include: { student: { select: { studentNumber: true } } },
+          },
+        },
+        orderBy: { order: "asc" },
+      },
+    },
+  })
+
+  const courseworksData: ArchiveCoursework[] = courseworkRows.map((cw) => ({
+    id: cw.id,
+    name: cw.name,
+    description: cw.description,
+    date: cw.date?.toISOString() ?? null,
+    classes: cw.classes.map((c) => ({
+      className: c.class.name,
+      order: c.order,
+    })),
+    tags: cw.tags.map((t) => ({ tagName: t.tag.name })),
+    students: cw.students.map((s) => ({
+      studentNumber: s.student.studentNumber,
+      customOrder: s.customOrder,
+    })),
+    items: cw.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      order: item.order,
+      maxScore: Number(item.maxScore),
+      inputMode: item.inputMode,
+      letterScales: item.letterScales.map((ls) => ({
+        label: ls.label,
+        score: Number(ls.score),
+        order: ls.order,
+      })),
+      scores: item.scores.map((sc) => ({
+        studentNumber: sc.student.studentNumber,
+        score: sc.score !== null ? Number(sc.score) : null,
+        letterValue: sc.letterValue,
+        adjustment: sc.adjustment !== null ? Number(sc.adjustment) : null,
+        adjustmentReason: sc.adjustmentReason,
+        comment: sc.comment,
+      })),
+    })),
+  }))
+
+  const manualScoresCount = courseworksData.reduce(
+    (sum, cw) => sum + cw.items.reduce((s, item) => s + item.scores.length, 0),
+    0
   )
 
   const boundarySets = gp.boundarySets.map((bs) => ({
@@ -222,12 +281,12 @@ export async function collectGradeArchiveData(
         gradeItemExclusions.length > 0 ? gradeItemExclusions : undefined,
       gradeOverrides: gradeOverrides.length > 0 ? gradeOverrides : undefined,
     },
-    manualScoresData: { manualScores },
+    courseworksData,
     boundariesData: { boundarySets },
     counts: {
       gradeItems: gradeItems.length,
       dataSources: totalDataSources,
-      manualScores: manualScores.length,
+      manualScores: manualScoresCount,
       boundarySets: boundarySets.length,
       boundaries: totalBoundaries,
       classes: classRefs.length,

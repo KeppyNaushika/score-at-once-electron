@@ -154,6 +154,7 @@ export interface GradeAPI {
       examId?: string
       subtotalId?: string
       cropRegionId?: string
+      courseworkItemId?: string
       name: string
       maxScore: number
       weight: number
@@ -163,8 +164,6 @@ export interface GradeAPI {
       treatExpectedAsMissing?: boolean
       estimationMode?: string
       estimationSourceIds?: string[]
-      inputMode?: string
-      letterScales?: { label: string; score: number; order: number }[]
     }) => Promise<{
       success: boolean
       dataSource?: import("../grade.types").GradeDataSourceWithDetails
@@ -182,8 +181,6 @@ export interface GradeAPI {
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string[]
-        inputMode?: string
-        letterScales?: { label: string; score: number; order: number }[]
       }
     ) => Promise<{
       success: boolean
@@ -206,22 +203,6 @@ export interface GradeAPI {
         estimationMode?: string
         estimationSourceIds?: string[]
       }
-    ) => Promise<{ success: boolean; error?: string }>
-    getManualScores: (gradeDataSourceId: string) => Promise<{
-      success: boolean
-      manualScores?: import("../grade.types").ManualScoreWithStudent[]
-      error?: string
-    }>
-    batchUpsertManualScores: (
-      scores: {
-        gradeDataSourceId: string
-        studentId: string
-        score?: number | null
-        letterValue?: string | null
-        adjustment?: number | null
-        adjustmentReason?: string | null
-        comment?: string | null
-      }[]
     ) => Promise<{ success: boolean; error?: string }>
     getBoundarySets: (gradeId: string) => Promise<{
       success: boolean
@@ -309,6 +290,7 @@ export interface GradeAPI {
       examId?: string
       subtotalId?: string
       cropRegionId?: string
+      courseworkItemId?: string
     }) => Promise<{ success: boolean; maxScore?: number; error?: string }>
     exportExcel: (
       gradeId: string,
@@ -342,11 +324,12 @@ export interface GradeAPI {
     }>
     executeImport: (
       archiveData: import("../gradeArchive.types").GradeArchiveData,
-      examMapping?: Record<string, string>
+      options?: import("../gradeArchive.types").GradeArchiveImportOptions
     ) => Promise<{
       success: boolean
       gradeId?: string
       error?: string
+      warnings?: string[]
     }>
   }
 }

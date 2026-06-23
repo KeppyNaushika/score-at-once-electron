@@ -1,16 +1,16 @@
 "use client"
 
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
-import { arrayMove } from "@dnd-kit/sortable"
-import { RotateCcw, Trash2, Users } from "lucide-react"
+import { Trash2, Users } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
-  DragHandle,
-  SortableTableProvider,
-  useSortableRow,
-} from "@/components/common/sortable-table"
+  type RosterClassOption,
+  type RosterRow,
+  RosterTable,
+  type RosterTableAdapter,
+  type RosterTableHandle,
+} from "@/components/common/roster-table"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type {
   AddPanelClassItem,
@@ -27,98 +27,96 @@ interface GradeClass {
   studentCount: number
 }
 
-interface ExamStudent {
-  id: string
-  studentId: string
-  customOrder: number | null
-  student: {
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-    memberships: {
-      classId: string
-      attendanceNumber: number | null
-      class: { id: string; name: string }
-    }[]
-  }
-}
-
 interface StudentsContainerProps {
   gradeId: string
-}
-
-function SortableRow({
-  examStudent,
-  classIdMap,
-}: {
-  examStudent: ExamStudent
-  classIdMap: Map<string, string>
-}) {
-  const { setNodeRef, style, dragHandleProps } = useSortableRow(
-    examStudent.studentId
-  )
-
-  const membership = examStudent.student.memberships.find((m) =>
-    classIdMap.has(m.classId)
-  )
-
-  return (
-    <tr ref={setNodeRef} style={style} className="border-t">
-      <td className="w-8 px-1 py-1.5">
-        <DragHandle
-          dragHandleProps={dragHandleProps}
-          className="flex items-center justify-center"
-        />
-      </td>
-      <td className="px-3 py-1.5">{membership?.class.name ?? "-"}</td>
-      <td className="px-3 py-1.5 text-center">
-        {membership?.attendanceNumber ?? "-"}
-      </td>
-      <td className="px-3 py-1.5">
-        {examStudent.student.lastName} {examStudent.student.firstName}
-      </td>
-      <td className="text-muted-foreground px-3 py-1.5">
-        {examStudent.student.studentNumber}
-      </td>
-    </tr>
-  )
 }
 
 /**
  * 成績算出試験の生徒管理コンテナ
  *
- * 学級の追加/削除と、対象生徒一覧のドラッグ&ドロップ並び替えを提供する。
+ * 学級の追加/削除と、共通 roster-table による対象生徒一覧の並び替えを提供する。
  */
 export function StudentsContainer({ gradeId }: StudentsContainerProps) {
   const [classes, setClasses] = useState<GradeClass[]>([])
-  const [students, setStudents] = useState<ExamStudent[]>([])
+  const [studentCount, setStudentCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [rosterHandle, setRosterHandle] = useState<RosterTableHandle | null>(
+    null
+  )
 
-  const loadData = useCallback(async () => {
+  const loadClasses = useCallback(async () => {
     try {
-      const [classResult, studentResult] = await Promise.all([
-        window.electronAPI.grade.getClasses(gradeId),
-        window.electronAPI.grade.getStudents(gradeId),
-      ])
-      if (classResult.success && classResult.classes) {
-        setClasses(classResult.classes)
-      }
-      if (studentResult.success && studentResult.students) {
-        setStudents(studentResult.students)
+      const result = await window.electronAPI.grade.getClasses(gradeId)
+      if (result.success && result.classes) {
+        setClasses(result.classes)
       }
     } catch (error) {
-      console.error("Error loading students data:", error)
-    } finally {
-      setLoading(false)
+      console.error("Error loading grade classes:", error)
     }
   }, [gradeId])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadClasses()
+  }, [loadClasses])
 
+  // 名簿テーブルのアダプター（成績）
+  const rosterAdapter = useMemo<RosterTableAdapter>(
+    () => ({
+      fetchRows: async () => {
+        const [classResult, studentResult] = await Promise.all([
+          window.electronAPI.grade.getClasses(gradeId),
+          window.electronAPI.grade.getStudents(gradeId),
+        ])
+        const classOrderMap = new Map(
+          (classResult.success && classResult.classes
+            ? classResult.classes
+            : []
+          ).map((c) => [c.classId, c.order])
+        )
+        const registeredClassIds = new Set(classOrderMap.keys())
+        const students =
+          studentResult.success && studentResult.students
+            ? studentResult.students
+            : []
+        return students.map((examStudent): RosterRow => {
+          const membership = examStudent.student.memberships.find((m) =>
+            registeredClassIds.has(m.classId)
+          )
+          return {
+            id: examStudent.studentId,
+            studentNumber: examStudent.student.studentNumber,
+            lastName: examStudent.student.lastName,
+            firstName: examStudent.student.firstName,
+            kana: "",
+            classInfo: {
+              className: membership?.class.name ?? null,
+              attendanceNumber: membership?.attendanceNumber ?? null,
+              classOrder: membership
+                ? (classOrderMap.get(membership.classId) ?? null)
+                : null,
+            },
+            customOrder: examStudent.customOrder,
+          }
+        })
+      },
+      fetchClasses: async () => {
+        const result = await window.electronAPI.grade.getClasses(gradeId)
+        if (!result.success || !result.classes) return []
+        return result.classes.map(
+          (c): RosterClassOption => ({ id: c.classId, name: c.className })
+        )
+      },
+      updateRowOrder: async (rowOrders) => {
+        await window.electronAPI.grade.updateStudentOrders(gradeId, rowOrders)
+      },
+      removeRows: async () => {
+        // 成績画面では生徒個別の削除はサポートしない（学級単位で管理）
+      },
+    }),
+    [gradeId]
+  )
+
+  // 生徒追加パネルのアダプター（成績）
   const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       fetchAvailableClasses: async (activeOnly) => {
@@ -184,6 +182,11 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
     [gradeId]
   )
 
+  const reloadAll = useCallback(async () => {
+    await loadClasses()
+    await rosterHandle?.refresh()
+  }, [loadClasses, rosterHandle])
+
   const handleRemoveClass = async (classId: string) => {
     try {
       const result = await window.electronAPI.grade.removeClass(
@@ -191,89 +194,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         classId
       )
       if (result.success) {
-        await loadData()
+        await reloadAll()
       }
     } catch (error) {
       console.error("Error removing class:", error)
     }
   }
-
-  const saveOrders = useCallback(
-    async (reordered: ExamStudent[]) => {
-      const studentOrders = reordered.map((examStudent, index) => ({
-        studentId: examStudent.studentId,
-        customOrder: index,
-      }))
-      await window.electronAPI.grade.updateStudentOrders(gradeId, studentOrders)
-    },
-    [gradeId]
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id))
-  }
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveId(null)
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = students.findIndex(
-      (examStudent) => examStudent.studentId === active.id
-    )
-    const newIndex = students.findIndex(
-      (examStudent) => examStudent.studentId === over.id
-    )
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = arrayMove(students, oldIndex, newIndex)
-    setStudents(reordered)
-    await saveOrders(reordered)
-  }
-
-  const handleResetOrder = async () => {
-    const classOrderMap = new Map(
-      classes.map((gradeClass) => [gradeClass.classId, gradeClass.order])
-    )
-    const sorted = [...students].sort((a, b) => {
-      const aMembership = a.student.memberships.find((membership) =>
-        classOrderMap.has(membership.classId)
-      )
-      const bMembership = b.student.memberships.find((membership) =>
-        classOrderMap.has(membership.classId)
-      )
-      const aClassOrder = aMembership
-        ? (classOrderMap.get(aMembership.classId) ?? 999)
-        : 999
-      const bClassOrder = bMembership
-        ? (classOrderMap.get(bMembership.classId) ?? 999)
-        : 999
-      if (aClassOrder !== bClassOrder) return aClassOrder - bClassOrder
-      const aAttendanceNumber = aMembership?.attendanceNumber ?? 999
-      const bAttendanceNumber = bMembership?.attendanceNumber ?? 999
-      return aAttendanceNumber - bAttendanceNumber
-    })
-    setStudents(sorted)
-    await saveOrders(sorted)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    )
-  }
-
-  const classIdMap = new Map(
-    classes.map((gradeClass) => [gradeClass.classId, gradeClass.className])
-  )
-  const activeStudent = activeId
-    ? students.find((examStudent) => examStudent.studentId === activeId)
-    : null
-  const activeMembership = activeStudent?.student.memberships.find(
-    (membership) => classIdMap.has(membership.classId)
-  )
 
   return (
     <div className="p-6">
@@ -285,7 +211,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       {/* 生徒追加（学級まるごと・個別） */}
       <div className="mb-6 rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-medium">生徒を追加</h3>
-        <StudentAddPanel adapter={addPanelAdapter} onAdded={loadData} />
+        <StudentAddPanel adapter={addPanelAdapter} onAdded={reloadAll} />
       </div>
 
       {/* 登録済み学級 */}
@@ -316,70 +242,18 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       )}
 
       {/* 生徒一覧 */}
-      {students.length > 0 ? (
-        <div className="rounded-lg border">
-          <div className="bg-muted/50 flex items-center justify-between px-4 py-2">
-            <span className="text-sm font-medium">
-              対象生徒: {students.length}名
-            </span>
-            <Button variant="ghost" size="sm" onClick={handleResetOrder}>
-              <RotateCcw className="mr-1 h-3 w-3" />
-              順序をリセット
-            </Button>
-          </div>
-          <div className="overflow-x-auto">
-            <SortableTableProvider
-              items={students.map((examStudent) => examStudent.studentId)}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              dragOverlay={
-                activeStudent && (
-                  <div className="bg-background rounded border px-4 py-2 text-sm shadow-lg">
-                    {activeMembership?.class.name ?? ""}{" "}
-                    {activeStudent.student.lastName}{" "}
-                    {activeStudent.student.firstName}
-                  </div>
-                )
-              }
-            >
-              <table className="w-full text-sm">
-                <thead className="bg-muted/30">
-                  <tr>
-                    <th className="w-8 px-1 py-2" />
-                    <th className="px-3 py-2 text-left font-medium">学級</th>
-                    <th className="px-3 py-2 text-left font-medium">
-                      出席番号
-                    </th>
-                    <th className="px-3 py-2 text-left font-medium">氏名</th>
-                    <th className="px-3 py-2 text-left font-medium">
-                      学籍番号
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((examStudent) => (
-                    <SortableRow
-                      key={examStudent.studentId}
-                      examStudent={examStudent}
-                      classIdMap={classIdMap}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </SortableTableProvider>
-          </div>
-        </div>
-      ) : (
-        <div className="flex h-32 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-          <p className="text-muted-foreground mb-1">生徒が登録されていません</p>
-          <p className="text-muted-foreground text-xs">
-            上の「学級を追加」から対象学級を選択してください
-          </p>
-        </div>
-      )}
+      <div className="mb-2">
+        <h3 className="text-sm font-medium">対象生徒: {studentCount}名</h3>
+      </div>
+      <RosterTable
+        adapter={rosterAdapter}
+        onLoadingChange={setLoading}
+        registerHandle={setRosterHandle}
+        onRowsChange={(rows) => setStudentCount(rows.length)}
+      />
 
       <div className="mt-6 flex justify-end">
-        <Button asChild disabled={students.length === 0}>
+        <Button asChild disabled={loading || studentCount === 0}>
           <Link href={`/grades/${gradeId}/03-data-sources`}>
             次へ: データソース
           </Link>
