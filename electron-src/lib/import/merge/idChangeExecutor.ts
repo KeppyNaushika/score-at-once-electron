@@ -102,6 +102,28 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       }),
   },
   {
+    // UNIQUE([examId, studentId]) があるため移行先の重複を回避しつつ更新する
+    model: "ReturnSnapshot",
+    move: async (tx, from, to) => {
+      const snapshots = await tx.returnSnapshot.findMany({
+        where: { studentId: from },
+      })
+      for (const snap of snapshots) {
+        const duplicate = await tx.returnSnapshot.findFirst({
+          where: { examId: snap.examId, studentId: to },
+        })
+        if (duplicate) {
+          await tx.returnSnapshot.delete({ where: { id: snap.id } })
+        } else {
+          await tx.returnSnapshot.update({
+            where: { id: snap.id },
+            data: { studentId: to },
+          })
+        }
+      }
+    },
+  },
+  {
     model: "GradeStudent",
     move: (tx, from, to) =>
       tx.gradeStudent.updateMany({

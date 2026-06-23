@@ -186,6 +186,22 @@ describe("DateTime正規化マイグレーション", () => {
     ).toBe(0)
   })
 
+  // normalize_datetime_to_text (20260613144726) より後に追加されたテーブル。
+  // driver adapter 移行後に新設されたため最初から ISO text で生まれ、integer(ms)
+  // の混在が発生しない。よって正規化 UPDATE の対象外（網羅チェックから除外する）。
+  // 歴史migrationは編集禁止のため、ここで明示的にホワイトリスト管理する。
+  const POST_MIGRATION_TABLES = new Set([
+    "AuditLog",
+    "Coursework",
+    "CourseworkClass",
+    "CourseworkItem",
+    "CourseworkLetterScale",
+    "CourseworkScore",
+    "CourseworkStudent",
+    "CourseworkTag",
+    "ReturnSnapshot",
+  ])
+
   it("網羅性: migration.sql が schema.prisma の全 DateTime カラムをカバーする", () => {
     const schemaPath = path.resolve(__dirname, "../../prisma/schema.prisma")
     const schemaText = fs.readFileSync(schemaPath, "utf-8")
@@ -199,6 +215,7 @@ describe("DateTime正規化マイグレーション", () => {
       const body = mm[2]
       const mapMatch = body.match(/@@map\("([^"]+)"\)/)
       const table = mapMatch ? mapMatch[1] : mm[1]
+      if (POST_MIGRATION_TABLES.has(table)) continue
       for (const line of body.split("\n")) {
         const parts = line.trim().split(/\s+/)
         if (parts.length >= 2 && parts[1].startsWith("DateTime")) {
