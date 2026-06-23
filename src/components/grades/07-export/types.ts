@@ -17,6 +17,8 @@ export interface GradeReportOptions {
   sourceBreakdownColumns: {
     score: boolean
     weight: boolean
+    /** コメント列（外部成績のコメントを表示） */
+    comment: boolean
   }
   /** コメント欄を表示 */
   showCommentSection: boolean
@@ -52,6 +54,7 @@ export const DEFAULT_GRADE_REPORT_OPTIONS: GradeReportOptions = {
   sourceBreakdownColumns: {
     score: true,
     weight: true,
+    comment: false,
   },
   showCommentSection: false,
   showSignatureSection: false,

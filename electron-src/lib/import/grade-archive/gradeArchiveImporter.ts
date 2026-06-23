@@ -217,6 +217,18 @@ export async function importGradeArchive(
                 estimationSourceIds: JSON.stringify(
                   dsData.estimationSourceIds ?? []
                 ),
+                // v1.3.0+: 入力モード・文字評価変換表（古いアーカイブはdefault）
+                inputMode: dsData.inputMode ?? "numeric",
+                ...(dsData.letterScales &&
+                  dsData.letterScales.length > 0 && {
+                    letterScales: {
+                      create: dsData.letterScales.map((ls) => ({
+                        label: ls.label,
+                        score: ls.score,
+                        order: ls.order,
+                      })),
+                    },
+                  }),
               },
             })
             dsKeyToId.set(`${giData.name}:${dsData.name}`, ds.id)
@@ -240,6 +252,11 @@ export async function importGradeArchive(
               gradeDataSourceId: dsId,
               studentId: student.id,
               score: msData.score,
+              // v1.3.0+: 文字評価・加減点・コメント（古いアーカイブはnull/0）
+              letterValue: msData.letterValue ?? null,
+              adjustment: msData.adjustment ?? 0,
+              adjustmentReason: msData.adjustmentReason ?? null,
+              comment: msData.comment ?? null,
             },
           })
         }

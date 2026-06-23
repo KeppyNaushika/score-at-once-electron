@@ -13,6 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import {
+  DEFAULT_LETTER_SCALES,
+  draftsToLetterScales,
+  type LetterScaleDraft,
+  LetterScaleEditor,
+} from "./LetterScaleEditor"
+
 type DataSourceType = "exam_total" | "subtotal" | "crop_region" | "manual"
 
 interface AddDataSourceInlineProps {
@@ -26,6 +33,8 @@ interface AddDataSourceInlineProps {
     name: string
     maxScore: number
     weight: number
+    inputMode?: string
+    letterScales?: { label: string; score: number; order: number }[]
   }) => Promise<{ success: boolean }>
   onCreated: () => void
 }
@@ -68,6 +77,11 @@ export function AddDataSourceInline({
   const [maxScore, setMaxScore] = useState("")
   const [weight, setWeight] = useState("")
   const [adding, setAdding] = useState(false)
+  // manual型: 入力モードと文字評価変換表
+  const [inputMode, setInputMode] = useState<"numeric" | "letter">("numeric")
+  const [letterScales, setLetterScales] = useState<LetterScaleDraft[]>(
+    DEFAULT_LETTER_SCALES
+  )
 
   // 全試験候補をロード
   useEffect(() => {
@@ -194,6 +208,12 @@ export function AddDataSourceInline({
       if (type === "crop_region") {
         data.cropRegionId = selectedCropRegionId || undefined
       }
+      if (type === "manual") {
+        data.inputMode = inputMode
+        if (inputMode === "letter") {
+          data.letterScales = draftsToLetterScales(letterScales)
+        }
+      }
       const result = await onCreate(data)
       if (result.success) {
         resetForm()
@@ -214,6 +234,8 @@ export function AddDataSourceInline({
     setName("")
     setMaxScore("")
     setWeight("")
+    setInputMode("numeric")
+    setLetterScales(DEFAULT_LETTER_SCALES)
   }
 
   const selectedSubtotals =
@@ -337,7 +359,55 @@ export function AddDataSourceInline({
             </SelectContent>
           </Select>
         )}
+
+        {/* manual型: 入力モード（数値 / 文字評価） */}
+        {type === "manual" && (
+          <Select
+            value={inputMode}
+            onValueChange={(v) => {
+              const mode = v as "numeric" | "letter"
+              setInputMode(mode)
+              // 文字モードへ切替時、満点/換算満点が空なら変換表の最大値で補完
+              if (mode === "letter") {
+                const scores = letterScales
+                  .map((s) => Number(s.score))
+                  .filter((n) => !isNaN(n))
+                if (scores.length > 0) {
+                  const max = Math.max(...scores)
+                  if (!maxScore) setMaxScore(String(max))
+                  if (!weight) setWeight(String(max))
+                }
+              }
+            }}
+          >
+            <SelectTrigger className="h-8 w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="numeric">数値入力</SelectItem>
+              <SelectItem value="letter">文字評価</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
+
+      {/* manual型 + 文字モード: 変換表エディタ */}
+      {type === "manual" && inputMode === "letter" && (
+        <LetterScaleEditor
+          scales={letterScales}
+          onChange={(next) => {
+            setLetterScales(next)
+            const scores = next
+              .map((s) => Number(s.score))
+              .filter((n) => !isNaN(n))
+            if (scores.length > 0) {
+              const max = Math.max(...scores)
+              if (!maxScore) setMaxScore(String(max))
+              if (!weight) setWeight(String(max))
+            }
+          }}
+        />
+      )}
 
       <div className="flex items-center gap-2">
         <Input

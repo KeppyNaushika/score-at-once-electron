@@ -295,6 +295,9 @@ function renderSourceBreakdownSection(
     isEstimated: boolean
     weightedScore: number | null
     weight: number
+    letterValue: string | null
+    adjustment: number | null
+    comment: string | null
   }
 
   const allRows: BreakdownRow[] = []
@@ -312,16 +315,26 @@ function renderSourceBreakdownSection(
         isEstimated: source.isEstimated,
         weightedScore: source.weightedScore,
         weight: source.weight,
+        letterValue: source.letterValue,
+        adjustment: source.adjustment,
+        comment: source.comment,
       })
     }
   }
 
   if (allRows.length === 0) return null
 
+  // コメントが1つでもあるか（列の有無判定にも使用）
+  const hasAnyComment = allRows.some(
+    (r) => r.comment !== null && r.comment !== ""
+  )
+  const showComment = srcCols.comment && hasAnyComment
+
   const buildHeaderRow = (): string => {
     const headerCols = [`<th>項目</th>`, `<th>${escapeHtml(label)}</th>`]
     if (srcCols.score) headerCols.push("<th>得点</th>")
     if (srcCols.weight) headerCols.push("<th>換算得点</th>")
+    if (showComment) headerCols.push("<th>コメント</th>")
     return `<tr>${headerCols.join("")}</tr>`
   }
 
@@ -337,14 +350,31 @@ function renderSourceBreakdownSection(
       `<td style="text-align:left">${escapeHtml(row.dataSourceName)}</td>`
     )
     if (srcCols.score) {
-      const score = row.rawScore !== null ? row.rawScore.toFixed(1) : "-"
+      // 文字評価は「記号(換算点)」、数値はそのまま。加減点があれば併記。
+      const scoreText =
+        row.rawScore !== null
+          ? row.letterValue !== null
+            ? `${escapeHtml(row.letterValue)} (${row.rawScore.toFixed(1)})`
+            : row.rawScore.toFixed(1)
+          : "-"
       const estimated = row.isEstimated ? " (推定)" : ""
-      cells.push(`<td>${score}${estimated} / ${row.maxScore.toFixed(1)}</td>`)
+      const adj =
+        row.adjustment !== null && row.adjustment !== 0
+          ? ` <span style="color:#b45309">[${row.adjustment > 0 ? "+" : ""}${row.adjustment}]</span>`
+          : ""
+      cells.push(
+        `<td>${scoreText}${estimated} / ${row.maxScore.toFixed(1)}${adj}</td>`
+      )
     }
     if (srcCols.weight) {
       const weighted =
         row.weightedScore !== null ? row.weightedScore.toFixed(2) : "-"
       cells.push(`<td>${weighted} / ${row.weight.toFixed(2)}</td>`)
+    }
+    if (showComment) {
+      cells.push(
+        `<td style="text-align:left">${escapeHtml(row.comment ?? "")}</td>`
+      )
     }
     return `<tr>${cells.join("")}</tr>`
   }

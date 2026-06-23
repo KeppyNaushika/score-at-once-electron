@@ -41,6 +41,7 @@ export async function collectGradeArchiveData(
               manualScores: {
                 include: { student: { select: { studentNumber: true } } },
               },
+              letterScales: { orderBy: { order: "asc" } },
             },
             orderBy: { order: "asc" },
           },
@@ -114,6 +115,12 @@ export async function collectGradeArchiveData(
         }
         return []
       })(),
+      inputMode: ds.inputMode,
+      letterScales: ds.letterScales.map((ls) => ({
+        label: ls.label,
+        score: Number(ls.score),
+        order: ls.order,
+      })),
     })),
   }))
 
@@ -157,6 +164,10 @@ export async function collectGradeArchiveData(
           dataSourceName: ds.name,
           studentNumber: ms.student.studentNumber,
           score: ms.score !== null ? Number(ms.score) : null,
+          letterValue: ms.letterValue,
+          adjustment: ms.adjustment !== null ? Number(ms.adjustment) : null,
+          adjustmentReason: ms.adjustmentReason,
+          comment: ms.comment,
         }))
       )
   )

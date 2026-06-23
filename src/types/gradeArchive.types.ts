@@ -82,6 +82,10 @@ export interface ArchiveDataSource {
   treatExpectedAsMissing?: boolean
   estimationMode?: string
   estimationSourceIds?: string[]
+  /** 入力モード（後方互換: v1.3.0+。"numeric" | "letter"） */
+  inputMode?: string
+  /** 文字評価→点数の変換表（後方互換: v1.3.0+） */
+  letterScales?: { label: string; score: number; order: number }[]
 }
 
 export interface ArchiveManualScoresData {
@@ -90,6 +94,14 @@ export interface ArchiveManualScoresData {
     dataSourceName: string
     studentNumber: string
     score: number | null
+    /** 文字評価記号（後方互換: v1.3.0+） */
+    letterValue?: string | null
+    /** 加点・減点（後方互換: v1.3.0+） */
+    adjustment?: number | null
+    /** 加減点の理由（後方互換: v1.3.0+） */
+    adjustmentReason?: string | null
+    /** コメント（後方互換: v1.3.0+） */
+    comment?: string | null
   }[]
 }
 

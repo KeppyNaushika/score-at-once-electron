@@ -731,6 +731,7 @@ model GradeDataSource {
   treatExpectedAsMissing Boolean  @default(false)
   estimationMode         String   @default("all") // "all" | "selected"
   estimationSourceIds    String   @default("[]") // JSON array of DataSource IDs
+  inputMode              String   @default("numeric") // "numeric" | "letter"（manual型のみ有効）
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -739,11 +740,28 @@ model GradeDataSource {
   subtotal     Subtotal?    @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
   cropRegion   CropRegion?  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
   manualScores ManualScore[]
+  letterScales GradeLetterScale[]
 
   @@index([gradeItemId])
   @@index([examId])
   @@index([subtotalId])
   @@index([cropRegionId])
+}
+
+/// 文字評価→点数の変換表（manual型データソース単位。例: A=100, B=80, C=60）
+model GradeLetterScale {
+  id                String   @id @default(uuid())
+  gradeDataSourceId String
+  label             String
+  score             Decimal
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  gradeDataSource GradeDataSource @relation(fields: [gradeDataSourceId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeDataSourceId, label])
+  @@index([gradeDataSourceId])
 }
 
 /// 外部成績（手動入力スコア）
@@ -752,6 +770,10 @@ model ManualScore {
   gradeDataSourceId String
   studentId         String
   score             Decimal?
+  letterValue       String? // 文字モード時の評価記号（"A"/"B"/"C" 等）
+  adjustment        Decimal? @default(0) // 加点・減点（期限超過等）
+  adjustmentReason  String? // 加減点の理由
+  comment           String? // 成績通知書に表示するコメント
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

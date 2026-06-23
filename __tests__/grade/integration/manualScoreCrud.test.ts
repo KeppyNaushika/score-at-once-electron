@@ -26,6 +26,7 @@ import {
   createDataSource,
   getDataSourcesByGradeItemId,
   reorderDataSources,
+  updateDataSource,
 } from "@/electron-src/lib/prisma/gradeDataSource"
 import { createGradeItem } from "@/electron-src/lib/prisma/gradeItem"
 import {
@@ -173,6 +174,132 @@ describe("ManualScore CRUD", () => {
     it("空配列の場合は何も起きない", async () => {
       const result = await batchUpsertManualScores([])
       expect(result.success).toBe(true)
+    })
+
+    it("文字評価・加減点・理由・コメントを保存できる", async () => {
+      const { dataSource, student1 } = await createTestData()
+
+      const result = await batchUpsertManualScores([
+        {
+          gradeDataSourceId: dataSource.id,
+          studentId: student1.id,
+          letterValue: "A",
+          adjustment: -5,
+          adjustmentReason: "期限超過",
+          comment: "丁寧にまとめられています",
+        },
+      ])
+      expect(result.success).toBe(true)
+
+      const scores = await getManualScoresByDataSourceId(dataSource.id)
+      const ms = scores.manualScores![0]
+      expect(ms.letterValue).toBe("A")
+      expect(Number(ms.adjustment)).toBe(-5)
+      expect(ms.adjustmentReason).toBe("期限超過")
+      expect(ms.comment).toBe("丁寧にまとめられています")
+    })
+
+    it("指定フィールドのみ部分更新できる（他フィールドは保持）", async () => {
+      const { dataSource, student1 } = await createTestData()
+
+      // まずスコアとコメントを設定
+      await batchUpsertManualScores([
+        {
+          gradeDataSourceId: dataSource.id,
+          studentId: student1.id,
+          score: 80,
+          comment: "初回コメント",
+        },
+      ])
+
+      // adjustmentのみ更新（score/commentは指定しない）
+      await batchUpsertManualScores([
+        {
+          gradeDataSourceId: dataSource.id,
+          studentId: student1.id,
+          adjustment: 10,
+        },
+      ])
+
+      const scores = await getManualScoresByDataSourceId(dataSource.id)
+      const ms = scores.manualScores![0]
+      expect(Number(ms.score)).toBe(80)
+      expect(Number(ms.adjustment)).toBe(10)
+      expect(ms.comment).toBe("初回コメント")
+    })
+  })
+
+  describe("文字評価データソース", () => {
+    it("inputMode='letter' と変換表を作成・取得できる", async () => {
+      const grade = await testPrisma.grade.create({
+        data: { name: "文字評価PJ" },
+      })
+      const gradeItemResult = await createGradeItem({
+        gradeId: grade.id,
+        name: "授業態度",
+      })
+
+      const dsResult = await createDataSource({
+        gradeItemId: gradeItemResult.gradeItem!.id,
+        type: "manual",
+        name: "観点別評価",
+        maxScore: 100,
+        weight: 100,
+        inputMode: "letter",
+        letterScales: [
+          { label: "A", score: 100, order: 0 },
+          { label: "B", score: 80, order: 1 },
+          { label: "C", score: 60, order: 2 },
+        ],
+      })
+
+      expect(dsResult.success).toBe(true)
+      expect(dsResult.dataSource!.inputMode).toBe("letter")
+      expect(dsResult.dataSource!.letterScales).toHaveLength(3)
+
+      const fetched = await getDataSourcesByGradeItemId(
+        gradeItemResult.gradeItem!.id
+      )
+      const ds = fetched.dataSources![0]
+      expect(ds.letterScales).toHaveLength(3)
+      expect(ds.letterScales[0].label).toBe("A")
+      expect(Number(ds.letterScales[0].score)).toBe(100)
+    })
+
+    it("updateDataSourceで変換表を全置換できる", async () => {
+      const grade = await testPrisma.grade.create({
+        data: { name: "文字評価PJ2" },
+      })
+      const gradeItemResult = await createGradeItem({
+        gradeId: grade.id,
+        name: "観点",
+      })
+      const dsResult = await createDataSource({
+        gradeItemId: gradeItemResult.gradeItem!.id,
+        type: "manual",
+        name: "評価",
+        maxScore: 100,
+        weight: 100,
+        inputMode: "letter",
+        letterScales: [
+          { label: "A", score: 100, order: 0 },
+          { label: "B", score: 80, order: 1 },
+        ],
+      })
+
+      // 2段階の新しい変換表で置換
+      const updated = await updateDataSource(dsResult.dataSource!.id, {
+        letterScales: [{ label: "○", score: 100, order: 0 }],
+      })
+      expect(updated.success).toBe(true)
+      expect(updated.dataSource!.letterScales).toHaveLength(1)
+      expect(updated.dataSource!.letterScales[0].label).toBe("○")
+
+      // DB上も1件のみ（古い2件は削除されている）
+      const remaining = await testPrisma.gradeLetterScale.findMany({
+        where: { gradeDataSourceId: dsResult.dataSource!.id },
+      })
+      expect(remaining).toHaveLength(1)
     })
   })
 

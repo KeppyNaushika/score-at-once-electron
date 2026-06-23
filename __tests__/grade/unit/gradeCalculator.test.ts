@@ -72,7 +72,14 @@ function buildGrade(
         exam?: unknown
         subtotal?: unknown
         cropRegion?: unknown
-        manualScores?: { studentId: string; score: unknown }[]
+        manualScores?: {
+          studentId: string
+          score?: unknown
+          letterValue?: string | null
+          adjustment?: unknown
+          adjustmentReason?: string | null
+          comment?: string | null
+        }[]
         order: number
         absentMethod?: string
         absentRatio?: number
@@ -80,6 +87,8 @@ function buildGrade(
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string
+        inputMode?: string
+        letterScales?: { label: string; score: number; order: number }[]
       }[]
     }[]
     boundarySets?: {
@@ -698,6 +707,237 @@ describe("calculateGrades", () => {
     expect(student.gradeItemResults[0].isExcluded).toBe(false)
     expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(80)
     expect(student.overallPercentage).toBeCloseTo(80)
+  })
+
+  // ===========================================================================
+  // 文字評価（letterモード）+ 加減点テスト
+  // ===========================================================================
+
+  it("letterモード: 評価記号を変換表で点数化する", async () => {
+    const gp = buildGrade({
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "提出物",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "manual",
+              name: "授業態度",
+              maxScore: 100,
+              weight: 100,
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              inputMode: "letter",
+              letterScales: [
+                { label: "A", score: 100, order: 0 },
+                { label: "B", score: 80, order: 1 },
+                { label: "C", score: 60, order: 2 },
+              ],
+              manualScores: [{ studentId: "s1", letterValue: "B" }],
+              order: 0,
+            },
+          ],
+        },
+      ],
+      boundarySets: [
+        {
+          id: "bs1",
+          targetType: "grade_item",
+          gradeItemId: "gi1",
+          boundaries: [
+            { label: "A", minPercentage: 90, order: 0 },
+            { label: "B", minPercentage: 70, order: 1 },
+            { label: "C", minPercentage: 0, order: 2 },
+          ],
+        },
+      ],
+    })
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+    const result = await calculateGrades("gp1")
+    const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+
+    // B → 80点
+    expect(ss.rawScore).toBe(80)
+    expect(ss.letterValue).toBe("B")
+    expect(
+      result.result!.students[0].gradeItemResults[0].percentage
+    ).toBeCloseTo(80)
+    // 80% → 評価B
+    expect(result.result!.students[0].gradeItemResults[0].gradeLabel).toBe("B")
+  })
+
+  it("letterモード: 未定義の評価記号はnull", async () => {
+    const gp = buildGrade({
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "提出物",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "manual",
+              name: "授業態度",
+              maxScore: 100,
+              weight: 100,
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              inputMode: "letter",
+              letterScales: [{ label: "A", score: 100, order: 0 }],
+              manualScores: [{ studentId: "s1", letterValue: "Z" }],
+              order: 0,
+            },
+          ],
+        },
+      ],
+    })
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+    const result = await calculateGrades("gp1")
+    const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    expect(ss.rawScore).toBeNull()
+  })
+
+  it("加減点: 数値スコアに加算しクランプする", async () => {
+    const gp = buildGrade({
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "提出物",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "manual",
+              name: "レポート",
+              maxScore: 100,
+              weight: 100,
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              inputMode: "numeric",
+              manualScores: [
+                {
+                  studentId: "s1",
+                  score: 85,
+                  adjustment: -10,
+                  adjustmentReason: "期限超過",
+                },
+              ],
+              order: 0,
+            },
+          ],
+        },
+      ],
+    })
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+    const result = await calculateGrades("gp1")
+    const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+
+    // 85 - 10 = 75
+    expect(ss.rawScore).toBe(75)
+    expect(ss.adjustment).toBe(-10)
+    expect(ss.adjustmentReason).toBe("期限超過")
+  })
+
+  it("加減点: letterモードの点数にも加算される（上限クランプ）", async () => {
+    const gp = buildGrade({
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "提出物",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "manual",
+              name: "授業態度",
+              maxScore: 100,
+              weight: 100,
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              inputMode: "letter",
+              letterScales: [{ label: "A", score: 100, order: 0 }],
+              manualScores: [
+                { studentId: "s1", letterValue: "A", adjustment: 20 },
+              ],
+              order: 0,
+            },
+          ],
+        },
+      ],
+    })
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+    const result = await calculateGrades("gp1")
+    const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+
+    // A(100) + 20 = 120 → clamp 100
+    expect(ss.rawScore).toBe(100)
+  })
+
+  it("コメントがsourceScoresに添付される", async () => {
+    const gp = buildGrade({
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "提出物",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "manual",
+              name: "レポート",
+              maxScore: 100,
+              weight: 100,
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              manualScores: [
+                {
+                  studentId: "s1",
+                  score: 90,
+                  comment: "とても良い内容でした",
+                },
+              ],
+              order: 0,
+            },
+          ],
+        },
+      ],
+    })
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+    const result = await calculateGrades("gp1")
+    const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    expect(ss.comment).toBe("とても良い内容でした")
   })
 
   it("実スコアがある場合 → isEstimated=false", async () => {

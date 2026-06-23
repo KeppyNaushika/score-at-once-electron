@@ -42,18 +42,40 @@ export async function getManualScoresByDataSourceId(gradeDataSourceId: string) {
 
 /**
  * 手動スコアを一括更新（upsert）
+ *
+ * 各フィールドは optional。指定されたフィールドのみ更新する（セル単位編集対応）。
+ * score / letterValue / adjustment / adjustmentReason / comment を扱う。
  */
 export async function batchUpsertManualScores(
   scores: {
     gradeDataSourceId: string
     studentId: string
-    score: number | null
+    score?: number | null
+    letterValue?: string | null
+    adjustment?: number | null
+    adjustmentReason?: string | null
+    comment?: string | null
   }[]
 ) {
   try {
     await prisma.$transaction(
-      scores.map((s) =>
-        prisma.manualScore.upsert({
+      scores.map((s) => {
+        // 指定されたフィールドのみを更新対象に含める
+        const fields: {
+          score?: number | null
+          letterValue?: string | null
+          adjustment?: number | null
+          adjustmentReason?: string | null
+          comment?: string | null
+        } = {}
+        if (s.score !== undefined) fields.score = s.score
+        if (s.letterValue !== undefined) fields.letterValue = s.letterValue
+        if (s.adjustment !== undefined) fields.adjustment = s.adjustment
+        if (s.adjustmentReason !== undefined)
+          fields.adjustmentReason = s.adjustmentReason
+        if (s.comment !== undefined) fields.comment = s.comment
+
+        return prisma.manualScore.upsert({
           where: {
             gradeDataSourceId_studentId: {
               gradeDataSourceId: s.gradeDataSourceId,
@@ -63,13 +85,11 @@ export async function batchUpsertManualScores(
           create: {
             gradeDataSourceId: s.gradeDataSourceId,
             studentId: s.studentId,
-            score: s.score,
+            ...fields,
           },
-          update: {
-            score: s.score,
-          },
+          update: fields,
         })
-      )
+      })
     )
 
     // 監査ログ: 手動スコアの一括更新（1件にまとめて記録）

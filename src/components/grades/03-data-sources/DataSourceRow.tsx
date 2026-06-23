@@ -6,9 +6,21 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { GradeDataSourceWithDetails } from "@/types/grade.types"
 
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"
+import {
+  draftsToLetterScales,
+  type LetterScaleDraft,
+  LetterScaleEditor,
+} from "./LetterScaleEditor"
 
 const TYPE_LABELS: Record<string, string> = {
   exam_total: "合計",
@@ -48,12 +60,28 @@ export function DataSourceRow({
   const [name, setName] = useState(dataSource.name)
   const [maxScore, setMaxScore] = useState(String(dataSource.maxScore))
   const [weight, setWeight] = useState(String(dataSource.weight))
+  const [inputMode, setInputMode] = useState<"numeric" | "letter">(
+    dataSource.inputMode === "letter" ? "letter" : "numeric"
+  )
+  const [letterScales, setLetterScales] = useState<LetterScaleDraft[]>(
+    dataSource.letterScales.map((ls) => ({
+      label: ls.label,
+      score: String(ls.score),
+    }))
+  )
+
+  const isManual = dataSource.type === "manual"
 
   const handleSave = async () => {
     await onUpdate(dataSource.id, {
       name,
       maxScore: Number(maxScore),
       weight: Number(weight),
+      ...(isManual && {
+        inputMode,
+        letterScales:
+          inputMode === "letter" ? draftsToLetterScales(letterScales) : [],
+      }),
     })
     setEditing(false)
   }
@@ -70,6 +98,20 @@ export function DataSourceRow({
             className="h-8 flex-1"
             placeholder="名前"
           />
+          {isManual && (
+            <Select
+              value={inputMode}
+              onValueChange={(v) => setInputMode(v as "numeric" | "letter")}
+            >
+              <SelectTrigger className="h-8 w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="numeric">数値入力</SelectItem>
+                <SelectItem value="letter">文字評価</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Input
             value={maxScore}
             onChange={(e) => setMaxScore(e.target.value)}
@@ -101,6 +143,9 @@ export function DataSourceRow({
             <X className="h-4 w-4" />
           </Button>
         </div>
+        {isManual && inputMode === "letter" && (
+          <LetterScaleEditor scales={letterScales} onChange={setLetterScales} />
+        )}
       </div>
     )
   }
@@ -125,6 +170,14 @@ export function DataSourceRow({
         <span className="text-sm font-medium">{dataSource.name}</span>
         {sourceRef && (
           <span className="text-muted-foreground text-xs">({sourceRef})</span>
+        )}
+        {isManual && dataSource.inputMode === "letter" && (
+          <Badge variant="outline" className="text-xs font-normal">
+            文字評価:{" "}
+            {dataSource.letterScales
+              .map((ls) => `${ls.label}=${ls.score}`)
+              .join(", ") || "未設定"}
+          </Badge>
         )}
         <EstimationSettingsPopover
           dataSource={dataSource}

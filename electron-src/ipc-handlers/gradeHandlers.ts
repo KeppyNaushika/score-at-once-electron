@@ -236,6 +236,8 @@ export function setupGradeHandlers(): void {
       treatExpectedAsMissing?: boolean
       estimationMode?: string
       estimationSourceIds?: string[]
+      inputMode?: string
+      letterScales?: { label: string; score: number; order: number }[]
     }) => {
       return createDataSource(data)
     }
@@ -255,6 +257,8 @@ export function setupGradeHandlers(): void {
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string[]
+        inputMode?: string
+        letterScales?: { label: string; score: number; order: number }[]
       }
     ) => {
       return updateDataSource(id, data)
@@ -334,7 +338,11 @@ export function setupGradeHandlers(): void {
       scores: {
         gradeDataSourceId: string
         studentId: string
-        score: number | null
+        score?: number | null
+        letterValue?: string | null
+        adjustment?: number | null
+        adjustmentReason?: string | null
+        comment?: string | null
       }[]
     ) => {
       return batchUpsertManualScores(scores)

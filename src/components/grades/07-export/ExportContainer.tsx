@@ -71,9 +71,24 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
       try {
         const result = await window.electronAPI.grade.getExportSettings(gradeId)
         if (result.success && result.settings?.reportOptions) {
+          const saved = result.settings
+            .reportOptions as Partial<GradeReportOptions>
+          // ネストした列選択は新フィールド欠落を防ぐためデフォルトと深くマージ
           setReportOptionsState({
             ...DEFAULT_GRADE_REPORT_OPTIONS,
-            ...(result.settings.reportOptions as Partial<GradeReportOptions>),
+            ...saved,
+            itemGradeColumns: {
+              ...DEFAULT_GRADE_REPORT_OPTIONS.itemGradeColumns,
+              ...saved.itemGradeColumns,
+            },
+            sourceBreakdownColumns: {
+              ...DEFAULT_GRADE_REPORT_OPTIONS.sourceBreakdownColumns,
+              ...saved.sourceBreakdownColumns,
+            },
+            footer: {
+              ...DEFAULT_GRADE_REPORT_OPTIONS.footer,
+              ...saved.footer,
+            },
           })
         }
       } catch (error) {

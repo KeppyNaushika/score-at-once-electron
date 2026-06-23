@@ -57,6 +57,8 @@ export interface GradeDataSourceWithDetails {
   treatExpectedAsMissing: boolean
   estimationMode: EstimationMode
   estimationSourceIds: string[]
+  /** manual型の入力モード（"numeric" | "letter"） */
+  inputMode: InputMode
   createdAt: Date
   updatedAt: Date
   exam: { id: string; examName: string; examDate: Date | null } | null
@@ -66,7 +68,21 @@ export interface GradeDataSourceWithDetails {
     label: string
     points: number | null
   } | null
+  /** 文字評価→点数の変換表（manual型 + letterモード時に使用） */
+  letterScales: GradeLetterScaleData[]
   _count?: { manualScores: number }
+}
+
+/** manual型データソースの入力モード */
+export type InputMode = "numeric" | "letter"
+
+/** 文字評価→点数の変換表エントリ */
+export interface GradeLetterScaleData {
+  id: string
+  gradeDataSourceId: string
+  label: string
+  score: number
+  order: number
 }
 
 /** 手動スコア（生徒情報付き） */
@@ -75,6 +91,14 @@ export interface ManualScoreWithStudent {
   gradeDataSourceId: string
   studentId: string
   score: number | null
+  /** 文字モード時の評価記号 */
+  letterValue: string | null
+  /** 加点・減点（期限超過等） */
+  adjustment: number | null
+  /** 加減点の理由 */
+  adjustmentReason: string | null
+  /** 成績通知書に表示するコメント */
+  comment: string | null
   student: {
     id: string
     studentNumber: string
@@ -158,11 +182,20 @@ export interface SourceScoreResult {
   dataSourceId: string
   dataSourceName: string
   type: string
+  /** 最終スコア（manual型は変換・加減点・クランプ適用後） */
   rawScore: number | null
   maxScore: number
   weight: number
   weightedScore: number | null
   isEstimated: boolean
+  /** 文字モード時に入力された評価記号（manual型のみ） */
+  letterValue: string | null
+  /** 適用された加点・減点（manual型のみ。0なら調整なし） */
+  adjustment: number | null
+  /** 加減点の理由（manual型のみ） */
+  adjustmentReason: string | null
+  /** コメント（manual型のみ。成績通知書に表示） */
+  comment: string | null
 }
 
 /** 成績算出結果全体 */

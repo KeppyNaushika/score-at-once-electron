@@ -40,6 +40,7 @@ const gradeItemInclude = {
       exam: { select: { id: true, examName: true, examDate: true } },
       subtotal: { select: { id: true, name: true, order: true } },
       cropRegion: { select: { id: true, label: true, points: true } },
+      letterScales: { orderBy: { order: "asc" as const } },
       _count: { select: { manualScores: true } },
     },
     orderBy: { order: "asc" as const },

@@ -26,8 +26,9 @@ export async function createGradeArchive(
     const data = await collectGradeArchiveData(gradeId)
 
     const manifest: GradeArchiveManifest = {
-      // v1.2.0: Grade.referenceDate と GradeExportSettings を追加
-      version: "1.2.0",
+      // v1.3.0: 文字評価変換表(GradeLetterScale)・inputMode・
+      //         ManualScoreの加減点/コメント/文字評価を追加
+      version: "1.3.0",
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
       gradeId,

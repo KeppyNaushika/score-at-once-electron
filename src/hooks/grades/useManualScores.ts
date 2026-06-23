@@ -5,6 +5,23 @@ import type {
   ManualScoreWithStudent,
 } from "@/types/grade.types"
 
+/** 1セル分の手動成績（データソース×生徒） */
+export interface ManualCell {
+  /** 数値モードのスコア */
+  score: number | null
+  /** 文字モードの評価記号 */
+  letterValue: string | null
+  /** 加点・減点 */
+  adjustment: number | null
+  /** 加減点の理由 */
+  adjustmentReason: string | null
+  /** コメント（成績通知書に表示） */
+  comment: string | null
+}
+
+/** 手動成績の部分更新（変更されたフィールドのみ） */
+export type ManualCellPatch = Partial<ManualCell>
+
 interface StudentScore {
   studentId: string
   studentNumber: string
@@ -12,16 +29,25 @@ interface StudentScore {
   firstName: string
   attendanceNumber: number | null
   className: string | null
-  scores: Record<string, number | null> // dataSourceId -> score
+  /** dataSourceId -> セル値 */
+  cells: Record<string, ManualCell>
+}
+
+const EMPTY_CELL: ManualCell = {
+  score: null,
+  letterValue: null,
+  adjustment: null,
+  adjustmentReason: null,
+  comment: null,
 }
 
 /**
  * 外部成績（手動スコア）の取得・更新を管理するフック
  *
- * 生徒ごとのスコアデータをロードし、個別更新・一括更新をデバウンス付きで提供する。
+ * 生徒ごとのスコア・文字評価・加減点・コメントをロードし、
+ * 部分更新（セル単位）をデバウンス付きで提供する。
  *
  * @param gradeId - 対象の成績試験ID
- * @returns manualDataSources, studentScores, loading, bulkUpdateScores
  */
 export function useManualScores(gradeId: string) {
   const [manualDataSources, setManualDataSources] = useState<
@@ -32,7 +58,10 @@ export function useManualScores(gradeId: string) {
   const pendingChanges = useRef<
     Map<
       string,
-      { gradeDataSourceId: string; studentId: string; score: number | null }
+      {
+        gradeDataSourceId: string
+        studentId: string
+      } & ManualCellPatch
     >
   >(new Map())
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -72,12 +101,20 @@ export function useManualScores(gradeId: string) {
       // 生徒×データソースのマトリックスを構築
       const students: StudentScore[] = studentsResult.students.map(
         (examStudent) => {
-          const scores: Record<string, number | null> = {}
+          const cells: Record<string, ManualCell> = {}
           for (const dataSource of manualSources) {
             const manualScore = allScores[dataSource.id]?.find(
               (score) => score.studentId === examStudent.student.id
             )
-            scores[dataSource.id] = manualScore?.score ?? null
+            cells[dataSource.id] = manualScore
+              ? {
+                  score: manualScore.score ?? null,
+                  letterValue: manualScore.letterValue ?? null,
+                  adjustment: manualScore.adjustment ?? null,
+                  adjustmentReason: manualScore.adjustmentReason ?? null,
+                  comment: manualScore.comment ?? null,
+                }
+              : { ...EMPTY_CELL }
           }
           // 登録学級内のmembershipを取得
           const membership = examStudent.student.memberships.find(
@@ -90,7 +127,7 @@ export function useManualScores(gradeId: string) {
             firstName: examStudent.student.firstName,
             attendanceNumber: membership?.attendanceNumber ?? null,
             className: membership?.class.name ?? null,
-            scores,
+            cells,
           }
         }
       )
@@ -107,44 +144,50 @@ export function useManualScores(gradeId: string) {
     loadData()
   }, [loadData])
 
-  const bulkUpdateScores = useCallback(
+  const bulkUpdateCells = useCallback(
     (
       changes: {
         dataSourceId: string
         studentId: string
-        score: number | null
+        patch: ManualCellPatch
       }[]
     ) => {
       if (changes.length === 0) return
 
       // ローカル状態を一括更新
       setStudentScores((prev) => {
-        const changeMap = new Map<string, Map<string, number | null>>()
+        const changeMap = new Map<string, Map<string, ManualCellPatch>>()
         for (const change of changes) {
           if (!changeMap.has(change.studentId))
             changeMap.set(change.studentId, new Map())
-          changeMap
-            .get(change.studentId)!
-            .set(change.dataSourceId, change.score)
+          const studentMap = changeMap.get(change.studentId)!
+          studentMap.set(change.dataSourceId, {
+            ...studentMap.get(change.dataSourceId),
+            ...change.patch,
+          })
         }
         return prev.map((student) => {
           const studentChanges = changeMap.get(student.studentId)
           if (!studentChanges) return student
-          const newScores = { ...student.scores }
-          for (const [dataSourceId, score] of studentChanges) {
-            newScores[dataSourceId] = score
+          const newCells = { ...student.cells }
+          for (const [dataSourceId, patch] of studentChanges) {
+            newCells[dataSourceId] = {
+              ...(newCells[dataSourceId] ?? EMPTY_CELL),
+              ...patch,
+            }
           }
-          return { ...student, scores: newScores }
+          return { ...student, cells: newCells }
         })
       })
 
-      // pendingChangesに追加
+      // pendingChangesにマージ
       for (const change of changes) {
         const key = `${change.dataSourceId}:${change.studentId}`
         pendingChanges.current.set(key, {
+          ...pendingChanges.current.get(key),
           gradeDataSourceId: change.dataSourceId,
           studentId: change.studentId,
-          score: change.score,
+          ...change.patch,
         })
       }
 
@@ -176,6 +219,6 @@ export function useManualScores(gradeId: string) {
     manualDataSources,
     studentScores,
     loading,
-    bulkUpdateScores,
+    bulkUpdateCells,
   }
 }
