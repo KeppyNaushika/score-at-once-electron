@@ -359,6 +359,64 @@ describe("GradeStudent / GradeClass", () => {
       expect(result.students).toHaveLength(1)
       expect(result.students![0].studentNumber).toBe("S003")
     })
+
+    it("activeOnly=true は基準日より後に始まる所属の生徒を除外する", async () => {
+      // referenceDate(2024-04-01) を基準に、開始済み/将来開始の生徒を判定する
+      const grade = await testPrisma.grade.create({
+        data: { name: "基準日PJ", referenceDate: new Date("2024-04-01") },
+      })
+      const classX = await testPrisma.class.create({
+        data: { name: "2年X組", grade: 2 },
+      })
+      // 基準日より前に開始済み（在籍中）
+      const current = await testPrisma.student.create({
+        data: {
+          studentNumber: "S301",
+          lastName: "在籍",
+          firstName: "太郎",
+          lastNameKana: "ザイセキ",
+          firstNameKana: "タロウ",
+        },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: {
+          studentId: current.id,
+          classId: classX.id,
+          attendanceNumber: 1,
+          startDate: new Date("2023-04-01"),
+          endDate: null,
+        },
+      })
+      // 基準日より後に開始（転入予定）
+      const future = await testPrisma.student.create({
+        data: {
+          studentNumber: "S300",
+          lastName: "転入",
+          firstName: "三郎",
+          lastNameKana: "テンニュウ",
+          firstNameKana: "サブロウ",
+        },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: {
+          studentId: future.id,
+          classId: classX.id,
+          attendanceNumber: 60,
+          startDate: new Date("2024-05-01"), // 基準日より後に開始
+          endDate: null,
+        },
+      })
+
+      const activeResult = await getAvailableStudentsForGrade(grade.id, true)
+      const activeNumbers = activeResult.students!.map((s) => s.studentNumber)
+      // 在籍中の S301 のみ。将来開始の S300 は除外
+      expect(activeNumbers).toContain("S301")
+      expect(activeNumbers).not.toContain("S300")
+
+      const allResult = await getAvailableStudentsForGrade(grade.id, false)
+      // activeOnly=false なら将来開始の生徒も含む
+      expect(allResult.students!.map((s) => s.studentNumber)).toContain("S300")
+    })
   })
 
   describe("getAvailableClassesForGrade（在籍フィルタ）", () => {
