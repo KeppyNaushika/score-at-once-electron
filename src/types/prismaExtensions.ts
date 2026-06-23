@@ -22,9 +22,6 @@ export type ClassWithMemberships = Prisma.ClassGetPayload<{
       include: {
         student: true
       }
-      where: {
-        endDate: null
-      }
     }
   }
 }>
@@ -37,9 +34,6 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
     memberships: {
       include: {
         class: true
-      }
-      where: {
-        endDate: null
       }
       orderBy: {
         startDate: "desc"

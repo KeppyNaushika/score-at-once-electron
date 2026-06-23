@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { isCurrentMembership } from "@/lib/membership"
 import type {
   StudentClassMembershipWithDetails,
   StudentWithMemberships,
@@ -24,11 +25,6 @@ interface MembershipsCardProps {
   onAddMembership: () => void
   onEditMembership: (membership: StudentClassMembershipWithDetails) => void
   onEndMembership: (membershipId: string) => void
-}
-
-const isCurrentMembership = (m: { endDate?: Date | null }) => {
-  if (!m.endDate) return true
-  return new Date(m.endDate) >= new Date()
 }
 
 const formatDate = (date: Date) => new Date(date).toLocaleDateString("ja-JP")

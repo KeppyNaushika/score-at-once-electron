@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
+import { isCurrentMembership } from "@/lib/membership"
 import type { ClassWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
@@ -78,7 +79,7 @@ export default function ClassManagementTable() {
       name: classItem.name,
       classCode: classItem.classCode ?? null,
       grade: classItem.grade ?? null,
-      memberCount: classItem.memberships.length,
+      memberCount: classItem.memberships.filter(isCurrentMembership).length,
       original: classItem,
     }))
   }, [filteredClasses])

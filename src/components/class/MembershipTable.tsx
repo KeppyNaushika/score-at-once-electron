@@ -1,12 +1,19 @@
 "use client"
 
-import { Calendar, Edit, Trash2 } from "lucide-react"
+import { Calendar, Edit, Trash2, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
@@ -18,11 +25,13 @@ import {
 } from "@/components/ui/table"
 import { Membership } from "@/hooks/useClassManagement"
 import { useTableSort } from "@/hooks/useTableSort"
+import { isCurrentMembership } from "@/lib/membership"
 import { cn } from "@/lib/utils"
 
 interface MembershipTableProps {
   memberships: Membership[]
   onEdit: (membership: Membership) => void
+  onViewStudent: (membership: Membership) => void
   onDelete: (membershipId: string) => void
   onBulkDelete?: (membershipIds: string[]) => void
 }
@@ -42,16 +51,14 @@ interface MembershipSortable {
 export default function MembershipTable({
   memberships,
   onEdit,
+  onViewStudent,
   onDelete,
   onBulkDelete,
 }: MembershipTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-
-  // 現在所属中かどうかを判定するヘルパー関数
-  const isCurrentMembership = (m: { endDate?: Date | null }) => {
-    if (!m.endDate) return true
-    return new Date(m.endDate) >= new Date()
-  }
+  const [statusFilter, setStatusFilter] = useState<"current" | "ended" | "all">(
+    "current"
+  )
 
   // ソート用のデータ変換
   const sortableData = useMemo<MembershipSortable[]>(() => {
@@ -72,18 +79,29 @@ export default function MembershipTable({
     defaultSort: { key: "attendanceNumber", direction: "asc" },
   })
 
+  // ステータスフィルター適用（既定は在籍中のみ）
+  const filteredData = useMemo(() => {
+    if (statusFilter === "current") {
+      return sortedData.filter((m) => m.isCurrent)
+    }
+    if (statusFilter === "ended") {
+      return sortedData.filter((m) => !m.isCurrent)
+    }
+    return sortedData
+  }, [sortedData, statusFilter])
+
   // 現在の所属を優先表示（ソート後）
   const displayData = useMemo(() => {
     // デフォルトソートの場合のみ、現在の所属を優先
     if (sortConfig.key === "attendanceNumber" || sortConfig.key === null) {
-      return [...sortedData].sort((a, b) => {
+      return [...filteredData].sort((a, b) => {
         if (a.isCurrent && !b.isCurrent) return -1
         if (!a.isCurrent && b.isCurrent) return 1
         return 0
       })
     }
-    return sortedData
-  }, [sortedData, sortConfig.key])
+    return filteredData
+  }, [filteredData, sortConfig.key])
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -127,16 +145,34 @@ export default function MembershipTable({
                 ({displayData.length}名)
               </span>
             </CardTitle>
-            {selectedIds.size > 0 && (
-              <Button
-                variant="destructive"
-                className="rounded-lg"
-                onClick={handleBulkDelete}
+            <div className="flex items-center gap-2">
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value as "current" | "ended" | "all")
+                  setSelectedIds(new Set())
+                }}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                選択した{selectedIds.size}件を削除
-              </Button>
-            )}
+                <SelectTrigger className="w-36 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current">在籍中のみ</SelectItem>
+                  <SelectItem value="ended">終了済みのみ</SelectItem>
+                  <SelectItem value="all">すべて</SelectItem>
+                </SelectContent>
+              </Select>
+              {selectedIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  className="rounded-lg"
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  選択した{selectedIds.size}件を削除
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -263,7 +299,17 @@ export default function MembershipTable({
                             variant="ghost"
                             size="icon"
                             className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                            onClick={() => onViewStudent(membership)}
+                            title="個人ページを開く"
+                          >
+                            <User className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
                             onClick={() => onEdit(membership)}
+                            title="所属を編集"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>

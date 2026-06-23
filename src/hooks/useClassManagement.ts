@@ -11,11 +11,12 @@ import type {
 /** 所属関係情報（UI用 — 新規作成時のstudentId指定を含む） */
 interface Membership {
   id: string
+  classId: string
   startDate: Date
   endDate?: Date | null
   attendanceNumber?: number | null
   notes?: string | null
-  studentId?: string // 新規作成時に使用
+  studentId: string
   student: {
     id: string
     studentNumber: string
@@ -95,11 +96,13 @@ export function useClassManagement(classId: string) {
     try {
       if (membershipToEdit) {
         // 既存のmembershipを更新
+        // 空欄は null で明示的にクリアする（undefined はPrismaでは「変更しない」）。
+        // startDate は必須項目のため、未指定時は既存値を維持する（undefined のまま）。
         const updateInput: Prisma.StudentClassMembershipUpdateInput = {
-          attendanceNumber: membershipData.attendanceNumber,
-          notes: membershipData.notes,
+          attendanceNumber: membershipData.attendanceNumber ?? null,
+          notes: membershipData.notes ?? null,
           startDate: membershipData.startDate,
-          endDate: membershipData.endDate,
+          endDate: membershipData.endDate ?? null,
         }
         await window.electronAPI.updateStudentClassMembership(
           membershipToEdit.id,
@@ -195,6 +198,7 @@ export function useClassManagement(classId: string) {
     setIsStudentImportModalOpen,
     isMembershipModalOpen,
     setIsMembershipModalOpen,
+    membershipToEdit,
     setMembershipToEdit,
     handleSaveClass,
     handleStudentImportSuccess,
