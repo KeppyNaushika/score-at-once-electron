@@ -198,6 +198,17 @@ export function IndividualReportTab({
                     }
                     variant="sub"
                   />
+                  <OptionCard
+                    label="コメント"
+                    checked={options.sourceBreakdownColumns.comment}
+                    onChange={(v) =>
+                      updateOption("sourceBreakdownColumns", {
+                        ...options.sourceBreakdownColumns,
+                        comment: v,
+                      })
+                    }
+                    variant="sub"
+                  />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">

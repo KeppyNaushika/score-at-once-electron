@@ -6,7 +6,9 @@ import { useCallback, useMemo, useRef } from "react"
 
 import { EditableTable } from "@/components/common/EditableTable"
 import { Button } from "@/components/ui/button"
+import type { ManualCellPatch } from "@/hooks/grades/useManualScores"
 import { useManualScores } from "@/hooks/grades/useManualScores"
+import type { GradeDataSourceWithDetails } from "@/types/grade.types"
 
 interface ManualScoresContainerProps {
   gradeId: string
@@ -20,14 +22,19 @@ interface ManualScoreRow {
   [key: string]: string
 }
 
+/** データソースごとの列ID（value列はds.id、補助列は接尾辞付き） */
+const adjColId = (dsId: string) => `${dsId}::adj`
+const reasonColId = (dsId: string) => `${dsId}::reason`
+const commentColId = (dsId: string) => `${dsId}::comment`
+
 /**
  * 外部成績入力コンテナ
  *
- * EditableTable を使用し、各生徒のスコアをExcelコピペ対応で一括入力できる。
- * 変更はデバウンスで自動保存される。
+ * EditableTable を使用し、各生徒の成績（数値 or 文字評価）・加減点・理由・コメントを
+ * Excelコピペ対応で一括入力できる。変更はデバウンスで自動保存される。
  */
 export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
-  const { manualDataSources, studentScores, loading, bulkUpdateScores } =
+  const { manualDataSources, studentScores, loading, bulkUpdateCells } =
     useManualScores(gradeId)
 
   // 前回のテーブルデータを保持（diff検出用）
@@ -45,10 +52,17 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
         studentName: `${student.lastName} ${student.firstName}`,
       }
       for (const dataSource of manualDataSources) {
-        row[dataSource.id] =
-          student.scores[dataSource.id] != null
-            ? String(student.scores[dataSource.id])
-            : ""
+        const cell = student.cells[dataSource.id]
+        // value列: 文字モードは評価記号、数値モードはスコア
+        if (dataSource.inputMode === "letter") {
+          row[dataSource.id] = cell?.letterValue ?? ""
+        } else {
+          row[dataSource.id] = cell?.score != null ? String(cell.score) : ""
+        }
+        row[adjColId(dataSource.id)] =
+          cell?.adjustment != null ? String(cell.adjustment) : ""
+        row[reasonColId(dataSource.id)] = cell?.adjustmentReason ?? ""
+        row[commentColId(dataSource.id)] = cell?.comment ?? ""
       }
       return row
     })
@@ -90,14 +104,49 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
       },
     ]
 
-    const scoreCols: ColumnDef<ManualScoreRow>[] = manualDataSources.map(
-      (dataSource) => ({
-        id: dataSource.id,
-        header: `${dataSource.name} (/${dataSource.maxScore})`,
-        accessorKey: dataSource.id,
-        size: 100,
-        meta: { placeholder: `0-${dataSource.maxScore}` },
-      })
+    const scoreCols: ColumnDef<ManualScoreRow>[] = manualDataSources.flatMap(
+      (dataSource): ColumnDef<ManualScoreRow>[] => {
+        const isLetter = dataSource.inputMode === "letter"
+        const validLabels = dataSource.letterScales
+          .map((ls) => ls.label)
+          .join("/")
+        return [
+          {
+            id: dataSource.id,
+            header: isLetter
+              ? `${dataSource.name} (評価)`
+              : `${dataSource.name} (/${dataSource.maxScore})`,
+            accessorKey: dataSource.id,
+            size: 110,
+            meta: {
+              placeholder: isLetter
+                ? validLabels || "評価記号"
+                : `0-${dataSource.maxScore}`,
+            },
+          },
+          {
+            id: adjColId(dataSource.id),
+            header: `${dataSource.name}·加減点`,
+            accessorKey: adjColId(dataSource.id),
+            size: 90,
+            meta: { placeholder: "±0" },
+          },
+          {
+            id: reasonColId(dataSource.id),
+            header: `${dataSource.name}·理由`,
+            accessorKey: reasonColId(dataSource.id),
+            size: 120,
+            meta: { placeholder: "期限超過 等" },
+          },
+          {
+            id: commentColId(dataSource.id),
+            header: `${dataSource.name}·コメント`,
+            accessorKey: commentColId(dataSource.id),
+            size: 160,
+            meta: { placeholder: "通知書に表示" },
+          },
+        ]
+      }
     )
 
     return [...readOnlyCols, ...scoreCols]
@@ -109,8 +158,16 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
       const changes: {
         dataSourceId: string
         studentId: string
-        score: number | null
+        patch: ManualCellPatch
       }[] = []
+
+      const pushPatch = (
+        dataSource: GradeDataSourceWithDetails,
+        studentId: string,
+        patch: ManualCellPatch
+      ) => {
+        changes.push({ dataSourceId: dataSource.id, studentId, patch })
+      }
 
       for (let i = 0; i < newData.length; i++) {
         const newRow = newData[i]
@@ -119,37 +176,78 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
 
         const studentId = newRow._studentId
         for (const dataSource of manualDataSources) {
-          const newVal = newRow[dataSource.id]
-          const oldVal = oldRow[dataSource.id]
-          if (newVal === oldVal) continue
+          const validLabels = new Set(
+            dataSource.letterScales.map((ls) => ls.label)
+          )
 
-          // バリデーション
-          const trimmed = (newVal ?? "").trim()
-          if (trimmed === "") {
-            changes.push({
-              dataSourceId: dataSource.id,
-              studentId,
-              score: null,
-            })
-          } else {
-            const num = Number(trimmed)
-            if (!isNaN(num) && num >= 0 && num <= Number(dataSource.maxScore)) {
-              changes.push({
-                dataSourceId: dataSource.id,
-                studentId,
-                score: num,
-              })
+          // value列（数値 or 文字評価）
+          const valId = dataSource.id
+          if (newRow[valId] !== oldRow[valId]) {
+            const trimmed = (newRow[valId] ?? "").trim()
+            if (dataSource.inputMode === "letter") {
+              if (trimmed === "") {
+                pushPatch(dataSource, studentId, { letterValue: null })
+              } else if (validLabels.has(trimmed)) {
+                pushPatch(dataSource, studentId, { letterValue: trimmed })
+              }
+              // 未定義の評価記号は無視
+            } else {
+              if (trimmed === "") {
+                pushPatch(dataSource, studentId, { score: null })
+              } else {
+                const num = Number(trimmed)
+                if (
+                  !isNaN(num) &&
+                  num >= 0 &&
+                  num <= Number(dataSource.maxScore)
+                ) {
+                  pushPatch(dataSource, studentId, { score: num })
+                }
+                // 範囲外・無効値は無視
+              }
             }
-            // 無効な値は無視（EditableTableがセル値を保持するので自然にリセットされる）
+          }
+
+          // 加減点列
+          const adjId = adjColId(dataSource.id)
+          if (newRow[adjId] !== oldRow[adjId]) {
+            const trimmed = (newRow[adjId] ?? "").trim()
+            if (trimmed === "") {
+              pushPatch(dataSource, studentId, { adjustment: null })
+            } else {
+              const num = Number(trimmed)
+              if (!isNaN(num) && isFinite(num)) {
+                pushPatch(dataSource, studentId, { adjustment: num })
+              }
+              // 無効値は無視
+            }
+          }
+
+          // 理由列
+          const rsnId = reasonColId(dataSource.id)
+          if (newRow[rsnId] !== oldRow[rsnId]) {
+            const val = (newRow[rsnId] ?? "").trim()
+            pushPatch(dataSource, studentId, {
+              adjustmentReason: val === "" ? null : val,
+            })
+          }
+
+          // コメント列
+          const cmtId = commentColId(dataSource.id)
+          if (newRow[cmtId] !== oldRow[cmtId]) {
+            const val = (newRow[cmtId] ?? "").trim()
+            pushPatch(dataSource, studentId, {
+              comment: val === "" ? null : val,
+            })
           }
         }
       }
 
       if (changes.length > 0) {
-        bulkUpdateScores(changes)
+        bulkUpdateCells(changes)
       }
     },
-    [manualDataSources, bulkUpdateScores]
+    [manualDataSources, bulkUpdateCells]
   )
 
   if (loading) {
@@ -186,16 +284,21 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">外部成績入力</h2>
       <p className="text-muted-foreground mb-4 text-sm">
-        各生徒の外部成績（提出物・授業態度等）を入力してください。変更は自動保存されます。
+        各生徒の外部成績（提出物・授業態度等）を入力してください。文字評価のデータソースは
+        評価記号（例:
+        A/B/C）で入力します。加減点・理由・コメントも記入できます。
+        変更は自動保存されます。
       </p>
 
-      <EditableTable
-        data={tableData}
-        columns={columns}
-        onDataChange={handleDataChange}
-        allowInsertRow={false}
-        allowDeleteRow={false}
-      />
+      <div className="overflow-x-auto">
+        <EditableTable
+          data={tableData}
+          columns={columns}
+          onDataChange={handleDataChange}
+          allowInsertRow={false}
+          allowDeleteRow={false}
+        />
+      </div>
 
       <div className="mt-6 flex justify-end">
         <Button asChild>

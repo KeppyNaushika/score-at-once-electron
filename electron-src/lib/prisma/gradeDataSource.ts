@@ -22,6 +22,7 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
         exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
+        letterScales: { orderBy: { order: "asc" } },
         _count: { select: { manualScores: true } },
       },
       orderBy: { order: "asc" },
@@ -54,6 +55,8 @@ export async function createDataSource(data: {
   treatExpectedAsMissing?: boolean
   estimationMode?: string
   estimationSourceIds?: string[]
+  inputMode?: string
+  letterScales?: { label: string; score: number; order: number }[]
 }) {
   try {
     // order を自動計算（gradeItem 内）
@@ -92,11 +95,25 @@ export async function createDataSource(data: {
         ...(data.estimationSourceIds !== undefined && {
           estimationSourceIds: JSON.stringify(data.estimationSourceIds),
         }),
+        ...(data.inputMode !== undefined && {
+          inputMode: data.inputMode,
+        }),
+        ...(data.letterScales !== undefined &&
+          data.letterScales.length > 0 && {
+            letterScales: {
+              create: data.letterScales.map((ls) => ({
+                label: ls.label,
+                score: ls.score,
+                order: ls.order,
+              })),
+            },
+          }),
       },
       include: {
         exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
+        letterScales: { orderBy: { order: "asc" } },
       },
     })
 
@@ -135,13 +152,26 @@ export async function updateDataSource(
     treatExpectedAsMissing?: boolean
     estimationMode?: string
     estimationSourceIds?: string[]
+    inputMode?: string
+    letterScales?: { label: string; score: number; order: number }[]
   }
 ) {
   try {
-    const { estimationSourceIds, ...rest } = data
+    const { estimationSourceIds, letterScales, ...rest } = data
     const updateData: Record<string, unknown> = { ...rest }
     if (estimationSourceIds !== undefined) {
       updateData.estimationSourceIds = JSON.stringify(estimationSourceIds)
+    }
+    // letterScales が指定された場合は全置換（deleteMany → create）
+    if (letterScales !== undefined) {
+      updateData.letterScales = {
+        deleteMany: {},
+        create: letterScales.map((ls) => ({
+          label: ls.label,
+          score: ls.score,
+          order: ls.order,
+        })),
+      }
     }
     const dataSource = await prisma.gradeDataSource.update({
       where: { id },
@@ -150,6 +180,7 @@ export async function updateDataSource(
         exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
+        letterScales: { orderBy: { order: "asc" } },
       },
     })
 

@@ -77,6 +77,8 @@ export function createGradeApi() {
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string[]
+        inputMode?: string
+        letterScales?: { label: string; score: number; order: number }[]
       }) => ipcRenderer.invoke("grade:createDataSource", data),
       updateDataSource: (
         id: string,
@@ -90,6 +92,8 @@ export function createGradeApi() {
           treatExpectedAsMissing?: boolean
           estimationMode?: string
           estimationSourceIds?: string[]
+          inputMode?: string
+          letterScales?: { label: string; score: number; order: number }[]
         }
       ) => ipcRenderer.invoke("grade:updateDataSource", id, data),
       deleteDataSource: (id: string) =>
@@ -118,7 +122,11 @@ export function createGradeApi() {
         scores: {
           gradeDataSourceId: string
           studentId: string
-          score: number | null
+          score?: number | null
+          letterValue?: string | null
+          adjustment?: number | null
+          adjustmentReason?: string | null
+          comment?: string | null
         }[]
       ) => ipcRenderer.invoke("grade:batchUpsertManualScores", scores),
       getBoundarySets: (gradeId: string) =>
