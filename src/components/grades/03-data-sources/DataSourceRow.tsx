@@ -6,27 +6,15 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { GradeDataSourceWithDetails } from "@/types/grade.types"
 
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"
-import {
-  draftsToLetterScales,
-  type LetterScaleDraft,
-  LetterScaleEditor,
-} from "./LetterScaleEditor"
 
 const TYPE_LABELS: Record<string, string> = {
   exam_total: "合計",
   subtotal: "小計",
   crop_region: "設問",
-  manual: "外部",
+  coursework: "資料",
 }
 
 interface DataSourceRowProps {
@@ -60,28 +48,20 @@ export function DataSourceRow({
   const [name, setName] = useState(dataSource.name)
   const [maxScore, setMaxScore] = useState(String(dataSource.maxScore))
   const [weight, setWeight] = useState(String(dataSource.weight))
-  const [inputMode, setInputMode] = useState<"numeric" | "letter">(
-    dataSource.inputMode === "letter" ? "letter" : "numeric"
-  )
-  const [letterScales, setLetterScales] = useState<LetterScaleDraft[]>(
-    dataSource.letterScales.map((ls) => ({
-      label: ls.label,
-      score: String(ls.score),
-    }))
-  )
 
-  const isManual = dataSource.type === "manual"
+  const isCoursework = dataSource.type === "coursework"
+  // coursework型の満点は評価項目を live 参照（計算と表示を一致させる。スナップショットのドリフト回避）
+  const displayMaxScore =
+    isCoursework && dataSource.courseworkItem
+      ? dataSource.courseworkItem.maxScore
+      : dataSource.maxScore
 
   const handleSave = async () => {
     await onUpdate(dataSource.id, {
       name,
-      maxScore: Number(maxScore),
+      // coursework型の満点は評価項目から live 参照するためここでは更新しない
+      ...(!isCoursework && { maxScore: Number(maxScore) }),
       weight: Number(weight),
-      ...(isManual && {
-        inputMode,
-        letterScales:
-          inputMode === "letter" ? draftsToLetterScales(letterScales) : [],
-      }),
     })
     setEditing(false)
   }
@@ -98,27 +78,20 @@ export function DataSourceRow({
             className="h-8 flex-1"
             placeholder="名前"
           />
-          {isManual && (
-            <Select
-              value={inputMode}
-              onValueChange={(v) => setInputMode(v as "numeric" | "letter")}
-            >
-              <SelectTrigger className="h-8 w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="numeric">数値入力</SelectItem>
-                <SelectItem value="letter">文字評価</SelectItem>
-              </SelectContent>
-            </Select>
+          {isCoursework ? (
+            // coursework型の満点は評価項目から live 参照（編集不可）
+            <span className="text-muted-foreground text-xs">
+              満点: {displayMaxScore}
+            </span>
+          ) : (
+            <Input
+              value={maxScore}
+              onChange={(e) => setMaxScore(e.target.value)}
+              className="h-8 w-20"
+              type="number"
+              placeholder="満点"
+            />
           )}
-          <Input
-            value={maxScore}
-            onChange={(e) => setMaxScore(e.target.value)}
-            className="h-8 w-20"
-            type="number"
-            placeholder="満点"
-          />
           <Input
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
@@ -143,9 +116,6 @@ export function DataSourceRow({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        {isManual && inputMode === "letter" && (
-          <LetterScaleEditor scales={letterScales} onChange={setLetterScales} />
-        )}
       </div>
     )
   }
@@ -158,23 +128,26 @@ export function DataSourceRow({
       if (dataSource.cropRegion) parts.push(dataSource.cropRegion.label)
       return parts.join(" > ")
     }
+    if (dataSource.courseworkItem) {
+      return `${dataSource.courseworkItem.coursework.name} > ${dataSource.courseworkItem.name}`
+    }
     return null
   })()
 
   return (
     <div className="flex items-center justify-between rounded border p-2">
       <div className="flex items-center gap-3">
-        <Badge variant={dataSource.type === "manual" ? "secondary" : "default"}>
+        <Badge variant={isCoursework ? "secondary" : "default"}>
           {typeLabel}
         </Badge>
         <span className="text-sm font-medium">{dataSource.name}</span>
         {sourceRef && (
           <span className="text-muted-foreground text-xs">({sourceRef})</span>
         )}
-        {isManual && dataSource.inputMode === "letter" && (
+        {isCoursework && dataSource.courseworkItem?.inputMode === "letter" && (
           <Badge variant="outline" className="text-xs font-normal">
             文字評価:{" "}
-            {dataSource.letterScales
+            {dataSource.courseworkItem.letterScales
               .map((ls) => `${ls.label}=${ls.score}`)
               .join(", ") || "未設定"}
           </Badge>
@@ -187,7 +160,7 @@ export function DataSourceRow({
       </div>
       <div className="flex items-center gap-3">
         <span className="text-muted-foreground text-xs">
-          満点: {dataSource.maxScore} / 換算満点: {dataSource.weight}
+          満点: {displayMaxScore} / 換算満点: {dataSource.weight}
         </span>
         <Button
           variant="ghost"

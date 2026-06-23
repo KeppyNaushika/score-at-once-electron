@@ -1,254 +1,91 @@
 "use client"
 
-import type { ColumnDef } from "@tanstack/react-table"
+import { ExternalLink } from "lucide-react"
 import Link from "next/link"
-import { useCallback, useMemo, useRef } from "react"
+import { useEffect, useState } from "react"
 
-import { EditableTable } from "@/components/common/EditableTable"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { ManualCellPatch } from "@/hooks/grades/useManualScores"
-import { useManualScores } from "@/hooks/grades/useManualScores"
 import type { GradeDataSourceWithDetails } from "@/types/grade.types"
 
 interface ManualScoresContainerProps {
   gradeId: string
 }
 
-interface ManualScoreRow {
-  _studentId: string
-  attendanceNumber: string
-  className: string
-  studentName: string
-  [key: string]: string
-}
-
-/** データソースごとの列ID（value列はds.id、補助列は接尾辞付き） */
-const adjColId = (dsId: string) => `${dsId}::adj`
-const reasonColId = (dsId: string) => `${dsId}::reason`
-const commentColId = (dsId: string) => `${dsId}::comment`
-
 /**
- * 外部成績入力コンテナ
+ * 試験外成績資料の入力状況 確認ビュー（読み取り専用）
  *
- * EditableTable を使用し、各生徒の成績（数値 or 文字評価）・加減点・理由・コメントを
- * Excelコピペ対応で一括入力できる。変更はデバウンスで自動保存される。
+ * 点数入力は試験外成績資料（Coursework）ページに一本化されたため、
+ * このステップでは成績算出が参照している coursework 型データソースの一覧と
+ * 入力状況を表示し、各資料ページへのリンクを提供する。
  */
 export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
-  const { manualDataSources, studentScores, loading, bulkUpdateCells } =
-    useManualScores(gradeId)
+  const [courseworkSources, setCourseworkSources] = useState<
+    GradeDataSourceWithDetails[]
+  >([])
+  // dataSourceId → この成績の対象生徒のうち実際に入力済み（非null）の人数
+  const [enteredCounts, setEnteredCounts] = useState<Record<string, number>>({})
+  const [studentCount, setStudentCount] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  // 前回のテーブルデータを保持（diff検出用）
-  const prevDataRef = useRef<ManualScoreRow[]>([])
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [gradeResult, studentsResult] = await Promise.all([
+          window.electronAPI.grade.getById(gradeId),
+          window.electronAPI.grade.getStudents(gradeId),
+        ])
+        if (!gradeResult.success || !gradeResult.grade) return
 
-  const tableData = useMemo(() => {
-    const data = studentScores.map((student): ManualScoreRow => {
-      const row: ManualScoreRow = {
-        _studentId: student.studentId,
-        attendanceNumber:
-          student.attendanceNumber != null
-            ? String(student.attendanceNumber)
-            : "-",
-        className: student.className ?? "-",
-        studentName: `${student.lastName} ${student.firstName}`,
-      }
-      for (const dataSource of manualDataSources) {
-        const cell = student.cells[dataSource.id]
-        // value列: 文字モードは評価記号、数値モードはスコア
-        if (dataSource.inputMode === "letter") {
-          row[dataSource.id] = cell?.letterValue ?? ""
-        } else {
-          row[dataSource.id] = cell?.score != null ? String(cell.score) : ""
-        }
-        row[adjColId(dataSource.id)] =
-          cell?.adjustment != null ? String(cell.adjustment) : ""
-        row[reasonColId(dataSource.id)] = cell?.adjustmentReason ?? ""
-        row[commentColId(dataSource.id)] = cell?.comment ?? ""
-      }
-      return row
-    })
-    prevDataRef.current = data
-    return data
-  }, [studentScores, manualDataSources])
+        const sources = gradeResult.grade.gradeItems
+          .flatMap((gradeItem) => gradeItem.dataSources)
+          .filter((dataSource) => dataSource.type === "coursework")
+        setCourseworkSources(sources)
 
-  const columns = useMemo((): ColumnDef<ManualScoreRow>[] => {
-    const readOnlyCols: ColumnDef<ManualScoreRow>[] = [
-      {
-        id: "attendanceNumber",
-        header: "出席番号",
-        accessorKey: "attendanceNumber",
-        size: 70,
-        meta: { readOnly: true },
-        cell: ({ getValue }) => (
-          <span className="text-sm">{String(getValue())}</span>
-        ),
-      },
-      {
-        id: "className",
-        header: "学級",
-        accessorKey: "className",
-        size: 80,
-        meta: { readOnly: true },
-        cell: ({ getValue }) => (
-          <span className="text-sm">{String(getValue())}</span>
-        ),
-      },
-      {
-        id: "studentName",
-        header: "氏名",
-        accessorKey: "studentName",
-        size: 120,
-        meta: { readOnly: true },
-        cell: ({ getValue }) => (
-          <span className="text-sm">{String(getValue())}</span>
-        ),
-      },
-    ]
+        // この成績の対象生徒ID（資料の名簿ではなく成績側の名簿で数える）
+        const gradeStudentIds = new Set(
+          studentsResult.success && studentsResult.students
+            ? studentsResult.students.map((s) => s.student.id)
+            : []
+        )
+        setStudentCount(gradeStudentIds.size)
 
-    const scoreCols: ColumnDef<ManualScoreRow>[] = manualDataSources.flatMap(
-      (dataSource): ColumnDef<ManualScoreRow>[] => {
-        const isLetter = dataSource.inputMode === "letter"
-        const validLabels = dataSource.letterScales
-          .map((ls) => ls.label)
-          .join("/")
-        return [
-          {
-            id: dataSource.id,
-            header: isLetter
-              ? `${dataSource.name} (評価)`
-              : `${dataSource.name} (/${dataSource.maxScore})`,
-            accessorKey: dataSource.id,
-            size: 110,
-            meta: {
-              placeholder: isLetter
-                ? validLabels || "評価記号"
-                : `0-${dataSource.maxScore}`,
-            },
-          },
-          {
-            id: adjColId(dataSource.id),
-            header: `${dataSource.name}·加減点`,
-            accessorKey: adjColId(dataSource.id),
-            size: 90,
-            meta: { placeholder: "±0" },
-          },
-          {
-            id: reasonColId(dataSource.id),
-            header: `${dataSource.name}·理由`,
-            accessorKey: reasonColId(dataSource.id),
-            size: 120,
-            meta: { placeholder: "期限超過 等" },
-          },
-          {
-            id: commentColId(dataSource.id),
-            header: `${dataSource.name}·コメント`,
-            accessorKey: commentColId(dataSource.id),
-            size: 160,
-            meta: { placeholder: "通知書に表示" },
-          },
+        // 評価項目は重複し得る（複数データソースが同一項目を参照）ので、
+        // 項目IDごとに1回だけ点数を取得し、対象生徒の入力済み（非null）数を集計する
+        const distinctItemIds = [
+          ...new Set(
+            sources
+              .map((ds) => ds.courseworkItem?.id)
+              .filter((id): id is string => !!id)
+          ),
         ]
-      }
-    )
-
-    return [...readOnlyCols, ...scoreCols]
-  }, [manualDataSources])
-
-  const handleDataChange = useCallback(
-    (newData: ManualScoreRow[]) => {
-      const prev = prevDataRef.current
-      const changes: {
-        dataSourceId: string
-        studentId: string
-        patch: ManualCellPatch
-      }[] = []
-
-      const pushPatch = (
-        dataSource: GradeDataSourceWithDetails,
-        studentId: string,
-        patch: ManualCellPatch
-      ) => {
-        changes.push({ dataSourceId: dataSource.id, studentId, patch })
-      }
-
-      for (let i = 0; i < newData.length; i++) {
-        const newRow = newData[i]
-        const oldRow = prev[i]
-        if (!oldRow || !newRow) continue
-
-        const studentId = newRow._studentId
-        for (const dataSource of manualDataSources) {
-          const validLabels = new Set(
-            dataSource.letterScales.map((ls) => ls.label)
-          )
-
-          // value列（数値 or 文字評価）
-          const valId = dataSource.id
-          if (newRow[valId] !== oldRow[valId]) {
-            const trimmed = (newRow[valId] ?? "").trim()
-            if (dataSource.inputMode === "letter") {
-              if (trimmed === "") {
-                pushPatch(dataSource, studentId, { letterValue: null })
-              } else if (validLabels.has(trimmed)) {
-                pushPatch(dataSource, studentId, { letterValue: trimmed })
-              }
-              // 未定義の評価記号は無視
-            } else {
-              if (trimmed === "") {
-                pushPatch(dataSource, studentId, { score: null })
-              } else {
-                const num = Number(trimmed)
-                if (
-                  !isNaN(num) &&
-                  num >= 0 &&
-                  num <= Number(dataSource.maxScore)
-                ) {
-                  pushPatch(dataSource, studentId, { score: num })
-                }
-                // 範囲外・無効値は無視
-              }
-            }
-          }
-
-          // 加減点列
-          const adjId = adjColId(dataSource.id)
-          if (newRow[adjId] !== oldRow[adjId]) {
-            const trimmed = (newRow[adjId] ?? "").trim()
-            if (trimmed === "") {
-              pushPatch(dataSource, studentId, { adjustment: null })
-            } else {
-              const num = Number(trimmed)
-              if (!isNaN(num) && isFinite(num)) {
-                pushPatch(dataSource, studentId, { adjustment: num })
-              }
-              // 無効値は無視
-            }
-          }
-
-          // 理由列
-          const rsnId = reasonColId(dataSource.id)
-          if (newRow[rsnId] !== oldRow[rsnId]) {
-            const val = (newRow[rsnId] ?? "").trim()
-            pushPatch(dataSource, studentId, {
-              adjustmentReason: val === "" ? null : val,
-            })
-          }
-
-          // コメント列
-          const cmtId = commentColId(dataSource.id)
-          if (newRow[cmtId] !== oldRow[cmtId]) {
-            const val = (newRow[cmtId] ?? "").trim()
-            pushPatch(dataSource, studentId, {
-              comment: val === "" ? null : val,
-            })
-          }
+        const enteredByItem: Record<string, number> = {}
+        await Promise.all(
+          distinctItemIds.map(async (itemId) => {
+            const scoreResult =
+              await window.electronAPI.coursework.getScores(itemId)
+            const scores = scoreResult.success ? (scoreResult.scores ?? []) : []
+            enteredByItem[itemId] = scores.filter(
+              (sc) =>
+                gradeStudentIds.has(sc.studentId) &&
+                (sc.score !== null || sc.letterValue !== null)
+            ).length
+          })
+        )
+        const counts: Record<string, number> = {}
+        for (const ds of sources) {
+          const itemId = ds.courseworkItem?.id
+          counts[ds.id] = itemId ? (enteredByItem[itemId] ?? 0) : 0
         }
+        setEnteredCounts(counts)
+      } catch (error) {
+        console.error("Error loading coursework data sources:", error)
+      } finally {
+        setLoading(false)
       }
-
-      if (changes.length > 0) {
-        bulkUpdateCells(changes)
-      }
-    },
-    [manualDataSources, bulkUpdateCells]
-  )
+    }
+    load()
+  }, [gradeId])
 
   if (loading) {
     return (
@@ -258,47 +95,68 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
     )
   }
 
-  if (manualDataSources.length === 0) {
-    return (
-      <div className="p-6">
-        <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-          <p className="text-muted-foreground mb-2">
-            外部成績データソースがありません
-          </p>
-          <p className="text-muted-foreground text-sm">
-            データソース設定で「外部成績」を追加してください
-          </p>
-        </div>
-        <div className="mt-6 flex justify-end">
-          <Button asChild>
-            <Link href={`/grades/${gradeId}/05-boundaries`}>
-              次へ: 成績境界
-            </Link>
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="p-6">
-      <h2 className="mb-4 text-lg font-semibold">外部成績入力</h2>
+      <h2 className="mb-2 text-lg font-semibold">試験外成績資料の確認</h2>
       <p className="text-muted-foreground mb-4 text-sm">
-        各生徒の外部成績（提出物・授業態度等）を入力してください。文字評価のデータソースは
-        評価記号（例:
-        A/B/C）で入力します。加減点・理由・コメントも記入できます。
-        変更は自動保存されます。
+        点数の入力は「試験外成績資料」ページで行います。ここでは成績算出が参照している
+        評価項目と入力状況を確認できます。点数を編集するには各資料ページを開いてください。
       </p>
 
-      <div className="overflow-x-auto">
-        <EditableTable
-          data={tableData}
-          columns={columns}
-          onDataChange={handleDataChange}
-          allowInsertRow={false}
-          allowDeleteRow={false}
-        />
-      </div>
+      {courseworkSources.length === 0 ? (
+        <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
+          <p className="text-muted-foreground mb-2">
+            試験外成績資料のデータソースがありません
+          </p>
+          <p className="text-muted-foreground text-sm">
+            データソース設定で「試験外成績資料」を追加してください
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {courseworkSources.map((ds) => {
+            const item = ds.courseworkItem
+            const enteredCount = enteredCounts[ds.id] ?? 0
+            return (
+              <div
+                key={ds.id}
+                className="flex items-center justify-between rounded border p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Badge variant="secondary">資料</Badge>
+                  <span className="text-sm font-medium">{ds.name}</span>
+                  {item && (
+                    <span className="text-muted-foreground text-xs">
+                      ({item.coursework.name} &gt; {item.name})
+                    </span>
+                  )}
+                  {item?.inputMode === "letter" && (
+                    <Badge variant="outline" className="text-xs font-normal">
+                      文字評価
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground text-xs">
+                    入力済み: {enteredCount}/{studentCount}名 / 満点:{" "}
+                    {item?.maxScore ?? ds.maxScore}
+                  </span>
+                  {item && (
+                    <Button asChild variant="ghost" size="sm">
+                      <Link
+                        href={`/coursework/${item.coursework.id}/04-scores`}
+                      >
+                        <ExternalLink className="mr-1 h-3 w-3" />
+                        資料を開く
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <div className="mt-6 flex justify-end">
         <Button asChild>

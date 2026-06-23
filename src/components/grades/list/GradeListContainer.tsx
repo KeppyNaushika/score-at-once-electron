@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -33,8 +34,14 @@ import {
 } from "@/components/ui/table"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import type { GradeWithDetails } from "@/types/grade.types"
+import type {
+  CourseworkImportDecision,
+  GradeArchiveData,
+  GradeArchiveImportPreview,
+} from "@/types/gradeArchive.types"
 
 import { GradeCreateDialog } from "./GradeCreateDialog"
+import { GradeImportDialog } from "./GradeImportDialog"
 
 const STEP_ICONS: Record<
   number,
@@ -57,6 +64,12 @@ export function GradeListContainer() {
   const [grades, setGrades] = useState<GradeWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  // インポート確認ウィザードの状態
+  const [importPreview, setImportPreview] =
+    useState<GradeArchiveImportPreview | null>(null)
+  const [importArchiveData, setImportArchiveData] =
+    useState<GradeArchiveData | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const loadGrades = useCallback(async () => {
     try {
@@ -93,14 +106,57 @@ export function GradeListContainer() {
 
   const handleImport = async () => {
     const result = await window.electronAPI.grade.importArchive()
-    if (result.success && result.archiveData) {
+    if (result.success && result.archiveData && result.preview) {
+      // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
+      setImportArchiveData(result.archiveData)
+      setImportPreview(result.preview)
+    }
+  }
+
+  const handleImportConfirm = async (
+    decisions: Record<string, CourseworkImportDecision>
+  ) => {
+    if (!importArchiveData || !importPreview) return
+    setImporting(true)
+    try {
+      // 試験参照のマッピング（examName → 既存examId）を照合結果から構築
+      const examMapping: Record<string, string> = {}
+      for (const em of importPreview.examMatches) {
+        if (em.found && em.examId) examMapping[em.examName] = em.examId
+      }
       const importResult = await window.electronAPI.grade.executeImport(
-        result.archiveData
+        importArchiveData,
+        { examMapping, courseworkDecisions: decisions }
       )
       if (importResult.success && importResult.gradeId) {
+        // 取り込み警告（点数スキップ・参照先未検出など）があれば通知する。
+        // 自動で消えると見落とすため手動で閉じるまで表示し、全件を本文に載せる。
+        if (importResult.warnings && importResult.warnings.length > 0) {
+          toast.warning(
+            `インポートは完了しましたが ${importResult.warnings.length} 件の警告があります`,
+            {
+              description: importResult.warnings.join("\n"),
+              duration: Infinity,
+              closeButton: true,
+            }
+          )
+        }
         router.push(`/grades/${importResult.gradeId}/01-setup`)
+      } else if (!importResult.success) {
+        toast.error("インポートに失敗しました", {
+          description: importResult.error,
+        })
       }
+    } finally {
+      setImporting(false)
+      setImportPreview(null)
+      setImportArchiveData(null)
     }
+  }
+
+  const handleImportCancel = () => {
+    setImportPreview(null)
+    setImportArchiveData(null)
   }
 
   if (loading) {
@@ -249,6 +305,14 @@ export function GradeListContainer() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onCreated={handleCreated}
+      />
+
+      <GradeImportDialog
+        open={importPreview !== null}
+        preview={importPreview}
+        importing={importing}
+        onCancel={handleImportCancel}
+        onConfirm={handleImportConfirm}
       />
     </div>
   )

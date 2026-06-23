@@ -132,12 +132,48 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       }),
   },
   {
-    model: "ManualScore",
-    move: (tx, from, to) =>
-      tx.manualScore.updateMany({
+    // UNIQUE([courseworkId, studentId]) があるため移行先の重複を回避しつつ更新する
+    model: "CourseworkStudent",
+    move: async (tx, from, to) => {
+      const rows = await tx.courseworkStudent.findMany({
         where: { studentId: from },
-        data: { studentId: to },
-      }),
+      })
+      for (const row of rows) {
+        const duplicate = await tx.courseworkStudent.findFirst({
+          where: { courseworkId: row.courseworkId, studentId: to },
+        })
+        if (duplicate) {
+          await tx.courseworkStudent.delete({ where: { id: row.id } })
+        } else {
+          await tx.courseworkStudent.update({
+            where: { id: row.id },
+            data: { studentId: to },
+          })
+        }
+      }
+    },
+  },
+  {
+    // UNIQUE([courseworkItemId, studentId]) があるため移行先の重複を回避しつつ更新する
+    model: "CourseworkScore",
+    move: async (tx, from, to) => {
+      const rows = await tx.courseworkScore.findMany({
+        where: { studentId: from },
+      })
+      for (const row of rows) {
+        const duplicate = await tx.courseworkScore.findFirst({
+          where: { courseworkItemId: row.courseworkItemId, studentId: to },
+        })
+        if (duplicate) {
+          await tx.courseworkScore.delete({ where: { id: row.id } })
+        } else {
+          await tx.courseworkScore.update({
+            where: { id: row.id },
+            data: { studentId: to },
+          })
+        }
+      }
+    },
   },
   {
     model: "GradeOverride",
@@ -181,6 +217,14 @@ export const CLASS_CASCADE_MOVERS: CascadeMover[] = [
     model: "GradeClass",
     move: (tx, from, to) =>
       tx.gradeClass.updateMany({
+        where: { classId: from },
+        data: { classId: to },
+      }),
+  },
+  {
+    model: "CourseworkClass",
+    move: (tx, from, to) =>
+      tx.courseworkClass.updateMany({
         where: { classId: from },
         data: { classId: to },
       }),

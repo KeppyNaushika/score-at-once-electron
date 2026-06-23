@@ -2,6 +2,8 @@
  * 成績算出試験の共有型定義
  */
 
+import type { CourseworkItemWithDetails, InputMode } from "./coursework.types"
+
 /** 成績算出試験（リレーション付き） */
 export interface GradeWithDetails {
   id: string
@@ -43,10 +45,11 @@ export type EstimationMode = "all" | "selected"
 export interface GradeDataSourceWithDetails {
   id: string
   gradeItemId: string
-  type: string // "exam_total" | "subtotal" | "crop_region" | "manual"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"
   examId: string | null
   subtotalId: string | null
   cropRegionId: string | null
+  courseworkItemId: string | null
   name: string
   maxScore: number
   weight: number
@@ -57,8 +60,6 @@ export interface GradeDataSourceWithDetails {
   treatExpectedAsMissing: boolean
   estimationMode: EstimationMode
   estimationSourceIds: string[]
-  /** manual型の入力モード（"numeric" | "letter"） */
-  inputMode: InputMode
   createdAt: Date
   updatedAt: Date
   exam: { id: string; examName: string; examDate: Date | null } | null
@@ -68,44 +69,15 @@ export interface GradeDataSourceWithDetails {
     label: string
     points: number | null
   } | null
-  /** 文字評価→点数の変換表（manual型 + letterモード時に使用） */
-  letterScales: GradeLetterScaleData[]
-  _count?: { manualScores: number }
+  /** coursework型が参照する評価項目（資料名・項目名・満点・入力モード・変換表） */
+  courseworkItem:
+    | (CourseworkItemWithDetails & {
+        coursework: { id: string; name: string }
+      })
+    | null
 }
 
-/** manual型データソースの入力モード */
-export type InputMode = "numeric" | "letter"
-
-/** 文字評価→点数の変換表エントリ */
-export interface GradeLetterScaleData {
-  id: string
-  gradeDataSourceId: string
-  label: string
-  score: number
-  order: number
-}
-
-/** 手動スコア（生徒情報付き） */
-export interface ManualScoreWithStudent {
-  id: string
-  gradeDataSourceId: string
-  studentId: string
-  score: number | null
-  /** 文字モード時の評価記号 */
-  letterValue: string | null
-  /** 加点・減点（期限超過等） */
-  adjustment: number | null
-  /** 加減点の理由 */
-  adjustmentReason: string | null
-  /** 成績通知書に表示するコメント */
-  comment: string | null
-  student: {
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-  }
-}
+export type { InputMode }
 
 /** 境界セット（境界リスト付き） */
 export interface GradeBoundarySetWithDetails {

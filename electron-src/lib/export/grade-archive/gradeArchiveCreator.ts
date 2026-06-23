@@ -26,9 +26,11 @@ export async function createGradeArchive(
     const data = await collectGradeArchiveData(gradeId)
 
     const manifest: GradeArchiveManifest = {
-      // v1.3.0: 文字評価変換表(GradeLetterScale)・inputMode・
-      //         ManualScoreの加減点/コメント/文字評価を追加
-      version: "1.3.0",
+      // v1.4.0: 外部成績(manual型 DataSource)を試験外成績資料(Coursework)へ昇格。
+      //   参照中の資料を自己完結で埋め込み、資料/評価項目/DataSource参照に uuid を併記する
+      //   （照合の一次キー。インポートは uuid 一致を優先し、名前照合はユーザー判断の二次フォールバック）。
+      //   ※ v1.3.0 以前の manual-scores は読み取り後方互換のみ。
+      version: "1.4.0",
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
       gradeId,
@@ -66,8 +68,8 @@ export async function createGradeArchive(
       archive.append(JSON.stringify(data.gradeData, null, 2), {
         name: "grade-exam.json",
       })
-      archive.append(JSON.stringify(data.manualScoresData, null, 2), {
-        name: "manual-scores.json",
+      archive.append(JSON.stringify(data.courseworksData, null, 2), {
+        name: "courseworks.json",
       })
       archive.append(JSON.stringify(data.boundariesData, null, 2), {
         name: "boundaries.json",

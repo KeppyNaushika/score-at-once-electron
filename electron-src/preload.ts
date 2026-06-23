@@ -5,6 +5,7 @@ import { createAnswerSheetBuilderApi } from "./preload-apis/answerSheetBuilderAp
 import { createArchiveApi } from "./preload-apis/archiveApi"
 import { createAuditLogApi } from "./preload-apis/auditLogApi"
 import { createAuthApi } from "./preload-apis/authApi"
+import { createCourseworkApi } from "./preload-apis/courseworkApi"
 import { createCropRegionApi } from "./preload-apis/cropRegionApi"
 import { createDrawingApi } from "./preload-apis/drawingApi"
 import { createExamApi } from "./preload-apis/examApi"
@@ -47,6 +48,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createSettingsApi(),
   ...createPdfToolsApi(),
   ...createGradeApi(),
+  ...createCourseworkApi(),
   ...createTagApi(),
   ...createOmrApi(),
   ...createAnswerSheetBuilderApi(),

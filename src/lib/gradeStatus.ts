@@ -40,14 +40,17 @@ export function getGradeCompletion(
     (gradeItem) => gradeItem.dataSources
   )
 
-  const manualDataSources = dataSources.filter(
-    (dataSource) => dataSource.type === "manual"
+  const courseworkDataSources = dataSources.filter(
+    (dataSource) => dataSource.type === "coursework"
   )
-  const hasManualDataSources = manualDataSources.length > 0
+  const hasCourseworkDataSources = courseworkDataSources.length > 0
+  // 「次のステップ」提案用のソフトな進捗判定。参照中の評価項目に点数行が
+  // 1件でもあれば入力着手済みとみなす（資料全体の概数。成績の対象生徒に対する
+  // 厳密な入力済み数は 04-manual-scores の確認ビューで集計・表示する）。
   const allManualScoresEntered =
-    !hasManualDataSources ||
-    manualDataSources.every(
-      (dataSource) => (dataSource._count?.manualScores ?? 0) > 0
+    !hasCourseworkDataSources ||
+    courseworkDataSources.every(
+      (dataSource) => (dataSource.courseworkItem?._count?.scores ?? 0) > 0
     )
 
   return {

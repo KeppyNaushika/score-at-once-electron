@@ -41,7 +41,6 @@ export async function cleanupTestDatabase(): Promise<void> {
 
   // 外部キー制約の依存順序に従い、子テーブルから削除
   // Grade関連
-  await prisma.manualScore.deleteMany()
   await prisma.gradeBoundary.deleteMany()
   await prisma.gradeBoundarySet.deleteMany()
   await prisma.gradeDataSource.deleteMany()
@@ -49,6 +48,14 @@ export async function cleanupTestDatabase(): Promise<void> {
   await prisma.gradeStudent.deleteMany()
   await prisma.gradeClass.deleteMany()
   await prisma.grade.deleteMany()
+  // Coursework関連（gradeDataSource 削除後に評価項目を削除）
+  await prisma.courseworkScore.deleteMany()
+  await prisma.courseworkLetterScale.deleteMany()
+  await prisma.courseworkItem.deleteMany()
+  await prisma.courseworkTag.deleteMany()
+  await prisma.courseworkClass.deleteMany()
+  await prisma.courseworkStudent.deleteMany()
+  await prisma.coursework.deleteMany()
   // Score関連
   await prisma.drawingAnnotation.deleteMany()
   await prisma.questionScore.deleteMany()

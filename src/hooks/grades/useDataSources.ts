@@ -69,11 +69,10 @@ export function useDataSources(gradeId: string) {
       examId?: string
       subtotalId?: string
       cropRegionId?: string
+      courseworkItemId?: string
       name: string
       maxScore: number
       weight: number
-      inputMode?: string
-      letterScales?: { label: string; score: number; order: number }[]
     }) => {
       const result = await window.electronAPI.grade.createDataSource(data)
       if (result.success) {
@@ -97,8 +96,6 @@ export function useDataSources(gradeId: string) {
         treatExpectedAsMissing?: boolean
         estimationMode?: string
         estimationSourceIds?: string[]
-        inputMode?: string
-        letterScales?: { label: string; score: number; order: number }[]
       }
     ) => {
       const result = await window.electronAPI.grade.updateDataSource(id, data)

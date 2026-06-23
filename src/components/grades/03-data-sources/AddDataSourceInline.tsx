@@ -13,14 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import {
-  DEFAULT_LETTER_SCALES,
-  draftsToLetterScales,
-  type LetterScaleDraft,
-  LetterScaleEditor,
-} from "./LetterScaleEditor"
-
-type DataSourceType = "exam_total" | "subtotal" | "crop_region" | "manual"
+type DataSourceType = "exam_total" | "subtotal" | "crop_region" | "coursework"
 
 interface AddDataSourceInlineProps {
   gradeItemId: string
@@ -30,11 +23,10 @@ interface AddDataSourceInlineProps {
     examId?: string
     subtotalId?: string
     cropRegionId?: string
+    courseworkItemId?: string
     name: string
     maxScore: number
     weight: number
-    inputMode?: string
-    letterScales?: { label: string; score: number; order: number }[]
   }) => Promise<{ success: boolean }>
   onCreated: () => void
 }
@@ -57,6 +49,19 @@ interface CropRegionOption {
   points: number | null
 }
 
+interface CourseworkOption {
+  id: string
+  name: string
+  date: string | null
+  items: {
+    id: string
+    name: string
+    maxScore: number
+    inputMode: string
+    order: number
+  }[]
+}
+
 export function AddDataSourceInline({
   gradeItemId,
   onCreate,
@@ -73,15 +78,14 @@ export function AddDataSourceInline({
   const [selectedSubtotalId, setSelectedSubtotalId] = useState("")
   const [cropRegions, setCropRegions] = useState<CropRegionOption[]>([])
   const [selectedCropRegionId, setSelectedCropRegionId] = useState("")
+  // coursework型: 資料→評価項目の2段選択
+  const [courseworks, setCourseworks] = useState<CourseworkOption[]>([])
+  const [selectedCourseworkId, setSelectedCourseworkId] = useState("")
+  const [selectedCourseworkItemId, setSelectedCourseworkItemId] = useState("")
   const [name, setName] = useState("")
   const [maxScore, setMaxScore] = useState("")
   const [weight, setWeight] = useState("")
   const [adding, setAdding] = useState(false)
-  // manual型: 入力モードと文字評価変換表
-  const [inputMode, setInputMode] = useState<"numeric" | "letter">("numeric")
-  const [letterScales, setLetterScales] = useState<LetterScaleDraft[]>(
-    DEFAULT_LETTER_SCALES
-  )
 
   // 全試験候補をロード
   useEffect(() => {
@@ -90,6 +94,18 @@ export function AddDataSourceInline({
       const result = await window.electronAPI.grade.getExamCandidates()
       if (result.success && result.exams) {
         setExams(result.exams)
+      }
+    }
+    load()
+  }, [open])
+
+  // 試験外成績資料の候補をロード
+  useEffect(() => {
+    if (!open) return
+    const load = async () => {
+      const result = await window.electronAPI.coursework.getCandidates()
+      if (result.success && result.courseworks) {
+        setCourseworks(result.courseworks)
       }
     }
     load()
@@ -119,7 +135,7 @@ export function AddDataSourceInline({
 
   // 満点自動計算
   const autoCalcMaxScore = useCallback(async () => {
-    if (type === "manual") return
+    if (type === "coursework") return
     if (!selectedExamId) return
 
     const data: {
@@ -144,9 +160,6 @@ export function AddDataSourceInline({
       if (result.success && result.maxScore !== undefined) {
         setMaxScore(String(result.maxScore))
         // 満点が未確定（0）の段階では weight を埋めない。
-        // subtotal/crop_region 選択前に maxScore=0 が返ると weight が "0" に
-        // 固定され、その後 maxScore が確定しても !weight が false になり
-        // 換算満点が 0 のまま（→ 換算点が常に0）になるのを防ぐ。
         if (!weight && result.maxScore > 0) setWeight(String(result.maxScore))
       }
     }
@@ -156,9 +169,23 @@ export function AddDataSourceInline({
     autoCalcMaxScore()
   }, [autoCalcMaxScore])
 
-  // 名前の自動設定
+  // coursework型: 評価項目選択時に満点・換算満点・名前を補完
   useEffect(() => {
-    if (type === "manual") return
+    if (type !== "coursework") return
+    const coursework = courseworks.find((c) => c.id === selectedCourseworkId)
+    const item = coursework?.items.find(
+      (i) => i.id === selectedCourseworkItemId
+    )
+    if (coursework && item) {
+      setMaxScore(String(item.maxScore))
+      setWeight((prev) => (prev ? prev : String(item.maxScore)))
+      setName(`${coursework.name}(${item.name})`)
+    }
+  }, [type, selectedCourseworkId, selectedCourseworkItemId, courseworks])
+
+  // 名前の自動設定（試験系）
+  useEffect(() => {
+    if (type === "coursework") return
     const exam = exams.find((p) => p.id === selectedExamId)
     if (!exam) return
 
@@ -199,7 +226,7 @@ export function AddDataSourceInline({
         maxScore: Number(maxScore),
         weight: Number(weight),
       }
-      if (type !== "manual") {
+      if (type !== "coursework") {
         data.examId = selectedExamId || undefined
       }
       if (type === "subtotal") {
@@ -208,11 +235,8 @@ export function AddDataSourceInline({
       if (type === "crop_region") {
         data.cropRegionId = selectedCropRegionId || undefined
       }
-      if (type === "manual") {
-        data.inputMode = inputMode
-        if (inputMode === "letter") {
-          data.letterScales = draftsToLetterScales(letterScales)
-        }
+      if (type === "coursework") {
+        data.courseworkItemId = selectedCourseworkItemId || undefined
       }
       const result = await onCreate(data)
       if (result.success) {
@@ -231,16 +255,22 @@ export function AddDataSourceInline({
     setSelectedSubtotalGroupId("")
     setSelectedSubtotalId("")
     setSelectedCropRegionId("")
+    setSelectedCourseworkId("")
+    setSelectedCourseworkItemId("")
     setName("")
     setMaxScore("")
     setWeight("")
-    setInputMode("numeric")
-    setLetterScales(DEFAULT_LETTER_SCALES)
   }
 
   const selectedSubtotals =
     subtotalGroups.find((sg) => sg.id === selectedSubtotalGroupId)?.subtotals ??
     []
+
+  const selectedCourseworkItems =
+    courseworks.find((c) => c.id === selectedCourseworkId)?.items ?? []
+
+  // coursework型は満点を評価項目から取得するため満点入力は読み取り専用
+  const isCoursework = type === "coursework"
 
   if (!open) {
     return (
@@ -268,6 +298,8 @@ export function AddDataSourceInline({
             setSelectedSubtotalGroupId("")
             setSelectedSubtotalId("")
             setSelectedCropRegionId("")
+            setSelectedCourseworkId("")
+            setSelectedCourseworkItemId("")
             setName("")
             setMaxScore("")
             setWeight("")
@@ -280,12 +312,12 @@ export function AddDataSourceInline({
             <SelectItem value="exam_total">全設問合計</SelectItem>
             <SelectItem value="subtotal">小計点</SelectItem>
             <SelectItem value="crop_region">設問</SelectItem>
-            <SelectItem value="manual">外部成績</SelectItem>
+            <SelectItem value="coursework">試験外成績資料</SelectItem>
           </SelectContent>
         </Select>
 
         {/* 試験試験選択 */}
-        {type !== "manual" && (
+        {type !== "coursework" && (
           <Select value={selectedExamId} onValueChange={setSelectedExamId}>
             <SelectTrigger className="h-8 w-48">
               <SelectValue placeholder="試験を選択" />
@@ -360,54 +392,51 @@ export function AddDataSourceInline({
           </Select>
         )}
 
-        {/* manual型: 入力モード（数値 / 文字評価） */}
-        {type === "manual" && (
-          <Select
-            value={inputMode}
-            onValueChange={(v) => {
-              const mode = v as "numeric" | "letter"
-              setInputMode(mode)
-              // 文字モードへ切替時、満点/換算満点が空なら変換表の最大値で補完
-              if (mode === "letter") {
-                const scores = letterScales
-                  .map((s) => Number(s.score))
-                  .filter((n) => !isNaN(n))
-                if (scores.length > 0) {
-                  const max = Math.max(...scores)
-                  if (!maxScore) setMaxScore(String(max))
-                  if (!weight) setWeight(String(max))
-                }
-              }
-            }}
-          >
-            <SelectTrigger className="h-8 w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="numeric">数値入力</SelectItem>
-              <SelectItem value="letter">文字評価</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* coursework型: 資料→評価項目の2段選択 */}
+        {type === "coursework" && (
+          <>
+            <Select
+              value={selectedCourseworkId}
+              onValueChange={(v) => {
+                setSelectedCourseworkId(v)
+                // 資料を切り替えたら項目選択と補完値をリセット（古い満点/名前の残留を防ぐ）
+                setSelectedCourseworkItemId("")
+                setMaxScore("")
+                setName("")
+                setWeight("")
+              }}
+            >
+              <SelectTrigger className="h-8 w-48">
+                <SelectValue placeholder="資料を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {courseworks.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedCourseworkItems.length > 0 && (
+              <Select
+                value={selectedCourseworkItemId}
+                onValueChange={setSelectedCourseworkItemId}
+              >
+                <SelectTrigger className="h-8 w-40">
+                  <SelectValue placeholder="評価項目" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedCourseworkItems.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </>
         )}
       </div>
-
-      {/* manual型 + 文字モード: 変換表エディタ */}
-      {type === "manual" && inputMode === "letter" && (
-        <LetterScaleEditor
-          scales={letterScales}
-          onChange={(next) => {
-            setLetterScales(next)
-            const scores = next
-              .map((s) => Number(s.score))
-              .filter((n) => !isNaN(n))
-            if (scores.length > 0) {
-              const max = Math.max(...scores)
-              if (!maxScore) setMaxScore(String(max))
-              if (!weight) setWeight(String(max))
-            }
-          }}
-        />
-      )}
 
       <div className="flex items-center gap-2">
         <Input
@@ -422,6 +451,7 @@ export function AddDataSourceInline({
           className="h-8 w-20"
           type="number"
           placeholder="満点"
+          readOnly={isCoursework}
         />
         <Input
           value={weight}
@@ -433,7 +463,13 @@ export function AddDataSourceInline({
         <Button
           size="sm"
           onClick={handleAdd}
-          disabled={!name.trim() || !maxScore || !weight || adding}
+          disabled={
+            !name.trim() ||
+            !maxScore ||
+            !weight ||
+            adding ||
+            (isCoursework && !selectedCourseworkItemId)
+          }
         >
           追加
         </Button>

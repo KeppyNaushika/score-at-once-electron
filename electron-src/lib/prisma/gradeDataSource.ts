@@ -22,8 +22,13 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
         exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
-        letterScales: { orderBy: { order: "asc" } },
-        _count: { select: { manualScores: true } },
+        courseworkItem: {
+          include: {
+            coursework: { select: { id: true, name: true } },
+            letterScales: { orderBy: { order: "asc" } },
+            _count: { select: { scores: true, gradeDataSources: true } },
+          },
+        },
       },
       orderBy: { order: "asc" },
     })
@@ -42,10 +47,11 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
  */
 export async function createDataSource(data: {
   gradeItemId: string
-  type: string // "exam_total" | "subtotal" | "crop_region" | "manual"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"
   examId?: string
   subtotalId?: string
   cropRegionId?: string
+  courseworkItemId?: string
   name: string
   maxScore: number
   weight: number
@@ -55,8 +61,6 @@ export async function createDataSource(data: {
   treatExpectedAsMissing?: boolean
   estimationMode?: string
   estimationSourceIds?: string[]
-  inputMode?: string
-  letterScales?: { label: string; score: number; order: number }[]
 }) {
   try {
     // order を自動計算（gradeItem 内）
@@ -66,6 +70,16 @@ export async function createDataSource(data: {
     })
     const nextOrder = (maxOrder._max.order ?? -1) + 1
 
+    // coursework型は満点を評価項目から取得（作成時スナップショット。計算は live 参照）
+    let maxScore = data.maxScore
+    if (data.type === "coursework" && data.courseworkItemId) {
+      const item = await prisma.courseworkItem.findUnique({
+        where: { id: data.courseworkItemId },
+        select: { maxScore: true },
+      })
+      if (item) maxScore = Number(item.maxScore)
+    }
+
     const dataSource = await prisma.gradeDataSource.create({
       data: {
         gradeItemId: data.gradeItemId,
@@ -73,8 +87,9 @@ export async function createDataSource(data: {
         examId: data.examId,
         subtotalId: data.subtotalId,
         cropRegionId: data.cropRegionId,
+        courseworkItemId: data.courseworkItemId,
         name: data.name,
-        maxScore: data.maxScore,
+        maxScore,
         weight: data.weight,
         order: nextOrder,
         ...(data.absentMethod !== undefined && {
@@ -95,25 +110,18 @@ export async function createDataSource(data: {
         ...(data.estimationSourceIds !== undefined && {
           estimationSourceIds: JSON.stringify(data.estimationSourceIds),
         }),
-        ...(data.inputMode !== undefined && {
-          inputMode: data.inputMode,
-        }),
-        ...(data.letterScales !== undefined &&
-          data.letterScales.length > 0 && {
-            letterScales: {
-              create: data.letterScales.map((ls) => ({
-                label: ls.label,
-                score: ls.score,
-                order: ls.order,
-              })),
-            },
-          }),
       },
       include: {
         exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
-        letterScales: { orderBy: { order: "asc" } },
+        courseworkItem: {
+          include: {
+            coursework: { select: { id: true, name: true } },
+            letterScales: { orderBy: { order: "asc" } },
+            _count: { select: { scores: true, gradeDataSources: true } },
+          },
+        },
       },
     })
 
@@ -152,26 +160,13 @@ export async function updateDataSource(
     treatExpectedAsMissing?: boolean
     estimationMode?: string
     estimationSourceIds?: string[]
-    inputMode?: string
-    letterScales?: { label: string; score: number; order: number }[]
   }
 ) {
   try {
-    const { estimationSourceIds, letterScales, ...rest } = data
+    const { estimationSourceIds, ...rest } = data
     const updateData: Record<string, unknown> = { ...rest }
     if (estimationSourceIds !== undefined) {
       updateData.estimationSourceIds = JSON.stringify(estimationSourceIds)
-    }
-    // letterScales が指定された場合は全置換（deleteMany → create）
-    if (letterScales !== undefined) {
-      updateData.letterScales = {
-        deleteMany: {},
-        create: letterScales.map((ls) => ({
-          label: ls.label,
-          score: ls.score,
-          order: ls.order,
-        })),
-      }
     }
     const dataSource = await prisma.gradeDataSource.update({
       where: { id },
@@ -180,7 +175,13 @@ export async function updateDataSource(
         exam: { select: { id: true, examName: true, examDate: true } },
         subtotal: { select: { id: true, name: true, order: true } },
         cropRegion: { select: { id: true, label: true, points: true } },
-        letterScales: { orderBy: { order: "asc" } },
+        courseworkItem: {
+          include: {
+            coursework: { select: { id: true, name: true } },
+            letterScales: { orderBy: { order: "asc" } },
+            _count: { select: { scores: true, gradeDataSources: true } },
+          },
+        },
       },
     })
 
@@ -395,6 +396,7 @@ export async function calculateSourceMaxScore(data: {
   examId?: string
   subtotalId?: string
   cropRegionId?: string
+  courseworkItemId?: string
 }): Promise<{ success: boolean; maxScore?: number; error?: string }> {
   try {
     if (data.type === "exam_total" && data.examId) {
@@ -438,7 +440,15 @@ export async function calculateSourceMaxScore(data: {
       return { success: true, maxScore: cr?.points ?? 0 }
     }
 
-    // manual → ユーザー入力なので0を返す
+    if (data.type === "coursework" && data.courseworkItemId) {
+      // 評価項目の満点を返す
+      const item = await prisma.courseworkItem.findUnique({
+        where: { id: data.courseworkItemId },
+        select: { maxScore: true },
+      })
+      return { success: true, maxScore: Number(item?.maxScore ?? 0) }
+    }
+
     return { success: true, maxScore: 0 }
   } catch (error) {
     console.error("Error calculating source max score:", error)

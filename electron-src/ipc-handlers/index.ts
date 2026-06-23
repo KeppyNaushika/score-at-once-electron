@@ -2,6 +2,7 @@ import { setupAnswerSheetBuilderHandlers } from "./answerSheetBuilderHandlers"
 import { registerArchiveHandlers } from "./archiveHandlers"
 import { setupAuditLogHandlers } from "./auditLogHandlers"
 import { setupAuthHandlers } from "./authHandlers"
+import { setupCourseworkHandlers } from "./courseworkHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
 import { setupDrawingHandlers } from "./drawingHandlers"
 import { setupExamClassHandlers } from "./examClassHandlers"
@@ -41,6 +42,7 @@ export function setupAllIPCHandlers(): void {
   setupPdfToolsHandlers()
   setupTagHandlers()
   setupGradeHandlers()
+  setupCourseworkHandlers()
   setupAnswerSheetBuilderHandlers()
   setupOMRHandlers()
   setupOmrConfigHandlers()

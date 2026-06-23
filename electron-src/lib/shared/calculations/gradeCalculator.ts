@@ -58,8 +58,12 @@ export async function calculateGrades(gradeId: string): Promise<{
                 exam: true,
                 subtotal: true,
                 cropRegion: true,
-                manualScores: true,
-                letterScales: true,
+                courseworkItem: {
+                  include: {
+                    scores: true,
+                    letterScales: { orderBy: { order: "asc" } },
+                  },
+                },
               },
               orderBy: { order: "asc" },
             },
@@ -207,7 +211,11 @@ export async function calculateGrades(gradeId: string): Promise<{
       }
       return {
         id: ds.id,
-        maxScore: Number(ds.maxScore),
+        // coursework型は評価項目の満点を live 参照（ドリフト回避）
+        maxScore:
+          ds.type === "coursework" && ds.courseworkItem
+            ? Number(ds.courseworkItem.maxScore)
+            : Number(ds.maxScore),
         absentMethod: (ds.absentMethod ?? "null") as AbsentMethod,
         absentRatio: Number(ds.absentRatio ?? 1),
         absentOffset: Number(ds.absentOffset ?? 0),
@@ -271,7 +279,11 @@ export async function calculateGrades(gradeId: string): Promise<{
         const sourceScores: SourceScoreResult[] = []
 
         for (const ds of gradeItem.dataSources) {
-          const maxScore = Number(ds.maxScore)
+          // coursework型は評価項目の満点を live 参照（ドリフト回避）
+          const maxScore =
+            ds.type === "coursework" && ds.courseworkItem
+              ? Number(ds.courseworkItem.maxScore)
+              : Number(ds.maxScore)
           const weight = Number(ds.weight)
           const absentMethod = (ds.absentMethod ?? "null") as AbsentMethod
           const absentRatio = Number(ds.absentRatio ?? 1)
@@ -318,10 +330,12 @@ export async function calculateGrades(gradeId: string): Promise<{
               ? (rawScore / maxScore) * weight
               : null
 
-          // manual型: 入力された評価記号・加減点・コメントを結果に添付
-          const manualScore =
-            ds.type === "manual"
-              ? ds.manualScores.find((m) => m.studentId === student.id)
+          // coursework型: 入力された評価記号・加減点・コメントを結果に添付
+          const courseworkScore =
+            ds.type === "coursework"
+              ? ds.courseworkItem?.scores.find(
+                  (s) => s.studentId === student.id
+                )
               : undefined
 
           sourceScores.push({
@@ -333,14 +347,14 @@ export async function calculateGrades(gradeId: string): Promise<{
             weight,
             weightedScore,
             isEstimated,
-            letterValue: manualScore?.letterValue ?? null,
+            letterValue: courseworkScore?.letterValue ?? null,
             adjustment:
-              manualScore?.adjustment !== null &&
-              manualScore?.adjustment !== undefined
-                ? Number(manualScore.adjustment)
+              courseworkScore?.adjustment !== null &&
+              courseworkScore?.adjustment !== undefined
+                ? Number(courseworkScore.adjustment)
                 : null,
-            adjustmentReason: manualScore?.adjustmentReason ?? null,
-            comment: manualScore?.comment ?? null,
+            adjustmentReason: courseworkScore?.adjustmentReason ?? null,
+            comment: courseworkScore?.comment ?? null,
           })
         }
 
@@ -493,14 +507,17 @@ async function getRawScore(
     subtotalId: string | null
     cropRegionId: string | null
     maxScore: unknown
-    inputMode?: string
-    manualScores: {
-      studentId: string
-      score: unknown
-      letterValue?: string | null
-      adjustment?: unknown
-    }[]
-    letterScales?: { label: string; score: unknown }[]
+    courseworkItem?: {
+      maxScore: unknown
+      inputMode: string
+      scores: {
+        studentId: string
+        score: unknown
+        letterValue?: string | null
+        adjustment?: unknown
+      }[]
+      letterScales: { label: string; score: unknown }[]
+    } | null
   },
   examDataCache: Map<string, ExamDataCache>
 ): Promise<number | null> {
@@ -526,55 +543,56 @@ async function getRawScore(
       ds.examId,
       examDataCache
     )
-  } else if (ds.type === "manual") {
-    return getManualRawScore(studentId, ds)
+  } else if (ds.type === "coursework" && ds.courseworkItem) {
+    return getCourseworkRawScore(studentId, ds.courseworkItem)
   }
   return null
 }
 
 /**
- * manual型データソースの実スコアを算出する。
+ * coursework型データソース（試験外成績資料の評価項目）の実スコアを算出する。
  * - letterモード: 入力された評価記号を変換表で点数化
  * - numericモード: 入力された数値をそのまま使用
  * いずれも加点・減点(adjustment)を加算し、[0, maxScore]にクランプする。
+ * 満点は評価項目（CourseworkItem.maxScore）を live 参照する。
  */
-function getManualRawScore(
+function getCourseworkRawScore(
   studentId: string,
-  ds: {
+  item: {
     maxScore: unknown
-    inputMode?: string
-    manualScores: {
+    inputMode: string
+    scores: {
       studentId: string
       score: unknown
       letterValue?: string | null
       adjustment?: unknown
     }[]
-    letterScales?: { label: string; score: unknown }[]
+    letterScales: { label: string; score: unknown }[]
   }
 ): number | null {
-  const ms = ds.manualScores.find((m) => m.studentId === studentId)
-  if (!ms) return null
+  const cs = item.scores.find((s) => s.studentId === studentId)
+  if (!cs) return null
 
   // 基準スコア（変換前・加減点前）を決定
   let base: number | null
-  if (ds.inputMode === "letter") {
-    if (ms.letterValue === null || ms.letterValue === undefined) {
+  if (item.inputMode === "letter") {
+    if (cs.letterValue === null || cs.letterValue === undefined) {
       base = null
     } else {
-      const scale = ds.letterScales?.find((ls) => ls.label === ms.letterValue)
+      const scale = item.letterScales.find((ls) => ls.label === cs.letterValue)
       base = scale ? Number(scale.score) : null
     }
   } else {
-    base = ms.score !== null && ms.score !== undefined ? Number(ms.score) : null
+    base = cs.score !== null && cs.score !== undefined ? Number(cs.score) : null
   }
 
   if (base === null || Number.isNaN(base)) return null
 
   const adjustment =
-    ms.adjustment !== null && ms.adjustment !== undefined
-      ? Number(ms.adjustment)
+    cs.adjustment !== null && cs.adjustment !== undefined
+      ? Number(cs.adjustment)
       : 0
-  const maxScore = Number(ds.maxScore)
+  const maxScore = Number(item.maxScore)
   return clamp(base + adjustment, 0, maxScore)
 }
 

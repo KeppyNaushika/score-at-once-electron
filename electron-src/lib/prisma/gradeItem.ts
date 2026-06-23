@@ -26,7 +26,13 @@ export async function getGradeItemsByExamId(gradeId: string) {
             },
             subtotal: { select: { id: true, name: true, order: true } },
             cropRegion: { select: { id: true, label: true, points: true } },
-            _count: { select: { manualScores: true } },
+            courseworkItem: {
+              include: {
+                coursework: { select: { id: true, name: true } },
+                letterScales: { orderBy: { order: "asc" } },
+                _count: { select: { scores: true, gradeDataSources: true } },
+              },
+            },
           },
           orderBy: { order: "asc" },
         },
@@ -68,6 +74,13 @@ export async function createGradeItem(data: { gradeId: string; name: string }) {
             },
             subtotal: { select: { id: true, name: true, order: true } },
             cropRegion: { select: { id: true, label: true, points: true } },
+            courseworkItem: {
+              include: {
+                coursework: { select: { id: true, name: true } },
+                letterScales: { orderBy: { order: "asc" } },
+                _count: { select: { scores: true, gradeDataSources: true } },
+              },
+            },
           },
           orderBy: { order: "asc" },
         },
@@ -110,6 +123,13 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
             },
             subtotal: { select: { id: true, name: true, order: true } },
             cropRegion: { select: { id: true, label: true, points: true } },
+            courseworkItem: {
+              include: {
+                coursework: { select: { id: true, name: true } },
+                letterScales: { orderBy: { order: "asc" } },
+                _count: { select: { scores: true, gradeDataSources: true } },
+              },
+            },
           },
           orderBy: { order: "asc" },
         },

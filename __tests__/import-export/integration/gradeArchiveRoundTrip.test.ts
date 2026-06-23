@@ -5,8 +5,10 @@
  *   electron-src/lib/export/grade-archive/gradeArchiveDataCollector.ts
  *   electron-src/lib/import/grade-archive/gradeArchiveImporter.ts
  *
- * 実SQLiteで「収集(export) → インポート(import)」を一周し、特に v1.2.0 で追加した
- * Grade.referenceDate と GradeExportSettings が往復で保持されることを検証する。
+ * 実SQLiteで「収集(export) → インポート(import)」を一周し、
+ *  - v1.2.0 の Grade.referenceDate / GradeExportSettings
+ *  - v1.4.0 の試験外成績資料(Coursework: 複数項目・点数・コメント・名簿・タグ)
+ * が往復で保持されること、および旧 v1.3.0 形式が Coursework へ変換されることを検証する。
  */
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -26,7 +28,10 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
 })
 
 import { collectGradeArchiveData } from "../../../electron-src/lib/export/grade-archive/gradeArchiveDataCollector"
-import { importGradeArchive } from "../../../electron-src/lib/import/grade-archive/gradeArchiveImporter"
+import {
+  importGradeArchive,
+  previewGradeArchiveImport,
+} from "../../../electron-src/lib/import/grade-archive/gradeArchiveImporter"
 
 const prisma = getTestPrismaClient()
 
@@ -37,15 +42,15 @@ function toArchive(
 ): GradeArchiveData {
   return {
     manifest: {
-      version: "1.2.0",
+      version: "1.4.0",
       appVersion: "test",
-      exportedAt: new Date("2026-06-14T00:00:00.000Z").toISOString(),
+      exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
       gradeId,
       gradeName: collected.gradeData.grade.name,
       counts: collected.counts,
     },
     gradeData: collected.gradeData,
-    manualScoresData: collected.manualScoresData,
+    courseworks: collected.courseworksData,
     boundariesData: collected.boundariesData,
   }
 }
@@ -105,21 +110,54 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(importedSettings!.settingsJson).toBe(settingsJson)
   })
 
-  it("文字評価変換表・inputMode・加減点・コメントが往復で保持される (v1.3.0)", async () => {
-    const grade = await prisma.grade.create({
-      data: { name: `成績_letter_${Date.now()}` },
+  it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが往復で保持される (v1.4.0)", async () => {
+    const suffix = Date.now()
+
+    // 生徒・学級
+    const cls = await prisma.class.create({
+      data: { name: `学級_${suffix}` },
     })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "授業態度", order: 0 },
-    })
-    const ds = await prisma.gradeDataSource.create({
+    const student = await prisma.student.create({
       data: {
-        gradeItemId: gradeItem.id,
-        type: "manual",
-        name: "観点別評価",
-        maxScore: 100,
-        weight: 100,
+        studentNumber: `CW_${suffix}`,
+        lastName: "鈴木",
+        firstName: "一郎",
+        lastNameKana: "スズキ",
+        firstNameKana: "イチロウ",
+      },
+    })
+    await prisma.studentClassMembership.create({
+      data: { classId: cls.id, studentId: student.id },
+    })
+    const tag = await prisma.tag.create({
+      data: { name: `タグ_${suffix}` },
+    })
+
+    // 試験外成績資料（2項目: 数値 + 文字評価）
+    const coursework = await prisma.coursework.create({
+      data: {
+        name: `第2回レポート_${suffix}`,
+        description: "レポート評価",
+        classes: { create: [{ classId: cls.id, order: 0 }] },
+        tags: { create: [{ tagId: tag.id }] },
+        students: { create: [{ studentId: student.id, customOrder: 0 }] },
+      },
+    })
+    const numItem = await prisma.courseworkItem.create({
+      data: {
+        courseworkId: coursework.id,
+        name: "提出物",
         order: 0,
+        maxScore: 100,
+        inputMode: "numeric",
+      },
+    })
+    const letterItem = await prisma.courseworkItem.create({
+      data: {
+        courseworkId: coursework.id,
+        name: "授業態度",
+        order: 1,
+        maxScore: 100,
         inputMode: "letter",
         letterScales: {
           create: [
@@ -130,59 +168,323 @@ describe("grade-archive ラウンドトリップ", () => {
         },
       },
     })
-    const student = await prisma.student.create({
+    await prisma.courseworkScore.create({
       data: {
-        studentNumber: `SL_${Date.now()}`,
-        lastName: "鈴木",
-        firstName: "一郎",
-        lastNameKana: "スズキ",
-        firstNameKana: "イチロウ",
-      },
-    })
-    await prisma.manualScore.create({
-      data: {
-        gradeDataSourceId: ds.id,
+        courseworkItemId: numItem.id,
         studentId: student.id,
-        letterValue: "B",
+        score: 85,
         adjustment: -5,
         adjustmentReason: "提出遅延",
+        comment: "丁寧にまとめられています",
+      },
+    })
+    await prisma.courseworkScore.create({
+      data: {
+        courseworkItemId: letterItem.id,
+        studentId: student.id,
+        letterValue: "B",
         comment: "発表が活発でした",
+      },
+    })
+
+    // 成績: 各項目を参照する coursework 型データソース
+    const grade = await prisma.grade.create({
+      data: { name: `成績_cw_${suffix}` },
+    })
+    const gradeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "主体的態度", order: 0 },
+    })
+    await prisma.gradeDataSource.create({
+      data: {
+        gradeItemId: gradeItem.id,
+        type: "coursework",
+        courseworkItemId: numItem.id,
+        name: "提出物参照",
+        maxScore: 100,
+        weight: 50,
+        order: 0,
+      },
+    })
+    await prisma.gradeDataSource.create({
+      data: {
+        gradeItemId: gradeItem.id,
+        type: "coursework",
+        courseworkItemId: letterItem.id,
+        name: "授業態度参照",
+        maxScore: 100,
+        weight: 50,
+        order: 1,
       },
     })
 
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
-    const collectedDs = collected.gradeData.gradeItems[0].dataSources[0]
-    expect(collectedDs.inputMode).toBe("letter")
-    expect(collectedDs.letterScales).toHaveLength(3)
-    const collectedMs = collected.manualScoresData.manualScores[0]
-    expect(collectedMs.letterValue).toBe("B")
-    expect(collectedMs.adjustment).toBe(-5)
-    expect(collectedMs.comment).toBe("発表が活発でした")
+    expect(collected.courseworksData).toHaveLength(1)
+    const cw = collected.courseworksData[0]
+    expect(cw.items).toHaveLength(2)
+    expect(cw.classes).toHaveLength(1)
+    expect(cw.tags[0].tagName).toBe(`タグ_${suffix}`)
+    expect(cw.students[0].studentNumber).toBe(`CW_${suffix}`)
+    const collectedNumDs = collected.gradeData.gradeItems[0].dataSources.find(
+      (d) => d.name === "提出物参照"
+    )!
+    expect(collectedNumDs.courseworkName).toBe(`第2回レポート_${suffix}`)
+    expect(collectedNumDs.courseworkItemName).toBe("提出物")
 
-    // インポート
+    // インポート（新規 Grade + Coursework が作成される。同名Courseworkは無い前提）
+    // 既存 Coursework と名前衝突しないよう、元の資料は残るが import 時は
+    // 別名でないため findFirst で既存を再利用する → 名前を変えて検証する。
+    // ここでは元データを削除せず、import が既存同名を再利用することを確認する。
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
 
+    // import 後、coursework 型データソースが courseworkItem を正しく解決していること
     const importedDs = await prisma.gradeDataSource.findFirst({
       where: {
         gradeItem: { gradeId: result.gradeId! },
-        name: "観点別評価",
+        name: "提出物参照",
       },
-      include: { letterScales: { orderBy: { order: "asc" } } },
+      include: {
+        courseworkItem: {
+          include: {
+            coursework: true,
+            scores: { include: { student: true } },
+          },
+        },
+      },
     })
-    expect(importedDs!.inputMode).toBe("letter")
-    expect(importedDs!.letterScales).toHaveLength(3)
-    expect(importedDs!.letterScales[0].label).toBe("A")
-    expect(Number(importedDs!.letterScales[0].score)).toBe(100)
+    expect(importedDs!.courseworkItem).not.toBeNull()
+    expect(importedDs!.courseworkItem!.name).toBe("提出物")
+    expect(importedDs!.courseworkItem!.coursework.name).toBe(
+      `第2回レポート_${suffix}`
+    )
+    // 既存同名 Coursework が再利用される（重複作成されない）
+    const courseworkCount = await prisma.coursework.count({
+      where: { name: `第2回レポート_${suffix}` },
+    })
+    expect(courseworkCount).toBe(1)
+  })
 
-    const importedMs = await prisma.manualScore.findFirst({
-      where: { gradeDataSourceId: importedDs!.id },
+  it("v1.4.0 で新規 Coursework が埋め込みから復元される（名前を変えて衝突回避）", async () => {
+    const suffix = Date.now()
+    await prisma.student.create({
+      data: {
+        studentNumber: `CW2_${suffix}`,
+        lastName: "佐藤",
+        firstName: "花子",
+        lastNameKana: "サトウ",
+        firstNameKana: "ハナコ",
+      },
     })
-    expect(importedMs!.letterValue).toBe("B")
-    expect(Number(importedMs!.adjustment)).toBe(-5)
-    expect(importedMs!.adjustmentReason).toBe("提出遅延")
-    expect(importedMs!.comment).toBe("発表が活発でした")
+
+    // アーカイブを手組み（DBには Coursework を作らず、埋め込みのみ）
+    const archive: GradeArchiveData = {
+      manifest: {
+        version: "1.4.0",
+        appVersion: "test",
+        exportedAt: new Date().toISOString(),
+        gradeId: "src",
+        gradeName: `成績_embed_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 1,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 0,
+          students: 1,
+        },
+      },
+      gradeData: {
+        grade: { name: `成績_embed_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "観点A",
+            order: 0,
+            dataSources: [
+              {
+                type: "coursework",
+                name: "資料参照",
+                maxScore: 100,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+                courseworkName: `埋込資料_${suffix}`,
+                courseworkItemName: "課題1",
+              },
+            ],
+          },
+        ],
+        classRefs: [],
+        examRefs: [],
+        studentRefs: [
+          { studentNumber: `CW2_${suffix}`, className: null, customOrder: 0 },
+        ],
+      },
+      courseworks: [
+        {
+          id: `cw_embed_${suffix}`,
+          name: `埋込資料_${suffix}`,
+          description: "埋め込みテスト",
+          date: null,
+          classes: [],
+          tags: [],
+          students: [{ studentNumber: `CW2_${suffix}`, customOrder: 0 }],
+          items: [
+            {
+              id: `cwi_embed_${suffix}`,
+              name: "課題1",
+              order: 0,
+              maxScore: 100,
+              inputMode: "numeric",
+              letterScales: [],
+              scores: [
+                {
+                  studentNumber: `CW2_${suffix}`,
+                  score: 72,
+                  letterValue: null,
+                  adjustment: null,
+                  adjustmentReason: null,
+                  comment: "良好",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      boundariesData: { boundarySets: [] },
+    }
+
+    const result = await importGradeArchive(archive)
+    expect(result.success).toBe(true)
+
+    const importedItem = await prisma.courseworkItem.findFirst({
+      where: { coursework: { name: `埋込資料_${suffix}` }, name: "課題1" },
+      include: { scores: { include: { student: true } } },
+    })
+    expect(importedItem).not.toBeNull()
+    expect(importedItem!.scores).toHaveLength(1)
+    expect(Number(importedItem!.scores[0].score)).toBe(72)
+    expect(importedItem!.scores[0].student.studentNumber).toBe(`CW2_${suffix}`)
+
+    const ds = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: result.gradeId! }, name: "資料参照" },
+    })
+    expect(ds!.courseworkItemId).toBe(importedItem!.id)
+    expect(ds!.type).toBe("coursework")
+  })
+
+  it("旧 v1.3.0 形式（manual + inputMode + letterScales）が Coursework へ変換される（後方互換）", async () => {
+    const suffix = Date.now()
+    await prisma.student.create({
+      data: {
+        studentNumber: `LEGACY_${suffix}`,
+        lastName: "高橋",
+        firstName: "次郎",
+        lastNameKana: "タカハシ",
+        firstNameKana: "ジロウ",
+      },
+    })
+
+    // 旧 v1.3.0 アーカイブ JSON を手組み（courseworks 無し、manualScoresData あり）
+    const legacy: GradeArchiveData = {
+      manifest: {
+        version: "1.3.0",
+        appVersion: "test",
+        exportedAt: new Date().toISOString(),
+        gradeId: "legacy",
+        gradeName: `成績_legacy_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 1,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 0,
+          students: 1,
+        },
+      },
+      gradeData: {
+        grade: { name: `成績_legacy_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "授業態度",
+            order: 0,
+            dataSources: [
+              {
+                type: "manual",
+                name: "観点別評価",
+                maxScore: 100,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+                inputMode: "letter",
+                letterScales: [
+                  { label: "A", score: 100, order: 0 },
+                  { label: "B", score: 80, order: 1 },
+                  { label: "C", score: 60, order: 2 },
+                ],
+              },
+            ],
+          },
+        ],
+        classRefs: [],
+        examRefs: [],
+        studentRefs: [
+          {
+            studentNumber: `LEGACY_${suffix}`,
+            className: null,
+            customOrder: 0,
+          },
+        ],
+      },
+      manualScoresData: {
+        manualScores: [
+          {
+            gradeItemName: "授業態度",
+            dataSourceName: "観点別評価",
+            studentNumber: `LEGACY_${suffix}`,
+            score: null,
+            letterValue: "B",
+            adjustment: -5,
+            adjustmentReason: "提出遅延",
+            comment: "発表が活発でした",
+          },
+        ],
+      },
+      boundariesData: { boundarySets: [] },
+    }
+
+    const result = await importGradeArchive(legacy)
+    expect(result.success).toBe(true)
+
+    // manual DataSource → Coursework(1項目) へ変換されている
+    const importedItem = await prisma.courseworkItem.findFirst({
+      where: { coursework: { name: "観点別評価" }, name: "観点別評価" },
+      include: {
+        letterScales: { orderBy: { order: "asc" } },
+        scores: true,
+      },
+    })
+    expect(importedItem).not.toBeNull()
+    expect(importedItem!.inputMode).toBe("letter")
+    expect(importedItem!.letterScales).toHaveLength(3)
+    expect(importedItem!.letterScales[0].label).toBe("A")
+    expect(importedItem!.scores).toHaveLength(1)
+    expect(importedItem!.scores[0].letterValue).toBe("B")
+    expect(Number(importedItem!.scores[0].adjustment)).toBe(-5)
+    expect(importedItem!.scores[0].comment).toBe("発表が活発でした")
+
+    // GradeDataSource が coursework 型に変換され item を参照している
+    const ds = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: result.gradeId! }, name: "観点別評価" },
+    })
+    expect(ds!.type).toBe("coursework")
+    expect(ds!.courseworkItemId).toBe(importedItem!.id)
   })
 
   it("referenceDate/exportSettings が無いGradeも問題なく往復する（後方互換）", async () => {
@@ -193,6 +495,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.gradeData.grade.referenceDate).toBeNull()
     expect(collected.gradeData.exportSettings).toBeNull()
+    expect(collected.courseworksData).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
@@ -206,5 +509,260 @@ describe("grade-archive ラウンドトリップ", () => {
       where: { gradeId: result.gradeId! },
     })
     expect(importedSettings).toBeNull()
+  })
+
+  it("v1.4.0: uuid一次照合で再インポートは冪等、明示的newで複製（ユーザー判断）", async () => {
+    const suffix = Date.now()
+    const cwId = `cw_uuid_${suffix}`
+    const itemId = `cwi_uuid_${suffix}`
+    const cwName = `uuid資料_${suffix}`
+    await prisma.student.create({
+      data: {
+        studentNumber: `UU_${suffix}`,
+        lastName: "鈴木",
+        firstName: "一郎",
+        lastNameKana: "スズキ",
+        firstNameKana: "イチロウ",
+      },
+    })
+
+    const buildArchive = (): GradeArchiveData => ({
+      manifest: {
+        version: "1.4.0",
+        appVersion: "test",
+        exportedAt: new Date().toISOString(),
+        gradeId: "g",
+        gradeName: `成績_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 1,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 0,
+          students: 1,
+        },
+      },
+      gradeData: {
+        grade: { name: `成績_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "観点",
+            order: 0,
+            dataSources: [
+              {
+                type: "coursework",
+                name: "資料参照",
+                maxScore: 100,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+                courseworkId: cwId,
+                courseworkItemId: itemId,
+                courseworkName: cwName,
+                courseworkItemName: "課題",
+              },
+            ],
+          },
+        ],
+        classRefs: [],
+        examRefs: [],
+        studentRefs: [
+          { studentNumber: `UU_${suffix}`, className: null, customOrder: 0 },
+        ],
+      },
+      courseworks: [
+        {
+          id: cwId,
+          name: cwName,
+          description: null,
+          date: null,
+          classes: [],
+          tags: [],
+          students: [{ studentNumber: `UU_${suffix}`, customOrder: 0 }],
+          items: [
+            {
+              id: itemId,
+              name: "課題",
+              order: 0,
+              maxScore: 100,
+              inputMode: "numeric",
+              letterScales: [],
+              scores: [
+                {
+                  studentNumber: `UU_${suffix}`,
+                  score: 80,
+                  letterValue: null,
+                  adjustment: null,
+                  adjustmentReason: null,
+                  comment: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      boundariesData: { boundarySets: [] },
+    })
+
+    // 1回目: decision未指定 → 元uuidを保持して新規作成
+    const r1 = await importGradeArchive(buildArchive())
+    expect(r1.success).toBe(true)
+    const created = await prisma.coursework.findUnique({ where: { id: cwId } })
+    expect(created).not.toBeNull()
+
+    // preview: uuid一致が検出される
+    const preview = await previewGradeArchiveImport(buildArchive())
+    expect(preview.courseworkMatches[0].uuidMatch?.id).toBe(cwId)
+
+    // 2回目: decision未指定 → uuid一致で流用（複製しない=冪等）
+    const r2 = await importGradeArchive(buildArchive())
+    expect(r2.success).toBe(true)
+    const afterReuse = await prisma.coursework.findMany({
+      where: { name: cwName },
+    })
+    expect(afterReuse).toHaveLength(1)
+    // DataSource は既存項目(itemId)を uuid一次で解決して結ぶ
+    const ds2 = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: r2.gradeId! }, name: "資料参照" },
+    })
+    expect(ds2!.courseworkItemId).toBe(itemId)
+
+    // 3回目: 明示的 new → ユーザー判断で別資料として複製（新uuid）
+    const r3 = await importGradeArchive(buildArchive(), {
+      courseworkDecisions: { [cwId]: { action: "new" } },
+    })
+    expect(r3.success).toBe(true)
+    const afterNew = await prisma.coursework.findMany({
+      where: { name: cwName },
+    })
+    expect(afterNew).toHaveLength(2)
+  })
+
+  it("v1.4.0: reuse判断で既存資料に統合し、不足項目だけ補完する", async () => {
+    const suffix = Date.now()
+    await prisma.student.create({
+      data: {
+        studentNumber: `RE_${suffix}`,
+        lastName: "田中",
+        firstName: "花",
+        lastNameKana: "タナカ",
+        firstNameKana: "ハナ",
+      },
+    })
+    // 既存資料（項目「既存」のみ）を用意
+    const existing = await prisma.coursework.create({
+      data: {
+        name: `統合先_${suffix}`,
+        items: { create: [{ name: "既存", order: 0, maxScore: 100 }] },
+      },
+      include: { items: true },
+    })
+
+    const archive: GradeArchiveData = {
+      manifest: {
+        version: "1.4.0",
+        appVersion: "test",
+        exportedAt: new Date().toISOString(),
+        gradeId: "g",
+        gradeName: `成績_re_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 1,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 0,
+          students: 1,
+        },
+      },
+      gradeData: {
+        grade: { name: `成績_re_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "観点",
+            order: 0,
+            dataSources: [
+              {
+                type: "coursework",
+                name: "資料参照",
+                maxScore: 100,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+                courseworkId: `arch_cw_${suffix}`,
+                courseworkItemId: `arch_item_${suffix}`,
+                courseworkName: `統合先_${suffix}`,
+                courseworkItemName: "新規項目",
+              },
+            ],
+          },
+        ],
+        classRefs: [],
+        examRefs: [],
+        studentRefs: [
+          { studentNumber: `RE_${suffix}`, className: null, customOrder: 0 },
+        ],
+      },
+      courseworks: [
+        {
+          id: `arch_cw_${suffix}`,
+          name: `統合先_${suffix}`,
+          description: null,
+          date: null,
+          classes: [],
+          tags: [],
+          students: [{ studentNumber: `RE_${suffix}`, customOrder: 0 }],
+          items: [
+            {
+              id: `arch_item_${suffix}`,
+              name: "新規項目",
+              order: 1,
+              maxScore: 50,
+              inputMode: "numeric",
+              letterScales: [],
+              scores: [
+                {
+                  studentNumber: `RE_${suffix}`,
+                  score: 40,
+                  letterValue: null,
+                  adjustment: null,
+                  adjustmentReason: null,
+                  comment: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      boundariesData: { boundarySets: [] },
+    }
+
+    const result = await importGradeArchive(archive, {
+      courseworkDecisions: {
+        [`arch_cw_${suffix}`]: { action: "reuse", existingId: existing.id },
+      },
+    })
+    expect(result.success).toBe(true)
+
+    // 複製されず既存資料に項目が補完される（既存「既存」＋補完「新規項目」=2）
+    const items = await prisma.courseworkItem.findMany({
+      where: { courseworkId: existing.id },
+    })
+    expect(items).toHaveLength(2)
+    expect(items.map((i) => i.name)).toEqual(
+      expect.arrayContaining(["既存", "新規項目"])
+    )
+    // DataSource は補完された項目に結ばれる
+    const ds = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: result.gradeId! }, name: "資料参照" },
+      include: { courseworkItem: true },
+    })
+    expect(ds!.courseworkItem!.name).toBe("新規項目")
+    expect(ds!.courseworkItem!.courseworkId).toBe(existing.id)
   })
 })

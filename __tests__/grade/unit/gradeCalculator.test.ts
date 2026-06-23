@@ -107,10 +107,38 @@ function buildGrade(
     }[]
   } = {}
 ) {
+  // 旧 manual 形式（manualScores/inputMode/letterScales をトップレベルに持つ）を、
+  // 新スキーマの coursework 形式（courseworkItem に内包）へ変換する。
+  // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
+  const gradeItems = (overrides.gradeItems ?? []).map((gi) => ({
+    ...gi,
+    dataSources: gi.dataSources.map((ds) => {
+      const isCoursework =
+        ds.type === "manual" ||
+        ds.type === "coursework" ||
+        ds.manualScores !== undefined ||
+        ds.inputMode !== undefined ||
+        ds.letterScales !== undefined
+      if (!isCoursework) {
+        return { ...ds, courseworkItem: null }
+      }
+      return {
+        ...ds,
+        type: "coursework",
+        courseworkItem: {
+          maxScore: ds.maxScore,
+          inputMode: ds.inputMode ?? "numeric",
+          scores: ds.manualScores ?? [],
+          letterScales: ds.letterScales ?? [],
+        },
+      }
+    }),
+  }))
+
   return {
     id: overrides.id ?? "gp1",
     name: overrides.name ?? "テストPJ",
-    gradeItems: overrides.gradeItems ?? [],
+    gradeItems,
     boundarySets: overrides.boundarySets ?? [],
     gradeClasses: overrides.gradeClasses ?? [],
   }

@@ -366,6 +366,58 @@ export const AUDIT_ACTIONS = {
     label: "成績の上書きを更新しました",
   },
 
+  // ── 試験外成績資料（coursework） ─────────────────────────────
+  "coursework.create": {
+    category: "grade",
+    verb: "create",
+    label: "試験外成績資料「{target}」を作成しました",
+  },
+  "coursework.update": {
+    category: "grade",
+    verb: "update",
+    label: "試験外成績資料「{target}」を編集しました",
+  },
+  "coursework.delete": {
+    category: "grade",
+    verb: "delete",
+    label: "試験外成績資料「{target}」を削除しました",
+  },
+  "coursework.student.add": {
+    category: "grade",
+    verb: "create",
+    label: "資料対象生徒を追加しました",
+  },
+  "coursework.student.remove": {
+    category: "grade",
+    verb: "delete",
+    label: "資料対象生徒を削除しました",
+  },
+  "coursework.student.reorder": {
+    category: "grade",
+    verb: "update",
+    label: "資料対象生徒の並び順を変更しました",
+  },
+  "coursework.item.create": {
+    category: "grade",
+    verb: "create",
+    label: "評価項目「{target}」を作成しました",
+  },
+  "coursework.item.update": {
+    category: "grade",
+    verb: "update",
+    label: "評価項目「{target}」を編集しました",
+  },
+  "coursework.item.delete": {
+    category: "grade",
+    verb: "delete",
+    label: "評価項目「{target}」を削除しました",
+  },
+  "coursework.score.update": {
+    category: "grade",
+    verb: "update",
+    label: "資料の点数を更新しました",
+  },
+
   // ── 解答用紙作成（answer_sheet） ─────────────────────────────
   "answer_sheet.create": {
     category: "answer_sheet",
