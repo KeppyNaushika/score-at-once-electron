@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
+import { isCurrentMembership } from "@/lib/membership"
 import type {
   ClassWithMemberships,
   StudentWithMemberships,
@@ -60,7 +61,7 @@ export default function StudentTable() {
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
-    useState<string>("all")
+    useState<string>("current")
   const [filterClassId, setFilterClassId] = useState<string>("all")
 
   // Selection states
@@ -94,12 +95,6 @@ export default function StudentTable() {
     }
     fetchData()
   }, [])
-
-  // 現在所属中かどうかを判定するヘルパー関数
-  const isCurrentMembership = (m: { endDate?: Date | null }) => {
-    if (!m.endDate) return true
-    return new Date(m.endDate) >= new Date()
-  }
 
   // Filter students
   const filteredStudents = useMemo(() => {

@@ -172,15 +172,17 @@ export default function StudentClassMembershipModal({
               生徒
             </Label>
             <div className="col-span-3 space-y-2">
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
-                <Input
-                  placeholder="生徒名または学籍番号で検索"
-                  value={studentSearchTerm}
-                  onChange={(e) => setStudentSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+              {!initialStudentId && (
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
+                  <Input
+                    placeholder="生徒名または学籍番号で検索"
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              )}
               <Select
                 value={studentId}
                 onValueChange={setStudentId}

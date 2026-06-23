@@ -42,6 +42,7 @@ export default function ClassDetailPage() {
     setIsStudentImportModalOpen,
     isMembershipModalOpen,
     setIsMembershipModalOpen,
+    membershipToEdit,
     setMembershipToEdit,
     handleSaveClass,
     handleStudentImportSuccess,
@@ -55,6 +56,11 @@ export default function ClassDetailPage() {
     useClassExamResults(classId)
 
   const handleEditMembership = (membership: Membership) => {
+    setMembershipToEdit(membership)
+    setIsMembershipModalOpen(true)
+  }
+
+  const handleViewStudent = (membership: Membership) => {
     router.push(`/students/${membership.student.id}`)
   }
 
@@ -203,6 +209,7 @@ export default function ClassDetailPage() {
                 <MembershipTable
                   memberships={classData.memberships}
                   onEdit={handleEditMembership}
+                  onViewStudent={handleViewStudent}
                   onDelete={handleDeleteMembership}
                   onBulkDelete={handleBulkDeleteMemberships}
                 />
@@ -231,9 +238,11 @@ export default function ClassDetailPage() {
           isOpen={isMembershipModalOpen}
           onClose={() => setIsMembershipModalOpen(false)}
           onSave={handleSaveMembership}
+          studentId={membershipToEdit?.studentId}
           classId={classId}
           availableStudents={students}
           availableClasses={[]}
+          membershipToEdit={membershipToEdit}
         />
       </div>
     </ProtectedRoute>

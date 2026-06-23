@@ -30,9 +30,6 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
       include: {
         student: true
       }
-      where: {
-        endDate: null // 現在所属中のみ
-      }
     }
   }
 }>
