@@ -26,6 +26,187 @@ import {
 } from "../lib/shared/utilities/validateScoringData"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
+// ============================================================
+// SVG→PNG変換用の共有オフスクリーンウィンドウ
+// ------------------------------------------------------------
+// テキスト要素ごとにBrowserWindowを生成・破棄すると、並列レンダリング時に
+// オフスクリーン合成サーフェスの確保やcapturePageが間欠的に失敗する。
+// 単一ウィンドウを使い回し、変換要求を直列化することで安定化・高速化する。
+// ============================================================
+
+/** 使い回す共有オフスクリーンウィンドウ */
+let sharedSvgWindow: BrowserWindow | null = null
+
+/** 変換要求を直列化するためのキュー */
+let svgConvertChain: Promise<unknown> = Promise.resolve()
+
+/** 進行中の変換要求数（0になったらアイドル破棄を予約する） */
+let pendingSvgConversions = 0
+
+/** アイドル時に共有ウィンドウを破棄するタイマー */
+let svgWindowIdleTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 変換が一定時間来なければ共有ウィンドウを破棄するまでの待機時間。
+ * 隠しウィンドウが常駐し続けると window-all-closed が発火せずアプリが終了
+ * できなくなるため、エクスポートのバースト終了後は速やかに解放する。
+ */
+const SVG_WINDOW_IDLE_MS = 5000
+
+/**
+ * loadURL / capturePage 1回あたりのタイムアウト。
+ * オフスクリーンGPUのストールでチェーンが永久ブロックするのを防ぐ。
+ */
+const SVG_RENDER_TIMEOUT_MS = 15000
+
+/** 共有オフスクリーンウィンドウを取得（無ければ生成） */
+function getSharedSvgWindow(): BrowserWindow {
+  // 利用が始まったらアイドル破棄予約を解除する
+  if (svgWindowIdleTimer) {
+    clearTimeout(svgWindowIdleTimer)
+    svgWindowIdleTimer = null
+  }
+  if (sharedSvgWindow && !sharedSvgWindow.isDestroyed()) {
+    return sharedSvgWindow
+  }
+  sharedSvgWindow = new BrowserWindow({
+    width: 200,
+    height: 50,
+    show: false,
+    transparent: true,
+    frame: false,
+    hasShadow: false,
+    webPreferences: {
+      offscreen: true,
+    },
+  })
+  return sharedSvgWindow
+}
+
+/**
+ * 共有オフスクリーンウィンドウを破棄する。
+ * アプリ終了時・変換失敗（ハング/クラッシュの疑い）時・アイドル時に呼ぶ。
+ * 破棄後は次回 getSharedSvgWindow で新しいウィンドウが生成される。
+ */
+export function destroySharedSvgWindow(): void {
+  if (svgWindowIdleTimer) {
+    clearTimeout(svgWindowIdleTimer)
+    svgWindowIdleTimer = null
+  }
+  if (sharedSvgWindow && !sharedSvgWindow.isDestroyed()) {
+    sharedSvgWindow.destroy()
+  }
+  sharedSvgWindow = null
+}
+
+/** 変換要求が掃けたら、一定アイドル後にウィンドウを破棄するよう予約する */
+function scheduleSvgWindowTeardown(): void {
+  if (svgWindowIdleTimer) clearTimeout(svgWindowIdleTimer)
+  svgWindowIdleTimer = setTimeout(() => {
+    svgWindowIdleTimer = null
+    // タイマー発火までに新たな要求が来ていないことを確認してから破棄
+    if (pendingSvgConversions === 0) destroySharedSvgWindow()
+  }, SVG_WINDOW_IDLE_MS)
+}
+
+/** 指定ミリ秒待機する */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Promiseにタイムアウトを付与する。期限を超えたら reject する。 */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`))
+    }, ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err) => {
+        clearTimeout(timer)
+        reject(err)
+      }
+    )
+  })
+}
+
+/** SVG文字列をPNGのdataURLへ変換する（共有ウィンドウを直列利用） */
+async function convertSvgToPngInternal(svgString: string): Promise<{
+  success: boolean
+  dataUrl?: string
+  width?: number
+  height?: number
+  error?: string
+}> {
+  const widthMatch = svgString.match(/width="([\d.]+)"/)
+  const heightMatch = svgString.match(/height="([\d.]+)"/)
+  const width = widthMatch ? Math.ceil(parseFloat(widthMatch[1])) : 200
+  const height = heightMatch ? Math.ceil(parseFloat(heightMatch[1])) : 50
+
+  const win = getSharedSvgWindow()
+  win.setContentSize(width + 20, height + 20)
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        * { margin: 0; padding: 0; }
+        html, body { background: transparent; overflow: hidden; }
+      </style>
+    </head>
+    <body>
+      ${svgString}
+    </body>
+    </html>
+  `
+  const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`
+
+  const capture = () =>
+    withTimeout(
+      win.webContents.capturePage({ x: 0, y: 0, width, height }),
+      SVG_RENDER_TIMEOUT_MS,
+      "capturePage"
+    )
+
+  try {
+    await withTimeout(win.loadURL(dataUri), SVG_RENDER_TIMEOUT_MS, "loadURL")
+
+    // オフスクリーン描画が完了するまで待機。capturePageが空画像を返す場合は
+    // 描画未完了なので短い間隔でリトライする（低速機の初回ペイント対策に
+    // 最大15回 = 約600msまで待つ）。
+    let image = await capture()
+    for (let attempt = 0; attempt < 15 && image.isEmpty(); attempt++) {
+      await delay(40)
+      image = await capture()
+    }
+
+    if (image.isEmpty()) {
+      // 描画リソースが壊れている可能性があるためウィンドウを作り直す
+      destroySharedSvgWindow()
+      return {
+        success: false,
+        error: `capturePage returned an empty image (${width}x${height})`,
+      }
+    }
+
+    const dataUrl = `data:image/png;base64,${image.toPNG().toString("base64")}`
+    return { success: true, dataUrl, width, height }
+  } catch (err) {
+    // ハング・GPUクラッシュした可能性があるため共有ウィンドウを破棄し、
+    // 次回要求で新しいウィンドウを再生成して回復させる。
+    destroySharedSvgWindow()
+    throw err
+  }
+}
+
 /** Excel・PDF出力・個人成績表・ストリーミングPDF生成に関するIPCチャンネルを登録する */
 export function setupExportHandlers(): void {
   // 採点データバリデーション（全エクスポート共通）
@@ -182,10 +363,11 @@ export function setupExportHandlers(): void {
   )
 
   // SVG→PNG変換ハンドラ（MathJaxテキストのtaint問題回避用）
-  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
+  // NOTE: 共有オフスクリーンウィンドウ（convertSvgToPngInternal）を直列利用する。
+  // 要求が並列に来ても svgConvertChain で順序化し、リソース競合を防ぐ。
   ipcMain.handle(
     "export:convertSvgToPng",
-    async (
+    (
       _event,
       options: {
         svgString: string
@@ -199,73 +381,26 @@ export function setupExportHandlers(): void {
       height?: number
       error?: string
     }> => {
-      try {
-        const { svgString } = options
-
-        const widthMatch = svgString.match(/width="([\d.]+)"/)
-        const heightMatch = svgString.match(/height="([\d.]+)"/)
-        const width = widthMatch ? Math.ceil(parseFloat(widthMatch[1])) : 200
-        const height = heightMatch ? Math.ceil(parseFloat(heightMatch[1])) : 50
-
-        const win = new BrowserWindow({
-          width: width + 20,
-          height: height + 20,
-          show: false,
-          transparent: true,
-          frame: false,
-          hasShadow: false,
-          webPreferences: {
-            offscreen: true,
-          },
-        })
-
-        try {
-          const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <style>
-                * { margin: 0; padding: 0; }
-                html, body { background: transparent; overflow: hidden; }
-              </style>
-            </head>
-            <body>
-              ${svgString}
-            </body>
-            </html>
-          `
-          const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`
-          await win.loadURL(dataUri)
-
-          await new Promise((resolve) => setTimeout(resolve, 100))
-
-          // capturePageはRetinaで2倍のピクセル数を返すため、論理サイズも返す
-          const image = await win.webContents.capturePage({
-            x: 0,
-            y: 0,
-            width,
-            height,
+      pendingSvgConversions++
+      const run = svgConvertChain
+        .then(() =>
+          convertSvgToPngInternal(options.svgString).catch((err) => {
+            console.error("Error in IPC handler [export:convertSvgToPng]:", err)
+            return {
+              success: false,
+              error:
+                err instanceof Error ? err.message : "Unknown error occurred",
+            }
           })
-          const pngBuffer = image.toPNG()
-          const base64 = pngBuffer.toString("base64")
-          const dataUrl = `data:image/png;base64,${base64}`
-
-          return {
-            success: true,
-            dataUrl,
-            width,
-            height,
-          }
-        } finally {
-          win.destroy()
-        }
-      } catch (err) {
-        console.error("Error in IPC handler [export:convertSvgToPng]:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error occurred",
-        }
-      }
+        )
+        .finally(() => {
+          pendingSvgConversions--
+          // 要求が掃けたら共有ウィンドウのアイドル破棄を予約する
+          if (pendingSvgConversions === 0) scheduleSvgWindowTeardown()
+        })
+      // チェーンが例外で途切れないようにする（runは常にresolveするが念のため）
+      svgConvertChain = run.catch(() => undefined)
+      return run
     }
   )
 

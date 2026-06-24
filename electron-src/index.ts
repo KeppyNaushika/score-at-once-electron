@@ -154,6 +154,15 @@ process.on("unhandledRejection", (reason, promise) => {
 
 // アプリが異常終了する前にログを出力とクリーンアップ
 app.on("before-quit", async (_event) => {
+  // SVG→PNG変換用の共有オフスクリーンウィンドウを破棄
+  try {
+    const { destroySharedSvgWindow } =
+      await import("./ipc-handlers/exportHandlers")
+    destroySharedSvgWindow()
+  } catch (error) {
+    console.warn("Failed to destroy shared SVG window:", error)
+  }
+
   // NAS同期の停止
   try {
     const { stopSync } = await import("./lib/sync/syncService")
