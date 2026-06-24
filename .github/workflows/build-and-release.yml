@@ -27,7 +27,7 @@ env:
 jobs:
   build:
     name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner || matrix.os }}
 
     strategy:
       matrix:
@@ -41,6 +41,11 @@ jobs:
             arch: arm64
             artifact_name: score-at-once-mac-arm64
           - os: windows-latest
+            # windows-latest(=windows-2025-vs2026)のVS2026環境ではnode-gypのVS検出が
+            # PowerShell出力のmaxBuffer超過(ERR_CHILD_PROCESS_STDIO_MAXBUFFER)で失敗し、
+            # better-sqlite3のネイティブ再ビルドが落ちる。VS2022の安定環境に固定する。
+            # 注: os ラベルは windows-latest のまま維持（後続の matrix.os 条件分岐が依存）
+            runner: windows-2022
             platform: win
             arch: x64
             artifact_name: score-at-once-windows-x64
