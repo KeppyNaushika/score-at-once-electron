@@ -306,151 +306,42 @@ jobs:
       - name: Generate release notes
         id: release_notes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # デバッグ: Token存在確認
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "::warning::GITHUB_TOKEN is not set - API calls may fail"
-          else
-            echo "GITHUB_TOKEN is configured (length: ${#GITHUB_TOKEN})"
-          fi
-
           RELEASE_TYPE="${{ steps.vars.outputs.release_type }}"
           VERSION="${{ steps.vars.outputs.version }}"
+          TAG_NAME="${{ steps.vars.outputs.tag_name }}"
 
-          # Get recent changes from git log since last tag
-          # Get the second most recent tag (the one before current release)
+          # 直近の前回タグ（現在のタグ自身は除外）を求める
           CURRENT_TAG=$(git tag --sort=-version:refname | head -n 1)
           LAST_TAG=$(git tag --sort=-version:refname | head -n 2 | tail -n 1)
-
-          # If current tag is the same as last tag, get the third most recent
           if [ "$CURRENT_TAG" = "$LAST_TAG" ]; then
             LAST_TAG=$(git tag --sort=-version:refname | head -n 3 | tail -n 1)
           fi
-
           echo "Last tag: $LAST_TAG"
 
+          # GitHub公式のリリースノート自動生成APIでマージ済みPR一覧を取得する。
+          # カテゴリ分け・除外は .github/release.yml の設定に従う。
+          # 自前のPR解析・API個別呼び出し・フォールバックは廃止。
+          GEN_ARGS=(
+            -X POST
+            "repos/${{ github.repository }}/releases/generate-notes"
+            -f "tag_name=$TAG_NAME"
+            -f "target_commitish=${{ github.sha }}"
+          )
           if [ -n "$LAST_TAG" ]; then
-            # Get all commits since last tag with detailed info
-            echo "Getting commits since $LAST_TAG..."
-            COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short $LAST_TAG..HEAD | head -15)
-
-            # If no commits since last tag, get commits from the last tag and before
-            if [ -z "$COMMIT_INFO" ]; then
-              echo "No commits since last tag, getting commits including the tag..."
-              COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short -5)
-            fi
-          else
-            # Get last 15 commits if no previous tag
-            echo "No previous tag found, getting last 15 commits..."
-            COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short -15)
+            GEN_ARGS+=(-f "previous_tag_name=$LAST_TAG")
           fi
 
-          echo "Raw commit info:"
-          echo "$COMMIT_INFO"
+          CHANGES=$(gh api "${GEN_ARGS[@]}" -q .body || true)
 
-          CHANGES=""
-          processed_prs=""
-
-          # Check if we have any commits to process
-          if [ -z "$COMMIT_INFO" ]; then
-            echo "No commit information available"
+          if [ -z "$CHANGES" ]; then
+            echo "::warning::generate-notes API returned empty - using default message"
             CHANGES="- バグ修正と機能改善"
-          else
-            # Process each commit
-            while IFS='|' read -r commit_hash commit_msg author date; do
-              # Skip empty lines
-              if [ -z "$commit_hash" ] || [ -z "$commit_msg" ]; then
-                continue
-              fi
-
-              echo "Processing: $commit_msg"
-
-            # Check if it's a merge commit from a PR
-            if [[ $commit_msg =~ ^Merge\ pull\ request\ #([0-9]+)\ from\ (.+)$ ]]; then
-              pr_number="${BASH_REMATCH[1]}"
-              branch_info="${BASH_REMATCH[2]}"
-
-              # Skip if we've already processed this PR
-              if [[ "$processed_prs" =~ $pr_number ]]; then
-                continue
-              fi
-              processed_prs="$processed_prs $pr_number"
-
-              echo "Found PR #$pr_number"
-
-              # Try to get PR title from GitHub API with proper error handling
-              echo "Fetching PR #$pr_number from API..."
-
-              # Use -w to get HTTP status code
-              response=$(curl -s -w "\n%{http_code}" \
-                -H "Authorization: token $GITHUB_TOKEN" \
-                -H "Accept: application/vnd.github.v3+json" \
-                "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number")
-
-              http_code=$(echo "$response" | tail -n1)
-              pr_data=$(echo "$response" | sed '$d')
-
-              echo "API Response status: $http_code"
-
-              if [ "$http_code" = "200" ] && [ -n "$pr_data" ]; then
-                pr_title=$(echo "$pr_data" | jq -r '.title // empty')
-
-                if [ -n "$pr_title" ] && [ "$pr_title" != "null" ] && [ "$pr_title" != "empty" ]; then
-                  echo "Got PR title: $pr_title"
-                  CHANGES="$CHANGES### 🔀 $pr_title (PR #$pr_number)\n"
-
-                  # Get commits within this PR for hierarchy
-                  pr_commits=$(git log --pretty=format:"  - %s (%an)" --grep="(#$pr_number)" --oneline | head -5)
-                  if [ -n "$pr_commits" ]; then
-                    CHANGES="$CHANGES$pr_commits\n"
-                  fi
-                  CHANGES="$CHANGES\n"
-                  continue
-                else
-                  echo "::warning::Could not parse PR title from API response"
-                fi
-              else
-                echo "::warning::API call failed for PR #$pr_number (HTTP $http_code)"
-                # Show error message if available
-                error_msg=$(echo "$pr_data" | jq -r '.message // empty' 2>/dev/null)
-                if [ -n "$error_msg" ]; then
-                  echo "API Error: $error_msg"
-                fi
-              fi
-
-              # Fallback: Use PR number and branch name
-              echo "Using fallback for PR #$pr_number"
-              branch_name=$(echo "$branch_info" | sed 's/.*\///' | sed 's/-/ /g' | sed 's/_/ /g')
-              CHANGES="$CHANGES- PR #$pr_number: $branch_name\n"
-
-            elif [[ $commit_msg =~ .*\(#([0-9]+)\)$ ]]; then
-              # Commit with PR reference - skip as it will be included in PR hierarchy
-              continue
-
-            else
-              # Regular direct commit
-              if [[ ! $commit_msg =~ ^(Merge\ branch|Update|Bump\ |chore\(|docs\(|style\() ]]; then
-                # Clean up commit message
-                clean_msg=$(echo "$commit_msg" | sed 's/^fix: //' | sed 's/^feat: //' | sed 's/^refactor: //')
-                CHANGES="$CHANGES- $clean_msg ($author)\n"
-              fi
-            fi
-          done <<< "$COMMIT_INFO"
           fi
 
-          # Format final output
-          CHANGES=$(echo -e "$CHANGES" | sed '/^$/d')
-
-          echo "Final changes:"
+          echo "Generated changes:"
           echo "$CHANGES"
-
-          # If no meaningful changes, provide default message with warning
-          if [ -z "$CHANGES" ] || [ "$(echo "$CHANGES" | wc -l)" -eq 0 ]; then
-            echo "::warning::No PR information could be retrieved - using default message"
-            echo "This might indicate an API authentication or rate limiting issue"
-            CHANGES="- バグ修正と機能改善"
-          fi
 
           if [ "$RELEASE_TYPE" = "prerelease" ]; then
             NOTES=$(VERSION="$VERSION" CHANGES="$CHANGES" node scripts/build-release-notes.js prerelease)
