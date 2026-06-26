@@ -46,12 +46,6 @@ const CHOICE_LABEL_PRESETS: {
     isCommonTest: true,
   },
   {
-    value: "minus",
-    displayName: "−（負の符号）",
-    labels: ["−"],
-    isCommonTest: true,
-  },
-  {
     value: "digit-minus",
     displayName: "0〜9,−（数値+符号）",
     labels: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "−"],
@@ -245,11 +239,19 @@ function ChoiceConfigFields({
   config: OMRChoiceConfig
   onChange: (config: OMRCellConfig) => void
 }) {
-  const currentPresetValue = useMemo(
+  const detectedPresetValue = useMemo(
     () => detectPreset(config.labels),
     [config.labels]
   )
-  const isCustom = currentPresetValue === "custom"
+
+  // 「カスタム」を明示的に選択中かどうか。
+  // detectPreset はラベルがどのプリセットにも一致しない場合のみ "custom" を返すため、
+  // プリセット由来のラベルからカスタムへ切り替えるにはこのフラグが必要。
+  const [forceCustom, setForceCustom] = useState(
+    () => detectedPresetValue === "custom"
+  )
+  const isCustom = forceCustom || detectedPresetValue === "custom"
+  const currentPresetValue = isCustom ? "custom" : detectedPresetValue
 
   // カスタム入力用のローカルステート
   const [customInput, setCustomInput] = useState(() =>
@@ -267,9 +269,11 @@ function ChoiceConfigFields({
           value={currentPresetValue}
           onValueChange={(preset) => {
             if (preset === "custom") {
+              setForceCustom(true)
               setCustomInput(config.labels.join(","))
               return
             }
+            setForceCustom(false)
             const p = CHOICE_LABEL_PRESETS.find((pr) => pr.value === preset)
             if (p) {
               const labels = p.labels.slice(0, Math.max(2, p.labels.length))
