@@ -1,0 +1,27 @@
+# GitHub公式のリリースノート自動生成（generate-notes）の設定。
+# build-and-release.yml の "Generate release notes" ステップが
+# この設定に従ってマージ済みPRを一覧・カテゴリ分けする。
+# 注意: 分類はPRに付与された「ラベル」基準。ラベルが無いPRは
+#       catch-all（"*"）の「その他の変更」にまとめて表示される。
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+      - dependabot[bot]
+  categories:
+    - title: 🚀 新機能・改善
+      labels:
+        - feature
+        - enhancement
+    - title: 🐛 バグ修正
+      labels:
+        - fix
+        - bug
+    - title: ⬆️ 依存関係の更新
+      labels:
+        - dependencies
+    - title: その他の変更
+      labels:
+        - "*"

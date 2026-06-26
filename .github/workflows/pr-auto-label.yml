@@ -1,0 +1,48 @@
+name: PR Auto Label
+
+# PRタイトルの Conventional Commits プレフィックスから自動でラベルを付与する。
+# 付与したラベルは .github/release.yml のカテゴリ分けに使われ、
+# リリースノートのPR一覧がセクション分けされる。
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply label from title prefix
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          # 先頭プレフィックスを抽出: feat / fix / feat(scope) / fix(ci)! など
+          PREFIX=$(printf '%s' "$PR_TITLE" \
+            | sed -nE 's/^([a-zA-Z]+)(\([^)]*\))?!?:.*/\1/p' \
+            | tr '[:upper:]' '[:lower:]')
+
+          echo "PR #$PR_NUMBER title: $PR_TITLE"
+          echo "Detected prefix: '${PREFIX:-<none>}'"
+
+          # プレフィックス -> 既存ラベルへのマッピング（release.yml と整合）
+          case "$PREFIX" in
+            feat|perf|refactor) LABEL="enhancement" ;;
+            fix)                LABEL="bug" ;;
+            *)                  LABEL="" ;;
+          esac
+
+          if [ -z "$LABEL" ]; then
+            echo "No matching label for prefix '${PREFIX:-<none>}' - skipping"
+            exit 0
+          fi
+
+          echo "Adding label: $LABEL"
+          gh pr edit "$PR_NUMBER" --add-label "$LABEL"
