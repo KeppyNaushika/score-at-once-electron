@@ -7,6 +7,7 @@ import type {
   AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
+import { isCurrentMembership } from "@/lib/membership"
 
 interface SelectableClass extends AddPanelClassItem {
   isSelected: boolean
@@ -21,6 +22,67 @@ interface UseStudentAddPanelParams {
   onAdded: () => void
   classActiveOnlyDefault: boolean
   studentActiveOnlyDefault: boolean
+}
+
+/** 学級候補が空になった理由（空表示メッセージの出し分け用） */
+export type ClassEmptyReason =
+  /** システムに生徒が1人も登録されていない（要・生徒登録） */
+  | "noStudents"
+  /** 生徒はいるが、どの学級にも所属していない */
+  | "noClassMembership"
+  /** 学級に所属者はいるが、在籍中（スイッチON条件）が0名 */
+  | "noCurrentInClass"
+  /** 学級に所属する生徒はいるが、追加可能分は全て追加済み */
+  | "allAdded"
+
+/** 生徒候補が空になった理由（空表示メッセージの出し分け用） */
+export type StudentEmptyReason =
+  /** システムに生徒が1人も登録されていない（要・生徒登録） */
+  | "noStudents"
+  /** 未在籍・在籍中（スイッチON条件）が0名で、過去在籍の生徒のみ存在 */
+  | "noCurrentEnrollment"
+  /** 対象生徒は存在するが、全て追加済み */
+  | "allAdded"
+
+/**
+ * 学級候補が0件のときの理由を判定する。
+ *
+ * 対象スコープのアダプタ（未追加候補）だけでは「生徒0人」と「全員追加済み」を
+ * 区別できないため、システム全体の生徒（追加済み含む）を見て判定する。
+ */
+async function resolveClassEmptyReason(
+  adapter: StudentAddPanelAdapter,
+  classActiveOnly: boolean
+): Promise<ClassEmptyReason> {
+  const allStudents = await window.electronAPI.fetchStudents()
+  if (allStudents.length === 0) return "noStudents"
+  const anyInClass = allStudents.some((s) => s.memberships.length > 0)
+  if (!anyInClass) return "noClassMembership"
+  // 学級所属者はいる。未追加の学級候補（在籍条件なし）が残るかで切り分ける
+  const classesAny = await adapter.fetchAvailableClasses(false)
+  if (classActiveOnly && classesAny.length > 0) return "noCurrentInClass"
+  return "allAdded"
+}
+
+/**
+ * 生徒候補が0件のときの理由を判定する。
+ *
+ * システム全体の生徒（追加済み含む）を見て、「生徒0人」「全員追加済み」
+ * 「未在籍・在籍中が元々0名（過去在籍のみ）」を区別する。
+ */
+async function resolveStudentEmptyReason(
+  studentActiveOnly: boolean
+): Promise<StudentEmptyReason> {
+  const allStudents = await window.electronAPI.fetchStudents()
+  if (allStudents.length === 0) return "noStudents"
+  if (studentActiveOnly) {
+    const hasCurrentOrUnassigned = allStudents.some(
+      (s) =>
+        s.memberships.length === 0 || s.memberships.some(isCurrentMembership)
+    )
+    return hasCurrentOrUnassigned ? "allAdded" : "noCurrentEnrollment"
+  }
+  return "allAdded"
 }
 
 /**
@@ -47,12 +109,21 @@ export function useStudentAddPanel({
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
+  const [classEmptyReason, setClassEmptyReason] =
+    useState<ClassEmptyReason | null>(null)
+  const [studentEmptyReason, setStudentEmptyReason] =
+    useState<StudentEmptyReason | null>(null)
 
   const loadClasses = useCallback(async () => {
     setLoadingClasses(true)
     try {
       const result = await adapter.fetchAvailableClasses(classActiveOnly)
       setClasses(result.map((c) => ({ ...c, isSelected: false })))
+      setClassEmptyReason(
+        result.length > 0
+          ? null
+          : await resolveClassEmptyReason(adapter, classActiveOnly)
+      )
     } catch (error) {
       console.error("Failed to fetch available classes:", error)
     } finally {
@@ -65,6 +136,11 @@ export function useStudentAddPanel({
     try {
       const result = await adapter.fetchAvailableStudents(studentActiveOnly)
       setStudents(result.map((s) => ({ ...s, isSelected: false })))
+      setStudentEmptyReason(
+        result.length > 0
+          ? null
+          : await resolveStudentEmptyReason(studentActiveOnly)
+      )
     } catch (error) {
       console.error("Failed to fetch available students:", error)
     } finally {
@@ -182,6 +258,8 @@ export function useStudentAddPanel({
     loadingClasses,
     loadingStudents,
     isAdding,
+    classEmptyReason,
+    studentEmptyReason,
     selectedClassCount,
     selectedStudentCount,
     handleClassSelection,

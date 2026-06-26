@@ -63,6 +63,8 @@ export function StudentAddPanel({
     loadingClasses,
     loadingStudents,
     isAdding,
+    classEmptyReason,
+    studentEmptyReason,
     selectedClassCount,
     selectedStudentCount,
     handleClassSelection,
@@ -76,6 +78,43 @@ export function StudentAddPanel({
     classActiveOnlyDefault,
     studentActiveOnlyDefault,
   })
+
+  // 学級候補が空のときの理由別メッセージ（スイッチ状態で文言を変える）
+  const classEmptyMessage = (() => {
+    switch (classEmptyReason) {
+      case "noStudents":
+        return "生徒が登録されていません。先に「生徒」ページで生徒を登録してください。"
+      case "noClassMembership":
+        return "学級に所属している生徒がいません。「個別で追加」タブから追加できます。"
+      case "noCurrentInClass":
+        return "在籍中の生徒がいる学級がありません。スイッチをオフにすると、現在在籍していない生徒も表示できます。"
+      case "allAdded":
+        return classActiveOnly
+          ? "在籍中の生徒は全て追加しました。"
+          : "学級に所属する生徒は全て追加しました。"
+      default:
+        return "追加可能な学級がありません"
+    }
+  })()
+
+  // 生徒候補が空のときの理由別メッセージ（スイッチ状態で文言を変える）
+  const studentEmptyMessage = (() => {
+    if (searchTerm || filterClassId !== "all") {
+      return "該当する生徒が見つかりません"
+    }
+    switch (studentEmptyReason) {
+      case "noStudents":
+        return "生徒が登録されていません。先に「生徒」ページで生徒を登録してください。"
+      case "noCurrentEnrollment":
+        return "未在籍・在籍中の生徒がいません。スイッチをオフにすると、現在在籍していない生徒も表示できます。"
+      case "allAdded":
+        return studentActiveOnly
+          ? "未在籍・在籍中の生徒は全て追加しました。"
+          : "すべての生徒を追加しました。"
+      default:
+        return "該当する生徒が見つかりません"
+    }
+  })()
 
   // fillHeight 時はタブ・カードを親の高さいっぱいに広げ、リストを内部スクロールにする
   const tabsClass = fillHeight ? "flex h-full w-full flex-col" : "w-full"
@@ -107,9 +146,9 @@ export function StudentAddPanel({
             checked={classActiveOnly}
             onCheckedChange={setClassActiveOnly}
           />
-          <span>在籍中の生徒のみ追加</span>
+          <span>在籍中の生徒のみ表示</span>
           <span className="text-muted-foreground text-xs">
-            （オフにすると在籍が終了した生徒も対象になります）
+            （オフにすると現在在籍していない生徒も表示します）
           </span>
         </label>
 
@@ -131,7 +170,7 @@ export function StudentAddPanel({
                 <div className="py-4 text-center">読み込み中...</div>
               ) : classes.length === 0 ? (
                 <div className="text-muted-foreground py-4 text-center">
-                  追加可能な学級がありません
+                  {classEmptyMessage}
                 </div>
               ) : (
                 classes.map((classItem) => (
@@ -215,9 +254,9 @@ export function StudentAddPanel({
             checked={studentActiveOnly}
             onCheckedChange={setStudentActiveOnly}
           />
-          <span>在籍中の生徒のみ表示</span>
+          <span>未在籍・在籍中の生徒のみ表示</span>
           <span className="text-muted-foreground text-xs">
-            （オフにすると在籍が終了した生徒・未所属の生徒も表示します）
+            （オフにすると過去に在籍した生徒も表示します）
           </span>
         </label>
 
@@ -259,7 +298,7 @@ export function StudentAddPanel({
               <div className="py-4 text-center">読み込み中...</div>
             ) : filteredStudents.length === 0 ? (
               <div className="text-muted-foreground py-4 text-center">
-                該当する生徒が見つかりません
+                {studentEmptyMessage}
               </div>
             ) : (
               <div className="space-y-2">

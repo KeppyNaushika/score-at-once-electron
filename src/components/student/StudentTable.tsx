@@ -61,7 +61,7 @@ export default function StudentTable() {
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
-    useState<string>("current")
+    useState<string>("current_unassigned")
   const [filterClassId, setFilterClassId] = useState<string>("all")
 
   // Selection states
@@ -113,7 +113,13 @@ export default function StudentTable() {
         if (!belongsToClass) return false
       }
 
-      if (filterMembershipStatus === "current") {
+      if (filterMembershipStatus === "current_unassigned") {
+        return (
+          matchesSearch &&
+          (student.memberships.length === 0 ||
+            student.memberships.some((m) => isCurrentMembership(m)))
+        )
+      } else if (filterMembershipStatus === "current") {
         return (
           matchesSearch &&
           student.memberships.some((m) => isCurrentMembership(m))
@@ -382,9 +388,10 @@ export default function StudentTable() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべて</SelectItem>
-              <SelectItem value="current">現在所属中</SelectItem>
-              <SelectItem value="past">過去の所属</SelectItem>
-              <SelectItem value="unassigned">未所属</SelectItem>
+              <SelectItem value="unassigned">未在籍</SelectItem>
+              <SelectItem value="current">在籍中</SelectItem>
+              <SelectItem value="current_unassigned">未在籍・在籍中</SelectItem>
+              <SelectItem value="past">過去在籍</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-muted-foreground text-sm tabular-nums">
