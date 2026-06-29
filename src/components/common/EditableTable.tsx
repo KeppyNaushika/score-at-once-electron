@@ -46,38 +46,85 @@ function EditableCell<T>({
     meta?.updateData(row.index, column.id, String(value ?? ""))
   }
 
+  const moveFocus = (target: HTMLInputElement) => {
+    target.focus()
+    target.select()
+  }
+
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-      inputRef.current?.blur()
-    }
-    if (e.key === "Tab") {
+    // IME変換確定のEnter/Tabではセル移動しない
+    if (e.nativeEvent.isComposing) return
+
+    const currentCell = inputRef.current
+    if (!currentCell) return
+
+    if (e.key === "Enter") {
+      // 同じ列の上下行へ移動（Shift+Enterで上）
       e.preventDefault()
-      const currentCell = inputRef.current
-      if (currentCell) {
-        const table = currentCell.closest("table")
-        if (table) {
-          const cells = Array.from(table.querySelectorAll("input"))
-          const currentIndex = cells.indexOf(currentCell)
-          const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1
-          if (nextIndex >= 0 && nextIndex < cells.length) {
-            ;(cells[nextIndex] as HTMLInputElement).focus()
-          }
-        }
+      const table = currentCell.closest("table")
+      if (!table) return
+      const rows = Array.from(table.querySelectorAll("tbody tr"))
+      const currentRow = currentCell.closest("tr")
+      const rowIndex = currentRow ? rows.indexOf(currentRow) : -1
+      if (rowIndex < 0 || !currentRow) return
+      const colIndex = Array.from(currentRow.querySelectorAll("input")).indexOf(
+        currentCell
+      )
+      if (colIndex < 0) return
+
+      const targetRowIndex = e.shiftKey ? rowIndex - 1 : rowIndex + 1
+      if (targetRowIndex < 0 || targetRowIndex >= rows.length) return
+      const targetInputs = Array.from(
+        rows[targetRowIndex].querySelectorAll("input")
+      )
+      const target =
+        targetInputs[colIndex] ?? targetInputs[targetInputs.length - 1]
+      if (target) moveFocus(target)
+      return
+    }
+
+    if (e.key === "Tab") {
+      // 左右へ移動。行末は次行の先頭、行頭は前行の末尾へ（Shift+Tabで逆）
+      e.preventDefault()
+      const table = currentCell.closest("table")
+      if (!table) return
+      const cells = Array.from(
+        table.querySelectorAll("tbody input")
+      ) as HTMLInputElement[]
+      const currentIndex = cells.indexOf(currentCell)
+      if (currentIndex < 0) return
+      const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1
+      if (nextIndex >= 0 && nextIndex < cells.length) {
+        moveFocus(cells[nextIndex])
       }
     }
   }
 
-  const meta = column.columnDef.meta as { placeholder?: string } | undefined
+  const meta = column.columnDef.meta as
+    | { placeholder?: string; validate?: (value: string) => boolean }
+    | undefined
+
+  // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
+  const strValue = String(value ?? "")
+  const isInvalid =
+    strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
 
   return (
     <input
       ref={inputRef}
-      value={String(value ?? "")}
+      value={strValue}
       onChange={(e) => setValue(e.target.value)}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
-      className="absolute inset-0 h-full w-full border-none bg-transparent px-4 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      className={`absolute inset-0 h-full w-full border-none px-4 py-2 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none ${
+        isInvalid
+          ? "bg-red-100 text-red-700 focus:bg-red-50"
+          : "bg-transparent focus:bg-white"
+      }`}
       placeholder={meta?.placeholder || ""}
+      title={
+        isInvalid ? "無効な値です（このままでは保存されません）" : undefined
+      }
     />
   )
 }
