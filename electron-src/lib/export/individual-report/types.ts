@@ -2,6 +2,8 @@
  * 個人成績表PDF出力機能の型定義
  */
 
+import type { SubtotalGroup } from "@prisma/client"
+
 import type { ScoringData } from "../../shared/types/exportTypes"
 
 // ================== 表示モード関連 ==================
@@ -177,13 +179,8 @@ export interface SubtotalStatistics {
   subtotalGroupName: string
 }
 
-/** SubtotalGroup情報（選択UI用） */
-export interface SubtotalGroupInfo {
-  id: string
-  name: string
-  /** このグループに属するSubtotalのID */
-  subtotalIds: string[]
-}
+/** SubtotalGroup選択UI用（Prisma型のサブセット。id/name のみ使用） */
+export type SubtotalGroupInfo = Pick<SubtotalGroup, "id" | "name">
 
 /** SubtotalGroup選択オプション */
 export interface SubtotalGroupSelection {

@@ -1,5 +1,7 @@
 import { ipcRenderer } from "electron"
 
+import type { ExportRDataOptions } from "../lib/export/r-exametrika/rDataExporter"
+
 /** 出力機能のIPC API（PDF/Excel出力・ストリーミング生成・個人成績表・印刷） */
 export function createExportApi() {
   return {
@@ -107,6 +109,10 @@ export function createExportApi() {
       selectedStudentIds: string[]
       outputPath?: string
     }) => ipcRenderer.invoke("export-grading-data-excel", options),
+
+    // R / exametrika 向けデータ出力（#834）
+    exportRData: (options: ExportRDataOptions) =>
+      ipcRenderer.invoke("export-r-data", options),
 
     // Progress listeners
     onExportProgress: (

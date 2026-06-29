@@ -6,7 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
 import { useItemAnalysis } from "../hooks/useItemAnalysis"
+import { useSpAnalysis } from "../hooks/useSpAnalysis"
+import { FrequencyDistributionChart } from "./FrequencyDistributionChart"
 import { ItemAnalysisPreview } from "./ItemAnalysisPreview"
+import { SpTablePreview } from "./SpTablePreview"
 
 function getStatusSymbol(status: string, score?: number | null): string {
   switch (status) {
@@ -44,11 +47,17 @@ interface ExcelPreviewProps {
   data: ExcelPreviewData
 }
 
+type SheetTab =
+  | "scores"
+  | "results"
+  | "item-analysis"
+  | "sp-table"
+  | "frequency"
+
 export function ExcelPreview({ data }: ExcelPreviewProps) {
-  const [sheetTab, setSheetTab] = useState<
-    "scores" | "results" | "item-analysis"
-  >("scores")
+  const [sheetTab, setSheetTab] = useState<SheetTab>("scores")
   const itemAnalysisData = useItemAnalysis(data)
+  const spAnalysis = useSpAnalysis(data)
 
   const hasSubtotals = data.headers.subtotalLabels.length > 0
 
@@ -56,10 +65,10 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
     <div className="flex h-full flex-col">
       <Tabs
         value={sheetTab}
-        onValueChange={(v) => setSheetTab(v as "scores" | "results")}
+        onValueChange={(v) => setSheetTab(v as SheetTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mb-1 grid w-full grid-cols-3">
+        <TabsList className="mb-1 grid w-full grid-cols-5">
           <TabsTrigger value="scores" className="text-xs">
             点数一覧
           </TabsTrigger>
@@ -68,6 +77,12 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
           </TabsTrigger>
           <TabsTrigger value="item-analysis" className="text-xs">
             問題分析
+          </TabsTrigger>
+          <TabsTrigger value="sp-table" className="text-xs">
+            S-P表
+          </TabsTrigger>
+          <TabsTrigger value="frequency" className="text-xs">
+            得点分布
           </TabsTrigger>
         </TabsList>
 
@@ -202,6 +217,26 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
           ) : (
             <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
               データがありません
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="sp-table" className="mt-0 flex-1 overflow-auto">
+          {spAnalysis?.spTable ? (
+            <SpTablePreview data={spAnalysis.spTable} />
+          ) : (
+            <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+              S-P表を作成できる採点データがありません
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="frequency" className="mt-0 flex-1 overflow-auto">
+          {spAnalysis?.frequency ? (
+            <FrequencyDistributionChart data={spAnalysis.frequency} />
+          ) : (
+            <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+              得点分布を作成できる得点データがありません
             </div>
           )}
         </TabsContent>

@@ -10,8 +10,10 @@ import {
 } from "../../shared/utilities/validateScoringData"
 import { fetchExportData } from "./dataFetcher"
 import { saveWorkbook } from "./fileSaver"
+import { createFrequencyDistributionSheet } from "./frequencyDistributionSheetCreator"
 import { createItemAnalysisSheet } from "./itemAnalysisSheetCreator"
 import { createResultSheet, createScoreSheet } from "./sheetCreators"
+import { createSpTableSheet } from "./spTableSheetCreator"
 
 /**
  * Excel出力のメイン処理
@@ -84,6 +86,12 @@ export async function exportGradingDataExcel(
       dataResult.questionRegions,
       dataResult.scoringData
     )
+
+    // S-P表シート作成（#838）
+    await createSpTableSheet(workbook, dataResult.scoringData)
+
+    // 得点度数分布シート作成（#838）
+    await createFrequencyDistributionSheet(workbook, dataResult.scoringData)
 
     // ファイル保存
     const examName = dataResult.exam?.examName

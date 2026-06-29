@@ -33,6 +33,7 @@ interface ExportOptionsCardProps {
   isExporting: boolean
   onExportScoredAnswers: () => void
   onExportGradingData: () => void
+  onExportRData: (format: "csv" | "json") => void
   onExportIndividualReports: () => void
   activeTab: ExportTabType
   onTabChange: (tab: ExportTabType) => void
@@ -50,6 +51,7 @@ export function ExportOptionsCard({
   isExporting,
   onExportScoredAnswers,
   onExportGradingData,
+  onExportRData,
   onExportIndividualReports,
   activeTab,
   onTabChange,
@@ -198,6 +200,36 @@ export function ExportOptionsCard({
           <p className="text-muted-foreground text-sm">
             採点データをExcel形式で出力します。設定は現在ありません。
           </p>
+        </div>
+
+        {/* R / exametrika 向けデータ出力（#834） */}
+        <div className="space-y-3 border-t pt-4">
+          <h4 className="text-base font-semibold">
+            分析用データ（R / exametrika）
+          </h4>
+          <p className="text-muted-foreground text-sm">
+            設問×生徒の正誤行列を出力します。欠席・未採点は欠測値として扱います。
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onExportRData("csv")}
+              disabled={selectedStudents.size === 0 || isExporting}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              CSV
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onExportRData("json")}
+              disabled={selectedStudents.size === 0 || isExporting}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              JSON
+            </Button>
+          </div>
         </div>
       </TabsContent>
 

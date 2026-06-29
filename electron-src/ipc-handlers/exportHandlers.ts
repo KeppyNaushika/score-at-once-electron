@@ -6,6 +6,10 @@ import {
   fetchIndividualReportData,
   fetchSubtotalGroupsForReport,
 } from "../lib/export/individual-report"
+import {
+  exportRData,
+  type ExportRDataOptions,
+} from "../lib/export/r-exametrika/rDataExporter"
 import { resolveMathJaxSrc, waitForRendering } from "../lib/printUtils"
 import { exportGradingDataExcel } from "../lib/prisma/excelExport"
 import {
@@ -245,6 +249,11 @@ export function setupExportHandlers(): void {
       return await exportGradingDataExcel(options)
     }
   )
+
+  // R / exametrika 向けデータ出力（#834）
+  registerSafeHandler("export-r-data", async (options: ExportRDataOptions) => {
+    return await exportRData(options)
+  })
 
   // Excelプレビュー用データ取得
   registerSafeHandler(
