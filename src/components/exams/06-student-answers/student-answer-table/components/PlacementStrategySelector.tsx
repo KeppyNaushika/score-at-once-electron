@@ -30,9 +30,6 @@ export function PlacementStrategySelector({
           生徒順
         </Button>
       </div>
-      {fileOrder === "filename-auto" && (
-        <span className="text-xs text-gray-500">(ファイル名自動配置)</span>
-      )}
     </div>
   )
 }

@@ -58,7 +58,7 @@ export interface UnifiedFile {
  * 配置戦略
  * テーブルDnDと同じ定義
  */
-export type PlacementStrategy = "page-first" | "student-first" | "filename-auto"
+export type PlacementStrategy = "page-first" | "student-first"
 
 /**
  * 無効化状態管理
