@@ -111,6 +111,7 @@ export function CourseworkScoresContainer({
       (item): ColumnDef<ScoreRow>[] => {
         const isLetter = item.inputMode === "letter"
         const validLabels = item.letterScales.map((ls) => ls.label).join("/")
+        const validLabelSet = new Set(item.letterScales.map((ls) => ls.label))
         return [
           {
             id: item.id,
@@ -123,6 +124,14 @@ export function CourseworkScoresContainer({
               placeholder: isLetter
                 ? validLabels || "評価記号"
                 : `0-${item.maxScore}`,
+              // 文字評価は定義済みラベル、数値は0〜満点の範囲のみ有効
+              validate: (value: string) => {
+                const trimmed = value.trim()
+                if (trimmed === "") return true
+                if (isLetter) return validLabelSet.has(trimmed)
+                const num = Number(trimmed)
+                return !isNaN(num) && num >= 0 && num <= item.maxScore
+              },
             },
           },
           {
@@ -130,7 +139,16 @@ export function CourseworkScoresContainer({
             header: `${item.name}·加減点`,
             accessorKey: adjColId(item.id),
             size: 90,
-            meta: { placeholder: "±0" },
+            meta: {
+              placeholder: "±0",
+              // 加減点は有限の数値のみ有効
+              validate: (value: string) => {
+                const trimmed = value.trim()
+                if (trimmed === "") return true
+                const num = Number(trimmed)
+                return !isNaN(num) && isFinite(num)
+              },
+            },
           },
           {
             id: reasonColId(item.id),

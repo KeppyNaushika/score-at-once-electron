@@ -146,6 +146,19 @@ export function useCourseworkScores(courseworkId: string) {
     loadData()
   }, [loadData])
 
+  // 未保存の変更を即座にDBへ反映する（デバウンス完了時・アンマウント時に使用）
+  const flushPending = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    const pending = Array.from(pendingChanges.current.values())
+    pendingChanges.current.clear()
+    if (pending.length > 0) {
+      await window.electronAPI.coursework.batchUpsertScores(pending)
+    }
+  }, [])
+
   const bulkUpdateCells = useCallback(
     (
       changes: {
@@ -197,25 +210,19 @@ export function useCourseworkScores(courseworkId: string) {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-      saveTimeoutRef.current = setTimeout(async () => {
-        const pending = Array.from(pendingChanges.current.values())
-        pendingChanges.current.clear()
-        if (pending.length > 0) {
-          await window.electronAPI.coursework.batchUpsertScores(pending)
-        }
+      saveTimeoutRef.current = setTimeout(() => {
+        void flushPending()
       }, 500)
     },
-    []
+    [flushPending]
   )
 
-  // クリーンアップ
+  // アンマウント時、未保存の変更が残っていれば即座にフラッシュする
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
+      void flushPending()
     }
-  }, [])
+  }, [flushPending])
 
   return {
     items,
