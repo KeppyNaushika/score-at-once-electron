@@ -13,6 +13,7 @@ import type {
 } from "../../../../src/types/gradeArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
+import { importCourseworkData } from "../coursework-archive/dataCreator"
 
 /**
  * インポート前のプレビュー（照合結果）
@@ -47,11 +48,30 @@ export async function previewGradeArchiveImport(
     })
   )
 
+  // 埋め込み資料の照合候補（v1.5.0: courseworkArchive / v1.4.0: courseworks）
+  const cwPreviewItems = data.courseworkArchive
+    ? data.courseworkArchive.courseworks.map((cw) => ({
+        id: cw.id,
+        name: cw.name,
+        itemCount: cw.items.length,
+        studentCount: cw.students.length,
+      }))
+    : (data.courseworks ?? []).map((cw) => ({
+        id: cw.id,
+        name: cw.name,
+        itemCount: cw.items.length,
+        studentCount: cw.students.length,
+      }))
+
   // Student照合
-  const courseworkStudentNumbers = (data.courseworks ?? []).flatMap((cw) => [
-    ...cw.students.map((s) => s.studentNumber),
-    ...cw.items.flatMap((item) => item.scores.map((sc) => sc.studentNumber)),
-  ])
+  const courseworkStudentNumbers = data.courseworkArchive
+    ? data.courseworkArchive.studentsData.map((s) => s.studentNumber)
+    : (data.courseworks ?? []).flatMap((cw) => [
+        ...cw.students.map((s) => s.studentNumber),
+        ...cw.items.flatMap((item) =>
+          item.scores.map((sc) => sc.studentNumber)
+        ),
+      ])
   const studentNumbers = [
     ...new Set(
       (manualScoresData?.manualScores ?? []).map((ms) => ms.studentNumber)
@@ -68,9 +88,9 @@ export async function previewGradeArchiveImport(
     existingStudents.map((s) => s.studentNumber)
   )
 
-  // v1.4.0+: 埋め込み資料のマッチング候補（uuid一次・名前二次）を算出
+  // 埋め込み資料のマッチング候補（uuid一次・名前二次）を算出
   const courseworkMatches = await Promise.all(
-    (data.courseworks ?? []).map(async (cw) => {
+    cwPreviewItems.map(async (cw) => {
       // uuid 完全一致（同一PC由来）
       const uuidMatch = cw.id
         ? await prisma.coursework.findUnique({
@@ -88,8 +108,8 @@ export async function previewGradeArchiveImport(
       return {
         archiveId: cw.id,
         name: cw.name,
-        itemCount: cw.items.length,
-        studentCount: cw.students.length,
+        itemCount: cw.itemCount,
+        studentCount: cw.studentCount,
         uuidMatch: uuidMatch ?? null,
         nameCandidates,
       }
@@ -446,8 +466,33 @@ export async function importGradeArchive(
           }
         }
 
-        if (data.courseworks && data.courseworks.length > 0) {
-          // v1.4.0+: 埋め込み資料を復元（資料ごとのユーザー判断を適用）
+        if (data.courseworkArchive) {
+          // v1.5.0+: 独立 coursework モジュールへ委譲（収集・生成ロジックの二重実装を解消）。
+          //   既存生徒・学級への lookup のみ（allowCreate=false）で grade の従来挙動を維持する。
+          const cwResult = await importCourseworkData(
+            tx,
+            data.courseworkArchive,
+            {
+              allowCreate: false,
+              studentMatching: "studentNumber",
+              courseworkDecisions,
+            }
+          )
+          warnings.push(...cwResult.warnings)
+          // DataSource 再リンク用: アーカイブ項目uuid → 実 CourseworkItem.id
+          for (const [archiveItemId, actualId] of cwResult.itemIdMap) {
+            itemIdToActual.set(archiveItemId, actualId)
+          }
+          // 名前フォールバック（uuid 不一致時）
+          for (const cw of data.courseworkArchive.courseworks) {
+            for (const item of cw.items) {
+              const actual = cwResult.itemIdMap.get(item.id)
+              if (actual)
+                itemNameToActual.set(`${cw.name}:${item.name}`, actual)
+            }
+          }
+        } else if (data.courseworks && data.courseworks.length > 0) {
+          // v1.4.0: 名前ベース埋め込み資料を復元（資料ごとのユーザー判断を適用）
           for (const cw of data.courseworks) {
             await ensureCoursework(cw, courseworkDecisions[cw.id])
           }

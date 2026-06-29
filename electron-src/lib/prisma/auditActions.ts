@@ -417,6 +417,16 @@ export const AUDIT_ACTIONS = {
     verb: "update",
     label: "資料の点数を更新しました",
   },
+  "coursework.export": {
+    category: "grade",
+    verb: "export",
+    label: "試験外成績資料「{target}」をエクスポートしました",
+  },
+  "coursework.import": {
+    category: "grade",
+    verb: "import",
+    label: "試験外成績資料「{target}」をインポートしました",
+  },
 
   // ── 解答用紙作成（answer_sheet） ─────────────────────────────
   "answer_sheet.create": {

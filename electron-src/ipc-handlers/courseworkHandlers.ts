@@ -2,6 +2,19 @@
  * Coursework（試験外成績資料）IPC ハンドラー
  */
 
+import { dialog, ipcMain } from "electron"
+
+import type {
+  CourseworkImportDecisions,
+  CourseworkMatchingMethod,
+} from "../../src/types/courseworkArchive.types"
+import { exportCoursework } from "../lib/export/coursework-archive"
+import {
+  cleanupCourseworkTempDir,
+  extractCourseworkArchive,
+  importCourseworkArchive,
+  previewCourseworkImport,
+} from "../lib/import/coursework-archive"
 import {
   addStudentsFromClassToCoursework,
   addStudentsToCoursework,
@@ -196,6 +209,93 @@ export function setupCourseworkHandlers(): void {
     "coursework:setTags",
     async (courseworkId: string, tagIds: string[]) => {
       return setCourseworkTags(courseworkId, tagIds)
+    }
+  )
+
+  // ── アーカイブ（.coursework のエクスポート／インポート）────────────
+  // エクスポート（保存ダイアログは exportCoursework 内で表示）
+  registerHandler("coursework:exportArchive", async (courseworkId: string) => {
+    return exportCoursework({ courseworkId })
+  })
+
+  // インポートファイル選択ダイアログ
+  registerHandler("coursework:selectImportFile", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "試験外成績資料をインポート",
+      filters: [
+        { name: "試験外成績資料", extensions: ["coursework"] },
+        { name: "すべてのファイル", extensions: ["*"] },
+      ],
+      properties: ["openFile"],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, canceled: true }
+    }
+    return { success: true, filePath: result.filePaths[0] }
+  })
+
+  // アーカイブ解析（プレビュー）。tempDir を finally で後始末するため手動 handle。
+  ipcMain.handle(
+    "coursework:analyzeArchive",
+    async (_event, options: { archivePath: string }) => {
+      let tempDir: string | null = null
+      try {
+        const ext = await extractCourseworkArchive(options.archivePath)
+        if (!ext.success || !ext.data) {
+          return { success: false, error: ext.error }
+        }
+        tempDir = ext.data.tempDir
+        return await previewCourseworkImport(ext.data.data)
+      } catch (error) {
+        console.error(
+          "Error in IPC handler [coursework:analyzeArchive]:",
+          error
+        )
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "アーカイブ解析に失敗しました",
+        }
+      } finally {
+        if (tempDir) cleanupCourseworkTempDir(tempDir)
+      }
+    }
+  )
+
+  // インポート実行。tempDir を finally で後始末するため手動 handle。
+  ipcMain.handle(
+    "coursework:importArchive",
+    async (
+      _event,
+      options: {
+        archivePath: string
+        courseworkDecisions?: CourseworkImportDecisions
+        studentMatching?: CourseworkMatchingMethod
+      }
+    ) => {
+      let tempDir: string | null = null
+      try {
+        const ext = await extractCourseworkArchive(options.archivePath)
+        if (!ext.success || !ext.data) {
+          return { success: false, error: ext.error }
+        }
+        tempDir = ext.data.tempDir
+        return await importCourseworkArchive(ext.data.data, {
+          courseworkDecisions: options.courseworkDecisions,
+          studentMatching: options.studentMatching,
+        })
+      } catch (error) {
+        console.error("Error in IPC handler [coursework:importArchive]:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "インポートに失敗しました",
+        }
+      } finally {
+        if (tempDir) cleanupCourseworkTempDir(tempDir)
+      }
     }
   )
 }

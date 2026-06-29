@@ -2,6 +2,8 @@
  * 成績算出アーカイブ(.grade)の型定義
  */
 
+import type { CollectedCourseworkData } from "./courseworkArchive.types"
+
 export interface GradeArchiveManifest {
   version: string
   appVersion: string
@@ -28,8 +30,16 @@ export interface GradeArchiveData {
    * 旧アーカイブ読込時の後方互換フォールバック用に optional で残す。
    */
   manualScoresData?: ArchiveManualScoresData
-  /** v1.4.0+: 参照中の試験外成績資料（Coursework）を自己完結で埋め込む */
+  /**
+   * v1.4.0: 参照中の試験外成績資料（Coursework）の名前ベース埋め込み。
+   * 読込後方互換用に残す。v1.5.0 以降は courseworkArchive を使う。
+   */
   courseworks?: ArchiveCoursework[]
+  /**
+   * v1.5.0+: 試験外成績資料を coursework-archive と同じ UUID ベースの形で内包する。
+   * 収集・生成ロジックは独立 coursework モジュールへ委譲（二重実装の解消）。
+   */
+  courseworkArchive?: CollectedCourseworkData
   boundariesData: ArchiveBoundariesData
 }
 

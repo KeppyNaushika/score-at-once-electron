@@ -1,6 +1,13 @@
 "use client"
 
-import { ClipboardEdit, MoreHorizontal, Plus, Trash2 } from "lucide-react"
+import {
+  ClipboardEdit,
+  FolderInput,
+  FolderOutput,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -21,8 +28,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { CourseworkSummary } from "@/types/coursework.types"
+import type {
+  CourseworkArchiveImportPreview,
+  CourseworkImportDecision,
+} from "@/types/courseworkArchive.types"
 
 import { CourseworkCreateDialog } from "./CourseworkCreateDialog"
+import { CourseworkImportDialog } from "./CourseworkImportDialog"
 
 /**
  * 試験外成績資料（Coursework）の一覧コンテナ
@@ -35,6 +47,13 @@ export function CourseworkListContainer() {
   const [courseworks, setCourseworks] = useState<CourseworkSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  // インポート確認ウィザードの状態
+  const [importPreview, setImportPreview] =
+    useState<CourseworkArchiveImportPreview | null>(null)
+  const [importArchivePath, setImportArchivePath] = useState<string | null>(
+    null
+  )
+  const [importing, setImporting] = useState(false)
 
   const loadCourseworks = useCallback(async () => {
     try {
@@ -77,6 +96,81 @@ export function CourseworkListContainer() {
     }
   }
 
+  const handleExport = async (coursework: CourseworkSummary) => {
+    try {
+      const result = await window.electronAPI.coursework.exportArchive(
+        coursework.id
+      )
+      if (result.success && !result.canceled) {
+        toast.success("資料をエクスポートしました", {
+          description: coursework.name,
+        })
+      } else if (!result.success) {
+        toast.error("エクスポートに失敗しました", {
+          description: result.error,
+        })
+      }
+    } catch (error) {
+      console.error("Error exporting coursework:", error)
+      toast.error("エクスポートに失敗しました")
+    }
+  }
+
+  const handleImport = async () => {
+    const selected = await window.electronAPI.coursework.selectImportFile()
+    if (!selected.success || selected.canceled || !selected.filePath) return
+    const analyzed = await window.electronAPI.coursework.analyzeArchive({
+      archivePath: selected.filePath,
+    })
+    if (!analyzed.success || !analyzed.preview) {
+      toast.error("アーカイブの解析に失敗しました", {
+        description: analyzed.error,
+      })
+      return
+    }
+    setImportArchivePath(selected.filePath)
+    setImportPreview(analyzed.preview)
+  }
+
+  const handleImportConfirm = async (
+    decisions: Record<string, CourseworkImportDecision>
+  ) => {
+    if (!importArchivePath) return
+    setImporting(true)
+    try {
+      const result = await window.electronAPI.coursework.importArchive({
+        archivePath: importArchivePath,
+        courseworkDecisions: decisions,
+      })
+      if (result.success) {
+        if (result.warnings && result.warnings.length > 0) {
+          toast.warning(
+            `インポートは完了しましたが ${result.warnings.length} 件の警告があります`,
+            {
+              description: result.warnings.join("\n"),
+              duration: Infinity,
+              closeButton: true,
+            }
+          )
+        } else {
+          toast.success("資料をインポートしました")
+        }
+        await loadCourseworks()
+      } else {
+        toast.error("インポートに失敗しました", { description: result.error })
+      }
+    } finally {
+      setImporting(false)
+      setImportPreview(null)
+      setImportArchivePath(null)
+    }
+  }
+
+  const handleImportCancel = () => {
+    setImportPreview(null)
+    setImportArchivePath(null)
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -96,6 +190,14 @@ export function CourseworkListContainer() {
           >
             <Plus className="mr-2 h-4 w-4" />
             新規作成
+          </Button>
+          <Button
+            onClick={handleImport}
+            variant="outline"
+            className="rounded-lg"
+          >
+            <FolderInput className="mr-2 h-4 w-4" />
+            .coursework 読み込み
           </Button>
         </div>
       </div>
@@ -169,6 +271,12 @@ export function CourseworkListContainer() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => handleExport(coursework)}
+                          >
+                            <FolderOutput className="mr-2 h-4 w-4" />
+                            .coursework 書き出し
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => handleDelete(coursework)}
                           >
@@ -190,6 +298,14 @@ export function CourseworkListContainer() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onCreated={handleCreated}
+      />
+
+      <CourseworkImportDialog
+        open={importPreview !== null}
+        preview={importPreview}
+        importing={importing}
+        onCancel={handleImportCancel}
+        onConfirm={handleImportConfirm}
       />
     </div>
   )

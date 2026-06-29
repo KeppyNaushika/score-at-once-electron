@@ -193,5 +193,30 @@ export interface CourseworkAPI {
       courseworkId: string,
       tagIds: string[]
     ) => Promise<{ success: boolean; error?: string }>
+
+    // アーカイブ（.coursework のエクスポート／インポート）
+    exportArchive: (
+      courseworkId: string
+    ) => Promise<
+      import("../courseworkArchive.types").ExportCourseworkArchiveResult
+    >
+    selectImportFile: () => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+      error?: string
+    }>
+    analyzeArchive: (options: { archivePath: string }) => Promise<{
+      success: boolean
+      preview?: import("../courseworkArchive.types").CourseworkArchiveImportPreview
+      error?: string
+    }>
+    importArchive: (options: {
+      archivePath: string
+      courseworkDecisions?: import("../courseworkArchive.types").CourseworkImportDecisions
+      studentMatching?: import("../courseworkArchive.types").CourseworkMatchingMethod
+    }) => Promise<
+      import("../courseworkArchive.types").CourseworkArchiveImportResult
+    >
   }
 }

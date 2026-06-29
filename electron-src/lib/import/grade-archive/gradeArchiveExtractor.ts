@@ -2,6 +2,7 @@
  * 成績算出アーカイブ (.grade) 展開・解析
  */
 
+import type { CollectedCourseworkData } from "../../../../src/types/courseworkArchive.types"
 import type {
   ArchiveBoundariesData,
   ArchiveCoursework,
@@ -49,12 +50,19 @@ export async function extractGradeArchive(
     const boundariesData: ArchiveBoundariesData = JSON.parse(
       files["boundaries.json"] ?? '{"boundarySets":[]}'
     )
-    // v1.4.0+: 試験外成績資料の埋め込み
-    const courseworks: ArchiveCoursework[] | undefined = files[
-      "courseworks.json"
-    ]
-      ? JSON.parse(files["courseworks.json"])
-      : undefined
+    // 試験外成績資料の埋め込み。
+    //   v1.5.0+: courseworks.json は coursework-archive 形式のオブジェクト（UUID ベース）。
+    //   v1.4.0 : courseworks.json は名前ベースの ArchiveCoursework[] 配列。
+    let courseworks: ArchiveCoursework[] | undefined
+    let courseworkArchive: CollectedCourseworkData | undefined
+    if (files["courseworks.json"]) {
+      const parsed = JSON.parse(files["courseworks.json"])
+      if (Array.isArray(parsed)) {
+        courseworks = parsed
+      } else if (parsed && typeof parsed === "object") {
+        courseworkArchive = parsed
+      }
+    }
     // 旧 v1.3.0 以前: manual-scores.json があれば後方互換用に読む
     const manualScoresData: ArchiveManualScoresData | undefined = files[
       "manual-scores.json"
@@ -69,6 +77,7 @@ export async function extractGradeArchive(
         gradeData,
         boundariesData,
         courseworks,
+        courseworkArchive,
         manualScoresData,
       },
     }

@@ -111,6 +111,18 @@ export function createCourseworkApi() {
       // タグ
       setTags: (courseworkId: string, tagIds: string[]) =>
         ipcRenderer.invoke("coursework:setTags", courseworkId, tagIds),
+
+      // アーカイブ（.coursework のエクスポート／インポート）
+      exportArchive: (courseworkId: string) =>
+        ipcRenderer.invoke("coursework:exportArchive", courseworkId),
+      selectImportFile: () => ipcRenderer.invoke("coursework:selectImportFile"),
+      analyzeArchive: (options: { archivePath: string }) =>
+        ipcRenderer.invoke("coursework:analyzeArchive", options),
+      importArchive: (options: {
+        archivePath: string
+        courseworkDecisions?: import("../../src/types/courseworkArchive.types").CourseworkImportDecisions
+        studentMatching?: import("../../src/types/courseworkArchive.types").CourseworkMatchingMethod
+      }) => ipcRenderer.invoke("coursework:importArchive", options),
     },
   }
 }
