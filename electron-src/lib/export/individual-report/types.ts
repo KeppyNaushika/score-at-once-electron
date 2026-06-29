@@ -4,6 +4,7 @@
 
 import type { SubtotalGroup } from "@prisma/client"
 
+import type { BoxPlotData } from "../../shared/calculations/numericStats"
 import type { ScoringData } from "../../shared/types/exportTypes"
 
 // ================== 表示モード関連 ==================
@@ -132,15 +133,6 @@ export interface ExamInfoForReport {
   examName: string
   examDate: Date | null
   tags: string[]
-}
-
-/** 箱ひげ図用統計データ */
-export interface BoxPlotData {
-  min: number
-  q1: number
-  median: number
-  q3: number
-  max: number
 }
 
 /** 生徒ごとの小計点データ（renderer側計算用） */

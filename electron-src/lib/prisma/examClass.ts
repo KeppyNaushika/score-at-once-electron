@@ -1,6 +1,7 @@
 import { ExamClass, Prisma } from "@prisma/client"
 
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
+import type { ExamClassWithMembers } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
@@ -590,37 +591,23 @@ export const getStudentClassInfo = async (
 /**
  * 登録学級ごとの所属生徒（集計エンジン・Phase 1）
  *
- * 試験に登録された各 ExamClass について、**受験日時点で在籍する**生徒のIDを集める。
- * 採番（getStudentClassInfoForExam）と異なり、**1人の生徒は所属する全学級に重複カウント**される
+ * 試験に登録された各 ExamClass について、**受験日時点で在籍する**生徒（class.memberships）を
+ * 含む Prisma payload（{@link ExamClassWithMembers}）をそのまま返す。memberships は受験日
+ * スナップショットで where 絞り込み・出席番号→学籍番号順にソート済み。採番
+ * （getStudentClassInfoForExam）と異なり**1人の生徒は所属する全学級に重複カウント**される
  * （用途2/3の学級平均は「学級全体」を母集団とするため、order優先の単一化はしない）。
  *
- * Excel学級平均行（teacherStat）・個人成績表の複数学級比較（studentReport）の土台。
- * フラグ（teacherStat/studentReport）はPhase 2のスキーマ追加後に拡張する。現状は order 昇順の
- * 全登録学級を返し、消費側がフィルタする。
+ * order 昇順の全登録学級を返し、消費側が用途別にフィルタする
+ * （Excel は teacherStat、個人成績表は studentReport）。所属生徒IDは
+ * `ec.class.memberships.map((m) => m.studentId)` で取得する。
  */
-export interface ExamClassMembers {
-  examClassId: string
-  classId: string
-  className: string
-  classCode: string | null
-  grade: number | null
-  order: number
-  administered: boolean
-  /** 教員集計（Excel学級平均行）の対象か */
-  teacherStat: boolean
-  /** 生徒表示（個人成績表の学級比較）の対象か */
-  studentReport: boolean
-  /** 受験日時点で在籍する生徒ID（出席番号→学籍番号順） */
-  studentIds: string[]
-}
-
 export const getClassMembersForExam = async (
   examId: string
-): Promise<ExamClassMembers[]> => {
+): Promise<ExamClassWithMembers[]> => {
   try {
     const referenceDate = await getExamReferenceDate(examId)
 
-    const examClasses = await prisma.examClass.findMany({
+    return await prisma.examClass.findMany({
       where: { examId },
       include: {
         class: {
@@ -638,19 +625,6 @@ export const getClassMembersForExam = async (
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     })
-
-    return examClasses.map((ec) => ({
-      examClassId: ec.id,
-      classId: ec.classId,
-      className: ec.class.name,
-      classCode: ec.class.classCode,
-      grade: ec.class.grade,
-      order: ec.order,
-      administered: ec.administered,
-      teacherStat: ec.teacherStat,
-      studentReport: ec.studentReport,
-      studentIds: ec.class.memberships.map((m) => m.studentId),
-    }))
   } catch (error) {
     console.error(`Failed to get class members for exam ${examId}:`, error)
     throw error

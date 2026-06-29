@@ -22,6 +22,7 @@ import type { SubtotalScore } from "../../shared/types/exportTypes"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
+  buildScoreByStudentId,
   calculateQuestionCorrectRates,
   calculateQuestionScoreRates,
   calculateStatisticsForStudent,
@@ -134,6 +135,27 @@ export async function fetchIndividualReportData(
       (c) => c.studentReport
     )
 
+    // studentId → 本人が所属する studentReport 学級（複数学級対応）。学級ごとに
+    // 1回だけ変換し、生徒ごとの走査（O(学級×学級人数)）を避ける。
+    const studentClassesByStudentId = new Map<string, StudentClassForStats[]>()
+    for (const c of studentReportClasses) {
+      const memberStudentIds = c.class.memberships.map((m) => m.studentId)
+      const entry: StudentClassForStats = {
+        classId: c.classId,
+        className: c.class.name,
+        grade: c.class.grade != null ? String(c.class.grade) : null,
+        memberStudentIds,
+      }
+      for (const sid of memberStudentIds) {
+        const list = studentClassesByStudentId.get(sid)
+        if (list) list.push(entry)
+        else studentClassesByStudentId.set(sid, [entry])
+      }
+    }
+
+    // 全生徒の合計点索引を1回だけ構築し、各生徒の統計算出で共有（再構築の O(N^2) 回避）
+    const scoreByStudentId = buildScoreByStudentId(allScoringData)
+
     // 各生徒のレポートデータを構築
     const reports: IndividualReportData[] = selectedScoringData.map(
       (scoringData) => {
@@ -147,15 +169,9 @@ export async function fetchIndividualReportData(
           attendanceNumber: scoringData.attendanceNumber ?? null,
         }
 
-        // 本人が所属する studentReport 学級を抽出（複数学級対応）
-        const studentClasses: StudentClassForStats[] = studentReportClasses
-          .filter((c) => c.studentIds.includes(scoringData.studentId))
-          .map((c) => ({
-            classId: c.classId,
-            className: c.className,
-            grade: c.grade != null ? String(c.grade) : null,
-            memberStudentIds: c.studentIds,
-          }))
+        // 本人が所属する studentReport 学級（事前構築した Map から O(1) 取得）
+        const studentClasses =
+          studentClassesByStudentId.get(scoringData.studentId) ?? []
 
         // 統計データ（subtotalScoresから直接グループ情報を取得可能）
         const statistics = calculateStatisticsForStudent(
@@ -164,7 +180,8 @@ export async function fetchIndividualReportData(
           allScoringData,
           studentClasses,
           questionCorrectRates,
-          questionScoreRates
+          questionScoreRates,
+          scoreByStudentId
         )
 
         // 学習アドバイス

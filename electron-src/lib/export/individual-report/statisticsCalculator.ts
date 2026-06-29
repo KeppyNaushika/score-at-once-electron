@@ -2,12 +2,17 @@
  * 個人成績表用統計計算ロジック
  */
 
+import {
+  average as calculateAverage,
+  boxPlot as calculateBoxPlotData,
+  rank as calculateRank,
+  stdDev as calculateStdDev,
+} from "../../shared/calculations/numericStats"
 import type {
   DiscriminationLevel,
   ScoringData,
 } from "../../shared/types/exportTypes"
 import type {
-  BoxPlotData,
   ClassStatEntry,
   RawTotalScoreEntry,
   StatisticsData,
@@ -27,68 +32,14 @@ export interface StudentClassForStats {
 }
 
 /**
- * 配列の平均値を計算
+ * studentId → 合計点の索引を構築する。
+ * 生徒ごとに calculateStatisticsForStudent を呼ぶ際、呼び出し側で一度だけ構築し
+ * 渡すことで O(生徒数^2) の再構築を避ける。
  */
-function calculateAverage(values: number[]): number {
-  if (values.length === 0) return 0
-  return values.reduce((sum, v) => sum + v, 0) / values.length
-}
-
-/**
- * 配列の標準偏差を計算
- */
-function calculateStdDev(values: number[]): number {
-  if (values.length === 0) return 0
-  const avg = calculateAverage(values)
-  const squaredDiffs = values.map((v) => Math.pow(v - avg, 2))
-  return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / values.length)
-}
-
-/**
- * 配列をソートして四分位数・中央値を計算（箱ひげ図用）
- * Tukey法: データを半分に分けて中央値を取る方法
- * 全数調査（試験の成績など）に適した計算方法
- */
-function calculateBoxPlotData(values: number[]): BoxPlotData {
-  if (values.length === 0) {
-    return { min: 0, q1: 0, median: 0, q3: 0, max: 0 }
-  }
-
-  const sorted = [...values].sort((a, b) => a - b)
-  const n = sorted.length
-
-  const min = sorted[0]
-  const max = sorted[n - 1]
-  const median = calculateMedian(sorted)
-
-  // Tukey法: データを下位半分と上位半分に分けて、それぞれの中央値を取る
-  // nが奇数の場合、中央値は両方の半分から除外する
-  const midIndex = Math.floor(n / 2)
-  const lowerHalf = sorted.slice(0, midIndex)
-  const upperHalf = sorted.slice(n % 2 === 0 ? midIndex : midIndex + 1)
-
-  const q1 = calculateMedian(lowerHalf)
-  const q3 = calculateMedian(upperHalf)
-
-  return { min, q1, median, q3, max }
-}
-
-/**
- * 配列の中央値を計算
- */
-function calculateMedian(sortedValues: number[]): number {
-  const n = sortedValues.length
-  if (n === 0) return 0
-  if (n === 1) return sortedValues[0]
-
-  const mid = Math.floor(n / 2)
-  if (n % 2 === 0) {
-    // 偶数個: 中央2つの平均
-    return (sortedValues[mid - 1] + sortedValues[mid]) / 2
-  } else {
-    // 奇数個: 中央の値
-    return sortedValues[mid]
-  }
+export function buildScoreByStudentId(
+  allScoringData: ScoringData[]
+): Map<string, number | null> {
+  return new Map(allScoringData.map((d) => [d.studentId, d.totalScore]))
 }
 
 /**
@@ -101,14 +52,6 @@ function calculateDeviation(
 ): number {
   if (stdDev === 0) return 50
   return Math.round(((score - average) / stdDev) * 10 + 50)
-}
-
-/**
- * 順位を計算（同点は同順位）
- */
-function calculateRank(score: number, allScores: number[]): number {
-  const sorted = [...allScores].sort((a, b) => b - a)
-  return sorted.findIndex((s) => s <= score) + 1
 }
 
 /**
@@ -345,7 +288,13 @@ export function calculateStatisticsForStudent(
   allScoringData: ScoringData[],
   studentClasses: StudentClassForStats[],
   questionCorrectRates: Record<string, number>,
-  questionScoreRates: Record<string, number>
+  questionScoreRates: Record<string, number>,
+  /**
+   * studentId → 合計点の索引（学級母集団の絞り込み用）。生徒ごとに本関数を
+   * 呼ぶ呼び出し側で一度だけ構築して渡せば O(生徒数^2) の再構築を避けられる。
+   * 省略時は allScoringData から内部構築する（buildScoreByStudentId と同一）。
+   */
+  scoreByStudentId?: Map<string, number | null>
 ): StatisticsData {
   // 全体のスコア配列（null を除外）
   const allScores = allScoringData
@@ -358,18 +307,14 @@ export function calculateStatisticsForStudent(
   const overallBoxPlot = calculateBoxPlotData(allScores)
 
   // studentId → 合計点の索引（学級母集団の絞り込み用）
-  const scoreByStudentId = new Map(
-    allScoringData.map((d) => [d.studentId, d.totalScore] as const)
-  )
+  const scoreById = scoreByStudentId ?? buildScoreByStudentId(allScoringData)
 
   // 学級別統計（studentReport 選択学級ごと。母集団＝当該学級全体）
   const classes: ClassStatEntry[] = studentClasses.map((cls) => {
     // allScoringData に存在する所属生徒のみ（在籍はするが採点対象外を除外）
-    const presentIds = cls.memberStudentIds.filter((id) =>
-      scoreByStudentId.has(id)
-    )
+    const presentIds = cls.memberStudentIds.filter((id) => scoreById.has(id))
     const classScores = presentIds
-      .map((id) => scoreByStudentId.get(id) ?? null)
+      .map((id) => scoreById.get(id) ?? null)
       .filter((s): s is number => s !== null)
 
     return {

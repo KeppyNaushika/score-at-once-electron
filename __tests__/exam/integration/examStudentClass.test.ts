@@ -281,16 +281,18 @@ describe("Exam 在籍フィルタ", () => {
       await addStudentsFromClass(exam.id, classB.id, false)
 
       const members = await getClassMembersForExam(exam.id)
+      const idsOf = (m: (typeof members)[number]) =>
+        m.class.memberships.map((x) => x.studentId)
 
       const a = members.find((m) => m.classId === classA.id)!
       const b = members.find((m) => m.classId === classB.id)!
 
       // classA: 受験日在籍の active のみ（転出済み left は除外）
-      expect(a.studentIds).toEqual([active.id])
+      expect(idsOf(a)).toEqual([active.id])
       // classB: active（複数学級に重複カウント）
-      expect(b.studentIds).toEqual([active.id])
+      expect(idsOf(b)).toEqual([active.id])
       // left はどの学級の集計にも含まれない
-      expect(members.flatMap((m) => m.studentIds)).not.toContain(left.id)
+      expect(members.flatMap(idsOf)).not.toContain(left.id)
       // 生徒ごと追加した学級は teacherStat / studentReport が true
       expect(a.teacherStat).toBe(true)
       expect(a.studentReport).toBe(true)

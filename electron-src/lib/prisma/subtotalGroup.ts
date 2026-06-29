@@ -488,21 +488,23 @@ export async function setSubtotalGroupSelection(
   boxPlotGroupIds: string[]
 ) {
   try {
-    const tableSet = new Set(tableGroupIds)
-    const boxPlotSet = new Set(boxPlotGroupIds)
-
     await prisma.$transaction(async (tx) => {
-      const links = await tx.examSubtotalGroup.findMany({
+      // 一旦全フラグを false にし、指定IDのみ true へ。行ごとの update（N+1）を
+      // 定数本数の updateMany に集約する。
+      await tx.examSubtotalGroup.updateMany({
         where: { examId },
-        select: { id: true, subtotalGroupId: true },
+        data: { selectedForTable: false, selectedForBoxPlot: false },
       })
-      for (const link of links) {
-        await tx.examSubtotalGroup.update({
-          where: { id: link.id },
-          data: {
-            selectedForTable: tableSet.has(link.subtotalGroupId),
-            selectedForBoxPlot: boxPlotSet.has(link.subtotalGroupId),
-          },
+      if (tableGroupIds.length > 0) {
+        await tx.examSubtotalGroup.updateMany({
+          where: { examId, subtotalGroupId: { in: tableGroupIds } },
+          data: { selectedForTable: true },
+        })
+      }
+      if (boxPlotGroupIds.length > 0) {
+        await tx.examSubtotalGroup.updateMany({
+          where: { examId, subtotalGroupId: { in: boxPlotGroupIds } },
+          data: { selectedForBoxPlot: true },
         })
       }
     })

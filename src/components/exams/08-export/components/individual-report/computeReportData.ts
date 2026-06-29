@@ -2,6 +2,12 @@
  * 個人成績表の共通計算ロジック
  * プレビュー（React）とPDF出力（renderToStaticMarkup）の両方で使用
  */
+import {
+  average,
+  boxPlot,
+  rank,
+  stdDev,
+} from "@/electron-src/lib/shared/calculations/numericStats"
 import type {
   IndividualReportData,
   IndividualReportOptions,
@@ -68,20 +74,8 @@ export function computeFilteredStats(
     .map((e) => e.totalScore)
     .filter((s): s is number => s !== null)
 
-  const avg = (arr: number[]) =>
-    arr.length === 0 ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length
-  const stdDevFn = (arr: number[]) => {
-    if (arr.length === 0) return 0
-    const a = avg(arr)
-    return Math.sqrt(arr.reduce((s, v) => s + (v - a) ** 2, 0) / arr.length)
-  }
-  const rankFn = (score: number, scores: number[]) => {
-    const sorted = [...scores].sort((a, b) => b - a)
-    return sorted.findIndex((s) => s <= score) + 1
-  }
-
-  const overallAvg = avg(allScores)
-  const overallStd = stdDevFn(allScores)
+  const overallAvg = average(allScores)
+  const overallStd = stdDev(allScores)
   const studentScore = report.scoringData.totalScore
   const deviation =
     studentScore === null || overallStd === 0
@@ -101,10 +95,10 @@ export function computeFilteredStats(
       .filter((s): s is number => s !== null)
     return {
       ...cls,
-      average: avg(classScores),
-      stdDev: stdDevFn(classScores),
+      average: average(classScores),
+      stdDev: stdDev(classScores),
       total: filteredMembers.length,
-      rank: studentScore !== null ? rankFn(studentScore, classScores) : 0,
+      rank: studentScore !== null ? rank(studentScore, classScores) : 0,
     }
   })
 
@@ -120,47 +114,14 @@ export function computeFilteredStats(
     personal: {
       ...report.statistics.personal,
       deviation,
-      overallRank: studentScore !== null ? rankFn(studentScore, allScores) : 0,
+      overallRank: studentScore !== null ? rank(studentScore, allScores) : 0,
     },
   }
 }
 
 // ============================
-// 箱ひげ図統計計算
+// 箱ひげ図統計計算（プリミティブは numericStats を共用）
 // ============================
-
-function calculateMedian(sortedValues: number[]): number {
-  const n = sortedValues.length
-  if (n === 0) return 0
-  if (n === 1) return sortedValues[0]
-  const mid = Math.floor(n / 2)
-  if (n % 2 === 0) {
-    return (sortedValues[mid - 1] + sortedValues[mid]) / 2
-  }
-  return sortedValues[mid]
-}
-
-function calculateAverage(values: number[]): number {
-  if (values.length === 0) return 0
-  return values.reduce((sum, v) => sum + v, 0) / values.length
-}
-
-function calculateBoxPlotData(values: number[]) {
-  if (values.length === 0) {
-    return { min: 0, q1: 0, median: 0, q3: 0, max: 0 }
-  }
-  const sorted = [...values].sort((a, b) => a - b)
-  const n = sorted.length
-  const min = sorted[0]
-  const max = sorted[n - 1]
-  const median = calculateMedian(sorted)
-  const midIndex = Math.floor(n / 2)
-  const lowerHalf = sorted.slice(0, midIndex)
-  const upperHalf = sorted.slice(n % 2 === 0 ? midIndex : midIndex + 1)
-  const q1 = calculateMedian(lowerHalf)
-  const q3 = calculateMedian(upperHalf)
-  return { min, q1, median, q3, max }
-}
 
 /**
  * 小計点箱ひげ図の統計を受験状態フィルタ付きで再計算
@@ -214,8 +175,8 @@ export function computeFilteredSubtotalStats(
       subtotalId: stat.subtotalId,
       subtotalLabel: stat.subtotalLabel,
       subtotalGroupId: stat.subtotalGroupId,
-      boxPlot: calculateBoxPlotData(filteredScores),
-      average: calculateAverage(filteredScores),
+      boxPlot: boxPlot(filteredScores),
+      average: average(filteredScores),
       maxScore: stat.maxScore,
     }
   })
@@ -249,9 +210,9 @@ export function computeFilteredOverallStat(
     subtotalGroupId: "__overall__",
     boxPlot:
       filteredScores.length > 0
-        ? calculateBoxPlotData(filteredScores)
+        ? boxPlot(filteredScores)
         : { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
-    average: calculateAverage(filteredScores),
+    average: average(filteredScores),
     maxScore: totalMaxScore,
   }
 }

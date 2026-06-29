@@ -188,10 +188,14 @@ export function ClassExamManager({
 
     try {
       for (const classId of selectedClassIds) {
+        // administered の学級は既定で教員集計・生徒表示の対象（移行の
+        // studentReport=administered と整合）。出力スコープは後から08で調整可能。
         await window.electronAPI.examClass.add({
           examId,
           classId,
           administered: true,
+          teacherStat: true,
+          studentReport: true,
         })
       }
 
