@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BarChart3,
   Check,
   CheckSquare,
   Eye,
@@ -40,8 +41,10 @@ import { ExcelPreview } from "./ExcelPreview"
 import type { ExportTabType } from "./ExportOptionsCard"
 import { IndividualReportPreview } from "./individual-report/IndividualReportPreview"
 import { ScoredAnswerPreview } from "./ScoredAnswerPreview"
+import { StatClassSelector } from "./StatClassSelector"
 
 interface StudentSelectionCardProps {
+  examId?: string
   students: Student[]
   availableClasses: Array<{ id: string; name: string }>
   searchTerm: string
@@ -74,6 +77,7 @@ interface StudentSelectionCardProps {
 }
 
 export function StudentSelectionCard({
+  examId,
   students,
   availableClasses,
   searchTerm,
@@ -101,9 +105,9 @@ export function StudentSelectionCard({
   isExcelPreviewLoading,
   excelPreviewError,
 }: StudentSelectionCardProps) {
-  const [activeTab, setActiveTab] = useState<"selection" | "preview">(
-    "selection"
-  )
+  const [activeTab, setActiveTab] = useState<
+    "class-stats" | "selection" | "preview"
+  >("selection")
 
   // exportTabからpreviewTypeを導出
   const previewType =
@@ -155,11 +159,17 @@ export function StudentSelectionCard({
   return (
     <Tabs
       value={activeTab}
-      onValueChange={(v) => setActiveTab(v as "selection" | "preview")}
+      onValueChange={(v) =>
+        setActiveTab(v as "class-stats" | "selection" | "preview")
+      }
       className="flex h-full flex-col"
     >
       {/* タブヘッダー */}
-      <TabsList className="mb-2 grid w-full grid-cols-2">
+      <TabsList className="mb-2 grid w-full grid-cols-3">
+        <TabsTrigger value="class-stats" className="gap-1">
+          <BarChart3 className="h-4 w-4" />
+          統計対象学級
+        </TabsTrigger>
         <TabsTrigger value="selection" className="gap-1">
           <Users className="h-4 w-4" />
           生徒選択
@@ -169,6 +179,20 @@ export function StudentSelectionCard({
           プレビュー
         </TabsTrigger>
       </TabsList>
+
+      {/* 統計対象学級タブ（教員集計 / 生徒表示の学級選択） */}
+      <TabsContent
+        value="class-stats"
+        className="mt-0 min-h-0 flex-1 overflow-auto"
+      >
+        {examId ? (
+          <StatClassSelector examId={examId} />
+        ) : (
+          <p className="text-muted-foreground p-4 text-center text-sm">
+            試験が読み込まれていません
+          </p>
+        )}
+      </TabsContent>
 
       {/* 生徒選択タブ */}
       <TabsContent

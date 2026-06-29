@@ -5,7 +5,6 @@ import {
   getAdministeredClasses,
   getAvailableClassesForExam,
   getExamClasses,
-  getStatisticsClasses,
   getStudentClassInfo,
   getStudentClassInfoForExam,
   removeExamClass,
@@ -27,11 +26,6 @@ export function setupExamClassHandlers(): void {
   // Get administered classes (for adding students)
   registerHandler("exam-class:get-administered", async (examId: string) => {
     return await getAdministeredClasses(examId)
-  })
-
-  // Get statistics classes (for aggregation)
-  registerHandler("exam-class:get-statistics", async (examId: string) => {
-    return await getStatisticsClasses(examId)
   })
 
   // Add a class to a exam

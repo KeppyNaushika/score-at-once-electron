@@ -260,7 +260,8 @@ export async function createFullTestExam(
       examId: exam.id,
       classId: cls.id,
       administered: true,
-      statistics: true,
+      teacherStat: true,
+      studentReport: true,
       order: 0,
     },
   })

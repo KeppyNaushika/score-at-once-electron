@@ -34,6 +34,19 @@ export function createSubtotalApi() {
         examId,
         subtotalGroupId
       ),
+    getSubtotalGroupSelection: (examId: string) =>
+      ipcRenderer.invoke("get-subtotal-group-selection", examId),
+    setSubtotalGroupSelection: (
+      examId: string,
+      tableGroupIds: string[],
+      boxPlotGroupIds: string[]
+    ) =>
+      ipcRenderer.invoke(
+        "set-subtotal-group-selection",
+        examId,
+        tableGroupIds,
+        boxPlotGroupIds
+      ),
 
     // Subtotal related (renamed from QuestionGroupItem)
     createSubtotal: (data: Prisma.SubtotalUncheckedCreateInput) =>

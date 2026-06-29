@@ -533,6 +533,8 @@ export async function collectExamData(
             id: psg.id,
             examId: psg.examId,
             subtotalGroupId: psg.subtotalGroupId,
+            selectedForTable: psg.selectedForTable,
+            selectedForBoxPlot: psg.selectedForBoxPlot,
             createdAt: psg.createdAt.toISOString(),
             updatedAt: psg.updatedAt.toISOString(),
           }))
@@ -544,7 +546,8 @@ export async function collectExamData(
             examId: pc.examId,
             classId: pc.classId,
             administered: pc.administered,
-            statistics: pc.statistics,
+            teacherStat: pc.teacherStat,
+            studentReport: pc.studentReport,
             order: pc.order,
             createdAt: pc.createdAt.toISOString(),
             updatedAt: pc.updatedAt.toISOString(),

@@ -441,6 +441,88 @@ export const getSubtotalGroupsByExamId = async (examId: string) => {
   return []
 }
 
+/**
+ * 小計グループの出力選択フラグを取得する（個人成績表のテーブル/箱ひげ図）。
+ * source of truth は ExamSubtotalGroup.selectedForTable/selectedForBoxPlot（settingsJson ではない）。
+ */
+export async function getSubtotalGroupSelection(examId: string) {
+  try {
+    const links = await prisma.examSubtotalGroup.findMany({
+      where: { examId },
+      select: {
+        subtotalGroupId: true,
+        selectedForTable: true,
+        selectedForBoxPlot: true,
+      },
+    })
+    return {
+      success: true as const,
+      tableGroupIds: links
+        .filter((l) => l.selectedForTable)
+        .map((l) => l.subtotalGroupId),
+      boxPlotGroupIds: links
+        .filter((l) => l.selectedForBoxPlot)
+        .map((l) => l.subtotalGroupId),
+    }
+  } catch (error) {
+    console.error("Error getting subtotal group selection:", error)
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "Unknown error",
+      tableGroupIds: [],
+      boxPlotGroupIds: [],
+    }
+  }
+}
+
+/**
+ * 小計グループの出力選択フラグを設定する（個人成績表のテーブル/箱ひげ図）。
+ * 指定 ID をフラグ true、それ以外を false にする（亡霊ID排除のため relational に保持）。
+ *
+ * @param tableGroupIds - 小計点テーブルに含める subtotalGroupId 群
+ * @param boxPlotGroupIds - 箱ひげ図に含める subtotalGroupId 群
+ */
+export async function setSubtotalGroupSelection(
+  examId: string,
+  tableGroupIds: string[],
+  boxPlotGroupIds: string[]
+) {
+  try {
+    const tableSet = new Set(tableGroupIds)
+    const boxPlotSet = new Set(boxPlotGroupIds)
+
+    await prisma.$transaction(async (tx) => {
+      const links = await tx.examSubtotalGroup.findMany({
+        where: { examId },
+        select: { id: true, subtotalGroupId: true },
+      })
+      for (const link of links) {
+        await tx.examSubtotalGroup.update({
+          where: { id: link.id },
+          data: {
+            selectedForTable: tableSet.has(link.subtotalGroupId),
+            selectedForBoxPlot: boxPlotSet.has(link.subtotalGroupId),
+          },
+        })
+      }
+    })
+
+    await recordAuditLog({
+      action: "subtotal_group.selection_update",
+      entityType: "ExamSubtotalGroup",
+      entityId: examId,
+    })
+
+    return { success: true as const }
+  } catch (error) {
+    console.error("Error setting subtotal group selection:", error)
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
 /** IDで小計点グループを取得する（subtotals・examSubtotalGroups含む） */
 export const getSubtotalGroupById = async (id: string) => {
   return prisma.subtotalGroup.findUnique({

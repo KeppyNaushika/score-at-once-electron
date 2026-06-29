@@ -27,16 +27,22 @@ function createMinimalStats(): StatisticsData {
       boxPlot: { min: 50, q1: 60, median: 70, q3: 80, max: 90 },
       total: 3,
     },
-    class: {
-      average: 70,
-      stdDev: 10,
-      boxPlot: { min: 50, q1: 60, median: 70, q3: 80, max: 90 },
-      total: 3,
-    },
+    classes: [
+      {
+        classId: "cA",
+        className: "A",
+        grade: "1",
+        memberStudentIds: ["s1", "s2", "s3"],
+        average: 70,
+        stdDev: 10,
+        boxPlot: { min: 50, q1: 60, median: 70, q3: 80, max: 90 },
+        total: 3,
+        rank: 1,
+      },
+    ],
     personal: {
       deviation: 50,
       overallRank: 1,
-      classRank: 1,
     },
     questionCorrectRates: {},
     questionScoreRates: {},
@@ -178,7 +184,7 @@ describe("computeFilteredStats", () => {
 
     expect(result.personal.deviation).toBe(0)
     expect(result.personal.overallRank).toBe(0)
-    expect(result.personal.classRank).toBe(0)
+    expect(result.classes[0].rank).toBe(0)
   })
 
   it("全ステータス有効時はフィルタリングせず元の統計を返す", () => {

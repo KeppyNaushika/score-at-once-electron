@@ -67,30 +67,48 @@ export function useExportPage() {
         try {
           const result =
             await window.electronAPI.settings.getExamExportSettings(examId)
-          if (result.success && result.settings) {
-            if (result.settings.scoringMarkConfig) {
-              const saved = result.settings
-                .scoringMarkConfig as Partial<ScoringMarkConfig>
-              // 後方互換性: subtotalScore/totalScore がない場合、summaryScore からフォールバック
-              const mergedConfig: ScoringMarkConfig = {
-                ...defaultScoringMarkConfig,
-                ...saved,
-              }
-              if (!saved.subtotalScore && saved.summaryScore) {
-                mergedConfig.subtotalScore = { ...saved.summaryScore }
-              }
-              if (!saved.totalScore && saved.summaryScore) {
-                mergedConfig.totalScore = { ...saved.summaryScore }
-              }
-              setScoringMarkConfigState(mergedConfig)
+          if (result.success && result.settings?.scoringMarkConfig) {
+            const saved = result.settings
+              .scoringMarkConfig as Partial<ScoringMarkConfig>
+            // 後方互換性: subtotalScore/totalScore がない場合、summaryScore からフォールバック
+            const mergedConfig: ScoringMarkConfig = {
+              ...defaultScoringMarkConfig,
+              ...saved,
             }
-            if (result.settings.individualReportOptions) {
-              setIndividualReportOptionsState({
-                ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-                ...result.settings.individualReportOptions,
-              })
+            if (!saved.subtotalScore && saved.summaryScore) {
+              mergedConfig.subtotalScore = { ...saved.summaryScore }
+            }
+            if (!saved.totalScore && saved.summaryScore) {
+              mergedConfig.totalScore = { ...saved.summaryScore }
+            }
+            setScoringMarkConfigState(mergedConfig)
+          }
+
+          // 個人成績表オプション（JSON）を基にしつつ、小計グループ選択は
+          // source of truth である ExamSubtotalGroup フラグから hydrate する（P5: 亡霊ID排除）
+          let baseOptions = DEFAULT_INDIVIDUAL_REPORT_OPTIONS
+          if (result.success && result.settings?.individualReportOptions) {
+            baseOptions = {
+              ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+              ...result.settings.individualReportOptions,
             }
           }
+          const selection =
+            await window.electronAPI.getSubtotalGroupSelection(examId)
+          if (selection.success) {
+            baseOptions = {
+              ...baseOptions,
+              tableSubtotalGroupSelection: {
+                ...baseOptions.tableSubtotalGroupSelection,
+                selectedGroupIds: selection.tableGroupIds,
+              },
+              boxPlotSubtotalGroupSelection: {
+                ...baseOptions.boxPlotSubtotalGroupSelection,
+                selectedGroupIds: selection.boxPlotGroupIds,
+              },
+            }
+          }
+          setIndividualReportOptionsState(baseOptions)
         } catch (error) {
           console.error("試験設定の読み込みに失敗しました:", error)
         }
@@ -144,13 +162,32 @@ export function useExportPage() {
 
       if (examId && window.electronAPI?.settings) {
         try {
+          // 小計グループ選択は relational フラグへ書き込み（source of truth）
+          await window.electronAPI.setSubtotalGroupSelection(
+            examId,
+            newOptions.tableSubtotalGroupSelection.selectedGroupIds,
+            newOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
+          )
+
           const result =
             await window.electronAPI.settings.getExamExportSettings(examId)
           const currentSettings =
             result.success && result.settings ? result.settings : {}
+          // JSON には selectedGroupIds（エンティティ参照）を残さない。
+          // enabled などの非参照設定のみ保持し、ID はフラグから hydrate する。
           await window.electronAPI.settings.saveExamExportSettings(examId, {
             ...currentSettings,
-            individualReportOptions: newOptions,
+            individualReportOptions: {
+              ...newOptions,
+              tableSubtotalGroupSelection: {
+                ...newOptions.tableSubtotalGroupSelection,
+                selectedGroupIds: [],
+              },
+              boxPlotSubtotalGroupSelection: {
+                ...newOptions.boxPlotSubtotalGroupSelection,
+                selectedGroupIds: [],
+              },
+            },
           })
         } catch (error) {
           console.error("個人成績表オプションの保存に失敗しました:", error)

@@ -68,15 +68,6 @@ export function computeFilteredStats(
     .map((e) => e.totalScore)
     .filter((s): s is number => s !== null)
 
-  const filteredClass = filteredAll.filter(
-    (e) =>
-      e.className === report.studentInfo.className &&
-      e.grade === report.studentInfo.grade
-  )
-  const classScores = filteredClass
-    .map((e) => e.totalScore)
-    .filter((s): s is number => s !== null)
-
   const avg = (arr: number[]) =>
     arr.length === 0 ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length
   const stdDevFn = (arr: number[]) => {
@@ -99,6 +90,24 @@ export function computeFilteredStats(
         : 50
       : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
 
+  // 学級別統計を受験状態フィルタ付きで再計算（学級ごとに memberStudentIds で母集団を絞る）
+  const classes = report.statistics.classes.map((cls) => {
+    const memberSet = new Set(cls.memberStudentIds)
+    const filteredMembers = filteredAll.filter((e) =>
+      memberSet.has(e.studentId)
+    )
+    const classScores = filteredMembers
+      .map((e) => e.totalScore)
+      .filter((s): s is number => s !== null)
+    return {
+      ...cls,
+      average: avg(classScores),
+      stdDev: stdDevFn(classScores),
+      total: filteredMembers.length,
+      rank: studentScore !== null ? rankFn(studentScore, classScores) : 0,
+    }
+  })
+
   return {
     ...report.statistics,
     overall: {
@@ -107,17 +116,11 @@ export function computeFilteredStats(
       stdDev: overallStd,
       total: filteredAll.length,
     },
-    class: {
-      ...report.statistics.class,
-      average: avg(classScores),
-      stdDev: stdDevFn(classScores),
-      total: filteredClass.length,
-    },
+    classes,
     personal: {
       ...report.statistics.personal,
       deviation,
       overallRank: studentScore !== null ? rankFn(studentScore, allScores) : 0,
-      classRank: studentScore !== null ? rankFn(studentScore, classScores) : 0,
     },
   }
 }
@@ -401,12 +404,19 @@ export function buildStatsItems(
     })
   }
 
+  // 複数学級時はラベルに学級名を付して区別する（単一学級なら従来どおり「学級平均」）
+  const multipleClasses = filteredStats.classes.length > 1
+  const classLabel = (className: string, suffix: string) =>
+    multipleClasses ? `${className}${suffix}` : `学級${suffix}`
+
   if (options.showAverage !== "none") {
     if (options.showAverage === "class" || options.showAverage === "both") {
-      items.push({
-        label: "学級平均",
-        value: filteredStats.class.average.toFixed(1),
-      })
+      for (const cls of filteredStats.classes) {
+        items.push({
+          label: classLabel(cls.className, "平均"),
+          value: cls.average.toFixed(1),
+        })
+      }
     }
     if (options.showAverage === "overall" || options.showAverage === "both") {
       items.push({
@@ -425,10 +435,12 @@ export function buildStatsItems(
 
   if (options.showRank) {
     if (options.rankType === "class" || options.rankType === "both") {
-      items.push({
-        label: "学級順位",
-        value: `${filteredStats.personal.classRank} / ${filteredStats.class.total}`,
-      })
+      for (const cls of filteredStats.classes) {
+        items.push({
+          label: classLabel(cls.className, "順位"),
+          value: `${cls.rank} / ${cls.total}`,
+        })
+      }
     }
     if (options.rankType === "overall" || options.rankType === "both") {
       items.push({

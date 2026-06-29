@@ -3,7 +3,7 @@
 試験(Exam)における「学級」の扱い — 採番・統計・出力 — を作り直すための設計文書。
 成績(Grade)・資料(Coursework)への共通化も含む。
 
-最終更新: 2026-06-29 / ステータス: 設計確定。学級再設計(Phase 0-5)は未実装。統計強化(11章)は **#833/#838/#834 すべて実装完了**（α係数・D値・S-P表・得点度数分布・R/exametrikaエクスポート。Excel/プレビュー配線済、typecheck・lint・テスト86件パス）。
+最終更新: 2026-06-30 / ステータス: 統計強化(11章 #833/#838/#834)は実装完了・コミット済(`3c99fc8a`)。**学級再設計は Phase 0〜4c 実装完了・未コミット**（受験日統一/集計エンジン/スキーマ＋移行/statistics削除/05簡素化/08統計対象学級タブ/Excel学級平均行/個人成績表の複数学級比較/小計グループのフラグ移行）。フルテスト 862 passed・1 failed(既存の grade 日付相対・無関係)、typecheck クリーン。**残り: Phase 5(UI共通化＋削除2段階modal)。詳細は 12 章。**
 
 ---
 
@@ -362,9 +362,24 @@ CLAUDE.md の規則に従う（`prisma migrate dev` / 手書き migration.sql＋
   - **テスト**: `__tests__/calculations/itemAnalysisStats.test.ts`（11件）/`spAnalysis.test.ts`（8件）。
     `npx vitest run __tests__/calculations/` で計86件パス。typecheck・lint クリーン。
 
-### 12.2 次にやること
+### 12.1.5 学級再設計 Phase 0〜4a 実装完了（2026-06-29、未コミット）
 
-1. **学級統計の再設計本体**: Phase 0（受験日統一）→ 1 →（2 スキーマ）→ 3 → 4 → 5。統計強化(#833-834)とは独立。
+すべて作業ツリーに保持（未コミット）。フルテスト 856 passed / 1 failed（残り1件は既存の日付相対 grade テスト `gradeStudentCrud`、本変更前から失敗・無関係）。typecheck クリーン、自分のファイルは lint クリーン。
+
+- **Phase 0 受験日統一（P3）**: `examClass.ts` の在籍解決 `getStudentClassInfoForExam`/`getStudentClassInfo` ＋一覧系 `getExamClasses`/`getAdministeredClasses`（旧 `endDate:null`）を `membershipFilterAt(getExamReferenceDate(examId))` に統一。テスト `__tests__/exam/integration/examStudentClass.test.ts`。
+- **Phase 1 集計エンジン（P1/P2）**: `examClass.ts` に `getClassMembersForExam`（登録学級→受験日所属生徒・**重複カウント**）新設。`excel/dataFetcher.ts` の表示用学級情報を `memberships[0]` → order解決値へ（individual-report も `fetchExportData` 経由で是正）。フォールバック付き。
+- **Phase 2 スキーマ＋移行**: `ExamClass` に `teacherStat`/`studentReport`、`ExamSubtotalGroup` に `selectedForTable`/`selectedForBoxPlot` 追加。migration `20260629120000_class_output_flags`（列追加＋ `teacherStat=旧statistics` / `studentReport=administered` の値移行）。archive `CURRENT_VERSION 1.15.0`（新フラグ optional、creator は旧フラグから補完、トランスフォーマー不要＝範囲方式）。
+  - **⚠️ 実DBに適用済み**: `npm run dev` 起動時に `migrationDeployer` が `data/database.db` へ自動適用済み（teacherStat/studentReport あり、statistics 無し）。コードは未コミットだが**DBは先行**している。
+- **Phase 3 statistics 完全削除＋UI**: schema から `statistics` 削除＋ `20260629130000_drop_examclass_statistics`（実DB適用済み）。`getStatisticsClasses` 関数・IPC・preload・d.ts・05チェックボックスを全撤去。05は「再採番」のみに簡素化。08左カードに **「統計対象学級」タブ**（`StatClassSelector`、教員集計/生徒表示の2列チェック）を追加。
+  - **⚠️ 消し残り注意**: `statistics` 書き込みは examClass.ts だけでなく `import/exam-archive/dataCreator.ts`・`import/merge/idIntegrationImporter.ts`・テストヘルパー（`testExamBuilder`/`seed-in-test`）にも在った。Prisma7 の create 入力型が緩く typecheck で全部は捕捉できない→ **grep で全 `statistics:` 書き込みを洗うこと**。
+- **Phase 4a Excel学級平均行（主成果）**: `excel/averageRows.ts` `appendClassAverageRows`（全体平均＋teacherStat学級ごとの平均、母集団=学級全体・全受験生徒データから集計）。`sheetCreators.createScoreSheet` に配線、`excelExportMain` で `fetchExportData(examId,[])`＋teacherStat学級を取得して渡す。テスト `__tests__/calculations/classAverageRows.test.ts`。
+- **Phase 4b 個人成績表の複数学級比較（2026-06-30 実装）**: `StatisticsData.class`（単一）→ `classes: ClassStatEntry[]`（学級ごと average/stdDev/boxPlot/total/rank＋`memberStudentIds`）。`personal.classRank` 廃止→各エントリ `rank` へ。`statisticsCalculator.calculateStatisticsForStudent` は第4引数を `StudentClassForStats[]` に変更し学級ごと算出。`dataFetcher` が `getClassMembersForExam(examId).filter(studentReport)` ∩ 本人所属で `studentClasses` を構築。renderer `computeReportData.computeFilteredStats` は `memberStudentIds` で母集団を絞って再計算、`buildStatsItems` は学級ごとに「学級平均/順位」を展開（複数時は学級名付きラベル）。**消費は types/statisticsCalculator/dataFetcher/computeReportData の4ファイルのみ**（BoxPlotChart/ScoreTablePreview は `statistics.class` 不使用、generatePrintHtml は buildStatsItems 経由で自動対応）。テスト更新 `statisticsCalculator.test.ts`/`computeReportData.test.ts`（複数学級・空学級ケース追加）。
+- **Phase 4c 小計グループのフラグ移行（2026-06-30 実装）**: source of truth を settingsJson から `ExamSubtotalGroup.selectedForTable/selectedForBoxPlot` へ。prisma `getSubtotalGroupSelection`/`setSubtotalGroupSelection`（指定外を false リセット）＋IPC `get/set-subtotal-group-selection`＋preload＋`cropRegionApi.d.ts`。`useExportPage`：読込時にフラグから `selectedGroupIds` を hydrate、保存時に `setSubtotalGroupSelection` 書込＋JSONから `selectedGroupIds` を `[]` 除去（`enabled` は JSON 維持）。migration `20260629140000_backfill_subtotal_selection_flags`（`json_each` で enabled=true の選択のみバックフィル、deployer の `;` 分割で2文・temp DB 検証済み）。レンダリングフィルタ `filterSubtotalScores` は selectedGroupIds 流用で無改修。アーカイブは Phase 2 で対応済み（dataCollector/dataCreator/型）。亡霊IDは ExamSubtotalGroup の FK カスケード削除で解消。テスト `__tests__/exam/integration/subtotalGroupSelection.test.ts`（4件）。
+  - **フルテスト 862 passed / 1 failed**（残り1件は既存の日付相対 grade `gradeStudentCrud`、無関係）。typecheck クリーン。
+
+### 12.2 次にやること（Phase 5）
+
+- **Phase 5 UI共通化**: `src/components/common/class-roster/ClassRosterManager.tsx` 抽出（flagColumns 可変＝試験は再採番1列・成績/資料は0列）、3エンティティ（試験/成績/資料）の学級登録UI移行、**削除2段階modal**（3章：所属データ有無で分岐）、grade/coursework に class reorder API（`setClassOrders`）。教員用/生徒用フラグ(teacherStat/studentReport)は05に出さず08側UIで操作（既存）。
 
 ### 12.3 実装上の不変条件（壊さないこと）
 
@@ -373,4 +388,6 @@ CLAUDE.md の規則に従う（`prisma migrate dev` / 手書き migration.sql＋
 - 学級平均の母集団は **学級全体**（生徒選択チェックは母集団に無関係、5.1）。
 - 用途1（採番）は1人1学級、用途2/3（教員/生徒統計）は重複カウント（2.4）。
 - エンティティ参照はJSONに入れない（4.1）。
+- 既定値（合意 2026-06-29）: **teacherStat=旧statistics**（生徒ごと追加=true/登録だけ=false）、**studentReport=administered**。`statistics` は廃止。
+- **並行セッション注意**: 別 Claude が同一ツリーで grade/coursework を編集中。schema.prisma・テストDB(`data/test-database.db`) を共有し、同時テストで `prisma db push` が "table User already exists" で衝突する。git 操作・テストは衝突回避を意識。自分のファイルのみ add。
 - 検証は常に `npx vitest run` ＋ `npm run typecheck`。

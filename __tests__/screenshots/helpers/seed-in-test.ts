@@ -423,7 +423,8 @@ export async function seedExamWithScoring(
         examId,
         classId,
         administered: true,
-        statistics: true,
+        teacherStat: true,
+        studentReport: true,
       },
     })
   }
@@ -730,7 +731,8 @@ export async function seedSimpleExam(
       examId,
       classId: classAId,
       administered: true,
-      statistics: true,
+      teacherStat: true,
+      studentReport: true,
     },
   })
   await db.examPage.create({

@@ -1,5 +1,6 @@
 import * as ExcelJS from "exceljs"
 
+import { getClassMembersForExam } from "../../prisma/examClass"
 import {
   ExportGradingDataOptions,
   ExportResult,
@@ -61,15 +62,30 @@ export async function exportGradingDataExcel(
       }
     }
 
+    // 学級平均行の母集団は「試験全体」（生徒選択に無関係）。全受験生徒の採点データと
+    // teacherStat=true の登録学級（受験日所属生徒つき）を取得する。
+    const allDataResult =
+      selectedStudentIds.length === 0
+        ? dataResult
+        : await fetchExportData(examId, [])
+    const allScoringData = allDataResult.success
+      ? (allDataResult.scoringData ?? [])
+      : []
+    const teacherStatClasses = (await getClassMembersForExam(examId)).filter(
+      (c) => c.teacherStat
+    )
+
     // Excelワークブック作成
     const workbook = new ExcelJS.Workbook()
 
-    // 点数一覧シート作成
+    // 点数一覧シート作成（全体平均・学級平均行つき）
     await createScoreSheet(
       workbook,
       dataResult.questionRegions,
       dataResult.subtotalColumns,
-      dataResult.scoringData
+      dataResult.scoringData,
+      allScoringData,
+      teacherStatClasses
     )
 
     // 正誤一覧シート作成

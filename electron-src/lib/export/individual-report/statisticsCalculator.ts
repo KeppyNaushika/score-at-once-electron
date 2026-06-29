@@ -8,11 +8,23 @@ import type {
 } from "../../shared/types/exportTypes"
 import type {
   BoxPlotData,
+  ClassStatEntry,
   RawTotalScoreEntry,
   StatisticsData,
   SubtotalRawScores,
   SubtotalStatistics,
 } from "./types"
+
+/**
+ * 統計算出に渡す学級情報（studentReport 選択学級 ∩ 本人の受験日所属学級）
+ */
+export interface StudentClassForStats {
+  classId: string
+  className: string
+  grade: string | null
+  /** 当該学級の受験日所属生徒ID（学級全体が母集団） */
+  memberStudentIds: string[]
+}
 
 /**
  * 配列の平均値を計算
@@ -323,20 +335,20 @@ export function getDiscriminationLevel(r: number | null): DiscriminationLevel {
 
 /**
  * 特定の生徒の統計データを計算
+ *
+ * @param studentClasses - studentReport 選択学級 ∩ 本人の受験日所属学級。
+ *   各学級全体を母集団として学級平均・順位を算出（複数学級対応）。
  */
 export function calculateStatisticsForStudent(
   _studentId: string,
   studentScore: number | null,
   allScoringData: ScoringData[],
-  classScoringData: ScoringData[],
+  studentClasses: StudentClassForStats[],
   questionCorrectRates: Record<string, number>,
   questionScoreRates: Record<string, number>
 ): StatisticsData {
   // 全体のスコア配列（null を除外）
   const allScores = allScoringData
-    .map((d) => d.totalScore)
-    .filter((s): s is number => s !== null)
-  const classScores = classScoringData
     .map((d) => d.totalScore)
     .filter((s): s is number => s !== null)
 
@@ -345,10 +357,34 @@ export function calculateStatisticsForStudent(
   const overallStdDev = calculateStdDev(allScores)
   const overallBoxPlot = calculateBoxPlotData(allScores)
 
-  // 学級統計
-  const classAverage = calculateAverage(classScores)
-  const classStdDev = calculateStdDev(classScores)
-  const classBoxPlot = calculateBoxPlotData(classScores)
+  // studentId → 合計点の索引（学級母集団の絞り込み用）
+  const scoreByStudentId = new Map(
+    allScoringData.map((d) => [d.studentId, d.totalScore] as const)
+  )
+
+  // 学級別統計（studentReport 選択学級ごと。母集団＝当該学級全体）
+  const classes: ClassStatEntry[] = studentClasses.map((cls) => {
+    // allScoringData に存在する所属生徒のみ（在籍はするが採点対象外を除外）
+    const presentIds = cls.memberStudentIds.filter((id) =>
+      scoreByStudentId.has(id)
+    )
+    const classScores = presentIds
+      .map((id) => scoreByStudentId.get(id) ?? null)
+      .filter((s): s is number => s !== null)
+
+    return {
+      classId: cls.classId,
+      className: cls.className,
+      grade: cls.grade,
+      memberStudentIds: cls.memberStudentIds,
+      average: calculateAverage(classScores),
+      stdDev: calculateStdDev(classScores),
+      boxPlot: calculateBoxPlotData(classScores),
+      total: presentIds.length,
+      rank:
+        studentScore !== null ? calculateRank(studentScore, classScores) : 0,
+    }
+  })
 
   // 個人統計（studentScore === null の場合は deviation=0, rank=0）
   const deviation =
@@ -357,8 +393,6 @@ export function calculateStatisticsForStudent(
       : 0
   const overallRank =
     studentScore !== null ? calculateRank(studentScore, allScores) : 0
-  const classRank =
-    studentScore !== null ? calculateRank(studentScore, classScores) : 0
 
   // 小計別統計（SubtotalScoreから直接グループ情報を取得）
   const subtotalStatistics = calculateSubtotalStatistics(allScoringData)
@@ -382,16 +416,10 @@ export function calculateStatisticsForStudent(
       boxPlot: overallBoxPlot,
       total: allScoringData.length,
     },
-    class: {
-      average: classAverage,
-      stdDev: classStdDev,
-      boxPlot: classBoxPlot,
-      total: classScoringData.length,
-    },
+    classes,
     personal: {
       deviation,
       overallRank,
-      classRank,
     },
     questionCorrectRates,
     questionScoreRates,

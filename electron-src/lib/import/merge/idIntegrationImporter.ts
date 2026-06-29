@@ -1237,7 +1237,9 @@ async function processExamClasses(
           examId: newExamId,
           classId: newClassId,
           administered: pc.administered,
-          statistics: pc.statistics,
+          // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
+          teacherStat: pc.teacherStat ?? pc.statistics ?? false,
+          studentReport: pc.studentReport ?? pc.administered ?? false,
           order: pc.order,
         },
       })

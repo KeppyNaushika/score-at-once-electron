@@ -236,6 +236,23 @@ describe("collectSubtotalRawScores", () => {
 describe("calculateStatisticsForStudent", () => {
   const emptyRates: Record<string, number> = {}
 
+  /** allData 全員を母集団とする単一学級を作る（学級統計テスト用） */
+  const classOf = (
+    allData: ScoringData[]
+  ): {
+    classId: string
+    className: string
+    grade: string | null
+    memberStudentIds: string[]
+  }[] => [
+    {
+      classId: "c1",
+      className: "1組",
+      grade: null,
+      memberStudentIds: allData.map((d) => d.studentId),
+    },
+  ]
+
   it("totalScore が null の生徒は偏差値0・順位0", () => {
     const allData: ScoringData[] = [
       createScoringData({ studentId: "s1", totalScore: 80 }),
@@ -247,14 +264,14 @@ describe("calculateStatisticsForStudent", () => {
       "s2",
       null,
       allData,
-      allData,
+      classOf(allData),
       emptyRates,
       emptyRates
     )
 
     expect(result.personal.deviation).toBe(0)
     expect(result.personal.overallRank).toBe(0)
-    expect(result.personal.classRank).toBe(0)
+    expect(result.classes[0].rank).toBe(0)
   })
 
   it("totalScore が null の生徒は全体・学級統計から除外される", () => {
@@ -268,13 +285,15 @@ describe("calculateStatisticsForStudent", () => {
       "s1",
       80,
       allData,
-      allData,
+      classOf(allData),
       emptyRates,
       emptyRates
     )
 
     // s2(null)を除外して s1(80) と s3(60) のみで平均 = 70
     expect(result.overall.average).toBe(70)
+    // 学級平均も同じ母集団なので 70
+    expect(result.classes[0].average).toBe(70)
   })
 
   it("全員 null の場合は平均0・標準偏差0", () => {
@@ -287,7 +306,7 @@ describe("calculateStatisticsForStudent", () => {
       "s1",
       null,
       allData,
-      allData,
+      classOf(allData),
       emptyRates,
       emptyRates
     )
@@ -308,7 +327,7 @@ describe("calculateStatisticsForStudent", () => {
       "s1",
       0,
       allData,
-      allData,
+      classOf(allData),
       emptyRates,
       emptyRates
     )
@@ -317,5 +336,60 @@ describe("calculateStatisticsForStudent", () => {
     expect(result.overall.average).toBe(50)
     // 0点の生徒は順位2位
     expect(result.personal.overallRank).toBe(2)
+  })
+
+  it("studentReport 学級が未選択（空配列）なら学級統計は空", () => {
+    const allData: ScoringData[] = [
+      createScoringData({ studentId: "s1", totalScore: 80 }),
+      createScoringData({ studentId: "s2", totalScore: 60 }),
+    ]
+
+    const result = calculateStatisticsForStudent(
+      "s1",
+      80,
+      allData,
+      [],
+      emptyRates,
+      emptyRates
+    )
+
+    expect(result.classes).toEqual([])
+  })
+
+  it("複数の studentReport 学級に属する生徒は学級ごとの統計を持つ", () => {
+    const allData: ScoringData[] = [
+      createScoringData({ studentId: "s1", totalScore: 80 }),
+      createScoringData({ studentId: "s2", totalScore: 60 }),
+      createScoringData({ studentId: "s3", totalScore: 40 }),
+    ]
+
+    const result = calculateStatisticsForStudent(
+      "s1",
+      80,
+      allData,
+      [
+        {
+          classId: "cA",
+          className: "A組",
+          grade: null,
+          memberStudentIds: ["s1", "s2"], // 平均=70・s1は1位
+        },
+        {
+          classId: "cB",
+          className: "B組",
+          grade: null,
+          memberStudentIds: ["s1", "s3"], // 平均=60・s1は1位
+        },
+      ],
+      emptyRates,
+      emptyRates
+    )
+
+    expect(result.classes).toHaveLength(2)
+    expect(result.classes[0].average).toBe(70)
+    expect(result.classes[0].rank).toBe(1)
+    expect(result.classes[0].total).toBe(2)
+    expect(result.classes[1].average).toBe(60)
+    expect(result.classes[1].rank).toBe(1)
   })
 })

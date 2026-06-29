@@ -797,6 +797,7 @@ export default function ExportMainView() {
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="h-full min-h-0">
             <StudentSelectionCard
+              examId={exam?.id}
               students={students} // 受験生徒順（customOrder）でソート済み
               availableClasses={availableClasses}
               searchTerm={searchTerm}
