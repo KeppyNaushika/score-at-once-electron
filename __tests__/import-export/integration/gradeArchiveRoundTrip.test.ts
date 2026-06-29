@@ -42,7 +42,7 @@ function toArchive(
 ): GradeArchiveData {
   return {
     manifest: {
-      version: "1.4.0",
+      version: "1.5.0",
       appVersion: "test",
       exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
       gradeId,
@@ -50,7 +50,7 @@ function toArchive(
       counts: collected.counts,
     },
     gradeData: collected.gradeData,
-    courseworks: collected.courseworksData,
+    courseworkArchive: collected.courseworkArchive,
     boundariesData: collected.boundariesData,
   }
 }
@@ -219,12 +219,14 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.courseworksData).toHaveLength(1)
-    const cw = collected.courseworksData[0]
+    expect(collected.courseworkArchive.courseworks).toHaveLength(1)
+    const cw = collected.courseworkArchive.courseworks[0]
     expect(cw.items).toHaveLength(2)
     expect(cw.classes).toHaveLength(1)
-    expect(cw.tags[0].tagName).toBe(`タグ_${suffix}`)
-    expect(cw.students[0].studentNumber).toBe(`CW_${suffix}`)
+    expect(collected.courseworkArchive.tagsData[0].name).toBe(`タグ_${suffix}`)
+    expect(collected.courseworkArchive.studentsData[0].studentNumber).toBe(
+      `CW_${suffix}`
+    )
     const collectedNumDs = collected.gradeData.gradeItems[0].dataSources.find(
       (d) => d.name === "提出物参照"
     )!
@@ -495,7 +497,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.gradeData.grade.referenceDate).toBeNull()
     expect(collected.gradeData.exportSettings).toBeNull()
-    expect(collected.courseworksData).toHaveLength(0)
+    expect(collected.courseworkArchive.courseworks).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
@@ -764,5 +766,125 @@ describe("grade-archive ラウンドトリップ", () => {
     })
     expect(ds!.courseworkItem!.name).toBe("新規項目")
     expect(ds!.courseworkItem!.courseworkId).toBe(existing.id)
+  })
+
+  it("旧 v1.4.0（名前ベース courseworks 埋め込み）を後方互換で読み込める", async () => {
+    const suffix = Date.now()
+    // 旧形式は生徒・学級を既存前提で名前 lookup する
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `LEGACY_${suffix}`,
+        lastName: "高橋",
+        firstName: "次郎",
+        lastNameKana: "タカハシ",
+        firstNameKana: "ジロウ",
+      },
+    })
+    await prisma.class.create({ data: { name: `旧学級_${suffix}` } })
+
+    const archiveItemId = "00000000-0000-4000-8000-000000000abc"
+    // v1.4.0 形式の GradeArchiveData を手組み（courseworks は名前ベース配列）
+    const legacy: GradeArchiveData = {
+      manifest: {
+        version: "1.4.0",
+        appVersion: "test",
+        exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
+        gradeId: "legacy-grade",
+        gradeName: `旧成績_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 1,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 1,
+          students: 1,
+        },
+      },
+      gradeData: {
+        grade: { name: `旧成績_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "主体的態度",
+            order: 0,
+            dataSources: [
+              {
+                type: "coursework",
+                name: "旧資料参照",
+                maxScore: 100,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+                courseworkItemId: archiveItemId,
+                courseworkName: `旧レポート_${suffix}`,
+                courseworkItemName: "提出物",
+              },
+            ],
+          },
+        ],
+        classRefs: [{ name: `旧学級_${suffix}` }],
+        examRefs: [],
+        studentRefs: [
+          {
+            studentNumber: `LEGACY_${suffix}`,
+            className: `旧学級_${suffix}`,
+            customOrder: 0,
+          },
+        ],
+      },
+      courseworks: [
+        {
+          id: "00000000-0000-4000-8000-0000000000cw",
+          name: `旧レポート_${suffix}`,
+          description: null,
+          date: null,
+          classes: [{ className: `旧学級_${suffix}`, order: 0 }],
+          tags: [],
+          students: [{ studentNumber: `LEGACY_${suffix}`, customOrder: 0 }],
+          items: [
+            {
+              id: archiveItemId,
+              name: "提出物",
+              order: 0,
+              maxScore: 100,
+              inputMode: "numeric",
+              letterScales: [],
+              scores: [
+                {
+                  studentNumber: `LEGACY_${suffix}`,
+                  score: 72,
+                  letterValue: null,
+                  adjustment: null,
+                  adjustmentReason: null,
+                  comment: "旧形式のコメント",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      boundariesData: { boundarySets: [] },
+    }
+
+    const result = await importGradeArchive(legacy)
+    expect(result.success).toBe(true)
+
+    // 旧形式でも Coursework と点数が復元され、DataSource が解決される
+    const score = await prisma.courseworkScore.findFirst({
+      where: { studentId: student.id },
+      include: { item: { include: { coursework: true } } },
+    })
+    expect(score).not.toBeNull()
+    expect(Number(score!.score)).toBe(72)
+    expect(score!.item.coursework.name).toBe(`旧レポート_${suffix}`)
+
+    const ds = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: result.gradeId! }, name: "旧資料参照" },
+      include: { courseworkItem: true },
+    })
+    expect(ds!.courseworkItem).not.toBeNull()
+    expect(ds!.courseworkItem!.name).toBe("提出物")
   })
 })
