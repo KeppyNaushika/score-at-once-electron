@@ -3,6 +3,7 @@ import type {
   IndividualReportOptions,
   SubtotalGroupsForReportResult,
 } from "@/electron-src/lib/export/individual-report/types"
+import type { ExportRDataOptions } from "@/electron-src/lib/export/r-exametrika/rDataExporter"
 import type {
   CaptureReturnSnapshotResult,
   ReturnDiffResult,
@@ -339,6 +340,13 @@ export interface ExportAPI {
         conflicted?: string[]
       }
     }
+  }>
+
+  // R / exametrika 向けデータ出力（#834）
+  exportRData: (options: ExportRDataOptions) => Promise<{
+    success: boolean
+    outputPath?: string
+    error?: string
   }>
 
   // Progress listeners

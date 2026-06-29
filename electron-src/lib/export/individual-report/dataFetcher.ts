@@ -325,7 +325,6 @@ export async function fetchSubtotalGroupsForReport(
       activeGroupsResult.examSubtotalGroups.map((psg) => ({
         id: psg.subtotalGroup.id,
         name: psg.subtotalGroup.name,
-        subtotalIds: psg.subtotalGroup.subtotals.map((s) => s.id),
       }))
 
     return {

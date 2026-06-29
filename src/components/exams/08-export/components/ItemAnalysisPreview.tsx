@@ -1,9 +1,7 @@
 "use client"
 
-import type {
-  DiscriminationLevel,
-  ItemAnalysisData,
-} from "../hooks/useItemAnalysis"
+import type { ItemAnalysisResult } from "@/electron-src/lib/shared/calculations/itemAnalysis"
+import type { DiscriminationLevel } from "@/electron-src/lib/shared/types/exportTypes"
 
 const LEVEL_CONFIG: Record<
   DiscriminationLevel,
@@ -18,43 +16,63 @@ const LEVEL_CONFIG: Record<
 }
 
 interface ItemAnalysisPreviewProps {
-  data: ItemAnalysisData[]
+  data: ItemAnalysisResult
+}
+
+/** 識別係数・D値セルを判定帯で着色するクラスを返す */
+function levelCellClass(level: DiscriminationLevel): string {
+  const c = LEVEL_CONFIG[level]
+  return `border px-1 py-0.5 text-right ${c.bg} ${c.text}`
 }
 
 export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
-  const avgCorrectRate =
-    data.length > 0
-      ? data.reduce((sum, d) => sum + d.correctRate, 0) / data.length
+  const { items, cronbachAlpha } = data
+
+  const avg = (selector: (i: (typeof items)[number]) => number): number =>
+    items.length > 0
+      ? items.reduce((sum, i) => sum + selector(i), 0) / items.length
       : 0
-  const avgScoreRate =
-    data.length > 0
-      ? data.reduce((sum, d) => sum + d.scoreRate, 0) / data.length
-      : 0
-  const validIndices = data.filter((d) => d.discriminationIndex !== null)
-  const avgDiscrim =
-    validIndices.length > 0
-      ? validIndices.reduce((sum, d) => sum + d.discriminationIndex!, 0) /
-        validIndices.length
+  const avgValid = (
+    selector: (i: (typeof items)[number]) => number | null
+  ): number | null => {
+    const vals = items.map(selector).filter((v): v is number => v !== null)
+    return vals.length > 0
+      ? vals.reduce((s, v) => s + v, 0) / vals.length
       : null
+  }
+
+  const avgCorrectRate = avg((i) => i.correctRate)
+  const avgScoreRate = avg((i) => i.scoreRate)
+  const avgDiscrim = avgValid((i) => i.discriminationIndex)
+  const avgDValue = avgValid((i) => i.dValue)
 
   return (
-    <table className="w-full border-collapse text-[10px]">
-      <thead className="bg-muted sticky top-0">
-        <tr>
-          <th className="border px-1 py-0.5 text-left">設問</th>
-          <th className="border px-1 py-0.5 text-right">配点</th>
-          <th className="border px-1 py-0.5 text-right">正答率(%)</th>
-          <th className="border px-1 py-0.5 text-right">得点率(%)</th>
-          <th className="border px-1 py-0.5 text-right">識別係数</th>
-          <th className="border px-1 py-0.5 text-center">判定</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, i) => {
-          const config = LEVEL_CONFIG[row.level]
-          return (
+    <div className="space-y-2">
+      <div className="text-muted-foreground px-1 text-[11px]">
+        クロンバックα係数:{" "}
+        <span className="text-foreground font-medium">
+          {cronbachAlpha !== null ? cronbachAlpha.toFixed(3) : "判定不可"}
+        </span>
+        <span className="ml-2">
+          （識別係数・D値の色: 良好≥0.4 / 許容≥0.3 / 要確認≥0.2 / 低い&lt;0.2 /
+          要検討&lt;0）
+        </span>
+      </div>
+      <table className="w-full border-collapse text-[10px]">
+        <thead className="bg-muted sticky top-0">
+          <tr>
+            <th className="border px-1 py-0.5 text-left">設問</th>
+            <th className="border px-1 py-0.5 text-right">配点</th>
+            <th className="border px-1 py-0.5 text-right">正答率(%)</th>
+            <th className="border px-1 py-0.5 text-right">得点率(%)</th>
+            <th className="border px-1 py-0.5 text-right">識別係数</th>
+            <th className="border px-1 py-0.5 text-right">D値</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((row, i) => (
             <tr key={i} className="hover:bg-muted/50">
-              <td className="border px-1 py-0.5">{row.questionLabel}</td>
+              <td className="border px-1 py-0.5">{row.label}</td>
               <td className="border px-1 py-0.5 text-right">{row.maxScore}</td>
               <td className="border px-1 py-0.5 text-right">
                 {row.correctRate.toFixed(1)}
@@ -62,34 +80,34 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
               <td className="border px-1 py-0.5 text-right">
                 {row.scoreRate.toFixed(1)}
               </td>
-              <td className="border px-1 py-0.5 text-right">
+              <td className={levelCellClass(row.discriminationLevel)}>
                 {row.discriminationIndex !== null
                   ? row.discriminationIndex.toFixed(3)
                   : "---"}
               </td>
-              <td
-                className={`border px-1 py-0.5 text-center ${config.bg} ${config.text}`}
-              >
-                {config.label}
+              <td className={levelCellClass(row.dValueLevel)}>
+                {row.dValue !== null ? row.dValue.toFixed(3) : "---"}
               </td>
             </tr>
-          )
-        })}
-        <tr className="bg-muted/70 font-medium">
-          <td className="border px-1 py-0.5">平均</td>
-          <td className="border px-1 py-0.5"></td>
-          <td className="border px-1 py-0.5 text-right">
-            {avgCorrectRate.toFixed(1)}
-          </td>
-          <td className="border px-1 py-0.5 text-right">
-            {avgScoreRate.toFixed(1)}
-          </td>
-          <td className="border px-1 py-0.5 text-right">
-            {avgDiscrim !== null ? avgDiscrim.toFixed(3) : "---"}
-          </td>
-          <td className="border px-1 py-0.5"></td>
-        </tr>
-      </tbody>
-    </table>
+          ))}
+          <tr className="bg-muted/70 font-medium">
+            <td className="border px-1 py-0.5">平均</td>
+            <td className="border px-1 py-0.5"></td>
+            <td className="border px-1 py-0.5 text-right">
+              {avgCorrectRate.toFixed(1)}
+            </td>
+            <td className="border px-1 py-0.5 text-right">
+              {avgScoreRate.toFixed(1)}
+            </td>
+            <td className="border px-1 py-0.5 text-right">
+              {avgDiscrim !== null ? avgDiscrim.toFixed(3) : "---"}
+            </td>
+            <td className="border px-1 py-0.5 text-right">
+              {avgDValue !== null ? avgDValue.toFixed(3) : "---"}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   )
 }

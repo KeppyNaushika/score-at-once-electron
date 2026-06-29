@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import type {
   RenderedPageData,
@@ -670,6 +671,28 @@ export default function ExportMainView() {
     }
   }
 
+  const handleExportRData = async (format: "csv" | "json") => {
+    setIsExporting(true)
+    try {
+      const selectedStudentIds = Array.from(selectedStudents)
+      const result = await window.electronAPI.exportRData({
+        examId: exam.id,
+        selectedStudentIds,
+        format,
+      })
+      if (result.success) {
+        toast.success(`分析用データを出力しました: ${result.outputPath}`)
+      } else if (result.error !== "出力がキャンセルされました") {
+        toast.error(`出力に失敗しました: ${result.error ?? ""}`)
+      }
+    } catch (error) {
+      console.error("R data export error:", error)
+      toast.error("出力中にエラーが発生しました")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const handleContinueExport = async () => {
     setShowWarningModal(false)
     const exportType = pendingExportType
@@ -821,6 +844,7 @@ export default function ExportMainView() {
               isExporting={isExporting}
               onExportScoredAnswers={handleExportScoredAnswers}
               onExportGradingData={handleExportGradingData}
+              onExportRData={handleExportRData}
               onExportIndividualReports={handleExportIndividualReports}
               activeTab={exportTab}
               onTabChange={setExportTab}
