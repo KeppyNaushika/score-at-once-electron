@@ -23,7 +23,11 @@ interface UseExamClassesReturn {
   /** クラス設定を更新 */
   updateClass: (
     examClassId: string,
-    options: { administered?: boolean; statistics?: boolean }
+    options: {
+      administered?: boolean
+      teacherStat?: boolean
+      studentReport?: boolean
+    }
   ) => Promise<ExamClassWithDetails | null>
 }
 
@@ -76,7 +80,11 @@ export function useExamClasses({
   const updateClass = useCallback(
     async (
       examClassId: string,
-      options: { administered?: boolean; statistics?: boolean }
+      options: {
+        administered?: boolean
+        teacherStat?: boolean
+        studentReport?: boolean
+      }
     ): Promise<ExamClassWithDetails | null> => {
       try {
         const result = await window.electronAPI.examClass.update({

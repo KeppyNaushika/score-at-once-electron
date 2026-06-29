@@ -147,6 +147,20 @@ export interface CropRegionAPI {
     success: boolean
     error?: string
   }>
+  getSubtotalGroupSelection: (examId: string) => Promise<{
+    success: boolean
+    tableGroupIds: string[]
+    boxPlotGroupIds: string[]
+    error?: string
+  }>
+  setSubtotalGroupSelection: (
+    examId: string,
+    tableGroupIds: string[],
+    boxPlotGroupIds: string[]
+  ) => Promise<{
+    success: boolean
+    error?: string
+  }>
 
   // Subtotal related
   createSubtotal: (

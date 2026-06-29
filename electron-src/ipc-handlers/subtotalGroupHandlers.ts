@@ -5,7 +5,9 @@ import {
   getActiveSubtotalGroupsForExam,
   getAvailableSubtotalGroupsForExam,
   getSubtotalGroups,
+  getSubtotalGroupSelection,
   removeSubtotalGroupFromExam,
+  setSubtotalGroupSelection,
   updateSubtotalGroup,
 } from "../lib/prisma/subtotalGroup"
 import { registerSafeHandler } from "./ipcHandlerUtils"
@@ -82,6 +84,30 @@ export function setupSubtotalGroupHandlers(): void {
     "remove-subtotal-group-from-exam",
     async (examId: string, subtotalGroupId: string) => {
       return await removeSubtotalGroupFromExam(examId, subtotalGroupId)
+    }
+  )
+
+  // 小計グループの出力選択フラグ取得（個人成績表のテーブル/箱ひげ図）
+  registerSafeHandler(
+    "get-subtotal-group-selection",
+    async (examId: string) => {
+      return await getSubtotalGroupSelection(examId)
+    }
+  )
+
+  // 小計グループの出力選択フラグ設定
+  registerSafeHandler(
+    "set-subtotal-group-selection",
+    async (
+      examId: string,
+      tableGroupIds: string[],
+      boxPlotGroupIds: string[]
+    ) => {
+      return await setSubtotalGroupSelection(
+        examId,
+        tableGroupIds,
+        boxPlotGroupIds
+      )
     }
   )
 }

@@ -188,6 +188,30 @@ export interface SubtotalGroupSelection {
   selectedGroupIds: string[]
 }
 
+/**
+ * 学級別統計（個人成績表の複数学級比較用）
+ *
+ * 母集団は「studentReport 選択学級 ∩ 本人の受験日所属学級」の各学級全体。
+ * 1人の生徒が複数の studentReport 学級に属する場合は複数エントリになる。
+ */
+export interface ClassStatEntry {
+  classId: string
+  className: string
+  grade: string | null
+  /**
+   * 当該学級の受験日所属生徒ID（renderer 側の受験状態フィルタ再計算用の母集団）。
+   * rawTotalScores を studentId で絞り込むためのキー。
+   */
+  memberStudentIds: string[]
+  average: number
+  stdDev: number
+  boxPlot: BoxPlotData
+  /** 母集団サイズ（受験状態フィルタ前の在籍生徒数。順位の分母表示に使用） */
+  total: number
+  /** この生徒の当該学級内順位（同点同順位。0=未採点・対象外） */
+  rank: number
+}
+
 /** 統計データ */
 export interface StatisticsData {
   // 全体統計
@@ -198,19 +222,13 @@ export interface StatisticsData {
     total: number
   }
 
-  // 学級統計
-  class: {
-    average: number
-    stdDev: number
-    boxPlot: BoxPlotData
-    total: number
-  }
+  // 学級統計（studentReport 選択学級ごと。複数学級対応）
+  classes: ClassStatEntry[]
 
   // 個人統計
   personal: {
     deviation: number
     overallRank: number
-    classRank: number
   }
 
   // 設問別正答率

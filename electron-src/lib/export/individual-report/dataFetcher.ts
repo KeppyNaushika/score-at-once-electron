@@ -6,6 +6,7 @@ import type { CropRegion } from "@prisma/client"
 
 import prisma from "../../prisma/client"
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
+import { getClassMembersForExam } from "../../prisma/examClass"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
 import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
@@ -24,6 +25,7 @@ import {
   calculateQuestionCorrectRates,
   calculateQuestionScoreRates,
   calculateStatisticsForStudent,
+  type StudentClassForStats,
 } from "./statisticsCalculator"
 import type {
   ExamInfoForReport,
@@ -126,6 +128,12 @@ export async function fetchIndividualReportData(
     const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
     const questionScoreRates = calculateQuestionScoreRates(allScoringData)
 
+    // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
+    // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）。
+    const studentReportClasses = (await getClassMembersForExam(examId)).filter(
+      (c) => c.studentReport
+    )
+
     // 各生徒のレポートデータを構築
     const reports: IndividualReportData[] = selectedScoringData.map(
       (scoringData) => {
@@ -139,19 +147,22 @@ export async function fetchIndividualReportData(
           attendanceNumber: scoringData.attendanceNumber ?? null,
         }
 
-        // 学級データを抽出（同じ学級の生徒のスコア）
-        const classScoringData = allScoringData.filter(
-          (d) =>
-            d.className === scoringData.className &&
-            d.grade === scoringData.grade
-        )
+        // 本人が所属する studentReport 学級を抽出（複数学級対応）
+        const studentClasses: StudentClassForStats[] = studentReportClasses
+          .filter((c) => c.studentIds.includes(scoringData.studentId))
+          .map((c) => ({
+            classId: c.classId,
+            className: c.className,
+            grade: c.grade != null ? String(c.grade) : null,
+            memberStudentIds: c.studentIds,
+          }))
 
         // 統計データ（subtotalScoresから直接グループ情報を取得可能）
         const statistics = calculateStatisticsForStudent(
           scoringData.studentId,
           scoringData.totalScore,
           allScoringData,
-          classScoringData,
+          studentClasses,
           questionCorrectRates,
           questionScoreRates
         )

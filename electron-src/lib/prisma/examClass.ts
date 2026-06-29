@@ -38,13 +38,15 @@ export interface AddExamClassOptions {
   examId: string
   classId: string
   administered?: boolean
-  statistics?: boolean
+  teacherStat?: boolean
+  studentReport?: boolean
 }
 
 export interface UpdateExamClassOptions {
   id: string
   administered?: boolean
-  statistics?: boolean
+  teacherStat?: boolean
+  studentReport?: boolean
   order?: number
 }
 
@@ -60,13 +62,15 @@ export const getExamClasses = async (
   examId: string
 ): Promise<ExamClassWithClass[]> => {
   try {
+    // 受験日時点で在籍する所属のみ表示（受験日スナップショット）
+    const referenceDate = await getExamReferenceDate(examId)
     return await prisma.examClass.findMany({
       where: { examId },
       include: {
         class: {
           include: {
             memberships: {
-              where: { endDate: null }, // Current memberships only
+              where: membershipFilterAt(referenceDate),
               include: {
                 student: true,
               },
@@ -93,6 +97,8 @@ export const getAdministeredClasses = async (
   examId: string
 ): Promise<ExamClassWithClass[]> => {
   try {
+    // 受験日時点で在籍する所属のみ（受験日スナップショット）
+    const referenceDate = await getExamReferenceDate(examId)
     return await prisma.examClass.findMany({
       where: {
         examId,
@@ -102,7 +108,7 @@ export const getAdministeredClasses = async (
         class: {
           include: {
             memberships: {
-              where: { endDate: null },
+              where: membershipFilterAt(referenceDate),
               include: {
                 student: true,
               },
@@ -123,48 +129,18 @@ export const getAdministeredClasses = async (
 }
 
 /**
- * Get classes marked for statistics aggregation
- */
-export const getStatisticsClasses = async (
-  examId: string
-): Promise<ExamClassWithClass[]> => {
-  try {
-    return await prisma.examClass.findMany({
-      where: {
-        examId,
-        statistics: true,
-      },
-      include: {
-        class: {
-          include: {
-            memberships: {
-              where: { endDate: null },
-              include: {
-                student: true,
-              },
-              orderBy: [
-                { attendanceNumber: "asc" },
-                { student: { studentNumber: "asc" } },
-              ],
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-    })
-  } catch (error) {
-    console.error(`Failed to get statistics classes for ${examId}:`, error)
-    throw error
-  }
-}
-
-/**
  * Add a class to a exam
  */
 export const addExamClass = async (
   options: AddExamClassOptions
 ): Promise<ExamClassWithDetails> => {
-  const { examId, classId, administered = false, statistics = false } = options
+  const {
+    examId,
+    classId,
+    administered = false,
+    teacherStat = false,
+    studentReport = false,
+  } = options
 
   try {
     // 現在の最大orderを取得して次の順序を決定
@@ -179,7 +155,8 @@ export const addExamClass = async (
         examId,
         classId,
         administered,
-        statistics,
+        teacherStat,
+        studentReport,
         order: nextOrder,
       },
       include: {
@@ -210,14 +187,15 @@ export const addExamClass = async (
 export const updateExamClass = async (
   options: UpdateExamClassOptions
 ): Promise<ExamClassWithDetails> => {
-  const { id, administered, statistics, order } = options
+  const { id, administered, teacherStat, studentReport, order } = options
 
   try {
     return await prisma.examClass.update({
       where: { id },
       data: {
         ...(administered !== undefined && { administered }),
-        ...(statistics !== undefined && { statistics }),
+        ...(teacherStat !== undefined && { teacherStat }),
+        ...(studentReport !== undefined && { studentReport }),
         ...(order !== undefined && { order }),
       },
       include: {
@@ -409,9 +387,12 @@ export const addStudentsFromClass = async (
         examId,
         classId,
         administered: true,
-        statistics: true,
+        teacherStat: true, // 生徒ごと追加した学級は教員集計の対象
+        studentReport: true, // administered なので生徒表示の対象
         order: nextOrder,
       },
+      // 再追加では構造（administered）のみ再宣言し、出力フラグ（teacherStat/studentReport）は
+      // 08 画面で設定したユーザーの選択を尊重して触らない
       update: {
         administered: true,
       },
@@ -495,6 +476,9 @@ export const getStudentClassInfoForExam = async (
   examId: string
 ): Promise<Record<string, StudentClassInfo>> => {
   try {
+    // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
+    const referenceDate = await getExamReferenceDate(examId)
+
     // 1. administered=true の ExamClass を order 順で取得
     const examClasses = await prisma.examClass.findMany({
       where: {
@@ -505,6 +489,7 @@ export const getStudentClassInfoForExam = async (
         class: {
           include: {
             memberships: {
+              where: membershipFilterAt(referenceDate),
               include: {
                 student: true,
               },
@@ -550,6 +535,9 @@ export const getStudentClassInfo = async (
   studentId: string
 ): Promise<StudentClassInfo> => {
   try {
+    // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
+    const referenceDate = await getExamReferenceDate(examId)
+
     // administered=true の ExamClass を order 順で取得
     const examClasses = await prisma.examClass.findMany({
       where: {
@@ -560,7 +548,7 @@ export const getStudentClassInfo = async (
         class: {
           include: {
             memberships: {
-              where: { studentId },
+              where: { studentId, ...membershipFilterAt(referenceDate) },
             },
           },
         },
@@ -595,6 +583,76 @@ export const getStudentClassInfo = async (
       `Failed to get student class info for student ${studentId} in exam ${examId}:`,
       error
     )
+    throw error
+  }
+}
+
+/**
+ * 登録学級ごとの所属生徒（集計エンジン・Phase 1）
+ *
+ * 試験に登録された各 ExamClass について、**受験日時点で在籍する**生徒のIDを集める。
+ * 採番（getStudentClassInfoForExam）と異なり、**1人の生徒は所属する全学級に重複カウント**される
+ * （用途2/3の学級平均は「学級全体」を母集団とするため、order優先の単一化はしない）。
+ *
+ * Excel学級平均行（teacherStat）・個人成績表の複数学級比較（studentReport）の土台。
+ * フラグ（teacherStat/studentReport）はPhase 2のスキーマ追加後に拡張する。現状は order 昇順の
+ * 全登録学級を返し、消費側がフィルタする。
+ */
+export interface ExamClassMembers {
+  examClassId: string
+  classId: string
+  className: string
+  classCode: string | null
+  grade: number | null
+  order: number
+  administered: boolean
+  /** 教員集計（Excel学級平均行）の対象か */
+  teacherStat: boolean
+  /** 生徒表示（個人成績表の学級比較）の対象か */
+  studentReport: boolean
+  /** 受験日時点で在籍する生徒ID（出席番号→学籍番号順） */
+  studentIds: string[]
+}
+
+export const getClassMembersForExam = async (
+  examId: string
+): Promise<ExamClassMembers[]> => {
+  try {
+    const referenceDate = await getExamReferenceDate(examId)
+
+    const examClasses = await prisma.examClass.findMany({
+      where: { examId },
+      include: {
+        class: {
+          include: {
+            memberships: {
+              where: membershipFilterAt(referenceDate),
+              orderBy: [
+                { attendanceNumber: "asc" },
+                { student: { studentNumber: "asc" } },
+              ],
+              select: { studentId: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    })
+
+    return examClasses.map((ec) => ({
+      examClassId: ec.id,
+      classId: ec.classId,
+      className: ec.class.name,
+      classCode: ec.class.classCode,
+      grade: ec.class.grade,
+      order: ec.order,
+      administered: ec.administered,
+      teacherStat: ec.teacherStat,
+      studentReport: ec.studentReport,
+      studentIds: ec.class.memberships.map((m) => m.studentId),
+    }))
+  } catch (error) {
+    console.error(`Failed to get class members for exam ${examId}:`, error)
     throw error
   }
 }

@@ -10,7 +10,8 @@ export interface ExamClassWithDetails {
   examId: string
   classId: string
   administered: boolean
-  statistics: boolean
+  teacherStat: boolean
+  studentReport: boolean
   order: number
   createdAt: Date
   updatedAt: Date
@@ -26,7 +27,8 @@ export interface ExamClassWithClass {
   examId: string
   classId: string
   administered: boolean
-  statistics: boolean
+  teacherStat: boolean
+  studentReport: boolean
   order: number
   createdAt: Date
   updatedAt: Date
@@ -72,11 +74,6 @@ export interface ExamClassAPI {
     getAdministered: (examId: string) => Promise<ExamClassWithClass[]>
 
     /**
-     * 統計集計用クラスを取得 (statistics=true)
-     */
-    getStatistics: (examId: string) => Promise<ExamClassWithClass[]>
-
-    /**
      * 試験に追加可能なクラスを取得（まだExamClassに含まれていないクラス）
      */
     getAvailable: (examId: string) => Promise<AvailableClass[]>
@@ -88,7 +85,8 @@ export interface ExamClassAPI {
       examId: string
       classId: string
       administered?: boolean
-      statistics?: boolean
+      teacherStat?: boolean
+      studentReport?: boolean
     }) => Promise<ExamClassWithDetails>
 
     /**
@@ -97,7 +95,8 @@ export interface ExamClassAPI {
     update: (options: {
       id: string
       administered?: boolean
-      statistics?: boolean
+      teacherStat?: boolean
+      studentReport?: boolean
       order?: number
     }) => Promise<ExamClassWithDetails>
 

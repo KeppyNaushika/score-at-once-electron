@@ -241,13 +241,15 @@ model UserExam {
 }
 
 model ExamSubtotalGroup {
-  id              String        @id @default(uuid())
-  examId          String
-  subtotalGroupId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @default(now()) @updatedAt
-  exam            Exam          @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                 String        @id @default(uuid())
+  examId             String
+  subtotalGroupId    String
+  selectedForTable   Boolean       @default(false) // 小計点テーブルに含めるグループ
+  selectedForBoxPlot Boolean       @default(false) // 箱ひげ図に含めるグループ
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @default(now()) @updatedAt
+  exam               Exam          @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subtotalGroup      SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model QuestionScore {
@@ -393,14 +395,15 @@ model AuditLog {
 }
 
 model ExamClass {
-  id           String   @id @default(uuid())
-  examId       String
-  classId      String
-  administered Boolean  @default(false) // 学級・出席番号表示の対象
-  statistics   Boolean  @default(false) // 統計集計の対象
-  order        Int      @default(0) // 複数クラス時の優先順位（小さいほど優先）
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(uuid())
+  examId        String
+  classId       String
+  administered  Boolean  @default(false) // 学級・出席番号表示（再採番）の対象
+  teacherStat   Boolean  @default(false) // 教員集計対象（Excel学級平均行）
+  studentReport Boolean  @default(false) // 生徒表示対象（個人成績表の学級比較）
+  order         Int      @default(0) // 複数クラス時の優先順位（小さいほど優先）
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
   class Class @relation(fields: [classId], references: [id], onDelete: Cascade)

@@ -1,7 +1,7 @@
 "use client"
 
 import type { DragEndEvent } from "@dnd-kit/core"
-import { BarChart3, Plus, Trash2, UserPlus } from "lucide-react"
+import { Plus, Trash2, UserPlus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import {
@@ -38,7 +38,7 @@ interface ClassExamManagerProps {
   onRemoveClass: (examClassId: string) => Promise<boolean>
   onUpdateClass: (
     examClassId: string,
-    options: { administered?: boolean; statistics?: boolean }
+    options: { administered?: boolean }
   ) => Promise<unknown>
   onClassesChanged?: () => void
   showAddDialog?: boolean
@@ -48,14 +48,12 @@ interface ClassExamManagerProps {
 interface SortableClassRowProps {
   examClass: ExamClassWithClass
   onAdministeredChange: (id: string, checked: boolean) => void
-  onStatisticsChange: (id: string, checked: boolean) => void
   onRemove: (id: string) => void
 }
 
 function SortableClassRow({
   examClass,
   onAdministeredChange,
-  onStatisticsChange,
   onRemove,
 }: SortableClassRowProps) {
   const { setNodeRef, style, dragHandleProps } = useSortableRow(examClass.id)
@@ -84,14 +82,6 @@ function SortableClassRow({
           checked={examClass.administered}
           onCheckedChange={(checked) =>
             onAdministeredChange(examClass.id, checked === true)
-          }
-        />
-      </TableCell>
-      <TableCell className="text-center">
-        <Checkbox
-          checked={examClass.statistics}
-          onCheckedChange={(checked) =>
-            onStatisticsChange(examClass.id, checked === true)
           }
         />
       </TableCell>
@@ -202,7 +192,6 @@ export function ClassExamManager({
           examId,
           classId,
           administered: true,
-          statistics: true,
         })
       }
 
@@ -236,14 +225,6 @@ export function ClassExamManager({
     await onUpdateClass(examClassId, { administered: checked })
   }
 
-  // statistics切り替え
-  const handleStatisticsChange = async (
-    examClassId: string,
-    checked: boolean
-  ) => {
-    await onUpdateClass(examClassId, { statistics: checked })
-  }
-
   // クラスを削除
   const handleRemoveClass = async (examClassId: string) => {
     await onRemoveClass(examClassId)
@@ -258,9 +239,9 @@ export function ClassExamManager({
     <div className="space-y-4">
       {/* ヘッダー行 */}
       <p className="text-muted-foreground text-sm">
-        学級表示・統計集計の対象クラスを管理します。生徒の追加は「生徒を追加」から行います。
+        再採番（並べ替え・出席番号）の対象クラスを管理します。生徒の追加は「生徒を追加」から行います。
         {localClasses.length > 0 && (
-          <> • 学級表示対象: {administeredClassCount}クラス</>
+          <> • 再採番対象: {administeredClassCount}クラス</>
         )}
       </p>
 
@@ -288,13 +269,7 @@ export function ClassExamManager({
                   <TableHead className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <UserPlus className="h-4 w-4" />
-                      <span>学級表示</span>
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <BarChart3 className="h-4 w-4" />
-                      <span>統計集計</span>
+                      <span>再採番</span>
                     </div>
                   </TableHead>
                   <TableHead className="w-20"></TableHead>
@@ -306,7 +281,6 @@ export function ClassExamManager({
                     key={examClass.id}
                     examClass={examClass}
                     onAdministeredChange={handleAdministeredChange}
-                    onStatisticsChange={handleStatisticsChange}
                     onRemove={handleRemoveClass}
                   />
                 ))}

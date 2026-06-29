@@ -296,6 +296,9 @@ export async function createImportedData(
               id: remapIdRequired(psg.id, mappings.examSubtotalGroup),
               examId: newExamId,
               subtotalGroupId: newSubtotalGroupId,
+              // v1.15.0+。旧アーカイブには無いので false 既定
+              selectedForTable: psg.selectedForTable ?? false,
+              selectedForBoxPlot: psg.selectedForBoxPlot ?? false,
             },
           })
         }
@@ -311,7 +314,10 @@ export async function createImportedData(
               examId: newExamId,
               classId: newClassId,
               administered: pc.administered,
-              statistics: pc.statistics,
+              // v1.15.0+。旧アーカイブには無いので旧フラグ(statistics/administered)から補完
+              // 教員集計 = 旧 statistics、生徒表示 = 再採番(administered)
+              teacherStat: pc.teacherStat ?? pc.statistics ?? false,
+              studentReport: pc.studentReport ?? pc.administered ?? false,
               order: pc.order,
             },
           })

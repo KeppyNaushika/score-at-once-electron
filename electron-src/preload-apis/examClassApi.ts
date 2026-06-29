@@ -9,20 +9,20 @@ export function createExamClassApi() {
         ipcRenderer.invoke("exam-class:get-all", examId),
       getAdministered: (examId: string) =>
         ipcRenderer.invoke("exam-class:get-administered", examId),
-      getStatistics: (examId: string) =>
-        ipcRenderer.invoke("exam-class:get-statistics", examId),
       getAvailable: (examId: string) =>
         ipcRenderer.invoke("exam-class:get-available", examId),
       add: (options: {
         examId: string
         classId: string
         administered?: boolean
-        statistics?: boolean
+        teacherStat?: boolean
+        studentReport?: boolean
       }) => ipcRenderer.invoke("exam-class:add", options),
       update: (options: {
         id: string
         administered?: boolean
-        statistics?: boolean
+        teacherStat?: boolean
+        studentReport?: boolean
         order?: number
       }) => ipcRenderer.invoke("exam-class:update", options),
       remove: (id: string) => ipcRenderer.invoke("exam-class:remove", id),

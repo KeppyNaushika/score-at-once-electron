@@ -2,6 +2,7 @@ import type { CropRegion, Exam, ExamStudent, Student } from "@prisma/client"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getExamById } from "../../prisma/exam"
+import { getStudentClassInfoForExam } from "../../prisma/examClass"
 import { getStudentsForExam } from "../../prisma/examStudent"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
@@ -78,6 +79,10 @@ export async function fetchExportData(
       return { success: false, error: "生徒データの取得に失敗しました" }
     }
 
+    // 表示用の学級・出席番号は受験日スナップショット＋order解決で決定（P1修正）。
+    // memberships[0]（startDate降順の先頭＝偶然の値）には依存しない。
+    const classInfoMap = await getStudentClassInfoForExam(examId)
+
     const cropRegions = await getCropRegionsByExamId(examId)
     const questionScoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
@@ -104,7 +109,10 @@ export async function fetchExportData(
           selectedStudentIds.includes(student.id)
       )
       .map((student) => {
-        // 最新の学級情報を取得（memberships配列の最初の要素）
+        // 受験日スナップショット＋order優先で解決した学級情報を使う（P1修正）
+        const resolved = classInfoMap[student.id]
+
+        // 解決不能時（administered学級に未所属等）は memberships[0] へフォールバック
         const studentWithMemberships = student as typeof student & {
           memberships?: Array<{
             attendanceNumber?: number | null
@@ -115,14 +123,19 @@ export async function fetchExportData(
             }
           }>
         }
-        const latestMembership = studentWithMemberships.memberships?.[0]
-        const classInfo = latestMembership?.class
+        const fallbackMembership = studentWithMemberships.memberships?.[0]
+        const fallbackClass = fallbackMembership?.class
+
+        const grade = resolved?.grade ?? fallbackClass?.grade ?? null
+        const className = resolved?.className ?? fallbackClass?.name
+        const attendanceNumber =
+          resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
 
         return {
           ...student,
-          grade: classInfo?.grade?.toString(),
-          className: classInfo?.name,
-          attendanceNumber: latestMembership?.attendanceNumber,
+          grade: grade != null ? grade.toString() : undefined,
+          className: className ?? undefined,
+          attendanceNumber: attendanceNumber ?? undefined,
         }
       })
       .sort((a, b) => {

@@ -755,6 +755,10 @@ export interface ArchiveExamData {
     id: string
     examId: string
     subtotalGroupId: string
+    /** v1.15.0+ 小計点テーブル選択 */
+    selectedForTable?: boolean
+    /** v1.15.0+ 箱ひげ図選択 */
+    selectedForBoxPlot?: boolean
     createdAt: string
     updatedAt: string
   }>
@@ -764,7 +768,12 @@ export interface ArchiveExamData {
     examId: string
     classId: string
     administered: boolean
-    statistics: boolean
+    /** 〜v1.14.0 の旧フラグ（v1.15.0 で teacherStat へ移行）。旧アーカイブ読込時のみ存在 */
+    statistics?: boolean
+    /** v1.15.0+ 教員集計対象 */
+    teacherStat?: boolean
+    /** v1.15.0+ 生徒表示対象 */
+    studentReport?: boolean
     order: number
     createdAt: string
     updatedAt: string
