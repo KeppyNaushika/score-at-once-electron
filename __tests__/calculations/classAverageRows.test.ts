@@ -10,8 +10,32 @@ import * as ExcelJS from "exceljs"
 import { describe, expect, it } from "vitest"
 
 import { appendClassAverageRows } from "@/electron-src/lib/export/excel/averageRows"
-import type { ExamClassMembers } from "@/electron-src/lib/prisma/examClass"
 import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
+import type { ExamClassWithMembers } from "@/types/prismaExtensions"
+
+/** ExamClassWithMembers の最小モック（テストで使う teacherStat / class.name / memberships のみ） */
+function makeClass(
+  name: string,
+  studentIds: string[],
+  teacherStat = true
+): ExamClassWithMembers {
+  return {
+    id: `ec-${name}`,
+    examId: "e1",
+    classId: `c-${name}`,
+    administered: true,
+    teacherStat,
+    studentReport: true,
+    order: 0,
+    class: {
+      id: `c-${name}`,
+      name,
+      classCode: null,
+      grade: 3,
+      memberships: studentIds.map((studentId) => ({ studentId })),
+    },
+  } as unknown as ExamClassWithMembers
+}
 
 function makeStudent(
   id: string,
@@ -67,20 +91,7 @@ describe("appendClassAverageRows", () => {
       makeStudent("S2", 80, 8),
       makeStudent("S3", 40, 4),
     ]
-    const classes: ExamClassMembers[] = [
-      {
-        examClassId: "ec1",
-        classId: "cA",
-        className: "3-A組",
-        classCode: null,
-        grade: 3,
-        order: 0,
-        administered: true,
-        teacherStat: true,
-        studentReport: true,
-        studentIds: ["S1", "S2"],
-      },
-    ]
+    const classes = [makeClass("3-A組", ["S1", "S2"])]
 
     appendClassAverageRows(ws, all, classes, [], QUESTION_REGIONS)
 

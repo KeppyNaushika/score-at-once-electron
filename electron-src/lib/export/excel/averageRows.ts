@@ -1,16 +1,18 @@
 import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
 
-import type { ExamClassMembers } from "../../prisma/examClass"
+import type { ExamClassWithMembers } from "@/types/prismaExtensions"
+
+import { average as mean } from "../../shared/calculations/numericStats"
 import type { ScoringData } from "../../shared/types/exportTypes"
 import { applyCellStyle } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"
 
-/** null を除いた平均（小数1桁）。対象が無ければ null */
+/** null を除いた平均（小数1桁）。対象が無ければ null（セル空欄用） */
 function average(values: (number | null | undefined)[]): number | null {
   const v = values.filter((x): x is number => x != null)
   if (v.length === 0) return null
-  return Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10
+  return Math.round(mean(v) * 10) / 10
 }
 
 /** 指定生徒集合の 合計点／小計／設問 の平均行（ヘッダー列順）を作る */
@@ -68,7 +70,7 @@ function buildAverageRow(
 export function appendClassAverageRows(
   worksheet: ExcelJS.Worksheet,
   allScoringData: ScoringData[],
-  teacherStatClasses: ExamClassMembers[],
+  teacherStatClasses: ExamClassWithMembers[],
   subtotalColumns: SubtotalColumn[],
   questionRegions: CropRegion[]
 ): void {
@@ -91,14 +93,14 @@ export function appendClassAverageRows(
   // 学級ごとの平均（teacherStat=true）
   const byId = new Map(allScoringData.map((s) => [s.studentId, s]))
   for (const cls of teacherStatClasses) {
-    const members = cls.studentIds
-      .map((id) => byId.get(id))
+    const members = cls.class.memberships
+      .map((m) => byId.get(m.studentId))
       .filter((s): s is ScoringData => s !== undefined)
     if (members.length === 0) continue
 
     const row = worksheet.addRow(
       buildAverageRow(
-        `${cls.className}平均`,
+        `${cls.class.name}平均`,
         members,
         subtotalColumns,
         questionRegions

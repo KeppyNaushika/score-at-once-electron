@@ -8,6 +8,7 @@ import { randomUUID } from "crypto"
 
 import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
+import { resolveExamClassOutputFlags } from "../examClassFlags"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { IdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
@@ -314,10 +315,8 @@ export async function createImportedData(
               examId: newExamId,
               classId: newClassId,
               administered: pc.administered,
-              // v1.15.0+。旧アーカイブには無いので旧フラグ(statistics/administered)から補完
-              // 教員集計 = 旧 statistics、生徒表示 = 再採番(administered)
-              teacherStat: pc.teacherStat ?? pc.statistics ?? false,
-              studentReport: pc.studentReport ?? pc.administered ?? false,
+              // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
+              ...resolveExamClassOutputFlags(pc),
               order: pc.order,
             },
           })

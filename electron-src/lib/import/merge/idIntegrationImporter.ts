@@ -21,6 +21,7 @@ import type {
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { resolveExamClassOutputFlags } from "../examClassFlags"
 import { isNewerByLww } from "./decisionMergePolicy"
 import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
@@ -632,6 +633,8 @@ async function processExamSubtotalGroups(
               id: psg.id,
               examId: newExamId,
               subtotalGroupId: newGroupId,
+              selectedForTable: psg.selectedForTable ?? false,
+              selectedForBoxPlot: psg.selectedForBoxPlot ?? false,
             },
           })
           idMappings.examSubtotalGroup[psg.id] = psg.id
@@ -1238,8 +1241,7 @@ async function processExamClasses(
           classId: newClassId,
           administered: pc.administered,
           // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-          teacherStat: pc.teacherStat ?? pc.statistics ?? false,
-          studentReport: pc.studentReport ?? pc.administered ?? false,
+          ...resolveExamClassOutputFlags(pc),
           order: pc.order,
         },
       })

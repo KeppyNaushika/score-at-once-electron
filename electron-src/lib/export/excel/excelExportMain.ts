@@ -28,8 +28,9 @@ export async function exportGradingDataExcel(
   try {
     const { examId, selectedStudentIds } = options
 
-    // データの取得
-    const dataResult = await fetchExportData(examId, selectedStudentIds)
+    // 学級平均行の母集団は「試験全体」（生徒選択に無関係）なので、全受験生徒データを
+    // 1回だけ取得し、選択生徒分は in-memory で絞る（部分出力時の二重フェッチを回避）。
+    const dataResult = await fetchExportData(examId, [])
     if (!dataResult.success) {
       return { success: false, error: dataResult.error }
     }
@@ -43,14 +44,21 @@ export async function exportGradingDataExcel(
       return { success: false, error: "必要なデータの取得に失敗しました" }
     }
 
+    const allScoringData = dataResult.scoringData
+    const selectedSet = new Set(selectedStudentIds)
+    const scoringData =
+      selectedStudentIds.length === 0
+        ? allScoringData
+        : allScoringData.filter((d) => selectedSet.has(d.studentId))
+    if (scoringData.length === 0) {
+      return { success: false, error: "選択された生徒が見つかりません" }
+    }
+
     // 採点データの検証と警告の生成（強制実行でない場合のみ）
     if (!options.forceExport) {
       const validationResult = validateScoringData(
-        dataResult.scoringData,
-        buildConflictIdentifiers(
-          dataResult.scoringData,
-          dataResult.scoreConflicts ?? []
-        )
+        scoringData,
+        buildConflictIdentifiers(scoringData, dataResult.scoreConflicts ?? [])
       )
       if (validationResult.hasWarnings) {
         return {
@@ -62,15 +70,7 @@ export async function exportGradingDataExcel(
       }
     }
 
-    // 学級平均行の母集団は「試験全体」（生徒選択に無関係）。全受験生徒の採点データと
-    // teacherStat=true の登録学級（受験日所属生徒つき）を取得する。
-    const allDataResult =
-      selectedStudentIds.length === 0
-        ? dataResult
-        : await fetchExportData(examId, [])
-    const allScoringData = allDataResult.success
-      ? (allDataResult.scoringData ?? [])
-      : []
+    // teacherStat=true の登録学級（受験日所属生徒つき）= 学級平均行の対象
     const teacherStatClasses = (await getClassMembersForExam(examId)).filter(
       (c) => c.teacherStat
     )
@@ -83,7 +83,7 @@ export async function exportGradingDataExcel(
       workbook,
       dataResult.questionRegions,
       dataResult.subtotalColumns,
-      dataResult.scoringData,
+      scoringData,
       allScoringData,
       teacherStatClasses
     )
@@ -93,21 +93,21 @@ export async function exportGradingDataExcel(
       workbook,
       dataResult.questionRegions,
       dataResult.subtotalColumns,
-      dataResult.scoringData
+      scoringData
     )
 
     // 問題分析シート作成
     await createItemAnalysisSheet(
       workbook,
       dataResult.questionRegions,
-      dataResult.scoringData
+      scoringData
     )
 
     // S-P表シート作成（#838）
-    await createSpTableSheet(workbook, dataResult.scoringData)
+    await createSpTableSheet(workbook, scoringData)
 
     // 得点度数分布シート作成（#838）
-    await createFrequencyDistributionSheet(workbook, dataResult.scoringData)
+    await createFrequencyDistributionSheet(workbook, scoringData)
 
     // ファイル保存
     const examName = dataResult.exam?.examName
