@@ -1,7 +1,14 @@
 "use client"
 
+import type { DragEndEvent } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
 import { Plus, X } from "lucide-react"
 
+import {
+  DragHandle,
+  SortableTableProvider,
+  useSortableRow,
+} from "@/components/common/sortable-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -23,9 +30,53 @@ export const DEFAULT_LETTER_SCALES: LetterScaleDraft[] = [
   { label: "C", score: "60" },
 ]
 
+interface ScaleRowProps {
+  id: string
+  scale: LetterScaleDraft
+  index: number
+  onUpdate: (index: number, patch: Partial<LetterScaleDraft>) => void
+  onRemove: (index: number) => void
+}
+
+/** ドラッグ&ドロップで並べ替え可能な変換表の1行 */
+function ScaleRow({ id, scale, index, onUpdate, onRemove }: ScaleRowProps) {
+  const { setNodeRef, style, dragHandleProps } = useSortableRow(id)
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <DragHandle dragHandleProps={dragHandleProps} />
+      <Input
+        value={scale.label}
+        onChange={(e) => onUpdate(index, { label: e.target.value })}
+        className="h-7 w-20 text-xs"
+        placeholder="記号"
+      />
+      <span className="text-muted-foreground text-xs">=</span>
+      <Input
+        value={scale.score}
+        onChange={(e) => onUpdate(index, { score: e.target.value })}
+        className="h-7 w-24 text-xs"
+        type="number"
+        step="any"
+        placeholder="点数"
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        onClick={() => onRemove(index)}
+        title="削除"
+      >
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
+  )
+}
+
 /**
  * 文字評価（A/B/C 等）→ 点数の変換表エディタ
  * manual型データソース + 文字モード時に使用する。
+ * 行はドラッグ&ドロップで並べ替えできる（順番が保存時の order になる）。
  */
 export function LetterScaleEditor({
   scales,
@@ -43,38 +94,36 @@ export function LetterScaleEditor({
     onChange([...scales, { label: "", score: "" }])
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = Number(active.id)
+    const newIndex = Number(over.id)
+    if (isNaN(oldIndex) || isNaN(newIndex)) return
+    onChange(arrayMove(scales, oldIndex, newIndex))
+  }
+
+  // 行のID（配列インデックスベース。並べ替えで配列順=order が決まる）
+  const rowIds = scales.map((_, i) => String(i))
+
   return (
     <div className="bg-muted/30 space-y-2 rounded border border-dashed p-2">
       <p className="text-muted-foreground text-xs font-medium">
         評価記号 → 点数の変換表
       </p>
       <div className="space-y-1">
-        {scales.map((scale, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <Input
-              value={scale.label}
-              onChange={(e) => updateRow(index, { label: e.target.value })}
-              className="h-7 w-20 text-xs"
-              placeholder="記号"
+        <SortableTableProvider items={rowIds} onDragEnd={handleDragEnd}>
+          {scales.map((scale, index) => (
+            <ScaleRow
+              key={index}
+              id={String(index)}
+              scale={scale}
+              index={index}
+              onUpdate={updateRow}
+              onRemove={removeRow}
             />
-            <span className="text-muted-foreground text-xs">=</span>
-            <Input
-              value={scale.score}
-              onChange={(e) => updateRow(index, { score: e.target.value })}
-              className="h-7 w-24 text-xs"
-              type="number"
-              placeholder="点数"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => removeRow(index)}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
+          ))}
+        </SortableTableProvider>
       </div>
       <Button
         variant="ghost"
