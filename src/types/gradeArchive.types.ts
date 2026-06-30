@@ -234,3 +234,49 @@ export interface GradeArchiveImportPreview {
   /** v1.4.0+: 埋め込み資料ごとのマッチング候補（ユーザー判断用） */
   courseworkMatches: GradeArchiveCourseworkMatch[]
 }
+
+// =============================================================================
+// バージョントランスフォーマー
+// =============================================================================
+
+/**
+ * トランスフォーマーが扱うバージョン。
+ * - 1.3.0: 外部成績は manual-scores.json（manual型 DataSource）
+ * - 1.4.0: courseworks.json に名前ベースで埋め込み
+ * - 1.5.0: courseworks.json を coursework-archive 形式（UUIDベース）で内包
+ * - 1.6.0: GradeDataSource.maxScore 列を廃止（満点はライブ算出）。外部成績の構造は
+ *   1.5.0 と同形のため専用 transformer は無し（ArchiveDataSource.maxScore は optional で旧読込互換）。
+ *
+ * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
+ * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
+ */
+export type GradeArchiveVersion = "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.6.0"
+export const GRADE_SUPPORTED_VERSIONS: readonly GradeArchiveVersion[] = [
+  "1.3.0",
+  "1.4.0",
+  "1.5.0",
+  "1.6.0",
+] as const
+
+export interface GradeTransformResult {
+  data: GradeArchiveData
+  warnings: string[]
+}
+
+export interface GradeVersionTransformer {
+  readonly fromVersion: GradeArchiveVersion
+  readonly toVersion: GradeArchiveVersion
+  transform(data: GradeArchiveData): GradeTransformResult
+}
+
+export interface GradeChainTransformResult {
+  data: GradeArchiveData
+  originalVersion: GradeArchiveVersion
+  finalVersion: GradeArchiveVersion
+  appliedTransformations: {
+    from: GradeArchiveVersion
+    to: GradeArchiveVersion
+  }[]
+  warnings: string[]
+}

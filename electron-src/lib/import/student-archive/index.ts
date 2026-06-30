@@ -24,6 +24,7 @@ import {
   processStudentIdIntegration,
 } from "../merge/processors"
 import type { IdChangeTarget, IdMappings } from "../merge/types"
+import { transformStudentToLatest } from "../student-transformers"
 import type { ExtractedStudentArchiveData } from "./archiveExtractor"
 
 /**
@@ -55,8 +56,9 @@ export function analyzeStudentArchive(manifest: StudentArchiveManifest): {
  * 事前照合を実行（Step 2）
  */
 export async function performStudentPreMatching(
-  data: ExtractedStudentArchiveData
+  rawData: ExtractedStudentArchiveData
 ): Promise<StudentArchiveFileOverviewData> {
+  const { data } = transformStudentToLatest(rawData)
   const compatData = toCompatibleData(data)
   const [studentResult, classResult] = await Promise.all([
     preMatchStudents(compatData as ExtractedArchiveData),
@@ -73,12 +75,14 @@ export async function performStudentPreMatching(
  * 生徒アーカイブのインポートを実行（Step 6）
  */
 export async function executeStudentImport(
-  data: ExtractedStudentArchiveData,
+  rawData: ExtractedStudentArchiveData,
   preMatchResult: StudentArchiveFileOverviewData,
   integrationConfig: StudentArchiveIdIntegrationConfig,
   updateDecisions?: UpdateDecisions
 ): Promise<StudentArchiveImportResult> {
-  const warnings: string[] = []
+  const { data, warnings: transformWarnings } =
+    transformStudentToLatest(rawData)
+  const warnings: string[] = [...transformWarnings]
   const counts = {
     created: { students: 0, classes: 0, memberships: 0 },
     updated: { students: 0, classes: 0, memberships: 0 },

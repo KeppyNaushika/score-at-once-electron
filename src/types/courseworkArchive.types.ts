@@ -10,10 +10,16 @@
  * 旧 .grade（v1.4.0、名前ベース埋め込み）の読込互換は grade 側の legacy 経路で維持。
  */
 
+/** アーカイブバージョン（追加時にユニオンへ足す） */
+export type CourseworkArchiveVersion = "1.0.0"
 /** 現行アーカイブバージョン */
-export const COURSEWORK_CURRENT_VERSION = "1.0.0"
+export const COURSEWORK_CURRENT_VERSION: CourseworkArchiveVersion = "1.0.0"
 /** 読込可能な最小バージョン */
-export const COURSEWORK_MIN_SUPPORTED_VERSION = "1.0.0"
+export const COURSEWORK_MIN_SUPPORTED_VERSION: CourseworkArchiveVersion =
+  "1.0.0"
+/** サポート対象バージョン（昇順） */
+export const COURSEWORK_SUPPORTED_VERSIONS: readonly CourseworkArchiveVersion[] =
+  ["1.0.0"] as const
 
 export interface CourseworkArchiveManifest {
   version: string
@@ -185,4 +191,30 @@ export interface CourseworkArchiveImportResult {
   createdCourseworkIds?: string[]
   warnings?: string[]
   error?: string
+}
+
+// =============================================================================
+// バージョントランスフォーマー
+// =============================================================================
+
+export interface CourseworkTransformResult {
+  data: CourseworkArchiveData
+  warnings: string[]
+}
+
+export interface CourseworkVersionTransformer {
+  readonly fromVersion: CourseworkArchiveVersion
+  readonly toVersion: CourseworkArchiveVersion
+  transform(data: CourseworkArchiveData): CourseworkTransformResult
+}
+
+export interface CourseworkChainTransformResult {
+  data: CourseworkArchiveData
+  originalVersion: CourseworkArchiveVersion
+  finalVersion: CourseworkArchiveVersion
+  appliedTransformations: {
+    from: CourseworkArchiveVersion
+    to: CourseworkArchiveVersion
+  }[]
+  warnings: string[]
 }
