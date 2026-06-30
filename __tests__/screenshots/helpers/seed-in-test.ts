@@ -14,7 +14,6 @@ import sharp from "sharp"
 import { createPrismaClientForPath } from "../../helpers/testPrismaClient"
 import {
   computeRegionDefinitions,
-  computeTotalPoints,
   generateMasterAnswerImage,
   generateStudentAnswerImage,
   generateStudentScores,
@@ -572,11 +571,10 @@ export async function seedGradeProject(
   classAId: string,
   classBId: string,
   subtotalIds: string[],
-  templatePath: string
+  // templatePath: 旧実装は領域定義から満点を算出していたが、満点はライブ算出になり不要化
+  _templatePath: string
 ): Promise<string> {
   const db = getPrisma()
-  const REGION_DEFINITIONS = computeRegionDefinitions(templatePath)
-  const TOTAL_POINTS = computeTotalPoints(REGION_DEFINITIONS)
 
   const gradeId = randomUUID()
   await db.grade.create({
@@ -631,19 +629,12 @@ export async function seedGradeProject(
       type: "exam_total",
       examId,
       name: "第２回定期テスト 数学（合計点）",
-      maxScore: TOTAL_POINTS,
       weight: 1.0,
     },
   })
   // 3つの小計それぞれにデータソースを作成
   // Q1-Q3: 知識・技能, Q4-Q5: 思考・判断・表現, Q6-Q7: 主体的に学習に取り組む態度
   for (let si = 0; si < 3; si++) {
-    const maxScore = REGION_DEFINITIONS.filter((r) => {
-      const mn = parseInt(r.label.replace(/[^\d].*/, ""), 10) || 1
-      if (si === 0) return mn <= 3
-      if (si === 1) return mn >= 4 && mn <= 5
-      return mn >= 6
-    }).reduce((sum, r) => sum + r.points, 0)
     await db.gradeDataSource.create({
       data: {
         id: randomUUID(),
@@ -652,7 +643,6 @@ export async function seedGradeProject(
         examId,
         subtotalId: subtotalIds[si],
         name: subtotalNames[si],
-        maxScore,
         weight: 1.0,
       },
     })

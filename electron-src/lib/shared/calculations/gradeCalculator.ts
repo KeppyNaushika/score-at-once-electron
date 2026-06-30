@@ -12,6 +12,7 @@ import type {
   StudentGradeResult,
 } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
+import { computeLiveMaxScore } from "../../prisma/gradeDataSource"
 import { calculateActualScore } from "../../prisma/questionScore"
 import { resolveEffectiveScores } from "./scoreResolution"
 import {
@@ -199,6 +200,14 @@ export async function calculateGrades(gradeId: string): Promise<{
       examExamStudentStatusMap.set(examId, statusMap)
     }
 
+    // 満点は元データ（設問配点 / 評価項目満点）からライブ算出する。
+    // GradeDataSource.maxScore 列のスナップショットは使わない（元データ追従）。
+    // 生徒ループの外で1ソース1回だけ算出してマップ化する。
+    const liveMaxScoreMap = new Map<string, number>()
+    for (const ds of allDataSources) {
+      liveMaxScoreMap.set(ds.id, await computeLiveMaxScore(ds))
+    }
+
     // DataSource情報をまとめる（推定で使用）
     const dataSourceInfos: DataSourceInfo[] = allDataSources.map((ds) => {
       let sourceIds: string[] = []
@@ -211,11 +220,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       }
       return {
         id: ds.id,
-        // coursework型は評価項目の満点を live 参照（ドリフト回避）
-        maxScore:
-          ds.type === "coursework" && ds.courseworkItem
-            ? Number(ds.courseworkItem.maxScore)
-            : Number(ds.maxScore),
+        maxScore: liveMaxScoreMap.get(ds.id) ?? 0,
         absentMethod: (ds.absentMethod ?? "null") as AbsentMethod,
         absentRatio: Number(ds.absentRatio ?? 1),
         absentOffset: Number(ds.absentOffset ?? 0),
@@ -279,11 +284,8 @@ export async function calculateGrades(gradeId: string): Promise<{
         const sourceScores: SourceScoreResult[] = []
 
         for (const ds of gradeItem.dataSources) {
-          // coursework型は評価項目の満点を live 参照（ドリフト回避）
-          const maxScore =
-            ds.type === "coursework" && ds.courseworkItem
-              ? Number(ds.courseworkItem.maxScore)
-              : Number(ds.maxScore)
+          // 満点は元データからライブ算出した値を使う（maxScore列は使わない）
+          const maxScore = liveMaxScoreMap.get(ds.id) ?? 0
           const weight = Number(ds.weight)
           const absentMethod = (ds.absentMethod ?? "null") as AbsentMethod
           const absentRatio = Number(ds.absentRatio ?? 1)
@@ -506,7 +508,6 @@ async function getRawScore(
     examId: string | null
     subtotalId: string | null
     cropRegionId: string | null
-    maxScore: unknown
     courseworkItem?: {
       maxScore: unknown
       inputMode: string

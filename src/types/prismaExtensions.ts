@@ -7,7 +7,7 @@
  * @module types/prisma-extensions
  */
 
-import type { Prisma } from "@prisma/client"
+import type { GradeDataSource, Prisma } from "@prisma/client"
 
 // =============================================================================
 // Student関連型
@@ -290,3 +290,22 @@ export type ExamSubtotalGroupWithSubtotalGroup =
 export type ExamSubtotalGroupWithExam = Prisma.ExamSubtotalGroupGetPayload<{
   include: { exam: true }
 }>
+
+// =============================================================================
+// GradeDataSource関連型
+// =============================================================================
+
+/**
+ * 満点をライブ算出（computeLiveMaxScore）するために必要な、
+ * データソースの識別フィールドだけを抜き出した型。
+ *
+ * 満点は常にこれらの種別・IDから元データ（設問配点 / 評価項目満点）を引いて
+ * 算出するため、満点値そのものは入力に含めない。
+ */
+export type GradeDataSourceMaxScoreRef = Pick<GradeDataSource, "type"> &
+  Partial<
+    Pick<
+      GradeDataSource,
+      "examId" | "subtotalId" | "cropRegionId" | "courseworkItemId"
+    >
+  >

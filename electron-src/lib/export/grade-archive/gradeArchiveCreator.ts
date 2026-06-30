@@ -26,10 +26,10 @@ export async function createGradeArchive(
     const data = await collectGradeArchiveData(gradeId)
 
     const manifest: GradeArchiveManifest = {
-      // v1.5.0: 試験外成績資料(Coursework)の内包を独立 coursework-archive モジュールへ委譲。
-      //   courseworks.json は UUID ベースの coursework-archive 形式（生徒/学級/タグの full レコード同梱）。
-      //   ※ v1.4.0（名前ベース埋め込み）/ v1.3.0（manual-scores）は読み取り後方互換のみ。
-      version: "1.5.0",
+      // v1.6.0: GradeDataSource.maxScore 廃止（満点はライブ算出・export では未出力）。
+      //   v1.5.0: 試験外成績資料を coursework-archive 形式（UUIDベース）で内包。
+      //   ※ v1.5.0 以前は読み取り後方互換のみ。バージョン履歴は gradeArchive.types.ts 参照。
+      version: "1.6.0",
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
       gradeId,

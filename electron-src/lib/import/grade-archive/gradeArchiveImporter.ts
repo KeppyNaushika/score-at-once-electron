@@ -543,7 +543,8 @@ export async function importGradeArchive(
                     id: legacyItemId,
                     name: dsData.name,
                     order: 0,
-                    maxScore: dsData.maxScore,
+                    // 旧1.3.0 "manual" の満点 → CourseworkItem.maxScore（実列）。optional化に伴いfallback。
+                    maxScore: dsData.maxScore ?? 0,
                     inputMode: dsData.inputMode ?? "numeric",
                     letterScales: dsData.letterScales ?? [],
                     scores: itemScores,
@@ -661,7 +662,7 @@ export async function importGradeArchive(
                 cropRegionId,
                 courseworkItemId,
                 name: dsData.name,
-                maxScore: dsData.maxScore,
+                // v1.6.0: GradeDataSource.maxScore 列は廃止。満点はライブ算出するため挿入しない。
                 weight: dsData.weight,
                 order: dsData.order,
                 absentMethod: dsData.absentMethod ?? "null",

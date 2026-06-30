@@ -25,7 +25,6 @@ interface DataSourceRowProps {
     id: string,
     data: {
       name?: string
-      maxScore?: number
       weight?: number
       absentMethod?: string
       absentRatio?: number
@@ -46,21 +45,16 @@ export function DataSourceRow({
 }: DataSourceRowProps) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(dataSource.name)
-  const [maxScore, setMaxScore] = useState(String(dataSource.maxScore))
   const [weight, setWeight] = useState(String(dataSource.weight))
 
   const isCoursework = dataSource.type === "coursework"
-  // coursework型の満点は評価項目を live 参照（計算と表示を一致させる。スナップショットのドリフト回避）
-  const displayMaxScore =
-    isCoursework && dataSource.courseworkItem
-      ? dataSource.courseworkItem.maxScore
-      : dataSource.maxScore
+  // 満点は元データ（設問配点 / 評価項目満点）からライブ算出した値をバックエンドが
+  // 全型で dataSource.maxScore に載せて返す。ここでは表示のみで編集不可。
+  const displayMaxScore = dataSource.maxScore
 
   const handleSave = async () => {
     await onUpdate(dataSource.id, {
       name,
-      // coursework型の満点は評価項目から live 参照するためここでは更新しない
-      ...(!isCoursework && { maxScore: Number(maxScore) }),
       weight: Number(weight),
     })
     setEditing(false)
@@ -78,20 +72,10 @@ export function DataSourceRow({
             className="h-8 flex-1"
             placeholder="名前"
           />
-          {isCoursework ? (
-            // coursework型の満点は評価項目から live 参照（編集不可）
-            <span className="text-muted-foreground text-xs">
-              満点: {displayMaxScore}
-            </span>
-          ) : (
-            <Input
-              value={maxScore}
-              onChange={(e) => setMaxScore(e.target.value)}
-              className="h-8 w-20"
-              type="number"
-              placeholder="満点"
-            />
-          )}
+          {/* 満点は元データ追従のため編集不可（表示のみ） */}
+          <span className="text-muted-foreground text-xs">
+            満点: {displayMaxScore}
+          </span>
           <Input
             value={weight}
             onChange={(e) => setWeight(e.target.value)}

@@ -87,7 +87,16 @@ export interface ArchiveGradeItem {
 export interface ArchiveDataSource {
   type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"（旧: "manual"）
   name: string
-  maxScore: number
+  /**
+   * @deprecated v1.6.0 で GradeDataSource.maxScore 列が廃止された（満点は元データから
+   * computeLiveMaxScore でライブ算出）。v1.6.0+ の export では出力しない。
+   *
+   * 削除せず optional で残す理由: 旧 1.3.0 アーカイブの "manual" 型データソースでは、
+   * この値が CourseworkItem.maxScore（実在する列）の出所になる
+   * （V1_3_0_to_V1_4_0 transformer / importer の manual→coursework 変換）。
+   * このフィールドを別用途へ転用してはならない（必ずアーカイブ版を切ること）。
+   */
+  maxScore?: number
   weight: number
   order: number
   examName: string | null

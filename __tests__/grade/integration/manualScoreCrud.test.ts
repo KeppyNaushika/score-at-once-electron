@@ -123,14 +123,12 @@ describe("GradeDataSource reorder テスト", () => {
         gradeItemId: gradeItem.id,
         type: "exam_total",
         name: "A",
-        maxScore: 10,
         weight: 10,
       })
       const ds2 = await createDataSource({
         gradeItemId: gradeItem.id,
         type: "exam_total",
         name: "B",
-        maxScore: 20,
         weight: 20,
       })
 

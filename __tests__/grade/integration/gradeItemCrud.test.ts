@@ -124,7 +124,6 @@ describe("GradeItem CRUD", () => {
         gradeItemId: giResult.gradeItem!.id,
         type: "manual",
         name: "レポート",
-        maxScore: 100,
         weight: 50,
       })
 
@@ -163,7 +162,6 @@ describe("GradeItem CRUD", () => {
         gradeItemId: giResult.gradeItem!.id,
         type: "manual",
         name: "ソース",
-        maxScore: 10,
         weight: 10,
       })
 
@@ -222,20 +220,20 @@ describe("GradeDataSource CRUD", () => {
       gradeItemId: giResult.gradeItem!.id,
       type: "manual",
       name: "手動入力",
-      maxScore: 50,
       weight: 30,
     })
 
     expect(dsResult.success).toBe(true)
     expect(dsResult.dataSource!.type).toBe("manual")
-    expect(Number(dsResult.dataSource!.maxScore)).toBe(50)
+    // 満点は元データからライブ算出（manual型は対応ソースなしのため0）
+    expect(Number(dsResult.dataSource!.maxScore)).toBe(0)
     expect(Number(dsResult.dataSource!.weight)).toBe(30)
 
     const list = await getDataSourcesByGradeItemId(giResult.gradeItem!.id)
     expect(list.dataSources).toHaveLength(1)
   })
 
-  it("DataSourceの名前・満点・配点を更新できる", async () => {
+  it("DataSourceの名前・換算満点を更新できる（満点は元データ追従で編集不可）", async () => {
     const gp = await createTestGrade()
     const giResult = await createGradeItem({
       gradeId: gp.id,
@@ -245,19 +243,17 @@ describe("GradeDataSource CRUD", () => {
       gradeItemId: giResult.gradeItem!.id,
       type: "manual",
       name: "旧",
-      maxScore: 10,
       weight: 10,
     })
 
     const updated = await updateDataSource(dsResult.dataSource!.id, {
       name: "新",
-      maxScore: 100,
       weight: 50,
     })
 
     expect(updated.success).toBe(true)
     expect(updated.dataSource!.name).toBe("新")
-    expect(Number(updated.dataSource!.maxScore)).toBe(100)
+    expect(Number(updated.dataSource!.weight)).toBe(50)
   })
 
   it("DataSourceを削除できる", async () => {
@@ -270,7 +266,6 @@ describe("GradeDataSource CRUD", () => {
       gradeItemId: giResult.gradeItem!.id,
       type: "manual",
       name: "削除対象",
-      maxScore: 10,
       weight: 10,
     })
 
@@ -292,14 +287,12 @@ describe("GradeDataSource CRUD", () => {
       gradeItemId: giResult.gradeItem!.id,
       type: "manual",
       name: "A",
-      maxScore: 10,
       weight: 10,
     })
     const ds2 = await createDataSource({
       gradeItemId: giResult.gradeItem!.id,
       type: "manual",
       name: "B",
-      maxScore: 20,
       weight: 20,
     })
 
