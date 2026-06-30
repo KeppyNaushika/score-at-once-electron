@@ -225,7 +225,6 @@ export function setupGradeHandlers(): void {
       cropRegionId?: string
       courseworkItemId?: string
       name: string
-      maxScore: number
       weight: number
       absentMethod?: string
       absentRatio?: number
@@ -244,7 +243,6 @@ export function setupGradeHandlers(): void {
       id: string,
       data: {
         name?: string
-        maxScore?: number
         weight?: number
         absentMethod?: string
         absentRatio?: number

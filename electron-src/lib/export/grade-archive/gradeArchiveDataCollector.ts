@@ -96,7 +96,7 @@ export async function collectGradeArchiveData(
     dataSources: gi.dataSources.map((ds) => ({
       type: ds.type,
       name: ds.name,
-      maxScore: Number(ds.maxScore),
+      // v1.6.0: maxScore は廃止（満点は import 後に元データからライブ算出）。出力しない。
       weight: Number(ds.weight),
       order: ds.order,
       examName: ds.exam?.examName ?? null,

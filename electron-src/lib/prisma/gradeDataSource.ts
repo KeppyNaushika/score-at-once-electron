@@ -2,6 +2,7 @@
  * GradeDataSource（成績データソース）のPrisma操作関数
  */
 
+import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
@@ -9,6 +10,16 @@ import prisma from "./client"
 /** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
 function serialize<T>(data: T): T {
   return JSON.parse(JSON.stringify(data))
+}
+
+/**
+ * データソースに、元データからライブ算出した満点(maxScore)を付与する。
+ * maxScore はDB列ではなく仮想（計算）フィールド。レンダラへ返す経路で常に付与する。
+ */
+async function withLiveMaxScore<T extends GradeDataSourceMaxScoreRef>(
+  ds: T
+): Promise<T & { maxScore: number }> {
+  return { ...ds, maxScore: await computeLiveMaxScore(ds) }
 }
 
 /**
@@ -53,7 +64,6 @@ export async function createDataSource(data: {
   cropRegionId?: string
   courseworkItemId?: string
   name: string
-  maxScore: number
   weight: number
   absentMethod?: string
   absentRatio?: number
@@ -70,16 +80,6 @@ export async function createDataSource(data: {
     })
     const nextOrder = (maxOrder._max.order ?? -1) + 1
 
-    // coursework型は満点を評価項目から取得（作成時スナップショット。計算は live 参照）
-    let maxScore = data.maxScore
-    if (data.type === "coursework" && data.courseworkItemId) {
-      const item = await prisma.courseworkItem.findUnique({
-        where: { id: data.courseworkItemId },
-        select: { maxScore: true },
-      })
-      if (item) maxScore = Number(item.maxScore)
-    }
-
     const dataSource = await prisma.gradeDataSource.create({
       data: {
         gradeItemId: data.gradeItemId,
@@ -89,7 +89,6 @@ export async function createDataSource(data: {
         cropRegionId: data.cropRegionId,
         courseworkItemId: data.courseworkItemId,
         name: data.name,
-        maxScore,
         weight: data.weight,
         order: nextOrder,
         ...(data.absentMethod !== undefined && {
@@ -135,7 +134,10 @@ export async function createDataSource(data: {
       target: data.name,
     })
 
-    return { success: true, dataSource: serialize(dataSource) }
+    return {
+      success: true,
+      dataSource: await withLiveMaxScore(serialize(dataSource)),
+    }
   } catch (error) {
     console.error("Error creating data source:", error)
     return {
@@ -152,7 +154,6 @@ export async function updateDataSource(
   id: string,
   data: {
     name?: string
-    maxScore?: number
     weight?: number
     absentMethod?: string
     absentRatio?: number
@@ -195,7 +196,10 @@ export async function updateDataSource(
       target: dataSource.name,
     })
 
-    return { success: true, dataSource: serialize(dataSource) }
+    return {
+      success: true,
+      dataSource: await withLiveMaxScore(serialize(dataSource)),
+    }
   } catch (error) {
     console.error("Error updating data source:", error)
     return {
@@ -389,7 +393,68 @@ export async function getExamCropRegions(examId: string) {
 }
 
 /**
- * ソースタイプに応じて満点を自動計算
+ * データソース1件の満点を元データ（設問配点 / 評価項目満点）からライブ算出する。
+ *
+ * GradeDataSource.maxScore 列はスナップショットに過ぎず、表示・計算では常にこの関数の
+ * 算出値を使う（元データを後から変更しても追従させるため）。
+ *
+ * 入力は識別フィールド（種別・各ID）だけで、満点は常に元データを引いて求める。
+ */
+export async function computeLiveMaxScore(
+  ds: GradeDataSourceMaxScoreRef
+): Promise<number> {
+  // coursework: 評価項目の満点
+  if (ds.type === "coursework") {
+    if (!ds.courseworkItemId) return 0
+    const item = await prisma.courseworkItem.findUnique({
+      where: { id: ds.courseworkItemId },
+      select: { maxScore: true },
+    })
+    return Number(item?.maxScore ?? 0)
+  }
+
+  // crop_region: 設問の配点
+  if (ds.type === "crop_region") {
+    if (!ds.cropRegionId) return 0
+    const cr = await prisma.cropRegion.findUnique({
+      where: { id: ds.cropRegionId },
+      select: { points: true },
+    })
+    return Number(cr?.points ?? 0)
+  }
+
+  // exam_total: 全QUESTION_ANSWER CropRegionのpoints合計
+  if (ds.type === "exam_total" && ds.examId) {
+    const pages = await prisma.examPage.findMany({
+      where: { examId: ds.examId },
+      include: { cropRegions: { where: { type: "QUESTION_ANSWER" } } },
+    })
+    return pages
+      .flatMap((p) => p.cropRegions)
+      .reduce((sum, cr) => sum + (cr.points ?? 0), 0)
+  }
+
+  // subtotal: 観点に割り当てられたCropRegion（QUESTION_ASSIGNMENT）のpoints合計
+  if (ds.type === "subtotal" && ds.subtotalId && ds.examId) {
+    const cropSubtotals = await prisma.cropSubtotal.findMany({
+      where: {
+        subtotalId: ds.subtotalId,
+        assignmentType: "QUESTION_ASSIGNMENT",
+      },
+      include: {
+        cropRegion: { include: { examPage: { select: { examId: true } } } },
+      },
+    })
+    return cropSubtotals
+      .filter((cs) => cs.cropRegion.examPage.examId === ds.examId)
+      .reduce((sum, cs) => sum + (cs.cropRegion.points ?? 0), 0)
+  }
+
+  return 0
+}
+
+/**
+ * ソースタイプに応じて満点を自動計算（データソース追加UIの換算満点初期値用）
  */
 export async function calculateSourceMaxScore(data: {
   type: string
@@ -399,57 +464,7 @@ export async function calculateSourceMaxScore(data: {
   courseworkItemId?: string
 }): Promise<{ success: boolean; maxScore?: number; error?: string }> {
   try {
-    if (data.type === "exam_total" && data.examId) {
-      // 試験の全QUESTION_ANSWER CropRegionのpoints合計
-      const pages = await prisma.examPage.findMany({
-        where: { examId: data.examId },
-        include: {
-          cropRegions: { where: { type: "QUESTION_ANSWER" } },
-        },
-      })
-      const total = pages
-        .flatMap((p) => p.cropRegions)
-        .reduce((sum, cr) => sum + (cr.points ?? 0), 0)
-      return { success: true, maxScore: total }
-    }
-
-    if (data.type === "subtotal" && data.subtotalId && data.examId) {
-      // Subtotalに紐づくCropRegion（QUESTION_ASSIGNMENT）のpoints合計
-      const cropSubtotals = await prisma.cropSubtotal.findMany({
-        where: {
-          subtotalId: data.subtotalId,
-          assignmentType: "QUESTION_ASSIGNMENT",
-        },
-        include: {
-          cropRegion: {
-            include: { examPage: { select: { examId: true } } },
-          },
-        },
-      })
-      const total = cropSubtotals
-        .filter((cs) => cs.cropRegion.examPage.examId === data.examId)
-        .reduce((sum, cs) => sum + (cs.cropRegion.points ?? 0), 0)
-      return { success: true, maxScore: total }
-    }
-
-    if (data.type === "crop_region" && data.cropRegionId) {
-      const cr = await prisma.cropRegion.findUnique({
-        where: { id: data.cropRegionId },
-        select: { points: true },
-      })
-      return { success: true, maxScore: cr?.points ?? 0 }
-    }
-
-    if (data.type === "coursework" && data.courseworkItemId) {
-      // 評価項目の満点を返す
-      const item = await prisma.courseworkItem.findUnique({
-        where: { id: data.courseworkItemId },
-        select: { maxScore: true },
-      })
-      return { success: true, maxScore: Number(item?.maxScore ?? 0) }
-    }
-
-    return { success: true, maxScore: 0 }
+    return { success: true, maxScore: await computeLiveMaxScore(data) }
   } catch (error) {
     console.error("Error calculating source max score:", error)
     return {

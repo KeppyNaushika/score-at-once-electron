@@ -71,7 +71,6 @@ export function useDataSources(gradeId: string) {
       cropRegionId?: string
       courseworkItemId?: string
       name: string
-      maxScore: number
       weight: number
     }) => {
       const result = await window.electronAPI.grade.createDataSource(data)
@@ -88,7 +87,6 @@ export function useDataSources(gradeId: string) {
       id: string,
       data: {
         name?: string
-        maxScore?: number
         weight?: number
         absentMethod?: string
         absentRatio?: number

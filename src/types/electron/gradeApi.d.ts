@@ -156,7 +156,6 @@ export interface GradeAPI {
       cropRegionId?: string
       courseworkItemId?: string
       name: string
-      maxScore: number
       weight: number
       absentMethod?: string
       absentRatio?: number
@@ -173,7 +172,6 @@ export interface GradeAPI {
       id: string,
       data: {
         name?: string
-        maxScore?: number
         weight?: number
         absentMethod?: string
         absentRatio?: number

@@ -196,7 +196,6 @@ describe("Coursework CRUD", () => {
       type: "coursework",
       courseworkItemId: item.item!.id,
       name: "資料(知識)",
-      maxScore: 100,
       weight: 100,
     })
 

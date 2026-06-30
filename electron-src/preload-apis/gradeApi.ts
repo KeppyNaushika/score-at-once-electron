@@ -70,7 +70,6 @@ export function createGradeApi() {
         cropRegionId?: string
         courseworkItemId?: string
         name: string
-        maxScore: number
         weight: number
         absentMethod?: string
         absentRatio?: number
@@ -83,7 +82,6 @@ export function createGradeApi() {
         id: string,
         data: {
           name?: string
-          maxScore?: number
           weight?: number
           absentMethod?: string
           absentRatio?: number

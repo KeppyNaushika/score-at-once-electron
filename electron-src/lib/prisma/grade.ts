@@ -2,8 +2,10 @@
  * Grade（成績算出試験）のPrisma操作関数
  */
 
+import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { computeLiveMaxScore } from "./gradeDataSource"
 
 /** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
 function serialize<T>(data: T): T {
@@ -32,6 +34,25 @@ function deserializeDataSources<T extends { gradeItems?: unknown[] }>(
     }
   }
   return data
+}
+
+/**
+ * gradeItems[].dataSources[] に、元データからライブ算出した満点(maxScore)を付与する。
+ * maxScore はDB列ではなく仮想（計算）フィールドのため、レンダラへ返す前に毎回算出する。
+ */
+async function hydrateLiveMaxScores<
+  T extends {
+    gradeItems?: Array<{
+      dataSources?: Array<GradeDataSourceMaxScoreRef & { maxScore?: number }>
+    }>
+  },
+>(grade: T): Promise<T> {
+  for (const gi of grade.gradeItems ?? []) {
+    for (const ds of gi.dataSources ?? []) {
+      ds.maxScore = await computeLiveMaxScore(ds)
+    }
+  }
+  return grade
 }
 
 const gradeItemInclude = {
@@ -120,7 +141,9 @@ export async function getGradeById(id: string) {
     }
     return {
       success: true,
-      grade: deserializeDataSources(serialize(grade)),
+      grade: await hydrateLiveMaxScores(
+        deserializeDataSources(serialize(grade))
+      ),
     }
   } catch (error) {
     console.error("Error getting grade exam:", error)

@@ -26,6 +26,18 @@ vi.mock("@/electron-src/lib/prisma/questionScore", () => ({
 const mockFindUnique = vi.fn()
 const mockFindMany = vi.fn()
 const mockGradeItemExclusionFindMany = vi.fn().mockResolvedValue([])
+
+// computeLiveMaxScore は coursework 型の満点を courseworkItem.findUnique で引く。
+// buildGrade が courseworkItemId → maxScore を登録し、モックはそれを返す。
+const courseworkItemMaxScores = new Map<string, unknown>()
+const mockCourseworkItemFindUnique = vi.fn(
+  ({ where: { id } }: { where: { id: string } }) =>
+    Promise.resolve(
+      courseworkItemMaxScores.has(id)
+        ? { maxScore: courseworkItemMaxScores.get(id) }
+        : null
+    )
+)
 vi.mock("@/electron-src/lib/prisma/client", () => ({
   default: {
     grade: {
@@ -41,6 +53,10 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
     questionScore: { findMany: vi.fn().mockResolvedValue([]) },
     examPage: { findMany: vi.fn().mockResolvedValue([]) },
     examStudent: { findMany: vi.fn().mockResolvedValue([]) },
+    courseworkItem: {
+      findUnique: (...args: [{ where: { id: string } }]) =>
+        mockCourseworkItemFindUnique(...args),
+    },
   },
 }))
 
@@ -107,6 +123,10 @@ function buildGrade(
     }[]
   } = {}
 ) {
+  // 満点は computeLiveMaxScore が courseworkItem.findUnique で引くため、
+  // 各テストの満点を courseworkItemId にひもづけてモックへ登録し直す。
+  courseworkItemMaxScores.clear()
+
   // 旧 manual 形式（manualScores/inputMode/letterScales をトップレベルに持つ）を、
   // 新スキーマの coursework 形式（courseworkItem に内包）へ変換する。
   // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
@@ -122,9 +142,13 @@ function buildGrade(
       if (!isCoursework) {
         return { ...ds, courseworkItem: null }
       }
+      // computeLiveMaxScore がこのIDで満点を引けるよう登録
+      const courseworkItemId = `${ds.id}-item`
+      courseworkItemMaxScores.set(courseworkItemId, ds.maxScore)
       return {
         ...ds,
         type: "coursework",
+        courseworkItemId,
         courseworkItem: {
           maxScore: ds.maxScore,
           inputMode: ds.inputMode ?? "numeric",

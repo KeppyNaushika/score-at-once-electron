@@ -25,7 +25,6 @@ interface AddDataSourceInlineProps {
     cropRegionId?: string
     courseworkItemId?: string
     name: string
-    maxScore: number
     weight: number
   }) => Promise<{ success: boolean }>
   onCreated: () => void
@@ -83,7 +82,6 @@ export function AddDataSourceInline({
   const [selectedCourseworkId, setSelectedCourseworkId] = useState("")
   const [selectedCourseworkItemId, setSelectedCourseworkItemId] = useState("")
   const [name, setName] = useState("")
-  const [maxScore, setMaxScore] = useState("")
   const [weight, setWeight] = useState("")
   const [adding, setAdding] = useState(false)
 
@@ -133,8 +131,8 @@ export function AddDataSourceInline({
     load()
   }, [selectedExamId])
 
-  // 満点自動計算
-  const autoCalcMaxScore = useCallback(async () => {
+  // 換算満点の初期値を元データの満点から補完（満点自体は保存せず元データ追従）
+  const autoSeedWeight = useCallback(async () => {
     if (type === "coursework") return
     if (!selectedExamId) return
 
@@ -157,19 +155,23 @@ export function AddDataSourceInline({
     if (data.examId || data.cropRegionId) {
       const result =
         await window.electronAPI.grade.calculateSourceMaxScore(data)
-      if (result.success && result.maxScore !== undefined) {
-        setMaxScore(String(result.maxScore))
-        // 満点が未確定（0）の段階では weight を埋めない。
-        if (!weight && result.maxScore > 0) setWeight(String(result.maxScore))
+      // 満点が未確定（0）の段階では weight を埋めない。
+      if (
+        !weight &&
+        result.success &&
+        result.maxScore !== undefined &&
+        result.maxScore > 0
+      ) {
+        setWeight(String(result.maxScore))
       }
     }
   }, [type, selectedExamId, selectedSubtotalId, selectedCropRegionId, weight])
 
   useEffect(() => {
-    autoCalcMaxScore()
-  }, [autoCalcMaxScore])
+    autoSeedWeight()
+  }, [autoSeedWeight])
 
-  // coursework型: 評価項目選択時に満点・換算満点・名前を補完
+  // coursework型: 評価項目選択時に換算満点・名前を補完
   useEffect(() => {
     if (type !== "coursework") return
     const coursework = courseworks.find((c) => c.id === selectedCourseworkId)
@@ -177,7 +179,6 @@ export function AddDataSourceInline({
       (i) => i.id === selectedCourseworkItemId
     )
     if (coursework && item) {
-      setMaxScore(String(item.maxScore))
       setWeight((prev) => (prev ? prev : String(item.maxScore)))
       setName(`${coursework.name}(${item.name})`)
     }
@@ -216,14 +217,13 @@ export function AddDataSourceInline({
   ])
 
   const handleAdd = async () => {
-    if (!name.trim() || !maxScore || !weight) return
+    if (!name.trim() || !weight) return
     setAdding(true)
     try {
       const data: Parameters<typeof onCreate>[0] = {
         gradeItemId,
         type,
         name: name.trim(),
-        maxScore: Number(maxScore),
         weight: Number(weight),
       }
       if (type !== "coursework") {
@@ -258,7 +258,6 @@ export function AddDataSourceInline({
     setSelectedCourseworkId("")
     setSelectedCourseworkItemId("")
     setName("")
-    setMaxScore("")
     setWeight("")
   }
 
@@ -269,7 +268,7 @@ export function AddDataSourceInline({
   const selectedCourseworkItems =
     courseworks.find((c) => c.id === selectedCourseworkId)?.items ?? []
 
-  // coursework型は満点を評価項目から取得するため満点入力は読み取り専用
+  // coursework型は評価項目を必須選択にするための判定（満点は元データ追従で入力欄なし）
   const isCoursework = type === "coursework"
 
   if (!open) {
@@ -301,7 +300,6 @@ export function AddDataSourceInline({
             setSelectedCourseworkId("")
             setSelectedCourseworkItemId("")
             setName("")
-            setMaxScore("")
             setWeight("")
           }}
         >
@@ -399,9 +397,8 @@ export function AddDataSourceInline({
               value={selectedCourseworkId}
               onValueChange={(v) => {
                 setSelectedCourseworkId(v)
-                // 資料を切り替えたら項目選択と補完値をリセット（古い満点/名前の残留を防ぐ）
+                // 資料を切り替えたら項目選択と補完値をリセット（古い名前/換算満点の残留を防ぐ）
                 setSelectedCourseworkItemId("")
-                setMaxScore("")
                 setName("")
                 setWeight("")
               }}
@@ -446,14 +443,6 @@ export function AddDataSourceInline({
           placeholder="名前"
         />
         <Input
-          value={maxScore}
-          onChange={(e) => setMaxScore(e.target.value)}
-          className="h-8 w-20"
-          type="number"
-          placeholder="満点"
-          readOnly={isCoursework}
-        />
-        <Input
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
           className="h-8 w-20"
@@ -465,7 +454,6 @@ export function AddDataSourceInline({
           onClick={handleAdd}
           disabled={
             !name.trim() ||
-            !maxScore ||
             !weight ||
             adding ||
             (isCoursework && !selectedCourseworkItemId)
