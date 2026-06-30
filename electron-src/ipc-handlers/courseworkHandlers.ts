@@ -28,12 +28,14 @@ import {
   getCourseworkById,
   getCourseworkCandidates,
   getCourseworkClasses,
+  getCourseworkClassRemovalPreview,
   getCourseworks,
   getCourseworkScoresByItemId,
   getCourseworkStudents,
   removeClassFromCoursework,
   removeStudentsFromCoursework,
   reorderCourseworkItems,
+  setCourseworkClassOrders,
   setCourseworkTags,
   updateCoursework,
   updateCourseworkItem,
@@ -199,8 +201,22 @@ export function setupCourseworkHandlers(): void {
 
   registerHandler(
     "coursework:removeClass",
+    async (courseworkId: string, classId: string, deleteStudents = true) => {
+      return removeClassFromCoursework(courseworkId, classId, deleteStudents)
+    }
+  )
+
+  registerHandler(
+    "coursework:classRemovalPreview",
     async (courseworkId: string, classId: string) => {
-      return removeClassFromCoursework(courseworkId, classId)
+      return getCourseworkClassRemovalPreview(courseworkId, classId)
+    }
+  )
+
+  registerHandler(
+    "coursework:setClassOrders",
+    async (courseworkId: string, orderedClassIds: string[]) => {
+      return setCourseworkClassOrders(courseworkId, orderedClassIds)
     }
   )
 

@@ -1,8 +1,11 @@
 "use client"
 
-import { Trash2, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import {
+  type ClassRosterEntry,
+  ClassRosterManager,
+} from "@/components/common/class-roster"
 import {
   type RosterClassOption,
   type RosterRow,
@@ -199,19 +202,17 @@ export function CourseworkStudentsContainer({
     await rosterHandle?.refresh()
   }, [loadClasses, rosterHandle])
 
-  const handleRemoveClass = async (classId: string) => {
-    try {
-      const result = await window.electronAPI.coursework.removeClass(
-        courseworkId,
-        classId
-      )
-      if (result.success) {
-        await reloadAll()
-      }
-    } catch (error) {
-      console.error("Error removing class:", error)
-    }
-  }
+  const classEntries = useMemo<ClassRosterEntry[]>(
+    () =>
+      classes.map((c) => ({
+        id: c.classId,
+        classId: c.classId,
+        name: c.className,
+        studentCount: c.studentCount,
+        order: c.order,
+      })),
+    [classes]
+  )
 
   return (
     <div className="p-6">
@@ -226,31 +227,45 @@ export function CourseworkStudentsContainer({
         <StudentAddPanel adapter={addPanelAdapter} onAdded={reloadAll} />
       </div>
 
-      {/* 登録済み学級 */}
+      {/* 登録済み学級（並び替え・削除） */}
       {classes.length > 0 && (
         <div className="mb-6">
           <h3 className="mb-3 text-sm font-medium">登録済み学級</h3>
-          <div className="flex flex-wrap gap-2">
-            {classes.map((courseworkClass) => (
-              <div
-                key={courseworkClass.id}
-                className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2"
-              >
-                <Users className="text-muted-foreground h-4 w-4" />
-                <span className="text-sm">
-                  {courseworkClass.className}（{courseworkClass.studentCount}
-                  名）
-                </span>
-                <button
-                  onClick={() => handleRemoveClass(courseworkClass.classId)}
-                  className="text-muted-foreground hover:text-destructive ml-1"
-                  title={`${courseworkClass.className}を削除`}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <ClassRosterManager
+            entries={classEntries}
+            removalMode="can-delete-students"
+            description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
+            onReorder={async (orderedClassIds) => {
+              const result = await window.electronAPI.coursework.setClassOrders(
+                courseworkId,
+                orderedClassIds
+              )
+              // 失敗時は throw して ClassRosterManager の楽観更新をロールバックさせる
+              if (!result.success) {
+                throw new Error(result.error || "学級の並び替えに失敗しました")
+              }
+            }}
+            fetchRemovalPreview={async (entry) => {
+              const result =
+                await window.electronAPI.coursework.classRemovalPreview(
+                  courseworkId,
+                  entry.classId
+                )
+              return { exclusiveCount: result.exclusiveCount ?? 0 }
+            }}
+            onRemove={async (entry, deleteStudents) => {
+              const result = await window.electronAPI.coursework.removeClass(
+                courseworkId,
+                entry.classId,
+                deleteStudents
+              )
+              // 失敗時は throw し、ダイアログを成功扱いで閉じさせない
+              if (!result.success) {
+                throw new Error(result.error || "学級の削除に失敗しました")
+              }
+            }}
+            onChanged={reloadAll}
+          />
         </div>
       )}
 

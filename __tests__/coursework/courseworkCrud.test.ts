@@ -17,6 +17,7 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
+  addStudentsFromClassToCoursework,
   addStudentsToCoursework,
   batchUpsertCourseworkScores,
   createCoursework,
@@ -25,9 +26,13 @@ import {
   deleteCourseworkItem,
   getCourseworkById,
   getCourseworkCandidates,
+  getCourseworkClasses,
+  getCourseworkClassRemovalPreview,
   getCourseworkScoresByItemId,
   getCourseworkStudents,
+  removeClassFromCoursework,
   removeStudentsFromCoursework,
+  setCourseworkClassOrders,
   updateCoursework,
   updateCourseworkItem,
   updateCourseworkStudentOrders,
@@ -224,5 +229,98 @@ describe("Coursework CRUD", () => {
     expect(target.items).toHaveLength(1)
     expect(target.items[0].name).toBe("知識")
     expect(Number(target.items[0].maxScore)).toBe(50)
+  })
+
+  describe("学級の並び替え・削除（Phase 5）", () => {
+    /** 資料 + classA(s1,s2) + classB(s3) を作り、両学級を資料へ登録する */
+    async function createClassData() {
+      const cw = await createCoursework({ name: "学級操作資料" })
+      const courseworkId = cw.coursework!.id
+      const classA = await testPrisma.class.create({
+        data: { name: "1年A組", grade: 1 },
+      })
+      const classB = await testPrisma.class.create({
+        data: { name: "1年B組", grade: 1 },
+      })
+      const { s1, s2 } = await createStudents()
+      const s3 = await testPrisma.student.create({
+        data: {
+          studentNumber: "S003",
+          lastName: "鈴木",
+          firstName: "一郎",
+          lastNameKana: "スズキ",
+          firstNameKana: "イチロウ",
+        },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: { studentId: s1.id, classId: classA.id, attendanceNumber: 1 },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: { studentId: s2.id, classId: classA.id, attendanceNumber: 2 },
+      })
+      await testPrisma.studentClassMembership.create({
+        data: { studentId: s3.id, classId: classB.id, attendanceNumber: 1 },
+      })
+      await addStudentsFromClassToCoursework(courseworkId, classA.id)
+      await addStudentsFromClassToCoursework(courseworkId, classB.id)
+      return { courseworkId, classA, classB, s1, s2, s3 }
+    }
+
+    it("setCourseworkClassOrders で学級の並び順を更新できる", async () => {
+      const { courseworkId, classA, classB } = await createClassData()
+
+      const result = await setCourseworkClassOrders(courseworkId, [
+        classB.id,
+        classA.id,
+      ])
+      expect(result.success).toBe(true)
+
+      const classes = await getCourseworkClasses(courseworkId)
+      const byName = new Map(
+        classes.classes!.map((c) => [c.className, c.order])
+      )
+      expect(byName.get("1年B組")).toBe(0)
+      expect(byName.get("1年A組")).toBe(1)
+    })
+
+    it("getCourseworkClassRemovalPreview が専属生徒数を返す", async () => {
+      const { courseworkId, classA } = await createClassData()
+
+      const preview = await getCourseworkClassRemovalPreview(
+        courseworkId,
+        classA.id
+      )
+      expect(preview.success).toBe(true)
+      // classA の s1,s2 は他学級に属さない → 2名
+      expect(preview.exclusiveCount).toBe(2)
+    })
+
+    it("deleteStudents=false なら登録解除のみで生徒は残る", async () => {
+      const { courseworkId, classA } = await createClassData()
+
+      const result = await removeClassFromCoursework(
+        courseworkId,
+        classA.id,
+        false
+      )
+      expect(result.success).toBe(true)
+      expect(result.removedStudents).toBe(0)
+
+      const classes = await getCourseworkClasses(courseworkId)
+      expect(classes.classes).toHaveLength(1) // classB のみ
+      const students = await getCourseworkStudents(courseworkId)
+      expect(students.students).toHaveLength(3) // 生徒は全員残る
+    })
+
+    it("deleteStudents=true（既定）なら専属生徒を削除する", async () => {
+      const { courseworkId, classA } = await createClassData()
+
+      const result = await removeClassFromCoursework(courseworkId, classA.id)
+      expect(result.success).toBe(true)
+      expect(result.removedStudents).toBe(2) // s1,s2
+
+      const students = await getCourseworkStudents(courseworkId)
+      expect(students.students).toHaveLength(1) // s3 のみ
+    })
   })
 })

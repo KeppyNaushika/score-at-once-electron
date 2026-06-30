@@ -112,12 +112,25 @@ export interface GradeAPI {
     }>
     removeClass: (
       gradeId: string,
-      classId: string
+      classId: string,
+      deleteStudents?: boolean
     ) => Promise<{
       success: boolean
       removedStudents?: number
       error?: string
     }>
+    classRemovalPreview: (
+      gradeId: string,
+      classId: string
+    ) => Promise<{
+      success: boolean
+      exclusiveCount?: number
+      error?: string
+    }>
+    setClassOrders: (
+      gradeId: string,
+      orderedClassIds: string[]
+    ) => Promise<{ success: boolean; error?: string }>
     updateStudentOrders: (
       gradeId: string,
       studentOrders: { studentId: string; customOrder: number }[]

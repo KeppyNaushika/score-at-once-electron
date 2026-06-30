@@ -19,7 +19,9 @@ import {
   type RosterAdapter,
   rosterAddStudents,
   rosterAddStudentsFromClass,
+  rosterClassRemovalPreview,
   rosterRemoveClass,
+  rosterSetClassOrders,
   rosterUpdateStudentOrders,
 } from "./rosterManager"
 
@@ -698,6 +700,16 @@ const courseworkRosterAdapter: RosterAdapter = {
       update: {},
     })
   },
+  setClassOrders: async (targetId, orders) => {
+    await prisma.$transaction(
+      orders.map((o) =>
+        prisma.courseworkClass.updateMany({
+          where: { courseworkId: targetId, classId: o.classId },
+          data: { order: o.order },
+        })
+      )
+    )
+  },
   listOtherClassIds: async (targetId, exceptClassId) => {
     const rows = await prisma.courseworkClass.findMany({
       where: { courseworkId: targetId, classId: { not: exceptClassId } },
@@ -794,12 +806,46 @@ export async function removeStudentsFromCoursework(
   }
 }
 
-/** 学級を削除（その学級由来の生徒も削除。他学級に属する生徒は残す） */
-export function removeClassFromCoursework(
+/** 学級の並び順を更新 */
+export function setCourseworkClassOrders(
+  courseworkId: string,
+  orderedClassIds: string[]
+) {
+  return rosterSetClassOrders(
+    courseworkRosterAdapter,
+    courseworkId,
+    orderedClassIds
+  )
+}
+
+/** 学級削除のプレビュー（専属生徒の削除数） */
+export function getCourseworkClassRemovalPreview(
   courseworkId: string,
   classId: string
 ) {
-  return rosterRemoveClass(courseworkRosterAdapter, courseworkId, classId)
+  return rosterClassRemovalPreview(
+    courseworkRosterAdapter,
+    courseworkId,
+    classId
+  )
+}
+
+/**
+ * 学級を削除する。
+ *
+ * @param deleteStudents trueなら専属生徒も削除（既定）。falseなら登録解除のみ。
+ */
+export function removeClassFromCoursework(
+  courseworkId: string,
+  classId: string,
+  deleteStudents = true
+) {
+  return rosterRemoveClass(
+    courseworkRosterAdapter,
+    courseworkId,
+    classId,
+    deleteStudents
+  )
 }
 
 // =============================================================================
