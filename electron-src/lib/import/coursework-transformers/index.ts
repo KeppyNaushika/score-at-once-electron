@@ -16,19 +16,9 @@ import {
   COURSEWORK_CURRENT_VERSION,
   COURSEWORK_SUPPORTED_VERSIONS,
 } from "../../../../src/types/courseworkArchive.types"
+import { compareVersions } from "../../shared/utilities/semver"
 
 const COURSEWORK_TRANSFORMERS: CourseworkVersionTransformer[] = []
-
-function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.split(".").map(Number)
-  const parts2 = v2.split(".").map(Number)
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0
-    const p2 = parts2[i] || 0
-    if (p1 !== p2) return p1 - p2
-  }
-  return 0
-}
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
 export function detectCourseworkVersion(

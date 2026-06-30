@@ -13,6 +13,7 @@ import {
   STUDENT_CURRENT_VERSION,
   STUDENT_SUPPORTED_VERSIONS,
 } from "../../../../src/types/studentArchive.types"
+import { compareVersions } from "../../shared/utilities/semver"
 import type { ExtractedStudentArchiveData } from "../student-archive/archiveExtractor"
 
 export interface StudentTransformResult {
@@ -27,17 +28,6 @@ export interface StudentVersionTransformer {
 }
 
 const STUDENT_TRANSFORMERS: StudentVersionTransformer[] = []
-
-function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.split(".").map(Number)
-  const parts2 = v2.split(".").map(Number)
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0
-    const p2 = parts2[i] || 0
-    if (p1 !== p2) return p1 - p2
-  }
-  return 0
-}
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
 export function detectStudentVersion(
