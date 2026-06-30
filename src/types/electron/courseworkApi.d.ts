@@ -181,12 +181,25 @@ export interface CourseworkAPI {
     ) => Promise<{ success: boolean; removedCount?: number; error?: string }>
     removeClass: (
       courseworkId: string,
-      classId: string
+      classId: string,
+      deleteStudents?: boolean
     ) => Promise<{
       success: boolean
       removedStudents?: number
       error?: string
     }>
+    classRemovalPreview: (
+      courseworkId: string,
+      classId: string
+    ) => Promise<{
+      success: boolean
+      exclusiveCount?: number
+      error?: string
+    }>
+    setClassOrders: (
+      courseworkId: string,
+      orderedClassIds: string[]
+    ) => Promise<{ success: boolean; error?: string }>
 
     // タグ
     setTags: (

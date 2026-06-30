@@ -58,8 +58,10 @@ import {
   getAvailableClassesForGrade,
   getAvailableStudentsForGrade,
   getGradeClasses,
+  getGradeClassRemovalPreview,
   getStudentsByGradeId,
   removeClassFromGrade,
+  setGradeClassOrders,
   updateGradeStudentOrders,
 } from "../lib/prisma/gradeStudent"
 import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
@@ -163,8 +165,22 @@ export function setupGradeHandlers(): void {
 
   registerHandler(
     "grade:removeClass",
+    async (gradeId: string, classId: string, deleteStudents = true) => {
+      return removeClassFromGrade(gradeId, classId, deleteStudents)
+    }
+  )
+
+  registerHandler(
+    "grade:classRemovalPreview",
     async (gradeId: string, classId: string) => {
-      return removeClassFromGrade(gradeId, classId)
+      return getGradeClassRemovalPreview(gradeId, classId)
+    }
+  )
+
+  registerHandler(
+    "grade:setClassOrders",
+    async (gradeId: string, orderedClassIds: string[]) => {
+      return setGradeClassOrders(gradeId, orderedClassIds)
     }
   )
 

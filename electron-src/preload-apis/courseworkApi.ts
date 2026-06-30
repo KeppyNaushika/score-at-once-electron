@@ -105,8 +105,29 @@ export function createCourseworkApi() {
           courseworkId,
           studentIds
         ),
-      removeClass: (courseworkId: string, classId: string) =>
-        ipcRenderer.invoke("coursework:removeClass", courseworkId, classId),
+      removeClass: (
+        courseworkId: string,
+        classId: string,
+        deleteStudents?: boolean
+      ) =>
+        ipcRenderer.invoke(
+          "coursework:removeClass",
+          courseworkId,
+          classId,
+          deleteStudents
+        ),
+      classRemovalPreview: (courseworkId: string, classId: string) =>
+        ipcRenderer.invoke(
+          "coursework:classRemovalPreview",
+          courseworkId,
+          classId
+        ),
+      setClassOrders: (courseworkId: string, orderedClassIds: string[]) =>
+        ipcRenderer.invoke(
+          "coursework:setClassOrders",
+          courseworkId,
+          orderedClassIds
+        ),
 
       // タグ
       setTags: (courseworkId: string, tagIds: string[]) =>

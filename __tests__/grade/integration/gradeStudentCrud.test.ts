@@ -23,8 +23,10 @@ import {
   getAvailableClassesForGrade,
   getAvailableStudentsForGrade,
   getGradeClasses,
+  getGradeClassRemovalPreview,
   getStudentsByGradeId,
   removeClassFromGrade,
+  setGradeClassOrders,
   updateGradeStudentOrders,
 } from "@/electron-src/lib/prisma/gradeStudent"
 
@@ -527,6 +529,72 @@ describe("GradeStudent / GradeClass", () => {
 
       const classes = await getGradeClasses(grade.id)
       expect(classes.classes).toHaveLength(0)
+    })
+
+    it("deleteStudents=false なら登録解除のみで生徒は残る", async () => {
+      const { grade, classA } = await createTestData()
+      await addStudentsFromClassToGrade(grade.id, classA.id)
+
+      const result = await removeClassFromGrade(grade.id, classA.id, false)
+
+      expect(result.success).toBe(true)
+      expect(result.removedStudents).toBe(0)
+
+      // GradeClass は外れるが、生徒は対象に残る
+      const classes = await getGradeClasses(grade.id)
+      expect(classes.classes).toHaveLength(0)
+      const students = await getStudentsByGradeId(grade.id)
+      expect(students.students).toHaveLength(2)
+    })
+  })
+
+  describe("getGradeClassRemovalPreview", () => {
+    it("専属生徒（この学級にのみ所属）の数を返す", async () => {
+      const { grade, classA } = await createTestData()
+      await addStudentsFromClassToGrade(grade.id, classA.id)
+
+      const preview = await getGradeClassRemovalPreview(grade.id, classA.id)
+
+      expect(preview.success).toBe(true)
+      // classA の student1,2 は他学級に属さない → 2名が削除対象
+      expect(preview.exclusiveCount).toBe(2)
+    })
+
+    it("他学級にも所属する生徒は削除対象に数えない", async () => {
+      const { grade, classA, classB, student1 } = await createTestData()
+      await testPrisma.studentClassMembership.create({
+        data: {
+          studentId: student1.id,
+          classId: classB.id,
+          attendanceNumber: 99,
+        },
+      })
+      await addStudentsFromClassToGrade(grade.id, classA.id)
+      await addStudentsFromClassToGrade(grade.id, classB.id)
+
+      const preview = await getGradeClassRemovalPreview(grade.id, classA.id)
+
+      // student1 は classB にも属するため、classA 専属は student2 のみ
+      expect(preview.exclusiveCount).toBe(1)
+    })
+  })
+
+  describe("setGradeClassOrders", () => {
+    it("学級の並び順を更新できる", async () => {
+      const { grade, classA, classB } = await createTestData()
+      await addStudentsFromClassToGrade(grade.id, classA.id)
+      await addStudentsFromClassToGrade(grade.id, classB.id)
+
+      // 初期は classA(0), classB(1)。逆順にする
+      const result = await setGradeClassOrders(grade.id, [classB.id, classA.id])
+      expect(result.success).toBe(true)
+
+      const classes = await getGradeClasses(grade.id)
+      const byName = new Map(
+        classes.classes!.map((c) => [c.className, c.order])
+      )
+      expect(byName.get("1年B組")).toBe(0)
+      expect(byName.get("1年A組")).toBe(1)
     })
   })
 })

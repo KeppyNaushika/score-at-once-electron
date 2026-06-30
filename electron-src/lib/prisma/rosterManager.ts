@@ -42,6 +42,11 @@ export interface RosterAdapter {
   classMaxOrder(targetId: string): Promise<number | null>
   /** 対象学級を作成（既存なら何もしない） */
   upsertClass(targetId: string, classId: string, order: number): Promise<void>
+  /** 対象学級の並び順を一括更新（単一トランザクションで実装すること） */
+  setClassOrders(
+    targetId: string,
+    orders: { classId: string; order: number }[]
+  ): Promise<void>
   /** 指定学級以外の登録学級ID一覧 */
   listOtherClassIds(targetId: string, exceptClassId: string): Promise<string[]>
   /** 学級と、それに伴い外す生徒を単一トランザクションで削除 */
@@ -221,29 +226,89 @@ export async function rosterUpdateStudentOrders(
   }
 }
 
-/** 学級を削除（その学級由来の生徒も削除。他学級にも在籍する生徒は残す） */
-export async function rosterRemoveClass(
+/** 学級の並び順を更新 */
+export async function rosterSetClassOrders(
+  adapter: RosterAdapter,
+  targetId: string,
+  orderedClassIds: string[]
+): Promise<RosterMutationResult> {
+  try {
+    await adapter.setClassOrders(
+      targetId,
+      orderedClassIds.map((classId, order) => ({ classId, order }))
+    )
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating class orders:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * 指定学級に「のみ」所属する（＝学級を外すと削除される）生徒IDを求める。
+ * 他の登録学級にも在籍する生徒は残るため除外する。
+ */
+async function computeExclusiveStudents(
   adapter: RosterAdapter,
   targetId: string,
   classId: string
+): Promise<string[]> {
+  const memberships = await prisma.studentClassMembership.findMany({
+    where: { classId },
+    select: { studentId: true },
+  })
+  const classStudentIds = memberships.map((m) => m.studentId)
+
+  const otherClassIds = await adapter.listOtherClassIds(targetId, classId)
+  const otherMemberships = await prisma.studentClassMembership.findMany({
+    where: { classId: { in: otherClassIds } },
+    select: { studentId: true },
+  })
+  const otherStudentIds = new Set(otherMemberships.map((m) => m.studentId))
+
+  return classStudentIds.filter((id) => !otherStudentIds.has(id))
+}
+
+/**
+ * 学級削除のプレビュー。専属生徒を削除する場合に消える生徒数を返す。
+ * 確認モーダルで「△名が削除されます」を出すために使う（実削除は行わない）。
+ */
+export async function rosterClassRemovalPreview(
+  adapter: RosterAdapter,
+  targetId: string,
+  classId: string
+): Promise<{ success: boolean; exclusiveCount?: number; error?: string }> {
+  try {
+    const exclusive = await computeExclusiveStudents(adapter, targetId, classId)
+    return { success: true, exclusiveCount: exclusive.length }
+  } catch (error) {
+    console.error("Error computing class removal preview:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * 学級を削除する。
+ *
+ * @param deleteStudents trueなら、その学級にのみ所属する生徒も削除する（他学級にも
+ *   在籍する生徒は残す）。falseなら学級登録だけ解除し、生徒は対象に残す。
+ */
+export async function rosterRemoveClass(
+  adapter: RosterAdapter,
+  targetId: string,
+  classId: string,
+  deleteStudents = true
 ): Promise<{ success: boolean; removedStudents?: number; error?: string }> {
   try {
-    const memberships = await prisma.studentClassMembership.findMany({
-      where: { classId },
-      select: { studentId: true },
-    })
-    const classStudentIds = memberships.map((m) => m.studentId)
-
-    const otherClassIds = await adapter.listOtherClassIds(targetId, classId)
-    const otherMemberships = await prisma.studentClassMembership.findMany({
-      where: { classId: { in: otherClassIds } },
-      select: { studentId: true },
-    })
-    const otherStudentIds = new Set(otherMemberships.map((m) => m.studentId))
-
-    const studentsToRemove = classStudentIds.filter(
-      (id) => !otherStudentIds.has(id)
-    )
+    const studentsToRemove = deleteStudents
+      ? await computeExclusiveStudents(adapter, targetId, classId)
+      : []
 
     await adapter.removeClassAndStudents(targetId, classId, studentsToRemove)
 
