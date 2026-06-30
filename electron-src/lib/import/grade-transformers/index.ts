@@ -7,19 +7,18 @@
  * grade はバージョン履歴が入り組んでおり（1.3.0 の manual / 1.4.0 の名前ベース /
  * 1.5.0 以降の UUIDベース）、旧アーカイブの version 表記が不正確な場合がある。
  * そこで「どのフィールドを持っているか」で適用する変換器を決める:
- *   - manualScoresData のみ           → 1.3.0 → 1.4.0（manual を名前ベース資料へ）
+ *   - manual 型 DataSource あり        → 1.3.0 → 1.4.0（manual を名前ベース資料へ。
+ *                                        点数の有無に関わらず変換し "manual" 型を残さない）
  *   - courseworks（名前ベース配列）あり → 1.4.0 → 1.5.0（courseworkArchive へ）
  *   - courseworkArchive あり           → 既に現行形式（1.5.0/1.6.0 とも同形。変換不要）
  * 1.6.0 は GradeDataSource.maxScore 列の廃止のみで、外部成績の構造は 1.5.0 と同形のため
  * 専用の transformer は持たない（ArchiveDataSource.maxScore は optional で旧読込互換）。
  */
 
-import type {
-  ArchiveCwStudent,
-  CollectedCourseworkData,
-} from "../../../../src/types/courseworkArchive.types"
+import type { CollectedCourseworkData } from "../../../../src/types/courseworkArchive.types"
 import type {
   GradeArchiveData,
+  GradeArchiveVersion,
   GradeChainTransformResult,
 } from "../../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../../src/types/gradeArchive.types"
@@ -28,7 +27,7 @@ import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 
 const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
   courseworks: [],
-  studentsData: [] as ArchiveCwStudent[],
+  studentsData: [],
   classesData: [],
   membershipsData: [],
   tagsData: [],
@@ -37,6 +36,21 @@ const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
 
 const v1_3_0 = new V1_3_0_to_V1_4_0_Transformer()
 const v1_4_0 = new V1_4_0_to_V1_5_0_Transformer()
+
+/** manual 型 DataSource を持つか（点数未入力でも true） */
+function hasManualDataSource(data: GradeArchiveData): boolean {
+  return data.gradeData.gradeItems.some((gi) =>
+    gi.dataSources.some((ds) => ds.type === "manual")
+  )
+}
+
+/** データ形状から元バージョンを推定（報告用） */
+function detectOriginalVersion(data: GradeArchiveData): GradeArchiveVersion {
+  if (data.courseworkArchive) return GRADE_CURRENT_VERSION
+  if (data.courseworks) return "1.4.0"
+  if (hasManualDataSource(data) || data.manualScoresData) return "1.3.0"
+  return GRADE_CURRENT_VERSION
+}
 
 /**
  * grade アーカイブを現行バージョンへ正規化する。
@@ -47,23 +61,21 @@ export function transformGradeToLatest(
 ): GradeChainTransformResult {
   let current = data
   const warnings: string[] = []
+  const originalVersion = detectOriginalVersion(data)
   const appliedTransformations: GradeChainTransformResult["appliedTransformations"] =
     []
 
   // 1.3.0 → 1.4.0: manual 型の外部成績を名前ベース資料へ
-  if (
-    !current.courseworkArchive &&
-    !current.courseworks &&
-    (current.manualScoresData?.manualScores?.length ?? 0) > 0
-  ) {
+  //   点数の有無に関わらず、manual 型 DataSource が残らないよう変換する。
+  if (!current.courseworkArchive && hasManualDataSource(current)) {
     const result = v1_3_0.transform(current)
     current = result.data
     warnings.push(...result.warnings)
     appliedTransformations.push({ from: "1.3.0", to: "1.4.0" })
   }
 
-  // 1.4.0 → 1.5.0: 名前ベース資料を courseworkArchive 形式へ
-  if (!current.courseworkArchive && current.courseworks) {
+  // 1.4.0 → 1.5.0: 名前ベース資料を courseworkArchive 形式へ（空配列でも変換して統一）
+  if (!current.courseworkArchive && current.courseworks !== undefined) {
     const result = v1_4_0.transform(current)
     current = result.data
     warnings.push(...result.warnings)
@@ -83,7 +95,7 @@ export function transformGradeToLatest(
 
   return {
     data: current,
-    originalVersion: "1.3.0",
+    originalVersion,
     finalVersion: GRADE_CURRENT_VERSION,
     appliedTransformations,
     warnings,

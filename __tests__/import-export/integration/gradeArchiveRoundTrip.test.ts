@@ -487,6 +487,167 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(ds!.courseworkItemId).toBe(importedItem!.id)
   })
 
+  // 回帰: 旧 v1.3.0 を preview→import の順に同一オブジェクトで処理しても
+  //   変換が入力を破壊せず、スコアが失われないこと（in-place mutation 回帰の防止）
+  it("v1.3.0: preview 実行後に同一オブジェクトを import してもスコアが保持される", async () => {
+    const suffix = Date.now()
+    await prisma.student.create({
+      data: {
+        studentNumber: `PV_${suffix}`,
+        lastName: "山田",
+        firstName: "太郎",
+        lastNameKana: "ヤマダ",
+        firstNameKana: "タロウ",
+      },
+    })
+
+    const buildLegacy = (): GradeArchiveData => ({
+      manifest: {
+        version: "1.3.0",
+        appVersion: "test",
+        exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
+        gradeId: "legacy-pv",
+        gradeName: `成績_pv_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 1,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 0,
+          students: 1,
+        },
+      },
+      gradeData: {
+        grade: { name: `成績_pv_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "提出物",
+            order: 0,
+            dataSources: [
+              {
+                type: "manual",
+                name: "レポート",
+                maxScore: 100,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+              },
+            ],
+          },
+        ],
+        classRefs: [],
+        examRefs: [],
+        studentRefs: [
+          { studentNumber: `PV_${suffix}`, className: null, customOrder: 0 },
+        ],
+      },
+      manualScoresData: {
+        manualScores: [
+          {
+            gradeItemName: "提出物",
+            dataSourceName: "レポート",
+            studentNumber: `PV_${suffix}`,
+            score: 73,
+            letterValue: null,
+            adjustment: null,
+            adjustmentReason: null,
+            comment: null,
+          },
+        ],
+      },
+      boundariesData: { boundarySets: [] },
+    })
+
+    // 同一オブジェクトを preview→import に渡す（IPC の実フローを再現）
+    const archive = buildLegacy()
+    const preview = await previewGradeArchiveImport(archive)
+    // preview は入力を破壊しない（manual 型のまま）
+    expect(archive.gradeData.gradeItems[0].dataSources[0].type).toBe("manual")
+    expect(preview.courseworkMatches).toHaveLength(1)
+
+    const result = await importGradeArchive(archive)
+    expect(result.success).toBe(true)
+
+    // スコアが失われず復元される
+    const item = await prisma.courseworkItem.findFirst({
+      where: { name: "レポート" },
+      include: { scores: true },
+    })
+    expect(item).not.toBeNull()
+    expect(item!.scores).toHaveLength(1)
+    expect(Number(item!.scores[0].score)).toBe(73)
+
+    // DataSource は coursework 型に解決され "manual" が残らない
+    const ds = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: result.gradeId! }, name: "レポート" },
+    })
+    expect(ds!.type).toBe("coursework")
+    expect(ds!.courseworkItemId).toBe(item!.id)
+  })
+
+  // 回帰: 点数が一切入力されていない manual ソースも coursework 型へ変換され、
+  //   無効な "manual" 型のまま永続化されないこと（検出ゲートの回帰防止）
+  it("v1.3.0: 点数未入力の manual ソースも coursework 型へ変換される", async () => {
+    const suffix = Date.now()
+    const archive: GradeArchiveData = {
+      manifest: {
+        version: "1.3.0",
+        appVersion: "test",
+        exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
+        gradeId: "legacy-empty",
+        gradeName: `成績_empty_${suffix}`,
+        counts: {
+          gradeItems: 1,
+          dataSources: 1,
+          manualScores: 0,
+          boundarySets: 0,
+          boundaries: 0,
+          classes: 0,
+          students: 0,
+        },
+      },
+      gradeData: {
+        grade: { name: `成績_empty_${suffix}`, description: null },
+        gradeItems: [
+          {
+            name: "活動",
+            order: 0,
+            dataSources: [
+              {
+                type: "manual",
+                name: "観察",
+                maxScore: 50,
+                weight: 100,
+                order: 0,
+                examName: null,
+                subtotalName: null,
+                cropRegionLabel: null,
+              },
+            ],
+          },
+        ],
+        classRefs: [],
+        examRefs: [],
+        studentRefs: [],
+      },
+      manualScoresData: { manualScores: [] },
+      boundariesData: { boundarySets: [] },
+    }
+
+    const result = await importGradeArchive(archive)
+    expect(result.success).toBe(true)
+
+    const ds = await prisma.gradeDataSource.findFirst({
+      where: { gradeItem: { gradeId: result.gradeId! }, name: "観察" },
+    })
+    expect(ds!.type).toBe("coursework")
+    // 点数ゼロでも CourseworkItem は生成され参照される
+    expect(ds!.courseworkItemId).not.toBeNull()
+  })
+
   it("referenceDate/exportSettings が無いGradeも問題なく往復する（後方互換）", async () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_min_${Date.now()}` },
