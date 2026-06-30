@@ -11,9 +11,9 @@ import type {
 } from "../../../../src/types/courseworkArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
+import { transformCourseworkToLatest } from "../coursework-transformers"
 import { importCourseworkData } from "./dataCreator"
 import { validateCourseworkManifest } from "./manifestValidator"
-import { transformCourseworkToLatest } from "./transformers"
 
 export type { ExtractedCourseworkArchive } from "./archiveExtractor"
 export {
