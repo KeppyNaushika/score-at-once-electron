@@ -89,7 +89,7 @@ export async function resolveStudents(
   return { map, warnings }
 }
 
-/** 学級を解決する。返り値は archiveClassId → 実 classId のマップ。 */
+/** 学級を解決する。返り値は archiveClassId → 実 classroomId のマップ。 */
 export async function resolveClasses(
   tx: TransactionClient,
   classes: ArchiveCwClass[],
@@ -97,7 +97,7 @@ export async function resolveClasses(
 ): Promise<{ map: IdMap; warnings: string[] }> {
   const map: IdMap = new Map()
   const warnings: string[] = []
-  const existing = await tx.class.findMany()
+  const existing = await tx.classroom.findMany()
   const byId = new Map(existing.map((c) => [c.id, c]))
   const byName = new Map(existing.map((c) => [c.name, c]))
 
@@ -117,7 +117,7 @@ export async function resolveClasses(
       continue
     }
     const uniqueName = await generateUniqueClassName(tx, c.name)
-    const created = await tx.class.create({
+    const created = await tx.classroom.create({
       data: {
         id: c.id,
         name: uniqueName,
@@ -160,7 +160,7 @@ export async function resolveTags(
 
 /**
  * 新規作成された生徒の名簿（membership）を復元する。
- * 既存 membership がある (studentId, classId) はスキップ（冪等）。
+ * 既存 membership がある (studentId, classroomId) はスキップ（冪等）。
  * lookup-only（allowCreate=false）では呼ばない想定。
  */
 export async function restoreMemberships(
@@ -171,17 +171,17 @@ export async function restoreMemberships(
 ): Promise<void> {
   for (const m of memberships) {
     const studentId = studentMap.get(m.studentId)
-    const classId = classMap.get(m.classId)
-    if (!studentId || !classId) continue
+    const classroomId = classMap.get(m.classroomId)
+    if (!studentId || !classroomId) continue
     const exists = await tx.studentClassMembership.findFirst({
-      where: { studentId, classId },
+      where: { studentId, classroomId },
       select: { id: true },
     })
     if (exists) continue
     await tx.studentClassMembership.create({
       data: {
         studentId,
-        classId,
+        classroomId,
         startDate: new Date(m.startDate),
         endDate: m.endDate ? new Date(m.endDate) : null,
         attendanceNumber: m.attendanceNumber,

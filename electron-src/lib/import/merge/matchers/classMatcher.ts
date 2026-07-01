@@ -25,9 +25,9 @@ export async function matchClasses(
 ): Promise<MatchResult<ClassData>[]> {
   const results: MatchResult<ClassData>[] = []
 
-  const existingClasses = await prisma.class.findMany()
+  const existingClasses = await prisma.classroom.findMany()
 
-  for (const importClass of importData.classesData.classes) {
+  for (const importClass of importData.classesData.classrooms) {
     let matchedClass: (typeof existingClasses)[0] | null = null
     let isExactMatch = false
 
@@ -80,7 +80,7 @@ export async function matchClasses(
 export async function preMatchClasses(
   importData: ExtractedArchiveData
 ): Promise<PreMatchingResult> {
-  const existingClasses = await prisma.class.findMany()
+  const existingClasses = await prisma.classroom.findMany()
 
   const byId: MatchedItem[] = []
   const byName: MatchedItem[] = []
@@ -89,7 +89,7 @@ export async function preMatchClasses(
   const existingById = new Map(existingClasses.map((c) => [c.id, c]))
   const existingByName = new Map(existingClasses.map((c) => [c.name, c]))
 
-  for (const importClass of importData.classesData.classes) {
+  for (const importClass of importData.classesData.classrooms) {
     const displayLabel = importClass.name
     const importItem: ImportItem = {
       importId: importClass.id,

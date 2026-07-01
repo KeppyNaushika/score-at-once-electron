@@ -73,7 +73,7 @@ describe("executeIdIntegrationImport", () => {
       examId?: string
       studentId?: string
       studentNumber?: string
-      classId?: string
+      classroomId?: string
       className?: string
       groupId?: string
       groupName?: string
@@ -81,7 +81,7 @@ describe("executeIdIntegrationImport", () => {
   ) {
     const examId = overrides.examId ?? generateId()
     const studentId = overrides.studentId ?? generateId()
-    const classId = overrides.classId ?? generateId()
+    const classroomId = overrides.classroomId ?? generateId()
     const groupId = overrides.groupId ?? generateId()
     const studentNumber = overrides.studentNumber ?? `SN_${Date.now()}`
     const className = overrides.className ?? `Class_${Date.now()}`
@@ -111,7 +111,7 @@ describe("executeIdIntegrationImport", () => {
       {
         id: generateId(),
         examId,
-        classId,
+        classroomId,
         administered: true,
         statistics: true,
         order: 0,
@@ -148,11 +148,11 @@ describe("executeIdIntegrationImport", () => {
         { id: studentId, studentNumber, lastName: "テスト", firstName: "太郎" },
       ]),
       classesData: createArchiveClassesData(
-        [{ id: classId, name: className }],
+        [{ id: classroomId, name: className }],
         [
           {
             studentId,
-            classId,
+            classroomId,
             attendanceNumber: 1,
           },
         ]
@@ -175,7 +175,7 @@ describe("executeIdIntegrationImport", () => {
       data,
       examId,
       studentId,
-      classId,
+      classroomId,
       groupId,
       regionId,
       scoreId,
@@ -197,8 +197,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -250,8 +250,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -296,8 +296,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -333,7 +333,8 @@ describe("executeIdIntegrationImport", () => {
 
   // II-4: 同一PCリインポート: スコアunchanged
   it("II-4: 同一試験再インポートでスコアがunchangedとなる", async () => {
-    const { data, examId, studentId, classId, groupId } = createBasicTestData()
+    const { data, examId, studentId, classroomId, groupId } =
+      createBasicTestData()
 
     // 先に全データをDBに作成しておく
     const preMatch1 = createFileOverviewData({
@@ -344,8 +345,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -380,8 +381,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -411,7 +414,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-5: 同一PCリインポート+スコア更新: newer_wins
   it("II-5: newer_wins戦略でスコア競合が解決される", async () => {
-    const { data, examId, studentId, scoreId, regionId, classId, groupId } =
+    const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
       createBasicTestData()
 
     // まず初回インポート
@@ -423,8 +426,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -485,8 +488,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -523,7 +528,7 @@ describe("executeIdIntegrationImport", () => {
   // II-6: import_wins戦略
   it("II-6: import_wins戦略でインポート側が優先される", async () => {
     // この戦略のテストは II-5 と同様の構造
-    const { data, examId, studentId, scoreId, regionId, classId, groupId } =
+    const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
       createBasicTestData()
 
     const preMatch1 = createFileOverviewData({
@@ -534,8 +539,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -593,8 +598,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -629,7 +636,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-7: existing_wins戦略
   it("II-7: existing_wins戦略で既存側が優先される", async () => {
-    const { data, examId, studentId, scoreId, regionId, classId, groupId } =
+    const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
       createBasicTestData()
 
     const preMatch1 = createFileOverviewData({
@@ -640,8 +647,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -699,8 +706,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -768,8 +777,8 @@ describe("executeIdIntegrationImport", () => {
           }),
         ],
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -842,8 +851,8 @@ describe("executeIdIntegrationImport", () => {
           }),
         ],
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -905,8 +914,8 @@ describe("executeIdIntegrationImport", () => {
           },
         ],
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -977,8 +986,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1035,8 +1044,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1098,8 +1107,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1170,8 +1179,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1214,7 +1223,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-16: QuestionScore重複回避 (B11)
   it("II-16: 同じcropRegion+studentのQuestionScoreが重複作成されない (B11 fix)", async () => {
-    const { data, examId, studentId, regionId, classId, groupId } =
+    const { data, examId, studentId, regionId, classroomId, groupId } =
       createBasicTestData()
 
     // 初回インポート
@@ -1226,8 +1235,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1265,8 +1274,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -1299,7 +1310,8 @@ describe("executeIdIntegrationImport", () => {
 
   // II-17: メンバーシップの冪等性
   it("II-17: メンバーシップが冪等にインポートされる", async () => {
-    const { data, examId, studentId, classId, groupId } = createBasicTestData()
+    const { data, examId, studentId, classroomId, groupId } =
+      createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -1309,8 +1321,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1345,8 +1357,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -1372,14 +1386,14 @@ describe("executeIdIntegrationImport", () => {
 
     // メンバーシップが重複していない
     const memberships = await prisma.studentClassMembership.findMany({
-      where: { studentId, classId },
+      where: { studentId, classroomId },
     })
     expect(memberships.length).toBe(1)
   })
 
   // II-18: ExamClassesの正しいマッピング
   it("II-18: ExamClassesが正しく作成される", async () => {
-    const { data, examId, classId } = createBasicTestData()
+    const { data, examId, classroomId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -1389,8 +1403,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1424,7 +1438,7 @@ describe("executeIdIntegrationImport", () => {
       where: { examId: result.examId! },
     })
     expect(examClasses.length).toBe(1)
-    expect(examClasses[0].classId).toBe(classId)
+    expect(examClasses[0].classroomId).toBe(classroomId)
     expect(examClasses[0].administered).toBe(true)
   })
 
@@ -1462,8 +1476,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1516,8 +1530,8 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: s.lastName,
         })),
       }),
-      class: createPreMatchingResult({
-        noMatch: data.classesData.classes.map((c) => ({
+      classroom: createPreMatchingResult({
+        noMatch: data.classesData.classrooms.map((c) => ({
           importId: c.id,
           importData: { ...c },
           displayLabel: c.name,
@@ -1726,7 +1740,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-23: ScoreDecisionのLWW競合解決（decidedAtが新しい方を採用）
   it("II-23: ScoreDecision競合はdecidedAtが新しい方を採用する（LWW）", async () => {
-    const { data, examId, studentId, regionId, classId, groupId } =
+    const { data, examId, studentId, regionId, classroomId, groupId } =
       createBasicTestData()
 
     const sdId = generateId()
@@ -1768,8 +1782,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
@@ -1804,7 +1820,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-24: ScoreDecisionのLWW（既存が新しい場合は上書きしない）
   it("II-24: ScoreDecision競合で既存が新しければ上書きしない（LWW）", async () => {
-    const { data, examId, studentId, regionId, classId, groupId } =
+    const { data, examId, studentId, regionId, classroomId, groupId } =
       createBasicTestData()
 
     const sdId = generateId()
@@ -1844,8 +1860,10 @@ describe("executeIdIntegrationImport", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],

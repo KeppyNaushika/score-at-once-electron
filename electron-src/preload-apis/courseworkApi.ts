@@ -79,13 +79,13 @@ export function createCourseworkApi() {
         ),
       addStudentsFromClass: (
         courseworkId: string,
-        classId: string,
+        classroomId: string,
         activeOnly?: boolean
       ) =>
         ipcRenderer.invoke(
           "coursework:addStudentsFromClass",
           courseworkId,
-          classId,
+          classroomId,
           activeOnly
         ),
       addStudents: (courseworkId: string, studentIds: string[]) =>
@@ -107,20 +107,20 @@ export function createCourseworkApi() {
         ),
       removeClass: (
         courseworkId: string,
-        classId: string,
+        classroomId: string,
         deleteStudents?: boolean
       ) =>
         ipcRenderer.invoke(
           "coursework:removeClass",
           courseworkId,
-          classId,
+          classroomId,
           deleteStudents
         ),
-      classRemovalPreview: (courseworkId: string, classId: string) =>
+      classRemovalPreview: (courseworkId: string, classroomId: string) =>
         ipcRenderer.invoke(
           "coursework:classRemovalPreview",
           courseworkId,
-          classId
+          classroomId
         ),
       setClassOrders: (courseworkId: string, orderedClassIds: string[]) =>
         ipcRenderer.invoke(

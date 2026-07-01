@@ -7,7 +7,7 @@ type StudentClassMembershipWithDetails =
   Prisma.StudentClassMembershipGetPayload<{
     include: {
       student: true
-      class: true
+      classroom: true
     }
   }>
 
@@ -15,7 +15,7 @@ type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
     memberships: {
       include: {
-        class: true
+        classroom: true
       }
       orderBy: {
         startDate: "desc"
@@ -24,7 +24,7 @@ type StudentWithMemberships = Prisma.StudentGetPayload<{
   }
 }>
 
-type ClassWithMemberships = Prisma.ClassGetPayload<{
+type ClassWithMemberships = Prisma.ClassroomGetPayload<{
   include: {
     memberships: {
       include: {
@@ -43,7 +43,7 @@ export const createStudentClassMembership = async (
       data: membershipData,
       include: {
         student: true,
-        class: true,
+        classroom: true,
       },
     })
   } catch (error) {
@@ -63,7 +63,7 @@ export const updateStudentClassMembership = async (
       data: membershipData,
       include: {
         student: true,
-        class: true,
+        classroom: true,
       },
     })
   } catch (error) {
@@ -80,8 +80,8 @@ export const deleteStudentClassMembership = async (
     const before = await prisma.studentClassMembership.findUnique({
       where: { id },
       select: {
-        classId: true,
-        class: { select: { name: true } },
+        classroomId: true,
+        classroom: { select: { name: true } },
         student: { select: { lastName: true, firstName: true } },
       },
     })
@@ -92,8 +92,8 @@ export const deleteStudentClassMembership = async (
       action: "class.membership.remove",
       entityType: "StudentClassMembership",
       entityId: id,
-      scopeId: before?.classId ?? null,
-      scopeLabel: before?.class.name ?? null,
+      scopeId: before?.classroomId ?? null,
+      scopeLabel: before?.classroom.name ?? null,
       target: before
         ? `${before.student.lastName} ${before.student.firstName}`.trim()
         : null,
@@ -116,7 +116,7 @@ export const getCurrentMembershipsByStudentId = async (
       },
       include: {
         student: true,
-        class: true,
+        classroom: true,
       },
       orderBy: {
         startDate: "desc",
@@ -137,7 +137,7 @@ export const getAllMembershipsByStudentId = async (
       where: { studentId },
       include: {
         student: true,
-        class: true,
+        classroom: true,
       },
       orderBy: {
         startDate: "desc",
@@ -151,17 +151,17 @@ export const getAllMembershipsByStudentId = async (
 
 /** 学級の現在所属中の生徒一覧を取得する（出席番号順、student・class含む） */
 export const getCurrentMembershipsByClassId = async (
-  classId: string
+  classroomId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
   try {
     return await prisma.studentClassMembership.findMany({
       where: {
-        classId,
+        classroomId,
         endDate: null, // 現在所属中
       },
       include: {
         student: true,
-        class: true,
+        classroom: true,
       },
       orderBy: [
         { attendanceNumber: "asc" },
@@ -180,7 +180,7 @@ export const getCurrentMembershipsByClassId = async (
  */
 export const addStudentToClass = async (
   studentId: string,
-  classId: string,
+  classroomId: string,
   startDate: Date = new Date(),
   attendanceNumber?: number,
   notes?: string
@@ -189,7 +189,7 @@ export const addStudentToClass = async (
     const existingActive = await prisma.studentClassMembership.findMany({
       where: {
         studentId,
-        classId,
+        classroomId,
         endDate: null,
       },
     })
@@ -199,7 +199,7 @@ export const addStudentToClass = async (
 
     const result = await createStudentClassMembership({
       student: { connect: { id: studentId } },
-      class: { connect: { id: classId } },
+      classroom: { connect: { id: classroomId } },
       startDate,
       attendanceNumber,
       notes,
@@ -209,8 +209,8 @@ export const addStudentToClass = async (
       action: "class.membership.add",
       entityType: "StudentClassMembership",
       entityId: result.id,
-      scopeId: classId,
-      scopeLabel: result.class?.name ?? null,
+      scopeId: classroomId,
+      scopeLabel: result.classroom?.name ?? null,
       target: `${result.student.lastName} ${result.student.firstName}`.trim(),
     })
 
@@ -263,7 +263,7 @@ export const getMembershipsByDateRange = async (
       where: whereCondition,
       include: {
         student: true,
-        class: true,
+        classroom: true,
       },
       orderBy: [{ student: { studentNumber: "asc" } }, { startDate: "desc" }],
     })

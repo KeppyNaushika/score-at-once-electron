@@ -2,12 +2,6 @@
  * 個人成績表の共通計算ロジック
  * プレビュー（React）とPDF出力（renderToStaticMarkup）の両方で使用
  */
-import {
-  average,
-  boxPlot,
-  rank,
-  stdDev,
-} from "@/electron-src/lib/shared/calculations/numericStats"
 import type {
   IndividualReportData,
   IndividualReportOptions,
@@ -15,6 +9,12 @@ import type {
   SubtotalRawScores,
   SubtotalStatistics,
 } from "@/electron-src/lib/export/individual-report/types"
+import {
+  average,
+  boxPlot,
+  rank,
+  stdDev,
+} from "@/electron-src/lib/shared/calculations/numericStats"
 import type { SubtotalScore } from "@/electron-src/lib/shared/types/exportTypes"
 
 /** 受験状態フィルタ */

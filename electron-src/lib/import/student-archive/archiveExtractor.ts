@@ -14,6 +14,7 @@ import type {
   ArchiveStudentsData,
 } from "../../../../src/types/examArchive.types"
 import type { StudentArchiveManifest } from "../../../../src/types/studentArchive.types"
+import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 
 /**
  * 展開された生徒アーカイブデータ
@@ -78,8 +79,8 @@ export async function extractStudentArchive(archivePath: string): Promise<{
     if (!fs.existsSync(classesPath)) {
       return { success: false, error: "classes.json が見つかりません" }
     }
-    const classesData: ArchiveClassesData = JSON.parse(
-      fs.readFileSync(classesPath, "utf-8")
+    const classesData: ArchiveClassesData = normalizeLegacyClassroomKeys(
+      JSON.parse(fs.readFileSync(classesPath, "utf-8"))
     )
 
     return {

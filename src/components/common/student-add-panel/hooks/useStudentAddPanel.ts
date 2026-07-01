@@ -156,9 +156,9 @@ export function useStudentAddPanel({
     loadStudents()
   }, [loadStudents])
 
-  const handleClassSelection = (classId: string, isSelected: boolean) => {
+  const handleClassSelection = (classroomId: string, isSelected: boolean) => {
     setClasses((prev) =>
-      prev.map((c) => (c.id === classId ? { ...c, isSelected } : c))
+      prev.map((c) => (c.id === classroomId ? { ...c, isSelected } : c))
     )
   }
 
@@ -232,7 +232,7 @@ export function useStudentAddPanel({
       student.studentNumber.toLowerCase().includes(term)
     const matchesClass =
       filterClassId === "all" ||
-      student.memberships.some((m) => m.class.id === filterClassId)
+      student.memberships.some((m) => m.classroom.id === filterClassId)
     return matchesSearch && matchesClass
   })
 

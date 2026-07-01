@@ -39,7 +39,7 @@ export async function getAvailableClassesForTarget(params: {
     params
   const excluded = new Set(excludeStudentIds)
 
-  const classes = await prisma.class.findMany({
+  const classes = await prisma.classroom.findMany({
     where:
       existingClassIds.length > 0
         ? { id: { notIn: existingClassIds } }

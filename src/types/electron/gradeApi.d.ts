@@ -49,9 +49,9 @@ export interface GradeAPI {
           lastName: string
           firstName: string
           memberships: Array<{
-            classId: string
+            classroomId: string
             attendanceNumber: number | null
-            class: { id: string; name: string }
+            classroom: { id: string; name: string }
           }>
         }
       }>
@@ -61,7 +61,7 @@ export interface GradeAPI {
       success: boolean
       classes?: Array<{
         id: string
-        classId: string
+        classroomId: string
         className: string
         order: number
         studentCount: number
@@ -93,7 +93,7 @@ export interface GradeAPI {
     }>
     addStudentsFromClass: (
       gradeId: string,
-      classId: string,
+      classroomId: string,
       activeOnly?: boolean
     ) => Promise<{
       success: boolean
@@ -112,7 +112,7 @@ export interface GradeAPI {
     }>
     removeClass: (
       gradeId: string,
-      classId: string,
+      classroomId: string,
       deleteStudents?: boolean
     ) => Promise<{
       success: boolean
@@ -121,7 +121,7 @@ export interface GradeAPI {
     }>
     classRemovalPreview: (
       gradeId: string,
-      classId: string
+      classroomId: string
     ) => Promise<{
       success: boolean
       exclusiveCount?: number

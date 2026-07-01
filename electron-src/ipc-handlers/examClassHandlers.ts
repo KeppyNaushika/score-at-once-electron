@@ -46,11 +46,11 @@ export function setupExamClassHandlers(): void {
     return await removeExamClass(id)
   })
 
-  // Remove a exam class by examId and classId
+  // Remove a exam class by examId and classroomId
   registerHandler(
     "exam-class:remove-by-ids",
-    async (examId: string, classId: string) => {
-      return await removeExamClassByIds(examId, classId)
+    async (examId: string, classroomId: string) => {
+      return await removeExamClassByIds(examId, classroomId)
     }
   )
 
@@ -62,8 +62,8 @@ export function setupExamClassHandlers(): void {
   // Add students from class (B案: 統合型フロー)
   registerHandler(
     "exam-class:add-students-from-class",
-    async (examId: string, classId: string, activeOnly = true) => {
-      return await addStudentsFromClass(examId, classId, activeOnly)
+    async (examId: string, classroomId: string, activeOnly = true) => {
+      return await addStudentsFromClass(examId, classroomId, activeOnly)
     }
   )
 

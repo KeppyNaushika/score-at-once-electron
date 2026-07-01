@@ -34,7 +34,7 @@ export async function getStudentsForExam(examId: string) {
           include: {
             memberships: {
               include: {
-                class: true,
+                classroom: true,
               },
               // endDate制限を削除 - 過去の所属も含めて取得
               orderBy: {

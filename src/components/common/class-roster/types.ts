@@ -13,7 +13,7 @@ export interface ClassRosterEntry {
   /** リンクのID（examClassId / gradeClass.id / courseworkClass.id） */
   id: string
   /** 学級ID（Class.id） */
-  classId: string
+  classroomId: string
   /** 学級名 */
   name: string
   /** 学級コード（任意） */

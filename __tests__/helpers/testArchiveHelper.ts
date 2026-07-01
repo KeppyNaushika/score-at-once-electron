@@ -204,7 +204,7 @@ export function createMinimalCollectedData(
       cropRegionMarkingOverrides: [],
     },
     studentsData: { students: [] },
-    classesData: { classes: [], memberships: [] },
+    classesData: { classrooms: [], memberships: [] },
     usersData: { users: [] },
     subtotalsData: { subtotalGroups: [], subtotals: [], cropSubtotals: [] },
     scoresData: { questionScores: [], drawingAnnotations: [] },
@@ -212,7 +212,7 @@ export function createMinimalCollectedData(
     deletedRecordsData: { deletedRecords: [] },
     counts: {
       students: 0,
-      classes: 0,
+      classrooms: 0,
       users: 0,
       pages: 0,
       regions: 0,

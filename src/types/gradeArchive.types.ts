@@ -16,7 +16,7 @@ export interface GradeArchiveManifest {
     manualScores: number
     boundarySets: number
     boundaries: number
-    classes: number
+    classrooms: number
     students: number
   }
 }
@@ -61,7 +61,7 @@ export interface ArchiveGradeData {
   }[]
   studentRefs: {
     studentNumber: string
-    className: string | null
+    classroomName: string | null
     customOrder: number | null
   }[]
   /** GradeItem除外設定（後方互換: optional） */
@@ -150,7 +150,7 @@ export interface ArchiveCoursework {
   name: string
   description: string | null
   date: string | null
-  classes: { className: string; order: number }[]
+  classrooms: { classroomName: string; order: number }[]
   tags: { tagName: string }[]
   students: { studentNumber: string; customOrder: number | null }[]
   items: ArchiveCourseworkItem[]

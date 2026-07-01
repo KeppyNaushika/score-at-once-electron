@@ -13,8 +13,8 @@ export function createStudentApi() {
     deleteStudent: (id: string) => ipcRenderer.invoke("delete-student", id),
     getStudentExamResults: (studentId: string) =>
       ipcRenderer.invoke("get-student-exam-results", studentId),
-    getClassExamResults: (classId: string) =>
-      ipcRenderer.invoke("get-class-exam-results", classId),
+    getClassExamResults: (classroomId: string) =>
+      ipcRenderer.invoke("get-class-exam-results", classroomId),
     exportStudentsExcel: (selectedStudentIds: string[]) =>
       ipcRenderer.invoke(
         "export-students-excel",
@@ -27,12 +27,12 @@ export function createStudentApi() {
 
     // Class related
     fetchClasses: () => ipcRenderer.invoke("fetch-classes"),
-    createClass: (classData: Prisma.ClassCreateInput) =>
+    createClass: (classData: Prisma.ClassroomCreateInput) =>
       ipcRenderer.invoke("create-class", classData),
-    updateClass: (classData: Prisma.ClassUpdateInput & { id: string }) =>
+    updateClass: (classData: Prisma.ClassroomUpdateInput & { id: string }) =>
       ipcRenderer.invoke("update-class", classData),
-    deleteClass: (classId: string) =>
-      ipcRenderer.invoke("delete-class", classId),
+    deleteClass: (classroomId: string) =>
+      ipcRenderer.invoke("delete-class", classroomId),
     exportClassesExcel: (selectedClassIds: string[]) =>
       ipcRenderer.invoke("export-classes-excel", selectedClassIds) as Promise<{
         success: boolean
@@ -55,11 +55,11 @@ export function createStudentApi() {
       ipcRenderer.invoke("get-current-memberships-by-student-id", studentId),
     getAllMembershipsByStudentId: (studentId: string) =>
       ipcRenderer.invoke("get-all-memberships-by-student-id", studentId),
-    getCurrentMembershipsByClassId: (classId: string) =>
-      ipcRenderer.invoke("get-current-memberships-by-class-id", classId),
+    getCurrentMembershipsByClassId: (classroomId: string) =>
+      ipcRenderer.invoke("get-current-memberships-by-class-id", classroomId),
     addStudentToClass: (
       studentId: string,
-      classId: string,
+      classroomId: string,
       startDate?: Date,
       attendanceNumber?: number,
       notes?: string
@@ -67,7 +67,7 @@ export function createStudentApi() {
       ipcRenderer.invoke(
         "add-student-to-class",
         studentId,
-        classId,
+        classroomId,
         startDate,
         attendanceNumber,
         notes

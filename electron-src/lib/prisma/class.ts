@@ -1,9 +1,9 @@
-import { Class, Prisma } from "@prisma/client"
+import { Classroom, Prisma } from "@prisma/client"
 
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
-type ClassWithMemberships = Prisma.ClassGetPayload<{
+type ClassWithMemberships = Prisma.ClassroomGetPayload<{
   include: {
     memberships: {
       include: {
@@ -16,7 +16,7 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
 /** 全学級を取得する（memberships.student リレーション含む、出席番号順） */
 export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
   try {
-    return await prisma.class.findMany({
+    return await prisma.classroom.findMany({
       include: {
         memberships: {
           include: {
@@ -38,10 +38,10 @@ export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
 
 /** 学級を新規作成する（memberships.student リレーション含む） */
 export const createClass = async (
-  classData: Prisma.ClassCreateInput
+  classData: Prisma.ClassroomCreateInput
 ): Promise<ClassWithMemberships> => {
   try {
-    const created = await prisma.class.create({
+    const created = await prisma.classroom.create({
       data: classData,
       include: {
         memberships: {
@@ -73,16 +73,16 @@ export const createClass = async (
 
 /** 学級情報を更新する（memberships.student リレーション含む） */
 export const updateClass = async (
-  classData: Prisma.ClassUpdateInput & { id: string }
+  classData: Prisma.ClassroomUpdateInput & { id: string }
 ): Promise<ClassWithMemberships> => {
   const { id, ...data } = classData
   try {
-    const before = await prisma.class.findUnique({
+    const before = await prisma.classroom.findUnique({
       where: { id },
       select: { name: true, grade: true, classCode: true, description: true },
     })
 
-    const updated = await prisma.class.update({
+    const updated = await prisma.classroom.update({
       where: { id },
       data,
       include: {
@@ -129,12 +129,14 @@ export const updateClass = async (
 }
 
 /** 学級を削除する（現在所属中の生徒がいる場合はエラー） */
-export const deleteClass = async (classId: string): Promise<Class | void> => {
+export const deleteClass = async (
+  classroomId: string
+): Promise<Classroom | void> => {
   try {
     // Check for current memberships instead of students directly
     const membershipCount = await prisma.studentClassMembership.count({
       where: {
-        classId,
+        classroomId,
         endDate: null, // current memberships only
       },
     })
@@ -143,18 +145,20 @@ export const deleteClass = async (classId: string): Promise<Class | void> => {
         `学級を削除できません: ${membershipCount} 人の生徒がまだ所属しています。`
       )
     }
-    const deleted = await prisma.class.delete({ where: { id: classId } })
+    const deleted = await prisma.classroom.delete({
+      where: { id: classroomId },
+    })
 
     await recordAuditLog({
       action: "class.delete",
       entityType: "Class",
-      entityId: classId,
+      entityId: classroomId,
       target: deleted.name,
     })
 
     return deleted
   } catch (error) {
-    console.error(`Failed to delete class ${classId}:`, error)
+    console.error(`Failed to delete class ${classroomId}:`, error)
     throw error
   }
 }

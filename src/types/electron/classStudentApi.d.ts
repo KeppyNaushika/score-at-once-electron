@@ -1,4 +1,4 @@
-import type { Class, Prisma, Student } from "@prisma/client"
+import type { Classroom, Prisma, Student } from "@prisma/client"
 
 import type {
   ClassWithMemberships,
@@ -67,12 +67,12 @@ export interface ClassStudentAPI {
     error?: string
   }>
   createClass: (
-    classData: Prisma.ClassCreateWithoutTeachersInput
+    classData: Prisma.ClassroomCreateWithoutTeachersInput
   ) => Promise<ClassWithMemberships>
   updateClass: (
-    classData: Prisma.ClassUpdateInput & { id: string }
+    classData: Prisma.ClassroomUpdateInput & { id: string }
   ) => Promise<ClassWithMemberships> // Ensure id is part of update
-  deleteClass: (classId: string) => Promise<Class | void>
+  deleteClass: (classroomId: string) => Promise<Classroom | void>
 
   // Student related
   fetchStudents: () => Promise<StudentWithMemberships[]>
@@ -85,7 +85,9 @@ export interface ClassStudentAPI {
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
   getStudentExamResults: (studentId: string) => Promise<StudentExamResult[]>
-  getClassExamResults: (classId: string) => Promise<ClassStudentExamResult[]>
+  getClassExamResults: (
+    classroomId: string
+  ) => Promise<ClassStudentExamResult[]>
   exportStudentsExcel: (selectedStudentIds: string[]) => Promise<{
     success: boolean
     outputPath?: string
@@ -113,11 +115,11 @@ export interface ClassStudentAPI {
     studentId: string
   ) => Promise<StudentClassMembershipWithDetails[]>
   getCurrentMembershipsByClassId: (
-    classId: string
+    classroomId: string
   ) => Promise<StudentClassMembershipWithDetails[]>
   addStudentToClass: (
     studentId: string,
-    classId: string,
+    classroomId: string,
     startDate?: Date,
     attendanceNumber?: number,
     notes?: string

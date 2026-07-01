@@ -187,7 +187,7 @@ export interface SubtotalGroupSelection {
  * 1人の生徒が複数の studentReport 学級に属する場合は複数エントリになる。
  */
 export interface ClassStatEntry {
-  classId: string
+  classroomId: string
   className: string
   grade: string | null
   /**

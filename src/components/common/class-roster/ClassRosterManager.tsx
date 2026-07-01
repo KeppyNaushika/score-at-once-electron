@@ -211,11 +211,11 @@ export function ClassRosterManager({
     }
   }
 
-  const toggleClassSelection = (classId: string) => {
+  const toggleClassSelection = (classroomId: string) => {
     setSelectedClassIds((prev) => {
       const next = new Set(prev)
-      if (next.has(classId)) next.delete(classId)
-      else next.add(classId)
+      if (next.has(classroomId)) next.delete(classroomId)
+      else next.add(classroomId)
       return next
     })
   }

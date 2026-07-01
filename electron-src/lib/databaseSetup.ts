@@ -39,7 +39,7 @@ export class DatabaseSetup {
   async isDatabaseEmpty(): Promise<boolean> {
     try {
       const userCount = await this.prisma.user.count()
-      const classCount = await this.prisma.class.count()
+      const classCount = await this.prisma.classroom.count()
       return userCount === 0 && classCount === 0
     } catch (error) {
       console.error("❌ Database content check failed:", error)
@@ -82,7 +82,7 @@ export class DatabaseSetup {
       })
 
       // サンプル学級の作成
-      const sampleClass = await this.prisma.class.upsert({
+      const sampleClass = await this.prisma.classroom.upsert({
         where: { name: "サンプル学級" },
         update: {},
         create: {
@@ -134,7 +134,7 @@ export class DatabaseSetup {
           await this.prisma.studentClassMembership.findFirst({
             where: {
               studentId: student.id,
-              classId: sampleClass.id,
+              classroomId: sampleClass.id,
               endDate: null, // 現在有効な所属のみ
             },
           })
@@ -143,7 +143,7 @@ export class DatabaseSetup {
           await this.prisma.studentClassMembership.create({
             data: {
               studentId: student.id,
-              classId: sampleClass.id,
+              classroomId: sampleClass.id,
               attendanceNumber: index + 1,
               startDate: new Date(),
             },

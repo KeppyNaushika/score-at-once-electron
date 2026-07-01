@@ -38,7 +38,7 @@ describe("FileOverviewStep", () => {
       manifest: createMockManifest({
         counts: {
           students: 3,
-          classes: 1,
+          classrooms: 1,
           users: 1,
           pages: 2,
           regions: 4,
@@ -65,7 +65,7 @@ describe("FileOverviewStep", () => {
     })
     render(<FileOverviewStep wizard={wizard} />)
 
-    // student: byId=2, class: byId=1, subtotalGroup: byId=1
+    // student: byId=2, classroom: byId=1, subtotalGroup: byId=1
     expect(screen.getByText(/自動で紐づく: 2/)).toBeInTheDocument()
   })
 

@@ -41,18 +41,22 @@ export interface RosterAdapter {
   /** 対象学級の現在の最大 order（無ければ null） */
   classMaxOrder(targetId: string): Promise<number | null>
   /** 対象学級を作成（既存なら何もしない） */
-  upsertClass(targetId: string, classId: string, order: number): Promise<void>
+  upsertClass(
+    targetId: string,
+    classroomId: string,
+    order: number
+  ): Promise<void>
   /** 対象学級の並び順を一括更新（単一トランザクションで実装すること） */
   setClassOrders(
     targetId: string,
-    orders: { classId: string; order: number }[]
+    orders: { classroomId: string; order: number }[]
   ): Promise<void>
   /** 指定学級以外の登録学級ID一覧 */
   listOtherClassIds(targetId: string, exceptClassId: string): Promise<string[]>
   /** 学級と、それに伴い外す生徒を単一トランザクションで削除 */
   removeClassAndStudents(
     targetId: string,
-    classId: string,
+    classroomId: string,
     studentIds: string[]
   ): Promise<void>
   /** 監査ログ用スコープ */
@@ -76,7 +80,7 @@ export interface RosterAdapter {
 export async function rosterAddStudentsFromClass(
   adapter: RosterAdapter,
   targetId: string,
-  classId: string,
+  classroomId: string,
   activeOnly = true
 ): Promise<{
   success: boolean
@@ -87,11 +91,11 @@ export async function rosterAddStudentsFromClass(
   try {
     const referenceDate = await adapter.getReferenceDate(targetId)
     const nextOrder = (await adapter.classMaxOrder(targetId)) ?? -1
-    await adapter.upsertClass(targetId, classId, nextOrder + 1)
+    await adapter.upsertClass(targetId, classroomId, nextOrder + 1)
 
     const memberships = await prisma.studentClassMembership.findMany({
       where: {
-        classId,
+        classroomId,
         ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
       },
       orderBy: [
@@ -127,7 +131,7 @@ export async function rosterAddStudentsFromClass(
         scopeId: scope.scopeId,
         scopeLabel: scope.scopeLabel,
         summary: adapter.audit.addFromClassSummary(toAdd.length),
-        extra: { count: toAdd.length, classId },
+        extra: { count: toAdd.length, classroomId },
       })
     }
 
@@ -235,7 +239,7 @@ export async function rosterSetClassOrders(
   try {
     await adapter.setClassOrders(
       targetId,
-      orderedClassIds.map((classId, order) => ({ classId, order }))
+      orderedClassIds.map((classroomId, order) => ({ classroomId, order }))
     )
     return { success: true }
   } catch (error) {
@@ -254,17 +258,17 @@ export async function rosterSetClassOrders(
 async function computeExclusiveStudents(
   adapter: RosterAdapter,
   targetId: string,
-  classId: string
+  classroomId: string
 ): Promise<string[]> {
   const memberships = await prisma.studentClassMembership.findMany({
-    where: { classId },
+    where: { classroomId },
     select: { studentId: true },
   })
   const classStudentIds = memberships.map((m) => m.studentId)
 
-  const otherClassIds = await adapter.listOtherClassIds(targetId, classId)
+  const otherClassIds = await adapter.listOtherClassIds(targetId, classroomId)
   const otherMemberships = await prisma.studentClassMembership.findMany({
-    where: { classId: { in: otherClassIds } },
+    where: { classroomId: { in: otherClassIds } },
     select: { studentId: true },
   })
   const otherStudentIds = new Set(otherMemberships.map((m) => m.studentId))
@@ -279,10 +283,14 @@ async function computeExclusiveStudents(
 export async function rosterClassRemovalPreview(
   adapter: RosterAdapter,
   targetId: string,
-  classId: string
+  classroomId: string
 ): Promise<{ success: boolean; exclusiveCount?: number; error?: string }> {
   try {
-    const exclusive = await computeExclusiveStudents(adapter, targetId, classId)
+    const exclusive = await computeExclusiveStudents(
+      adapter,
+      targetId,
+      classroomId
+    )
     return { success: true, exclusiveCount: exclusive.length }
   } catch (error) {
     console.error("Error computing class removal preview:", error)
@@ -302,15 +310,19 @@ export async function rosterClassRemovalPreview(
 export async function rosterRemoveClass(
   adapter: RosterAdapter,
   targetId: string,
-  classId: string,
+  classroomId: string,
   deleteStudents = true
 ): Promise<{ success: boolean; removedStudents?: number; error?: string }> {
   try {
     const studentsToRemove = deleteStudents
-      ? await computeExclusiveStudents(adapter, targetId, classId)
+      ? await computeExclusiveStudents(adapter, targetId, classroomId)
       : []
 
-    await adapter.removeClassAndStudents(targetId, classId, studentsToRemove)
+    await adapter.removeClassAndStudents(
+      targetId,
+      classroomId,
+      studentsToRemove
+    )
 
     const scope = await adapter.scope(targetId)
     await recordAuditLog({
@@ -320,7 +332,7 @@ export async function rosterRemoveClass(
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       summary: adapter.audit.removeClassSummary(studentsToRemove.length),
-      extra: { removedStudents: studentsToRemove.length, classId },
+      extra: { removedStudents: studentsToRemove.length, classroomId },
     })
 
     return { success: true, removedStudents: studentsToRemove.length }

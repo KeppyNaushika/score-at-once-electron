@@ -31,7 +31,7 @@ const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
   classesData: [],
   membershipsData: [],
   tagsData: [],
-  counts: { courseworks: 0, items: 0, scores: 0, students: 0, classes: 0 },
+  counts: { courseworks: 0, items: 0, scores: 0, students: 0, classrooms: 0 },
 }
 
 const v1_3_0 = new V1_3_0_to_V1_4_0_Transformer()

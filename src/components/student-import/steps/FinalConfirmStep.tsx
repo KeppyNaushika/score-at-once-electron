@@ -22,7 +22,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
   const summary = useMemo(() => {
     if (!state.fileOverviewData) return null
 
-    const { student, class: classResult } = state.fileOverviewData
+    const { student, classroom: classResult } = state.fileOverviewData
     const config = state.idIntegrationConfig
 
     // 生徒サマリー
@@ -57,21 +57,21 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     let classNew = 0
     let classSkip = 0
 
-    if (config.class.strategy === "all_new") {
+    if (config.classroom.strategy === "all_new") {
       classNew = classSecondaryMatched + classNoMatch
     } else {
       classMerge += classSecondaryMatched
       classNew = classNoMatch
     }
 
-    for (const d of config.class.decisions) {
+    for (const d of config.classroom.decisions) {
       if (d.decisionType === "create_new") classNew++
       else if (d.decisionType === "skip") classSkip++
     }
 
     return {
       student: { merge: studentMerge, new: studentNew, skip: studentSkip },
-      class: { merge: classMerge, new: classNew, skip: classSkip },
+      classroom: { merge: classMerge, new: classNew, skip: classSkip },
     }
   }, [state.fileOverviewData, state.idIntegrationConfig])
 
@@ -116,22 +116,22 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         <div className="border-border/50 rounded-lg border p-4">
           <h4 className="mb-3 font-medium">学級</h4>
           <div className="space-y-2 text-sm">
-            {summary.class.merge > 0 && (
+            {summary.classroom.merge > 0 && (
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>既存データと紐づけ: {summary.class.merge}件</span>
+                <span>既存データと紐づけ: {summary.classroom.merge}件</span>
               </div>
             )}
-            {summary.class.new > 0 && (
+            {summary.classroom.new > 0 && (
               <div className="flex items-center gap-2">
                 <PlusCircle className="h-4 w-4 text-blue-500" />
-                <span>新規登録: {summary.class.new}件</span>
+                <span>新規登録: {summary.classroom.new}件</span>
               </div>
             )}
-            {summary.class.skip > 0 && (
+            {summary.classroom.skip > 0 && (
               <div className="flex items-center gap-2">
                 <SkipForward className="h-4 w-4 text-gray-500" />
-                <span>スキップ: {summary.class.skip}件</span>
+                <span>スキップ: {summary.classroom.skip}件</span>
               </div>
             )}
           </div>

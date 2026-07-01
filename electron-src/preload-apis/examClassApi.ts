@@ -13,7 +13,7 @@ export function createExamClassApi() {
         ipcRenderer.invoke("exam-class:get-available", examId),
       add: (options: {
         examId: string
-        classId: string
+        classroomId: string
         administered?: boolean
         teacherStat?: boolean
         studentReport?: boolean
@@ -28,17 +28,17 @@ export function createExamClassApi() {
       remove: (id: string) => ipcRenderer.invoke("exam-class:remove", id),
       reorder: (options: { examId: string; orderedIds: string[] }) =>
         ipcRenderer.invoke("exam-class:reorder", options),
-      removeByIds: (examId: string, classId: string) =>
-        ipcRenderer.invoke("exam-class:remove-by-ids", examId, classId),
+      removeByIds: (examId: string, classroomId: string) =>
+        ipcRenderer.invoke("exam-class:remove-by-ids", examId, classroomId),
       addStudentsFromClass: (
         examId: string,
-        classId: string,
+        classroomId: string,
         activeOnly?: boolean
       ) =>
         ipcRenderer.invoke(
           "exam-class:add-students-from-class",
           examId,
-          classId,
+          classroomId,
           activeOnly
         ),
       getStudentClassInfo: (examId: string) =>

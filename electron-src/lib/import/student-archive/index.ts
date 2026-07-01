@@ -67,7 +67,7 @@ export async function performStudentPreMatching(
 
   return {
     student: studentResult,
-    class: classResult,
+    classroom: classResult,
   }
 }
 
@@ -84,10 +84,10 @@ export async function executeStudentImport(
     transformStudentToLatest(rawData)
   const warnings: string[] = [...transformWarnings]
   const counts = {
-    created: { students: 0, classes: 0, memberships: 0 },
-    updated: { students: 0, classes: 0, memberships: 0 },
-    skipped: { students: 0, classes: 0, memberships: 0 },
-    unchanged: { students: 0, classes: 0, memberships: 0 },
+    created: { students: 0, classrooms: 0, memberships: 0 },
+    updated: { students: 0, classrooms: 0, memberships: 0 },
+    skipped: { students: 0, classrooms: 0, memberships: 0 },
+    unchanged: { students: 0, classrooms: 0, memberships: 0 },
   }
 
   // ArchiveDataCounts互換のカウント（プロセッサーが使用）
@@ -100,7 +100,7 @@ export async function executeStudentImport(
 
   const idMappings: IdMappings = {
     student: {},
-    class: {},
+    classroom: {},
     subtotalGroup: {},
     subtotal: {},
     exam: {},
@@ -128,7 +128,7 @@ export async function executeStudentImport(
   // FileOverviewData互換に変換（プロセッサーが使用）
   const compatPreMatch = {
     student: preMatchResult.student,
-    class: preMatchResult.class,
+    classroom: preMatchResult.classroom,
     subtotalGroup: { byId: [], noMatch: [] },
   }
 
@@ -154,7 +154,7 @@ export async function executeStudentImport(
         await processClassIdIntegration(
           compatData as ExtractedArchiveData,
           compatPreMatch,
-          integrationConfig.class,
+          integrationConfig.classroom,
           idMappings,
           idChangeTargets,
           archiveCounts,
@@ -176,13 +176,13 @@ export async function executeStudentImport(
 
     // archiveCounts → counts に変換
     counts.created.students = archiveCounts.created.students
-    counts.created.classes = archiveCounts.created.classes
+    counts.created.classrooms = archiveCounts.created.classrooms
     counts.updated.students = archiveCounts.updated.students
-    counts.updated.classes = archiveCounts.updated.classes
+    counts.updated.classrooms = archiveCounts.updated.classrooms
     counts.skipped.students = archiveCounts.skipped.students
-    counts.skipped.classes = archiveCounts.skipped.classes
+    counts.skipped.classrooms = archiveCounts.skipped.classrooms
     counts.unchanged.students = archiveCounts.unchanged.students
-    counts.unchanged.classes = archiveCounts.unchanged.classes
+    counts.unchanged.classrooms = archiveCounts.unchanged.classrooms
 
     // memberships のカウントはprocessMembershipでは集計されないため
     // idMappings.membership のサイズで推定
@@ -215,7 +215,7 @@ export async function executeStudentImport(
 function createEmptyArchiveCounts() {
   return {
     students: 0,
-    classes: 0,
+    classrooms: 0,
     users: 0,
     pages: 0,
     regions: 0,

@@ -68,7 +68,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
     )
   }
 
-  const { student, class: classResult } = state.fileOverviewData
+  const { student, classroom: classResult } = state.fileOverviewData
   const { counts } = state.manifest
 
   return (
@@ -76,7 +76,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
       <div className="text-center">
         <h3 className="text-lg font-semibold">ファイルの内容</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          生徒 {counts.students}名、学級 {counts.classes}件、所属{" "}
+          生徒 {counts.students}名、学級 {counts.classrooms}件、所属{" "}
           {counts.memberships}件
         </p>
       </div>

@@ -117,17 +117,17 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
             {classes.map((ec) => (
               <TableRow key={ec.id}>
                 <TableCell className="font-medium">
-                  {ec.class.name}
-                  {ec.class.grade != null && (
+                  {ec.classroom.name}
+                  {ec.classroom.grade != null && (
                     <span className="text-muted-foreground ml-2 text-xs">
-                      {ec.class.grade}年
+                      {ec.classroom.grade}年
                     </span>
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-center text-xs">
                   <span className="inline-flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {ec.class.memberships.length}
+                    {ec.classroom.memberships.length}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">

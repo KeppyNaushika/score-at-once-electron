@@ -37,7 +37,7 @@ export interface ArchiveManifest {
  */
 export interface ArchiveDataCounts {
   students: number
-  classes: number
+  classrooms: number
   users: number
   pages: number
   regions: number
@@ -72,7 +72,7 @@ export type SubtotalGroupMatchingMethod = "name" | "none"
  */
 export interface MatchingConfig {
   student: StudentMatchingMethod
-  class: ClassMatchingMethod
+  classroom: ClassMatchingMethod
   user: UserMatchingMethod
   exam: ExamMatchingMethod
   subtotalGroup: SubtotalGroupMatchingMethod
@@ -83,7 +83,7 @@ export interface MatchingConfig {
  */
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
   student: "studentNumber",
-  class: "name",
+  classroom: "name",
   user: "username",
   exam: "always_new",
   subtotalGroup: "name",
@@ -192,7 +192,7 @@ export interface FileOverviewData {
   /** 生徒の照合結果 */
   student: PreMatchingResult
   /** 学級の照合結果 */
-  class: PreMatchingResult
+  classroom: PreMatchingResult
   /** 小計グループの照合結果 */
   subtotalGroup: PreMatchingResult
   /** 試験の照合結果（ID一致 = 同じPCでマージ可能） */
@@ -267,7 +267,7 @@ export interface CategoryIdIntegrationConfig {
  */
 export interface IdIntegrationConfig {
   student: CategoryIdIntegrationConfig
-  class: CategoryIdIntegrationConfig
+  classroom: CategoryIdIntegrationConfig
   subtotalGroup: CategoryIdIntegrationConfig
   /** 小計項目の直接マッピング（importSubtotalId → existingSubtotalId | "__new__"） */
   subtotalMappings?: Record<string, string>
@@ -763,7 +763,7 @@ export interface ArchiveExamData {
   examClasses: Array<{
     id: string
     examId: string
-    classId: string
+    classroomId: string
     administered: boolean
     /** 〜v1.14.0 の旧フラグ（v1.15.0 で teacherStat へ移行）。旧アーカイブ読込時のみ存在 */
     statistics?: boolean
@@ -829,7 +829,7 @@ export interface ArchiveStudentsData {
  * 学級データ (classes.json)
  */
 export interface ArchiveClassesData {
-  classes: Array<{
+  classrooms: Array<{
     id: string
     name: string
     classCode: string | null
@@ -842,7 +842,7 @@ export interface ArchiveClassesData {
   memberships: Array<{
     id: string
     studentId: string
-    classId: string
+    classroomId: string
     startDate: string
     endDate: string | null
     attendanceNumber: number | null
@@ -1055,7 +1055,7 @@ export type ImportWizardStep =
  */
 export const DEFAULT_ID_INTEGRATION_CONFIG: IdIntegrationConfig = {
   student: { strategy: "by_student_number", decisions: [] },
-  class: { strategy: "by_name", decisions: [] },
+  classroom: { strategy: "by_name", decisions: [] },
   subtotalGroup: { strategy: "by_name", decisions: [] },
 }
 

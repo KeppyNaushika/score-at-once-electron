@@ -7,7 +7,7 @@ export type StudentStatus = "participating" | "expected" | "absent"
 export interface StudentMembership {
   id: string
   attendanceNumber?: number | null
-  class: {
+  classroom: {
     id: string
     name: string
   }

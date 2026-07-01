@@ -1,4 +1,4 @@
-import type { Class, Exam, ExamClass } from "@prisma/client"
+import type { Classroom, Exam, ExamClass } from "@prisma/client"
 
 import type { ClassWithMemberships } from "../prismaExtensions"
 
@@ -8,14 +8,14 @@ import type { ClassWithMemberships } from "../prismaExtensions"
 export interface ExamClassWithDetails {
   id: string
   examId: string
-  classId: string
+  classroomId: string
   administered: boolean
   teacherStat: boolean
   studentReport: boolean
   order: number
   createdAt: Date
   updatedAt: Date
-  class: Class
+  classroom: Classroom
   exam: Exam
 }
 
@@ -25,14 +25,14 @@ export interface ExamClassWithDetails {
 export interface ExamClassWithClass {
   id: string
   examId: string
-  classId: string
+  classroomId: string
   administered: boolean
   teacherStat: boolean
   studentReport: boolean
   order: number
   createdAt: Date
   updatedAt: Date
-  class: ClassWithMemberships
+  classroom: ClassWithMemberships
 }
 
 /**
@@ -83,7 +83,7 @@ export interface ExamClassAPI {
      */
     add: (options: {
       examId: string
-      classId: string
+      classroomId: string
       administered?: boolean
       teacherStat?: boolean
       studentReport?: boolean
@@ -114,16 +114,16 @@ export interface ExamClassAPI {
     }) => Promise<void>
 
     /**
-     * ExamClassを削除 (examIdとclassIdで指定)
+     * ExamClassを削除 (examIdとclassroomIdで指定)
      */
-    removeByIds: (examId: string, classId: string) => Promise<ExamClass>
+    removeByIds: (examId: string, classroomId: string) => Promise<ExamClass>
 
     /**
      * クラスから生徒を試験に追加（B案: 統合型フロー）
      */
     addStudentsFromClass: (
       examId: string,
-      classId: string,
+      classroomId: string,
       activeOnly?: boolean
     ) => Promise<{
       added: number

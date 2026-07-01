@@ -17,7 +17,7 @@ export const initialState: ImportWizardState = {
   fileOverviewData: null,
   idIntegrationConfig: {
     student: { strategy: "by_student_number", decisions: [] },
-    class: { strategy: "by_name", decisions: [] },
+    classroom: { strategy: "by_name", decisions: [] },
     subtotalGroup: { strategy: "by_name", decisions: [] },
   },
   scoringConflictConfig: {
@@ -26,7 +26,7 @@ export const initialState: ImportWizardState = {
   },
   matchingConfig: {
     student: "studentNumber",
-    class: "name",
+    classroom: "name",
     user: "username",
     exam: "always_new",
     subtotalGroup: "name",

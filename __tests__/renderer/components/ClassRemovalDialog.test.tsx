@@ -19,7 +19,7 @@ import type { ClassRosterEntry } from "@/components/common/class-roster/types"
 
 const entry: ClassRosterEntry = {
   id: "c1",
-  classId: "c1",
+  classroomId: "c1",
   name: "3-A組",
   studentCount: 3,
   order: 0,

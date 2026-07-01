@@ -14,8 +14,8 @@ export interface GradeWithDetails {
   updatedAt: Date
   gradeClasses: {
     id: string
-    classId: string
-    class: { id: string; name: string }
+    classroomId: string
+    classroom: { id: string; name: string }
     order: number
   }[]
   gradeItems: GradeItemWithDetails[]

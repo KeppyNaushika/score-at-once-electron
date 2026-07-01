@@ -102,17 +102,17 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
           <div className="border-border/50 rounded-lg border p-4">
             <h4 className="mb-2 text-sm font-medium">学級</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              {summary.created.classes > 0 && (
-                <span>新規: {summary.created.classes}件</span>
+              {summary.created.classrooms > 0 && (
+                <span>新規: {summary.created.classrooms}件</span>
               )}
-              {summary.updated.classes > 0 && (
-                <span>更新: {summary.updated.classes}件</span>
+              {summary.updated.classrooms > 0 && (
+                <span>更新: {summary.updated.classrooms}件</span>
               )}
-              {summary.unchanged.classes > 0 && (
-                <span>変更なし: {summary.unchanged.classes}件</span>
+              {summary.unchanged.classrooms > 0 && (
+                <span>変更なし: {summary.unchanged.classrooms}件</span>
               )}
-              {summary.skipped.classes > 0 && (
-                <span>スキップ: {summary.skipped.classes}件</span>
+              {summary.skipped.classrooms > 0 && (
+                <span>スキップ: {summary.skipped.classrooms}件</span>
               )}
             </div>
           </div>

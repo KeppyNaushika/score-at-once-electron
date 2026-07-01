@@ -54,7 +54,7 @@ function cascadeChildrenFromSchema(target: string): string[] {
 describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () => {
   const cases = [
     { target: "Student", movers: STUDENT_CASCADE_MOVERS },
-    { target: "Class", movers: CLASS_CASCADE_MOVERS },
+    { target: "Classroom", movers: CLASS_CASCADE_MOVERS },
     { target: "SubtotalGroup", movers: SUBTOTAL_GROUP_CASCADE_MOVERS },
   ]
 

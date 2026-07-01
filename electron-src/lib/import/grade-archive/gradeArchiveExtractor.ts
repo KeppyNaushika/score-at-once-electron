@@ -11,6 +11,7 @@ import type {
   GradeArchiveData,
   GradeArchiveManifest,
 } from "../../../../src/types/gradeArchive.types"
+import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 
 // archiver で作った ZIP を展開するために unzipper を使用
 // 試験に unzipper がない場合は adm-zip を使用
@@ -44,8 +45,9 @@ export async function extractGradeArchive(
     }
 
     const manifest: GradeArchiveManifest = JSON.parse(manifestJson)
-    const gradeData: ArchiveGradeData = JSON.parse(
-      files["grade-exam.json"] ?? "{}"
+    // 学級リネーム前の旧キー（className/classes/classId）は読取り時に現行キーへ正規化
+    const gradeData: ArchiveGradeData = normalizeLegacyClassroomKeys(
+      JSON.parse(files["grade-exam.json"] ?? "{}")
     )
     const boundariesData: ArchiveBoundariesData = JSON.parse(
       files["boundaries.json"] ?? '{"boundarySets":[]}'
@@ -56,7 +58,9 @@ export async function extractGradeArchive(
     let courseworks: ArchiveCoursework[] | undefined
     let courseworkArchive: CollectedCourseworkData | undefined
     if (files["courseworks.json"]) {
-      const parsed = JSON.parse(files["courseworks.json"])
+      const parsed = normalizeLegacyClassroomKeys(
+        JSON.parse(files["courseworks.json"])
+      )
       if (Array.isArray(parsed)) {
         courseworks = parsed
       } else if (parsed && typeof parsed === "object") {

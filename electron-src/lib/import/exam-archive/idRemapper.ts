@@ -35,7 +35,7 @@ export interface IdMappings {
   /** Student ID: 旧ID -> 新ID */
   student: Record<string, string>
   /** Class ID: 旧ID -> 新ID */
-  class: Record<string, string>
+  classroom: Record<string, string>
   /** StudentClassMembership ID: 旧ID -> 新ID */
   membership: Record<string, string>
   /** User ID: 旧ID -> 新ID */
@@ -101,7 +101,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     examSubtotalGroup: {},
     examClass: {},
     student: {},
-    class: {},
+    classroom: {},
     membership: {},
     user: {},
     subtotalGroup: {},
@@ -179,8 +179,8 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   }
 
   // 学級
-  for (const cls of data.classesData.classes) {
-    mappings.class[cls.id] = randomUUID()
+  for (const cls of data.classesData.classrooms) {
+    mappings.classroom[cls.id] = randomUUID()
   }
 
   // 学級所属

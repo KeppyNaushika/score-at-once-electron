@@ -316,10 +316,10 @@ export async function seedClasses(
   studentIds: string[]
 ): Promise<{ classAId: string; classBId: string }> {
   const db = getPrisma()
-  const classA = await db.class.create({
+  const classA = await db.classroom.create({
     data: { id: randomUUID(), name: "2年A組", grade: 2 },
   })
-  const classB = await db.class.create({
+  const classB = await db.classroom.create({
     data: { id: randomUUID(), name: "2年B組", grade: 2 },
   })
   for (let i = 0; i < 20; i++) {
@@ -327,7 +327,7 @@ export async function seedClasses(
       data: {
         id: randomUUID(),
         studentId: studentIds[i],
-        classId: classA.id,
+        classroomId: classA.id,
         attendanceNumber: i + 1,
       },
     })
@@ -337,7 +337,7 @@ export async function seedClasses(
       data: {
         id: randomUUID(),
         studentId: studentIds[i],
-        classId: classB.id,
+        classroomId: classB.id,
         attendanceNumber: i - 19,
       },
     })
@@ -415,12 +415,12 @@ export async function seedExamWithScoring(
   await db.userExam.create({
     data: { id: randomUUID(), userId, examId, role: "OWNER" },
   })
-  for (const classId of [classAId, classBId]) {
+  for (const classroomId of [classAId, classBId]) {
     await db.examClass.create({
       data: {
         id: randomUUID(),
         examId,
-        classId,
+        classroomId,
         administered: true,
         teacherStat: true,
         studentReport: true,
@@ -585,9 +585,9 @@ export async function seedGradeProject(
       referenceDate: new Date("2025-11-01"),
     },
   })
-  for (const classId of [classAId, classBId]) {
+  for (const classroomId of [classAId, classBId]) {
     await db.gradeClass.create({
-      data: { id: randomUUID(), gradeId, classId },
+      data: { id: randomUUID(), gradeId, classroomId },
     })
   }
   for (let i = 0; i < studentIds.length; i++) {
@@ -719,7 +719,7 @@ export async function seedSimpleExam(
     data: {
       id: randomUUID(),
       examId,
-      classId: classAId,
+      classroomId: classAId,
       administered: true,
       teacherStat: true,
       studentReport: true,

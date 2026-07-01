@@ -11,7 +11,7 @@ import type {
 /** 所属関係情報（UI用 — 新規作成時のstudentId指定を含む） */
 interface Membership {
   id: string
-  classId: string
+  classroomId: string
   startDate: Date
   endDate?: Date | null
   attendanceNumber?: number | null
@@ -27,7 +27,7 @@ interface Membership {
 }
 
 /** 学級の詳細表示・編集・所属関係の管理を提供するカスタムフック */
-export function useClassManagement(classId: string) {
+export function useClassManagement(classroomId: string) {
   const [loading, setLoading] = useState(true)
   const [classData, setClassData] = useState<ClassWithMemberships | null>(null)
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
@@ -43,7 +43,7 @@ export function useClassManagement(classId: string) {
     try {
       setLoading(true)
       const classes = await window.electronAPI.fetchClasses()
-      const targetClass = classes.find((c) => c.id === classId)
+      const targetClass = classes.find((c) => c.id === classroomId)
       if (targetClass) {
         setClassData(targetClass)
       }
@@ -55,7 +55,7 @@ export function useClassManagement(classId: string) {
     } finally {
       setLoading(false)
     }
-  }, [classId])
+  }, [classroomId])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -69,8 +69,8 @@ export function useClassManagement(classId: string) {
     try {
       // Extract memberships to avoid type conflicts
       const { memberships: _memberships, ...classUpdateData } = classInfo
-      const updateInput: Prisma.ClassUpdateInput & { id: string } = {
-        id: classId,
+      const updateInput: Prisma.ClassroomUpdateInput & { id: string } = {
+        id: classroomId,
         name: classUpdateData.name,
         classCode: classUpdateData.classCode,
         grade: classUpdateData.grade,
@@ -112,7 +112,7 @@ export function useClassManagement(classId: string) {
         // 新規所属関係を作成
         const membership = await window.electronAPI.addStudentToClass(
           membershipData.studentId,
-          classId,
+          classroomId,
           membershipData.startDate ?? undefined,
           membershipData.attendanceNumber ?? undefined,
           membershipData.notes ?? undefined
@@ -128,7 +128,7 @@ export function useClassManagement(classId: string) {
 
       // Refresh class data
       const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find((c) => c.id === classId)
+      const updatedClass = classes.find((c) => c.id === classroomId)
       if (updatedClass) {
         setClassData(updatedClass)
       }
@@ -146,7 +146,7 @@ export function useClassManagement(classId: string) {
 
         // Refresh class data
         const classes = await window.electronAPI.fetchClasses()
-        const updatedClass = classes.find((c) => c.id === classId)
+        const updatedClass = classes.find((c) => c.id === classroomId)
         if (updatedClass) {
           setClassData(updatedClass)
         }
@@ -166,7 +166,7 @@ export function useClassManagement(classId: string) {
 
       // Refresh class data
       const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find((c) => c.id === classId)
+      const updatedClass = classes.find((c) => c.id === classroomId)
       if (updatedClass) {
         setClassData(updatedClass)
       }
@@ -179,7 +179,7 @@ export function useClassManagement(classId: string) {
   const handleDeleteClass = async () => {
     if (window.confirm("この学級を削除しますか？")) {
       try {
-        await window.electronAPI.deleteClass(classId)
+        await window.electronAPI.deleteClass(classroomId)
         // Navigate back to classes list would be handled by the component
       } catch (error) {
         console.error("Failed to delete class:", error)

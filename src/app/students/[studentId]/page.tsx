@@ -75,7 +75,7 @@ export default function StudentDetailPage() {
   }
 
   const handleSaveMembershipData = async (
-    membershipData: Partial<StudentClassMembership> & { classId: string }
+    membershipData: Partial<StudentClassMembership> & { classroomId: string }
   ) => {
     const success = await handleSaveMembership(membershipData, membershipToEdit)
     if (success) {
@@ -199,7 +199,7 @@ export default function StudentDetailPage() {
             onClose={() => setIsMembershipModalOpen(false)}
             onSave={handleSaveMembershipData}
             studentId={student.id}
-            classId={undefined}
+            classroomId={undefined}
             availableStudents={[
               {
                 id: student.id,

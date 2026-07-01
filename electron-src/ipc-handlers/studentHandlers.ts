@@ -98,8 +98,8 @@ export function setupStudentHandlers(): void {
 
   registerHandler(
     "get-current-memberships-by-class-id",
-    async (classId: string) => {
-      return await getCurrentMembershipsByClassId(classId)
+    async (classroomId: string) => {
+      return await getCurrentMembershipsByClassId(classroomId)
     }
   )
 
@@ -107,7 +107,7 @@ export function setupStudentHandlers(): void {
     "add-student-to-class",
     async (
       studentId: string,
-      classId: string,
+      classroomId: string,
       startDate?: Date,
       attendanceNumber?: number,
       notes?: string
@@ -116,7 +116,7 @@ export function setupStudentHandlers(): void {
 
       const result = await addStudentToClass(
         studentId,
-        classId,
+        classroomId,
         dateToUse,
         attendanceNumber,
         notes
@@ -205,9 +205,9 @@ export function setupStudentHandlers(): void {
     return await getStudentExamResults(studentId)
   })
 
-  registerHandler("get-class-exam-results", async (classId: string) => {
+  registerHandler("get-class-exam-results", async (classroomId: string) => {
     const { getClassExamResults } = await import("../lib/prisma/student")
-    return await getClassExamResults(classId)
+    return await getClassExamResults(classroomId)
   })
 
   // 生徒データExcelエクスポート（選択された生徒のみ）

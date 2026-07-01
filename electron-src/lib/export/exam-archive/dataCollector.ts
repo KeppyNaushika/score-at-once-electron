@@ -132,10 +132,10 @@ export async function collectExamData(
           where: { studentId: { in: Array.from(studentIds) } },
         })
 
-    const classIds = new Set(memberships.map((m) => m.classId))
+    const classIds = new Set(memberships.map((m) => m.classroomId))
     const classes = isTemplate
       ? []
-      : await prisma.class.findMany({
+      : await prisma.classroom.findMany({
           where: { id: { in: Array.from(classIds) } },
         })
 
@@ -544,7 +544,7 @@ export async function collectExamData(
         : exam.examClasses.map((pc) => ({
             id: pc.id,
             examId: pc.examId,
-            classId: pc.classId,
+            classroomId: pc.classroomId,
             administered: pc.administered,
             teacherStat: pc.teacherStat,
             studentReport: pc.studentReport,
@@ -600,7 +600,7 @@ export async function collectExamData(
     }
 
     const classesData: ArchiveClassesData = {
-      classes: classes.map((c) => ({
+      classrooms: classes.map((c) => ({
         id: c.id,
         name: c.name,
         classCode: c.classCode,
@@ -613,7 +613,7 @@ export async function collectExamData(
       memberships: memberships.map((m) => ({
         id: m.id,
         studentId: m.studentId,
-        classId: m.classId,
+        classroomId: m.classroomId,
         startDate: m.startDate.toISOString(),
         endDate: m.endDate?.toISOString() ?? null,
         attendanceNumber: m.attendanceNumber,
@@ -711,7 +711,7 @@ export async function collectExamData(
     // 12. 件数を集計
     const counts: ArchiveDataCounts = {
       students: students.length,
-      classes: classes.length,
+      classrooms: classes.length,
       users: users.length,
       pages: exam.examPages.length,
       regions: examData.cropRegions.length,

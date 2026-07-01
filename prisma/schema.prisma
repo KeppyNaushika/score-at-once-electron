@@ -27,7 +27,7 @@ model User {
   scoreDecisions         ScoreDecision[]
 }
 
-model Class {
+model Classroom {
   id                  String                   @id @default(uuid())
   name                String                   @unique
   classCode           String?
@@ -71,7 +71,7 @@ model Student {
 model StudentClassMembership {
   id               String    @id @default(uuid())
   studentId        String
-  classId          String
+  classroomId          String
   startDate        DateTime  @default(now())
   endDate          DateTime?
   attendanceNumber Int?
@@ -79,11 +79,11 @@ model StudentClassMembership {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classroom            Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
-  @@index([classId])
-  @@index([classId, attendanceNumber])
+  @@index([classroomId])
+  @@index([classroomId, attendanceNumber])
   @@index([startDate, endDate])
 }
 
@@ -397,7 +397,7 @@ model AuditLog {
 model ExamClass {
   id            String   @id @default(uuid())
   examId        String
-  classId       String
+  classroomId       String
   administered  Boolean  @default(false) // 学級・出席番号表示（再採番）の対象
   teacherStat   Boolean  @default(false) // 教員集計対象（Excel学級平均行）
   studentReport Boolean  @default(false) // 生徒表示対象（個人成績表の学級比較）
@@ -406,11 +406,11 @@ model ExamClass {
   updatedAt     DateTime @updatedAt
 
   exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
-  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  @@unique([examId, classId])
+  @@unique([examId, classroomId])
   @@index([examId])
-  @@index([classId])
+  @@index([classroomId])
 }
 
 model Tag {
@@ -709,17 +709,17 @@ model GradeItem {
 model GradeClass {
   id        String   @id @default(uuid())
   gradeId   String
-  classId   String
+  classroomId   String
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeId, classId])
+  @@unique([gradeId, classroomId])
   @@index([gradeId])
-  @@index([classId])
+  @@index([classroomId])
 }
 
 /// 成績算出プロジェクトの対象生徒
@@ -887,17 +887,17 @@ model Coursework {
 model CourseworkClass {
   id           String   @id @default(uuid())
   courseworkId String
-  classId      String
+  classroomId      String
   order        Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   coursework Coursework @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
-  class      Class      @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classroom      Classroom  @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  @@unique([courseworkId, classId])
+  @@unique([courseworkId, classroomId])
   @@index([courseworkId])
-  @@index([classId])
+  @@index([classroomId])
 }
 
 /// 試験外成績資料の対象生徒（名簿）。点数が項目ごとに複数つくため名簿は独立テーブル。

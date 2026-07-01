@@ -69,7 +69,7 @@ export async function getCourseworkById(id: string) {
       where: { id },
       include: {
         classes: {
-          include: { class: { select: { id: true, name: true } } },
+          include: { classroom: { select: { id: true, name: true } } },
           orderBy: { order: "asc" },
         },
         tags: {
@@ -540,7 +540,7 @@ export async function getCourseworkStudents(courseworkId: string) {
         student: {
           include: {
             memberships: {
-              include: { class: { select: { id: true, name: true } } },
+              include: { classroom: { select: { id: true, name: true } } },
             },
           },
         },
@@ -564,7 +564,7 @@ export async function getCourseworkClasses(courseworkId: string) {
     const classes = await prisma.courseworkClass.findMany({
       where: { courseworkId },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
@@ -579,10 +579,10 @@ export async function getCourseworkClasses(courseworkId: string) {
       success: true,
       classes: classes.map((c) => ({
         id: c.id,
-        classId: c.classId,
-        className: c.class.name,
+        classroomId: c.classroomId,
+        className: c.classroom.name,
         order: c.order,
-        studentCount: c.class.memberships.length,
+        studentCount: c.classroom.memberships.length,
       })),
     }
   } catch (error) {
@@ -604,7 +604,7 @@ export async function getAvailableClassesForCoursework(
     const [existing, courseworkStudents] = await Promise.all([
       prisma.courseworkClass.findMany({
         where: { courseworkId },
-        select: { classId: true },
+        select: { classroomId: true },
       }),
       prisma.courseworkStudent.findMany({
         where: { courseworkId },
@@ -613,7 +613,7 @@ export async function getAvailableClassesForCoursework(
     ])
 
     const classes = await getAvailableClassesForTarget({
-      existingClassIds: existing.map((e) => e.classId),
+      existingClassIds: existing.map((e) => e.classroomId),
       excludeStudentIds: courseworkStudents.map((g) => g.studentId),
       referenceDate,
       activeOnly,
@@ -693,10 +693,12 @@ const courseworkRosterAdapter: RosterAdapter = {
     })
     return result._max.order
   },
-  upsertClass: async (targetId, classId, order) => {
+  upsertClass: async (targetId, classroomId, order) => {
     await prisma.courseworkClass.upsert({
-      where: { courseworkId_classId: { courseworkId: targetId, classId } },
-      create: { courseworkId: targetId, classId, order },
+      where: {
+        courseworkId_classroomId: { courseworkId: targetId, classroomId },
+      },
+      create: { courseworkId: targetId, classroomId, order },
       update: {},
     })
   },
@@ -704,7 +706,7 @@ const courseworkRosterAdapter: RosterAdapter = {
     await prisma.$transaction(
       orders.map((o) =>
         prisma.courseworkClass.updateMany({
-          where: { courseworkId: targetId, classId: o.classId },
+          where: { courseworkId: targetId, classroomId: o.classroomId },
           data: { order: o.order },
         })
       )
@@ -712,18 +714,20 @@ const courseworkRosterAdapter: RosterAdapter = {
   },
   listOtherClassIds: async (targetId, exceptClassId) => {
     const rows = await prisma.courseworkClass.findMany({
-      where: { courseworkId: targetId, classId: { not: exceptClassId } },
-      select: { classId: true },
+      where: { courseworkId: targetId, classroomId: { not: exceptClassId } },
+      select: { classroomId: true },
     })
-    return rows.map((c) => c.classId)
+    return rows.map((c) => c.classroomId)
   },
-  removeClassAndStudents: async (targetId, classId, studentIds) => {
+  removeClassAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([
       prisma.courseworkStudent.deleteMany({
         where: { courseworkId: targetId, studentId: { in: studentIds } },
       }),
       prisma.courseworkClass.delete({
-        where: { courseworkId_classId: { courseworkId: targetId, classId } },
+        where: {
+          courseworkId_classroomId: { courseworkId: targetId, classroomId },
+        },
       }),
     ])
   },
@@ -744,13 +748,13 @@ const courseworkRosterAdapter: RosterAdapter = {
 /** 学級から生徒を一括追加 */
 export function addStudentsFromClassToCoursework(
   courseworkId: string,
-  classId: string,
+  classroomId: string,
   activeOnly = true
 ) {
   return rosterAddStudentsFromClass(
     courseworkRosterAdapter,
     courseworkId,
-    classId,
+    classroomId,
     activeOnly
   )
 }
@@ -821,12 +825,12 @@ export function setCourseworkClassOrders(
 /** 学級削除のプレビュー（専属生徒の削除数） */
 export function getCourseworkClassRemovalPreview(
   courseworkId: string,
-  classId: string
+  classroomId: string
 ) {
   return rosterClassRemovalPreview(
     courseworkRosterAdapter,
     courseworkId,
-    classId
+    classroomId
   )
 }
 
@@ -837,13 +841,13 @@ export function getCourseworkClassRemovalPreview(
  */
 export function removeClassFromCoursework(
   courseworkId: string,
-  classId: string,
+  classroomId: string,
   deleteStudents = true
 ) {
   return rosterRemoveClass(
     courseworkRosterAdapter,
     courseworkId,
-    classId,
+    classroomId,
     deleteStudents
   )
 }

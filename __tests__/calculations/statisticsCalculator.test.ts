@@ -240,13 +240,13 @@ describe("calculateStatisticsForStudent", () => {
   const classOf = (
     allData: ScoringData[]
   ): {
-    classId: string
+    classroomId: string
     className: string
     grade: string | null
     memberStudentIds: string[]
   }[] => [
     {
-      classId: "c1",
+      classroomId: "c1",
       className: "1組",
       grade: null,
       memberStudentIds: allData.map((d) => d.studentId),
@@ -369,13 +369,13 @@ describe("calculateStatisticsForStudent", () => {
       allData,
       [
         {
-          classId: "cA",
+          classroomId: "cA",
           className: "A組",
           grade: null,
           memberStudentIds: ["s1", "s2"], // 平均=70・s1は1位
         },
         {
-          classId: "cB",
+          classroomId: "cB",
           className: "B組",
           grade: null,
           memberStudentIds: ["s1", "s3"], // 平均=60・s1は1位

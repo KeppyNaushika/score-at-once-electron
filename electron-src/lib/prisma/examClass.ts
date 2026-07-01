@@ -16,14 +16,14 @@ export type StudentClassInfoMap = Map<string, StudentClassInfo>
 
 type ExamClassWithDetails = Prisma.ExamClassGetPayload<{
   include: {
-    class: true
+    classroom: true
     exam: true
   }
 }>
 
 type ExamClassWithClass = Prisma.ExamClassGetPayload<{
   include: {
-    class: {
+    classroom: {
       include: {
         memberships: {
           include: {
@@ -37,7 +37,7 @@ type ExamClassWithClass = Prisma.ExamClassGetPayload<{
 
 export interface AddExamClassOptions {
   examId: string
-  classId: string
+  classroomId: string
   administered?: boolean
   teacherStat?: boolean
   studentReport?: boolean
@@ -68,7 +68,7 @@ export const getExamClasses = async (
     return await prisma.examClass.findMany({
       where: { examId },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
@@ -106,7 +106,7 @@ export const getAdministeredClasses = async (
         administered: true,
       },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
@@ -137,7 +137,7 @@ export const addExamClass = async (
 ): Promise<ExamClassWithDetails> => {
   const {
     examId,
-    classId,
+    classroomId,
     administered = false,
     teacherStat = false,
     studentReport = false,
@@ -154,14 +154,14 @@ export const addExamClass = async (
     const examClass = await prisma.examClass.create({
       data: {
         examId,
-        classId,
+        classroomId,
         administered,
         teacherStat,
         studentReport,
         order: nextOrder,
       },
       include: {
-        class: true,
+        classroom: true,
         exam: true,
       },
     })
@@ -172,12 +172,15 @@ export const addExamClass = async (
       entityId: examClass.id,
       scopeId: examId,
       scopeLabel: examClass.exam?.examName ?? null,
-      target: examClass.class?.name ?? null,
+      target: examClass.classroom?.name ?? null,
     })
 
     return examClass
   } catch (error) {
-    console.error(`Failed to add class ${classId} to exam ${examId}:`, error)
+    console.error(
+      `Failed to add class ${classroomId} to exam ${examId}:`,
+      error
+    )
     throw error
   }
 }
@@ -200,7 +203,7 @@ export const updateExamClass = async (
         ...(order !== undefined && { order }),
       },
       include: {
-        class: true,
+        classroom: true,
         exam: true,
       },
     })
@@ -240,7 +243,7 @@ export const removeExamClass = async (id: string): Promise<ExamClass> => {
   try {
     const before = await prisma.examClass.findUnique({
       where: { id },
-      select: { examId: true, class: { select: { name: true } } },
+      select: { examId: true, classroom: { select: { name: true } } },
     })
 
     const deleted = await prisma.examClass.delete({
@@ -254,7 +257,7 @@ export const removeExamClass = async (id: string): Promise<ExamClass> => {
       entityId: id,
       scopeId: scope?.scopeId ?? null,
       scopeLabel: scope?.scopeLabel ?? null,
-      target: before?.class.name ?? null,
+      target: before?.classroom.name ?? null,
     })
 
     return deleted
@@ -265,21 +268,21 @@ export const removeExamClass = async (id: string): Promise<ExamClass> => {
 }
 
 /**
- * Remove a class from a exam by examId and classId
+ * Remove a class from a exam by examId and classroomId
  */
 export const removeExamClassByIds = async (
   examId: string,
-  classId: string
+  classroomId: string
 ): Promise<ExamClass> => {
   try {
-    const cls = await prisma.class.findUnique({
-      where: { id: classId },
+    const cls = await prisma.classroom.findUnique({
+      where: { id: classroomId },
       select: { name: true },
     })
 
     const deleted = await prisma.examClass.delete({
       where: {
-        examId_classId: { examId, classId },
+        examId_classroomId: { examId, classroomId },
       },
     })
 
@@ -296,7 +299,7 @@ export const removeExamClassByIds = async (
     return deleted
   } catch (error) {
     console.error(
-      `Failed to remove class ${classId} from exam ${examId}:`,
+      `Failed to remove class ${classroomId} from exam ${examId}:`,
       error
     )
     throw error
@@ -322,12 +325,12 @@ export const getAvailableClassesForExam = async (
     // Get classes already associated with this exam
     const existingExamClasses = await prisma.examClass.findMany({
       where: { examId },
-      select: { classId: true },
+      select: { classroomId: true },
     })
-    const existingClassIds = existingExamClasses.map((pc) => pc.classId)
+    const existingClassIds = existingExamClasses.map((pc) => pc.classroomId)
 
     // Get all classes not in ExamClass
-    const availableClasses = await prisma.class.findMany({
+    const availableClasses = await prisma.classroom.findMany({
       where: {
         id: {
           notIn: existingClassIds.length > 0 ? existingClassIds : undefined,
@@ -362,7 +365,7 @@ export const getAvailableClassesForExam = async (
  */
 export const addStudentsFromClass = async (
   examId: string,
-  classId: string,
+  classroomId: string,
   activeOnly = true
 ): Promise<{
   added: number
@@ -382,11 +385,11 @@ export const addStudentsFromClass = async (
     // 2. ExamClass を作成（既に存在する場合は administered=true に更新）
     const examClass = await prisma.examClass.upsert({
       where: {
-        examId_classId: { examId, classId },
+        examId_classroomId: { examId, classroomId },
       },
       create: {
         examId,
-        classId,
+        classroomId,
         administered: true,
         teacherStat: true, // 生徒ごと追加した学級は教員集計の対象
         studentReport: true, // administered なので生徒表示の対象
@@ -402,7 +405,7 @@ export const addStudentsFromClass = async (
     // 3. クラスの生徒を出席番号順で取得（activeOnlyなら基準日時点で在籍中のみ）
     const memberships = await prisma.studentClassMembership.findMany({
       where: {
-        classId,
+        classroomId,
         ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
       },
       orderBy: [{ attendanceNumber: "asc" }],
@@ -456,7 +459,7 @@ export const addStudentsFromClass = async (
     }
   } catch (error) {
     console.error(
-      `Failed to add students from class ${classId} to exam ${examId}:`,
+      `Failed to add students from class ${classroomId} to exam ${examId}:`,
       error
     )
     throw error
@@ -487,7 +490,7 @@ export const getStudentClassInfoForExam = async (
         administered: true,
       },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
@@ -505,16 +508,16 @@ export const getStudentClassInfoForExam = async (
     const result: Record<string, StudentClassInfo> = {}
 
     for (const pc of examClasses) {
-      for (const membership of pc.class.memberships) {
+      for (const membership of pc.classroom.memberships) {
         // 既に情報がある生徒はスキップ（order優先順位を尊重）
         if (result[membership.studentId]) {
           continue
         }
 
         result[membership.studentId] = {
-          className: pc.class.name,
-          classCode: pc.class.classCode,
-          grade: pc.class.grade,
+          className: pc.classroom.name,
+          classCode: pc.classroom.classCode,
+          grade: pc.classroom.grade,
           attendanceNumber: membership.attendanceNumber,
           classOrder: pc.order,
         }
@@ -546,7 +549,7 @@ export const getStudentClassInfo = async (
         administered: true,
       },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: { studentId, ...membershipFilterAt(referenceDate) },
@@ -559,12 +562,12 @@ export const getStudentClassInfo = async (
 
     // 最初にマッチするクラスを使用
     for (const pc of examClasses) {
-      if (pc.class.memberships.length > 0) {
-        const membership = pc.class.memberships[0]
+      if (pc.classroom.memberships.length > 0) {
+        const membership = pc.classroom.memberships[0]
         return {
-          className: pc.class.name,
-          classCode: pc.class.classCode,
-          grade: pc.class.grade,
+          className: pc.classroom.name,
+          classCode: pc.classroom.classCode,
+          grade: pc.classroom.grade,
           attendanceNumber: membership.attendanceNumber,
           classOrder: pc.order,
         }
@@ -599,7 +602,7 @@ export const getStudentClassInfo = async (
  *
  * order 昇順の全登録学級を返し、消費側が用途別にフィルタする
  * （Excel は teacherStat、個人成績表は studentReport）。所属生徒IDは
- * `ec.class.memberships.map((m) => m.studentId)` で取得する。
+ * `ec.classroom.memberships.map((m) => m.studentId)` で取得する。
  */
 export const getClassMembersForExam = async (
   examId: string
@@ -610,7 +613,7 @@ export const getClassMembersForExam = async (
     return await prisma.examClass.findMany({
       where: { examId },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),

@@ -4,7 +4,7 @@
  * v1.4.0 の名前ベース埋め込み資料（courseworks）を、v1.5.0 の coursework-archive 形式
  * （UUIDベース・full レコード同梱の courseworkArchive）へ正規化する。
  *
- * 旧形式は studentNumber/className/tagName しか持たないため、UUID を持つ full レコードは
+ * 旧形式は studentNumber/classroomName/tagName しか持たないため、UUID を持つ full レコードは
  * 作れない。そこで「名前キーの synthetic レコード」を生成し、実際の名前→既存実体の解決は
  * 後段の importCourseworkData（grade では allowCreate=false の lookup-only）へ委ねる。
  * scores の updatedAt はエポックにし、LWW で既存スコアを上書きしない（旧挙動を維持）。
@@ -28,7 +28,8 @@ const EPOCH = new Date(0).toISOString()
 
 const synthStudentId = (studentNumber: string) =>
   `legacy-student:${studentNumber}`
-const synthClassId = (className: string) => `legacy-class:${className}`
+const synthClassId = (classroomName: string) =>
+  `legacy-classroom:${classroomName}`
 const synthTagId = (tagName: string) => `legacy-tag:${tagName}`
 
 export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
@@ -43,7 +44,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
     const tagNames = new Set<string>()
     for (const cw of legacy) {
       cw.students.forEach((s) => studentNumbers.add(s.studentNumber))
-      cw.classes.forEach((c) => classNames.add(c.className))
+      cw.classrooms.forEach((c) => classNames.add(c.classroomName))
       cw.tags.forEach((t) => tagNames.add(t.tagName))
       cw.items.forEach((item) =>
         item.scores.forEach((sc) => studentNumbers.add(sc.studentNumber))
@@ -80,8 +81,8 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
       name: cw.name,
       description: cw.description,
       date: cw.date,
-      classes: cw.classes.map((c) => ({
-        classId: synthClassId(c.className),
+      classrooms: cw.classrooms.map((c) => ({
+        classroomId: synthClassId(c.classroomName),
         order: c.order,
       })),
       tags: cw.tags.map((t) => ({ tagId: synthTagId(t.tagName) })),
@@ -124,7 +125,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
         items: itemCount,
         scores: scoreCount,
         students: studentsData.length,
-        classes: classesData.length,
+        classrooms: classesData.length,
       },
     }
 

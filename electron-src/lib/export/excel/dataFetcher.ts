@@ -124,7 +124,7 @@ export async function fetchExportData(
           }>
         }
         const fallbackMembership = studentWithMemberships.memberships?.[0]
-        const fallbackClass = fallbackMembership?.class
+        const fallbackClass = fallbackMembership?.classroom
 
         const grade = resolved?.grade ?? fallbackClass?.grade ?? null
         const className = resolved?.className ?? fallbackClass?.name

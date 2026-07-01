@@ -81,7 +81,7 @@ export async function cleanupTestDatabase(): Promise<void> {
   await prisma.tag.deleteMany()
   await prisma.studentClassMembership.deleteMany()
   await prisma.student.deleteMany()
-  await prisma.class.deleteMany()
+  await prisma.classroom.deleteMany()
   await prisma.userKeyboardShortcut.deleteMany()
   await prisma.userPreference.deleteMany()
   await prisma.user.deleteMany()

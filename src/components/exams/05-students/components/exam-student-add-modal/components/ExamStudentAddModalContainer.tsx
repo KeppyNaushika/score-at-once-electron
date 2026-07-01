@@ -61,21 +61,21 @@ export function ExamStudentAddModalContainer({
           firstNameKana: s.firstNameKana,
           memberships: s.memberships.map((m) => ({
             attendanceNumber: m.attendanceNumber,
-            class: { id: m.class.id, name: m.class.name },
+            classroom: { id: m.classroom.id, name: m.classroom.name },
           })),
         }))
       },
       addClasses: async (orderedClassIds, activeOnly) => {
         // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）
-        for (const classId of orderedClassIds) {
+        for (const classroomId of orderedClassIds) {
           const result =
             await window.electronAPI.examClass.addStudentsFromClass(
               examId,
-              classId,
+              classroomId,
               activeOnly
             )
           if (!result) {
-            throw new Error(`学級 ${classId} の追加に失敗しました`)
+            throw new Error(`学級 ${classroomId} の追加に失敗しました`)
           }
         }
       },

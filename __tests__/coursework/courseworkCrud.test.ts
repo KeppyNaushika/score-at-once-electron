@@ -236,10 +236,10 @@ describe("Coursework CRUD", () => {
     async function createClassData() {
       const cw = await createCoursework({ name: "学級操作資料" })
       const courseworkId = cw.coursework!.id
-      const classA = await testPrisma.class.create({
+      const classA = await testPrisma.classroom.create({
         data: { name: "1年A組", grade: 1 },
       })
-      const classB = await testPrisma.class.create({
+      const classB = await testPrisma.classroom.create({
         data: { name: "1年B組", grade: 1 },
       })
       const { s1, s2 } = await createStudents()
@@ -253,13 +253,13 @@ describe("Coursework CRUD", () => {
         },
       })
       await testPrisma.studentClassMembership.create({
-        data: { studentId: s1.id, classId: classA.id, attendanceNumber: 1 },
+        data: { studentId: s1.id, classroomId: classA.id, attendanceNumber: 1 },
       })
       await testPrisma.studentClassMembership.create({
-        data: { studentId: s2.id, classId: classA.id, attendanceNumber: 2 },
+        data: { studentId: s2.id, classroomId: classA.id, attendanceNumber: 2 },
       })
       await testPrisma.studentClassMembership.create({
-        data: { studentId: s3.id, classId: classB.id, attendanceNumber: 1 },
+        data: { studentId: s3.id, classroomId: classB.id, attendanceNumber: 1 },
       })
       await addStudentsFromClassToCoursework(courseworkId, classA.id)
       await addStudentsFromClassToCoursework(courseworkId, classB.id)

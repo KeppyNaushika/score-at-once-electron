@@ -77,7 +77,7 @@ export async function executeIdIntegrationImport(
 
   const idMappings: IdMappings = {
     student: {},
-    class: {},
+    classroom: {},
     subtotalGroup: {},
     subtotal: {},
     exam: {},
@@ -126,7 +126,7 @@ export async function executeIdIntegrationImport(
         await processClassIdIntegration(
           data,
           preMatchResult,
-          integrationConfig.class,
+          integrationConfig.classroom,
           idMappings,
           idChangeTargets,
           counts,
@@ -1003,16 +1003,16 @@ async function processDrawingAnnotations(
  */
 export async function processMemberships(
   memberships: ArchiveClassesData["memberships"],
-  idMappings: Pick<IdMappings, "student" | "class" | "membership">,
+  idMappings: Pick<IdMappings, "student" | "classroom" | "membership">,
   tx: Tx
 ): Promise<void> {
   for (const m of memberships) {
     const newStudentId = idMappings.student[m.studentId]
-    const newClassId = idMappings.class[m.classId]
+    const newClassId = idMappings.classroom[m.classroomId]
 
     if (newStudentId && newClassId) {
       const existing = await tx.studentClassMembership.findFirst({
-        where: { studentId: newStudentId, classId: newClassId },
+        where: { studentId: newStudentId, classroomId: newClassId },
       })
 
       if (!existing) {
@@ -1026,7 +1026,7 @@ export async function processMemberships(
             data: {
               id: m.id,
               studentId: newStudentId,
-              classId: newClassId,
+              classroomId: newClassId,
               startDate: new Date(m.startDate),
               endDate: m.endDate ? new Date(m.endDate) : null,
               attendanceNumber: m.attendanceNumber,
@@ -1222,11 +1222,11 @@ async function processExamClasses(
   tx: Tx
 ): Promise<void> {
   for (const pc of data.examData.examClasses) {
-    const newClassId = idMappings.class[pc.classId]
+    const newClassId = idMappings.classroom[pc.classroomId]
     if (!newClassId) continue
 
     const existing = await tx.examClass.findFirst({
-      where: { examId: newExamId, classId: newClassId },
+      where: { examId: newExamId, classroomId: newClassId },
     })
     if (existing) continue
 
@@ -1238,7 +1238,7 @@ async function processExamClasses(
         data: {
           id: pc.id,
           examId: newExamId,
-          classId: newClassId,
+          classroomId: newClassId,
           administered: pc.administered,
           // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
           ...resolveExamClassOutputFlags(pc),

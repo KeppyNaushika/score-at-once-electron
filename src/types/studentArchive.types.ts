@@ -48,7 +48,7 @@ export interface StudentArchiveManifest {
  */
 export interface StudentArchiveDataCounts {
   students: number
-  classes: number
+  classrooms: number
   memberships: number
 }
 
@@ -87,7 +87,7 @@ export interface StudentArchiveFileOverviewData {
   /** 生徒の照合結果 */
   student: PreMatchingResult
   /** 学級の照合結果 */
-  class: PreMatchingResult
+  classroom: PreMatchingResult
 }
 
 // =============================================================================
@@ -99,7 +99,7 @@ export interface StudentArchiveFileOverviewData {
  */
 export interface StudentArchiveIdIntegrationConfig {
   student: CategoryIdIntegrationConfig
-  class: CategoryIdIntegrationConfig
+  classroom: CategoryIdIntegrationConfig
 }
 
 // =============================================================================
@@ -156,7 +156,7 @@ export interface StudentImportWizardState {
 export const DEFAULT_STUDENT_ID_INTEGRATION_CONFIG: StudentArchiveIdIntegrationConfig =
   {
     student: { strategy: "by_student_number", decisions: [] },
-    class: { strategy: "by_name", decisions: [] },
+    classroom: { strategy: "by_name", decisions: [] },
   }
 
 /**

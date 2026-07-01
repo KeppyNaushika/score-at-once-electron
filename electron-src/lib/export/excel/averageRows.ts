@@ -93,14 +93,14 @@ export function appendClassAverageRows(
   // 学級ごとの平均（teacherStat=true）
   const byId = new Map(allScoringData.map((s) => [s.studentId, s]))
   for (const cls of teacherStatClasses) {
-    const members = cls.class.memberships
+    const members = cls.classroom.memberships
       .map((m) => byId.get(m.studentId))
       .filter((s): s is ScoringData => s !== undefined)
     if (members.length === 0) continue
 
     const row = worksheet.addRow(
       buildAverageRow(
-        `${cls.class.name}平均`,
+        `${cls.classroom.name}平均`,
         members,
         subtotalColumns,
         questionRegions

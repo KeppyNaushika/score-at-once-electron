@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 export interface MembershipSaveData {
   studentId: string
-  classId: string
+  classroomId: string
   startDate?: Date
   endDate?: Date
   attendanceNumber?: number
@@ -37,7 +37,7 @@ interface StudentClassMembershipModalProps {
   onClose: () => void
   onSave: (membershipData: MembershipSaveData) => void
   studentId?: string
-  classId?: string
+  classroomId?: string
   availableStudents: Array<{
     id: string
     studentNumber: string
@@ -54,7 +54,7 @@ interface StudentClassMembershipModalProps {
   membershipToEdit?: {
     id: string
     studentId: string
-    classId: string
+    classroomId: string
     startDate?: Date | string | null
     endDate?: Date | string | null
     attendanceNumber?: number | null
@@ -67,13 +67,13 @@ export default function StudentClassMembershipModal({
   onClose,
   onSave,
   studentId: initialStudentId,
-  classId: initialClassId,
+  classroomId: initialClassId,
   availableStudents,
   availableClasses,
   membershipToEdit,
 }: StudentClassMembershipModalProps) {
   const [studentId, setStudentId] = useState(initialStudentId || "")
-  const [classId, setClassId] = useState(initialClassId || "")
+  const [classroomId, setClassId] = useState(initialClassId || "")
   const [attendanceNumber, setAttendanceNumber] = useState<string>("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
@@ -99,7 +99,7 @@ export default function StudentClassMembershipModal({
 
       if (membershipToEdit) {
         setStudentId(membershipToEdit.studentId)
-        setClassId(membershipToEdit.classId)
+        setClassId(membershipToEdit.classroomId)
         setAttendanceNumber(membershipToEdit.attendanceNumber?.toString() || "")
         setStartDate(formatDateForInput(membershipToEdit.startDate))
         setEndDate(formatDateForInput(membershipToEdit.endDate))
@@ -129,8 +129,8 @@ export default function StudentClassMembershipModal({
       newErrors.studentId = "生徒を選択してください。"
     }
 
-    if (!classId) {
-      newErrors.classId = "学級を選択してください。"
+    if (!classroomId) {
+      newErrors.classroomId = "学級を選択してください。"
     }
 
     setErrors(newErrors)
@@ -144,7 +144,7 @@ export default function StudentClassMembershipModal({
 
     onSave({
       studentId,
-      classId,
+      classroomId,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
       attendanceNumber: attendanceNumber
@@ -227,7 +227,7 @@ export default function StudentClassMembershipModal({
             </Label>
             <div className="col-span-3">
               <Select
-                value={classId}
+                value={classroomId}
                 onValueChange={setClassId}
                 disabled={!!initialClassId}
               >
@@ -243,8 +243,10 @@ export default function StudentClassMembershipModal({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.classId && (
-                <p className="mt-1 text-sm text-red-500">{errors.classId}</p>
+              {errors.classroomId && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.classroomId}
+                </p>
               )}
             </div>
           </div>

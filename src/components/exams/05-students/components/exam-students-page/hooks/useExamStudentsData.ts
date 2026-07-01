@@ -84,10 +84,10 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
       sortedStudents.forEach((student) => {
         // 各生徒の全所属履歴を確認
         student.memberships?.forEach((membership: StudentMembership) => {
-          if (!uniqueClasses.has(membership.class.id)) {
-            uniqueClasses.set(membership.class.id, {
-              id: membership.class.id,
-              name: membership.class.name,
+          if (!uniqueClasses.has(membership.classroom.id)) {
+            uniqueClasses.set(membership.classroom.id, {
+              id: membership.classroom.id,
+              name: membership.classroom.name,
             })
           }
         })
@@ -225,7 +225,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
       const matchesClass =
         selectedClassId === "all" ||
         student.memberships?.some(
-          (membership) => membership.class.id === selectedClassId
+          (membership) => membership.classroom.id === selectedClassId
         )
 
       return matchesSearch && matchesStatus && matchesClass
@@ -304,7 +304,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     const matchesClass =
       selectedClassId === "all" ||
       student.memberships?.some(
-        (membership) => membership.class.id === selectedClassId
+        (membership) => membership.classroom.id === selectedClassId
       )
 
     return matchesSearch && matchesStatus && matchesClass
@@ -319,7 +319,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
         studentNumber: student?.studentNumber || "",
         lastName: student?.lastName || "",
         firstName: student?.firstName || "",
-        className: student?.memberships?.[0]?.class.name || "未所属",
+        className: student?.memberships?.[0]?.classroom.name || "未所属",
       }
     }
   )

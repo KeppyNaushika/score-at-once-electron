@@ -24,7 +24,7 @@ export interface CollectedGradeData {
     manualScores: number
     boundarySets: number
     boundaries: number
-    classes: number
+    classrooms: number
     students: number
   }
 }
@@ -52,7 +52,7 @@ export async function collectGradeArchiveData(
         orderBy: { order: "asc" },
       },
       gradeClasses: {
-        include: { class: true },
+        include: { classroom: true },
         orderBy: { order: "asc" },
       },
       gradeStudents: {
@@ -60,7 +60,7 @@ export async function collectGradeArchiveData(
           student: {
             include: {
               memberships: {
-                include: { class: { select: { name: true } } },
+                include: { classroom: { select: { name: true } } },
               },
             },
           },
@@ -92,7 +92,7 @@ export async function collectGradeArchiveData(
     },
   })
 
-  const classIds = new Set(gp.gradeClasses.map((c) => c.classId))
+  const classIds = new Set(gp.gradeClasses.map((c) => c.classroomId))
 
   const gradeItems = gp.gradeItems.map((gi) => ({
     name: gi.name,
@@ -159,16 +159,16 @@ export async function collectGradeArchiveData(
     }))
 
   const classRefs = gp.gradeClasses.map((c) => ({
-    name: c.class.name,
+    name: c.classroom.name,
   }))
 
   const studentRefs = gp.gradeStudents.map((ps) => {
     const membership = ps.student.memberships.find((m) =>
-      classIds.has(m.classId)
+      classIds.has(m.classroomId)
     )
     return {
       studentNumber: ps.student.studentNumber,
-      className: membership?.class.name ?? null,
+      classroomName: membership?.classroom.name ?? null,
       customOrder: ps.customOrder,
     }
   })
@@ -255,7 +255,7 @@ export async function collectGradeArchiveData(
       manualScores: manualScoresCount,
       boundarySets: boundarySets.length,
       boundaries: totalBoundaries,
-      classes: classRefs.length,
+      classrooms: classRefs.length,
       students: studentRefs.length,
     },
   }

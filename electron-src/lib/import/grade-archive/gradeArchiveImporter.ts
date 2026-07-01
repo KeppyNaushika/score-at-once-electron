@@ -28,7 +28,7 @@ export async function previewGradeArchiveImport(
   // Class照合（複数学級対応）
   const classMatches = await Promise.all(
     gradeData.classRefs.map(async (ref) => {
-      const existing = await prisma.class.findUnique({
+      const existing = await prisma.classroom.findUnique({
         where: { name: ref.name },
       })
       return { found: !!existing, name: ref.name }
@@ -163,14 +163,14 @@ export async function importGradeArchive(
         // 2. Class照合→GradeClass作成
         for (let i = 0; i < gradeData.classRefs.length; i++) {
           const ref = gradeData.classRefs[i]
-          const cls = await tx.class.findUnique({
+          const cls = await tx.classroom.findUnique({
             where: { name: ref.name },
           })
           if (cls) {
             await tx.gradeClass.create({
               data: {
                 gradeId: gp.id,
-                classId: cls.id,
+                classroomId: cls.id,
                 order: i,
               },
             })

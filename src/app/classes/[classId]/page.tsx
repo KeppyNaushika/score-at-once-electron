@@ -230,7 +230,7 @@ export default function ClassDetailPage() {
           isOpen={isStudentImportModalOpen}
           onClose={() => setIsStudentImportModalOpen(false)}
           onImportSuccess={handleStudentImportSuccess}
-          classId={classId}
+          classroomId={classId}
           className={classData?.name || ""}
         />
 
@@ -239,7 +239,7 @@ export default function ClassDetailPage() {
           onClose={() => setIsMembershipModalOpen(false)}
           onSave={handleSaveMembership}
           studentId={membershipToEdit?.studentId}
-          classId={classId}
+          classroomId={classId}
           availableStudents={students}
           availableClasses={[]}
           membershipToEdit={membershipToEdit}

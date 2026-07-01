@@ -51,11 +51,11 @@ describe("processClassIdIntegration", () => {
   // =========================================================================
   describe("ID一致（byId）", () => {
     it("同一IDの学級が存在する場合、自動でマッピングされる", async () => {
-      const classId = generateId()
+      const classroomId = generateId()
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
-          id: classId,
+          id: classroomId,
           name: "1年A組",
           classCode: "1A",
           grade: 1,
@@ -64,13 +64,18 @@ describe("processClassIdIntegration", () => {
 
       const data = createExtractedArchiveData({
         classesData: createArchiveClassesData([
-          { id: classId, name: "1年A組", classCode: "1A", grade: 1 },
+          { id: classroomId, name: "1年A組", classCode: "1A", grade: 1 },
         ]),
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
-          byId: [createMatchedItem({ importId: classId, existingId: classId })],
+        classroom: createPreMatchingResult({
+          byId: [
+            createMatchedItem({
+              importId: classroomId,
+              existingId: classroomId,
+            }),
+          ],
           noMatch: [],
         }),
       })
@@ -93,7 +98,7 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      expect(idMappings.class[classId]).toBe(classId)
+      expect(idMappings.classroom[classroomId]).toBe(classroomId)
     })
   })
 
@@ -105,7 +110,7 @@ describe("processClassIdIntegration", () => {
       const existingId = generateId()
       const importId = generateId()
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
           id: existingId,
           name: "2年B組",
@@ -121,7 +126,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           byName: [createMatchedItem({ importId, existingId })],
           noMatch: [],
         }),
@@ -145,7 +150,7 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      expect(idMappings.class[importId]).toBe(existingId)
+      expect(idMappings.classroom[importId]).toBe(existingId)
       expect(idChangeTargets).toHaveLength(0)
     })
   })
@@ -164,7 +169,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           noMatch: [{ importId, importData: {}, displayLabel: "3年C組" }],
         }),
       })
@@ -187,11 +192,13 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      expect(idMappings.class[importId]).toBe(importId)
-      const created = await prisma.class.findUnique({ where: { id: importId } })
+      expect(idMappings.classroom[importId]).toBe(importId)
+      const created = await prisma.classroom.findUnique({
+        where: { id: importId },
+      })
       expect(created).not.toBeNull()
       expect(created!.name).toBe("3年C組")
-      expect(counts.created.classes).toBe(1)
+      expect(counts.created.classrooms).toBe(1)
     })
   })
 
@@ -203,7 +210,7 @@ describe("processClassIdIntegration", () => {
       const existingId = generateId()
       const importId = generateId()
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
           id: existingId,
           name: "1年A組",
@@ -231,7 +238,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           byName: [createMatchedItem({ importId, existingId })],
           noMatch: [],
         }),
@@ -255,7 +262,7 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      expect(idMappings.class[importId]).toBe(existingId)
+      expect(idMappings.classroom[importId]).toBe(existingId)
       expect(idChangeTargets).toHaveLength(0)
     })
   })
@@ -268,7 +275,7 @@ describe("processClassIdIntegration", () => {
       const existingId = generateId()
       const importId = generateId()
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
           id: existingId,
           name: "2年B組",
@@ -296,7 +303,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           byName: [createMatchedItem({ importId, existingId })],
           noMatch: [],
         }),
@@ -320,10 +327,10 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      expect(idMappings.class[importId]).toBe(existingId)
+      expect(idMappings.classroom[importId]).toBe(existingId)
       expect(idChangeTargets).toHaveLength(1)
       expect(idChangeTargets[0]).toEqual({
-        category: "class",
+        category: "classroom",
         existingId,
         newId: importId,
       })
@@ -349,7 +356,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           noMatch: [
             { importId, importData: {}, displayLabel: "スキップクラス" },
           ],
@@ -374,8 +381,8 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      expect(counts.skipped.classes).toBe(1)
-      expect(idMappings.class[importId]).toBeUndefined()
+      expect(counts.skipped.classrooms).toBe(1)
+      expect(idMappings.classroom[importId]).toBeUndefined()
     })
   })
 
@@ -387,7 +394,7 @@ describe("processClassIdIntegration", () => {
       const existingId = generateId()
       const importId = generateId()
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
           id: existingId,
           name: "1年A組",
@@ -413,7 +420,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           noMatch: [{ importId, importData: {}, displayLabel: "1年A組" }],
         }),
       })
@@ -437,16 +444,18 @@ describe("processClassIdIntegration", () => {
       })
 
       // B5修正: サフィックス付きのクラス名で新規作成される
-      expect(idMappings.class[importId]).toBe(importId)
-      const created = await prisma.class.findUnique({ where: { id: importId } })
+      expect(idMappings.classroom[importId]).toBe(importId)
+      const created = await prisma.classroom.findUnique({
+        where: { id: importId },
+      })
       expect(created).not.toBeNull()
       expect(created!.name).toBe("1年A組 (2)") // suffix added
-      expect(counts.created.classes).toBe(1)
+      expect(counts.created.classrooms).toBe(1)
       // 警告にサフィックス付与の通知が含まれる
       expect(warnings.length).toBeGreaterThan(0)
       expect(warnings[0]).toContain("重複回避")
       // 既存レコードは変更されない
-      const existing = await prisma.class.findUnique({
+      const existing = await prisma.classroom.findUnique({
         where: { id: existingId },
       })
       expect(existing).not.toBeNull()
@@ -462,7 +471,7 @@ describe("processClassIdIntegration", () => {
       const existingId = generateId()
       const importId = generateId()
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
           id: existingId,
           name: "旧名クラス",
@@ -481,7 +490,7 @@ describe("processClassIdIntegration", () => {
         },
       ])
       // descriptionを設定
-      classesData.classes[0].description = "新説明"
+      classesData.classrooms[0].description = "新説明"
 
       const data = createExtractedArchiveData({ classesData })
 
@@ -493,7 +502,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           byName: [createMatchedItem({ importId, existingId })],
           noMatch: [],
         }),
@@ -505,7 +514,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       const updateDecisions = {
-        [`class:${importId}`]: {
+        [`classroom:${importId}`]: {
           classCode: "use_import" as const,
           grade: "use_import" as const,
         },
@@ -525,7 +534,7 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      const updated = await prisma.class.findUnique({
+      const updated = await prisma.classroom.findUnique({
         where: { id: existingId },
       })
       expect(updated!.classCode).toBe("NEW")
@@ -533,7 +542,7 @@ describe("processClassIdIntegration", () => {
       // 更新対象外のフィールドは元のまま
       expect(updated!.name).toBe("旧名クラス")
       expect(updated!.description).toBe("旧説明")
-      expect(counts.updated.classes).toBe(1)
+      expect(counts.updated.classrooms).toBe(1)
     })
   })
 
@@ -546,7 +555,7 @@ describe("processClassIdIntegration", () => {
       const importId = generateId()
       const oldDate = new Date("2024-01-01")
 
-      await prisma.class.create({
+      await prisma.classroom.create({
         data: {
           id: existingId,
           name: "古い名前",
@@ -560,7 +569,7 @@ describe("processClassIdIntegration", () => {
       const classesData = createArchiveClassesData([
         { id: importId, name: "新しい名前", classCode: "NEW", grade: 2 },
       ])
-      classesData.classes[0].updatedAt = newerDate.toISOString()
+      classesData.classrooms[0].updatedAt = newerDate.toISOString()
 
       const data = createExtractedArchiveData({ classesData })
 
@@ -572,7 +581,7 @@ describe("processClassIdIntegration", () => {
       })
 
       const preMatchResult = createFileOverviewData({
-        class: createPreMatchingResult({
+        classroom: createPreMatchingResult({
           byName: [createMatchedItem({ importId, existingId })],
           noMatch: [],
         }),
@@ -584,7 +593,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       const updateDecisions = {
-        [`class:${importId}`]: {
+        [`classroom:${importId}`]: {
           classCode: "use_newer" as const,
         },
       }
@@ -603,11 +612,11 @@ describe("processClassIdIntegration", () => {
         )
       })
 
-      const updated = await prisma.class.findUnique({
+      const updated = await prisma.classroom.findUnique({
         where: { id: existingId },
       })
       expect(updated!.classCode).toBe("NEW")
-      expect(counts.updated.classes).toBe(1)
+      expect(counts.updated.classrooms).toBe(1)
     })
   })
 })

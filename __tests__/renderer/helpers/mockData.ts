@@ -23,7 +23,7 @@ export function createMockCounts(
 ): ArchiveDataCounts {
   return {
     students: 3,
-    classes: 1,
+    classrooms: 1,
     users: 1,
     pages: 2,
     regions: 4,
@@ -132,7 +132,7 @@ export function createMockFileOverviewData(
 ): FileOverviewData {
   return {
     student: createMockPreMatchingResult(),
-    class: createMockPreMatchingResult({
+    classroom: createMockPreMatchingResult({
       byIdCount: 1,
       noMatchCount: 0,
     }),

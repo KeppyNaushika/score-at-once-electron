@@ -164,7 +164,7 @@ async function main() {
     // クラスIDマップ
     const classIdMap = new Map<number, string>()
     for (const [num, name] of Object.entries(CLASS_MAP)) {
-      const cls = await prisma.class.findFirst({ where: { name } })
+      const cls = await prisma.classroom.findFirst({ where: { name } })
       if (!cls) throw new Error(`クラス「${name}」が見つかりません`)
       classIdMap.set(Number(num), cls.id)
     }
@@ -172,9 +172,9 @@ async function main() {
     // 生徒マッチング用マップ
     const studentByKey = new Map<string, string>()
     const studentByName = new Map<string, string>()
-    for (const [classNum, classId] of classIdMap) {
+    for (const [classNum, classroomId] of classIdMap) {
       const memberships = await prisma.studentClassMembership.findMany({
-        where: { classId },
+        where: { classroomId },
         include: { student: true },
       })
       for (const m of memberships) {
@@ -190,12 +190,12 @@ async function main() {
 
     // クラスメンバー一覧（欠席者検出用）
     const classMembers = new Map<string, string[]>()
-    for (const [, classId] of classIdMap) {
+    for (const [, classroomId] of classIdMap) {
       const memberships = await prisma.studentClassMembership.findMany({
-        where: { classId },
+        where: { classroomId },
       })
       classMembers.set(
-        classId,
+        classroomId,
         memberships.map((m) => m.studentId)
       )
     }
@@ -308,8 +308,8 @@ async function importExam(
 
   // 欠席者: ExamClassに紐づく全生徒のうち、名簿にない生徒
   const absentStudentIds = new Set<string>()
-  for (const classId of allClassIds) {
-    const members = classMembers.get(classId) || []
+  for (const classroomId of allClassIds) {
+    const members = classMembers.get(classroomId) || []
     for (const sid of members) {
       if (!participatingStudentIds.has(sid)) {
         absentStudentIds.add(sid)
@@ -394,7 +394,7 @@ async function importExam(
       data: {
         id: crypto.randomUUID(),
         examId,
-        classId: sortedClassIds[i],
+        classroomId: sortedClassIds[i],
         administered: true,
         statistics: true,
         order: i,
@@ -411,7 +411,7 @@ async function importExam(
   const studentClassInfo = await prisma.studentClassMembership.findMany({
     where: {
       studentId: { in: allStudentIdsForExam },
-      classId: { in: sortedClassIds },
+      classroomId: { in: sortedClassIds },
     },
   })
   const studentInfoMap = new Map<
@@ -419,7 +419,7 @@ async function importExam(
     { classOrder: number; attendance: number }
   >()
   for (const m of studentClassInfo) {
-    const classOrder = sortedClassIds.indexOf(m.classId)
+    const classOrder = sortedClassIds.indexOf(m.classroomId)
     if (classOrder >= 0) {
       studentInfoMap.set(m.studentId, {
         classOrder,

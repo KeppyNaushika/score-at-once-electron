@@ -19,7 +19,8 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
   if (!state.fileOverviewData) return null
 
-  const { student: studentResult, class: classResult } = state.fileOverviewData
+  const { student: studentResult, classroom: classResult } =
+    state.fileOverviewData
 
   // 全てID一致で自動照合できる場合はファストパス
   const studentNeedsDecision =
@@ -65,7 +66,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       },
       fileOverviewData: {
         student: studentResult,
-        class: classResult,
+        classroom: classResult,
         subtotalGroup: { byId: [], noMatch: [] },
       },
     },
@@ -73,7 +74,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       category: string,
       config: Record<string, unknown>
     ) => {
-      if (category === "student" || category === "class") {
+      if (category === "student" || category === "classroom") {
         wizard.updateIdIntegrationConfig(category, config)
       }
     },
@@ -82,7 +83,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       importId: string,
       decision: Record<string, unknown>
     ) => {
-      if (category === "student" || category === "class") {
+      if (category === "student" || category === "classroom") {
         wizard.updateIdIntegrationDecision(category, importId, decision)
       }
     },
@@ -90,7 +91,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       category: string,
       idChoice: "use_import_id" | "use_existing_id"
     ) => {
-      if (category === "student" || category === "class") {
+      if (category === "student" || category === "classroom") {
         wizard.batchUpdateIdIntegrationDecisions(category, idChoice)
       }
     },
@@ -113,7 +114,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
               <span className="ml-1 text-xs">({studentNeedsDecision})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="class">
+          <TabsTrigger value="classroom">
             学級
             {classNeedsDecision > 0 && (
               <span className="ml-1 text-xs">({classNeedsDecision})</span>
@@ -130,11 +131,11 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           />
         </TabsContent>
 
-        <TabsContent value="class" className="mt-4">
+        <TabsContent value="classroom" className="mt-4">
           <ClassIntegrationPanel
             wizard={wizardAdapter as never}
             onStrategyChange={(strategy) =>
-              wizard.updateIdIntegrationConfig("class", { strategy })
+              wizard.updateIdIntegrationConfig("classroom", { strategy })
             }
           />
         </TabsContent>

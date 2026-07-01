@@ -114,7 +114,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const suffix = Date.now()
 
     // 生徒・学級
-    const cls = await prisma.class.create({
+    const cls = await prisma.classroom.create({
       data: { name: `学級_${suffix}` },
     })
     const student = await prisma.student.create({
@@ -127,7 +127,7 @@ describe("grade-archive ラウンドトリップ", () => {
       },
     })
     await prisma.studentClassMembership.create({
-      data: { classId: cls.id, studentId: student.id },
+      data: { classroomId: cls.id, studentId: student.id },
     })
     const tag = await prisma.tag.create({
       data: { name: `タグ_${suffix}` },
@@ -138,7 +138,7 @@ describe("grade-archive ラウンドトリップ", () => {
       data: {
         name: `第2回レポート_${suffix}`,
         description: "レポート評価",
-        classes: { create: [{ classId: cls.id, order: 0 }] },
+        classes: { create: [{ classroomId: cls.id, order: 0 }] },
         tags: { create: [{ tagId: tag.id }] },
         students: { create: [{ studentId: student.id, customOrder: 0 }] },
       },
@@ -220,7 +220,7 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(collected.courseworkArchive.courseworks).toHaveLength(1)
     const cw = collected.courseworkArchive.courseworks[0]
     expect(cw.items).toHaveLength(2)
-    expect(cw.classes).toHaveLength(1)
+    expect(cw.classrooms).toHaveLength(1)
     expect(collected.courseworkArchive.tagsData[0].name).toBe(`タグ_${suffix}`)
     expect(collected.courseworkArchive.studentsData[0].studentNumber).toBe(
       `CW_${suffix}`
@@ -291,7 +291,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 1,
           boundarySets: 0,
           boundaries: 0,
-          classes: 0,
+          classrooms: 0,
           students: 1,
         },
       },
@@ -320,7 +320,11 @@ describe("grade-archive ラウンドトリップ", () => {
         classRefs: [],
         examRefs: [],
         studentRefs: [
-          { studentNumber: `CW2_${suffix}`, className: null, customOrder: 0 },
+          {
+            studentNumber: `CW2_${suffix}`,
+            classroomName: null,
+            customOrder: 0,
+          },
         ],
       },
       courseworks: [
@@ -329,7 +333,7 @@ describe("grade-archive ラウンドトリップ", () => {
           name: `埋込資料_${suffix}`,
           description: "埋め込みテスト",
           date: null,
-          classes: [],
+          classrooms: [],
           tags: [],
           students: [{ studentNumber: `CW2_${suffix}`, customOrder: 0 }],
           items: [
@@ -402,7 +406,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 1,
           boundarySets: 0,
           boundaries: 0,
-          classes: 0,
+          classrooms: 0,
           students: 1,
         },
       },
@@ -437,7 +441,7 @@ describe("grade-archive ラウンドトリップ", () => {
         studentRefs: [
           {
             studentNumber: `LEGACY_${suffix}`,
-            className: null,
+            classroomName: null,
             customOrder: 0,
           },
         ],
@@ -514,7 +518,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 1,
           boundarySets: 0,
           boundaries: 0,
-          classes: 0,
+          classrooms: 0,
           students: 1,
         },
       },
@@ -541,7 +545,11 @@ describe("grade-archive ラウンドトリップ", () => {
         classRefs: [],
         examRefs: [],
         studentRefs: [
-          { studentNumber: `PV_${suffix}`, className: null, customOrder: 0 },
+          {
+            studentNumber: `PV_${suffix}`,
+            classroomName: null,
+            customOrder: 0,
+          },
         ],
       },
       manualScoresData: {
@@ -605,7 +613,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 0,
           boundarySets: 0,
           boundaries: 0,
-          classes: 0,
+          classrooms: 0,
           students: 0,
         },
       },
@@ -700,7 +708,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 1,
           boundarySets: 0,
           boundaries: 0,
-          classes: 0,
+          classrooms: 0,
           students: 1,
         },
       },
@@ -731,7 +739,11 @@ describe("grade-archive ラウンドトリップ", () => {
         classRefs: [],
         examRefs: [],
         studentRefs: [
-          { studentNumber: `UU_${suffix}`, className: null, customOrder: 0 },
+          {
+            studentNumber: `UU_${suffix}`,
+            classroomName: null,
+            customOrder: 0,
+          },
         ],
       },
       courseworks: [
@@ -740,7 +752,7 @@ describe("grade-archive ラウンドトリップ", () => {
           name: cwName,
           description: null,
           date: null,
-          classes: [],
+          classrooms: [],
           tags: [],
           students: [{ studentNumber: `UU_${suffix}`, customOrder: 0 }],
           items: [
@@ -835,7 +847,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 1,
           boundarySets: 0,
           boundaries: 0,
-          classes: 0,
+          classrooms: 0,
           students: 1,
         },
       },
@@ -866,7 +878,11 @@ describe("grade-archive ラウンドトリップ", () => {
         classRefs: [],
         examRefs: [],
         studentRefs: [
-          { studentNumber: `RE_${suffix}`, className: null, customOrder: 0 },
+          {
+            studentNumber: `RE_${suffix}`,
+            classroomName: null,
+            customOrder: 0,
+          },
         ],
       },
       courseworks: [
@@ -875,7 +891,7 @@ describe("grade-archive ラウンドトリップ", () => {
           name: `統合先_${suffix}`,
           description: null,
           date: null,
-          classes: [],
+          classrooms: [],
           tags: [],
           students: [{ studentNumber: `RE_${suffix}`, customOrder: 0 }],
           items: [
@@ -1019,7 +1035,7 @@ describe("grade-archive ラウンドトリップ", () => {
         firstNameKana: "ジロウ",
       },
     })
-    await prisma.class.create({ data: { name: `旧学級_${suffix}` } })
+    await prisma.classroom.create({ data: { name: `旧学級_${suffix}` } })
 
     const archiveItemId = "00000000-0000-4000-8000-000000000abc"
     // v1.4.0 形式の GradeArchiveData を手組み（courseworks は名前ベース配列）
@@ -1036,7 +1052,7 @@ describe("grade-archive ラウンドトリップ", () => {
           manualScores: 1,
           boundarySets: 0,
           boundaries: 0,
-          classes: 1,
+          classrooms: 1,
           students: 1,
         },
       },
@@ -1068,7 +1084,7 @@ describe("grade-archive ラウンドトリップ", () => {
         studentRefs: [
           {
             studentNumber: `LEGACY_${suffix}`,
-            className: `旧学級_${suffix}`,
+            classroomName: `旧学級_${suffix}`,
             customOrder: 0,
           },
         ],
@@ -1079,7 +1095,7 @@ describe("grade-archive ラウンドトリップ", () => {
           name: `旧レポート_${suffix}`,
           description: null,
           date: null,
-          classes: [{ className: `旧学級_${suffix}`, order: 0 }],
+          classrooms: [{ classroomName: `旧学級_${suffix}`, order: 0 }],
           tags: [],
           students: [{ studentNumber: `LEGACY_${suffix}`, customOrder: 0 }],
           items: [

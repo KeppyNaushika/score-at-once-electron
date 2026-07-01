@@ -108,7 +108,7 @@ export default function StudentTable() {
 
       if (filterClassId !== "all") {
         const belongsToClass = student.memberships.some(
-          (m) => m.class.id === filterClassId && isCurrentMembership(m)
+          (m) => m.classroom.id === filterClassId && isCurrentMembership(m)
         )
         if (!belongsToClass) return false
       }
@@ -295,7 +295,7 @@ export default function StudentTable() {
     return student.memberships
       .filter((m) => isCurrentMembership(m))
       .map((m) => ({
-        name: m.class.name,
+        name: m.classroom.name,
       }))
   }
 

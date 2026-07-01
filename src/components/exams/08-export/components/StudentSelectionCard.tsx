@@ -140,11 +140,11 @@ export function StudentSelectionCard({
     setSelectedStudents(newSelection)
   }
 
-  const toggleClassFilter = (classId: string) => {
-    if (selectedClasses.includes(classId)) {
-      setSelectedClasses(selectedClasses.filter((id) => id !== classId))
+  const toggleClassFilter = (classroomId: string) => {
+    if (selectedClasses.includes(classroomId)) {
+      setSelectedClasses(selectedClasses.filter((id) => id !== classroomId))
     } else {
-      setSelectedClasses([...selectedClasses, classId])
+      setSelectedClasses([...selectedClasses, classroomId])
     }
   }
 

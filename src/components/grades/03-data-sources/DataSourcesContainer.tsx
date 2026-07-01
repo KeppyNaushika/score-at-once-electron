@@ -63,7 +63,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       setStudents(studentsResult.students)
     }
     if (classesResult.success && classesResult.classes) {
-      setClassIds(classesResult.classes.map((c) => c.classId))
+      setClassIds(classesResult.classes.map((c) => c.classroomId))
     }
   }, [gradeId])
 

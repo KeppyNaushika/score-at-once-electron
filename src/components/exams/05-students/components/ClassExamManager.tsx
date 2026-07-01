@@ -44,11 +44,11 @@ export function ClassExamManager({
     () =>
       examClasses.map((ec) => ({
         id: ec.id,
-        classId: ec.classId,
-        name: ec.class.name,
-        classCode: ec.class.classCode,
-        grade: ec.class.grade,
-        studentCount: ec.class.memberships.length,
+        classroomId: ec.classroomId,
+        name: ec.classroom.name,
+        classCode: ec.classroom.classCode,
+        grade: ec.classroom.grade,
+        studentCount: ec.classroom.memberships.length,
         order: ec.order,
       })),
     [examClasses]
@@ -104,12 +104,12 @@ export function ClassExamManager({
         }))
       }}
       onAddClasses={async (classIds) => {
-        for (const classId of classIds) {
+        for (const classroomId of classIds) {
           // administered の学級は既定で教員集計・生徒表示の対象（移行の
           // studentReport=administered と整合）。出力スコープは後から08で調整可能。
           await window.electronAPI.examClass.add({
             examId,
-            classId,
+            classroomId,
             administered: true,
             teacherStat: true,
             studentReport: true,
