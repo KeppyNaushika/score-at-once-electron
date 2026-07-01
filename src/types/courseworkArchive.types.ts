@@ -129,8 +129,7 @@ export interface CollectedCourseworkData {
 
 /** インポート時に資料ごとにユーザーが選ぶ取り込み方法 */
 export type CourseworkImportDecision =
-  | { action: "reuse"; existingId: string }
-  | { action: "new" }
+  { action: "reuse"; existingId: string } | { action: "new" }
 
 /** アーカイブ内の資料 uuid → ユーザー決定 */
 export type CourseworkImportDecisions = Record<string, CourseworkImportDecision>

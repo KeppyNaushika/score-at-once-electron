@@ -273,12 +273,7 @@ export function PdfCanvasRenderer({
         endX: a.endX,
         endY: a.endY,
         lineStyle: a.lineStyle as
-          | "solid"
-          | "wave"
-          | "zigzag"
-          | "double"
-          | "arrow"
-          | "both_arrow",
+          "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow",
         text: a.text,
         fontSize: a.fontSize,
         textBoxWidth: 0,

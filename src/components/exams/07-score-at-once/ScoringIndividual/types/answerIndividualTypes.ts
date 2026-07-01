@@ -8,12 +8,7 @@ import type {
 
 // 線種の型定義
 export type LineStyle =
-  | "solid"
-  | "wave"
-  | "zigzag"
-  | "double"
-  | "arrow"
-  | "both_arrow"
+  "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow"
 
 // アンカー方向（8方向 + center）
 export type AnchorDirection =
@@ -53,12 +48,7 @@ export interface DrawingElement {
 
 // 描画ツールの型定義
 export type DrawingTool =
-  | "hand"
-  | "text"
-  | "line"
-  | "rectangle"
-  | "ellipse"
-  | "select"
+  "hand" | "text" | "line" | "rectangle" | "ellipse" | "select"
 
 // 線の編集モード
 export type LineEditMode = "move" | "start" | "end" | null

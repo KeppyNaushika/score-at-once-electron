@@ -60,11 +60,7 @@ export interface ExportOptions {
 
 // PDF出力フェーズの型
 export type ExportPhase =
-  | "initializing"
-  | "rendering"
-  | "embedding"
-  | "saving"
-  | "complete"
+  "initializing" | "rendering" | "embedding" | "saving" | "complete"
 
 // Canvas描画の詳細プログレス
 export interface RenderProgress {

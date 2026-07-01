@@ -56,10 +56,7 @@ export type GradingMode = "grid" | "individual"
  * レイアウト方向
  */
 export type LayoutDirection =
-  | "right-down"
-  | "left-down"
-  | "down-right"
-  | "down-left"
+  "right-down" | "left-down" | "down-right" | "down-left"
 
 /**
  * クライアントサイド用のQuestionScore型
@@ -146,18 +143,13 @@ export type ScoringOperationMode = "keyboard" | "mouse"
  * - "partial_modal": クリックで部分点入力モーダルを開く
  */
 export type MouseBrushAction =
-  | Exclude<ScoringStatus, "unscored">
-  | "select"
-  | "partial_modal"
+  Exclude<ScoringStatus, "unscored"> | "select" | "partial_modal"
 
 /**
  * 模範解答表示モード
  */
 export type MasterAnswerDisplayMode =
-  | "off"
-  | "overlay"
-  | "split-horizontal"
-  | "split-vertical"
+  "off" | "overlay" | "split-horizontal" | "split-vertical"
 
 /**
  * 模範解答キー動作モード

@@ -9,15 +9,7 @@ import { getTableColumns, tableExists } from "../databaseUtils"
  * S7=v0.7.x, S8=v0.8.x, S9=v0.9.x(現行)
  */
 export type SchemaVersion =
-  | "S3"
-  | "S4"
-  | "S5"
-  | "S6"
-  | "S7"
-  | "S8"
-  | "S9"
-  | "MIGRATED"
-  | "UNKNOWN"
+  "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "MIGRATED" | "UNKNOWN"
 
 /** 既存DBのスキーマ状態を検出する */
 export const detectSchemaVersion = async (

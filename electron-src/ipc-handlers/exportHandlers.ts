@@ -574,9 +574,8 @@ export function setupExportHandlers(): void {
         const margins = options.margins || {}
         // pageSizeがmmオブジェクトの場合はインチに変換
         let resolvedPageSize:
-          | "A4"
-          | "Letter"
-          | { width: number; height: number } = options.pageSize || "A4"
+          "A4" | "Letter" | { width: number; height: number } =
+          options.pageSize || "A4"
         if (
           typeof resolvedPageSize === "object" &&
           "width" in resolvedPageSize &&

@@ -122,8 +122,7 @@ export function useExportPage() {
   const setScoringMarkConfig = useCallback(
     async (
       config:
-        | ScoringMarkConfig
-        | ((prev: ScoringMarkConfig) => ScoringMarkConfig)
+        ScoringMarkConfig | ((prev: ScoringMarkConfig) => ScoringMarkConfig)
     ) => {
       const newConfig =
         typeof config === "function" ? config(scoringMarkConfig) : config

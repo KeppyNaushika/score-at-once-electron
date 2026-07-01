@@ -215,10 +215,7 @@ export interface FileOverviewData {
  * - all_new: "全員を新しい生徒として追加する"
  */
 export type StudentMatchingStrategy =
-  | "by_student_number"
-  | "by_name"
-  | "individual"
-  | "all_new"
+  "by_student_number" | "by_name" | "individual" | "all_new"
 
 export type ClassMatchingStrategy = "by_name" | "individual" | "all_new"
 
@@ -1168,10 +1165,7 @@ export type UpdateDecisions = Record<string, FieldUpdateDecision>
  * - manual: "競合している採点を1つずつ確認する"
  */
 export type ScoringConflictResolutionStrategy =
-  | "import_wins"
-  | "existing_wins"
-  | "newer_wins"
-  | "manual"
+  "import_wins" | "existing_wins" | "newer_wins" | "manual"
 
 /**
  * 採点結果の競合（1件分）

@@ -102,8 +102,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   const setReportOptions = useCallback(
     (
       options:
-        | GradeReportOptions
-        | ((prev: GradeReportOptions) => GradeReportOptions)
+        GradeReportOptions | ((prev: GradeReportOptions) => GradeReportOptions)
     ) => {
       setReportOptionsState((prev) => {
         const newOptions =

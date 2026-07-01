@@ -77,12 +77,7 @@ export interface ExportResult {
 
 // 問題分析関連の型定義
 export type DiscriminationLevel =
-  | "good"
-  | "acceptable"
-  | "marginal"
-  | "poor"
-  | "negative"
-  | "insufficient"
+  "good" | "acceptable" | "marginal" | "poor" | "negative" | "insufficient"
 
 export interface ItemAnalysisRow {
   questionId: string

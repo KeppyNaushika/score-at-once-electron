@@ -32,20 +32,16 @@ export async function createDataRows(
 ) {
   // 事前に順位を計算（総合点の降順でソート、null は最下位扱い）
   const scoringDataWithRank: ScoringDataWithRank[] = scoringData
-    .map(
-      (student, index): ScoringDataWithRank => ({
-        ...student,
-        originalIndex: index,
-        rank: 0, // 仮の値、後で正しい順位に更新
-      })
-    )
+    .map((student, index): ScoringDataWithRank => ({
+      ...student,
+      originalIndex: index,
+      rank: 0, // 仮の値、後で正しい順位に更新
+    }))
     .sort((a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1))
-    .map(
-      (student, rank): ScoringDataWithRank => ({
-        ...student,
-        rank: student.totalScore !== null ? rank + 1 : 0,
-      })
-    )
+    .map((student, rank): ScoringDataWithRank => ({
+      ...student,
+      rank: student.totalScore !== null ? rank + 1 : 0,
+    }))
     // 元の順序に戻す
     .sort((a, b) => a.originalIndex - b.originalIndex)
 

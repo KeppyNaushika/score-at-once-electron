@@ -58,9 +58,7 @@ export async function getStudentsForExam(examId: string) {
       return {
         ...studentRest,
         status: examStudent.status.toLowerCase() as
-          | "participating"
-          | "expected"
-          | "absent",
+          "participating" | "expected" | "absent",
         isInExam: true,
         customOrder: examStudent.customOrder,
         answerSheetCount: _count.studentAnswerImages,
