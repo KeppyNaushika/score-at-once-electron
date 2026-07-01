@@ -23,11 +23,7 @@ export interface CellData {
   pageNumber?: number
   file?: UnifiedFile
   disabledReason?:
-    | "row"
-    | "column"
-    | "position"
-    | "existing_answer"
-    | "absent_student"
+    "row" | "column" | "position" | "existing_answer" | "absent_student"
 }
 
 // Component props interfaces
@@ -74,11 +70,7 @@ export interface EmptyTableCellProps {
   hasExistingAnswer?: boolean
   allowOverwrite?: boolean
   disabledReason?:
-    | "row"
-    | "column"
-    | "position"
-    | "existing_answer"
-    | "absent_student"
+    "row" | "column" | "position" | "existing_answer" | "absent_student"
   onTogglePosition?: () => void
   onUploadToCell?: () => void
   onToggleAnswerDisabled?: () => void

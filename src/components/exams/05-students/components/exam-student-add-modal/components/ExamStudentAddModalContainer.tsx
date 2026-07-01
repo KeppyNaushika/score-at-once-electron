@@ -39,14 +39,12 @@ export function ExamStudentAddModalContainer({
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map(
-          (c): AddPanelClassItem => ({
-            id: c.id,
-            name: c.name,
-            studentCount: c.studentCount,
-            studentNames: c.studentNames,
-          })
-        )
+        return result.classes.map((c): AddPanelClassItem => ({
+          id: c.id,
+          name: c.name,
+          studentCount: c.studentCount,
+          studentNames: c.studentNames,
+        }))
       },
       fetchAvailableStudents: async (activeOnly) => {
         const result = await window.electronAPI.getStudentsNotInExam(
@@ -54,20 +52,18 @@ export function ExamStudentAddModalContainer({
           activeOnly
         )
         if (!result.success || !result.students) return []
-        return result.students.map(
-          (s): AddPanelStudentItem => ({
-            id: s.id,
-            studentNumber: s.studentNumber,
-            lastName: s.lastName,
-            firstName: s.firstName,
-            lastNameKana: s.lastNameKana,
-            firstNameKana: s.firstNameKana,
-            memberships: s.memberships.map((m) => ({
-              attendanceNumber: m.attendanceNumber,
-              class: { id: m.class.id, name: m.class.name },
-            })),
-          })
-        )
+        return result.students.map((s): AddPanelStudentItem => ({
+          id: s.id,
+          studentNumber: s.studentNumber,
+          lastName: s.lastName,
+          firstName: s.firstName,
+          lastNameKana: s.lastNameKana,
+          firstNameKana: s.firstNameKana,
+          memberships: s.memberships.map((m) => ({
+            attendanceNumber: m.attendanceNumber,
+            class: { id: m.class.id, name: m.class.name },
+          })),
+        }))
       },
       addClasses: async (orderedClassIds, activeOnly) => {
         // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）

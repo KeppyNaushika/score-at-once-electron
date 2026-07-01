@@ -76,8 +76,7 @@ export default function TemplateStepPage() {
   const handleRegionsChange = useCallback(
     async (
       newRegions:
-        | CropRegionArea[]
-        | ((prev: CropRegionArea[]) => CropRegionArea[])
+        CropRegionArea[] | ((prev: CropRegionArea[]) => CropRegionArea[])
     ) => {
       const finalRegions =
         typeof newRegions === "function"

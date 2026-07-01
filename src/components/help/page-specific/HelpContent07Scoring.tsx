@@ -57,12 +57,7 @@ function getScrollParent(el: HTMLElement | null): HTMLElement | null {
 const MAX_SCORE = 10
 
 type DemoStatus =
-  | "unscored"
-  | "correct"
-  | "incorrect"
-  | "partial"
-  | "no_answer"
-  | "pending"
+  "unscored" | "correct" | "incorrect" | "partial" | "no_answer" | "pending"
 
 interface GuideKeys {
   correct: string
@@ -1639,12 +1634,7 @@ function IndividualScoringDemo({
 }
 
 type DrawToolKind =
-  | "line"
-  | "rectangle"
-  | "ellipse"
-  | "text"
-  | "select"
-  | "hand"
+  "line" | "rectangle" | "ellipse" | "text" | "select" | "hand"
 
 /** ツール説明アニメの答案下地（薄いプレースホルダ行） */
 function ToolBackdrop() {

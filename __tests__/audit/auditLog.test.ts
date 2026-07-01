@@ -111,8 +111,7 @@ describe("監査ログ recordAuditLog", () => {
     })
     const page = await getAuditLogs()
     const changes = page.entries[0].metadata?.changes as
-      | { before: unknown; after: unknown }[]
-      | undefined
+      { before: unknown; after: unknown }[] | undefined
     expect(changes?.[0].before).toBe("旧")
     expect(changes?.[0].after).toBe("新")
   })
@@ -146,8 +145,7 @@ describe("監査ログ 集約（coalesce）", () => {
     expect(page.total).toBe(1)
     expect(page.entries[0].occurrences).toBe(2)
     const changes = page.entries[0].metadata?.changes as
-      | { after: unknown }[]
-      | undefined
+      { after: unknown }[] | undefined
     expect(changes?.[0].after).toBe("B") // after は最新で上書き
   })
 

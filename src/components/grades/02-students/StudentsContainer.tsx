@@ -105,9 +105,10 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       fetchClasses: async () => {
         const result = await window.electronAPI.grade.getClasses(gradeId)
         if (!result.success || !result.classes) return []
-        return result.classes.map(
-          (c): RosterClassOption => ({ id: c.classId, name: c.className })
-        )
+        return result.classes.map((c): RosterClassOption => ({
+          id: c.classId,
+          name: c.className,
+        }))
       },
       updateRowOrder: async (rowOrders) => {
         await window.electronAPI.grade.updateStudentOrders(gradeId, rowOrders)
@@ -128,14 +129,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map(
-          (c): AddPanelClassItem => ({
-            id: c.id,
-            name: c.name,
-            studentCount: c.studentCount,
-            studentNames: c.studentNames,
-          })
-        )
+        return result.classes.map((c): AddPanelClassItem => ({
+          id: c.id,
+          name: c.name,
+          studentCount: c.studentCount,
+          studentNames: c.studentNames,
+        }))
       },
       fetchAvailableStudents: async (activeOnly) => {
         const result = await window.electronAPI.grade.getAvailableStudents(
@@ -143,20 +142,18 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           activeOnly
         )
         if (!result.success || !result.students) return []
-        return result.students.map(
-          (s): AddPanelStudentItem => ({
-            id: s.id,
-            studentNumber: s.studentNumber,
-            lastName: s.lastName,
-            firstName: s.firstName,
-            lastNameKana: s.lastNameKana,
-            firstNameKana: s.firstNameKana,
-            memberships: s.memberships.map((m) => ({
-              attendanceNumber: m.attendanceNumber,
-              class: { id: m.class.id, name: m.class.name },
-            })),
-          })
-        )
+        return result.students.map((s): AddPanelStudentItem => ({
+          id: s.id,
+          studentNumber: s.studentNumber,
+          lastName: s.lastName,
+          firstName: s.firstName,
+          lastNameKana: s.lastNameKana,
+          firstNameKana: s.firstNameKana,
+          memberships: s.memberships.map((m) => ({
+            attendanceNumber: m.attendanceNumber,
+            class: { id: m.class.id, name: m.class.name },
+          })),
+        }))
       },
       addClasses: async (orderedClassIds, activeOnly) => {
         for (const classId of orderedClassIds) {

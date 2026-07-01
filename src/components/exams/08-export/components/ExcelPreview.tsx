@@ -48,11 +48,7 @@ interface ExcelPreviewProps {
 }
 
 type SheetTab =
-  | "scores"
-  | "results"
-  | "item-analysis"
-  | "sp-table"
-  | "frequency"
+  "scores" | "results" | "item-analysis" | "sp-table" | "frequency"
 
 export function ExcelPreview({ data }: ExcelPreviewProps) {
   const [sheetTab, setSheetTab] = useState<SheetTab>("scores")

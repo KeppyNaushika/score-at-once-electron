@@ -76,21 +76,19 @@ function templateToDefinition(
           label: sq.label as string,
           branchQuestions: (
             (sq.branchQuestions as Array<Record<string, unknown>>) || []
-          ).map(
-            (bq): BranchQuestion => ({
-              id: bq.id as string,
-              label: bq.label as string,
-              heightMultiplier: bq.heightMultiplier as number,
-              points: bq.points as number,
-              textElements: [],
-              imageElements: [],
-              layoutWidth: (bq.layoutWidth as string) ?? undefined,
-              nextPlacement:
-                (bq.nextPlacement as BranchQuestion["nextPlacement"]) ??
-                undefined,
-              goUp: (bq.goUp as number) ?? undefined,
-            })
-          ),
+          ).map((bq): BranchQuestion => ({
+            id: bq.id as string,
+            label: bq.label as string,
+            heightMultiplier: bq.heightMultiplier as number,
+            points: bq.points as number,
+            textElements: [],
+            imageElements: [],
+            layoutWidth: (bq.layoutWidth as string) ?? undefined,
+            nextPlacement:
+              (bq.nextPlacement as BranchQuestion["nextPlacement"]) ??
+              undefined,
+            goUp: (bq.goUp as number) ?? undefined,
+          })),
           heightMultiplier: sq.heightMultiplier as number,
           points: sq.points as number,
           textElements: (

@@ -7,12 +7,7 @@
 export type DrawingType = "text" | "line" | "rectangle" | "ellipse"
 export type DrawingTool = "select" | "text" | "line" | "rectangle" | "ellipse"
 export type LineStyle =
-  | "solid"
-  | "wave"
-  | "zigzag"
-  | "double"
-  | "arrow"
-  | "both_arrow"
+  "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow"
 export type HorizontalAlign = "left" | "center" | "right"
 export type VerticalAlign = "top" | "center" | "bottom"
 export type AnchorDirection =

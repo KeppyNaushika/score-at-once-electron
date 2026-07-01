@@ -17,9 +17,7 @@ import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export type ExportTabType =
-  | "scored-answers"
-  | "grading-data"
-  | "individual-reports"
+  "scored-answers" | "grading-data" | "individual-reports"
 
 interface ExportOptionsCardProps {
   examId: string

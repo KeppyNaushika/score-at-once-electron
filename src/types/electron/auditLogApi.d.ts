@@ -6,20 +6,10 @@
  */
 
 export type AuditCategory =
-  | "exam"
-  | "grade"
-  | "answer_sheet"
-  | "student"
-  | "user"
-  | "system"
+  "exam" | "grade" | "answer_sheet" | "student" | "user" | "system"
 
 export type AuditVerb =
-  | "create"
-  | "update"
-  | "delete"
-  | "export"
-  | "import"
-  | "other"
+  "create" | "update" | "delete" | "export" | "import" | "other"
 
 /** before→after の単一フィールド差分 */
 export interface AuditChange {

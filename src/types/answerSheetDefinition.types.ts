@@ -67,10 +67,7 @@ export interface BorderStyles {
 
 /** 文字数ガイドを表示するマスの隅 */
 export type ManuscriptGuidePosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right"
+  "top-left" | "top-right" | "bottom-left" | "bottom-right"
 
 /**
  * 原稿用紙の文字位置マーカー（先頭からN文字目に紐づく目印）。
@@ -277,10 +274,7 @@ export interface MultiColumnConfig {
 export type HeaderFieldType = "field" | "hfill" | "label"
 
 export type LinkedRegionType =
-  | "TOTAL_SCORE"
-  | "SUBTOTAL_SCORE"
-  | "STUDENT_NAME"
-  | "STUDENT_ID"
+  "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "STUDENT_NAME" | "STUDENT_ID"
 
 export interface HeaderFieldDefinition {
   id: string
