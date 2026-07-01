@@ -139,11 +139,11 @@ export async function fetchIndividualReportData(
     // 1回だけ変換し、生徒ごとの走査（O(学級×学級人数)）を避ける。
     const studentClassesByStudentId = new Map<string, StudentClassForStats[]>()
     for (const c of studentReportClasses) {
-      const memberStudentIds = c.class.memberships.map((m) => m.studentId)
+      const memberStudentIds = c.classroom.memberships.map((m) => m.studentId)
       const entry: StudentClassForStats = {
-        classId: c.classId,
-        className: c.class.name,
-        grade: c.class.grade != null ? String(c.class.grade) : null,
+        classroomId: c.classroomId,
+        className: c.classroom.name,
+        grade: c.classroom.grade != null ? String(c.classroom.grade) : null,
         memberStudentIds,
       }
       for (const sid of memberStudentIds) {

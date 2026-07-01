@@ -8,7 +8,7 @@ import type prisma from "../../prisma/client"
 /** IDマッピング */
 export interface IdMappings {
   student: Record<string, string>
-  class: Record<string, string>
+  classroom: Record<string, string>
   subtotalGroup: Record<string, string>
   subtotal: Record<string, string>
   exam: Record<string, string>
@@ -33,7 +33,7 @@ export interface IdMappings {
 
 /** ID変更対象 */
 export interface IdChangeTarget {
-  category: "student" | "class" | "subtotalGroup"
+  category: "student" | "classroom" | "subtotalGroup"
   existingId: string
   newId: string
 }
@@ -55,7 +55,7 @@ export type PrismaTransaction = Parameters<
 export function createEmptyCounts(): ArchiveDataCounts {
   return {
     students: 0,
-    classes: 0,
+    classrooms: 0,
     users: 0,
     pages: 0,
     regions: 0,

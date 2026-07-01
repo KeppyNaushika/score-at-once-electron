@@ -32,7 +32,7 @@ interface FieldChange {
 /** 更新が必要なアイテム */
 interface UpdateableItem {
   id: string
-  category: "student" | "class" | "subtotalGroup"
+  category: "student" | "classroom" | "subtotalGroup"
   displayLabel: string
   fieldChanges: FieldChange[]
   importData: Record<string, unknown>
@@ -51,7 +51,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     studentNumber: "学籍番号",
     enrollmentYear: "入学年度",
   },
-  class: {
+  classroom: {
     name: "学級名",
     classCode: "学級コード",
     grade: "学年",
@@ -68,7 +68,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
 function detectFieldChanges(
   importData: Record<string, unknown>,
   existingData: Record<string, unknown>,
-  category: "student" | "class" | "subtotalGroup"
+  category: "student" | "classroom" | "subtotalGroup"
 ): FieldChange[] {
   const changes: FieldChange[] = []
   const labels = FIELD_LABELS[category]
@@ -107,7 +107,7 @@ function detectFieldChanges(
 function extractUpdateableItems(
   preMatch: PreMatchingResult,
   config: CategoryIdIntegrationConfig,
-  category: "student" | "class" | "subtotalGroup"
+  category: "student" | "classroom" | "subtotalGroup"
 ): UpdateableItem[] {
   const items: UpdateableItem[] = []
 
@@ -211,9 +211,9 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
 
   const classItems = fileOverviewData
     ? extractUpdateableItems(
-        fileOverviewData.class,
-        idIntegrationConfig.class,
-        "class"
+        fileOverviewData.classroom,
+        idIntegrationConfig.classroom,
+        "classroom"
       )
     : []
 

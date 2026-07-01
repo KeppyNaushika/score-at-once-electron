@@ -47,7 +47,10 @@ export async function collectCourseworkArchiveData(
     name: cw.name,
     description: cw.description,
     date: cw.date?.toISOString() ?? null,
-    classes: cw.classes.map((c) => ({ classId: c.classId, order: c.order })),
+    classrooms: cw.classes.map((c) => ({
+      classroomId: c.classroomId,
+      order: c.order,
+    })),
     tags: cw.tags.map((t) => ({ tagId: t.tagId })),
     students: cw.students.map((s) => ({
       studentId: s.studentId,
@@ -82,7 +85,7 @@ export async function collectCourseworkArchiveData(
   const tagIds = new Set<string>()
   for (const cw of rows) {
     cw.students.forEach((s) => studentIds.add(s.studentId))
-    cw.classes.forEach((c) => classIds.add(c.classId))
+    cw.classes.forEach((c) => classIds.add(c.classroomId))
     cw.tags.forEach((t) => tagIds.add(t.tagId))
     cw.items.forEach((item) =>
       item.scores.forEach((sc) => studentIds.add(sc.studentId))
@@ -103,7 +106,7 @@ export async function collectCourseworkArchiveData(
     updatedAt: s.updatedAt.toISOString(),
   }))
 
-  const classRows = await prisma.class.findMany({
+  const classRows = await prisma.classroom.findMany({
     where: { id: { in: [...classIds] } },
   })
   const classesData: ArchiveCwClass[] = classRows.map((c) => ({
@@ -119,13 +122,13 @@ export async function collectCourseworkArchiveData(
   const membershipRows = await prisma.studentClassMembership.findMany({
     where: {
       studentId: { in: [...studentIds] },
-      classId: { in: [...classIds] },
+      classroomId: { in: [...classIds] },
     },
   })
   const membershipsData: ArchiveCwMembership[] = membershipRows.map((m) => ({
     id: m.id,
     studentId: m.studentId,
-    classId: m.classId,
+    classroomId: m.classroomId,
     startDate: m.startDate.toISOString(),
     endDate: m.endDate?.toISOString() ?? null,
     attendanceNumber: m.attendanceNumber,
@@ -159,7 +162,7 @@ export async function collectCourseworkArchiveData(
       items: itemCount,
       scores: scoreCount,
       students: studentsData.length,
-      classes: classesData.length,
+      classrooms: classesData.length,
     },
   }
 }

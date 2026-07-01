@@ -119,7 +119,7 @@ export interface CourseworkAPI {
       success: boolean
       classes?: {
         id: string
-        classId: string
+        classroomId: string
         className: string
         order: number
         studentCount: number
@@ -154,7 +154,7 @@ export interface CourseworkAPI {
     }>
     addStudentsFromClass: (
       courseworkId: string,
-      classId: string,
+      classroomId: string,
       activeOnly?: boolean
     ) => Promise<{
       success: boolean
@@ -181,7 +181,7 @@ export interface CourseworkAPI {
     ) => Promise<{ success: boolean; removedCount?: number; error?: string }>
     removeClass: (
       courseworkId: string,
-      classId: string,
+      classroomId: string,
       deleteStudents?: boolean
     ) => Promise<{
       success: boolean
@@ -190,7 +190,7 @@ export interface CourseworkAPI {
     }>
     classRemovalPreview: (
       courseworkId: string,
-      classId: string
+      classroomId: string
     ) => Promise<{
       success: boolean
       exclusiveCount?: number

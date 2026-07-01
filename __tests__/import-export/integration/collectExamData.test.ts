@@ -70,7 +70,7 @@ describe("collectExamData", () => {
     expect(data.examData.examPages.length).toBe(2)
     expect(data.examData.cropRegions.length).toBe(4)
     expect(data.studentsData.students.length).toBe(3)
-    expect(data.classesData.classes.length).toBeGreaterThanOrEqual(1)
+    expect(data.classesData.classrooms.length).toBeGreaterThanOrEqual(1)
     expect(data.classesData.memberships.length).toBe(3)
     expect(data.usersData.users.length).toBe(1)
     expect(data.subtotalsData.subtotalGroups.length).toBe(1)
@@ -177,7 +177,7 @@ describe("collectExamData", () => {
     const { data } = result
 
     expect(data!.counts.students).toBe(data!.studentsData.students.length)
-    expect(data!.counts.classes).toBe(data!.classesData.classes.length)
+    expect(data!.counts.classrooms).toBe(data!.classesData.classrooms.length)
     expect(data!.counts.users).toBe(data!.usersData.users.length)
     expect(data!.counts.pages).toBe(data!.examData.examPages.length)
     expect(data!.counts.regions).toBe(data!.examData.cropRegions.length)
@@ -304,13 +304,13 @@ describe("collectExamData", () => {
     const data = result.data!
 
     // 学級が含まれている
-    expect(data.classesData.classes.length).toBeGreaterThanOrEqual(1)
+    expect(data.classesData.classrooms.length).toBeGreaterThanOrEqual(1)
 
     // メンバーシップが学級と生徒を結びつけている
     expect(data.classesData.memberships.length).toBe(2)
     for (const m of data.classesData.memberships) {
-      const classMatch = data.classesData.classes.find(
-        (c) => c.id === m.classId
+      const classMatch = data.classesData.classrooms.find(
+        (c) => c.id === m.classroomId
       )
       expect(classMatch).toBeDefined()
     }

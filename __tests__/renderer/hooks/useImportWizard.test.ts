@@ -92,7 +92,7 @@ describe("useImportWizard", () => {
       const { result } = renderHook(() => useImportWizard())
       const config = result.current.state.idIntegrationConfig
       expect(config.student.strategy).toBe("by_student_number")
-      expect(config.class.strategy).toBe("by_name")
+      expect(config.classroom.strategy).toBe("by_name")
       expect(config.subtotalGroup.strategy).toBe("by_name")
       expect(config.student.decisions).toEqual([])
     })
@@ -398,13 +398,13 @@ describe("useImportWizard", () => {
       const { result } = renderHook(() => useImportWizard())
 
       act(() => {
-        result.current.updateIdIntegrationConfig("class", {
+        result.current.updateIdIntegrationConfig("classroom", {
           strategy: "all_new",
           decisions: [],
         })
       })
 
-      expect(result.current.state.idIntegrationConfig.class.strategy).toBe(
+      expect(result.current.state.idIntegrationConfig.classroom.strategy).toBe(
         "all_new"
       )
     })
@@ -434,7 +434,7 @@ describe("useImportWizard", () => {
         })
       })
 
-      expect(result.current.state.idIntegrationConfig.class.strategy).toBe(
+      expect(result.current.state.idIntegrationConfig.classroom.strategy).toBe(
         "by_name"
       )
       expect(

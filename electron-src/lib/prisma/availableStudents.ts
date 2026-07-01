@@ -14,7 +14,7 @@ import { membershipFilterAt } from "./membershipFilter"
 export type AvailableStudentItem = Prisma.StudentGetPayload<{
   include: {
     memberships: {
-      include: { class: true }
+      include: { classroom: true }
     }
   }
 }>
@@ -50,7 +50,7 @@ export async function getAvailableStudentsForTarget(params: {
     },
     include: {
       memberships: {
-        include: { class: true },
+        include: { classroom: true },
         orderBy: { startDate: "desc" },
       },
     },

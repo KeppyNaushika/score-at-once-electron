@@ -300,10 +300,10 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
 
   const classSummary = fileOverviewData
     ? calculateCategorySummary(
-        fileOverviewData.class,
-        idIntegrationConfig.class,
+        fileOverviewData.classroom,
+        idIntegrationConfig.classroom,
         updateDecisions,
-        "class"
+        "classroom"
       )
     : null
 

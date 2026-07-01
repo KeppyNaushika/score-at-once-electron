@@ -10,7 +10,7 @@ type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
     memberships: {
       include: {
-        class: true
+        classroom: true
       }
       orderBy: {
         startDate: "desc"
@@ -26,7 +26,7 @@ export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
       include: {
         memberships: {
           include: {
-            class: true,
+            classroom: true,
           },
           // すべてのメンバーシップを取得（現在・過去両方）
           orderBy: {
@@ -52,7 +52,7 @@ export const createStudent = async (
       include: {
         memberships: {
           include: {
-            class: true,
+            classroom: true,
           },
           where: {
             endDate: null,
@@ -102,7 +102,7 @@ export const updateStudent = async (
       include: {
         memberships: {
           include: {
-            class: true,
+            classroom: true,
           },
           where: {
             endDate: null,
@@ -352,12 +352,12 @@ export interface ClassStudentExamResult {
 
 /** 学級に所属する全生徒の試験成績を一括取得する */
 export const getClassExamResults = async (
-  classId: string
+  classroomId: string
 ): Promise<ClassStudentExamResult[]> => {
   try {
     const memberships = await prisma.studentClassMembership.findMany({
       where: {
-        classId,
+        classroomId,
         OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
       },
       include: {

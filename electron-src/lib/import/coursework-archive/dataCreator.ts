@@ -150,16 +150,16 @@ export async function importCourseworkData(
     courseworkId: string,
     cw: ArchiveCourseworkRef
   ): Promise<void> => {
-    for (const c of cw.classes) {
-      const classId = classes.map.get(c.classId)
-      if (!classId) continue
+    for (const c of cw.classrooms) {
+      const classroomId = classes.map.get(c.classroomId)
+      if (!classroomId) continue
       const exists = await tx.courseworkClass.findUnique({
-        where: { courseworkId_classId: { courseworkId, classId } },
+        where: { courseworkId_classroomId: { courseworkId, classroomId } },
         select: { id: true },
       })
       if (!exists) {
         await tx.courseworkClass.create({
-          data: { courseworkId, classId, order: c.order },
+          data: { courseworkId, classroomId, order: c.order },
         })
       }
     }

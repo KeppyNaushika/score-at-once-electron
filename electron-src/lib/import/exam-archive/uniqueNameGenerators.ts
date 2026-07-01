@@ -62,7 +62,7 @@ export async function generateUniqueClassName(
   tx: TransactionClient,
   originalName: string
 ): Promise<string> {
-  const existing = await tx.class.findUnique({
+  const existing = await tx.classroom.findUnique({
     where: { name: originalName },
   })
 
@@ -74,7 +74,7 @@ export async function generateUniqueClassName(
   let suffix = 2
   let newName = `${originalName} (${suffix})`
 
-  while (await tx.class.findUnique({ where: { name: newName } })) {
+  while (await tx.classroom.findUnique({ where: { name: newName } })) {
     suffix++
     newName = `${originalName} (${suffix})`
   }

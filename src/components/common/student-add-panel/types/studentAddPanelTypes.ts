@@ -26,7 +26,7 @@ export interface AddPanelStudentItem {
   firstNameKana: string
   memberships: {
     attendanceNumber?: number | null
-    class: { id: string; name: string }
+    classroom: { id: string; name: string }
   }[]
 }
 

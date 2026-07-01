@@ -34,9 +34,9 @@ interface StudentData {
     lastName: string
     firstName: string
     memberships: Array<{
-      classId: string
+      classroomId: string
       attendanceNumber: number | null
-      class: { id: string; name: string }
+      classroom: { id: string; name: string }
     }>
   }
 }
@@ -106,7 +106,7 @@ export function StudentExclusionModal({
               <TableBody>
                 {students.map((ps) => {
                   const membership = ps.student.memberships.find((m) =>
-                    classIdSet.has(m.classId)
+                    classIdSet.has(m.classroomId)
                   )
                   return (
                     <TableRow key={ps.studentId}>
@@ -114,7 +114,7 @@ export function StudentExclusionModal({
                         <div className="flex items-center gap-2 text-sm whitespace-nowrap">
                           {membership && (
                             <span className="text-muted-foreground">
-                              {membership.class.name}
+                              {membership.classroom.name}
                             </span>
                           )}
                           <span className="text-muted-foreground tabular-nums">

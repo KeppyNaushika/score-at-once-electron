@@ -37,7 +37,7 @@ export async function getStudentsByGradeId(gradeId: string) {
         student: {
           include: {
             memberships: {
-              include: { class: { select: { id: true, name: true } } },
+              include: { classroom: { select: { id: true, name: true } } },
             },
           },
         },
@@ -63,7 +63,7 @@ export async function getGradeClasses(gradeId: string) {
     const classes = await prisma.gradeClass.findMany({
       where: { gradeId },
       include: {
-        class: {
+        classroom: {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
@@ -78,10 +78,10 @@ export async function getGradeClasses(gradeId: string) {
       success: true,
       classes: classes.map((c) => ({
         id: c.id,
-        classId: c.classId,
-        className: c.class.name,
+        classroomId: c.classroomId,
+        className: c.classroom.name,
         order: c.order,
-        studentCount: c.class.memberships.length,
+        studentCount: c.classroom.memberships.length,
       })),
     }
   } catch (error) {
@@ -109,7 +109,7 @@ export async function getAvailableClassesForGrade(
     const [existing, gradeStudents] = await Promise.all([
       prisma.gradeClass.findMany({
         where: { gradeId },
-        select: { classId: true },
+        select: { classroomId: true },
       }),
       prisma.gradeStudent.findMany({
         where: { gradeId },
@@ -118,7 +118,7 @@ export async function getAvailableClassesForGrade(
     ])
 
     const classes = await getAvailableClassesForTarget({
-      existingClassIds: existing.map((e) => e.classId),
+      existingClassIds: existing.map((e) => e.classroomId),
       excludeStudentIds: gradeStudents.map((g) => g.studentId),
       referenceDate,
       activeOnly,
@@ -202,10 +202,10 @@ const gradeRosterAdapter: RosterAdapter = {
     })
     return result._max.order
   },
-  upsertClass: async (targetId, classId, order) => {
+  upsertClass: async (targetId, classroomId, order) => {
     await prisma.gradeClass.upsert({
-      where: { gradeId_classId: { gradeId: targetId, classId } },
-      create: { gradeId: targetId, classId, order },
+      where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
+      create: { gradeId: targetId, classroomId, order },
       update: {},
     })
   },
@@ -213,7 +213,7 @@ const gradeRosterAdapter: RosterAdapter = {
     await prisma.$transaction(
       orders.map((o) =>
         prisma.gradeClass.updateMany({
-          where: { gradeId: targetId, classId: o.classId },
+          where: { gradeId: targetId, classroomId: o.classroomId },
           data: { order: o.order },
         })
       )
@@ -221,18 +221,18 @@ const gradeRosterAdapter: RosterAdapter = {
   },
   listOtherClassIds: async (targetId, exceptClassId) => {
     const rows = await prisma.gradeClass.findMany({
-      where: { gradeId: targetId, classId: { not: exceptClassId } },
-      select: { classId: true },
+      where: { gradeId: targetId, classroomId: { not: exceptClassId } },
+      select: { classroomId: true },
     })
-    return rows.map((c) => c.classId)
+    return rows.map((c) => c.classroomId)
   },
-  removeClassAndStudents: async (targetId, classId, studentIds) => {
+  removeClassAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([
       prisma.gradeStudent.deleteMany({
         where: { gradeId: targetId, studentId: { in: studentIds } },
       }),
       prisma.gradeClass.delete({
-        where: { gradeId_classId: { gradeId: targetId, classId } },
+        where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
       }),
     ])
   },
@@ -257,13 +257,13 @@ const gradeRosterAdapter: RosterAdapter = {
  */
 export function addStudentsFromClassToGrade(
   gradeId: string,
-  classId: string,
+  classroomId: string,
   activeOnly = true
 ) {
   return rosterAddStudentsFromClass(
     gradeRosterAdapter,
     gradeId,
-    classId,
+    classroomId,
     activeOnly
   )
 }
@@ -290,8 +290,11 @@ export function setGradeClassOrders(
 }
 
 /** 学級削除のプレビュー（専属生徒の削除数） */
-export function getGradeClassRemovalPreview(gradeId: string, classId: string) {
-  return rosterClassRemovalPreview(gradeRosterAdapter, gradeId, classId)
+export function getGradeClassRemovalPreview(
+  gradeId: string,
+  classroomId: string
+) {
+  return rosterClassRemovalPreview(gradeRosterAdapter, gradeId, classroomId)
 }
 
 /**
@@ -301,8 +304,13 @@ export function getGradeClassRemovalPreview(gradeId: string, classId: string) {
  */
 export function removeClassFromGrade(
   gradeId: string,
-  classId: string,
+  classroomId: string,
   deleteStudents = true
 ) {
-  return rosterRemoveClass(gradeRosterAdapter, gradeId, classId, deleteStudents)
+  return rosterRemoveClass(
+    gradeRosterAdapter,
+    gradeId,
+    classroomId,
+    deleteStudents
+  )
 }

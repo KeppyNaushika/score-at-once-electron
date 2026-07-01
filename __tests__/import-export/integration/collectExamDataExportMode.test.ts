@@ -81,7 +81,9 @@ describe("collectExamData - エクスポートモード", () => {
       expect(d.studentsData.students.length).toBe(
         f.studentsData.students.length
       )
-      expect(d.classesData.classes.length).toBe(f.classesData.classes.length)
+      expect(d.classesData.classrooms.length).toBe(
+        f.classesData.classrooms.length
+      )
       expect(d.scoresData.questionScores.length).toBe(
         f.scoresData.questionScores.length
       )
@@ -102,7 +104,7 @@ describe("collectExamData - エクスポートモード", () => {
       const data = result.data!
 
       expect(data.studentsData.students.length).toBe(3)
-      expect(data.classesData.classes.length).toBeGreaterThanOrEqual(1)
+      expect(data.classesData.classrooms.length).toBeGreaterThanOrEqual(1)
       expect(data.classesData.memberships.length).toBe(3)
       expect(data.scoresData.questionScores.length).toBe(12) // 4 regions × 3 students
       expect(data.subtotalsData.subtotalGroups.length).toBe(1)
@@ -171,10 +173,10 @@ describe("collectExamData - エクスポートモード", () => {
       expect(result.success).toBe(true)
       const data = result.data!
 
-      expect(data.classesData.classes).toEqual([])
+      expect(data.classesData.classrooms).toEqual([])
       expect(data.classesData.memberships).toEqual([])
       expect(data.examData.examClasses).toEqual([])
-      expect(data.counts.classes).toBe(0)
+      expect(data.counts.classrooms).toBe(0)
     })
 
     it("EM-T3: 採点データが空になる", async () => {
@@ -329,7 +331,7 @@ describe("collectExamData - エクスポートモード", () => {
       const data = result.data!
 
       expect(data.studentsData.students).toEqual([])
-      expect(data.classesData.classes).toEqual([])
+      expect(data.classesData.classrooms).toEqual([])
       expect(data.classesData.memberships).toEqual([])
       expect(data.scoresData.questionScores).toEqual([])
       expect(data.scoresData.drawingAnnotations).toEqual([])
@@ -416,7 +418,7 @@ describe("collectExamData - エクスポートモード", () => {
       const data = result.data!
 
       expect(data.counts.students).toBe(data.studentsData.students.length)
-      expect(data.counts.classes).toBe(data.classesData.classes.length)
+      expect(data.counts.classrooms).toBe(data.classesData.classrooms.length)
       expect(data.counts.scores).toBe(data.scoresData.questionScores.length)
       expect(data.counts.annotations).toBe(
         data.scoresData.drawingAnnotations.length
@@ -439,7 +441,7 @@ describe("collectExamData - エクスポートモード", () => {
       const data = result.data!
 
       expect(data.counts.students).toBe(data.studentsData.students.length)
-      expect(data.counts.classes).toBe(data.classesData.classes.length)
+      expect(data.counts.classrooms).toBe(data.classesData.classrooms.length)
       expect(data.counts.scores).toBe(data.scoresData.questionScores.length)
       expect(data.counts.subtotalGroups).toBe(
         data.subtotalsData.subtotalGroups.length

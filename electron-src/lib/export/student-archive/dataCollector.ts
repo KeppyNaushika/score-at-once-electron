@@ -38,7 +38,7 @@ export async function collectStudentArchiveData(
   })
 
   // 3. 関連する学級IDを導出
-  const relatedClassIds = [...new Set(allMemberships.map((m) => m.classId))]
+  const relatedClassIds = [...new Set(allMemberships.map((m) => m.classroomId))]
 
   // classIdsが指定されていればフィルタ
   const targetClassIds = classIds
@@ -46,14 +46,14 @@ export async function collectStudentArchiveData(
     : relatedClassIds
 
   // 4. 学級を取得
-  const classes = await prisma.class.findMany({
+  const classes = await prisma.classroom.findMany({
     where: { id: { in: targetClassIds } },
   })
 
   // 5. 所属をフィルタ（対象学級のもののみ）
   const targetClassIdSet = new Set(targetClassIds)
   const filteredMemberships = allMemberships.filter((m) =>
-    targetClassIdSet.has(m.classId)
+    targetClassIdSet.has(m.classroomId)
   )
 
   // 6. アーカイブ形式に整形
@@ -72,7 +72,7 @@ export async function collectStudentArchiveData(
   }
 
   const classesData: ArchiveClassesData = {
-    classes: classes.map((c) => ({
+    classrooms: classes.map((c) => ({
       id: c.id,
       name: c.name,
       classCode: c.classCode,
@@ -85,7 +85,7 @@ export async function collectStudentArchiveData(
     memberships: filteredMemberships.map((m) => ({
       id: m.id,
       studentId: m.studentId,
-      classId: m.classId,
+      classroomId: m.classroomId,
       startDate: m.startDate.toISOString(),
       endDate: m.endDate ? m.endDate.toISOString() : null,
       attendanceNumber: m.attendanceNumber,
@@ -100,7 +100,7 @@ export async function collectStudentArchiveData(
     classesData,
     counts: {
       students: students.length,
-      classes: classes.length,
+      classrooms: classes.length,
       memberships: filteredMemberships.length,
     },
   }

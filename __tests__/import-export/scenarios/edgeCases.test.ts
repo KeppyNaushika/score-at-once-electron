@@ -438,7 +438,7 @@ describe("edgeCases", () => {
     const examId = generateId()
     const studentId = generateId()
     const studentNumber = `IDEMP_${Date.now()}`
-    const classId = generateId()
+    const classroomId = generateId()
     const className = `Idemp_${Date.now()}`
     const groupId = generateId()
     const groupName = `IdempG_${Date.now()}`
@@ -465,7 +465,7 @@ describe("edgeCases", () => {
       {
         id: generateId(),
         examId,
-        classId,
+        classroomId,
         administered: true,
         statistics: true,
         order: 0,
@@ -492,8 +492,8 @@ describe("edgeCases", () => {
         { id: studentId, studentNumber },
       ]),
       classesData: createArchiveClassesData(
-        [{ id: classId, name: className }],
-        [{ studentId, classId, attendanceNumber: 1 }]
+        [{ id: classroomId, name: className }],
+        [{ studentId, classroomId, attendanceNumber: 1 }]
       ),
       subtotalsData: createArchiveSubtotalsData([
         { id: groupId, name: groupName },
@@ -516,9 +516,9 @@ describe("edgeCases", () => {
           { importId: studentId, importData: {}, displayLabel: "テスト" },
         ],
       }),
-      class: createPreMatchingResult({
+      classroom: createPreMatchingResult({
         noMatch: [
-          { importId: classId, importData: {}, displayLabel: className },
+          { importId: classroomId, importData: {}, displayLabel: className },
         ],
       }),
       subtotalGroup: createPreMatchingResult({
@@ -549,8 +549,10 @@ describe("edgeCases", () => {
           createMatchedItem({ importId: studentId, existingId: studentId }),
         ],
       }),
-      class: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: classId, existingId: classId })],
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
       }),
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],

@@ -72,7 +72,7 @@ export class V1_3_0_to_V1_4_0_Transformer implements GradeVersionTransformer {
             name: dsData.name,
             description: null,
             date: null,
-            classes: [],
+            classrooms: [],
             tags: [],
             students: cwStudents,
             items: [

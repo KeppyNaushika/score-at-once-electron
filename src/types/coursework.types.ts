@@ -64,8 +64,8 @@ export interface CourseworkWithDetails {
   updatedAt: Date
   classes: {
     id: string
-    classId: string
-    class: { id: string; name: string }
+    classroomId: string
+    classroom: { id: string; name: string }
     order: number
   }[]
   tags: {
@@ -94,9 +94,9 @@ export interface CourseworkStudentWithDetails {
     lastNameKana: string
     firstNameKana: string
     memberships: {
-      classId: string
+      classroomId: string
       attendanceNumber: number | null
-      class: { id: string; name: string }
+      classroom: { id: string; name: string }
     }[]
   }
 }

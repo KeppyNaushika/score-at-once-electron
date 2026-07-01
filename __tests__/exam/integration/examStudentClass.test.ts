@@ -45,7 +45,7 @@ async function createTestData() {
     data: { examName: "テスト試験", examDate: new Date("2024-04-10") },
   })
 
-  const classA = await testPrisma.class.create({
+  const classA = await testPrisma.classroom.create({
     data: { name: "3年A組", grade: 3 },
   })
 
@@ -73,7 +73,7 @@ async function createTestData() {
   await testPrisma.studentClassMembership.create({
     data: {
       studentId: active.id,
-      classId: classA.id,
+      classroomId: classA.id,
       attendanceNumber: 1,
       startDate: new Date("2024-04-01"), // examDate(2024-04-10)より前に開始
     },
@@ -81,7 +81,7 @@ async function createTestData() {
   await testPrisma.studentClassMembership.create({
     data: {
       studentId: left.id,
-      classId: classA.id,
+      classroomId: classA.id,
       attendanceNumber: 2,
       startDate: new Date("2023-04-01"),
       endDate: new Date("2024-03-31"), // examDate(2024-04-10)より前に終了
@@ -131,7 +131,7 @@ describe("Exam 在籍フィルタ", () => {
 
       // active を退会させ、在籍中0名にする（left は転出済み）
       await testPrisma.studentClassMembership.deleteMany({
-        where: { classId: classA.id, studentId: { not: left.id } },
+        where: { classroomId: classA.id, studentId: { not: left.id } },
       })
 
       const activeResult = await getClassesNotInExam(exam.id, true)
@@ -144,7 +144,7 @@ describe("Exam 在籍フィルタ", () => {
 
   describe("将来始まる所属（基準日より後に入学/転入）", () => {
     /** examDate(2024-04-10) より後に始まる所属を持つ生徒を classA に追加 */
-    async function addFutureStudent(classId: string) {
+    async function addFutureStudent(classroomId: string) {
       const future = await testPrisma.student.create({
         data: {
           studentNumber: "E003",
@@ -157,7 +157,7 @@ describe("Exam 在籍フィルタ", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: future.id,
-          classId,
+          classroomId,
           attendanceNumber: 3,
           startDate: new Date("2024-05-01"), // examDate より後に開始
           endDate: null,
@@ -264,13 +264,13 @@ describe("Exam 在籍フィルタ", () => {
       const { exam, classA, active, left } = await createTestData()
 
       // 第2学級（バスケ部）を作り、active を classA/classB の両方に所属させる
-      const classB = await testPrisma.class.create({
+      const classB = await testPrisma.classroom.create({
         data: { name: "バスケ部", grade: 3 },
       })
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: active.id,
-          classId: classB.id,
+          classroomId: classB.id,
           attendanceNumber: 5,
           startDate: new Date("2024-04-01"),
         },
@@ -282,10 +282,10 @@ describe("Exam 在籍フィルタ", () => {
 
       const members = await getClassMembersForExam(exam.id)
       const idsOf = (m: (typeof members)[number]) =>
-        m.class.memberships.map((x) => x.studentId)
+        m.classroom.memberships.map((x) => x.studentId)
 
-      const a = members.find((m) => m.classId === classA.id)!
-      const b = members.find((m) => m.classId === classB.id)!
+      const a = members.find((m) => m.classroomId === classA.id)!
+      const b = members.find((m) => m.classroomId === classB.id)!
 
       // classA: 受験日在籍の active のみ（転出済み left は除外）
       expect(idsOf(a)).toEqual([active.id])

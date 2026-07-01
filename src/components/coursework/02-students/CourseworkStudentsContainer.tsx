@@ -22,7 +22,7 @@ import type {
 
 interface CourseworkClass {
   id: string
-  classId: string
+  classroomId: string
   className: string
   order: number
   studentCount: number
@@ -74,7 +74,7 @@ export function CourseworkStudentsContainer({
           (classResult.success && classResult.classes
             ? classResult.classes
             : []
-          ).map((c) => [c.classId, c.order])
+          ).map((c) => [c.classroomId, c.order])
         )
         const registeredClassIds = new Set(classOrderMap.keys())
         const students =
@@ -83,7 +83,7 @@ export function CourseworkStudentsContainer({
             : []
         return students.map((courseworkStudent): RosterRow => {
           const membership = courseworkStudent.student.memberships.find((m) =>
-            registeredClassIds.has(m.classId)
+            registeredClassIds.has(m.classroomId)
           )
           return {
             id: courseworkStudent.studentId,
@@ -92,10 +92,10 @@ export function CourseworkStudentsContainer({
             firstName: courseworkStudent.student.firstName,
             kana: `${courseworkStudent.student.lastNameKana} ${courseworkStudent.student.firstNameKana}`,
             classInfo: {
-              className: membership?.class.name ?? null,
+              className: membership?.classroom.name ?? null,
               attendanceNumber: membership?.attendanceNumber ?? null,
               classOrder: membership
-                ? (classOrderMap.get(membership.classId) ?? null)
+                ? (classOrderMap.get(membership.classroomId) ?? null)
                 : null,
             },
             customOrder: courseworkStudent.customOrder,
@@ -107,7 +107,7 @@ export function CourseworkStudentsContainer({
           await window.electronAPI.coursework.getClasses(courseworkId)
         if (!result.success || !result.classes) return []
         return result.classes.map((c): RosterClassOption => ({
-          id: c.classId,
+          id: c.classroomId,
           name: c.className,
         }))
       },
@@ -160,23 +160,23 @@ export function CourseworkStudentsContainer({
             ? [
                 {
                   attendanceNumber: null,
-                  class: { id: s.className, name: s.className },
+                  classroom: { id: s.className, name: s.className },
                 },
               ]
             : [],
         }))
       },
       addClasses: async (orderedClassIds, activeOnly) => {
-        for (const classId of orderedClassIds) {
+        for (const classroomId of orderedClassIds) {
           const result =
             await window.electronAPI.coursework.addStudentsFromClass(
               courseworkId,
-              classId,
+              classroomId,
               activeOnly
             )
           if (!result.success) {
             throw new Error(
-              result.error || `学級 ${classId} の追加に失敗しました`
+              result.error || `学級 ${classroomId} の追加に失敗しました`
             )
           }
         }
@@ -202,8 +202,8 @@ export function CourseworkStudentsContainer({
   const classEntries = useMemo<ClassRosterEntry[]>(
     () =>
       classes.map((c) => ({
-        id: c.classId,
-        classId: c.classId,
+        id: c.classroomId,
+        classroomId: c.classroomId,
         name: c.className,
         studentCount: c.studentCount,
         order: c.order,
@@ -246,14 +246,14 @@ export function CourseworkStudentsContainer({
               const result =
                 await window.electronAPI.coursework.classRemovalPreview(
                   courseworkId,
-                  entry.classId
+                  entry.classroomId
                 )
               return { exclusiveCount: result.exclusiveCount ?? 0 }
             }}
             onRemove={async (entry, deleteStudents) => {
               const result = await window.electronAPI.coursework.removeClass(
                 courseworkId,
-                entry.classId,
+                entry.classroomId,
                 deleteStudents
               )
               // 失敗時は throw し、ダイアログを成功扱いで閉じさせない

@@ -49,7 +49,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       where: { id: gradeId },
       include: {
         gradeClasses: {
-          include: { class: true },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
         gradeItems: {
@@ -98,7 +98,7 @@ export async function calculateGrades(gradeId: string): Promise<{
         student: {
           include: {
             memberships: {
-              include: { class: { select: { id: true, name: true } } },
+              include: { classroom: { select: { id: true, name: true } } },
             },
           },
         },
@@ -106,7 +106,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
     })
 
-    const classIds = gp.gradeClasses.map((c) => c.classId)
+    const classIds = gp.gradeClasses.map((c) => c.classroomId)
 
     // 3. 上書きデータを取得
     const overrides = await prisma.gradeOverride.findMany({
@@ -268,7 +268,7 @@ export async function calculateGrades(gradeId: string): Promise<{
     for (const ps of examStudents) {
       const student = ps.student
       const membership = student.memberships.find((m) =>
-        classIds.includes(m.classId)
+        classIds.includes(m.classroomId)
       )
       const gradeItemResults: GradeItemResult[] = []
 
@@ -463,7 +463,7 @@ export async function calculateGrades(gradeId: string): Promise<{
         lastName: student.lastName,
         firstName: student.firstName,
         attendanceNumber: membership?.attendanceNumber ?? null,
-        className: membership?.class.name ?? null,
+        className: membership?.classroom.name ?? null,
         gradeItemResults,
         overallScore,
         overallMaxScore,
@@ -480,7 +480,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       result: {
         gradeId: gp.id,
         gradeName: gp.name,
-        classNames: gp.gradeClasses.map((c) => c.class.name),
+        classNames: gp.gradeClasses.map((c) => c.classroom.name),
         gradeItems: gp.gradeItems.map((gi) => ({
           id: gi.id,
           name: gi.name,

@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 
 interface GradeClass {
   id: string
-  classId: string
+  classroomId: string
   className: string
   order: number
   studentCount: number
@@ -74,7 +74,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           (classResult.success && classResult.classes
             ? classResult.classes
             : []
-          ).map((c) => [c.classId, c.order])
+          ).map((c) => [c.classroomId, c.order])
         )
         const registeredClassIds = new Set(classOrderMap.keys())
         const students =
@@ -83,7 +83,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             : []
         return students.map((examStudent): RosterRow => {
           const membership = examStudent.student.memberships.find((m) =>
-            registeredClassIds.has(m.classId)
+            registeredClassIds.has(m.classroomId)
           )
           return {
             id: examStudent.studentId,
@@ -92,10 +92,10 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             firstName: examStudent.student.firstName,
             kana: "",
             classInfo: {
-              className: membership?.class.name ?? null,
+              className: membership?.classroom.name ?? null,
               attendanceNumber: membership?.attendanceNumber ?? null,
               classOrder: membership
-                ? (classOrderMap.get(membership.classId) ?? null)
+                ? (classOrderMap.get(membership.classroomId) ?? null)
                 : null,
             },
             customOrder: examStudent.customOrder,
@@ -106,7 +106,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         const result = await window.electronAPI.grade.getClasses(gradeId)
         if (!result.success || !result.classes) return []
         return result.classes.map((c): RosterClassOption => ({
-          id: c.classId,
+          id: c.classroomId,
           name: c.className,
         }))
       },
@@ -151,20 +151,20 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           firstNameKana: s.firstNameKana,
           memberships: s.memberships.map((m) => ({
             attendanceNumber: m.attendanceNumber,
-            class: { id: m.class.id, name: m.class.name },
+            classroom: { id: m.classroom.id, name: m.classroom.name },
           })),
         }))
       },
       addClasses: async (orderedClassIds, activeOnly) => {
-        for (const classId of orderedClassIds) {
+        for (const classroomId of orderedClassIds) {
           const result = await window.electronAPI.grade.addStudentsFromClass(
             gradeId,
-            classId,
+            classroomId,
             activeOnly
           )
           if (!result.success) {
             throw new Error(
-              result.error || `学級 ${classId} の追加に失敗しました`
+              result.error || `学級 ${classroomId} の追加に失敗しました`
             )
           }
         }
@@ -190,8 +190,8 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
   const classEntries = useMemo<ClassRosterEntry[]>(
     () =>
       classes.map((c) => ({
-        id: c.classId,
-        classId: c.classId,
+        id: c.classroomId,
+        classroomId: c.classroomId,
         name: c.className,
         studentCount: c.studentCount,
         order: c.order,
@@ -233,14 +233,14 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             fetchRemovalPreview={async (entry) => {
               const result = await window.electronAPI.grade.classRemovalPreview(
                 gradeId,
-                entry.classId
+                entry.classroomId
               )
               return { exclusiveCount: result.exclusiveCount ?? 0 }
             }}
             onRemove={async (entry, deleteStudents) => {
               const result = await window.electronAPI.grade.removeClass(
                 gradeId,
-                entry.classId,
+                entry.classroomId,
                 deleteStudents
               )
               // 失敗時は throw し、ダイアログを成功扱いで閉じさせない

@@ -111,12 +111,12 @@ export default function ClassManagementTable() {
     }
   }
 
-  const toggleSelectClass = (classId: string) => {
+  const toggleSelectClass = (classroomId: string) => {
     const newSet = new Set(selectedClassIds)
-    if (newSet.has(classId)) {
-      newSet.delete(classId)
+    if (newSet.has(classroomId)) {
+      newSet.delete(classroomId)
     } else {
-      newSet.add(classId)
+      newSet.add(classroomId)
     }
     setSelectedClassIds(newSet)
   }
@@ -132,14 +132,14 @@ export default function ClassManagementTable() {
     setIsClassModalOpen(true)
   }
 
-  const handleDeleteClass = async (classId: string) => {
+  const handleDeleteClass = async (classroomId: string) => {
     if (window.confirm("本当にこの学級を削除しますか？")) {
       try {
-        await window.electronAPI.deleteClass(classId)
-        setClasses(classes.filter((c) => c.id !== classId))
+        await window.electronAPI.deleteClass(classroomId)
+        setClasses(classes.filter((c) => c.id !== classroomId))
         setSelectedClassIds((prev) => {
           const newSet = new Set(prev)
-          newSet.delete(classId)
+          newSet.delete(classroomId)
           return newSet
         })
       } catch (error) {

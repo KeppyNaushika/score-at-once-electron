@@ -44,11 +44,11 @@ async function createTestData() {
     data: { name: "テスト成績PJ" },
   })
 
-  const classA = await testPrisma.class.create({
+  const classA = await testPrisma.classroom.create({
     data: { name: "1年A組", grade: 1 },
   })
 
-  const classB = await testPrisma.class.create({
+  const classB = await testPrisma.classroom.create({
     data: { name: "1年B組", grade: 1 },
   })
 
@@ -86,14 +86,14 @@ async function createTestData() {
   await testPrisma.studentClassMembership.create({
     data: {
       studentId: student1.id,
-      classId: classA.id,
+      classroomId: classA.id,
       attendanceNumber: 1,
     },
   })
   await testPrisma.studentClassMembership.create({
     data: {
       studentId: student2.id,
-      classId: classA.id,
+      classroomId: classA.id,
       attendanceNumber: 2,
     },
   })
@@ -102,7 +102,7 @@ async function createTestData() {
   await testPrisma.studentClassMembership.create({
     data: {
       studentId: student3.id,
-      classId: classB.id,
+      classroomId: classB.id,
       attendanceNumber: 1,
     },
   })
@@ -209,7 +209,7 @@ describe("GradeStudent / GradeClass", () => {
       const result = await getStudentsByGradeId(grade.id)
 
       expect(result.students![0].student.memberships.length).toBeGreaterThan(0)
-      expect(result.students![0].student.memberships[0].class.name).toBe(
+      expect(result.students![0].student.memberships[0].classroom.name).toBe(
         "1年A組"
       )
     })
@@ -295,7 +295,7 @@ describe("GradeStudent / GradeClass", () => {
 
   describe("getAvailableStudentsForGrade（個別追加候補）", () => {
     /** 未所属の生徒と、所属が終了済みの生徒を追加する */
-    async function addEdgeCaseStudents(classId: string) {
+    async function addEdgeCaseStudents(classroomId: string) {
       const noMembership = await testPrisma.student.create({
         data: {
           studentNumber: "S100",
@@ -317,7 +317,7 @@ describe("GradeStudent / GradeClass", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: ended.id,
-          classId,
+          classroomId,
           attendanceNumber: 50,
           startDate: new Date("2019-04-01"),
           endDate: new Date("2020-03-31"),
@@ -367,7 +367,7 @@ describe("GradeStudent / GradeClass", () => {
       const grade = await testPrisma.grade.create({
         data: { name: "基準日PJ", referenceDate: new Date("2024-04-01") },
       })
-      const classX = await testPrisma.class.create({
+      const classX = await testPrisma.classroom.create({
         data: { name: "2年X組", grade: 2 },
       })
       // 基準日より前に開始済み（在籍中）
@@ -383,7 +383,7 @@ describe("GradeStudent / GradeClass", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: current.id,
-          classId: classX.id,
+          classroomId: classX.id,
           attendanceNumber: 1,
           startDate: new Date("2023-04-01"),
           endDate: null,
@@ -402,7 +402,7 @@ describe("GradeStudent / GradeClass", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: future.id,
-          classId: classX.id,
+          classroomId: classX.id,
           attendanceNumber: 60,
           startDate: new Date("2024-05-01"), // 基準日より後に開始
           endDate: null,
@@ -426,7 +426,7 @@ describe("GradeStudent / GradeClass", () => {
       const { grade } = await createTestData()
 
       // 在籍終了済みの生徒だけが所属する学級C
-      const classC = await testPrisma.class.create({
+      const classC = await testPrisma.classroom.create({
         data: { name: "1年C組", grade: 1 },
       })
       const alum = await testPrisma.student.create({
@@ -441,7 +441,7 @@ describe("GradeStudent / GradeClass", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: alum.id,
-          classId: classC.id,
+          classroomId: classC.id,
           attendanceNumber: 1,
           startDate: new Date("2019-04-01"),
           endDate: new Date("2020-03-31"),
@@ -501,7 +501,7 @@ describe("GradeStudent / GradeClass", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: student1.id,
-          classId: classB.id,
+          classroomId: classB.id,
           attendanceNumber: 99,
         },
       })
@@ -565,7 +565,7 @@ describe("GradeStudent / GradeClass", () => {
       await testPrisma.studentClassMembership.create({
         data: {
           studentId: student1.id,
-          classId: classB.id,
+          classroomId: classB.id,
           attendanceNumber: 99,
         },
       })

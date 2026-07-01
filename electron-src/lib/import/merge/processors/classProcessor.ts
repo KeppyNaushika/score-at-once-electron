@@ -23,7 +23,7 @@ import type {
 export async function processClassIdIntegration(
   data: ExtractedArchiveData,
   preMatchResult: FileOverviewData,
-  config: IdIntegrationConfig["class"],
+  config: IdIntegrationConfig["classroom"],
   idMappings: IdMappings,
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
@@ -31,11 +31,11 @@ export async function processClassIdIntegration(
   tx: PrismaTransaction,
   updateDecisions?: UpdateDecisions
 ): Promise<void> {
-  const classPreMatch = preMatchResult.class
+  const classPreMatch = preMatchResult.classroom
 
   // ID一致したもの
   for (const match of classPreMatch.byId) {
-    idMappings.class[match.importId] = match.existingId
+    idMappings.classroom[match.importId] = match.existingId
   }
 
   const processDecision = async (
@@ -43,19 +43,21 @@ export async function processClassIdIntegration(
     decision: IdIntegrationDecision | undefined,
     defaultExistingId: string | undefined
   ) => {
-    const importClass = data.classesData.classes.find((c) => c.id === importId)
+    const importClass = data.classesData.classrooms.find(
+      (c) => c.id === importId
+    )
     if (!importClass) return
 
     if (!decision || decision.decisionType === "create_new") {
       const uniqueName = await generateUniqueClassName(tx, importClass.name)
 
-      const existingById = await tx.class.findUnique({
+      const existingById = await tx.classroom.findUnique({
         where: { id: importId },
       })
       if (existingById) {
-        idMappings.class[importId] = importId
+        idMappings.classroom[importId] = importId
       } else {
-        await tx.class.create({
+        await tx.classroom.create({
           data: {
             id: importId,
             name: uniqueName,
@@ -64,8 +66,8 @@ export async function processClassIdIntegration(
             description: importClass.description ?? null,
           },
         })
-        idMappings.class[importId] = importId
-        counts.created.classes++
+        idMappings.classroom[importId] = importId
+        counts.created.classrooms++
 
         if (uniqueName !== importClass.name) {
           warnings.push(
@@ -80,10 +82,10 @@ export async function processClassIdIntegration(
         return
       }
 
-      idMappings.class[importId] = existingId
+      idMappings.classroom[importId] = existingId
 
       // フィールド更新処理
-      const updateKey = `class:${importId}`
+      const updateKey = `classroom:${importId}`
       const fieldDecisions = updateDecisions?.[updateKey]
       if (fieldDecisions && importClass) {
         const updateData: Record<string, unknown> = {}
@@ -101,7 +103,7 @@ export async function processClassIdIntegration(
               ? new Date(importClass.updatedAt)
               : null
             if (importUpdatedAt) {
-              const existing = await tx.class.findUnique({
+              const existing = await tx.classroom.findUnique({
                 where: { id: existingId },
               })
               if (existing && importUpdatedAt > existing.updatedAt) {
@@ -111,23 +113,23 @@ export async function processClassIdIntegration(
           }
         }
         if (Object.keys(updateData).length > 0) {
-          await tx.class.update({
+          await tx.classroom.update({
             where: { id: existingId },
             data: updateData,
           })
-          counts.updated.classes++
+          counts.updated.classrooms++
         }
       }
 
       if (decision.idChoice === "use_import_id") {
         idChangeTargets.push({
-          category: "class",
+          category: "classroom",
           existingId: existingId,
           newId: importId,
         })
       }
     } else if (decision.decisionType === "skip") {
-      counts.skipped.classes++
+      counts.skipped.classrooms++
     }
   }
 
@@ -166,7 +168,7 @@ export async function processClassIdIntegration(
 
   // どれにも一致しない
   for (const item of classPreMatch.noMatch) {
-    if (idMappings.class[item.importId]) continue
+    if (idMappings.classroom[item.importId]) continue
 
     const decision = config.decisions.find((d) => d.importId === item.importId)
     await processDecision(

@@ -67,7 +67,7 @@ function detectFieldChanges(
 
 function extractUpdateableItems(
   matchedItems: MatchedItem[],
-  category: "student" | "class",
+  category: "student" | "classroom",
   fieldLabels: Record<string, string>
 ): UpdateableItem[] {
   const items: UpdateableItem[] = []
@@ -99,9 +99,9 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
   const { state, setFieldUpdateDecision, setBulkUpdateStrategy, goToNextStep } =
     wizard
 
-  const { student, class: classResult } = state.fileOverviewData ?? {
+  const { student, classroom: classResult } = state.fileOverviewData ?? {
     student: { byId: [], noMatch: [] },
-    class: { byId: [], noMatch: [] },
+    classroom: { byId: [], noMatch: [] },
   }
 
   // 同一人物と判定されたアイテム（byId + by二次照合で same_person のもの）のフィールド変更を検出
@@ -119,7 +119,11 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
         "student",
         STUDENT_FIELD_LABELS
       ),
-      ...extractUpdateableItems(allClassMatched, "class", CLASS_FIELD_LABELS),
+      ...extractUpdateableItems(
+        allClassMatched,
+        "classroom",
+        CLASS_FIELD_LABELS
+      ),
     ]
   }, [student, classResult])
 

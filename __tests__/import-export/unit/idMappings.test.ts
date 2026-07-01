@@ -21,7 +21,7 @@ describe("IdMappings", () => {
 
       const expectedCategories = [
         "student",
-        "class",
+        "classroom",
         "subtotalGroup",
         "subtotal",
         "exam",
@@ -65,12 +65,12 @@ describe("IdMappings", () => {
       const classExistingId = generateId()
 
       mappings.student[studentImportId] = studentExistingId
-      mappings.class[classImportId] = classExistingId
+      mappings.classroom[classImportId] = classExistingId
 
       expect(mappings.student[studentImportId]).toBe(studentExistingId)
-      expect(mappings.class[classImportId]).toBe(classExistingId)
+      expect(mappings.classroom[classImportId]).toBe(classExistingId)
       expect(Object.keys(mappings.student)).toHaveLength(1)
-      expect(Object.keys(mappings.class)).toHaveLength(1)
+      expect(Object.keys(mappings.classroom)).toHaveLength(1)
     })
   })
 
@@ -131,7 +131,7 @@ describe("createEmptyCounts", () => {
     const counts = createEmptyCounts()
 
     expect(counts.students).toBe(0)
-    expect(counts.classes).toBe(0)
+    expect(counts.classrooms).toBe(0)
     expect(counts.users).toBe(0)
     expect(counts.pages).toBe(0)
     expect(counts.regions).toBe(0)
@@ -158,11 +158,11 @@ describe("ImportCounts", () => {
 
     importCounts.created.students++
     importCounts.created.students++
-    importCounts.updated.classes++
+    importCounts.updated.classrooms++
     importCounts.skipped.scores += 5
 
     expect(importCounts.created.students).toBe(2)
-    expect(importCounts.updated.classes).toBe(1)
+    expect(importCounts.updated.classrooms).toBe(1)
     expect(importCounts.skipped.scores).toBe(5)
     expect(importCounts.unchanged.students).toBe(0)
   })

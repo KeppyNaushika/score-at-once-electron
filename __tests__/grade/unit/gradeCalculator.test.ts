@@ -127,7 +127,7 @@ function buildGrade(
       }[]
     }[]
     gradeClasses?: {
-      classId: string
+      classroomId: string
       class: { id: string; name: string }
     }[]
   } = {}

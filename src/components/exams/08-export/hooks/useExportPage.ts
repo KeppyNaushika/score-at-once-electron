@@ -325,7 +325,7 @@ export function useExportPage() {
 
     const matchesClass =
       selectedClasses.length === 0 ||
-      student.memberships.some((m) => selectedClasses.includes(m.class.id))
+      student.memberships.some((m) => selectedClasses.includes(m.classroom.id))
 
     const matchesStatus =
       selectedStatuses.length === 0 || selectedStatuses.includes(student.status)
@@ -337,7 +337,7 @@ export function useExportPage() {
   const availableClasses = Array.from(
     new Map(
       students
-        .flatMap((s) => s.memberships.map((m) => m.class))
+        .flatMap((s) => s.memberships.map((m) => m.classroom))
         .map((cls) => [cls.id, cls])
     ).values()
   )

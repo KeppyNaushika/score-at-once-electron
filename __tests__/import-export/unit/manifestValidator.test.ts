@@ -25,7 +25,7 @@ function createValidManifest(
     examName: "テスト試験",
     counts: {
       students: 3,
-      classes: 1,
+      classrooms: 1,
       users: 1,
       pages: 2,
       regions: 4,

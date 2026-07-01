@@ -170,8 +170,12 @@ export function setupCourseworkHandlers(): void {
 
   registerHandler(
     "coursework:addStudentsFromClass",
-    async (courseworkId: string, classId: string, activeOnly?: boolean) => {
-      return addStudentsFromClassToCoursework(courseworkId, classId, activeOnly)
+    async (courseworkId: string, classroomId: string, activeOnly?: boolean) => {
+      return addStudentsFromClassToCoursework(
+        courseworkId,
+        classroomId,
+        activeOnly
+      )
     }
   )
 
@@ -201,15 +205,23 @@ export function setupCourseworkHandlers(): void {
 
   registerHandler(
     "coursework:removeClass",
-    async (courseworkId: string, classId: string, deleteStudents = true) => {
-      return removeClassFromCoursework(courseworkId, classId, deleteStudents)
+    async (
+      courseworkId: string,
+      classroomId: string,
+      deleteStudents = true
+    ) => {
+      return removeClassFromCoursework(
+        courseworkId,
+        classroomId,
+        deleteStudents
+      )
     }
   )
 
   registerHandler(
     "coursework:classRemovalPreview",
-    async (courseworkId: string, classId: string) => {
-      return getCourseworkClassRemovalPreview(courseworkId, classId)
+    async (courseworkId: string, classroomId: string) => {
+      return getCourseworkClassRemovalPreview(courseworkId, classroomId)
     }
   )
 

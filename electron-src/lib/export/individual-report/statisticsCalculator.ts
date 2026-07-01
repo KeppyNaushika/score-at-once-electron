@@ -24,7 +24,7 @@ import type {
  * 統計算出に渡す学級情報（studentReport 選択学級 ∩ 本人の受験日所属学級）
  */
 export interface StudentClassForStats {
-  classId: string
+  classroomId: string
   className: string
   grade: string | null
   /** 当該学級の受験日所属生徒ID（学級全体が母集団） */
@@ -318,7 +318,7 @@ export function calculateStatisticsForStudent(
       .filter((s): s is number => s !== null)
 
     return {
-      classId: cls.classId,
+      classroomId: cls.classroomId,
       className: cls.className,
       grade: cls.grade,
       memberStudentIds: cls.memberStudentIds,

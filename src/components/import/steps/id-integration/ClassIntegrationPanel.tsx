@@ -16,8 +16,8 @@ export function ClassIntegrationPanel({
   onStrategyChange,
 }: ClassIntegrationPanelProps) {
   const { state } = wizard
-  const overview = state.fileOverviewData?.class
-  const strategy = state.idIntegrationConfig.class
+  const overview = state.fileOverviewData?.classroom
+  const strategy = state.idIntegrationConfig.classroom
     .strategy as ClassMatchingStrategy
 
   if (!overview) return null
@@ -83,7 +83,7 @@ export function ClassIntegrationPanel({
       {(strategy === "by_name" || strategy === "individual") && (
         <DetailPanel
           wizard={wizard}
-          entityType="class"
+          entityType="classroom"
           byName={overview.byName ?? []}
           noMatch={overview.noMatch}
           showIndividualMessage={strategy === "individual"}
@@ -93,7 +93,7 @@ export function ClassIntegrationPanel({
               existingId: item.existingId,
             }))
             wizard.batchUpdateIdIntegrationDecisions(
-              "class",
+              "classroom",
               items,
               "same_person",
               idChoice

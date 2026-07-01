@@ -47,11 +47,11 @@ export interface FullTestExam {
     lastName: string
     firstName: string
   }>
-  class: { id: string; name: string }
+  classroom: { id: string; name: string }
   memberships: Array<{
     id: string
     studentId: string
-    classId: string
+    classroomId: string
     attendanceNumber: number | null
   }>
   examStudents: Array<{
@@ -59,7 +59,7 @@ export interface FullTestExam {
     examId: string
     studentId: string
   }>
-  examClass: { id: string; examId: string; classId: string }
+  examClass: { id: string; examId: string; classroomId: string }
   subtotalGroup: { id: string; name: string }
   subtotals: Array<{
     id: string
@@ -205,7 +205,7 @@ export async function createFullTestExam(
   }
 
   // 6. 学級作成
-  const cls = await prisma.class.create({
+  const cls = await prisma.classroom.create({
     data: {
       id: randomUUID(),
       name: `${className}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -235,7 +235,7 @@ export async function createFullTestExam(
       data: {
         id: randomUUID(),
         studentId: student.id,
-        classId: cls.id,
+        classroomId: cls.id,
         attendanceNumber: i + 1,
       },
     })
@@ -258,7 +258,7 @@ export async function createFullTestExam(
     data: {
       id: randomUUID(),
       examId: exam.id,
-      classId: cls.id,
+      classroomId: cls.id,
       administered: true,
       teacherStat: true,
       studentReport: true,
@@ -473,11 +473,11 @@ export async function createFullTestExam(
       lastName: s.lastName,
       firstName: s.firstName,
     })),
-    class: { id: cls.id, name: cls.name },
+    classroom: { id: cls.id, name: cls.name },
     memberships: memberships.map((m) => ({
       id: m.id,
       studentId: m.studentId,
-      classId: m.classId,
+      classroomId: m.classroomId,
       attendanceNumber: m.attendanceNumber,
     })),
     examStudents: examStudents.map((ps) => ({
@@ -488,7 +488,7 @@ export async function createFullTestExam(
     examClass: {
       id: examClass.id,
       examId: examClass.examId,
-      classId: examClass.classId,
+      classroomId: examClass.classroomId,
     },
     subtotalGroup: { id: subtotalGroup.id, name: subtotalGroup.name },
     subtotals: subtotals.map((s) => ({

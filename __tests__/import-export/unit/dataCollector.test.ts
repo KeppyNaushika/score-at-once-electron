@@ -64,18 +64,18 @@ describe("アーカイブデータ構造", () => {
 
   describe("ArchiveClassesData", () => {
     it("学級と所属データが正しい形式で生成される", () => {
-      const classId = generateId()
+      const classroomId = generateId()
       const studentId = generateId()
       const data = createArchiveClassesData(
-        [{ id: classId, name: "1年A組" }],
-        [{ studentId, classId, attendanceNumber: 1 }]
+        [{ id: classroomId, name: "1年A組" }],
+        [{ studentId, classroomId, attendanceNumber: 1 }]
       )
 
-      expect(data.classes).toHaveLength(1)
-      expect(data.classes[0].name).toBe("1年A組")
+      expect(data.classrooms).toHaveLength(1)
+      expect(data.classrooms[0].name).toBe("1年A組")
       expect(data.memberships).toHaveLength(1)
       expect(data.memberships[0].studentId).toBe(studentId)
-      expect(data.memberships[0].classId).toBe(classId)
+      expect(data.memberships[0].classroomId).toBe(classroomId)
       expect(data.memberships[0].attendanceNumber).toBe(1)
     })
   })

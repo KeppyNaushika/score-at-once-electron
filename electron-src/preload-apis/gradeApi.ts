@@ -34,28 +34,28 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:addStudentsToGrade", gradeId, studentIds),
       addStudentsFromClass: (
         gradeId: string,
-        classId: string,
+        classroomId: string,
         activeOnly?: boolean
       ) =>
         ipcRenderer.invoke(
           "grade:addStudentsFromClass",
           gradeId,
-          classId,
+          classroomId,
           activeOnly
         ),
       removeClass: (
         gradeId: string,
-        classId: string,
+        classroomId: string,
         deleteStudents?: boolean
       ) =>
         ipcRenderer.invoke(
           "grade:removeClass",
           gradeId,
-          classId,
+          classroomId,
           deleteStudents
         ),
-      classRemovalPreview: (gradeId: string, classId: string) =>
-        ipcRenderer.invoke("grade:classRemovalPreview", gradeId, classId),
+      classRemovalPreview: (gradeId: string, classroomId: string) =>
+        ipcRenderer.invoke("grade:classRemovalPreview", gradeId, classroomId),
       setClassOrders: (gradeId: string, orderedClassIds: string[]) =>
         ipcRenderer.invoke("grade:setClassOrders", gradeId, orderedClassIds),
       updateStudentOrders: (

@@ -36,8 +36,8 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       (state.manifest?.counts.students ?? 0)
   const hasClassDecisions =
     state.fileOverviewData &&
-    state.fileOverviewData.class.byId.length <
-      (state.manifest?.counts.classes ?? 0)
+    state.fileOverviewData.classroom.byId.length <
+      (state.manifest?.counts.classrooms ?? 0)
   const hasSubtotalGroupDecisions =
     state.fileOverviewData &&
     state.fileOverviewData.subtotalGroup.byId.length <
@@ -116,7 +116,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="class" className="gap-2">
+          <TabsTrigger value="classroom" className="gap-2">
             <School className="h-4 w-4" />
             学級
             {hasClassDecisions && (
@@ -147,11 +147,14 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
         </TabsContent>
 
         {/* 学級タブ */}
-        <TabsContent value="class" className="mt-0">
+        <TabsContent value="classroom" className="mt-0">
           <ClassIntegrationPanel
             wizard={wizard}
             onStrategyChange={(strategy) =>
-              updateIdIntegrationConfig("class", { strategy, decisions: [] })
+              updateIdIntegrationConfig("classroom", {
+                strategy,
+                decisions: [],
+              })
             }
           />
         </TabsContent>

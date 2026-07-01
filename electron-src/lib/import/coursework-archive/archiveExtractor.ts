@@ -16,6 +16,7 @@ import type {
   CourseworkArchiveData,
   CourseworkArchiveManifest,
 } from "../../../../src/types/courseworkArchive.types"
+import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 
 export interface ExtractedCourseworkArchive {
   manifest: CourseworkArchiveManifest
@@ -60,14 +61,18 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
       return { success: false, error: "マニフェストファイルが見つかりません" }
     }
 
-    const courseworks =
+    // 学級リネーム前の旧キー（classId/classes）は読取り時に現行キーへ正規化
+    const courseworks = normalizeLegacyClassroomKeys(
       readJsonFile<ArchiveCourseworkRef[]>(tempDir, "courseworks.json") ?? []
+    )
     const studentsData =
       readJsonFile<ArchiveCwStudent[]>(tempDir, "students.json") ?? []
-    const classesData =
+    const classesData = normalizeLegacyClassroomKeys(
       readJsonFile<ArchiveCwClass[]>(tempDir, "classes.json") ?? []
-    const membershipsData =
+    )
+    const membershipsData = normalizeLegacyClassroomKeys(
       readJsonFile<ArchiveCwMembership[]>(tempDir, "memberships.json") ?? []
+    )
     const tagsData = readJsonFile<ArchiveCwTag[]>(tempDir, "tags.json") ?? []
 
     return {

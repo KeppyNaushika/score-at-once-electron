@@ -81,7 +81,7 @@ export async function getAllGrades() {
     const grades = await prisma.grade.findMany({
       include: {
         gradeClasses: {
-          include: { class: true },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
         gradeItems: {
@@ -120,7 +120,7 @@ export async function getGradeById(id: string) {
       where: { id },
       include: {
         gradeClasses: {
-          include: { class: true },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
         gradeItems: {
@@ -171,7 +171,7 @@ export async function createGrade(data: {
       },
       include: {
         gradeClasses: {
-          include: { class: true },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
         gradeItems: {
@@ -233,7 +233,7 @@ export async function updateGrade(
       data: updateData,
       include: {
         gradeClasses: {
-          include: { class: true },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
         gradeItems: {

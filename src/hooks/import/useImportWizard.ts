@@ -228,7 +228,7 @@ export function useImportWizard() {
   }, [state.archivePath])
 
   /** カテゴリキーの型（subtotalMappingsを除く） */
-  type IdIntegrationCategoryKey = "student" | "class" | "subtotalGroup"
+  type IdIntegrationCategoryKey = "student" | "classroom" | "subtotalGroup"
 
   // ID統合設定を更新
   const updateIdIntegrationConfig = useCallback(

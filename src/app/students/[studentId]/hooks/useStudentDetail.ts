@@ -70,7 +70,7 @@ export function useStudentDetail(studentId: string) {
   }
 
   const handleSaveMembership = async (
-    membershipData: Partial<StudentClassMembership> & { classId: string },
+    membershipData: Partial<StudentClassMembership> & { classroomId: string },
     membershipToEdit?: StudentClassMembershipWithDetails | null
   ) => {
     try {
@@ -82,7 +82,7 @@ export function useStudentDetail(studentId: string) {
       } else {
         const membership = await window.electronAPI.addStudentToClass(
           studentId,
-          membershipData.classId,
+          membershipData.classroomId,
           membershipData.startDate ?? undefined,
           membershipData.attendanceNumber ?? undefined,
           membershipData.notes ?? undefined

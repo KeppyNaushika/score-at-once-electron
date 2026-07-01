@@ -18,7 +18,7 @@ interface ClassStudentImportModalProps {
   isOpen: boolean
   onClose: () => void
   onImportSuccess: () => void
-  classId: string
+  classroomId: string
   className: string
 }
 
@@ -33,7 +33,7 @@ export default function ClassStudentImportModal({
   isOpen,
   onClose,
   onImportSuccess,
-  classId,
+  classroomId,
   className,
 }: ClassStudentImportModalProps) {
   const [studentData, setStudentData] = useState<ClassStudentImportRow[]>([
@@ -157,7 +157,7 @@ export default function ClassStudentImportModal({
           // バックエンド側で重複チェック・既存所属終了を処理
           const membership = await window.electronAPI.addStudentToClass(
             student.id,
-            classId,
+            classroomId,
             startDate,
             attendanceNumber ? parseInt(attendanceNumber) : undefined
           )

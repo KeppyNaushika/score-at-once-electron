@@ -60,7 +60,7 @@ export async function performAllMatching(
 ): Promise<AllMatchResults> {
   const [students, classes, users, subtotalGroups] = await Promise.all([
     matchStudents(importData, config.student),
-    matchClasses(importData, config.class),
+    matchClasses(importData, config.classroom),
     matchUsers(importData, config.user),
     matchSubtotalGroups(importData, config.subtotalGroup),
   ])
@@ -99,7 +99,7 @@ export async function performPreMatching(
 
   return {
     student: studentResult,
-    class: classResult,
+    classroom: classResult,
     subtotalGroup: subtotalGroupResult,
     exam: examResult,
   }

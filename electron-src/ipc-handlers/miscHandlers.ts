@@ -239,20 +239,20 @@ export function setupMiscHandlers(): void {
 
   registerHandler(
     "create-class",
-    async (classData: Prisma.ClassCreateInput) => {
+    async (classData: Prisma.ClassroomCreateInput) => {
       return await createClass(classData)
     }
   )
 
   registerHandler(
     "update-class",
-    async (classData: Prisma.ClassUpdateInput & { id: string }) => {
+    async (classData: Prisma.ClassroomUpdateInput & { id: string }) => {
       return await updateClass(classData)
     }
   )
 
-  registerHandler("delete-class", async (classId: string) => {
-    return await deleteClass(classId)
+  registerHandler("delete-class", async (classroomId: string) => {
+    return await deleteClass(classroomId)
   })
 
   // Master image handlers

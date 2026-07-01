@@ -78,7 +78,7 @@ export async function createImportedData(
       }
 
       // 2. 学級を作成（重複する名前はサフィックスを付与）
-      for (const cls of data.classesData.classes) {
+      for (const cls of data.classesData.classrooms) {
         const uniqueName = await generateUniqueClassName(tx, cls.name)
 
         if (uniqueName !== cls.name) {
@@ -87,9 +87,9 @@ export async function createImportedData(
           )
         }
 
-        await tx.class.create({
+        await tx.classroom.create({
           data: {
-            id: remapIdRequired(cls.id, mappings.class),
+            id: remapIdRequired(cls.id, mappings.classroom),
             name: uniqueName,
             classCode: cls.classCode,
             grade: cls.grade,
@@ -102,14 +102,14 @@ export async function createImportedData(
       // 3. 学級所属を作成
       for (const membership of data.classesData.memberships) {
         const newStudentId = remapId(membership.studentId, mappings.student)
-        const newClassId = remapId(membership.classId, mappings.class)
+        const newClassId = remapId(membership.classroomId, mappings.classroom)
 
         if (newStudentId && newClassId) {
           await tx.studentClassMembership.create({
             data: {
               id: remapIdRequired(membership.id, mappings.membership),
               studentId: newStudentId,
-              classId: newClassId,
+              classroomId: newClassId,
               startDate: new Date(membership.startDate),
               endDate: membership.endDate ? new Date(membership.endDate) : null,
               attendanceNumber: membership.attendanceNumber,
@@ -307,13 +307,13 @@ export async function createImportedData(
 
       // 9.5. ExamClassを作成 (v1.1.0+)
       for (const pc of data.examData.examClasses || []) {
-        const newClassId = remapId(pc.classId, mappings.class)
+        const newClassId = remapId(pc.classroomId, mappings.classroom)
         if (newClassId) {
           await tx.examClass.create({
             data: {
               id: remapIdRequired(pc.id, mappings.examClass),
               examId: newExamId,
-              classId: newClassId,
+              classroomId: newClassId,
               administered: pc.administered,
               // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
               ...resolveExamClassOutputFlags(pc),
@@ -653,7 +653,7 @@ export async function createImportedData(
       examId: newExamId,
       counts: {
         students: data.studentsData.students.length,
-        classes: data.classesData.classes.length,
+        classrooms: data.classesData.classrooms.length,
         users: data.usersData.users.length,
         pages: data.examData.examPages.length,
         regions: data.examData.cropRegions.length,

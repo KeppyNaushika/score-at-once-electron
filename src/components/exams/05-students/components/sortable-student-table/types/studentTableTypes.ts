@@ -15,7 +15,7 @@ export interface Student {
   memberships: {
     id: string
     attendanceNumber?: number | null
-    class: {
+    classroom: {
       id: string
       name: string
     }

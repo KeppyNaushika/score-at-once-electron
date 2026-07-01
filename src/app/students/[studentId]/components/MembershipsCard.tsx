@@ -92,14 +92,14 @@ export function MembershipsCard({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">
-                            {membership.class.name}
+                            {membership.classroom.name}
                           </span>
-                          {membership.class.classCode && (
+                          {membership.classroom.classCode && (
                             <Badge
                               variant="outline"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
                             >
-                              {membership.class.classCode}
+                              {membership.classroom.classCode}
                             </Badge>
                           )}
                           {isCurrent ? (

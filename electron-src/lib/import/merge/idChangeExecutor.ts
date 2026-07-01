@@ -201,32 +201,32 @@ export const CLASS_CASCADE_MOVERS: CascadeMover[] = [
     model: "StudentClassMembership",
     move: (tx, from, to) =>
       tx.studentClassMembership.updateMany({
-        where: { classId: from },
-        data: { classId: to },
+        where: { classroomId: from },
+        data: { classroomId: to },
       }),
   },
   {
     model: "ExamClass",
     move: (tx, from, to) =>
       tx.examClass.updateMany({
-        where: { classId: from },
-        data: { classId: to },
+        where: { classroomId: from },
+        data: { classroomId: to },
       }),
   },
   {
     model: "GradeClass",
     move: (tx, from, to) =>
       tx.gradeClass.updateMany({
-        where: { classId: from },
-        data: { classId: to },
+        where: { classroomId: from },
+        data: { classroomId: to },
       }),
   },
   {
     model: "CourseworkClass",
     move: (tx, from, to) =>
       tx.courseworkClass.updateMany({
-        where: { classId: from },
-        data: { classId: to },
+        where: { classroomId: from },
+        data: { classroomId: to },
       }),
   },
 ]
@@ -310,7 +310,7 @@ export async function executeIdChanges(
   for (const target of targets) {
     if (target.category === "student") {
       await changeStudentId(tx, target, idMappings, warnings)
-    } else if (target.category === "class") {
+    } else if (target.category === "classroom") {
       await changeClassId(tx, target, idMappings, warnings)
     } else if (target.category === "subtotalGroup") {
       await changeSubtotalGroupId(tx, target, idMappings, warnings)
@@ -380,20 +380,20 @@ async function changeClassId(
   idMappings: IdMappings,
   _warnings: string[]
 ): Promise<void> {
-  const existingClass = await tx.class.findUnique({
+  const existingClass = await tx.classroom.findUnique({
     where: { id: target.existingId },
   })
 
   if (!existingClass) return
 
   // 1. UNIQUE制約のあるnameを一時値に変更
-  await tx.class.update({
+  await tx.classroom.update({
     where: { id: target.existingId },
     data: { name: `__TEMP_${target.existingId}` },
   })
 
   // 2. 新しいIDで元のnameを使ってレコード作成
-  await tx.class.create({
+  await tx.classroom.create({
     data: {
       id: target.newId,
       name: existingClass.name,
@@ -414,10 +414,10 @@ async function changeClassId(
   )
 
   // 4. 古いレコードを削除
-  await tx.class.delete({ where: { id: target.existingId } })
+  await tx.classroom.delete({ where: { id: target.existingId } })
 
   // 5. マッピングを更新
-  remapMappingValues(idMappings.class, target.existingId, target.newId)
+  remapMappingValues(idMappings.classroom, target.existingId, target.newId)
 }
 
 /**

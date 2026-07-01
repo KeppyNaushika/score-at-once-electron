@@ -68,7 +68,7 @@ export function createArchiveStudentsData(
 }
 
 export function createArchiveClassesData(
-  classes: Array<{
+  classrooms: Array<{
     id?: string
     name?: string
     classCode?: string | null
@@ -77,12 +77,12 @@ export function createArchiveClassesData(
   memberships: Array<{
     id?: string
     studentId: string
-    classId: string
+    classroomId: string
     attendanceNumber?: number | null
   }> = []
 ): ArchiveClassesData {
   return {
-    classes: classes.map((c, i) => ({
+    classrooms: classrooms.map((c, i) => ({
       id: c.id ?? generateId(),
       name: c.name ?? `クラス${i + 1}`,
       classCode: c.classCode ?? null,
@@ -95,7 +95,7 @@ export function createArchiveClassesData(
     memberships: memberships.map((m) => ({
       id: m.id ?? generateId(),
       studentId: m.studentId,
-      classId: m.classId,
+      classroomId: m.classroomId,
       startDate: new Date().toISOString(),
       endDate: null,
       attendanceNumber: m.attendanceNumber ?? null,
@@ -274,7 +274,7 @@ export function createExtractedArchiveData(
       examName: "テスト",
       counts: {
         students: 0,
-        classes: 0,
+        classrooms: 0,
         users: 0,
         pages: 0,
         regions: 0,
@@ -333,7 +333,7 @@ export function createFileOverviewData(
 ): FileOverviewData {
   return {
     student: overrides.student ?? createPreMatchingResult(),
-    class: overrides.class ?? createPreMatchingResult(),
+    classroom: overrides.classroom ?? createPreMatchingResult(),
     subtotalGroup: overrides.subtotalGroup ?? createPreMatchingResult(),
     exam: overrides.exam,
     scoringConflicts: overrides.scoringConflicts,
@@ -352,7 +352,7 @@ export function createIdIntegrationConfig(
       strategy: "by_student_number",
       decisions: [],
     },
-    class: overrides.class ?? { strategy: "by_name", decisions: [] },
+    classroom: overrides.classroom ?? { strategy: "by_name", decisions: [] },
     subtotalGroup: overrides.subtotalGroup ?? {
       strategy: "by_name",
       decisions: [],
@@ -378,7 +378,7 @@ export function createDecision(
 export function createEmptyIdMappings(): IdMappings {
   return {
     student: {},
-    class: {},
+    classroom: {},
     subtotalGroup: {},
     subtotal: {},
     exam: {},

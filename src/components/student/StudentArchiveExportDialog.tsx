@@ -53,8 +53,8 @@ export function StudentArchiveExportDialog({
         const classMap = new Map<string, string>()
         for (const student of selectedStudents) {
           for (const m of student.memberships || []) {
-            if (m.class && !classMap.has(m.class.id)) {
-              classMap.set(m.class.id, m.class.name)
+            if (m.classroom && !classMap.has(m.classroom.id)) {
+              classMap.set(m.classroom.id, m.classroom.name)
             }
           }
         }

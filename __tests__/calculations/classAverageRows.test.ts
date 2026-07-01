@@ -22,12 +22,12 @@ function makeClass(
   return {
     id: `ec-${name}`,
     examId: "e1",
-    classId: `c-${name}`,
+    classroomId: `c-${name}`,
     administered: true,
     teacherStat,
     studentReport: true,
     order: 0,
-    class: {
+    classroom: {
       id: `c-${name}`,
       name,
       classCode: null,

@@ -16,7 +16,7 @@ import type { GradeDataSource, Prisma } from "@prisma/client"
 /**
  * 学級所属情報を含む学級型
  */
-export type ClassWithMemberships = Prisma.ClassGetPayload<{
+export type ClassWithMemberships = Prisma.ClassroomGetPayload<{
   include: {
     memberships: {
       include: {
@@ -32,11 +32,11 @@ export type ClassWithMemberships = Prisma.ClassGetPayload<{
  * getClassMembersForExam が返す集計エンジンの基本型
  * （Excel学級平均行・個人成績表の学級比較）。memberships は受験日スナップショットで
  * where 絞り込み・出席番号→学籍番号順にソート済み。所属生徒IDは
- * `ec.class.memberships.map((m) => m.studentId)` で取得する。
+ * `ec.classroom.memberships.map((m) => m.studentId)` で取得する。
  */
 export type ExamClassWithMembers = Prisma.ExamClassGetPayload<{
   include: {
-    class: {
+    classroom: {
       include: {
         memberships: {
           select: { studentId: true }
@@ -53,7 +53,7 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
     memberships: {
       include: {
-        class: true
+        classroom: true
       }
       orderBy: {
         startDate: "desc"
@@ -69,7 +69,7 @@ export type StudentClassMembershipWithDetails =
   Prisma.StudentClassMembershipGetPayload<{
     include: {
       student: true
-      class: true
+      classroom: true
     }
   }>
 

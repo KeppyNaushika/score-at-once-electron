@@ -21,6 +21,7 @@ import type {
   ArchiveTagsData,
   ArchiveUsersData,
 } from "../../../../src/types/examArchive.types"
+import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 import { convertScoresDataToV1_13 } from "../transformers/V1_12_0_to_V1_13_0"
 
 /**
@@ -94,16 +95,17 @@ export async function extractArchive(archivePath: string): Promise<{
 
     // 各JSONファイルを読み込み
     // v1.5.0+: exam.json, v1.4.0以前: project.json にフォールバック
-    const examData =
+    // 学級リネーム前の旧キー（classId/classes）は読取り時に現行キーへ正規化
+    const examData = normalizeLegacyClassroomKeys(
       readJsonFile<ArchiveExamData>(tempDir, "exam.json") ??
-      readJsonFile<ArchiveExamData>(tempDir, "project.json")
+        readJsonFile<ArchiveExamData>(tempDir, "project.json")
+    )
     const studentsData = readJsonFile<ArchiveStudentsData>(
       tempDir,
       "students.json"
     )
-    const classesData = readJsonFile<ArchiveClassesData>(
-      tempDir,
-      "classes.json"
+    const classesData = normalizeLegacyClassroomKeys(
+      readJsonFile<ArchiveClassesData>(tempDir, "classes.json")
     )
     const usersData = readJsonFile<ArchiveUsersData>(tempDir, "users.json")
     const subtotalsData = readJsonFile<ArchiveSubtotalsData>(

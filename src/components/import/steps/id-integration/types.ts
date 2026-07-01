@@ -12,9 +12,9 @@ import type {
   SubtotalGroupMatchingStrategy,
 } from "@/types/examArchive.types"
 
-export type CategoryType = "student" | "class" | "subtotalGroup"
+export type CategoryType = "student" | "classroom" | "subtotalGroup"
 
-export type EntityType = "student" | "class" | "subtotalGroup"
+export type EntityType = "student" | "classroom" | "subtotalGroup"
 
 /** 決定タイプ */
 export type DecisionType = "same_person" | "create_new" | "skip"
@@ -38,7 +38,7 @@ export const ENTITY_LABELS: Record<EntityType, EntityLabels> = {
     noData: "このPCに同じデータなし",
     idChoiceLabel: "どちらに合わせる？",
   },
-  class: {
+  classroom: {
     samePerson: "このPCの学級と同じものとして扱う",
     createNew: "新しい学級として登録する",
     skip: "取り込まない",

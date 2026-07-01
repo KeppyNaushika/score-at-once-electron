@@ -30,7 +30,7 @@ export interface CourseworkArchiveManifest {
     items: number
     scores: number
     students: number
-    classes: number
+    classrooms: number
   }
 }
 
@@ -40,7 +40,7 @@ export interface ArchiveCourseworkRef {
   name: string
   description: string | null
   date: string | null
-  classes: { classId: string; order: number }[]
+  classrooms: { classroomId: string; order: number }[]
   tags: { tagId: string }[]
   students: { studentId: string; customOrder: number | null }[]
   items: ArchiveCourseworkItemRef[]
@@ -93,7 +93,7 @@ export interface ArchiveCwClass {
 export interface ArchiveCwMembership {
   id: string
   studentId: string
-  classId: string
+  classroomId: string
   startDate: string
   endDate: string | null
   attendanceNumber: number | null

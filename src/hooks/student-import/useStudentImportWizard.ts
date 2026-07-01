@@ -98,7 +98,7 @@ export function useStudentImportWizard() {
   // ID統合設定を更新
   const updateIdIntegrationConfig = useCallback(
     (
-      category: "student" | "class",
+      category: "student" | "classroom",
       config: Partial<CategoryIdIntegrationConfig>
     ) => {
       setState((prev) => ({
@@ -118,7 +118,7 @@ export function useStudentImportWizard() {
   // 個別のID統合決定を更新
   const updateIdIntegrationDecision = useCallback(
     (
-      category: "student" | "class",
+      category: "student" | "classroom",
       importId: string,
       decision: Partial<IdIntegrationDecision>
     ) => {
@@ -159,7 +159,7 @@ export function useStudentImportWizard() {
 
   // 一括ID選択更新
   const batchUpdateIdIntegrationDecisions = useCallback(
-    (category: "student" | "class", idChoice: IdChoice) => {
+    (category: "student" | "classroom", idChoice: IdChoice) => {
       setState((prev) => {
         const currentConfig = prev.idIntegrationConfig[category]
         const newDecisions = currentConfig.decisions.map((d) => ({

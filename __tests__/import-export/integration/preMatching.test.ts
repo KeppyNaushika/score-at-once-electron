@@ -178,12 +178,12 @@ describe("preMatching", () => {
     const className = `テストクラス_${Date.now()}`
 
     // ID一致用
-    await prisma.class.create({
+    await prisma.classroom.create({
       data: { id: classIdMatch, name: `IDクラス_${Date.now()}` },
     })
 
     // 名前一致用
-    await prisma.class.create({
+    await prisma.classroom.create({
       data: { id: classNameMatchExisting, name: className },
     })
 
@@ -199,13 +199,13 @@ describe("preMatching", () => {
 
     const result = await performPreMatching(data)
 
-    expect(result.class.byId.length).toBe(1)
-    expect(result.class.byId[0].importId).toBe(classIdMatch)
+    expect(result.classroom.byId.length).toBe(1)
+    expect(result.classroom.byId[0].importId).toBe(classIdMatch)
 
-    expect(result.class.byName).toBeDefined()
-    expect(result.class.byName!.length).toBe(1)
-    expect(result.class.byName![0].importId).toBe(classNameMatchImport)
-    expect(result.class.byName![0].existingId).toBe(classNameMatchExisting)
+    expect(result.classroom.byName).toBeDefined()
+    expect(result.classroom.byName!.length).toBe(1)
+    expect(result.classroom.byName![0].importId).toBe(classNameMatchImport)
+    expect(result.classroom.byName![0].existingId).toBe(classNameMatchExisting)
   })
 
   // PM-6: 小計グループbyId/byNameマッチ

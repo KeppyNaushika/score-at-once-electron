@@ -29,7 +29,7 @@ function createMinimalStats(): StatisticsData {
     },
     classes: [
       {
-        classId: "cA",
+        classroomId: "cA",
         className: "A",
         grade: "1",
         memberStudentIds: ["s1", "s2", "s3"],
