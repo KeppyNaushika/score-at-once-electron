@@ -7,16 +7,18 @@ import {
   COURSEWORK_MIN_SUPPORTED_VERSION,
   type CourseworkArchiveManifest,
 } from "../../../../src/types/courseworkArchive.types"
+import { compareVersions } from "../../shared/utilities/semver"
 
-function compareVersions(v1: string, v2: string): number {
-  const p1 = v1.split(".").map(Number)
-  const p2 = v2.split(".").map(Number)
-  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-    const a = p1[i] ?? 0
-    const b = p2[i] ?? 0
-    if (a !== b) return a > b ? 1 : -1
-  }
-  return 0
+/** マニフェスト（version を持つオブジェクト）かどうかの型ガード */
+function isCourseworkArchiveManifest(
+  value: unknown
+): value is CourseworkArchiveManifest {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "version" in value &&
+    typeof value.version === "string"
+  )
 }
 
 export interface CourseworkCompatibilityInfo {
@@ -35,11 +37,7 @@ export interface CourseworkCompatibilityInfo {
 export function validateCourseworkManifest(
   manifest: unknown
 ): CourseworkCompatibilityInfo & { manifest?: CourseworkArchiveManifest } {
-  if (
-    !manifest ||
-    typeof manifest !== "object" ||
-    typeof (manifest as CourseworkArchiveManifest).version !== "string"
-  ) {
+  if (!isCourseworkArchiveManifest(manifest)) {
     return {
       compatible: false,
       requiresTransform: false,
@@ -48,7 +46,7 @@ export function validateCourseworkManifest(
     }
   }
 
-  const m = manifest as CourseworkArchiveManifest
+  const m = manifest
   const warnings: string[] = []
 
   if (compareVersions(m.version, COURSEWORK_CURRENT_VERSION) > 0) {
