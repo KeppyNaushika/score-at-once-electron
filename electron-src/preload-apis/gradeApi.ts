@@ -151,6 +151,36 @@ export function createGradeApi() {
         targetType: string
         gradeItemId: string | null
       }) => ipcRenderer.invoke("grade:deleteGradeOverride", data),
+      getGradeConstraints: (gradeId: string) =>
+        ipcRenderer.invoke("grade:getGradeConstraints", gradeId),
+      createGradeConstraint: (data: {
+        gradeId: string
+        constraint: {
+          name: string
+          kind: string
+          config: string
+          expression: string
+          color: string
+          message: string | null
+          enabled: boolean
+          order: number
+        }
+      }) => ipcRenderer.invoke("grade:createGradeConstraint", data),
+      updateGradeConstraint: (data: {
+        id: string
+        constraint: Partial<{
+          name: string
+          kind: string
+          config: string
+          expression: string
+          color: string
+          message: string | null
+          enabled: boolean
+          order: number
+        }>
+      }) => ipcRenderer.invoke("grade:updateGradeConstraint", data),
+      deleteGradeConstraint: (id: string) =>
+        ipcRenderer.invoke("grade:deleteGradeConstraint", id),
       getGradeItemExclusions: (gradeId: string) =>
         ipcRenderer.invoke("grade:getGradeItemExclusions", gradeId),
       setGradeItemExclusion: (data: {

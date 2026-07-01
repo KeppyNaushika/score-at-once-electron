@@ -1,14 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { useBoundaries } from "@/hooks/grades/useBoundaries"
 
 import { BoundaryEditor } from "./BoundaryEditor"
 import { BoundaryPresetSelector } from "./BoundaryPresetSelector"
+import { ConstraintRulesEditor } from "./ConstraintRulesEditor"
 
 interface BoundariesContainerProps {
   gradeId: string
@@ -17,7 +18,6 @@ interface BoundariesContainerProps {
 export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
   const { exam, boundarySets, loading, saveBoundarySet } =
     useBoundaries(gradeId)
-  const [activeTab, setActiveTab] = useState("")
 
   if (loading || !exam) {
     return (
@@ -28,7 +28,6 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
   }
 
   const gradeItems = exam.gradeItems
-  const effectiveTab = activeTab || gradeItems[0]?.id || ""
 
   const getExistingBoundaries = (
     targetType: string,
@@ -48,14 +47,6 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
     await saveBoundarySet({ targetType, gradeItemId, boundaries })
   }
 
-  const handlePreset = (
-    targetType: string,
-    gradeItemId: string | null,
-    boundaries: { label: string; minPercentage: number; order: number }[]
-  ) => {
-    handleSave(targetType, gradeItemId, boundaries)
-  }
-
   return (
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">成績境界設定</h2>
@@ -63,33 +54,32 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
         各パーセンテージ閾値以上でその成績ラベルが付与されます。
       </p>
 
-      <Tabs value={effectiveTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full">
-          {gradeItems.map((gi) => (
-            <TabsTrigger key={gi.id} value={gi.id}>
-              {gi.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
+      <div className="space-y-4">
         {gradeItems.map((gi) => (
-          <TabsContent key={gi.id} value={gi.id} className="mt-4">
-            <div className="mb-4">
-              <BoundaryPresetSelector
-                onSelect={(boundaries) =>
-                  handlePreset("grade_item", gi.id, boundaries)
-                }
-              />
-            </div>
+          <Card key={gi.id} className="space-y-3 p-4">
+            <h3 className="text-base font-semibold">{gi.name}</h3>
+            <BoundaryPresetSelector
+              onSelect={(boundaries) =>
+                handleSave("grade_item", gi.id, boundaries)
+              }
+            />
             <BoundaryEditor
               boundaries={getExistingBoundaries("grade_item", gi.id)}
               onSave={(boundaries) =>
                 handleSave("grade_item", gi.id, boundaries)
               }
             />
-          </TabsContent>
+          </Card>
         ))}
-      </Tabs>
+      </div>
+
+      <Separator className="my-8" />
+
+      <ConstraintRulesEditor
+        gradeId={gradeId}
+        gradeItems={gradeItems}
+        boundarySets={boundarySets}
+      />
 
       <div className="mt-8 flex justify-end">
         <Button asChild>

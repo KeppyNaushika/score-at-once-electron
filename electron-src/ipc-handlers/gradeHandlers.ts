@@ -4,6 +4,7 @@
 
 import { dialog } from "electron"
 
+import type { GradeConstraintInput } from "../../src/types/grade.types"
 import { createGradeArchive } from "../lib/export/grade-archive"
 import { exportGradeExcel } from "../lib/export/gradeExcel"
 import {
@@ -25,6 +26,12 @@ import {
   getBoundarySetsByGradeId,
   upsertBoundarySet,
 } from "../lib/prisma/gradeBoundary"
+import {
+  createGradeConstraint,
+  deleteGradeConstraint,
+  getGradeConstraints,
+  updateGradeConstraint,
+} from "../lib/prisma/gradeConstraint"
 import {
   batchUpdateAbsentPolicy,
   calculateSourceMaxScore,
@@ -381,6 +388,32 @@ export function setupGradeHandlers(): void {
       return deleteGradeOverride(data)
     }
   )
+
+  // =====================================================================
+  // GradeConstraint（観点間の制約ルール）
+  // =====================================================================
+
+  registerHandler("grade:getGradeConstraints", async (gradeId: string) => {
+    return getGradeConstraints(gradeId)
+  })
+
+  registerHandler(
+    "grade:createGradeConstraint",
+    async (data: { gradeId: string; constraint: GradeConstraintInput }) => {
+      return createGradeConstraint(data)
+    }
+  )
+
+  registerHandler(
+    "grade:updateGradeConstraint",
+    async (data: { id: string; constraint: Partial<GradeConstraintInput> }) => {
+      return updateGradeConstraint(data)
+    }
+  )
+
+  registerHandler("grade:deleteGradeConstraint", async (id: string) => {
+    return deleteGradeConstraint(id)
+  })
 
   // =====================================================================
   // GradeItemExclusion

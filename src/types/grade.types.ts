@@ -184,3 +184,75 @@ export interface GradeCalculationResult {
     boundaries: { label: string; minPercentage: number }[]
   }[]
 }
+
+// ─────────────────────────────────────────────────────────────
+// 観点間の制約ルール（不適切な観点/評定の組合せを検知して着色）
+// ─────────────────────────────────────────────────────────────
+
+/** 制約ルールの種別 */
+export type GradeConstraintKind =
+  | "consistency" // 観点集計と評定の整合（Excel流: A=5,B=3,C=1の平均など）
+  | "mutual_exclusion" // 特定ラベルの混在禁止（A・C混在など）
+  | "expression" // 上級者向け自由記述式
+
+/** 整合ルールの設定 */
+export interface ConsistencyConfig {
+  /** ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }） */
+  labelValues: Record<string, number>
+  /** 観点の集計方法 */
+  aggregate: "average" | "sum"
+  /** 許容する評定との差（これを超えたら違反） */
+  tolerance: number
+  /**
+   * 比較先の「評定」にあたる GradeItem 名（例「評定」）。
+   * その項目を評定とみなし、下の viewpointItems を集計して比較する。
+   */
+  target: string
+  /**
+   * 集計対象の観点 GradeItem 名の配列（例 知識・技能／思考・判断・表現／態度）。
+   * 空/未指定なら target 以外の全 GradeItem を対象にする。
+   */
+  viewpointItems?: string[]
+}
+
+/** 混在禁止ルールの設定 */
+export interface MutualExclusionConfig {
+  /** 同時に現れてはいけないラベル集合（例 ["A", "C"]） */
+  labels: string[]
+}
+
+/** DBに保存される制約ルール1件 */
+export interface GradeConstraintData {
+  id: string
+  gradeId: string
+  name: string
+  kind: GradeConstraintKind
+  /** kind別の設定JSON文字列（ConsistencyConfig / MutualExclusionConfig） */
+  config: string
+  /** kind="expression" 時の式 */
+  expression: string
+  color: string
+  message: string | null
+  enabled: boolean
+  order: number
+}
+
+/** 制約ルールの作成・更新入力 */
+export interface GradeConstraintInput {
+  name: string
+  kind: GradeConstraintKind
+  config: string
+  expression: string
+  color: string
+  message: string | null
+  enabled: boolean
+  order: number
+}
+
+/** 1生徒×1ルールの違反結果 */
+export interface ConstraintViolation {
+  constraintId: string
+  name: string
+  color: string
+  message: string | null
+}

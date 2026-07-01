@@ -9,13 +9,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { evaluateConstraints } from "@/lib/gradeConstraints"
 import type {
   GradeCalculationResult,
+  GradeConstraintData,
   GradeItemResult,
 } from "@/types/grade.types"
 
 interface ResultsTableProps {
   result: GradeCalculationResult
+  constraints?: GradeConstraintData[]
   onGradeOverride: (params: {
     studentId: string
     targetType: "grade_item" | "overall"
@@ -282,9 +285,25 @@ function EditableGradeLabel({
  * 生徒ごとの各評価項目パーセンテージ・成績ラベル・総合成績を表示する。
  * 各列ヘッダーをクリックしてソート可能。
  */
-export function ResultsTable({ result, onGradeOverride }: ResultsTableProps) {
+export function ResultsTable({
+  result,
+  constraints = [],
+  onGradeOverride,
+}: ResultsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("registrationOrder")
   const [sortAsc, setSortAsc] = useState(true)
+
+  // 制約ルール違反を評価（studentId → 違反一覧）
+  const violationsByStudent = useMemo(
+    () => evaluateConstraints(result, constraints).violations,
+    [result, constraints]
+  )
+
+  // 凡例に表示する有効ルール
+  const activeConstraints = useMemo(
+    () => constraints.filter((c) => c.enabled),
+    [constraints]
+  )
 
   // 各列に対応するboundaryLabels（minPercentage降順）を算出
   const boundaryLabelsMap = useMemo(() => {
@@ -347,97 +366,154 @@ export function ResultsTable({ result, onGradeOverride }: ResultsTableProps) {
   )
 
   return (
-    <div className="mt-6 overflow-x-auto rounded-lg border">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50">
-          <tr>
-            <SortHeader label="順序" sortId="registrationOrder" />
-            <SortHeader label="番号" sortId="attendanceNumber" />
-            <th className="px-2 py-2 text-left font-medium">氏名</th>
-            {result.gradeItems.map((gradeItem) => (
-              <SortHeader
-                key={gradeItem.id}
-                label={gradeItem.name}
-                sortId={gradeItem.id}
-              />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedStudents.map((student) => (
-            <tr key={student.studentId} className="border-t">
-              <td className="text-muted-foreground px-2 py-1.5 text-center">
-                {result.students.indexOf(student) + 1}
-              </td>
-              <td className="px-2 py-1.5 text-center">
-                {student.attendanceNumber ?? "-"}
-              </td>
-              <td className="px-2 py-1.5">
-                {student.lastName} {student.firstName}
-              </td>
-              {result.gradeItems.map((gradeItem) => {
-                const itemResult = student.gradeItemResults.find(
-                  (r) => r.gradeItemId === gradeItem.id
-                )
-
-                // 除外表示
-                if (itemResult?.isExcluded) {
-                  return (
-                    <td key={gradeItem.id} className="px-2 py-1.5 text-center">
-                      <span className="text-muted-foreground text-xs italic">
-                        除外
-                      </span>
-                    </td>
-                  )
-                }
-
-                const hasEstimated = itemResult?.sourceScores.some(
-                  (s) => s.isEstimated
-                )
-                return (
-                  <td key={gradeItem.id} className="px-2 py-1.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {itemResult ? (
-                        <GradeItemBreakdownPopover
-                          itemResult={itemResult}
-                          hasEstimated={!!hasEstimated}
-                        />
-                      ) : (
-                        <span className="w-12 text-right text-xs tabular-nums">
-                          -
-                        </span>
-                      )}
-                      <EditableGradeLabel
-                        gradeLabel={itemResult?.gradeLabel ?? null}
-                        originalLabel={itemResult?.originalGradeLabel ?? null}
-                        overrideLabel={itemResult?.overrideGradeLabel ?? null}
-                        boundaryLabels={boundaryLabelsMap[gradeItem.id] ?? []}
-                        onCommit={(newLabel) =>
-                          onGradeOverride({
-                            studentId: student.studentId,
-                            targetType: "grade_item",
-                            gradeItemId: gradeItem.id,
-                            overrideLabel: newLabel,
-                          })
-                        }
-                      />
-                    </div>
-                  </td>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {result.students.some((s) =>
-        s.gradeItemResults.some((gi) =>
-          gi.sourceScores.some((ss) => ss.isEstimated)
-        )
-      ) && (
-        <div className="border-t px-3 py-1.5">
-          <span className="text-xs text-amber-600">* 欠測推定を含む</span>
-        </div>
+    <>
+      {activeConstraints.length > 0 && (
+        <ConstraintLegend constraints={activeConstraints} />
       )}
+      <div className="mt-6 overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <SortHeader label="順序" sortId="registrationOrder" />
+              <SortHeader label="番号" sortId="attendanceNumber" />
+              <th className="px-2 py-2 text-left font-medium">氏名</th>
+              {result.gradeItems.map((gradeItem) => (
+                <SortHeader
+                  key={gradeItem.id}
+                  label={gradeItem.name}
+                  sortId={gradeItem.id}
+                />
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sortedStudents.map((student) => {
+              const violations =
+                violationsByStudent.get(student.studentId) ?? []
+              const rowColor = violations[0]?.color
+              const rowTitle =
+                violations.length > 0
+                  ? violations
+                      .map((v) =>
+                        v.message ? `${v.name}: ${v.message}` : v.name
+                      )
+                      .join("\n")
+                  : undefined
+              return (
+                <tr
+                  key={student.studentId}
+                  className="border-t"
+                  style={rowColor ? { backgroundColor: rowColor } : undefined}
+                  title={rowTitle}
+                >
+                  <td className="text-muted-foreground px-2 py-1.5 text-center">
+                    {result.students.indexOf(student) + 1}
+                  </td>
+                  <td className="px-2 py-1.5 text-center">
+                    {student.attendanceNumber ?? "-"}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    {student.lastName} {student.firstName}
+                  </td>
+                  {result.gradeItems.map((gradeItem) => {
+                    const itemResult = student.gradeItemResults.find(
+                      (r) => r.gradeItemId === gradeItem.id
+                    )
+
+                    // 除外表示
+                    if (itemResult?.isExcluded) {
+                      return (
+                        <td
+                          key={gradeItem.id}
+                          className="px-2 py-1.5 text-center"
+                        >
+                          <span className="text-muted-foreground text-xs italic">
+                            除外
+                          </span>
+                        </td>
+                      )
+                    }
+
+                    const hasEstimated = itemResult?.sourceScores.some(
+                      (s) => s.isEstimated
+                    )
+                    return (
+                      <td
+                        key={gradeItem.id}
+                        className="px-2 py-1.5 text-center"
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          {itemResult ? (
+                            <GradeItemBreakdownPopover
+                              itemResult={itemResult}
+                              hasEstimated={!!hasEstimated}
+                            />
+                          ) : (
+                            <span className="w-12 text-right text-xs tabular-nums">
+                              -
+                            </span>
+                          )}
+                          <EditableGradeLabel
+                            gradeLabel={itemResult?.gradeLabel ?? null}
+                            originalLabel={
+                              itemResult?.originalGradeLabel ?? null
+                            }
+                            overrideLabel={
+                              itemResult?.overrideGradeLabel ?? null
+                            }
+                            boundaryLabels={
+                              boundaryLabelsMap[gradeItem.id] ?? []
+                            }
+                            onCommit={(newLabel) =>
+                              onGradeOverride({
+                                studentId: student.studentId,
+                                targetType: "grade_item",
+                                gradeItemId: gradeItem.id,
+                                overrideLabel: newLabel,
+                              })
+                            }
+                          />
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {result.students.some((s) =>
+          s.gradeItemResults.some((gi) =>
+            gi.sourceScores.some((ss) => ss.isEstimated)
+          )
+        ) && (
+          <div className="border-t px-3 py-1.5">
+            <span className="text-xs text-amber-600">* 欠測推定を含む</span>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+/** 制約ルールの色凡例 */
+function ConstraintLegend({
+  constraints,
+}: {
+  constraints: GradeConstraintData[]
+}) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+      <span className="text-muted-foreground">制約ルール:</span>
+      {constraints.map((c) => (
+        <span key={c.id} className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded border"
+            style={{ backgroundColor: c.color }}
+          />
+          {c.name}
+        </span>
+      ))}
     </div>
   )
 }

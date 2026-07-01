@@ -84,6 +84,9 @@ export async function collectGradeArchiveData(
           gradeItem: { select: { name: true } },
         },
       },
+      gradeConstraints: {
+        orderBy: { order: "asc" },
+      },
       exportSettings: true,
     },
   })
@@ -206,6 +209,17 @@ export async function collectGradeArchiveData(
     overrideLabel: ov.overrideLabel,
   }))
 
+  const gradeConstraints = gp.gradeConstraints.map((c) => ({
+    name: c.name,
+    kind: c.kind,
+    config: c.config,
+    expression: c.expression,
+    color: c.color,
+    message: c.message,
+    enabled: c.enabled,
+    order: c.order,
+  }))
+
   return {
     gradeData: {
       grade: {
@@ -223,6 +237,8 @@ export async function collectGradeArchiveData(
       gradeItemExclusions:
         gradeItemExclusions.length > 0 ? gradeItemExclusions : undefined,
       gradeOverrides: gradeOverrides.length > 0 ? gradeOverrides : undefined,
+      gradeConstraints:
+        gradeConstraints.length > 0 ? gradeConstraints : undefined,
     },
     courseworkArchive,
     boundariesData: { boundarySets },

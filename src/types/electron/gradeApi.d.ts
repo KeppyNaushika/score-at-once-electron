@@ -246,6 +246,30 @@ export interface GradeAPI {
       targetType: string
       gradeItemId: string | null
     }) => Promise<{ success: boolean; error?: string }>
+    getGradeConstraints: (gradeId: string) => Promise<{
+      success: boolean
+      constraints?: import("../grade.types").GradeConstraintData[]
+      error?: string
+    }>
+    createGradeConstraint: (data: {
+      gradeId: string
+      constraint: import("../grade.types").GradeConstraintInput
+    }) => Promise<{
+      success: boolean
+      constraint?: import("../grade.types").GradeConstraintData
+      error?: string
+    }>
+    updateGradeConstraint: (data: {
+      id: string
+      constraint: Partial<import("../grade.types").GradeConstraintInput>
+    }) => Promise<{
+      success: boolean
+      constraint?: import("../grade.types").GradeConstraintData
+      error?: string
+    }>
+    deleteGradeConstraint: (
+      id: string
+    ) => Promise<{ success: boolean; error?: string }>
     getGradeItemExclusions: (gradeId: string) => Promise<{
       success: boolean
       exclusions?: Array<{

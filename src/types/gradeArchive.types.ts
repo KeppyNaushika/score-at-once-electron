@@ -76,6 +76,17 @@ export interface ArchiveGradeData {
     gradeItemName: string | null
     overrideLabel: string
   }[]
+  /** 観点間の制約ルール（後方互換: v1.7.0+。古いアーカイブではundefined） */
+  gradeConstraints?: {
+    name: string
+    kind: string
+    config: string
+    expression: string
+    color: string
+    message: string | null
+    enabled: boolean
+    order: number
+  }[]
 }
 
 export interface ArchiveGradeItem {
@@ -165,8 +176,7 @@ export interface ArchiveCourseworkItem {
 
 /** v1.4.0+: インポート時に資料ごとにユーザーが選ぶ取り込み方法 */
 export type CourseworkImportDecision =
-  | { action: "reuse"; existingId: string }
-  | { action: "new" }
+  { action: "reuse"; existingId: string } | { action: "new" }
 
 /** アーカイブ内の資料uuid → ユーザー決定 */
 export type CourseworkImportDecisions = Record<string, CourseworkImportDecision>
@@ -246,17 +256,21 @@ export interface GradeArchiveImportPreview {
  * - 1.5.0: courseworks.json を coursework-archive 形式（UUIDベース）で内包
  * - 1.6.0: GradeDataSource.maxScore 列を廃止（満点はライブ算出）。外部成績の構造は
  *   1.5.0 と同形のため専用 transformer は無し（ArchiveDataSource.maxScore は optional で旧読込互換）。
+ * - 1.7.0: 観点間の制約ルール（GradeConstraint）を追加。gradeConstraints は optional で
+ *   旧アーカイブ読込時は空配列扱い。構造は加算的なため専用 transformer は無し。
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
  */
-export type GradeArchiveVersion = "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.6.0"
+export type GradeArchiveVersion =
+  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.7.0"
 export const GRADE_SUPPORTED_VERSIONS: readonly GradeArchiveVersion[] = [
   "1.3.0",
   "1.4.0",
   "1.5.0",
   "1.6.0",
+  "1.7.0",
 ] as const
 
 export interface GradeTransformResult {
