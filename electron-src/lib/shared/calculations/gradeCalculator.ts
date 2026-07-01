@@ -65,6 +65,16 @@ export async function calculateGrades(gradeId: string): Promise<{
                     letterScales: { orderBy: { order: "asc" } },
                   },
                 },
+                coursework: {
+                  include: {
+                    items: {
+                      include: {
+                        scores: true,
+                        letterScales: { orderBy: { order: "asc" } },
+                      },
+                    },
+                  },
+                },
               },
               orderBy: { order: "asc" },
             },
@@ -519,6 +529,19 @@ async function getRawScore(
       }[]
       letterScales: { label: string; score: unknown }[]
     } | null
+    coursework?: {
+      items: {
+        maxScore: unknown
+        inputMode: string
+        scores: {
+          studentId: string
+          score: unknown
+          letterValue?: string | null
+          adjustment?: unknown
+        }[]
+        letterScales: { label: string; score: unknown }[]
+      }[]
+    } | null
   },
   examDataCache: Map<string, ExamDataCache>
 ): Promise<number | null> {
@@ -546,8 +569,41 @@ async function getRawScore(
     )
   } else if (ds.type === "coursework" && ds.courseworkItem) {
     return getCourseworkRawScore(studentId, ds.courseworkItem)
+  } else if (ds.type === "coursework_total" && ds.coursework) {
+    return getCourseworkTotalRawScore(studentId, ds.coursework.items)
   }
   return null
+}
+
+/**
+ * coursework_total型データソース（試験外成績資料の全評価項目合計）の実スコアを算出する。
+ * 各評価項目のスコアを getCourseworkRawScore で求めて合算する。
+ * exam_total と同様、採点済み項目のみを合算し、全項目が未入力なら null を返す。
+ */
+function getCourseworkTotalRawScore(
+  studentId: string,
+  items: {
+    maxScore: unknown
+    inputMode: string
+    scores: {
+      studentId: string
+      score: unknown
+      letterValue?: string | null
+      adjustment?: unknown
+    }[]
+    letterScales: { label: string; score: unknown }[]
+  }[]
+): number | null {
+  let total = 0
+  let hasScored = false
+  for (const item of items) {
+    const score = getCourseworkRawScore(studentId, item)
+    if (score !== null) {
+      hasScored = true
+      total += score
+    }
+  }
+  return hasScored ? total : null
 }
 
 /**

@@ -70,6 +70,7 @@ export function useDataSources(gradeId: string) {
       subtotalId?: string
       cropRegionId?: string
       courseworkItemId?: string
+      courseworkId?: string
       name: string
       weight: number
     }) => {

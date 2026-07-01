@@ -269,6 +269,31 @@ export async function importGradeArchive(
               }
             }
 
+            // Coursework（資料全体）解決（uuid一次・名前二次）。
+            //   exam/subtotal/cropRegion と同じく import 時に直接照合する。
+            let courseworkId: string | null = null
+            if (dsData.type === "coursework_total") {
+              if (dsData.courseworkId) {
+                const byId = await tx.coursework.findUnique({
+                  where: { id: dsData.courseworkId },
+                  select: { id: true },
+                })
+                courseworkId = byId?.id ?? null
+              }
+              if (!courseworkId && dsData.courseworkName) {
+                const byName = await tx.coursework.findFirst({
+                  where: { name: dsData.courseworkName },
+                  select: { id: true },
+                })
+                courseworkId = byName?.id ?? null
+              }
+              if (!courseworkId) {
+                warnings.push(
+                  `成績項目「${giData.name}」のデータソース「${dsData.name}」: 参照先の試験外成績資料が見つかりませんでした`
+                )
+              }
+            }
+
             let examId: string | null = null
             if (
               dsData.examName &&
@@ -319,6 +344,7 @@ export async function importGradeArchive(
                 subtotalId,
                 cropRegionId,
                 courseworkItemId,
+                courseworkId,
                 name: dsData.name,
                 // v1.6.0: GradeDataSource.maxScore 列は廃止。満点はライブ算出するため挿入しない。
                 weight: dsData.weight,

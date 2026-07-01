@@ -82,6 +82,7 @@ export function createGradeApi() {
         subtotalId?: string
         cropRegionId?: string
         courseworkItemId?: string
+        courseworkId?: string
         name: string
         weight: number
         absentMethod?: string

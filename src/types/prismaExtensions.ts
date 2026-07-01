@@ -306,6 +306,10 @@ export type GradeDataSourceMaxScoreRef = Pick<GradeDataSource, "type"> &
   Partial<
     Pick<
       GradeDataSource,
-      "examId" | "subtotalId" | "cropRegionId" | "courseworkItemId"
+      | "examId"
+      | "subtotalId"
+      | "cropRegionId"
+      | "courseworkItemId"
+      | "courseworkId"
     >
   >

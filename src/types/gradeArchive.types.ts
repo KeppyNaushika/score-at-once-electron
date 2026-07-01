@@ -96,7 +96,7 @@ export interface ArchiveGradeItem {
 }
 
 export interface ArchiveDataSource {
-  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"（旧: "manual"）
+  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"（旧: "manual"）
   name: string
   /**
    * @deprecated v1.6.0 で GradeDataSource.maxScore 列が廃止された（満点は元データから
@@ -119,11 +119,11 @@ export interface ArchiveDataSource {
   treatExpectedAsMissing?: boolean
   estimationMode?: string
   estimationSourceIds?: string[]
-  /** v1.4.0+: type==="coursework" の参照先資料uuid（照合の一次キー） */
+  /** v1.4.0+: type==="coursework"（項目参照）/ v1.8.0+: type==="coursework_total"（資料全体）の参照先資料uuid（照合の一次キー） */
   courseworkId?: string | null
   /** v1.4.0+: type==="coursework" の参照先評価項目uuid（照合の一次キー） */
   courseworkItemId?: string | null
-  /** v1.4.0+: type==="coursework" の参照先資料名（uuid不一致時の二次フォールバック） */
+  /** v1.4.0+: type==="coursework"（項目参照）/ v1.8.0+: type==="coursework_total"（資料全体）の参照先資料名（uuid不一致時の二次フォールバック） */
   courseworkName?: string | null
   /** v1.4.0+: type==="coursework" の参照先評価項目名（名前フォールバック） */
   courseworkItemName?: string | null
@@ -258,19 +258,24 @@ export interface GradeArchiveImportPreview {
  *   1.5.0 と同形のため専用 transformer は無し（ArchiveDataSource.maxScore は optional で旧読込互換）。
  * - 1.7.0: 観点間の制約ルール（GradeConstraint）を追加。gradeConstraints は optional で
  *   旧アーカイブ読込時は空配列扱い。構造は加算的なため専用 transformer は無し。
+ * - 1.8.0: 資料全体を参照する coursework_total 型 DataSource を追加。参照先資料は
+ *   既存の ArchiveDataSource.courseworkId / courseworkName（optional）で表現するため
+ *   新規フィールドは無く、旧アーカイブには coursework_total が存在しないだけなので
+ *   専用 transformer は無し（加算的変更）。
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
  */
 export type GradeArchiveVersion =
-  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.7.0"
+  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.8.0"
 export const GRADE_SUPPORTED_VERSIONS: readonly GradeArchiveVersion[] = [
   "1.3.0",
   "1.4.0",
   "1.5.0",
   "1.6.0",
   "1.7.0",
+  "1.8.0",
 ] as const
 
 export interface GradeTransformResult {

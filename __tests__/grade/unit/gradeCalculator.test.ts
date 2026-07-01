@@ -38,6 +38,13 @@ const mockCourseworkItemFindUnique = vi.fn(
         : null
     )
 )
+// computeLiveMaxScore は coursework_total 型の満点を courseworkId で全項目を
+// findMany して合算する。courseworkId → 各項目の {maxScore} を登録し、モックが返す。
+const courseworkTotalItems = new Map<string, { maxScore: unknown }[]>()
+const mockCourseworkItemFindMany = vi.fn(
+  ({ where: { courseworkId } }: { where: { courseworkId: string } }) =>
+    Promise.resolve(courseworkTotalItems.get(courseworkId) ?? [])
+)
 vi.mock("@/electron-src/lib/prisma/client", () => ({
   default: {
     grade: {
@@ -56,6 +63,8 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
     courseworkItem: {
       findUnique: (...args: [{ where: { id: string } }]) =>
         mockCourseworkItemFindUnique(...args),
+      findMany: (...args: [{ where: { courseworkId: string } }]) =>
+        mockCourseworkItemFindMany(...args),
     },
   },
 }))
@@ -1029,6 +1038,84 @@ describe("calculateGrades", () => {
     const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
     expect(ss.rawScore).toBe(75)
     expect(ss.isEstimated).toBe(false)
+  })
+
+  it("coursework_total: 資料の全評価項目のスコア・満点を合算する", async () => {
+    // 資料 cw1 は2項目（満点 50 + 30 = 80）。生徒 s1 は 40 + 30 = 70 点。
+    courseworkTotalItems.clear()
+    courseworkTotalItems.set("cw1", [{ maxScore: 50 }, { maxScore: 30 }])
+
+    const gp = {
+      id: "gp1",
+      name: "PJ",
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "資料",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "coursework_total",
+              name: "資料合計",
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              courseworkItemId: null,
+              courseworkId: "cw1",
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              courseworkItem: null,
+              coursework: {
+                items: [
+                  {
+                    maxScore: 50,
+                    inputMode: "numeric",
+                    scores: [{ studentId: "s1", score: 40 }],
+                    letterScales: [],
+                  },
+                  {
+                    maxScore: 30,
+                    inputMode: "numeric",
+                    scores: [{ studentId: "s1", score: 30 }],
+                    letterScales: [],
+                  },
+                ],
+              },
+              weight: 100,
+              order: 0,
+              absentMethod: "null",
+              absentRatio: 1,
+              absentOffset: 0,
+              treatExpectedAsMissing: false,
+              estimationMode: "all",
+              estimationSourceIds: "[]",
+            },
+          ],
+        },
+      ],
+      boundarySets: [],
+      gradeClasses: [],
+    }
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([
+      buildStudent({ id: "s1" }),
+      buildStudent({ id: "s2", studentNumber: "S002" }),
+    ])
+
+    const result = await calculateGrades("gp1")
+
+    // s1: 合算 70点 / 満点 80点 → 換算 70/80*100 = 87.5
+    const s1 = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    expect(s1.rawScore).toBe(70)
+    expect(s1.maxScore).toBe(80)
+    expect(s1.weightedScore).toBe(87.5)
+
+    // s2: 全項目未入力 → rawScore は null（absentMethod="null" のため推定なし）
+    const s2Item = result.result!.students[1].gradeItemResults[0]
+    expect(s2Item.sourceScores[0].rawScore).toBeNull()
+    expect(s2Item.isAllMissing).toBe(true)
   })
 })
 
