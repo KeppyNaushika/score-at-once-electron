@@ -919,7 +919,7 @@ describe("calculateGrades", () => {
     expect(ss.adjustmentReason).toBe("期限超過")
   })
 
-  it("加減点: letterモードの点数にも加算される（上限クランプ）", async () => {
+  it("加減点: letterモードの点数にも加算され、配点超えも反映される", async () => {
     const gp = buildGrade({
       gradeItems: [
         {
@@ -956,8 +956,49 @@ describe("calculateGrades", () => {
     const result = await calculateGrades("gp1")
     const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
 
-    // A(100) + 20 = 120 → clamp 100
-    expect(ss.rawScore).toBe(100)
+    // A(100) + 20 = 120。上限クランプを行わないため配点(100)超えがそのまま反映される
+    expect(ss.rawScore).toBe(120)
+    // 換算得点も weight(100) を超える（120/100*100 = 120）
+    expect(ss.weightedScore).toBe(120)
+  })
+
+  it("加減点: 減点で0未満になっても下限クランプせずそのまま反映される", async () => {
+    const gp = buildGrade({
+      gradeItems: [
+        {
+          id: "gi1",
+          name: "提出物",
+          order: 0,
+          dataSources: [
+            {
+              id: "ds1",
+              type: "manual",
+              name: "レポート",
+              maxScore: 100,
+              weight: 100,
+              examId: null,
+              subtotalId: null,
+              cropRegionId: null,
+              exam: null,
+              subtotal: null,
+              cropRegion: null,
+              inputMode: "numeric",
+              manualScores: [{ studentId: "s1", score: 10, adjustment: -30 }],
+              order: 0,
+            },
+          ],
+        },
+      ],
+    })
+    mockFindUnique.mockResolvedValue(gp)
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+    const result = await calculateGrades("gp1")
+    const ss = result.result!.students[0].gradeItemResults[0].sourceScores[0]
+
+    // 10 - 30 = -20。下限クランプを行わないため負値もそのまま反映される
+    expect(ss.rawScore).toBe(-20)
+    expect(ss.weightedScore).toBe(-20)
   })
 
   it("コメントがsourceScoresに添付される", async () => {
