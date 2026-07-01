@@ -101,8 +101,7 @@ function EditableCell<T>({
   }
 
   const meta = column.columnDef.meta as
-    | { placeholder?: string; validate?: (value: string) => boolean }
-    | undefined
+    { placeholder?: string; validate?: (value: string) => boolean } | undefined
 
   // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
   const strValue = String(value ?? "")
@@ -316,7 +315,11 @@ export function EditableTable<T extends object>({
     e.preventDefault()
 
     const paste = e.clipboardData.getData("text")
-    const rows = paste.split("\n").filter((row) => row.trim() !== "")
+    // CRLF/CR を LF に正規化してから分割（末尾セルに \r が混入するのを防ぐ）
+    const rows = paste.replace(/\r\n?/g, "\n").split("\n")
+    // 末尾の終端改行による空行のみ除去。途中の空行は行対応を保つため残す
+    // （空行を除去すると空白セルの分だけ以降の行が上に詰まりズレる）
+    while (rows.length > 0 && rows[rows.length - 1].trim() === "") rows.pop()
 
     if (rows.length === 0) return
 
