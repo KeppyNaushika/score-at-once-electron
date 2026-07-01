@@ -15,6 +15,9 @@ import {
 
 type DataSourceType = "exam_total" | "subtotal" | "crop_region" | "coursework"
 
+/** 資料の評価項目セレクトで「資料全体（全項目合計）」を表すセンチネル値 */
+const COURSEWORK_WHOLE = "__whole__"
+
 interface AddDataSourceInlineProps {
   gradeItemId: string
   onCreate: (data: {
@@ -24,6 +27,7 @@ interface AddDataSourceInlineProps {
     subtotalId?: string
     cropRegionId?: string
     courseworkItemId?: string
+    courseworkId?: string
     name: string
     weight: number
   }) => Promise<{ success: boolean }>
@@ -171,14 +175,24 @@ export function AddDataSourceInline({
     autoSeedWeight()
   }, [autoSeedWeight])
 
-  // coursework型: 評価項目選択時に換算満点・名前を補完
+  // coursework型: 評価項目（または資料全体）選択時に換算満点・名前を補完
   useEffect(() => {
     if (type !== "coursework") return
     const coursework = courseworks.find((c) => c.id === selectedCourseworkId)
-    const item = coursework?.items.find(
-      (i) => i.id === selectedCourseworkItemId
-    )
-    if (coursework && item) {
+    if (!coursework) return
+    if (selectedCourseworkItemId === COURSEWORK_WHOLE) {
+      // 資料全体: 換算満点の初期値は全評価項目の満点合計、名前は「資料名(合計)」
+      // maxScore は IPC 経由で文字列化され得る（Prisma Decimal）ため必ず数値化して加算する
+      const totalMax = coursework.items.reduce(
+        (sum, i) => sum + Number(i.maxScore),
+        0
+      )
+      setWeight((prev) => (prev ? prev : String(totalMax)))
+      setName(`${coursework.name}(合計)`)
+      return
+    }
+    const item = coursework.items.find((i) => i.id === selectedCourseworkItemId)
+    if (item) {
       setWeight((prev) => (prev ? prev : String(item.maxScore)))
       setName(`${coursework.name}(${item.name})`)
     }
@@ -220,9 +234,12 @@ export function AddDataSourceInline({
     if (!name.trim() || !weight) return
     setAdding(true)
     try {
+      // 資料全体が選ばれた場合は coursework_total 型（資料IDを参照）へ切り替える
+      const isWhole =
+        type === "coursework" && selectedCourseworkItemId === COURSEWORK_WHOLE
       const data: Parameters<typeof onCreate>[0] = {
         gradeItemId,
-        type,
+        type: isWhole ? "coursework_total" : type,
         name: name.trim(),
         weight: Number(weight),
       }
@@ -236,7 +253,11 @@ export function AddDataSourceInline({
         data.cropRegionId = selectedCropRegionId || undefined
       }
       if (type === "coursework") {
-        data.courseworkItemId = selectedCourseworkItemId || undefined
+        if (isWhole) {
+          data.courseworkId = selectedCourseworkId || undefined
+        } else {
+          data.courseworkItemId = selectedCourseworkItemId || undefined
+        }
       }
       const result = await onCreate(data)
       if (result.success) {
@@ -414,7 +435,7 @@ export function AddDataSourceInline({
                 ))}
               </SelectContent>
             </Select>
-            {selectedCourseworkItems.length > 0 && (
+            {selectedCourseworkId && (
               <Select
                 value={selectedCourseworkItemId}
                 onValueChange={setSelectedCourseworkItemId}
@@ -423,6 +444,7 @@ export function AddDataSourceInline({
                   <SelectValue placeholder="評価項目" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={COURSEWORK_WHOLE}>（資料全体）</SelectItem>
                   {selectedCourseworkItems.map((i) => (
                     <SelectItem key={i.id} value={i.id}>
                       {i.name}

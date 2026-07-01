@@ -15,6 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
   subtotal: "小計",
   crop_region: "設問",
   coursework: "資料",
+  coursework_total: "資料合計",
 }
 
 interface DataSourceRowProps {
@@ -47,7 +48,8 @@ export function DataSourceRow({
   const [name, setName] = useState(dataSource.name)
   const [weight, setWeight] = useState(String(dataSource.weight))
 
-  const isCoursework = dataSource.type === "coursework"
+  const isCoursework =
+    dataSource.type === "coursework" || dataSource.type === "coursework_total"
   // 満点は元データ（設問配点 / 評価項目満点）からライブ算出した値をバックエンドが
   // 全型で dataSource.maxScore に載せて返す。ここでは表示のみで編集不可。
   const displayMaxScore = dataSource.maxScore
@@ -114,6 +116,9 @@ export function DataSourceRow({
     }
     if (dataSource.courseworkItem) {
       return `${dataSource.courseworkItem.coursework.name} > ${dataSource.courseworkItem.name}`
+    }
+    if (dataSource.coursework) {
+      return `${dataSource.coursework.name} > 全項目`
     }
     return null
   })()

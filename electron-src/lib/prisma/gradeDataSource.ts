@@ -40,6 +40,7 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
             _count: { select: { scores: true, gradeDataSources: true } },
           },
         },
+        coursework: { select: { id: true, name: true } },
       },
       orderBy: { order: "asc" },
     })
@@ -58,11 +59,12 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
  */
 export async function createDataSource(data: {
   gradeItemId: string
-  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"
   examId?: string
   subtotalId?: string
   cropRegionId?: string
   courseworkItemId?: string
+  courseworkId?: string
   name: string
   weight: number
   absentMethod?: string
@@ -88,6 +90,7 @@ export async function createDataSource(data: {
         subtotalId: data.subtotalId,
         cropRegionId: data.cropRegionId,
         courseworkItemId: data.courseworkItemId,
+        courseworkId: data.courseworkId,
         name: data.name,
         weight: data.weight,
         order: nextOrder,
@@ -121,6 +124,7 @@ export async function createDataSource(data: {
             _count: { select: { scores: true, gradeDataSources: true } },
           },
         },
+        coursework: { select: { id: true, name: true } },
       },
     })
 
@@ -183,6 +187,7 @@ export async function updateDataSource(
             _count: { select: { scores: true, gradeDataSources: true } },
           },
         },
+        coursework: { select: { id: true, name: true } },
       },
     })
 
@@ -413,6 +418,16 @@ export async function computeLiveMaxScore(
     return Number(item?.maxScore ?? 0)
   }
 
+  // coursework_total: 資料全体（全評価項目）の満点合計
+  if (ds.type === "coursework_total") {
+    if (!ds.courseworkId) return 0
+    const items = await prisma.courseworkItem.findMany({
+      where: { courseworkId: ds.courseworkId },
+      select: { maxScore: true },
+    })
+    return items.reduce((sum, item) => sum + Number(item.maxScore), 0)
+  }
+
   // crop_region: 設問の配点
   if (ds.type === "crop_region") {
     if (!ds.cropRegionId) return 0
@@ -462,6 +477,7 @@ export async function calculateSourceMaxScore(data: {
   subtotalId?: string
   cropRegionId?: string
   courseworkItemId?: string
+  courseworkId?: string
 }): Promise<{ success: boolean; maxScore?: number; error?: string }> {
   try {
     return { success: true, maxScore: await computeLiveMaxScore(data) }

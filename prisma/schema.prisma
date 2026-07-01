@@ -740,16 +740,18 @@ model GradeStudent {
   @@index([gradeId, customOrder])
 }
 
-/// 成績データソース（5種: exam_total / subtotal / crop_region / coursework）
+/// 成績データソース（6種: exam_total / subtotal / crop_region / coursework / coursework_total）
 /// coursework型は CourseworkItem（試験外成績資料の評価項目）を参照する
+/// coursework_total型は Coursework（試験外成績資料）全体を参照し、全評価項目のスコアを合算する
 model GradeDataSource {
   id                     String   @id @default(uuid())
   gradeItemId            String
-  type                   String // "exam_total" | "subtotal" | "crop_region" | "coursework"
+  type                   String // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"
   examId                 String?
   subtotalId             String?
   cropRegionId           String?
   courseworkItemId       String?
+  courseworkId           String?
   name                   String
   weight                 Decimal
   order                  Int      @default(0)
@@ -767,12 +769,14 @@ model GradeDataSource {
   subtotal       Subtotal?       @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
   cropRegion     CropRegion?     @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
   courseworkItem CourseworkItem? @relation(fields: [courseworkItemId], references: [id], onDelete: SetNull)
+  coursework     Coursework?     @relation(fields: [courseworkId], references: [id], onDelete: SetNull)
 
   @@index([gradeItemId])
   @@index([examId])
   @@index([subtotalId])
   @@index([cropRegionId])
   @@index([courseworkItemId])
+  @@index([courseworkId])
 }
 
 /// 評価項目ごとの対象生徒除外設定
@@ -872,10 +876,11 @@ model Coursework {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  classes  CourseworkClass[]
-  students CourseworkStudent[]
-  tags     CourseworkTag[]
-  items    CourseworkItem[]
+  classes          CourseworkClass[]
+  students         CourseworkStudent[]
+  tags             CourseworkTag[]
+  items            CourseworkItem[]
+  gradeDataSources GradeDataSource[]
 }
 
 /// 試験外成績資料の対象学級

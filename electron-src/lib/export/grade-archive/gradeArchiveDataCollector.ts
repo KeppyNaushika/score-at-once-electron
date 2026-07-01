@@ -44,6 +44,7 @@ export async function collectGradeArchiveData(
               subtotal: true,
               cropRegion: true,
               courseworkItem: { include: { coursework: true } },
+              coursework: { select: { id: true, name: true } },
             },
             orderBy: { order: "asc" },
           },
@@ -120,16 +121,22 @@ export async function collectGradeArchiveData(
         }
         return []
       })(),
+      // coursework: 評価項目参照（courseworkId は親資料 / courseworkItemId は項目）
+      // coursework_total: 資料全体参照（courseworkId のみ・項目参照は null）
       courseworkId:
         ds.type === "coursework"
           ? (ds.courseworkItem?.coursework?.id ?? null)
-          : null,
+          : ds.type === "coursework_total"
+            ? (ds.coursework?.id ?? null)
+            : null,
       courseworkItemId:
         ds.type === "coursework" ? (ds.courseworkItem?.id ?? null) : null,
       courseworkName:
         ds.type === "coursework"
           ? (ds.courseworkItem?.coursework?.name ?? null)
-          : null,
+          : ds.type === "coursework_total"
+            ? (ds.coursework?.name ?? null)
+            : null,
       courseworkItemName:
         ds.type === "coursework" ? (ds.courseworkItem?.name ?? null) : null,
     })),

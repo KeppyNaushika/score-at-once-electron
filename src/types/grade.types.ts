@@ -45,11 +45,12 @@ export type EstimationMode = "all" | "selected"
 export interface GradeDataSourceWithDetails {
   id: string
   gradeItemId: string
-  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"
   examId: string | null
   subtotalId: string | null
   cropRegionId: string | null
   courseworkItemId: string | null
+  courseworkId: string | null
   name: string
   maxScore: number
   weight: number
@@ -75,6 +76,8 @@ export interface GradeDataSourceWithDetails {
         coursework: { id: string; name: string }
       })
     | null
+  /** coursework_total型が参照する資料（全評価項目を合算する対象） */
+  coursework: { id: string; name: string } | null
 }
 
 export type { InputMode }
