@@ -610,7 +610,10 @@ function getCourseworkTotalRawScore(
  * coursework型データソース（試験外成績資料の評価項目）の実スコアを算出する。
  * - letterモード: 入力された評価記号を変換表で点数化
  * - numericモード: 入力された数値をそのまま使用
- * いずれも加点・減点(adjustment)を加算し、[0, maxScore]にクランプする。
+ * いずれも加点・減点(adjustment)を加算し、結果はクランプしない。
+ * 実際に入力された得点は配点超え（100%超）も負値（減点で0未満）もそのまま反映する。
+ * （推定で算出した代替スコアは別途 applyAdjustmentAndClamp で [0, 満点] に収める。
+ * 実入力と推定値で扱いを分け、推定値だけが配点を超えないようにするため。）
  * 満点は評価項目（CourseworkItem.maxScore）を live 参照する。
  */
 function getCourseworkRawScore(
@@ -649,8 +652,8 @@ function getCourseworkRawScore(
     cs.adjustment !== null && cs.adjustment !== undefined
       ? Number(cs.adjustment)
       : 0
-  const maxScore = Number(item.maxScore)
-  return clamp(base + adjustment, 0, maxScore)
+  // クランプしない。配点超え・負値のいずれも入力どおり成績算出に反映する。
+  return base + adjustment
 }
 
 /**
