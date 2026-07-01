@@ -663,7 +663,28 @@ model Grade {
   gradeStudents       GradeStudent[]
   gradeOverrides      GradeOverride[]
   gradeItemExclusions GradeItemExclusion[]
+  gradeConstraints    GradeConstraint[]
   exportSettings      GradeExportSettings?
+}
+
+/// 観点間の制約ルール（不適切な観点/評定の組合せを検知して着色）
+model GradeConstraint {
+  id         String   @id @default(uuid())
+  gradeId    String
+  name       String
+  kind       String // "consistency" | "mutual_exclusion" | "expression"
+  config     String   @default("{}") // ビルダー設定のJSON（kind別）
+  expression String   @default("") // kind="expression" 時のみ使用
+  color      String // 着色色（hex等）
+  message    String?
+  enabled    Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@index([gradeId])
 }
 
 /// 評価項目（知識・技能、思考・判断・表現、評定 等）

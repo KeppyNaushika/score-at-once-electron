@@ -434,6 +434,28 @@ export async function importGradeArchive(
           }
         }
 
+        // 観点間の制約ルール（v1.7.0+。式は観点名参照のためID再マップ不要）
+        if (
+          gradeData.gradeConstraints &&
+          gradeData.gradeConstraints.length > 0
+        ) {
+          for (const c of gradeData.gradeConstraints) {
+            await tx.gradeConstraint.create({
+              data: {
+                gradeId: gp.id,
+                name: c.name,
+                kind: c.kind,
+                config: c.config,
+                expression: c.expression,
+                color: c.color,
+                message: c.message,
+                enabled: c.enabled,
+                order: c.order,
+              },
+            })
+          }
+        }
+
         return { success: true, gradeId: gp.id }
       }
     )

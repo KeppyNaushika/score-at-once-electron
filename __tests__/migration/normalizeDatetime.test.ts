@@ -199,6 +199,7 @@ describe("DateTime正規化マイグレーション", () => {
     "CourseworkScore",
     "CourseworkStudent",
     "CourseworkTag",
+    "GradeConstraint",
     "ReturnSnapshot",
   ])
 

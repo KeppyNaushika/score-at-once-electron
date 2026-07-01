@@ -4,6 +4,7 @@ import { ArrowRight, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+import { useGradeConstraints } from "@/hooks/grades/useGradeConstraints"
 import { useGradeResults } from "@/hooks/grades/useGradeResults"
 
 import { GradeDistributionChart } from "./GradeDistributionChart"
@@ -16,6 +17,7 @@ interface ResultsContainerProps {
 export function ResultsContainer({ gradeId }: ResultsContainerProps) {
   const { result, loading, error, recalculate, setGradeOverride } =
     useGradeResults(gradeId)
+  const { constraints } = useGradeConstraints(gradeId)
 
   if (loading) {
     return (
@@ -68,7 +70,11 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
       </div>
 
       <GradeDistributionChart result={result} />
-      <ResultsTable result={result} onGradeOverride={setGradeOverride} />
+      <ResultsTable
+        result={result}
+        constraints={constraints}
+        onGradeOverride={setGradeOverride}
+      />
     </div>
   )
 }

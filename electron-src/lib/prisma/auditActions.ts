@@ -19,12 +19,7 @@ export type AuditCategory =
 
 /** アクションの種別（アイコン・色分け用） */
 export type AuditVerb =
-  | "create"
-  | "update"
-  | "delete"
-  | "export"
-  | "import"
-  | "other"
+  "create" | "update" | "delete" | "export" | "import" | "other"
 
 export interface AuditActionDef {
   category: AuditCategory
@@ -364,6 +359,21 @@ export const AUDIT_ACTIONS = {
     category: "grade",
     verb: "update",
     label: "成績の上書きを更新しました",
+  },
+  "grade.constraint.create": {
+    category: "grade",
+    verb: "create",
+    label: "観点間の制約ルールを作成しました",
+  },
+  "grade.constraint.update": {
+    category: "grade",
+    verb: "update",
+    label: "観点間の制約ルールを更新しました",
+  },
+  "grade.constraint.delete": {
+    category: "grade",
+    verb: "delete",
+    label: "観点間の制約ルールを削除しました",
   },
 
   // ── 試験外成績資料（coursework） ─────────────────────────────

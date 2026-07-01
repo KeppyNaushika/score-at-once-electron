@@ -927,6 +927,86 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(ds!.courseworkItem!.courseworkId).toBe(existing.id)
   })
 
+  it("観点間の制約ルール(GradeConstraint)が往復で保持される (v1.7.0)", async () => {
+    const suffix = Date.now()
+    const grade = await prisma.grade.create({
+      data: { name: `成績_constraint_${suffix}` },
+    })
+    await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    await prisma.gradeConstraint.create({
+      data: {
+        gradeId: grade.id,
+        name: "A・C混在禁止",
+        kind: "mutual_exclusion",
+        config: JSON.stringify({ labels: ["A", "C"] }),
+        expression: "",
+        color: "#fecaca",
+        message: "AとCは混在しません",
+        enabled: true,
+        order: 0,
+      },
+    })
+    await prisma.gradeConstraint.create({
+      data: {
+        gradeId: grade.id,
+        name: "評定と観点の整合",
+        kind: "expression",
+        config: "{}",
+        expression: 'abs(item("評定") - mean("知識・技能")) > 1',
+        color: "#fde68a",
+        message: null,
+        enabled: false,
+        order: 1,
+      },
+    })
+
+    // 収集（export）
+    const collected = await collectGradeArchiveData(grade.id)
+    expect(collected.gradeData.gradeConstraints).toHaveLength(2)
+    const exclusion = collected.gradeData.gradeConstraints!.find(
+      (c) => c.kind === "mutual_exclusion"
+    )!
+    expect(exclusion.name).toBe("A・C混在禁止")
+    expect(exclusion.config).toBe(JSON.stringify({ labels: ["A", "C"] }))
+
+    // インポート（新規Gradeとして作成される）
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+
+    const imported = await prisma.gradeConstraint.findMany({
+      where: { gradeId: result.gradeId! },
+      orderBy: { order: "asc" },
+    })
+    expect(imported).toHaveLength(2)
+    expect(imported[0].name).toBe("A・C混在禁止")
+    expect(imported[0].kind).toBe("mutual_exclusion")
+    expect(imported[0].message).toBe("AとCは混在しません")
+    expect(imported[0].enabled).toBe(true)
+    expect(imported[1].kind).toBe("expression")
+    expect(imported[1].expression).toBe(
+      'abs(item("評定") - mean("知識・技能")) > 1'
+    )
+    expect(imported[1].enabled).toBe(false)
+    expect(imported[1].color).toBe("#fde68a")
+  })
+
+  it("gradeConstraints が無いGradeも問題なく往復する（後方互換）", async () => {
+    const grade = await prisma.grade.create({
+      data: { name: `成績_noconstraint_${Date.now()}` },
+    })
+    const collected = await collectGradeArchiveData(grade.id)
+    expect(collected.gradeData.gradeConstraints).toBeUndefined()
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+    const imported = await prisma.gradeConstraint.findMany({
+      where: { gradeId: result.gradeId! },
+    })
+    expect(imported).toHaveLength(0)
+  })
+
   it("旧 v1.4.0（名前ベース courseworks 埋め込み）を後方互換で読み込める", async () => {
     const suffix = Date.now()
     // 旧形式は生徒・学級を既存前提で名前 lookup する
