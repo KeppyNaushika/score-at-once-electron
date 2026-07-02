@@ -38,7 +38,7 @@ export function useStudentAnswerUpload(
 
   // 前回描画と比較し、削除されたファイルのblob URLを解放
   useEffect(() => {
-    const currentIds = new Set(files.map((f) => f.id))
+    const currentIds = new Set(files.map((file) => file.id))
     for (const prev of prevFilesRef.current) {
       if (!currentIds.has(prev.id) && prev.preview?.startsWith("blob:")) {
         URL.revokeObjectURL(prev.preview)
@@ -51,9 +51,9 @@ export function useStudentAnswerUpload(
   // アンマウント時に全blob URLを解放
   useEffect(() => {
     return () => {
-      for (const f of prevFilesRef.current) {
-        if (f.preview?.startsWith("blob:")) {
-          URL.revokeObjectURL(f.preview)
+      for (const file of prevFilesRef.current) {
+        if (file.preview?.startsWith("blob:")) {
+          URL.revokeObjectURL(file.preview)
         }
       }
     }
@@ -185,7 +185,7 @@ export function useStudentAnswerUpload(
         setMarkerAvailablePages((prev) => {
           if (
             prev.size === availablePages.size &&
-            [...prev].every((p) => availablePages.has(p))
+            [...prev].every((pageNumber) => availablePages.has(pageNumber))
           ) {
             return prev
           }
@@ -197,10 +197,10 @@ export function useStudentAnswerUpload(
           for (const page of result.pages) {
             if (!page.result.success && page.result.diagnostics) {
               lines.push(`ページ${page.pageNumber}:`)
-              for (const d of page.result.diagnostics) {
-                if (!d.detected) {
+              for (const diagnostic of page.result.diagnostics) {
+                if (!diagnostic.detected) {
                   lines.push(
-                    `  ${d.corner}: ${d.failReason ?? "不明"} (黒px: ${d.darkPixels}/${d.totalPixels})`
+                    `  ${diagnostic.corner}: ${diagnostic.failReason ?? "不明"} (黒px: ${diagnostic.darkPixels}/${diagnostic.totalPixels})`
                   )
                 }
               }
@@ -259,16 +259,16 @@ export function useStudentAnswerUpload(
       try {
         // クライアント側補正結果からマップ構築（uploadDataの(studentId,pageNumber)=生徒×マスターページ）
         const correctionMap = new Map<string, "corrected" | "skipped">()
-        for (const d of uploadData) {
+        for (const uploadItem of uploadData) {
           if (
-            d.correctionStatus &&
-            d.correctionStatus !== "not_requested" &&
-            d.studentId
+            uploadItem.correctionStatus &&
+            uploadItem.correctionStatus !== "not_requested" &&
+            uploadItem.studentId
           ) {
-            const key = `${d.studentId}-${d.pageNumber}`
+            const key = `${uploadItem.studentId}-${uploadItem.pageNumber}`
             correctionMap.set(
               key,
-              d.correctionStatus as "corrected" | "skipped"
+              uploadItem.correctionStatus as "corrected" | "skipped"
             )
           }
         }

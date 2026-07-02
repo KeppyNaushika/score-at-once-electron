@@ -138,11 +138,11 @@ export async function fetchExportData(
           attendanceNumber: attendanceNumber ?? undefined,
         }
       })
-      .sort((a, b) => {
+      .sort((studentA, studentB) => {
         const aOrder =
-          (a as Student & { customOrder?: number }).customOrder ?? 999999
+          (studentA as Student & { customOrder?: number }).customOrder ?? 999999
         const bOrder =
-          (b as Student & { customOrder?: number }).customOrder ?? 999999
+          (studentB as Student & { customOrder?: number }).customOrder ?? 999999
         return aOrder - bOrder
       })
 
@@ -151,16 +151,16 @@ export async function fetchExportData(
     }
 
     // 設問領域と小計領域の分離・ソート
-    const sortByOrderIndex = (a: CropRegion, b: CropRegion) => {
-      const orderA = a.orderIndex ?? Number.MAX_SAFE_INTEGER
-      const orderB = b.orderIndex ?? Number.MAX_SAFE_INTEGER
+    const sortByOrderIndex = (regionA: CropRegion, regionB: CropRegion) => {
+      const orderA = regionA.orderIndex ?? Number.MAX_SAFE_INTEGER
+      const orderB = regionB.orderIndex ?? Number.MAX_SAFE_INTEGER
       if (orderA !== orderB) {
         return orderA - orderB
       }
-      if (Math.abs(a.y - b.y) < 0.01) {
-        return a.x - b.x
+      if (Math.abs(regionA.y - regionB.y) < 0.01) {
+        return regionA.x - regionB.x
       }
-      return a.y - b.y
+      return regionA.y - regionB.y
     }
 
     const questionRegions = cropRegions
@@ -175,21 +175,26 @@ export async function fetchExportData(
     const subtotalGroupsResult = await getActiveSubtotalGroupsForExam(examId)
     const subtotalGroupsData: SubtotalGroupData[] =
       subtotalGroupsResult.success && subtotalGroupsResult.examSubtotalGroups
-        ? subtotalGroupsResult.examSubtotalGroups.map((psg) => ({
-            groupId: psg.subtotalGroup.id,
-            groupName: psg.subtotalGroup.name,
-            subtotals: psg.subtotalGroup.subtotals.map((s) => ({
-              id: s.id,
-              name: s.name,
-              order: s.order,
-            })),
+        ? subtotalGroupsResult.examSubtotalGroups.map((examSubtotalGroup) => ({
+            groupId: examSubtotalGroup.subtotalGroup.id,
+            groupName: examSubtotalGroup.subtotalGroup.name,
+            subtotals: examSubtotalGroup.subtotalGroup.subtotals.map(
+              (subtotal) => ({
+                id: subtotal.id,
+                name: subtotal.name,
+                order: subtotal.order,
+              })
+            ),
           }))
         : []
 
     // SubtotalGroupから小計列情報を構築
     const subtotalColumns: SubtotalColumn[] = subtotalGroupsData.flatMap(
       (group) =>
-        group.subtotals.map((s) => ({ subtotalId: s.id, label: s.name }))
+        group.subtotals.map((subtotal) => ({
+          subtotalId: subtotal.id,
+          label: subtotal.name,
+        }))
     )
 
     // 採点データの構造化
@@ -255,7 +260,7 @@ async function buildScoringData(
         questionScores
       )
 
-      const allUnscored = scores.every((s) => s.status === "unscored")
+      const allUnscored = scores.every((score) => score.status === "unscored")
       const totalScore = allUnscored
         ? null
         : scores.reduce((sum, score) => sum + (score.score ?? 0), 0)

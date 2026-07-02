@@ -10,9 +10,9 @@ import type { SubtotalColumn } from "./dataFetcher"
 
 /** null を除いた平均（小数1桁）。対象が無ければ null（セル空欄用） */
 function average(values: (number | null | undefined)[]): number | null {
-  const v = values.filter((x): x is number => x != null)
-  if (v.length === 0) return null
-  return Math.round(mean(v) * 10) / 10
+  const numbers = values.filter((x): x is number => x != null)
+  if (numbers.length === 0) return null
+  return Math.round(mean(numbers) * 10) / 10
 }
 
 /** 指定生徒集合の 合計点／小計／設問 の平均行（ヘッダー列順）を作る */
@@ -22,21 +22,28 @@ function buildAverageRow(
   subtotalColumns: SubtotalColumn[],
   questionRegions: CropRegion[]
 ): (string | number)[] {
-  const totalAvg = average(students.map((s) => s.totalScore))
-  const subtotalAvgs = subtotalColumns.map((col) =>
+  const totalAvg = average(students.map((student) => student.totalScore))
+  const subtotalAvgs = subtotalColumns.map((subtotalColumn) =>
     average(
       students.map(
-        (s) =>
-          s.subtotalScores.find((x) => x.subtotalId === col.subtotalId)?.score
+        (student) =>
+          student.subtotalScores.find(
+            (subtotalScore) =>
+              subtotalScore.subtotalId === subtotalColumn.subtotalId
+          )?.score
       )
     )
   )
   const questionAvgs = questionRegions.map((region) =>
     average(
-      students.map((s) => {
-        const sc = s.scores.find((x) => x.questionId === region.id)
+      students.map((student) => {
+        const matchedScore = student.scores.find(
+          (score) => score.questionId === region.id
+        )
         // 未採点は集計から除外（null）
-        return sc && sc.status !== "unscored" ? sc.score : null
+        return matchedScore && matchedScore.status !== "unscored"
+          ? matchedScore.score
+          : null
       })
     )
   )
@@ -51,8 +58,8 @@ function buildAverageRow(
     "",
     label,
     totalAvg ?? "",
-    ...subtotalAvgs.map((v) => v ?? ""),
-    ...questionAvgs.map((v) => v ?? ""),
+    ...subtotalAvgs.map((subtotalAvg) => subtotalAvg ?? ""),
+    ...questionAvgs.map((questionAvg) => questionAvg ?? ""),
   ]
 }
 
@@ -91,16 +98,20 @@ export function appendClassAverageRows(
   overallRow.eachCell((cell) => applyCellStyle(cell, "total"))
 
   // 学級ごとの平均（teacherStat=true）
-  const byId = new Map(allScoringData.map((s) => [s.studentId, s]))
-  for (const cls of teacherStatClasses) {
-    const members = cls.classroom.memberships
-      .map((m) => byId.get(m.studentId))
-      .filter((s): s is ScoringData => s !== undefined)
+  const byId = new Map(
+    allScoringData.map((scoringData) => [scoringData.studentId, scoringData])
+  )
+  for (const examClass of teacherStatClasses) {
+    const members = examClass.classroom.memberships
+      .map((membership) => byId.get(membership.studentId))
+      .filter(
+        (scoringData): scoringData is ScoringData => scoringData !== undefined
+      )
     if (members.length === 0) continue
 
     const row = worksheet.addRow(
       buildAverageRow(
-        `${cls.classroom.name}平均`,
+        `${examClass.classroom.name}平均`,
         members,
         subtotalColumns,
         questionRegions

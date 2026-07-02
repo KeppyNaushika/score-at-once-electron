@@ -24,28 +24,28 @@ export function collectAsbData(
   let branchQuestions = 0
   let omrConfigs = 0
 
-  for (const mq of definition.majorQuestions) {
-    for (const sq of mq.subQuestions) {
+  for (const majorQuestion of definition.majorQuestions) {
+    for (const subQuestion of majorQuestion.subQuestions) {
       subQuestions++
-      textElements += sq.textElements.length
-      if (sq.imageElements) {
-        imageElements += sq.imageElements.length
-        for (const ie of sq.imageElements) {
-          if (ie.imagePath) imagePaths.push(ie.imagePath)
+      textElements += subQuestion.textElements.length
+      if (subQuestion.imageElements) {
+        imageElements += subQuestion.imageElements.length
+        for (const imageElement of subQuestion.imageElements) {
+          if (imageElement.imagePath) imagePaths.push(imageElement.imagePath)
         }
       }
-      if (sq.omrConfig) omrConfigs++
+      if (subQuestion.omrConfig) omrConfigs++
 
-      for (const bq of sq.branchQuestions) {
+      for (const branchQuestion of subQuestion.branchQuestions) {
         branchQuestions++
-        textElements += bq.textElements.length
-        if (bq.imageElements) {
-          imageElements += bq.imageElements.length
-          for (const ie of bq.imageElements) {
-            if (ie.imagePath) imagePaths.push(ie.imagePath)
+        textElements += branchQuestion.textElements.length
+        if (branchQuestion.imageElements) {
+          imageElements += branchQuestion.imageElements.length
+          for (const imageElement of branchQuestion.imageElements) {
+            if (imageElement.imagePath) imagePaths.push(imageElement.imagePath)
           }
         }
-        if (bq.omrConfig) omrConfigs++
+        if (branchQuestion.omrConfig) omrConfigs++
       }
     }
   }

@@ -139,27 +139,29 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   // result が来たら全員選択を初期化
   useMemo(() => {
     if (studentsRef.length > 0 && selectedStudents.size === 0) {
-      setSelectedStudents(new Set(studentsRef.map((s) => s.studentId)))
+      setSelectedStudents(
+        new Set(studentsRef.map((student) => student.studentId))
+      )
       setPreviewStudentId(studentsRef[0]?.studentId ?? "")
     }
   }, [studentsRef]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const classNames = useMemo(() => {
     const names = new Set<string>()
-    for (const s of studentsRef) {
-      if (s.className) names.add(s.className)
+    for (const student of studentsRef) {
+      if (student.className) names.add(student.className)
     }
     return Array.from(names).sort()
   }, [studentsRef])
 
   const filteredStudents = useMemo(() => {
-    return studentsRef.filter((s) => {
-      if (selectedClass !== "__all__" && s.className !== selectedClass)
+    return studentsRef.filter((student) => {
+      if (selectedClass !== "__all__" && student.className !== selectedClass)
         return false
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
-        const name = `${s.lastName} ${s.firstName}`.toLowerCase()
-        const num = s.studentNumber?.toLowerCase() ?? ""
+        const name = `${student.lastName} ${student.firstName}`.toLowerCase()
+        const num = student.studentNumber?.toLowerCase() ?? ""
         if (!name.includes(term) && !num.includes(term)) return false
       }
       return true
@@ -167,12 +169,14 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   }, [studentsRef, selectedClass, searchTerm])
 
   const selectAllFiltered = () => {
-    const ids = filteredStudents.map((s) => s.studentId)
+    const ids = filteredStudents.map((student) => student.studentId)
     setSelectedStudents((prev) => new Set([...prev, ...ids]))
   }
 
   const deselectAllFiltered = () => {
-    const filteredIds = new Set(filteredStudents.map((s) => s.studentId))
+    const filteredIds = new Set(
+      filteredStudents.map((student) => student.studentId)
+    )
     setSelectedStudents(
       (prev) => new Set([...prev].filter((id) => !filteredIds.has(id)))
     )
@@ -189,8 +193,8 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
 
   const selectedStudentIds = useMemo(() => {
     return studentsRef
-      .filter((s) => selectedStudents.has(s.studentId))
-      .map((s) => s.studentId)
+      .filter((student) => selectedStudents.has(student.studentId))
+      .map((student) => student.studentId)
   }, [studentsRef, selectedStudents])
 
   const previewHtml = useMemo(() => {
@@ -419,12 +423,19 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                         </SelectTrigger>
                         <SelectContent>
                           {result.students
-                            .filter((s) => selectedStudents.has(s.studentId))
-                            .map((s) => (
-                              <SelectItem key={s.studentId} value={s.studentId}>
-                                {s.attendanceNumber ?? "-"} {s.lastName}{" "}
-                                {s.firstName}
-                                {s.className ? ` (${s.className})` : ""}
+                            .filter((student) =>
+                              selectedStudents.has(student.studentId)
+                            )
+                            .map((student) => (
+                              <SelectItem
+                                key={student.studentId}
+                                value={student.studentId}
+                              >
+                                {student.attendanceNumber ?? "-"}{" "}
+                                {student.lastName} {student.firstName}
+                                {student.className
+                                  ? ` (${student.className})`
+                                  : ""}
                               </SelectItem>
                             ))}
                         </SelectContent>

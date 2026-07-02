@@ -26,7 +26,7 @@ export function MutualExclusionFields({
   const displayLabels = labels.length > 0 ? labels : config.labels
   const toggle = (label: string) => {
     const next = config.labels.includes(label)
-      ? config.labels.filter((l) => l !== label)
+      ? config.labels.filter((existingLabel) => existingLabel !== label)
       : [...config.labels, label]
     onChange({ ...config, labels: next })
   }

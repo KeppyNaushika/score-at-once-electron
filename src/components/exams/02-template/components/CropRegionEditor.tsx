@@ -173,7 +173,7 @@ const CropRegionEditor = ({
         case "QUESTION_ANSWER":
           newAreaSpecifics = {
             label: `設問 ${
-              areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
+              areas.filter((area) => area.type === "QUESTION_ANSWER").length + 1
             }`,
             type: "QUESTION_ANSWER",
             points: defaultPoints,
@@ -260,8 +260,8 @@ const CropRegionEditor = ({
               min={0}
               value={defaultPoints}
               onChange={(e) => {
-                const v = parseInt(e.target.value)
-                if (!isNaN(v) && v >= 0) onDefaultPointsChange(v)
+                const points = parseInt(e.target.value)
+                if (!isNaN(points) && points >= 0) onDefaultPointsChange(points)
               }}
               className="h-7 w-16 rounded border px-2 text-right text-sm"
             />

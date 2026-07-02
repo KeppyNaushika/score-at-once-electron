@@ -142,7 +142,9 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
     warnings.push(...scoreWarnings)
 
     // DrawingAnnotation の変換（旧フォーマット配列をバリデーション）
-    const validScoreIds = new Set(questionScores.map((qs) => qs.id))
+    const validScoreIds = new Set(
+      questionScores.map((questionScore) => questionScore.id)
+    )
     const rawAnnotations = data.scoresData.drawingAnnotations as unknown[]
     const oldAnnotations: V1_1_0_DrawingAnnotation[] = Array.isArray(
       rawAnnotations
@@ -176,13 +178,17 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         },
         examData: {
           ...data.examData,
-          masterImages: masterImages.map((m) => ({ ...m })),
-          studentAnswerImages: studentAnswerImages.map((s) => ({ ...s })),
+          masterImages: masterImages.map((masterImage) => ({ ...masterImage })),
+          studentAnswerImages: studentAnswerImages.map(
+            (studentAnswerImage) => ({ ...studentAnswerImage })
+          ),
         },
         scoresData: {
-          questionScores: questionScores.map((qs) => ({ ...qs })),
-          drawingAnnotations: drawingAnnotations.map((da) => ({
-            ...da,
+          questionScores: questionScores.map((questionScore) => ({
+            ...questionScore,
+          })),
+          drawingAnnotations: drawingAnnotations.map((drawingAnnotation) => ({
+            ...drawingAnnotation,
             isFavorite: false,
           })),
         },
@@ -204,24 +210,24 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
     const imageWarnings: string[] = []
     let skippedCount = 0
 
-    for (const img of pageImages) {
-      if (img.imageType === "MODEL_ANSWER") {
+    for (const pageImage of pageImages) {
+      if (pageImage.imageType === "MODEL_ANSWER") {
         masterImages.push({
-          id: img.id,
-          examPageId: img.examPageId,
-          imagePath: img.imagePath,
-          createdAt: img.createdAt,
-          updatedAt: img.updatedAt,
+          id: pageImage.id,
+          examPageId: pageImage.examPageId,
+          imagePath: pageImage.imagePath,
+          createdAt: pageImage.createdAt,
+          updatedAt: pageImage.updatedAt,
         })
-      } else if (img.imageType === "STUDENT_ANSWER") {
-        if (img.studentId) {
+      } else if (pageImage.imageType === "STUDENT_ANSWER") {
+        if (pageImage.studentId) {
           studentAnswerImages.push({
-            id: img.id,
-            examPageId: img.examPageId,
-            studentId: img.studentId,
-            imagePath: img.imagePath,
-            createdAt: img.createdAt,
-            updatedAt: img.updatedAt,
+            id: pageImage.id,
+            examPageId: pageImage.examPageId,
+            studentId: pageImage.studentId,
+            imagePath: pageImage.imagePath,
+            createdAt: pageImage.createdAt,
+            updatedAt: pageImage.updatedAt,
           })
         } else {
           // studentIdがnullの答案画像はスキップ
@@ -259,10 +265,11 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
     let skippedCount = 0
 
     const transformed = questionScores
-      .map((qs) => {
+      .map((questionScore) => {
         // 旧フィールド名から新フィールド名への変換
-        const userId = qs.userId || qs.scoredByUserId || ""
-        const studentId = qs.studentId || ""
+        const userId =
+          questionScore.userId || questionScore.scoredByUserId || ""
+        const studentId = questionScore.studentId || ""
 
         if (!userId || !studentId) {
           skippedCount++
@@ -270,20 +277,20 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         }
 
         return {
-          id: qs.id,
-          cropRegionId: qs.cropRegionId,
+          id: questionScore.id,
+          cropRegionId: questionScore.cropRegionId,
           studentId,
-          partialScore: qs.partialScore,
-          status: qs.status,
+          partialScore: questionScore.partialScore,
+          status: questionScore.status,
           userId,
-          createdAt: qs.createdAt,
-          updatedAt: qs.updatedAt,
+          createdAt: questionScore.createdAt,
+          updatedAt: questionScore.updatedAt,
         }
       })
       .filter(
         (
-          qs
-        ): qs is {
+          questionScore
+        ): questionScore is {
           id: string
           cropRegionId: string
           studentId: string
@@ -292,7 +299,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
           userId: string
           createdAt: string
           updatedAt: string
-        } => qs !== null
+        } => questionScore !== null
       )
 
     if (skippedCount > 0) {
@@ -344,15 +351,16 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
     let skippedByParent = 0
 
     const transformed = annotations
-      .map((da) => {
+      .map((drawingAnnotation) => {
         // 親のQuestionScoreがスキップされた場合はスキップ
-        if (!validScoreIds.has(da.questionScoreId)) {
+        if (!validScoreIds.has(drawingAnnotation.questionScoreId)) {
           skippedByParent++
           return null
         }
 
         // 旧フィールド名から新フィールド名への変換
-        const userId = da.userId || da.createdByUserId || ""
+        const userId =
+          drawingAnnotation.userId || drawingAnnotation.createdByUserId || ""
 
         if (!userId) {
           skippedByUserId++
@@ -360,33 +368,38 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         }
 
         return {
-          id: da.id,
-          questionScoreId: da.questionScoreId,
-          type: da.type,
-          x: da.x,
-          y: da.y,
-          color: da.color,
-          strokeWidth: da.strokeWidth,
-          width: da.width,
-          height: da.height,
-          endX: da.endX,
-          endY: da.endY,
-          lineStyle: da.lineStyle,
-          text: da.text,
-          fontSize: da.fontSize,
-          textBoxWidth: da.textBoxWidth,
-          textBoxHeight: da.textBoxHeight,
-          horizontalAlign: da.horizontalAlign,
-          verticalAlign: da.verticalAlign,
-          anchorDirection: da.anchorDirection,
-          displayX: da.displayX,
-          displayY: da.displayY,
+          id: drawingAnnotation.id,
+          questionScoreId: drawingAnnotation.questionScoreId,
+          type: drawingAnnotation.type,
+          x: drawingAnnotation.x,
+          y: drawingAnnotation.y,
+          color: drawingAnnotation.color,
+          strokeWidth: drawingAnnotation.strokeWidth,
+          width: drawingAnnotation.width,
+          height: drawingAnnotation.height,
+          endX: drawingAnnotation.endX,
+          endY: drawingAnnotation.endY,
+          lineStyle: drawingAnnotation.lineStyle,
+          text: drawingAnnotation.text,
+          fontSize: drawingAnnotation.fontSize,
+          textBoxWidth: drawingAnnotation.textBoxWidth,
+          textBoxHeight: drawingAnnotation.textBoxHeight,
+          horizontalAlign: drawingAnnotation.horizontalAlign,
+          verticalAlign: drawingAnnotation.verticalAlign,
+          anchorDirection: drawingAnnotation.anchorDirection,
+          displayX: drawingAnnotation.displayX,
+          displayY: drawingAnnotation.displayY,
           userId,
-          createdAt: da.createdAt,
-          updatedAt: da.updatedAt,
+          createdAt: drawingAnnotation.createdAt,
+          updatedAt: drawingAnnotation.updatedAt,
         }
       })
-      .filter((da): da is NonNullable<typeof da> => da !== null)
+      .filter(
+        (
+          drawingAnnotation
+        ): drawingAnnotation is NonNullable<typeof drawingAnnotation> =>
+          drawingAnnotation !== null
+      )
 
     if (skippedByUserId > 0) {
       annotationWarnings.push(

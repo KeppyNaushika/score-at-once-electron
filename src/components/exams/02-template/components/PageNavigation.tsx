@@ -49,7 +49,7 @@ export function PageNavigation({
   }
 
   const currentIndex = masterImages.findIndex(
-    (img) => img.id === selectedMasterImage?.id
+    (masterImage) => masterImage.id === selectedMasterImage?.id
   )
 
   /**
@@ -94,9 +94,9 @@ export function PageNavigation({
             <SelectValue placeholder="ページを選択" />
           </SelectTrigger>
           <SelectContent>
-            {masterImages.map((img) => (
-              <SelectItem key={img.id} value={img.id}>
-                ページ {img.pageNumber}
+            {masterImages.map((masterImage) => (
+              <SelectItem key={masterImage.id} value={masterImage.id}>
+                ページ {masterImage.pageNumber}
               </SelectItem>
             ))}
           </SelectContent>

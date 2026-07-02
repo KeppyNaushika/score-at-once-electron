@@ -121,8 +121,9 @@ export function GradeListContainer() {
     try {
       // 試験参照のマッピング（examName → 既存examId）を照合結果から構築
       const examMapping: Record<string, string> = {}
-      for (const em of importPreview.examMatches) {
-        if (em.found && em.examId) examMapping[em.examName] = em.examId
+      for (const examMatch of importPreview.examMatches) {
+        if (examMatch.found && examMatch.examId)
+          examMapping[examMatch.examName] = examMatch.examId
       }
       const importResult = await window.electronAPI.grade.executeImport(
         importArchiveData,

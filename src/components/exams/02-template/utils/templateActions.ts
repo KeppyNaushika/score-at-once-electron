@@ -148,7 +148,7 @@ export function getAdjacentImages(
   }
 
   const currentIndex = masterImages.findIndex(
-    (img) => img.id === selectedImageId
+    (masterImage) => masterImage.id === selectedImageId
   )
 
   return {

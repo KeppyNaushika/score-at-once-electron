@@ -117,19 +117,24 @@ export function AnswerSheetBuilderMainView({
   const [examDialogOpen, setExamDialogOpen] = useState(false)
 
   // 問題統計（定義データから集計）
-  const allCells = multiPageLayout.pages.flatMap((p) => p.cells)
-  const totalQuestions = allCells.filter((c) => c.cellType === "answer").length
+  const allCells = multiPageLayout.pages.flatMap((page) => page.cells)
+  const totalQuestions = allCells.filter(
+    (cell) => cell.cellType === "answer"
+  ).length
   let totalPoints = 0
-  for (const mq of definition.majorQuestions) {
-    for (const sq of mq.subQuestions) {
-      if (sq.branchQuestions.length > 0) {
-        if (sq.usesBranchPoints === false) {
-          totalPoints += sq.points
+  for (const majorQuestion of definition.majorQuestions) {
+    for (const subQuestion of majorQuestion.subQuestions) {
+      if (subQuestion.branchQuestions.length > 0) {
+        if (subQuestion.usesBranchPoints === false) {
+          totalPoints += subQuestion.points
         } else {
-          totalPoints += sq.branchQuestions.reduce((s, b) => s + b.points, 0)
+          totalPoints += subQuestion.branchQuestions.reduce(
+            (sum, branchQuestion) => sum + branchQuestion.points,
+            0
+          )
         }
       } else {
-        totalPoints += sq.points
+        totalPoints += subQuestion.points
       }
     }
   }

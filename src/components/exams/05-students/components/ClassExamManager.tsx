@@ -42,21 +42,24 @@ export function ClassExamManager({
 }: ClassExamManagerProps) {
   const entries = useMemo<ClassRosterEntry[]>(
     () =>
-      examClasses.map((ec) => ({
-        id: ec.id,
-        classroomId: ec.classroomId,
-        name: ec.classroom.name,
-        classCode: ec.classroom.classCode,
-        grade: ec.classroom.grade,
-        studentCount: ec.classroom.memberships.length,
-        order: ec.order,
+      examClasses.map((examClass) => ({
+        id: examClass.id,
+        classroomId: examClass.classroomId,
+        name: examClass.classroom.name,
+        classCode: examClass.classroom.classCode,
+        grade: examClass.classroom.grade,
+        studentCount: examClass.classroom.memberships.length,
+        order: examClass.order,
       })),
     [examClasses]
   )
 
   // examClassId → administered の参照（行ごとの線形検索を避ける）
   const administeredById = useMemo(
-    () => new Map(examClasses.map((ec) => [ec.id, ec.administered])),
+    () =>
+      new Map(
+        examClasses.map((examClass) => [examClass.id, examClass.administered])
+      ),
     [examClasses]
   )
 

@@ -12,14 +12,14 @@ import {
 
 /** ScoringData を S-P表入力（二値）へ正規化 */
 function toSpInput(scoringData: ScoringData[]): SpInputStudent[] {
-  return scoringData.map((d) => ({
-    studentId: d.studentId,
-    studentName: d.studentName,
-    items: d.scores.map((s) => ({
-      questionId: s.questionId,
-      label: s.questionLabel,
-      isCorrect: s.status === "correct",
-      isScored: s.status !== "unscored",
+  return scoringData.map((student) => ({
+    studentId: student.studentId,
+    studentName: student.studentName,
+    items: student.scores.map((score) => ({
+      questionId: score.questionId,
+      label: score.questionLabel,
+      isCorrect: score.status === "correct",
+      isScored: score.status !== "unscored",
     })),
   }))
 }
@@ -52,7 +52,7 @@ export async function createSpTableSheet(
   // ヘッダー行: 生徒 | 各設問 | 正答数 | 注意係数
   const headers = [
     "生徒",
-    ...problems.map((p) => p.label),
+    ...problems.map((problem) => problem.label),
     "正答数",
     "注意係数",
   ]
@@ -70,7 +70,7 @@ export async function createSpTableSheet(
         : "---"
     const row = worksheet.addRow([
       student.studentName,
-      ...student.cells.map((c) => (c ? "○" : "")),
+      ...student.cells.map((isCorrect) => (isCorrect ? "○" : "")),
       student.correctCount,
       cautionText,
     ])
@@ -112,7 +112,7 @@ export async function createSpTableSheet(
   // 正答者数の行
   const correctCountRow = worksheet.addRow([
     "正答者数",
-    ...problems.map((p) => p.correctCount),
+    ...problems.map((problem) => problem.correctCount),
     "",
     "",
   ])
@@ -121,8 +121,10 @@ export async function createSpTableSheet(
   // 設問の注意係数の行
   const problemCautionRow = worksheet.addRow([
     "注意係数",
-    ...problems.map((p) =>
-      p.cautionIndex !== null ? Math.round(p.cautionIndex * 1000) / 1000 : "---"
+    ...problems.map((problem) =>
+      problem.cautionIndex !== null
+        ? Math.round(problem.cautionIndex * 1000) / 1000
+        : "---"
     ),
     "",
     "",

@@ -25,16 +25,16 @@ export function SetupContainer({ gradeId }: SetupContainerProps) {
 
   const loadData = useCallback(async () => {
     try {
-      const gpResult = await window.electronAPI.grade.getById(gradeId)
+      const gradeResult = await window.electronAPI.grade.getById(gradeId)
 
-      if (gpResult.success && gpResult.grade) {
-        const gp = gpResult.grade
-        setExam(gp)
-        setName(gp.name)
-        setDescription(gp.description ?? "")
+      if (gradeResult.success && gradeResult.grade) {
+        const grade = gradeResult.grade
+        setExam(grade)
+        setName(grade.name)
+        setDescription(grade.description ?? "")
         setReferenceDate(
-          gp.referenceDate
-            ? new Date(gp.referenceDate).toISOString().split("T")[0]
+          grade.referenceDate
+            ? new Date(grade.referenceDate).toISOString().split("T")[0]
             : ""
         )
       }

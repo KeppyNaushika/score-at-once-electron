@@ -127,10 +127,10 @@ export default function ExportMainView() {
   // プレビュー用の生徒リスト
   const previewStudentList = useMemo(() => {
     return students
-      .filter((s) => selectedStudents.has(s.id))
-      .map((s) => ({
-        id: s.id,
-        name: `${s.lastName} ${s.firstName}`,
+      .filter((student) => selectedStudents.has(student.id))
+      .map((student) => ({
+        id: student.id,
+        name: `${student.lastName} ${student.firstName}`,
       }))
   }, [students, selectedStudents])
 

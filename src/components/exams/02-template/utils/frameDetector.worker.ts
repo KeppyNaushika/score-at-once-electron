@@ -246,7 +246,7 @@ function detectVerticalLines(
 
 function mergeHLines(lines: HLine[], mergeTolerance: number): HLine[] {
   if (lines.length === 0) return []
-  lines.sort((a, b) => a.y - b.y || a.x1 - b.x1)
+  lines.sort((lineA, lineB) => lineA.y - lineB.y || lineA.x1 - lineB.x1)
   const merged: HLine[] = []
   for (const line of lines) {
     const last = merged[merged.length - 1]
@@ -265,7 +265,7 @@ function mergeHLines(lines: HLine[], mergeTolerance: number): HLine[] {
 
 function mergeVLines(lines: VLine[], mergeTolerance: number): VLine[] {
   if (lines.length === 0) return []
-  lines.sort((a, b) => a.x - b.x || a.y1 - b.y1)
+  lines.sort((lineA, lineB) => lineA.x - lineB.x || lineA.y1 - lineB.y1)
   const merged: VLine[] = []
   for (const line of lines) {
     const last = merged[merged.length - 1]
@@ -371,11 +371,11 @@ function deduplicateRects(rects: PixelRect[]): PixelRect[] {
   const unique: PixelRect[] = []
   for (const rect of rects) {
     const isDuplicate = unique.some(
-      (r) =>
-        Math.abs(r.x - rect.x) <= DUPLICATE_TOLERANCE &&
-        Math.abs(r.y - rect.y) <= DUPLICATE_TOLERANCE &&
-        Math.abs(r.width - rect.width) <= DUPLICATE_TOLERANCE &&
-        Math.abs(r.height - rect.height) <= DUPLICATE_TOLERANCE
+      (uniqueRect) =>
+        Math.abs(uniqueRect.x - rect.x) <= DUPLICATE_TOLERANCE &&
+        Math.abs(uniqueRect.y - rect.y) <= DUPLICATE_TOLERANCE &&
+        Math.abs(uniqueRect.width - rect.width) <= DUPLICATE_TOLERANCE &&
+        Math.abs(uniqueRect.height - rect.height) <= DUPLICATE_TOLERANCE
     )
     if (!isDuplicate) {
       unique.push(rect)
@@ -392,7 +392,7 @@ function filterRects(
   minHeight: number
 ): DetectedRectResult[] {
   let filtered = rects.filter(
-    (r) => r.width >= minWidth && r.height >= minHeight
+    (rect) => rect.width >= minWidth && rect.height >= minHeight
   )
   filtered = removeOverlappingLarger(filtered)
   return filtered
@@ -404,16 +404,16 @@ function removeOverlappingLarger(
   const toRemove = new Set<number>()
   for (let i = 0; i < rects.length; i++) {
     for (let j = i + 1; j < rects.length; j++) {
-      const a = rects[i]
-      const b = rects[j]
-      const ix1 = Math.max(a.x, b.x)
-      const iy1 = Math.max(a.y, b.y)
-      const ix2 = Math.min(a.x + a.width, b.x + b.width)
-      const iy2 = Math.min(a.y + a.height, b.y + b.height)
+      const rectA = rects[i]
+      const rectB = rects[j]
+      const ix1 = Math.max(rectA.x, rectB.x)
+      const iy1 = Math.max(rectA.y, rectB.y)
+      const ix2 = Math.min(rectA.x + rectA.width, rectB.x + rectB.width)
+      const iy2 = Math.min(rectA.y + rectA.height, rectB.y + rectB.height)
       if (ix2 <= ix1 || iy2 <= iy1) continue
       const intersection = (ix2 - ix1) * (iy2 - iy1)
-      const areaA = a.width * a.height
-      const areaB = b.width * b.height
+      const areaA = rectA.width * rectA.height
+      const areaB = rectB.width * rectB.height
       const smallerArea = Math.min(areaA, areaB)
       const largerIdx = areaA < areaB ? j : i
       const smallerNonOverlap = smallerArea - intersection
@@ -464,10 +464,10 @@ function detectRects(
   const hMargin = h * EDGE_MARGIN_RATIO
   const wMargin = w * EDGE_MARGIN_RATIO
   horizontalLines = horizontalLines.filter(
-    (l) => l.y > hMargin && l.y < h - hMargin
+    (line) => line.y > hMargin && line.y < h - hMargin
   )
   verticalLines = verticalLines.filter(
-    (l) => l.x > wMargin && l.x < w - wMargin
+    (line) => line.x > wMargin && line.x < w - wMargin
   )
 
   // 線延長
@@ -490,11 +490,15 @@ function detectRects(
 
   // 線数が多すぎる場合は長い線を優先（短い線はノイズの可能性が高い）
   if (horizontalLines.length > MAX_LINES_FOR_RECT_BUILD) {
-    horizontalLines.sort((a, b) => b.x2 - b.x1 - (a.x2 - a.x1))
+    horizontalLines.sort(
+      (lineA, lineB) => lineB.x2 - lineB.x1 - (lineA.x2 - lineA.x1)
+    )
     horizontalLines = horizontalLines.slice(0, MAX_LINES_FOR_RECT_BUILD)
   }
   if (verticalLines.length > MAX_LINES_FOR_RECT_BUILD) {
-    verticalLines.sort((a, b) => b.y2 - b.y1 - (a.y2 - a.y1))
+    verticalLines.sort(
+      (lineA, lineB) => lineB.y2 - lineB.y1 - (lineA.y2 - lineA.y1)
+    )
     verticalLines = verticalLines.slice(0, MAX_LINES_FOR_RECT_BUILD)
   }
 

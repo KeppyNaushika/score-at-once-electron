@@ -327,10 +327,20 @@ export function ResultsTable({
     }
   }
 
+  // 登録順（result.students の元順序）の1始まり順位を studentId で引ける Map。
+  // レンダー毎・比較毎の indexOf(O(n)) を避けるため一度だけ構築する。
+  const registrationRankByStudentId = useMemo(
+    () =>
+      new Map(
+        result.students.map((student, index) => [student.studentId, index])
+      ),
+    [result.students]
+  )
+
   const sortedStudents = [...result.students].sort((a, b) => {
     if (sortKey === "registrationOrder") {
-      const aIndex = result.students.indexOf(a)
-      const bIndex = result.students.indexOf(b)
+      const aIndex = registrationRankByStudentId.get(a.studentId) ?? 0
+      const bIndex = registrationRankByStudentId.get(b.studentId) ?? 0
       return sortAsc ? aIndex - bIndex : bIndex - aIndex
     }
     let comparison = 0
@@ -407,7 +417,8 @@ export function ResultsTable({
                   title={rowTitle}
                 >
                   <td className="text-muted-foreground px-2 py-1.5 text-center">
-                    {result.students.indexOf(student) + 1}
+                    {(registrationRankByStudentId.get(student.studentId) ?? 0) +
+                      1}
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     {student.attendanceNumber ?? "-"}
