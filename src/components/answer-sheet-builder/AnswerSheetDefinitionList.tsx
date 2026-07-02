@@ -56,7 +56,7 @@ export function AnswerSheetDefinitionList() {
   const toggleSort = useCallback(
     (key: SortKey) => {
       if (sortKey === key) {
-        setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+        setSortDir((prevSortDir) => (prevSortDir === "asc" ? "desc" : "asc"))
       } else {
         setSortKey(key)
         setSortDir(key === "name" ? "asc" : "desc")

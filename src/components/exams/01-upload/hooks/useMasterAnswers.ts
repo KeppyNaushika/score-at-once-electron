@@ -117,7 +117,7 @@ export function useMasterAnswers(
         if (result) {
           const totalPages = allFilesData.length
           const pdfCount = files.filter(
-            (f) => f.type === "application/pdf"
+            (file) => file.type === "application/pdf"
           ).length
           const imageCount = files.length - pdfCount
 
@@ -227,12 +227,14 @@ export function useMasterAnswers(
         await window.electronAPI.updateMasterImagePageSize(answerId, pageSize)
         setState((prev) => ({
           ...prev,
-          answers: prev.answers.map((a) =>
-            a.id === answerId ? { ...a, pageSize } : a
+          answers: prev.answers.map((answer) =>
+            answer.id === answerId ? { ...answer, pageSize } : answer
           ),
         }))
         onAnswersChange(
-          state.answers.map((a) => (a.id === answerId ? { ...a, pageSize } : a))
+          state.answers.map((answer) =>
+            answer.id === answerId ? { ...answer, pageSize } : answer
+          )
         )
         toast.success("用紙サイズを変更しました")
       } catch (error) {

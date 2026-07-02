@@ -35,8 +35,10 @@ export default function PdfToolsMainView() {
   }
 
   const handleFileRemoved = (fileId: string) => {
-    setImportedFiles((prev) => prev.filter((f) => f.id !== fileId))
-    setOutputPages((prev) => prev.filter((p) => p.sourceFileId !== fileId))
+    setImportedFiles((prev) => prev.filter((file) => file.id !== fileId))
+    setOutputPages((prev) =>
+      prev.filter((page) => page.sourceFileId !== fileId)
+    )
     // ファイル削除時に対応する除外ページもクリア
     setExcludedPages((prev) => {
       const next = new Set<string>()
@@ -49,7 +51,7 @@ export default function PdfToolsMainView() {
 
   const handleFileUpdated = (updatedFile: ImportedFile) => {
     setImportedFiles((prev) =>
-      prev.map((f) => (f.id === updatedFile.id ? updatedFile : f))
+      prev.map((file) => (file.id === updatedFile.id ? updatedFile : file))
     )
   }
 
@@ -62,8 +64,8 @@ export default function PdfToolsMainView() {
     setExcludedPages((prev) => {
       const next = new Set(prev)
       if (page.isNUpCombined && page.combinedPages) {
-        for (const pn of page.combinedPages) {
-          next.add(`${page.sourceFileId}:${pn}`)
+        for (const pageNumber of page.combinedPages) {
+          next.add(`${page.sourceFileId}:${pageNumber}`)
         }
       } else {
         next.add(`${page.sourceFileId}:${page.sourcePageNumber}`)

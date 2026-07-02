@@ -18,8 +18,10 @@ export function generateGradeReportBatchHtml(
   options: GradeReportOptions
 ): string {
   const reportsHtml = studentIds
-    .map((id, index) => {
-      const student = result.students.find((s) => s.studentId === id)
+    .map((studentId, index) => {
+      const student = result.students.find(
+        (student) => student.studentId === studentId
+      )
       if (!student) return ""
       const isLast = index === studentIds.length - 1
       const pageBreak = isLast ? "" : ' style="page-break-after: always;"'
@@ -326,7 +328,7 @@ function renderSourceBreakdownSection(
 
   // コメントが1つでもあるか（列の有無判定にも使用）
   const hasAnyComment = allRows.some(
-    (r) => r.comment !== null && r.comment !== ""
+    (row) => row.comment !== null && row.comment !== ""
   )
   const showComment = srcCols.comment && hasAnyComment
 

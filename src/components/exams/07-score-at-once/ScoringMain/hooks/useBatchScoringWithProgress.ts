@@ -54,7 +54,7 @@ export function useBatchScoringWithProgress({
       const answerIds = Array.from(selectedAnswers)
       setRecentlyScoredAnswers((prev) => {
         const newSet = new Set(prev)
-        answerIds.forEach((id) => newSet.add(id))
+        answerIds.forEach((answerId) => newSet.add(answerId))
         return newSet
       })
 

@@ -16,8 +16,8 @@ export async function resolveImageDataUris(
 
   for (const cell of cells) {
     if (!cell.imageElements?.length) continue
-    for (const ie of cell.imageElements) {
-      paths.add(ie.imagePath)
+    for (const imageElement of cell.imageElements) {
+      paths.add(imageElement.imagePath)
     }
   }
 

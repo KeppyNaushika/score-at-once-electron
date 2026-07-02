@@ -44,10 +44,10 @@ export function containsPoint(rect: Rect, x: number, y: number): boolean {
 export function getBoundingRect(rects: Rect[]): Rect | null {
   if (rects.length === 0) return null
 
-  const minX = Math.min(...rects.map((r) => r.x))
-  const minY = Math.min(...rects.map((r) => r.y))
-  const maxX = Math.max(...rects.map((r) => r.x + r.width))
-  const maxY = Math.max(...rects.map((r) => r.y + r.height))
+  const minX = Math.min(...rects.map((rect) => rect.x))
+  const minY = Math.min(...rects.map((rect) => rect.y))
+  const maxX = Math.max(...rects.map((rect) => rect.x + rect.width))
+  const maxY = Math.max(...rects.map((rect) => rect.y + rect.height))
 
   return {
     x: minX,

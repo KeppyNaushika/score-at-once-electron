@@ -30,7 +30,7 @@ async function renderPageSvgHtmls(
   const effectiveRenderMode = renderMode ?? definition.renderMode
 
   // 画像の data URI を事前解決
-  const allCells = multiLayout.pages.flatMap((p) => p.cells)
+  const allCells = multiLayout.pages.flatMap((page) => page.cells)
   const imageDataUris = await resolveImageDataUris(allCells)
 
   // 各ページを renderToStaticMarkup で HTML 化

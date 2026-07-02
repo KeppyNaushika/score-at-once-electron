@@ -27,10 +27,10 @@ export function PreviewPane({ html }: PreviewPaneProps) {
 
   // Shadow DOMにHTMLを挿入し、実際の描画サイズを測定
   useEffect(() => {
-    const el = hostRef.current
-    if (!el || !html) return
+    const host = hostRef.current
+    if (!host || !html) return
 
-    const shadow = el.shadowRoot ?? el.attachShadow({ mode: "open" })
+    const shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" })
 
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, "text/html")
@@ -58,21 +58,21 @@ export function PreviewPane({ html }: PreviewPaneProps) {
 
     // 描画後にコンテンツの実寸を測定
     requestAnimationFrame(() => {
-      const w = wrapper.offsetWidth
-      const h = wrapper.offsetHeight
-      if (w > 0 && h > 0) {
-        contentSizeRef.current = { width: w, height: h }
+      const width = wrapper.offsetWidth
+      const height = wrapper.offsetHeight
+      if (width > 0 && height > 0) {
+        contentSizeRef.current = { width, height }
       }
 
       // 初期スケールを算出
       if (!initializedRef.current) {
         const container = containerRef.current
         if (container) {
-          const cs = getComputedStyle(container)
+          const computedStyle = getComputedStyle(container)
           const availableWidth =
             container.clientWidth -
-            parseFloat(cs.paddingLeft) -
-            parseFloat(cs.paddingRight)
+            parseFloat(computedStyle.paddingLeft) -
+            parseFloat(computedStyle.paddingRight)
           if (availableWidth > 0 && contentSizeRef.current.width > 0) {
             setScale(Math.min(availableWidth / contentSizeRef.current.width, 1))
             initializedRef.current = true
@@ -123,7 +123,7 @@ export function PreviewPane({ html }: PreviewPaneProps) {
   }, [handleWheel])
 
   const s = scale ?? 1
-  const { width: cw, height: ch } = contentSizeRef.current
+  const { width: contentWidth, height: contentHeight } = contentSizeRef.current
 
   return (
     <div
@@ -132,8 +132,8 @@ export function PreviewPane({ html }: PreviewPaneProps) {
     >
       <div
         style={{
-          width: cw * s,
-          height: ch * s,
+          width: contentWidth * s,
+          height: contentHeight * s,
           margin: "0 auto",
           visibility: scale !== null ? "visible" : "hidden",
         }}

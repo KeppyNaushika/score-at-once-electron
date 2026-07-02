@@ -44,7 +44,9 @@ export default function ExportActions({
     try {
       // OutputPagesからMergePageInputを作成
       const pages = outputPages.map((page) => {
-        const file = importedFiles.find((f) => f.id === page.sourceFileId)
+        const file = importedFiles.find(
+          (importedFile) => importedFile.id === page.sourceFileId
+        )
         console.log("Creating page input:", {
           fileId: page.sourceFileId,
           fileName: file?.name,

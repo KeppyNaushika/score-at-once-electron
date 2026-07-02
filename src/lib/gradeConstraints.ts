@@ -68,16 +68,22 @@ interface ViewpointLabel {
 function buildOrderedLabelsMap(
   result: GradeCalculationResult
 ): Map<string, string[]> {
-  const idToName = new Map(result.gradeItems.map((gi) => [gi.id, gi.name]))
+  const idToName = new Map(
+    result.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
+  )
   const byName = new Map<string, string[]>()
-  for (const bs of result.boundarySets) {
-    if (bs.targetType !== "grade_item" || !bs.gradeItemId) continue
-    const name = idToName.get(bs.gradeItemId)
+  for (const boundarySet of result.boundarySets) {
+    if (boundarySet.targetType !== "grade_item" || !boundarySet.gradeItemId)
+      continue
+    const name = idToName.get(boundarySet.gradeItemId)
     if (!name) continue
     // minPercentage 昇順 = 弱い評価が先頭
-    const ordered = [...bs.boundaries]
-      .sort((a, b) => a.minPercentage - b.minPercentage)
-      .map((b) => b.label)
+    const ordered = [...boundarySet.boundaries]
+      .sort(
+        (boundaryA, boundaryB) =>
+          boundaryA.minPercentage - boundaryB.minPercentage
+      )
+      .map((boundary) => boundary.label)
     byName.set(name, ordered)
   }
   return byName
@@ -109,9 +115,14 @@ function labelToValue(
 /** 生徒の観点ラベル一覧（除外・未算出は含めない） */
 function collectViewpointLabels(student: StudentGradeResult): ViewpointLabel[] {
   return student.gradeItemResults
-    .filter((r) => !r.isExcluded)
-    .map((r) => ({ name: r.gradeItemName, label: r.gradeLabel }))
-    .filter((v): v is ViewpointLabel => v.label !== null)
+    .filter((gradeItemResult) => !gradeItemResult.isExcluded)
+    .map((gradeItemResult) => ({
+      name: gradeItemResult.gradeItemName,
+      label: gradeItemResult.gradeLabel,
+    }))
+    .filter(
+      (viewpoint): viewpoint is ViewpointLabel => viewpoint.label !== null
+    )
 }
 
 function evalConsistency(
@@ -120,7 +131,9 @@ function evalConsistency(
   ordered: Map<string, string[]>
 ): boolean {
   // 「評定」を担う GradeItem を比較先にし、指定の観点（未指定なら残り全部）を集計対象にする
-  const targetItem = viewpoints.find((v) => v.name === config.target)
+  const targetItem = viewpoints.find(
+    (viewpoint) => viewpoint.name === config.target
+  )
   if (!targetItem) return false
   const targetVal = labelToValue(
     targetItem.label,
@@ -132,16 +145,22 @@ function evalConsistency(
   const selected = config.viewpointItems ?? []
   const aggregationViewpoints =
     selected.length > 0
-      ? viewpoints.filter((v) => selected.includes(v.name))
-      : viewpoints.filter((v) => v.name !== config.target)
+      ? viewpoints.filter((viewpoint) => selected.includes(viewpoint.name))
+      : viewpoints.filter((viewpoint) => viewpoint.name !== config.target)
   if (aggregationViewpoints.length === 0) return false
 
   const values = aggregationViewpoints
-    .map((v) => labelToValue(v.label, config.labelValues, ordered.get(v.name)))
-    .filter((v): v is number => v !== null)
+    .map((viewpoint) =>
+      labelToValue(
+        viewpoint.label,
+        config.labelValues,
+        ordered.get(viewpoint.name)
+      )
+    )
+    .filter((value): value is number => value !== null)
   if (values.length === 0) return false
 
-  const sum = values.reduce((acc, v) => acc + v, 0)
+  const sum = values.reduce((acc, value) => acc + value, 0)
   const aggregate = config.aggregate === "sum" ? sum : sum / values.length
 
   return Math.abs(targetVal - aggregate) > config.tolerance
@@ -153,7 +172,7 @@ function evalMutualExclusion(
 ): boolean {
   const present = new Set(
     viewpoints
-      .map((v) => v.label)
+      .map((viewpoint) => viewpoint.label)
       .filter((label) => config.labels.includes(label))
   )
   return present.size >= 2
@@ -170,8 +189,8 @@ function buildExpressionScope(
   allItemNames: Set<string>
 ): Record<string, Value> {
   // 各項目の数値（ラベル値: 数値ラベルはそのまま、A/B/C等は弱→強の順位）
-  const itemValue = (vp: ViewpointLabel) =>
-    labelToValue(vp.label, undefined, ordered.get(vp.name))
+  const itemValue = (viewpoint: ViewpointLabel) =>
+    labelToValue(viewpoint.label, undefined, ordered.get(viewpoint.name))
 
   // 存在しない項目名の参照はタイプミスとみなしエラーにする（無言失火を防ぐ）。
   // 実在する項目だが当該生徒が除外されている場合は throw せず未定義扱い。

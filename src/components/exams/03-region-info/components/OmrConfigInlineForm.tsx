@@ -67,7 +67,9 @@ export function OmrConfigInlineForm({
   )
   const [choiceLabels, setChoiceLabels] = useState<string[]>(() => {
     if (existingConfig?.choiceOptions?.length) {
-      return existingConfig.choiceOptions.map((o) => o.label)
+      return existingConfig.choiceOptions.map(
+        (choiceOption) => choiceOption.label
+      )
     }
     return DEFAULT_CHOICE_LABELS.slice(0, numChoices)
   })
@@ -75,8 +77,8 @@ export function OmrConfigInlineForm({
     if (existingConfig?.choiceOptions?.length) {
       return new Set(
         existingConfig.choiceOptions
-          .filter((o) => o.isCorrect)
-          .map((o) => o.choiceIndex)
+          .filter((choiceOption) => choiceOption.isCorrect)
+          .map((choiceOption) => choiceOption.choiceIndex)
       )
     }
     return new Set<number>()

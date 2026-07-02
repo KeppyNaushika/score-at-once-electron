@@ -145,7 +145,10 @@ export function SubtotalGroupSelector({
                       </Badge>
                     </div>
                     <div className="text-muted-foreground mt-1 text-xs">
-                      項目: {group.subtotals.map((s) => s.name).join(", ")}
+                      項目:{" "}
+                      {group.subtotals
+                        .map((subtotal) => subtotal.name)
+                        .join(", ")}
                     </div>
                   </div>
                   <Button

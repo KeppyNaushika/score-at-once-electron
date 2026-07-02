@@ -95,9 +95,9 @@ export class FrameDetector {
         worker.removeEventListener("message", onMessage)
         worker.removeEventListener("error", onError)
 
-        const rects: DetectedRect[] = event.data.rects.map((r) => ({
+        const rects: DetectedRect[] = event.data.rects.map((rect) => ({
           id: generateId(),
-          ...r,
+          ...rect,
         }))
         resolve(rects)
       }

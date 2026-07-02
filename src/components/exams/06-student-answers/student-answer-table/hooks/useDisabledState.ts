@@ -79,9 +79,9 @@ export function useDisabledState() {
   const initializeStudentsWithoutAnswers = useCallback(
     (students: UnifiedStudent[]) => {
       // 欠席生徒を初期状態で行無効にする（ユーザーが手動で有効化可能）
-      const sortedStudents = [...students].sort((a, b) => {
-        const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
-        const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
+      const sortedStudents = [...students].sort((studentA, studentB) => {
+        const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+        const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
         return aOrder - bOrder
       })
 

@@ -117,7 +117,10 @@ export function useTemplateData(examId: string | undefined) {
               updatedAt: page.updatedAt,
             }
           })
-          .sort((a, b) => a.pageNumber - b.pageNumber)
+          .sort(
+            (masterImageA, masterImageB) =>
+              masterImageA.pageNumber - masterImageB.pageNumber
+          )
 
         processedMasterImages = masterImages
         selectedImage = processedMasterImages[0]
@@ -193,7 +196,9 @@ export function useTemplateData(examId: string | undefined) {
    */
   const handleMasterImageChange = useCallback(
     async (imageId: string) => {
-      const image = initialData.masterImages.find((img) => img.id === imageId)
+      const image = initialData.masterImages.find(
+        (masterImage) => masterImage.id === imageId
+      )
       if (!image || !examId) return
 
       try {

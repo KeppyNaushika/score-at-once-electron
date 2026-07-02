@@ -99,15 +99,15 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
    * UserExam を v1.1.0 形式に変換
    */
   private transformUserExams(userExams: V1_0_0_UserExam[]): V1_1_0_UserExam[] {
-    return userExams.map((up, index) => {
+    return userExams.map((userExam, index) => {
       // roleが存在する場合は保持、なければデフォルト値を設定
       // 最初のユーザーはOWNER、それ以外はGRADER
-      const role = up.role ?? (index === 0 ? "OWNER" : "GRADER")
+      const role = userExam.role ?? (index === 0 ? "OWNER" : "GRADER")
 
       return {
-        ...up,
+        ...userExam,
         role,
-        invitedAt: up.createdAt, // createdAtで代用
+        invitedAt: userExam.createdAt, // createdAtで代用
         invitedBy: index === 0 ? null : (userExams[0]?.userId ?? null),
       }
     })

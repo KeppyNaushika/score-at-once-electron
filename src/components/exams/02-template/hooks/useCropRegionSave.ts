@@ -190,8 +190,9 @@ export function useCropRegionSave(
           break
         case "QUESTION_ANSWER":
           label = `設問 ${
-            existingRegions.filter((a) => a.type === "QUESTION_ANSWER").length +
-            1
+            existingRegions.filter(
+              (region) => region.type === "QUESTION_ANSWER"
+            ).length + 1
           }`
           points = String(defaultPoints ?? 10)
           break

@@ -212,8 +212,8 @@ export async function getPdfExportData(options: {
       }))
 
     // 選択された生徒のみフィルタリング
-    const selectedStudents = allStudents.filter((s) =>
-      selectedStudentIds.includes(s.id)
+    const selectedStudents = allStudents.filter((student) =>
+      selectedStudentIds.includes(student.id)
     )
 
     const pages: PdfExportPageData[] = []
@@ -221,7 +221,7 @@ export async function getPdfExportData(options: {
     for (const student of selectedStudents) {
       // この生徒の答案画像を取得
       const studentAnswerList = studentAnswers.filter(
-        (sa) => sa.studentId === student.id
+        (studentAnswer) => studentAnswer.studentId === student.id
       )
 
       if (studentAnswerList.length === 0) continue
@@ -238,7 +238,7 @@ export async function getPdfExportData(options: {
 
         // このページの採点領域を取得
         const pageRegions = cropRegions.filter(
-          (cr) => cr.examPage?.pageNumber === pageNumber
+          (cropRegion) => cropRegion.examPage?.pageNumber === pageNumber
         )
 
         // 採点データを構築
@@ -250,7 +250,9 @@ export async function getPdfExportData(options: {
               return null
             }
             const score = allScores.find(
-              (s) => s.cropRegionId === region.id && s.studentId === student.id
+              (resolvedScore) =>
+                resolvedScore.cropRegionId === region.id &&
+                resolvedScore.studentId === student.id
             )
             return {
               questionScoreId: score?.questionScoreId || "",
@@ -270,17 +272,18 @@ export async function getPdfExportData(options: {
           })
           .filter(
             // 提案行が無くても確定（decision）で採点済みのセルはマークを描画する
-            (sd): sd is NonNullable<typeof sd> =>
-              sd !== null &&
-              (sd.questionScoreId !== "" || sd.status !== "unscored")
+            (scoringEntry): scoringEntry is NonNullable<typeof scoringEntry> =>
+              scoringEntry !== null &&
+              (scoringEntry.questionScoreId !== "" ||
+                scoringEntry.status !== "unscored")
           )
 
         // アノテーションを取得
         const annotations: PdfExportPageData["annotations"] = []
-        for (const sd of scoringData) {
-          if (!sd.questionScoreId) continue
+        for (const scoringEntry of scoringData) {
+          if (!scoringEntry.questionScoreId) continue
           const annots = await getDrawingAnnotationsByQuestionScore(
-            sd.questionScoreId
+            scoringEntry.questionScoreId
           )
           for (const annot of annots) {
             annotations.push({

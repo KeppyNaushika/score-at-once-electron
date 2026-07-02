@@ -9,7 +9,9 @@ import { ConvertedImage } from "@/lib/pdfConverter"
 export const sortImagesByPageNumber = (
   answers: MasterAnswer[]
 ): MasterAnswer[] => {
-  return [...answers].sort((a, b) => a.pageNumber - b.pageNumber)
+  return [...answers].sort(
+    (answerA, answerB) => answerA.pageNumber - answerB.pageNumber
+  )
 }
 
 /**

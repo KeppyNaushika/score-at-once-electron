@@ -41,15 +41,15 @@ export function useBatchScoring({
         if (result.success && result.score) {
           const dbScore = result.score
           setQuestionScores((prev) =>
-            prev.map((s) =>
-              s.id === scoreId
+            prev.map((questionScore) =>
+              questionScore.id === scoreId
                 ? {
-                    ...s,
+                    ...questionScore,
                     partialScore: dbScore.partialScore,
                     status: dbScore.status,
                     updatedAt: new Date(dbScore.updatedAt),
                   }
-                : s
+                : questionScore
             )
           )
         }

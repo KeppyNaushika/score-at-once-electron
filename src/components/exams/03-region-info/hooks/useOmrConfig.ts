@@ -18,8 +18,8 @@ export function useOmrConfig(examId: string) {
       const result = await window.electronAPI.omrConfig.getByExam(examId)
       if (result.success && result.configs) {
         const map = new Map<string, CropRegionOmrConfigWithOptions>()
-        for (const cfg of result.configs) {
-          map.set(cfg.cropRegionId, cfg)
+        for (const config of result.configs) {
+          map.set(config.cropRegionId, config)
         }
         setOmrConfigs(map)
       }

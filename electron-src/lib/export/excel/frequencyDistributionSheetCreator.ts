@@ -17,7 +17,7 @@ export async function createFrequencyDistributionSheet(
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("得点度数分布")
 
-  const totalScores = scoringData.map((d) => d.totalScore)
+  const totalScores = scoringData.map((student) => student.totalScore)
   const maxScore = scoringData[0]?.totalMaxScore ?? 0
   const result = computeFrequencyDistribution(totalScores, maxScore)
 
