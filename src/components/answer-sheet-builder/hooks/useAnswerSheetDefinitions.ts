@@ -43,7 +43,9 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
 
     const result = await api.deleteDefinition(id)
     if (result.success) {
-      setDefinitions((prev) => prev.filter((d) => d.id !== id))
+      setDefinitions((prev) =>
+        prev.filter((definition) => definition.id !== id)
+      )
       toast.success("定義を削除しました")
     } else {
       toast.error(result.error ?? "削除に失敗しました")

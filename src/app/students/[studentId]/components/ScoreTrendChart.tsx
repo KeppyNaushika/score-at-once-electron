@@ -86,38 +86,40 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   // 全タグ一覧
   const allTags = useMemo(() => {
     const tagSet = new Set<string>()
-    results.forEach((r) => r.tags.forEach((t) => tagSet.add(t)))
+    results.forEach((examResult) =>
+      examResult.tags.forEach((tag) => tagSet.add(tag))
+    )
     return Array.from(tagSet).sort()
   }, [results])
 
   // 全小計一覧
   const subtotalOptions = useMemo<SubtotalOption[]>(() => {
     const map = new Map<string, SubtotalOption>()
-    results.forEach((r) => {
-      r.subtotalScores.forEach((s) => {
-        if (!map.has(s.subtotalId)) {
-          map.set(s.subtotalId, {
-            id: s.subtotalId,
-            label: s.subtotalName,
-            groupName: s.subtotalGroupName,
+    results.forEach((examResult) => {
+      examResult.subtotalScores.forEach((subtotalScore) => {
+        if (!map.has(subtotalScore.subtotalId)) {
+          map.set(subtotalScore.subtotalId, {
+            id: subtotalScore.subtotalId,
+            label: subtotalScore.subtotalName,
+            groupName: subtotalScore.subtotalGroupName,
           })
         }
       })
     })
-    return Array.from(map.values()).sort((a, b) => {
-      const g = a.groupName.localeCompare(b.groupName)
-      if (g !== 0) return g
-      return a.label.localeCompare(b.label)
+    return Array.from(map.values()).sort((optionA, optionB) => {
+      const groupComparison = optionA.groupName.localeCompare(optionB.groupName)
+      if (groupComparison !== 0) return groupComparison
+      return optionA.label.localeCompare(optionB.label)
     })
   }, [results])
 
   // グループ名でまとめた小計一覧
   const subtotalGroups = useMemo(() => {
     const groups = new Map<string, SubtotalOption[]>()
-    for (const opt of subtotalOptions) {
-      const list = groups.get(opt.groupName) || []
-      list.push(opt)
-      groups.set(opt.groupName, list)
+    for (const option of subtotalOptions) {
+      const list = groups.get(option.groupName) || []
+      list.push(option)
+      groups.set(option.groupName, list)
     }
     return Array.from(groups.entries())
   }, [subtotalOptions])
@@ -130,8 +132,10 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
         parts.push(Array.from(tags).join("・"))
       }
       if (subtotalId !== "__total__") {
-        const opt = subtotalOptions.find((o) => o.id === subtotalId)
-        if (opt) parts.push(opt.label)
+        const matchedOption = subtotalOptions.find(
+          (option) => option.id === subtotalId
+        )
+        if (matchedOption) parts.push(matchedOption.label)
       } else {
         parts.push("合計")
       }
@@ -143,13 +147,13 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   // 系列の追加
   const addSeries = useCallback(() => {
     setSeriesList((prev) => {
-      const colorIdx = prev.length % SERIES_COLORS.length
+      const colorIndex = prev.length % SERIES_COLORS.length
       const newSeries: SeriesConfig = {
         id: createId(),
         label: "合計",
         tags: new Set<string>(),
         subtotalId: "__total__",
-        color: SERIES_COLORS[colorIdx],
+        color: SERIES_COLORS[colorIndex],
       }
       return [...prev, newSeries]
     })
@@ -159,7 +163,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   const removeSeries = useCallback((seriesId: string) => {
     setSeriesList((prev) => {
       if (prev.length <= 1) return prev
-      return prev.filter((s) => s.id !== seriesId)
+      return prev.filter((series) => series.id !== seriesId)
     })
   }, [])
 
@@ -167,15 +171,19 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   const toggleSeriesTag = useCallback(
     (seriesId: string, tag: string) => {
       setSeriesList((prev) =>
-        prev.map((s) => {
-          if (s.id !== seriesId) return s
-          const next = new Set(s.tags)
+        prev.map((series) => {
+          if (series.id !== seriesId) return series
+          const next = new Set(series.tags)
           if (next.has(tag)) {
             next.delete(tag)
           } else {
             next.add(tag)
           }
-          return { ...s, tags: next, label: buildLabel(next, s.subtotalId) }
+          return {
+            ...series,
+            tags: next,
+            label: buildLabel(next, series.subtotalId),
+          }
         })
       )
     },
@@ -185,10 +193,14 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   const clearSeriesTags = useCallback(
     (seriesId: string) => {
       setSeriesList((prev) =>
-        prev.map((s) => {
-          if (s.id !== seriesId) return s
+        prev.map((series) => {
+          if (series.id !== seriesId) return series
           const empty = new Set<string>()
-          return { ...s, tags: empty, label: buildLabel(empty, s.subtotalId) }
+          return {
+            ...series,
+            tags: empty,
+            label: buildLabel(empty, series.subtotalId),
+          }
         })
       )
     },
@@ -199,9 +211,13 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   const setSeriesSubtotal = useCallback(
     (seriesId: string, subtotalId: string) => {
       setSeriesList((prev) =>
-        prev.map((s) => {
-          if (s.id !== seriesId) return s
-          return { ...s, subtotalId, label: buildLabel(s.tags, subtotalId) }
+        prev.map((series) => {
+          if (series.id !== seriesId) return series
+          return {
+            ...series,
+            subtotalId,
+            label: buildLabel(series.tags, subtotalId),
+          }
         })
       )
     },
@@ -221,36 +237,38 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
 
     for (const series of seriesList) {
       const scored = results.filter(
-        (r) =>
-          r.examDate &&
-          (r.status === "complete" || r.status === "partial") &&
-          (series.tags.size === 0 || r.tags.some((t) => series.tags.has(t)))
+        (examResult) =>
+          examResult.examDate &&
+          (examResult.status === "complete" ||
+            examResult.status === "partial") &&
+          (series.tags.size === 0 ||
+            examResult.tags.some((tag) => series.tags.has(tag)))
       )
 
-      for (const r of scored) {
-        const key = new Date(r.examDate!).getTime()
+      for (const examResult of scored) {
+        const key = new Date(examResult.examDate!).getTime()
         let score: number
         let maxScore: number
 
         if (series.subtotalId === "__total__") {
-          score = r.totalScore
-          maxScore = r.maxScore
+          score = examResult.totalScore
+          maxScore = examResult.maxScore
         } else {
-          const sub = r.subtotalScores.find(
-            (s) => s.subtotalId === series.subtotalId
+          const matchedSubtotal = examResult.subtotalScores.find(
+            (subtotalScore) => subtotalScore.subtotalId === series.subtotalId
           )
-          if (!sub) continue
-          score = sub.score
-          maxScore = sub.maxScore
+          if (!matchedSubtotal) continue
+          score = matchedSubtotal.score
+          maxScore = matchedSubtotal.maxScore
         }
 
         const rate = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
 
         if (!dateMap.has(key)) {
           dateMap.set(key, {
-            date: formatShortDate(r.examDate!),
+            date: formatShortDate(examResult.examDate!),
             sortKey: key,
-            examName: r.examName,
+            examName: examResult.examName,
           })
         }
 
@@ -262,11 +280,11 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
     }
 
     const merged = Array.from(dateMap.values()).sort(
-      (a, b) => a.sortKey - b.sortKey
+      (entryA, entryB) => entryA.sortKey - entryB.sortKey
     )
 
-    const anySeriesHasData = seriesList.some((s) =>
-      merged.some((d) => d[s.id] !== undefined)
+    const anySeriesHasData = seriesList.some((series) =>
+      merged.some((entry) => entry[series.id] !== undefined)
     )
 
     return { mergedData: merged, hasData: anySeriesHasData }
@@ -318,10 +336,12 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                     {series.subtotalId === "__total__"
                       ? "合計得点率"
                       : (() => {
-                          const opt = subtotalOptions.find(
-                            (o) => o.id === series.subtotalId
+                          const matchedOption = subtotalOptions.find(
+                            (option) => option.id === series.subtotalId
                           )
-                          return opt ? opt.label : "合計得点率"
+                          return matchedOption
+                            ? matchedOption.label
+                            : "合計得点率"
                         })()}
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
@@ -338,12 +358,14 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                         {groupName}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
-                        {items.map((opt) => (
+                        {items.map((option) => (
                           <DropdownMenuItem
-                            key={opt.id}
-                            onClick={() => setSeriesSubtotal(series.id, opt.id)}
+                            key={option.id}
+                            onClick={() =>
+                              setSeriesSubtotal(series.id, option.id)
+                            }
                           >
-                            {opt.label}
+                            {option.label}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuSubContent>
@@ -408,9 +430,9 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => {
-                  const d = new Date(v)
-                  return `${d.getMonth() + 1}/${d.getDate()}`
+                tickFormatter={(tickValue) => {
+                  const date = new Date(tickValue)
+                  return `${date.getMonth() + 1}/${date.getDate()}`
                 }}
               />
               <YAxis
@@ -418,7 +440,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => `${v}%`}
+                tickFormatter={(tickValue) => `${tickValue}%`}
                 width={45}
               />
               <Tooltip
@@ -435,11 +457,11 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                         {first.date as string}
                       </p>
                       <div className="mt-1.5 space-y-1">
-                        {payload.map((p) => {
+                        {payload.map((payloadEntry) => {
                           const series = seriesList.find(
-                            (s) => s.id === p.dataKey
+                            (candidate) => candidate.id === payloadEntry.dataKey
                           )
-                          if (!series || p.value == null) return null
+                          if (!series || payloadEntry.value == null) return null
                           const score = first[`${series.id}_score`] as number
                           const max = first[`${series.id}_max`] as number
                           return (
@@ -455,7 +477,8 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                                 {series.label}
                               </span>
                               <span className="ml-auto font-semibold tabular-nums">
-                                {score} / {max} 点（{p.value as number}
+                                {score} / {max} 点（
+                                {payloadEntry.value as number}
                                 %）
                               </span>
                             </div>
@@ -468,7 +491,9 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
               />
               <Legend
                 formatter={(value) => {
-                  const series = seriesList.find((s) => s.id === value)
+                  const series = seriesList.find(
+                    (candidate) => candidate.id === value
+                  )
                   return (
                     <span className="text-xs">{series?.label ?? value}</span>
                   )

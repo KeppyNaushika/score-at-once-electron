@@ -84,8 +84,8 @@ export function ClassRemovalDialog({
     if (!preview) return
     let cancelled = false
     preview(entry)
-      .then((p) => {
-        if (!cancelled) setExclusiveCount(p.exclusiveCount)
+      .then((removalPreview) => {
+        if (!cancelled) setExclusiveCount(removalPreview.exclusiveCount)
       })
       .catch((err) => {
         console.error("Failed to fetch class removal preview:", err)

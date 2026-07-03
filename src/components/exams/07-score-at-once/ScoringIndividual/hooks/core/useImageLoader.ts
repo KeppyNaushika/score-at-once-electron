@@ -48,8 +48,9 @@ export function useImageLoader({
         const studentAnswerSheets = studentAnswerImages
           .filter((sheet) => sheet.studentId === currentScoringData.studentId)
           .sort(
-            (a, b) =>
-              (a.examPage?.pageNumber || 1) - (b.examPage?.pageNumber || 1)
+            (sheetA, sheetB) =>
+              (sheetA.examPage?.pageNumber || 1) -
+              (sheetB.examPage?.pageNumber || 1)
           )
 
         imagesToLoad = studentAnswerSheets.map((sheet) => ({
@@ -69,10 +70,10 @@ export function useImageLoader({
       // 画像を並列読み込み
       const loadPromises = imagesToLoad.map(async (imageInfo) => {
         return new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image()
+          const image = new Image()
 
-          img.onload = () => resolve(img)
-          img.onerror = (error) => {
+          image.onload = () => resolve(image)
+          image.onerror = (error) => {
             console.error(
               `Failed to load image for page ${imageInfo.pageNumber}:`,
               error
@@ -87,7 +88,7 @@ export function useImageLoader({
               if (result.success && result.exists) {
                 // 相対パスを使用（appimg:// プロトコルハンドラー内で絶対パスに変換される）
                 // 絶対パスを使うと appimg:////Users/... となりURL正規化でパスが壊れる
-                img.src = `appimg:///${imageInfo.path}`
+                image.src = `appimg:///${imageInfo.path}`
               } else {
                 console.warn(`File does not exist: ${imageInfo.path}`)
                 reject(new Error(`File not found: ${imageInfo.path}`))
@@ -95,7 +96,7 @@ export function useImageLoader({
             })
             .catch((error) => {
               console.error("Error checking file existence:", error)
-              img.src = `appimg:///${imageInfo.path}` // フォールバック
+              image.src = `appimg:///${imageInfo.path}` // フォールバック
             })
         })
       })

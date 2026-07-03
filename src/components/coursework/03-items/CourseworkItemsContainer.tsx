@@ -54,7 +54,10 @@ function toDraft(item: CourseworkItemWithDetails): ItemDraft {
         ? item.letterScales
             .slice()
             .sort((a, b) => a.order - b.order)
-            .map((ls) => ({ label: ls.label, score: String(ls.score) }))
+            .map((letterScale) => ({
+              label: letterScale.label,
+              score: String(letterScale.score),
+            }))
         : DEFAULT_LETTER_SCALES,
   }
 }

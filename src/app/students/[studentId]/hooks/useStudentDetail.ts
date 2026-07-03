@@ -19,7 +19,9 @@ export function useStudentDetail(studentId: string) {
       try {
         setLoading(true)
         const students = await window.electronAPI.fetchStudents()
-        const targetStudent = students.find((s) => s.id === studentId)
+        const targetStudent = students.find(
+          (student) => student.id === studentId
+        )
         if (targetStudent) {
           setStudent(targetStudent)
         }
@@ -98,7 +100,9 @@ export function useStudentDetail(studentId: string) {
 
       // Refresh student data
       const students = await window.electronAPI.fetchStudents()
-      const updatedStudent = students.find((s) => s.id === studentId)
+      const updatedStudent = students.find(
+        (student) => student.id === studentId
+      )
       if (updatedStudent) {
         setStudent(updatedStudent)
       }
@@ -117,7 +121,9 @@ export function useStudentDetail(studentId: string) {
 
         // Refresh student data
         const students = await window.electronAPI.fetchStudents()
-        const updatedStudent = students.find((s) => s.id === studentId)
+        const updatedStudent = students.find(
+          (student) => student.id === studentId
+        )
         if (updatedStudent) {
           setStudent(updatedStudent)
         }

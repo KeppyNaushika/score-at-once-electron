@@ -35,12 +35,12 @@ export function PreviewToolbar({
   onPageChange,
 }: PreviewToolbarProps) {
   const zoomIn = () => {
-    const nextIdx = ZOOM_STEPS.findIndex((s) => s > zoom)
+    const nextIdx = ZOOM_STEPS.findIndex((step) => step > zoom)
     if (nextIdx >= 0) onZoomChange(ZOOM_STEPS[nextIdx])
   }
 
   const zoomOut = () => {
-    const prevIdx = [...ZOOM_STEPS].reverse().findIndex((s) => s < zoom)
+    const prevIdx = [...ZOOM_STEPS].reverse().findIndex((step) => step < zoom)
     if (prevIdx >= 0) onZoomChange(ZOOM_STEPS[ZOOM_STEPS.length - 1 - prevIdx])
   }
 

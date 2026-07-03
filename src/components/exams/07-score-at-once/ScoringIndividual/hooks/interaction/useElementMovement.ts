@@ -406,17 +406,17 @@ export function useElementMovement({
           type?: string
         }
       >()
-      for (const elemId of elementIds) {
-        const elem = drawingElements.find((el) => el.id === elemId)
-        if (elem) {
-          elementsMap.set(elemId, {
-            x: elem.x,
-            y: elem.y,
-            endX: elem.endX,
-            endY: elem.endY,
-            displayX: elem.displayX,
-            displayY: elem.displayY,
-            type: elem.type,
+      for (const elementId of elementIds) {
+        const element = drawingElements.find((el) => el.id === elementId)
+        if (element) {
+          elementsMap.set(elementId, {
+            x: element.x,
+            y: element.y,
+            endX: element.endX,
+            endY: element.endY,
+            displayX: element.displayX,
+            displayY: element.displayY,
+            type: element.type,
           })
         }
       }

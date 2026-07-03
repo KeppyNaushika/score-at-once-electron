@@ -49,18 +49,21 @@ export default function InterleaveSettings({
   // ファイルが変更されたらtransformsを同期
   useEffect(() => {
     const currentConfig = configRef.current
-    const currentFileIds = new Set(files.map((f) => f.id))
-    const existingTransforms = currentConfig.transforms.filter((t) =>
-      currentFileIds.has(t.fileId)
+    const currentFileIds = new Set(files.map((file) => file.id))
+    const existingTransforms = currentConfig.transforms.filter((transform) =>
+      currentFileIds.has(transform.fileId)
     )
 
     // 新しいファイルのデフォルト設定を追加
     const newTransforms: FileTransform[] = files
-      .filter((f) => !existingTransforms.some((t) => t.fileId === f.id))
-      .map((f) => ({
-        fileId: f.id,
-        nUp: { ...f.nUp },
-        rotation: f.rotation,
+      .filter(
+        (file) =>
+          !existingTransforms.some((transform) => transform.fileId === file.id)
+      )
+      .map((file) => ({
+        fileId: file.id,
+        nUp: { ...file.nUp },
+        rotation: file.rotation,
         pagesPerGroup: 1,
       }))
 
@@ -85,8 +88,8 @@ export default function InterleaveSettings({
   ) => {
     onConfigChange({
       ...config,
-      transforms: config.transforms.map((t) =>
-        t.fileId === fileId ? { ...t, ...updates } : t
+      transforms: config.transforms.map((transform) =>
+        transform.fileId === fileId ? { ...transform, ...updates } : transform
       ),
     })
   }

@@ -46,8 +46,8 @@ export default function OutputPreview({
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = pages.findIndex((p) => p.id === active.id)
-    const newIndex = pages.findIndex((p) => p.id === over.id)
+    const oldIndex = pages.findIndex((page) => page.id === active.id)
+    const newIndex = pages.findIndex((page) => page.id === over.id)
 
     if (oldIndex !== -1 && newIndex !== -1) {
       onPagesChange(arrayMove(pages, oldIndex, newIndex))
@@ -76,7 +76,7 @@ export default function OutputPreview({
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={pages.map((p) => p.id)}
+        items={pages.map((page) => page.id)}
         strategy={rectSortingStrategy}
       >
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">

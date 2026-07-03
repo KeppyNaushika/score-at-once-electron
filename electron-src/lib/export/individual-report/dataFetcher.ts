@@ -80,7 +80,7 @@ export async function fetchIndividualReportData(
     const examInfo: ExamInfoForReport = {
       examName: exam.examName,
       examDate: exam.examDate,
-      tags: examTags.map((et) => et.tag.name),
+      tags: examTags.map((examTag) => examTag.tag.name),
     }
 
     // 試験のactiveなSubtotalGroupsとSubtotalsを取得
@@ -89,7 +89,7 @@ export async function fetchIndividualReportData(
     // CropRegionsと採点データを取得
     const cropRegions = await getCropRegionsByExamId(examId)
     const questionRegions = cropRegions.filter(
-      (r) => r.type === "QUESTION_ANSWER"
+      (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
     )
     const questionScoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
@@ -101,27 +101,27 @@ export async function fetchIndividualReportData(
 
     // 全生徒の小計点を計算（Subtotal単位）
     const allScoringData = await Promise.all(
-      allScoringDataFromExcel.map(async (data) => {
+      allScoringDataFromExcel.map(async (scoringData) => {
         const subtotalScores = await buildSubtotalScoresFromGroups(
-          data.studentId,
+          scoringData.studentId,
           subtotalGroupsData,
           allQuestionScores,
           questionRegions
         )
-        return { ...data, subtotalScores }
+        return { ...scoringData, subtotalScores }
       })
     )
 
     // 選択された生徒の小計点を計算
     const selectedScoringData = await Promise.all(
-      selectedScoringDataFromExcel.map(async (data) => {
+      selectedScoringDataFromExcel.map(async (scoringData) => {
         const subtotalScores = await buildSubtotalScoresFromGroups(
-          data.studentId,
+          scoringData.studentId,
           subtotalGroupsData,
           allQuestionScores,
           questionRegions
         )
-        return { ...data, subtotalScores }
+        return { ...scoringData, subtotalScores }
       })
     )
 
@@ -132,24 +132,29 @@ export async function fetchIndividualReportData(
     // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
     // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）。
     const studentReportClasses = (await getClassMembersForExam(examId)).filter(
-      (c) => c.studentReport
+      (examClass) => examClass.studentReport
     )
 
     // studentId → 本人が所属する studentReport 学級（複数学級対応）。学級ごとに
     // 1回だけ変換し、生徒ごとの走査（O(学級×学級人数)）を避ける。
     const studentClassesByStudentId = new Map<string, StudentClassForStats[]>()
-    for (const c of studentReportClasses) {
-      const memberStudentIds = c.classroom.memberships.map((m) => m.studentId)
+    for (const examClass of studentReportClasses) {
+      const memberStudentIds = examClass.classroom.memberships.map(
+        (membership) => membership.studentId
+      )
       const entry: StudentClassForStats = {
-        classroomId: c.classroomId,
-        className: c.classroom.name,
-        grade: c.classroom.grade != null ? String(c.classroom.grade) : null,
+        classroomId: examClass.classroomId,
+        className: examClass.classroom.name,
+        grade:
+          examClass.classroom.grade != null
+            ? String(examClass.classroom.grade)
+            : null,
         memberStudentIds,
       }
-      for (const sid of memberStudentIds) {
-        const list = studentClassesByStudentId.get(sid)
+      for (const studentId of memberStudentIds) {
+        const list = studentClassesByStudentId.get(studentId)
         if (list) list.push(entry)
-        else studentClassesByStudentId.set(sid, [entry])
+        else studentClassesByStudentId.set(studentId, [entry])
       }
     }
 
@@ -241,13 +246,13 @@ async function getSubtotalGroupsWithSubtotals(
     return []
   }
 
-  return result.examSubtotalGroups.map((psg) => ({
-    groupId: psg.subtotalGroup.id,
-    groupName: psg.subtotalGroup.name,
-    subtotals: psg.subtotalGroup.subtotals.map((s) => ({
-      id: s.id,
-      name: s.name,
-      order: s.order,
+  return result.examSubtotalGroups.map((examSubtotalGroup) => ({
+    groupId: examSubtotalGroup.subtotalGroup.id,
+    groupName: examSubtotalGroup.subtotalGroup.name,
+    subtotals: examSubtotalGroup.subtotalGroup.subtotals.map((subtotal) => ({
+      id: subtotal.id,
+      name: subtotal.name,
+      order: subtotal.order,
     })),
   }))
 }
@@ -314,16 +319,18 @@ function collectWarnings(
   const noScoringData: string[] = []
   const ungraded: string[] = []
 
-  for (const data of scoringData) {
-    const hasScores = data.scores.length > 0
+  for (const scoringDatum of scoringData) {
+    const hasScores = scoringDatum.scores.length > 0
     if (!hasScores) {
-      noScoringData.push(data.studentName)
+      noScoringData.push(scoringDatum.studentName)
       continue
     }
 
-    const hasUngradedScores = data.scores.some((s) => s.status === "unscored")
+    const hasUngradedScores = scoringDatum.scores.some(
+      (score) => score.status === "unscored"
+    )
     if (hasUngradedScores) {
-      ungraded.push(data.studentName)
+      ungraded.push(scoringDatum.studentName)
     }
   }
 
@@ -350,9 +357,9 @@ export async function fetchSubtotalGroupsForReport(
     }
 
     const subtotalGroups: SubtotalGroupInfo[] =
-      activeGroupsResult.examSubtotalGroups.map((psg) => ({
-        id: psg.subtotalGroup.id,
-        name: psg.subtotalGroup.name,
+      activeGroupsResult.examSubtotalGroups.map((examSubtotalGroup) => ({
+        id: examSubtotalGroup.subtotalGroup.id,
+        name: examSubtotalGroup.subtotalGroup.name,
       }))
 
     return {

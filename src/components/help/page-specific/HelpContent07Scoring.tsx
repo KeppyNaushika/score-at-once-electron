@@ -45,11 +45,11 @@ function formatModKey(key?: string): string {
 
 /** スクロール可能な最寄りの祖先を返す（IntersectionObserver の root 用） */
 function getScrollParent(el: HTMLElement | null): HTMLElement | null {
-  let p = el?.parentElement ?? null
-  while (p) {
-    const oy = getComputedStyle(p).overflowY
-    if (oy === "auto" || oy === "scroll") return p
-    p = p.parentElement
+  let parent = el?.parentElement ?? null
+  while (parent) {
+    const overflowY = getComputedStyle(parent).overflowY
+    if (overflowY === "auto" || overflowY === "scroll") return parent
+    parent = parent.parentElement
   }
   return null
 }
@@ -1921,13 +1921,13 @@ function BehaviorAnimation({
       <div className="absolute top-1.5 left-2 h-3 text-[8px] font-medium text-gray-500">
         {cycle ? (
           <div className="relative h-3 w-20">
-            {BEHAVIOR_NAMES.map((n, i) => (
+            {BEHAVIOR_NAMES.map((name, i) => (
               <span
-                key={n}
+                key={name}
                 className="absolute inset-0"
                 style={{ animation: `help07Show3 3s ${i}s infinite` }}
               >
-                氏名 {n}
+                氏名 {name}
               </span>
             ))}
           </div>
@@ -1937,11 +1937,11 @@ function BehaviorAnimation({
       </div>
 
       {/* 設問の行（手書きを模した薄い線） */}
-      {BEHAVIOR_ROW_TOPS.map((t) => (
+      {BEHAVIOR_ROW_TOPS.map((rowTop) => (
         <span
-          key={t}
+          key={rowTop}
           className="absolute left-2 block h-2 rounded-sm bg-gray-200"
-          style={{ top: t + 6, width: "72%" }}
+          style={{ top: rowTop + 6, width: "72%" }}
         />
       ))}
 
@@ -2285,9 +2285,9 @@ export function HelpContent07Scoring() {
         const rootTop = root.getBoundingClientRect().top
         const line = root.clientHeight * 0.35
         let current = headings[0].dataset.helpHeading ?? null
-        for (const el of headings) {
-          const top = el.getBoundingClientRect().top - rootTop
-          if (top - 8 <= line) current = el.dataset.helpHeading ?? current
+        for (const heading of headings) {
+          const top = heading.getBoundingClientRect().top - rootTop
+          if (top - 8 <= line) current = heading.dataset.helpHeading ?? current
           else break
         }
         setActiveTitle(current)

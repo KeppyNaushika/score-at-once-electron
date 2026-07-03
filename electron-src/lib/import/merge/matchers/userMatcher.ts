@@ -27,7 +27,7 @@ export async function matchUsers(
     let isExactMatch = false
 
     // Step 1: UUIDで照合
-    const uuidMatch = existingUsers.find((u) => u.id === importUser.id)
+    const uuidMatch = existingUsers.find((user) => user.id === importUser.id)
     if (uuidMatch) {
       matchedUser = uuidMatch
       isExactMatch = true
@@ -38,8 +38,9 @@ export async function matchUsers(
       switch (method) {
         case "username":
           matchedUser =
-            existingUsers.find((u) => u.username === importUser.username) ??
-            null
+            existingUsers.find(
+              (user) => user.username === importUser.username
+            ) ?? null
           break
       }
     }

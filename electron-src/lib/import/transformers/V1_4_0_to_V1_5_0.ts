@@ -133,9 +133,15 @@ export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
 
     // examExportSettings: projectId → examId
     if (examData.examExportSettings) {
-      const ees = examData.examExportSettings as Record<string, unknown>
-      if ("projectId" in ees && !("examId" in ees)) {
-        const projectId = ees.projectId
+      const examExportSettings = examData.examExportSettings as Record<
+        string,
+        unknown
+      >
+      if (
+        "projectId" in examExportSettings &&
+        !("examId" in examExportSettings)
+      ) {
+        const projectId = examExportSettings.projectId
         examData.examExportSettings = {
           ...examData.examExportSettings,
           ...(typeof projectId === "string" ? { examId: projectId } : {}),

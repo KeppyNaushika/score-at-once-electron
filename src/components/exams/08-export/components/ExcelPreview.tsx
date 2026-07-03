@@ -122,13 +122,13 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
                   </td>
                   {hasSubtotals &&
                     data.headers.subtotalLabels.map((_, i) => {
-                      const sub = row.subtotalScores[i]
+                      const subtotalScore = row.subtotalScores[i]
                       return (
                         <td
                           key={`sub-${i}`}
                           className="border px-1 py-0.5 text-right"
                         >
-                          {sub?.score ?? "-"}
+                          {subtotalScore?.score ?? "-"}
                         </td>
                       )
                     })}
@@ -180,13 +180,13 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
                   </td>
                   {hasSubtotals &&
                     data.headers.subtotalLabels.map((_, i) => {
-                      const sub = row.subtotalScores[i]
+                      const subtotalScore = row.subtotalScores[i]
                       return (
                         <td
                           key={`sub-${i}`}
                           className="border px-1 py-0.5 text-right"
                         >
-                          {sub?.score ?? "-"}
+                          {subtotalScore?.score ?? "-"}
                         </td>
                       )
                     })}

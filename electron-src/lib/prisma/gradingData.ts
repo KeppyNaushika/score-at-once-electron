@@ -107,7 +107,7 @@ export const deleteAllGradingDataForStudent = async (
       })
       if (affectedScores.length > 0) {
         await recordDrawingAnnotationDeletionsForQuestionScores(
-          affectedScores.map((s) => s.id),
+          affectedScores.map((score) => score.id),
           { tx }
         )
       }

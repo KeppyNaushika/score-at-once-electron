@@ -41,7 +41,7 @@ export async function createFrequencyDistributionSheet(
   const headerRow = worksheet.addRow(["得点階級", "度数", "割合(%)", "分布"])
   headerRow.eachCell((cell) => applyCellStyle(cell, "header"))
 
-  const maxCount = Math.max(...result.bins.map((b) => b.count), 1)
+  const maxCount = Math.max(...result.bins.map((bin) => bin.count), 1)
 
   for (const bin of result.bins) {
     const ratio = result.count > 0 ? (bin.count / result.count) * 100 : 0

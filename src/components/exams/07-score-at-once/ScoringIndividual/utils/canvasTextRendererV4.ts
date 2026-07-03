@@ -224,7 +224,9 @@ export async function renderTextElementsV4(
   selectedElementIds: string[] = []
 ): Promise<V4TextRenderResult[]> {
   const results: V4TextRenderResult[] = []
-  const textElements = elements.filter((el) => el.type === "text" && el.text)
+  const textElements = elements.filter(
+    (element) => element.type === "text" && element.text
+  )
 
   for (const element of textElements) {
     const isSelected = selectedElementIds.includes(element.id)

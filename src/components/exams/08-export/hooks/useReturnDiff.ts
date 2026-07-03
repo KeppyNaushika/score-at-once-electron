@@ -30,7 +30,9 @@ export function useReturnDiff(examId: string) {
       const result: ReturnDiffResult =
         await window.electronAPI.export.getReturnDiff(examId)
       if (result.success) {
-        setDiffByStudent(new Map(result.diffs.map((d) => [d.studentId, d])))
+        setDiffByStudent(
+          new Map(result.diffs.map((diff) => [diff.studentId, diff]))
+        )
         setHasAnySnapshot(result.hasAnySnapshot)
       } else {
         console.error("返却差分の取得に失敗しました:", result.error)

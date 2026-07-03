@@ -74,7 +74,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           (classResult.success && classResult.classes
             ? classResult.classes
             : []
-          ).map((c) => [c.classroomId, c.order])
+          ).map((gradeClass) => [gradeClass.classroomId, gradeClass.order])
         )
         const registeredClassIds = new Set(classOrderMap.keys())
         const students =
@@ -82,8 +82,8 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             ? studentResult.students
             : []
         return students.map((examStudent): RosterRow => {
-          const membership = examStudent.student.memberships.find((m) =>
-            registeredClassIds.has(m.classroomId)
+          const membership = examStudent.student.memberships.find(
+            (membership) => registeredClassIds.has(membership.classroomId)
           )
           return {
             id: examStudent.studentId,
@@ -105,9 +105,9 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       fetchClasses: async () => {
         const result = await window.electronAPI.grade.getClasses(gradeId)
         if (!result.success || !result.classes) return []
-        return result.classes.map((c): RosterClassOption => ({
-          id: c.classroomId,
-          name: c.className,
+        return result.classes.map((gradeClass): RosterClassOption => ({
+          id: gradeClass.classroomId,
+          name: gradeClass.className,
         }))
       },
       updateRowOrder: async (rowOrders) => {
@@ -129,11 +129,11 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map((c): AddPanelClassItem => ({
-          id: c.id,
-          name: c.name,
-          studentCount: c.studentCount,
-          studentNames: c.studentNames,
+        return result.classes.map((classroom): AddPanelClassItem => ({
+          id: classroom.id,
+          name: classroom.name,
+          studentCount: classroom.studentCount,
+          studentNames: classroom.studentNames,
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
@@ -142,16 +142,19 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           activeOnly
         )
         if (!result.success || !result.students) return []
-        return result.students.map((s): AddPanelStudentItem => ({
-          id: s.id,
-          studentNumber: s.studentNumber,
-          lastName: s.lastName,
-          firstName: s.firstName,
-          lastNameKana: s.lastNameKana,
-          firstNameKana: s.firstNameKana,
-          memberships: s.memberships.map((m) => ({
-            attendanceNumber: m.attendanceNumber,
-            classroom: { id: m.classroom.id, name: m.classroom.name },
+        return result.students.map((student): AddPanelStudentItem => ({
+          id: student.id,
+          studentNumber: student.studentNumber,
+          lastName: student.lastName,
+          firstName: student.firstName,
+          lastNameKana: student.lastNameKana,
+          firstNameKana: student.firstNameKana,
+          memberships: student.memberships.map((membership) => ({
+            attendanceNumber: membership.attendanceNumber,
+            classroom: {
+              id: membership.classroom.id,
+              name: membership.classroom.name,
+            },
           })),
         }))
       },
@@ -189,12 +192,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
 
   const classEntries = useMemo<ClassRosterEntry[]>(
     () =>
-      classes.map((c) => ({
-        id: c.classroomId,
-        classroomId: c.classroomId,
-        name: c.className,
-        studentCount: c.studentCount,
-        order: c.order,
+      classes.map((gradeClass) => ({
+        id: gradeClass.classroomId,
+        classroomId: gradeClass.classroomId,
+        name: gradeClass.className,
+        studentCount: gradeClass.studentCount,
+        order: gradeClass.order,
       })),
     [classes]
   )

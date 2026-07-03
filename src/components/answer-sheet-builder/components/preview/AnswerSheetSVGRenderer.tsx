@@ -256,22 +256,22 @@ export function AnswerSheetSVGRenderer({
 
       {/* セル内テキスト要素（インラインマークアップ対応） */}
       {cells
-        .filter((c) => c.cellType === "answer")
+        .filter((cell) => cell.cellType === "answer")
         .flatMap((cell, cellIdx) => {
           // 原稿用紙セル: 字埋めレンダリング
           if (cell.manuscriptGrid) {
-            const g = cell.manuscriptGrid
-            const fontSize = g.cellSizeMm * 0.8
+            const manuscriptGrid = cell.manuscriptGrid
+            const fontSize = manuscriptGrid.cellSizeMm * 0.8
             // 全テキスト要素のセグメントをフラット化して1文字ずつに分解
             const chars: { char: string; seg: InlineSegment }[] = []
-            for (const te of cell.textElements) {
-              const segments = parseInlineMarkup(te.text)
-              for (const seg of segments) {
+            for (const textElement of cell.textElements) {
+              const segments = parseInlineMarkup(textElement.text)
+              for (const segment of segments) {
                 // 模範解答セグメントもマス位置は確保する（空送り）。
                 // 非表示時は下の fill="transparent" で見えなくするだけにし、
                 // スキップして後続文字を詰めない。
-                for (const ch of seg.text) {
-                  chars.push({ char: ch, seg })
+                for (const char of segment.text) {
+                  chars.push({ char, seg: segment })
                 }
               }
             }
@@ -279,28 +279,36 @@ export function AnswerSheetSVGRenderer({
               .map(({ char, seg }, ci) => {
                 const pos = manuscriptCharPosition(
                   ci,
-                  g.columns,
-                  g.rows,
-                  g.vertical
+                  manuscriptGrid.columns,
+                  manuscriptGrid.rows,
+                  manuscriptGrid.vertical
                 )
                 if (!pos) return null
                 const { col, row } = pos
-                const cellCx = g.gridX + col * g.cellSizeMm + g.cellSizeMm / 2
-                const cellCy = g.gridY + row * g.cellSizeMm + g.cellSizeMm / 2
+                const cellCx =
+                  manuscriptGrid.gridX +
+                  col * manuscriptGrid.cellSizeMm +
+                  manuscriptGrid.cellSizeMm / 2
+                const cellCy =
+                  manuscriptGrid.gridY +
+                  row * manuscriptGrid.cellSizeMm +
+                  manuscriptGrid.cellSizeMm / 2
                 // 縦書きのみ約物の回転・右上寄せを適用
-                const adj = g.vertical
+                const adjustment = manuscriptGrid.vertical
                   ? verticalGlyphAdjust(char)
                   : { rotate: 0, dxRatio: 0, dyRatio: 0 }
-                const cx = cellCx + adj.dxRatio * g.cellSizeMm
-                const cy = cellCy + adj.dyRatio * g.cellSizeMm
+                const cx =
+                  cellCx + adjustment.dxRatio * manuscriptGrid.cellSizeMm
+                const cy =
+                  cellCy + adjustment.dyRatio * manuscriptGrid.cellSizeMm
                 return (
                   <text
                     key={`mc-${cellIdx}-${cell.label}-${ci}`}
                     x={cx}
                     y={cy}
                     transform={
-                      adj.rotate
-                        ? `rotate(${adj.rotate} ${cx} ${cy})`
+                      adjustment.rotate
+                        ? `rotate(${adjustment.rotate} ${cx} ${cy})`
                         : undefined
                     }
                     fontSize={fontSize}
@@ -334,10 +342,10 @@ export function AnswerSheetSVGRenderer({
           }
 
           // 通常セル
-          return cell.textElements.map((te, ti) => {
-            const segments = parseInlineMarkup(te.text)
-            const hasMath = segments.some((s) => s.math)
-            const hasNewline = te.text.includes("\n")
+          return cell.textElements.map((textElement, ti) => {
+            const segments = parseInlineMarkup(textElement.text)
+            const hasMath = segments.some((segment) => segment.math)
+            const hasNewline = textElement.text.includes("\n")
 
             // 縦書き: foreignObject + writing-mode:vertical-rl 方式（デバッグで縦書き実証済み）。
             // インラインマークアップ（太字/斜体/模範解答色）も renderSegmentsHtml で保持する。
@@ -359,7 +367,7 @@ export function AnswerSheetSVGRenderer({
                       alignItems: "center",
                       justifyContent: "center",
                       writingMode: "vertical-rl",
-                      fontSize: `${te.fontSize}px`,
+                      fontSize: `${textElement.fontSize}px`,
                       fontFamily: "'Noto Sans JP', sans-serif",
                       color: "#000",
                       lineHeight: 1,
@@ -368,7 +376,11 @@ export function AnswerSheetSVGRenderer({
                   >
                     {forPrint
                       ? renderSegmentsHtmlForPrint(segments, renderMode)
-                      : renderSegmentsHtml(segments, renderMode, te.fontSize)}
+                      : renderSegmentsHtml(
+                          segments,
+                          renderMode,
+                          textElement.fontSize
+                        )}
                   </div>
                 </foreignObject>
               )
@@ -376,7 +388,7 @@ export function AnswerSheetSVGRenderer({
 
             // foreignObject: 数式 or 改行テキスト
             if (hasMath || hasNewline) {
-              const textLines = te.text.split("\n")
+              const textLines = textElement.text.split("\n")
 
               return (
                 <foreignObject
@@ -388,20 +400,20 @@ export function AnswerSheetSVGRenderer({
                 >
                   <div
                     style={{
-                      fontSize: `${te.fontSize}px`,
+                      fontSize: `${textElement.fontSize}px`,
                       fontFamily: "'Noto Sans JP', sans-serif",
                       textAlign:
-                        te.horizontalAlign === "left"
+                        textElement.horizontalAlign === "left"
                           ? "left"
-                          : te.horizontalAlign === "right"
+                          : textElement.horizontalAlign === "right"
                             ? "right"
                             : "center",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent:
-                        te.verticalAlign === "top"
+                        textElement.verticalAlign === "top"
                           ? "flex-start"
-                          : te.verticalAlign === "bottom"
+                          : textElement.verticalAlign === "bottom"
                             ? "flex-end"
                             : "center",
                       height: "100%",
@@ -417,7 +429,7 @@ export function AnswerSheetSVGRenderer({
                           : renderSegmentsHtml(
                               parseInlineMarkup(line),
                               renderMode,
-                              te.fontSize
+                              textElement.fontSize
                             )}
                       </div>
                     ))}
@@ -428,21 +440,21 @@ export function AnswerSheetSVGRenderer({
 
             // 単一行テキスト（math含むテキストは上のforeignObjectパスで処理済み）
             const tx =
-              te.horizontalAlign === "left"
+              textElement.horizontalAlign === "left"
                 ? cell.x + 2
-                : te.horizontalAlign === "right"
+                : textElement.horizontalAlign === "right"
                   ? cell.x + cell.width - 2
                   : cell.x + cell.width / 2
             const ty =
-              te.verticalAlign === "top"
-                ? cell.y + te.fontSize / 2 + 1
-                : te.verticalAlign === "bottom"
-                  ? cell.y + cell.height - te.fontSize / 2 - 1
+              textElement.verticalAlign === "top"
+                ? cell.y + textElement.fontSize / 2 + 1
+                : textElement.verticalAlign === "bottom"
+                  ? cell.y + cell.height - textElement.fontSize / 2 - 1
                   : cell.y + cell.height / 2
             const anchor =
-              te.horizontalAlign === "left"
+              textElement.horizontalAlign === "left"
                 ? "start"
-                : te.horizontalAlign === "right"
+                : textElement.horizontalAlign === "right"
                   ? "end"
                   : "middle"
 
@@ -451,7 +463,7 @@ export function AnswerSheetSVGRenderer({
                 key={`te-${cellIdx}-${cell.label}-${ti}`}
                 x={tx}
                 y={ty}
-                fontSize={te.fontSize}
+                fontSize={textElement.fontSize}
                 fontFamily="'Noto Sans JP', sans-serif"
                 textAnchor={anchor}
                 dominantBaseline="central"
@@ -465,34 +477,36 @@ export function AnswerSheetSVGRenderer({
 
       {/* 画像要素 */}
       {cells
-        .filter((c) => c.cellType === "answer" && c.imageElements?.length)
+        .filter(
+          (cell) => cell.cellType === "answer" && cell.imageElements?.length
+        )
         .flatMap((cell, cellIdx) =>
           cell
-            .imageElements!.filter((ie) => {
-              const vis = ie.visibility ?? "both"
-              if (vis === "both") return true
-              if (vis === "answer-sheet-only")
+            .imageElements!.filter((imageElement) => {
+              const visibility = imageElement.visibility ?? "both"
+              if (visibility === "both") return true
+              if (visibility === "answer-sheet-only")
                 return renderMode === "answer-sheet"
-              if (vis === "model-answer-only")
+              if (visibility === "model-answer-only")
                 return renderMode === "model-answer"
               return true
             })
-            .map((ie, ii) => {
+            .map((imageElement, ii) => {
               const pad = 1
               const ix = cell.x + pad
               const iy = cell.y + pad
               const iw = cell.width - pad * 2
               const ih = cell.height - pad * 2
               const par =
-                ie.objectFit === "contain"
+                imageElement.objectFit === "contain"
                   ? "xMidYMid meet"
-                  : ie.objectFit === "cover"
+                  : imageElement.objectFit === "cover"
                     ? "xMidYMid slice"
                     : "none"
               const href =
-                forPrint && imageDataUris?.has(ie.imagePath)
-                  ? imageDataUris.get(ie.imagePath)!
-                  : `appimg:///${ie.imagePath}`
+                forPrint && imageDataUris?.has(imageElement.imagePath)
+                  ? imageDataUris.get(imageElement.imagePath)!
+                  : `appimg:///${imageElement.imagePath}`
               return (
                 <image
                   key={`img-${cellIdx}-${cell.label}-${ii}`}
@@ -502,7 +516,7 @@ export function AnswerSheetSVGRenderer({
                   width={iw}
                   height={ih}
                   preserveAspectRatio={par}
-                  opacity={ie.opacity}
+                  opacity={imageElement.opacity}
                 />
               )
             })
@@ -510,7 +524,7 @@ export function AnswerSheetSVGRenderer({
 
       {/* OMRバブル（共通テスト準拠：楕円＋内部ラベル） */}
       {cells
-        .filter((c) => c.cellType === "answer" && c.omrBubbles?.length)
+        .filter((cell) => cell.cellType === "answer" && cell.omrBubbles?.length)
         .flatMap((cell, cellIdx) =>
           cell.omrBubbles!.map((bubble, bi) => {
             const cx = bubble.normalizedCx * pageWidthMm
@@ -546,7 +560,9 @@ export function AnswerSheetSVGRenderer({
 
       {/* OMR数字欄 */}
       {cells
-        .filter((c) => c.cellType === "answer" && c.omrDigitBoxes?.length)
+        .filter(
+          (cell) => cell.cellType === "answer" && cell.omrDigitBoxes?.length
+        )
         .flatMap((cell, cellIdx) =>
           cell.omrDigitBoxes!.map((box, di) => {
             const x = box.normalizedX * pageWidthMm
@@ -570,15 +586,23 @@ export function AnswerSheetSVGRenderer({
 
       {/* 原稿用紙グリッド */}
       {cells
-        .filter((c) => c.cellType === "answer" && c.manuscriptGrid)
+        .filter((cell) => cell.cellType === "answer" && cell.manuscriptGrid)
         .map((cell, cellIdx) => {
-          const g = cell.manuscriptGrid!
+          const manuscriptGrid = cell.manuscriptGrid!
           // 縦線(col)/横線(row)への線種割当は書字方向で決まる。
           // 行方向（字間）= 縦書きなら横線・横書きなら縦線。輪転印刷でかすれぬよう黒。
-          const colStyle = g.vertical ? g.lineDividerStyle : g.charDividerStyle
-          const colWidth = g.vertical ? g.lineDividerWidth : g.charDividerWidth
-          const rowStyle = g.vertical ? g.charDividerStyle : g.lineDividerStyle
-          const rowWidth = g.vertical ? g.charDividerWidth : g.lineDividerWidth
+          const colStyle = manuscriptGrid.vertical
+            ? manuscriptGrid.lineDividerStyle
+            : manuscriptGrid.charDividerStyle
+          const colWidth = manuscriptGrid.vertical
+            ? manuscriptGrid.lineDividerWidth
+            : manuscriptGrid.charDividerWidth
+          const rowStyle = manuscriptGrid.vertical
+            ? manuscriptGrid.charDividerStyle
+            : manuscriptGrid.lineDividerStyle
+          const rowWidth = manuscriptGrid.vertical
+            ? manuscriptGrid.charDividerWidth
+            : manuscriptGrid.lineDividerWidth
           // 字間（char）/行間（line）罫線の破線倍率。縦書きは縦線=行間・横線=字間。
           const charDash = {
             dashRatio:
@@ -594,9 +618,9 @@ export function AnswerSheetSVGRenderer({
             gapRatio:
               borderConfig?.manuscriptLineDividerGapRatio ?? DEFAULT_GAP_RATIO,
           }
-          const colDash = g.vertical ? lineDash : charDash
-          const rowDash = g.vertical ? charDash : lineDash
-          const cs = g.cellSizeMm
+          const colDash = manuscriptGrid.vertical ? lineDash : charDash
+          const rowDash = manuscriptGrid.vertical ? charDash : lineDash
+          const cs = manuscriptGrid.cellSizeMm
           // 区切り罫線を「置き換え」るため、どの内部罫線セグメントを差し替えるか先に収集。
           // 縦線セグメント: key `${ci}:${row}` / 横線セグメント: key `${ri}:${col}`
           type BoundarySpec = {
@@ -607,13 +631,13 @@ export function AnswerSheetSVGRenderer({
           }
           const vOverride = new Map<string, BoundarySpec>()
           const hOverride = new Map<string, BoundarySpec>()
-          for (const guide of g.charGuides) {
+          for (const guide of manuscriptGrid.charGuides) {
             if (!guide.boundary) continue
             const pos = manuscriptCharPosition(
               guide.atChar - 1,
-              g.columns,
-              g.rows,
-              g.vertical
+              manuscriptGrid.columns,
+              manuscriptGrid.rows,
+              manuscriptGrid.vertical
             )
             if (!pos) continue
             const bw = guide.boundaryWidth ?? DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH
@@ -625,31 +649,31 @@ export function AnswerSheetSVGRenderer({
             }
             // 行末（折り返し位置）は内部罫線が無く、置き換え対象は構造罫線
             // （小計/大問罫線）になるため、ここでは描画しない。
-            if (g.vertical) {
+            if (manuscriptGrid.vertical) {
               // 縦書き: 文字は上→下。トレーリング側＝マス下辺（横罫線 ri=row+1）
-              if (pos.row < g.rows - 1) {
+              if (pos.row < manuscriptGrid.rows - 1) {
                 hOverride.set(`${pos.row + 1}:${pos.col}`, spec)
               }
             } else {
               // 横書き: 文字は左→右。トレーリング側＝マス右辺（縦罫線 ci=col+1）
-              if (pos.col < g.columns - 1) {
+              if (pos.col < manuscriptGrid.columns - 1) {
                 vOverride.set(`${pos.col + 1}:${pos.row}`, spec)
               }
             }
           }
           const gridLines: React.ReactNode[] = []
           // 縦罫線（内部）: 置き換え区間を除いて連続ランで描き、区間は境界線で差し替え
-          for (let ci = 1; ci < g.columns; ci++) {
-            const x = g.gridX + ci * cs
+          for (let ci = 1; ci < manuscriptGrid.columns; ci++) {
+            const x = manuscriptGrid.gridX + ci * cs
             const flushRun = (r0: number, r1: number) => {
               if (r1 <= r0) return
               gridLines.push(
                 <line
                   key={`mg-v-${cellIdx}-${cell.label}-${ci}-${r0}`}
                   x1={x}
-                  y1={g.gridY + r0 * cs}
+                  y1={manuscriptGrid.gridY + r0 * cs}
                   x2={x}
-                  y2={g.gridY + r1 * cs}
+                  y2={manuscriptGrid.gridY + r1 * cs}
                   stroke="#000"
                   strokeWidth={colWidth}
                   {...getDashProps(
@@ -663,43 +687,43 @@ export function AnswerSheetSVGRenderer({
               )
             }
             let runStart = 0
-            for (let row = 0; row < g.rows; row++) {
-              const ov = vOverride.get(`${ci}:${row}`)
-              if (!ov) continue
+            for (let row = 0; row < manuscriptGrid.rows; row++) {
+              const override = vOverride.get(`${ci}:${row}`)
+              if (!override) continue
               flushRun(runStart, row)
               gridLines.push(
                 <line
                   key={`mg-vb-${cellIdx}-${cell.label}-${ci}-${row}`}
                   x1={x}
-                  y1={g.gridY + row * cs}
+                  y1={manuscriptGrid.gridY + row * cs}
                   x2={x}
-                  y2={g.gridY + (row + 1) * cs}
+                  y2={manuscriptGrid.gridY + (row + 1) * cs}
                   stroke="#000"
-                  strokeWidth={ov.width}
+                  strokeWidth={override.width}
                   {...getDashProps(
-                    ov.style,
-                    ov.width,
+                    override.style,
+                    override.width,
                     cs,
-                    ov.dashRatio,
-                    ov.gapRatio
+                    override.dashRatio,
+                    override.gapRatio
                   )}
                 />
               )
               runStart = row + 1
             }
-            flushRun(runStart, g.rows)
+            flushRun(runStart, manuscriptGrid.rows)
           }
           // 横罫線（内部）: 同様に置き換え区間を差し替え
-          for (let ri = 1; ri < g.rows; ri++) {
-            const y = g.gridY + ri * cs
+          for (let ri = 1; ri < manuscriptGrid.rows; ri++) {
+            const y = manuscriptGrid.gridY + ri * cs
             const flushRun = (c0: number, c1: number) => {
               if (c1 <= c0) return
               gridLines.push(
                 <line
                   key={`mg-h-${cellIdx}-${cell.label}-${ri}-${c0}`}
-                  x1={g.gridX + c0 * cs}
+                  x1={manuscriptGrid.gridX + c0 * cs}
                   y1={y}
-                  x2={g.gridX + c1 * cs}
+                  x2={manuscriptGrid.gridX + c1 * cs}
                   y2={y}
                   stroke="#000"
                   strokeWidth={rowWidth}
@@ -714,51 +738,51 @@ export function AnswerSheetSVGRenderer({
               )
             }
             let runStart = 0
-            for (let col = 0; col < g.columns; col++) {
-              const ov = hOverride.get(`${ri}:${col}`)
-              if (!ov) continue
+            for (let col = 0; col < manuscriptGrid.columns; col++) {
+              const override = hOverride.get(`${ri}:${col}`)
+              if (!override) continue
               flushRun(runStart, col)
               gridLines.push(
                 <line
                   key={`mg-hb-${cellIdx}-${cell.label}-${ri}-${col}`}
-                  x1={g.gridX + col * cs}
+                  x1={manuscriptGrid.gridX + col * cs}
                   y1={y}
-                  x2={g.gridX + (col + 1) * cs}
+                  x2={manuscriptGrid.gridX + (col + 1) * cs}
                   y2={y}
                   stroke="#000"
-                  strokeWidth={ov.width}
+                  strokeWidth={override.width}
                   {...getDashProps(
-                    ov.style,
-                    ov.width,
+                    override.style,
+                    override.width,
                     cs,
-                    ov.dashRatio,
-                    ov.gapRatio
+                    override.dashRatio,
+                    override.gapRatio
                   )}
                 />
               )
               runStart = col + 1
             }
-            flushRun(runStart, g.columns)
+            flushRun(runStart, manuscriptGrid.columns)
           }
           // 数字ガイド: 先頭からN文字目のマスの隅に小さく表示（空ラベルは描かない）
           const guides: React.ReactNode[] = []
-          for (let gi = 0; gi < g.charGuides.length; gi++) {
-            const guide = g.charGuides[gi]
+          for (let gi = 0; gi < manuscriptGrid.charGuides.length; gi++) {
+            const guide = manuscriptGrid.charGuides[gi]
             if (!guide.label) continue
             const pos = manuscriptCharPosition(
               guide.atChar - 1,
-              g.columns,
-              g.rows,
-              g.vertical
+              manuscriptGrid.columns,
+              manuscriptGrid.rows,
+              manuscriptGrid.vertical
             )
             if (!pos) continue
-            const fs = g.guideFontSize
-            const cellX0 = g.gridX + pos.col * cs
-            const cellY0 = g.gridY + pos.row * cs
-            const left = g.guidePosition.endsWith("left")
-            const top = g.guidePosition.startsWith("top")
+            const fs = manuscriptGrid.guideFontSize
+            const cellX0 = manuscriptGrid.gridX + pos.col * cs
+            const cellY0 = manuscriptGrid.gridY + pos.row * cs
+            const left = manuscriptGrid.guidePosition.endsWith("left")
+            const top = manuscriptGrid.guidePosition.startsWith("top")
             // アンカー点 = マスの該当隅から余白分だけ内側へ
-            const gpad = g.guidePadding
+            const gpad = manuscriptGrid.guidePadding
             const px = left ? cellX0 + gpad : cellX0 + cs - gpad
             const py = top ? cellY0 + gpad : cellY0 + cs - gpad
             guides.push(

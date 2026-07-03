@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -50,6 +50,7 @@ export default function ClassModal({
   const [description, setDescription] = useState("")
   const [isVisible, setIsVisible] = useState(true)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -109,7 +110,16 @@ export default function ClassModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onOpenAutoFocus={(e) => {
+          // autoFocus属性はRadixのFocusScope・開いた直後のstateリセット再レンダーと
+          // 競合し、本番ビルドではフォーカスがinputに乗らないことがある。
+          // ここで明示的に学級名inputへフォーカスを確定させる。
+          e.preventDefault()
+          nameInputRef.current?.focus()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {classToEdit ? "学級情報を編集" : "新しい学級を作成"}
@@ -130,10 +140,10 @@ export default function ClassModal({
             <div className="col-span-3">
               <Input
                 id="className"
+                ref={nameInputRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="例: 1年A組、数学基礎クラス"
-                autoFocus
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-500">{errors.name}</p>

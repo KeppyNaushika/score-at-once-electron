@@ -33,13 +33,15 @@ export function StudentAnswerPanel({
 }: StudentAnswerPanelProps) {
   // 受験生徒順にソート
   const sortedStudents = [...students].sort(
-    (a, b) => a.customOrder - b.customOrder
+    (studentA, studentB) => studentA.customOrder - studentB.customOrder
   )
-  const currentStudent = sortedStudents.find((s) => s.id === currentStudentId)
+  const currentStudent = sortedStudents.find(
+    (student) => student.id === currentStudentId
+  )
 
   const handlePrevStudent = () => {
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentStudentId
+      (student) => student.id === currentStudentId
     )
     if (currentIndex > 0) {
       onStudentChange(sortedStudents[currentIndex - 1].id)
@@ -48,7 +50,7 @@ export function StudentAnswerPanel({
 
   const handleNextStudent = () => {
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentStudentId
+      (student) => student.id === currentStudentId
     )
     if (currentIndex < sortedStudents.length - 1) {
       onStudentChange(sortedStudents[currentIndex + 1].id)
@@ -64,7 +66,9 @@ export function StudentAnswerPanel({
           size="sm"
           onClick={handlePrevStudent}
           disabled={
-            sortedStudents.findIndex((s) => s.id === currentStudentId) === 0
+            sortedStudents.findIndex(
+              (student) => student.id === currentStudentId
+            ) === 0
           }
         >
           ←
@@ -90,7 +94,9 @@ export function StudentAnswerPanel({
           size="sm"
           onClick={handleNextStudent}
           disabled={
-            sortedStudents.findIndex((s) => s.id === currentStudentId) ===
+            sortedStudents.findIndex(
+              (student) => student.id === currentStudentId
+            ) ===
             sortedStudents.length - 1
           }
         >
@@ -100,8 +106,10 @@ export function StudentAnswerPanel({
 
       {/* 現在の位置表示 */}
       <div className="text-center text-xs text-gray-500">
-        {sortedStudents.findIndex((s) => s.id === currentStudentId) + 1} /{" "}
-        {sortedStudents.length}
+        {sortedStudents.findIndex(
+          (student) => student.id === currentStudentId
+        ) + 1}{" "}
+        / {sortedStudents.length}
       </div>
     </SidePanelSection>
   )

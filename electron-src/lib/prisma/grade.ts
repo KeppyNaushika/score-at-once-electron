@@ -21,14 +21,16 @@ function deserializeDataSources<T extends { gradeItems?: unknown[] }>(
   const gradeItems = (data as Record<string, unknown[]>).gradeItems as Array<{
     dataSources?: Array<Record<string, unknown>>
   }>
-  for (const gi of gradeItems) {
-    if (!Array.isArray(gi.dataSources)) continue
-    for (const ds of gi.dataSources) {
-      if (typeof ds.estimationSourceIds === "string") {
+  for (const gradeItem of gradeItems) {
+    if (!Array.isArray(gradeItem.dataSources)) continue
+    for (const dataSource of gradeItem.dataSources) {
+      if (typeof dataSource.estimationSourceIds === "string") {
         try {
-          ds.estimationSourceIds = JSON.parse(ds.estimationSourceIds as string)
+          dataSource.estimationSourceIds = JSON.parse(
+            dataSource.estimationSourceIds as string
+          )
         } catch {
-          ds.estimationSourceIds = []
+          dataSource.estimationSourceIds = []
         }
       }
     }
@@ -47,9 +49,9 @@ async function hydrateLiveMaxScores<
     }>
   },
 >(grade: T): Promise<T> {
-  for (const gi of grade.gradeItems ?? []) {
-    for (const ds of gi.dataSources ?? []) {
-      ds.maxScore = await computeLiveMaxScore(ds)
+  for (const gradeItem of grade.gradeItems ?? []) {
+    for (const dataSource of gradeItem.dataSources ?? []) {
+      dataSource.maxScore = await computeLiveMaxScore(dataSource)
     }
   }
   return grade
@@ -100,7 +102,7 @@ export async function getAllGrades() {
     })
     return {
       success: true,
-      grades: grades.map((gp) => deserializeDataSources(serialize(gp))),
+      grades: grades.map((grade) => deserializeDataSources(serialize(grade))),
     }
   } catch (error) {
     console.error("Error getting grade exams:", error)

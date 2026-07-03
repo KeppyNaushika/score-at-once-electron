@@ -72,9 +72,11 @@ export function getExamProgress(exam: ExamWithDetails): ExamProgress {
   const participatingStudentIds =
     exam.examStudents
       ?.filter(
-        (ps) => ps.status === "PARTICIPATING" || ps.status === "EXPECTED"
+        (examStudent) =>
+          examStudent.status === "PARTICIPATING" ||
+          examStudent.status === "EXPECTED"
       )
-      ?.map((ps) => ps.studentId) || []
+      ?.map((examStudent) => examStudent.studentId) || []
 
   // 受験・見込み生徒の数をカウント（複数ページの答案でも1人1回のみ）
   const answerSheetCount = new Set(

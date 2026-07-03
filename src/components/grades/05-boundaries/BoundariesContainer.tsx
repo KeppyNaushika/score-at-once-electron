@@ -34,7 +34,9 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
     gradeItemId: string | null
   ) => {
     const set = boundarySets.find(
-      (bs) => bs.targetType === targetType && bs.gradeItemId === gradeItemId
+      (boundarySet) =>
+        boundarySet.targetType === targetType &&
+        boundarySet.gradeItemId === gradeItemId
     )
     return set?.boundaries ?? []
   }
@@ -55,18 +57,18 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
       </p>
 
       <div className="space-y-4">
-        {gradeItems.map((gi) => (
-          <Card key={gi.id} className="space-y-3 p-4">
-            <h3 className="text-base font-semibold">{gi.name}</h3>
+        {gradeItems.map((gradeItem) => (
+          <Card key={gradeItem.id} className="space-y-3 p-4">
+            <h3 className="text-base font-semibold">{gradeItem.name}</h3>
             <BoundaryPresetSelector
               onSelect={(boundaries) =>
-                handleSave("grade_item", gi.id, boundaries)
+                handleSave("grade_item", gradeItem.id, boundaries)
               }
             />
             <BoundaryEditor
-              boundaries={getExistingBoundaries("grade_item", gi.id)}
+              boundaries={getExistingBoundaries("grade_item", gradeItem.id)}
               onSave={(boundaries) =>
-                handleSave("grade_item", gi.id, boundaries)
+                handleSave("grade_item", gradeItem.id, boundaries)
               }
             />
           </Card>

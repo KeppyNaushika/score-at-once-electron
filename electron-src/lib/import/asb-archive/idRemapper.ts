@@ -26,41 +26,41 @@ export function generateAsbIdMappings(
     omrConfig: {},
   }
 
-  for (const hf of definition.settings.headerFields) {
-    mappings.headerField[hf.id] = randomUUID()
+  for (const headerField of definition.settings.headerFields) {
+    mappings.headerField[headerField.id] = randomUUID()
   }
 
-  for (const mq of definition.majorQuestions) {
-    mappings.majorQuestion[mq.id] = randomUUID()
+  for (const majorQuestion of definition.majorQuestions) {
+    mappings.majorQuestion[majorQuestion.id] = randomUUID()
 
-    for (const sq of mq.subQuestions) {
-      mappings.subQuestion[sq.id] = randomUUID()
+    for (const subQuestion of majorQuestion.subQuestions) {
+      mappings.subQuestion[subQuestion.id] = randomUUID()
 
-      for (const te of sq.textElements) {
-        mappings.textElement[te.id] = randomUUID()
+      for (const textElement of subQuestion.textElements) {
+        mappings.textElement[textElement.id] = randomUUID()
       }
-      if (sq.imageElements) {
-        for (const ie of sq.imageElements) {
-          mappings.imageElement[ie.id] = randomUUID()
+      if (subQuestion.imageElements) {
+        for (const imageElement of subQuestion.imageElements) {
+          mappings.imageElement[imageElement.id] = randomUUID()
         }
       }
-      if (sq.omrConfig) {
-        mappings.omrConfig[sq.id] = randomUUID()
+      if (subQuestion.omrConfig) {
+        mappings.omrConfig[subQuestion.id] = randomUUID()
       }
 
-      for (const bq of sq.branchQuestions) {
-        mappings.branchQuestion[bq.id] = randomUUID()
+      for (const branchQuestion of subQuestion.branchQuestions) {
+        mappings.branchQuestion[branchQuestion.id] = randomUUID()
 
-        for (const te of bq.textElements) {
-          mappings.textElement[te.id] = randomUUID()
+        for (const textElement of branchQuestion.textElements) {
+          mappings.textElement[textElement.id] = randomUUID()
         }
-        if (bq.imageElements) {
-          for (const ie of bq.imageElements) {
-            mappings.imageElement[ie.id] = randomUUID()
+        if (branchQuestion.imageElements) {
+          for (const imageElement of branchQuestion.imageElements) {
+            mappings.imageElement[imageElement.id] = randomUUID()
           }
         }
-        if (bq.omrConfig) {
-          mappings.omrConfig[bq.id] = randomUUID()
+        if (branchQuestion.omrConfig) {
+          mappings.omrConfig[branchQuestion.id] = randomUUID()
         }
       }
     }
@@ -80,34 +80,39 @@ export function remapDefinitionIds(
 
   cloned.id = mappings.definition[definition.id]
 
-  for (const hf of cloned.settings.headerFields) {
-    hf.id = mappings.headerField[hf.id] ?? hf.id
+  for (const headerField of cloned.settings.headerFields) {
+    headerField.id = mappings.headerField[headerField.id] ?? headerField.id
   }
 
-  for (const mq of cloned.majorQuestions) {
-    mq.id = mappings.majorQuestion[mq.id] ?? mq.id
+  for (const majorQuestion of cloned.majorQuestions) {
+    majorQuestion.id =
+      mappings.majorQuestion[majorQuestion.id] ?? majorQuestion.id
 
-    for (const sq of mq.subQuestions) {
-      sq.id = mappings.subQuestion[sq.id] ?? sq.id
+    for (const subQuestion of majorQuestion.subQuestions) {
+      subQuestion.id = mappings.subQuestion[subQuestion.id] ?? subQuestion.id
 
-      for (const te of sq.textElements) {
-        te.id = mappings.textElement[te.id] ?? te.id
+      for (const textElement of subQuestion.textElements) {
+        textElement.id = mappings.textElement[textElement.id] ?? textElement.id
       }
-      if (sq.imageElements) {
-        for (const ie of sq.imageElements) {
-          ie.id = mappings.imageElement[ie.id] ?? ie.id
+      if (subQuestion.imageElements) {
+        for (const imageElement of subQuestion.imageElements) {
+          imageElement.id =
+            mappings.imageElement[imageElement.id] ?? imageElement.id
         }
       }
 
-      for (const bq of sq.branchQuestions) {
-        bq.id = mappings.branchQuestion[bq.id] ?? bq.id
+      for (const branchQuestion of subQuestion.branchQuestions) {
+        branchQuestion.id =
+          mappings.branchQuestion[branchQuestion.id] ?? branchQuestion.id
 
-        for (const te of bq.textElements) {
-          te.id = mappings.textElement[te.id] ?? te.id
+        for (const textElement of branchQuestion.textElements) {
+          textElement.id =
+            mappings.textElement[textElement.id] ?? textElement.id
         }
-        if (bq.imageElements) {
-          for (const ie of bq.imageElements) {
-            ie.id = mappings.imageElement[ie.id] ?? ie.id
+        if (branchQuestion.imageElements) {
+          for (const imageElement of branchQuestion.imageElements) {
+            imageElement.id =
+              mappings.imageElement[imageElement.id] ?? imageElement.id
           }
         }
       }

@@ -39,11 +39,11 @@ export function ExamStudentAddModalContainer({
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map((c): AddPanelClassItem => ({
-          id: c.id,
-          name: c.name,
-          studentCount: c.studentCount,
-          studentNames: c.studentNames,
+        return result.classes.map((classroom): AddPanelClassItem => ({
+          id: classroom.id,
+          name: classroom.name,
+          studentCount: classroom.studentCount,
+          studentNames: classroom.studentNames,
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
@@ -52,16 +52,19 @@ export function ExamStudentAddModalContainer({
           activeOnly
         )
         if (!result.success || !result.students) return []
-        return result.students.map((s): AddPanelStudentItem => ({
-          id: s.id,
-          studentNumber: s.studentNumber,
-          lastName: s.lastName,
-          firstName: s.firstName,
-          lastNameKana: s.lastNameKana,
-          firstNameKana: s.firstNameKana,
-          memberships: s.memberships.map((m) => ({
-            attendanceNumber: m.attendanceNumber,
-            classroom: { id: m.classroom.id, name: m.classroom.name },
+        return result.students.map((student): AddPanelStudentItem => ({
+          id: student.id,
+          studentNumber: student.studentNumber,
+          lastName: student.lastName,
+          firstName: student.firstName,
+          lastNameKana: student.lastNameKana,
+          firstNameKana: student.firstNameKana,
+          memberships: student.memberships.map((membership) => ({
+            attendanceNumber: membership.attendanceNumber,
+            classroom: {
+              id: membership.classroom.id,
+              name: membership.classroom.name,
+            },
           })),
         }))
       },
@@ -93,11 +96,13 @@ export function ExamStudentAddModalContainer({
         let startOrder = 0
         if (existing.success && existing.students) {
           const others = existing.students.filter(
-            (s) => !studentIds.includes(s.id)
+            (student) => !studentIds.includes(student.id)
           )
           const maxOrder = others.reduce(
-            (max, s) =>
-              s.customOrder != null ? Math.max(max, s.customOrder) : max,
+            (max, student) =>
+              student.customOrder != null
+                ? Math.max(max, student.customOrder)
+                : max,
             -1
           )
           startOrder = maxOrder + 1

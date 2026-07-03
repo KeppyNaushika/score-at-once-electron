@@ -27,13 +27,13 @@ export function SpTablePreview({ data }: SpTablePreviewProps) {
         <thead className="bg-muted sticky top-0">
           <tr>
             <th className="border px-1 py-0.5 text-left">生徒</th>
-            {problems.map((p) => (
+            {problems.map((problem) => (
               <th
-                key={p.questionId}
+                key={problem.questionId}
                 className="border px-1 py-0.5 text-center"
-                title={`正答者数 ${p.correctCount}`}
+                title={`正答者数 ${problem.correctCount}`}
               >
-                {p.label}
+                {problem.label}
               </th>
             ))}
             <th className="border px-1 py-0.5 text-right">正答数</th>
@@ -41,14 +41,14 @@ export function SpTablePreview({ data }: SpTablePreviewProps) {
           </tr>
         </thead>
         <tbody>
-          {students.map((s, rowIdx) => (
-            <tr key={s.studentId} className="hover:bg-muted/50">
+          {students.map((student, rowIdx) => (
+            <tr key={student.studentId} className="hover:bg-muted/50">
               <td className="border px-1 py-0.5 whitespace-nowrap">
-                {s.studentName}
+                {student.studentName}
               </td>
-              {s.cells.map((correct, colIdx) => {
+              {student.cells.map((correct, colIdx) => {
                 // S曲線: 正答数 c の右に縦境界
-                const sCurve = colIdx === s.correctCount - 1
+                const sCurve = colIdx === student.correctCount - 1
                 // P曲線: 設問の正答者数 m の行の下に横境界
                 const pCurve = rowIdx === problems[colIdx].correctCount - 1
                 const borderClass = [
@@ -67,18 +67,21 @@ export function SpTablePreview({ data }: SpTablePreviewProps) {
                 )
               })}
               <td className="border px-1 py-0.5 text-right font-medium">
-                {s.correctCount}
+                {student.correctCount}
               </td>
               <td className="border px-1 py-0.5 text-right">
-                {fmtCaution(s.cautionIndex)}
+                {fmtCaution(student.cautionIndex)}
               </td>
             </tr>
           ))}
           <tr className="bg-muted/70 font-medium">
             <td className="border px-1 py-0.5">正答者数</td>
-            {problems.map((p) => (
-              <td key={p.questionId} className="border px-1 py-0.5 text-center">
-                {p.correctCount}
+            {problems.map((problem) => (
+              <td
+                key={problem.questionId}
+                className="border px-1 py-0.5 text-center"
+              >
+                {problem.correctCount}
               </td>
             ))}
             <td className="border px-1 py-0.5"></td>
@@ -86,9 +89,12 @@ export function SpTablePreview({ data }: SpTablePreviewProps) {
           </tr>
           <tr className="bg-muted/70 font-medium">
             <td className="border px-1 py-0.5">注意係数</td>
-            {problems.map((p) => (
-              <td key={p.questionId} className="border px-1 py-0.5 text-center">
-                {fmtCaution(p.cautionIndex)}
+            {problems.map((problem) => (
+              <td
+                key={problem.questionId}
+                className="border px-1 py-0.5 text-center"
+              >
+                {fmtCaution(problem.cautionIndex)}
               </td>
             ))}
             <td className="border px-1 py-0.5"></td>

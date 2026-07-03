@@ -99,7 +99,7 @@ export default function ExportProgressModal({
 
   // フェーズインデックスを取得
   const currentPhaseIndex = useMemo(() => {
-    return PHASES.findIndex((p) => p.id === currentPhase)
+    return PHASES.findIndex((phase) => phase.id === currentPhase)
   }, [currentPhase])
 
   // ページ完了グリッド用の計算値（propsから直接取得）

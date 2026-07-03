@@ -80,7 +80,7 @@ export function useBatchScoring({
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
       const currentCropRegion = cropRegions.find(
-        (r) => r.id === currentCropRegionId
+        (cropRegion) => cropRegion.id === currentCropRegionId
       )
 
       if (!currentCropRegion) return

@@ -59,7 +59,7 @@ function transposeManuscriptGrid(
   g: ManuscriptGrid,
   realWidth: number
 ): ManuscriptGrid {
-  const r = transposeRect(
+  const rect = transposeRect(
     g.gridX,
     g.gridY,
     g.gridWidth,
@@ -72,10 +72,10 @@ function transposeManuscriptGrid(
     ...g,
     columns: g.rows,
     rows: g.columns,
-    gridX: r.x,
-    gridY: r.y,
-    gridWidth: r.w,
-    gridHeight: r.h,
+    gridX: rect.x,
+    gridY: rect.y,
+    gridWidth: rect.w,
+    gridHeight: rect.h,
     vertical: true,
   }
 }
@@ -107,17 +107,17 @@ function transposeCell(
   realWidth: number,
   realHeight: number
 ): ComputedCell {
-  const r = transposeRect(cell.x, cell.y, cell.width, cell.height, realWidth)
+  const rect = transposeRect(cell.x, cell.y, cell.width, cell.height, realWidth)
   return {
     ...cell,
-    x: r.x,
-    y: r.y,
-    width: r.w,
-    height: r.h,
-    normalizedX: r.x / realWidth,
-    normalizedY: r.y / realHeight,
-    normalizedW: r.w / realWidth,
-    normalizedH: r.h / realHeight,
+    x: rect.x,
+    y: rect.y,
+    width: rect.w,
+    height: rect.h,
+    normalizedX: rect.x / realWidth,
+    normalizedY: rect.y / realHeight,
+    normalizedW: rect.w / realWidth,
+    normalizedH: rect.h / realHeight,
     ...(cell.manuscriptGrid
       ? {
           manuscriptGrid: transposeManuscriptGrid(
@@ -154,28 +154,28 @@ function transposeNumberLabel(
   label: ComputedNumberLabel,
   realWidth: number
 ): ComputedNumberLabel {
-  const r = transposeRect(
+  const rect = transposeRect(
     label.x,
     label.y,
     label.width,
     label.height,
     realWidth
   )
-  return { ...label, x: r.x, y: r.y, width: r.w, height: r.h }
+  return { ...label, x: rect.x, y: rect.y, width: rect.w, height: rect.h }
 }
 
 function transposeHeaderField(
   field: ComputedHeaderField,
   realWidth: number
 ): ComputedHeaderField {
-  const r = transposeRect(
+  const rect = transposeRect(
     field.x,
     field.y,
     field.width,
     field.height,
     realWidth
   )
-  return { ...field, x: r.x, y: r.y, width: r.w, height: r.h }
+  return { ...field, x: rect.x, y: rect.y, width: rect.w, height: rect.h }
 }
 
 function transposeMarker(
@@ -184,14 +184,14 @@ function transposeMarker(
 ): ComputedOMRMarker {
   // マーカーは size を持つ正方形。点変換だと Y軸ミラーで size 分ずれて
   // 用紙外や反対側へ飛ぶため、矩形として変換し四隅アンカーを保つ。
-  const r = transposeRect(
+  const rect = transposeRect(
     marker.x,
     marker.y,
     marker.size,
     marker.size,
     realWidth
   )
-  return { ...marker, x: r.x, y: r.y }
+  return { ...marker, x: rect.x, y: rect.y }
 }
 
 /** ページ単位の全要素を縦組み実座標へ変換する */
@@ -203,16 +203,16 @@ export function transformPageToVertical(
   return {
     ...page,
     vertical: true,
-    cells: page.cells.map((c) => transposeCell(c, realWidth, realHeight)),
-    lines: page.lines.map((l) => transposeLine(l, realWidth)),
-    numberLabels: page.numberLabels.map((n) =>
-      transposeNumberLabel(n, realWidth)
+    cells: page.cells.map((cell) => transposeCell(cell, realWidth, realHeight)),
+    lines: page.lines.map((line) => transposeLine(line, realWidth)),
+    numberLabels: page.numberLabels.map((numberLabel) =>
+      transposeNumberLabel(numberLabel, realWidth)
     ),
-    omrMarkerPositions: page.omrMarkerPositions.map((m) =>
-      transposeMarker(m, realWidth)
+    omrMarkerPositions: page.omrMarkerPositions.map((marker) =>
+      transposeMarker(marker, realWidth)
     ),
-    headerFields: page.headerFields.map((h) =>
-      transposeHeaderField(h, realWidth)
+    headerFields: page.headerFields.map((headerField) =>
+      transposeHeaderField(headerField, realWidth)
     ),
   }
 }
@@ -228,16 +228,18 @@ export function transformLayoutToVertical(
     vertical: true,
     pageWidthMm: realWidth,
     pageHeightMm: realHeight,
-    cells: layout.cells.map((c) => transposeCell(c, realWidth, realHeight)),
-    lines: layout.lines.map((l) => transposeLine(l, realWidth)),
-    numberLabels: layout.numberLabels.map((n) =>
-      transposeNumberLabel(n, realWidth)
+    cells: layout.cells.map((cell) =>
+      transposeCell(cell, realWidth, realHeight)
     ),
-    omrMarkerPositions: layout.omrMarkerPositions.map((m) =>
-      transposeMarker(m, realWidth)
+    lines: layout.lines.map((line) => transposeLine(line, realWidth)),
+    numberLabels: layout.numberLabels.map((numberLabel) =>
+      transposeNumberLabel(numberLabel, realWidth)
     ),
-    headerFields: layout.headerFields.map((h) =>
-      transposeHeaderField(h, realWidth)
+    omrMarkerPositions: layout.omrMarkerPositions.map((marker) =>
+      transposeMarker(marker, realWidth)
+    ),
+    headerFields: layout.headerFields.map((headerField) =>
+      transposeHeaderField(headerField, realWidth)
     ),
   }
 }

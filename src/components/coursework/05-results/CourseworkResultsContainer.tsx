@@ -24,7 +24,9 @@ function letterToScore(
   letterValue: string | null
 ): number | null {
   if (letterValue == null) return null
-  const match = item.letterScales.find((ls) => ls.label === letterValue)
+  const match = item.letterScales.find(
+    (letterScale) => letterScale.label === letterValue
+  )
   return match ? match.score : null
 }
 
@@ -99,7 +101,7 @@ export function CourseworkResultsContainer({
                   const comment = row.cells[item.id]?.comment
                   return comment ? `${item.name}: ${comment}` : null
                 })
-                .filter((c): c is string => c != null)
+                .filter((comment): comment is string => comment != null)
 
               return (
                 <TableRow key={row.studentId}>

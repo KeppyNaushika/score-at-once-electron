@@ -114,8 +114,10 @@ export function computeLayoutFromDefinition(
   const subNumX = majorNumX + majorNumWidth
   const subNumWidth = columnWidths.subNumber
 
-  const hasBranch = majorQuestions.some((mq) =>
-    mq.subQuestions.some((sq) => sq.branchQuestions.length > 0)
+  const hasBranch = majorQuestions.some((majorQuestion) =>
+    majorQuestion.subQuestions.some(
+      (subQuestion) => subQuestion.branchQuestions.length > 0
+    )
   )
   const branchNumWidth = hasBranch ? columnWidths.branchNumber : 0
 
@@ -133,8 +135,8 @@ export function computeLayoutFromDefinition(
 
   let currentY = margins.top + effectiveHeaderHeight
 
-  majorQuestions.forEach((major, mi) => {
-    if (mi > 0) {
+  majorQuestions.forEach((major, majorIndex) => {
+    if (majorIndex > 0) {
       currentY += spacing.majorQuestionSpacing
     }
 
@@ -186,12 +188,12 @@ export function computeLayoutFromDefinition(
         return sub
       })
       const gridCells = buildSubGridLayout(subsForGrid)
-      for (const gc of gridCells) {
-        const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
-        const cellWidth = gc.width * horizontalAreaWidth
-        const cellY = majorStartY + gc.y * baseRowHeight
-        const cellHeight = gc.height * baseRowHeight
-        const sub = gc.item
+      for (const gridCell of gridCells) {
+        const cellX = horizontalAreaX + gridCell.x * horizontalAreaWidth
+        const cellWidth = gridCell.width * horizontalAreaWidth
+        const cellY = majorStartY + gridCell.y * baseRowHeight
+        const cellHeight = gridCell.height * baseRowHeight
+        const sub = gridCell.item
         const hasBranches = sub.branchQuestions.length > 0
         const effSubNumW = sub.label === "" ? 0 : subNumWidth
 
@@ -216,8 +218,8 @@ export function computeLayoutFromDefinition(
           const cellRight = cellX + cellWidth
           renderBranchQuestions(
             sub,
-            mi,
-            gc.itemIndex,
+            majorIndex,
+            gridCell.itemIndex,
             major.label,
             cellY,
             0,
@@ -246,7 +248,7 @@ export function computeLayoutFromDefinition(
           }
           cells.push(
             createCell(
-              [mi, gc.itemIndex],
+              [majorIndex, gridCell.itemIndex],
               ansX,
               cellY,
               ansW,
@@ -288,22 +290,22 @@ export function computeLayoutFromDefinition(
       // rowRightEdges: Y区間ごとの右端X座標を計算（枝問横配置を考慮）
       const rawRightEdges: { yTop: number; yBottom: number; rightX: number }[] =
         []
-      for (const gc of gridCells) {
-        const sub2 = gc.item
-        const gcCellX = horizontalAreaX + gc.x * horizontalAreaWidth
-        const gcCellW = gc.width * horizontalAreaWidth
-        const gcCellY = majorStartY + gc.y * baseRowHeight
-        const gcCellH = gc.height * baseRowHeight
+      for (const gridCell of gridCells) {
+        const subQuestion = gridCell.item
+        const gcCellX = horizontalAreaX + gridCell.x * horizontalAreaWidth
+        const gcCellW = gridCell.width * horizontalAreaWidth
+        const gcCellY = majorStartY + gridCell.y * baseRowHeight
+        const gcCellH = gridCell.height * baseRowHeight
         const gcCellRight = gcCellX + gcCellW
-        const gcEffSubNumW = sub2.label === "" ? 0 : subNumWidth
+        const gcEffSubNumW = subQuestion.label === "" ? 0 : subNumWidth
 
         if (
-          sub2.branchQuestions.length > 0 &&
-          isGridHorizontal(sub2.branchQuestions)
+          subQuestion.branchQuestions.length > 0 &&
+          isGridHorizontal(subQuestion.branchQuestions)
         ) {
           const branchAreaX = gcCellX + gcEffSubNumW
           const branchAreaWidth = gcCellRight - branchAreaX
-          const branchCells = buildBranchGridLayout(sub2.branchQuestions)
+          const branchCells = buildBranchGridLayout(subQuestion.branchQuestions)
           for (const edge of computeGridRowRightEdges(
             branchCells,
             gcCellY,
@@ -430,7 +432,7 @@ export function computeLayoutFromDefinition(
         )
       })
 
-      major.subQuestions.forEach((sub, si) => {
+      major.subQuestions.forEach((sub, subIndex) => {
         const subStartY = currentY
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
@@ -455,8 +457,8 @@ export function computeLayoutFromDefinition(
         if (hasBranches) {
           renderBranchQuestions(
             sub,
-            mi,
-            si,
+            majorIndex,
+            subIndex,
             major.label,
             subStartY,
             0,
@@ -466,7 +468,7 @@ export function computeLayoutFromDefinition(
             branchNumWidth,
             effAnswerX,
             effAnswerWidth,
-            subRightEdges[si],
+            subRightEdges[subIndex],
             baseRowHeight,
             paper,
             settings,
@@ -484,7 +486,7 @@ export function computeLayoutFromDefinition(
           }
           cells.push(
             createCell(
-              [mi, si],
+              [majorIndex, subIndex],
               effAnswerX,
               subStartY,
               ansW,
@@ -512,7 +514,7 @@ export function computeLayoutFromDefinition(
         // vertical-sub行の右端（枝問横配置時は枝問グリッドの右端を使用）
         if (hasBranches && isGridHorizontal(sub.branchQuestions)) {
           const branchAreaX = subNumX + effSubNumW
-          const branchAreaWidth = subRightEdges[si] - branchAreaX
+          const branchAreaWidth = subRightEdges[subIndex] - branchAreaX
           const branchCells = buildBranchGridLayout(sub.branchQuestions)
           for (const edge of computeGridRowRightEdges(
             branchCells,
@@ -527,7 +529,7 @@ export function computeLayoutFromDefinition(
           majorRightEdges.push({
             yTop: subStartY,
             yBottom: subStartY + subHeight,
-            rightX: subRightEdges[si],
+            rightX: subRightEdges[subIndex],
           })
         }
         // vertical-sub行の左端は常にcontentLeft
@@ -540,10 +542,10 @@ export function computeLayoutFromDefinition(
         currentY += subHeight
 
         // 行間の区切り線（最後の行以外）
-        if (si < major.subQuestions.length - 1) {
+        if (subIndex < major.subQuestions.length - 1) {
           const dividerRightX = Math.max(
-            subRightEdges[si],
-            subRightEdges[si + 1]
+            subRightEdges[subIndex],
+            subRightEdges[subIndex + 1]
           )
           lines.push({
             x1: subNumX,
@@ -557,12 +559,13 @@ export function computeLayoutFromDefinition(
               axis: "horizontal",
               target: {
                 type: "heightMultiplier",
-                majorIndex: mi,
-                subIndex: si,
+                majorIndex: majorIndex,
+                subIndex: subIndex,
               },
               currentValueMm: hasBranches
                 ? sub.branchQuestions.reduce(
-                    (s, bq) => s + bq.heightMultiplier * baseRowHeight,
+                    (sum, branchQuestion) =>
+                      sum + branchQuestion.heightMultiplier * baseRowHeight,
                     0
                   )
                 : sub.heightMultiplier * baseRowHeight,
@@ -580,7 +583,10 @@ export function computeLayoutFromDefinition(
       rowLeftEdges: majorLeftEdges,
     })
 
-    if (spacing.majorQuestionSpacing === 0 && mi < majorQuestions.length - 1) {
+    if (
+      spacing.majorQuestionSpacing === 0 &&
+      majorIndex < majorQuestions.length - 1
+    ) {
       lines.push({
         x1: contentLeft,
         y1: currentY,
@@ -612,8 +618,12 @@ export function computeLayoutFromDefinition(
       )
     }
   } else {
-    const allRightEdges = majorLayoutRanges.flatMap((r) => r.rowRightEdges)
-    const allLeftEdges = majorLayoutRanges.flatMap((r) => r.rowLeftEdges)
+    const allRightEdges = majorLayoutRanges.flatMap(
+      (range) => range.rowRightEdges
+    )
+    const allLeftEdges = majorLayoutRanges.flatMap(
+      (range) => range.rowLeftEdges
+    )
     addSteppedBorderLines(
       lines,
       contentLeft,
@@ -634,15 +644,15 @@ export function computeLayoutFromDefinition(
   const horizontalMajorRanges: { top: number; bottom: number }[] = []
   {
     let trackY = margins.top + effectiveHeaderHeight
-    for (let mi2 = 0; mi2 < majorQuestions.length; mi2++) {
-      const mq = majorQuestions[mi2]
-      if (mi2 > 0) {
+    for (let majorIndex = 0; majorIndex < majorQuestions.length; majorIndex++) {
+      const majorQuestion = majorQuestions[majorIndex]
+      if (majorIndex > 0) {
         trackY += spacing.majorQuestionSpacing
       }
 
-      if (isGridHorizontal(mq.subQuestions)) {
+      if (isGridHorizontal(majorQuestion.subQuestions)) {
         const height = computeMajorHeight(
-          mq,
+          majorQuestion,
           baseRowHeight,
           contentRight - (majorNumX + majorNumWidth),
           subNumWidth
@@ -651,7 +661,7 @@ export function computeLayoutFromDefinition(
         trackY += height
       } else {
         let subSegStart: number | null = null
-        for (const sub of mq.subQuestions) {
+        for (const sub of majorQuestion.subQuestions) {
           const subH = computeSubHeight(sub, baseRowHeight)
           if (sub.label !== "") {
             if (subSegStart === null) subSegStart = trackY
@@ -667,9 +677,9 @@ export function computeLayoutFromDefinition(
               const effBranchLineX = subNumX + effSubNumW + branchNumWidth
               let branchSegStart: number | null = null
               let branchY = trackY
-              for (const bq of sub.branchQuestions) {
-                const bqH = bq.heightMultiplier * baseRowHeight
-                if (bq.label !== "") {
+              for (const branchQuestion of sub.branchQuestions) {
+                const bqH = branchQuestion.heightMultiplier * baseRowHeight
+                if (branchQuestion.label !== "") {
                   if (branchSegStart === null) branchSegStart = branchY
                 } else {
                   if (branchSegStart !== null) {
@@ -775,12 +785,12 @@ export function computeLayoutFromDefinition(
   const subNcSw = getLineWidth("subNumberColumn", settings.borderConfig)
   for (const range of verticalRanges) {
     const clipped = clipRangeToMajorLayouts(range, majorLayoutRanges)
-    for (const cr of clipped) {
+    for (const clippedRange of clipped) {
       lines.push({
         x1: subNumX + subNumWidth,
-        y1: cr.top,
+        y1: clippedRange.top,
         x2: subNumX + subNumWidth,
-        y2: cr.bottom,
+        y2: clippedRange.bottom,
         style: settings.borderConfig.subNumberDivider,
         lineType: "subNumberColumn",
         strokeWidth: subNcSw,
@@ -799,12 +809,12 @@ export function computeLayoutFromDefinition(
     const branchNcSw = getLineWidth("branchNumberColumn", settings.borderConfig)
     for (const range of branchVerticalRanges) {
       const clipped = clipRangeToMajorLayouts(range, majorLayoutRanges)
-      for (const cr of clipped) {
+      for (const clippedRange of clipped) {
         lines.push({
           x1: range.lineX,
-          y1: cr.top,
+          y1: clippedRange.top,
           x2: range.lineX,
-          y2: cr.bottom,
+          y2: clippedRange.bottom,
           style: settings.borderConfig.branchNumberDivider,
           lineType: "branchNumberColumn",
           strokeWidth: branchNcSw,
@@ -822,13 +832,21 @@ export function computeLayoutFromDefinition(
   // 段組み仕切り線
   const mcDividerLine = settings.multiColumn.dividerLine
   if (settings.multiColumn.enabled && mcDividerLine) {
-    const mc = settings.multiColumn
+    const multiColumn = settings.multiColumn
     const singleColumnWidth =
-      (contentRight - contentLeft - (mc.columnCount - 1) * mc.columnGapMm) /
-      mc.columnCount
-    for (let ci = 1; ci < mc.columnCount; ci++) {
+      (contentRight -
+        contentLeft -
+        (multiColumn.columnCount - 1) * multiColumn.columnGapMm) /
+      multiColumn.columnCount
+    for (
+      let columnIndex = 1;
+      columnIndex < multiColumn.columnCount;
+      columnIndex++
+    ) {
       const dividerX =
-        contentLeft + ci * singleColumnWidth + (ci - 0.5) * mc.columnGapMm
+        contentLeft +
+        columnIndex * singleColumnWidth +
+        (columnIndex - 0.5) * multiColumn.columnGapMm
       lines.push({
         x1: dividerX,
         y1: contentTop,
@@ -836,7 +854,7 @@ export function computeLayoutFromDefinition(
         y2: contentBottom,
         style: mcDividerLine,
         lineType: "columnDivider",
-        strokeWidth: mc.dividerLineWidth,
+        strokeWidth: multiColumn.dividerLineWidth,
       })
     }
   }

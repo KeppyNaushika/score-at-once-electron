@@ -49,7 +49,9 @@ export async function exportGradingDataExcel(
     const scoringData =
       selectedStudentIds.length === 0
         ? allScoringData
-        : allScoringData.filter((d) => selectedSet.has(d.studentId))
+        : allScoringData.filter((studentScoringData) =>
+            selectedSet.has(studentScoringData.studentId)
+          )
     if (scoringData.length === 0) {
       return { success: false, error: "選択された生徒が見つかりません" }
     }
@@ -72,7 +74,7 @@ export async function exportGradingDataExcel(
 
     // teacherStat=true の登録学級（受験日所属生徒つき）= 学級平均行の対象
     const teacherStatClasses = (await getClassMembersForExam(examId)).filter(
-      (c) => c.teacherStat
+      (examClass) => examClass.teacherStat
     )
 
     // Excelワークブック作成

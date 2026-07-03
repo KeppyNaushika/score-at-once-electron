@@ -276,7 +276,8 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
       const existing = next.get(command.commandId) || []
       // 同じregistrationIdのハンドラーを置換、それ以外は保持
       const filtered = existing.filter(
-        (h) => h.registrationId !== command.registrationId
+        (commandHandler) =>
+          commandHandler.registrationId !== command.registrationId
       )
       next.set(command.commandId, [...filtered, command])
       return next
@@ -290,7 +291,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
         const existing = next.get(commandId)
         if (existing) {
           const filtered = existing.filter(
-            (h) => h.registrationId !== registrationId
+            (commandHandler) => commandHandler.registrationId !== registrationId
           )
           if (filtered.length === 0) {
             next.delete(commandId)
@@ -428,9 +429,9 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
       // when句の複雑さ（&&の数）でソート（降順）
       // より複雑な条件 = より具体的な状況 = 優先度が高い
-      candidates.sort((a, b) => {
-        const complexityA = (a.when.match(/&&/g) || []).length
-        const complexityB = (b.when.match(/&&/g) || []).length
+      candidates.sort((candidateA, candidateB) => {
+        const complexityA = (candidateA.when.match(/&&/g) || []).length
+        const complexityB = (candidateB.when.match(/&&/g) || []).length
         return complexityB - complexityA
       })
 

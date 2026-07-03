@@ -25,7 +25,7 @@ export async function createSheetHeaders(
     "学籍番号",
     "氏名",
     "合計点",
-    ...subtotalColumns.map((col) => col.label),
+    ...subtotalColumns.map((subtotalColumn) => subtotalColumn.label),
     ...questionRegions.map(
       (region: CropRegion) =>
         region.label || `問${(region.orderIndex ?? 0) + 1}`

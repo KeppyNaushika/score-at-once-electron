@@ -27,8 +27,8 @@ export function OMRCellDetail({
   function handleSave() {
     const values = editValue
       .split(",")
-      .map((v) => v.trim())
-      .filter((v) => v !== "")
+      .map((value) => value.trim())
+      .filter((value) => value !== "")
     onUpdate(values)
   }
 
@@ -68,16 +68,16 @@ export function OMRCellDetail({
               塗りつぶし率
             </Label>
             <div className="mt-0.5 flex gap-2">
-              {cellResult.fillRatios.map((r, i) => (
+              {cellResult.fillRatios.map((fillRatio, i) => (
                 <span
                   key={i}
                   className={`rounded px-1.5 py-0.5 text-xs ${
-                    r >= 0.4
+                    fillRatio >= 0.4
                       ? "bg-primary/10 text-primary font-medium"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {(r * 100).toFixed(0)}%
+                  {(fillRatio * 100).toFixed(0)}%
                 </span>
               ))}
             </div>

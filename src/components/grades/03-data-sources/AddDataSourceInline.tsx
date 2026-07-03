@@ -178,20 +178,24 @@ export function AddDataSourceInline({
   // coursework型: 評価項目（または資料全体）選択時に換算満点・名前を補完
   useEffect(() => {
     if (type !== "coursework") return
-    const coursework = courseworks.find((c) => c.id === selectedCourseworkId)
+    const coursework = courseworks.find(
+      (courseworkOption) => courseworkOption.id === selectedCourseworkId
+    )
     if (!coursework) return
     if (selectedCourseworkItemId === COURSEWORK_WHOLE) {
       // 資料全体: 換算満点の初期値は全評価項目の満点合計、名前は「資料名(合計)」
       // maxScore は IPC 経由で文字列化され得る（Prisma Decimal）ため必ず数値化して加算する
       const totalMax = coursework.items.reduce(
-        (sum, i) => sum + Number(i.maxScore),
+        (sum, courseworkItem) => sum + Number(courseworkItem.maxScore),
         0
       )
       setWeight((prev) => (prev ? prev : String(totalMax)))
       setName(`${coursework.name}(合計)`)
       return
     }
-    const item = coursework.items.find((i) => i.id === selectedCourseworkItemId)
+    const item = coursework.items.find(
+      (courseworkItem) => courseworkItem.id === selectedCourseworkItemId
+    )
     if (item) {
       setWeight((prev) => (prev ? prev : String(item.maxScore)))
       setName(`${coursework.name}(${item.name})`)
@@ -201,23 +205,27 @@ export function AddDataSourceInline({
   // 名前の自動設定（試験系）
   useEffect(() => {
     if (type === "coursework") return
-    const exam = exams.find((p) => p.id === selectedExamId)
+    const exam = exams.find((examOption) => examOption.id === selectedExamId)
     if (!exam) return
 
     if (type === "exam_total") {
       setName(`${exam.examName}(合計)`)
     } else if (type === "subtotal" && selectedSubtotalId) {
-      const sg = subtotalGroups.find((g) =>
-        g.subtotals.some((s) => s.id === selectedSubtotalId)
+      const subtotalGroup = subtotalGroups.find((group) =>
+        group.subtotals.some((subtotal) => subtotal.id === selectedSubtotalId)
       )
-      const subtotal = sg?.subtotals.find((s) => s.id === selectedSubtotalId)
+      const subtotal = subtotalGroup?.subtotals.find(
+        (candidateSubtotal) => candidateSubtotal.id === selectedSubtotalId
+      )
       if (subtotal) {
         setName(`${exam.examName}(${subtotal.name})`)
       }
     } else if (type === "crop_region" && selectedCropRegionId) {
-      const cr = cropRegions.find((r) => r.id === selectedCropRegionId)
-      if (cr) {
-        setName(`${exam.examName}(${cr.label})`)
+      const cropRegion = cropRegions.find(
+        (cropRegionOption) => cropRegionOption.id === selectedCropRegionId
+      )
+      if (cropRegion) {
+        setName(`${exam.examName}(${cropRegion.label})`)
       }
     }
   }, [
@@ -283,11 +291,13 @@ export function AddDataSourceInline({
   }
 
   const selectedSubtotals =
-    subtotalGroups.find((sg) => sg.id === selectedSubtotalGroupId)?.subtotals ??
-    []
+    subtotalGroups.find(
+      (subtotalGroup) => subtotalGroup.id === selectedSubtotalGroupId
+    )?.subtotals ?? []
 
   const selectedCourseworkItems =
-    courseworks.find((c) => c.id === selectedCourseworkId)?.items ?? []
+    courseworks.find((coursework) => coursework.id === selectedCourseworkId)
+      ?.items ?? []
 
   // coursework型は評価項目を必須選択にするための判定（満点は元データ追従で入力欄なし）
   const isCoursework = type === "coursework"
@@ -342,9 +352,9 @@ export function AddDataSourceInline({
               <SelectValue placeholder="試験を選択" />
             </SelectTrigger>
             <SelectContent>
-              {exams.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.examName}
+              {exams.map((examOption) => (
+                <SelectItem key={examOption.id} value={examOption.id}>
+                  {examOption.examName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -365,9 +375,9 @@ export function AddDataSourceInline({
                 <SelectValue placeholder="観点グループ" />
               </SelectTrigger>
               <SelectContent>
-                {subtotalGroups.map((sg) => (
-                  <SelectItem key={sg.id} value={sg.id}>
-                    {sg.name}
+                {subtotalGroups.map((subtotalGroup) => (
+                  <SelectItem key={subtotalGroup.id} value={subtotalGroup.id}>
+                    {subtotalGroup.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -381,9 +391,9 @@ export function AddDataSourceInline({
                   <SelectValue placeholder="観点" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedSubtotals.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
+                  {selectedSubtotals.map((subtotal) => (
+                    <SelectItem key={subtotal.id} value={subtotal.id}>
+                      {subtotal.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -402,9 +412,9 @@ export function AddDataSourceInline({
               <SelectValue placeholder="設問を選択" />
             </SelectTrigger>
             <SelectContent>
-              {cropRegions.map((cr) => (
-                <SelectItem key={cr.id} value={cr.id}>
-                  {cr.label} ({cr.points ?? 0}点)
+              {cropRegions.map((cropRegion) => (
+                <SelectItem key={cropRegion.id} value={cropRegion.id}>
+                  {cropRegion.label} ({cropRegion.points ?? 0}点)
                 </SelectItem>
               ))}
             </SelectContent>
@@ -428,9 +438,9 @@ export function AddDataSourceInline({
                 <SelectValue placeholder="資料を選択" />
               </SelectTrigger>
               <SelectContent>
-                {courseworks.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+                {courseworks.map((coursework) => (
+                  <SelectItem key={coursework.id} value={coursework.id}>
+                    {coursework.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -445,9 +455,12 @@ export function AddDataSourceInline({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={COURSEWORK_WHOLE}>（資料全体）</SelectItem>
-                  {selectedCourseworkItems.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name}
+                  {selectedCourseworkItems.map((courseworkItem) => (
+                    <SelectItem
+                      key={courseworkItem.id}
+                      value={courseworkItem.id}
+                    >
+                      {courseworkItem.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

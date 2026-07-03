@@ -122,7 +122,7 @@ function extractUpdateableItems(
     if (preMatch.byStudentNumber) {
       for (const match of preMatch.byStudentNumber) {
         const decision = config.decisions.find(
-          (d) => d.importId === match.importId
+          (candidateDecision) => candidateDecision.importId === match.importId
         )
         if (
           config.strategy === "by_student_number" ||
@@ -137,10 +137,11 @@ function extractUpdateableItems(
     if (preMatch.byName) {
       for (const match of preMatch.byName) {
         // 既に処理済みかチェック
-        if (linked.some((l) => l.importId === match.importId)) continue
+        if (linked.some((linkedItem) => linkedItem.importId === match.importId))
+          continue
 
         const decision = config.decisions.find(
-          (d) => d.importId === match.importId
+          (candidateDecision) => candidateDecision.importId === match.importId
         )
         if (
           config.strategy === "by_name" ||
@@ -411,7 +412,9 @@ function CategoryUpdateSection({
 }: CategoryUpdateSectionProps) {
   const allItemKeys = items.map((item) => `${item.category}:${item.id}`)
   const allFields = [
-    ...new Set(items.flatMap((item) => item.fieldChanges.map((c) => c.field))),
+    ...new Set(
+      items.flatMap((item) => item.fieldChanges.map((change) => change.field))
+    ),
   ]
 
   const handleBulk = (strategy: UpdateStrategy) => {

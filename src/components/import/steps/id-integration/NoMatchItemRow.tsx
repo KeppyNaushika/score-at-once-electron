@@ -53,7 +53,9 @@ export function NoMatchItemRow({
   // 選択中の既存グループの小計項目
   const selectedExistingSubtotals = useMemo(() => {
     if (!selectedExistingId || !allExistingItems) return undefined
-    return allExistingItems.find((g) => g.id === selectedExistingId)?.subtotals
+    return allExistingItems.find(
+      (existing) => existing.id === selectedExistingId
+    )?.subtotals
   }, [selectedExistingId, allExistingItems])
 
   // 小計項目マッピングエディタの表示条件
@@ -69,7 +71,9 @@ export function NoMatchItemRow({
   useEffect(() => {
     if (!wizard || !isSubtotalGroup) return
     const config = wizard.state.idIntegrationConfig.subtotalGroup
-    const existing = config.decisions.find((d) => d.importId === item.importId)
+    const existing = config.decisions.find(
+      (decision) => decision.importId === item.importId
+    )
     if (existing) {
       setDecision(existing.decisionType as DecisionType)
       if (existing.existingId) setSelectedExistingId(existing.existingId)
@@ -104,7 +108,9 @@ export function NoMatchItemRow({
     onDecisionChange("same_person", existingId, idChoice)
     // 既存グループが変わったら小計マッピングをクリア
     if (wizard && importSubtotals) {
-      wizard.clearSubtotalMappings(importSubtotals.map((s) => s.id))
+      wizard.clearSubtotalMappings(
+        importSubtotals.map((subtotal) => subtotal.id)
+      )
     }
   }
 

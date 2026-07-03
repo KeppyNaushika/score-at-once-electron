@@ -60,8 +60,8 @@ export function cleanupElementStyles(container: HTMLElement): void {
 
   // 段落要素の特別処理
   const paragraphs = container.querySelectorAll("p")
-  paragraphs.forEach((p) => {
-    const htmlP = p as HTMLElement
+  paragraphs.forEach((paragraph) => {
+    const htmlP = paragraph as HTMLElement
     htmlP.style.margin = "0"
     htmlP.style.padding = "0"
     htmlP.style.lineHeight = FONT_SETTINGS.DEFAULT_LINE_HEIGHT.toString()
@@ -69,8 +69,8 @@ export function cleanupElementStyles(container: HTMLElement): void {
 
   // MathJax要素のベースライン配置処理
   const mjxElements = container.querySelectorAll("mjx-container")
-  mjxElements.forEach((mjx) => {
-    const htmlMjx = mjx as HTMLElement
+  mjxElements.forEach((mjxElement) => {
+    const htmlMjx = mjxElement as HTMLElement
     htmlMjx.style.margin = "0"
     htmlMjx.style.padding = "0"
     htmlMjx.style.verticalAlign = "baseline" // ベースライン配置

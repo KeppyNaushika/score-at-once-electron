@@ -33,7 +33,7 @@ export interface CollectedGradeData {
 export async function collectGradeArchiveData(
   gradeId: string
 ): Promise<CollectedGradeData> {
-  const gp = await prisma.grade.findUniqueOrThrow({
+  const grade = await prisma.grade.findUniqueOrThrow({
     where: { id: gradeId },
     include: {
       gradeItems: {
@@ -92,29 +92,31 @@ export async function collectGradeArchiveData(
     },
   })
 
-  const classIds = new Set(gp.gradeClasses.map((c) => c.classroomId))
+  const classIds = new Set(
+    grade.gradeClasses.map((gradeClass) => gradeClass.classroomId)
+  )
 
-  const gradeItems = gp.gradeItems.map((gi) => ({
-    name: gi.name,
-    order: gi.order,
-    dataSources: gi.dataSources.map((ds) => ({
-      type: ds.type,
-      name: ds.name,
+  const gradeItems = grade.gradeItems.map((gradeItem) => ({
+    name: gradeItem.name,
+    order: gradeItem.order,
+    dataSources: gradeItem.dataSources.map((dataSource) => ({
+      type: dataSource.type,
+      name: dataSource.name,
       // v1.6.0: maxScore は廃止（満点は import 後に元データからライブ算出）。出力しない。
-      weight: Number(ds.weight),
-      order: ds.order,
-      examName: ds.exam?.examName ?? null,
-      subtotalName: ds.subtotal?.name ?? null,
-      cropRegionLabel: ds.cropRegion?.label ?? null,
-      absentMethod: ds.absentMethod,
-      absentRatio: Number(ds.absentRatio),
-      absentOffset: Number(ds.absentOffset),
-      treatExpectedAsMissing: ds.treatExpectedAsMissing,
-      estimationMode: ds.estimationMode,
+      weight: Number(dataSource.weight),
+      order: dataSource.order,
+      examName: dataSource.exam?.examName ?? null,
+      subtotalName: dataSource.subtotal?.name ?? null,
+      cropRegionLabel: dataSource.cropRegion?.label ?? null,
+      absentMethod: dataSource.absentMethod,
+      absentRatio: Number(dataSource.absentRatio),
+      absentOffset: Number(dataSource.absentOffset),
+      treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
+      estimationMode: dataSource.estimationMode,
       estimationSourceIds: (() => {
-        if (typeof ds.estimationSourceIds === "string") {
+        if (typeof dataSource.estimationSourceIds === "string") {
           try {
-            return JSON.parse(ds.estimationSourceIds)
+            return JSON.parse(dataSource.estimationSourceIds)
           } catch {
             return []
           }
@@ -124,118 +126,129 @@ export async function collectGradeArchiveData(
       // coursework: 評価項目参照（courseworkId は親資料 / courseworkItemId は項目）
       // coursework_total: 資料全体参照（courseworkId のみ・項目参照は null）
       courseworkId:
-        ds.type === "coursework"
-          ? (ds.courseworkItem?.coursework?.id ?? null)
-          : ds.type === "coursework_total"
-            ? (ds.coursework?.id ?? null)
+        dataSource.type === "coursework"
+          ? (dataSource.courseworkItem?.coursework?.id ?? null)
+          : dataSource.type === "coursework_total"
+            ? (dataSource.coursework?.id ?? null)
             : null,
       courseworkItemId:
-        ds.type === "coursework" ? (ds.courseworkItem?.id ?? null) : null,
+        dataSource.type === "coursework"
+          ? (dataSource.courseworkItem?.id ?? null)
+          : null,
       courseworkName:
-        ds.type === "coursework"
-          ? (ds.courseworkItem?.coursework?.name ?? null)
-          : ds.type === "coursework_total"
-            ? (ds.coursework?.name ?? null)
+        dataSource.type === "coursework"
+          ? (dataSource.courseworkItem?.coursework?.name ?? null)
+          : dataSource.type === "coursework_total"
+            ? (dataSource.coursework?.name ?? null)
             : null,
       courseworkItemName:
-        ds.type === "coursework" ? (ds.courseworkItem?.name ?? null) : null,
+        dataSource.type === "coursework"
+          ? (dataSource.courseworkItem?.name ?? null)
+          : null,
     })),
   }))
 
-  const allDataSources = gp.gradeItems.flatMap((gi) => gi.dataSources)
+  const allDataSources = grade.gradeItems.flatMap(
+    (gradeItem) => gradeItem.dataSources
+  )
 
   const examRefs = allDataSources
     .filter(
-      (ds) =>
-        (ds.type === "exam_total" ||
-          ds.type === "subtotal" ||
-          ds.type === "crop_region") &&
-        ds.exam
+      (dataSource) =>
+        (dataSource.type === "exam_total" ||
+          dataSource.type === "subtotal" ||
+          dataSource.type === "crop_region") &&
+        dataSource.exam
     )
-    .map((ds) => ({
-      examName: ds.exam!.examName,
-      examDate: ds.exam!.examDate?.toISOString() ?? null,
-      dataSourceName: ds.name,
+    .map((dataSource) => ({
+      examName: dataSource.exam!.examName,
+      examDate: dataSource.exam!.examDate?.toISOString() ?? null,
+      dataSourceName: dataSource.name,
     }))
 
-  const classRefs = gp.gradeClasses.map((c) => ({
-    name: c.classroom.name,
+  const classRefs = grade.gradeClasses.map((gradeClass) => ({
+    name: gradeClass.classroom.name,
   }))
 
-  const studentRefs = gp.gradeStudents.map((ps) => {
-    const membership = ps.student.memberships.find((m) =>
-      classIds.has(m.classroomId)
+  const studentRefs = grade.gradeStudents.map((gradeStudent) => {
+    const membership = gradeStudent.student.memberships.find(
+      (studentMembership) => classIds.has(studentMembership.classroomId)
     )
     return {
-      studentNumber: ps.student.studentNumber,
+      studentNumber: gradeStudent.student.studentNumber,
       classroomName: membership?.classroom.name ?? null,
-      customOrder: ps.customOrder,
+      customOrder: gradeStudent.customOrder,
     }
   })
 
   // v1.5.0+: 参照中の試験外成績資料（Coursework）を独立モジュールへ委譲して収集
   const courseworkIds = new Set(
     allDataSources
-      .filter((ds) => ds.type === "coursework" && ds.courseworkItem)
-      .map((ds) => ds.courseworkItem!.courseworkId)
+      .filter(
+        (dataSource) =>
+          dataSource.type === "coursework" && dataSource.courseworkItem
+      )
+      .map((dataSource) => dataSource.courseworkItem!.courseworkId)
   )
   const courseworkArchive = await collectCourseworkArchiveData([
     ...courseworkIds,
   ])
   const manualScoresCount = courseworkArchive.counts.scores
 
-  const boundarySets = gp.boundarySets.map((bs) => ({
-    targetType: bs.targetType,
-    gradeItemName: bs.gradeItem?.name ?? null,
-    boundaries: bs.boundaries.map((b) => ({
-      label: b.label,
-      minPercentage: Number(b.minPercentage),
-      order: b.order,
+  const boundarySets = grade.boundarySets.map((boundarySet) => ({
+    targetType: boundarySet.targetType,
+    gradeItemName: boundarySet.gradeItem?.name ?? null,
+    boundaries: boundarySet.boundaries.map((boundary) => ({
+      label: boundary.label,
+      minPercentage: Number(boundary.minPercentage),
+      order: boundary.order,
     })),
   }))
 
   const totalBoundaries = boundarySets.reduce(
-    (sum, bs) => sum + bs.boundaries.length,
+    (sum, boundarySet) => sum + boundarySet.boundaries.length,
     0
   )
 
   const totalDataSources = gradeItems.reduce(
-    (sum, gi) => sum + gi.dataSources.length,
+    (sum, gradeItem) => sum + gradeItem.dataSources.length,
     0
   )
 
-  const gradeItemExclusions = gp.gradeItemExclusions.map((ex) => ({
-    studentNumber: ex.student.studentNumber,
-    gradeItemName: ex.gradeItem.name,
+  const gradeItemExclusions = grade.gradeItemExclusions.map(
+    (gradeItemExclusion) => ({
+      studentNumber: gradeItemExclusion.student.studentNumber,
+      gradeItemName: gradeItemExclusion.gradeItem.name,
+    })
+  )
+
+  const gradeOverrides = grade.gradeOverrides.map((gradeOverride) => ({
+    studentNumber: gradeOverride.student.studentNumber,
+    targetType: gradeOverride.targetType,
+    gradeItemName: gradeOverride.gradeItem?.name ?? null,
+    overrideLabel: gradeOverride.overrideLabel,
   }))
 
-  const gradeOverrides = gp.gradeOverrides.map((ov) => ({
-    studentNumber: ov.student.studentNumber,
-    targetType: ov.targetType,
-    gradeItemName: ov.gradeItem?.name ?? null,
-    overrideLabel: ov.overrideLabel,
-  }))
-
-  const gradeConstraints = gp.gradeConstraints.map((c) => ({
-    name: c.name,
-    kind: c.kind,
-    config: c.config,
-    expression: c.expression,
-    color: c.color,
-    message: c.message,
-    enabled: c.enabled,
-    order: c.order,
+  const gradeConstraints = grade.gradeConstraints.map((gradeConstraint) => ({
+    name: gradeConstraint.name,
+    kind: gradeConstraint.kind,
+    config: gradeConstraint.config,
+    expression: gradeConstraint.expression,
+    color: gradeConstraint.color,
+    message: gradeConstraint.message,
+    enabled: gradeConstraint.enabled,
+    order: gradeConstraint.order,
   }))
 
   return {
     gradeData: {
       grade: {
-        name: gp.name,
-        description: gp.description,
-        referenceDate: gp.referenceDate?.toISOString() ?? null,
+        name: grade.name,
+        description: grade.description,
+        referenceDate: grade.referenceDate?.toISOString() ?? null,
       },
-      exportSettings: gp.exportSettings
-        ? { settingsJson: gp.exportSettings.settingsJson }
+      exportSettings: grade.exportSettings
+        ? { settingsJson: grade.exportSettings.settingsJson }
         : null,
       gradeItems,
       classRefs,

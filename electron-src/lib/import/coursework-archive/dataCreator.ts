@@ -80,13 +80,13 @@ export async function importCourseworkData(
   const upsertScores = async (
     courseworkItemId: string,
     item: ArchiveCourseworkItemRef,
-    cwName: string
+    courseworkName: string
   ): Promise<void> => {
-    for (const sc of item.scores) {
-      const studentId = students.map.get(sc.studentId)
+    for (const courseworkScore of item.scores) {
+      const studentId = students.map.get(courseworkScore.studentId)
       if (!studentId) {
         warnings.push(
-          `試験外成績資料「${cwName}」評価項目「${item.name}」: 生徒の点数を解決できずスキップしました`
+          `試験外成績資料「${courseworkName}」評価項目「${item.name}」: 生徒の点数を解決できずスキップしました`
         )
         continue
       }
@@ -96,14 +96,16 @@ export async function importCourseworkData(
         },
       })
       const payload = {
-        score: sc.score,
-        letterValue: sc.letterValue,
-        adjustment: sc.adjustment ?? 0,
-        adjustmentReason: sc.adjustmentReason,
-        comment: sc.comment,
+        score: courseworkScore.score,
+        letterValue: courseworkScore.letterValue,
+        adjustment: courseworkScore.adjustment ?? 0,
+        adjustmentReason: courseworkScore.adjustmentReason,
+        comment: courseworkScore.comment,
       }
       if (existing) {
-        if (isNewerByLww(new Date(sc.updatedAt), existing.updatedAt)) {
+        if (
+          isNewerByLww(new Date(courseworkScore.updatedAt), existing.updatedAt)
+        ) {
           await tx.courseworkScore.update({
             where: { id: existing.id },
             data: payload,
@@ -133,10 +135,10 @@ export async function importCourseworkData(
         inputMode: item.inputMode || "numeric",
         ...(item.letterScales.length > 0 && {
           letterScales: {
-            create: item.letterScales.map((ls) => ({
-              label: ls.label,
-              score: ls.score,
-              order: ls.order,
+            create: item.letterScales.map((letterScale) => ({
+              label: letterScale.label,
+              score: letterScale.score,
+              order: letterScale.order,
             })),
           },
         }),

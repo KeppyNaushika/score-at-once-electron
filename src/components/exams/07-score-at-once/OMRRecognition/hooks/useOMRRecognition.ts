@@ -131,8 +131,8 @@ export function useOMRRecognition(
           sheetResults: [...prev.sheetResults, result],
           allCellResults: [
             ...prev.allCellResults,
-            ...result.cellResults.map((cr) => ({
-              ...cr,
+            ...result.cellResults.map((cellResult) => ({
+              ...cellResult,
               studentId: result.studentId,
             })),
           ],
@@ -188,8 +188,8 @@ export function useOMRRecognition(
 
         const allCells: Array<OMRCellResult & { studentId?: string }> = []
         for (const result of results) {
-          for (const cr of result.cellResults) {
-            allCells.push({ ...cr, studentId: result.studentId })
+          for (const cellResult of result.cellResults) {
+            allCells.push({ ...cellResult, studentId: result.studentId })
           }
         }
 
@@ -198,8 +198,8 @@ export function useOMRRecognition(
           progress: {
             total: entries.length,
             processed: entries.length,
-            succeeded: results.filter((r) => r.success).length,
-            failed: results.filter((r) => !r.success).length,
+            succeeded: results.filter((result) => result.success).length,
+            failed: results.filter((result) => !result.success).length,
           },
           sheetResults: results,
           allCellResults: allCells,

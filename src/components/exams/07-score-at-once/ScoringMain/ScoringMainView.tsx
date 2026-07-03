@@ -173,7 +173,7 @@ function ScoringMainViewContent() {
   ])
 
   const currentCropRegion = cropRegions.find(
-    (r) => r.id === currentCropRegionId
+    (cropRegion) => cropRegion.id === currentCropRegionId
   )
 
   /** Effect処理フック */
@@ -273,8 +273,8 @@ function ScoringMainViewContent() {
     // 次のレンダー後に選択するためqueueMicrotaskで遅延
     queueMicrotask(() => {
       const unscoredIds = allScoringData
-        .filter((d) => d.status === "unscored")
-        .map((d) => d.id)
+        .filter((scoringData) => scoringData.status === "unscored")
+        .map((scoringData) => scoringData.id)
       replaceSelection(unscoredIds)
     })
   }, [allScoringData, replaceSelection, filterSettings, handleToggleFilter])
@@ -446,7 +446,9 @@ function ScoringMainViewContent() {
 
       // トグル: 同じステータスなら未採点に戻す
       if (isToggle) {
-        const currentData = allScoringData.find((d) => d.id === answerId)
+        const currentData = allScoringData.find(
+          (scoringData) => scoringData.id === answerId
+        )
         if (currentData?.status === status) {
           const targetSet = new Set([answerId])
           handleBatchScore("unscored" as ScoringStatus, null, null, targetSet)
@@ -480,14 +482,18 @@ function ScoringMainViewContent() {
   const handleBatchScoreVisibleUnscored = useCallback(
     (status: MouseBrushAction) => {
       const unscoredVisible = allScoringData.filter(
-        (d) => d.status === "unscored" && filteredScoringDataIds.includes(d.id)
+        (scoringData) =>
+          scoringData.status === "unscored" &&
+          filteredScoringDataIds.includes(scoringData.id)
       )
       if (unscoredVisible.length === 0) return
-      const targetSet = new Set(unscoredVisible.map((d) => d.id))
+      const targetSet = new Set(
+        unscoredVisible.map((scoringData) => scoringData.id)
+      )
       handleBatchScore(status as ScoringStatus, null, null, targetSet)
       setRecentlyScoredAnswers((prev) => {
         const newSet = new Set(prev)
-        unscoredVisible.forEach((d) => newSet.add(d.id))
+        unscoredVisible.forEach((scoringData) => newSet.add(scoringData.id))
         return newSet
       })
     },
@@ -503,7 +509,9 @@ function ScoringMainViewContent() {
   const visibleUnscoredCount = useMemo(
     () =>
       allScoringData.filter(
-        (d) => d.status === "unscored" && filteredScoringDataIds.includes(d.id)
+        (scoringData) =>
+          scoringData.status === "unscored" &&
+          filteredScoringDataIds.includes(scoringData.id)
       ).length,
     [allScoringData, filteredScoringDataIds]
   )
@@ -512,7 +520,9 @@ function ScoringMainViewContent() {
   const hiddenUnscoredCount = useMemo(
     () =>
       allScoringData.filter(
-        (d) => d.status === "unscored" && !filteredScoringDataIds.includes(d.id)
+        (scoringData) =>
+          scoringData.status === "unscored" &&
+          !filteredScoringDataIds.includes(scoringData.id)
       ).length,
     [allScoringData, filteredScoringDataIds]
   )
@@ -561,7 +571,7 @@ function ScoringMainViewContent() {
     if (!exam?.examPages) return []
     return exam.examPages
       .slice()
-      .sort((a, b) => a.pageNumber - b.pageNumber)
+      .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
       .map((page) => {
         const masterImage = page.masterImages?.[0]
         return masterImage?.imagePath
@@ -621,7 +631,7 @@ function ScoringMainViewContent() {
     if (selectedStudentAnswerImageIds.size > 0) {
       const selectedAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
       const selectedAnswer = studentAnswerImages.find(
-        (a) => a.id === selectedAnswerId
+        (answerImage) => answerImage.id === selectedAnswerId
       )
       return selectedAnswer?.student?.id || ""
     }

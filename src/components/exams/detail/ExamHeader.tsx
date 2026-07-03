@@ -54,18 +54,21 @@ export default function ExamHeader({
           <div className="mt-3 flex items-center gap-4">
             {exam.examTags &&
               exam.examTags.length > 0 &&
-              exam.examTags.map((et) => (
+              exam.examTags.map((examTag) => (
                 <Badge
-                  key={et.tag.id}
+                  key={examTag.tag.id}
                   variant="outline"
                   style={
-                    et.tag.color
-                      ? { borderColor: et.tag.color, color: et.tag.color }
+                    examTag.tag.color
+                      ? {
+                          borderColor: examTag.tag.color,
+                          color: examTag.tag.color,
+                        }
                       : undefined
                   }
                 >
                   <Tag className="mr-1 h-3 w-3" />
-                  {et.tag.name}
+                  {examTag.tag.name}
                 </Badge>
               ))}
             {exam.examDate && (

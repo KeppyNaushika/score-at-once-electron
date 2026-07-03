@@ -147,12 +147,12 @@ function ResizeMoveFigure() {
           animation: "help02Edit 5s ease-in-out infinite",
         }}
       >
-        {RESIZE_HANDLES.map((h) => (
+        {RESIZE_HANDLES.map((handle) => (
           <span
-            key={h.pos}
-            className={`absolute h-2 w-2 rounded-[1px] border border-blue-600 bg-white ${h.pos}`}
+            key={handle.pos}
+            className={`absolute h-2 w-2 rounded-[1px] border border-blue-600 bg-white ${handle.pos}`}
             style={
-              h.pulse
+              handle.pulse
                 ? { animation: "help02Handle 5s ease-in-out infinite" }
                 : undefined
             }
@@ -179,20 +179,20 @@ function AutoDetectFigure() {
   return (
     <SheetBackdrop>
       {/* もとから印刷されている解答欄（薄い実線） */}
-      {DETECT_REGIONS.map((r, i) => (
+      {DETECT_REGIONS.map((region, i) => (
         <div
           key={`box-${i}`}
           className="absolute rounded-sm border border-gray-300"
-          style={r}
+          style={region}
         />
       ))}
       {/* 自動検出された青い点線の枠（順に現れる） */}
-      {DETECT_REGIONS.map((r, i) => (
+      {DETECT_REGIONS.map((region, i) => (
         <div
           key={`hit-${i}`}
           className="absolute rounded-sm border-2 border-dashed border-blue-500 bg-blue-500/10"
           style={{
-            ...r,
+            ...region,
             animation: `help02Detect 4.5s ${i * 0.5}s ease-in-out infinite`,
           }}
         />

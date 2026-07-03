@@ -63,7 +63,9 @@ export function useBatchScoring({
 
   const rollbackCreate = useCallback(
     (tempId: string) => {
-      setQuestionScores((prev) => prev.filter((s) => s.id !== tempId))
+      setQuestionScores((prev) =>
+        prev.filter((questionScore) => questionScore.id !== tempId)
+      )
       toast.error("採点の保存に失敗しました")
     },
     [setQuestionScores]
@@ -120,7 +122,7 @@ export function useBatchScoring({
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
       const currentCropRegion = cropRegions.find(
-        (r) => r.id === currentCropRegionId
+        (cropRegion) => cropRegion.id === currentCropRegionId
       )
 
       if (!currentCropRegion) return
@@ -187,25 +189,26 @@ export function useBatchScoring({
               ? (newScore as unknown as QuestionScore["partialScore"])
               : null
           setQuestionScores((prev) =>
-            prev.map((s) =>
-              s.id === scoreId
+            prev.map((questionScore) =>
+              questionScore.id === scoreId
                 ? {
-                    ...s,
+                    ...questionScore,
                     partialScore: optimisticPartialScore,
                     status: scoringStatus,
                   }
-                : s
+                : questionScore
             )
           )
           // refも同期してループ内の次の反復で最新値が見えるようにする
-          questionScoresRef.current = questionScoresRef.current.map((s) =>
-            s.id === scoreId
-              ? {
-                  ...s,
-                  partialScore: optimisticPartialScore,
-                  status: scoringStatus,
-                }
-              : s
+          questionScoresRef.current = questionScoresRef.current.map(
+            (questionScore) =>
+              questionScore.id === scoreId
+                ? {
+                    ...questionScore,
+                    partialScore: optimisticPartialScore,
+                    status: scoringStatus,
+                  }
+                : questionScore
           )
 
           // DB保存をfire-and-forget
@@ -220,13 +223,13 @@ export function useBatchScoring({
                 // 成功時: updatedAtを反映
                 const updatedScore = result.score
                 setQuestionScores((prev) =>
-                  prev.map((s) =>
-                    s.id === scoreId
+                  prev.map((questionScore) =>
+                    questionScore.id === scoreId
                       ? {
-                          ...s,
+                          ...questionScore,
                           updatedAt: new Date(updatedScore.updatedAt),
                         }
-                      : s
+                      : questionScore
                   )
                 )
               } else {
@@ -276,15 +279,15 @@ export function useBatchScoring({
                 // 成功時: 仮IDを本物のIDに差し替え
                 const createdScore = result.score
                 setQuestionScores((prev) =>
-                  prev.map((s) =>
-                    s.id === tempId
+                  prev.map((questionScore) =>
+                    questionScore.id === tempId
                       ? {
-                          ...s,
+                          ...questionScore,
                           id: createdScore.id,
                           createdAt: new Date(createdScore.createdAt),
                           updatedAt: new Date(createdScore.updatedAt),
                         }
-                      : s
+                      : questionScore
                   )
                 )
               } else {

@@ -54,7 +54,7 @@ export function useStudentImport() {
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
       existingStudentNumbers = new Set(
-        existingStudents.map((s) => s.studentNumber)
+        existingStudents.map((student) => student.studentNumber)
       )
     } catch (error) {
       console.warn("既存生徒の取得に失敗しました:", error)
@@ -78,7 +78,7 @@ export function useStudentImport() {
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
       existingStudentNumbers = new Set(
-        existingStudents.map((s) => s.studentNumber)
+        existingStudents.map((student) => student.studentNumber)
       )
     } catch (error) {
       console.warn("既存生徒の取得に失敗しました:", error)
@@ -146,7 +146,7 @@ export function useStudentImport() {
       // 既存の生徒データを取得
       const existingStudents = await window.electronAPI.fetchStudents()
       const existingStudentNumbers = new Set(
-        existingStudents.map((s) => s.studentNumber)
+        existingStudents.map((student) => student.studentNumber)
       )
 
       const validStudentData = studentData.filter(

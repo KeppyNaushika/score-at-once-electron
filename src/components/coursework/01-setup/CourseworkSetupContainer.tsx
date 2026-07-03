@@ -50,15 +50,21 @@ export function CourseworkSetupContainer({
         window.electronAPI.tagGetAll(),
       ])
 
-      setAllTags(tags.map((t) => ({ id: t.id, name: t.name, color: t.color })))
+      setAllTags(
+        tags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }))
+      )
 
       if (cwResult.success && cwResult.coursework) {
-        const cw = cwResult.coursework
-        setCoursework(cw)
-        setName(cw.name)
-        setDescription(cw.description ?? "")
-        setDate(cw.date ? new Date(cw.date).toISOString().split("T")[0] : "")
-        setSelectedTagIds(new Set(cw.tags.map((t) => t.tagId)))
+        const coursework = cwResult.coursework
+        setCoursework(coursework)
+        setName(coursework.name)
+        setDescription(coursework.description ?? "")
+        setDate(
+          coursework.date
+            ? new Date(coursework.date).toISOString().split("T")[0]
+            : ""
+        )
+        setSelectedTagIds(new Set(coursework.tags.map((tag) => tag.tagId)))
       }
     } catch (error) {
       console.error("Error loading coursework setup:", error)

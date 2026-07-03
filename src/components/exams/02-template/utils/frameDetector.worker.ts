@@ -55,19 +55,22 @@ const MAX_LINES_FOR_RECT_BUILD = 100
 
 // --- パラメータ ---
 function getSensitivityParams(sensitivity: number, refDimension: number) {
-  const s = Math.max(1, Math.min(5, sensitivity))
+  const clampedSensitivity = Math.max(1, Math.min(5, sensitivity))
   const scale = refDimension / PARAM_REFERENCE_DIM
   return {
-    thresholdFactor: [1.0, 0.85, 0.7, 0.55, 0.4][s - 1],
-    dilationIterations: [0, 1, 1, 2, 2][s - 1],
-    lineGapTolerance: Math.max(1, Math.round([1, 3, 5, 8, 12][s - 1] * scale)),
+    thresholdFactor: [1.0, 0.85, 0.7, 0.55, 0.4][clampedSensitivity - 1],
+    dilationIterations: [0, 1, 1, 2, 2][clampedSensitivity - 1],
+    lineGapTolerance: Math.max(
+      1,
+      Math.round([1, 3, 5, 8, 12][clampedSensitivity - 1] * scale)
+    ),
     lineMergeTolerance: Math.max(
       1,
-      Math.round([3, 5, 6, 8, 10][s - 1] * scale)
+      Math.round([3, 5, 6, 8, 10][clampedSensitivity - 1] * scale)
     ),
     intersectionTolerance: Math.max(
       1,
-      Math.round([5, 7, 8, 10, 12][s - 1] * scale)
+      Math.round([5, 7, 8, 10, 12][clampedSensitivity - 1] * scale)
     ),
   }
 }

@@ -131,7 +131,8 @@ export async function detectAllConflicts(
     const studentConflicts = createConflictItems(
       matchResults.students,
       "Student",
-      (s) => `${s.lastName} ${s.firstName} (${s.studentNumber})`
+      (student) =>
+        `${student.lastName} ${student.firstName} (${student.studentNumber})`
     )
     results.push({
       category: "Student",
@@ -144,7 +145,7 @@ export async function detectAllConflicts(
     const classConflicts = createConflictItems(
       matchResults.classes,
       "Class",
-      (c) => c.name
+      (classroom) => classroom.name
     )
     results.push({
       category: "Class",
@@ -157,7 +158,7 @@ export async function detectAllConflicts(
     const userConflicts = createConflictItems(
       matchResults.users,
       "User",
-      (u) => `${u.name} (${u.username})`
+      (user) => `${user.name} (${user.username})`
     )
     results.push({
       category: "User",
@@ -170,7 +171,7 @@ export async function detectAllConflicts(
     const subtotalGroupConflicts = createConflictItems(
       matchResults.subtotalGroups,
       "SubtotalGroup",
-      (sg) => sg.name
+      (subtotalGroup) => subtotalGroup.name
     )
     results.push({
       category: "SubtotalGroup",

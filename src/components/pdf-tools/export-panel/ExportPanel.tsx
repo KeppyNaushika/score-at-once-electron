@@ -59,7 +59,7 @@ export default function ExportPanel({
       interleaveConfig
     )
     const filtered = pages.filter(
-      (p) => !isPageExcluded(p, excludedPagesRef.current)
+      (page) => !isPageExcluded(page, excludedPagesRef.current)
     )
     onOutputPagesChange(filtered)
   }, [importedFiles, exportMode, interleaveConfig, onOutputPagesChange])
@@ -117,8 +117,8 @@ export default function ExportPanel({
 /** 除外対象かどうかを判定 */
 function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
   if (page.isNUpCombined && page.combinedPages) {
-    return page.combinedPages.some((pn) =>
-      excludedPages.has(`${page.sourceFileId}:${pn}`)
+    return page.combinedPages.some((pageNumber) =>
+      excludedPages.has(`${page.sourceFileId}:${pageNumber}`)
     )
   }
   return excludedPages.has(`${page.sourceFileId}:${page.sourcePageNumber}`)
@@ -165,13 +165,13 @@ function generateOutputPages(
         }
       } else {
         // 通常モード
-        for (const pageNum of sortedPages) {
+        for (const pageNumber of sortedPages) {
           pages.push({
             id: crypto.randomUUID(),
             sourceFileId: file.id,
             sourceFileName: file.name,
-            sourcePageNumber: pageNum,
-            thumbnail: file.thumbnails[pageNum - 1] || "",
+            sourcePageNumber: pageNumber,
+            thumbnail: file.thumbnails[pageNumber - 1] || "",
             rotation: file.rotation,
             isNUpCombined: false,
           })
@@ -206,13 +206,13 @@ function generateOutputPages(
           })
         }
       } else {
-        for (const pageNum of sortedPages) {
+        for (const pageNumber of sortedPages) {
           group.push({
             id: crypto.randomUUID(),
             sourceFileId: file.id,
             sourceFileName: file.name,
-            sourcePageNumber: pageNum,
-            thumbnail: file.thumbnails[pageNum - 1] || "",
+            sourcePageNumber: pageNumber,
+            thumbnail: file.thumbnails[pageNumber - 1] || "",
             rotation: transform.rotation,
             isNUpCombined: false,
           })
@@ -223,17 +223,19 @@ function generateOutputPages(
     }
 
     // pagesPerGroupに基づいてグループ化してインターリーブ
-    const groupedPages: OutputPage[][][] = filePageGroups.map((group, idx) => {
-      const transform = interleaveConfig.transforms[idx]
-      const perGroup = transform?.pagesPerGroup || 1
-      const chunks: OutputPage[][] = []
-      for (let i = 0; i < group.length; i += perGroup) {
-        chunks.push(group.slice(i, i + perGroup))
+    const groupedPages: OutputPage[][][] = filePageGroups.map(
+      (group, index) => {
+        const transform = interleaveConfig.transforms[index]
+        const perGroup = transform?.pagesPerGroup || 1
+        const chunks: OutputPage[][] = []
+        for (let i = 0; i < group.length; i += perGroup) {
+          chunks.push(group.slice(i, i + perGroup))
+        }
+        return chunks
       }
-      return chunks
-    })
+    )
 
-    const maxChunks = Math.max(...groupedPages.map((g) => g.length), 0)
+    const maxChunks = Math.max(...groupedPages.map((group) => group.length), 0)
     for (let i = 0; i < maxChunks; i++) {
       for (const chunks of groupedPages) {
         if (chunks[i]) {

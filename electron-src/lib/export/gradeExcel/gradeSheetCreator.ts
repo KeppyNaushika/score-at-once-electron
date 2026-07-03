@@ -49,10 +49,10 @@ export function createGradeResultSheet(
     let resultColIndex = 2 // 0=番号, 1=氏名
 
     for (const gradeItem of result.gradeItems) {
-      const gir = student.gradeItemResults.find(
-        (r) => r.gradeItemId === gradeItem.id
+      const gradeItemResult = student.gradeItemResults.find(
+        (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
       )
-      if (gir?.isExcluded) {
+      if (gradeItemResult?.isExcluded) {
         row.push("除外")
         excludedCellIndices.push(resultColIndex)
         resultColIndex++
@@ -61,16 +61,17 @@ export function createGradeResultSheet(
         resultColIndex++
       } else {
         row.push(
-          gir?.percentage !== null && gir?.percentage !== undefined
-            ? Math.round(gir.percentage * 10) / 10
+          gradeItemResult?.percentage !== null &&
+            gradeItemResult?.percentage !== undefined
+            ? Math.round(gradeItemResult.percentage * 10) / 10
             : null
         )
-        if (gir?.isAllMissing) {
+        if (gradeItemResult?.isAllMissing) {
           allMissingCellIndices.push(resultColIndex)
         }
         resultColIndex++
-        row.push(gir?.gradeLabel ?? null)
-        if (gir?.isAllMissing) {
+        row.push(gradeItemResult?.gradeLabel ?? null)
+        if (gradeItemResult?.isAllMissing) {
           allMissingCellIndices.push(resultColIndex)
         }
         resultColIndex++
@@ -105,11 +106,11 @@ export function createGradeResultSheet(
   }
 
   // 列幅調整
-  sheet.columns.forEach((col, i) => {
+  sheet.columns.forEach((column, i) => {
     if (i === 1) {
-      col.width = 16
+      column.width = 16
     } else {
-      col.width = 12
+      column.width = 12
     }
   })
 }
@@ -127,12 +128,12 @@ export function createDetailSheet(
   const headers = ["番号", "氏名"]
   for (const gradeItem of result.gradeItems) {
     const firstStudent = result.students[0]
-    const gir = firstStudent?.gradeItemResults.find(
-      (r) => r.gradeItemId === gradeItem.id
+    const gradeItemResult = firstStudent?.gradeItemResults.find(
+      (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
     )
-    if (gir) {
-      for (const ss of gir.sourceScores) {
-        headers.push(`${gradeItem.name}/${ss.dataSourceName}`)
+    if (gradeItemResult) {
+      for (const sourceScore of gradeItemResult.sourceScores) {
+        headers.push(`${gradeItem.name}/${sourceScore.dataSourceName}`)
       }
     }
     headers.push(`${gradeItem.name} 合計`)
@@ -174,17 +175,17 @@ export function createDetailSheet(
     let colIndex = 2 // 0=番号, 1=氏名
 
     for (const gradeItem of result.gradeItems) {
-      const gir = student.gradeItemResults.find(
-        (r) => r.gradeItemId === gradeItem.id
+      const gradeItemResult = student.gradeItemResults.find(
+        (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
       )
-      if (gir) {
-        if (gir.isExcluded) {
+      if (gradeItemResult) {
+        if (gradeItemResult.isExcluded) {
           // 除外: DataSource列分 + 合計列の全てを「除外」表示
           const firstStudent = result.students[0]
-          const refGir = firstStudent?.gradeItemResults.find(
-            (r) => r.gradeItemId === gradeItem.id
+          const referenceGradeItemResult = firstStudent?.gradeItemResults.find(
+            (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
           )
-          const sourceCount = refGir?.sourceScores.length ?? 0
+          const sourceCount = referenceGradeItemResult?.sourceScores.length ?? 0
           for (let i = 0; i < sourceCount; i++) {
             row.push("除外")
             detailExcludedCellIndices.push(colIndex)
@@ -194,20 +195,20 @@ export function createDetailSheet(
           detailExcludedCellIndices.push(colIndex)
           colIndex++
         } else {
-          for (const ss of gir.sourceScores) {
+          for (const sourceScore of gradeItemResult.sourceScores) {
             row.push(
-              ss.weightedScore !== null
-                ? Math.round(ss.weightedScore * 100) / 100
+              sourceScore.weightedScore !== null
+                ? Math.round(sourceScore.weightedScore * 100) / 100
                 : null
             )
-            if (ss.isEstimated) {
+            if (sourceScore.isEstimated) {
               estimatedCellIndices.push(colIndex)
             }
             colIndex++
           }
           row.push(
-            gir.weightedScore !== null
-              ? Math.round(gir.weightedScore * 100) / 100
+            gradeItemResult.weightedScore !== null
+              ? Math.round(gradeItemResult.weightedScore * 100) / 100
               : null
           )
           colIndex++
@@ -242,11 +243,11 @@ export function createDetailSheet(
     }
   }
 
-  sheet.columns.forEach((col, i) => {
+  sheet.columns.forEach((column, i) => {
     if (i === 1) {
-      col.width = 16
+      column.width = 16
     } else {
-      col.width = 14
+      column.width = 14
     }
   })
 }

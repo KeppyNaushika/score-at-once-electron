@@ -38,7 +38,9 @@ export async function collectStudentArchiveData(
   })
 
   // 3. 関連する学級IDを導出
-  const relatedClassIds = [...new Set(allMemberships.map((m) => m.classroomId))]
+  const relatedClassIds = [
+    ...new Set(allMemberships.map((membership) => membership.classroomId)),
+  ]
 
   // classIdsが指定されていればフィルタ
   const targetClassIds = classIds
@@ -52,46 +54,46 @@ export async function collectStudentArchiveData(
 
   // 5. 所属をフィルタ（対象学級のもののみ）
   const targetClassIdSet = new Set(targetClassIds)
-  const filteredMemberships = allMemberships.filter((m) =>
-    targetClassIdSet.has(m.classroomId)
+  const filteredMemberships = allMemberships.filter((membership) =>
+    targetClassIdSet.has(membership.classroomId)
   )
 
   // 6. アーカイブ形式に整形
   const studentsData: ArchiveStudentsData = {
-    students: students.map((s) => ({
-      id: s.id,
-      studentNumber: s.studentNumber,
-      lastName: s.lastName,
-      firstName: s.firstName,
-      lastNameKana: s.lastNameKana,
-      firstNameKana: s.firstNameKana,
-      enrollmentYear: s.enrollmentYear,
-      createdAt: s.createdAt.toISOString(),
-      updatedAt: s.updatedAt.toISOString(),
+    students: students.map((student) => ({
+      id: student.id,
+      studentNumber: student.studentNumber,
+      lastName: student.lastName,
+      firstName: student.firstName,
+      lastNameKana: student.lastNameKana,
+      firstNameKana: student.firstNameKana,
+      enrollmentYear: student.enrollmentYear,
+      createdAt: student.createdAt.toISOString(),
+      updatedAt: student.updatedAt.toISOString(),
     })),
   }
 
   const classesData: ArchiveClassesData = {
-    classrooms: classes.map((c) => ({
-      id: c.id,
-      name: c.name,
-      classCode: c.classCode,
-      grade: c.grade,
-      description: c.description,
-      isVisible: c.isVisible,
-      createdAt: c.createdAt.toISOString(),
-      updatedAt: c.updatedAt.toISOString(),
+    classrooms: classes.map((classroom) => ({
+      id: classroom.id,
+      name: classroom.name,
+      classCode: classroom.classCode,
+      grade: classroom.grade,
+      description: classroom.description,
+      isVisible: classroom.isVisible,
+      createdAt: classroom.createdAt.toISOString(),
+      updatedAt: classroom.updatedAt.toISOString(),
     })),
-    memberships: filteredMemberships.map((m) => ({
-      id: m.id,
-      studentId: m.studentId,
-      classroomId: m.classroomId,
-      startDate: m.startDate.toISOString(),
-      endDate: m.endDate ? m.endDate.toISOString() : null,
-      attendanceNumber: m.attendanceNumber,
-      notes: m.notes,
-      createdAt: m.createdAt.toISOString(),
-      updatedAt: m.updatedAt.toISOString(),
+    memberships: filteredMemberships.map((membership) => ({
+      id: membership.id,
+      studentId: membership.studentId,
+      classroomId: membership.classroomId,
+      startDate: membership.startDate.toISOString(),
+      endDate: membership.endDate ? membership.endDate.toISOString() : null,
+      attendanceNumber: membership.attendanceNumber,
+      notes: membership.notes,
+      createdAt: membership.createdAt.toISOString(),
+      updatedAt: membership.updatedAt.toISOString(),
     })),
   }
 

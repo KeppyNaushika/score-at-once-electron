@@ -284,9 +284,9 @@ export function StudentAddPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">すべての学級</SelectItem>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name}
+                  {classes.map((classroom) => (
+                    <SelectItem key={classroom.id} value={classroom.id}>
+                      {classroom.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

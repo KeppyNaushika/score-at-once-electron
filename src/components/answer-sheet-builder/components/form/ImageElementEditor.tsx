@@ -101,8 +101,8 @@ export function ImageElementEditor({
 
   const handleChange = useCallback(
     (index: number, data: Partial<CellImageElement>) => {
-      const updated = imageElements.map((el, i) =>
-        i === index ? { ...el, ...data } : el
+      const updated = imageElements.map((element, i) =>
+        i === index ? { ...element, ...data } : element
       )
       onUpdate(updated)
     },
@@ -124,17 +124,17 @@ export function ImageElementEditor({
         </Button>
       </div>
 
-      {imageElements.map((el, i) => (
-        <div key={el.id} className="space-y-1.5 rounded border p-1.5">
+      {imageElements.map((element, i) => (
+        <div key={element.id} className="space-y-1.5 rounded border p-1.5">
           {/* Row 1: サムネイル + ファイル名 + 削除 */}
           <div className="flex items-center gap-1.5">
             <img
-              src={`appimg:///${el.imagePath}`}
-              alt={el.originalName}
+              src={`appimg:///${element.imagePath}`}
+              alt={element.originalName}
               className="h-8 w-8 shrink-0 rounded border object-contain"
             />
             <span className="min-w-0 flex-1 truncate text-xs">
-              {el.originalName}
+              {element.originalName}
             </span>
             <Button
               variant="ghost"
@@ -149,7 +149,7 @@ export function ImageElementEditor({
           {/* Row 2: objectFit + 表示モード */}
           <div className="flex items-center gap-2">
             <Select
-              value={el.objectFit}
+              value={element.objectFit}
               onValueChange={(v) =>
                 handleChange(i, { objectFit: v as ImageObjectFit })
               }
@@ -167,7 +167,7 @@ export function ImageElementEditor({
             </Select>
 
             <Select
-              value={el.visibility ?? "both"}
+              value={element.visibility ?? "both"}
               onValueChange={(v) =>
                 handleChange(i, { visibility: v as ImageVisibility })
               }
@@ -194,12 +194,12 @@ export function ImageElementEditor({
               min={0}
               max={100}
               step={5}
-              value={[Math.round(el.opacity * 100)]}
+              value={[Math.round(element.opacity * 100)]}
               onValueChange={([v]) => handleChange(i, { opacity: v / 100 })}
               className="flex-1"
             />
             <span className="w-8 shrink-0 text-right text-[10px]">
-              {Math.round(el.opacity * 100)}%
+              {Math.round(element.opacity * 100)}%
             </span>
           </div>
         </div>

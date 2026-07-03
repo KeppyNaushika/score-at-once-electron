@@ -106,18 +106,23 @@ export async function rosterAddStudentsFromClass(
     })
 
     const existing = await adapter.listExistingStudents(targetId)
-    const existingIds = new Set(existing.map((e) => e.studentId))
+    const existingIds = new Set(
+      existing.map((existingStudent) => existingStudent.studentId)
+    )
     const maxCustomOrder = existing.reduce(
-      (max, e) => Math.max(max, e.customOrder ?? 0),
+      (max, existingStudent) => Math.max(max, existingStudent.customOrder ?? 0),
       0
     )
 
     const toAdd: { studentId: string; customOrder: number }[] = []
     let orderOffset = maxCustomOrder + 1
-    for (const m of memberships) {
-      if (!existingIds.has(m.studentId)) {
-        toAdd.push({ studentId: m.studentId, customOrder: orderOffset++ })
-        existingIds.add(m.studentId)
+    for (const membership of memberships) {
+      if (!existingIds.has(membership.studentId)) {
+        toAdd.push({
+          studentId: membership.studentId,
+          customOrder: orderOffset++,
+        })
+        existingIds.add(membership.studentId)
       }
     }
 
@@ -162,9 +167,11 @@ export async function rosterAddStudents(
 }> {
   try {
     const existing = await adapter.listExistingStudents(targetId)
-    const existingIds = new Set(existing.map((e) => e.studentId))
+    const existingIds = new Set(
+      existing.map((existingStudent) => existingStudent.studentId)
+    )
     const maxCustomOrder = existing.reduce(
-      (max, e) => Math.max(max, e.customOrder ?? 0),
+      (max, existingStudent) => Math.max(max, existingStudent.customOrder ?? 0),
       0
     )
 
@@ -264,14 +271,16 @@ async function computeExclusiveStudents(
     where: { classroomId },
     select: { studentId: true },
   })
-  const classStudentIds = memberships.map((m) => m.studentId)
+  const classStudentIds = memberships.map((membership) => membership.studentId)
 
   const otherClassIds = await adapter.listOtherClassIds(targetId, classroomId)
   const otherMemberships = await prisma.studentClassMembership.findMany({
     where: { classroomId: { in: otherClassIds } },
     select: { studentId: true },
   })
-  const otherStudentIds = new Set(otherMemberships.map((m) => m.studentId))
+  const otherStudentIds = new Set(
+    otherMemberships.map((membership) => membership.studentId)
+  )
 
   return classStudentIds.filter((id) => !otherStudentIds.has(id))
 }

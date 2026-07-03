@@ -34,7 +34,7 @@ export function RosterTableHeader({
             <Checkbox
               checked={
                 sortedRows.length > 0 &&
-                sortedRows.every((r) => selectedIds.has(r.id))
+                sortedRows.every((row) => selectedIds.has(row.id))
               }
               onCheckedChange={onSelectAll}
             />

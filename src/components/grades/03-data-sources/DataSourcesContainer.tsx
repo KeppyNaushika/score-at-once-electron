@@ -63,7 +63,9 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       setStudents(studentsResult.students)
     }
     if (classesResult.success && classesResult.classes) {
-      setClassIds(classesResult.classes.map((c) => c.classroomId))
+      setClassIds(
+        classesResult.classes.map((classroom) => classroom.classroomId)
+      )
     }
   }, [gradeId])
 
@@ -74,7 +76,9 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
 
   // 一括欠測設定
   const [batchMode, setBatchMode] = useState(false)
-  const [selectedDsIds, setSelectedDsIds] = useState<Set<string>>(new Set())
+  const [selectedDataSourceIds, setSelectedDataSourceIds] = useState<
+    Set<string>
+  >(new Set())
   const [batchMethod, setBatchMethod] = useState<AbsentMethod>("zero")
   const [batchRatio, setBatchRatio] = useState("1")
   const [batchOffset, setBatchOffset] = useState("0")
@@ -105,27 +109,29 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     setEditingItemName("")
   }
 
-  const toggleDsSelection = (dsId: string) => {
-    setSelectedDsIds((prev) => {
+  const toggleDsSelection = (dataSourceId: string) => {
+    setSelectedDataSourceIds((prev) => {
       const next = new Set(prev)
-      if (next.has(dsId)) next.delete(dsId)
-      else next.add(dsId)
+      if (next.has(dataSourceId)) next.delete(dataSourceId)
+      else next.add(dataSourceId)
       return next
     })
   }
 
   const handleBatchApply = async () => {
-    if (selectedDsIds.size === 0) return
-    await batchUpdateAbsentPolicy([...selectedDsIds], {
+    if (selectedDataSourceIds.size === 0) return
+    await batchUpdateAbsentPolicy([...selectedDataSourceIds], {
       absentMethod: batchMethod,
       absentRatio: Number(batchRatio),
       absentOffset: Number(batchOffset),
     })
     setBatchMode(false)
-    setSelectedDsIds(new Set())
+    setSelectedDataSourceIds(new Set())
   }
 
-  const allDataSources = exam.gradeItems.flatMap((gi) => gi.dataSources)
+  const allDataSources = exam.gradeItems.flatMap(
+    (gradeItem) => gradeItem.dataSources
+  )
 
   return (
     <div className="p-6">
@@ -170,7 +176,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
               size="sm"
               onClick={() => {
                 setBatchMode(!batchMode)
-                setSelectedDsIds(new Set())
+                setSelectedDataSourceIds(new Set())
               }}
             >
               <Settings className="mr-1 h-3.5 w-3.5" />
@@ -186,7 +192,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
           <p className="mb-3 text-sm font-medium">
             欠測時推定の一括設定
             <Badge variant="outline" className="ml-2">
-              {selectedDsIds.size}件選択中
+              {selectedDataSourceIds.size}件選択中
             </Badge>
           </p>
           <div className="flex items-center gap-3">
@@ -225,7 +231,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             <Button
               size="sm"
               onClick={handleBatchApply}
-              disabled={selectedDsIds.size === 0}
+              disabled={selectedDataSourceIds.size === 0}
             >
               適用
             </Button>
@@ -290,18 +296,18 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
           {/* DataSource リスト */}
           {gradeItem.dataSources.length > 0 && (
             <div className="mb-3 space-y-2">
-              {gradeItem.dataSources.map((ds) => (
-                <div key={ds.id} className="flex items-start gap-2">
+              {gradeItem.dataSources.map((dataSource) => (
+                <div key={dataSource.id} className="flex items-start gap-2">
                   {batchMode && (
                     <Checkbox
-                      checked={selectedDsIds.has(ds.id)}
-                      onCheckedChange={() => toggleDsSelection(ds.id)}
+                      checked={selectedDataSourceIds.has(dataSource.id)}
+                      onCheckedChange={() => toggleDsSelection(dataSource.id)}
                       className="mt-3"
                     />
                   )}
                   <div className="flex-1">
                     <DataSourceRow
-                      dataSource={ds}
+                      dataSource={dataSource}
                       allDataSources={allDataSources}
                       onUpdate={updateDataSource}
                       onDelete={deleteDataSource}

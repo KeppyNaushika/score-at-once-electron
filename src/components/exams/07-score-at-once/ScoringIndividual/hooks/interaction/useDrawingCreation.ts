@@ -262,10 +262,10 @@ export function useDrawingCreation({
         )
 
         setDrawingElements((prev) =>
-          prev.map((el) =>
-            el.id === elementId
-              ? { ...el, endX: constrained.endX, endY: constrained.endY }
-              : el
+          prev.map((element) =>
+            element.id === elementId
+              ? { ...element, endX: constrained.endX, endY: constrained.endY }
+              : element
           )
         )
         return true
@@ -282,8 +282,8 @@ export function useDrawingCreation({
         height = constrained.height
 
         setDrawingElements((prev) =>
-          prev.map((el) =>
-            el.id === elementId ? { ...el, width, height } : el
+          prev.map((element) =>
+            element.id === elementId ? { ...element, width, height } : element
           )
         )
         return true
@@ -313,7 +313,9 @@ export function useDrawingCreation({
 
     const elementId = drawingElementRef.current.id
 
-    const finalElement = drawingElements.find((el) => el.id === elementId)
+    const finalElement = drawingElements.find(
+      (element) => element.id === elementId
+    )
     if (!finalElement) {
       drawingElementRef.current = null
       setIsDrawing(false)
@@ -321,7 +323,9 @@ export function useDrawingCreation({
     }
 
     // ローカル状態から一時要素を削除
-    setDrawingElements((prev) => prev.filter((el) => el.id !== elementId))
+    setDrawingElements((prev) =>
+      prev.filter((element) => element.id !== elementId)
+    )
 
     // addDrawingElementでローカル状態に再追加＆DB保存
     addDrawingElement(finalElement)

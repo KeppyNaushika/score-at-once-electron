@@ -27,11 +27,11 @@ export function useSpAnalysis(
     const input: SpInputStudent[] = data.rows.map((row) => ({
       studentId: row.studentId,
       studentName: row.studentName,
-      items: row.scores.map((s) => ({
-        questionId: s.questionId,
-        label: s.questionLabel,
-        isCorrect: s.status === "correct",
-        isScored: s.status !== "unscored",
+      items: row.scores.map((questionScore) => ({
+        questionId: questionScore.questionId,
+        label: questionScore.questionLabel,
+        isCorrect: questionScore.status === "correct",
+        isScored: questionScore.status !== "unscored",
       })),
     }))
 

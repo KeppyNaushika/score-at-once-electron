@@ -33,7 +33,9 @@ export function SubtotalGroupSelector({
           await window.electronAPI.export.getSubtotalGroupsForReport(examId)
         if (result.success && result.subtotalGroups) {
           setGroups(result.subtotalGroups)
-          const fetchedGroupIds = result.subtotalGroups.map((g) => g.id)
+          const fetchedGroupIds = result.subtotalGroups.map(
+            (subtotalGroup) => subtotalGroup.id
+          )
 
           // localStorageから復元された選択がある場合、有効なIDのみにフィルタ
           // 復元された選択がない（初回）または無効な場合のみ、全グループを選択
@@ -99,7 +101,7 @@ export function SubtotalGroupSelector({
   const handleSelectAll = () => {
     onChange({
       enabled: true,
-      selectedGroupIds: groups.map((g) => g.id),
+      selectedGroupIds: groups.map((subtotalGroup) => subtotalGroup.id),
     })
   }
 

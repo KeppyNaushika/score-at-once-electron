@@ -78,7 +78,9 @@ export function GradeImportDialog({
   const classMatched = preview.classMatches.filter(
     (classMatch) => classMatch.found
   ).length
-  const examMatched = preview.examMatches.filter((e) => e.found).length
+  const examMatched = preview.examMatches.filter(
+    (examMatch) => examMatch.found
+  ).length
 
   const handleConfirm = () => {
     const decisions: Record<string, CourseworkImportDecision> = {}

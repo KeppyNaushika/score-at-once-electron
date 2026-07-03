@@ -79,10 +79,10 @@ export const MasterAnswerView = forwardRef<
         urls.map(
           (url) =>
             new Promise<HTMLImageElement>((resolve, reject) => {
-              const img = new Image()
-              img.onload = () => resolve(img)
-              img.onerror = reject
-              img.src = url
+              const image = new Image()
+              image.onload = () => resolve(image)
+              image.onerror = reject
+              image.src = url
             })
         )
       )
@@ -90,10 +90,10 @@ export const MasterAnswerView = forwardRef<
       setLoadedImages(
         results
           .filter(
-            (r): r is PromiseFulfilledResult<HTMLImageElement> =>
-              r.status === "fulfilled"
+            (result): result is PromiseFulfilledResult<HTMLImageElement> =>
+              result.status === "fulfilled"
           )
-          .map((r) => r.value)
+          .map((result) => result.value)
       )
     }
     loadAll()
@@ -168,9 +168,9 @@ export const MasterAnswerView = forwardRef<
         )
       : loadedImages.length > 0
         ? loadedImages.reduce(
-            (total, img, index) =>
+            (total, image, index) =>
               total +
-              img.naturalHeight +
+              image.naturalHeight +
               (index < loadedImages.length - 1 ? pageSpacing : 0),
             0
           )
@@ -203,12 +203,12 @@ export const MasterAnswerView = forwardRef<
           minHeight: "100%",
         }}
       >
-        {loadedImages.map((img, pageIndex) => {
-          const displayWidth = refWidth ?? img.naturalWidth
+        {loadedImages.map((image, pageIndex) => {
+          const displayWidth = refWidth ?? image.naturalWidth
           const displayHeight =
             refHeights && refHeights[pageIndex] !== undefined
               ? refHeights[pageIndex]
-              : img.naturalHeight
+              : image.naturalHeight
 
           let offsetY = 0
           for (let i = 0; i < pageIndex; i++) {
@@ -222,7 +222,7 @@ export const MasterAnswerView = forwardRef<
           return (
             <img
               key={`master-page-${pageIndex}`}
-              src={img.src}
+              src={image.src}
               alt={`模範解答 ページ${pageIndex + 1}`}
               className="pointer-events-none absolute left-0 block"
               style={{

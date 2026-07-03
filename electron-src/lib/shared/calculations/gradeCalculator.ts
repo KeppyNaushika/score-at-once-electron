@@ -45,7 +45,7 @@ export async function calculateGrades(gradeId: string): Promise<{
 }> {
   try {
     // 1. Grade + リレーションを取得
-    const gp = await prisma.grade.findUnique({
+    const grade = await prisma.grade.findUnique({
       where: { id: gradeId },
       include: {
         gradeClasses: {
@@ -87,7 +87,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       },
     })
 
-    if (!gp) {
+    if (!grade) {
       return { success: false, error: "Grade exam not found" }
     }
 
@@ -106,16 +106,18 @@ export async function calculateGrades(gradeId: string): Promise<{
       orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
     })
 
-    const classIds = gp.gradeClasses.map((c) => c.classroomId)
+    const classIds = grade.gradeClasses.map(
+      (gradeClass) => gradeClass.classroomId
+    )
 
     // 3. 上書きデータを取得
     const overrides = await prisma.gradeOverride.findMany({
       where: { gradeId },
     })
     const overrideMap = new Map<string, string>()
-    for (const ov of overrides) {
-      const key = `${ov.studentId}:${ov.targetType}:${ov.gradeItemId ?? "__overall__"}`
-      overrideMap.set(key, ov.overrideLabel)
+    for (const override of overrides) {
+      const key = `${override.studentId}:${override.targetType}:${override.gradeItemId ?? "__overall__"}`
+      overrideMap.set(key, override.overrideLabel)
     }
 
     // 3.5. 除外データを取得
@@ -123,22 +125,26 @@ export async function calculateGrades(gradeId: string): Promise<{
       where: { gradeId },
     })
     const exclusionSet = new Set(
-      exclusions.map((ex) => `${ex.studentId}:${ex.gradeItemId}`)
+      exclusions.map(
+        (exclusion) => `${exclusion.studentId}:${exclusion.gradeItemId}`
+      )
     )
 
     // 4. 全DataSourceから使用される試験試験IDを収集
-    const allDataSources = gp.gradeItems.flatMap((gi) => gi.dataSources)
+    const allDataSources = grade.gradeItems.flatMap(
+      (gradeItem) => gradeItem.dataSources
+    )
     const examIds = [
       ...new Set(
         allDataSources
           .filter(
-            (ds) =>
-              (ds.type === "exam_total" ||
-                ds.type === "subtotal" ||
-                ds.type === "crop_region") &&
-              ds.examId
+            (dataSource) =>
+              (dataSource.type === "exam_total" ||
+                dataSource.type === "subtotal" ||
+                dataSource.type === "crop_region") &&
+              dataSource.examId
           )
-          .map((ds) => ds.examId!)
+          .map((dataSource) => dataSource.examId!)
       ),
     ]
 
@@ -174,23 +180,23 @@ export async function calculateGrades(gradeId: string): Promise<{
           include: { cropRegions: true },
         }),
       ])
-      const cropRegions = examPages.flatMap((pp) => pp.cropRegions)
+      const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)
       // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
       const { resolved: resolvedScores } = resolveEffectiveScores(
         questionScores,
         scoreDecisions
       )
       examDataCache.set(examId, {
-        questionScores: resolvedScores.map((qs) => ({
-          studentId: qs.studentId,
-          cropRegionId: qs.cropRegionId,
-          status: qs.status,
-          partialScore: qs.partialScore,
+        questionScores: resolvedScores.map((resolvedScore) => ({
+          studentId: resolvedScore.studentId,
+          cropRegionId: resolvedScore.cropRegionId,
+          status: resolvedScore.status,
+          partialScore: resolvedScore.partialScore,
         })),
-        cropRegions: cropRegions.map((cr) => ({
-          id: cr.id,
-          type: cr.type,
-          points: cr.points,
+        cropRegions: cropRegions.map((cropRegion) => ({
+          id: cropRegion.id,
+          type: cropRegion.type,
+          points: cropRegion.points,
         })),
       })
     }
@@ -199,13 +205,13 @@ export async function calculateGrades(gradeId: string): Promise<{
     // Map<examId, Map<studentId, status>>
     const examExamStudentStatusMap = new Map<string, Map<string, string>>()
     for (const examId of examIds) {
-      const ps = await prisma.examStudent.findMany({
+      const examStudentStatuses = await prisma.examStudent.findMany({
         where: { examId: examId },
         select: { studentId: true, status: true },
       })
       const statusMap = new Map<string, string>()
-      for (const p of ps) {
-        statusMap.set(p.studentId, p.status)
+      for (const examStudent of examStudentStatuses) {
+        statusMap.set(examStudent.studentId, examStudent.status)
       }
       examExamStudentStatusMap.set(examId, statusMap)
     }
@@ -214,65 +220,75 @@ export async function calculateGrades(gradeId: string): Promise<{
     // GradeDataSource.maxScore 列のスナップショットは使わない（元データ追従）。
     // 生徒ループの外で1ソース1回だけ算出してマップ化する。
     const liveMaxScoreMap = new Map<string, number>()
-    for (const ds of allDataSources) {
-      liveMaxScoreMap.set(ds.id, await computeLiveMaxScore(ds))
+    for (const dataSource of allDataSources) {
+      liveMaxScoreMap.set(dataSource.id, await computeLiveMaxScore(dataSource))
     }
 
     // DataSource情報をまとめる（推定で使用）
-    const dataSourceInfos: DataSourceInfo[] = allDataSources.map((ds) => {
-      let sourceIds: string[] = []
-      if (typeof ds.estimationSourceIds === "string") {
-        try {
-          sourceIds = JSON.parse(ds.estimationSourceIds)
-        } catch {
-          sourceIds = []
+    const dataSourceInfos: DataSourceInfo[] = allDataSources.map(
+      (dataSource) => {
+        let sourceIds: string[] = []
+        if (typeof dataSource.estimationSourceIds === "string") {
+          try {
+            sourceIds = JSON.parse(dataSource.estimationSourceIds)
+          } catch {
+            sourceIds = []
+          }
+        }
+        return {
+          id: dataSource.id,
+          maxScore: liveMaxScoreMap.get(dataSource.id) ?? 0,
+          absentMethod: (dataSource.absentMethod ?? "null") as AbsentMethod,
+          absentRatio: Number(dataSource.absentRatio ?? 1),
+          absentOffset: Number(dataSource.absentOffset ?? 0),
+          estimationMode: dataSource.estimationMode ?? "all",
+          estimationSourceIds: sourceIds,
         }
       }
-      return {
-        id: ds.id,
-        maxScore: liveMaxScoreMap.get(ds.id) ?? 0,
-        absentMethod: (ds.absentMethod ?? "null") as AbsentMethod,
-        absentRatio: Number(ds.absentRatio ?? 1),
-        absentOffset: Number(ds.absentOffset ?? 0),
-        estimationMode: ds.estimationMode ?? "all",
-        estimationSourceIds: sourceIds,
-      }
-    })
+    )
 
     // === パス1: 全生徒 × 全DataSourceの rawScore を収集 ===
     // Map<studentId, Map<dataSourceId, number | null>>
     const rawScoreMap = new Map<string, Map<string, number | null>>()
 
-    for (const ps of examStudents) {
+    for (const examStudent of examStudents) {
       const studentScores = new Map<string, number | null>()
-      for (const ds of allDataSources) {
-        let raw = await getRawScore(ps.student.id, ds, examDataCache)
+      for (const dataSource of allDataSources) {
+        let raw = await getRawScore(
+          examStudent.student.id,
+          dataSource,
+          examDataCache
+        )
 
         // 見込→欠測対応: treatExpectedAsMissing が true かつ
         // 試験試験の ExamStudent.status === "EXPECTED" → null扱い
-        if (raw !== null && ds.treatExpectedAsMissing && ds.examId) {
-          const statusMap = examExamStudentStatusMap.get(ds.examId)
-          if (statusMap?.get(ps.student.id) === "EXPECTED") {
+        if (
+          raw !== null &&
+          dataSource.treatExpectedAsMissing &&
+          dataSource.examId
+        ) {
+          const statusMap = examExamStudentStatusMap.get(dataSource.examId)
+          if (statusMap?.get(examStudent.student.id) === "EXPECTED") {
             raw = null
           }
         }
 
-        studentScores.set(ds.id, raw)
+        studentScores.set(dataSource.id, raw)
       }
-      rawScoreMap.set(ps.student.id, studentScores)
+      rawScoreMap.set(examStudent.student.id, studentScores)
     }
 
     // === パス2: 推定 + 重み付け ===
     const students: StudentGradeResult[] = []
 
-    for (const ps of examStudents) {
-      const student = ps.student
-      const membership = student.memberships.find((m) =>
-        classIds.includes(m.classroomId)
+    for (const examStudent of examStudents) {
+      const student = examStudent.student
+      const membership = student.memberships.find((membership) =>
+        classIds.includes(membership.classroomId)
       )
       const gradeItemResults: GradeItemResult[] = []
 
-      for (const gradeItem of gp.gradeItems) {
+      for (const gradeItem of grade.gradeItems) {
         // 除外チェック
         if (exclusionSet.has(`${student.id}:${gradeItem.id}`)) {
           gradeItemResults.push({
@@ -293,34 +309,37 @@ export async function calculateGrades(gradeId: string): Promise<{
 
         const sourceScores: SourceScoreResult[] = []
 
-        for (const ds of gradeItem.dataSources) {
+        for (const dataSource of gradeItem.dataSources) {
           // 満点は元データからライブ算出した値を使う（maxScore列は使わない）
-          const maxScore = liveMaxScoreMap.get(ds.id) ?? 0
-          const weight = Number(ds.weight)
-          const absentMethod = (ds.absentMethod ?? "null") as AbsentMethod
-          const absentRatio = Number(ds.absentRatio ?? 1)
-          const absentOffset = Number(ds.absentOffset ?? 0)
+          const maxScore = liveMaxScoreMap.get(dataSource.id) ?? 0
+          const weight = Number(dataSource.weight)
+          const absentMethod = (dataSource.absentMethod ??
+            "null") as AbsentMethod
+          const absentRatio = Number(dataSource.absentRatio ?? 1)
+          const absentOffset = Number(dataSource.absentOffset ?? 0)
 
-          const dsInfo = dataSourceInfos.find((d) => d.id === ds.id)
+          const dataSourceInfo = dataSourceInfos.find(
+            (sourceInfo) => sourceInfo.id === dataSource.id
+          )
 
           const studentScores = rawScoreMap.get(student.id)
-          let rawScore = studentScores?.get(ds.id) ?? null
+          let rawScore = studentScores?.get(dataSource.id) ?? null
           let isEstimated = false
 
           // rawScoreがnullかつ推定設定がある場合、代替スコアを算出
           if (rawScore === null && absentMethod !== "null") {
             // ソース選択対応: estimationMode === "selected" の場合、指定IDのみ使用
             const sourcesToUse =
-              dsInfo?.estimationMode === "selected"
-                ? dataSourceInfos.filter((d) =>
-                    dsInfo.estimationSourceIds.includes(d.id)
+              dataSourceInfo?.estimationMode === "selected"
+                ? dataSourceInfos.filter((sourceInfo) =>
+                    dataSourceInfo.estimationSourceIds.includes(sourceInfo.id)
                   )
                 : dataSourceInfos
 
             const estimated = estimateAbsentScore(
               absentMethod,
               student.id,
-              ds.id,
+              dataSource.id,
               maxScore,
               rawScoreMap,
               sourcesToUse
@@ -344,16 +363,16 @@ export async function calculateGrades(gradeId: string): Promise<{
 
           // coursework型: 入力された評価記号・加減点・コメントを結果に添付
           const courseworkScore =
-            ds.type === "coursework"
-              ? ds.courseworkItem?.scores.find(
-                  (s) => s.studentId === student.id
+            dataSource.type === "coursework"
+              ? dataSource.courseworkItem?.scores.find(
+                  (score) => score.studentId === student.id
                 )
               : undefined
 
           sourceScores.push({
-            dataSourceId: ds.id,
-            dataSourceName: ds.name,
-            type: ds.type,
+            dataSourceId: dataSource.id,
+            dataSourceName: dataSource.name,
+            type: dataSource.type,
             rawScore,
             maxScore,
             weight,
@@ -372,7 +391,7 @@ export async function calculateGrades(gradeId: string): Promise<{
 
         // GradeItemの重み付け合計（欠点以外のみ分母に含める）
         const nonNullSources = sourceScores.filter(
-          (s) => s.weightedScore !== null
+          (sourceScore) => sourceScore.weightedScore !== null
         )
 
         let weightedMax: number
@@ -381,14 +400,20 @@ export async function calculateGrades(gradeId: string): Promise<{
         let isAllMissing = false
 
         if (nonNullSources.length > 0) {
-          weightedMax = nonNullSources.reduce((sum, s) => sum + s.weight, 0)
+          weightedMax = nonNullSources.reduce(
+            (sum, sourceScore) => sum + sourceScore.weight,
+            0
+          )
           weightedScore = nonNullSources.reduce(
-            (sum, s) => sum + s.weightedScore!,
+            (sum, sourceScore) => sum + sourceScore.weightedScore!,
             0
           )
         } else if (sourceScores.length > 0) {
           // 全スコアがnull → 換算合計0点として扱う
-          weightedMax = sourceScores.reduce((sum, s) => sum + s.weight, 0)
+          weightedMax = sourceScores.reduce(
+            (sum, sourceScore) => sum + sourceScore.weight,
+            0
+          )
           weightedScore = 0
           isAllMissing = true
         } else {
@@ -402,9 +427,10 @@ export async function calculateGrades(gradeId: string): Promise<{
             : null
 
         // 境界セットからラベルを決定
-        const boundarySet = gp.boundarySets.find(
-          (bs) =>
-            bs.targetType === "grade_item" && bs.gradeItemId === gradeItem.id
+        const boundarySet = grade.boundarySets.find(
+          (boundarySet) =>
+            boundarySet.targetType === "grade_item" &&
+            boundarySet.gradeItemId === gradeItem.id
         )
         const originalGradeLabel = determineGradeLabel(
           percentage,
@@ -429,25 +455,30 @@ export async function calculateGrades(gradeId: string): Promise<{
       }
 
       // 総合スコア（除外・欠点のGradeItemは分母・分子から除外）
-      const includedResults = gradeItemResults.filter((gi) => !gi.isExcluded)
+      const includedResults = gradeItemResults.filter(
+        (gradeItemResult) => !gradeItemResult.isExcluded
+      )
       const nonNullItems = includedResults.filter(
-        (gi) => gi.weightedScore !== null
+        (gradeItemResult) => gradeItemResult.weightedScore !== null
       )
       const overallMaxScore = nonNullItems.reduce(
-        (sum, gi) => sum + gi.weightedMaxScore,
+        (sum, gradeItemResult) => sum + gradeItemResult.weightedMaxScore,
         0
       )
       const overallScore =
         nonNullItems.length > 0
-          ? nonNullItems.reduce((sum, gi) => sum + gi.weightedScore!, 0)
+          ? nonNullItems.reduce(
+              (sum, gradeItemResult) => sum + gradeItemResult.weightedScore!,
+              0
+            )
           : null
       const overallPercentage =
         overallScore !== null && overallMaxScore > 0
           ? (overallScore / overallMaxScore) * 100
           : null
 
-      const overallBoundarySet = gp.boundarySets.find(
-        (bs) => bs.targetType === "overall"
+      const overallBoundarySet = grade.boundarySets.find(
+        (boundarySet) => boundarySet.targetType === "overall"
       )
       const originalOverallGradeLabel = determineGradeLabel(
         overallPercentage,
@@ -478,23 +509,25 @@ export async function calculateGrades(gradeId: string): Promise<{
     return {
       success: true,
       result: {
-        gradeId: gp.id,
-        gradeName: gp.name,
-        classNames: gp.gradeClasses.map((c) => c.classroom.name),
-        gradeItems: gp.gradeItems.map((gi) => ({
-          id: gi.id,
-          name: gi.name,
-          order: gi.order,
+        gradeId: grade.id,
+        gradeName: grade.name,
+        classNames: grade.gradeClasses.map(
+          (gradeClass) => gradeClass.classroom.name
+        ),
+        gradeItems: grade.gradeItems.map((gradeItem) => ({
+          id: gradeItem.id,
+          name: gradeItem.name,
+          order: gradeItem.order,
         })),
         students,
-        boundarySets: gp.boundarySets.map((bs) => ({
-          targetType: bs.targetType,
-          gradeItemId: bs.gradeItemId,
-          boundaries: [...bs.boundaries]
+        boundarySets: grade.boundarySets.map((boundarySet) => ({
+          targetType: boundarySet.targetType,
+          gradeItemId: boundarySet.gradeItemId,
+          boundaries: [...boundarySet.boundaries]
             .sort((a, b) => Number(b.minPercentage) - Number(a.minPercentage))
-            .map((b) => ({
-              label: b.label,
-              minPercentage: Number(b.minPercentage),
+            .map((boundary) => ({
+              label: boundary.label,
+              minPercentage: Number(boundary.minPercentage),
             })),
         })),
       },
@@ -513,7 +546,7 @@ export async function calculateGrades(gradeId: string): Promise<{
  */
 async function getRawScore(
   studentId: string,
-  ds: {
+  dataSource: {
     type: string
     examId: string | null
     subtotalId: string | null
@@ -545,14 +578,18 @@ async function getRawScore(
   },
   examDataCache: Map<string, ExamDataCache>
 ): Promise<number | null> {
-  if (ds.type === "exam_total" && ds.examId) {
-    return calculateExamTotalScore(studentId, ds.examId, examDataCache)
-  } else if (ds.type === "subtotal" && ds.subtotalId && ds.examId) {
-    const examData = examDataCache.get(ds.examId)
+  if (dataSource.type === "exam_total" && dataSource.examId) {
+    return calculateExamTotalScore(studentId, dataSource.examId, examDataCache)
+  } else if (
+    dataSource.type === "subtotal" &&
+    dataSource.subtotalId &&
+    dataSource.examId
+  ) {
+    const examData = examDataCache.get(dataSource.examId)
     if (examData) {
       const result = await calculateSubtotalScoreBySubtotalId(
         studentId,
-        ds.subtotalId,
+        dataSource.subtotalId,
         examData.questionScores,
         examData.cropRegions as Parameters<
           typeof calculateSubtotalScoreBySubtotalId
@@ -560,17 +597,21 @@ async function getRawScore(
       )
       return result.score
     }
-  } else if (ds.type === "crop_region" && ds.cropRegionId && ds.examId) {
+  } else if (
+    dataSource.type === "crop_region" &&
+    dataSource.cropRegionId &&
+    dataSource.examId
+  ) {
     return calculateCropRegionScore(
       studentId,
-      ds.cropRegionId,
-      ds.examId,
+      dataSource.cropRegionId,
+      dataSource.examId,
       examDataCache
     )
-  } else if (ds.type === "coursework" && ds.courseworkItem) {
-    return getCourseworkRawScore(studentId, ds.courseworkItem)
-  } else if (ds.type === "coursework_total" && ds.coursework) {
-    return getCourseworkTotalRawScore(studentId, ds.coursework.items)
+  } else if (dataSource.type === "coursework" && dataSource.courseworkItem) {
+    return getCourseworkRawScore(studentId, dataSource.courseworkItem)
+  } else if (dataSource.type === "coursework_total" && dataSource.coursework) {
+    return getCourseworkTotalRawScore(studentId, dataSource.coursework.items)
   }
   return null
 }
@@ -630,27 +671,38 @@ function getCourseworkRawScore(
     letterScales: { label: string; score: unknown }[]
   }
 ): number | null {
-  const cs = item.scores.find((s) => s.studentId === studentId)
-  if (!cs) return null
+  const courseworkScore = item.scores.find(
+    (score) => score.studentId === studentId
+  )
+  if (!courseworkScore) return null
 
   // 基準スコア（変換前・加減点前）を決定
   let base: number | null
   if (item.inputMode === "letter") {
-    if (cs.letterValue === null || cs.letterValue === undefined) {
+    if (
+      courseworkScore.letterValue === null ||
+      courseworkScore.letterValue === undefined
+    ) {
       base = null
     } else {
-      const scale = item.letterScales.find((ls) => ls.label === cs.letterValue)
+      const scale = item.letterScales.find(
+        (letterScale) => letterScale.label === courseworkScore.letterValue
+      )
       base = scale ? Number(scale.score) : null
     }
   } else {
-    base = cs.score !== null && cs.score !== undefined ? Number(cs.score) : null
+    base =
+      courseworkScore.score !== null && courseworkScore.score !== undefined
+        ? Number(courseworkScore.score)
+        : null
   }
 
   if (base === null || Number.isNaN(base)) return null
 
   const adjustment =
-    cs.adjustment !== null && cs.adjustment !== undefined
-      ? Number(cs.adjustment)
+    courseworkScore.adjustment !== null &&
+    courseworkScore.adjustment !== undefined
+      ? Number(courseworkScore.adjustment)
       : 0
   // クランプしない。配点超え・負値のいずれも入力どおり成績算出に反映する。
   return base + adjustment
@@ -709,12 +761,12 @@ function estimateByAverage(
   let ratioSum = 0
   let ratioCount = 0
 
-  for (const ds of allDataSources) {
-    if (ds.id === dataSourceId) continue
-    if (ds.maxScore <= 0) continue
-    const score = studentScores.get(ds.id)
+  for (const dataSource of allDataSources) {
+    if (dataSource.id === dataSourceId) continue
+    if (dataSource.maxScore <= 0) continue
+    const score = studentScores.get(dataSource.id)
     if (score === null || score === undefined) continue
-    ratioSum += score / ds.maxScore
+    ratioSum += score / dataSource.maxScore
     ratioCount++
   }
 
@@ -738,8 +790,10 @@ function estimateByRegression(
 ): number | null {
   // 他DataSourceのID一覧（predictor変数）
   const predictorDsIds = allDataSources
-    .filter((ds) => ds.id !== dataSourceId && ds.maxScore > 0)
-    .map((ds) => ds.id)
+    .filter(
+      (dataSource) => dataSource.id !== dataSourceId && dataSource.maxScore > 0
+    )
+    .map((dataSource) => dataSource.id)
 
   if (predictorDsIds.length === 0) return null
 
@@ -749,8 +803,8 @@ function estimateByRegression(
 
   // 対象生徒が持っているpredictorのみを使用
   const availablePredictors = predictorDsIds.filter((id) => {
-    const s = targetStudentScores.get(id)
-    return s !== null && s !== undefined
+    const score = targetStudentScores.get(id)
+    return score !== null && score !== undefined
   })
 
   if (availablePredictors.length === 0) return null
@@ -759,8 +813,8 @@ function estimateByRegression(
   const X: number[][] = [] // 各行 = [1, x1, x2, ...] (切片含む)
   const Y: number[] = []
 
-  for (const [sid, scores] of rawScoreMap) {
-    if (sid === studentId) continue
+  for (const [otherStudentId, scores] of rawScoreMap) {
+    if (otherStudentId === studentId) continue
     const y = scores.get(dataSourceId)
     if (y === null || y === undefined) continue
 
@@ -926,19 +980,24 @@ function calculateExamTotalScore(
   if (!examData) return null
 
   const studentScores = examData.questionScores.filter(
-    (qs) => qs.studentId === studentId
+    (questionScore) => questionScore.studentId === studentId
   )
   const questionRegions = examData.cropRegions.filter(
-    (cr) => cr.type === "QUESTION_ANSWER"
+    (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
   )
 
   let totalScore = 0
   let hasScored = false
 
-  for (const cr of questionRegions) {
-    const scoreData = studentScores.find((s) => s.cropRegionId === cr.id)
+  for (const cropRegion of questionRegions) {
+    const scoreData = studentScores.find(
+      (questionScore) => questionScore.cropRegionId === cropRegion.id
+    )
     if (scoreData) {
-      const actualScore = calculateActualScore(scoreData, cr.points ?? 0)
+      const actualScore = calculateActualScore(
+        scoreData,
+        cropRegion.points ?? 0
+      )
       if (actualScore !== null) {
         hasScored = true
         totalScore += actualScore
@@ -961,11 +1020,15 @@ function calculateCropRegionScore(
   const examData = examDataCache.get(examId)
   if (!examData) return null
 
-  const cropRegion = examData.cropRegions.find((cr) => cr.id === cropRegionId)
+  const cropRegion = examData.cropRegions.find(
+    (cropRegion) => cropRegion.id === cropRegionId
+  )
   if (!cropRegion) return null
 
   const scoreData = examData.questionScores.find(
-    (qs) => qs.studentId === studentId && qs.cropRegionId === cropRegionId
+    (questionScore) =>
+      questionScore.studentId === studentId &&
+      questionScore.cropRegionId === cropRegionId
   )
   if (!scoreData) return null
 

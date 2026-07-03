@@ -197,7 +197,7 @@ export function AuditLogsTab() {
     void (async () => {
       try {
         const data = await window.electronAPI.fetchUsers()
-        setUsers(data.map((u) => ({ id: u.id, name: u.name })))
+        setUsers(data.map((user) => ({ id: user.id, name: user.name })))
       } catch (e) {
         console.error("Failed to load users for audit filter:", e)
       }
@@ -254,9 +254,9 @@ export function AuditLogsTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>すべてのユーザー</SelectItem>
-            {users.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name}
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name}
               </SelectItem>
             ))}
           </SelectContent>

@@ -72,7 +72,7 @@ export function computeFilteredStats(
   const filteredAll = filterByStatus(raw)
   const allScores = filteredAll
     .map((e) => e.totalScore)
-    .filter((s): s is number => s !== null)
+    .filter((score): score is number => score !== null)
 
   const overallAvg = average(allScores)
   const overallStd = stdDev(allScores)
@@ -85,16 +85,16 @@ export function computeFilteredStats(
       : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
 
   // 学級別統計を受験状態フィルタ付きで再計算（学級ごとに memberStudentIds で母集団を絞る）
-  const classes = report.statistics.classes.map((cls) => {
-    const memberSet = new Set(cls.memberStudentIds)
+  const classes = report.statistics.classes.map((classroom) => {
+    const memberSet = new Set(classroom.memberStudentIds)
     const filteredMembers = filteredAll.filter((e) =>
       memberSet.has(e.studentId)
     )
     const classScores = filteredMembers
       .map((e) => e.totalScore)
-      .filter((s): s is number => s !== null)
+      .filter((score): score is number => score !== null)
     return {
-      ...cls,
+      ...classroom,
       average: average(classScores),
       stdDev: stdDev(classScores),
       total: filteredMembers.length,
@@ -151,14 +151,15 @@ export function computeFilteredSubtotalStats(
     }
 
     const filteredScores = rawData.scores
-      .filter((s) => {
-        if (s.status === "participating") return includeStatuses.participating
-        if (s.status === "expected") return includeStatuses.expected
-        if (s.status === "absent") return includeStatuses.absent
+      .filter((rawScore) => {
+        if (rawScore.status === "participating")
+          return includeStatuses.participating
+        if (rawScore.status === "expected") return includeStatuses.expected
+        if (rawScore.status === "absent") return includeStatuses.absent
         return true
       })
-      .map((s) => s.score)
-      .filter((s): s is number => s !== null)
+      .map((rawScore) => rawScore.score)
+      .filter((score): score is number => score !== null)
 
     if (filteredScores.length === 0) {
       return {
@@ -195,14 +196,15 @@ export function computeFilteredOverallStat(
   includeStatuses: BoxPlotIncludeStatuses
 ): ComputedSubtotalStat {
   const filteredScores = rawTotalScores
-    .filter((s) => {
-      if (s.status === "participating") return includeStatuses.participating
-      if (s.status === "expected") return includeStatuses.expected
-      if (s.status === "absent") return includeStatuses.absent
+    .filter((rawTotalScore) => {
+      if (rawTotalScore.status === "participating")
+        return includeStatuses.participating
+      if (rawTotalScore.status === "expected") return includeStatuses.expected
+      if (rawTotalScore.status === "absent") return includeStatuses.absent
       return true
     })
-    .map((s) => s.totalScore)
-    .filter((s): s is number => s !== null)
+    .map((rawTotalScore) => rawTotalScore.totalScore)
+    .filter((score): score is number => score !== null)
 
   return {
     subtotalId: "__overall__",
@@ -372,10 +374,10 @@ export function buildStatsItems(
 
   if (options.showAverage !== "none") {
     if (options.showAverage === "class" || options.showAverage === "both") {
-      for (const cls of filteredStats.classes) {
+      for (const classroom of filteredStats.classes) {
         items.push({
-          label: classLabel(cls.className, "平均"),
-          value: cls.average.toFixed(1),
+          label: classLabel(classroom.className, "平均"),
+          value: classroom.average.toFixed(1),
         })
       }
     }
@@ -396,10 +398,10 @@ export function buildStatsItems(
 
   if (options.showRank) {
     if (options.rankType === "class" || options.rankType === "both") {
-      for (const cls of filteredStats.classes) {
+      for (const classroom of filteredStats.classes) {
         items.push({
-          label: classLabel(cls.className, "順位"),
-          value: `${cls.rank} / ${cls.total}`,
+          label: classLabel(classroom.className, "順位"),
+          value: `${classroom.rank} / ${classroom.total}`,
         })
       }
     }
@@ -423,6 +425,6 @@ export function buildStatsItems(
  */
 export function formatDate(date: Date | null): string {
   if (!date) return ""
-  const d = new Date(date)
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+  const parsedDate = new Date(date)
+  return `${parsedDate.getFullYear()}年${parsedDate.getMonth() + 1}月${parsedDate.getDate()}日`
 }

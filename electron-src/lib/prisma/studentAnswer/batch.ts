@@ -48,7 +48,7 @@ export async function batchUpdateStudentAnswerPlacements(
       const missingSheets = moves.filter((_, index) => !answerSheets[index])
       if (missingSheets.length > 0) {
         throw new Error(
-          `答案が見つかりません: ${missingSheets.map((m) => m.fileId).join(", ")}`
+          `答案が見つかりません: ${missingSheets.map((move) => move.fileId).join(", ")}`
         )
       }
 
@@ -57,7 +57,7 @@ export async function batchUpdateStudentAnswerPlacements(
       if (withScoring) {
         // 全ての採点データを取得（studentIdベース）
         const studentIds = moves
-          .map((m) => m.finalStudentId)
+          .map((move) => move.finalStudentId)
           .filter((id): id is string => id !== null)
         if (studentIds.length > 0) {
           allQuestionScores = await tx.questionScore.findMany({
@@ -67,7 +67,7 @@ export async function batchUpdateStudentAnswerPlacements(
           })
 
           // cascade削除前にDrawingAnnotationのtombstoneを記録
-          const scoreIds = allQuestionScores.map((s) => s.id)
+          const scoreIds = allQuestionScores.map((score) => score.id)
           if (scoreIds.length > 0) {
             await recordDrawingAnnotationDeletionsForQuestionScores(scoreIds, {
               tx,
@@ -85,14 +85,14 @@ export async function batchUpdateStudentAnswerPlacements(
 
       // studentIdがnullの移動はStudentAnswerImageでは不可能なので、
       // finalStudentIdがnullの場合は削除として扱う
-      const deleteMoves = moves.filter((m) => m.finalStudentId === null)
-      const updateMoves = moves.filter((m) => m.finalStudentId !== null)
+      const deleteMoves = moves.filter((move) => move.finalStudentId === null)
+      const updateMoves = moves.filter((move) => move.finalStudentId !== null)
 
       // nullに設定される答案を削除
       if (deleteMoves.length > 0) {
         await tx.studentAnswerImage.deleteMany({
           where: {
-            id: { in: deleteMoves.map((m) => m.fileId) },
+            id: { in: deleteMoves.map((move) => move.fileId) },
           },
         })
       }
@@ -208,8 +208,8 @@ export async function swapStudentAnswerPlacementsWithScoring(
 
       // cascade削除前にDrawingAnnotationのtombstoneを記録
       const allScoreIds = [
-        ...questionScores1.map((s) => s.id),
-        ...questionScores2.map((s) => s.id),
+        ...questionScores1.map((score) => score.id),
+        ...questionScores2.map((score) => score.id),
       ]
       if (allScoreIds.length > 0) {
         await recordDrawingAnnotationDeletionsForQuestionScores(allScoreIds, {

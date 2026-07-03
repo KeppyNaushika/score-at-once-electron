@@ -110,8 +110,12 @@ export function CourseworkScoresContainer({
     const scoreCols: ColumnDef<ScoreRow>[] = items.flatMap(
       (item): ColumnDef<ScoreRow>[] => {
         const isLetter = item.inputMode === "letter"
-        const validLabels = item.letterScales.map((ls) => ls.label).join("/")
-        const validLabelSet = new Set(item.letterScales.map((ls) => ls.label))
+        const validLabels = item.letterScales
+          .map((letterScale) => letterScale.label)
+          .join("/")
+        const validLabelSet = new Set(
+          item.letterScales.map((letterScale) => letterScale.label)
+        )
         return [
           {
             id: item.id,
@@ -195,7 +199,9 @@ export function CourseworkScoresContainer({
 
         const studentId = newRow._studentId
         for (const item of items) {
-          const validLabels = new Set(item.letterScales.map((ls) => ls.label))
+          const validLabels = new Set(
+            item.letterScales.map((letterScale) => letterScale.label)
+          )
 
           // value列（数値 or 文字評価）
           const valId = item.id

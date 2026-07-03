@@ -36,9 +36,9 @@ function clipRightToOuter(
   rightEdges: { yTop: number; yBottom: number; rightX: number }[]
 ): number {
   let maxOuter = -Infinity
-  for (const re of rightEdges) {
-    if (re.yTop <= y + 1e-9 && re.yBottom >= y - 1e-9) {
-      maxOuter = Math.max(maxOuter, re.rightX)
+  for (const rightEdge of rightEdges) {
+    if (rightEdge.yTop <= y + 1e-9 && rightEdge.yBottom >= y - 1e-9) {
+      maxOuter = Math.max(maxOuter, rightEdge.rightX)
     }
   }
   return maxOuter > -Infinity ? Math.min(cellRight, maxOuter) : cellRight
@@ -88,18 +88,18 @@ export function renderGridCompletionLines<
     leftEdges,
   } = outerBounds
 
-  for (const gc of gridCells) {
-    const left = areaX + gc.x * areaWidth
-    const right = areaX + (gc.x + gc.width) * areaWidth
-    const top = areaStartY + gc.y * baseRowHeight
-    const bottom = areaStartY + (gc.y + gc.height) * baseRowHeight
+  for (const gridCell of gridCells) {
+    const left = areaX + gridCell.x * areaWidth
+    const right = areaX + (gridCell.x + gridCell.width) * areaWidth
+    const top = areaStartY + gridCell.y * baseRowHeight
+    const bottom = areaStartY + (gridCell.y + gridCell.height) * baseRowHeight
 
     // 右辺: セルの右端が外枠の rightX 以上ならスキップ（外枠が境界を描画する）
-    for (const re of rightEdges) {
-      const oTop = Math.max(top, re.yTop)
-      const oBottom = Math.min(bottom, re.yBottom)
+    for (const rightEdge of rightEdges) {
+      const oTop = Math.max(top, rightEdge.yTop)
+      const oBottom = Math.min(bottom, rightEdge.yBottom)
       if (oBottom <= oTop + 1e-9) continue
-      if (right >= re.rightX - 0.01) continue
+      if (right >= rightEdge.rightX - 0.01) continue
       lines.push({
         x1: right,
         y1: oTop,
@@ -112,11 +112,11 @@ export function renderGridCompletionLines<
     }
 
     // 左辺: セルの左端が外枠の leftX 以下ならスキップ
-    for (const le of leftEdges) {
-      const oTop = Math.max(top, le.yTop)
-      const oBottom = Math.min(bottom, le.yBottom)
+    for (const leftEdge of leftEdges) {
+      const oTop = Math.max(top, leftEdge.yTop)
+      const oBottom = Math.min(bottom, leftEdge.yBottom)
       if (oBottom <= oTop + 1e-9) continue
-      if (left <= le.leftX + 0.01) continue
+      if (left <= leftEdge.leftX + 0.01) continue
       lines.push({
         x1: left,
         y1: oTop,
@@ -238,8 +238,8 @@ export function renderGridDividerLines<
 /** 枝問の描画（横配置・縦配置両対応） */
 export function renderBranchQuestions(
   sub: SubQuestion,
-  mi: number,
-  si: number,
+  majorIndex: number,
+  subIndex: number,
   majorLabel: string,
   subStartY: number,
   pageIndex: number,
@@ -265,16 +265,16 @@ export function renderBranchQuestions(
     const branchAreaWidth = contentRight - branchAreaX
     const branchCells = buildBranchGridLayout(sub.branchQuestions)
 
-    for (const gc of branchCells) {
-      const cellX = branchAreaX + gc.x * branchAreaWidth
-      const cellWidth = gc.width * branchAreaWidth
-      const cellY = subStartY + gc.y * baseRowHeight
-      const cellHeight = gc.height * baseRowHeight
-      const effBranchNumW = gc.item.label === "" ? 0 : branchNumWidth
+    for (const gridCell of branchCells) {
+      const cellX = branchAreaX + gridCell.x * branchAreaWidth
+      const cellWidth = gridCell.width * branchAreaWidth
+      const cellY = subStartY + gridCell.y * baseRowHeight
+      const cellHeight = gridCell.height * baseRowHeight
+      const effBranchNumW = gridCell.item.label === "" ? 0 : branchNumWidth
 
       if (effBranchNumW > 0) {
         numberLabels.push({
-          text: gc.item.label,
+          text: gridCell.item.label,
           x: cellX,
           y: cellY,
           width: effBranchNumW,
@@ -284,23 +284,24 @@ export function renderBranchQuestions(
         })
       }
 
-      const branchPoints = sub.usesBranchPoints === false ? 0 : gc.item.points
+      const branchPoints =
+        sub.usesBranchPoints === false ? 0 : gridCell.item.points
       cells.push(
         createCell(
-          [mi, si, gc.itemIndex],
+          [majorIndex, subIndex, gridCell.itemIndex],
           cellX + effBranchNumW,
           cellY,
           cellWidth - effBranchNumW,
           cellHeight,
           paper,
-          `${majorLabel}-${sub.label}-${gc.item.label}`,
+          `${majorLabel}-${sub.label}-${gridCell.item.label}`,
           branchPoints,
-          gc.item.textElements,
+          gridCell.item.textElements,
           "answer",
           pageIndex,
           undefined,
-          gc.item.omrConfig,
-          gc.item.imageElements
+          gridCell.item.omrConfig,
+          gridCell.item.imageElements
         )
       )
 
@@ -363,7 +364,7 @@ export function renderBranchQuestions(
   } else {
     // 縦配置
     let branchY = subStartY
-    sub.branchQuestions.forEach((branch, bi) => {
+    sub.branchQuestions.forEach((branch, branchIndex) => {
       const branchHeight = branch.heightMultiplier * baseRowHeight
       const effBranchNumW = branch.label === "" ? 0 : branchNumWidth
       const effBranchAnswerX = branchNumX + effBranchNumW
@@ -384,7 +385,7 @@ export function renderBranchQuestions(
       const branchPoints = sub.usesBranchPoints === false ? 0 : branch.points
       cells.push(
         createCell(
-          [mi, si, bi],
+          [majorIndex, subIndex, branchIndex],
           effBranchAnswerX,
           branchY,
           effBranchAnswerW,
@@ -401,7 +402,7 @@ export function renderBranchQuestions(
         )
       )
 
-      if (bi < sub.branchQuestions.length - 1) {
+      if (branchIndex < sub.branchQuestions.length - 1) {
         lines.push({
           x1: branchNumX,
           y1: branchY + branchHeight,
@@ -414,9 +415,9 @@ export function renderBranchQuestions(
             axis: "horizontal",
             target: {
               type: "heightMultiplier",
-              majorIndex: mi,
-              subIndex: si,
-              branchIndex: bi,
+              majorIndex: majorIndex,
+              subIndex: subIndex,
+              branchIndex: branchIndex,
             },
             currentValueMm: branchHeight,
             minMm: baseRowHeight * 0.5,

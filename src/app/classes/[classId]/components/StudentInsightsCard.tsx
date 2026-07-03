@@ -49,24 +49,24 @@ interface InsightSortable {
 // ── ヘルパー ──
 
 function calcSlope(values: number[]): number | null {
-  const n = values.length
-  if (n < 2) return null
+  const pointCount = values.length
+  if (pointCount < 2) return null
 
   let sumX = 0
   let sumY = 0
   let sumXY = 0
   let sumX2 = 0
 
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < pointCount; i++) {
     sumX += i
     sumY += values[i]
     sumXY += i * values[i]
     sumX2 += i * i
   }
 
-  const denom = n * sumX2 - sumX * sumX
+  const denom = pointCount * sumX2 - sumX * sumX
   if (denom === 0) return 0
-  return (n * sumXY - sumX * sumY) / denom
+  return (pointCount * sumXY - sumX * sumY) / denom
 }
 
 function formatSlope(slope: number | null): string {
@@ -98,8 +98,10 @@ export function StudentInsightsCard({
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>()
-    studentResults.forEach((sr) =>
-      sr.examResults.forEach((r) => r.tags.forEach((t) => tagSet.add(t)))
+    studentResults.forEach((studentResult) =>
+      studentResult.examResults.forEach((examResult) =>
+        examResult.tags.forEach((tag) => tagSet.add(tag))
+      )
     )
     return Array.from(tagSet).sort()
   }, [studentResults])
@@ -119,31 +121,38 @@ export function StudentInsightsCard({
     const toTime = dateTo ? new Date(dateTo).getTime() : null
 
     const filterExams = (exams: ExamResult[]) =>
-      exams.filter((r) => {
-        if (!r.examDate || r.maxScore === 0) return false
-        if (r.status !== "complete" && r.status !== "partial") return false
-        if (selectedTags.size > 0 && !r.tags.some((t) => selectedTags.has(t)))
+      exams.filter((examResult) => {
+        if (!examResult.examDate || examResult.maxScore === 0) return false
+        if (examResult.status !== "complete" && examResult.status !== "partial")
           return false
-        const time = new Date(r.examDate).getTime()
+        if (
+          selectedTags.size > 0 &&
+          !examResult.tags.some((tag) => selectedTags.has(tag))
+        )
+          return false
+        const time = new Date(examResult.examDate).getTime()
         if (fromTime && time < fromTime) return false
         if (toTime && time > toTime) return false
         return true
       })
 
-    return studentResults.map((sr) => {
-      const filtered = filterExams(sr.examResults).sort(
-        (a, b) =>
-          new Date(a.examDate!).getTime() - new Date(b.examDate!).getTime()
+    return studentResults.map((studentResult) => {
+      const filtered = filterExams(studentResult.examResults).sort(
+        (examA, examB) =>
+          new Date(examA.examDate!).getTime() -
+          new Date(examB.examDate!).getTime()
       )
 
-      const rates = filtered.map((r) => (r.totalScore / r.maxScore) * 100)
+      const rates = filtered.map(
+        (examResult) => (examResult.totalScore / examResult.maxScore) * 100
+      )
 
       if (rates.length === 0) {
         return {
-          studentId: sr.studentId,
-          studentName: sr.studentName,
-          studentNumber: sr.studentNumber,
-          attendanceNumber: sr.attendanceNumber,
+          studentId: studentResult.studentId,
+          studentName: studentResult.studentName,
+          studentNumber: studentResult.studentNumber,
+          attendanceNumber: studentResult.attendanceNumber,
           avgRate: null,
           slope: null,
           trend: "insufficient" as const,
@@ -152,7 +161,9 @@ export function StudentInsightsCard({
       }
 
       const avgRate =
-        Math.round((rates.reduce((a, b) => a + b, 0) / rates.length) * 10) / 10
+        Math.round(
+          (rates.reduce((sum, rate) => sum + rate, 0) / rates.length) * 10
+        ) / 10
       const rawSlope = calcSlope(rates)
       const slope = rawSlope !== null ? Math.round(rawSlope * 10) / 10 : null
 
@@ -168,10 +179,10 @@ export function StudentInsightsCard({
       }
 
       return {
-        studentId: sr.studentId,
-        studentName: sr.studentName,
-        studentNumber: sr.studentNumber,
-        attendanceNumber: sr.attendanceNumber,
+        studentId: studentResult.studentId,
+        studentName: studentResult.studentName,
+        studentNumber: studentResult.studentNumber,
+        attendanceNumber: studentResult.attendanceNumber,
         avgRate,
         slope,
         trend,
@@ -184,15 +195,15 @@ export function StudentInsightsCard({
   const sortableData = useMemo<InsightSortable[]>(
     () =>
       insights
-        .filter((i) => i.trend !== "insufficient")
-        .map((i) => ({
-          id: i.studentId,
-          attendanceNumber: i.attendanceNumber,
-          studentName: i.studentName,
-          examCount: i.examCount,
-          avgRate: i.avgRate,
-          slope: i.slope,
-          original: i,
+        .filter((insight) => insight.trend !== "insufficient")
+        .map((insight) => ({
+          id: insight.studentId,
+          attendanceNumber: insight.attendanceNumber,
+          studentName: insight.studentName,
+          examCount: insight.examCount,
+          avgRate: insight.avgRate,
+          slope: insight.slope,
+          original: insight,
         })),
     [insights]
   )
@@ -201,8 +212,10 @@ export function StudentInsightsCard({
     defaultSort: { key: "slope", direction: "asc" },
   })
 
-  const downCount = insights.filter((i) => i.trend === "down").length
-  const upCount = insights.filter((i) => i.trend === "up").length
+  const downCount = insights.filter(
+    (insight) => insight.trend === "down"
+  ).length
+  const upCount = insights.filter((insight) => insight.trend === "up").length
 
   if (studentResults.length === 0) return null
 

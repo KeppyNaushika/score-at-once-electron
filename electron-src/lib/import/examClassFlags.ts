@@ -7,14 +7,14 @@
  * import の2経路（exam-archive/dataCreator・merge/idIntegrationImporter）で共有し、
  * 補完規則の重複・ドリフトを防ぐ。
  */
-export function resolveExamClassOutputFlags(pc: {
+export function resolveExamClassOutputFlags(examClass: {
   teacherStat?: boolean | null
   studentReport?: boolean | null
   statistics?: boolean | null
   administered?: boolean | null
 }): { teacherStat: boolean; studentReport: boolean } {
   return {
-    teacherStat: pc.teacherStat ?? pc.statistics ?? false,
-    studentReport: pc.studentReport ?? pc.administered ?? false,
+    teacherStat: examClass.teacherStat ?? examClass.statistics ?? false,
+    studentReport: examClass.studentReport ?? examClass.administered ?? false,
   }
 }

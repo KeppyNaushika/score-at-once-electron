@@ -74,7 +74,10 @@ export function CourseworkStudentsContainer({
           (classResult.success && classResult.classes
             ? classResult.classes
             : []
-          ).map((c) => [c.classroomId, c.order])
+          ).map((courseworkClass) => [
+            courseworkClass.classroomId,
+            courseworkClass.order,
+          ])
         )
         const registeredClassIds = new Set(classOrderMap.keys())
         const students =
@@ -82,8 +85,8 @@ export function CourseworkStudentsContainer({
             ? studentResult.students
             : []
         return students.map((courseworkStudent): RosterRow => {
-          const membership = courseworkStudent.student.memberships.find((m) =>
-            registeredClassIds.has(m.classroomId)
+          const membership = courseworkStudent.student.memberships.find(
+            (membership) => registeredClassIds.has(membership.classroomId)
           )
           return {
             id: courseworkStudent.studentId,
@@ -106,9 +109,9 @@ export function CourseworkStudentsContainer({
         const result =
           await window.electronAPI.coursework.getClasses(courseworkId)
         if (!result.success || !result.classes) return []
-        return result.classes.map((c): RosterClassOption => ({
-          id: c.classroomId,
-          name: c.className,
+        return result.classes.map((courseworkClass): RosterClassOption => ({
+          id: courseworkClass.classroomId,
+          name: courseworkClass.className,
         }))
       },
       updateRowOrder: async (rowOrders) => {
@@ -136,10 +139,10 @@ export function CourseworkStudentsContainer({
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map((c): AddPanelClassItem => ({
-          id: c.id,
-          name: c.name,
-          studentCount: c.studentCount,
+        return result.classes.map((classroom): AddPanelClassItem => ({
+          id: classroom.id,
+          name: classroom.name,
+          studentCount: classroom.studentCount,
           studentNames: [],
         }))
       },
@@ -149,18 +152,18 @@ export function CourseworkStudentsContainer({
           activeOnly
         )
         if (!result.success || !result.students) return []
-        return result.students.map((s): AddPanelStudentItem => ({
-          id: s.id,
-          studentNumber: s.studentNumber,
-          lastName: s.lastName,
-          firstName: s.firstName,
+        return result.students.map((student): AddPanelStudentItem => ({
+          id: student.id,
+          studentNumber: student.studentNumber,
+          lastName: student.lastName,
+          firstName: student.firstName,
           lastNameKana: "",
           firstNameKana: "",
-          memberships: s.className
+          memberships: student.className
             ? [
                 {
                   attendanceNumber: null,
-                  classroom: { id: s.className, name: s.className },
+                  classroom: { id: student.className, name: student.className },
                 },
               ]
             : [],
@@ -201,12 +204,12 @@ export function CourseworkStudentsContainer({
 
   const classEntries = useMemo<ClassRosterEntry[]>(
     () =>
-      classes.map((c) => ({
-        id: c.classroomId,
-        classroomId: c.classroomId,
-        name: c.className,
-        studentCount: c.studentCount,
-        order: c.order,
+      classes.map((courseworkClass) => ({
+        id: courseworkClass.classroomId,
+        classroomId: courseworkClass.classroomId,
+        name: courseworkClass.className,
+        studentCount: courseworkClass.studentCount,
+        order: courseworkClass.order,
       })),
     [classes]
   )

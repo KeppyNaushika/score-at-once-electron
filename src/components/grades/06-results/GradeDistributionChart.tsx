@@ -20,18 +20,18 @@ export function GradeDistributionChart({
     <div className="rounded-lg border p-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full">
-          {result.gradeItems.map((gi) => (
-            <TabsTrigger key={gi.id} value={gi.id}>
-              {gi.name}
+          {result.gradeItems.map((gradeItem) => (
+            <TabsTrigger key={gradeItem.id} value={gradeItem.id}>
+              {gradeItem.name}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {result.gradeItems.map((gi) => {
+        {result.gradeItems.map((gradeItem) => {
           const distribution: Record<string, number> = {}
           for (const student of result.students) {
             const gir = student.gradeItemResults.find(
-              (r) => r.gradeItemId === gi.id
+              (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
             )
             if (gir?.isExcluded) continue
             const label = gir?.gradeLabel ?? "未評価"
@@ -40,12 +40,14 @@ export function GradeDistributionChart({
 
           // boundarySetsからminPercentage降順でソート
           const boundarySet = result.boundarySets?.find(
-            (bs) => bs.targetType === "grade_item" && bs.gradeItemId === gi.id
+            (candidateSet) =>
+              candidateSet.targetType === "grade_item" &&
+              candidateSet.gradeItemId === gradeItem.id
           )
           const labelOrder = new Map<string, number>()
           if (boundarySet) {
-            for (const b of boundarySet.boundaries) {
-              labelOrder.set(b.label, b.minPercentage)
+            for (const boundary of boundarySet.boundaries) {
+              labelOrder.set(boundary.label, boundary.minPercentage)
             }
           }
           const entries = Object.entries(distribution).sort(
@@ -58,7 +60,11 @@ export function GradeDistributionChart({
           const total = entries.reduce((sum, [, count]) => sum + count, 0)
 
           return (
-            <TabsContent key={gi.id} value={gi.id} className="mt-3">
+            <TabsContent
+              key={gradeItem.id}
+              value={gradeItem.id}
+              className="mt-3"
+            >
               <div className="space-y-2">
                 {entries.map(([label, count]) => (
                   <div key={label} className="flex items-center gap-3">

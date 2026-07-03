@@ -33,7 +33,9 @@ export async function matchSubtotalGroups(
     let isExactMatch = false
 
     // Step 1: UUIDで照合
-    const uuidMatch = existingGroups.find((g) => g.id === importGroup.id)
+    const uuidMatch = existingGroups.find(
+      (group) => group.id === importGroup.id
+    )
     if (uuidMatch) {
       matchedGroup = uuidMatch
       isExactMatch = true
@@ -44,7 +46,8 @@ export async function matchSubtotalGroups(
       switch (method) {
         case "name":
           matchedGroup =
-            existingGroups.find((g) => g.name === importGroup.name) ?? null
+            existingGroups.find((group) => group.name === importGroup.name) ??
+            null
           break
       }
     }
@@ -81,14 +84,16 @@ export async function preMatchSubtotalGroups(
   const byName: MatchedItem[] = []
   const noMatch: ImportItem[] = []
 
-  const existingById = new Map(existingGroups.map((g) => [g.id, g]))
-  const existingByName = new Map(existingGroups.map((g) => [g.name, g]))
+  const existingById = new Map(existingGroups.map((group) => [group.id, group]))
+  const existingByName = new Map(
+    existingGroups.map((group) => [group.name, group])
+  )
 
   // インポートデータからグループ別にSubtotalを収集
   const importSubtotalsByGroup = buildImportSubtotalsByGroup(importData)
 
   // 既存グループのSubtotal一覧を一括取得
-  const existingGroupIds = existingGroups.map((g) => g.id)
+  const existingGroupIds = existingGroups.map((group) => group.id)
   const existingSubtotals =
     existingGroupIds.length > 0
       ? await prisma.subtotal.findMany({
@@ -97,10 +102,10 @@ export async function preMatchSubtotalGroups(
         })
       : []
   const existingSubtotalsByGroup = new Map<string, SubtotalInfo[]>()
-  for (const s of existingSubtotals) {
-    const list = existingSubtotalsByGroup.get(s.subtotalGroupId) ?? []
-    list.push({ id: s.id, name: s.name, order: s.order })
-    existingSubtotalsByGroup.set(s.subtotalGroupId, list)
+  for (const subtotal of existingSubtotals) {
+    const list = existingSubtotalsByGroup.get(subtotal.subtotalGroupId) ?? []
+    list.push({ id: subtotal.id, name: subtotal.name, order: subtotal.order })
+    existingSubtotalsByGroup.set(subtotal.subtotalGroupId, list)
   }
 
   for (const importGroup of importData.subtotalsData.subtotalGroups) {
@@ -154,10 +159,10 @@ export async function preMatchSubtotalGroups(
   }
 
   // 全既存グループ情報を返す（手動紐づけ用）
-  const allExistingItems = existingGroups.map((g) => ({
-    id: g.id,
-    name: g.name,
-    subtotals: existingSubtotalsByGroup.get(g.id),
+  const allExistingItems = existingGroups.map((group) => ({
+    id: group.id,
+    name: group.name,
+    subtotals: existingSubtotalsByGroup.get(group.id),
   }))
 
   return {
@@ -175,14 +180,14 @@ function buildImportSubtotalsByGroup(
   importData: ExtractedArchiveData
 ): Map<string, SubtotalInfo[]> {
   const map = new Map<string, SubtotalInfo[]>()
-  for (const s of importData.subtotalsData.subtotals) {
-    const list = map.get(s.subtotalGroupId) ?? []
-    list.push({ id: s.id, name: s.name, order: s.order })
-    map.set(s.subtotalGroupId, list)
+  for (const subtotal of importData.subtotalsData.subtotals) {
+    const list = map.get(subtotal.subtotalGroupId) ?? []
+    list.push({ id: subtotal.id, name: subtotal.name, order: subtotal.order })
+    map.set(subtotal.subtotalGroupId, list)
   }
   // order順にソート
   for (const list of map.values()) {
-    list.sort((a, b) => a.order - b.order)
+    list.sort((subtotalA, subtotalB) => subtotalA.order - subtotalB.order)
   }
   return map
 }

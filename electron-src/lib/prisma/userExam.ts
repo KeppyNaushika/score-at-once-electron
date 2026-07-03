@@ -367,7 +367,7 @@ export const searchUsersForInvitation = async (
       where: { examId },
       select: { userId: true },
     })
-    const existingMemberIds = existingMembers.map((m) => m.userId)
+    const existingMemberIds = existingMembers.map((member) => member.userId)
 
     // Search users excluding existing members
     return await prisma.user.findMany({

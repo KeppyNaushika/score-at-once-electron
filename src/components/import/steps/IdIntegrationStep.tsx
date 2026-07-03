@@ -51,7 +51,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     const strategy = state.idIntegrationConfig.subtotalGroup.strategy
     if (strategy === "all_new") return false // all_newなら決定不要
     const decisions = state.idIntegrationConfig.subtotalGroup.decisions
-    const decidedIds = new Set(decisions.map((d) => d.importId))
+    const decidedIds = new Set(decisions.map((decision) => decision.importId))
     return noMatch.some((item) => !decidedIds.has(item.importId))
   })()
 

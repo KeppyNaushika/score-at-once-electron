@@ -427,7 +427,7 @@ function drawZigzagLine(
   }
 
   // 位置順にソート
-  peaks.sort((a, b) => a.pos - b.pos)
+  peaks.sort((peakA, peakB) => peakA.pos - peakB.pos)
 
   ctx.beginPath()
   ctx.moveTo(startX, startY)

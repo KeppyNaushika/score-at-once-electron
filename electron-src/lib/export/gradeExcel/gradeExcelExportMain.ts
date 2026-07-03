@@ -28,8 +28,8 @@ export async function exportGradeExcel(
       options?.studentIds && options.studentIds.length > 0
         ? {
             ...result,
-            students: result.students.filter((s) =>
-              options.studentIds!.includes(s.studentId)
+            students: result.students.filter((student) =>
+              options.studentIds!.includes(student.studentId)
             ),
           }
         : result

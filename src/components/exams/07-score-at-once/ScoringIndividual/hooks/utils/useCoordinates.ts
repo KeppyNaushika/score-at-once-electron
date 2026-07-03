@@ -64,13 +64,13 @@ export function useCoordinates({
   const getImageCoordinatesFromEvent = useCallback(
     (e: React.MouseEvent | React.PointerEvent) => {
       const canvas = canvasRef.current
-      const img = imageRef.current
+      const image = imageRef.current
 
-      if (!canvas || !img) {
+      if (!canvas || !image) {
         return null
       }
 
-      if (!img.naturalWidth || !img.naturalHeight) {
+      if (!image.naturalWidth || !image.naturalHeight) {
         return null
       }
 
@@ -87,7 +87,7 @@ export function useCoordinates({
       if (!canvasElement) return null
 
       const canvasWidth = canvasElement.width
-      const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
+      const imageOffsetX = (canvasWidth - image.naturalWidth) / 2
 
       const imageX = actualX - imageOffsetX
       let imageY = actualY
@@ -96,7 +96,7 @@ export function useCoordinates({
       // loadedImagesが2枚以上ある場合、Y座標をページ内座標に変換
       if (loadedImages.length > 1) {
         let pageOffsetY = 0
-        let targetPageHeight = img.naturalHeight // デフォルトは1ページ目の高さ
+        let targetPageHeight = image.naturalHeight // デフォルトは1ページ目の高さ
 
         for (let i = 0; i < loadedImages.length; i++) {
           const pageHeight = loadedImages[i].naturalHeight
@@ -115,15 +115,15 @@ export function useCoordinates({
 
         // ページ内座標で正規化（0-1の範囲）
         return {
-          x: imageX / img.naturalWidth,
+          x: imageX / image.naturalWidth,
           y: imageY / targetPageHeight,
         }
       }
 
       // 単一ページの場合：従来通りの正規化（0-1の範囲）
       return {
-        x: imageX / img.naturalWidth,
-        y: imageY / img.naturalHeight,
+        x: imageX / image.naturalWidth,
+        y: imageY / image.naturalHeight,
       }
     },
     [canvasRef, imageRef, zoom, loadedImages, pageSpacing]

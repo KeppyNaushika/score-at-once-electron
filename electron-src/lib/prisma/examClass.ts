@@ -275,7 +275,7 @@ export const removeExamClassByIds = async (
   classroomId: string
 ): Promise<ExamClass> => {
   try {
-    const cls = await prisma.classroom.findUnique({
+    const classroom = await prisma.classroom.findUnique({
       where: { id: classroomId },
       select: { name: true },
     })
@@ -293,7 +293,7 @@ export const removeExamClassByIds = async (
       entityId: deleted.id,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      target: cls?.name ?? null,
+      target: classroom?.name ?? null,
     })
 
     return deleted
@@ -327,7 +327,9 @@ export const getAvailableClassesForExam = async (
       where: { examId },
       select: { classroomId: true },
     })
-    const existingClassIds = existingExamClasses.map((pc) => pc.classroomId)
+    const existingClassIds = existingExamClasses.map(
+      (examClass) => examClass.classroomId
+    )
 
     // Get all classes not in ExamClass
     const availableClasses = await prisma.classroom.findMany({
@@ -342,12 +344,12 @@ export const getAvailableClassesForExam = async (
       orderBy: [{ grade: "asc" }, { name: "asc" }],
     })
 
-    return availableClasses.map((cls) => ({
-      id: cls.id,
-      name: cls.name,
-      classCode: cls.classCode,
-      grade: cls.grade,
-      studentCount: cls.memberships.length,
+    return availableClasses.map((classroom) => ({
+      id: classroom.id,
+      name: classroom.name,
+      classCode: classroom.classCode,
+      grade: classroom.grade,
+      studentCount: classroom.memberships.length,
     }))
   } catch (error) {
     console.error(`Failed to get available classes for exam ${examId}:`, error)
@@ -418,12 +420,12 @@ export const addStudentsFromClass = async (
       select: { studentId: true, customOrder: true },
     })
     const existingStudentIds = new Set(
-      existingExamStudents.map((ps) => ps.studentId)
+      existingExamStudents.map((examStudent) => examStudent.studentId)
     )
 
     // 5. 現在の最大 customOrder を取得
     const maxCustomOrder = existingExamStudents.reduce(
-      (max, ps) => Math.max(max, ps.customOrder ?? 0),
+      (max, examStudent) => Math.max(max, examStudent.customOrder ?? 0),
       0
     )
 
@@ -507,19 +509,19 @@ export const getStudentClassInfoForExam = async (
     // 2. 生徒ごとの学級情報をマップに格納（order順で最初にマッチしたものを使用）
     const result: Record<string, StudentClassInfo> = {}
 
-    for (const pc of examClasses) {
-      for (const membership of pc.classroom.memberships) {
+    for (const examClass of examClasses) {
+      for (const membership of examClass.classroom.memberships) {
         // 既に情報がある生徒はスキップ（order優先順位を尊重）
         if (result[membership.studentId]) {
           continue
         }
 
         result[membership.studentId] = {
-          className: pc.classroom.name,
-          classCode: pc.classroom.classCode,
-          grade: pc.classroom.grade,
+          className: examClass.classroom.name,
+          classCode: examClass.classroom.classCode,
+          grade: examClass.classroom.grade,
           attendanceNumber: membership.attendanceNumber,
-          classOrder: pc.order,
+          classOrder: examClass.order,
         }
       }
     }
@@ -561,15 +563,15 @@ export const getStudentClassInfo = async (
     })
 
     // 最初にマッチするクラスを使用
-    for (const pc of examClasses) {
-      if (pc.classroom.memberships.length > 0) {
-        const membership = pc.classroom.memberships[0]
+    for (const examClass of examClasses) {
+      if (examClass.classroom.memberships.length > 0) {
+        const membership = examClass.classroom.memberships[0]
         return {
-          className: pc.classroom.name,
-          classCode: pc.classroom.classCode,
-          grade: pc.classroom.grade,
+          className: examClass.classroom.name,
+          classCode: examClass.classroom.classCode,
+          grade: examClass.classroom.grade,
           attendanceNumber: membership.attendanceNumber,
-          classOrder: pc.order,
+          classOrder: examClass.order,
         }
       }
     }

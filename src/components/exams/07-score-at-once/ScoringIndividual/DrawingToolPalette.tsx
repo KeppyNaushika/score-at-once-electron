@@ -88,14 +88,18 @@ export function DrawingToolPalette({
   favoriteElementIds,
 }: DrawingToolPaletteProps) {
   // 選択中の各タイプの要素を取得（複数選択対応）
-  const selectedLines = selectedElements.filter((el) => el.type === "line")
+  const selectedLines = selectedElements.filter(
+    (element) => element.type === "line"
+  )
   const selectedRectangles = selectedElements.filter(
-    (el) => el.type === "rectangle"
+    (element) => element.type === "rectangle"
   )
   const selectedEllipses = selectedElements.filter(
-    (el) => el.type === "ellipse"
+    (element) => element.type === "ellipse"
   )
-  const selectedTexts = selectedElements.filter((el) => el.type === "text")
+  const selectedTexts = selectedElements.filter(
+    (element) => element.type === "text"
+  )
 
   // 代表要素（UI表示用に最初の要素を使用）
   const firstLine = selectedLines[0]
@@ -123,8 +127,8 @@ export function DrawingToolPalette({
   const handleLineColorChange = useCallback(
     (color: string) => {
       if (selectedLines.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedLines.map((el) => ({
-          id: el.id,
+        const updates = selectedLines.map((element) => ({
+          id: element.id,
           updates: { color },
         }))
         onUpdateSelectedElements(updates)
@@ -137,8 +141,8 @@ export function DrawingToolPalette({
   const handleLineWidthChange = useCallback(
     (width: number) => {
       if (selectedLines.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedLines.map((el) => ({
-          id: el.id,
+        const updates = selectedLines.map((element) => ({
+          id: element.id,
           updates: { strokeWidth: width },
         }))
         onUpdateSelectedElements(updates)
@@ -151,8 +155,8 @@ export function DrawingToolPalette({
   const handleLineStyleChange = useCallback(
     (style: string) => {
       if (selectedLines.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedLines.map((el) => ({
-          id: el.id,
+        const updates = selectedLines.map((element) => ({
+          id: element.id,
           updates: { lineStyle: style as LineStyle },
         }))
         onUpdateSelectedElements(updates)
@@ -166,8 +170,8 @@ export function DrawingToolPalette({
   const handleRectColorChange = useCallback(
     (color: string) => {
       if (selectedRectangles.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedRectangles.map((el) => ({
-          id: el.id,
+        const updates = selectedRectangles.map((element) => ({
+          id: element.id,
           updates: { color },
         }))
         onUpdateSelectedElements(updates)
@@ -180,8 +184,8 @@ export function DrawingToolPalette({
   const handleRectWidthChange = useCallback(
     (width: number) => {
       if (selectedRectangles.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedRectangles.map((el) => ({
-          id: el.id,
+        const updates = selectedRectangles.map((element) => ({
+          id: element.id,
           updates: { strokeWidth: width },
         }))
         onUpdateSelectedElements(updates)
@@ -195,8 +199,8 @@ export function DrawingToolPalette({
   const handleEllipseColorChange = useCallback(
     (color: string) => {
       if (selectedEllipses.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedEllipses.map((el) => ({
-          id: el.id,
+        const updates = selectedEllipses.map((element) => ({
+          id: element.id,
           updates: { color },
         }))
         onUpdateSelectedElements(updates)
@@ -209,8 +213,8 @@ export function DrawingToolPalette({
   const handleEllipseWidthChange = useCallback(
     (width: number) => {
       if (selectedEllipses.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedEllipses.map((el) => ({
-          id: el.id,
+        const updates = selectedEllipses.map((element) => ({
+          id: element.id,
           updates: { strokeWidth: width },
         }))
         onUpdateSelectedElements(updates)
@@ -224,8 +228,8 @@ export function DrawingToolPalette({
   const handleTextColorChange = useCallback(
     (color: string) => {
       if (selectedTexts.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedTexts.map((el) => ({
-          id: el.id,
+        const updates = selectedTexts.map((element) => ({
+          id: element.id,
           updates: { color },
         }))
         onUpdateSelectedElements(updates)
@@ -580,14 +584,16 @@ export function DrawingToolPalette({
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        onToggleFavorite(selectedElements.map((el) => el.id))
+                        onToggleFavorite(
+                          selectedElements.map((element) => element.id)
+                        )
                       }
                     >
                       <Star
                         className={cn(
                           "h-4 w-4",
-                          selectedElements.some((el) =>
-                            favoriteElementIds?.has(el.id)
+                          selectedElements.some((element) =>
+                            favoriteElementIds?.has(element.id)
                           ) && "fill-yellow-400 text-yellow-400"
                         )}
                       />

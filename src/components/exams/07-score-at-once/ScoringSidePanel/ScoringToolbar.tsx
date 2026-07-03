@@ -153,7 +153,7 @@ const SCORING_BUTTONS = [
 
 /** マウスモード用ブラシ（unscoredを除く） */
 const BRUSH_BUTTONS = SCORING_BUTTONS.filter(
-  (b) => b.status !== "unscored"
+  (button) => button.status !== "unscored"
 ) as Array<{
   status: MouseBrushAction
   label: string
@@ -382,8 +382,9 @@ export default function ScoringToolbar({
                       onClick={() => onBatchScoreVisibleUnscored(mouseBrush)}
                     >
                       表示中の未採点{visibleUnscoredCount}件を
-                      {BRUSH_BUTTONS.find((b) => b.status === mouseBrush)
-                        ?.label ?? mouseBrush}
+                      {BRUSH_BUTTONS.find(
+                        (button) => button.status === mouseBrush
+                      )?.label ?? mouseBrush}
                       にする
                     </Button>
                     {hiddenUnscoredCount > 0 && (
@@ -439,13 +440,13 @@ export default function ScoringToolbar({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {CLICK_ACTION_OPTIONS.map((opt) => (
+                              {CLICK_ACTION_OPTIONS.map((option) => (
                                 <SelectItem
-                                  key={opt.value}
-                                  value={opt.value}
+                                  key={option.value}
+                                  value={option.value}
                                   className="text-xs"
                                 >
-                                  {opt.label}
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -596,13 +597,13 @@ export default function ScoringToolbar({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {CLICK_ACTION_OPTIONS.map((opt) => (
+                              {CLICK_ACTION_OPTIONS.map((option) => (
                                 <SelectItem
-                                  key={opt.value}
-                                  value={opt.value}
+                                  key={option.value}
+                                  value={option.value}
                                   className="text-xs"
                                 >
-                                  {opt.label}
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>

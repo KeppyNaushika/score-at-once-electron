@@ -100,16 +100,16 @@ export async function upsertOmrConfig(
     // choiceOptionsを作成（バブル位置含む）
     if (data.choiceOptions && data.choiceOptions.length > 0) {
       await tx.cropRegionOmrChoiceOption.createMany({
-        data: data.choiceOptions.map((opt) => ({
+        data: data.choiceOptions.map((choiceOption) => ({
           omrConfigId: config.id,
-          choiceIndex: opt.choiceIndex,
-          label: opt.label,
-          isCorrect: opt.isCorrect,
-          shape: opt.shape ?? null,
-          normalizedCx: opt.normalizedCx ?? null,
-          normalizedCy: opt.normalizedCy ?? null,
-          normalizedWidth: opt.normalizedWidth ?? null,
-          normalizedHeight: opt.normalizedHeight ?? null,
+          choiceIndex: choiceOption.choiceIndex,
+          label: choiceOption.label,
+          isCorrect: choiceOption.isCorrect,
+          shape: choiceOption.shape ?? null,
+          normalizedCx: choiceOption.normalizedCx ?? null,
+          normalizedCy: choiceOption.normalizedCy ?? null,
+          normalizedWidth: choiceOption.normalizedWidth ?? null,
+          normalizedHeight: choiceOption.normalizedHeight ?? null,
         })),
       })
     }

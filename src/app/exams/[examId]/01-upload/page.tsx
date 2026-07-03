@@ -50,7 +50,7 @@ export default function MasterAnswerStepPage() {
         // examPages から master answers を抽出してソート
         const masterAnswers = convertExamPagesToMasterAnswers(
           fetchedExam.examPages
-        ).sort((a, b) => a.pageNumber - b.pageNumber)
+        ).sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
         setMasterAnswers(masterAnswers)
       } else {
         setMasterAnswers([])

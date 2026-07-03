@@ -82,8 +82,8 @@ export function useCanvasV4Integration({
   // 画像アスペクト比（Shift制約で正円/正方形にするため）
   const imageAspectRatio = useMemo(() => {
     if (loadedImages.length > 0) {
-      const img = loadedImages[0]
-      return img.naturalWidth / img.naturalHeight
+      const image = loadedImages[0]
+      return image.naturalWidth / image.naturalHeight
     }
     return 1
   }, [loadedImages])

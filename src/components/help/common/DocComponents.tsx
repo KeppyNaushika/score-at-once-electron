@@ -31,11 +31,11 @@ function useHeadingActive(title: string): boolean {
 
 /** スクロール可能な最寄りの祖先を返す（現在地判定の基準） */
 function getScrollParent(el: HTMLElement | null): HTMLElement | null {
-  let p = el?.parentElement ?? null
-  while (p) {
-    const oy = getComputedStyle(p).overflowY
-    if (oy === "auto" || oy === "scroll") return p
-    p = p.parentElement
+  let parent = el?.parentElement ?? null
+  while (parent) {
+    const overflowY = getComputedStyle(parent).overflowY
+    if (overflowY === "auto" || overflowY === "scroll") return parent
+    parent = parent.parentElement
   }
   return null
 }
@@ -93,9 +93,9 @@ export function HelpDoc({ children }: { children: React.ReactNode }) {
         const rootTop = root.getBoundingClientRect().top
         const line = root.clientHeight * 0.35
         let current = headings[0].dataset.helpHeading ?? null
-        for (const el of headings) {
-          const top = el.getBoundingClientRect().top - rootTop
-          if (top - 8 <= line) current = el.dataset.helpHeading ?? current
+        for (const heading of headings) {
+          const top = heading.getBoundingClientRect().top - rootTop
+          if (top - 8 <= line) current = heading.dataset.helpHeading ?? current
           else break
         }
         setActiveTitle(current)
@@ -253,13 +253,13 @@ export function Callout({
   title?: string
   children: React.ReactNode
 }) {
-  const s = calloutStyles[type]
+  const style = calloutStyles[type]
   return (
-    <div className={`rounded-r-lg border-l-4 p-4 ${s.box}`}>
-      <div className={`mb-1 text-sm font-bold ${s.title}`}>
-        {title ?? s.label}
+    <div className={`rounded-r-lg border-l-4 p-4 ${style.box}`}>
+      <div className={`mb-1 text-sm font-bold ${style.title}`}>
+        {title ?? style.label}
       </div>
-      <div className={`text-sm leading-relaxed ${s.body}`}>{children}</div>
+      <div className={`text-sm leading-relaxed ${style.body}`}>{children}</div>
     </div>
   )
 }
@@ -310,30 +310,30 @@ export function HelpTabs({
   }[]
 }) {
   const [active, setActive] = useState(tabs[0]?.id)
-  const current = tabs.find((t) => t.id === active) ?? tabs[0]
+  const current = tabs.find((tab) => tab.id === active) ?? tabs[0]
   return (
     <div>
       <div
         role="tablist"
         className="inline-flex w-full gap-1 rounded-xl border border-gray-200 bg-gray-100 p-1 sm:w-auto"
       >
-        {tabs.map((t) => {
-          const isActive = active === t.id
+        {tabs.map((tab) => {
+          const isActive = active === tab.id
           return (
             <button
-              key={t.id}
+              key={tab.id}
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => setActive(t.id)}
+              onClick={() => setActive(tab.id)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors sm:flex-none ${
                 isActive
                   ? "bg-white text-blue-700 shadow-sm"
                   : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              {t.icon}
-              {t.label}
+              {tab.icon}
+              {tab.label}
             </button>
           )
         })}

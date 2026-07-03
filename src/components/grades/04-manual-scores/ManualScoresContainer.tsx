@@ -55,7 +55,7 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
         const distinctItemIds = [
           ...new Set(
             sources
-              .map((ds) => ds.courseworkItem?.id)
+              .map((dataSource) => dataSource.courseworkItem?.id)
               .filter((id): id is string => !!id)
           ),
         ]

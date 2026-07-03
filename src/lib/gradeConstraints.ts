@@ -106,8 +106,8 @@ function labelToValue(
   const asNumber = Number(label)
   if (label.trim() !== "" && !Number.isNaN(asNumber)) return asNumber
   if (ordered) {
-    const idx = ordered.indexOf(label)
-    if (idx >= 0) return idx + 1
+    const index = ordered.indexOf(label)
+    if (index >= 0) return index + 1
   }
   return null
 }
@@ -205,41 +205,51 @@ function buildExpressionScope(
     if (names.length === 0) return viewpoints
     const wanted = names.map(String)
     wanted.forEach(requireKnownItem)
-    return viewpoints.filter((v) => wanted.includes(v.name))
+    return viewpoints.filter((viewpoint) => wanted.includes(viewpoint.name))
   }
   const numericOf = (names: Value[]) =>
     selected(names)
       .map(itemValue)
-      .filter((v): v is number => v !== null)
+      .filter((value): value is number => value !== null)
 
   return {
     label: (name: Value) => {
       requireKnownItem(String(name))
-      return viewpoints.find((v) => v.name === String(name))?.label ?? ""
+      return (
+        viewpoints.find((viewpoint) => viewpoint.name === String(name))
+          ?.label ?? ""
+      )
     },
     item: (name: Value) => {
       requireKnownItem(String(name))
-      const found = viewpoints.find((v) => v.name === String(name))
+      const found = viewpoints.find(
+        (viewpoint) => viewpoint.name === String(name)
+      )
       return found ? (itemValue(found) ?? NaN) : NaN
     },
     has: (labelValue: Value) =>
-      viewpoints.some((v) => v.label === String(labelValue)) ? 1 : 0,
+      viewpoints.some((viewpoint) => viewpoint.label === String(labelValue))
+        ? 1
+        : 0,
     count: (labelValue: Value) =>
-      viewpoints.filter((v) => v.label === String(labelValue)).length,
-    sum: (...names: Value[]) => numericOf(names).reduce((acc, v) => acc + v, 0),
+      viewpoints.filter((viewpoint) => viewpoint.label === String(labelValue))
+        .length,
+    sum: (...names: Value[]) =>
+      numericOf(names).reduce((accumulator, value) => accumulator + value, 0),
     mean: (...names: Value[]) => {
-      const vals = numericOf(names)
-      return vals.length
-        ? vals.reduce((acc, v) => acc + v, 0) / vals.length
+      const values = numericOf(names)
+      return values.length
+        ? values.reduce((accumulator, value) => accumulator + value, 0) /
+            values.length
         : NaN
     },
     min: (...names: Value[]) => {
-      const vals = numericOf(names)
-      return vals.length ? Math.min(...vals) : NaN
+      const values = numericOf(names)
+      return values.length ? Math.min(...values) : NaN
     },
     max: (...names: Value[]) => {
-      const vals = numericOf(names)
-      return vals.length ? Math.max(...vals) : NaN
+      const values = numericOf(names)
+      return values.length ? Math.max(...values) : NaN
     },
   }
 }
@@ -280,32 +290,40 @@ export function evaluateConstraints(
   const errors = new Map<string, string>()
 
   const ordered = buildOrderedLabelsMap(result)
-  const allItemNames = new Set(result.gradeItems.map((gi) => gi.name))
+  const allItemNames = new Set(
+    result.gradeItems.map((gradeItem) => gradeItem.name)
+  )
   const active = constraints
-    .filter((c) => c.enabled)
-    .sort((a, b) => a.order - b.order)
+    .filter((constraint) => constraint.enabled)
+    .sort((constraintA, constraintB) => constraintA.order - constraintB.order)
 
   // 事前検証（無言失火を防ぐためルール単位でエラーを記録）
   //  - expression: 構文チェックしてコンパイル
   //  - consistency: 比較先（評定）の項目が選択済みかつ実在するか
   const compiled = new Map<string, ReturnType<typeof parser.parse> | null>()
-  for (const c of active) {
-    if (c.kind === "expression") {
+  for (const constraint of active) {
+    if (constraint.kind === "expression") {
       try {
-        compiled.set(c.id, parser.parse(c.expression))
+        compiled.set(constraint.id, parser.parse(constraint.expression))
       } catch (error) {
-        compiled.set(c.id, null)
+        compiled.set(constraint.id, null)
         errors.set(
-          c.id,
+          constraint.id,
           error instanceof Error ? error.message : "式の解析に失敗しました"
         )
       }
-    } else if (c.kind === "consistency") {
-      const cfg = parseConfig(c.config, DEFAULT_CONSISTENCY_CONFIG)
-      if (!cfg.target) {
-        errors.set(c.id, "評定（比較先の項目）が未選択です")
-      } else if (!allItemNames.has(cfg.target)) {
-        errors.set(c.id, `評定の項目「${cfg.target}」が見つかりません`)
+    } else if (constraint.kind === "consistency") {
+      const consistencyConfig = parseConfig(
+        constraint.config,
+        DEFAULT_CONSISTENCY_CONFIG
+      )
+      if (!consistencyConfig.target) {
+        errors.set(constraint.id, "評定（比較先の項目）が未選択です")
+      } else if (!allItemNames.has(consistencyConfig.target)) {
+        errors.set(
+          constraint.id,
+          `評定の項目「${consistencyConfig.target}」が見つかりません`
+        )
       }
     }
   }
@@ -313,32 +331,32 @@ export function evaluateConstraints(
   for (const student of result.students) {
     const viewpoints = collectViewpointLabels(student)
 
-    for (const c of active) {
-      if (errors.has(c.id)) continue // 検証エラー済みのルールは着色しない
+    for (const constraint of active) {
+      if (errors.has(constraint.id)) continue // 検証エラー済みのルールは着色しない
       let violated = false
       try {
-        if (c.kind === "consistency") {
+        if (constraint.kind === "consistency") {
           violated = evalConsistency(
-            parseConfig(c.config, DEFAULT_CONSISTENCY_CONFIG),
+            parseConfig(constraint.config, DEFAULT_CONSISTENCY_CONFIG),
             viewpoints,
             ordered
           )
-        } else if (c.kind === "mutual_exclusion") {
+        } else if (constraint.kind === "mutual_exclusion") {
           violated = evalMutualExclusion(
-            parseConfig(c.config, DEFAULT_MUTUAL_EXCLUSION_CONFIG),
+            parseConfig(constraint.config, DEFAULT_MUTUAL_EXCLUSION_CONFIG),
             viewpoints
           )
-        } else if (c.kind === "expression") {
-          const expr = compiled.get(c.id)
-          if (!expr) continue // パースエラーは着色しない
+        } else if (constraint.kind === "expression") {
+          const compiledExpression = compiled.get(constraint.id)
+          if (!compiledExpression) continue // パースエラーは着色しない
           const scope = buildExpressionScope(viewpoints, ordered, allItemNames)
-          violated = Boolean(expr.evaluate(scope))
+          violated = Boolean(compiledExpression.evaluate(scope))
         }
       } catch (error) {
         // 評価時エラー（未定義観点名など）はルール単位で記録し着色しない
-        if (!errors.has(c.id)) {
+        if (!errors.has(constraint.id)) {
           errors.set(
-            c.id,
+            constraint.id,
             error instanceof Error ? error.message : "式の評価に失敗しました"
           )
         }
@@ -348,13 +366,13 @@ export function evaluateConstraints(
       if (violated) {
         const list = violations.get(student.studentId) ?? []
         list.push({
-          constraintId: c.id,
-          name: c.name,
-          color: c.color,
-          message: c.message,
+          constraintId: constraint.id,
+          name: constraint.name,
+          color: constraint.color,
+          message: constraint.message,
         })
         violations.set(student.studentId, list)
-        counts.set(c.id, (counts.get(c.id) ?? 0) + 1)
+        counts.set(constraint.id, (counts.get(constraint.id) ?? 0) + 1)
       }
     }
   }

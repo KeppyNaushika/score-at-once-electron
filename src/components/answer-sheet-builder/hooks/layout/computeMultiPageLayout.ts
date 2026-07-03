@@ -93,8 +93,10 @@ export function computeMultiPageLayoutFromDefinition(
   const majorNumWidth = columnWidths.majorNumber
   const subNumWidth = columnWidths.subNumber
 
-  const hasBranch = majorQuestions.some((mq) =>
-    mq.subQuestions.some((sq) => sq.branchQuestions.length > 0)
+  const hasBranch = majorQuestions.some((majorQuestion) =>
+    majorQuestion.subQuestions.some(
+      (subQuestion) => subQuestion.branchQuestions.length > 0
+    )
   )
   const branchNumWidth = hasBranch ? columnWidths.branchNumber : 0
 
@@ -102,19 +104,20 @@ export function computeMultiPageLayoutFromDefinition(
   // 段組み: 各段の座標範囲を計算
   // ============================
 
-  const mc = settings.multiColumn
-  const isMultiCol = mc.enabled && mc.columnCount > 1
+  const multiColumn = settings.multiColumn
+  const isMultiCol = multiColumn.enabled && multiColumn.columnCount > 1
   const fullContentWidth = contentRight - contentLeft
   const singleColWidth = isMultiCol
-    ? (fullContentWidth - (mc.columnCount - 1) * mc.columnGapMm) /
-      mc.columnCount
+    ? (fullContentWidth -
+        (multiColumn.columnCount - 1) * multiColumn.columnGapMm) /
+      multiColumn.columnCount
     : fullContentWidth
-  const columnCount = isMultiCol ? mc.columnCount : 1
+  const columnCount = isMultiCol ? multiColumn.columnCount : 1
 
   const colBoundsArr: ColBounds[] = []
-  for (let ci = 0; ci < columnCount; ci++) {
+  for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
     const colLeft = isMultiCol
-      ? contentLeft + ci * (singleColWidth + mc.columnGapMm)
+      ? contentLeft + columnIndex * (singleColWidth + multiColumn.columnGapMm)
       : contentLeft
     const colRight = colLeft + singleColWidth
     colBoundsArr.push({
@@ -183,7 +186,7 @@ export function computeMultiPageLayoutFromDefinition(
   function layoutMajorOnPage(
     page: PageData,
     major: MajorQuestion,
-    mi: number,
+    majorIndex: number,
     startY: number,
     pageIdx: number,
     col: ColBounds,
@@ -230,12 +233,12 @@ export function computeMultiPageLayoutFromDefinition(
       const gridCells = buildSubGridLayout(subsForGrid)
       const rightEdgesStart = colData.rowRightEdges.length
       const leftEdgesStart = colData.rowLeftEdges.length
-      for (const gc of gridCells) {
-        const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
-        const cellWidth = gc.width * horizontalAreaWidth
-        const cellY = majorStartY + gc.y * baseRowHeight
-        const cellHeight = gc.height * baseRowHeight
-        const sub = gc.item
+      for (const gridCell of gridCells) {
+        const cellX = horizontalAreaX + gridCell.x * horizontalAreaWidth
+        const cellWidth = gridCell.width * horizontalAreaWidth
+        const cellY = majorStartY + gridCell.y * baseRowHeight
+        const cellHeight = gridCell.height * baseRowHeight
+        const sub = gridCell.item
         const hasBranches = sub.branchQuestions.length > 0
         const effSubNumW = sub.label === "" ? 0 : subNumWidth
 
@@ -259,8 +262,8 @@ export function computeMultiPageLayoutFromDefinition(
           const cellRight = cellX + cellWidth
           renderBranchQuestions(
             sub,
-            mi,
-            gc.itemIndex,
+            majorIndex,
+            gridCell.itemIndex,
             major.label,
             cellY,
             pageIdx,
@@ -289,7 +292,7 @@ export function computeMultiPageLayoutFromDefinition(
           }
           page.cells.push(
             createCell(
-              [mi, gc.itemIndex],
+              [majorIndex, gridCell.itemIndex],
               ansX,
               cellY,
               ansW,
@@ -331,22 +334,22 @@ export function computeMultiPageLayoutFromDefinition(
       // rowRightEdges（枝問横配置を考慮）
       const rawRightEdges: { yTop: number; yBottom: number; rightX: number }[] =
         []
-      for (const gc of gridCells) {
-        const sub2 = gc.item
-        const gcCellX = horizontalAreaX + gc.x * horizontalAreaWidth
-        const gcCellW = gc.width * horizontalAreaWidth
-        const gcCellY = majorStartY + gc.y * baseRowHeight
-        const gcCellH = gc.height * baseRowHeight
+      for (const gridCell of gridCells) {
+        const subQuestion = gridCell.item
+        const gcCellX = horizontalAreaX + gridCell.x * horizontalAreaWidth
+        const gcCellW = gridCell.width * horizontalAreaWidth
+        const gcCellY = majorStartY + gridCell.y * baseRowHeight
+        const gcCellH = gridCell.height * baseRowHeight
         const gcCellRight = gcCellX + gcCellW
-        const gcEffSubNumW = sub2.label === "" ? 0 : subNumWidth
+        const gcEffSubNumW = subQuestion.label === "" ? 0 : subNumWidth
 
         if (
-          sub2.branchQuestions.length > 0 &&
-          isGridHorizontal(sub2.branchQuestions)
+          subQuestion.branchQuestions.length > 0 &&
+          isGridHorizontal(subQuestion.branchQuestions)
         ) {
           const branchAreaX = gcCellX + gcEffSubNumW
           const branchAreaWidth = gcCellRight - branchAreaX
-          const branchCells = buildBranchGridLayout(sub2.branchQuestions)
+          const branchCells = buildBranchGridLayout(subQuestion.branchQuestions)
           for (const edge of computeGridRowRightEdges(
             branchCells,
             gcCellY,
@@ -479,7 +482,7 @@ export function computeMultiPageLayoutFromDefinition(
         )
       })
 
-      major.subQuestions.forEach((sub, si) => {
+      major.subQuestions.forEach((sub, subIndex) => {
         const subStartY = localY
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
@@ -504,8 +507,8 @@ export function computeMultiPageLayoutFromDefinition(
         if (hasBranches) {
           renderBranchQuestions(
             sub,
-            mi,
-            si,
+            majorIndex,
+            subIndex,
             major.label,
             subStartY,
             pageIdx,
@@ -515,7 +518,7 @@ export function computeMultiPageLayoutFromDefinition(
             branchNumWidth,
             effAnswerX,
             effAnswerWidth,
-            subRightEdges[si],
+            subRightEdges[subIndex],
             baseRowHeight,
             paper,
             settings,
@@ -530,9 +533,9 @@ export function computeMultiPageLayoutFromDefinition(
             const effBranchLineX = effBranchNumX + branchNumWidth
             let branchSegStart: number | null = null
             let branchY = subStartY
-            for (const bq of sub.branchQuestions) {
-              const bqH = bq.heightMultiplier * baseRowHeight
-              if (bq.label !== "") {
+            for (const branchQuestion of sub.branchQuestions) {
+              const bqH = branchQuestion.heightMultiplier * baseRowHeight
+              if (branchQuestion.label !== "") {
                 if (branchSegStart === null) branchSegStart = branchY
               } else {
                 if (branchSegStart !== null) {
@@ -563,7 +566,7 @@ export function computeMultiPageLayoutFromDefinition(
           }
           page.cells.push(
             createCell(
-              [mi, si],
+              [majorIndex, subIndex],
               effAnswerX,
               subStartY,
               ansW,
@@ -591,7 +594,7 @@ export function computeMultiPageLayoutFromDefinition(
         // vertical-sub行の右端（枝問横配置時は枝問グリッドの右端を使用）
         if (hasBranches && isGridHorizontal(sub.branchQuestions)) {
           const branchAreaX = col.subNumX + effSubNumW
-          const branchAreaWidth = subRightEdges[si] - branchAreaX
+          const branchAreaWidth = subRightEdges[subIndex] - branchAreaX
           const branchCells = buildBranchGridLayout(sub.branchQuestions)
           for (const edge of computeGridRowRightEdges(
             branchCells,
@@ -606,7 +609,7 @@ export function computeMultiPageLayoutFromDefinition(
           colData.rowRightEdges.push({
             yTop: subStartY,
             yBottom: subStartY + subHeight,
-            rightX: subRightEdges[si],
+            rightX: subRightEdges[subIndex],
           })
         }
         colData.rowLeftEdges.push({
@@ -618,10 +621,10 @@ export function computeMultiPageLayoutFromDefinition(
         localY += subHeight
 
         // 行間の区切り線（最後の行以外）
-        if (si < major.subQuestions.length - 1) {
+        if (subIndex < major.subQuestions.length - 1) {
           const dividerRightX = Math.max(
-            subRightEdges[si],
-            subRightEdges[si + 1]
+            subRightEdges[subIndex],
+            subRightEdges[subIndex + 1]
           )
           page.lines.push({
             x1: col.subNumX,
@@ -670,8 +673,8 @@ export function computeMultiPageLayoutFromDefinition(
   let currentColIdx = 0
   const colCurrentY: number[] = Array(columnCount).fill(contentTop)
 
-  for (let mi = 0; mi < majorQuestions.length; mi++) {
-    const major = majorQuestions[mi]
+  for (let majorIndex = 0; majorIndex < majorQuestions.length; majorIndex++) {
+    const major = majorQuestions[majorIndex]
     let col = colBoundsArr[currentColIdx]
     let colHorizWidth = col.contentRight - col.majorNumX - majorNumWidth
     const majorHeight = computeMajorHeight(
@@ -697,10 +700,14 @@ export function computeMultiPageLayoutFromDefinition(
       if (currentColIdx >= columnCount) {
         // 全段が満杯 → 新ページ
         // 残りの段のcontentBottomYも確定
-        for (let ci = currentColIdx; ci < columnCount; ci++) {
-          if (colCurrentY[ci] > contentTop) {
-            pagesData[currentPageIdx].columns[ci].contentBottomY =
-              colCurrentY[ci]
+        for (
+          let columnIndex = currentColIdx;
+          columnIndex < columnCount;
+          columnIndex++
+        ) {
+          if (colCurrentY[columnIndex] > contentTop) {
+            pagesData[currentPageIdx].columns[columnIndex].contentBottomY =
+              colCurrentY[columnIndex]
           }
         }
         currentPageIdx++
@@ -727,7 +734,7 @@ export function computeMultiPageLayoutFromDefinition(
     colCurrentY[currentColIdx] = layoutMajorOnPage(
       page,
       major,
-      mi,
+      majorIndex,
       colCurrentY[currentColIdx],
       currentPageIdx,
       colBoundsArr[currentColIdx],
@@ -742,7 +749,10 @@ export function computeMultiPageLayoutFromDefinition(
     })
 
     // 大問間の区切り線（majorQuestionSpacing === 0 のとき）
-    if (spacing.majorQuestionSpacing === 0 && mi < majorQuestions.length - 1) {
+    if (
+      spacing.majorQuestionSpacing === 0 &&
+      majorIndex < majorQuestions.length - 1
+    ) {
       page.lines.push({
         x1: colBoundsArr[currentColIdx].contentLeft,
         y1: colCurrentY[currentColIdx],
@@ -756,9 +766,10 @@ export function computeMultiPageLayoutFromDefinition(
   }
 
   // 最終ページの全段のcontentBottomYを確定
-  for (let ci = 0; ci < columnCount; ci++) {
-    if (colCurrentY[ci] > contentTop) {
-      pagesData[currentPageIdx].columns[ci].contentBottomY = colCurrentY[ci]
+  for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+    if (colCurrentY[columnIndex] > contentTop) {
+      pagesData[currentPageIdx].columns[columnIndex].contentBottomY =
+        colCurrentY[columnIndex]
     }
   }
 
@@ -766,30 +777,34 @@ export function computeMultiPageLayoutFromDefinition(
   // ページごとに罫線・番号列線・OMRマーカーを追加
   // ============================
 
-  const pages: ComputedPageLayout[] = pagesData.map((pd, idx) => {
+  const pages: ComputedPageLayout[] = pagesData.map((pageData, idx) => {
     // 全段のcontentBottomYの最大値
     const pageContentBottom = Math.max(
       contentTop,
-      ...pd.columns.map((c) => c.contentBottomY)
+      ...pageData.columns.map((column) => column.contentBottomY)
     )
 
     // 各段の罫線処理
-    for (let ci = 0; ci < columnCount; ci++) {
-      const col = colBoundsArr[ci]
-      const colData = pd.columns[ci]
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+      const col = colBoundsArr[columnIndex]
+      const colData = pageData.columns[columnIndex]
       if (colData.contentBottomY <= contentTop) continue // この段に内容がない
 
       const colContentBottom = colData.contentBottomY
 
       // 段末尾の大問区切り線を削除
-      for (let li = pd.lines.length - 1; li >= 0; li--) {
-        const ln = pd.lines[li]
+      for (
+        let lineIndex = pageData.lines.length - 1;
+        lineIndex >= 0;
+        lineIndex--
+      ) {
+        const line = pageData.lines[lineIndex]
         if (
-          ln.lineType === "major" &&
-          Math.abs(ln.y1 - colContentBottom) < 0.01 &&
-          Math.abs(ln.x1 - col.contentLeft) < 0.01
+          line.lineType === "major" &&
+          Math.abs(line.y1 - colContentBottom) < 0.01 &&
+          Math.abs(line.x1 - col.contentLeft) < 0.01
         ) {
-          pd.lines.splice(li, 1)
+          pageData.lines.splice(lineIndex, 1)
           break
         }
       }
@@ -801,7 +816,7 @@ export function computeMultiPageLayoutFromDefinition(
       ) {
         for (const range of colData.majorLayoutRanges) {
           addSteppedBorderLines(
-            pd.lines,
+            pageData.lines,
             col.contentLeft,
             range.startY,
             col.contentRight,
@@ -814,7 +829,7 @@ export function computeMultiPageLayoutFromDefinition(
         }
       } else if (colData.majorLayoutRanges.length > 0) {
         addSteppedBorderLines(
-          pd.lines,
+          pageData.lines,
           col.contentLeft,
           contentTop,
           col.contentRight,
@@ -846,7 +861,7 @@ export function computeMultiPageLayoutFromDefinition(
         let segStart = contentTop
         for (const range of majorColExcludeRanges) {
           if (segStart < range.top - 0.01) {
-            pd.lines.push({
+            pageData.lines.push({
               x1: majorNumLineX,
               y1: segStart,
               x2: majorNumLineX,
@@ -859,7 +874,7 @@ export function computeMultiPageLayoutFromDefinition(
           segStart = range.bottom
         }
         if (segStart < colContentBottom - 0.01) {
-          pd.lines.push({
+          pageData.lines.push({
             x1: majorNumLineX,
             y1: segStart,
             x2: majorNumLineX,
@@ -882,12 +897,12 @@ export function computeMultiPageLayoutFromDefinition(
             range,
             colData.majorLayoutRanges
           )
-          for (const cr of clipped) {
-            pd.lines.push({
+          for (const clippedRange of clipped) {
+            pageData.lines.push({
               x1: col.subNumX + subNumWidth,
-              y1: cr.top,
+              y1: clippedRange.top,
               x2: col.subNumX + subNumWidth,
-              y2: cr.bottom,
+              y2: clippedRange.bottom,
               style: settings.borderConfig.subNumberDivider,
               lineType: "subNumberColumn",
               strokeWidth: subNcSwPage,
@@ -907,12 +922,12 @@ export function computeMultiPageLayoutFromDefinition(
             range,
             colData.majorLayoutRanges
           )
-          for (const cr of clipped) {
-            pd.lines.push({
+          for (const clippedRange of clipped) {
+            pageData.lines.push({
               x1: range.lineX,
-              y1: cr.top,
+              y1: clippedRange.top,
               x2: range.lineX,
-              y2: cr.bottom,
+              y2: clippedRange.bottom,
               style: settings.borderConfig.branchNumberDivider,
               lineType: "branchNumberColumn",
               strokeWidth: branchNcSwPage,
@@ -925,17 +940,19 @@ export function computeMultiPageLayoutFromDefinition(
     // 段組み仕切り線
     const mcDividerLine = settings.multiColumn.dividerLine
     if (isMultiCol && mcDividerLine) {
-      for (let ci = 1; ci < columnCount; ci++) {
+      for (let columnIndex = 1; columnIndex < columnCount; columnIndex++) {
         const dividerX =
-          contentLeft + ci * singleColWidth + (ci - 0.5) * mc.columnGapMm
-        pd.lines.push({
+          contentLeft +
+          columnIndex * singleColWidth +
+          (columnIndex - 0.5) * multiColumn.columnGapMm
+        pageData.lines.push({
           x1: dividerX,
           y1: contentTop,
           x2: dividerX,
           y2: pageContentBottom,
           style: mcDividerLine,
           lineType: "columnDivider",
-          strokeWidth: mc.dividerLineWidth,
+          strokeWidth: multiColumn.dividerLineWidth,
         })
       }
     }
@@ -944,9 +961,9 @@ export function computeMultiPageLayoutFromDefinition(
 
     return {
       pageIndex: idx,
-      cells: pd.cells,
-      lines: pd.lines,
-      numberLabels: pd.numberLabels,
+      cells: pageData.cells,
+      lines: pageData.lines,
+      numberLabels: pageData.numberLabels,
       omrMarkerPositions,
       headerFields,
       contentHeightMm: pageContentBottom - margins.top,

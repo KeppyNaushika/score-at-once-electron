@@ -19,8 +19,8 @@ export async function getUserKeyboardShortcuts(userId: string) {
     where: { userId },
   })
   // action -> key のマッピングに変換
-  return shortcuts.reduce<Record<string, string>>((acc, s) => {
-    acc[s.action] = s.key
+  return shortcuts.reduce<Record<string, string>>((acc, shortcut) => {
+    acc[shortcut.action] = shortcut.key
     return acc
   }, {})
 }
@@ -139,8 +139,8 @@ export async function getUserPreferences(
   const records = await prisma.userPreference.findMany({
     where: { userId },
   })
-  return records.reduce<Record<string, string>>((acc, r) => {
-    acc[r.key] = r.value
+  return records.reduce<Record<string, string>>((acc, record) => {
+    acc[record.key] = record.value
     return acc
   }, {})
 }

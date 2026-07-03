@@ -90,9 +90,9 @@ export function injectPrintStyles(): () => void {
 
   // クリーンアップ関数を返す
   return () => {
-    const el = document.getElementById(styleId)
-    if (el) {
-      el.remove()
+    const element = document.getElementById(styleId)
+    if (element) {
+      element.remove()
     }
   }
 }

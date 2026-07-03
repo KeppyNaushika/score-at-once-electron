@@ -110,10 +110,12 @@ export async function uploadStudentAnswers(
     // Phase 1: 画像補正を並列実行（CPU集中処理）
     // ================================================================
     // マスターマーカーキャッシュの初期化（全ページ分を事前取得）
-    const pageNumbers = [...new Set(filesData.map((f) => f.pageNumber || 1))]
+    const pageNumbers = [
+      ...new Set(filesData.map((fileData) => fileData.pageNumber || 1)),
+    ]
     await Promise.all(
-      pageNumbers.map((pn) =>
-        getMasterMarkersForPage(examId, pn, masterMarkerCache)
+      pageNumbers.map((pageNumber) =>
+        getMasterMarkersForPage(examId, pageNumber, masterMarkerCache)
       )
     )
 
@@ -302,11 +304,14 @@ export async function getStudentAnswersByExamId(examId: string) {
 
     // 重複除去フォールバック（@@unique制約適用前のデータ対策）
     const seen = new Map<string, (typeof studentAnswerImages)[0]>()
-    for (const img of studentAnswerImages) {
-      const key = `${img.studentId}-${img.examPageId}`
+    for (const studentAnswerImage of studentAnswerImages) {
+      const key = `${studentAnswerImage.studentId}-${studentAnswerImage.examPageId}`
       const existing = seen.get(key)
-      if (!existing || new Date(img.updatedAt) > new Date(existing.updatedAt)) {
-        seen.set(key, img)
+      if (
+        !existing ||
+        new Date(studentAnswerImage.updatedAt) > new Date(existing.updatedAt)
+      ) {
+        seen.set(key, studentAnswerImage)
       }
     }
     const deduplicated = Array.from(seen.values())

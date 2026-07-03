@@ -94,8 +94,8 @@ export function TextElementEditor({
   }
 
   const handleChange = (index: number, data: Partial<CellTextElement>) => {
-    const updated = textElements.map((el, i) =>
-      i === index ? { ...el, ...data } : el
+    const updated = textElements.map((element, i) =>
+      i === index ? { ...element, ...data } : element
     )
     onUpdate(updated)
   }
@@ -115,14 +115,14 @@ export function TextElementEditor({
         </Button>
       </div>
 
-      {textElements.map((el, i) => (
-        <div key={el.id} className="space-y-1 rounded border p-1.5">
+      {textElements.map((element, i) => (
+        <div key={element.id} className="space-y-1 rounded border p-1.5">
           {/* Row 1: テキスト + 削除 */}
           <div className="flex items-start gap-1">
             <Textarea
               className="min-h-7 min-w-0 flex-1 resize-none text-xs"
               rows={2}
-              value={el.text}
+              value={element.text}
               onChange={(e) => handleChange(i, { text: e.target.value })}
               placeholder="テキスト（**太字** *斜体* __下線__ ~~打消~~ $数式$ ||模範解答||）"
             />
@@ -141,7 +141,7 @@ export function TextElementEditor({
             <input
               type="number"
               className="h-7 w-14 shrink-0 rounded border text-center text-xs"
-              value={el.fontSize}
+              value={element.fontSize}
               min={2}
               max={24}
               step={0.5}
@@ -156,7 +156,7 @@ export function TextElementEditor({
 
             <CycleButton
               values={H_ALIGNS}
-              current={el.horizontalAlign}
+              current={element.horizontalAlign}
               icons={H_ALIGN_ICON}
               titles={vertical ? H_ALIGN_TITLE_VERTICAL : H_ALIGN_TITLE}
               rotate={vertical}
@@ -165,7 +165,7 @@ export function TextElementEditor({
 
             <CycleButton
               values={V_ALIGNS}
-              current={el.verticalAlign}
+              current={element.verticalAlign}
               icons={V_ALIGN_ICON}
               titles={vertical ? V_ALIGN_TITLE_VERTICAL : V_ALIGN_TITLE}
               rotate={vertical}

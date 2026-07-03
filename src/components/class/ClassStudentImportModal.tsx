@@ -133,7 +133,9 @@ export default function ClassStudentImportModal({
 
       // 生徒一覧を一度だけ取得（N+1問題の修正）
       const students = await window.electronAPI.fetchStudents()
-      const studentByNumber = new Map(students.map((s) => [s.studentNumber, s]))
+      const studentByNumber = new Map(
+        students.map((student) => [student.studentNumber, student])
+      )
 
       let successCount = 0
       const notFoundStudents: string[] = []

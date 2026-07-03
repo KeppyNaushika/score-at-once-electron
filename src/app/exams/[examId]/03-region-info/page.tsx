@@ -305,8 +305,8 @@ export default function RegionInfoPage() {
             <span>
               合計{" "}
               {cropRegions
-                .filter((r) => r.type === "QUESTION_ANSWER")
-                .reduce((sum, r) => sum + (r.points ?? 0), 0)}
+                .filter((region) => region.type === "QUESTION_ANSWER")
+                .reduce((sum, region) => sum + (region.points ?? 0), 0)}
               点
             </span>
           </div>
@@ -350,8 +350,8 @@ export default function RegionInfoPage() {
               合計配点：
               <span className="text-lg font-bold">
                 {cropRegions
-                  .filter((r) => r.type === "QUESTION_ANSWER")
-                  .reduce((sum, r) => sum + (r.points ?? 0), 0)}
+                  .filter((region) => region.type === "QUESTION_ANSWER")
+                  .reduce((sum, region) => sum + (region.points ?? 0), 0)}
               </span>
               点
             </span>

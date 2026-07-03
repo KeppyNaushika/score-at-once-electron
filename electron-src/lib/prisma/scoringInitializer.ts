@@ -30,8 +30,10 @@ export const initializeScoringRecords = async (examId: string) => {
         throw new Error("No default user found for scoring initialization")
       }
 
-      const studentIds = examStudents.map((es) => es.studentId)
-      const regionIds = questionRegions.map((r) => r.id)
+      const studentIds = examStudents.map(
+        (examStudent) => examStudent.studentId
+      )
+      const regionIds = questionRegions.map((region) => region.id)
 
       // 既存レコードを一括取得してSetで管理
       const existingScores = await tx.questionScore.findMany({
@@ -43,7 +45,9 @@ export const initializeScoringRecords = async (examId: string) => {
         select: { studentId: true, cropRegionId: true },
       })
       const existingSet = new Set(
-        existingScores.map((s) => `${s.studentId}#${s.cropRegionId}`)
+        existingScores.map(
+          (score) => `${score.studentId}#${score.cropRegionId}`
+        )
       )
 
       const scoringRecords = []

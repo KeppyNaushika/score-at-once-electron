@@ -36,12 +36,15 @@ export function MembershipsCard({
   onEndMembership,
 }: MembershipsCardProps) {
   const sortedMemberships = useMemo(() => {
-    return [...student.memberships].sort((a, b) => {
-      const aCurrent = isCurrentMembership(a)
-      const bCurrent = isCurrentMembership(b)
-      if (aCurrent && !bCurrent) return -1
-      if (!aCurrent && bCurrent) return 1
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    return [...student.memberships].sort((membershipA, membershipB) => {
+      const membershipAIsCurrent = isCurrentMembership(membershipA)
+      const membershipBIsCurrent = isCurrentMembership(membershipB)
+      if (membershipAIsCurrent && !membershipBIsCurrent) return -1
+      if (!membershipAIsCurrent && membershipBIsCurrent) return 1
+      return (
+        new Date(membershipB.startDate).getTime() -
+        new Date(membershipA.startDate).getTime()
+      )
     })
   }, [student.memberships])
 

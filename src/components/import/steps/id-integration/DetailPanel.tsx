@@ -42,19 +42,19 @@ export function DetailPanel({
     }
     const config = wizard.state.idIntegrationConfig.subtotalGroup
     const decisionByImportId = new Map(
-      config.decisions.map((d) => [d.importId, d])
+      config.decisions.map((decision) => [decision.importId, decision])
     )
     // byName items: 決定未設定（デフォルトsame_person）またはsame_personの場合のみ
     for (const item of byName) {
-      const d = decisionByImportId.get(item.importId)
-      if (!d || d.decisionType === "same_person") {
+      const decision = decisionByImportId.get(item.importId)
+      if (!decision || decision.decisionType === "same_person") {
         ids.add(item.existingId)
       }
     }
     // 全same_person決定（noMatchの手動紐づけ含む）
-    for (const d of config.decisions) {
-      if (d.decisionType === "same_person" && d.existingId) {
-        ids.add(d.existingId)
+    for (const decision of config.decisions) {
+      if (decision.decisionType === "same_person" && decision.existingId) {
+        ids.add(decision.existingId)
       }
     }
     return ids
@@ -106,7 +106,7 @@ export function DetailPanel({
           {byName.map((item) => {
             const currentConfig = wizard.state.idIntegrationConfig[entityType]
             const itemDecision = currentConfig.decisions.find(
-              (d) => d.importId === item.importId
+              (decision) => decision.importId === item.importId
             )
             return (
               <MatchedItemRow

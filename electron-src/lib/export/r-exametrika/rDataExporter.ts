@@ -66,10 +66,10 @@ export async function exportRData(
     }
 
     // 設問列は最初の生徒の並びを基準にする
-    const questions = scoringData[0].scores.map((s) => ({
-      questionId: s.questionId,
-      label: s.questionLabel,
-      maxScore: s.maxScore,
+    const questions = scoringData[0].scores.map((questionScore) => ({
+      questionId: questionScore.questionId,
+      label: questionScore.questionLabel,
+      maxScore: questionScore.maxScore,
     }))
 
     let content: string
@@ -78,20 +78,20 @@ export async function exportRData(
         {
           exam: { examName: dataResult.exam?.examName ?? "" },
           questions,
-          students: scoringData.map((sd) => {
-            const absent = sd.status === "absent"
+          students: scoringData.map((scoringDatum) => {
+            const absent = scoringDatum.status === "absent"
             return {
-              studentId: sd.studentId,
-              studentName: sd.studentName,
-              studentNumber: sd.studentNumber,
-              status: sd.status ?? "participating",
-              totalScore: sd.totalScore,
-              totalMaxScore: sd.totalMaxScore,
-              responses: sd.scores.map((s) => ({
-                questionId: s.questionId,
-                status: s.status,
-                score: s.score,
-                binary: toBinary(s.status, absent),
+              studentId: scoringDatum.studentId,
+              studentName: scoringDatum.studentName,
+              studentNumber: scoringDatum.studentNumber,
+              status: scoringDatum.status ?? "participating",
+              totalScore: scoringDatum.totalScore,
+              totalMaxScore: scoringDatum.totalMaxScore,
+              responses: scoringDatum.scores.map((questionScore) => ({
+                questionId: questionScore.questionId,
+                status: questionScore.status,
+                score: questionScore.score,
+                binary: toBinary(questionScore.status, absent),
               })),
             }
           }),
@@ -104,17 +104,17 @@ export async function exportRData(
       const header = [
         "studentNumber",
         "studentName",
-        ...questions.map((q) => q.label),
+        ...questions.map((question) => question.label),
       ]
       const lines = [header.map(csvCell).join(",")]
-      for (const sd of scoringData) {
-        const absent = sd.status === "absent"
+      for (const scoringDatum of scoringData) {
+        const absent = scoringDatum.status === "absent"
         const cells = [
-          csvCell(sd.studentNumber),
-          csvCell(sd.studentName),
-          ...sd.scores.map((s) => {
-            const b = toBinary(s.status, absent)
-            return b === null ? "" : String(b)
+          csvCell(scoringDatum.studentNumber),
+          csvCell(scoringDatum.studentName),
+          ...scoringDatum.scores.map((questionScore) => {
+            const binary = toBinary(questionScore.status, absent)
+            return binary === null ? "" : String(binary)
           }),
         ]
         lines.push(cells.join(","))

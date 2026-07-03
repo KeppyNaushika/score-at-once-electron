@@ -135,7 +135,8 @@ export function resolveEffectiveScores(
     const proposals = groups.get(key) ?? []
     const decidedAt = toTime(decision.decidedAt)
     const isStale = proposals.some(
-      (p) => p.status !== "unscored" && toTime(p.updatedAt) > decidedAt
+      (proposal) =>
+        proposal.status !== "unscored" && toTime(proposal.updatedAt) > decidedAt
     )
 
     resolved.push({
@@ -154,9 +155,11 @@ export function resolveEffectiveScores(
     if (decidedCells.has(key)) continue
 
     // 旧データ耐性: 未変換の final 行があれば提案より優先する
-    const finals = group.filter((s) => s.status === "final")
+    const finals = group.filter((proposal) => proposal.status === "final")
     const candidates =
-      finals.length > 0 ? finals : group.filter((s) => s.status !== "unscored")
+      finals.length > 0
+        ? finals
+        : group.filter((proposal) => proposal.status !== "unscored")
 
     if (candidates.length === 0) {
       // 全行 unscored — 表示用に1件残す
@@ -166,9 +169,10 @@ export function resolveEffectiveScores(
 
     const first = candidates[0]
     const allAgree = candidates.every(
-      (s) =>
-        s.status === first.status &&
-        normalizeScore(s.partialScore) === normalizeScore(first.partialScore)
+      (proposal) =>
+        proposal.status === first.status &&
+        normalizeScore(proposal.partialScore) ===
+          normalizeScore(first.partialScore)
     )
 
     if (allAgree) {

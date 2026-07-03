@@ -123,10 +123,10 @@ export function setupOMRHandlers(): void {
 
         // 2. 座標変換を構築
         const sortedMarkers = {
-          TL: markerResult.markers.find((m) => m.corner === "TL")!,
-          TR: markerResult.markers.find((m) => m.corner === "TR")!,
-          BL: markerResult.markers.find((m) => m.corner === "BL")!,
-          BR: markerResult.markers.find((m) => m.corner === "BR")!,
+          TL: markerResult.markers.find((marker) => marker.corner === "TL")!,
+          TR: markerResult.markers.find((marker) => marker.corner === "TR")!,
+          BL: markerResult.markers.find((marker) => marker.corner === "BL")!,
+          BR: markerResult.markers.find((marker) => marker.corner === "BR")!,
         }
 
         const transform = createTransform(
@@ -245,10 +245,18 @@ export function setupOMRHandlers(): void {
             failed++
           } else {
             const sortedMarkers = {
-              TL: markerResult.markers.find((m) => m.corner === "TL")!,
-              TR: markerResult.markers.find((m) => m.corner === "TR")!,
-              BL: markerResult.markers.find((m) => m.corner === "BL")!,
-              BR: markerResult.markers.find((m) => m.corner === "BR")!,
+              TL: markerResult.markers.find(
+                (marker) => marker.corner === "TL"
+              )!,
+              TR: markerResult.markers.find(
+                (marker) => marker.corner === "TR"
+              )!,
+              BL: markerResult.markers.find(
+                (marker) => marker.corner === "BL"
+              )!,
+              BR: markerResult.markers.find(
+                (marker) => marker.corner === "BR"
+              )!,
             }
 
             const transform = createTransform(
@@ -353,10 +361,10 @@ export function setupOMRHandlers(): void {
 
       const dataDir = getDataDirectory()
 
-      for (const mi of masterImages) {
-        const pageNumber = mi.examPage.pageNumber
+      for (const masterImage of masterImages) {
+        const pageNumber = masterImage.examPage.pageNumber
         const cacheKey = `${examId}:${pageNumber}:${colorThreshold ?? 128}`
-        const imagePath = path.join(dataDir, mi.imagePath)
+        const imagePath = path.join(dataDir, masterImage.imagePath)
         const mtimeMs = getMtimeMs(imagePath)
 
         // キャッシュチェック（ファイル差し替えを検知したら再検出）
@@ -375,7 +383,7 @@ export function setupOMRHandlers(): void {
       }
 
       // 全ページで4マーカー検出できたか
-      const allSuccess = pages.every((p) => p.result.success)
+      const allSuccess = pages.every((page) => page.result.success)
 
       return {
         success: allSuccess,

@@ -33,10 +33,10 @@ export function ConsistencyFields({
   // ラベル値は A/B/C 等の非数値ラベルのみ（数値ラベルはそのまま数値化される）
   const valueLabels = (
     labels.length > 0 ? labels : Object.keys(config.labelValues)
-  ).filter((l) => Number.isNaN(Number(l)))
+  ).filter((label) => Number.isNaN(Number(label)))
 
   const target = config.target
-  const viewpointNames = itemNames.filter((n) => n !== target)
+  const viewpointNames = itemNames.filter((itemName) => itemName !== target)
   const effectiveViewpoints =
     config.viewpointItems && config.viewpointItems.length > 0
       ? config.viewpointItems
@@ -62,7 +62,9 @@ export function ConsistencyFields({
               onChange({
                 ...config,
                 target: value,
-                viewpointItems: itemNames.filter((n) => n !== value),
+                viewpointItems: itemNames.filter(
+                  (itemName) => itemName !== value
+                ),
               })
             }
           >
@@ -70,9 +72,9 @@ export function ConsistencyFields({
               <SelectValue placeholder="項目を選択" />
             </SelectTrigger>
             <SelectContent>
-              {itemNames.map((n) => (
-                <SelectItem key={n} value={n}>
-                  {n}
+              {itemNames.map((itemName) => (
+                <SelectItem key={itemName} value={itemName}>
+                  {itemName}
                 </SelectItem>
               ))}
             </SelectContent>

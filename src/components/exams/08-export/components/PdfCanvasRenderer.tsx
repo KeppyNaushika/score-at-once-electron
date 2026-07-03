@@ -156,9 +156,9 @@ export function PdfCanvasRenderer({
    */
   const initCanvasPool = useCallback((size: number): CanvasPoolItem[] => {
     // 既存のCanvasを削除
-    canvasPoolRef.current.forEach((item) => {
-      if (item.canvas.parentNode) {
-        item.canvas.parentNode.removeChild(item.canvas)
+    canvasPoolRef.current.forEach((poolItem) => {
+      if (poolItem.canvas.parentNode) {
+        poolItem.canvas.parentNode.removeChild(poolItem.canvas)
       }
     })
 
@@ -178,9 +178,9 @@ export function PdfCanvasRenderer({
    * Canvas Poolをクリーンアップ
    */
   const cleanupCanvasPool = useCallback(() => {
-    canvasPoolRef.current.forEach((item) => {
-      if (item.canvas.parentNode) {
-        item.canvas.parentNode.removeChild(item.canvas)
+    canvasPoolRef.current.forEach((poolItem) => {
+      if (poolItem.canvas.parentNode) {
+        poolItem.canvas.parentNode.removeChild(poolItem.canvas)
       }
     })
     canvasPoolRef.current = []
@@ -244,86 +244,100 @@ export function PdfCanvasRenderer({
       const image = await loadImage(page.imageUrl)
 
       const scoringDataForPdf: ScoringDataForPdf[] = page.scoringData.map(
-        (sd) => ({
-          questionScoreId: sd.questionScoreId,
-          status: sd.status,
-          partialScore: sd.partialScore,
+        (scoringData) => ({
+          questionScoreId: scoringData.questionScoreId,
+          status: scoringData.status,
+          partialScore: scoringData.partialScore,
           cropRegion: {
-            id: sd.cropRegion.id,
-            x: sd.cropRegion.x,
-            y: sd.cropRegion.y,
-            width: sd.cropRegion.width,
-            height: sd.cropRegion.height,
-            label: sd.cropRegion.label,
-            maxScore: sd.cropRegion.maxScore,
+            id: scoringData.cropRegion.id,
+            x: scoringData.cropRegion.x,
+            y: scoringData.cropRegion.y,
+            width: scoringData.cropRegion.width,
+            height: scoringData.cropRegion.height,
+            label: scoringData.cropRegion.label,
+            maxScore: scoringData.cropRegion.maxScore,
           },
         })
       )
 
-      const annotations: DrawingAnnotation[] = page.annotations.map((a) => ({
-        id: a.id,
-        questionScoreId: a.questionScoreId,
-        type: a.type as "text" | "line" | "rectangle" | "ellipse",
-        x: a.x,
-        y: a.y,
-        color: a.color,
-        strokeWidth: a.strokeWidth,
-        width: a.width,
-        height: a.height,
-        endX: a.endX,
-        endY: a.endY,
-        lineStyle: a.lineStyle as
-          "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow",
-        text: a.text,
-        fontSize: a.fontSize,
-        textBoxWidth: 0,
-        textBoxHeight: 0,
-        horizontalAlign: "left" as const,
-        verticalAlign: "top" as const,
-        displayX: a.displayX,
-        displayY: a.displayY,
-        anchorDirection: a.anchorDirection as
-          | "top-left"
-          | "top"
-          | "top-right"
-          | "left"
-          | "center"
-          | "right"
-          | "bottom-left"
-          | "bottom"
-          | "bottom-right",
-        isFavorite: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId: a.userId,
-      }))
+      const annotations: DrawingAnnotation[] = page.annotations.map(
+        (annotation) => ({
+          id: annotation.id,
+          questionScoreId: annotation.questionScoreId,
+          type: annotation.type as "text" | "line" | "rectangle" | "ellipse",
+          x: annotation.x,
+          y: annotation.y,
+          color: annotation.color,
+          strokeWidth: annotation.strokeWidth,
+          width: annotation.width,
+          height: annotation.height,
+          endX: annotation.endX,
+          endY: annotation.endY,
+          lineStyle: annotation.lineStyle as
+            "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow",
+          text: annotation.text,
+          fontSize: annotation.fontSize,
+          textBoxWidth: 0,
+          textBoxHeight: 0,
+          horizontalAlign: "left" as const,
+          verticalAlign: "top" as const,
+          displayX: annotation.displayX,
+          displayY: annotation.displayY,
+          anchorDirection: annotation.anchorDirection as
+            | "top-left"
+            | "top"
+            | "top-right"
+            | "left"
+            | "center"
+            | "right"
+            | "bottom-left"
+            | "bottom"
+            | "bottom-right",
+          isFavorite: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          userId: annotation.userId,
+        })
+      )
 
       const subtotalDataForPdf: SubtotalDataForPdf[] = (page.subtotalData || [])
-        .filter((st): st is typeof st & { score: number } => st.score != null)
-        .map((st) => ({
-          regionId: st.regionId,
-          label: st.label,
-          score: st.score,
-          x: st.x,
-          y: st.y,
-          width: st.width,
-          height: st.height,
-          pageNumber: st.pageNumber,
+        .filter(
+          (
+            subtotalData
+          ): subtotalData is typeof subtotalData & {
+            score: number
+          } => subtotalData.score != null
+        )
+        .map((subtotalData) => ({
+          regionId: subtotalData.regionId,
+          label: subtotalData.label,
+          score: subtotalData.score,
+          x: subtotalData.x,
+          y: subtotalData.y,
+          width: subtotalData.width,
+          height: subtotalData.height,
+          pageNumber: subtotalData.pageNumber,
         }))
 
       const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
         page.totalScoreData || []
       )
-        .filter((ts): ts is typeof ts & { score: number } => ts.score != null)
-        .map((ts) => ({
-          regionId: ts.regionId,
-          score: ts.score,
-          maxScore: ts.maxScore,
-          x: ts.x,
-          y: ts.y,
-          width: ts.width,
-          height: ts.height,
-          pageNumber: ts.pageNumber,
+        .filter(
+          (
+            totalScoreData
+          ): totalScoreData is typeof totalScoreData & {
+            score: number
+          } => totalScoreData.score != null
+        )
+        .map((totalScoreData) => ({
+          regionId: totalScoreData.regionId,
+          score: totalScoreData.score,
+          maxScore: totalScoreData.maxScore,
+          x: totalScoreData.x,
+          y: totalScoreData.y,
+          width: totalScoreData.width,
+          height: totalScoreData.height,
+          pageNumber: totalScoreData.pageNumber,
         }))
 
       const blob = await renderAnswerSheetToCanvas(

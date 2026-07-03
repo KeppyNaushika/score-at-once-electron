@@ -49,17 +49,19 @@ function toItemAnalysisInput(
   questionRegions: CropRegion[],
   scoringData: ScoringData[]
 ): ItemAnalysisInputStudent[] {
-  return scoringData.map((sd) => {
-    const byId = new Map(sd.scores.map((s) => [s.questionId, s]))
+  return scoringData.map((student) => {
+    const byId = new Map(
+      student.scores.map((score) => [score.questionId, score])
+    )
     return {
       items: questionRegions.map((region) => {
-        const s = byId.get(region.id)
+        const score = byId.get(region.id)
         return {
           questionId: region.id,
           label: region.label || `問${(region.orderIndex ?? 0) + 1}`,
           maxScore: region.points ?? 0,
-          score: s?.score ?? null,
-          isCorrect: s?.status === "correct",
+          score: score?.score ?? null,
+          isCorrect: score?.status === "correct",
         }
       }),
     }

@@ -70,7 +70,9 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   // 初期状態：タグが1つ以上あれば各タグを系列に、なければ合計1つ
   const [seriesList, setSeriesList] = useState<BarSeriesConfig[]>(() => {
     const tagSet = new Set<string>()
-    results.forEach((r) => r.tags.forEach((t) => tagSet.add(t)))
+    results.forEach((examResult) =>
+      examResult.tags.forEach((tag) => tagSet.add(tag))
+    )
     const tags = Array.from(tagSet).sort()
 
     if (tags.length > 0) {
@@ -96,38 +98,40 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   // 全タグ一覧
   const allTags = useMemo(() => {
     const tagSet = new Set<string>()
-    results.forEach((r) => r.tags.forEach((t) => tagSet.add(t)))
+    results.forEach((examResult) =>
+      examResult.tags.forEach((tag) => tagSet.add(tag))
+    )
     return Array.from(tagSet).sort()
   }, [results])
 
   // 全小計一覧
   const subtotalOptions = useMemo<SubtotalOption[]>(() => {
     const map = new Map<string, SubtotalOption>()
-    results.forEach((r) => {
-      r.subtotalScores.forEach((s) => {
-        if (!map.has(s.subtotalId)) {
-          map.set(s.subtotalId, {
-            id: s.subtotalId,
-            label: s.subtotalName,
-            groupName: s.subtotalGroupName,
+    results.forEach((examResult) => {
+      examResult.subtotalScores.forEach((subtotalScore) => {
+        if (!map.has(subtotalScore.subtotalId)) {
+          map.set(subtotalScore.subtotalId, {
+            id: subtotalScore.subtotalId,
+            label: subtotalScore.subtotalName,
+            groupName: subtotalScore.subtotalGroupName,
           })
         }
       })
     })
-    return Array.from(map.values()).sort((a, b) => {
-      const g = a.groupName.localeCompare(b.groupName)
-      if (g !== 0) return g
-      return a.label.localeCompare(b.label)
+    return Array.from(map.values()).sort((optionA, optionB) => {
+      const groupComparison = optionA.groupName.localeCompare(optionB.groupName)
+      if (groupComparison !== 0) return groupComparison
+      return optionA.label.localeCompare(optionB.label)
     })
   }, [results])
 
   // グループ化した小計一覧
   const subtotalGroups = useMemo(() => {
     const groups = new Map<string, SubtotalOption[]>()
-    for (const opt of subtotalOptions) {
-      const list = groups.get(opt.groupName) || []
-      list.push(opt)
-      groups.set(opt.groupName, list)
+    for (const option of subtotalOptions) {
+      const list = groups.get(option.groupName) || []
+      list.push(option)
+      groups.set(option.groupName, list)
     }
     return Array.from(groups.entries())
   }, [subtotalOptions])
@@ -140,8 +144,10 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
         parts.push(Array.from(tags).join("・"))
       }
       if (subtotalId !== "__total__") {
-        const opt = subtotalOptions.find((o) => o.id === subtotalId)
-        if (opt) parts.push(opt.label)
+        const matchedOption = subtotalOptions.find(
+          (option) => option.id === subtotalId
+        )
+        if (matchedOption) parts.push(matchedOption.label)
       } else if (tags.size === 0) {
         parts.push("合計")
       }
@@ -152,7 +158,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
 
   const addSeries = useCallback(() => {
     setSeriesList((prev) => {
-      const colorIdx = prev.length % SERIES_COLORS.length
+      const colorIndex = prev.length % SERIES_COLORS.length
       return [
         ...prev,
         {
@@ -160,7 +166,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
           label: "合計",
           tags: new Set<string>(),
           subtotalId: "__total__",
-          color: SERIES_COLORS[colorIdx],
+          color: SERIES_COLORS[colorIndex],
         },
       ]
     })
@@ -169,19 +175,23 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   const removeSeries = useCallback((seriesId: string) => {
     setSeriesList((prev) => {
       if (prev.length <= 1) return prev
-      return prev.filter((s) => s.id !== seriesId)
+      return prev.filter((series) => series.id !== seriesId)
     })
   }, [])
 
   const toggleSeriesTag = useCallback(
     (seriesId: string, tag: string) => {
       setSeriesList((prev) =>
-        prev.map((s) => {
-          if (s.id !== seriesId) return s
-          const next = new Set(s.tags)
+        prev.map((series) => {
+          if (series.id !== seriesId) return series
+          const next = new Set(series.tags)
           if (next.has(tag)) next.delete(tag)
           else next.add(tag)
-          return { ...s, tags: next, label: buildLabel(next, s.subtotalId) }
+          return {
+            ...series,
+            tags: next,
+            label: buildLabel(next, series.subtotalId),
+          }
         })
       )
     },
@@ -191,10 +201,14 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   const clearSeriesTags = useCallback(
     (seriesId: string) => {
       setSeriesList((prev) =>
-        prev.map((s) => {
-          if (s.id !== seriesId) return s
+        prev.map((series) => {
+          if (series.id !== seriesId) return series
           const empty = new Set<string>()
-          return { ...s, tags: empty, label: buildLabel(empty, s.subtotalId) }
+          return {
+            ...series,
+            tags: empty,
+            label: buildLabel(empty, series.subtotalId),
+          }
         })
       )
     },
@@ -204,9 +218,13 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   const setSeriesSubtotal = useCallback(
     (seriesId: string, subtotalId: string) => {
       setSeriesList((prev) =>
-        prev.map((s) => {
-          if (s.id !== seriesId) return s
-          return { ...s, subtotalId, label: buildLabel(s.tags, subtotalId) }
+        prev.map((series) => {
+          if (series.id !== seriesId) return series
+          return {
+            ...series,
+            subtotalId,
+            label: buildLabel(series.tags, subtotalId),
+          }
         })
       )
     },
@@ -217,28 +235,30 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   const chartData = useMemo(() => {
     return seriesList.map((series) => {
       const scored = results.filter(
-        (r) =>
-          (r.status === "complete" || r.status === "partial") &&
-          (series.tags.size === 0 || r.tags.some((t) => series.tags.has(t)))
+        (examResult) =>
+          (examResult.status === "complete" ||
+            examResult.status === "partial") &&
+          (series.tags.size === 0 ||
+            examResult.tags.some((tag) => series.tags.has(tag)))
       )
 
       let totalRate = 0
       let count = 0
 
-      for (const r of scored) {
+      for (const examResult of scored) {
         let score: number
         let maxScore: number
 
         if (series.subtotalId === "__total__") {
-          score = r.totalScore
-          maxScore = r.maxScore
+          score = examResult.totalScore
+          maxScore = examResult.maxScore
         } else {
-          const sub = r.subtotalScores.find(
-            (s) => s.subtotalId === series.subtotalId
+          const matchedSubtotal = examResult.subtotalScores.find(
+            (subtotalScore) => subtotalScore.subtotalId === series.subtotalId
           )
-          if (!sub) continue
-          score = sub.score
-          maxScore = sub.maxScore
+          if (!matchedSubtotal) continue
+          score = matchedSubtotal.score
+          maxScore = matchedSubtotal.maxScore
         }
 
         if (maxScore > 0) {
@@ -257,7 +277,10 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
     })
   }, [results, seriesList])
 
-  if (results.filter((r) => r.status !== "unscored").length === 0) {
+  if (
+    results.filter((examResult) => examResult.status !== "unscored").length ===
+    0
+  ) {
     return null
   }
 
@@ -303,10 +326,12 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
                     {series.subtotalId === "__total__"
                       ? "合計得点率"
                       : (() => {
-                          const opt = subtotalOptions.find(
-                            (o) => o.id === series.subtotalId
+                          const matchedOption = subtotalOptions.find(
+                            (option) => option.id === series.subtotalId
                           )
-                          return opt ? opt.label : "合計得点率"
+                          return matchedOption
+                            ? matchedOption.label
+                            : "合計得点率"
                         })()}
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
@@ -323,12 +348,14 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
                         {groupName}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
-                        {items.map((opt) => (
+                        {items.map((option) => (
                           <DropdownMenuItem
-                            key={opt.id}
-                            onClick={() => setSeriesSubtotal(series.id, opt.id)}
+                            key={option.id}
+                            onClick={() =>
+                              setSeriesSubtotal(series.id, option.id)
+                            }
                           >
-                            {opt.label}
+                            {option.label}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuSubContent>
@@ -397,7 +424,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
               tick={{ fontSize: 12 }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v) => `${v}%`}
+              tickFormatter={(tickValue) => `${tickValue}%`}
             />
             <YAxis
               type="category"
@@ -410,28 +437,28 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
             <Tooltip
               content={({ active, payload }) => {
                 if (!active || !payload?.[0]) return null
-                const d = payload[0].payload as {
+                const barData = payload[0].payload as {
                   label: string
                   avgRate: number
                   examCount: number
                 }
                 return (
                   <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
-                    <p className="text-sm font-medium">{d.label}</p>
+                    <p className="text-sm font-medium">{barData.label}</p>
                     <p className="mt-1 text-sm tabular-nums">
                       平均得点率：
-                      <span className="font-semibold">{d.avgRate}%</span>
+                      <span className="font-semibold">{barData.avgRate}%</span>
                     </p>
                     <p className="text-muted-foreground text-xs tabular-nums">
-                      {d.examCount}回の試験
+                      {barData.examCount}回の試験
                     </p>
                   </div>
                 )
               }}
             />
             <Bar dataKey="avgRate" radius={[0, 4, 4, 0]} barSize={28}>
-              {chartData.map((d) => (
-                <Cell key={d.id} fill={d.color} opacity={0.85} />
+              {chartData.map((barData) => (
+                <Cell key={barData.id} fill={barData.color} opacity={0.85} />
               ))}
             </Bar>
           </BarChart>

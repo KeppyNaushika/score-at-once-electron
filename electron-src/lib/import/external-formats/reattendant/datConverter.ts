@@ -591,8 +591,8 @@ function convertPageBlocksToCropRegions(
     question: DatQuationBlock
   }> = []
   for (const page of pageBlocks) {
-    for (const q of page.QuationBlock) {
-      allQuestions.push({ pageNo: page.PageNo, question: q })
+    for (const question of page.QuationBlock) {
+      allQuestions.push({ pageNo: page.PageNo, question })
     }
   }
   allQuestions.sort((a, b) => a.question.Seq - b.question.Seq)
@@ -651,11 +651,11 @@ function convertPageBlocksToCropRegions(
     }
 
     // QuationBlock → QUESTION_ANSWER
-    for (const q of page.QuationBlock) {
-      if (q.QuizType === "PARTIAL_MATCH" && q.Completion) {
+    for (const question of page.QuationBlock) {
+      if (question.QuizType === "PARTIAL_MATCH" && question.Completion) {
         // PARTIAL_MATCH: 各Completionに個別CropRegion
-        for (let i = 0; i < q.Completion.length; i++) {
-          const completion = q.Completion[i]
+        for (let i = 0; i < question.Completion.length; i++) {
+          const completion = question.Completion[i]
           const pointArea = completion.PointArea?.[0]
           if (!pointArea) continue
 
@@ -663,40 +663,40 @@ function convertPageBlocksToCropRegions(
           regions.push({
             id,
             examPageId,
-            label: `${q.QuizName}(${i + 1})`,
+            label: `${question.QuizName}(${i + 1})`,
             type: "QUESTION_ANSWER",
             x: pointArea.X / normW,
             y: pointArea.Y / normH,
             width: pointArea.Width / normW,
             height: pointArea.Height / normH,
-            points: q.Score,
-            orderIndex: seqToOrderIndex.get(q.Seq * 1000 + i) ?? null,
+            points: question.Score,
+            orderIndex: seqToOrderIndex.get(question.Seq * 1000 + i) ?? null,
             createdAt: now,
             updatedAt: now,
           })
-          trackQuizName(q.QuizName, id)
+          trackQuizName(question.QuizName, id)
         }
       } else {
         // FREE: PointArea[0] → 1つのCropRegion
-        const pointArea = q.PointArea?.[0]
+        const pointArea = question.PointArea?.[0]
         if (!pointArea) continue
 
         const id = generateUuid()
         regions.push({
           id,
           examPageId,
-          label: q.QuizName,
+          label: question.QuizName,
           type: "QUESTION_ANSWER",
           x: pointArea.X / normW,
           y: pointArea.Y / normH,
           width: pointArea.Width / normW,
           height: pointArea.Height / normH,
-          points: q.Score,
-          orderIndex: seqToOrderIndex.get(q.Seq * 1000) ?? null,
+          points: question.Score,
+          orderIndex: seqToOrderIndex.get(question.Seq * 1000) ?? null,
           createdAt: now,
           updatedAt: now,
         })
-        trackQuizName(q.QuizName, id)
+        trackQuizName(question.QuizName, id)
       }
     }
   }
@@ -761,14 +761,14 @@ function generateSubtotalData(
 
   // question_name → question_id マッピング
   const questionNameToId = new Map<string, number>()
-  for (const q of questions) {
-    questionNameToId.set(q.question_name, q.id)
+  for (const question of questions) {
+    questionNameToId.set(question.question_name, question.id)
   }
 
   // question_id → angle_id マッピング
   const questionIdToAngleId = new Map<number, number>()
-  for (const qa of questionAngles) {
-    questionIdToAngleId.set(qa.question_id, qa.angle_id)
+  for (const questionAngle of questionAngles) {
+    questionIdToAngleId.set(questionAngle.question_id, questionAngle.angle_id)
   }
 
   // ========================================

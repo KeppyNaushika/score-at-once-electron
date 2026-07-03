@@ -14,11 +14,11 @@ export async function getGradeItemExclusions(gradeId: string) {
     })
     return {
       success: true,
-      exclusions: exclusions.map((ex) => ({
-        id: ex.id,
-        gradeId: ex.gradeId,
-        studentId: ex.studentId,
-        gradeItemId: ex.gradeItemId,
+      exclusions: exclusions.map((exclusion) => ({
+        id: exclusion.id,
+        gradeId: exclusion.gradeId,
+        studentId: exclusion.studentId,
+        gradeItemId: exclusion.gradeItemId,
       })),
     }
   } catch (error) {

@@ -37,13 +37,18 @@ export async function createDataRows(
       originalIndex: index,
       rank: 0, // 仮の値、後で正しい順位に更新
     }))
-    .sort((a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1))
+    .sort(
+      (studentA, studentB) =>
+        (studentB.totalScore ?? -1) - (studentA.totalScore ?? -1)
+    )
     .map((student, rank): ScoringDataWithRank => ({
       ...student,
       rank: student.totalScore !== null ? rank + 1 : 0,
     }))
     // 元の順序に戻す
-    .sort((a, b) => a.originalIndex - b.originalIndex)
+    .sort(
+      (studentA, studentB) => studentA.originalIndex - studentB.originalIndex
+    )
 
   for (let i = 0; i < scoringDataWithRank.length; i++) {
     const student = scoringDataWithRank[i]
@@ -99,9 +104,9 @@ function setSubtotalCells(
   let subtotalColIndex = 9
 
   for (const column of subtotalColumns) {
-    const col = getExcelColumnLetter(subtotalColIndex)
+    const columnLetter = getExcelColumnLetter(subtotalColIndex)
     const subtotalScore = student.subtotalScores.find(
-      (s) => s.subtotalId === column.subtotalId
+      (subtotalScore) => subtotalScore.subtotalId === column.subtotalId
     )
 
     if (isScoreSheet) {
@@ -111,9 +116,9 @@ function setSubtotalCells(
         subtotalScore.score !== null &&
         subtotalScore.score !== undefined
       ) {
-        row.getCell(col).value = subtotalScore.score
+        row.getCell(columnLetter).value = subtotalScore.score
       } else {
-        row.getCell(col).value = ""
+        row.getCell(columnLetter).value = ""
       }
     } else {
       // 正誤一覧：計算済みの小計点を直接使用（旧Excel関数方式を廃止）
@@ -122,9 +127,9 @@ function setSubtotalCells(
         subtotalScore.score !== null &&
         subtotalScore.score !== undefined
       ) {
-        row.getCell(col).value = subtotalScore.score
+        row.getCell(columnLetter).value = subtotalScore.score
       } else {
-        row.getCell(col).value = ""
+        row.getCell(columnLetter).value = ""
       }
     }
     subtotalColIndex++
@@ -148,8 +153,8 @@ function setQuestionCells(
   let scoreColIndex = 9 + subtotalCount // 1つ右にシフト
 
   for (const score of student.scores) {
-    const col = getExcelColumnLetter(scoreColIndex)
-    const cell = row.getCell(col)
+    const columnLetter = getExcelColumnLetter(scoreColIndex)
+    const cell = row.getCell(columnLetter)
 
     if (isScoreSheet) {
       // 点数一覧

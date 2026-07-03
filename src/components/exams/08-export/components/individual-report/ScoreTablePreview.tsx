@@ -173,30 +173,34 @@ function SingleColumnTable({
           </tr>
         </thead>
         <tbody>
-          {data.map((item, index) => {
+          {data.map((questionScore, index) => {
             const isAlt = index % 2 === 1
             const rowStyle: React.CSSProperties = {
               backgroundColor: isAlt ? "#fafafa" : "transparent",
             }
 
             const correctRate =
-              report.statistics.questionCorrectRates[item.questionId] ?? 0
+              report.statistics.questionCorrectRates[
+                questionScore.questionId
+              ] ?? 0
             const scoreRate =
-              report.statistics.questionScoreRates?.[item.questionId] ?? 0
+              report.statistics.questionScoreRates?.[
+                questionScore.questionId
+              ] ?? 0
 
-            const { mark, markColor } = getMarkInfo(item.status)
+            const { mark, markColor } = getMarkInfo(questionScore.status)
 
             return (
               <tr key={index} style={rowStyle}>
                 <td style={{ ...cellStyle, textAlign: "left" }}>
-                  {item.questionLabel.length > 30
-                    ? item.questionLabel.substring(0, 30) + "..."
-                    : item.questionLabel}
+                  {questionScore.questionLabel.length > 30
+                    ? questionScore.questionLabel.substring(0, 30) + "..."
+                    : questionScore.questionLabel}
                 </td>
                 <td style={{ ...cellStyle, textAlign: "center" }}>
                   <ScoreDisplay
-                    score={item.score}
-                    maxScore={item.maxScore}
+                    score={questionScore.score}
+                    maxScore={questionScore.maxScore}
                     fontSize={baseFontSize}
                   />
                 </td>
@@ -404,19 +408,19 @@ function MultiColumnTable({
                 </tr>
               </thead>
               <tbody>
-                {colData.map((item, index) => {
+                {colData.map((questionScore, index) => {
                   const isAlt = index % 2 === 1
                   const rowStyle: React.CSSProperties = {
                     backgroundColor: isAlt ? "#fafafa" : "transparent",
                   }
 
-                  const { mark, markColor } = getMarkInfo(item.status)
+                  const { mark, markColor } = getMarkInfo(questionScore.status)
 
                   // ラベルを短縮
                   const shortLabel =
-                    item.questionLabel.length > 8
-                      ? item.questionLabel.substring(0, 8) + "…"
-                      : item.questionLabel
+                    questionScore.questionLabel.length > 8
+                      ? questionScore.questionLabel.substring(0, 8) + "…"
+                      : questionScore.questionLabel
 
                   return (
                     <tr key={index} style={rowStyle}>
@@ -429,14 +433,14 @@ function MultiColumnTable({
                           textOverflow: "ellipsis",
                           maxWidth: "0",
                         }}
-                        title={item.questionLabel}
+                        title={questionScore.questionLabel}
                       >
                         {shortLabel}
                       </td>
                       <td style={{ ...cellStyle, textAlign: "center" }}>
                         <ScoreDisplay
-                          score={item.score}
-                          maxScore={item.maxScore}
+                          score={questionScore.score}
+                          maxScore={questionScore.maxScore}
                           fontSize={baseFontSize}
                         />
                       </td>
@@ -456,7 +460,7 @@ function MultiColumnTable({
                         <td style={{ ...cellStyle, textAlign: "center" }}>
                           {Math.round(
                             report.statistics.questionCorrectRates[
-                              item.questionId
+                              questionScore.questionId
                             ] ?? 0
                           )}
                           %
@@ -466,7 +470,7 @@ function MultiColumnTable({
                         <td style={{ ...cellStyle, textAlign: "center" }}>
                           {Math.round(
                             report.statistics.questionScoreRates?.[
-                              item.questionId
+                              questionScore.questionId
                             ] ?? 0
                           )}
                           %

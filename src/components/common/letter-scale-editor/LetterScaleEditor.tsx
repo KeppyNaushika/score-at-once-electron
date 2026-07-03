@@ -83,7 +83,9 @@ export function LetterScaleEditor({
   onChange,
 }: LetterScaleEditorProps) {
   const updateRow = (index: number, patch: Partial<LetterScaleDraft>) => {
-    onChange(scales.map((s, i) => (i === index ? { ...s, ...patch } : s)))
+    onChange(
+      scales.map((scale, i) => (i === index ? { ...scale, ...patch } : scale))
+    )
   }
 
   const removeRow = (index: number) => {
@@ -143,10 +145,14 @@ export function draftsToLetterScales(
   scales: LetterScaleDraft[]
 ): { label: string; score: number; order: number }[] {
   return scales
-    .map((s) => ({
-      label: s.label.trim(),
-      score: Number(s.score),
+    .map((scale) => ({
+      label: scale.label.trim(),
+      score: Number(scale.score),
     }))
-    .filter((s) => s.label !== "" && !isNaN(s.score))
-    .map((s, index) => ({ label: s.label, score: s.score, order: index }))
+    .filter((scale) => scale.label !== "" && !isNaN(scale.score))
+    .map((scale, index) => ({
+      label: scale.label,
+      score: scale.score,
+      order: index,
+    }))
 }

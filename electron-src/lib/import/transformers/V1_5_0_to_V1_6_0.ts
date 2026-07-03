@@ -20,10 +20,14 @@ export class V1_5_0_to_V1_6_0_Transformer implements VersionTransformer {
     const warnings: string[] = []
 
     // DrawingAnnotation に isFavorite を追加
-    const drawingAnnotations = data.scoresData.drawingAnnotations.map((da) => ({
-      ...da,
-      isFavorite: "isFavorite" in da && da.isFavorite === true,
-    }))
+    const drawingAnnotations = data.scoresData.drawingAnnotations.map(
+      (drawingAnnotation) => ({
+        ...drawingAnnotation,
+        isFavorite:
+          "isFavorite" in drawingAnnotation &&
+          drawingAnnotation.isFavorite === true,
+      })
+    )
 
     const annotationCount = drawingAnnotations.length
     if (annotationCount > 0) {

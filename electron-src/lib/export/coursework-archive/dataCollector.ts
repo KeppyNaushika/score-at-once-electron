@@ -42,39 +42,39 @@ export async function collectCourseworkArchiveData(
     },
   })
 
-  const courseworks: ArchiveCourseworkRef[] = rows.map((cw) => ({
-    id: cw.id,
-    name: cw.name,
-    description: cw.description,
-    date: cw.date?.toISOString() ?? null,
-    classrooms: cw.classes.map((c) => ({
-      classroomId: c.classroomId,
-      order: c.order,
+  const courseworks: ArchiveCourseworkRef[] = rows.map((coursework) => ({
+    id: coursework.id,
+    name: coursework.name,
+    description: coursework.description,
+    date: coursework.date?.toISOString() ?? null,
+    classrooms: coursework.classes.map((classroom) => ({
+      classroomId: classroom.classroomId,
+      order: classroom.order,
     })),
-    tags: cw.tags.map((t) => ({ tagId: t.tagId })),
-    students: cw.students.map((s) => ({
-      studentId: s.studentId,
-      customOrder: s.customOrder,
+    tags: coursework.tags.map((tag) => ({ tagId: tag.tagId })),
+    students: coursework.students.map((student) => ({
+      studentId: student.studentId,
+      customOrder: student.customOrder,
     })),
-    items: cw.items.map((item) => ({
+    items: coursework.items.map((item) => ({
       id: item.id,
       name: item.name,
       order: item.order,
       maxScore: Number(item.maxScore),
       inputMode: item.inputMode,
-      letterScales: item.letterScales.map((ls) => ({
-        label: ls.label,
-        score: Number(ls.score),
-        order: ls.order,
+      letterScales: item.letterScales.map((letterScale) => ({
+        label: letterScale.label,
+        score: Number(letterScale.score),
+        order: letterScale.order,
       })),
-      scores: item.scores.map((sc) => ({
-        studentId: sc.studentId,
-        score: sc.score !== null ? Number(sc.score) : null,
-        letterValue: sc.letterValue,
-        adjustment: sc.adjustment !== null ? Number(sc.adjustment) : null,
-        adjustmentReason: sc.adjustmentReason,
-        comment: sc.comment,
-        updatedAt: sc.updatedAt.toISOString(),
+      scores: item.scores.map((score) => ({
+        studentId: score.studentId,
+        score: score.score !== null ? Number(score.score) : null,
+        letterValue: score.letterValue,
+        adjustment: score.adjustment !== null ? Number(score.adjustment) : null,
+        adjustmentReason: score.adjustmentReason,
+        comment: score.comment,
+        updatedAt: score.updatedAt.toISOString(),
       })),
     })),
   }))
@@ -83,39 +83,41 @@ export async function collectCourseworkArchiveData(
   const studentIds = new Set<string>()
   const classIds = new Set<string>()
   const tagIds = new Set<string>()
-  for (const cw of rows) {
-    cw.students.forEach((s) => studentIds.add(s.studentId))
-    cw.classes.forEach((c) => classIds.add(c.classroomId))
-    cw.tags.forEach((t) => tagIds.add(t.tagId))
-    cw.items.forEach((item) =>
-      item.scores.forEach((sc) => studentIds.add(sc.studentId))
+  for (const coursework of rows) {
+    coursework.students.forEach((student) => studentIds.add(student.studentId))
+    coursework.classes.forEach((classroom) =>
+      classIds.add(classroom.classroomId)
+    )
+    coursework.tags.forEach((tag) => tagIds.add(tag.tagId))
+    coursework.items.forEach((item) =>
+      item.scores.forEach((score) => studentIds.add(score.studentId))
     )
   }
 
   const studentRows = await prisma.student.findMany({
     where: { id: { in: [...studentIds] } },
   })
-  const studentsData: ArchiveCwStudent[] = studentRows.map((s) => ({
-    id: s.id,
-    studentNumber: s.studentNumber,
-    lastName: s.lastName,
-    firstName: s.firstName,
-    lastNameKana: s.lastNameKana,
-    firstNameKana: s.firstNameKana,
-    enrollmentYear: s.enrollmentYear,
-    updatedAt: s.updatedAt.toISOString(),
+  const studentsData: ArchiveCwStudent[] = studentRows.map((student) => ({
+    id: student.id,
+    studentNumber: student.studentNumber,
+    lastName: student.lastName,
+    firstName: student.firstName,
+    lastNameKana: student.lastNameKana,
+    firstNameKana: student.firstNameKana,
+    enrollmentYear: student.enrollmentYear,
+    updatedAt: student.updatedAt.toISOString(),
   }))
 
   const classRows = await prisma.classroom.findMany({
     where: { id: { in: [...classIds] } },
   })
-  const classesData: ArchiveCwClass[] = classRows.map((c) => ({
-    id: c.id,
-    name: c.name,
-    classCode: c.classCode,
-    grade: c.grade,
-    description: c.description,
-    isVisible: c.isVisible,
+  const classesData: ArchiveCwClass[] = classRows.map((classroom) => ({
+    id: classroom.id,
+    name: classroom.name,
+    classCode: classroom.classCode,
+    grade: classroom.grade,
+    description: classroom.description,
+    isVisible: classroom.isVisible,
   }))
 
   // 名簿の裏付けとして、参照生徒×参照学級の所属を収集
@@ -125,29 +127,36 @@ export async function collectCourseworkArchiveData(
       classroomId: { in: [...classIds] },
     },
   })
-  const membershipsData: ArchiveCwMembership[] = membershipRows.map((m) => ({
-    id: m.id,
-    studentId: m.studentId,
-    classroomId: m.classroomId,
-    startDate: m.startDate.toISOString(),
-    endDate: m.endDate?.toISOString() ?? null,
-    attendanceNumber: m.attendanceNumber,
-    notes: m.notes,
-  }))
+  const membershipsData: ArchiveCwMembership[] = membershipRows.map(
+    (membership) => ({
+      id: membership.id,
+      studentId: membership.studentId,
+      classroomId: membership.classroomId,
+      startDate: membership.startDate.toISOString(),
+      endDate: membership.endDate?.toISOString() ?? null,
+      attendanceNumber: membership.attendanceNumber,
+      notes: membership.notes,
+    })
+  )
 
   const tagRows = await prisma.tag.findMany({
     where: { id: { in: [...tagIds] } },
   })
-  const tagsData: ArchiveCwTag[] = tagRows.map((t) => ({
-    id: t.id,
-    name: t.name,
-    order: t.order,
-    color: t.color,
+  const tagsData: ArchiveCwTag[] = tagRows.map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+    order: tag.order,
+    color: tag.color,
   }))
 
-  const itemCount = courseworks.reduce((sum, cw) => sum + cw.items.length, 0)
+  const itemCount = courseworks.reduce(
+    (sum, coursework) => sum + coursework.items.length,
+    0
+  )
   const scoreCount = courseworks.reduce(
-    (sum, cw) => sum + cw.items.reduce((s, item) => s + item.scores.length, 0),
+    (sum, coursework) =>
+      sum +
+      coursework.items.reduce((total, item) => total + item.scores.length, 0),
     0
   )
 

@@ -59,16 +59,18 @@ const EXPRESSION_HELP = [
 /** boundarySets から観点別評価に登場しうるラベルの一覧を作る */
 function collectLabels(boundarySets: GradeBoundarySetWithDetails[]): string[] {
   const set = new Set<string>()
-  for (const bs of boundarySets) {
-    if (bs.targetType !== "grade_item") continue
-    for (const b of bs.boundaries) set.add(b.label)
+  for (const boundarySet of boundarySets) {
+    if (boundarySet.targetType !== "grade_item") continue
+    for (const boundary of boundarySet.boundaries) set.add(boundary.label)
   }
   return Array.from(set)
 }
 
 /** 「評定」にあたる項目を推測（名前に「評定」を含む最後の項目、無ければ末尾） */
 function guessTargetItem(itemNames: string[]): string {
-  const byName = [...itemNames].reverse().find((n) => n.includes("評定"))
+  const byName = [...itemNames]
+    .reverse()
+    .find((itemName) => itemName.includes("評定"))
   return byName ?? itemNames[itemNames.length - 1] ?? ""
 }
 
@@ -93,7 +95,10 @@ export function ConstraintRulesEditor({
 
   const labels = useMemo(() => collectLabels(boundarySets), [boundarySets])
   // 項目名は同期的に得られる gradeItems から作る（calcResult の読込を待たない）
-  const itemNames = useMemo(() => gradeItems.map((gi) => gi.name), [gradeItems])
+  const itemNames = useMemo(
+    () => gradeItems.map((gradeItem) => gradeItem.name),
+    [gradeItems]
+  )
 
   // プレビュー用に成績算出結果を取得
   const loadCalc = useCallback(async () => {
@@ -122,7 +127,7 @@ export function ConstraintRulesEditor({
       config = JSON.stringify({
         ...DEFAULT_CONSISTENCY_CONFIG,
         target,
-        viewpointItems: itemNames.filter((n) => n !== target),
+        viewpointItems: itemNames.filter((itemName) => itemName !== target),
       })
     }
     const input: GradeConstraintInput = {

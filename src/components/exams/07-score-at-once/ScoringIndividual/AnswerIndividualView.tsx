@@ -104,16 +104,16 @@ export default function AnswerIndividualView({
   const allCropRegionsWithStatus = useMemo(() => {
     if (!cropRegions || !questionScores || !currentScoringData) return []
     const studentId = currentScoringData.studentId
-    return cropRegions.map((cr) => {
+    return cropRegions.map((cropRegion) => {
       const status = getScoringStatusFromArray(
         questionScores,
         studentId,
-        cr.id
+        cropRegion.id
       ) as ScoringStatus
-      const qs = questionScores.find(
-        (q) => q.studentId === studentId && q.cropRegionId === cr.id
+      const questionScore = questionScores.find(
+        (q) => q.studentId === studentId && q.cropRegionId === cropRegion.id
       )
-      const maxScore = cr.points ?? 0
+      const maxScore = cropRegion.points ?? 0
       let actualScore: number | null = null
       switch (status) {
         case "correct":
@@ -126,10 +126,12 @@ export default function AnswerIndividualView({
         case "partial":
         case "pending":
           actualScore =
-            qs?.partialScore != null ? Number(qs.partialScore) : null
+            questionScore?.partialScore != null
+              ? Number(questionScore.partialScore)
+              : null
           break
       }
-      return { cropRegion: cr, status, actualScore }
+      return { cropRegion, status, actualScore }
     })
   }, [cropRegions, questionScores, currentScoringData])
 
@@ -223,7 +225,7 @@ export default function AnswerIndividualView({
     if (onImageSizeChanged && loadedImages.length > 0) {
       onImageSizeChanged({
         width: loadedImages[0].naturalWidth,
-        heights: loadedImages.map((img) => img.naturalHeight),
+        heights: loadedImages.map((image) => image.naturalHeight),
       })
     }
   }, [loadedImages, onImageSizeChanged])
@@ -363,9 +365,9 @@ export default function AnswerIndividualView({
   // お気に入りアノテーションIDのセット
   const favoriteElementIds = useMemo(() => {
     const ids = new Set<string>()
-    for (const el of drawingState.drawingElements) {
-      if ((el as { isFavorite?: boolean }).isFavorite) {
-        ids.add(el.id)
+    for (const element of drawingState.drawingElements) {
+      if ((element as { isFavorite?: boolean }).isFavorite) {
+        ids.add(element.id)
       }
     }
     return ids
@@ -385,8 +387,10 @@ export default function AnswerIndividualView({
             // ローカル状態を更新
             drawingState.setDrawingElements(
               (prev: typeof drawingState.drawingElements) =>
-                prev.map((el: (typeof prev)[number]) =>
-                  el.id === elementId ? { ...el, isFavorite: !isFavorite } : el
+                prev.map((element: (typeof prev)[number]) =>
+                  element.id === elementId
+                    ? { ...element, isFavorite: !isFavorite }
+                    : element
                 )
             )
           }
@@ -413,10 +417,10 @@ export default function AnswerIndividualView({
         masterOverlayImageUrls.map(
           (url) =>
             new Promise<HTMLImageElement>((resolve, reject) => {
-              const img = new Image()
-              img.onload = () => resolve(img)
-              img.onerror = reject
-              img.src = url
+              const image = new Image()
+              image.onload = () => resolve(image)
+              image.onerror = reject
+              image.src = url
             })
         )
       )
@@ -424,10 +428,10 @@ export default function AnswerIndividualView({
       setMasterOverlayImages(
         results
           .filter(
-            (r): r is PromiseFulfilledResult<HTMLImageElement> =>
-              r.status === "fulfilled"
+            (result): result is PromiseFulfilledResult<HTMLImageElement> =>
+              result.status === "fulfilled"
           )
-          .map((r) => r.value)
+          .map((result) => result.value)
       )
     }
     loadAll()
@@ -442,9 +446,9 @@ export default function AnswerIndividualView({
   const answerNaturalHeight =
     loadedImages.length > 0
       ? loadedImages.reduce(
-          (total, img, index) =>
+          (total, image, index) =>
             total +
-            img.naturalHeight +
+            image.naturalHeight +
             (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
           0
         )
@@ -497,9 +501,9 @@ export default function AnswerIndividualView({
             height={
               loadedImages.length > 0
                 ? loadedImages.reduce(
-                    (total, img, index) =>
+                    (total, image, index) =>
                       total +
-                      img.naturalHeight +
+                      image.naturalHeight +
                       (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
                     0
                   )
@@ -515,9 +519,9 @@ export default function AnswerIndividualView({
                 loadedImages.length > 0
                   ? `${
                       loadedImages.reduce(
-                        (total, img, index) =>
+                        (total, image, index) =>
                           total +
-                          img.naturalHeight +
+                          image.naturalHeight +
                           (index < loadedImages.length - 1
                             ? pageSpacing || 20
                             : 0),
@@ -541,9 +545,9 @@ export default function AnswerIndividualView({
             height={
               loadedImages.length > 0
                 ? loadedImages.reduce(
-                    (total, img, index) =>
+                    (total, image, index) =>
                       total +
-                      img.naturalHeight +
+                      image.naturalHeight +
                       (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
                     0
                   )
@@ -559,9 +563,9 @@ export default function AnswerIndividualView({
                 loadedImages.length > 0
                   ? `${
                       loadedImages.reduce(
-                        (total, img, index) =>
+                        (total, image, index) =>
                           total +
-                          img.naturalHeight +
+                          image.naturalHeight +
                           (index < loadedImages.length - 1
                             ? pageSpacing || 20
                             : 0),
@@ -580,9 +584,9 @@ export default function AnswerIndividualView({
             height={
               loadedImages.length > 0
                 ? loadedImages.reduce(
-                    (total, img, index) =>
+                    (total, image, index) =>
                       total +
-                      img.naturalHeight +
+                      image.naturalHeight +
                       (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
                     0
                   )
@@ -598,9 +602,9 @@ export default function AnswerIndividualView({
                 loadedImages.length > 0
                   ? `${
                       loadedImages.reduce(
-                        (total, img, index) =>
+                        (total, image, index) =>
                           total +
-                          img.naturalHeight +
+                          image.naturalHeight +
                           (index < loadedImages.length - 1
                             ? pageSpacing || 20
                             : 0),
@@ -615,26 +619,26 @@ export default function AnswerIndividualView({
           {/* 模範解答オーバーレイ画像（overlay モード時・ページごとに描画） */}
           {isOverlayMode &&
             masterOverlayImages.length > 0 &&
-            masterOverlayImages.map((masterImg, pageIndex) => {
+            masterOverlayImages.map((masterImage, pageIndex) => {
               let pageOffsetY = 0
               for (let i = 0; i < pageIndex; i++) {
-                const srcImg = loadedImages[i] || masterOverlayImages[i]
-                if (srcImg) {
-                  pageOffsetY += srcImg.naturalHeight + (pageSpacing || 20)
+                const sourceImage = loadedImages[i] || masterOverlayImages[i]
+                if (sourceImage) {
+                  pageOffsetY += sourceImage.naturalHeight + (pageSpacing || 20)
                 }
               }
-              const pageImg = loadedImages[pageIndex]
-              const pageWidth = pageImg
-                ? pageImg.naturalWidth
-                : masterImg.naturalWidth
-              const pageHeight = pageImg
-                ? pageImg.naturalHeight
-                : masterImg.naturalHeight
+              const pageImage = loadedImages[pageIndex]
+              const pageWidth = pageImage
+                ? pageImage.naturalWidth
+                : masterImage.naturalWidth
+              const pageHeight = pageImage
+                ? pageImage.naturalHeight
+                : masterImage.naturalHeight
 
               return (
                 <img
                   key={`master-overlay-${pageIndex}`}
-                  src={masterImg.src}
+                  src={masterImage.src}
                   alt={`模範解答 ページ${pageIndex + 1}`}
                   className="pointer-events-none absolute left-0 block"
                   style={{

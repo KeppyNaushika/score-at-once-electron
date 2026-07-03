@@ -100,7 +100,9 @@ export function EstimationSettingsPopover({
 
   const toggleSourceId = (id: string) => {
     setSelectedSourceIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((sourceId) => sourceId !== id)
+        : [...prev, id]
     )
   }
 
@@ -111,19 +113,22 @@ export function EstimationSettingsPopover({
     const sourceCount =
       dataSource.estimationMode === "selected"
         ? (dataSource.estimationSourceIds ?? []).length
-        : allDataSources.filter((ds) => ds.id !== dataSource.id).length
+        : allDataSources.filter(
+            (candidateSource) => candidateSource.id !== dataSource.id
+          ).length
     const modeLabel =
       dataSource.estimationMode === "selected"
         ? `選(${sourceCount})`
         : `全(${sourceCount})`
     const parts = [methodLabel, modeLabel]
     if (dataSource.absentRatio !== 1 || dataSource.absentOffset !== 0) {
-      const r = dataSource.absentRatio !== 1 ? `×${dataSource.absentRatio}` : ""
-      const o =
+      const ratioText =
+        dataSource.absentRatio !== 1 ? `×${dataSource.absentRatio}` : ""
+      const offsetText =
         dataSource.absentOffset !== 0
           ? `${dataSource.absentOffset > 0 ? "+" : ""}${dataSource.absentOffset}`
           : ""
-      parts.push(r + o)
+      parts.push(ratioText + offsetText)
     }
     return parts.join(" ")
   })()
@@ -230,22 +235,26 @@ export function EstimationSettingsPopover({
 
                   {estimationMode === "selected" && (
                     <div className="max-h-36 space-y-1 overflow-y-auto rounded border p-2">
-                      {allDataSources.map((ds) => {
-                        const isSelf = ds.id === dataSource.id
+                      {allDataSources.map((candidateSource) => {
+                        const isSelf = candidateSource.id === dataSource.id
                         return (
                           <div
-                            key={ds.id}
+                            key={candidateSource.id}
                             className={`flex items-center gap-2 ${isSelf ? "opacity-40" : ""}`}
                           >
                             <Checkbox
-                              checked={selectedSourceIds.includes(ds.id)}
+                              checked={selectedSourceIds.includes(
+                                candidateSource.id
+                              )}
                               onCheckedChange={() =>
-                                !isSelf && toggleSourceId(ds.id)
+                                !isSelf && toggleSourceId(candidateSource.id)
                               }
                               disabled={isSelf}
                               className="h-3.5 w-3.5"
                             />
-                            <span className="truncate text-xs">{ds.name}</span>
+                            <span className="truncate text-xs">
+                              {candidateSource.name}
+                            </span>
                           </div>
                         )
                       })}

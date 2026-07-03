@@ -121,7 +121,7 @@ export function RosterTable({
       const matchesClass =
         selectedClassId === "all" ||
         row.classInfo.className ===
-          classes.find((c) => c.id === selectedClassId)?.name
+          classes.find((classroom) => classroom.id === selectedClassId)?.name
 
       const matchesAdditional = additionalFilters.every((filter) =>
         filter.predicate(row)
@@ -149,7 +149,7 @@ export function RosterTable({
   const handleSelectAllRows = useCallback(
     (isSelected: boolean) => {
       if (isSelected) {
-        setSelectedIds(new Set(filteredRows.map((r) => r.id)))
+        setSelectedIds(new Set(filteredRows.map((row) => row.id)))
       } else {
         setSelectedIds(new Set())
       }
@@ -161,7 +161,7 @@ export function RosterTable({
     async (rowOrders: { studentId: string; customOrder: number }[]) => {
       // 楽観的に customOrder を反映
       const orderMap = new Map(
-        rowOrders.map((o) => [o.studentId, o.customOrder])
+        rowOrders.map((rowOrder) => [rowOrder.studentId, rowOrder.customOrder])
       )
       setRows((prev) =>
         prev.map((row) => ({

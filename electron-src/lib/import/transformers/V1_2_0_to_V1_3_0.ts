@@ -83,7 +83,7 @@ export class V1_2_0_to_V1_3_0_Transformer implements VersionTransformer {
           version: this.toVersion,
         },
         studentsData: {
-          students: transformedStudents.map((s) => ({ ...s })),
+          students: transformedStudents.map((student) => ({ ...student })),
         },
       },
       warnings,
@@ -97,10 +97,14 @@ export class V1_2_0_to_V1_3_0_Transformer implements VersionTransformer {
     return students.map((student) => {
       // studentId または studentNumber のどちらかが存在する場合に対応
       // Record型で旧新フィールド名を安全にチェック
-      const rec = { ...student } as Record<string, unknown>
+      const studentRecord = { ...student } as Record<string, unknown>
       const studentNumber =
-        (typeof rec.studentNumber === "string" ? rec.studentNumber : "") ||
-        (typeof rec.studentId === "string" ? rec.studentId : "") ||
+        (typeof studentRecord.studentNumber === "string"
+          ? studentRecord.studentNumber
+          : "") ||
+        (typeof studentRecord.studentId === "string"
+          ? studentRecord.studentId
+          : "") ||
         ""
 
       return {

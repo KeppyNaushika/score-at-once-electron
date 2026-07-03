@@ -57,7 +57,9 @@ export default function QuestionNavigator({
   onToggle,
 }: QuestionNavigatorProps) {
   const currentIndex = currentCropRegion
-    ? questionRegions.findIndex((q) => q.id === currentCropRegion.id)
+    ? questionRegions.findIndex(
+        (question) => question.id === currentCropRegion.id
+      )
     : -1
 
   // 0/0の設問を特定
@@ -118,7 +120,8 @@ export default function QuestionNavigator({
             value={currentCropRegion?.id || ""}
             onValueChange={(value) => {
               const selectedRegion =
-                questionRegions.find((q) => q.id === value) || null
+                questionRegions.find((question) => question.id === value) ||
+                null
               onCropRegionChange(selectedRegion)
             }}
           >

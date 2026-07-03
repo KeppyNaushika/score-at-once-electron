@@ -32,7 +32,9 @@ export async function matchClasses(
     let isExactMatch = false
 
     // Step 1: UUIDで照合
-    const uuidMatch = existingClasses.find((c) => c.id === importClass.id)
+    const uuidMatch = existingClasses.find(
+      (classroom) => classroom.id === importClass.id
+    )
     if (uuidMatch) {
       matchedClass = uuidMatch
       isExactMatch = true
@@ -43,7 +45,9 @@ export async function matchClasses(
       switch (method) {
         case "name":
           matchedClass =
-            existingClasses.find((c) => c.name === importClass.name) ?? null
+            existingClasses.find(
+              (classroom) => classroom.name === importClass.name
+            ) ?? null
           break
       }
     }
@@ -86,8 +90,12 @@ export async function preMatchClasses(
   const byName: MatchedItem[] = []
   const noMatch: ImportItem[] = []
 
-  const existingById = new Map(existingClasses.map((c) => [c.id, c]))
-  const existingByName = new Map(existingClasses.map((c) => [c.name, c]))
+  const existingById = new Map(
+    existingClasses.map((classroom) => [classroom.id, classroom])
+  )
+  const existingByName = new Map(
+    existingClasses.map((classroom) => [classroom.name, classroom])
+  )
 
   for (const importClass of importData.classesData.classrooms) {
     const displayLabel = importClass.name

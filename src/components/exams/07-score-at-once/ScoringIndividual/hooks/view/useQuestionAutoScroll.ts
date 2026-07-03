@@ -58,16 +58,16 @@ export function useQuestionAutoScroll({
     const questionPageNumber = currentCropRegion.examPage?.pageNumber || 1
     const questionPageIndex = questionPageNumber - 1
 
-    const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
-    if (!questionImg) return
+    const questionImage = loadedImages[questionPageIndex] || loadedImages[0]
+    if (!questionImage) return
 
     // 設問領域の中心座標（設問ページの画像内の実際のピクセル座標）
     const questionCenterX =
       (currentCropRegion.x + currentCropRegion.width / 2) *
-      questionImg.naturalWidth
+      questionImage.naturalWidth
     const questionCenterY =
       (currentCropRegion.y + currentCropRegion.height / 2) *
-      questionImg.naturalHeight
+      questionImage.naturalHeight
 
     // 複数ページ表示の場合、設問が属するページのオフセットを計算
     let pageOffsetY = 0
@@ -81,7 +81,7 @@ export function useQuestionAutoScroll({
 
     // 画像の中央配置オフセットを考慮
     const canvasWidth = loadedImages[0].naturalWidth
-    const imageOffsetX = (canvasWidth - questionImg.naturalWidth) / 2
+    const imageOffsetX = (canvasWidth - questionImage.naturalWidth) / 2
 
     // 次のフレームでスクロール位置を調整
     requestAnimationFrame(() => {

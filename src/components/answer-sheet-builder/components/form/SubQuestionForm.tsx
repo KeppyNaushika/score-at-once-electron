@@ -36,8 +36,8 @@ function calcBranchMaxGoUps(branches: BranchQuestion[]): number[] {
   let row = 0
   let curX = 0
   for (let i = 0; i < branches.length; i++) {
-    const b = branches[i]
-    const w = parseFractionSimple(b.layoutWidth ?? "1")
+    const branchQuestion = branches[i]
+    const w = parseFractionSimple(branchQuestion.layoutWidth ?? "1")
 
     // auto-break
     if (curX > 1e-9 && curX + w > 1 + 1e-9) {
@@ -49,14 +49,14 @@ function calcBranchMaxGoUps(branches: BranchQuestion[]): number[] {
     result.push(row)
 
     // goUp 適用
-    if (b.goUp != null && b.goUp > 0) {
-      row = Math.max(0, row - b.goUp)
+    if (branchQuestion.goUp != null && branchQuestion.goUp > 0) {
+      row = Math.max(0, row - branchQuestion.goUp)
       curX = 0.5
     }
 
     curX += w
 
-    if (b.nextPlacement === "break") {
+    if (branchQuestion.nextPlacement === "break") {
       row++
       curX = 0
     }
@@ -109,7 +109,8 @@ export function SubQuestionForm({
     !!sub.manuscriptPaper?.enabled
 
   const hasVisibilityRestricted = sub.imageElements?.some(
-    (ie) => ie.visibility && ie.visibility !== "both"
+    (imageElement) =>
+      imageElement.visibility && imageElement.visibility !== "both"
   )
 
   const branchMaxGoUps = useMemo(

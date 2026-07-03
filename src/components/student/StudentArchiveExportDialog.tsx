@@ -45,16 +45,19 @@ export function StudentArchiveExportDialog({
       setIsLoading(true)
       try {
         const allStudents = await window.electronAPI.fetchStudents()
-        const selectedStudents = allStudents.filter((s: { id: string }) =>
-          selectedStudentIds.has(s.id)
+        const selectedStudents = allStudents.filter((student: { id: string }) =>
+          selectedStudentIds.has(student.id)
         )
 
         // 紐づく学級を収集
         const classMap = new Map<string, string>()
         for (const student of selectedStudents) {
-          for (const m of student.memberships || []) {
-            if (m.classroom && !classMap.has(m.classroom.id)) {
-              classMap.set(m.classroom.id, m.classroom.name)
+          for (const membership of student.memberships || []) {
+            if (
+              membership.classroom &&
+              !classMap.has(membership.classroom.id)
+            ) {
+              classMap.set(membership.classroom.id, membership.classroom.name)
             }
           }
         }
@@ -65,7 +68,7 @@ export function StudentArchiveExportDialog({
 
         setRelatedClasses(classes)
         // デフォルト: 全学級を選択
-        setSelectedClassIds(new Set(classes.map((c) => c.id)))
+        setSelectedClassIds(new Set(classes.map((classroom) => classroom.id)))
       } catch (error) {
         console.error("Failed to fetch classes:", error)
       } finally {
@@ -92,7 +95,9 @@ export function StudentArchiveExportDialog({
     if (selectedClassIds.size === relatedClasses.length) {
       setSelectedClassIds(new Set())
     } else {
-      setSelectedClassIds(new Set(relatedClasses.map((c) => c.id)))
+      setSelectedClassIds(
+        new Set(relatedClasses.map((classroom) => classroom.id))
+      )
     }
   }
 
@@ -169,16 +174,16 @@ export function StudentArchiveExportDialog({
                   <span className="text-sm font-medium">すべて選択</span>
                 </label>
 
-                {relatedClasses.map((cls) => (
+                {relatedClasses.map((classroom) => (
                   <label
-                    key={cls.id}
+                    key={classroom.id}
                     className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5"
                   >
                     <Checkbox
-                      checked={selectedClassIds.has(cls.id)}
-                      onCheckedChange={() => toggleClass(cls.id)}
+                      checked={selectedClassIds.has(classroom.id)}
+                      onCheckedChange={() => toggleClass(classroom.id)}
                     />
-                    <span className="text-sm">{cls.name}</span>
+                    <span className="text-sm">{classroom.name}</span>
                   </label>
                 ))}
               </div>

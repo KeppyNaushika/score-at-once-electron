@@ -15,14 +15,15 @@ export function ClassSummaryCards({ studentResults }: ClassSummaryCardsProps) {
   const stats = useMemo(() => {
     // 全生徒×全試験の得点率を収集
     const allRates: number[] = []
-    for (const sr of studentResults) {
-      const scored = sr.examResults.filter(
-        (r) => r.status === "complete" || r.status === "partial"
+    for (const studentResult of studentResults) {
+      const scored = studentResult.examResults.filter(
+        (examResult) =>
+          examResult.status === "complete" || examResult.status === "partial"
       )
       if (scored.length > 0) {
-        for (const r of scored) {
-          if (r.maxScore > 0) {
-            allRates.push((r.totalScore / r.maxScore) * 100)
+        for (const examResult of scored) {
+          if (examResult.maxScore > 0) {
+            allRates.push((examResult.totalScore / examResult.maxScore) * 100)
           }
         }
       }
@@ -36,9 +37,10 @@ export function ClassSummaryCards({ studentResults }: ClassSummaryCardsProps) {
       }
     }
 
-    const avg = allRates.reduce((a, b) => a + b, 0) / allRates.length
+    const avg = allRates.reduce((sum, rate) => sum + rate, 0) / allRates.length
     const variance =
-      allRates.reduce((sum, r) => sum + (r - avg) ** 2, 0) / allRates.length
+      allRates.reduce((sum, rate) => sum + (rate - avg) ** 2, 0) /
+      allRates.length
     const stdDev = Math.sqrt(variance)
 
     return {
