@@ -139,7 +139,7 @@ const errorCount = errors.length
 
 ### 実体名の原則（引数・ローカル変数）
 
-**その実体が何かを名前で言う。** 短縮（`u`）も濁り（`value`/`data`）も同じ「命名の放棄」。変数の解像度は型の解像度を超えられない ── 濁った変数名は濁った型名（`Data`/`Info`/`Item`）の影であり、直すなら型名が先。
+**その実体が何かを名前で言う。** 短縮（`u`）も濁り（`value`/`data`/`item`）も「命名の放棄」。変数の解像度は型の解像度を超えられない ── 濁った変数名は濁った型名（`Data`/`Info`/`Item`）の影であり、直すなら型名が先。ただし濁り名が許されるのは下表 A の例外（真のジェネリック・外部ライブラリ規約）の場合のみ。
 
 配列の高階関数・`for...of` の要素は、要素の型に対応するフル実体名にする。
 
@@ -161,19 +161,19 @@ cropRegions.filter((cr) => cr.points > 0)
 
 #### 慣例として残してよい名前
 
-| 分類      | 名前                                            | 範囲                                                                                    |
-| --------- | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
-| A（基本） | `i`                                             | 裸のループカウンタ（**最終手段**。上記の高階関数原則が優先）                            |
-| A         | `e`                                             | イベント引数（`e.target.value`）／catch のエラー                                        |
-| A         | `<T>`/`<K>`/`<V>` 等                            | 真のジェネリック型パラメータ                                                            |
-| A         | `x`/`value`/`data`                              | 真のジェネリック or 外部ライブラリ規約（axios `response.data`、React Query `{ data }`） |
-| B（拡張） | `prev`                                          | React `setState((prev) => …)` の前状態                                                  |
-| B         | `acc`                                           | `reduce` のアキュムレータ                                                               |
-| B         | `tx`                                            | Prisma `$transaction` クライアント                                                      |
-| B         | `db` / `fs` / `fd`                              | database ハンドル／file system モジュール／file descriptor                              |
-| B         | `x`/`y`/`w`/`h`, `dx`/`dy`, `rx`/`ry`/`rw`/`rh` | 幾何・矩形の座標／寸法／デルタ（数学的表記）                                            |
+| 分類      | 名前                                            | 範囲                                                                                                                                                   |
+| --------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A（基本） | `i`                                             | 裸のループカウンタ（**最終手段**。上記の高階関数原則が優先）                                                                                           |
+| A         | `e`                                             | イベント引数（`e.target.value`）／catch のエラー                                                                                                       |
+| A         | `<T>`/`<K>`/`<V>` 等                            | 真のジェネリック型パラメータ                                                                                                                           |
+| A         | `value`/`data`/`x`                              | 真のジェネリック（`<T>(value: T)`）or 外部ライブラリ規約（axios `response.data`、React Query `{ data }`、shadcn/Radix `onValueChange={(value) => …}`） |
+| B（拡張） | `prev`                                          | React `setState((prev) => …)` の前状態                                                                                                                 |
+| B         | `acc`                                           | `reduce` のアキュムレータ                                                                                                                              |
+| B         | `tx`                                            | Prisma `$transaction` クライアント                                                                                                                     |
+| B         | `db` / `fs` / `fd`                              | database ハンドル／file system モジュール／file descriptor                                                                                             |
+| B         | `x`/`y`/`w`/`h`, `dx`/`dy`, `rx`/`ry`/`rw`/`rh` | 幾何・矩形の座標／寸法／デルタ（数学的表記）                                                                                                           |
 
-**慣例ではない（実体名化する）**: `v` = value（`onValueChange={(v) => …}`。event の `e` と混同しがちだが慣用ではない → `value`）。実体要素の `s`/`c`/`m`/`cr`/`sg` → `student`/`classroom`/`membership`/`cropRegion`/`subtotalGroup`。
+**外部ライブラリ規約のコールバックは `value` を使う**: `onValueChange={(value) => …}`（shadcn/Radix の多数派に従う。1文字 `v` は避けて `value` と綴る）。**実体名化する対象**: 実体要素の `s`/`c`/`m`/`cr`/`sg` → `student`/`classroom`/`membership`/`cropRegion`/`subtotalGroup`。
 
 ---
 
