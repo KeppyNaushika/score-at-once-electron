@@ -137,6 +137,44 @@ const studentCount = students.length
 const errorCount = errors.length
 ```
 
+### 実体名の原則（引数・ローカル変数）
+
+**その実体が何かを名前で言う。** 短縮（`u`）も濁り（`value`/`data`）も同じ「命名の放棄」。変数の解像度は型の解像度を超えられない ── 濁った変数名は濁った型名（`Data`/`Info`/`Item`）の影であり、直すなら型名が先。
+
+配列の高階関数・`for...of` の要素は、要素の型に対応するフル実体名にする。
+
+```typescript
+// ✅ 要素の型を名前で言う
+students.map((student) => student.id)
+classrooms.find((classroom) => classroom.id === id)
+cropRegions.filter((cropRegion) => cropRegion.points > 0)
+
+// ❌ 1文字・濁った略語
+students.map((s) => s.id)
+classrooms.find((c) => ...)
+cropRegions.filter((cr) => cr.points > 0)
+```
+
+予約語 `class` の回避で短縮しない。意味語を足す（`cls`/`clazz` ではなく `classroom`、CSS は `className`）。
+
+**索引より高階関数を原則とする。** 生の索引 `for (let i = ...)` ループを避け、`map`/`filter`/`reduce`/`forEach` 等で表現する。`i` が許されるのは高階関数で自然に書けない場合の最終手段。
+
+#### 慣例として残してよい名前
+
+| 分類      | 名前                                            | 範囲                                                                                    |
+| --------- | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
+| A（基本） | `i`                                             | 裸のループカウンタ（**最終手段**。上記の高階関数原則が優先）                            |
+| A         | `e`                                             | イベント引数（`e.target.value`）／catch のエラー                                        |
+| A         | `<T>`/`<K>`/`<V>` 等                            | 真のジェネリック型パラメータ                                                            |
+| A         | `x`/`value`/`data`                              | 真のジェネリック or 外部ライブラリ規約（axios `response.data`、React Query `{ data }`） |
+| B（拡張） | `prev`                                          | React `setState((prev) => …)` の前状態                                                  |
+| B         | `acc`                                           | `reduce` のアキュムレータ                                                               |
+| B         | `tx`                                            | Prisma `$transaction` クライアント                                                      |
+| B         | `db` / `fs` / `fd`                              | database ハンドル／file system モジュール／file descriptor                              |
+| B         | `x`/`y`/`w`/`h`, `dx`/`dy`, `rx`/`ry`/`rw`/`rh` | 幾何・矩形の座標／寸法／デルタ（数学的表記）                                            |
+
+**慣例ではない（実体名化する）**: `v` = value（`onValueChange={(v) => …}`。event の `e` と混同しがちだが慣用ではない → `value`）。実体要素の `s`/`c`/`m`/`cr`/`sg` → `student`/`classroom`/`membership`/`cropRegion`/`subtotalGroup`。
+
 ---
 
 ## 不要なコードの削除
@@ -644,3 +682,4 @@ export async function exportToExcel(
 | 2025-01-12 | eslint-plugin-simple-import-sort を導入                          |
 | 2025-01-12 | 命名規則・不要コード削除のセクションを追加                       |
 | 2025-01-12 | ESLint設定との整合性確認・修正、Tailwind CSSマイグレーション追加 |
+| 2026-07-04 | 命名規則に「実体名の原則・高階関数優先・慣例例外 A/B」を追加     |
