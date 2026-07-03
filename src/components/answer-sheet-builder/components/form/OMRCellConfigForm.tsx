@@ -220,13 +220,13 @@ export function OMRCellConfigForm({
 
 /** 現在のラベルに一致するプリセットを検出 */
 function detectPreset(labels: string[]): string {
-  for (const p of CHOICE_LABEL_PRESETS) {
-    if (p.value === "custom") continue
+  for (const preset of CHOICE_LABEL_PRESETS) {
+    if (preset.value === "custom") continue
     if (
-      p.labels.length >= labels.length &&
-      labels.every((l, i) => p.labels[i] === l)
+      preset.labels.length >= labels.length &&
+      labels.every((label, i) => preset.labels[i] === label)
     ) {
-      return p.value
+      return preset.value
     }
   }
   return "custom"
@@ -292,9 +292,9 @@ function ChoiceConfigFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CHOICE_LABEL_PRESETS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.displayName}
+            {CHOICE_LABEL_PRESETS.map((preset) => (
+              <SelectItem key={preset.value} value={preset.value}>
+                {preset.displayName}
               </SelectItem>
             ))}
           </SelectContent>
@@ -316,8 +316,8 @@ function ChoiceConfigFields({
               setCustomInput(val)
               const labels = val
                 .split(",")
-                .map((s) => s.trim())
-                .filter((s) => s.length > 0)
+                .map((label) => label.trim())
+                .filter((label) => label.length > 0)
               if (labels.length >= 2) {
                 onChange({
                   ...config,

@@ -3,8 +3,10 @@ import { Prisma } from "@prisma/client"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
-const studentLabel = (s: { lastName: string; firstName: string }): string =>
-  `${s.lastName} ${s.firstName}`.trim()
+const studentLabel = (student: {
+  lastName: string
+  firstName: string
+}): string => `${student.lastName} ${student.firstName}`.trim()
 
 type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
@@ -238,8 +240,8 @@ export const getStudentExamResults = async (
 
     const results: StudentExamResult[] = []
 
-    for (const ps of examStudents) {
-      const exam = ps.exam
+    for (const examStudent of examStudents) {
+      const exam = examStudent.exam
       let totalScore = 0
       let maxScore = 0
       let scoredCount = 0
@@ -263,34 +265,40 @@ export const getStudentExamResults = async (
           const regionPoints = region.points || 0
           maxScore += regionPoints
 
-          const qs = region.questionScores[0]
+          const questionScoreRecord = region.questionScores[0]
           let questionScore = 0
           let isScored = false
 
-          if (qs && qs.status !== "unscored") {
+          if (
+            questionScoreRecord &&
+            questionScoreRecord.status !== "unscored"
+          ) {
             isScored = true
             scoredCount++
-            if (qs.status === "correct") {
+            if (questionScoreRecord.status === "correct") {
               questionScore = regionPoints
-            } else if (qs.status === "partial" && qs.partialScore) {
-              questionScore = Number(qs.partialScore)
+            } else if (
+              questionScoreRecord.status === "partial" &&
+              questionScoreRecord.partialScore
+            ) {
+              questionScore = Number(questionScoreRecord.partialScore)
             }
           }
 
           totalScore += questionScore
 
           // 小計への振り分け
-          for (const cs of region.cropSubtotals) {
-            const sid = cs.subtotal.id
+          for (const cropSubtotal of region.cropSubtotals) {
+            const sid = cropSubtotal.subtotal.id
             const existing = subtotalMap.get(sid)
             if (existing) {
               existing.maxScore += regionPoints
               if (isScored) existing.score += questionScore
             } else {
               subtotalMap.set(sid, {
-                subtotalName: cs.subtotal.name,
-                subtotalGroupId: cs.subtotal.subtotalGroup.id,
-                subtotalGroupName: cs.subtotal.subtotalGroup.name,
+                subtotalName: cropSubtotal.subtotal.name,
+                subtotalGroupId: cropSubtotal.subtotal.subtotalGroup.id,
+                subtotalGroupName: cropSubtotal.subtotal.subtotalGroup.name,
                 score: isScored ? questionScore : 0,
                 maxScore: regionPoints,
               })
@@ -317,7 +325,7 @@ export const getStudentExamResults = async (
         examId: exam.id,
         examName: exam.examName,
         examDate: exam.examDate,
-        tags: exam.examTags.map((et) => et.tag.name),
+        tags: exam.examTags.map((examTag) => examTag.tag.name),
         totalScore,
         maxScore,
         scoredCount,
@@ -368,13 +376,13 @@ export const getClassExamResults = async (
 
     const results: ClassStudentExamResult[] = []
 
-    for (const m of memberships) {
-      const examResults = await getStudentExamResults(m.student.id)
+    for (const membership of memberships) {
+      const examResults = await getStudentExamResults(membership.student.id)
       results.push({
-        studentId: m.student.id,
-        studentNumber: m.student.studentNumber,
-        studentName: `${m.student.lastName} ${m.student.firstName}`,
-        attendanceNumber: m.attendanceNumber,
+        studentId: membership.student.id,
+        studentNumber: membership.student.studentNumber,
+        studentName: `${membership.student.lastName} ${membership.student.firstName}`,
+        attendanceNumber: membership.attendanceNumber,
         examResults,
       })
     }

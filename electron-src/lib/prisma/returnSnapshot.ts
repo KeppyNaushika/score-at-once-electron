@@ -138,11 +138,13 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
     string,
     { label: string | null; maxScore: number | null }
   >()
-  for (const r of cropRegions) {
-    regions.set(r.id, {
-      label: r.label ?? null,
+  for (const cropRegion of cropRegions) {
+    regions.set(cropRegion.id, {
+      label: cropRegion.label ?? null,
       maxScore:
-        r.points !== null && r.points !== undefined ? Number(r.points) : null,
+        cropRegion.points !== null && cropRegion.points !== undefined
+          ? Number(cropRegion.points)
+          : null,
     })
   }
 
@@ -155,11 +157,12 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
 
   const effectiveByStudent = new Map<string, EffectiveScore[]>()
   const effectiveQsIds = new Set<string>()
-  for (const eff of resolved) {
-    const list = effectiveByStudent.get(eff.studentId)
-    if (list) list.push(eff)
-    else effectiveByStudent.set(eff.studentId, [eff])
-    if (eff.questionScoreId) effectiveQsIds.add(eff.questionScoreId)
+  for (const effectiveScore of resolved) {
+    const list = effectiveByStudent.get(effectiveScore.studentId)
+    if (list) list.push(effectiveScore)
+    else effectiveByStudent.set(effectiveScore.studentId, [effectiveScore])
+    if (effectiveScore.questionScoreId)
+      effectiveQsIds.add(effectiveScore.questionScoreId)
   }
 
   // 印刷対象の注釈のみ（有効スコアとして採用された QuestionScore に紐づくもの）を取得
@@ -187,27 +190,27 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
   })
 
   const annotationsByStudent = new Map<string, SnapshotAnnotation[]>()
-  for (const a of annotationRows) {
-    if (!effectiveQsIds.has(a.questionScoreId)) continue // 印刷されない注釈は除外
+  for (const annotationRow of annotationRows) {
+    if (!effectiveQsIds.has(annotationRow.questionScoreId)) continue // 印刷されない注釈は除外
     const normalized: SnapshotAnnotation = {
-      r: a.questionScore.cropRegionId,
-      t: a.type,
-      x: round(a.x),
-      y: round(a.y),
-      ex: round(a.endX),
-      ey: round(a.endY),
-      w: round(a.width),
-      h: round(a.height),
-      c: a.color,
-      sw: round(a.strokeWidth),
-      ls: a.lineStyle,
-      tx: a.text,
-      fs: round(a.fontSize),
-      dx: round(a.displayX),
-      dy: round(a.displayY),
-      ad: a.anchorDirection,
+      r: annotationRow.questionScore.cropRegionId,
+      t: annotationRow.type,
+      x: round(annotationRow.x),
+      y: round(annotationRow.y),
+      ex: round(annotationRow.endX),
+      ey: round(annotationRow.endY),
+      w: round(annotationRow.width),
+      h: round(annotationRow.height),
+      c: annotationRow.color,
+      sw: round(annotationRow.strokeWidth),
+      ls: annotationRow.lineStyle,
+      tx: annotationRow.text,
+      fs: round(annotationRow.fontSize),
+      dx: round(annotationRow.displayX),
+      dy: round(annotationRow.displayY),
+      ad: annotationRow.anchorDirection,
     }
-    const studentId = a.questionScore.studentId
+    const studentId = annotationRow.questionScore.studentId
     const list = annotationsByStudent.get(studentId)
     if (list) list.push(normalized)
     else annotationsByStudent.set(studentId, [normalized])
@@ -360,7 +363,9 @@ export const getReturnDiff = async (
         capturedAt: true,
       },
     })
-    const snapshotByStudent = new Map(snapshots.map((s) => [s.studentId, s]))
+    const snapshotByStudent = new Map(
+      snapshots.map((snapshot) => [snapshot.studentId, snapshot])
+    )
 
     // スナップショットを持つ生徒 ∪ 現在の採点データを持つ生徒
     const studentIds = new Set<string>([
@@ -410,8 +415,12 @@ export const getReturnDiff = async (
       }
 
       // スコアのセル単位差分
-      const beforeScores = new Map(snapshotContent.scores.map((c) => [c.r, c]))
-      const afterScores = new Map(currentContent.scores.map((c) => [c.r, c]))
+      const beforeScores = new Map(
+        snapshotContent.scores.map((cell) => [cell.r, cell])
+      )
+      const afterScores = new Map(
+        currentContent.scores.map((cell) => [cell.r, cell])
+      )
       const cellIds = new Set<string>([
         ...beforeScores.keys(),
         ...afterScores.keys(),

@@ -149,10 +149,10 @@ export function buildGridLayout<
     rows[curRowIdx].rightX = Math.max(rows[curRowIdx].rightX, curX + w)
     rows[curRowIdx].maxH = Math.max(rows[curRowIdx].maxH, h)
 
-    const np = item.nextPlacement ?? "inline"
-    if (np === "inline") {
+    const nextPlacement = item.nextPlacement ?? "inline"
+    if (nextPlacement === "inline") {
       curX += w
-    } else if (np === "break") {
+    } else if (nextPlacement === "break") {
       if (blockLeftX > 1e-9) {
         // goUpブロック内の break → ブロック残幅で既存行を検索
         advanceRow(1 - blockLeftX)
@@ -216,7 +216,7 @@ export function isGridHorizontal<
 /** グリッドセル配列の合計高さ（baseRowHeight単位） */
 export function gridTotalHeight<T>(cells: GridCell<T>[]): number {
   if (cells.length === 0) return 0
-  return Math.max(...cells.map((c) => c.y + c.height))
+  return Math.max(...cells.map((cell) => cell.y + cell.height))
 }
 
 /** 絶対座標のY区間・右端エントリをマージする（同一Y区間の最大rightXを取る） */
@@ -265,10 +265,10 @@ export function computeGridRowRightEdges<T>(
 ): { yTop: number; yBottom: number; rightX: number }[] {
   const ySet = new Set<number>()
   const absCells: { y: number; yEnd: number; rightX: number }[] = []
-  for (const gc of gridCells) {
-    const cellY = areaStartY + gc.y * baseRowHeight
-    const cellYEnd = cellY + gc.height * baseRowHeight
-    const cellRightX = areaX + (gc.x + gc.width) * areaWidth
+  for (const gridCell of gridCells) {
+    const cellY = areaStartY + gridCell.y * baseRowHeight
+    const cellYEnd = cellY + gridCell.height * baseRowHeight
+    const cellRightX = areaX + (gridCell.x + gridCell.width) * areaWidth
     ySet.add(cellY)
     ySet.add(cellYEnd)
     absCells.push({ y: cellY, yEnd: cellYEnd, rightX: cellRightX })
@@ -314,10 +314,10 @@ export function computeGridRowLeftEdges<T>(
 ): { yTop: number; yBottom: number; leftX: number }[] {
   const ySet = new Set<number>()
   const absCells: { y: number; yEnd: number; leftX: number }[] = []
-  for (const gc of gridCells) {
-    const cellY = areaStartY + gc.y * baseRowHeight
-    const cellYEnd = cellY + gc.height * baseRowHeight
-    const cellLeftX = areaX + gc.x * areaWidth
+  for (const gridCell of gridCells) {
+    const cellY = areaStartY + gridCell.y * baseRowHeight
+    const cellYEnd = cellY + gridCell.height * baseRowHeight
+    const cellLeftX = areaX + gridCell.x * areaWidth
     ySet.add(cellY)
     ySet.add(cellYEnd)
     absCells.push({ y: cellY, yEnd: cellYEnd, leftX: cellLeftX })

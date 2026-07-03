@@ -260,31 +260,40 @@ function reducer(
         [category]: preset,
       }
       const labels = parsePresetLabels(preset)
-      const majorQuestions = state.majorQuestions.map((mq, mi) => {
-        if (category === "major") {
-          return { ...mq, label: labels[mi] ?? mq.label }
-        }
-        if (category === "sub") {
+      const majorQuestions = state.majorQuestions.map(
+        (majorQuestion, majorIndex) => {
+          if (category === "major") {
+            return {
+              ...majorQuestion,
+              label: labels[majorIndex] ?? majorQuestion.label,
+            }
+          }
+          if (category === "sub") {
+            return {
+              ...majorQuestion,
+              subQuestions: majorQuestion.subQuestions.map(
+                (subQuestion, subIndex) => ({
+                  ...subQuestion,
+                  label: labels[subIndex] ?? subQuestion.label,
+                })
+              ),
+            }
+          }
+          // branch: 小問ごとに0からリスタート
           return {
-            ...mq,
-            subQuestions: mq.subQuestions.map((sq, si) => ({
-              ...sq,
-              label: labels[si] ?? sq.label,
+            ...majorQuestion,
+            subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
+              ...subQuestion,
+              branchQuestions: subQuestion.branchQuestions.map(
+                (branchQuestion, branchIndex) => ({
+                  ...branchQuestion,
+                  label: labels[branchIndex] ?? branchQuestion.label,
+                })
+              ),
             })),
           }
         }
-        // branch: 小問ごとに0からリスタート
-        return {
-          ...mq,
-          subQuestions: mq.subQuestions.map((sq) => ({
-            ...sq,
-            branchQuestions: sq.branchQuestions.map((bq, bi) => ({
-              ...bq,
-              label: labels[bi] ?? bq.label,
-            })),
-          })),
-        }
-      })
+      )
       return { ...state, labelPresets: newPresets, majorQuestions }
     }
 
@@ -303,8 +312,8 @@ function reducer(
 
     case "UPDATE_HEADER_FIELD": {
       const { fieldId, data } = action.payload
-      const fields = state.settings.headerFields.map((f) =>
-        f.id === fieldId ? { ...f, ...data } : f
+      const fields = state.settings.headerFields.map((field) =>
+        field.id === fieldId ? { ...field, ...data } : field
       )
       return {
         ...state,
@@ -314,8 +323,8 @@ function reducer(
 
     case "DELETE_HEADER_FIELD": {
       const fields = state.settings.headerFields
-        .filter((f) => f.id !== action.payload.fieldId)
-        .map((f, i) => ({ ...f, order: i }))
+        .filter((field) => field.id !== action.payload.fieldId)
+        .map((field, i) => ({ ...field, order: i }))
       return {
         ...state,
         settings: { ...state.settings, headerFields: fields },
@@ -327,7 +336,7 @@ function reducer(
       const fields = [...state.settings.headerFields]
       const [moved] = fields.splice(fromIndex, 1)
       fields.splice(toIndex, 0, moved)
-      const reordered = fields.map((f, i) => ({ ...f, order: i }))
+      const reordered = fields.map((field, i) => ({ ...field, order: i }))
       return {
         ...state,
         settings: { ...state.settings, headerFields: reordered },

@@ -153,12 +153,12 @@ export function useZoomAndScroll({
     const effectiveHeight = availableHeight - padding
 
     // 全画像の合計サイズを計算
-    const firstImg = loadedImages[0]
-    const totalWidth = firstImg.naturalWidth
+    const firstImage = loadedImages[0]
+    const totalWidth = firstImage.naturalWidth
     const totalHeight = loadedImages.reduce(
-      (total, img, index) =>
+      (total, image, index) =>
         total +
-        img.naturalHeight +
+        image.naturalHeight +
         (index < loadedImages.length - 1 ? pageSpacing : 0),
       0
     )
@@ -226,14 +226,15 @@ export function useZoomAndScroll({
     const questionPageNumber = currentCropRegion.examPage?.pageNumber || 1
     const questionPageIndex = questionPageNumber - 1 // 1ベース→0ベースに変換
 
-    const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
-    if (!questionImg) {
+    const questionImage = loadedImages[questionPageIndex] || loadedImages[0]
+    if (!questionImage) {
       return
     }
 
     // 設問領域の実際のサイズ（ピクセル）
-    const questionWidth = currentCropRegion.width * questionImg.naturalWidth
-    const questionHeight = currentCropRegion.height * questionImg.naturalHeight
+    const questionWidth = currentCropRegion.width * questionImage.naturalWidth
+    const questionHeight =
+      currentCropRegion.height * questionImage.naturalHeight
 
     // 設問領域をコンテナに収めるためのズームを計算
     const zoomByWidth = effectiveWidth / questionWidth
@@ -247,10 +248,10 @@ export function useZoomAndScroll({
     // 設問領域の中心座標（設問ページの画像内の実際のピクセル座標）
     const questionCenterX =
       (currentCropRegion.x + currentCropRegion.width / 2) *
-      questionImg.naturalWidth
+      questionImage.naturalWidth
     const questionCenterY =
       (currentCropRegion.y + currentCropRegion.height / 2) *
-      questionImg.naturalHeight
+      questionImage.naturalHeight
 
     // 複数ページ表示の場合、設問が属するページのオフセットを計算
     let pageOffsetY = 0
@@ -265,7 +266,7 @@ export function useZoomAndScroll({
 
     // 画像の中央配置オフセットを考慮（Canvas幅は最初の画像幅）
     const canvasWidth = loadedImages[0].naturalWidth
-    const imageOffsetX = (canvasWidth - questionImg.naturalWidth) / 2
+    const imageOffsetX = (canvasWidth - questionImage.naturalWidth) / 2
 
     onZoomChange(newZoom)
 

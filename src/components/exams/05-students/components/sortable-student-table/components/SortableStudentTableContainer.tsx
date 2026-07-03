@@ -208,7 +208,8 @@ export function SortableStudentTableContainer(
   )
 
   const classOptions = useMemo(
-    () => classes.map((cls) => ({ id: cls.id, name: cls.name })),
+    () =>
+      classes.map((classroom) => ({ id: classroom.id, name: classroom.name })),
     [classes]
   )
 

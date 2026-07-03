@@ -234,12 +234,12 @@ export function useCanvasDrawing({
 
       if (images.length === 0) return
 
-      const firstImg = images[0]
-      const canvasWidth = firstImg.naturalWidth
+      const firstImage = images[0]
+      const canvasWidth = firstImage.naturalWidth
       const totalHeight = images.reduce(
-        (total, img, index) =>
+        (total, image, index) =>
           total +
-          img.naturalHeight +
+          image.naturalHeight +
           (index < images.length - 1 ? pageSpacing : 0),
         0
       )
@@ -260,17 +260,17 @@ export function useCanvasDrawing({
 
       // 複数ページ表示処理
       let currentY = 0
-      images.forEach((img, index) => {
-        const offsetX = (canvasWidth - img.naturalWidth) / 2
+      images.forEach((image, index) => {
+        const offsetX = (canvasWidth - image.naturalWidth) / 2
         const offsetY = currentY
 
-        ctx.drawImage(img, offsetX, offsetY)
+        ctx.drawImage(image, offsetX, offsetY)
 
         if (images.length > 1 && index < images.length - 1) {
           ctx.strokeStyle = "#e5e7eb"
           ctx.lineWidth = 1
           ctx.setLineDash([5, 5])
-          const borderY = offsetY + img.naturalHeight + pageSpacing / 2
+          const borderY = offsetY + image.naturalHeight + pageSpacing / 2
           ctx.beginPath()
           ctx.moveTo(0, borderY)
           ctx.lineTo(canvas.width, borderY)
@@ -278,7 +278,7 @@ export function useCanvasDrawing({
           ctx.setLineDash([])
         }
 
-        currentY += img.naturalHeight + (images.length > 1 ? pageSpacing : 0)
+        currentY += image.naturalHeight + (images.length > 1 ? pageSpacing : 0)
       })
 
       // 透明度定数
@@ -297,8 +297,8 @@ export function useCanvasDrawing({
 
         if (regionPageIndex < 0 || regionPageIndex >= images.length) return
 
-        const img = images[regionPageIndex]
-        if (!img) return
+        const image = images[regionPageIndex]
+        if (!image) return
 
         let pageOffsetY = 0
         for (let i = 0; i < regionPageIndex; i++) {
@@ -306,13 +306,13 @@ export function useCanvasDrawing({
             images[i].naturalHeight + (images.length > 1 ? pageSpacing : 0)
         }
 
-        const offsetX = (canvasWidth - img.naturalWidth) / 2
+        const offsetX = (canvasWidth - image.naturalWidth) / 2
         const offsetY = pageOffsetY
 
-        const regionX = region.x * img.naturalWidth + offsetX
-        const regionY = region.y * img.naturalHeight + offsetY
-        const regionWidth = region.width * img.naturalWidth
-        const regionHeight = region.height * img.naturalHeight
+        const regionX = region.x * image.naturalWidth + offsetX
+        const regionY = region.y * image.naturalHeight + offsetY
+        const regionWidth = region.width * image.naturalWidth
+        const regionHeight = region.height * image.naturalHeight
 
         const opacity = isCurrent ? CURRENT_OPACITY : OTHER_OPACITY
 
@@ -434,7 +434,8 @@ export function useCanvasDrawing({
           const currentStatus = currentScoringData?.status ?? "unscored"
           // 現在の設問のスコアをallCropRegionsWithStatusから取得
           const currentRegionData = allCropRegionsWithStatus.find(
-            (r) => r.cropRegion.id === currentCropRegion.id
+            (cropRegionWithStatus) =>
+              cropRegionWithStatus.cropRegion.id === currentCropRegion.id
           )
           drawCropRegionMark(
             currentCropRegion,
@@ -601,12 +602,12 @@ export function useCanvasDrawing({
     const ctx = overlayCanvas.getContext("2d")
     if (!ctx) return
 
-    const baseImg = loadedImages[0]
-    const canvasWidth = baseImg.naturalWidth
+    const baseImage = loadedImages[0]
+    const canvasWidth = baseImage.naturalWidth
     const totalHeight = loadedImages.reduce(
-      (total, img, index) =>
+      (total, image, index) =>
         total +
-        img.naturalHeight +
+        image.naturalHeight +
         (index < loadedImages.length - 1 ? pageSpacing : 0),
       0
     )
@@ -694,16 +695,16 @@ export function useCanvasDrawing({
               { x, y: y + h },
               { x: x + w, y: y + h },
             ]
-            corners.forEach((c) => {
+            corners.forEach((corner) => {
               ctx.fillRect(
-                c.x - halfHandle,
-                c.y - halfHandle,
+                corner.x - halfHandle,
+                corner.y - halfHandle,
                 handleSize,
                 handleSize
               )
               ctx.strokeRect(
-                c.x - halfHandle,
-                c.y - halfHandle,
+                corner.x - halfHandle,
+                corner.y - halfHandle,
                 handleSize,
                 handleSize
               )
@@ -739,7 +740,7 @@ export function useCanvasDrawing({
     // ホバー中要素のハンドルを描画
     if (hoveredElementId && !selectedElementIds.includes(hoveredElementId)) {
       const hoveredElement = drawingElements.find(
-        (el) => el.id === hoveredElementId
+        (element) => element.id === hoveredElementId
       )
       if (hoveredElement) {
         drawElementHandles(
@@ -828,12 +829,12 @@ export function useCanvasDrawing({
     const ctx = textCanvas.getContext("2d")
     if (!ctx) return
 
-    const baseImg = loadedImages[0]
-    const canvasWidth = baseImg.naturalWidth
+    const baseImage = loadedImages[0]
+    const canvasWidth = baseImage.naturalWidth
     const totalHeight = loadedImages.reduce(
-      (total, img, index) =>
+      (total, image, index) =>
         total +
-        img.naturalHeight +
+        image.naturalHeight +
         (index < loadedImages.length - 1 ? pageSpacing : 0),
       0
     )
@@ -876,13 +877,15 @@ export function useCanvasDrawing({
     const currentPageHeight = currentPageImg.naturalHeight
     const currentPageOffsetY = calcTextPageOffset(currentPageIndex)
 
-    const drawingElementsMap = new Map(drawingElements.map((el) => [el.id, el]))
+    const drawingElementsMap = new Map(
+      drawingElements.map((element) => [element.id, element])
+    )
 
     // 全テキストをallAnnotationsから描画
     const textAnnotations = allAnnotations.filter(
-      (a) => a.type === "text" && a.text
+      (annotation) => annotation.type === "text" && annotation.text
     )
-    const drawnIds = new Set(textAnnotations.map((a) => a.id))
+    const drawnIds = new Set(textAnnotations.map((annotation) => annotation.id))
 
     const annotationResults = await Promise.all(
       textAnnotations.map(async (annotation) => {
@@ -960,7 +963,8 @@ export function useCanvasDrawing({
 
     // 新規作成直後の要素（現在設問のページに描画）
     const newTextElements = drawingElements.filter(
-      (el) => el.type === "text" && el.text && !drawnIds.has(el.id)
+      (element) =>
+        element.type === "text" && element.text && !drawnIds.has(element.id)
     )
 
     if (newTextElements.length > 0) {
@@ -1072,7 +1076,9 @@ export function useCanvasDrawing({
     const isTextBeingDragged =
       (isDraggingElement ?? false) &&
       selectedElementIds.some((id) =>
-        drawingElements.find((el) => el.id === id && el.type === "text")
+        drawingElements.find(
+          (element) => element.id === id && element.type === "text"
+        )
       )
 
     if (isTextBeingDragged && !prevTextDraggingRef.current) {

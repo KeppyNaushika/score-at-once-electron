@@ -50,7 +50,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
           </h2>
           <p className="text-muted-foreground text-sm">
             {result.classNames.join("、") || "学級未登録"} /{" "}
-            {result.gradeItems.map((gi) => gi.name).join("、") ||
+            {result.gradeItems.map((gradeItem) => gradeItem.name).join("、") ||
               "評価項目未設定"}{" "}
             / {result.students.length}名
           </p>

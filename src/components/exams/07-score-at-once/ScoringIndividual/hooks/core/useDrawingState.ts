@@ -238,7 +238,9 @@ export function useDrawingState(
       updates: Array<{ id: string; updates: Partial<DrawingElement> }>
     ) => {
       const previousElements: Map<string, DrawingElement> = new Map()
-      const updateMap = new Map(updates.map((u) => [u.id, u.updates]))
+      const updateMap = new Map(
+        updates.map((update) => [update.id, update.updates])
+      )
 
       // ローカル状態を即座に更新（1回のsetStateで全て更新）
       setDrawingElements((prev) => {
@@ -277,7 +279,7 @@ export function useDrawingState(
 
       // ローカル状態を即座に更新
       setDrawingElements((prev) => {
-        removedElement = prev.find((e) => e.id === id) || null
+        removedElement = prev.find((element) => element.id === id) || null
         return prev.filter((element) => element.id !== id)
       })
 

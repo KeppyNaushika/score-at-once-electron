@@ -65,14 +65,16 @@ export async function detectScoringConflicts(
   const cropRegions = await prisma.cropRegion.findMany({
     where: { id: { in: existingCropRegionIds } },
   })
-  const cropRegionMap = new Map(cropRegions.map((r) => [r.id, r]))
+  const cropRegionMap = new Map(
+    cropRegions.map((cropRegion) => [cropRegion.id, cropRegion])
+  )
 
   // 生徒情報を取得
   const studentIds = Object.values(studentIdMapping)
   const students = await prisma.student.findMany({
     where: { id: { in: studentIds } },
   })
-  const studentMap = new Map(students.map((s) => [s.id, s]))
+  const studentMap = new Map(students.map((student) => [student.id, student]))
 
   // インポートデータの各QuestionScoreについて競合をチェック
   for (const importScore of importData.scoresData.questionScores) {
@@ -230,7 +232,9 @@ export async function detectScoringConflictsWithUserDecisions(
       },
     },
   })
-  const existingCropRegionIds = new Set(existingCropRegions.map((r) => r.id))
+  const existingCropRegionIds = new Set(
+    existingCropRegions.map((cropRegion) => cropRegion.id)
+  )
 
   for (const region of importData.examData.cropRegions) {
     if (existingCropRegionIds.has(region.id)) {

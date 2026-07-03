@@ -253,22 +253,22 @@ function BorderFieldRow({
           {field.label}
         </span>
         <div className="border-input flex shrink-0 rounded-md border">
-          {LINE_STYLES.map((ls) => (
+          {LINE_STYLES.map((lineStyle) => (
             <button
-              key={ls.value}
+              key={lineStyle.value}
               type="button"
-              title={ls.title}
+              title={lineStyle.title}
               className={cn(
                 "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
-                activeStyle === ls.value
+                activeStyle === lineStyle.value
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground"
               )}
               onClick={() =>
-                onUpdate({ [field.styleKey]: ls.value as LineStyle })
+                onUpdate({ [field.styleKey]: lineStyle.value as LineStyle })
               }
             >
-              <LineIcon style={ls.value} />
+              <LineIcon style={lineStyle.value} />
             </button>
           ))}
         </div>

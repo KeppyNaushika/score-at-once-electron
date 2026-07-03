@@ -43,9 +43,9 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     }
 
     // 個別決定をカウント
-    for (const d of config.student.decisions) {
-      if (d.decisionType === "create_new") studentNew++
-      else if (d.decisionType === "skip") studentSkip++
+    for (const decision of config.student.decisions) {
+      if (decision.decisionType === "create_new") studentNew++
+      else if (decision.decisionType === "skip") studentSkip++
     }
 
     // 学級サマリー
@@ -64,9 +64,9 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       classNew = classNoMatch
     }
 
-    for (const d of config.classroom.decisions) {
-      if (d.decisionType === "create_new") classNew++
-      else if (d.decisionType === "skip") classSkip++
+    for (const decision of config.classroom.decisions) {
+      if (decision.decisionType === "create_new") classNew++
+      else if (decision.decisionType === "skip") classSkip++
     }
 
     return {

@@ -256,7 +256,9 @@ export async function applyScoringColorPreset(
   presetId: string,
   userId?: string
 ): Promise<void> {
-  const preset = SCORING_COLOR_PRESETS.find((p) => p.id === presetId)
+  const preset = SCORING_COLOR_PRESETS.find(
+    (candidate) => candidate.id === presetId
+  )
   if (!preset) {
     console.error(`Preset not found: ${presetId}`)
     return

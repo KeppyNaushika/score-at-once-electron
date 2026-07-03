@@ -145,9 +145,9 @@ export function SubtotalGroupModal({
       setSubtotals(
         editingGroup.subtotals
           .sort((a, b) => a.order - b.order)
-          .map((s, index) => ({
-            id: s.id,
-            name: s.name,
+          .map((subtotal, index) => ({
+            id: subtotal.id,
+            name: subtotal.name,
             order: index,
           }))
       )
@@ -214,7 +214,7 @@ export function SubtotalGroupModal({
       return
     }
 
-    const hasEmptyNames = subtotals.some((s) => !s.name.trim())
+    const hasEmptyNames = subtotals.some((subtotal) => !subtotal.name.trim())
     if (hasEmptyNames) {
       alert("すべての小計項目に名前を入力してください。")
       return
@@ -222,8 +222,8 @@ export function SubtotalGroupModal({
 
     setSaving(true)
     try {
-      const subtotalData = subtotals.map((s, index) => ({
-        name: s.name.trim(),
+      const subtotalData = subtotals.map((subtotal, index) => ({
+        name: subtotal.name.trim(),
         order: index,
       }))
 
@@ -309,7 +309,7 @@ export function SubtotalGroupModal({
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={subtotals.map((s) => s.id)}
+                  items={subtotals.map((subtotal) => subtotal.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="space-y-3">

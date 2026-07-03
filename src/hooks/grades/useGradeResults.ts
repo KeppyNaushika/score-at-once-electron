@@ -20,11 +20,11 @@ export function useGradeResults(gradeId: string) {
     setLoading(true)
     setError(null)
     try {
-      const res = await window.electronAPI.grade.calculateGrades(gradeId)
-      if (res.success && res.result) {
-        setResult(res.result)
+      const response = await window.electronAPI.grade.calculateGrades(gradeId)
+      if (response.success && response.result) {
+        setResult(response.result)
       } else {
-        setError(res.error ?? "計算に失敗しました")
+        setError(response.error ?? "計算に失敗しました")
       }
     } catch (err) {
       console.error("Error calculating grades:", err)

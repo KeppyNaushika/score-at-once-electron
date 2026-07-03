@@ -356,7 +356,7 @@ async function drawElement(
               })
             }
 
-            peaks.sort((a, b) => a.pos - b.pos)
+            peaks.sort((peakA, peakB) => peakA.pos - peakB.pos)
 
             ctx.beginPath()
             ctx.moveTo(currentX, currentY)

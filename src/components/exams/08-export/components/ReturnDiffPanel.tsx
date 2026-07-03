@@ -83,14 +83,14 @@ export function ReturnDiffPanel({
   const [detailOpen, setDetailOpen] = useState(false)
 
   const studentName = (id: string): string => {
-    const s = students.find((st) => st.id === id)
-    return s ? `${s.lastName} ${s.firstName}` : id
+    const student = students.find((student) => student.id === id)
+    return student ? `${student.lastName} ${student.firstName}` : id
   }
 
   // 変更があった生徒の差分（名前順は students の並びに従う）
   const changedDiffs: ReturnStudentDiff[] = students
-    .map((s) => diffByStudent.get(s.id))
-    .filter((d): d is ReturnStudentDiff => !!d && d.changed)
+    .map((student) => diffByStudent.get(student.id))
+    .filter((diff): diff is ReturnStudentDiff => !!diff && diff.changed)
 
   const selectChangedOnly = () => {
     setSelectedStudents(new Set(changedStudentIds))
@@ -163,18 +163,18 @@ export function ReturnDiffPanel({
                     </div>
                     {diff.scoreChanges.length > 0 ? (
                       <ul className="text-muted-foreground space-y-0.5">
-                        {diff.scoreChanges.map((c) => (
+                        {diff.scoreChanges.map((scoreChange) => (
                           <li
-                            key={c.cropRegionId}
+                            key={scoreChange.cropRegionId}
                             className="flex items-center gap-1.5"
                           >
                             <span className="text-foreground">
-                              {c.label || "設問"}:
+                              {scoreChange.label || "設問"}:
                             </span>
-                            <span>{cellText(c.before)}</span>
+                            <span>{cellText(scoreChange.before)}</span>
                             <ArrowRight className="h-3 w-3 shrink-0" />
                             <span className="text-foreground">
-                              {cellText(c.after)}
+                              {cellText(scoreChange.after)}
                             </span>
                           </li>
                         ))}

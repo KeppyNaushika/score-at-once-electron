@@ -40,7 +40,7 @@ export function IndividualModePanel({
     if (selectedAnswers && selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
       const selectedAnswer = studentAnswerImages?.find(
-        (a) => a.id === selectedAnswerId
+        (studentAnswerImage) => studentAnswerImage.id === selectedAnswerId
       )
       return selectedAnswer?.student?.id || ""
     }

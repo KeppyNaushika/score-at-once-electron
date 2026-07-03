@@ -118,9 +118,9 @@ export function clipRangeToMajorLayouts(
 ): Array<{ top: number; bottom: number }> {
   if (majorLayouts.length === 0) return [range]
   const result: Array<{ top: number; bottom: number }> = []
-  for (const ml of majorLayouts) {
-    const top = Math.max(range.top, ml.startY)
-    const bottom = Math.min(range.bottom, ml.endY)
+  for (const majorLayout of majorLayouts) {
+    const top = Math.max(range.top, majorLayout.startY)
+    const bottom = Math.min(range.bottom, majorLayout.endY)
     if (top < bottom - 0.01) {
       result.push({ top, bottom })
     }
@@ -158,8 +158,8 @@ export function manuscriptCharPosition(
 
 /** 分数文字列 (e.g. "1/4", "3/4") を 0〜1 の数値に変換 */
 export function parseFraction(s: string): number {
-  const m = s.match(/^(\d+)\/(\d+)$/)
-  if (m) return parseInt(m[1]) / parseInt(m[2])
+  const match = s.match(/^(\d+)\/(\d+)$/)
+  if (match) return parseInt(match[1]) / parseInt(match[2])
   const n = parseFloat(s)
   return isNaN(n) ? 1 : n
 }

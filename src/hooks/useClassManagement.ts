@@ -43,7 +43,9 @@ export function useClassManagement(classroomId: string) {
     try {
       setLoading(true)
       const classes = await window.electronAPI.fetchClasses()
-      const targetClass = classes.find((c) => c.id === classroomId)
+      const targetClass = classes.find(
+        (classroom) => classroom.id === classroomId
+      )
       if (targetClass) {
         setClassData(targetClass)
       }
@@ -128,7 +130,9 @@ export function useClassManagement(classroomId: string) {
 
       // Refresh class data
       const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find((c) => c.id === classroomId)
+      const updatedClass = classes.find(
+        (classroom) => classroom.id === classroomId
+      )
       if (updatedClass) {
         setClassData(updatedClass)
       }
@@ -146,7 +150,9 @@ export function useClassManagement(classroomId: string) {
 
         // Refresh class data
         const classes = await window.electronAPI.fetchClasses()
-        const updatedClass = classes.find((c) => c.id === classroomId)
+        const updatedClass = classes.find(
+          (classroom) => classroom.id === classroomId
+        )
         if (updatedClass) {
           setClassData(updatedClass)
         }
@@ -166,7 +172,9 @@ export function useClassManagement(classroomId: string) {
 
       // Refresh class data
       const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find((c) => c.id === classroomId)
+      const updatedClass = classes.find(
+        (classroom) => classroom.id === classroomId
+      )
       if (updatedClass) {
         setClassData(updatedClass)
       }

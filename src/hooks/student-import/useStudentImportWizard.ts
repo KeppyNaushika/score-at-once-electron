@@ -162,9 +162,12 @@ export function useStudentImportWizard() {
     (category: "student" | "classroom", idChoice: IdChoice) => {
       setState((prev) => {
         const currentConfig = prev.idIntegrationConfig[category]
-        const newDecisions = currentConfig.decisions.map((d) => ({
-          ...d,
-          idChoice: d.decisionType === "same_person" ? idChoice : d.idChoice,
+        const newDecisions = currentConfig.decisions.map((decision) => ({
+          ...decision,
+          idChoice:
+            decision.decisionType === "same_person"
+              ? idChoice
+              : decision.idChoice,
         }))
         return {
           ...prev,

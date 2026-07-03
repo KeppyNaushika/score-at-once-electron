@@ -93,7 +93,7 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
     })
 
     const existingStudentIds = new Set(
-      existingExamStudents.map((ps) => ps.studentId)
+      existingExamStudents.map((examStudent) => examStudent.studentId)
     )
     const newStudentIds = studentIds.filter((id) => !existingStudentIds.has(id))
 
@@ -317,7 +317,9 @@ export async function getClassesNotInExam(examId: string, activeOnly = true) {
 
     const classes = await getAvailableClassesForTarget({
       existingClassIds: [],
-      excludeStudentIds: examStudents.map((ps) => ps.studentId),
+      excludeStudentIds: examStudents.map(
+        (examStudent) => examStudent.studentId
+      ),
       referenceDate,
       activeOnly,
     })
@@ -346,7 +348,9 @@ export async function getStudentsNotInExam(examId: string, activeOnly = true) {
     })
 
     const students = await getAvailableStudentsForTarget({
-      excludeStudentIds: examStudents.map((ps) => ps.studentId),
+      excludeStudentIds: examStudents.map(
+        (examStudent) => examStudent.studentId
+      ),
       referenceDate,
       activeOnly,
     })

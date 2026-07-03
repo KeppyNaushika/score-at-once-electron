@@ -96,8 +96,8 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
       // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
       const filterClasses: ClassGroup[] = Array.from(
         uniqueClasses.values()
-      ).map((cls) => ({
-        ...cls,
+      ).map((classroom) => ({
+        ...classroom,
         students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
       }))
 
@@ -155,7 +155,10 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
       // 成功した場合、受験生徒リストのcustomOrderを更新し、再ソート
       const orderMap = new Map(
-        studentOrders.map((o) => [o.studentId, o.customOrder])
+        studentOrders.map((studentOrder) => [
+          studentOrder.studentId,
+          studentOrder.customOrder,
+        ])
       )
 
       setStudents((prevStudents) => {
@@ -232,7 +235,9 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     })
 
     if (isSelected) {
-      setSelectedStudentsForRemoval(new Set(filteredStudents.map((s) => s.id)))
+      setSelectedStudentsForRemoval(
+        new Set(filteredStudents.map((student) => student.id))
+      )
     } else {
       setSelectedStudentsForRemoval(new Set())
     }

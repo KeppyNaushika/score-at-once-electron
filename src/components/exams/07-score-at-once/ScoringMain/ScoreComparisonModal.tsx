@@ -294,8 +294,8 @@ export default function ScoreComparisonModal({
                 <div>
                   {comparison.decision &&
                   comparison.proposedScores?.some(
-                    (s) =>
-                      new Date(s.updatedAt) >
+                    (score) =>
+                      new Date(score.updatedAt) >
                       new Date(comparison.decision!.decidedAt)
                   ) ? (
                     <>

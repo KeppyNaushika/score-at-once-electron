@@ -373,7 +373,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
 
       // 全子要素のIDを再生成
       const regeneratedHeaderFields = definition.settings.headerFields.map(
-        (hf) => ({ ...hf, id: crypto.randomUUID() })
+        (headerField) => ({ ...headerField, id: crypto.randomUUID() })
       )
 
       // 新定義の画像ディレクトリを作成
@@ -382,47 +382,60 @@ export function setupAnswerSheetBuilderHandlers(): void {
 
       // 画像コピーとパス更新を行うヘルパー
       const copyImageElement = <T extends { id: string; imagePath: string }>(
-        ie: T
+        imageElement: T
       ): T => {
-        let newImagePath = ie.imagePath
-        if (ie.imagePath) {
-          const absoluteSrc = getAbsolutePathFromData(ie.imagePath)
+        let newImagePath = imageElement.imagePath
+        if (imageElement.imagePath) {
+          const absoluteSrc = getAbsolutePathFromData(imageElement.imagePath)
           if (fs.existsSync(absoluteSrc)) {
-            const filename = path.basename(ie.imagePath)
+            const filename = path.basename(imageElement.imagePath)
             const destPath = path.join(newImagesDir, filename)
             fs.copyFileSync(absoluteSrc, destPath)
             newImagePath = getRelativePathFromData(destPath)
           }
         }
-        return { ...ie, id: crypto.randomUUID(), imagePath: newImagePath }
+        return {
+          ...imageElement,
+          id: crypto.randomUUID(),
+          imagePath: newImagePath,
+        }
       }
 
-      const regeneratedMajorQuestions = definition.majorQuestions.map((mq) => ({
-        ...mq,
-        id: crypto.randomUUID(),
-        subQuestions: mq.subQuestions.map((sq) => ({
-          ...sq,
+      const regeneratedMajorQuestions = definition.majorQuestions.map(
+        (majorQuestion) => ({
+          ...majorQuestion,
           id: crypto.randomUUID(),
-          textElements: sq.textElements.map((te) => ({
-            ...te,
+          subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
+            ...subQuestion,
             id: crypto.randomUUID(),
-          })),
-          imageElements: sq.imageElements?.map(copyImageElement),
-          branchQuestions: sq.branchQuestions.map((bq) => ({
-            ...bq,
-            id: crypto.randomUUID(),
-            textElements: bq.textElements.map((te) => ({
-              ...te,
+            textElements: subQuestion.textElements.map((textElement) => ({
+              ...textElement,
               id: crypto.randomUUID(),
             })),
-            imageElements: bq.imageElements?.map(copyImageElement),
+            imageElements: subQuestion.imageElements?.map(copyImageElement),
+            branchQuestions: subQuestion.branchQuestions.map(
+              (branchQuestion) => ({
+                ...branchQuestion,
+                id: crypto.randomUUID(),
+                textElements: branchQuestion.textElements.map(
+                  (textElement) => ({
+                    ...textElement,
+                    id: crypto.randomUUID(),
+                  })
+                ),
+                imageElements:
+                  branchQuestion.imageElements?.map(copyImageElement),
+              })
+            ),
           })),
-        })),
-      }))
+        })
+      )
 
       // 既存の名前と重複しないようサフィックス付与
       const existing = await listAsbDefinitions(userId)
-      const existingNames = new Set(existing.map((d) => d.name))
+      const existingNames = new Set(
+        existing.map((existingDefinition) => existingDefinition.name)
+      )
       let newName = `${definition.name} (コピー)`
       if (existingNames.has(newName)) {
         let suffix = 2

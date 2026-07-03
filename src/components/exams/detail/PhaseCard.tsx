@@ -130,7 +130,7 @@ export default function PhaseCard({ phase, examId }: PhaseCardProps) {
           <div className="mt-4 border-t pt-4">
             {(() => {
               const nextStep = phase.steps.find(
-                (s) => s.id === phase.nextStepId
+                (step) => step.id === phase.nextStepId
               )
               return nextStep ? (
                 <Link href={`/exams/${examId}${nextStep.path}`}>

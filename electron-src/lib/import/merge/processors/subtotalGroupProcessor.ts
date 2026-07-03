@@ -45,7 +45,7 @@ export async function processSubtotalGroupIdIntegration(
     defaultExistingId: string | undefined
   ) => {
     const importGroup = data.subtotalsData.subtotalGroups.find(
-      (g) => g.id === importId
+      (group) => group.id === importId
     )
     if (!importGroup) return
 

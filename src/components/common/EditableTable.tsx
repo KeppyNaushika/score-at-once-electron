@@ -182,8 +182,8 @@ export function EditableTable<T extends object>({
 
   const addRowAfter = useCallback(
     (index: number) => {
-      const newRow = columns.reduce<Record<string, string>>((acc, col) => {
-        if (col.id) acc[col.id] = ""
+      const newRow = columns.reduce<Record<string, string>>((acc, column) => {
+        if (column.id) acc[column.id] = ""
         return acc
       }, {}) as T
 
@@ -201,17 +201,18 @@ export function EditableTable<T extends object>({
   const hasReadOnlyColumns = useMemo(
     () =>
       columns.some(
-        (col) => (col.meta as { readOnly?: boolean } | undefined)?.readOnly
+        (column) =>
+          (column.meta as { readOnly?: boolean } | undefined)?.readOnly
       ),
     [columns]
   )
 
   const editableColumns = useMemo(
     () => [
-      ...columns.map((col) => {
-        const meta = col.meta as { readOnly?: boolean } | undefined
-        if (meta?.readOnly) return col // readOnlyカラムは元のセルレンダラーを維持
-        return { ...col, cell: EditableCell }
+      ...columns.map((column) => {
+        const meta = column.meta as { readOnly?: boolean } | undefined
+        if (meta?.readOnly) return column // readOnlyカラムは元のセルレンダラーを維持
+        return { ...column, cell: EditableCell }
       }),
       // 行追加ボタン列
       ...(allowInsertRow
@@ -264,8 +265,9 @@ export function EditableTable<T extends object>({
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
         // readOnlyカラムへの変更を無視
-        const col = columns.find((c) => c.id === columnId)
-        if ((col?.meta as { readOnly?: boolean } | undefined)?.readOnly) return
+        const column = columns.find((candidate) => candidate.id === columnId)
+        if ((column?.meta as { readOnly?: boolean } | undefined)?.readOnly)
+          return
 
         setTableData((old) => {
           const newData = old.map((row, index) => {
@@ -286,8 +288,8 @@ export function EditableTable<T extends object>({
   })
 
   const addRow = () => {
-    const newRow = columns.reduce<Record<string, string>>((acc, col) => {
-      if (col.id) acc[col.id] = ""
+    const newRow = columns.reduce<Record<string, string>>((acc, column) => {
+      if (column.id) acc[column.id] = ""
       return acc
     }, {}) as T
 
@@ -300,8 +302,8 @@ export function EditableTable<T extends object>({
     const newRows = Array.from(
       { length: count },
       () =>
-        columns.reduce<Record<string, string>>((acc, col) => {
-          if (col.id) acc[col.id] = ""
+        columns.reduce<Record<string, string>>((acc, column) => {
+          if (column.id) acc[column.id] = ""
           return acc
         }, {}) as T
     )
@@ -326,7 +328,8 @@ export function EditableTable<T extends object>({
     if (hasReadOnlyColumns) {
       // マージ型ペースト: readOnlyカラムをスキップし、editableカラムのみにデータをマッピング
       const editableCols = columns.filter(
-        (col) => !(col.meta as { readOnly?: boolean } | undefined)?.readOnly
+        (column) =>
+          !(column.meta as { readOnly?: boolean } | undefined)?.readOnly
       )
 
       // フォーカスセルの位置を起点にする
@@ -348,7 +351,7 @@ export function EditableTable<T extends object>({
         if (tdIndex >= 0 && tdIndex < visibleColumns.length) {
           const focusedColId = visibleColumns[tdIndex].id
           const editableIndex = editableCols.findIndex(
-            (c) => c.id === focusedColId
+            (column) => column.id === focusedColId
           )
           if (editableIndex >= 0) startEditableColIndex = editableIndex
         }
@@ -378,8 +381,8 @@ export function EditableTable<T extends object>({
       // 全置換型ペースト（後方互換）
       const pastedData = rows.map((row) => {
         const cells = row.split("\t")
-        return columns.reduce<Record<string, string>>((acc, col, index) => {
-          if (col.id) acc[col.id] = cells[index] || ""
+        return columns.reduce<Record<string, string>>((acc, column, index) => {
+          if (column.id) acc[column.id] = cells[index] || ""
           return acc
         }, {}) as T
       })

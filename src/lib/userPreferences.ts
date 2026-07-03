@@ -89,8 +89,10 @@ export function parsePreference<K extends PreferenceKey>(
       case "boolean":
         return (raw === "true") as PreferenceValueType[K]
       case "number": {
-        const num = Number(raw)
-        return (isNaN(num) ? schema.default : num) as PreferenceValueType[K]
+        const parsedNumber = Number(raw)
+        return (
+          isNaN(parsedNumber) ? schema.default : parsedNumber
+        ) as PreferenceValueType[K]
       }
       case "string": {
         // JSON文字列 → パースしてバリデーション

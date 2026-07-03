@@ -62,15 +62,15 @@ export default function MembershipTable({
 
   // ソート用のデータ変換
   const sortableData = useMemo<MembershipSortable[]>(() => {
-    return memberships.map((m) => ({
-      id: m.id,
-      studentId: m.student.studentNumber,
-      attendanceNumber: m.attendanceNumber ?? null,
-      fullName: `${m.student.lastName}${m.student.firstName}`,
-      startDate: m.startDate.toISOString(),
-      endDate: m.endDate ? m.endDate.toISOString() : null,
-      isCurrent: isCurrentMembership(m),
-      original: m,
+    return memberships.map((membership) => ({
+      id: membership.id,
+      studentId: membership.student.studentNumber,
+      attendanceNumber: membership.attendanceNumber ?? null,
+      fullName: `${membership.student.lastName}${membership.student.firstName}`,
+      startDate: membership.startDate.toISOString(),
+      endDate: membership.endDate ? membership.endDate.toISOString() : null,
+      isCurrent: isCurrentMembership(membership),
+      original: membership,
     }))
   }, [memberships])
 
@@ -82,10 +82,10 @@ export default function MembershipTable({
   // ステータスフィルター適用（既定は在籍中のみ）
   const filteredData = useMemo(() => {
     if (statusFilter === "current") {
-      return sortedData.filter((m) => m.isCurrent)
+      return sortedData.filter((membership) => membership.isCurrent)
     }
     if (statusFilter === "ended") {
-      return sortedData.filter((m) => !m.isCurrent)
+      return sortedData.filter((membership) => !membership.isCurrent)
     }
     return sortedData
   }, [sortedData, statusFilter])
@@ -105,7 +105,7 @@ export default function MembershipTable({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(displayData.map((m) => m.id)))
+      setSelectedIds(new Set(displayData.map((membership) => membership.id)))
     } else {
       setSelectedIds(new Set())
     }

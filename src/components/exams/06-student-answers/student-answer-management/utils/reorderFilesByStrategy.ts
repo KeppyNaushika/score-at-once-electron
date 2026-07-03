@@ -22,9 +22,9 @@ export function reorderFilesByStrategy(
   }
 
   // 2. 生徒のソート（customOrder準拠）
-  const sortedStudents = [...students].sort((a, b) => {
-    const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
-    const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
+  const sortedStudents = [...students].sort((studentA, studentB) => {
+    const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+    const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
     return aOrder - bOrder
   })
 
@@ -90,9 +90,9 @@ export function buildOrderedFileArrayFromStudentAnswers(
   const basicFiles: UnifiedFile[] = convertAnswerSheetsToFiles(studentAnswers)
 
   // 生徒のソート（受験生徒順：customOrder準拠）
-  const sortedStudents = [...students].sort((a, b) => {
-    const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
-    const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
+  const sortedStudents = [...students].sort((studentA, studentB) => {
+    const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+    const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
     return aOrder - bOrder
   })
 

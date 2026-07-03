@@ -36,7 +36,9 @@ export async function matchStudents(
     let isExactMatch = false
 
     // Step 1: UUIDで照合
-    const uuidMatch = existingStudents.find((s) => s.id === importStudent.id)
+    const uuidMatch = existingStudents.find(
+      (student) => student.id === importStudent.id
+    )
     if (uuidMatch) {
       matchedStudent = uuidMatch
       isExactMatch = true
@@ -48,16 +50,16 @@ export async function matchStudents(
         case "studentNumber":
           matchedStudent =
             existingStudents.find(
-              (s) => s.studentNumber === importStudent.studentNumber
+              (student) => student.studentNumber === importStudent.studentNumber
             ) ?? null
           break
 
         case "name":
           matchedStudent =
             existingStudents.find(
-              (s) =>
-                s.lastName === importStudent.lastName &&
-                s.firstName === importStudent.firstName
+              (student) =>
+                student.lastName === importStudent.lastName &&
+                student.firstName === importStudent.firstName
             ) ?? null
           break
       }
@@ -107,16 +109,18 @@ export async function preMatchStudents(
   const noMatch: ImportItem[] = []
 
   // 既存データをID別、学籍番号別、氏名別にインデックス化
-  const existingById = new Map(existingStudents.map((s) => [s.id, s]))
+  const existingById = new Map(
+    existingStudents.map((student) => [student.id, student])
+  )
   const existingByStudentNumber = new Map(
-    existingStudents.map((s) => [s.studentNumber, s])
+    existingStudents.map((student) => [student.studentNumber, student])
   )
   // 氏名は重複がありうるので、最初に見つかったものを使用
   const existingByName = new Map<string, (typeof existingStudents)[0]>()
-  for (const s of existingStudents) {
-    const key = `${s.lastName}|${s.firstName}`
+  for (const student of existingStudents) {
+    const key = `${student.lastName}|${student.firstName}`
     if (!existingByName.has(key)) {
-      existingByName.set(key, s)
+      existingByName.set(key, student)
     }
   }
 

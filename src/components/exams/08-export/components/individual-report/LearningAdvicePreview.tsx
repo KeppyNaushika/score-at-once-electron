@@ -63,17 +63,17 @@ export function LearningAdvicePreview({
             color: "#78350f",
           }}
         >
-          {advice.reviewQuestions.map((q, i) => (
-            <span key={q.questionId}>
+          {advice.reviewQuestions.map((question, i) => (
+            <span key={question.questionId}>
               {i > 0 && "、"}
-              <strong>{q.label}</strong>
+              <strong>{question.label}</strong>
               <span
                 style={{
                   fontSize: `${10 * fontScale}px`,
                   color: "#a16207",
                 }}
               >
-                （正答率{Math.round(q.correctRate)}%）
+                （正答率{Math.round(question.correctRate)}%）
               </span>
             </span>
           ))}

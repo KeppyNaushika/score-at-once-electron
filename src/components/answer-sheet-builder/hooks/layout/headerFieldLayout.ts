@@ -26,15 +26,15 @@ export function computeHeaderFieldLayout(
 
   // hfill の幅を計算: 全幅から固定要素とギャップを引いた残りを均等配分
   const hfillCount = sorted.filter(
-    (f) => (f.type ?? "field") === "hfill"
+    (field) => (field.type ?? "field") === "hfill"
   ).length
   let hfillWidth = 0
 
   if (hfillCount > 0 && contentRight != null) {
     const totalAvailableWidth = contentRight - contentLeft
-    const fixedWidth = sorted.reduce((sum, f) => {
-      if ((f.type ?? "field") === "hfill") return sum
-      return sum + f.widthMm
+    const fixedWidth = sorted.reduce((sum, field) => {
+      if ((field.type ?? "field") === "hfill") return sum
+      return sum + field.widthMm
     }, 0)
     const totalGaps = (sorted.length - 1) * gap
     const remainingWidth = Math.max(
@@ -73,10 +73,12 @@ export function computeHeaderFieldLayout(
   })
 
   // hfill は高さ 0 として扱わない: field/label の最大高さを使う
-  const nonHfillFields = sorted.filter((f) => (f.type ?? "field") !== "hfill")
+  const nonHfillFields = sorted.filter(
+    (field) => (field.type ?? "field") !== "hfill"
+  )
   const totalHeightMm =
     nonHfillFields.length > 0
-      ? Math.max(...nonHfillFields.map((f) => f.heightMm))
+      ? Math.max(...nonHfillFields.map((field) => field.heightMm))
       : 0
 
   return { fields, totalHeightMm }

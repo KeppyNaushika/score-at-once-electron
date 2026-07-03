@@ -218,7 +218,10 @@ function renderSectionElement(
       })
 
       const totalAllocatedColumns = isHorizontalLayout
-        ? groupTableDataList.reduce((sum, g) => sum + g.allocatedColumns, 0)
+        ? groupTableDataList.reduce(
+            (sum, groupData) => sum + groupData.allocatedColumns,
+            0
+          )
         : 1
 
       return React.createElement(SubtotalTableView, {
@@ -251,10 +254,10 @@ function renderSectionElement(
         options.boxPlotSubtotalGroupSelection.selectedGroupIds.length > 0
       ) {
         subtotalStats = subtotalStats.filter(
-          (s) =>
-            !s.subtotalGroupId ||
+          (subtotalStat) =>
+            !subtotalStat.subtotalGroupId ||
             options.boxPlotSubtotalGroupSelection!.selectedGroupIds.includes(
-              s.subtotalGroupId
+              subtotalStat.subtotalGroupId
             )
         )
       }
@@ -262,11 +265,11 @@ function renderSectionElement(
       if (options.hideUnassignedSubtotals) {
         const assignedSubtotalIds = new Set(
           report.scoringData.subtotalScores
-            .filter((s) => s.hasQuestionAssignments)
-            .map((s) => s.subtotalId)
+            .filter((subtotalScore) => subtotalScore.hasQuestionAssignments)
+            .map((subtotalScore) => subtotalScore.subtotalId)
         )
-        subtotalStats = subtotalStats.filter((s) =>
-          assignedSubtotalIds.has(s.subtotalId)
+        subtotalStats = subtotalStats.filter((subtotalStat) =>
+          assignedSubtotalIds.has(subtotalStat.subtotalId)
         )
       }
 
@@ -295,7 +298,7 @@ function renderSectionElement(
           return report.scoringData.totalScore ?? 0
         }
         const subtotal = report.scoringData.subtotalScores.find(
-          (s) => s.subtotalId === id
+          (subtotalScore) => subtotalScore.subtotalId === id
         )
         return subtotal?.score ?? 0
       }

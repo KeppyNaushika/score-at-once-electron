@@ -137,9 +137,13 @@ export async function calculateSubtotalScoreForStudent(
     let hasScoredQuestion = false
 
     for (const questionId of finalQuestionIds) {
-      const scoreData = studentScores.find((s) => s.cropRegionId === questionId)
+      const scoreData = studentScores.find(
+        (questionScore) => questionScore.cropRegionId === questionId
+      )
       if (scoreData) {
-        const cropRegion = cropRegions.find((r) => r.id === questionId)
+        const cropRegion = cropRegions.find(
+          (cropRegion) => cropRegion.id === questionId
+        )
         const questionMaxScore = cropRegion?.points || 0
         totalMaxScore += questionMaxScore
         const actualScore = calculateActualScore(scoreData, questionMaxScore)
@@ -189,7 +193,9 @@ function calculateStudentTotalScoreWithMax(
 
   // 採点データがある設問の得点を合計
   for (const scoreData of studentScores) {
-    const cropRegion = cropRegions.find((r) => r.id === scoreData.cropRegionId)
+    const cropRegion = cropRegions.find(
+      (cropRegion) => cropRegion.id === scoreData.cropRegionId
+    )
     if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
       const maxScore = cropRegion.points || 10
       const actualScore = calculateActualScore(scoreData, maxScore)
@@ -235,13 +241,17 @@ export async function calculateSubtotalScoreBySubtotalId(
     // QUESTION_ASSIGNMENTタイプのみをフィルタリング
     const allQuestionAssignments = (
       cropSubtotals as CropSubtotalWithCropRegion[]
-    ).filter((cs) => cs.assignmentType === "QUESTION_ASSIGNMENT")
+    ).filter(
+      (cropSubtotal) => cropSubtotal.assignmentType === "QUESTION_ASSIGNMENT"
+    )
 
     // 現在の試験のCropRegion IDでフィルタリング
     // （SubtotalGroupは複数試験で共有されるため）
-    const examCropRegionIds = new Set(cropRegions.map((r) => r.id))
-    const questionAssignments = allQuestionAssignments.filter((cs) =>
-      examCropRegionIds.has(cs.cropRegionId)
+    const examCropRegionIds = new Set(
+      cropRegions.map((cropRegion) => cropRegion.id)
+    )
+    const questionAssignments = allQuestionAssignments.filter((cropSubtotal) =>
+      examCropRegionIds.has(cropSubtotal.cropRegionId)
     )
 
     const hasQuestionAssignments = questionAssignments.length > 0
@@ -252,7 +262,7 @@ export async function calculateSubtotalScoreBySubtotalId(
 
     // 関連するQUESTION_ANSWER CropRegion IDを取得
     const questionCropRegionIds = new Set(
-      questionAssignments.map((cs) => cs.cropRegionId)
+      questionAssignments.map((cropSubtotal) => cropSubtotal.cropRegionId)
     )
 
     // 該当する設問の点数と最大点を合計
@@ -261,13 +271,17 @@ export async function calculateSubtotalScoreBySubtotalId(
     let hasScoredQuestion = false
 
     for (const questionId of questionCropRegionIds) {
-      const cropRegion = cropRegions.find((r) => r.id === questionId)
+      const cropRegion = cropRegions.find(
+        (cropRegion) => cropRegion.id === questionId
+      )
       if (!cropRegion || cropRegion.type !== "QUESTION_ANSWER") continue
 
       const questionMaxScore = cropRegion.points || 0
       totalMaxScore += questionMaxScore
 
-      const scoreData = studentScores.find((s) => s.cropRegionId === questionId)
+      const scoreData = studentScores.find(
+        (questionScore) => questionScore.cropRegionId === questionId
+      )
       if (scoreData) {
         const actualScore = calculateActualScore(scoreData, questionMaxScore)
         if (actualScore !== null) {

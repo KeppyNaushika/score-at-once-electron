@@ -81,7 +81,9 @@ export function SubtotalGroupCard({
               </div>
               <div className="space-y-1">
                 {group.subtotals
-                  .sort((a, b) => a.order - b.order)
+                  .sort(
+                    (subtotalA, subtotalB) => subtotalA.order - subtotalB.order
+                  )
                   .slice(0, 3)
                   .map((subtotal) => (
                     <div

@@ -53,8 +53,10 @@ export function CourseworkImportDialog({
 
   const initialSelections = useMemo(() => {
     const init: Record<string, string> = {}
-    for (const cw of preview?.matches ?? []) {
-      init[cw.archiveId] = cw.uuidMatch ? `reuse:${cw.uuidMatch.id}` : "new"
+    for (const coursework of preview?.matches ?? []) {
+      init[coursework.archiveId] = coursework.uuidMatch
+        ? `reuse:${coursework.uuidMatch.id}`
+        : "new"
     }
     return init
   }, [preview])
@@ -68,9 +70,9 @@ export function CourseworkImportDialog({
 
   const handleConfirm = () => {
     const decisions: Record<string, CourseworkImportDecision> = {}
-    for (const cw of preview.matches) {
-      decisions[cw.archiveId] = valueToDecision(
-        effectiveSelections[cw.archiveId] ?? "new"
+    for (const coursework of preview.matches) {
+      decisions[coursework.archiveId] = valueToDecision(
+        effectiveSelections[coursework.archiveId] ?? "new"
       )
     }
     onConfirm(decisions)
@@ -93,54 +95,66 @@ export function CourseworkImportDialog({
             </p>
           ) : (
             <div className="space-y-4">
-              {preview.matches.map((cw) => (
-                <div key={cw.archiveId} className="rounded border p-3">
+              {preview.matches.map((coursework) => (
+                <div key={coursework.archiveId} className="rounded border p-3">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-sm font-medium">{cw.name}</span>
+                    <span className="text-sm font-medium">
+                      {coursework.name}
+                    </span>
                     <span className="text-muted-foreground text-xs">
-                      （評価項目 {cw.itemCount} ・名簿 {cw.studentCount}名）
+                      （評価項目 {coursework.itemCount} ・名簿{" "}
+                      {coursework.studentCount}名）
                     </span>
                   </div>
                   <RadioGroup
-                    value={effectiveSelections[cw.archiveId] ?? "new"}
+                    value={effectiveSelections[coursework.archiveId] ?? "new"}
                     onValueChange={(v) =>
-                      setSelections((prev) => ({ ...prev, [cw.archiveId]: v }))
+                      setSelections((prev) => ({
+                        ...prev,
+                        [coursework.archiveId]: v,
+                      }))
                     }
                     className="space-y-1"
                   >
-                    {cw.uuidMatch && (
+                    {coursework.uuidMatch && (
                       <div className="flex items-center gap-2">
                         <RadioGroupItem
-                          value={`reuse:${cw.uuidMatch.id}`}
-                          id={`${cw.archiveId}-uuid`}
+                          value={`reuse:${coursework.uuidMatch.id}`}
+                          id={`${coursework.archiveId}-uuid`}
                         />
                         <Label
-                          htmlFor={`${cw.archiveId}-uuid`}
+                          htmlFor={`${coursework.archiveId}-uuid`}
                           className="text-sm font-normal"
                         >
                           既存へ統合（同一データ・uuid一致）:{" "}
-                          {cw.uuidMatch.name}
+                          {coursework.uuidMatch.name}
                         </Label>
                       </div>
                     )}
-                    {cw.nameCandidates.map((nc) => (
-                      <div key={nc.id} className="flex items-center gap-2">
+                    {coursework.nameCandidates.map((nameCandidate) => (
+                      <div
+                        key={nameCandidate.id}
+                        className="flex items-center gap-2"
+                      >
                         <RadioGroupItem
-                          value={`reuse:${nc.id}`}
-                          id={`${cw.archiveId}-${nc.id}`}
+                          value={`reuse:${nameCandidate.id}`}
+                          id={`${coursework.archiveId}-${nameCandidate.id}`}
                         />
                         <Label
-                          htmlFor={`${cw.archiveId}-${nc.id}`}
+                          htmlFor={`${coursework.archiveId}-${nameCandidate.id}`}
                           className="text-sm font-normal"
                         >
-                          既存へ統合（名前一致）: {nc.name}
+                          既存へ統合（名前一致）: {nameCandidate.name}
                         </Label>
                       </div>
                     ))}
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem value="new" id={`${cw.archiveId}-new`} />
+                      <RadioGroupItem
+                        value="new"
+                        id={`${coursework.archiveId}-new`}
+                      />
                       <Label
-                        htmlFor={`${cw.archiveId}-new`}
+                        htmlFor={`${coursework.archiveId}-new`}
                         className="text-sm font-normal"
                       >
                         新規作成（別の資料として取り込む）

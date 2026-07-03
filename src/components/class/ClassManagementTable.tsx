@@ -136,7 +136,7 @@ export default function ClassManagementTable() {
     if (window.confirm("本当にこの学級を削除しますか？")) {
       try {
         await window.electronAPI.deleteClass(classroomId)
-        setClasses(classes.filter((c) => c.id !== classroomId))
+        setClasses(classes.filter((classroom) => classroom.id !== classroomId))
         setSelectedClassIds((prev) => {
           const newSet = new Set(prev)
           newSet.delete(classroomId)
@@ -163,7 +163,9 @@ export default function ClassManagementTable() {
           ...classData,
         })
         setClasses(
-          classes.map((c) => (c.id === updatedClass.id ? updatedClass : c))
+          classes.map((classroom) =>
+            classroom.id === updatedClass.id ? updatedClass : classroom
+          )
         )
       } else {
         const newClass = await window.electronAPI.createClass(classData)

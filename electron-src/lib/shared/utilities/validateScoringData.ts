@@ -7,12 +7,14 @@ export function buildConflictIdentifiers(
   scoringData: ScoringData[],
   scoreConflicts: Array<{ studentId: string; cropRegionId: string }>
 ): string[] {
-  return scoreConflicts.map((c) => {
-    const student = scoringData.find((s) => s.studentId === c.studentId)
-    const question = student?.scores.find(
-      (q) => q.questionId === c.cropRegionId
+  return scoreConflicts.map((conflict) => {
+    const student = scoringData.find(
+      (studentData) => studentData.studentId === conflict.studentId
     )
-    return `${student?.studentName ?? c.studentId} - ${question?.questionLabel ?? c.cropRegionId}`
+    const question = student?.scores.find(
+      (score) => score.questionId === conflict.cropRegionId
+    )
+    return `${student?.studentName ?? conflict.studentId} - ${question?.questionLabel ?? conflict.cropRegionId}`
   })
 }
 

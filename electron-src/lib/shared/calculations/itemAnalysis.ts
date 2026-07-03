@@ -88,30 +88,35 @@ export function computeItemAnalysis(
 ): ItemAnalysisResult | null {
   if (students.length === 0) return null
 
-  const questions = students[0].items.map((it) => ({
-    questionId: it.questionId,
-    label: it.label,
-    maxScore: it.maxScore,
+  const questions = students[0].items.map((item) => ({
+    questionId: item.questionId,
+    label: item.label,
+    maxScore: item.maxScore,
   }))
   const k = questions.length
   if (k === 0) return null
 
   // 各生徒の設問→item を Map 化（O(生徒×k) に抑える）
-  const studentMaps = students.map((s) => {
+  const studentMaps = students.map((student) => {
     const m = new Map<string, ItemAnalysisInputItem>()
-    for (const it of s.items) m.set(it.questionId, it)
+    for (const item of student.items) m.set(item.questionId, item)
     return m
   })
 
   // complete-case: 全設問が採点済み（全 score 非null）の生徒
   const completeMaps = studentMaps.filter((m) =>
-    questions.every((q) => (m.get(q.questionId)?.score ?? null) !== null)
+    questions.every(
+      (question) => (m.get(question.questionId)?.score ?? null) !== null
+    )
   )
   const completeCaseCount = completeMaps.length
 
   // complete-case の合計点（行和）
   const completeTotals = completeMaps.map((m) =>
-    questions.reduce((sum, q) => sum + (m.get(q.questionId)?.score ?? 0), 0)
+    questions.reduce(
+      (sum, question) => sum + (m.get(question.questionId)?.score ?? 0),
+      0
+    )
   )
 
   // D値: complete-case を合計点降順に並べ上位/下位27%群の得点率差
@@ -137,17 +142,17 @@ export function computeItemAnalysis(
     return rates.length > 0 ? average(rates) : null
   }
 
-  const items: ItemAnalysisItem[] = questions.map((q) => {
+  const items: ItemAnalysisItem[] = questions.map((question) => {
     // 正答率・得点率（score 非null の生徒を母数）
     let correctCount = 0
     let scoredCount = 0
     let scoreRateSum = 0
     for (const m of studentMaps) {
-      const it = m.get(q.questionId)
-      if (!it || it.score === null) continue
+      const item = m.get(question.questionId)
+      if (!item || item.score === null) continue
       scoredCount++
-      if (it.isCorrect) correctCount++
-      if (q.maxScore > 0) scoreRateSum += it.score / q.maxScore
+      if (item.isCorrect) correctCount++
+      if (question.maxScore > 0) scoreRateSum += item.score / question.maxScore
     }
     const correctRate = scoredCount > 0 ? (correctCount / scoredCount) * 100 : 0
     const scoreRate = scoredCount > 0 ? (scoreRateSum / scoredCount) * 100 : 0
@@ -158,9 +163,9 @@ export function computeItemAnalysis(
       const itemScores: number[] = []
       const correctedTotals: number[] = []
       completeMaps.forEach((m, i) => {
-        const s = m.get(q.questionId)?.score ?? 0
-        itemScores.push(s)
-        correctedTotals.push(completeTotals[i] - s)
+        const score = m.get(question.questionId)?.score ?? 0
+        itemScores.push(score)
+        correctedTotals.push(completeTotals[i] - score)
       })
       const itemSd = stdDev(itemScores)
       const totalSd = stdDev(correctedTotals)
@@ -179,15 +184,23 @@ export function computeItemAnalysis(
     // D値（得点率差）
     let dValue: number | null = null
     if (groupSize >= 1) {
-      const up = groupScoreRate(upperIdx, q.questionId, q.maxScore)
-      const low = groupScoreRate(lowerIdx, q.questionId, q.maxScore)
+      const up = groupScoreRate(
+        upperIdx,
+        question.questionId,
+        question.maxScore
+      )
+      const low = groupScoreRate(
+        lowerIdx,
+        question.questionId,
+        question.maxScore
+      )
       dValue = up !== null && low !== null ? up - low : null
     }
 
     return {
-      questionId: q.questionId,
-      label: q.label,
-      maxScore: q.maxScore,
+      questionId: question.questionId,
+      label: question.label,
+      maxScore: question.maxScore,
       correctRate,
       scoreRate,
       discriminationIndex,
@@ -220,8 +233,10 @@ function computeCronbachAlpha(
   if (completeMaps.length < 3) return null
 
   let sumItemVariance = 0
-  for (const q of questions) {
-    const itemScores = completeMaps.map((m) => m.get(q.questionId)?.score ?? 0)
+  for (const question of questions) {
+    const itemScores = completeMaps.map(
+      (m) => m.get(question.questionId)?.score ?? 0
+    )
     sumItemVariance += stdDev(itemScores) ** 2
   }
   const totalVariance = stdDev(completeTotals) ** 2

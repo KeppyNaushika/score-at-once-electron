@@ -171,7 +171,7 @@ export function useStudentAnswerManagement(
 
     const currentAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
     const currentAnswer = studentAnswerImages.find(
-      (a) => a.id === currentAnswerId
+      (sheet) => sheet.id === currentAnswerId
     )
     if (!currentAnswer) return
 
@@ -179,17 +179,17 @@ export function useStudentAnswerManagement(
       (a, b) => a.customOrder - b.customOrder
     )
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student?.id
+      (student) => student.id === currentAnswer.student?.id
     )
     if (currentIndex < sortedStudents.length - 1) {
       const nextStudent = sortedStudents[currentIndex + 1]
       // 現在の設問ページに対応するpageImageを優先選択
       const nextStudentSheets = studentAnswerImages.filter(
-        (a) => a.student?.id === nextStudent.id
+        (sheet) => sheet.student?.id === nextStudent.id
       )
       const nextStudentAnswer = currentCropRegion
         ? nextStudentSheets.find(
-            (a) => a.examPageId === currentCropRegion.examPageId
+            (sheet) => sheet.examPageId === currentCropRegion.examPageId
           ) || nextStudentSheets[0]
         : nextStudentSheets[0]
       if (nextStudentAnswer) {
@@ -212,7 +212,7 @@ export function useStudentAnswerManagement(
 
     const currentAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
     const currentAnswer = studentAnswerImages.find(
-      (a) => a.id === currentAnswerId
+      (sheet) => sheet.id === currentAnswerId
     )
     if (!currentAnswer) return
 
@@ -220,16 +220,16 @@ export function useStudentAnswerManagement(
       (a, b) => a.customOrder - b.customOrder
     )
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student?.id
+      (student) => student.id === currentAnswer.student?.id
     )
     if (currentIndex > 0) {
       const prevStudent = sortedStudents[currentIndex - 1]
       const prevStudentSheets = studentAnswerImages.filter(
-        (a) => a.student?.id === prevStudent.id
+        (sheet) => sheet.student?.id === prevStudent.id
       )
       const prevStudentAnswer = currentCropRegion
         ? prevStudentSheets.find(
-            (a) => a.examPageId === currentCropRegion.examPageId
+            (sheet) => sheet.examPageId === currentCropRegion.examPageId
           ) || prevStudentSheets[0]
         : prevStudentSheets[0]
       if (prevStudentAnswer) {

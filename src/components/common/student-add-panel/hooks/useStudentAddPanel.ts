@@ -56,7 +56,9 @@ async function resolveClassEmptyReason(
 ): Promise<ClassEmptyReason> {
   const allStudents = await window.electronAPI.fetchStudents()
   if (allStudents.length === 0) return "noStudents"
-  const anyInClass = allStudents.some((s) => s.memberships.length > 0)
+  const anyInClass = allStudents.some(
+    (student) => student.memberships.length > 0
+  )
   if (!anyInClass) return "noClassMembership"
   // 学級所属者はいる。未追加の学級候補（在籍条件なし）が残るかで切り分ける
   const classesAny = await adapter.fetchAvailableClasses(false)
@@ -77,8 +79,9 @@ async function resolveStudentEmptyReason(
   if (allStudents.length === 0) return "noStudents"
   if (studentActiveOnly) {
     const hasCurrentOrUnassigned = allStudents.some(
-      (s) =>
-        s.memberships.length === 0 || s.memberships.some(isCurrentMembership)
+      (student) =>
+        student.memberships.length === 0 ||
+        student.memberships.some(isCurrentMembership)
     )
     return hasCurrentOrUnassigned ? "allAdded" : "noCurrentEnrollment"
   }
@@ -118,7 +121,9 @@ export function useStudentAddPanel({
     setLoadingClasses(true)
     try {
       const result = await adapter.fetchAvailableClasses(classActiveOnly)
-      setClasses(result.map((c) => ({ ...c, isSelected: false })))
+      setClasses(
+        result.map((classroom) => ({ ...classroom, isSelected: false }))
+      )
       setClassEmptyReason(
         result.length > 0
           ? null
@@ -135,7 +140,7 @@ export function useStudentAddPanel({
     setLoadingStudents(true)
     try {
       const result = await adapter.fetchAvailableStudents(studentActiveOnly)
-      setStudents(result.map((s) => ({ ...s, isSelected: false })))
+      setStudents(result.map((student) => ({ ...student, isSelected: false })))
       setStudentEmptyReason(
         result.length > 0
           ? null
@@ -158,35 +163,43 @@ export function useStudentAddPanel({
 
   const handleClassSelection = (classroomId: string, isSelected: boolean) => {
     setClasses((prev) =>
-      prev.map((c) => (c.id === classroomId ? { ...c, isSelected } : c))
+      prev.map((classroom) =>
+        classroom.id === classroomId ? { ...classroom, isSelected } : classroom
+      )
     )
   }
 
   const handleClassReorder = (orderedIds: string[]) => {
     setClasses((prev) => {
-      const byId = new Map(prev.map((c) => [c.id, c]))
+      const byId = new Map(prev.map((classroom) => [classroom.id, classroom]))
       const reordered = orderedIds
         .map((id) => byId.get(id))
-        .filter((c): c is SelectableClass => c !== undefined)
+        .filter(
+          (classroom): classroom is SelectableClass => classroom !== undefined
+        )
       // 並び替え対象（選択済み）以外はそのまま末尾に残す
-      const rest = prev.filter((c) => !orderedIds.includes(c.id))
+      const rest = prev.filter(
+        (classroom) => !orderedIds.includes(classroom.id)
+      )
       return [...reordered, ...rest]
     })
   }
 
   const handleStudentSelection = (studentId: string, isSelected: boolean) => {
     setStudents((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, isSelected } : s))
+      prev.map((student) =>
+        student.id === studentId ? { ...student, isSelected } : student
+      )
     )
   }
 
   const handleAddClasses = async () => {
-    const selected = classes.filter((c) => c.isSelected)
+    const selected = classes.filter((classroom) => classroom.isSelected)
     if (selected.length === 0) return
     setIsAdding(true)
     try {
       await adapter.addClasses(
-        selected.map((c) => c.id),
+        selected.map((classroom) => classroom.id),
         classActiveOnly
       )
       await Promise.all([loadClasses(), loadStudents()])
@@ -203,11 +216,11 @@ export function useStudentAddPanel({
   }
 
   const handleAddStudents = async () => {
-    const selected = students.filter((s) => s.isSelected)
+    const selected = students.filter((student) => student.isSelected)
     if (selected.length === 0) return
     setIsAdding(true)
     try {
-      await adapter.addStudents(selected.map((s) => s.id))
+      await adapter.addStudents(selected.map((student) => student.id))
       await Promise.all([loadClasses(), loadStudents()])
       onAdded()
     } catch (error) {
@@ -232,13 +245,17 @@ export function useStudentAddPanel({
       student.studentNumber.toLowerCase().includes(term)
     const matchesClass =
       filterClassId === "all" ||
-      student.memberships.some((m) => m.classroom.id === filterClassId)
+      student.memberships.some(
+        (membership) => membership.classroom.id === filterClassId
+      )
     return matchesSearch && matchesClass
   })
 
-  const selectedClasses = classes.filter((c) => c.isSelected)
+  const selectedClasses = classes.filter((classroom) => classroom.isSelected)
   const selectedClassCount = selectedClasses.length
-  const selectedStudentCount = students.filter((s) => s.isSelected).length
+  const selectedStudentCount = students.filter(
+    (student) => student.isSelected
+  ).length
 
   return {
     activeTab,

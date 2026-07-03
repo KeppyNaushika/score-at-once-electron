@@ -109,7 +109,7 @@ export function useTextboxV4Integration({
       // 既存要素を編集する場合、その要素のfontSizeとanchorDirectionを取得
       if (elementId) {
         const existingElement = drawingElements.find(
-          (el) => el.id === elementId
+          (element) => element.id === elementId
         )
         if (existingElement && existingElement.type === "text") {
           setCurrentFontSize(

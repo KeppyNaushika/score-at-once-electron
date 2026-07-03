@@ -21,8 +21,8 @@ interface ItemAnalysisPreviewProps {
 
 /** 識別係数・D値セルを判定帯で着色するクラスを返す */
 function levelCellClass(level: DiscriminationLevel): string {
-  const c = LEVEL_CONFIG[level]
-  return `border px-1 py-0.5 text-right ${c.bg} ${c.text}`
+  const config = LEVEL_CONFIG[level]
+  return `border px-1 py-0.5 text-right ${config.bg} ${config.text}`
 }
 
 export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
@@ -30,7 +30,7 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
 
   const avg = (selector: (i: (typeof items)[number]) => number): number =>
     items.length > 0
-      ? items.reduce((sum, i) => sum + selector(i), 0) / items.length
+      ? items.reduce((sum, item) => sum + selector(item), 0) / items.length
       : 0
   const avgValid = (
     selector: (i: (typeof items)[number]) => number | null
@@ -41,10 +41,10 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
       : null
   }
 
-  const avgCorrectRate = avg((i) => i.correctRate)
-  const avgScoreRate = avg((i) => i.scoreRate)
-  const avgDiscrim = avgValid((i) => i.discriminationIndex)
-  const avgDValue = avgValid((i) => i.dValue)
+  const avgCorrectRate = avg((item) => item.correctRate)
+  const avgScoreRate = avg((item) => item.scoreRate)
+  const avgDiscrim = avgValid((item) => item.discriminationIndex)
+  const avgDValue = avgValid((item) => item.dValue)
 
   return (
     <div className="space-y-2">

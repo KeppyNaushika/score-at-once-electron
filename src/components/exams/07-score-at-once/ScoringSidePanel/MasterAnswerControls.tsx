@@ -103,9 +103,9 @@ export function MasterAnswerControls({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {DISPLAY_MODE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {DISPLAY_MODE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

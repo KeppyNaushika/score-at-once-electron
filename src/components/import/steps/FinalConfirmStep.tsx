@@ -62,7 +62,7 @@ function calculateCategorySummary(
     const fieldDecisions = updateDecisions[key]
     if (fieldDecisions && Object.keys(fieldDecisions).length > 0) {
       const hasUpdate = Object.values(fieldDecisions).some(
-        (s) => s === "use_import" || s === "use_newer"
+        (strategy) => strategy === "use_import" || strategy === "use_newer"
       )
       if (hasUpdate) {
         updated++
@@ -81,7 +81,7 @@ function calculateCategorySummary(
   }
 
   const getDecision = (importId: string) => {
-    return config.decisions.find((d) => d.importId === importId)
+    return config.decisions.find((decision) => decision.importId === importId)
   }
 
   // 学籍番号一致
@@ -128,7 +128,7 @@ function calculateCategorySummary(
   if (preMatch.byName) {
     for (const match of preMatch.byName) {
       const alreadyProcessed = preMatch.byStudentNumber?.some(
-        (m) => m.importId === match.importId
+        (studentNumberMatch) => studentNumberMatch.importId === match.importId
       )
       if (alreadyProcessed) continue
 

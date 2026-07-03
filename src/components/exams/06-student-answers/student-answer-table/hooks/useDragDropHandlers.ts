@@ -58,10 +58,10 @@ export function useDragDropHandlers({
       const activeId = active.id.toString()
 
       const activeFileFromEnabled = getEnabledFiles().find(
-        (f) => f.id === activeId
+        (file) => file.id === activeId
       )
       const activeFileFromDisabled = getDisabledFiles().find(
-        (f) => f.id === activeId
+        (file) => file.id === activeId
       )
 
       if (activeFileFromEnabled) {
@@ -116,14 +116,14 @@ export function useDragDropHandlers({
           // 1. fileIdのみを入れ替え、各位置のstudentIdとpageNumberは固定
           const originalFiles = [...newFiles]
           const reorderedFileIds = arrayMove(
-            newFiles.map((f) => f.id),
+            newFiles.map((file) => file.id),
             oldIndex,
             newIndex
           )
 
           // 2. 各位置に対して、新しいfileIdと元の論理位置を組み合わせ
           const reorderedFiles = originalFiles.map((originalFile, index) => ({
-            ...files.find((f) => f.id === reorderedFileIds[index])!, // 新しいfileIdのファイルオブジェクト
+            ...files.find((file) => file.id === reorderedFileIds[index])!, // 新しいfileIdのファイルオブジェクト
             studentId: originalFile.studentId, // 元の位置のstudentId
             pageNumber: originalFile.pageNumber, // 元の位置のpageNumber
           }))

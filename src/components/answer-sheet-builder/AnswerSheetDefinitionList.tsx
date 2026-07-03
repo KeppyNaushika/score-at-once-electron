@@ -65,17 +65,28 @@ export function AnswerSheetDefinitionList() {
     [sortKey]
   )
 
-  const sorted = [...definitions].sort((a, b) => {
+  const sorted = [...definitions].sort((definitionA, definitionB) => {
     const dir = sortDir === "asc" ? 1 : -1
     switch (sortKey) {
       case "name":
-        return dir * a.name.localeCompare(b.name)
+        return dir * definitionA.name.localeCompare(definitionB.name)
       case "updatedAt":
-        return dir * (a.updatedAt ?? "").localeCompare(b.updatedAt ?? "")
+        return (
+          dir *
+          (definitionA.updatedAt ?? "").localeCompare(
+            definitionB.updatedAt ?? ""
+          )
+        )
       case "questionCount":
-        return dir * ((a.questionCount ?? 0) - (b.questionCount ?? 0))
+        return (
+          dir *
+          ((definitionA.questionCount ?? 0) - (definitionB.questionCount ?? 0))
+        )
       case "totalPoints":
-        return dir * ((a.totalPoints ?? 0) - (b.totalPoints ?? 0))
+        return (
+          dir *
+          ((definitionA.totalPoints ?? 0) - (definitionB.totalPoints ?? 0))
+        )
       default:
         return 0
     }
@@ -88,10 +99,10 @@ export function AnswerSheetDefinitionList() {
 
     const newId = crypto.randomUUID()
     const { createDefaultDefinition } = await import("./constants")
-    const def = createDefaultDefinition()
-    def.id = newId
+    const definition = createDefaultDefinition()
+    definition.id = newId
 
-    const result = await api.saveDefinition(def, user.id)
+    const result = await api.saveDefinition(definition, user.id)
     if (result.success) {
       router.push(`/answer-sheet-builder/${newId}`)
     }
@@ -141,8 +152,8 @@ export function AnswerSheetDefinitionList() {
     if (importResult.success) {
       toast.success("定義を読み込みました")
       if (importResult.warnings?.length) {
-        for (const w of importResult.warnings) {
-          toast.warning(w)
+        for (const warning of importResult.warnings) {
+          toast.warning(warning)
         }
       }
       await loadDefinitions()
@@ -158,8 +169,8 @@ export function AnswerSheetDefinitionList() {
 
   const formatDate = (iso?: string) => {
     if (!iso) return "-"
-    const d = new Date(iso)
-    return d.toLocaleDateString("ja-JP", {
+    const date = new Date(iso)
+    return date.toLocaleDateString("ja-JP", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -244,25 +255,29 @@ export function AnswerSheetDefinitionList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sorted.map((def) => (
+                {sorted.map((definition) => (
                   <TableRow
-                    key={def.id}
+                    key={definition.id}
                     className="group cursor-pointer"
-                    onClick={() => handleEdit(def.id)}
+                    onClick={() => handleEdit(definition.id)}
                   >
-                    <TableCell className="font-medium">{def.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {def.paperSize ?? "-"}{" "}
-                      {def.orientation === "landscape" ? "横" : "縦"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {def.questionCount ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {def.totalPoints != null ? `${def.totalPoints}点` : "-"}
+                    <TableCell className="font-medium">
+                      {definition.name}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(def.updatedAt)}
+                      {definition.paperSize ?? "-"}{" "}
+                      {definition.orientation === "landscape" ? "横" : "縦"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {definition.questionCount ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {definition.totalPoints != null
+                        ? `${definition.totalPoints}点`
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {formatDate(definition.updatedAt)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -280,18 +295,20 @@ export function AnswerSheetDefinitionList() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenuItem onClick={() => handleEdit(def.id)}>
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(definition.id)}
+                          >
                             <Pencil className="mr-2 h-4 w-4" />
                             編集
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => duplicateDefinition(def.id)}
+                            onClick={() => duplicateDefinition(definition.id)}
                           >
                             <Copy className="mr-2 h-4 w-4" />
                             複製
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleExport(def.id)}
+                            onClick={() => handleExport(definition.id)}
                           >
                             <FolderOutput className="mr-2 h-4 w-4" />
                             .asb 書き出し
@@ -299,7 +316,9 @@ export function AnswerSheetDefinitionList() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => handleDelete(def.id, def.name)}
+                            onClick={() =>
+                              handleDelete(definition.id, definition.name)
+                            }
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             削除

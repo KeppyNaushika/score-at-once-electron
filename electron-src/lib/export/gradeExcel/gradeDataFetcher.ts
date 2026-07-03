@@ -25,7 +25,7 @@ export async function fetchGradeExportData(
       }
     }
 
-    const gp = await prisma.grade.findUnique({
+    const grade = await prisma.grade.findUnique({
       where: { id: gradeId },
       select: {
         name: true,
@@ -40,8 +40,10 @@ export async function fetchGradeExportData(
       success: true,
       data: {
         result: calcResult.result,
-        examName: gp?.name ?? "",
-        classNames: gp?.gradeClasses.map((c) => c.classroom.name) ?? [],
+        examName: grade?.name ?? "",
+        classNames:
+          grade?.gradeClasses.map((gradeClass) => gradeClass.classroom.name) ??
+          [],
       },
     }
   } catch (error) {

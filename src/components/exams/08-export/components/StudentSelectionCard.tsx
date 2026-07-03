@@ -128,12 +128,12 @@ export function StudentSelectionCard({
   }
 
   const selectAllFiltered = () => {
-    const allFilteredIds = students.map((s) => s.id)
+    const allFilteredIds = students.map((student) => student.id)
     setSelectedStudents(new Set([...selectedStudents, ...allFilteredIds]))
   }
 
   const deselectAllFiltered = () => {
-    const filteredIds = new Set(students.map((s) => s.id))
+    const filteredIds = new Set(students.map((student) => student.id))
     const newSelection = new Set(
       [...selectedStudents].filter((id) => !filteredIds.has(id))
     )
@@ -230,16 +230,16 @@ export function StudentSelectionCard({
               <PopoverContent className="w-64 p-2">
                 <div className="space-y-1">
                   <h4 className="mb-2 text-sm font-medium">学級を選択</h4>
-                  {availableClasses.map((cls) => (
+                  {availableClasses.map((classroom) => (
                     <Button
-                      key={cls.id}
+                      key={classroom.id}
                       variant="ghost"
                       size="sm"
                       className="h-8 w-full justify-between px-2"
-                      onClick={() => toggleClassFilter(cls.id)}
+                      onClick={() => toggleClassFilter(classroom.id)}
                     >
-                      <span className="text-sm">{cls.name}</span>
-                      {selectedClasses.includes(cls.id) && (
+                      <span className="text-sm">{classroom.name}</span>
+                      {selectedClasses.includes(classroom.id) && (
                         <Check className="h-4 w-4" />
                       )}
                     </Button>
@@ -374,9 +374,9 @@ export function StudentSelectionCard({
                   <SelectValue placeholder="選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {previewStudentList.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
+                  {previewStudentList.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

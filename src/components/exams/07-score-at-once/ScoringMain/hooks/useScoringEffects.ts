@@ -123,20 +123,20 @@ export function useScoringEffects(params: UseScoringEffectsParams): void {
       if (currentSelectedIds.size > 0) {
         const currentAnswerId = Array.from(currentSelectedIds)[0]
         const currentAnswer = currentPageImages.find(
-          (a) => a.id === currentAnswerId
+          (pageImage) => pageImage.id === currentAnswerId
         )
         if (currentAnswer?.student?.id) {
           // 新しい設問のcropRegionを取得
           const newCropRegion = currentCropRegions.find(
-            (r) => r.id === currentCropRegionId
+            (cropRegion) => cropRegion.id === currentCropRegionId
           )
           if (newCropRegion) {
             // 同じ生徒の新しいページに対応するpageImageを探す
             const studentId = currentAnswer.student?.id
             const newPageImage = currentPageImages.find(
-              (a) =>
-                a.student?.id === studentId &&
-                a.examPageId === newCropRegion.examPageId
+              (pageImage) =>
+                pageImage.student?.id === studentId &&
+                pageImage.examPageId === newCropRegion.examPageId
             )
             if (newPageImage) {
               setSelectedPageImageIds(new Set([newPageImage.id]))

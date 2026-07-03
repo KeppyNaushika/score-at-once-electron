@@ -17,8 +17,8 @@ export function useImportedFiles() {
   const buildImportedFile = useCallback(
     (name: string, path: string, images: ConvertedImage[]): ImportedFile => {
       const pageCount = images.length
-      const thumbnails = images.map((img) =>
-        arrayBufferToDataUrl(img.buffer, img.type)
+      const thumbnails = images.map((image) =>
+        arrayBufferToDataUrl(image.buffer, image.type)
       )
 
       const selectedPages = new Set<number>()

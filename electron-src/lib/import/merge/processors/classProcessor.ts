@@ -44,7 +44,7 @@ export async function processClassIdIntegration(
     defaultExistingId: string | undefined
   ) => {
     const importClass = data.classesData.classrooms.find(
-      (c) => c.id === importId
+      (classroom) => classroom.id === importId
     )
     if (!importClass) return
 

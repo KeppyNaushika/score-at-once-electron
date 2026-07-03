@@ -103,10 +103,10 @@ export default function AnswerGridView({
     : []
 
   const studentAnswers = allScoringData
-    .filter((data) => filteredScoringDataIds.includes(data.id))
-    .map((data) => ({
-      ...data,
-      isSelected: selectedScoringDataIds.has(data.id),
+    .filter((scoringData) => filteredScoringDataIds.includes(scoringData.id))
+    .map((scoringData) => ({
+      ...scoringData,
+      isSelected: selectedScoringDataIds.has(scoringData.id),
     }))
 
   const answers = [...masterAnswers, ...studentAnswers]

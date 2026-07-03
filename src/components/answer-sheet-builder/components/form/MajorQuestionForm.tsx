@@ -33,8 +33,8 @@ function calcSubMaxGoUps(subs: SubQuestion[]): number[] {
   let row = 0
   let curX = 0
   for (let i = 0; i < subs.length; i++) {
-    const s = subs[i]
-    const w = parseFractionSimple(s.layoutWidth ?? "1")
+    const subQuestion = subs[i]
+    const w = parseFractionSimple(subQuestion.layoutWidth ?? "1")
 
     // auto-break: 前の要素の配置結果で現在行に収まらない場合
     if (curX > 1e-9 && curX + w > 1 + 1e-9) {
@@ -46,14 +46,14 @@ function calcSubMaxGoUps(subs: SubQuestion[]): number[] {
     result.push(row)
 
     // goUp 適用
-    if (s.goUp != null && s.goUp > 0) {
-      row = Math.max(0, row - s.goUp)
+    if (subQuestion.goUp != null && subQuestion.goUp > 0) {
+      row = Math.max(0, row - subQuestion.goUp)
       curX = 0.5
     }
 
     curX += w
 
-    if (s.nextPlacement === "break") {
+    if (subQuestion.nextPlacement === "break") {
       row++
       curX = 0
     }
@@ -191,10 +191,10 @@ export function MajorQuestionForm({
           {/* 小問リスト */}
           {major.subQuestions.length > 0 && (
             <div className="space-y-2 pl-2">
-              {major.subQuestions.map((sub, si) => (
+              {major.subQuestions.map((subQuestion, si) => (
                 <SubQuestionForm
-                  key={sub.id}
-                  sub={sub}
+                  key={subQuestion.id}
+                  sub={subQuestion}
                   majorIndex={majorIndex}
                   subIndex={si}
                   totalSubCount={major.subQuestions.length}

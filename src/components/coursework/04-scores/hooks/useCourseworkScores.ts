@@ -83,7 +83,9 @@ export function useCourseworkScores(courseworkId: string) {
 
       const registeredClassIds = new Set(
         classesResult.success && classesResult.classes
-          ? classesResult.classes.map((c) => c.classroomId)
+          ? classesResult.classes.map(
+              (courseworkClass) => courseworkClass.classroomId
+            )
           : []
       )
 
@@ -107,7 +109,7 @@ export function useCourseworkScores(courseworkId: string) {
           const cells: Record<string, CourseworkCell> = {}
           for (const item of sortedItems) {
             const score = allScores[item.id]?.find(
-              (s) => s.studentId === courseworkStudent.student.id
+              (score) => score.studentId === courseworkStudent.student.id
             )
             cells[item.id] = score
               ? {
@@ -119,8 +121,8 @@ export function useCourseworkScores(courseworkId: string) {
                 }
               : { ...EMPTY_CELL }
           }
-          const membership = courseworkStudent.student.memberships.find((m) =>
-            registeredClassIds.has(m.classroomId)
+          const membership = courseworkStudent.student.memberships.find(
+            (membership) => registeredClassIds.has(membership.classroomId)
           )
           return {
             studentId: courseworkStudent.student.id,

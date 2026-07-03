@@ -114,7 +114,9 @@ export const initializeDatabase = async (): Promise<boolean> => {
 
         // SQLを複数のステートメントに分割して実行
         const allSQL = MIGRATION_SQL + INDEX_SQL
-        const statements = allSQL.split(";").filter((stmt) => stmt.trim())
+        const statements = allSQL
+          .split(";")
+          .filter((statement) => statement.trim())
 
         for (const statement of statements) {
           if (statement.trim()) {

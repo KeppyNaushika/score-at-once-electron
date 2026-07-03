@@ -47,27 +47,36 @@ export function useStudentAnswersData(examId: string) {
         await window.electronAPI.getStudentsForExam(examId)
       if (examStudentsResult.success && examStudentsResult.students) {
         const sortedStudents = examStudentsResult.students
-          .sort((a: ExamStudentData, b: ExamStudentData) => {
+          .sort((studentA: ExamStudentData, studentB: ExamStudentData) => {
             if (
-              a.customOrder !== null &&
-              a.customOrder !== undefined &&
-              b.customOrder !== null &&
-              b.customOrder !== undefined
+              studentA.customOrder !== null &&
+              studentA.customOrder !== undefined &&
+              studentB.customOrder !== null &&
+              studentB.customOrder !== undefined
             ) {
-              return a.customOrder - b.customOrder
+              return studentA.customOrder - studentB.customOrder
             }
-            if (a.customOrder !== null && a.customOrder !== undefined) return -1
-            if (b.customOrder !== null && b.customOrder !== undefined) return 1
+            if (
+              studentA.customOrder !== null &&
+              studentA.customOrder !== undefined
+            )
+              return -1
+            if (
+              studentB.customOrder !== null &&
+              studentB.customOrder !== undefined
+            )
+              return 1
 
-            const aNumber = a.memberships?.[0]?.attendanceNumber
-            const bNumber = b.memberships?.[0]?.attendanceNumber
-            if (aNumber && bNumber) return aNumber - bNumber
-            if (aNumber) return -1
-            if (bNumber) return 1
+            const studentANumber = studentA.memberships?.[0]?.attendanceNumber
+            const studentBNumber = studentB.memberships?.[0]?.attendanceNumber
+            if (studentANumber && studentBNumber)
+              return studentANumber - studentBNumber
+            if (studentANumber) return -1
+            if (studentBNumber) return 1
 
-            const aName = `${a.lastName}${a.firstName}`
-            const bName = `${b.lastName}${b.firstName}`
-            return aName.localeCompare(bName)
+            const studentAName = `${studentA.lastName}${studentA.firstName}`
+            const studentBName = `${studentB.lastName}${studentB.firstName}`
+            return studentAName.localeCompare(studentBName)
           })
           .map((student: ExamStudentData) => ({
             id: student.id,
@@ -179,9 +188,11 @@ export function usePendingChanges(
         ({ fileId, fromState, toState }) => {
           // 生徒名を解決
           const fromStudent = students?.find(
-            (s) => s.id === fromState.studentId
+            (student) => student.id === fromState.studentId
           )
-          const toStudent = students?.find((s) => s.id === toState.studentId)
+          const toStudent = students?.find(
+            (student) => student.id === toState.studentId
+          )
 
           // 移動先にある既存ファイルを特定
           // studentAnswersから移動先位置(toState.studentId, toState.pageNumber)にあるファイルを検索
@@ -257,9 +268,9 @@ export function usePendingChanges(
 
         console.log("🔄 Batch moves to apply:", {
           totalMoves: allMoves.length,
-          moves: allMoves.map((m) => ({
-            fileId: m.fileId.substring(0, 8) + "...",
-            to: `${m.finalStudentId?.substring(0, 8) || "null"}...page${m.finalPageNumber}`,
+          moves: allMoves.map((move) => ({
+            fileId: move.fileId.substring(0, 8) + "...",
+            to: `${move.finalStudentId?.substring(0, 8) || "null"}...page${move.finalPageNumber}`,
           })),
         })
 

@@ -108,7 +108,9 @@ export default function StudentTable() {
 
       if (filterClassId !== "all") {
         const belongsToClass = student.memberships.some(
-          (m) => m.classroom.id === filterClassId && isCurrentMembership(m)
+          (membership) =>
+            membership.classroom.id === filterClassId &&
+            isCurrentMembership(membership)
         )
         if (!belongsToClass) return false
       }
@@ -117,18 +119,24 @@ export default function StudentTable() {
         return (
           matchesSearch &&
           (student.memberships.length === 0 ||
-            student.memberships.some((m) => isCurrentMembership(m)))
+            student.memberships.some((membership) =>
+              isCurrentMembership(membership)
+            ))
         )
       } else if (filterMembershipStatus === "current") {
         return (
           matchesSearch &&
-          student.memberships.some((m) => isCurrentMembership(m))
+          student.memberships.some((membership) =>
+            isCurrentMembership(membership)
+          )
         )
       } else if (filterMembershipStatus === "past") {
         return (
           matchesSearch &&
           student.memberships.length > 0 &&
-          student.memberships.every((m) => !isCurrentMembership(m))
+          student.memberships.every(
+            (membership) => !isCurrentMembership(membership)
+          )
         )
       } else if (filterMembershipStatus === "unassigned") {
         return matchesSearch && student.memberships.length === 0
@@ -202,7 +210,7 @@ export default function StudentTable() {
     if (window.confirm("本当にこの生徒を削除しますか？")) {
       try {
         await window.electronAPI.deleteStudent(studentId)
-        setStudents(students.filter((s) => s.id !== studentId))
+        setStudents(students.filter((student) => student.id !== studentId))
         setSelectedStudentIds((prev) => {
           const newSet = new Set(prev)
           newSet.delete(studentId)
@@ -238,7 +246,9 @@ export default function StudentTable() {
         studentData
       )
       setStudents(
-        students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
+        students.map((student) =>
+          student.id === updatedStudent.id ? updatedStudent : student
+        )
       )
       setIsStudentModalOpen(false)
     } catch (error) {
@@ -282,9 +292,11 @@ export default function StudentTable() {
 
   const onStudentsImported = (importedStudents: StudentWithMemberships[]) => {
     setStudents((prevStudents) => {
-      const existingStudentIds = new Set(prevStudents.map((s) => s.id))
+      const existingStudentIds = new Set(
+        prevStudents.map((student) => student.id)
+      )
       const newStudents = importedStudents.filter(
-        (s) => !existingStudentIds.has(s.id)
+        (student) => !existingStudentIds.has(student.id)
       )
       return [...prevStudents, ...newStudents]
     })
@@ -293,9 +305,9 @@ export default function StudentTable() {
   // Get current classes for display
   const getCurrentClasses = (student: StudentWithMemberships) => {
     return student.memberships
-      .filter((m) => isCurrentMembership(m))
-      .map((m) => ({
-        name: m.classroom.name,
+      .filter((membership) => isCurrentMembership(membership))
+      .map((membership) => ({
+        name: membership.classroom.name,
       }))
   }
 
@@ -370,11 +382,11 @@ export default function StudentTable() {
             <SelectContent>
               <SelectItem value="all">すべての学級</SelectItem>
               {classes
-                .filter((c) => c.isVisible !== false)
+                .filter((classroom) => classroom.isVisible !== false)
                 .sort((a, b) => a.name.localeCompare(b.name))
-                .map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+                .map((classroom) => (
+                  <SelectItem key={classroom.id} value={classroom.id}>
+                    {classroom.name}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -482,13 +494,13 @@ export default function StudentTable() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
-                        {currentClasses.map((cls, idx) => (
+                        {currentClasses.map((classroom, idx) => (
                           <Badge
                             key={idx}
                             variant="secondary"
                             className="rounded-full px-2.5 py-0.5 text-xs font-normal"
                           >
-                            {cls.name}
+                            {classroom.name}
                           </Badge>
                         ))}
                         {currentClasses.length === 0 && (

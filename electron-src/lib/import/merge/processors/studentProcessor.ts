@@ -45,7 +45,7 @@ export async function processStudentIdIntegration(
     defaultExistingId: string | undefined
   ) => {
     const importStudent = data.studentsData.students.find(
-      (s) => s.id === importId
+      (student) => student.id === importId
     )
     if (!importStudent) return
 

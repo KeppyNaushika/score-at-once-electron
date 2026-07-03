@@ -137,7 +137,7 @@ export function DataSourceRow({
           <Badge variant="outline" className="text-xs font-normal">
             文字評価:{" "}
             {dataSource.courseworkItem.letterScales
-              .map((ls) => `${ls.label}=${ls.score}`)
+              .map((letterScale) => `${letterScale.label}=${letterScale.score}`)
               .join(", ") || "未設定"}
           </Badge>
         )}

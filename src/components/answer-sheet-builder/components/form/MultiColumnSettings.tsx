@@ -29,10 +29,10 @@ export function MultiColumnSettings({
   onUpdate,
   vertical = false,
 }: MultiColumnSettingsProps) {
-  const mc = settings.multiColumn
+  const multiColumn = settings.multiColumn
 
   const update = (partial: Partial<MultiColumnConfig>) => {
-    onUpdate({ multiColumn: { ...mc, ...partial } })
+    onUpdate({ multiColumn: { ...multiColumn, ...partial } })
   }
 
   return (
@@ -40,12 +40,12 @@ export function MultiColumnSettings({
       <div className="flex items-center justify-between">
         <Label className="text-xs font-semibold">段組み</Label>
         <Switch
-          checked={mc.enabled}
+          checked={multiColumn.enabled}
           onCheckedChange={(enabled) => update({ enabled })}
         />
       </div>
 
-      {mc.enabled && (
+      {multiColumn.enabled && (
         <div className="space-y-2 pl-1">
           {vertical && (
             <p className="text-muted-foreground text-[10px] leading-snug">
@@ -55,7 +55,7 @@ export function MultiColumnSettings({
           <div>
             <Label className="text-xs">段数</Label>
             <Select
-              value={String(mc.columnCount)}
+              value={String(multiColumn.columnCount)}
               onValueChange={(v) => update({ columnCount: Number(v) as 2 | 3 })}
             >
               <SelectTrigger className="h-8 text-xs">
@@ -70,7 +70,7 @@ export function MultiColumnSettings({
 
           <SliderWithInput
             label="段間余白"
-            value={mc.columnGapMm}
+            value={multiColumn.columnGapMm}
             min={0}
             max={30}
             step={1}
@@ -80,7 +80,7 @@ export function MultiColumnSettings({
           <div>
             <Label className="text-xs">仕切り線</Label>
             <Select
-              value={mc.dividerLine ?? "none"}
+              value={multiColumn.dividerLine ?? "none"}
               onValueChange={(v) =>
                 update({
                   dividerLine: v === "none" ? null : (v as LineStyle),

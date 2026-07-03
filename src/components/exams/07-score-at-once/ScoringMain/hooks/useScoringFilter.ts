@@ -85,7 +85,7 @@ export function useScoringFilter({
     useState<Map<string, Set<string>>>(new Map())
 
   const currentCropRegion = cropRegions.find(
-    (r) => r.id === currentCropRegionId
+    (cropRegion) => cropRegion.id === currentCropRegionId
   )
 
   // 現在の設問の採点履歴を取得（外部インターフェース互換）

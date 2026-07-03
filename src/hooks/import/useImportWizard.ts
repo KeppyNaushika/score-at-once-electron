@@ -290,9 +290,9 @@ export function useImportWizard() {
           existingId: item.existingId,
           idChoice,
         }))
-        const targetIds = new Set(items.map((i) => i.importId))
+        const targetIds = new Set(items.map((item) => item.importId))
         const otherDecisions = currentConfig.decisions.filter(
-          (d) => !targetIds.has(d.importId)
+          (decision) => !targetIds.has(decision.importId)
         )
         return {
           ...prev,

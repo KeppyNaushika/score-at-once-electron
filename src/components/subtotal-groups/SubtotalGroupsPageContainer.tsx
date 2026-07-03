@@ -111,7 +111,9 @@ export function SubtotalGroupsPageContainer() {
 
   // 削除
   const handleDelete = async (groupId: string) => {
-    const group = subtotalGroups.find((g) => g.id === groupId)
+    const group = subtotalGroups.find(
+      (subtotalGroup) => subtotalGroup.id === groupId
+    )
     const groupName = group?.name || "不明なグループ"
 
     if (

@@ -263,7 +263,9 @@ export function ScoringSidePanel({
   // アノテーションの生徒・設問に移動
   const handleNavigateTo = useCallback(
     (studentId: string, cropRegionId: string) => {
-      const targetCropRegion = cropRegions.find((cr) => cr.id === cropRegionId)
+      const targetCropRegion = cropRegions.find(
+        (cropRegion) => cropRegion.id === cropRegionId
+      )
       if (targetCropRegion) {
         onCropRegionChange(targetCropRegion)
       }
@@ -278,7 +280,9 @@ export function ScoringSidePanel({
   const currentStudentId = (() => {
     if (!selectedStudentAnswerImageIds || !studentAnswerImages) return undefined
     const selectedId = Array.from(selectedStudentAnswerImageIds)[0]
-    const selectedAnswer = studentAnswerImages.find((a) => a.id === selectedId)
+    const selectedAnswer = studentAnswerImages.find(
+      (studentAnswerImage) => studentAnswerImage.id === selectedId
+    )
     return selectedAnswer?.student?.id
   })()
 

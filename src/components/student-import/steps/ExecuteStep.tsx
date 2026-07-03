@@ -131,8 +131,8 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
             注意事項
           </h4>
           <ul className="list-inside list-disc space-y-1 text-sm text-amber-600 dark:text-amber-400">
-            {warnings.map((w, i) => (
-              <li key={i}>{w}</li>
+            {warnings.map((warning, i) => (
+              <li key={i}>{warning}</li>
             ))}
           </ul>
         </div>

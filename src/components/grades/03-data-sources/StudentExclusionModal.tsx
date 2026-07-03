@@ -96,20 +96,20 @@ export function StudentExclusionModal({
                   <TableHead className="sticky left-0 z-10 bg-white">
                     生徒
                   </TableHead>
-                  {gradeItems.map((gi) => (
-                    <TableHead key={gi.id} className="text-center">
-                      <div className="text-xs">{gi.name}</div>
+                  {gradeItems.map((gradeItem) => (
+                    <TableHead key={gradeItem.id} className="text-center">
+                      <div className="text-xs">{gradeItem.name}</div>
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.map((ps) => {
-                  const membership = ps.student.memberships.find((m) =>
-                    classIdSet.has(m.classroomId)
+                {students.map((gradeStudent) => {
+                  const membership = gradeStudent.student.memberships.find(
+                    (candidate) => classIdSet.has(candidate.classroomId)
                   )
                   return (
-                    <TableRow key={ps.studentId}>
+                    <TableRow key={gradeStudent.studentId}>
                       <TableCell className="sticky left-0 z-10 bg-white">
                         <div className="flex items-center gap-2 text-sm whitespace-nowrap">
                           {membership && (
@@ -121,18 +121,25 @@ export function StudentExclusionModal({
                             {membership?.attendanceNumber ?? "-"}
                           </span>
                           <span>
-                            {ps.student.lastName} {ps.student.firstName}
+                            {gradeStudent.student.lastName}{" "}
+                            {gradeStudent.student.firstName}
                           </span>
                         </div>
                       </TableCell>
-                      {gradeItems.map((gi) => {
-                        const excluded = isExcluded(ps.studentId, gi.id)
+                      {gradeItems.map((gradeItem) => {
+                        const excluded = isExcluded(
+                          gradeStudent.studentId,
+                          gradeItem.id
+                        )
                         return (
-                          <TableCell key={gi.id} className="text-center">
+                          <TableCell key={gradeItem.id} className="text-center">
                             <Checkbox
                               checked={!excluded}
                               onCheckedChange={() =>
-                                toggleExclusion(ps.studentId, gi.id)
+                                toggleExclusion(
+                                  gradeStudent.studentId,
+                                  gradeItem.id
+                                )
                               }
                             />
                           </TableCell>

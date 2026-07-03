@@ -25,7 +25,7 @@ export async function resolveNameConflict(
   userId: string
 ): Promise<string> {
   const existing = await listAsbDefinitions(userId)
-  const existingNames = new Set(existing.map((d) => d.name))
+  const existingNames = new Set(existing.map((definition) => definition.name))
 
   if (!existingNames.has(name)) return name
 
@@ -52,8 +52,8 @@ export function copyImagesAndUpdatePaths(
 
   // tempイメージの basename → fullPath マップ
   const tempImageMap = new Map<string, string>()
-  for (const p of tempImagePaths) {
-    tempImageMap.set(path.basename(p), p)
+  for (const tempImagePath of tempImagePaths) {
+    tempImageMap.set(path.basename(tempImagePath), tempImagePath)
   }
 
   // ツリーを走査して imagePath を更新
@@ -61,22 +61,22 @@ export function copyImagesAndUpdatePaths(
     imageElements?: { imagePath: string; originalName: string }[]
   ) => {
     if (!imageElements) return
-    for (const ie of imageElements) {
-      const basename = path.basename(ie.imagePath)
+    for (const imageElement of imageElements) {
+      const basename = path.basename(imageElement.imagePath)
       const sourcePath = tempImageMap.get(basename)
       if (sourcePath && fs.existsSync(sourcePath)) {
         const destPath = path.join(imagesDir, basename)
         fs.copyFileSync(sourcePath, destPath)
-        ie.imagePath = getRelativePathFromData(destPath)
+        imageElement.imagePath = getRelativePathFromData(destPath)
       }
     }
   }
 
-  for (const mq of definition.majorQuestions) {
-    for (const sq of mq.subQuestions) {
-      updateImageElements(sq.imageElements)
-      for (const bq of sq.branchQuestions) {
-        updateImageElements(bq.imageElements)
+  for (const majorQuestion of definition.majorQuestions) {
+    for (const subQuestion of majorQuestion.subQuestions) {
+      updateImageElements(subQuestion.imageElements)
+      for (const branchQuestion of subQuestion.branchQuestions) {
+        updateImageElements(branchQuestion.imageElements)
       }
     }
   }

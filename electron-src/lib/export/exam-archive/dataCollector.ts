@@ -103,16 +103,16 @@ export async function collectExamData(
     // 2. 関連する生徒IDを収集（templateモードではスキップ）
     const studentIds = new Set<string>()
     if (!isTemplate) {
-      for (const ps of exam.examStudents) {
-        studentIds.add(ps.studentId)
+      for (const examStudent of exam.examStudents) {
+        studentIds.add(examStudent.studentId)
       }
       for (const page of exam.examPages) {
-        for (const img of page.studentAnswerImages) {
-          studentIds.add(img.studentId)
+        for (const studentAnswerImage of page.studentAnswerImages) {
+          studentIds.add(studentAnswerImage.studentId)
         }
         for (const region of page.cropRegions) {
-          for (const score of region.questionScores) {
-            studentIds.add(score.studentId)
+          for (const questionScore of region.questionScores) {
+            studentIds.add(questionScore.studentId)
           }
         }
       }
@@ -132,7 +132,9 @@ export async function collectExamData(
           where: { studentId: { in: Array.from(studentIds) } },
         })
 
-    const classIds = new Set(memberships.map((m) => m.classroomId))
+    const classIds = new Set(
+      memberships.map((membership) => membership.classroomId)
+    )
     const classes = isTemplate
       ? []
       : await prisma.classroom.findMany({
@@ -163,7 +165,9 @@ export async function collectExamData(
     const includeSubtotals = exportMode !== "template"
     const subtotalGroupIds = new Set(
       includeSubtotals
-        ? exam.examSubtotalGroups.map((psg) => psg.subtotalGroupId)
+        ? exam.examSubtotalGroups.map(
+            (examSubtotalGroup) => examSubtotalGroup.subtotalGroupId
+          )
         : []
     )
     const subtotalGroups = includeSubtotals
@@ -185,7 +189,7 @@ export async function collectExamData(
 
     // 7.7. CropRegionMarkingOverrideを取得
     const cropRegionIds = exam.examPages.flatMap((page) =>
-      page.cropRegions.map((r) => r.id)
+      page.cropRegions.map((cropRegion) => cropRegion.id)
     )
     const cropRegionMarkingOverrides =
       await prisma.cropRegionMarkingOverride.findMany({
@@ -199,7 +203,11 @@ export async function collectExamData(
           where: { subtotalGroupId: { in: subtotalGroupIdArray } },
         })
       : []
-    const tagIds = [...new Set(tagSubtotalGroups.map((tsg) => tsg.tagId))]
+    const tagIds = [
+      ...new Set(
+        tagSubtotalGroups.map((tagSubtotalGroup) => tagSubtotalGroup.tagId)
+      ),
+    ]
     const tags = includeSubtotals
       ? await prisma.tag.findMany({
           where: { id: { in: tagIds } },
@@ -221,8 +229,8 @@ export async function collectExamData(
     if (includeSubtotals) {
       for (const page of exam.examPages) {
         for (const region of page.cropRegions) {
-          for (const cs of region.cropSubtotals) {
-            cropSubtotals.push(cs)
+          for (const cropSubtotal of region.cropSubtotals) {
+            cropSubtotals.push(cropSubtotal)
           }
         }
       }
@@ -233,14 +241,20 @@ export async function collectExamData(
     const answerSheetPaths: string[] = []
 
     for (const page of exam.examPages) {
-      for (const img of page.masterImages) {
+      for (const masterImage of page.masterImages) {
         // projects/ → exams/ パス正規化（v0.6.x リネーム対応）
-        const normalized = img.imagePath.replace(/^projects\//, "exams/")
+        const normalized = masterImage.imagePath.replace(
+          /^projects\//,
+          "exams/"
+        )
         masterImagePaths.push(normalized)
       }
       if (!isTemplate) {
-        for (const img of page.studentAnswerImages) {
-          const normalized = img.imagePath.replace(/^projects\//, "exams/")
+        for (const studentAnswerImage of page.studentAnswerImages) {
+          const normalized = studentAnswerImage.imagePath.replace(
+            /^projects\//,
+            "exams/"
+          )
           answerSheetPaths.push(normalized)
         }
       }
@@ -256,55 +270,55 @@ export async function collectExamData(
     if (!isTemplate) {
       for (const page of exam.examPages) {
         for (const region of page.cropRegions) {
-          for (const score of region.questionScores) {
+          for (const questionScore of region.questionScores) {
             // ログインユーザーの採点データのみを収集
-            if (score.userId !== userId) {
+            if (questionScore.userId !== userId) {
               continue
             }
 
             questionScores.push({
-              id: score.id,
-              cropRegionId: score.cropRegionId,
-              studentId: score.studentId,
-              partialScore: score.partialScore?.toString() ?? null,
-              status: score.status,
-              userId: score.userId,
-              createdAt: score.createdAt.toISOString(),
-              updatedAt: score.updatedAt.toISOString(),
+              id: questionScore.id,
+              cropRegionId: questionScore.cropRegionId,
+              studentId: questionScore.studentId,
+              partialScore: questionScore.partialScore?.toString() ?? null,
+              status: questionScore.status,
+              userId: questionScore.userId,
+              createdAt: questionScore.createdAt.toISOString(),
+              updatedAt: questionScore.updatedAt.toISOString(),
             })
 
-            for (const ann of score.drawingAnnotations) {
+            for (const drawingAnnotation of questionScore.drawingAnnotations) {
               // ログインユーザーのアノテーションのみを収集
-              if (ann.userId !== userId) {
+              if (drawingAnnotation.userId !== userId) {
                 continue
               }
 
               drawingAnnotations.push({
-                id: ann.id,
-                questionScoreId: ann.questionScoreId,
-                type: ann.type,
-                x: ann.x,
-                y: ann.y,
-                color: ann.color,
-                strokeWidth: ann.strokeWidth,
-                width: ann.width,
-                height: ann.height,
-                endX: ann.endX,
-                endY: ann.endY,
-                lineStyle: ann.lineStyle,
-                text: ann.text,
-                fontSize: ann.fontSize,
-                textBoxWidth: ann.textBoxWidth,
-                textBoxHeight: ann.textBoxHeight,
-                horizontalAlign: ann.horizontalAlign,
-                verticalAlign: ann.verticalAlign,
-                anchorDirection: ann.anchorDirection,
-                displayX: ann.displayX,
-                displayY: ann.displayY,
-                isFavorite: ann.isFavorite,
-                userId: ann.userId,
-                createdAt: ann.createdAt.toISOString(),
-                updatedAt: ann.updatedAt.toISOString(),
+                id: drawingAnnotation.id,
+                questionScoreId: drawingAnnotation.questionScoreId,
+                type: drawingAnnotation.type,
+                x: drawingAnnotation.x,
+                y: drawingAnnotation.y,
+                color: drawingAnnotation.color,
+                strokeWidth: drawingAnnotation.strokeWidth,
+                width: drawingAnnotation.width,
+                height: drawingAnnotation.height,
+                endX: drawingAnnotation.endX,
+                endY: drawingAnnotation.endY,
+                lineStyle: drawingAnnotation.lineStyle,
+                text: drawingAnnotation.text,
+                fontSize: drawingAnnotation.fontSize,
+                textBoxWidth: drawingAnnotation.textBoxWidth,
+                textBoxHeight: drawingAnnotation.textBoxHeight,
+                horizontalAlign: drawingAnnotation.horizontalAlign,
+                verticalAlign: drawingAnnotation.verticalAlign,
+                anchorDirection: drawingAnnotation.anchorDirection,
+                displayX: drawingAnnotation.displayX,
+                displayY: drawingAnnotation.displayY,
+                isFavorite: drawingAnnotation.isFavorite,
+                userId: drawingAnnotation.userId,
+                createdAt: drawingAnnotation.createdAt.toISOString(),
+                updatedAt: drawingAnnotation.updatedAt.toISOString(),
               })
             }
           }
@@ -316,19 +330,19 @@ export async function collectExamData(
       const decisions = await prisma.scoreDecision.findMany({
         where: { cropRegion: { examPage: { examId } } },
       })
-      for (const d of decisions) {
+      for (const decision of decisions) {
         scoreDecisions.push({
-          id: d.id,
-          cropRegionId: d.cropRegionId,
-          studentId: d.studentId,
-          verdict: d.verdict,
-          score: d.score?.toString() ?? null,
-          comment: d.comment,
-          decidedByUserId: d.decidedByUserId,
-          decidedAt: d.decidedAt.toISOString(),
-          sourceQuestionScoreId: d.sourceQuestionScoreId,
-          createdAt: d.createdAt.toISOString(),
-          updatedAt: d.updatedAt.toISOString(),
+          id: decision.id,
+          cropRegionId: decision.cropRegionId,
+          studentId: decision.studentId,
+          verdict: decision.verdict,
+          score: decision.score?.toString() ?? null,
+          comment: decision.comment,
+          decidedByUserId: decision.decidedByUserId,
+          decidedAt: decision.decidedAt.toISOString(),
+          sourceQuestionScoreId: decision.sourceQuestionScoreId,
+          createdAt: decision.createdAt.toISOString(),
+          updatedAt: decision.updatedAt.toISOString(),
         })
       }
 
@@ -337,17 +351,17 @@ export async function collectExamData(
       const snapshots = await prisma.returnSnapshot.findMany({
         where: { examId },
       })
-      for (const s of snapshots) {
+      for (const snapshot of snapshots) {
         returnSnapshots.push({
-          id: s.id,
-          examId: s.examId,
-          studentId: s.studentId,
-          scoresJson: s.scoresJson,
-          totalScore: s.totalScore?.toString() ?? null,
-          capturedByUserId: s.capturedByUserId,
-          capturedAt: s.capturedAt.toISOString(),
-          createdAt: s.createdAt.toISOString(),
-          updatedAt: s.updatedAt.toISOString(),
+          id: snapshot.id,
+          examId: snapshot.examId,
+          studentId: snapshot.studentId,
+          scoresJson: snapshot.scoresJson,
+          totalScore: snapshot.totalScore?.toString() ?? null,
+          capturedByUserId: snapshot.capturedByUserId,
+          capturedAt: snapshot.capturedAt.toISOString(),
+          createdAt: snapshot.createdAt.toISOString(),
+          updatedAt: snapshot.updatedAt.toISOString(),
         })
       }
     }
@@ -407,19 +421,19 @@ export async function collectExamData(
       // v1.7.0+: CropRegionOmrChoiceOption
       omrChoiceOptions: exam.examPages.flatMap((page) =>
         page.cropRegions.flatMap((region) =>
-          (region.omrConfig?.choiceOptions ?? []).map((opt) => ({
-            id: opt.id,
-            omrConfigId: opt.omrConfigId,
-            choiceIndex: opt.choiceIndex,
-            label: opt.label,
-            isCorrect: opt.isCorrect,
-            shape: opt.shape,
-            normalizedCx: opt.normalizedCx,
-            normalizedCy: opt.normalizedCy,
-            normalizedWidth: opt.normalizedWidth,
-            normalizedHeight: opt.normalizedHeight,
-            createdAt: opt.createdAt.toISOString(),
-            updatedAt: opt.updatedAt.toISOString(),
+          (region.omrConfig?.choiceOptions ?? []).map((choiceOption) => ({
+            id: choiceOption.id,
+            omrConfigId: choiceOption.omrConfigId,
+            choiceIndex: choiceOption.choiceIndex,
+            label: choiceOption.label,
+            isCorrect: choiceOption.isCorrect,
+            shape: choiceOption.shape,
+            normalizedCx: choiceOption.normalizedCx,
+            normalizedCy: choiceOption.normalizedCy,
+            normalizedWidth: choiceOption.normalizedWidth,
+            normalizedHeight: choiceOption.normalizedHeight,
+            createdAt: choiceOption.createdAt.toISOString(),
+            updatedAt: choiceOption.updatedAt.toISOString(),
           }))
         )
       ),
@@ -441,32 +455,32 @@ export async function collectExamData(
       ),
       // v1.11.0+: CompoundAnswer
       compoundAnswers: exam.examPages.flatMap((page) =>
-        page.compoundAnswers.map((ca) => ({
-          id: ca.id,
-          examPageId: ca.examPageId,
-          label: ca.label,
-          answerFormat: ca.answerFormat,
-          correctAnswer: ca.correctAnswer,
-          points: ca.points,
-          orderIndex: ca.orderIndex,
-          alternativeAnswers: ca.alternativeAnswers,
-          requireReduced: ca.requireReduced,
-          createdAt: ca.createdAt.toISOString(),
-          updatedAt: ca.updatedAt.toISOString(),
+        page.compoundAnswers.map((compoundAnswer) => ({
+          id: compoundAnswer.id,
+          examPageId: compoundAnswer.examPageId,
+          label: compoundAnswer.label,
+          answerFormat: compoundAnswer.answerFormat,
+          correctAnswer: compoundAnswer.correctAnswer,
+          points: compoundAnswer.points,
+          orderIndex: compoundAnswer.orderIndex,
+          alternativeAnswers: compoundAnswer.alternativeAnswers,
+          requireReduced: compoundAnswer.requireReduced,
+          createdAt: compoundAnswer.createdAt.toISOString(),
+          updatedAt: compoundAnswer.updatedAt.toISOString(),
         }))
       ),
       // v1.11.0+: CompoundAnswerMember
       compoundAnswerMembers: exam.examPages.flatMap((page) =>
-        page.compoundAnswers.flatMap((ca) =>
-          ca.members.map((m) => ({
-            id: m.id,
-            compoundAnswerId: m.compoundAnswerId,
-            cropRegionId: m.cropRegionId,
-            order: m.order,
-            roleLabel: m.roleLabel,
-            separator: m.separator,
-            createdAt: m.createdAt.toISOString(),
-            updatedAt: m.updatedAt.toISOString(),
+        page.compoundAnswers.flatMap((compoundAnswer) =>
+          compoundAnswer.members.map((member) => ({
+            id: member.id,
+            compoundAnswerId: member.compoundAnswerId,
+            cropRegionId: member.cropRegionId,
+            order: member.order,
+            roleLabel: member.roleLabel,
+            separator: member.separator,
+            createdAt: member.createdAt.toISOString(),
+            updatedAt: member.updatedAt.toISOString(),
           }))
         )
       ),
@@ -474,19 +488,19 @@ export async function collectExamData(
       compoundAnswerScores: isTemplate
         ? []
         : exam.examPages.flatMap((page) =>
-            page.compoundAnswers.flatMap((ca) =>
-              ca.scores
-                .filter((s) => s.userId === userId)
-                .map((s) => ({
-                  id: s.id,
-                  compoundAnswerId: s.compoundAnswerId,
-                  studentId: s.studentId,
-                  userId: s.userId,
-                  recognizedAnswer: s.recognizedAnswer,
-                  status: s.status,
-                  partialScore: s.partialScore?.toString() ?? null,
-                  createdAt: s.createdAt.toISOString(),
-                  updatedAt: s.updatedAt.toISOString(),
+            page.compoundAnswers.flatMap((compoundAnswer) =>
+              compoundAnswer.scores
+                .filter((score) => score.userId === userId)
+                .map((score) => ({
+                  id: score.id,
+                  compoundAnswerId: score.compoundAnswerId,
+                  studentId: score.studentId,
+                  userId: score.userId,
+                  recognizedAnswer: score.recognizedAnswer,
+                  status: score.status,
+                  partialScore: score.partialScore?.toString() ?? null,
+                  createdAt: score.createdAt.toISOString(),
+                  updatedAt: score.updatedAt.toISOString(),
                 }))
             )
           ),
@@ -494,75 +508,75 @@ export async function collectExamData(
       pageImages: [],
       // v1.2.0+: 新形式
       masterImages: exam.examPages.flatMap((page) =>
-        page.masterImages.map((img) => ({
-          id: img.id,
-          examPageId: img.examPageId,
-          imagePath: img.imagePath,
-          pageSize: img.pageSize,
-          createdAt: img.createdAt.toISOString(),
-          updatedAt: img.updatedAt.toISOString(),
+        page.masterImages.map((masterImage) => ({
+          id: masterImage.id,
+          examPageId: masterImage.examPageId,
+          imagePath: masterImage.imagePath,
+          pageSize: masterImage.pageSize,
+          createdAt: masterImage.createdAt.toISOString(),
+          updatedAt: masterImage.updatedAt.toISOString(),
         }))
       ),
       studentAnswerImages: isTemplate
         ? []
         : exam.examPages.flatMap((page) =>
-            page.studentAnswerImages.map((img) => ({
-              id: img.id,
-              examPageId: img.examPageId,
-              studentId: img.studentId,
-              imagePath: img.imagePath,
-              createdAt: img.createdAt.toISOString(),
-              updatedAt: img.updatedAt.toISOString(),
+            page.studentAnswerImages.map((studentAnswerImage) => ({
+              id: studentAnswerImage.id,
+              examPageId: studentAnswerImage.examPageId,
+              studentId: studentAnswerImage.studentId,
+              imagePath: studentAnswerImage.imagePath,
+              createdAt: studentAnswerImage.createdAt.toISOString(),
+              updatedAt: studentAnswerImage.updatedAt.toISOString(),
             }))
           ),
       examStudents: isTemplate
         ? []
-        : exam.examStudents.map((ps) => ({
-            id: ps.id,
-            examId: ps.examId,
-            studentId: ps.studentId,
-            status: ps.status,
-            customOrder: ps.customOrder,
-            createdAt: ps.createdAt.toISOString(),
-            updatedAt: ps.updatedAt.toISOString(),
+        : exam.examStudents.map((examStudent) => ({
+            id: examStudent.id,
+            examId: examStudent.examId,
+            studentId: examStudent.studentId,
+            status: examStudent.status,
+            customOrder: examStudent.customOrder,
+            createdAt: examStudent.createdAt.toISOString(),
+            updatedAt: examStudent.updatedAt.toISOString(),
           })),
       // v0.3.0以降: UserExamは無視（インポート時に現在のユーザーで作成）
       userExams: [],
       examSubtotalGroups: includeSubtotals
-        ? exam.examSubtotalGroups.map((psg) => ({
-            id: psg.id,
-            examId: psg.examId,
-            subtotalGroupId: psg.subtotalGroupId,
-            selectedForTable: psg.selectedForTable,
-            selectedForBoxPlot: psg.selectedForBoxPlot,
-            createdAt: psg.createdAt.toISOString(),
-            updatedAt: psg.updatedAt.toISOString(),
+        ? exam.examSubtotalGroups.map((examSubtotalGroup) => ({
+            id: examSubtotalGroup.id,
+            examId: examSubtotalGroup.examId,
+            subtotalGroupId: examSubtotalGroup.subtotalGroupId,
+            selectedForTable: examSubtotalGroup.selectedForTable,
+            selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot,
+            createdAt: examSubtotalGroup.createdAt.toISOString(),
+            updatedAt: examSubtotalGroup.updatedAt.toISOString(),
           }))
         : [],
       examClasses: isTemplate
         ? []
-        : exam.examClasses.map((pc) => ({
-            id: pc.id,
-            examId: pc.examId,
-            classroomId: pc.classroomId,
-            administered: pc.administered,
-            teacherStat: pc.teacherStat,
-            studentReport: pc.studentReport,
-            order: pc.order,
-            createdAt: pc.createdAt.toISOString(),
-            updatedAt: pc.updatedAt.toISOString(),
+        : exam.examClasses.map((examClass) => ({
+            id: examClass.id,
+            examId: examClass.examId,
+            classroomId: examClass.classroomId,
+            administered: examClass.administered,
+            teacherStat: examClass.teacherStat,
+            studentReport: examClass.studentReport,
+            order: examClass.order,
+            createdAt: examClass.createdAt.toISOString(),
+            updatedAt: examClass.updatedAt.toISOString(),
           })),
       // v1.4.0+
-      examMarkingFormats: examMarkingFormats.map((pmf) => ({
-        id: pmf.id,
-        examId: pmf.examId,
-        markType: pmf.markType,
-        symbol: pmf.symbol,
-        color: pmf.color,
-        fontSize: pmf.fontSize,
-        strokeWidth: pmf.strokeWidth,
-        createdAt: pmf.createdAt.toISOString(),
-        updatedAt: pmf.updatedAt.toISOString(),
+      examMarkingFormats: examMarkingFormats.map((examMarkingFormat) => ({
+        id: examMarkingFormat.id,
+        examId: examMarkingFormat.examId,
+        markType: examMarkingFormat.markType,
+        symbol: examMarkingFormat.symbol,
+        color: examMarkingFormat.color,
+        fontSize: examMarkingFormat.fontSize,
+        strokeWidth: examMarkingFormat.strokeWidth,
+        createdAt: examMarkingFormat.createdAt.toISOString(),
+        updatedAt: examMarkingFormat.updatedAt.toISOString(),
       })),
       examExportSettings: examExportSettings
         ? {
@@ -573,91 +587,93 @@ export async function collectExamData(
             updatedAt: examExportSettings.updatedAt.toISOString(),
           }
         : null,
-      cropRegionMarkingOverrides: cropRegionMarkingOverrides.map((crmo) => ({
-        id: crmo.id,
-        cropRegionId: crmo.cropRegionId,
-        markType: crmo.markType,
-        symbol: crmo.symbol,
-        color: crmo.color,
-        visible: crmo.visible,
-        createdAt: crmo.createdAt.toISOString(),
-        updatedAt: crmo.updatedAt.toISOString(),
-      })),
+      cropRegionMarkingOverrides: cropRegionMarkingOverrides.map(
+        (cropRegionMarkingOverride) => ({
+          id: cropRegionMarkingOverride.id,
+          cropRegionId: cropRegionMarkingOverride.cropRegionId,
+          markType: cropRegionMarkingOverride.markType,
+          symbol: cropRegionMarkingOverride.symbol,
+          color: cropRegionMarkingOverride.color,
+          visible: cropRegionMarkingOverride.visible,
+          createdAt: cropRegionMarkingOverride.createdAt.toISOString(),
+          updatedAt: cropRegionMarkingOverride.updatedAt.toISOString(),
+        })
+      ),
     }
 
     const studentsData: ArchiveStudentsData = {
-      students: students.map((s) => ({
-        id: s.id,
-        studentNumber: s.studentNumber,
-        lastName: s.lastName,
-        firstName: s.firstName,
-        lastNameKana: s.lastNameKana,
-        firstNameKana: s.firstNameKana,
-        enrollmentYear: s.enrollmentYear,
-        createdAt: s.createdAt.toISOString(),
-        updatedAt: s.updatedAt.toISOString(),
+      students: students.map((student) => ({
+        id: student.id,
+        studentNumber: student.studentNumber,
+        lastName: student.lastName,
+        firstName: student.firstName,
+        lastNameKana: student.lastNameKana,
+        firstNameKana: student.firstNameKana,
+        enrollmentYear: student.enrollmentYear,
+        createdAt: student.createdAt.toISOString(),
+        updatedAt: student.updatedAt.toISOString(),
       })),
     }
 
     const classesData: ArchiveClassesData = {
-      classrooms: classes.map((c) => ({
-        id: c.id,
-        name: c.name,
-        classCode: c.classCode,
-        grade: c.grade,
-        description: c.description,
-        isVisible: c.isVisible,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
+      classrooms: classes.map((classroom) => ({
+        id: classroom.id,
+        name: classroom.name,
+        classCode: classroom.classCode,
+        grade: classroom.grade,
+        description: classroom.description,
+        isVisible: classroom.isVisible,
+        createdAt: classroom.createdAt.toISOString(),
+        updatedAt: classroom.updatedAt.toISOString(),
       })),
-      memberships: memberships.map((m) => ({
-        id: m.id,
-        studentId: m.studentId,
-        classroomId: m.classroomId,
-        startDate: m.startDate.toISOString(),
-        endDate: m.endDate?.toISOString() ?? null,
-        attendanceNumber: m.attendanceNumber,
-        notes: m.notes,
-        createdAt: m.createdAt.toISOString(),
-        updatedAt: m.updatedAt.toISOString(),
+      memberships: memberships.map((membership) => ({
+        id: membership.id,
+        studentId: membership.studentId,
+        classroomId: membership.classroomId,
+        startDate: membership.startDate.toISOString(),
+        endDate: membership.endDate?.toISOString() ?? null,
+        attendanceNumber: membership.attendanceNumber,
+        notes: membership.notes,
+        createdAt: membership.createdAt.toISOString(),
+        updatedAt: membership.updatedAt.toISOString(),
       })),
     }
 
     const usersData: ArchiveUsersData = {
-      users: users.map((u) => ({
-        id: u.id,
-        username: u.username,
-        name: u.name,
-        role: u.role,
-        createdAt: u.createdAt.toISOString(),
-        updatedAt: u.updatedAt.toISOString(),
+      users: users.map((user) => ({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
       })),
     }
 
     const subtotalsData: ArchiveSubtotalsData = {
-      subtotalGroups: subtotalGroups.map((sg) => ({
-        id: sg.id,
-        name: sg.name,
-        createdAt: sg.createdAt.toISOString(),
-        updatedAt: sg.updatedAt.toISOString(),
+      subtotalGroups: subtotalGroups.map((subtotalGroup) => ({
+        id: subtotalGroup.id,
+        name: subtotalGroup.name,
+        createdAt: subtotalGroup.createdAt.toISOString(),
+        updatedAt: subtotalGroup.updatedAt.toISOString(),
       })),
-      subtotals: subtotalGroups.flatMap((sg) =>
-        sg.subtotals.map((s) => ({
-          id: s.id,
-          name: s.name,
-          subtotalGroupId: s.subtotalGroupId,
-          order: s.order,
-          createdAt: s.createdAt.toISOString(),
-          updatedAt: s.updatedAt.toISOString(),
+      subtotals: subtotalGroups.flatMap((subtotalGroup) =>
+        subtotalGroup.subtotals.map((subtotal) => ({
+          id: subtotal.id,
+          name: subtotal.name,
+          subtotalGroupId: subtotal.subtotalGroupId,
+          order: subtotal.order,
+          createdAt: subtotal.createdAt.toISOString(),
+          updatedAt: subtotal.updatedAt.toISOString(),
         }))
       ),
-      cropSubtotals: cropSubtotals.map((cs) => ({
-        id: cs.id,
-        cropRegionId: cs.cropRegionId,
-        subtotalId: cs.subtotalId,
-        assignmentType: cs.assignmentType,
-        createdAt: cs.createdAt.toISOString(),
-        updatedAt: cs.updatedAt.toISOString(),
+      cropSubtotals: cropSubtotals.map((cropSubtotal) => ({
+        id: cropSubtotal.id,
+        cropRegionId: cropSubtotal.cropRegionId,
+        subtotalId: cropSubtotal.subtotalId,
+        assignmentType: cropSubtotal.assignmentType,
+        createdAt: cropSubtotal.createdAt.toISOString(),
+        updatedAt: cropSubtotal.updatedAt.toISOString(),
       })),
     }
 
@@ -669,27 +685,27 @@ export async function collectExamData(
     }
 
     const tagsData: ArchiveTagsData = {
-      tags: tags.map((t) => ({
-        id: t.id,
-        name: t.name,
-        order: t.order,
-        color: t.color,
-        createdAt: t.createdAt.toISOString(),
-        updatedAt: t.updatedAt.toISOString(),
+      tags: tags.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        order: tag.order,
+        color: tag.color,
+        createdAt: tag.createdAt.toISOString(),
+        updatedAt: tag.updatedAt.toISOString(),
       })),
-      tagSubtotalGroups: tagSubtotalGroups.map((tsg) => ({
-        id: tsg.id,
-        tagId: tsg.tagId,
-        subtotalGroupId: tsg.subtotalGroupId,
-        createdAt: tsg.createdAt.toISOString(),
-        updatedAt: tsg.updatedAt.toISOString(),
+      tagSubtotalGroups: tagSubtotalGroups.map((tagSubtotalGroup) => ({
+        id: tagSubtotalGroup.id,
+        tagId: tagSubtotalGroup.tagId,
+        subtotalGroupId: tagSubtotalGroup.subtotalGroupId,
+        createdAt: tagSubtotalGroup.createdAt.toISOString(),
+        updatedAt: tagSubtotalGroup.updatedAt.toISOString(),
       })),
-      examTags: examTags.map((et) => ({
-        id: et.id,
-        examId: et.examId,
-        tagId: et.tagId,
-        createdAt: et.createdAt.toISOString(),
-        updatedAt: et.updatedAt.toISOString(),
+      examTags: examTags.map((examTag) => ({
+        id: examTag.id,
+        examId: examTag.examId,
+        tagId: examTag.tagId,
+        createdAt: examTag.createdAt.toISOString(),
+        updatedAt: examTag.updatedAt.toISOString(),
       })),
     }
 
@@ -698,13 +714,13 @@ export async function collectExamData(
       where: { examId },
     })
     const deletedRecordsData: ArchiveDeletedRecordsData = {
-      deletedRecords: deletedRecords.map((dr) => ({
-        id: dr.id,
-        tableName: dr.tableName,
-        recordId: dr.recordId,
-        deletedAt: dr.deletedAt.toISOString(),
-        userId: dr.userId,
-        examId: dr.examId,
+      deletedRecords: deletedRecords.map((deletedRecord) => ({
+        id: deletedRecord.id,
+        tableName: deletedRecord.tableName,
+        recordId: deletedRecord.recordId,
+        deletedAt: deletedRecord.deletedAt.toISOString(),
+        userId: deletedRecord.userId,
+        examId: deletedRecord.examId,
       })),
     }
 

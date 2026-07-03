@@ -39,7 +39,12 @@ export interface StudentClassForStats {
 export function buildScoreByStudentId(
   allScoringData: ScoringData[]
 ): Map<string, number | null> {
-  return new Map(allScoringData.map((d) => [d.studentId, d.totalScore]))
+  return new Map(
+    allScoringData.map((scoringData) => [
+      scoringData.studentId,
+      scoringData.totalScore,
+    ])
+  )
 }
 
 /**
@@ -65,14 +70,16 @@ export function calculateQuestionCorrectRates(
   if (allScoringData.length === 0) return rates
 
   // 最初の生徒から設問リストを取得
-  const questionIds = allScoringData[0].scores.map((s) => s.questionId)
+  const questionIds = allScoringData[0].scores.map((score) => score.questionId)
 
   for (const questionId of questionIds) {
     let correctCount = 0
     let totalCount = 0
 
-    for (const data of allScoringData) {
-      const score = data.scores.find((s) => s.questionId === questionId)
+    for (const scoringData of allScoringData) {
+      const score = scoringData.scores.find(
+        (questionScore) => questionScore.questionId === questionId
+      )
       if (score && score.status !== "unscored") {
         totalCount++
         if (score.status === "correct") {
@@ -98,14 +105,16 @@ export function calculateQuestionScoreRates(
 
   if (allScoringData.length === 0) return rates
 
-  const questionIds = allScoringData[0].scores.map((s) => s.questionId)
+  const questionIds = allScoringData[0].scores.map((score) => score.questionId)
 
   for (const questionId of questionIds) {
     let scoreSum = 0
     let totalCount = 0
 
-    for (const data of allScoringData) {
-      const score = data.scores.find((s) => s.questionId === questionId)
+    for (const scoringData of allScoringData) {
+      const score = scoringData.scores.find(
+        (questionScore) => questionScore.questionId === questionId
+      )
       if (score && score.status !== "unscored" && score.maxScore > 0) {
         totalCount++
         scoreSum += (score.score ?? 0) / score.maxScore
@@ -138,9 +147,9 @@ export function calculateSubtotalStatistics(
   return subtotalTemplate.map((template) => {
     const scores: number[] = []
 
-    for (const data of allScoringData) {
-      const subtotal = data.subtotalScores.find(
-        (s) => s.subtotalId === template.subtotalId
+    for (const scoringData of allScoringData) {
+      const subtotal = scoringData.subtotalScores.find(
+        (subtotalScore) => subtotalScore.subtotalId === template.subtotalId
       )
       if (subtotal && subtotal.score !== null) {
         scores.push(subtotal.score)
@@ -218,20 +227,26 @@ export function calculateDiscriminationIndices(
 
   if (allScoringData.length === 0) return indices
 
-  const questionIds = allScoringData[0].scores.map((s) => s.questionId)
+  const questionIds = allScoringData[0].scores.map((score) => score.questionId)
 
   for (const questionId of questionIds) {
     const itemScores: number[] = []
     const correctedTotals: number[] = []
 
-    for (const data of allScoringData) {
-      const score = data.scores.find((s) => s.questionId === questionId)
-      if (!score || score.status === "unscored" || data.totalScore === null) {
+    for (const scoringData of allScoringData) {
+      const score = scoringData.scores.find(
+        (questionScore) => questionScore.questionId === questionId
+      )
+      if (
+        !score ||
+        score.status === "unscored" ||
+        scoringData.totalScore === null
+      ) {
         continue
       }
       const itemScore = score.score ?? 0
       itemScores.push(itemScore)
-      correctedTotals.push(data.totalScore - itemScore)
+      correctedTotals.push(scoringData.totalScore - itemScore)
     }
 
     if (itemScores.length < 3) {

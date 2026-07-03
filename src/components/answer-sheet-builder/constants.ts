@@ -269,13 +269,13 @@ export function getCircledNumber(n: number): string {
 
 /** 漢数字（1〜99） */
 function kanjiNumber(n: number): string {
-  const d = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
-  if (n >= 1 && n <= 9) return d[n]
+  const digits = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
+  if (n >= 1 && n <= 9) return digits[n]
   if (n === 10) return "十"
   const tens = Math.floor(n / 10)
   const ones = n % 10
-  if (tens === 1) return `十${d[ones]}`
-  return `${d[tens]}十${ones > 0 ? d[ones] : ""}`
+  if (tens === 1) return `十${digits[ones]}`
+  return `${digits[tens]}十${ones > 0 ? digits[ones] : ""}`
 }
 
 /** 全角数字変換 */

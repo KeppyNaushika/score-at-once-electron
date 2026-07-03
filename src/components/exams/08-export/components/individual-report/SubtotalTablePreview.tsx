@@ -132,7 +132,10 @@ export function SubtotalTablePreview({
 
   const totalAllocatedColumns = useMemo(() => {
     if (!isHorizontalLayout) return 1
-    return groupTableDataList.reduce((sum, g) => sum + g.allocatedColumns, 0)
+    return groupTableDataList.reduce(
+      (sum, groupData) => sum + groupData.allocatedColumns,
+      0
+    )
   }, [groupTableDataList, isHorizontalLayout])
 
   if (subtotalScores.length === 0) return null
@@ -286,8 +289,8 @@ export function SubtotalTableView({
                       return (
                         <tr key={rowIndex} style={rowStyle}>
                           {groupData.columnItems.map((colItems, colIndex) => {
-                            const item = colItems[rowIndex]
-                            if (!item) {
+                            const subtotalScore = colItems[rowIndex]
+                            if (!subtotalScore) {
                               return (
                                 <Fragment key={colIndex}>
                                   <td style={cellStyle}></td>
@@ -297,15 +300,16 @@ export function SubtotalTableView({
                             }
 
                             const shortLabel =
-                              item.subtotalLabel.length > 10
-                                ? item.subtotalLabel.substring(0, 10) + "…"
-                                : item.subtotalLabel
+                              subtotalScore.subtotalLabel.length > 10
+                                ? subtotalScore.subtotalLabel.substring(0, 10) +
+                                  "…"
+                                : subtotalScore.subtotalLabel
 
                             return (
                               <Fragment key={colIndex}>
                                 <td
                                   style={{ ...cellStyle, textAlign: "left" }}
-                                  title={item.subtotalLabel}
+                                  title={subtotalScore.subtotalLabel}
                                 >
                                   {shortLabel}
                                 </td>
@@ -313,8 +317,8 @@ export function SubtotalTableView({
                                   style={{ ...cellStyle, textAlign: "center" }}
                                 >
                                   <ScoreDisplay
-                                    score={item.score}
-                                    maxScore={item.maxScore}
+                                    score={subtotalScore.score}
+                                    maxScore={subtotalScore.maxScore}
                                     fontSize={baseFontSize}
                                   />
                                 </td>

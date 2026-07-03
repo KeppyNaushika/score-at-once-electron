@@ -57,9 +57,11 @@ export function useStudentAnswerUploadMain({
     setUploadProgress(0)
 
     try {
-      const selectedFiles = fileProcessing.files.filter((f) => f.isSelected)
+      const selectedFiles = fileProcessing.files.filter(
+        (file) => file.isSelected
+      )
       const selectedStudents = studentManagement.studentsWithAnswers.filter(
-        (s) => s.isSelected
+        (student) => student.isSelected
       )
 
       if (selectedFiles.length === 0) {
@@ -144,7 +146,9 @@ export function useStudentAnswerUploadMain({
 
   const removeFile = useCallback(
     (fileId: string) => {
-      fileProcessing.setFiles((prev) => prev.filter((f) => f.id !== fileId))
+      fileProcessing.setFiles((prev) =>
+        prev.filter((file) => file.id !== fileId)
+      )
     },
     [fileProcessing]
   )
@@ -152,8 +156,8 @@ export function useStudentAnswerUploadMain({
   const toggleFileSelection = useCallback(
     (fileId: string) => {
       fileProcessing.setFiles((prev) =>
-        prev.map((f) =>
-          f.id === fileId ? { ...f, isSelected: !f.isSelected } : f
+        prev.map((file) =>
+          file.id === fileId ? { ...file, isSelected: !file.isSelected } : file
         )
       )
     },
@@ -216,10 +220,10 @@ export function useStudentAnswerUploadMain({
   )
 
   const selectedFilesCount = fileProcessing.files.filter(
-    (f) => f.isSelected
+    (file) => file.isSelected
   ).length
   const selectedStudentsCount = studentManagement.studentsWithAnswers.filter(
-    (s) => s.isSelected
+    (student) => student.isSelected
   ).length
 
   return {

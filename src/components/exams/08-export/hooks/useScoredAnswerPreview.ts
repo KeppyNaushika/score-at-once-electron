@@ -193,20 +193,20 @@ export function useScoredAnswerPreview({
 
         const urls: string[] = []
         for (const { page, img } of loadedPages) {
-          const scoringDataForPdf = page.scoringData.map((sd) => ({
-            questionScoreId: sd.questionScoreId,
-            status: sd.status,
-            partialScore: sd.partialScore,
+          const scoringDataForPdf = page.scoringData.map((scoreData) => ({
+            questionScoreId: scoreData.questionScoreId,
+            status: scoreData.status,
+            partialScore: scoreData.partialScore,
             cropRegion: {
-              id: sd.cropRegion.id,
-              x: sd.cropRegion.x,
-              y: sd.cropRegion.y,
-              width: sd.cropRegion.width,
-              height: sd.cropRegion.height,
-              label: sd.cropRegion.label,
-              maxScore: sd.cropRegion.maxScore,
+              id: scoreData.cropRegion.id,
+              x: scoreData.cropRegion.x,
+              y: scoreData.cropRegion.y,
+              width: scoreData.cropRegion.width,
+              height: scoreData.cropRegion.height,
+              label: scoreData.cropRegion.label,
+              maxScore: scoreData.cropRegion.maxScore,
               examPage: {
-                pageNumber: sd.cropRegion.pageNumber,
+                pageNumber: scoreData.cropRegion.pageNumber,
               },
             },
           }))
@@ -215,34 +215,42 @@ export function useScoredAnswerPreview({
             page.subtotalData || []
           )
             .filter(
-              (sd): sd is typeof sd & { score: number } => sd.score != null
+              (
+                subtotalData
+              ): subtotalData is typeof subtotalData & {
+                score: number
+              } => subtotalData.score != null
             )
-            .map((sd) => ({
-              regionId: sd.regionId,
-              label: sd.label,
-              score: sd.score,
-              x: sd.x,
-              y: sd.y,
-              width: sd.width,
-              height: sd.height,
-              pageNumber: sd.pageNumber,
+            .map((subtotalData) => ({
+              regionId: subtotalData.regionId,
+              label: subtotalData.label,
+              score: subtotalData.score,
+              x: subtotalData.x,
+              y: subtotalData.y,
+              width: subtotalData.width,
+              height: subtotalData.height,
+              pageNumber: subtotalData.pageNumber,
             }))
 
           const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
             page.totalScoreData || []
           )
             .filter(
-              (td): td is typeof td & { score: number } => td.score != null
+              (
+                totalScoreData
+              ): totalScoreData is typeof totalScoreData & {
+                score: number
+              } => totalScoreData.score != null
             )
-            .map((td) => ({
-              regionId: td.regionId,
-              score: td.score,
-              maxScore: td.maxScore,
-              x: td.x,
-              y: td.y,
-              width: td.width,
-              height: td.height,
-              pageNumber: td.pageNumber,
+            .map((totalScoreData) => ({
+              regionId: totalScoreData.regionId,
+              score: totalScoreData.score,
+              maxScore: totalScoreData.maxScore,
+              x: totalScoreData.x,
+              y: totalScoreData.y,
+              width: totalScoreData.width,
+              height: totalScoreData.height,
+              pageNumber: totalScoreData.pageNumber,
             }))
 
           // annotationsをDrawingAnnotation形式にキャスト

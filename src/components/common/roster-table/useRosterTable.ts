@@ -139,7 +139,7 @@ export function useRosterTable({
   // チェックボックスのトグル（Shiftキー対応）
   const handleToggleSelection = useCallback(
     (studentId: string, event?: React.MouseEvent) => {
-      const currentIndex = sortedRows.findIndex((r) => r.id === studentId)
+      const currentIndex = sortedRows.findIndex((row) => row.id === studentId)
 
       if (
         event?.shiftKey &&
@@ -185,7 +185,7 @@ export function useRosterTable({
 
   const activeRow = useMemo(
     () =>
-      activeId ? (sortedRows.find((r) => r.id === activeId) ?? null) : null,
+      activeId ? (sortedRows.find((row) => row.id === activeId) ?? null) : null,
     [activeId, sortedRows]
   )
 

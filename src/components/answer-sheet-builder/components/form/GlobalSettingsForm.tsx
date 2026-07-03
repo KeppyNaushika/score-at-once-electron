@@ -47,9 +47,9 @@ export function GlobalSettingsForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PAPER_SIZE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+              {PAPER_SIZE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>

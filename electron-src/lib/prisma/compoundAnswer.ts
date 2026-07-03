@@ -62,12 +62,12 @@ export async function createCompoundAnswer(
     })
 
     await tx.compoundAnswerMember.createMany({
-      data: data.members.map((m) => ({
+      data: data.members.map((member) => ({
         compoundAnswerId: compoundAnswer.id,
-        cropRegionId: m.cropRegionId,
-        order: m.order,
-        roleLabel: m.roleLabel ?? null,
-        separator: m.separator ?? null,
+        cropRegionId: member.cropRegionId,
+        order: member.order,
+        roleLabel: member.roleLabel ?? null,
+        separator: member.separator ?? null,
       })),
     })
 
@@ -190,12 +190,12 @@ export async function upsertCompoundAnswerScore(data: {
   })
 
   // 採点（複合解答）。同じ複合解答×操作者の連続採点を集約する。
-  const ca = await prisma.compoundAnswer.findUnique({
+  const compoundAnswer = await prisma.compoundAnswer.findUnique({
     where: { id: data.compoundAnswerId },
     select: { examPageId: true },
   })
-  const scope = ca
-    ? await resolveExamScopeByPage(ca.examPageId)
+  const scope = compoundAnswer
+    ? await resolveExamScopeByPage(compoundAnswer.examPageId)
     : { scopeId: null, scopeLabel: null }
   await recordAuditLog({
     action: "exam.compound_answer.update",

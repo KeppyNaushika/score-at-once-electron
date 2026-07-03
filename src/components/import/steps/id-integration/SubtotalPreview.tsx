@@ -17,8 +17,12 @@ export function SubtotalPreview({
 }: SubtotalPreviewProps) {
   if (!importSubtotals?.length && !existingSubtotals?.length) return null
 
-  const importNames = new Set(importSubtotals?.map((s) => s.name) ?? [])
-  const existingNames = new Set(existingSubtotals?.map((s) => s.name) ?? [])
+  const importNames = new Set(
+    importSubtotals?.map((subtotal) => subtotal.name) ?? []
+  )
+  const existingNames = new Set(
+    existingSubtotals?.map((subtotal) => subtotal.name) ?? []
+  )
 
   return (
     <div className="mt-2 grid grid-cols-2 gap-3 rounded border p-2 text-xs">
@@ -28,17 +32,17 @@ export function SubtotalPreview({
         </div>
         {importSubtotals?.length ? (
           <ul className="space-y-0.5">
-            {importSubtotals.map((s) => (
+            {importSubtotals.map((subtotal) => (
               <li
-                key={`${s.name}-${s.order}`}
+                key={`${subtotal.name}-${subtotal.order}`}
                 className={cn(
                   "rounded px-1.5 py-0.5",
-                  existingNames.has(s.name)
+                  existingNames.has(subtotal.name)
                     ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
                     : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                 )}
               >
-                {s.name}
+                {subtotal.name}
               </li>
             ))}
           </ul>
@@ -52,17 +56,17 @@ export function SubtotalPreview({
         </div>
         {existingSubtotals?.length ? (
           <ul className="space-y-0.5">
-            {existingSubtotals.map((s) => (
+            {existingSubtotals.map((subtotal) => (
               <li
-                key={`${s.name}-${s.order}`}
+                key={`${subtotal.name}-${subtotal.order}`}
                 className={cn(
                   "rounded px-1.5 py-0.5",
-                  importNames.has(s.name)
+                  importNames.has(subtotal.name)
                     ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
                     : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                 )}
               >
-                {s.name}
+                {subtotal.name}
               </li>
             ))}
           </ul>

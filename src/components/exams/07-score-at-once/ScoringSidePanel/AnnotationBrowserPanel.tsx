@@ -106,8 +106,8 @@ function getSourceInfo(annotation: AnnotationWithContext): string {
     parts.push(annotation.questionScore.cropRegion.label)
   }
   if (annotation.questionScore?.student) {
-    const s = annotation.questionScore.student
-    parts.push(`${s.lastName}${s.firstName}`)
+    const student = annotation.questionScore.student
+    parts.push(`${student.lastName}${student.firstName}`)
   }
   return parts.join(" / ") || "—"
 }
@@ -155,8 +155,10 @@ export function AnnotationBrowserPanel({
         })
       }
     }
-    return Array.from(studentMap.values()).sort((a, b) =>
-      a.studentNumber.localeCompare(b.studentNumber, "ja", { numeric: true })
+    return Array.from(studentMap.values()).sort((studentA, studentB) =>
+      studentA.studentNumber.localeCompare(studentB.studentNumber, "ja", {
+        numeric: true,
+      })
     )
   }, [displayItems])
 
@@ -165,7 +167,9 @@ export function AnnotationBrowserPanel({
     async (studentId: string, cropRegionId: string): Promise<string | null> => {
       // 既存のQuestionScoreを探す
       const existing = questionScores.find(
-        (qs) => qs.studentId === studentId && qs.cropRegionId === cropRegionId
+        (questionScore) =>
+          questionScore.studentId === studentId &&
+          questionScore.cropRegionId === cropRegionId
       )
       if (existing) return existing.id
 
@@ -229,9 +233,11 @@ export function AnnotationBrowserPanel({
 
           // selectedScoringDataIdsからstudentIdをマッピング
           const targetStudentIds = selectedScoringDataIds
-            .map((sdId) => {
-              const sd = allScoringData.find((s) => s.id === sdId)
-              return sd?.studentId
+            .map((scoringDataId) => {
+              const scoringData = allScoringData.find(
+                (candidate) => candidate.id === scoringDataId
+              )
+              return scoringData?.studentId
             })
             .filter((id): id is string => !!id)
 
@@ -322,9 +328,9 @@ export function AnnotationBrowserPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全生徒</SelectItem>
-              {uniqueStudents.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.studentNumber} {s.name}
+              {uniqueStudents.map((student) => (
+                <SelectItem key={student.id} value={student.id}>
+                  {student.studentNumber} {student.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -459,26 +465,30 @@ export function AnnotationBrowserPanel({
                       </ContextMenuTrigger>
                       <ContextMenuContent>
                         {item.allIds
-                          .map((id) => allAnnotations.find((a) => a.id === id))
-                          .filter(
-                            (a): a is AnnotationWithContext =>
-                              !!a?.questionScore?.studentId &&
-                              !!a?.questionScore?.cropRegionId
+                          .map((id) =>
+                            allAnnotations.find(
+                              (annotation) => annotation.id === id
+                            )
                           )
-                          .map((a) => {
-                            const s = a.questionScore!.student
-                            const label = s
-                              ? `${s.studentNumber} ${s.lastName}${s.firstName}`
-                              : a.questionScore!.studentId!.slice(0, 8)
+                          .filter(
+                            (annotation): annotation is AnnotationWithContext =>
+                              !!annotation?.questionScore?.studentId &&
+                              !!annotation?.questionScore?.cropRegionId
+                          )
+                          .map((annotation) => {
+                            const student = annotation.questionScore!.student
+                            const label = student
+                              ? `${student.studentNumber} ${student.lastName}${student.firstName}`
+                              : annotation.questionScore!.studentId!.slice(0, 8)
                             const question =
-                              a.questionScore!.cropRegion?.label ?? ""
+                              annotation.questionScore!.cropRegion?.label ?? ""
                             return (
                               <ContextMenuItem
-                                key={a.id}
+                                key={annotation.id}
                                 onClick={() =>
                                   onNavigateTo(
-                                    a.questionScore!.studentId!,
-                                    a.questionScore!.cropRegionId!
+                                    annotation.questionScore!.studentId!,
+                                    annotation.questionScore!.cropRegionId!
                                   )
                                 }
                               >

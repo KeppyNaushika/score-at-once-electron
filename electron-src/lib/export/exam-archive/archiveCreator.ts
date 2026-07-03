@@ -57,7 +57,10 @@ function getSchemaVersion(): string {
     if (fs.existsSync(migrationsDir)) {
       const migrations = fs
         .readdirSync(migrationsDir)
-        .filter((f) => !f.startsWith(".") && f !== "migration_lock.toml")
+        .filter(
+          (migration) =>
+            !migration.startsWith(".") && migration !== "migration_lock.toml"
+        )
         .sort()
       if (migrations.length > 0) {
         return migrations[migrations.length - 1]

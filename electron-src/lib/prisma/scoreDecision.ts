@@ -5,8 +5,8 @@ import { resolveExamScopeByCropRegion, resolveStudentLabel } from "./auditScope"
 import prisma from "./client"
 
 /** verdict コードを日本語表示に変換（監査ログ差分用） */
-const verdictLabel = (v: string | null | undefined): string => {
-  switch (v) {
+const verdictLabel = (verdict: string | null | undefined): string => {
+  switch (verdict) {
     case "correct":
       return "正解"
     case "incorrect":
@@ -20,7 +20,7 @@ const verdictLabel = (v: string | null | undefined): string => {
     case "double_mark":
       return "複数マーク"
     default:
-      return v ?? "（なし）"
+      return verdict ?? "（なし）"
   }
 }
 
@@ -60,8 +60,8 @@ export const canDecideScore = async (
   // 個人利用（メンバー管理なし）の試験は制限しない
   if (members.length === 0) return { allowed: true }
 
-  const me = members.find((m) => m.userId === userId)
-  if (me?.role === "OWNER") return { allowed: true }
+  const currentMember = members.find((member) => member.userId === userId)
+  if (currentMember?.role === "OWNER") return { allowed: true }
 
   return {
     allowed: false,

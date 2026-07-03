@@ -433,8 +433,8 @@ export async function removeSubtotalGroupFromExam(
 export const getSubtotalGroupsByExamId = async (examId: string) => {
   const result = await getActiveSubtotalGroupsForExam(examId)
   if (result.success && result.examSubtotalGroups) {
-    return result.examSubtotalGroups.map((psg) => ({
-      ...psg.subtotalGroup,
+    return result.examSubtotalGroups.map((examSubtotalGroup) => ({
+      ...examSubtotalGroup.subtotalGroup,
       examId,
     }))
   }
@@ -458,11 +458,11 @@ export async function getSubtotalGroupSelection(examId: string) {
     return {
       success: true as const,
       tableGroupIds: links
-        .filter((l) => l.selectedForTable)
-        .map((l) => l.subtotalGroupId),
+        .filter((link) => link.selectedForTable)
+        .map((link) => link.subtotalGroupId),
       boxPlotGroupIds: links
-        .filter((l) => l.selectedForBoxPlot)
-        .map((l) => l.subtotalGroupId),
+        .filter((link) => link.selectedForBoxPlot)
+        .map((link) => link.subtotalGroupId),
     }
   } catch (error) {
     console.error("Error getting subtotal group selection:", error)

@@ -146,25 +146,26 @@ export function useOmrAutoScoring(examId: string) {
 
       // 3. DBからOMR設定を読み込み、cellConfigsを構築
       const cellConfigs: Record<string, OMRCellConfig> = {}
-      for (const cfg of configs) {
-        if (cfg.type === "choice") {
-          const labels = cfg.choiceOptions.map((opt) => opt.label)
-          const correctAnswers = cfg.choiceOptions
-            .filter((opt) => opt.isCorrect)
-            .map((opt) => opt.choiceIndex)
-          cellConfigs[cfg.cropRegionId] = {
+      for (const omrConfig of configs) {
+        if (omrConfig.type === "choice") {
+          const labels = omrConfig.choiceOptions.map((option) => option.label)
+          const correctAnswers = omrConfig.choiceOptions
+            .filter((option) => option.isCorrect)
+            .map((option) => option.choiceIndex)
+          cellConfigs[omrConfig.cropRegionId] = {
             type: "choice",
-            numChoices: cfg.numChoices ?? labels.length,
+            numChoices: omrConfig.numChoices ?? labels.length,
             labels,
             correctAnswers,
             layout:
-              (cfg.choiceLayout as "horizontal" | "vertical") ?? "horizontal",
+              (omrConfig.choiceLayout as "horizontal" | "vertical") ??
+              "horizontal",
           }
-        } else if (cfg.type === "handwritten-digit") {
-          cellConfigs[cfg.cropRegionId] = {
+        } else if (omrConfig.type === "handwritten-digit") {
+          cellConfigs[omrConfig.cropRegionId] = {
             type: "handwritten-digit",
-            numDigits: cfg.numDigits ?? 1,
-            correctAnswer: cfg.correctAnswer ?? undefined,
+            numDigits: omrConfig.numDigits ?? 1,
+            correctAnswer: omrConfig.correctAnswer ?? undefined,
           }
         }
       }
@@ -176,7 +177,7 @@ export function useOmrAutoScoring(examId: string) {
 
       // 4. 答案画像を取得（全生徒分）
       // ページ1のみ対応（OMR設定はページ1前提）
-      const page1 = markerResult.pages.find((p) => p.pageNumber === 1)
+      const page1 = markerResult.pages.find((page) => page.pageNumber === 1)
       if (!page1 || !page1.result.success) {
         setState((s) => ({
           ...s,
@@ -193,16 +194,16 @@ export function useOmrAutoScoring(examId: string) {
         { x: number; y: number },
         { x: number; y: number },
       ] = page1.result.markers
-        .sort((a, b) => {
+        .sort((markerA, markerB) => {
           const cornerOrder = { TL: 0, TR: 1, BL: 2, BR: 3 }
           return (
-            cornerOrder[a.corner as keyof typeof cornerOrder] -
-            cornerOrder[b.corner as keyof typeof cornerOrder]
+            cornerOrder[markerA.corner as keyof typeof cornerOrder] -
+            cornerOrder[markerB.corner as keyof typeof cornerOrder]
           )
         })
-        .map((m) => ({
-          x: m.centerX / page1.result.imageWidth,
-          y: m.centerY / page1.result.imageHeight,
+        .map((marker) => ({
+          x: marker.centerX / page1.result.imageWidth,
+          y: marker.centerY / page1.result.imageHeight,
         })) as [
         { x: number; y: number },
         { x: number; y: number },
@@ -214,7 +215,7 @@ export function useOmrAutoScoring(examId: string) {
       const cropRegions =
         await window.electronAPI.getCropRegionsByExamId(examId)
       const page1Regions = cropRegions.filter(
-        (r) => r.examPage?.pageNumber === 1
+        (cropRegion) => cropRegion.examPage?.pageNumber === 1
       )
       if (page1Regions.length === 0) {
         setState((s) => ({
@@ -231,7 +232,7 @@ export function useOmrAutoScoring(examId: string) {
 
       const page1ExamPageId = page1Regions[0]?.examPage?.id
       const answerImages = allAnswerImages.filter(
-        (img) => img.examPageId === page1ExamPageId
+        (answerImage) => answerImage.examPageId === page1ExamPageId
       )
 
       if (answerImages.length === 0) {
@@ -244,11 +245,11 @@ export function useOmrAutoScoring(examId: string) {
       }
 
       // 画像パス（DB相対パス）を収集 — メインプロセス側で絶対パスに解決
-      const imagePaths = answerImages.map((img) => ({
-        path: img.imagePath,
-        studentId: img.studentId,
-        studentName: img.student
-          ? `${img.student.lastName} ${img.student.firstName}`
+      const imagePaths = answerImages.map((answerImage) => ({
+        path: answerImage.imagePath,
+        studentId: answerImage.studentId,
+        studentName: answerImage.student
+          ? `${answerImage.student.lastName} ${answerImage.student.firstName}`
           : undefined,
       }))
 
@@ -267,25 +268,25 @@ export function useOmrAutoScoring(examId: string) {
 
       // 7. 配点マップ構築
       const pointsMap: Record<string, number> = {}
-      for (const r of page1Regions) {
-        if (r.points != null) {
-          pointsMap[r.id] = r.points
+      for (const region of page1Regions) {
+        if (region.points != null) {
+          pointsMap[region.id] = region.points
         }
       }
 
       // マーカー検出失敗の診断
-      const failedSheets = results.filter((r) => !r.success)
+      const failedSheets = results.filter((result) => !result.success)
       if (failedSheets.length > 0) {
         console.warn(
           `OMR: ${failedSheets.length}/${results.length} 枚でマーカー検出失敗`,
-          failedSheets.map((r) => ({
-            studentId: r.studentId,
-            error: r.error,
+          failedSheets.map((sheet) => ({
+            studentId: sheet.studentId,
+            error: sheet.error,
           }))
         )
       }
       const emptyResultSheets = results.filter(
-        (r) => r.success && r.cellResults.length === 0
+        (result) => result.success && result.cellResults.length === 0
       )
       if (emptyResultSheets.length > 0) {
         console.warn(
@@ -480,11 +481,11 @@ function buildCellsFromRegions(
 ): ComputedCell[] {
   const cells: ComputedCell[] = []
 
-  for (const cfg of configs) {
-    const region = regions.find((r) => r.id === cfg.cropRegionId)
+  for (const omrConfig of configs) {
+    const region = regions.find((r) => r.id === omrConfig.cropRegionId)
     if (!region) continue
 
-    const config = cellConfigs[cfg.cropRegionId]
+    const config = cellConfigs[omrConfig.cropRegionId]
     if (!config) continue
 
     const cell: ComputedCell = {
@@ -497,7 +498,7 @@ function buildCellsFromRegions(
       normalizedY: region.y,
       normalizedW: region.width,
       normalizedH: region.height,
-      label: cfg.cropRegionId,
+      label: omrConfig.cropRegionId,
       points: region.points ?? 0,
       cellType: "answer",
       pageIndex: 0,
@@ -506,27 +507,27 @@ function buildCellsFromRegions(
 
     if (config.type === "choice") {
       // DB保存済みバブル位置を優先、なければ推定計算にフォールバック
-      const hasSavedPositions = cfg.choiceOptions.some(
-        (opt) => opt.normalizedCx != null
+      const hasSavedPositions = omrConfig.choiceOptions.some(
+        (option) => option.normalizedCx != null
       )
       if (hasSavedPositions) {
-        cell.omrBubbles = cfg.choiceOptions
-          .filter((opt) => opt.normalizedCx != null)
-          .map((opt) => ({
-            normalizedCx: opt.normalizedCx!,
-            normalizedCy: opt.normalizedCy!,
-            normalizedWidth: opt.normalizedWidth!,
-            normalizedHeight: opt.normalizedHeight!,
-            choiceIndex: opt.choiceIndex,
-            label: opt.label,
+        cell.omrBubbles = omrConfig.choiceOptions
+          .filter((option) => option.normalizedCx != null)
+          .map((option) => ({
+            normalizedCx: option.normalizedCx!,
+            normalizedCy: option.normalizedCy!,
+            normalizedWidth: option.normalizedWidth!,
+            normalizedHeight: option.normalizedHeight!,
+            choiceIndex: option.choiceIndex,
+            label: option.label,
           }))
       } else {
         cell.omrBubbles = computeBubblesFromRegion(region, config)
       }
     } else if (config.type === "handwritten-digit") {
       // DB保存済み数字欄位置を優先、なければ推定計算にフォールバック
-      if (cfg.digitBoxes && cfg.digitBoxes.length > 0) {
-        cell.omrDigitBoxes = cfg.digitBoxes.map((box) => ({
+      if (omrConfig.digitBoxes && omrConfig.digitBoxes.length > 0) {
+        cell.omrDigitBoxes = omrConfig.digitBoxes.map((box) => ({
           normalizedX: box.normalizedX,
           normalizedY: box.normalizedY,
           normalizedW: box.normalizedW,

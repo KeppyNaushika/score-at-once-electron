@@ -374,8 +374,8 @@ export function useCanvasInteraction({
 
       // 最も近いハンドルを選択
       if (handleHits.length > 0) {
-        const closest = handleHits.reduce((a, b) =>
-          a.distance < b.distance ? a : b
+        const closest = handleHits.reduce((handleHitA, handleHitB) =>
+          handleHitA.distance < handleHitB.distance ? handleHitA : handleHitB
         )
 
         // ポインターキャプチャのヘルパー
@@ -550,7 +550,7 @@ export function useCanvasInteraction({
         resizeOriginalBounds
       ) {
         const resizeElement = drawingElements.find(
-          (el) => el.id === resizeElementId
+          (element) => element.id === resizeElementId
         )
         if (resizeElement) {
           handleElementResize(
@@ -572,8 +572,8 @@ export function useCanvasInteraction({
         setCursor("crosshair")
       } else if (isDraggingElement) {
         if (lineEditMode === "start" || lineEditMode === "end") {
-          const selectedElement = drawingElements.find((el) =>
-            selectedElementIds.includes(el.id)
+          const selectedElement = drawingElements.find((element) =>
+            selectedElementIds.includes(element.id)
           )
           if (selectedElement) {
             const cursor = getResizeCursor(selectedElement, lineEditMode)
@@ -713,7 +713,7 @@ export function useCanvasInteraction({
 
         if (resizeElementId) {
           const resizedElement = drawingElements.find(
-            (el) => el.id === resizeElementId
+            (element) => element.id === resizeElementId
           )
           if (resizedElement) {
             const updates: Partial<DrawingElement> = {

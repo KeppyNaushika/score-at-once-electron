@@ -85,9 +85,9 @@ export default function StudentClassMembershipModal({
     date: Date | string | null | undefined
   ): string => {
     if (!date) return ""
-    const d = typeof date === "string" ? new Date(date) : date
-    if (isNaN(d.getTime())) return ""
-    return d.toISOString().split("T")[0]
+    const parsedDate = typeof date === "string" ? new Date(date) : date
+    if (isNaN(parsedDate.getTime())) return ""
+    return parsedDate.toISOString().split("T")[0]
   }
 
   useEffect(() => {

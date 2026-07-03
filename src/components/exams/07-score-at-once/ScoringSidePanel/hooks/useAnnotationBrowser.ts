@@ -146,19 +146,23 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
     let filtered = allAnnotations
     if (filters.cropRegionId) {
       filtered = filtered.filter(
-        (a) => a.questionScore?.cropRegionId === filters.cropRegionId
+        (annotation) =>
+          annotation.questionScore?.cropRegionId === filters.cropRegionId
       )
     }
     if (filters.studentId) {
       filtered = filtered.filter(
-        (a) => a.questionScore?.studentId === filters.studentId
+        (annotation) =>
+          annotation.questionScore?.studentId === filters.studentId
       )
     }
     if (filters.type) {
-      filtered = filtered.filter((a) => a.type === filters.type)
+      filtered = filtered.filter(
+        (annotation) => annotation.type === filters.type
+      )
     }
     if (filters.favoritesOnly) {
-      filtered = filtered.filter((a) => a.isFavorite)
+      filtered = filtered.filter((annotation) => annotation.isFavorite)
     }
 
     // 重複省略: グルーピング
@@ -178,23 +182,25 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
     for (const annotations of groups.values()) {
       // updatedAt descで最新を代表にする
       const sorted = [...annotations].sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        (annotationA, annotationB) =>
+          new Date(annotationB.updatedAt).getTime() -
+          new Date(annotationA.updatedAt).getTime()
       )
       items.push({
         representative: sorted[0],
         count: annotations.length,
-        isFavorite: annotations.some((a) => a.isFavorite),
-        allIds: annotations.map((a) => a.id),
+        isFavorite: annotations.some((annotation) => annotation.isFavorite),
+        allIds: annotations.map((annotation) => annotation.id),
       })
     }
 
     // ソート: お気に入り優先 → updatedAt desc
-    items.sort((a, b) => {
-      if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1
+    items.sort((itemA, itemB) => {
+      if (itemA.isFavorite !== itemB.isFavorite)
+        return itemA.isFavorite ? -1 : 1
       return (
-        new Date(b.representative.updatedAt).getTime() -
-        new Date(a.representative.updatedAt).getTime()
+        new Date(itemB.representative.updatedAt).getTime() -
+        new Date(itemA.representative.updatedAt).getTime()
       )
     })
 
@@ -211,8 +217,10 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
         if (result.success) {
           // ローカル状態を即時更新
           setAllAnnotations((prev) =>
-            prev.map((a) =>
-              a.id === id ? { ...a, isFavorite: !currentFavorite } : a
+            prev.map((annotation) =>
+              annotation.id === id
+                ? { ...annotation, isFavorite: !currentFavorite }
+                : annotation
             )
           )
         }
@@ -241,84 +249,88 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
 
       // フロントエンド側重複チェック: allAnnotationsを使ってローカルで判定
       // 既に同一プロパティのアノテーションが存在するquestionScoreIdを除外する
-      const newQsIds = targetQuestionScoreIds.filter((qsId) => {
-        // このqsIdに紐づく既存アノテーションの中で、ソースと同一のものがあるか
-        return !allAnnotations.some((existing) => {
-          if (existing.questionScore?.id !== qsId) return false
-          // 位置はpositionOverrideを適用した値と比較
-          const targetX =
-            (positionOverride as { x?: number }).x ?? sourceAnnotation.x
-          const targetY =
-            (positionOverride as { y?: number }).y ?? sourceAnnotation.y
-          const targetEndX =
-            (positionOverride as { endX?: number }).endX ??
-            sourceAnnotation.endX
-          const targetEndY =
-            (positionOverride as { endY?: number }).endY ??
-            sourceAnnotation.endY
-          const targetDisplayX =
-            (positionOverride as { displayX?: number }).displayX ??
-            sourceAnnotation.displayX
-          const targetDisplayY =
-            (positionOverride as { displayY?: number }).displayY ??
-            sourceAnnotation.displayY
+      const newQuestionScoreIds = targetQuestionScoreIds.filter(
+        (questionScoreId) => {
+          // このquestionScoreIdに紐づく既存アノテーションの中で、ソースと同一のものがあるか
+          return !allAnnotations.some((existing) => {
+            if (existing.questionScore?.id !== questionScoreId) return false
+            // 位置はpositionOverrideを適用した値と比較
+            const targetX =
+              (positionOverride as { x?: number }).x ?? sourceAnnotation.x
+            const targetY =
+              (positionOverride as { y?: number }).y ?? sourceAnnotation.y
+            const targetEndX =
+              (positionOverride as { endX?: number }).endX ??
+              sourceAnnotation.endX
+            const targetEndY =
+              (positionOverride as { endY?: number }).endY ??
+              sourceAnnotation.endY
+            const targetDisplayX =
+              (positionOverride as { displayX?: number }).displayX ??
+              sourceAnnotation.displayX
+            const targetDisplayY =
+              (positionOverride as { displayY?: number }).displayY ??
+              sourceAnnotation.displayY
 
-          return (
-            existing.type === sourceAnnotation.type &&
-            existing.x === targetX &&
-            existing.y === targetY &&
-            existing.color === sourceAnnotation.color &&
-            existing.strokeWidth === sourceAnnotation.strokeWidth &&
-            existing.width === sourceAnnotation.width &&
-            existing.height === sourceAnnotation.height &&
-            existing.endX === targetEndX &&
-            existing.endY === targetEndY &&
-            existing.lineStyle === sourceAnnotation.lineStyle &&
-            existing.text === sourceAnnotation.text &&
-            existing.fontSize === sourceAnnotation.fontSize &&
-            existing.textBoxWidth === sourceAnnotation.textBoxWidth &&
-            existing.textBoxHeight === sourceAnnotation.textBoxHeight &&
-            existing.horizontalAlign === sourceAnnotation.horizontalAlign &&
-            existing.verticalAlign === sourceAnnotation.verticalAlign &&
-            existing.anchorDirection === sourceAnnotation.anchorDirection &&
-            existing.displayX === targetDisplayX &&
-            existing.displayY === targetDisplayY &&
-            existing.userId === userId
-          )
-        })
-      })
+            return (
+              existing.type === sourceAnnotation.type &&
+              existing.x === targetX &&
+              existing.y === targetY &&
+              existing.color === sourceAnnotation.color &&
+              existing.strokeWidth === sourceAnnotation.strokeWidth &&
+              existing.width === sourceAnnotation.width &&
+              existing.height === sourceAnnotation.height &&
+              existing.endX === targetEndX &&
+              existing.endY === targetEndY &&
+              existing.lineStyle === sourceAnnotation.lineStyle &&
+              existing.text === sourceAnnotation.text &&
+              existing.fontSize === sourceAnnotation.fontSize &&
+              existing.textBoxWidth === sourceAnnotation.textBoxWidth &&
+              existing.textBoxHeight === sourceAnnotation.textBoxHeight &&
+              existing.horizontalAlign === sourceAnnotation.horizontalAlign &&
+              existing.verticalAlign === sourceAnnotation.verticalAlign &&
+              existing.anchorDirection === sourceAnnotation.anchorDirection &&
+              existing.displayX === targetDisplayX &&
+              existing.displayY === targetDisplayY &&
+              existing.userId === userId
+            )
+          })
+        }
+      )
 
-      const skipped = targetQuestionScoreIds.length - newQsIds.length
+      const skipped = targetQuestionScoreIds.length - newQuestionScoreIds.length
 
       // 全て重複の場合はIPCリクエストを送らない
-      if (newQsIds.length === 0) {
+      if (newQuestionScoreIds.length === 0) {
         return { created: 0, skipped }
       }
 
-      const createDataList: DrawingCreateData[] = newQsIds.map((qsId) => ({
-        questionScoreId: qsId,
-        type: sourceAnnotation.type,
-        x: sourceAnnotation.x,
-        y: sourceAnnotation.y,
-        color: sourceAnnotation.color,
-        strokeWidth: sourceAnnotation.strokeWidth,
-        width: sourceAnnotation.width,
-        height: sourceAnnotation.height,
-        endX: sourceAnnotation.endX,
-        endY: sourceAnnotation.endY,
-        lineStyle: sourceAnnotation.lineStyle,
-        text: sourceAnnotation.text,
-        fontSize: sourceAnnotation.fontSize,
-        textBoxWidth: sourceAnnotation.textBoxWidth,
-        textBoxHeight: sourceAnnotation.textBoxHeight,
-        horizontalAlign: sourceAnnotation.horizontalAlign,
-        verticalAlign: sourceAnnotation.verticalAlign,
-        anchorDirection: sourceAnnotation.anchorDirection,
-        displayX: sourceAnnotation.displayX,
-        displayY: sourceAnnotation.displayY,
-        userId,
-        ...positionOverride,
-      }))
+      const createDataList: DrawingCreateData[] = newQuestionScoreIds.map(
+        (questionScoreId) => ({
+          questionScoreId: questionScoreId,
+          type: sourceAnnotation.type,
+          x: sourceAnnotation.x,
+          y: sourceAnnotation.y,
+          color: sourceAnnotation.color,
+          strokeWidth: sourceAnnotation.strokeWidth,
+          width: sourceAnnotation.width,
+          height: sourceAnnotation.height,
+          endX: sourceAnnotation.endX,
+          endY: sourceAnnotation.endY,
+          lineStyle: sourceAnnotation.lineStyle,
+          text: sourceAnnotation.text,
+          fontSize: sourceAnnotation.fontSize,
+          textBoxWidth: sourceAnnotation.textBoxWidth,
+          textBoxHeight: sourceAnnotation.textBoxHeight,
+          horizontalAlign: sourceAnnotation.horizontalAlign,
+          verticalAlign: sourceAnnotation.verticalAlign,
+          anchorDirection: sourceAnnotation.anchorDirection,
+          displayX: sourceAnnotation.displayX,
+          displayY: sourceAnnotation.displayY,
+          userId,
+          ...positionOverride,
+        })
+      )
 
       try {
         if (createDataList.length === 1) {

@@ -84,16 +84,18 @@ export function reevaluateWithThreshold(
 
     for (const cellResult of sheet.cellResults) {
       const cropRegionId = cellResult.label
-      const cfg = omrConfigs.find((c) => c.cropRegionId === cropRegionId)
+      const omrConfig = omrConfigs.find(
+        (config) => config.cropRegionId === cropRegionId
+      )
       const maxPoints = pointsMap[cropRegionId] ?? 0
 
       // fillRatiosがない場合（手書き数字型など）は元の結果をそのまま使用
-      if (!cellResult.fillRatios || !cfg || cfg.type !== "choice") {
+      if (!cellResult.fillRatios || !omrConfig || omrConfig.type !== "choice") {
         updatedCellResults.push(cellResult)
         entries.push(
           buildEntryFromCellResult(
             cellResult,
-            cfg,
+            omrConfig,
             maxPoints,
             confidenceThreshold
           )
@@ -102,12 +104,16 @@ export function reevaluateWithThreshold(
       }
 
       // fillRatiosからareaThresholdで再判定
-      const updatedCell = reevaluateChoiceCell(cellResult, cfg, areaThreshold)
+      const updatedCell = reevaluateChoiceCell(
+        cellResult,
+        omrConfig,
+        areaThreshold
+      )
       updatedCellResults.push(updatedCell)
       entries.push(
         buildEntryFromCellResult(
           updatedCell,
-          cfg,
+          omrConfig,
           maxPoints,
           confidenceThreshold
         )
@@ -135,9 +141,9 @@ function reevaluateChoiceCell(
 ): OMRCellResult {
   const fillRatios = cellResult.fillRatios!
   const correctAnswers = cfg.choiceOptions
-    .filter((o) => o.isCorrect)
-    .map((o) => o.choiceIndex)
-  const labels = cfg.choiceOptions.map((o) => o.label)
+    .filter((option) => option.isCorrect)
+    .map((option) => option.choiceIndex)
+  const labels = cfg.choiceOptions.map((option) => option.label)
 
   const markedIndices: number[] = []
   for (let i = 0; i < fillRatios.length; i++) {
@@ -233,11 +239,11 @@ function buildEntryFromCellResult(
     cellResult.recognizedValues.length > 0
   ) {
     const correctLabels = cfg.choiceOptions
-      .filter((o) => o.isCorrect)
-      .map((o) => o.label)
+      .filter((option) => option.isCorrect)
+      .map((option) => option.label)
     if (correctLabels.length > 1) {
-      const correctCount = cellResult.recognizedValues.filter((v) =>
-        correctLabels.includes(v)
+      const correctCount = cellResult.recognizedValues.filter((value) =>
+        correctLabels.includes(value)
       ).length
       if (correctCount > 0 && correctCount < correctLabels.length) {
         status = "partial"
@@ -337,8 +343,8 @@ export function recommendAreaThreshold(
   if (allRatios.length < 2) return null
 
   const sorted = allRatios
-    .filter((r) => r >= 0.05 && r <= 0.85)
-    .sort((a, b) => a - b)
+    .filter((ratio) => ratio >= 0.05 && ratio <= 0.85)
+    .sort((ratioA, ratioB) => ratioA - ratioB)
 
   if (sorted.length < 2) return null
 

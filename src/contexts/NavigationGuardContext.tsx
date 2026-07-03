@@ -143,10 +143,10 @@ export function NavigationGuardProvider({
                 {details.length > 0 && (
                   <ul className="my-2 list-inside list-disc">
                     {details
-                      .filter((d) => d.count > 0)
-                      .map((d) => (
-                        <li key={d.label}>
-                          {d.label}: {d.count}件
+                      .filter((detail) => detail.count > 0)
+                      .map((detail) => (
+                        <li key={detail.label}>
+                          {detail.label}: {detail.count}件
                         </li>
                       ))}
                   </ul>

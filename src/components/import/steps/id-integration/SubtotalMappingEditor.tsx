@@ -41,8 +41,8 @@ export function SubtotalMappingEditor({
   // 既存SubtotalのIDマップ（名前→ID）
   const existingIdByName = useMemo(() => {
     const map = new Map<string, string>()
-    for (const s of existingSubtotals) {
-      map.set(s.name, s.id)
+    for (const existingSub of existingSubtotals) {
+      map.set(existingSub.name, existingSub.id)
     }
     return map
   }, [existingSubtotals])

@@ -122,8 +122,8 @@ export function parseInlineMarkup(input: string): InlineSegment[] {
           pushSegment(current)
           current = ""
           style[styleKey] = false
-          const idx = styleStack.lastIndexOf(styleKey)
-          if (idx !== -1) styleStack.splice(idx, 1)
+          const index = styleStack.lastIndexOf(styleKey)
+          if (index !== -1) styleStack.splice(index, 1)
           i += delim.pattern.length
           matched = true
           break

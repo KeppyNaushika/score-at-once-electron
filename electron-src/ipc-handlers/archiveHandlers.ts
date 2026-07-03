@@ -89,7 +89,7 @@ export async function executeBulkExport(
   }
 
   return {
-    success: results.some((r) => r.success),
+    success: results.some((result) => result.success),
     results,
     outputDirectory,
   }

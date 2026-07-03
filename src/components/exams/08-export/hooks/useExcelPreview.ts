@@ -105,7 +105,10 @@ export function useExcelPreview({
             ) || [],
           questionMaxScores:
             result.questionRegions?.map((r) => r.points ?? 0) || [],
-          subtotalLabels: result.subtotalColumns?.map((c) => c.label) || [],
+          subtotalLabels:
+            result.subtotalColumns?.map(
+              (subtotalColumn) => subtotalColumn.label
+            ) || [],
         }
 
         const rows: ExcelPreviewRow[] = result.scoringData.map((data) => ({

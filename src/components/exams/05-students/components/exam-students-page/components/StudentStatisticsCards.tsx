@@ -11,12 +11,14 @@ export function StudentStatisticsCards({
 }: StudentStatisticsCardsProps) {
   const totalStudents = students.length
   const participatingStudents = students.filter(
-    (s) => s.status === "participating"
+    (student) => student.status === "participating"
   ).length
   const expectedStudents = students.filter(
-    (s) => s.status === "expected"
+    (student) => student.status === "expected"
   ).length
-  const absentStudents = students.filter((s) => s.status === "absent").length
+  const absentStudents = students.filter(
+    (student) => student.status === "absent"
+  ).length
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-4">

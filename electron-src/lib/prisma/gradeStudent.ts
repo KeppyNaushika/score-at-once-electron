@@ -76,12 +76,12 @@ export async function getGradeClasses(gradeId: string) {
     })
     return {
       success: true,
-      classes: classes.map((c) => ({
-        id: c.id,
-        classroomId: c.classroomId,
-        className: c.classroom.name,
-        order: c.order,
-        studentCount: c.classroom.memberships.length,
+      classes: classes.map((gradeClass) => ({
+        id: gradeClass.id,
+        classroomId: gradeClass.classroomId,
+        className: gradeClass.classroom.name,
+        order: gradeClass.order,
+        studentCount: gradeClass.classroom.memberships.length,
       })),
     }
   } catch (error) {
@@ -118,8 +118,10 @@ export async function getAvailableClassesForGrade(
     ])
 
     const classes = await getAvailableClassesForTarget({
-      existingClassIds: existing.map((e) => e.classroomId),
-      excludeStudentIds: gradeStudents.map((g) => g.studentId),
+      existingClassIds: existing.map((gradeClass) => gradeClass.classroomId),
+      excludeStudentIds: gradeStudents.map(
+        (gradeStudent) => gradeStudent.studentId
+      ),
       referenceDate,
       activeOnly,
     })
@@ -151,7 +153,9 @@ export async function getAvailableStudentsForGrade(
     })
 
     const students = await getAvailableStudentsForTarget({
-      excludeStudentIds: gradeStudents.map((g) => g.studentId),
+      excludeStudentIds: gradeStudents.map(
+        (gradeStudent) => gradeStudent.studentId
+      ),
       referenceDate,
       activeOnly,
     })
@@ -178,19 +182,19 @@ const gradeRosterAdapter: RosterAdapter = {
     }),
   createStudents: async (targetId, rows) => {
     await prisma.gradeStudent.createMany({
-      data: rows.map((r) => ({
+      data: rows.map((row) => ({
         gradeId: targetId,
-        studentId: r.studentId,
-        customOrder: r.customOrder,
+        studentId: row.studentId,
+        customOrder: row.customOrder,
       })),
     })
   },
   setStudentOrders: async (targetId, orders) => {
     await prisma.$transaction(
-      orders.map((o) =>
+      orders.map((order) =>
         prisma.gradeStudent.updateMany({
-          where: { gradeId: targetId, studentId: o.studentId },
-          data: { customOrder: o.customOrder },
+          where: { gradeId: targetId, studentId: order.studentId },
+          data: { customOrder: order.customOrder },
         })
       )
     )
@@ -211,10 +215,10 @@ const gradeRosterAdapter: RosterAdapter = {
   },
   setClassOrders: async (targetId, orders) => {
     await prisma.$transaction(
-      orders.map((o) =>
+      orders.map((order) =>
         prisma.gradeClass.updateMany({
-          where: { gradeId: targetId, classroomId: o.classroomId },
-          data: { order: o.order },
+          where: { gradeId: targetId, classroomId: order.classroomId },
+          data: { order: order.order },
         })
       )
     )
@@ -224,7 +228,7 @@ const gradeRosterAdapter: RosterAdapter = {
       where: { gradeId: targetId, classroomId: { not: exceptClassId } },
       select: { classroomId: true },
     })
-    return rows.map((c) => c.classroomId)
+    return rows.map((gradeClass) => gradeClass.classroomId)
   },
   removeClassAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([

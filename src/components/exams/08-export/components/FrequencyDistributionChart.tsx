@@ -13,7 +13,7 @@ interface FrequencyDistributionChartProps {
 export function FrequencyDistributionChart({
   data,
 }: FrequencyDistributionChartProps) {
-  const maxCount = Math.max(...data.bins.map((b) => b.count), 1)
+  const maxCount = Math.max(...data.bins.map((bin) => bin.count), 1)
 
   return (
     <div className="space-y-2 p-1">

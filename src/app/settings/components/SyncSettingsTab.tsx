@@ -156,7 +156,9 @@ export function SyncSettingsTab() {
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <div className="space-y-1 text-sm text-amber-800">
-              {status.versionMismatches.some((m) => m.remoteIsNewer) ? (
+              {status.versionMismatches.some(
+                (mismatch) => mismatch.remoteIsNewer
+              ) ? (
                 <p className="font-medium">
                   他のPCがより新しいバージョンのアプリを使用しています。このPCのアプリを更新するまで、そのPCとの同期は保留されます。
                 </p>

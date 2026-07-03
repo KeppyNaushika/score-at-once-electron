@@ -40,7 +40,8 @@ export function GradeExcelPreview({
     [selectedStudentIds]
   )
   const students = useMemo(
-    () => result.students.filter((s) => selectedSet.has(s.studentId)),
+    () =>
+      result.students.filter((student) => selectedSet.has(student.studentId)),
     [result.students, selectedSet]
   )
 
@@ -51,11 +52,17 @@ export function GradeExcelPreview({
       result.gradeItems.map((gradeItem) => {
         let sourceNames: string[] = []
         for (const student of result.students) {
-          const gir = student.gradeItemResults.find(
-            (r) => r.gradeItemId === gradeItem.id
+          const gradeItemResult = student.gradeItemResults.find(
+            (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
           )
-          if (gir && !gir.isExcluded && gir.sourceScores.length > 0) {
-            sourceNames = gir.sourceScores.map((ss) => ss.dataSourceName)
+          if (
+            gradeItemResult &&
+            !gradeItemResult.isExcluded &&
+            gradeItemResult.sourceScores.length > 0
+          ) {
+            sourceNames = gradeItemResult.sourceScores.map(
+              (sourceScore) => sourceScore.dataSourceName
+            )
             break
           }
         }
@@ -64,7 +71,8 @@ export function GradeExcelPreview({
     [result.gradeItems, result.students]
   )
 
-  const studentName = (s: StudentGradeResult) => `${s.lastName} ${s.firstName}`
+  const studentName = (student: StudentGradeResult) =>
+    `${student.lastName} ${student.firstName}`
 
   return (
     <div className="flex h-full flex-col">
@@ -89,13 +97,13 @@ export function GradeExcelPreview({
               <tr>
                 <th className="border px-1 py-0.5 text-left">番号</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
-                {result.gradeItems.map((gi) => (
+                {result.gradeItems.map((gradeItem) => (
                   <th
-                    key={gi.id}
+                    key={gradeItem.id}
                     colSpan={2}
                     className="border px-1 py-0.5 text-center"
                   >
-                    {gi.name}
+                    {gradeItem.name}
                   </th>
                 ))}
                 <th colSpan={2} className="border px-1 py-0.5 text-center">
@@ -105,8 +113,8 @@ export function GradeExcelPreview({
               <tr>
                 <th className="border px-1 py-0.5" />
                 <th className="border px-1 py-0.5" />
-                {result.gradeItems.map((gi) => (
-                  <ResultSubHeader key={gi.id} />
+                {result.gradeItems.map((gradeItem) => (
+                  <ResultSubHeader key={gradeItem.id} />
                 ))}
                 <ResultSubHeader />
               </tr>
@@ -120,19 +128,20 @@ export function GradeExcelPreview({
                   <td className="border px-1 py-0.5 whitespace-nowrap">
                     {studentName(student)}
                   </td>
-                  {result.gradeItems.map((gi) => {
+                  {result.gradeItems.map((gradeItem) => {
                     const gir = student.gradeItemResults.find(
-                      (r) => r.gradeItemId === gi.id
+                      (gradeItemResult) =>
+                        gradeItemResult.gradeItemId === gradeItem.id
                     )
                     if (gir?.isExcluded) {
-                      return <ExcludedCells key={gi.id} count={2} />
+                      return <ExcludedCells key={gradeItem.id} count={2} />
                     }
                     const pct = round1(gir?.percentage ?? null)
                     const allMissing = gir?.isAllMissing ?? false
                     const cls = allMissing ? "text-red-500" : ""
                     return (
                       <ResultCells
-                        key={gi.id}
+                        key={gradeItem.id}
                         percentage={pct}
                         label={gir?.gradeLabel ?? null}
                         className={cls}
@@ -191,7 +200,8 @@ export function GradeExcelPreview({
                   </td>
                   {detailColumns.map(({ gradeItem, sourceNames }) => {
                     const gir = student.gradeItemResults.find(
-                      (r) => r.gradeItemId === gradeItem.id
+                      (gradeItemResult) =>
+                        gradeItemResult.gradeItemId === gradeItem.id
                     )
                     if (gir?.isExcluded) {
                       return (
@@ -301,9 +311,9 @@ function DetailCells({
   // 表示する列数を sourceCount に合わせる（生徒間で列数を揃える）
   const cells: React.ReactNode[] = []
   for (let i = 0; i < sourceCount; i++) {
-    const ss = gir?.sourceScores[i]
-    const value = ss ? (round2(ss.weightedScore) ?? "-") : "-"
-    const estimated = ss?.isEstimated ?? false
+    const sourceScore = gir?.sourceScores[i]
+    const value = sourceScore ? (round2(sourceScore.weightedScore) ?? "-") : "-"
+    const estimated = sourceScore?.isEstimated ?? false
     cells.push(
       <td
         key={i}

@@ -138,21 +138,24 @@ export async function listAsbDefinitions(
   return rows.map((row) => {
     let questionCount = 0
     let totalPoints = 0
-    for (const mq of row.majorQuestions) {
-      for (const sq of mq.subQuestions) {
-        if (sq.branchQuestions.length > 0) {
-          if (sq.usesBranchPoints === false) {
+    for (const majorQuestion of row.majorQuestions) {
+      for (const subQuestion of majorQuestion.subQuestions) {
+        if (subQuestion.branchQuestions.length > 0) {
+          if (subQuestion.usesBranchPoints === false) {
             // 完答モード: 小問の点数を使用
             questionCount += 1
-            totalPoints += sq.points
+            totalPoints += subQuestion.points
           } else {
             // 枝問ごとの配点モード: 枝問の点数を合計
-            questionCount += sq.branchQuestions.length
-            totalPoints += sq.branchQuestions.reduce((s, b) => s + b.points, 0)
+            questionCount += subQuestion.branchQuestions.length
+            totalPoints += subQuestion.branchQuestions.reduce(
+              (sum, branchQuestion) => sum + branchQuestion.points,
+              0
+            )
           }
         } else {
           questionCount += 1
-          totalPoints += sq.points
+          totalPoints += subQuestion.points
         }
       }
     }
@@ -219,75 +222,78 @@ export async function saveAsbDefinition(
 
     // ヘッダーフィールドを作成
     for (let hi = 0; hi < definition.settings.headerFields.length; hi++) {
-      const hf = definition.settings.headerFields[hi]
+      const headerField = definition.settings.headerFields[hi]
       await tx.asbHeaderField.create({
         data: {
-          id: hf.id,
+          id: headerField.id,
           definitionId: definition.id,
-          type: hf.type ?? "field",
-          label: hf.label,
-          widthMm: hf.widthMm,
-          heightMm: hf.heightMm,
-          gridCount: hf.gridCount,
-          lineStyle: hf.lineStyle,
-          lineWidth: hf.lineWidth,
+          type: headerField.type ?? "field",
+          label: headerField.label,
+          widthMm: headerField.widthMm,
+          heightMm: headerField.heightMm,
+          gridCount: headerField.gridCount,
+          lineStyle: headerField.lineStyle,
+          lineWidth: headerField.lineWidth,
           order: hi,
-          fontSize: hf.fontSize ?? null,
-          linkedRegionType: hf.linkedRegionType ?? null,
+          fontSize: headerField.fontSize ?? null,
+          linkedRegionType: headerField.linkedRegionType ?? null,
         },
       })
     }
 
     // 大問 → 小問 → 枝問 を再帰的に作成
     for (let mi = 0; mi < definition.majorQuestions.length; mi++) {
-      const mq = definition.majorQuestions[mi]
+      const majorQuestion = definition.majorQuestions[mi]
       await tx.asbMajorQuestion.create({
         data: {
-          id: mq.id,
+          id: majorQuestion.id,
           definitionId: definition.id,
-          label: mq.label,
+          label: majorQuestion.label,
           order: mi,
         },
       })
 
-      for (let si = 0; si < mq.subQuestions.length; si++) {
-        const sq = mq.subQuestions[si]
+      for (let si = 0; si < majorQuestion.subQuestions.length; si++) {
+        const subQuestion = majorQuestion.subQuestions[si]
         await tx.asbSubQuestion.create({
           data: {
-            id: sq.id,
-            majorQuestionId: mq.id,
-            label: sq.label,
+            id: subQuestion.id,
+            majorQuestionId: majorQuestion.id,
+            label: subQuestion.label,
             order: si,
-            heightMultiplier: sq.heightMultiplier,
-            points: sq.points,
-            usesBranchPoints: sq.usesBranchPoints ?? null,
-            layoutWidth: sq.layoutWidth ?? null,
-            nextPlacement: sq.nextPlacement ?? null,
-            goUp: sq.goUp ?? null,
-            manuscriptEnabled: sq.manuscriptPaper?.enabled ?? false,
-            manuscriptColumns: sq.manuscriptPaper?.columns ?? 20,
-            manuscriptRows: sq.manuscriptPaper?.rows ?? 10,
+            heightMultiplier: subQuestion.heightMultiplier,
+            points: subQuestion.points,
+            usesBranchPoints: subQuestion.usesBranchPoints ?? null,
+            layoutWidth: subQuestion.layoutWidth ?? null,
+            nextPlacement: subQuestion.nextPlacement ?? null,
+            goUp: subQuestion.goUp ?? null,
+            manuscriptEnabled: subQuestion.manuscriptPaper?.enabled ?? false,
+            manuscriptColumns: subQuestion.manuscriptPaper?.columns ?? 20,
+            manuscriptRows: subQuestion.manuscriptPaper?.rows ?? 10,
             manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
-            manuscriptCharGuides: sq.manuscriptPaper?.charGuides
-              ? JSON.stringify(sq.manuscriptPaper.charGuides)
+            manuscriptCharGuides: subQuestion.manuscriptPaper?.charGuides
+              ? JSON.stringify(subQuestion.manuscriptPaper.charGuides)
               : null,
-            manuscriptGuideFontSize: sq.manuscriptPaper?.guideFontSize ?? null,
-            manuscriptGuidePosition: sq.manuscriptPaper?.guidePosition ?? null,
-            manuscriptGuidePadding: sq.manuscriptPaper?.guidePadding ?? null,
-            borderStyleTop: sq.borderStyles?.top ?? null,
-            borderStyleBottom: sq.borderStyles?.bottom ?? null,
-            borderStyleLeft: sq.borderStyles?.left ?? null,
-            borderStyleRight: sq.borderStyles?.right ?? null,
+            manuscriptGuideFontSize:
+              subQuestion.manuscriptPaper?.guideFontSize ?? null,
+            manuscriptGuidePosition:
+              subQuestion.manuscriptPaper?.guidePosition ?? null,
+            manuscriptGuidePadding:
+              subQuestion.manuscriptPaper?.guidePadding ?? null,
+            borderStyleTop: subQuestion.borderStyles?.top ?? null,
+            borderStyleBottom: subQuestion.borderStyles?.bottom ?? null,
+            borderStyleLeft: subQuestion.borderStyles?.left ?? null,
+            borderStyleRight: subQuestion.borderStyles?.right ?? null,
           },
         })
 
         // テキスト要素（小問）
-        for (let ti = 0; ti < sq.textElements.length; ti++) {
-          const te = sq.textElements[ti]
+        for (let ti = 0; ti < subQuestion.textElements.length; ti++) {
+          const te = subQuestion.textElements[ti]
           await tx.asbTextElement.create({
             data: {
               id: te.id,
-              subQuestionId: sq.id,
+              subQuestionId: subQuestion.id,
               text: te.text,
               fontSize: te.fontSize,
               horizontalAlign: te.horizontalAlign,
@@ -298,13 +304,13 @@ export async function saveAsbDefinition(
         }
 
         // 画像要素（小問）
-        if (sq.imageElements) {
-          for (let ii = 0; ii < sq.imageElements.length; ii++) {
-            const ie = sq.imageElements[ii]
+        if (subQuestion.imageElements) {
+          for (let ii = 0; ii < subQuestion.imageElements.length; ii++) {
+            const ie = subQuestion.imageElements[ii]
             await tx.asbImageElement.create({
               data: {
                 id: ie.id,
-                subQuestionId: sq.id,
+                subQuestionId: subQuestion.id,
                 imagePath: ie.imagePath,
                 originalName: ie.originalName,
                 objectFit: ie.objectFit,
@@ -319,17 +325,21 @@ export async function saveAsbDefinition(
         }
 
         // OMR設定（小問）
-        if (sq.omrConfig) {
-          await createOmrConfig(tx, { subQuestionId: sq.id }, sq.omrConfig)
+        if (subQuestion.omrConfig) {
+          await createOmrConfig(
+            tx,
+            { subQuestionId: subQuestion.id },
+            subQuestion.omrConfig
+          )
         }
 
         // 枝問
-        for (let bi = 0; bi < sq.branchQuestions.length; bi++) {
-          const bq = sq.branchQuestions[bi]
+        for (let bi = 0; bi < subQuestion.branchQuestions.length; bi++) {
+          const bq = subQuestion.branchQuestions[bi]
           await tx.asbBranchQuestion.create({
             data: {
               id: bq.id,
-              subQuestionId: sq.id,
+              subQuestionId: subQuestion.id,
               label: bq.label,
               order: bi,
               heightMultiplier: bq.heightMultiplier,

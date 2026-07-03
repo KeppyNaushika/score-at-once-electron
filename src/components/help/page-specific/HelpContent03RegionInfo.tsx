@@ -68,15 +68,15 @@ function RowRegionSyncFigure() {
     <div aria-hidden className="flex items-stretch justify-center gap-6">
       {/* 左：解答用紙プレビュー */}
       <div className="relative h-40 w-28 shrink-0 rounded-md border border-gray-300 bg-white shadow-sm">
-        {regions.map((r, i) => (
+        {regions.map((region, i) => (
           <div
             key={i}
             className="absolute rounded-sm border-2"
             style={{
-              top: r.top,
-              left: r.left,
-              width: r.width,
-              height: r.height,
+              top: region.top,
+              left: region.left,
+              width: region.width,
+              height: region.height,
               borderColor: "#d1d5db",
               animation: `help03RegionOn 9s ${i * 3}s infinite`,
             }}
@@ -120,9 +120,9 @@ function CellFocusFigure() {
   return (
     <div aria-hidden className="flex flex-col items-center gap-2">
       <div className="grid grid-cols-3 gap-1.5 text-[10px] font-semibold text-gray-400">
-        {columns.map((c) => (
-          <span key={c} className="w-[60px] text-center">
-            {c}
+        {columns.map((column) => (
+          <span key={column} className="w-[60px] text-center">
+            {column}
           </span>
         ))}
       </div>
@@ -163,9 +163,9 @@ function OmrScanFigure() {
     <div aria-hidden className="flex flex-col items-center gap-3">
       <div className="relative h-12 w-[160px] overflow-hidden rounded-md border border-gray-300 bg-white px-3">
         <div className="flex h-full items-center justify-between">
-          {choices.map((c, i) => (
+          {choices.map((choice, i) => (
             <div
-              key={c}
+              key={choice}
               className="flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold"
               style={
                 i === correct
@@ -177,7 +177,7 @@ function OmrScanFigure() {
                   : { borderColor: "#d1d5db", color: "#9ca3af" }
               }
             >
-              {c}
+              {choice}
             </div>
           ))}
         </div>

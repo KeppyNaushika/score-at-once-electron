@@ -62,15 +62,15 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       const images = await tx.studentAnswerImage.findMany({
         where: { studentId: from },
       })
-      for (const img of images) {
+      for (const image of images) {
         const duplicate = await tx.studentAnswerImage.findFirst({
-          where: { examPageId: img.examPageId, studentId: to },
+          where: { examPageId: image.examPageId, studentId: to },
         })
         if (duplicate) {
-          await tx.studentAnswerImage.delete({ where: { id: img.id } })
+          await tx.studentAnswerImage.delete({ where: { id: image.id } })
         } else {
           await tx.studentAnswerImage.update({
-            where: { id: img.id },
+            where: { id: image.id },
             data: { studentId: to },
           })
         }
@@ -108,15 +108,15 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       const snapshots = await tx.returnSnapshot.findMany({
         where: { studentId: from },
       })
-      for (const snap of snapshots) {
+      for (const snapshot of snapshots) {
         const duplicate = await tx.returnSnapshot.findFirst({
-          where: { examId: snap.examId, studentId: to },
+          where: { examId: snapshot.examId, studentId: to },
         })
         if (duplicate) {
-          await tx.returnSnapshot.delete({ where: { id: snap.id } })
+          await tx.returnSnapshot.delete({ where: { id: snapshot.id } })
         } else {
           await tx.returnSnapshot.update({
-            where: { id: snap.id },
+            where: { id: snapshot.id },
             data: { studentId: to },
           })
         }
@@ -138,15 +138,20 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       const rows = await tx.courseworkStudent.findMany({
         where: { studentId: from },
       })
-      for (const row of rows) {
+      for (const courseworkStudent of rows) {
         const duplicate = await tx.courseworkStudent.findFirst({
-          where: { courseworkId: row.courseworkId, studentId: to },
+          where: {
+            courseworkId: courseworkStudent.courseworkId,
+            studentId: to,
+          },
         })
         if (duplicate) {
-          await tx.courseworkStudent.delete({ where: { id: row.id } })
+          await tx.courseworkStudent.delete({
+            where: { id: courseworkStudent.id },
+          })
         } else {
           await tx.courseworkStudent.update({
-            where: { id: row.id },
+            where: { id: courseworkStudent.id },
             data: { studentId: to },
           })
         }
@@ -160,15 +165,20 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       const rows = await tx.courseworkScore.findMany({
         where: { studentId: from },
       })
-      for (const row of rows) {
+      for (const courseworkScore of rows) {
         const duplicate = await tx.courseworkScore.findFirst({
-          where: { courseworkItemId: row.courseworkItemId, studentId: to },
+          where: {
+            courseworkItemId: courseworkScore.courseworkItemId,
+            studentId: to,
+          },
         })
         if (duplicate) {
-          await tx.courseworkScore.delete({ where: { id: row.id } })
+          await tx.courseworkScore.delete({
+            where: { id: courseworkScore.id },
+          })
         } else {
           await tx.courseworkScore.update({
-            where: { id: row.id },
+            where: { id: courseworkScore.id },
             data: { studentId: to },
           })
         }

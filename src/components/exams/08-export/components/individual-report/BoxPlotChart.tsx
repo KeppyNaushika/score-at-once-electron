@@ -92,9 +92,11 @@ export function BoxPlotChart({
       subtotalGroupSelection.selectedGroupIds.length > 0
     ) {
       stats = stats.filter(
-        (s) =>
-          !s.subtotalGroupId ||
-          subtotalGroupSelection.selectedGroupIds.includes(s.subtotalGroupId)
+        (subtotalStat) =>
+          !subtotalStat.subtotalGroupId ||
+          subtotalGroupSelection.selectedGroupIds.includes(
+            subtotalStat.subtotalGroupId
+          )
       )
     }
 
@@ -102,10 +104,12 @@ export function BoxPlotChart({
     if (hideUnassignedSubtotals) {
       const assignedSubtotalIds = new Set(
         scoringData.subtotalScores
-          .filter((s) => s.hasQuestionAssignments)
-          .map((s) => s.subtotalId)
+          .filter((subtotalScore) => subtotalScore.hasQuestionAssignments)
+          .map((subtotalScore) => subtotalScore.subtotalId)
       )
-      stats = stats.filter((s) => assignedSubtotalIds.has(s.subtotalId))
+      stats = stats.filter((subtotalStat) =>
+        assignedSubtotalIds.has(subtotalStat.subtotalId)
+      )
     }
 
     return stats
@@ -146,7 +150,9 @@ export function BoxPlotChart({
     if (id === "__overall__") {
       return scoringData.totalScore ?? 0
     }
-    const subtotal = scoringData.subtotalScores.find((s) => s.subtotalId === id)
+    const subtotal = scoringData.subtotalScores.find(
+      (subtotalScore) => subtotalScore.subtotalId === id
+    )
     return subtotal?.score ?? 0
   }
 

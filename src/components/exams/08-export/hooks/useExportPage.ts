@@ -256,22 +256,32 @@ export function useExportPage() {
       if (studentsResponse && studentsResponse.success) {
         // 受験生徒順（customOrder）でソート
         const sortedStudents = (studentsResponse.students || []).sort(
-          (a, b) => {
+          (studentA, studentB) => {
             // customOrderが設定されている場合はそれを優先
             if (
-              a.customOrder !== null &&
-              a.customOrder !== undefined &&
-              b.customOrder !== null &&
-              b.customOrder !== undefined
+              studentA.customOrder !== null &&
+              studentA.customOrder !== undefined &&
+              studentB.customOrder !== null &&
+              studentB.customOrder !== undefined
             ) {
-              return a.customOrder - b.customOrder
+              return studentA.customOrder - studentB.customOrder
             }
-            if (a.customOrder !== null && a.customOrder !== undefined) return -1
-            if (b.customOrder !== null && b.customOrder !== undefined) return 1
+            if (
+              studentA.customOrder !== null &&
+              studentA.customOrder !== undefined
+            )
+              return -1
+            if (
+              studentB.customOrder !== null &&
+              studentB.customOrder !== undefined
+            )
+              return 1
 
             // customOrderが未設定の場合は出席番号順をフォールバック
-            const aAttendanceNumber = a.memberships?.[0]?.attendanceNumber
-            const bAttendanceNumber = b.memberships?.[0]?.attendanceNumber
+            const aAttendanceNumber =
+              studentA.memberships?.[0]?.attendanceNumber
+            const bAttendanceNumber =
+              studentB.memberships?.[0]?.attendanceNumber
 
             if (aAttendanceNumber && bAttendanceNumber) {
               return aAttendanceNumber - bAttendanceNumber
@@ -280,8 +290,8 @@ export function useExportPage() {
             if (bAttendanceNumber) return 1
 
             // 出席番号もない場合は名前順
-            const aName = `${a.lastName}${a.firstName}`
-            const bName = `${b.lastName}${b.firstName}`
+            const aName = `${studentA.lastName}${studentA.firstName}`
+            const bName = `${studentB.lastName}${studentB.firstName}`
             return aName.localeCompare(bName, "ja")
           }
         )
@@ -289,8 +299,8 @@ export function useExportPage() {
         setStudents(sortedStudents)
         // デフォルトで参加中の学生を選択
         const participatingStudents = sortedStudents
-          .filter((s) => s.status === "participating")
-          .map((s) => s.id)
+          .filter((student) => student.status === "participating")
+          .map((student) => student.id)
         setSelectedStudents(new Set(participatingStudents))
       }
     } catch (error) {
@@ -325,7 +335,9 @@ export function useExportPage() {
 
     const matchesClass =
       selectedClasses.length === 0 ||
-      student.memberships.some((m) => selectedClasses.includes(m.classroom.id))
+      student.memberships.some((membership) =>
+        selectedClasses.includes(membership.classroom.id)
+      )
 
     const matchesStatus =
       selectedStatuses.length === 0 || selectedStatuses.includes(student.status)
@@ -337,8 +349,10 @@ export function useExportPage() {
   const availableClasses = Array.from(
     new Map(
       students
-        .flatMap((s) => s.memberships.map((m) => m.classroom))
-        .map((cls) => [cls.id, cls])
+        .flatMap((student) =>
+          student.memberships.map((membership) => membership.classroom)
+        )
+        .map((classroom) => [classroom.id, classroom])
     ).values()
   )
 

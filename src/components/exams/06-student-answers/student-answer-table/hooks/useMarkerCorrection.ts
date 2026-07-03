@@ -42,7 +42,7 @@ export function useMarkerCorrection({
 
   // 削除されたファイルの元バッファ参照を解放（メモリリーク防止）
   useEffect(() => {
-    const currentIds = new Set(files.map((f) => f.id))
+    const currentIds = new Set(files.map((file) => file.id))
     for (const id of originalBuffersRef.current.keys()) {
       if (!currentIds.has(id)) {
         originalBuffersRef.current.delete(id)
@@ -94,7 +94,9 @@ export function useMarkerCorrection({
 
     // 補正対象のIDを loading 状態として公開（補正実行のもののみ）
     const correctingIds = new Set(
-      tasks.filter((t) => t.target !== undefined).map((t) => t.file.id)
+      tasks
+        .filter((task) => task.target !== undefined)
+        .map((task) => task.file.id)
     )
     if (correctingIds.size > 0) {
       setCorrectingFileIds((prev) => {
@@ -179,8 +181,10 @@ export function useMarkerCorrection({
       }
 
       // 最新のfiles（他所で更新された可能性）に対してid一致で差し替え
-      const byId = new Map(processed.map((p) => [p.id, p]))
-      const merged = filesRef.current.map((f) => byId.get(f.id) ?? f)
+      const byId = new Map(
+        processed.map((processedFile) => [processedFile.id, processedFile])
+      )
+      const merged = filesRef.current.map((file) => byId.get(file.id) ?? file)
       onFilesChange(merged)
 
       // loading終了

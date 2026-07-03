@@ -10,8 +10,12 @@ export function ClassStatisticsCards({
   examClasses,
 }: ClassStatisticsCardsProps) {
   const totalClasses = examClasses.length
-  const administeredClasses = examClasses.filter((pc) => pc.administered).length
-  const teacherStatClasses = examClasses.filter((pc) => pc.teacherStat).length
+  const administeredClasses = examClasses.filter(
+    (examClass) => examClass.administered
+  ).length
+  const teacherStatClasses = examClasses.filter(
+    (examClass) => examClass.teacherStat
+  ).length
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-4">

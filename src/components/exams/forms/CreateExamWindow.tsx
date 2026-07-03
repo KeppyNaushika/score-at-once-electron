@@ -103,10 +103,10 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
 
   // サジェスト候補（入力中のテキストでフィルタ、既に追加済みは除外）
   const suggestions = allTags.filter(
-    (t) =>
-      !tagTexts.includes(t.name) &&
+    (tag) =>
+      !tagTexts.includes(tag.name) &&
       (currentTagInput.trim() === "" ||
-        t.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
+        tag.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
   )
 
   return (

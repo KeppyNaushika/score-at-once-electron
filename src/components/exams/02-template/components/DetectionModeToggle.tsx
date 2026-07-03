@@ -46,14 +46,14 @@ export const DetectionModeToggle = memo(function DetectionModeToggle({
         onValueChange={(value) => onModeChange(value as DetectionMode)}
       >
         <TabsList className="w-full">
-          {MODES.map((m) => (
+          {MODES.map((detectionMode) => (
             <TabsTrigger
-              key={m}
-              value={m}
+              key={detectionMode}
+              value={detectionMode}
               disabled={disabled}
               className="flex-1 text-xs"
             >
-              {DETECTION_MODE_LABELS[m]}
+              {DETECTION_MODE_LABELS[detectionMode]}
             </TabsTrigger>
           ))}
         </TabsList>

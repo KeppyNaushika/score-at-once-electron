@@ -32,17 +32,17 @@ export function useScoringMarks({
           resolve()
           return
         }
-        const img = new Image()
-        img.onload = () => {
-          scoringMarkImagesRef.current.set(type, img)
+        const image = new Image()
+        image.onload = () => {
+          scoringMarkImagesRef.current.set(type, image)
           resolve()
         }
-        img.onerror = () => {
+        image.onerror = () => {
           console.warn(`Failed to load scoring mark: ${type}`)
           resolve()
         }
         // Next.jsのpublicフォルダからロード
-        img.src = `/score-assets/${type}.png`
+        image.src = `/score-assets/${type}.png`
       })
     })
     Promise.all(loadPromises)

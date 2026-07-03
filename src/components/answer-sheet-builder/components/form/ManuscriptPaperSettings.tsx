@@ -88,7 +88,9 @@ export function ManuscriptPaperSettings({
 
   const updateGuide = (index: number, data: Partial<ManuscriptCharGuide>) => {
     handleChange({
-      charGuides: guides.map((g, i) => (i === index ? { ...g, ...data } : g)),
+      charGuides: guides.map((guide, i) =>
+        i === index ? { ...guide, ...data } : guide
+      ),
     })
   }
 
@@ -283,9 +285,9 @@ export function ManuscriptPaperSettings({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BOUNDARY_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                    {BOUNDARY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -25,8 +25,8 @@ export function useGradeItemExclusions(gradeId: string) {
       if (result.success && result.exclusions) {
         setExclusionSet(
           new Set(
-            result.exclusions.map((ex: ExclusionRecord) =>
-              buildKey(ex.studentId, ex.gradeItemId)
+            result.exclusions.map((exclusion: ExclusionRecord) =>
+              buildKey(exclusion.studentId, exclusion.gradeItemId)
             )
           )
         )

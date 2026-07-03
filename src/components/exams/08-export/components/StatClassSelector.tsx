@@ -54,7 +54,9 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
     ) => {
       // 楽観的更新
       setClasses((prev) =>
-        prev.map((c) => (c.id === examClassId ? { ...c, ...patch } : c))
+        prev.map((examClass) =>
+          examClass.id === examClassId ? { ...examClass, ...patch } : examClass
+        )
       )
       try {
         await window.electronAPI.examClass.update({ id: examClassId, ...patch })
@@ -114,35 +116,39 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {classes.map((ec) => (
-              <TableRow key={ec.id}>
+            {classes.map((examClass) => (
+              <TableRow key={examClass.id}>
                 <TableCell className="font-medium">
-                  {ec.classroom.name}
-                  {ec.classroom.grade != null && (
+                  {examClass.classroom.name}
+                  {examClass.classroom.grade != null && (
                     <span className="text-muted-foreground ml-2 text-xs">
-                      {ec.classroom.grade}年
+                      {examClass.classroom.grade}年
                     </span>
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-center text-xs">
                   <span className="inline-flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {ec.classroom.memberships.length}
+                    {examClass.classroom.memberships.length}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">
                   <Checkbox
-                    checked={ec.teacherStat}
+                    checked={examClass.teacherStat}
                     onCheckedChange={(checked) =>
-                      updateFlag(ec.id, { teacherStat: checked === true })
+                      updateFlag(examClass.id, {
+                        teacherStat: checked === true,
+                      })
                     }
                   />
                 </TableCell>
                 <TableCell className="text-center">
                   <Checkbox
-                    checked={ec.studentReport}
+                    checked={examClass.studentReport}
                     onCheckedChange={(checked) =>
-                      updateFlag(ec.id, { studentReport: checked === true })
+                      updateFlag(examClass.id, {
+                        studentReport: checked === true,
+                      })
                     }
                   />
                 </TableCell>

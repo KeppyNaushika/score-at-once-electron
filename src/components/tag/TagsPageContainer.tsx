@@ -246,13 +246,13 @@ export function TagsPageContainer() {
       const { active, over } = event
       if (!over || active.id === over.id) return
 
-      const oldIndex = tags.findIndex((t) => t.id === active.id)
-      const newIndex = tags.findIndex((t) => t.id === over.id)
+      const oldIndex = tags.findIndex((tag) => tag.id === active.id)
+      const newIndex = tags.findIndex((tag) => tag.id === over.id)
       if (oldIndex === -1 || newIndex === -1) return
 
       const reordered = arrayMove(tags, oldIndex, newIndex)
       setTags(reordered)
-      void window.electronAPI.tagReorder(reordered.map((t) => t.id))
+      void window.electronAPI.tagReorder(reordered.map((tag) => tag.id))
     },
     [tags]
   )
@@ -345,7 +345,7 @@ export function TagsPageContainer() {
             <TooltipProvider delayDuration={300}>
               <div className="mx-auto max-w-xl space-y-2">
                 <SortableTableProvider
-                  items={tags.map((t) => t.id)}
+                  items={tags.map((tag) => tag.id)}
                   onDragEnd={handleDragEnd}
                 >
                   {tags.map((tag) => (
@@ -353,7 +353,7 @@ export function TagsPageContainer() {
                       key={tag.id}
                       tag={tag}
                       onEdit={handleEdit}
-                      onDelete={(t) => void handleDelete(t)}
+                      onDelete={(tag) => void handleDelete(tag)}
                     />
                   ))}
                 </SortableTableProvider>

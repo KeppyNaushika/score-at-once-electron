@@ -45,7 +45,8 @@ export function BranchQuestionForm({
     branch.textElements.length > 0 || (branch.imageElements?.length ?? 0) > 0
 
   const hasVisibilityRestricted = branch.imageElements?.some(
-    (ie) => ie.visibility && ie.visibility !== "both"
+    (imageElement) =>
+      imageElement.visibility && imageElement.visibility !== "both"
   )
 
   const goUpActive = branch.goUp != null

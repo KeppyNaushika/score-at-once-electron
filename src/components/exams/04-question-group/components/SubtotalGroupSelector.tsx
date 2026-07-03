@@ -241,7 +241,7 @@ export function SubtotalGroupSelector({
                           項目:{" "}
                           {group.subtotals
                             .slice(0, 3)
-                            .map((s) => s.name)
+                            .map((subtotal) => subtotal.name)
                             .join(", ")}
                           {group.subtotals.length > 3 &&
                             ` 他${group.subtotals.length - 3}項目`}

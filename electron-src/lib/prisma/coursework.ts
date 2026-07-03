@@ -229,7 +229,11 @@ async function getReferencingGradeNamesForCoursework(
     where: { courseworkItem: { courseworkId } },
     select: { gradeItem: { select: { grade: { select: { name: true } } } } },
   })
-  return [...new Set(dataSources.map((ds) => ds.gradeItem.grade.name))]
+  return [
+    ...new Set(
+      dataSources.map((dataSource) => dataSource.gradeItem.grade.name)
+    ),
+  ]
 }
 
 /** 評価項目を参照している成績名の一覧を返す（重複排除） */
@@ -240,7 +244,11 @@ async function getReferencingGradeNamesForItem(
     where: { courseworkItemId },
     select: { gradeItem: { select: { grade: { select: { name: true } } } } },
   })
-  return [...new Set(dataSources.map((ds) => ds.gradeItem.grade.name))]
+  return [
+    ...new Set(
+      dataSources.map((dataSource) => dataSource.gradeItem.grade.name)
+    ),
+  ]
 }
 
 // =============================================================================
@@ -272,10 +280,10 @@ export async function createCourseworkItem(data: {
         ...(data.letterScales !== undefined &&
           data.letterScales.length > 0 && {
             letterScales: {
-              create: data.letterScales.map((ls) => ({
-                label: ls.label,
-                score: ls.score,
-                order: ls.order,
+              create: data.letterScales.map((letterScale) => ({
+                label: letterScale.label,
+                score: letterScale.score,
+                order: letterScale.order,
               })),
             },
           }),
@@ -322,10 +330,10 @@ export async function updateCourseworkItem(
     if (letterScales !== undefined) {
       updateData.letterScales = {
         deleteMany: {},
-        create: letterScales.map((ls) => ({
-          label: ls.label,
-          score: ls.score,
-          order: ls.order,
+        create: letterScales.map((letterScale) => ({
+          label: letterScale.label,
+          score: letterScale.score,
+          order: letterScale.order,
         })),
       }
     }
@@ -470,7 +478,7 @@ export async function batchUpsertCourseworkScores(
 ) {
   try {
     await prisma.$transaction(
-      scores.map((s) => {
+      scores.map((score) => {
         const fields: {
           score?: number | null
           letterValue?: string | null
@@ -478,23 +486,24 @@ export async function batchUpsertCourseworkScores(
           adjustmentReason?: string | null
           comment?: string | null
         } = {}
-        if (s.score !== undefined) fields.score = s.score
-        if (s.letterValue !== undefined) fields.letterValue = s.letterValue
-        if (s.adjustment !== undefined) fields.adjustment = s.adjustment
-        if (s.adjustmentReason !== undefined)
-          fields.adjustmentReason = s.adjustmentReason
-        if (s.comment !== undefined) fields.comment = s.comment
+        if (score.score !== undefined) fields.score = score.score
+        if (score.letterValue !== undefined)
+          fields.letterValue = score.letterValue
+        if (score.adjustment !== undefined) fields.adjustment = score.adjustment
+        if (score.adjustmentReason !== undefined)
+          fields.adjustmentReason = score.adjustmentReason
+        if (score.comment !== undefined) fields.comment = score.comment
 
         return prisma.courseworkScore.upsert({
           where: {
             courseworkItemId_studentId: {
-              courseworkItemId: s.courseworkItemId,
-              studentId: s.studentId,
+              courseworkItemId: score.courseworkItemId,
+              studentId: score.studentId,
             },
           },
           create: {
-            courseworkItemId: s.courseworkItemId,
-            studentId: s.studentId,
+            courseworkItemId: score.courseworkItemId,
+            studentId: score.studentId,
             ...fields,
           },
           update: fields,
@@ -577,12 +586,12 @@ export async function getCourseworkClasses(courseworkId: string) {
     })
     return {
       success: true,
-      classes: classes.map((c) => ({
-        id: c.id,
-        classroomId: c.classroomId,
-        className: c.classroom.name,
-        order: c.order,
-        studentCount: c.classroom.memberships.length,
+      classes: classes.map((courseworkClass) => ({
+        id: courseworkClass.id,
+        classroomId: courseworkClass.classroomId,
+        className: courseworkClass.classroom.name,
+        order: courseworkClass.order,
+        studentCount: courseworkClass.classroom.memberships.length,
       })),
     }
   } catch (error) {
@@ -613,8 +622,12 @@ export async function getAvailableClassesForCoursework(
     ])
 
     const classes = await getAvailableClassesForTarget({
-      existingClassIds: existing.map((e) => e.classroomId),
-      excludeStudentIds: courseworkStudents.map((g) => g.studentId),
+      existingClassIds: existing.map(
+        (existingClass) => existingClass.classroomId
+      ),
+      excludeStudentIds: courseworkStudents.map(
+        (courseworkStudent) => courseworkStudent.studentId
+      ),
       referenceDate,
       activeOnly,
     })
@@ -642,7 +655,9 @@ export async function getAvailableStudentsForCoursework(
     })
 
     const students = await getAvailableStudentsForTarget({
-      excludeStudentIds: courseworkStudents.map((g) => g.studentId),
+      excludeStudentIds: courseworkStudents.map(
+        (courseworkStudent) => courseworkStudent.studentId
+      ),
       referenceDate,
       activeOnly,
     })
@@ -669,19 +684,19 @@ const courseworkRosterAdapter: RosterAdapter = {
     }),
   createStudents: async (targetId, rows) => {
     await prisma.courseworkStudent.createMany({
-      data: rows.map((r) => ({
+      data: rows.map((row) => ({
         courseworkId: targetId,
-        studentId: r.studentId,
-        customOrder: r.customOrder,
+        studentId: row.studentId,
+        customOrder: row.customOrder,
       })),
     })
   },
   setStudentOrders: async (targetId, orders) => {
     await prisma.$transaction(
-      orders.map((o) =>
+      orders.map((studentOrder) =>
         prisma.courseworkStudent.updateMany({
-          where: { courseworkId: targetId, studentId: o.studentId },
-          data: { customOrder: o.customOrder },
+          where: { courseworkId: targetId, studentId: studentOrder.studentId },
+          data: { customOrder: studentOrder.customOrder },
         })
       )
     )
@@ -704,10 +719,13 @@ const courseworkRosterAdapter: RosterAdapter = {
   },
   setClassOrders: async (targetId, orders) => {
     await prisma.$transaction(
-      orders.map((o) =>
+      orders.map((classOrder) =>
         prisma.courseworkClass.updateMany({
-          where: { courseworkId: targetId, classroomId: o.classroomId },
-          data: { order: o.order },
+          where: {
+            courseworkId: targetId,
+            classroomId: classOrder.classroomId,
+          },
+          data: { order: classOrder.order },
         })
       )
     )
@@ -717,7 +735,7 @@ const courseworkRosterAdapter: RosterAdapter = {
       where: { courseworkId: targetId, classroomId: { not: exceptClassId } },
       select: { classroomId: true },
     })
-    return rows.map((c) => c.classroomId)
+    return rows.map((courseworkClass) => courseworkClass.classroomId)
   },
   removeClassAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([

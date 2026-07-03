@@ -78,9 +78,9 @@ function ClassAddFigure() {
         <span className="text-xs text-gray-500">まとめて追加</span>
       </div>
       <div className="space-y-1.5 rounded-lg border border-gray-200 bg-white p-2">
-        {rows.map((r, i) => (
+        {rows.map((row, i) => (
           <div
-            key={r.no}
+            key={row.no}
             className="flex items-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-xs text-gray-700"
             style={{
               opacity: 0,
@@ -88,8 +88,8 @@ function ClassAddFigure() {
             }}
           >
             <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="w-5 text-gray-400">{r.no}</span>
-            <span>{r.name}</span>
+            <span className="w-5 text-gray-400">{row.no}</span>
+            <span>{row.name}</span>
           </div>
         ))}
       </div>

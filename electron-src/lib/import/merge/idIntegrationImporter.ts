@@ -329,55 +329,57 @@ async function processSubtotals(
   // スキップされた小計をグループ別に集計
   const skippedByGroup: Record<string, string[]> = {}
 
-  for (const s of data.subtotalsData.subtotals) {
-    const newGroupId = idMappings.subtotalGroup[s.subtotalGroupId]
+  for (const subtotal of data.subtotalsData.subtotals) {
+    const newGroupId = idMappings.subtotalGroup[subtotal.subtotalGroupId]
     if (!newGroupId) {
       // グループがスキップされた → 配下の小計もスキップ
       const groupName =
         data.subtotalsData.subtotalGroups.find(
-          (g) => g.id === s.subtotalGroupId
-        )?.name ?? s.subtotalGroupId
+          (subtotalGroup) => subtotalGroup.id === subtotal.subtotalGroupId
+        )?.name ?? subtotal.subtotalGroupId
       if (!skippedByGroup[groupName]) skippedByGroup[groupName] = []
-      skippedByGroup[groupName].push(s.name)
+      skippedByGroup[groupName].push(subtotal.name)
       continue
     }
 
     // 1. 明示的なマッピングがあれば使う
-    const explicitTarget = subtotalMappings?.[s.id]
+    const explicitTarget = subtotalMappings?.[subtotal.id]
     if (explicitTarget && explicitTarget !== "__new__") {
       // 既存の小計項目に直接結びつけ
-      idMappings.subtotal[s.id] = explicitTarget
+      idMappings.subtotal[subtotal.id] = explicitTarget
       continue
     }
 
     // 2. "__new__" の場合は新規作成を強制
     if (explicitTarget === "__new__") {
-      await createNewSubtotal(s, newGroupId, idMappings, tx)
+      await createNewSubtotal(subtotal, newGroupId, idMappings, tx)
       continue
     }
 
     // 3. マッピング未設定（デフォルト動作: 従来の名前ベース自動マッチ）
     const existing = await tx.subtotal.findFirst({
-      where: { subtotalGroupId: newGroupId, name: s.name },
+      where: { subtotalGroupId: newGroupId, name: subtotal.name },
     })
 
     if (!existing) {
-      const existingById = await tx.subtotal.findUnique({ where: { id: s.id } })
+      const existingById = await tx.subtotal.findUnique({
+        where: { id: subtotal.id },
+      })
       if (existingById) {
-        idMappings.subtotal[s.id] = s.id
+        idMappings.subtotal[subtotal.id] = subtotal.id
       } else {
         await tx.subtotal.create({
           data: {
-            id: s.id,
-            name: s.name,
+            id: subtotal.id,
+            name: subtotal.name,
             subtotalGroupId: newGroupId,
-            order: s.order,
+            order: subtotal.order,
           },
         })
-        idMappings.subtotal[s.id] = s.id
+        idMappings.subtotal[subtotal.id] = subtotal.id
       }
     } else {
-      idMappings.subtotal[s.id] = existing.id
+      idMappings.subtotal[subtotal.id] = existing.id
     }
   }
 
@@ -393,21 +395,21 @@ async function processSubtotals(
  * 小計項目を新規作成（名前重複時はサフィックス付き）
  */
 async function createNewSubtotal(
-  s: ExtractedArchiveData["subtotalsData"]["subtotals"][0],
+  subtotal: ExtractedArchiveData["subtotalsData"]["subtotals"][0],
   newGroupId: string,
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
   // 同名の小計が既にあるかチェック
   const existingWithName = await tx.subtotal.findFirst({
-    where: { subtotalGroupId: newGroupId, name: s.name },
+    where: { subtotalGroupId: newGroupId, name: subtotal.name },
   })
 
-  let finalName = s.name
+  let finalName = subtotal.name
   if (existingWithName) {
     // サフィックス付きで新規作成
     for (let i = 2; i <= 100; i++) {
-      const candidate = `${s.name} (${i})`
+      const candidate = `${subtotal.name} (${i})`
       const dup = await tx.subtotal.findFirst({
         where: { subtotalGroupId: newGroupId, name: candidate },
       })
@@ -418,18 +420,20 @@ async function createNewSubtotal(
     }
   }
 
-  const existingById = await tx.subtotal.findUnique({ where: { id: s.id } })
-  const newId = existingById ? randomUUID() : s.id
+  const existingById = await tx.subtotal.findUnique({
+    where: { id: subtotal.id },
+  })
+  const newId = existingById ? randomUUID() : subtotal.id
 
   await tx.subtotal.create({
     data: {
       id: newId,
       name: finalName,
       subtotalGroupId: newGroupId,
-      order: s.order,
+      order: subtotal.order,
     },
   })
-  idMappings.subtotal[s.id] = newId
+  idMappings.subtotal[subtotal.id] = newId
 }
 
 async function processExam(
@@ -488,7 +492,7 @@ async function mapExistingExamPages(
   const existingExamPages = await tx.examPage.findMany({
     where: { examId: newExamId },
   })
-  const existingPageIds = new Set(existingExamPages.map((p) => p.id))
+  const existingPageIds = new Set(existingExamPages.map((page) => page.id))
 
   for (const page of data.examData.examPages) {
     if (existingPageIds.has(page.id)) {
@@ -528,7 +532,9 @@ async function mapExistingCropRegions(
       examPage: { examId: newExamId },
     },
   })
-  const existingRegionIds = new Set(existingCropRegions.map((r) => r.id))
+  const existingRegionIds = new Set(
+    existingCropRegions.map((cropRegion) => cropRegion.id)
+  )
 
   for (const region of data.examData.cropRegions) {
     const mappedPageId = idMappings.examPage[region.examPageId]
@@ -613,31 +619,34 @@ async function processExamSubtotalGroups(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const psg of data.examData.examSubtotalGroups) {
-    const newGroupId = idMappings.subtotalGroup[psg.subtotalGroupId]
+  for (const examSubtotalGroup of data.examData.examSubtotalGroups) {
+    const newGroupId =
+      idMappings.subtotalGroup[examSubtotalGroup.subtotalGroupId]
     if (newGroupId) {
       const existing = await tx.examSubtotalGroup.findFirst({
         where: { examId: newExamId, subtotalGroupId: newGroupId },
       })
       if (existing) {
-        idMappings.examSubtotalGroup[psg.id] = existing.id
+        idMappings.examSubtotalGroup[examSubtotalGroup.id] = existing.id
       } else {
         const existingById = await tx.examSubtotalGroup.findUnique({
-          where: { id: psg.id },
+          where: { id: examSubtotalGroup.id },
         })
         if (existingById) {
-          idMappings.examSubtotalGroup[psg.id] = psg.id
+          idMappings.examSubtotalGroup[examSubtotalGroup.id] =
+            examSubtotalGroup.id
         } else {
           await tx.examSubtotalGroup.create({
             data: {
-              id: psg.id,
+              id: examSubtotalGroup.id,
               examId: newExamId,
               subtotalGroupId: newGroupId,
-              selectedForTable: psg.selectedForTable ?? false,
-              selectedForBoxPlot: psg.selectedForBoxPlot ?? false,
+              selectedForTable: examSubtotalGroup.selectedForTable ?? false,
+              selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
             },
           })
-          idMappings.examSubtotalGroup[psg.id] = psg.id
+          idMappings.examSubtotalGroup[examSubtotalGroup.id] =
+            examSubtotalGroup.id
         }
       }
     }
@@ -651,35 +660,35 @@ async function processExamStudents(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const ps of data.examData.examStudents) {
-    const newStudentId = idMappings.student[ps.studentId]
+  for (const examStudent of data.examData.examStudents) {
+    const newStudentId = idMappings.student[examStudent.studentId]
     if (newStudentId) {
       if (isExamIdMatch) {
         const existing = await tx.examStudent.findFirst({
           where: { examId: newExamId, studentId: newStudentId },
         })
         if (existing) {
-          idMappings.examStudent[ps.id] = existing.id
+          idMappings.examStudent[examStudent.id] = existing.id
           continue
         }
       }
 
       const existingById = await tx.examStudent.findUnique({
-        where: { id: ps.id },
+        where: { id: examStudent.id },
       })
       if (existingById) {
-        idMappings.examStudent[ps.id] = ps.id
+        idMappings.examStudent[examStudent.id] = examStudent.id
       } else {
         await tx.examStudent.create({
           data: {
-            id: ps.id,
+            id: examStudent.id,
             examId: newExamId,
             studentId: newStudentId,
-            status: ps.status,
-            customOrder: ps.customOrder,
+            status: examStudent.status,
+            customOrder: examStudent.customOrder,
           },
         })
-        idMappings.examStudent[ps.id] = ps.id
+        idMappings.examStudent[examStudent.id] = examStudent.id
       }
     }
   }
@@ -759,35 +768,35 @@ async function processCropSubtotals(
 ): Promise<void> {
   let skippedCount = 0
 
-  for (const cs of data.subtotalsData.cropSubtotals) {
-    const newRegionId = idMappings.cropRegion[cs.cropRegionId]
-    const newSubtotalId = idMappings.subtotal[cs.subtotalId]
+  for (const cropSubtotal of data.subtotalsData.cropSubtotals) {
+    const newRegionId = idMappings.cropRegion[cropSubtotal.cropRegionId]
+    const newSubtotalId = idMappings.subtotal[cropSubtotal.subtotalId]
     if (newRegionId && newSubtotalId) {
       if (isExamIdMatch) {
         const existing = await tx.cropSubtotal.findFirst({
           where: { cropRegionId: newRegionId, subtotalId: newSubtotalId },
         })
         if (existing) {
-          idMappings.cropSubtotal[cs.id] = existing.id
+          idMappings.cropSubtotal[cropSubtotal.id] = existing.id
           continue
         }
       }
 
       const existingById = await tx.cropSubtotal.findUnique({
-        where: { id: cs.id },
+        where: { id: cropSubtotal.id },
       })
       if (existingById) {
-        idMappings.cropSubtotal[cs.id] = cs.id
+        idMappings.cropSubtotal[cropSubtotal.id] = cropSubtotal.id
       } else {
         await tx.cropSubtotal.create({
           data: {
-            id: cs.id,
+            id: cropSubtotal.id,
             cropRegionId: newRegionId,
             subtotalId: newSubtotalId,
-            assignmentType: cs.assignmentType,
+            assignmentType: cropSubtotal.assignmentType,
           },
         })
-        idMappings.cropSubtotal[cs.id] = cs.id
+        idMappings.cropSubtotal[cropSubtotal.id] = cropSubtotal.id
       }
     } else {
       skippedCount++

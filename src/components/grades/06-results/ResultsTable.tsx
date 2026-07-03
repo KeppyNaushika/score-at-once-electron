@@ -87,27 +87,31 @@ function GradeItemBreakdownPopover({
             </tr>
           </thead>
           <tbody>
-            {itemResult.sourceScores.map((s) => {
-              const isMissing = s.weightedScore === null
+            {itemResult.sourceScores.map((sourceScore) => {
+              const isMissing = sourceScore.weightedScore === null
               return (
                 <tr
-                  key={s.dataSourceId}
+                  key={sourceScore.dataSourceId}
                   className={`border-b last:border-0 ${isMissing ? "text-muted-foreground line-through" : ""}`}
                 >
                   <td className="py-1 pr-1">
-                    {s.dataSourceName}
-                    {s.isEstimated && (
+                    {sourceScore.dataSourceName}
+                    {sourceScore.isEstimated && (
                       <span className="ml-0.5 text-amber-600">*</span>
                     )}
                   </td>
                   <td className="py-1 text-right tabular-nums">
-                    {s.rawScore !== null ? s.rawScore : "-"}
+                    {sourceScore.rawScore !== null ? sourceScore.rawScore : "-"}
                   </td>
-                  <td className="py-1 text-right tabular-nums">{s.maxScore}</td>
-                  <td className="py-1 text-right tabular-nums">{s.weight}</td>
                   <td className="py-1 text-right tabular-nums">
-                    {s.weightedScore !== null
-                      ? s.weightedScore.toFixed(2)
+                    {sourceScore.maxScore}
+                  </td>
+                  <td className="py-1 text-right tabular-nums">
+                    {sourceScore.weight}
+                  </td>
+                  <td className="py-1 text-right tabular-nums">
+                    {sourceScore.weightedScore !== null
+                      ? sourceScore.weightedScore.toFixed(2)
                       : "欠"}
                   </td>
                 </tr>
@@ -301,19 +305,19 @@ export function ResultsTable({
 
   // 凡例に表示する有効ルール
   const activeConstraints = useMemo(
-    () => constraints.filter((c) => c.enabled),
+    () => constraints.filter((constraint) => constraint.enabled),
     [constraints]
   )
 
   // 各列に対応するboundaryLabels（minPercentage降順）を算出
   const boundaryLabelsMap = useMemo(() => {
     const map: Record<string, string[]> = {}
-    for (const bs of result.boundarySets ?? []) {
+    for (const boundarySet of result.boundarySets ?? []) {
       const key =
-        bs.targetType === "overall"
+        boundarySet.targetType === "overall"
           ? "__overall__"
-          : (bs.gradeItemId ?? "__unknown__")
-      map[key] = bs.boundaries.map((b) => b.label)
+          : (boundarySet.gradeItemId ?? "__unknown__")
+      map[key] = boundarySet.boundaries.map((boundary) => boundary.label)
     }
     return map
   }, [result.boundarySets])
@@ -404,8 +408,10 @@ export function ResultsTable({
               const rowTitle =
                 violations.length > 0
                   ? violations
-                      .map((v) =>
-                        v.message ? `${v.name}: ${v.message}` : v.name
+                      .map((violation) =>
+                        violation.message
+                          ? `${violation.name}: ${violation.message}`
+                          : violation.name
                       )
                       .join("\n")
                   : undefined
@@ -428,7 +434,8 @@ export function ResultsTable({
                   </td>
                   {result.gradeItems.map((gradeItem) => {
                     const itemResult = student.gradeItemResults.find(
-                      (r) => r.gradeItemId === gradeItem.id
+                      (gradeItemResult) =>
+                        gradeItemResult.gradeItemId === gradeItem.id
                     )
 
                     // 除外表示
@@ -446,7 +453,7 @@ export function ResultsTable({
                     }
 
                     const hasEstimated = itemResult?.sourceScores.some(
-                      (s) => s.isEstimated
+                      (sourceScore) => sourceScore.isEstimated
                     )
                     return (
                       <td
@@ -493,9 +500,11 @@ export function ResultsTable({
             })}
           </tbody>
         </table>
-        {result.students.some((s) =>
-          s.gradeItemResults.some((gi) =>
-            gi.sourceScores.some((ss) => ss.isEstimated)
+        {result.students.some((student) =>
+          student.gradeItemResults.some((gradeItemResult) =>
+            gradeItemResult.sourceScores.some(
+              (sourceScore) => sourceScore.isEstimated
+            )
           )
         ) && (
           <div className="border-t px-3 py-1.5">
@@ -516,13 +525,13 @@ function ConstraintLegend({
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
       <span className="text-muted-foreground">制約ルール:</span>
-      {constraints.map((c) => (
-        <span key={c.id} className="flex items-center gap-1.5">
+      {constraints.map((constraint) => (
+        <span key={constraint.id} className="flex items-center gap-1.5">
           <span
             className="inline-block h-3 w-3 rounded border"
-            style={{ backgroundColor: c.color }}
+            style={{ backgroundColor: constraint.color }}
           />
-          {c.name}
+          {constraint.name}
         </span>
       ))}
     </div>

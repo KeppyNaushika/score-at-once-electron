@@ -188,26 +188,27 @@ export async function getPdfExportData(options: {
     }
     // Prisma型をStudentAnswerData型に変換
     const studentAnswers: StudentAnswerData[] =
-      studentAnswersResult.studentAnswerImages.map((img) => ({
-        id: img.id,
-        studentId: img.studentId,
-        pageNumber: img.examPage.pageNumber,
-        examPageId: img.examPageId,
-        imagePath: img.imagePath,
-        originalImagePath: img.imagePath,
-        isAbsent: img.student?.examStudents?.[0]?.status === "ABSENT" || false,
-        student: img.student
+      studentAnswersResult.studentAnswerImages.map((image) => ({
+        id: image.id,
+        studentId: image.studentId,
+        pageNumber: image.examPage.pageNumber,
+        examPageId: image.examPageId,
+        imagePath: image.imagePath,
+        originalImagePath: image.imagePath,
+        isAbsent:
+          image.student?.examStudents?.[0]?.status === "ABSENT" || false,
+        student: image.student
           ? {
-              id: img.student.id,
-              lastName: img.student.lastName,
-              firstName: img.student.firstName,
-              lastNameKana: img.student.lastNameKana,
-              firstNameKana: img.student.firstNameKana,
-              studentNumber: img.student.studentNumber,
-              examStudents: img.student.examStudents,
+              id: image.student.id,
+              lastName: image.student.lastName,
+              firstName: image.student.firstName,
+              lastNameKana: image.student.lastNameKana,
+              firstNameKana: image.student.firstNameKana,
+              studentNumber: image.student.studentNumber,
+              examStudents: image.student.examStudents,
             }
           : null,
-        examId: img.examPage.examId,
+        examId: image.examPage.examId,
         status: "ready" as const,
       }))
 

@@ -63,7 +63,9 @@ export function ClassExamManager({
     [examClasses]
   )
 
-  const administeredCount = examClasses.filter((ec) => ec.administered).length
+  const administeredCount = examClasses.filter(
+    (examClass) => examClass.administered
+  ).length
 
   const flagColumns = useMemo<ClassRosterFlagColumn[]>(
     () => [
@@ -98,12 +100,12 @@ export function ClassExamManager({
       emptyHint="「学級を追加」ボタンから学級を追加してください"
       fetchAvailableClasses={async () => {
         const classes = await window.electronAPI.examClass.getAvailable(examId)
-        return classes.map((c): AvailableClassOption => ({
-          id: c.id,
-          name: c.name,
-          classCode: c.classCode,
-          grade: c.grade,
-          studentCount: c.studentCount,
+        return classes.map((classroom): AvailableClassOption => ({
+          id: classroom.id,
+          name: classroom.name,
+          classCode: classroom.classCode,
+          grade: classroom.grade,
+          studentCount: classroom.studentCount,
         }))
       }}
       onAddClasses={async (classIds) => {

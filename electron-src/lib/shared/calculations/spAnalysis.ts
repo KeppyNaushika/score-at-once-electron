@@ -70,21 +70,23 @@ export interface SpTableResult {
  * - 設問数0、または有効生徒0なら null。
  */
 export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
-  const students = input.filter((s) => s.items.some((it) => it.isScored))
+  const students = input.filter((student) =>
+    student.items.some((item) => item.isScored)
+  )
   if (students.length === 0) return null
 
-  const problemIds = students[0].items.map((it) => it.questionId)
-  const problemLabels = students[0].items.map((it) => it.label)
+  const problemIds = students[0].items.map((item) => item.questionId)
+  const problemLabels = students[0].items.map((item) => item.label)
   const m = problemIds.length
   if (m === 0) return null
 
   const n = students.length
 
   // 二値行列 x[i][j]（正答=1, それ以外=0）
-  const x: number[][] = students.map((s) =>
-    problemIds.map((qid) => {
-      const it = s.items.find((p) => p.questionId === qid)
-      return it && it.isCorrect ? 1 : 0
+  const x: number[][] = students.map((student) =>
+    problemIds.map((questionId) => {
+      const item = student.items.find((item) => item.questionId === questionId)
+      return item && item.isCorrect ? 1 : 0
     })
   )
 
@@ -180,7 +182,7 @@ export function computeFrequencyDistribution(
   totalScores: (number | null)[],
   maxScore: number
 ): FrequencyDistributionResult | null {
-  const scores = totalScores.filter((s): s is number => s !== null)
+  const scores = totalScores.filter((score): score is number => score !== null)
   if (scores.length === 0) return null
 
   const top = maxScore > 0 ? maxScore : Math.max(...scores)
@@ -202,8 +204,8 @@ export function computeFrequencyDistribution(
     bins.push({ lower: 0, upper: top, count: 0, label: `0–${top}` })
   }
 
-  for (const s of scores) {
-    let idx = Math.floor(s / binWidth)
+  for (const score of scores) {
+    let idx = Math.floor(score / binWidth)
     if (idx >= bins.length) idx = bins.length - 1
     if (idx < 0) idx = 0
     bins[idx].count++

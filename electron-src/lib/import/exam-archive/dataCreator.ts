@@ -78,23 +78,23 @@ export async function createImportedData(
       }
 
       // 2. 学級を作成（重複する名前はサフィックスを付与）
-      for (const cls of data.classesData.classrooms) {
-        const uniqueName = await generateUniqueClassName(tx, cls.name)
+      for (const classroom of data.classesData.classrooms) {
+        const uniqueName = await generateUniqueClassName(tx, classroom.name)
 
-        if (uniqueName !== cls.name) {
+        if (uniqueName !== classroom.name) {
           warnings.push(
-            `学級名を「${cls.name}」から「${uniqueName}」に変更しました`
+            `学級名を「${classroom.name}」から「${uniqueName}」に変更しました`
           )
         }
 
         await tx.classroom.create({
           data: {
-            id: remapIdRequired(cls.id, mappings.classroom),
+            id: remapIdRequired(classroom.id, mappings.classroom),
             name: uniqueName,
-            classCode: cls.classCode,
-            grade: cls.grade,
-            description: cls.description,
-            isVisible: cls.isVisible,
+            classCode: classroom.classCode,
+            grade: classroom.grade,
+            description: classroom.description,
+            isVisible: classroom.isVisible,
           },
         })
       }
@@ -123,26 +123,26 @@ export async function createImportedData(
       // v0.3.0以降: アーカイブ内のユーザーは作成せず、現在のログインユーザーを使用
 
       // 5. 小計グループを作成
-      for (const sg of data.subtotalsData.subtotalGroups) {
+      for (const subtotalGroup of data.subtotalsData.subtotalGroups) {
         await tx.subtotalGroup.create({
           data: {
-            id: remapIdRequired(sg.id, mappings.subtotalGroup),
-            name: sg.name,
+            id: remapIdRequired(subtotalGroup.id, mappings.subtotalGroup),
+            name: subtotalGroup.name,
           },
         })
       }
 
       // 6. 小計を作成
-      for (const s of data.subtotalsData.subtotals) {
+      for (const subtotal of data.subtotalsData.subtotals) {
         await tx.subtotal.create({
           data: {
-            id: remapIdRequired(s.id, mappings.subtotal),
-            name: s.name,
+            id: remapIdRequired(subtotal.id, mappings.subtotal),
+            name: subtotal.name,
             subtotalGroupId: remapIdRequired(
-              s.subtotalGroupId,
+              subtotal.subtotalGroupId,
               mappings.subtotalGroup
             ),
-            order: s.order,
+            order: subtotal.order,
           },
         })
       }
@@ -163,15 +163,17 @@ export async function createImportedData(
           })
         }
 
-        for (const tsg of tagsData.tagSubtotalGroups) {
-          const newTagId = remapId(tsg.tagId, mappings.tag)
+        for (const tagSubtotalGroup of tagsData.tagSubtotalGroups) {
+          const newTagId = remapId(tagSubtotalGroup.tagId, mappings.tag)
           const newSubtotalGroupId = remapId(
-            tsg.subtotalGroupId,
+            tagSubtotalGroup.subtotalGroupId,
             mappings.subtotalGroup
           )
           if (newTagId && newSubtotalGroupId) {
             // tagのIDがupsertで変わっている可能性があるため、名前で実際のIDを取得
-            const originalTag = tagsData.tags.find((t) => t.id === tsg.tagId)
+            const originalTag = tagsData.tags.find(
+              (tag) => tag.id === tagSubtotalGroup.tagId
+            )
             if (originalTag) {
               const actualTag = await tx.tag.findUnique({
                 where: { name: originalTag.name },
@@ -189,7 +191,10 @@ export async function createImportedData(
                 if (!existing) {
                   await tx.tagSubtotalGroup.create({
                     data: {
-                      id: remapIdRequired(tsg.id, mappings.tagSubtotalGroup),
+                      id: remapIdRequired(
+                        tagSubtotalGroup.id,
+                        mappings.tagSubtotalGroup
+                      ),
                       tagId: actualTag.id,
                       subtotalGroupId: newSubtotalGroupId,
                     },
@@ -201,10 +206,12 @@ export async function createImportedData(
         }
 
         // ExamTag作成
-        for (const et of tagsData.examTags) {
-          const newTagId = remapId(et.tagId, mappings.tag)
+        for (const examTag of tagsData.examTags) {
+          const newTagId = remapId(examTag.tagId, mappings.tag)
           if (newTagId) {
-            const originalTag = tagsData.tags.find((t) => t.id === et.tagId)
+            const originalTag = tagsData.tags.find(
+              (tag) => tag.id === examTag.tagId
+            )
             if (originalTag) {
               const actualTag = await tx.tag.findUnique({
                 where: { name: originalTag.name },
@@ -216,7 +223,7 @@ export async function createImportedData(
                 if (!existing) {
                   await tx.examTag.create({
                     data: {
-                      id: remapIdRequired(et.id, mappings.examTag),
+                      id: remapIdRequired(examTag.id, mappings.examTag),
                       examId: newExamId,
                       tagId: actualTag.id,
                     },
@@ -259,81 +266,90 @@ export async function createImportedData(
       })
 
       // 8.5. ExamMarkingFormatを作成 (v1.4.0+)
-      for (const pmf of data.examData.examMarkingFormats || []) {
+      for (const examMarkingFormat of data.examData.examMarkingFormats || []) {
         await tx.examMarkingFormat.create({
           data: {
-            id: remapIdRequired(pmf.id, mappings.examMarkingFormat),
+            id: remapIdRequired(
+              examMarkingFormat.id,
+              mappings.examMarkingFormat
+            ),
             examId: newExamId,
-            markType: pmf.markType,
-            symbol: pmf.symbol,
-            color: pmf.color,
-            fontSize: pmf.fontSize,
-            strokeWidth: pmf.strokeWidth,
+            markType: examMarkingFormat.markType,
+            symbol: examMarkingFormat.symbol,
+            color: examMarkingFormat.color,
+            fontSize: examMarkingFormat.fontSize,
+            strokeWidth: examMarkingFormat.strokeWidth,
           },
         })
       }
 
       // 8.6. ExamExportSettingsを作成 (v1.4.0+)
-      const pes = data.examData.examExportSettings
-      if (pes) {
+      const examExportSettings = data.examData.examExportSettings
+      if (examExportSettings) {
         await tx.examExportSettings.create({
           data: {
-            id: remapIdRequired(pes.id, mappings.examExportSettings),
+            id: remapIdRequired(
+              examExportSettings.id,
+              mappings.examExportSettings
+            ),
             examId: newExamId,
-            settingsJson: pes.settingsJson,
+            settingsJson: examExportSettings.settingsJson,
           },
         })
       }
 
       // 9. ExamSubtotalGroupを作成
-      for (const psg of data.examData.examSubtotalGroups) {
+      for (const examSubtotalGroup of data.examData.examSubtotalGroups) {
         const newSubtotalGroupId = remapId(
-          psg.subtotalGroupId,
+          examSubtotalGroup.subtotalGroupId,
           mappings.subtotalGroup
         )
         if (newSubtotalGroupId) {
           await tx.examSubtotalGroup.create({
             data: {
-              id: remapIdRequired(psg.id, mappings.examSubtotalGroup),
+              id: remapIdRequired(
+                examSubtotalGroup.id,
+                mappings.examSubtotalGroup
+              ),
               examId: newExamId,
               subtotalGroupId: newSubtotalGroupId,
               // v1.15.0+。旧アーカイブには無いので false 既定
-              selectedForTable: psg.selectedForTable ?? false,
-              selectedForBoxPlot: psg.selectedForBoxPlot ?? false,
+              selectedForTable: examSubtotalGroup.selectedForTable ?? false,
+              selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
             },
           })
         }
       }
 
       // 9.5. ExamClassを作成 (v1.1.0+)
-      for (const pc of data.examData.examClasses || []) {
-        const newClassId = remapId(pc.classroomId, mappings.classroom)
+      for (const examClass of data.examData.examClasses || []) {
+        const newClassId = remapId(examClass.classroomId, mappings.classroom)
         if (newClassId) {
           await tx.examClass.create({
             data: {
-              id: remapIdRequired(pc.id, mappings.examClass),
+              id: remapIdRequired(examClass.id, mappings.examClass),
               examId: newExamId,
               classroomId: newClassId,
-              administered: pc.administered,
+              administered: examClass.administered,
               // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-              ...resolveExamClassOutputFlags(pc),
-              order: pc.order,
+              ...resolveExamClassOutputFlags(examClass),
+              order: examClass.order,
             },
           })
         }
       }
 
       // 10. ExamStudentを作成
-      for (const ps of data.examData.examStudents) {
-        const newStudentId = remapId(ps.studentId, mappings.student)
+      for (const examStudent of data.examData.examStudents) {
+        const newStudentId = remapId(examStudent.studentId, mappings.student)
         if (newStudentId) {
           await tx.examStudent.create({
             data: {
-              id: remapIdRequired(ps.id, mappings.examStudent),
+              id: remapIdRequired(examStudent.id, mappings.examStudent),
               examId: newExamId,
               studentId: newStudentId,
-              status: ps.status,
-              customOrder: ps.customOrder,
+              status: examStudent.status,
+              customOrder: examStudent.customOrder,
             },
           })
         }

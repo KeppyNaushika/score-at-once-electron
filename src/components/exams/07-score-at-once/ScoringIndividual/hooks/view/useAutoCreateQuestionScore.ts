@@ -43,9 +43,9 @@ export function useAutoCreateQuestionScore({
   // 現在のQuestionScoreを検索
   const currentQuestionScoreId =
     questionScores?.find(
-      (qs) =>
-        qs.studentId === currentStudentId &&
-        qs.cropRegionId === currentCropRegionId
+      (questionScore) =>
+        questionScore.studentId === currentStudentId &&
+        questionScore.cropRegionId === currentCropRegionId
     )?.id ?? null
 
   // QuestionScore作成関数

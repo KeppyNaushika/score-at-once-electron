@@ -27,7 +27,9 @@ export function ScreenControlTab() {
   // サイドバー動作（セクション別）
   const [sidebarBehaviors, setSidebarBehaviors] = useState<
     Record<string, SidebarBehavior>
-  >(() => Object.fromEntries(SIDEBAR_SECTIONS.map((s) => [s.key, "none"])))
+  >(() =>
+    Object.fromEntries(SIDEBAR_SECTIONS.map((section) => [section.key, "none"]))
+  )
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -151,7 +153,9 @@ export function ScreenControlTab() {
   const handleSidebarBehaviorChange = useCallback(
     (sectionKey: string, behavior: SidebarBehavior) => {
       setSidebarBehaviors((prev) => ({ ...prev, [sectionKey]: behavior }))
-      const section = SIDEBAR_SECTIONS.find((s) => s.key === sectionKey)
+      const section = SIDEBAR_SECTIONS.find(
+        (candidate) => candidate.key === sectionKey
+      )
       if (section) {
         localStorage.setItem(section.storageKey, behavior)
       }

@@ -86,11 +86,13 @@ function ClassRowCells({ entry, flagColumns, onRemove }: ClassRowProps) {
       </TableCell>
       <TableCell>{entry.grade ? `${entry.grade}年` : "-"}</TableCell>
       <TableCell className="text-center">{entry.studentCount}名</TableCell>
-      {flagColumns.map((col) => (
-        <TableCell key={col.key} className="text-center">
+      {flagColumns.map((flagColumn) => (
+        <TableCell key={flagColumn.key} className="text-center">
           <Checkbox
-            checked={col.checked(entry)}
-            onCheckedChange={(checked) => col.onChange(entry, checked === true)}
+            checked={flagColumn.checked(entry)}
+            onCheckedChange={(checked) =>
+              flagColumn.onChange(entry, checked === true)
+            }
           />
         </TableCell>
       ))}
@@ -228,9 +230,9 @@ export function ClassRosterManager({
           <TableHead>クラス名</TableHead>
           <TableHead>学年</TableHead>
           <TableHead className="text-center">生徒数</TableHead>
-          {flagColumns.map((col) => (
-            <TableHead key={col.key} className="text-center">
-              {col.header}
+          {flagColumns.map((flagColumn) => (
+            <TableHead key={flagColumn.key} className="text-center">
+              {flagColumn.header}
             </TableHead>
           ))}
           <TableHead className="w-20"></TableHead>

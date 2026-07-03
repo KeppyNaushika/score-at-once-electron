@@ -109,35 +109,41 @@ export default function Navigation({
             {navGroups.map((group, groupIndex) => (
               <Fragment key={groupIndex}>
                 {groupIndex > 0 && <Separator className="my-1" />}
-                {group.map((item) =>
+                {group.map((navItem) =>
                   isSidebarMinimized ? (
-                    <Tooltip key={item.label}>
+                    <Tooltip key={navItem.label}>
                       <TooltipTrigger asChild>
-                        <GuardedLink href={item.href} passHref>
+                        <GuardedLink href={navItem.href} passHref>
                           <Button
                             variant={
-                              pathname === item.href ? "secondary" : "ghost"
+                              pathname === navItem.href ? "secondary" : "ghost"
                             }
                             size="icon"
                             className="w-full justify-center"
-                            aria-label={item.label}
+                            aria-label={navItem.label}
                           >
-                            <item.icon className="h-5 w-5" />
+                            <navItem.icon className="h-5 w-5" />
                           </Button>
                         </GuardedLink>
                       </TooltipTrigger>
                       <TooltipContent side="right" sideOffset={5}>
-                        {item.label}
+                        {navItem.label}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <GuardedLink key={item.label} href={item.href} passHref>
+                    <GuardedLink
+                      key={navItem.label}
+                      href={navItem.href}
+                      passHref
+                    >
                       <Button
-                        variant={pathname === item.href ? "secondary" : "ghost"}
+                        variant={
+                          pathname === navItem.href ? "secondary" : "ghost"
+                        }
                         className="w-full justify-start"
                       >
-                        <item.icon className="mr-3 h-5 w-5" />
-                        {item.label}
+                        <navItem.icon className="mr-3 h-5 w-5" />
+                        {navItem.label}
                       </Button>
                     </GuardedLink>
                   )

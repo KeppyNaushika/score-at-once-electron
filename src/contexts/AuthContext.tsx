@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userId) {
         // userIdから直接ユーザー情報を取得
         const users = await window.electronAPI.fetchUsers()
-        const user = users.find((u: User) => u.id === userId)
+        const user = users.find((candidate: User) => candidate.id === userId)
         if (user) {
           setUser(user)
         } else {

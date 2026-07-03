@@ -268,12 +268,14 @@ export function setupCourseworkHandlers(): void {
     async (_event, options: { archivePath: string }) => {
       let tempDir: string | null = null
       try {
-        const ext = await extractCourseworkArchive(options.archivePath)
-        if (!ext.success || !ext.data) {
-          return { success: false, error: ext.error }
+        const extractResult = await extractCourseworkArchive(
+          options.archivePath
+        )
+        if (!extractResult.success || !extractResult.data) {
+          return { success: false, error: extractResult.error }
         }
-        tempDir = ext.data.tempDir
-        return await previewCourseworkImport(ext.data.data)
+        tempDir = extractResult.data.tempDir
+        return await previewCourseworkImport(extractResult.data.data)
       } catch (error) {
         console.error(
           "Error in IPC handler [coursework:analyzeArchive]:",

@@ -85,8 +85,8 @@ async function createMasterImageRecords(
   newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const img of data.examData.masterImages!) {
-    const newExamPageId = idMappings.examPage[img.examPageId]
+  for (const masterImage of data.examData.masterImages!) {
+    const newExamPageId = idMappings.examPage[masterImage.examPageId]
     if (!newExamPageId) continue
 
     // 既存のMasterImageレコードをチェック
@@ -95,19 +95,19 @@ async function createMasterImageRecords(
     })
     if (existing) continue
 
-    const filename = path.basename(img.imagePath)
+    const filename = path.basename(masterImage.imagePath)
     const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
     const existingById = await tx.masterImage.findUnique({
-      where: { id: img.id },
+      where: { id: masterImage.id },
     })
     if (!existingById) {
       await tx.masterImage.create({
         data: {
-          id: img.id,
+          id: masterImage.id,
           examPageId: newExamPageId,
           imagePath: newImagePath,
-          pageSize: img.pageSize ?? "A4",
+          pageSize: masterImage.pageSize ?? "A4",
         },
       })
     }
@@ -123,9 +123,9 @@ async function createStudentAnswerImageRecords(
   newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const img of data.examData.studentAnswerImages!) {
-    const newExamPageId = idMappings.examPage[img.examPageId]
-    const newStudentId = idMappings.student[img.studentId]
+  for (const studentAnswerImage of data.examData.studentAnswerImages!) {
+    const newExamPageId = idMappings.examPage[studentAnswerImage.examPageId]
+    const newStudentId = idMappings.student[studentAnswerImage.studentId]
     if (!newExamPageId || !newStudentId) continue
 
     // 既存のStudentAnswerImageレコードをチェック
@@ -137,19 +137,21 @@ async function createStudentAnswerImageRecords(
     })
     if (existing) continue
 
-    const relativePath = img.imagePath.substring(
-      img.imagePath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
+    const relativePath = studentAnswerImage.imagePath.substring(
+      studentAnswerImage.imagePath.lastIndexOf("answer-sheets") +
+        "answer-sheets".length +
+        1
     )
     const newImagePath =
       `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
     const existingById = await tx.studentAnswerImage.findUnique({
-      where: { id: img.id },
+      where: { id: studentAnswerImage.id },
     })
     if (!existingById) {
       await tx.studentAnswerImage.create({
         data: {
-          id: img.id,
+          id: studentAnswerImage.id,
           examPageId: newExamPageId,
           studentId: newStudentId,
           imagePath: newImagePath,
@@ -168,13 +170,13 @@ async function createLegacyImageRecords(
   newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const img of data.examData.pageImages) {
-    const newExamPageId = idMappings.examPage[img.examPageId]
+  for (const pageImage of data.examData.pageImages) {
+    const newExamPageId = idMappings.examPage[pageImage.examPageId]
     if (!newExamPageId) continue
 
-    const filename = path.basename(img.imagePath)
+    const filename = path.basename(pageImage.imagePath)
 
-    if (img.imageType === "MODEL_ANSWER") {
+    if (pageImage.imageType === "MODEL_ANSWER") {
       // 既存のMasterImageレコードをチェック
       const existingMaster = await tx.masterImage.findFirst({
         where: { examPageId: newExamPageId },
@@ -184,19 +186,22 @@ async function createLegacyImageRecords(
       const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
       const existingById = await tx.masterImage.findUnique({
-        where: { id: img.id },
+        where: { id: pageImage.id },
       })
       if (!existingById) {
         await tx.masterImage.create({
           data: {
-            id: img.id,
+            id: pageImage.id,
             examPageId: newExamPageId,
             imagePath: newImagePath,
           },
         })
       }
-    } else if (img.imageType === "STUDENT_ANSWER" && img.studentId) {
-      const newStudentId = idMappings.student[img.studentId]
+    } else if (
+      pageImage.imageType === "STUDENT_ANSWER" &&
+      pageImage.studentId
+    ) {
+      const newStudentId = idMappings.student[pageImage.studentId]
       if (!newStudentId) continue
 
       // 既存のStudentAnswerImageレコードをチェック
@@ -208,19 +213,21 @@ async function createLegacyImageRecords(
       })
       if (existingAnswer) continue
 
-      const relativePath = img.imagePath.substring(
-        img.imagePath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
+      const relativePath = pageImage.imagePath.substring(
+        pageImage.imagePath.lastIndexOf("answer-sheets") +
+          "answer-sheets".length +
+          1
       )
       const newImagePath =
         `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
       const existingById = await tx.studentAnswerImage.findUnique({
-        where: { id: img.id },
+        where: { id: pageImage.id },
       })
       if (!existingById) {
         await tx.studentAnswerImage.create({
           data: {
-            id: img.id,
+            id: pageImage.id,
             examPageId: newExamPageId,
             studentId: newStudentId,
             imagePath: newImagePath,

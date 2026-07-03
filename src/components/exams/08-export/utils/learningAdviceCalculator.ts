@@ -50,19 +50,21 @@ function findReviewQuestions(
   // 正答率の下限でフィルタリング（nullの場合はフィルタリングなし）
   if (options.reviewRateMin !== null) {
     candidates = candidates.filter(
-      (q) => q.correctRate >= options.reviewRateMin!
+      (candidate) => candidate.correctRate >= options.reviewRateMin!
     )
   }
 
   // 正答率の上限でフィルタリング（nullの場合はフィルタリングなし）
   if (options.reviewRateMax !== null) {
     candidates = candidates.filter(
-      (q) => q.correctRate <= options.reviewRateMax!
+      (candidate) => candidate.correctRate <= options.reviewRateMax!
     )
   }
 
   // 正答率が高い順にソート（より多くの人ができた問題を優先）
-  candidates.sort((a, b) => b.correctRate - a.correctRate)
+  candidates.sort(
+    (candidateA, candidateB) => candidateB.correctRate - candidateA.correctRate
+  )
 
   // 問題数で制限（nullの場合は全て表示）
   if (options.reviewQuestionCount !== null) {
