@@ -218,10 +218,10 @@ function cleanupElementStyles(container: HTMLElement): void {
 
   // 段落要素の特別処理
   const paragraphs = container.querySelectorAll('p')
-  paragraphs.forEach((p) => {
-    p.style.margin = '0'
-    p.style.padding = '0'
-    p.style.lineHeight = '1'
+  paragraphs.forEach((paragraph) => {
+    paragraph.style.margin = '0'
+    paragraph.style.padding = '0'
+    paragraph.style.lineHeight = '1'
   })
 
   // MathJax要素のベースライン配置

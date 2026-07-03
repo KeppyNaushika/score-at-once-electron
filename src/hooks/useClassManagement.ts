@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 
 import type {
-  ClassWithMemberships,
+  ClassroomWithMemberships,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
 
@@ -29,7 +29,9 @@ interface Membership {
 /** 学級の詳細表示・編集・所属関係の管理を提供するカスタムフック */
 export function useClassManagement(classroomId: string) {
   const [loading, setLoading] = useState(true)
-  const [classData, setClassData] = useState<ClassWithMemberships | null>(null)
+  const [classData, setClassData] = useState<ClassroomWithMemberships | null>(
+    null
+  )
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
   const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
@@ -67,7 +69,9 @@ export function useClassManagement(classroomId: string) {
     return () => cancelAnimationFrame(frame)
   }, [fetchData])
 
-  const handleSaveClass = async (classInfo: Partial<ClassWithMemberships>) => {
+  const handleSaveClass = async (
+    classInfo: Partial<ClassroomWithMemberships>
+  ) => {
     try {
       // Extract memberships to avoid type conflicts
       const { memberships: _memberships, ...classUpdateData } = classInfo
@@ -100,7 +104,7 @@ export function useClassManagement(classroomId: string) {
         // 既存のmembershipを更新
         // 空欄は null で明示的にクリアする（undefined はPrismaでは「変更しない」）。
         // startDate は必須項目のため、未指定時は既存値を維持する（undefined のまま）。
-        const updateInput: Prisma.StudentClassMembershipUpdateInput = {
+        const updateInput: Prisma.StudentClassroomMembershipUpdateInput = {
           attendanceNumber: membershipData.attendanceNumber ?? null,
           notes: membershipData.notes ?? null,
           startDate: membershipData.startDate,

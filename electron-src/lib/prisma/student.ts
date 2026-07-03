@@ -363,7 +363,7 @@ export const getClassExamResults = async (
   classroomId: string
 ): Promise<ClassStudentExamResult[]> => {
   try {
-    const memberships = await prisma.studentClassMembership.findMany({
+    const memberships = await prisma.studentClassroomMembership.findMany({
       where: {
         classroomId,
         OR: [{ endDate: null }, { endDate: { gte: new Date() } }],

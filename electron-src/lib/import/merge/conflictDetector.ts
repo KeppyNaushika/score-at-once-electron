@@ -24,7 +24,7 @@ function hasDataDifference(
   excludeKeys: string[] = ["id", "createdAt", "updatedAt"]
 ): boolean {
   const keysToCheck = Object.keys(importData).filter(
-    (k) => !excludeKeys.includes(k)
+    (key) => !excludeKeys.includes(key)
   )
 
   for (const key of keysToCheck) {

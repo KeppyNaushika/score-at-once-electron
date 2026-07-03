@@ -25,11 +25,11 @@ function item(opts: Partial<TestItem> = {}): TestItem {
 function simplify(
   cells: ReturnType<typeof buildGridLayout<TestItem>>
 ): { x: number; y: number; w: number; h: number }[] {
-  return cells.map((c) => ({
-    x: round(c.x),
-    y: round(c.y),
-    w: round(c.width),
-    h: round(c.height),
+  return cells.map((cell) => ({
+    x: round(cell.x),
+    y: round(cell.y),
+    w: round(cell.width),
+    h: round(cell.height),
   }))
 }
 
@@ -147,10 +147,20 @@ describe("buildGridLayout: 均等幅", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: round(1 / 3), h: 1 })
-    expect(s[1]).toEqual({ x: round(1 / 3), y: 0, w: round(1 / 3), h: 1 })
-    expect(s[2]).toEqual({ x: round(2 / 3), y: 0, w: round(1 / 3), h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: round(1 / 3), h: 1 })
+    expect(simplified[1]).toEqual({
+      x: round(1 / 3),
+      y: 0,
+      w: round(1 / 3),
+      h: 1,
+    })
+    expect(simplified[2]).toEqual({
+      x: round(2 / 3),
+      y: 0,
+      w: round(1 / 3),
+      h: 1,
+    })
   })
 
   it("4等分: 1/4 × 4 → 1行", () => {
@@ -160,10 +170,10 @@ describe("buildGridLayout: 均等幅", () => {
       item({ layoutWidth: "1/4" }),
       item({ layoutWidth: "1/4" }),
     ])
-    const s = simplify(cells)
-    expect(s.every((c) => c.y === 0)).toBe(true)
-    expect(s.map((c) => c.x)).toEqual([0, 0.25, 0.5, 0.75])
-    expect(s.every((c) => c.w === 0.25)).toBe(true)
+    const simplified = simplify(cells)
+    expect(simplified.every((cell) => cell.y === 0)).toBe(true)
+    expect(simplified.map((cell) => cell.x)).toEqual([0, 0.25, 0.5, 0.75])
+    expect(simplified.every((cell) => cell.w === 0.25)).toBe(true)
   })
 })
 
@@ -186,10 +196,10 @@ describe("buildGridLayout: 不均等幅", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "2/3" }),
     ])
-    const s = simplify(cells)
-    expect(s[0].x).toBe(0)
-    expect(s[1].x).toBeCloseTo(1 / 3, 4)
-    expect(s[0].w + s[1].w).toBeCloseTo(1, 4)
+    const simplified = simplify(cells)
+    expect(simplified[0].x).toBe(0)
+    expect(simplified[1].x).toBeCloseTo(1 / 3, 4)
+    expect(simplified[0].w + simplified[1].w).toBeCloseTo(1, 4)
   })
 
   it("1/4 + 1/4 + 1/2 → 1行", () => {
@@ -198,11 +208,11 @@ describe("buildGridLayout: 不均等幅", () => {
       item({ layoutWidth: "1/4" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s.every((c) => c.y === 0)).toBe(true)
-    expect(s[0].x).toBe(0)
-    expect(s[1].x).toBe(0.25)
-    expect(s[2].x).toBe(0.5)
+    const simplified = simplify(cells)
+    expect(simplified.every((cell) => cell.y === 0)).toBe(true)
+    expect(simplified[0].x).toBe(0)
+    expect(simplified[1].x).toBe(0.25)
+    expect(simplified[2].x).toBe(0.5)
   })
 })
 
@@ -215,11 +225,11 @@ describe("buildGridLayout: 自動改行", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
     // 3つ目: 1/2 + 1/2 = 1 で自動改行後、次の行に
-    expect(s[2]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
   })
 
   it("1/2 × 4 → 2行 (2+2)", () => {
@@ -229,11 +239,11 @@ describe("buildGridLayout: 自動改行", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(0)
-    expect(s[2].y).toBe(1)
-    expect(s[3].y).toBe(1)
+    const simplified = simplify(cells)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(0)
+    expect(simplified[2].y).toBe(1)
+    expect(simplified[3].y).toBe(1)
   })
 
   it("1/3 × 5 → 2行 (3+2)", () => {
@@ -244,18 +254,18 @@ describe("buildGridLayout: 自動改行", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
-    expect(s.filter((c) => c.y === 0)).toHaveLength(3)
-    expect(s.filter((c) => c.y === 1)).toHaveLength(2)
+    const simplified = simplify(cells)
+    expect(simplified.filter((cell) => cell.y === 0)).toHaveLength(3)
+    expect(simplified.filter((cell) => cell.y === 1)).toHaveLength(2)
   })
 
   it("1/3 × 9 → 3行 (3+3+3)", () => {
     const items = Array.from({ length: 9 }, () => item({ layoutWidth: "1/3" }))
     const cells = buildGridLayout(items)
-    const s = simplify(cells)
-    expect(s.filter((c) => c.y === 0)).toHaveLength(3)
-    expect(s.filter((c) => c.y === 1)).toHaveLength(3)
-    expect(s.filter((c) => c.y === 2)).toHaveLength(3)
+    const simplified = simplify(cells)
+    expect(simplified.filter((cell) => cell.y === 0)).toHaveLength(3)
+    expect(simplified.filter((cell) => cell.y === 1)).toHaveLength(3)
+    expect(simplified.filter((cell) => cell.y === 2)).toHaveLength(3)
   })
 
   it("幅超過で改行: 1/2 + 1/2 + 1/3 + 2/3", () => {
@@ -265,13 +275,13 @@ describe("buildGridLayout: 自動改行", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "2/3" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 行0: 1/2 + 1/2 = 1 → 自動改行
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(0)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(0)
     // 行1: 1/3 + 2/3 = 1
-    expect(s[2].y).toBe(1)
-    expect(s[3].y).toBe(1)
+    expect(simplified[2].y).toBe(1)
+    expect(simplified[3].y).toBe(1)
   })
 
   it("1を超えるアイテムは改行してから配置", () => {
@@ -279,9 +289,9 @@ describe("buildGridLayout: 自動改行", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "3/4" }), // 1/2 + 3/4 > 1 → この項目の前で改行
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.75, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.75, h: 1 })
   })
 })
 
@@ -293,9 +303,9 @@ describe("buildGridLayout: 明示的 break (↵)", () => {
       item({ layoutWidth: "1/4", nextPlacement: "break" }),
       item({ layoutWidth: "1/4" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
   })
 
   it("L字型: 1/2 + 1/2 ↵ + 1/1", () => {
@@ -304,10 +314,10 @@ describe("buildGridLayout: 明示的 break (↵)", () => {
       item({ layoutWidth: "1/2", nextPlacement: "break" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
   })
 
   it("逆L字型: 1/1 ↵ + 1/2 + 1/2", () => {
@@ -316,10 +326,10 @@ describe("buildGridLayout: 明示的 break (↵)", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 1, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 1, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
   })
 
   it("T字型: 1/3 + 1/3 + 1/3 ↵ + 1/1", () => {
@@ -329,11 +339,11 @@ describe("buildGridLayout: 明示的 break (↵)", () => {
       item({ layoutWidth: "1/3", nextPlacement: "break" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(0)
-    expect(s[2].y).toBe(0)
-    expect(s[3]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(0)
+    expect(simplified[2].y).toBe(0)
+    expect(simplified[3]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
   })
 
   it("逆T字型: 1/1 ↵ + 1/3 + 1/3 + 1/3", () => {
@@ -343,11 +353,11 @@ describe("buildGridLayout: 明示的 break (↵)", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 1, h: 1 })
-    expect(s[1].y).toBe(1)
-    expect(s[2].y).toBe(1)
-    expect(s[3].y).toBe(1)
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 1, h: 1 })
+    expect(simplified[1].y).toBe(1)
+    expect(simplified[2].y).toBe(1)
+    expect(simplified[3].y).toBe(1)
   })
 
   it("連続 break: 1/4 ↵ + 1/4 ↵ + 1/4", () => {
@@ -356,11 +366,11 @@ describe("buildGridLayout: 明示的 break (↵)", () => {
       item({ layoutWidth: "1/4", nextPlacement: "break" }),
       item({ layoutWidth: "1/4" }),
     ])
-    const s = simplify(cells)
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(1)
-    expect(s[2].y).toBe(2)
-    expect(s.every((c) => c.x === 0)).toBe(true)
+    const simplified = simplify(cells)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(1)
+    expect(simplified[2].y).toBe(2)
+    expect(simplified.every((cell) => cell.x === 0)).toBe(true)
   })
 })
 
@@ -372,9 +382,9 @@ describe("buildGridLayout: goUp (↑)", () => {
       item({ layoutWidth: "1/2", nextPlacement: "break" }),
       item({ layoutWidth: "1/2", goUp: 1 }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
   })
 
   it("左2段 + 右1枠: 1/4 ↵ + 1/4 + 1/2 ↑1", () => {
@@ -383,11 +393,11 @@ describe("buildGridLayout: goUp (↑)", () => {
       item({ layoutWidth: "1/4" }),
       item({ layoutWidth: "1/2", goUp: 1, heightMultiplier: 2 }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
     // ↑1 → row0に戻る、x = max(rightX of rows 0..1) = 1/4
-    expect(s[2]).toEqual({ x: 0.25, y: 0, w: 0.5, h: 2 })
+    expect(simplified[2]).toEqual({ x: 0.25, y: 0, w: 0.5, h: 2 })
   })
 
   it("左3段 + 右大枠: 1/4 ↵ × 2 + 1/4 + 3/4 ↑2", () => {
@@ -397,11 +407,11 @@ describe("buildGridLayout: goUp (↑)", () => {
       item({ layoutWidth: "1/4" }),
       item({ layoutWidth: "3/4", goUp: 2, heightMultiplier: 3 }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 2, w: 0.25, h: 1 })
-    expect(s[3]).toEqual({ x: 0.25, y: 0, w: 0.75, h: 3 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: 0.25, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0.25, y: 0, w: 0.75, h: 3 })
   })
 
   it("goUp=0 は効果なし", () => {
@@ -409,9 +419,9 @@ describe("buildGridLayout: goUp (↑)", () => {
       item({ layoutWidth: "1/2", nextPlacement: "break" }),
       item({ layoutWidth: "1/2", goUp: 0 }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // goUp=0 → 移動しない → 2行目に配置
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
   })
 
   it("goUp が行数を超える場合は row 0 にクランプ", () => {
@@ -419,9 +429,9 @@ describe("buildGridLayout: goUp (↑)", () => {
       item({ layoutWidth: "1/2", nextPlacement: "break" }),
       item({ layoutWidth: "1/2", goUp: 99 }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // goUp=99 → row 0 にクランプ
-    expect(s[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
   })
 })
 
@@ -436,15 +446,15 @@ describe("buildGridLayout: goUp 後の後続配置", () => {
       item({ layoutWidth: "3/4", goUp: 2, heightMultiplier: 3 }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ①②③ は左カラム
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 2, w: 0.25, h: 1 })
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.25, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: 0.25, h: 1 })
     // ④ は右の大枠 (h=3)
-    expect(s[3]).toEqual({ x: 0.25, y: 0, w: 0.75, h: 3 })
+    expect(simplified[3]).toEqual({ x: 0.25, y: 0, w: 0.75, h: 3 })
     // ⑤ はブロック全体の下 (y=3)、x=0 に戻る
-    expect(s[4]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
   })
 
   it("左3段 + 右大枠 + 下に2分割", () => {
@@ -456,10 +466,10 @@ describe("buildGridLayout: goUp 後の後続配置", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ⑤⑥ は y=3 の行に横並び
-    expect(s[4]).toEqual({ x: 0, y: 3, w: 0.5, h: 1 })
-    expect(s[5]).toEqual({ x: 0.5, y: 3, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0, y: 3, w: 0.5, h: 1 })
+    expect(simplified[5]).toEqual({ x: 0.5, y: 3, w: 0.5, h: 1 })
   })
 
   it("左2段 + 右大枠 + 下段 + さらに下段", () => {
@@ -471,16 +481,16 @@ describe("buildGridLayout: goUp 後の後続配置", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ①② 左列
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
     // ③ 右大枠
-    expect(s[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
+    expect(simplified[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
     // ④⑤⑥ 下に3等分 (y=2)
-    expect(s[3].y).toBe(2)
-    expect(s[4].y).toBe(2)
-    expect(s[5].y).toBe(2)
+    expect(simplified[3].y).toBe(2)
+    expect(simplified[4].y).toBe(2)
+    expect(simplified[5].y).toBe(2)
   })
 })
 
@@ -492,9 +502,9 @@ describe("buildGridLayout: 高さ", () => {
       item({ layoutWidth: "1/2", heightMultiplier: 1 }),
       item({ layoutWidth: "1/2", heightMultiplier: 3 }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 3 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 3 })
     expect(gridTotalHeight(cells)).toBe(3)
   })
 
@@ -504,9 +514,9 @@ describe("buildGridLayout: 高さ", () => {
       item({ layoutWidth: "1/2", heightMultiplier: 1 }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 行0の maxH = 2 → 次の行は y=2
-    expect(s[2]).toEqual({ x: 0, y: 2, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: 0.5, h: 1 })
   })
 
   it("break 後の Y 位置は行の最大高さ基準", () => {
@@ -515,9 +525,9 @@ describe("buildGridLayout: 高さ", () => {
       item({ layoutWidth: "1/2", heightMultiplier: 3, nextPlacement: "break" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 行0の maxH = 3 → 次の行は y=3
-    expect(s[2]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
   })
 
   it("goUp + 高さ混在: 全高さは最大の下端", () => {
@@ -541,8 +551,8 @@ describe("buildGridLayout: グリッドパターン", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s).toEqual([
+    const simplified = simplify(cells)
+    expect(simplified).toEqual([
       { x: 0, y: 0, w: 0.5, h: 1 },
       { x: 0.5, y: 0, w: 0.5, h: 1 },
       { x: 0, y: 1, w: 0.5, h: 1 },
@@ -553,10 +563,10 @@ describe("buildGridLayout: グリッドパターン", () => {
   it("3×2 グリッド", () => {
     const items = Array.from({ length: 6 }, () => item({ layoutWidth: "1/3" }))
     const cells = buildGridLayout(items)
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 行0: 3つ、行1: 3つ
-    expect(s.filter((c) => c.y === 0)).toHaveLength(3)
-    expect(s.filter((c) => c.y === 1)).toHaveLength(3)
+    expect(simplified.filter((cell) => cell.y === 0)).toHaveLength(3)
+    expect(simplified.filter((cell) => cell.y === 1)).toHaveLength(3)
   })
 
   it("2×2 + 全幅下段", () => {
@@ -567,8 +577,8 @@ describe("buildGridLayout: グリッドパターン", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
-    expect(s[4]).toEqual({ x: 0, y: 2, w: 1, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[4]).toEqual({ x: 0, y: 2, w: 1, h: 1 })
   })
 
   it("全幅上段 + 2×2 + 全幅下段 (サンドイッチ)", () => {
@@ -580,13 +590,13 @@ describe("buildGridLayout: グリッドパターン", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 1, h: 1 })
-    expect(s[1].y).toBe(1)
-    expect(s[2].y).toBe(1)
-    expect(s[3].y).toBe(2)
-    expect(s[4].y).toBe(2)
-    expect(s[5]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 1, h: 1 })
+    expect(simplified[1].y).toBe(1)
+    expect(simplified[2].y).toBe(1)
+    expect(simplified[3].y).toBe(2)
+    expect(simplified[4].y).toBe(2)
+    expect(simplified[5]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
   })
 })
 
@@ -602,16 +612,16 @@ describe("buildGridLayout: 複雑な組み合わせ", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 行0: 1/2 + 1/2 (自動改行)
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(0)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(0)
     // 行1: 1/1 (自動改行)
-    expect(s[2]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
     // 行2: 1/3 × 3
-    expect(s[3].y).toBe(2)
-    expect(s[4].y).toBe(2)
-    expect(s[5].y).toBe(2)
+    expect(simplified[3].y).toBe(2)
+    expect(simplified[4].y).toBe(2)
+    expect(simplified[5].y).toBe(2)
   })
 
   it("凸型: 中央が広い", () => {
@@ -622,15 +632,15 @@ describe("buildGridLayout: 複雑な組み合わせ", () => {
       item({ layoutWidth: "1/4" }),
       item({ layoutWidth: "1/4" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 行0: 2つ (中央寄り短い)
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(0)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(0)
     // 行1: 全幅
-    expect(s[2]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
     // 行2: 2つ
-    expect(s[3].y).toBe(2)
-    expect(s[4].y).toBe(2)
+    expect(simplified[3].y).toBe(2)
+    expect(simplified[4].y).toBe(2)
   })
 
   it("階段型: 段々幅が広がる", () => {
@@ -640,11 +650,11 @@ describe("buildGridLayout: 複雑な組み合わせ", () => {
       item({ layoutWidth: "3/4", nextPlacement: "break" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 2, w: 0.75, h: 1 })
-    expect(s[3]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.25, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: 0.75, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
   })
 
   it("goUp 2回使用: 3カラム", () => {
@@ -655,19 +665,19 @@ describe("buildGridLayout: 複雑な組み合わせ", () => {
       item({ layoutWidth: "1/3", goUp: 3, heightMultiplier: 3 }),
       item({ layoutWidth: "1/3", goUp: 3, heightMultiplier: 3 }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 左列
-    expect(s[0]).toEqual({ x: 0, y: 0, w: round(1 / 3), h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: round(1 / 3), h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 2, w: round(1 / 3), h: 1 })
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: round(1 / 3), h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: round(1 / 3), h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: round(1 / 3), h: 1 })
     // 中央列 (goUp 3 → row 0, x = 1/3)
-    expect(s[3].x).toBeCloseTo(1 / 3, 4)
-    expect(s[3].y).toBe(0)
-    expect(s[3].h).toBe(3)
+    expect(simplified[3].x).toBeCloseTo(1 / 3, 4)
+    expect(simplified[3].y).toBe(0)
+    expect(simplified[3].h).toBe(3)
     // 右列 (goUp 3 → row 0, x = 2/3)
-    expect(s[4].x).toBeCloseTo(2 / 3, 4)
-    expect(s[4].y).toBe(0)
-    expect(s[4].h).toBe(3)
+    expect(simplified[4].x).toBeCloseTo(2 / 3, 4)
+    expect(simplified[4].y).toBe(0)
+    expect(simplified[4].h).toBe(3)
   })
 
   it("goUp + break + 全幅 の繰り返し", () => {
@@ -683,17 +693,17 @@ describe("buildGridLayout: 複雑な組み合わせ", () => {
       item({ layoutWidth: "1/3" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ブロック1
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
     // ブロック2: y=2
-    expect(s[3]).toEqual({ x: 0, y: 2, w: 1, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0, y: 2, w: 1, h: 1 })
     // ブロック3: y=3
-    expect(s[4].y).toBe(3)
-    expect(s[5].y).toBe(3)
-    expect(s[6].y).toBe(3)
+    expect(simplified[4].y).toBe(3)
+    expect(simplified[5].y).toBe(3)
+    expect(simplified[6].y).toBe(3)
   })
 })
 
@@ -702,8 +712,8 @@ describe("buildGridLayout: 複雑な組み合わせ", () => {
 describe("buildGridLayout: エッジケース", () => {
   it("layoutWidth あり1件のみ → 横配置モード、1セル", () => {
     const cells = buildGridLayout([item({ layoutWidth: "1/2" })])
-    const s = simplify(cells)
-    expect(s).toEqual([{ x: 0, y: 0, w: 0.5, h: 1 }])
+    const simplified = simplify(cells)
+    expect(simplified).toEqual([{ x: 0, y: 0, w: 0.5, h: 1 }])
   })
 
   it("layoutWidth なしが混在 → 未指定は幅1扱い", () => {
@@ -711,11 +721,11 @@ describe("buildGridLayout: エッジケース", () => {
       item({ layoutWidth: "1/2" }),
       item(), // layoutWidth なし → "1" → 幅1
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ①: x=0, w=0.5
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
     // ②: layoutWidth 未指定 → 幅1 → 1/2+1 > 1 で改行
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 1, h: 1 })
   })
 
   it("heightMultiplier が 0.5 のアイテム", () => {
@@ -723,9 +733,9 @@ describe("buildGridLayout: エッジケース", () => {
       item({ layoutWidth: "1/2", heightMultiplier: 0.5 }),
       item({ layoutWidth: "1/2", heightMultiplier: 1.5 }),
     ])
-    const s = simplify(cells)
-    expect(s[0].h).toBe(0.5)
-    expect(s[1].h).toBe(1.5)
+    const simplified = simplify(cells)
+    expect(simplified[0].h).toBe(0.5)
+    expect(simplified[1].h).toBe(1.5)
     expect(gridTotalHeight(cells)).toBe(1.5)
   })
 
@@ -736,10 +746,10 @@ describe("buildGridLayout: エッジケース", () => {
       item({ layoutWidth: "1/2", nextPlacement: "break" }),
       item({ layoutWidth: "1/2", goUp: 1 }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
     // ② は goUp で row 0 に戻り、①の右に配置
-    expect(s[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
   })
 
   it("全アイテムに break → 全て別の行", () => {
@@ -748,10 +758,10 @@ describe("buildGridLayout: エッジケース", () => {
       item({ layoutWidth: "1/3", nextPlacement: "break" }),
       item({ layoutWidth: "1/3" }),
     ])
-    const s = simplify(cells)
-    expect(s[0].y).toBe(0)
-    expect(s[1].y).toBe(1)
-    expect(s[2].y).toBe(2)
+    const simplified = simplify(cells)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].y).toBe(1)
+    expect(simplified[2].y).toBe(2)
   })
 
   it("goUp なし + nextPlacement なし → 全て inline", () => {
@@ -761,8 +771,8 @@ describe("buildGridLayout: エッジケース", () => {
       item({ layoutWidth: "1/4" }),
       item({ layoutWidth: "1/4" }),
     ])
-    const s = simplify(cells)
-    expect(s.every((c) => c.y === 0)).toBe(true)
+    const simplified = simplify(cells)
+    expect(simplified.every((cell) => cell.y === 0)).toBe(true)
   })
 
   it("自動改行後に goUp で戻れる", () => {
@@ -772,13 +782,13 @@ describe("buildGridLayout: エッジケース", () => {
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2", goUp: 1 }), // row0 に戻る... が rightX=1 なので収まらない
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // row0: ① ② → rightX=1
     // row1: ③ (x=0, w=0.5) → rightX=0.5
     // ④ goUp=1 → targetIdx=0, maxRightX = max(1, 0.5) = 1
     // curX=1 → 幅超過で改行 → 新しい行
-    expect(s[3].y).toBe(2)
-    expect(s[3].x).toBe(0)
+    expect(simplified[3].y).toBe(2)
+    expect(simplified[3].x).toBe(0)
   })
 })
 
@@ -795,13 +805,13 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 2, w: 0.5, h: 1 })
-    expect(s[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-    expect(s[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
-    expect(s[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: 0.5, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    expect(simplified[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
   })
 
   it("2列2行: goUp 後に既存行を埋める", () => {
@@ -811,11 +821,11 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2", goUp: 1 }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-    expect(s[3]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
   })
 
   it("2列3行 + 下に全幅行", () => {
@@ -828,13 +838,13 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 右列が既存3行を埋める
-    expect(s[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-    expect(s[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
-    expect(s[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    expect(simplified[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
     // 全幅行は下に配置
-    expect(s[6]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
+    expect(simplified[6]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
   })
 
   it("左3段(h=1) + 右大枠(h=3, goUp): 後続は下に配置", () => {
@@ -846,10 +856,10 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "3/4", goUp: 2, heightMultiplier: 3 }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ⑤ は goUp ブロックの下に配置 (y=3)
-    expect(s[4].y).toBe(3)
-    expect(s[4].x).toBe(0)
+    expect(simplified[4].y).toBe(3)
+    expect(simplified[4].x).toBe(0)
   })
 
   it("2列 + 右列に h=2 セル: lastCellBottom でスキップ", () => {
@@ -861,11 +871,11 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2", goUp: 2, heightMultiplier: 2 }),
       item({ layoutWidth: "1/2" }),
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // ④ at (0.5, 0) h=2 → lastCellBottom=2
-    expect(s[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
+    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
     // ⑤ は row 2 (y=2) に進む（row 1 は ④ のカバー範囲内なのでスキップ）
-    expect(s[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
   })
 
   it("2列 + 左列に h=2 セル: 右列は4アイテムで埋まる", () => {
@@ -881,18 +891,18 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2" }), // ⑦ h=1
       item({ layoutWidth: "1/1" }), // ⑧ 全幅
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 左列
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    expect(s[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
-    expect(s[2]).toEqual({ x: 0, y: 2, w: 0.5, h: 2 }) // h=2
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
+    expect(simplified[1]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0, y: 2, w: 0.5, h: 2 }) // h=2
     // 右列: 4アイテムが y=0,1,2,3 に配置
-    expect(s[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-    expect(s[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
-    expect(s[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
-    expect(s[6]).toEqual({ x: 0.5, y: 3, w: 0.5, h: 1 }) // ③のh=2内
+    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    expect(simplified[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    expect(simplified[6]).toEqual({ x: 0.5, y: 3, w: 0.5, h: 1 }) // ③のh=2内
     // 全幅行は下に
-    expect(s[7]).toEqual({ x: 0, y: 4, w: 1, h: 1 })
+    expect(simplified[7]).toEqual({ x: 0, y: 4, w: 1, h: 1 })
   })
 
   it("2列 + 左列先頭が h=2: 右列は既存行を埋めてから新行", () => {
@@ -904,16 +914,16 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2" }), // ④
       item({ layoutWidth: "1/2" }), // ⑤
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 左列
-    expect(s[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 2 })
-    expect(s[1]).toEqual({ x: 0, y: 2, w: 0.5, h: 1 })
+    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 2 })
+    expect(simplified[1]).toEqual({ x: 0, y: 2, w: 0.5, h: 1 })
     // 右列: ③④⑤ が y=0,1,2 で ① (h=2) の空間を埋める
-    expect(s[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[2]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
     // ④: ①のh=2内のy=1に中間行を作成して配置
-    expect(s[3]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
     // ⑤: 既存行 (y=2) に配置
-    expect(s[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
   })
 
   it("2列 + 左列中間が h=3: 右列がグリッド内で自動拡張", () => {
@@ -929,13 +939,13 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2" }), // ⑦
       item({ layoutWidth: "1/2" }), // ⑧
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 右列: y=0,1,2,3,4
-    expect(s[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-    expect(s[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
-    expect(s[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
-    expect(s[6]).toEqual({ x: 0.5, y: 3, w: 0.5, h: 1 })
-    expect(s[7]).toEqual({ x: 0.5, y: 4, w: 0.5, h: 1 })
+    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 1, w: 0.5, h: 1 })
+    expect(simplified[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    expect(simplified[6]).toEqual({ x: 0.5, y: 3, w: 0.5, h: 1 })
+    expect(simplified[7]).toEqual({ x: 0.5, y: 4, w: 0.5, h: 1 })
   })
 
   it("2列 + 右列に h=2 混在: 後続は lastCellBottom を尊重", () => {
@@ -949,10 +959,10 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/1" }),
     ])
-    const s = simplify(cells)
-    expect(s[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
-    expect(s[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
-    expect(s[5]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
+    const simplified = simplify(cells)
+    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
+    expect(simplified[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
+    expect(simplified[5]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
   })
 
   it("3列パターン: 3段 + goUp × 2（中間カラムに明示break）", () => {
@@ -970,28 +980,28 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
       item({ layoutWidth: "1/3" }), // ⑧
       item({ layoutWidth: "1/3" }), // ⑨
     ])
-    const s = simplify(cells)
+    const simplified = simplify(cells)
     // 左列 (x=0)
-    expect(s[0].x).toBe(0)
-    expect(s[0].y).toBe(0)
-    expect(s[1].x).toBe(0)
-    expect(s[1].y).toBe(1)
-    expect(s[2].x).toBe(0)
-    expect(s[2].y).toBe(2)
+    expect(simplified[0].x).toBe(0)
+    expect(simplified[0].y).toBe(0)
+    expect(simplified[1].x).toBe(0)
+    expect(simplified[1].y).toBe(1)
+    expect(simplified[2].x).toBe(0)
+    expect(simplified[2].y).toBe(2)
     // 中列 (x≈1/3)
-    expect(s[3].x).toBeCloseTo(1 / 3)
-    expect(s[3].y).toBe(0)
-    expect(s[4].x).toBeCloseTo(1 / 3)
-    expect(s[4].y).toBe(1)
-    expect(s[5].x).toBeCloseTo(1 / 3)
-    expect(s[5].y).toBe(2)
+    expect(simplified[3].x).toBeCloseTo(1 / 3)
+    expect(simplified[3].y).toBe(0)
+    expect(simplified[4].x).toBeCloseTo(1 / 3)
+    expect(simplified[4].y).toBe(1)
+    expect(simplified[5].x).toBeCloseTo(1 / 3)
+    expect(simplified[5].y).toBe(2)
     // 右列 (x≈2/3)
-    expect(s[6].x).toBeCloseTo(2 / 3)
-    expect(s[6].y).toBe(0)
-    expect(s[7].x).toBeCloseTo(2 / 3)
-    expect(s[7].y).toBe(1)
-    expect(s[8].x).toBeCloseTo(2 / 3)
-    expect(s[8].y).toBe(2)
+    expect(simplified[6].x).toBeCloseTo(2 / 3)
+    expect(simplified[6].y).toBe(0)
+    expect(simplified[7].x).toBeCloseTo(2 / 3)
+    expect(simplified[7].y).toBe(1)
+    expect(simplified[8].x).toBeCloseTo(2 / 3)
+    expect(simplified[8].y).toBe(2)
   })
 })
 

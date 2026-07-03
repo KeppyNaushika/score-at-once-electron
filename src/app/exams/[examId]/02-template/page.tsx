@@ -157,7 +157,7 @@ export default function TemplateStepPage() {
   const hasRegionsForCurrentImage =
     initialData.selectedMasterImage &&
     initialData.cropRegions.filter(
-      (r) => r.examPageId === initialData.selectedMasterImage?.id
+      (region) => region.examPageId === initialData.selectedMasterImage?.id
     ).length > 0
 
   // ローディング・エラー状態の表示

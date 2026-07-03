@@ -322,7 +322,9 @@ function main() {
   const reports: UnusedReturnReport[] = []
 
   for (const [hookName, hookReturn] of hookReturns) {
-    const usagesForHook = allUsages.filter((u) => u.hookName === hookName)
+    const usagesForHook = allUsages.filter(
+      (usage) => usage.hookName === hookName
+    )
 
     if (usagesForHook.length === 0) {
       // フックが使用されていない（別の問題）

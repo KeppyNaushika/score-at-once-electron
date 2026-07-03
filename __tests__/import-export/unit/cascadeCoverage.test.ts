@@ -61,7 +61,7 @@ describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () =
   for (const { target, movers } of cases) {
     it(`${target} の onDelete:Cascade 子テーブルが全てレジストリに登録されている`, () => {
       const expected = cascadeChildrenFromSchema(target)
-      const actual = movers.map((mv) => mv.model).sort()
+      const actual = movers.map((mover) => mover.model).sort()
 
       // 漏れ（schemaにあるがレジストリに無い）→ カスケード削除バグになる
       // 余分（レジストリにあるがschemaに無い）→ 不要な処理 or リネーム漏れ

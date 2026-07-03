@@ -302,7 +302,7 @@ export async function convertDatToScore(
       examStudents: [],
       userExams: [],
       examSubtotalGroups: subtotalData.examSubtotalGroups,
-      examClasses: [],
+      examClassrooms: [],
       examMarkingFormats: [],
       examExportSettings: null,
       cropRegionMarkingOverrides: [],
@@ -863,8 +863,8 @@ function generateSubtotalData(
   // ========================================
 
   const activeAngles = angles
-    .filter((a) => !a.delete_flg)
-    .sort((a, b) => a.angle_sort_no - b.angle_sort_no)
+    .filter((angle) => !angle.delete_flg)
+    .sort((angleA, angleB) => angleA.angle_sort_no - angleB.angle_sort_no)
 
   if (activeAngles.length > 0 && questionAngles.length > 0) {
     const kantenGroupId = generateUuid()

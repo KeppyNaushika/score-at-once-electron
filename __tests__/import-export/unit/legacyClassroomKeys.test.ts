@@ -24,10 +24,10 @@ describe("normalizeLegacyClassroomKeys（旧アーカイブ学級キーの後方
     })
   })
 
-  it("ネストした examClasses / counts も再帰的に変換する", () => {
+  it("ネストした examClassrooms / counts も再帰的に変換する", () => {
     const old = {
       counts: { classes: 2 },
-      examData: { examClasses: [{ examId: "e1", classId: "c1" }] },
+      examData: { examClassrooms: [{ examId: "e1", classId: "c1" }] },
       classesData: {
         classes: [{ id: "c1" }],
         memberships: [{ classId: "c1", studentId: "s1" }],
@@ -35,7 +35,7 @@ describe("normalizeLegacyClassroomKeys（旧アーカイブ学級キーの後方
     }
     expect(normalizeLegacyClassroomKeys(old)).toEqual({
       counts: { classrooms: 2 },
-      examData: { examClasses: [{ examId: "e1", classroomId: "c1" }] },
+      examData: { examClassrooms: [{ examId: "e1", classroomId: "c1" }] },
       classesData: {
         classrooms: [{ id: "c1" }],
         memberships: [{ classroomId: "c1", studentId: "s1" }],

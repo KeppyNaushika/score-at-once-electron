@@ -141,7 +141,9 @@ describe("exportImportRoundTrip", () => {
 
     expect(importedExam).not.toBeNull()
     expect(importedExam!.examPages.length).toBe(2)
-    expect(importedExam!.examPages.flatMap((p) => p.cropRegions).length).toBe(4)
+    expect(
+      importedExam!.examPages.flatMap((examPage) => examPage.cropRegions).length
+    ).toBe(4)
     expect(importedExam!.examStudents.length).toBe(3)
 
     cleanupTempDir(extractResult.data!.tempDir)

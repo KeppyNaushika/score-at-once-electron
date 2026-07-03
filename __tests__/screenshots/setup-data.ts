@@ -90,101 +90,102 @@ async function main() {
     delete defData.updatedAt
     await prisma.asbDefinition.create({ data: defData as never })
 
-    for (const hf of template.headerFields) {
+    for (const headerField of template.headerFields) {
       await prisma.asbHeaderField.create({
-        data: { ...hf, id: randomUUID(), definitionId: asbDefId },
+        data: { ...headerField, id: randomUUID(), definitionId: asbDefId },
       })
     }
 
-    for (const mq of template.majorQuestions) {
+    for (const majorQuestion of template.majorQuestions) {
       const newMqId = randomUUID()
       await prisma.asbMajorQuestion.create({
         data: {
           id: newMqId,
           definitionId: asbDefId,
-          label: mq.label,
-          order: mq.order,
+          label: majorQuestion.label,
+          order: majorQuestion.order,
         },
       })
-      for (const sq of mq.subQuestions) {
+      for (const subQuestion of majorQuestion.subQuestions) {
         const newSqId = randomUUID()
         await prisma.asbSubQuestion.create({
           data: {
             id: newSqId,
             majorQuestionId: newMqId,
-            label: sq.label,
-            order: sq.order,
-            heightMultiplier: sq.heightMultiplier,
-            points: sq.points,
-            usesBranchPoints: sq.usesBranchPoints,
-            layoutWidth: sq.layoutWidth,
-            nextPlacement: sq.nextPlacement,
-            goUp: sq.goUp,
-            manuscriptEnabled: sq.manuscriptEnabled,
-            manuscriptColumns: sq.manuscriptColumns,
-            manuscriptRows: sq.manuscriptRows,
-            manuscriptCellSizeMm: sq.manuscriptCellSizeMm,
-            borderStyleTop: sq.borderStyleTop,
-            borderStyleBottom: sq.borderStyleBottom,
-            borderStyleLeft: sq.borderStyleLeft,
-            borderStyleRight: sq.borderStyleRight,
+            label: subQuestion.label,
+            order: subQuestion.order,
+            heightMultiplier: subQuestion.heightMultiplier,
+            points: subQuestion.points,
+            usesBranchPoints: subQuestion.usesBranchPoints,
+            layoutWidth: subQuestion.layoutWidth,
+            nextPlacement: subQuestion.nextPlacement,
+            goUp: subQuestion.goUp,
+            manuscriptEnabled: subQuestion.manuscriptEnabled,
+            manuscriptColumns: subQuestion.manuscriptColumns,
+            manuscriptRows: subQuestion.manuscriptRows,
+            manuscriptCellSizeMm: subQuestion.manuscriptCellSizeMm,
+            borderStyleTop: subQuestion.borderStyleTop,
+            borderStyleBottom: subQuestion.borderStyleBottom,
+            borderStyleLeft: subQuestion.borderStyleLeft,
+            borderStyleRight: subQuestion.borderStyleRight,
           },
         })
-        for (const te of sq.textElements || []) {
+        for (const textElement of subQuestion.textElements || []) {
           await prisma.asbTextElement.create({
             data: {
               id: randomUUID(),
               subQuestionId: newSqId,
               branchQuestionId: null,
-              text: te.text,
-              fontSize: te.fontSize,
-              horizontalAlign: te.horizontalAlign,
-              verticalAlign: te.verticalAlign,
-              order: te.order,
+              text: textElement.text,
+              fontSize: textElement.fontSize,
+              horizontalAlign: textElement.horizontalAlign,
+              verticalAlign: textElement.verticalAlign,
+              order: textElement.order,
             },
           })
         }
-        if (sq.omrConfig) {
+        if (subQuestion.omrConfig) {
           const newOmrId = randomUUID()
           await prisma.asbOmrConfig.create({
             data: {
               id: newOmrId,
               subQuestionId: newSqId,
-              type: sq.omrConfig.type,
-              numChoices: sq.omrConfig.numChoices,
-              choiceLayout: sq.omrConfig.choiceLayout,
-              numDigits: sq.omrConfig.numDigits,
-              correctAnswer: sq.omrConfig.correctAnswer,
+              type: subQuestion.omrConfig.type,
+              numChoices: subQuestion.omrConfig.numChoices,
+              choiceLayout: subQuestion.omrConfig.choiceLayout,
+              numDigits: subQuestion.omrConfig.numDigits,
+              correctAnswer: subQuestion.omrConfig.correctAnswer,
             },
           })
-          for (const co of sq.omrConfig.choiceOptions || []) {
+          for (const choiceOption of subQuestion.omrConfig.choiceOptions ||
+            []) {
             await prisma.asbOmrChoiceOption.create({
               data: {
                 id: randomUUID(),
                 omrConfigId: newOmrId,
-                choiceIndex: co.choiceIndex,
-                label: co.label,
-                isCorrect: co.isCorrect,
+                choiceIndex: choiceOption.choiceIndex,
+                label: choiceOption.label,
+                isCorrect: choiceOption.isCorrect,
               },
             })
           }
         }
-        for (const bq of sq.branchQuestions || []) {
+        for (const branchQuestion of subQuestion.branchQuestions || []) {
           await prisma.asbBranchQuestion.create({
             data: {
               id: randomUUID(),
               subQuestionId: newSqId,
-              label: bq.label,
-              order: bq.order,
-              heightMultiplier: bq.heightMultiplier,
-              points: bq.points,
-              layoutWidth: bq.layoutWidth,
-              nextPlacement: bq.nextPlacement,
-              goUp: bq.goUp,
-              borderStyleTop: bq.borderStyleTop,
-              borderStyleBottom: bq.borderStyleBottom,
-              borderStyleLeft: bq.borderStyleLeft,
-              borderStyleRight: bq.borderStyleRight,
+              label: branchQuestion.label,
+              order: branchQuestion.order,
+              heightMultiplier: branchQuestion.heightMultiplier,
+              points: branchQuestion.points,
+              layoutWidth: branchQuestion.layoutWidth,
+              nextPlacement: branchQuestion.nextPlacement,
+              goUp: branchQuestion.goUp,
+              borderStyleTop: branchQuestion.borderStyleTop,
+              borderStyleBottom: branchQuestion.borderStyleBottom,
+              borderStyleLeft: branchQuestion.borderStyleLeft,
+              borderStyleRight: branchQuestion.borderStyleRight,
             },
           })
         }

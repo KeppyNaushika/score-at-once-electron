@@ -22,10 +22,14 @@ export function useItemAnalysis(
     if (data.headers.questionLabels.length === 0) return null
 
     const input: ItemAnalysisInputStudent[] = data.rows.map((row) => ({
-      items: row.scores.map((questionScore, qi) => ({
+      items: row.scores.map((questionScore, questionIndex) => ({
         questionId: questionScore.questionId,
-        label: data.headers.questionLabels[qi] ?? questionScore.questionLabel,
-        maxScore: data.headers.questionMaxScores[qi] ?? questionScore.maxScore,
+        label:
+          data.headers.questionLabels[questionIndex] ??
+          questionScore.questionLabel,
+        maxScore:
+          data.headers.questionMaxScores[questionIndex] ??
+          questionScore.maxScore,
         // 解決済み得点（未採点・未確定は null、無回答は 0）をそのまま使う
         score: questionScore.score,
         isCorrect: questionScore.status === "correct",

@@ -70,7 +70,7 @@ async function createTestData() {
     },
   })
 
-  await testPrisma.studentClassMembership.create({
+  await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: active.id,
       classroomId: classA.id,
@@ -78,7 +78,7 @@ async function createTestData() {
       startDate: new Date("2024-04-01"), // examDate(2024-04-10)より前に開始
     },
   })
-  await testPrisma.studentClassMembership.create({
+  await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: left.id,
       classroomId: classA.id,
@@ -130,15 +130,19 @@ describe("Exam 在籍フィルタ", () => {
       const { exam, classA, left } = await createTestData()
 
       // active を退会させ、在籍中0名にする（left は転出済み）
-      await testPrisma.studentClassMembership.deleteMany({
+      await testPrisma.studentClassroomMembership.deleteMany({
         where: { classroomId: classA.id, studentId: { not: left.id } },
       })
 
       const activeResult = await getClassesNotInExam(exam.id, true)
-      expect(activeResult.classes!.map((c) => c.name)).not.toContain("3年A組")
+      expect(
+        activeResult.classes!.map((classroom) => classroom.name)
+      ).not.toContain("3年A組")
 
       const allResult = await getClassesNotInExam(exam.id, false)
-      expect(allResult.classes!.map((c) => c.name)).toContain("3年A組")
+      expect(allResult.classes!.map((classroom) => classroom.name)).toContain(
+        "3年A組"
+      )
     })
   })
 
@@ -154,7 +158,7 @@ describe("Exam 在籍フィルタ", () => {
           firstNameKana: "ジロウ",
         },
       })
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: future.id,
           classroomId,
@@ -175,7 +179,9 @@ describe("Exam 在籍フィルタ", () => {
       // 在籍中の active のみ。転入予定(E003)も転出済み(E002)も除外
       expect(result.added).toBe(1)
       const students = await getStudentsForExam(exam.id)
-      expect(students.students!.map((s) => s.studentNumber)).toEqual(["E001"])
+      expect(
+        students.students!.map((student) => student.studentNumber)
+      ).toEqual(["E001"])
     })
 
     it("activeOnly=true の個別追加候補に将来始まる所属の生徒は含まれない", async () => {
@@ -184,7 +190,9 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, true)
 
-      expect(result.students!.map((s) => s.studentNumber)).toEqual(["E001"])
+      expect(result.students!.map((student) => student.studentNumber)).toEqual([
+        "E001",
+      ])
     })
 
     it("activeOnly=false なら将来始まる所属の生徒も対象になる", async () => {
@@ -193,7 +201,9 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, false)
 
-      const numbers = result.students!.map((s) => s.studentNumber).sort()
+      const numbers = result
+        .students!.map((student) => student.studentNumber)
+        .sort()
       expect(numbers).toEqual(["E001", "E002", "E003"])
     })
   })
@@ -205,7 +215,9 @@ describe("Exam 在籍フィルタ", () => {
       const result = await getStudentsNotInExam(exam.id, true)
 
       expect(result.success).toBe(true)
-      expect(result.students!.map((s) => s.studentNumber)).toEqual(["E001"])
+      expect(result.students!.map((student) => student.studentNumber)).toEqual([
+        "E001",
+      ])
     })
 
     it("activeOnly=false は在籍終了の生徒も返す", async () => {
@@ -213,7 +225,9 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, false)
 
-      const numbers = result.students!.map((s) => s.studentNumber).sort()
+      const numbers = result
+        .students!.map((student) => student.studentNumber)
+        .sort()
       expect(numbers).toEqual(["E001", "E002"])
     })
 
@@ -267,7 +281,7 @@ describe("Exam 在籍フィルタ", () => {
       const classB = await testPrisma.classroom.create({
         data: { name: "バスケ部", grade: 3 },
       })
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: active.id,
           classroomId: classB.id,
@@ -281,11 +295,11 @@ describe("Exam 在籍フィルタ", () => {
       await addStudentsFromClass(exam.id, classB.id, false)
 
       const members = await getClassMembersForExam(exam.id)
-      const idsOf = (m: (typeof members)[number]) =>
-        m.classroom.memberships.map((x) => x.studentId)
+      const idsOf = (member: (typeof members)[number]) =>
+        member.classroom.memberships.map((membership) => membership.studentId)
 
-      const a = members.find((m) => m.classroomId === classA.id)!
-      const b = members.find((m) => m.classroomId === classB.id)!
+      const a = members.find((member) => member.classroomId === classA.id)!
+      const b = members.find((member) => member.classroomId === classB.id)!
 
       // classA: 受験日在籍の active のみ（転出済み left は除外）
       expect(idsOf(a)).toEqual([active.id])

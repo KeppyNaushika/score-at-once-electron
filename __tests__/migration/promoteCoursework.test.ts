@@ -38,10 +38,10 @@ const applyMigration = async () => {
   const sql = fs.readFileSync(MIGRATION_SQL, "utf-8")
   const statements = sql
     .split(";")
-    .map((s) => s.trim())
-    .filter((s) => {
-      if (s.length === 0) return false
-      const stripped = s
+    .map((statement) => statement.trim())
+    .filter((statement) => {
+      if (statement.length === 0) return false
+      const stripped = statement
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/--[^\n]*/g, "")
         .trim()
@@ -176,7 +176,7 @@ describe("promote_coursework マイグレーション", () => {
       `SELECT * FROM "CourseworkStudent" ORDER BY "studentId"`
     )
     // s1（点数あり）と s2（点数なし）の両方が名簿に存在すること
-    expect(students.map((s) => s.studentId)).toEqual(["s1", "s2"])
+    expect(students.map((student) => student.studentId)).toEqual(["s1", "s2"])
   })
 
   it("学級・点数・変換表が正しく移送される", async () => {
@@ -212,7 +212,7 @@ describe("promote_coursework マイグレーション", () => {
     const scales = await rawAll<{ label: string; score: number }>(
       `SELECT * FROM "CourseworkLetterScale" ORDER BY "order"`
     )
-    expect(scales.map((s) => s.label)).toEqual(["A", "B"])
+    expect(scales.map((scale) => scale.label)).toEqual(["A", "B"])
   })
 
   it("GradeDataSource が coursework 参照へ置き換わり、旧テーブル・旧列が撤去される", async () => {
@@ -221,25 +221,25 @@ describe("promote_coursework マイグレーション", () => {
     await seed()
     await applyMigration()
 
-    const ds = await rawAll<{
+    const dataSources = await rawAll<{
       courseworkItemId: string
       type: string
     }>(`SELECT * FROM "GradeDataSource"`)
-    expect(ds[0].courseworkItemId).toBe("ds1")
-    expect(ds[0].type).toBe("coursework")
+    expect(dataSources[0].courseworkItemId).toBe("ds1")
+    expect(dataSources[0].type).toBe("coursework")
 
     // inputMode 列が撤去されている
     const cols = await rawAll<{ name: string }>(
       `SELECT name FROM pragma_table_info('GradeDataSource')`
     )
-    expect(cols.map((c) => c.name)).not.toContain("inputMode")
-    expect(cols.map((c) => c.name)).toContain("courseworkItemId")
+    expect(cols.map((column) => column.name)).not.toContain("inputMode")
+    expect(cols.map((column) => column.name)).toContain("courseworkItemId")
 
     // 旧テーブルが DROP されている
     const tables = await rawAll<{ name: string }>(
       `SELECT name FROM sqlite_master WHERE type='table'`
     )
-    const names = tables.map((t) => t.name)
+    const names = tables.map((table) => table.name)
     expect(names).not.toContain("ManualScore")
     expect(names).not.toContain("GradeLetterScale")
   })

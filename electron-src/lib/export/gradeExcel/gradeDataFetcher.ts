@@ -29,7 +29,7 @@ export async function fetchGradeExportData(
       where: { id: gradeId },
       select: {
         name: true,
-        gradeClasses: {
+        gradeClassrooms: {
           include: { classroom: { select: { name: true } } },
           orderBy: { order: "asc" },
         },
@@ -42,8 +42,9 @@ export async function fetchGradeExportData(
         result: calcResult.result,
         examName: grade?.name ?? "",
         classNames:
-          grade?.gradeClasses.map((gradeClass) => gradeClass.classroom.name) ??
-          [],
+          grade?.gradeClassrooms.map(
+            (gradeClass) => gradeClass.classroom.name
+          ) ?? [],
       },
     }
   } catch (error) {

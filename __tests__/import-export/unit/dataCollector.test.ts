@@ -46,7 +46,7 @@ describe("アーカイブデータ構造", () => {
       expect(data.students).toHaveLength(3)
 
       // デフォルトのstudentNumberはユニーク
-      const numbers = data.students.map((s) => s.studentNumber)
+      const numbers = data.students.map((student) => student.studentNumber)
       expect(new Set(numbers).size).toBe(3)
     })
 
@@ -106,7 +106,7 @@ describe("アーカイブデータ構造", () => {
         cropRegionsPerPage: 2,
       })
 
-      const pageIds = new Set(data.examPages.map((p) => p.id))
+      const pageIds = new Set(data.examPages.map((examPage) => examPage.id))
       for (const region of data.cropRegions) {
         expect(pageIds.has(region.examPageId)).toBe(true)
       }
@@ -121,7 +121,7 @@ describe("アーカイブデータ構造", () => {
       expect(data.examStudents).toEqual([])
       expect(data.userExams).toEqual([])
       expect(data.examSubtotalGroups).toEqual([])
-      expect(data.examClasses).toEqual([])
+      expect(data.examClassrooms).toEqual([])
     })
   })
 

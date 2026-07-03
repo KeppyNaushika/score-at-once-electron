@@ -188,25 +188,25 @@ export function collectSubtotalRawScores(
 
   return subtotalTemplate.map((template) => {
     const scores = allScoringData
-      .map((data) => {
-        const subtotal = data.subtotalScores.find(
-          (s) => s.subtotalId === template.subtotalId
+      .map((scoringData) => {
+        const subtotal = scoringData.subtotalScores.find(
+          (subtotalScore) => subtotalScore.subtotalId === template.subtotalId
         )
         if (!subtotal || subtotal.score === null) return null
         return {
-          studentId: data.studentId,
+          studentId: scoringData.studentId,
           score: subtotal.score,
-          status: data.status || ("participating" as const),
+          status: scoringData.status || ("participating" as const),
         }
       })
       .filter(
         (
-          s
-        ): s is {
+          entry
+        ): entry is {
           studentId: string
           score: number
           status: "participating" | "expected" | "absent"
-        } => s !== null
+        } => entry !== null
       )
 
     return {
@@ -313,8 +313,8 @@ export function calculateStatisticsForStudent(
 ): StatisticsData {
   // 全体のスコア配列（null を除外）
   const allScores = allScoringData
-    .map((d) => d.totalScore)
-    .filter((s): s is number => s !== null)
+    .map((scoringData) => scoringData.totalScore)
+    .filter((score): score is number => score !== null)
 
   // 全体統計
   const overallAverage = calculateAverage(allScores)
@@ -325,18 +325,20 @@ export function calculateStatisticsForStudent(
   const scoreById = scoreByStudentId ?? buildScoreByStudentId(allScoringData)
 
   // 学級別統計（studentReport 選択学級ごと。母集団＝当該学級全体）
-  const classes: ClassStatEntry[] = studentClasses.map((cls) => {
+  const classes: ClassStatEntry[] = studentClasses.map((classroom) => {
     // allScoringData に存在する所属生徒のみ（在籍はするが採点対象外を除外）
-    const presentIds = cls.memberStudentIds.filter((id) => scoreById.has(id))
+    const presentIds = classroom.memberStudentIds.filter((id) =>
+      scoreById.has(id)
+    )
     const classScores = presentIds
       .map((id) => scoreById.get(id) ?? null)
-      .filter((s): s is number => s !== null)
+      .filter((score): score is number => score !== null)
 
     return {
-      classroomId: cls.classroomId,
-      className: cls.className,
-      grade: cls.grade,
-      memberStudentIds: cls.memberStudentIds,
+      classroomId: classroom.classroomId,
+      className: classroom.className,
+      grade: classroom.grade,
+      memberStudentIds: classroom.memberStudentIds,
       average: calculateAverage(classScores),
       stdDev: calculateStdDev(classScores),
       boxPlot: calculateBoxPlotData(classScores),
@@ -361,13 +363,15 @@ export function calculateStatisticsForStudent(
   const subtotalRawScores = collectSubtotalRawScores(allScoringData)
 
   // 全生徒の合計点データ（renderer側での統計再計算用）
-  const rawTotalScores: RawTotalScoreEntry[] = allScoringData.map((d) => ({
-    studentId: d.studentId,
-    totalScore: d.totalScore,
-    status: d.status || ("participating" as const),
-    className: d.className,
-    grade: d.grade,
-  }))
+  const rawTotalScores: RawTotalScoreEntry[] = allScoringData.map(
+    (scoringData) => ({
+      studentId: scoringData.studentId,
+      totalScore: scoringData.totalScore,
+      status: scoringData.status || ("participating" as const),
+      className: scoringData.className,
+      grade: scoringData.grade,
+    })
+  )
 
   return {
     overall: {

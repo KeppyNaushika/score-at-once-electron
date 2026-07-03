@@ -34,10 +34,12 @@ import type {
 
 /** SyncResultからバージョン不一致リモートの一覧を抽出する */
 function extractVersionMismatches(result: SyncResult): VersionMismatchRemote[] {
-  return result.skippedRemotes.map((s) => ({
-    clientId: s.clientId,
-    remoteVersion: s.remoteVersion,
-    remoteIsNewer: s.remoteVersion !== null && s.remoteVersion > s.localVersion,
+  return result.skippedRemotes.map((skippedRemote) => ({
+    clientId: skippedRemote.clientId,
+    remoteVersion: skippedRemote.remoteVersion,
+    remoteIsNewer:
+      skippedRemote.remoteVersion !== null &&
+      skippedRemote.remoteVersion > skippedRemote.localVersion,
   }))
 }
 
@@ -70,7 +72,7 @@ function broadcastSyncStatus(): void {
 function getTombstoneTargetTables(): Set<string> {
   if (!syncInstance) return new Set()
   return new Set(
-    syncInstance.getSyncedTables().filter((t) => t !== "DeletedRecord")
+    syncInstance.getSyncedTables().filter((table) => table !== "DeletedRecord")
   )
 }
 

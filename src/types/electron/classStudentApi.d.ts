@@ -1,8 +1,8 @@
 import type { Classroom, Prisma, Student } from "@prisma/client"
 
 import type {
-  ClassWithMemberships,
-  StudentClassMembershipWithDetails,
+  ClassroomWithMemberships,
+  StudentClassroomMembershipWithDetails,
   StudentWithMemberships,
 } from "../prismaExtensions"
 
@@ -42,7 +42,7 @@ interface ClassStudentExamResult {
  */
 export interface ClassStudentAPI {
   // Class related
-  fetchClasses: () => Promise<ClassWithMemberships[]>
+  fetchClasses: () => Promise<ClassroomWithMemberships[]>
   getClassesNotInExam: (
     examId: string,
     activeOnly?: boolean
@@ -68,10 +68,10 @@ export interface ClassStudentAPI {
   }>
   createClass: (
     classData: Prisma.ClassroomCreateWithoutTeachersInput
-  ) => Promise<ClassWithMemberships>
+  ) => Promise<ClassroomWithMemberships>
   updateClass: (
     classData: Prisma.ClassroomUpdateInput & { id: string }
-  ) => Promise<ClassWithMemberships> // Ensure id is part of update
+  ) => Promise<ClassroomWithMemberships> // Ensure id is part of update
   deleteClass: (classroomId: string) => Promise<Classroom | void>
 
   // Student related
@@ -101,35 +101,35 @@ export interface ClassStudentAPI {
 
   // Student Class Membership related
   createStudentClassMembership: (
-    membershipData: Prisma.StudentClassMembershipCreateInput
-  ) => Promise<StudentClassMembershipWithDetails>
+    membershipData: Prisma.StudentClassroomMembershipCreateInput
+  ) => Promise<StudentClassroomMembershipWithDetails>
   updateStudentClassMembership: (
     id: string,
-    membershipData: Prisma.StudentClassMembershipUpdateInput
-  ) => Promise<StudentClassMembershipWithDetails>
+    membershipData: Prisma.StudentClassroomMembershipUpdateInput
+  ) => Promise<StudentClassroomMembershipWithDetails>
   deleteStudentClassMembership: (id: string) => Promise<void>
   getCurrentMembershipsByStudentId: (
     studentId: string
-  ) => Promise<StudentClassMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithDetails[]>
   getAllMembershipsByStudentId: (
     studentId: string
-  ) => Promise<StudentClassMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithDetails[]>
   getCurrentMembershipsByClassId: (
     classroomId: string
-  ) => Promise<StudentClassMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithDetails[]>
   addStudentToClass: (
     studentId: string,
     classroomId: string,
     startDate?: Date,
     attendanceNumber?: number,
     notes?: string
-  ) => Promise<StudentClassMembershipWithDetails>
+  ) => Promise<StudentClassroomMembershipWithDetails>
   endStudentMembership: (
     membershipId: string,
     endDate?: Date
-  ) => Promise<StudentClassMembershipWithDetails>
+  ) => Promise<StudentClassroomMembershipWithDetails>
   getMembershipsByDateRange: (
     startDate: Date,
     endDate?: Date
-  ) => Promise<StudentClassMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithDetails[]>
 }

@@ -93,7 +93,7 @@ export async function rosterAddStudentsFromClass(
     const nextOrder = (await adapter.classMaxOrder(targetId)) ?? -1
     await adapter.upsertClass(targetId, classroomId, nextOrder + 1)
 
-    const memberships = await prisma.studentClassMembership.findMany({
+    const memberships = await prisma.studentClassroomMembership.findMany({
       where: {
         classroomId,
         ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
@@ -267,14 +267,14 @@ async function computeExclusiveStudents(
   targetId: string,
   classroomId: string
 ): Promise<string[]> {
-  const memberships = await prisma.studentClassMembership.findMany({
+  const memberships = await prisma.studentClassroomMembership.findMany({
     where: { classroomId },
     select: { studentId: true },
   })
   const classStudentIds = memberships.map((membership) => membership.studentId)
 
   const otherClassIds = await adapter.listOtherClassIds(targetId, classroomId)
-  const otherMemberships = await prisma.studentClassMembership.findMany({
+  const otherMemberships = await prisma.studentClassroomMembership.findMany({
     where: { classroomId: { in: otherClassIds } },
     select: { studentId: true },
   })

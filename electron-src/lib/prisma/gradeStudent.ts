@@ -60,7 +60,7 @@ export async function getStudentsByGradeId(gradeId: string) {
 export async function getGradeClasses(gradeId: string) {
   try {
     const referenceDate = await getExamReferenceDate(gradeId)
-    const classes = await prisma.gradeClass.findMany({
+    const classes = await prisma.gradeClassroom.findMany({
       where: { gradeId },
       include: {
         classroom: {
@@ -107,7 +107,7 @@ export async function getAvailableClassesForGrade(
   try {
     const referenceDate = await getExamReferenceDate(gradeId)
     const [existing, gradeStudents] = await Promise.all([
-      prisma.gradeClass.findMany({
+      prisma.gradeClassroom.findMany({
         where: { gradeId },
         select: { classroomId: true },
       }),
@@ -200,14 +200,14 @@ const gradeRosterAdapter: RosterAdapter = {
     )
   },
   classMaxOrder: async (targetId) => {
-    const result = await prisma.gradeClass.aggregate({
+    const result = await prisma.gradeClassroom.aggregate({
       where: { gradeId: targetId },
       _max: { order: true },
     })
     return result._max.order
   },
   upsertClass: async (targetId, classroomId, order) => {
-    await prisma.gradeClass.upsert({
+    await prisma.gradeClassroom.upsert({
       where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
       create: { gradeId: targetId, classroomId, order },
       update: {},
@@ -216,7 +216,7 @@ const gradeRosterAdapter: RosterAdapter = {
   setClassOrders: async (targetId, orders) => {
     await prisma.$transaction(
       orders.map((order) =>
-        prisma.gradeClass.updateMany({
+        prisma.gradeClassroom.updateMany({
           where: { gradeId: targetId, classroomId: order.classroomId },
           data: { order: order.order },
         })
@@ -224,7 +224,7 @@ const gradeRosterAdapter: RosterAdapter = {
     )
   },
   listOtherClassIds: async (targetId, exceptClassId) => {
-    const rows = await prisma.gradeClass.findMany({
+    const rows = await prisma.gradeClassroom.findMany({
       where: { gradeId: targetId, classroomId: { not: exceptClassId } },
       select: { classroomId: true },
     })
@@ -235,7 +235,7 @@ const gradeRosterAdapter: RosterAdapter = {
       prisma.gradeStudent.deleteMany({
         where: { gradeId: targetId, studentId: { in: studentIds } },
       }),
-      prisma.gradeClass.delete({
+      prisma.gradeClassroom.delete({
         where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
       }),
     ])

@@ -3,7 +3,7 @@ import { Classroom, Prisma } from "@prisma/client"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
-type ClassWithMemberships = Prisma.ClassroomGetPayload<{
+type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
   include: {
     memberships: {
       include: {
@@ -14,7 +14,7 @@ type ClassWithMemberships = Prisma.ClassroomGetPayload<{
 }>
 
 /** 全学級を取得する（memberships.student リレーション含む、出席番号順） */
-export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
+export const fetchClasses = async (): Promise<ClassroomWithMemberships[]> => {
   try {
     return await prisma.classroom.findMany({
       include: {
@@ -39,7 +39,7 @@ export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
 /** 学級を新規作成する（memberships.student リレーション含む） */
 export const createClass = async (
   classData: Prisma.ClassroomCreateInput
-): Promise<ClassWithMemberships> => {
+): Promise<ClassroomWithMemberships> => {
   try {
     const created = await prisma.classroom.create({
       data: classData,
@@ -74,7 +74,7 @@ export const createClass = async (
 /** 学級情報を更新する（memberships.student リレーション含む） */
 export const updateClass = async (
   classData: Prisma.ClassroomUpdateInput & { id: string }
-): Promise<ClassWithMemberships> => {
+): Promise<ClassroomWithMemberships> => {
   const { id, ...data } = classData
   try {
     const before = await prisma.classroom.findUnique({
@@ -134,7 +134,7 @@ export const deleteClass = async (
 ): Promise<Classroom | void> => {
   try {
     // Check for current memberships instead of students directly
-    const membershipCount = await prisma.studentClassMembership.count({
+    const membershipCount = await prisma.studentClassroomMembership.count({
       where: {
         classroomId,
         endDate: null, // current memberships only

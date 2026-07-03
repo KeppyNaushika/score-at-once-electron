@@ -30,11 +30,11 @@ export function GradeDistributionChart({
         {result.gradeItems.map((gradeItem) => {
           const distribution: Record<string, number> = {}
           for (const student of result.students) {
-            const gir = student.gradeItemResults.find(
+            const itemResult = student.gradeItemResults.find(
               (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
             )
-            if (gir?.isExcluded) continue
-            const label = gir?.gradeLabel ?? "未評価"
+            if (itemResult?.isExcluded) continue
+            const label = itemResult?.gradeLabel ?? "未評価"
             distribution[label] = (distribution[label] ?? 0) + 1
           }
 
@@ -51,8 +51,9 @@ export function GradeDistributionChart({
             }
           }
           const entries = Object.entries(distribution).sort(
-            (a, b) =>
-              (labelOrder.get(b[0]) ?? -1) - (labelOrder.get(a[0]) ?? -1)
+            (entryA, entryB) =>
+              (labelOrder.get(entryB[0]) ?? -1) -
+              (labelOrder.get(entryA[0]) ?? -1)
           )
           if (entries.length === 0) return null
 

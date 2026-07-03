@@ -27,7 +27,7 @@ export async function collectCourseworkArchiveData(
   const rows = await prisma.coursework.findMany({
     where: { id: { in: courseworkIds } },
     include: {
-      classes: { orderBy: { order: "asc" } },
+      classrooms: { orderBy: { order: "asc" } },
       tags: true,
       students: {
         orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
@@ -47,7 +47,7 @@ export async function collectCourseworkArchiveData(
     name: coursework.name,
     description: coursework.description,
     date: coursework.date?.toISOString() ?? null,
-    classrooms: coursework.classes.map((classroom) => ({
+    classrooms: coursework.classrooms.map((classroom) => ({
       classroomId: classroom.classroomId,
       order: classroom.order,
     })),
@@ -85,7 +85,7 @@ export async function collectCourseworkArchiveData(
   const tagIds = new Set<string>()
   for (const coursework of rows) {
     coursework.students.forEach((student) => studentIds.add(student.studentId))
-    coursework.classes.forEach((classroom) =>
+    coursework.classrooms.forEach((classroom) =>
       classIds.add(classroom.classroomId)
     )
     coursework.tags.forEach((tag) => tagIds.add(tag.tagId))
@@ -121,7 +121,7 @@ export async function collectCourseworkArchiveData(
   }))
 
   // 名簿の裏付けとして、参照生徒×参照学級の所属を収集
-  const membershipRows = await prisma.studentClassMembership.findMany({
+  const membershipRows = await prisma.studentClassroomMembership.findMany({
     where: {
       studentId: { in: [...studentIds] },
       classroomId: { in: [...classIds] },

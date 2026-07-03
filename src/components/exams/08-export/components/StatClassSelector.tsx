@@ -34,7 +34,7 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
     if (!examId) return
     setLoading(true)
     try {
-      const result = await window.electronAPI.examClass.getAll(examId)
+      const result = await window.electronAPI.examClassroom.getAll(examId)
       setClasses(result ?? [])
     } catch (err) {
       console.error("Failed to load exam classes:", err)
@@ -59,7 +59,10 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
         )
       )
       try {
-        await window.electronAPI.examClass.update({ id: examClassId, ...patch })
+        await window.electronAPI.examClassroom.update({
+          id: examClassId,
+          ...patch,
+        })
       } catch (err) {
         console.error("Failed to update exam class flags:", err)
         // 失敗時は再取得して整合

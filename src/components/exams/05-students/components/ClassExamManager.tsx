@@ -13,7 +13,7 @@ import type { ExamClassWithClass } from "@/types/electron/examClassApi"
 
 interface ClassExamManagerProps {
   examId: string
-  examClasses: ExamClassWithClass[]
+  examClassrooms: ExamClassWithClass[]
   onRemoveClass: (examClassId: string) => Promise<boolean>
   onUpdateClass: (
     examClassId: string,
@@ -33,7 +33,7 @@ interface ClassExamManagerProps {
  */
 export function ClassExamManager({
   examId,
-  examClasses,
+  examClassrooms,
   onRemoveClass,
   onUpdateClass,
   onClassesChanged,
@@ -42,7 +42,7 @@ export function ClassExamManager({
 }: ClassExamManagerProps) {
   const entries = useMemo<ClassRosterEntry[]>(
     () =>
-      examClasses.map((examClass) => ({
+      examClassrooms.map((examClass) => ({
         id: examClass.id,
         classroomId: examClass.classroomId,
         name: examClass.classroom.name,
@@ -51,19 +51,22 @@ export function ClassExamManager({
         studentCount: examClass.classroom.memberships.length,
         order: examClass.order,
       })),
-    [examClasses]
+    [examClassrooms]
   )
 
   // examClassId → administered の参照（行ごとの線形検索を避ける）
   const administeredById = useMemo(
     () =>
       new Map(
-        examClasses.map((examClass) => [examClass.id, examClass.administered])
+        examClassrooms.map((examClass) => [
+          examClass.id,
+          examClass.administered,
+        ])
       ),
-    [examClasses]
+    [examClassrooms]
   )
 
-  const administeredCount = examClasses.filter(
+  const administeredCount = examClassrooms.filter(
     (examClass) => examClass.administered
   ).length
 
@@ -99,7 +102,8 @@ export function ClassExamManager({
       }
       emptyHint="「学級を追加」ボタンから学級を追加してください"
       fetchAvailableClasses={async () => {
-        const classes = await window.electronAPI.examClass.getAvailable(examId)
+        const classes =
+          await window.electronAPI.examClassroom.getAvailable(examId)
         return classes.map((classroom): AvailableClassOption => ({
           id: classroom.id,
           name: classroom.name,
@@ -112,7 +116,7 @@ export function ClassExamManager({
         for (const classroomId of classIds) {
           // administered の学級は既定で教員集計・生徒表示の対象（移行の
           // studentReport=administered と整合）。出力スコープは後から08で調整可能。
-          await window.electronAPI.examClass.add({
+          await window.electronAPI.examClassroom.add({
             examId,
             classroomId,
             administered: true,
@@ -122,7 +126,7 @@ export function ClassExamManager({
         }
       }}
       onReorder={async (orderedIds) => {
-        await window.electronAPI.examClass.reorder({ examId, orderedIds })
+        await window.electronAPI.examClassroom.reorder({ examId, orderedIds })
       }}
       onRemove={async (entry) => {
         await onRemoveClass(entry.id)

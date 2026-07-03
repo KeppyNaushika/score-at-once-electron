@@ -199,12 +199,12 @@ export async function restoreMemberships(
     const studentId = studentMap.get(membership.studentId)
     const classroomId = classMap.get(membership.classroomId)
     if (!studentId || !classroomId) continue
-    const exists = await tx.studentClassMembership.findFirst({
+    const exists = await tx.studentClassroomMembership.findFirst({
       where: { studentId, classroomId },
       select: { id: true },
     })
     if (exists) continue
-    await tx.studentClassMembership.create({
+    await tx.studentClassroomMembership.create({
       data: {
         studentId,
         classroomId,

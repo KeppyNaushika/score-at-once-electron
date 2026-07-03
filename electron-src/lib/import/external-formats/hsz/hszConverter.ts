@@ -150,7 +150,7 @@ export async function convertHszToScore(
       examStudents: [],
       userExams: [],
       examSubtotalGroups: subtotalData.examSubtotalGroups,
-      examClasses: [],
+      examClassrooms: [],
       examMarkingFormats: [],
       examExportSettings: null,
       cropRegionMarkingOverrides: [],

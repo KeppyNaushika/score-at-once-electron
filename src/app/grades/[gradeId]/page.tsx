@@ -257,7 +257,7 @@ export default function GradeDetailPage() {
   const overallProgress =
     (completionSteps.filter(Boolean).length / completionSteps.length) * 100
 
-  const classNames = exam.gradeClasses
+  const classNames = exam.gradeClassrooms
     .map((gradeClass) => gradeClass.classroom.name)
     .join("、")
 

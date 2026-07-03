@@ -59,7 +59,7 @@ export default function RegionInfoPage() {
       if (fetchedExam) {
         if (fetchedExam.examPages && fetchedExam.examPages.length > 0) {
           const sortedExamPages = [...fetchedExam.examPages].sort(
-            (a, b) => a.pageNumber - b.pageNumber
+            (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
           )
           setExamPages(sortedExamPages)
           setSelectedExamPage(sortedExamPages[0])
@@ -257,7 +257,7 @@ export default function RegionInfoPage() {
                         />
                         {pageRegions.map((area, index) => {
                           const globalIndex = cropRegions.findIndex(
-                            (r) => r.id === area.id
+                            (region) => region.id === area.id
                           )
                           const isSelected = selectedRowIndex === globalIndex
                           return (

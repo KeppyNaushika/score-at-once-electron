@@ -42,7 +42,7 @@ function dValueOf(
   result: ReturnType<typeof computeItemAnalysis>,
   questionId: string
 ): number | null {
-  return result!.items.find((it) => it.questionId === questionId)!.dValue
+  return result!.items.find((item) => item.questionId === questionId)!.dValue
 }
 
 // ================== クロンバックα係数 ==================

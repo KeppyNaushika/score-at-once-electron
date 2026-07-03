@@ -124,7 +124,7 @@ export async function convertToExam(
       // CropRegion作成（このページの解答セルのみ）
       // 枝問配点オフの場合、同一小問の枝問セルを1つの領域に統合する
       const answerCells = pageLayout.cells.filter(
-        (c) => c.cellType === "answer"
+        (cell) => cell.cellType === "answer"
       )
 
       // 枝問配点オフの小問を特定し、枝問セルをグループ化
@@ -153,18 +153,18 @@ export async function convertToExam(
             // 同一小問の全枝問セル（同一ページ内）を統合
             processedKeys.add(key)
             const siblings = answerCells.filter(
-              (c) =>
-                c.questionPath[0] === mi &&
-                c.questionPath[1] === si &&
-                c.questionPath.length === 3
+              (cell) =>
+                cell.questionPath[0] === mi &&
+                cell.questionPath[1] === si &&
+                cell.questionPath.length === 3
             )
-            const minX = Math.min(...siblings.map((c) => c.normalizedX))
-            const minY = Math.min(...siblings.map((c) => c.normalizedY))
+            const minX = Math.min(...siblings.map((cell) => cell.normalizedX))
+            const minY = Math.min(...siblings.map((cell) => cell.normalizedY))
             const maxX = Math.max(
-              ...siblings.map((c) => c.normalizedX + c.normalizedW)
+              ...siblings.map((cell) => cell.normalizedX + cell.normalizedW)
             )
             const maxY = Math.max(
-              ...siblings.map((c) => c.normalizedY + c.normalizedH)
+              ...siblings.map((cell) => cell.normalizedY + cell.normalizedH)
             )
             mergedCells.push({
               label: sub.label,

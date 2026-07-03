@@ -55,7 +55,7 @@ export const assertDatabaseNotNewerThanApp = async (
   )
 
   const unknownNewer = applied
-    .map((r) => r.migration_name)
+    .map((row) => row.migration_name)
     .filter((name) => !localSet.has(name) && name > latestLocal)
     .sort()
 

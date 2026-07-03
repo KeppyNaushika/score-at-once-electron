@@ -50,17 +50,17 @@ const applyMigrationFor = async (tables: string[]) => {
   const sql = fs.readFileSync(MIGRATION_SQL, "utf-8")
   const statements = sql
     .split(";")
-    .map((s) => s.trim())
-    .filter((s) => {
-      const stripped = s
+    .map((statement) => statement.trim())
+    .filter((statement) => {
+      const stripped = statement
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/--[^\n]*/g, "")
         .trim()
       return stripped.length > 0
     })
   for (const stmt of statements) {
-    const m = stmt.match(/UPDATE\s+"(\w+)"/)
-    if (m && tables.includes(m[1])) {
+    const match = stmt.match(/UPDATE\s+"(\w+)"/)
+    if (match && tables.includes(match[1])) {
       await prisma.$executeRawUnsafe(stmt)
     }
   }
@@ -71,7 +71,7 @@ const countByType = async (table: string, col: string) => {
   const rows = await prisma.$queryRawUnsafe<{ t: string; c: number }[]>(
     `SELECT typeof("${col}") AS t, COUNT(*) AS c FROM "${table}" GROUP BY typeof("${col}")`
   )
-  return Object.fromEntries(rows.map((r) => [r.t, Number(r.c)]))
+  return Object.fromEntries(rows.map((row) => [row.t, Number(row.c)]))
 }
 
 beforeAll(async () => {
@@ -133,7 +133,9 @@ describe("DateTime正規化マイグレーション", () => {
 
     // 【バグ再現】integer(endDate) >= text(基準日) は SQLite型優先順位で常にfalse。
     // 在籍中の未来終了(m_future)が除外され、null(m_active)の1件しか拾えない
-    const before = await prisma.studentClassMembership.count({ where: filter })
+    const before = await prisma.studentClassroomMembership.count({
+      where: filter,
+    })
     expect(before).toBe(1)
 
     // 正規化マイグレーション適用
@@ -147,7 +149,9 @@ describe("DateTime正規化マイグレーション", () => {
 
     // 【修正確認】未来終了(m_future) + 在籍中(m_active) の2件が正しく拾える。
     // 過去終了(m_past)は基準日時点で在籍していないため除外されるのが正しい
-    const after = await prisma.studentClassMembership.count({ where: filter })
+    const after = await prisma.studentClassroomMembership.count({
+      where: filter,
+    })
     expect(after).toBe(2)
   })
 
@@ -241,10 +245,10 @@ describe("DateTime正規化マイグレーション", () => {
     const sql = fs.readFileSync(MIGRATION_SQL, "utf-8")
     const statements = sql
       .split(";")
-      .map((s) => s.trim())
-      .filter((s) => {
-        if (s.length === 0) return false
-        const stripped = s
+      .map((statement) => statement.trim())
+      .filter((statement) => {
+        if (statement.length === 0) return false
+        const stripped = statement
           .replace(/\/\*[\s\S]*?\*\//g, "")
           .replace(/--[^\n]*/g, "")
           .trim()
@@ -252,8 +256,8 @@ describe("DateTime正規化マイグレーション", () => {
       })
 
     // filterを通過した全片は実行可能なUPDATE文であるべき
-    const nonExecutable = statements.filter((s) => {
-      const stripped = s
+    const nonExecutable = statements.filter((statement) => {
+      const stripped = statement
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/--[^\n]*/g, "")
         .trim()

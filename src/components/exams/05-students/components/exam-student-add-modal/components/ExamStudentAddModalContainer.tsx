@@ -72,7 +72,7 @@ export function ExamStudentAddModalContainer({
         // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）
         for (const classroomId of orderedClassIds) {
           const result =
-            await window.electronAPI.examClass.addStudentsFromClass(
+            await window.electronAPI.examClassroom.addStudentsFromClass(
               examId,
               classroomId,
               activeOnly

@@ -94,9 +94,9 @@ export default function MembershipTable({
   const displayData = useMemo(() => {
     // デフォルトソートの場合のみ、現在の所属を優先
     if (sortConfig.key === "attendanceNumber" || sortConfig.key === null) {
-      return [...filteredData].sort((a, b) => {
-        if (a.isCurrent && !b.isCurrent) return -1
-        if (!a.isCurrent && b.isCurrent) return 1
+      return [...filteredData].sort((membershipA, membershipB) => {
+        if (membershipA.isCurrent && !membershipB.isCurrent) return -1
+        if (!membershipA.isCurrent && membershipB.isCurrent) return 1
         return 0
       })
     }

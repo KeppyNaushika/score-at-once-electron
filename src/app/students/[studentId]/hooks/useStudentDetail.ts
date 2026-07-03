@@ -1,17 +1,17 @@
-import type { Student, StudentClassMembership } from "@prisma/client"
+import type { Student, StudentClassroomMembership } from "@prisma/client"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import type {
-  ClassWithMemberships,
-  StudentClassMembershipWithDetails,
+  ClassroomWithMemberships,
+  StudentClassroomMembershipWithDetails,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
 
 export function useStudentDetail(studentId: string) {
   const router = useRouter()
   const [student, setStudent] = useState<StudentWithMemberships | null>(null)
-  const [classes, setClasses] = useState<ClassWithMemberships[]>([])
+  const [classes, setClasses] = useState<ClassroomWithMemberships[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -72,8 +72,10 @@ export function useStudentDetail(studentId: string) {
   }
 
   const handleSaveMembership = async (
-    membershipData: Partial<StudentClassMembership> & { classroomId: string },
-    membershipToEdit?: StudentClassMembershipWithDetails | null
+    membershipData: Partial<StudentClassroomMembership> & {
+      classroomId: string
+    },
+    membershipToEdit?: StudentClassroomMembershipWithDetails | null
   ) => {
     try {
       if (membershipToEdit) {

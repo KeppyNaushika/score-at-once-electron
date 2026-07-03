@@ -443,16 +443,16 @@ describe("detectScoringConflicts", () => {
         userId: user.id,
       })
 
-      for (const s of [
+      for (const student of [
         { id: student1, num: "S001", last: "田中", first: "太郎" },
         { id: student2, num: "S002", last: "佐藤", first: "花子" },
       ]) {
         await prisma.student.create({
           data: {
-            id: s.id,
-            studentNumber: s.num,
-            lastName: s.last,
-            firstName: s.first,
+            id: student.id,
+            studentNumber: student.num,
+            lastName: student.last,
+            firstName: student.first,
             lastNameKana: "カナ",
             firstNameKana: "カナ",
             enrollmentYear: 2024,

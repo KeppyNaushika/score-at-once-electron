@@ -80,7 +80,7 @@ function buildAsbTransformChain(
 
   while (currentVersion !== toVersion) {
     const transformer = ASB_TRANSFORMERS.find(
-      (t) => t.fromVersion === currentVersion
+      (candidate) => candidate.fromVersion === currentVersion
     )
     if (!transformer) {
       throw new Error(

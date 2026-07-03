@@ -69,8 +69,8 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
 
     const transformedUserExams = this.transformUserExams(oldUserExams)
 
-    // examClasses が存在しない場合は空配列で初期化
-    const examClasses = data.examData.examClasses ?? []
+    // examClassrooms が存在しない場合は空配列で初期化
+    const examClassrooms = data.examData.examClassrooms ?? []
 
     // 警告メッセージを追加
     warnings.push(
@@ -88,7 +88,7 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
         examData: {
           ...data.examData,
           userExams: transformedUserExams,
-          examClasses,
+          examClassrooms,
         },
       },
       warnings,

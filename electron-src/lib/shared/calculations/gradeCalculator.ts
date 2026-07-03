@@ -48,7 +48,7 @@ export async function calculateGrades(gradeId: string): Promise<{
     const grade = await prisma.grade.findUnique({
       where: { id: gradeId },
       include: {
-        gradeClasses: {
+        gradeClassrooms: {
           include: { classroom: true },
           orderBy: { order: "asc" },
         },
@@ -106,7 +106,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
     })
 
-    const classIds = grade.gradeClasses.map(
+    const classIds = grade.gradeClassrooms.map(
       (gradeClass) => gradeClass.classroomId
     )
 
@@ -511,7 +511,7 @@ export async function calculateGrades(gradeId: string): Promise<{
       result: {
         gradeId: grade.id,
         gradeName: grade.name,
-        classNames: grade.gradeClasses.map(
+        classNames: grade.gradeClassrooms.map(
           (gradeClass) => gradeClass.classroom.name
         ),
         gradeItems: grade.gradeItems.map((gradeItem) => ({

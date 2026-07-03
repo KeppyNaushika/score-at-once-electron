@@ -482,7 +482,9 @@ function buildCellsFromRegions(
   const cells: ComputedCell[] = []
 
   for (const omrConfig of configs) {
-    const region = regions.find((r) => r.id === omrConfig.cropRegionId)
+    const region = regions.find(
+      (candidateRegion) => candidateRegion.id === omrConfig.cropRegionId
+    )
     if (!region) continue
 
     const config = cellConfigs[omrConfig.cropRegionId]

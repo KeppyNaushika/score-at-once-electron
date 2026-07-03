@@ -268,11 +268,15 @@ export function setupExportHandlers(): void {
       }
       // Prismaの Decimal/Date 型はIPC経由でcloneできないため、
       // プレーンなJSオブジェクトに変換して返す
-      const questionRegions = result.questionRegions?.map((r) => ({
-        id: r.id,
-        label: r.label,
-        points: r.points != null ? Number(r.points) : null,
-        orderIndex: r.orderIndex != null ? Number(r.orderIndex) : null,
+      const questionRegions = result.questionRegions?.map((questionRegion) => ({
+        id: questionRegion.id,
+        label: questionRegion.label,
+        points:
+          questionRegion.points != null ? Number(questionRegion.points) : null,
+        orderIndex:
+          questionRegion.orderIndex != null
+            ? Number(questionRegion.orderIndex)
+            : null,
       }))
 
       const scoringData = result.scoringData?.map((sd) => ({
@@ -284,20 +288,21 @@ export function setupExportHandlers(): void {
         attendanceNumber:
           sd.attendanceNumber != null ? Number(sd.attendanceNumber) : null,
         status: sd.status,
-        scores: sd.scores.map((s) => ({
-          questionId: s.questionId,
-          questionLabel: s.questionLabel,
-          score: s.score != null ? Number(s.score) : null,
-          maxScore: Number(s.maxScore),
-          status: s.status,
+        scores: sd.scores.map((score) => ({
+          questionId: score.questionId,
+          questionLabel: score.questionLabel,
+          score: score.score != null ? Number(score.score) : null,
+          maxScore: Number(score.maxScore),
+          status: score.status,
         })),
         totalScore: sd.totalScore != null ? Number(sd.totalScore) : null,
         totalMaxScore: Number(sd.totalMaxScore),
-        subtotalScores: sd.subtotalScores.map((ss) => ({
-          subtotalId: ss.subtotalId,
-          subtotalLabel: ss.subtotalLabel,
-          score: ss.score != null ? Number(ss.score) : null,
-          maxScore: Number(ss.maxScore),
+        subtotalScores: sd.subtotalScores.map((subtotalScore) => ({
+          subtotalId: subtotalScore.subtotalId,
+          subtotalLabel: subtotalScore.subtotalLabel,
+          score:
+            subtotalScore.score != null ? Number(subtotalScore.score) : null,
+          maxScore: Number(subtotalScore.maxScore),
         })),
       }))
 

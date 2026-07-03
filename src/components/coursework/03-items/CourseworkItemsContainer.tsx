@@ -53,7 +53,10 @@ function toDraft(item: CourseworkItemWithDetails): ItemDraft {
       item.letterScales.length > 0
         ? item.letterScales
             .slice()
-            .sort((a, b) => a.order - b.order)
+            .sort(
+              (letterScaleA, letterScaleB) =>
+                letterScaleA.order - letterScaleB.order
+            )
             .map((letterScale) => ({
               label: letterScale.label,
               score: String(letterScale.score),
@@ -199,7 +202,7 @@ export function CourseworkItemsContainer({
       if (result.success && result.coursework) {
         const sorted = result.coursework.items
           .slice()
-          .sort((a, b) => a.order - b.order)
+          .sort((itemA, itemB) => itemA.order - itemB.order)
         setItems(sorted)
         setDraftsSynced(
           Object.fromEntries(sorted.map((item) => [item.id, toDraft(item)]))
@@ -312,8 +315,8 @@ export function CourseworkItemsContainer({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = items.findIndex((i) => i.id === active.id)
-    const newIndex = items.findIndex((i) => i.id === over.id)
+    const oldIndex = items.findIndex((item) => item.id === active.id)
+    const newIndex = items.findIndex((item) => item.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
     const reordered = arrayMove(items, oldIndex, newIndex)
     setItems(reordered)
@@ -372,7 +375,7 @@ export function CourseworkItemsContainer({
       ) : (
         <div className="space-y-3">
           <SortableTableProvider
-            items={items.map((i) => i.id)}
+            items={items.map((item) => item.id)}
             onDragEnd={handleDragEnd}
           >
             {items.map((item) => {

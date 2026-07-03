@@ -56,7 +56,7 @@ function buildChain(
   let current = fromVersion
   while (current !== toVersion) {
     const transformer = COURSEWORK_TRANSFORMERS.find(
-      (t) => t.fromVersion === current
+      (candidate) => candidate.fromVersion === current
     )
     if (!transformer) {
       throw new Error(

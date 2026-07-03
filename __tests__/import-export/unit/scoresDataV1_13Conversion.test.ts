@@ -15,7 +15,7 @@ type ArchiveAnnotation = ArchiveScoresData["drawingAnnotations"][number]
 
 let seq = 0
 
-function qs(
+function makeQuestionScore(
   overrides: Partial<ArchiveQuestionScore> = {}
 ): ArchiveQuestionScore {
   seq++
@@ -72,7 +72,7 @@ function scoresData(
 
 describe("convertScoresDataToV1_13", () => {
   it("final行からScoreDecisionが生成される（IDはfinal行を流用）", () => {
-    const final = qs({ status: "final", partialScore: "3" })
+    const final = makeQuestionScore({ status: "final", partialScore: "3" })
     const { scoresData: result, warnings } = convertScoresDataToV1_13(
       scoresData([final])
     )
@@ -88,18 +88,18 @@ describe("convertScoresDataToV1_13", () => {
   })
 
   it("partialScoreがnullのfinal行はverdict=correctになる", () => {
-    const final = qs({ status: "final", partialScore: null })
+    const final = makeQuestionScore({ status: "final", partialScore: null })
     const { scoresData: result } = convertScoresDataToV1_13(scoresData([final]))
     expect(result.scoreDecisions?.[0].verdict).toBe("correct")
   })
 
   it("複数final行は最新（updatedAt降順→id降順）のみ確定になる", () => {
-    const older = qs({
+    const older = makeQuestionScore({
       status: "final",
       partialScore: "3",
       updatedAt: "2026-06-01T10:00:00Z",
     })
-    const newer = qs({
+    const newer = makeQuestionScore({
       status: "final",
       partialScore: "8",
       updatedAt: "2026-06-02T10:00:00Z",
@@ -113,22 +113,22 @@ describe("convertScoresDataToV1_13", () => {
   })
 
   it("同じ採点者の提案行があるfinal行は削除され、注釈が提案行へ移動する", () => {
-    const proposal = qs({ status: "partial", partialScore: "3" })
-    const final = qs({ status: "final", partialScore: "3" })
+    const proposal = makeQuestionScore({ status: "partial", partialScore: "3" })
+    const final = makeQuestionScore({ status: "final", partialScore: "3" })
     const ann = annotation(final.id)
 
     const { scoresData: result } = convertScoresDataToV1_13(
       scoresData([proposal, final], [ann])
     )
 
-    const ids = result.questionScores.map((s) => s.id)
+    const ids = result.questionScores.map((questionScore) => questionScore.id)
     expect(ids).toContain(proposal.id)
     expect(ids).not.toContain(final.id)
     expect(result.drawingAnnotations[0].questionScoreId).toBe(proposal.id)
   })
 
   it("提案行が無いfinal行は判定のみの提案行へ変換される", () => {
-    const final = qs({ status: "final", partialScore: "3" })
+    const final = makeQuestionScore({ status: "final", partialScore: "3" })
     const { scoresData: result } = convertScoresDataToV1_13(scoresData([final]))
     expect(result.questionScores).toHaveLength(1)
     expect(result.questionScores[0]).toMatchObject({
@@ -139,8 +139,11 @@ describe("convertScoresDataToV1_13", () => {
   })
 
   it("proposedは点数の有無でpartial/pendingへ変換される", () => {
-    const withScore = qs({ status: "proposed", partialScore: "5" })
-    const withoutScore = qs({
+    const withScore = makeQuestionScore({
+      status: "proposed",
+      partialScore: "5",
+    })
+    const withoutScore = makeQuestionScore({
       status: "proposed",
       partialScore: null,
       cropRegionId: "region-2",
@@ -148,14 +151,19 @@ describe("convertScoresDataToV1_13", () => {
     const { scoresData: result } = convertScoresDataToV1_13(
       scoresData([withScore, withoutScore])
     )
-    const byId = new Map(result.questionScores.map((s) => [s.id, s]))
+    const byId = new Map(
+      result.questionScores.map((questionScore) => [
+        questionScore.id,
+        questionScore,
+      ])
+    )
     expect(byId.get(withScore.id)?.status).toBe("partial")
     expect(byId.get(withoutScore.id)?.status).toBe("pending")
   })
 
   it("v1.13.0形式（final/proposedなし・scoreDecisionsあり）には冪等", () => {
     const data: ArchiveScoresData = {
-      questionScores: [qs({ status: "correct" })],
+      questionScores: [makeQuestionScore({ status: "correct" })],
       drawingAnnotations: [],
       scoreDecisions: [],
     }
@@ -166,7 +174,7 @@ describe("convertScoresDataToV1_13", () => {
 
   it("scoreDecisions未定義（旧アーカイブ）でも空配列で補完される", () => {
     const { scoresData: result } = convertScoresDataToV1_13(
-      scoresData([qs({ status: "correct" })])
+      scoresData([makeQuestionScore({ status: "correct" })])
     )
     expect(result.scoreDecisions).toEqual([])
   })

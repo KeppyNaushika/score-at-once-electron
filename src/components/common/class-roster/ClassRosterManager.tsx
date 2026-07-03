@@ -181,8 +181,8 @@ export function ClassRosterManager({
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = localEntries.findIndex((e) => e.id === active.id)
-    const newIndex = localEntries.findIndex((e) => e.id === over.id)
+    const oldIndex = localEntries.findIndex((entry) => entry.id === active.id)
+    const newIndex = localEntries.findIndex((entry) => entry.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
 
     const newOrder = [...localEntries]
@@ -191,7 +191,7 @@ export function ClassRosterManager({
     setLocalEntries(newOrder)
 
     try {
-      await onReorder(newOrder.map((e) => e.id))
+      await onReorder(newOrder.map((entry) => entry.id))
       onChanged?.()
     } catch (err) {
       console.error("Failed to reorder classes:", err)
@@ -265,7 +265,7 @@ export function ClassRosterManager({
       ) : (
         <div className="rounded-md border">
           <SortableTableProvider
-            items={localEntries.map((e) => e.id)}
+            items={localEntries.map((entry) => entry.id)}
             onDragEnd={handleDragEnd}
           >
             {body}

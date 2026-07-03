@@ -1,7 +1,7 @@
 import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
 
-import type { ExamClassWithMembers } from "@/types/prismaExtensions"
+import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 import { average as mean } from "../../shared/calculations/numericStats"
 import type { ScoringData } from "../../shared/types/exportTypes"
@@ -10,7 +10,7 @@ import type { SubtotalColumn } from "./dataFetcher"
 
 /** null を除いた平均（小数1桁）。対象が無ければ null（セル空欄用） */
 function average(values: (number | null | undefined)[]): number | null {
-  const numbers = values.filter((x): x is number => x != null)
+  const numbers = values.filter((value): value is number => value != null)
   if (numbers.length === 0) return null
   return Math.round(mean(numbers) * 10) / 10
 }
@@ -77,7 +77,7 @@ function buildAverageRow(
 export function appendClassAverageRows(
   worksheet: ExcelJS.Worksheet,
   allScoringData: ScoringData[],
-  teacherStatClasses: ExamClassWithMembers[],
+  teacherStatClasses: ExamClassroomWithMembers[],
   subtotalColumns: SubtotalColumn[],
   questionRegions: CropRegion[]
 ): void {

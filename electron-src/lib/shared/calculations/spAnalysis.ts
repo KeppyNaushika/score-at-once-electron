@@ -126,11 +126,11 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
     .map((_, j) => j)
     .sort((a, b) => colSum[b] - colSum[a])
 
-  const problems: SpProblemColumn[] = problemOrder.map((j) => ({
-    questionId: problemIds[j],
-    label: problemLabels[j],
-    correctCount: colSum[j],
-    cautionIndex: problemCaution(j),
+  const problems: SpProblemColumn[] = problemOrder.map((problemIndex) => ({
+    questionId: problemIds[problemIndex],
+    label: problemLabels[problemIndex],
+    correctCount: colSum[problemIndex],
+    cautionIndex: problemCaution(problemIndex),
   }))
 
   const studentRows: SpStudentRow[] = studentOrder.map((i) => ({
@@ -138,7 +138,7 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
     studentName: students[i].studentName,
     correctCount: rowSum[i],
     cautionIndex: studentCaution(i),
-    cells: problemOrder.map((j) => x[i][j] === 1),
+    cells: problemOrder.map((problemIndex) => x[i][problemIndex] === 1),
   }))
 
   return {

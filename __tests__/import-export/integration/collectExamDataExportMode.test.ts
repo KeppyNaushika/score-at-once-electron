@@ -74,23 +74,25 @@ describe("collectExamData - エクスポートモード", () => {
       expect(defaultResult.success).toBe(true)
       expect(fullResult.success).toBe(true)
 
-      const d = defaultResult.data!
-      const f = fullResult.data!
+      const defaultData = defaultResult.data!
+      const fullData = fullResult.data!
 
       // 主要フィールドの件数が一致
-      expect(d.studentsData.students.length).toBe(
-        f.studentsData.students.length
+      expect(defaultData.studentsData.students.length).toBe(
+        fullData.studentsData.students.length
       )
-      expect(d.classesData.classrooms.length).toBe(
-        f.classesData.classrooms.length
+      expect(defaultData.classesData.classrooms.length).toBe(
+        fullData.classesData.classrooms.length
       )
-      expect(d.scoresData.questionScores.length).toBe(
-        f.scoresData.questionScores.length
+      expect(defaultData.scoresData.questionScores.length).toBe(
+        fullData.scoresData.questionScores.length
       )
-      expect(d.subtotalsData.subtotalGroups.length).toBe(
-        f.subtotalsData.subtotalGroups.length
+      expect(defaultData.subtotalsData.subtotalGroups.length).toBe(
+        fullData.subtotalsData.subtotalGroups.length
       )
-      expect(d.answerSheetPaths.length).toBe(f.answerSheetPaths.length)
+      expect(defaultData.answerSheetPaths.length).toBe(
+        fullData.answerSheetPaths.length
+      )
     })
 
     it("EM-F2: fullモードは全データを含む", async () => {
@@ -112,7 +114,7 @@ describe("collectExamData - エクスポートモード", () => {
       expect(data.masterImagePaths.length).toBe(2)
       expect(data.answerSheetPaths.length).toBe(6) // 3 students × 2 pages
       expect(data.examData.examStudents.length).toBe(3)
-      expect(data.examData.examClasses.length).toBeGreaterThanOrEqual(1)
+      expect(data.examData.examClassrooms.length).toBeGreaterThanOrEqual(1)
       expect(data.examData.examSubtotalGroups.length).toBe(1)
       expect(data.tagsData.tags.length).toBeGreaterThan(0)
     })
@@ -175,7 +177,7 @@ describe("collectExamData - エクスポートモード", () => {
 
       expect(data.classesData.classrooms).toEqual([])
       expect(data.classesData.memberships).toEqual([])
-      expect(data.examData.examClasses).toEqual([])
+      expect(data.examData.examClassrooms).toEqual([])
       expect(data.counts.classrooms).toBe(0)
     })
 
@@ -338,7 +340,7 @@ describe("collectExamData - エクスポートモード", () => {
       expect(data.examData.studentAnswerImages).toEqual([])
       expect(data.answerSheetPaths).toEqual([])
       expect(data.examData.examStudents).toEqual([])
-      expect(data.examData.examClasses).toEqual([])
+      expect(data.examData.examClassrooms).toEqual([])
     })
 
     it("EM-S2: 小計データが含まれる", async () => {

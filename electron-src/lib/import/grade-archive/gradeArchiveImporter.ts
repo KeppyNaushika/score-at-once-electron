@@ -171,7 +171,7 @@ export async function importGradeArchive(
             where: { name: ref.name },
           })
           if (classroom) {
-            await tx.gradeClass.create({
+            await tx.gradeClassroom.create({
               data: {
                 gradeId: grade.id,
                 classroomId: classroom.id,

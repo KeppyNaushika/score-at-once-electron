@@ -28,9 +28,9 @@ describe("coordinateTransform", () => {
   describe("歪みなし（理想的な場合）", () => {
     // 検出コーナー = 正規化座標 * 画像サイズ
     const detectedCorners: [Point, Point, Point, Point] = expectedCorners.map(
-      (c) => ({
-        x: c.x * imageWidth,
-        y: c.y * imageHeight,
+      (corner) => ({
+        x: corner.x * imageWidth,
+        y: corner.y * imageHeight,
       })
     ) as [Point, Point, Point, Point]
 
@@ -119,9 +119,9 @@ describe("coordinateTransform", () => {
 
   describe("normalizedRectToPixelRect", () => {
     const detectedCorners: [Point, Point, Point, Point] = expectedCorners.map(
-      (c) => ({
-        x: c.x * imageWidth,
-        y: c.y * imageHeight,
+      (corner) => ({
+        x: corner.x * imageWidth,
+        y: corner.y * imageHeight,
       })
     ) as [Point, Point, Point, Point]
 

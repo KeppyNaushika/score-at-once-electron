@@ -92,7 +92,7 @@ export async function collectExamData(
         examStudents: true,
         userExams: true,
         examSubtotalGroups: true,
-        examClasses: true,
+        examClassrooms: true,
       },
     })
 
@@ -128,7 +128,7 @@ export async function collectExamData(
     // 4. 関連する学級と所属を取得（templateモードでは空）
     const memberships = isTemplate
       ? []
-      : await prisma.studentClassMembership.findMany({
+      : await prisma.studentClassroomMembership.findMany({
           where: { studentId: { in: Array.from(studentIds) } },
         })
 
@@ -553,9 +553,9 @@ export async function collectExamData(
             updatedAt: examSubtotalGroup.updatedAt.toISOString(),
           }))
         : [],
-      examClasses: isTemplate
+      examClassrooms: isTemplate
         ? []
-        : exam.examClasses.map((examClass) => ({
+        : exam.examClassrooms.map((examClass) => ({
             id: examClass.id,
             examId: examClass.examId,
             classroomId: examClass.classroomId,

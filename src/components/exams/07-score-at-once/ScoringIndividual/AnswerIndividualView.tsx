@@ -695,8 +695,8 @@ export default function AnswerIndividualView({
         onLineStyleChange={(style) =>
           drawingState.setLineStyle(style as LineStyle)
         }
-        selectedElements={drawingState.drawingElements.filter((el) =>
-          drawingState.selectedElementIds.includes(el.id)
+        selectedElements={drawingState.drawingElements.filter((element) =>
+          drawingState.selectedElementIds.includes(element.id)
         )}
         onUpdateSelectedElements={drawingState.updateDrawingElements}
         onClearSelection={drawingState.clearSelection}

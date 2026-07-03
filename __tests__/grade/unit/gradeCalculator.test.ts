@@ -126,7 +126,7 @@ function buildGrade(
         order: number
       }[]
     }[]
-    gradeClasses?: {
+    gradeClassrooms?: {
       classroomId: string
       class: { id: string; name: string }
     }[]
@@ -139,30 +139,30 @@ function buildGrade(
   // 旧 manual 形式（manualScores/inputMode/letterScales をトップレベルに持つ）を、
   // 新スキーマの coursework 形式（courseworkItem に内包）へ変換する。
   // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
-  const gradeItems = (overrides.gradeItems ?? []).map((gi) => ({
-    ...gi,
-    dataSources: gi.dataSources.map((ds) => {
+  const gradeItems = (overrides.gradeItems ?? []).map((gradeItem) => ({
+    ...gradeItem,
+    dataSources: gradeItem.dataSources.map((dataSource) => {
       const isCoursework =
-        ds.type === "manual" ||
-        ds.type === "coursework" ||
-        ds.manualScores !== undefined ||
-        ds.inputMode !== undefined ||
-        ds.letterScales !== undefined
+        dataSource.type === "manual" ||
+        dataSource.type === "coursework" ||
+        dataSource.manualScores !== undefined ||
+        dataSource.inputMode !== undefined ||
+        dataSource.letterScales !== undefined
       if (!isCoursework) {
-        return { ...ds, courseworkItem: null }
+        return { ...dataSource, courseworkItem: null }
       }
       // computeLiveMaxScore がこのIDで満点を引けるよう登録
-      const courseworkItemId = `${ds.id}-item`
-      courseworkItemMaxScores.set(courseworkItemId, ds.maxScore)
+      const courseworkItemId = `${dataSource.id}-item`
+      courseworkItemMaxScores.set(courseworkItemId, dataSource.maxScore)
       return {
-        ...ds,
+        ...dataSource,
         type: "coursework",
         courseworkItemId,
         courseworkItem: {
-          maxScore: ds.maxScore,
-          inputMode: ds.inputMode ?? "numeric",
-          scores: ds.manualScores ?? [],
-          letterScales: ds.letterScales ?? [],
+          maxScore: dataSource.maxScore,
+          inputMode: dataSource.inputMode ?? "numeric",
+          scores: dataSource.manualScores ?? [],
+          letterScales: dataSource.letterScales ?? [],
         },
       }
     }),
@@ -173,7 +173,7 @@ function buildGrade(
     name: overrides.name ?? "テストPJ",
     gradeItems,
     boundarySets: overrides.boundarySets ?? [],
-    gradeClasses: overrides.gradeClasses ?? [],
+    gradeClassrooms: overrides.gradeClassrooms ?? [],
   }
 }
 
@@ -1137,7 +1137,7 @@ describe("calculateGrades", () => {
         },
       ],
       boundarySets: [],
-      gradeClasses: [],
+      gradeClassrooms: [],
     }
     mockFindUnique.mockResolvedValue(gp)
     mockFindMany.mockResolvedValue([

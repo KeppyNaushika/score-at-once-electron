@@ -48,7 +48,9 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
 const LEGACY_SIDEBAR_BEHAVIOR_KEY = "sidebarBehaviorOnWorkPage"
 
 function getSidebarBehaviorForPath(pathname: string): SidebarBehavior | null {
-  const section = SIDEBAR_SECTIONS.find((s) => s.pathMatch(pathname))
+  const section = SIDEBAR_SECTIONS.find((sidebarSection) =>
+    sidebarSection.pathMatch(pathname)
+  )
   if (!section) return null
 
   try {
@@ -68,7 +70,9 @@ function getSidebarBehaviorForPath(pathname: string): SidebarBehavior | null {
 }
 
 function getCurrentSectionKey(pathname: string): string | null {
-  const section = SIDEBAR_SECTIONS.find((s) => s.pathMatch(pathname))
+  const section = SIDEBAR_SECTIONS.find((sidebarSection) =>
+    sidebarSection.pathMatch(pathname)
+  )
   return section?.key ?? null
 }
 

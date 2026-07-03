@@ -44,7 +44,7 @@ beforeAll(async () => {
   })
   examPageId = page.id
 
-  const cr1 = await prisma.cropRegion.create({
+  const cropRegion1 = await prisma.cropRegion.create({
     data: {
       examPageId: page.id,
       label: "問1",
@@ -57,9 +57,9 @@ beforeAll(async () => {
       orderIndex: 0,
     },
   })
-  cropRegionId1 = cr1.id
+  cropRegionId1 = cropRegion1.id
 
-  const cr2 = await prisma.cropRegion.create({
+  const cropRegion2 = await prisma.cropRegion.create({
     data: {
       examPageId: page.id,
       label: "問2",
@@ -72,7 +72,7 @@ beforeAll(async () => {
       orderIndex: 1,
     },
   })
-  cropRegionId2 = cr2.id
+  cropRegionId2 = cropRegion2.id
 })
 
 afterEach(async () => {
@@ -308,10 +308,12 @@ describe("試験IDによる取得", () => {
 
     expect(configs).toHaveLength(2)
 
-    const choiceConfig = configs.find((c) => c.type === "choice")!
+    const choiceConfig = configs.find((config) => config.type === "choice")!
     expect(choiceConfig.choiceOptions).toHaveLength(4)
 
-    const digitConfig = configs.find((c) => c.type === "handwritten-digit")!
+    const digitConfig = configs.find(
+      (config) => config.type === "handwritten-digit"
+    )!
     expect(digitConfig.correctAnswer).toBe("15")
   })
 

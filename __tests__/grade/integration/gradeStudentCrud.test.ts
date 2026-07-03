@@ -83,14 +83,14 @@ async function createTestData() {
   })
 
   // classAに student1, student2 を所属させる
-  await testPrisma.studentClassMembership.create({
+  await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: student1.id,
       classroomId: classA.id,
       attendanceNumber: 1,
     },
   })
-  await testPrisma.studentClassMembership.create({
+  await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: student2.id,
       classroomId: classA.id,
@@ -99,7 +99,7 @@ async function createTestData() {
   })
 
   // classBに student3 を所属させる
-  await testPrisma.studentClassMembership.create({
+  await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: student3.id,
       classroomId: classB.id,
@@ -288,7 +288,9 @@ describe("GradeStudent / GradeClass", () => {
       await addStudentsToGrade(grade.id, [student3.id])
 
       const students = await getStudentsByGradeId(grade.id)
-      const target = students.students!.find((s) => s.studentId === student3.id)
+      const target = students.students!.find(
+        (student) => student.studentId === student3.id
+      )
       expect(target?.customOrder).toBe(3)
     })
   })
@@ -314,7 +316,7 @@ describe("GradeStudent / GradeClass", () => {
           firstNameKana: "ハナコ",
         },
       })
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: ended.id,
           classroomId,
@@ -335,7 +337,9 @@ describe("GradeStudent / GradeClass", () => {
       expect(result.success).toBe(true)
       // student1,2,3 のみ（未所属・卒業済みは除外）
       expect(result.students).toHaveLength(3)
-      const numbers = result.students!.map((s) => s.studentNumber).sort()
+      const numbers = result
+        .students!.map((student) => student.studentNumber)
+        .sort()
       expect(numbers).toEqual(["S001", "S002", "S003"])
     })
 
@@ -380,7 +384,7 @@ describe("GradeStudent / GradeClass", () => {
           firstNameKana: "タロウ",
         },
       })
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: current.id,
           classroomId: classX.id,
@@ -399,7 +403,7 @@ describe("GradeStudent / GradeClass", () => {
           firstNameKana: "サブロウ",
         },
       })
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: future.id,
           classroomId: classX.id,
@@ -410,14 +414,18 @@ describe("GradeStudent / GradeClass", () => {
       })
 
       const activeResult = await getAvailableStudentsForGrade(grade.id, true)
-      const activeNumbers = activeResult.students!.map((s) => s.studentNumber)
+      const activeNumbers = activeResult.students!.map(
+        (student) => student.studentNumber
+      )
       // 在籍中の S301 のみ。将来開始の S300 は除外
       expect(activeNumbers).toContain("S301")
       expect(activeNumbers).not.toContain("S300")
 
       const allResult = await getAvailableStudentsForGrade(grade.id, false)
       // activeOnly=false なら将来開始の生徒も含む
-      expect(allResult.students!.map((s) => s.studentNumber)).toContain("S300")
+      expect(
+        allResult.students!.map((student) => student.studentNumber)
+      ).toContain("S300")
     })
   })
 
@@ -438,7 +446,7 @@ describe("GradeStudent / GradeClass", () => {
           firstNameKana: "ジロウ",
         },
       })
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: alum.id,
           classroomId: classC.id,
@@ -449,13 +457,15 @@ describe("GradeStudent / GradeClass", () => {
       })
 
       const activeResult = await getAvailableClassesForGrade(grade.id, true)
-      const activeNames = activeResult.classes!.map((c) => c.name)
+      const activeNames = activeResult.classes!.map(
+        (classroom) => classroom.name
+      )
       // classC は在籍中0名なので非表示（classA, classB は表示）
       expect(activeNames).not.toContain("1年C組")
       expect(activeNames).toEqual(expect.arrayContaining(["1年A組", "1年B組"]))
 
       const allResult = await getAvailableClassesForGrade(grade.id, false)
-      const allNames = allResult.classes!.map((c) => c.name)
+      const allNames = allResult.classes!.map((classroom) => classroom.name)
       // activeOnly=false なら在籍終了の生徒も数えるので classC も表示
       expect(allNames).toContain("1年C組")
     })
@@ -498,7 +508,7 @@ describe("GradeStudent / GradeClass", () => {
       const { grade, classA, classB, student1 } = await createTestData()
 
       // student1をclassBにも所属させる
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student1.id,
           classroomId: classB.id,
@@ -562,7 +572,7 @@ describe("GradeStudent / GradeClass", () => {
 
     it("他学級にも所属する生徒は削除対象に数えない", async () => {
       const { grade, classA, classB, student1 } = await createTestData()
-      await testPrisma.studentClassMembership.create({
+      await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student1.id,
           classroomId: classB.id,
@@ -591,7 +601,10 @@ describe("GradeStudent / GradeClass", () => {
 
       const classes = await getGradeClasses(grade.id)
       const byName = new Map(
-        classes.classes!.map((c) => [c.className, c.order])
+        classes.classes!.map((classroom) => [
+          classroom.className,
+          classroom.order,
+        ])
       )
       expect(byName.get("1年B組")).toBe(0)
       expect(byName.get("1年A組")).toBe(1)

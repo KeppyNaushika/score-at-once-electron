@@ -46,112 +46,123 @@ describe("ReturnSnapshot capture/diff", () => {
   })
 
   it("記録直後は差分が無い", async () => {
-    const fx = await createFullTestExam(testPrisma, {
+    const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
       includeAnnotations: true,
     })
-    const studentIds = fx.students.map((s) => s.id)
+    const studentIds = fixture.students.map((student) => student.id)
 
     const cap = await captureReturnSnapshot({
-      examId: fx.exam.id,
+      examId: fixture.exam.id,
       studentIds,
     })
     expect(cap.success).toBe(true)
     expect(cap.capturedCount).toBe(studentIds.length)
 
-    const diff = await getReturnDiff(fx.exam.id)
+    const diff = await getReturnDiff(fixture.exam.id)
     expect(diff.success).toBe(true)
     expect(diff.hasAnySnapshot).toBe(true)
-    for (const d of diff.diffs) {
-      expect(d.hasSnapshot).toBe(true)
-      expect(d.changed).toBe(false)
-      expect(d.scoreChanges).toHaveLength(0)
-      expect(d.annotationChanged).toBe(false)
+    for (const studentDiff of diff.diffs) {
+      expect(studentDiff.hasSnapshot).toBe(true)
+      expect(studentDiff.changed).toBe(false)
+      expect(studentDiff.scoreChanges).toHaveLength(0)
+      expect(studentDiff.annotationChanged).toBe(false)
     }
   })
 
   it("スコア変更を before→after で検知する", async () => {
-    const fx = await createFullTestExam(testPrisma, { includeScores: true })
-    const studentIds = fx.students.map((s) => s.id)
-    await captureReturnSnapshot({ examId: fx.exam.id, studentIds })
+    const fixture = await createFullTestExam(testPrisma, {
+      includeScores: true,
+    })
+    const studentIds = fixture.students.map((student) => student.id)
+    await captureReturnSnapshot({ examId: fixture.exam.id, studentIds })
 
     // 1件の採点を correct → incorrect に変更
-    const target = fx.questionScores[0]
+    const target = fixture.questionScores[0]
     await testPrisma.questionScore.update({
       where: { id: target.id },
       data: { status: "incorrect", updatedAt: new Date() },
     })
 
-    const diff = await getReturnDiff(fx.exam.id)
-    const changed = diff.diffs.filter((d) => d.changed)
+    const diff = await getReturnDiff(fixture.exam.id)
+    const changed = diff.diffs.filter((studentDiff) => studentDiff.changed)
     expect(changed).toHaveLength(1)
 
-    const d = changed[0]
-    expect(d.studentId).toBe(target.studentId)
-    const cell = d.scoreChanges.find(
-      (c) => c.cropRegionId === target.cropRegionId
+    const studentDiff = changed[0]
+    expect(studentDiff.studentId).toBe(target.studentId)
+    const cell = studentDiff.scoreChanges.find(
+      (scoreChange) => scoreChange.cropRegionId === target.cropRegionId
     )
     expect(cell).toBeDefined()
     expect(cell?.before?.status).toBe("correct")
     expect(cell?.before?.value).toBe(10)
     expect(cell?.after?.status).toBe("incorrect")
     expect(cell?.after?.value).toBe(0)
-    expect(d.annotationChanged).toBe(false)
+    expect(studentDiff.annotationChanged).toBe(false)
   })
 
   it("注釈の編集を annotationChanged で検知する", async () => {
-    const fx = await createFullTestExam(testPrisma, {
+    const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
       includeAnnotations: true,
     })
-    const studentIds = fx.students.map((s) => s.id)
-    await captureReturnSnapshot({ examId: fx.exam.id, studentIds })
+    const studentIds = fixture.students.map((student) => student.id)
+    await captureReturnSnapshot({ examId: fixture.exam.id, studentIds })
 
     // 注釈のテキストを変更
-    const annotation = fx.drawingAnnotations[0]
+    const annotation = fixture.drawingAnnotations[0]
     await testPrisma.drawingAnnotation.update({
       where: { id: annotation.id },
       data: { text: "変更後コメント", updatedAt: new Date() },
     })
 
-    const diff = await getReturnDiff(fx.exam.id)
-    const changed = diff.diffs.filter((d) => d.changed)
+    const diff = await getReturnDiff(fixture.exam.id)
+    const changed = diff.diffs.filter((studentDiff) => studentDiff.changed)
     expect(changed).toHaveLength(1)
     expect(changed[0].annotationChanged).toBe(true)
     expect(changed[0].scoreChanges).toHaveLength(0)
   })
 
   it("注釈の削除を annotationChanged で検知する", async () => {
-    const fx = await createFullTestExam(testPrisma, {
+    const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
       includeAnnotations: true,
     })
-    const studentIds = fx.students.map((s) => s.id)
-    await captureReturnSnapshot({ examId: fx.exam.id, studentIds })
+    const studentIds = fixture.students.map((student) => student.id)
+    await captureReturnSnapshot({ examId: fixture.exam.id, studentIds })
 
     await testPrisma.drawingAnnotation.delete({
-      where: { id: fx.drawingAnnotations[0].id },
+      where: { id: fixture.drawingAnnotations[0].id },
     })
 
-    const diff = await getReturnDiff(fx.exam.id)
-    const changed = diff.diffs.filter((d) => d.changed)
+    const diff = await getReturnDiff(fixture.exam.id)
+    const changed = diff.diffs.filter((studentDiff) => studentDiff.changed)
     expect(changed).toHaveLength(1)
     expect(changed[0].annotationChanged).toBe(true)
   })
 
   it("スナップショット未記録の生徒は hasSnapshot=false", async () => {
-    const fx = await createFullTestExam(testPrisma, { includeScores: true })
+    const fixture = await createFullTestExam(testPrisma, {
+      includeScores: true,
+    })
     // 1人だけ返却版として記録する
-    const [first, ...rest] = fx.students.map((s) => s.id)
-    await captureReturnSnapshot({ examId: fx.exam.id, studentIds: [first] })
+    const [first, ...rest] = fixture.students.map((student) => student.id)
+    await captureReturnSnapshot({
+      examId: fixture.exam.id,
+      studentIds: [first],
+    })
 
-    const diff = await getReturnDiff(fx.exam.id)
-    const firstDiff = diff.diffs.find((d) => d.studentId === first)
+    const diff = await getReturnDiff(fixture.exam.id)
+    const firstDiff = diff.diffs.find(
+      (studentDiff) => studentDiff.studentId === first
+    )
     expect(firstDiff?.hasSnapshot).toBe(true)
     for (const id of rest) {
-      const d = diff.diffs.find((x) => x.studentId === id)
-      expect(d?.hasSnapshot).toBe(false)
-      expect(d?.changed).toBe(false)
+      const studentDiff = diff.diffs.find(
+        (candidate) => candidate.studentId === id
+      )
+      expect(studentDiff?.hasSnapshot).toBe(false)
+      expect(studentDiff?.changed).toBe(false)
     }
   })
 })

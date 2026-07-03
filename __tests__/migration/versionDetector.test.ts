@@ -16,8 +16,8 @@ const createPrisma = () => createPrismaClientForPath(TEST_DB_PATH)
 const execSql = async (sql: string) => {
   const stmts = sql
     .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s && !s.startsWith("--"))
+    .map((statement) => statement.trim())
+    .filter((statement) => statement && !statement.startsWith("--"))
   for (const stmt of stmts) {
     await prisma.$executeRawUnsafe(stmt)
   }

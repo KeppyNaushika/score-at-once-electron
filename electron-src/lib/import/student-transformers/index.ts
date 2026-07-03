@@ -70,7 +70,7 @@ export function transformStudentToLatest(
   let guard = 0
   while (version !== targetVersion) {
     const transformer = STUDENT_TRANSFORMERS.find(
-      (t) => t.fromVersion === version
+      (candidate) => candidate.fromVersion === version
     )
     if (!transformer) break
     const result = transformer.transform(current)

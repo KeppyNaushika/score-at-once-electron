@@ -100,14 +100,14 @@ describe("transformLayoutToVertical", () => {
     expect(c.normalizedY).toBeCloseTo(c.y / H)
     expect(c.normalizedW).toBeCloseTo(c.width / W)
     expect(c.normalizedH).toBeCloseTo(c.height / H)
-    for (const v of [
+    for (const normalized of [
       c.normalizedX,
       c.normalizedY,
       c.normalizedW,
       c.normalizedH,
     ]) {
-      expect(v).toBeGreaterThanOrEqual(0)
-      expect(v).toBeLessThanOrEqual(1)
+      expect(normalized).toBeGreaterThanOrEqual(0)
+      expect(normalized).toBeLessThanOrEqual(1)
     }
   })
 
@@ -167,16 +167,16 @@ describe("transformLayoutToVertical", () => {
       { x: H - offset - size, y: W - offset - size, size },
     ]
     const out = transformLayoutToVertical(layout, W, H)
-    for (const m of out.omrMarkerPositions) {
-      expect(m.size).toBe(size)
-      expect(m.x).toBeGreaterThanOrEqual(0)
-      expect(m.y).toBeGreaterThanOrEqual(0)
-      expect(m.x + m.size).toBeLessThanOrEqual(W + 1e-9)
-      expect(m.y + m.size).toBeLessThanOrEqual(H + 1e-9)
+    for (const marker of out.omrMarkerPositions) {
+      expect(marker.size).toBe(size)
+      expect(marker.x).toBeGreaterThanOrEqual(0)
+      expect(marker.y).toBeGreaterThanOrEqual(0)
+      expect(marker.x + marker.size).toBeLessThanOrEqual(W + 1e-9)
+      expect(marker.y + marker.size).toBeLessThanOrEqual(H + 1e-9)
     }
     // 全マーカーが実用紙の四隅（offset余白）に1つずつ配置される
     const corners = out.omrMarkerPositions
-      .map((m) => `${Math.round(m.x)},${Math.round(m.y)}`)
+      .map((marker) => `${Math.round(marker.x)},${Math.round(marker.y)}`)
       .sort()
     expect(corners).toEqual(
       [

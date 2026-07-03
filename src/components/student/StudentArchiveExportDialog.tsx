@@ -64,7 +64,7 @@ export function StudentArchiveExportDialog({
 
         const classes = Array.from(classMap.entries())
           .map(([id, name]) => ({ id, name }))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .sort((entryA, entryB) => entryA.name.localeCompare(entryB.name))
 
         setRelatedClasses(classes)
         // デフォルト: 全学級を選択

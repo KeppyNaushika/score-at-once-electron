@@ -74,8 +74,8 @@ export default function DeleteExamModal({
           id: exam.id,
           display: exam.examName,
           badges: [
-            ...(exam.examTags ?? []).map((et) => ({
-              label: et.tag.name,
+            ...(exam.examTags ?? []).map((examTag) => ({
+              label: examTag.tag.name,
               variant: "outline" as const,
             })),
             ...(exam.examDate

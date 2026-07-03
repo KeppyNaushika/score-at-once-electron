@@ -8,58 +8,58 @@ datasource db {
 }
 
 model User {
-  id                  String                 @id @default(uuid())
-  username            String                 @unique
-  passcode            String?
-  name                String
-  role                String                 @default("teacher")
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
-  passcodeType        String?                @default("none")
-  drawingAnnotations  DrawingAnnotation[]
-  questionScores      QuestionScore[]
-  userExams           UserExam[]
-  invitedUserExams    UserExam[]             @relation("InvitedByUser")
-  keyboardShortcuts   UserKeyboardShortcut[]
-  preferences         UserPreference[]
+  id                     String                 @id @default(uuid())
+  username               String                 @unique
+  passcode               String?
+  name                   String
+  role                   String                 @default("teacher")
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  passcodeType           String?                @default("none")
+  drawingAnnotations     DrawingAnnotation[]
+  questionScores         QuestionScore[]
+  userExams              UserExam[]
+  invitedUserExams       UserExam[]             @relation("InvitedByUser")
+  keyboardShortcuts      UserKeyboardShortcut[]
+  preferences            UserPreference[]
   answerSheetDefinitions AsbDefinition[]
   compoundAnswerScores   CompoundAnswerScore[]
   scoreDecisions         ScoreDecision[]
 }
 
 model Classroom {
-  id                  String                   @id @default(uuid())
-  name                String                   @unique
-  classCode           String?
-  grade               Int?
-  description         String?
-  isVisible           Boolean                  @default(true)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  memberships         StudentClassMembership[]
-  examClasses         ExamClass[]
-  gradeClasses        GradeClass[]
-  courseworkClasses   CourseworkClass[]
+  id                   String                       @id @default(uuid())
+  name                 String                       @unique
+  classCode            String?
+  grade                Int?
+  description          String?
+  isVisible            Boolean                      @default(true)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  memberships          StudentClassroomMembership[]
+  examClassrooms       ExamClassroom[]
+  gradeClassrooms      GradeClassroom[]
+  courseworkClassrooms CourseworkClassroom[]
 
   @@map("classes")
 }
 
 model Student {
-  id                  String                   @id @default(uuid())
-  studentNumber       String                   @unique
-  lastName            String
-  firstName           String
-  lastNameKana        String
-  firstNameKana       String
-  enrollmentYear      Int?
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  studentAnswerImages StudentAnswerImage[]
-  examStudents        ExamStudent[]
-  questionScores      QuestionScore[]
-  memberships         StudentClassMembership[]
-  gradeStudents       GradeStudent[]
-  gradeOverrides      GradeOverride[]
+  id                   String                       @id @default(uuid())
+  studentNumber        String                       @unique
+  lastName             String
+  firstName            String
+  lastNameKana         String
+  firstNameKana        String
+  enrollmentYear       Int?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  studentAnswerImages  StudentAnswerImage[]
+  examStudents         ExamStudent[]
+  questionScores       QuestionScore[]
+  memberships          StudentClassroomMembership[]
+  gradeStudents        GradeStudent[]
+  gradeOverrides       GradeOverride[]
   gradeItemExclusions  GradeItemExclusion[]
   compoundAnswerScores CompoundAnswerScore[]
   scoreDecisions       ScoreDecision[]
@@ -68,10 +68,10 @@ model Student {
   courseworkScores     CourseworkScore[]
 }
 
-model StudentClassMembership {
+model StudentClassroomMembership {
   id               String    @id @default(uuid())
   studentId        String
-  classroomId          String
+  classroomId      String
   startDate        DateTime  @default(now())
   endDate          DateTime?
   attendanceNumber Int?
@@ -79,33 +79,34 @@ model StudentClassMembership {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  classroom            Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroom        Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
   @@index([classroomId])
   @@index([classroomId, attendanceNumber])
   @@index([startDate, endDate])
+  @@map("StudentClassMembership")
 }
 
 model Exam {
-  id                 String               @id @default(uuid())
-  examName           String
-  examDate           DateTime?
-  description        String?
+  id                      String              @id @default(uuid())
+  examName                String
+  examDate                DateTime?
+  description             String?
   /// 答案アップロード時にOMRマーカーによる位置補正を既定でONにするか（ASB由来かつomrMarkers有効な試験はtrue）
-  markerCorrectionEnabled Boolean         @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @default(now()) @updatedAt
-  examPages          ExamPage[]
-  examStudents       ExamStudent[]
-  examSubtotalGroups ExamSubtotalGroup[]
-  userExams          UserExam[]
-  examClasses        ExamClass[]
-  markingFormats     ExamMarkingFormat[]
-  exportSettings     ExamExportSettings?
-  gradeDataSources   GradeDataSource[]
-  examTags           ExamTag[]
-  returnSnapshots    ReturnSnapshot[]
+  markerCorrectionEnabled Boolean             @default(false)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @default(now()) @updatedAt
+  examPages               ExamPage[]
+  examStudents            ExamStudent[]
+  examSubtotalGroups      ExamSubtotalGroup[]
+  userExams               UserExam[]
+  examClassrooms          ExamClassroom[]
+  markingFormats          ExamMarkingFormat[]
+  exportSettings          ExamExportSettings?
+  gradeDataSources        GradeDataSource[]
+  examTags                ExamTag[]
+  returnSnapshots         ReturnSnapshot[]
 }
 
 model ExamStudent {
@@ -166,36 +167,36 @@ model StudentAnswerImage {
 }
 
 model CropRegion {
-  id               String                      @id @default(uuid())
-  examPageId       String
-  label            String
-  type             String
-  x                Float
-  y                Float
-  width            Float
-  height           Float
-  points           Int?
-  orderIndex       Int?
-  createdAt        DateTime                    @default(now())
-  updatedAt        DateTime                    @default(now()) @updatedAt
-  examPage         ExamPage                    @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  cropSubtotals    CropSubtotal[]
-  questionScores   QuestionScore[]
-  markingOverrides CropRegionMarkingOverride[]
-  gradeDataSources GradeDataSource[]
-  omrConfig            CropRegionOmrConfig?
-  compoundMembership   CompoundAnswerMember?
-  scoreDecisions       ScoreDecision[]
+  id                 String                      @id @default(uuid())
+  examPageId         String
+  label              String
+  type               String
+  x                  Float
+  y                  Float
+  width              Float
+  height             Float
+  points             Int?
+  orderIndex         Int?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @default(now()) @updatedAt
+  examPage           ExamPage                    @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropSubtotals      CropSubtotal[]
+  questionScores     QuestionScore[]
+  markingOverrides   CropRegionMarkingOverride[]
+  gradeDataSources   GradeDataSource[]
+  omrConfig          CropRegionOmrConfig?
+  compoundMembership CompoundAnswerMember?
+  scoreDecisions     ScoreDecision[]
 }
 
 model SubtotalGroup {
-  id                    String                 @id @default(uuid())
-  name                  String
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @default(now()) @updatedAt
-  examSubtotalGroups    ExamSubtotalGroup[]
-  subtotals             Subtotal[]
-  tagSubtotalGroups TagSubtotalGroup[]
+  id                 String              @id @default(uuid())
+  name               String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+  examSubtotalGroups ExamSubtotalGroup[]
+  subtotals          Subtotal[]
+  tagSubtotalGroups  TagSubtotalGroup[]
 }
 
 model Subtotal {
@@ -371,14 +372,14 @@ model DeletedRecord {
 /// 追記専用・不変。状態を変える全操作とエクスポートを記録する（閲覧は対象外）。
 /// userIdはFKを張らず素の文字列とし、ユーザー削除後もログが残るようにする（DeletedRecord同様）。
 model AuditLog {
-  id         String   @id @default(uuid())
-  createdAt  DateTime @default(now()) // 初回操作日時（ISO text）
-  updatedAt  DateTime @updatedAt // 最終更新日時。連続操作の集約時に上書きされる（LWW同期のタイムスタンプ列）
-  userId     String? // 操作者。システム操作はnull
-  action     String // "exam.update" / "grade.boundary.update" 等の名前空間付きアクション
-  category   String // "exam" | "grade" | "answer_sheet" | "student" | "user" | "system"
-  scopeId    String? // 絞り込み用の親エンティティID（examId / gradeId / definitionId 等）
-  scopeLabel String? // 表示用スナップショット（対象が消えても残す。"数学 期末" 等）
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) // 初回操作日時（ISO text）
+  updatedAt   DateTime @updatedAt // 最終更新日時。連続操作の集約時に上書きされる（LWW同期のタイムスタンプ列）
+  userId      String? // 操作者。システム操作はnull
+  action      String // "exam.update" / "grade.boundary.update" 等の名前空間付きアクション
+  category    String // "exam" | "grade" | "answer_sheet" | "student" | "user" | "system"
+  scopeId     String? // 絞り込み用の親エンティティID（examId / gradeId / definitionId 等）
+  scopeLabel  String? // 表示用スナップショット（対象が消えても残す。"数学 期末" 等）
   entityType  String // 変更対象のテーブル名（"Exam" 等）
   entityId    String // 変更対象のレコードID
   summary     String // 人間可読の要約（構造化レンダリングのフォールバック）
@@ -394,10 +395,10 @@ model AuditLog {
   @@index([coalesceKey])
 }
 
-model ExamClass {
+model ExamClassroom {
   id            String   @id @default(uuid())
   examId        String
-  classroomId       String
+  classroomId   String
   administered  Boolean  @default(false) // 学級・出席番号表示（再採番）の対象
   teacherStat   Boolean  @default(false) // 教員集計対象（Excel学級平均行）
   studentReport Boolean  @default(false) // 生徒表示対象（個人成績表の学級比較）
@@ -405,12 +406,13 @@ model ExamClass {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam      Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
   @@unique([examId, classroomId])
   @@index([examId])
   @@index([classroomId])
+  @@map("ExamClass")
 }
 
 model Tag {
@@ -532,13 +534,13 @@ model CropRegionMarkingOverride {
 model CropRegionOmrConfig {
   id             String   @id @default(uuid())
   cropRegionId   String   @unique
-  type           String   // "choice" | "handwritten-digit"
-  numChoices     Int?     // choice: 選択肢数(2-10)
-  choiceLayout   String?  // "horizontal" | "vertical"
-  numDigits      Int?     // handwritten-digit: 桁数(1-5)
-  correctAnswer  String?  // digit正答("42") / choice正答はchoiceOptionsで管理
-  colorThreshold Int?     // 認識パラメータ上書き
-  areaThreshold  Float?   // 認識パラメータ上書き
+  type           String // "choice" | "handwritten-digit"
+  numChoices     Int? // choice: 選択肢数(2-10)
+  choiceLayout   String? // "horizontal" | "vertical"
+  numDigits      Int? // handwritten-digit: 桁数(1-5)
+  correctAnswer  String? // digit正答("42") / choice正答はchoiceOptionsで管理
+  colorThreshold Int? // 認識パラメータ上書き
+  areaThreshold  Float? // 認識パラメータ上書き
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -554,13 +556,13 @@ model CropRegionOmrChoiceOption {
   id               String   @id @default(uuid())
   omrConfigId      String
   choiceIndex      Int
-  label            String   // "ア","イ" etc.
+  label            String // "ア","イ" etc.
   isCorrect        Boolean  @default(false)
   shape            String?  @default("ellipse") // "ellipse" | "rectangle" | "circle"
-  normalizedCx     Float?   // バブル中心X (0-1正規化)
-  normalizedCy     Float?   // バブル中心Y (0-1正規化)
-  normalizedWidth  Float?   // バブル幅 (0-1正規化)
-  normalizedHeight Float?   // バブル高さ (0-1正規化)
+  normalizedCx     Float? // バブル中心X (0-1正規化)
+  normalizedCy     Float? // バブル中心Y (0-1正規化)
+  normalizedWidth  Float? // バブル幅 (0-1正規化)
+  normalizedHeight Float? // バブル高さ (0-1正規化)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -574,11 +576,11 @@ model CropRegionOmrChoiceOption {
 model CropRegionOmrDigitBox {
   id          String   @id @default(uuid())
   omrConfigId String
-  digitIndex  Int      // 0-based桁位置
-  normalizedX Float    // 左端 (0-1正規化)
-  normalizedY Float    // 上端 (0-1正規化)
-  normalizedW Float    // 幅 (0-1正規化)
-  normalizedH Float    // 高さ (0-1正規化)
+  digitIndex  Int // 0-based桁位置
+  normalizedX Float // 左端 (0-1正規化)
+  normalizedY Float // 上端 (0-1正規化)
+  normalizedW Float // 幅 (0-1正規化)
+  normalizedH Float // 高さ (0-1正規化)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -593,12 +595,12 @@ model CropRegionOmrDigitBox {
 model CompoundAnswer {
   id                 String   @id @default(uuid())
   examPageId         String
-  label              String   // "アイ/ウエ", "Grid-In #1"
-  answerFormat       String   // "fraction" | "multi-digit" | "grid-in"
-  correctAnswer      String   // "-3/14", "42"
+  label              String // "アイ/ウエ", "Grid-In #1"
+  answerFormat       String // "fraction" | "multi-digit" | "grid-in"
+  correctAnswer      String // "-3/14", "42"
   points             Int      @default(0)
   orderIndex         Int?
-  alternativeAnswers String?  // カンマ区切りの別解 (.667,.6667)
+  alternativeAnswers String? // カンマ区切りの別解 (.667,.6667)
   requireReduced     Boolean  @default(false) // 約分必須か（共通テスト: true）
   createdAt          DateTime @default(now())
   updatedAt          DateTime @default(now()) @updatedAt
@@ -615,9 +617,9 @@ model CompoundAnswerMember {
   id               String   @id @default(uuid())
   compoundAnswerId String
   cropRegionId     String   @unique // 1つのCropRegionは最大1つのCompoundAnswerに所属
-  order            Int      // グループ内での連結順序
-  roleLabel        String?  // "ア", "分子1桁目" 等
-  separator        String?  // この列の後に挿入する文字 ("/" 等)
+  order            Int // グループ内での連結順序
+  roleLabel        String? // "ア", "分子1桁目" 等
+  separator        String? // この列の後に挿入する文字 ("/" 等)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @default(now()) @updatedAt
 
@@ -633,7 +635,7 @@ model CompoundAnswerScore {
   compoundAnswerId String
   studentId        String
   userId           String
-  recognizedAnswer String?  // 組み立てた回答文字列
+  recognizedAnswer String? // 組み立てた回答文字列
   status           String   @default("unscored")
   partialScore     Decimal?
   createdAt        DateTime @default(now())
@@ -659,7 +661,7 @@ model Grade {
 
   gradeItems          GradeItem[]
   boundarySets        GradeBoundarySet[]
-  gradeClasses        GradeClass[]
+  gradeClassrooms     GradeClassroom[]
   gradeStudents       GradeStudent[]
   gradeOverrides      GradeOverride[]
   gradeItemExclusions GradeItemExclusion[]
@@ -696,7 +698,7 @@ model GradeItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  grade               Grade              @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  grade               Grade                @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   dataSources         GradeDataSource[]
   boundarySets        GradeBoundarySet[]
   gradeOverrides      GradeOverride[]
@@ -706,20 +708,21 @@ model GradeItem {
 }
 
 /// 成績算出プロジェクトの対象学級
-model GradeClass {
-  id        String   @id @default(uuid())
-  gradeId   String
-  classroomId   String
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model GradeClassroom {
+  id          String   @id @default(uuid())
+  gradeId     String
+  classroomId String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
   @@unique([gradeId, classroomId])
   @@index([gradeId])
   @@index([classroomId])
+  @@map("GradeClass")
 }
 
 /// 成績算出プロジェクトの対象生徒
@@ -807,8 +810,8 @@ model GradeBoundarySet {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  grade      Grade          @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  gradeItem  GradeItem?     @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  grade      Grade           @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeItem  GradeItem?      @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
   boundaries GradeBoundary[]
 
   @@unique([gradeId, targetType, gradeItemId])
@@ -876,7 +879,7 @@ model Coursework {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  classes          CourseworkClass[]
+  classrooms       CourseworkClassroom[]
   students         CourseworkStudent[]
   tags             CourseworkTag[]
   items            CourseworkItem[]
@@ -884,20 +887,21 @@ model Coursework {
 }
 
 /// 試験外成績資料の対象学級
-model CourseworkClass {
+model CourseworkClassroom {
   id           String   @id @default(uuid())
   courseworkId String
-  classroomId      String
+  classroomId  String
   order        Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   coursework Coursework @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
-  classroom      Classroom  @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroom  Classroom  @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
   @@unique([courseworkId, classroomId])
   @@index([courseworkId])
   @@index([classroomId])
+  @@map("CourseworkClass")
 }
 
 /// 試験外成績資料の対象生徒（名簿）。点数が項目ごとに複数つくため名簿は独立テーブル。
@@ -945,7 +949,7 @@ model CourseworkItem {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  coursework       Coursework             @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
+  coursework       Coursework              @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
   scores           CourseworkScore[]
   letterScales     CourseworkLetterScale[]
   gradeDataSources GradeDataSource[]
@@ -996,91 +1000,91 @@ model CourseworkLetterScale {
 
 /// 解答用紙定義（トップレベル + GlobalSettings インライン）
 model AsbDefinition {
-  id        String   @id @default(uuid())
-  name      String   @default("新しい解答用紙")
-  renderMode String  @default("answer-sheet")
+  id         String @id @default(uuid())
+  name       String @default("新しい解答用紙")
+  renderMode String @default("answer-sheet")
 
   // LabelPresets
-  labelPresetMajor String?
-  labelPresetSub   String?
+  labelPresetMajor  String?
+  labelPresetSub    String?
   labelPresetBranch String?
 
   // GlobalSettings (フラット化)
-  paperSize            String  @default("A4")
-  orientation          String  @default("portrait")
-  verticalLayout       Boolean @default(false)
-  baseRowHeight        Float   @default(12)
-  numberDisplayMode    String  @default("multirow")
-  marginTop            Float   @default(15)
-  marginBottom         Float   @default(15)
-  marginLeft           Float   @default(10)
-  marginRight          Float   @default(10)
-  colWidthMajorNumber  Float   @default(10)
-  colWidthSubNumber    Float   @default(10)
-  colWidthBranchNumber Float   @default(10)
-  majorQuestionSpacing Float   @default(5)
-  headerHeight         Float   @default(0)
+  paperSize                            String  @default("A4")
+  orientation                          String  @default("portrait")
+  verticalLayout                       Boolean @default(false)
+  baseRowHeight                        Float   @default(12)
+  numberDisplayMode                    String  @default("multirow")
+  marginTop                            Float   @default(15)
+  marginBottom                         Float   @default(15)
+  marginLeft                           Float   @default(10)
+  marginRight                          Float   @default(10)
+  colWidthMajorNumber                  Float   @default(10)
+  colWidthSubNumber                    Float   @default(10)
+  colWidthBranchNumber                 Float   @default(10)
+  majorQuestionSpacing                 Float   @default(5)
+  headerHeight                         Float   @default(0)
   // BorderConfig (7 styles + 7 widths)
-  borderOuterBorder              String @default("solid")
-  borderMajorDivider             String @default("solid")
-  borderSubDivider               String @default("solid")
-  borderBranchDivider            String @default("dashed")
-  borderMajorNumberDivider       String @default("solid")
-  borderSubNumberDivider         String @default("solid")
-  borderBranchNumberDivider      String @default("solid")
-  borderOuterBorderWidth         Float? @default(0.7)
-  borderMajorDividerWidth        Float? @default(0.5)
-  borderSubDividerWidth          Float? @default(0.4)
-  borderBranchDividerWidth       Float? @default(0.3)
-  borderMajorNumberDividerWidth  Float? @default(0.4)
-  borderSubNumberDividerWidth    Float? @default(0.4)
-  borderBranchNumberDividerWidth Float? @default(0.3)
+  borderOuterBorder                    String  @default("solid")
+  borderMajorDivider                   String  @default("solid")
+  borderSubDivider                     String  @default("solid")
+  borderBranchDivider                  String  @default("dashed")
+  borderMajorNumberDivider             String  @default("solid")
+  borderSubNumberDivider               String  @default("solid")
+  borderBranchNumberDivider            String  @default("solid")
+  borderOuterBorderWidth               Float?  @default(0.7)
+  borderMajorDividerWidth              Float?  @default(0.5)
+  borderSubDividerWidth                Float?  @default(0.4)
+  borderBranchDividerWidth             Float?  @default(0.3)
+  borderMajorNumberDividerWidth        Float?  @default(0.4)
+  borderSubNumberDividerWidth          Float?  @default(0.4)
+  borderBranchNumberDividerWidth       Float?  @default(0.3)
   // 原稿用紙マス目罫線（字間=行方向は破線、行間は実線が既定。色は常に黒）
-  borderManuscriptCharDivider      String  @default("dashed")
-  borderManuscriptLineDivider      String  @default("solid")
-  borderManuscriptCharDividerWidth Float?  @default(0.2)
-  borderManuscriptLineDividerWidth Float?  @default(0.2)
+  borderManuscriptCharDivider          String  @default("dashed")
+  borderManuscriptLineDivider          String  @default("solid")
+  borderManuscriptCharDividerWidth     Float?  @default(0.2)
+  borderManuscriptLineDividerWidth     Float?  @default(0.2)
   // 破線/点線のダッシュ長・間隔（線幅に対する倍率。未指定=既定 dash3/gap2）
-  borderOuterBorderDashRatio          Float?
-  borderOuterBorderGapRatio           Float?
-  borderMajorDividerDashRatio         Float?
-  borderMajorDividerGapRatio          Float?
-  borderSubDividerDashRatio           Float?
-  borderSubDividerGapRatio            Float?
-  borderBranchDividerDashRatio        Float?
-  borderBranchDividerGapRatio         Float?
-  borderMajorNumberDividerDashRatio   Float?
-  borderMajorNumberDividerGapRatio    Float?
-  borderSubNumberDividerDashRatio     Float?
-  borderSubNumberDividerGapRatio      Float?
-  borderBranchNumberDividerDashRatio  Float?
-  borderBranchNumberDividerGapRatio   Float?
+  borderOuterBorderDashRatio           Float?
+  borderOuterBorderGapRatio            Float?
+  borderMajorDividerDashRatio          Float?
+  borderMajorDividerGapRatio           Float?
+  borderSubDividerDashRatio            Float?
+  borderSubDividerGapRatio             Float?
+  borderBranchDividerDashRatio         Float?
+  borderBranchDividerGapRatio          Float?
+  borderMajorNumberDividerDashRatio    Float?
+  borderMajorNumberDividerGapRatio     Float?
+  borderSubNumberDividerDashRatio      Float?
+  borderSubNumberDividerGapRatio       Float?
+  borderBranchNumberDividerDashRatio   Float?
+  borderBranchNumberDividerGapRatio    Float?
   borderManuscriptCharDividerDashRatio Float?
   borderManuscriptCharDividerGapRatio  Float?
   borderManuscriptLineDividerDashRatio Float?
   borderManuscriptLineDividerGapRatio  Float?
   // OMRMarkers
-  omrMarkersEnabled Boolean @default(false)
-  omrMarkersSizeMm  Float   @default(5)
-  omrMarkersOffsetMm Float  @default(3)
+  omrMarkersEnabled                    Boolean @default(false)
+  omrMarkersSizeMm                     Float   @default(5)
+  omrMarkersOffsetMm                   Float   @default(3)
   // Fonts
-  fontFamily          String @default("Noto Sans JP")
-  fontDefaultSize     Float  @default(6)
-  fontMajorNumberSize Float  @default(6)
-  fontSubNumberSize   Float  @default(6)
-  fontBranchNumberSize Float @default(5)
+  fontFamily                           String  @default("Noto Sans JP")
+  fontDefaultSize                      Float   @default(6)
+  fontMajorNumberSize                  Float   @default(6)
+  fontSubNumberSize                    Float   @default(6)
+  fontBranchNumberSize                 Float   @default(5)
   // MultiColumn
-  multiColumnEnabled          Boolean @default(false)
-  multiColumnCount            Int     @default(2)
-  multiColumnGapMm            Float   @default(5)
-  multiColumnDividerLine      String?
-  multiColumnDividerLineWidth Float   @default(0.3)
+  multiColumnEnabled                   Boolean @default(false)
+  multiColumnCount                     Int     @default(2)
+  multiColumnGapMm                     Float   @default(5)
+  multiColumnDividerLine               String?
+  multiColumnDividerLineWidth          Float   @default(0.3)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   majorQuestions AsbMajorQuestion[]
   headerFields   AsbHeaderField[]
@@ -1125,21 +1129,21 @@ model AsbMajorQuestion {
 
 /// 小問
 model AsbSubQuestion {
-  id               String  @id @default(uuid())
-  majorQuestionId  String
-  label            String
-  order            Int     @default(0)
-  heightMultiplier Float   @default(1)
-  points           Float   @default(1)
-  usesBranchPoints Boolean?
-  layoutWidth      String?
-  nextPlacement    String?
-  goUp             Int?
+  id                      String   @id @default(uuid())
+  majorQuestionId         String
+  label                   String
+  order                   Int      @default(0)
+  heightMultiplier        Float    @default(1)
+  points                  Float    @default(1)
+  usesBranchPoints        Boolean?
+  layoutWidth             String?
+  nextPlacement           String?
+  goUp                    Int?
   // ManuscriptPaper (1:1 inline)
-  manuscriptEnabled  Boolean @default(false)
-  manuscriptColumns  Int     @default(20)
-  manuscriptRows     Int     @default(10)
-  manuscriptCellSizeMm Float @default(8)
+  manuscriptEnabled       Boolean  @default(false)
+  manuscriptColumns       Int      @default(20)
+  manuscriptRows          Int      @default(10)
+  manuscriptCellSizeMm    Float    @default(8)
   // 文字位置マーカー: JSON配列 [{atChar,label,boundary?,boundaryWidth?,overrideRowEnd?}]
   // （数字ガイド＋区切り罫線の統合）、表示位置・文字サイズ・余白（マス比）
   manuscriptCharGuides    String?
@@ -1147,15 +1151,15 @@ model AsbSubQuestion {
   manuscriptGuidePosition String?
   manuscriptGuidePadding  Float?
   // BorderStyles (per-side)
-  borderStyleTop    String?
-  borderStyleBottom String?
-  borderStyleLeft   String?
-  borderStyleRight  String?
+  borderStyleTop          String?
+  borderStyleBottom       String?
+  borderStyleLeft         String?
+  borderStyleRight        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  majorQuestion   AsbMajorQuestion  @relation(fields: [majorQuestionId], references: [id], onDelete: Cascade)
+  majorQuestion   AsbMajorQuestion    @relation(fields: [majorQuestionId], references: [id], onDelete: Cascade)
   branchQuestions AsbBranchQuestion[]
   textElements    AsbTextElement[]
   imageElements   AsbImageElement[]
@@ -1166,15 +1170,15 @@ model AsbSubQuestion {
 
 /// 枝問
 model AsbBranchQuestion {
-  id               String  @id @default(uuid())
-  subQuestionId    String
-  label            String
-  order            Int     @default(0)
-  heightMultiplier Float   @default(1)
-  points           Float   @default(1)
-  layoutWidth      String?
-  nextPlacement    String?
-  goUp             Int?
+  id                String  @id @default(uuid())
+  subQuestionId     String
+  label             String
+  order             Int     @default(0)
+  heightMultiplier  Float   @default(1)
+  points            Float   @default(1)
+  layoutWidth       String?
+  nextPlacement     String?
+  goUp              Int?
   borderStyleTop    String?
   borderStyleBottom String?
   borderStyleLeft   String?
@@ -1183,10 +1187,10 @@ model AsbBranchQuestion {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  subQuestion  AsbSubQuestion    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
-  textElements AsbTextElement[]
+  subQuestion   AsbSubQuestion    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  textElements  AsbTextElement[]
   imageElements AsbImageElement[]
-  omrConfig    AsbOmrConfig?
+  omrConfig     AsbOmrConfig?
 
   @@index([subQuestionId])
 }
@@ -1250,8 +1254,8 @@ model AsbOmrConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  subQuestion    AsbSubQuestion?    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
-  branchQuestion AsbBranchQuestion? @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
+  subQuestion    AsbSubQuestion?      @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  branchQuestion AsbBranchQuestion?   @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
   choiceOptions  AsbOmrChoiceOption[]
 
   @@index([subQuestionId])

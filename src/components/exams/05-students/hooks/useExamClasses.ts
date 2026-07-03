@@ -13,7 +13,7 @@ interface UseExamClassesOptions {
 
 interface UseExamClassesReturn {
   /** 試験に関連付けられたクラス一覧 */
-  examClasses: ExamClassWithClass[]
+  examClassrooms: ExamClassWithClass[]
   /** 読み込み中フラグ */
   loading: boolean
   /** データを再取得 */
@@ -37,7 +37,7 @@ interface UseExamClassesReturn {
 export function useExamClasses({
   examId,
 }: UseExamClassesOptions): UseExamClassesReturn {
-  const [examClasses, setExamClasses] = useState<ExamClassWithClass[]>([])
+  const [examClassrooms, setExamClasses] = useState<ExamClassWithClass[]>([])
   const [loading, setLoading] = useState(true)
 
   // データ取得
@@ -47,7 +47,7 @@ export function useExamClasses({
     setLoading(true)
 
     try {
-      const data = await window.electronAPI.examClass.getAll(examId)
+      const data = await window.electronAPI.examClassroom.getAll(examId)
       setExamClasses(data)
     } catch (err) {
       console.error("Failed to fetch exam classes:", err)
@@ -65,7 +65,7 @@ export function useExamClasses({
   const removeClass = useCallback(
     async (examClassId: string): Promise<boolean> => {
       try {
-        await window.electronAPI.examClass.remove(examClassId)
+        await window.electronAPI.examClassroom.remove(examClassId)
         await fetchExamClasses()
         return true
       } catch (err) {
@@ -87,7 +87,7 @@ export function useExamClasses({
       }
     ): Promise<ExamClassWithDetails | null> => {
       try {
-        const result = await window.electronAPI.examClass.update({
+        const result = await window.electronAPI.examClassroom.update({
           id: examClassId,
           ...options,
         })
@@ -102,7 +102,7 @@ export function useExamClasses({
   )
 
   return {
-    examClasses,
+    examClassrooms,
     loading,
     refresh: fetchExamClasses,
     removeClass,

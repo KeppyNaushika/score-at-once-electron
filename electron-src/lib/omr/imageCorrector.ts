@@ -213,8 +213,12 @@ export async function correctImage(
     const dstPoints: Point[] = []
 
     for (const corner of cornerOrder) {
-      const answerMarker = answerResult.markers.find((m) => m.corner === corner)
-      const masterMarker = masterMarkers.find((m) => m.corner === corner)
+      const answerMarker = answerResult.markers.find(
+        (marker) => marker.corner === corner
+      )
+      const masterMarker = masterMarkers.find(
+        (marker) => marker.corner === corner
+      )
 
       if (!answerMarker || !masterMarker) {
         return {

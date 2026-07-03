@@ -272,11 +272,13 @@ export function ScoringMarkSettingsContainer({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(positionLabels) as MarkPosition[]).map((pos) => (
-                  <SelectItem key={pos} value={pos}>
-                    {positionLabels[pos]}
-                  </SelectItem>
-                ))}
+                {(Object.keys(positionLabels) as MarkPosition[]).map(
+                  (position) => (
+                    <SelectItem key={position} value={position}>
+                      {positionLabels[position]}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>

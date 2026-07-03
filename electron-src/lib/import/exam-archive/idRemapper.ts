@@ -169,7 +169,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   }
 
   // ExamClass (v1.1.0+)
-  for (const examClass of data.examData.examClasses || []) {
+  for (const examClass of data.examData.examClassrooms || []) {
     mappings.examClass[examClass.id] = randomUUID()
   }
 

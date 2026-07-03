@@ -61,7 +61,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
       ["projectStudents", "examStudents"],
       ["userProjects", "userExams"],
       ["projectSubtotalGroups", "examSubtotalGroups"],
-      ["projectClasses", "examClasses"],
+      ["projectClasses", "examClassrooms"],
       ["projectMarkingFormats", "examMarkingFormats"],
       ["projectExportSettings", "examExportSettings"],
     ]
@@ -103,8 +103,8 @@ export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
       "projectId",
       "examId"
     )!
-    examData.examClasses = renameField(
-      examData.examClasses,
+    examData.examClassrooms = renameField(
+      examData.examClassrooms,
       "projectId",
       "examId"
     )!

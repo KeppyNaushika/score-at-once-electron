@@ -63,7 +63,7 @@ export function setupStudentHandlers(): void {
   // Student Class Membership handlers
   registerHandler(
     "create-student-class-membership",
-    async (membershipData: Prisma.StudentClassMembershipCreateInput) => {
+    async (membershipData: Prisma.StudentClassroomMembershipCreateInput) => {
       return await createStudentClassMembership(membershipData)
     }
   )
@@ -72,7 +72,7 @@ export function setupStudentHandlers(): void {
     "update-student-class-membership",
     async (
       id: string,
-      membershipData: Prisma.StudentClassMembershipUpdateInput
+      membershipData: Prisma.StudentClassroomMembershipUpdateInput
     ) => {
       return await updateStudentClassMembership(id, membershipData)
     }
@@ -216,7 +216,9 @@ export function setupStudentHandlers(): void {
     async (selectedStudentIds: string[]) => {
       const allStudents = await fetchStudents()
       const selectedSet = new Set(selectedStudentIds)
-      const students = allStudents.filter((s) => selectedSet.has(s.id))
+      const students = allStudents.filter((student) =>
+        selectedSet.has(student.id)
+      )
 
       if (students.length === 0) {
         return { success: false, error: "出力する生徒が選択されていません" }
@@ -248,8 +250,8 @@ export function setupStudentHandlers(): void {
       headerRow.eachCell((cell) => applyCellStyle(cell, "header"))
 
       // データ行（学籍番号順）
-      const sorted = [...students].sort((a, b) =>
-        a.studentNumber.localeCompare(b.studentNumber, "ja")
+      const sorted = [...students].sort((studentA, studentB) =>
+        studentA.studentNumber.localeCompare(studentB.studentNumber, "ja")
       )
 
       for (const student of sorted) {
@@ -279,7 +281,9 @@ export function setupStudentHandlers(): void {
       const { fetchClasses } = await import("../lib/prisma/class")
       const allClasses = await fetchClasses()
       const selectedSet = new Set(selectedClassIds)
-      const classes = allClasses.filter((c) => selectedSet.has(c.id))
+      const classes = allClasses.filter((classroom) =>
+        selectedSet.has(classroom.id)
+      )
 
       if (classes.length === 0) {
         return { success: false, error: "出力する学級が選択されていません" }
@@ -298,13 +302,17 @@ export function setupStudentHandlers(): void {
 
       // 全生徒を取得（学籍番号逆引き用）
       const allStudents = await fetchStudents()
-      const studentMap = new Map(allStudents.map((s) => [s.id, s]))
+      const studentMap = new Map(
+        allStudents.map((student) => [student.id, student])
+      )
 
       const workbook = new ExcelJS.Workbook()
 
       // 学級ごとにシートを作成
-      for (const cls of classes) {
-        const sheetName = cls.name.replace(/[\\/:*?"<>|]/g, "_").slice(0, 31)
+      for (const classroom of classes) {
+        const sheetName = classroom.name
+          .replace(/[\\/:*?"<>|]/g, "_")
+          .slice(0, 31)
         const worksheet = workbook.addWorksheet(sheetName)
 
         // ヘッダー行（学級インポートと同じカラム・順序）
@@ -317,27 +325,29 @@ export function setupStudentHandlers(): void {
         headerRow.eachCell((cell) => applyCellStyle(cell, "header"))
 
         // 所属データ（出席番号順）
-        const sortedMemberships = [...cls.memberships].sort((a, b) => {
-          const aNum = a.attendanceNumber ?? Infinity
-          const bNum = b.attendanceNumber ?? Infinity
-          return aNum - bNum
-        })
+        const sortedMemberships = [...classroom.memberships].sort(
+          (membershipA, membershipB) => {
+            const numberA = membershipA.attendanceNumber ?? Infinity
+            const numberB = membershipB.attendanceNumber ?? Infinity
+            return numberA - numberB
+          }
+        )
 
-        for (const m of sortedMemberships) {
-          const student = studentMap.get(m.student.id)
-          const studentNumber = student?.studentNumber ?? m.student.id
+        for (const membership of sortedMemberships) {
+          const student = studentMap.get(membership.student.id)
+          const studentNumber = student?.studentNumber ?? membership.student.id
           const row = worksheet.addRow([
             studentNumber,
-            m.attendanceNumber ?? "",
-            m.startDate
-              ? new Date(m.startDate).toLocaleDateString("ja-JP", {
+            membership.attendanceNumber ?? "",
+            membership.startDate
+              ? new Date(membership.startDate).toLocaleDateString("ja-JP", {
                   year: "numeric",
                   month: "numeric",
                   day: "numeric",
                 })
               : "",
-            m.endDate
-              ? new Date(m.endDate).toLocaleDateString("ja-JP", {
+            membership.endDate
+              ? new Date(membership.endDate).toLocaleDateString("ja-JP", {
                   year: "numeric",
                   month: "numeric",
                   day: "numeric",

@@ -318,7 +318,7 @@ describe("diffFields", () => {
         { field: "c", label: "C" },
       ]
     )
-    expect(changes.map((c) => c.field).sort()).toEqual(["a", "c"])
+    expect(changes.map((change) => change.field).sort()).toEqual(["a", "c"])
   })
 
   it("変化が無ければ空配列", () => {

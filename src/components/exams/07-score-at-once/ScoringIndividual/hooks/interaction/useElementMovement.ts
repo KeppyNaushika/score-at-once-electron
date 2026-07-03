@@ -407,7 +407,9 @@ export function useElementMovement({
         }
       >()
       for (const elementId of elementIds) {
-        const element = drawingElements.find((el) => el.id === elementId)
+        const element = drawingElements.find(
+          (candidateElement) => candidateElement.id === elementId
+        )
         if (element) {
           elementsMap.set(elementId, {
             x: element.x,

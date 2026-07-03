@@ -42,7 +42,7 @@ import {
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import type {
-  ClassWithMemberships,
+  ClassroomWithMemberships,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
 
@@ -58,7 +58,7 @@ interface StudentSortable {
 export default function StudentTable() {
   const router = useRouter()
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
-  const [classes, setClasses] = useState<ClassWithMemberships[]>([])
+  const [classes, setClasses] = useState<ClassroomWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
     useState<string>("current_unassigned")
@@ -162,7 +162,10 @@ export default function StudentTable() {
   })
 
   // Selection handlers
-  const filteredIds = useMemo(() => sortedData.map((d) => d.id), [sortedData])
+  const filteredIds = useMemo(
+    () => sortedData.map((row) => row.id),
+    [sortedData]
+  )
 
   const isAllSelected =
     filteredIds.length > 0 &&
@@ -383,7 +386,9 @@ export default function StudentTable() {
               <SelectItem value="all">すべての学級</SelectItem>
               {classes
                 .filter((classroom) => classroom.isVisible !== false)
-                .sort((a, b) => a.name.localeCompare(b.name))
+                .sort((classroomA, classroomB) =>
+                  classroomA.name.localeCompare(classroomB.name)
+                )
                 .map((classroom) => (
                   <SelectItem key={classroom.id} value={classroom.id}>
                     {classroom.name}

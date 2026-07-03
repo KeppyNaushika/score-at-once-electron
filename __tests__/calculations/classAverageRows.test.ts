@@ -11,14 +11,14 @@ import { describe, expect, it } from "vitest"
 
 import { appendClassAverageRows } from "@/electron-src/lib/export/excel/averageRows"
 import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
-import type { ExamClassWithMembers } from "@/types/prismaExtensions"
+import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
-/** ExamClassWithMembers の最小モック（テストで使う teacherStat / class.name / memberships のみ） */
+/** ExamClassroomWithMembers の最小モック（テストで使う teacherStat / class.name / memberships のみ） */
 function makeClass(
   name: string,
   studentIds: string[],
   teacherStat = true
-): ExamClassWithMembers {
+): ExamClassroomWithMembers {
   return {
     id: `ec-${name}`,
     examId: "e1",
@@ -34,7 +34,7 @@ function makeClass(
       grade: 3,
       memberships: studentIds.map((studentId) => ({ studentId })),
     },
-  } as unknown as ExamClassWithMembers
+  } as unknown as ExamClassroomWithMembers
 }
 
 function makeStudent(
@@ -71,9 +71,9 @@ const TOTAL_COL = 8
 
 describe("appendClassAverageRows", () => {
   it("全体平均と teacherStat 学級平均を正しい列・値で出す", () => {
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet("点数一覧")
-    ws.addRow([
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("点数一覧")
+    worksheet.addRow([
       "受験状態",
       "順位",
       "学年",
@@ -93,22 +93,22 @@ describe("appendClassAverageRows", () => {
     ]
     const classes = [makeClass("3-A組", ["S1", "S2"])]
 
-    appendClassAverageRows(ws, all, classes, [], QUESTION_REGIONS)
+    appendClassAverageRows(worksheet, all, classes, [], QUESTION_REGIONS)
 
     // 空行 + 全体平均 + 3-A組平均
-    const overall = ws.getRow(3) // header=1, 空行=2, 全体平均=3
+    const overall = worksheet.getRow(3) // header=1, 空行=2, 全体平均=3
     expect(overall.getCell(NAME_COL).value).toBe("全体平均")
     expect(overall.getCell(TOTAL_COL).value).toBe(60)
 
-    const classRow = ws.getRow(4)
+    const classRow = worksheet.getRow(4)
     expect(classRow.getCell(NAME_COL).value).toBe("3-A組平均")
     expect(classRow.getCell(TOTAL_COL).value).toBe(70)
   })
 
   it("未採点(totalScore null)は平均母数から除外される", () => {
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet("点数一覧")
-    ws.addRow([
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("点数一覧")
+    worksheet.addRow([
       "受験状態",
       "順位",
       "学年",
@@ -126,15 +126,15 @@ describe("appendClassAverageRows", () => {
       makeStudent("S2", 80, 8),
       makeStudent("S3", null, null),
     ]
-    appendClassAverageRows(ws, all, [], [], QUESTION_REGIONS)
-    expect(ws.getRow(3).getCell(TOTAL_COL).value).toBe(70)
+    appendClassAverageRows(worksheet, all, [], [], QUESTION_REGIONS)
+    expect(worksheet.getRow(3).getCell(TOTAL_COL).value).toBe(70)
   })
 
   it("空データなら何も追加しない", () => {
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet("点数一覧")
-    ws.addRow(["氏名", "合計点"])
-    appendClassAverageRows(ws, [], [], [], QUESTION_REGIONS)
-    expect(ws.rowCount).toBe(1)
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("点数一覧")
+    worksheet.addRow(["氏名", "合計点"])
+    appendClassAverageRows(worksheet, [], [], [], QUESTION_REGIONS)
+    expect(worksheet.rowCount).toBe(1)
   })
 })

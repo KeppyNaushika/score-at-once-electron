@@ -41,7 +41,11 @@ describe("computeSpTable", () => {
     expect(result).not.toBeNull()
     const r = result!
     // 生徒は正答数降順
-    expect(r.students.map((s) => s.studentId)).toEqual(["S1", "S2", "S3"])
+    expect(r.students.map((student) => student.studentId)).toEqual([
+      "S1",
+      "S2",
+      "S3",
+    ])
     expect(r.students[0].correctCount).toBe(3)
     // S1(n=3)は分母0→null、S2/S3はGuttman一致で0
     expect(r.students[0].cautionIndex).toBeNull()
@@ -59,11 +63,15 @@ describe("computeSpTable", () => {
     ]
     const result = computeSpTable(data)!
     // colSum: p1=3, p2=2, p3=2 → 設問は p1,p2,p3 の順
-    expect(result.problems.map((p) => p.questionId)).toEqual(["q1", "q2", "q3"])
+    expect(result.problems.map((problem) => problem.questionId)).toEqual([
+      "q1",
+      "q2",
+      "q3",
+    ])
     expect(result.problems[0].correctCount).toBe(3)
 
-    const s3 = result.students.find((s) => s.studentId === "S3")!
-    const s4 = result.students.find((s) => s.studentId === "S4")!
+    const s3 = result.students.find((student) => student.studentId === "S3")!
+    const s4 = result.students.find((student) => student.studentId === "S4")!
     // 手計算: S3 CS=1.5, S4 CS=0
     expect(s3.cautionIndex).toBeCloseTo(1.5, 6)
     expect(s4.cautionIndex).toBeCloseTo(0, 6)
@@ -77,7 +85,7 @@ describe("computeSpTable", () => {
     ]
     const r = computeSpTable(data)!
     // S2 は p1,p2 正答・p3 誤答（並びは p1,p2,p3）
-    const s2 = r.students.find((s) => s.studentId === "S2")!
+    const s2 = r.students.find((student) => student.studentId === "S2")!
     expect(s2.cells).toEqual([true, true, false])
   })
 
@@ -90,7 +98,9 @@ describe("computeSpTable", () => {
     ]
     const r = computeSpTable(data)!
     expect(r.studentCount).toBe(3)
-    expect(r.students.find((s) => s.studentId === "S4")).toBeUndefined()
+    expect(
+      r.students.find((student) => student.studentId === "S4")
+    ).toBeUndefined()
   })
 
   it("有効生徒が居なければ null", () => {

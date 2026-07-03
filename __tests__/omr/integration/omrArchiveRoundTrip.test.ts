@@ -41,7 +41,7 @@ beforeAll(async () => {
   examPageId = page.id
 
   // CropRegion x2 + OMR設定
-  const cr1 = await prisma.cropRegion.create({
+  const cropRegion1 = await prisma.cropRegion.create({
     data: {
       examPageId: page.id,
       label: "設問1",
@@ -58,7 +58,7 @@ beforeAll(async () => {
   // choice OMR設定
   const omrConfig1 = await prisma.cropRegionOmrConfig.create({
     data: {
-      cropRegionId: cr1.id,
+      cropRegionId: cropRegion1.id,
       type: "choice",
       numChoices: 4,
       choiceLayout: "horizontal",
@@ -93,7 +93,7 @@ beforeAll(async () => {
     ],
   })
 
-  const cr2 = await prisma.cropRegion.create({
+  const cropRegion2 = await prisma.cropRegion.create({
     data: {
       examPageId: page.id,
       label: "設問2",
@@ -110,7 +110,7 @@ beforeAll(async () => {
   // handwritten-digit OMR設定
   await prisma.cropRegionOmrConfig.create({
     data: {
-      cropRegionId: cr2.id,
+      cropRegionId: cropRegion2.id,
       type: "handwritten-digit",
       numDigits: 3,
       correctAnswer: "256",
@@ -134,7 +134,7 @@ describe("OMR設定の読み書き整合性", () => {
     expect(configs).toHaveLength(2)
 
     // orderIndex 0 = choice
-    const choiceConfig = configs.find((c) => c.type === "choice")
+    const choiceConfig = configs.find((config) => config.type === "choice")
     expect(choiceConfig).toBeDefined()
     expect(choiceConfig!.numChoices).toBe(4)
     expect(choiceConfig!.choiceLayout).toBe("horizontal")
@@ -145,7 +145,9 @@ describe("OMR設定の読み書き整合性", () => {
     expect(choiceConfig!.choiceOptions[3].isCorrect).toBe(false)
 
     // orderIndex 1 = handwritten-digit
-    const digitConfig = configs.find((c) => c.type === "handwritten-digit")
+    const digitConfig = configs.find(
+      (config) => config.type === "handwritten-digit"
+    )
     expect(digitConfig).toBeDefined()
     expect(digitConfig!.numDigits).toBe(3)
     expect(digitConfig!.correctAnswer).toBe("256")
@@ -270,7 +272,9 @@ describe("OMR設定の読み書き整合性", () => {
 
     expect(importedConfigs).toHaveLength(2)
 
-    const importedChoice = importedConfigs.find((c) => c.type === "choice")!
+    const importedChoice = importedConfigs.find(
+      (config) => config.type === "choice"
+    )!
     expect(importedChoice.numChoices).toBe(4)
     expect(importedChoice.choiceLayout).toBe("horizontal")
     expect(importedChoice.choiceOptions).toHaveLength(4)
@@ -278,7 +282,7 @@ describe("OMR設定の読み書き整合性", () => {
     expect(importedChoice.choiceOptions[0].isCorrect).toBe(true)
 
     const importedDigit = importedConfigs.find(
-      (c) => c.type === "handwritten-digit"
+      (config) => config.type === "handwritten-digit"
     )!
     expect(importedDigit.numDigits).toBe(3)
     expect(importedDigit.correctAnswer).toBe("256")

@@ -1,7 +1,7 @@
 import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
 
-import type { ExamClassWithMembers } from "@/types/prismaExtensions"
+import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 import { ScoringData } from "../../shared/types/exportTypes"
 import { autoFitColumns } from "../../shared/utilities/excelUtilities"
@@ -27,7 +27,7 @@ export async function createScoreSheet(
   /** 学級平均行の母集団（試験全体の採点データ。選択生徒ではない） */
   allScoringData: ScoringData[] = [],
   /** teacherStat=true の登録学級（受験日所属生徒つき） */
-  teacherStatClasses: ExamClassWithMembers[] = []
+  teacherStatClasses: ExamClassroomWithMembers[] = []
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("点数一覧")
 

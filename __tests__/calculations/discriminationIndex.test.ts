@@ -41,14 +41,14 @@ function makeScoringData(
   const total =
     totalScore !== undefined
       ? totalScore
-      : scores.reduce((sum, s) => sum + (s.score ?? 0), 0)
+      : scores.reduce((sum, score) => sum + (score.score ?? 0), 0)
   return {
     studentId,
     studentName: `生徒${studentId}`,
     studentNumber: studentId,
     scores,
     totalScore: total,
-    totalMaxScore: scores.reduce((sum, s) => sum + s.maxScore, 0),
+    totalMaxScore: scores.reduce((sum, score) => sum + score.maxScore, 0),
     subtotalScores: [],
   }
 }
@@ -239,19 +239,29 @@ describe("calculateDiscriminationIndices", () => {
 
     const data: ScoringData[] = Array.from(
       { length: studentCount },
-      (_, si) => {
-        const scores = Array.from({ length: questionCount }, (_, qi) =>
-          makeScore(`q${qi}`, (si + qi) % 11, 10)
+      (_, studentIndex) => {
+        const scores = Array.from(
+          { length: questionCount },
+          (_, questionIndex) =>
+            makeScore(
+              `q${questionIndex}`,
+              (studentIndex + questionIndex) % 11,
+              10
+            )
         )
-        return makeScoringData(`s${si}`, scores)
+        return makeScoringData(`s${studentIndex}`, scores)
       }
     )
 
     const result = calculateDiscriminationIndices(data)
     expect(Object.keys(result)).toHaveLength(questionCount)
     // 全設問について値が返る（null含む）
-    for (let qi = 0; qi < questionCount; qi++) {
-      expect(result[`q${qi}`]).toBeDefined()
+    for (
+      let questionIndex = 0;
+      questionIndex < questionCount;
+      questionIndex++
+    ) {
+      expect(result[`q${questionIndex}`]).toBeDefined()
     }
   })
 

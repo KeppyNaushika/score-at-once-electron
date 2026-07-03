@@ -40,9 +40,9 @@ export interface CascadeMover {
  */
 export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
   {
-    model: "StudentClassMembership",
+    model: "StudentClassroomMembership",
     move: (tx, from, to) =>
-      tx.studentClassMembership.updateMany({
+      tx.studentClassroomMembership.updateMany({
         where: { studentId: from },
         data: { studentId: to },
       }),
@@ -208,33 +208,33 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
  */
 export const CLASS_CASCADE_MOVERS: CascadeMover[] = [
   {
-    model: "StudentClassMembership",
+    model: "StudentClassroomMembership",
     move: (tx, from, to) =>
-      tx.studentClassMembership.updateMany({
+      tx.studentClassroomMembership.updateMany({
         where: { classroomId: from },
         data: { classroomId: to },
       }),
   },
   {
-    model: "ExamClass",
+    model: "ExamClassroom",
     move: (tx, from, to) =>
-      tx.examClass.updateMany({
+      tx.examClassroom.updateMany({
         where: { classroomId: from },
         data: { classroomId: to },
       }),
   },
   {
-    model: "GradeClass",
+    model: "GradeClassroom",
     move: (tx, from, to) =>
-      tx.gradeClass.updateMany({
+      tx.gradeClassroom.updateMany({
         where: { classroomId: from },
         data: { classroomId: to },
       }),
   },
   {
-    model: "CourseworkClass",
+    model: "CourseworkClassroom",
     move: (tx, from, to) =>
-      tx.courseworkClass.updateMany({
+      tx.courseworkClassroom.updateMany({
         where: { classroomId: from },
         data: { classroomId: to },
       }),

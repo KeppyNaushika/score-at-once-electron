@@ -344,28 +344,32 @@ function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
 
 /** DB TextElement 行を CellTextElement 配列に変換する */
 function dbTextElements(elements: AsbTextElement[]): CellTextElement[] {
-  return elements.map((te) => ({
-    id: te.id,
-    text: te.text,
-    fontSize: te.fontSize,
-    horizontalAlign: te.horizontalAlign as CellTextElement["horizontalAlign"],
-    verticalAlign: te.verticalAlign as CellTextElement["verticalAlign"],
+  return elements.map((textElement) => ({
+    id: textElement.id,
+    text: textElement.text,
+    fontSize: textElement.fontSize,
+    horizontalAlign:
+      textElement.horizontalAlign as CellTextElement["horizontalAlign"],
+    verticalAlign:
+      textElement.verticalAlign as CellTextElement["verticalAlign"],
   }))
 }
 
 /** DB ImageElement 行を CellImageElement 配列に変換する */
 function dbImageElements(elements: AsbImageElement[]): CellImageElement[] {
-  return elements.map((ie) => ({
-    id: ie.id,
-    imagePath: ie.imagePath,
-    originalName: ie.originalName,
-    objectFit: ie.objectFit as CellImageElement["objectFit"],
-    horizontalAlign: ie.horizontalAlign as CellImageElement["horizontalAlign"],
-    verticalAlign: ie.verticalAlign as CellImageElement["verticalAlign"],
-    opacity: ie.opacity,
+  return elements.map((imageElement) => ({
+    id: imageElement.id,
+    imagePath: imageElement.imagePath,
+    originalName: imageElement.originalName,
+    objectFit: imageElement.objectFit as CellImageElement["objectFit"],
+    horizontalAlign:
+      imageElement.horizontalAlign as CellImageElement["horizontalAlign"],
+    verticalAlign:
+      imageElement.verticalAlign as CellImageElement["verticalAlign"],
+    opacity: imageElement.opacity,
     visibility:
-      ie.visibility !== "both"
-        ? (ie.visibility as CellImageElement["visibility"])
+      imageElement.visibility !== "both"
+        ? (imageElement.visibility as CellImageElement["visibility"])
         : undefined,
   }))
 }
@@ -380,10 +384,10 @@ function dbToOmrConfig(
     return {
       type: "choice",
       numChoices: config.numChoices ?? 4,
-      labels: config.choiceOptions.map((o) => o.label),
+      labels: config.choiceOptions.map((option) => option.label),
       correctAnswers: config.choiceOptions
-        .filter((o) => o.isCorrect)
-        .map((o) => o.choiceIndex),
+        .filter((option) => option.isCorrect)
+        .map((option) => option.choiceIndex),
       layout: (config.choiceLayout ??
         "horizontal") as OMRChoiceConfig["layout"],
     }
@@ -402,98 +406,65 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
   // ヘッダーフィールドをDBから復元
   if (row.headerFields) {
     settings.headerFields = row.headerFields.map(
-      (hf): HeaderFieldDefinition => ({
-        id: hf.id,
-        type: (hf.type as HeaderFieldDefinition["type"]) ?? "field",
-        label: hf.label,
-        widthMm: hf.widthMm,
-        heightMm: hf.heightMm,
-        gridCount: hf.gridCount,
-        lineStyle: hf.lineStyle as LineStyle,
-        lineWidth: hf.lineWidth,
-        order: hf.order,
-        fontSize: hf.fontSize ?? undefined,
+      (headerField): HeaderFieldDefinition => ({
+        id: headerField.id,
+        type: (headerField.type as HeaderFieldDefinition["type"]) ?? "field",
+        label: headerField.label,
+        widthMm: headerField.widthMm,
+        heightMm: headerField.heightMm,
+        gridCount: headerField.gridCount,
+        lineStyle: headerField.lineStyle as LineStyle,
+        lineWidth: headerField.lineWidth,
+        order: headerField.order,
+        fontSize: headerField.fontSize ?? undefined,
         linkedRegionType:
-          (hf.linkedRegionType as LinkedRegionType) ?? undefined,
+          (headerField.linkedRegionType as LinkedRegionType) ?? undefined,
       })
     )
   }
-  const majorQuestions: MajorQuestion[] = row.majorQuestions.map((mq) => ({
-    id: mq.id,
-    label: mq.label,
-    subQuestions: mq.subQuestions.map((sq): SubQuestion => {
-      const manuscriptPaper = sq.manuscriptEnabled
-        ? {
-            enabled: true as const,
-            columns: sq.manuscriptColumns,
-            rows: sq.manuscriptRows,
-            charGuides: parseCharGuides(sq.manuscriptCharGuides),
-            guideFontSize: sq.manuscriptGuideFontSize ?? undefined,
-            guidePosition:
-              (sq.manuscriptGuidePosition as ManuscriptGuidePosition | null) ??
-              undefined,
-            guidePadding: sq.manuscriptGuidePadding ?? undefined,
-          }
-        : undefined
-      const borderStyles =
-        sq.borderStyleTop ||
-        sq.borderStyleBottom ||
-        sq.borderStyleLeft ||
-        sq.borderStyleRight
-          ? {
-              top: sq.borderStyleTop as SubQuestion["borderStyles"] extends infer T
-                ? T extends { top?: infer U }
-                  ? U
-                  : undefined
-                : undefined,
-              bottom:
-                sq.borderStyleBottom as SubQuestion["borderStyles"] extends infer T
-                  ? T extends { bottom?: infer U }
-                    ? U
-                    : undefined
-                  : undefined,
-              left: sq.borderStyleLeft as SubQuestion["borderStyles"] extends infer T
-                ? T extends { left?: infer U }
-                  ? U
-                  : undefined
-                : undefined,
-              right:
-                sq.borderStyleRight as SubQuestion["borderStyles"] extends infer T
-                  ? T extends { right?: infer U }
-                    ? U
-                    : undefined
-                  : undefined,
-            }
-          : undefined
-
-      return {
-        id: sq.id,
-        label: sq.label,
-        branchQuestions: sq.branchQuestions.map((bq): BranchQuestion => {
-          const bqBorderStyles =
-            bq.borderStyleTop ||
-            bq.borderStyleBottom ||
-            bq.borderStyleLeft ||
-            bq.borderStyleRight
+  const majorQuestions: MajorQuestion[] = row.majorQuestions.map(
+    (majorQuestion) => ({
+      id: majorQuestion.id,
+      label: majorQuestion.label,
+      subQuestions: majorQuestion.subQuestions.map(
+        (subQuestion): SubQuestion => {
+          const manuscriptPaper = subQuestion.manuscriptEnabled
+            ? {
+                enabled: true as const,
+                columns: subQuestion.manuscriptColumns,
+                rows: subQuestion.manuscriptRows,
+                charGuides: parseCharGuides(subQuestion.manuscriptCharGuides),
+                guideFontSize: subQuestion.manuscriptGuideFontSize ?? undefined,
+                guidePosition:
+                  (subQuestion.manuscriptGuidePosition as ManuscriptGuidePosition | null) ??
+                  undefined,
+                guidePadding: subQuestion.manuscriptGuidePadding ?? undefined,
+              }
+            : undefined
+          const borderStyles =
+            subQuestion.borderStyleTop ||
+            subQuestion.borderStyleBottom ||
+            subQuestion.borderStyleLeft ||
+            subQuestion.borderStyleRight
               ? {
-                  top: bq.borderStyleTop as BranchQuestion["borderStyles"] extends infer T
+                  top: subQuestion.borderStyleTop as SubQuestion["borderStyles"] extends infer T
                     ? T extends { top?: infer U }
                       ? U
                       : undefined
                     : undefined,
                   bottom:
-                    bq.borderStyleBottom as BranchQuestion["borderStyles"] extends infer T
+                    subQuestion.borderStyleBottom as SubQuestion["borderStyles"] extends infer T
                       ? T extends { bottom?: infer U }
                         ? U
                         : undefined
                       : undefined,
-                  left: bq.borderStyleLeft as BranchQuestion["borderStyles"] extends infer T
+                  left: subQuestion.borderStyleLeft as SubQuestion["borderStyles"] extends infer T
                     ? T extends { left?: infer U }
                       ? U
                       : undefined
                     : undefined,
                   right:
-                    bq.borderStyleRight as BranchQuestion["borderStyles"] extends infer T
+                    subQuestion.borderStyleRight as SubQuestion["borderStyles"] extends infer T
                       ? T extends { right?: infer U }
                         ? U
                         : undefined
@@ -502,33 +473,79 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
               : undefined
 
           return {
-            id: bq.id,
-            label: bq.label,
-            heightMultiplier: bq.heightMultiplier,
-            points: bq.points,
-            textElements: dbTextElements(bq.textElements),
-            imageElements: dbImageElements(bq.imageElements),
-            borderStyles: bqBorderStyles as BranchQuestion["borderStyles"],
-            layoutWidth: bq.layoutWidth ?? undefined,
-            nextPlacement: bq.nextPlacement as BranchQuestion["nextPlacement"],
-            goUp: bq.goUp ?? undefined,
-            omrConfig: bq.omrConfig ? dbToOmrConfig(bq.omrConfig) : undefined,
+            id: subQuestion.id,
+            label: subQuestion.label,
+            branchQuestions: subQuestion.branchQuestions.map(
+              (branchQuestion): BranchQuestion => {
+                const bqBorderStyles =
+                  branchQuestion.borderStyleTop ||
+                  branchQuestion.borderStyleBottom ||
+                  branchQuestion.borderStyleLeft ||
+                  branchQuestion.borderStyleRight
+                    ? {
+                        top: branchQuestion.borderStyleTop as BranchQuestion["borderStyles"] extends infer T
+                          ? T extends { top?: infer U }
+                            ? U
+                            : undefined
+                          : undefined,
+                        bottom:
+                          branchQuestion.borderStyleBottom as BranchQuestion["borderStyles"] extends infer T
+                            ? T extends { bottom?: infer U }
+                              ? U
+                              : undefined
+                            : undefined,
+                        left: branchQuestion.borderStyleLeft as BranchQuestion["borderStyles"] extends infer T
+                          ? T extends { left?: infer U }
+                            ? U
+                            : undefined
+                          : undefined,
+                        right:
+                          branchQuestion.borderStyleRight as BranchQuestion["borderStyles"] extends infer T
+                            ? T extends { right?: infer U }
+                              ? U
+                              : undefined
+                            : undefined,
+                      }
+                    : undefined
+
+                return {
+                  id: branchQuestion.id,
+                  label: branchQuestion.label,
+                  heightMultiplier: branchQuestion.heightMultiplier,
+                  points: branchQuestion.points,
+                  textElements: dbTextElements(branchQuestion.textElements),
+                  imageElements: dbImageElements(branchQuestion.imageElements),
+                  borderStyles:
+                    bqBorderStyles as BranchQuestion["borderStyles"],
+                  layoutWidth: branchQuestion.layoutWidth ?? undefined,
+                  nextPlacement:
+                    branchQuestion.nextPlacement as BranchQuestion["nextPlacement"],
+                  goUp: branchQuestion.goUp ?? undefined,
+                  omrConfig: branchQuestion.omrConfig
+                    ? dbToOmrConfig(branchQuestion.omrConfig)
+                    : undefined,
+                }
+              }
+            ),
+            heightMultiplier: subQuestion.heightMultiplier,
+            points: subQuestion.points,
+            textElements: dbTextElements(subQuestion.textElements),
+            imageElements: dbImageElements(subQuestion.imageElements),
+            manuscriptPaper,
+            borderStyles: borderStyles as SubQuestion["borderStyles"],
+            layoutWidth: subQuestion.layoutWidth ?? undefined,
+            nextPlacement:
+              subQuestion.nextPlacement as SubQuestion["nextPlacement"],
+            goUp: subQuestion.goUp ?? undefined,
+            usesBranchPoints: subQuestion.usesBranchPoints ?? undefined,
+            omrConfig: subQuestion.omrConfig
+              ? dbToOmrConfig(subQuestion.omrConfig)
+              : undefined,
           }
-        }),
-        heightMultiplier: sq.heightMultiplier,
-        points: sq.points,
-        textElements: dbTextElements(sq.textElements),
-        imageElements: dbImageElements(sq.imageElements),
-        manuscriptPaper,
-        borderStyles: borderStyles as SubQuestion["borderStyles"],
-        layoutWidth: sq.layoutWidth ?? undefined,
-        nextPlacement: sq.nextPlacement as SubQuestion["nextPlacement"],
-        goUp: sq.goUp ?? undefined,
-        usesBranchPoints: sq.usesBranchPoints ?? undefined,
-        omrConfig: sq.omrConfig ? dbToOmrConfig(sq.omrConfig) : undefined,
-      }
-    }),
-  }))
+        }
+      ),
+    })
+  )
 
   return {
     id: row.id,
