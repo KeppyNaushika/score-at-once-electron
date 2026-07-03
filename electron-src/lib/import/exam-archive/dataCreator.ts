@@ -105,7 +105,7 @@ export async function createImportedData(
         const newClassId = remapId(membership.classroomId, mappings.classroom)
 
         if (newStudentId && newClassId) {
-          await tx.studentClassMembership.create({
+          await tx.studentClassroomMembership.create({
             data: {
               id: remapIdRequired(membership.id, mappings.membership),
               studentId: newStudentId,
@@ -322,10 +322,10 @@ export async function createImportedData(
       }
 
       // 9.5. ExamClassを作成 (v1.1.0+)
-      for (const examClass of data.examData.examClasses || []) {
+      for (const examClass of data.examData.examClassrooms || []) {
         const newClassId = remapId(examClass.classroomId, mappings.classroom)
         if (newClassId) {
-          await tx.examClass.create({
+          await tx.examClassroom.create({
             data: {
               id: remapIdRequired(examClass.id, mappings.examClass),
               examId: newExamId,
@@ -550,21 +550,24 @@ export async function createImportedData(
       // 14. QuestionScoreを作成
       // v0.3.0以降: userIdを現在のログインユーザーで上書き
       // v0.4.0以降: studentIdは必須フィールド
-      for (const qs of data.scoresData.questionScores) {
-        const newCropRegionId = remapId(qs.cropRegionId, mappings.cropRegion)
-        const newStudentId = remapId(qs.studentId, mappings.student)
+      for (const questionScore of data.scoresData.questionScores) {
+        const newCropRegionId = remapId(
+          questionScore.cropRegionId,
+          mappings.cropRegion
+        )
+        const newStudentId = remapId(questionScore.studentId, mappings.student)
 
         // studentIdは必須フィールド
         if (newCropRegionId && newStudentId) {
           await tx.questionScore.create({
             data: {
-              id: remapIdRequired(qs.id, mappings.questionScore),
+              id: remapIdRequired(questionScore.id, mappings.questionScore),
               cropRegionId: newCropRegionId,
               studentId: newStudentId,
-              partialScore: qs.partialScore
-                ? parseFloat(qs.partialScore)
+              partialScore: questionScore.partialScore
+                ? parseFloat(questionScore.partialScore)
                 : null,
-              status: qs.status,
+              status: questionScore.status,
               userId: currentUserId,
             },
           })

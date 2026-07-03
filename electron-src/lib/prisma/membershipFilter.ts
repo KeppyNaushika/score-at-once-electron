@@ -22,7 +22,7 @@ import { Prisma } from "@prisma/client"
  */
 export function membershipFilterAt(
   referenceDate?: Date | null
-): Prisma.StudentClassMembershipWhereInput {
+): Prisma.StudentClassroomMembershipWhereInput {
   const date = referenceDate ?? new Date()
   return {
     startDate: { lte: date },

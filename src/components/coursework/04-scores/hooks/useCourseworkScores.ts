@@ -76,7 +76,7 @@ export function useCourseworkScores(courseworkId: string) {
 
       const sortedItems = cwResult.coursework.items
         .slice()
-        .sort((a, b) => a.order - b.order)
+        .sort((itemA, itemB) => itemA.order - itemB.order)
       setItems(sortedItems)
 
       if (!studentsResult.success || !studentsResult.students) return

@@ -760,7 +760,7 @@ export interface ArchiveExamData {
     updatedAt: string
   }>
   /** v1.1.0+ ExamClass関係 */
-  examClasses: Array<{
+  examClassrooms: Array<{
     id: string
     examId: string
     classroomId: string

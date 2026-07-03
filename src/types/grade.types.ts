@@ -12,7 +12,7 @@ export interface GradeWithDetails {
   referenceDate: string | null
   createdAt: Date
   updatedAt: Date
-  gradeClasses: {
+  gradeClassrooms: {
     id: string
     classroomId: string
     classroom: { id: string; name: string }

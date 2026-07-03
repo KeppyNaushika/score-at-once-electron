@@ -308,9 +308,9 @@ export function AnnotationBrowserPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全設問</SelectItem>
-              {cropRegions.map((cr) => (
-                <SelectItem key={cr.id} value={cr.id}>
-                  {cr.label || cr.id.slice(0, 6)}
+              {cropRegions.map((cropRegion) => (
+                <SelectItem key={cropRegion.id} value={cropRegion.id}>
+                  {cropRegion.label || cropRegion.id.slice(0, 6)}
                 </SelectItem>
               ))}
             </SelectContent>

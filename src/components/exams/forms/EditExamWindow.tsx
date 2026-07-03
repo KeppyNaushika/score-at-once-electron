@@ -52,7 +52,7 @@ const EditExamWindow = ({
           window.electronAPI.examTagGetByExamId(examToEdit.id),
           window.electronAPI.tagGetAll(),
         ])
-        setTagNames(examTags.map((et) => et.tag.name))
+        setTagNames(examTags.map((examTag) => examTag.tag.name))
         setAllTags(tags)
       } catch {
         // ignore
@@ -102,7 +102,7 @@ const EditExamWindow = ({
   )
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTagNames(tagNames.filter((t) => t !== tagToRemove))
+    setTagNames(tagNames.filter((tagName) => tagName !== tagToRemove))
   }
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -114,10 +114,10 @@ const EditExamWindow = ({
 
   // サジェスト候補
   const suggestions = allTags.filter(
-    (t) =>
-      !tagNames.includes(t.name) &&
+    (tag) =>
+      !tagNames.includes(tag.name) &&
       (currentTagInput.trim() === "" ||
-        t.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
+        tag.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
   )
 
   return (

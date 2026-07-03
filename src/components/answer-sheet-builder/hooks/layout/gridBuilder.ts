@@ -80,8 +80,8 @@ export function buildGridLayout<
     if (!advanced) {
       // グリッド全体の下端を計算
       let gridBottom = 0
-      for (const r of rows) {
-        gridBottom = Math.max(gridBottom, r.y + r.maxH)
+      for (const row of rows) {
+        gridBottom = Math.max(gridBottom, row.y + row.maxH)
       }
 
       if (
@@ -229,7 +229,7 @@ export function mergeAbsoluteRightEdges(
     ySet.add(e.yTop)
     ySet.add(e.yBottom)
   }
-  const sortedYs = Array.from(ySet).sort((a, b) => a - b)
+  const sortedYs = Array.from(ySet).sort((yA, yB) => yA - yB)
   const result: { yTop: number; yBottom: number; rightX: number }[] = []
   for (let i = 0; i < sortedYs.length - 1; i++) {
     const yTop = sortedYs[i]
@@ -274,7 +274,7 @@ export function computeGridRowRightEdges<T>(
     absCells.push({ y: cellY, yEnd: cellYEnd, rightX: cellRightX })
   }
 
-  const sortedYs = Array.from(ySet).sort((a, b) => a - b)
+  const sortedYs = Array.from(ySet).sort((yA, yB) => yA - yB)
   const result: { yTop: number; yBottom: number; rightX: number }[] = []
 
   for (let i = 0; i < sortedYs.length - 1; i++) {
@@ -323,7 +323,7 @@ export function computeGridRowLeftEdges<T>(
     absCells.push({ y: cellY, yEnd: cellYEnd, leftX: cellLeftX })
   }
 
-  const sortedYs = Array.from(ySet).sort((a, b) => a - b)
+  const sortedYs = Array.from(ySet).sort((yA, yB) => yA - yB)
   const result: { yTop: number; yBottom: number; leftX: number }[] = []
 
   for (let i = 0; i < sortedYs.length - 1; i++) {

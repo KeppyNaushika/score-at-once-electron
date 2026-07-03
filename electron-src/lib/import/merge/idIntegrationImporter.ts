@@ -1031,18 +1031,18 @@ export async function processMemberships(
     const newClassId = idMappings.classroom[membership.classroomId]
 
     if (newStudentId && newClassId) {
-      const existing = await tx.studentClassMembership.findFirst({
+      const existing = await tx.studentClassroomMembership.findFirst({
         where: { studentId: newStudentId, classroomId: newClassId },
       })
 
       if (!existing) {
-        const existingById = await tx.studentClassMembership.findUnique({
+        const existingById = await tx.studentClassroomMembership.findUnique({
           where: { id: membership.id },
         })
         if (existingById) {
           idMappings.membership[membership.id] = membership.id
         } else {
-          await tx.studentClassMembership.create({
+          await tx.studentClassroomMembership.create({
             data: {
               id: membership.id,
               studentId: newStudentId,
@@ -1245,20 +1245,20 @@ async function processExamClasses(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const examClass of data.examData.examClasses) {
+  for (const examClass of data.examData.examClassrooms) {
     const newClassId = idMappings.classroom[examClass.classroomId]
     if (!newClassId) continue
 
-    const existing = await tx.examClass.findFirst({
+    const existing = await tx.examClassroom.findFirst({
       where: { examId: newExamId, classroomId: newClassId },
     })
     if (existing) continue
 
-    const existingById = await tx.examClass.findUnique({
+    const existingById = await tx.examClassroom.findUnique({
       where: { id: examClass.id },
     })
     if (!existingById) {
-      await tx.examClass.create({
+      await tx.examClassroom.create({
         data: {
           id: examClass.id,
           examId: newExamId,

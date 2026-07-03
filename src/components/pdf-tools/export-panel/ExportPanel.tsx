@@ -142,7 +142,9 @@ function generateOutputPages(
   if (mode === "merge" || mode === "split") {
     // 結合・分割モード: 選択されたページを順番に追加
     for (const file of files) {
-      const sortedPages = Array.from(file.selectedPages).sort((a, b) => a - b)
+      const sortedPages = Array.from(file.selectedPages).sort(
+        (pageNumberA, pageNumberB) => pageNumberA - pageNumberB
+      )
 
       if (file.nUp.enabled) {
         // 2-in-1モード: 2ページずつ結合
@@ -183,10 +185,14 @@ function generateOutputPages(
     const filePageGroups: OutputPage[][] = []
 
     for (const transform of interleaveConfig.transforms) {
-      const file = files.find((f) => f.id === transform.fileId)
+      const file = files.find(
+        (candidateFile) => candidateFile.id === transform.fileId
+      )
       if (!file) continue
 
-      const sortedPages = Array.from(file.selectedPages).sort((a, b) => a - b)
+      const sortedPages = Array.from(file.selectedPages).sort(
+        (pageNumberA, pageNumberB) => pageNumberA - pageNumberB
+      )
       const group: OutputPage[] = []
 
       if (transform.nUp.enabled) {

@@ -274,9 +274,14 @@ function ChoiceConfigFields({
               return
             }
             setForceCustom(false)
-            const p = CHOICE_LABEL_PRESETS.find((pr) => pr.value === preset)
-            if (p) {
-              const labels = p.labels.slice(0, Math.max(2, p.labels.length))
+            const matchedPreset = CHOICE_LABEL_PRESETS.find(
+              (presetOption) => presetOption.value === preset
+            )
+            if (matchedPreset) {
+              const labels = matchedPreset.labels.slice(
+                0,
+                Math.max(2, matchedPreset.labels.length)
+              )
               onChange({
                 ...config,
                 numChoices: labels.length,

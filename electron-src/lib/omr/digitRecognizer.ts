@@ -233,7 +233,9 @@ export async function recognizeDigitCell(
     // 空欄チェック: ほとんど白い場合はスキップ
     // colorThresholdを0-1スケールに変換して空欄判定に利用
     const blankThreshold = params.colorThreshold / 255
-    const nonZeroCount = input.filter((v) => v > blankThreshold).length
+    const nonZeroCount = input.filter(
+      (pixelValue) => pixelValue > blankThreshold
+    ).length
     if (nonZeroCount < 10) {
       recognizedDigits.push("")
       continue
@@ -250,7 +252,7 @@ export async function recognizeDigitCell(
     }
   }
 
-  const validDigits = recognizedDigits.filter((d) => d !== "")
+  const validDigits = recognizedDigits.filter((digit) => digit !== "")
   const recognizedValue = recognizedDigits.join("")
   const confidence =
     validDigits.length > 0 ? totalConfidence / validDigits.length : 0

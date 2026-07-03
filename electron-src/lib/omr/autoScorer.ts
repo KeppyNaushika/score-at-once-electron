@@ -38,7 +38,9 @@ export function convertToScoreEntriesFromDb(
   cropRegionPointsMap: Record<string, number>
 ): AutoScoreEntry[] {
   // omrConfigをcropRegionIdでインデックス化
-  const configMap = new Map(omrConfigs.map((c) => [c.cropRegionId, c]))
+  const configMap = new Map(
+    omrConfigs.map((omrConfig) => [omrConfig.cropRegionId, omrConfig])
+  )
 
   return cellResults.map((result) => {
     // resultのlabelにはcropRegionIdが格納されている前提
@@ -82,8 +84,8 @@ export function convertToScoreEntriesFromDb(
         .map((opt) => opt.label)
 
       if (correctLabels.length > 1) {
-        const correctCount = result.recognizedValues.filter((v) =>
-          correctLabels.includes(v)
+        const correctCount = result.recognizedValues.filter((value) =>
+          correctLabels.includes(value)
         ).length
         if (correctCount > 0 && correctCount < correctLabels.length) {
           status = "partial"

@@ -273,8 +273,8 @@ describe("groupSubtotalData", () => {
     const result = groupSubtotalData(scores)
     expect(result).toHaveLength(2)
 
-    const kokugo = result.find((g) => g.groupName === "国語")
-    const sugaku = result.find((g) => g.groupName === "数学")
+    const kokugo = result.find((group) => group.groupName === "国語")
+    const sugaku = result.find((group) => group.groupName === "数学")
     expect(kokugo?.totalScore).toBe(30)
     expect(sugaku?.totalScore).toBe(0)
   })

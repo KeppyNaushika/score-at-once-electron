@@ -111,7 +111,7 @@ export async function getAuditLogs(
 
   // 操作者情報を一括解決
   const userIds = Array.from(
-    new Set(rows.map((r) => r.userId).filter((id): id is string => !!id))
+    new Set(rows.map((row) => row.userId).filter((id): id is string => !!id))
   )
   const users =
     userIds.length > 0
@@ -120,33 +120,33 @@ export async function getAuditLogs(
           select: { id: true, name: true, username: true },
         })
       : []
-  const userMap = new Map(users.map((u) => [u.id, u]))
+  const userMap = new Map(users.map((user) => [user.id, user]))
 
   const toIso = (v: Date | string): string =>
     v instanceof Date ? v.toISOString() : String(v)
 
-  const entries: AuditLogEntry[] = rows.map((r) => {
-    const def = getAuditActionDef(r.action)
-    const actor = r.userId ? userMap.get(r.userId) : undefined
-    const metadata = parseMetadata(r.metadata)
+  const entries: AuditLogEntry[] = rows.map((row) => {
+    const def = getAuditActionDef(row.action)
+    const actor = row.userId ? userMap.get(row.userId) : undefined
+    const metadata = parseMetadata(row.metadata)
     const occurrences =
       typeof metadata?.occurrences === "number" ? metadata.occurrences : 1
     return {
-      id: r.id,
-      createdAt: toIso(r.createdAt),
-      updatedAt: toIso(r.updatedAt),
+      id: row.id,
+      createdAt: toIso(row.createdAt),
+      updatedAt: toIso(row.updatedAt),
       occurrences,
-      action: r.action,
+      action: row.action,
       category: def.category,
       verb: def.verb,
-      userId: r.userId,
+      userId: row.userId,
       actorName: actor?.name ?? null,
       actorUsername: actor?.username ?? null,
-      entityType: r.entityType,
-      entityId: r.entityId,
-      scopeId: r.scopeId,
-      scopeLabel: r.scopeLabel,
-      summary: r.summary,
+      entityType: row.entityType,
+      entityId: row.entityId,
+      scopeId: row.scopeId,
+      scopeLabel: row.scopeLabel,
+      summary: row.summary,
       metadata,
     }
   })
@@ -171,17 +171,17 @@ export async function getAuditLogScopes(): Promise<AuditScopeFacet[]> {
   return rows
     .filter(
       (
-        r
-      ): r is {
+        row
+      ): row is {
         scopeId: string
         scopeLabel: string | null
         category: string
-      } => !!r.scopeId
+      } => !!row.scopeId
     )
-    .map((r) => ({
-      scopeId: r.scopeId,
-      scopeLabel: r.scopeLabel,
-      category: r.category,
+    .map((row) => ({
+      scopeId: row.scopeId,
+      scopeLabel: row.scopeLabel,
+      category: row.category,
     }))
 }
 

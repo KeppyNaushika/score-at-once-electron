@@ -756,7 +756,9 @@ export function useCanvasDrawing({
     // 選択中要素のハンドルを描画
     if (selectedElementIds.length > 0) {
       selectedElementIds.forEach((id) => {
-        const element = drawingElements.find((el) => el.id === id)
+        const element = drawingElements.find(
+          (candidateElement) => candidateElement.id === id
+        )
         if (!element) return
         drawElementHandles(element, handleSize, halfHandle, "#3b82f6", 1.0)
       })
@@ -765,7 +767,9 @@ export function useCanvasDrawing({
     // テキスト要素のドラッグ中: 簡易表示
     if (isDraggingElement && selectedElementIds.length > 0) {
       selectedElementIds.forEach((id) => {
-        const element = drawingElements.find((el) => el.id === id)
+        const element = drawingElements.find(
+          (candidateElement) => candidateElement.id === id
+        )
         if (!element || element.type !== "text") return
 
         ctx.save()

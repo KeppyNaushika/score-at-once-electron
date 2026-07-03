@@ -723,7 +723,7 @@ export function computeLayoutFromDefinition(
           bottom: majorLayoutRanges[i + 1].startY,
         })
       }
-      majorColExcludeRanges.sort((a, b) => a.top - b.top)
+      majorColExcludeRanges.sort((rangeA, rangeB) => rangeA.top - rangeB.top)
     }
     let segStart = contentTop
     let isFirst = true

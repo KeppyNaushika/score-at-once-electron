@@ -219,7 +219,7 @@ function GridStyleAnimation() {
       className="grid grid-cols-3 gap-1.5"
       style={{ "--help07-sel": sel } as CSSProperties}
     >
-      {marks.map((ok, i) => (
+      {marks.map((isCorrect, i) => (
         <div
           key={i}
           className="flex h-9 items-center justify-center rounded-sm border-2 bg-white"
@@ -228,12 +228,12 @@ function GridStyleAnimation() {
           <span
             className="text-lg font-bold"
             style={{
-              color: ok ? colors.correct.icon : colors.incorrect.icon,
+              color: isCorrect ? colors.correct.icon : colors.incorrect.icon,
               opacity: 0,
               animation: `help07Mark 6s ${i * 0.7}s infinite`,
             }}
           >
-            {ok ? "○" : "×"}
+            {isCorrect ? "○" : "×"}
           </span>
         </div>
       ))}
@@ -488,7 +488,7 @@ function ScoringButtonRow({
     <TooltipProvider delayDuration={300}>
       <div className="mt-4 flex flex-wrap gap-2">
         {markOrder.map((status) => {
-          const sc = colors[status]
+          const statusColor = colors[status]
           const Icon = cfg[status].icon
           const keyLabel = (rawKeys[status] || "?").toUpperCase()
           return (
@@ -501,9 +501,9 @@ function ScoringButtonRow({
                   onClick={() => onScore(status)}
                   className="flex h-12 w-16 flex-col gap-1 border-2 hover:opacity-80"
                   style={{
-                    backgroundColor: sc.bg,
-                    color: sc.text,
-                    borderColor: sc.bg,
+                    backgroundColor: statusColor.bg,
+                    color: statusColor.text,
+                    borderColor: statusColor.bg,
                   }}
                 >
                   <Icon className="h-4 w-4" />
@@ -554,7 +554,7 @@ function ScoringGridDemo({
   const cfg = getDynamicScoreStatusConfig(colors)
   const firstUnscored = Math.max(
     0,
-    initialCells.findIndex((c) => c.status === "unscored")
+    initialCells.findIndex((cell) => cell.status === "unscored")
   )
   const [cells, setCells] = useState<DemoCell[]>(initialCells)
   const [selected, setSelected] = useState(firstUnscored)
@@ -589,15 +589,17 @@ function ScoringGridDemo({
 
   const applyStatus = useCallback((status: DemoStatus, score?: number) => {
     const sel = selectedRef.current
-    const updated = cellsRef.current.map((c, i) =>
-      i === sel ? { ...c, status, score } : c
+    const updated = cellsRef.current.map((cell, i) =>
+      i === sel ? { ...cell, status, score } : cell
     )
     setCellsSynced(updated)
     const after = updated.findIndex(
-      (c, i) => i > sel && c.status === "unscored"
+      (cell, i) => i > sel && cell.status === "unscored"
     )
     const wrap =
-      after === -1 ? updated.findIndex((c) => c.status === "unscored") : after
+      after === -1
+        ? updated.findIndex((cell) => cell.status === "unscored")
+        : after
     if (wrap !== -1) setSelectedSynced(wrap)
   }, [])
 
@@ -791,7 +793,7 @@ function ScoringGridDemo({
     cancelPartial,
   ])
 
-  const allScored = cells.every((c) => c.status !== "unscored")
+  const allScored = cells.every((cell) => cell.status !== "unscored")
 
   useEffect(() => {
     if (allScored && !notifiedRef.current) {
@@ -1248,11 +1250,11 @@ function SheetLine({ label, widths }: { label: string; widths: string[] }) {
         {label}
       </span>
       <div className="flex flex-1 flex-col gap-1.5 py-0.5">
-        {widths.map((w, i) => (
+        {widths.map((width, i) => (
           <span
             key={i}
             className="block h-2 rounded-sm bg-gray-200"
-            style={{ width: w }}
+            style={{ width }}
           />
         ))}
       </div>
@@ -1383,16 +1385,18 @@ function IndividualScoringDemo({
 
   const applyStatus = useCallback((status: DemoStatus, score?: number) => {
     const sel = selectedRef.current
-    const updated = cellsRef.current.map((c, i) =>
-      i === sel ? { ...c, status, score } : c
+    const updated = cellsRef.current.map((cell, i) =>
+      i === sel ? { ...cell, status, score } : cell
     )
     setCellsSynced(updated)
     // 採点したら次の未採点の生徒へ自動で進む
     const after = updated.findIndex(
-      (c, i) => i > sel && c.status === "unscored"
+      (cell, i) => i > sel && cell.status === "unscored"
     )
     const wrap =
-      after === -1 ? updated.findIndex((c) => c.status === "unscored") : after
+      after === -1
+        ? updated.findIndex((cell) => cell.status === "unscored")
+        : after
     if (wrap !== -1) setSelectedSynced(wrap)
   }, [])
 
@@ -1547,7 +1551,7 @@ function IndividualScoringDemo({
   const cell = cells[selected]
   const sd = scoreText(cell)
   const mark = SHEET_MARKS[cell.status]
-  const scoredCount = cells.filter((x) => x.status !== "unscored").length
+  const scoredCount = cells.filter((cell) => cell.status !== "unscored").length
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">

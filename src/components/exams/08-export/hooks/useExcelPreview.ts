@@ -101,10 +101,14 @@ export function useExcelPreview({
         const headers: ExcelPreviewHeader = {
           questionLabels:
             result.questionRegions?.map(
-              (r) => r.label || `問${(r.orderIndex ?? 0) + 1}`
+              (questionRegion) =>
+                questionRegion.label ||
+                `問${(questionRegion.orderIndex ?? 0) + 1}`
             ) || [],
           questionMaxScores:
-            result.questionRegions?.map((r) => r.points ?? 0) || [],
+            result.questionRegions?.map(
+              (questionRegion) => questionRegion.points ?? 0
+            ) || [],
           subtotalLabels:
             result.subtotalColumns?.map(
               (subtotalColumn) => subtotalColumn.label

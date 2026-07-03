@@ -38,7 +38,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const refreshStudentData = useCallback(async () => {
     const [studentsResult, classInfoResult] = await Promise.all([
       window.electronAPI.getStudentsForExam(examId),
-      window.electronAPI.examClass.getStudentClassInfo(examId),
+      window.electronAPI.examClassroom.getStudentClassInfo(examId),
     ])
 
     if (studentsResult.success && studentsResult.students) {
@@ -52,26 +52,34 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
       // 受験生徒をcustomOrder順で並び替え（ExamStudentテーブルの順序が基準）
       const sortedStudents = [...studentsWithClassInfo].sort(
-        (a: Student, b: Student) => {
+        (studentA: Student, studentB: Student) => {
           // customOrderが設定されている場合はそれを優先
           if (
-            a.customOrder !== null &&
-            a.customOrder !== undefined &&
-            b.customOrder !== null &&
-            b.customOrder !== undefined
+            studentA.customOrder !== null &&
+            studentA.customOrder !== undefined &&
+            studentB.customOrder !== null &&
+            studentB.customOrder !== undefined
           ) {
-            return a.customOrder - b.customOrder
+            return studentA.customOrder - studentB.customOrder
           }
-          if (a.customOrder !== null && a.customOrder !== undefined) return -1
-          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+          if (
+            studentA.customOrder !== null &&
+            studentA.customOrder !== undefined
+          )
+            return -1
+          if (
+            studentB.customOrder !== null &&
+            studentB.customOrder !== undefined
+          )
+            return 1
 
           // customOrderが未設定の場合はデフォルト順（学級順→出席番号順）
-          const aClassOrder = a.examClassInfo?.classOrder ?? 99999
-          const bClassOrder = b.examClassInfo?.classOrder ?? 99999
+          const aClassOrder = studentA.examClassInfo?.classOrder ?? 99999
+          const bClassOrder = studentB.examClassInfo?.classOrder ?? 99999
           if (aClassOrder !== bClassOrder) return aClassOrder - bClassOrder
 
-          const aAttendance = a.examClassInfo?.attendanceNumber ?? 99999
-          const bAttendance = b.examClassInfo?.attendanceNumber ?? 99999
+          const aAttendance = studentA.examClassInfo?.attendanceNumber ?? 99999
+          const bAttendance = studentB.examClassInfo?.attendanceNumber ?? 99999
           return aAttendance - bAttendance
         }
       )
@@ -168,25 +176,33 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
         }))
 
         // customOrder順で再ソート
-        return updatedStudents.sort((a, b) => {
+        return updatedStudents.sort((studentA, studentB) => {
           if (
-            a.customOrder !== null &&
-            a.customOrder !== undefined &&
-            b.customOrder !== null &&
-            b.customOrder !== undefined
+            studentA.customOrder !== null &&
+            studentA.customOrder !== undefined &&
+            studentB.customOrder !== null &&
+            studentB.customOrder !== undefined
           ) {
-            return a.customOrder - b.customOrder
+            return studentA.customOrder - studentB.customOrder
           }
-          if (a.customOrder !== null && a.customOrder !== undefined) return -1
-          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+          if (
+            studentA.customOrder !== null &&
+            studentA.customOrder !== undefined
+          )
+            return -1
+          if (
+            studentB.customOrder !== null &&
+            studentB.customOrder !== undefined
+          )
+            return 1
 
           // 両方nullの場合はデフォルト順（学級順→出席番号順）
-          const aClassOrder = a.examClassInfo?.classOrder ?? 99999
-          const bClassOrder = b.examClassInfo?.classOrder ?? 99999
+          const aClassOrder = studentA.examClassInfo?.classOrder ?? 99999
+          const bClassOrder = studentB.examClassInfo?.classOrder ?? 99999
           if (aClassOrder !== bClassOrder) return aClassOrder - bClassOrder
 
-          const aAttendance = a.examClassInfo?.attendanceNumber ?? 99999
-          const bAttendance = b.examClassInfo?.attendanceNumber ?? 99999
+          const aAttendance = studentA.examClassInfo?.attendanceNumber ?? 99999
+          const bAttendance = studentB.examClassInfo?.attendanceNumber ?? 99999
           return aAttendance - bAttendance
         })
       })
@@ -318,7 +334,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   // 削除用生徒データの作成
   const studentsForRemovalData: StudentForRemoval[] = studentsToRemove.map(
     (id) => {
-      const student = students.find((s) => s.id === id)
+      const student = students.find((candidate) => candidate.id === id)
       return {
         id,
         studentNumber: student?.studentNumber || "",

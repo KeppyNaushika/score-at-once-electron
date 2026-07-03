@@ -473,7 +473,9 @@ describe("ブリッジマイグレーション統合テスト", () => {
     >(
       `SELECT "key", "value" FROM "UserPreference" WHERE "userId" = 'u1' ORDER BY "key"`
     )
-    const prefMap = Object.fromEntries(prefs.map((p) => [p.key, p.value]))
+    const prefMap = Object.fromEntries(
+      prefs.map((pref) => [pref.key, pref.value])
+    )
     expect(prefMap["showStudentNames"]).toBe("true")
     expect(prefMap["itemsPerLine"]).toBe("5")
 

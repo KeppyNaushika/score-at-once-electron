@@ -48,7 +48,9 @@ export function ScreenBlackout() {
     const loadPasscodeType = async () => {
       try {
         const users = await window.electronAPI.fetchUsers()
-        const currentUser = users.find((u: { id: string }) => u.id === user.id)
+        const currentUser = users.find(
+          (candidateUser: { id: string }) => candidateUser.id === user.id
+        )
         setPasscodeType(currentUser?.passcodeType ?? "none")
       } catch {
         setPasscodeType("none")

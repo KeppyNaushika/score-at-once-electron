@@ -45,7 +45,9 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
         // この成績の対象生徒ID（資料の名簿ではなく成績側の名簿で数える）
         const gradeStudentIds = new Set(
           studentsResult.success && studentsResult.students
-            ? studentsResult.students.map((s) => s.student.id)
+            ? studentsResult.students.map(
+                (gradeStudent) => gradeStudent.student.id
+              )
             : []
         )
         setStudentCount(gradeStudentIds.size)
@@ -66,16 +68,17 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
               await window.electronAPI.coursework.getScores(itemId)
             const scores = scoreResult.success ? (scoreResult.scores ?? []) : []
             enteredByItem[itemId] = scores.filter(
-              (sc) =>
-                gradeStudentIds.has(sc.studentId) &&
-                (sc.score !== null || sc.letterValue !== null)
+              (courseworkScore) =>
+                gradeStudentIds.has(courseworkScore.studentId) &&
+                (courseworkScore.score !== null ||
+                  courseworkScore.letterValue !== null)
             ).length
           })
         )
         const counts: Record<string, number> = {}
-        for (const ds of sources) {
-          const itemId = ds.courseworkItem?.id
-          counts[ds.id] = itemId ? (enteredByItem[itemId] ?? 0) : 0
+        for (const dataSource of sources) {
+          const itemId = dataSource.courseworkItem?.id
+          counts[dataSource.id] = itemId ? (enteredByItem[itemId] ?? 0) : 0
         }
         setEnteredCounts(counts)
       } catch (error) {
@@ -114,17 +117,17 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {courseworkSources.map((ds) => {
-            const item = ds.courseworkItem
-            const enteredCount = enteredCounts[ds.id] ?? 0
+          {courseworkSources.map((dataSource) => {
+            const item = dataSource.courseworkItem
+            const enteredCount = enteredCounts[dataSource.id] ?? 0
             return (
               <div
-                key={ds.id}
+                key={dataSource.id}
                 className="flex items-center justify-between rounded border p-3"
               >
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary">資料</Badge>
-                  <span className="text-sm font-medium">{ds.name}</span>
+                  <span className="text-sm font-medium">{dataSource.name}</span>
                   {item && (
                     <span className="text-muted-foreground text-xs">
                       ({item.coursework.name} &gt; {item.name})
@@ -139,7 +142,7 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
                 <div className="flex items-center gap-3">
                   <span className="text-muted-foreground text-xs">
                     入力済み: {enteredCount}/{studentCount}名 / 満点:{" "}
-                    {item?.maxScore ?? ds.maxScore}
+                    {item?.maxScore ?? dataSource.maxScore}
                   </span>
                   {item && (
                     <Button asChild variant="ghost" size="sm">

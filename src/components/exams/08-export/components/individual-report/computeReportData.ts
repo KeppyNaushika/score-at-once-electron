@@ -62,16 +62,16 @@ export function computeFilteredStats(
   if (includeAll) return report.statistics
 
   const filterByStatus = (entries: typeof raw) =>
-    entries.filter((e) => {
-      if (e.status === "participating") return statuses.participating
-      if (e.status === "expected") return statuses.expected
-      if (e.status === "absent") return statuses.absent
+    entries.filter((entry) => {
+      if (entry.status === "participating") return statuses.participating
+      if (entry.status === "expected") return statuses.expected
+      if (entry.status === "absent") return statuses.absent
       return true
     })
 
   const filteredAll = filterByStatus(raw)
   const allScores = filteredAll
-    .map((e) => e.totalScore)
+    .map((entry) => entry.totalScore)
     .filter((score): score is number => score !== null)
 
   const overallAvg = average(allScores)
@@ -87,11 +87,11 @@ export function computeFilteredStats(
   // 学級別統計を受験状態フィルタ付きで再計算（学級ごとに memberStudentIds で母集団を絞る）
   const classes = report.statistics.classes.map((classroom) => {
     const memberSet = new Set(classroom.memberStudentIds)
-    const filteredMembers = filteredAll.filter((e) =>
-      memberSet.has(e.studentId)
+    const filteredMembers = filteredAll.filter((entry) =>
+      memberSet.has(entry.studentId)
     )
     const classScores = filteredMembers
-      .map((e) => e.totalScore)
+      .map((entry) => entry.totalScore)
       .filter((score): score is number => score !== null)
     return {
       ...classroom,
@@ -137,7 +137,9 @@ export function computeFilteredSubtotalStats(
     includeStatuses.absent
 
   return subtotalStatistics.map((stat) => {
-    const rawData = rawScores.find((r) => r.subtotalId === stat.subtotalId)
+    const rawData = rawScores.find(
+      (subtotalRawScore) => subtotalRawScore.subtotalId === stat.subtotalId
+    )
 
     if (!rawData || includeAll) {
       return {

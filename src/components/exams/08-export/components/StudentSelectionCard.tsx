@@ -150,7 +150,9 @@ export function StudentSelectionCard({
 
   const toggleStatusFilter = (status: string) => {
     if (selectedStatuses.includes(status)) {
-      setSelectedStatuses(selectedStatuses.filter((s) => s !== status))
+      setSelectedStatuses(
+        selectedStatuses.filter((selectedStatus) => selectedStatus !== status)
+      )
     } else {
       setSelectedStatuses([...selectedStatuses, status])
     }

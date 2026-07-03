@@ -41,20 +41,20 @@ export async function previewCourseworkImport(
   const { data: normalized, warnings } = transformCourseworkToLatest(data)
 
   const matches: CourseworkArchiveMatch[] = []
-  for (const cw of normalized.courseworks) {
+  for (const coursework of normalized.courseworks) {
     const uuidMatch = await prisma.coursework.findUnique({
-      where: { id: cw.id },
+      where: { id: coursework.id },
       select: { id: true, name: true },
     })
     const nameCandidates = await prisma.coursework.findMany({
-      where: { name: cw.name },
+      where: { name: coursework.name },
       select: { id: true, name: true },
     })
     matches.push({
-      archiveId: cw.id,
-      name: cw.name,
-      itemCount: cw.items.length,
-      studentCount: cw.students.length,
+      archiveId: coursework.id,
+      name: coursework.name,
+      itemCount: coursework.items.length,
+      studentCount: coursework.students.length,
       uuidMatch: uuidMatch ?? null,
       nameCandidates,
     })
@@ -93,13 +93,13 @@ export async function importCourseworkArchive(
     })
 
     // 監査ログ（ベストエフォート）
-    for (const cw of normalized.courseworks) {
+    for (const coursework of normalized.courseworks) {
       void recordAuditLog({
         action: "coursework.import",
         entityType: "Coursework",
-        entityId: cw.id,
-        scopeLabel: cw.name,
-        target: cw.name,
+        entityId: coursework.id,
+        scopeLabel: coursework.name,
+        target: coursework.name,
       })
     }
 

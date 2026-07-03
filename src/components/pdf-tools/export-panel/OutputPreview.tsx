@@ -56,7 +56,7 @@ export default function OutputPreview({
 
   const handleDeletePage = (page: OutputPage) => {
     // 即座に表示から除去（ドラッグ並び替えの順序を維持）
-    onPagesChange(pages.filter((p) => p.id !== page.id))
+    onPagesChange(pages.filter((otherPage) => otherPage.id !== page.id))
     // 永続的に除外（設定変更による再生成時も反映）
     onDeletePage(page)
   }

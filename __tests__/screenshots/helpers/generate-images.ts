@@ -42,76 +42,80 @@ function templateToDefinition(
 ): AnswerSheetDefinition {
   const t = template as Record<string, unknown>
   const headerFields = (t.headerFields as Array<Record<string, unknown>>).map(
-    (hf) => ({
-      id: hf.id as string,
-      type: ((hf.type as string) ?? "field") as HeaderFieldType,
-      label: hf.label as string,
-      widthMm: hf.widthMm as number,
-      heightMm: hf.heightMm as number,
-      gridCount: hf.gridCount as number,
-      lineStyle: hf.lineStyle as LineStyle,
-      lineWidth: hf.lineWidth as number,
-      order: hf.order as number,
-      fontSize: (hf.fontSize as number) ?? undefined,
-      linkedRegionType: (hf.linkedRegionType as LinkedRegionType) ?? undefined,
+    (headerField) => ({
+      id: headerField.id as string,
+      type: ((headerField.type as string) ?? "field") as HeaderFieldType,
+      label: headerField.label as string,
+      widthMm: headerField.widthMm as number,
+      heightMm: headerField.heightMm as number,
+      gridCount: headerField.gridCount as number,
+      lineStyle: headerField.lineStyle as LineStyle,
+      lineWidth: headerField.lineWidth as number,
+      order: headerField.order as number,
+      fontSize: (headerField.fontSize as number) ?? undefined,
+      linkedRegionType:
+        (headerField.linkedRegionType as LinkedRegionType) ?? undefined,
     })
   )
 
   const majorQuestions = (
     t.majorQuestions as Array<Record<string, unknown>>
-  ).map((mq) => ({
-    id: mq.id as string,
-    label: mq.label as string,
-    subQuestions: (mq.subQuestions as Array<Record<string, unknown>>).map(
-      (sq): SubQuestion => {
-        const manuscriptPaper = sq.manuscriptEnabled
-          ? {
-              enabled: true as const,
-              columns: sq.manuscriptColumns as number,
-              rows: sq.manuscriptRows as number,
-            }
-          : undefined
-        return {
-          id: sq.id as string,
-          label: sq.label as string,
-          branchQuestions: (
-            (sq.branchQuestions as Array<Record<string, unknown>>) || []
-          ).map((bq): BranchQuestion => ({
-            id: bq.id as string,
-            label: bq.label as string,
-            heightMultiplier: bq.heightMultiplier as number,
-            points: bq.points as number,
-            textElements: [],
-            imageElements: [],
-            layoutWidth: (bq.layoutWidth as string) ?? undefined,
-            nextPlacement:
-              (bq.nextPlacement as BranchQuestion["nextPlacement"]) ??
-              undefined,
-            goUp: (bq.goUp as number) ?? undefined,
-          })),
-          heightMultiplier: sq.heightMultiplier as number,
-          points: sq.points as number,
-          textElements: (
-            (sq.textElements as Array<Record<string, unknown>>) || []
-          ).map((te) => ({
-            id: (te.id as string) ?? crypto.randomUUID(),
-            text: te.text as string,
-            fontSize: te.fontSize as number,
-            horizontalAlign:
-              (te.horizontalAlign as "left" | "center" | "right") ?? "left",
-            verticalAlign:
-              (te.verticalAlign as "top" | "middle" | "bottom") ?? "top",
-          })),
+  ).map((majorQuestion) => ({
+    id: majorQuestion.id as string,
+    label: majorQuestion.label as string,
+    subQuestions: (
+      majorQuestion.subQuestions as Array<Record<string, unknown>>
+    ).map((subQuestion): SubQuestion => {
+      const manuscriptPaper = subQuestion.manuscriptEnabled
+        ? {
+            enabled: true as const,
+            columns: subQuestion.manuscriptColumns as number,
+            rows: subQuestion.manuscriptRows as number,
+          }
+        : undefined
+      return {
+        id: subQuestion.id as string,
+        label: subQuestion.label as string,
+        branchQuestions: (
+          (subQuestion.branchQuestions as Array<Record<string, unknown>>) || []
+        ).map((branchQuestion): BranchQuestion => ({
+          id: branchQuestion.id as string,
+          label: branchQuestion.label as string,
+          heightMultiplier: branchQuestion.heightMultiplier as number,
+          points: branchQuestion.points as number,
+          textElements: [],
           imageElements: [],
-          manuscriptPaper,
-          layoutWidth: (sq.layoutWidth as string) ?? undefined,
+          layoutWidth: (branchQuestion.layoutWidth as string) ?? undefined,
           nextPlacement:
-            (sq.nextPlacement as SubQuestion["nextPlacement"]) ?? undefined,
-          goUp: (sq.goUp as number) ?? undefined,
-          usesBranchPoints: (sq.usesBranchPoints as boolean) ?? undefined,
-        }
+            (branchQuestion.nextPlacement as BranchQuestion["nextPlacement"]) ??
+            undefined,
+          goUp: (branchQuestion.goUp as number) ?? undefined,
+        })),
+        heightMultiplier: subQuestion.heightMultiplier as number,
+        points: subQuestion.points as number,
+        textElements: (
+          (subQuestion.textElements as Array<Record<string, unknown>>) || []
+        ).map((textElement) => ({
+          id: (textElement.id as string) ?? crypto.randomUUID(),
+          text: textElement.text as string,
+          fontSize: textElement.fontSize as number,
+          horizontalAlign:
+            (textElement.horizontalAlign as "left" | "center" | "right") ??
+            "left",
+          verticalAlign:
+            (textElement.verticalAlign as "top" | "middle" | "bottom") ?? "top",
+        })),
+        imageElements: [],
+        manuscriptPaper,
+        layoutWidth: (subQuestion.layoutWidth as string) ?? undefined,
+        nextPlacement:
+          (subQuestion.nextPlacement as SubQuestion["nextPlacement"]) ??
+          undefined,
+        goUp: (subQuestion.goUp as number) ?? undefined,
+        usesBranchPoints:
+          (subQuestion.usesBranchPoints as boolean) ?? undefined,
       }
-    ),
+    }),
   }))
 
   return {
@@ -199,7 +203,7 @@ export function computeRegionDefinitions(templatePath: string): RegionDef[] {
   const page0 = layout.pages[0]
   if (!page0) return []
 
-  const answerCells = page0.cells.filter((c) => c.cellType === "answer")
+  const answerCells = page0.cells.filter((cell) => cell.cellType === "answer")
 
   // examConverter と同じロジック: usesBranchPoints === false の枝問は統合
   const mergedCells: Array<{
@@ -213,29 +217,37 @@ export function computeRegionDefinitions(templatePath: string): RegionDef[] {
   const processedKeys = new Set<string>()
 
   for (const cell of answerCells) {
-    const [mi, si, bi] = cell.questionPath
-    const isBranch = bi !== undefined
+    const [majorIndex, subIndex, branchIndex] = cell.questionPath
+    const isBranch = branchIndex !== undefined
 
     if (isBranch) {
-      const key = `${mi}-${si}`
+      const key = `${majorIndex}-${subIndex}`
       if (processedKeys.has(key)) continue
 
-      const sub = definition.majorQuestions[mi]?.subQuestions[si]
+      const sub = definition.majorQuestions[majorIndex]?.subQuestions[subIndex]
       if (sub?.usesBranchPoints === false) {
         processedKeys.add(key)
         const siblings = answerCells.filter(
-          (c) =>
-            c.questionPath[0] === mi &&
-            c.questionPath[1] === si &&
-            c.questionPath.length === 3
+          (siblingCell) =>
+            siblingCell.questionPath[0] === majorIndex &&
+            siblingCell.questionPath[1] === subIndex &&
+            siblingCell.questionPath.length === 3
         )
-        const minX = Math.min(...siblings.map((c) => c.normalizedX))
-        const minY = Math.min(...siblings.map((c) => c.normalizedY))
+        const minX = Math.min(
+          ...siblings.map((siblingCell) => siblingCell.normalizedX)
+        )
+        const minY = Math.min(
+          ...siblings.map((siblingCell) => siblingCell.normalizedY)
+        )
         const maxX = Math.max(
-          ...siblings.map((c) => c.normalizedX + c.normalizedW)
+          ...siblings.map(
+            (siblingCell) => siblingCell.normalizedX + siblingCell.normalizedW
+          )
         )
         const maxY = Math.max(
-          ...siblings.map((c) => c.normalizedY + c.normalizedH)
+          ...siblings.map(
+            (siblingCell) => siblingCell.normalizedY + siblingCell.normalizedH
+          )
         )
         mergedCells.push({
           label: sub.label,
@@ -274,7 +286,7 @@ export function computeRegionDefinitions(templatePath: string): RegionDef[] {
  * 配点合計を計算
  */
 export function computeTotalPoints(regions: RegionDef[]): number {
-  return regions.reduce((sum, r) => sum + r.points, 0)
+  return regions.reduce((sum, region) => sum + region.points, 0)
 }
 
 /**
@@ -414,7 +426,7 @@ function createHandwrittenSvg(
   } else {
     // 小さい領域: 高さの80%を目安に、大きめに描画
     const byHeight = Math.floor(height * 0.8)
-    const maxTextLen = Math.max(...lines.map((l) => l.length), 1)
+    const maxTextLen = Math.max(...lines.map((line) => line.length), 1)
     const byWidth = Math.floor((width / maxTextLen) * 1.8)
     fontSize = Math.max(64, Math.min(byHeight, byWidth, 140))
   }
@@ -473,8 +485,8 @@ export async function generateStudentAnswerImage(
 
   const composites: { input: Buffer; left: number; top: number }[] = []
 
-  for (const s of scores) {
-    const region = regions[s.regionIndex]
+  for (const score of scores) {
+    const region = regions[score.regionIndex]
     if (!region) continue
 
     const rx = Math.round(region.x * imgW)
@@ -488,28 +500,28 @@ export async function generateStudentAnswerImage(
     const correctAns = CORRECT_ANSWERS[region.label] ?? ""
     const wrongPool = WRONG_ANSWERS[region.label] ?? ["?"]
 
-    if (s.status === "correct") {
+    if (score.status === "correct") {
       answerText = correctAns
-    } else if (s.status === "partial") {
+    } else if (score.status === "partial") {
       // 部分点: 正解の一部を書く or 途中まで
       const partial =
         wrongPool[0] ?? correctAns.split("\n").slice(0, 2).join("\n")
       answerText = partial
     } else {
       // 誤答: 間違った答えをseedに応じて選ぶ
-      const wi = (studentIndex + s.regionIndex) % wrongPool.length
-      answerText = wrongPool[wi]
+      const wrongIndex = (studentIndex + score.regionIndex) % wrongPool.length
+      answerText = wrongPool[wrongIndex]
     }
 
     if (!answerText) continue
 
-    const color = s.status === "correct" ? "#1a1a1a" : "#1a1a1a"
+    const color = score.status === "correct" ? "#1a1a1a" : "#1a1a1a"
     const svg = createHandwrittenSvg(
       answerText,
       rw,
       rh,
       color,
-      studentIndex * 7 + s.regionIndex
+      studentIndex * 7 + score.regionIndex
     )
     composites.push({
       input: Buffer.from(svg),
@@ -587,15 +599,23 @@ export function generateStudentScores(
   regions: RegionDef[]
 ): { regionIndex: number; score: number; status: string }[] {
   const seed = studentIndex * 7 + 3
-  return regions.map((r) => {
-    const hash = (seed + r.orderIndex * 13) % 100
+  return regions.map((region) => {
+    const hash = (seed + region.orderIndex * 13) % 100
     if (hash < 60) {
-      return { regionIndex: r.orderIndex, score: r.points, status: "correct" }
+      return {
+        regionIndex: region.orderIndex,
+        score: region.points,
+        status: "correct",
+      }
     } else if (hash < 80) {
-      const partial = Math.max(1, Math.floor(r.points * 0.5))
-      return { regionIndex: r.orderIndex, score: partial, status: "partial" }
+      const partial = Math.max(1, Math.floor(region.points * 0.5))
+      return {
+        regionIndex: region.orderIndex,
+        score: partial,
+        status: "partial",
+      }
     } else {
-      return { regionIndex: r.orderIndex, score: 0, status: "incorrect" }
+      return { regionIndex: region.orderIndex, score: 0, status: "incorrect" }
     }
   })
 }

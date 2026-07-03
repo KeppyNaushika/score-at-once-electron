@@ -35,7 +35,7 @@ export function useSpAnalysis(
       })),
     }))
 
-    const totalScores = data.rows.map((r) => r.totalScore)
+    const totalScores = data.rows.map((row) => row.totalScore)
     const maxScore = data.rows[0]?.totalMaxScore ?? 0
 
     return {

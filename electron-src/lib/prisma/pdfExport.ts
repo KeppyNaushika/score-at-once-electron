@@ -341,11 +341,11 @@ export async function getPdfExportData(options: {
           const subtotalResult = await calculateSubtotalScoreForStudent(
             student.id,
             subtotalRegion.id,
-            allScores.map((s) => ({
-              studentId: s.studentId,
-              cropRegionId: s.cropRegionId,
-              status: s.status,
-              partialScore: s.partialScore,
+            allScores.map((score) => ({
+              studentId: score.studentId,
+              cropRegionId: score.cropRegionId,
+              status: score.status,
+              partialScore: score.partialScore,
             })),
             cropRegions as CropRegion[]
           )
@@ -436,7 +436,7 @@ export async function getPdfExportData(options: {
     // ページを生徒順（customOrder順）・ページ番号順でソート
     // selectedStudents は getStudentsForExam が customOrder 順で返すため、
     // その順序を生徒の並び順として使う（選択操作の順序には依存させない）
-    const orderedStudentIds = selectedStudents.map((s) => s.id)
+    const orderedStudentIds = selectedStudents.map((student) => student.id)
     pages.sort((a, b) => {
       const studentCompare =
         orderedStudentIds.indexOf(a.studentId) -

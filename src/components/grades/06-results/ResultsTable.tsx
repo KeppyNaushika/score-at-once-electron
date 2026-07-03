@@ -341,20 +341,21 @@ export function ResultsTable({
     [result.students]
   )
 
-  const sortedStudents = [...result.students].sort((a, b) => {
+  const sortedStudents = [...result.students].sort((studentA, studentB) => {
     if (sortKey === "registrationOrder") {
-      const aIndex = registrationRankByStudentId.get(a.studentId) ?? 0
-      const bIndex = registrationRankByStudentId.get(b.studentId) ?? 0
+      const aIndex = registrationRankByStudentId.get(studentA.studentId) ?? 0
+      const bIndex = registrationRankByStudentId.get(studentB.studentId) ?? 0
       return sortAsc ? aIndex - bIndex : bIndex - aIndex
     }
     let comparison = 0
     if (sortKey === "attendanceNumber") {
-      comparison = (a.attendanceNumber ?? 999) - (b.attendanceNumber ?? 999)
+      comparison =
+        (studentA.attendanceNumber ?? 999) - (studentB.attendanceNumber ?? 999)
     } else {
-      const aItemResult = a.gradeItemResults.find(
+      const aItemResult = studentA.gradeItemResults.find(
         (itemResult) => itemResult.gradeItemId === sortKey
       )
-      const bItemResult = b.gradeItemResults.find(
+      const bItemResult = studentB.gradeItemResults.find(
         (itemResult) => itemResult.gradeItemId === sortKey
       )
       comparison =

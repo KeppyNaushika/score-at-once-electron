@@ -51,7 +51,7 @@ export async function collectGradeArchiveData(
         },
         orderBy: { order: "asc" },
       },
-      gradeClasses: {
+      gradeClassrooms: {
         include: { classroom: true },
         orderBy: { order: "asc" },
       },
@@ -93,7 +93,7 @@ export async function collectGradeArchiveData(
   })
 
   const classIds = new Set(
-    grade.gradeClasses.map((gradeClass) => gradeClass.classroomId)
+    grade.gradeClassrooms.map((gradeClass) => gradeClass.classroomId)
   )
 
   const gradeItems = grade.gradeItems.map((gradeItem) => ({
@@ -166,7 +166,7 @@ export async function collectGradeArchiveData(
       dataSourceName: dataSource.name,
     }))
 
-  const classRefs = grade.gradeClasses.map((gradeClass) => ({
+  const classRefs = grade.gradeClassrooms.map((gradeClass) => ({
     name: gradeClass.classroom.name,
   }))
 

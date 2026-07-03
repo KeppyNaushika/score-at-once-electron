@@ -81,7 +81,11 @@ export function CourseworkListContainer() {
     try {
       const result = await window.electronAPI.coursework.delete(coursework.id)
       if (result.success) {
-        setCourseworks((prev) => prev.filter((cw) => cw.id !== coursework.id))
+        setCourseworks((prev) =>
+          prev.filter(
+            (existingCoursework) => existingCoursework.id !== coursework.id
+          )
+        )
         toast.success("資料を削除しました", { description: coursework.name })
       } else if (result.usedBy && result.usedBy.length > 0) {
         toast.error("削除できません", {

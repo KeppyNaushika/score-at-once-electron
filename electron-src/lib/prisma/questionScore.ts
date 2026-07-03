@@ -522,19 +522,20 @@ export const getQuestionScoreComparison = async (
       }),
     ])
 
-    const proposedScores = scores.filter((s) => s.status !== "unscored")
+    const proposedScores = scores.filter((score) => score.status !== "unscored")
 
     const first = proposedScores[0]
     const proposalsDisagree =
       proposedScores.length > 1 &&
       proposedScores.some(
-        (s) =>
-          s.status !== first.status ||
-          Number(s.partialScore ?? NaN) !== Number(first.partialScore ?? NaN)
+        (score) =>
+          score.status !== first.status ||
+          Number(score.partialScore ?? NaN) !==
+            Number(first.partialScore ?? NaN)
       )
     const decisionIsStale =
       decision !== null &&
-      proposedScores.some((s) => s.updatedAt > decision.decidedAt)
+      proposedScores.some((score) => score.updatedAt > decision.decidedAt)
 
     return {
       success: true,

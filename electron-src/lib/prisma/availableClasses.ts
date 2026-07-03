@@ -58,23 +58,29 @@ export async function getAvailableClassesForTarget(params: {
   })
 
   return classes
-    .map((c) => {
+    .map((classroom) => {
       // 同一生徒の複数在籍歴を重複カウントせず、対象に未追加の生徒だけ集める
       const seen = new Set<string>()
       const studentNames: string[] = []
-      for (const m of c.memberships) {
-        if (excluded.has(m.studentId) || seen.has(m.studentId)) continue
-        seen.add(m.studentId)
-        studentNames.push(`${m.student.lastName} ${m.student.firstName}`)
+      for (const membership of classroom.memberships) {
+        if (
+          excluded.has(membership.studentId) ||
+          seen.has(membership.studentId)
+        )
+          continue
+        seen.add(membership.studentId)
+        studentNames.push(
+          `${membership.student.lastName} ${membership.student.firstName}`
+        )
       }
       return {
-        id: c.id,
-        name: c.name,
-        classCode: c.classCode,
-        grade: c.grade,
+        id: classroom.id,
+        name: classroom.name,
+        classCode: classroom.classCode,
+        grade: classroom.grade,
         studentCount: studentNames.length,
         studentNames,
       }
     })
-    .filter((c) => c.studentCount > 0)
+    .filter((classroom) => classroom.studentCount > 0)
 }

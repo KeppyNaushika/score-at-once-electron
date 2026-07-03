@@ -3,17 +3,17 @@
 import type { ExamClassWithClass } from "@/types/electron/examClassApi"
 
 interface ClassStatisticsCardsProps {
-  examClasses: ExamClassWithClass[]
+  examClassrooms: ExamClassWithClass[]
 }
 
 export function ClassStatisticsCards({
-  examClasses,
+  examClassrooms,
 }: ClassStatisticsCardsProps) {
-  const totalClasses = examClasses.length
-  const administeredClasses = examClasses.filter(
+  const totalClasses = examClassrooms.length
+  const administeredClasses = examClassrooms.filter(
     (examClass) => examClass.administered
   ).length
-  const teacherStatClasses = examClasses.filter(
+  const teacherStatClasses = examClassrooms.filter(
     (examClass) => examClass.teacherStat
   ).length
 

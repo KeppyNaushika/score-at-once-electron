@@ -306,7 +306,7 @@ describe("archiveRoundTrip", () => {
           examStudents: [],
           userExams: [],
           examSubtotalGroups: [],
-          examClasses: [],
+          examClassrooms: [],
         })
       )
     )

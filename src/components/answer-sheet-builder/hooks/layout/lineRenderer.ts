@@ -498,11 +498,13 @@ export function addSteppedBorderLines(
 
   // 右辺にステップが必要か
   const hasPartialRightRow = rowRightEdges.some(
-    (r) => Math.abs(r.rightX - contentRight) > 0.01
+    (rowEdge) => Math.abs(rowEdge.rightX - contentRight) > 0.01
   )
   // 左辺にステップが必要か
   const hasPartialLeftRow =
-    rowLeftEdges?.some((r) => Math.abs(r.leftX - contentLeft) > 0.01) ?? false
+    rowLeftEdges?.some(
+      (rowEdge) => Math.abs(rowEdge.leftX - contentLeft) > 0.01
+    ) ?? false
 
   if (!hasPartialRightRow && !hasPartialLeftRow) {
     addBorderLines(

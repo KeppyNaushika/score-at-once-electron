@@ -119,7 +119,9 @@ export default function InterleaveSettings({
             各ファイルの変換設定を個別に指定できます
           </p>
           {config.transforms.map((transform) => {
-            const file = files.find((f) => f.id === transform.fileId)
+            const file = files.find(
+              (candidateFile) => candidateFile.id === transform.fileId
+            )
             if (!file) return null
 
             return (
@@ -186,10 +188,10 @@ export default function InterleaveSettings({
                       max={99}
                       value={transform.pagesPerGroup}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value)
-                        if (val >= 1) {
+                        const pagesPerGroup = parseInt(e.target.value)
+                        if (pagesPerGroup >= 1) {
                           handleTransformChange(transform.fileId, {
-                            pagesPerGroup: val,
+                            pagesPerGroup,
                           })
                         }
                       }}

@@ -1,7 +1,7 @@
-import { ExamClass, Prisma } from "@prisma/client"
+import { ExamClassroom, Prisma } from "@prisma/client"
 
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
-import type { ExamClassWithMembers } from "@/types/prismaExtensions"
+import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
@@ -14,14 +14,14 @@ import { membershipFilterAt } from "./membershipFilter"
  */
 export type StudentClassInfoMap = Map<string, StudentClassInfo>
 
-type ExamClassWithDetails = Prisma.ExamClassGetPayload<{
+type ExamClassWithDetails = Prisma.ExamClassroomGetPayload<{
   include: {
     classroom: true
     exam: true
   }
 }>
 
-type ExamClassWithClass = Prisma.ExamClassGetPayload<{
+type ExamClassWithClass = Prisma.ExamClassroomGetPayload<{
   include: {
     classroom: {
       include: {
@@ -53,7 +53,7 @@ export interface UpdateExamClassOptions {
 
 export interface ReorderExamClassesOptions {
   examId: string
-  orderedIds: string[] // ExamClass IDs in new order
+  orderedIds: string[] // ExamClassroom IDs in new order
 }
 
 /**
@@ -65,7 +65,7 @@ export const getExamClasses = async (
   try {
     // 受験日時点で在籍する所属のみ表示（受験日スナップショット）
     const referenceDate = await getExamReferenceDate(examId)
-    return await prisma.examClass.findMany({
+    return await prisma.examClassroom.findMany({
       where: { examId },
       include: {
         classroom: {
@@ -100,7 +100,7 @@ export const getAdministeredClasses = async (
   try {
     // 受験日時点で在籍する所属のみ（受験日スナップショット）
     const referenceDate = await getExamReferenceDate(examId)
-    return await prisma.examClass.findMany({
+    return await prisma.examClassroom.findMany({
       where: {
         examId,
         administered: true,
@@ -145,13 +145,13 @@ export const addExamClass = async (
 
   try {
     // 現在の最大orderを取得して次の順序を決定
-    const maxOrderResult = await prisma.examClass.aggregate({
+    const maxOrderResult = await prisma.examClassroom.aggregate({
       where: { examId },
       _max: { order: true },
     })
     const nextOrder = (maxOrderResult._max.order ?? -1) + 1
 
-    const examClass = await prisma.examClass.create({
+    const examClass = await prisma.examClassroom.create({
       data: {
         examId,
         classroomId,
@@ -168,7 +168,7 @@ export const addExamClass = async (
 
     await recordAuditLog({
       action: "exam.class.assign",
-      entityType: "ExamClass",
+      entityType: "ExamClassroom",
       entityId: examClass.id,
       scopeId: examId,
       scopeLabel: examClass.exam?.examName ?? null,
@@ -194,7 +194,7 @@ export const updateExamClass = async (
   const { id, administered, teacherStat, studentReport, order } = options
 
   try {
-    return await prisma.examClass.update({
+    return await prisma.examClassroom.update({
       where: { id },
       data: {
         ...(administered !== undefined && { administered }),
@@ -224,7 +224,7 @@ export const reorderExamClasses = async (
   try {
     await prisma.$transaction(
       orderedIds.map((id, index) =>
-        prisma.examClass.update({
+        prisma.examClassroom.update({
           where: { id },
           data: { order: index },
         })
@@ -239,21 +239,21 @@ export const reorderExamClasses = async (
 /**
  * Remove a class from a exam
  */
-export const removeExamClass = async (id: string): Promise<ExamClass> => {
+export const removeExamClass = async (id: string): Promise<ExamClassroom> => {
   try {
-    const before = await prisma.examClass.findUnique({
+    const before = await prisma.examClassroom.findUnique({
       where: { id },
       select: { examId: true, classroom: { select: { name: true } } },
     })
 
-    const deleted = await prisma.examClass.delete({
+    const deleted = await prisma.examClassroom.delete({
       where: { id },
     })
 
     const scope = before ? await resolveExamScope(before.examId) : null
     await recordAuditLog({
       action: "exam.class.unassign",
-      entityType: "ExamClass",
+      entityType: "ExamClassroom",
       entityId: id,
       scopeId: scope?.scopeId ?? null,
       scopeLabel: scope?.scopeLabel ?? null,
@@ -273,14 +273,14 @@ export const removeExamClass = async (id: string): Promise<ExamClass> => {
 export const removeExamClassByIds = async (
   examId: string,
   classroomId: string
-): Promise<ExamClass> => {
+): Promise<ExamClassroom> => {
   try {
     const classroom = await prisma.classroom.findUnique({
       where: { id: classroomId },
       select: { name: true },
     })
 
-    const deleted = await prisma.examClass.delete({
+    const deleted = await prisma.examClassroom.delete({
       where: {
         examId_classroomId: { examId, classroomId },
       },
@@ -289,7 +289,7 @@ export const removeExamClassByIds = async (
     const scope = await resolveExamScope(examId)
     await recordAuditLog({
       action: "exam.class.unassign",
-      entityType: "ExamClass",
+      entityType: "ExamClassroom",
       entityId: deleted.id,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
@@ -307,7 +307,7 @@ export const removeExamClassByIds = async (
 }
 
 /**
- * Get all classes that are NOT in ExamClass for a exam
+ * Get all classes that are NOT in ExamClassroom for a exam
  * Used by ClassExamManager to show available classes to add
  */
 export const getAvailableClassesForExam = async (
@@ -323,7 +323,7 @@ export const getAvailableClassesForExam = async (
 > => {
   try {
     // Get classes already associated with this exam
-    const existingExamClasses = await prisma.examClass.findMany({
+    const existingExamClasses = await prisma.examClassroom.findMany({
       where: { examId },
       select: { classroomId: true },
     })
@@ -331,7 +331,7 @@ export const getAvailableClassesForExam = async (
       (examClass) => examClass.classroomId
     )
 
-    // Get all classes not in ExamClass
+    // Get all classes not in ExamClassroom
     const availableClasses = await prisma.classroom.findMany({
       where: {
         id: {
@@ -360,7 +360,7 @@ export const getAvailableClassesForExam = async (
 /**
  * クラスから生徒を試験に追加（B案: 統合型フロー）
  *
- * 1. ExamClass を作成（administered=true, 次の order）
+ * 1. ExamClassroom を作成（administered=true, 次の order）
  * 2. クラスの生徒を出席番号順で ExamStudent に追加
  *
  * @returns 追加された生徒数とスキップされた生徒数
@@ -372,20 +372,20 @@ export const addStudentsFromClass = async (
 ): Promise<{
   added: number
   skipped: number
-  examClass: ExamClass
+  examClass: ExamClassroom
 }> => {
   try {
     const referenceDate = await getExamReferenceDate(examId)
 
-    // 1. 現在の ExamClass の最大 order を取得
-    const maxOrderResult = await prisma.examClass.aggregate({
+    // 1. 現在の ExamClassroom の最大 order を取得
+    const maxOrderResult = await prisma.examClassroom.aggregate({
       where: { examId },
       _max: { order: true },
     })
     const nextOrder = (maxOrderResult._max.order ?? -1) + 1
 
-    // 2. ExamClass を作成（既に存在する場合は administered=true に更新）
-    const examClass = await prisma.examClass.upsert({
+    // 2. ExamClassroom を作成（既に存在する場合は administered=true に更新）
+    const examClass = await prisma.examClassroom.upsert({
       where: {
         examId_classroomId: { examId, classroomId },
       },
@@ -405,7 +405,7 @@ export const addStudentsFromClass = async (
     })
 
     // 3. クラスの生徒を出席番号順で取得（activeOnlyなら基準日時点で在籍中のみ）
-    const memberships = await prisma.studentClassMembership.findMany({
+    const memberships = await prisma.studentClassroomMembership.findMany({
       where: {
         classroomId,
         ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
@@ -472,8 +472,8 @@ export const addStudentsFromClass = async (
  * 試験内の全生徒の学級・出席番号情報を取得
  *
  * ロジック:
- * 1. ExamClass (administered=true) を order 順で取得
- * 2. 各クラスの StudentClassMembership を取得
+ * 1. ExamClassroom (administered=true) を order 順で取得
+ * 2. 各クラスの StudentClassroomMembership を取得
  * 3. 生徒ごとに、最初にマッチするクラスの情報を返す
  *
  * @returns Map<studentId, StudentClassInfo>
@@ -485,8 +485,8 @@ export const getStudentClassInfoForExam = async (
     // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
     const referenceDate = await getExamReferenceDate(examId)
 
-    // 1. administered=true の ExamClass を order 順で取得
-    const examClasses = await prisma.examClass.findMany({
+    // 1. administered=true の ExamClassroom を order 順で取得
+    const examClassrooms = await prisma.examClassroom.findMany({
       where: {
         examId,
         administered: true,
@@ -509,7 +509,7 @@ export const getStudentClassInfoForExam = async (
     // 2. 生徒ごとの学級情報をマップに格納（order順で最初にマッチしたものを使用）
     const result: Record<string, StudentClassInfo> = {}
 
-    for (const examClass of examClasses) {
+    for (const examClass of examClassrooms) {
       for (const membership of examClass.classroom.memberships) {
         // 既に情報がある生徒はスキップ（order優先順位を尊重）
         if (result[membership.studentId]) {
@@ -544,8 +544,8 @@ export const getStudentClassInfo = async (
     // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
     const referenceDate = await getExamReferenceDate(examId)
 
-    // administered=true の ExamClass を order 順で取得
-    const examClasses = await prisma.examClass.findMany({
+    // administered=true の ExamClassroom を order 順で取得
+    const examClassrooms = await prisma.examClassroom.findMany({
       where: {
         examId,
         administered: true,
@@ -563,7 +563,7 @@ export const getStudentClassInfo = async (
     })
 
     // 最初にマッチするクラスを使用
-    for (const examClass of examClasses) {
+    for (const examClass of examClassrooms) {
       if (examClass.classroom.memberships.length > 0) {
         const membership = examClass.classroom.memberships[0]
         return {
@@ -596,8 +596,8 @@ export const getStudentClassInfo = async (
 /**
  * 登録学級ごとの所属生徒（集計エンジン・Phase 1）
  *
- * 試験に登録された各 ExamClass について、**受験日時点で在籍する**生徒（class.memberships）を
- * 含む Prisma payload（{@link ExamClassWithMembers}）をそのまま返す。memberships は受験日
+ * 試験に登録された各 ExamClassroom について、**受験日時点で在籍する**生徒（class.memberships）を
+ * 含む Prisma payload（{@link ExamClassroomWithMembers}）をそのまま返す。memberships は受験日
  * スナップショットで where 絞り込み・出席番号→学籍番号順にソート済み。採番
  * （getStudentClassInfoForExam）と異なり**1人の生徒は所属する全学級に重複カウント**される
  * （用途2/3の学級平均は「学級全体」を母集団とするため、order優先の単一化はしない）。
@@ -608,11 +608,11 @@ export const getStudentClassInfo = async (
  */
 export const getClassMembersForExam = async (
   examId: string
-): Promise<ExamClassWithMembers[]> => {
+): Promise<ExamClassroomWithMembers[]> => {
   try {
     const referenceDate = await getExamReferenceDate(examId)
 
-    return await prisma.examClass.findMany({
+    return await prisma.examClassroom.findMany({
       where: { examId },
       include: {
         classroom: {

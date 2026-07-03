@@ -111,7 +111,7 @@ describe("cornerMarkerDetector", () => {
     expect(result.imageHeight).toBe(height)
 
     // 各コーナーが検出されている
-    const corners = result.markers.map((m) => m.corner).sort()
+    const corners = result.markers.map((marker) => marker.corner).sort()
     expect(corners).toEqual(["BL", "BR", "TL", "TR"])
   })
 
@@ -279,7 +279,7 @@ describe("cornerMarkerDetector", () => {
     expect(result.markers).toHaveLength(4)
 
     // 各コーナーが検出されている
-    const detectedCorners = result.markers.map((m) => m.corner).sort()
+    const detectedCorners = result.markers.map((marker) => marker.corner).sort()
     expect(detectedCorners).toEqual(["BL", "BR", "TL", "TR"])
   })
 
@@ -313,7 +313,7 @@ describe("cornerMarkerDetector", () => {
         expect(result.imageWidth).toBe(width)
         expect(result.imageHeight).toBe(height)
 
-        const corners = result.markers.map((m) => m.corner).sort()
+        const corners = result.markers.map((marker) => marker.corner).sort()
         expect(corners).toEqual(["BL", "BR", "TL", "TR"])
       }
     )
@@ -381,7 +381,7 @@ describe("cornerMarkerDetector", () => {
       expect(result.success).toBe(true)
       expect(result.markers).toHaveLength(4)
 
-      const corners = result.markers.map((m) => m.corner).sort()
+      const corners = result.markers.map((marker) => marker.corner).sort()
       expect(corners).toEqual(["BL", "BR", "TL", "TR"])
     })
   })
@@ -452,7 +452,7 @@ describe("cornerMarkerDetector", () => {
       expect(result.success).toBe(true)
       expect(result.markers).toHaveLength(4)
 
-      const corners = result.markers.map((m) => m.corner).sort()
+      const corners = result.markers.map((marker) => marker.corner).sort()
       expect(corners).toEqual(["BL", "BR", "TL", "TR"])
     })
   })
@@ -509,7 +509,7 @@ describe("cornerMarkerDetector", () => {
       expect(result.success).toBe(true)
       expect(result.markers).toHaveLength(4)
 
-      const corners = result.markers.map((m) => m.corner).sort()
+      const corners = result.markers.map((marker) => marker.corner).sort()
       expect(corners).toEqual(["BL", "BR", "TL", "TR"])
     })
   })
@@ -609,7 +609,9 @@ describe("cornerMarkerDetector", () => {
       expect(result.success).toBe(true)
       expect(result.markers).toHaveLength(4)
 
-      const detectedCorners = result.markers.map((m) => m.corner).sort()
+      const detectedCorners = result.markers
+        .map((marker) => marker.corner)
+        .sort()
       expect(detectedCorners).toEqual(["BL", "BR", "TL", "TR"])
     })
   })
@@ -677,12 +679,14 @@ describe("cornerMarkerDetector", () => {
       // マーカー+罫線の連結成分が選ばれる可能性がある。
       // その場合、バウンディングボックスが横長になるため信頼度が低下する。
       // 他の3マーカーは正常に検出されるべき。
-      const tlMarker = result.markers.find((m) => m.corner === "TL")
-      const otherMarkers = result.markers.filter((m) => m.corner !== "TL")
+      const tlMarker = result.markers.find((marker) => marker.corner === "TL")
+      const otherMarkers = result.markers.filter(
+        (marker) => marker.corner !== "TL"
+      )
 
       // 他の3マーカーは必ず検出される
       expect(otherMarkers).toHaveLength(3)
-      const otherCorners = otherMarkers.map((m) => m.corner).sort()
+      const otherCorners = otherMarkers.map((marker) => marker.corner).sort()
       expect(otherCorners).toEqual(["BL", "BR", "TR"])
 
       // 他の3マーカーは高信頼度
@@ -694,7 +698,7 @@ describe("cornerMarkerDetector", () => {
         // TLが検出された場合、信頼度が他のマーカーより低いことを確認
         // （バウンディングボックスが正方形から外れるため）
         const minOtherConfidence = Math.min(
-          ...otherMarkers.map((m) => m.confidence)
+          ...otherMarkers.map((marker) => marker.confidence)
         )
         expect(tlMarker.confidence).toBeLessThan(minOtherConfidence)
       } else {
@@ -729,7 +733,7 @@ describe("cornerMarkerDetector", () => {
         expect(result.success).toBe(true)
         expect(result.markers).toHaveLength(4)
 
-        const corners = result.markers.map((m) => m.corner).sort()
+        const corners = result.markers.map((marker) => marker.corner).sort()
         expect(corners).toEqual(["BL", "BR", "TL", "TR"])
       }
     )
@@ -788,7 +792,7 @@ describe("cornerMarkerDetector", () => {
       expect(result.success).toBe(true)
       expect(result.markers).toHaveLength(4)
 
-      const corners = result.markers.map((m) => m.corner).sort()
+      const corners = result.markers.map((marker) => marker.corner).sort()
       expect(corners).toEqual(["BL", "BR", "TL", "TR"])
     })
   })

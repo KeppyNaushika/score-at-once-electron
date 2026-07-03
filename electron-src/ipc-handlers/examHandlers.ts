@@ -47,31 +47,39 @@ function serializeQuestionScore(score: {
 function computeExamStatus(exam: ExamForListPayload) {
   const hasImages = exam.examPages.length > 0
 
-  const allCropRegions = exam.examPages.flatMap((p) => p.cropRegions)
+  const allCropRegions = exam.examPages.flatMap(
+    (examPage) => examPage.cropRegions
+  )
   const hasLayout = allCropRegions.length > 0
   const hasRegionInfo = hasLayout
 
   const hasSubtotalRegions = allCropRegions.some(
-    (r) => r.type === "SUBTOTAL_SCORE"
+    (cropRegion) => cropRegion.type === "SUBTOTAL_SCORE"
   )
   const hasSubtotalGroupSetting =
     !hasSubtotalRegions || exam.examSubtotalGroups.length > 0
 
   const hasStudents = exam.examStudents.length > 0
 
-  const allAnswerImages = exam.examPages.flatMap((p) => p.studentAnswerImages)
+  const allAnswerImages = exam.examPages.flatMap(
+    (examPage) => examPage.studentAnswerImages
+  )
   const hasAnswers = allAnswerImages.length > 0
 
   // 採点進捗の計算
   const questionAnswerRegions = allCropRegions.filter(
-    (r) => r.type === "QUESTION_ANSWER"
+    (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
   )
   const questionAnswerCount = questionAnswerRegions.length
 
   const participatingStudentIds = new Set(
     exam.examStudents
-      .filter((ps) => ps.status === "PARTICIPATING" || ps.status === "EXPECTED")
-      .map((ps) => ps.studentId)
+      .filter(
+        (examStudent) =>
+          examStudent.status === "PARTICIPATING" ||
+          examStudent.status === "EXPECTED"
+      )
+      .map((examStudent) => examStudent.studentId)
   )
 
   const answerSheetCount = new Set(

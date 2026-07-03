@@ -35,9 +35,11 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
   const avgValid = (
     selector: (i: (typeof items)[number]) => number | null
   ): number | null => {
-    const vals = items.map(selector).filter((v): v is number => v !== null)
+    const vals = items
+      .map(selector)
+      .filter((value): value is number => value !== null)
     return vals.length > 0
-      ? vals.reduce((s, v) => s + v, 0) / vals.length
+      ? vals.reduce((sum, value) => sum + value, 0) / vals.length
       : null
   }
 

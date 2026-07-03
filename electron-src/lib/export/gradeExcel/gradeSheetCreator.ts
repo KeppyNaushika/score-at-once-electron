@@ -88,8 +88,8 @@ export function createGradeResultSheet(
     const excelRow = sheet.addRow(row)
 
     // 除外セルにスタイル適用
-    for (const idx of excludedCellIndices) {
-      const cell = excelRow.getCell(idx + 1) // ExcelJS: 1-indexed
+    for (const cellIndex of excludedCellIndices) {
+      const cell = excelRow.getCell(cellIndex + 1) // ExcelJS: 1-indexed
       cell.font = { italic: true, color: { argb: "FF999999" } }
       cell.fill = {
         type: "pattern",
@@ -99,8 +99,8 @@ export function createGradeResultSheet(
     }
 
     // 全欠測→0点セルに赤色適用
-    for (const idx of allMissingCellIndices) {
-      const cell = excelRow.getCell(idx + 1)
+    for (const cellIndex of allMissingCellIndices) {
+      const cell = excelRow.getCell(cellIndex + 1)
       cell.font = { color: { argb: "FFEF4444" } }
     }
   }
@@ -225,15 +225,15 @@ export function createDetailSheet(
     const excelRow = sheet.addRow(row)
 
     // 推定セルにスタイル適用
-    for (const idx of estimatedCellIndices) {
-      const cell = excelRow.getCell(idx + 1) // ExcelJS: 1-indexed
+    for (const cellIndex of estimatedCellIndices) {
+      const cell = excelRow.getCell(cellIndex + 1) // ExcelJS: 1-indexed
       cell.font = { italic: true, color: { argb: "FFD97706" } }
       cell.note = "欠測推定値"
     }
 
     // 除外セルにスタイル適用
-    for (const idx of detailExcludedCellIndices) {
-      const cell = excelRow.getCell(idx + 1)
+    for (const cellIndex of detailExcludedCellIndices) {
+      const cell = excelRow.getCell(cellIndex + 1)
       cell.font = { italic: true, color: { argb: "FF999999" } }
       cell.fill = {
         type: "pattern",

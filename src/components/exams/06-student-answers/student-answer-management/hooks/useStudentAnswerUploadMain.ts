@@ -277,7 +277,7 @@ export function useStudentAnswerUploadMain({
     getStudentName: useCallback(
       (studentId: string) => {
         const student = studentManagement.studentsWithAnswers.find(
-          (s) => s.id === studentId
+          (studentWithAnswers) => studentWithAnswers.id === studentId
         )
         return student ? `${student.lastName} ${student.firstName}` : ""
       },

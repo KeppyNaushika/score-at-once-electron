@@ -78,11 +78,11 @@ export async function upsertBoundarySet(data: {
         // 境界を作成
         if (data.boundaries.length > 0) {
           await tx.gradeBoundary.createMany({
-            data: data.boundaries.map((b) => ({
+            data: data.boundaries.map((boundary) => ({
               gradeBoundarySetId: setId,
-              label: b.label,
-              minPercentage: b.minPercentage,
-              order: b.order,
+              label: boundary.label,
+              minPercentage: boundary.minPercentage,
+              order: boundary.order,
             })),
           })
         }

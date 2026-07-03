@@ -280,11 +280,11 @@ export function useElementResize({
       const clamped = clampNormalized(newX, newY, newWidth, newHeight)
 
       setDrawingElements((prev) =>
-        prev.map((el) => {
-          if (el.id === element.id) {
-            if (el.type === "text") {
+        prev.map((drawingElement) => {
+          if (drawingElement.id === element.id) {
+            if (drawingElement.type === "text") {
               return {
-                ...el,
+                ...drawingElement,
                 x: clamped.x,
                 y: clamped.y,
                 textBoxWidth: clamped.width,
@@ -292,7 +292,7 @@ export function useElementResize({
               }
             } else {
               return {
-                ...el,
+                ...drawingElement,
                 x: clamped.x,
                 y: clamped.y,
                 width: clamped.width,
@@ -300,7 +300,7 @@ export function useElementResize({
               }
             }
           }
-          return el
+          return drawingElement
         })
       )
     },

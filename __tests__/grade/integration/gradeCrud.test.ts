@@ -52,7 +52,7 @@ describe("Grade CRUD", () => {
       expect(result.grade).toBeDefined()
       expect(result.grade!.name).toBe("1学期期末成績")
       expect(result.grade!.gradeItems).toEqual([])
-      expect(result.grade!.gradeClasses).toEqual([])
+      expect(result.grade!.gradeClassrooms).toEqual([])
     })
 
     it("descriptionとreferenceDateを指定して作成できる", async () => {
@@ -130,7 +130,7 @@ describe("Grade CRUD", () => {
       expect(result.error).toBe("Grade exam not found")
     })
 
-    it("関連するgradeItemsとgradeClassesが含まれる", async () => {
+    it("関連するgradeItemsとgradeClassroomsが含まれる", async () => {
       const created = await createGrade({ name: "PJ" })
       await testPrisma.gradeItem.create({
         data: {

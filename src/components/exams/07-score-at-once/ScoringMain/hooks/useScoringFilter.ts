@@ -117,26 +117,28 @@ export function useScoringFilter({
       (pageImage) => pageImage.examPageId === currentCropRegion.examPageId
     )
 
-    const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
-      const aOrder =
-        a.student?.examStudents?.[0]?.customOrder !== undefined
-          ? a.student.examStudents[0].customOrder
-          : 999999
-      const bOrder =
-        b.student?.examStudents?.[0]?.customOrder !== undefined
-          ? b.student.examStudents[0].customOrder
-          : 999999
+    const sortedAnswerSheets = [...pageFilteredSheets].sort(
+      (sheetA, sheetB) => {
+        const aOrder =
+          sheetA.student?.examStudents?.[0]?.customOrder !== undefined
+            ? sheetA.student.examStudents[0].customOrder
+            : 999999
+        const bOrder =
+          sheetB.student?.examStudents?.[0]?.customOrder !== undefined
+            ? sheetB.student.examStudents[0].customOrder
+            : 999999
 
-      if (aOrder === bOrder) {
-        const aName = `${a.student?.lastName ?? ""}${a.student?.firstName ?? ""}`
-        const bName = `${b.student?.lastName ?? ""}${b.student?.firstName ?? ""}`
-        return aName.localeCompare(bName, "ja")
+        if (aOrder === bOrder) {
+          const aName = `${sheetA.student?.lastName ?? ""}${sheetA.student?.firstName ?? ""}`
+          const bName = `${sheetB.student?.lastName ?? ""}${sheetB.student?.firstName ?? ""}`
+          return aName.localeCompare(bName, "ja")
+        }
+
+        const sortResult = (aOrder || 0) - (bOrder || 0)
+
+        return sortResult
       }
-
-      const sortResult = (aOrder || 0) - (bOrder || 0)
-
-      return sortResult
-    })
+    )
 
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
       (pageImage) => {

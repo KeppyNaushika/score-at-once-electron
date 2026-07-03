@@ -323,7 +323,7 @@ export async function seedClasses(
     data: { id: randomUUID(), name: "2年B組", grade: 2 },
   })
   for (let i = 0; i < 20; i++) {
-    await db.studentClassMembership.create({
+    await db.studentClassroomMembership.create({
       data: {
         id: randomUUID(),
         studentId: studentIds[i],
@@ -333,7 +333,7 @@ export async function seedClasses(
     })
   }
   for (let i = 20; i < 40; i++) {
-    await db.studentClassMembership.create({
+    await db.studentClassroomMembership.create({
       data: {
         id: randomUUID(),
         studentId: studentIds[i],
@@ -364,7 +364,7 @@ export async function seedSubtotalAndTag(): Promise<{
   ]
   const subtotalIds: string[] = []
   for (let i = 0; i < subtotalNames.length; i++) {
-    const st = await db.subtotal.create({
+    const subtotal = await db.subtotal.create({
       data: {
         id: randomUUID(),
         name: subtotalNames[i],
@@ -372,7 +372,7 @@ export async function seedSubtotalAndTag(): Promise<{
         order: i,
       },
     })
-    subtotalIds.push(st.id)
+    subtotalIds.push(subtotal.id)
   }
   const tag = await db.tag.create({
     data: { id: randomUUID(), name: "数学" },
@@ -416,7 +416,7 @@ export async function seedExamWithScoring(
     data: { id: randomUUID(), userId, examId, role: "OWNER" },
   })
   for (const classroomId of [classAId, classBId]) {
-    await db.examClass.create({
+    await db.examClassroom.create({
       data: {
         id: randomUUID(),
         examId,
@@ -464,7 +464,7 @@ export async function seedExamWithScoring(
   // 採点領域
   const cropRegionIds: string[] = []
   for (const region of REGION_DEFINITIONS) {
-    const cr = await db.cropRegion.create({
+    const cropRegion = await db.cropRegion.create({
       data: {
         id: randomUUID(),
         examPageId: examPage.id,
@@ -478,7 +478,7 @@ export async function seedExamWithScoring(
         orderIndex: region.orderIndex,
       },
     })
-    cropRegionIds.push(cr.id)
+    cropRegionIds.push(cropRegion.id)
 
     // 大問番号に応じて3つの小計に振り分け
     // Q1-Q3: 知識・技能, Q4-Q5: 思考・判断・表現, Q6-Q7: 主体的に学習に取り組む態度
@@ -487,7 +487,7 @@ export async function seedExamWithScoring(
     await db.cropSubtotal.create({
       data: {
         id: randomUUID(),
-        cropRegionId: cr.id,
+        cropRegionId: cropRegion.id,
         subtotalId: subtotalIds[subtotalIndex],
         assignmentType: "QUESTION_ASSIGNMENT",
       },
@@ -542,14 +542,14 @@ export async function seedExamWithScoring(
   // 採点結果
   for (let i = 0; i < studentIds.length; i++) {
     const scores = allScores[i]
-    for (const s of scores) {
+    for (const scoreEntry of scores) {
       await db.questionScore.create({
         data: {
           id: randomUUID(),
-          cropRegionId: cropRegionIds[s.regionIndex],
+          cropRegionId: cropRegionIds[scoreEntry.regionIndex],
           studentId: studentIds[i],
-          partialScore: s.score,
-          status: s.status,
+          partialScore: scoreEntry.score,
+          status: scoreEntry.status,
           userId,
         },
       })
@@ -586,7 +586,7 @@ export async function seedGradeProject(
     },
   })
   for (const classroomId of [classAId, classBId]) {
-    await db.gradeClass.create({
+    await db.gradeClassroom.create({
       data: { id: randomUUID(), gradeId, classroomId },
     })
   }
@@ -615,10 +615,10 @@ export async function seedGradeProject(
   ]
   const gradeItemIds: string[] = []
   for (let i = 0; i < gradeItemNames.length; i++) {
-    const gi = await db.gradeItem.create({
+    const gradeItem = await db.gradeItem.create({
       data: { id: randomUUID(), gradeId, name: gradeItemNames[i], order: i },
     })
-    gradeItemIds.push(gi.id)
+    gradeItemIds.push(gradeItem.id)
   }
 
   // 評定 → 合計点データソース
@@ -634,15 +634,15 @@ export async function seedGradeProject(
   })
   // 3つの小計それぞれにデータソースを作成
   // Q1-Q3: 知識・技能, Q4-Q5: 思考・判断・表現, Q6-Q7: 主体的に学習に取り組む態度
-  for (let si = 0; si < 3; si++) {
+  for (let subtotalIndex = 0; subtotalIndex < 3; subtotalIndex++) {
     await db.gradeDataSource.create({
       data: {
         id: randomUUID(),
-        gradeItemId: gradeItemIds[si],
+        gradeItemId: gradeItemIds[subtotalIndex],
         type: "subtotal",
         examId,
-        subtotalId: subtotalIds[si],
-        name: subtotalNames[si],
+        subtotalId: subtotalIds[subtotalIndex],
+        name: subtotalNames[subtotalIndex],
         weight: 1.0,
       },
     })
@@ -656,7 +656,7 @@ export async function seedGradeProject(
     { label: "E", minPercentage: 0 },
   ]
   for (const giId of gradeItemIds) {
-    const bs = await db.gradeBoundarySet.create({
+    const boundarySet = await db.gradeBoundarySet.create({
       data: {
         id: randomUUID(),
         gradeId,
@@ -664,14 +664,18 @@ export async function seedGradeProject(
         gradeItemId: giId,
       },
     })
-    for (let bi = 0; bi < boundaryLabels.length; bi++) {
+    for (
+      let boundaryIndex = 0;
+      boundaryIndex < boundaryLabels.length;
+      boundaryIndex++
+    ) {
       await db.gradeBoundary.create({
         data: {
           id: randomUUID(),
-          gradeBoundarySetId: bs.id,
-          label: boundaryLabels[bi].label,
-          minPercentage: boundaryLabels[bi].minPercentage,
-          order: bi,
+          gradeBoundarySetId: boundarySet.id,
+          label: boundaryLabels[boundaryIndex].label,
+          minPercentage: boundaryLabels[boundaryIndex].minPercentage,
+          order: boundaryIndex,
         },
       })
     }
@@ -679,14 +683,18 @@ export async function seedGradeProject(
   const overallBS = await db.gradeBoundarySet.create({
     data: { id: randomUUID(), gradeId, targetType: "overall" },
   })
-  for (let bi = 0; bi < boundaryLabels.length; bi++) {
+  for (
+    let boundaryIndex = 0;
+    boundaryIndex < boundaryLabels.length;
+    boundaryIndex++
+  ) {
     await db.gradeBoundary.create({
       data: {
         id: randomUUID(),
         gradeBoundarySetId: overallBS.id,
-        label: boundaryLabels[bi].label,
-        minPercentage: boundaryLabels[bi].minPercentage,
-        order: bi,
+        label: boundaryLabels[boundaryIndex].label,
+        minPercentage: boundaryLabels[boundaryIndex].minPercentage,
+        order: boundaryIndex,
       },
     })
   }
@@ -715,7 +723,7 @@ export async function seedSimpleExam(
   await db.userExam.create({
     data: { id: randomUUID(), userId, examId, role: "OWNER" },
   })
-  await db.examClass.create({
+  await db.examClassroom.create({
     data: {
       id: randomUUID(),
       examId,

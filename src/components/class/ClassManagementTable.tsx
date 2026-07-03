@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
-import type { ClassWithMemberships } from "@/types/prismaExtensions"
+import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
 interface ClassSortable {
@@ -30,17 +30,16 @@ interface ClassSortable {
   classCode: string | null
   grade: number | null
   memberCount: number
-  original: ClassWithMemberships
+  original: ClassroomWithMemberships
 }
 
 export default function ClassManagementTable() {
   const router = useRouter()
-  const [classes, setClasses] = useState<ClassWithMemberships[]>([])
+  const [classes, setClasses] = useState<ClassroomWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
-  const [classToEdit, setClassToEdit] = useState<ClassWithMemberships | null>(
-    null
-  )
+  const [classToEdit, setClassToEdit] =
+    useState<ClassroomWithMemberships | null>(null)
 
   // Selection states
   const [selectedClassIds, setSelectedClassIds] = useState<Set<string>>(
@@ -90,7 +89,10 @@ export default function ClassManagementTable() {
   })
 
   // Selection handlers
-  const filteredIds = useMemo(() => sortedData.map((d) => d.id), [sortedData])
+  const filteredIds = useMemo(
+    () => sortedData.map((row) => row.id),
+    [sortedData]
+  )
 
   const isAllSelected =
     filteredIds.length > 0 &&
@@ -127,7 +129,7 @@ export default function ClassManagementTable() {
     setIsClassModalOpen(true)
   }
 
-  const handleEditClass = (classItem: ClassWithMemberships) => {
+  const handleEditClass = (classItem: ClassroomWithMemberships) => {
     setClassToEdit(classItem)
     setIsClassModalOpen(true)
   }

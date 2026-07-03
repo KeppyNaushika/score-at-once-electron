@@ -76,7 +76,7 @@ function average(values: number[]): number {
 function stdDev(values: number[]): number {
   if (values.length === 0) return 0
   const avg = average(values)
-  return Math.sqrt(average(values.map((v) => (v - avg) ** 2)))
+  return Math.sqrt(average(values.map((value) => (value - avg) ** 2)))
 }
 
 /**
@@ -104,17 +104,19 @@ export function computeItemAnalysis(
   })
 
   // complete-case: 全設問が採点済み（全 score 非null）の生徒
-  const completeMaps = studentMaps.filter((m) =>
+  const completeMaps = studentMaps.filter((studentMap) =>
     questions.every(
-      (question) => (m.get(question.questionId)?.score ?? null) !== null
+      (question) =>
+        (studentMap.get(question.questionId)?.score ?? null) !== null
     )
   )
   const completeCaseCount = completeMaps.length
 
   // complete-case の合計点（行和）
-  const completeTotals = completeMaps.map((m) =>
+  const completeTotals = completeMaps.map((studentMap) =>
     questions.reduce(
-      (sum, question) => sum + (m.get(question.questionId)?.score ?? 0),
+      (sum, question) =>
+        sum + (studentMap.get(question.questionId)?.score ?? 0),
       0
     )
   )
@@ -147,8 +149,8 @@ export function computeItemAnalysis(
     let correctCount = 0
     let scoredCount = 0
     let scoreRateSum = 0
-    for (const m of studentMaps) {
-      const item = m.get(question.questionId)
+    for (const studentMap of studentMaps) {
+      const item = studentMap.get(question.questionId)
       if (!item || item.score === null) continue
       scoredCount++
       if (item.isCorrect) correctCount++
@@ -235,7 +237,7 @@ function computeCronbachAlpha(
   let sumItemVariance = 0
   for (const question of questions) {
     const itemScores = completeMaps.map(
-      (m) => m.get(question.questionId)?.score ?? 0
+      (studentMap) => studentMap.get(question.questionId)?.score ?? 0
     )
     sumItemVariance += stdDev(itemScores) ** 2
   }

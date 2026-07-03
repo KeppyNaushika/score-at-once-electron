@@ -72,7 +72,9 @@ export default function QuestionNavigator({
     console.warn(
       "🚨 QuestionNavigator: 0/0 progress questions:",
       zeroProgressQuestions.map(([id, progress]) => {
-        const region = questionRegions.find((r) => r.id === id)
+        const region = questionRegions.find(
+          (questionRegion) => questionRegion.id === id
+        )
         return {
           questionId: id,
           questionLabel: region?.label || "Unknown",

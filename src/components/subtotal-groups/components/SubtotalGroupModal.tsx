@@ -144,7 +144,7 @@ export function SubtotalGroupModal({
       })
       setSubtotals(
         editingGroup.subtotals
-          .sort((a, b) => a.order - b.order)
+          .sort((subtotalA, subtotalB) => subtotalA.order - subtotalB.order)
           .map((subtotal, index) => ({
             id: subtotal.id,
             name: subtotal.name,

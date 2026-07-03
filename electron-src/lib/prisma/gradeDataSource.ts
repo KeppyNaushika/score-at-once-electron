@@ -350,7 +350,7 @@ export async function getExamCandidates() {
  */
 export async function getExamSubtotalGroups(examId: string) {
   try {
-    const psg = await prisma.examSubtotalGroup.findMany({
+    const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
       where: { examId },
       include: {
         subtotalGroup: {
@@ -360,7 +360,9 @@ export async function getExamSubtotalGroups(examId: string) {
     })
     return {
       success: true,
-      subtotalGroups: psg.map((p) => p.subtotalGroup),
+      subtotalGroups: examSubtotalGroups.map(
+        (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+      ),
     }
   } catch (error) {
     console.error("Error getting exam subtotal groups:", error)
@@ -386,7 +388,7 @@ export async function getExamCropRegions(examId: string) {
       },
       orderBy: { pageNumber: "asc" },
     })
-    const cropRegions = pages.flatMap((p) => p.cropRegions)
+    const cropRegions = pages.flatMap((page) => page.cropRegions)
     return { success: true, cropRegions: serialize(cropRegions) }
   } catch (error) {
     console.error("Error getting exam crop regions:", error)
@@ -431,11 +433,11 @@ export async function computeLiveMaxScore(
   // crop_region: 設問の配点
   if (ds.type === "crop_region") {
     if (!ds.cropRegionId) return 0
-    const cr = await prisma.cropRegion.findUnique({
+    const cropRegion = await prisma.cropRegion.findUnique({
       where: { id: ds.cropRegionId },
       select: { points: true },
     })
-    return Number(cr?.points ?? 0)
+    return Number(cropRegion?.points ?? 0)
   }
 
   // exam_total: 全QUESTION_ANSWER CropRegionのpoints合計
@@ -445,8 +447,8 @@ export async function computeLiveMaxScore(
       include: { cropRegions: { where: { type: "QUESTION_ANSWER" } } },
     })
     return pages
-      .flatMap((p) => p.cropRegions)
-      .reduce((sum, cr) => sum + (cr.points ?? 0), 0)
+      .flatMap((page) => page.cropRegions)
+      .reduce((sum, cropRegion) => sum + (cropRegion.points ?? 0), 0)
   }
 
   // subtotal: 観点に割り当てられたCropRegion（QUESTION_ASSIGNMENT）のpoints合計
@@ -461,8 +463,13 @@ export async function computeLiveMaxScore(
       },
     })
     return cropSubtotals
-      .filter((cs) => cs.cropRegion.examPage.examId === ds.examId)
-      .reduce((sum, cs) => sum + (cs.cropRegion.points ?? 0), 0)
+      .filter(
+        (cropSubtotal) => cropSubtotal.cropRegion.examPage.examId === ds.examId
+      )
+      .reduce(
+        (sum, cropSubtotal) => sum + (cropSubtotal.cropRegion.points ?? 0),
+        0
+      )
   }
 
   return 0

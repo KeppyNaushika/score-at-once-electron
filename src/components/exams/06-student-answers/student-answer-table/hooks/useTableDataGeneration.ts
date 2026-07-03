@@ -70,19 +70,19 @@ export function useTableDataGeneration({
       // 配置戦略に基づいて有効セルをソート
       if (fileOrder === "page-first") {
         // ページ順: ページ番号を優先してソート
-        validPositions.sort((a, b) => {
-          if (a.pageIndex !== b.pageIndex) {
-            return a.pageIndex - b.pageIndex
+        validPositions.sort((positionA, positionB) => {
+          if (positionA.pageIndex !== positionB.pageIndex) {
+            return positionA.pageIndex - positionB.pageIndex
           }
-          return a.studentIndex - b.studentIndex
+          return positionA.studentIndex - positionB.studentIndex
         })
       } else {
         // 生徒順: 生徒番号を優先してソート（デフォルトで既にこの順序）
-        validPositions.sort((a, b) => {
-          if (a.studentIndex !== b.studentIndex) {
-            return a.studentIndex - b.studentIndex
+        validPositions.sort((positionA, positionB) => {
+          if (positionA.studentIndex !== positionB.studentIndex) {
+            return positionA.studentIndex - positionB.studentIndex
           }
-          return a.pageIndex - b.pageIndex
+          return positionA.pageIndex - positionB.pageIndex
         })
       }
 
@@ -153,7 +153,7 @@ export function useTableDataGeneration({
           if (answerSheet.studentId && answerSheet.pageNumber) {
             // 既存答案の学生IDとページ番号から位置を特定
             const studentIndex = sortedStudents.findIndex(
-              (s) => s.id === answerSheet.studentId
+              (student) => student.id === answerSheet.studentId
             )
             const pageIndex = answerSheet.pageNumber - 1
             if (studentIndex >= 0 && pageIndex >= 0) {
@@ -191,9 +191,9 @@ export function useTableDataGeneration({
       }
 
       // 既存答案がある位置を優先してソート（上書き有効時のみ）
-      validPositions.sort((a, b) => {
-        const aKey = `${a.studentIndex}-${a.pageIndex}`
-        const bKey = `${b.studentIndex}-${b.pageIndex}`
+      validPositions.sort((positionA, positionB) => {
+        const aKey = `${positionA.studentIndex}-${positionA.pageIndex}`
+        const bKey = `${positionB.studentIndex}-${positionB.pageIndex}`
         const aHasExisting = existingAnswerPositions.has(aKey)
         const bHasExisting = existingAnswerPositions.has(bKey)
 
@@ -204,16 +204,16 @@ export function useTableDataGeneration({
         // 同じ条件の場合は配置戦略に基づいてソート
         if (fileOrder === "page-first") {
           // ページ順: ページ番号を優先してソート
-          if (a.pageIndex !== b.pageIndex) {
-            return a.pageIndex - b.pageIndex
+          if (positionA.pageIndex !== positionB.pageIndex) {
+            return positionA.pageIndex - positionB.pageIndex
           }
-          return a.studentIndex - b.studentIndex
+          return positionA.studentIndex - positionB.studentIndex
         } else {
           // 生徒順: 生徒番号を優先してソート（デフォルト）
-          if (a.studentIndex !== b.studentIndex) {
-            return a.studentIndex - b.studentIndex
+          if (positionA.studentIndex !== positionB.studentIndex) {
+            return positionA.studentIndex - positionB.studentIndex
           }
-          return a.pageIndex - b.pageIndex
+          return positionA.pageIndex - positionB.pageIndex
         }
       })
 

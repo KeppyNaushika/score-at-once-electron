@@ -107,7 +107,7 @@ describe("executeIdIntegrationImport", () => {
     ]
 
     // ExamClassを追加
-    examData.examClasses = [
+    examData.examClassrooms = [
       {
         id: generateId(),
         examId,
@@ -191,24 +191,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -244,24 +244,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -290,24 +290,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -339,24 +339,24 @@ describe("executeIdIntegrationImport", () => {
     // 先に全データをDBに作成しておく
     const preMatch1 = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -420,24 +420,24 @@ describe("executeIdIntegrationImport", () => {
     // まず初回インポート
     const preMatch1 = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -533,24 +533,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch1 = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -641,24 +641,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch1 = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -778,17 +778,17 @@ describe("executeIdIntegrationImport", () => {
         ],
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -852,17 +852,17 @@ describe("executeIdIntegrationImport", () => {
         ],
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -915,17 +915,17 @@ describe("executeIdIntegrationImport", () => {
         ],
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -980,24 +980,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1038,24 +1038,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1101,24 +1101,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1173,24 +1173,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1229,24 +1229,24 @@ describe("executeIdIntegrationImport", () => {
     // 初回インポート
     const preMatch1 = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1315,24 +1315,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1385,7 +1385,7 @@ describe("executeIdIntegrationImport", () => {
     expect(result2.success).toBe(true)
 
     // メンバーシップが重複していない
-    const memberships = await prisma.studentClassMembership.findMany({
+    const memberships = await prisma.studentClassroomMembership.findMany({
       where: { studentId, classroomId },
     })
     expect(memberships.length).toBe(1)
@@ -1397,24 +1397,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1434,12 +1434,12 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const examClasses = await prisma.examClass.findMany({
+    const examClassrooms = await prisma.examClassroom.findMany({
       where: { examId: result.examId! },
     })
-    expect(examClasses.length).toBe(1)
-    expect(examClasses[0].classroomId).toBe(classroomId)
-    expect(examClasses[0].administered).toBe(true)
+    expect(examClassrooms.length).toBe(1)
+    expect(examClassrooms[0].classroomId).toBe(classroomId)
+    expect(examClassrooms[0].administered).toBe(true)
   })
 
   // II-19: トランザクションエラー時の全ロールバック
@@ -1470,24 +1470,24 @@ describe("executeIdIntegrationImport", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -1524,24 +1524,24 @@ describe("executeIdIntegrationImport", () => {
   ) {
     return createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((s) => ({
-          importId: s.id,
-          importData: { ...s },
-          displayLabel: s.lastName,
+        noMatch: data.studentsData.students.map((student) => ({
+          importId: student.id,
+          importData: { ...student },
+          displayLabel: student.lastName,
         })),
       }),
       classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((c) => ({
-          importId: c.id,
-          importData: { ...c },
-          displayLabel: c.name,
+        noMatch: data.classesData.classrooms.map((classroom) => ({
+          importId: classroom.id,
+          importData: { ...classroom },
+          displayLabel: classroom.name,
         })),
       }),
       subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((g) => ({
-          importId: g.id,
-          importData: { ...g },
-          displayLabel: g.name,
+        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+          importId: subtotalGroup.id,
+          importData: { ...subtotalGroup },
+          displayLabel: subtotalGroup.name,
         })),
       }),
       exam: {
@@ -2025,17 +2025,17 @@ describe("executeIdIntegrationImport", () => {
         where: { cropRegionId: regionId },
       })
     ).toBe(1)
-    const cfg = await prisma.cropRegionOmrConfig.findFirst({
+    const omrConfig = await prisma.cropRegionOmrConfig.findFirst({
       where: { cropRegionId: regionId },
     })
     expect(
       await prisma.cropRegionOmrChoiceOption.count({
-        where: { omrConfigId: cfg!.id },
+        where: { omrConfigId: omrConfig!.id },
       })
     ).toBe(1)
     expect(
       await prisma.cropRegionOmrDigitBox.count({
-        where: { omrConfigId: cfg!.id },
+        where: { omrConfigId: omrConfig!.id },
       })
     ).toBe(1)
     expect(await prisma.compoundAnswer.count({ where: { id: caId } })).toBe(1)

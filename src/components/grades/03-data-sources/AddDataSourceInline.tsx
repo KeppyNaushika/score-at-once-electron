@@ -121,15 +121,15 @@ export function AddDataSourceInline({
       return
     }
     const load = async () => {
-      const [sgResult, crResult] = await Promise.all([
+      const [subtotalGroupResult, cropRegionResult] = await Promise.all([
         window.electronAPI.grade.getExamSubtotalGroups(selectedExamId),
         window.electronAPI.grade.getExamCropRegions(selectedExamId),
       ])
-      if (sgResult.success && sgResult.subtotalGroups) {
-        setSubtotalGroups(sgResult.subtotalGroups)
+      if (subtotalGroupResult.success && subtotalGroupResult.subtotalGroups) {
+        setSubtotalGroups(subtotalGroupResult.subtotalGroups)
       }
-      if (crResult.success && crResult.cropRegions) {
-        setCropRegions(crResult.cropRegions)
+      if (cropRegionResult.success && cropRegionResult.cropRegions) {
+        setCropRegions(cropRegionResult.cropRegions)
       }
     }
     load()

@@ -55,7 +55,7 @@ function toArchive(collected: CollectedCourseworkData): CourseworkArchiveData {
 }
 
 async function seedCoursework(suffix: number) {
-  const cls = await prisma.classroom.create({
+  const classroom = await prisma.classroom.create({
     data: { name: `学級_${suffix}` },
   })
   const student = await prisma.student.create({
@@ -67,15 +67,19 @@ async function seedCoursework(suffix: number) {
       firstNameKana: "イチロウ",
     },
   })
-  await prisma.studentClassMembership.create({
-    data: { classroomId: cls.id, studentId: student.id, attendanceNumber: 1 },
+  await prisma.studentClassroomMembership.create({
+    data: {
+      classroomId: classroom.id,
+      studentId: student.id,
+      attendanceNumber: 1,
+    },
   })
   const tag = await prisma.tag.create({ data: { name: `タグ_${suffix}` } })
   const coursework = await prisma.coursework.create({
     data: {
       name: `第1回レポート_${suffix}`,
       description: "レポート評価",
-      classes: { create: [{ classroomId: cls.id, order: 0 }] },
+      classrooms: { create: [{ classroomId: classroom.id, order: 0 }] },
       tags: { create: [{ tagId: tag.id }] },
       students: { create: [{ studentId: student.id, customOrder: 0 }] },
     },
@@ -99,7 +103,7 @@ async function seedCoursework(suffix: number) {
       comment: "丁寧にまとめられています",
     },
   })
-  return { cls, student, tag, coursework, item, score }
+  return { classroom, student, tag, coursework, item, score }
 }
 
 describe("coursework-archive ラウンドトリップ", () => {
@@ -117,9 +121,9 @@ describe("coursework-archive ラウンドトリップ", () => {
 
     const collected = await collectCourseworkArchiveData([seeded.coursework.id])
     expect(collected.courseworks).toHaveLength(1)
-    const cw = collected.courseworks[0]
-    expect(cw.items).toHaveLength(1)
-    expect(cw.items[0].scores[0].updatedAt).toBeDefined()
+    const coursework = collected.courseworks[0]
+    expect(coursework.items).toHaveLength(1)
+    expect(coursework.items[0].scores[0].updatedAt).toBeDefined()
     expect(collected.studentsData[0].studentNumber).toBe(`CW_${suffix}`)
     expect(collected.tagsData[0].name).toBe(`タグ_${suffix}`)
 
@@ -156,10 +160,10 @@ describe("coursework-archive ラウンドトリップ", () => {
     expect(Number(item!.scores[0].adjustment)).toBe(-5)
     expect(item!.scores[0].student.studentNumber).toBe(`CW_${suffix}`)
 
-    const cls = await prisma.classroom.findUnique({
+    const classroom = await prisma.classroom.findUnique({
       where: { name: `学級_${suffix}` },
     })
-    expect(cls).not.toBeNull()
+    expect(classroom).not.toBeNull()
   })
 
   it("studentNumber一致・別UUIDの生徒は名前フォールバックで統合される", async () => {
@@ -171,11 +175,11 @@ describe("coursework-archive ラウンドトリップ", () => {
     await prisma.courseworkScore.deleteMany()
     await prisma.courseworkItem.deleteMany()
     await prisma.courseworkStudent.deleteMany()
-    await prisma.courseworkClass.deleteMany()
+    await prisma.courseworkClassroom.deleteMany()
     await prisma.courseworkTag.deleteMany()
     await prisma.coursework.deleteMany()
     await prisma.courseworkScore.deleteMany()
-    await prisma.studentClassMembership.deleteMany()
+    await prisma.studentClassroomMembership.deleteMany()
     await prisma.student.delete({ where: { id: seeded.student.id } })
     // 同じ学籍番号で別UUIDの生徒を作る
     const reborn = await prisma.student.create({

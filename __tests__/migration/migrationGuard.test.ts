@@ -52,7 +52,7 @@ const getMigrationNames = async (): Promise<string[]> => {
   const rows = await prisma.$queryRawUnsafe<{ migration_name: string }[]>(
     `SELECT "migration_name" FROM "_prisma_migrations" ORDER BY "migration_name"`
   )
-  return rows.map((r) => r.migration_name)
+  return rows.map((row) => row.migration_name)
 }
 
 beforeAll(async () => {

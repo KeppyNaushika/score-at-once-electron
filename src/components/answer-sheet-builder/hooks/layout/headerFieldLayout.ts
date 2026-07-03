@@ -21,7 +21,9 @@ export function computeHeaderFieldLayout(
     return { fields: [], totalHeightMm: 0 }
   }
 
-  const sorted = [...headerFields].sort((a, b) => a.order - b.order)
+  const sorted = [...headerFields].sort(
+    (fieldA, fieldB) => fieldA.order - fieldB.order
+  )
   const gap = 2 // フィールド間のギャップ (mm)
 
   // hfill の幅を計算: 全幅から固定要素とギャップを引いた残りを均等配分

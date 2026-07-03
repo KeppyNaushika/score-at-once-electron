@@ -4,7 +4,7 @@ import { ipcRenderer } from "electron"
 export function createExamClassApi() {
   return {
     // ExamClass
-    examClass: {
+    examClassroom: {
       getAll: (examId: string) =>
         ipcRenderer.invoke("exam-class:get-all", examId),
       getAdministered: (examId: string) =>

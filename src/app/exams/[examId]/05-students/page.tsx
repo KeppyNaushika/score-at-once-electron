@@ -56,7 +56,7 @@ export default function StudentsPage() {
   } = useExamStudentsData({ examId })
 
   const {
-    examClasses,
+    examClassrooms,
     loading: classesLoading,
     refresh: refreshExamClasses,
     removeClass,
@@ -119,7 +119,7 @@ export default function StudentsPage() {
               </>
             ) : (
               <>
-                <ClassStatisticsCards examClasses={examClasses} />
+                <ClassStatisticsCards examClassrooms={examClassrooms} />
                 <Button onClick={() => setShowAddClassDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   学級を追加
@@ -156,7 +156,7 @@ export default function StudentsPage() {
         <TabsContent value="classes" className="flex-1 overflow-auto pb-6">
           <ClassExamManager
             examId={examId}
-            examClasses={examClasses}
+            examClassrooms={examClassrooms}
             onRemoveClass={removeClass}
             onUpdateClass={updateClass}
             onClassesChanged={() => {

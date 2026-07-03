@@ -114,7 +114,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const suffix = Date.now()
 
     // 生徒・学級
-    const cls = await prisma.classroom.create({
+    const classroom = await prisma.classroom.create({
       data: { name: `学級_${suffix}` },
     })
     const student = await prisma.student.create({
@@ -126,8 +126,8 @@ describe("grade-archive ラウンドトリップ", () => {
         firstNameKana: "イチロウ",
       },
     })
-    await prisma.studentClassMembership.create({
-      data: { classroomId: cls.id, studentId: student.id },
+    await prisma.studentClassroomMembership.create({
+      data: { classroomId: classroom.id, studentId: student.id },
     })
     const tag = await prisma.tag.create({
       data: { name: `タグ_${suffix}` },
@@ -138,7 +138,7 @@ describe("grade-archive ラウンドトリップ", () => {
       data: {
         name: `第2回レポート_${suffix}`,
         description: "レポート評価",
-        classes: { create: [{ classroomId: cls.id, order: 0 }] },
+        classrooms: { create: [{ classroomId: classroom.id, order: 0 }] },
         tags: { create: [{ tagId: tag.id }] },
         students: { create: [{ studentId: student.id, customOrder: 0 }] },
       },
@@ -218,15 +218,15 @@ describe("grade-archive ラウンドトリップ", () => {
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.courseworkArchive.courseworks).toHaveLength(1)
-    const cw = collected.courseworkArchive.courseworks[0]
-    expect(cw.items).toHaveLength(2)
-    expect(cw.classrooms).toHaveLength(1)
+    const archivedCoursework = collected.courseworkArchive.courseworks[0]
+    expect(archivedCoursework.items).toHaveLength(2)
+    expect(archivedCoursework.classrooms).toHaveLength(1)
     expect(collected.courseworkArchive.tagsData[0].name).toBe(`タグ_${suffix}`)
     expect(collected.courseworkArchive.studentsData[0].studentNumber).toBe(
       `CW_${suffix}`
     )
     const collectedNumDs = collected.gradeData.gradeItems[0].dataSources.find(
-      (d) => d.name === "提出物参照"
+      (dataSource) => dataSource.name === "提出物参照"
     )!
     expect(collectedNumDs.courseworkName).toBe(`第2回レポート_${suffix}`)
     expect(collectedNumDs.courseworkItemName).toBe("提出物")
@@ -373,11 +373,11 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(Number(importedItem!.scores[0].score)).toBe(72)
     expect(importedItem!.scores[0].student.studentNumber).toBe(`CW2_${suffix}`)
 
-    const ds = await prisma.gradeDataSource.findFirst({
+    const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "資料参照" },
     })
-    expect(ds!.courseworkItemId).toBe(importedItem!.id)
-    expect(ds!.type).toBe("coursework")
+    expect(dataSource!.courseworkItemId).toBe(importedItem!.id)
+    expect(dataSource!.type).toBe("coursework")
   })
 
   it("旧 v1.3.0 形式（manual + inputMode + letterScales）が Coursework へ変換される（後方互換）", async () => {
@@ -484,11 +484,11 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(importedItem!.scores[0].comment).toBe("発表が活発でした")
 
     // GradeDataSource が coursework 型に変換され item を参照している
-    const ds = await prisma.gradeDataSource.findFirst({
+    const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "観点別評価" },
     })
-    expect(ds!.type).toBe("coursework")
-    expect(ds!.courseworkItemId).toBe(importedItem!.id)
+    expect(dataSource!.type).toBe("coursework")
+    expect(dataSource!.courseworkItemId).toBe(importedItem!.id)
   })
 
   // 回帰: 旧 v1.3.0 を preview→import の順に同一オブジェクトで処理しても
@@ -589,11 +589,11 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(Number(item!.scores[0].score)).toBe(73)
 
     // DataSource は coursework 型に解決され "manual" が残らない
-    const ds = await prisma.gradeDataSource.findFirst({
+    const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "レポート" },
     })
-    expect(ds!.type).toBe("coursework")
-    expect(ds!.courseworkItemId).toBe(item!.id)
+    expect(dataSource!.type).toBe("coursework")
+    expect(dataSource!.courseworkItemId).toBe(item!.id)
   })
 
   // 回帰: 点数が一切入力されていない manual ソースも coursework 型へ変換され、
@@ -648,12 +648,12 @@ describe("grade-archive ラウンドトリップ", () => {
     const result = await importGradeArchive(archive)
     expect(result.success).toBe(true)
 
-    const ds = await prisma.gradeDataSource.findFirst({
+    const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "観察" },
     })
-    expect(ds!.type).toBe("coursework")
+    expect(dataSource!.type).toBe("coursework")
     // 点数ゼロでも CourseworkItem は生成され参照される
-    expect(ds!.courseworkItemId).not.toBeNull()
+    expect(dataSource!.courseworkItemId).not.toBeNull()
   })
 
   it("referenceDate/exportSettings が無いGradeも問題なく往復する（後方互換）", async () => {
@@ -935,12 +935,12 @@ describe("grade-archive ラウンドトリップ", () => {
       expect.arrayContaining(["既存", "新規項目"])
     )
     // DataSource は補完された項目に結ばれる
-    const ds = await prisma.gradeDataSource.findFirst({
+    const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "資料参照" },
       include: { courseworkItem: true },
     })
-    expect(ds!.courseworkItem!.name).toBe("新規項目")
-    expect(ds!.courseworkItem!.courseworkId).toBe(existing.id)
+    expect(dataSource!.courseworkItem!.name).toBe("新規項目")
+    expect(dataSource!.courseworkItem!.courseworkId).toBe(existing.id)
   })
 
   it("観点間の制約ルール(GradeConstraint)が往復で保持される (v1.7.0)", async () => {
@@ -982,7 +982,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.gradeData.gradeConstraints).toHaveLength(2)
     const exclusion = collected.gradeData.gradeConstraints!.find(
-      (c) => c.kind === "mutual_exclusion"
+      (constraint) => constraint.kind === "mutual_exclusion"
     )!
     expect(exclusion.name).toBe("A・C混在禁止")
     expect(exclusion.config).toBe(JSON.stringify({ labels: ["A", "C"] }))
@@ -1135,11 +1135,11 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(Number(score!.score)).toBe(72)
     expect(score!.item.coursework.name).toBe(`旧レポート_${suffix}`)
 
-    const ds = await prisma.gradeDataSource.findFirst({
+    const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "旧資料参照" },
       include: { courseworkItem: true },
     })
-    expect(ds!.courseworkItem).not.toBeNull()
-    expect(ds!.courseworkItem!.name).toBe("提出物")
+    expect(dataSource!.courseworkItem).not.toBeNull()
+    expect(dataSource!.courseworkItem!.name).toBe("提出物")
   })
 })

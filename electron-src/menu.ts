@@ -221,15 +221,15 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
       {
         label: "部分点",
         submenu: [
-          ...[...Array(10).keys()].map((v) => {
+          ...[...Array(10).keys()].map((digit) => {
             const menuItem: MenuItemConstructorOptions = {
               // Added type
-              label: `部分点に ${v} を右追加`,
-              accelerator: v.toString(),
+              label: `部分点に ${digit} を右追加`,
+              accelerator: digit.toString(),
               click: () =>
                 mainWindow.webContents.send(
                   "score-panel",
-                  `partial-point-${v}`
+                  `partial-point-${digit}`
                 ),
             }
             return menuItem

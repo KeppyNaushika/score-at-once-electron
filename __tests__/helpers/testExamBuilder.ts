@@ -205,7 +205,7 @@ export async function createFullTestExam(
   }
 
   // 6. 学級作成
-  const cls = await prisma.classroom.create({
+  const classroom = await prisma.classroom.create({
     data: {
       id: randomUUID(),
       name: `${className}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -231,18 +231,18 @@ export async function createFullTestExam(
     students.push(student)
 
     // メンバーシップ
-    const membership = await prisma.studentClassMembership.create({
+    const membership = await prisma.studentClassroomMembership.create({
       data: {
         id: randomUUID(),
         studentId: student.id,
-        classroomId: cls.id,
+        classroomId: classroom.id,
         attendanceNumber: i + 1,
       },
     })
     memberships.push(membership)
 
     // ExamStudent
-    const ps = await prisma.examStudent.create({
+    const examStudent = await prisma.examStudent.create({
       data: {
         id: randomUUID(),
         examId: exam.id,
@@ -250,15 +250,15 @@ export async function createFullTestExam(
         status: "PARTICIPATING",
       },
     })
-    examStudents.push(ps)
+    examStudents.push(examStudent)
   }
 
   // 8. ExamClass作成
-  const examClass = await prisma.examClass.create({
+  const examClass = await prisma.examClassroom.create({
     data: {
       id: randomUUID(),
       examId: exam.id,
-      classroomId: cls.id,
+      classroomId: classroom.id,
       administered: true,
       teacherStat: true,
       studentReport: true,
@@ -301,7 +301,7 @@ export async function createFullTestExam(
   const cropSubtotals = []
   for (let i = 0; i < cropRegions.length; i++) {
     const subtotalIdx = i % subtotals.length
-    const cs = await prisma.cropSubtotal.create({
+    const cropSubtotal = await prisma.cropSubtotal.create({
       data: {
         id: randomUUID(),
         cropRegionId: cropRegions[i].id,
@@ -309,7 +309,7 @@ export async function createFullTestExam(
         assignmentType: "auto",
       },
     })
-    cropSubtotals.push(cs)
+    cropSubtotals.push(cropSubtotal)
   }
 
   // 12. QuestionScore作成
@@ -317,7 +317,7 @@ export async function createFullTestExam(
   if (includeScores) {
     for (const region of cropRegions) {
       for (const student of students) {
-        const qs = await prisma.questionScore.create({
+        const questionScore = await prisma.questionScore.create({
           data: {
             id: randomUUID(),
             cropRegionId: region.id,
@@ -328,12 +328,14 @@ export async function createFullTestExam(
           },
         })
         questionScores.push({
-          id: qs.id,
-          cropRegionId: qs.cropRegionId,
-          studentId: qs.studentId,
-          userId: qs.userId,
-          status: qs.status,
-          partialScore: qs.partialScore ? Number(qs.partialScore) : null,
+          id: questionScore.id,
+          cropRegionId: questionScore.cropRegionId,
+          studentId: questionScore.studentId,
+          userId: questionScore.userId,
+          status: questionScore.status,
+          partialScore: questionScore.partialScore
+            ? Number(questionScore.partialScore)
+            : null,
         })
       }
     }
@@ -343,7 +345,7 @@ export async function createFullTestExam(
   const drawingAnnotations = []
   if (includeAnnotations && questionScores.length > 0) {
     // 最初のスコアにだけアノテーションを追加
-    const da = await prisma.drawingAnnotation.create({
+    const drawingAnnotation = await prisma.drawingAnnotation.create({
       data: {
         id: randomUUID(),
         questionScoreId: questionScores[0].id,
@@ -353,21 +355,21 @@ export async function createFullTestExam(
         userId: user.id,
       },
     })
-    drawingAnnotations.push(da)
+    drawingAnnotations.push(drawingAnnotation)
   }
 
   // 14. マスター画像レコード
   const masterImages = []
   if (includeMasterImages) {
     for (const page of pages) {
-      const mi = await prisma.masterImage.create({
+      const masterImage = await prisma.masterImage.create({
         data: {
           id: randomUUID(),
           examPageId: page.id,
           imagePath: `exams/${exam.id}/master-images/page${page.pageNumber}.png`,
         },
       })
-      masterImages.push(mi)
+      masterImages.push(masterImage)
     }
   }
 
@@ -456,34 +458,34 @@ export async function createFullTestExam(
     user: { id: user.id, username: user.username, name: user.name },
     exam: { id: exam.id, examName: exam.examName },
     userExam: { id: userExam.id },
-    pages: pages.map((p) => ({
-      id: p.id,
-      examId: p.examId,
-      pageNumber: p.pageNumber,
+    pages: pages.map((page) => ({
+      id: page.id,
+      examId: page.examId,
+      pageNumber: page.pageNumber,
     })),
-    cropRegions: cropRegions.map((r) => ({
-      id: r.id,
-      examPageId: r.examPageId,
-      label: r.label,
-      points: r.points ?? 0,
+    cropRegions: cropRegions.map((cropRegion) => ({
+      id: cropRegion.id,
+      examPageId: cropRegion.examPageId,
+      label: cropRegion.label,
+      points: cropRegion.points ?? 0,
     })),
-    students: students.map((s) => ({
-      id: s.id,
-      studentNumber: s.studentNumber,
-      lastName: s.lastName,
-      firstName: s.firstName,
+    students: students.map((student) => ({
+      id: student.id,
+      studentNumber: student.studentNumber,
+      lastName: student.lastName,
+      firstName: student.firstName,
     })),
-    classroom: { id: cls.id, name: cls.name },
-    memberships: memberships.map((m) => ({
-      id: m.id,
-      studentId: m.studentId,
-      classroomId: m.classroomId,
-      attendanceNumber: m.attendanceNumber,
+    classroom: { id: classroom.id, name: classroom.name },
+    memberships: memberships.map((membership) => ({
+      id: membership.id,
+      studentId: membership.studentId,
+      classroomId: membership.classroomId,
+      attendanceNumber: membership.attendanceNumber,
     })),
-    examStudents: examStudents.map((ps) => ({
-      id: ps.id,
-      examId: ps.examId,
-      studentId: ps.studentId,
+    examStudents: examStudents.map((examStudent) => ({
+      id: examStudent.id,
+      examId: examStudent.examId,
+      studentId: examStudent.studentId,
     })),
     examClass: {
       id: examClass.id,
@@ -491,27 +493,27 @@ export async function createFullTestExam(
       classroomId: examClass.classroomId,
     },
     subtotalGroup: { id: subtotalGroup.id, name: subtotalGroup.name },
-    subtotals: subtotals.map((s) => ({
-      id: s.id,
-      name: s.name,
-      subtotalGroupId: s.subtotalGroupId,
+    subtotals: subtotals.map((subtotal) => ({
+      id: subtotal.id,
+      name: subtotal.name,
+      subtotalGroupId: subtotal.subtotalGroupId,
     })),
     examSubtotalGroup: { id: examSubtotalGroup.id },
-    cropSubtotals: cropSubtotals.map((cs) => ({
-      id: cs.id,
-      cropRegionId: cs.cropRegionId,
-      subtotalId: cs.subtotalId,
+    cropSubtotals: cropSubtotals.map((cropSubtotal) => ({
+      id: cropSubtotal.id,
+      cropRegionId: cropSubtotal.cropRegionId,
+      subtotalId: cropSubtotal.subtotalId,
     })),
     questionScores,
-    drawingAnnotations: drawingAnnotations.map((da) => ({
-      id: da.id,
-      questionScoreId: da.questionScoreId,
-      userId: da.userId,
+    drawingAnnotations: drawingAnnotations.map((drawingAnnotation) => ({
+      id: drawingAnnotation.id,
+      questionScoreId: drawingAnnotation.questionScoreId,
+      userId: drawingAnnotation.userId,
     })),
-    masterImages: masterImages.map((mi) => ({
-      id: mi.id,
-      examPageId: mi.examPageId,
-      imagePath: mi.imagePath,
+    masterImages: masterImages.map((masterImage) => ({
+      id: masterImage.id,
+      examPageId: masterImage.examPageId,
+      imagePath: masterImage.imagePath,
     })),
     studentAnswerImages: studentAnswerImages.map((sai) => ({
       id: sai.id,

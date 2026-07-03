@@ -33,7 +33,7 @@ export async function collectStudentArchiveData(
   })
 
   // 2. 全ての所属を取得
-  const allMemberships = await prisma.studentClassMembership.findMany({
+  const allMemberships = await prisma.studentClassroomMembership.findMany({
     where: { studentId: { in: studentIds } },
   })
 

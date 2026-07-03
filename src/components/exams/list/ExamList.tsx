@@ -96,14 +96,14 @@ const File = () => {
         const term = searchTerm.trim().toLowerCase()
         const nameMatch = exam.examName.toLowerCase().includes(term)
         const descMatch = exam.description?.toLowerCase().includes(term)
-        const tagMatch = exam.tags.some((t) =>
-          t.name.toLowerCase().includes(term)
+        const tagMatch = exam.tags.some((tag) =>
+          tag.name.toLowerCase().includes(term)
         )
         if (!nameMatch && !descMatch && !tagMatch) return false
       }
       // タグフィルタ
       if (filterTagIds.size > 0) {
-        const examTagIds = new Set(exam.tags.map((t) => t.id))
+        const examTagIds = new Set(exam.tags.map((tag) => tag.id))
         const hasMatch = [...filterTagIds].some((id) => examTagIds.has(id))
         if (!hasMatch) return false
       }
@@ -157,7 +157,7 @@ const File = () => {
       if (prev.size === sortedData.length) {
         return new Set()
       }
-      return new Set(sortedData.map((d) => d.id))
+      return new Set(sortedData.map((sortedItem) => sortedItem.id))
     })
   }, [sortedData])
 
@@ -215,8 +215,12 @@ const File = () => {
           return
         }
 
-        const successCount = result.results.filter((r) => r.success).length
-        const failCount = result.results.filter((r) => !r.success).length
+        const successCount = result.results.filter(
+          (exportResult) => exportResult.success
+        ).length
+        const failCount = result.results.filter(
+          (exportResult) => !exportResult.success
+        ).length
 
         if (failCount === 0) {
           toast.success("書き出し完了", {

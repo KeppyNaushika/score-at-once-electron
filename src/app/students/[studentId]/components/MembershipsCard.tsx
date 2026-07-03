@@ -16,14 +16,14 @@ import {
 } from "@/components/ui/table"
 import { isCurrentMembership } from "@/lib/membership"
 import type {
-  StudentClassMembershipWithDetails,
+  StudentClassroomMembershipWithDetails,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
 
 interface MembershipsCardProps {
   student: StudentWithMemberships
   onAddMembership: () => void
-  onEditMembership: (membership: StudentClassMembershipWithDetails) => void
+  onEditMembership: (membership: StudentClassroomMembershipWithDetails) => void
   onEndMembership: (membershipId: string) => void
 }
 
@@ -150,7 +150,7 @@ export function MembershipsCard({
                               onEditMembership({
                                 ...membership,
                                 student,
-                              } as StudentClassMembershipWithDetails)
+                              } as StudentClassroomMembershipWithDetails)
                             }
                           >
                             <Edit className="h-4 w-4" />

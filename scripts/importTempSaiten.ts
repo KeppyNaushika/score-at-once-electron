@@ -164,26 +164,29 @@ async function main() {
     // クラスIDマップ
     const classIdMap = new Map<number, string>()
     for (const [num, name] of Object.entries(CLASS_MAP)) {
-      const cls = await prisma.classroom.findFirst({ where: { name } })
-      if (!cls) throw new Error(`クラス「${name}」が見つかりません`)
-      classIdMap.set(Number(num), cls.id)
+      const classroom = await prisma.classroom.findFirst({ where: { name } })
+      if (!classroom) throw new Error(`クラス「${name}」が見つかりません`)
+      classIdMap.set(Number(num), classroom.id)
     }
 
     // 生徒マッチング用マップ
     const studentByKey = new Map<string, string>()
     const studentByName = new Map<string, string>()
     for (const [classNum, classroomId] of classIdMap) {
-      const memberships = await prisma.studentClassMembership.findMany({
+      const memberships = await prisma.studentClassroomMembership.findMany({
         where: { classroomId },
         include: { student: true },
       })
-      for (const m of memberships) {
-        if (m.attendanceNumber != null) {
-          studentByKey.set(`${classNum}-${m.attendanceNumber}`, m.student.id)
+      for (const membership of memberships) {
+        if (membership.attendanceNumber != null) {
+          studentByKey.set(
+            `${classNum}-${membership.attendanceNumber}`,
+            membership.student.id
+          )
         }
         studentByName.set(
-          `${m.student.lastName}　${m.student.firstName}`,
-          m.student.id
+          `${membership.student.lastName}　${membership.student.firstName}`,
+          membership.student.id
         )
       }
     }
@@ -191,12 +194,12 @@ async function main() {
     // クラスメンバー一覧（欠席者検出用）
     const classMembers = new Map<string, string[]>()
     for (const [, classroomId] of classIdMap) {
-      const memberships = await prisma.studentClassMembership.findMany({
+      const memberships = await prisma.studentClassroomMembership.findMany({
         where: { classroomId },
       })
       classMembers.set(
         classroomId,
-        memberships.map((m) => m.studentId)
+        memberships.map((membership) => membership.studentId)
       )
     }
 
@@ -253,8 +256,8 @@ async function importExam(
     imgW: number
     imgH: number
   }
-  const pages: PageData[] = group.pages.map((p) => {
-    const dir = resolvePageDir(p)
+  const pages: PageData[] = group.pages.map((page) => {
+    const dir = resolvePageDir(page)
     const meibo: MeiboEntry[] = JSON.parse(
       fs.readFileSync(path.join(dir, "meibo.json"), "utf8")
     )
@@ -343,7 +346,9 @@ async function importExam(
     if (WITH_ANSWERS) {
       const answerSrcDir = path.join(pages[pi].dataDir, "answer")
       const existingFiles = new Set(
-        fs.readdirSync(answerSrcDir).filter((f) => f.endsWith(".png"))
+        fs
+          .readdirSync(answerSrcDir)
+          .filter((filename) => filename.endsWith(".png"))
       )
       for (const [meiboIdx, studentId] of pageMeiboMaps[pi]) {
         const srcFile = `${meiboIdx}.png`
@@ -390,7 +395,7 @@ async function importExam(
     return aNum - bNum
   })
   for (let i = 0; i < sortedClassIds.length; i++) {
-    await prisma.examClass.create({
+    await prisma.examClassroom.create({
       data: {
         id: crypto.randomUUID(),
         examId,
@@ -408,7 +413,7 @@ async function importExam(
   // 学級順→出席番号順でcustomOrderを振る
   const allStudentIdsForExam = [...participatingStudentIds, ...absentStudentIds]
 
-  const studentClassInfo = await prisma.studentClassMembership.findMany({
+  const studentClassInfo = await prisma.studentClassroomMembership.findMany({
     where: {
       studentId: { in: allStudentIdsForExam },
       classroomId: { in: sortedClassIds },
@@ -418,12 +423,12 @@ async function importExam(
     string,
     { classOrder: number; attendance: number }
   >()
-  for (const m of studentClassInfo) {
-    const classOrder = sortedClassIds.indexOf(m.classroomId)
+  for (const studentInfo of studentClassInfo) {
+    const classOrder = sortedClassIds.indexOf(studentInfo.classroomId)
     if (classOrder >= 0) {
-      studentInfoMap.set(m.studentId, {
+      studentInfoMap.set(studentInfo.studentId, {
         classOrder,
-        attendance: m.attendanceNumber ?? 9999,
+        attendance: studentInfo.attendanceNumber ?? 9999,
       })
     }
   }
@@ -512,26 +517,26 @@ async function importExam(
     }
 
     // CropRegion + QuestionScore
-    for (const q of page.questions) {
-      const cropType = TYPE_MAP[q.type]
+    for (const question of page.questions) {
+      const cropType = TYPE_MAP[question.type]
       if (!cropType) continue
 
       const cropRegionId = crypto.randomUUID()
-      const [x1, y1, x2, y2] = q.area
-      const isQ = q.type === "設問"
-      const isSubtotal = q.type === "小計点"
+      const [x1, y1, x2, y2] = question.area
+      const isQ = question.type === "設問"
+      const isSubtotal = question.type === "小計点"
 
       await prisma.cropRegion.create({
         data: {
           id: cropRegionId,
           examPageId,
-          label: buildLabel(q),
+          label: buildLabel(question),
           type: cropType,
           x: x1 / page.imgW,
           y: y1 / page.imgH,
           width: (x2 - x1) / page.imgW,
           height: (y2 - y1) / page.imgH,
-          points: q.haiten ?? null,
+          points: question.haiten ?? null,
           orderIndex: isQ ? globalOrder++ : null,
           createdAt: now,
           updatedAt: now,
@@ -539,17 +544,17 @@ async function importExam(
       })
 
       // 大問追跡
-      if (isQ && q.daimon != null) {
-        const d = String(q.daimon)
+      if (isQ && question.daimon != null) {
+        const d = String(question.daimon)
         const ids = daimonToCropIds.get(d) || []
         ids.push(cropRegionId)
         daimonToCropIds.set(d, ids)
       }
-      if (isSubtotal && q.daimon != null) {
-        subtotalMap.set(String(q.daimon), cropRegionId)
+      if (isSubtotal && question.daimon != null) {
+        subtotalMap.set(String(question.daimon), cropRegionId)
       }
 
-      if (!isQ || !q.score) continue
+      if (!isQ || !question.score) continue
 
       const scoreRows: Array<{
         id: string
@@ -562,14 +567,14 @@ async function importExam(
         updatedAt: Date
       }> = []
 
-      for (let mi = 0; mi < q.score.length; mi++) {
+      for (let mi = 0; mi < question.score.length; mi++) {
         const sid = mm.get(mi)
         if (!sid) continue
-        const s = q.score[mi]
+        const s = question.score[mi]
         if (s.status === "unscored") continue
 
         let ps: number | null = null
-        if (s.status === "correct") ps = q.haiten ?? null
+        if (s.status === "correct") ps = question.haiten ?? null
         else if (s.status === "incorrect") ps = 0
         else if (s.status === "partial") ps = s.point
 
@@ -658,7 +663,9 @@ async function importExam(
   }
 
   const totalQ = pages.reduce(
-    (s, p) => s + p.questions.filter((q) => q.type === "設問").length,
+    (sum, page) =>
+      sum +
+      page.questions.filter((question) => question.type === "設問").length,
     0
   )
   console.log(

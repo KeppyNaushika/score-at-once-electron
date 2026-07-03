@@ -42,11 +42,11 @@ export function createStudentApi() {
 
     // Student Class Membership related
     createStudentClassMembership: (
-      membershipData: Prisma.StudentClassMembershipCreateInput
+      membershipData: Prisma.StudentClassroomMembershipCreateInput
     ) => ipcRenderer.invoke("create-student-class-membership", membershipData),
     updateStudentClassMembership: (
       id: string,
-      membershipData: Prisma.StudentClassMembershipUpdateInput
+      membershipData: Prisma.StudentClassroomMembershipUpdateInput
     ) =>
       ipcRenderer.invoke("update-student-class-membership", id, membershipData),
     deleteStudentClassMembership: (id: string) =>

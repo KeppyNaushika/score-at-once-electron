@@ -92,13 +92,13 @@ export function createArchiveClassesData(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),
-    memberships: memberships.map((m) => ({
-      id: m.id ?? generateId(),
-      studentId: m.studentId,
-      classroomId: m.classroomId,
+    memberships: memberships.map((membership) => ({
+      id: membership.id ?? generateId(),
+      studentId: membership.studentId,
+      classroomId: membership.classroomId,
       startDate: new Date().toISOString(),
       endDate: null,
-      attendanceNumber: m.attendanceNumber ?? null,
+      attendanceNumber: membership.attendanceNumber ?? null,
       notes: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -180,7 +180,7 @@ export function createArchiveExamData(
     examStudents: [],
     userExams: [],
     examSubtotalGroups: [],
-    examClasses: [],
+    examClassrooms: [],
   }
 }
 
@@ -198,12 +198,12 @@ export function createArchiveSubtotalsData(
     updatedAt: new Date().toISOString(),
   }))
 
-  const subtotals = groups.flatMap((g, gi) =>
-    (g.subtotals ?? []).map((s, si) => ({
-      id: s.id ?? generateId(),
-      name: s.name ?? `小計${si + 1}`,
-      subtotalGroupId: subtotalGroups[gi].id,
-      order: s.order ?? si,
+  const subtotals = groups.flatMap((group, groupIndex) =>
+    (group.subtotals ?? []).map((subtotal, subtotalIndex) => ({
+      id: subtotal.id ?? generateId(),
+      name: subtotal.name ?? `小計${subtotalIndex + 1}`,
+      subtotalGroupId: subtotalGroups[groupIndex].id,
+      order: subtotal.order ?? subtotalIndex,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }))
@@ -227,13 +227,13 @@ export function createArchiveScoresData(
   }> = []
 ): ArchiveScoresData {
   return {
-    questionScores: scores.map((s) => ({
-      id: s.id ?? generateId(),
-      cropRegionId: s.cropRegionId,
-      studentId: s.studentId,
-      partialScore: s.partialScore ?? null,
-      status: s.status ?? "unscored",
-      userId: s.userId ?? generateId(),
+    questionScores: scores.map((score) => ({
+      id: score.id ?? generateId(),
+      cropRegionId: score.cropRegionId,
+      studentId: score.studentId,
+      partialScore: score.partialScore ?? null,
+      status: score.status ?? "unscored",
+      userId: score.userId ?? generateId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),

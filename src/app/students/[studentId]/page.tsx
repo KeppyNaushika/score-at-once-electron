@@ -1,6 +1,6 @@
 "use client"
 
-import type { StudentClassMembership } from "@prisma/client"
+import type { StudentClassroomMembership } from "@prisma/client"
 import { ArrowLeft, BarChart3, Edit, Trash2, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
@@ -23,7 +23,7 @@ import StudentClassMembershipModal from "@/components/student/StudentClassMember
 import StudentModal from "@/components/student/StudentModal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { StudentClassMembershipWithDetails } from "@/types/prismaExtensions"
+import type { StudentClassroomMembershipWithDetails } from "@/types/prismaExtensions"
 
 export default function StudentDetailPage() {
   const params = useParams()
@@ -46,7 +46,7 @@ export default function StudentDetailPage() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] =
-    useState<StudentClassMembershipWithDetails | null>(null)
+    useState<StudentClassroomMembershipWithDetails | null>(null)
 
   const handleEditStudentClick = () => {
     setIsStudentModalOpen(true)
@@ -68,14 +68,16 @@ export default function StudentDetailPage() {
   }
 
   const handleEditMembership = (
-    membership: StudentClassMembershipWithDetails
+    membership: StudentClassroomMembershipWithDetails
   ) => {
     setMembershipToEdit(membership)
     setIsMembershipModalOpen(true)
   }
 
   const handleSaveMembershipData = async (
-    membershipData: Partial<StudentClassMembership> & { classroomId: string }
+    membershipData: Partial<StudentClassroomMembership> & {
+      classroomId: string
+    }
   ) => {
     const success = await handleSaveMembership(membershipData, membershipToEdit)
     if (success) {

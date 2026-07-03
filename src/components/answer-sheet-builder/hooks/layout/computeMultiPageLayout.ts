@@ -856,7 +856,9 @@ export function computeMultiPageLayoutFromDefinition(
               bottom: colData.majorLayoutRanges[i + 1].startY,
             })
           }
-          majorColExcludeRanges.sort((a, b) => a.top - b.top)
+          majorColExcludeRanges.sort(
+            (rangeA, rangeB) => rangeA.top - rangeB.top
+          )
         }
         let segStart = contentTop
         for (const range of majorColExcludeRanges) {
@@ -972,8 +974,8 @@ export function computeMultiPageLayoutFromDefinition(
 
   if (vertical) {
     return {
-      pages: pages.map((p) =>
-        transformPageToVertical(p, realPaper.width, realPaper.height)
+      pages: pages.map((page) =>
+        transformPageToVertical(page, realPaper.width, realPaper.height)
       ),
       totalPages: pages.length,
       pageWidthMm: realPaper.width,

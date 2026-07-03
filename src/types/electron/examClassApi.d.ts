@@ -1,9 +1,9 @@
-import type { Classroom, Exam, ExamClass } from "@prisma/client"
+import type { Classroom, Exam, ExamClassroom } from "@prisma/client"
 
-import type { ClassWithMemberships } from "../prismaExtensions"
+import type { ClassroomWithMemberships } from "../prismaExtensions"
 
 /**
- * ExamClass with class details
+ * ExamClassroom with class details
  */
 export interface ExamClassWithDetails {
   id: string
@@ -20,7 +20,7 @@ export interface ExamClassWithDetails {
 }
 
 /**
- * ExamClass with class and membership details
+ * ExamClassroom with class and membership details
  */
 export interface ExamClassWithClass {
   id: string
@@ -32,11 +32,11 @@ export interface ExamClassWithClass {
   order: number
   createdAt: Date
   updatedAt: Date
-  classroom: ClassWithMemberships
+  classroom: ClassroomWithMemberships
 }
 
 /**
- * Available class for adding to ExamClass
+ * Available class for adding to ExamClassroom
  */
 export interface AvailableClass {
   id: string
@@ -47,22 +47,22 @@ export interface AvailableClass {
 }
 
 /**
- * 生徒の学級・出席番号情報（ExamClass経由で取得）
+ * 生徒の学級・出席番号情報（ExamClassroom経由で取得）
  */
 export interface StudentClassInfo {
   className: string | null
   classCode: string | null
   grade: number | null
   attendanceNumber: number | null
-  /** ExamClass の並び順 */
+  /** ExamClassroom の並び順 */
   classOrder: number | null
 }
 
 /**
- * ExamClass関連API
+ * ExamClassroom関連API
  */
 export interface ExamClassAPI {
-  examClass: {
+  examClassroom: {
     /**
      * 試験に関連付けられた全クラスを取得
      */
@@ -74,7 +74,7 @@ export interface ExamClassAPI {
     getAdministered: (examId: string) => Promise<ExamClassWithClass[]>
 
     /**
-     * 試験に追加可能なクラスを取得（まだExamClassに含まれていないクラス）
+     * 試験に追加可能なクラスを取得（まだExamClassroomに含まれていないクラス）
      */
     getAvailable: (examId: string) => Promise<AvailableClass[]>
 
@@ -90,7 +90,7 @@ export interface ExamClassAPI {
     }) => Promise<ExamClassWithDetails>
 
     /**
-     * ExamClassを更新
+     * ExamClassroomを更新
      */
     update: (options: {
       id: string
@@ -101,12 +101,12 @@ export interface ExamClassAPI {
     }) => Promise<ExamClassWithDetails>
 
     /**
-     * ExamClassを削除 (idで指定)
+     * ExamClassroomを削除 (idで指定)
      */
-    remove: (id: string) => Promise<ExamClass>
+    remove: (id: string) => Promise<ExamClassroom>
 
     /**
-     * ExamClassの順序を一括更新
+     * ExamClassroomの順序を一括更新
      */
     reorder: (options: {
       examId: string
@@ -114,9 +114,9 @@ export interface ExamClassAPI {
     }) => Promise<void>
 
     /**
-     * ExamClassを削除 (examIdとclassroomIdで指定)
+     * ExamClassroomを削除 (examIdとclassroomIdで指定)
      */
-    removeByIds: (examId: string, classroomId: string) => Promise<ExamClass>
+    removeByIds: (examId: string, classroomId: string) => Promise<ExamClassroom>
 
     /**
      * クラスから生徒を試験に追加（B案: 統合型フロー）
@@ -128,7 +128,7 @@ export interface ExamClassAPI {
     ) => Promise<{
       added: number
       skipped: number
-      examClass: ExamClass
+      examClassroom: ExamClassroom
     }>
 
     /**

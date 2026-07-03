@@ -25,7 +25,7 @@ export function average(values: number[]): number {
 export function stdDev(values: number[]): number {
   if (values.length === 0) return 0
   const avg = average(values)
-  const squaredDiffs = values.map((v) => (v - avg) ** 2)
+  const squaredDiffs = values.map((value) => (value - avg) ** 2)
   return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / values.length)
 }
 
@@ -67,5 +67,5 @@ export function boxPlot(values: number[]): BoxPlotData {
 /** 順位（同点同順位。降順ソートで score 以下になる最初の位置+1） */
 export function rank(score: number, allScores: number[]): number {
   const sorted = [...allScores].sort((a, b) => b - a)
-  return sorted.findIndex((s) => s <= score) + 1
+  return sorted.findIndex((value) => value <= score) + 1
 }

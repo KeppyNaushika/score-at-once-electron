@@ -43,7 +43,8 @@ export function BoundaryEditor({ boundaries, onSave }: BoundaryEditorProps) {
   useEffect(() => {
     if (boundaries.length > 0) {
       const sorted = [...boundaries].sort(
-        (a, b) => b.minPercentage - a.minPercentage
+        (firstBoundary, secondBoundary) =>
+          secondBoundary.minPercentage - firstBoundary.minPercentage
       )
       setItems(
         sorted.map((boundary) => ({

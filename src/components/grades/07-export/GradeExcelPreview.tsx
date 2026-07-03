@@ -129,22 +129,22 @@ export function GradeExcelPreview({
                     {studentName(student)}
                   </td>
                   {result.gradeItems.map((gradeItem) => {
-                    const gir = student.gradeItemResults.find(
+                    const itemResult = student.gradeItemResults.find(
                       (gradeItemResult) =>
                         gradeItemResult.gradeItemId === gradeItem.id
                     )
-                    if (gir?.isExcluded) {
+                    if (itemResult?.isExcluded) {
                       return <ExcludedCells key={gradeItem.id} count={2} />
                     }
-                    const pct = round1(gir?.percentage ?? null)
-                    const allMissing = gir?.isAllMissing ?? false
-                    const cls = allMissing ? "text-red-500" : ""
+                    const percentage = round1(itemResult?.percentage ?? null)
+                    const allMissing = itemResult?.isAllMissing ?? false
+                    const colorClass = allMissing ? "text-red-500" : ""
                     return (
                       <ResultCells
                         key={gradeItem.id}
-                        percentage={pct}
-                        label={gir?.gradeLabel ?? null}
-                        className={cls}
+                        percentage={percentage}
+                        label={itemResult?.gradeLabel ?? null}
+                        className={colorClass}
                       />
                     )
                   })}
@@ -199,11 +199,11 @@ export function GradeExcelPreview({
                     {studentName(student)}
                   </td>
                   {detailColumns.map(({ gradeItem, sourceNames }) => {
-                    const gir = student.gradeItemResults.find(
+                    const itemResult = student.gradeItemResults.find(
                       (gradeItemResult) =>
                         gradeItemResult.gradeItemId === gradeItem.id
                     )
-                    if (gir?.isExcluded) {
+                    if (itemResult?.isExcluded) {
                       return (
                         <ExcludedCells
                           key={gradeItem.id}
@@ -214,7 +214,7 @@ export function GradeExcelPreview({
                     return (
                       <DetailCells
                         key={gradeItem.id}
-                        gir={gir}
+                        gir={itemResult}
                         sourceCount={sourceNames.length}
                       />
                     )

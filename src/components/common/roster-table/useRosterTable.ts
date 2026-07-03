@@ -104,7 +104,9 @@ export function useRosterTable({
 
         const selectedRowsData = selectedRowsList
           .map((row) => {
-            const index = newSortedRows.findIndex((r) => r.id === row.id)
+            const index = newSortedRows.findIndex(
+              (sortedRow) => sortedRow.id === row.id
+            )
             return newSortedRows.splice(index, 1)[0]
           })
           .filter(Boolean)

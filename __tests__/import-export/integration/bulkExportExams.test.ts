@@ -106,10 +106,10 @@ describe("executeBulkExport", () => {
 
     // .scoreファイルが実際に作成されている
     const files = fs.readdirSync(outputDir)
-    const scoreFiles = files.filter((f) => f.endsWith(".score"))
+    const scoreFiles = files.filter((file) => file.endsWith(".score"))
     expect(scoreFiles).toHaveLength(2)
-    expect(scoreFiles.some((f) => f.startsWith("数学テスト-"))).toBe(true)
-    expect(scoreFiles.some((f) => f.startsWith("英語テスト-"))).toBe(true)
+    expect(scoreFiles.some((file) => file.startsWith("数学テスト-"))).toBe(true)
+    expect(scoreFiles.some((file) => file.startsWith("英語テスト-"))).toBe(true)
   })
 
   // BE-2: 存在しない試験IDが含まれる場合、その試験のみ失敗し他は続行する
@@ -146,7 +146,7 @@ describe("executeBulkExport", () => {
     // 成功した分のファイルのみ作成される
     const scoreFiles = fs
       .readdirSync(outputDir)
-      .filter((f) => f.endsWith(".score"))
+      .filter((file) => file.endsWith(".score"))
     expect(scoreFiles).toHaveLength(1)
   })
 
@@ -163,7 +163,9 @@ describe("executeBulkExport", () => {
 
     expect(result.success).toBe(false)
     expect(result.results).toHaveLength(2)
-    expect(result.results.every((r) => !r.success)).toBe(true)
+    expect(result.results.every((exportResult) => !exportResult.success)).toBe(
+      true
+    )
   })
 
   // BE-4: 単一試験の一括エクスポート

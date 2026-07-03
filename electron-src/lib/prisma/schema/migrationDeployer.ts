@@ -31,7 +31,7 @@ export const deployPendingMigrations = async (
   const applied = await prisma.$queryRawUnsafe<{ migration_name: string }[]>(
     `SELECT "migration_name" FROM "_prisma_migrations" WHERE "rolled_back_at" IS NULL ORDER BY "migration_name"`
   )
-  const appliedNames = new Set(applied.map((r) => r.migration_name))
+  const appliedNames = new Set(applied.map((row) => row.migration_name))
 
   // 未適用のマイグレーションを抽出
   const pendingDirs = listLocalMigrationNames().filter((dirName) => {
@@ -60,11 +60,11 @@ export const deployPendingMigrations = async (
       // コメント行を除去してからSQL本体の有無を判定する
       const statements = sql
         .split(";")
-        .map((s) => s.trim())
-        .filter((s) => {
-          if (s.length === 0) return false
+        .map((statement) => statement.trim())
+        .filter((statement) => {
+          if (statement.length === 0) return false
           // ブロックコメント・行コメントを除去した後に実行可能なSQLが残るか判定
-          const stripped = s
+          const stripped = statement
             .replace(/\/\*[\s\S]*?\*\//g, "") // ブロックコメント除去
             .replace(/--[^\n]*/g, "") // 行コメント除去
             .trim()
@@ -110,8 +110,8 @@ export const listLocalMigrationNames = (): string[] => {
   if (!migrationsDir || !fs.existsSync(migrationsDir)) return []
   return fs
     .readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name)
     .sort()
 }
 

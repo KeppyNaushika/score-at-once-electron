@@ -131,7 +131,7 @@ export class DatabaseSetup {
 
         // 学級への所属を作成（既存チェック後に作成）
         const existingMembership =
-          await this.prisma.studentClassMembership.findFirst({
+          await this.prisma.studentClassroomMembership.findFirst({
             where: {
               studentId: student.id,
               classroomId: sampleClass.id,
@@ -140,7 +140,7 @@ export class DatabaseSetup {
           })
 
         if (!existingMembership) {
-          await this.prisma.studentClassMembership.create({
+          await this.prisma.studentClassroomMembership.create({
             data: {
               studentId: student.id,
               classroomId: sampleClass.id,

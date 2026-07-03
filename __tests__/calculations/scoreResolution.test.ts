@@ -228,7 +228,9 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const d = decision({ cropRegionId: "r1" })
     const { resolved } = resolveEffectiveScores([decided, undecided], [d])
     expect(resolved).toHaveLength(2)
-    const r2 = resolved.find((r) => r.cropRegionId === "r2")
+    const r2 = resolved.find(
+      (resolvedScore) => resolvedScore.cropRegionId === "r2"
+    )
     expect(r2?.source).toBe("proposal")
     expect(r2?.status).toBe("incorrect")
   })

@@ -68,7 +68,7 @@ export async function getCourseworkById(id: string) {
     const coursework = await prisma.coursework.findUnique({
       where: { id },
       include: {
-        classes: {
+        classrooms: {
           include: { classroom: { select: { id: true, name: true } } },
           orderBy: { order: "asc" },
         },
@@ -570,7 +570,7 @@ export async function getCourseworkStudents(courseworkId: string) {
 export async function getCourseworkClasses(courseworkId: string) {
   try {
     const referenceDate = await getCourseworkDate(courseworkId)
-    const classes = await prisma.courseworkClass.findMany({
+    const classes = await prisma.courseworkClassroom.findMany({
       where: { courseworkId },
       include: {
         classroom: {
@@ -611,7 +611,7 @@ export async function getAvailableClassesForCoursework(
   try {
     const referenceDate = await getCourseworkDate(courseworkId)
     const [existing, courseworkStudents] = await Promise.all([
-      prisma.courseworkClass.findMany({
+      prisma.courseworkClassroom.findMany({
         where: { courseworkId },
         select: { classroomId: true },
       }),
@@ -702,14 +702,14 @@ const courseworkRosterAdapter: RosterAdapter = {
     )
   },
   classMaxOrder: async (targetId) => {
-    const result = await prisma.courseworkClass.aggregate({
+    const result = await prisma.courseworkClassroom.aggregate({
       where: { courseworkId: targetId },
       _max: { order: true },
     })
     return result._max.order
   },
   upsertClass: async (targetId, classroomId, order) => {
-    await prisma.courseworkClass.upsert({
+    await prisma.courseworkClassroom.upsert({
       where: {
         courseworkId_classroomId: { courseworkId: targetId, classroomId },
       },
@@ -720,7 +720,7 @@ const courseworkRosterAdapter: RosterAdapter = {
   setClassOrders: async (targetId, orders) => {
     await prisma.$transaction(
       orders.map((classOrder) =>
-        prisma.courseworkClass.updateMany({
+        prisma.courseworkClassroom.updateMany({
           where: {
             courseworkId: targetId,
             classroomId: classOrder.classroomId,
@@ -731,7 +731,7 @@ const courseworkRosterAdapter: RosterAdapter = {
     )
   },
   listOtherClassIds: async (targetId, exceptClassId) => {
-    const rows = await prisma.courseworkClass.findMany({
+    const rows = await prisma.courseworkClassroom.findMany({
       where: { courseworkId: targetId, classroomId: { not: exceptClassId } },
       select: { classroomId: true },
     })
@@ -742,7 +742,7 @@ const courseworkRosterAdapter: RosterAdapter = {
       prisma.courseworkStudent.deleteMany({
         where: { courseworkId: targetId, studentId: { in: studentIds } },
       }),
-      prisma.courseworkClass.delete({
+      prisma.courseworkClassroom.delete({
         where: {
           courseworkId_classroomId: { courseworkId: targetId, classroomId },
         },

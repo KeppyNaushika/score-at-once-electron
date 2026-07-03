@@ -249,7 +249,7 @@ describe("calculateStatisticsForStudent", () => {
       classroomId: "c1",
       className: "1組",
       grade: null,
-      memberStudentIds: allData.map((d) => d.studentId),
+      memberStudentIds: allData.map((scoringData) => scoringData.studentId),
     },
   ]
 

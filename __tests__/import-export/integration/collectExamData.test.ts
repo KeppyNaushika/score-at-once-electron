@@ -132,8 +132,8 @@ describe("collectExamData", () => {
 
     expect(result.success).toBe(true)
     // アノテーションは全てテストユーザーのもの
-    for (const ann of result.data!.scoresData.drawingAnnotations) {
-      expect(ann.userId).toBe(testExam.user.id)
+    for (const annotation of result.data!.scoresData.drawingAnnotations) {
+      expect(annotation.userId).toBe(testExam.user.id)
     }
   })
 
@@ -282,13 +282,13 @@ describe("collectExamData", () => {
     expect(result.success).toBe(true)
     const data = result.data!
 
-    for (const p of data.masterImagePaths) {
-      expect(p).toContain("exams/")
-      expect(p).not.toMatch(/^\//) // 絶対パスではない
+    for (const masterImagePath of data.masterImagePaths) {
+      expect(masterImagePath).toContain("exams/")
+      expect(masterImagePath).not.toMatch(/^\//) // 絶対パスではない
     }
-    for (const p of data.answerSheetPaths) {
-      expect(p).toContain("exams/")
-      expect(p).not.toMatch(/^\//)
+    for (const answerSheetPath of data.answerSheetPaths) {
+      expect(answerSheetPath).toContain("exams/")
+      expect(answerSheetPath).not.toMatch(/^\//)
     }
   })
 
@@ -308,9 +308,9 @@ describe("collectExamData", () => {
 
     // メンバーシップが学級と生徒を結びつけている
     expect(data.classesData.memberships.length).toBe(2)
-    for (const m of data.classesData.memberships) {
+    for (const membership of data.classesData.memberships) {
       const classMatch = data.classesData.classrooms.find(
-        (c) => c.id === m.classroomId
+        (classroom) => classroom.id === membership.classroomId
       )
       expect(classMatch).toBeDefined()
     }

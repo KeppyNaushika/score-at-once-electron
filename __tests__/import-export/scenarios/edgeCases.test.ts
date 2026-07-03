@@ -128,10 +128,10 @@ describe("edgeCases", () => {
     })
 
     // ExamStudentを追加
-    data.examData.examStudents = students.map((s) => ({
+    data.examData.examStudents = students.map((student) => ({
       id: generateId(),
       examId,
-      studentId: s.id!,
+      studentId: student.id!,
       status: "PARTICIPATING",
       customOrder: null,
       createdAt: new Date().toISOString(),
@@ -140,10 +140,10 @@ describe("edgeCases", () => {
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
-        noMatch: students.map((s) => ({
-          importId: s.id!,
-          importData: { ...s },
-          displayLabel: `${s.lastName}${s.firstName}`,
+        noMatch: students.map((student) => ({
+          importId: student.id!,
+          importData: { ...student },
+          displayLabel: `${student.lastName}${student.firstName}`,
         })),
       }),
       exam: {
@@ -389,9 +389,9 @@ describe("edgeCases", () => {
     ]
 
     // CropSubtotalsを追加
-    subtotalsData.cropSubtotals = examData.cropRegions.map((r, i) => ({
+    subtotalsData.cropSubtotals = examData.cropRegions.map((cropRegion, i) => ({
       id: generateId(),
-      cropRegionId: r.id,
+      cropRegionId: cropRegion.id,
       subtotalId:
         subtotalsData.subtotals[i % subtotalsData.subtotals.length].id,
       assignmentType: "auto",
@@ -461,7 +461,7 @@ describe("edgeCases", () => {
       },
     ]
 
-    examData.examClasses = [
+    examData.examClassrooms = [
       {
         id: generateId(),
         examId,

@@ -448,7 +448,7 @@ function drawGridLine(
         peaks.push({ pos: center - i * zigPitch, amp })
       }
 
-      peaks.sort((a, b) => a.pos - b.pos)
+      peaks.sort((peakA, peakB) => peakA.pos - peakB.pos)
 
       ctx.beginPath()
       ctx.moveTo(startX, startY)

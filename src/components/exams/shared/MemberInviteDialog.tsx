@@ -305,9 +305,11 @@ export function MemberInviteDialog({
                 </TableHeader>
                 <TableBody>
                   {[...members]
-                    .sort((a, b) => {
-                      if (a.role === "OWNER" && b.role !== "OWNER") return -1
-                      if (a.role !== "OWNER" && b.role === "OWNER") return 1
+                    .sort((memberA, memberB) => {
+                      if (memberA.role === "OWNER" && memberB.role !== "OWNER")
+                        return -1
+                      if (memberA.role !== "OWNER" && memberB.role === "OWNER")
+                        return 1
                       return 0
                     })
                     .map((member) => (
