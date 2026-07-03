@@ -530,6 +530,19 @@ import { validateFile } from "./utils/file-processing"
 4. **機能削除の安全性**: ディレクトリごと削除可能
 5. **依存関係の可視化**: import文で使用範囲が明確
 
+### 🏷 変数・引数命名の方針（厳守）
+
+**命名の完全な規約は [docs/coding-style.md](./docs/coding-style.md) の「命名規則」にある。変数・引数を書く前に必ず参照すること。**
+
+**その実体が何かを名前で言う。** 短縮（`u`）も濁り（`value`/`data`/`item`）も命名の放棄。**変数の解像度は型の解像度を超えられない**（濁った変数名は濁った型名の影 → 直すなら型名が先）。ただし濁り名が許されるのは下記「慣例」の例外のみ。
+
+要点：
+
+- **実体名で呼ぶ**: 配列高階関数・`for...of` の要素は要素の型のフル実体名にする（`s`→`student`, `c`→`classroom`, `cr`→`cropRegion`, `sg`→`subtotalGroup`）。
+- **索引より高階関数を原則**: 生の `for (let i = ...)` を避け `map`/`filter`/`reduce`/`forEach` で表現。`i` は最終手段。
+- **予約語 `class` の回避で短縮しない**: `cls`/`clazz` ではなく `classroom`（CSS は `className`）。
+- **慣例として残してよい名前**: A（基本）= `i`・`e`・真のジェネリック `<T>`・外部ライブラリ規約の `value`/`data`（axios `response.data`、React Query `{ data }`、shadcn/Radix `onValueChange={(value) => …}` ← 多数派に従い `value` を使う。1文字 `v` は避け綴る）。B（拡張）= `prev`（setState updater）・`acc`（reduce）・`tx`（Prisma transaction）・`db`/`fs`/`fd`・幾何座標（`x`/`y`/`w`/`h`/`dx`/`dy`/`rx`/`ry`/`rw`/`rh`）。
+
 ### 🔷 型管理の方針
 
 #### 基本原則
