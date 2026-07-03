@@ -38,52 +38,62 @@ export async function resolveStudents(
   const map: IdMap = new Map()
   const warnings: string[] = []
   const existing = await tx.student.findMany()
-  const byId = new Map(existing.map((s) => [s.id, s]))
-  const byNumber = new Map(existing.map((s) => [s.studentNumber, s]))
+  const byId = new Map(
+    existing.map((existingStudent) => [existingStudent.id, existingStudent])
+  )
+  const byNumber = new Map(
+    existing.map((existingStudent) => [
+      existingStudent.studentNumber,
+      existingStudent,
+    ])
+  )
   const byName = new Map<string, (typeof existing)[number]>()
-  for (const s of existing) {
-    const key = `${s.lastName}|${s.firstName}`
-    if (!byName.has(key)) byName.set(key, s)
+  for (const existingStudent of existing) {
+    const key = `${existingStudent.lastName}|${existingStudent.firstName}`
+    if (!byName.has(key)) byName.set(key, existingStudent)
   }
 
-  for (const s of students) {
+  for (const student of students) {
     // 1. UUID 一次照合
-    const uuidMatch = byId.get(s.id)
+    const uuidMatch = byId.get(student.id)
     if (uuidMatch) {
-      map.set(s.id, uuidMatch.id)
+      map.set(student.id, uuidMatch.id)
       continue
     }
     // 2. 二次照合
     let matched: (typeof existing)[number] | undefined
     if (options.method === "studentNumber") {
-      matched = byNumber.get(s.studentNumber)
+      matched = byNumber.get(student.studentNumber)
     } else if (options.method === "name") {
-      matched = byName.get(`${s.lastName}|${s.firstName}`)
+      matched = byName.get(`${student.lastName}|${student.firstName}`)
     }
     if (matched) {
-      map.set(s.id, matched.id)
+      map.set(student.id, matched.id)
       continue
     }
     // 3. 新規作成 or スキップ
     if (!options.allowCreate) {
       warnings.push(
-        `生徒「${s.lastName}${s.firstName}（${s.studentNumber}）」が見つからないためスキップしました`
+        `生徒「${student.lastName}${student.firstName}（${student.studentNumber}）」が見つからないためスキップしました`
       )
       continue
     }
-    const uniqueNumber = await generateUniqueStudentNumber(tx, s.studentNumber)
+    const uniqueNumber = await generateUniqueStudentNumber(
+      tx,
+      student.studentNumber
+    )
     const created = await tx.student.create({
       data: {
-        id: s.id,
+        id: student.id,
         studentNumber: uniqueNumber,
-        lastName: s.lastName,
-        firstName: s.firstName,
-        lastNameKana: s.lastNameKana,
-        firstNameKana: s.firstNameKana,
-        enrollmentYear: s.enrollmentYear,
+        lastName: student.lastName,
+        firstName: student.firstName,
+        lastNameKana: student.lastNameKana,
+        firstNameKana: student.firstNameKana,
+        enrollmentYear: student.enrollmentYear,
       },
     })
-    map.set(s.id, created.id)
+    map.set(student.id, created.id)
   }
 
   return { map, warnings }
@@ -98,36 +108,48 @@ export async function resolveClasses(
   const map: IdMap = new Map()
   const warnings: string[] = []
   const existing = await tx.classroom.findMany()
-  const byId = new Map(existing.map((c) => [c.id, c]))
-  const byName = new Map(existing.map((c) => [c.name, c]))
+  const byId = new Map(
+    existing.map((existingClassroom) => [
+      existingClassroom.id,
+      existingClassroom,
+    ])
+  )
+  const byName = new Map(
+    existing.map((existingClassroom) => [
+      existingClassroom.name,
+      existingClassroom,
+    ])
+  )
 
-  for (const c of classes) {
-    const uuidMatch = byId.get(c.id)
+  for (const classroom of classes) {
+    const uuidMatch = byId.get(classroom.id)
     if (uuidMatch) {
-      map.set(c.id, uuidMatch.id)
+      map.set(classroom.id, uuidMatch.id)
       continue
     }
-    const nameMatch = byName.get(c.name)
+    const nameMatch = byName.get(classroom.name)
     if (nameMatch) {
-      map.set(c.id, nameMatch.id)
+      map.set(classroom.id, nameMatch.id)
       continue
     }
     if (!options.allowCreate) {
-      warnings.push(`学級「${c.name}」が見つからないためスキップしました`)
+      warnings.push(
+        `学級「${classroom.name}」が見つからないためスキップしました`
+      )
       continue
     }
-    const uniqueName = await generateUniqueClassName(tx, c.name)
+    const uniqueName = await generateUniqueClassName(tx, classroom.name)
     const created = await tx.classroom.create({
       data: {
-        id: c.id,
+        id: classroom.id,
         name: uniqueName,
-        classCode: c.classCode,
-        grade: c.grade,
-        description: c.description,
-        isVisible: c.isVisible,
+        classCode: classroom.classCode,
+        grade: classroom.grade,
+        description: classroom.description,
+        isVisible: classroom.isVisible,
       },
     })
-    map.set(c.id, created.id)
+    map.set(classroom.id, created.id)
   }
 
   return { map, warnings }
@@ -142,18 +164,22 @@ export async function resolveTags(
   tags: ArchiveCwTag[]
 ): Promise<IdMap> {
   const map: IdMap = new Map()
-  for (const t of tags) {
-    const byId = await tx.tag.findUnique({ where: { id: t.id } })
+  for (const archiveTag of tags) {
+    const byId = await tx.tag.findUnique({ where: { id: archiveTag.id } })
     if (byId) {
-      map.set(t.id, byId.id)
+      map.set(archiveTag.id, byId.id)
       continue
     }
     const tag = await tx.tag.upsert({
-      where: { name: t.name },
-      create: { name: t.name, order: t.order, color: t.color },
+      where: { name: archiveTag.name },
+      create: {
+        name: archiveTag.name,
+        order: archiveTag.order,
+        color: archiveTag.color,
+      },
       update: {},
     })
-    map.set(t.id, tag.id)
+    map.set(archiveTag.id, tag.id)
   }
   return map
 }
@@ -169,9 +195,9 @@ export async function restoreMemberships(
   studentMap: IdMap,
   classMap: IdMap
 ): Promise<void> {
-  for (const m of memberships) {
-    const studentId = studentMap.get(m.studentId)
-    const classroomId = classMap.get(m.classroomId)
+  for (const membership of memberships) {
+    const studentId = studentMap.get(membership.studentId)
+    const classroomId = classMap.get(membership.classroomId)
     if (!studentId || !classroomId) continue
     const exists = await tx.studentClassMembership.findFirst({
       where: { studentId, classroomId },
@@ -182,10 +208,10 @@ export async function restoreMemberships(
       data: {
         studentId,
         classroomId,
-        startDate: new Date(m.startDate),
-        endDate: m.endDate ? new Date(m.endDate) : null,
-        attendanceNumber: m.attendanceNumber,
-        notes: m.notes,
+        startDate: new Date(membership.startDate),
+        endDate: membership.endDate ? new Date(membership.endDate) : null,
+        attendanceNumber: membership.attendanceNumber,
+        notes: membership.notes,
       },
     })
   }

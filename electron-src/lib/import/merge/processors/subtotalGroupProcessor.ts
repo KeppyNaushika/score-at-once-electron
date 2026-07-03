@@ -157,7 +157,7 @@ export async function processSubtotalGroupIdIntegration(
   if (groupPreMatch.byName) {
     for (const match of groupPreMatch.byName) {
       const decision = config.decisions.find(
-        (d) => d.importId === match.importId
+        (decision) => decision.importId === match.importId
       )
 
       if (config.strategy === "by_name") {
@@ -190,7 +190,9 @@ export async function processSubtotalGroupIdIntegration(
   for (const item of groupPreMatch.noMatch) {
     if (idMappings.subtotalGroup[item.importId]) continue
 
-    const decision = config.decisions.find((d) => d.importId === item.importId)
+    const decision = config.decisions.find(
+      (decision) => decision.importId === item.importId
+    )
     await processDecision(
       item.importId,
       decision || {

@@ -137,7 +137,7 @@ export async function processClassIdIntegration(
   if (classPreMatch.byName) {
     for (const match of classPreMatch.byName) {
       const decision = config.decisions.find(
-        (d) => d.importId === match.importId
+        (decision) => decision.importId === match.importId
       )
 
       if (config.strategy === "by_name") {
@@ -170,7 +170,9 @@ export async function processClassIdIntegration(
   for (const item of classPreMatch.noMatch) {
     if (idMappings.classroom[item.importId]) continue
 
-    const decision = config.decisions.find((d) => d.importId === item.importId)
+    const decision = config.decisions.find(
+      (decision) => decision.importId === item.importId
+    )
     await processDecision(
       item.importId,
       decision || {

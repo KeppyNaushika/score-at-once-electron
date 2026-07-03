@@ -26,8 +26,8 @@ import type {
 
 type ArchiveQuestionScore = ArchiveScoresData["questionScores"][number]
 
-const cellKey = (s: ArchiveQuestionScore): string =>
-  `${s.studentId} ${s.cropRegionId}`
+const cellKey = (questionScore: ArchiveQuestionScore): string =>
+  `${questionScore.studentId} ${questionScore.cropRegionId}`
 
 /** updatedAt 降順 → id 降順で最新の行を選ぶ（決定的） */
 const pickLatest = (rows: ArchiveQuestionScore[]): ArchiveQuestionScore =>
@@ -55,27 +55,33 @@ export function convertScoresDataToV1_13(scoresData: ArchiveScoresData): {
   const drawingAnnotations = scoresData.drawingAnnotations ?? []
   const existingDecisions = scoresData.scoreDecisions ?? []
 
-  const finals = questionScores.filter((s) => s.status === "final")
+  const finals = questionScores.filter(
+    (questionScore) => questionScore.status === "final"
+  )
   if (finals.length === 0 && scoresData.scoreDecisions) {
     // 既にv1.13.0形式
-    const hasProposed = questionScores.some((s) => s.status === "proposed")
+    const hasProposed = questionScores.some(
+      (questionScore) => questionScore.status === "proposed"
+    )
     if (!hasProposed) return { scoresData, warnings }
   }
 
   // 1) 生徒×設問ごとに最新の final 行から確定を生成
   const finalsByCell = new Map<string, ArchiveQuestionScore[]>()
-  for (const f of finals) {
-    const key = cellKey(f)
+  for (const finalScore of finals) {
+    const key = cellKey(finalScore)
     const group = finalsByCell.get(key)
     if (group) {
-      group.push(f)
+      group.push(finalScore)
     } else {
-      finalsByCell.set(key, [f])
+      finalsByCell.set(key, [finalScore])
     }
   }
 
   const decidedCells = new Set(
-    existingDecisions.map((d) => `${d.studentId} ${d.cropRegionId}`)
+    existingDecisions.map(
+      (decision) => `${decision.studentId} ${decision.cropRegionId}`
+    )
   )
   const scoreDecisions = [...existingDecisions]
   for (const group of finalsByCell.values()) {
@@ -98,47 +104,49 @@ export function convertScoresDataToV1_13(scoresData: ArchiveScoresData): {
 
   // 2) final 行の注釈を同じ採点者の既存提案行へ移動
   const proposalByCellUser = new Map<string, ArchiveQuestionScore>()
-  for (const s of questionScores) {
-    if (s.status === "final") continue
-    const key = `${cellKey(s)} ${s.userId}`
+  for (const questionScore of questionScores) {
+    if (questionScore.status === "final") continue
+    const key = `${cellKey(questionScore)} ${questionScore.userId}`
     const existing = proposalByCellUser.get(key)
-    if (!existing || pickLatest([existing, s]) === s) {
-      proposalByCellUser.set(key, s)
+    if (!existing || pickLatest([existing, questionScore]) === questionScore) {
+      proposalByCellUser.set(key, questionScore)
     }
   }
 
   const finalIdToProposalId = new Map<string, string>()
   const finalIdsToDelete = new Set<string>()
-  for (const f of finals) {
-    const proposal = proposalByCellUser.get(`${cellKey(f)} ${f.userId}`)
+  for (const finalScore of finals) {
+    const proposal = proposalByCellUser.get(
+      `${cellKey(finalScore)} ${finalScore.userId}`
+    )
     if (proposal) {
-      finalIdToProposalId.set(f.id, proposal.id)
-      finalIdsToDelete.add(f.id) // 3) 提案行がある final 行は削除
+      finalIdToProposalId.set(finalScore.id, proposal.id)
+      finalIdsToDelete.add(finalScore.id) // 3) 提案行がある final 行は削除
     }
   }
 
-  const movedAnnotations = drawingAnnotations.map((a) => {
-    const newId = finalIdToProposalId.get(a.questionScoreId)
-    return newId ? { ...a, questionScoreId: newId } : a
+  const movedAnnotations = drawingAnnotations.map((annotation) => {
+    const newId = finalIdToProposalId.get(annotation.questionScoreId)
+    return newId ? { ...annotation, questionScoreId: newId } : annotation
   })
 
   // 3-4) final 行の削除・変換、proposed の浄化
   const cleanedScores = questionScores
-    .filter((s) => !finalIdsToDelete.has(s.id))
-    .map((s) => {
-      if (s.status === "final") {
+    .filter((questionScore) => !finalIdsToDelete.has(questionScore.id))
+    .map((questionScore) => {
+      if (questionScore.status === "final") {
         return {
-          ...s,
-          status: s.partialScore === null ? "correct" : "partial",
+          ...questionScore,
+          status: questionScore.partialScore === null ? "correct" : "partial",
         }
       }
-      if (s.status === "proposed") {
+      if (questionScore.status === "proposed") {
         return {
-          ...s,
-          status: s.partialScore === null ? "pending" : "partial",
+          ...questionScore,
+          status: questionScore.partialScore === null ? "pending" : "partial",
         }
       }
-      return s
+      return questionScore
     })
 
   if (finals.length > 0) {
@@ -170,7 +178,7 @@ export class V1_12_0_to_V1_13_0_Transformer implements VersionTransformer {
         manifest: { ...data.manifest, version: this.toVersion },
         scoresData,
       },
-      warnings: warnings.map((w) => `1.12.0→1.13.0: ${w}`),
+      warnings: warnings.map((warning) => `1.12.0→1.13.0: ${warning}`),
     }
   }
 }

@@ -39,8 +39,8 @@ const v1_4_0 = new V1_4_0_to_V1_5_0_Transformer()
 
 /** manual 型 DataSource を持つか（点数未入力でも true） */
 function hasManualDataSource(data: GradeArchiveData): boolean {
-  return data.gradeData.gradeItems.some((gi) =>
-    gi.dataSources.some((ds) => ds.type === "manual")
+  return data.gradeData.gradeItems.some((gradeItem) =>
+    gradeItem.dataSources.some((dataSource) => dataSource.type === "manual")
   )
 }
 

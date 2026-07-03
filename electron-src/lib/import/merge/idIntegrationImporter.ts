@@ -820,14 +820,18 @@ async function processQuestionScores(
   tx: Tx
 ): Promise<void> {
   const scoringConflicts = preMatchResult.scoringConflicts?.conflicts ?? []
-  const conflictMap = new Map(scoringConflicts.map((c) => [c.importScoreId, c]))
+  const conflictMap = new Map(
+    scoringConflicts.map((conflict) => [conflict.importScoreId, conflict])
+  )
 
-  for (const qs of data.scoresData.questionScores) {
-    const newRegionId = idMappings.cropRegion[qs.cropRegionId]
-    const newStudentId = qs.studentId ? idMappings.student[qs.studentId] : null
+  for (const questionScore of data.scoresData.questionScores) {
+    const newRegionId = idMappings.cropRegion[questionScore.cropRegionId]
+    const newStudentId = questionScore.studentId
+      ? idMappings.student[questionScore.studentId]
+      : null
 
     if (newRegionId && newStudentId) {
-      const conflict = conflictMap.get(qs.id)
+      const conflict = conflictMap.get(questionScore.id)
 
       if (conflict) {
         // データが同一なら何もしない
@@ -837,7 +841,7 @@ async function processQuestionScores(
             conflict.existingScore.partialScore
 
         if (isIdentical) {
-          idMappings.questionScore[qs.id] = conflict.existingScoreId
+          idMappings.questionScore[questionScore.id] = conflict.existingScoreId
           counts.unchanged.scores++
           continue
         }
@@ -848,7 +852,7 @@ async function processQuestionScores(
         )
 
         if (resolution === "existing") {
-          idMappings.questionScore[qs.id] = conflict.existingScoreId
+          idMappings.questionScore[questionScore.id] = conflict.existingScoreId
           counts.skipped.scores++
           continue
         }
@@ -856,12 +860,14 @@ async function processQuestionScores(
         await tx.questionScore.update({
           where: { id: conflict.existingScoreId },
           data: {
-            partialScore: qs.partialScore ? parseFloat(qs.partialScore) : null,
-            status: qs.status,
+            partialScore: questionScore.partialScore
+              ? parseFloat(questionScore.partialScore)
+              : null,
+            status: questionScore.status,
             userId: currentUserId,
           },
         })
-        idMappings.questionScore[qs.id] = conflict.existingScoreId
+        idMappings.questionScore[questionScore.id] = conflict.existingScoreId
         counts.updated.scores++
       } else {
         // B11 fix: Check for existing score with same cropRegion+student
@@ -872,29 +878,29 @@ async function processQuestionScores(
           },
         })
         if (existingByComposite) {
-          idMappings.questionScore[qs.id] = existingByComposite.id
+          idMappings.questionScore[questionScore.id] = existingByComposite.id
           counts.unchanged.scores++
         } else {
           const existingById = await tx.questionScore.findUnique({
-            where: { id: qs.id },
+            where: { id: questionScore.id },
           })
           if (existingById) {
-            idMappings.questionScore[qs.id] = qs.id
+            idMappings.questionScore[questionScore.id] = questionScore.id
             counts.unchanged.scores++
           } else {
             await tx.questionScore.create({
               data: {
-                id: qs.id,
+                id: questionScore.id,
                 cropRegionId: newRegionId,
                 studentId: newStudentId,
-                partialScore: qs.partialScore
-                  ? parseFloat(qs.partialScore)
+                partialScore: questionScore.partialScore
+                  ? parseFloat(questionScore.partialScore)
                   : null,
-                status: qs.status,
+                status: questionScore.status,
                 userId: currentUserId,
               },
             })
-            idMappings.questionScore[qs.id] = qs.id
+            idMappings.questionScore[questionScore.id] = questionScore.id
             counts.created.scores++
           }
         }
@@ -910,29 +916,29 @@ async function processDeletedRecords(
   const deletedRecords = data.deletedRecordsData?.deletedRecords ?? []
   if (deletedRecords.length === 0) return
 
-  for (const dr of deletedRecords) {
+  for (const deletedRecord of deletedRecords) {
     // tombstoneをローカルDBにupsert
     await tx.deletedRecord.upsert({
       where: {
         tableName_recordId: {
-          tableName: dr.tableName,
-          recordId: dr.recordId,
+          tableName: deletedRecord.tableName,
+          recordId: deletedRecord.recordId,
         },
       },
       update: {},
       create: {
-        tableName: dr.tableName,
-        recordId: dr.recordId,
-        deletedAt: new Date(dr.deletedAt),
-        userId: dr.userId,
-        examId: dr.examId,
+        tableName: deletedRecord.tableName,
+        recordId: deletedRecord.recordId,
+        deletedAt: new Date(deletedRecord.deletedAt),
+        userId: deletedRecord.userId,
+        examId: deletedRecord.examId,
       },
     })
 
     // ローカルに該当レコードが残っていれば削除（削除の伝搬）
-    if (dr.tableName === "DrawingAnnotation") {
+    if (deletedRecord.tableName === "DrawingAnnotation") {
       await tx.drawingAnnotation.deleteMany({
-        where: { id: dr.recordId },
+        where: { id: deletedRecord.recordId },
       })
     }
   }
@@ -950,53 +956,58 @@ async function processDrawingAnnotations(
     where: { tableName: "DrawingAnnotation" },
     select: { recordId: true },
   })
-  const deletedIds = new Set(localTombstones.map((t) => t.recordId))
+  const deletedIds = new Set(
+    localTombstones.map((tombstone) => tombstone.recordId)
+  )
 
-  for (const da of data.scoresData.drawingAnnotations) {
-    const newScoreId = idMappings.questionScore[da.questionScoreId]
+  for (const drawingAnnotation of data.scoresData.drawingAnnotations) {
+    const newScoreId =
+      idMappings.questionScore[drawingAnnotation.questionScoreId]
 
     if (newScoreId) {
       // tombstoneチェック: 削除済みならスキップ
-      if (deletedIds.has(da.id)) {
+      if (deletedIds.has(drawingAnnotation.id)) {
         counts.skipped.annotations++
         continue
       }
 
       const existingById = await tx.drawingAnnotation.findUnique({
-        where: { id: da.id },
+        where: { id: drawingAnnotation.id },
       })
       if (existingById) {
-        idMappings.drawingAnnotation[da.id] = da.id
+        idMappings.drawingAnnotation[drawingAnnotation.id] =
+          drawingAnnotation.id
         counts.unchanged.annotations++
       } else {
         await tx.drawingAnnotation.create({
           data: {
-            id: da.id,
+            id: drawingAnnotation.id,
             questionScoreId: newScoreId,
-            type: da.type,
-            x: da.x,
-            y: da.y,
-            color: da.color,
-            strokeWidth: da.strokeWidth,
-            width: da.width,
-            height: da.height,
-            endX: da.endX,
-            endY: da.endY,
-            lineStyle: da.lineStyle,
-            text: da.text,
-            fontSize: da.fontSize,
-            textBoxWidth: da.textBoxWidth,
-            textBoxHeight: da.textBoxHeight,
-            horizontalAlign: da.horizontalAlign,
-            verticalAlign: da.verticalAlign,
-            anchorDirection: da.anchorDirection,
-            displayX: da.displayX,
-            displayY: da.displayY,
-            isFavorite: da.isFavorite,
+            type: drawingAnnotation.type,
+            x: drawingAnnotation.x,
+            y: drawingAnnotation.y,
+            color: drawingAnnotation.color,
+            strokeWidth: drawingAnnotation.strokeWidth,
+            width: drawingAnnotation.width,
+            height: drawingAnnotation.height,
+            endX: drawingAnnotation.endX,
+            endY: drawingAnnotation.endY,
+            lineStyle: drawingAnnotation.lineStyle,
+            text: drawingAnnotation.text,
+            fontSize: drawingAnnotation.fontSize,
+            textBoxWidth: drawingAnnotation.textBoxWidth,
+            textBoxHeight: drawingAnnotation.textBoxHeight,
+            horizontalAlign: drawingAnnotation.horizontalAlign,
+            verticalAlign: drawingAnnotation.verticalAlign,
+            anchorDirection: drawingAnnotation.anchorDirection,
+            displayX: drawingAnnotation.displayX,
+            displayY: drawingAnnotation.displayY,
+            isFavorite: drawingAnnotation.isFavorite,
             userId: currentUserId,
           },
         })
-        idMappings.drawingAnnotation[da.id] = da.id
+        idMappings.drawingAnnotation[drawingAnnotation.id] =
+          drawingAnnotation.id
         counts.created.annotations++
       }
     }
@@ -1015,9 +1026,9 @@ export async function processMemberships(
   idMappings: Pick<IdMappings, "student" | "classroom" | "membership">,
   tx: Tx
 ): Promise<void> {
-  for (const m of memberships) {
-    const newStudentId = idMappings.student[m.studentId]
-    const newClassId = idMappings.classroom[m.classroomId]
+  for (const membership of memberships) {
+    const newStudentId = idMappings.student[membership.studentId]
+    const newClassId = idMappings.classroom[membership.classroomId]
 
     if (newStudentId && newClassId) {
       const existing = await tx.studentClassMembership.findFirst({
@@ -1026,26 +1037,26 @@ export async function processMemberships(
 
       if (!existing) {
         const existingById = await tx.studentClassMembership.findUnique({
-          where: { id: m.id },
+          where: { id: membership.id },
         })
         if (existingById) {
-          idMappings.membership[m.id] = m.id
+          idMappings.membership[membership.id] = membership.id
         } else {
           await tx.studentClassMembership.create({
             data: {
-              id: m.id,
+              id: membership.id,
               studentId: newStudentId,
               classroomId: newClassId,
-              startDate: new Date(m.startDate),
-              endDate: m.endDate ? new Date(m.endDate) : null,
-              attendanceNumber: m.attendanceNumber,
-              notes: m.notes,
+              startDate: new Date(membership.startDate),
+              endDate: membership.endDate ? new Date(membership.endDate) : null,
+              attendanceNumber: membership.attendanceNumber,
+              notes: membership.notes,
             },
           })
-          idMappings.membership[m.id] = m.id
+          idMappings.membership[membership.id] = membership.id
         }
       } else {
-        idMappings.membership[m.id] = existing.id
+        idMappings.membership[membership.id] = existing.id
       }
     }
   }
@@ -1057,25 +1068,25 @@ async function processExamMarkingFormats(
   tx: Tx
 ): Promise<void> {
   const formats = data.examData.examMarkingFormats ?? []
-  for (const fmt of formats) {
+  for (const format of formats) {
     const existing = await tx.examMarkingFormat.findFirst({
-      where: { examId: newExamId, markType: fmt.markType },
+      where: { examId: newExamId, markType: format.markType },
     })
     if (existing) continue
 
     const existingById = await tx.examMarkingFormat.findUnique({
-      where: { id: fmt.id },
+      where: { id: format.id },
     })
     if (!existingById) {
       await tx.examMarkingFormat.create({
         data: {
-          id: fmt.id,
+          id: format.id,
           examId: newExamId,
-          markType: fmt.markType,
-          symbol: fmt.symbol,
-          color: fmt.color,
-          fontSize: fmt.fontSize,
-          strokeWidth: fmt.strokeWidth,
+          markType: format.markType,
+          symbol: format.symbol,
+          color: format.color,
+          fontSize: format.fontSize,
+          strokeWidth: format.strokeWidth,
         },
       })
     }
@@ -1115,27 +1126,30 @@ async function processCropRegionMarkingOverrides(
   tx: Tx
 ): Promise<void> {
   const overrides = data.examData.cropRegionMarkingOverrides ?? []
-  for (const ovr of overrides) {
-    const newCropRegionId = idMappings.cropRegion[ovr.cropRegionId]
+  for (const markingOverride of overrides) {
+    const newCropRegionId = idMappings.cropRegion[markingOverride.cropRegionId]
     if (!newCropRegionId) continue
 
     const existing = await tx.cropRegionMarkingOverride.findFirst({
-      where: { cropRegionId: newCropRegionId, markType: ovr.markType },
+      where: {
+        cropRegionId: newCropRegionId,
+        markType: markingOverride.markType,
+      },
     })
     if (existing) continue
 
     const existingById = await tx.cropRegionMarkingOverride.findUnique({
-      where: { id: ovr.id },
+      where: { id: markingOverride.id },
     })
     if (!existingById) {
       await tx.cropRegionMarkingOverride.create({
         data: {
-          id: ovr.id,
+          id: markingOverride.id,
           cropRegionId: newCropRegionId,
-          markType: ovr.markType,
-          symbol: ovr.symbol,
-          color: ovr.color,
-          visible: ovr.visible,
+          markType: markingOverride.markType,
+          symbol: markingOverride.symbol,
+          color: markingOverride.color,
+          visible: markingOverride.visible,
         },
       })
     }
@@ -1172,9 +1186,10 @@ async function processTags(
     }
   }
 
-  for (const tsg of data.tagsData.tagSubtotalGroups) {
-    const newTagId = tagIdMapping[tsg.tagId]
-    const newGroupId = idMappings.subtotalGroup[tsg.subtotalGroupId]
+  for (const tagSubtotalGroup of data.tagsData.tagSubtotalGroups) {
+    const newTagId = tagIdMapping[tagSubtotalGroup.tagId]
+    const newGroupId =
+      idMappings.subtotalGroup[tagSubtotalGroup.subtotalGroupId]
     if (!newTagId || !newGroupId) continue
 
     const existing = await tx.tagSubtotalGroup.findFirst({
@@ -1183,12 +1198,12 @@ async function processTags(
     if (existing) continue
 
     const existingById = await tx.tagSubtotalGroup.findUnique({
-      where: { id: tsg.id },
+      where: { id: tagSubtotalGroup.id },
     })
     if (!existingById) {
       await tx.tagSubtotalGroup.create({
         data: {
-          id: tsg.id,
+          id: tagSubtotalGroup.id,
           tagId: newTagId,
           subtotalGroupId: newGroupId,
         },
@@ -1199,8 +1214,8 @@ async function processTags(
   // ExamTag処理
   const newExamId = idMappings.exam[data.examData.exam.id]
   if (newExamId) {
-    for (const et of data.tagsData.examTags) {
-      const newTagId = tagIdMapping[et.tagId]
+    for (const examTag of data.tagsData.examTags) {
+      const newTagId = tagIdMapping[examTag.tagId]
       if (!newTagId) continue
 
       const existing = await tx.examTag.findFirst({
@@ -1209,12 +1224,12 @@ async function processTags(
       if (existing) continue
 
       const existingById = await tx.examTag.findUnique({
-        where: { id: et.id },
+        where: { id: examTag.id },
       })
       if (!existingById) {
         await tx.examTag.create({
           data: {
-            id: et.id,
+            id: examTag.id,
             examId: newExamId,
             tagId: newTagId,
           },
@@ -1230,8 +1245,8 @@ async function processExamClasses(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const pc of data.examData.examClasses) {
-    const newClassId = idMappings.classroom[pc.classroomId]
+  for (const examClass of data.examData.examClasses) {
+    const newClassId = idMappings.classroom[examClass.classroomId]
     if (!newClassId) continue
 
     const existing = await tx.examClass.findFirst({
@@ -1240,18 +1255,18 @@ async function processExamClasses(
     if (existing) continue
 
     const existingById = await tx.examClass.findUnique({
-      where: { id: pc.id },
+      where: { id: examClass.id },
     })
     if (!existingById) {
       await tx.examClass.create({
         data: {
-          id: pc.id,
+          id: examClass.id,
           examId: newExamId,
           classroomId: newClassId,
-          administered: pc.administered,
+          administered: examClass.administered,
           // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-          ...resolveExamClassOutputFlags(pc),
-          order: pc.order,
+          ...resolveExamClassOutputFlags(examClass),
+          order: examClass.order,
         },
       })
     }
@@ -1270,8 +1285,8 @@ async function processOmrConfigs(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const cfg of data.examData.omrConfigs ?? []) {
-    const newCropRegionId = idMappings.cropRegion[cfg.cropRegionId]
+  for (const omrConfig of data.examData.omrConfigs ?? []) {
+    const newCropRegionId = idMappings.cropRegion[omrConfig.cropRegionId]
     if (!newCropRegionId) continue
 
     // 対象リージョンに既にOMR設定があればスキップ（リージョンは1:1）
@@ -1279,65 +1294,65 @@ async function processOmrConfigs(
       where: { cropRegionId: newCropRegionId },
     })
     if (existingForRegion) {
-      idMappings.cropRegionOmrConfig[cfg.id] = existingForRegion.id
+      idMappings.cropRegionOmrConfig[omrConfig.id] = existingForRegion.id
       continue
     }
 
     const existingById = await tx.cropRegionOmrConfig.findUnique({
-      where: { id: cfg.id },
+      where: { id: omrConfig.id },
     })
     if (existingById) {
-      idMappings.cropRegionOmrConfig[cfg.id] = cfg.id
+      idMappings.cropRegionOmrConfig[omrConfig.id] = omrConfig.id
       continue
     }
 
     await tx.cropRegionOmrConfig.create({
       data: {
-        id: cfg.id,
+        id: omrConfig.id,
         cropRegionId: newCropRegionId,
-        type: cfg.type,
-        numChoices: cfg.numChoices,
-        choiceLayout: cfg.choiceLayout,
-        numDigits: cfg.numDigits,
-        correctAnswer: cfg.correctAnswer,
-        colorThreshold: cfg.colorThreshold,
-        areaThreshold: cfg.areaThreshold,
+        type: omrConfig.type,
+        numChoices: omrConfig.numChoices,
+        choiceLayout: omrConfig.choiceLayout,
+        numDigits: omrConfig.numDigits,
+        correctAnswer: omrConfig.correctAnswer,
+        colorThreshold: omrConfig.colorThreshold,
+        areaThreshold: omrConfig.areaThreshold,
       },
     })
-    idMappings.cropRegionOmrConfig[cfg.id] = cfg.id
+    idMappings.cropRegionOmrConfig[omrConfig.id] = omrConfig.id
 
     // 新規作成したconfig配下のChoiceOptionを作成
-    for (const opt of data.examData.omrChoiceOptions ?? []) {
-      if (opt.omrConfigId !== cfg.id) continue
+    for (const choiceOption of data.examData.omrChoiceOptions ?? []) {
+      if (choiceOption.omrConfigId !== omrConfig.id) continue
       await tx.cropRegionOmrChoiceOption.create({
         data: {
-          id: opt.id,
-          omrConfigId: cfg.id,
-          choiceIndex: opt.choiceIndex,
-          label: opt.label,
-          isCorrect: opt.isCorrect,
-          shape: opt.shape ?? null,
-          normalizedCx: opt.normalizedCx ?? null,
-          normalizedCy: opt.normalizedCy ?? null,
-          normalizedWidth: opt.normalizedWidth ?? null,
-          normalizedHeight: opt.normalizedHeight ?? null,
+          id: choiceOption.id,
+          omrConfigId: omrConfig.id,
+          choiceIndex: choiceOption.choiceIndex,
+          label: choiceOption.label,
+          isCorrect: choiceOption.isCorrect,
+          shape: choiceOption.shape ?? null,
+          normalizedCx: choiceOption.normalizedCx ?? null,
+          normalizedCy: choiceOption.normalizedCy ?? null,
+          normalizedWidth: choiceOption.normalizedWidth ?? null,
+          normalizedHeight: choiceOption.normalizedHeight ?? null,
         },
       })
-      idMappings.cropRegionOmrChoiceOption[opt.id] = opt.id
+      idMappings.cropRegionOmrChoiceOption[choiceOption.id] = choiceOption.id
     }
 
     // 新規作成したconfig配下のDigitBoxを作成
-    for (const box of data.examData.omrDigitBoxes ?? []) {
-      if (box.omrConfigId !== cfg.id) continue
+    for (const digitBox of data.examData.omrDigitBoxes ?? []) {
+      if (digitBox.omrConfigId !== omrConfig.id) continue
       await tx.cropRegionOmrDigitBox.create({
         data: {
-          id: box.id,
-          omrConfigId: cfg.id,
-          digitIndex: box.digitIndex,
-          normalizedX: box.normalizedX,
-          normalizedY: box.normalizedY,
-          normalizedW: box.normalizedW,
-          normalizedH: box.normalizedH,
+          id: digitBox.id,
+          omrConfigId: omrConfig.id,
+          digitIndex: digitBox.digitIndex,
+          normalizedX: digitBox.normalizedX,
+          normalizedY: digitBox.normalizedY,
+          normalizedW: digitBox.normalizedW,
+          normalizedH: digitBox.normalizedH,
         },
       })
     }
@@ -1355,49 +1370,52 @@ async function processCompoundAnswers(
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const ca of data.examData.compoundAnswers ?? []) {
-    const newExamPageId = idMappings.examPage[ca.examPageId]
+  for (const compoundAnswer of data.examData.compoundAnswers ?? []) {
+    const newExamPageId = idMappings.examPage[compoundAnswer.examPageId]
     if (!newExamPageId) continue
 
     const existingById = await tx.compoundAnswer.findUnique({
-      where: { id: ca.id },
+      where: { id: compoundAnswer.id },
     })
     if (existingById) {
-      idMappings.compoundAnswer[ca.id] = ca.id
+      idMappings.compoundAnswer[compoundAnswer.id] = compoundAnswer.id
       continue
     }
 
     await tx.compoundAnswer.create({
       data: {
-        id: ca.id,
+        id: compoundAnswer.id,
         examPageId: newExamPageId,
-        label: ca.label,
-        answerFormat: ca.answerFormat,
-        correctAnswer: ca.correctAnswer,
-        points: ca.points,
-        orderIndex: ca.orderIndex,
-        alternativeAnswers: ca.alternativeAnswers,
-        requireReduced: ca.requireReduced,
+        label: compoundAnswer.label,
+        answerFormat: compoundAnswer.answerFormat,
+        correctAnswer: compoundAnswer.correctAnswer,
+        points: compoundAnswer.points,
+        orderIndex: compoundAnswer.orderIndex,
+        alternativeAnswers: compoundAnswer.alternativeAnswers,
+        requireReduced: compoundAnswer.requireReduced,
       },
     })
-    idMappings.compoundAnswer[ca.id] = ca.id
+    idMappings.compoundAnswer[compoundAnswer.id] = compoundAnswer.id
 
     // 新規作成したCompoundAnswer配下のMemberを作成
-    for (const cam of data.examData.compoundAnswerMembers ?? []) {
-      if (cam.compoundAnswerId !== ca.id) continue
-      const newCropRegionId = idMappings.cropRegion[cam.cropRegionId]
+    for (const compoundAnswerMember of data.examData.compoundAnswerMembers ??
+      []) {
+      if (compoundAnswerMember.compoundAnswerId !== compoundAnswer.id) continue
+      const newCropRegionId =
+        idMappings.cropRegion[compoundAnswerMember.cropRegionId]
       if (!newCropRegionId) continue
       await tx.compoundAnswerMember.create({
         data: {
-          id: cam.id,
-          compoundAnswerId: ca.id,
+          id: compoundAnswerMember.id,
+          compoundAnswerId: compoundAnswer.id,
           cropRegionId: newCropRegionId,
-          order: cam.order,
-          roleLabel: cam.roleLabel,
-          separator: cam.separator,
+          order: compoundAnswerMember.order,
+          roleLabel: compoundAnswerMember.roleLabel,
+          separator: compoundAnswerMember.separator,
         },
       })
-      idMappings.compoundAnswerMember[cam.id] = cam.id
+      idMappings.compoundAnswerMember[compoundAnswerMember.id] =
+        compoundAnswerMember.id
     }
   }
 }
@@ -1415,15 +1433,15 @@ async function processScoreDecisions(
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
-  for (const sd of data.scoresData.scoreDecisions ?? []) {
-    const newRegionId = idMappings.cropRegion[sd.cropRegionId]
-    const newStudentId = idMappings.student[sd.studentId]
+  for (const scoreDecision of data.scoresData.scoreDecisions ?? []) {
+    const newRegionId = idMappings.cropRegion[scoreDecision.cropRegionId]
+    const newStudentId = idMappings.student[scoreDecision.studentId]
     if (!newRegionId || !newStudentId) continue
 
-    const newSourceQsId = sd.sourceQuestionScoreId
-      ? (idMappings.questionScore[sd.sourceQuestionScoreId] ?? null)
+    const newSourceQsId = scoreDecision.sourceQuestionScoreId
+      ? (idMappings.questionScore[scoreDecision.sourceQuestionScoreId] ?? null)
       : null
-    const incomingDecidedAt = new Date(sd.decidedAt)
+    const incomingDecidedAt = new Date(scoreDecision.decidedAt)
 
     const existing = await tx.scoreDecision.findUnique({
       where: {
@@ -1440,9 +1458,9 @@ async function processScoreDecisions(
         await tx.scoreDecision.update({
           where: { id: existing.id },
           data: {
-            verdict: sd.verdict,
-            score: sd.score ? parseFloat(sd.score) : null,
-            comment: sd.comment,
+            verdict: scoreDecision.verdict,
+            score: scoreDecision.score ? parseFloat(scoreDecision.score) : null,
+            comment: scoreDecision.comment,
             decidedByUserId: currentUserId,
             decidedAt: incomingDecidedAt,
             sourceQuestionScoreId: newSourceQsId,
@@ -1452,33 +1470,33 @@ async function processScoreDecisions(
       } else {
         counts.skipped.scores++
       }
-      idMappings.scoreDecision[sd.id] = existing.id
+      idMappings.scoreDecision[scoreDecision.id] = existing.id
       continue
     }
 
     const existingById = await tx.scoreDecision.findUnique({
-      where: { id: sd.id },
+      where: { id: scoreDecision.id },
     })
     if (existingById) {
-      idMappings.scoreDecision[sd.id] = sd.id
+      idMappings.scoreDecision[scoreDecision.id] = scoreDecision.id
       counts.unchanged.scores++
       continue
     }
 
     await tx.scoreDecision.create({
       data: {
-        id: sd.id,
+        id: scoreDecision.id,
         cropRegionId: newRegionId,
         studentId: newStudentId,
-        verdict: sd.verdict,
-        score: sd.score ? parseFloat(sd.score) : null,
-        comment: sd.comment,
+        verdict: scoreDecision.verdict,
+        score: scoreDecision.score ? parseFloat(scoreDecision.score) : null,
+        comment: scoreDecision.comment,
         decidedByUserId: currentUserId,
         decidedAt: incomingDecidedAt,
         sourceQuestionScoreId: newSourceQsId,
       },
     })
-    idMappings.scoreDecision[sd.id] = sd.id
+    idMappings.scoreDecision[scoreDecision.id] = scoreDecision.id
     counts.created.scores++
   }
 }
@@ -1496,12 +1514,13 @@ async function processCompoundAnswerScores(
   counts: ImportCounts,
   tx: Tx
 ): Promise<void> {
-  for (const cas of data.examData.compoundAnswerScores ?? []) {
-    const newCompoundAnswerId = idMappings.compoundAnswer[cas.compoundAnswerId]
-    const newStudentId = idMappings.student[cas.studentId]
+  for (const compoundAnswerScore of data.examData.compoundAnswerScores ?? []) {
+    const newCompoundAnswerId =
+      idMappings.compoundAnswer[compoundAnswerScore.compoundAnswerId]
+    const newStudentId = idMappings.student[compoundAnswerScore.studentId]
     if (!newCompoundAnswerId || !newStudentId) continue
 
-    const incomingUpdatedAt = new Date(cas.updatedAt)
+    const incomingUpdatedAt = new Date(compoundAnswerScore.updatedAt)
 
     const existing = await tx.compoundAnswerScore.findUnique({
       where: {
@@ -1519,10 +1538,10 @@ async function processCompoundAnswerScores(
           where: { id: existing.id },
           data: {
             userId: currentUserId,
-            recognizedAnswer: cas.recognizedAnswer,
-            status: cas.status,
-            partialScore: cas.partialScore
-              ? parseFloat(cas.partialScore)
+            recognizedAnswer: compoundAnswerScore.recognizedAnswer,
+            status: compoundAnswerScore.status,
+            partialScore: compoundAnswerScore.partialScore
+              ? parseFloat(compoundAnswerScore.partialScore)
               : null,
           },
         })
@@ -1530,31 +1549,35 @@ async function processCompoundAnswerScores(
       } else {
         counts.skipped.scores++
       }
-      idMappings.compoundAnswerScore[cas.id] = existing.id
+      idMappings.compoundAnswerScore[compoundAnswerScore.id] = existing.id
       continue
     }
 
     const existingById = await tx.compoundAnswerScore.findUnique({
-      where: { id: cas.id },
+      where: { id: compoundAnswerScore.id },
     })
     if (existingById) {
-      idMappings.compoundAnswerScore[cas.id] = cas.id
+      idMappings.compoundAnswerScore[compoundAnswerScore.id] =
+        compoundAnswerScore.id
       counts.unchanged.scores++
       continue
     }
 
     await tx.compoundAnswerScore.create({
       data: {
-        id: cas.id,
+        id: compoundAnswerScore.id,
         compoundAnswerId: newCompoundAnswerId,
         studentId: newStudentId,
         userId: currentUserId,
-        recognizedAnswer: cas.recognizedAnswer,
-        status: cas.status,
-        partialScore: cas.partialScore ? parseFloat(cas.partialScore) : null,
+        recognizedAnswer: compoundAnswerScore.recognizedAnswer,
+        status: compoundAnswerScore.status,
+        partialScore: compoundAnswerScore.partialScore
+          ? parseFloat(compoundAnswerScore.partialScore)
+          : null,
       },
     })
-    idMappings.compoundAnswerScore[cas.id] = cas.id
+    idMappings.compoundAnswerScore[compoundAnswerScore.id] =
+      compoundAnswerScore.id
     counts.created.scores++
   }
 }

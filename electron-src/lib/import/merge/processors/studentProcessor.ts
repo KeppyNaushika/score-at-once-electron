@@ -148,7 +148,7 @@ export async function processStudentIdIntegration(
   if (studentPreMatch.byStudentNumber) {
     for (const match of studentPreMatch.byStudentNumber) {
       const decision = config.decisions.find(
-        (d) => d.importId === match.importId
+        (decision) => decision.importId === match.importId
       )
 
       // strategyに応じたデフォルト処理
@@ -185,7 +185,7 @@ export async function processStudentIdIntegration(
       if (idMappings.student[match.importId]) continue
 
       const decision = config.decisions.find(
-        (d) => d.importId === match.importId
+        (decision) => decision.importId === match.importId
       )
 
       if (config.strategy === "by_name") {
@@ -218,7 +218,9 @@ export async function processStudentIdIntegration(
   for (const item of studentPreMatch.noMatch) {
     if (idMappings.student[item.importId]) continue
 
-    const decision = config.decisions.find((d) => d.importId === item.importId)
+    const decision = config.decisions.find(
+      (decision) => decision.importId === item.importId
+    )
     await processDecision(
       item.importId,
       decision || {
