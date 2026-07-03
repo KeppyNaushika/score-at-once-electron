@@ -31,9 +31,9 @@ export class V1_3_0_to_V1_4_0_Transformer implements GradeVersionTransformer {
     const gradeName = data.manifest.gradeName
 
     // 当該 grade の対象生徒（GradeStudent と同じ studentRefs）を名簿に流用
-    const cwStudents = data.gradeData.studentRefs.map((s) => ({
-      studentNumber: s.studentNumber,
-      customOrder: s.customOrder,
+    const cwStudents = data.gradeData.studentRefs.map((studentRef) => ({
+      studentNumber: studentRef.studentNumber,
+      customOrder: studentRef.customOrder,
     }))
 
     const generated: ArchiveCoursework[] = []
@@ -54,17 +54,17 @@ export class V1_3_0_to_V1_4_0_Transformer implements GradeVersionTransformer {
 
           const itemScores = manualScores
             .filter(
-              (ms) =>
-                ms.gradeItemName === giData.name &&
-                ms.dataSourceName === dsData.name
+              (manualScore) =>
+                manualScore.gradeItemName === giData.name &&
+                manualScore.dataSourceName === dsData.name
             )
-            .map((ms) => ({
-              studentNumber: ms.studentNumber,
-              score: ms.score,
-              letterValue: ms.letterValue ?? null,
-              adjustment: ms.adjustment ?? null,
-              adjustmentReason: ms.adjustmentReason ?? null,
-              comment: ms.comment ?? null,
+            .map((manualScore) => ({
+              studentNumber: manualScore.studentNumber,
+              score: manualScore.score,
+              letterValue: manualScore.letterValue ?? null,
+              adjustment: manualScore.adjustment ?? null,
+              adjustmentReason: manualScore.adjustmentReason ?? null,
+              comment: manualScore.comment ?? null,
             }))
 
           generated.push({

@@ -150,10 +150,10 @@ export async function importCourseworkData(
   /** 学級・タグ・名簿の join を冪等に張る */
   const ensureJoins = async (
     courseworkId: string,
-    cw: ArchiveCourseworkRef
+    coursework: ArchiveCourseworkRef
   ): Promise<void> => {
-    for (const c of cw.classrooms) {
-      const classroomId = classes.map.get(c.classroomId)
+    for (const classroomRef of coursework.classrooms) {
+      const classroomId = classes.map.get(classroomRef.classroomId)
       if (!classroomId) continue
       const exists = await tx.courseworkClass.findUnique({
         where: { courseworkId_classroomId: { courseworkId, classroomId } },
@@ -161,12 +161,12 @@ export async function importCourseworkData(
       })
       if (!exists) {
         await tx.courseworkClass.create({
-          data: { courseworkId, classroomId, order: c.order },
+          data: { courseworkId, classroomId, order: classroomRef.order },
         })
       }
     }
-    for (const t of cw.tags) {
-      const tagId = tagMap.get(t.tagId)
+    for (const tagRef of coursework.tags) {
+      const tagId = tagMap.get(tagRef.tagId)
       if (!tagId) continue
       const exists = await tx.courseworkTag.findUnique({
         where: { courseworkId_tagId: { courseworkId, tagId } },
@@ -176,8 +176,8 @@ export async function importCourseworkData(
         await tx.courseworkTag.create({ data: { courseworkId, tagId } })
       }
     }
-    for (const s of cw.students) {
-      const studentId = students.map.get(s.studentId)
+    for (const studentRef of coursework.students) {
+      const studentId = students.map.get(studentRef.studentId)
       if (!studentId) continue
       const exists = await tx.courseworkStudent.findUnique({
         where: { courseworkId_studentId: { courseworkId, studentId } },
@@ -185,15 +185,19 @@ export async function importCourseworkData(
       })
       if (!exists) {
         await tx.courseworkStudent.create({
-          data: { courseworkId, studentId, customOrder: s.customOrder },
+          data: {
+            courseworkId,
+            studentId,
+            customOrder: studentRef.customOrder,
+          },
         })
       }
     }
   }
 
   // 2. 資料本体
-  for (const cw of data.courseworks) {
-    const decision = decisions[cw.id]
+  for (const coursework of data.courseworks) {
+    const decision = decisions[coursework.id]
     let reuseId: string | null = null
 
     if (decision?.action === "reuse") {
@@ -204,12 +208,12 @@ export async function importCourseworkData(
       reuseId = exists?.id ?? null
       if (!reuseId) {
         warnings.push(
-          `試験外成績資料「${cw.name}」: 指定された統合先が見つからないため新規作成しました`
+          `試験外成績資料「${coursework.name}」: 指定された統合先が見つからないため新規作成しました`
         )
       }
     } else if (!decision) {
       const uuidMatch = await tx.coursework.findUnique({
-        where: { id: cw.id },
+        where: { id: coursework.id },
         select: { id: true },
       })
       reuseId = uuidMatch?.id ?? null
@@ -217,20 +221,20 @@ export async function importCourseworkData(
 
     if (reuseId) {
       // 既存資料へ統合: 名簿/学級/タグの不足を補い、項目は名前で突合、点数は LWW
-      await ensureJoins(reuseId, cw)
+      await ensureJoins(reuseId, coursework)
       const existing = await tx.coursework.findUnique({
         where: { id: reuseId },
         include: { items: { select: { id: true, name: true } } },
       })
       const existingByName = new Map(
-        (existing?.items ?? []).map((i) => [i.name, i.id])
+        (existing?.items ?? []).map((item) => [item.name, item.id])
       )
-      for (const item of cw.items) {
+      for (const item of coursework.items) {
         let actualItemId = existingByName.get(item.name)
         if (!actualItemId) {
           actualItemId = await createItem(reuseId, randomUUID(), item)
         }
-        await upsertScores(actualItemId, item, cw.name)
+        await upsertScores(actualItemId, item, coursework.name)
         if (item.id) itemIdMap.set(item.id, actualItemId)
       }
       continue
@@ -238,24 +242,24 @@ export async function importCourseworkData(
 
     // 新規作成。decision 未指定（uuid 不一致の初回取込）のみ元 uuid を保持して冪等化。
     const preserveUuids = !decision
-    const newCourseworkId = preserveUuids ? cw.id : randomUUID()
+    const newCourseworkId = preserveUuids ? coursework.id : randomUUID()
     const created = await tx.coursework.create({
       data: {
         id: newCourseworkId,
-        name: cw.name,
-        description: cw.description,
-        date: cw.date ? new Date(cw.date) : null,
+        name: coursework.name,
+        description: coursework.description,
+        date: coursework.date ? new Date(coursework.date) : null,
       },
     })
     createdCourseworkIds.push(created.id)
-    await ensureJoins(created.id, cw)
-    for (const item of cw.items) {
+    await ensureJoins(created.id, coursework)
+    for (const item of coursework.items) {
       const actualItemId = await createItem(
         created.id,
         preserveUuids ? item.id : randomUUID(),
         item
       )
-      await upsertScores(actualItemId, item, cw.name)
+      await upsertScores(actualItemId, item, coursework.name)
       if (item.id) itemIdMap.set(item.id, actualItemId)
     }
   }

@@ -51,19 +51,22 @@ export async function previewGradeArchiveImport(
   )
 
   // 埋め込み資料の照合候補（正規化済みのため courseworkArchive のみ参照）
-  const cwPreviewItems = (courseworkArchive?.courseworks ?? []).map((cw) => ({
-    id: cw.id,
-    name: cw.name,
-    itemCount: cw.items.length,
-    studentCount: cw.students.length,
-  }))
+  const cwPreviewItems = (courseworkArchive?.courseworks ?? []).map(
+    (coursework) => ({
+      id: coursework.id,
+      name: coursework.name,
+      itemCount: coursework.items.length,
+      studentCount: coursework.students.length,
+    })
+  )
 
   // Student照合
   const courseworkStudentNumbers =
-    courseworkArchive?.studentsData.map((s) => s.studentNumber) ?? []
+    courseworkArchive?.studentsData.map((student) => student.studentNumber) ??
+    []
   const studentNumbers = [
     ...courseworkStudentNumbers,
-    ...gradeData.studentRefs.map((s) => s.studentNumber),
+    ...gradeData.studentRefs.map((studentRef) => studentRef.studentNumber),
   ]
   const uniqueNumbers = [...new Set(studentNumbers)]
   const existingStudents = await prisma.student.findMany({
@@ -71,31 +74,31 @@ export async function previewGradeArchiveImport(
     select: { studentNumber: true },
   })
   const existingNumberSet = new Set(
-    existingStudents.map((s) => s.studentNumber)
+    existingStudents.map((student) => student.studentNumber)
   )
 
   // 埋め込み資料のマッチング候補（uuid一次・名前二次）を算出
   const courseworkMatches = await Promise.all(
-    cwPreviewItems.map(async (cw) => {
+    cwPreviewItems.map(async (courseworkPreview) => {
       // uuid 完全一致（同一PC由来）
-      const uuidMatch = cw.id
+      const uuidMatch = courseworkPreview.id
         ? await prisma.coursework.findUnique({
-            where: { id: cw.id },
+            where: { id: courseworkPreview.id },
             select: { id: true, name: true },
           })
         : null
       // 名前一致候補（名前は非ユニークなので複数あり得る。uuid一致は除外）
       const nameCandidates = (
         await prisma.coursework.findMany({
-          where: { name: cw.name },
+          where: { name: courseworkPreview.name },
           select: { id: true, name: true },
         })
-      ).filter((c) => c.id !== uuidMatch?.id)
+      ).filter((coursework) => coursework.id !== uuidMatch?.id)
       return {
-        archiveId: cw.id,
-        name: cw.name,
-        itemCount: cw.itemCount,
-        studentCount: cw.studentCount,
+        archiveId: courseworkPreview.id,
+        name: courseworkPreview.name,
+        itemCount: courseworkPreview.itemCount,
+        studentCount: courseworkPreview.studentCount,
         uuidMatch: uuidMatch ?? null,
         nameCandidates,
       }
@@ -106,10 +109,11 @@ export async function previewGradeArchiveImport(
     manifest: data.manifest,
     classMatches,
     examMatches,
-    studentMatchCount: uniqueNumbers.filter((sn) => existingNumberSet.has(sn))
-      .length,
+    studentMatchCount: uniqueNumbers.filter((studentNumber) =>
+      existingNumberSet.has(studentNumber)
+    ).length,
     studentMissingCount: uniqueNumbers.filter(
-      (sn) => !existingNumberSet.has(sn)
+      (studentNumber) => !existingNumberSet.has(studentNumber)
     ).length,
     courseworkMatches,
   }
@@ -139,7 +143,7 @@ export async function importGradeArchive(
         const { gradeData, boundariesData } = data
 
         // 1. Grade作成
-        const gp = await tx.grade.create({
+        const grade = await tx.grade.create({
           data: {
             name: gradeData.grade.name,
             description: gradeData.grade.description,
@@ -154,7 +158,7 @@ export async function importGradeArchive(
         if (gradeData.exportSettings) {
           await tx.gradeExportSettings.create({
             data: {
-              gradeId: gp.id,
+              gradeId: grade.id,
               settingsJson: gradeData.exportSettings.settingsJson,
             },
           })
@@ -163,14 +167,14 @@ export async function importGradeArchive(
         // 2. Class照合→GradeClass作成
         for (let i = 0; i < gradeData.classRefs.length; i++) {
           const ref = gradeData.classRefs[i]
-          const cls = await tx.classroom.findUnique({
+          const classroom = await tx.classroom.findUnique({
             where: { name: ref.name },
           })
-          if (cls) {
+          if (classroom) {
             await tx.gradeClass.create({
               data: {
-                gradeId: gp.id,
-                classroomId: cls.id,
+                gradeId: grade.id,
+                classroomId: classroom.id,
                 order: i,
               },
             })
@@ -185,7 +189,7 @@ export async function importGradeArchive(
           if (student) {
             await tx.gradeStudent.create({
               data: {
-                gradeId: gp.id,
+                gradeId: grade.id,
                 studentId: student.id,
                 customOrder: studentRef.customOrder,
               },
@@ -216,11 +220,11 @@ export async function importGradeArchive(
           for (const [archiveItemId, actualId] of cwResult.itemIdMap) {
             itemIdToActual.set(archiveItemId, actualId)
           }
-          for (const cw of data.courseworkArchive.courseworks) {
-            for (const item of cw.items) {
+          for (const coursework of data.courseworkArchive.courseworks) {
+            for (const item of coursework.items) {
               const actual = cwResult.itemIdMap.get(item.id)
               if (actual)
-                itemNameToActual.set(`${cw.name}:${item.name}`, actual)
+                itemNameToActual.set(`${coursework.name}:${item.name}`, actual)
             }
           }
         }
@@ -229,7 +233,7 @@ export async function importGradeArchive(
         for (const giData of gradeData.gradeItems) {
           const gi = await tx.gradeItem.create({
             data: {
-              gradeId: gp.id,
+              gradeId: grade.id,
               name: giData.name,
               order: giData.order,
             },
@@ -369,19 +373,19 @@ export async function importGradeArchive(
           let gradeItemId: string | null = null
           if (bsData.gradeItemName) {
             // GradeItem名で照合（同じ試験内）
-            const gi = await tx.gradeItem.findFirst({
+            const gradeItem = await tx.gradeItem.findFirst({
               where: {
-                gradeId: gp.id,
+                gradeId: grade.id,
                 name: bsData.gradeItemName,
               },
             })
-            gradeItemId = gi?.id ?? null
+            gradeItemId = gradeItem?.id ?? null
             if (!gradeItemId) continue
           }
 
-          const bs = await tx.gradeBoundarySet.create({
+          const boundarySet = await tx.gradeBoundarySet.create({
             data: {
-              gradeId: gp.id,
+              gradeId: grade.id,
               targetType: bsData.targetType,
               gradeItemId,
             },
@@ -389,11 +393,11 @@ export async function importGradeArchive(
 
           if (bsData.boundaries.length > 0) {
             await tx.gradeBoundary.createMany({
-              data: bsData.boundaries.map((b) => ({
-                gradeBoundarySetId: bs.id,
-                label: b.label,
-                minPercentage: b.minPercentage,
-                order: b.order,
+              data: bsData.boundaries.map((boundary) => ({
+                gradeBoundarySetId: boundarySet.id,
+                label: boundary.label,
+                minPercentage: boundary.minPercentage,
+                order: boundary.order,
               })),
             })
           }
@@ -412,7 +416,7 @@ export async function importGradeArchive(
 
             const gradeItem = await tx.gradeItem.findFirst({
               where: {
-                gradeId: gp.id,
+                gradeId: grade.id,
                 name: excl.gradeItemName,
               },
             })
@@ -420,7 +424,7 @@ export async function importGradeArchive(
 
             await tx.gradeItemExclusion.create({
               data: {
-                gradeId: gp.id,
+                gradeId: grade.id,
                 studentId: student.id,
                 gradeItemId: gradeItem.id,
               },
@@ -430,18 +434,18 @@ export async function importGradeArchive(
 
         // 8. GradeOverride挿入（後方互換: optionalフィールド）
         if (gradeData.gradeOverrides && gradeData.gradeOverrides.length > 0) {
-          for (const ov of gradeData.gradeOverrides) {
+          for (const gradeOverride of gradeData.gradeOverrides) {
             const student = await tx.student.findUnique({
-              where: { studentNumber: ov.studentNumber },
+              where: { studentNumber: gradeOverride.studentNumber },
             })
             if (!student) continue
 
             let gradeItemId: string | null = null
-            if (ov.gradeItemName) {
+            if (gradeOverride.gradeItemName) {
               const gradeItem = await tx.gradeItem.findFirst({
                 where: {
-                  gradeId: gp.id,
-                  name: ov.gradeItemName,
+                  gradeId: grade.id,
+                  name: gradeOverride.gradeItemName,
                 },
               })
               if (!gradeItem) continue
@@ -450,11 +454,11 @@ export async function importGradeArchive(
 
             await tx.gradeOverride.create({
               data: {
-                gradeId: gp.id,
+                gradeId: grade.id,
                 studentId: student.id,
-                targetType: ov.targetType,
+                targetType: gradeOverride.targetType,
                 gradeItemId,
-                overrideLabel: ov.overrideLabel,
+                overrideLabel: gradeOverride.overrideLabel,
               },
             })
           }
@@ -465,24 +469,24 @@ export async function importGradeArchive(
           gradeData.gradeConstraints &&
           gradeData.gradeConstraints.length > 0
         ) {
-          for (const c of gradeData.gradeConstraints) {
+          for (const gradeConstraint of gradeData.gradeConstraints) {
             await tx.gradeConstraint.create({
               data: {
-                gradeId: gp.id,
-                name: c.name,
-                kind: c.kind,
-                config: c.config,
-                expression: c.expression,
-                color: c.color,
-                message: c.message,
-                enabled: c.enabled,
-                order: c.order,
+                gradeId: grade.id,
+                name: gradeConstraint.name,
+                kind: gradeConstraint.kind,
+                config: gradeConstraint.config,
+                expression: gradeConstraint.expression,
+                color: gradeConstraint.color,
+                message: gradeConstraint.message,
+                enabled: gradeConstraint.enabled,
+                order: gradeConstraint.order,
               },
             })
           }
         }
 
-        return { success: true, gradeId: gp.id }
+        return { success: true, gradeId: grade.id }
       }
     )
 

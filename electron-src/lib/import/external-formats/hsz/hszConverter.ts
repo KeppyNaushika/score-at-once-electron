@@ -47,7 +47,9 @@ export async function convertHszToScore(
     const entries = hszZip.getEntries()
 
     // 2. db_info.json を取得・パース
-    const dbInfoEntry = entries.find((e) => e.entryName === "db_info.json")
+    const dbInfoEntry = entries.find(
+      (entry) => entry.entryName === "db_info.json"
+    )
     if (!dbInfoEntry) {
       return { success: false, error: "db_info.json が見つかりません" }
     }
@@ -61,15 +63,15 @@ export async function convertHszToScore(
 
     // ページ番号 → UUID マッピング
     const pageUuidMap = new Map<number, string>()
-    for (const sp of sheet_pages) {
-      pageUuidMap.set(sp.page, generateUuid())
+    for (const sheetPage of sheet_pages) {
+      pageUuidMap.set(sheetPage.page, generateUuid())
     }
 
     // 4. ExamPages 生成
-    const examPages = sheet_pages.map((sp) => ({
-      id: pageUuidMap.get(sp.page)!,
+    const examPages = sheet_pages.map((sheetPage) => ({
+      id: pageUuidMap.get(sheetPage.page)!,
       examId,
-      pageNumber: sp.page + 1, // Score at Onceは1始まり
+      pageNumber: sheetPage.page + 1, // Score at Onceは1始まり
       createdAt: now,
       updatedAt: now,
     }))
@@ -83,13 +85,13 @@ export async function convertHszToScore(
       updatedAt: string
     }> = []
 
-    for (const sp of sheet_pages) {
-      const imgFileName = `correct_${sp.page}.png`
-      const imgEntry = entries.find((e) => e.entryName === imgFileName)
+    for (const sheetPage of sheet_pages) {
+      const imgFileName = `correct_${sheetPage.page}.png`
+      const imgEntry = entries.find((entry) => entry.entryName === imgFileName)
       if (imgEntry) {
         masterImages.push({
           id: generateUuid(),
-          examPageId: pageUuidMap.get(sp.page)!,
+          examPageId: pageUuidMap.get(sheetPage.page)!,
           imagePath: imgFileName,
           createdAt: now,
           updatedAt: now,
@@ -100,8 +102,8 @@ export async function convertHszToScore(
     // 6. CropRegions 生成（sheet_fields → cropRegions変換）
     // ページ番号 → 画像サイズ マッピング（ピクセル→正規化座標変換用）
     const pageImageSizeMap = new Map<number, { w: number; h: number }>()
-    for (const sp of sheet_pages) {
-      pageImageSizeMap.set(sp.page, sp.correct_image_size)
+    for (const sheetPage of sheet_pages) {
+      pageImageSizeMap.set(sheetPage.page, sheetPage.correct_image_size)
     }
 
     const {
@@ -234,9 +236,9 @@ export async function convertHszToScore(
     )
 
     // 模範解答画像をmaster-images/にコピー
-    for (const sp of sheet_pages) {
-      const imgFileName = `correct_${sp.page}.png`
-      const imgEntry = entries.find((e) => e.entryName === imgFileName)
+    for (const sheetPage of sheet_pages) {
+      const imgFileName = `correct_${sheetPage.page}.png`
+      const imgEntry = entries.find((entry) => entry.entryName === imgFileName)
       if (imgEntry) {
         scoreZip.addFile(`master-images/${imgFileName}`, imgEntry.getData())
       }
@@ -490,7 +492,7 @@ function generateHszSubtotalData(
 
     // part1をソートしてSubtotalを作成
     const sortedPart1s = Array.from(part1ToCropIds.keys()).sort(
-      (a, b) => parseInt(a, 10) - parseInt(b, 10)
+      (part1A, part1B) => parseInt(part1A, 10) - parseInt(part1B, 10)
     )
     const part1ToSubtotalId = new Map<string, string>()
 
@@ -562,7 +564,7 @@ function generateHszSubtotalData(
 
     // regionをソートしてSubtotalを作成
     const sortedRegions = Array.from(regionToCropIds.keys()).sort(
-      (a, b) => parseInt(a, 10) - parseInt(b, 10)
+      (regionA, regionB) => parseInt(regionA, 10) - parseInt(regionB, 10)
     )
     const regionToSubtotalId = new Map<string, string>()
 

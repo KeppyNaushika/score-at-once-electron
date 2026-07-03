@@ -139,38 +139,38 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   }
 
   // v1.2.0+: MasterImage
-  for (const img of data.examData.masterImages || []) {
-    mappings.masterImage[img.id] = randomUUID()
+  for (const masterImage of data.examData.masterImages || []) {
+    mappings.masterImage[masterImage.id] = randomUUID()
   }
 
   // v1.2.0+: StudentAnswerImage
-  for (const img of data.examData.studentAnswerImages || []) {
-    mappings.studentAnswerImage[img.id] = randomUUID()
+  for (const studentAnswerImage of data.examData.studentAnswerImages || []) {
+    mappings.studentAnswerImage[studentAnswerImage.id] = randomUUID()
   }
 
   // v1.1.0以前: PageImage（後方互換性）
-  for (const img of data.examData.pageImages) {
-    mappings.pageImage[img.id] = randomUUID()
+  for (const pageImage of data.examData.pageImages) {
+    mappings.pageImage[pageImage.id] = randomUUID()
   }
 
   // ExamStudent
-  for (const ps of data.examData.examStudents) {
-    mappings.examStudent[ps.id] = randomUUID()
+  for (const examStudent of data.examData.examStudents) {
+    mappings.examStudent[examStudent.id] = randomUUID()
   }
 
   // UserExam
-  for (const up of data.examData.userExams) {
-    mappings.userExam[up.id] = randomUUID()
+  for (const userExam of data.examData.userExams) {
+    mappings.userExam[userExam.id] = randomUUID()
   }
 
   // ExamSubtotalGroup
-  for (const psg of data.examData.examSubtotalGroups) {
-    mappings.examSubtotalGroup[psg.id] = randomUUID()
+  for (const examSubtotalGroup of data.examData.examSubtotalGroups) {
+    mappings.examSubtotalGroup[examSubtotalGroup.id] = randomUUID()
   }
 
   // ExamClass (v1.1.0+)
-  for (const pc of data.examData.examClasses || []) {
-    mappings.examClass[pc.id] = randomUUID()
+  for (const examClass of data.examData.examClasses || []) {
+    mappings.examClass[examClass.id] = randomUUID()
   }
 
   // 生徒
@@ -179,8 +179,8 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   }
 
   // 学級
-  for (const cls of data.classesData.classrooms) {
-    mappings.classroom[cls.id] = randomUUID()
+  for (const classroom of data.classesData.classrooms) {
+    mappings.classroom[classroom.id] = randomUUID()
   }
 
   // 学級所属
@@ -194,43 +194,43 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   }
 
   // 小計グループ
-  for (const sg of data.subtotalsData.subtotalGroups) {
-    mappings.subtotalGroup[sg.id] = randomUUID()
+  for (const subtotalGroup of data.subtotalsData.subtotalGroups) {
+    mappings.subtotalGroup[subtotalGroup.id] = randomUUID()
   }
 
   // 小計
-  for (const s of data.subtotalsData.subtotals) {
-    mappings.subtotal[s.id] = randomUUID()
+  for (const subtotal of data.subtotalsData.subtotals) {
+    mappings.subtotal[subtotal.id] = randomUUID()
   }
 
   // CropSubtotal
-  for (const cs of data.subtotalsData.cropSubtotals) {
-    mappings.cropSubtotal[cs.id] = randomUUID()
+  for (const cropSubtotal of data.subtotalsData.cropSubtotals) {
+    mappings.cropSubtotal[cropSubtotal.id] = randomUUID()
   }
 
   // QuestionScore
-  for (const qs of data.scoresData.questionScores) {
-    mappings.questionScore[qs.id] = randomUUID()
+  for (const questionScore of data.scoresData.questionScores) {
+    mappings.questionScore[questionScore.id] = randomUUID()
   }
 
   // v1.13.0+: ScoreDecision
-  for (const sd of data.scoresData.scoreDecisions || []) {
-    mappings.scoreDecision[sd.id] = randomUUID()
+  for (const scoreDecision of data.scoresData.scoreDecisions || []) {
+    mappings.scoreDecision[scoreDecision.id] = randomUUID()
   }
 
   // v1.14.0+: ReturnSnapshot
-  for (const rs of data.scoresData.returnSnapshots || []) {
-    mappings.returnSnapshot[rs.id] = randomUUID()
+  for (const returnSnapshot of data.scoresData.returnSnapshots || []) {
+    mappings.returnSnapshot[returnSnapshot.id] = randomUUID()
   }
 
   // DrawingAnnotation
-  for (const da of data.scoresData.drawingAnnotations) {
-    mappings.drawingAnnotation[da.id] = randomUUID()
+  for (const drawingAnnotation of data.scoresData.drawingAnnotations) {
+    mappings.drawingAnnotation[drawingAnnotation.id] = randomUUID()
   }
 
   // v1.4.0+: ExamMarkingFormat
-  for (const pmf of data.examData.examMarkingFormats || []) {
-    mappings.examMarkingFormat[pmf.id] = randomUUID()
+  for (const examMarkingFormat of data.examData.examMarkingFormats || []) {
+    mappings.examMarkingFormat[examMarkingFormat.id] = randomUUID()
   }
 
   // v1.4.0+: ExamExportSettings
@@ -240,38 +240,41 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   }
 
   // v1.4.0+: CropRegionMarkingOverride
-  for (const crmo of data.examData.cropRegionMarkingOverrides || []) {
-    mappings.cropRegionMarkingOverride[crmo.id] = randomUUID()
+  for (const cropRegionMarkingOverride of data.examData
+    .cropRegionMarkingOverrides || []) {
+    mappings.cropRegionMarkingOverride[cropRegionMarkingOverride.id] =
+      randomUUID()
   }
 
   // v1.7.0+: CropRegionOmrConfig
-  for (const cfg of data.examData.omrConfigs || []) {
-    mappings.cropRegionOmrConfig[cfg.id] = randomUUID()
+  for (const omrConfig of data.examData.omrConfigs || []) {
+    mappings.cropRegionOmrConfig[omrConfig.id] = randomUUID()
   }
 
   // v1.7.0+: CropRegionOmrChoiceOption
-  for (const opt of data.examData.omrChoiceOptions || []) {
-    mappings.cropRegionOmrChoiceOption[opt.id] = randomUUID()
+  for (const omrChoiceOption of data.examData.omrChoiceOptions || []) {
+    mappings.cropRegionOmrChoiceOption[omrChoiceOption.id] = randomUUID()
   }
 
   // v1.11.0+: CropRegionOmrDigitBox
-  for (const box of data.examData.omrDigitBoxes || []) {
-    mappings.cropRegionOmrDigitBox[box.id] = randomUUID()
+  for (const omrDigitBox of data.examData.omrDigitBoxes || []) {
+    mappings.cropRegionOmrDigitBox[omrDigitBox.id] = randomUUID()
   }
 
   // v1.11.0+: CompoundAnswer
-  for (const ca of data.examData.compoundAnswers || []) {
-    mappings.compoundAnswer[ca.id] = randomUUID()
+  for (const compoundAnswer of data.examData.compoundAnswers || []) {
+    mappings.compoundAnswer[compoundAnswer.id] = randomUUID()
   }
 
   // v1.11.0+: CompoundAnswerMember
-  for (const cam of data.examData.compoundAnswerMembers || []) {
-    mappings.compoundAnswerMember[cam.id] = randomUUID()
+  for (const compoundAnswerMember of data.examData.compoundAnswerMembers ||
+    []) {
+    mappings.compoundAnswerMember[compoundAnswerMember.id] = randomUUID()
   }
 
   // v1.11.0+: CompoundAnswerScore
-  for (const cas of data.examData.compoundAnswerScores || []) {
-    mappings.compoundAnswerScore[cas.id] = randomUUID()
+  for (const compoundAnswerScore of data.examData.compoundAnswerScores || []) {
+    mappings.compoundAnswerScore[compoundAnswerScore.id] = randomUUID()
   }
 
   // v1.10.0+: Tag (旧Subject)
@@ -282,13 +285,13 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     }
 
     // TagSubtotalGroup (旧SubjectSubtotalGroup)
-    for (const tsg of tagsData.tagSubtotalGroups) {
-      mappings.tagSubtotalGroup[tsg.id] = randomUUID()
+    for (const tagSubtotalGroup of tagsData.tagSubtotalGroups) {
+      mappings.tagSubtotalGroup[tagSubtotalGroup.id] = randomUUID()
     }
 
     // ExamTag
-    for (const et of tagsData.examTags) {
-      mappings.examTag[et.id] = randomUUID()
+    for (const examTag of tagsData.examTags) {
+      mappings.examTag[examTag.id] = randomUUID()
     }
   }
 

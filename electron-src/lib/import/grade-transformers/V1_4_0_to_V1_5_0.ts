@@ -42,25 +42,31 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
     const studentNumbers = new Set<string>()
     const classNames = new Set<string>()
     const tagNames = new Set<string>()
-    for (const cw of legacy) {
-      cw.students.forEach((s) => studentNumbers.add(s.studentNumber))
-      cw.classrooms.forEach((c) => classNames.add(c.classroomName))
-      cw.tags.forEach((t) => tagNames.add(t.tagName))
-      cw.items.forEach((item) =>
-        item.scores.forEach((sc) => studentNumbers.add(sc.studentNumber))
+    for (const coursework of legacy) {
+      coursework.students.forEach((student) =>
+        studentNumbers.add(student.studentNumber)
+      )
+      coursework.classrooms.forEach((classroom) =>
+        classNames.add(classroom.classroomName)
+      )
+      coursework.tags.forEach((tag) => tagNames.add(tag.tagName))
+      coursework.items.forEach((item) =>
+        item.scores.forEach((score) => studentNumbers.add(score.studentNumber))
       )
     }
 
-    const studentsData: ArchiveCwStudent[] = [...studentNumbers].map((sn) => ({
-      id: synthStudentId(sn),
-      studentNumber: sn,
-      lastName: "",
-      firstName: "",
-      lastNameKana: "",
-      firstNameKana: "",
-      enrollmentYear: null,
-      updatedAt: EPOCH,
-    }))
+    const studentsData: ArchiveCwStudent[] = [...studentNumbers].map(
+      (studentNumber) => ({
+        id: synthStudentId(studentNumber),
+        studentNumber,
+        lastName: "",
+        firstName: "",
+        lastNameKana: "",
+        firstNameKana: "",
+        enrollmentYear: null,
+        updatedAt: EPOCH,
+      })
+    )
     const classesData: ArchiveCwClass[] = [...classNames].map((name) => ({
       id: synthClassId(name),
       name,
@@ -76,42 +82,50 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
       color: null,
     }))
 
-    const courseworks: ArchiveCourseworkRef[] = legacy.map((cw) => ({
-      id: cw.id,
-      name: cw.name,
-      description: cw.description,
-      date: cw.date,
-      classrooms: cw.classrooms.map((c) => ({
-        classroomId: synthClassId(c.classroomName),
-        order: c.order,
+    const courseworks: ArchiveCourseworkRef[] = legacy.map((coursework) => ({
+      id: coursework.id,
+      name: coursework.name,
+      description: coursework.description,
+      date: coursework.date,
+      classrooms: coursework.classrooms.map((classroom) => ({
+        classroomId: synthClassId(classroom.classroomName),
+        order: classroom.order,
       })),
-      tags: cw.tags.map((t) => ({ tagId: synthTagId(t.tagName) })),
-      students: cw.students.map((s) => ({
-        studentId: synthStudentId(s.studentNumber),
-        customOrder: s.customOrder,
+      tags: coursework.tags.map((tag) => ({ tagId: synthTagId(tag.tagName) })),
+      students: coursework.students.map((student) => ({
+        studentId: synthStudentId(student.studentNumber),
+        customOrder: student.customOrder,
       })),
-      items: cw.items.map((item) => ({
+      items: coursework.items.map((item) => ({
         id: item.id,
         name: item.name,
         order: item.order,
         maxScore: item.maxScore,
         inputMode: item.inputMode,
         letterScales: item.letterScales,
-        scores: item.scores.map((sc) => ({
-          studentId: synthStudentId(sc.studentNumber),
-          score: sc.score,
-          letterValue: sc.letterValue,
-          adjustment: sc.adjustment,
-          adjustmentReason: sc.adjustmentReason,
-          comment: sc.comment,
+        scores: item.scores.map((score) => ({
+          studentId: synthStudentId(score.studentNumber),
+          score: score.score,
+          letterValue: score.letterValue,
+          adjustment: score.adjustment,
+          adjustmentReason: score.adjustmentReason,
+          comment: score.comment,
           updatedAt: EPOCH,
         })),
       })),
     }))
 
-    const itemCount = courseworks.reduce((s, cw) => s + cw.items.length, 0)
+    const itemCount = courseworks.reduce(
+      (total, coursework) => total + coursework.items.length,
+      0
+    )
     const scoreCount = courseworks.reduce(
-      (s, cw) => s + cw.items.reduce((n, item) => n + item.scores.length, 0),
+      (total, coursework) =>
+        total +
+        coursework.items.reduce(
+          (scoreTotal, item) => scoreTotal + item.scores.length,
+          0
+        ),
       0
     )
     const courseworkArchive: CollectedCourseworkData = {

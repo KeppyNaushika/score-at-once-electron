@@ -79,8 +79,8 @@ export async function convertDatToScore(
     const entries = datZip.getEntries()
 
     // 2. RealtendantAppVersion.txt で検証
-    const versionEntry = entries.find((e) =>
-      e.entryName.endsWith("RealtendantAppVersion.txt")
+    const versionEntry = entries.find((entry) =>
+      entry.entryName.endsWith("RealtendantAppVersion.txt")
     )
     if (!versionEntry) {
       return {
@@ -91,8 +91,8 @@ export async function convertDatToScore(
     }
 
     // 3. contents.json → image_scale取得
-    const contentsEntry = entries.find((e) =>
-      e.entryName.endsWith("contents.json")
+    const contentsEntry = entries.find((entry) =>
+      entry.entryName.endsWith("contents.json")
     )
     if (!contentsEntry) {
       return { success: false, error: "contents.json が見つかりません" }
@@ -107,8 +107,8 @@ export async function convertDatToScore(
     const imageScale = contents.image_scale || 0.5
 
     // 4. workbooks.json → 試験名・教科取得
-    const workbooksEntry = entries.find((e) =>
-      e.entryName.endsWith("workbooks.json")
+    const workbooksEntry = entries.find((entry) =>
+      entry.entryName.endsWith("workbooks.json")
     )
     if (!workbooksEntry) {
       return { success: false, error: "workbooks.json が見つかりません" }
@@ -123,7 +123,9 @@ export async function convertDatToScore(
 
     // 5. .jsファイルを発見し、abcDataをパース
     const jsEntry = entries.find(
-      (e) => e.entryName.endsWith(".js") && !e.entryName.endsWith("_answer.js")
+      (entry) =>
+        entry.entryName.endsWith(".js") &&
+        !entry.entryName.endsWith("_answer.js")
     )
     if (!jsEntry) {
       return {
@@ -141,8 +143,8 @@ export async function convertDatToScore(
     }
 
     // 6. workbook_infoes.json → abc_xml（スコア印字エリア情報）
-    const workbookInfoEntry = entries.find((e) =>
-      e.entryName.endsWith("workbook_infoes.json")
+    const workbookInfoEntry = entries.find((entry) =>
+      entry.entryName.endsWith("workbook_infoes.json")
     )
     let abcXml: string | null = null
     if (workbookInfoEntry) {
@@ -159,10 +161,13 @@ export async function convertDatToScore(
     // 7. 模範解答画像を発見し、PNGヘッダーから画像サイズを取得
     const masterImageEntries = entries
       .filter(
-        (e) =>
-          e.entryName.includes("/Correct/abc_m") && e.entryName.endsWith(".png")
+        (entry) =>
+          entry.entryName.includes("/Correct/abc_m") &&
+          entry.entryName.endsWith(".png")
       )
-      .sort((a, b) => a.entryName.localeCompare(b.entryName))
+      .sort((entryA, entryB) =>
+        entryA.entryName.localeCompare(entryB.entryName)
+      )
 
     if (masterImageEntries.length === 0) {
       return { success: false, error: "模範解答画像が見つかりません" }
@@ -219,20 +224,22 @@ export async function convertDatToScore(
     }
 
     // 9. questions.json, angles.json, question_angles.json 読み込み
-    const questionsEntry = entries.find((e) =>
-      e.entryName.endsWith("questions.json")
+    const questionsEntry = entries.find((entry) =>
+      entry.entryName.endsWith("questions.json")
     )
     const questions: DatQuestion[] = questionsEntry
       ? JSON.parse(questionsEntry.getData().toString("utf8"))
       : []
 
-    const anglesEntry = entries.find((e) => e.entryName.endsWith("angles.json"))
+    const anglesEntry = entries.find((entry) =>
+      entry.entryName.endsWith("angles.json")
+    )
     const angles: DatAngle[] = anglesEntry
       ? JSON.parse(anglesEntry.getData().toString("utf8"))
       : []
 
-    const questionAnglesEntry = entries.find((e) =>
-      e.entryName.endsWith("question_angles.json")
+    const questionAnglesEntry = entries.find((entry) =>
+      entry.entryName.endsWith("question_angles.json")
     )
     const questionAngles: DatQuestionAngle[] = questionAnglesEntry
       ? JSON.parse(questionAnglesEntry.getData().toString("utf8"))

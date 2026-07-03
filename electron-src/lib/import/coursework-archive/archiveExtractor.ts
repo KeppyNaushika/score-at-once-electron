@@ -25,9 +25,9 @@ export interface ExtractedCourseworkArchive {
 }
 
 function readJsonFile<T>(dir: string, name: string): T | null {
-  const p = path.join(dir, name)
-  if (!fs.existsSync(p)) return null
-  return JSON.parse(fs.readFileSync(p, "utf-8")) as T
+  const filePath = path.join(dir, name)
+  if (!fs.existsSync(filePath)) return null
+  return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T
 }
 
 /**

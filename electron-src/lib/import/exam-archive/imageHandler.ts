@@ -68,19 +68,19 @@ export async function createImageRecords(
 ): Promise<void> {
   // v1.2.0+ 形式: masterImages と studentAnswerImages が存在する場合
   if (data.examData.masterImages && data.examData.masterImages.length > 0) {
-    for (const img of data.examData.masterImages) {
-      const newExamPageId = remapId(img.examPageId, mappings.examPage)
+    for (const masterImage of data.examData.masterImages) {
+      const newExamPageId = remapId(masterImage.examPageId, mappings.examPage)
       if (!newExamPageId) continue
 
-      const filename = path.basename(img.imagePath)
+      const filename = path.basename(masterImage.imagePath)
       const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
       await prisma.masterImage.create({
         data: {
-          id: remapIdRequired(img.id, mappings.masterImage),
+          id: remapIdRequired(masterImage.id, mappings.masterImage),
           examPageId: newExamPageId,
           imagePath: newImagePath,
-          pageSize: img.pageSize ?? "A4",
+          pageSize: masterImage.pageSize ?? "A4",
         },
       })
     }
@@ -90,9 +90,15 @@ export async function createImageRecords(
     data.examData.studentAnswerImages &&
     data.examData.studentAnswerImages.length > 0
   ) {
-    for (const img of data.examData.studentAnswerImages) {
-      const newExamPageId = remapId(img.examPageId, mappings.examPage)
-      const newStudentId = remapId(img.studentId, mappings.student)
+    for (const studentAnswerImage of data.examData.studentAnswerImages) {
+      const newExamPageId = remapId(
+        studentAnswerImage.examPageId,
+        mappings.examPage
+      )
+      const newStudentId = remapId(
+        studentAnswerImage.studentId,
+        mappings.student
+      )
       if (!newExamPageId || !newStudentId) continue
 
       // 同一(examPageId, studentId)の重複チェック
@@ -104,15 +110,20 @@ export async function createImageRecords(
       })
       if (existing) continue
 
-      const relativePath = img.imagePath.substring(
-        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
+      const relativePath = studentAnswerImage.imagePath.substring(
+        studentAnswerImage.imagePath.indexOf("answer-sheets") +
+          "answer-sheets".length +
+          1
       )
       const newImagePath =
         `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
       await prisma.studentAnswerImage.create({
         data: {
-          id: remapIdRequired(img.id, mappings.studentAnswerImage),
+          id: remapIdRequired(
+            studentAnswerImage.id,
+            mappings.studentAnswerImage
+          ),
           examPageId: newExamPageId,
           studentId: newStudentId,
           imagePath: newImagePath,
@@ -124,24 +135,27 @@ export async function createImageRecords(
   }
 
   // v1.1.0以前: pageImages から変換（後方互換性）
-  for (const img of data.examData.pageImages) {
-    const newExamPageId = remapId(img.examPageId, mappings.examPage)
+  for (const pageImage of data.examData.pageImages) {
+    const newExamPageId = remapId(pageImage.examPageId, mappings.examPage)
     if (!newExamPageId) continue
 
-    const filename = path.basename(img.imagePath)
+    const filename = path.basename(pageImage.imagePath)
 
-    if (img.imageType === "MODEL_ANSWER") {
+    if (pageImage.imageType === "MODEL_ANSWER") {
       const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
       await prisma.masterImage.create({
         data: {
-          id: remapIdRequired(img.id, mappings.pageImage),
+          id: remapIdRequired(pageImage.id, mappings.pageImage),
           examPageId: newExamPageId,
           imagePath: newImagePath,
         },
       })
-    } else if (img.imageType === "STUDENT_ANSWER" && img.studentId) {
-      const newStudentId = remapId(img.studentId, mappings.student)
+    } else if (
+      pageImage.imageType === "STUDENT_ANSWER" &&
+      pageImage.studentId
+    ) {
+      const newStudentId = remapId(pageImage.studentId, mappings.student)
       if (!newStudentId) continue
 
       // 同一(examPageId, studentId)の重複チェック
@@ -153,15 +167,17 @@ export async function createImageRecords(
       })
       if (existing) continue
 
-      const relativePath = img.imagePath.substring(
-        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
+      const relativePath = pageImage.imagePath.substring(
+        pageImage.imagePath.indexOf("answer-sheets") +
+          "answer-sheets".length +
+          1
       )
       const newImagePath =
         `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
       await prisma.studentAnswerImage.create({
         data: {
-          id: remapIdRequired(img.id, mappings.pageImage),
+          id: remapIdRequired(pageImage.id, mappings.pageImage),
           examPageId: newExamPageId,
           studentId: newStudentId,
           imagePath: newImagePath,
