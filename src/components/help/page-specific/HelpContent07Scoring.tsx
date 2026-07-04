@@ -1863,7 +1863,7 @@ function DisplayModeMini({
   }
   if (mode === "split-h") {
     return (
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded border border-gray-300 bg-white">
+      <div className="relative aspect-4/3 w-full overflow-hidden rounded border border-gray-300 bg-white">
         {/* 答案用紙：中央から左半分の中央へ寄る */}
         <div
           className="absolute inset-y-0 left-0 flex w-full items-center justify-center text-2xl font-bold text-blue-900/70"
@@ -1882,7 +1882,7 @@ function DisplayModeMini({
     )
   }
   return (
-    <div className="relative aspect-[4/3] w-full overflow-hidden rounded border border-gray-300 bg-white">
+    <div className="relative aspect-4/3 w-full overflow-hidden rounded border border-gray-300 bg-white">
       {/* 答案用紙：中央から上半分の中央へ寄る */}
       <div
         className="absolute inset-x-0 top-0 flex h-full items-center justify-center text-2xl font-bold text-blue-900/70"
