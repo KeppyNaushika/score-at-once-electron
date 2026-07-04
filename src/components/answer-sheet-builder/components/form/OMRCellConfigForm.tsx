@@ -189,7 +189,7 @@ export function OMRCellConfigForm({
         <div className="border-muted ml-2 space-y-1.5 border-l-2 pl-3">
           {/* 認識タイプ */}
           <div className="flex items-center gap-1.5">
-            <Label className="text-muted-foreground min-w-[3rem] text-xs">
+            <Label className="text-muted-foreground min-w-12 text-xs">
               種類
             </Label>
             <Select value={config.type} onValueChange={handleTypeChange}>
@@ -262,9 +262,7 @@ function ChoiceConfigFields({
     <>
       {/* ラベルプリセット */}
       <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-[3rem] text-xs">
-          ラベル
-        </Label>
+        <Label className="text-muted-foreground min-w-12 text-xs">ラベル</Label>
         <Select
           value={currentPresetValue}
           onValueChange={(preset) => {
@@ -309,17 +307,15 @@ function ChoiceConfigFields({
       {/* カスタムラベル入力 */}
       {isCustom && (
         <div className="flex items-center gap-1.5">
-          <Label className="text-muted-foreground min-w-[3rem] text-xs">
-            入力
-          </Label>
+          <Label className="text-muted-foreground min-w-12 text-xs">入力</Label>
           <Input
             className="h-7 w-44 text-xs"
             value={customInput}
             placeholder="例: +,-,±"
             onChange={(e) => {
-              const val = e.target.value
-              setCustomInput(val)
-              const labels = val
+              const value = e.target.value
+              setCustomInput(value)
+              const labels = value
                 .split(",")
                 .map((label) => label.trim())
                 .filter((label) => label.length > 0)
@@ -341,7 +337,7 @@ function ChoiceConfigFields({
       {/* 選択肢数（プリセット時のみ調整可能） */}
       {!isCustom && (
         <div className="flex items-center gap-1.5">
-          <Label className="text-muted-foreground min-w-[3rem] text-xs">
+          <Label className="text-muted-foreground min-w-12 text-xs">
             選択肢数
           </Label>
           <input
@@ -371,9 +367,7 @@ function ChoiceConfigFields({
 
       {/* 配置方向 */}
       <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-[3rem] text-xs">
-          配置
-        </Label>
+        <Label className="text-muted-foreground min-w-12 text-xs">配置</Label>
         <Select
           value={config.layout}
           onValueChange={(v: "horizontal" | "vertical") =>
@@ -392,7 +386,7 @@ function ChoiceConfigFields({
 
       {/* 正解選択 */}
       <div className="flex items-start gap-1.5">
-        <Label className="text-muted-foreground mt-1 min-w-[3rem] text-xs">
+        <Label className="text-muted-foreground mt-1 min-w-12 text-xs">
           正解
         </Label>
         <div className="flex flex-wrap gap-1">
@@ -402,7 +396,7 @@ function ChoiceConfigFields({
               <button
                 key={idx}
                 type="button"
-                className={`h-6 min-w-[1.5rem] rounded border px-1 text-xs ${
+                className={`h-6 min-w-6 rounded border px-1 text-xs ${
                   isSelected
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-muted text-muted-foreground hover:border-primary/50"
@@ -434,9 +428,7 @@ function DigitConfigFields({
   return (
     <>
       <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-[3rem] text-xs">
-          桁数
-        </Label>
+        <Label className="text-muted-foreground min-w-12 text-xs">桁数</Label>
         <input
           type="number"
           className="border-input h-7 w-14 [appearance:textfield] rounded border px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -452,9 +444,7 @@ function DigitConfigFields({
         />
       </div>
       <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-[3rem] text-xs">
-          正解
-        </Label>
+        <Label className="text-muted-foreground min-w-12 text-xs">正解</Label>
         <input
           className="border-input h-7 w-20 rounded border px-1.5 text-center text-xs"
           value={config.correctAnswer ?? ""}

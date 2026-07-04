@@ -142,14 +142,14 @@ function MathSpan({
   const ref = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
-    const el = ref.current
-    if (!el || !window.MathJax?.tex2svg) return
+    const element = ref.current
+    if (!element || !window.MathJax?.tex2svg) return
     try {
       const container = window.MathJax.tex2svg(tex, {
         display: displayMath ?? false,
       })
-      el.innerHTML = ""
-      el.appendChild(container)
+      element.innerHTML = ""
+      element.appendChild(container)
     } catch {
       // フォールバック: そのまま表示
     }

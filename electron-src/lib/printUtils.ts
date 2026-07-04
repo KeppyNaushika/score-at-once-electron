@@ -31,10 +31,10 @@ function getMathJaxSource(): string {
 export function resolveMathJaxSrc(html: string): string {
   if (!html.includes("__MATHJAX_SRC__")) return html
   try {
-    const src = getMathJaxSource()
+    const source = getMathJaxSource()
     return html.replace(
       '<script src="__MATHJAX_SRC__"></script>',
-      `<script>${src}</script>`
+      `<script>${source}</script>`
     )
   } catch (err) {
     console.error("Failed to load MathJax source:", err)

@@ -20,6 +20,7 @@ import {
 import {
   ScoreDetail,
   ScoringData,
+  SubtotalGroupData,
   SubtotalScore,
 } from "../../shared/types/exportTypes"
 
@@ -27,17 +28,6 @@ import {
 export interface SubtotalColumn {
   subtotalId: string
   label: string
-}
-
-/** SubtotalGroup情報（Excel出力用） */
-interface SubtotalGroupData {
-  groupId: string
-  groupName: string
-  subtotals: Array<{
-    id: string
-    name: string
-    order: number
-  }>
 }
 
 /**

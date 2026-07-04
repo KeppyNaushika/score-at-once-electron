@@ -103,8 +103,8 @@ export function ConstraintRulesEditor({
   // プレビュー用に成績算出結果を取得
   const loadCalc = useCallback(async () => {
     try {
-      const res = await window.electronAPI.grade.calculateGrades(gradeId)
-      if (res.success && res.result) setCalcResult(res.result)
+      const result = await window.electronAPI.grade.calculateGrades(gradeId)
+      if (result.success && result.result) setCalcResult(result.result)
     } catch (error) {
       console.error("Error calculating grades for preview:", error)
     }

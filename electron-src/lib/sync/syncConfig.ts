@@ -78,9 +78,9 @@ export function loadSyncConfig(): SyncAppConfig {
 
 export function saveSyncConfig(config: SyncAppConfig): void {
   const configPath = getConfigPath()
-  const dir = path.dirname(configPath)
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
+  const directory = path.dirname(configPath)
+  if (!fs.existsSync(directory)) {
+    fs.mkdirSync(directory, { recursive: true })
   }
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8")
 }

@@ -467,64 +467,81 @@ export async function createImportedData(
       }
 
       // 12.10. CompoundAnswerを作成 (v1.11.0+)
-      for (const ca of data.examData.compoundAnswers || []) {
-        const newExamPageId = remapId(ca.examPageId, mappings.examPage)
+      for (const compoundAnswer of data.examData.compoundAnswers || []) {
+        const newExamPageId = remapId(
+          compoundAnswer.examPageId,
+          mappings.examPage
+        )
         if (newExamPageId) {
           await tx.compoundAnswer.create({
             data: {
-              id: remapIdRequired(ca.id, mappings.compoundAnswer),
+              id: remapIdRequired(compoundAnswer.id, mappings.compoundAnswer),
               examPageId: newExamPageId,
-              label: ca.label,
-              answerFormat: ca.answerFormat,
-              correctAnswer: ca.correctAnswer,
-              points: ca.points,
-              orderIndex: ca.orderIndex,
-              alternativeAnswers: ca.alternativeAnswers,
-              requireReduced: ca.requireReduced,
+              label: compoundAnswer.label,
+              answerFormat: compoundAnswer.answerFormat,
+              correctAnswer: compoundAnswer.correctAnswer,
+              points: compoundAnswer.points,
+              orderIndex: compoundAnswer.orderIndex,
+              alternativeAnswers: compoundAnswer.alternativeAnswers,
+              requireReduced: compoundAnswer.requireReduced,
             },
           })
         }
       }
 
       // 12.11. CompoundAnswerMemberを作成 (v1.11.0+)
-      for (const cam of data.examData.compoundAnswerMembers || []) {
+      for (const compoundAnswerMember of data.examData.compoundAnswerMembers ||
+        []) {
         const newCompoundAnswerId = remapId(
-          cam.compoundAnswerId,
+          compoundAnswerMember.compoundAnswerId,
           mappings.compoundAnswer
         )
-        const newCropRegionId = remapId(cam.cropRegionId, mappings.cropRegion)
+        const newCropRegionId = remapId(
+          compoundAnswerMember.cropRegionId,
+          mappings.cropRegion
+        )
         if (newCompoundAnswerId && newCropRegionId) {
           await tx.compoundAnswerMember.create({
             data: {
-              id: remapIdRequired(cam.id, mappings.compoundAnswerMember),
+              id: remapIdRequired(
+                compoundAnswerMember.id,
+                mappings.compoundAnswerMember
+              ),
               compoundAnswerId: newCompoundAnswerId,
               cropRegionId: newCropRegionId,
-              order: cam.order,
-              roleLabel: cam.roleLabel,
-              separator: cam.separator,
+              order: compoundAnswerMember.order,
+              roleLabel: compoundAnswerMember.roleLabel,
+              separator: compoundAnswerMember.separator,
             },
           })
         }
       }
 
       // 12.12. CompoundAnswerScoreを作成 (v1.11.0+)
-      for (const cas of data.examData.compoundAnswerScores || []) {
+      for (const compoundAnswerScore of data.examData.compoundAnswerScores ||
+        []) {
         const newCompoundAnswerId = remapId(
-          cas.compoundAnswerId,
+          compoundAnswerScore.compoundAnswerId,
           mappings.compoundAnswer
         )
-        const newStudentId = remapId(cas.studentId, mappings.student)
+        const newStudentId = remapId(
+          compoundAnswerScore.studentId,
+          mappings.student
+        )
         if (newCompoundAnswerId && newStudentId) {
           await tx.compoundAnswerScore.create({
             data: {
-              id: remapIdRequired(cas.id, mappings.compoundAnswerScore),
+              id: remapIdRequired(
+                compoundAnswerScore.id,
+                mappings.compoundAnswerScore
+              ),
               compoundAnswerId: newCompoundAnswerId,
               studentId: newStudentId,
               userId: currentUserId,
-              recognizedAnswer: cas.recognizedAnswer,
-              status: cas.status,
-              partialScore: cas.partialScore
-                ? parseFloat(cas.partialScore)
+              recognizedAnswer: compoundAnswerScore.recognizedAnswer,
+              status: compoundAnswerScore.status,
+              partialScore: compoundAnswerScore.partialScore
+                ? parseFloat(compoundAnswerScore.partialScore)
                 : null,
             },
           })
@@ -532,16 +549,22 @@ export async function createImportedData(
       }
 
       // 13. CropSubtotalを作成
-      for (const cs of data.subtotalsData.cropSubtotals) {
-        const newCropRegionId = remapId(cs.cropRegionId, mappings.cropRegion)
-        const newSubtotalId = remapId(cs.subtotalId, mappings.subtotal)
+      for (const cropSubtotal of data.subtotalsData.cropSubtotals) {
+        const newCropRegionId = remapId(
+          cropSubtotal.cropRegionId,
+          mappings.cropRegion
+        )
+        const newSubtotalId = remapId(
+          cropSubtotal.subtotalId,
+          mappings.subtotal
+        )
         if (newCropRegionId && newSubtotalId) {
           await tx.cropSubtotal.create({
             data: {
-              id: remapIdRequired(cs.id, mappings.cropSubtotal),
+              id: remapIdRequired(cropSubtotal.id, mappings.cropSubtotal),
               cropRegionId: newCropRegionId,
               subtotalId: newSubtotalId,
-              assignmentType: cs.assignmentType,
+              assignmentType: cropSubtotal.assignmentType,
             },
           })
         }
@@ -576,23 +599,28 @@ export async function createImportedData(
 
       // 14.5. ScoreDecisionを作成 (v1.13.0+)
       // decidedByUserIdは現在のログインユーザーで上書き
-      for (const sd of data.scoresData.scoreDecisions || []) {
-        const newCropRegionId = remapId(sd.cropRegionId, mappings.cropRegion)
-        const newStudentId = remapId(sd.studentId, mappings.student)
+      for (const scoreDecision of data.scoresData.scoreDecisions || []) {
+        const newCropRegionId = remapId(
+          scoreDecision.cropRegionId,
+          mappings.cropRegion
+        )
+        const newStudentId = remapId(scoreDecision.studentId, mappings.student)
 
         if (newCropRegionId && newStudentId) {
           await tx.scoreDecision.create({
             data: {
-              id: remapIdRequired(sd.id, mappings.scoreDecision),
+              id: remapIdRequired(scoreDecision.id, mappings.scoreDecision),
               cropRegionId: newCropRegionId,
               studentId: newStudentId,
-              verdict: sd.verdict,
-              score: sd.score ? parseFloat(sd.score) : null,
-              comment: sd.comment,
+              verdict: scoreDecision.verdict,
+              score: scoreDecision.score
+                ? parseFloat(scoreDecision.score)
+                : null,
+              comment: scoreDecision.comment,
               decidedByUserId: currentUserId,
-              decidedAt: new Date(sd.decidedAt),
+              decidedAt: new Date(scoreDecision.decidedAt),
               sourceQuestionScoreId: remapId(
-                sd.sourceQuestionScoreId,
+                scoreDecision.sourceQuestionScoreId,
                 mappings.questionScore
               ),
             },
@@ -602,20 +630,22 @@ export async function createImportedData(
 
       // 14.6. ReturnSnapshot（返却版スナップショット）を作成 (v1.14.0+)
       // capturedByUserId は現在のログインユーザーで上書き
-      for (const rs of data.scoresData.returnSnapshots || []) {
-        const newExamId = remapId(rs.examId, mappings.exam)
-        const newStudentId = remapId(rs.studentId, mappings.student)
+      for (const returnSnapshot of data.scoresData.returnSnapshots || []) {
+        const newExamId = remapId(returnSnapshot.examId, mappings.exam)
+        const newStudentId = remapId(returnSnapshot.studentId, mappings.student)
 
         if (newExamId && newStudentId) {
           await tx.returnSnapshot.create({
             data: {
-              id: remapIdRequired(rs.id, mappings.returnSnapshot),
+              id: remapIdRequired(returnSnapshot.id, mappings.returnSnapshot),
               examId: newExamId,
               studentId: newStudentId,
-              scoresJson: rs.scoresJson,
-              totalScore: rs.totalScore ? parseFloat(rs.totalScore) : null,
+              scoresJson: returnSnapshot.scoresJson,
+              totalScore: returnSnapshot.totalScore
+                ? parseFloat(returnSnapshot.totalScore)
+                : null,
               capturedByUserId: currentUserId,
-              capturedAt: new Date(rs.capturedAt),
+              capturedAt: new Date(returnSnapshot.capturedAt),
             },
           })
         }
@@ -623,37 +653,40 @@ export async function createImportedData(
 
       // 15. DrawingAnnotationを作成
       // v0.3.0以降: userIdを現在のログインユーザーで上書き
-      for (const da of data.scoresData.drawingAnnotations) {
+      for (const drawingAnnotation of data.scoresData.drawingAnnotations) {
         const newQuestionScoreId = remapId(
-          da.questionScoreId,
+          drawingAnnotation.questionScoreId,
           mappings.questionScore
         )
 
         if (newQuestionScoreId) {
           await tx.drawingAnnotation.create({
             data: {
-              id: remapIdRequired(da.id, mappings.drawingAnnotation),
+              id: remapIdRequired(
+                drawingAnnotation.id,
+                mappings.drawingAnnotation
+              ),
               questionScoreId: newQuestionScoreId,
-              type: da.type,
-              x: da.x,
-              y: da.y,
-              color: da.color,
-              strokeWidth: da.strokeWidth,
-              width: da.width,
-              height: da.height,
-              endX: da.endX,
-              endY: da.endY,
-              lineStyle: da.lineStyle,
-              text: da.text,
-              fontSize: da.fontSize,
-              textBoxWidth: da.textBoxWidth,
-              textBoxHeight: da.textBoxHeight,
-              horizontalAlign: da.horizontalAlign,
-              verticalAlign: da.verticalAlign,
-              anchorDirection: da.anchorDirection,
-              displayX: da.displayX,
-              displayY: da.displayY,
-              isFavorite: da.isFavorite,
+              type: drawingAnnotation.type,
+              x: drawingAnnotation.x,
+              y: drawingAnnotation.y,
+              color: drawingAnnotation.color,
+              strokeWidth: drawingAnnotation.strokeWidth,
+              width: drawingAnnotation.width,
+              height: drawingAnnotation.height,
+              endX: drawingAnnotation.endX,
+              endY: drawingAnnotation.endY,
+              lineStyle: drawingAnnotation.lineStyle,
+              text: drawingAnnotation.text,
+              fontSize: drawingAnnotation.fontSize,
+              textBoxWidth: drawingAnnotation.textBoxWidth,
+              textBoxHeight: drawingAnnotation.textBoxHeight,
+              horizontalAlign: drawingAnnotation.horizontalAlign,
+              verticalAlign: drawingAnnotation.verticalAlign,
+              anchorDirection: drawingAnnotation.anchorDirection,
+              displayX: drawingAnnotation.displayX,
+              displayY: drawingAnnotation.displayY,
+              isFavorite: drawingAnnotation.isFavorite,
               userId: currentUserId,
             },
           })

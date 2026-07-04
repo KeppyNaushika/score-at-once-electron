@@ -254,18 +254,18 @@ export async function convertToExam(
 
       // CropRegion作成（ヘッダーフィールドのlinkedRegionType）
       const linkedFields = pageLayout.headerFields.filter(
-        (hf) => hf.linkedRegionType
+        (headerField) => headerField.linkedRegionType
       )
-      for (const hf of linkedFields) {
-        const normalizedX = hf.x / multiPageLayout.pageWidthMm
-        const normalizedY = hf.y / multiPageLayout.pageHeightMm
-        const normalizedW = hf.width / multiPageLayout.pageWidthMm
-        const normalizedH = hf.height / multiPageLayout.pageHeightMm
+      for (const headerField of linkedFields) {
+        const normalizedX = headerField.x / multiPageLayout.pageWidthMm
+        const normalizedY = headerField.y / multiPageLayout.pageHeightMm
+        const normalizedW = headerField.width / multiPageLayout.pageWidthMm
+        const normalizedH = headerField.height / multiPageLayout.pageHeightMm
         await prisma.cropRegion.create({
           data: {
             examPageId: examPage.id,
-            label: hf.label,
-            type: hf.linkedRegionType!,
+            label: headerField.label,
+            type: headerField.linkedRegionType!,
             x: normalizedX,
             y: normalizedY,
             width: normalizedW,

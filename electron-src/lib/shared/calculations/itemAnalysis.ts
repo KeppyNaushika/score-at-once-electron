@@ -136,8 +136,8 @@ export function computeItemAnalysis(
   ): number | null => {
     if (maxScore <= 0) return null
     const rates: number[] = []
-    for (const i of idxs) {
-      const score = completeMaps[i].get(questionId)?.score
+    for (const completeMapIndex of idxs) {
+      const score = completeMaps[completeMapIndex].get(questionId)?.score
       if (score == null) continue
       rates.push(score / maxScore)
     }

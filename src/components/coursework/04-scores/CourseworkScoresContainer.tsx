@@ -133,8 +133,12 @@ export function CourseworkScoresContainer({
                 const trimmed = value.trim()
                 if (trimmed === "") return true
                 if (isLetter) return validLabelSet.has(trimmed)
-                const num = Number(trimmed)
-                return !isNaN(num) && num >= 0 && num <= item.maxScore
+                const parsedValue = Number(trimmed)
+                return (
+                  !isNaN(parsedValue) &&
+                  parsedValue >= 0 &&
+                  parsedValue <= item.maxScore
+                )
               },
             },
           },
@@ -149,8 +153,8 @@ export function CourseworkScoresContainer({
               validate: (value: string) => {
                 const trimmed = value.trim()
                 if (trimmed === "") return true
-                const num = Number(trimmed)
-                return !isNaN(num) && isFinite(num)
+                const parsedValue = Number(trimmed)
+                return !isNaN(parsedValue) && isFinite(parsedValue)
               },
             },
           },
@@ -218,9 +222,13 @@ export function CourseworkScoresContainer({
               if (trimmed === "") {
                 pushPatch(item, studentId, { score: null })
               } else {
-                const num = Number(trimmed)
-                if (!isNaN(num) && num >= 0 && num <= item.maxScore) {
-                  pushPatch(item, studentId, { score: num })
+                const parsedValue = Number(trimmed)
+                if (
+                  !isNaN(parsedValue) &&
+                  parsedValue >= 0 &&
+                  parsedValue <= item.maxScore
+                ) {
+                  pushPatch(item, studentId, { score: parsedValue })
                 }
                 // 範囲外・無効値は無視
               }
@@ -234,9 +242,9 @@ export function CourseworkScoresContainer({
             if (trimmed === "") {
               pushPatch(item, studentId, { adjustment: null })
             } else {
-              const num = Number(trimmed)
-              if (!isNaN(num) && isFinite(num)) {
-                pushPatch(item, studentId, { adjustment: num })
+              const parsedValue = Number(trimmed)
+              if (!isNaN(parsedValue) && isFinite(parsedValue)) {
+                pushPatch(item, studentId, { adjustment: parsedValue })
               }
               // 無効値は無視
             }

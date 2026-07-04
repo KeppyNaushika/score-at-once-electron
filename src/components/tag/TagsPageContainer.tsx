@@ -295,11 +295,11 @@ export function TagsPageContainer() {
       }
       await loadTags()
     } catch (error) {
-      const msg =
+      const message =
         error instanceof Error && error.message.includes("Unique")
           ? "同じ名前のタグが既に存在します"
           : "タグの保存に失敗しました"
-      toast.error(msg)
+      toast.error(message)
       throw error // モーダルを閉じない
     }
   }

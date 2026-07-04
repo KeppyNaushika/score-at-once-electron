@@ -7,10 +7,10 @@ import * as ExcelJS from "exceljs"
  */
 export function getExcelColumnLetter(colIndex: number): string {
   let result = ""
-  let num = colIndex - 1
-  while (num >= 0) {
-    result = String.fromCharCode(65 + (num % 26)) + result
-    num = Math.floor(num / 26) - 1
+  let columnValue = colIndex - 1
+  while (columnValue >= 0) {
+    result = String.fromCharCode(65 + (columnValue % 26)) + result
+    columnValue = Math.floor(columnValue / 26) - 1
   }
   return result
 }

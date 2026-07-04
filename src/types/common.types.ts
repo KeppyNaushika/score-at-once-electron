@@ -85,28 +85,28 @@ export interface ExamListItem {
 export function isValidExam(data: unknown): data is ExamWithDetails {
   if (typeof data !== "object" || data === null) return false
 
-  const obj = data as Record<string, unknown>
+  const record = data as Record<string, unknown>
 
   // DateはIPC経由でDateオブジェクトとして渡される
-  const isValidDate = (val: unknown): boolean =>
-    val instanceof Date || typeof val === "string"
+  const isValidDate = (value: unknown): boolean =>
+    value instanceof Date || typeof value === "string"
 
   return (
-    typeof obj.id === "string" &&
-    typeof obj.examName === "string" &&
-    (obj.examDate === null || isValidDate(obj.examDate)) &&
-    (obj.description === undefined ||
-      obj.description === null ||
-      typeof obj.description === "string") &&
-    isValidDate(obj.createdAt) &&
-    isValidDate(obj.updatedAt) &&
-    (obj.examPages === undefined || Array.isArray(obj.examPages)) &&
-    (obj.cropRegions === undefined || Array.isArray(obj.cropRegions)) &&
-    (obj.examStudents === undefined || Array.isArray(obj.examStudents)) &&
-    (obj.userExams === undefined || Array.isArray(obj.userExams)) &&
-    (obj.examSubtotalGroups === undefined ||
-      Array.isArray(obj.examSubtotalGroups)) &&
-    (obj.answerImages === undefined || Array.isArray(obj.answerImages))
+    typeof record.id === "string" &&
+    typeof record.examName === "string" &&
+    (record.examDate === null || isValidDate(record.examDate)) &&
+    (record.description === undefined ||
+      record.description === null ||
+      typeof record.description === "string") &&
+    isValidDate(record.createdAt) &&
+    isValidDate(record.updatedAt) &&
+    (record.examPages === undefined || Array.isArray(record.examPages)) &&
+    (record.cropRegions === undefined || Array.isArray(record.cropRegions)) &&
+    (record.examStudents === undefined || Array.isArray(record.examStudents)) &&
+    (record.userExams === undefined || Array.isArray(record.userExams)) &&
+    (record.examSubtotalGroups === undefined ||
+      Array.isArray(record.examSubtotalGroups)) &&
+    (record.answerImages === undefined || Array.isArray(record.answerImages))
   )
 }
 

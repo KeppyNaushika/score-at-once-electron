@@ -161,8 +161,9 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
         const name = `${student.lastName} ${student.firstName}`.toLowerCase()
-        const num = student.studentNumber?.toLowerCase() ?? ""
-        if (!name.includes(term) && !num.includes(term)) return false
+        const studentNumberLower = student.studentNumber?.toLowerCase() ?? ""
+        if (!name.includes(term) && !studentNumberLower.includes(term))
+          return false
       }
       return true
     })

@@ -107,87 +107,97 @@ export type FlatGlobalSettings = {
 }
 
 /** GlobalSettings をDBフラットカラム形式に変換する */
-export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
+export function flattenGlobalSettings(
+  settings: GlobalSettings
+): FlatGlobalSettings {
   return {
-    paperSize: s.paperSize,
-    orientation: s.orientation,
-    verticalLayout: s.verticalLayout ?? false,
-    baseRowHeight: s.baseRowHeight,
-    numberDisplayMode: s.numberDisplayMode,
-    marginTop: s.margins.top,
-    marginBottom: s.margins.bottom,
-    marginLeft: s.margins.left,
-    marginRight: s.margins.right,
-    colWidthMajorNumber: s.columnWidths.majorNumber,
-    colWidthSubNumber: s.columnWidths.subNumber,
-    colWidthBranchNumber: s.columnWidths.branchNumber,
-    majorQuestionSpacing: s.spacing.majorQuestionSpacing,
-    headerHeight: s.spacing.headerHeight,
-    borderOuterBorder: s.borderConfig.outerBorder,
-    borderMajorDivider: s.borderConfig.majorDivider,
-    borderSubDivider: s.borderConfig.subDivider,
-    borderBranchDivider: s.borderConfig.branchDivider,
-    borderMajorNumberDivider: s.borderConfig.majorNumberDivider,
-    borderSubNumberDivider: s.borderConfig.subNumberDivider,
-    borderBranchNumberDivider: s.borderConfig.branchNumberDivider,
-    borderOuterBorderWidth: s.borderConfig.outerBorderWidth ?? null,
-    borderMajorDividerWidth: s.borderConfig.majorDividerWidth ?? null,
-    borderSubDividerWidth: s.borderConfig.subDividerWidth ?? null,
-    borderBranchDividerWidth: s.borderConfig.branchDividerWidth ?? null,
+    paperSize: settings.paperSize,
+    orientation: settings.orientation,
+    verticalLayout: settings.verticalLayout ?? false,
+    baseRowHeight: settings.baseRowHeight,
+    numberDisplayMode: settings.numberDisplayMode,
+    marginTop: settings.margins.top,
+    marginBottom: settings.margins.bottom,
+    marginLeft: settings.margins.left,
+    marginRight: settings.margins.right,
+    colWidthMajorNumber: settings.columnWidths.majorNumber,
+    colWidthSubNumber: settings.columnWidths.subNumber,
+    colWidthBranchNumber: settings.columnWidths.branchNumber,
+    majorQuestionSpacing: settings.spacing.majorQuestionSpacing,
+    headerHeight: settings.spacing.headerHeight,
+    borderOuterBorder: settings.borderConfig.outerBorder,
+    borderMajorDivider: settings.borderConfig.majorDivider,
+    borderSubDivider: settings.borderConfig.subDivider,
+    borderBranchDivider: settings.borderConfig.branchDivider,
+    borderMajorNumberDivider: settings.borderConfig.majorNumberDivider,
+    borderSubNumberDivider: settings.borderConfig.subNumberDivider,
+    borderBranchNumberDivider: settings.borderConfig.branchNumberDivider,
+    borderOuterBorderWidth: settings.borderConfig.outerBorderWidth ?? null,
+    borderMajorDividerWidth: settings.borderConfig.majorDividerWidth ?? null,
+    borderSubDividerWidth: settings.borderConfig.subDividerWidth ?? null,
+    borderBranchDividerWidth: settings.borderConfig.branchDividerWidth ?? null,
     borderMajorNumberDividerWidth:
-      s.borderConfig.majorNumberDividerWidth ?? null,
-    borderSubNumberDividerWidth: s.borderConfig.subNumberDividerWidth ?? null,
+      settings.borderConfig.majorNumberDividerWidth ?? null,
+    borderSubNumberDividerWidth:
+      settings.borderConfig.subNumberDividerWidth ?? null,
     borderBranchNumberDividerWidth:
-      s.borderConfig.branchNumberDividerWidth ?? null,
+      settings.borderConfig.branchNumberDividerWidth ?? null,
     borderManuscriptCharDivider:
-      s.borderConfig.manuscriptCharDivider ?? "dashed",
+      settings.borderConfig.manuscriptCharDivider ?? "dashed",
     borderManuscriptLineDivider:
-      s.borderConfig.manuscriptLineDivider ?? "solid",
+      settings.borderConfig.manuscriptLineDivider ?? "solid",
     borderManuscriptCharDividerWidth:
-      s.borderConfig.manuscriptCharDividerWidth ?? null,
+      settings.borderConfig.manuscriptCharDividerWidth ?? null,
     borderManuscriptLineDividerWidth:
-      s.borderConfig.manuscriptLineDividerWidth ?? null,
-    borderOuterBorderDashRatio: s.borderConfig.outerBorderDashRatio ?? null,
-    borderOuterBorderGapRatio: s.borderConfig.outerBorderGapRatio ?? null,
-    borderMajorDividerDashRatio: s.borderConfig.majorDividerDashRatio ?? null,
-    borderMajorDividerGapRatio: s.borderConfig.majorDividerGapRatio ?? null,
-    borderSubDividerDashRatio: s.borderConfig.subDividerDashRatio ?? null,
-    borderSubDividerGapRatio: s.borderConfig.subDividerGapRatio ?? null,
-    borderBranchDividerDashRatio: s.borderConfig.branchDividerDashRatio ?? null,
-    borderBranchDividerGapRatio: s.borderConfig.branchDividerGapRatio ?? null,
+      settings.borderConfig.manuscriptLineDividerWidth ?? null,
+    borderOuterBorderDashRatio:
+      settings.borderConfig.outerBorderDashRatio ?? null,
+    borderOuterBorderGapRatio:
+      settings.borderConfig.outerBorderGapRatio ?? null,
+    borderMajorDividerDashRatio:
+      settings.borderConfig.majorDividerDashRatio ?? null,
+    borderMajorDividerGapRatio:
+      settings.borderConfig.majorDividerGapRatio ?? null,
+    borderSubDividerDashRatio:
+      settings.borderConfig.subDividerDashRatio ?? null,
+    borderSubDividerGapRatio: settings.borderConfig.subDividerGapRatio ?? null,
+    borderBranchDividerDashRatio:
+      settings.borderConfig.branchDividerDashRatio ?? null,
+    borderBranchDividerGapRatio:
+      settings.borderConfig.branchDividerGapRatio ?? null,
     borderMajorNumberDividerDashRatio:
-      s.borderConfig.majorNumberDividerDashRatio ?? null,
+      settings.borderConfig.majorNumberDividerDashRatio ?? null,
     borderMajorNumberDividerGapRatio:
-      s.borderConfig.majorNumberDividerGapRatio ?? null,
+      settings.borderConfig.majorNumberDividerGapRatio ?? null,
     borderSubNumberDividerDashRatio:
-      s.borderConfig.subNumberDividerDashRatio ?? null,
+      settings.borderConfig.subNumberDividerDashRatio ?? null,
     borderSubNumberDividerGapRatio:
-      s.borderConfig.subNumberDividerGapRatio ?? null,
+      settings.borderConfig.subNumberDividerGapRatio ?? null,
     borderBranchNumberDividerDashRatio:
-      s.borderConfig.branchNumberDividerDashRatio ?? null,
+      settings.borderConfig.branchNumberDividerDashRatio ?? null,
     borderBranchNumberDividerGapRatio:
-      s.borderConfig.branchNumberDividerGapRatio ?? null,
+      settings.borderConfig.branchNumberDividerGapRatio ?? null,
     borderManuscriptCharDividerDashRatio:
-      s.borderConfig.manuscriptCharDividerDashRatio ?? null,
+      settings.borderConfig.manuscriptCharDividerDashRatio ?? null,
     borderManuscriptCharDividerGapRatio:
-      s.borderConfig.manuscriptCharDividerGapRatio ?? null,
+      settings.borderConfig.manuscriptCharDividerGapRatio ?? null,
     borderManuscriptLineDividerDashRatio:
-      s.borderConfig.manuscriptLineDividerDashRatio ?? null,
+      settings.borderConfig.manuscriptLineDividerDashRatio ?? null,
     borderManuscriptLineDividerGapRatio:
-      s.borderConfig.manuscriptLineDividerGapRatio ?? null,
-    omrMarkersEnabled: s.omrMarkers.enabled,
-    omrMarkersSizeMm: s.omrMarkers.sizeMm,
-    omrMarkersOffsetMm: s.omrMarkers.offsetMm,
-    fontFamily: s.fonts.family,
-    fontDefaultSize: s.fonts.defaultSize,
-    fontMajorNumberSize: s.fonts.majorNumberSize,
-    fontSubNumberSize: s.fonts.subNumberSize,
-    fontBranchNumberSize: s.fonts.branchNumberSize,
-    multiColumnEnabled: s.multiColumn.enabled,
-    multiColumnCount: s.multiColumn.columnCount,
-    multiColumnGapMm: s.multiColumn.columnGapMm,
-    multiColumnDividerLine: s.multiColumn.dividerLine,
-    multiColumnDividerLineWidth: s.multiColumn.dividerLineWidth,
+      settings.borderConfig.manuscriptLineDividerGapRatio ?? null,
+    omrMarkersEnabled: settings.omrMarkers.enabled,
+    omrMarkersSizeMm: settings.omrMarkers.sizeMm,
+    omrMarkersOffsetMm: settings.omrMarkers.offsetMm,
+    fontFamily: settings.fonts.family,
+    fontDefaultSize: settings.fonts.defaultSize,
+    fontMajorNumberSize: settings.fonts.majorNumberSize,
+    fontSubNumberSize: settings.fonts.subNumberSize,
+    fontBranchNumberSize: settings.fonts.branchNumberSize,
+    multiColumnEnabled: settings.multiColumn.enabled,
+    multiColumnCount: settings.multiColumn.columnCount,
+    multiColumnGapMm: settings.multiColumn.columnGapMm,
+    multiColumnDividerLine: settings.multiColumn.dividerLine,
+    multiColumnDividerLineWidth: settings.multiColumn.dividerLineWidth,
   }
 }
 
