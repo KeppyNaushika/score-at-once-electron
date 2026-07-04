@@ -40,26 +40,26 @@ interface RegionDef {
 function templateToDefinition(
   template: Record<string, unknown>
 ): AnswerSheetDefinition {
-  const t = template as Record<string, unknown>
-  const headerFields = (t.headerFields as Array<Record<string, unknown>>).map(
-    (headerField) => ({
-      id: headerField.id as string,
-      type: ((headerField.type as string) ?? "field") as HeaderFieldType,
-      label: headerField.label as string,
-      widthMm: headerField.widthMm as number,
-      heightMm: headerField.heightMm as number,
-      gridCount: headerField.gridCount as number,
-      lineStyle: headerField.lineStyle as LineStyle,
-      lineWidth: headerField.lineWidth as number,
-      order: headerField.order as number,
-      fontSize: (headerField.fontSize as number) ?? undefined,
-      linkedRegionType:
-        (headerField.linkedRegionType as LinkedRegionType) ?? undefined,
-    })
-  )
+  const templateRecord = template as Record<string, unknown>
+  const headerFields = (
+    templateRecord.headerFields as Array<Record<string, unknown>>
+  ).map((headerField) => ({
+    id: headerField.id as string,
+    type: ((headerField.type as string) ?? "field") as HeaderFieldType,
+    label: headerField.label as string,
+    widthMm: headerField.widthMm as number,
+    heightMm: headerField.heightMm as number,
+    gridCount: headerField.gridCount as number,
+    lineStyle: headerField.lineStyle as LineStyle,
+    lineWidth: headerField.lineWidth as number,
+    order: headerField.order as number,
+    fontSize: (headerField.fontSize as number) ?? undefined,
+    linkedRegionType:
+      (headerField.linkedRegionType as LinkedRegionType) ?? undefined,
+  }))
 
   const majorQuestions = (
-    t.majorQuestions as Array<Record<string, unknown>>
+    templateRecord.majorQuestions as Array<Record<string, unknown>>
   ).map((majorQuestion) => ({
     id: majorQuestion.id as string,
     label: majorQuestion.label as string,
@@ -119,74 +119,83 @@ function templateToDefinition(
   }))
 
   return {
-    id: t.id as string,
-    name: t.name as string,
+    id: templateRecord.id as string,
+    name: templateRecord.name as string,
     settings: {
-      paperSize: t.paperSize as "B4",
-      orientation: t.orientation as "portrait",
-      baseRowHeight: t.baseRowHeight as number,
-      numberDisplayMode: t.numberDisplayMode as "multirow",
+      paperSize: templateRecord.paperSize as "B4",
+      orientation: templateRecord.orientation as "portrait",
+      baseRowHeight: templateRecord.baseRowHeight as number,
+      numberDisplayMode: templateRecord.numberDisplayMode as "multirow",
       margins: {
-        top: t.marginTop as number,
-        bottom: t.marginBottom as number,
-        left: t.marginLeft as number,
-        right: t.marginRight as number,
+        top: templateRecord.marginTop as number,
+        bottom: templateRecord.marginBottom as number,
+        left: templateRecord.marginLeft as number,
+        right: templateRecord.marginRight as number,
       },
       columnWidths: {
-        majorNumber: t.colWidthMajorNumber as number,
-        subNumber: t.colWidthSubNumber as number,
-        branchNumber: t.colWidthBranchNumber as number,
+        majorNumber: templateRecord.colWidthMajorNumber as number,
+        subNumber: templateRecord.colWidthSubNumber as number,
+        branchNumber: templateRecord.colWidthBranchNumber as number,
       },
       spacing: {
-        majorQuestionSpacing: t.majorQuestionSpacing as number,
-        headerHeight: t.headerHeight as number,
+        majorQuestionSpacing: templateRecord.majorQuestionSpacing as number,
+        headerHeight: templateRecord.headerHeight as number,
       },
       borderConfig: {
-        outerBorder: t.borderOuterBorder as LineStyle,
-        majorDivider: t.borderMajorDivider as LineStyle,
-        subDivider: t.borderSubDivider as LineStyle,
-        branchDivider: t.borderBranchDivider as LineStyle,
-        majorNumberDivider: t.borderMajorNumberDivider as LineStyle,
-        subNumberDivider: t.borderSubNumberDivider as LineStyle,
-        branchNumberDivider: t.borderBranchNumberDivider as LineStyle,
-        outerBorderWidth: (t.borderOuterBorderWidth as number) ?? undefined,
-        majorDividerWidth: (t.borderMajorDividerWidth as number) ?? undefined,
-        subDividerWidth: (t.borderSubDividerWidth as number) ?? undefined,
-        branchDividerWidth: (t.borderBranchDividerWidth as number) ?? undefined,
+        outerBorder: templateRecord.borderOuterBorder as LineStyle,
+        majorDivider: templateRecord.borderMajorDivider as LineStyle,
+        subDivider: templateRecord.borderSubDivider as LineStyle,
+        branchDivider: templateRecord.borderBranchDivider as LineStyle,
+        majorNumberDivider:
+          templateRecord.borderMajorNumberDivider as LineStyle,
+        subNumberDivider: templateRecord.borderSubNumberDivider as LineStyle,
+        branchNumberDivider:
+          templateRecord.borderBranchNumberDivider as LineStyle,
+        outerBorderWidth:
+          (templateRecord.borderOuterBorderWidth as number) ?? undefined,
+        majorDividerWidth:
+          (templateRecord.borderMajorDividerWidth as number) ?? undefined,
+        subDividerWidth:
+          (templateRecord.borderSubDividerWidth as number) ?? undefined,
+        branchDividerWidth:
+          (templateRecord.borderBranchDividerWidth as number) ?? undefined,
         majorNumberDividerWidth:
-          (t.borderMajorNumberDividerWidth as number) ?? undefined,
+          (templateRecord.borderMajorNumberDividerWidth as number) ?? undefined,
         subNumberDividerWidth:
-          (t.borderSubNumberDividerWidth as number) ?? undefined,
+          (templateRecord.borderSubNumberDividerWidth as number) ?? undefined,
         branchNumberDividerWidth:
-          (t.borderBranchNumberDividerWidth as number) ?? undefined,
+          (templateRecord.borderBranchNumberDividerWidth as number) ??
+          undefined,
       },
       omrMarkers: {
-        enabled: t.omrMarkersEnabled as boolean,
-        sizeMm: t.omrMarkersSizeMm as number,
-        offsetMm: t.omrMarkersOffsetMm as number,
+        enabled: templateRecord.omrMarkersEnabled as boolean,
+        sizeMm: templateRecord.omrMarkersSizeMm as number,
+        offsetMm: templateRecord.omrMarkersOffsetMm as number,
       },
       fonts: {
-        family: t.fontFamily as string,
-        defaultSize: t.fontDefaultSize as number,
-        majorNumberSize: t.fontMajorNumberSize as number,
-        subNumberSize: t.fontSubNumberSize as number,
-        branchNumberSize: t.fontBranchNumberSize as number,
+        family: templateRecord.fontFamily as string,
+        defaultSize: templateRecord.fontDefaultSize as number,
+        majorNumberSize: templateRecord.fontMajorNumberSize as number,
+        subNumberSize: templateRecord.fontSubNumberSize as number,
+        branchNumberSize: templateRecord.fontBranchNumberSize as number,
       },
       multiColumn: {
-        enabled: t.multiColumnEnabled as boolean,
-        columnCount: (t.multiColumnCount as 2 | 3) ?? 2,
-        columnGapMm: t.multiColumnGapMm as number,
-        dividerLine: (t.multiColumnDividerLine as LineStyle) ?? null,
-        dividerLineWidth: (t.multiColumnDividerLineWidth as number) ?? 0.3,
+        enabled: templateRecord.multiColumnEnabled as boolean,
+        columnCount: (templateRecord.multiColumnCount as 2 | 3) ?? 2,
+        columnGapMm: templateRecord.multiColumnGapMm as number,
+        dividerLine:
+          (templateRecord.multiColumnDividerLine as LineStyle) ?? null,
+        dividerLineWidth:
+          (templateRecord.multiColumnDividerLineWidth as number) ?? 0.3,
       },
       headerFields,
     },
     majorQuestions,
-    renderMode: (t.renderMode as "model-answer") ?? "model-answer",
+    renderMode: (templateRecord.renderMode as "model-answer") ?? "model-answer",
     labelPresets: {
-      major: (t.labelPresetMajor as string) ?? undefined,
-      sub: (t.labelPresetSub as string) ?? undefined,
-      branch: (t.labelPresetBranch as string) ?? undefined,
+      major: (templateRecord.labelPresetMajor as string) ?? undefined,
+      sub: (templateRecord.labelPresetSub as string) ?? undefined,
+      branch: (templateRecord.labelPresetBranch as string) ?? undefined,
     },
   }
 }

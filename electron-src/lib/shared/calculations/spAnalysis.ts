@@ -77,8 +77,8 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
 
   const problemIds = students[0].items.map((item) => item.questionId)
   const problemLabels = students[0].items.map((item) => item.label)
-  const m = problemIds.length
-  if (m === 0) return null
+  const problemCount = problemIds.length
+  if (problemCount === 0) return null
 
   const n = students.length
 
@@ -93,7 +93,7 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
   const rowSum = x.map((row) => row.reduce((a, b) => a + b, 0))
   const colSum = problemIds.map((_, j) => x.reduce((a, row) => a + row[j], 0))
 
-  const colMean = colSum.reduce((a, b) => a + b, 0) / m
+  const colMean = colSum.reduce((a, b) => a + b, 0) / problemCount
   const rowMean = rowSum.reduce((a, b) => a + b, 0) / n
   const colSumDesc = [...colSum].sort((a, b) => b - a)
   const rowSumDesc = [...rowSum].sort((a, b) => b - a)
@@ -145,7 +145,7 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
     students: studentRows,
     problems,
     studentCount: n,
-    problemCount: m,
+    problemCount,
   }
 }
 

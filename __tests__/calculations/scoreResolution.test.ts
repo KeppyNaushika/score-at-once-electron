@@ -51,15 +51,15 @@ function decision(
 
 describe("resolveEffectiveScores - 提案のみ", () => {
   it("単一の提案はそのまま解決される", () => {
-    const s = score({ status: "correct" })
-    const { resolved, conflicts } = resolveEffectiveScores([s])
+    const scoreRow = score({ status: "correct" })
+    const { resolved, conflicts } = resolveEffectiveScores([scoreRow])
     expect(resolved).toHaveLength(1)
     expect(resolved[0]).toMatchObject({
       studentId: "student-1",
       cropRegionId: "region-1",
       status: "correct",
       partialScore: null,
-      questionScoreId: s.id,
+      questionScoreId: scoreRow.id,
       source: "proposal",
       isStale: false,
     })
@@ -67,10 +67,14 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   })
 
   it("生徒×設問ごとに独立して解決される", () => {
-    const a = score({ studentId: "s1", cropRegionId: "r1" })
-    const b = score({ studentId: "s1", cropRegionId: "r2" })
-    const c = score({ studentId: "s2", cropRegionId: "r1" })
-    const { resolved, conflicts } = resolveEffectiveScores([a, b, c])
+    const scoreA = score({ studentId: "s1", cropRegionId: "r1" })
+    const scoreB = score({ studentId: "s1", cropRegionId: "r2" })
+    const scoreC = score({ studentId: "s2", cropRegionId: "r1" })
+    const { resolved, conflicts } = resolveEffectiveScores([
+      scoreA,
+      scoreB,
+      scoreC,
+    ])
     expect(resolved).toHaveLength(3)
     expect(conflicts).toEqual([])
   })
@@ -86,9 +90,9 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   })
 
   it("全行unscoredなら1件だけ残る", () => {
-    const a = score({ status: "unscored" })
-    const b = score({ status: "unscored" })
-    const { resolved, conflicts } = resolveEffectiveScores([a, b])
+    const scoreA = score({ status: "unscored" })
+    const scoreB = score({ status: "unscored" })
+    const { resolved, conflicts } = resolveEffectiveScores([scoreA, scoreB])
     expect(resolved).toHaveLength(1)
     expect(resolved[0].status).toBe("unscored")
     expect(conflicts).toEqual([])
@@ -136,11 +140,19 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   })
 
   it("updatedAtが同時刻ならidで決定的に選択される", () => {
-    const t = new Date("2026-06-01T10:00:00Z")
-    const a = score({ id: "id-aaa", status: "correct", updatedAt: t })
-    const b = score({ id: "id-zzz", status: "correct", updatedAt: t })
-    const result1 = resolveEffectiveScores([a, b])
-    const result2 = resolveEffectiveScores([b, a])
+    const timestamp = new Date("2026-06-01T10:00:00Z")
+    const scoreA = score({
+      id: "id-aaa",
+      status: "correct",
+      updatedAt: timestamp,
+    })
+    const scoreB = score({
+      id: "id-zzz",
+      status: "correct",
+      updatedAt: timestamp,
+    })
+    const result1 = resolveEffectiveScores([scoreA, scoreB])
+    const result2 = resolveEffectiveScores([scoreB, scoreA])
     expect(result1.resolved[0].questionScoreId).toBe("id-zzz")
     expect(result2.resolved[0].questionScoreId).toBe("id-zzz")
   })
@@ -169,10 +181,10 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
   it("確定があれば提案の食い違いに関わらず確定が採用される", () => {
     const teacherA = score({ status: "partial", partialScore: 3 })
     const teacherB = score({ status: "partial", partialScore: 7 })
-    const d = decision({ verdict: "partial", score: 5 })
+    const decisionRow = decision({ verdict: "partial", score: 5 })
     const { resolved, conflicts } = resolveEffectiveScores(
       [teacherA, teacherB],
-      [d]
+      [decisionRow]
     )
     expect(resolved).toHaveLength(1)
     expect(resolved[0]).toMatchObject({
@@ -185,16 +197,16 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
   })
 
   it("提案が無いセルの確定も解決される", () => {
-    const d = decision()
-    const { resolved } = resolveEffectiveScores([], [d])
+    const decisionRow = decision()
+    const { resolved } = resolveEffectiveScores([], [decisionRow])
     expect(resolved).toHaveLength(1)
     expect(resolved[0].source).toBe("decision")
     expect(resolved[0].questionScoreId).toBeNull()
   })
 
   it("採用元提案がある確定はquestionScoreIdに引き継がれる", () => {
-    const d = decision({ sourceQuestionScoreId: "qs-123" })
-    const { resolved } = resolveEffectiveScores([], [d])
+    const decisionRow = decision({ sourceQuestionScoreId: "qs-123" })
+    const { resolved } = resolveEffectiveScores([], [decisionRow])
     expect(resolved[0].questionScoreId).toBe("qs-123")
   })
 
@@ -204,8 +216,10 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
       partialScore: 9,
       updatedAt: new Date("2026-06-03T10:00:00Z"),
     })
-    const d = decision({ decidedAt: new Date("2026-06-02T10:00:00Z") })
-    const { resolved } = resolveEffectiveScores([newer], [d])
+    const decisionRow = decision({
+      decidedAt: new Date("2026-06-02T10:00:00Z"),
+    })
+    const { resolved } = resolveEffectiveScores([newer], [decisionRow])
     expect(resolved[0].isStale).toBe(true)
     // 値は確定のまま
     expect(resolved[0].partialScore).toBe(5)
@@ -217,22 +231,27 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
       partialScore: 3,
       updatedAt: new Date("2026-06-01T10:00:00Z"),
     })
-    const d = decision({ decidedAt: new Date("2026-06-02T10:00:00Z") })
-    const { resolved } = resolveEffectiveScores([older], [d])
+    const decisionRow = decision({
+      decidedAt: new Date("2026-06-02T10:00:00Z"),
+    })
+    const { resolved } = resolveEffectiveScores([older], [decisionRow])
     expect(resolved[0].isStale).toBe(false)
   })
 
   it("確定の無い他のセルは通常通り解決される", () => {
     const decided = score({ cropRegionId: "r1", status: "correct" })
     const undecided = score({ cropRegionId: "r2", status: "incorrect" })
-    const d = decision({ cropRegionId: "r1" })
-    const { resolved } = resolveEffectiveScores([decided, undecided], [d])
+    const decisionRow = decision({ cropRegionId: "r1" })
+    const { resolved } = resolveEffectiveScores(
+      [decided, undecided],
+      [decisionRow]
+    )
     expect(resolved).toHaveLength(2)
-    const r2 = resolved.find(
+    const region2Score = resolved.find(
       (resolvedScore) => resolvedScore.cropRegionId === "r2"
     )
-    expect(r2?.source).toBe("proposal")
-    expect(r2?.status).toBe("incorrect")
+    expect(region2Score?.source).toBe("proposal")
+    expect(region2Score?.status).toBe("incorrect")
   })
 })
 

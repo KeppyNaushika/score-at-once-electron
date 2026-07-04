@@ -98,9 +98,9 @@ export function computeItemAnalysis(
 
   // 各生徒の設問→item を Map 化（O(生徒×k) に抑える）
   const studentMaps = students.map((student) => {
-    const m = new Map<string, ItemAnalysisInputItem>()
-    for (const item of student.items) m.set(item.questionId, item)
-    return m
+    const itemMap = new Map<string, ItemAnalysisInputItem>()
+    for (const item of student.items) itemMap.set(item.questionId, item)
+    return itemMap
   })
 
   // complete-case: 全設問が採点済み（全 score 非null）の生徒

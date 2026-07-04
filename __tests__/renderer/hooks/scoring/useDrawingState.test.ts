@@ -191,7 +191,7 @@ describe("useDrawingState", () => {
 
       // DB応答前にdrawingElementsに追加されている
       expect(
-        result.current.drawingElements.find((e) => e.id === "new-1")
+        result.current.drawingElements.find((element) => element.id === "new-1")
       ).toBeDefined()
 
       // DB応答を完了
@@ -227,7 +227,9 @@ describe("useDrawingState", () => {
 
       // DB保存は失敗するが、ローカル状態は残る（エラーがuseDrawingAnnotations内で吸収されるため）
       expect(
-        result.current.drawingElements.find((e) => e.id === "fail-1")
+        result.current.drawingElements.find(
+          (element) => element.id === "fail-1"
+        )
       ).toBeDefined()
     })
 
@@ -332,15 +334,15 @@ describe("useDrawingState", () => {
         ])
       })
 
-      expect(result.current.drawingElements.find((e) => e.id === "a1")?.x).toBe(
-        0.5
-      )
-      expect(result.current.drawingElements.find((e) => e.id === "a2")?.x).toBe(
-        0.6
-      )
-      expect(result.current.drawingElements.find((e) => e.id === "a3")?.x).toBe(
-        0.3
-      )
+      expect(
+        result.current.drawingElements.find((element) => element.id === "a1")?.x
+      ).toBe(0.5)
+      expect(
+        result.current.drawingElements.find((element) => element.id === "a2")?.x
+      ).toBe(0.6)
+      expect(
+        result.current.drawingElements.find((element) => element.id === "a3")?.x
+      ).toBe(0.3)
     })
   })
 

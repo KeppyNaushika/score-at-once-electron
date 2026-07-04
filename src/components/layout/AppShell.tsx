@@ -22,25 +22,25 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
     key: "exams",
     label: "試験一覧",
     storageKey: "sidebarBehavior_exams",
-    pathMatch: (p) => p.startsWith("/exams"),
+    pathMatch: (path) => path.startsWith("/exams"),
   },
   {
     key: "answerSheetBuilder",
     label: "解答用紙作成",
     storageKey: "sidebarBehavior_answerSheetBuilder",
-    pathMatch: (p) => p.startsWith("/answer-sheet-builder"),
+    pathMatch: (path) => path.startsWith("/answer-sheet-builder"),
   },
   {
     key: "pdfTools",
     label: "PDF加工",
     storageKey: "sidebarBehavior_pdfTools",
-    pathMatch: (p) => p.startsWith("/pdf-tools"),
+    pathMatch: (path) => path.startsWith("/pdf-tools"),
   },
   {
     key: "grades",
     label: "成績算出",
     storageKey: "sidebarBehavior_grades",
-    pathMatch: (p) => p.startsWith("/grades"),
+    pathMatch: (path) => path.startsWith("/grades"),
   },
 ]
 

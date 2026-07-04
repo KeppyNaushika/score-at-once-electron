@@ -602,7 +602,9 @@ function convertPageBlocksToCropRegions(
       allQuestions.push({ pageNo: page.PageNo, question })
     }
   }
-  allQuestions.sort((a, b) => a.question.Seq - b.question.Seq)
+  allQuestions.sort(
+    (entryA, entryB) => entryA.question.Seq - entryB.question.Seq
+  )
 
   // Seq → orderIndex マッピング
   const seqToOrderIndex = new Map<number, number>()

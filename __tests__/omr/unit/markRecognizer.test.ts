@@ -187,10 +187,10 @@ function create4ChoiceBubbles(
 ): ComputedOMRBubble[] {
   const bubbleW = 30 / imgWidth
   const bubbleH = 48 / imgHeight
-  const n = 4
-  const spacing = 1 / (n + 1)
+  const choiceCount = 4
+  const spacing = 1 / (choiceCount + 1)
 
-  return Array.from({ length: n }, (_, i) => ({
+  return Array.from({ length: choiceCount }, (_, i) => ({
     normalizedCx: spacing * (i + 1),
     normalizedCy: 0.5,
     normalizedWidth: bubbleW,
@@ -235,12 +235,12 @@ describe("markRecognizer", () => {
   }
 
   it("塗りつぶしなし → no_answer", async () => {
-    const img = createTestImage(imgWidth, imgHeight, bubbles, [])
+    const image = createTestImage(imgWidth, imgHeight, bubbles, [])
     const cell = makeCell(bubbles)
     const result = await recognizeCell(
       cell,
       config,
-      img,
+      image,
       transform,
       DEFAULT_PARAMS
     )
@@ -251,12 +251,12 @@ describe("markRecognizer", () => {
   })
 
   it("正解のバブルを塗りつぶし → correct", async () => {
-    const img = createTestImage(imgWidth, imgHeight, bubbles, [1]) // ②を塗る
+    const image = createTestImage(imgWidth, imgHeight, bubbles, [1]) // ②を塗る
     const cell = makeCell(bubbles)
     const result = await recognizeCell(
       cell,
       config,
-      img,
+      image,
       transform,
       DEFAULT_PARAMS
     )
@@ -267,12 +267,12 @@ describe("markRecognizer", () => {
   })
 
   it("不正解のバブルを塗りつぶし → incorrect", async () => {
-    const img = createTestImage(imgWidth, imgHeight, bubbles, [2]) // ③を塗る
+    const image = createTestImage(imgWidth, imgHeight, bubbles, [2]) // ③を塗る
     const cell = makeCell(bubbles)
     const result = await recognizeCell(
       cell,
       config,
-      img,
+      image,
       transform,
       DEFAULT_PARAMS
     )
@@ -282,12 +282,12 @@ describe("markRecognizer", () => {
   })
 
   it("複数バブルを塗りつぶし（正解数より多い） → ambiguous", async () => {
-    const img = createTestImage(imgWidth, imgHeight, bubbles, [0, 1]) // ①②を塗る
+    const image = createTestImage(imgWidth, imgHeight, bubbles, [0, 1]) // ①②を塗る
     const cell = makeCell(bubbles)
     const result = await recognizeCell(
       cell,
       config,
-      img,
+      image,
       transform,
       DEFAULT_PARAMS
     )
@@ -297,12 +297,12 @@ describe("markRecognizer", () => {
   })
 
   it("fillRatiosが各バブルの値を返す", async () => {
-    const img = createTestImage(imgWidth, imgHeight, bubbles, [1])
+    const image = createTestImage(imgWidth, imgHeight, bubbles, [1])
     const cell = makeCell(bubbles)
     const result = await recognizeCell(
       cell,
       config,
-      img,
+      image,
       transform,
       DEFAULT_PARAMS
     )
@@ -317,12 +317,12 @@ describe("markRecognizer", () => {
   })
 
   it("omrBubblesが空の場合は no_answer", async () => {
-    const img = createTestImage(imgWidth, imgHeight, [], [])
+    const image = createTestImage(imgWidth, imgHeight, [], [])
     const cell = makeCell([])
     const result = await recognizeCell(
       cell,
       config,
-      img,
+      image,
       transform,
       DEFAULT_PARAMS
     )
@@ -341,12 +341,12 @@ describe("markRecognizer", () => {
     }
 
     it("複数正解を全て選択 → correct", async () => {
-      const img = createTestImage(imgWidth, imgHeight, bubbles, [0, 2])
+      const image = createTestImage(imgWidth, imgHeight, bubbles, [0, 2])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         multiConfig,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -356,12 +356,12 @@ describe("markRecognizer", () => {
     })
 
     it("正解を一部だけ選択 → incorrect", async () => {
-      const img = createTestImage(imgWidth, imgHeight, bubbles, [0])
+      const image = createTestImage(imgWidth, imgHeight, bubbles, [0])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         multiConfig,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -392,12 +392,12 @@ describe("markRecognizer", () => {
     }
 
     it("数字7を塗りつぶし → correct + 認識値は '7'", async () => {
-      const img = createTestImage(imgWidth, imgHeight, digitBubbles, [7])
+      const image = createTestImage(imgWidth, imgHeight, digitBubbles, [7])
       const cell = makeCell(digitBubbles)
       const result = await recognizeCell(
         cell,
         digitConfig,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -413,14 +413,14 @@ describe("markRecognizer", () => {
 
   describe("鉛筆の濃淡", () => {
     it("しっかり濃く塗った鉛筆マーク（gray=30）→ 認識される", async () => {
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 30, coverage: 0.9, pattern: "solid" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -431,14 +431,14 @@ describe("markRecognizer", () => {
 
     it("薄く塗った鉛筆マーク（gray=100）→ 認識される", async () => {
       // gray=100 は colorThreshold=128 より暗いので「暗い」判定
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 100, coverage: 0.85, pattern: "random" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -449,14 +449,14 @@ describe("markRecognizer", () => {
 
     it("非常に薄い塗り（gray=140）→ 閾値以上なので認識されない", async () => {
       // gray=140 > colorThreshold=128 なので「暗くない」判定
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 140, coverage: 1, pattern: "solid" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -469,7 +469,7 @@ describe("markRecognizer", () => {
   describe("消しゴム跡（消し残し）", () => {
     it("消しゴムで消した跡（gray=180, 20%残り）→ 認識しない", async () => {
       // 消しゴムで消したが20%程度のピクセルが薄く残っている
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 0, gray: 80, coverage: 0.2, pattern: "random" },
         { index: 1, gray: 10, coverage: 0.95, pattern: "solid" }, // 本命の塗り
       ])
@@ -477,7 +477,7 @@ describe("markRecognizer", () => {
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -491,7 +491,7 @@ describe("markRecognizer", () => {
     })
 
     it("消しゴム跡が35%残り → ギリギリ認識しない", async () => {
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 0, gray: 60, coverage: 0.35, pattern: "random" },
         { index: 1, gray: 0, coverage: 1, pattern: "solid" },
       ])
@@ -499,7 +499,7 @@ describe("markRecognizer", () => {
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -511,7 +511,7 @@ describe("markRecognizer", () => {
 
   describe("ダブルマーク（怪しいケース）", () => {
     it("2つのバブルを均等にしっかり塗り → ambiguous", async () => {
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 1, pattern: "solid" },
         { index: 2, gray: 0, coverage: 1, pattern: "solid" },
       ])
@@ -519,7 +519,7 @@ describe("markRecognizer", () => {
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -531,7 +531,7 @@ describe("markRecognizer", () => {
 
     it("本命しっかり + 別の微妙な塗り(45%) → ダブルマーク判定", async () => {
       // 1つはしっかり塗り、もう1つが閾値ギリギリ超え
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 1, pattern: "solid" },
         { index: 3, gray: 50, coverage: 0.5, pattern: "random" },
       ])
@@ -539,7 +539,7 @@ describe("markRecognizer", () => {
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -555,7 +555,7 @@ describe("markRecognizer", () => {
     })
 
     it("本命しっかり + 別の薄塗り(30%) → 本命のみ認識", async () => {
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 1, pattern: "solid" },
         { index: 3, gray: 80, coverage: 0.3, pattern: "random" },
       ])
@@ -563,7 +563,7 @@ describe("markRecognizer", () => {
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -576,14 +576,14 @@ describe("markRecognizer", () => {
 
   describe("雑な塗り方", () => {
     it("楕円の上半分だけ塗る → 約50%で閾値超えなら認識", async () => {
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 1, pattern: "top-half" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -595,14 +595,14 @@ describe("markRecognizer", () => {
 
     it("中心部だけ塗る（coverage=0.6）→ 認識される", async () => {
       // 楕円の中心60%の面積だけ塗る
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 0.6, pattern: "center" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -613,14 +613,14 @@ describe("markRecognizer", () => {
 
     it("中心の小さな点だけ（coverage=0.15）→ 認識されない", async () => {
       // ちょっとだけ点を打った程度
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 0.15, pattern: "center" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         DEFAULT_PARAMS
       )
@@ -637,14 +637,14 @@ describe("markRecognizer", () => {
         areaThreshold: 0.2, // 通常0.4 → 0.2に緩和
       }
       // 30%しか塗っていない
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 0.3, pattern: "random" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         looseParams
       )
@@ -659,14 +659,14 @@ describe("markRecognizer", () => {
         areaThreshold: 0.9, // 90%以上塗らないと認識しない
       }
       // 70%塗り
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 0.7, pattern: "random" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         strictParams
       )
@@ -680,14 +680,14 @@ describe("markRecognizer", () => {
         areaThreshold: 0.4,
       }
       // gray=80（中程度の鉛筆）で塗る
-      const img = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 80, coverage: 1, pattern: "solid" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
         cell,
         config,
-        img,
+        image,
         transform,
         darkOnlyParams
       )

@@ -53,63 +53,63 @@ afterEach(() => {
 
 describe("useKeyboard - 削除ショートカットのガード", () => {
   it("通常時: 非編集要素上の Backspace は選択要素を削除する", () => {
-    const h = mountKeyboard({
+    const handlers = mountKeyboard({
       selectedElementIds: ["e1", "e2"],
       isTextEditing: false,
     })
 
     pressKeyOn(document.body, "Backspace")
 
-    expect(h.removeDrawingElement).toHaveBeenCalledTimes(2)
-    expect(h.removeDrawingElement).toHaveBeenCalledWith("e1")
-    expect(h.removeDrawingElement).toHaveBeenCalledWith("e2")
+    expect(handlers.removeDrawingElement).toHaveBeenCalledTimes(2)
+    expect(handlers.removeDrawingElement).toHaveBeenCalledWith("e1")
+    expect(handlers.removeDrawingElement).toHaveBeenCalledWith("e2")
   })
 
   it("通常時: Delete キーでも選択要素を削除する", () => {
-    const h = mountKeyboard({
+    const handlers = mountKeyboard({
       selectedElementIds: ["e1"],
       isTextEditing: false,
     })
 
     pressKeyOn(document.body, "Delete")
 
-    expect(h.removeDrawingElement).toHaveBeenCalledExactlyOnceWith("e1")
+    expect(handlers.removeDrawingElement).toHaveBeenCalledExactlyOnceWith("e1")
   })
 
   it("修正の核心: テキスト編集モーダル表示中はフォーカスが外れていても削除しない", () => {
     // モーダルは開いているが、フォーカスは textarea ではなく body にある状況
-    const h = mountKeyboard({
+    const handlers = mountKeyboard({
       selectedElementIds: ["e1"],
       isTextEditing: true,
     })
 
     pressKeyOn(document.body, "Backspace")
 
-    expect(h.removeDrawingElement).not.toHaveBeenCalled()
+    expect(handlers.removeDrawingElement).not.toHaveBeenCalled()
   })
 
   it("既存の保険: 入力欄(textarea)にフォーカスがある場合は削除しない", () => {
     const textarea = document.createElement("textarea")
     document.body.appendChild(textarea)
 
-    const h = mountKeyboard({
+    const handlers = mountKeyboard({
       selectedElementIds: ["e1"],
       isTextEditing: false,
     })
 
     pressKeyOn(textarea, "Backspace")
 
-    expect(h.removeDrawingElement).not.toHaveBeenCalled()
+    expect(handlers.removeDrawingElement).not.toHaveBeenCalled()
   })
 
   it("選択要素が無ければ何もしない", () => {
-    const h = mountKeyboard({
+    const handlers = mountKeyboard({
       selectedElementIds: [],
       isTextEditing: false,
     })
 
     pressKeyOn(document.body, "Backspace")
 
-    expect(h.removeDrawingElement).not.toHaveBeenCalled()
+    expect(handlers.removeDrawingElement).not.toHaveBeenCalled()
   })
 })

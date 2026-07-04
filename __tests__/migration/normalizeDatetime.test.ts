@@ -58,10 +58,10 @@ const applyMigrationFor = async (tables: string[]) => {
         .trim()
       return stripped.length > 0
     })
-  for (const stmt of statements) {
-    const match = stmt.match(/UPDATE\s+"(\w+)"/)
+  for (const statement of statements) {
+    const match = statement.match(/UPDATE\s+"(\w+)"/)
     if (match && tables.includes(match[1])) {
-      await prisma.$executeRawUnsafe(stmt)
+      await prisma.$executeRawUnsafe(statement)
     }
   }
 }
@@ -215,11 +215,11 @@ describe("DateTime正規化マイグレーション", () => {
     // schema.prisma から (物理テーブル名, DateTimeカラム) を抽出
     const expected: [string, string][] = []
     const modelRe = /model\s+(\w+)\s*\{([\s\S]*?)\n\}/g
-    let mm: RegExpExecArray | null
-    while ((mm = modelRe.exec(schemaText))) {
-      const body = mm[2]
+    let modelMatch: RegExpExecArray | null
+    while ((modelMatch = modelRe.exec(schemaText))) {
+      const body = modelMatch[2]
       const mapMatch = body.match(/@@map\("([^"]+)"\)/)
-      const table = mapMatch ? mapMatch[1] : mm[1]
+      const table = mapMatch ? mapMatch[1] : modelMatch[1]
       if (POST_MIGRATION_TABLES.has(table)) continue
       for (const line of body.split("\n")) {
         const parts = line.trim().split(/\s+/)
@@ -233,8 +233,8 @@ describe("DateTime正規化マイグレーション", () => {
 
     // 各 (table, col) に対応する UPDATE 文が migration.sql に存在すること
     const missing = expected.filter(
-      ([table, col]) =>
-        !migrationText.includes(`UPDATE "${table}" SET "${col}"`)
+      ([table, column]) =>
+        !migrationText.includes(`UPDATE "${table}" SET "${column}"`)
     )
     expect(missing).toEqual([])
   })

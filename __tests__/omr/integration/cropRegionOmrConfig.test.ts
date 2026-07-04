@@ -137,11 +137,11 @@ async function upsertOmrConfig(data: {
 
     if (data.choiceOptions?.length) {
       await tx.cropRegionOmrChoiceOption.createMany({
-        data: data.choiceOptions.map((opt) => ({
+        data: data.choiceOptions.map((choiceOption) => ({
           omrConfigId: configId,
-          choiceIndex: opt.choiceIndex,
-          label: opt.label,
-          isCorrect: opt.isCorrect,
+          choiceIndex: choiceOption.choiceIndex,
+          label: choiceOption.label,
+          isCorrect: choiceOption.isCorrect,
         })),
       })
     }

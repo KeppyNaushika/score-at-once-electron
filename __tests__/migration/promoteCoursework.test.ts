@@ -47,8 +47,8 @@ const applyMigration = async () => {
         .trim()
       return stripped.length > 0
     })
-  for (const stmt of statements) {
-    await prisma.$executeRawUnsafe(stmt)
+  for (const statement of statements) {
+    await prisma.$executeRawUnsafe(statement)
   }
 }
 
@@ -152,10 +152,10 @@ describe("promote_coursework マイグレーション", () => {
     await seed()
     await applyMigration()
 
-    const cw = await rawAll(`SELECT * FROM "Coursework"`)
-    expect(cw).toHaveLength(1)
-    expect(cw[0].id).toBe("cw-ds1")
-    expect(cw[0].name).toBe("レポート")
+    const coursework = await rawAll(`SELECT * FROM "Coursework"`)
+    expect(coursework).toHaveLength(1)
+    expect(coursework[0].id).toBe("cw-ds1")
+    expect(coursework[0].name).toBe("レポート")
 
     const item = await rawAll(`SELECT * FROM "CourseworkItem"`)
     expect(item).toHaveLength(1)
@@ -229,11 +229,11 @@ describe("promote_coursework マイグレーション", () => {
     expect(dataSources[0].type).toBe("coursework")
 
     // inputMode 列が撤去されている
-    const cols = await rawAll<{ name: string }>(
+    const columns = await rawAll<{ name: string }>(
       `SELECT name FROM pragma_table_info('GradeDataSource')`
     )
-    expect(cols.map((column) => column.name)).not.toContain("inputMode")
-    expect(cols.map((column) => column.name)).toContain("courseworkItemId")
+    expect(columns.map((column) => column.name)).not.toContain("inputMode")
+    expect(columns.map((column) => column.name)).toContain("courseworkItemId")
 
     // 旧テーブルが DROP されている
     const tables = await rawAll<{ name: string }>(

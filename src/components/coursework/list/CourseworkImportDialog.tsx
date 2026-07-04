@@ -79,7 +79,7 @@ export function CourseworkImportDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>試験外成績資料のインポート</DialogTitle>
@@ -108,10 +108,10 @@ export function CourseworkImportDialog({
                   </div>
                   <RadioGroup
                     value={effectiveSelections[coursework.archiveId] ?? "new"}
-                    onValueChange={(v) =>
+                    onValueChange={(value) =>
                       setSelections((prev) => ({
                         ...prev,
-                        [coursework.archiveId]: v,
+                        [coursework.archiveId]: value,
                       }))
                     }
                     className="space-y-1"

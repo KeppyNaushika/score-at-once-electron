@@ -112,15 +112,15 @@ export function BranchQuestionForm({
               className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
               value={branch.layoutWidth ?? ""}
               onChange={(e) => {
-                const v = e.target.value.trim()
-                if (v === "") {
+                const value = e.target.value.trim()
+                if (value === "") {
                   onUpdate({
                     layoutWidth: undefined,
                     nextPlacement: undefined,
                     goUp: undefined,
                   })
                 } else {
-                  onUpdate({ layoutWidth: v })
+                  onUpdate({ layoutWidth: value })
                 }
               }}
               placeholder="—"
@@ -177,11 +177,11 @@ export function BranchQuestionForm({
                 min={1}
                 max={maxGoUp}
                 onChange={(e) => {
-                  const v = e.target.value
-                  if (v === "") {
+                  const value = e.target.value
+                  if (value === "") {
                     onUpdate({ goUp: 0 })
                   } else {
-                    onUpdate({ goUp: Number(v) })
+                    onUpdate({ goUp: Number(value) })
                   }
                 }}
                 onBlur={() => {

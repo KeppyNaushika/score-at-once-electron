@@ -31,16 +31,18 @@ function cascadeChildrenFromSchema(target: string): string[] {
   )
   const modelRe = /^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm
   const found = new Set<string>()
-  let m: RegExpExecArray | null
-  while ((m = modelRe.exec(src)) !== null) {
-    const modelName = m[1]
-    const body = m[2]
+  let modelMatch: RegExpExecArray | null
+  while ((modelMatch = modelRe.exec(src)) !== null) {
+    const modelName = modelMatch[1]
+    const body = modelMatch[2]
     for (const line of body.split("\n")) {
       // 例: "  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)"
-      const rel = line.match(/^\s*\w+\s+(\w+)\??\s+@relation\(([^)]*)\)/)
-      if (!rel) continue
-      const relType = rel[1]
-      const args = rel[2]
+      const relationMatch = line.match(
+        /^\s*\w+\s+(\w+)\??\s+@relation\(([^)]*)\)/
+      )
+      if (!relationMatch) continue
+      const relType = relationMatch[1]
+      const args = relationMatch[2]
       if (relType !== target) continue
       // owning側（FKを持つ側）かつ onDelete:Cascade のみ対象
       if (!/fields:\s*\[/.test(args)) continue

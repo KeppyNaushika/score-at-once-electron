@@ -298,19 +298,23 @@ describe("Exam 在籍フィルタ", () => {
       const idsOf = (member: (typeof members)[number]) =>
         member.classroom.memberships.map((membership) => membership.studentId)
 
-      const a = members.find((member) => member.classroomId === classA.id)!
-      const b = members.find((member) => member.classroomId === classB.id)!
+      const classAMembers = members.find(
+        (member) => member.classroomId === classA.id
+      )!
+      const classBMembers = members.find(
+        (member) => member.classroomId === classB.id
+      )!
 
       // classA: 受験日在籍の active のみ（転出済み left は除外）
-      expect(idsOf(a)).toEqual([active.id])
+      expect(idsOf(classAMembers)).toEqual([active.id])
       // classB: active（複数学級に重複カウント）
-      expect(idsOf(b)).toEqual([active.id])
+      expect(idsOf(classBMembers)).toEqual([active.id])
       // left はどの学級の集計にも含まれない
       expect(members.flatMap(idsOf)).not.toContain(left.id)
       // 生徒ごと追加した学級は teacherStat / studentReport が true
-      expect(a.teacherStat).toBe(true)
-      expect(a.studentReport).toBe(true)
-      expect(b.teacherStat).toBe(true)
+      expect(classAMembers.teacherStat).toBe(true)
+      expect(classAMembers.studentReport).toBe(true)
+      expect(classBMembers.teacherStat).toBe(true)
     })
   })
 })

@@ -329,7 +329,7 @@ export async function getPdfExportData(options: {
 
         // 小計点領域を取得（このページのSUBTOTAL_SCORE領域）
         const subtotalRegions = pageRegions.filter(
-          (cr) => cr.type === "SUBTOTAL_SCORE"
+          (cropRegion) => cropRegion.type === "SUBTOTAL_SCORE"
         )
 
         // 小計点データを計算
@@ -364,14 +364,16 @@ export async function getPdfExportData(options: {
 
         // 合計点を計算（全設問の合計）
         const questionRegions = cropRegions.filter(
-          (cr) => cr.type === "QUESTION_ANSWER"
+          (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
         )
         let totalScore = 0
         let totalMaxScore = 0
         let hasScoredQuestion = false
         for (const region of questionRegions) {
           const score = allScores.find(
-            (s) => s.cropRegionId === region.id && s.studentId === student.id
+            (resolvedScore) =>
+              resolvedScore.cropRegionId === region.id &&
+              resolvedScore.studentId === student.id
           )
           if (score) {
             const maxScore = region.points !== null ? Number(region.points) : 0
@@ -395,7 +397,7 @@ export async function getPdfExportData(options: {
 
         // 合計点領域を取得（このページのTOTAL_SCORE領域）
         const totalScoreRegions = pageRegions.filter(
-          (cr) => cr.type === "TOTAL_SCORE"
+          (cropRegion) => cropRegion.type === "TOTAL_SCORE"
         )
 
         // 合計点領域データを構築
@@ -437,12 +439,12 @@ export async function getPdfExportData(options: {
     // selectedStudents は getStudentsForExam が customOrder 順で返すため、
     // その順序を生徒の並び順として使う（選択操作の順序には依存させない）
     const orderedStudentIds = selectedStudents.map((student) => student.id)
-    pages.sort((a, b) => {
+    pages.sort((pageA, pageB) => {
       const studentCompare =
-        orderedStudentIds.indexOf(a.studentId) -
-        orderedStudentIds.indexOf(b.studentId)
+        orderedStudentIds.indexOf(pageA.studentId) -
+        orderedStudentIds.indexOf(pageB.studentId)
       if (studentCompare !== 0) return studentCompare
-      return a.pageNumber - b.pageNumber
+      return pageA.pageNumber - pageB.pageNumber
     })
 
     return {

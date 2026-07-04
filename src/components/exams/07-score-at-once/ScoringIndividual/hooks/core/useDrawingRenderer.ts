@@ -370,13 +370,13 @@ function drawWaveLine(
 
   ctx.beginPath()
   for (let i = 0; i <= steps; i++) {
-    const t = i / steps
-    const pos = t * lineLength
+    const ratio = i / steps
+    const pos = ratio * lineLength
     const theta = (2 * Math.PI * (pos - lineLength / 2)) / wavelength
     const offset = waveAmplitude * Math.cos(theta)
 
-    const x = startX + dx * t + perpX * offset
-    const y = startY + dy * t + perpY * offset
+    const x = startX + dx * ratio + perpX * offset
+    const y = startY + dy * ratio + perpY * offset
 
     if (i === 0) ctx.moveTo(x, y)
     else ctx.lineTo(x, y)
@@ -433,9 +433,9 @@ function drawZigzagLine(
   ctx.moveTo(startX, startY)
 
   for (const peak of peaks) {
-    const t = peak.pos / lineLength
-    const baseX = startX + dx * t
-    const baseY = startY + dy * t
+    const ratio = peak.pos / lineLength
+    const baseX = startX + dx * ratio
+    const baseY = startY + dy * ratio
     ctx.lineTo(baseX + perpX * peak.amp, baseY + perpY * peak.amp)
   }
 

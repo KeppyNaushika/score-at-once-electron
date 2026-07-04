@@ -19,11 +19,11 @@ function makeStudent(
   return {
     studentId,
     studentName: studentId,
-    items: pattern.map((v, i) => ({
+    items: pattern.map((value, i) => ({
       questionId: `q${i + 1}`,
       label: `q${i + 1}`,
-      isCorrect: v === 1,
-      isScored: v !== null,
+      isCorrect: value === 1,
+      isScored: value !== null,
     })),
   }
 }
@@ -39,18 +39,18 @@ describe("computeSpTable", () => {
     ]
     const result = computeSpTable(data)
     expect(result).not.toBeNull()
-    const r = result!
+    const spTable = result!
     // 生徒は正答数降順
-    expect(r.students.map((student) => student.studentId)).toEqual([
+    expect(spTable.students.map((student) => student.studentId)).toEqual([
       "S1",
       "S2",
       "S3",
     ])
-    expect(r.students[0].correctCount).toBe(3)
+    expect(spTable.students[0].correctCount).toBe(3)
     // S1(n=3)は分母0→null、S2/S3はGuttman一致で0
-    expect(r.students[0].cautionIndex).toBeNull()
-    expect(r.students[1].cautionIndex).toBeCloseTo(0, 6)
-    expect(r.students[2].cautionIndex).toBeCloseTo(0, 6)
+    expect(spTable.students[0].cautionIndex).toBeNull()
+    expect(spTable.students[1].cautionIndex).toBeCloseTo(0, 6)
+    expect(spTable.students[2].cautionIndex).toBeCloseTo(0, 6)
   })
 
   it("逸脱した応答パターンの生徒は高い注意係数になる", () => {
@@ -70,11 +70,15 @@ describe("computeSpTable", () => {
     ])
     expect(result.problems[0].correctCount).toBe(3)
 
-    const s3 = result.students.find((student) => student.studentId === "S3")!
-    const s4 = result.students.find((student) => student.studentId === "S4")!
+    const student3 = result.students.find(
+      (student) => student.studentId === "S3"
+    )!
+    const student4 = result.students.find(
+      (student) => student.studentId === "S4"
+    )!
     // 手計算: S3 CS=1.5, S4 CS=0
-    expect(s3.cautionIndex).toBeCloseTo(1.5, 6)
-    expect(s4.cautionIndex).toBeCloseTo(0, 6)
+    expect(student3.cautionIndex).toBeCloseTo(1.5, 6)
+    expect(student4.cautionIndex).toBeCloseTo(0, 6)
   })
 
   it("cells は設問の並び（正答者数降順）に揃う", () => {
@@ -83,10 +87,12 @@ describe("computeSpTable", () => {
       makeStudent("S2", [1, 1, 0]),
       makeStudent("S3", [1, 0, 0]),
     ]
-    const r = computeSpTable(data)!
+    const spTable = computeSpTable(data)!
     // S2 は p1,p2 正答・p3 誤答（並びは p1,p2,p3）
-    const s2 = r.students.find((student) => student.studentId === "S2")!
-    expect(s2.cells).toEqual([true, true, false])
+    const student2 = spTable.students.find(
+      (student) => student.studentId === "S2"
+    )!
+    expect(student2.cells).toEqual([true, true, false])
   })
 
   it("全問未採点の生徒は母集団から除外される", () => {
@@ -96,10 +102,10 @@ describe("computeSpTable", () => {
       makeStudent("S3", [1, 0, 0]),
       makeStudent("S4", [null, null, null]),
     ]
-    const r = computeSpTable(data)!
-    expect(r.studentCount).toBe(3)
+    const spTable = computeSpTable(data)!
+    expect(spTable.studentCount).toBe(3)
     expect(
-      r.students.find((student) => student.studentId === "S4")
+      spTable.students.find((student) => student.studentId === "S4")
     ).toBeUndefined()
   })
 

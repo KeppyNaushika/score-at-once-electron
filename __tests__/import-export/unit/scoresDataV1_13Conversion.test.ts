@@ -115,10 +115,10 @@ describe("convertScoresDataToV1_13", () => {
   it("同じ採点者の提案行があるfinal行は削除され、注釈が提案行へ移動する", () => {
     const proposal = makeQuestionScore({ status: "partial", partialScore: "3" })
     const final = makeQuestionScore({ status: "final", partialScore: "3" })
-    const ann = annotation(final.id)
+    const finalAnnotation = annotation(final.id)
 
     const { scoresData: result } = convertScoresDataToV1_13(
-      scoresData([proposal, final], [ann])
+      scoresData([proposal, final], [finalAnnotation])
     )
 
     const ids = result.questionScores.map((questionScore) => questionScore.id)

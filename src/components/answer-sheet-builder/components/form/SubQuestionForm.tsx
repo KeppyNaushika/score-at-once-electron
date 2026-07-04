@@ -23,11 +23,11 @@ import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
 /** 簡易分数パース (例: "1/3" → 0.333) */
-function parseFractionSimple(s: string): number {
-  const m = s.match(/^(\d+)\/(\d+)$/)
-  if (m) return parseInt(m[1]) / parseInt(m[2])
-  const n = parseFloat(s)
-  return isNaN(n) ? 1 : n
+function parseFractionSimple(fraction: string): number {
+  const match = fraction.match(/^(\d+)\/(\d+)$/)
+  if (match) return parseInt(match[1]) / parseInt(match[2])
+  const parsed = parseFloat(fraction)
+  return isNaN(parsed) ? 1 : parsed
 }
 
 /** 各枝問の maxGoUp (= その枝問の goUp 適用前の行インデックス) を計算 */
@@ -188,15 +188,15 @@ export function SubQuestionForm({
                 className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
                 value={sub.layoutWidth ?? ""}
                 onChange={(e) => {
-                  const v = e.target.value.trim()
-                  if (v === "") {
+                  const value = e.target.value.trim()
+                  if (value === "") {
                     onUpdate({
                       layoutWidth: undefined,
                       nextPlacement: undefined,
                       goUp: undefined,
                     })
                   } else {
-                    onUpdate({ layoutWidth: v })
+                    onUpdate({ layoutWidth: value })
                   }
                 }}
                 placeholder="—"
@@ -254,11 +254,11 @@ export function SubQuestionForm({
                 min={1}
                 max={maxGoUp}
                 onChange={(e) => {
-                  const v = e.target.value
-                  if (v === "") {
+                  const value = e.target.value
+                  if (value === "") {
                     onUpdate({ goUp: 0 })
                   } else {
-                    onUpdate({ goUp: Number(v) })
+                    onUpdate({ goUp: Number(value) })
                   }
                 }}
                 onBlur={() => {
@@ -295,7 +295,7 @@ export function SubQuestionForm({
             <Switch
               className="scale-75"
               checked={sub.usesBranchPoints !== false}
-              onCheckedChange={(v) => onUpdate({ usesBranchPoints: v })}
+              onCheckedChange={(value) => onUpdate({ usesBranchPoints: value })}
             />
           </div>
         )}

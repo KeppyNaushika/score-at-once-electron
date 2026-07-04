@@ -322,8 +322,8 @@ export function AddDataSourceInline({
         {/* Type選択 */}
         <Select
           value={type}
-          onValueChange={(v) => {
-            setType(v as DataSourceType)
+          onValueChange={(value) => {
+            setType(value as DataSourceType)
             setSelectedExamId("")
             setSelectedSubtotalGroupId("")
             setSelectedSubtotalId("")
@@ -366,8 +366,8 @@ export function AddDataSourceInline({
           <>
             <Select
               value={selectedSubtotalGroupId}
-              onValueChange={(v) => {
-                setSelectedSubtotalGroupId(v)
+              onValueChange={(value) => {
+                setSelectedSubtotalGroupId(value)
                 setSelectedSubtotalId("")
               }}
             >
@@ -426,8 +426,8 @@ export function AddDataSourceInline({
           <>
             <Select
               value={selectedCourseworkId}
-              onValueChange={(v) => {
-                setSelectedCourseworkId(v)
+              onValueChange={(value) => {
+                setSelectedCourseworkId(value)
                 // 資料を切り替えたら項目選択と補完値をリセット（古い名前/換算満点の残留を防ぐ）
                 setSelectedCourseworkItemId("")
                 setName("")

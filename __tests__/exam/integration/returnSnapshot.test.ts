@@ -52,12 +52,12 @@ describe("ReturnSnapshot capture/diff", () => {
     })
     const studentIds = fixture.students.map((student) => student.id)
 
-    const cap = await captureReturnSnapshot({
+    const captureResult = await captureReturnSnapshot({
       examId: fixture.exam.id,
       studentIds,
     })
-    expect(cap.success).toBe(true)
-    expect(cap.capturedCount).toBe(studentIds.length)
+    expect(captureResult.success).toBe(true)
+    expect(captureResult.capturedCount).toBe(studentIds.length)
 
     const diff = await getReturnDiff(fixture.exam.id)
     expect(diff.success).toBe(true)

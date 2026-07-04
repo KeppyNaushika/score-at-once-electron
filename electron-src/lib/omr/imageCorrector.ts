@@ -53,28 +53,28 @@ function computeRigidTransform(
     throw new Error("src と dst は同数かつ2点以上必要です")
   }
 
-  const n = src.length
+  const pointCount = src.length
 
   // 重心を計算
   let srcCx = 0,
     srcCy = 0,
     dstCx = 0,
     dstCy = 0
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < pointCount; i++) {
     srcCx += src[i].x
     srcCy += src[i].y
     dstCx += dst[i].x
     dstCy += dst[i].y
   }
-  srcCx /= n
-  srcCy /= n
-  dstCx /= n
-  dstCy /= n
+  srcCx /= pointCount
+  srcCy /= pointCount
+  dstCx /= pointCount
+  dstCy /= pointCount
 
   // 重心を原点にした座標で回転角を計算
   let sumCross = 0 // Σ(sx*dy - sy*dx)
   let sumDot = 0 // Σ(sx*dx + sy*dy)
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < pointCount; i++) {
     const sx = src[i].x - srcCx
     const sy = src[i].y - srcCy
     const dx = dst[i].x - dstCx
@@ -98,26 +98,26 @@ function computeRigidTransform(
  * マーカー重心間の距離比からスケール係数を算出
  */
 function computeScaleFactor(src: Point[], dst: Point[]): number {
-  const n = src.length
+  const pointCount = src.length
 
   let srcCx = 0,
     srcCy = 0,
     dstCx = 0,
     dstCy = 0
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < pointCount; i++) {
     srcCx += src[i].x
     srcCy += src[i].y
     dstCx += dst[i].x
     dstCy += dst[i].y
   }
-  srcCx /= n
-  srcCy /= n
-  dstCx /= n
-  dstCy /= n
+  srcCx /= pointCount
+  srcCy /= pointCount
+  dstCx /= pointCount
+  dstCy /= pointCount
 
   let srcDistSum = 0
   let dstDistSum = 0
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < pointCount; i++) {
     srcDistSum += Math.sqrt((src[i].x - srcCx) ** 2 + (src[i].y - srcCy) ** 2)
     dstDistSum += Math.sqrt((dst[i].x - dstCx) ** 2 + (dst[i].y - dstCy) ** 2)
   }

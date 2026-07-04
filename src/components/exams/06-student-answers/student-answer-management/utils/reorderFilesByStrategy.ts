@@ -23,9 +23,9 @@ export function reorderFilesByStrategy(
 
   // 2. 生徒のソート（customOrder準拠）
   const sortedStudents = [...students].sort((studentA, studentB) => {
-    const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-    const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-    return aOrder - bOrder
+    const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+    const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
+    return studentAOrder - studentBOrder
   })
 
   // 3. 新しい配置戦略に基づく理想的な位置順序を計算
@@ -59,9 +59,9 @@ export function reorderFilesByStrategy(
   // 4. 新しい順序に基づいてファイル配列を再構築
   const reorderedFiles: UnifiedFile[] = []
 
-  newIdealPositions.forEach((pos) => {
-    const targetStudent = sortedStudents[pos.studentIndex]
-    const targetPageNumber = pos.pageIndex + 1
+  newIdealPositions.forEach((idealPosition) => {
+    const targetStudent = sortedStudents[idealPosition.studentIndex]
+    const targetPageNumber = idealPosition.pageIndex + 1
 
     // 現在のファイル配列から対応するファイルを検索
     const matchingFile = actualFiles.find(
@@ -91,9 +91,9 @@ export function buildOrderedFileArrayFromStudentAnswers(
 
   // 生徒のソート（受験生徒順：customOrder準拠）
   const sortedStudents = [...students].sort((studentA, studentB) => {
-    const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-    const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-    return aOrder - bOrder
+    const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+    const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
+    return studentAOrder - studentBOrder
   })
 
   // 配置戦略に基づく理想的な位置順序を計算
@@ -126,9 +126,9 @@ export function buildOrderedFileArrayFromStudentAnswers(
   // 理想的な位置順序に基づいてファイル配列を構築
   const orderedFiles: UnifiedFile[] = []
 
-  idealPositions.forEach((pos) => {
-    const targetStudent = sortedStudents[pos.studentIndex]
-    const targetPageNumber = pos.pageIndex + 1
+  idealPositions.forEach((idealPosition) => {
+    const targetStudent = sortedStudents[idealPosition.studentIndex]
+    const targetPageNumber = idealPosition.pageIndex + 1
 
     // 対応するファイルをDBデータから検索
     const matchingFile = basicFiles.find(

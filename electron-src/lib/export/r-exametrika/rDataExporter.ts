@@ -36,11 +36,11 @@ function toBinary(status: string, studentAbsent: boolean): number | null {
 
 /** CSVセルのエスケープ（カンマ・引用符・改行を含む場合は引用） */
 function csvCell(value: string | number): string {
-  const s = String(value)
-  if (/[",\n]/.test(s)) {
-    return `"${s.replace(/"/g, '""')}"`
+  const text = String(value)
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
   }
-  return s
+  return text
 }
 
 /**

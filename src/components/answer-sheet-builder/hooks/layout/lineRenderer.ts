@@ -188,16 +188,19 @@ export function renderGridDividerLines<
 
   // 隣接セル間の共有辺に区切り線を描画
   for (let i = 0; i < gridCells.length; i++) {
-    const a = gridCells[i]
+    const cellA = gridCells[i]
     for (let j = i + 1; j < gridCells.length; j++) {
-      const b = gridCells[j]
+      const cellB = gridCells[j]
 
-      // 垂直共有辺: aの右端 === bの左端 かつ Y方向にオーバーラップ
-      const aRight = a.x + a.width
-      const bLeft = b.x
+      // 垂直共有辺: cellAの右端 === cellBの左端 かつ Y方向にオーバーラップ
+      const aRight = cellA.x + cellA.width
+      const bLeft = cellB.x
       if (Math.abs(aRight - bLeft) < 1e-9) {
-        const overlapTop = Math.max(a.y, b.y)
-        const overlapBottom = Math.min(a.y + a.height, b.y + b.height)
+        const overlapTop = Math.max(cellA.y, cellB.y)
+        const overlapBottom = Math.min(
+          cellA.y + cellA.height,
+          cellB.y + cellB.height
+        )
         if (overlapBottom > overlapTop + 1e-9) {
           const lineX = areaX + aRight * areaWidth
           lines.push({
@@ -212,12 +215,15 @@ export function renderGridDividerLines<
         }
       }
 
-      // 水平共有辺: aの下端 === bの上端 かつ X方向にオーバーラップ
-      const aBottom = a.y + a.height
-      const bTop = b.y
+      // 水平共有辺: cellAの下端 === cellBの上端 かつ X方向にオーバーラップ
+      const aBottom = cellA.y + cellA.height
+      const bTop = cellB.y
       if (Math.abs(aBottom - bTop) < 1e-9) {
-        const overlapLeft = Math.max(a.x, b.x)
-        const overlapRight = Math.min(a.x + a.width, b.x + b.width)
+        const overlapLeft = Math.max(cellA.x, cellB.x)
+        const overlapRight = Math.min(
+          cellA.x + cellA.width,
+          cellB.x + cellB.width
+        )
         if (overlapRight > overlapLeft + 1e-9) {
           const lineY = areaStartY + aBottom * baseRowHeight
           lines.push({

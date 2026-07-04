@@ -49,7 +49,7 @@ import {
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
 async function createStudents() {
-  const s1 = await testPrisma.student.create({
+  const student1 = await testPrisma.student.create({
     data: {
       studentNumber: "S001",
       lastName: "山田",
@@ -58,7 +58,7 @@ async function createStudents() {
       firstNameKana: "タロウ",
     },
   })
-  const s2 = await testPrisma.student.create({
+  const student2 = await testPrisma.student.create({
     data: {
       studentNumber: "S002",
       lastName: "佐藤",
@@ -67,7 +67,7 @@ async function createStudents() {
       firstNameKana: "ハナコ",
     },
   })
-  return { s1, s2 }
+  return { student1, student2 }
 }
 
 describe("Coursework CRUD", () => {
@@ -125,7 +125,7 @@ describe("Coursework CRUD", () => {
   })
 
   it("点数を一括 upsert・部分更新・取得できる", async () => {
-    const { s1, s2 } = await createStudents()
+    const { student1, student2 } = await createStudents()
     const courseworkResult = await createCoursework({ name: "資料" })
     const item = await createCourseworkItem({
       courseworkId: courseworkResult.coursework!.id,
@@ -137,11 +137,11 @@ describe("Coursework CRUD", () => {
     await batchUpsertCourseworkScores([
       {
         courseworkItemId: itemId,
-        studentId: s1.id,
+        studentId: student1.id,
         score: 85,
         comment: "良い",
       },
-      { courseworkItemId: itemId, studentId: s2.id, score: 70 },
+      { courseworkItemId: itemId, studentId: student2.id, score: 70 },
     ])
 
     let scores = await getCourseworkScoresByItemId(itemId)
@@ -149,34 +149,36 @@ describe("Coursework CRUD", () => {
 
     // 部分更新（adjustment のみ。score/comment は保持）
     await batchUpsertCourseworkScores([
-      { courseworkItemId: itemId, studentId: s1.id, adjustment: -5 },
+      { courseworkItemId: itemId, studentId: student1.id, adjustment: -5 },
     ])
     scores = await getCourseworkScoresByItemId(itemId)
-    const s1Score = scores.scores!.find((score) => score.studentId === s1.id)!
-    expect(Number(s1Score.score)).toBe(85)
-    expect(Number(s1Score.adjustment)).toBe(-5)
-    expect(s1Score.comment).toBe("良い")
+    const student1Score = scores.scores!.find(
+      (score) => score.studentId === student1.id
+    )!
+    expect(Number(student1Score.score)).toBe(85)
+    expect(Number(student1Score.adjustment)).toBe(-5)
+    expect(student1Score.comment).toBe("良い")
   })
 
   it("名簿に生徒を追加・並べ替え・削除できる", async () => {
-    const { s1, s2 } = await createStudents()
+    const { student1, student2 } = await createStudents()
     const courseworkResult = await createCoursework({ name: "資料" })
     const id = courseworkResult.coursework!.id
 
-    const added = await addStudentsToCoursework(id, [s1.id, s2.id])
+    const added = await addStudentsToCoursework(id, [student1.id, student2.id])
     expect(added.addedCount).toBe(2)
 
     let roster = await getCourseworkStudents(id)
     expect(roster.students).toHaveLength(2)
 
     await updateCourseworkStudentOrders(id, [
-      { studentId: s1.id, customOrder: 1 },
-      { studentId: s2.id, customOrder: 0 },
+      { studentId: student1.id, customOrder: 1 },
+      { studentId: student2.id, customOrder: 0 },
     ])
     roster = await getCourseworkStudents(id)
-    expect(roster.students![0].studentId).toBe(s2.id)
+    expect(roster.students![0].studentId).toBe(student2.id)
 
-    const removed = await removeStudentsFromCoursework(id, [s1.id])
+    const removed = await removeStudentsFromCoursework(id, [student1.id])
     expect(removed.removedCount).toBe(1)
     roster = await getCourseworkStudents(id)
     expect(roster.students).toHaveLength(1)
@@ -246,8 +248,8 @@ describe("Coursework CRUD", () => {
       const classB = await testPrisma.classroom.create({
         data: { name: "1年B組", grade: 1 },
       })
-      const { s1, s2 } = await createStudents()
-      const s3 = await testPrisma.student.create({
+      const { student1, student2 } = await createStudents()
+      const student3 = await testPrisma.student.create({
         data: {
           studentNumber: "S003",
           lastName: "鈴木",
@@ -257,17 +259,29 @@ describe("Coursework CRUD", () => {
         },
       })
       await testPrisma.studentClassroomMembership.create({
-        data: { studentId: s1.id, classroomId: classA.id, attendanceNumber: 1 },
+        data: {
+          studentId: student1.id,
+          classroomId: classA.id,
+          attendanceNumber: 1,
+        },
       })
       await testPrisma.studentClassroomMembership.create({
-        data: { studentId: s2.id, classroomId: classA.id, attendanceNumber: 2 },
+        data: {
+          studentId: student2.id,
+          classroomId: classA.id,
+          attendanceNumber: 2,
+        },
       })
       await testPrisma.studentClassroomMembership.create({
-        data: { studentId: s3.id, classroomId: classB.id, attendanceNumber: 1 },
+        data: {
+          studentId: student3.id,
+          classroomId: classB.id,
+          attendanceNumber: 1,
+        },
       })
       await addStudentsFromClassToCoursework(courseworkId, classA.id)
       await addStudentsFromClassToCoursework(courseworkId, classB.id)
-      return { courseworkId, classA, classB, s1, s2, s3 }
+      return { courseworkId, classA, classB, student1, student2, student3 }
     }
 
     it("setCourseworkClassOrders で学級の並び順を更新できる", async () => {

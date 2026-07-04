@@ -188,12 +188,12 @@ export async function resolveStudentLabel(
   studentId: string
 ): Promise<string | null> {
   try {
-    const s = await prisma.student.findUnique({
+    const student = await prisma.student.findUnique({
       where: { id: studentId },
       select: { lastName: true, firstName: true },
     })
-    if (!s) return null
-    return `${s.lastName} ${s.firstName}`.trim()
+    if (!student) return null
+    return `${student.lastName} ${student.firstName}`.trim()
   } catch {
     return null
   }
@@ -202,11 +202,11 @@ export async function resolveStudentLabel(
 /** userId から表示名を解決 */
 export async function resolveUserLabel(userId: string): Promise<string | null> {
   try {
-    const u = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true },
     })
-    return u?.name ?? null
+    return user?.name ?? null
   } catch {
     return null
   }

@@ -62,13 +62,13 @@ describe("監査ログ recordAuditLog", () => {
 
     const page = await getAuditLogs()
     expect(page.total).toBe(1)
-    const e = page.entries[0]
-    expect(e.action).toBe("exam.create")
-    expect(e.category).toBe("exam")
-    expect(e.verb).toBe("create")
-    expect(e.scopeLabel).toBe("数学 期末")
-    expect(e.occurrences).toBe(1)
-    expect(e.summary).toContain("数学 期末")
+    const entry = page.entries[0]
+    expect(entry.action).toBe("exam.create")
+    expect(entry.category).toBe("exam")
+    expect(entry.verb).toBe("create")
+    expect(entry.scopeLabel).toBe("数学 期末")
+    expect(entry.occurrences).toBe(1)
+    expect(entry.summary).toContain("数学 期末")
   })
 
   it("操作者名が userId から解決されて付与される", async () => {

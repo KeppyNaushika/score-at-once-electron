@@ -172,10 +172,10 @@ async function inferDigit(
     let sumExp = 0
 
     for (let i = 0; i < 10; i++) {
-      const v = Math.exp(data[i])
-      sumExp += v
-      if (v > maxVal) {
-        maxVal = v
+      const expValue = Math.exp(data[i])
+      sumExp += expValue
+      if (expValue > maxVal) {
+        maxVal = expValue
         maxIdx = i
       }
     }

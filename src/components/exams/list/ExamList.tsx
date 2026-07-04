@@ -325,9 +325,9 @@ const File = () => {
                         <div className="max-h-28 overflow-y-auto">
                           {allTags
                             .filter(
-                              (t) =>
+                              (tag) =>
                                 !bulkTagInput.trim() ||
-                                t.name
+                                tag.name
                                   .toLowerCase()
                                   .includes(bulkTagInput.trim().toLowerCase())
                             )

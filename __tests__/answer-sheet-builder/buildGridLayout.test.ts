@@ -33,8 +33,8 @@ function simplify(
   }))
 }
 
-function round(n: number): number {
-  return Math.round(n * 10000) / 10000
+function round(value: number): number {
+  return Math.round(value * 10000) / 10000
 }
 
 // ─── parseFraction テスト ───

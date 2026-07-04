@@ -378,7 +378,7 @@ export async function createFullTestExam(
   if (includeStudentAnswerImages) {
     for (const page of pages) {
       for (const student of students) {
-        const sai = await prisma.studentAnswerImage.create({
+        const studentAnswerImage = await prisma.studentAnswerImage.create({
           data: {
             id: randomUUID(),
             examPageId: page.id,
@@ -386,7 +386,7 @@ export async function createFullTestExam(
             imagePath: `exams/${exam.id}/answer-sheets/${student.studentNumber}_page${page.pageNumber}.png`,
           },
         })
-        studentAnswerImages.push(sai)
+        studentAnswerImages.push(studentAnswerImage)
       }
     }
   }
@@ -401,7 +401,7 @@ export async function createFullTestExam(
   if (includeV140Data) {
     // ExamMarkingFormat
     for (const markType of ["correct", "incorrect"]) {
-      const pmf = await prisma.examMarkingFormat.create({
+      const examMarkingFormat = await prisma.examMarkingFormat.create({
         data: {
           id: randomUUID(),
           examId: exam.id,
@@ -410,7 +410,7 @@ export async function createFullTestExam(
           color: markType === "correct" ? "#00ff00" : "#ff0000",
         },
       })
-      examMarkingFormats.push(pmf)
+      examMarkingFormats.push(examMarkingFormat)
     }
 
     // ExamExportSettings
@@ -424,17 +424,18 @@ export async function createFullTestExam(
 
     // CropRegionMarkingOverride（最初のregionに）
     if (cropRegions.length > 0) {
-      const crmo = await prisma.cropRegionMarkingOverride.create({
-        data: {
-          id: randomUUID(),
-          cropRegionId: cropRegions[0].id,
-          markType: "correct",
-          symbol: "◎",
-          color: "#0000ff",
-          visible: true,
-        },
-      })
-      cropRegionMarkingOverrides.push(crmo)
+      const cropRegionMarkingOverride =
+        await prisma.cropRegionMarkingOverride.create({
+          data: {
+            id: randomUUID(),
+            cropRegionId: cropRegions[0].id,
+            markType: "correct",
+            symbol: "◎",
+            color: "#0000ff",
+            visible: true,
+          },
+        })
+      cropRegionMarkingOverrides.push(cropRegionMarkingOverride)
     }
 
     // Tag + TagSubtotalGroup
@@ -515,16 +516,16 @@ export async function createFullTestExam(
       examPageId: masterImage.examPageId,
       imagePath: masterImage.imagePath,
     })),
-    studentAnswerImages: studentAnswerImages.map((sai) => ({
-      id: sai.id,
-      examPageId: sai.examPageId,
-      studentId: sai.studentId,
-      imagePath: sai.imagePath,
+    studentAnswerImages: studentAnswerImages.map((studentAnswerImage) => ({
+      id: studentAnswerImage.id,
+      examPageId: studentAnswerImage.examPageId,
+      studentId: studentAnswerImage.studentId,
+      imagePath: studentAnswerImage.imagePath,
     })),
-    examMarkingFormats: examMarkingFormats.map((pmf) => ({
-      id: pmf.id,
-      examId: pmf.examId,
-      markType: pmf.markType,
+    examMarkingFormats: examMarkingFormats.map((examMarkingFormat) => ({
+      id: examMarkingFormat.id,
+      examId: examMarkingFormat.examId,
+      markType: examMarkingFormat.markType,
     })),
     examExportSettings: examExportSettings
       ? {
@@ -533,11 +534,13 @@ export async function createFullTestExam(
           settingsJson: examExportSettings.settingsJson,
         }
       : null,
-    cropRegionMarkingOverrides: cropRegionMarkingOverrides.map((crmo) => ({
-      id: crmo.id,
-      cropRegionId: crmo.cropRegionId,
-      markType: crmo.markType,
-    })),
+    cropRegionMarkingOverrides: cropRegionMarkingOverrides.map(
+      (cropRegionMarkingOverride) => ({
+        id: cropRegionMarkingOverride.id,
+        cropRegionId: cropRegionMarkingOverride.cropRegionId,
+        markType: cropRegionMarkingOverride.markType,
+      })
+    ),
     tag: tag ? { id: tag.id, name: tag.name } : null,
     tagSubtotalGroup: tagSubtotalGroup
       ? {

@@ -162,29 +162,29 @@ describe("OMR設定の読み書き整合性", () => {
       orderBy: { cropRegion: { orderIndex: "asc" } },
     })
 
-    const exportedOmrConfigs = configs.map((cfg) => ({
-      id: cfg.id,
-      cropRegionId: cfg.cropRegionId,
-      type: cfg.type,
-      numChoices: cfg.numChoices,
-      choiceLayout: cfg.choiceLayout,
-      numDigits: cfg.numDigits,
-      correctAnswer: cfg.correctAnswer,
-      colorThreshold: cfg.colorThreshold,
-      areaThreshold: cfg.areaThreshold,
-      createdAt: cfg.createdAt.toISOString(),
-      updatedAt: cfg.updatedAt.toISOString(),
+    const exportedOmrConfigs = configs.map((config) => ({
+      id: config.id,
+      cropRegionId: config.cropRegionId,
+      type: config.type,
+      numChoices: config.numChoices,
+      choiceLayout: config.choiceLayout,
+      numDigits: config.numDigits,
+      correctAnswer: config.correctAnswer,
+      colorThreshold: config.colorThreshold,
+      areaThreshold: config.areaThreshold,
+      createdAt: config.createdAt.toISOString(),
+      updatedAt: config.updatedAt.toISOString(),
     }))
 
-    const exportedChoiceOptions = configs.flatMap((cfg) =>
-      cfg.choiceOptions.map((opt) => ({
-        id: opt.id,
-        omrConfigId: opt.omrConfigId,
-        choiceIndex: opt.choiceIndex,
-        label: opt.label,
-        isCorrect: opt.isCorrect,
-        createdAt: opt.createdAt.toISOString(),
-        updatedAt: opt.updatedAt.toISOString(),
+    const exportedChoiceOptions = configs.flatMap((config) =>
+      config.choiceOptions.map((choiceOption) => ({
+        id: choiceOption.id,
+        omrConfigId: choiceOption.omrConfigId,
+        choiceIndex: choiceOption.choiceIndex,
+        label: choiceOption.label,
+        isCorrect: choiceOption.isCorrect,
+        createdAt: choiceOption.createdAt.toISOString(),
+        updatedAt: choiceOption.updatedAt.toISOString(),
       }))
     )
 
@@ -211,54 +211,54 @@ describe("OMR設定の読み書き整合性", () => {
       orderBy: { orderIndex: "asc" },
     })
 
-    for (const origCr of originalCropRegions) {
-      const newCr = await prisma.cropRegion.create({
+    for (const originalCropRegion of originalCropRegions) {
+      const newCropRegion = await prisma.cropRegion.create({
         data: {
           examPageId: newPage.id,
-          label: origCr.label,
-          type: origCr.type,
-          x: origCr.x,
-          y: origCr.y,
-          width: origCr.width,
-          height: origCr.height,
-          points: origCr.points,
-          orderIndex: origCr.orderIndex,
+          label: originalCropRegion.label,
+          type: originalCropRegion.type,
+          x: originalCropRegion.x,
+          y: originalCropRegion.y,
+          width: originalCropRegion.width,
+          height: originalCropRegion.height,
+          points: originalCropRegion.points,
+          orderIndex: originalCropRegion.orderIndex,
         },
       })
-      cropRegionIdMap.set(origCr.id, newCr.id)
+      cropRegionIdMap.set(originalCropRegion.id, newCropRegion.id)
     }
 
     // OmrConfig を新IDで作成
-    for (const cfg of exportedOmrConfigs) {
-      const newCropRegionId = cropRegionIdMap.get(cfg.cropRegionId)
+    for (const config of exportedOmrConfigs) {
+      const newCropRegionId = cropRegionIdMap.get(config.cropRegionId)
       if (!newCropRegionId) continue
 
-      const newCfg = await prisma.cropRegionOmrConfig.create({
+      const newConfig = await prisma.cropRegionOmrConfig.create({
         data: {
           cropRegionId: newCropRegionId,
-          type: cfg.type,
-          numChoices: cfg.numChoices,
-          choiceLayout: cfg.choiceLayout,
-          numDigits: cfg.numDigits,
-          correctAnswer: cfg.correctAnswer,
-          colorThreshold: cfg.colorThreshold,
-          areaThreshold: cfg.areaThreshold,
+          type: config.type,
+          numChoices: config.numChoices,
+          choiceLayout: config.choiceLayout,
+          numDigits: config.numDigits,
+          correctAnswer: config.correctAnswer,
+          colorThreshold: config.colorThreshold,
+          areaThreshold: config.areaThreshold,
         },
       })
-      omrConfigIdMap.set(cfg.id, newCfg.id)
+      omrConfigIdMap.set(config.id, newConfig.id)
     }
 
     // ChoiceOption を新IDで作成
-    for (const opt of exportedChoiceOptions) {
-      const newOmrConfigId = omrConfigIdMap.get(opt.omrConfigId)
+    for (const choiceOption of exportedChoiceOptions) {
+      const newOmrConfigId = omrConfigIdMap.get(choiceOption.omrConfigId)
       if (!newOmrConfigId) continue
 
       await prisma.cropRegionOmrChoiceOption.create({
         data: {
           omrConfigId: newOmrConfigId,
-          choiceIndex: opt.choiceIndex,
-          label: opt.label,
-          isCorrect: opt.isCorrect,
+          choiceIndex: choiceOption.choiceIndex,
+          label: choiceOption.label,
+          isCorrect: choiceOption.isCorrect,
         },
       })
     }

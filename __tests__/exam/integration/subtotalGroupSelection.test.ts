@@ -61,32 +61,32 @@ describe("小計グループ出力選択フラグ", () => {
 
   it("初期状態は全フラグ false（空配列）", async () => {
     const { exam } = await createTestData()
-    const sel = await getSubtotalGroupSelection(exam.id)
-    expect(sel.success).toBe(true)
-    expect(sel.tableGroupIds).toEqual([])
-    expect(sel.boxPlotGroupIds).toEqual([])
+    const selection = await getSubtotalGroupSelection(exam.id)
+    expect(selection.success).toBe(true)
+    expect(selection.tableGroupIds).toEqual([])
+    expect(selection.boxPlotGroupIds).toEqual([])
   })
 
   it("set した選択が get で往復する", async () => {
     const { exam, groupIds } = await createTestData()
-    const [g1, g2, g3] = groupIds
+    const [group1Id, group2Id, group3Id] = groupIds
 
-    await setSubtotalGroupSelection(exam.id, [g1, g2], [g3])
+    await setSubtotalGroupSelection(exam.id, [group1Id, group2Id], [group3Id])
 
-    const sel = await getSubtotalGroupSelection(exam.id)
-    expect(sel.tableGroupIds.sort()).toEqual([g1, g2].sort())
-    expect(sel.boxPlotGroupIds).toEqual([g3])
+    const selection = await getSubtotalGroupSelection(exam.id)
+    expect(selection.tableGroupIds.sort()).toEqual([group1Id, group2Id].sort())
+    expect(selection.boxPlotGroupIds).toEqual([group3Id])
   })
 
   it("set は指定外グループのフラグを false にリセットする", async () => {
     const { exam, groupIds } = await createTestData()
-    const [g1, g2] = groupIds
+    const [group1Id, group2Id] = groupIds
 
-    await setSubtotalGroupSelection(exam.id, [g1, g2], [])
-    await setSubtotalGroupSelection(exam.id, [g1], []) // g2 を外す
+    await setSubtotalGroupSelection(exam.id, [group1Id, group2Id], [])
+    await setSubtotalGroupSelection(exam.id, [group1Id], []) // g2 を外す
 
-    const sel = await getSubtotalGroupSelection(exam.id)
-    expect(sel.tableGroupIds).toEqual([g1])
+    const selection = await getSubtotalGroupSelection(exam.id)
+    expect(selection.tableGroupIds).toEqual([group1Id])
   })
 
   it("空配列を set すると全フラグが false になる", async () => {
@@ -94,8 +94,8 @@ describe("小計グループ出力選択フラグ", () => {
     await setSubtotalGroupSelection(exam.id, groupIds, groupIds)
     await setSubtotalGroupSelection(exam.id, [], [])
 
-    const sel = await getSubtotalGroupSelection(exam.id)
-    expect(sel.tableGroupIds).toEqual([])
-    expect(sel.boxPlotGroupIds).toEqual([])
+    const selection = await getSubtotalGroupSelection(exam.id)
+    expect(selection.tableGroupIds).toEqual([])
+    expect(selection.boxPlotGroupIds).toEqual([])
   })
 })

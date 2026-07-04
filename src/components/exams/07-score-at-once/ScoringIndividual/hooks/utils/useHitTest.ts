@@ -150,14 +150,14 @@ export function useHitTestUtils({
       }
 
       // 線分上の最近点のパラメータ t (0-1にクランプ)
-      const t = Math.max(
+      const ratio = Math.max(
         0,
         Math.min(1, ((testX - x1) * dx + (testY - y1) * dy) / lengthSquared)
       )
 
       // 最近点の座標
-      const nearestX = x1 + t * dx
-      const nearestY = y1 + t * dy
+      const nearestX = x1 + ratio * dx
+      const nearestY = y1 + ratio * dy
 
       return distance(testX, testY, nearestX, nearestY)
     },

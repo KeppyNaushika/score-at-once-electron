@@ -37,19 +37,19 @@ export function IndividualReportSettings({
           <OptionCard
             label="点数"
             checked={options.showScore}
-            onChange={(v) => updateOption("showScore", v)}
+            onChange={(value) => updateOption("showScore", value)}
           />
           <OptionCard
             label="学級平均"
             checked={
               options.showAverage === "class" || options.showAverage === "both"
             }
-            onChange={(v) => {
+            onChange={(value) => {
               const showOverall =
                 options.showAverage === "overall" ||
                 options.showAverage === "both"
-              if (v && showOverall) updateOption("showAverage", "both")
-              else if (v) updateOption("showAverage", "class")
+              if (value && showOverall) updateOption("showAverage", "both")
+              else if (value) updateOption("showAverage", "class")
               else if (showOverall) updateOption("showAverage", "overall")
               else updateOption("showAverage", "none")
             }}
@@ -60,12 +60,12 @@ export function IndividualReportSettings({
               options.showAverage === "overall" ||
               options.showAverage === "both"
             }
-            onChange={(v) => {
+            onChange={(value) => {
               const showClass =
                 options.showAverage === "class" ||
                 options.showAverage === "both"
-              if (v && showClass) updateOption("showAverage", "both")
-              else if (v) updateOption("showAverage", "overall")
+              if (value && showClass) updateOption("showAverage", "both")
+              else if (value) updateOption("showAverage", "overall")
               else if (showClass) updateOption("showAverage", "class")
               else updateOption("showAverage", "none")
             }}
@@ -73,7 +73,7 @@ export function IndividualReportSettings({
           <OptionCard
             label="偏差値"
             checked={options.showDeviation}
-            onChange={(v) => updateOption("showDeviation", v)}
+            onChange={(value) => updateOption("showDeviation", value)}
           />
           <OptionCard
             label="学級順位"
@@ -81,13 +81,13 @@ export function IndividualReportSettings({
               options.showRank &&
               (options.rankType === "class" || options.rankType === "both")
             }
-            onChange={(v) => {
+            onChange={(value) => {
               const showOverall =
                 options.showRank &&
                 (options.rankType === "overall" || options.rankType === "both")
-              if (v && showOverall) {
+              if (value && showOverall) {
                 onChange({ ...options, showRank: true, rankType: "both" })
-              } else if (v) {
+              } else if (value) {
                 onChange({ ...options, showRank: true, rankType: "class" })
               } else if (showOverall) {
                 onChange({ ...options, rankType: "overall" })
@@ -102,13 +102,13 @@ export function IndividualReportSettings({
               options.showRank &&
               (options.rankType === "overall" || options.rankType === "both")
             }
-            onChange={(v) => {
+            onChange={(value) => {
               const showClass =
                 options.showRank &&
                 (options.rankType === "class" || options.rankType === "both")
-              if (v && showClass) {
+              if (value && showClass) {
                 onChange({ ...options, showRank: true, rankType: "both" })
-              } else if (v) {
+              } else if (value) {
                 onChange({ ...options, showRank: true, rankType: "overall" })
               } else if (showClass) {
                 onChange({ ...options, rankType: "class" })
@@ -127,10 +127,10 @@ export function IndividualReportSettings({
             <OptionCard
               label="受験"
               checked={options.boxPlotIncludeStatuses.participating}
-              onChange={(v) =>
+              onChange={(value) =>
                 updateOption("boxPlotIncludeStatuses", {
                   ...options.boxPlotIncludeStatuses,
-                  participating: v,
+                  participating: value,
                 })
               }
               variant="sub"
@@ -138,10 +138,10 @@ export function IndividualReportSettings({
             <OptionCard
               label="見込"
               checked={options.boxPlotIncludeStatuses.expected}
-              onChange={(v) =>
+              onChange={(value) =>
                 updateOption("boxPlotIncludeStatuses", {
                   ...options.boxPlotIncludeStatuses,
-                  expected: v,
+                  expected: value,
                 })
               }
               variant="sub"
@@ -149,10 +149,10 @@ export function IndividualReportSettings({
             <OptionCard
               label="欠席"
               checked={options.boxPlotIncludeStatuses.absent}
-              onChange={(v) =>
+              onChange={(value) =>
                 updateOption("boxPlotIncludeStatuses", {
                   ...options.boxPlotIncludeStatuses,
-                  absent: v,
+                  absent: value,
                 })
               }
               variant="sub"
@@ -168,14 +168,14 @@ export function IndividualReportSettings({
           <OptionCard
             label="設問と関連付けのない小計点を非表示"
             checked={options.hideUnassignedSubtotals}
-            onChange={(v) => updateOption("hideUnassignedSubtotals", v)}
+            onChange={(value) => updateOption("hideUnassignedSubtotals", value)}
           />
 
           {/* 小計点の表 */}
           <OptionCardWithChildren
             label="小計点の表"
             checked={options.showSubtotalTable}
-            onChange={(v) => updateOption("showSubtotalTable", v)}
+            onChange={(value) => updateOption("showSubtotalTable", value)}
           >
             {options.showSubtotalTable && (
               <div className="mt-2 flex flex-col gap-4">
@@ -189,7 +189,9 @@ export function IndividualReportSettings({
                 <OptionCard
                   label="グループごとの小計"
                   checked={options.showGroupSubtotals}
-                  onChange={(v) => updateOption("showGroupSubtotals", v)}
+                  onChange={(value) =>
+                    updateOption("showGroupSubtotals", value)
+                  }
                   variant="sub"
                 />
                 <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
@@ -201,13 +203,13 @@ export function IndividualReportSettings({
                     className="h-6 flex-1 text-xs"
                     value={options.subtotalTableColumns}
                     onChange={(e) => {
-                      const v = Math.min(
+                      const value = Math.min(
                         10,
                         Math.max(1, Number(e.target.value))
                       )
                       updateOption(
                         "subtotalTableColumns",
-                        v as SubtotalTableColumns
+                        value as SubtotalTableColumns
                       )
                     }}
                   />
@@ -220,9 +222,9 @@ export function IndividualReportSettings({
                     className="h-6 flex-1 text-xs"
                     value={options.subtotalTableFontSize}
                     onChange={(e) => {
-                      const v = Math.max(1, Number(e.target.value))
-                      if (!isNaN(v)) {
-                        updateOption("subtotalTableFontSize", v)
+                      const value = Math.max(1, Number(e.target.value))
+                      if (!isNaN(value)) {
+                        updateOption("subtotalTableFontSize", value)
                       }
                     }}
                   />
@@ -236,10 +238,10 @@ export function IndividualReportSettings({
           <OptionCardWithChildren
             label="箱ひげ図"
             checked={options.graphOptions.showBoxPlot}
-            onChange={(v) =>
+            onChange={(value) =>
               updateOption("graphOptions", {
                 ...options.graphOptions,
-                showBoxPlot: v,
+                showBoxPlot: value,
               })
             }
           >
@@ -249,10 +251,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="合計点"
                     checked={options.graphOptions.showOverallBoxPlot ?? false}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showOverallBoxPlot: v,
+                        showOverallBoxPlot: value,
                       })
                     }
                     variant="sub"
@@ -269,10 +271,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="最小"
                     checked={options.graphOptions.showBoxPlotMin}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showBoxPlotMin: v,
+                        showBoxPlotMin: value,
                       })
                     }
                     variant="sub"
@@ -280,10 +282,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="Q1"
                     checked={options.graphOptions.showBoxPlotQ1}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showBoxPlotQ1: v,
+                        showBoxPlotQ1: value,
                       })
                     }
                     variant="sub"
@@ -291,10 +293,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="中央値"
                     checked={options.graphOptions.showBoxPlotMedian}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showBoxPlotMedian: v,
+                        showBoxPlotMedian: value,
                       })
                     }
                     variant="sub"
@@ -302,10 +304,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="Q3"
                     checked={options.graphOptions.showBoxPlotQ3}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showBoxPlotQ3: v,
+                        showBoxPlotQ3: value,
                       })
                     }
                     variant="sub"
@@ -313,10 +315,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="最大"
                     checked={options.graphOptions.showBoxPlotMax}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showBoxPlotMax: v,
+                        showBoxPlotMax: value,
                       })
                     }
                     variant="sub"
@@ -324,10 +326,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="平均線"
                     checked={options.graphOptions.showAverageLine}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showAverageLine: v,
+                        showAverageLine: value,
                       })
                     }
                     variant="sub"
@@ -335,10 +337,10 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="あなたの得点"
                     checked={options.graphOptions.showStudentMarker}
-                    onChange={(v) =>
+                    onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showStudentMarker: v,
+                        showStudentMarker: value,
                       })
                     }
                     variant="sub"
@@ -355,14 +357,14 @@ export function IndividualReportSettings({
                       className="h-6 w-16 text-xs"
                       value={options.graphOptions.boxPlotFontSize ?? 11}
                       onChange={(e) => {
-                        const v = Math.min(
+                        const value = Math.min(
                           16,
                           Math.max(6, Number(e.target.value))
                         )
-                        if (!isNaN(v)) {
+                        if (!isNaN(value)) {
                           updateOption("graphOptions", {
                             ...options.graphOptions,
-                            boxPlotFontSize: v,
+                            boxPlotFontSize: value,
                           })
                         }
                       }}
@@ -378,14 +380,14 @@ export function IndividualReportSettings({
                       className="h-6 w-16 text-xs"
                       value={options.graphOptions.boxPlotItemHeight ?? 20}
                       onChange={(e) => {
-                        const v = Math.min(
+                        const value = Math.min(
                           40,
                           Math.max(0, Number(e.target.value))
                         )
-                        if (!isNaN(v)) {
+                        if (!isNaN(value)) {
                           updateOption("graphOptions", {
                             ...options.graphOptions,
-                            boxPlotItemHeight: v,
+                            boxPlotItemHeight: value,
                           })
                         }
                       }}
@@ -405,7 +407,7 @@ export function IndividualReportSettings({
           <OptionCardWithChildren
             label="設問の表"
             checked={options.showQuestionTable}
-            onChange={(v) => updateOption("showQuestionTable", v)}
+            onChange={(value) => updateOption("showQuestionTable", value)}
           >
             {options.showQuestionTable && (
               <div className="mt-2 flex flex-col gap-2">
@@ -413,19 +415,19 @@ export function IndividualReportSettings({
                   <OptionCard
                     label="マルバツ表示"
                     checked={options.showMarks}
-                    onChange={(v) => updateOption("showMarks", v)}
+                    onChange={(value) => updateOption("showMarks", value)}
                     variant="sub"
                   />
                   <OptionCard
                     label="正答率"
                     checked={options.showCorrectRate}
-                    onChange={(v) => updateOption("showCorrectRate", v)}
+                    onChange={(value) => updateOption("showCorrectRate", value)}
                     variant="sub"
                   />
                   <OptionCard
                     label="得点率"
                     checked={options.showScoreRate ?? false}
-                    onChange={(v) => updateOption("showScoreRate", v)}
+                    onChange={(value) => updateOption("showScoreRate", value)}
                     variant="sub"
                   />
                 </div>
@@ -438,13 +440,13 @@ export function IndividualReportSettings({
                     className="h-6 flex-1 text-xs"
                     value={options.questionTableColumns}
                     onChange={(e) => {
-                      const v = Math.min(
+                      const value = Math.min(
                         10,
                         Math.max(1, Number(e.target.value))
                       )
                       updateOption(
                         "questionTableColumns",
-                        v as QuestionTableColumns
+                        value as QuestionTableColumns
                       )
                     }}
                   />
@@ -457,9 +459,9 @@ export function IndividualReportSettings({
                     className="h-6 flex-1 text-xs"
                     value={options.questionTableFontSize}
                     onChange={(e) => {
-                      const v = Math.max(1, Number(e.target.value))
-                      if (!isNaN(v)) {
-                        updateOption("questionTableFontSize", v)
+                      const value = Math.max(1, Number(e.target.value))
+                      if (!isNaN(value)) {
+                        updateOption("questionTableFontSize", value)
                       }
                     }}
                   />
@@ -472,7 +474,7 @@ export function IndividualReportSettings({
           <OptionCardWithChildren
             label="学習アドバイス"
             checked={options.showLearningAdvice}
-            onChange={(v) => updateOption("showLearningAdvice", v)}
+            onChange={(value) => updateOption("showLearningAdvice", value)}
           >
             {options.showLearningAdvice && (
               <div className="mt-2 flex flex-col gap-2">
@@ -566,12 +568,12 @@ export function IndividualReportSettings({
           <OptionCard
             label="コメント欄"
             checked={options.showComment}
-            onChange={(v) => updateOption("showComment", v)}
+            onChange={(value) => updateOption("showComment", value)}
           />
           <OptionCard
             label="署名・押印欄"
             checked={options.showSignature}
-            onChange={(v) => updateOption("showSignature", v)}
+            onChange={(value) => updateOption("showSignature", value)}
           />
         </div>
       </Section>
@@ -625,7 +627,7 @@ function OptionCard({
     >
       <Checkbox
         checked={checked}
-        onCheckedChange={(v) => onChange(v === true)}
+        onCheckedChange={(value) => onChange(value === true)}
         onClick={(e) => e.stopPropagation()}
       />
       <Label className="cursor-pointer text-xs">{label}</Label>
@@ -656,7 +658,7 @@ function OptionCardWithChildren({
       >
         <Checkbox
           checked={checked}
-          onCheckedChange={(v) => onChange(v === true)}
+          onCheckedChange={(value) => onChange(value === true)}
           onClick={(e) => e.stopPropagation()}
         />
         <Label className="cursor-pointer text-xs">{label}</Label>

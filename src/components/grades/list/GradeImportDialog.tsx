@@ -93,7 +93,7 @@ export function GradeImportDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>成績アーカイブのインポート</DialogTitle>
@@ -149,10 +149,10 @@ export function GradeImportDialog({
                     value={
                       effectiveSelections[courseworkMatch.archiveId] ?? "new"
                     }
-                    onValueChange={(v) =>
+                    onValueChange={(value) =>
                       setSelections((prev) => ({
                         ...prev,
-                        [courseworkMatch.archiveId]: v,
+                        [courseworkMatch.archiveId]: value,
                       }))
                     }
                     className="space-y-1"

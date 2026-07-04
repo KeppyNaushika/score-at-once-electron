@@ -78,7 +78,7 @@ export function IndividualReportTab({
           <OptionCardWithChildren
             label="項目別評価"
             checked={options.showItemGrades}
-            onChange={(v) => updateOption("showItemGrades", v)}
+            onChange={(checked) => updateOption("showItemGrades", checked)}
           >
             {options.showItemGrades && (
               <div className="mt-2 flex flex-col gap-2">
@@ -86,10 +86,10 @@ export function IndividualReportTab({
                   <OptionCard
                     label="得点"
                     checked={options.itemGradeColumns.score}
-                    onChange={(v) =>
+                    onChange={(checked) =>
                       updateOption("itemGradeColumns", {
                         ...options.itemGradeColumns,
-                        score: v,
+                        score: checked,
                       })
                     }
                     variant="sub"
@@ -97,10 +97,10 @@ export function IndividualReportTab({
                   <OptionCard
                     label="得点率"
                     checked={options.itemGradeColumns.percentage}
-                    onChange={(v) =>
+                    onChange={(checked) =>
                       updateOption("itemGradeColumns", {
                         ...options.itemGradeColumns,
-                        percentage: v,
+                        percentage: checked,
                       })
                     }
                     variant="sub"
@@ -108,10 +108,10 @@ export function IndividualReportTab({
                   <OptionCard
                     label="評価"
                     checked={options.itemGradeColumns.gradeLabel}
-                    onChange={(v) =>
+                    onChange={(checked) =>
                       updateOption("itemGradeColumns", {
                         ...options.itemGradeColumns,
-                        gradeLabel: v,
+                        gradeLabel: checked,
                       })
                     }
                     variant="sub"
@@ -127,11 +127,11 @@ export function IndividualReportTab({
                       className="h-6 w-16 text-xs"
                       value={options.itemGradeTableColumns}
                       onChange={(e) => {
-                        const v = Math.min(
+                        const columnCount = Math.min(
                           5,
                           Math.max(1, Number(e.target.value))
                         )
-                        updateOption("itemGradeTableColumns", v)
+                        updateOption("itemGradeTableColumns", columnCount)
                       }}
                     />
                   </div>
@@ -143,9 +143,9 @@ export function IndividualReportTab({
                       className="h-6 w-16 text-xs"
                       value={options.itemGradeFontSize}
                       onChange={(e) => {
-                        const v = Math.max(1, Number(e.target.value))
-                        if (!isNaN(v)) {
-                          updateOption("itemGradeFontSize", v)
+                        const fontSize = Math.max(1, Number(e.target.value))
+                        if (!isNaN(fontSize)) {
+                          updateOption("itemGradeFontSize", fontSize)
                         }
                       }}
                     />
@@ -160,7 +160,7 @@ export function IndividualReportTab({
           <OptionCardWithChildren
             label={`${sourceLabel}内訳`}
             checked={options.showSourceBreakdown}
-            onChange={(v) => updateOption("showSourceBreakdown", v)}
+            onChange={(checked) => updateOption("showSourceBreakdown", checked)}
           >
             {options.showSourceBreakdown && (
               <div className="mt-2 flex flex-col gap-2">
@@ -179,10 +179,10 @@ export function IndividualReportTab({
                   <OptionCard
                     label="得点"
                     checked={options.sourceBreakdownColumns.score}
-                    onChange={(v) =>
+                    onChange={(checked) =>
                       updateOption("sourceBreakdownColumns", {
                         ...options.sourceBreakdownColumns,
-                        score: v,
+                        score: checked,
                       })
                     }
                     variant="sub"
@@ -190,10 +190,10 @@ export function IndividualReportTab({
                   <OptionCard
                     label="換算得点"
                     checked={options.sourceBreakdownColumns.weight}
-                    onChange={(v) =>
+                    onChange={(checked) =>
                       updateOption("sourceBreakdownColumns", {
                         ...options.sourceBreakdownColumns,
-                        weight: v,
+                        weight: checked,
                       })
                     }
                     variant="sub"
@@ -201,10 +201,10 @@ export function IndividualReportTab({
                   <OptionCard
                     label="コメント"
                     checked={options.sourceBreakdownColumns.comment}
-                    onChange={(v) =>
+                    onChange={(checked) =>
                       updateOption("sourceBreakdownColumns", {
                         ...options.sourceBreakdownColumns,
-                        comment: v,
+                        comment: checked,
                       })
                     }
                     variant="sub"
@@ -220,11 +220,11 @@ export function IndividualReportTab({
                       className="h-6 w-16 text-xs"
                       value={options.sourceBreakdownTableColumns}
                       onChange={(e) => {
-                        const v = Math.min(
+                        const columnCount = Math.min(
                           5,
                           Math.max(1, Number(e.target.value))
                         )
-                        updateOption("sourceBreakdownTableColumns", v)
+                        updateOption("sourceBreakdownTableColumns", columnCount)
                       }}
                     />
                   </div>
@@ -236,9 +236,9 @@ export function IndividualReportTab({
                       className="h-6 w-16 text-xs"
                       value={options.sourceBreakdownFontSize}
                       onChange={(e) => {
-                        const v = Math.max(1, Number(e.target.value))
-                        if (!isNaN(v)) {
-                          updateOption("sourceBreakdownFontSize", v)
+                        const fontSize = Math.max(1, Number(e.target.value))
+                        if (!isNaN(fontSize)) {
+                          updateOption("sourceBreakdownFontSize", fontSize)
                         }
                       }}
                     />
@@ -257,12 +257,14 @@ export function IndividualReportTab({
           <OptionCard
             label="コメント欄"
             checked={options.showCommentSection}
-            onChange={(v) => updateOption("showCommentSection", v)}
+            onChange={(checked) => updateOption("showCommentSection", checked)}
           />
           <OptionCard
             label="押印欄"
             checked={options.showSignatureSection}
-            onChange={(v) => updateOption("showSignatureSection", v)}
+            onChange={(checked) =>
+              updateOption("showSignatureSection", checked)
+            }
           />
         </div>
       </Section>
@@ -380,7 +382,7 @@ function OptionCard({
     >
       <Checkbox
         checked={checked}
-        onCheckedChange={(v) => onChange(v === true)}
+        onCheckedChange={(checkedState) => onChange(checkedState === true)}
         onClick={(e) => e.stopPropagation()}
       />
       <Label className="cursor-pointer text-xs">{label}</Label>
@@ -411,7 +413,7 @@ function OptionCardWithChildren({
       >
         <Checkbox
           checked={checked}
-          onCheckedChange={(v) => onChange(v === true)}
+          onCheckedChange={(checkedState) => onChange(checkedState === true)}
           onClick={(e) => e.stopPropagation()}
         />
         <Label className="cursor-pointer text-xs">{label}</Label>

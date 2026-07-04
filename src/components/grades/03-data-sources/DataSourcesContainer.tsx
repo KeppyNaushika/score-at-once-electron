@@ -198,7 +198,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
           <div className="flex items-center gap-3">
             <Select
               value={batchMethod}
-              onValueChange={(v) => setBatchMethod(v as AbsentMethod)}
+              onValueChange={(value) => setBatchMethod(value as AbsentMethod)}
             >
               <SelectTrigger className="h-8 w-28 text-xs">
                 <SelectValue />

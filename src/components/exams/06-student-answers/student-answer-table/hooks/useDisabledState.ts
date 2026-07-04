@@ -80,9 +80,9 @@ export function useDisabledState() {
     (students: UnifiedStudent[]) => {
       // 欠席生徒を初期状態で行無効にする（ユーザーが手動で有効化可能）
       const sortedStudents = [...students].sort((studentA, studentB) => {
-        const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-        const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-        return aOrder - bOrder
+        const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+        const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
+        return studentAOrder - studentBOrder
       })
 
       const absentStudentRows = new Set<number>()

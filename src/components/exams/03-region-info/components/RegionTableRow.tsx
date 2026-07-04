@@ -247,7 +247,7 @@ export const RegionTableRow = ({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
-                setOmrExpanded((v) => !v)
+                setOmrExpanded((prev) => !prev)
               }}
               className={`h-7 gap-1 ${hasOmrConfig ? "text-blue-600" : "text-muted-foreground"}`}
             >

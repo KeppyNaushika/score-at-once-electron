@@ -171,9 +171,10 @@ export function ClassRemovalDialog({
 
           <RadioGroup
             value={choice}
-            onValueChange={(v) => {
+            onValueChange={(value) => {
               // as を使わず型ガードで RemovalChoice に絞り込む
-              if (v === "unlink" || v === "delete-students") setChoice(v)
+              if (value === "unlink" || value === "delete-students")
+                setChoice(value)
             }}
             className="gap-3 py-2"
           >

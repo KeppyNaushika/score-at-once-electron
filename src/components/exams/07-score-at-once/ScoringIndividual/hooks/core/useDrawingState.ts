@@ -185,7 +185,11 @@ export function useDrawingState(
         } catch (error) {
           console.error("描画要素保存エラー:", error)
           // 保存に失敗した場合、ローカル状態をロールバック
-          setDrawingElements((prev) => prev.filter((e) => e.id !== element.id))
+          setDrawingElements((prev) =>
+            prev.filter(
+              (candidateElement) => candidateElement.id !== element.id
+            )
+          )
         }
       }
     },

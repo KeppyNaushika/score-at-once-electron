@@ -74,18 +74,22 @@ export function useOmrAutoScoring(examId: string) {
     try {
       const result = await window.electronAPI.omrConfig.getByExam(examId)
       if (result.success && result.configs) {
-        setState((s) => ({ ...s, omrConfigs: result.configs!, error: null }))
+        setState((prev) => ({
+          ...prev,
+          omrConfigs: result.configs!,
+          error: null,
+        }))
         return result.configs
       }
-      setState((s) => ({
-        ...s,
+      setState((prev) => ({
+        ...prev,
         omrConfigs: [],
         error: result.error ?? "OMR設定が見つかりません",
       }))
       return []
     } catch (error) {
-      setState((s) => ({
-        ...s,
+      setState((prev) => ({
+        ...prev,
         error: error instanceof Error ? error.message : "OMR設定の取得に失敗",
       }))
       return []
@@ -100,7 +104,7 @@ export function useOmrAutoScoring(examId: string) {
   /** バッチ進捗リスナー */
   useEffect(() => {
     const unsubscribe = window.electronAPI.omr.onBatchProgress((progress) => {
-      setState((s) => ({ ...s, progress }))
+      setState((prev) => ({ ...prev, progress }))
     })
     return unsubscribe
   }, [])
@@ -110,8 +114,8 @@ export function useOmrAutoScoring(examId: string) {
    * CropRegionOmrConfigからOMRCellConfigへの変換→バッチ認識→自動採点
    */
   const runRecognition = useCallback(async () => {
-    setState((s) => ({
-      ...s,
+    setState((prev) => ({
+      ...prev,
       isRecognizing: true,
       sheetResults: [],
       scoreEntries: new Map(),
@@ -124,8 +128,8 @@ export function useOmrAutoScoring(examId: string) {
       // 1. OMR設定を取得
       const configs = await loadOmrConfigs()
       if (configs.length === 0) {
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isRecognizing: false,
           error: "OMR設定がありません",
         }))
@@ -136,8 +140,8 @@ export function useOmrAutoScoring(examId: string) {
       const markerResult =
         await window.electronAPI.omr.detectMasterMarkers(examId)
       if (!markerResult.success || markerResult.pages.length === 0) {
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isRecognizing: false,
           error: markerResult.error ?? "マーカーを検出できませんでした",
         }))
@@ -179,8 +183,8 @@ export function useOmrAutoScoring(examId: string) {
       // ページ1のみ対応（OMR設定はページ1前提）
       const page1 = markerResult.pages.find((page) => page.pageNumber === 1)
       if (!page1 || !page1.result.success) {
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isRecognizing: false,
           error: "ページ1のマーカーが検出できません",
         }))
@@ -218,8 +222,8 @@ export function useOmrAutoScoring(examId: string) {
         (cropRegion) => cropRegion.examPage?.pageNumber === 1
       )
       if (page1Regions.length === 0) {
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isRecognizing: false,
           error: "ページ1の領域が見つかりません",
         }))
@@ -236,8 +240,8 @@ export function useOmrAutoScoring(examId: string) {
       )
 
       if (answerImages.length === 0) {
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isRecognizing: false,
           error: "答案画像が見つかりません",
         }))
@@ -312,8 +316,8 @@ export function useOmrAutoScoring(examId: string) {
       // 推奨閾値を算出
       const recommended = recommendAreaThreshold(results)
 
-      setState((s) => ({
-        ...s,
+      setState((prev) => ({
+        ...prev,
         isRecognizing: false,
         sheetResults: updatedSheetResults,
         originalSheetResults: results,
@@ -325,8 +329,8 @@ export function useOmrAutoScoring(examId: string) {
         recommendedAreaThreshold: recommended,
       }))
     } catch (error) {
-      setState((s) => ({
-        ...s,
+      setState((prev) => ({
+        ...prev,
         isRecognizing: false,
         error: error instanceof Error ? error.message : "OMR認識に失敗しました",
       }))
@@ -338,7 +342,7 @@ export function useOmrAutoScoring(examId: string) {
    */
   const applyScores = useCallback(
     async (userId: string) => {
-      setState((s) => ({ ...s, isApplying: true, error: null }))
+      setState((prev) => ({ ...prev, isApplying: true, error: null }))
       try {
         const entries: Array<{
           studentId: string
@@ -361,8 +365,8 @@ export function useOmrAutoScoring(examId: string) {
         }
 
         if (entries.length === 0) {
-          setState((s) => ({
-            ...s,
+          setState((prev) => ({
+            ...prev,
             isApplying: false,
             error: "反映する採点データがありません",
           }))
@@ -373,19 +377,19 @@ export function useOmrAutoScoring(examId: string) {
           await window.electronAPI.batchUpdateQuestionScores(entries)
 
         if (result.success) {
-          setState((s) => ({ ...s, isApplying: false }))
+          setState((prev) => ({ ...prev, isApplying: false }))
           return true
         }
 
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isApplying: false,
           error: result.error ?? "採点反映に失敗しました",
         }))
         return false
       } catch (error) {
-        setState((s) => ({
-          ...s,
+        setState((prev) => ({
+          ...prev,
           isApplying: false,
           error:
             error instanceof Error ? error.message : "採点反映に失敗しました",
@@ -408,8 +412,8 @@ export function useOmrAutoScoring(examId: string) {
           areaThreshold: newThreshold,
           confidenceThreshold: state.confidenceThreshold,
         })
-      setState((s) => ({
-        ...s,
+      setState((prev) => ({
+        ...prev,
         areaThreshold: newThreshold,
         sheetResults: updatedSheetResults,
         scoreEntries,
@@ -436,8 +440,8 @@ export function useOmrAutoScoring(examId: string) {
           areaThreshold: state.areaThreshold,
           confidenceThreshold: newThreshold,
         })
-      setState((s) => ({
-        ...s,
+      setState((prev) => ({
+        ...prev,
         confidenceThreshold: newThreshold,
         sheetResults: updatedSheetResults,
         scoreEntries,
@@ -552,21 +556,21 @@ function computeBubblesFromRegion(
   region: CropRegionWithDetails,
   config: OMRCellConfig & { type: "choice" }
 ): ComputedOMRBubble[] {
-  const n = config.numChoices
+  const numChoices = config.numChoices
   const bubbles: ComputedOMRBubble[] = []
 
   // バブルサイズ: 間隔の60%幅、高さは領域高さの70%（実際の印刷バブルに近似）
   const spacing =
     config.layout === "horizontal"
-      ? region.width / (n + 1)
-      : region.height / (n + 1)
+      ? region.width / (numChoices + 1)
+      : region.height / (numChoices + 1)
   const bubbleW = spacing * 0.6
   const bubbleH = Math.min(bubbleW * 1.6, region.height * 0.7)
 
   if (config.layout === "horizontal") {
-    const spacing = region.width / (n + 1)
+    const spacing = region.width / (numChoices + 1)
     const cy = region.y + region.height / 2
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < numChoices; i++) {
       bubbles.push({
         normalizedCx: region.x + spacing * (i + 1),
         normalizedCy: cy,
@@ -577,9 +581,9 @@ function computeBubblesFromRegion(
       })
     }
   } else {
-    const spacing = region.height / (n + 1)
+    const spacing = region.height / (numChoices + 1)
     const cx = region.x + region.width / 2
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < numChoices; i++) {
       bubbles.push({
         normalizedCx: cx,
         normalizedCy: region.y + spacing * (i + 1),
@@ -599,14 +603,14 @@ function computeDigitBoxesFromRegion(
   region: CropRegionWithDetails,
   config: OMRCellConfig & { type: "handwritten-digit" }
 ): ComputedOMRDigitBox[] {
-  const n = config.numDigits
+  const numDigits = config.numDigits
   const boxH = region.height * 0.8
-  const boxW = Math.min(boxH, region.width / (n + 0.5))
-  const totalW = boxW * n
+  const boxW = Math.min(boxH, region.width / (numDigits + 0.5))
+  const totalW = boxW * numDigits
   const startX = region.x + (region.width - totalW) / 2
   const startY = region.y + (region.height - boxH) / 2
 
-  return Array.from({ length: n }, (_, i) => ({
+  return Array.from({ length: numDigits }, (_, i) => ({
     normalizedX: startX + boxW * i,
     normalizedY: startY,
     normalizedW: boxW,

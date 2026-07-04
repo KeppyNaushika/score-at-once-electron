@@ -291,15 +291,15 @@ export async function seedStudents(): Promise<string[]> {
   const db = getPrisma()
   const ids: string[] = []
   for (let i = 0; i < STUDENT_DATA.length; i++) {
-    const s = STUDENT_DATA[i]
+    const studentData = STUDENT_DATA[i]
     const student = await db.student.create({
       data: {
         id: randomUUID(),
         studentNumber: `S${String(i + 1).padStart(3, "0")}`,
-        lastName: s.lastName,
-        firstName: s.firstName,
-        lastNameKana: s.lastNameKana,
-        firstNameKana: s.firstNameKana,
+        lastName: studentData.lastName,
+        firstName: studentData.firstName,
+        lastNameKana: studentData.lastNameKana,
+        firstNameKana: studentData.firstNameKana,
         enrollmentYear: 2025,
       },
     })
@@ -655,13 +655,13 @@ export async function seedGradeProject(
     { label: "D", minPercentage: 35 },
     { label: "E", minPercentage: 0 },
   ]
-  for (const giId of gradeItemIds) {
+  for (const gradeItemId of gradeItemIds) {
     const boundarySet = await db.gradeBoundarySet.create({
       data: {
         id: randomUUID(),
         gradeId,
         targetType: "grade_item",
-        gradeItemId: giId,
+        gradeItemId,
       },
     })
     for (
@@ -680,7 +680,7 @@ export async function seedGradeProject(
       })
     }
   }
-  const overallBS = await db.gradeBoundarySet.create({
+  const overallBoundarySet = await db.gradeBoundarySet.create({
     data: { id: randomUUID(), gradeId, targetType: "overall" },
   })
   for (
@@ -691,7 +691,7 @@ export async function seedGradeProject(
     await db.gradeBoundary.create({
       data: {
         id: randomUUID(),
-        gradeBoundarySetId: overallBS.id,
+        gradeBoundarySetId: overallBoundarySet.id,
         label: boundaryLabels[boundaryIndex].label,
         minPercentage: boundaryLabels[boundaryIndex].minPercentage,
         order: boundaryIndex,

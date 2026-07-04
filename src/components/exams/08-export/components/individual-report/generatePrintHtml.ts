@@ -205,7 +205,10 @@ function renderSectionElement(
           ? allocateColumnsDHondt(groupedData, columns).get(group.groupId) || 1
           : columns
         const columnItems = splitItemsIntoColumns(group.items, allocatedColumns)
-        const maxRows = Math.max(...columnItems.map((col) => col.length), 0)
+        const maxRows = Math.max(
+          ...columnItems.map((column) => column.length),
+          0
+        )
         return {
           groupId: group.groupId,
           groupName: group.groupName,

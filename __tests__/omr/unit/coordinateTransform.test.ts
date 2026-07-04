@@ -42,21 +42,21 @@ describe("coordinateTransform", () => {
     )
 
     it("正規化座標0,0を正しく変換できる", () => {
-      const p = normalizedToPixel(0, 0, transform)
-      expect(p.x).toBeCloseTo(0, 0)
-      expect(p.y).toBeCloseTo(0, 0)
+      const point = normalizedToPixel(0, 0, transform)
+      expect(point.x).toBeCloseTo(0, 0)
+      expect(point.y).toBeCloseTo(0, 0)
     })
 
     it("正規化座標1,1を正しく変換できる", () => {
-      const p = normalizedToPixel(1, 1, transform)
-      expect(p.x).toBeCloseTo(imageWidth, 0)
-      expect(p.y).toBeCloseTo(imageHeight, 0)
+      const point = normalizedToPixel(1, 1, transform)
+      expect(point.x).toBeCloseTo(imageWidth, 0)
+      expect(point.y).toBeCloseTo(imageHeight, 0)
     })
 
     it("正規化座標0.5,0.5を正しく変換できる（中心）", () => {
-      const p = normalizedToPixel(0.5, 0.5, transform)
-      expect(p.x).toBeCloseTo(imageWidth / 2, 0)
-      expect(p.y).toBeCloseTo(imageHeight / 2, 0)
+      const point = normalizedToPixel(0.5, 0.5, transform)
+      expect(point.x).toBeCloseTo(imageWidth / 2, 0)
+      expect(point.y).toBeCloseTo(imageHeight / 2, 0)
     })
 
     it("任意の正規化座標を誤差2px以内で変換できる", () => {
@@ -68,11 +68,11 @@ describe("coordinateTransform", () => {
       ]
 
       for (const { nx, ny } of testPoints) {
-        const p = normalizedToPixel(nx, ny, transform)
+        const point = normalizedToPixel(nx, ny, transform)
         const expectedX = nx * imageWidth
         const expectedY = ny * imageHeight
-        expect(Math.abs(p.x - expectedX)).toBeLessThan(2)
-        expect(Math.abs(p.y - expectedY)).toBeLessThan(2)
+        expect(Math.abs(point.x - expectedX)).toBeLessThan(2)
+        expect(Math.abs(point.y - expectedY)).toBeLessThan(2)
       }
     })
   })
@@ -97,13 +97,13 @@ describe("coordinateTransform", () => {
     it("変換結果が検出コーナー付近に収まる", () => {
       // 期待コーナーの正規化座標を変換すると、検出コーナーに近い値になるべき
       for (let i = 0; i < 4; i++) {
-        const p = normalizedToPixel(
+        const point = normalizedToPixel(
           expectedCorners[i].x,
           expectedCorners[i].y,
           transform
         )
-        expect(Math.abs(p.x - skewedCorners[i].x)).toBeLessThan(2)
-        expect(Math.abs(p.y - skewedCorners[i].y)).toBeLessThan(2)
+        expect(Math.abs(point.x - skewedCorners[i].x)).toBeLessThan(2)
+        expect(Math.abs(point.y - skewedCorners[i].y)).toBeLessThan(2)
       }
     })
 

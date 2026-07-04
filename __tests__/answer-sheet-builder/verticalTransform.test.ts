@@ -38,17 +38,17 @@ describe("transposeRect", () => {
   })
 
   it("面積は保存される", () => {
-    const r = transposeRect(5, 7, 11, 13, W)
-    expect(r.w * r.h).toBe(11 * 13)
+    const rect = transposeRect(5, 7, 11, 13, W)
+    expect(rect.w * rect.h).toBe(11 * 13)
   })
 
   it("論理ページ右下端の矩形が実座標内に収まる", () => {
     // 論理ページは幅高さ入れ替え (LW=H, LH=W)。論理の右下隅 (LW, LH)=(297,210)
-    const r = transposeRect(H - 10, W - 10, 10, 10, W)
-    expect(r.x).toBeGreaterThanOrEqual(0)
-    expect(r.y).toBeGreaterThanOrEqual(0)
-    expect(r.x + r.w).toBeLessThanOrEqual(W + 1e-9)
-    expect(r.y + r.h).toBeLessThanOrEqual(H + 1e-9)
+    const rect = transposeRect(H - 10, W - 10, 10, 10, W)
+    expect(rect.x).toBeGreaterThanOrEqual(0)
+    expect(rect.y).toBeGreaterThanOrEqual(0)
+    expect(rect.x + rect.w).toBeLessThanOrEqual(W + 1e-9)
+    expect(rect.y + rect.h).toBeLessThanOrEqual(H + 1e-9)
   })
 })
 
@@ -95,16 +95,16 @@ describe("transformLayoutToVertical", () => {
 
   it("セルの normalized は変換後の実座標で再計算され [0,1] に収まる", () => {
     const out = transformLayoutToVertical(makeLayout([makeCell()]), W, H)
-    const c = out.cells[0]
-    expect(c.normalizedX).toBeCloseTo(c.x / W)
-    expect(c.normalizedY).toBeCloseTo(c.y / H)
-    expect(c.normalizedW).toBeCloseTo(c.width / W)
-    expect(c.normalizedH).toBeCloseTo(c.height / H)
+    const cell = out.cells[0]
+    expect(cell.normalizedX).toBeCloseTo(cell.x / W)
+    expect(cell.normalizedY).toBeCloseTo(cell.y / H)
+    expect(cell.normalizedW).toBeCloseTo(cell.width / W)
+    expect(cell.normalizedH).toBeCloseTo(cell.height / H)
     for (const normalized of [
-      c.normalizedX,
-      c.normalizedY,
-      c.normalizedW,
-      c.normalizedH,
+      cell.normalizedX,
+      cell.normalizedY,
+      cell.normalizedW,
+      cell.normalizedH,
     ]) {
       expect(normalized).toBeGreaterThanOrEqual(0)
       expect(normalized).toBeLessThanOrEqual(1)
@@ -136,22 +136,22 @@ describe("transformLayoutToVertical", () => {
       },
     })
     const out = transformLayoutToVertical(makeLayout([cell]), W, H)
-    const g = out.cells[0].manuscriptGrid!
-    expect(g.columns).toBe(5)
-    expect(g.rows).toBe(20)
-    expect(g.vertical).toBe(true)
-    expect(g.cellSizeMm).toBe(8)
+    const grid = out.cells[0].manuscriptGrid!
+    expect(grid.columns).toBe(5)
+    expect(grid.rows).toBe(20)
+    expect(grid.vertical).toBe(true)
+    expect(grid.cellSizeMm).toBe(8)
     // 矩形の幅高さも入れ替わる
-    expect(g.gridWidth).toBe(40)
-    expect(g.gridHeight).toBe(160)
+    expect(grid.gridWidth).toBe(40)
+    expect(grid.gridHeight).toBe(160)
     // 罫線スタイル・ガイドは方向セマンティック/atChar基準のため転置不変で素通り
-    expect(g.charDividerStyle).toBe("dashed")
-    expect(g.lineDividerStyle).toBe("solid")
-    expect(g.charGuides).toEqual([
+    expect(grid.charDividerStyle).toBe("dashed")
+    expect(grid.lineDividerStyle).toBe("solid")
+    expect(grid.charGuides).toEqual([
       { atChar: 80, label: "80" },
       { atChar: 100, label: "", boundary: "solid" },
     ])
-    expect(g.guidePosition).toBe("bottom-left")
+    expect(grid.guidePosition).toBe("bottom-left")
   })
 
   it("OMRマーカーは矩形変換で四隅アンカーが保たれ用紙内に収まる", () => {
@@ -202,11 +202,11 @@ describe("transformLayoutToVertical", () => {
       ],
     })
     const out = transformLayoutToVertical(makeLayout([cell]), W, H)
-    const b = out.cells[0].omrBubbles![0]
-    expect(b.normalizedCx).toBeCloseTo(1 - 0.1)
-    expect(b.normalizedCy).toBeCloseTo(0.25)
-    expect(b.normalizedWidth).toBeCloseTo(0.032)
-    expect(b.normalizedHeight).toBeCloseTo(0.02)
+    const bubble = out.cells[0].omrBubbles![0]
+    expect(bubble.normalizedCx).toBeCloseTo(1 - 0.1)
+    expect(bubble.normalizedCy).toBeCloseTo(0.25)
+    expect(bubble.normalizedWidth).toBeCloseTo(0.032)
+    expect(bubble.normalizedHeight).toBeCloseTo(0.02)
   })
 })
 
