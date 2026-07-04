@@ -9,7 +9,7 @@ const MARK_TYPES = [
   "correct",
   "incorrect",
   "partial",
-  "hold",
+  "pending",
   "unscored",
 ] as const
 type MarkType = (typeof MARK_TYPES)[number]
@@ -54,14 +54,13 @@ export function useScoringMarks({
  */
 export function getScoringMarkKey(status: string): MarkType | null {
   switch (status) {
-    case "pending":
-      return "hold"
     case "no_answer":
     case "double_mark":
       return "incorrect"
     case "correct":
     case "incorrect":
     case "partial":
+    case "pending":
       return status as MarkType
     default:
       return null

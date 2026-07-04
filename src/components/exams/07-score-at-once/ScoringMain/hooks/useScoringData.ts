@@ -1,3 +1,4 @@
+import type { QuestionScore } from "@prisma/client"
 import { useCallback, useState } from "react"
 
 import { useBatchScoring } from "@/components/exams/07-score-at-once/ScoringData/hooks/useBatchScoring"
@@ -7,7 +8,6 @@ import type {
 } from "@/components/exams/07-score-at-once/ScoringData/types/scoringDataTypes"
 import { loadQuestionScores } from "@/components/exams/07-score-at-once/ScoringData/utils/dataLoader"
 import { calculateQuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/utils/progressCalculator"
-import { type QuestionScore } from "@/components/exams/07-score-at-once/types"
 
 interface UseScoringDataProps {
   currentUserId: string | null

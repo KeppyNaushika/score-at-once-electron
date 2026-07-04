@@ -167,7 +167,7 @@ function setQuestionCells(
           score.score !== null && score.score !== undefined ? score.score : 0
       }
       // 部分点・保留の場合は赤色に設定
-      if (score.status === "partial" || score.status === "hold") {
+      if (score.status === "partial" || score.status === "pending") {
         cell.font = { color: { argb: "FFFF0000" } }
       }
     } else {
@@ -184,7 +184,7 @@ function setQuestionCells(
         cell.value = statusSymbol || ""
       }
       // 部分点・保留の場合は赤色に設定
-      if (score.status === "partial" || score.status === "hold") {
+      if (score.status === "partial" || score.status === "pending") {
         cell.font = { color: { argb: "FFFF0000" } }
       }
     }

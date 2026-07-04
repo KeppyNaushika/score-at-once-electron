@@ -871,12 +871,10 @@ export async function renderAnswerSheetToCanvas(
     } else {
       // 採点マーク画像の取得
       const markKey =
-        scoringData.status === "pending"
-          ? "hold"
-          : scoringData.status === "no_answer" ||
-              scoringData.status === "double_mark"
-            ? "incorrect"
-            : scoringData.status
+        scoringData.status === "no_answer" ||
+        scoringData.status === "double_mark"
+          ? "incorrect"
+          : scoringData.status
       const markImage = scoringMarkImages.get(markKey)
 
       if (markImage) {
@@ -987,7 +985,7 @@ export async function renderAnswerSheetToCanvas(
 export async function preloadScoringMarkImages(): Promise<
   Map<string, HTMLImageElement>
 > {
-  const markTypes = ["correct", "partial", "hold", "incorrect"]
+  const markTypes = ["correct", "partial", "pending", "incorrect"]
   const images = new Map<string, HTMLImageElement>()
 
   await Promise.all(

@@ -14,7 +14,6 @@ import type {
 import type {
   CropRegionWithExamPage,
   ScoringData,
-  ScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
 import type {
   MarkPosition,
@@ -23,6 +22,7 @@ import type {
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   clearSvgCache,
@@ -439,7 +439,7 @@ export function useCanvasDrawing({
           )
           drawCropRegionMark(
             currentCropRegion,
-            currentStatus as ScoringStatus,
+            currentStatus,
             true,
             currentRegionData?.actualScore ?? null
           )

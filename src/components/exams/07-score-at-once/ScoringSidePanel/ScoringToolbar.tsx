@@ -28,7 +28,6 @@ import type {
 import type {
   MouseBrushAction,
   ScoringOperationMode,
-  ScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,7 +48,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
-import type { ScoringStatusType } from "@/lib/scoringStatusColors"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { SidePanelSection } from "./SidePanelSection"
 
@@ -96,7 +95,7 @@ interface ScoringToolbarProps {
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
 }
 
-const STATUS_MAP: Record<ScoringStatus, ScoringStatusType> = {
+const STATUS_MAP: Record<ScoringStatus, ScoringStatus> = {
   unscored: "unscored",
   correct: "correct",
   partial: "partial",
@@ -108,43 +107,43 @@ const STATUS_MAP: Record<ScoringStatus, ScoringStatusType> = {
 
 const SCORING_BUTTONS = [
   {
-    status: "unscored" as ScoringStatus,
+    status: "unscored",
     label: "未採点",
     icon: Circle,
     description: "未採点にする",
   },
   {
-    status: "correct" as ScoringStatus,
+    status: "correct",
     label: "正答",
     icon: CheckCircle,
     description: "正答にする",
   },
   {
-    status: "partial" as ScoringStatus,
+    status: "partial",
     label: "部分点",
     icon: AlertTriangle,
     description: "部分点にする",
   },
   {
-    status: "pending" as ScoringStatus,
+    status: "pending",
     label: "保留",
     icon: Clock,
     description: "保留にする",
   },
   {
-    status: "incorrect" as ScoringStatus,
+    status: "incorrect",
     label: "誤答",
     icon: X,
     description: "誤答にする",
   },
   {
-    status: "no_answer" as ScoringStatus,
+    status: "no_answer",
     label: "無答",
     icon: Minus,
     description: "無答にする",
   },
   {
-    status: "double_mark" as ScoringStatus,
+    status: "double_mark",
     label: "Wマーク",
     icon: CopyX,
     description: "ダブルマークにする",
@@ -327,9 +326,7 @@ export default function ScoringToolbar({
                           ? { bg: "#e5e7eb", text: "#374151" }
                           : button.status === "partial_modal"
                             ? scoringColors[STATUS_MAP.partial]
-                            : scoringColors[
-                                STATUS_MAP[button.status as ScoringStatus]
-                              ]
+                            : scoringColors[STATUS_MAP[button.status]]
                       const isActive = mouseBrush === button.status
                       return (
                         <Tooltip key={button.status}>

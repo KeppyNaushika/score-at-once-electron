@@ -33,10 +33,7 @@ import {
   ScoringLoadingState,
 } from "@/components/exams/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
-import type {
-  MouseBrushAction,
-  ScoringStatus,
-} from "@/components/exams/07-score-at-once/types"
+import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
@@ -414,7 +411,7 @@ function ScoringMainViewContent() {
 
       // 採点ステータスを直接適用
       const targetSet = new Set([answerId])
-      handleBatchScore(action as ScoringStatus, null, null, targetSet)
+      handleBatchScore(action, null, null, targetSet)
       setRecentlyScoredAnswers((prev) => {
         const newSet = new Set(prev)
         newSet.add(answerId)
@@ -451,7 +448,7 @@ function ScoringMainViewContent() {
         )
         if (currentData?.status === status) {
           const targetSet = new Set([answerId])
-          handleBatchScore("unscored" as ScoringStatus, null, null, targetSet)
+          handleBatchScore("unscored", null, null, targetSet)
           setRecentlyScoredAnswers((prev) => {
             const newSet = new Set(prev)
             newSet.add(answerId)
@@ -462,7 +459,7 @@ function ScoringMainViewContent() {
       }
 
       const targetSet = new Set([answerId])
-      handleBatchScore(status as ScoringStatus, null, null, targetSet)
+      handleBatchScore(status, null, null, targetSet)
       setRecentlyScoredAnswers((prev) => {
         const newSet = new Set(prev)
         newSet.add(answerId)
@@ -490,7 +487,7 @@ function ScoringMainViewContent() {
       const targetSet = new Set(
         unscoredVisible.map((scoringData) => scoringData.id)
       )
-      handleBatchScore(status as ScoringStatus, null, null, targetSet)
+      handleBatchScore(status, null, null, targetSet)
       setRecentlyScoredAnswers((prev) => {
         const newSet = new Set(prev)
         unscoredVisible.forEach((scoringData) => newSet.add(scoringData.id))

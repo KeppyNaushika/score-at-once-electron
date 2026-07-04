@@ -1,12 +1,4 @@
-// 採点状態の型定義
-export type ScoringStatus =
-  | "unscored" // 未採点
-  | "correct" // 正答
-  | "incorrect" // 誤答
-  | "partial" // 部分点
-  | "pending" // 処理中
-  | "no_answer" // 無答
-  | "double_mark" // ダブルマーク
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // 位置の型定義
 export type MarkPosition =

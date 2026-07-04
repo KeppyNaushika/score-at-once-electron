@@ -19,7 +19,6 @@ import {
   SCORING_STATUS_LABELS,
   SCORING_STATUS_ORDER,
   type ScoringStatusColors,
-  type ScoringStatusType,
 } from "@/lib/scoringStatusColors"
 import {
   parsePreference,
@@ -27,6 +26,7 @@ import {
   USER_PREFERENCE_SCHEMA,
 } from "@/lib/userPreferences"
 import { cn } from "@/lib/utils"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316"
 const SELECTION_BORDER_PRESETS = [
@@ -219,7 +219,7 @@ export function DisplaySettingsTab() {
   // 個別の色変更
   const handleStatusColorChange = useCallback(
     async (
-      status: ScoringStatusType,
+      status: ScoringStatus,
       type: "bg" | "text" | "icon",
       color: string
     ) => {

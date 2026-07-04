@@ -1,20 +1,9 @@
-// Import and re-export from student-answer.types for consistency
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   PendingChange,
-  PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-  UploadData,
 } from "@/components/exams/06-student-answers/types"
-
-export type {
-  PendingChange,
-  PlacementStrategy,
-  UnifiedFile,
-  UnifiedStudent,
-  UploadData,
-}
 
 // Processed student answer format for component compatibility
 export interface ProcessedStudentAnswer {

@@ -1,7 +1,8 @@
 // Prisma型をインポート
+import type { QuestionScore } from "@prisma/client"
+
 import type {
   CropRegionWithExamPage,
-  QuestionScore,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"

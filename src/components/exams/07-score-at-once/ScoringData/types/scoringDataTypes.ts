@@ -1,9 +1,10 @@
+import type { QuestionScore } from "@prisma/client"
+
 import type {
   CropRegionWithExamPage,
-  QuestionScore,
-  ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 export interface QuestionProgress {
   [questionId: string]: {

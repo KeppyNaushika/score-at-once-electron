@@ -1,4 +1,5 @@
-import type { QuestionScore } from "@/components/exams/07-score-at-once/types"
+import type { QuestionScore } from "@prisma/client"
+
 import { decimalToNumber } from "@/components/exams/07-score-at-once/types"
 
 /**

@@ -1,5 +1,7 @@
 // Excel・PDF出力で共通的に使用される型定義
 
+import type { ScoringStatus } from "@/types/scoringStatus.types"
+
 export interface ExportGradingDataOptions {
   examId: string
   selectedStudentIds: string[]
@@ -57,14 +59,7 @@ export interface ScoreDetail {
   shimon?: string
   score: number | null
   maxScore: number
-  status:
-    | "unscored"
-    | "correct"
-    | "partial"
-    | "hold"
-    | "incorrect"
-    | "no_answer"
-    | "double_mark"
+  status: ScoringStatus
 }
 
 export interface ExportResult {

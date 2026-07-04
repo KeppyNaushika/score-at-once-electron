@@ -2,19 +2,14 @@
 
 import { useEffect, useRef, useState } from "react"
 
+import type { ScoringStatus } from "@/types/scoringStatus.types"
+
 interface ExcelPreviewScore {
   questionId: string
   questionLabel: string
   score: number | null
   maxScore: number
-  status:
-    | "unscored"
-    | "correct"
-    | "partial"
-    | "hold"
-    | "incorrect"
-    | "no_answer"
-    | "double_mark"
+  status: ScoringStatus
 }
 
 interface ExcelPreviewSubtotalScore {

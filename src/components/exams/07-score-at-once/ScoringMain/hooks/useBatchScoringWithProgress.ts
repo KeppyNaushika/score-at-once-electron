@@ -4,8 +4,8 @@ import type { ScoringBehavior } from "@/components/exams/07-score-at-once/Scorin
 import type {
   GradingMode,
   ScoringData,
-  ScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /** ScoringDataに選択状態を追加した型 */
 type ScoringDataWithSelection = ScoringData & { isSelected: boolean }

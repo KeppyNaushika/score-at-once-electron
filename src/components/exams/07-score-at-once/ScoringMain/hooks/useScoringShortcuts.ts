@@ -6,10 +6,8 @@
  */
 
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
-import type {
-  ScoringOperationMode,
-  ScoringStatus,
-} from "@/components/exams/07-score-at-once/types"
+import type { ScoringOperationMode } from "@/components/exams/07-score-at-once/types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
  * ショートカットハンドラーの型定義

@@ -8,11 +8,11 @@ import type {
 import type {
   CropRegionWithExamPage,
   ScoringData,
-  ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
  * 採点領域と採点ステータスのペア（全設問マーク描画用）

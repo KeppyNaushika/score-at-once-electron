@@ -30,7 +30,6 @@ import type {
   MasterAnswerKeyBehavior,
   MouseBrushAction,
   ScoringOperationMode,
-  ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
@@ -42,9 +41,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import type { ScoringStatusType } from "@/lib/scoringStatusColors"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-const STATUS_MAP: Record<string, ScoringStatusType> = {
+const STATUS_MAP: Record<string, ScoringStatus> = {
   unscored: "unscored",
   correct: "correct",
   partial: "partial",

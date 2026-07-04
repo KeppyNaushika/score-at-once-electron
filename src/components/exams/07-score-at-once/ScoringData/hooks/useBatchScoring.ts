@@ -1,14 +1,14 @@
 // import { checkForAutoFinalization } from "@/components/exams/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
+import type { QuestionScore } from "@prisma/client"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 
 import type {
   CropRegionWithExamPage,
-  QuestionScore,
-  ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface UseBatchScoringProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]

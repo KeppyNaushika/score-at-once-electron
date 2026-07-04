@@ -8,6 +8,7 @@ import type {
   CaptureReturnSnapshotResult,
   ReturnDiffResult,
 } from "@/electron-src/lib/prisma/returnSnapshot"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
  * エクスポート（PDF/Excel/印刷）関連API
@@ -273,14 +274,7 @@ export interface ExportAPI {
           questionLabel: string
           score: number | null
           maxScore: number
-          status:
-            | "unscored"
-            | "correct"
-            | "partial"
-            | "hold"
-            | "incorrect"
-            | "no_answer"
-            | "double_mark"
+          status: ScoringStatus
         }>
         totalScore: number | null
         totalMaxScore: number
