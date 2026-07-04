@@ -1144,9 +1144,9 @@ model AsbSubQuestion {
   manuscriptColumns       Int      @default(20)
   manuscriptRows          Int      @default(10)
   manuscriptCellSizeMm    Float    @default(8)
-  // 文字位置マーカー: JSON配列 [{atChar,label,boundary?,boundaryWidth?,overrideRowEnd?}]
-  // （数字ガイド＋区切り罫線の統合）、表示位置・文字サイズ・余白（マス比）
-  manuscriptCharGuides    String?
+  // 文字位置マーカー（数字ガイド＋区切り罫線の統合）は「id を持つオブジェクトの配列」のため
+  // JSON 直列化をやめ AsbCharGuide テーブルへ分離（issue #913）。
+  // 以下 guide 設定は 1:1 のスカラー値（配列でなく JSON でもない）ためインライン継続。
   manuscriptGuideFontSize Float?
   manuscriptGuidePosition String?
   manuscriptGuidePadding  Float?
@@ -1164,6 +1164,7 @@ model AsbSubQuestion {
   textElements    AsbTextElement[]
   imageElements   AsbImageElement[]
   omrConfig       AsbOmrConfig?
+  charGuides      AsbCharGuide[]
 
   @@index([majorQuestionId])
 }
@@ -1277,4 +1278,25 @@ model AsbOmrChoiceOption {
 
   @@unique([omrConfigId, choiceIndex])
   @@index([omrConfigId])
+}
+
+/// 原稿用紙の文字位置マーカー（数字ガイド＋区切り罫線の統合）。
+/// AsbSubQuestion.manuscriptCharGuides の JSON 直列化を廃し独立テーブル化（issue #913）。
+/// order は表示順。atChar 重複は UI で禁止するが DB 制約は課さない（id で追従）。
+model AsbCharGuide {
+  id                String   @id @default(uuid())
+  subQuestionId     String
+  order             Int      @default(0)
+  atChar            Int
+  label             String
+  boundary          String?
+  boundaryWidth     Float?
+  boundaryDashRatio Float?
+  boundaryGapRatio  Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subQuestion AsbSubQuestion @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([subQuestionId])
 }

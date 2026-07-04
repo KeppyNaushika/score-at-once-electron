@@ -14,6 +14,11 @@ import { Input } from "@/components/ui/input"
 
 /** 文字評価→点数の変換表エディタの行（入力中は文字列で保持） */
 export interface LetterScaleDraft {
+  /**
+   * UI編集中のみ有効な安定キー（React key / D&D 用）。
+   * DBには保存されない ── draftsToLetterScales で {label,score,order} へ変換する際に落ちる。
+   */
+  id: string
   label: string
   score: string
 }
@@ -23,12 +28,22 @@ interface LetterScaleEditorProps {
   onChange: (scales: LetterScaleDraft[]) => void
 }
 
+/** 変換表の行を1つ生成（UI編集用の安定 id を付与） */
+export function createLetterScaleDraft(
+  label = "",
+  score = ""
+): LetterScaleDraft {
+  return { id: crypto.randomUUID(), label, score }
+}
+
 /** よく使う3段階プリセット（A=100, B=80, C=60） */
-export const DEFAULT_LETTER_SCALES: LetterScaleDraft[] = [
-  { label: "A", score: "100" },
-  { label: "B", score: "80" },
-  { label: "C", score: "60" },
-]
+export function createDefaultLetterScales(): LetterScaleDraft[] {
+  return [
+    createLetterScaleDraft("A", "100"),
+    createLetterScaleDraft("B", "80"),
+    createLetterScaleDraft("C", "60"),
+  ]
+}
 
 interface ScaleRowProps {
   id: string
@@ -93,20 +108,20 @@ export function LetterScaleEditor({
   }
 
   const addRow = () => {
-    onChange([...scales, { label: "", score: "" }])
+    onChange([...scales, createLetterScaleDraft()])
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = Number(active.id)
-    const newIndex = Number(over.id)
-    if (isNaN(oldIndex) || isNaN(newIndex)) return
+    const oldIndex = scales.findIndex((scale) => scale.id === active.id)
+    const newIndex = scales.findIndex((scale) => scale.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
     onChange(arrayMove(scales, oldIndex, newIndex))
   }
 
-  // 行のID（配列インデックスベース。並べ替えで配列順=order が決まる）
-  const rowIds = scales.map((_, i) => String(i))
+  // 行のID（安定 uuid。並べ替え・削除で要素に追従する）
+  const rowIds = scales.map((scale) => scale.id)
 
   return (
     <div className="bg-muted/30 space-y-2 rounded border border-dashed p-2">
@@ -117,8 +132,8 @@ export function LetterScaleEditor({
         <SortableTableProvider items={rowIds} onDragEnd={handleDragEnd}>
           {scales.map((scale, index) => (
             <ScaleRow
-              key={index}
-              id={String(index)}
+              key={scale.id}
+              id={scale.id}
               scale={scale}
               index={index}
               onUpdate={updateRow}

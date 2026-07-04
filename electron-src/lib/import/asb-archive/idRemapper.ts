@@ -23,6 +23,7 @@ export function generateAsbIdMappings(
     branchQuestion: {},
     textElement: {},
     imageElement: {},
+    charGuide: {},
     omrConfig: {},
   }
 
@@ -42,6 +43,11 @@ export function generateAsbIdMappings(
       if (subQuestion.imageElements) {
         for (const imageElement of subQuestion.imageElements) {
           mappings.imageElement[imageElement.id] = randomUUID()
+        }
+      }
+      if (subQuestion.manuscriptPaper?.charGuides) {
+        for (const charGuide of subQuestion.manuscriptPaper.charGuides) {
+          mappings.charGuide[charGuide.id] = randomUUID()
         }
       }
       if (subQuestion.omrConfig) {
@@ -98,6 +104,11 @@ export function remapDefinitionIds(
         for (const imageElement of subQuestion.imageElements) {
           imageElement.id =
             mappings.imageElement[imageElement.id] ?? imageElement.id
+        }
+      }
+      if (subQuestion.manuscriptPaper?.charGuides) {
+        for (const charGuide of subQuestion.manuscriptPaper.charGuides) {
+          charGuide.id = mappings.charGuide[charGuide.id] ?? charGuide.id
         }
       }
 

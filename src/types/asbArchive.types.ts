@@ -15,6 +15,7 @@ export interface AsbArchiveDataCounts {
   branchQuestions: number
   textElements: number
   imageElements: number
+  charGuides: number
   omrConfigs: number
   images: number
 }
@@ -65,10 +66,11 @@ export interface AsbChainTransformResult {
 // バージョン
 // =============================================================================
 
-export type AsbArchiveVersion = "1.0.0"
-export const ASB_CURRENT_VERSION: AsbArchiveVersion = "1.0.0"
+export type AsbArchiveVersion = "1.0.0" | "1.1.0"
+export const ASB_CURRENT_VERSION: AsbArchiveVersion = "1.1.0"
 export const ASB_SUPPORTED_VERSIONS: readonly AsbArchiveVersion[] = [
   "1.0.0",
+  "1.1.0",
 ] as const
 
 // =============================================================================
@@ -83,5 +85,6 @@ export interface AsbIdMappings {
   branchQuestion: Record<string, string>
   textElement: Record<string, string>
   imageElement: Record<string, string>
+  charGuide: Record<string, string>
   omrConfig: Record<string, string>
 }

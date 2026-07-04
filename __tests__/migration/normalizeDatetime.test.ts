@@ -195,6 +195,7 @@ describe("DateTime正規化マイグレーション", () => {
   // の混在が発生しない。よって正規化 UPDATE の対象外（網羅チェックから除外する）。
   // 歴史migrationは編集禁止のため、ここで明示的にホワイトリスト管理する。
   const POST_MIGRATION_TABLES = new Set([
+    "AsbCharGuide",
     "AuditLog",
     "Coursework",
     "CourseworkClass",

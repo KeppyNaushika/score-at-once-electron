@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import {
-  DEFAULT_LETTER_SCALES,
+  createDefaultLetterScales,
   draftsToLetterScales,
   type LetterScaleDraft,
   LetterScaleEditor,
@@ -58,10 +58,12 @@ function toDraft(item: CourseworkItemWithDetails): ItemDraft {
                 letterScaleA.order - letterScaleB.order
             )
             .map((letterScale) => ({
+              // 既存行は DB の安定 id をそのまま UI の key に使う
+              id: letterScale.id,
               label: letterScale.label,
               score: String(letterScale.score),
             }))
-        : DEFAULT_LETTER_SCALES,
+        : createDefaultLetterScales(),
   }
 }
 
