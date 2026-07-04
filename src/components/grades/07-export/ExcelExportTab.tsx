@@ -19,11 +19,11 @@ export function ExcelExportTab({
   const handleExportExcel = async () => {
     setExporting(true)
     try {
-      const res = await window.electronAPI.grade.exportExcel(gradeId, {
+      const result = await window.electronAPI.grade.exportExcel(gradeId, {
         studentIds: selectedStudentIds,
       })
-      if (!res.success) {
-        console.error("Export failed:", res.error)
+      if (!result.success) {
+        console.error("Export failed:", result.error)
       }
     } catch (err) {
       console.error("Export error:", err)

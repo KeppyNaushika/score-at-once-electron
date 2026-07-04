@@ -66,25 +66,25 @@ export function AnswerSheetDefinitionList() {
   )
 
   const sorted = [...definitions].sort((definitionA, definitionB) => {
-    const dir = sortDir === "asc" ? 1 : -1
+    const direction = sortDir === "asc" ? 1 : -1
     switch (sortKey) {
       case "name":
-        return dir * definitionA.name.localeCompare(definitionB.name)
+        return direction * definitionA.name.localeCompare(definitionB.name)
       case "updatedAt":
         return (
-          dir *
+          direction *
           (definitionA.updatedAt ?? "").localeCompare(
             definitionB.updatedAt ?? ""
           )
         )
       case "questionCount":
         return (
-          dir *
+          direction *
           ((definitionA.questionCount ?? 0) - (definitionB.questionCount ?? 0))
         )
       case "totalPoints":
         return (
-          dir *
+          direction *
           ((definitionA.totalPoints ?? 0) - (definitionB.totalPoints ?? 0))
         )
       default:

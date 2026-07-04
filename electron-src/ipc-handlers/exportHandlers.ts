@@ -279,25 +279,30 @@ export function setupExportHandlers(): void {
             : null,
       }))
 
-      const scoringData = result.scoringData?.map((sd) => ({
-        studentId: sd.studentId,
-        studentName: sd.studentName,
-        studentNumber: sd.studentNumber,
-        grade: sd.grade,
-        className: sd.className,
+      const scoringData = result.scoringData?.map((studentScoring) => ({
+        studentId: studentScoring.studentId,
+        studentName: studentScoring.studentName,
+        studentNumber: studentScoring.studentNumber,
+        grade: studentScoring.grade,
+        className: studentScoring.className,
         attendanceNumber:
-          sd.attendanceNumber != null ? Number(sd.attendanceNumber) : null,
-        status: sd.status,
-        scores: sd.scores.map((score) => ({
+          studentScoring.attendanceNumber != null
+            ? Number(studentScoring.attendanceNumber)
+            : null,
+        status: studentScoring.status,
+        scores: studentScoring.scores.map((score) => ({
           questionId: score.questionId,
           questionLabel: score.questionLabel,
           score: score.score != null ? Number(score.score) : null,
           maxScore: Number(score.maxScore),
           status: score.status,
         })),
-        totalScore: sd.totalScore != null ? Number(sd.totalScore) : null,
-        totalMaxScore: Number(sd.totalMaxScore),
-        subtotalScores: sd.subtotalScores.map((subtotalScore) => ({
+        totalScore:
+          studentScoring.totalScore != null
+            ? Number(studentScoring.totalScore)
+            : null,
+        totalMaxScore: Number(studentScoring.totalMaxScore),
+        subtotalScores: studentScoring.subtotalScores.map((subtotalScore) => ({
           subtotalId: subtotalScore.subtotalId,
           subtotalLabel: subtotalScore.subtotalLabel,
           score:

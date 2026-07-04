@@ -18,7 +18,10 @@ import {
   calculateSubtotalScoreBySubtotalId,
   type QuestionScoreData,
 } from "../../shared/calculations/subtotalCalculator"
-import type { SubtotalScore } from "../../shared/types/exportTypes"
+import type {
+  SubtotalGroupData,
+  SubtotalScore,
+} from "../../shared/types/exportTypes"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
@@ -228,16 +231,6 @@ export async function fetchIndividualReportData(
 /**
  * SubtotalGroupとSubtotalの情報を取得
  */
-interface SubtotalGroupData {
-  groupId: string
-  groupName: string
-  subtotals: Array<{
-    id: string
-    name: string
-    order: number
-  }>
-}
-
 async function getSubtotalGroupsWithSubtotals(
   examId: string
 ): Promise<SubtotalGroupData[]> {

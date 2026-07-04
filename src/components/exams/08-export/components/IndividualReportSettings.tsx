@@ -486,18 +486,18 @@ export function IndividualReportSettings({
                     placeholder="なし"
                     value={options.adviceOptions.reviewRateMin ?? ""}
                     onChange={(e) => {
-                      const val = e.target.value
-                      if (val === "") {
+                      const inputValue = e.target.value
+                      if (inputValue === "") {
                         updateOption("adviceOptions", {
                           ...options.adviceOptions,
                           reviewRateMin: null,
                         })
                       } else {
-                        const num = Number(val)
-                        if (!isNaN(num)) {
+                        const parsedValue = Number(inputValue)
+                        if (!isNaN(parsedValue)) {
                           updateOption("adviceOptions", {
                             ...options.adviceOptions,
-                            reviewRateMin: num,
+                            reviewRateMin: parsedValue,
                           })
                         }
                       }
@@ -510,18 +510,18 @@ export function IndividualReportSettings({
                     placeholder="なし"
                     value={options.adviceOptions.reviewRateMax ?? ""}
                     onChange={(e) => {
-                      const val = e.target.value
-                      if (val === "") {
+                      const inputValue = e.target.value
+                      if (inputValue === "") {
                         updateOption("adviceOptions", {
                           ...options.adviceOptions,
                           reviewRateMax: null,
                         })
                       } else {
-                        const num = Number(val)
-                        if (!isNaN(num)) {
+                        const parsedValue = Number(inputValue)
+                        if (!isNaN(parsedValue)) {
                           updateOption("adviceOptions", {
                             ...options.adviceOptions,
-                            reviewRateMax: num,
+                            reviewRateMax: parsedValue,
                           })
                         }
                       }
@@ -537,18 +537,18 @@ export function IndividualReportSettings({
                     placeholder="全て"
                     value={options.adviceOptions.reviewQuestionCount ?? ""}
                     onChange={(e) => {
-                      const val = e.target.value
-                      if (val === "") {
+                      const inputValue = e.target.value
+                      if (inputValue === "") {
                         updateOption("adviceOptions", {
                           ...options.adviceOptions,
                           reviewQuestionCount: null,
                         })
                       } else {
-                        const num = Number(val)
-                        if (!isNaN(num)) {
+                        const parsedValue = Number(inputValue)
+                        if (!isNaN(parsedValue)) {
                           updateOption("adviceOptions", {
                             ...options.adviceOptions,
-                            reviewQuestionCount: num,
+                            reviewQuestionCount: parsedValue,
                           })
                         }
                       }

@@ -185,23 +185,23 @@ export function ScoringContentArea({
   // 非表示に戻す際は対称的な補正で元の中心へ復帰する。
   useEffect(() => {
     if (gradingMode !== "individual") return
-    const el = answerScrollRef.current
-    if (!el) return
+    const element = answerScrollRef.current
+    if (!element) return
 
-    let prevW = el.clientWidth
-    let prevH = el.clientHeight
+    let prevW = element.clientWidth
+    let prevH = element.clientHeight
 
     const observer = new ResizeObserver(() => {
-      const newW = el.clientWidth
-      const newH = el.clientHeight
+      const newW = element.clientWidth
+      const newH = element.clientHeight
       if (newW === prevW && newH === prevH) return
       // 旧サイズで中心にあったコンテンツ点を、新サイズでも中心に保つ
-      el.scrollLeft += (prevW - newW) / 2
-      el.scrollTop += (prevH - newH) / 2
+      element.scrollLeft += (prevW - newW) / 2
+      element.scrollTop += (prevH - newH) / 2
       prevW = newW
       prevH = newH
     })
-    observer.observe(el)
+    observer.observe(element)
     return () => observer.disconnect()
   }, [gradingMode])
 

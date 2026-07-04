@@ -171,21 +171,6 @@ export interface DragData {
 // ============================================================================
 
 /**
- * 一時的な変換ファイル（中間データ）
- */
-export interface ConvertedFileTemp {
-  id: string
-  name: string
-  type: string
-  size: number
-  buffer: ArrayBuffer
-  preview: string
-  originalFileName: string
-  pageNumber: number
-  pageLabel?: string
-}
-
-/**
  * ファイル処理の進捗状態
  */
 export interface FileProcessingProgress {

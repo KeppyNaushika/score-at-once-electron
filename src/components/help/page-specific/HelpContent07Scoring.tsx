@@ -212,12 +212,12 @@ const HELP07_KEYFRAMES = `
 /** 一覧表示の説明アニメ：答案が並び、順に印がついていく */
 function GridStyleAnimation() {
   const colors = useScoringStatusColors()
-  const sel = useSelectionBorder()
+  const selectionBorder = useSelectionBorder()
   const marks = [true, false, true, true, false, true]
   return (
     <div
       className="grid grid-cols-3 gap-1.5"
-      style={{ "--help07-sel": sel } as CSSProperties}
+      style={{ "--help07-sel": selectionBorder } as CSSProperties}
     >
       {marks.map((isCorrect, i) => (
         <div
@@ -582,19 +582,19 @@ function ScoringGridDemo({
     selectedRef.current = n
     setSelected(n)
   }
-  const setPartialSynced = (p: PartialInput) => {
-    partialRef.current = p
-    setPartial(p)
+  const setPartialSynced = (partialInput: PartialInput) => {
+    partialRef.current = partialInput
+    setPartial(partialInput)
   }
 
   const applyStatus = useCallback((status: DemoStatus, score?: number) => {
-    const sel = selectedRef.current
+    const selectedIndex = selectedRef.current
     const updated = cellsRef.current.map((cell, i) =>
-      i === sel ? { ...cell, status, score } : cell
+      i === selectedIndex ? { ...cell, status, score } : cell
     )
     setCellsSynced(updated)
     const after = updated.findIndex(
-      (cell, i) => i > sel && cell.status === "unscored"
+      (cell, i) => i > selectedIndex && cell.status === "unscored"
     )
     const wrap =
       after === -1
@@ -611,8 +611,8 @@ function ScoringGridDemo({
     if (items.length === 0) return 1
     const top0 = items[0].offsetTop
     let cols = 0
-    for (const it of items) {
-      if (it.offsetTop === top0) cols++
+    for (const child of items) {
+      if (child.offsetTop === top0) cols++
       else break
     }
     return Math.max(1, cols)
@@ -677,9 +677,9 @@ function ScoringGridDemo({
       setPartialSynced({ active: false, value: "" })
       return
     }
-    const num = Math.min(MAX_SCORE, Math.max(0, Number(value)))
+    const clampedScore = Math.min(MAX_SCORE, Math.max(0, Number(value)))
     setPartialSynced({ active: false, value: "" })
-    applyStatus("partial", num)
+    applyStatus("partial", clampedScore)
   }, [applyStatus])
 
   const confirmPending = useCallback(() => {
@@ -1380,20 +1380,20 @@ function IndividualScoringDemo({
     selectedRef.current = n
     setSelected(n)
   }
-  const setPartialSynced = (p: PartialInput) => {
-    partialRef.current = p
-    setPartial(p)
+  const setPartialSynced = (partialInput: PartialInput) => {
+    partialRef.current = partialInput
+    setPartial(partialInput)
   }
 
   const applyStatus = useCallback((status: DemoStatus, score?: number) => {
-    const sel = selectedRef.current
+    const selectedIndex = selectedRef.current
     const updated = cellsRef.current.map((cell, i) =>
-      i === sel ? { ...cell, status, score } : cell
+      i === selectedIndex ? { ...cell, status, score } : cell
     )
     setCellsSynced(updated)
     // 採点したら次の未採点の生徒へ自動で進む
     const after = updated.findIndex(
-      (cell, i) => i > sel && cell.status === "unscored"
+      (cell, i) => i > selectedIndex && cell.status === "unscored"
     )
     const wrap =
       after === -1
@@ -1441,9 +1441,9 @@ function IndividualScoringDemo({
       setPartialSynced({ active: false, value: "" })
       return
     }
-    const num = Math.min(MAX_SCORE, Math.max(0, Number(value)))
+    const clampedScore = Math.min(MAX_SCORE, Math.max(0, Number(value)))
     setPartialSynced({ active: false, value: "" })
-    applyStatus("partial", num)
+    applyStatus("partial", clampedScore)
   }, [applyStatus])
 
   const confirmPending = useCallback(() => {
@@ -1850,7 +1850,7 @@ function DisplayModeMini({
 }) {
   if (mode === "overlay") {
     return (
-      <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded border border-gray-300 bg-white">
+      <div className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden rounded border border-gray-300 bg-white">
         <span className="text-2xl font-bold text-blue-900/70">答</span>
         <span
           className="absolute inset-0 flex items-center justify-center bg-rose-500/10 text-2xl font-bold text-rose-500/60"
