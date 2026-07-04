@@ -20,6 +20,7 @@ export function collectAsbData(
   const imagePaths: string[] = []
   let textElements = 0
   let imageElements = 0
+  let charGuides = 0
   let subQuestions = 0
   let branchQuestions = 0
   let omrConfigs = 0
@@ -28,6 +29,7 @@ export function collectAsbData(
     for (const subQuestion of majorQuestion.subQuestions) {
       subQuestions++
       textElements += subQuestion.textElements.length
+      charGuides += subQuestion.manuscriptPaper?.charGuides?.length ?? 0
       if (subQuestion.imageElements) {
         imageElements += subQuestion.imageElements.length
         for (const imageElement of subQuestion.imageElements) {
@@ -59,6 +61,7 @@ export function collectAsbData(
       branchQuestions,
       textElements,
       imageElements,
+      charGuides,
       omrConfigs,
       images: imagePaths.length,
     },

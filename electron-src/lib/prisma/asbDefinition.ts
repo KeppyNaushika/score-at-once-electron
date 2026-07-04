@@ -7,6 +7,7 @@
 
 import type {
   AsbBranchQuestion,
+  AsbCharGuide,
   AsbDefinition,
   AsbHeaderField,
   AsbImageElement,
@@ -49,6 +50,7 @@ export type DbDefinitionFull = AsbDefinition & {
       })[]
       textElements: AsbTextElement[]
       imageElements: AsbImageElement[]
+      charGuides: AsbCharGuide[]
       omrConfig:
         | (AsbOmrConfig & {
             choiceOptions: {
@@ -87,6 +89,7 @@ const fullInclude = {
           },
           textElements: { orderBy: { order: "asc" as const } },
           imageElements: { orderBy: { order: "asc" as const } },
+          charGuides: { orderBy: { order: "asc" as const } },
           omrConfig: {
             include: {
               choiceOptions: {
@@ -271,9 +274,6 @@ export async function saveAsbDefinition(
             manuscriptColumns: subQuestion.manuscriptPaper?.columns ?? 20,
             manuscriptRows: subQuestion.manuscriptPaper?.rows ?? 10,
             manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
-            manuscriptCharGuides: subQuestion.manuscriptPaper?.charGuides
-              ? JSON.stringify(subQuestion.manuscriptPaper.charGuides)
-              : null,
             manuscriptGuideFontSize:
               subQuestion.manuscriptPaper?.guideFontSize ?? null,
             manuscriptGuidePosition:
@@ -286,6 +286,25 @@ export async function saveAsbDefinition(
             borderStyleRight: subQuestion.borderStyles?.right ?? null,
           },
         })
+
+        // 文字位置マーカー（数字ガイド＋区切り罫線）
+        const charGuides = subQuestion.manuscriptPaper?.charGuides ?? []
+        for (let gi = 0; gi < charGuides.length; gi++) {
+          const charGuide = charGuides[gi]
+          await tx.asbCharGuide.create({
+            data: {
+              id: charGuide.id,
+              subQuestionId: subQuestion.id,
+              order: gi,
+              atChar: charGuide.atChar,
+              label: charGuide.label,
+              boundary: charGuide.boundary ?? null,
+              boundaryWidth: charGuide.boundaryWidth ?? null,
+              boundaryDashRatio: charGuide.boundaryDashRatio ?? null,
+              boundaryGapRatio: charGuide.boundaryGapRatio ?? null,
+            },
+          })
+        }
 
         // テキスト要素（小問）
         for (let ti = 0; ti < subQuestion.textElements.length; ti++) {

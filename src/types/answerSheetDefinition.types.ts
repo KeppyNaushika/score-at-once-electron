@@ -76,6 +76,8 @@ export type ManuscriptGuidePosition =
  * - boundary が未指定なら区切り罫線は引かない（数字ガイドのみ使う場合）。
  */
 export interface ManuscriptCharGuide {
+  /** 安定ID（React key・DB AsbCharGuide.id・アーカイブID再マッピングに使用） */
+  id: string
   /** 先頭からの文字数（1始まり） */
   atChar: number
   /** 表示テキスト（空文字列 = 数字非表示） */

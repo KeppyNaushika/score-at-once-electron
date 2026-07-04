@@ -127,8 +127,8 @@ describe("transformLayoutToVertical", () => {
         lineDividerStyle: "solid",
         lineDividerWidth: 0.2,
         charGuides: [
-          { atChar: 80, label: "80" },
-          { atChar: 100, label: "", boundary: "solid" },
+          { id: "guide-1", atChar: 80, label: "80" },
+          { id: "guide-2", atChar: 100, label: "", boundary: "solid" },
         ],
         guideFontSize: 2.2,
         guidePosition: "bottom-left",
@@ -148,8 +148,8 @@ describe("transformLayoutToVertical", () => {
     expect(grid.charDividerStyle).toBe("dashed")
     expect(grid.lineDividerStyle).toBe("solid")
     expect(grid.charGuides).toEqual([
-      { atChar: 80, label: "80" },
-      { atChar: 100, label: "", boundary: "solid" },
+      { id: "guide-1", atChar: 80, label: "80" },
+      { id: "guide-2", atChar: 100, label: "", boundary: "solid" },
     ])
     expect(grid.guidePosition).toBe("bottom-left")
   })

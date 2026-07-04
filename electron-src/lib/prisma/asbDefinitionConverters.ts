@@ -6,6 +6,7 @@
  */
 
 import type {
+  AsbCharGuide,
   AsbDefinition,
   AsbImageElement,
   AsbOmrConfig,
@@ -191,51 +192,27 @@ export function flattenGlobalSettings(s: GlobalSettings): FlatGlobalSettings {
 }
 
 /**
- * DB の JSON文字列から文字位置マーカー配列（数字ガイド＋区切り罫線の統合）を復元する。
- * 旧形式 {atChar,label} も互換で読める（boundary 等は欠落＝未設定）。
+ * AsbCharGuide テーブル行（order昇順で取得済み）を文字位置マーカー配列へ変換する。
+ * boundary は DB移行時に solid/dashed/dotted へ検証済みだが、念のため型を絞る。
  */
-function parseCharGuides(
-  json: string | null
-): ManuscriptCharGuide[] | undefined {
-  if (!json) return undefined
+function dbCharGuides(rows: AsbCharGuide[]): ManuscriptCharGuide[] | undefined {
+  if (rows.length === 0) return undefined
   const VALID_STYLES = new Set<LineStyle>(["solid", "dashed", "dotted"])
-  try {
-    const parsed: unknown = JSON.parse(json)
-    if (!Array.isArray(parsed)) return undefined
-    const guides = parsed
-      .filter(
-        (g): g is ManuscriptCharGuide =>
-          typeof g === "object" &&
-          g !== null &&
-          typeof (g as ManuscriptCharGuide).atChar === "number" &&
-          typeof (g as ManuscriptCharGuide).label === "string"
-      )
-      .map((g): ManuscriptCharGuide => {
-        const boundary =
-          typeof g.boundary === "string" &&
-          VALID_STYLES.has(g.boundary as LineStyle)
-            ? (g.boundary as LineStyle)
-            : undefined
-        return {
-          atChar: g.atChar,
-          label: g.label,
-          boundary,
-          boundaryWidth:
-            typeof g.boundaryWidth === "number" ? g.boundaryWidth : undefined,
-          boundaryDashRatio:
-            typeof g.boundaryDashRatio === "number"
-              ? g.boundaryDashRatio
-              : undefined,
-          boundaryGapRatio:
-            typeof g.boundaryGapRatio === "number"
-              ? g.boundaryGapRatio
-              : undefined,
-        }
-      })
-    return guides.length > 0 ? guides : undefined
-  } catch {
-    return undefined
-  }
+  return rows.map((row): ManuscriptCharGuide => {
+    const boundary =
+      row.boundary !== null && VALID_STYLES.has(row.boundary as LineStyle)
+        ? (row.boundary as LineStyle)
+        : undefined
+    return {
+      id: row.id,
+      atChar: row.atChar,
+      label: row.label,
+      boundary,
+      boundaryWidth: row.boundaryWidth ?? undefined,
+      boundaryDashRatio: row.boundaryDashRatio ?? undefined,
+      boundaryGapRatio: row.boundaryGapRatio ?? undefined,
+    }
+  })
 }
 
 /** DBフラットカラムから GlobalSettings に復元する */
@@ -433,7 +410,7 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
                 enabled: true as const,
                 columns: subQuestion.manuscriptColumns,
                 rows: subQuestion.manuscriptRows,
-                charGuides: parseCharGuides(subQuestion.manuscriptCharGuides),
+                charGuides: dbCharGuides(subQuestion.charGuides),
                 guideFontSize: subQuestion.manuscriptGuideFontSize ?? undefined,
                 guidePosition:
                   (subQuestion.manuscriptGuidePosition as ManuscriptGuidePosition | null) ??

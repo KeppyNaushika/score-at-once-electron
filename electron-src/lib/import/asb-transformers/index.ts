@@ -1,7 +1,7 @@
 /**
  * ASB アーカイブ変換器
  *
- * 初期バージョンではtransformerは空。将来バージョン追加時に登録する。
+ * 旧バージョンのアーカイブを最新形式へ順に変換する。新バージョン追加時にここへ登録する。
  */
 
 import type {
@@ -15,12 +15,15 @@ import {
   ASB_CURRENT_VERSION,
   ASB_SUPPORTED_VERSIONS,
 } from "../../../../src/types/asbArchive.types"
+import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 
 // =============================================================================
 // Transformer Registry
 // =============================================================================
 
-const ASB_TRANSFORMERS: AsbVersionTransformer[] = []
+const ASB_TRANSFORMERS: AsbVersionTransformer[] = [
+  new V1_0_0_to_V1_1_0_Transformer(),
+]
 
 // =============================================================================
 // Version Detection
