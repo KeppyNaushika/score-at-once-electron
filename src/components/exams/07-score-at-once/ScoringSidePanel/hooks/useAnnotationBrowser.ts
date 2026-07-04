@@ -40,22 +40,22 @@ export interface AddToTargetsParams {
 /**
  * 重複省略のグルーピングキーを生成
  */
-function getGroupingKey(a: AnnotationWithContext): string {
-  const cropRegionId = a.questionScore?.cropRegionId ?? ""
+function getGroupingKey(annotation: AnnotationWithContext): string {
+  const cropRegionId = annotation.questionScore?.cropRegionId ?? ""
   return [
     cropRegionId,
-    a.type,
-    a.text,
-    a.color,
-    a.strokeWidth,
-    a.fontSize,
-    a.lineStyle,
-    a.x.toFixed(3),
-    a.y.toFixed(3),
-    a.width.toFixed(3),
-    a.height.toFixed(3),
-    a.endX.toFixed(3),
-    a.endY.toFixed(3),
+    annotation.type,
+    annotation.text,
+    annotation.color,
+    annotation.strokeWidth,
+    annotation.fontSize,
+    annotation.lineStyle,
+    annotation.x.toFixed(3),
+    annotation.y.toFixed(3),
+    annotation.width.toFixed(3),
+    annotation.height.toFixed(3),
+    annotation.endX.toFixed(3),
+    annotation.endY.toFixed(3),
   ].join("|")
 }
 

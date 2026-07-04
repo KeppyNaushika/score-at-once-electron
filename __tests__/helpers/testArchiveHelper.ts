@@ -151,7 +151,7 @@ export function verifyArchiveContents(archivePath: string): {
         e.entryName.startsWith("master-images/") ||
         e.entryName.startsWith("answer-sheets/")
     )
-    .map((e) => e.entryName)
+    .map((entry) => entry.entryName)
 
   return {
     manifest,

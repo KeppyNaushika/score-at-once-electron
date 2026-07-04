@@ -258,9 +258,9 @@ const computeTotal = (
 ): number | null => {
   let total = 0
   let hasAny = false
-  for (const e of effective) {
-    const maxScore = regions.get(e.cropRegionId)?.maxScore ?? 0
-    const value = calculateEffectiveScoreValue(e, maxScore)
+  for (const effectiveScore of effective) {
+    const maxScore = regions.get(effectiveScore.cropRegionId)?.maxScore ?? 0
+    const value = calculateEffectiveScoreValue(effectiveScore, maxScore)
     if (value !== null) {
       total += value
       hasAny = true

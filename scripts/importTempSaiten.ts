@@ -336,12 +336,12 @@ async function importExam(
   const answerRelPaths = new Map<string, string>()
 
   for (let pi = 0; pi < pages.length; pi++) {
-    const fn = `master-page-${pi + 1}.png`
+    const filename = `master-page-${pi + 1}.png`
     copyFileWithRetry(
       path.join(pages[pi].dataDir, "model_answer", "model_answer.png"),
-      path.join(examDir, "master-answers", fn)
+      path.join(examDir, "master-answers", filename)
     )
-    masterRelPaths.push(`exams/${examId}/master-answers/${fn}`)
+    masterRelPaths.push(`exams/${examId}/master-answers/${filename}`)
 
     if (WITH_ANSWERS) {
       const answerSrcDir = path.join(pages[pi].dataDir, "answer")

@@ -22,7 +22,9 @@ import { DEFAULT_SYNC_CONFIG, SyncAppConfig } from "./types"
  */
 export function getSchemaVersion(): string {
   try {
-    const entries = listLocalMigrationNames().filter((e) => /^\d{14}_/.test(e))
+    const entries = listLocalMigrationNames().filter((migrationName) =>
+      /^\d{14}_/.test(migrationName)
+    )
     return entries.length > 0 ? entries[entries.length - 1] : "unknown"
   } catch {
     return "unknown"

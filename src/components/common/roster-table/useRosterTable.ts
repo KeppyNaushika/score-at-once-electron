@@ -7,29 +7,31 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import type { RosterRow } from "@/components/common/roster-table/types"
 
 /** customOrder 優先・なければ classOrder→attendanceNumber でソート */
-function compareByCustomOrder(a: RosterRow, b: RosterRow): number {
-  const aHasCustom = a.customOrder !== null && a.customOrder !== undefined
-  const bHasCustom = b.customOrder !== null && b.customOrder !== undefined
+function compareByCustomOrder(rowA: RosterRow, rowB: RosterRow): number {
+  const rowAHasCustom =
+    rowA.customOrder !== null && rowA.customOrder !== undefined
+  const rowBHasCustom =
+    rowB.customOrder !== null && rowB.customOrder !== undefined
 
-  if (aHasCustom && bHasCustom) {
-    return a.customOrder! - b.customOrder!
+  if (rowAHasCustom && rowBHasCustom) {
+    return rowA.customOrder! - rowB.customOrder!
   }
-  if (aHasCustom) return -1
-  if (bHasCustom) return 1
+  if (rowAHasCustom) return -1
+  if (rowBHasCustom) return 1
 
-  return compareByDefault(a, b)
+  return compareByDefault(rowA, rowB)
 }
 
 /** 学級順→出席番号順（デフォルト順） */
-function compareByDefault(a: RosterRow, b: RosterRow): number {
-  const aClassOrder = a.classInfo.classOrder ?? 99999
-  const bClassOrder = b.classInfo.classOrder ?? 99999
-  if (aClassOrder !== bClassOrder) {
-    return aClassOrder - bClassOrder
+function compareByDefault(rowA: RosterRow, rowB: RosterRow): number {
+  const rowAClassOrder = rowA.classInfo.classOrder ?? 99999
+  const rowBClassOrder = rowB.classInfo.classOrder ?? 99999
+  if (rowAClassOrder !== rowBClassOrder) {
+    return rowAClassOrder - rowBClassOrder
   }
-  const aAttendance = a.classInfo.attendanceNumber ?? 99999
-  const bAttendance = b.classInfo.attendanceNumber ?? 99999
-  return aAttendance - bAttendance
+  const rowAAttendance = rowA.classInfo.attendanceNumber ?? 99999
+  const rowBAttendance = rowB.classInfo.attendanceNumber ?? 99999
+  return rowAAttendance - rowBAttendance
 }
 
 interface UseRosterTableParams {

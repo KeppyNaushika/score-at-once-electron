@@ -354,56 +354,56 @@ export async function saveAsbDefinition(
 
         // 枝問
         for (let bi = 0; bi < subQuestion.branchQuestions.length; bi++) {
-          const bq = subQuestion.branchQuestions[bi]
+          const branchQuestion = subQuestion.branchQuestions[bi]
           await tx.asbBranchQuestion.create({
             data: {
-              id: bq.id,
+              id: branchQuestion.id,
               subQuestionId: subQuestion.id,
-              label: bq.label,
+              label: branchQuestion.label,
               order: bi,
-              heightMultiplier: bq.heightMultiplier,
-              points: bq.points,
-              layoutWidth: bq.layoutWidth ?? null,
-              nextPlacement: bq.nextPlacement ?? null,
-              goUp: bq.goUp ?? null,
-              borderStyleTop: bq.borderStyles?.top ?? null,
-              borderStyleBottom: bq.borderStyles?.bottom ?? null,
-              borderStyleLeft: bq.borderStyles?.left ?? null,
-              borderStyleRight: bq.borderStyles?.right ?? null,
+              heightMultiplier: branchQuestion.heightMultiplier,
+              points: branchQuestion.points,
+              layoutWidth: branchQuestion.layoutWidth ?? null,
+              nextPlacement: branchQuestion.nextPlacement ?? null,
+              goUp: branchQuestion.goUp ?? null,
+              borderStyleTop: branchQuestion.borderStyles?.top ?? null,
+              borderStyleBottom: branchQuestion.borderStyles?.bottom ?? null,
+              borderStyleLeft: branchQuestion.borderStyles?.left ?? null,
+              borderStyleRight: branchQuestion.borderStyles?.right ?? null,
             },
           })
 
           // テキスト要素（枝問）
-          for (let ti = 0; ti < bq.textElements.length; ti++) {
-            const te = bq.textElements[ti]
+          for (let ti = 0; ti < branchQuestion.textElements.length; ti++) {
+            const textElement = branchQuestion.textElements[ti]
             await tx.asbTextElement.create({
               data: {
-                id: te.id,
-                branchQuestionId: bq.id,
-                text: te.text,
-                fontSize: te.fontSize,
-                horizontalAlign: te.horizontalAlign,
-                verticalAlign: te.verticalAlign,
+                id: textElement.id,
+                branchQuestionId: branchQuestion.id,
+                text: textElement.text,
+                fontSize: textElement.fontSize,
+                horizontalAlign: textElement.horizontalAlign,
+                verticalAlign: textElement.verticalAlign,
                 order: ti,
               },
             })
           }
 
           // 画像要素（枝問）
-          if (bq.imageElements) {
-            for (let ii = 0; ii < bq.imageElements.length; ii++) {
-              const ie = bq.imageElements[ii]
+          if (branchQuestion.imageElements) {
+            for (let ii = 0; ii < branchQuestion.imageElements.length; ii++) {
+              const imageElement = branchQuestion.imageElements[ii]
               await tx.asbImageElement.create({
                 data: {
-                  id: ie.id,
-                  branchQuestionId: bq.id,
-                  imagePath: ie.imagePath,
-                  originalName: ie.originalName,
-                  objectFit: ie.objectFit,
-                  horizontalAlign: ie.horizontalAlign,
-                  verticalAlign: ie.verticalAlign,
-                  opacity: ie.opacity,
-                  visibility: ie.visibility ?? "both",
+                  id: imageElement.id,
+                  branchQuestionId: branchQuestion.id,
+                  imagePath: imageElement.imagePath,
+                  originalName: imageElement.originalName,
+                  objectFit: imageElement.objectFit,
+                  horizontalAlign: imageElement.horizontalAlign,
+                  verticalAlign: imageElement.verticalAlign,
+                  opacity: imageElement.opacity,
+                  visibility: imageElement.visibility ?? "both",
                   order: ii,
                 },
               })
@@ -411,8 +411,12 @@ export async function saveAsbDefinition(
           }
 
           // OMR設定（枝問）
-          if (bq.omrConfig) {
-            await createOmrConfig(tx, { branchQuestionId: bq.id }, bq.omrConfig)
+          if (branchQuestion.omrConfig) {
+            await createOmrConfig(
+              tx,
+              { branchQuestionId: branchQuestion.id },
+              branchQuestion.omrConfig
+            )
           }
         }
       }
