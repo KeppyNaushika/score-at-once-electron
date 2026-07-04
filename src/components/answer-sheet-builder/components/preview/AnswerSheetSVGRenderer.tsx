@@ -620,7 +620,7 @@ export function AnswerSheetSVGRenderer({
           }
           const colDash = manuscriptGrid.vertical ? lineDash : charDash
           const rowDash = manuscriptGrid.vertical ? charDash : lineDash
-          const cs = manuscriptGrid.cellSizeMm
+          const cellSize = manuscriptGrid.cellSizeMm
           // 区切り罫線を「置き換え」るため、どの内部罫線セグメントを差し替えるか先に収集。
           // 縦線セグメント: key `${ci}:${row}` / 横線セグメント: key `${ri}:${col}`
           type BoundarySpec = {
@@ -664,22 +664,22 @@ export function AnswerSheetSVGRenderer({
           const gridLines: React.ReactNode[] = []
           // 縦罫線（内部）: 置き換え区間を除いて連続ランで描き、区間は境界線で差し替え
           for (let ci = 1; ci < manuscriptGrid.columns; ci++) {
-            const x = manuscriptGrid.gridX + ci * cs
+            const x = manuscriptGrid.gridX + ci * cellSize
             const flushRun = (r0: number, r1: number) => {
               if (r1 <= r0) return
               gridLines.push(
                 <line
                   key={`mg-v-${cellIdx}-${cell.label}-${ci}-${r0}`}
                   x1={x}
-                  y1={manuscriptGrid.gridY + r0 * cs}
+                  y1={manuscriptGrid.gridY + r0 * cellSize}
                   x2={x}
-                  y2={manuscriptGrid.gridY + r1 * cs}
+                  y2={manuscriptGrid.gridY + r1 * cellSize}
                   stroke="#000"
                   strokeWidth={colWidth}
                   {...getDashProps(
                     colStyle,
                     colWidth,
-                    (r1 - r0) * cs,
+                    (r1 - r0) * cellSize,
                     colDash.dashRatio,
                     colDash.gapRatio
                   )}
@@ -695,15 +695,15 @@ export function AnswerSheetSVGRenderer({
                 <line
                   key={`mg-vb-${cellIdx}-${cell.label}-${ci}-${row}`}
                   x1={x}
-                  y1={manuscriptGrid.gridY + row * cs}
+                  y1={manuscriptGrid.gridY + row * cellSize}
                   x2={x}
-                  y2={manuscriptGrid.gridY + (row + 1) * cs}
+                  y2={manuscriptGrid.gridY + (row + 1) * cellSize}
                   stroke="#000"
                   strokeWidth={override.width}
                   {...getDashProps(
                     override.style,
                     override.width,
-                    cs,
+                    cellSize,
                     override.dashRatio,
                     override.gapRatio
                   )}
@@ -715,22 +715,22 @@ export function AnswerSheetSVGRenderer({
           }
           // 横罫線（内部）: 同様に置き換え区間を差し替え
           for (let ri = 1; ri < manuscriptGrid.rows; ri++) {
-            const y = manuscriptGrid.gridY + ri * cs
+            const y = manuscriptGrid.gridY + ri * cellSize
             const flushRun = (c0: number, c1: number) => {
               if (c1 <= c0) return
               gridLines.push(
                 <line
                   key={`mg-h-${cellIdx}-${cell.label}-${ri}-${c0}`}
-                  x1={manuscriptGrid.gridX + c0 * cs}
+                  x1={manuscriptGrid.gridX + c0 * cellSize}
                   y1={y}
-                  x2={manuscriptGrid.gridX + c1 * cs}
+                  x2={manuscriptGrid.gridX + c1 * cellSize}
                   y2={y}
                   stroke="#000"
                   strokeWidth={rowWidth}
                   {...getDashProps(
                     rowStyle,
                     rowWidth,
-                    (c1 - c0) * cs,
+                    (c1 - c0) * cellSize,
                     rowDash.dashRatio,
                     rowDash.gapRatio
                   )}
@@ -745,16 +745,16 @@ export function AnswerSheetSVGRenderer({
               gridLines.push(
                 <line
                   key={`mg-hb-${cellIdx}-${cell.label}-${ri}-${col}`}
-                  x1={manuscriptGrid.gridX + col * cs}
+                  x1={manuscriptGrid.gridX + col * cellSize}
                   y1={y}
-                  x2={manuscriptGrid.gridX + (col + 1) * cs}
+                  x2={manuscriptGrid.gridX + (col + 1) * cellSize}
                   y2={y}
                   stroke="#000"
                   strokeWidth={override.width}
                   {...getDashProps(
                     override.style,
                     override.width,
-                    cs,
+                    cellSize,
                     override.dashRatio,
                     override.gapRatio
                   )}
@@ -777,14 +777,14 @@ export function AnswerSheetSVGRenderer({
             )
             if (!pos) continue
             const fs = manuscriptGrid.guideFontSize
-            const cellX0 = manuscriptGrid.gridX + pos.col * cs
-            const cellY0 = manuscriptGrid.gridY + pos.row * cs
+            const cellX0 = manuscriptGrid.gridX + pos.col * cellSize
+            const cellY0 = manuscriptGrid.gridY + pos.row * cellSize
             const left = manuscriptGrid.guidePosition.endsWith("left")
             const top = manuscriptGrid.guidePosition.startsWith("top")
             // アンカー点 = マスの該当隅から余白分だけ内側へ
             const gpad = manuscriptGrid.guidePadding
-            const px = left ? cellX0 + gpad : cellX0 + cs - gpad
-            const py = top ? cellY0 + gpad : cellY0 + cs - gpad
+            const px = left ? cellX0 + gpad : cellX0 + cellSize - gpad
+            const py = top ? cellY0 + gpad : cellY0 + cellSize - gpad
             guides.push(
               <text
                 key={`mguide-${cellIdx}-${cell.label}-${gi}`}

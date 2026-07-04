@@ -158,7 +158,9 @@ export function registerArchiveHandlers(): void {
           const zip = new AdmZip(filePath)
           const hasVersion = zip
             .getEntries()
-            .some((e) => e.entryName.endsWith("RealtendantAppVersion.txt"))
+            .some((entry) =>
+              entry.entryName.endsWith("RealtendantAppVersion.txt")
+            )
           if (hasVersion) {
             sourceFormat = "dat"
           }

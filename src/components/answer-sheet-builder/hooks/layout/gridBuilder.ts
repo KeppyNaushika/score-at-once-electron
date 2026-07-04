@@ -67,9 +67,9 @@ export function buildGridLayout<
 
     if (blockLeftX + nextW <= 1 + 1e-9) {
       // 幅的にブロック内に収まる → lastCellBottom に一致する既存行を探す
-      for (let r = 0; r < rows.length; r++) {
-        if (Math.abs(rows[r].y - lastCellBottom) < 1e-9) {
-          curRowIdx = r
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        if (Math.abs(rows[rowIndex].y - lastCellBottom) < 1e-9) {
+          curRowIdx = rowIndex
           curX = blockLeftX
           advanced = true
           break
@@ -113,8 +113,8 @@ export function buildGridLayout<
     if (item.goUp != null && item.goUp > 0) {
       const targetIdx = Math.max(0, curRowIdx - item.goUp)
       let maxRightX = 0
-      for (let r = targetIdx; r <= curRowIdx; r++) {
-        maxRightX = Math.max(maxRightX, rows[r].rightX)
+      for (let rowIndex = targetIdx; rowIndex <= curRowIdx; rowIndex++) {
+        maxRightX = Math.max(maxRightX, rows[rowIndex].rightX)
       }
       curRowIdx = targetIdx
       curX = maxRightX
@@ -225,9 +225,9 @@ export function mergeAbsoluteRightEdges(
 ): { yTop: number; yBottom: number; rightX: number }[] {
   if (edges.length === 0) return []
   const ySet = new Set<number>()
-  for (const e of edges) {
-    ySet.add(e.yTop)
-    ySet.add(e.yBottom)
+  for (const edge of edges) {
+    ySet.add(edge.yTop)
+    ySet.add(edge.yBottom)
   }
   const sortedYs = Array.from(ySet).sort((yA, yB) => yA - yB)
   const result: { yTop: number; yBottom: number; rightX: number }[] = []
@@ -236,9 +236,9 @@ export function mergeAbsoluteRightEdges(
     const yBottom = sortedYs[i + 1]
     const midY = (yTop + yBottom) / 2
     let maxRightX = 0
-    for (const e of edges) {
-      if (e.yTop <= midY + 1e-9 && e.yBottom >= midY - 1e-9) {
-        maxRightX = Math.max(maxRightX, e.rightX)
+    for (const edge of edges) {
+      if (edge.yTop <= midY + 1e-9 && edge.yBottom >= midY - 1e-9) {
+        maxRightX = Math.max(maxRightX, edge.rightX)
       }
     }
     if (maxRightX > 0) {

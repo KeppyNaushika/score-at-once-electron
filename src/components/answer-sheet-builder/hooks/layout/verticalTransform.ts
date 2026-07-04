@@ -81,24 +81,24 @@ function transposeManuscriptGrid(
 }
 
 /** OMRバブル（正規化座標）を縦組みへ変換する。中心は点変換、幅高さは入れ替え */
-function transposeBubble(b: ComputedOMRBubble): ComputedOMRBubble {
+function transposeBubble(bubble: ComputedOMRBubble): ComputedOMRBubble {
   return {
-    ...b,
-    normalizedCx: 1 - b.normalizedCy,
-    normalizedCy: b.normalizedCx,
-    normalizedWidth: b.normalizedHeight,
-    normalizedHeight: b.normalizedWidth,
+    ...bubble,
+    normalizedCx: 1 - bubble.normalizedCy,
+    normalizedCy: bubble.normalizedCx,
+    normalizedWidth: bubble.normalizedHeight,
+    normalizedHeight: bubble.normalizedWidth,
   }
 }
 
 /** OMR数字欄（正規化矩形）を縦組みへ変換する */
-function transposeDigitBox(d: ComputedOMRDigitBox): ComputedOMRDigitBox {
+function transposeDigitBox(digitBox: ComputedOMRDigitBox): ComputedOMRDigitBox {
   return {
-    ...d,
-    normalizedX: 1 - (d.normalizedY + d.normalizedH),
-    normalizedY: d.normalizedX,
-    normalizedW: d.normalizedH,
-    normalizedH: d.normalizedW,
+    ...digitBox,
+    normalizedX: 1 - (digitBox.normalizedY + digitBox.normalizedH),
+    normalizedY: digitBox.normalizedX,
+    normalizedW: digitBox.normalizedH,
+    normalizedH: digitBox.normalizedW,
   }
 }
 

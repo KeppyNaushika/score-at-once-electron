@@ -95,7 +95,7 @@ export async function resolveGradeScopeByDataSource(
   dataSourceId: string
 ): Promise<{ scopeId: string | null; scopeLabel: string | null }> {
   try {
-    const ds = await prisma.gradeDataSource.findUnique({
+    const dataSource = await prisma.gradeDataSource.findUnique({
       where: { id: dataSourceId },
       select: {
         gradeItem: {
@@ -104,8 +104,8 @@ export async function resolveGradeScopeByDataSource(
       },
     })
     return {
-      scopeId: ds?.gradeItem.gradeId ?? null,
-      scopeLabel: ds?.gradeItem.grade?.name ?? null,
+      scopeId: dataSource?.gradeItem.gradeId ?? null,
+      scopeLabel: dataSource?.gradeItem.grade?.name ?? null,
     }
   } catch {
     return { scopeId: null, scopeLabel: null }
@@ -158,7 +158,7 @@ export async function resolveExamScopeByQuestionScore(
   questionScoreId: string
 ): Promise<{ scopeId: string | null; scopeLabel: string | null }> {
   try {
-    const qs = await prisma.questionScore.findUnique({
+    const questionScore = await prisma.questionScore.findUnique({
       where: { id: questionScoreId },
       select: {
         cropRegion: {
@@ -173,10 +173,10 @@ export async function resolveExamScopeByQuestionScore(
         },
       },
     })
-    const examId = qs?.cropRegion.examPage.examId ?? null
+    const examId = questionScore?.cropRegion.examPage.examId ?? null
     return {
       scopeId: examId,
-      scopeLabel: qs?.cropRegion.examPage.exam?.examName ?? null,
+      scopeLabel: questionScore?.cropRegion.examPage.exam?.examName ?? null,
     }
   } catch {
     return { scopeId: null, scopeLabel: null }

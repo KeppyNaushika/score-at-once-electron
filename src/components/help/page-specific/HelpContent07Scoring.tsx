@@ -482,14 +482,14 @@ function ScoringButtonRow({
   onScore: (status: DemoStatus) => void
 }) {
   const colors = useScoringStatusColors()
-  const cfg = getDynamicScoreStatusConfig(colors)
+  const statusConfigMap = getDynamicScoreStatusConfig(colors)
   if (markOrder.length === 0) return null
   return (
     <TooltipProvider delayDuration={300}>
       <div className="mt-4 flex flex-wrap gap-2">
         {markOrder.map((status) => {
           const statusColor = colors[status]
-          const Icon = cfg[status].icon
+          const Icon = statusConfigMap[status].icon
           const keyLabel = (rawKeys[status] || "?").toUpperCase()
           return (
             <Tooltip key={status}>
@@ -551,7 +551,7 @@ function ScoringGridDemo({
 }) {
   const colors = useScoringStatusColors()
   const selectionColor = useSelectionBorder()
-  const cfg = getDynamicScoreStatusConfig(colors)
+  const statusConfigMap = getDynamicScoreStatusConfig(colors)
   const firstUnscored = Math.max(
     0,
     initialCells.findIndex((cell) => cell.status === "unscored")
@@ -855,7 +855,7 @@ function ScoringGridDemo({
 
         {cells.map((cell, i) => {
           const isSelected = i === selected
-          const statusConfig = cfg[cell.status]
+          const statusConfig = statusConfigMap[cell.status]
           const Icon = statusConfig.icon
           const bg = isSelected
             ? statusConfig.selectedBgStyle

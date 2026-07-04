@@ -300,19 +300,19 @@ function linesIntersect(
   )
 }
 
-function intersectSorted(a: number[], b: number[]): number[] {
+function intersectSorted(sortedA: number[], sortedB: number[]): number[] {
   const result: number[] = []
-  let ai = 0
-  let bi = 0
-  while (ai < a.length && bi < b.length) {
-    if (a[ai] === b[bi]) {
-      result.push(a[ai])
-      ai++
-      bi++
-    } else if (a[ai] < b[bi]) {
-      ai++
+  let indexA = 0
+  let indexB = 0
+  while (indexA < sortedA.length && indexB < sortedB.length) {
+    if (sortedA[indexA] === sortedB[indexB]) {
+      result.push(sortedA[indexA])
+      indexA++
+      indexB++
+    } else if (sortedA[indexA] < sortedB[indexB]) {
+      indexA++
     } else {
-      bi++
+      indexB++
     }
   }
   return result
@@ -353,10 +353,14 @@ function buildRectsFromLines(
       const shared = intersectSorted(hToV[i], hToV[j])
       if (shared.length < 2) continue
 
-      for (let k = 0; k < shared.length; k++) {
-        for (let l = k + 1; l < shared.length; l++) {
-          const left = vLines[shared[k]]
-          const right = vLines[shared[l]]
+      for (let leftIndex = 0; leftIndex < shared.length; leftIndex++) {
+        for (
+          let rightIndex = leftIndex + 1;
+          rightIndex < shared.length;
+          rightIndex++
+        ) {
+          const left = vLines[shared[leftIndex]]
+          const right = vLines[shared[rightIndex]]
           const width = right.x - left.x
           const height = bottom.y - top.y
           if (width > 10 && height > 10) {

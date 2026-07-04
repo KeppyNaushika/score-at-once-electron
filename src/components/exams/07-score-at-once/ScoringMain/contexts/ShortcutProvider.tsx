@@ -158,7 +158,7 @@ function evaluateWhenClause(
     // コンテキスト変数を直接参照可能
     // 例: "!inputFocus && gradingMode == 'grid'"
 
-    const fn = new Function(
+    const evaluateWhen = new Function(
       "inputFocus",
       "textEditorActive",
       "gradingMode",
@@ -170,7 +170,7 @@ function evaluateWhenClause(
       `return ${when}`
     )
 
-    return fn(
+    return evaluateWhen(
       context.inputFocus,
       context.textEditorActive,
       context.gradingMode,
