@@ -69,7 +69,7 @@ export function validateScoringData(
 
       // 部分点・保留で値が入力されていない（0点は有効な値なので除外）
       if (
-        (score.status === "partial" || score.status === "hold") &&
+        (score.status === "partial" || score.status === "pending") &&
         score.score === null
       ) {
         warnings.missingPartialScore.push(identifier)

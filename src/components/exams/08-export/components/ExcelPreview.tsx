@@ -16,8 +16,8 @@ function getStatusSymbol(status: string, score?: number | null): string {
     case "correct":
       return "○"
     case "partial":
-    case "hold":
-      return score != null ? `△${score}` : "△NULL"
+    case "pending":
+      return score != null ? `△${score}` : "△"
     case "incorrect":
       return "×"
     case "no_answer":
@@ -32,7 +32,7 @@ function getStatusColor(status: string): string {
     case "correct":
       return "text-blue-600"
     case "partial":
-    case "hold":
+    case "pending":
       return "text-amber-600"
     case "incorrect":
       return "text-red-600"

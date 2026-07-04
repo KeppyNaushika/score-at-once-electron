@@ -1,3 +1,4 @@
+import type { QuestionScore } from "@prisma/client"
 import {
   useCallback,
   useEffect,
@@ -11,13 +12,12 @@ import type {
   CropRegionWithExamPage,
   GradingMode,
   MasterGridItem,
-  QuestionScore,
   ScoringData,
-  ScoringStatus,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { ExamWithDetails } from "@/types/common.types"
+import { toScoringStatus } from "@/types/scoringStatus.types"
 
 const areArraysEqual = (a: string[], b: string[]) => {
   if (a.length !== b.length) {
@@ -152,7 +152,7 @@ export function useScoringFilter({
               : "",
             currentScore: undefined,
             maxScore: currentCropRegion.points ?? 0,
-            status: "unscored" as ScoringStatus,
+            status: "unscored",
             questionRegion: currentCropRegion,
             customOrder: 999999,
           }
@@ -176,7 +176,7 @@ export function useScoringFilter({
               ? Number(score.partialScore)
               : undefined,
           maxScore: currentCropRegion.points ?? 0,
-          status: (score?.status as ScoringStatus) ?? "unscored",
+          status: toScoringStatus(score?.status),
           questionRegion: currentCropRegion,
           customOrder:
             pageImage.student?.examStudents?.[0]?.customOrder || 999999,
@@ -557,10 +557,11 @@ export function useScoringFilter({
   const getGridAnswerData = useCallback((): (ScoringData & {
     isSelected: boolean
   })[] => {
+    const answerById = new Map(
+      getAllGridAnswerData.map((answer) => [answer.id, answer])
+    )
     return visibleAnswers
-      .map((answerId) =>
-        getAllGridAnswerData.find((answer) => answer.id === answerId)
-      )
+      .map((answerId) => answerById.get(answerId))
       .filter(
         (answer): answer is ScoringData & { isSelected: boolean } =>
           answer !== undefined

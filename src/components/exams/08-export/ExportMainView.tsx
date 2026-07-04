@@ -239,6 +239,7 @@ export default function ExportMainView() {
   const validateBeforeExport = async (
     exportType: "scored-answers" | "grading-data" | "individual-reports"
   ): Promise<boolean> => {
+    if (!exam) return false
     const selectedStudentIds = Array.from(selectedStudents)
     const result = await window.electronAPI.export.validateScoringData({
       examId: exam.id,
@@ -289,6 +290,7 @@ export default function ExportMainView() {
   }
 
   const executeExportScoredAnswers = async () => {
+    if (!exam) return
     try {
       // 処理開始
       setIsExporting(true)
@@ -645,6 +647,7 @@ export default function ExportMainView() {
   }
 
   const executeExportGradingData = async () => {
+    if (!exam) return
     setIsExporting(true)
 
     try {
@@ -672,6 +675,7 @@ export default function ExportMainView() {
   }
 
   const handleExportRData = async (format: "csv" | "json") => {
+    if (!exam) return
     setIsExporting(true)
     try {
       const selectedStudentIds = Array.from(selectedStudents)
@@ -732,6 +736,7 @@ export default function ExportMainView() {
   }
 
   const executeExportIndividualReports = async () => {
+    if (!exam) return
     setIsExporting(true)
 
     try {

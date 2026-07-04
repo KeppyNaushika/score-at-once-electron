@@ -8,27 +8,10 @@ import type { Prisma, QuestionScore } from "@prisma/client"
 
 /** Prisma拡張型をprismaExtensions.tsからインポート */
 import type { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
-
-/** Prisma基本型をエクスポート */
-export type {
-  CropRegion,
-  MasterImage,
-  QuestionScore,
-  StudentAnswerImage,
-} from "@prisma/client"
-
-/**
- * 採点状態の型定義
- * Prismaスキーマではstring型なので、ここで厳密な型を定義
- */
-export type ScoringStatus =
-  | "unscored"
-  | "correct"
-  | "incorrect"
-  | "partial"
-  | "pending"
-  | "no_answer"
-  | "double_mark"
+import {
+  type ScoringStatus,
+  toScoringStatus,
+} from "@/types/scoringStatus.types"
 
 /**
  * StudentAnswerImageを学生とExamStudents情報で拡張した型
@@ -196,7 +179,7 @@ export function getScoringStatusFromArray(
   if (!cropRegionId) return "unscored"
 
   const score = findQuestionScore(questionScores, studentId, cropRegionId)
-  return (score?.status as ScoringStatus) ?? "unscored"
+  return toScoringStatus(score?.status)
 }
 
 /**

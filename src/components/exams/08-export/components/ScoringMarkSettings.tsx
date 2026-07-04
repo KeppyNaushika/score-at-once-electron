@@ -15,7 +15,6 @@ export type {
   PageSize,
   ScoreTextConfig,
   ScoringMarkConfig,
-  ScoringStatus,
   TextAlignment,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 

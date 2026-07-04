@@ -10,7 +10,6 @@ import {
   useState,
 } from "react"
 
-import type { ScoringStatus } from "@/components/exams/07-score-at-once/types"
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
 import { defaultConfig as defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
@@ -109,7 +108,7 @@ export default function AnswerIndividualView({
         questionScores,
         studentId,
         cropRegion.id
-      ) as ScoringStatus
+      )
       const questionScore = questionScores.find(
         (candidateQuestionScore) =>
           candidateQuestionScore.studentId === studentId &&

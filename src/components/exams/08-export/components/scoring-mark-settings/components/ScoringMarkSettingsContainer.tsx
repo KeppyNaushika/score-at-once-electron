@@ -16,7 +16,6 @@ import type {
   MarkPosition,
   ScoreTextConfig,
   ScoringMarkConfig,
-  ScoringStatus,
   TextAlignment,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import { Button } from "@/components/ui/button"
@@ -31,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface ScoringMarkSettingsContainerProps {
   config: ScoringMarkConfig

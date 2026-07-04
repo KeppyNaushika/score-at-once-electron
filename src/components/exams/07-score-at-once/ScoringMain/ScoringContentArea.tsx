@@ -1,5 +1,6 @@
 "use client"
 
+import type { QuestionScore } from "@prisma/client"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/AnswerGridView"
@@ -12,7 +13,6 @@ import type {
   MasterAnswerDisplayMode,
   MasterGridItem,
   MouseBrushAction,
-  QuestionScore,
   ScoringData,
   ScoringOperationMode,
   StudentAnswerImageWithExamStudents,

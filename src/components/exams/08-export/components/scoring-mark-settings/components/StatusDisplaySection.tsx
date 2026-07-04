@@ -3,10 +3,10 @@
 import Image from "next/image"
 
 import { statusLabels } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import type { ScoringStatus } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import { getMarkImagePath } from "@/components/exams/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface StatusDisplaySectionProps {
   showMarkForStatus: Record<ScoringStatus, boolean>

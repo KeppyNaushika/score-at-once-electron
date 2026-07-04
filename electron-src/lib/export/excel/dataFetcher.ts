@@ -1,5 +1,7 @@
 import type { CropRegion, Exam, ExamStudent, Student } from "@prisma/client"
 
+import type { ScoringStatus } from "@/types/scoringStatus.types"
+
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getExamById } from "../../prisma/exam"
 import { getStudentClassInfoForExam } from "../../prisma/examClass"
@@ -300,14 +302,7 @@ function buildScoreDetails(
       questionLabel: region.label || `問${(region.orderIndex ?? 0) + 1}`,
       score: actualScore,
       maxScore: region.points || 0,
-      status:
-        (scoreRecord?.status as
-          | "unscored"
-          | "correct"
-          | "partial"
-          | "hold"
-          | "incorrect"
-          | "no_answer") || "unscored",
+      status: (scoreRecord?.status as ScoringStatus) || "unscored",
     }
   })
 }

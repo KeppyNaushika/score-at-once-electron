@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import type {
-  CropRegionWithExamPage,
-  ScoringStatus,
-} from "@/components/exams/07-score-at-once/types"
+import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { useShortcutContext } from "../contexts/ShortcutProvider"
 

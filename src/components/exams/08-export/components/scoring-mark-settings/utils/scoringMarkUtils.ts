@@ -1,4 +1,4 @@
-import type { ScoringStatus } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /** 採点状態から対応するマーク画像のパスを返す */
 export function getMarkImagePath(status: ScoringStatus): string {

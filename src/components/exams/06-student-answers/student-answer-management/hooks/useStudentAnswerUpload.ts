@@ -5,7 +5,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UploadData,
-} from "@/components/exams/06-student-answers/student-answer-management/types"
+} from "@/components/exams/06-student-answers/types"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 
 /** 答案ファイルのドロップ・変換・アップロード処理を統合するフック */

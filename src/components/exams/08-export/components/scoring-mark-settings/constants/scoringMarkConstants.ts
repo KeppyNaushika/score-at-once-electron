@@ -2,8 +2,8 @@ import type {
   MarkPosition,
   ScoreTextConfig,
   ScoringMarkConfig,
-  ScoringStatus,
 } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // 既定色（点数印字・採点記号マーク）
 export const DEFAULT_PARTIAL_SCORE_COLOR = "#ef4444" // 部分点・配点（赤）

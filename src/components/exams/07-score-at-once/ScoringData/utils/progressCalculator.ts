@@ -1,12 +1,11 @@
+import type { QuestionScore } from "@prisma/client"
+
 import type {
   CropRegionWithExamPage,
   QuestionProgress,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/ScoringData/types/scoringDataTypes"
-import {
-  findQuestionScore,
-  type QuestionScore,
-} from "@/components/exams/07-score-at-once/types"
+import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 
 /** 各設問の採点進捗（採点済み件数・割合）を計算する */
 export function calculateQuestionProgress(

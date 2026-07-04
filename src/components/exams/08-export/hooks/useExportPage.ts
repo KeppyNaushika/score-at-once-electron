@@ -13,6 +13,7 @@ import {
   defaultScoringMarkConfig,
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/ScoringMarkSettings"
+import type { ExamWithDetails } from "@/types/common.types"
 
 /** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */
 export function useExportPage() {
@@ -21,8 +22,7 @@ export function useExportPage() {
   const initializedRef = useRef(false)
 
   // 基本状態
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [exam, setExam] = useState<any>(null)
+  const [exam, setExam] = useState<ExamWithDetails | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
 

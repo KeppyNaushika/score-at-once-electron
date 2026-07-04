@@ -7,15 +7,7 @@
  * - DBに保存（UserPreference KV方式）
  */
 
-/** 採点状態の種類（ScoringStatusと統一） */
-export type ScoringStatusType =
-  | "unscored"
-  | "correct"
-  | "partial"
-  | "pending"
-  | "incorrect"
-  | "no_answer"
-  | "double_mark"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /** 各状態の色設定 */
 export interface StatusColorConfig {
@@ -28,7 +20,7 @@ export interface StatusColorConfig {
 }
 
 /** 全状態の色設定 */
-export type ScoringStatusColors = Record<ScoringStatusType, StatusColorConfig>
+export type ScoringStatusColors = Record<ScoringStatus, StatusColorConfig>
 
 /** カラープリセット定義 */
 export interface ScoringColorPreset {
@@ -39,7 +31,7 @@ export interface ScoringColorPreset {
 }
 
 /** 状態のラベル（日本語） */
-export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
+export const SCORING_STATUS_LABELS: Record<ScoringStatus, string> = {
   unscored: "未採点",
   correct: "正答",
   partial: "部分点",
@@ -50,7 +42,7 @@ export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
 }
 
 /** 状態の表示順序 */
-export const SCORING_STATUS_ORDER: ScoringStatusType[] = [
+export const SCORING_STATUS_ORDER: ScoringStatus[] = [
   "unscored",
   "correct",
   "partial",

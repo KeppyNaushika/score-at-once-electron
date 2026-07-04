@@ -23,9 +23,8 @@ export function getStatusSymbol(status: string, score?: number): string {
     case "correct":
       return "○"
     case "partial":
-      return score !== undefined && score !== null ? `△${score}` : "△NULL"
-    case "hold":
-      return score !== undefined && score !== null ? `△${score}` : "△NULL"
+    case "pending":
+      return score !== undefined && score !== null ? `△${score}` : "△"
     case "incorrect":
       return "×"
     case "no_answer":
