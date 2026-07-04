@@ -120,7 +120,7 @@ export function ClassExamManager({
             examId,
             classroomId,
             administered: true,
-            teacherStat: true,
+            teacherStatistics: true,
             studentReport: true,
           })
         }

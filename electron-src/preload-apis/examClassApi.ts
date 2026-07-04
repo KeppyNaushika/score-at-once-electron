@@ -15,13 +15,13 @@ export function createExamClassApi() {
         examId: string
         classroomId: string
         administered?: boolean
-        teacherStat?: boolean
+        teacherStatistics?: boolean
         studentReport?: boolean
       }) => ipcRenderer.invoke("exam-class:add", options),
       update: (options: {
         id: string
         administered?: boolean
-        teacherStat?: boolean
+        teacherStatistics?: boolean
         studentReport?: boolean
         order?: number
       }) => ipcRenderer.invoke("exam-class:update", options),

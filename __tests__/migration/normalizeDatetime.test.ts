@@ -125,18 +125,22 @@ describe("DateTime正規化マイグレーション", () => {
       null: 1,
     })
 
-    // 本番と同じ経路: Prismaクエリ (driver adapter が Date を ISO text で渡す)
+    // 本番と同じ経路を模す: driver adapter が Date を ISO text で渡すため、
+    // $queryRawUnsafe に Date をバインドして integer(endDate) と比較する。
+    // テーブルは normalize migration と同じ旧物理名 StudentClassMembership で作成しており、
+    // 新物理名へマップされる Prisma クライアントでは参照できないため生SQLを用いる。
     const refDate = new Date(REFERENCE)
-    const filter = {
-      OR: [{ endDate: null }, { endDate: { gte: refDate } }],
+    const countActiveSince = async (): Promise<number> => {
+      const rows = await prisma.$queryRawUnsafe<{ n: number | bigint }[]>(
+        `SELECT COUNT(*) AS n FROM "StudentClassMembership" WHERE "endDate" IS NULL OR "endDate" >= ?`,
+        refDate
+      )
+      return Number(rows[0].n)
     }
 
     // 【バグ再現】integer(endDate) >= text(基準日) は SQLite型優先順位で常にfalse。
     // 在籍中の未来終了(m_future)が除外され、null(m_active)の1件しか拾えない
-    const before = await prisma.studentClassroomMembership.count({
-      where: filter,
-    })
-    expect(before).toBe(1)
+    expect(await countActiveSince()).toBe(1)
 
     // 正規化マイグレーション適用
     await applyMigrationFor(["StudentClassMembership"])
@@ -149,10 +153,7 @@ describe("DateTime正規化マイグレーション", () => {
 
     // 【修正確認】未来終了(m_future) + 在籍中(m_active) の2件が正しく拾える。
     // 過去終了(m_past)は基準日時点で在籍していないため除外されるのが正しい
-    const after = await prisma.studentClassroomMembership.count({
-      where: filter,
-    })
-    expect(after).toBe(2)
+    expect(await countActiveSince()).toBe(2)
   })
 
   it("変換形式が driver adapter と同一 (YYYY-MM-DDTHH:MM:SS.mmm+00:00)", async () => {
@@ -198,7 +199,7 @@ describe("DateTime正規化マイグレーション", () => {
     "AsbCharGuide",
     "AuditLog",
     "Coursework",
-    "CourseworkClass",
+    "CourseworkClassroom", // 旧 CourseworkClass（20260704010000 でリネーム）
     "CourseworkItem",
     "CourseworkLetterScale",
     "CourseworkScore",
@@ -206,6 +207,17 @@ describe("DateTime正規化マイグレーション", () => {
     "CourseworkTag",
     "GradeConstraint",
     "ReturnSnapshot",
+  ])
+
+  // 20260704010000_rename_class_tables_to_classroom で物理名をリネームしたテーブル。
+  // normalize migration (20260613144726) は旧物理名（classes / StudentClassMembership /
+  // ExamClass / GradeClass）でこれらを既に正規化済みで、RENAME TO は ISO text データを
+  // 保持するため再正規化は不要。歴史migrationは編集禁止のため現物理名を網羅チェックから除外する。
+  const RENAMED_AFTER_NORMALIZATION = new Set([
+    "Classroom",
+    "StudentClassroomMembership",
+    "ExamClassroom",
+    "GradeClassroom",
   ])
 
   it("網羅性: migration.sql が schema.prisma の全 DateTime カラムをカバーする", () => {
@@ -221,7 +233,11 @@ describe("DateTime正規化マイグレーション", () => {
       const body = modelMatch[2]
       const mapMatch = body.match(/@@map\("([^"]+)"\)/)
       const table = mapMatch ? mapMatch[1] : modelMatch[1]
-      if (POST_MIGRATION_TABLES.has(table)) continue
+      if (
+        POST_MIGRATION_TABLES.has(table) ||
+        RENAMED_AFTER_NORMALIZATION.has(table)
+      )
+        continue
       for (const line of body.split("\n")) {
         const parts = line.trim().split(/\s+/)
         if (parts.length >= 2 && parts[1].startsWith("DateTime")) {

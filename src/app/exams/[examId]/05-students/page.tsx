@@ -92,7 +92,7 @@ export default function StudentsPage() {
             <TabsTrigger value="students" className="px-4">
               受験生徒一覧
             </TabsTrigger>
-            <TabsTrigger value="classes" className="px-4">
+            <TabsTrigger value="classrooms" className="px-4">
               学級の関連付け
             </TabsTrigger>
           </TabsList>
@@ -153,7 +153,7 @@ export default function StudentsPage() {
         </TabsContent>
 
         {/* 受験学級タブ */}
-        <TabsContent value="classes" className="flex-1 overflow-auto pb-6">
+        <TabsContent value="classrooms" className="flex-1 overflow-auto pb-6">
           <ClassExamManager
             examId={examId}
             examClassrooms={examClassrooms}

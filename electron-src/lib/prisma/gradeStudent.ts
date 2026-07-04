@@ -243,7 +243,7 @@ const gradeRosterAdapter: RosterAdapter = {
   scope: (targetId) => resolveGradeScope(targetId),
   audit: {
     studentEntity: "GradeStudent",
-    classEntity: "GradeClass",
+    classEntity: "GradeClassroom",
     addAction: "grade.student.add",
     removeAction: "grade.student.remove",
     reorderAction: "grade.student.reorder",

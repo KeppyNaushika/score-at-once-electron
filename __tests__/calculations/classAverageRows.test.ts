@@ -3,7 +3,7 @@
  *
  * appendClassAverageRows が
  * - 全体平均行（受験者＝合計点 non-null）
- * - teacherStat 学級ごとの学級平均行（母集団=学級全体、重複カウント）
+ * - teacherStatistics 学級ごとの学級平均行（母集団=学級全体、重複カウント）
  * を正しい列に出すことを検証する。
  */
 import * as ExcelJS from "exceljs"
@@ -13,18 +13,18 @@ import { appendClassAverageRows } from "@/electron-src/lib/export/excel/averageR
 import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
-/** ExamClassroomWithMembers の最小モック（テストで使う teacherStat / class.name / memberships のみ） */
+/** ExamClassroomWithMembers の最小モック（テストで使う teacherStatistics / class.name / memberships のみ） */
 function makeClass(
   name: string,
   studentIds: string[],
-  teacherStat = true
+  teacherStatistics = true
 ): ExamClassroomWithMembers {
   return {
     id: `ec-${name}`,
     examId: "e1",
     classroomId: `c-${name}`,
     administered: true,
-    teacherStat,
+    teacherStatistics,
     studentReport: true,
     order: 0,
     classroom: {
@@ -70,7 +70,7 @@ const NAME_COL = 7
 const TOTAL_COL = 8
 
 describe("appendClassAverageRows", () => {
-  it("全体平均と teacherStat 学級平均を正しい列・値で出す", () => {
+  it("全体平均と teacherStatistics 学級平均を正しい列・値で出す", () => {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("点数一覧")
     worksheet.addRow([

@@ -100,7 +100,7 @@ export function useStudentAddPanel({
   classActiveOnlyDefault,
   studentActiveOnlyDefault,
 }: UseStudentAddPanelParams) {
-  const [activeTab, setActiveTab] = useState("classes")
+  const [activeTab, setActiveTab] = useState("classrooms")
   const [classes, setClasses] = useState<SelectableClass[]>([])
   const [students, setStudents] = useState<SelectableStudent[]>([])
   const [searchTerm, setSearchTerm] = useState("")

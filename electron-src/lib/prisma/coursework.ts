@@ -752,7 +752,7 @@ const courseworkRosterAdapter: RosterAdapter = {
   scope: (targetId) => resolveCourseworkScope(targetId),
   audit: {
     studentEntity: "CourseworkStudent",
-    classEntity: "CourseworkClass",
+    classEntity: "CourseworkClassroom",
     addAction: "coursework.student.add",
     removeAction: "coursework.student.remove",
     reorderAction: "coursework.student.reorder",

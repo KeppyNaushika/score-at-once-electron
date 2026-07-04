@@ -26,8 +26,8 @@ export async function createScoreSheet(
   scoringData: ScoringData[],
   /** 学級平均行の母集団（試験全体の採点データ。選択生徒ではない） */
   allScoringData: ScoringData[] = [],
-  /** teacherStat=true の登録学級（受験日所属生徒つき） */
-  teacherStatClasses: ExamClassroomWithMembers[] = []
+  /** teacherStatistics=true の登録学級（受験日所属生徒つき） */
+  teacherStatisticsClasses: ExamClassroomWithMembers[] = []
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("点数一覧")
 
@@ -41,7 +41,7 @@ export async function createScoreSheet(
   appendClassAverageRows(
     worksheet,
     allScoringData,
-    teacherStatClasses,
+    teacherStatisticsClasses,
     subtotalColumns,
     questionRegions
   )

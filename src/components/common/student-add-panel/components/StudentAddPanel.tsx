@@ -135,12 +135,12 @@ export function StudentAddPanel({
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className={tabsClass}>
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="classes">学級で追加</TabsTrigger>
+        <TabsTrigger value="classrooms">学級で追加</TabsTrigger>
         <TabsTrigger value="individuals">個別で追加</TabsTrigger>
       </TabsList>
 
       {/* 学級で追加 */}
-      <TabsContent value="classes" className={tabsContentClass}>
+      <TabsContent value="classrooms" className={tabsContentClass}>
         <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
           <Switch
             checked={classActiveOnly}

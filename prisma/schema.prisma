@@ -40,8 +40,6 @@ model Classroom {
   examClassrooms       ExamClassroom[]
   gradeClassrooms      GradeClassroom[]
   courseworkClassrooms CourseworkClassroom[]
-
-  @@map("classes")
 }
 
 model Student {
@@ -85,7 +83,6 @@ model StudentClassroomMembership {
   @@index([classroomId])
   @@index([classroomId, attendanceNumber])
   @@index([startDate, endDate])
-  @@map("StudentClassMembership")
 }
 
 model Exam {
@@ -396,15 +393,15 @@ model AuditLog {
 }
 
 model ExamClassroom {
-  id            String   @id @default(uuid())
-  examId        String
-  classroomId   String
-  administered  Boolean  @default(false) // 学級・出席番号表示（再採番）の対象
-  teacherStat   Boolean  @default(false) // 教員集計対象（Excel学級平均行）
-  studentReport Boolean  @default(false) // 生徒表示対象（個人成績表の学級比較）
-  order         Int      @default(0) // 複数クラス時の優先順位（小さいほど優先）
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(uuid())
+  examId            String
+  classroomId       String
+  administered      Boolean  @default(false) // 学級・出席番号表示（再採番）の対象
+  teacherStatistics Boolean  @default(false) // 教員集計対象（Excel学級平均行）
+  studentReport     Boolean  @default(false) // 生徒表示対象（個人成績表の学級比較）
+  order             Int      @default(0) // 複数クラス時の優先順位（小さいほど優先）
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   exam      Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
@@ -412,7 +409,6 @@ model ExamClassroom {
   @@unique([examId, classroomId])
   @@index([examId])
   @@index([classroomId])
-  @@map("ExamClass")
 }
 
 model Tag {
@@ -722,7 +718,6 @@ model GradeClassroom {
   @@unique([gradeId, classroomId])
   @@index([gradeId])
   @@index([classroomId])
-  @@map("GradeClass")
 }
 
 /// 成績算出プロジェクトの対象生徒
@@ -901,7 +896,6 @@ model CourseworkClassroom {
   @@unique([courseworkId, classroomId])
   @@index([courseworkId])
   @@index([classroomId])
-  @@map("CourseworkClass")
 }
 
 /// 試験外成績資料の対象生徒（名簿）。点数が項目ごとに複数つくため名簿は独立テーブル。

@@ -10,7 +10,7 @@ export interface ExamClassWithDetails {
   examId: string
   classroomId: string
   administered: boolean
-  teacherStat: boolean
+  teacherStatistics: boolean
   studentReport: boolean
   order: number
   createdAt: Date
@@ -27,7 +27,7 @@ export interface ExamClassWithClass {
   examId: string
   classroomId: string
   administered: boolean
-  teacherStat: boolean
+  teacherStatistics: boolean
   studentReport: boolean
   order: number
   createdAt: Date
@@ -85,7 +85,7 @@ export interface ExamClassAPI {
       examId: string
       classroomId: string
       administered?: boolean
-      teacherStat?: boolean
+      teacherStatistics?: boolean
       studentReport?: boolean
     }) => Promise<ExamClassWithDetails>
 
@@ -95,7 +95,7 @@ export interface ExamClassAPI {
     update: (options: {
       id: string
       administered?: boolean
-      teacherStat?: boolean
+      teacherStatistics?: boolean
       studentReport?: boolean
       order?: number
     }) => Promise<ExamClassWithDetails>
