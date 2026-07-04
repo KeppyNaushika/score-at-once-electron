@@ -311,10 +311,10 @@ describe("Exam 在籍フィルタ", () => {
       expect(idsOf(classBMembers)).toEqual([active.id])
       // left はどの学級の集計にも含まれない
       expect(members.flatMap(idsOf)).not.toContain(left.id)
-      // 生徒ごと追加した学級は teacherStat / studentReport が true
-      expect(classAMembers.teacherStat).toBe(true)
+      // 生徒ごと追加した学級は teacherStatistics / studentReport が true
+      expect(classAMembers.teacherStatistics).toBe(true)
       expect(classAMembers.studentReport).toBe(true)
-      expect(classBMembers.teacherStat).toBe(true)
+      expect(classBMembers.teacherStatistics).toBe(true)
     })
   })
 })

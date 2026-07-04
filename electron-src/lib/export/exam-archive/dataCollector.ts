@@ -560,7 +560,7 @@ export async function collectExamData(
             examId: examClass.examId,
             classroomId: examClass.classroomId,
             administered: examClass.administered,
-            teacherStat: examClass.teacherStat,
+            teacherStatistics: examClass.teacherStatistics,
             studentReport: examClass.studentReport,
             order: examClass.order,
             createdAt: examClass.createdAt.toISOString(),

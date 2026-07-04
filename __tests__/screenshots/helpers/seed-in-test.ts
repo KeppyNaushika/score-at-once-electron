@@ -422,7 +422,7 @@ export async function seedExamWithScoring(
         examId,
         classroomId,
         administered: true,
-        teacherStat: true,
+        teacherStatistics: true,
         studentReport: true,
       },
     })
@@ -729,7 +729,7 @@ export async function seedSimpleExam(
       examId,
       classroomId: classAId,
       administered: true,
-      teacherStat: true,
+      teacherStatistics: true,
       studentReport: true,
     },
   })

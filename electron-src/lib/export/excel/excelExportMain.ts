@@ -72,10 +72,10 @@ export async function exportGradingDataExcel(
       }
     }
 
-    // teacherStat=true の登録学級（受験日所属生徒つき）= 学級平均行の対象
-    const teacherStatClasses = (await getClassMembersForExam(examId)).filter(
-      (examClass) => examClass.teacherStat
-    )
+    // teacherStatistics=true の登録学級（受験日所属生徒つき）= 学級平均行の対象
+    const teacherStatisticsClasses = (
+      await getClassMembersForExam(examId)
+    ).filter((examClass) => examClass.teacherStatistics)
 
     // Excelワークブック作成
     const workbook = new ExcelJS.Workbook()
@@ -87,7 +87,7 @@ export async function exportGradingDataExcel(
       dataResult.subtotalColumns,
       scoringData,
       allScoringData,
-      teacherStatClasses
+      teacherStatisticsClasses
     )
 
     // 正誤一覧シート作成

@@ -39,14 +39,14 @@ export interface AddExamClassOptions {
   examId: string
   classroomId: string
   administered?: boolean
-  teacherStat?: boolean
+  teacherStatistics?: boolean
   studentReport?: boolean
 }
 
 export interface UpdateExamClassOptions {
   id: string
   administered?: boolean
-  teacherStat?: boolean
+  teacherStatistics?: boolean
   studentReport?: boolean
   order?: number
 }
@@ -139,7 +139,7 @@ export const addExamClass = async (
     examId,
     classroomId,
     administered = false,
-    teacherStat = false,
+    teacherStatistics = false,
     studentReport = false,
   } = options
 
@@ -156,7 +156,7 @@ export const addExamClass = async (
         examId,
         classroomId,
         administered,
-        teacherStat,
+        teacherStatistics,
         studentReport,
         order: nextOrder,
       },
@@ -191,14 +191,14 @@ export const addExamClass = async (
 export const updateExamClass = async (
   options: UpdateExamClassOptions
 ): Promise<ExamClassWithDetails> => {
-  const { id, administered, teacherStat, studentReport, order } = options
+  const { id, administered, teacherStatistics, studentReport, order } = options
 
   try {
     return await prisma.examClassroom.update({
       where: { id },
       data: {
         ...(administered !== undefined && { administered }),
-        ...(teacherStat !== undefined && { teacherStat }),
+        ...(teacherStatistics !== undefined && { teacherStatistics }),
         ...(studentReport !== undefined && { studentReport }),
         ...(order !== undefined && { order }),
       },
@@ -393,11 +393,11 @@ export const addStudentsFromClass = async (
         examId,
         classroomId,
         administered: true,
-        teacherStat: true, // 生徒ごと追加した学級は教員集計の対象
+        teacherStatistics: true, // 生徒ごと追加した学級は教員集計の対象
         studentReport: true, // administered なので生徒表示の対象
         order: nextOrder,
       },
-      // 再追加では構造（administered）のみ再宣言し、出力フラグ（teacherStat/studentReport）は
+      // 再追加では構造（administered）のみ再宣言し、出力フラグ（teacherStatistics/studentReport）は
       // 08 画面で設定したユーザーの選択を尊重して触らない
       update: {
         administered: true,
@@ -603,7 +603,7 @@ export const getStudentClassInfo = async (
  * （用途2/3の学級平均は「学級全体」を母集団とするため、order優先の単一化はしない）。
  *
  * order 昇順の全登録学級を返し、消費側が用途別にフィルタする
- * （Excel は teacherStat、個人成績表は studentReport）。所属生徒IDは
+ * （Excel は teacherStatistics、個人成績表は studentReport）。所属生徒IDは
  * `ec.classroom.memberships.map((m) => m.studentId)` で取得する。
  */
 export const getClassMembersForExam = async (

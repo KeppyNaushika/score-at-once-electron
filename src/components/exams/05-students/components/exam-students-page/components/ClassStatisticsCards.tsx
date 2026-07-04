@@ -13,8 +13,8 @@ export function ClassStatisticsCards({
   const administeredClasses = examClassrooms.filter(
     (examClass) => examClass.administered
   ).length
-  const teacherStatClasses = examClassrooms.filter(
-    (examClass) => examClass.teacherStat
+  const teacherStatisticsClasses = examClassrooms.filter(
+    (examClass) => examClass.teacherStatistics
   ).length
 
   return (
@@ -36,7 +36,7 @@ export function ClassStatisticsCards({
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">教員集計</span>
         <span className="rounded-md border border-blue-200 bg-blue-100 px-3 text-lg font-bold text-blue-700">
-          {teacherStatClasses}
+          {teacherStatisticsClasses}
         </span>
       </div>
     </div>

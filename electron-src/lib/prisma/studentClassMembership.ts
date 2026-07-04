@@ -90,7 +90,7 @@ export const deleteStudentClassMembership = async (
 
     await recordAuditLog({
       action: "class.membership.remove",
-      entityType: "StudentClassMembership",
+      entityType: "StudentClassroomMembership",
       entityId: id,
       scopeId: before?.classroomId ?? null,
       scopeLabel: before?.classroom.name ?? null,
@@ -207,7 +207,7 @@ export const addStudentToClass = async (
 
     await recordAuditLog({
       action: "class.membership.add",
-      entityType: "StudentClassMembership",
+      entityType: "StudentClassroomMembership",
       entityId: result.id,
       scopeId: classroomId,
       scopeLabel: result.classroom?.name ?? null,

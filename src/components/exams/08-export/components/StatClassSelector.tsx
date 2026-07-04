@@ -21,7 +21,7 @@ interface StatClassSelectorProps {
 /**
  * 統計対象学級の選択（Phase 3）
  *
- * 試験に登録された学級ごとに「教員集計(teacherStat)」「生徒表示(studentReport)」を切り替える。
+ * 試験に登録された学級ごとに「教員集計(teacherStatistics)」「生徒表示(studentReport)」を切り替える。
  * - 教員集計: Excel の学級平均行に出す学級
  * - 生徒表示: 個人成績表の学級比較に出す学級（生徒に渡るので慎重に）
  * どちらも複数選択可（1人の生徒が複数学級の平均に数えられる）。受験生徒画面(05)の再採番とは別軸。
@@ -50,7 +50,7 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
   const updateFlag = useCallback(
     async (
       examClassId: string,
-      patch: { teacherStat?: boolean; studentReport?: boolean }
+      patch: { teacherStatistics?: boolean; studentReport?: boolean }
     ) => {
       // 楽観的更新
       setClasses((prev) =>
@@ -137,10 +137,10 @@ export function StatClassSelector({ examId }: StatClassSelectorProps) {
                 </TableCell>
                 <TableCell className="text-center">
                   <Checkbox
-                    checked={examClass.teacherStat}
+                    checked={examClass.teacherStatistics}
                     onCheckedChange={(checked) =>
                       updateFlag(examClass.id, {
-                        teacherStat: checked === true,
+                        teacherStatistics: checked === true,
                       })
                     }
                   />

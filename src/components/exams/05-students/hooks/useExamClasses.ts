@@ -25,7 +25,7 @@ interface UseExamClassesReturn {
     examClassId: string,
     options: {
       administered?: boolean
-      teacherStat?: boolean
+      teacherStatistics?: boolean
       studentReport?: boolean
     }
   ) => Promise<ExamClassWithDetails | null>
@@ -82,7 +82,7 @@ export function useExamClasses({
       examClassId: string,
       options: {
         administered?: boolean
-        teacherStat?: boolean
+        teacherStatistics?: boolean
         studentReport?: boolean
       }
     ): Promise<ExamClassWithDetails | null> => {

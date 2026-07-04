@@ -59,7 +59,7 @@ export const createClass = async (
 
     await recordAuditLog({
       action: "class.create",
-      entityType: "Class",
+      entityType: "Classroom",
       entityId: created.id,
       target: created.name,
     })
@@ -101,7 +101,7 @@ export const updateClass = async (
 
     await recordAuditLog({
       action: "class.update",
-      entityType: "Class",
+      entityType: "Classroom",
       entityId: updated.id,
       target: updated.name,
       changes: diffFields(
@@ -151,7 +151,7 @@ export const deleteClass = async (
 
     await recordAuditLog({
       action: "class.delete",
-      entityType: "Class",
+      entityType: "Classroom",
       entityId: classroomId,
       target: deleted.name,
     })

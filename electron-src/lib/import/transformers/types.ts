@@ -41,6 +41,7 @@ import type {
  * - 1.13.0: v0.12.x (ScoreDecision 追加 — OWNERによる確定スコア。QuestionScoreのstatus proposed/final廃止)
  * - 1.14.0: v0.13.x (ReturnSnapshot 追加 — 答案返却版スナップショット。返却後の採点修正差分検出用)
  * - 1.15.0: v0.14.x (ExamClass に teacherStat/studentReport、ExamSubtotalGroup に selectedForTable/selectedForBoxPlot 追加 — 学級統計再設計。statistics 廃止)
+ * - 1.16.0: v0.14.x (物理テーブル名を Classroom 系へ統一、ExamClassroom.teacherStat → teacherStatistics リネーム。読込は旧 teacherStat/statistics を補完)
  */
 export type ArchiveVersion =
   | "1.0.0"
@@ -59,9 +60,10 @@ export type ArchiveVersion =
   | "1.13.0"
   | "1.14.0"
   | "1.15.0"
+  | "1.16.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.15.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.16.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -81,6 +83,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.13.0",
   "1.14.0",
   "1.15.0",
+  "1.16.0",
 ] as const
 
 // =============================================================================

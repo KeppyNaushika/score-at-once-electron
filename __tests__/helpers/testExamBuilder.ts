@@ -260,7 +260,7 @@ export async function createFullTestExam(
       examId: exam.id,
       classroomId: classroom.id,
       administered: true,
-      teacherStat: true,
+      teacherStatistics: true,
       studentReport: true,
       order: 0,
     },

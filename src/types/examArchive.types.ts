@@ -767,8 +767,10 @@ export interface ArchiveExamData {
     administered: boolean
     /** 〜v1.14.0 の旧フラグ（v1.15.0 で teacherStat へ移行）。旧アーカイブ読込時のみ存在 */
     statistics?: boolean
-    /** v1.15.0+ 教員集計対象 */
+    /** v1.15.0 の旧フラグ（v1.16.0 で teacherStatistics へリネーム）。旧アーカイブ読込時のみ存在 */
     teacherStat?: boolean
+    /** v1.16.0+ 教員集計対象 */
+    teacherStatistics?: boolean
     /** v1.15.0+ 生徒表示対象 */
     studentReport?: boolean
     order: number
