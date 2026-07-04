@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { ScoringStatus } from "@/types/scoringStatus.types"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 interface ExcelPreviewScore {
   questionId: string
@@ -26,7 +27,7 @@ export interface ExcelPreviewRow {
   grade?: string
   className?: string
   attendanceNumber?: number | null
-  status?: "participating" | "expected" | "absent"
+  status?: StudentStatus
   scores: ExcelPreviewScore[]
   totalScore: number | null
   totalMaxScore: number

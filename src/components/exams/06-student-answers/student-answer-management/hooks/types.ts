@@ -1,3 +1,5 @@
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 export interface ConvertedFile {
   id: string
   name: string
@@ -39,7 +41,7 @@ export interface StudentWithAnswers {
   isSelected: boolean
   hasExistingAnswers: boolean
   overwrite: boolean
-  status?: "participating" | "expected" | "absent"
+  status?: StudentStatus
   customOrder?: number | null
   attendanceNumber?: number | null
 }
@@ -54,7 +56,7 @@ export interface UseStudentAnswerUploadProps {
     firstNameKana: string
     studentId: string
     attendanceNumber?: number | null
-    status?: "participating" | "expected" | "absent"
+    status?: StudentStatus
     customOrder?: number | null
   }>
   onUploadComplete?: () => void

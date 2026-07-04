@@ -9,6 +9,7 @@ import type {
   ReturnDiffResult,
 } from "@/electron-src/lib/prisma/returnSnapshot"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 /**
  * エクスポート（PDF/Excel/印刷）関連API
@@ -268,7 +269,7 @@ export interface ExportAPI {
         grade?: string
         className?: string
         attendanceNumber?: number | null
-        status?: "participating" | "expected" | "absent"
+        status?: StudentStatus
         scores: Array<{
           questionId: string
           questionLabel: string

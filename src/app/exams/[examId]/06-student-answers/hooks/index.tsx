@@ -13,13 +13,13 @@ import type {
 } from "@/components/exams/06-student-answers/types"
 import type { ExamPageWithDetails } from "@/types/prismaExtensions"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 import type { StudentData } from "../components"
 
 // APIから返される生徒データの型（StudentWithMembershipsに試験固有フィールドを追加）
 interface ExamStudentData extends StudentWithMemberships {
-  status: "participating" | "expected" | "absent"
-  isInExam: boolean
+  status: StudentStatus
   customOrder: number | null
 }
 

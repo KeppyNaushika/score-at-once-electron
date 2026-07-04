@@ -2,6 +2,8 @@
  * 個人成績表用統計計算ロジック
  */
 
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 import {
   average as calculateAverage,
   boxPlot as calculateBoxPlotData,
@@ -205,7 +207,7 @@ export function collectSubtotalRawScores(
         ): entry is {
           studentId: string
           score: number
-          status: "participating" | "expected" | "absent"
+          status: StudentStatus
         } => entry !== null
       )
 

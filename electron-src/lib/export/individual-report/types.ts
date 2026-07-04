@@ -4,6 +4,8 @@
 
 import type { SubtotalGroup } from "@prisma/client"
 
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 import type { BoxPlotData } from "../../shared/calculations/numericStats"
 import type { ScoringData } from "../../shared/types/exportTypes"
 
@@ -139,7 +141,7 @@ export interface ExamInfoForReport {
 export interface StudentSubtotalScore {
   studentId: string
   score: number | null
-  status: "participating" | "expected" | "absent"
+  status: StudentStatus
 }
 
 /** 小計別生スコアデータ（renderer側でのbox plot計算用） */
@@ -152,7 +154,7 @@ export interface SubtotalRawScores {
 export interface RawTotalScoreEntry {
   studentId: string
   totalScore: number | null
-  status: "participating" | "expected" | "absent"
+  status: StudentStatus
   className?: string
   grade?: string
 }

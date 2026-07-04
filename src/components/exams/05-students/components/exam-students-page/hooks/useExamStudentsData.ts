@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react"
 
+import type { RosterClassOption } from "@/components/common/roster-table"
 import type {
-  ClassGroup,
   GradingDataInfo,
   Student,
-  StudentForRemoval,
-  StudentMembership,
-  StudentStatus,
 } from "@/components/exams/05-students/components/exam-students-page/types/examStudentsTypes"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 interface UseExamStudentsDataProps {
   examId: string
@@ -19,7 +17,7 @@ interface UseExamStudentsDataProps {
 export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [loading, setLoading] = useState(true)
   const [students, setStudents] = useState<Student[]>([]) // 順序付き生徒リスト
-  const [classes, setClasses] = useState<ClassGroup[]>([]) // フィルタ用学級情報
+  const [classes, setClasses] = useState<RosterClassOption[]>([]) // フィルタ用学級情報
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<StudentStatus | "all">("all")
   const [selectedClassId, setSelectedClassId] = useState<string>("all")
@@ -86,12 +84,12 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
       setStudents(sortedStudents)
 
-      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（表示のみ）
-      const uniqueClasses = new Map<string, { id: string; name: string }>()
+      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
+      const uniqueClasses = new Map<string, RosterClassOption>()
 
       sortedStudents.forEach((student) => {
         // 各生徒の全所属履歴を確認
-        student.memberships?.forEach((membership: StudentMembership) => {
+        student.memberships?.forEach((membership) => {
           if (!uniqueClasses.has(membership.classroom.id)) {
             uniqueClasses.set(membership.classroom.id, {
               id: membership.classroom.id,
@@ -101,15 +99,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
         })
       })
 
-      // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
-      const filterClasses: ClassGroup[] = Array.from(
-        uniqueClasses.values()
-      ).map((classroom) => ({
-        ...classroom,
-        students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
-      }))
-
-      setClasses(filterClasses)
+      setClasses(Array.from(uniqueClasses.values()))
     } else {
       console.error("Failed to refresh student data:", studentsResult.error)
     }
@@ -331,18 +321,10 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     return matchesSearch && matchesStatus && matchesClass
   })
 
-  // 削除用生徒データの作成
-  const studentsForRemovalData: StudentForRemoval[] = studentsToRemove.map(
-    (id) => {
-      const student = students.find((candidate) => candidate.id === id)
-      return {
-        id,
-        studentNumber: student?.studentNumber || "",
-        lastName: student?.lastName || "",
-        firstName: student?.firstName || "",
-        className: student?.memberships?.[0]?.classroom.name || "未所属",
-      }
-    }
+  // 削除対象の生徒（実体をそのまま渡す。射影型は作らない）
+  const removeIdSet = new Set(studentsToRemove)
+  const studentsForRemovalData = students.filter((student) =>
+    removeIdSet.has(student.id)
   )
 
   return {

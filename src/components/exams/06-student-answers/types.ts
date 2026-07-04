@@ -4,6 +4,8 @@
  * レポート分析に基づき6つのStudent型と4つのStudentAnswer型を1つに統合
  */
 
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 // ============================================================================
 // 基本的な型定義
 // ============================================================================
@@ -20,7 +22,7 @@ export interface UnifiedStudent {
   firstNameKana: string
   studentNumber: string
   attendanceNumber?: number | null
-  status?: "participating" | "expected" | "absent"
+  status?: StudentStatus
   customOrder?: number | null // 🚨 必須: 受験生徒順序
 }
 

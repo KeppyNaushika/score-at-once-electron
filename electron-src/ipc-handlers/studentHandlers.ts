@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client"
 import { dialog } from "electron"
 import * as ExcelJS from "exceljs"
 
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 import {
   addStudentsToExam,
   getClassesNotInExam,
@@ -160,11 +162,7 @@ export function setupStudentHandlers(): void {
 
   registerHandler(
     "update-student-exam-status",
-    async (
-      examId: string,
-      studentId: string,
-      status: "participating" | "expected" | "absent"
-    ) => {
+    async (examId: string, studentId: string, status: StudentStatus) => {
       return await updateStudentExamStatus(examId, studentId, status)
     }
   )

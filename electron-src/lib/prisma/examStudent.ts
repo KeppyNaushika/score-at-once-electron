@@ -1,8 +1,14 @@
+import {
+  type StudentStatus,
+  toStudentStatus,
+} from "@/types/studentStatus.types"
+
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveStudentLabel } from "./auditScope"
 import { getAvailableClassesForTarget } from "./availableClasses"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
+
 // ExamStudentStatus enum は削除されたため、文字列として定義
 type ExamStudentStatus = "PARTICIPATING" | "EXPECTED" | "ABSENT"
 
@@ -57,9 +63,7 @@ export async function getStudentsForExam(examId: string) {
       const { _count, ...studentRest } = examStudent.student
       return {
         ...studentRest,
-        status: examStudent.status.toLowerCase() as
-          "participating" | "expected" | "absent",
-        isInExam: true,
+        status: toStudentStatus(examStudent.status),
         customOrder: examStudent.customOrder,
         answerSheetCount: _count.studentAnswerImages,
       }
@@ -206,7 +210,7 @@ export async function removeStudentsFromExam(
 export async function updateStudentExamStatus(
   examId: string,
   studentId: string,
-  status: "participating" | "expected" | "absent"
+  status: StudentStatus
 ) {
   try {
     // statusを大文字に変換してenumに合わせる

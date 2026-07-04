@@ -1,6 +1,7 @@
 import type { CropRegion, Exam, ExamStudent, Student } from "@prisma/client"
 
 import type { ScoringStatus } from "@/types/scoringStatus.types"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getExamById } from "../../prisma/exam"
@@ -232,7 +233,7 @@ async function buildScoringData(
     grade?: string
     className?: string
     attendanceNumber?: number | null
-    status?: "participating" | "expected" | "absent"
+    status?: StudentStatus
   })[],
   questionRegions: CropRegion[],
   subtotalGroups: SubtotalGroupData[],

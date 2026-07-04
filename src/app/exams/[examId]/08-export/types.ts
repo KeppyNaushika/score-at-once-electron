@@ -1,3 +1,5 @@
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 // 個人成績表用型定義をre-export
 export type {
   AdviceOptions,
@@ -17,9 +19,6 @@ export {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
 } from "@/electron-src/lib/export/individual-report/types"
 
-// 生徒の状態を表す型
-export type StudentStatus = "participating" | "expected" | "absent"
-
 // 生徒データの型
 export interface Student {
   id: string
@@ -38,7 +37,6 @@ export interface Student {
     }
   }[]
   status: StudentStatus
-  isInExam: boolean
   customOrder?: number | null
 }
 
