@@ -1,52 +1,19 @@
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
-// 生徒の状態を表す型
-export type StudentStatus = "participating" | "expected" | "absent"
-
-// 所属情報の型
-export interface StudentMembership {
-  id: string
-  attendanceNumber?: number | null
-  classroom: {
-    id: string
-    name: string
-  }
-}
-
-// 生徒データの型（実際のデータベース構造に合わせて更新）
-export interface Student {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-  memberships: StudentMembership[]
+// 生徒データの型 = Prisma拡張(StudentWithMemberships: scalars + memberships+classroom)に
+// 試験別の計算フィールド（Prismaに存在しない導出値）を付与した view-model。
+// getStudentsForExam の戻り値（examApi.d.ts）と同じ形。
+export type Student = StudentWithMemberships & {
   /** ExamClass(administered=true)から取得した学級情報 */
   examClassInfo?: StudentClassInfo | null
   status: StudentStatus
-  isInExam: boolean
   customOrder?: number | null
   answerSheetCount: number
-}
-
-// クラスデータの型
-export interface ClassGroup {
-  id: string
-  name: string
-  students: Student[]
 }
 
 export interface GradingDataInfo {
   hasData: boolean
   totalItems: number
-}
-
-export interface StudentForRemoval {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  className: string
 }

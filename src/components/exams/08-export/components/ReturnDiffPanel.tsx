@@ -82,15 +82,13 @@ export function ReturnDiffPanel({
   } = useReturnDiff(examId)
   const [detailOpen, setDetailOpen] = useState(false)
 
-  const studentName = (id: string): string => {
-    const student = students.find((student) => student.id === id)
-    return student ? `${student.lastName} ${student.firstName}` : id
-  }
-
-  // 変更があった生徒の差分（名前順は students の並びに従う）
-  const changedDiffs: ReturnStudentDiff[] = students
-    .map((student) => diffByStudent.get(student.id))
-    .filter((diff): diff is ReturnStudentDiff => !!diff && diff.changed)
+  // 変更があった生徒の差分（生徒実体をペアで保持。順序は students の並びに従う）
+  const changedDiffs = students
+    .map((student) => ({ student, diff: diffByStudent.get(student.id) }))
+    .filter(
+      (pair): pair is { student: Student; diff: ReturnStudentDiff } =>
+        !!pair.diff && pair.diff.changed
+    )
 
   const selectChangedOnly = () => {
     setSelectedStudents(new Set(changedStudentIds))
@@ -147,13 +145,13 @@ export function ReturnDiffPanel({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
-                {changedDiffs.map((diff) => (
+                {changedDiffs.map(({ student, diff }) => (
                   <div
                     key={diff.studentId}
                     className="border-border rounded-md border p-3 text-sm"
                   >
                     <div className="mb-1 flex items-center gap-2 font-medium">
-                      {studentName(diff.studentId)}
+                      {student.lastName} {student.firstName}
                       {diff.annotationChanged && (
                         <Badge variant="secondary" className="gap-1">
                           <PencilLine className="h-3 w-3" />

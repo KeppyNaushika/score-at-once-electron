@@ -20,7 +20,6 @@ import { SortableTableProvider } from "@/components/common/sortable-table"
 import type {
   SortableStudentTableProps,
   Student,
-  StudentStatus,
 } from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
 import {
   AlertDialog,
@@ -42,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 /** 試験名簿の Student を共通の RosterRow へ変換 */
 function toRosterRow(student: Student): RosterRow {

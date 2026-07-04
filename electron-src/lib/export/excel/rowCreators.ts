@@ -1,5 +1,7 @@
 import * as ExcelJS from "exceljs"
 
+import type { StudentStatus } from "@/types/studentStatus.types"
+
 import { ScoringData } from "../../shared/types/exportTypes"
 import {
   applyCellStyle,
@@ -198,9 +200,7 @@ function setQuestionCells(
  * @param status - 受験状態
  * @returns 日本語の受験状態
  */
-function getStatusText(
-  status?: "participating" | "expected" | "absent"
-): string {
+function getStatusText(status?: StudentStatus): string {
   switch (status) {
     case "participating":
       return "受験"

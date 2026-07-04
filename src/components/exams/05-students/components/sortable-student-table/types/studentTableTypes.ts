@@ -1,7 +1,6 @@
+import type { RosterClassOption } from "@/components/common/roster-table"
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
-
-// 生徒の状態を表す型
-export type StudentStatus = "participating" | "expected" | "absent"
+import type { StudentStatus } from "@/types/studentStatus.types"
 
 // 生徒データの型
 export interface Student {
@@ -23,20 +22,12 @@ export interface Student {
   /** ExamClass(administered=true)から取得した学級情報 */
   examClassInfo?: StudentClassInfo | null
   status: StudentStatus
-  isInExam: boolean
   customOrder?: number | null
   answerSheetCount: number
 }
 
-// クラスデータの型
-export interface ClassGroup {
-  id: string
-  name: string
-  students: Student[]
-}
-
 export interface SortableStudentTableProps {
-  classes: ClassGroup[]
+  classes: RosterClassOption[]
   onStudentStatusUpdate: (
     studentId: string,
     status: StudentStatus

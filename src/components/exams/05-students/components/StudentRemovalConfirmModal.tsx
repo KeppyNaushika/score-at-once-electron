@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Trash2 } from "lucide-react"
 
+import type { Student } from "@/components/exams/05-students/components/exam-students-page/types/examStudentsTypes"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,13 +18,7 @@ interface StudentRemovalConfirmModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
-  studentsToRemove: Array<{
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-    className: string
-  }>
+  studentsToRemove: Student[]
   hasGradingData: boolean
   gradingDataCount?: number
 }
@@ -65,7 +60,7 @@ export default function StudentRemovalConfirmModal({
                     {student.studentNumber}
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
-                    {student.className}
+                    {student.examClassInfo?.className ?? "未所属"}
                   </Badge>
                 </div>
               </div>
