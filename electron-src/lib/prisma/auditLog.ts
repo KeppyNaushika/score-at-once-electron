@@ -166,10 +166,15 @@ export function diffFields<T extends Record<string, unknown>>(
 ): AuditChange[] {
   const changes: AuditChange[] = []
   for (const { field, label } of watched) {
-    const b = before?.[field]
-    const a = after?.[field]
-    if (!isEqual(b, a)) {
-      changes.push({ field, label, before: b ?? null, after: a ?? null })
+    const beforeValue = before?.[field]
+    const afterValue = after?.[field]
+    if (!isEqual(beforeValue, afterValue)) {
+      changes.push({
+        field,
+        label,
+        before: beforeValue ?? null,
+        after: afterValue ?? null,
+      })
     }
   }
   return changes

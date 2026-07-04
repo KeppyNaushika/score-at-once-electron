@@ -43,10 +43,10 @@ export function ConsistencyFields({
       : viewpointNames
 
   const toggleViewpoint = (name: string) => {
-    const set = new Set(effectiveViewpoints)
-    if (set.has(name)) set.delete(name)
-    else set.add(name)
-    onChange({ ...config, viewpointItems: [...set] })
+    const viewpointSet = new Set(effectiveViewpoints)
+    if (viewpointSet.has(name)) viewpointSet.delete(name)
+    else viewpointSet.add(name)
+    onChange({ ...config, viewpointItems: [...viewpointSet] })
   }
 
   return (

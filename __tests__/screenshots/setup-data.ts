@@ -43,8 +43,8 @@ async function main() {
 
   // 既存DB削除してまっさらに
   for (const ext of ["", "-shm", "-wal", "-journal"]) {
-    const f = DB_PATH + ext
-    if (fs.existsSync(f)) fs.unlinkSync(f)
+    const dbFilePath = DB_PATH + ext
+    if (fs.existsSync(dbFilePath)) fs.unlinkSync(dbFilePath)
   }
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true })
 
@@ -97,21 +97,21 @@ async function main() {
     }
 
     for (const majorQuestion of template.majorQuestions) {
-      const newMqId = randomUUID()
+      const newMajorQuestionId = randomUUID()
       await prisma.asbMajorQuestion.create({
         data: {
-          id: newMqId,
+          id: newMajorQuestionId,
           definitionId: asbDefId,
           label: majorQuestion.label,
           order: majorQuestion.order,
         },
       })
       for (const subQuestion of majorQuestion.subQuestions) {
-        const newSqId = randomUUID()
+        const newSubQuestionId = randomUUID()
         await prisma.asbSubQuestion.create({
           data: {
-            id: newSqId,
-            majorQuestionId: newMqId,
+            id: newSubQuestionId,
+            majorQuestionId: newMajorQuestionId,
             label: subQuestion.label,
             order: subQuestion.order,
             heightMultiplier: subQuestion.heightMultiplier,
@@ -134,7 +134,7 @@ async function main() {
           await prisma.asbTextElement.create({
             data: {
               id: randomUUID(),
-              subQuestionId: newSqId,
+              subQuestionId: newSubQuestionId,
               branchQuestionId: null,
               text: textElement.text,
               fontSize: textElement.fontSize,
@@ -149,7 +149,7 @@ async function main() {
           await prisma.asbOmrConfig.create({
             data: {
               id: newOmrId,
-              subQuestionId: newSqId,
+              subQuestionId: newSubQuestionId,
               type: subQuestion.omrConfig.type,
               numChoices: subQuestion.omrConfig.numChoices,
               choiceLayout: subQuestion.omrConfig.choiceLayout,
@@ -174,7 +174,7 @@ async function main() {
           await prisma.asbBranchQuestion.create({
             data: {
               id: randomUUID(),
-              subQuestionId: newSqId,
+              subQuestionId: newSubQuestionId,
               label: branchQuestion.label,
               order: branchQuestion.order,
               heightMultiplier: branchQuestion.heightMultiplier,

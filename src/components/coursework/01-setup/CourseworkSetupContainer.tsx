@@ -45,7 +45,7 @@ export function CourseworkSetupContainer({
 
   const loadData = useCallback(async () => {
     try {
-      const [cwResult, tags] = await Promise.all([
+      const [courseworkResult, tags] = await Promise.all([
         window.electronAPI.coursework.getById(courseworkId),
         window.electronAPI.tagGetAll(),
       ])
@@ -54,8 +54,8 @@ export function CourseworkSetupContainer({
         tags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }))
       )
 
-      if (cwResult.success && cwResult.coursework) {
-        const coursework = cwResult.coursework
+      if (courseworkResult.success && courseworkResult.coursework) {
+        const coursework = courseworkResult.coursework
         setCoursework(coursework)
         setName(coursework.name)
         setDescription(coursework.description ?? "")

@@ -100,8 +100,8 @@ export function computeFillRatio(
 
   let darkCount = 0
   for (let i = 0; i < totalPixels; i++) {
-    const r = pixels[i * channels]
-    if (r < threshold) {
+    const red = pixels[i * channels]
+    if (red < threshold) {
       darkCount++
     }
   }
@@ -122,7 +122,7 @@ export function computeCircularFillRatio(
   threshold: number
 ): number {
   const { data, width, height, channels } = rawData
-  const r2 = radius * radius
+  const radiusSquared = radius * radius
 
   let totalPixels = 0
   let darkCount = 0
@@ -136,7 +136,7 @@ export function computeCircularFillRatio(
     for (let px = x0; px <= x1; px++) {
       const dx = px - centerX
       const dy = py - centerY
-      if (dx * dx + dy * dy <= r2) {
+      if (dx * dx + dy * dy <= radiusSquared) {
         totalPixels++
         const idx = (py * width + px) * channels
         const luminance =

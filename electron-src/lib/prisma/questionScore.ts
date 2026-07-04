@@ -6,8 +6,8 @@ import prisma from "./client"
 import { recordDrawingAnnotationDeletionsForQuestionScores } from "./deletedRecord"
 
 /** QuestionScore.status を日本語表示に変換（監査ログ差分用） */
-const scoreStatusLabel = (s: string | null | undefined): string => {
-  switch (s) {
+const scoreStatusLabel = (status: string | null | undefined): string => {
+  switch (status) {
     case "correct":
       return "正解"
     case "incorrect":
@@ -23,7 +23,7 @@ const scoreStatusLabel = (s: string | null | undefined): string => {
     case "unscored":
       return "未採点"
     default:
-      return s ?? "（なし）"
+      return status ?? "（なし）"
   }
 }
 

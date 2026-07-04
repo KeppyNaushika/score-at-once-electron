@@ -24,15 +24,15 @@ function makeStudent(
   opts?: { maxScores?: number[]; partialAt?: number[] }
 ): ItemAnalysisInputStudent {
   return {
-    items: pattern.map((v, i) => ({
+    items: pattern.map((value, i) => ({
       questionId: `q${i + 1}`,
       label: `q${i + 1}`,
       maxScore: opts?.maxScores?.[i] ?? 1,
-      score: v,
+      score: value,
       // partialAt に含まれる設問は部分点（正答ではない）扱い
       isCorrect:
-        v !== null &&
-        v === (opts?.maxScores?.[i] ?? 1) &&
+        value !== null &&
+        value === (opts?.maxScores?.[i] ?? 1) &&
         !(opts?.partialAt ?? []).includes(i),
     })),
   }

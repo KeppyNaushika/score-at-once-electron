@@ -88,10 +88,10 @@ export function useTableDataGeneration({
 
       // ファイルと有効セルをマッピング（ファイル配列の順序で）
       const filePositionMap = new Map<string, UnifiedFile>()
-      validPositions.forEach((pos, fileIndex) => {
+      validPositions.forEach((position, fileIndex) => {
         const file = enabledFiles[fileIndex]
         if (file) {
-          const key = `${pos.studentIndex}-${pos.pageIndex}`
+          const key = `${position.studentIndex}-${position.pageIndex}`
           filePositionMap.set(key, file)
         }
       })
@@ -192,14 +192,16 @@ export function useTableDataGeneration({
 
       // 既存答案がある位置を優先してソート（上書き有効時のみ）
       validPositions.sort((positionA, positionB) => {
-        const aKey = `${positionA.studentIndex}-${positionA.pageIndex}`
-        const bKey = `${positionB.studentIndex}-${positionB.pageIndex}`
-        const aHasExisting = existingAnswerPositions.has(aKey)
-        const bHasExisting = existingAnswerPositions.has(bKey)
+        const positionAKey = `${positionA.studentIndex}-${positionA.pageIndex}`
+        const positionBKey = `${positionB.studentIndex}-${positionB.pageIndex}`
+        const positionAHasExisting = existingAnswerPositions.has(positionAKey)
+        const positionBHasExisting = existingAnswerPositions.has(positionBKey)
 
         // 既存答案がある位置を優先（上書き有効時）
-        if (allowOverwrite && aHasExisting && !bHasExisting) return -1
-        if (allowOverwrite && !aHasExisting && bHasExisting) return 1
+        if (allowOverwrite && positionAHasExisting && !positionBHasExisting)
+          return -1
+        if (allowOverwrite && !positionAHasExisting && positionBHasExisting)
+          return 1
 
         // 同じ条件の場合は配置戦略に基づいてソート
         if (fileOrder === "page-first") {
@@ -219,10 +221,10 @@ export function useTableDataGeneration({
 
       // ファイルと有効セルをマッピング（ファイル配列の順序で自動配置）
       const filePositionMap = new Map<string, UnifiedFile>()
-      validPositions.forEach((pos, fileIndex) => {
+      validPositions.forEach((position, fileIndex) => {
         const file = enabledFiles[fileIndex]
         if (file) {
-          const key = `${pos.studentIndex}-${pos.pageIndex}`
+          const key = `${position.studentIndex}-${position.pageIndex}`
           filePositionMap.set(key, file)
         }
       })

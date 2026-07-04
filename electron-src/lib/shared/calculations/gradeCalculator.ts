@@ -524,7 +524,11 @@ export async function calculateGrades(gradeId: string): Promise<{
           targetType: boundarySet.targetType,
           gradeItemId: boundarySet.gradeItemId,
           boundaries: [...boundarySet.boundaries]
-            .sort((a, b) => Number(b.minPercentage) - Number(a.minPercentage))
+            .sort(
+              (boundaryA, boundaryB) =>
+                Number(boundaryB.minPercentage) -
+                Number(boundaryA.minPercentage)
+            )
             .map((boundary) => ({
               label: boundary.label,
               minPercentage: Number(boundary.minPercentage),
@@ -1045,7 +1049,8 @@ function determineGradeLabel(
   if (percentage === null || boundaries.length === 0) return null
 
   const sorted = [...boundaries].sort(
-    (a, b) => Number(b.minPercentage) - Number(a.minPercentage)
+    (boundaryA, boundaryB) =>
+      Number(boundaryB.minPercentage) - Number(boundaryA.minPercentage)
   )
 
   for (const boundary of sorted) {

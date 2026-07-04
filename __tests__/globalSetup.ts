@@ -21,8 +21,8 @@ export async function setup() {
 
   // テスト用DBが既に存在する場合は削除
   for (const suffix of ["", "-journal", "-wal", "-shm"]) {
-    const p = TEST_DB_PATH + suffix
-    if (fs.existsSync(p)) fs.unlinkSync(p)
+    const dbFilePath = TEST_DB_PATH + suffix
+    if (fs.existsSync(dbFilePath)) fs.unlinkSync(dbFilePath)
   }
 
   // テスト用DBのディレクトリを確認
@@ -42,10 +42,10 @@ export async function setup() {
 
 export async function teardown() {
   for (const suffix of ["", "-journal", "-wal", "-shm"]) {
-    const p = TEST_DB_PATH + suffix
-    if (fs.existsSync(p)) {
+    const dbFilePath = TEST_DB_PATH + suffix
+    if (fs.existsSync(dbFilePath)) {
       try {
-        fs.unlinkSync(p)
+        fs.unlinkSync(dbFilePath)
       } catch {
         // ignore
       }

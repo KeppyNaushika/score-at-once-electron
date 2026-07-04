@@ -115,10 +115,10 @@ describe("executeIdChanges", () => {
       expect(oldGroup).toBeNull()
 
       // FK参照が更新されていること
-      const psg = await prisma.examSubtotalGroup.findUnique({
+      const examSubtotalGroup = await prisma.examSubtotalGroup.findUnique({
         where: { id: examSubtotalGroupId },
       })
-      expect(psg!.subtotalGroupId).toBe(newGroupId)
+      expect(examSubtotalGroup!.subtotalGroupId).toBe(newGroupId)
 
       const subtotal = await prisma.subtotal.findUnique({
         where: { id: subtotalId },
@@ -236,14 +236,14 @@ describe("executeIdChanges", () => {
       })
 
       // 全てのFK参照が更新されていること
-      const psg1 = await prisma.examSubtotalGroup.findUnique({
+      const examSubtotalGroup1 = await prisma.examSubtotalGroup.findUnique({
         where: { id: examSubtotalGroup1Id },
       })
-      const psg2 = await prisma.examSubtotalGroup.findUnique({
+      const examSubtotalGroup2 = await prisma.examSubtotalGroup.findUnique({
         where: { id: examSubtotalGroup2Id },
       })
-      expect(psg1!.subtotalGroupId).toBe(newGroupId)
-      expect(psg2!.subtotalGroupId).toBe(newGroupId)
+      expect(examSubtotalGroup1!.subtotalGroupId).toBe(newGroupId)
+      expect(examSubtotalGroup2!.subtotalGroupId).toBe(newGroupId)
 
       const subtotal1 = await prisma.subtotal.findUnique({
         where: { id: subtotal1Id },
@@ -376,10 +376,10 @@ describe("executeIdChanges", () => {
           points: 5,
         },
       })
-      const casId = generateId()
+      const compoundAnswerScoreId = generateId()
       await prisma.compoundAnswerScore.create({
         data: {
-          id: casId,
+          id: compoundAnswerScoreId,
           compoundAnswerId: compoundId,
           studentId: existingStudentId,
           userId,
@@ -409,11 +409,11 @@ describe("executeIdChanges", () => {
       expect(decision!.studentId).toBe(newStudentId)
 
       // CompoundAnswerScore も同様
-      const cas = await prisma.compoundAnswerScore.findUnique({
-        where: { id: casId },
+      const compoundAnswerScore = await prisma.compoundAnswerScore.findUnique({
+        where: { id: compoundAnswerScoreId },
       })
-      expect(cas).not.toBeNull()
-      expect(cas!.studentId).toBe(newStudentId)
+      expect(compoundAnswerScore).not.toBeNull()
+      expect(compoundAnswerScore!.studentId).toBe(newStudentId)
     })
   })
 

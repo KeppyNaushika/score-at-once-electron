@@ -111,7 +111,9 @@ export default function AnswerIndividualView({
         cropRegion.id
       ) as ScoringStatus
       const questionScore = questionScores.find(
-        (q) => q.studentId === studentId && q.cropRegionId === cropRegion.id
+        (candidateQuestionScore) =>
+          candidateQuestionScore.studentId === studentId &&
+          candidateQuestionScore.cropRegionId === cropRegion.id
       )
       const maxScore = cropRegion.points ?? 0
       let actualScore: number | null = null

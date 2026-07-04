@@ -85,13 +85,13 @@ export function createTestArchive(
 
   // 画像ファイル
   if (options.masterImageFiles) {
-    for (const img of options.masterImageFiles) {
-      zip.addFile(img.archivePath, img.content)
+    for (const masterImageFile of options.masterImageFiles) {
+      zip.addFile(masterImageFile.archivePath, masterImageFile.content)
     }
   }
   if (options.answerSheetFiles) {
-    for (const img of options.answerSheetFiles) {
-      zip.addFile(img.archivePath, img.content)
+    for (const answerSheetFile of options.answerSheetFiles) {
+      zip.addFile(answerSheetFile.archivePath, answerSheetFile.content)
     }
   }
 

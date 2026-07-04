@@ -278,21 +278,21 @@ export function useExportPage() {
               return 1
 
             // customOrderが未設定の場合は出席番号順をフォールバック
-            const aAttendanceNumber =
+            const studentAAttendanceNumber =
               studentA.memberships?.[0]?.attendanceNumber
-            const bAttendanceNumber =
+            const studentBAttendanceNumber =
               studentB.memberships?.[0]?.attendanceNumber
 
-            if (aAttendanceNumber && bAttendanceNumber) {
-              return aAttendanceNumber - bAttendanceNumber
+            if (studentAAttendanceNumber && studentBAttendanceNumber) {
+              return studentAAttendanceNumber - studentBAttendanceNumber
             }
-            if (aAttendanceNumber) return -1
-            if (bAttendanceNumber) return 1
+            if (studentAAttendanceNumber) return -1
+            if (studentBAttendanceNumber) return 1
 
             // 出席番号もない場合は名前順
-            const aName = `${studentA.lastName}${studentA.firstName}`
-            const bName = `${studentB.lastName}${studentB.firstName}`
-            return aName.localeCompare(bName, "ja")
+            const studentAName = `${studentA.lastName}${studentA.firstName}`
+            const studentBName = `${studentB.lastName}${studentB.firstName}`
+            return studentAName.localeCompare(studentBName, "ja")
           }
         )
 

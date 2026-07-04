@@ -237,7 +237,7 @@ describe("useAllStudentAnnotations", () => {
       )
 
       await act(async () => {
-        await new Promise((r) => setTimeout(r, 10))
+        await new Promise((resolve) => setTimeout(resolve, 10))
       })
 
       expect(result.current.allStudentAnnotations).toHaveLength(0)
@@ -254,7 +254,7 @@ describe("useAllStudentAnnotations", () => {
       )
 
       await act(async () => {
-        await new Promise((r) => setTimeout(r, 10))
+        await new Promise((resolve) => setTimeout(resolve, 10))
       })
 
       expect(result.current.allStudentAnnotations).toHaveLength(0)

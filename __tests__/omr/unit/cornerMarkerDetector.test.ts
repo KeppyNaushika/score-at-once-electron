@@ -152,9 +152,9 @@ describe("cornerMarkerDetector", () => {
     }
 
     for (const marker of result.markers) {
-      const exp = expected[marker.corner]
-      expect(Math.abs(marker.centerX - exp.x)).toBeLessThanOrEqual(5)
-      expect(Math.abs(marker.centerY - exp.y)).toBeLessThanOrEqual(5)
+      const expectedCenter = expected[marker.corner]
+      expect(Math.abs(marker.centerX - expectedCenter.x)).toBeLessThanOrEqual(5)
+      expect(Math.abs(marker.centerY - expectedCenter.y)).toBeLessThanOrEqual(5)
     }
   })
 

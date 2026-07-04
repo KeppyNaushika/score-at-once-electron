@@ -1215,10 +1215,10 @@ describe("executeIdIntegrationImport", () => {
     })
     expect(tags.length).toBe(1)
 
-    const tsg = await prisma.tagSubtotalGroup.findMany({
+    const tagSubtotalGroups = await prisma.tagSubtotalGroup.findMany({
       where: { tagId },
     })
-    expect(tsg.length).toBe(1)
+    expect(tagSubtotalGroups.length).toBe(1)
   })
 
   // II-16: QuestionScore重複回避 (B11)
@@ -1557,11 +1557,11 @@ describe("executeIdIntegrationImport", () => {
   it("II-20: OMR設定一式がmerge経路で作成される", async () => {
     const { data, examId, regionId } = createBasicTestData()
 
-    const cfgId = generateId()
+    const omrConfigId = generateId()
     const now = new Date().toISOString()
     data.examData.omrConfigs = [
       {
-        id: cfgId,
+        id: omrConfigId,
         cropRegionId: regionId,
         type: "choice",
         numChoices: 4,
@@ -1577,7 +1577,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.omrChoiceOptions = [
       {
         id: generateId(),
-        omrConfigId: cfgId,
+        omrConfigId: omrConfigId,
         choiceIndex: 0,
         label: "1",
         isCorrect: true,
@@ -1593,7 +1593,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.omrDigitBoxes = [
       {
         id: generateId(),
-        omrConfigId: cfgId,
+        omrConfigId: omrConfigId,
         digitIndex: 0,
         normalizedX: 0.1,
         normalizedY: 0.1,
@@ -1633,11 +1633,11 @@ describe("executeIdIntegrationImport", () => {
     const { data, examId, regionId, studentId } = createBasicTestData()
 
     const pageId = data.examData.examPages[0].id
-    const caId = generateId()
+    const compoundAnswerId = generateId()
     const now = new Date().toISOString()
     data.examData.compoundAnswers = [
       {
-        id: caId,
+        id: compoundAnswerId,
         examPageId: pageId,
         label: "複合1",
         answerFormat: "fraction",
@@ -1653,7 +1653,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.compoundAnswerMembers = [
       {
         id: generateId(),
-        compoundAnswerId: caId,
+        compoundAnswerId: compoundAnswerId,
         cropRegionId: regionId,
         order: 0,
         roleLabel: "分子",
@@ -1665,7 +1665,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.compoundAnswerScores = [
       {
         id: generateId(),
-        compoundAnswerId: caId,
+        compoundAnswerId: compoundAnswerId,
         studentId,
         userId: currentUser.id,
         recognizedAnswer: "1/2",
@@ -1685,14 +1685,16 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const cas = await prisma.compoundAnswer.findMany({ where: { id: caId } })
-    expect(cas.length).toBe(1)
+    const compoundAnswers = await prisma.compoundAnswer.findMany({
+      where: { id: compoundAnswerId },
+    })
+    expect(compoundAnswers.length).toBe(1)
     const members = await prisma.compoundAnswerMember.findMany({
-      where: { compoundAnswerId: caId },
+      where: { compoundAnswerId: compoundAnswerId },
     })
     expect(members.length).toBe(1)
     const scores = await prisma.compoundAnswerScore.findMany({
-      where: { compoundAnswerId: caId, studentId },
+      where: { compoundAnswerId: compoundAnswerId, studentId },
     })
     expect(scores.length).toBe(1)
     // userIdは現在のユーザーで上書きされる
@@ -1703,11 +1705,11 @@ describe("executeIdIntegrationImport", () => {
   it("II-22: ScoreDecisionがmerge経路で作成される", async () => {
     const { data, examId, regionId, studentId } = createBasicTestData()
 
-    const sdId = generateId()
+    const scoreDecisionId = generateId()
     const now = new Date().toISOString()
     data.scoresData.scoreDecisions = [
       {
-        id: sdId,
+        id: scoreDecisionId,
         cropRegionId: regionId,
         studentId,
         verdict: "correct",
@@ -1743,11 +1745,11 @@ describe("executeIdIntegrationImport", () => {
     const { data, examId, studentId, regionId, classroomId, groupId } =
       createBasicTestData()
 
-    const sdId = generateId()
+    const scoreDecisionId = generateId()
     const oldDate = new Date("2025-06-01T00:00:00.000Z").toISOString()
     data.scoresData.scoreDecisions = [
       {
-        id: sdId,
+        id: scoreDecisionId,
         cropRegionId: regionId,
         studentId,
         verdict: "incorrect",
@@ -1823,11 +1825,11 @@ describe("executeIdIntegrationImport", () => {
     const { data, examId, studentId, regionId, classroomId, groupId } =
       createBasicTestData()
 
-    const sdId = generateId()
+    const scoreDecisionId = generateId()
     const newDate = new Date("2025-12-01T00:00:00.000Z").toISOString()
     data.scoresData.scoreDecisions = [
       {
-        id: sdId,
+        id: scoreDecisionId,
         cropRegionId: regionId,
         studentId,
         verdict: "correct",
@@ -1904,10 +1906,10 @@ describe("executeIdIntegrationImport", () => {
     const pageId = data.examData.examPages[0].id
 
     // OMR一式
-    const cfgId = generateId()
+    const omrConfigId = generateId()
     data.examData.omrConfigs = [
       {
-        id: cfgId,
+        id: omrConfigId,
         cropRegionId: regionId,
         type: "choice",
         numChoices: 4,
@@ -1923,7 +1925,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.omrChoiceOptions = [
       {
         id: generateId(),
-        omrConfigId: cfgId,
+        omrConfigId: omrConfigId,
         choiceIndex: 0,
         label: "1",
         isCorrect: true,
@@ -1939,7 +1941,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.omrDigitBoxes = [
       {
         id: generateId(),
-        omrConfigId: cfgId,
+        omrConfigId: omrConfigId,
         digitIndex: 0,
         normalizedX: 0.1,
         normalizedY: 0.1,
@@ -1951,10 +1953,10 @@ describe("executeIdIntegrationImport", () => {
     ]
 
     // 複合解答一式
-    const caId = generateId()
+    const compoundAnswerId = generateId()
     data.examData.compoundAnswers = [
       {
-        id: caId,
+        id: compoundAnswerId,
         examPageId: pageId,
         label: "複合1",
         answerFormat: "fraction",
@@ -1970,7 +1972,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.compoundAnswerMembers = [
       {
         id: generateId(),
-        compoundAnswerId: caId,
+        compoundAnswerId: compoundAnswerId,
         cropRegionId: regionId,
         order: 0,
         roleLabel: "分子",
@@ -1982,7 +1984,7 @@ describe("executeIdIntegrationImport", () => {
     data.examData.compoundAnswerScores = [
       {
         id: generateId(),
-        compoundAnswerId: caId,
+        compoundAnswerId: compoundAnswerId,
         studentId,
         userId: currentUser.id,
         recognizedAnswer: "1/2",
@@ -2038,15 +2040,17 @@ describe("executeIdIntegrationImport", () => {
         where: { omrConfigId: omrConfig!.id },
       })
     ).toBe(1)
-    expect(await prisma.compoundAnswer.count({ where: { id: caId } })).toBe(1)
+    expect(
+      await prisma.compoundAnswer.count({ where: { id: compoundAnswerId } })
+    ).toBe(1)
     expect(
       await prisma.compoundAnswerMember.count({
-        where: { compoundAnswerId: caId },
+        where: { compoundAnswerId: compoundAnswerId },
       })
     ).toBe(1)
     expect(
       await prisma.compoundAnswerScore.count({
-        where: { compoundAnswerId: caId, studentId },
+        where: { compoundAnswerId: compoundAnswerId, studentId },
       })
     ).toBe(1)
     expect(

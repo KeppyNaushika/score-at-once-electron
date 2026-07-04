@@ -76,11 +76,11 @@ export const deployPendingMigrations = async (
       }
 
       // 適用成功を記録
-      const id = generateUuid()
+      const migrationId = generateUuid()
       const finishedAt = new Date().toISOString()
       await prisma.$executeRawUnsafe(
         `INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "started_at", "applied_steps_count")
-         VALUES ('${id}', '${checksum}', '${finishedAt}', '${dirName}', '${startedAt}', 1)`
+         VALUES ('${migrationId}', '${checksum}', '${finishedAt}', '${dirName}', '${startedAt}', 1)`
       )
 
       appliedCount++
@@ -141,8 +141,8 @@ const getMigrationsDir = (): string | null => {
 }
 
 const generateUuid = (): string => {
-  const hex = (n: number) =>
-    Array.from({ length: n }, () =>
+  const hex = (charCount: number) =>
+    Array.from({ length: charCount }, () =>
       Math.floor(Math.random() * 16).toString(16)
     ).join("")
   return `${hex(8)}-${hex(4)}-4${hex(3)}-${(8 + Math.floor(Math.random() * 4)).toString(16)}${hex(3)}-${hex(12)}`

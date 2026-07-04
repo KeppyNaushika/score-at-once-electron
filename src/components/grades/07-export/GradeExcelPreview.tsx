@@ -78,7 +78,7 @@ export function GradeExcelPreview({
     <div className="flex h-full flex-col">
       <Tabs
         value={sheetTab}
-        onValueChange={(v) => setSheetTab(v as "result" | "detail")}
+        onValueChange={(value) => setSheetTab(value as "result" | "detail")}
         className="flex flex-1 flex-col"
       >
         <TabsList className="mb-1 grid w-full grid-cols-2">

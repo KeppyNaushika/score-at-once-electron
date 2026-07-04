@@ -204,9 +204,9 @@ export function CourseworkScoresContainer({
           )
 
           // value列（数値 or 文字評価）
-          const valId = item.id
-          if (newRow[valId] !== oldRow[valId]) {
-            const trimmed = (newRow[valId] ?? "").trim()
+          const valueColumnId = item.id
+          if (newRow[valueColumnId] !== oldRow[valueColumnId]) {
+            const trimmed = (newRow[valueColumnId] ?? "").trim()
             if (item.inputMode === "letter") {
               if (trimmed === "") {
                 pushPatch(item, studentId, { letterValue: null })
@@ -228,9 +228,9 @@ export function CourseworkScoresContainer({
           }
 
           // 加減点列
-          const adjId = adjColId(item.id)
-          if (newRow[adjId] !== oldRow[adjId]) {
-            const trimmed = (newRow[adjId] ?? "").trim()
+          const adjustmentColumnId = adjColId(item.id)
+          if (newRow[adjustmentColumnId] !== oldRow[adjustmentColumnId]) {
+            const trimmed = (newRow[adjustmentColumnId] ?? "").trim()
             if (trimmed === "") {
               pushPatch(item, studentId, { adjustment: null })
             } else {
@@ -243,20 +243,20 @@ export function CourseworkScoresContainer({
           }
 
           // 理由列
-          const rsnId = reasonColId(item.id)
-          if (newRow[rsnId] !== oldRow[rsnId]) {
-            const val = (newRow[rsnId] ?? "").trim()
+          const reasonColumnId = reasonColId(item.id)
+          if (newRow[reasonColumnId] !== oldRow[reasonColumnId]) {
+            const reasonValue = (newRow[reasonColumnId] ?? "").trim()
             pushPatch(item, studentId, {
-              adjustmentReason: val === "" ? null : val,
+              adjustmentReason: reasonValue === "" ? null : reasonValue,
             })
           }
 
           // コメント列
-          const cmtId = commentColId(item.id)
-          if (newRow[cmtId] !== oldRow[cmtId]) {
-            const val = (newRow[cmtId] ?? "").trim()
+          const commentColumnId = commentColId(item.id)
+          if (newRow[commentColumnId] !== oldRow[commentColumnId]) {
+            const commentValue = (newRow[commentColumnId] ?? "").trim()
             pushPatch(item, studentId, {
-              comment: val === "" ? null : val,
+              comment: commentValue === "" ? null : commentValue,
             })
           }
         }

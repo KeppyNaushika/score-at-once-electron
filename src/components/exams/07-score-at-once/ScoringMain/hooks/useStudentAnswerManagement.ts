@@ -101,7 +101,7 @@ export function useStudentAnswerManagement(
     })
 
     const sortedStudents = Array.from(uniqueStudents.values()).sort(
-      (a, b) => a.customOrder - b.customOrder
+      (answerA, answerB) => answerA.customOrder - answerB.customOrder
     )
     return sortedStudents
   }, [studentAnswerImages])
@@ -152,7 +152,7 @@ export function useStudentAnswerManagement(
       selectedStudentAnswerImageIds.size === 0
     ) {
       const sortedStudents = [...students].sort(
-        (a, b) => a.customOrder - b.customOrder
+        (answerA, answerB) => answerA.customOrder - answerB.customOrder
       )
       handleStudentChange(sortedStudents[0].id)
     }
@@ -176,7 +176,7 @@ export function useStudentAnswerManagement(
     if (!currentAnswer) return
 
     const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder
+      (answerA, answerB) => answerA.customOrder - answerB.customOrder
     )
     const currentIndex = sortedStudents.findIndex(
       (student) => student.id === currentAnswer.student?.id
@@ -217,7 +217,7 @@ export function useStudentAnswerManagement(
     if (!currentAnswer) return
 
     const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder
+      (answerA, answerB) => answerA.customOrder - answerB.customOrder
     )
     const currentIndex = sortedStudents.findIndex(
       (student) => student.id === currentAnswer.student?.id

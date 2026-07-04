@@ -336,11 +336,14 @@ export const getStudentExamResults = async (
     }
 
     // 試験日の降順でソート
-    results.sort((a, b) => {
-      if (!a.examDate && !b.examDate) return 0
-      if (!a.examDate) return 1
-      if (!b.examDate) return -1
-      return new Date(b.examDate).getTime() - new Date(a.examDate).getTime()
+    results.sort((firstResult, secondResult) => {
+      if (!firstResult.examDate && !secondResult.examDate) return 0
+      if (!firstResult.examDate) return 1
+      if (!secondResult.examDate) return -1
+      return (
+        new Date(secondResult.examDate).getTime() -
+        new Date(firstResult.examDate).getTime()
+      )
     })
 
     return results

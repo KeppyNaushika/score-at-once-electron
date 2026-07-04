@@ -545,10 +545,10 @@ async function importExam(
 
       // 大問追跡
       if (isQ && question.daimon != null) {
-        const d = String(question.daimon)
-        const ids = daimonToCropIds.get(d) || []
+        const daimonKey = String(question.daimon)
+        const ids = daimonToCropIds.get(daimonKey) || []
         ids.push(cropRegionId)
-        daimonToCropIds.set(d, ids)
+        daimonToCropIds.set(daimonKey, ids)
       }
       if (isSubtotal && question.daimon != null) {
         subtotalMap.set(String(question.daimon), cropRegionId)
@@ -570,20 +570,20 @@ async function importExam(
       for (let mi = 0; mi < question.score.length; mi++) {
         const sid = mm.get(mi)
         if (!sid) continue
-        const s = question.score[mi]
-        if (s.status === "unscored") continue
+        const scoreEntry = question.score[mi]
+        if (scoreEntry.status === "unscored") continue
 
         let ps: number | null = null
-        if (s.status === "correct") ps = question.haiten ?? null
-        else if (s.status === "incorrect") ps = 0
-        else if (s.status === "partial") ps = s.point
+        if (scoreEntry.status === "correct") ps = question.haiten ?? null
+        else if (scoreEntry.status === "incorrect") ps = 0
+        else if (scoreEntry.status === "partial") ps = scoreEntry.point
 
         scoreRows.push({
           id: crypto.randomUUID(),
           cropRegionId,
           studentId: sid,
           partialScore: ps,
-          status: s.status,
+          status: scoreEntry.status,
           userId: USER_ID,
           createdAt: now,
           updatedAt: now,
@@ -621,19 +621,19 @@ async function importExam(
     })
 
     for (let i = 0; i < sortedDaimons.length; i++) {
-      const d = sortedDaimons[i]
+      const daimon = sortedDaimons[i]
       const subtotalId = crypto.randomUUID()
       await prisma.subtotal.create({
         data: {
           id: subtotalId,
-          name: `大問${d}`,
+          name: `大問${daimon}`,
           subtotalGroupId: groupId,
           order: i,
           createdAt: now,
           updatedAt: now,
         },
       })
-      for (const cropId of daimonToCropIds.get(d) || []) {
+      for (const cropId of daimonToCropIds.get(daimon) || []) {
         await prisma.cropSubtotal.create({
           data: {
             id: crypto.randomUUID(),
@@ -645,7 +645,7 @@ async function importExam(
           },
         })
       }
-      const stCropId = subtotalMap.get(d)
+      const stCropId = subtotalMap.get(daimon)
       if (stCropId) {
         await prisma.cropSubtotal.create({
           data: {

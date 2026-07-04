@@ -116,19 +116,22 @@ const verifyS9Schema = async () => {
   }
 
   // UserPreferenceがKV形式であること
-  const upCols = await getTableColumns(prisma, "UserPreference")
-  expect(upCols).toContain("key")
-  expect(upCols).toContain("value")
+  const userPreferenceColumns = await getTableColumns(prisma, "UserPreference")
+  expect(userPreferenceColumns).toContain("key")
+  expect(userPreferenceColumns).toContain("value")
 
   // MasterImage.pageSizeが存在
-  const miCols = await getTableColumns(prisma, "MasterImage")
-  expect(miCols).toContain("pageSize")
+  const masterImageColumns = await getTableColumns(prisma, "MasterImage")
+  expect(masterImageColumns).toContain("pageSize")
 
   // DrawingAnnotation.isFavorite + userId
-  const daCols = await getTableColumns(prisma, "DrawingAnnotation")
-  expect(daCols).toContain("isFavorite")
-  expect(daCols).toContain("userId")
-  expect(daCols).not.toContain("createdByUserId")
+  const drawingAnnotationColumns = await getTableColumns(
+    prisma,
+    "DrawingAnnotation"
+  )
+  expect(drawingAnnotationColumns).toContain("isFavorite")
+  expect(drawingAnnotationColumns).toContain("userId")
+  expect(drawingAnnotationColumns).not.toContain("createdByUserId")
 
   // _prisma_migrationsが1件（ベースライン）
   const migrations = await prisma.$queryRawUnsafe<{ cnt: number }[]>(
@@ -464,8 +467,11 @@ describe("ブリッジマイグレーション統合テスト", () => {
 
     // UserScoringPreference → UserPreference移行
     expect(await tableExists(prisma, "UserScoringPreference")).toBe(false)
-    const upCols = await getTableColumns(prisma, "UserPreference")
-    expect(upCols).toContain("key")
+    const userPreferenceColumns = await getTableColumns(
+      prisma,
+      "UserPreference"
+    )
+    expect(userPreferenceColumns).toContain("key")
 
     // 移行されたデータ確認
     const prefs = await prisma.$queryRawUnsafe<
@@ -480,8 +486,8 @@ describe("ブリッジマイグレーション統合テスト", () => {
     expect(prefMap["itemsPerLine"]).toBe("5")
 
     // MasterImage.pageSize
-    const miCols = await getTableColumns(prisma, "MasterImage")
-    expect(miCols).toContain("pageSize")
+    const masterImageColumns = await getTableColumns(prisma, "MasterImage")
+    expect(masterImageColumns).toContain("pageSize")
 
     // ベースライン
     const migrations = await prisma.$queryRawUnsafe<{ cnt: number }[]>(

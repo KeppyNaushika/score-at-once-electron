@@ -259,8 +259,8 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
           <div className="h-full min-h-0">
             <Tabs
               value={selectionTab}
-              onValueChange={(v) =>
-                setSelectionTab(v as "selection" | "preview")
+              onValueChange={(value) =>
+                setSelectionTab(value as "selection" | "preview")
               }
               className="flex h-full flex-col rounded-lg border p-4"
             >
@@ -454,7 +454,9 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
             <div className="rounded-lg border p-4">
               <Tabs
                 value={exportTab}
-                onValueChange={(v) => setExportTab(v as GradeExportTabType)}
+                onValueChange={(value) =>
+                  setExportTab(value as GradeExportTabType)
+                }
               >
                 <TabsList className="mb-4 w-full">
                   <TabsTrigger

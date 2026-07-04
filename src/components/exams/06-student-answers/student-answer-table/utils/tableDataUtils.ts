@@ -9,9 +9,9 @@ export function sortStudentsByCustomOrder(
   students: UnifiedStudent[]
 ): UnifiedStudent[] {
   return [...students].sort((studentA, studentB) => {
-    const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-    const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-    return aOrder - bOrder
+    const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+    const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
+    return studentAOrder - studentBOrder
   })
 }
 

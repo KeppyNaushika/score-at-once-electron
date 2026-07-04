@@ -102,7 +102,7 @@ export function SubtotalTablePreview({
       return groupedData.map((group) => {
         const allocatedColumns = allocation.get(group.groupId) || 1
         const columnItems = splitItemsIntoColumns(group.items, allocatedColumns)
-        const maxRows = Math.max(...columnItems.map((col) => col.length))
+        const maxRows = Math.max(...columnItems.map((column) => column.length))
         return {
           groupId: group.groupId,
           groupName: group.groupName,
@@ -116,7 +116,7 @@ export function SubtotalTablePreview({
     } else {
       return groupedData.map((group) => {
         const columnItems = splitItemsIntoColumns(group.items, columns)
-        const maxRows = Math.max(...columnItems.map((col) => col.length))
+        const maxRows = Math.max(...columnItems.map((column) => column.length))
         return {
           groupId: group.groupId,
           groupName: group.groupName,

@@ -170,7 +170,9 @@ export function OmrConfigInlineForm({
         <Label className="w-20 text-xs">タイプ</Label>
         <Select
           value={omrType}
-          onValueChange={(v) => setOmrType(v as "choice" | "handwritten-digit")}
+          onValueChange={(value) =>
+            setOmrType(value as "choice" | "handwritten-digit")
+          }
         >
           <SelectTrigger className="h-8 w-40">
             <SelectValue />

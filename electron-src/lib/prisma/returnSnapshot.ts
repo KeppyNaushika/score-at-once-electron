@@ -120,7 +120,7 @@ export interface CaptureReturnSnapshotResult {
 // ---- 内部ヘルパー ----
 
 /** float のノイズによる誤検知を防ぐため小数4桁に丸める */
-const round = (n: number): number => Math.round(n * 1e4) / 1e4
+const round = (value: number): number => Math.round(value * 1e4) / 1e4
 
 /** 試験の現在状態（有効スコア・注釈・領域）をまとめて読み込む */
 interface ExamState {
@@ -225,16 +225,24 @@ const buildContent = (
   annotations: SnapshotAnnotation[]
 ): SnapshotContent => {
   const scores: SnapshotScoreCell[] = effective
-    .filter((e) => e.status !== "unscored")
-    .map((e) => ({ r: e.cropRegionId, s: e.status, p: e.partialScore }))
-    .sort((a, b) => (a.r < b.r ? -1 : a.r > b.r ? 1 : 0))
+    .filter((effectiveScore) => effectiveScore.status !== "unscored")
+    .map((effectiveScore) => ({
+      r: effectiveScore.cropRegionId,
+      s: effectiveScore.status,
+      p: effectiveScore.partialScore,
+    }))
+    .sort((cellA, cellB) =>
+      cellA.r < cellB.r ? -1 : cellA.r > cellB.r ? 1 : 0
+    )
 
   // 注釈は id を含めず内容で安定ソート（削除+同内容再作成は「変更なし」とみなす）
-  const sortedAnnotations = [...annotations].sort((a, b) => {
-    const ka = JSON.stringify(a)
-    const kb = JSON.stringify(b)
-    return ka < kb ? -1 : ka > kb ? 1 : 0
-  })
+  const sortedAnnotations = [...annotations].sort(
+    (annotationA, annotationB) => {
+      const keyA = JSON.stringify(annotationA)
+      const keyB = JSON.stringify(annotationB)
+      return keyA < keyB ? -1 : keyA > keyB ? 1 : 0
+    }
+  )
 
   return { v: SNAPSHOT_VERSION, scores, annotations: sortedAnnotations }
 }

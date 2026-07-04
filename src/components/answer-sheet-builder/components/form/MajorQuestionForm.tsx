@@ -20,11 +20,11 @@ import type {
 import { SubQuestionForm } from "./SubQuestionForm"
 
 /** 簡易分数パース (例: "1/3" → 0.333) */
-function parseFractionSimple(s: string): number {
-  const m = s.match(/^(\d+)\/(\d+)$/)
-  if (m) return parseInt(m[1]) / parseInt(m[2])
-  const n = parseFloat(s)
-  return isNaN(n) ? 1 : n
+function parseFractionSimple(fraction: string): number {
+  const match = fraction.match(/^(\d+)\/(\d+)$/)
+  if (match) return parseInt(match[1]) / parseInt(match[2])
+  const parsed = parseFloat(fraction)
+  return isNaN(parsed) ? 1 : parsed
 }
 
 /** 各小問の maxGoUp (= その小問の goUp 適用前の行インデックス) を計算 */

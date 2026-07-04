@@ -33,12 +33,12 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
     targetType: string,
     gradeItemId: string | null
   ) => {
-    const set = boundarySets.find(
+    const matchedBoundarySet = boundarySets.find(
       (boundarySet) =>
         boundarySet.targetType === targetType &&
         boundarySet.gradeItemId === gradeItemId
     )
-    return set?.boundaries ?? []
+    return matchedBoundarySet?.boundaries ?? []
   }
 
   const handleSave = async (

@@ -28,7 +28,7 @@ export function ScoringModeModal({
   const [remember, setRemember] = useState(false)
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>採点操作モードを選択</DialogTitle>
@@ -73,7 +73,7 @@ export function ScoringModeModal({
           <Checkbox
             id="remember-mode"
             checked={remember}
-            onCheckedChange={(v) => setRemember(v === true)}
+            onCheckedChange={(checked) => setRemember(checked === true)}
           />
           <label
             htmlFor="remember-mode"

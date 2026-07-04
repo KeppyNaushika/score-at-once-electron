@@ -17,9 +17,9 @@ function serialize<T>(data: T): T {
  * maxScore はDB列ではなく仮想（計算）フィールド。レンダラへ返す経路で常に付与する。
  */
 async function withLiveMaxScore<T extends GradeDataSourceMaxScoreRef>(
-  ds: T
+  dataSource: T
 ): Promise<T & { maxScore: number }> {
-  return { ...ds, maxScore: await computeLiveMaxScore(ds) }
+  return { ...dataSource, maxScore: await computeLiveMaxScore(dataSource) }
 }
 
 /**

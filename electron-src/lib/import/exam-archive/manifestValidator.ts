@@ -116,16 +116,16 @@ export function validateManifestFields(manifest: unknown): string | null {
     return "マニフェストが不正です"
   }
 
-  const m = manifest as Record<string, unknown>
+  const manifestRecord = manifest as Record<string, unknown>
 
   // v1.4.0以前の旧形式フォールバック: projectId → examId, projectName → examName
-  if ("projectId" in m && !("examId" in m)) {
-    m.examId = m.projectId
-    delete m.projectId
+  if ("projectId" in manifestRecord && !("examId" in manifestRecord)) {
+    manifestRecord.examId = manifestRecord.projectId
+    delete manifestRecord.projectId
   }
-  if ("projectName" in m && !("examName" in m)) {
-    m.examName = m.projectName
-    delete m.projectName
+  if ("projectName" in manifestRecord && !("examName" in manifestRecord)) {
+    manifestRecord.examName = manifestRecord.projectName
+    delete manifestRecord.projectName
   }
 
   // 必須フィールドチェック
@@ -137,18 +137,21 @@ export function validateManifestFields(manifest: unknown): string | null {
     "counts",
   ]
   for (const field of requiredFields) {
-    if (!(field in m)) {
+    if (!(field in manifestRecord)) {
       return `マニフェストに必須フィールド '${field}' がありません`
     }
   }
 
   // バージョン形式チェック
-  if (typeof m.version !== "string" || !/^\d+\.\d+\.\d+$/.test(m.version)) {
+  if (
+    typeof manifestRecord.version !== "string" ||
+    !/^\d+\.\d+\.\d+$/.test(manifestRecord.version)
+  ) {
     return "バージョン形式が不正です"
   }
 
   // counts オブジェクトチェック
-  if (!m.counts || typeof m.counts !== "object") {
+  if (!manifestRecord.counts || typeof manifestRecord.counts !== "object") {
     return "countsフィールドが不正です"
   }
 

@@ -46,34 +46,41 @@ export function validateCourseworkManifest(
     }
   }
 
-  const m = manifest
+  const manifestData = manifest
   const warnings: string[] = []
 
-  if (compareVersions(m.version, COURSEWORK_CURRENT_VERSION) > 0) {
+  if (compareVersions(manifestData.version, COURSEWORK_CURRENT_VERSION) > 0) {
     return {
       compatible: false,
       requiresTransform: false,
       warnings,
-      error: `このアーカイブ（v${m.version}）は現在のアプリ（v${COURSEWORK_CURRENT_VERSION}）より新しいため読み込めません。アプリを更新してください。`,
+      error: `このアーカイブ（v${manifestData.version}）は現在のアプリ（v${COURSEWORK_CURRENT_VERSION}）より新しいため読み込めません。アプリを更新してください。`,
     }
   }
 
-  if (compareVersions(m.version, COURSEWORK_MIN_SUPPORTED_VERSION) < 0) {
+  if (
+    compareVersions(manifestData.version, COURSEWORK_MIN_SUPPORTED_VERSION) < 0
+  ) {
     return {
       compatible: false,
       requiresTransform: false,
       warnings,
-      error: `このアーカイブ（v${m.version}）は古すぎるため読み込めません。`,
+      error: `このアーカイブ（v${manifestData.version}）は古すぎるため読み込めません。`,
     }
   }
 
   const requiresTransform =
-    compareVersions(m.version, COURSEWORK_CURRENT_VERSION) < 0
+    compareVersions(manifestData.version, COURSEWORK_CURRENT_VERSION) < 0
   if (requiresTransform) {
     warnings.push(
-      `アーカイブ（v${m.version}）を現行（v${COURSEWORK_CURRENT_VERSION}）へ変換して読み込みます。`
+      `アーカイブ（v${manifestData.version}）を現行（v${COURSEWORK_CURRENT_VERSION}）へ変換して読み込みます。`
     )
   }
 
-  return { compatible: true, requiresTransform, warnings, manifest: m }
+  return {
+    compatible: true,
+    requiresTransform,
+    warnings,
+    manifest: manifestData,
+  }
 }

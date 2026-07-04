@@ -132,8 +132,8 @@ function SortableItemRow({
               <Label className="text-xs">入力方式</Label>
               <Select
                 value={draft.inputMode}
-                onValueChange={(v) =>
-                  onUpdate(item.id, { inputMode: v as InputMode })
+                onValueChange={(value) =>
+                  onUpdate(item.id, { inputMode: value as InputMode })
                 }
               >
                 <SelectTrigger className="h-8 w-28 text-xs">

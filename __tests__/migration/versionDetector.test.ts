@@ -14,12 +14,12 @@ let prisma: PrismaClient
 const createPrisma = () => createPrismaClientForPath(TEST_DB_PATH)
 
 const execSql = async (sql: string) => {
-  const stmts = sql
+  const statements = sql
     .split(";")
     .map((statement) => statement.trim())
     .filter((statement) => statement && !statement.startsWith("--"))
-  for (const stmt of stmts) {
-    await prisma.$executeRawUnsafe(stmt)
+  for (const statement of statements) {
+    await prisma.$executeRawUnsafe(statement)
   }
 }
 

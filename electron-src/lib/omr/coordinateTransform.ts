@@ -110,7 +110,11 @@ export function normalizedRectToPixelRect(
 /**
  * 逆線形補間: a→bの範囲でvが占める割合を返す
  */
-function inverseLerp(a: number, b: number, v: number): number {
-  if (Math.abs(b - a) < 1e-10) return 0
-  return (v - a) / (b - a)
+function inverseLerp(
+  rangeStart: number,
+  rangeEnd: number,
+  value: number
+): number {
+  if (Math.abs(rangeEnd - rangeStart) < 1e-10) return 0
+  return (value - rangeStart) / (rangeEnd - rangeStart)
 }

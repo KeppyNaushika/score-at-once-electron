@@ -136,14 +136,14 @@ export function reevaluateWithThreshold(
  */
 function reevaluateChoiceCell(
   cellResult: OMRCellResult,
-  cfg: CropRegionOmrConfigWithOptions,
+  config: CropRegionOmrConfigWithOptions,
   areaThreshold: number
 ): OMRCellResult {
   const fillRatios = cellResult.fillRatios!
-  const correctAnswers = cfg.choiceOptions
+  const correctAnswers = config.choiceOptions
     .filter((option) => option.isCorrect)
     .map((option) => option.choiceIndex)
-  const labels = cfg.choiceOptions.map((option) => option.label)
+  const labels = config.choiceOptions.map((option) => option.label)
 
   const markedIndices: number[] = []
   for (let i = 0; i < fillRatios.length; i++) {
@@ -153,7 +153,7 @@ function reevaluateChoiceCell(
   }
 
   const recognizedValues = markedIndices.map(
-    (idx) => labels[idx] ?? String(idx)
+    (markedIndex) => labels[markedIndex] ?? String(markedIndex)
   )
 
   // 信頼度計算（markRecognizer.ts と同一）
@@ -185,7 +185,7 @@ function reevaluateChoiceCell(
   } else {
     const isCorrect =
       markedIndices.length === correctAnswers.length &&
-      markedIndices.every((idx) => correctAnswers.includes(idx))
+      markedIndices.every((markedIndex) => correctAnswers.includes(markedIndex))
     autoScoreStatus = isCorrect ? "correct" : "incorrect"
   }
 
@@ -202,7 +202,7 @@ function reevaluateChoiceCell(
  */
 function buildEntryFromCellResult(
   cellResult: OMRCellResult,
-  cfg: CropRegionOmrConfigWithOptions | undefined,
+  config: CropRegionOmrConfigWithOptions | undefined,
   maxPoints: number,
   confidenceThreshold: number
 ): AutoScoreEntry {
@@ -234,11 +234,11 @@ function buildEntryFromCellResult(
 
   // 部分点チェック
   if (
-    cfg?.type === "choice" &&
+    config?.type === "choice" &&
     status === "incorrect" &&
     cellResult.recognizedValues.length > 0
   ) {
-    const correctLabels = cfg.choiceOptions
+    const correctLabels = config.choiceOptions
       .filter((option) => option.isCorrect)
       .map((option) => option.label)
     if (correctLabels.length > 1) {

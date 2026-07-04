@@ -664,20 +664,20 @@ function ScoringGridDemo({
     setPartialSynced({ active: true, value: next })
   }, [])
 
-  const setPartialValue = useCallback((v: string) => {
-    if (!/^\d*\.?\d*$/.test(v)) return
-    if (Number(v) > MAX_SCORE) return
-    if (v.replace(".", "").length > 3) return
-    setPartialSynced({ active: true, value: v })
+  const setPartialValue = useCallback((value: string) => {
+    if (!/^\d*\.?\d*$/.test(value)) return
+    if (Number(value) > MAX_SCORE) return
+    if (value.replace(".", "").length > 3) return
+    setPartialSynced({ active: true, value: value })
   }, [])
 
   const confirmPartial = useCallback(() => {
-    const v = partialRef.current.value
-    if (v === "" || v === ".") {
+    const value = partialRef.current.value
+    if (value === "" || value === ".") {
       setPartialSynced({ active: false, value: "" })
       return
     }
-    const num = Math.min(MAX_SCORE, Math.max(0, Number(v)))
+    const num = Math.min(MAX_SCORE, Math.max(0, Number(value)))
     setPartialSynced({ active: false, value: "" })
     applyStatus("partial", num)
   }, [applyStatus])
@@ -855,10 +855,12 @@ function ScoringGridDemo({
 
         {cells.map((cell, i) => {
           const isSelected = i === selected
-          const c = cfg[cell.status]
-          const Icon = c.icon
-          const bg = isSelected ? c.selectedBgStyle : c.bgStyle
-          const sd = scoreText(cell)
+          const statusConfig = cfg[cell.status]
+          const Icon = statusConfig.icon
+          const bg = isSelected
+            ? statusConfig.selectedBgStyle
+            : statusConfig.bgStyle
+          const scoreDisplay = scoreText(cell)
           return (
             <button
               type="button"
@@ -891,17 +893,17 @@ function ScoringGridDemo({
               <div className="flex items-center justify-between gap-1">
                 <span
                   className="truncate text-xs font-medium"
-                  style={c.textStyle}
+                  style={statusConfig.textStyle}
                 >
                   {cell.name}
                 </span>
                 <div className="flex shrink-0 items-center gap-1">
-                  {sd && (
+                  {scoreDisplay && (
                     <Badge variant="outline" className="h-4 px-1 text-xs">
-                      {sd}
+                      {scoreDisplay}
                     </Badge>
                   )}
-                  <Icon className="h-3 w-3" style={c.iconStyle} />
+                  <Icon className="h-3 w-3" style={statusConfig.iconStyle} />
                 </div>
               </div>
             </button>
@@ -1426,20 +1428,20 @@ function IndividualScoringDemo({
     setPartialSynced({ active: true, value: next })
   }, [])
 
-  const setPartialValue = useCallback((v: string) => {
-    if (!/^\d*\.?\d*$/.test(v)) return
-    if (Number(v) > MAX_SCORE) return
-    if (v.replace(".", "").length > 3) return
-    setPartialSynced({ active: true, value: v })
+  const setPartialValue = useCallback((value: string) => {
+    if (!/^\d*\.?\d*$/.test(value)) return
+    if (Number(value) > MAX_SCORE) return
+    if (value.replace(".", "").length > 3) return
+    setPartialSynced({ active: true, value: value })
   }, [])
 
   const confirmPartial = useCallback(() => {
-    const v = partialRef.current.value
-    if (v === "" || v === ".") {
+    const value = partialRef.current.value
+    if (value === "" || value === ".") {
       setPartialSynced({ active: false, value: "" })
       return
     }
-    const num = Math.min(MAX_SCORE, Math.max(0, Number(v)))
+    const num = Math.min(MAX_SCORE, Math.max(0, Number(value)))
     setPartialSynced({ active: false, value: "" })
     applyStatus("partial", num)
   }, [applyStatus])
@@ -1549,7 +1551,7 @@ function IndividualScoringDemo({
   }
 
   const cell = cells[selected]
-  const sd = scoreText(cell)
+  const scoreDisplay = scoreText(cell)
   const mark = SHEET_MARKS[cell.status]
   const scoredCount = cells.filter((cell) => cell.status !== "unscored").length
 
@@ -1584,7 +1586,7 @@ function IndividualScoringDemo({
           answerClassName="text-blue-900/80"
           mark={mark}
           markColor={colors[cell.status].icon}
-          score={sd}
+          score={scoreDisplay}
         />
 
         {/* 模範解答の答案用紙（右）— 同じサイズで、領域に正答を表示 */}
@@ -1844,7 +1846,7 @@ function DrawToolCard({
 function DisplayModeMini({
   mode,
 }: {
-  mode: "overlay" | "split-h" | "split-v"
+  mode: "overlay" | "split-h" | "split-value"
 }) {
   if (mode === "overlay") {
     return (
@@ -2027,7 +2029,7 @@ function IndividualGuide({
               <span className="text-[11px] text-gray-500">横に並べる</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
-              <DisplayModeMini mode="split-v" />
+              <DisplayModeMini mode="split-value" />
               <span className="text-xs font-medium text-gray-700">
                 上下分割
               </span>

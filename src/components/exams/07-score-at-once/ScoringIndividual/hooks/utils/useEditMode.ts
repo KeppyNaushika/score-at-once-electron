@@ -49,7 +49,7 @@ export function useEditModeUtils() {
       }
 
       // 線分上の最近点を求める（0-1の範囲でクランプ）
-      const t = Math.max(
+      const ratio = Math.max(
         0,
         Math.min(
           1,
@@ -59,8 +59,8 @@ export function useEditModeUtils() {
       )
 
       // 最近点までの距離
-      const nearestX = element.x + t * dx
-      const nearestY = element.y + t * dy
+      const nearestX = element.x + ratio * dx
+      const nearestY = element.y + ratio * dy
       const distToLine = Math.sqrt(
         Math.pow(testX - nearestX, 2) + Math.pow(testY - nearestY, 2)
       )

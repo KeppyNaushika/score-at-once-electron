@@ -17,9 +17,9 @@ export function buildDnDArrayFromFileStates(
 
   // 生徒のソート（受験生徒順：customOrder準拠）
   const sortedStudents = [...students].sort((studentA, studentB) => {
-    const aOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-    const bOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-    return aOrder - bOrder
+    const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
+    const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
+    return studentAOrder - studentBOrder
   })
 
   // 配置戦略に基づいて論理位置の順序を決定（Math.floor不使用）

@@ -163,7 +163,7 @@ export function EstimationSettingsPopover({
             <Label className="text-xs">推定方法</Label>
             <Select
               value={method}
-              onValueChange={(v) => setMethod(v as AbsentMethod)}
+              onValueChange={(value) => setMethod(value as AbsentMethod)}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
@@ -211,8 +211,8 @@ export function EstimationSettingsPopover({
                   <Label className="text-xs">推定に使用するソース</Label>
                   <RadioGroup
                     value={estimationMode}
-                    onValueChange={(v) =>
-                      setEstimationMode(v as EstimationMode)
+                    onValueChange={(value) =>
+                      setEstimationMode(value as EstimationMode)
                     }
                     className="gap-2"
                   >
@@ -268,8 +268,8 @@ export function EstimationSettingsPopover({
                 <div className="flex items-center gap-2 border-t pt-3">
                   <Checkbox
                     checked={treatExpectedAsMissing}
-                    onCheckedChange={(v) =>
-                      setTreatExpectedAsMissing(v === true)
+                    onCheckedChange={(value) =>
+                      setTreatExpectedAsMissing(value === true)
                     }
                     id="treat-expected"
                     className="h-3.5 w-3.5"

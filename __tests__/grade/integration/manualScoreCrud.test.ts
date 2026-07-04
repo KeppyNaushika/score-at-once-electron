@@ -119,13 +119,13 @@ describe("GradeDataSource reorder テスト", () => {
       })
       const gradeItem = gradeItemResult.gradeItem!
 
-      const ds1 = await createDataSource({
+      const dataSource1 = await createDataSource({
         gradeItemId: gradeItem.id,
         type: "exam_total",
         name: "A",
         weight: 10,
       })
-      const ds2 = await createDataSource({
+      const dataSource2 = await createDataSource({
         gradeItemId: gradeItem.id,
         type: "exam_total",
         name: "B",
@@ -134,8 +134,8 @@ describe("GradeDataSource reorder テスト", () => {
 
       // 順序を入れ替え
       const result = await reorderDataSources([
-        { id: ds1.dataSource!.id, order: 1 },
-        { id: ds2.dataSource!.id, order: 0 },
+        { id: dataSource1.dataSource!.id, order: 1 },
+        { id: dataSource2.dataSource!.id, order: 0 },
       ])
 
       expect(result.success).toBe(true)

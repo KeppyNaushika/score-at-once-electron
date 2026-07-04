@@ -53,14 +53,15 @@ export function createArchiveStudentsData(
   }> = []
 ): ArchiveStudentsData {
   return {
-    students: students.map((s, i) => ({
-      id: s.id ?? generateId(),
-      studentNumber: s.studentNumber ?? `S${String(i + 1).padStart(3, "0")}`,
-      lastName: s.lastName ?? `姓${i + 1}`,
-      firstName: s.firstName ?? `名${i + 1}`,
-      lastNameKana: s.lastNameKana ?? `セイ${i + 1}`,
-      firstNameKana: s.firstNameKana ?? `メイ${i + 1}`,
-      enrollmentYear: s.enrollmentYear ?? 2024,
+    students: students.map((student, i) => ({
+      id: student.id ?? generateId(),
+      studentNumber:
+        student.studentNumber ?? `S${String(i + 1).padStart(3, "0")}`,
+      lastName: student.lastName ?? `姓${i + 1}`,
+      firstName: student.firstName ?? `名${i + 1}`,
+      lastNameKana: student.lastNameKana ?? `セイ${i + 1}`,
+      firstNameKana: student.firstNameKana ?? `メイ${i + 1}`,
+      enrollmentYear: student.enrollmentYear ?? 2024,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),
@@ -82,11 +83,11 @@ export function createArchiveClassesData(
   }> = []
 ): ArchiveClassesData {
   return {
-    classrooms: classrooms.map((c, i) => ({
-      id: c.id ?? generateId(),
-      name: c.name ?? `クラス${i + 1}`,
-      classCode: c.classCode ?? null,
-      grade: c.grade ?? null,
+    classrooms: classrooms.map((classroom, i) => ({
+      id: classroom.id ?? generateId(),
+      name: classroom.name ?? `クラス${i + 1}`,
+      classCode: classroom.classCode ?? null,
+      grade: classroom.grade ?? null,
       description: null,
       isVisible: true,
       createdAt: new Date().toISOString(),
@@ -115,11 +116,11 @@ export function createArchiveUsersData(
   }> = []
 ): ArchiveUsersData {
   return {
-    users: users.map((u, i) => ({
-      id: u.id ?? generateId(),
-      username: u.username ?? `user${i + 1}`,
-      name: u.name ?? `ユーザー${i + 1}`,
-      role: u.role ?? "teacher",
+    users: users.map((user, i) => ({
+      id: user.id ?? generateId(),
+      username: user.username ?? `user${i + 1}`,
+      name: user.name ?? `ユーザー${i + 1}`,
+      role: user.role ?? "teacher",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),
@@ -146,18 +147,18 @@ export function createArchiveExamData(
     updatedAt: new Date().toISOString(),
   }))
 
-  const cropRegions = examPages.flatMap((page, pi) =>
-    Array.from({ length: cropRegionsPerPage }, (_, ri) => ({
+  const cropRegions = examPages.flatMap((page, pageIndex) =>
+    Array.from({ length: cropRegionsPerPage }, (_, regionIndex) => ({
       id: generateId(),
       examPageId: page.id,
-      label: `問${pi * cropRegionsPerPage + ri + 1}`,
+      label: `問${pageIndex * cropRegionsPerPage + regionIndex + 1}`,
       type: "QUESTION",
       x: 0,
-      y: ri * 100,
+      y: regionIndex * 100,
       width: 200,
       height: 80,
       points: 10,
-      orderIndex: pi * cropRegionsPerPage + ri,
+      orderIndex: pageIndex * cropRegionsPerPage + regionIndex,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }))
@@ -191,9 +192,9 @@ export function createArchiveSubtotalsData(
     subtotals?: Array<{ id?: string; name?: string; order?: number }>
   }> = []
 ): ArchiveSubtotalsData {
-  const subtotalGroups = groups.map((g, i) => ({
-    id: g.id ?? generateId(),
-    name: g.name ?? `小計グループ${i + 1}`,
+  const subtotalGroups = groups.map((group, i) => ({
+    id: group.id ?? generateId(),
+    name: group.name ?? `小計グループ${i + 1}`,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }))

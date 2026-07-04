@@ -289,15 +289,15 @@ export async function saveAsbDefinition(
 
         // テキスト要素（小問）
         for (let ti = 0; ti < subQuestion.textElements.length; ti++) {
-          const te = subQuestion.textElements[ti]
+          const textElement = subQuestion.textElements[ti]
           await tx.asbTextElement.create({
             data: {
-              id: te.id,
+              id: textElement.id,
               subQuestionId: subQuestion.id,
-              text: te.text,
-              fontSize: te.fontSize,
-              horizontalAlign: te.horizontalAlign,
-              verticalAlign: te.verticalAlign,
+              text: textElement.text,
+              fontSize: textElement.fontSize,
+              horizontalAlign: textElement.horizontalAlign,
+              verticalAlign: textElement.verticalAlign,
               order: ti,
             },
           })
@@ -306,18 +306,18 @@ export async function saveAsbDefinition(
         // 画像要素（小問）
         if (subQuestion.imageElements) {
           for (let ii = 0; ii < subQuestion.imageElements.length; ii++) {
-            const ie = subQuestion.imageElements[ii]
+            const imageElement = subQuestion.imageElements[ii]
             await tx.asbImageElement.create({
               data: {
-                id: ie.id,
+                id: imageElement.id,
                 subQuestionId: subQuestion.id,
-                imagePath: ie.imagePath,
-                originalName: ie.originalName,
-                objectFit: ie.objectFit,
-                horizontalAlign: ie.horizontalAlign,
-                verticalAlign: ie.verticalAlign,
-                opacity: ie.opacity,
-                visibility: ie.visibility ?? "both",
+                imagePath: imageElement.imagePath,
+                originalName: imageElement.originalName,
+                objectFit: imageElement.objectFit,
+                horizontalAlign: imageElement.horizontalAlign,
+                verticalAlign: imageElement.verticalAlign,
+                opacity: imageElement.opacity,
+                visibility: imageElement.visibility ?? "both",
                 order: ii,
               },
             })

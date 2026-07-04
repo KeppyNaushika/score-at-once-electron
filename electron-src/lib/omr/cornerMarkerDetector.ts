@@ -170,25 +170,25 @@ function detectMarkerInRegion(
     }
   }
 
-  function find(x: number): number {
-    while (parent[x] !== x) {
-      parent[x] = parent[parent[x]] // path compression
-      x = parent[x]
+  function find(node: number): number {
+    while (parent[node] !== node) {
+      parent[node] = parent[parent[node]] // path compression
+      node = parent[node]
     }
-    return x
+    return node
   }
 
-  function union(a: number, b: number): void {
-    const ra = find(a)
-    const rb = find(b)
-    if (ra === rb) return
-    if (rank[ra] < rank[rb]) {
-      parent[ra] = rb
-    } else if (rank[ra] > rank[rb]) {
-      parent[rb] = ra
+  function union(nodeA: number, nodeB: number): void {
+    const rootA = find(nodeA)
+    const rootB = find(nodeB)
+    if (rootA === rootB) return
+    if (rank[rootA] < rank[rootB]) {
+      parent[rootA] = rootB
+    } else if (rank[rootA] > rank[rootB]) {
+      parent[rootB] = rootA
     } else {
-      parent[rb] = ra
-      rank[ra]++
+      parent[rootB] = rootA
+      rank[rootA]++
     }
   }
 
@@ -289,15 +289,15 @@ function detectMarkerInRegion(
   let largestAspect = 0
 
   for (const [root, compSize] of componentSizes) {
-    const b = componentBounds.get(root)!
-    const bw = b.maxX - b.minX + 1
-    const bh = b.maxY - b.minY + 1
+    const bounds = componentBounds.get(root)!
+    const bw = bounds.maxX - bounds.minX + 1
+    const bh = bounds.maxY - bounds.minY + 1
     const maxDim = Math.max(bw, bh)
-    const ar = Math.min(bw, bh) / maxDim
+    const aspectRatio = Math.min(bw, bh) / maxDim
 
     if (compSize > largestSize) {
       largestSize = compSize
-      largestAspect = ar
+      largestAspect = aspectRatio
     }
 
     if (compSize < minArea) continue
@@ -307,7 +307,7 @@ function detectMarkerInRegion(
 
     // スコア = アスペクト比(正方形性) × 充填率(密度) × 面積の重み
     // 正方形で密に塗りつぶされたコンポーネントを優先
-    const score = ar * fillRatio * Math.sqrt(compSize)
+    const score = aspectRatio * fillRatio * Math.sqrt(compSize)
 
     if (score > bestScore) {
       bestScore = score

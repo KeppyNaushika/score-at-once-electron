@@ -68,14 +68,14 @@ function createImageWithFilledCircle(
 
 describe("computeCircularFillRatio", () => {
   it("完全に白い画像では塗りつぶし率が0", () => {
-    const img = createWhiteImage(100, 100)
-    const ratio = computeCircularFillRatio(img, 50, 50, 20, 128)
+    const image = createWhiteImage(100, 100)
+    const ratio = computeCircularFillRatio(image, 50, 50, 20, 128)
     expect(ratio).toBe(0)
   })
 
   it("円を完全に塗りつぶした画像では塗りつぶし率が1に近い", () => {
-    const img = createImageWithFilledCircle(200, 200, 100, 100, 30)
-    const ratio = computeCircularFillRatio(img, 100, 100, 30, 128)
+    const image = createImageWithFilledCircle(200, 200, 100, 100, 30)
+    const ratio = computeCircularFillRatio(image, 100, 100, 30, 128)
     expect(ratio).toBeGreaterThan(0.95)
   })
 
@@ -101,14 +101,14 @@ describe("computeCircularFillRatio", () => {
         }
       }
     }
-    const img: RawImageData = {
+    const image: RawImageData = {
       data,
       width: imgWidth,
       height: imgHeight,
       channels,
     }
 
-    const ratio = computeCircularFillRatio(img, cx, cy, radius, 128)
+    const ratio = computeCircularFillRatio(image, cx, cy, radius, 128)
     expect(ratio).toBeGreaterThan(0.4)
     expect(ratio).toBeLessThan(0.6)
   })
@@ -116,16 +116,16 @@ describe("computeCircularFillRatio", () => {
 
 describe("computeEllipticalFillRatio", () => {
   it("完全に白い画像では塗りつぶし率が0", () => {
-    const img = createWhiteImage(200, 200)
-    const ratio = computeEllipticalFillRatio(img, 100, 100, 20, 30, 128)
+    const image = createWhiteImage(200, 200)
+    const ratio = computeEllipticalFillRatio(image, 100, 100, 20, 30, 128)
     expect(ratio).toBe(0)
   })
 
   it("楕円を完全に塗りつぶした場合は1に近い", () => {
     const halfW = 15
     const halfH = 25
-    const img = createImageWithFilledEllipse(200, 200, 100, 100, halfW, halfH)
-    const ratio = computeEllipticalFillRatio(img, 100, 100, halfW, halfH, 128)
+    const image = createImageWithFilledEllipse(200, 200, 100, 100, halfW, halfH)
+    const ratio = computeEllipticalFillRatio(image, 100, 100, halfW, halfH, 128)
     expect(ratio).toBeGreaterThan(0.95)
   })
 
@@ -133,8 +133,8 @@ describe("computeEllipticalFillRatio", () => {
     // 共通テスト風: 幅4mm、高さ6.4mm相当（300dpiでの近似ピクセル値）
     const halfW = 24 // ~4mm/2 at 300dpi
     const halfH = 38 // ~6.4mm/2 at 300dpi
-    const img = createImageWithFilledEllipse(200, 200, 100, 100, halfW, halfH)
-    const ratio = computeEllipticalFillRatio(img, 100, 100, halfW, halfH, 128)
+    const image = createImageWithFilledEllipse(200, 200, 100, 100, halfW, halfH)
+    const ratio = computeEllipticalFillRatio(image, 100, 100, halfW, halfH, 128)
     expect(ratio).toBeGreaterThan(0.95)
   })
 
@@ -159,14 +159,14 @@ describe("computeEllipticalFillRatio", () => {
         }
       }
     }
-    const img: RawImageData = {
+    const image: RawImageData = {
       data,
       width: imgWidth,
       height: imgHeight,
       channels,
     }
 
-    const ratio = computeEllipticalFillRatio(img, 100, 100, halfW, halfH, 128)
+    const ratio = computeEllipticalFillRatio(image, 100, 100, halfW, halfH, 128)
     expect(ratio).toBe(0)
   })
 
@@ -190,7 +190,7 @@ describe("computeEllipticalFillRatio", () => {
         }
       }
     }
-    const img: RawImageData = {
+    const image: RawImageData = {
       data,
       width: imgWidth,
       height: imgHeight,
@@ -199,7 +199,7 @@ describe("computeEllipticalFillRatio", () => {
 
     // 閾値100なら「暗い」にならない（luminance≈128 > 100）
     const ratioLow = computeEllipticalFillRatio(
-      img,
+      image,
       100,
       100,
       halfW,
@@ -210,7 +210,7 @@ describe("computeEllipticalFillRatio", () => {
 
     // 閾値200なら「暗い」になる
     const ratioHigh = computeEllipticalFillRatio(
-      img,
+      image,
       100,
       100,
       halfW,

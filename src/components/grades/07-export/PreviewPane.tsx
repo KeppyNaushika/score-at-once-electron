@@ -122,7 +122,7 @@ export function PreviewPane({ html }: PreviewPaneProps) {
     return () => container.removeEventListener("wheel", handleWheel)
   }, [handleWheel])
 
-  const s = scale ?? 1
+  const effectiveScale = scale ?? 1
   const { width: contentWidth, height: contentHeight } = contentSizeRef.current
 
   return (
@@ -132,8 +132,8 @@ export function PreviewPane({ html }: PreviewPaneProps) {
     >
       <div
         style={{
-          width: contentWidth * s,
-          height: contentHeight * s,
+          width: contentWidth * effectiveScale,
+          height: contentHeight * effectiveScale,
           margin: "0 auto",
           visibility: scale !== null ? "visible" : "hidden",
         }}
@@ -141,7 +141,7 @@ export function PreviewPane({ html }: PreviewPaneProps) {
         <div
           ref={hostRef}
           style={{
-            transform: `scale(${s})`,
+            transform: `scale(${effectiveScale})`,
             transformOrigin: "top left",
           }}
         />

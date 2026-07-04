@@ -19,11 +19,11 @@ import {
 
 /** GradeのreferenceDateを取得 */
 async function getExamReferenceDate(gradeId: string): Promise<Date | null> {
-  const gp = await prisma.grade.findUnique({
+  const grade = await prisma.grade.findUnique({
     where: { id: gradeId },
     select: { referenceDate: true },
   })
-  return gp?.referenceDate ?? null
+  return grade?.referenceDate ?? null
 }
 
 /**
@@ -248,9 +248,11 @@ const gradeRosterAdapter: RosterAdapter = {
     removeAction: "grade.student.remove",
     reorderAction: "grade.student.reorder",
     reorderCoalescePrefix: "grade_student_reorder",
-    addFromClassSummary: (n) => `学級から成績対象生徒を${n}名追加しました`,
-    addIndividualSummary: (n) => `成績対象生徒を${n}名追加しました`,
-    removeClassSummary: (n) => `学級を成績から外し、生徒${n}名を削除しました`,
+    addFromClassSummary: (count) =>
+      `学級から成績対象生徒を${count}名追加しました`,
+    addIndividualSummary: (count) => `成績対象生徒を${count}名追加しました`,
+    removeClassSummary: (count) =>
+      `学級を成績から外し、生徒${count}名を削除しました`,
   },
 }
 

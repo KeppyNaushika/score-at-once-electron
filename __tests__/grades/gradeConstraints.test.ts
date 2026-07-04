@@ -35,9 +35,9 @@ function makeStudent(
     firstName: "",
     attendanceNumber: null,
     className: null,
-    gradeItemResults: GRADE_ITEMS.map((gi, i) => ({
-      gradeItemId: gi.id,
-      gradeItemName: gi.name,
+    gradeItemResults: GRADE_ITEMS.map((gradeItem, i) => ({
+      gradeItemId: gradeItem.id,
+      gradeItemName: gradeItem.name,
       isExcluded: false,
       isAllMissing: false,
       sourceScores: [],
@@ -101,15 +101,15 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
 
   function makeStudent4(
     id: string,
-    k: string,
-    s: string,
-    a: string,
+    knowledge: string,
+    thinking: string,
+    attitude: string,
     hyotei: string
   ): StudentGradeResult {
     const labels: Record<string, string> = {
-      "gi-k": k,
-      "gi-s": s,
-      "gi-a": a,
+      "gi-k": knowledge,
+      "gi-s": thinking,
+      "gi-a": attitude,
       "gi-h": hyotei,
     }
     return {
@@ -119,17 +119,17 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
       firstName: "",
       attendanceNumber: null,
       className: null,
-      gradeItemResults: ITEMS_WITH_HYOTEI.map((gi) => ({
-        gradeItemId: gi.id,
-        gradeItemName: gi.name,
+      gradeItemResults: ITEMS_WITH_HYOTEI.map((gradeItem) => ({
+        gradeItemId: gradeItem.id,
+        gradeItemName: gradeItem.name,
         isExcluded: false,
         isAllMissing: false,
         sourceScores: [],
         weightedScore: 1,
         weightedMaxScore: 1,
         percentage: 50,
-        gradeLabel: labels[gi.id],
-        originalGradeLabel: labels[gi.id],
+        gradeLabel: labels[gradeItem.id],
+        originalGradeLabel: labels[gradeItem.id],
         overrideGradeLabel: null,
       })),
       overallScore: null,
