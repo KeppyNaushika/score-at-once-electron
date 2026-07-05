@@ -9,7 +9,7 @@ import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 
 import {
   type CategoryType,
-  ClassIntegrationPanel,
+  ClassroomIntegrationPanel,
   StudentIntegrationPanel,
   SubtotalGroupIntegrationPanel,
 } from "./id-integration"
@@ -148,7 +148,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
         {/* 学級タブ */}
         <TabsContent value="classroom" className="mt-0">
-          <ClassIntegrationPanel
+          <ClassroomIntegrationPanel
             wizard={wizard}
             onStrategyChange={(strategy) =>
               updateIdIntegrationConfig("classroom", {

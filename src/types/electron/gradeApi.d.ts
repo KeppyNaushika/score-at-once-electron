@@ -129,7 +129,7 @@ export interface GradeAPI {
     }>
     setClassOrders: (
       gradeId: string,
-      orderedClassIds: string[]
+      orderedClassroomIds: string[]
     ) => Promise<{ success: boolean; error?: string }>
     updateStudentOrders: (
       gradeId: string,

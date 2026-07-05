@@ -56,8 +56,12 @@ export function createGradeApi() {
         ),
       classRemovalPreview: (gradeId: string, classroomId: string) =>
         ipcRenderer.invoke("grade:classRemovalPreview", gradeId, classroomId),
-      setClassOrders: (gradeId: string, orderedClassIds: string[]) =>
-        ipcRenderer.invoke("grade:setClassOrders", gradeId, orderedClassIds),
+      setClassOrders: (gradeId: string, orderedClassroomIds: string[]) =>
+        ipcRenderer.invoke(
+          "grade:setClassOrders",
+          gradeId,
+          orderedClassroomIds
+        ),
       updateStudentOrders: (
         gradeId: string,
         studentOrders: { studentId: string; customOrder: number }[]

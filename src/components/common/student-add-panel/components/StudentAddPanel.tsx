@@ -2,7 +2,7 @@
 
 import { Plus, Search, UserPlus } from "lucide-react"
 
-import { SortableClassList } from "@/components/common/student-add-panel/components/SortableClassList"
+import { SortableClassroomList } from "@/components/common/student-add-panel/components/SortableClassroomList"
 import { useStudentAddPanel } from "@/components/common/student-add-panel/hooks/useStudentAddPanel"
 import type { StudentAddPanelProps } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
 import { Badge } from "@/components/ui/badge"
@@ -54,8 +54,8 @@ export function StudentAddPanel({
     filteredStudents,
     searchTerm,
     setSearchTerm,
-    filterClassId,
-    setFilterClassId,
+    filterClassroomId,
+    setFilterClassroomId,
     classActiveOnly,
     setClassActiveOnly,
     studentActiveOnly,
@@ -99,7 +99,7 @@ export function StudentAddPanel({
 
   // 生徒候補が空のときの理由別メッセージ（スイッチ状態で文言を変える）
   const studentEmptyMessage = (() => {
-    if (searchTerm || filterClassId !== "all") {
+    if (searchTerm || filterClassroomId !== "all") {
       return "該当する生徒が見つかりません"
     }
     switch (studentEmptyReason) {
@@ -225,7 +225,7 @@ export function StudentAddPanel({
                 </CardDescription>
               </CardHeader>
               <CardContent className={reorderContentClass}>
-                <SortableClassList
+                <SortableClassroomList
                   selectedClasses={selectedClasses}
                   onReorder={handleClassReorder}
                 />
@@ -278,7 +278,10 @@ export function StudentAddPanel({
                   className="pl-10"
                 />
               </div>
-              <Select value={filterClassId} onValueChange={setFilterClassId}>
+              <Select
+                value={filterClassroomId}
+                onValueChange={setFilterClassroomId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="学級フィルタ" />
                 </SelectTrigger>

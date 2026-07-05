@@ -1,7 +1,7 @@
 /**
- * classProcessor の統合テスト
+ * classroomProcessor の統合テスト
  *
- * テスト対象: electron-src/lib/import/merge/processors/classProcessor.ts
+ * テスト対象: electron-src/lib/import/merge/processors/classroomProcessor.ts
  * 実際のSQLiteテスト用DBを使用し、学級ID統合処理を検証する
  */
 
@@ -33,11 +33,11 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
   }
 })
 
-import { processClassIdIntegration } from "../../../electron-src/lib/import/merge/processors/classProcessor"
+import { processClassroomIdIntegration } from "../../../electron-src/lib/import/merge/processors/classroomProcessor"
 
 const prisma = getTestPrismaClient()
 
-describe("processClassIdIntegration", () => {
+describe("processClassroomIdIntegration", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
   })
@@ -86,7 +86,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [] },
@@ -138,7 +138,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [] },
@@ -180,7 +180,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [] },
@@ -250,7 +250,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [decision] },
@@ -315,7 +315,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [decision] },
@@ -369,7 +369,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [decision] },
@@ -431,7 +431,7 @@ describe("processClassIdIntegration", () => {
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [decision] },
@@ -521,7 +521,7 @@ describe("processClassIdIntegration", () => {
       }
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [decision] },
@@ -599,7 +599,7 @@ describe("processClassIdIntegration", () => {
       }
 
       await prisma.$transaction(async (tx) => {
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           { strategy: "by_name", decisions: [decision] },

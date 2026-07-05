@@ -227,8 +227,8 @@ export function setupCourseworkHandlers(): void {
 
   registerHandler(
     "coursework:setClassOrders",
-    async (courseworkId: string, orderedClassIds: string[]) => {
-      return setCourseworkClassOrders(courseworkId, orderedClassIds)
+    async (courseworkId: string, orderedClassroomIds: string[]) => {
+      return setCourseworkClassOrders(courseworkId, orderedClassroomIds)
     }
   )
 

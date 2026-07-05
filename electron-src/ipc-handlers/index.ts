@@ -5,7 +5,7 @@ import { setupAuthHandlers } from "./authHandlers"
 import { setupCourseworkHandlers } from "./courseworkHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
 import { setupDrawingHandlers } from "./drawingHandlers"
-import { setupExamClassHandlers } from "./examClassHandlers"
+import { setupExamClassroomHandlers } from "./examClassroomHandlers"
 import { setupExamHandlers } from "./examHandlers"
 import { setupExportHandlers } from "./exportHandlers"
 import { setupGradeHandlers } from "./gradeHandlers"
@@ -36,7 +36,7 @@ export function setupAllIPCHandlers(): void {
   setupSubtotalGroupHandlers()
   setupDrawingHandlers()
   registerArchiveHandlers()
-  setupExamClassHandlers()
+  setupExamClassroomHandlers()
   setupUserExamHandlers()
   registerSettingsHandlers()
   setupPdfToolsHandlers()

@@ -6,7 +6,7 @@ import type { CropRegion } from "@prisma/client"
 
 import prisma from "../../prisma/client"
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
-import { getClassMembersForExam } from "../../prisma/examClass"
+import { getClassMembersForExam } from "../../prisma/examClassroom"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
 import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
@@ -29,7 +29,7 @@ import {
   calculateQuestionCorrectRates,
   calculateQuestionScoreRates,
   calculateStatisticsForStudent,
-  type StudentClassForStats,
+  type StudentClassroomForStatistics,
 } from "./statisticsCalculator"
 import type {
   ExamInfoForReport,
@@ -144,22 +144,25 @@ export async function fetchIndividualReportData(
     // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
     // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）。
     const studentReportClasses = (await getClassMembersForExam(examId)).filter(
-      (examClass) => examClass.studentReport
+      (examClassroom) => examClassroom.studentReport
     )
 
     // studentId → 本人が所属する studentReport 学級（複数学級対応）。学級ごとに
     // 1回だけ変換し、生徒ごとの走査（O(学級×学級人数)）を避ける。
-    const studentClassesByStudentId = new Map<string, StudentClassForStats[]>()
-    for (const examClass of studentReportClasses) {
-      const memberStudentIds = examClass.classroom.memberships.map(
+    const studentClassesByStudentId = new Map<
+      string,
+      StudentClassroomForStatistics[]
+    >()
+    for (const examClassroom of studentReportClasses) {
+      const memberStudentIds = examClassroom.classroom.memberships.map(
         (membership) => membership.studentId
       )
-      const entry: StudentClassForStats = {
-        classroomId: examClass.classroomId,
-        className: examClass.classroom.name,
+      const entry: StudentClassroomForStatistics = {
+        classroomId: examClassroom.classroomId,
+        className: examClassroom.classroom.name,
         grade:
-          examClass.classroom.grade != null
-            ? String(examClass.classroom.grade)
+          examClassroom.classroom.grade != null
+            ? String(examClassroom.classroom.grade)
             : null,
         memberStudentIds,
       }

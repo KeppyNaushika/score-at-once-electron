@@ -106,7 +106,7 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    // ExamClassを追加
+    // ExamClassroomを追加
     examData.examClassrooms = [
       {
         id: generateId(),
@@ -1391,8 +1391,8 @@ describe("executeIdIntegrationImport", () => {
     expect(memberships.length).toBe(1)
   })
 
-  // II-18: ExamClassesの正しいマッピング
-  it("II-18: ExamClassesが正しく作成される", async () => {
+  // II-18: ExamClassroomsの正しいマッピング
+  it("II-18: ExamClassroomsが正しく作成される", async () => {
     const { data, examId, classroomId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({

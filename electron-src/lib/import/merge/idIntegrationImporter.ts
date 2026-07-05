@@ -21,12 +21,12 @@ import type {
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
-import { resolveExamClassOutputFlags } from "../examClassFlags"
+import { resolveExamClassroomOutputFlags } from "../examClassroomFlags"
 import { isNewerByLww } from "./decisionMergePolicy"
 import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
 import {
-  processClassIdIntegration,
+  processClassroomIdIntegration,
   processStudentIdIntegration,
   processSubtotalGroupIdIntegration,
 } from "./processors"
@@ -123,7 +123,7 @@ export async function executeIdIntegrationImport(
         )
 
         // 2. 学級のID統合処理
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           data,
           preMatchResult,
           integrationConfig.classroom,
@@ -205,8 +205,8 @@ export async function executeIdIntegrationImport(
         // 10d. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
         await processTags(data, idMappings, tx)
 
-        // 10e. ExamClass (v1.1.0+)
-        await processExamClasses(data, newExamId, idMappings, tx)
+        // 10e. ExamClassroom (v1.1.0+)
+        await processExamClassrooms(data, newExamId, idMappings, tx)
 
         // 10f. OMR設定（CropRegionOmrConfig/ChoiceOption/DigitBox） (v1.7.0+/v1.11.0+)
         await processOmrConfigs(data, idMappings, tx)
@@ -1028,11 +1028,11 @@ export async function processMemberships(
 ): Promise<void> {
   for (const membership of memberships) {
     const newStudentId = idMappings.student[membership.studentId]
-    const newClassId = idMappings.classroom[membership.classroomId]
+    const newClassroomId = idMappings.classroom[membership.classroomId]
 
-    if (newStudentId && newClassId) {
+    if (newStudentId && newClassroomId) {
       const existing = await tx.studentClassroomMembership.findFirst({
-        where: { studentId: newStudentId, classroomId: newClassId },
+        where: { studentId: newStudentId, classroomId: newClassroomId },
       })
 
       if (!existing) {
@@ -1046,7 +1046,7 @@ export async function processMemberships(
             data: {
               id: membership.id,
               studentId: newStudentId,
-              classroomId: newClassId,
+              classroomId: newClassroomId,
               startDate: new Date(membership.startDate),
               endDate: membership.endDate ? new Date(membership.endDate) : null,
               attendanceNumber: membership.attendanceNumber,
@@ -1239,34 +1239,34 @@ async function processTags(
   }
 }
 
-async function processExamClasses(
+async function processExamClassrooms(
   data: ExtractedArchiveData,
   newExamId: string,
   idMappings: IdMappings,
   tx: Tx
 ): Promise<void> {
-  for (const examClass of data.examData.examClassrooms) {
-    const newClassId = idMappings.classroom[examClass.classroomId]
-    if (!newClassId) continue
+  for (const examClassroom of data.examData.examClassrooms) {
+    const newClassroomId = idMappings.classroom[examClassroom.classroomId]
+    if (!newClassroomId) continue
 
     const existing = await tx.examClassroom.findFirst({
-      where: { examId: newExamId, classroomId: newClassId },
+      where: { examId: newExamId, classroomId: newClassroomId },
     })
     if (existing) continue
 
     const existingById = await tx.examClassroom.findUnique({
-      where: { id: examClass.id },
+      where: { id: examClassroom.id },
     })
     if (!existingById) {
       await tx.examClassroom.create({
         data: {
-          id: examClass.id,
+          id: examClassroom.id,
           examId: newExamId,
-          classroomId: newClassId,
-          administered: examClass.administered,
+          classroomId: newClassroomId,
+          administered: examClassroom.administered,
           // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-          ...resolveExamClassOutputFlags(examClass),
-          order: examClass.order,
+          ...resolveExamClassroomOutputFlags(examClassroom),
+          order: examClassroom.order,
         },
       })
     }

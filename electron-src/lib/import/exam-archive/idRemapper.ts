@@ -30,13 +30,13 @@ export interface IdMappings {
   userExam: Record<string, string>
   /** ExamSubtotalGroup ID: 旧ID -> 新ID */
   examSubtotalGroup: Record<string, string>
-  /** ExamClass ID: 旧ID -> 新ID (v1.1.0+) */
-  examClass: Record<string, string>
+  /** ExamClassroom ID: 旧ID -> 新ID (v1.1.0+) */
+  examClassroom: Record<string, string>
   /** Student ID: 旧ID -> 新ID */
   student: Record<string, string>
   /** Class ID: 旧ID -> 新ID */
   classroom: Record<string, string>
-  /** StudentClassMembership ID: 旧ID -> 新ID */
+  /** StudentClassroomMembership ID: 旧ID -> 新ID */
   membership: Record<string, string>
   /** User ID: 旧ID -> 新ID */
   user: Record<string, string>
@@ -99,7 +99,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     examStudent: {},
     userExam: {},
     examSubtotalGroup: {},
-    examClass: {},
+    examClassroom: {},
     student: {},
     classroom: {},
     membership: {},
@@ -168,9 +168,9 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     mappings.examSubtotalGroup[examSubtotalGroup.id] = randomUUID()
   }
 
-  // ExamClass (v1.1.0+)
-  for (const examClass of data.examData.examClassrooms || []) {
-    mappings.examClass[examClass.id] = randomUUID()
+  // ExamClassroom (v1.1.0+)
+  for (const examClassroom of data.examData.examClassrooms || []) {
+    mappings.examClassroom[examClassroom.id] = randomUUID()
   }
 
   // 生徒

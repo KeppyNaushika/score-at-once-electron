@@ -41,7 +41,7 @@ import { ExcelPreview } from "./ExcelPreview"
 import type { ExportTabType } from "./ExportOptionsCard"
 import { IndividualReportPreview } from "./individual-report/IndividualReportPreview"
 import { ScoredAnswerPreview } from "./ScoredAnswerPreview"
-import { StatClassSelector } from "./StatClassSelector"
+import { StatisticsClassroomSelector } from "./StatisticsClassroomSelector"
 
 interface StudentSelectionCardProps {
   examId?: string
@@ -177,7 +177,7 @@ export function StudentSelectionCard({
         className="mt-0 min-h-0 flex-1 overflow-auto"
       >
         {examId ? (
-          <StatClassSelector examId={examId} />
+          <StatisticsClassroomSelector examId={examId} />
         ) : (
           <p className="text-muted-foreground p-4 text-center text-sm">
             試験が読み込まれていません

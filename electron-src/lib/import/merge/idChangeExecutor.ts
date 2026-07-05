@@ -321,7 +321,7 @@ export async function executeIdChanges(
     if (target.category === "student") {
       await changeStudentId(tx, target, idMappings, warnings)
     } else if (target.category === "classroom") {
-      await changeClassId(tx, target, idMappings, warnings)
+      await changeClassroomId(tx, target, idMappings, warnings)
     } else if (target.category === "subtotalGroup") {
       await changeSubtotalGroupId(tx, target, idMappings, warnings)
     }
@@ -384,7 +384,7 @@ async function changeStudentId(
  * 学級IDの変更（temp-value方式 + カスケード子の移し替え）
  * 移し替え対象は CLASS_CASCADE_MOVERS を参照（schema と一致をテストで強制）。
  */
-async function changeClassId(
+async function changeClassroomId(
   tx: PrismaTransaction,
   target: IdChangeTarget,
   idMappings: IdMappings,

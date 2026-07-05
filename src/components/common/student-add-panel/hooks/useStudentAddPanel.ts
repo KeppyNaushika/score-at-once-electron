@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type {
-  AddPanelClassItem,
+  AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
 import { isCurrentMembership } from "@/lib/membership"
 
-interface SelectableClass extends AddPanelClassItem {
+interface SelectableClass extends AddPanelClassroomItem {
   isSelected: boolean
 }
 
@@ -104,7 +104,7 @@ export function useStudentAddPanel({
   const [classes, setClasses] = useState<SelectableClass[]>([])
   const [students, setStudents] = useState<SelectableStudent[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterClassId, setFilterClassId] = useState("all")
+  const [filterClassroomId, setFilterClassroomId] = useState("all")
   const [classActiveOnly, setClassActiveOnly] = useState(classActiveOnlyDefault)
   const [studentActiveOnly, setStudentActiveOnly] = useState(
     studentActiveOnlyDefault
@@ -244,9 +244,9 @@ export function useStudentAddPanel({
       fullKana.includes(term) ||
       student.studentNumber.toLowerCase().includes(term)
     const matchesClass =
-      filterClassId === "all" ||
+      filterClassroomId === "all" ||
       student.memberships.some(
-        (membership) => membership.classroom.id === filterClassId
+        (membership) => membership.classroom.id === filterClassroomId
       )
     return matchesSearch && matchesClass
   })
@@ -266,8 +266,8 @@ export function useStudentAddPanel({
     filteredStudents,
     searchTerm,
     setSearchTerm,
-    filterClassId,
-    setFilterClassId,
+    filterClassroomId,
+    setFilterClassroomId,
     classActiveOnly,
     setClassActiveOnly,
     studentActiveOnly,

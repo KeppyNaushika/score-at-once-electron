@@ -17,10 +17,10 @@ import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "../merge/idChangeExecutor"
 import { processMemberships } from "../merge/idIntegrationImporter"
-import { preMatchClasses } from "../merge/matchers/classMatcher"
+import { preMatchClasses } from "../merge/matchers/classroomMatcher"
 import { preMatchStudents } from "../merge/matchers/studentMatcher"
 import {
-  processClassIdIntegration,
+  processClassroomIdIntegration,
   processStudentIdIntegration,
 } from "../merge/processors"
 import type { IdChangeTarget, IdMappings } from "../merge/types"
@@ -151,7 +151,7 @@ export async function executeStudentImport(
         )
 
         // 2. 学級のID統合処理
-        await processClassIdIntegration(
+        await processClassroomIdIntegration(
           compatData as ExtractedArchiveData,
           compatPreMatch,
           integrationConfig.classroom,

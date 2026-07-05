@@ -13,13 +13,13 @@
 import type { AnswerSheetBuilderAPI } from "./electron/answerSheetBuilderApi"
 import type { ArchiveAPI } from "./electron/archiveApi"
 import type { AuditLogAPI } from "./electron/auditLogApi"
-import type { ClassStudentAPI } from "./electron/classStudentApi"
+import type { ClassroomStudentAPI } from "./electron/classroomStudentApi"
 import type { CourseworkAPI } from "./electron/courseworkApi"
 import type { CropRegionAPI } from "./electron/cropRegionApi"
 import type { DataManagementAPI } from "./electron/dataManagementApi"
 import type { DrawingAPI } from "./electron/drawingApi"
 import type { ExamAPI } from "./electron/examApi"
-import type { ExamClassAPI } from "./electron/examClassApi"
+import type { ExamClassroomAPI } from "./electron/examClassroomApi"
 import type { ExportAPI } from "./electron/exportApi"
 import type { GradeAPI } from "./electron/gradeApi"
 import type { MasterImageAPI } from "./electron/masterImageApi"
@@ -76,14 +76,14 @@ export interface MyAPI
     ExamAPI,
     UserAuthAPI,
     StudentAnswerAPI,
-    ClassStudentAPI,
+    ClassroomStudentAPI,
     MasterImageAPI,
     CropRegionAPI,
     ScoringAPI,
     ExportAPI,
     ArchiveAPI,
     DrawingAPI,
-    ExamClassAPI,
+    ExamClassroomAPI,
     UserExamAPI,
     SettingsAPI,
     PdfToolsAPI,

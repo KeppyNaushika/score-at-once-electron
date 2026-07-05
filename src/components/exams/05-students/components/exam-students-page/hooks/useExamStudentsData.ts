@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import type { RosterClassOption } from "@/components/common/roster-table"
+import type { RosterClassroomOption } from "@/components/common/roster-table"
 import {
   type ExamClassroomPlacement,
   resolveExamClassroomPlacement,
@@ -16,7 +16,7 @@ interface UseExamStudentsDataProps {
 
 /**
  * customOrder → 学級順（placement.classOrder）→ 出席番号順で受験生徒を比較する。
- * placement（ExamClass 由来の表示学級情報）は studentId をキーに別持ちする side data。
+ * placement（ExamClassroom 由来の表示学級情報）は studentId をキーに別持ちする side data。
  */
 function compareExamStudents(
   placementByStudent: Record<string, ExamClassroomPlacement>
@@ -62,17 +62,17 @@ function compareExamStudents(
 export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [loading, setLoading] = useState(true)
   const [examStudents, setExamStudents] = useState<ExamStudentWithDetails[]>([]) // 順序付き受験生徒リスト
-  // ExamClass(administered=true) 由来の表示学級情報。ExamStudentWithDetails にマージせず
+  // ExamClassroom(administered=true) 由来の表示学級情報。ExamStudentWithDetails にマージせず
   // studentId をキーに別持ちする side data（getStudentsForExam の戻り値には含まれない）。
   const [placementByStudent, setPlacementByStudent] = useState<
     Record<string, ExamClassroomPlacement>
   >({})
-  const [classes, setClasses] = useState<RosterClassOption[]>([]) // フィルタ用学級情報
+  const [classes, setClasses] = useState<RosterClassroomOption[]>([]) // フィルタ用学級情報
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<ExamStudentStatus | "all">(
     "all"
   )
-  const [selectedClassId, setSelectedClassId] = useState<string>("all")
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>("all")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showRemovalConfirm, setShowRemovalConfirm] = useState(false)
   const [studentsToRemove, setStudentsToRemove] = useState<string[]>([])
@@ -101,7 +101,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
       setPlacementByStudent(placement)
 
       // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
-      const uniqueClasses = new Map<string, RosterClassOption>()
+      const uniqueClasses = new Map<string, RosterClassroomOption>()
       sortedExamStudents.forEach((examStudent) => {
         // 各生徒の全所属履歴を確認
         examStudent.student.memberships?.forEach((membership) => {
@@ -220,14 +220,14 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
       // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック
       const matchesClass =
-        selectedClassId === "all" ||
+        selectedClassroomId === "all" ||
         student.memberships?.some(
-          (membership) => membership.classroom.id === selectedClassId
+          (membership) => membership.classroom.id === selectedClassroomId
         )
 
       return matchesSearch && matchesStatus && matchesClass
     },
-    [searchTerm, statusFilter, selectedClassId]
+    [searchTerm, statusFilter, selectedClassroomId]
   )
 
   // 全選択の処理（SortableStudentTable用）
@@ -307,8 +307,8 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     setSearchTerm,
     statusFilter,
     setStatusFilter,
-    selectedClassId,
-    setSelectedClassId,
+    selectedClassroomId,
+    setSelectedClassroomId,
     showAddDialog,
     setShowAddDialog,
     showRemovalConfirm,

@@ -49,7 +49,7 @@ const navGroups: NavItem[][] = [
   [{ href: "/pdf-tools", label: "PDF加工", icon: FileStack }],
   [
     { href: "/students", label: "生徒管理", icon: Users },
-    { href: "/classes", label: "学級管理", icon: School },
+    { href: "/classrooms", label: "学級管理", icon: School },
     { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
     { href: "/tags", label: "タグ管理", icon: Tag },
   ],

@@ -4,7 +4,7 @@
 
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type {
-  ClassMatchingStrategy,
+  ClassroomMatchingStrategy,
   ExistingItemInfo,
   IdChoice,
   MatchedItem,
@@ -65,8 +65,8 @@ export interface StudentIntegrationPanelProps extends IntegrationPanelBaseProps 
 }
 
 /** 学級統合パネルProps */
-export interface ClassIntegrationPanelProps extends IntegrationPanelBaseProps {
-  onStrategyChange: (strategy: ClassMatchingStrategy) => void
+export interface ClassroomIntegrationPanelProps extends IntegrationPanelBaseProps {
+  onStrategyChange: (strategy: ClassroomMatchingStrategy) => void
 }
 
 /** 小計グループ統合パネルProps */

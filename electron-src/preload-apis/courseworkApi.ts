@@ -122,11 +122,11 @@ export function createCourseworkApi() {
           courseworkId,
           classroomId
         ),
-      setClassOrders: (courseworkId: string, orderedClassIds: string[]) =>
+      setClassOrders: (courseworkId: string, orderedClassroomIds: string[]) =>
         ipcRenderer.invoke(
           "coursework:setClassOrders",
           courseworkId,
-          orderedClassIds
+          orderedClassroomIds
         ),
 
       // タグ

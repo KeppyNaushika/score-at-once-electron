@@ -4,11 +4,11 @@ import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
-  type ClassRosterEntry,
-  ClassRosterManager,
-} from "@/components/common/class-roster"
+  type ClassroomRosterEntry,
+  ClassroomRosterManager,
+} from "@/components/common/classroom-roster"
 import {
-  type RosterClassOption,
+  type RosterClassroomOption,
   type RosterRow,
   RosterTable,
   type RosterTableAdapter,
@@ -16,7 +16,7 @@ import {
 } from "@/components/common/roster-table"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type {
-  AddPanelClassItem,
+  AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
@@ -76,14 +76,14 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             : []
           ).map((gradeClass) => [gradeClass.classroomId, gradeClass.order])
         )
-        const registeredClassIds = new Set(classOrderMap.keys())
+        const registeredClassroomIds = new Set(classOrderMap.keys())
         const students =
           studentResult.success && studentResult.students
             ? studentResult.students
             : []
         return students.map((examStudent): RosterRow => {
           const membership = examStudent.student.memberships.find(
-            (membership) => registeredClassIds.has(membership.classroomId)
+            (membership) => registeredClassroomIds.has(membership.classroomId)
           )
           return {
             id: examStudent.studentId,
@@ -105,7 +105,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       fetchClasses: async () => {
         const result = await window.electronAPI.grade.getClasses(gradeId)
         if (!result.success || !result.classes) return []
-        return result.classes.map((gradeClass): RosterClassOption => ({
+        return result.classes.map((gradeClass): RosterClassroomOption => ({
           id: gradeClass.classroomId,
           name: gradeClass.className,
         }))
@@ -129,7 +129,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map((classroom): AddPanelClassItem => ({
+        return result.classes.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
           studentCount: classroom.studentCount,
@@ -158,8 +158,8 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
           })),
         }))
       },
-      addClasses: async (orderedClassIds, activeOnly) => {
-        for (const classroomId of orderedClassIds) {
+      addClasses: async (orderedClassroomIds, activeOnly) => {
+        for (const classroomId of orderedClassroomIds) {
           const result = await window.electronAPI.grade.addStudentsFromClass(
             gradeId,
             classroomId,
@@ -190,7 +190,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
     await rosterHandle?.refresh()
   }, [loadClasses, rosterHandle])
 
-  const classEntries = useMemo<ClassRosterEntry[]>(
+  const classEntries = useMemo<ClassroomRosterEntry[]>(
     () =>
       classes.map((gradeClass) => ({
         id: gradeClass.classroomId,
@@ -219,16 +219,16 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       {classes.length > 0 && (
         <div className="mb-6">
           <h3 className="mb-3 text-sm font-medium">登録済み学級</h3>
-          <ClassRosterManager
+          <ClassroomRosterManager
             entries={classEntries}
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
-            onReorder={async (orderedClassIds) => {
+            onReorder={async (orderedClassroomIds) => {
               const result = await window.electronAPI.grade.setClassOrders(
                 gradeId,
-                orderedClassIds
+                orderedClassroomIds
               )
-              // 失敗時は throw して ClassRosterManager の楽観更新をロールバックさせる
+              // 失敗時は throw して ClassroomRosterManager の楽観更新をロールバックさせる
               if (!result.success) {
                 throw new Error(result.error || "学級の並び替えに失敗しました")
               }

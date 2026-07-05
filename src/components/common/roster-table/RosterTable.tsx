@@ -8,7 +8,7 @@ import { RosterTableFilters } from "@/components/common/roster-table/RosterTable
 import { RosterTableHeader } from "@/components/common/roster-table/RosterTableHeader"
 import { RosterTableRow } from "@/components/common/roster-table/RosterTableRow"
 import type {
-  RosterClassOption,
+  RosterClassroomOption,
   RosterRow,
   RosterTableAdapter,
   RosterTableSlots,
@@ -64,9 +64,9 @@ export function RosterTable({
   onRowsChange,
 }: RosterTableProps) {
   const [rows, setRows] = useState<RosterRow[]>([])
-  const [classes, setClasses] = useState<RosterClassOption[]>([])
+  const [classes, setClasses] = useState<RosterClassroomOption[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedClassId, setSelectedClassId] = useState("all")
+  const [selectedClassroomId, setSelectedClassroomId] = useState("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
@@ -119,9 +119,10 @@ export function RosterTable({
         row.studentNumber.toLowerCase().includes(term)
 
       const matchesClass =
-        selectedClassId === "all" ||
+        selectedClassroomId === "all" ||
         row.classInfo.className ===
-          classes.find((classroom) => classroom.id === selectedClassId)?.name
+          classes.find((classroom) => classroom.id === selectedClassroomId)
+            ?.name
 
       const matchesAdditional = additionalFilters.every((filter) =>
         filter.predicate(row)
@@ -129,7 +130,7 @@ export function RosterTable({
 
       return matchesSearch && matchesClass && matchesAdditional
     })
-  }, [rows, searchTerm, selectedClassId, classes, additionalFilters])
+  }, [rows, searchTerm, selectedClassroomId, classes, additionalFilters])
 
   const handleSelectionChange = useCallback(
     (studentId: string, isSelected: boolean) => {
@@ -230,8 +231,8 @@ export function RosterTable({
         <RosterTableFilters
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          selectedClassId={selectedClassId}
-          onClassChange={setSelectedClassId}
+          selectedClassroomId={selectedClassroomId}
+          onClassChange={setSelectedClassroomId}
           classes={classes}
           additionalFilters={additionalFilters}
         />

@@ -5,7 +5,7 @@
  *
  * 主な変更点:
  * - UserExam: invitedAt, invitedBy フィールド追加
- * - ExamClass テーブル追加
+ * - ExamClassroom テーブル追加
  * - その他新規テーブル追加（インポート時は空で初期化）
  *
  * @see docs/schema-history/README.md

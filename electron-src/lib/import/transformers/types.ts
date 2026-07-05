@@ -26,7 +26,7 @@ import type {
  * サポートされているアーカイブバージョン
  *
  * - 1.0.0: v0.2.x (UserExam.invitedAt/invitedBy なし, PageImage使用)
- * - 1.1.0: v0.3.x (UserExam完全対応, ExamClass追加, PageImage使用)
+ * - 1.1.0: v0.3.x (UserExam完全対応, ExamClassroom追加, PageImage使用)
  * - 1.2.0: v0.4.x (MasterImage/StudentAnswerImage分離, userId/studentId非NULL)
  * - 1.3.0: v0.5.x (Student.studentId → Student.studentNumber リネーム)
  * - 1.4.0: v0.5.x (ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加)
@@ -40,7 +40,7 @@ import type {
  * - 1.12.0: v0.12.x (Exam.markerCorrectionEnabled 追加 — ASB由来試験のマーク補正既定ONフラグ)
  * - 1.13.0: v0.12.x (ScoreDecision 追加 — OWNERによる確定スコア。QuestionScoreのstatus proposed/final廃止)
  * - 1.14.0: v0.13.x (ReturnSnapshot 追加 — 答案返却版スナップショット。返却後の採点修正差分検出用)
- * - 1.15.0: v0.14.x (ExamClass に teacherStat/studentReport、ExamSubtotalGroup に selectedForTable/selectedForBoxPlot 追加 — 学級統計再設計。statistics 廃止)
+ * - 1.15.0: v0.14.x (ExamClassroom に teacherStat/studentReport、ExamSubtotalGroup に selectedForTable/selectedForBoxPlot 追加 — 学級統計再設計。statistics 廃止)
  * - 1.16.0: v0.14.x (物理テーブル名を Classroom 系へ統一、ExamClassroom.teacherStat → teacherStatistics リネーム。読込は旧 teacherStat/statistics を補完)
  */
 export type ArchiveVersion =

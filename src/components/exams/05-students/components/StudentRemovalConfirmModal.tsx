@@ -20,7 +20,7 @@ interface StudentRemovalConfirmModalProps {
   onClose: () => void
   onConfirm: () => void
   studentsToRemove: ExamStudentWithDetails[]
-  /** ExamClass 由来の表示学級情報（studentId キーの side data） */
+  /** ExamClassroom 由来の表示学級情報（studentId キーの side data） */
   placementByStudent: Record<string, ExamClassroomPlacement>
   hasGradingData: boolean
   gradingDataCount?: number

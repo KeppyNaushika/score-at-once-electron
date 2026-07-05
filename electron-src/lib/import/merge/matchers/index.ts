@@ -2,7 +2,7 @@
  * マッチャーモジュール
  */
 
-export { matchClasses, preMatchClasses } from "./classMatcher"
+export { matchClasses, preMatchClasses } from "./classroomMatcher"
 export { matchStudents, preMatchStudents } from "./studentMatcher"
 export {
   matchSubtotalGroups,

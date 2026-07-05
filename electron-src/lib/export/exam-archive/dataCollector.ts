@@ -555,16 +555,16 @@ export async function collectExamData(
         : [],
       examClassrooms: isTemplate
         ? []
-        : exam.examClassrooms.map((examClass) => ({
-            id: examClass.id,
-            examId: examClass.examId,
-            classroomId: examClass.classroomId,
-            administered: examClass.administered,
-            teacherStatistics: examClass.teacherStatistics,
-            studentReport: examClass.studentReport,
-            order: examClass.order,
-            createdAt: examClass.createdAt.toISOString(),
-            updatedAt: examClass.updatedAt.toISOString(),
+        : exam.examClassrooms.map((examClassroom) => ({
+            id: examClassroom.id,
+            examId: examClassroom.examId,
+            classroomId: examClassroom.classroomId,
+            administered: examClassroom.administered,
+            teacherStatistics: examClassroom.teacherStatistics,
+            studentReport: examClassroom.studentReport,
+            order: examClassroom.order,
+            createdAt: examClassroom.createdAt.toISOString(),
+            updatedAt: examClassroom.updatedAt.toISOString(),
           })),
       // v1.4.0+
       examMarkingFormats: examMarkingFormats.map((examMarkingFormat) => ({

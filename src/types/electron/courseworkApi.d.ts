@@ -198,7 +198,7 @@ export interface CourseworkAPI {
     }>
     setClassOrders: (
       courseworkId: string,
-      orderedClassIds: string[]
+      orderedClassroomIds: string[]
     ) => Promise<{ success: boolean; error?: string }>
 
     // タグ

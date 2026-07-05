@@ -5,14 +5,14 @@ import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
-import { ClassExamManager } from "@/components/exams/05-students/components/ClassExamManager"
-import { ClassStatisticsCards } from "@/components/exams/05-students/components/exam-students-page/components/ClassStatisticsCards"
+import { ClassroomExamManager } from "@/components/exams/05-students/components/ClassroomExamManager"
+import { ClassroomStatisticsCards } from "@/components/exams/05-students/components/exam-students-page/components/ClassroomStatisticsCards"
 import { StudentStatisticsCards } from "@/components/exams/05-students/components/exam-students-page/components/StudentStatisticsCards"
 import { useExamStudentsData } from "@/components/exams/05-students/components/exam-students-page/hooks/useExamStudentsData"
 import ExamStudentAddModal from "@/components/exams/05-students/components/ExamStudentAddModal"
 import SortableStudentTable from "@/components/exams/05-students/components/SortableStudentTable"
 import StudentRemovalConfirmModal from "@/components/exams/05-students/components/StudentRemovalConfirmModal"
-import { useExamClasses } from "@/components/exams/05-students/hooks/useExamClasses"
+import { useExamClassrooms } from "@/components/exams/05-students/hooks/useExamClassrooms"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
@@ -35,8 +35,8 @@ export default function StudentsPage() {
     setSearchTerm,
     statusFilter,
     setStatusFilter,
-    selectedClassId,
-    setSelectedClassId,
+    selectedClassroomId,
+    setSelectedClassroomId,
     showAddDialog,
     setShowAddDialog,
     showRemovalConfirm,
@@ -59,10 +59,10 @@ export default function StudentsPage() {
   const {
     examClassrooms,
     loading: classesLoading,
-    refresh: refreshExamClasses,
+    refresh: refreshExamClassrooms,
     removeClass,
     updateClass,
-  } = useExamClasses({ examId })
+  } = useExamClassrooms({ examId })
 
   if (loading || classesLoading) {
     return (
@@ -120,7 +120,7 @@ export default function StudentsPage() {
               </>
             ) : (
               <>
-                <ClassStatisticsCards examClassrooms={examClassrooms} />
+                <ClassroomStatisticsCards examClassrooms={examClassrooms} />
                 <Button onClick={() => setShowAddClassDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   学級を追加
@@ -146,8 +146,8 @@ export default function StudentsPage() {
               examId={examId}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
-              selectedClassId={selectedClassId}
-              onClassChange={setSelectedClassId}
+              selectedClassroomId={selectedClassroomId}
+              onClassChange={setSelectedClassroomId}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
             />
@@ -156,13 +156,13 @@ export default function StudentsPage() {
 
         {/* 受験学級タブ */}
         <TabsContent value="classrooms" className="flex-1 overflow-auto pb-6">
-          <ClassExamManager
+          <ClassroomExamManager
             examId={examId}
             examClassrooms={examClassrooms}
             onRemoveClass={removeClass}
             onUpdateClass={updateClass}
             onClassesChanged={() => {
-              refreshExamClasses()
+              refreshExamClassrooms()
               refreshStudentData()
             }}
             showAddDialog={showAddClassDialog}
@@ -178,7 +178,7 @@ export default function StudentsPage() {
         examId={examId}
         onStudentsAdded={() => {
           refreshStudentData()
-          refreshExamClasses()
+          refreshExamClassrooms()
         }}
       />
 

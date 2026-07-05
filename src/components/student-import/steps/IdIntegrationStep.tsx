@@ -3,7 +3,7 @@
 import { CheckCircle2, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
-import { ClassIntegrationPanel } from "@/components/import/steps/id-integration/ClassIntegrationPanel"
+import { ClassroomIntegrationPanel } from "@/components/import/steps/id-integration/ClassroomIntegrationPanel"
 import { StudentIntegrationPanel } from "@/components/import/steps/id-integration/StudentIntegrationPanel"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -55,7 +55,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
   }
 
   // 既存のパネルに渡す互換オブジェクトを作成
-  // StudentIntegrationPanel / ClassIntegrationPanel は
+  // StudentIntegrationPanel / ClassroomIntegrationPanel は
   // examArchive の useImportWizard を想定しているため、アダプターを作成
   const wizardAdapter = {
     state: {
@@ -132,7 +132,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
         </TabsContent>
 
         <TabsContent value="classroom" className="mt-4">
-          <ClassIntegrationPanel
+          <ClassroomIntegrationPanel
             wizard={wizardAdapter as never}
             onStrategyChange={(strategy) =>
               wizard.updateIdIntegrationConfig("classroom", { strategy })

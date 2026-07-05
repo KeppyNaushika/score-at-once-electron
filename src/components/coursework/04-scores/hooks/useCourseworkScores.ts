@@ -82,7 +82,7 @@ export function useCourseworkScores(courseworkId: string) {
 
       if (!studentsResult.success || !studentsResult.students) return
 
-      const registeredClassIds = new Set(
+      const registeredClassroomIds = new Set(
         classesResult.success && classesResult.classes
           ? classesResult.classes.map(
               (courseworkClass) => courseworkClass.classroomId
@@ -123,7 +123,7 @@ export function useCourseworkScores(courseworkId: string) {
               : { ...EMPTY_CELL }
           }
           const membership = courseworkStudent.student.memberships.find(
-            (membership) => registeredClassIds.has(membership.classroomId)
+            (membership) => registeredClassroomIds.has(membership.classroomId)
           )
           return {
             studentId: courseworkStudent.student.id,

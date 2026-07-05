@@ -52,7 +52,10 @@ export interface RosterAdapter {
     orders: { classroomId: string; order: number }[]
   ): Promise<void>
   /** 指定学級以外の登録学級ID一覧 */
-  listOtherClassIds(targetId: string, exceptClassId: string): Promise<string[]>
+  listOtherClassroomIds(
+    targetId: string,
+    exceptClassroomId: string
+  ): Promise<string[]>
   /** 学級と、それに伴い外す生徒を単一トランザクションで削除 */
   removeClassAndStudents(
     targetId: string,
@@ -241,12 +244,12 @@ export async function rosterUpdateStudentOrders(
 export async function rosterSetClassOrders(
   adapter: RosterAdapter,
   targetId: string,
-  orderedClassIds: string[]
+  orderedClassroomIds: string[]
 ): Promise<RosterMutationResult> {
   try {
     await adapter.setClassOrders(
       targetId,
-      orderedClassIds.map((classroomId, order) => ({ classroomId, order }))
+      orderedClassroomIds.map((classroomId, order) => ({ classroomId, order }))
     )
     return { success: true }
   } catch (error) {
@@ -273,9 +276,12 @@ async function computeExclusiveStudents(
   })
   const classStudentIds = memberships.map((membership) => membership.studentId)
 
-  const otherClassIds = await adapter.listOtherClassIds(targetId, classroomId)
+  const otherClassroomIds = await adapter.listOtherClassroomIds(
+    targetId,
+    classroomId
+  )
   const otherMemberships = await prisma.studentClassroomMembership.findMany({
-    where: { classroomId: { in: otherClassIds } },
+    where: { classroomId: { in: otherClassroomIds } },
     select: { studentId: true },
   })
   const otherStudentIds = new Set(
