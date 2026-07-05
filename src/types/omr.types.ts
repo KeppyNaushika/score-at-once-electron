@@ -18,8 +18,6 @@ export interface Point {
 // OMRセル設定（問題定義に紐付く）
 // =====================
 
-export type OMRAnswerType = "choice" | "handwritten-digit"
-
 export interface OMRChoiceConfig {
   type: "choice"
   /** 選択肢数（2-10） */
@@ -104,11 +102,6 @@ export interface OMRRecognitionParams {
   areaThreshold: number
   /** 信頼度閾値（この値未満は low_confidence としてフラグ、デフォルト0.7） */
   confidenceThreshold?: number
-}
-
-export const DEFAULT_OMR_RECOGNITION_PARAMS: OMRRecognitionParams = {
-  colorThreshold: 25,
-  areaThreshold: 0.4,
 }
 
 // =====================

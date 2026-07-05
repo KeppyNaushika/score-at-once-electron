@@ -98,13 +98,3 @@ export interface ImageLoaderReturn {
   imageLoaded: boolean
   loadedImages: HTMLImageElement[]
 }
-
-/**
- * テキスト境界キャッシュのアイテム
- */
-export interface TextBoundsCacheItem {
-  x: number
-  y: number
-  width: number
-  height: number
-}

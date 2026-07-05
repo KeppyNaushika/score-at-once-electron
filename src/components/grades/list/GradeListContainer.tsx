@@ -33,9 +33,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getGradeStatus } from "@/lib/gradeStatus"
+import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeWithDetails } from "@/types/grade.types"
 import type {
-  CourseworkImportDecision,
   GradeArchiveData,
   GradeArchiveImportPreview,
 } from "@/types/gradeArchive.types"

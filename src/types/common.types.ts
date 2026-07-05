@@ -221,21 +221,3 @@ export interface CropRegionUpdateData {
   orderIndex?: number
   points?: number
 }
-
-// =============================================================================
-// その他の共有型
-// =============================================================================
-
-/**
- * StudentTable等で使用する生徒データ型
- * Prisma.StudentGetPayloadの簡略版
- */
-export interface StudentData {
-  id: string
-  studentNumber: string
-  name: string
-  furigana?: string
-  admissionYear?: number
-  createdAt: Date
-  updatedAt: Date
-}

@@ -13,7 +13,7 @@ export interface ArchiveAPI {
       examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("../examArchive.types").ExportMode
+      exportMode?: import("../examArchive.types").ArchiveExportMode
     }) => Promise<import("../examArchive.types").ExportExamResult>
 
     /**

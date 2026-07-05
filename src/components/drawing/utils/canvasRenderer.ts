@@ -3,7 +3,7 @@
  * @description アノテーションの描画とプレビュー表示を行う
  */
 
-import { CANVAS_SETTINGS } from "@/app/textbox-on-canvas-v3/constants"
+import { CANVAS_SETTINGS } from "@/lib/textbox-canvas/constants"
 import type {
   DrawingAnnotation,
   DrawingCreateData,

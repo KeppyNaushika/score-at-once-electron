@@ -15,10 +15,8 @@ import {
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type {
-  CourseworkImportDecision,
-  GradeArchiveImportPreview,
-} from "@/types/gradeArchive.types"
+import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
+import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
 interface GradeImportDialogProps {
   open: boolean

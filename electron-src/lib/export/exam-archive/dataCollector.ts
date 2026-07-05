@@ -9,12 +9,12 @@ import type {
   ArchiveDataCounts,
   ArchiveDeletedRecordsData,
   ArchiveExamData,
+  ArchiveExportMode,
   ArchiveScoresData,
   ArchiveStudentsData,
   ArchiveSubtotalsData,
   ArchiveTagsData,
   ArchiveUsersData,
-  ExportMode,
 } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 
@@ -48,7 +48,7 @@ export interface CollectedData {
 export async function collectExamData(
   examId: string,
   userId: string,
-  exportMode: ExportMode = "full"
+  exportMode: ArchiveExportMode = "full"
 ): Promise<{ success: boolean; data?: CollectedData; error?: string }> {
   try {
     const isTemplate =

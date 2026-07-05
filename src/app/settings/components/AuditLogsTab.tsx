@@ -27,9 +27,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import type {
   AuditCategory,
-  AuditLogEntry,
   AuditVerb,
-} from "@/types/electron/auditLogApi"
+} from "@/electron-src/lib/prisma/auditActions"
+import type { AuditLogEntry } from "@/types/electron/auditLogApi"
 
 const CATEGORY_LABELS: Record<AuditCategory, string> = {
   exam: "試験",

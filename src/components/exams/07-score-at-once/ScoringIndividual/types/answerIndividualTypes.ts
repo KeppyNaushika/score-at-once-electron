@@ -6,10 +6,7 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-
-// 線種の型定義
-export type LineStyle =
-  "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 // アンカー方向（8方向 + center）
 export type AnchorDirection =

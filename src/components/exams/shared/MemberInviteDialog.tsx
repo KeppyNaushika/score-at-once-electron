@@ -22,10 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type {
-  UserExamWithUserAndInviter,
-  UserRole,
-} from "@/types/electron/userExamApi"
+import type { UserRole } from "@/electron-src/lib/prisma/userExam"
+import type { UserExamWithUserAndInviter } from "@/types/electron/userExamApi"
 
 interface MemberInviteDialogProps {
   isOpen: boolean

@@ -4,10 +4,10 @@ import type {
   DrawingElement,
   DrawingTool,
   LineEditMode,
-  LineStyle,
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
 import { useHandTool } from "./interaction/useHandTool"

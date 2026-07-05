@@ -9,7 +9,7 @@ export function createArchiveApi() {
         examId: string
         userId: string
         outputPath?: string
-        exportMode?: import("../../src/types/examArchive.types").ExportMode
+        exportMode?: import("../../src/types/examArchive.types").ArchiveExportMode
       }) => ipcRenderer.invoke("archive:exportExam", options),
       analyzeArchive: (options: { archivePath: string }) =>
         ipcRenderer.invoke("archive:analyzeArchive", options),
@@ -35,7 +35,7 @@ export function createArchiveApi() {
       bulkExportExams: (options: {
         examIds: string[]
         userId: string
-        exportMode?: import("../../src/types/examArchive.types").ExportMode
+        exportMode?: import("../../src/types/examArchive.types").ArchiveExportMode
       }) => ipcRenderer.invoke("archive:bulkExportExams", options),
       selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
       convertHszToScore: (options: { hszPath: string }) =>

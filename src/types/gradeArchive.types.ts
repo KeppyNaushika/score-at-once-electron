@@ -2,7 +2,10 @@
  * 成績算出アーカイブ(.grade)の型定義
  */
 
-import type { CollectedCourseworkData } from "./courseworkArchive.types"
+import type {
+  CollectedCourseworkData,
+  CourseworkImportDecisions,
+} from "./courseworkArchive.types"
 
 export interface GradeArchiveManifest {
   version: string
@@ -174,13 +177,6 @@ export interface ArchiveCourseworkItem {
   }[]
 }
 
-/** v1.4.0+: インポート時に資料ごとにユーザーが選ぶ取り込み方法 */
-export type CourseworkImportDecision =
-  { action: "reuse"; existingId: string } | { action: "new" }
-
-/** アーカイブ内の資料uuid → ユーザー決定 */
-export type CourseworkImportDecisions = Record<string, CourseworkImportDecision>
-
 /** インポート実行時のオプション */
 export interface GradeArchiveImportOptions {
   /** 試験参照のマッピング（examName → 既存examId） */
@@ -269,14 +265,6 @@ export interface GradeArchiveImportPreview {
 export type GradeArchiveVersion =
   "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0"
 export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.8.0"
-export const GRADE_SUPPORTED_VERSIONS: readonly GradeArchiveVersion[] = [
-  "1.3.0",
-  "1.4.0",
-  "1.5.0",
-  "1.6.0",
-  "1.7.0",
-  "1.8.0",
-] as const
 
 export interface GradeTransformResult {
   data: GradeArchiveData

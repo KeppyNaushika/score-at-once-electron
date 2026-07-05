@@ -16,7 +16,7 @@ import type {
 /**
  * 生徒データの型定義（UIコンポーネント用）
  */
-export interface StudentData {
+export interface AnswerManagementStudent {
   /** 生徒ID (UUID) */
   id: string
   /** 学籍番号 */
@@ -52,7 +52,7 @@ interface UseStudentAnswerManagementParams {
  */
 interface UseStudentAnswerManagementReturn {
   /** 生徒一覧（ソート済み） */
-  students: StudentData[]
+  students: AnswerManagementStudent[]
   /** 生徒変更ハンドラー */
   handleStudentChange: (studentId: string) => void
   /** 次の生徒へ移動（個別表示用） */
@@ -85,11 +85,11 @@ export function useStudentAnswerManagement(
   const students = useMemo(() => {
     if (!studentAnswerImages || studentAnswerImages.length === 0) return []
 
-    const uniqueStudents = new Map<string, StudentData>()
+    const uniqueStudents = new Map<string, AnswerManagementStudent>()
 
     studentAnswerImages.forEach((sheet) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
-        const studentData: StudentData = {
+        const studentData: AnswerManagementStudent = {
           id: sheet.student.id,
           studentNumber: sheet.student.studentNumber,
           lastName: sheet.student.lastName,

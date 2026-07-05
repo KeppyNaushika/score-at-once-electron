@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { SyncAppConfig, SyncAppStatus } from "@/types/electron/syncApi"
+import type {
+  SyncAppConfig,
+  SyncAppStatus,
+} from "@/electron-src/lib/sync/types"
 
 const DEFAULT_STATUS: SyncAppStatus = {
   state: "disabled",

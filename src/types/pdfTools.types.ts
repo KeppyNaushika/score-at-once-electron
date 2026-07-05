@@ -7,7 +7,7 @@
 export type RotationDegree = 0 | 90 | 180 | 270
 
 /** エクスポートモード */
-export type ExportMode = "merge" | "split" | "interleave"
+export type PdfExportMode = "merge" | "split" | "interleave"
 
 /** 2-in-1 レイアウト */
 export type NUpLayout = "2x1" | "1x2" // 横並び / 縦並び
@@ -61,49 +61,12 @@ export interface InterleaveConfig {
   transforms: FileTransform[]
 }
 
-/** PDF Tools 全体の状態 */
-export interface PdfToolsState {
-  importedFiles: ImportedFile[]
-  outputPages: OutputPage[]
-  exportMode: ExportMode
-  interleaveConfig: InterleaveConfig
-  isProcessing: boolean
-}
-
-/** IPC: PDF結合オプション */
-export interface MergePdfsOptions {
-  pages: Array<{
-    filePath: string
-    pageNumber: number
-    rotation?: RotationDegree
-  }>
-  outputPath: string
-}
-
-/** IPC: PDF分割オプション */
-export interface SplitPdfOptions {
-  filePath: string
-  outputDir: string
-  prefix?: string
-}
-
 /** IPC: 2-in-1変換オプション */
 export interface NUpOptions {
   filePath: string
   layout: NUpLayout
   order: PageOrder
   outputPath: string
-}
-
-/** IPC: PNG書き出しオプション */
-export interface ExportPngOptions {
-  pages: Array<{
-    filePath: string
-    pageNumber: number
-    rotation?: RotationDegree
-  }>
-  outputDir: string
-  scale?: number
 }
 
 /** IPC: 汎用レスポンス */

@@ -1,30 +1,13 @@
 /**
  * NAS同期 API 型定義
+ *
+ * 型の SSOT は main 側 `electron-src/lib/sync/types.ts`。IPC 契約はそれを import する。
  */
 
-export interface SyncAppConfig {
-  enabled: boolean
-  clientId: string
-  intervalMs: number
-  changelogRetentionDays: number
-}
-
-/** スキーマバージョン不一致でスキップされたリモートクライアント */
-export interface VersionMismatchRemote {
-  clientId: string
-  remoteVersion: string | null
-  /** リモートの方が新しいかどうか（= このPCのアプリ更新が必要） */
-  remoteIsNewer: boolean
-}
-
-export interface SyncAppStatus {
-  state: "idle" | "syncing" | "error" | "disabled"
-  lastSyncTime: string | null
-  lastError: string | null
-  syncCount: number
-  /** 直近のsyncでスキーマバージョン不一致によりスキップされたリモート */
-  versionMismatches: VersionMismatchRemote[]
-}
+import type {
+  SyncAppConfig,
+  SyncAppStatus,
+} from "@/electron-src/lib/sync/types"
 
 export interface SyncAPI {
   sync: {

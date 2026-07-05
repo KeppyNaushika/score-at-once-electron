@@ -45,7 +45,10 @@ export function useBatchScoring({
               questionScore.id === scoreId
                 ? {
                     ...questionScore,
-                    partialScore: dbScore.partialScore,
+                    // 状態は Decimal 型だが実体は number（IPC で serialize 済み）。
+                    // 本ファイル既存の Decimal-lie キャスト idiom に合わせる。
+                    partialScore:
+                      dbScore.partialScore as unknown as QuestionScore["partialScore"],
                     status: dbScore.status,
                     updatedAt: new Date(dbScore.updatedAt),
                   }

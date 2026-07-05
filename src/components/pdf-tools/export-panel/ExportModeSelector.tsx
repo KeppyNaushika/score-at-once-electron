@@ -2,11 +2,11 @@
 
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type { ExportMode } from "@/types/pdfTools.types"
+import type { PdfExportMode } from "@/types/pdfTools.types"
 
 interface ExportModeSelectorProps {
-  mode: ExportMode
-  onModeChange: (mode: ExportMode) => void
+  mode: PdfExportMode
+  onModeChange: (mode: PdfExportMode) => void
   disabled: boolean
 }
 
@@ -20,7 +20,7 @@ export default function ExportModeSelector({
       <Label className="mb-2 block text-sm font-medium">出力モード</Label>
       <RadioGroup
         value={mode}
-        onValueChange={(value) => onModeChange(value as ExportMode)}
+        onValueChange={(value) => onModeChange(value as PdfExportMode)}
         className="flex gap-4"
         disabled={disabled}
       >

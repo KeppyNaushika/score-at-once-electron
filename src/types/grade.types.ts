@@ -2,7 +2,7 @@
  * 成績算出試験の共有型定義
  */
 
-import type { CourseworkItemWithDetails, InputMode } from "./coursework.types"
+import type { CourseworkItemWithDetails } from "./coursework.types"
 
 /** 成績算出試験（リレーション付き） */
 export interface GradeWithDetails {
@@ -80,8 +80,6 @@ export interface GradeDataSourceWithDetails {
   coursework: { id: string; name: string } | null
 }
 
-export type { InputMode }
-
 /** 境界セット（境界リスト付き） */
 export interface GradeBoundarySetWithDetails {
   id: string
@@ -143,13 +141,6 @@ export interface GradeItemResult {
   originalGradeLabel: string | null
   /** 上書き値（nullなら上書きなし） */
   overrideGradeLabel: string | null
-}
-
-/** GradeItem除外設定データ */
-export interface GradeItemExclusionData {
-  gradeId: string
-  studentId: string
-  gradeItemId: string
 }
 
 /** データソース別スコア */

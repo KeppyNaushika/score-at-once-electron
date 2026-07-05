@@ -46,27 +46,6 @@ export interface UnifiedFile {
  */
 export type PlacementStrategy = "page-first" | "student-first"
 
-/**
- * 無効化状態管理
- * テーブルDnDのDisabledStateと互換
- */
-export interface DisabledState {
-  rows: Set<number> // 生徒レベル無効化（studentIndex）
-  cols: Set<number> // ページレベル無効化（pageNumber - 1）
-  positions: Set<number> // セルレベル無効化（position）
-}
-
-/**
- * グリッド状態管理（簡素化版）
- * 従来のGridStateを大幅簡素化
- */
-export interface SimpleGridState {
-  files: UnifiedFile[] // メインのファイル配列
-  disabledState: DisabledState // 無効化状態
-  placementStrategy: PlacementStrategy // 配置戦略
-  maxPages: number // 最大ページ数（動的計算）
-}
-
 // ============================================================================
 // データベース連携用の型定義
 // ============================================================================
@@ -86,79 +65,6 @@ export interface UploadData {
   overwrite: boolean // 上書きフラグ
   correctWithMarkers?: boolean // マーカー補正フラグ
   correctionStatus?: "corrected" | "skipped" | "not_requested" // クライアント側補正結果
-}
-
-/**
- * 既存のStudentAnswerWithDetailsから必要な部分を抽出
- * 表示用の最小限の情報
- */
-export interface ExistingStudentAnswer {
-  id: string
-  studentId: string | null
-  pageNumber: number
-  createdAt: Date
-  isAbsent: boolean
-  student?: {
-    id: string
-    lastName: string
-    firstName: string
-    studentNumber: string
-  }
-}
-
-// ============================================================================
-// 氏名欄拡大表示用の型定義
-// ============================================================================
-
-/**
- * レイアウト領域情報（氏名欄拡大表示用）
- * 既存のLayoutRegion型との互換性確保
- */
-export interface NameFieldRegion {
-  id: string
-  type: "name" | "studentId" // 氏名欄または学籍番号欄
-  x: number // 相対座標（0-1）
-  y: number
-  width: number
-  height: number
-  masterImageId: string // 対応するマスター画像ID
-  pageNumber: number // ページ番号
-}
-
-// ============================================================================
-// ユーティリティ型
-// ============================================================================
-
-/**
- * ドラッグ&ドロップイベント用
- */
-export interface DragData {
-  type: "file" | "trash"
-  file?: UnifiedFile
-  sourcePosition?: number
-}
-
-// ============================================================================
-// ファイル変換用の型定義
-// ============================================================================
-
-/**
- * ファイル処理の進捗状態
- */
-export interface FileProcessingProgress {
-  current: number
-  total: number
-  fileName?: string
-}
-
-/**
- * PDFパスワード処理状態
- */
-export interface PasswordDialogState {
-  isOpen: boolean
-  fileName?: string
-  attempts: number
-  hasError: boolean
 }
 
 // ============================================================================

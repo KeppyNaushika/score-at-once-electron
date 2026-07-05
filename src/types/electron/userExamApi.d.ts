@@ -1,9 +1,6 @@
 import type { Exam, User, UserExam } from "@prisma/client"
 
-/**
- * UserExam ロール
- */
-export type UserRole = "OWNER" | "GRADER"
+import type { UserRole } from "@/electron-src/lib/prisma/userExam"
 
 /**
  * UserExam with user and inviter details

@@ -7,9 +7,9 @@ import { useCallback, useState } from "react"
 import { useCursor } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/utils/useCursor"
 import type {
   DrawingElement,
-  LineStyle,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { useDrawingCreation } from "./useDrawingCreation"
 import { useElementMovement } from "./useElementMovement"

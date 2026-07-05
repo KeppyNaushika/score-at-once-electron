@@ -48,7 +48,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { useTableSort } from "@/hooks/useTableSort"
 import type { ExamListItem } from "@/types/common.types"
-import type { ExportMode } from "@/types/examArchive.types"
+import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 interface ExamSortable {
   id: string
@@ -195,7 +195,7 @@ const File = () => {
   )
 
   const handleBulkExport = useCallback(
-    async (exportMode: ExportMode) => {
+    async (exportMode: ArchiveExportMode) => {
       if (!user || selectedExamIds.size === 0) return
 
       setIsBulkExporting(true)
