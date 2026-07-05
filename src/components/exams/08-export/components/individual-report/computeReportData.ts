@@ -16,7 +16,7 @@ import {
   stdDev,
 } from "@/electron-src/lib/shared/calculations/numericStats"
 import type { SubtotalScore } from "@/electron-src/lib/shared/types/exportTypes"
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 /** 受験状態フィルタ */
 export interface BoxPlotIncludeStatuses {
@@ -193,7 +193,7 @@ export function computeFilteredOverallStat(
   rawTotalScores: {
     studentId: string
     totalScore: number | null
-    status: StudentStatus
+    status: ExamStudentStatus
   }[],
   totalMaxScore: number,
   includeStatuses: BoxPlotIncludeStatuses

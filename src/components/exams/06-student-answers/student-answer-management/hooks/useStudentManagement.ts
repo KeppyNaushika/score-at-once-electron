@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { StudentWithAnswers } from "@/components/exams/06-student-answers/student-answer-management/hooks/types"
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 interface UseStudentManagementProps {
   students: Array<{
@@ -14,7 +14,7 @@ interface UseStudentManagementProps {
     firstNameKana: string
     studentId: string
     attendanceNumber?: number | null
-    status?: StudentStatus
+    status?: ExamStudentStatus
     customOrder?: number | null
   }>
 }

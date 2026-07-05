@@ -1,6 +1,6 @@
 import type { RosterClassOption } from "@/components/common/roster-table"
 import type { StudentClassInfo } from "@/types/electron/examClassApi"
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 // 生徒データの型
 export interface Student {
@@ -21,7 +21,7 @@ export interface Student {
   }[]
   /** ExamClass(administered=true)から取得した学級情報 */
   examClassInfo?: StudentClassInfo | null
-  status: StudentStatus
+  status: ExamStudentStatus
   customOrder?: number | null
   answerSheetCount: number
 }
@@ -30,7 +30,7 @@ export interface SortableStudentTableProps {
   classes: RosterClassOption[]
   onStudentStatusUpdate: (
     studentId: string,
-    status: StudentStatus
+    status: ExamStudentStatus
   ) => Promise<void>
   onStudentOrderUpdate: (
     examId: string,
@@ -45,6 +45,6 @@ export interface SortableStudentTableProps {
   onSearchChange: (value: string) => void
   selectedClassId: string
   onClassChange: (value: string) => void
-  statusFilter: StudentStatus | "all"
-  onStatusChange: (value: StudentStatus | "all") => void
+  statusFilter: ExamStudentStatus | "all"
+  onStatusChange: (value: ExamStudentStatus | "all") => void
 }

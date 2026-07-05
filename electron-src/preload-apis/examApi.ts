@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
 import { CreateExamArgs } from "../../src/types/electron/examApi"
-import type { StudentStatus } from "../../src/types/studentStatus.types"
+import type { ExamStudentStatus } from "../../src/types/examStudentStatus.types"
 
 /** 試験管理のIPC API（CRUD・模範解答・受験生徒管理・学級連携） */
 export function createExamApi() {
@@ -51,7 +51,7 @@ export function createExamApi() {
     updateStudentExamStatus: (
       examId: string,
       studentId: string,
-      status: StudentStatus
+      status: ExamStudentStatus
     ) =>
       ipcRenderer.invoke(
         "update-student-exam-status",

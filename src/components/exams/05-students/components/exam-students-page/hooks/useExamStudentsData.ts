@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type { RosterClassOption } from "@/components/common/roster-table"
-import type {
-  GradingDataInfo,
-  Student,
-} from "@/components/exams/05-students/components/exam-students-page/types/examStudentsTypes"
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { Student } from "@/components/exams/05-students/components/exam-students-page/types/examStudentsTypes"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 interface UseExamStudentsDataProps {
   examId: string
@@ -19,7 +16,9 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [students, setStudents] = useState<Student[]>([]) // 順序付き生徒リスト
   const [classes, setClasses] = useState<RosterClassOption[]>([]) // フィルタ用学級情報
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StudentStatus | "all">("all")
+  const [statusFilter, setStatusFilter] = useState<ExamStudentStatus | "all">(
+    "all"
+  )
   const [selectedClassId, setSelectedClassId] = useState<string>("all")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showRemovalConfirm, setShowRemovalConfirm] = useState(false)
@@ -27,10 +26,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<
     Set<string>
   >(new Set())
-  const [gradingDataInfo, setGradingDataInfo] = useState<GradingDataInfo>({
-    hasData: false,
-    totalItems: 0,
-  })
+  const [gradingItemCount, setGradingItemCount] = useState(0)
 
   // データの再読み込み
   const refreshStudentData = useCallback(async () => {
@@ -114,7 +110,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   // 生徒の状態を更新
   const updateStudentStatus = async (
     studentId: string,
-    newStatus: StudentStatus
+    newStatus: ExamStudentStatus
   ) => {
     try {
       const result = await window.electronAPI.updateStudentExamStatus(
@@ -261,16 +257,13 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
       const gradingResult =
         await window.electronAPI.checkGradingDataForStudents(examId, studentIds)
       if (gradingResult.success) {
-        setGradingDataInfo({
-          hasData: gradingResult.hasAnyData || false,
-          totalItems: gradingResult.totalGradingItems || 0,
-        })
+        setGradingItemCount(gradingResult.totalGradingItems || 0)
       } else {
-        setGradingDataInfo({ hasData: false, totalItems: 0 })
+        setGradingItemCount(0)
       }
     } catch (error) {
       console.error("Failed to check grading data:", error)
-      setGradingDataInfo({ hasData: false, totalItems: 0 })
+      setGradingItemCount(0)
     }
 
     setShowRemovalConfirm(true)
@@ -343,7 +336,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     setShowRemovalConfirm,
     setStudentsToRemove,
     selectedStudentsForRemoval,
-    gradingDataInfo,
+    gradingItemCount,
     refreshStudentData,
     updateStudentStatus,
     updateStudentOrders,

@@ -73,8 +73,8 @@ export function getExamProgress(exam: ExamWithDetails): ExamProgress {
     exam.examStudents
       ?.filter(
         (examStudent) =>
-          examStudent.status === "PARTICIPATING" ||
-          examStudent.status === "EXPECTED"
+          examStudent.status === "participating" ||
+          examStudent.status === "expected"
       )
       ?.map((examStudent) => examStudent.studentId) || []
 

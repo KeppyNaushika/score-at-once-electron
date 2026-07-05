@@ -1,4 +1,4 @@
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 // 個人成績表用型定義をre-export
 export type {
@@ -36,7 +36,7 @@ export interface Student {
       name: string
     }
   }[]
-  status: StudentStatus
+  status: ExamStudentStatus
   customOrder?: number | null
 }
 

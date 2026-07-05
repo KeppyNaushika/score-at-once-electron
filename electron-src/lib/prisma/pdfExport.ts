@@ -196,7 +196,7 @@ export async function getPdfExportData(options: {
         imagePath: image.imagePath,
         originalImagePath: image.imagePath,
         isAbsent:
-          image.student?.examStudents?.[0]?.status === "ABSENT" || false,
+          image.student?.examStudents?.[0]?.status === "absent" || false,
         student: image.student
           ? {
               id: image.student.id,

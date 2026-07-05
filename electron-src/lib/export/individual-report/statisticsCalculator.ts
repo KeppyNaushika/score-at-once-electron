@@ -2,7 +2,7 @@
  * 個人成績表用統計計算ロジック
  */
 
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import {
   average as calculateAverage,
@@ -207,7 +207,7 @@ export function collectSubtotalRawScores(
         ): entry is {
           studentId: string
           score: number
-          status: StudentStatus
+          status: ExamStudentStatus
         } => entry !== null
       )
 

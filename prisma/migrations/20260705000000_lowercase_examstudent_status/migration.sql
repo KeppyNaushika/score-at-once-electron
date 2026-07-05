@@ -1,0 +1,11 @@
+-- ExamStudent.status を小文字に統一する。
+-- QuestionScore.status（元から小文字保存）と同じ規約に揃え、UI/DB/型を
+-- participating|expected|absent の小文字で一本化する。これにより境界での
+-- toUpperCase()/toLowerCase() 変換が不要になる。
+--
+-- 既存行（PARTICIPATING / EXPECTED / ABSENT）を小文字化する。
+-- 列 DEFAULT（旧 'PARTICIPATING'）はテーブル再構築（FK 危険）を避けるため物理的には
+-- 変更しない。代わりに schema.prisma から @default を撤去して status を必須フィールド化し、
+-- status 省略 create をコンパイルエラーにすることで、大文字デフォルトが発火する経路を
+-- 型で封じている（列 DEFAULT は未使用・デッド）。
+UPDATE "ExamStudent" SET status = LOWER(status);

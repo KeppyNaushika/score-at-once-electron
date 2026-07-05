@@ -1,6 +1,6 @@
 import * as ExcelJS from "exceljs"
 
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import { ScoringData } from "../../shared/types/exportTypes"
 import {
@@ -9,14 +9,6 @@ import {
   getStatusSymbol,
 } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"
-
-/**
- * 順位付きの採点データ型
- */
-type ScoringDataWithRank = ScoringData & {
-  originalIndex: number
-  rank: number
-}
 
 /**
  * データ行を作成する
@@ -33,8 +25,8 @@ export async function createDataRows(
   isScoreSheet: boolean
 ) {
   // 事前に順位を計算（総合点の降順でソート、null は最下位扱い）
-  const scoringDataWithRank: ScoringDataWithRank[] = scoringData
-    .map((student, index): ScoringDataWithRank => ({
+  const scoringDataWithRank = scoringData
+    .map((student, index) => ({
       ...student,
       originalIndex: index,
       rank: 0, // 仮の値、後で正しい順位に更新
@@ -43,7 +35,7 @@ export async function createDataRows(
       (studentA, studentB) =>
         (studentB.totalScore ?? -1) - (studentA.totalScore ?? -1)
     )
-    .map((student, rank): ScoringDataWithRank => ({
+    .map((student, rank) => ({
       ...student,
       rank: student.totalScore !== null ? rank + 1 : 0,
     }))
@@ -200,7 +192,7 @@ function setQuestionCells(
  * @param status - 受験状態
  * @returns 日本語の受験状態
  */
-function getStatusText(status?: StudentStatus): string {
+function getStatusText(status?: ExamStudentStatus): string {
   switch (status) {
     case "participating":
       return "受験"

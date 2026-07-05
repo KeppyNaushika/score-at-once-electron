@@ -1,8 +1,8 @@
 import type { Exam, Prisma } from "@prisma/client"
 
 import type { ExamListItem, ExamWithDetails } from "../common.types"
+import type { ExamStudentStatus } from "../examStudentStatus.types"
 import type { StudentWithMemberships } from "../prismaExtensions"
-import type { StudentStatus } from "../studentStatus.types"
 
 // Exam作成/更新用の引数型
 export interface CreateExamArgs {
@@ -36,7 +36,7 @@ export interface ExamAPI {
   getStudentsForExam: (examId: string) => Promise<{
     success: boolean
     students?: (StudentWithMemberships & {
-      status: StudentStatus
+      status: ExamStudentStatus
       customOrder: number | null
       answerSheetCount: number
     })[]
@@ -59,7 +59,7 @@ export interface ExamAPI {
   updateStudentExamStatus: (
     examId: string,
     studentId: string,
-    status: StudentStatus
+    status: ExamStudentStatus
   ) => Promise<{
     success: boolean
     error?: string

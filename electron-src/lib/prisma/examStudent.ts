@@ -1,16 +1,13 @@
 import {
-  type StudentStatus,
-  toStudentStatus,
-} from "@/types/studentStatus.types"
+  type ExamStudentStatus,
+  toExamStudentStatus,
+} from "@/types/examStudentStatus.types"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveStudentLabel } from "./auditScope"
 import { getAvailableClassesForTarget } from "./availableClasses"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
-
-// ExamStudentStatus enum は削除されたため、文字列として定義
-type ExamStudentStatus = "PARTICIPATING" | "EXPECTED" | "ABSENT"
 
 /** Exam.examDate を在籍判定の基準日として取得（未設定なら null → 現在日時扱い） */
 export async function getExamReferenceDate(
@@ -63,7 +60,7 @@ export async function getStudentsForExam(examId: string) {
       const { _count, ...studentRest } = examStudent.student
       return {
         ...studentRest,
-        status: toStudentStatus(examStudent.status),
+        status: toExamStudentStatus(examStudent.status),
         customOrder: examStudent.customOrder,
         answerSheetCount: _count.studentAnswerImages,
       }
@@ -106,7 +103,7 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
       const createData = newStudentIds.map((studentId) => ({
         examId,
         studentId,
-        status: "PARTICIPATING",
+        status: "participating",
       }))
 
       await prisma.examStudent.createMany({
@@ -210,19 +207,16 @@ export async function removeStudentsFromExam(
 export async function updateStudentExamStatus(
   examId: string,
   studentId: string,
-  status: StudentStatus
+  status: ExamStudentStatus
 ) {
   try {
-    // statusを大文字に変換してenumに合わせる
-    const enumStatus = status.toUpperCase() as ExamStudentStatus
-
     await prisma.examStudent.updateMany({
       where: {
         examId,
         studentId,
       },
       data: {
-        status: enumStatus,
+        status,
       },
     })
 
