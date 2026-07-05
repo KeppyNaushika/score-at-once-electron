@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
-import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
+import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 /** 受験生徒（ExamStudent）と表示学級情報を共通の RosterRow へ変換 */

@@ -1,7 +1,20 @@
-import type {
-  ExamClassroomPlacement,
-  ExamClassWithClass,
-} from "@/types/electron/examClassApi"
+import type { Classroom } from "@prisma/client"
+
+import type { ExamClassWithClass } from "@/types/electron/examClassApi"
+
+/**
+ * 採番学級の解決結果（studentId → 表示学級・出席番号・学級順）。
+ *
+ * renderer 側で administered 学級から解決する computed な形。採番学級（Prisma `Classroom`）を
+ * 同梱し、05 の表示・並び替えや 08 の書き出し placement 生成で共有する。
+ */
+export interface ExamClassroomPlacement {
+  /** 採番順を決める administered 学級（Prisma Classroom を同梱。未所属なら null） */
+  classroom: Classroom | null
+  attendanceNumber: number | null
+  /** ExamClassroom の並び順 */
+  order: number | null
+}
 
 /**
  * administered 学級（`examClassroom.getAdministered` の戻り値＝DB 構造そのまま）から、

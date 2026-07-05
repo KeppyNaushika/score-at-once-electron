@@ -8,6 +8,7 @@ import type {
   CaptureReturnSnapshotResult,
   ReturnDiffResult,
 } from "@/electron-src/lib/prisma/returnSnapshot"
+import type { StudentExportPlacement } from "@/electron-src/lib/shared/types/exportTypes"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -193,6 +194,7 @@ export interface ExportAPI {
       examId: string
       selectedStudentIds: string[]
       options: IndividualReportOptions
+      studentPlacements?: Record<string, StudentExportPlacement>
     }) => Promise<GetIndividualReportDataResult>
 
     // 個人成績表用小計点グループ一覧取得
@@ -250,6 +252,7 @@ export interface ExportAPI {
     getExcelPreviewData: (options: {
       examId: string
       selectedStudentIds: string[]
+      studentPlacements?: Record<string, StudentExportPlacement>
     }) => Promise<{
       success: boolean
       questionRegions?: Array<{
@@ -316,6 +319,7 @@ export interface ExportAPI {
     selectedStudentIds: string[]
     outputPath?: string
     forceExport?: boolean
+    studentPlacements?: Record<string, StudentExportPlacement>
   }) => Promise<{
     success: boolean
     outputPath?: string

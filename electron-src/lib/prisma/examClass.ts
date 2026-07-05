@@ -1,6 +1,5 @@
 import { ExamClassroom, Prisma } from "@prisma/client"
 
-import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
@@ -464,78 +463,12 @@ export const addStudentsFromClass = async (
 }
 
 /**
- * 試験内の全生徒の学級・出席番号情報を取得
- *
- * ロジック:
- * 1. ExamClassroom (administered=true) を order 順で取得
- * 2. 各クラスの StudentClassroomMembership を取得
- * 3. 生徒ごとに、最初にマッチするクラスの情報を返す
- *
- * @returns Map<studentId, ExamClassroomPlacement>
- */
-export const getStudentClassInfoForExam = async (
-  examId: string
-): Promise<Record<string, ExamClassroomPlacement>> => {
-  try {
-    // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
-    const referenceDate = await getExamReferenceDate(examId)
-
-    // 1. administered=true の ExamClassroom を order 順で取得
-    const examClassrooms = await prisma.examClassroom.findMany({
-      where: {
-        examId,
-        administered: true,
-      },
-      include: {
-        classroom: {
-          include: {
-            memberships: {
-              where: membershipFilterAt(referenceDate),
-              include: {
-                student: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { order: "asc" },
-    })
-
-    // 2. 生徒ごとの学級情報をマップに格納（order順で最初にマッチしたものを使用）
-    const result: Record<string, ExamClassroomPlacement> = {}
-
-    for (const examClass of examClassrooms) {
-      // 解決用に include した memberships は出力に含めず、Classroom スカラーをそのまま同梱する
-      const { memberships: _memberships, ...classroom } = examClass.classroom
-
-      for (const membership of examClass.classroom.memberships) {
-        // 既に情報がある生徒はスキップ（order優先順位を尊重）
-        if (result[membership.studentId]) {
-          continue
-        }
-
-        result[membership.studentId] = {
-          classroom,
-          attendanceNumber: membership.attendanceNumber,
-          order: examClass.order,
-        }
-      }
-    }
-
-    return result
-  } catch (error) {
-    console.error(`Failed to get student class info for exam ${examId}:`, error)
-    throw error
-  }
-}
-
-/**
  * 登録学級ごとの所属生徒（集計エンジン・Phase 1）
  *
  * 試験に登録された各 ExamClassroom について、**受験日時点で在籍する**生徒（class.memberships）を
  * 含む Prisma payload（{@link ExamClassroomWithMembers}）をそのまま返す。memberships は受験日
- * スナップショットで where 絞り込み・出席番号→学籍番号順にソート済み。採番
- * （getStudentClassInfoForExam）と異なり**1人の生徒は所属する全学級に重複カウント**される
+ * スナップショットで where 絞り込み・出席番号→学籍番号順にソート済み。採番学級の解決
+ * （renderer 側 `resolveExamClassroomPlacement`）と異なり**1人の生徒は所属する全学級に重複カウント**される
  * （用途2/3の学級平均は「学級全体」を母集団とするため、order優先の単一化はしない）。
  *
  * order 昇順の全登録学級を返し、消費側が用途別にフィルタする

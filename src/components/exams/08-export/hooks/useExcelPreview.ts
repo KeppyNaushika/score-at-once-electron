@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 
+import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -83,9 +84,11 @@ export function useExcelPreview({
       setError(null)
 
       try {
+        const studentPlacements = await loadStudentExportPlacements(examId)
         const result = await window.electronAPI.export.getExcelPreviewData({
           examId,
           selectedStudentIds,
+          studentPlacements,
         })
 
         if (!result.success || !result.scoringData) {

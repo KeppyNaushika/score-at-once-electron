@@ -5,7 +5,6 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getExamById } from "../../prisma/exam"
-import { getStudentClassInfoForExam } from "../../prisma/examClass"
 import { getStudentsForExam } from "../../prisma/examStudent"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
@@ -23,6 +22,7 @@ import {
 import {
   ScoreDetail,
   ScoringData,
+  StudentExportPlacement,
   SubtotalGroupData,
   SubtotalScore,
 } from "../../shared/types/exportTypes"
@@ -58,7 +58,8 @@ export interface ExportDataResult {
  */
 export async function fetchExportData(
   examId: string,
-  selectedStudentIds: string[]
+  selectedStudentIds: string[],
+  studentPlacements?: Record<string, StudentExportPlacement>
 ): Promise<ExportDataResult> {
   try {
     // 基本データの取得
@@ -71,10 +72,6 @@ export async function fetchExportData(
     if (!studentsResult.success) {
       return { success: false, error: "生徒データの取得に失敗しました" }
     }
-
-    // 表示用の学級・出席番号は受験日スナップショット＋order解決で決定（P1修正）。
-    // memberships[0]（startDate降順の先頭＝偶然の値）には依存しない。
-    const classInfoMap = await getStudentClassInfoForExam(examId)
 
     const cropRegions = await getCropRegionsByExamId(examId)
     const questionScoresResult = await getQuestionScoresForExam(examId)
@@ -98,7 +95,7 @@ export async function fetchExportData(
     // Excel 出力層は内部で flat な Student 射影（student.id = 生徒ID）を消費するため、
     // IPC/renderer 契約の nested な ExamStudentWithDetails をここで境界フラット化する。
     // customOrder / status は ExamStudent 実列を平坦に畳み、表示学級（grade/className/
-    // attendanceNumber）は受験日スナップショット解決を優先して付与する。
+    // attendanceNumber）は renderer が採番解決して渡した studentPlacements を優先する。
     const selectedStudents = (studentsResult.students || [])
       .filter(
         (examStudent) =>
@@ -108,15 +105,15 @@ export async function fetchExportData(
       .map((examStudent) => {
         const student = examStudent.student
 
-        // 受験日スナップショット＋order優先で解決した学級情報を使う（P1修正）
-        const resolved = classInfoMap[examStudent.studentId]
+        // renderer が採番解決して渡した表示学級情報を優先（採番学級の SSOT は renderer）
+        const resolved = studentPlacements?.[examStudent.studentId]
 
-        // 解決不能時（administered学級に未所属等）は memberships[0] へフォールバック
+        // 未指定（administered学級に未所属等）は memberships[0] へフォールバック
         const fallbackMembership = student.memberships?.[0]
         const fallbackClass = fallbackMembership?.classroom
 
-        const grade = resolved?.classroom?.grade ?? fallbackClass?.grade ?? null
-        const className = resolved?.classroom?.name ?? fallbackClass?.name
+        const grade = resolved?.grade ?? fallbackClass?.grade ?? null
+        const className = resolved?.className ?? fallbackClass?.name
         const attendanceNumber =
           resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
 

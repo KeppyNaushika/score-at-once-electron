@@ -3,11 +3,26 @@
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+/**
+ * 出力に必要な生徒ごとの表示学級情報（採番学級の解決結果）。
+ *
+ * 採番学級の解決は renderer 側（`resolveExamClassroomPlacement`）で行い、書き出しに
+ * 必要な値だけをこの lean な形で main へ渡す（export は型制限の対象外・DB へ書き戻さない）。
+ * 未指定の生徒は fetchExportData 側で `student.memberships[0]` にフォールバックする。
+ */
+export interface StudentExportPlacement {
+  grade: number | null
+  className: string | null
+  attendanceNumber: number | null
+}
+
 export interface ExportGradingDataOptions {
   examId: string
   selectedStudentIds: string[]
   outputPath?: string
   forceExport?: boolean // 警告を無視して強制実行
+  /** renderer が採番解決して渡す表示学級情報（studentId キー）。Excel 出力で使用 */
+  studentPlacements?: Record<string, StudentExportPlacement>
 }
 
 export interface ScoringData {
