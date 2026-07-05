@@ -669,11 +669,7 @@ function drawScoringMark(
   const regionWidth = region.width * imageWidth
   const regionHeight = region.height * imageHeight
 
-  const markSize = Math.min(
-    config.markSize,
-    regionWidth * 0.8,
-    regionHeight * 0.8
-  )
+  const markSize = config.markSize
   const { x, y } = calculateMarkPosition(
     regionX,
     regionY,
