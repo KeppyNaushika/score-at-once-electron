@@ -13,10 +13,10 @@ import type {
   DrawingState,
   DrawingTool,
   LineEditMode,
-  LineStyle,
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 // データベース統合フックのインポート
 import {

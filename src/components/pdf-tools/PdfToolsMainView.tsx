@@ -4,10 +4,10 @@ import { GripVertical } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type {
-  ExportMode,
   ImportedFile,
   InterleaveConfig,
   OutputPage,
+  PdfExportMode,
 } from "@/types/pdfTools.types"
 
 import ExportPanel from "./export-panel/ExportPanel"
@@ -16,7 +16,7 @@ import ImportPanel from "./import-panel/ImportPanel"
 export default function PdfToolsMainView() {
   const [importedFiles, setImportedFiles] = useState<ImportedFile[]>([])
   const [outputPages, setOutputPages] = useState<OutputPage[]>([])
-  const [exportMode, setExportMode] = useState<ExportMode>("merge")
+  const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
   const [interleaveConfig, setInterleaveConfig] = useState<InterleaveConfig>({
     enabled: false,
     transforms: [],

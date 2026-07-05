@@ -1,6 +1,7 @@
 import type { QuestionScore } from "@prisma/client"
 
 import { decimalToNumber } from "@/components/exams/07-score-at-once/types"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 /**
  * 既存の採点データを読み込む関数（QuestionScore配列で返す）
@@ -18,7 +19,8 @@ export async function loadQuestionScores(
     )
 
     // Handle both direct array and { success, scores } format
-    let scores: QuestionScore[]
+    // IPC 境界の実体は SerializedQuestionScore（partialScore は number）。
+    let scores: SerializedQuestionScore[]
     if (Array.isArray(result)) {
       scores = result
     } else if (result?.success && Array.isArray(result.scores)) {

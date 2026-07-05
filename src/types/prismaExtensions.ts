@@ -7,9 +7,10 @@
  * @module types/prisma-extensions
  */
 
-import type { GradeDataSource, Prisma } from "@prisma/client"
+import type { GradeDataSource, Prisma, QuestionScore } from "@prisma/client"
 
 import type { ExamStudentStatus } from "./examStudentStatus.types"
+import type { ScoringStatus } from "./scoringStatus.types"
 
 // =============================================================================
 // Student関連型
@@ -107,31 +108,26 @@ export type StudentClassroomMembershipWithDetails =
 // Answer関連型
 // =============================================================================
 
-/**
- * 詳細情報を含む答案型（新構造：StudentAnswerImageベース）
- */
-export type StudentAnswerWithDetails = Prisma.StudentAnswerImageGetPayload<{
-  include: {
-    student: {
-      include: {
-        examStudents: {
-          select: {
-            customOrder: true
-          }
-        }
-      }
-    }
-    examPage: {
-      include: {
-        exam: true
-      }
-    }
-  }
-}>
-
 // =============================================================================
 // QuestionScore関連型
 // =============================================================================
+
+/**
+ * IPC 境界を越えた QuestionScore の実体型（type injection）。
+ *
+ * scoringHandlers.ts の `serializeScore` は QuestionScore の全スカラー列を返しつつ、
+ * `partialScore` を Decimal→number へ、`status`（DB 上は String）を SSOT の
+ * ScoringStatus literal union へ絞り込む。生 Prisma `QuestionScore` を返り値型に
+ * 使うと「型=Decimal / 実体=number」の乖離になるため、この型を IPC 返り値に用いる。
+ * リレーション（user/student/cropRegion）は serialize 時に落ちるので含めない。
+ */
+export type SerializedQuestionScore = Omit<
+  QuestionScore,
+  "partialScore" | "status"
+> & {
+  partialScore: number | null
+  status: ScoringStatus
+}
 
 /**
  * 採点者情報を含むQuestionScore型（比較用）
@@ -142,48 +138,10 @@ export type QuestionScoreWithUser = Prisma.QuestionScoreGetPayload<{
   }
 }>
 
-/**
- * 完全なリレーションを含むQuestionScore型（作成・更新用）
- */
-export type QuestionScoreWithRelations = Prisma.QuestionScoreGetPayload<{
-  include: {
-    student: true
-    cropRegion: true
-    user: true
-  }
-}>
-
 // =============================================================================
 // Exam関連型
 // NOTE: IPCハンドラーが返す ExamWithDetails は common.types.ts で定義
 // =============================================================================
-
-/**
- * 全リレーションを含むExam型（Prismaクエリ用）
- * IPCハンドラーが返す型は common.types.ts の ExamWithDetails を使用
- */
-export type ExamPayloadWithAllRelations = Prisma.ExamGetPayload<{
-  include: {
-    userExams: { include: { user: true } }
-    examPages: {
-      include: {
-        masterImages: true
-        studentAnswerImages: { include: { student: true } }
-        cropRegions: {
-          include: {
-            cropSubtotals: { include: { subtotal: true } }
-            questionScores: { include: { student: true; user: true } }
-          }
-        }
-      }
-      orderBy: { pageNumber: "asc" }
-    }
-    examSubtotalGroups: {
-      include: { subtotalGroup: { include: { subtotals: true } } }
-    }
-    examStudents: { include: { student: true } }
-  }
-}>
 
 // =============================================================================
 // CropRegion関連型
@@ -286,13 +244,6 @@ export type StudentAnswerImageWithDetails =
 // =============================================================================
 
 /**
- * ユーザーと試験を含むUserExam型
- */
-export type UserExamWithDetails = Prisma.UserExamGetPayload<{
-  include: { user: true; exam: true }
-}>
-
-/**
  * 試験を含むUserExam型
  */
 export type UserExamWithExam = Prisma.UserExamGetPayload<{
@@ -313,13 +264,6 @@ export type ExamSubtotalGroupWithSubtotalGroup =
   Prisma.ExamSubtotalGroupGetPayload<{
     include: { subtotalGroup: { include: { subtotals: true } } }
   }>
-
-/**
- * Examを含むExamSubtotalGroup型
- */
-export type ExamSubtotalGroupWithExam = Prisma.ExamSubtotalGroupGetPayload<{
-  include: { exam: true }
-}>
 
 // =============================================================================
 // GradeDataSource関連型

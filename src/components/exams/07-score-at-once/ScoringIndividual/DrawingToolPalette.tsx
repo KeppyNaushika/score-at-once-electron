@@ -18,16 +18,13 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
-import type {
-  DrawingElement,
-  DrawingTool,
-  LineStyle,
-} from "./types/answerIndividualTypes"
+import type { DrawingElement, DrawingTool } from "./types/answerIndividualTypes"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
 

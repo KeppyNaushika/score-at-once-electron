@@ -23,7 +23,7 @@ import {
 import { useGradeItemExclusions } from "@/hooks/grades/useGradeItemExclusions"
 import type { GradeItemWithDetails } from "@/types/grade.types"
 
-interface StudentData {
+interface ExclusionStudent {
   id: string
   gradeId: string
   studentId: string
@@ -46,7 +46,7 @@ interface StudentExclusionModalProps {
   onOpenChange: (open: boolean) => void
   gradeId: string
   gradeItems: GradeItemWithDetails[]
-  students: StudentData[]
+  students: ExclusionStudent[]
   classroomIds: string[]
 }
 

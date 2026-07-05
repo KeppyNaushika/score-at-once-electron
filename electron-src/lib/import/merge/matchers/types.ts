@@ -15,7 +15,7 @@ export interface MatchResult<T extends Record<string, unknown>> {
 }
 
 /** 生徒データ */
-export interface StudentData {
+export interface MatchStudentData {
   [key: string]: unknown
   id: string
   studentNumber: string
@@ -60,7 +60,7 @@ export interface SubtotalGroupData {
  * 全カテゴリのマッチング結果
  */
 export interface AllMatchResults {
-  students: MatchResult<StudentData>[]
+  students: MatchResult<MatchStudentData>[]
   classes: MatchResult<ClassroomData>[]
   users: MatchResult<UserData>[]
   subtotalGroups: MatchResult<SubtotalGroupData>[]

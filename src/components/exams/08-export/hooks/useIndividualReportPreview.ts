@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { IndividualReportOptions } from "@/app/exams/[examId]/08-export/types"
 import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
+import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
 import type { IndividualReportData } from "@/electron-src/lib/export/individual-report/types"
 
 interface UseIndividualReportPreviewOptions {

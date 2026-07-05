@@ -1,9 +1,10 @@
 import type { QuestionScore } from "@prisma/client"
 
 import type {
-  QuestionScoreWithRelations,
   QuestionScoreWithUser,
+  SerializedQuestionScore,
 } from "../prismaExtensions"
+import type { ScoringStatus } from "../scoringStatus.types"
 
 // OWNERによる確定スコア（IPC経由でscoreはnumberに変換済み）
 export interface ScoreDecisionForComparison {
@@ -33,9 +34,9 @@ export interface QuestionScoreComparisonResult {
 // QuestionScore operation result type (create/update)
 export interface QuestionScoreOperationResult {
   success: boolean
-  score?: QuestionScoreWithRelations
+  score?: SerializedQuestionScore
   error?: string
-  conflictData?: QuestionScore
+  conflictData?: SerializedQuestionScore
 }
 
 /**
@@ -49,26 +50,19 @@ export interface ScoringAPI {
     userId?: string
   ) => Promise<{
     success: boolean
-    scores?: QuestionScore[]
+    scores?: SerializedQuestionScore[]
     error?: string
   }>
   getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<{
     success: boolean
-    scores?: QuestionScore[]
+    scores?: SerializedQuestionScore[]
     error?: string
   }>
   createQuestionScore: (data: {
     cropRegionId: string
     studentId: string // v0.4.0+: required
     partialScore?: number
-    status:
-      | "unscored"
-      | "correct"
-      | "incorrect"
-      | "partial"
-      | "pending"
-      | "no_answer"
-      | "double_mark"
+    status: ScoringStatus
     userId: string // v0.4.0+: required
   }) => Promise<QuestionScoreOperationResult>
 
@@ -76,14 +70,7 @@ export interface ScoringAPI {
     id: string,
     data: {
       partialScore?: number
-      status?:
-        | "unscored"
-        | "correct"
-        | "incorrect"
-        | "partial"
-        | "pending"
-        | "no_answer"
-        | "double_mark"
+      status?: ScoringStatus
       comment?: string
       version?: number
     },

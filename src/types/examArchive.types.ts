@@ -29,7 +29,7 @@ export interface ArchiveManifest {
   /** データ件数サマリー */
   counts: ArchiveDataCounts
   /** エクスポートモード（部分エクスポート時に記録） */
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 }
 
 /**
@@ -278,15 +278,6 @@ export interface IdIntegrationConfig {
 // =============================================================================
 
 /**
- * 競合解決ポリシー
- */
-export type ConflictPolicy =
-  | "import_wins" // インポートデータで上書き
-  | "existing_wins" // 既存データを維持
-  | "timestamp" // updatedAtが新しい方を採用
-  | "manual" // 手動で個別選択
-
-/**
  * 競合カテゴリ
  */
 export type ConflictCategory =
@@ -360,23 +351,6 @@ export interface MatchingCandidate extends ConflictItem {
  */
 export type MatchingDecisionType = "same_person" | "different_person" | "skip"
 
-export interface MatchingDecision {
-  /** アイテムID */
-  itemId: string
-  /** 判断結果 */
-  decision: MatchingDecisionType
-}
-
-/**
- * 更新するかどうかの選択結果
- */
-export interface UpdateDecision {
-  /** アイテムID */
-  itemId: string
-  /** 情報を更新するか */
-  shouldUpdate: boolean
-}
-
 /**
  * カテゴリ別の照合サマリー（先生向け表示用）
  */
@@ -399,23 +373,6 @@ export interface CategoryMatchingSummary {
   confirmationItems: MatchingCandidate[]
   /** 問題があるアイテムのリスト */
   conflictItems: MatchingCandidate[]
-}
-
-/**
- * カテゴリ別競合解決設定
- */
-export interface CategoryConflictResolution {
-  /** 競合解決ポリシー */
-  policy: ConflictPolicy
-  /** 手動解決時の個別設定 */
-  manualResolutions?: Record<string, "import" | "existing">
-}
-
-/**
- * 全体の競合解決設定
- */
-export type ConflictResolutions = {
-  [K in ConflictCategory]?: CategoryConflictResolution
 }
 
 // =============================================================================
@@ -459,27 +416,6 @@ export interface ConflictDetectionResult {
 }
 
 // =============================================================================
-// Import Modes
-// =============================================================================
-
-/**
- * インポートモード
- */
-export type ImportMode = "new" | "merge"
-
-/**
- * インポートオプション
- */
-export interface ImportOptions {
-  /** インポートモード */
-  mode: ImportMode
-  /** マッチング設定 (mergeモード時のみ) */
-  matchingConfig?: MatchingConfig
-  /** 競合解決設定 (mergeモード時のみ) */
-  conflictResolutions?: ConflictResolutions
-}
-
-// =============================================================================
 // Export Mode
 // =============================================================================
 
@@ -490,7 +426,7 @@ export interface ImportOptions {
  * - template: 模範解答＋領域情報のみ（採点テンプレート）
  * - template_with_subtotals: テンプレート＋小計設定
  */
-export type ExportMode = "full" | "template" | "template_with_subtotals"
+export type ArchiveExportMode = "full" | "template" | "template_with_subtotals"
 
 // =============================================================================
 // IPC API Types
@@ -503,7 +439,7 @@ export interface BulkExportExamsOptions {
   examIds: string[]
   userId: string
   /** エクスポートモード（デフォルト: full） */
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 }
 
 /**
@@ -536,7 +472,7 @@ export interface ExportExamOptions {
   userId: string
   outputPath?: string
   /** エクスポートモード（デフォルト: full） */
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 }
 
 /**

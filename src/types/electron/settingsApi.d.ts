@@ -1,3 +1,6 @@
+import type { MarkingOverrideData } from "@/electron-src/lib/prisma/cropRegionMarkingOverride"
+import type { MarkingFormatData } from "@/electron-src/lib/prisma/examSettings"
+
 /**
  * 試験採点記号設定
  */
@@ -36,27 +39,6 @@ export interface CropRegionMarkingOverrideWithRegion extends CropRegionMarkingOv
     label: string | null
     type: string
   }
-}
-
-/**
- * ExamMarkingFormat作成/更新用データ
- */
-export interface MarkingFormatData {
-  markType: string
-  symbol: string
-  color: string
-  fontSize?: number | null
-  strokeWidth?: number | null
-}
-
-/**
- * CropRegionMarkingOverride作成/更新用データ
- */
-export interface MarkingOverrideData {
-  markType: string
-  symbol?: string | null
-  color?: string | null
-  visible?: boolean
 }
 
 /**

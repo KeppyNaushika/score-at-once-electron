@@ -6,9 +6,9 @@ import { dialog, ipcMain } from "electron"
 import * as path from "path"
 
 import type {
+  ArchiveExportMode,
   BulkExportExamResult,
   BulkExportExamsResult,
-  ExportMode,
   FileOverviewData,
   IdIntegrationConfig,
   MatchingConfig,
@@ -42,7 +42,7 @@ export async function executeBulkExport(
   examIds: string[],
   userId: string,
   outputDirectory: string,
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 ): Promise<BulkExportExamsResult> {
   const results: BulkExportExamResult[] = []
 
@@ -106,7 +106,7 @@ export function registerArchiveHandlers(): void {
       examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("../../src/types/examArchive.types").ExportMode
+      exportMode?: import("../../src/types/examArchive.types").ArchiveExportMode
     }) => {
       return await exportExam(options)
     },
@@ -386,7 +386,7 @@ export function registerArchiveHandlers(): void {
     async (options: {
       examIds: string[]
       userId: string
-      exportMode?: ExportMode
+      exportMode?: ArchiveExportMode
     }): Promise<BulkExportExamsResult> => {
       // フォルダ選択ダイアログを表示
       const dialogResult = await dialog.showOpenDialog({

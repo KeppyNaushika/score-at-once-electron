@@ -1,13 +1,13 @@
 "use client"
 
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import type {
   IndividualReportOptions,
   QuestionTableColumns,
   SubtotalTableColumns,
-} from "@/app/exams/[examId]/08-export/types"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/electron-src/lib/export/individual-report/types"
 
 import { SubtotalGroupSelector } from "./individual-report/SubtotalGroupSelector"
 

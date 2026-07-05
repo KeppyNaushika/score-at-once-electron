@@ -1,0 +1,218 @@
+# 型定義ファイル 監査レポート
+
+> 実施日: 2026-07-05
+> 対象: `src/types/**`（40ファイル）＋ 機能内 `types.ts` 17ファイル ＋ 対応する `electron-src/lib` 定義
+> 観点: ①型規約準拠（docs/coding-style.md §型管理の方針）②ファイル配置 ③重複定義
+> 手法: 全ファイル精読 ＋ `grep` による参照数・重複の実測クロス検証
+
+## 総評
+
+- **`any` と不正な `as` は全ファイルで 0 件**（`as const` と `"Decimal as string"` コメントのみ）。
+- 一方で以下に系統的な問題がある:
+  1. **IPC契約の逐語コピー**（`src/types/electron/*.d.ts` ↔ `electron-src/lib/*` の二重定義）
+  2. **Prisma優先原則違反**（Prismaモデルの手書き再定義）
+  3. **デッド型の大量残存**（約40型）
+  4. **re-export 禁止違反**
+- 模範ファイル（`coursework.types.ts` / `scoringStatus.types.ts` / `cropRegionApi.d.ts` / `exportApi.d.ts`）を基準に他を寄せるのが是正方針。
+
+---
+
+## 対応状況（2026-07-05 実施・随時更新）
+
+監査後、以下を実施済み（すべて `npm run typecheck` 通過、多くは `vitest` も確認）。
+
+### ✅ 完了
+
+| 区分          | 内容                                                                                                                                                                                                                                                                                                                          | 備考                                                                                                                                                                                                                                                   |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 配置3         | `src/app/textbox-on-canvas-v3/` **ディレクトリごと削除**（V4=`src/lib/textbox-canvas` が本番）                                                                                                                                                                                                                                | `canvasRenderer.ts` の `CANVAS_SETTINGS` import を `@/lib/textbox-canvas/constants` へ付け替え                                                                                                                                                         |
+| 4 デッド型    | 約45型を削除（表4の全項目 ＋ v3 の型）。`id-integration` の `CategoryType`≡`EntityType` は別途                                                                                                                                                                                                                                | 各 grep で外部参照0を確認して削除                                                                                                                                                                                                                      |
+| 1-A IPCミラー | `sync`（3型）/`UserRole`/`settings`（`MarkingFormatData`/`MarkingOverrideData`）を lib SSOT の `import type` へ統一。消費者も付け替え                                                                                                                                                                                         | `exportApi.d.ts` の正解パターンに統一                                                                                                                                                                                                                  |
+| 1-A audit     | `auditLogApi.d.ts` の8型を lib SSOT から import。`AuditLogEntry.metadata` は renderer の `AuditMetadata` 精緻化を **型注入**（`Omit<…,"metadata"> & { metadata: AuditMetadata\|null }`）で維持。`AuditLogPage.entries` も同様                                                                                                 | 純粋重複でなく型注入だったため精緻化を保持                                                                                                                                                                                                             |
+| 1-D           | `CourseworkImportDecision(s)` を `gradeArchive`→`courseworkArchive` へ一本化                                                                                                                                                                                                                                                  | 消費者2件付け替え                                                                                                                                                                                                                                      |
+| 1-E           | `LineStyle`（answerIndividualTypes→drawingAnnotation へ一本化・完全複製の解消）／`HorizontalAlign`・`VerticalAlign`→`AnnotationHorizontalAlign`・`AnnotationVerticalAlign`／`ExportMode`→`PdfExportMode`・`ArchiveExportMode`／`StudentData`（ローカル3件）→`MatchStudentData`・`AnswerManagementStudent`・`ExclusionStudent` | 全て記述名へ改名                                                                                                                                                                                                                                       |
+| 2-C           | `prismaExtensions.ts` に `SerializedQuestionScore` を新設し `scoringApi.d.ts` の返り値を差し替え。status 手書き union を `ScoringStatus` へ。`serializeScore` に境界変換 `toScoringStatus` を追加し返り値型を `SerializedQuestionScore` で固定。デッド化した `QuestionScoreWithRelations` も削除                              | **実測で判明**: `serializeScore` はリレーションを返さない（`QuestionScoreWithRelations` は嘘）・`partialScore` は number。**code-review 指摘**: 型は `ScoringStatus` を主張するのに実体は生 string を通していた→境界変換を追加して型＝実体に一致させた |
+| 2-D           | `08-export/types.ts` のバレル re-export と `grade.types.ts` の `InputMode` re-export を撤去                                                                                                                                                                                                                                   | 消費者を正規パスへ直接 import                                                                                                                                                                                                                          |
+
+### ⏳ 残（未着手）
+
+| 区分     | 内容                                                                                                                                                                                                                                                                                                          | 方針                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1-B      | `prismaExtensions.ts` ↔ `lib/prisma/*` の同名別 include（`CropRegionWithDetails`/`SubtotalWithDetails`/`ExamPageWithDetails`/`SubtotalGroupWithItems`/`CropSubtotalWithRelations`）                                                                                                                           | **消費者意図ベース**で unify（同データ）/ separate（別データ）。unify は `const xxxInclude = {…} satisfies Prisma.XxxInclude` を作りクエリと `GetPayload<typeof xxxInclude>` の両方で使う（型＝クエリで drift 不能）。`WithDetails` は記述名へ廃止（`MasterImageWithPageMeta` 等）。`masterAnswer.ts` の `ExamPageWithDetails`＝実体 `MasterImage` は名が実体を偽装しており最優先で是正 |
+| 2-A      | Prisma モデル手書き複製の解消: `grade.types.ts` を `Prisma.GetPayload` 派生へ／`settingsApi` の `ExamMarkingFormat`・`CropRegionMarkingOverride`／`tagApi` の `TagRecord`／`userExamApi` の `UserExamWith*`／`examClassroomApi`（1-C）／`omr` の `CropRegionOmrConfigWithOptions`（方向は omr.types が SSOT） | `@prisma/client` import か `GetPayload` へ。`grade.types` は最大の是正対象                                                                                                                                                                                                                                                                                                              |
+| 2-B      | literal union 注入漏れ（`QuestionScoreData.status`/`CropRegionArea.type`/`grade.types` の各 type/targetType の生 string）／`CropRegionAreaType` の型ガード・境界コンバータ欠如                                                                                                                                | SSOT 化・型注入                                                                                                                                                                                                                                                                                                                                                                         |
+| 2-E      | `studentAnswerApi.d.ts` の無意味な別名 `AnswerSheetWithDetails`                                                                                                                                                                                                                                               | 削除・直接参照へ                                                                                                                                                                                                                                                                                                                                                                        |
+| 1-B 補足 | `QuestionScoreData`/`SubtotalGroupData`/`IdMappings`/`SubtotalScoreResult` 等の同名別物、gradeApi↔courseworkApi の名簿系匿名ペイロード重複                                                                                                                                                                    | 記述名化・共有型化                                                                                                                                                                                                                                                                                                                                                                      |
+| 配置3    | `transformers/types.ts`（exam だけ framework が `electron-src` 配下）の統一                                                                                                                                                                                                                                   | src/types へ寄せるか全アーカイブを electron-src へ                                                                                                                                                                                                                                                                                                                                      |
+
+> 命名方針: `WithDetails`/`Data`/`Info` 等の濁り名を廃し、**include 内容を名前で言う**（`<Entity>With<Relations>`）。docs/coding-style.md §命名規則準拠。
+
+---
+
+## 1. 重複・名前衝突【最重要・系統的】
+
+### 1-A. IPC契約の逐語コピー（docs §「IPC通信における型の一貫性（厳守）」違反）
+
+`src/types/electron/*.d.ts`（renderer契約）と `electron-src/lib/*`（main定義）で**同一型を手書きコピー**している。
+`exportApi.d.ts` だけが正しく `import type { … } from "@/electron-src/lib/…"` で SSOT を参照しており、これが手本。
+
+| 型                                                                                                                                                              | renderer側（コピー）           | main側（SSOT）                                                   | 状態     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------- | -------- |
+| `AuditLogEntry` ほか計8型（`AuditCategory`/`AuditVerb`/`AuditChange`/`AuditMetadata`/`AuditLogFilter`/`AuditLogQueryOptions`/`AuditLogPage`/`AuditScopeFacet`） | `electron/auditLogApi.d.ts`    | `lib/prisma/auditQuery.ts` / `auditActions.ts` / `auditLog.ts`   | 逐語一致 |
+| `SyncAppConfig`/`SyncAppStatus`/`VersionMismatchRemote`                                                                                                         | `electron/syncApi.d.ts`        | `lib/sync/types.ts`                                              | 逐語一致 |
+| `UserRole`                                                                                                                                                      | `electron/userExamApi.d.ts:6`  | `lib/prisma/userExam.ts:21`                                      | 逐語一致 |
+| `MarkingFormatData`/`MarkingOverrideData`                                                                                                                       | `electron/settingsApi.d.ts:44` | `lib/prisma/examSettings.ts:13` / `cropRegionMarkingOverride.ts` | 逐語一致 |
+| `CropRegionOmrConfigWithOptions`                                                                                                                                | `omr.types.ts:217`             | `lib/prisma/cropRegionOmrConfig.ts`                              | 二重     |
+
+**現状の import 地図**（`import-from-lib` は `@/electron-src` 参照数、`own-export` は独自 export 数）:
+
+- lib SSOT を import しているのは `exportApi.d.ts`（4件）のみ。
+- 他は全て own-export で、うちデータ型を逐語コピーしているのが `auditLogApi`(10) / `cropRegionApi`(7) / `settingsApi`(6) / `syncApi`(4) / `userExamApi`(4) / `scoringApi`(4) / `examClassroomApi`(4)。
+
+**是正**: 各 `.d.ts` は lib 側から `import type` するか、共有型を `prismaExtensions.ts`／ドメイン型ファイルへ集約して双方で参照。スキーマ列追加時に片側だけ黙って drift する。
+
+### 1-B. `prismaExtensions.ts` ↔ `lib/prisma/*` の同名だが別 include（drift 済み）
+
+| 型                          | 定義箇所と差分                                                                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CropRegionWithDetails`     | `prismaExtensions.ts:195`（examPage→exam, subtotalGroup 展開あり）vs `lib/prisma/cropRegion.ts:316`（浅い include）— **別物**                                            |
+| `SubtotalWithDetails`       | `prismaExtensions.ts:222` / `lib/prisma/subtotal.ts:63` / `lib/prisma/questionGroupItem.ts:65` の3つが**それぞれ別 include**                                             |
+| `ExamPageWithDetails`       | `prismaExtensions.ts:250`（GetPayload）/ `lib/prisma/examPage.ts:125`（GetPayload・別形）/ `lib/prisma/masterAnswer.ts:453`（`MasterImage & {…}` 交差型）の3つが**別物** |
+| `SubtotalGroupWithItems`    | `prismaExtensions.ts` / `lib/prisma/questionGroup.ts` で二重                                                                                                             |
+| `CropSubtotalWithRelations` | `prismaExtensions.ts` / `lib/prisma/questionSubtotalAssignment.ts` で二重                                                                                                |
+
+**是正**: 同名で中身が違うのが最も危険。用途別に**別名**にするか、集約して1つに統合。
+
+### 1-C. `examClassroomApi.d.ts` main/renderer 二重定義
+
+`ExamClassroomWithDetails`/`ExamClassroomWithMemberships`（`examClassroomApi.d.ts:8-36`）を renderer が**手書き**、
+main `lib/prisma/examClassroom.ts:11-30` が `Prisma.ExamClassroomGetPayload<…>` で**別定義**。1-A と同種の drift 源。
+`add`/`update` の option インライン形状（`examClassroomApi.d.ts:72-89`）も main の `AddExamClassroomOptions`/`UpdateExamClassroomOptions`（`examClassroom.ts:32-40`）と重複。
+
+### 1-D. アーカイブ間の重複
+
+- `CourseworkImportDecision`/`CourseworkImportDecisions` — `gradeArchive.types.ts:178,182` が `courseworkArchive.types.ts:131,135` と**構造完全一致**。grade 側を削除し coursework 版を import（grade-archive は coursework へ委譲する設計なので自然）。
+- 同梱エンティティ Student/Classroom/Membership/Tag が exam と coursework で別々に手書き:
+
+  | エンティティ | examArchive                                   | courseworkArchive               | 差分                                   |
+  | ------------ | --------------------------------------------- | ------------------------------- | -------------------------------------- |
+  | Student      | `ArchiveStudentsData.students[]`（816-828）   | `ArchiveCwStudent`（71-80）     | Cw は `createdAt` を持たない           |
+  | Classroom    | `ArchiveClassesData.classrooms[]`（834-843）  | `ArchiveCwClass`（83-90）       | Cw は `createdAt/updatedAt` を持たない |
+  | Membership   | `ArchiveClassesData.memberships[]`（844-854） | `ArchiveCwMembership`（93-101） | 同上                                   |
+  | Tag          | `ArchiveTagsData.tags[]`（994-1003）          | `ArchiveCwTag`（103-108）       | ほぼ同一                               |
+
+  **ただしアーカイブは独立バージョニング契約**のため機械的統合は非推奨。共有するなら「両契約で同一保証」の基底を明示コメント付きで切り出す。
+
+- grade の `ArchiveCoursework`/`ArchiveCourseworkItem`（名前ベース・v1.4 レガシー）と coursework の `ArchiveCourseworkRef`/`ArchiveCourseworkItemRef`（UUIDベース・現行）は**意図的に別物**。統合不可・現状維持が正しい。
+
+### 1-E. その他の同名衝突
+
+- **`StudentData`** — `common.types.ts:233`（**デッド**・旧命名 `name`/`furigana`/`admissionYear`）＋独立ローカル3件（`merge/matchers/types.ts:18`, `ScoringMain/hooks/useStudentAnswerManagement.ts:19`, `grades/03-data-sources/StudentExclusionModal.tsx:26`）が別形状で併存。
+- **`LineStyle`** — `ScoringIndividual/types/answerIndividualTypes.ts:11` が `drawingAnnotation.types.ts:9` を**完全複製**（import すべき）。`answerSheetDefinition.types.ts:16` は別ドメイン別値の同名。
+- **`HorizontalAlign`/`VerticalAlign`** — `drawingAnnotation.types.ts:11,12` と `answerSheetDefinition.types.ts:19,20` で同名（Vertical は `center` vs `middle` だけ差）。混同源。
+- **`QuestionScoreData`** — `common.types.ts:161` vs `subtotalCalculator.ts:20`（別物）。
+- **`SubtotalGroupData`** — `merge/matchers/types.ts:52` vs `lib/shared/types/exportTypes.ts:60`（別物）。
+- **`ExportMode`** — `pdfTools.types.ts:10`（`merge|split|interleave`）vs `examArchive.types.ts:493`（`full|template|template_with_subtotals`）＝**別意味の同名**。
+- **`IdMappings`** — `merge/types.ts` vs `exam-archive/idRemapper.ts`（別物）。
+- **`SubtotalScoreResult`** — `subtotalCalculator.ts` / `lib/prisma/student.ts` / `students/[studentId]/hooks/useStudentExamResults.ts` / `classrooms/[classroomId]/hooks/useClassroomExamResults.ts` の4箇所。
+- gradeApi ↔ courseworkApi の「名簿系」匿名ペイロード、「利用可能学級」形状（`examClassroomApi`/`classroomStudentApi`/`gradeApi` の3ファイル）が重複 → 共有型化候補。
+
+---
+
+## 2. 型規約違反
+
+### 2-A. Prisma優先原則違反（手書き再定義）
+
+- **`grade.types.ts`** — `GradeWithDetails:8` / `GradeItemWithDetails:30` / `GradeDataSourceWithDetails:45` / `GradeBoundarySetWithDetails:86` / `GradeBoundaryData:96` / `GradeConstraintData:228` が対応Prismaモデルありながら `Prisma.XxxGetPayload` を使わず全手書き。`coursework.types.ts` の型注入パターンと不整合（最大の是正対象・大きめのリファクタ）。`maxScore`(仮想フィールド)/`weight`/`absentRatio`(Decimal→number) は `Omit<GetPayload, …> & {…}` で表現すべき。
+- **`common.types.ts`** — `QuestionScoreData:161`（Prisma `QuestionScore` 手書き）、`CropRegionArea:136`/`CropRegionCreateData:198`/`CropRegionUpdateData:214`（Prisma `CropRegion` 縮小版）。
+- **`drawingAnnotation.types.ts:25 DrawingAnnotation`** — Prisma モデル全フィールド複製（163参照・影響大につき段階的に）。
+- **`settingsApi.d.ts:4,19`** — `ExamMarkingFormat`/`CropRegionMarkingOverride` が Prisma 同名モデル完全複製・名前衝突。
+- **`tagApi.d.ts:5 TagRecord`** — Prisma `Tag` 完全一致 → `import type { Tag } from "@prisma/client"` に置換。`TagSubtotalGroup`/`ExamTag` 中間テーブルもインライン重複。
+- **`userExamApi.d.ts:11,37`** — `UserExamWithUserAndInviter`/`UserExamWithExamDetails`。後者は `prismaExtensions.UserExamWithExam` と重複。`Prisma.UserExamGetPayload<{ include: { user: true; inviter: true } }>` を prismaExtensions に集約すべき。
+
+### 2-B. literal union の注入漏れ（生 `string`）
+
+SSOT が存在するのに `status: string` / `type: string` のまま:
+
+- `common.types.ts:166 QuestionScoreData.status`（`ScoringStatus` 未注入）、`common.types.ts:139 CropRegionArea.type`（同ファイル130行に `CropRegionAreaType` があるのに未使用）。
+- `scoringApi.d.ts:64-86` — status 7メンバー union（`unscored`〜`double_mark`）を**2回手書き**（`scoringStatus.types.ScoringStatus` SSOT 未 import。exportApi は使えている）。
+- `grade.types.ts` — `GradeDataSourceWithDetails.type:47`/`GradeBoundarySetWithDetails.targetType:88`/`SourceScoreResult.type:159` はコメントに列挙があるのに union 未定義（SSOT 化候補）。`GradeConstraintKind:196`/`AbsentMethod:39`/`EstimationMode:41` は union 化済みで粒度が不揃い。
+- `common.types.ts:118 CROP_REGION_AREA_TYPES` / `:130 CropRegionAreaType` は const→union はあるが**型ガード `isCropRegionAreaType`／境界コンバータ `toCropRegionAreaType` が無く**、SSOT パターンとして不完全（生 string 混入を防げていない）。
+
+### 2-C. Decimal境界: `SerializedQuestionScore` が実在しない
+
+`scoringApi.d.ts:38,50-59` が生 `QuestionScore`（`partialScore: Decimal`）を返す型だが、**実行時は `scoringHandlers.ts:37 serializeScore` で `.toNumber()` 済み**＝型と実体が乖離。
+docs が例示する `SerializedQuestionScore = Omit<QuestionScore, "partialScore"> & { partialScore: number | null }` は **grep 0件で未実装**。`prismaExtensions.ts` に定義して適用すべき。
+同様に `ScoreDecisionForComparison`（`scoringApi.d.ts:9-20`）も serialized 集約候補（`ScoreDecision.score` が Decimal）。
+
+### 2-D. re-export 禁止違反（docs §「re-exportとバレルファイルの方針」）
+
+- `src/app/exams/[examId]/08-export/types.ts:4-20` — `individual-report/types` からの型10件＋定数3件の純粋バレル。消費側は両方から import しており実害あり → 直接 import へ付け替え。
+- `grade.types.ts:83 export type { InputMode }`（coursework から再 export）。
+- `studentArchive.types.ts:180 export type { ArchiveClassesData, ArchiveStudentsData }`（**デッド** re-export）。
+
+### 2-E. 後方互換残骸（コードベース側は禁止）
+
+- `drawingAnnotation.types.ts:140 DrawingElementLegacy`（「既存互換用」コメント付き・参照0）。
+- `studentAnswerApi.d.ts:5 AnswerSheetWithDetails = StudentAnswerImageWithDetails`（無意味な別名間接・コメントで自認）。
+
+---
+
+## 3. ファイル配置
+
+- **`electron-src/lib/import/transformers/types.ts`** — exam-archive の transformer フレームワーク一式（`ArchiveData`/`TransformResult`/`VersionTransformer`/`CURRENT_VERSION`/`SUPPORTED_VERSIONS` 等）だけが `electron-src/lib` 配下。他4アーカイブ（coursework/grade/asb/student）は同等物を `src/types/` に置いており、**exam だけ逆**。どちらかに統一を。データ形状の重複はなし（配置ポリシーのみ・リーフの `Archive*Data` は `src/types/examArchive.types.ts` を正しく import）。
+- **`08-export/types.ts`** の re-export（2-D）は配置問題でもある。
+- **`src/app/textbox-on-canvas-v3/types.ts`** — 実験ディレクトリの型が本番 `src/lib/textbox-canvas/types.ts` と `TextBox`/`Point`/`DragState`/`MeasuredSize`/`SvgRenderResult` 等**同名別形状**で並行（v3 は `width/height/horizontalAlign`、本番は `anchorDirection/textSize`）。混同源。整理検討を。
+- `individual-report/types.ts` は electron-src 常駐だが renderer 20+ が参照する事実上のIPC契約。`@/electron-src` alias で確立済みのため**現状維持で可**。
+
+---
+
+## 4. デッドコード（未参照 export・grep 実測で確認）
+
+計 **約40型**。安全に削除可能。
+
+| ファイル                                | デッド型                                                                                                                                                                                                                                                                         |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prismaExtensions.ts`                   | `StudentAnswerWithDetails:113`, `ExamPayloadWithAllRelations:165`, `UserExamWithDetails:291`, `ExamSubtotalGroupWithExam:320`（外部参照0を独立確認済み）                                                                                                                         |
+| `common.types.ts`                       | `StudentData:233`（旧命名・完全デッド）                                                                                                                                                                                                                                          |
+| `grade.types.ts`                        | `GradeItemExclusionData:149`                                                                                                                                                                                                                                                     |
+| `omr.types.ts`                          | `OMRAnswerType:21`, `DEFAULT_OMR_RECOGNITION_PARAMS:109`                                                                                                                                                                                                                         |
+| `pdfTools.types.ts`                     | `PdfToolsState:65`, `MergePdfsOptions:74`, `SplitPdfOptions:84`, `ExportPngOptions:99`                                                                                                                                                                                           |
+| `drawingAnnotation.types.ts`            | `isTextAnnotation:125`, `isLineAnnotation:130`, `isShapeAnnotation:135`, `DrawingElementLegacy:140`, `DrawingBatchCreateData:161`, `DrawingBatchUpdateData:165`, `DrawingAnnotationResponse:176`                                                                                 |
+| `examArchive.types.ts`                  | `ConflictPolicy:283`/`CategoryConflictResolution:407`/`ConflictResolutions:417`/`ImportMode:468`/`ImportOptions:473`（相互参照の孤立島）＋`MatchingDecision:363`/`UpdateDecision:373`                                                                                            |
+| `gradeArchive.types.ts`                 | `GRADE_SUPPORTED_VERSIONS:272`（未配線 const）                                                                                                                                                                                                                                   |
+| `studentArchive.types.ts`               | re-export `ArchiveClassesData`/`ArchiveStudentsData:180`（デッド）                                                                                                                                                                                                               |
+| `06-student-answers/types.ts`           | `DisabledState:53`/`SimpleGridState:63`/`ExistingStudentAnswer:95`/`NameFieldRegion:117`/`DragData:135`/`FileProcessingProgress:148`/`PasswordDialogState:157`（デッドグリッド撤去の名残）                                                                                       |
+| `src/lib/textbox-canvas/types.ts`       | `MathJaxProcessingOptions:102`/`ElementMeasurement:116`/`DetailedMeasurement:137`/`PreviewComponentProps:164`/`RenderingStatus:172`/`SvgConversionOptions:196`/`RenderResult:212`/`CanvasState:226`/`CanvasManagementHook:240`/`TextBoxOperationsHook:301`（V4移行後の残骸10型） |
+| `textbox-on-canvas-v3/types.ts`         | `MathJaxProcessingOptions:79`/`ElementMeasurement:93`/`DetailedMeasurement:114`                                                                                                                                                                                                  |
+| `ScoringIndividual/hooks/core/types.ts` | `TextBoundsCacheItem:105`                                                                                                                                                                                                                                                        |
+| `id-integration/types.ts`               | `CategoryType:15` ≡ `EntityType:17`（同一 union 二重）→ 片方へ統合                                                                                                                                                                                                               |
+
+> 注: examArchive の `@deprecated` 群（`exam.subject:594`/`pageImages:703`/`ArchiveSubjectsData:973`/`cellGeometryJson:632`/`statistics:768` 等）は transformer 後方互換のため**正当**。削除しない。coursework の `CourseworkTransformResult`/`VersionTransformer`（v1.0.0 変換器ゼロ）、各アーカイブの `*_SUPPORTED_VERSIONS`（grade を除く）も framework スキャフォールドで保持妥当。
+
+---
+
+## 5. 模範（このパターンに寄せる）
+
+- **`coursework.types.ts`** — 全型が `Prisma.XxxGetPayload` ＋ `Omit<…Decimal> & {…number}` 型注入。`SubtotalGroupInfo = Pick<SubtotalGroup, "id" | "name">` のサブセットも良い例。
+- **`scoringStatus.types.ts` / `examStudentStatus.types.ts`** — `const XS as const → union → isX → toX` の SSOT 完全形。冒頭コメントで「union 手書き重複禁止」を明文化。
+- **`cropRegionApi.d.ts`** — `Omit<Prisma.XxxUncheckedCreateInput, "id" | …>` で引数導出。
+- **`exportApi.d.ts`** — IPC契約を lib SSOT から `import type`（1-A の正解パターン）。
+
+---
+
+## 優先対応順（推奨）
+
+1. **デッド型 約40件の削除**（安全・即効。`DrawingElementLegacy` は規約明示禁止）
+2. **IPCミラーの解消**（1-A / 1-C）— lib からの `import type` へ統一
+3. **`SerializedQuestionScore` を実装**し scoringApi の Decimal 乖離を修正（2-C）＋ scoringApi の status を `ScoringStatus` 参照へ
+4. **prismaExtensions ↔ lib/prisma の同名別物**（1-B）を集約 / 改名
+5. **re-export 3件の撤去**（2-D）、`grade.types` の Prisma 派生化（2-A・大きめ）
+
+低リスクは 1・2・5。ここから修正 PR を段階的に作るのが安全。
+
+---
+
+## 付録: `any` / 不正 `as` 検査
+
+全対象ファイルで `any` 使用・不正な `as` キャストは検出されなかった（`as const` と `"Decimal as string"` コメントのみ）。この点は規約完全準拠。

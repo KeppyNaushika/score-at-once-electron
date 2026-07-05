@@ -8,8 +8,8 @@ export type DrawingType = "text" | "line" | "rectangle" | "ellipse"
 export type DrawingTool = "select" | "text" | "line" | "rectangle" | "ellipse"
 export type LineStyle =
   "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow"
-export type HorizontalAlign = "left" | "center" | "right"
-export type VerticalAlign = "top" | "center" | "bottom"
+export type AnnotationHorizontalAlign = "left" | "center" | "right"
+export type AnnotationVerticalAlign = "top" | "center" | "bottom"
 export type AnchorDirection =
   | "top-left"
   | "top"
@@ -47,8 +47,8 @@ export interface DrawingAnnotation {
   fontSize: number
   textBoxWidth: number // 0.0 - 1.0
   textBoxHeight: number // 0.0 - 1.0
-  horizontalAlign: HorizontalAlign
-  verticalAlign: VerticalAlign
+  horizontalAlign: AnnotationHorizontalAlign
+  verticalAlign: AnnotationVerticalAlign
 
   // V4統合フィールド
   anchorDirection: AnchorDirection
@@ -90,8 +90,8 @@ export interface DrawingCreateData {
   fontSize?: number
   textBoxWidth?: number
   textBoxHeight?: number
-  horizontalAlign?: HorizontalAlign
-  verticalAlign?: VerticalAlign
+  horizontalAlign?: AnnotationHorizontalAlign
+  verticalAlign?: AnnotationVerticalAlign
   anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
@@ -113,70 +113,18 @@ export interface DrawingUpdateData {
   fontSize?: number
   textBoxWidth?: number
   textBoxHeight?: number
-  horizontalAlign?: HorizontalAlign
-  verticalAlign?: VerticalAlign
+  horizontalAlign?: AnnotationHorizontalAlign
+  verticalAlign?: AnnotationVerticalAlign
   anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
   isFavorite?: boolean
 }
 
-/** アノテーションがテキスト型かどうかを判定する型ガード */
-export function isTextAnnotation(annotation: DrawingAnnotation): boolean {
-  return annotation.type === "text"
-}
-
-/** アノテーションが直線型かどうかを判定する型ガード */
-export function isLineAnnotation(annotation: DrawingAnnotation): boolean {
-  return annotation.type === "line"
-}
-
-/** アノテーションが図形型（長方形または楕円）かどうかを判定する型ガード */
-export function isShapeAnnotation(annotation: DrawingAnnotation): boolean {
-  return annotation.type === "rectangle" || annotation.type === "ellipse"
-}
-
-// 既存DrawingElementとの互換性用型
-export interface DrawingElementLegacy {
-  id: string
-  type: "text" | "line" | "rectangle" | "ellipse"
-  x: number
-  y: number
-  width?: number
-  height?: number
-  endX?: number
-  endY?: number
-  text?: string
-  color: string
-  strokeWidth: number
-  lineStyle?: LineStyle
-  fontSize?: number
-  textBoxWidth?: number
-  textBoxHeight?: number
-  displayX?: number
-  displayY?: number
-}
-
-// バッチ操作用型
-export interface DrawingBatchCreateData {
-  annotations: DrawingCreateData[]
-}
-
-export interface DrawingBatchUpdateData {
-  updates: Array<{ id: string; data: DrawingUpdateData }>
-}
-
 // 統計情報用型
 export interface DrawingAnnotationStats {
   total: number
   byType: Record<DrawingType, number>
-}
-
-// レスポンス用型
-export interface DrawingAnnotationResponse {
-  success: boolean
-  data?: DrawingAnnotation | DrawingAnnotation[]
-  error?: string
 }
 
 // QuestionScore情報を含む拡張型（アノテーションブラウズパネル用）

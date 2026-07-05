@@ -3,8 +3,6 @@
  */
 
 import type {
-  ArchiveClassesData,
-  ArchiveStudentsData,
   CategoryIdIntegrationConfig,
   PreMatchingResult,
   UpdateDecisions,
@@ -172,9 +170,3 @@ export const INITIAL_STUDENT_IMPORT_WIZARD_STATE: StudentImportWizardState = {
   error: null,
   updateDecisions: {},
 }
-
-// =============================================================================
-// Re-export for convenience
-// =============================================================================
-
-export type { ArchiveClassesData, ArchiveStudentsData }

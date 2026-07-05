@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import type {
-  AuditLogEntry,
-  AuditLogFilter,
-} from "@/types/electron/auditLogApi"
+import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
+import type { AuditLogEntry } from "@/types/electron/auditLogApi"
 
 const PAGE_SIZE = 50
 

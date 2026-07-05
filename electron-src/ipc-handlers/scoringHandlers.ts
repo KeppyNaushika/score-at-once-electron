@@ -1,3 +1,5 @@
+import type { SerializedQuestionScore } from "../../src/types/prismaExtensions"
+import { toScoringStatus } from "../../src/types/scoringStatus.types"
 import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
@@ -18,24 +20,25 @@ import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
 import { registerHandler } from "./ipcHandlerUtils"
 
 /**
- * QuestionScoreをIPC用に変換（DecimalをnumberにDateはそのまま）
+ * QuestionScoreをIPC用に変換（Decimal→number、Dateはそのまま、
+ * status は境界で ScoringStatus へ narrowing する）。
  */
 function serializeScore(score: {
   id: string
   cropRegionId: string
-  studentId: string | null
+  studentId: string
   partialScore: { toNumber(): number } | null
   status: string
-  userId: string | null
+  userId: string
   createdAt: Date
   updatedAt: Date
-}) {
+}): SerializedQuestionScore {
   return {
     id: score.id,
     cropRegionId: score.cropRegionId,
     studentId: score.studentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
-    status: score.status,
+    status: toScoringStatus(score.status),
     userId: score.userId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,

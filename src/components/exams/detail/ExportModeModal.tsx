@@ -5,17 +5,17 @@ import { useState } from "react"
 import BaseModal from "@/components/common/BaseModal"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type { ExportMode } from "@/types/examArchive.types"
+import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 interface ExportModeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onExport: (mode: ExportMode) => void
+  onExport: (mode: ArchiveExportMode) => void
   isExporting: boolean
 }
 
 const EXPORT_MODES: Array<{
-  value: ExportMode
+  value: ArchiveExportMode
   label: string
   description: string
 }> = [
@@ -42,7 +42,7 @@ export default function ExportModeModal({
   onExport,
   isExporting,
 }: ExportModeModalProps) {
-  const [selectedMode, setSelectedMode] = useState<ExportMode>("full")
+  const [selectedMode, setSelectedMode] = useState<ArchiveExportMode>("full")
 
   return (
     <BaseModal
@@ -64,7 +64,7 @@ export default function ExportModeModal({
     >
       <RadioGroup
         value={selectedMode}
-        onValueChange={(value) => setSelectedMode(value as ExportMode)}
+        onValueChange={(value) => setSelectedMode(value as ArchiveExportMode)}
         className="space-y-3"
       >
         {EXPORT_MODES.map((mode) => (

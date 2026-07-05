@@ -9,7 +9,7 @@
 import { describe, expect, test } from "vitest"
 
 import { generateExportFileName } from "../../../electron-src/lib/export/exam-archive/archiveCreator"
-import type { ExportMode } from "../../../src/types/examArchive.types"
+import type { ArchiveExportMode } from "../../../src/types/examArchive.types"
 
 describe("generateExportFileName - エクスポートモード対応", () => {
   // EM-1: fullモード（デフォルト）はサフィックスなし
@@ -59,7 +59,7 @@ describe("generateExportFileName - エクスポートモード対応", () => {
 
   // EM-6: 拡張子は常に.score
   test("EM-6: 拡張子は全モードで.score", () => {
-    const modes: (ExportMode | undefined)[] = [
+    const modes: (ArchiveExportMode | undefined)[] = [
       "full",
       "template",
       "template_with_subtotals",

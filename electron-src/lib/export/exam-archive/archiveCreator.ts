@@ -10,8 +10,8 @@ import * as fs from "fs"
 import * as path from "path"
 
 import type {
+  ArchiveExportMode,
   ArchiveManifest,
-  ExportMode,
 } from "../../../../src/types/examArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import { CURRENT_VERSION } from "../../import/transformers/types"
@@ -43,7 +43,7 @@ interface CreateArchiveOptions {
   /** エクスポートしたユーザー名 */
   exportedBy?: string
   /** エクスポートモード */
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 }
 
 /**
@@ -80,7 +80,7 @@ function createManifest(
   examName: string,
   counts: CollectedData["counts"],
   exportedBy?: string,
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 ): ArchiveManifest {
   return {
     version: CURRENT_VERSION,
@@ -258,7 +258,7 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
  */
 export function generateExportFileName(
   examName: string,
-  exportMode?: ExportMode
+  exportMode?: ArchiveExportMode
 ): string {
   const sanitizedName = examName.replace(/[<>:"/\\|?*]/g, "_")
   const now = new Date()

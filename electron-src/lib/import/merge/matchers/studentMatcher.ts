@@ -10,7 +10,7 @@ import type {
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import type { MatchResult, StudentData } from "./types"
+import type { MatchResult, MatchStudentData } from "./types"
 
 /**
  * 生徒データのマッチングを実行
@@ -25,8 +25,8 @@ import type { MatchResult, StudentData } from "./types"
 export async function matchStudents(
   importData: ExtractedArchiveData,
   method: StudentMatchingMethod
-): Promise<MatchResult<StudentData>[]> {
-  const results: MatchResult<StudentData>[] = []
+): Promise<MatchResult<MatchStudentData>[]> {
+  const results: MatchResult<MatchStudentData>[] = []
 
   // 既存の生徒を全て取得
   const existingStudents = await prisma.student.findMany()

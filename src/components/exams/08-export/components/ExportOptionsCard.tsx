@@ -4,7 +4,6 @@ import { Download } from "lucide-react"
 
 import {
   ExportOptions,
-  IndividualReportOptions,
   PdfOrientation,
 } from "@/app/exams/[examId]/08-export/types"
 import { IndividualReportSettings } from "@/components/exams/08-export/components/IndividualReportSettings"
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
 
 export type ExportTabType =
   "scored-answers" | "grading-data" | "individual-reports"

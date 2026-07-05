@@ -3,17 +3,16 @@
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import {
-  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-  ExportOptions,
-  IndividualReportOptions,
-  Student,
-} from "@/app/exams/[examId]/08-export/types"
+import { ExportOptions, Student } from "@/app/exams/[examId]/08-export/types"
 import {
   defaultScoringMarkConfig,
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/ScoringMarkSettings"
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
+import {
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+  type IndividualReportOptions,
+} from "@/electron-src/lib/export/individual-report/types"
 import type { ExamWithDetails } from "@/types/common.types"
 
 /** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */

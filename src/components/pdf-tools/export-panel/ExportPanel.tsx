@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type {
-  ExportMode,
   ImportedFile,
   InterleaveConfig,
   OutputPage,
+  PdfExportMode,
 } from "@/types/pdfTools.types"
 
 import ExportActions from "./ExportActions"
@@ -19,10 +19,10 @@ interface ExportPanelProps {
   importedFiles: ImportedFile[]
   outputPages: OutputPage[]
   excludedPages: Set<string>
-  exportMode: ExportMode
+  exportMode: PdfExportMode
   interleaveConfig: InterleaveConfig
   isProcessing: boolean
-  onExportModeChange: (mode: ExportMode) => void
+  onExportModeChange: (mode: PdfExportMode) => void
   onInterleaveConfigChange: (config: InterleaveConfig) => void
   onOutputPagesChange: (pages: OutputPage[]) => void
   onPageExcluded: (page: OutputPage) => void
@@ -134,7 +134,7 @@ function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
  */
 function generateOutputPages(
   files: ImportedFile[],
-  mode: ExportMode,
+  mode: PdfExportMode,
   interleaveConfig: InterleaveConfig
 ): OutputPage[] {
   const pages: OutputPage[] = []

@@ -17,7 +17,7 @@ import EditExamWindow from "@/components/exams/forms/EditExamWindow"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { useAuth } from "@/contexts/AuthContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
-import type { ExportMode } from "@/types/examArchive.types"
+import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 export default function ExamDetailPage() {
   const params = useParams()
@@ -68,7 +68,7 @@ export default function ExamDetailPage() {
     router.push("/exams")
   }
 
-  const handleExport = async (exportMode: ExportMode) => {
+  const handleExport = async (exportMode: ArchiveExportMode) => {
     if (isExporting) return
 
     if (!user?.id) {

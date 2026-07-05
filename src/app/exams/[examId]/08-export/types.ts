@@ -1,24 +1,5 @@
 import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
-// 個人成績表用型定義をre-export
-export type {
-  AdviceOptions,
-  AverageDisplayType,
-  FontSizeOption,
-  GraphOptions,
-  IndividualReportOptions,
-  QuestionTableColumns,
-  RankDisplayType,
-  ReportDisplayMode,
-  ScoreRateFormat,
-  SubtotalTableColumns,
-} from "@/electron-src/lib/export/individual-report/types"
-export {
-  DEFAULT_ADVICE_OPTIONS,
-  DEFAULT_GRAPH_OPTIONS,
-  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-} from "@/electron-src/lib/export/individual-report/types"
-
 // 生徒データの型 = getStudentsForExam の戻り値（ExamStudentWithDetails）。
 // 08結果出力では学級情報は classroomInfoMap 経由で解決し、受験生徒の識別・所属・
 // 受験状態・並び順のみを examStudent.student(.memberships) / status / customOrder で参照する。
