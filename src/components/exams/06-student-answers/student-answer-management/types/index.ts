@@ -1,9 +1,6 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
-import type {
-  PendingChange,
-  UnifiedFile,
-  UnifiedStudent,
-} from "@/components/exams/06-student-answers/types"
+import type { PendingChange } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 // Processed student answer format for component compatibility
 export interface ProcessedStudentAnswer {
@@ -27,7 +24,7 @@ export interface ProcessedStudentAnswer {
 // Local component-specific types
 export interface StudentAnswerUploadProps {
   examId: string
-  students: UnifiedStudent[]
+  students: ExamStudentWithDetails[]
   modelAnswerCount: number
   onUploadComplete?: () => void
   existingStudentAnswers?: ProcessedStudentAnswer[]
@@ -64,36 +61,4 @@ export interface GridHeaderProps {
   maxPages: number
   pageStates: Set<number>
   onTogglePage: (pageNumber: number) => void
-}
-
-export interface StudentCellProps {
-  student: UnifiedStudent
-  isEnabled: boolean
-  onToggle: () => void
-}
-
-export interface AnswerCellProps {
-  student: UnifiedStudent | null
-  pageNumber: number
-  file: UnifiedFile | null
-  isStudentDisabled: boolean
-  isPageDisabled: boolean
-  isFileDisabled: boolean
-  onToggleFile?: () => void
-  onRemoveFile?: () => void
-  onCellClick?: () => void
-  className?: string
-}
-
-export interface StudentGridRowProps {
-  student: UnifiedStudent
-  maxPages: number
-  pageStates: Set<number>
-  fileStates: Set<string>
-  files: UnifiedFile[]
-  isStudentDisabled: boolean
-  onToggleStudent: () => void
-  onToggleFile: (fileId: string) => void
-  onRemoveFile: (fileId: string) => void
-  onCellClick: (studentId: string, pageNumber: number) => void
 }

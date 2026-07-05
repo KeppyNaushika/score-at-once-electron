@@ -11,15 +11,15 @@ import {
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface UseDragDropHandlersParams {
   files: UnifiedFile[]
   onFilesChange: (files: UnifiedFile[]) => void
   getEnabledFiles: () => UnifiedFile[]
   getDisabledFiles: () => UnifiedFile[]
-  students?: UnifiedStudent[]
+  students?: ExamStudentWithDetails[]
   modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy

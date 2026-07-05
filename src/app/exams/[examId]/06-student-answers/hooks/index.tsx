@@ -11,12 +11,13 @@ import type {
   PendingChange,
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
-import type { UnifiedStudent } from "@/components/exams/06-student-answers/types"
-import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamPageWithDetails } from "@/types/prismaExtensions"
+import type {
+  ExamPageWithDetails,
+  ExamStudentWithDetails,
+} from "@/types/prismaExtensions"
 
 export function useStudentAnswersData(examId: string) {
-  const [students, setStudents] = useState<UnifiedStudent[]>([])
+  const [students, setStudents] = useState<ExamStudentWithDetails[]>([])
   const [studentAnswers, setStudentAnswers] = useState<
     ProcessedStudentAnswer[]
   >([])
@@ -34,37 +35,19 @@ export function useStudentAnswersData(examId: string) {
         setIsLoading(true)
       }
 
-      // Load students（採番順を決める administered 学級名も placement から取得）
-      const [examStudentsResult, administeredClasses] = await Promise.all([
-        window.electronAPI.getStudentsForExam(examId),
-        window.electronAPI.examClassroom.getAdministered(examId),
-      ])
+      // Load students（受験生徒を ExamStudentWithDetails のまま保持する）
+      const examStudentsResult =
+        await window.electronAPI.getStudentsForExam(examId)
       if (examStudentsResult.success && examStudentsResult.students) {
         // 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。06 は下流の
         // 読み手なので customOrder のみで並べ、出席番号・氏名などの独自フォールバックは
         // 加えない。getStudentsForExam は customOrder 昇順（同着は studentNumber）で返すため、
         // 同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
-        // 採番学級は administered 学級（DB 構造）から renderer 側で解決する。
-        const placement = resolveExamClassroomPlacement(administeredClasses)
-        const sortedStudents: UnifiedStudent[] = examStudentsResult.students
-          .sort(
-            (examStudentA, examStudentB) =>
-              (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
-              (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)
-          )
-          .map((examStudent) => ({
-            id: examStudent.studentId,
-            lastName: examStudent.student.lastName,
-            firstName: examStudent.student.firstName,
-            lastNameKana: examStudent.student.lastNameKana,
-            firstNameKana: examStudent.student.firstNameKana,
-            studentNumber: examStudent.student.studentNumber,
-            status: examStudent.status,
-            customOrder: examStudent.customOrder ?? null,
-            // 採番順を決める administered 学級（Prisma Classroom を同梱、未所属は null）。
-            // memberships[0]（startDate 降順先頭＝偶然の値）には依存しない。
-            classroom: placement[examStudent.studentId]?.classroom ?? null,
-          }))
+        const sortedStudents = [...examStudentsResult.students].sort(
+          (examStudentA, examStudentB) =>
+            (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
+            (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)
+        )
 
         setStudents(sortedStudents)
       }
@@ -138,7 +121,7 @@ export function useStudentAnswersData(examId: string) {
 
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
-  students?: UnifiedStudent[],
+  students?: ExamStudentWithDetails[],
   studentAnswers?: ProcessedStudentAnswer[]
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
@@ -163,10 +146,10 @@ export function usePendingChanges(
         ({ fileId, fromState, toState }) => {
           // 生徒名を解決
           const fromStudent = students?.find(
-            (student) => student.id === fromState.studentId
+            (examStudent) => examStudent.studentId === fromState.studentId
           )
           const toStudent = students?.find(
-            (student) => student.id === toState.studentId
+            (examStudent) => examStudent.studentId === toState.studentId
           )
 
           // 移動先にある既存ファイルを特定
@@ -200,14 +183,14 @@ export function usePendingChanges(
               studentId: fromState.studentId,
               pageNumber: fromState.pageNumber,
               studentName: fromStudent
-                ? `${fromStudent.lastName} ${fromStudent.firstName}`
+                ? `${fromStudent.student.lastName} ${fromStudent.student.firstName}`
                 : undefined,
             },
             toPosition: {
               studentId: toState.studentId,
               pageNumber: toState.pageNumber,
               studentName: toStudent
-                ? `${toStudent.lastName} ${toStudent.firstName}`
+                ? `${toStudent.student.lastName} ${toStudent.student.firstName}`
                 : undefined,
             },
           }

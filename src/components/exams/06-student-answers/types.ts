@@ -1,38 +1,14 @@
 /**
  * テーブルDnD準拠の型定義
  * 06-student-answersページ専用の統一型定義
- * レポート分析に基づき6つのStudent型と4つのStudentAnswer型を1つに統合
+ *
+ * 受験生徒は Prisma 拡張型 `ExamStudentWithDetails` をそのまま持ち回るため、
+ * 独自の生徒 view-model は定義しない（採番学級などの派生表示値が要る場合はフックで導出する）。
  */
-
-import type { Classroom, Student } from "@prisma/client"
-
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 // ============================================================================
 // 基本的な型定義
 // ============================================================================
-
-/**
- * 06答案管理の受験生徒 view-model（単一 SSOT）。
- *
- * Prisma `Student` のスカラー（識別・氏名）を Pick し、試験固有の受験状態・並び順
- * （ExamStudent 由来）と、採番順を決める administered 学級（placement 由来・Prisma Classroom 同梱）を付与する。
- * かつて 6 つに分裂していた生徒型はこの型へ一本化する（手書き重複を作らない）。
- */
-export type UnifiedStudent = Pick<
-  Student,
-  | "id"
-  | "lastName"
-  | "firstName"
-  | "lastNameKana"
-  | "firstNameKana"
-  | "studentNumber"
-> & {
-  status?: ExamStudentStatus
-  customOrder?: number | null // 受験生徒順序（ExamStudent.customOrder）
-  /** 採番順を決める administered 学級（Prisma Classroom を同梱、未所属なら null） */
-  classroom?: Classroom | null
-}
 
 /**
  * 統一されたファイル型定義
@@ -152,20 +128,6 @@ export interface NameFieldRegion {
 // ============================================================================
 // ユーティリティ型
 // ============================================================================
-
-/**
- * テーブルDnDのgetTableData相当の戻り値
- */
-export interface TableCell {
-  studentIndex: number
-  pageNumber: number
-  position: number
-  file: UnifiedFile | null
-  student: UnifiedStudent
-  isDisabled: boolean
-}
-
-export type TableData = TableCell[][] // [row][col]形式
 
 /**
  * ドラッグ&ドロップイベント用

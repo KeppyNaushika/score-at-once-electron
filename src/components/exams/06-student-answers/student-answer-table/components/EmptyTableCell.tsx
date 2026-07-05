@@ -77,7 +77,7 @@ export function EmptyTableCell({
                 {hasExistingAnswer ? "答案画像あり" : "空セル"}
                 {student && (
                   <div className="mt-1">
-                    {student.lastName} {student.firstName}
+                    {student.student.lastName} {student.student.firstName}
                   </div>
                 )}
                 {pageNumber && <div>P{pageNumber}</div>}

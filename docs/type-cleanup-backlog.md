@@ -10,25 +10,14 @@
 
 ---
 
-## 現在のチェックポイント（実装済み・**未コミット**・typecheck/lint/テスト緑）
+## 完了済み（merge 済み or 実装済み・緑）
 
-- b-1/b-2/b-3: RosterTable の無型 `extras` 撤去 / 選択を `useStudentSelection` フックへ集約（`useMemo` も除去）/ `ReturnDiffPanel` を `selectedStudentIds: string[]` + intent へ
-- c: 重複3 `Student` 型を **`ExamStudentWithDetails`（nested Prisma 拡張）** に統合。`getStudentsForExam` / IPC もこの型。05/06/08・electron 出力を nested アクセスへ（`examStudent.studentId` / `examStudent.student.X`）
-- `StudentClassInfo` → **`ExamClassroomPlacement`** 改名。placement は **Prisma `Classroom` を同梱**（フラット `className` 文字列を廃止）
-- 06 並び替えを **customOrder のみ**に単純化（falsy-zero・比較器重複・`[0]` 索引を撤去）
-- 06 の重複8生徒型を暫定 **`UnifiedStudent`（`Pick<Student> & {...}`）** へ集約し、採番学級バッジを placement 経由に
-- **Task 1 完了**: placement を renderer 側解決へ。専用 IPC（`getStudentClassInfo` map / `getStudentClassInfoSingle` single）と main `getStudentClassInfo`（単一）・未使用 `ExamClassroomPlacementMap` を撤去。新設 `src/lib/examClassroomPlacement.ts` の `resolveExamClassroomPlacement(administeredClasses)` が既存 `getAdministered`（DB 構造 IPC）から採番を計算。05/06 を載せ替え。境界型 `ExamClassroomPlacement` は残置（main `getStudentClassInfoForExam`＝export 経路がまだ使用）。
+- **Task 1（PR #935 merge 済み）**: placement を renderer 側解決へ。専用 IPC（`getStudentClassInfo` map / `getStudentClassInfoSingle` single）と main `getStudentClassInfo`（単一）・未使用 `ExamClassroomPlacementMap` を撤去。新設 `src/lib/examClassroomPlacement.ts` の `resolveExamClassroomPlacement(administeredClasses)` が既存 `getAdministered`（DB 構造 IPC）から採番を計算。併せて受験生徒型を nested `ExamStudentWithDetails` へ集約・08 選択を `useStudentSelection` へ・06 並び替えを customOrder のみへ・`ExamClassroomPlacement` に `Classroom` 同梱。
+- **Task 2（実装済み・未コミット・緑）**: 06 のフラット `UnifiedStudent` を撤廃し `ExamStudentWithDetails`（nested）を持ち回る（16 ファイル、`.id`→`.studentId` / 氏名→`.student.X`）。**副産物の大発見**: `student-answer-management` に放棄された「管理グリッド」実装が丸ごとデッド（現行は `student-answer-table` パス）。`StudentGridRow`/`StudentCell`/`AnswerCell`/`useStudentAnswerUploadMain`/`useStudentManagement`/`useFileProcessing` ＋ 専用型（`StudentGridRowProps` 他・`StudentWithAnswers`・`hooks/types.ts` 丸ごと・06 root の未使用 `TableCell`/`TableData`）を削除。classroom バッジは唯一 dead な `StudentCell` のみが消費していたため、**06 は placement 自体が不要**になり loadData から撤去（placement は 05 のみ利用）。
 
 ---
 
 ## 残タスク（この設計で確定）
-
-### 2. 06 を nested 化（フラット `UnifiedStudent` を廃止）
-
-- 現状の Pick ベース `UnifiedStudent` を廃し、**`ExamStudentWithDetails`（nested）を持ち回る**。
-- 影響 ~14 ファイル（`student-answer-management` / `student-answer-table` の grid/table/dnd/upload）: `student.lastName`→`examStudent.student.lastName`、`student.id`→`examStudent.studentId`、`student.status`→`examStudent.status`、`student.customOrder`→`examStudent.customOrder`。
-- 採番学級は 1 のフック（placement 側データ）で参照。`StudentWithAnswers` 等は `ExamStudentWithDetails & { フラグ }` に。
-- フックの返り値「全体」に名前は付けない（推論／`ReturnType`）。
 
 ### 3. export（Excel/PDF）を renderer 主導に
 
@@ -45,6 +34,6 @@
 
 ## 進め方メモ
 
-- 1 → 2 → 3 の順（placement フック確立 → 06 nested → export 付け替え）。各段で typecheck ゲート。
+- 残るは 3（export 付け替え）→ 4（coding-style.md 追記）。各段で typecheck ゲート。
 - 並行セッション所有ファイル（`coding-style.md` / `identifier-vs-entity-audit.md` / `type-convention-audit.md`）は触らない。
-- 本セッションの全変更は未コミット。区切りでコミットするかは要判断。
+- Task 1 は PR #935 で merge 済み。Task 2 は未コミット（緑）。

@@ -5,10 +5,7 @@ import { FilePreviewCell } from "@/components/exams/06-student-answers/student-a
 import { SortableTableCell } from "@/components/exams/06-student-answers/student-answer-table/components/SortableTableCell"
 import type { PreviewMode } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
-import type {
-  UnifiedFile,
-  UnifiedStudent,
-} from "@/components/exams/06-student-answers/types"
+import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
 import {
   Table,
   TableBody,
@@ -16,6 +13,7 @@ import {
   TableHeader as UITableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface TableContentProps {
   tableData: Array<
@@ -23,11 +21,11 @@ interface TableContentProps {
       type: "file" | "empty" | "disabled"
       position: number
       file?: UnifiedFile
-      student?: UnifiedStudent
+      student?: ExamStudentWithDetails
       pageNumber?: number
     }>
   >
-  sortedStudents: UnifiedStudent[]
+  sortedStudents: ExamStudentWithDetails[]
   maxPages: number
   disabledState: {
     rows: Set<number>
@@ -127,7 +125,7 @@ export function TableContent({
         </UITableHeader>
         <TableBody>
           {tableData.map((row, studentIndex) => (
-            <TableRow key={sortedStudents[studentIndex].id}>
+            <TableRow key={sortedStudents[studentIndex].studentId}>
               {/* 生徒名セル */}
               <TableHead
                 className={`border text-center ${
@@ -145,11 +143,11 @@ export function TableContent({
               >
                 <div className="px-2 py-1">
                   <div className="text-sm font-medium">
-                    {sortedStudents[studentIndex].lastName}{" "}
-                    {sortedStudents[studentIndex].firstName}
+                    {sortedStudents[studentIndex].student.lastName}{" "}
+                    {sortedStudents[studentIndex].student.firstName}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {sortedStudents[studentIndex].studentNumber}
+                    {sortedStudents[studentIndex].student.studentNumber}
                   </div>
                 </div>
               </TableHead>
@@ -212,7 +210,7 @@ export function TableContent({
                     mode={mode}
                     studentName={
                       cellData.student
-                        ? `${cellData.student.lastName} ${cellData.student.firstName}`
+                        ? `${cellData.student.student.lastName} ${cellData.student.student.firstName}`
                         : undefined
                     }
                     pageNumber={cellData.pageNumber ?? undefined}
@@ -255,13 +253,13 @@ interface EmptyTableCellWithLogicProps {
   cellData: {
     type: "empty" | "disabled" | "file"
     position: number
-    student?: UnifiedStudent
+    student?: ExamStudentWithDetails
     pageNumber?: number
     file?: UnifiedFile
   }
   studentIndex: number
   pageIndex: number
-  sortedStudents: UnifiedStudent[]
+  sortedStudents: ExamStudentWithDetails[]
   disabledState: {
     rows: Set<number>
     cols: Set<number>
@@ -354,7 +352,7 @@ function EmptyTableCellWithLogic({
         onUploadModalOpen(
           cellData.position,
           cellData.student
-            ? `${cellData.student.lastName} ${cellData.student.firstName}`
+            ? `${cellData.student.student.lastName} ${cellData.student.student.firstName}`
             : undefined,
           cellData.pageNumber ?? undefined
         )
