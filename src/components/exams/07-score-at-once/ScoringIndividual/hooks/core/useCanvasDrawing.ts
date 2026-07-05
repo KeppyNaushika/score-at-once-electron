@@ -347,12 +347,7 @@ export function useCanvasDrawing({
             : null
 
           if (markImage) {
-            const configMarkSize = scoringMarkConfig?.markSize ?? 50
-            const markSize = Math.min(
-              configMarkSize,
-              regionWidth * 0.8,
-              regionHeight * 0.8
-            )
+            const markSize = scoringMarkConfig?.markSize ?? 50
 
             const markPos = scoringMarkConfig
               ? calculateMarkPosition(
