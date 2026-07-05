@@ -57,9 +57,9 @@ export interface GradeAPI {
       }>
       error?: string
     }>
-    getClasses: (gradeId: string) => Promise<{
+    getClassrooms: (gradeId: string) => Promise<{
       success: boolean
-      classes?: Array<{
+      classrooms?: Array<{
         id: string
         classroomId: string
         className: string
@@ -68,15 +68,15 @@ export interface GradeAPI {
       }>
       error?: string
     }>
-    getAvailableClasses: (
+    getAvailableClassrooms: (
       gradeId: string,
       activeOnly?: boolean
     ) => Promise<{
       success: boolean
-      classes?: Array<{
+      classrooms?: Array<{
         id: string
         name: string
-        classCode: string | null
+        classroomCode: string | null
         grade: number | null
         studentCount: number
         studentNames: string[]
@@ -91,7 +91,7 @@ export interface GradeAPI {
       students?: import("../prismaExtensions").StudentWithMemberships[]
       error?: string
     }>
-    addStudentsFromClass: (
+    addStudentsFromClassroom: (
       gradeId: string,
       classroomId: string,
       activeOnly?: boolean
@@ -110,7 +110,7 @@ export interface GradeAPI {
       skippedCount?: number
       error?: string
     }>
-    removeClass: (
+    removeClassroom: (
       gradeId: string,
       classroomId: string,
       deleteStudents?: boolean
@@ -119,7 +119,7 @@ export interface GradeAPI {
       removedStudents?: number
       error?: string
     }>
-    classRemovalPreview: (
+    classroomRemovalPreview: (
       gradeId: string,
       classroomId: string
     ) => Promise<{
@@ -127,7 +127,7 @@ export interface GradeAPI {
       exclusiveCount?: number
       error?: string
     }>
-    setClassOrders: (
+    setClassroomOrders: (
       gradeId: string,
       orderedClassroomIds: string[]
     ) => Promise<{ success: boolean; error?: string }>

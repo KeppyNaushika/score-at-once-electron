@@ -390,11 +390,11 @@ async function changeClassroomId(
   idMappings: IdMappings,
   _warnings: string[]
 ): Promise<void> {
-  const existingClass = await tx.classroom.findUnique({
+  const existingClassroom = await tx.classroom.findUnique({
     where: { id: target.existingId },
   })
 
-  if (!existingClass) return
+  if (!existingClassroom) return
 
   // 1. UNIQUE制約のあるnameを一時値に変更
   await tx.classroom.update({
@@ -406,12 +406,12 @@ async function changeClassroomId(
   await tx.classroom.create({
     data: {
       id: target.newId,
-      name: existingClass.name,
-      classCode: existingClass.classCode,
-      grade: existingClass.grade,
-      description: existingClass.description,
-      createdAt: existingClass.createdAt,
-      updatedAt: existingClass.updatedAt,
+      name: existingClassroom.name,
+      classroomCode: existingClassroom.classroomCode,
+      grade: existingClassroom.grade,
+      description: existingClassroom.description,
+      createdAt: existingClassroom.createdAt,
+      updatedAt: existingClassroom.updatedAt,
     },
   })
 

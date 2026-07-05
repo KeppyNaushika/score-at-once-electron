@@ -1,6 +1,6 @@
 import * as ExcelJS from "exceljs"
 
-import { getClassMembersForExam } from "../../prisma/examClassroom"
+import { getClassroomMembersForExam } from "../../prisma/examClassroom"
 import {
   ExportGradingDataOptions,
   ExportResult,
@@ -78,8 +78,8 @@ export async function exportGradingDataExcel(
     }
 
     // teacherStatistics=true の登録学級（受験日所属生徒つき）= 学級平均行の対象
-    const teacherStatisticsClasses = (
-      await getClassMembersForExam(examId)
+    const teacherStatisticsClassrooms = (
+      await getClassroomMembersForExam(examId)
     ).filter((examClassroom) => examClassroom.teacherStatistics)
 
     // Excelワークブック作成
@@ -92,7 +92,7 @@ export async function exportGradingDataExcel(
       dataResult.subtotalColumns,
       scoringData,
       allScoringData,
-      teacherStatisticsClasses
+      teacherStatisticsClassrooms
     )
 
     // 正誤一覧シート作成

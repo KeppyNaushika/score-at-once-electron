@@ -68,7 +68,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
     )
   }
 
-  const { student, classroom: classResult } = state.fileOverviewData
+  const { student, classroom: classroomResult } = state.fileOverviewData
   const { counts } = state.manifest
 
   return (
@@ -83,7 +83,11 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
 
       <div className="mx-auto grid max-w-2xl gap-4">
         <CategoryOverviewCard title="生徒" icon={Users} result={student} />
-        <CategoryOverviewCard title="学級" icon={Users} result={classResult} />
+        <CategoryOverviewCard
+          title="学級"
+          icon={Users}
+          result={classroomResult}
+        />
       </div>
 
       <div className="flex justify-center pt-4">

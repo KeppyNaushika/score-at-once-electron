@@ -178,7 +178,7 @@ export const getCurrentMembershipsByClassroomId = async (
  *  同一生徒・同一学級のアクティブな所属（endDate: null）があれば
  *  自動的に終了してから新規作成する。
  */
-export const addStudentToClass = async (
+export const addStudentToClassroom = async (
   studentId: string,
   classroomId: string,
   startDate: Date = new Date(),

@@ -20,7 +20,7 @@ import type { TransactionClient } from "../exam-archive/uniqueNameGenerators"
 import { isNewerByLww } from "../merge/decisionMergePolicy"
 import {
   type IdMap,
-  resolveClasses,
+  resolveClassrooms,
   resolveStudents,
   resolveTags,
   restoreMemberships,
@@ -64,7 +64,7 @@ export async function importCourseworkData(
     allowCreate,
   })
   warnings.push(...students.warnings)
-  const classes = await resolveClasses(tx, data.classesData, { allowCreate })
+  const classes = await resolveClassrooms(tx, data.classesData, { allowCreate })
   warnings.push(...classes.warnings)
   const tagMap = await resolveTags(tx, data.tagsData)
   if (allowCreate) {

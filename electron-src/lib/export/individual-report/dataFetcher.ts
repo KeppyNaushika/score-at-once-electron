@@ -6,7 +6,7 @@ import type { CropRegion } from "@prisma/client"
 
 import prisma from "../../prisma/client"
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
-import { getClassMembersForExam } from "../../prisma/examClassroom"
+import { getClassroomMembersForExam } from "../../prisma/examClassroom"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
 import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
@@ -143,17 +143,17 @@ export async function fetchIndividualReportData(
 
     // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
     // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）。
-    const studentReportClasses = (await getClassMembersForExam(examId)).filter(
-      (examClassroom) => examClassroom.studentReport
-    )
+    const studentReportClassrooms = (
+      await getClassroomMembersForExam(examId)
+    ).filter((examClassroom) => examClassroom.studentReport)
 
     // studentId → 本人が所属する studentReport 学級（複数学級対応）。学級ごとに
     // 1回だけ変換し、生徒ごとの走査（O(学級×学級人数)）を避ける。
-    const studentClassesByStudentId = new Map<
+    const studentClassroomsByStudentId = new Map<
       string,
       StudentClassroomForStatistics[]
     >()
-    for (const examClassroom of studentReportClasses) {
+    for (const examClassroom of studentReportClassrooms) {
       const memberStudentIds = examClassroom.classroom.memberships.map(
         (membership) => membership.studentId
       )
@@ -167,9 +167,9 @@ export async function fetchIndividualReportData(
         memberStudentIds,
       }
       for (const studentId of memberStudentIds) {
-        const list = studentClassesByStudentId.get(studentId)
+        const list = studentClassroomsByStudentId.get(studentId)
         if (list) list.push(entry)
-        else studentClassesByStudentId.set(studentId, [entry])
+        else studentClassroomsByStudentId.set(studentId, [entry])
       }
     }
 
@@ -190,15 +190,15 @@ export async function fetchIndividualReportData(
         }
 
         // 本人が所属する studentReport 学級（事前構築した Map から O(1) 取得）
-        const studentClasses =
-          studentClassesByStudentId.get(scoringData.studentId) ?? []
+        const studentClassrooms =
+          studentClassroomsByStudentId.get(scoringData.studentId) ?? []
 
         // 統計データ（subtotalScoresから直接グループ情報を取得可能）
         const statistics = calculateStatisticsForStudent(
           scoringData.studentId,
           scoringData.totalScore,
           allScoringData,
-          studentClasses,
+          studentClassrooms,
           questionCorrectRates,
           questionScoreRates,
           scoreByStudentId

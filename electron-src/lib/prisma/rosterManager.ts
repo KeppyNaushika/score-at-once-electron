@@ -1,7 +1,7 @@
 /**
  * 名簿（対象生徒・対象学級）操作の共通ロジック
  *
- * 成績算出（GradeStudent/GradeClass）と試験外成績資料（CourseworkStudent/CourseworkClass）は
+ * 成績算出（GradeStudent/GradeClassroom）と試験外成績資料（CourseworkStudent/CourseworkClassroom）は
  * 名簿の追加・並べ替え・削除のロジックがほぼ同一。アルゴリズム（customOrder の連番採番、
  * 既存重複の除外、「学級を外しても他学級に在籍する生徒は残す」判定）をここに一本化し、
  * テーブル固有の I/O・監査メタデータは {@link RosterAdapter} で各ドメインが型安全に供給する。
@@ -39,15 +39,15 @@ export interface RosterAdapter {
     orders: { studentId: string; customOrder: number }[]
   ): Promise<void>
   /** 対象学級の現在の最大 order（無ければ null） */
-  classMaxOrder(targetId: string): Promise<number | null>
+  classroomMaxOrder(targetId: string): Promise<number | null>
   /** 対象学級を作成（既存なら何もしない） */
-  upsertClass(
+  upsertClassroom(
     targetId: string,
     classroomId: string,
     order: number
   ): Promise<void>
   /** 対象学級の並び順を一括更新（単一トランザクションで実装すること） */
-  setClassOrders(
+  setClassroomOrders(
     targetId: string,
     orders: { classroomId: string; order: number }[]
   ): Promise<void>
@@ -57,7 +57,7 @@ export interface RosterAdapter {
     exceptClassroomId: string
   ): Promise<string[]>
   /** 学級と、それに伴い外す生徒を単一トランザクションで削除 */
-  removeClassAndStudents(
+  removeClassroomAndStudents(
     targetId: string,
     classroomId: string,
     studentIds: string[]
@@ -68,19 +68,19 @@ export interface RosterAdapter {
   ): Promise<{ scopeId: string; scopeLabel: string | null }>
   audit: {
     studentEntity: string
-    classEntity: string
+    classroomEntity: string
     addAction: string
     removeAction: string
     reorderAction: string
     reorderCoalescePrefix: string
-    addFromClassSummary: (count: number) => string
+    addFromClassroomSummary: (count: number) => string
     addIndividualSummary: (count: number) => string
-    removeClassSummary: (count: number) => string
+    removeClassroomSummary: (count: number) => string
   }
 }
 
 /** 学級から生徒を一括追加（基準日時点の在籍者を出席番号順で） */
-export async function rosterAddStudentsFromClass(
+export async function rosterAddStudentsFromClassroom(
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string,
@@ -93,8 +93,8 @@ export async function rosterAddStudentsFromClass(
 }> {
   try {
     const referenceDate = await adapter.getReferenceDate(targetId)
-    const nextOrder = (await adapter.classMaxOrder(targetId)) ?? -1
-    await adapter.upsertClass(targetId, classroomId, nextOrder + 1)
+    const nextOrder = (await adapter.classroomMaxOrder(targetId)) ?? -1
+    await adapter.upsertClassroom(targetId, classroomId, nextOrder + 1)
 
     const memberships = await prisma.studentClassroomMembership.findMany({
       where: {
@@ -138,7 +138,7 @@ export async function rosterAddStudentsFromClass(
         entityId: targetId,
         scopeId: scope.scopeId,
         scopeLabel: scope.scopeLabel,
-        summary: adapter.audit.addFromClassSummary(toAdd.length),
+        summary: adapter.audit.addFromClassroomSummary(toAdd.length),
         extra: { count: toAdd.length, classroomId },
       })
     }
@@ -241,13 +241,13 @@ export async function rosterUpdateStudentOrders(
 }
 
 /** 学級の並び順を更新 */
-export async function rosterSetClassOrders(
+export async function rosterSetClassroomOrders(
   adapter: RosterAdapter,
   targetId: string,
   orderedClassroomIds: string[]
 ): Promise<RosterMutationResult> {
   try {
-    await adapter.setClassOrders(
+    await adapter.setClassroomOrders(
       targetId,
       orderedClassroomIds.map((classroomId, order) => ({ classroomId, order }))
     )
@@ -274,7 +274,9 @@ async function computeExclusiveStudents(
     where: { classroomId },
     select: { studentId: true },
   })
-  const classStudentIds = memberships.map((membership) => membership.studentId)
+  const classroomStudentIds = memberships.map(
+    (membership) => membership.studentId
+  )
 
   const otherClassroomIds = await adapter.listOtherClassroomIds(
     targetId,
@@ -288,14 +290,14 @@ async function computeExclusiveStudents(
     otherMemberships.map((membership) => membership.studentId)
   )
 
-  return classStudentIds.filter((id) => !otherStudentIds.has(id))
+  return classroomStudentIds.filter((id) => !otherStudentIds.has(id))
 }
 
 /**
  * 学級削除のプレビュー。専属生徒を削除する場合に消える生徒数を返す。
  * 確認モーダルで「△名が削除されます」を出すために使う（実削除は行わない）。
  */
-export async function rosterClassRemovalPreview(
+export async function rosterClassroomRemovalPreview(
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string
@@ -322,7 +324,7 @@ export async function rosterClassRemovalPreview(
  * @param deleteStudents trueなら、その学級にのみ所属する生徒も削除する（他学級にも
  *   在籍する生徒は残す）。falseなら学級登録だけ解除し、生徒は対象に残す。
  */
-export async function rosterRemoveClass(
+export async function rosterRemoveClassroom(
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string,
@@ -333,7 +335,7 @@ export async function rosterRemoveClass(
       ? await computeExclusiveStudents(adapter, targetId, classroomId)
       : []
 
-    await adapter.removeClassAndStudents(
+    await adapter.removeClassroomAndStudents(
       targetId,
       classroomId,
       studentsToRemove
@@ -342,11 +344,11 @@ export async function rosterRemoveClass(
     const scope = await adapter.scope(targetId)
     await recordAuditLog({
       action: adapter.audit.removeAction,
-      entityType: adapter.audit.classEntity,
+      entityType: adapter.audit.classroomEntity,
       entityId: targetId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: adapter.audit.removeClassSummary(studentsToRemove.length),
+      summary: adapter.audit.removeClassroomSummary(studentsToRemove.length),
       extra: { removedStudents: studentsToRemove.length, classroomId },
     })
 

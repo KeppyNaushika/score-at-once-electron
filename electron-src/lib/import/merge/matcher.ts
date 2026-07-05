@@ -13,13 +13,13 @@ import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import {
   type AllMatchResults,
-  type ClassData,
-  matchClasses,
+  type ClassroomData,
+  matchClassrooms,
   type MatchResult,
   matchStudents,
   matchSubtotalGroups,
   matchUsers,
-  preMatchClasses,
+  preMatchClassrooms,
   preMatchStudents,
   preMatchSubtotalGroups,
   type StudentData,
@@ -34,7 +34,7 @@ import {
 // 型の再エクスポート
 export type {
   AllMatchResults,
-  ClassData,
+  ClassroomData,
   MatchResult,
   StudentData,
   SubtotalGroupData,
@@ -45,7 +45,7 @@ export type {
 export {
   detectScoringConflicts,
   detectScoringConflictsWithUserDecisions,
-  matchClasses,
+  matchClassrooms,
   matchStudents,
   matchSubtotalGroups,
   matchUsers,
@@ -60,7 +60,7 @@ export async function performAllMatching(
 ): Promise<AllMatchResults> {
   const [students, classes, users, subtotalGroups] = await Promise.all([
     matchStudents(importData, config.student),
-    matchClasses(importData, config.classroom),
+    matchClassrooms(importData, config.classroom),
     matchUsers(importData, config.user),
     matchSubtotalGroups(importData, config.subtotalGroup),
   ])
@@ -89,17 +89,17 @@ export async function performAllMatching(
 export async function performPreMatching(
   importData: ExtractedArchiveData
 ): Promise<FileOverviewData> {
-  const [studentResult, classResult, subtotalGroupResult, examResult] =
+  const [studentResult, classroomResult, subtotalGroupResult, examResult] =
     await Promise.all([
       preMatchStudents(importData),
-      preMatchClasses(importData),
+      preMatchClassrooms(importData),
       preMatchSubtotalGroups(importData),
       preMatchExam(importData),
     ])
 
   return {
     student: studentResult,
-    classroom: classResult,
+    classroom: classroomResult,
     subtotalGroup: subtotalGroupResult,
     exam: examResult,
   }

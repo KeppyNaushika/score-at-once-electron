@@ -47,7 +47,7 @@ interface StudentExclusionModalProps {
   gradeId: string
   gradeItems: GradeItemWithDetails[]
   students: StudentData[]
-  classIds: string[]
+  classroomIds: string[]
 }
 
 export function StudentExclusionModal({
@@ -56,12 +56,12 @@ export function StudentExclusionModal({
   gradeId,
   gradeItems,
   students,
-  classIds,
+  classroomIds,
 }: StudentExclusionModalProps) {
   const { exclusionSet, loading, isExcluded, toggleExclusion } =
     useGradeItemExclusions(gradeId)
 
-  const classIdSet = useMemo(() => new Set(classIds), [classIds])
+  const classroomIdSet = useMemo(() => new Set(classroomIds), [classroomIds])
 
   const exclusionCount = exclusionSet.size
 
@@ -106,7 +106,7 @@ export function StudentExclusionModal({
               <TableBody>
                 {students.map((gradeStudent) => {
                   const membership = gradeStudent.student.memberships.find(
-                    (candidate) => classIdSet.has(candidate.classroomId)
+                    (candidate) => classroomIdSet.has(candidate.classroomId)
                   )
                   return (
                     <TableRow key={gradeStudent.studentId}>

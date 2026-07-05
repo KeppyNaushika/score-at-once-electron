@@ -20,7 +20,7 @@ export {
 } from "@/electron-src/lib/export/individual-report/types"
 
 // 生徒データの型 = getStudentsForExam の戻り値（ExamStudentWithDetails）。
-// 08結果出力では学級情報は classInfoMap 経由で解決し、受験生徒の識別・所属・
+// 08結果出力では学級情報は classroomInfoMap 経由で解決し、受験生徒の識別・所属・
 // 受験状態・並び順のみを examStudent.student(.memberships) / status / customOrder で参照する。
 export type Student = ExamStudentWithDetails
 

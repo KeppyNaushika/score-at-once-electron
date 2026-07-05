@@ -31,7 +31,7 @@ export type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
 /**
  * 受験日所属生徒（studentId のみ）を含む ExamClassroom 型。
  *
- * getClassMembersForExam が返す集計エンジンの基本型
+ * getClassroomMembersForExam が返す集計エンジンの基本型
  * （Excel学級平均行・個人成績表の学級比較）。memberships は受験日スナップショットで
  * where 絞り込み・出席番号→学籍番号順にソート済み。所属生徒IDは
  * `ec.classroom.memberships.map((m) => m.studentId)` で取得する。

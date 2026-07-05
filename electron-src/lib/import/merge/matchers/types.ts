@@ -28,11 +28,11 @@ export interface StudentData {
 }
 
 /** 学級データ */
-export interface ClassData {
+export interface ClassroomData {
   [key: string]: unknown
   id: string
   name: string
-  classCode: string | null
+  classroomCode: string | null
   grade: number | null
   description: string | null
   updatedAt: string | Date
@@ -61,7 +61,7 @@ export interface SubtotalGroupData {
  */
 export interface AllMatchResults {
   students: MatchResult<StudentData>[]
-  classes: MatchResult<ClassData>[]
+  classes: MatchResult<ClassroomData>[]
   users: MatchResult<UserData>[]
   subtotalGroups: MatchResult<SubtotalGroupData>[]
 }

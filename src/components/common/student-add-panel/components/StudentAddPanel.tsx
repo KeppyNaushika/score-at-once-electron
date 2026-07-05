@@ -41,55 +41,55 @@ import {
 export function StudentAddPanel({
   adapter,
   onAdded,
-  showClassReorder = true,
-  classActiveOnlyDefault = true,
+  showClassroomReorder = true,
+  classroomActiveOnlyDefault = true,
   studentActiveOnlyDefault = true,
   fillHeight = false,
 }: StudentAddPanelProps) {
   const {
     activeTab,
     setActiveTab,
-    classes,
-    selectedClasses,
+    classrooms,
+    selectedClassrooms,
     filteredStudents,
     searchTerm,
     setSearchTerm,
     filterClassroomId,
     setFilterClassroomId,
-    classActiveOnly,
-    setClassActiveOnly,
+    classroomActiveOnly,
+    setClassroomActiveOnly,
     studentActiveOnly,
     setStudentActiveOnly,
-    loadingClasses,
+    loadingClassrooms,
     loadingStudents,
     isAdding,
-    classEmptyReason,
+    classroomEmptyReason,
     studentEmptyReason,
-    selectedClassCount,
+    selectedClassroomCount,
     selectedStudentCount,
-    handleClassSelection,
-    handleClassReorder,
+    handleClassroomSelection,
+    handleClassroomReorder,
     handleStudentSelection,
-    handleAddClasses,
+    handleAddClassrooms,
     handleAddStudents,
   } = useStudentAddPanel({
     adapter,
     onAdded,
-    classActiveOnlyDefault,
+    classroomActiveOnlyDefault,
     studentActiveOnlyDefault,
   })
 
   // 学級候補が空のときの理由別メッセージ（スイッチ状態で文言を変える）
-  const classEmptyMessage = (() => {
-    switch (classEmptyReason) {
+  const classroomEmptyMessage = (() => {
+    switch (classroomEmptyReason) {
       case "noStudents":
         return "生徒が登録されていません。先に「生徒」ページで生徒を登録してください。"
-      case "noClassMembership":
+      case "noClassroomMembership":
         return "学級に所属している生徒がいません。「個別で追加」タブから追加できます。"
-      case "noCurrentInClass":
+      case "noCurrentInClassroom":
         return "在籍中の生徒がいる学級がありません。スイッチをオフにすると、現在在籍していない生徒も表示できます。"
       case "allAdded":
-        return classActiveOnly
+        return classroomActiveOnly
           ? "在籍中の生徒は全て追加しました。"
           : "学級に所属する生徒は全て追加しました。"
       default:
@@ -143,8 +143,8 @@ export function StudentAddPanel({
       <TabsContent value="classrooms" className={tabsContentClass}>
         <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
           <Switch
-            checked={classActiveOnly}
-            onCheckedChange={setClassActiveOnly}
+            checked={classroomActiveOnly}
+            onCheckedChange={setClassroomActiveOnly}
           />
           <span>在籍中の生徒のみ表示</span>
           <span className="text-muted-foreground text-xs">
@@ -154,7 +154,7 @@ export function StudentAddPanel({
 
         <div
           className={`grid grid-cols-1 gap-4 ${
-            showClassReorder ? "lg:grid-cols-2" : ""
+            showClassroomReorder ? "lg:grid-cols-2" : ""
           } ${fillHeight ? "min-h-0 flex-1" : ""}`}
         >
           {/* 利用可能な学級一覧 */}
@@ -166,43 +166,46 @@ export function StudentAddPanel({
               </CardDescription>
             </CardHeader>
             <CardContent className={classListContentClass}>
-              {loadingClasses ? (
+              {loadingClassrooms ? (
                 <div className="py-4 text-center">読み込み中...</div>
-              ) : classes.length === 0 ? (
+              ) : classrooms.length === 0 ? (
                 <div className="text-muted-foreground py-4 text-center">
-                  {classEmptyMessage}
+                  {classroomEmptyMessage}
                 </div>
               ) : (
-                classes.map((classItem) => (
-                  <Card key={classItem.id} className="p-3">
+                classrooms.map((classroomItem) => (
+                  <Card key={classroomItem.id} className="p-3">
                     <div className="flex items-center space-x-3">
                       <Checkbox
-                        id={`add-class-${classItem.id}`}
-                        checked={classItem.isSelected}
+                        id={`add-class-${classroomItem.id}`}
+                        checked={classroomItem.isSelected}
                         onCheckedChange={(checked) =>
-                          handleClassSelection(classItem.id, checked === true)
+                          handleClassroomSelection(
+                            classroomItem.id,
+                            checked === true
+                          )
                         }
                       />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <label
-                            htmlFor={`add-class-${classItem.id}`}
+                            htmlFor={`add-class-${classroomItem.id}`}
                             className="cursor-pointer font-medium"
                           >
-                            {classItem.name}
+                            {classroomItem.name}
                           </label>
                           <TooltipProvider delayDuration={150}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge variant="outline">
-                                  {classItem.studentCount}名
+                                  {classroomItem.studentCount}名
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent
                                 side="left"
                                 className="max-h-64 max-w-xs overflow-auto whitespace-pre-line"
                               >
-                                {classItem.studentNames.join("\n")}
+                                {classroomItem.studentNames.join("\n")}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -216,7 +219,7 @@ export function StudentAddPanel({
           </Card>
 
           {/* 追加順序 */}
-          {showClassReorder && (
+          {showClassroomReorder && (
             <Card className={listCardClass}>
               <CardHeader>
                 <CardTitle className="text-lg">追加順序</CardTitle>
@@ -226,8 +229,8 @@ export function StudentAddPanel({
               </CardHeader>
               <CardContent className={reorderContentClass}>
                 <SortableClassroomList
-                  selectedClasses={selectedClasses}
-                  onReorder={handleClassReorder}
+                  selectedClassrooms={selectedClassrooms}
+                  onReorder={handleClassroomReorder}
                 />
               </CardContent>
             </Card>
@@ -236,13 +239,13 @@ export function StudentAddPanel({
 
         <div className="flex justify-end">
           <Button
-            onClick={handleAddClasses}
-            disabled={selectedClassCount === 0 || isAdding}
+            onClick={handleAddClassrooms}
+            disabled={selectedClassroomCount === 0 || isAdding}
           >
             <Plus className="mr-2 h-4 w-4" />
             {isAdding
               ? "追加中..."
-              : `選択した学級を追加 (${selectedClassCount}学級)`}
+              : `選択した学級を追加 (${selectedClassroomCount}学級)`}
           </Button>
         </div>
       </TabsContent>
@@ -287,7 +290,7 @@ export function StudentAddPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">すべての学級</SelectItem>
-                  {classes.map((classroom) => (
+                  {classrooms.map((classroom) => (
                     <SelectItem key={classroom.id} value={classroom.id}>
                       {classroom.name}
                     </SelectItem>

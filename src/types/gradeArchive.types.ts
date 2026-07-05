@@ -53,7 +53,7 @@ export interface ArchiveGradeData {
   /** 成績出力設定（後方互換: v1.2.0+。GradeExportSettingsと1:1） */
   exportSettings?: { settingsJson: string } | null
   gradeItems: ArchiveGradeItem[]
-  classRefs: { name: string }[]
+  classroomRefs: { name: string }[]
   examRefs: {
     examName: string
     examDate: string | null
@@ -233,7 +233,7 @@ export interface ArchiveBoundariesData {
 
 export interface GradeArchiveImportPreview {
   manifest: GradeArchiveManifest
-  classMatches: { found: boolean; name: string }[]
+  classroomMatches: { found: boolean; name: string }[]
   examMatches: {
     examName: string
     found: boolean

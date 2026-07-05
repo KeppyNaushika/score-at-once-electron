@@ -296,14 +296,14 @@ export function getDiscriminationLevel(r: number | null): DiscriminationLevel {
 /**
  * 特定の生徒の統計データを計算
  *
- * @param studentClasses - studentReport 選択学級 ∩ 本人の受験日所属学級。
+ * @param studentClassrooms - studentReport 選択学級 ∩ 本人の受験日所属学級。
  *   各学級全体を母集団として学級平均・順位を算出（複数学級対応）。
  */
 export function calculateStatisticsForStudent(
   _studentId: string,
   studentScore: number | null,
   allScoringData: ScoringData[],
-  studentClasses: StudentClassroomForStatistics[],
+  studentClassrooms: StudentClassroomForStatistics[],
   questionCorrectRates: Record<string, number>,
   questionScoreRates: Record<string, number>,
   /**
@@ -327,13 +327,13 @@ export function calculateStatisticsForStudent(
   const scoreById = scoreByStudentId ?? buildScoreByStudentId(allScoringData)
 
   // 学級別統計（studentReport 選択学級ごと。母集団＝当該学級全体）
-  const classes: ClassroomStatisticsEntry[] = studentClasses.map(
+  const classrooms: ClassroomStatisticsEntry[] = studentClassrooms.map(
     (classroom) => {
       // allScoringData に存在する所属生徒のみ（在籍はするが採点対象外を除外）
       const presentIds = classroom.memberStudentIds.filter((id) =>
         scoreById.has(id)
       )
-      const classScores = presentIds
+      const classroomScores = presentIds
         .map((id) => scoreById.get(id) ?? null)
         .filter((score): score is number => score !== null)
 
@@ -342,12 +342,14 @@ export function calculateStatisticsForStudent(
         className: classroom.className,
         grade: classroom.grade,
         memberStudentIds: classroom.memberStudentIds,
-        average: calculateAverage(classScores),
-        stdDev: calculateStdDev(classScores),
-        boxPlot: calculateBoxPlotData(classScores),
+        average: calculateAverage(classroomScores),
+        stdDev: calculateStdDev(classroomScores),
+        boxPlot: calculateBoxPlotData(classroomScores),
         total: presentIds.length,
         rank:
-          studentScore !== null ? calculateRank(studentScore, classScores) : 0,
+          studentScore !== null
+            ? calculateRank(studentScore, classroomScores)
+            : 0,
       }
     }
   )
@@ -384,7 +386,7 @@ export function calculateStatisticsForStudent(
       boxPlot: overallBoxPlot,
       total: allScoringData.length,
     },
-    classes,
+    classrooms,
     personal: {
       deviation,
       overallRank,

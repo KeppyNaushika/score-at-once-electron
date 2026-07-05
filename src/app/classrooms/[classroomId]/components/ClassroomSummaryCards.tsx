@@ -5,10 +5,10 @@ import { useMemo } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-import type { ClassStudentResult } from "../hooks/useClassroomExamResults"
+import type { ClassroomStudentResult } from "../hooks/useClassroomExamResults"
 
 interface ClassroomSummaryCardsProps {
-  studentResults: ClassStudentResult[]
+  studentResults: ClassroomStudentResult[]
 }
 
 export function ClassroomSummaryCards({

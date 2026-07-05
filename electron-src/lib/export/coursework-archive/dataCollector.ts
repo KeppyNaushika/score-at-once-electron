@@ -81,12 +81,12 @@ export async function collectCourseworkArchiveData(
 
   // 参照されている生徒・学級・タグの UUID を集約
   const studentIds = new Set<string>()
-  const classIds = new Set<string>()
+  const classroomIds = new Set<string>()
   const tagIds = new Set<string>()
   for (const coursework of rows) {
     coursework.students.forEach((student) => studentIds.add(student.studentId))
     coursework.classrooms.forEach((classroom) =>
-      classIds.add(classroom.classroomId)
+      classroomIds.add(classroom.classroomId)
     )
     coursework.tags.forEach((tag) => tagIds.add(tag.tagId))
     coursework.items.forEach((item) =>
@@ -108,13 +108,13 @@ export async function collectCourseworkArchiveData(
     updatedAt: student.updatedAt.toISOString(),
   }))
 
-  const classRows = await prisma.classroom.findMany({
-    where: { id: { in: [...classIds] } },
+  const classroomRows = await prisma.classroom.findMany({
+    where: { id: { in: [...classroomIds] } },
   })
-  const classesData: ArchiveCwClass[] = classRows.map((classroom) => ({
+  const classesData: ArchiveCwClass[] = classroomRows.map((classroom) => ({
     id: classroom.id,
     name: classroom.name,
-    classCode: classroom.classCode,
+    classroomCode: classroom.classroomCode,
     grade: classroom.grade,
     description: classroom.description,
     isVisible: classroom.isVisible,
@@ -124,7 +124,7 @@ export async function collectCourseworkArchiveData(
   const membershipRows = await prisma.studentClassroomMembership.findMany({
     where: {
       studentId: { in: [...studentIds] },
-      classroomId: { in: [...classIds] },
+      classroomId: { in: [...classroomIds] },
     },
   })
   const membershipsData: ArchiveCwMembership[] = membershipRows.map(

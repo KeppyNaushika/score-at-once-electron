@@ -48,7 +48,7 @@ export function createArchiveApi() {
     studentArchive: {
       exportStudents: (options: {
         studentIds: string[]
-        classIds?: string[]
+        classroomIds?: string[]
       }) => ipcRenderer.invoke("studentArchive:exportStudents", options),
       selectImportFile: () =>
         ipcRenderer.invoke("studentArchive:selectImportFile"),

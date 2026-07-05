@@ -86,20 +86,20 @@ export function computeFilteredStats(
       : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
 
   // 学級別統計を受験状態フィルタ付きで再計算（学級ごとに memberStudentIds で母集団を絞る）
-  const classes = report.statistics.classes.map((classroom) => {
+  const classrooms = report.statistics.classrooms.map((classroom) => {
     const memberSet = new Set(classroom.memberStudentIds)
     const filteredMembers = filteredAll.filter((entry) =>
       memberSet.has(entry.studentId)
     )
-    const classScores = filteredMembers
+    const classroomScores = filteredMembers
       .map((entry) => entry.totalScore)
       .filter((score): score is number => score !== null)
     return {
       ...classroom,
-      average: average(classScores),
-      stdDev: stdDev(classScores),
+      average: average(classroomScores),
+      stdDev: stdDev(classroomScores),
       total: filteredMembers.length,
-      rank: studentScore !== null ? rank(studentScore, classScores) : 0,
+      rank: studentScore !== null ? rank(studentScore, classroomScores) : 0,
     }
   })
 
@@ -111,7 +111,7 @@ export function computeFilteredStats(
       stdDev: overallStd,
       total: filteredAll.length,
     },
-    classes,
+    classrooms,
     personal: {
       ...report.statistics.personal,
       deviation,
@@ -371,15 +371,15 @@ export function buildStatsItems(
   }
 
   // 複数学級時はラベルに学級名を付して区別する（単一学級なら従来どおり「学級平均」）
-  const multipleClasses = filteredStats.classes.length > 1
-  const classLabel = (className: string, suffix: string) =>
-    multipleClasses ? `${className}${suffix}` : `学級${suffix}`
+  const multipleClassrooms = filteredStats.classrooms.length > 1
+  const classroomLabel = (className: string, suffix: string) =>
+    multipleClassrooms ? `${className}${suffix}` : `学級${suffix}`
 
   if (options.showAverage !== "none") {
     if (options.showAverage === "class" || options.showAverage === "both") {
-      for (const classroom of filteredStats.classes) {
+      for (const classroom of filteredStats.classrooms) {
         items.push({
-          label: classLabel(classroom.className, "平均"),
+          label: classroomLabel(classroom.className, "平均"),
           value: classroom.average.toFixed(1),
         })
       }
@@ -401,9 +401,9 @@ export function buildStatsItems(
 
   if (options.showRank) {
     if (options.rankType === "class" || options.rankType === "both") {
-      for (const classroom of filteredStats.classes) {
+      for (const classroom of filteredStats.classrooms) {
         items.push({
-          label: classLabel(classroom.className, "順位"),
+          label: classroomLabel(classroom.className, "順位"),
           value: `${classroom.rank} / ${classroom.total}`,
         })
       }

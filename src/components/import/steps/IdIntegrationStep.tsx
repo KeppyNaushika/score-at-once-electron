@@ -34,7 +34,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     state.fileOverviewData &&
     state.fileOverviewData.student.byId.length <
       (state.manifest?.counts.students ?? 0)
-  const hasClassDecisions =
+  const hasClassroomDecisions =
     state.fileOverviewData &&
     state.fileOverviewData.classroom.byId.length <
       (state.manifest?.counts.classrooms ?? 0)
@@ -57,7 +57,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
   // 何も判断が必要ない場合はスキップ可能
   const canSkip =
-    !hasStudentDecisions && !hasClassDecisions && !hasSubtotalGroupDecisions
+    !hasStudentDecisions && !hasClassroomDecisions && !hasSubtotalGroupDecisions
 
   if (canSkip) {
     return (
@@ -119,7 +119,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           <TabsTrigger value="classroom" className="gap-2">
             <School className="h-4 w-4" />
             学級
-            {hasClassDecisions && (
+            {hasClassroomDecisions && (
               <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">
                 !
               </span>

@@ -9,7 +9,7 @@ import type {
 } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
 import { isCurrentMembership } from "@/lib/membership"
 
-interface SelectableClass extends AddPanelClassroomItem {
+interface SelectableClassroom extends AddPanelClassroomItem {
   isSelected: boolean
 }
 
@@ -20,18 +20,18 @@ interface SelectableStudent extends AddPanelStudentItem {
 interface UseStudentAddPanelParams {
   adapter: StudentAddPanelAdapter
   onAdded: () => void
-  classActiveOnlyDefault: boolean
+  classroomActiveOnlyDefault: boolean
   studentActiveOnlyDefault: boolean
 }
 
 /** 学級候補が空になった理由（空表示メッセージの出し分け用） */
-export type ClassEmptyReason =
+export type ClassroomEmptyReason =
   /** システムに生徒が1人も登録されていない（要・生徒登録） */
   | "noStudents"
   /** 生徒はいるが、どの学級にも所属していない */
-  | "noClassMembership"
+  | "noClassroomMembership"
   /** 学級に所属者はいるが、在籍中（スイッチON条件）が0名 */
-  | "noCurrentInClass"
+  | "noCurrentInClassroom"
   /** 学級に所属する生徒はいるが、追加可能分は全て追加済み */
   | "allAdded"
 
@@ -50,19 +50,20 @@ export type StudentEmptyReason =
  * 対象スコープのアダプタ（未追加候補）だけでは「生徒0人」と「全員追加済み」を
  * 区別できないため、システム全体の生徒（追加済み含む）を見て判定する。
  */
-async function resolveClassEmptyReason(
+async function resolveClassroomEmptyReason(
   adapter: StudentAddPanelAdapter,
-  classActiveOnly: boolean
-): Promise<ClassEmptyReason> {
+  classroomActiveOnly: boolean
+): Promise<ClassroomEmptyReason> {
   const allStudents = await window.electronAPI.fetchStudents()
   if (allStudents.length === 0) return "noStudents"
-  const anyInClass = allStudents.some(
+  const anyInClassroom = allStudents.some(
     (student) => student.memberships.length > 0
   )
-  if (!anyInClass) return "noClassMembership"
+  if (!anyInClassroom) return "noClassroomMembership"
   // 学級所属者はいる。未追加の学級候補（在籍条件なし）が残るかで切り分ける
-  const classesAny = await adapter.fetchAvailableClasses(false)
-  if (classActiveOnly && classesAny.length > 0) return "noCurrentInClass"
+  const classroomsAny = await adapter.fetchAvailableClassrooms(false)
+  if (classroomActiveOnly && classroomsAny.length > 0)
+    return "noCurrentInClassroom"
   return "allAdded"
 }
 
@@ -97,44 +98,46 @@ async function resolveStudentEmptyReason(
 export function useStudentAddPanel({
   adapter,
   onAdded,
-  classActiveOnlyDefault,
+  classroomActiveOnlyDefault,
   studentActiveOnlyDefault,
 }: UseStudentAddPanelParams) {
   const [activeTab, setActiveTab] = useState("classrooms")
-  const [classes, setClasses] = useState<SelectableClass[]>([])
+  const [classrooms, setClassrooms] = useState<SelectableClassroom[]>([])
   const [students, setStudents] = useState<SelectableStudent[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterClassroomId, setFilterClassroomId] = useState("all")
-  const [classActiveOnly, setClassActiveOnly] = useState(classActiveOnlyDefault)
+  const [classroomActiveOnly, setClassroomActiveOnly] = useState(
+    classroomActiveOnlyDefault
+  )
   const [studentActiveOnly, setStudentActiveOnly] = useState(
     studentActiveOnlyDefault
   )
-  const [loadingClasses, setLoadingClasses] = useState(false)
+  const [loadingClassrooms, setLoadingClassrooms] = useState(false)
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
-  const [classEmptyReason, setClassEmptyReason] =
-    useState<ClassEmptyReason | null>(null)
+  const [classroomEmptyReason, setClassroomEmptyReason] =
+    useState<ClassroomEmptyReason | null>(null)
   const [studentEmptyReason, setStudentEmptyReason] =
     useState<StudentEmptyReason | null>(null)
 
-  const loadClasses = useCallback(async () => {
-    setLoadingClasses(true)
+  const loadClassrooms = useCallback(async () => {
+    setLoadingClassrooms(true)
     try {
-      const result = await adapter.fetchAvailableClasses(classActiveOnly)
-      setClasses(
+      const result = await adapter.fetchAvailableClassrooms(classroomActiveOnly)
+      setClassrooms(
         result.map((classroom) => ({ ...classroom, isSelected: false }))
       )
-      setClassEmptyReason(
+      setClassroomEmptyReason(
         result.length > 0
           ? null
-          : await resolveClassEmptyReason(adapter, classActiveOnly)
+          : await resolveClassroomEmptyReason(adapter, classroomActiveOnly)
       )
     } catch (error) {
-      console.error("Failed to fetch available classes:", error)
+      console.error("Failed to fetch available classrooms:", error)
     } finally {
-      setLoadingClasses(false)
+      setLoadingClassrooms(false)
     }
-  }, [adapter, classActiveOnly])
+  }, [adapter, classroomActiveOnly])
 
   const loadStudents = useCallback(async () => {
     setLoadingStudents(true)
@@ -154,28 +157,32 @@ export function useStudentAddPanel({
   }, [adapter, studentActiveOnly])
 
   useEffect(() => {
-    loadClasses()
-  }, [loadClasses])
+    loadClassrooms()
+  }, [loadClassrooms])
 
   useEffect(() => {
     loadStudents()
   }, [loadStudents])
 
-  const handleClassSelection = (classroomId: string, isSelected: boolean) => {
-    setClasses((prev) =>
+  const handleClassroomSelection = (
+    classroomId: string,
+    isSelected: boolean
+  ) => {
+    setClassrooms((prev) =>
       prev.map((classroom) =>
         classroom.id === classroomId ? { ...classroom, isSelected } : classroom
       )
     )
   }
 
-  const handleClassReorder = (orderedIds: string[]) => {
-    setClasses((prev) => {
+  const handleClassroomReorder = (orderedIds: string[]) => {
+    setClassrooms((prev) => {
       const byId = new Map(prev.map((classroom) => [classroom.id, classroom]))
       const reordered = orderedIds
         .map((id) => byId.get(id))
         .filter(
-          (classroom): classroom is SelectableClass => classroom !== undefined
+          (classroom): classroom is SelectableClassroom =>
+            classroom !== undefined
         )
       // 並び替え対象（選択済み）以外はそのまま末尾に残す
       const rest = prev.filter(
@@ -193,19 +200,19 @@ export function useStudentAddPanel({
     )
   }
 
-  const handleAddClasses = async () => {
-    const selected = classes.filter((classroom) => classroom.isSelected)
+  const handleAddClassrooms = async () => {
+    const selected = classrooms.filter((classroom) => classroom.isSelected)
     if (selected.length === 0) return
     setIsAdding(true)
     try {
-      await adapter.addClasses(
+      await adapter.addClassrooms(
         selected.map((classroom) => classroom.id),
-        classActiveOnly
+        classroomActiveOnly
       )
-      await Promise.all([loadClasses(), loadStudents()])
+      await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
-      console.error("Failed to add classes:", error)
+      console.error("Failed to add classrooms:", error)
       alert(
         "学級の追加に失敗しました: " +
           (error instanceof Error ? error.message : "Unknown error")
@@ -221,7 +228,7 @@ export function useStudentAddPanel({
     setIsAdding(true)
     try {
       await adapter.addStudents(selected.map((student) => student.id))
-      await Promise.all([loadClasses(), loadStudents()])
+      await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
       console.error("Failed to add students:", error)
@@ -243,16 +250,18 @@ export function useStudentAddPanel({
       fullName.includes(term) ||
       fullKana.includes(term) ||
       student.studentNumber.toLowerCase().includes(term)
-    const matchesClass =
+    const matchesClassroom =
       filterClassroomId === "all" ||
       student.memberships.some(
         (membership) => membership.classroom.id === filterClassroomId
       )
-    return matchesSearch && matchesClass
+    return matchesSearch && matchesClassroom
   })
 
-  const selectedClasses = classes.filter((classroom) => classroom.isSelected)
-  const selectedClassCount = selectedClasses.length
+  const selectedClassrooms = classrooms.filter(
+    (classroom) => classroom.isSelected
+  )
+  const selectedClassroomCount = selectedClassrooms.length
   const selectedStudentCount = students.filter(
     (student) => student.isSelected
   ).length
@@ -260,29 +269,29 @@ export function useStudentAddPanel({
   return {
     activeTab,
     setActiveTab,
-    classes,
-    selectedClasses,
+    classrooms,
+    selectedClassrooms,
     students,
     filteredStudents,
     searchTerm,
     setSearchTerm,
     filterClassroomId,
     setFilterClassroomId,
-    classActiveOnly,
-    setClassActiveOnly,
+    classroomActiveOnly,
+    setClassroomActiveOnly,
     studentActiveOnly,
     setStudentActiveOnly,
-    loadingClasses,
+    loadingClassrooms,
     loadingStudents,
     isAdding,
-    classEmptyReason,
+    classroomEmptyReason,
     studentEmptyReason,
-    selectedClassCount,
+    selectedClassroomCount,
     selectedStudentCount,
-    handleClassSelection,
-    handleClassReorder,
+    handleClassroomSelection,
+    handleClassroomReorder,
     handleStudentSelection,
-    handleAddClasses,
+    handleAddClassrooms,
     handleAddStudents,
   }
 }

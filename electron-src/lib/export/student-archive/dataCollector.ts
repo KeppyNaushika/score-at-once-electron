@@ -21,11 +21,11 @@ export interface CollectedStudentArchiveData {
  * 生徒アーカイブ用のデータを収集
  *
  * @param studentIds - エクスポート対象の生徒ID
- * @param classIds - エクスポート対象の学級ID（省略時: 選択生徒に関連する全学級）
+ * @param classroomIds - エクスポート対象の学級ID（省略時: 選択生徒に関連する全学級）
  */
 export async function collectStudentArchiveData(
   studentIds: string[],
-  classIds?: string[]
+  classroomIds?: string[]
 ): Promise<CollectedStudentArchiveData> {
   // 1. 生徒を取得
   const students = await prisma.student.findMany({
@@ -42,9 +42,9 @@ export async function collectStudentArchiveData(
     ...new Set(allMemberships.map((membership) => membership.classroomId)),
   ]
 
-  // classIdsが指定されていればフィルタ
-  const targetClassroomIds = classIds
-    ? relatedClassroomIds.filter((id) => classIds.includes(id))
+  // classroomIdsが指定されていればフィルタ
+  const targetClassroomIds = classroomIds
+    ? relatedClassroomIds.filter((id) => classroomIds.includes(id))
     : relatedClassroomIds
 
   // 4. 学級を取得
@@ -77,7 +77,7 @@ export async function collectStudentArchiveData(
     classrooms: classes.map((classroom) => ({
       id: classroom.id,
       name: classroom.name,
-      classCode: classroom.classCode,
+      classroomCode: classroom.classroomCode,
       grade: classroom.grade,
       description: classroom.description,
       isVisible: classroom.isVisible,

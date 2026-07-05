@@ -15,7 +15,7 @@ interface UseExamStudentsDataProps {
 }
 
 /**
- * customOrder → 学級順（placement.classOrder）→ 出席番号順で受験生徒を比較する。
+ * customOrder → 学級順（placement.classroomOrder）→ 出席番号順で受験生徒を比較する。
  * placement（ExamClassroom 由来の表示学級情報）は studentId をキーに別持ちする side data。
  */
 function compareExamStudents(
@@ -48,9 +48,10 @@ function compareExamStudents(
     // customOrder が未設定の場合はデフォルト順（学級順→出席番号順）
     const placementA = placementByStudent[examStudentA.studentId]
     const placementB = placementByStudent[examStudentB.studentId]
-    const classOrderA = placementA?.order ?? 99999
-    const classOrderB = placementB?.order ?? 99999
-    if (classOrderA !== classOrderB) return classOrderA - classOrderB
+    const classroomOrderA = placementA?.order ?? 99999
+    const classroomOrderB = placementB?.order ?? 99999
+    if (classroomOrderA !== classroomOrderB)
+      return classroomOrderA - classroomOrderB
 
     const attendanceA = placementA?.attendanceNumber ?? 99999
     const attendanceB = placementB?.attendanceNumber ?? 99999
@@ -67,7 +68,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [placementByStudent, setPlacementByStudent] = useState<
     Record<string, ExamClassroomPlacement>
   >({})
-  const [classes, setClasses] = useState<RosterClassroomOption[]>([]) // フィルタ用学級情報
+  const [classrooms, setClassrooms] = useState<RosterClassroomOption[]>([]) // フィルタ用学級情報
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<ExamStudentStatus | "all">(
     "all"
@@ -83,14 +84,14 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
   // データの再読み込み
   const refreshStudentData = useCallback(async () => {
-    const [studentsResult, administeredClasses] = await Promise.all([
+    const [studentsResult, administeredClassrooms] = await Promise.all([
       window.electronAPI.getStudentsForExam(examId),
       window.electronAPI.examClassroom.getAdministered(examId),
     ])
 
     if (studentsResult.success && studentsResult.students) {
       // 採番学級は administered 学級（DB 構造）から renderer 側で解決する
-      const placement = resolveExamClassroomPlacement(administeredClasses)
+      const placement = resolveExamClassroomPlacement(administeredClassrooms)
 
       // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
       const sortedExamStudents = [...studentsResult.students].sort(
@@ -113,7 +114,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
           }
         })
       })
-      setClasses(Array.from(uniqueClasses.values()))
+      setClassrooms(Array.from(uniqueClasses.values()))
     } else {
       console.error("Failed to refresh student data:", studentsResult.error)
     }
@@ -219,13 +220,13 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
         statusFilter === "all" || examStudent.status === statusFilter
 
       // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック
-      const matchesClass =
+      const matchesClassroom =
         selectedClassroomId === "all" ||
         student.memberships?.some(
           (membership) => membership.classroom.id === selectedClassroomId
         )
 
-      return matchesSearch && matchesStatus && matchesClass
+      return matchesSearch && matchesStatus && matchesClassroom
     },
     [searchTerm, statusFilter, selectedClassroomId]
   )
@@ -302,7 +303,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     loading,
     students: examStudents,
     placementByStudent,
-    classes,
+    classrooms,
     searchTerm,
     setSearchTerm,
     statusFilter,

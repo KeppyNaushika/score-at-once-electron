@@ -10,14 +10,14 @@ import type { ReactNode } from "react"
 
 /** 登録済み学級1件（リンクID＋表示に必要な学級情報） */
 export interface ClassroomRosterEntry {
-  /** リンクのID（examClassroomId / gradeClass.id / courseworkClass.id） */
+  /** リンクのID（examClassroomId / gradeClassroom.id / courseworkClassroom.id） */
   id: string
   /** 学級ID（Class.id） */
   classroomId: string
   /** 学級名 */
   name: string
   /** 学級コード（任意） */
-  classCode?: string | null
+  classroomCode?: string | null
   /** 学年（任意） */
   grade?: number | null
   /** 登録時点の所属生徒数 */
@@ -30,7 +30,7 @@ export interface ClassroomRosterEntry {
 export interface AvailableClassroomOption {
   id: string
   name: string
-  classCode?: string | null
+  classroomCode?: string | null
   grade?: number | null
   studentCount: number
 }
@@ -58,9 +58,9 @@ export interface ClassroomRosterFlagColumn {
  * - `unlink-only`: 登録を解除するだけ（生徒は残す）。試験はこちら（採点データは05で管理）。
  * - `can-delete-students`: 登録解除に加え、その学級にのみ所属する生徒も削除できる。成績・資料。
  */
-export type ClassRemovalMode = "unlink-only" | "can-delete-students"
+export type ClassroomRemovalMode = "unlink-only" | "can-delete-students"
 
 /** 削除プレビュー（その学級にのみ所属する＝削除対象になる生徒数） */
-export interface ClassRemovalPreview {
+export interface ClassroomRemovalPreview {
   exclusiveCount: number
 }

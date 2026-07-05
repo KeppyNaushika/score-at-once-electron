@@ -16,26 +16,26 @@ import {
   previewCourseworkImport,
 } from "../lib/import/coursework-archive"
 import {
-  addStudentsFromClassToCoursework,
+  addStudentsFromClassroomToCoursework,
   addStudentsToCoursework,
   batchUpsertCourseworkScores,
   createCoursework,
   createCourseworkItem,
   deleteCoursework,
   deleteCourseworkItem,
-  getAvailableClassesForCoursework,
+  getAvailableClassroomsForCoursework,
   getAvailableStudentsForCoursework,
   getCourseworkById,
   getCourseworkCandidates,
-  getCourseworkClasses,
-  getCourseworkClassRemovalPreview,
+  getCourseworkClassroomRemovalPreview,
+  getCourseworkClassrooms,
   getCourseworks,
   getCourseworkScoresByItemId,
   getCourseworkStudents,
-  removeClassFromCoursework,
+  removeClassroomFromCoursework,
   removeStudentsFromCoursework,
   reorderCourseworkItems,
-  setCourseworkClassOrders,
+  setCourseworkClassroomOrders,
   setCourseworkTags,
   updateCoursework,
   updateCourseworkItem,
@@ -145,19 +145,19 @@ export function setupCourseworkHandlers(): void {
     }
   )
 
-  // 名簿（CourseworkStudent / CourseworkClass）
+  // 名簿（CourseworkStudent / CourseworkClassroom）
   registerHandler("coursework:getStudents", async (courseworkId: string) => {
     return getCourseworkStudents(courseworkId)
   })
 
-  registerHandler("coursework:getClasses", async (courseworkId: string) => {
-    return getCourseworkClasses(courseworkId)
+  registerHandler("coursework:getClassrooms", async (courseworkId: string) => {
+    return getCourseworkClassrooms(courseworkId)
   })
 
   registerHandler(
-    "coursework:getAvailableClasses",
+    "coursework:getAvailableClassrooms",
     async (courseworkId: string, activeOnly?: boolean) => {
-      return getAvailableClassesForCoursework(courseworkId, activeOnly)
+      return getAvailableClassroomsForCoursework(courseworkId, activeOnly)
     }
   )
 
@@ -169,9 +169,9 @@ export function setupCourseworkHandlers(): void {
   )
 
   registerHandler(
-    "coursework:addStudentsFromClass",
+    "coursework:addStudentsFromClassroom",
     async (courseworkId: string, classroomId: string, activeOnly?: boolean) => {
-      return addStudentsFromClassToCoursework(
+      return addStudentsFromClassroomToCoursework(
         courseworkId,
         classroomId,
         activeOnly
@@ -204,13 +204,13 @@ export function setupCourseworkHandlers(): void {
   )
 
   registerHandler(
-    "coursework:removeClass",
+    "coursework:removeClassroom",
     async (
       courseworkId: string,
       classroomId: string,
       deleteStudents = true
     ) => {
-      return removeClassFromCoursework(
+      return removeClassroomFromCoursework(
         courseworkId,
         classroomId,
         deleteStudents
@@ -219,16 +219,16 @@ export function setupCourseworkHandlers(): void {
   )
 
   registerHandler(
-    "coursework:classRemovalPreview",
+    "coursework:classroomRemovalPreview",
     async (courseworkId: string, classroomId: string) => {
-      return getCourseworkClassRemovalPreview(courseworkId, classroomId)
+      return getCourseworkClassroomRemovalPreview(courseworkId, classroomId)
     }
   )
 
   registerHandler(
-    "coursework:setClassOrders",
+    "coursework:setClassroomOrders",
     async (courseworkId: string, orderedClassroomIds: string[]) => {
-      return setCourseworkClassOrders(courseworkId, orderedClassroomIds)
+      return setCourseworkClassroomOrders(courseworkId, orderedClassroomIds)
     }
   )
 

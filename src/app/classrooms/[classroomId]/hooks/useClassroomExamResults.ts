@@ -22,7 +22,7 @@ export interface ExamResult {
   subtotalScores: SubtotalScoreResult[]
 }
 
-export interface ClassStudentResult {
+export interface ClassroomStudentResult {
   studentId: string
   studentNumber: string
   studentName: string
@@ -31,13 +31,16 @@ export interface ClassStudentResult {
 }
 
 export function useClassroomExamResults(classroomId: string) {
-  const [studentResults, setStudentResults] = useState<ClassStudentResult[]>([])
+  const [studentResults, setStudentResults] = useState<
+    ClassroomStudentResult[]
+  >([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const data = await window.electronAPI.getClassExamResults(classroomId)
+        const data =
+          await window.electronAPI.getClassroomExamResults(classroomId)
         setStudentResults(data)
       } catch (error) {
         console.error("Failed to fetch class exam results:", error)

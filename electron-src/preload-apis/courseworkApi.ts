@@ -63,11 +63,11 @@ export function createCourseworkApi() {
       // 名簿
       getStudents: (courseworkId: string) =>
         ipcRenderer.invoke("coursework:getStudents", courseworkId),
-      getClasses: (courseworkId: string) =>
-        ipcRenderer.invoke("coursework:getClasses", courseworkId),
-      getAvailableClasses: (courseworkId: string, activeOnly?: boolean) =>
+      getClassrooms: (courseworkId: string) =>
+        ipcRenderer.invoke("coursework:getClassrooms", courseworkId),
+      getAvailableClassrooms: (courseworkId: string, activeOnly?: boolean) =>
         ipcRenderer.invoke(
-          "coursework:getAvailableClasses",
+          "coursework:getAvailableClassrooms",
           courseworkId,
           activeOnly
         ),
@@ -77,13 +77,13 @@ export function createCourseworkApi() {
           courseworkId,
           activeOnly
         ),
-      addStudentsFromClass: (
+      addStudentsFromClassroom: (
         courseworkId: string,
         classroomId: string,
         activeOnly?: boolean
       ) =>
         ipcRenderer.invoke(
-          "coursework:addStudentsFromClass",
+          "coursework:addStudentsFromClassroom",
           courseworkId,
           classroomId,
           activeOnly
@@ -105,26 +105,29 @@ export function createCourseworkApi() {
           courseworkId,
           studentIds
         ),
-      removeClass: (
+      removeClassroom: (
         courseworkId: string,
         classroomId: string,
         deleteStudents?: boolean
       ) =>
         ipcRenderer.invoke(
-          "coursework:removeClass",
+          "coursework:removeClassroom",
           courseworkId,
           classroomId,
           deleteStudents
         ),
-      classRemovalPreview: (courseworkId: string, classroomId: string) =>
+      classroomRemovalPreview: (courseworkId: string, classroomId: string) =>
         ipcRenderer.invoke(
-          "coursework:classRemovalPreview",
+          "coursework:classroomRemovalPreview",
           courseworkId,
           classroomId
         ),
-      setClassOrders: (courseworkId: string, orderedClassroomIds: string[]) =>
+      setClassroomOrders: (
+        courseworkId: string,
+        orderedClassroomIds: string[]
+      ) =>
         ipcRenderer.invoke(
-          "coursework:setClassOrders",
+          "coursework:setClassroomOrders",
           courseworkId,
           orderedClassroomIds
         ),

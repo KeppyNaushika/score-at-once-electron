@@ -39,7 +39,7 @@ const STUDENT_FIELD_LABELS: Record<string, string> = {
 
 const CLASS_FIELD_LABELS: Record<string, string> = {
   name: "学級名",
-  classCode: "学級コード",
+  classroomCode: "学級コード",
   grade: "学年",
   description: "説明",
 }
@@ -99,7 +99,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
   const { state, setFieldUpdateDecision, setBulkUpdateStrategy, goToNextStep } =
     wizard
 
-  const { student, classroom: classResult } = state.fileOverviewData ?? {
+  const { student, classroom: classroomResult } = state.fileOverviewData ?? {
     student: { byId: [], noMatch: [] },
     classroom: { byId: [], noMatch: [] },
   }
@@ -111,7 +111,10 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
       ...(student.byStudentNumber ?? []),
       ...(student.byName ?? []),
     ]
-    const allClassMatched = [...classResult.byId, ...(classResult.byName ?? [])]
+    const allClassroomMatched = [
+      ...classroomResult.byId,
+      ...(classroomResult.byName ?? []),
+    ]
 
     return [
       ...extractUpdateableItems(
@@ -120,12 +123,12 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
         STUDENT_FIELD_LABELS
       ),
       ...extractUpdateableItems(
-        allClassMatched,
+        allClassroomMatched,
         "classroom",
         CLASS_FIELD_LABELS
       ),
     ]
-  }, [student, classResult])
+  }, [student, classroomResult])
 
   // 初期値を設定（keep_existing をデフォルトに）
   useEffect(() => {

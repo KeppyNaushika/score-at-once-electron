@@ -53,7 +53,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
   },
   classroom: {
     name: "学級名",
-    classCode: "学級コード",
+    classroomCode: "学級コード",
     grade: "学年",
     description: "説明",
   },
@@ -210,7 +210,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
       )
     : []
 
-  const classItems = fileOverviewData
+  const classroomItems = fileOverviewData
     ? extractUpdateableItems(
         fileOverviewData.classroom,
         idIntegrationConfig.classroom,
@@ -226,7 +226,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
       )
     : []
 
-  const allItems = [...studentItems, ...classItems, ...subtotalGroupItems]
+  const allItems = [...studentItems, ...classroomItems, ...subtotalGroupItems]
   const hasUpdates = allItems.length > 0
 
   return (
@@ -270,11 +270,11 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
               )}
 
               {/* 学級 */}
-              {classItems.length > 0 && (
+              {classroomItems.length > 0 && (
                 <CategoryUpdateSection
                   icon={<GraduationCap className="h-5 w-5" />}
                   title="学級"
-                  items={classItems}
+                  items={classroomItems}
                   updateDecisions={updateDecisions}
                   onFieldDecision={setFieldUpdateDecision}
                   onBulkStrategy={setBulkUpdateStrategy}

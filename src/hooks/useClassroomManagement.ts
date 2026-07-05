@@ -29,9 +29,8 @@ interface Membership {
 /** 学級の詳細表示・編集・所属関係の管理を提供するカスタムフック */
 export function useClassroomManagement(classroomId: string) {
   const [loading, setLoading] = useState(true)
-  const [classData, setClassData] = useState<ClassroomWithMemberships | null>(
-    null
-  )
+  const [classroomData, setClassroomData] =
+    useState<ClassroomWithMemberships | null>(null)
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
   const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
@@ -44,12 +43,12 @@ export function useClassroomManagement(classroomId: string) {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const classes = await window.electronAPI.fetchClasses()
-      const targetClass = classes.find(
+      const classrooms = await window.electronAPI.fetchClassrooms()
+      const targetClassroom = classrooms.find(
         (classroom) => classroom.id === classroomId
       )
-      if (targetClass) {
-        setClassData(targetClass)
+      if (targetClassroom) {
+        setClassroomData(targetClassroom)
       }
 
       const fetchedStudents = await window.electronAPI.fetchStudents()
@@ -69,22 +68,24 @@ export function useClassroomManagement(classroomId: string) {
     return () => cancelAnimationFrame(frame)
   }, [fetchData])
 
-  const handleSaveClass = async (
-    classInfo: Partial<ClassroomWithMemberships>
+  const handleSaveClassroom = async (
+    classroomInfo: Partial<ClassroomWithMemberships>
   ) => {
     try {
       // Extract memberships to avoid type conflicts
-      const { memberships: _memberships, ...classUpdateData } = classInfo
+      const { memberships: _memberships, ...classroomUpdateData } =
+        classroomInfo
       const updateInput: Prisma.ClassroomUpdateInput & { id: string } = {
         id: classroomId,
-        name: classUpdateData.name,
-        classCode: classUpdateData.classCode,
-        grade: classUpdateData.grade,
-        description: classUpdateData.description,
-        isVisible: classUpdateData.isVisible,
+        name: classroomUpdateData.name,
+        classroomCode: classroomUpdateData.classroomCode,
+        grade: classroomUpdateData.grade,
+        description: classroomUpdateData.description,
+        isVisible: classroomUpdateData.isVisible,
       }
-      const updatedClass = await window.electronAPI.updateClass(updateInput)
-      setClassData(updatedClass)
+      const updatedClassroom =
+        await window.electronAPI.updateClassroom(updateInput)
+      setClassroomData(updatedClassroom)
       setIsClassroomModalOpen(false)
     } catch (error) {
       console.error("Failed to update class:", error)
@@ -116,7 +117,7 @@ export function useClassroomManagement(classroomId: string) {
         )
       } else if (membershipData.studentId) {
         // 新規所属関係を作成
-        const membership = await window.electronAPI.addStudentToClass(
+        const membership = await window.electronAPI.addStudentToClassroom(
           membershipData.studentId,
           classroomId,
           membershipData.startDate ?? undefined,
@@ -133,12 +134,12 @@ export function useClassroomManagement(classroomId: string) {
       }
 
       // Refresh class data
-      const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find(
+      const classrooms = await window.electronAPI.fetchClassrooms()
+      const updatedClassroom = classrooms.find(
         (classroom) => classroom.id === classroomId
       )
-      if (updatedClass) {
-        setClassData(updatedClass)
+      if (updatedClassroom) {
+        setClassroomData(updatedClassroom)
       }
       setIsMembershipModalOpen(false)
     } catch (error) {
@@ -153,12 +154,12 @@ export function useClassroomManagement(classroomId: string) {
         await window.electronAPI.deleteStudentClassroomMembership(membershipId)
 
         // Refresh class data
-        const classes = await window.electronAPI.fetchClasses()
-        const updatedClass = classes.find(
+        const classrooms = await window.electronAPI.fetchClassrooms()
+        const updatedClassroom = classrooms.find(
           (classroom) => classroom.id === classroomId
         )
-        if (updatedClass) {
-          setClassData(updatedClass)
+        if (updatedClassroom) {
+          setClassroomData(updatedClassroom)
         }
       } catch (error) {
         console.error("Failed to delete membership:", error)
@@ -175,12 +176,12 @@ export function useClassroomManagement(classroomId: string) {
       }
 
       // Refresh class data
-      const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find(
+      const classrooms = await window.electronAPI.fetchClassrooms()
+      const updatedClassroom = classrooms.find(
         (classroom) => classroom.id === classroomId
       )
-      if (updatedClass) {
-        setClassData(updatedClass)
+      if (updatedClassroom) {
+        setClassroomData(updatedClassroom)
       }
     } catch (error) {
       console.error("Failed to delete memberships:", error)
@@ -188,11 +189,11 @@ export function useClassroomManagement(classroomId: string) {
     }
   }
 
-  const handleDeleteClass = async () => {
+  const handleDeleteClassroom = async () => {
     if (window.confirm("この学級を削除しますか？")) {
       try {
-        await window.electronAPI.deleteClass(classroomId)
-        // Navigate back to classes list would be handled by the component
+        await window.electronAPI.deleteClassroom(classroomId)
+        // Navigate back to classrooms list would be handled by the component
       } catch (error) {
         console.error("Failed to delete class:", error)
         alert("学級の削除に失敗しました。")
@@ -202,7 +203,7 @@ export function useClassroomManagement(classroomId: string) {
 
   return {
     loading,
-    classData,
+    classroomData,
     students,
     isClassroomModalOpen,
     setIsClassroomModalOpen,
@@ -212,12 +213,12 @@ export function useClassroomManagement(classroomId: string) {
     setIsMembershipModalOpen,
     membershipToEdit,
     setMembershipToEdit,
-    handleSaveClass,
+    handleSaveClassroom,
     handleStudentImportSuccess,
     handleSaveMembership,
     handleDeleteMembership,
     handleBulkDeleteMemberships,
-    handleDeleteClass,
+    handleDeleteClassroom,
   }
 }
 

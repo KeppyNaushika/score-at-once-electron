@@ -19,7 +19,7 @@ import {
 import { useTableSort } from "@/hooks/useTableSort"
 
 import type {
-  ClassStudentResult,
+  ClassroomStudentResult,
   ExamResult,
 } from "../hooks/useClassroomExamResults"
 
@@ -85,7 +85,7 @@ const SLOPE_THRESHOLD = 1.5
 // ── コンポーネント ──
 
 interface StudentInsightsCardProps {
-  studentResults: ClassStudentResult[]
+  studentResults: ClassroomStudentResult[]
 }
 
 export function StudentInsightsCard({

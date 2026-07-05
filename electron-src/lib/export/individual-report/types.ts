@@ -220,7 +220,7 @@ export interface StatisticsData {
   }
 
   // 学級統計（studentReport 選択学級ごと。複数学級対応）
-  classes: ClassroomStatisticsEntry[]
+  classrooms: ClassroomStatisticsEntry[]
 
   // 個人統計
   personal: {

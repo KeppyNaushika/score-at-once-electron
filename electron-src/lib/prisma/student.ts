@@ -353,7 +353,7 @@ export const getStudentExamResults = async (
   }
 }
 
-export interface ClassStudentExamResult {
+export interface ClassroomStudentExamResult {
   studentId: string
   studentNumber: string
   studentName: string
@@ -362,9 +362,9 @@ export interface ClassStudentExamResult {
 }
 
 /** 学級に所属する全生徒の試験成績を一括取得する */
-export const getClassExamResults = async (
+export const getClassroomExamResults = async (
   classroomId: string
-): Promise<ClassStudentExamResult[]> => {
+): Promise<ClassroomStudentExamResult[]> => {
   try {
     const memberships = await prisma.studentClassroomMembership.findMany({
       where: {
@@ -377,7 +377,7 @@ export const getClassExamResults = async (
       orderBy: [{ attendanceNumber: "asc" }, { student: { lastName: "asc" } }],
     })
 
-    const results: ClassStudentExamResult[] = []
+    const results: ClassroomStudentExamResult[] = []
 
     for (const membership of memberships) {
       const examResults = await getStudentExamResults(membership.student.id)

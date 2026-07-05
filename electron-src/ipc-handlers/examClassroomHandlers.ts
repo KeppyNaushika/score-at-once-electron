@@ -1,9 +1,9 @@
 import {
   addExamClassroom,
   AddExamClassroomOptions,
-  addStudentsFromClass,
-  getAdministeredClasses,
-  getAvailableClassesForExam,
+  addStudentsFromClassroom,
+  getAdministeredClassrooms,
+  getAvailableClassroomsForExam,
   getExamClassrooms,
   removeExamClassroom,
   removeExamClassroomByIds,
@@ -16,14 +16,14 @@ import { registerHandler } from "./ipcHandlerUtils"
 
 /** 試験と学級の関連付け（ExamClassroom）に関するIPCチャンネルを登録する */
 export function setupExamClassroomHandlers(): void {
-  // Get all classes for a exam
+  // Get all classrooms for a exam
   registerHandler("exam-class:get-all", async (examId: string) => {
     return await getExamClassrooms(examId)
   })
 
-  // Get administered classes (for adding students)
+  // Get administered classrooms (for adding students)
   registerHandler("exam-class:get-administered", async (examId: string) => {
-    return await getAdministeredClasses(examId)
+    return await getAdministeredClassrooms(examId)
   })
 
   // Add a class to a exam
@@ -55,20 +55,20 @@ export function setupExamClassroomHandlers(): void {
     }
   )
 
-  // Get available classes (not yet in ExamClassroom)
+  // Get available classrooms (not yet in ExamClassroom)
   registerHandler("exam-class:get-available", async (examId: string) => {
-    return await getAvailableClassesForExam(examId)
+    return await getAvailableClassroomsForExam(examId)
   })
 
   // Add students from class (B案: 統合型フロー)
   registerHandler(
     "exam-class:add-students-from-class",
     async (examId: string, classroomId: string, activeOnly = true) => {
-      return await addStudentsFromClass(examId, classroomId, activeOnly)
+      return await addStudentsFromClassroom(examId, classroomId, activeOnly)
     }
   )
 
-  // Reorder exam classes
+  // Reorder exam classrooms
   registerHandler(
     "exam-class:reorder",
     async (options: ReorderExamClassroomsOptions) => {

@@ -57,7 +57,7 @@ const HELP05_KEYFRAMES = `
 `
 
 /** 学級を選ぶと、その学級の生徒の行がまとめて追加される様子 */
-function ClassAddFigure() {
+function ClassroomAddFigure() {
   const rows = [
     { no: "1", name: "佐藤 花子" },
     { no: "2", name: "鈴木 一郎" },
@@ -187,7 +187,7 @@ export function HelpContent05Students() {
           「学級で追加」では、学級を選ぶとその学級の生徒をまとめて登録できます。複数の学級を選んだときは、追加する順序も並べ替えて決められます。一度にたくさんの生徒を登録したいときに便利です。
         </p>
         <Figure caption="学級を選ぶと、その学級の生徒がまとめて一覧に追加されます。">
-          <ClassAddFigure />
+          <ClassroomAddFigure />
         </Figure>
         <p>
           「個別で追加」では、名前・ふりがな・学籍番号で生徒を検索し、必要な生徒だけを選んで登録できます。学級でしぼり込むこともできます。

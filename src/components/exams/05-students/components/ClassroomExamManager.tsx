@@ -14,12 +14,12 @@ import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroo
 interface ClassroomExamManagerProps {
   examId: string
   examClassrooms: ExamClassroomWithMemberships[]
-  onRemoveClass: (examClassroomId: string) => Promise<boolean>
-  onUpdateClass: (
+  onRemoveClassroom: (examClassroomId: string) => Promise<boolean>
+  onUpdateClassroom: (
     examClassroomId: string,
     options: { administered?: boolean }
   ) => Promise<unknown>
-  onClassesChanged?: () => void
+  onClassroomsChanged?: () => void
   showAddDialog?: boolean
   onShowAddDialogChange?: (open: boolean) => void
 }
@@ -34,9 +34,9 @@ interface ClassroomExamManagerProps {
 export function ClassroomExamManager({
   examId,
   examClassrooms,
-  onRemoveClass,
-  onUpdateClass,
-  onClassesChanged,
+  onRemoveClassroom,
+  onUpdateClassroom,
+  onClassroomsChanged,
   showAddDialog,
   onShowAddDialogChange,
 }: ClassroomExamManagerProps) {
@@ -46,7 +46,7 @@ export function ClassroomExamManager({
         id: examClassroom.id,
         classroomId: examClassroom.classroomId,
         name: examClassroom.classroom.name,
-        classCode: examClassroom.classroom.classCode,
+        classroomCode: examClassroom.classroom.classroomCode,
         grade: examClassroom.classroom.grade,
         studentCount: examClassroom.classroom.memberships.length,
         order: examClassroom.order,
@@ -82,11 +82,11 @@ export function ClassroomExamManager({
         ),
         checked: (entry) => administeredById.get(entry.id) ?? false,
         onChange: async (entry, checked) => {
-          await onUpdateClass(entry.id, { administered: checked })
+          await onUpdateClassroom(entry.id, { administered: checked })
         },
       },
     ],
-    [administeredById, onUpdateClass]
+    [administeredById, onUpdateClassroom]
   )
 
   return (
@@ -101,19 +101,19 @@ export function ClassroomExamManager({
         </>
       }
       emptyHint="「学級を追加」ボタンから学級を追加してください"
-      fetchAvailableClasses={async () => {
-        const classes =
+      fetchAvailableClassrooms={async () => {
+        const classrooms =
           await window.electronAPI.examClassroom.getAvailable(examId)
-        return classes.map((classroom): AvailableClassroomOption => ({
+        return classrooms.map((classroom): AvailableClassroomOption => ({
           id: classroom.id,
           name: classroom.name,
-          classCode: classroom.classCode,
+          classroomCode: classroom.classroomCode,
           grade: classroom.grade,
           studentCount: classroom.studentCount,
         }))
       }}
-      onAddClasses={async (classIds) => {
-        for (const classroomId of classIds) {
+      onAddClassrooms={async (classroomIds) => {
+        for (const classroomId of classroomIds) {
           // administered の学級は既定で教員集計・生徒表示の対象（移行の
           // studentReport=administered と整合）。出力スコープは後から08で調整可能。
           await window.electronAPI.examClassroom.add({
@@ -129,9 +129,9 @@ export function ClassroomExamManager({
         await window.electronAPI.examClassroom.reorder({ examId, orderedIds })
       }}
       onRemove={async (entry) => {
-        await onRemoveClass(entry.id)
+        await onRemoveClassroom(entry.id)
       }}
-      onChanged={onClassesChanged}
+      onChanged={onClassroomsChanged}
       showAddDialog={showAddDialog}
       onShowAddDialogChange={onShowAddDialogChange}
     />

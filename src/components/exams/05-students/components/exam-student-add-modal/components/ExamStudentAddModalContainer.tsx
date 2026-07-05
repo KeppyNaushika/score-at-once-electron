@@ -23,7 +23,7 @@ import {
  * 試験への生徒追加モーダル
  *
  * 共通 StudentAddPanel を試験用 adapter で駆動する。学級追加はサーバ集約の
- * examClassroom.addStudentsFromClass（ExamClassroom作成＋customOrder連番）に委譲する。
+ * examClassroom.addStudentsFromClassroom（ExamClassroom作成＋customOrder連番）に委譲する。
  */
 export function ExamStudentAddModalContainer({
   isOpen,
@@ -33,13 +33,13 @@ export function ExamStudentAddModalContainer({
 }: ExamStudentAddModalProps) {
   const adapter = useMemo<StudentAddPanelAdapter>(
     () => ({
-      fetchAvailableClasses: async (activeOnly) => {
-        const result = await window.electronAPI.getClassesNotInExam(
+      fetchAvailableClassrooms: async (activeOnly) => {
+        const result = await window.electronAPI.getClassroomsNotInExam(
           examId,
           activeOnly
         )
-        if (!result.success || !result.classes) return []
-        return result.classes.map((classroom): AddPanelClassroomItem => ({
+        if (!result.success || !result.classrooms) return []
+        return result.classrooms.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
           studentCount: classroom.studentCount,
@@ -68,11 +68,11 @@ export function ExamStudentAddModalContainer({
           })),
         }))
       },
-      addClasses: async (orderedClassroomIds, activeOnly) => {
+      addClassrooms: async (orderedClassroomIds, activeOnly) => {
         // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）
         for (const classroomId of orderedClassroomIds) {
           const result =
-            await window.electronAPI.examClassroom.addStudentsFromClass(
+            await window.electronAPI.examClassroom.addStudentsFromClassroom(
               examId,
               classroomId,
               activeOnly

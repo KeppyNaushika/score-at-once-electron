@@ -11,7 +11,7 @@ import { membershipFilterAt } from "./membershipFilter"
 export interface AvailableClassroomItem {
   id: string
   name: string
-  classCode: string | null
+  classroomCode: string | null
   grade: number | null
   /** この学級から新たに追加できる在籍生徒数（対象に未追加かつ activeOnly 条件を満たす生徒の人数） */
   studentCount: number
@@ -22,14 +22,14 @@ export interface AvailableClassroomItem {
 /**
  * 追加可能な学級候補を返す
  *
- * @param existingClassroomIds 候補から除外する学級ID（成績の GradeClass など、既に紐付け済みの学級）
+ * @param existingClassroomIds 候補から除外する学級ID（成績の GradeClassroom など、既に紐付け済みの学級）
  * @param excludeStudentIds 人数カウントから除外する生徒ID（既に対象へ追加済みの生徒）
  * @param referenceDate 在籍判定の基準日（exam=examDate / grade=referenceDate、null可）
  * @param activeOnly true なら基準日時点で在籍中（終了していない所属）の生徒のみ数える
  *
  * いずれの場合も、追加できる在籍生徒が0名の学級は候補から除外する。
  */
-export async function getAvailableClassesForTarget(params: {
+export async function getAvailableClassroomsForTarget(params: {
   existingClassroomIds: string[]
   excludeStudentIds: string[]
   referenceDate: Date | null
@@ -39,7 +39,7 @@ export async function getAvailableClassesForTarget(params: {
     params
   const excluded = new Set(excludeStudentIds)
 
-  const classes = await prisma.classroom.findMany({
+  const classrooms = await prisma.classroom.findMany({
     where:
       existingClassroomIds.length > 0
         ? { id: { notIn: existingClassroomIds } }
@@ -57,7 +57,7 @@ export async function getAvailableClassesForTarget(params: {
     orderBy: [{ grade: "asc" }, { name: "asc" }],
   })
 
-  return classes
+  return classrooms
     .map((classroom) => {
       // 同一生徒の複数在籍歴を重複カウントせず、対象に未追加の生徒だけ集める
       const seen = new Set<string>()
@@ -76,7 +76,7 @@ export async function getAvailableClassesForTarget(params: {
       return {
         id: classroom.id,
         name: classroom.name,
-        classCode: classroom.classCode,
+        classroomCode: classroom.classroomCode,
         grade: classroom.grade,
         studentCount: studentNames.length,
         studentNames,

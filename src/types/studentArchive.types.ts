@@ -63,7 +63,7 @@ export interface ExportStudentsArchiveOptions {
   /** エクスポート対象の生徒ID */
   studentIds: string[]
   /** エクスポート対象の学級ID（省略時: 選択生徒に関連する全学級） */
-  classIds?: string[]
+  classroomIds?: string[]
 }
 
 /**

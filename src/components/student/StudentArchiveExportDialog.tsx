@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface ClassInfo {
+interface ClassroomInfo {
   id: string
   name: string
 }
@@ -30,7 +30,9 @@ export function StudentArchiveExportDialog({
   onClose,
   selectedStudentIds,
 }: StudentArchiveExportDialogProps) {
-  const [relatedClasses, setRelatedClasses] = useState<ClassInfo[]>([])
+  const [relatedClassrooms, setRelatedClassrooms] = useState<ClassroomInfo[]>(
+    []
+  )
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
@@ -41,7 +43,7 @@ export function StudentArchiveExportDialog({
   useEffect(() => {
     if (!isOpen || selectedStudentIds.size === 0) return
 
-    const fetchClasses = async () => {
+    const fetchClassrooms = async () => {
       setIsLoading(true)
       try {
         const allStudents = await window.electronAPI.fetchStudents()
@@ -50,38 +52,41 @@ export function StudentArchiveExportDialog({
         )
 
         // 紐づく学級を収集
-        const classMap = new Map<string, string>()
+        const classroomMap = new Map<string, string>()
         for (const student of selectedStudents) {
           for (const membership of student.memberships || []) {
             if (
               membership.classroom &&
-              !classMap.has(membership.classroom.id)
+              !classroomMap.has(membership.classroom.id)
             ) {
-              classMap.set(membership.classroom.id, membership.classroom.name)
+              classroomMap.set(
+                membership.classroom.id,
+                membership.classroom.name
+              )
             }
           }
         }
 
-        const classes = Array.from(classMap.entries())
+        const classrooms = Array.from(classroomMap.entries())
           .map(([id, name]) => ({ id, name }))
           .sort((entryA, entryB) => entryA.name.localeCompare(entryB.name))
 
-        setRelatedClasses(classes)
+        setRelatedClassrooms(classrooms)
         // デフォルト: 全学級を選択
         setSelectedClassroomIds(
-          new Set(classes.map((classroom) => classroom.id))
+          new Set(classrooms.map((classroom) => classroom.id))
         )
       } catch (error) {
-        console.error("Failed to fetch classes:", error)
+        console.error("Failed to fetch classrooms:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchClasses()
+    fetchClassrooms()
   }, [isOpen, selectedStudentIds])
 
-  const toggleClass = (classroomId: string) => {
+  const toggleClassroom = (classroomId: string) => {
     setSelectedClassroomIds((prev) => {
       const next = new Set(prev)
       if (next.has(classroomId)) {
@@ -94,11 +99,11 @@ export function StudentArchiveExportDialog({
   }
 
   const toggleAll = () => {
-    if (selectedClassroomIds.size === relatedClasses.length) {
+    if (selectedClassroomIds.size === relatedClassrooms.length) {
       setSelectedClassroomIds(new Set())
     } else {
       setSelectedClassroomIds(
-        new Set(relatedClasses.map((classroom) => classroom.id))
+        new Set(relatedClassrooms.map((classroom) => classroom.id))
       )
     }
   }
@@ -108,8 +113,8 @@ export function StudentArchiveExportDialog({
     try {
       const result = await window.electronAPI.studentArchive.exportStudents({
         studentIds: Array.from(selectedStudentIds),
-        classIds:
-          selectedClassroomIds.size === relatedClasses.length
+        classroomIds:
+          selectedClassroomIds.size === relatedClassrooms.length
             ? undefined
             : Array.from(selectedClassroomIds),
       })
@@ -144,7 +149,7 @@ export function StudentArchiveExportDialog({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             </div>
-          ) : relatedClasses.length === 0 ? (
+          ) : relatedClassrooms.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               選択した生徒に紐づく学級はありません。
               <br />
@@ -165,7 +170,7 @@ export function StudentArchiveExportDialog({
                 <label className="hover:bg-muted/50 flex items-center gap-3 border-b px-4 py-2.5">
                   <Checkbox
                     checked={
-                      selectedClassroomIds.size === relatedClasses.length
+                      selectedClassroomIds.size === relatedClassrooms.length
                         ? true
                         : selectedClassroomIds.size > 0
                           ? "indeterminate"
@@ -176,14 +181,14 @@ export function StudentArchiveExportDialog({
                   <span className="text-sm font-medium">すべて選択</span>
                 </label>
 
-                {relatedClasses.map((classroom) => (
+                {relatedClassrooms.map((classroom) => (
                   <label
                     key={classroom.id}
                     className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5"
                   >
                     <Checkbox
                       checked={selectedClassroomIds.has(classroom.id)}
-                      onCheckedChange={() => toggleClass(classroom.id)}
+                      onCheckedChange={() => toggleClassroom(classroom.id)}
                     />
                     <span className="text-sm">{classroom.name}</span>
                   </label>

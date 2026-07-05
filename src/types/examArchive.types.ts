@@ -291,7 +291,7 @@ export type ConflictPolicy =
  */
 export type ConflictCategory =
   | "Student"
-  | "Class"
+  | "Classroom"
   | "User"
   | "Exam"
   | "SubtotalGroup"
@@ -834,7 +834,7 @@ export interface ArchiveClassesData {
   classrooms: Array<{
     id: string
     name: string
-    classCode: string | null
+    classroomCode: string | null
     grade: number | null
     description: string | null
     isVisible: boolean

@@ -221,7 +221,7 @@ export function GradeListContainer() {
                   const StepIcon = STEP_ICONS[status.step] ?? BarChart3
 
                   const classNames = grade.gradeClassrooms
-                    .map((gradeClass) => gradeClass.classroom.name)
+                    .map((gradeClassroom) => gradeClassroom.classroom.name)
                     .join("、")
 
                   return (

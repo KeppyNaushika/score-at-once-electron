@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import type { ClassStudentResult } from "../hooks/useClassroomExamResults"
+import type { ClassroomStudentResult } from "../hooks/useClassroomExamResults"
 
 // ── 型定義 ──
 
@@ -66,7 +66,7 @@ const formatShortDate = (date: Date) =>
 // ── コンポーネント ──
 
 interface ClassroomScoreTrendChartProps {
-  studentResults: ClassStudentResult[]
+  studentResults: ClassroomStudentResult[]
 }
 
 export function ClassroomScoreTrendChart({

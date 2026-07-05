@@ -32,7 +32,7 @@ export default function StudentDetailPage() {
 
   const {
     student,
-    classes,
+    classrooms,
     loading,
     handleEditStudent,
     handleDeleteStudent,
@@ -212,7 +212,7 @@ export default function StudentDetailPage() {
                 firstNameKana: student.firstNameKana,
               },
             ]}
-            availableClasses={classes}
+            availableClassrooms={classrooms}
             membershipToEdit={membershipToEdit}
           />
         )}

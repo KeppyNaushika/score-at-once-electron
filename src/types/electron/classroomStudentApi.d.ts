@@ -29,7 +29,7 @@ interface StudentExamResult {
   subtotalScores: SubtotalScoreResult[]
 }
 
-interface ClassStudentExamResult {
+interface ClassroomStudentExamResult {
   studentId: string
   studentNumber: string
   studentName: string
@@ -42,16 +42,16 @@ interface ClassStudentExamResult {
  */
 export interface ClassroomStudentAPI {
   // Class related
-  fetchClasses: () => Promise<ClassroomWithMemberships[]>
-  getClassesNotInExam: (
+  fetchClassrooms: () => Promise<ClassroomWithMemberships[]>
+  getClassroomsNotInExam: (
     examId: string,
     activeOnly?: boolean
   ) => Promise<{
     success: boolean
-    classes?: Array<{
+    classrooms?: Array<{
       id: string
       name: string
-      classCode: string | null
+      classroomCode: string | null
       grade: number | null
       studentCount: number
       studentNames: string[]
@@ -66,13 +66,13 @@ export interface ClassroomStudentAPI {
     students?: StudentWithMemberships[]
     error?: string
   }>
-  createClass: (
-    classData: Prisma.ClassroomCreateWithoutTeachersInput
+  createClassroom: (
+    classroomData: Prisma.ClassroomCreateWithoutTeachersInput
   ) => Promise<ClassroomWithMemberships>
-  updateClass: (
-    classData: Prisma.ClassroomUpdateInput & { id: string }
+  updateClassroom: (
+    classroomData: Prisma.ClassroomUpdateInput & { id: string }
   ) => Promise<ClassroomWithMemberships> // Ensure id is part of update
-  deleteClass: (classroomId: string) => Promise<Classroom | void>
+  deleteClassroom: (classroomId: string) => Promise<Classroom | void>
 
   // Student related
   fetchStudents: () => Promise<StudentWithMemberships[]>
@@ -85,15 +85,15 @@ export interface ClassroomStudentAPI {
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
   getStudentExamResults: (studentId: string) => Promise<StudentExamResult[]>
-  getClassExamResults: (
+  getClassroomExamResults: (
     classroomId: string
-  ) => Promise<ClassStudentExamResult[]>
+  ) => Promise<ClassroomStudentExamResult[]>
   exportStudentsExcel: (selectedStudentIds: string[]) => Promise<{
     success: boolean
     outputPath?: string
     error?: string
   }>
-  exportClassesExcel: (selectedClassroomIds: string[]) => Promise<{
+  exportClassroomsExcel: (selectedClassroomIds: string[]) => Promise<{
     success: boolean
     outputPath?: string
     error?: string
@@ -117,7 +117,7 @@ export interface ClassroomStudentAPI {
   getCurrentMembershipsByClassroomId: (
     classroomId: string
   ) => Promise<StudentClassroomMembershipWithDetails[]>
-  addStudentToClass: (
+  addStudentToClassroom: (
     studentId: string,
     classroomId: string,
     startDate?: Date,

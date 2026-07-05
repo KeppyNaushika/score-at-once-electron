@@ -64,7 +64,7 @@ export function RosterTable({
   onRowsChange,
 }: RosterTableProps) {
   const [rows, setRows] = useState<RosterRow[]>([])
-  const [classes, setClasses] = useState<RosterClassroomOption[]>([])
+  const [classrooms, setClassrooms] = useState<RosterClassroomOption[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassroomId, setSelectedClassroomId] = useState("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -83,12 +83,12 @@ export function RosterTable({
   const loadData = useCallback(async () => {
     onLoadingChange?.(true)
     try {
-      const [fetchedRows, fetchedClasses] = await Promise.all([
+      const [fetchedRows, fetchedClassrooms] = await Promise.all([
         adapter.fetchRows(),
-        adapter.fetchClasses(),
+        adapter.fetchClassrooms(),
       ])
       setRows(fetchedRows)
-      setClasses(fetchedClasses)
+      setClassrooms(fetchedClassrooms)
     } catch (error) {
       console.error("Failed to load roster data:", error)
     } finally {
@@ -118,19 +118,19 @@ export function RosterTable({
         fullKana.includes(term) ||
         row.studentNumber.toLowerCase().includes(term)
 
-      const matchesClass =
+      const matchesClassroom =
         selectedClassroomId === "all" ||
-        row.classInfo.className ===
-          classes.find((classroom) => classroom.id === selectedClassroomId)
+        row.classroomInfo.className ===
+          classrooms.find((classroom) => classroom.id === selectedClassroomId)
             ?.name
 
       const matchesAdditional = additionalFilters.every((filter) =>
         filter.predicate(row)
       )
 
-      return matchesSearch && matchesClass && matchesAdditional
+      return matchesSearch && matchesClassroom && matchesAdditional
     })
-  }, [rows, searchTerm, selectedClassroomId, classes, additionalFilters])
+  }, [rows, searchTerm, selectedClassroomId, classrooms, additionalFilters])
 
   const handleSelectionChange = useCallback(
     (studentId: string, isSelected: boolean) => {
@@ -232,8 +232,8 @@ export function RosterTable({
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           selectedClassroomId={selectedClassroomId}
-          onClassChange={setSelectedClassroomId}
-          classes={classes}
+          onClassroomChange={setSelectedClassroomId}
+          classrooms={classrooms}
           additionalFilters={additionalFilters}
         />
         {enableRemove && selectedIds.size > 0 && (

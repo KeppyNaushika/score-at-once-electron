@@ -19,8 +19,8 @@ interface RosterTableFiltersProps {
   searchTerm: string
   onSearchChange: (value: string) => void
   selectedClassroomId: string
-  onClassChange: (value: string) => void
-  classes: RosterClassroomOption[]
+  onClassroomChange: (value: string) => void
+  classrooms: RosterClassroomOption[]
   additionalFilters: RosterFilter[]
 }
 
@@ -29,8 +29,8 @@ export function RosterTableFilters({
   searchTerm,
   onSearchChange,
   selectedClassroomId,
-  onClassChange,
-  classes,
+  onClassroomChange,
+  classrooms,
   additionalFilters,
 }: RosterTableFiltersProps) {
   return (
@@ -45,13 +45,13 @@ export function RosterTableFilters({
         />
       </div>
 
-      <Select value={selectedClassroomId} onValueChange={onClassChange}>
+      <Select value={selectedClassroomId} onValueChange={onClassroomChange}>
         <SelectTrigger className="w-40">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">すべての学級</SelectItem>
-          {classes.map((classroom) => (
+          {classrooms.map((classroom) => (
             <SelectItem key={classroom.id} value={classroom.id}>
               {classroom.name}
             </SelectItem>

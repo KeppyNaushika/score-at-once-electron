@@ -317,7 +317,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [],
+        classroomRefs: [],
         examRefs: [],
         studentRefs: [
           {
@@ -436,7 +436,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [],
+        classroomRefs: [],
         examRefs: [],
         studentRefs: [
           {
@@ -542,7 +542,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [],
+        classroomRefs: [],
         examRefs: [],
         studentRefs: [
           {
@@ -637,7 +637,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [],
+        classroomRefs: [],
         examRefs: [],
         studentRefs: [],
       },
@@ -736,7 +736,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [],
+        classroomRefs: [],
         examRefs: [],
         studentRefs: [
           {
@@ -875,7 +875,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [],
+        classroomRefs: [],
         examRefs: [],
         studentRefs: [
           {
@@ -1079,7 +1079,7 @@ describe("grade-archive ラウンドトリップ", () => {
             ],
           },
         ],
-        classRefs: [{ name: `旧学級_${suffix}` }],
+        classroomRefs: [{ name: `旧学級_${suffix}` }],
         examRefs: [],
         studentRefs: [
           {

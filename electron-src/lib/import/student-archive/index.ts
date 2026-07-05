@@ -17,7 +17,7 @@ import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "../merge/idChangeExecutor"
 import { processMemberships } from "../merge/idIntegrationImporter"
-import { preMatchClasses } from "../merge/matchers/classroomMatcher"
+import { preMatchClassrooms } from "../merge/matchers/classroomMatcher"
 import { preMatchStudents } from "../merge/matchers/studentMatcher"
 import {
   processClassroomIdIntegration,
@@ -30,7 +30,7 @@ import type { ExtractedStudentArchiveData } from "./archiveExtractor"
 /**
  * ExtractedStudentArchiveData を ExtractedArchiveData 互換のオブジェクトに変換
  *
- * preMatchStudents/preMatchClasses は ExtractedArchiveData を受け取るため、
+ * preMatchStudents/preMatchClassrooms は ExtractedArchiveData を受け取るため、
  * 必要なフィールドのみを持つ互換オブジェクトを作成する
  */
 function toCompatibleData(
@@ -60,14 +60,14 @@ export async function performStudentPreMatching(
 ): Promise<StudentArchiveFileOverviewData> {
   const { data } = transformStudentToLatest(rawData)
   const compatData = toCompatibleData(data)
-  const [studentResult, classResult] = await Promise.all([
+  const [studentResult, classroomResult] = await Promise.all([
     preMatchStudents(compatData as ExtractedArchiveData),
-    preMatchClasses(compatData as ExtractedArchiveData),
+    preMatchClassrooms(compatData as ExtractedArchiveData),
   ])
 
   return {
     student: studentResult,
-    classroom: classResult,
+    classroom: classroomResult,
   }
 }
 

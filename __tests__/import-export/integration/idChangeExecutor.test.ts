@@ -431,7 +431,7 @@ describe("executeIdChanges", () => {
         data: {
           id: existingClassroomId,
           name: "1年A組",
-          classCode: "1A",
+          classroomCode: "1A",
           grade: 1,
         },
       })
@@ -480,11 +480,11 @@ describe("executeIdChanges", () => {
       })
 
       // 新しいIDでレコードが存在し、元のnameを保持していること
-      const newClass = await prisma.classroom.findUnique({
+      const newClassroom = await prisma.classroom.findUnique({
         where: { id: newClassroomId },
       })
-      expect(newClass).not.toBeNull()
-      expect(newClass!.name).toBe("1年A組")
+      expect(newClassroom).not.toBeNull()
+      expect(newClassroom!.name).toBe("1年A組")
 
       // 古いIDのレコードが削除されていること
       const oldClass = await prisma.classroom.findUnique({

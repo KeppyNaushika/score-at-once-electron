@@ -5,7 +5,7 @@ import ClassroomManagementTable from "@/components/classroom/ClassroomManagement
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 
-export default function ClassesPage() {
+export default function ClassroomsPage() {
   const { helpButton } = usePageHelp()
 
   return (

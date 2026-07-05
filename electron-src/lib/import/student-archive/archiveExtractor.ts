@@ -75,12 +75,12 @@ export async function extractStudentArchive(archivePath: string): Promise<{
     )
 
     // classes.json を読み込み
-    const classesPath = path.join(tempDir, "classes.json")
-    if (!fs.existsSync(classesPath)) {
+    const classroomsPath = path.join(tempDir, "classes.json")
+    if (!fs.existsSync(classroomsPath)) {
       return { success: false, error: "classes.json が見つかりません" }
     }
     const classesData: ArchiveClassesData = normalizeLegacyClassroomKeys(
-      JSON.parse(fs.readFileSync(classesPath, "utf-8"))
+      JSON.parse(fs.readFileSync(classroomsPath, "utf-8"))
     )
 
     return {

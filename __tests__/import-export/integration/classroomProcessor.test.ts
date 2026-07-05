@@ -57,14 +57,14 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: classroomId,
           name: "1年A組",
-          classCode: "1A",
+          classroomCode: "1A",
           grade: 1,
         },
       })
 
       const data = createExtractedArchiveData({
         classesData: createArchiveClassesData([
-          { id: classroomId, name: "1年A組", classCode: "1A", grade: 1 },
+          { id: classroomId, name: "1年A組", classroomCode: "1A", grade: 1 },
         ]),
       })
 
@@ -114,14 +114,14 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: existingId,
           name: "2年B組",
-          classCode: "2B",
+          classroomCode: "2B",
           grade: 2,
         },
       })
 
       const data = createExtractedArchiveData({
         classesData: createArchiveClassesData([
-          { id: importId, name: "2年B組", classCode: "2B-new", grade: 2 },
+          { id: importId, name: "2年B組", classroomCode: "2B-new", grade: 2 },
         ]),
       })
 
@@ -164,7 +164,7 @@ describe("processClassroomIdIntegration", () => {
 
       const data = createExtractedArchiveData({
         classesData: createArchiveClassesData([
-          { id: importId, name: "3年C組", classCode: "3C", grade: 3 },
+          { id: importId, name: "3年C組", classroomCode: "3C", grade: 3 },
         ]),
       })
 
@@ -214,7 +214,7 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: existingId,
           name: "1年A組",
-          classCode: "1A",
+          classroomCode: "1A",
           grade: 1,
         },
       })
@@ -224,7 +224,7 @@ describe("processClassroomIdIntegration", () => {
           {
             id: importId,
             name: "1年A組_renamed",
-            classCode: "1A-new",
+            classroomCode: "1A-new",
             grade: 1,
           },
         ]),
@@ -279,7 +279,7 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: existingId,
           name: "2年B組",
-          classCode: "2B",
+          classroomCode: "2B",
           grade: 2,
         },
       })
@@ -289,7 +289,7 @@ describe("processClassroomIdIntegration", () => {
           {
             id: importId,
             name: "2年B組_import",
-            classCode: "2B-import",
+            classroomCode: "2B-import",
             grade: 2,
           },
         ]),
@@ -398,7 +398,7 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: existingId,
           name: "1年A組",
-          classCode: "1A-old",
+          classroomCode: "1A-old",
           grade: 1,
         },
       })
@@ -408,7 +408,7 @@ describe("processClassroomIdIntegration", () => {
           {
             id: importId,
             name: "1年A組", // 既存と同じ名前
-            classCode: "1A-new",
+            classroomCode: "1A-new",
             grade: 1,
           },
         ]),
@@ -475,7 +475,7 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: existingId,
           name: "旧名クラス",
-          classCode: "OLD",
+          classroomCode: "OLD",
           grade: 1,
           description: "旧説明",
         },
@@ -485,7 +485,7 @@ describe("processClassroomIdIntegration", () => {
         {
           id: importId,
           name: "新名クラス",
-          classCode: "NEW",
+          classroomCode: "NEW",
           grade: 2,
         },
       ])
@@ -515,7 +515,7 @@ describe("processClassroomIdIntegration", () => {
 
       const updateDecisions = {
         [`classroom:${importId}`]: {
-          classCode: "use_import" as const,
+          classroomCode: "use_import" as const,
           grade: "use_import" as const,
         },
       }
@@ -537,7 +537,7 @@ describe("processClassroomIdIntegration", () => {
       const updated = await prisma.classroom.findUnique({
         where: { id: existingId },
       })
-      expect(updated!.classCode).toBe("NEW")
+      expect(updated!.classroomCode).toBe("NEW")
       expect(updated!.grade).toBe(2)
       // 更新対象外のフィールドは元のまま
       expect(updated!.name).toBe("旧名クラス")
@@ -559,7 +559,7 @@ describe("processClassroomIdIntegration", () => {
         data: {
           id: existingId,
           name: "古い名前",
-          classCode: "OLD",
+          classroomCode: "OLD",
           grade: 1,
           updatedAt: oldDate,
         },
@@ -567,7 +567,7 @@ describe("processClassroomIdIntegration", () => {
 
       const newerDate = new Date("2025-06-01")
       const classesData = createArchiveClassesData([
-        { id: importId, name: "新しい名前", classCode: "NEW", grade: 2 },
+        { id: importId, name: "新しい名前", classroomCode: "NEW", grade: 2 },
       ])
       classesData.classrooms[0].updatedAt = newerDate.toISOString()
 
@@ -594,7 +594,7 @@ describe("processClassroomIdIntegration", () => {
 
       const updateDecisions = {
         [`classroom:${importId}`]: {
-          classCode: "use_newer" as const,
+          classroomCode: "use_newer" as const,
         },
       }
 
@@ -615,7 +615,7 @@ describe("processClassroomIdIntegration", () => {
       const updated = await prisma.classroom.findUnique({
         where: { id: existingId },
       })
-      expect(updated!.classCode).toBe("NEW")
+      expect(updated!.classroomCode).toBe("NEW")
       expect(counts.updated.classrooms).toBe(1)
     })
   })

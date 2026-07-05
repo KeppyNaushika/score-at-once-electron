@@ -83,7 +83,7 @@ export interface ArchiveCwStudent {
 export interface ArchiveCwClass {
   id: string
   name: string
-  classCode: string | null
+  classroomCode: string | null
   grade: number | null
   description: string | null
   isVisible: boolean

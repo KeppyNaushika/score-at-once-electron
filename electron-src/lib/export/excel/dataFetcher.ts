@@ -110,10 +110,10 @@ export async function fetchExportData(
 
         // 未指定（administered学級に未所属等）は memberships[0] へフォールバック
         const fallbackMembership = student.memberships?.[0]
-        const fallbackClass = fallbackMembership?.classroom
+        const fallbackClassroom = fallbackMembership?.classroom
 
-        const grade = resolved?.grade ?? fallbackClass?.grade ?? null
-        const className = resolved?.className ?? fallbackClass?.name
+        const grade = resolved?.grade ?? fallbackClassroom?.grade ?? null
+        const className = resolved?.className ?? fallbackClassroom?.name
         const attendanceNumber =
           resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
 

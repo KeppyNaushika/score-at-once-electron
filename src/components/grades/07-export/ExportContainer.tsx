@@ -49,7 +49,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
     new Set()
   )
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedClass, setSelectedClass] = useState<string>("__all__")
+  const [selectedClassroom, setSelectedClassroom] = useState<string>("__all__")
   const [selectionTab, setSelectionTab] = useState<"selection" | "preview">(
     "selection"
   )
@@ -156,7 +156,10 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
 
   const filteredStudents = useMemo(() => {
     return studentsRef.filter((student) => {
-      if (selectedClass !== "__all__" && student.className !== selectedClass)
+      if (
+        selectedClassroom !== "__all__" &&
+        student.className !== selectedClassroom
+      )
         return false
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
@@ -167,7 +170,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
       }
       return true
     })
-  }, [studentsRef, selectedClass, searchTerm])
+  }, [studentsRef, selectedClassroom, searchTerm])
 
   const selectAllFiltered = () => {
     const ids = filteredStudents.map((student) => student.studentId)
@@ -296,8 +299,8 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                 <div className="mb-2 flex shrink-0 items-center justify-between">
                   {classNames.length > 1 && (
                     <Select
-                      value={selectedClass}
-                      onValueChange={setSelectedClass}
+                      value={selectedClassroom}
+                      onValueChange={setSelectedClassroom}
                     >
                       <SelectTrigger className="h-8 w-32 text-xs">
                         <SelectValue />

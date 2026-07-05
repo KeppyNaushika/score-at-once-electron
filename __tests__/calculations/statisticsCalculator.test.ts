@@ -271,7 +271,7 @@ describe("calculateStatisticsForStudent", () => {
 
     expect(result.personal.deviation).toBe(0)
     expect(result.personal.overallRank).toBe(0)
-    expect(result.classes[0].rank).toBe(0)
+    expect(result.classrooms[0].rank).toBe(0)
   })
 
   it("totalScore が null の生徒は全体・学級統計から除外される", () => {
@@ -293,7 +293,7 @@ describe("calculateStatisticsForStudent", () => {
     // s2(null)を除外して s1(80) と s3(60) のみで平均 = 70
     expect(result.overall.average).toBe(70)
     // 学級平均も同じ母集団なので 70
-    expect(result.classes[0].average).toBe(70)
+    expect(result.classrooms[0].average).toBe(70)
   })
 
   it("全員 null の場合は平均0・標準偏差0", () => {
@@ -353,7 +353,7 @@ describe("calculateStatisticsForStudent", () => {
       emptyRates
     )
 
-    expect(result.classes).toEqual([])
+    expect(result.classrooms).toEqual([])
   })
 
   it("複数の studentReport 学級に属する生徒は学級ごとの統計を持つ", () => {
@@ -385,11 +385,11 @@ describe("calculateStatisticsForStudent", () => {
       emptyRates
     )
 
-    expect(result.classes).toHaveLength(2)
-    expect(result.classes[0].average).toBe(70)
-    expect(result.classes[0].rank).toBe(1)
-    expect(result.classes[0].total).toBe(2)
-    expect(result.classes[1].average).toBe(60)
-    expect(result.classes[1].rank).toBe(1)
+    expect(result.classrooms).toHaveLength(2)
+    expect(result.classrooms[0].average).toBe(70)
+    expect(result.classrooms[0].rank).toBe(1)
+    expect(result.classrooms[0].total).toBe(2)
+    expect(result.classrooms[1].average).toBe(60)
+    expect(result.classrooms[1].rank).toBe(1)
   })
 })

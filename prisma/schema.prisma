@@ -30,7 +30,7 @@ model User {
 model Classroom {
   id                   String                       @id @default(uuid())
   name                 String                       @unique
-  classCode            String?
+  classroomCode            String?
   grade                Int?
   description          String?
   isVisible            Boolean                      @default(true)

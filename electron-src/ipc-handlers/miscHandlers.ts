@@ -3,10 +3,10 @@ import * as fs from "fs/promises"
 
 import { getAbsolutePathFromData } from "../lib/dataManager"
 import {
-  createClass,
-  deleteClass,
-  fetchClasses,
-  updateClass,
+  createClassroom,
+  deleteClassroom,
+  fetchClassrooms,
+  updateClassroom,
 } from "../lib/prisma/classroom"
 import {
   deleteMasterAnswer,
@@ -233,26 +233,26 @@ export function setupMiscHandlers(): void {
   )
 
   // Class handlers
-  registerHandler("fetch-classes", async () => {
-    return await fetchClasses()
+  registerHandler("fetch-classrooms", async () => {
+    return await fetchClassrooms()
   })
 
   registerHandler(
     "create-class",
-    async (classData: Prisma.ClassroomCreateInput) => {
-      return await createClass(classData)
+    async (classroomData: Prisma.ClassroomCreateInput) => {
+      return await createClassroom(classroomData)
     }
   )
 
   registerHandler(
     "update-class",
-    async (classData: Prisma.ClassroomUpdateInput & { id: string }) => {
-      return await updateClass(classData)
+    async (classroomData: Prisma.ClassroomUpdateInput & { id: string }) => {
+      return await updateClassroom(classroomData)
     }
   )
 
   registerHandler("delete-class", async (classroomId: string) => {
-    return await deleteClass(classroomId)
+    return await deleteClassroom(classroomId)
   })
 
   // Master image handlers

@@ -25,12 +25,12 @@ export default function StudentsPage() {
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [activeTab, setActiveTab] = useState("students")
-  const [showAddClassDialog, setShowAddClassDialog] = useState(false)
+  const [showAddClassroomDialog, setShowAddClassroomDialog] = useState(false)
 
   const {
     loading,
     students,
-    classes,
+    classrooms,
     searchTerm,
     setSearchTerm,
     statusFilter,
@@ -58,13 +58,13 @@ export default function StudentsPage() {
 
   const {
     examClassrooms,
-    loading: classesLoading,
+    loading: classroomsLoading,
     refresh: refreshExamClassrooms,
-    removeClass,
-    updateClass,
+    removeClassroom,
+    updateClassroom,
   } = useExamClassrooms({ examId })
 
-  if (loading || classesLoading) {
+  if (loading || classroomsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner />
@@ -121,7 +121,7 @@ export default function StudentsPage() {
             ) : (
               <>
                 <ClassroomStatisticsCards examClassrooms={examClassrooms} />
-                <Button onClick={() => setShowAddClassDialog(true)}>
+                <Button onClick={() => setShowAddClassroomDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   学級を追加
                 </Button>
@@ -135,7 +135,7 @@ export default function StudentsPage() {
           {/* 生徒一覧テーブル */}
           <div className="mb-6">
             <SortableStudentTable
-              classes={classes}
+              classrooms={classrooms}
               onStudentStatusUpdate={updateStudentStatus}
               onStudentOrderUpdate={updateStudentOrders}
               selectedStudents={selectedStudentsForRemoval}
@@ -147,7 +147,7 @@ export default function StudentsPage() {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               selectedClassroomId={selectedClassroomId}
-              onClassChange={setSelectedClassroomId}
+              onClassroomChange={setSelectedClassroomId}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
             />
@@ -159,14 +159,14 @@ export default function StudentsPage() {
           <ClassroomExamManager
             examId={examId}
             examClassrooms={examClassrooms}
-            onRemoveClass={removeClass}
-            onUpdateClass={updateClass}
-            onClassesChanged={() => {
+            onRemoveClassroom={removeClassroom}
+            onUpdateClassroom={updateClassroom}
+            onClassroomsChanged={() => {
               refreshExamClassrooms()
               refreshStudentData()
             }}
-            showAddDialog={showAddClassDialog}
-            onShowAddDialogChange={setShowAddClassDialog}
+            showAddDialog={showAddClassroomDialog}
+            onShowAddDialogChange={setShowAddClassroomDialog}
           />
         </TabsContent>
       </Tabs>

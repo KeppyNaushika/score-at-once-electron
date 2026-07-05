@@ -19,7 +19,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
   if (!state.fileOverviewData) return null
 
-  const { student: studentResult, classroom: classResult } =
+  const { student: studentResult, classroom: classroomResult } =
     state.fileOverviewData
 
   // 全てID一致で自動照合できる場合はファストパス
@@ -27,10 +27,11 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     (studentResult.byStudentNumber?.length ?? 0) +
     (studentResult.byName?.length ?? 0) +
     studentResult.noMatch.length
-  const classNeedsDecision =
-    (classResult.byName?.length ?? 0) + classResult.noMatch.length
+  const classroomNeedsDecision =
+    (classroomResult.byName?.length ?? 0) + classroomResult.noMatch.length
 
-  const allAutoMatched = studentNeedsDecision === 0 && classNeedsDecision === 0
+  const allAutoMatched =
+    studentNeedsDecision === 0 && classroomNeedsDecision === 0
 
   if (allAutoMatched) {
     return (
@@ -66,7 +67,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       },
       fileOverviewData: {
         student: studentResult,
-        classroom: classResult,
+        classroom: classroomResult,
         subtotalGroup: { byId: [], noMatch: [] },
       },
     },
@@ -116,8 +117,8 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           </TabsTrigger>
           <TabsTrigger value="classroom">
             学級
-            {classNeedsDecision > 0 && (
-              <span className="ml-1 text-xs">({classNeedsDecision})</span>
+            {classroomNeedsDecision > 0 && (
+              <span className="ml-1 text-xs">({classroomNeedsDecision})</span>
             )}
           </TabsTrigger>
         </TabsList>

@@ -29,7 +29,7 @@ export function useExportPage() {
 
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedClasses, setSelectedClasses] = useState<string[]>([])
+  const [selectedClassrooms, setSelectedClassrooms] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
     "participating",
   ])
@@ -307,21 +307,21 @@ export function useExportPage() {
       student.firstName.includes(searchTerm) ||
       student.studentNumber.includes(searchTerm)
 
-    const matchesClass =
-      selectedClasses.length === 0 ||
+    const matchesClassroom =
+      selectedClassrooms.length === 0 ||
       student.memberships.some((membership) =>
-        selectedClasses.includes(membership.classroom.id)
+        selectedClassrooms.includes(membership.classroom.id)
       )
 
     const matchesStatus =
       selectedStatuses.length === 0 ||
       selectedStatuses.includes(examStudent.status)
 
-    return matchesSearch && matchesClass && matchesStatus
+    return matchesSearch && matchesClassroom && matchesStatus
   })
 
   // 学級一覧取得（生徒が所属している学級のみ、重複なし）
-  const availableClasses = Array.from(
+  const availableClassrooms = Array.from(
     new Map(
       students
         .flatMap((examStudent) =>
@@ -337,14 +337,14 @@ export function useExportPage() {
     // データ
     exam,
     students: filteredStudents,
-    availableClasses,
+    availableClassrooms,
     loading,
 
     // フィルタ・検索
     searchTerm,
     setSearchTerm,
-    selectedClasses,
-    setSelectedClasses,
+    selectedClassrooms,
+    setSelectedClassrooms,
     selectedStatuses,
     setSelectedStatuses,
 

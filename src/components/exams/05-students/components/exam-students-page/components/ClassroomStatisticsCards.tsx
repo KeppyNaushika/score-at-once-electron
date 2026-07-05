@@ -9,11 +9,11 @@ interface ClassroomStatisticsCardsProps {
 export function ClassroomStatisticsCards({
   examClassrooms,
 }: ClassroomStatisticsCardsProps) {
-  const totalClasses = examClassrooms.length
-  const administeredClasses = examClassrooms.filter(
+  const totalClassrooms = examClassrooms.length
+  const administeredClassrooms = examClassrooms.filter(
     (examClassroom) => examClassroom.administered
   ).length
-  const teacherStatisticsClasses = examClassrooms.filter(
+  const teacherStatisticsClassrooms = examClassrooms.filter(
     (examClassroom) => examClassroom.teacherStatistics
   ).length
 
@@ -22,21 +22,21 @@ export function ClassroomStatisticsCards({
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">総学級数</span>
         <span className="rounded-md border bg-white px-3 text-lg font-bold text-gray-900 shadow-sm">
-          {totalClasses}
+          {totalClassrooms}
         </span>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">再採番</span>
         <span className="rounded-md border border-green-200 bg-green-100 px-3 text-lg font-bold text-green-700">
-          {administeredClasses}
+          {administeredClassrooms}
         </span>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">教員集計</span>
         <span className="rounded-md border border-blue-200 bg-blue-100 px-3 text-lg font-bold text-blue-700">
-          {teacherStatisticsClasses}
+          {teacherStatisticsClassrooms}
         </span>
       </div>
     </div>

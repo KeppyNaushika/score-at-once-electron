@@ -1,5 +1,5 @@
 /**
- * GradeStudent / GradeClass 統合テスト
+ * GradeStudent / GradeClassroom 統合テスト
  *
  * 学級登録・生徒一括追加・並び順変更・学級削除を検証
  */
@@ -18,15 +18,15 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
-  addStudentsFromClassToGrade,
+  addStudentsFromClassroomToGrade,
   addStudentsToGrade,
-  getAvailableClassesForGrade,
+  getAvailableClassroomsForGrade,
   getAvailableStudentsForGrade,
-  getGradeClasses,
-  getGradeClassRemovalPreview,
+  getGradeClassroomRemovalPreview,
+  getGradeClassrooms,
   getStudentsByGradeId,
-  removeClassFromGrade,
-  setGradeClassOrders,
+  removeClassroomFromGrade,
+  setGradeClassroomOrders,
   updateGradeStudentOrders,
 } from "@/electron-src/lib/prisma/gradeStudent"
 
@@ -44,11 +44,11 @@ async function createTestData() {
     data: { name: "テスト成績PJ" },
   })
 
-  const classA = await testPrisma.classroom.create({
+  const classroomA = await testPrisma.classroom.create({
     data: { name: "1年A組", grade: 1 },
   })
 
-  const classB = await testPrisma.classroom.create({
+  const classroomB = await testPrisma.classroom.create({
     data: { name: "1年B組", grade: 1 },
   })
 
@@ -82,35 +82,35 @@ async function createTestData() {
     },
   })
 
-  // classAに student1, student2 を所属させる
+  // classroomAに student1, student2 を所属させる
   await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: student1.id,
-      classroomId: classA.id,
+      classroomId: classroomA.id,
       attendanceNumber: 1,
     },
   })
   await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: student2.id,
-      classroomId: classA.id,
+      classroomId: classroomA.id,
       attendanceNumber: 2,
     },
   })
 
-  // classBに student3 を所属させる
+  // classroomBに student3 を所属させる
   await testPrisma.studentClassroomMembership.create({
     data: {
       studentId: student3.id,
-      classroomId: classB.id,
+      classroomId: classroomB.id,
       attendanceNumber: 1,
     },
   })
 
-  return { grade, classA, classB, student1, student2, student3 }
+  return { grade, classroomA, classroomB, student1, student2, student3 }
 }
 
-describe("GradeStudent / GradeClass", () => {
+describe("GradeStudent / GradeClassroom", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
   })
@@ -121,11 +121,14 @@ describe("GradeStudent / GradeClass", () => {
     await disconnectTestPrisma()
   })
 
-  describe("addStudentsFromClassToGrade", () => {
+  describe("addStudentsFromClassroomToGrade", () => {
     it("学級から生徒を一括追加できる", async () => {
-      const { grade, classA } = await createTestData()
+      const { grade, classroomA } = await createTestData()
 
-      const result = await addStudentsFromClassToGrade(grade.id, classA.id)
+      const result = await addStudentsFromClassroomToGrade(
+        grade.id,
+        classroomA.id
+      )
 
       expect(result.success).toBe(true)
       expect(result.added).toBe(2)
@@ -133,43 +136,46 @@ describe("GradeStudent / GradeClass", () => {
     })
 
     it("既に追加済みの生徒はスキップされる", async () => {
-      const { grade, classA } = await createTestData()
+      const { grade, classroomA } = await createTestData()
 
-      await addStudentsFromClassToGrade(grade.id, classA.id)
-      const result = await addStudentsFromClassToGrade(grade.id, classA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
+      const result = await addStudentsFromClassroomToGrade(
+        grade.id,
+        classroomA.id
+      )
 
       expect(result.success).toBe(true)
       expect(result.added).toBe(0)
       expect(result.skipped).toBe(2)
     })
 
-    it("GradeClassが作成される", async () => {
-      const { grade, classA } = await createTestData()
+    it("GradeClassroomが作成される", async () => {
+      const { grade, classroomA } = await createTestData()
 
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const classes = await getGradeClasses(grade.id)
-      expect(classes.success).toBe(true)
-      expect(classes.classes).toHaveLength(1)
-      expect(classes.classes![0].className).toBe("1年A組")
+      const classrooms = await getGradeClassrooms(grade.id)
+      expect(classrooms.success).toBe(true)
+      expect(classrooms.classrooms).toHaveLength(1)
+      expect(classrooms.classrooms![0].className).toBe("1年A組")
     })
 
     it("複数学級の追加でorderが正しく設定される", async () => {
-      const { grade, classA, classB } = await createTestData()
+      const { grade, classroomA, classroomB } = await createTestData()
 
-      await addStudentsFromClassToGrade(grade.id, classA.id)
-      await addStudentsFromClassToGrade(grade.id, classB.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
-      const classes = await getGradeClasses(grade.id)
-      expect(classes.classes).toHaveLength(2)
-      expect(classes.classes![0].order).toBe(0)
-      expect(classes.classes![1].order).toBe(1)
+      const classrooms = await getGradeClassrooms(grade.id)
+      expect(classrooms.classrooms).toHaveLength(2)
+      expect(classrooms.classrooms![0].order).toBe(0)
+      expect(classrooms.classrooms![1].order).toBe(1)
     })
 
     it("customOrderが出席番号順で連番になる", async () => {
-      const { grade, classA } = await createTestData()
+      const { grade, classroomA } = await createTestData()
 
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const students = await getStudentsByGradeId(grade.id)
       expect(students.success).toBe(true)
@@ -181,8 +187,8 @@ describe("GradeStudent / GradeClass", () => {
 
   describe("getStudentsByGradeId", () => {
     it("生徒一覧を取得できる", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getStudentsByGradeId(grade.id)
 
@@ -203,8 +209,8 @@ describe("GradeStudent / GradeClass", () => {
     })
 
     it("memberships情報が含まれる", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getStudentsByGradeId(grade.id)
 
@@ -215,42 +221,42 @@ describe("GradeStudent / GradeClass", () => {
     })
   })
 
-  describe("getGradeClasses", () => {
+  describe("getGradeClassrooms", () => {
     it("登録学級一覧を取得できる", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const result = await getGradeClasses(grade.id)
+      const result = await getGradeClassrooms(grade.id)
 
       expect(result.success).toBe(true)
-      expect(result.classes).toHaveLength(1)
-      expect(result.classes![0].className).toBe("1年A組")
-      expect(result.classes![0].studentCount).toBe(2)
+      expect(result.classrooms).toHaveLength(1)
+      expect(result.classrooms![0].className).toBe("1年A組")
+      expect(result.classrooms![0].studentCount).toBe(2)
     })
   })
 
-  describe("getAvailableClassesForGrade", () => {
+  describe("getAvailableClassroomsForGrade", () => {
     it("未登録の学級一覧を取得できる", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const result = await getAvailableClassesForGrade(grade.id)
+      const result = await getAvailableClassroomsForGrade(grade.id)
 
       expect(result.success).toBe(true)
-      // classAは登録済みなので、classBのみ
-      expect(result.classes).toHaveLength(1)
-      expect(result.classes![0].name).toBe("1年B組")
+      // classroomAは登録済みなので、classroomBのみ
+      expect(result.classrooms).toHaveLength(1)
+      expect(result.classrooms![0].name).toBe("1年B組")
     })
 
     it("全学級が登録済みのとき空配列を返す", async () => {
-      const { grade, classA, classB } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
-      await addStudentsFromClassToGrade(grade.id, classB.id)
+      const { grade, classroomA, classroomB } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
-      const result = await getAvailableClassesForGrade(grade.id)
+      const result = await getAvailableClassroomsForGrade(grade.id)
 
       expect(result.success).toBe(true)
-      expect(result.classes).toHaveLength(0)
+      expect(result.classrooms).toHaveLength(0)
     })
   })
 
@@ -280,10 +286,10 @@ describe("GradeStudent / GradeClass", () => {
     })
 
     it("customOrderが既存の末尾に連番で付与される", async () => {
-      const { grade, classA, student3 } = await createTestData()
+      const { grade, classroomA, student3 } = await createTestData()
 
       // 学級から2名追加（customOrder 1,2）
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
       // 個別で student3 を追加 → customOrder 3
       await addStudentsToGrade(grade.id, [student3.id])
 
@@ -328,24 +334,26 @@ describe("GradeStudent / GradeClass", () => {
       return { noMembership, ended }
     }
 
-    it("activeOnly=true は在籍中の所属がある生徒のみ返す", async () => {
-      const { grade, classA } = await createTestData()
-      await addEdgeCaseStudents(classA.id)
+    it("activeOnly=true は未在籍・在籍中の生徒を返す（過去在籍のみ除外）", async () => {
+      const { grade, classroomA } = await createTestData()
+      await addEdgeCaseStudents(classroomA.id)
 
       const result = await getAvailableStudentsForGrade(grade.id, true)
 
       expect(result.success).toBe(true)
-      // student1,2,3 のみ（未所属・卒業済みは除外）
-      expect(result.students).toHaveLength(3)
+      // student1,2,3 + 未所属S100（過去在籍=卒業済みS101のみ除外）。
+      // activeOnly は「未在籍または在籍中」を残し過去在籍だけを除外する仕様
+      // （availableStudents.ts）。
+      expect(result.students).toHaveLength(4)
       const numbers = result
         .students!.map((student) => student.studentNumber)
         .sort()
-      expect(numbers).toEqual(["S001", "S002", "S003"])
+      expect(numbers).toEqual(["S001", "S002", "S003", "S100"])
     })
 
     it("activeOnly=false は未所属・在籍終了の生徒も含む", async () => {
-      const { grade, classA } = await createTestData()
-      await addEdgeCaseStudents(classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addEdgeCaseStudents(classroomA.id)
 
       const result = await getAvailableStudentsForGrade(grade.id, false)
 
@@ -355,9 +363,9 @@ describe("GradeStudent / GradeClass", () => {
     })
 
     it("既に成績へ追加済みの生徒は候補から除外される", async () => {
-      const { grade, classA } = await createTestData()
-      // classAの student1,2 を追加
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      // classroomAの student1,2 を追加
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getAvailableStudentsForGrade(grade.id, true)
 
@@ -429,7 +437,7 @@ describe("GradeStudent / GradeClass", () => {
     })
   })
 
-  describe("getAvailableClassesForGrade（在籍フィルタ）", () => {
+  describe("getAvailableClassroomsForGrade（在籍フィルタ）", () => {
     it("在籍中の生徒が0名の学級は activeOnly=true で非表示", async () => {
       const { grade } = await createTestData()
 
@@ -456,16 +464,16 @@ describe("GradeStudent / GradeClass", () => {
         },
       })
 
-      const activeResult = await getAvailableClassesForGrade(grade.id, true)
-      const activeNames = activeResult.classes!.map(
+      const activeResult = await getAvailableClassroomsForGrade(grade.id, true)
+      const activeNames = activeResult.classrooms!.map(
         (classroom) => classroom.name
       )
-      // classC は在籍中0名なので非表示（classA, classB は表示）
+      // classC は在籍中0名なので非表示（classroomA, classroomB は表示）
       expect(activeNames).not.toContain("1年C組")
       expect(activeNames).toEqual(expect.arrayContaining(["1年A組", "1年B組"]))
 
-      const allResult = await getAvailableClassesForGrade(grade.id, false)
-      const allNames = allResult.classes!.map((classroom) => classroom.name)
+      const allResult = await getAvailableClassroomsForGrade(grade.id, false)
+      const allNames = allResult.classrooms!.map((classroom) => classroom.name)
       // activeOnly=false なら在籍終了の生徒も数えるので classC も表示
       expect(allNames).toContain("1年C組")
     })
@@ -473,8 +481,8 @@ describe("GradeStudent / GradeClass", () => {
 
   describe("updateGradeStudentOrders", () => {
     it("生徒の並び順を更新できる", async () => {
-      const { grade, classA, student1, student2 } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA, student1, student2 } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       // student2を先頭に
       const result = await updateGradeStudentOrders(grade.id, [
@@ -490,12 +498,12 @@ describe("GradeStudent / GradeClass", () => {
     })
   })
 
-  describe("removeClassFromGrade", () => {
+  describe("removeClassroomFromGrade", () => {
     it("学級を削除すると関連する生徒も削除される", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const result = await removeClassFromGrade(grade.id, classA.id)
+      const result = await removeClassroomFromGrade(grade.id, classroomA.id)
 
       expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(2)
@@ -505,103 +513,116 @@ describe("GradeStudent / GradeClass", () => {
     })
 
     it("他の学級にも所属する生徒は削除されない", async () => {
-      const { grade, classA, classB, student1 } = await createTestData()
+      const { grade, classroomA, classroomB, student1 } = await createTestData()
 
-      // student1をclassBにも所属させる
+      // student1をclassroomBにも所属させる
       await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student1.id,
-          classroomId: classB.id,
+          classroomId: classroomB.id,
           attendanceNumber: 99,
         },
       })
 
-      await addStudentsFromClassToGrade(grade.id, classA.id)
-      await addStudentsFromClassToGrade(grade.id, classB.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
-      // classAを削除
-      const result = await removeClassFromGrade(grade.id, classA.id)
+      // classroomAを削除
+      const result = await removeClassroomFromGrade(grade.id, classroomA.id)
 
       expect(result.success).toBe(true)
-      // student1はclassBにも属しているので削除されない、student2のみ削除
+      // student1はclassroomBにも属しているので削除されない、student2のみ削除
       expect(result.removedStudents).toBe(1)
 
       const students = await getStudentsByGradeId(grade.id)
-      // student1（classAとclassBに所属）+ student3（classBのみ） = 2人残る
+      // student1（classroomAとclassroomBに所属）+ student3（classroomBのみ） = 2人残る
       expect(students.students!.length).toBe(2)
     })
 
-    it("削除後にGradeClassも削除される", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+    it("削除後にGradeClassroomも削除される", async () => {
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      await removeClassFromGrade(grade.id, classA.id)
+      await removeClassroomFromGrade(grade.id, classroomA.id)
 
-      const classes = await getGradeClasses(grade.id)
-      expect(classes.classes).toHaveLength(0)
+      const classrooms = await getGradeClassrooms(grade.id)
+      expect(classrooms.classrooms).toHaveLength(0)
     })
 
     it("deleteStudents=false なら登録解除のみで生徒は残る", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const result = await removeClassFromGrade(grade.id, classA.id, false)
+      const result = await removeClassroomFromGrade(
+        grade.id,
+        classroomA.id,
+        false
+      )
 
       expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(0)
 
-      // GradeClass は外れるが、生徒は対象に残る
-      const classes = await getGradeClasses(grade.id)
-      expect(classes.classes).toHaveLength(0)
+      // GradeClassroom は外れるが、生徒は対象に残る
+      const classrooms = await getGradeClassrooms(grade.id)
+      expect(classrooms.classrooms).toHaveLength(0)
       const students = await getStudentsByGradeId(grade.id)
       expect(students.students).toHaveLength(2)
     })
   })
 
-  describe("getGradeClassRemovalPreview", () => {
+  describe("getGradeClassroomRemovalPreview", () => {
     it("専属生徒（この学級にのみ所属）の数を返す", async () => {
-      const { grade, classA } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
+      const { grade, classroomA } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const preview = await getGradeClassRemovalPreview(grade.id, classA.id)
+      const preview = await getGradeClassroomRemovalPreview(
+        grade.id,
+        classroomA.id
+      )
 
       expect(preview.success).toBe(true)
-      // classA の student1,2 は他学級に属さない → 2名が削除対象
+      // classroomA の student1,2 は他学級に属さない → 2名が削除対象
       expect(preview.exclusiveCount).toBe(2)
     })
 
     it("他学級にも所属する生徒は削除対象に数えない", async () => {
-      const { grade, classA, classB, student1 } = await createTestData()
+      const { grade, classroomA, classroomB, student1 } = await createTestData()
       await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student1.id,
-          classroomId: classB.id,
+          classroomId: classroomB.id,
           attendanceNumber: 99,
         },
       })
-      await addStudentsFromClassToGrade(grade.id, classA.id)
-      await addStudentsFromClassToGrade(grade.id, classB.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
-      const preview = await getGradeClassRemovalPreview(grade.id, classA.id)
+      const preview = await getGradeClassroomRemovalPreview(
+        grade.id,
+        classroomA.id
+      )
 
-      // student1 は classB にも属するため、classA 専属は student2 のみ
+      // student1 は classroomB にも属するため、classroomA 専属は student2 のみ
       expect(preview.exclusiveCount).toBe(1)
     })
   })
 
-  describe("setGradeClassOrders", () => {
+  describe("setGradeClassroomOrders", () => {
     it("学級の並び順を更新できる", async () => {
-      const { grade, classA, classB } = await createTestData()
-      await addStudentsFromClassToGrade(grade.id, classA.id)
-      await addStudentsFromClassToGrade(grade.id, classB.id)
+      const { grade, classroomA, classroomB } = await createTestData()
+      await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
+      await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
-      // 初期は classA(0), classB(1)。逆順にする
-      const result = await setGradeClassOrders(grade.id, [classB.id, classA.id])
+      // 初期は classroomA(0), classroomB(1)。逆順にする
+      const result = await setGradeClassroomOrders(grade.id, [
+        classroomB.id,
+        classroomA.id,
+      ])
       expect(result.success).toBe(true)
 
-      const classes = await getGradeClasses(grade.id)
+      const classrooms = await getGradeClassrooms(grade.id)
       const byName = new Map(
-        classes.classes!.map((classroom) => [
+        classrooms.classrooms!.map((classroom) => [
           classroom.className,
           classroom.order,
         ])

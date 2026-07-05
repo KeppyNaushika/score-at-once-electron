@@ -22,7 +22,7 @@ interface ClassroomStudentImportModalProps {
   className: string
 }
 
-interface ClassStudentImportRow {
+interface ClassroomStudentImportRow {
   studentId: string
   attendanceNumber: string
   startDate: string
@@ -36,7 +36,7 @@ export default function ClassroomStudentImportModal({
   classroomId,
   className,
 }: ClassroomStudentImportModalProps) {
-  const [studentData, setStudentData] = useState<ClassStudentImportRow[]>([
+  const [studentData, setStudentData] = useState<ClassroomStudentImportRow[]>([
     { studentId: "", attendanceNumber: "", startDate: "", endDate: "" },
   ])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -53,7 +53,7 @@ export default function ClassroomStudentImportModal({
     return date instanceof Date && !isNaN(date.getTime())
   }
 
-  const validateData = (data: ClassStudentImportRow[]) => {
+  const validateData = (data: ClassroomStudentImportRow[]) => {
     const errors: string[] = []
     const warnings: string[] = []
     let validCount = 0
@@ -116,7 +116,7 @@ export default function ClassroomStudentImportModal({
     return { valid: validCount, errors, warnings }
   }
 
-  const handleDataChange = (data: ClassStudentImportRow[]) => {
+  const handleDataChange = (data: ClassroomStudentImportRow[]) => {
     setStudentData(data)
     const validationResult = validateData(data)
     setValidation(validationResult)
@@ -157,7 +157,7 @@ export default function ClassroomStudentImportModal({
           const endDateStr = row.endDate.trim()
 
           // バックエンド側で重複チェック・既存所属終了を処理
-          const membership = await window.electronAPI.addStudentToClass(
+          const membership = await window.electronAPI.addStudentToClassroom(
             student.id,
             classroomId,
             startDate,
