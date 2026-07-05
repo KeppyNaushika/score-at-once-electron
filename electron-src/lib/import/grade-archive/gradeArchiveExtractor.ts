@@ -45,7 +45,7 @@ export async function extractGradeArchive(
     }
 
     const manifest: GradeArchiveManifest = JSON.parse(manifestJson)
-    // 学級リネーム前の旧キー（className/classes/classroomId）は読取り時に現行キーへ正規化
+    // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
     const gradeData: ArchiveGradeData = normalizeLegacyClassroomKeys(
       JSON.parse(files["grade-exam.json"] ?? "{}")
     )

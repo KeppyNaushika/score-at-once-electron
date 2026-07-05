@@ -15,7 +15,7 @@ import { resolve } from "path"
 import { describe, expect, it } from "vitest"
 
 import {
-  CLASS_CASCADE_MOVERS,
+  CLASSROOM_CASCADE_MOVERS,
   STUDENT_CASCADE_MOVERS,
   SUBTOTAL_GROUP_CASCADE_MOVERS,
 } from "../../../electron-src/lib/import/merge/idChangeExecutor"
@@ -56,7 +56,7 @@ function cascadeChildrenFromSchema(target: string): string[] {
 describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () => {
   const cases = [
     { target: "Student", movers: STUDENT_CASCADE_MOVERS },
-    { target: "Classroom", movers: CLASS_CASCADE_MOVERS },
+    { target: "Classroom", movers: CLASSROOM_CASCADE_MOVERS },
     { target: "SubtotalGroup", movers: SUBTOTAL_GROUP_CASCADE_MOVERS },
   ]
 

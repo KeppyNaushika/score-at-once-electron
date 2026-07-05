@@ -37,7 +37,7 @@ __tests__/
 │   │   ├── idIntegrationImporter.test.ts # ID統合インポート全体
 │   │   ├── subtotalGroupProcessor.test.ts # 小計グループ処理
 │   │   ├── studentProcessor.test.ts     # 生徒処理
-│   │   ├── classProcessor.test.ts       # 学級処理
+│   │   ├── classroomProcessor.test.ts   # 学級処理
 │   │   ├── idChangeExecutor.test.ts     # ID変更の実行
 │   │   └── scoringConflictDetector.test.ts # 採点競合の検出
 │   └── scenarios/                   # シナリオテスト
@@ -69,9 +69,9 @@ __tests__/
 
 DBに完全な試験データを一式作成するヘルパー。
 
-| 関数                                  | 説明                                                                                                 |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `createFullTestExam(prisma, options)` | User, Exam, Pages, CropRegions, Students, Class, QuestionScores 等を一括作成し、全エンティティを返す |
+| 関数                                  | 説明                                                                                                     |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `createFullTestExam(prisma, options)` | User, Exam, Pages, CropRegions, Students, Classroom, QuestionScores 等を一括作成し、全エンティティを返す |
 
 オプションで `pageCount`, `studentCount`, `includeV140Data`, `includeScores` などを制御可能。
 
@@ -256,7 +256,7 @@ DBから試験データを収集する `collectExamData` 関数を検証。
 | DC-9  | v1.4.0データが収集される                       | ExamMarkingFormat等の収集  |
 | DC-10 | Subject/SubjectSubtotalGroupデータが収集される | 教科データの収集           |
 | DC-11 | 画像パスが相対パスで取得される                 | パス形式の確認             |
-| DC-12 | Classがメンバーシップ経由で収集される          | 学級の間接収集             |
+| DC-12 | Classroomがメンバーシップ経由で収集される      | 学級の間接収集             |
 
 ### archiveRoundTrip.test.ts（11テスト）
 
@@ -346,7 +346,7 @@ DBから試験データを収集する `collectExamData` 関数を検証。
 | インポートデータの方が新しい場合にフィールドが更新される         | フィールド更新（use_newer/新しい） |
 | インポートデータの方が古い場合はフィールドが更新されない         | フィールド更新（use_newer/古い）   |
 
-### classProcessor.test.ts（9テスト）
+### classroomProcessor.test.ts（9テスト）
 
 学級レコードのID統合処理を検証。
 
@@ -441,7 +441,7 @@ Stage 2のID変更処理（レコード再作成 + FK更新 + 旧レコード削
 | B3     | ExamExportSettingsがインポートで処理されることを確認              | パス |
 | B3     | CropRegionMarkingOverrideがインポートで処理されることを確認       | パス |
 | B3     | Subject/SubjectSubtotalGroupがインポートで処理されることを確認    | パス |
-| B3     | ExamClassがインポートで処理されることを確認                       | パス |
+| B3     | ExamClassroomがインポートで処理されることを確認                   | パス |
 | B4     | ID変更時のUNIQUE制約がtemp-value方式で回避される                  | todo |
 | B5     | create_new決定では学籍番号にサフィックスを付与して新規作成する    | パス |
 | B6     | 既存ページはcounts.unchanged.pages++でカウントされる              | パス |

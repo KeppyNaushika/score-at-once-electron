@@ -25,7 +25,7 @@ export function createStudentApi() {
         error?: string
       }>,
 
-    // Class related
+    // Classroom related
     fetchClassrooms: () => ipcRenderer.invoke("fetch-classrooms"),
     createClassroom: (classroomData: Prisma.ClassroomCreateInput) =>
       ipcRenderer.invoke("create-class", classroomData),
@@ -44,7 +44,7 @@ export function createStudentApi() {
         error?: string
       }>,
 
-    // Student Class Membership related
+    // Student Classroom Membership related
     createStudentClassroomMembership: (
       membershipData: Prisma.StudentClassroomMembershipCreateInput
     ) => ipcRenderer.invoke("create-student-class-membership", membershipData),

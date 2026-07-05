@@ -12,7 +12,7 @@ import type { ReactNode } from "react"
 export interface ClassroomRosterEntry {
   /** リンクのID（examClassroomId / gradeClassroom.id / courseworkClassroom.id） */
   id: string
-  /** 学級ID（Class.id） */
+  /** 学級ID（Classroom.id） */
   classroomId: string
   /** 学級名 */
   name: string

@@ -232,7 +232,7 @@ export function setupMiscHandlers(): void {
     }
   )
 
-  // Class handlers
+  // Classroom handlers
   registerHandler("fetch-classrooms", async () => {
     return await fetchClassrooms()
   })

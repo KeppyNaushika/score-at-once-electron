@@ -96,7 +96,7 @@ export async function extractArchive(archivePath: string): Promise<{
 
     // 各JSONファイルを読み込み
     // v1.5.0+: exam.json, v1.4.0以前: project.json にフォールバック
-    // 学級リネーム前の旧キー（classroomId/classes）は読取り時に現行キーへ正規化
+    // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
     const legacyNormalizedExamData = normalizeLegacyClassroomKeys(
       readJsonFile<ArchiveExamData>(tempDir, "exam.json") ??
         readJsonFile<ArchiveExamData>(tempDir, "project.json")

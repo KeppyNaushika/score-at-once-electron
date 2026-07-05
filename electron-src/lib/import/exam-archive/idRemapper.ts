@@ -34,7 +34,7 @@ export interface IdMappings {
   examClassroom: Record<string, string>
   /** Student ID: 旧ID -> 新ID */
   student: Record<string, string>
-  /** Class ID: 旧ID -> 新ID */
+  /** Classroom ID: 旧ID -> 新ID */
   classroom: Record<string, string>
   /** StudentClassroomMembership ID: 旧ID -> 新ID */
   membership: Record<string, string>
