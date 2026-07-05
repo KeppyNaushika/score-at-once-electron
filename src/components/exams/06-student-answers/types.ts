@@ -4,6 +4,8 @@
  * レポート分析に基づき6つのStudent型と4つのStudentAnswer型を1つに統合
  */
 
+import type { Classroom, Student } from "@prisma/client"
+
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 // ============================================================================
@@ -11,19 +13,25 @@ import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 // ============================================================================
 
 /**
- * 統一された生徒型定義
- * 05-studentsのcustomOrder順序に対応
+ * 06答案管理の受験生徒 view-model（単一 SSOT）。
+ *
+ * Prisma `Student` のスカラー（識別・氏名）を Pick し、試験固有の受験状態・並び順
+ * （ExamStudent 由来）と、採番順を決める administered 学級（placement 由来・Prisma Classroom 同梱）を付与する。
+ * かつて 6 つに分裂していた生徒型はこの型へ一本化する（手書き重複を作らない）。
  */
-export interface UnifiedStudent {
-  id: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  studentNumber: string
-  attendanceNumber?: number | null
+export type UnifiedStudent = Pick<
+  Student,
+  | "id"
+  | "lastName"
+  | "firstName"
+  | "lastNameKana"
+  | "firstNameKana"
+  | "studentNumber"
+> & {
   status?: ExamStudentStatus
-  customOrder?: number | null // 🚨 必須: 受験生徒順序
+  customOrder?: number | null // 受験生徒順序（ExamStudent.customOrder）
+  /** 採番順を決める administered 学級（Prisma Classroom を同梱、未所属なら null） */
+  classroom?: Classroom | null
 }
 
 /**

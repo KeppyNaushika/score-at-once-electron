@@ -1,4 +1,4 @@
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 // 個人成績表用型定義をre-export
 export type {
@@ -19,26 +19,10 @@ export {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
 } from "@/electron-src/lib/export/individual-report/types"
 
-// 生徒データの型
-export interface Student {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-  memberships: {
-    id: string
-    attendanceNumber?: number | null
-    classroom: {
-      id: string
-      name: string
-    }
-  }[]
-  status: ExamStudentStatus
-  customOrder?: number | null
-}
+// 生徒データの型 = getStudentsForExam の戻り値（ExamStudentWithDetails）。
+// 08結果出力では学級情報は classInfoMap 経由で解決し、受験生徒の識別・所属・
+// 受験状態・並び順のみを examStudent.student(.memberships) / status / customOrder で参照する。
+export type Student = ExamStudentWithDetails
 
 // PDF用紙の向きの型
 export type PdfOrientation = "portrait" | "landscape"

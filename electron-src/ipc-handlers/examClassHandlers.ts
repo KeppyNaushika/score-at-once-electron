@@ -5,8 +5,6 @@ import {
   getAdministeredClasses,
   getAvailableClassesForExam,
   getExamClasses,
-  getStudentClassInfo,
-  getStudentClassInfoForExam,
   removeExamClass,
   removeExamClassByIds,
   reorderExamClasses,
@@ -64,22 +62,6 @@ export function setupExamClassHandlers(): void {
     "exam-class:add-students-from-class",
     async (examId: string, classroomId: string, activeOnly = true) => {
       return await addStudentsFromClass(examId, classroomId, activeOnly)
-    }
-  )
-
-  // Get class info for all students in a exam
-  registerHandler(
-    "exam-class:get-student-class-info",
-    async (examId: string) => {
-      return await getStudentClassInfoForExam(examId)
-    }
-  )
-
-  // Get class info for a single student
-  registerHandler(
-    "exam-class:get-student-class-info-single",
-    async (examId: string, studentId: string) => {
-      return await getStudentClassInfo(examId, studentId)
     }
   )
 

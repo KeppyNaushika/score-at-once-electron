@@ -12,24 +12,12 @@ import type { FileState } from "@/components/exams/06-student-answers/student-an
 import type {
   PendingChange,
   ScoringDataOption,
+  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
-
-export interface StudentData {
-  id: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  studentNumber: string
-  attendanceNumber?: number | null
-  status?: ExamStudentStatus
-  customOrder?: number | null
-}
 
 // Components
 export function LoadingSpinner() {
@@ -79,7 +67,7 @@ export function StudentAnswersTabsNavigation({
 
 interface StudentAnswersTabContentProps {
   examId: string
-  students: StudentData[]
+  students: UnifiedStudent[]
   modelAnswerCount: number
   studentAnswers: ProcessedStudentAnswer[]
   pendingChanges: PendingChange[]

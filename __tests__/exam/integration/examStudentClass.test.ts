@@ -20,7 +20,6 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 import {
   addStudentsFromClass,
   getClassMembersForExam,
-  getStudentClassInfo,
   getStudentClassInfoForExam,
 } from "@/electron-src/lib/prisma/examClass"
 import {
@@ -113,7 +112,7 @@ describe("Exam 在籍フィルタ", () => {
 
       const students = await getStudentsForExam(exam.id)
       expect(students.students).toHaveLength(1)
-      expect(students.students![0].studentNumber).toBe("E001")
+      expect(students.students![0].student.studentNumber).toBe("E001")
     })
 
     it("activeOnly=false は在籍終了の生徒も追加する", async () => {
@@ -180,7 +179,9 @@ describe("Exam 在籍フィルタ", () => {
       expect(result.added).toBe(1)
       const students = await getStudentsForExam(exam.id)
       expect(
-        students.students!.map((student) => student.studentNumber)
+        students.students!.map(
+          (examStudent) => examStudent.student.studentNumber
+        )
       ).toEqual(["E001"])
     })
 
@@ -253,22 +254,9 @@ describe("Exam 在籍フィルタ", () => {
 
       // 受験日(2024-04-10)に在籍中の active のみ解決。転出済み left は除外
       expect(Object.keys(info)).toEqual([active.id])
-      expect(info[active.id].className).toBe("3年A組")
+      expect(info[active.id].classroom?.name).toBe("3年A組")
       expect(info[active.id].attendanceNumber).toBe(1)
       expect(info[left.id]).toBeUndefined()
-    })
-
-    it("getStudentClassInfo は受験日に在籍しない生徒へ null を返す", async () => {
-      const { exam, classA, active, left } = await createTestData()
-      await addStudentsFromClass(exam.id, classA.id, false)
-
-      const activeInfo = await getStudentClassInfo(exam.id, active.id)
-      expect(activeInfo.className).toBe("3年A組")
-      expect(activeInfo.attendanceNumber).toBe(1)
-
-      const leftInfo = await getStudentClassInfo(exam.id, left.id)
-      expect(leftInfo.className).toBeNull()
-      expect(leftInfo.attendanceNumber).toBeNull()
     })
   })
 

@@ -2,6 +2,7 @@ import {
   type ExamStudentStatus,
   toExamStudentStatus,
 } from "@/types/examStudentStatus.types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveStudentLabel } from "./auditScope"
@@ -56,19 +57,19 @@ export async function getStudentsForExam(examId: string) {
       },
     })
 
-    const studentsWithStatus = examStudents.map((examStudent) => {
-      const { _count, ...studentRest } = examStudent.student
-      return {
-        ...studentRest,
+    // ExamStudent をそのまま返し、status のみ ExamStudentStatus へ narrowing する。
+    // 生徒識別・学級所属・答案枚数は examStudent.student(.memberships / ._count) 配下に
+    // Prisma スキーマのまま保持する（フラットな畳み込みはしない）。
+    const examStudentsWithDetails: ExamStudentWithDetails[] = examStudents.map(
+      (examStudent) => ({
+        ...examStudent,
         status: toExamStudentStatus(examStudent.status),
-        customOrder: examStudent.customOrder,
-        answerSheetCount: _count.studentAnswerImages,
-      }
-    })
+      })
+    )
 
     return {
       success: true,
-      students: studentsWithStatus,
+      students: examStudentsWithDetails,
     }
   } catch (error) {
     console.error("Error fetching students for exam:", error)

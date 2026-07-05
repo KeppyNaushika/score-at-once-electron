@@ -3,20 +3,10 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { StudentWithAnswers } from "@/components/exams/06-student-answers/student-answer-management/hooks/types"
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { UnifiedStudent } from "@/components/exams/06-student-answers/types"
 
 interface UseStudentManagementProps {
-  students: Array<{
-    id: string
-    lastName: string
-    firstName: string
-    lastNameKana: string
-    firstNameKana: string
-    studentId: string
-    attendanceNumber?: number | null
-    status?: ExamStudentStatus
-    customOrder?: number | null
-  }>
+  students: UnifiedStudent[]
 }
 
 /** 答案アップロード時の生徒選択状態・上書き設定を管理するフック */

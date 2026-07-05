@@ -17,10 +17,7 @@ import {
   useRosterTable,
 } from "@/components/common/roster-table"
 import { SortableTableProvider } from "@/components/common/sortable-table"
-import type {
-  SortableStudentTableProps,
-  Student,
-} from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
+import type { SortableStudentTableProps } from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,28 +38,29 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
-/** 試験名簿の Student を共通の RosterRow へ変換 */
-function toRosterRow(student: Student): RosterRow {
+/** 受験生徒（ExamStudent）と表示学級情報を共通の RosterRow へ変換 */
+function toRosterRow(
+  examStudent: ExamStudentWithDetails,
+  placement: ExamClassroomPlacement | undefined
+): RosterRow {
+  const student = examStudent.student
   return {
-    id: student.id,
+    id: examStudent.studentId,
     studentNumber: student.studentNumber,
     lastName: student.lastName,
     firstName: student.firstName,
     kana: `${student.lastNameKana} ${student.firstNameKana}`,
     classInfo: {
-      className: student.examClassInfo?.className ?? null,
-      classCode: student.examClassInfo?.classCode ?? null,
-      grade: student.examClassInfo?.grade ?? null,
-      attendanceNumber: student.examClassInfo?.attendanceNumber ?? null,
-      classOrder: student.examClassInfo?.classOrder ?? null,
+      className: placement?.classroom?.name ?? null,
+      classCode: placement?.classroom?.classCode ?? null,
+      grade: placement?.classroom?.grade ?? null,
+      attendanceNumber: placement?.attendanceNumber ?? null,
+      classOrder: placement?.order ?? null,
     },
-    customOrder: student.customOrder,
-    extras: {
-      status: student.status,
-      answerSheetCount: student.answerSheetCount,
-    },
+    customOrder: examStudent.customOrder,
   }
 }
 
@@ -84,6 +82,7 @@ export function SortableStudentTableContainer(
     onStudentStatusUpdate,
     onStudentOrderUpdate,
     filteredStudents,
+    placementByStudent,
     examId,
     searchTerm,
     onSearchChange,
@@ -97,7 +96,23 @@ export function SortableStudentTableContainer(
   const [isResetting, setIsResetting] = useState(false)
 
   const filteredRows = useMemo(
-    () => filteredStudents.map(toRosterRow),
+    () =>
+      filteredStudents.map((examStudent) =>
+        toRosterRow(examStudent, placementByStudent[examStudent.studentId])
+      ),
+    [filteredStudents, placementByStudent]
+  )
+
+  // スロット列（答案枚数・受験状態）が元の ExamStudent を型安全に参照するための索引。
+  // RosterRow に無型の extras を積んで as で取り出すのを避ける。
+  const examStudentByStudentId = useMemo(
+    () =>
+      new Map<string, ExamStudentWithDetails>(
+        filteredStudents.map((examStudent) => [
+          examStudent.studentId,
+          examStudent,
+        ])
+      ),
     [filteredStudents]
   )
 
@@ -127,7 +142,8 @@ export function SortableStudentTableContainer(
         cellClassName: "text-center",
         cell: (row) => {
           const count =
-            (row.extras?.answerSheetCount as number | undefined) ?? 0
+            examStudentByStudentId.get(row.id)?.student._count
+              .studentAnswerImages ?? 0
           return count > 0 ? (
             <Badge variant="secondary" className="tabular-nums">
               {count}枚
@@ -138,7 +154,7 @@ export function SortableStudentTableContainer(
         },
       },
     ],
-    []
+    [examStudentByStudentId]
   )
 
   // 受験状態フィルタ（スロット）
@@ -170,7 +186,7 @@ export function SortableStudentTableContainer(
     () => ({
       header: "受験状態",
       render: (row) => {
-        const status = row.extras?.status as ExamStudentStatus | undefined
+        const status = examStudentByStudentId.get(row.id)?.status
         return (
           <div className="flex gap-1">
             <Button
@@ -204,7 +220,7 @@ export function SortableStudentTableContainer(
         )
       },
     }),
-    [onStudentStatusUpdate]
+    [onStudentStatusUpdate, examStudentByStudentId]
   )
 
   const classOptions = useMemo(

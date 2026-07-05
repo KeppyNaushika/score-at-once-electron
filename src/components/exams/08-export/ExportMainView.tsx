@@ -74,7 +74,10 @@ export default function ExportMainView() {
     selectedStatuses,
     setSelectedStatuses,
     selectedStudents,
-    setSelectedStudents,
+    replaceSelection,
+    toggleStudent,
+    addStudents,
+    removeStudents,
     exportOptions,
     setExportOptions,
     scoringMarkConfig,
@@ -127,10 +130,10 @@ export default function ExportMainView() {
   // プレビュー用の生徒リスト
   const previewStudentList = useMemo(() => {
     return students
-      .filter((student) => selectedStudents.has(student.id))
-      .map((student) => ({
-        id: student.id,
-        name: `${student.lastName} ${student.firstName}`,
+      .filter((examStudent) => selectedStudents.has(examStudent.studentId))
+      .map((examStudent) => ({
+        id: examStudent.studentId,
+        name: `${examStudent.student.lastName} ${examStudent.student.firstName}`,
       }))
   }, [students, selectedStudents])
 
@@ -795,8 +798,8 @@ export default function ExportMainView() {
         <ReturnDiffPanel
           examId={exam?.id ?? ""}
           students={students}
-          selectedStudents={selectedStudents}
-          setSelectedStudents={setSelectedStudents}
+          selectedStudentIds={selectedStudentIds}
+          onSelectStudentIds={replaceSelection}
         />
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
@@ -812,7 +815,9 @@ export default function ExportMainView() {
               selectedStatuses={selectedStatuses}
               setSelectedStatuses={setSelectedStatuses}
               selectedStudents={selectedStudents}
-              setSelectedStudents={setSelectedStudents}
+              toggleStudent={toggleStudent}
+              addStudents={addStudents}
+              removeStudents={removeStudents}
               // プレビュー関連
               exportTab={exportTab}
               previewData={previewData}

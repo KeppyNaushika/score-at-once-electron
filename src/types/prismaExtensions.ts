@@ -9,6 +9,8 @@
 
 import type { GradeDataSource, Prisma } from "@prisma/client"
 
+import type { ExamStudentStatus } from "./examStudentStatus.types"
+
 // =============================================================================
 // Student関連型
 // =============================================================================
@@ -61,6 +63,34 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
     }
   }
 }>
+
+/**
+ * 受験生徒（ExamStudent）の詳細型。
+ * `getStudentsForExam`（examApi.d.ts）の戻り値要素と同一の SSOT。
+ *
+ * 実体は Exam×Student×Classroom の結合を生徒1人へ畳んだもので、基底は Student ではなく
+ * **ExamStudent**。受験状態（status）・並び順（customOrder）は ExamStudent の実列、
+ * 生徒識別・学級所属は `examStudent.student(.memberships.classroom)`、答案枚数は
+ * `examStudent.student._count.studentAnswerImages` として Prisma スキーマに完全追随する。
+ * 機能ごとに手書きで重複宣言せず、05/06/08・electron 出力すべてがこの型を参照する。
+ *
+ * status のみ ExamStudentStatus へ narrowing する（DB 上は string。Prisma+SQLite が enum を
+ * 表現できないための一点拡張で、SerializedQuestionScore の Decimal→number や ScoringStatus と
+ * 同じパターン）。それ以外に手書きの graft は持たない。
+ */
+export type ExamStudentWithDetails = Omit<
+  Prisma.ExamStudentGetPayload<{
+    include: {
+      student: {
+        include: {
+          memberships: { include: { classroom: true } }
+          _count: { select: { studentAnswerImages: true } }
+        }
+      }
+    }
+  }>,
+  "status"
+> & { status: ExamStudentStatus }
 
 /**
  * 生徒と学級を含む学級所属型

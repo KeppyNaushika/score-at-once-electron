@@ -28,8 +28,6 @@ export interface RosterRow {
   kana: string
   classInfo: RosterClassInfo
   customOrder?: number | null
-  /** スロット列が参照する任意の追加データ */
-  extras?: Record<string, unknown>
 }
 
 /** フィルタ用の学級候補 */
