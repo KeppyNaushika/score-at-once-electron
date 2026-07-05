@@ -191,7 +191,7 @@ export interface SubtotalGroupSelection {
  * 母集団は「studentReport 選択学級 ∩ 本人の受験日所属学級」の各学級全体。
  * 1人の生徒が複数の studentReport 学級に属する場合は複数エントリになる。
  */
-export interface ClassStatEntry {
+export interface ClassroomStatisticsEntry {
   classroomId: string
   className: string
   grade: string | null
@@ -220,7 +220,7 @@ export interface StatisticsData {
   }
 
   // 学級統計（studentReport 選択学級ごと。複数学級対応）
-  classes: ClassStatEntry[]
+  classes: ClassroomStatisticsEntry[]
 
   // 個人統計
   personal: {

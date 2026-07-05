@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * ClassRemovalDialog（学級削除の2段階モーダル）のテスト
+ * ClassroomRemovalDialog（学級削除の2段階モーダル）のテスト
  *
  * 設計3章の分岐を検証する:
  * - unlink-only（試験）: 単純確認1段階で deleteStudents=false
@@ -14,10 +14,10 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { ClassRemovalDialog } from "@/components/common/class-roster/ClassRemovalDialog"
-import type { ClassRosterEntry } from "@/components/common/class-roster/types"
+import { ClassroomRemovalDialog } from "@/components/common/classroom-roster/ClassroomRemovalDialog"
+import type { ClassroomRosterEntry } from "@/components/common/classroom-roster/types"
 
-const entry: ClassRosterEntry = {
+const entry: ClassroomRosterEntry = {
   id: "c1",
   classroomId: "c1",
   name: "3-A組",
@@ -25,7 +25,7 @@ const entry: ClassRosterEntry = {
   order: 0,
 }
 
-describe("ClassRemovalDialog", () => {
+describe("ClassroomRemovalDialog", () => {
   afterEach(() => {
     vi.clearAllMocks()
   })
@@ -36,7 +36,7 @@ describe("ClassRemovalDialog", () => {
     const onClose = vi.fn()
 
     render(
-      <ClassRemovalDialog
+      <ClassroomRemovalDialog
         entry={entry}
         mode="unlink-only"
         onConfirm={onConfirm}
@@ -56,7 +56,7 @@ describe("ClassRemovalDialog", () => {
     const fetchRemovalPreview = vi.fn().mockResolvedValue({ exclusiveCount: 2 })
 
     render(
-      <ClassRemovalDialog
+      <ClassroomRemovalDialog
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -81,7 +81,7 @@ describe("ClassRemovalDialog", () => {
     const fetchRemovalPreview = vi.fn().mockResolvedValue({ exclusiveCount: 2 })
 
     render(
-      <ClassRemovalDialog
+      <ClassroomRemovalDialog
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -115,7 +115,7 @@ describe("ClassRemovalDialog", () => {
       .mockRejectedValue(new Error("preview failed"))
 
     render(
-      <ClassRemovalDialog
+      <ClassroomRemovalDialog
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -146,7 +146,7 @@ describe("ClassRemovalDialog", () => {
     const fetchRemovalPreview = vi.fn().mockResolvedValue({ exclusiveCount: 0 })
 
     render(
-      <ClassRemovalDialog
+      <ClassroomRemovalDialog
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}

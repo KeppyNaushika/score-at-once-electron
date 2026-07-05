@@ -28,7 +28,7 @@ const EPOCH = new Date(0).toISOString()
 
 const synthStudentId = (studentNumber: string) =>
   `legacy-student:${studentNumber}`
-const synthClassId = (classroomName: string) =>
+const synthClassroomId = (classroomName: string) =>
   `legacy-classroom:${classroomName}`
 const synthTagId = (tagName: string) => `legacy-tag:${tagName}`
 
@@ -68,7 +68,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
       })
     )
     const classesData: ArchiveCwClass[] = [...classNames].map((name) => ({
-      id: synthClassId(name),
+      id: synthClassroomId(name),
       name,
       classCode: null,
       grade: null,
@@ -88,7 +88,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
       description: coursework.description,
       date: coursework.date,
       classrooms: coursework.classrooms.map((classroom) => ({
-        classroomId: synthClassId(classroom.classroomName),
+        classroomId: synthClassroomId(classroom.classroomName),
         order: classroom.order,
       })),
       tags: coursework.tags.map((tag) => ({ tagId: synthTagId(tag.tagName) })),

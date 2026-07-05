@@ -7,7 +7,7 @@ import {
   deleteClass,
   fetchClasses,
   updateClass,
-} from "../lib/prisma/class"
+} from "../lib/prisma/classroom"
 import {
   deleteMasterAnswer,
   getMasterAnswersByExamId,

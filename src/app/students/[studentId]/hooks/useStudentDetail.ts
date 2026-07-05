@@ -79,7 +79,7 @@ export function useStudentDetail(studentId: string) {
   ) => {
     try {
       if (membershipToEdit) {
-        await window.electronAPI.updateStudentClassMembership(
+        await window.electronAPI.updateStudentClassroomMembership(
           membershipToEdit.id,
           membershipData
         )

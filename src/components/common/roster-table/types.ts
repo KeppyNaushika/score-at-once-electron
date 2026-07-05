@@ -8,12 +8,12 @@ import type { ReactNode } from "react"
  */
 
 /** 正規化された学級情報 */
-export interface RosterClassInfo {
+export interface RosterClassroomInfo {
   className: string | null
   classCode?: string | null
   grade?: number | null
   attendanceNumber: number | null
-  /** 学級（ExamClass/GradeClass 等）の並び順 */
+  /** 学級（ExamClassroom/GradeClass 等）の並び順 */
   classOrder?: number | null
 }
 
@@ -26,12 +26,12 @@ export interface RosterRow {
   firstName: string
   /** ふりがな（姓名連結済み。無い場合は空文字） */
   kana: string
-  classInfo: RosterClassInfo
+  classInfo: RosterClassroomInfo
   customOrder?: number | null
 }
 
 /** フィルタ用の学級候補 */
-export interface RosterClassOption {
+export interface RosterClassroomOption {
   id: string
   name: string
 }
@@ -67,7 +67,7 @@ export interface RosterTableAdapter {
   /** 名簿行を取得 */
   fetchRows: () => Promise<RosterRow[]>
   /** フィルタ用の学級候補を取得 */
-  fetchClasses: () => Promise<RosterClassOption[]>
+  fetchClasses: () => Promise<RosterClassroomOption[]>
   /** 並び順を更新（customOrder の連番を保存） */
   updateRowOrder: (
     rowOrders: { studentId: string; customOrder: number }[]

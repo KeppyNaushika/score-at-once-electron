@@ -101,8 +101,8 @@ export function appendClassAverageRows(
   const byId = new Map(
     allScoringData.map((scoringData) => [scoringData.studentId, scoringData])
   )
-  for (const examClass of teacherStatisticsClasses) {
-    const members = examClass.classroom.memberships
+  for (const examClassroom of teacherStatisticsClasses) {
+    const members = examClassroom.classroom.memberships
       .map((membership) => byId.get(membership.studentId))
       .filter(
         (scoringData): scoringData is ScoringData => scoringData !== undefined
@@ -111,7 +111,7 @@ export function appendClassAverageRows(
 
     const row = worksheet.addRow(
       buildAverageRow(
-        `${examClass.classroom.name}平均`,
+        `${examClassroom.classroom.name}平均`,
         members,
         subtotalColumns,
         questionRegions

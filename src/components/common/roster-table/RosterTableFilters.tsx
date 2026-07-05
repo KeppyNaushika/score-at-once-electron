@@ -3,7 +3,7 @@
 import { Search } from "lucide-react"
 
 import type {
-  RosterClassOption,
+  RosterClassroomOption,
   RosterFilter,
 } from "@/components/common/roster-table/types"
 import { Input } from "@/components/ui/input"
@@ -18,9 +18,9 @@ import {
 interface RosterTableFiltersProps {
   searchTerm: string
   onSearchChange: (value: string) => void
-  selectedClassId: string
+  selectedClassroomId: string
   onClassChange: (value: string) => void
-  classes: RosterClassOption[]
+  classes: RosterClassroomOption[]
   additionalFilters: RosterFilter[]
 }
 
@@ -28,7 +28,7 @@ interface RosterTableFiltersProps {
 export function RosterTableFilters({
   searchTerm,
   onSearchChange,
-  selectedClassId,
+  selectedClassroomId,
   onClassChange,
   classes,
   additionalFilters,
@@ -45,7 +45,7 @@ export function RosterTableFilters({
         />
       </div>
 
-      <Select value={selectedClassId} onValueChange={onClassChange}>
+      <Select value={selectedClassroomId} onValueChange={onClassChange}>
         <SelectTrigger className="w-40">
           <SelectValue />
         </SelectTrigger>

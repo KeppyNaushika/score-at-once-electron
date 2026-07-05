@@ -7,7 +7,7 @@
  */
 
 /** 学級候補（追加可能な学級） */
-export interface AddPanelClassItem {
+export interface AddPanelClassroomItem {
   id: string
   name: string
   /** この学級から新たに追加できる在籍生徒数 */
@@ -33,13 +33,18 @@ export interface AddPanelStudentItem {
 /** host が差し込むデータ取得・追加処理 */
 export interface StudentAddPanelAdapter {
   /** 追加可能な学級候補を取得（activeOnly=在籍中のみ） */
-  fetchAvailableClasses: (activeOnly: boolean) => Promise<AddPanelClassItem[]>
+  fetchAvailableClasses: (
+    activeOnly: boolean
+  ) => Promise<AddPanelClassroomItem[]>
   /** 追加可能な生徒候補を取得（activeOnly=在籍中の所属が1件以上ある生徒のみ） */
   fetchAvailableStudents: (
     activeOnly: boolean
   ) => Promise<AddPanelStudentItem[]>
   /** 選択した学級（指定順）を一括追加 */
-  addClasses: (orderedClassIds: string[], activeOnly: boolean) => Promise<void>
+  addClasses: (
+    orderedClassroomIds: string[],
+    activeOnly: boolean
+  ) => Promise<void>
   /** 選択した生徒を個別追加 */
   addStudents: (studentIds: string[]) => Promise<void>
 }

@@ -23,15 +23,15 @@ import {
 } from "../lib/prisma/student"
 import {
   addStudentToClass,
-  createStudentClassMembership,
-  deleteStudentClassMembership,
+  createStudentClassroomMembership,
+  deleteStudentClassroomMembership,
   endStudentMembership,
   getAllMembershipsByStudentId,
-  getCurrentMembershipsByClassId,
+  getCurrentMembershipsByClassroomId,
   getCurrentMembershipsByStudentId,
   getMembershipsByDateRange,
-  updateStudentClassMembership,
-} from "../lib/prisma/studentClassMembership"
+  updateStudentClassroomMembership,
+} from "../lib/prisma/studentClassroomMembership"
 import {
   applyCellStyle,
   autoFitColumns,
@@ -66,7 +66,7 @@ export function setupStudentHandlers(): void {
   registerHandler(
     "create-student-class-membership",
     async (membershipData: Prisma.StudentClassroomMembershipCreateInput) => {
-      return await createStudentClassMembership(membershipData)
+      return await createStudentClassroomMembership(membershipData)
     }
   )
 
@@ -76,12 +76,12 @@ export function setupStudentHandlers(): void {
       id: string,
       membershipData: Prisma.StudentClassroomMembershipUpdateInput
     ) => {
-      return await updateStudentClassMembership(id, membershipData)
+      return await updateStudentClassroomMembership(id, membershipData)
     }
   )
 
   registerHandler("delete-student-class-membership", async (id: string) => {
-    return await deleteStudentClassMembership(id)
+    return await deleteStudentClassroomMembership(id)
   })
 
   registerHandler(
@@ -101,7 +101,7 @@ export function setupStudentHandlers(): void {
   registerHandler(
     "get-current-memberships-by-class-id",
     async (classroomId: string) => {
-      return await getCurrentMembershipsByClassId(classroomId)
+      return await getCurrentMembershipsByClassroomId(classroomId)
     }
   )
 
@@ -275,10 +275,10 @@ export function setupStudentHandlers(): void {
   // 学級データExcelエクスポート（選択された学級の所属データ）
   registerSafeHandler(
     "export-classes-excel",
-    async (selectedClassIds: string[]) => {
-      const { fetchClasses } = await import("../lib/prisma/class")
+    async (selectedClassroomIds: string[]) => {
+      const { fetchClasses } = await import("../lib/prisma/classroom")
       const allClasses = await fetchClasses()
-      const selectedSet = new Set(selectedClassIds)
+      const selectedSet = new Set(selectedClassroomIds)
       const classes = allClasses.filter((classroom) =>
         selectedSet.has(classroom.id)
       )

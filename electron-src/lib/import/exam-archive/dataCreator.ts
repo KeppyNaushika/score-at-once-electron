@@ -8,7 +8,7 @@ import { randomUUID } from "crypto"
 
 import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
-import { resolveExamClassOutputFlags } from "../examClassFlags"
+import { resolveExamClassroomOutputFlags } from "../examClassroomFlags"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { IdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
@@ -102,14 +102,17 @@ export async function createImportedData(
       // 3. 学級所属を作成
       for (const membership of data.classesData.memberships) {
         const newStudentId = remapId(membership.studentId, mappings.student)
-        const newClassId = remapId(membership.classroomId, mappings.classroom)
+        const newClassroomId = remapId(
+          membership.classroomId,
+          mappings.classroom
+        )
 
-        if (newStudentId && newClassId) {
+        if (newStudentId && newClassroomId) {
           await tx.studentClassroomMembership.create({
             data: {
               id: remapIdRequired(membership.id, mappings.membership),
               studentId: newStudentId,
-              classroomId: newClassId,
+              classroomId: newClassroomId,
               startDate: new Date(membership.startDate),
               endDate: membership.endDate ? new Date(membership.endDate) : null,
               attendanceNumber: membership.attendanceNumber,
@@ -321,19 +324,22 @@ export async function createImportedData(
         }
       }
 
-      // 9.5. ExamClassを作成 (v1.1.0+)
-      for (const examClass of data.examData.examClassrooms || []) {
-        const newClassId = remapId(examClass.classroomId, mappings.classroom)
-        if (newClassId) {
+      // 9.5. ExamClassroomを作成 (v1.1.0+)
+      for (const examClassroom of data.examData.examClassrooms || []) {
+        const newClassroomId = remapId(
+          examClassroom.classroomId,
+          mappings.classroom
+        )
+        if (newClassroomId) {
           await tx.examClassroom.create({
             data: {
-              id: remapIdRequired(examClass.id, mappings.examClass),
+              id: remapIdRequired(examClassroom.id, mappings.examClassroom),
               examId: newExamId,
-              classroomId: newClassId,
-              administered: examClass.administered,
+              classroomId: newClassroomId,
+              administered: examClassroom.administered,
               // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-              ...resolveExamClassOutputFlags(examClass),
-              order: examClass.order,
+              ...resolveExamClassroomOutputFlags(examClassroom),
+              order: examClassroom.order,
             },
           })
         }

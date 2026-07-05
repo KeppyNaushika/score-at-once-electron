@@ -52,7 +52,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
         ReturnType<typeof window.electronAPI.grade.getStudents>
       >["students"]
     >()
-  const [classIds, setClassIds] = useState<string[]>([])
+  const [classIds, setClassroomIds] = useState<string[]>([])
 
   const loadStudentsAndClasses = useCallback(async () => {
     const [studentsResult, classesResult] = await Promise.all([
@@ -63,7 +63,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       setStudents(studentsResult.students)
     }
     if (classesResult.success && classesResult.classes) {
-      setClassIds(
+      setClassroomIds(
         classesResult.classes.map((classroom) => classroom.classroomId)
       )
     }

@@ -1,5 +1,5 @@
 /**
- * 学級所属（StudentClassMembership）の在籍フィルタ
+ * 学級所属（StudentClassroomMembership）の在籍フィルタ
  *
  * exam / grade の対象生徒管理で共有する純関数。
  * 「在籍中」は生徒単体では決まらず、終了していない所属（endDateがnull、

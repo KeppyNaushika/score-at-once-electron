@@ -21,7 +21,7 @@ import {
   addStudentsFromClass,
   getAdministeredClasses,
   getClassMembersForExam,
-} from "@/electron-src/lib/prisma/examClass"
+} from "@/electron-src/lib/prisma/examClassroom"
 import {
   getClassesNotInExam,
   getStudentsForExam,
@@ -250,7 +250,7 @@ describe("Exam 在籍フィルタ", () => {
   describe("採番学級の解決（getAdministeredClasses + resolveExamClassroomPlacement）", () => {
     it("受験日時点で在籍する生徒のみ学級情報を解決する", async () => {
       const { exam, classA, active, left } = await createTestData()
-      // administered=true の ExamClass を作る（両方を受験者に追加）
+      // administered=true の ExamClassroom を作る（両方を受験者に追加）
       await addStudentsFromClass(exam.id, classA.id, false)
 
       const administeredClasses = await getAdministeredClasses(exam.id)

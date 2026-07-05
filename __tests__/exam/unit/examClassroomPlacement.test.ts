@@ -9,14 +9,14 @@
 import { describe, expect, it } from "vitest"
 
 import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamClassWithClass } from "@/types/electron/examClassApi"
+import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroomApi"
 
 /** テスト用の administered ExamClassroom を最小構成で組み立てる */
-function buildExamClass(
+function buildExamClassroom(
   order: number,
   classroom: { id: string; name: string; grade: number | null },
   members: Array<{ studentId: string; attendanceNumber: number | null }>
-): ExamClassWithClass {
+): ExamClassroomWithMemberships {
   return {
     id: `ec-${classroom.id}`,
     examId: "exam-1",
@@ -47,18 +47,18 @@ function buildExamClass(
         student: { id: member.studentId } as unknown,
       })),
     },
-    // ExamClassWithClass は exam を含まないためこのままでよい
-  } as unknown as ExamClassWithClass
+    // ExamClassroomWithMemberships は exam を含まないためこのままでよい
+  } as unknown as ExamClassroomWithMemberships
 }
 
 describe("resolveExamClassroomPlacement", () => {
   it("生徒が複数の administered 学級に所属する場合、order 昇順で最初の学級を採番学級にする", () => {
     // 意図的に配列順は order 昇順にしない（リゾルバが order で並べ直すことを検証）
     const administeredClasses = [
-      buildExamClass(1, { id: "clubB", name: "バスケ部", grade: 3 }, [
+      buildExamClassroom(1, { id: "clubB", name: "バスケ部", grade: 3 }, [
         { studentId: "s1", attendanceNumber: 7 },
       ]),
-      buildExamClass(0, { id: "classA", name: "3年A組", grade: 3 }, [
+      buildExamClassroom(0, { id: "classA", name: "3年A組", grade: 3 }, [
         { studentId: "s1", attendanceNumber: 1 },
         { studentId: "s2", attendanceNumber: 2 },
       ]),

@@ -62,7 +62,7 @@ export default function StudentTable() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
     useState<string>("current_unassigned")
-  const [filterClassId, setFilterClassId] = useState<string>("all")
+  const [filterClassroomId, setFilterClassroomId] = useState<string>("all")
 
   // Selection states
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
@@ -106,10 +106,10 @@ export default function StudentTable() {
         fullNameKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())
 
-      if (filterClassId !== "all") {
+      if (filterClassroomId !== "all") {
         const belongsToClass = student.memberships.some(
           (membership) =>
-            membership.classroom.id === filterClassId &&
+            membership.classroom.id === filterClassroomId &&
             isCurrentMembership(membership)
         )
         if (!belongsToClass) return false
@@ -143,7 +143,7 @@ export default function StudentTable() {
       }
       return matchesSearch
     })
-  }, [students, searchTerm, filterClassId, filterMembershipStatus])
+  }, [students, searchTerm, filterClassroomId, filterMembershipStatus])
 
   // ソート用のデータ変換
   const sortableData = useMemo<StudentSortable[]>(() => {
@@ -378,7 +378,10 @@ export default function StudentTable() {
               className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
-          <Select value={filterClassId} onValueChange={setFilterClassId}>
+          <Select
+            value={filterClassroomId}
+            onValueChange={setFilterClassroomId}
+          >
             <SelectTrigger className="h-9 w-40 rounded-lg">
               <SelectValue placeholder="学級フィルタ" />
             </SelectTrigger>

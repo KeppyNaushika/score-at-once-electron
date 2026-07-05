@@ -2,7 +2,7 @@
  * ID統合ステップのコンポーネント
  */
 
-export { ClassIntegrationPanel } from "./ClassIntegrationPanel"
+export { ClassroomIntegrationPanel } from "./ClassroomIntegrationPanel"
 export { DetailPanel } from "./DetailPanel"
 export { MatchedItemRow } from "./MatchedItemRow"
 export { NoMatchItemRow } from "./NoMatchItemRow"

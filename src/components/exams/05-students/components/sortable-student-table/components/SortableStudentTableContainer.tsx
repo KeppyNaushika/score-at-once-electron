@@ -86,7 +86,7 @@ export function SortableStudentTableContainer(
     examId,
     searchTerm,
     onSearchChange,
-    selectedClassId,
+    selectedClassroomId,
     onClassChange,
     statusFilter,
     onStatusChange,
@@ -246,7 +246,7 @@ export function SortableStudentTableContainer(
         <RosterTableFilters
           searchTerm={searchTerm}
           onSearchChange={onSearchChange}
-          selectedClassId={selectedClassId}
+          selectedClassroomId={selectedClassroomId}
           onClassChange={onClassChange}
           classes={classOptions}
           additionalFilters={additionalFilters}

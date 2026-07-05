@@ -1,0 +1,224 @@
+"use client"
+
+import type { Prisma } from "@prisma/client"
+import { useCallback, useEffect, useState } from "react"
+
+import type {
+  ClassroomWithMemberships,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
+
+/** 所属関係情報（UI用 — 新規作成時のstudentId指定を含む） */
+interface Membership {
+  id: string
+  classroomId: string
+  startDate: Date
+  endDate?: Date | null
+  attendanceNumber?: number | null
+  notes?: string | null
+  studentId: string
+  student: {
+    id: string
+    studentNumber: string
+    lastName: string
+    firstName: string
+    firstNameKana: string
+  }
+}
+
+/** 学級の詳細表示・編集・所属関係の管理を提供するカスタムフック */
+export function useClassroomManagement(classroomId: string) {
+  const [loading, setLoading] = useState(true)
+  const [classData, setClassData] = useState<ClassroomWithMemberships | null>(
+    null
+  )
+  const [students, setStudents] = useState<StudentWithMemberships[]>([])
+  const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
+  const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
+    useState(false)
+  const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
+  const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(
+    null
+  )
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const classes = await window.electronAPI.fetchClasses()
+      const targetClass = classes.find(
+        (classroom) => classroom.id === classroomId
+      )
+      if (targetClass) {
+        setClassData(targetClass)
+      }
+
+      const fetchedStudents = await window.electronAPI.fetchStudents()
+      setStudents(fetchedStudents || [])
+    } catch (error) {
+      console.error("Failed to fetch data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [classroomId])
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void fetchData()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [fetchData])
+
+  const handleSaveClass = async (
+    classInfo: Partial<ClassroomWithMemberships>
+  ) => {
+    try {
+      // Extract memberships to avoid type conflicts
+      const { memberships: _memberships, ...classUpdateData } = classInfo
+      const updateInput: Prisma.ClassroomUpdateInput & { id: string } = {
+        id: classroomId,
+        name: classUpdateData.name,
+        classCode: classUpdateData.classCode,
+        grade: classUpdateData.grade,
+        description: classUpdateData.description,
+        isVisible: classUpdateData.isVisible,
+      }
+      const updatedClass = await window.electronAPI.updateClass(updateInput)
+      setClassData(updatedClass)
+      setIsClassroomModalOpen(false)
+    } catch (error) {
+      console.error("Failed to update class:", error)
+      alert("学級情報の更新に失敗しました。")
+    }
+  }
+
+  const handleStudentImportSuccess = async () => {
+    // Refresh class data
+    await fetchData()
+    setIsStudentImportModalOpen(false)
+  }
+
+  const handleSaveMembership = async (membershipData: Partial<Membership>) => {
+    try {
+      if (membershipToEdit) {
+        // 既存のmembershipを更新
+        // 空欄は null で明示的にクリアする（undefined はPrismaでは「変更しない」）。
+        // startDate は必須項目のため、未指定時は既存値を維持する（undefined のまま）。
+        const updateInput: Prisma.StudentClassroomMembershipUpdateInput = {
+          attendanceNumber: membershipData.attendanceNumber ?? null,
+          notes: membershipData.notes ?? null,
+          startDate: membershipData.startDate,
+          endDate: membershipData.endDate ?? null,
+        }
+        await window.electronAPI.updateStudentClassroomMembership(
+          membershipToEdit.id,
+          updateInput
+        )
+      } else if (membershipData.studentId) {
+        // 新規所属関係を作成
+        const membership = await window.electronAPI.addStudentToClass(
+          membershipData.studentId,
+          classroomId,
+          membershipData.startDate ?? undefined,
+          membershipData.attendanceNumber ?? undefined,
+          membershipData.notes ?? undefined
+        )
+        // 終了日が指定されている場合は所属を終了
+        if (membershipData.endDate) {
+          await window.electronAPI.endStudentMembership(
+            membership.id,
+            new Date(membershipData.endDate)
+          )
+        }
+      }
+
+      // Refresh class data
+      const classes = await window.electronAPI.fetchClasses()
+      const updatedClass = classes.find(
+        (classroom) => classroom.id === classroomId
+      )
+      if (updatedClass) {
+        setClassData(updatedClass)
+      }
+      setIsMembershipModalOpen(false)
+    } catch (error) {
+      console.error("Failed to save membership:", error)
+      alert("所属関係の保存に失敗しました。")
+    }
+  }
+
+  const handleDeleteMembership = async (membershipId: string) => {
+    if (window.confirm("この所属関係を削除しますか？")) {
+      try {
+        await window.electronAPI.deleteStudentClassroomMembership(membershipId)
+
+        // Refresh class data
+        const classes = await window.electronAPI.fetchClasses()
+        const updatedClass = classes.find(
+          (classroom) => classroom.id === classroomId
+        )
+        if (updatedClass) {
+          setClassData(updatedClass)
+        }
+      } catch (error) {
+        console.error("Failed to delete membership:", error)
+        alert("所属関係の削除に失敗しました。")
+      }
+    }
+  }
+
+  const handleBulkDeleteMemberships = async (membershipIds: string[]) => {
+    try {
+      // Delete each membership
+      for (const membershipId of membershipIds) {
+        await window.electronAPI.deleteStudentClassroomMembership(membershipId)
+      }
+
+      // Refresh class data
+      const classes = await window.electronAPI.fetchClasses()
+      const updatedClass = classes.find(
+        (classroom) => classroom.id === classroomId
+      )
+      if (updatedClass) {
+        setClassData(updatedClass)
+      }
+    } catch (error) {
+      console.error("Failed to delete memberships:", error)
+      alert("所属関係の削除に失敗しました。")
+    }
+  }
+
+  const handleDeleteClass = async () => {
+    if (window.confirm("この学級を削除しますか？")) {
+      try {
+        await window.electronAPI.deleteClass(classroomId)
+        // Navigate back to classes list would be handled by the component
+      } catch (error) {
+        console.error("Failed to delete class:", error)
+        alert("学級の削除に失敗しました。")
+      }
+    }
+  }
+
+  return {
+    loading,
+    classData,
+    students,
+    isClassroomModalOpen,
+    setIsClassroomModalOpen,
+    isStudentImportModalOpen,
+    setIsStudentImportModalOpen,
+    isMembershipModalOpen,
+    setIsMembershipModalOpen,
+    membershipToEdit,
+    setMembershipToEdit,
+    handleSaveClass,
+    handleStudentImportSuccess,
+    handleSaveMembership,
+    handleDeleteMembership,
+    handleBulkDeleteMemberships,
+    handleDeleteClass,
+  }
+}
+
+export type { Membership }

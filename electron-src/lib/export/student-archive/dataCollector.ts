@@ -38,24 +38,24 @@ export async function collectStudentArchiveData(
   })
 
   // 3. 関連する学級IDを導出
-  const relatedClassIds = [
+  const relatedClassroomIds = [
     ...new Set(allMemberships.map((membership) => membership.classroomId)),
   ]
 
   // classIdsが指定されていればフィルタ
-  const targetClassIds = classIds
-    ? relatedClassIds.filter((id) => classIds.includes(id))
-    : relatedClassIds
+  const targetClassroomIds = classIds
+    ? relatedClassroomIds.filter((id) => classIds.includes(id))
+    : relatedClassroomIds
 
   // 4. 学級を取得
   const classes = await prisma.classroom.findMany({
-    where: { id: { in: targetClassIds } },
+    where: { id: { in: targetClassroomIds } },
   })
 
   // 5. 所属をフィルタ（対象学級のもののみ）
-  const targetClassIdSet = new Set(targetClassIds)
+  const targetClassroomIdSet = new Set(targetClassroomIds)
   const filteredMemberships = allMemberships.filter((membership) =>
-    targetClassIdSet.has(membership.classroomId)
+    targetClassroomIdSet.has(membership.classroomId)
   )
 
   // 6. アーカイブ形式に整形

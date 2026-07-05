@@ -33,29 +33,32 @@ export function createStudentApi() {
       ipcRenderer.invoke("update-class", classData),
     deleteClass: (classroomId: string) =>
       ipcRenderer.invoke("delete-class", classroomId),
-    exportClassesExcel: (selectedClassIds: string[]) =>
-      ipcRenderer.invoke("export-classes-excel", selectedClassIds) as Promise<{
+    exportClassesExcel: (selectedClassroomIds: string[]) =>
+      ipcRenderer.invoke(
+        "export-classes-excel",
+        selectedClassroomIds
+      ) as Promise<{
         success: boolean
         outputPath?: string
         error?: string
       }>,
 
     // Student Class Membership related
-    createStudentClassMembership: (
+    createStudentClassroomMembership: (
       membershipData: Prisma.StudentClassroomMembershipCreateInput
     ) => ipcRenderer.invoke("create-student-class-membership", membershipData),
-    updateStudentClassMembership: (
+    updateStudentClassroomMembership: (
       id: string,
       membershipData: Prisma.StudentClassroomMembershipUpdateInput
     ) =>
       ipcRenderer.invoke("update-student-class-membership", id, membershipData),
-    deleteStudentClassMembership: (id: string) =>
+    deleteStudentClassroomMembership: (id: string) =>
       ipcRenderer.invoke("delete-student-class-membership", id),
     getCurrentMembershipsByStudentId: (studentId: string) =>
       ipcRenderer.invoke("get-current-memberships-by-student-id", studentId),
     getAllMembershipsByStudentId: (studentId: string) =>
       ipcRenderer.invoke("get-all-memberships-by-student-id", studentId),
-    getCurrentMembershipsByClassId: (classroomId: string) =>
+    getCurrentMembershipsByClassroomId: (classroomId: string) =>
       ipcRenderer.invoke("get-current-memberships-by-class-id", classroomId),
     addStudentToClass: (
       studentId: string,

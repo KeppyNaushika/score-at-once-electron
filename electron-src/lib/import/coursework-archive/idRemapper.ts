@@ -99,7 +99,7 @@ export async function resolveStudents(
   return { map, warnings }
 }
 
-/** 学級を解決する。返り値は archiveClassId → 実 classroomId のマップ。 */
+/** 学級を解決する。返り値は archiveClassroomId → 実 classroomId のマップ。 */
 export async function resolveClasses(
   tx: TransactionClient,
   classes: ArchiveCwClass[],

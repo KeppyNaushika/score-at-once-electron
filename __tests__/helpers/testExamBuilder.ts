@@ -59,7 +59,7 @@ export interface FullTestExam {
     examId: string
     studentId: string
   }>
-  examClass: { id: string; examId: string; classroomId: string }
+  examClassroom: { id: string; examId: string; classroomId: string }
   subtotalGroup: { id: string; name: string }
   subtotals: Array<{
     id: string
@@ -253,8 +253,8 @@ export async function createFullTestExam(
     examStudents.push(examStudent)
   }
 
-  // 8. ExamClass作成
-  const examClass = await prisma.examClassroom.create({
+  // 8. ExamClassroom作成
+  const examClassroom = await prisma.examClassroom.create({
     data: {
       id: randomUUID(),
       examId: exam.id,
@@ -488,10 +488,10 @@ export async function createFullTestExam(
       examId: examStudent.examId,
       studentId: examStudent.studentId,
     })),
-    examClass: {
-      id: examClass.id,
-      examId: examClass.examId,
-      classroomId: examClass.classroomId,
+    examClassroom: {
+      id: examClassroom.id,
+      examId: examClassroom.examId,
+      classroomId: examClassroom.classroomId,
     },
     subtotalGroup: { id: subtotalGroup.id, name: subtotalGroup.name },
     subtotals: subtotals.map((subtotal) => ({

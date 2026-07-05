@@ -62,7 +62,7 @@ export interface ArchiveDataCounts {
  *    - その他: 指定されたフィールドで照合
  */
 export type StudentMatchingMethod = "studentNumber" | "name" | "none"
-export type ClassMatchingMethod = "name" | "none"
+export type ClassroomMatchingMethod = "name" | "none"
 export type UserMatchingMethod = "username" | "none"
 export type ExamMatchingMethod = "always_new"
 export type SubtotalGroupMatchingMethod = "name" | "none"
@@ -72,7 +72,7 @@ export type SubtotalGroupMatchingMethod = "name" | "none"
  */
 export interface MatchingConfig {
   student: StudentMatchingMethod
-  classroom: ClassMatchingMethod
+  classroom: ClassroomMatchingMethod
   user: UserMatchingMethod
   exam: ExamMatchingMethod
   subtotalGroup: SubtotalGroupMatchingMethod
@@ -217,7 +217,7 @@ export interface FileOverviewData {
 export type StudentMatchingStrategy =
   "by_student_number" | "by_name" | "individual" | "all_new"
 
-export type ClassMatchingStrategy = "by_name" | "individual" | "all_new"
+export type ClassroomMatchingStrategy = "by_name" | "individual" | "all_new"
 
 export type SubtotalGroupMatchingStrategy = "by_name" | "individual" | "all_new"
 
@@ -256,7 +256,7 @@ export interface CategoryIdIntegrationConfig {
   /** 紐づけ方法 */
   strategy:
     | StudentMatchingStrategy
-    | ClassMatchingStrategy
+    | ClassroomMatchingStrategy
     | SubtotalGroupMatchingStrategy
   /** 個別の決定（strategyがindividualの場合、またはstrategy適用後の個別調整） */
   decisions: IdIntegrationDecision[]
@@ -759,7 +759,7 @@ export interface ArchiveExamData {
     createdAt: string
     updatedAt: string
   }>
-  /** v1.1.0+ ExamClass関係 */
+  /** v1.1.0+ ExamClassroom関係 */
   examClassrooms: Array<{
     id: string
     examId: string

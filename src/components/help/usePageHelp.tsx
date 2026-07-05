@@ -12,7 +12,7 @@ import { HelpContent05Students as StudentsHelpContent } from "@/components/help/
 import { HelpContent06StudentAnswers as StudentAnswersHelpContent } from "@/components/help/page-specific/HelpContent06StudentAnswers"
 import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent07Scoring"
 import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent08Export"
-import { HelpContentClasses as ClassesHelpContent } from "@/components/help/page-specific/HelpContentClasses"
+import { HelpContentClassrooms as ClassroomsHelpContent } from "@/components/help/page-specific/HelpContentClassrooms"
 import { HelpContentStudents as StudentsMasterHelpContent } from "@/components/help/page-specific/HelpContentStudents"
 import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,7 @@ const pageHelpComponents: {
   "07-score-at-once": ScoringHelpContent,
   "08-export": ExportHelpContent,
   "subtotal-groups": SubtotalGroupsHelpContent,
-  classes: ClassesHelpContent,
+  classes: ClassroomsHelpContent,
   students: StudentsMasterHelpContent,
 }
 
@@ -56,7 +56,7 @@ export function usePageHelp() {
     if (pathname.includes("subtotal-groups")) {
       return "subtotal-groups"
     }
-    if (pathname.includes("/classes") && !pathname.includes("exams")) {
+    if (pathname.includes("/classrooms") && !pathname.includes("exams")) {
       return "classes"
     }
     if (pathname.includes("/students") && !pathname.includes("exams")) {

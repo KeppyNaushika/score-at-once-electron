@@ -186,8 +186,8 @@ export function setupGradeHandlers(): void {
 
   registerHandler(
     "grade:setClassOrders",
-    async (gradeId: string, orderedClassIds: string[]) => {
-      return setGradeClassOrders(gradeId, orderedClassIds)
+    async (gradeId: string, orderedClassroomIds: string[]) => {
+      return setGradeClassOrders(gradeId, orderedClassroomIds)
     }
   )
 

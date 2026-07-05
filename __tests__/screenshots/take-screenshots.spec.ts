@@ -235,7 +235,7 @@ test.describe.serial("第1章: 初期設定", () => {
 
   test("1-3 学級管理", async () => {
     // (A) 空の学級一覧
-    await nav(page, "/classes")
+    await nav(page, "/classrooms")
     await ss(page, "ch1-setup/05-class-list.png")
 
     // (B) 学級追加ダイアログ（入力あり）
@@ -271,7 +271,7 @@ test.describe.serial("第1章: 初期設定", () => {
     classBId = classResult.classBId
 
     // (D) 作成後の学級一覧
-    await nav(page, "/classes")
+    await nav(page, "/classrooms")
     await ss(page, "ch1-setup/07-class-list-updated.png")
 
     // (E) UIで2年C組を追加（空のクラス）
@@ -315,7 +315,7 @@ test.describe.serial("第1章: 初期設定", () => {
     // (F) 空のクラス詳細
     if (newClassCreated) {
       try {
-        await nav(page, "/classes")
+        await nav(page, "/classrooms")
         const newClassLink = page.getByText("2年C組").first()
         if (await newClassLink.isVisible({ timeout: 2000 })) {
           await newClassLink.click()
@@ -331,7 +331,7 @@ test.describe.serial("第1章: 初期設定", () => {
     }
 
     // (G) 2年A組の詳細（生徒が20名いる）
-    await nav(page, `/classes/${classAId}`)
+    await nav(page, `/classrooms/${classAId}`)
     await ss(page, "ch1-setup/09-class-with-students.png")
   })
 

@@ -19,7 +19,7 @@ import { useStudentExamResults } from "@/app/students/[studentId]/hooks/useStude
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
-import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
+import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -196,7 +196,7 @@ export default function StudentDetailPage() {
         )}
 
         {isMembershipModalOpen && (
-          <StudentClassMembershipModal
+          <StudentClassroomMembershipModal
             isOpen={isMembershipModalOpen}
             onClose={() => setIsMembershipModalOpen(false)}
             onSave={handleSaveMembershipData}

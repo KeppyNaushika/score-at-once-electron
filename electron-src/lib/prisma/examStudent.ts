@@ -6,7 +6,7 @@ import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveStudentLabel } from "./auditScope"
-import { getAvailableClassesForTarget } from "./availableClasses"
+import { getAvailableClassesForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
 
@@ -315,7 +315,7 @@ export async function getClassesNotInExam(examId: string, activeOnly = true) {
     })
 
     const classes = await getAvailableClassesForTarget({
-      existingClassIds: [],
+      existingClassroomIds: [],
       excludeStudentIds: examStudents.map(
         (examStudent) => examStudent.studentId
       ),

@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
-  type ClassRosterEntry,
-  ClassRosterManager,
-} from "@/components/common/class-roster"
+  type ClassroomRosterEntry,
+  ClassroomRosterManager,
+} from "@/components/common/classroom-roster"
 import {
-  type RosterClassOption,
+  type RosterClassroomOption,
   type RosterRow,
   RosterTable,
   type RosterTableAdapter,
@@ -15,7 +15,7 @@ import {
 } from "@/components/common/roster-table"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type {
-  AddPanelClassItem,
+  AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
@@ -79,14 +79,14 @@ export function CourseworkStudentsContainer({
             courseworkClass.order,
           ])
         )
-        const registeredClassIds = new Set(classOrderMap.keys())
+        const registeredClassroomIds = new Set(classOrderMap.keys())
         const students =
           studentResult.success && studentResult.students
             ? studentResult.students
             : []
         return students.map((courseworkStudent): RosterRow => {
           const membership = courseworkStudent.student.memberships.find(
-            (membership) => registeredClassIds.has(membership.classroomId)
+            (membership) => registeredClassroomIds.has(membership.classroomId)
           )
           return {
             id: courseworkStudent.studentId,
@@ -109,7 +109,7 @@ export function CourseworkStudentsContainer({
         const result =
           await window.electronAPI.coursework.getClasses(courseworkId)
         if (!result.success || !result.classes) return []
-        return result.classes.map((courseworkClass): RosterClassOption => ({
+        return result.classes.map((courseworkClass): RosterClassroomOption => ({
           id: courseworkClass.classroomId,
           name: courseworkClass.className,
         }))
@@ -139,7 +139,7 @@ export function CourseworkStudentsContainer({
           activeOnly
         )
         if (!result.success || !result.classes) return []
-        return result.classes.map((classroom): AddPanelClassItem => ({
+        return result.classes.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
           studentCount: classroom.studentCount,
@@ -169,8 +169,8 @@ export function CourseworkStudentsContainer({
             : [],
         }))
       },
-      addClasses: async (orderedClassIds, activeOnly) => {
-        for (const classroomId of orderedClassIds) {
+      addClasses: async (orderedClassroomIds, activeOnly) => {
+        for (const classroomId of orderedClassroomIds) {
           const result =
             await window.electronAPI.coursework.addStudentsFromClass(
               courseworkId,
@@ -202,7 +202,7 @@ export function CourseworkStudentsContainer({
     await rosterHandle?.refresh()
   }, [loadClasses, rosterHandle])
 
-  const classEntries = useMemo<ClassRosterEntry[]>(
+  const classEntries = useMemo<ClassroomRosterEntry[]>(
     () =>
       classes.map((courseworkClass) => ({
         id: courseworkClass.classroomId,
@@ -231,16 +231,16 @@ export function CourseworkStudentsContainer({
       {classes.length > 0 && (
         <div className="mb-6">
           <h3 className="mb-3 text-sm font-medium">登録済み学級</h3>
-          <ClassRosterManager
+          <ClassroomRosterManager
             entries={classEntries}
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
-            onReorder={async (orderedClassIds) => {
+            onReorder={async (orderedClassroomIds) => {
               const result = await window.electronAPI.coursework.setClassOrders(
                 courseworkId,
-                orderedClassIds
+                orderedClassroomIds
               )
-              // 失敗時は throw して ClassRosterManager の楽観更新をロールバックさせる
+              // 失敗時は throw して ClassroomRosterManager の楽観更新をロールバックさせる
               if (!result.success) {
                 throw new Error(result.error || "学級の並び替えに失敗しました")
               }

@@ -31,7 +31,7 @@ export function StudentArchiveExportDialog({
   selectedStudentIds,
 }: StudentArchiveExportDialogProps) {
   const [relatedClasses, setRelatedClasses] = useState<ClassInfo[]>([])
-  const [selectedClassIds, setSelectedClassIds] = useState<Set<string>>(
+  const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
   const [isLoading, setIsLoading] = useState(false)
@@ -68,7 +68,9 @@ export function StudentArchiveExportDialog({
 
         setRelatedClasses(classes)
         // デフォルト: 全学級を選択
-        setSelectedClassIds(new Set(classes.map((classroom) => classroom.id)))
+        setSelectedClassroomIds(
+          new Set(classes.map((classroom) => classroom.id))
+        )
       } catch (error) {
         console.error("Failed to fetch classes:", error)
       } finally {
@@ -79,23 +81,23 @@ export function StudentArchiveExportDialog({
     fetchClasses()
   }, [isOpen, selectedStudentIds])
 
-  const toggleClass = (classId: string) => {
-    setSelectedClassIds((prev) => {
+  const toggleClass = (classroomId: string) => {
+    setSelectedClassroomIds((prev) => {
       const next = new Set(prev)
-      if (next.has(classId)) {
-        next.delete(classId)
+      if (next.has(classroomId)) {
+        next.delete(classroomId)
       } else {
-        next.add(classId)
+        next.add(classroomId)
       }
       return next
     })
   }
 
   const toggleAll = () => {
-    if (selectedClassIds.size === relatedClasses.length) {
-      setSelectedClassIds(new Set())
+    if (selectedClassroomIds.size === relatedClasses.length) {
+      setSelectedClassroomIds(new Set())
     } else {
-      setSelectedClassIds(
+      setSelectedClassroomIds(
         new Set(relatedClasses.map((classroom) => classroom.id))
       )
     }
@@ -107,9 +109,9 @@ export function StudentArchiveExportDialog({
       const result = await window.electronAPI.studentArchive.exportStudents({
         studentIds: Array.from(selectedStudentIds),
         classIds:
-          selectedClassIds.size === relatedClasses.length
+          selectedClassroomIds.size === relatedClasses.length
             ? undefined
-            : Array.from(selectedClassIds),
+            : Array.from(selectedClassroomIds),
       })
 
       if (result.success) {
@@ -163,9 +165,9 @@ export function StudentArchiveExportDialog({
                 <label className="hover:bg-muted/50 flex items-center gap-3 border-b px-4 py-2.5">
                   <Checkbox
                     checked={
-                      selectedClassIds.size === relatedClasses.length
+                      selectedClassroomIds.size === relatedClasses.length
                         ? true
-                        : selectedClassIds.size > 0
+                        : selectedClassroomIds.size > 0
                           ? "indeterminate"
                           : false
                     }
@@ -180,7 +182,7 @@ export function StudentArchiveExportDialog({
                     className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5"
                   >
                     <Checkbox
-                      checked={selectedClassIds.has(classroom.id)}
+                      checked={selectedClassroomIds.has(classroom.id)}
                       onCheckedChange={() => toggleClass(classroom.id)}
                     />
                     <span className="text-sm">{classroom.name}</span>

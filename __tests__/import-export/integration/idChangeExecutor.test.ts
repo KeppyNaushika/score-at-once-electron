@@ -422,14 +422,14 @@ describe("executeIdChanges", () => {
   // =========================================================================
   describe("学級ID変更", () => {
     it("temp-value方式により新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {
-      const existingClassId = generateId()
-      const newClassId = generateId()
+      const existingClassroomId = generateId()
+      const newClassroomId = generateId()
       const studentId = generateId()
       const examId = generateId()
 
       await prisma.classroom.create({
         data: {
-          id: existingClassId,
+          id: existingClassroomId,
           name: "1年A組",
           classCode: "1A",
           grade: 1,
@@ -455,24 +455,24 @@ describe("executeIdChanges", () => {
       // FK参照を作成
       const membershipId = generateId()
       await prisma.studentClassroomMembership.create({
-        data: { id: membershipId, studentId, classroomId: existingClassId },
+        data: { id: membershipId, studentId, classroomId: existingClassroomId },
       })
 
-      const examClassId = generateId()
+      const examClassroomId = generateId()
       await prisma.examClassroom.create({
-        data: { id: examClassId, examId, classroomId: existingClassId },
+        data: { id: examClassroomId, examId, classroomId: existingClassroomId },
       })
 
       const targets: IdChangeTarget[] = [
         {
           category: "classroom",
-          existingId: existingClassId,
-          newId: newClassId,
+          existingId: existingClassroomId,
+          newId: newClassroomId,
         },
       ]
 
       const idMappings = createEmptyIdMappings()
-      idMappings.classroom["import-class-1"] = existingClassId
+      idMappings.classroom["import-class-1"] = existingClassroomId
       const warnings: string[] = []
 
       await prisma.$transaction(async (tx) => {
@@ -481,14 +481,14 @@ describe("executeIdChanges", () => {
 
       // 新しいIDでレコードが存在し、元のnameを保持していること
       const newClass = await prisma.classroom.findUnique({
-        where: { id: newClassId },
+        where: { id: newClassroomId },
       })
       expect(newClass).not.toBeNull()
       expect(newClass!.name).toBe("1年A組")
 
       // 古いIDのレコードが削除されていること
       const oldClass = await prisma.classroom.findUnique({
-        where: { id: existingClassId },
+        where: { id: existingClassroomId },
       })
       expect(oldClass).toBeNull()
 
@@ -496,15 +496,15 @@ describe("executeIdChanges", () => {
       const membership = await prisma.studentClassroomMembership.findUnique({
         where: { id: membershipId },
       })
-      expect(membership!.classroomId).toBe(newClassId)
+      expect(membership!.classroomId).toBe(newClassroomId)
 
-      const examClass = await prisma.examClassroom.findFirst({
-        where: { id: examClassId },
+      const examClassroom = await prisma.examClassroom.findFirst({
+        where: { id: examClassroomId },
       })
-      expect(examClass!.classroomId).toBe(newClassId)
+      expect(examClassroom!.classroomId).toBe(newClassroomId)
 
       // マッピングが更新されていること
-      expect(idMappings.classroom["import-class-1"]).toBe(newClassId)
+      expect(idMappings.classroom["import-class-1"]).toBe(newClassroomId)
 
       // 警告なし
       expect(warnings).toHaveLength(0)
@@ -589,8 +589,8 @@ describe("executeIdChanges", () => {
     it("全カテゴリのID変更が正常に処理される", async () => {
       const existingStudentId = generateId()
       const newStudentId = generateId()
-      const existingClassId = generateId()
-      const newClassId = generateId()
+      const existingClassroomId = generateId()
+      const newClassroomId = generateId()
       const existingGroupId = generateId()
       const newGroupId = generateId()
 
@@ -607,7 +607,7 @@ describe("executeIdChanges", () => {
       })
 
       await prisma.classroom.create({
-        data: { id: existingClassId, name: "1年A組" },
+        data: { id: existingClassroomId, name: "1年A組" },
       })
 
       await prisma.subtotalGroup.create({
@@ -622,8 +622,8 @@ describe("executeIdChanges", () => {
         },
         {
           category: "classroom",
-          existingId: existingClassId,
-          newId: newClassId,
+          existingId: existingClassroomId,
+          newId: newClassroomId,
         },
         {
           category: "subtotalGroup",
@@ -634,7 +634,7 @@ describe("executeIdChanges", () => {
 
       const idMappings = createEmptyIdMappings()
       idMappings.student["s1"] = existingStudentId
-      idMappings.classroom["c1"] = existingClassId
+      idMappings.classroom["c1"] = existingClassroomId
       idMappings.subtotalGroup["g1"] = existingGroupId
       const warnings: string[] = []
 
@@ -664,12 +664,14 @@ describe("executeIdChanges", () => {
 
       // Class: temp-value方式で正常にID変更される
       expect(
-        await prisma.classroom.findUnique({ where: { id: newClassId } })
+        await prisma.classroom.findUnique({ where: { id: newClassroomId } })
       ).not.toBeNull()
       expect(
-        await prisma.classroom.findUnique({ where: { id: existingClassId } })
+        await prisma.classroom.findUnique({
+          where: { id: existingClassroomId },
+        })
       ).toBeNull()
-      expect(idMappings.classroom["c1"]).toBe(newClassId)
+      expect(idMappings.classroom["c1"]).toBe(newClassroomId)
 
       // 警告なし
       expect(warnings).toHaveLength(0)
