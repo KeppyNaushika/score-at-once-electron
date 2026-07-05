@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { IndividualReportOptions } from "@/app/exams/[examId]/08-export/types"
+import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type { IndividualReportData } from "@/electron-src/lib/export/individual-report/types"
 
 interface UseIndividualReportPreviewOptions {
@@ -66,10 +67,12 @@ export function useIndividualReportPreview({
     setError(null)
 
     try {
+      const studentPlacements = await loadStudentExportPlacements(examId)
       const result = await window.electronAPI.export.getIndividualReportData({
         examId,
         selectedStudentIds: [previewStudentId],
         options: optionsRef.current,
+        studentPlacements,
       })
 
       if (result.success && result.reports && result.reports.length > 0) {

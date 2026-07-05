@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
+import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface StudentRemovalConfirmModalProps {

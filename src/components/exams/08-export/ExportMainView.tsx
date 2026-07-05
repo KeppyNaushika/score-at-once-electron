@@ -25,6 +25,7 @@ import { useExcelPreview } from "@/components/exams/08-export/hooks/useExcelPrev
 import { useExportPage } from "@/components/exams/08-export/hooks/useExportPage"
 import { useIndividualReportPreview } from "@/components/exams/08-export/hooks/useIndividualReportPreview"
 import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useScoredAnswerPreview"
+import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type { ScoringMarkConfigForPdf } from "@/components/exams/08-export/utils/pdfCanvasRenderer"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
@@ -655,11 +656,13 @@ export default function ExportMainView() {
 
     try {
       const selectedStudentIds = Array.from(selectedStudents)
+      const studentPlacements = await loadStudentExportPlacements(exam.id)
 
       const result = await window.electronAPI.exportGradingDataExcel({
         examId: exam.id,
         selectedStudentIds,
         forceExport: true,
+        studentPlacements,
       })
 
       if (result.success) {
@@ -744,6 +747,7 @@ export default function ExportMainView() {
 
     try {
       const selectedStudentIds = Array.from(selectedStudents)
+      const studentPlacements = await loadStudentExportPlacements(exam.id)
 
       // 1. データ取得（統計・アドバイス含む）
       const dataResult =
@@ -751,6 +755,7 @@ export default function ExportMainView() {
           examId: exam.id,
           selectedStudentIds,
           options: individualReportOptions,
+          studentPlacements,
         })
 
       if (!dataResult.success || !dataResult.reports) {

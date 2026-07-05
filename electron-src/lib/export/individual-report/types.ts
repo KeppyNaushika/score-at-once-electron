@@ -7,7 +7,10 @@ import type { SubtotalGroup } from "@prisma/client"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import type { BoxPlotData } from "../../shared/calculations/numericStats"
-import type { ScoringData } from "../../shared/types/exportTypes"
+import type {
+  ScoringData,
+  StudentExportPlacement,
+} from "../../shared/types/exportTypes"
 
 // ================== 表示モード関連 ==================
 
@@ -271,6 +274,8 @@ export interface GetIndividualReportDataOptions {
   examId: string
   selectedStudentIds: string[]
   options: IndividualReportOptions
+  /** renderer が採番解決して渡す表示学級情報（studentId キー） */
+  studentPlacements?: Record<string, StudentExportPlacement>
 }
 
 /** 個人成績表データ取得結果 */

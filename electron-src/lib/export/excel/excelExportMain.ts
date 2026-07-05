@@ -30,7 +30,12 @@ export async function exportGradingDataExcel(
 
     // 学級平均行の母集団は「試験全体」（生徒選択に無関係）なので、全受験生徒データを
     // 1回だけ取得し、選択生徒分は in-memory で絞る（部分出力時の二重フェッチを回避）。
-    const dataResult = await fetchExportData(examId, [])
+    // 採番学級は renderer が解決して渡す studentPlacements を使う。
+    const dataResult = await fetchExportData(
+      examId,
+      [],
+      options.studentPlacements
+    )
     if (!dataResult.success) {
       return { success: false, error: dataResult.error }
     }

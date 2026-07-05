@@ -19,14 +19,15 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 
 import {
   addStudentsFromClass,
+  getAdministeredClasses,
   getClassMembersForExam,
-  getStudentClassInfoForExam,
 } from "@/electron-src/lib/prisma/examClass"
 import {
   getClassesNotInExam,
   getStudentsForExam,
   getStudentsNotInExam,
 } from "@/electron-src/lib/prisma/examStudent"
+import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 
 import {
   cleanupTestDatabase,
@@ -243,20 +244,23 @@ describe("Exam 在籍フィルタ", () => {
     })
   })
 
-  // P3修正: 在籍解決（採番・表示）も受験日基準で判定する
-  describe("getStudentClassInfoForExam（受験日スナップショット）", () => {
+  // P3修正: 在籍解決（採番・表示）も受験日基準で判定する。
+  // 採番学級の解決は renderer 側 resolveExamClassroomPlacement が担い、
+  // 受験日スナップショット絞り込みは main の getAdministeredClasses が行う。
+  describe("採番学級の解決（getAdministeredClasses + resolveExamClassroomPlacement）", () => {
     it("受験日時点で在籍する生徒のみ学級情報を解決する", async () => {
       const { exam, classA, active, left } = await createTestData()
       // administered=true の ExamClass を作る（両方を受験者に追加）
       await addStudentsFromClass(exam.id, classA.id, false)
 
-      const info = await getStudentClassInfoForExam(exam.id)
+      const administeredClasses = await getAdministeredClasses(exam.id)
+      const placement = resolveExamClassroomPlacement(administeredClasses)
 
       // 受験日(2024-04-10)に在籍中の active のみ解決。転出済み left は除外
-      expect(Object.keys(info)).toEqual([active.id])
-      expect(info[active.id].classroom?.name).toBe("3年A組")
-      expect(info[active.id].attendanceNumber).toBe(1)
-      expect(info[left.id]).toBeUndefined()
+      expect(Object.keys(placement)).toEqual([active.id])
+      expect(placement[active.id].classroom?.name).toBe("3年A組")
+      expect(placement[active.id].attendanceNumber).toBe(1)
+      expect(placement[left.id]).toBeUndefined()
     })
   })
 

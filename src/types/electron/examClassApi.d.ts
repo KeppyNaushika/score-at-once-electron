@@ -47,17 +47,6 @@ export interface AvailableClass {
 }
 
 /**
- * 生徒の学級・出席番号情報（ExamClassroom経由で取得）
- */
-export interface ExamClassroomPlacement {
-  /** 採番順を決める administered 学級（Prisma Classroom をそのまま同梱。未所属なら null） */
-  classroom: Classroom | null
-  attendanceNumber: number | null
-  /** ExamClassroom の並び順 */
-  order: number | null
-}
-
-/**
  * ExamClassroom関連API
  */
 export interface ExamClassAPI {

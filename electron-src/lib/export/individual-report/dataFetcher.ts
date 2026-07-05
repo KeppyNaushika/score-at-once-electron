@@ -48,11 +48,16 @@ import type {
 export async function fetchIndividualReportData(
   options: GetIndividualReportDataOptions
 ): Promise<GetIndividualReportDataResult> {
-  const { examId, selectedStudentIds, options: reportOptions } = options
+  const {
+    examId,
+    selectedStudentIds,
+    options: reportOptions,
+    studentPlacements,
+  } = options
 
   try {
-    // 全生徒のデータを取得（平均計算等に必要）
-    const allDataResult = await fetchExportData(examId, [])
+    // 全生徒のデータを取得（平均計算等に必要）。採番学級は renderer が解決して渡す。
+    const allDataResult = await fetchExportData(examId, [], studentPlacements)
     if (!allDataResult.success || !allDataResult.exam) {
       return {
         success: false,
@@ -61,7 +66,11 @@ export async function fetchIndividualReportData(
     }
 
     // 選択された生徒のデータを取得
-    const selectedDataResult = await fetchExportData(examId, selectedStudentIds)
+    const selectedDataResult = await fetchExportData(
+      examId,
+      selectedStudentIds,
+      studentPlacements
+    )
     if (!selectedDataResult.success || !selectedDataResult.scoringData) {
       return {
         success: false,

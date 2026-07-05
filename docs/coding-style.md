@@ -175,6 +175,36 @@ cropRegions.filter((cr) => cr.points > 0)
 
 **外部ライブラリ規約のコールバックは `value` を使う**: `onValueChange={(value) => …}`（shadcn/Radix の多数派に従う。1文字 `v` は避けて `value` と綴る）。**実体名化する対象**: 実体要素の `s`/`c`/`m`/`cr`/`sg` → `student`/`classroom`/`membership`/`cropRegion`/`subtotalGroup`。
 
+#### id ではなく実体を持つ原則（`xxxIds` の扱い）
+
+**id を保持してよいのは、id そのものが目的の場合に限る。** 次の 4 用途のみ正当:
+
+1. **選択・所属の判定** — UI の選択状態（`selectedStudentIds`）。意味論が「集合・重複なし・所属判定」なら `string[]` より `Set<string>` を優先する。
+2. **並べ替えの順序** — reorder ペイロード（`orderedIds`）。順序そのものが payload。
+3. **関連付けの設定** — `setExamTags(examId, tagIds)` のような関連の張り替え。
+4. **IPC／シリアライズ境界の通過** — レンダラ→main へ id を渡し、DB を持つ main 側で取得する（実体を境界越しに運ばない）。
+
+**downstream で実体のフィールドが要るなら、最初から実体を持つ。** 判定テスト:
+
+> `.find((x) => x.id === id)` や id 指定 fetch で、前段が既に持っていた（or 持つべき）実体を作り直していないか？
+
+作り直しているなら、その前段が実体を保持すべきだったサイン。特に **実体を `.map((e) => e.id)` で id 配列に潰した直後に DB／API を叩いて同じ実体を取り直す**のは冗長往復で禁止。
+
+```typescript
+// ❌ 実体を id に潰し、あとで DB/API から取り直す（冗長往復）
+const studentIds = students.map((student) => student.id)
+const reloaded = await api.getStudentsByIds(studentIds) // students は既に手元にある
+
+// ❌ id 配列を .find のループで実体へ引き直す（O(n·m) の再構築）
+const rows = visibleIds.map((id) => allRows.find((row) => row.id === id))
+
+// ✅ 実体をそのまま持つ／どうしても id state なら Map で一括引き（順序保持・O(n)）
+const rowById = new Map(allRows.map((row) => [row.id, row]))
+const rows = visibleIds.map((id) => rowById.get(id)).filter(Boolean)
+```
+
+**例外**: 外部ライブラリが id 文字列を渡してくる場合（dnd-kit の `active.id: string` から行を引く等）は規約に従い `.find` で可。
+
 ---
 
 ## 不要なコードの削除
@@ -311,6 +341,33 @@ interface StudentData {
   // ...Prisma型と同じフィールドを再定義
 }
 ```
+
+### 独自型を制限する目的（なぜ上位を優先するか）
+
+独自型の制限が守っているのは **DB への書き込み整合性** である。独自型で DB と異なる「特殊なデータ構造」をコンポーネント／IPC 間で運ぶと、それを DB に書き戻す（永続化する）ときに破綻する。逆に言えば、**DB に永続化しない経路は型制限の対象外**：
+
+- **ファイル書き出し（Excel / PDF 等）**: DB に反映しない read-out。フックで得たデータを出力に必要な形へ整えて main 側へ渡してよい。ただし「好きな型」ではなく **必要な型**（変な型の乱立を防ぐ）。
+- **フィルタ機能・DB 非保存の UI / DnD 状態**: 同様に carve-out（上記 a と同義）。ただし DB をミラーした view-model をこの名目で温存しない（それは下記のフックで解く）。
+
+### DB 由来データを計算した値の扱い
+
+DB で管理されるデータを **計算した値** を使いたい場合：
+
+1. **原則そのコンポーネント内で計算する**。renderer にデータが揃っていれば再フェッチにはならない（禁止なのは「データ不足で再クエリ／再フェッチ」する方）。main 側で特殊な計算をして専用 IPC を生やさない。
+2. 計算ロジックが長く別ファイルに出したい → **型を宣言せず引数で渡す**か **フックを定義**する。
+3. **複数箇所で同じ計算値を使う → 共通フックを作って共有する**。フックの返り値「全体」に名前は付けない（推論／`ReturnType`）。名前を付けるのは複数箇所で共有する“データの形”のみ。
+4. 新機能開発時は既存フックのロジックが適切か検証し、既存を変更するか新規に作るかを吟味する。
+
+> 独自型を不必要に宣言すると、その裏に **重複ロジック・デッドコード・再クエリ・変更未追従** が生まれる。シンプルにデータを渡し、共通のデータ構造（Prisma 拡張型）を使うのが大規模コードベースの原則。
+
+### Decimal 型・リテラル型の「適切な対応」（型注入）
+
+Prisma 型のうち renderer で扱いにくい一部（Decimal、SQLite に enum が無いための `String` 列）は、**独自型を作らず「型注入」で上書き**する。共通形は `Omit<PrismaModel, "field"> & { field: 補正型 }` ＋ **境界で1回だけ変換**。
+
+- **Decimal → number**: 型は `types/prismaExtensions.ts` に集約（例 `SerializedQuestionScore = Omit<QuestionScore, "partialScore"> & { partialScore: number | null }`）。実行時は境界で `decimal.toNumber()`。理由: Prisma の Decimal（decimal.js）は IPC で壊れ renderer で扱いにくい。
+- **string → literal union**: SSOT を 1 ファイルに（`ScoringStatus` / `ExamStudentStatus` が前例）。`const XS = [...] as const` → `type X = (typeof XS)[number]`（1 配列から union 導出）＋型ガード `isX` ＋境界コンバータ `toX(s): X`（想定外は安全な既定へ）。型は `Omit<PrismaModel, "status"> & { status: X }`、実行時は境界で `toX(row.status)`。union をあちこち手書きしない。
+
+`Omit` は「上書き（Decimal / union）・機密除去（`password` 等）」に使う。禁止するのは「表示のために小さくする縮小 `Pick`」の独自 view の方。
 
 ### 禁止事項
 
@@ -683,3 +740,4 @@ export async function exportToExcel(
 | 2025-01-12 | 命名規則・不要コード削除のセクションを追加                       |
 | 2025-01-12 | ESLint設定との整合性確認・修正、Tailwind CSSマイグレーション追加 |
 | 2026-07-04 | 命名規則に「実体名の原則・高階関数優先・慣例例外 A/B」を追加     |
+| 2026-07-05 | 命名規則に「id ではなく実体を持つ原則（`xxxIds` の扱い）」を追加 |

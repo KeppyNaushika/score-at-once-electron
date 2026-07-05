@@ -24,6 +24,7 @@ import {
   captureReturnSnapshot,
   getReturnDiff,
 } from "../lib/prisma/returnSnapshot"
+import type { StudentExportPlacement } from "../lib/shared/types/exportTypes"
 import {
   buildConflictIdentifiers,
   validateScoringData,
@@ -245,6 +246,7 @@ export function setupExportHandlers(): void {
       examId: string
       selectedStudentIds: string[]
       outputPath?: string
+      studentPlacements?: Record<string, StudentExportPlacement>
     }) => {
       return await exportGradingDataExcel(options)
     }
@@ -258,10 +260,15 @@ export function setupExportHandlers(): void {
   // Excelプレビュー用データ取得
   registerSafeHandler(
     "export:getExcelPreviewData",
-    async (options: { examId: string; selectedStudentIds: string[] }) => {
+    async (options: {
+      examId: string
+      selectedStudentIds: string[]
+      studentPlacements?: Record<string, StudentExportPlacement>
+    }) => {
       const result = await fetchExportData(
         options.examId,
-        options.selectedStudentIds
+        options.selectedStudentIds,
+        options.studentPlacements
       )
       if (!result.success) {
         return { success: false, error: result.error }

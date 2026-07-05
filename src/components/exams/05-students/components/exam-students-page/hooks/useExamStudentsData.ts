@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type { RosterClassOption } from "@/components/common/roster-table"
-import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
+import {
+  type ExamClassroomPlacement,
+  resolveExamClassroomPlacement,
+} from "@/lib/examClassroomPlacement"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 

@@ -53,6 +53,10 @@ export function createExportApi() {
         examId: string
         selectedStudentIds: string[]
         options: import("../lib/export/individual-report").IndividualReportOptions
+        studentPlacements?: Record<
+          string,
+          import("../lib/shared/types/exportTypes").StudentExportPlacement
+        >
       }) => ipcRenderer.invoke("export:getIndividualReportData", options),
       getSubtotalGroupsForReport: (examId: string) =>
         ipcRenderer.invoke("export:getSubtotalGroupsForReport", examId),
@@ -85,6 +89,10 @@ export function createExportApi() {
       getExcelPreviewData: (options: {
         examId: string
         selectedStudentIds: string[]
+        studentPlacements?: Record<
+          string,
+          import("../lib/shared/types/exportTypes").StudentExportPlacement
+        >
       }) => ipcRenderer.invoke("export:getExcelPreviewData", options),
       // 印刷ダイアログを開く
       openPrintDialog: (options: {
@@ -108,6 +116,10 @@ export function createExportApi() {
       examId: string
       selectedStudentIds: string[]
       outputPath?: string
+      studentPlacements?: Record<
+        string,
+        import("../lib/shared/types/exportTypes").StudentExportPlacement
+      >
     }) => ipcRenderer.invoke("export-grading-data-excel", options),
 
     // R / exametrika 向けデータ出力（#834）

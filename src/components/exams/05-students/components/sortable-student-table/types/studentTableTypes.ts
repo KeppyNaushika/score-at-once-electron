@@ -1,5 +1,5 @@
 import type { RosterClassOption } from "@/components/common/roster-table"
-import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
+import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
