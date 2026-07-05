@@ -1,22 +1,13 @@
-import { Prisma, UserExam } from "@prisma/client"
+import { UserExam } from "@prisma/client"
+
+import type {
+  UserExamWithExam,
+  UserExamWithUserAndInviter,
+} from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
-
-// Types for UserExam with relations
-type UserExamWithUser = Prisma.UserExamGetPayload<{
-  include: {
-    user: true
-    inviter: true
-  }
-}>
-
-type UserExamWithExam = Prisma.UserExamGetPayload<{
-  include: {
-    exam: true
-  }
-}>
 
 export type UserRole = "OWNER" | "GRADER"
 
@@ -36,7 +27,7 @@ export interface SetOwnerOptions {
  */
 export const getExamMembers = async (
   examId: string
-): Promise<UserExamWithUser[]> => {
+): Promise<UserExamWithUserAndInviter[]> => {
   try {
     return await prisma.userExam.findMany({
       where: { examId },
@@ -132,7 +123,7 @@ export const setExamOwner = async (
  */
 export const inviteExamMember = async (
   options: InviteMemberOptions
-): Promise<UserExamWithUser> => {
+): Promise<UserExamWithUserAndInviter> => {
   const { examId, userId, invitedBy } = options
 
   try {
@@ -336,7 +327,7 @@ export const getUserExams = async (
  */
 export const getExamOwner = async (
   examId: string
-): Promise<UserExamWithUser | null> => {
+): Promise<UserExamWithUserAndInviter | null> => {
   try {
     return await prisma.userExam.findFirst({
       where: {

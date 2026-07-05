@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import type {
   ExamClassroomWithDetails,
   ExamClassroomWithMemberships,
-} from "@/types/electron/examClassroomApi"
+} from "@/electron-src/lib/prisma/examClassroom"
 
 interface UseExamClassroomsOptions {
   examId: string

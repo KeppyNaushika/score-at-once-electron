@@ -7,11 +7,7 @@ import type { Prisma } from "@prisma/client"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
-
-/** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
-function serialize<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data))
-}
+import { serializePrisma } from "./serializePrisma"
 
 /**
  * 成績算出試験の全境界セットを取得
@@ -26,7 +22,7 @@ export async function getBoundarySetsByGradeId(gradeId: string) {
       },
       orderBy: [{ targetType: "asc" }, { gradeItem: { order: "asc" } }],
     })
-    return { success: true, boundarySets: serialize(boundarySets) }
+    return { success: true, boundarySets: serializePrisma(boundarySets) }
   } catch (error) {
     console.error("Error getting boundary sets:", error)
     return {
@@ -106,7 +102,7 @@ export async function upsertBoundarySet(data: {
       scopeLabel: scope.scopeLabel,
     })
 
-    return { success: true, boundarySet: serialize(result) }
+    return { success: true, boundarySet: serializePrisma(result) }
   } catch (error) {
     console.error("Error upserting boundary set:", error)
     return {

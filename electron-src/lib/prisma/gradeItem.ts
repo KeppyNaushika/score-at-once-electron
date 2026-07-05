@@ -5,11 +5,12 @@
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope, resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
-
-/** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
-function serialize<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data))
-}
+import {
+  gradeItemWithDataSourcesInclude,
+  hydrateGradeItem,
+  hydrateGradeItems,
+} from "./gradeDataSource"
+import { serializePrisma } from "./serializePrisma"
 
 /**
  * GradeItem一覧を取得（dataSources含む）
@@ -18,28 +19,13 @@ export async function getGradeItemsByExamId(gradeId: string) {
   try {
     const gradeItems = await prisma.gradeItem.findMany({
       where: { gradeId },
-      include: {
-        dataSources: {
-          include: {
-            exam: {
-              select: { id: true, examName: true, examDate: true },
-            },
-            subtotal: { select: { id: true, name: true, order: true } },
-            cropRegion: { select: { id: true, label: true, points: true } },
-            courseworkItem: {
-              include: {
-                coursework: { select: { id: true, name: true } },
-                letterScales: { orderBy: { order: "asc" } },
-                _count: { select: { scores: true, gradeDataSources: true } },
-              },
-            },
-          },
-          orderBy: { order: "asc" },
-        },
-      },
+      include: gradeItemWithDataSourcesInclude,
       orderBy: { order: "asc" },
     })
-    return { success: true, gradeItems: serialize(gradeItems) }
+    return {
+      success: true,
+      gradeItems: hydrateGradeItems(serializePrisma(gradeItems)),
+    }
   } catch (error) {
     console.error("Error getting grade items:", error)
     return {
@@ -66,25 +52,7 @@ export async function createGradeItem(data: { gradeId: string; name: string }) {
         name: data.name,
         order: nextOrder,
       },
-      include: {
-        dataSources: {
-          include: {
-            exam: {
-              select: { id: true, examName: true, examDate: true },
-            },
-            subtotal: { select: { id: true, name: true, order: true } },
-            cropRegion: { select: { id: true, label: true, points: true } },
-            courseworkItem: {
-              include: {
-                coursework: { select: { id: true, name: true } },
-                letterScales: { orderBy: { order: "asc" } },
-                _count: { select: { scores: true, gradeDataSources: true } },
-              },
-            },
-          },
-          orderBy: { order: "asc" },
-        },
-      },
+      include: gradeItemWithDataSourcesInclude,
     })
 
     const scope = await resolveGradeScope(data.gradeId)
@@ -97,7 +65,10 @@ export async function createGradeItem(data: { gradeId: string; name: string }) {
       target: gradeItem.name,
     })
 
-    return { success: true, gradeItem: serialize(gradeItem) }
+    return {
+      success: true,
+      gradeItem: hydrateGradeItem(serializePrisma(gradeItem)),
+    }
   } catch (error) {
     console.error("Error creating grade item:", error)
     return {
@@ -115,25 +86,7 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
     const gradeItem = await prisma.gradeItem.update({
       where: { id },
       data,
-      include: {
-        dataSources: {
-          include: {
-            exam: {
-              select: { id: true, examName: true, examDate: true },
-            },
-            subtotal: { select: { id: true, name: true, order: true } },
-            cropRegion: { select: { id: true, label: true, points: true } },
-            courseworkItem: {
-              include: {
-                coursework: { select: { id: true, name: true } },
-                letterScales: { orderBy: { order: "asc" } },
-                _count: { select: { scores: true, gradeDataSources: true } },
-              },
-            },
-          },
-          orderBy: { order: "asc" },
-        },
-      },
+      include: gradeItemWithDataSourcesInclude,
     })
 
     const scope = await resolveGradeScope(gradeItem.gradeId)
@@ -146,7 +99,10 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
       target: gradeItem.name,
     })
 
-    return { success: true, gradeItem: serialize(gradeItem) }
+    return {
+      success: true,
+      gradeItem: hydrateGradeItem(serializePrisma(gradeItem)),
+    }
   } catch (error) {
     console.error("Error updating grade item:", error)
     return {

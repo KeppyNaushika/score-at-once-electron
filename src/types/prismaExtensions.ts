@@ -182,6 +182,15 @@ export type UserExamWithUser = Prisma.UserExamGetPayload<{
 }>
 
 /**
+ * ユーザーと招待者を含むUserExam型。
+ * メンバー一覧・オーナー取得（userExam.getMembers/getOwner）が返す実形状の SSOT。
+ * main（`lib/prisma/userExam.ts`）と renderer 契約（`userExamApi.d.ts`）の双方が参照する。
+ */
+export type UserExamWithUserAndInviter = Prisma.UserExamGetPayload<{
+  include: { user: true; inviter: true }
+}>
+
+/**
  * SubtotalGroupを含むExamSubtotalGroup型
  */
 export type ExamSubtotalGroupWithSubtotalGroup =

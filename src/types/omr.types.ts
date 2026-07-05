@@ -5,6 +5,12 @@
  * コーナーマーカー検出、座標変換、マーク認識、手書き数字認識、自動採点。
  */
 
+import type {
+  CropRegionOmrChoiceOption,
+  CropRegionOmrConfig,
+  CropRegionOmrDigitBox,
+} from "@prisma/client"
+
 // =====================
 // 基本型
 // =====================
@@ -180,47 +186,14 @@ export interface ComputedOMRDigitBox {
 // CropRegion OMR設定（DB管理）
 // =====================
 
-export interface CropRegionOmrChoiceOptionData {
-  id: string
-  omrConfigId: string
-  choiceIndex: number
-  label: string
-  isCorrect: boolean
-  shape: string | null
-  normalizedCx: number | null
-  normalizedCy: number | null
-  normalizedWidth: number | null
-  normalizedHeight: number | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface CropRegionOmrDigitBoxData {
-  id: string
-  omrConfigId: string
-  digitIndex: number
-  normalizedX: number
-  normalizedY: number
-  normalizedW: number
-  normalizedH: number
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface CropRegionOmrConfigWithOptions {
-  id: string
-  cropRegionId: string
-  type: string // "choice" | "handwritten-digit"
-  numChoices: number | null
-  choiceLayout: string | null
-  numDigits: number | null
-  correctAnswer: string | null
-  colorThreshold: number | null
-  areaThreshold: number | null
-  createdAt: Date
-  updatedAt: Date
-  choiceOptions: CropRegionOmrChoiceOptionData[]
-  digitBoxes: CropRegionOmrDigitBoxData[]
+/**
+ * CropRegion の OMR 設定（選択肢・数字ボックス同梱）。
+ * Prisma モデルをそのまま派生する（`upsertOmrConfig` 等が返す実形状）。
+ * normalizedXxx は schema 上 `Float`（Decimal ではない）なので number のまま IPC を渡せる。
+ */
+export type CropRegionOmrConfigWithOptions = CropRegionOmrConfig & {
+  choiceOptions: CropRegionOmrChoiceOption[]
+  digitBoxes: CropRegionOmrDigitBox[]
 }
 
 // =====================

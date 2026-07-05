@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { UserRole } from "@/electron-src/lib/prisma/userExam"
-import type { UserExamWithUserAndInviter } from "@/types/electron/userExamApi"
+import type { UserExamWithUserAndInviter } from "@/types/prismaExtensions"
 
 interface MemberInviteDialogProps {
   isOpen: boolean

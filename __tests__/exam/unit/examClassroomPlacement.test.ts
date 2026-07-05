@@ -8,8 +8,8 @@
 
 import { describe, expect, it } from "vitest"
 
+import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
 import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroomApi"
 
 /** テスト用の administered ExamClassroom を最小構成で組み立てる */
 function buildExamClassroom(
