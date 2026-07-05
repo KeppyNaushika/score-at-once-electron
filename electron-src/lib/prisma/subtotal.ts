@@ -49,23 +49,27 @@ export const getSubtotalsByGroupId = async (subtotalGroupId: string) => {
   })
 }
 
+/**
+ * getSubtotalById の include 形状（SSOT）。
+ * questionGroupItem.ts と同一形状だったため、こちらへ統合した。
+ */
+export const subtotalWithGroupAndCropsInclude = {
+  subtotalGroup: true,
+  cropSubtotals: true,
+} satisfies Prisma.SubtotalInclude
+
+/** subtotalGroup・cropSubtotals を含む Subtotal（getSubtotalById の返り値） */
+export type SubtotalWithGroupAndCrops = Prisma.SubtotalGetPayload<{
+  include: typeof subtotalWithGroupAndCropsInclude
+}>
+
 /** IDで小計項目を取得する（subtotalGroup・cropSubtotals含む） */
 export const getSubtotalById = async (id: string) => {
   return prisma.subtotal.findUnique({
     where: { id },
-    include: {
-      subtotalGroup: true, // 親の SubtotalGroup も取得
-      cropSubtotals: true, // 関連する CropSubtotal も取得
-    },
+    include: subtotalWithGroupAndCropsInclude,
   })
 }
-
-export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
-  include: {
-    subtotalGroup: true
-    cropSubtotals: true
-  }
-}>
 
 /** 小計項目の表示順序をトランザクション内で一括更新する */
 export const updateSubtotalOrders = async (

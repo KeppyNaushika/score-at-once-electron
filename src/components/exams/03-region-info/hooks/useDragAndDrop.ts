@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 
 type DragState = {
   draggedIndex: number | null
@@ -8,8 +8,8 @@ type DragState = {
 }
 
 type UseDragAndDropProps = {
-  regions: CropRegionWithDetails[]
-  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithDetails[]>>
+  regions: CropRegionWithSubtotals[]
+  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithSubtotals[]>>
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
 }

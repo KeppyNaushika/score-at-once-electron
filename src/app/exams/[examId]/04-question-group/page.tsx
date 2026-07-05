@@ -11,11 +11,9 @@ import { SubtotalGroupSelector } from "@/components/exams/04-question-group/comp
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import {
-  CropRegionWithDetails,
-  ExamSubtotalGroupWithSubtotalGroup,
-  SubtotalGroupWithItems,
-} from "@/types/prismaExtensions"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
+import { ExamSubtotalGroupWithSubtotalGroup } from "@/types/prismaExtensions"
 
 export default function SubtotalGroupPage() {
   const params = useParams()
@@ -24,11 +22,11 @@ export default function SubtotalGroupPage() {
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<
-    SubtotalGroupWithItems[]
+    SubtotalGroupWithSubtotals[]
   >([])
-  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
+  const [cropRegions, setCropRegions] = useState<CropRegionWithSubtotals[]>([])
   const [subtotalRegions, setSubtotalRegions] = useState<
-    CropRegionWithDetails[]
+    CropRegionWithSubtotals[]
   >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +52,7 @@ export default function SubtotalGroupPage() {
         const activeGroups =
           activeSubtotalGroupsResponse.examSubtotalGroups?.map(
             (psg: ExamSubtotalGroupWithSubtotalGroup) =>
-              psg.subtotalGroup as SubtotalGroupWithItems
+              psg.subtotalGroup as SubtotalGroupWithSubtotals
           ) || []
         setActiveSubtotalGroups(activeGroups)
       }
@@ -62,13 +60,13 @@ export default function SubtotalGroupPage() {
       if (cropRegionsResponse) {
         // 設問タイプの領域のみフィルタリング
         const questionRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) => region.type === "QUESTION_ANSWER"
+          (region: CropRegionWithSubtotals) => region.type === "QUESTION_ANSWER"
         )
         setCropRegions(questionRegions)
 
         // 小計点タイプの領域のみフィルタリング
         const subtotalRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) => region.type === "SUBTOTAL_SCORE"
+          (region: CropRegionWithSubtotals) => region.type === "SUBTOTAL_SCORE"
         )
         setSubtotalRegions(subtotalRegions)
       }

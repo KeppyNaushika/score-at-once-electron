@@ -100,11 +100,4 @@ export const getAssignmentsByQuestionGroupItemId = async (
   })
 }
 
-export type CropSubtotalWithRelations = Prisma.CropSubtotalGetPayload<{
-  include: {
-    cropRegion: true
-    subtotal: true
-  }
-}>
-
 export type QuestionSubtotalAssignmentPayload = CropSubtotal

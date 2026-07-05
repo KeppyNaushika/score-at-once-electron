@@ -129,28 +129,4 @@ export const getQuestionGroupById = async (id: string) => {
   }
 }
 
-export type SubtotalGroupWithItems = {
-  id: string
-  name: string
-  createdAt: Date
-  updatedAt: Date
-  items: Array<{
-    id: string
-    name: string
-    maxScore: number
-    order: number
-    subtotalGroupId: string
-    createdAt: Date
-    updatedAt: Date
-  }>
-  exam?: {
-    id: string
-    name: string
-    createdAt: Date
-    updatedAt: Date
-    tag?: string | null
-  } | null
-  examId?: string
-}
-
 export type QuestionGroupPayload = SubtotalGroup

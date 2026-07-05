@@ -9,6 +9,11 @@ import {
 } from "../dataManager"
 import prisma from "./client"
 
+/**
+ * MasterImage に親 examPage を含めた型。uploadMasterAnswers・updateMasterImagePageSize が返す。
+ */
+export type MasterImageWithExamPage = MasterImage & { examPage: ExamPage }
+
 /** 模範解答画像をアップロードし、ExamPageとMasterImageを作成する（examPage含む） */
 export const uploadMasterAnswers = async (
   examId: string,
@@ -18,7 +23,7 @@ export const uploadMasterAnswers = async (
     buffer: ArrayBuffer
     path?: string
   }[]
-): Promise<(MasterImage & { examPage: ExamPage })[]> => {
+): Promise<MasterImageWithExamPage[]> => {
   // Check if exam exists and get existing pages
   const exam = await prisma.exam.findUnique({
     where: { id: examId },
@@ -43,7 +48,7 @@ export const uploadMasterAnswers = async (
       0
     ) || 0
 
-  const uploadedAnswers: (MasterImage & { examPage: ExamPage })[] = []
+  const uploadedAnswers: MasterImageWithExamPage[] = []
 
   const examAnswerDir = getMasterAnswersDirectory(examId)
   await fs.mkdir(examAnswerDir, { recursive: true })
@@ -279,7 +284,9 @@ export const updateMasterAnswersOrder = async (
 }
 
 /** 試験IDで模範解答一覧を取得する（masterImages含む、ページ番号順） */
-export const getMasterAnswersByExamId = async (examId: string) => {
+export const getMasterAnswersByExamId = async (
+  examId: string
+): Promise<MasterImageWithPageMeta[]> => {
   const examPages = await prisma.examPage.findMany({
     where: { examId },
     include: {
@@ -289,7 +296,7 @@ export const getMasterAnswersByExamId = async (examId: string) => {
   })
 
   // Flatten to return individual answers with their page info
-  const masterAnswers = []
+  const masterAnswers: MasterImageWithPageMeta[] = []
   for (const page of examPages) {
     for (const answer of page.masterImages) {
       masterAnswers.push({
@@ -450,7 +457,12 @@ export const updateMasterImagePageSize = async (
   })
 }
 
-export type ExamPageWithDetails = MasterImage & {
+/**
+ * getMasterAnswersByExamId が返す、MasterImage をページ情報（pageNumber・examId・
+ * 旧API互換の path）でフラット化した1件分の型。ExamPage のリレーション payload ではなく、
+ * MasterImage のスカラーへ手書きで graft した独自構造。
+ */
+export type MasterImageWithPageMeta = MasterImage & {
   pageNumber: number
   examId: string
   path: string

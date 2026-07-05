@@ -131,7 +131,7 @@ export const generatePageNumberUpdateRequests = (
 
 /**
  * ExamPage配列からMasterAnswer配列を生成する
- * @param {ExamPageWithDetails[]} examPages - 試験ページ一覧
+ * @param {ExamPageWithContent[]} examPages - 試験ページ一覧
  * @returns {MasterAnswer[]} MasterAnswer形式の配列
  */
 type MinimalMasterImage = {

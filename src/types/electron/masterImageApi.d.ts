@@ -1,15 +1,13 @@
-import type { ExamPage, MasterImage, Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import type {
-  ExamPageWithDetails,
-  MasterImageWithDetails,
-  StudentAnswerImageWithDetails,
-} from "../prismaExtensions"
+  DeleteMasterAnswerResult,
+  MasterImageWithExamPage,
+  MasterImageWithPageMeta,
+} from "@/electron-src/lib/prisma/masterAnswer"
 
-export interface MasterAnswerDeletionResult {
-  deletedAnswer: MasterImage | null
-  examPages: ExamPageWithDetails[]
-}
+import type { StudentAnswerImageWithDetails } from "../prismaExtensions"
 
 /**
  * ExamPage・マスター画像・答案画像関連API
@@ -28,8 +26,10 @@ export interface MasterImageAPI {
     path: string
     error?: string
   }>
-  getExamPagesByExamId: (examId: string) => Promise<ExamPageWithDetails[]>
-  getMasterImagesByExamId: (examId: string) => Promise<MasterImageWithDetails[]>
+  getExamPagesByExamId: (examId: string) => Promise<ExamPageWithContent[]>
+  getMasterImagesByExamId: (
+    examId: string
+  ) => Promise<MasterImageWithPageMeta[]>
   getStudentAnswerImagesByExamId: (
     examId: string
   ) => Promise<StudentAnswerImageWithDetails[]>
@@ -42,13 +42,13 @@ export interface MasterImageAPI {
       buffer: ArrayBuffer
       path?: string
     }[]
-  ) => Promise<ExamPageWithDetails[]>
-  deleteMasterAnswer: (answerId: string) => Promise<MasterAnswerDeletionResult>
+  ) => Promise<MasterImageWithExamPage[]>
+  deleteMasterAnswer: (answerId: string) => Promise<DeleteMasterAnswerResult>
   updateMasterAnswersOrder: (
     answerOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
   updateMasterImagePageSize: (
     id: string,
     pageSize: string
-  ) => Promise<MasterImage & { examPage: ExamPage }>
+  ) => Promise<MasterImageWithExamPage>
 }

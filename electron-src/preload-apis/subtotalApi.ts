@@ -15,10 +15,6 @@ export function createSubtotalApi() {
     ) => ipcRenderer.invoke("update-subtotal-group", id, data),
     deleteSubtotalGroup: (id: string) =>
       ipcRenderer.invoke("delete-subtotal-group", id),
-    getSubtotalGroupsByExamId: (examId: string) =>
-      ipcRenderer.invoke("get-subtotal-groups-by-exam-id", examId),
-    getSubtotalGroupById: (id: string) =>
-      ipcRenderer.invoke("get-subtotal-group-by-id", id),
 
     // New SubtotalGroup management API
     getSubtotalGroups: () => ipcRenderer.invoke("get-subtotal-groups"),

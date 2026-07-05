@@ -14,18 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  CropRegionWithDetails,
-  CropSubtotalWithRelations,
-  SubtotalGroupWithItems,
-} from "@/types/prismaExtensions"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { CropSubtotalWithSubtotalGroup } from "@/electron-src/lib/prisma/cropSubtotal"
+import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
 import { type FillUpdate, useFillHandleDrag } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
 
 interface QuestionAssignmentMatrixWithFillHandleProps {
-  subtotalGroups: SubtotalGroupWithItems[]
-  cropRegions: CropRegionWithDetails[]
+  subtotalGroups: SubtotalGroupWithSubtotals[]
+  cropRegions: CropRegionWithSubtotals[]
   onUpdateAssignments: (
     questionCropRegionId: string,
     subtotalIds: string[]
@@ -135,7 +133,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
         if (result && Array.isArray(result)) {
           newAssignments[region.id] = new Set(
             result.map(
-              (cropSubtotal: CropSubtotalWithRelations) =>
+              (cropSubtotal: CropSubtotalWithSubtotalGroup) =>
                 cropSubtotal.subtotalId
             )
           )

@@ -28,12 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import {
   CROP_REGION_AREA_TYPES,
   CropRegionAreaType,
 } from "@/types/common.types"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {
@@ -61,7 +61,7 @@ const typeIcons: Record<CropRegionAreaType, IconType> = {
 }
 
 type RegionTableRowProps = {
-  region: CropRegionWithDetails
+  region: CropRegionWithSubtotals
   globalIndex: number
   isSelected: boolean
   isDragged: boolean

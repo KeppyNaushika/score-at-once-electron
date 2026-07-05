@@ -144,84 +144,8 @@ export type QuestionScoreWithUser = Prisma.QuestionScoreGetPayload<{
 // =============================================================================
 
 // =============================================================================
-// CropRegion関連型
+// StudentAnswerImage関連型
 // =============================================================================
-
-/**
- * 詳細情報を含むCropRegion型
- */
-export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
-  include: {
-    examPage: { include: { exam: true } }
-    cropSubtotals: {
-      include: { subtotal: { include: { subtotalGroup: true } } }
-    }
-    questionScores: { include: { student: true; user: true } }
-  }
-}>
-
-// =============================================================================
-// SubtotalGroup/Subtotal関連型
-// =============================================================================
-
-/**
- * 小計項目を含むSubtotalGroup型
- */
-export type SubtotalGroupWithItems = Prisma.SubtotalGroupGetPayload<{
-  include: {
-    subtotals: { orderBy: { order: "asc" } }
-    examSubtotalGroups: { include: { exam: true } }
-  }
-}>
-
-/**
- * 詳細情報を含むSubtotal型
- */
-export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
-  include: {
-    subtotalGroup: true
-    cropSubtotals: { include: { cropRegion: true } }
-  }
-}>
-
-// =============================================================================
-// CropSubtotal関連型
-// =============================================================================
-
-/**
- * 完全なリレーションを含むCropSubtotal型
- */
-export type CropSubtotalWithRelations = Prisma.CropSubtotalGetPayload<{
-  include: {
-    cropRegion: { include: { examPage: true } }
-    subtotal: { include: { subtotalGroup: true } }
-  }
-}>
-
-// =============================================================================
-// ExamPage/MasterImage/StudentAnswerImage関連型
-// =============================================================================
-
-/**
- * 詳細情報を含むExamPage型
- */
-export type ExamPageWithDetails = Prisma.ExamPageGetPayload<{
-  include: {
-    exam: true
-    cropRegions: true
-    masterImages: true
-    studentAnswerImages: { include: { student: true } }
-  }
-}>
-
-/**
- * 詳細情報を含むMasterImage型
- */
-export type MasterImageWithDetails = Prisma.MasterImageGetPayload<{
-  include: {
-    examPage: { include: { exam: true } }
-  }
-}>
 
 /**
  * 詳細情報を含むStudentAnswerImage型

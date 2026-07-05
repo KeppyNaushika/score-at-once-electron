@@ -1,9 +1,9 @@
 import { useRef } from "react"
 
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 
 type UseKeyboardNavigationProps = {
-  filteredRegions: CropRegionWithDetails[]
+  filteredRegions: CropRegionWithSubtotals[]
 }
 
 /** 領域情報テーブルのEnter/Tabキーによるセル間移動を管理するフック */

@@ -1,8 +1,8 @@
 import { User } from "@prisma/client"
 import { toast } from "sonner"
 
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
-import { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 /**
  * テンプレート保存処理
@@ -55,17 +55,17 @@ export async function saveTemplate(
       }
     })
 
-    const savedRegions: CropRegionWithDetails[] =
+    const savedRegions: CropRegionWithSubtotals[] =
       await Promise.all(savePromises)
 
     // 保存された領域データを整形
     const formattedRegions: CropRegionArea[] = savedRegions
       .filter(
         (
-          region: CropRegionWithDetails | null
-        ): region is CropRegionWithDetails => region !== null
+          region: CropRegionWithSubtotals | null
+        ): region is CropRegionWithSubtotals => region !== null
       )
-      .map((region: CropRegionWithDetails) => ({
+      .map((region: CropRegionWithSubtotals) => ({
         id: region.id,
         type: region.type as CropRegionAreaType,
         x: region.x,

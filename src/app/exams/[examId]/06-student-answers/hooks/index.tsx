@@ -11,10 +11,8 @@ import type {
   PendingChange,
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
-import type {
-  ExamPageWithDetails,
-  ExamStudentWithDetails,
-} from "@/types/prismaExtensions"
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 export function useStudentAnswersData(examId: string) {
   const [students, setStudents] = useState<ExamStudentWithDetails[]>([])
@@ -92,7 +90,7 @@ export function useStudentAnswersData(examId: string) {
           modelAnswers && modelAnswers.length > 0
             ? Math.max(
                 ...modelAnswers.map(
-                  (page: ExamPageWithDetails) => page.pageNumber
+                  (page: ExamPageWithContent) => page.pageNumber
                 )
               )
             : 0

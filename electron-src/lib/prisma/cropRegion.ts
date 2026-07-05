@@ -8,6 +8,42 @@ import {
 } from "./auditScope"
 import prisma from "./client"
 
+/**
+ * CropRegion の include 形状（SSOT）。型（GetPayload）と実クエリの双方がこの const を
+ * 参照するため両者が乖離しない。
+ *
+ * 領域メタデータの作成/更新（create/update）は採点結果を必要としないため questionScores を
+ * 引かない軽い形状。get 系のみ採点画面向けに questionScores も引く。
+ */
+export const cropRegionWithSubtotalsInclude = {
+  examPage: true,
+  cropSubtotals: {
+    include: {
+      subtotal: true,
+    },
+  },
+} satisfies Prisma.CropRegionInclude
+
+export const cropRegionWithSubtotalsAndScoresInclude = {
+  examPage: true,
+  cropSubtotals: {
+    include: {
+      subtotal: true,
+    },
+  },
+  questionScores: true,
+} satisfies Prisma.CropRegionInclude
+
+/** examPage・cropSubtotals.subtotal を含む CropRegion（create/update の返り値） */
+export type CropRegionWithSubtotals = Prisma.CropRegionGetPayload<{
+  include: typeof cropRegionWithSubtotalsInclude
+}>
+
+/** examPage・cropSubtotals.subtotal・questionScores を含む CropRegion（get 系の返り値） */
+export type CropRegionWithSubtotalsAndScores = Prisma.CropRegionGetPayload<{
+  include: typeof cropRegionWithSubtotalsAndScoresInclude
+}>
+
 /** 設問領域を作成する（orderIndex未指定時は自動採番、examPage・cropSubtotals リレーション含む） */
 export const createCropRegion = async (
   data: Prisma.CropRegionUncheckedCreateInput
@@ -48,14 +84,7 @@ export const createCropRegion = async (
       ...data,
       orderIndex,
     },
-    include: {
-      examPage: true,
-      cropSubtotals: {
-        include: {
-          subtotal: true,
-        },
-      },
-    },
+    include: cropRegionWithSubtotalsInclude,
   })
 
   const scope = await resolveExamScope(examPage.examId)
@@ -103,14 +132,7 @@ export const updateCropRegion = async (
   const region = await prisma.cropRegion.update({
     where: { id },
     data,
-    include: {
-      examPage: true,
-      cropSubtotals: {
-        include: {
-          subtotal: true,
-        },
-      },
-    },
+    include: cropRegionWithSubtotalsInclude,
   })
 
   const scope = await resolveExamScope(region.examPage.examId)
@@ -158,15 +180,7 @@ export const getCropRegionsByExamId = async (examId: string) => {
         examId: examId,
       },
     },
-    include: {
-      examPage: true, // examPage情報を追加
-      cropSubtotals: {
-        include: {
-          subtotal: true,
-        },
-      },
-      questionScores: true, // 関連する QuestionScore も取得
-    },
+    include: cropRegionWithSubtotalsAndScoresInclude,
     orderBy: [
       { orderIndex: "asc" }, // 手動順序（最優先）
       { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
@@ -197,15 +211,7 @@ export const getCropRegionsByExamId = async (examId: string) => {
           examId: examId,
         },
       },
-      include: {
-        examPage: true,
-        cropSubtotals: {
-          include: {
-            subtotal: true,
-          },
-        },
-        questionScores: true,
-      },
+      include: cropRegionWithSubtotalsAndScoresInclude,
       orderBy: [
         { orderIndex: "asc" },
         { examPage: { pageNumber: "asc" } },
@@ -230,15 +236,7 @@ export const getQuestionAnswerRegionsByExamId = async (examId: string) => {
       },
       type: "QUESTION_ANSWER", // DB レベルでフィルタリング
     },
-    include: {
-      examPage: true,
-      cropSubtotals: {
-        include: {
-          subtotal: true,
-        },
-      },
-      questionScores: true,
-    },
+    include: cropRegionWithSubtotalsAndScoresInclude,
     orderBy: [
       { orderIndex: "asc" }, // 手動順序（最優先）
       { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
@@ -273,15 +271,7 @@ export const getQuestionAnswerRegionsByExamId = async (examId: string) => {
 export const getCropRegionById = async (id: string) => {
   return prisma.cropRegion.findUnique({
     where: { id },
-    include: {
-      examPage: true,
-      cropSubtotals: {
-        include: {
-          subtotal: true,
-        },
-      },
-      questionScores: true,
-    },
+    include: cropRegionWithSubtotalsAndScoresInclude,
   })
 }
 
@@ -312,17 +302,5 @@ export const updateCropRegionOrders = async (
 
   return result
 }
-
-export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
-  include: {
-    examPage: true
-    cropSubtotals: {
-      include: {
-        subtotal: true
-      }
-    }
-    questionScores: true
-  }
-}>
 
 export type CropRegionPayload = CropRegion
