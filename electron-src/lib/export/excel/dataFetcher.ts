@@ -95,47 +95,43 @@ export async function fetchExportData(
 
     // 選択された生徒のフィルタリングとソート
     // 空配列の場合は全生徒を取得（統計計算用）
+    // Excel 出力層は内部で flat な Student 射影（student.id = 生徒ID）を消費するため、
+    // IPC/renderer 契約の nested な ExamStudentWithDetails をここで境界フラット化する。
+    // customOrder / status は ExamStudent 実列を平坦に畳み、表示学級（grade/className/
+    // attendanceNumber）は受験日スナップショット解決を優先して付与する。
     const selectedStudents = (studentsResult.students || [])
       .filter(
-        (student) =>
+        (examStudent) =>
           selectedStudentIds.length === 0 ||
-          selectedStudentIds.includes(student.id)
+          selectedStudentIds.includes(examStudent.studentId)
       )
-      .map((student) => {
+      .map((examStudent) => {
+        const student = examStudent.student
+
         // 受験日スナップショット＋order優先で解決した学級情報を使う（P1修正）
-        const resolved = classInfoMap[student.id]
+        const resolved = classInfoMap[examStudent.studentId]
 
         // 解決不能時（administered学級に未所属等）は memberships[0] へフォールバック
-        const studentWithMemberships = student as typeof student & {
-          memberships?: Array<{
-            attendanceNumber?: number | null
-            class: {
-              id: string
-              name: string
-              grade?: number | null
-            }
-          }>
-        }
-        const fallbackMembership = studentWithMemberships.memberships?.[0]
+        const fallbackMembership = student.memberships?.[0]
         const fallbackClass = fallbackMembership?.classroom
 
-        const grade = resolved?.grade ?? fallbackClass?.grade ?? null
-        const className = resolved?.className ?? fallbackClass?.name
+        const grade = resolved?.classroom?.grade ?? fallbackClass?.grade ?? null
+        const className = resolved?.classroom?.name ?? fallbackClass?.name
         const attendanceNumber =
           resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
 
         return {
           ...student,
+          customOrder: examStudent.customOrder,
+          status: examStudent.status,
           grade: grade != null ? grade.toString() : undefined,
           className: className ?? undefined,
           attendanceNumber: attendanceNumber ?? undefined,
         }
       })
       .sort((studentA, studentB) => {
-        const aOrder =
-          (studentA as Student & { customOrder?: number }).customOrder ?? 999999
-        const bOrder =
-          (studentB as Student & { customOrder?: number }).customOrder ?? 999999
+        const aOrder = studentA.customOrder ?? 999999
+        const bOrder = studentB.customOrder ?? 999999
         return aOrder - bOrder
       })
 

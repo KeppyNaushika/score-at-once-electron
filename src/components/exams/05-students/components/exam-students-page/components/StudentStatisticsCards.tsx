@@ -1,9 +1,9 @@
 "use client"
 
-import type { Student } from "@/components/exams/05-students/components/exam-students-page/types/examStudentsTypes"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface StudentStatisticsCardsProps {
-  students: Student[]
+  students: ExamStudentWithDetails[]
 }
 
 export function StudentStatisticsCards({
@@ -11,13 +11,13 @@ export function StudentStatisticsCards({
 }: StudentStatisticsCardsProps) {
   const totalStudents = students.length
   const participatingStudents = students.filter(
-    (student) => student.status === "participating"
+    (examStudent) => examStudent.status === "participating"
   ).length
   const expectedStudents = students.filter(
-    (student) => student.status === "expected"
+    (examStudent) => examStudent.status === "expected"
   ).length
   const absentStudents = students.filter(
-    (student) => student.status === "absent"
+    (examStudent) => examStudent.status === "absent"
   ).length
 
   return (

@@ -1,78 +1,50 @@
-# 型・命名クリーンアップ 残タスク
+# renderer 型リファクタ 残計画
 
-05-students / 06 / 08-export まわりの型・命名整理の作業メモ。
-「Prisma のデータ構造をそのまま持つ」規約への整合と、濁った命名・不要型の排除が目的。
+型規約に沿った renderer 側データ構造の整理。**規約の全文はメモリ `feedback_type_conventions.md`（＋核心は `docs/coding-style.md` §型管理の方針）**。要点：
 
-## 完了済み（参考）
-
-- `GradingDataInfo` / `ExamStudentData` / `ScoringDataWithRank` — いずれも不要と判明し**削除**（型注釈を外して TS 推論に委譲、`GradingDataInfo` は `hasData` が `totalItems>0` と冗長のため件数1スカラーへ簡素化）
-- `Student`（05）= `StudentWithMemberships & { 計算フィールド }` へ Prisma 拡張型化。`StudentMembership` / `ClassGroup` / 死フィールド `isInExam` を除去
-- `StudentStatus` → **`ExamStudentStatus`** に改名（SSOT `src/types/examStudentStatus.types.ts`）。`ScoringStatus` と対の構造（const + union + `isX` + `toX`）
-- **#5 DB 小文字統一**: `ExamStudent.status` を `participating|expected|absent` に統一（migration `20260705000000_lowercase_examstudent_status`）。`toUpperCase`/`toLowerCase` の往復を全廃し、`toExamStudentStatus` は `toScoringStatus` と同型の純粋な絞り込みに。アーカイブは v1.17.0 + `V1_16_0_to_V1_17_0` 変換器で旧大文字を正規化
+- renderer で DB 管理データは原則 **Prisma 拡張型**（`Prisma.XGetPayload<{ include }>`）で DB と構造一致。
+- DB 由来データを計算した値 → 原則そのコンポーネント内で計算。長い→引数渡し or フック。複数箇所→共通フック。
+- Decimal→number / string→literal union は**境界での型注入**（`Omit<Model,"f"> & { f: 補正型 }` ＋ `toX()`/`.toNumber()`）。`SerializedQuestionScore` / `ScoringStatus` が前例。
+- ファイル書き出し（Excel/PDF）は DB 非反映の read-out ＝**型制限の対象外**。ただし「必要な型」を渡す（乱立禁止）。
+- **独自型を制限する目的＝ DB への書き込み整合性の保護。**
 
 ---
 
-## 残タスク
+## 現在のチェックポイント（実装済み・**未コミット**・typecheck/lint/テスト緑）
 
-### b. データ表現の設計（局所的）
-
-#### b-1. RosterTable 関連のデータの持ち様は適切か
-- `src/components/common/roster-table/` と、それを使う 05-students / grades / coursework の各 Container のデータ受け渡しを点検
-- `RosterClassOption` 等の共有型の持ち方、`extras` バッグ（`row.extras?.status as ...` のような型無しアクセス）の妥当性を確認
-- 論点: 汎用テーブルに渡すデータが型安全か、`as` キャストや `unknown` バッグに逃げていないか
-
-#### b-2. `Set<string>` を props/state に直接持つのは妥当か
-- 例: `useExamStudentsData` の `selectedStudentsForRemoval: Set<string>`、`ReturnDiffPanel` の `selectedStudents: Set<string>`、`usePendingChanges` の `affectedCells: Set<string>`
-- 論点: `Set` を prop 境界で渡すことの是非（React の再レンダリング判定・シリアライズ・イミュータビリティ）。配列 + ヘルパー、あるいは専用フックに閉じ込めるべきか検討
-
-#### b-3. `ReturnDiffPanelProps` は適切か
-- `src/components/exams/08-export/components/ReturnDiffPanel.tsx` の Props（`students: Student[]` / `selectedStudents: Set<string>` / `setSelectedStudents`）
-- 論点: 表示名解決のためだけに全生徒を渡す設計、`Set` の受け渡し（b-2 と関連）、`setSelectedStudents` を生で渡す形の妥当性
-
-### c. 大物リファクタ（中核 IPC 契約の変更）
-
-#### c-1. `getStudentsForExam` の戻り値を Prisma ネイティブへ + `examClassInfo` の分離
-
-**背景（この作業で確定した設計）**
-今 `Student`（05）と呼んでいる object の正体は **Student ではなく ExamStudent**（Exam×Student×Classroom を3つの中間テーブルで結合し生徒1人に畳んだビュー）。現状は取得境界で平坦化した手書き合成型。
-
-**方針**
-- 実体の基底を `ExamStudent` の Prisma GetPayload にする:
-  ```ts
-  type ExamStudentWithDetails = Prisma.ExamStudentGetPayload<{
-    include: {
-      student: {
-        include: {
-          memberships: { include: { classroom: true } }
-          _count: { select: { studentAnswerImages: true } }
-        }
-      }
-    }
-  }>
-  ```
-  → `status` / `customOrder`（ExamStudent 実列）、identity・memberships、答案枚数（`_count`）がすべてスキーマ追従の Prisma 型に。手書き graft ゼロ
-- 還元不能な `examClassInfo` だけを分離:
-  - 型名は **`ExamClassroomPlacement`**（`StudentClassInfo` の `Info` 濁りを排除）
-  - 形は概ね Prisma 派生: `Prisma.ExamClassroomGetPayload<{ include: { classroom: true } }> & { attendanceNumber: number | null }`（`attendanceNumber` のみ membership 由来の付加）
-  - `Student` にマージせず `Record<studentId, ExamClassroomPlacement>` の side data として保持し、使用箇所で `placementByStudent[examStudent.studentId]` 参照
-- 命名: 変数は `examStudent`（`entry` 等の濁り禁止）、ネストが煩い箇所は `const student = examStudent.student` で実体名エイリアス
-- 平坦アクセス（`student.lastName`）→ ネスト（`examStudent.student.lastName`）の冗長さは**受け入れる**（規約優先）
-
-**影響範囲（`getStudentsForExam` 消費者 6ファイル）**
-- `src/components/exams/05-students/.../useExamStudentsData.ts`
-- `src/components/exams/05-students/.../ExamStudentAddModalContainer.tsx`
-- `src/app/exams/[examId]/06-student-answers/hooks/index.tsx`
-- `src/components/exams/08-export/hooks/useExportPage.ts`
-- `src/hooks/useExamDetail.ts`
-- `electron-src/lib/prisma/pdfExport.ts` / `electron-src/lib/export/excel/dataFetcher.ts`
-
-**進め方**: 型定義 → `getStudentsForExam` の戻り値形状 → 各消費者を順に、途中で `typecheck` を通しながら段階的に。並行セッション所有ファイルに注意。
-
-**補足**: 06 hooks/index.tsx の sort に `memberships?.[0]?.attendanceNumber` の `[0]` 索引アンチパターンが残存（本 reframe or 別途で `examClassInfo`/placement へ寄せる）。
+- b-1/b-2/b-3: RosterTable の無型 `extras` 撤去 / 選択を `useStudentSelection` フックへ集約（`useMemo` も除去）/ `ReturnDiffPanel` を `selectedStudentIds: string[]` + intent へ
+- c: 重複3 `Student` 型を **`ExamStudentWithDetails`（nested Prisma 拡張）** に統合。`getStudentsForExam` / IPC もこの型。05/06/08・electron 出力を nested アクセスへ（`examStudent.studentId` / `examStudent.student.X`）
+- `StudentClassInfo` → **`ExamClassroomPlacement`** 改名。placement は **Prisma `Classroom` を同梱**（フラット `className` 文字列を廃止）
+- 06 並び替えを **customOrder のみ**に単純化（falsy-zero・比較器重複・`[0]` 索引を撤去）
+- 06 の重複8生徒型を暫定 **`UnifiedStudent`（`Pick<Student> & {...}`）** へ集約し、採番学級バッジを placement 経由に
+- **Task 1 完了**: placement を renderer 側解決へ。専用 IPC（`getStudentClassInfo` map / `getStudentClassInfoSingle` single）と main `getStudentClassInfo`（単一）・未使用 `ExamClassroomPlacementMap` を撤去。新設 `src/lib/examClassroomPlacement.ts` の `resolveExamClassroomPlacement(administeredClasses)` が既存 `getAdministered`（DB 構造 IPC）から採番を計算。05/06 を載せ替え。境界型 `ExamClassroomPlacement` は残置（main `getStudentClassInfoForExam`＝export 経路がまだ使用）。
 
 ---
 
-## 進め方の推奨
-1. まず現状の緑（改名 + #5）を `/git-workflow` でコミットしてチェックポイント化
-2. b（局所的・3件）を片付ける
-3. 最後に c-1 の reframe（最大の山）
+## 残タスク（この設計で確定）
+
+### 2. 06 を nested 化（フラット `UnifiedStudent` を廃止）
+
+- 現状の Pick ベース `UnifiedStudent` を廃し、**`ExamStudentWithDetails`（nested）を持ち回る**。
+- 影響 ~14 ファイル（`student-answer-management` / `student-answer-table` の grid/table/dnd/upload）: `student.lastName`→`examStudent.student.lastName`、`student.id`→`examStudent.studentId`、`student.status`→`examStudent.status`、`student.customOrder`→`examStudent.customOrder`。
+- 採番学級は 1 のフック（placement 側データ）で参照。`StudentWithAnswers` 等は `ExamStudentWithDetails & { フラグ }` に。
+- フックの返り値「全体」に名前は付けない（推論／`ReturnType`）。
+
+### 3. export（Excel/PDF）を renderer 主導に
+
+- 型制限の対象外。renderer が採番を含む**必要な**データを export IPC に渡し、`dataFetcher` の `getStudentClassInfoForExam` 呼び出し（main 側採番解決）を撤去。
+- 「好きな型」ではなく必要な型（乱立防止）。
+- 完了時: main `getStudentClassInfoForExam` を撤去 → 境界型 `ExamClassroomPlacement` は renderer 専用になるので `src/lib/examClassroomPlacement.ts` へ移す。併せて `resolveExamClassroomPlacement` の単体テストを追加（現状は main の `getStudentClassInfoForExam` テストがロジックを担保）。
+
+### 4. coding-style.md へ規約差分を追記（並行セッション完了後）
+
+- 追記内容: 目的＝DB書き込み保護 / 書き出しは対象外＋必要な型 / 計算はコンポーネント・フック / Decimal・union の型注入。
+- **`docs/coding-style.md` は現在並行セッションが編集中**のため、そのセッション完了を待って反映。
+
+---
+
+## 進め方メモ
+
+- 1 → 2 → 3 の順（placement フック確立 → 06 nested → export 付け替え）。各段で typecheck ゲート。
+- 並行セッション所有ファイル（`coding-style.md` / `identifier-vs-entity-audit.md` / `type-convention-audit.md`）は触らない。
+- 本セッションの全変更は未コミット。区切りでコミットするかは要判断。

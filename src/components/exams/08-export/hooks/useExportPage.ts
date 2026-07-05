@@ -13,6 +13,7 @@ import {
   defaultScoringMarkConfig,
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/ScoringMarkSettings"
+import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
 import type { ExamWithDetails } from "@/types/common.types"
 
 /** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */
@@ -33,10 +34,14 @@ export function useExportPage() {
     "participating",
   ])
 
-  // 選択状態
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
-    new Set()
-  )
+  // 選択状態（Set の変異は useStudentSelection のインテントメソッドに閉じ込める）
+  const {
+    selectedStudentIds,
+    replaceSelection,
+    toggleStudent,
+    addStudents,
+    removeStudents,
+  } = useStudentSelection()
 
   // 出力設定
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
@@ -254,61 +259,29 @@ export function useExportPage() {
       }
 
       if (studentsResponse && studentsResponse.success) {
-        // 受験生徒順（customOrder）でソート
+        // 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の
+        // 読み手なので customOrder のみで並べ、出席番号・氏名などの独自フォールバックは
+        // 加えない。getStudentsForExam は customOrder 昇順（同着は studentNumber）で返すため、
+        // 同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
         const sortedStudents = (studentsResponse.students || []).sort(
-          (studentA, studentB) => {
-            // customOrderが設定されている場合はそれを優先
-            if (
-              studentA.customOrder !== null &&
-              studentA.customOrder !== undefined &&
-              studentB.customOrder !== null &&
-              studentB.customOrder !== undefined
-            ) {
-              return studentA.customOrder - studentB.customOrder
-            }
-            if (
-              studentA.customOrder !== null &&
-              studentA.customOrder !== undefined
-            )
-              return -1
-            if (
-              studentB.customOrder !== null &&
-              studentB.customOrder !== undefined
-            )
-              return 1
-
-            // customOrderが未設定の場合は出席番号順をフォールバック
-            const studentAAttendanceNumber =
-              studentA.memberships?.[0]?.attendanceNumber
-            const studentBAttendanceNumber =
-              studentB.memberships?.[0]?.attendanceNumber
-
-            if (studentAAttendanceNumber && studentBAttendanceNumber) {
-              return studentAAttendanceNumber - studentBAttendanceNumber
-            }
-            if (studentAAttendanceNumber) return -1
-            if (studentBAttendanceNumber) return 1
-
-            // 出席番号もない場合は名前順
-            const studentAName = `${studentA.lastName}${studentA.firstName}`
-            const studentBName = `${studentB.lastName}${studentB.firstName}`
-            return studentAName.localeCompare(studentBName, "ja")
-          }
+          (examStudentA, examStudentB) =>
+            (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
+            (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)
         )
 
         setStudents(sortedStudents)
         // デフォルトで参加中の学生を選択
         const participatingStudents = sortedStudents
-          .filter((student) => student.status === "participating")
-          .map((student) => student.id)
-        setSelectedStudents(new Set(participatingStudents))
+          .filter((examStudent) => examStudent.status === "participating")
+          .map((examStudent) => examStudent.studentId)
+        replaceSelection(participatingStudents)
       }
     } catch (error) {
       console.error("Failed to load data:", error)
     } finally {
       setLoading(false)
     }
-  }, [examId])
+  }, [examId, replaceSelection])
 
   // 初期化
   useEffect(() => {
@@ -326,7 +299,8 @@ export function useExportPage() {
   }, [])
 
   // フィルタリング（既にソート済みの students を使用）
-  const filteredStudents = students.filter((student) => {
+  const filteredStudents = students.filter((examStudent) => {
+    const student = examStudent.student
     const matchesSearch =
       searchTerm === "" ||
       student.lastName.includes(searchTerm) ||
@@ -340,7 +314,8 @@ export function useExportPage() {
       )
 
     const matchesStatus =
-      selectedStatuses.length === 0 || selectedStatuses.includes(student.status)
+      selectedStatuses.length === 0 ||
+      selectedStatuses.includes(examStudent.status)
 
     return matchesSearch && matchesClass && matchesStatus
   })
@@ -349,8 +324,10 @@ export function useExportPage() {
   const availableClasses = Array.from(
     new Map(
       students
-        .flatMap((student) =>
-          student.memberships.map((membership) => membership.classroom)
+        .flatMap((examStudent) =>
+          examStudent.student.memberships.map(
+            (membership) => membership.classroom
+          )
         )
         .map((classroom) => [classroom.id, classroom])
     ).values()
@@ -372,8 +349,11 @@ export function useExportPage() {
     setSelectedStatuses,
 
     // 選択
-    selectedStudents,
-    setSelectedStudents,
+    selectedStudents: selectedStudentIds,
+    replaceSelection,
+    toggleStudent,
+    addStudents,
+    removeStudents,
 
     // 出力設定
     exportOptions,

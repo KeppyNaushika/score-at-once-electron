@@ -1,6 +1,6 @@
 import { ExamClassroom, Prisma } from "@prisma/client"
 
-import type { StudentClassInfo } from "@/types/electron/examClassApi"
+import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
@@ -8,11 +8,6 @@ import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 import { getExamReferenceDate } from "./examStudent"
 import { membershipFilterAt } from "./membershipFilter"
-
-/**
- * 試験内の全生徒の学級・出席番号情報
- */
-export type StudentClassInfoMap = Map<string, StudentClassInfo>
 
 type ExamClassWithDetails = Prisma.ExamClassroomGetPayload<{
   include: {
@@ -476,11 +471,11 @@ export const addStudentsFromClass = async (
  * 2. 各クラスの StudentClassroomMembership を取得
  * 3. 生徒ごとに、最初にマッチするクラスの情報を返す
  *
- * @returns Map<studentId, StudentClassInfo>
+ * @returns Map<studentId, ExamClassroomPlacement>
  */
 export const getStudentClassInfoForExam = async (
   examId: string
-): Promise<Record<string, StudentClassInfo>> => {
+): Promise<Record<string, ExamClassroomPlacement>> => {
   try {
     // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
     const referenceDate = await getExamReferenceDate(examId)
@@ -507,9 +502,12 @@ export const getStudentClassInfoForExam = async (
     })
 
     // 2. 生徒ごとの学級情報をマップに格納（order順で最初にマッチしたものを使用）
-    const result: Record<string, StudentClassInfo> = {}
+    const result: Record<string, ExamClassroomPlacement> = {}
 
     for (const examClass of examClassrooms) {
+      // 解決用に include した memberships は出力に含めず、Classroom スカラーをそのまま同梱する
+      const { memberships: _memberships, ...classroom } = examClass.classroom
+
       for (const membership of examClass.classroom.memberships) {
         // 既に情報がある生徒はスキップ（order優先順位を尊重）
         if (result[membership.studentId]) {
@@ -517,11 +515,9 @@ export const getStudentClassInfoForExam = async (
         }
 
         result[membership.studentId] = {
-          className: examClass.classroom.name,
-          classCode: examClass.classroom.classCode,
-          grade: examClass.classroom.grade,
+          classroom,
           attendanceNumber: membership.attendanceNumber,
-          classOrder: examClass.order,
+          order: examClass.order,
         }
       }
     }
@@ -529,66 +525,6 @@ export const getStudentClassInfoForExam = async (
     return result
   } catch (error) {
     console.error(`Failed to get student class info for exam ${examId}:`, error)
-    throw error
-  }
-}
-
-/**
- * 単一生徒の学級・出席番号情報を取得
- */
-export const getStudentClassInfo = async (
-  examId: string,
-  studentId: string
-): Promise<StudentClassInfo> => {
-  try {
-    // 受験日時点で在籍する所属のみを解決対象とする（受験日スナップショット）
-    const referenceDate = await getExamReferenceDate(examId)
-
-    // administered=true の ExamClassroom を order 順で取得
-    const examClassrooms = await prisma.examClassroom.findMany({
-      where: {
-        examId,
-        administered: true,
-      },
-      include: {
-        classroom: {
-          include: {
-            memberships: {
-              where: { studentId, ...membershipFilterAt(referenceDate) },
-            },
-          },
-        },
-      },
-      orderBy: { order: "asc" },
-    })
-
-    // 最初にマッチするクラスを使用
-    for (const examClass of examClassrooms) {
-      if (examClass.classroom.memberships.length > 0) {
-        const membership = examClass.classroom.memberships[0]
-        return {
-          className: examClass.classroom.name,
-          classCode: examClass.classroom.classCode,
-          grade: examClass.classroom.grade,
-          attendanceNumber: membership.attendanceNumber,
-          classOrder: examClass.order,
-        }
-      }
-    }
-
-    // 該当なし
-    return {
-      className: null,
-      classCode: null,
-      grade: null,
-      attendanceNumber: null,
-      classOrder: null,
-    }
-  } catch (error) {
-    console.error(
-      `Failed to get student class info for student ${studentId} in exam ${examId}:`,
-      error
-    )
     throw error
   }
 }

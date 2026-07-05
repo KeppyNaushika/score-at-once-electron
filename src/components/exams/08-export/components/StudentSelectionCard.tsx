@@ -54,7 +54,9 @@ interface StudentSelectionCardProps {
   selectedStatuses: string[]
   setSelectedStatuses: (statuses: string[]) => void
   selectedStudents: Set<string>
-  setSelectedStudents: (students: Set<string>) => void
+  toggleStudent: (studentId: string) => void
+  addStudents: (studentIds: string[]) => void
+  removeStudents: (studentIds: string[]) => void
   // プレビュー関連
   exportTab?: ExportTabType
   previewData?: IndividualReportData | null
@@ -87,7 +89,9 @@ export function StudentSelectionCard({
   selectedStatuses,
   setSelectedStatuses,
   selectedStudents,
-  setSelectedStudents,
+  toggleStudent,
+  addStudents,
+  removeStudents,
   exportTab,
   previewData,
   isPreviewLoading,
@@ -117,27 +121,12 @@ export function StudentSelectionCard({
         ? "excel"
         : "scored-answers"
 
-  const toggleStudentSelection = (studentId: string) => {
-    const newSelection = new Set(selectedStudents)
-    if (newSelection.has(studentId)) {
-      newSelection.delete(studentId)
-    } else {
-      newSelection.add(studentId)
-    }
-    setSelectedStudents(newSelection)
-  }
-
   const selectAllFiltered = () => {
-    const allFilteredIds = students.map((student) => student.id)
-    setSelectedStudents(new Set([...selectedStudents, ...allFilteredIds]))
+    addStudents(students.map((examStudent) => examStudent.studentId))
   }
 
   const deselectAllFiltered = () => {
-    const filteredIds = new Set(students.map((student) => student.id))
-    const newSelection = new Set(
-      [...selectedStudents].filter((id) => !filteredIds.has(id))
-    )
-    setSelectedStudents(newSelection)
+    removeStudents(students.map((examStudent) => examStudent.studentId))
   }
 
   const toggleClassFilter = (classroomId: string) => {
@@ -310,34 +299,35 @@ export function StudentSelectionCard({
             </span>
           </div>
           <div className="flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
-            {students.map((student) => (
+            {students.map((examStudent) => (
               <div
-                key={student.id}
+                key={examStudent.studentId}
                 className="hover:bg-muted flex items-center space-x-2 rounded p-1"
               >
                 <Checkbox
-                  id={`student-${student.id}`}
-                  checked={selectedStudents.has(student.id)}
-                  onCheckedChange={() => toggleStudentSelection(student.id)}
+                  id={`student-${examStudent.studentId}`}
+                  checked={selectedStudents.has(examStudent.studentId)}
+                  onCheckedChange={() => toggleStudent(examStudent.studentId)}
                   className="h-4 w-4"
                 />
                 <Label
-                  htmlFor={`student-${student.id}`}
+                  htmlFor={`student-${examStudent.studentId}`}
                   className="flex-1 cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs">
-                      {student.lastName} {student.firstName}
+                      {examStudent.student.lastName}{" "}
+                      {examStudent.student.firstName}
                     </span>
                     <div className="flex items-center gap-1">
-                      {student.customOrder !== null &&
-                        student.customOrder !== undefined && (
+                      {examStudent.customOrder !== null &&
+                        examStudent.customOrder !== undefined && (
                           <span className="text-muted-foreground bg-muted rounded px-1 text-xs">
-                            {student.customOrder}
+                            {examStudent.customOrder}
                           </span>
                         )}
                       <span className="text-muted-foreground text-xs">
-                        {student.studentNumber}
+                        {examStudent.student.studentNumber}
                       </span>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { UnifiedStudent } from "@/components/exams/06-student-answers/types"
 
 export interface ConvertedFile {
   id: string
@@ -31,33 +31,14 @@ export interface ExamPage {
   examId: string
 }
 
-export interface StudentWithAnswers {
-  id: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  studentId: string
+export type StudentWithAnswers = UnifiedStudent & {
   isSelected: boolean
   hasExistingAnswers: boolean
   overwrite: boolean
-  status?: ExamStudentStatus
-  customOrder?: number | null
-  attendanceNumber?: number | null
 }
 
 export interface UseStudentAnswerUploadProps {
   examId: string
-  students: Array<{
-    id: string
-    lastName: string
-    firstName: string
-    lastNameKana: string
-    firstNameKana: string
-    studentId: string
-    attendanceNumber?: number | null
-    status?: ExamStudentStatus
-    customOrder?: number | null
-  }>
+  students: UnifiedStudent[]
   onUploadComplete?: () => void
 }

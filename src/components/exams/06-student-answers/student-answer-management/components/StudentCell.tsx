@@ -87,12 +87,12 @@ export function StudentCell({
 
           <div className="flex items-center gap-1">
             {getStatusBadge()}
-            {student.attendanceNumber && (
+            {student.classroom && (
               <Badge
                 variant="secondary"
                 className="border-none bg-transparent px-1 py-0 text-xs text-slate-600"
               >
-                {student.attendanceNumber}
+                {student.classroom.name}
               </Badge>
             )}
           </div>

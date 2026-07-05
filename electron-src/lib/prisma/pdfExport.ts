@@ -174,9 +174,14 @@ export async function getPdfExportData(options: {
       decisionsResult.success ? (decisionsResult.decisions ?? []) : []
     )
 
-    // 生徒情報を取得
+    // 生徒情報を取得。PDF 出力層は内部で flat な Student 射影（student.id = 生徒ID）を
+    // 消費するため、IPC 契約の nested な ExamStudentWithDetails をここで境界フラット化する。
     const studentsResult = await getStudentsForExam(examId)
-    const allStudents = studentsResult.students || []
+    const allStudents = (studentsResult.students || []).map((examStudent) => ({
+      ...examStudent.student,
+      customOrder: examStudent.customOrder,
+      status: examStudent.status,
+    }))
 
     // 答案画像を取得
     const studentAnswersResult = await getStudentAnswersByExamId(examId)

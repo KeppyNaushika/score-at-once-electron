@@ -59,8 +59,10 @@ interface ReturnDiffPanelProps {
   examId: string
   /** 表示名解決用の生徒一覧（フィルタ前の全件が望ましい） */
   students: Student[]
-  selectedStudents: Set<string>
-  setSelectedStudents: (students: Set<string>) => void
+  /** 現在の選択（「返却版として記録」対象・件数表示に使う） */
+  selectedStudentIds: string[]
+  /** 選択を差し替える（「変更があった生徒のみ選択」） */
+  onSelectStudentIds: (studentIds: string[]) => void
 }
 
 /**
@@ -70,8 +72,8 @@ interface ReturnDiffPanelProps {
 export function ReturnDiffPanel({
   examId,
   students,
-  selectedStudents,
-  setSelectedStudents,
+  selectedStudentIds,
+  onSelectStudentIds,
 }: ReturnDiffPanelProps) {
   const {
     diffByStudent,
@@ -82,20 +84,23 @@ export function ReturnDiffPanel({
   } = useReturnDiff(examId)
   const [detailOpen, setDetailOpen] = useState(false)
 
-  // 変更があった生徒の差分（生徒実体をペアで保持。順序は students の並びに従う）
+  // 変更があった生徒の差分（受験生徒実体をペアで保持。順序は students の並びに従う）
   const changedDiffs = students
-    .map((student) => ({ student, diff: diffByStudent.get(student.id) }))
+    .map((examStudent) => ({
+      examStudent,
+      diff: diffByStudent.get(examStudent.studentId),
+    }))
     .filter(
-      (pair): pair is { student: Student; diff: ReturnStudentDiff } =>
+      (pair): pair is { examStudent: Student; diff: ReturnStudentDiff } =>
         !!pair.diff && pair.diff.changed
     )
 
   const selectChangedOnly = () => {
-    setSelectedStudents(new Set(changedStudentIds))
+    onSelectStudentIds(Array.from(changedStudentIds))
   }
 
   const handleCapture = async () => {
-    await capture(Array.from(selectedStudents))
+    await capture(selectedStudentIds)
   }
 
   return (
@@ -116,10 +121,10 @@ export function ReturnDiffPanel({
             variant="outline"
             size="sm"
             onClick={handleCapture}
-            disabled={capturing || selectedStudents.size === 0}
+            disabled={capturing || selectedStudentIds.length === 0}
           >
             <FileCheck className="mr-1 h-4 w-4" />
-            選択中の{selectedStudents.size}名を返却版として記録
+            選択中の{selectedStudentIds.length}名を返却版として記録
           </Button>
 
           {hasAnySnapshot && (
@@ -145,13 +150,14 @@ export function ReturnDiffPanel({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
-                {changedDiffs.map(({ student, diff }) => (
+                {changedDiffs.map(({ examStudent, diff }) => (
                   <div
                     key={diff.studentId}
                     className="border-border rounded-md border p-3 text-sm"
                   >
                     <div className="mb-1 flex items-center gap-2 font-medium">
-                      {student.lastName} {student.firstName}
+                      {examStudent.student.lastName}{" "}
+                      {examStudent.student.firstName}
                       {diff.annotationChanged && (
                         <Badge variant="secondary" className="gap-1">
                           <PencilLine className="h-3 w-3" />

@@ -96,12 +96,12 @@ export function ExamStudentAddModalContainer({
         let startOrder = 0
         if (existing.success && existing.students) {
           const others = existing.students.filter(
-            (student) => !studentIds.includes(student.id)
+            (examStudent) => !studentIds.includes(examStudent.studentId)
           )
           const maxOrder = others.reduce(
-            (max, student) =>
-              student.customOrder != null
-                ? Math.max(max, student.customOrder)
+            (max, examStudent) =>
+              examStudent.customOrder != null
+                ? Math.max(max, examStudent.customOrder)
                 : max,
             -1
           )

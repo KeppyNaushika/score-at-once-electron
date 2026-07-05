@@ -2,7 +2,6 @@
 
 import { AlertTriangle, Trash2 } from "lucide-react"
 
-import type { Student } from "@/components/exams/05-students/components/exam-students-page/types/examStudentsTypes"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,12 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import type { ExamClassroomPlacement } from "@/types/electron/examClassApi"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface StudentRemovalConfirmModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
-  studentsToRemove: Student[]
+  studentsToRemove: ExamStudentWithDetails[]
+  /** ExamClass 由来の表示学級情報（studentId キーの side data） */
+  placementByStudent: Record<string, ExamClassroomPlacement>
   hasGradingData: boolean
   gradingDataCount?: number
 }
@@ -28,6 +31,7 @@ export default function StudentRemovalConfirmModal({
   onClose,
   onConfirm,
   studentsToRemove,
+  placementByStudent,
   hasGradingData,
   gradingDataCount = 0,
 }: StudentRemovalConfirmModalProps) {
@@ -47,20 +51,21 @@ export default function StudentRemovalConfirmModal({
         <div className="space-y-4">
           {/* 削除対象の生徒一覧 */}
           <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
-            {studentsToRemove.map((student) => (
+            {studentsToRemove.map((examStudent) => (
               <div
-                key={student.id}
+                key={examStudent.studentId}
                 className="flex items-center justify-between text-sm"
               >
                 <span>
-                  {student.lastName} {student.firstName}
+                  {examStudent.student.lastName} {examStudent.student.firstName}
                 </span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {student.studentNumber}
+                    {examStudent.student.studentNumber}
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
-                    {student.examClassInfo?.className ?? "未所属"}
+                    {placementByStudent[examStudent.studentId]?.classroom
+                      ?.name ?? "未所属"}
                   </Badge>
                 </div>
               </div>

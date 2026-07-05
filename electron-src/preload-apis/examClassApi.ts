@@ -41,14 +41,6 @@ export function createExamClassApi() {
           classroomId,
           activeOnly
         ),
-      getStudentClassInfo: (examId: string) =>
-        ipcRenderer.invoke("exam-class:get-student-class-info", examId),
-      getStudentClassInfoSingle: (examId: string, studentId: string) =>
-        ipcRenderer.invoke(
-          "exam-class:get-student-class-info-single",
-          examId,
-          studentId
-        ),
     },
   }
 }

@@ -53,6 +53,7 @@ export default function StudentsPage() {
     confirmStudentRemoval,
     filteredStudents,
     studentsForRemovalData,
+    placementByStudent,
   } = useExamStudentsData({ examId })
 
   const {
@@ -141,6 +142,7 @@ export default function StudentsPage() {
               onStudentSelectionChange={handleStudentSelectionChange}
               onSelectAll={handleSelectAll}
               filteredStudents={filteredStudents}
+              placementByStudent={placementByStudent}
               examId={examId}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
@@ -189,6 +191,7 @@ export default function StudentsPage() {
         }}
         onConfirm={confirmStudentRemoval}
         studentsToRemove={studentsForRemovalData}
+        placementByStudent={placementByStudent}
         hasGradingData={gradingItemCount > 0}
         gradingDataCount={gradingItemCount}
       />

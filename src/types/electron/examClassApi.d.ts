@@ -49,13 +49,12 @@ export interface AvailableClass {
 /**
  * 生徒の学級・出席番号情報（ExamClassroom経由で取得）
  */
-export interface StudentClassInfo {
-  className: string | null
-  classCode: string | null
-  grade: number | null
+export interface ExamClassroomPlacement {
+  /** 採番順を決める administered 学級（Prisma Classroom をそのまま同梱。未所属なら null） */
+  classroom: Classroom | null
   attendanceNumber: number | null
   /** ExamClassroom の並び順 */
-  classOrder: number | null
+  order: number | null
 }
 
 /**
@@ -130,20 +129,5 @@ export interface ExamClassAPI {
       skipped: number
       examClassroom: ExamClassroom
     }>
-
-    /**
-     * 試験内の全生徒の学級・出席番号情報を取得
-     */
-    getStudentClassInfo: (
-      examId: string
-    ) => Promise<Record<string, StudentClassInfo>>
-
-    /**
-     * 単一生徒の学級・出席番号情報を取得
-     */
-    getStudentClassInfoSingle: (
-      examId: string,
-      studentId: string
-    ) => Promise<StudentClassInfo>
   }
 }
