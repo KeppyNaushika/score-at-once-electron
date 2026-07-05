@@ -2,6 +2,46 @@ import type { CropSubtotal, Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
+/**
+ * CropSubtotal の include 形状（SSOT）。メソッドごとに取得するリレーションが異なるため
+ * 3種類を用意し、型（GetPayload）と実クエリの双方がこの const を参照する。
+ */
+export const cropSubtotalWithRegionAndSubtotalInclude = {
+  cropRegion: true,
+  subtotal: true,
+} satisfies Prisma.CropSubtotalInclude
+
+export const cropSubtotalWithSubtotalGroupInclude = {
+  subtotal: {
+    include: {
+      subtotalGroup: true,
+    },
+  },
+} satisfies Prisma.CropSubtotalInclude
+
+export const cropSubtotalWithRegionPageInclude = {
+  cropRegion: {
+    include: {
+      examPage: true,
+    },
+  },
+} satisfies Prisma.CropSubtotalInclude
+
+/** cropRegion・subtotal（いずれも浅い）を含む CropSubtotal（create の返り値） */
+export type CropSubtotalWithRegionAndSubtotal = Prisma.CropSubtotalGetPayload<{
+  include: typeof cropSubtotalWithRegionAndSubtotalInclude
+}>
+
+/** subtotal.subtotalGroup を含む CropSubtotal（getCropSubtotalsByCropRegionId の返り値） */
+export type CropSubtotalWithSubtotalGroup = Prisma.CropSubtotalGetPayload<{
+  include: typeof cropSubtotalWithSubtotalGroupInclude
+}>
+
+/** cropRegion.examPage を含む CropSubtotal（getCropSubtotalsBySubtotalId の返り値） */
+export type CropSubtotalWithRegionPage = Prisma.CropSubtotalGetPayload<{
+  include: typeof cropSubtotalWithRegionPageInclude
+}>
+
 /** 設問-小計紐付けを作成する（設問領域・小計項目の存在と試験での有効化を検証、cropRegion・subtotal リレーション含む） */
 export const createCropSubtotal = async (
   data: Prisma.CropSubtotalUncheckedCreateInput
@@ -51,10 +91,7 @@ export const createCropSubtotal = async (
 
   return prisma.cropSubtotal.create({
     data,
-    include: {
-      cropRegion: true,
-      subtotal: true,
-    },
+    include: cropSubtotalWithRegionAndSubtotalInclude,
   })
 }
 
@@ -149,13 +186,7 @@ export const deleteCropSubtotalsByCropRegionId = async (
 export const getCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
   return prisma.cropSubtotal.findMany({
     where: { cropRegionId },
-    include: {
-      subtotal: {
-        include: {
-          subtotalGroup: true,
-        },
-      },
-    },
+    include: cropSubtotalWithSubtotalGroupInclude,
   })
 }
 
@@ -163,13 +194,7 @@ export const getCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
 export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
   return prisma.cropSubtotal.findMany({
     where: { subtotalId },
-    include: {
-      cropRegion: {
-        include: {
-          examPage: true,
-        },
-      },
-    },
+    include: cropSubtotalWithRegionPageInclude,
   })
 }
 

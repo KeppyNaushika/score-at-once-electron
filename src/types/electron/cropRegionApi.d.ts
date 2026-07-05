@@ -8,11 +8,19 @@ import type {
 } from "@prisma/client"
 
 import type {
-  CropRegionWithDetails,
-  CropSubtotalWithRelations,
-  SubtotalGroupWithItems,
-  SubtotalWithDetails,
-} from "../prismaExtensions"
+  CropRegionWithSubtotals,
+  CropRegionWithSubtotalsAndScores,
+} from "@/electron-src/lib/prisma/cropRegion"
+import type {
+  CropSubtotalWithRegionAndSubtotal,
+  CropSubtotalWithRegionPage,
+  CropSubtotalWithSubtotalGroup,
+} from "@/electron-src/lib/prisma/cropSubtotal"
+import type { SubtotalWithGroupAndCrops } from "@/electron-src/lib/prisma/subtotal"
+import type {
+  SubtotalGroupWithSubtotals,
+  SubtotalGroupWithSubtotalsAndExams,
+} from "@/electron-src/lib/prisma/subtotalGroup"
 
 // CropRegion作成/更新用の引数型
 export type SaveCropRegionArgs = Omit<
@@ -49,20 +57,24 @@ export interface CropRegionAPI {
   // CropRegion related (updated from LayoutRegion)
   createCropRegion: (
     data: Prisma.CropRegionUncheckedCreateInput
-  ) => Promise<CropRegionWithDetails>
+  ) => Promise<CropRegionWithSubtotals>
   createManyCropRegions: (
     data: Prisma.CropRegionCreateManyInput[]
   ) => Promise<Prisma.BatchPayload>
   updateCropRegion: (
     id: string,
     data: Prisma.CropRegionUpdateInput
-  ) => Promise<CropRegionWithDetails>
+  ) => Promise<CropRegionWithSubtotals>
   deleteCropRegion: (id: string) => Promise<CropRegion | void>
-  getCropRegionsByExamId: (examId: string) => Promise<CropRegionWithDetails[]>
+  getCropRegionsByExamId: (
+    examId: string
+  ) => Promise<CropRegionWithSubtotalsAndScores[]>
   getQuestionAnswerRegionsByExamId: (
     examId: string
-  ) => Promise<CropRegionWithDetails[]>
-  getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
+  ) => Promise<CropRegionWithSubtotalsAndScores[]>
+  getCropRegionById: (
+    id: string
+  ) => Promise<CropRegionWithSubtotalsAndScores | null>
   updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>
   ) => Promise<CropRegion[]>
@@ -70,7 +82,7 @@ export interface CropRegionAPI {
   // SubtotalGroup related
   getSubtotalGroups: () => Promise<{
     success: boolean
-    subtotalGroups?: SubtotalGroupWithItems[]
+    subtotalGroups?: SubtotalGroupWithSubtotalsAndExams[]
     error?: string
   }>
   createSubtotalGroup: (data: {
@@ -81,7 +93,7 @@ export interface CropRegionAPI {
     }[]
   }) => Promise<{
     success: boolean
-    subtotalGroup?: SubtotalGroupWithItems
+    subtotalGroup?: SubtotalGroupWithSubtotals
     error?: string
   }>
   updateSubtotalGroup: (
@@ -95,20 +107,16 @@ export interface CropRegionAPI {
     }
   ) => Promise<{
     success: boolean
-    subtotalGroup?: SubtotalGroupWithItems
+    subtotalGroup?: SubtotalGroupWithSubtotals
     error?: string
   }>
   deleteSubtotalGroup: (id: string) => Promise<{
     success: boolean
     error?: string
   }>
-  getSubtotalGroupsByExamId: (
-    examId: string
-  ) => Promise<SubtotalGroupWithItems[]>
-  getSubtotalGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
   getAvailableSubtotalGroupsForExam: (examId: string) => Promise<{
     success: boolean
-    subtotalGroups?: SubtotalGroupWithItems[]
+    subtotalGroups?: SubtotalGroupWithSubtotals[]
     error?: string
   }>
   getActiveSubtotalGroupsForExam: (examId: string) => Promise<{
@@ -165,19 +173,17 @@ export interface CropRegionAPI {
   // Subtotal related
   createSubtotal: (
     data: Prisma.SubtotalUncheckedCreateInput
-  ) => Promise<SubtotalWithDetails>
+  ) => Promise<Subtotal>
   createManySubtotals: (
     items: Prisma.SubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
   updateSubtotal: (
     id: string,
     data: Prisma.SubtotalUpdateInput
-  ) => Promise<SubtotalWithDetails>
+  ) => Promise<Subtotal>
   deleteSubtotal: (id: string) => Promise<Subtotal | void>
-  getSubtotalsByGroupId: (
-    subtotalGroupId: string
-  ) => Promise<SubtotalWithDetails[]>
-  getSubtotalById: (id: string) => Promise<SubtotalWithDetails | null>
+  getSubtotalsByGroupId: (subtotalGroupId: string) => Promise<Subtotal[]>
+  getSubtotalById: (id: string) => Promise<SubtotalWithGroupAndCrops | null>
   updateSubtotalOrders: (
     orders: { id: string; order: number }[]
   ) => Promise<Prisma.BatchPayload>
@@ -185,7 +191,7 @@ export interface CropRegionAPI {
   // CropSubtotal related
   createCropSubtotal: (
     data: Prisma.CropSubtotalUncheckedCreateInput
-  ) => Promise<CropSubtotalWithRelations>
+  ) => Promise<CropSubtotalWithRegionAndSubtotal>
   createManyCropSubtotals: (
     assignments: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
@@ -195,10 +201,10 @@ export interface CropRegionAPI {
   ) => Promise<Prisma.BatchPayload>
   getCropSubtotalsByCropRegionId: (
     cropRegionId: string
-  ) => Promise<CropSubtotalWithRelations[]>
+  ) => Promise<CropSubtotalWithSubtotalGroup[]>
   getCropSubtotalsBySubtotalId: (
     subtotalId: string
-  ) => Promise<CropSubtotalWithRelations[]>
+  ) => Promise<CropSubtotalWithRegionPage[]>
 
   // UserExam and ExamSubtotalGroup related
   createUserExam: (

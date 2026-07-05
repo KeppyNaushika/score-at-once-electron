@@ -11,7 +11,7 @@ import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConf
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 
 export default function RegionInfoPage() {
   const params = useParams()
@@ -27,7 +27,7 @@ export default function RegionInfoPage() {
   )
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
+  const [cropRegions, setCropRegions] = useState<CropRegionWithSubtotals[]>([])
 
   const [examPages, setExamPages] = useState<ExamPage[]>([])
   const [selectedExamPage, setSelectedExamPage] = useState<ExamPage | null>(
@@ -115,7 +115,7 @@ export default function RegionInfoPage() {
   }, [loadInitialData])
 
   const autoSaveRegions = useCallback(
-    async (regions: CropRegionWithDetails[]) => {
+    async (regions: CropRegionWithSubtotals[]) => {
       if (!examId || !currentUser) return
 
       try {
@@ -151,8 +151,8 @@ export default function RegionInfoPage() {
           setCropRegions(
             savedRegions.filter(
               (
-                region: CropRegionWithDetails | null
-              ): region is CropRegionWithDetails => region !== null
+                region: CropRegionWithSubtotals | null
+              ): region is CropRegionWithSubtotals => region !== null
             )
           )
         }
@@ -166,8 +166,8 @@ export default function RegionInfoPage() {
   const handleRegionsChange = useCallback(
     (
       newRegions:
-        | CropRegionWithDetails[]
-        | ((prev: CropRegionWithDetails[]) => CropRegionWithDetails[])
+        | CropRegionWithSubtotals[]
+        | ((prev: CropRegionWithSubtotals[]) => CropRegionWithSubtotals[])
     ) => {
       const updatedRegions =
         typeof newRegions === "function" ? newRegions(cropRegions) : newRegions

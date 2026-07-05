@@ -7,8 +7,8 @@ import {
   DatabaseOperation,
   RegionCoordinates,
 } from "@/components/exams/02-template/types"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import { CropRegionArea } from "@/types/common.types"
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 /**
  * 領域保存処理を担当するカスタムフック
@@ -30,13 +30,13 @@ export function useCropRegionSave(
    *
    * @param region - 保存する領域データ
    * @param operation - 実行する操作（'create' | 'update'）
-   * @returns Promise<CropRegionWithDetails | null> 保存結果
+   * @returns Promise<CropRegionWithSubtotals | null> 保存結果
    */
   const saveRegion = useCallback(
     async (
       region: CropRegionArea,
       operation: DatabaseOperation
-    ): Promise<CropRegionWithDetails | null> => {
+    ): Promise<CropRegionWithSubtotals | null> => {
       if (!examId || !currentUser) {
         console.warn("Missing examId or currentUser for saveRegion")
         return null
@@ -102,7 +102,7 @@ export function useCropRegionSave(
       try {
         const saveResults: Array<{
           originalIndex: number
-          result: CropRegionWithDetails | null
+          result: CropRegionWithSubtotals | null
           wasUpdate: boolean
         }> = []
 

@@ -33,10 +33,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { SubtotalGroupWithItems } from "@/types/prismaExtensions"
+import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
 interface QuestionGroupItemListProps {
-  subtotalGroup: SubtotalGroupWithItems
+  subtotalGroup: SubtotalGroupWithSubtotals
   onCreateItem: (subtotalGroupId: string, name: string) => Promise<boolean>
   onUpdateItem: (id: string, name: string) => Promise<boolean>
   onDeleteItem: (id: string) => Promise<boolean>

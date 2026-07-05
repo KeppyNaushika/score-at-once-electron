@@ -4,26 +4,50 @@ import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
 /**
+ * SubtotalGroup の include 形状（SSOT）。型（GetPayload）と実クエリの双方がこの const を
+ * 参照するため両者が乖離しない。create/update/available は subtotals のみ、
+ * getSubtotalGroups は examSubtotalGroups.exam（id・examName の部分 select）も取る。
+ */
+export const subtotalGroupWithSubtotalsInclude = {
+  subtotals: {
+    orderBy: { order: "asc" },
+  },
+} satisfies Prisma.SubtotalGroupInclude
+
+export const subtotalGroupWithSubtotalsAndExamsInclude = {
+  subtotals: {
+    orderBy: { order: "asc" },
+  },
+  examSubtotalGroups: {
+    include: {
+      exam: {
+        select: {
+          id: true,
+          examName: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.SubtotalGroupInclude
+
+/** subtotals を含む SubtotalGroup（create/update/available の返り値） */
+export type SubtotalGroupWithSubtotals = Prisma.SubtotalGroupGetPayload<{
+  include: typeof subtotalGroupWithSubtotalsInclude
+}>
+
+/** subtotals・examSubtotalGroups.exam（部分 select）を含む SubtotalGroup（getSubtotalGroups の返り値） */
+export type SubtotalGroupWithSubtotalsAndExams =
+  Prisma.SubtotalGroupGetPayload<{
+    include: typeof subtotalGroupWithSubtotalsAndExamsInclude
+  }>
+
+/**
  * 小計点グループを全て取得
  */
 export async function getSubtotalGroups() {
   try {
     const subtotalGroups = await prisma.subtotalGroup.findMany({
-      include: {
-        subtotals: {
-          orderBy: { order: "asc" },
-        },
-        examSubtotalGroups: {
-          include: {
-            exam: {
-              select: {
-                id: true,
-                examName: true,
-              },
-            },
-          },
-        },
-      },
+      include: subtotalGroupWithSubtotalsAndExamsInclude,
       orderBy: { createdAt: "desc" },
     })
 
@@ -58,11 +82,7 @@ export async function createSubtotalGroup(data: {
           create: data.subtotals,
         },
       },
-      include: {
-        subtotals: {
-          orderBy: { order: "asc" },
-        },
-      },
+      include: subtotalGroupWithSubtotalsInclude,
     })
 
     await recordAuditLog({
@@ -116,11 +136,7 @@ export async function updateSubtotalGroup(
               create: data.subtotals,
             },
           },
-          include: {
-            subtotals: {
-              orderBy: { order: "asc" },
-            },
-          },
+          include: subtotalGroupWithSubtotalsInclude,
         })
       }
     )
@@ -263,11 +279,7 @@ export async function getAvailableSubtotalGroupsForExam(examId: string) {
           },
         },
       },
-      include: {
-        subtotals: {
-          orderBy: { order: "asc" },
-        },
-      },
+      include: subtotalGroupWithSubtotalsInclude,
       orderBy: { name: "asc" },
     })
 
@@ -429,18 +441,6 @@ export async function removeSubtotalGroupFromExam(
   }
 }
 
-/** 試験IDで有効な小計点グループ一覧を取得する（互換性レイヤー、examIdを付与して返す） */
-export const getSubtotalGroupsByExamId = async (examId: string) => {
-  const result = await getActiveSubtotalGroupsForExam(examId)
-  if (result.success && result.examSubtotalGroups) {
-    return result.examSubtotalGroups.map((examSubtotalGroup) => ({
-      ...examSubtotalGroup.subtotalGroup,
-      examId,
-    }))
-  }
-  return []
-}
-
 /**
  * 小計グループの出力選択フラグを取得する（個人成績表のテーブル/箱ひげ図）。
  * source of truth は ExamSubtotalGroup.selectedForTable/selectedForBoxPlot（settingsJson ではない）。
@@ -523,21 +523,4 @@ export async function setSubtotalGroupSelection(
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
-}
-
-/** IDで小計点グループを取得する（subtotals・examSubtotalGroups含む） */
-export const getSubtotalGroupById = async (id: string) => {
-  return prisma.subtotalGroup.findUnique({
-    where: { id },
-    include: {
-      subtotals: {
-        orderBy: { order: "asc" },
-      },
-      examSubtotalGroups: {
-        include: {
-          exam: true,
-        },
-      },
-    },
-  })
 }

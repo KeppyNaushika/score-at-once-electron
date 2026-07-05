@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { SubtotalGroupWithItems } from "@/types/prismaExtensions"
+import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
 interface SubtotalData {
   [subtotalGroupId: string]: {
@@ -26,7 +26,7 @@ interface SubtotalData {
 
 interface SubtotalPreviewProps {
   subtotalData: SubtotalData
-  subtotalGroups: SubtotalGroupWithItems[]
+  subtotalGroups: SubtotalGroupWithSubtotals[]
 }
 
 export function SubtotalPreview({

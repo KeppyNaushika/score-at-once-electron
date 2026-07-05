@@ -7,12 +7,12 @@ import { DeleteConfirmModal } from "@/components/exams/03-region-info/components
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 type RegionDetailsTableProps = {
-  regions: CropRegionWithDetails[]
-  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithDetails[]>>
+  regions: CropRegionWithSubtotals[]
+  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithSubtotals[]>>
   disabled?: boolean
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>

@@ -62,13 +62,6 @@ export const getQuestionGroupItemById = async (id: string) => {
   })
 }
 
-export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
-  include: {
-    subtotalGroup: true
-    cropSubtotals: true
-  }
-}>
-
 /** 設問グループ項目の表示順序をトランザクション内で一括更新する */
 export const updateQuestionGroupItemOrders = async (
   orders: { id: string; order: number }[]

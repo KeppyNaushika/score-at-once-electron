@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 
+import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type {
   ComputedOMRBubble,
@@ -11,7 +12,6 @@ import type {
   OMRCellConfig,
   OMRSheetResult,
 } from "@/types/omr.types"
-import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 
 import {
   type AutoScoreEntry,
@@ -479,7 +479,7 @@ export function useOmrAutoScoring(examId: string) {
  * DBの正規化座標（0-1）を直接使用し、バブル/数字欄の位置を計算する
  */
 function buildCellsFromRegions(
-  regions: CropRegionWithDetails[],
+  regions: CropRegionWithSubtotals[],
   configs: CropRegionOmrConfigWithOptions[],
   cellConfigs: Record<string, OMRCellConfig>
 ): ComputedCell[] {
@@ -553,7 +553,7 @@ function buildCellsFromRegions(
 
 /** CropRegionの正規化座標内にバブル位置を等間隔配置 */
 function computeBubblesFromRegion(
-  region: CropRegionWithDetails,
+  region: CropRegionWithSubtotals,
   config: OMRCellConfig & { type: "choice" }
 ): ComputedOMRBubble[] {
   const numChoices = config.numChoices
@@ -600,7 +600,7 @@ function computeBubblesFromRegion(
 
 /** CropRegionの正規化座標内に数字欄を等間隔配置 */
 function computeDigitBoxesFromRegion(
-  region: CropRegionWithDetails,
+  region: CropRegionWithSubtotals,
   config: OMRCellConfig & { type: "handwritten-digit" }
 ): ComputedOMRDigitBox[] {
   const numDigits = config.numDigits
