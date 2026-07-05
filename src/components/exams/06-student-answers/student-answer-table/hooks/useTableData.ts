@@ -13,12 +13,12 @@ import {
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface UseTableDataParams {
   files: UnifiedFile[]
-  students: UnifiedStudent[]
+  students: ExamStudentWithDetails[]
   modelAnswerCount: number
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState

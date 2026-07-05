@@ -5,12 +5,12 @@ import { buildDnDArrayFromFileStates } from "@/components/exams/06-student-answe
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface UseDragDropStateParams {
   files: UnifiedFile[]
-  students?: UnifiedStudent[]
+  students?: ExamStudentWithDetails[]
   modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy

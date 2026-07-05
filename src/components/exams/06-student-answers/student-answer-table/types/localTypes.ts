@@ -2,9 +2,9 @@ import type {
   PendingChange,
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 import type { FileState } from "./dragDropTypes"
 
@@ -21,7 +21,7 @@ export interface UploadModalState {
 
 export interface StudentAnswerTableProps {
   examId: string
-  students: UnifiedStudent[]
+  students: ExamStudentWithDetails[]
   files: UnifiedFile[]
   modelAnswerCount: number
   fileOrder?: PlacementStrategy

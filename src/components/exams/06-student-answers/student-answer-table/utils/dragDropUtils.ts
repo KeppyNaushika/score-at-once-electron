@@ -2,14 +2,14 @@ import type { FileState } from "@/components/exams/06-student-answers/student-an
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 /** FileState配列と配置戦略からDnD用の順序付きファイル配列を構築する */
 export function buildDnDArrayFromFileStates(
   fileStates: FileState[],
   strategy: PlacementStrategy,
-  students: UnifiedStudent[],
+  students: ExamStudentWithDetails[],
   masterImageCount: number,
   files: UnifiedFile[]
 ): UnifiedFile[] {
@@ -33,7 +33,7 @@ export function buildDnDArrayFromFileStates(
     sortedStudents.forEach((student) => {
       for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
         orderedPositions.push({
-          studentId: student.id,
+          studentId: student.studentId,
           pageNumber: pageNum,
         })
       }
@@ -43,7 +43,7 @@ export function buildDnDArrayFromFileStates(
     for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
       sortedStudents.forEach((student) => {
         orderedPositions.push({
-          studentId: student.id,
+          studentId: student.studentId,
           pageNumber: pageNum,
         })
       })

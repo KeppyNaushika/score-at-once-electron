@@ -1,8 +1,8 @@
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 // Preview mode for different display options
 export type PreviewMode = "full" | "name-only"
@@ -19,7 +19,7 @@ export interface ExtendedDisabledState {
 export interface CellData {
   type: "file" | "empty" | "disabled"
   position: number
-  student?: UnifiedStudent
+  student?: ExamStudentWithDetails
   pageNumber?: number
   file?: UnifiedFile
   disabledReason?:
@@ -62,7 +62,7 @@ export interface SortableTableCellProps {
 
 export interface EmptyTableCellProps {
   position: number
-  student: UnifiedStudent | null
+  student: ExamStudentWithDetails | null
   pageNumber: number | null
   isPositionDisabled: boolean
   isPendingChange?: boolean

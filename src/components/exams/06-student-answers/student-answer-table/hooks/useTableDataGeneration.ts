@@ -8,12 +8,12 @@ import { getEnabledFiles } from "@/components/exams/06-student-answers/student-a
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 interface UseTableDataGenerationParams {
   files: UnifiedFile[]
-  sortedStudents: UnifiedStudent[]
+  sortedStudents: ExamStudentWithDetails[]
   modelAnswerCount: number
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
@@ -153,7 +153,7 @@ export function useTableDataGeneration({
           if (answerSheet.studentId && answerSheet.pageNumber) {
             // 既存答案の学生IDとページ番号から位置を特定
             const studentIndex = sortedStudents.findIndex(
-              (student) => student.id === answerSheet.studentId
+              (examStudent) => examStudent.studentId === answerSheet.studentId
             )
             const pageIndex = answerSheet.pageNumber - 1
             if (studentIndex >= 0 && pageIndex >= 0) {

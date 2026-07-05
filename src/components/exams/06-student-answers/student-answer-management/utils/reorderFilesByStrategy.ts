@@ -1,8 +1,8 @@
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 import type { ProcessedStudentAnswer } from "../types"
 import { convertAnswerSheetsToFiles } from "./convertStudentAnswersToFiles"
@@ -10,7 +10,7 @@ import { convertAnswerSheetsToFiles } from "./convertStudentAnswersToFiles"
 /** 配置戦略（ページ順/生徒順）に基づいてファイル配列を再配置する */
 export function reorderFilesByStrategy(
   currentFiles: UnifiedFile[],
-  students: UnifiedStudent[],
+  students: ExamStudentWithDetails[],
   modelAnswerCount: number,
   newFileOrder: PlacementStrategy
 ): UnifiedFile[] {
@@ -66,7 +66,7 @@ export function reorderFilesByStrategy(
     // 現在のファイル配列から対応するファイルを検索
     const matchingFile = actualFiles.find(
       (file) =>
-        file.studentId === targetStudent.id &&
+        file.studentId === targetStudent.studentId &&
         file.pageNumber === targetPageNumber
     )
 
@@ -82,7 +82,7 @@ export function reorderFilesByStrategy(
 /** 既存の答案データを配置戦略に基づく統一ファイル配列に変換する */
 export function buildOrderedFileArrayFromStudentAnswers(
   studentAnswers: ProcessedStudentAnswer[],
-  students: UnifiedStudent[],
+  students: ExamStudentWithDetails[],
   modelAnswerCount: number,
   fileOrder: PlacementStrategy
 ): UnifiedFile[] {
@@ -133,7 +133,7 @@ export function buildOrderedFileArrayFromStudentAnswers(
     // 対応するファイルをDBデータから検索
     const matchingFile = basicFiles.find(
       (file) =>
-        file.studentId === targetStudent.id &&
+        file.studentId === targetStudent.studentId &&
         file.pageNumber === targetPageNumber
     )
 

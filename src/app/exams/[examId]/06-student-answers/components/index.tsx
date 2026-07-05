@@ -12,9 +12,9 @@ import type { FileState } from "@/components/exams/06-student-answers/student-an
 import type {
   PendingChange,
   ScoringDataOption,
-  UnifiedStudent,
 } from "@/components/exams/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
@@ -67,7 +67,7 @@ export function StudentAnswersTabsNavigation({
 
 interface StudentAnswersTabContentProps {
   examId: string
-  students: UnifiedStudent[]
+  students: ExamStudentWithDetails[]
   modelAnswerCount: number
   studentAnswers: ProcessedStudentAnswer[]
   pendingChanges: PendingChange[]

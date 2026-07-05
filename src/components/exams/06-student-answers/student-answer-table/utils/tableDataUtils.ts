@@ -1,13 +1,11 @@
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type {
-  UnifiedFile,
-  UnifiedStudent,
-} from "@/components/exams/06-student-answers/types"
+import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 /** 生徒をcustomOrder昇順にソートした新しい配列を返す */
 export function sortStudentsByCustomOrder(
-  students: UnifiedStudent[]
-): UnifiedStudent[] {
+  students: ExamStudentWithDetails[]
+): ExamStudentWithDetails[] {
   return [...students].sort((studentA, studentB) => {
     const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
     const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
@@ -18,7 +16,7 @@ export function sortStudentsByCustomOrder(
 /** 確認モードで答案が存在しないテーブル位置を無効化するSetを返す */
 export function calculateDynamicDisabledPositions(
   files: UnifiedFile[],
-  sortedStudents: UnifiedStudent[],
+  sortedStudents: ExamStudentWithDetails[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view"
@@ -50,7 +48,7 @@ export function calculateDynamicDisabledPositions(
         // その位置に対応する答案があるかチェック
         const hasAnswerForPosition = files.some(
           (file) =>
-            file.studentId === student.id &&
+            file.studentId === student.studentId &&
             file.pageNumber === pageNumber &&
             !disabledState.files.has(file.id)
         )
@@ -70,7 +68,7 @@ export function calculateDynamicDisabledPositions(
 /** 既存の答案が割り当てられているテーブル位置のSetを返す（警告オーバーレイ用） */
 export function calculatePositionsWithExistingAnswers(
   files: UnifiedFile[],
-  sortedStudents: UnifiedStudent[],
+  sortedStudents: ExamStudentWithDetails[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view",
@@ -101,13 +99,14 @@ export function calculatePositionsWithExistingAnswers(
         // アップロードモード: existingAnswerSheets から判定
         hasAnswerForPosition = existingAnswerSheets.some(
           (sheet) =>
-            sheet.studentId === student.id && sheet.pageNumber === pageNumber
+            sheet.studentId === student.studentId &&
+            sheet.pageNumber === pageNumber
         )
       } else {
         // 確認モード: files から判定
         hasAnswerForPosition = files.some(
           (file) =>
-            file.studentId === student.id &&
+            file.studentId === student.studentId &&
             file.pageNumber === pageNumber &&
             !disabledState.files.has(file.id)
         )
