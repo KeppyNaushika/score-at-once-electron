@@ -298,7 +298,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       )
     : null
 
-  const classSummary = fileOverviewData
+  const classroomSummary = fileOverviewData
     ? calculateCategorySummary(
         fileOverviewData.classroom,
         idIntegrationConfig.classroom,
@@ -347,12 +347,12 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         )}
 
         {/* 学級 */}
-        {classSummary && (
+        {classroomSummary && (
           <SummaryCard
             icon={<GraduationCap className="h-5 w-5" />}
             title="学級"
             unit="クラス"
-            summary={classSummary}
+            summary={classroomSummary}
           />
         )}
 

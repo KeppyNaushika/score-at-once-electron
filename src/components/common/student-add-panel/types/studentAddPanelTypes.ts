@@ -33,7 +33,7 @@ export interface AddPanelStudentItem {
 /** host が差し込むデータ取得・追加処理 */
 export interface StudentAddPanelAdapter {
   /** 追加可能な学級候補を取得（activeOnly=在籍中のみ） */
-  fetchAvailableClasses: (
+  fetchAvailableClassrooms: (
     activeOnly: boolean
   ) => Promise<AddPanelClassroomItem[]>
   /** 追加可能な生徒候補を取得（activeOnly=在籍中の所属が1件以上ある生徒のみ） */
@@ -41,7 +41,7 @@ export interface StudentAddPanelAdapter {
     activeOnly: boolean
   ) => Promise<AddPanelStudentItem[]>
   /** 選択した学級（指定順）を一括追加 */
-  addClasses: (
+  addClassrooms: (
     orderedClassroomIds: string[],
     activeOnly: boolean
   ) => Promise<void>
@@ -54,11 +54,11 @@ export interface StudentAddPanelProps {
   /** 追加完了時に呼ばれる（host 側のロスター再読込などに使う） */
   onAdded: () => void
   /** 学級の追加順をドラッグで並び替え可能にするか（既定 true） */
-  showClassReorder?: boolean
+  showClassroomReorder?: boolean
   /** 親の高さいっぱいに広げ、候補リストを内部スクロールにするか（モーダル用、既定 false） */
   fillHeight?: boolean
   /** 学級タブの在籍スイッチ初期値（既定 true） */
-  classActiveOnlyDefault?: boolean
+  classroomActiveOnlyDefault?: boolean
   /** 個別タブの在籍スイッチ初期値（既定 true） */
   studentActiveOnlyDefault?: boolean
 }

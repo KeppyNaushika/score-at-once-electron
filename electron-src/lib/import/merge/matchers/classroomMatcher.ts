@@ -10,7 +10,7 @@ import type {
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import type { ClassData, MatchResult } from "./types"
+import type { ClassroomData, MatchResult } from "./types"
 
 /**
  * 学級データのマッチングを実行
@@ -19,34 +19,34 @@ import type { ClassData, MatchResult } from "./types"
  * 1. まずUUIDで照合
  * 2. UUIDが一致しない場合、methodで指定された二次照合を実行
  */
-export async function matchClasses(
+export async function matchClassrooms(
   importData: ExtractedArchiveData,
   method: ClassroomMatchingMethod
-): Promise<MatchResult<ClassData>[]> {
-  const results: MatchResult<ClassData>[] = []
+): Promise<MatchResult<ClassroomData>[]> {
+  const results: MatchResult<ClassroomData>[] = []
 
-  const existingClasses = await prisma.classroom.findMany()
+  const existingClassrooms = await prisma.classroom.findMany()
 
-  for (const importClass of importData.classesData.classrooms) {
-    let matchedClass: (typeof existingClasses)[0] | null = null
+  for (const importClassroom of importData.classesData.classrooms) {
+    let matchedClassroom: (typeof existingClassrooms)[0] | null = null
     let isExactMatch = false
 
     // Step 1: UUIDで照合
-    const uuidMatch = existingClasses.find(
-      (classroom) => classroom.id === importClass.id
+    const uuidMatch = existingClassrooms.find(
+      (classroom) => classroom.id === importClassroom.id
     )
     if (uuidMatch) {
-      matchedClass = uuidMatch
+      matchedClassroom = uuidMatch
       isExactMatch = true
     }
 
     // Step 2: UUIDが一致しない場合、二次照合を実行
-    if (!matchedClass && method !== "none") {
+    if (!matchedClassroom && method !== "none") {
       switch (method) {
         case "name":
-          matchedClass =
-            existingClasses.find(
-              (classroom) => classroom.name === importClass.name
+          matchedClassroom =
+            existingClassrooms.find(
+              (classroom) => classroom.name === importClassroom.name
             ) ?? null
           break
       }
@@ -54,24 +54,24 @@ export async function matchClasses(
 
     results.push({
       importData: {
-        id: importClass.id,
-        name: importClass.name,
-        classCode: importClass.classCode,
-        grade: importClass.grade,
-        description: importClass.description,
-        updatedAt: importClass.updatedAt,
+        id: importClassroom.id,
+        name: importClassroom.name,
+        classroomCode: importClassroom.classroomCode,
+        grade: importClassroom.grade,
+        description: importClassroom.description,
+        updatedAt: importClassroom.updatedAt,
       },
-      existingData: matchedClass
+      existingData: matchedClassroom
         ? {
-            id: matchedClass.id,
-            name: matchedClass.name,
-            classCode: matchedClass.classCode,
-            grade: matchedClass.grade,
-            description: matchedClass.description,
-            updatedAt: matchedClass.updatedAt,
+            id: matchedClassroom.id,
+            name: matchedClassroom.name,
+            classroomCode: matchedClassroom.classroomCode,
+            grade: matchedClassroom.grade,
+            description: matchedClassroom.description,
+            updatedAt: matchedClassroom.updatedAt,
           }
         : null,
-      matchType: matchedClass ? (isExactMatch ? "exact" : "fuzzy") : "new",
+      matchType: matchedClassroom ? (isExactMatch ? "exact" : "fuzzy") : "new",
     })
   }
 
@@ -81,37 +81,37 @@ export async function matchClasses(
 /**
  * 学級の事前照合
  */
-export async function preMatchClasses(
+export async function preMatchClassrooms(
   importData: ExtractedArchiveData
 ): Promise<PreMatchingResult> {
-  const existingClasses = await prisma.classroom.findMany()
+  const existingClassrooms = await prisma.classroom.findMany()
 
   const byId: MatchedItem[] = []
   const byName: MatchedItem[] = []
   const noMatch: ImportItem[] = []
 
   const existingById = new Map(
-    existingClasses.map((classroom) => [classroom.id, classroom])
+    existingClassrooms.map((classroom) => [classroom.id, classroom])
   )
   const existingByName = new Map(
-    existingClasses.map((classroom) => [classroom.name, classroom])
+    existingClassrooms.map((classroom) => [classroom.name, classroom])
   )
 
-  for (const importClass of importData.classesData.classrooms) {
-    const displayLabel = importClass.name
+  for (const importClassroom of importData.classesData.classrooms) {
+    const displayLabel = importClassroom.name
     const importItem: ImportItem = {
-      importId: importClass.id,
-      importData: importClass,
+      importId: importClassroom.id,
+      importData: importClassroom,
       displayLabel,
     }
 
     // ID照合
-    const idMatch = existingById.get(importClass.id)
+    const idMatch = existingById.get(importClassroom.id)
     if (idMatch) {
       byId.push({
-        importId: importClass.id,
+        importId: importClassroom.id,
         existingId: idMatch.id,
-        importData: importClass,
+        importData: importClassroom,
         existingData: idMatch,
         displayLabel,
         matchReason: "同じパソコンで作成されたデータ",
@@ -120,12 +120,12 @@ export async function preMatchClasses(
     }
 
     // 名前照合
-    const nameMatch = existingByName.get(importClass.name)
+    const nameMatch = existingByName.get(importClassroom.name)
     if (nameMatch) {
       byName.push({
-        importId: importClass.id,
+        importId: importClassroom.id,
         existingId: nameMatch.id,
-        importData: importClass,
+        importData: importClassroom,
         existingData: nameMatch,
         displayLabel,
         matchReason: "学級名が一致",

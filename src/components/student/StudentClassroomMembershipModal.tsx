@@ -46,10 +46,10 @@ interface StudentClassroomMembershipModalProps {
     lastNameKana: string
     firstNameKana: string
   }>
-  availableClasses: Array<{
+  availableClassrooms: Array<{
     id: string
     name: string
-    classCode?: string | null
+    classroomCode?: string | null
   }>
   membershipToEdit?: {
     id: string
@@ -69,7 +69,7 @@ export default function StudentClassroomMembershipModal({
   studentId: initialStudentId,
   classroomId: initialClassroomId,
   availableStudents,
-  availableClasses,
+  availableClassrooms,
   membershipToEdit,
 }: StudentClassroomMembershipModalProps) {
   const [studentId, setStudentId] = useState(initialStudentId || "")
@@ -235,10 +235,11 @@ export default function StudentClassroomMembershipModal({
                   <SelectValue placeholder="学級を選択してください" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableClasses.map((classItem) => (
-                    <SelectItem key={classItem.id} value={classItem.id}>
-                      {classItem.name}
-                      {classItem.classCode && ` (${classItem.classCode})`}
+                  {availableClassrooms.map((classroomItem) => (
+                    <SelectItem key={classroomItem.id} value={classroomItem.id}>
+                      {classroomItem.name}
+                      {classroomItem.classroomCode &&
+                        ` (${classroomItem.classroomCode})`}
                     </SelectItem>
                   ))}
                 </SelectContent>

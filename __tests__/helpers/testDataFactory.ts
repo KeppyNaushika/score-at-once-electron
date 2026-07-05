@@ -72,7 +72,7 @@ export function createArchiveClassesData(
   classrooms: Array<{
     id?: string
     name?: string
-    classCode?: string | null
+    classroomCode?: string | null
     grade?: number | null
   }> = [],
   memberships: Array<{
@@ -86,7 +86,7 @@ export function createArchiveClassesData(
     classrooms: classrooms.map((classroom, i) => ({
       id: classroom.id ?? generateId(),
       name: classroom.name ?? `クラス${i + 1}`,
-      classCode: classroom.classCode ?? null,
+      classroomCode: classroom.classroomCode ?? null,
       grade: classroom.grade ?? null,
       description: null,
       isVisible: true,

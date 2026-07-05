@@ -24,41 +24,45 @@ export function createGradeApi() {
       // 生徒・学級管理
       getStudents: (gradeId: string) =>
         ipcRenderer.invoke("grade:getStudents", gradeId),
-      getClasses: (gradeId: string) =>
-        ipcRenderer.invoke("grade:getClasses", gradeId),
-      getAvailableClasses: (gradeId: string, activeOnly?: boolean) =>
-        ipcRenderer.invoke("grade:getAvailableClasses", gradeId, activeOnly),
+      getClassrooms: (gradeId: string) =>
+        ipcRenderer.invoke("grade:getClassrooms", gradeId),
+      getAvailableClassrooms: (gradeId: string, activeOnly?: boolean) =>
+        ipcRenderer.invoke("grade:getAvailableClassrooms", gradeId, activeOnly),
       getAvailableStudents: (gradeId: string, activeOnly?: boolean) =>
         ipcRenderer.invoke("grade:getAvailableStudents", gradeId, activeOnly),
       addStudentsToGrade: (gradeId: string, studentIds: string[]) =>
         ipcRenderer.invoke("grade:addStudentsToGrade", gradeId, studentIds),
-      addStudentsFromClass: (
+      addStudentsFromClassroom: (
         gradeId: string,
         classroomId: string,
         activeOnly?: boolean
       ) =>
         ipcRenderer.invoke(
-          "grade:addStudentsFromClass",
+          "grade:addStudentsFromClassroom",
           gradeId,
           classroomId,
           activeOnly
         ),
-      removeClass: (
+      removeClassroom: (
         gradeId: string,
         classroomId: string,
         deleteStudents?: boolean
       ) =>
         ipcRenderer.invoke(
-          "grade:removeClass",
+          "grade:removeClassroom",
           gradeId,
           classroomId,
           deleteStudents
         ),
-      classRemovalPreview: (gradeId: string, classroomId: string) =>
-        ipcRenderer.invoke("grade:classRemovalPreview", gradeId, classroomId),
-      setClassOrders: (gradeId: string, orderedClassroomIds: string[]) =>
+      classroomRemovalPreview: (gradeId: string, classroomId: string) =>
         ipcRenderer.invoke(
-          "grade:setClassOrders",
+          "grade:classroomRemovalPreview",
+          gradeId,
+          classroomId
+        ),
+      setClassroomOrders: (gradeId: string, orderedClassroomIds: string[]) =>
+        ipcRenderer.invoke(
+          "grade:setClassroomOrders",
           gradeId,
           orderedClassroomIds
         ),

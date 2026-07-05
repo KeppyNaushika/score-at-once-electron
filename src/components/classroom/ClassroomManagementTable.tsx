@@ -24,10 +24,10 @@ import { isCurrentMembership } from "@/lib/membership"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
-interface ClassSortable {
+interface ClassroomSortable {
   id: string
   name: string
-  classCode: string | null
+  classroomCode: string | null
   grade: number | null
   memberCount: number
   original: ClassroomWithMemberships
@@ -35,10 +35,10 @@ interface ClassSortable {
 
 export default function ClassroomManagementTable() {
   const router = useRouter()
-  const [classes, setClasses] = useState<ClassroomWithMemberships[]>([])
+  const [classrooms, setClassrooms] = useState<ClassroomWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
-  const [classToEdit, setClassToEdit] =
+  const [classroomToEdit, setClassroomToEdit] =
     useState<ClassroomWithMemberships | null>(null)
 
   // Selection states
@@ -49,39 +49,39 @@ export default function ClassroomManagementTable() {
 
   // Data fetching
   useEffect(() => {
-    const fetchClasses = async () => {
+    const fetchClassrooms = async () => {
       try {
-        const fetchedClasses = await window.electronAPI.fetchClasses()
-        setClasses(fetchedClasses || [])
+        const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
+        setClassrooms(fetchedClassrooms || [])
       } catch (error) {
-        console.error("Failed to fetch classes:", error)
+        console.error("Failed to fetch classrooms:", error)
       }
     }
-    fetchClasses()
+    fetchClassrooms()
   }, [])
 
-  // Filter classes
-  const filteredClasses = useMemo(() => {
-    return classes.filter((classItem) => {
-      const matchesSearch = classItem.name
+  // Filter classrooms
+  const filteredClassrooms = useMemo(() => {
+    return classrooms.filter((classroomItem) => {
+      const matchesSearch = classroomItem.name
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
-      const isVisible = classItem.isVisible !== false
+      const isVisible = classroomItem.isVisible !== false
       return matchesSearch && isVisible
     })
-  }, [classes, searchTerm])
+  }, [classrooms, searchTerm])
 
   // ソート用のデータ変換
-  const sortableData = useMemo<ClassSortable[]>(() => {
-    return filteredClasses.map((classItem) => ({
-      id: classItem.id,
-      name: classItem.name,
-      classCode: classItem.classCode ?? null,
-      grade: classItem.grade ?? null,
-      memberCount: classItem.memberships.filter(isCurrentMembership).length,
-      original: classItem,
+  const sortableData = useMemo<ClassroomSortable[]>(() => {
+    return filteredClassrooms.map((classroomItem) => ({
+      id: classroomItem.id,
+      name: classroomItem.name,
+      classroomCode: classroomItem.classroomCode ?? null,
+      grade: classroomItem.grade ?? null,
+      memberCount: classroomItem.memberships.filter(isCurrentMembership).length,
+      original: classroomItem,
     }))
-  }, [filteredClasses])
+  }, [filteredClassrooms])
 
   // ソート機能
   const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
@@ -113,7 +113,7 @@ export default function ClassroomManagementTable() {
     }
   }
 
-  const toggleSelectClass = (classroomId: string) => {
+  const toggleSelectClassroom = (classroomId: string) => {
     const newSet = new Set(selectedClassroomIds)
     if (newSet.has(classroomId)) {
       newSet.delete(classroomId)
@@ -124,21 +124,23 @@ export default function ClassroomManagementTable() {
   }
 
   // Event handlers
-  const handleAddNewClass = () => {
-    setClassToEdit(null)
+  const handleAddNewClassroom = () => {
+    setClassroomToEdit(null)
     setIsClassroomModalOpen(true)
   }
 
-  const handleEditClass = (classItem: ClassroomWithMemberships) => {
-    setClassToEdit(classItem)
+  const handleEditClassroom = (classroomItem: ClassroomWithMemberships) => {
+    setClassroomToEdit(classroomItem)
     setIsClassroomModalOpen(true)
   }
 
-  const handleDeleteClass = async (classroomId: string) => {
+  const handleDeleteClassroom = async (classroomId: string) => {
     if (window.confirm("本当にこの学級を削除しますか？")) {
       try {
-        await window.electronAPI.deleteClass(classroomId)
-        setClasses(classes.filter((classroom) => classroom.id !== classroomId))
+        await window.electronAPI.deleteClassroom(classroomId)
+        setClassrooms(
+          classrooms.filter((classroom) => classroom.id !== classroomId)
+        )
         setSelectedClassroomIds((prev) => {
           const newSet = new Set(prev)
           newSet.delete(classroomId)
@@ -151,27 +153,28 @@ export default function ClassroomManagementTable() {
     }
   }
 
-  const handleSaveClass = async (classData: {
+  const handleSaveClassroom = async (classroomData: {
     name: string
-    classCode?: string
+    classroomCode?: string
     grade?: number
     description?: string
     isVisible?: boolean
   }) => {
     try {
-      if (classToEdit) {
-        const updatedClass = await window.electronAPI.updateClass({
-          id: classToEdit.id,
-          ...classData,
+      if (classroomToEdit) {
+        const updatedClassroom = await window.electronAPI.updateClassroom({
+          id: classroomToEdit.id,
+          ...classroomData,
         })
-        setClasses(
-          classes.map((classroom) =>
-            classroom.id === updatedClass.id ? updatedClass : classroom
+        setClassrooms(
+          classrooms.map((classroom) =>
+            classroom.id === updatedClassroom.id ? updatedClassroom : classroom
           )
         )
       } else {
-        const newClass = await window.electronAPI.createClass(classData)
-        setClasses([...classes, newClass])
+        const newClassroom =
+          await window.electronAPI.createClassroom(classroomData)
+        setClassrooms([...classrooms, newClassroom])
       }
       setIsClassroomModalOpen(false)
     } catch (error) {
@@ -184,7 +187,7 @@ export default function ClassroomManagementTable() {
     if (selectedClassroomIds.size === 0) return
     setIsExporting(true)
     try {
-      const result = await window.electronAPI.exportClassesExcel(
+      const result = await window.electronAPI.exportClassroomsExcel(
         Array.from(selectedClassroomIds)
       )
       if (result.success) {
@@ -195,7 +198,7 @@ export default function ClassroomManagementTable() {
         toast.error(`エクスポートに失敗しました: ${result.error}`)
       }
     } catch (error) {
-      console.error("Failed to export classes:", error)
+      console.error("Failed to export classrooms:", error)
       toast.error("エクスポート中にエラーが発生しました")
     } finally {
       setIsExporting(false)
@@ -208,7 +211,7 @@ export default function ClassroomManagementTable() {
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center space-x-2">
           <Button
-            onClick={handleAddNewClass}
+            onClick={handleAddNewClassroom}
             variant="outline"
             className="rounded-lg"
           >
@@ -276,7 +279,7 @@ export default function ClassroomManagementTable() {
                   学級名
                 </SortableTableHead>
                 <SortableTableHead
-                  sortKey="classCode"
+                  sortKey="classroomCode"
                   currentSortKey={sortConfig.key}
                   currentDirection={sortConfig.direction}
                   onSort={(key) => requestSort(key)}
@@ -304,13 +307,15 @@ export default function ClassroomManagementTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedData.map(({ original: classItem, memberCount }) => {
-                const isSelected = selectedClassroomIds.has(classItem.id)
+              {sortedData.map(({ original: classroomItem, memberCount }) => {
+                const isSelected = selectedClassroomIds.has(classroomItem.id)
 
                 return (
                   <TableRow
-                    key={classItem.id}
-                    onClick={() => router.push(`/classrooms/${classItem.id}`)}
+                    key={classroomItem.id}
+                    onClick={() =>
+                      router.push(`/classrooms/${classroomItem.id}`)
+                    }
                     className="group cursor-pointer"
                     data-state={isSelected ? "selected" : undefined}
                   >
@@ -320,34 +325,36 @@ export default function ClassroomManagementTable() {
                     >
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => toggleSelectClass(classItem.id)}
-                        aria-label={`${classItem.name}を選択`}
+                        onCheckedChange={() =>
+                          toggleSelectClassroom(classroomItem.id)
+                        }
+                        aria-label={`${classroomItem.name}を選択`}
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      {classItem.name}
+                      {classroomItem.name}
                     </TableCell>
                     <TableCell>
-                      {classItem.classCode ? (
+                      {classroomItem.classroomCode ? (
                         <Badge
                           variant="outline"
                           className="rounded-full px-2.5 py-0.5 text-xs font-normal"
                         >
-                          {classItem.classCode}
+                          {classroomItem.classroomCode}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {classItem.grade || (
+                      {classroomItem.grade || (
                         <span className="text-muted-foreground">未設定</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {classItem.description ? (
+                      {classroomItem.description ? (
                         <span className="max-w-xs truncate text-sm">
-                          {classItem.description}
+                          {classroomItem.description}
                         </span>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
@@ -364,7 +371,7 @@ export default function ClassroomManagementTable() {
                           className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleEditClass(classItem)
+                            handleEditClassroom(classroomItem)
                           }}
                         >
                           <Edit className="h-4 w-4" />
@@ -375,7 +382,7 @@ export default function ClassroomManagementTable() {
                           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDeleteClass(classItem.id)
+                            handleDeleteClassroom(classroomItem.id)
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -405,8 +412,8 @@ export default function ClassroomManagementTable() {
         <ClassroomModal
           isOpen={isClassroomModalOpen}
           onClose={() => setIsClassroomModalOpen(false)}
-          onSave={handleSaveClass}
-          classToEdit={classToEdit}
+          onSave={handleSaveClassroom}
+          classroomToEdit={classroomToEdit}
         />
       )}
     </div>

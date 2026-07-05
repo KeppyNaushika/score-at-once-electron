@@ -38,7 +38,7 @@ const pageHelpComponents: {
   "07-score-at-once": ScoringHelpContent,
   "08-export": ExportHelpContent,
   "subtotal-groups": SubtotalGroupsHelpContent,
-  classes: ClassroomsHelpContent,
+  classrooms: ClassroomsHelpContent,
   students: StudentsMasterHelpContent,
 }
 
@@ -57,7 +57,7 @@ export function usePageHelp() {
       return "subtotal-groups"
     }
     if (pathname.includes("/classrooms") && !pathname.includes("exams")) {
-      return "classes"
+      return "classrooms"
     }
     if (pathname.includes("/students") && !pathname.includes("exams")) {
       return "students"
@@ -91,7 +91,7 @@ export function usePageHelp() {
       "07-score-at-once": "一括採点",
       "08-export": "結果出力",
       "subtotal-groups": "小計点グループ管理",
-      classes: "学級管理",
+      classrooms: "学級管理",
       students: "生徒管理",
     }
     return (currentPageId && titles[currentPageId]) || "ヘルプ"

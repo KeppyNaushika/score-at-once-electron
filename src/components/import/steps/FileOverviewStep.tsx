@@ -68,7 +68,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
   const studentStats = state.fileOverviewData
     ? getStats(state.fileOverviewData.student)
     : null
-  const classStats = state.fileOverviewData
+  const classroomStats = state.fileOverviewData
     ? getStats(state.fileOverviewData.classroom)
     : null
   const subtotalGroupStats = state.fileOverviewData
@@ -127,8 +127,8 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
               icon={<School className="h-5 w-5" />}
               label="学級"
               total={state.manifest?.counts.classrooms ?? 0}
-              autoMatched={classStats?.autoMatched ?? 0}
-              needsDecision={classStats?.needsDecision ?? 0}
+              autoMatched={classroomStats?.autoMatched ?? 0}
+              needsDecision={classroomStats?.needsDecision ?? 0}
               isExpanded={expandedCategories.has("classroom")}
               onToggle={() => toggleCategory("classroom")}
               autoMatchedItems={state.fileOverviewData.classroom.byId}

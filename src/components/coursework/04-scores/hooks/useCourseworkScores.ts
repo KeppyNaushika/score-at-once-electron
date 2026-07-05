@@ -67,11 +67,11 @@ export function useCourseworkScores(courseworkId: string) {
 
   const loadData = useCallback(async () => {
     try {
-      const [courseworkResult, studentsResult, classesResult] =
+      const [courseworkResult, studentsResult, classroomsResult] =
         await Promise.all([
           window.electronAPI.coursework.getById(courseworkId),
           window.electronAPI.coursework.getStudents(courseworkId),
-          window.electronAPI.coursework.getClasses(courseworkId),
+          window.electronAPI.coursework.getClassrooms(courseworkId),
         ])
       if (!courseworkResult.success || !courseworkResult.coursework) return
 
@@ -83,9 +83,9 @@ export function useCourseworkScores(courseworkId: string) {
       if (!studentsResult.success || !studentsResult.students) return
 
       const registeredClassroomIds = new Set(
-        classesResult.success && classesResult.classes
-          ? classesResult.classes.map(
-              (courseworkClass) => courseworkClass.classroomId
+        classroomsResult.success && classroomsResult.classrooms
+          ? classroomsResult.classrooms.map(
+              (courseworkClassroom) => courseworkClassroom.classroomId
             )
           : []
       )

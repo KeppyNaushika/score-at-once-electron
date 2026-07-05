@@ -1,8 +1,8 @@
 export { ClassroomRosterManager } from "./ClassroomRosterManager"
 export type {
   AvailableClassroomOption,
-  ClassRemovalMode,
-  ClassRemovalPreview,
+  ClassroomRemovalMode,
+  ClassroomRemovalPreview,
   ClassroomRosterEntry,
   ClassroomRosterFlagColumn,
 } from "./types"

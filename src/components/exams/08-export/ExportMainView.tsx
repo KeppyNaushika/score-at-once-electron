@@ -66,12 +66,12 @@ export default function ExportMainView() {
   const {
     exam,
     students,
-    availableClasses,
+    availableClassrooms,
     loading,
     searchTerm,
     setSearchTerm,
-    selectedClasses,
-    setSelectedClasses,
+    selectedClassrooms,
+    setSelectedClassrooms,
     selectedStatuses,
     setSelectedStatuses,
     selectedStudents,
@@ -812,11 +812,11 @@ export default function ExportMainView() {
             <StudentSelectionCard
               examId={exam?.id}
               students={students} // 受験生徒順（customOrder）でソート済み
-              availableClasses={availableClasses}
+              availableClassrooms={availableClassrooms}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
-              selectedClasses={selectedClasses}
-              setSelectedClasses={setSelectedClasses}
+              selectedClassrooms={selectedClassrooms}
+              setSelectedClassrooms={setSelectedClassrooms}
               selectedStatuses={selectedStatuses}
               setSelectedStatuses={setSelectedStatuses}
               selectedStudents={selectedStudents}

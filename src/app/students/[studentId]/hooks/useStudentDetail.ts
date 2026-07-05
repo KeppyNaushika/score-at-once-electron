@@ -11,7 +11,7 @@ import type {
 export function useStudentDetail(studentId: string) {
   const router = useRouter()
   const [student, setStudent] = useState<StudentWithMemberships | null>(null)
-  const [classes, setClasses] = useState<ClassroomWithMemberships[]>([])
+  const [classrooms, setClassrooms] = useState<ClassroomWithMemberships[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -26,8 +26,8 @@ export function useStudentDetail(studentId: string) {
           setStudent(targetStudent)
         }
 
-        const fetchedClasses = await window.electronAPI.fetchClasses()
-        setClasses(fetchedClasses || [])
+        const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
+        setClassrooms(fetchedClassrooms || [])
       } catch (error) {
         console.error("Failed to fetch data:", error)
       } finally {
@@ -84,7 +84,7 @@ export function useStudentDetail(studentId: string) {
           membershipData
         )
       } else {
-        const membership = await window.electronAPI.addStudentToClass(
+        const membership = await window.electronAPI.addStudentToClassroom(
           studentId,
           membershipData.classroomId,
           membershipData.startDate ?? undefined,
@@ -141,7 +141,7 @@ export function useStudentDetail(studentId: string) {
 
   return {
     student,
-    classes,
+    classrooms,
     loading,
     handleEditStudent,
     handleDeleteStudent,

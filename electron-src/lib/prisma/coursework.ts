@@ -11,17 +11,17 @@ import {
   resolveCourseworkScope,
   resolveCourseworkScopeByItem,
 } from "./auditScope"
-import { getAvailableClassesForTarget } from "./availableClassrooms"
+import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
 import {
   type RosterAdapter,
   rosterAddStudents,
-  rosterAddStudentsFromClass,
-  rosterClassRemovalPreview,
-  rosterRemoveClass,
-  rosterSetClassOrders,
+  rosterAddStudentsFromClassroom,
+  rosterClassroomRemovalPreview,
+  rosterRemoveClassroom,
+  rosterSetClassroomOrders,
   rosterUpdateStudentOrders,
 } from "./rosterManager"
 
@@ -537,7 +537,7 @@ export async function batchUpsertCourseworkScores(
 }
 
 // =============================================================================
-// 名簿（CourseworkStudent / CourseworkClass）
+// 名簿（CourseworkStudent / CourseworkClassroom）
 // =============================================================================
 
 /** 対象生徒一覧を取得 */
@@ -567,10 +567,10 @@ export async function getCourseworkStudents(courseworkId: string) {
 }
 
 /** 登録学級一覧を取得 */
-export async function getCourseworkClasses(courseworkId: string) {
+export async function getCourseworkClassrooms(courseworkId: string) {
   try {
     const referenceDate = await getCourseworkDate(courseworkId)
-    const classes = await prisma.courseworkClassroom.findMany({
+    const classrooms = await prisma.courseworkClassroom.findMany({
       where: { courseworkId },
       include: {
         classroom: {
@@ -586,16 +586,16 @@ export async function getCourseworkClasses(courseworkId: string) {
     })
     return {
       success: true,
-      classes: classes.map((courseworkClass) => ({
-        id: courseworkClass.id,
-        classroomId: courseworkClass.classroomId,
-        className: courseworkClass.classroom.name,
-        order: courseworkClass.order,
-        studentCount: courseworkClass.classroom.memberships.length,
+      classrooms: classrooms.map((courseworkClassroom) => ({
+        id: courseworkClassroom.id,
+        classroomId: courseworkClassroom.classroomId,
+        className: courseworkClassroom.classroom.name,
+        order: courseworkClassroom.order,
+        studentCount: courseworkClassroom.classroom.memberships.length,
       })),
     }
   } catch (error) {
-    console.error("Error getting coursework classes:", error)
+    console.error("Error getting coursework classrooms:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -604,7 +604,7 @@ export async function getCourseworkClasses(courseworkId: string) {
 }
 
 /** まだ登録されていない学級一覧を取得 */
-export async function getAvailableClassesForCoursework(
+export async function getAvailableClassroomsForCoursework(
   courseworkId: string,
   activeOnly = true
 ) {
@@ -621,9 +621,9 @@ export async function getAvailableClassesForCoursework(
       }),
     ])
 
-    const classes = await getAvailableClassesForTarget({
+    const classrooms = await getAvailableClassroomsForTarget({
       existingClassroomIds: existing.map(
-        (existingClass) => existingClass.classroomId
+        (existingClassroom) => existingClassroom.classroomId
       ),
       excludeStudentIds: courseworkStudents.map(
         (courseworkStudent) => courseworkStudent.studentId
@@ -632,9 +632,9 @@ export async function getAvailableClassesForCoursework(
       activeOnly,
     })
 
-    return { success: true, classes }
+    return { success: true, classrooms }
   } catch (error) {
-    console.error("Error getting available classes:", error)
+    console.error("Error getting available classrooms:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -701,14 +701,14 @@ const courseworkRosterAdapter: RosterAdapter = {
       )
     )
   },
-  classMaxOrder: async (targetId) => {
+  classroomMaxOrder: async (targetId) => {
     const result = await prisma.courseworkClassroom.aggregate({
       where: { courseworkId: targetId },
       _max: { order: true },
     })
     return result._max.order
   },
-  upsertClass: async (targetId, classroomId, order) => {
+  upsertClassroom: async (targetId, classroomId, order) => {
     await prisma.courseworkClassroom.upsert({
       where: {
         courseworkId_classroomId: { courseworkId: targetId, classroomId },
@@ -717,15 +717,15 @@ const courseworkRosterAdapter: RosterAdapter = {
       update: {},
     })
   },
-  setClassOrders: async (targetId, orders) => {
+  setClassroomOrders: async (targetId, orders) => {
     await prisma.$transaction(
-      orders.map((classOrder) =>
+      orders.map((classroomOrder) =>
         prisma.courseworkClassroom.updateMany({
           where: {
             courseworkId: targetId,
-            classroomId: classOrder.classroomId,
+            classroomId: classroomOrder.classroomId,
           },
-          data: { order: classOrder.order },
+          data: { order: classroomOrder.order },
         })
       )
     )
@@ -738,9 +738,9 @@ const courseworkRosterAdapter: RosterAdapter = {
       },
       select: { classroomId: true },
     })
-    return rows.map((courseworkClass) => courseworkClass.classroomId)
+    return rows.map((courseworkClassroom) => courseworkClassroom.classroomId)
   },
-  removeClassAndStudents: async (targetId, classroomId, studentIds) => {
+  removeClassroomAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([
       prisma.courseworkStudent.deleteMany({
         where: { courseworkId: targetId, studentId: { in: studentIds } },
@@ -755,24 +755,25 @@ const courseworkRosterAdapter: RosterAdapter = {
   scope: (targetId) => resolveCourseworkScope(targetId),
   audit: {
     studentEntity: "CourseworkStudent",
-    classEntity: "CourseworkClassroom",
+    classroomEntity: "CourseworkClassroom",
     addAction: "coursework.student.add",
     removeAction: "coursework.student.remove",
     reorderAction: "coursework.student.reorder",
     reorderCoalescePrefix: "coursework_student_reorder",
-    addFromClassSummary: (n) => `学級から資料対象生徒を${n}名追加しました`,
+    addFromClassroomSummary: (n) => `学級から資料対象生徒を${n}名追加しました`,
     addIndividualSummary: (n) => `資料対象生徒を${n}名追加しました`,
-    removeClassSummary: (n) => `学級を資料から外し、生徒${n}名を削除しました`,
+    removeClassroomSummary: (n) =>
+      `学級を資料から外し、生徒${n}名を削除しました`,
   },
 }
 
 /** 学級から生徒を一括追加 */
-export function addStudentsFromClassToCoursework(
+export function addStudentsFromClassroomToCoursework(
   courseworkId: string,
   classroomId: string,
   activeOnly = true
 ) {
-  return rosterAddStudentsFromClass(
+  return rosterAddStudentsFromClassroom(
     courseworkRosterAdapter,
     courseworkId,
     classroomId,
@@ -832,11 +833,11 @@ export async function removeStudentsFromCoursework(
 }
 
 /** 学級の並び順を更新 */
-export function setCourseworkClassOrders(
+export function setCourseworkClassroomOrders(
   courseworkId: string,
   orderedClassroomIds: string[]
 ) {
-  return rosterSetClassOrders(
+  return rosterSetClassroomOrders(
     courseworkRosterAdapter,
     courseworkId,
     orderedClassroomIds
@@ -844,11 +845,11 @@ export function setCourseworkClassOrders(
 }
 
 /** 学級削除のプレビュー（専属生徒の削除数） */
-export function getCourseworkClassRemovalPreview(
+export function getCourseworkClassroomRemovalPreview(
   courseworkId: string,
   classroomId: string
 ) {
-  return rosterClassRemovalPreview(
+  return rosterClassroomRemovalPreview(
     courseworkRosterAdapter,
     courseworkId,
     classroomId
@@ -860,12 +861,12 @@ export function getCourseworkClassRemovalPreview(
  *
  * @param deleteStudents trueなら専属生徒も削除（既定）。falseなら登録解除のみ。
  */
-export function removeClassFromCoursework(
+export function removeClassroomFromCoursework(
   courseworkId: string,
   classroomId: string,
   deleteStudents = true
 ) {
-  return rosterRemoveClass(
+  return rosterRemoveClassroom(
     courseworkRosterAdapter,
     courseworkId,
     classroomId,

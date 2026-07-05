@@ -6,7 +6,7 @@ import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import {
   addStudentsToExam,
-  getClassesNotInExam,
+  getClassroomsNotInExam,
   getStudentsForExam,
   getStudentsNotInExam,
   removeStudentsFromExam,
@@ -22,7 +22,7 @@ import {
   updateStudent,
 } from "../lib/prisma/student"
 import {
-  addStudentToClass,
+  addStudentToClassroom,
   createStudentClassroomMembership,
   deleteStudentClassroomMembership,
   endStudentMembership,
@@ -116,7 +116,7 @@ export function setupStudentHandlers(): void {
     ) => {
       const dateToUse = startDate ? new Date(startDate) : new Date()
 
-      const result = await addStudentToClass(
+      const result = await addStudentToClassroom(
         studentId,
         classroomId,
         dateToUse,
@@ -168,9 +168,9 @@ export function setupStudentHandlers(): void {
   )
 
   registerHandler(
-    "get-classes-not-in-exam",
+    "get-classrooms-not-in-exam",
     async (examId: string, activeOnly = true) => {
-      return await getClassesNotInExam(examId, activeOnly)
+      return await getClassroomsNotInExam(examId, activeOnly)
     }
   )
 
@@ -204,8 +204,8 @@ export function setupStudentHandlers(): void {
   })
 
   registerHandler("get-class-exam-results", async (classroomId: string) => {
-    const { getClassExamResults } = await import("../lib/prisma/student")
-    return await getClassExamResults(classroomId)
+    const { getClassroomExamResults } = await import("../lib/prisma/student")
+    return await getClassroomExamResults(classroomId)
   })
 
   // 生徒データExcelエクスポート（選択された生徒のみ）
@@ -274,16 +274,16 @@ export function setupStudentHandlers(): void {
 
   // 学級データExcelエクスポート（選択された学級の所属データ）
   registerSafeHandler(
-    "export-classes-excel",
+    "export-classrooms-excel",
     async (selectedClassroomIds: string[]) => {
-      const { fetchClasses } = await import("../lib/prisma/classroom")
-      const allClasses = await fetchClasses()
+      const { fetchClassrooms } = await import("../lib/prisma/classroom")
+      const allClassrooms = await fetchClassrooms()
       const selectedSet = new Set(selectedClassroomIds)
-      const classes = allClasses.filter((classroom) =>
+      const classrooms = allClassrooms.filter((classroom) =>
         selectedSet.has(classroom.id)
       )
 
-      if (classes.length === 0) {
+      if (classrooms.length === 0) {
         return { success: false, error: "出力する学級が選択されていません" }
       }
 
@@ -307,7 +307,7 @@ export function setupStudentHandlers(): void {
       const workbook = new ExcelJS.Workbook()
 
       // 学級ごとにシートを作成
-      for (const classroom of classes) {
+      for (const classroom of classrooms) {
         const sheetName = classroom.name
           .replace(/[\\/:*?"<>|]/g, "_")
           .slice(0, 31)

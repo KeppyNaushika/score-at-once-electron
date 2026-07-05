@@ -11,9 +11,11 @@ import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 export async function loadStudentExportPlacements(
   examId: string
 ): Promise<Record<string, StudentExportPlacement>> {
-  const administeredClasses =
+  const administeredClassrooms =
     await window.electronAPI.examClassroom.getAdministered(examId)
-  const placementByStudent = resolveExamClassroomPlacement(administeredClasses)
+  const placementByStudent = resolveExamClassroomPlacement(
+    administeredClassrooms
+  )
 
   return Object.fromEntries(
     Object.entries(placementByStudent).map(([studentId, placement]) => [

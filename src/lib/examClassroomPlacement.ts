@@ -22,19 +22,19 @@ export interface ExamClassroomPlacement {
  *
  * order 昇順で走査し、各生徒が最初にマッチした administered 学級を採番学級とする
  * （first-match-wins）。memberships は `getAdministered` が受験日スナップショットで
- * 絞り込み済み。専用 IPC（旧 `getStudentClassInfo`）を廃し、DB 構造から直接計算することで
+ * 絞り込み済み。専用 IPC（旧 `getStudentClassroomInfo`）を廃し、DB 構造から直接計算することで
  * 重複ロジック・変更未追従を避ける。採番学級は 05/06 の複数箇所で使うため共通化する。
  */
 export function resolveExamClassroomPlacement(
-  administeredClasses: ExamClassroomWithMemberships[]
+  administeredClassrooms: ExamClassroomWithMemberships[]
 ): Record<string, ExamClassroomPlacement> {
   // getAdministered は createdAt 順で返すため、採番の優先順位（order）で並べ直す
-  const orderedClasses = [...administeredClasses].sort(
-    (classA, classB) => classA.order - classB.order
+  const orderedClassrooms = [...administeredClassrooms].sort(
+    (classroomA, classroomB) => classroomA.order - classroomB.order
   )
 
   const placementByStudent: Record<string, ExamClassroomPlacement> = {}
-  for (const examClassroom of orderedClasses) {
+  for (const examClassroom of orderedClassrooms) {
     // 解決用に include した memberships は出力に含めず、Classroom スカラーを同梱する
     const { memberships: _memberships, ...classroom } = examClassroom.classroom
     for (const membership of examClassroom.classroom.memberships) {

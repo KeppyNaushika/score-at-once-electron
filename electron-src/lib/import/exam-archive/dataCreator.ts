@@ -91,7 +91,7 @@ export async function createImportedData(
           data: {
             id: remapIdRequired(classroom.id, mappings.classroom),
             name: uniqueName,
-            classCode: classroom.classCode,
+            classroomCode: classroom.classroomCode,
             grade: classroom.grade,
             description: classroom.description,
             isVisible: classroom.isVisible,

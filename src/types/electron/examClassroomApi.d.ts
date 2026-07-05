@@ -41,7 +41,7 @@ export interface ExamClassroomWithMemberships {
 export interface AvailableClassroom {
   id: string
   name: string
-  classCode: string | null
+  classroomCode: string | null
   grade: number | null
   studentCount: number
 }
@@ -109,7 +109,7 @@ export interface ExamClassroomAPI {
     /**
      * クラスから生徒を試験に追加（B案: 統合型フロー）
      */
-    addStudentsFromClass: (
+    addStudentsFromClassroom: (
       examId: string,
       classroomId: string,
       activeOnly?: boolean

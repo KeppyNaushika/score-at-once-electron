@@ -22,7 +22,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
   const summary = useMemo(() => {
     if (!state.fileOverviewData) return null
 
-    const { student, classroom: classResult } = state.fileOverviewData
+    const { student, classroom: classroomResult } = state.fileOverviewData
     const config = state.idIntegrationConfig
 
     // 生徒サマリー
@@ -49,29 +49,33 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     }
 
     // 学級サマリー
-    const classAutoMatched = classResult.byId.length
-    const classSecondaryMatched = classResult.byName?.length ?? 0
-    const classNoMatch = classResult.noMatch.length
+    const classroomAutoMatched = classroomResult.byId.length
+    const classroomSecondaryMatched = classroomResult.byName?.length ?? 0
+    const classroomNoMatch = classroomResult.noMatch.length
 
-    let classMerge = classAutoMatched
-    let classNew = 0
-    let classSkip = 0
+    let classroomMerge = classroomAutoMatched
+    let classroomNew = 0
+    let classroomSkip = 0
 
     if (config.classroom.strategy === "all_new") {
-      classNew = classSecondaryMatched + classNoMatch
+      classroomNew = classroomSecondaryMatched + classroomNoMatch
     } else {
-      classMerge += classSecondaryMatched
-      classNew = classNoMatch
+      classroomMerge += classroomSecondaryMatched
+      classroomNew = classroomNoMatch
     }
 
     for (const decision of config.classroom.decisions) {
-      if (decision.decisionType === "create_new") classNew++
-      else if (decision.decisionType === "skip") classSkip++
+      if (decision.decisionType === "create_new") classroomNew++
+      else if (decision.decisionType === "skip") classroomSkip++
     }
 
     return {
       student: { merge: studentMerge, new: studentNew, skip: studentSkip },
-      classroom: { merge: classMerge, new: classNew, skip: classSkip },
+      classroom: {
+        merge: classroomMerge,
+        new: classroomNew,
+        skip: classroomSkip,
+      },
     }
   }, [state.fileOverviewData, state.idIntegrationConfig])
 

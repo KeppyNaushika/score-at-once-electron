@@ -43,7 +43,7 @@ export async function fetchGradeExportData(
         examName: grade?.name ?? "",
         classNames:
           grade?.gradeClassrooms.map(
-            (gradeClass) => gradeClass.classroom.name
+            (gradeClassroom) => gradeClassroom.classroom.name
           ) ?? [],
       },
     }

@@ -23,7 +23,7 @@ import { collectStudentArchiveData } from "./dataCollector"
 export async function exportStudentsArchive(
   options: ExportStudentsArchiveOptions
 ): Promise<ExportStudentsArchiveResult> {
-  const { studentIds, classIds } = options
+  const { studentIds, classroomIds } = options
 
   try {
     if (studentIds.length === 0) {
@@ -34,7 +34,10 @@ export async function exportStudentsArchive(
     }
 
     // 1. データを収集
-    const collectedData = await collectStudentArchiveData(studentIds, classIds)
+    const collectedData = await collectStudentArchiveData(
+      studentIds,
+      classroomIds
+    )
 
     // 2. 保存先ダイアログを表示
     const defaultFileName = generateStudentExportFileName()
@@ -65,7 +68,7 @@ export async function exportStudentsArchive(
       summary: `生徒を${studentIds.length}名エクスポートしました`,
       extra: {
         studentCount: studentIds.length,
-        classCount: classIds?.length ?? 0,
+        classroomCount: classroomIds?.length ?? 0,
         outputPath: archiveResult.outputPath,
       },
     })

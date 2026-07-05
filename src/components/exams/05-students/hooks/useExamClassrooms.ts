@@ -19,9 +19,9 @@ interface UseExamClassroomsReturn {
   /** データを再取得 */
   refresh: () => Promise<void>
   /** クラスを削除 */
-  removeClass: (examClassroomId: string) => Promise<boolean>
+  removeClassroom: (examClassroomId: string) => Promise<boolean>
   /** クラス設定を更新 */
-  updateClass: (
+  updateClassroom: (
     examClassroomId: string,
     options: {
       administered?: boolean
@@ -52,7 +52,7 @@ export function useExamClassrooms({
       const data = await window.electronAPI.examClassroom.getAll(examId)
       setExamClassrooms(data)
     } catch (err) {
-      console.error("Failed to fetch exam classes:", err)
+      console.error("Failed to fetch exam classrooms:", err)
     } finally {
       setLoading(false)
     }
@@ -64,7 +64,7 @@ export function useExamClassrooms({
   }, [fetchExamClassrooms])
 
   // クラスを削除
-  const removeClass = useCallback(
+  const removeClassroom = useCallback(
     async (examClassroomId: string): Promise<boolean> => {
       try {
         await window.electronAPI.examClassroom.remove(examClassroomId)
@@ -79,7 +79,7 @@ export function useExamClassrooms({
   )
 
   // クラス設定を更新
-  const updateClass = useCallback(
+  const updateClassroom = useCallback(
     async (
       examClassroomId: string,
       options: {
@@ -107,7 +107,7 @@ export function useExamClassrooms({
     examClassrooms,
     loading,
     refresh: fetchExamClassrooms,
-    removeClass,
-    updateClass,
+    removeClassroom,
+    updateClassroom,
   }
 }

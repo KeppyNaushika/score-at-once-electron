@@ -266,9 +266,9 @@ test.describe.serial("第1章: 初期設定", () => {
     }
 
     // (C) DB直接操作で2クラス作成
-    const classResult = await seedClasses(studentIds)
-    classAId = classResult.classAId
-    classBId = classResult.classBId
+    const classroomResult = await seedClasses(studentIds)
+    classAId = classroomResult.classAId
+    classBId = classroomResult.classBId
 
     // (D) 作成後の学級一覧
     await nav(page, "/classrooms")

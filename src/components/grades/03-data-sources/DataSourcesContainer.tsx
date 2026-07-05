@@ -52,27 +52,27 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
         ReturnType<typeof window.electronAPI.grade.getStudents>
       >["students"]
     >()
-  const [classIds, setClassroomIds] = useState<string[]>([])
+  const [classroomIds, setClassroomIds] = useState<string[]>([])
 
-  const loadStudentsAndClasses = useCallback(async () => {
-    const [studentsResult, classesResult] = await Promise.all([
+  const loadStudentsAndClassrooms = useCallback(async () => {
+    const [studentsResult, classroomsResult] = await Promise.all([
       window.electronAPI.grade.getStudents(gradeId),
-      window.electronAPI.grade.getClasses(gradeId),
+      window.electronAPI.grade.getClassrooms(gradeId),
     ])
     if (studentsResult.success) {
       setStudents(studentsResult.students)
     }
-    if (classesResult.success && classesResult.classes) {
+    if (classroomsResult.success && classroomsResult.classrooms) {
       setClassroomIds(
-        classesResult.classes.map((classroom) => classroom.classroomId)
+        classroomsResult.classrooms.map((classroom) => classroom.classroomId)
       )
     }
   }, [gradeId])
 
   const handleOpenExclusionModal = useCallback(async () => {
-    await loadStudentsAndClasses()
+    await loadStudentsAndClassrooms()
     setExclusionModalOpen(true)
-  }, [loadStudentsAndClasses])
+  }, [loadStudentsAndClassrooms])
 
   // 一括欠測設定
   const [batchMode, setBatchMode] = useState(false)
@@ -349,7 +349,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
           gradeId={gradeId}
           gradeItems={exam.gradeItems}
           students={students}
-          classIds={classIds}
+          classroomIds={classroomIds}
         />
       )}
     </div>

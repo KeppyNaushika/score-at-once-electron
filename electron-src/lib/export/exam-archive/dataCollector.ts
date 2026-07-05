@@ -132,13 +132,13 @@ export async function collectExamData(
           where: { studentId: { in: Array.from(studentIds) } },
         })
 
-    const classIds = new Set(
+    const classroomIds = new Set(
       memberships.map((membership) => membership.classroomId)
     )
     const classes = isTemplate
       ? []
       : await prisma.classroom.findMany({
-          where: { id: { in: Array.from(classIds) } },
+          where: { id: { in: Array.from(classroomIds) } },
         })
 
     // 5. 現在のユーザーのみを取得（パスコードは除外）
@@ -619,7 +619,7 @@ export async function collectExamData(
       classrooms: classes.map((classroom) => ({
         id: classroom.id,
         name: classroom.name,
-        classCode: classroom.classCode,
+        classroomCode: classroom.classroomCode,
         grade: classroom.grade,
         description: classroom.description,
         isVisible: classroom.isVisible,

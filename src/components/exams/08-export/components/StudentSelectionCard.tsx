@@ -46,11 +46,11 @@ import { StatisticsClassroomSelector } from "./StatisticsClassroomSelector"
 interface StudentSelectionCardProps {
   examId?: string
   students: Student[]
-  availableClasses: Array<{ id: string; name: string }>
+  availableClassrooms: Array<{ id: string; name: string }>
   searchTerm: string
   setSearchTerm: (term: string) => void
-  selectedClasses: string[]
-  setSelectedClasses: (classes: string[]) => void
+  selectedClassrooms: string[]
+  setSelectedClassrooms: (classrooms: string[]) => void
   selectedStatuses: string[]
   setSelectedStatuses: (statuses: string[]) => void
   selectedStudents: Set<string>
@@ -81,11 +81,11 @@ interface StudentSelectionCardProps {
 export function StudentSelectionCard({
   examId,
   students,
-  availableClasses,
+  availableClassrooms,
   searchTerm,
   setSearchTerm,
-  selectedClasses,
-  setSelectedClasses,
+  selectedClassrooms,
+  setSelectedClassrooms,
   selectedStatuses,
   setSelectedStatuses,
   selectedStudents,
@@ -129,11 +129,13 @@ export function StudentSelectionCard({
     removeStudents(students.map((examStudent) => examStudent.studentId))
   }
 
-  const toggleClassFilter = (classroomId: string) => {
-    if (selectedClasses.includes(classroomId)) {
-      setSelectedClasses(selectedClasses.filter((id) => id !== classroomId))
+  const toggleClassroomFilter = (classroomId: string) => {
+    if (selectedClassrooms.includes(classroomId)) {
+      setSelectedClassrooms(
+        selectedClassrooms.filter((id) => id !== classroomId)
+      )
     } else {
-      setSelectedClasses([...selectedClasses, classroomId])
+      setSelectedClassrooms([...selectedClassrooms, classroomId])
     }
   }
 
@@ -215,22 +217,22 @@ export function StudentSelectionCard({
                   size="sm"
                   className="h-8 text-xs whitespace-nowrap"
                 >
-                  学級({selectedClasses.length})
+                  学級({selectedClassrooms.length})
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 p-2">
                 <div className="space-y-1">
                   <h4 className="mb-2 text-sm font-medium">学級を選択</h4>
-                  {availableClasses.map((classroom) => (
+                  {availableClassrooms.map((classroom) => (
                     <Button
                       key={classroom.id}
                       variant="ghost"
                       size="sm"
                       className="h-8 w-full justify-between px-2"
-                      onClick={() => toggleClassFilter(classroom.id)}
+                      onClick={() => toggleClassroomFilter(classroom.id)}
                     >
                       <span className="text-sm">{classroom.name}</span>
-                      {selectedClasses.includes(classroom.id) && (
+                      {selectedClassrooms.includes(classroom.id) && (
                         <Check className="h-4 w-4" />
                       )}
                     </Button>

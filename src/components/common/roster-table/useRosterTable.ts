@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import type { RosterRow } from "@/components/common/roster-table/types"
 
-/** customOrder 優先・なければ classOrder→attendanceNumber でソート */
+/** customOrder 優先・なければ classroomOrder→attendanceNumber でソート */
 function compareByCustomOrder(rowA: RosterRow, rowB: RosterRow): number {
   const rowAHasCustom =
     rowA.customOrder !== null && rowA.customOrder !== undefined
@@ -24,13 +24,13 @@ function compareByCustomOrder(rowA: RosterRow, rowB: RosterRow): number {
 
 /** 学級順→出席番号順（デフォルト順） */
 function compareByDefault(rowA: RosterRow, rowB: RosterRow): number {
-  const rowAClassOrder = rowA.classInfo.classOrder ?? 99999
-  const rowBClassOrder = rowB.classInfo.classOrder ?? 99999
-  if (rowAClassOrder !== rowBClassOrder) {
-    return rowAClassOrder - rowBClassOrder
+  const rowAClassroomOrder = rowA.classroomInfo.classroomOrder ?? 99999
+  const rowBClassroomOrder = rowB.classroomInfo.classroomOrder ?? 99999
+  if (rowAClassroomOrder !== rowBClassroomOrder) {
+    return rowAClassroomOrder - rowBClassroomOrder
   }
-  const rowAAttendance = rowA.classInfo.attendanceNumber ?? 99999
-  const rowBAttendance = rowB.classInfo.attendanceNumber ?? 99999
+  const rowAAttendance = rowA.classroomInfo.attendanceNumber ?? 99999
+  const rowBAttendance = rowB.classroomInfo.attendanceNumber ?? 99999
   return rowAAttendance - rowBAttendance
 }
 

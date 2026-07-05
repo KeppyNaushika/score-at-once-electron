@@ -53,12 +53,12 @@ function toRosterRow(
     lastName: student.lastName,
     firstName: student.firstName,
     kana: `${student.lastNameKana} ${student.firstNameKana}`,
-    classInfo: {
+    classroomInfo: {
       className: placement?.classroom?.name ?? null,
-      classCode: placement?.classroom?.classCode ?? null,
+      classroomCode: placement?.classroom?.classroomCode ?? null,
       grade: placement?.classroom?.grade ?? null,
       attendanceNumber: placement?.attendanceNumber ?? null,
-      classOrder: placement?.order ?? null,
+      classroomOrder: placement?.order ?? null,
     },
     customOrder: examStudent.customOrder,
   }
@@ -75,7 +75,7 @@ export function SortableStudentTableContainer(
   props: SortableStudentTableProps
 ) {
   const {
-    classes,
+    classrooms,
     selectedStudents,
     onStudentSelectionChange,
     onSelectAll,
@@ -87,7 +87,7 @@ export function SortableStudentTableContainer(
     searchTerm,
     onSearchChange,
     selectedClassroomId,
-    onClassChange,
+    onClassroomChange,
     statusFilter,
     onStatusChange,
   } = props
@@ -223,10 +223,13 @@ export function SortableStudentTableContainer(
     [onStudentStatusUpdate, examStudentByStudentId]
   )
 
-  const classOptions = useMemo(
+  const classroomOptions = useMemo(
     () =>
-      classes.map((classroom) => ({ id: classroom.id, name: classroom.name })),
-    [classes]
+      classrooms.map((classroom) => ({
+        id: classroom.id,
+        name: classroom.name,
+      })),
+    [classrooms]
   )
 
   const handleConfirmReset = async () => {
@@ -247,8 +250,8 @@ export function SortableStudentTableContainer(
           searchTerm={searchTerm}
           onSearchChange={onSearchChange}
           selectedClassroomId={selectedClassroomId}
-          onClassChange={onClassChange}
-          classes={classOptions}
+          onClassroomChange={onClassroomChange}
+          classrooms={classroomOptions}
           additionalFilters={additionalFilters}
         />
         <Button

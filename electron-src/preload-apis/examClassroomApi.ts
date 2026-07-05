@@ -30,7 +30,7 @@ export function createExamClassroomApi() {
         ipcRenderer.invoke("exam-class:reorder", options),
       removeByIds: (examId: string, classroomId: string) =>
         ipcRenderer.invoke("exam-class:remove-by-ids", examId, classroomId),
-      addStudentsFromClass: (
+      addStudentsFromClassroom: (
         examId: string,
         classroomId: string,
         activeOnly?: boolean

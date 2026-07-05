@@ -1,7 +1,7 @@
 /**
  * Excel 学級平均行（Phase 4・主成果）のテスト
  *
- * appendClassAverageRows が
+ * appendClassroomAverageRows が
  * - 全体平均行（受験者＝合計点 non-null）
  * - teacherStatistics 学級ごとの学級平均行（母集団=学級全体、重複カウント）
  * を正しい列に出すことを検証する。
@@ -9,7 +9,7 @@
 import * as ExcelJS from "exceljs"
 import { describe, expect, it } from "vitest"
 
-import { appendClassAverageRows } from "@/electron-src/lib/export/excel/averageRows"
+import { appendClassroomAverageRows } from "@/electron-src/lib/export/excel/averageRows"
 import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
@@ -30,7 +30,7 @@ function makeClass(
     classroom: {
       id: `c-${name}`,
       name,
-      classCode: null,
+      classroomCode: null,
       grade: 3,
       memberships: studentIds.map((studentId) => ({ studentId })),
     },
@@ -63,13 +63,13 @@ function makeStudent(
 
 const QUESTION_REGIONS = [
   { id: "q1", label: "問1", orderIndex: 0 },
-] as unknown as Parameters<typeof appendClassAverageRows>[4]
+] as unknown as Parameters<typeof appendClassroomAverageRows>[4]
 
 /** ヘッダー列: 受験状態,順位,学年,学級,出席番号,学籍番号,氏名(7),合計点(8),...設問 */
 const NAME_COL = 7
 const TOTAL_COL = 8
 
-describe("appendClassAverageRows", () => {
+describe("appendClassroomAverageRows", () => {
   it("全体平均と teacherStatistics 学級平均を正しい列・値で出す", () => {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("点数一覧")
@@ -85,7 +85,7 @@ describe("appendClassAverageRows", () => {
       "問1",
     ])
 
-    // S1,S2 が classA。S3 は学級なし。全体平均=(60+80+40)/3=60、classA平均=(60+80)/2=70
+    // S1,S2 が classroomA。S3 は学級なし。全体平均=(60+80+40)/3=60、classroomA平均=(60+80)/2=70
     const all = [
       makeStudent("S1", 60, 6),
       makeStudent("S2", 80, 8),
@@ -93,7 +93,7 @@ describe("appendClassAverageRows", () => {
     ]
     const classes = [makeClass("3-A組", ["S1", "S2"])]
 
-    appendClassAverageRows(worksheet, all, classes, [], QUESTION_REGIONS)
+    appendClassroomAverageRows(worksheet, all, classes, [], QUESTION_REGIONS)
 
     // 空行 + 全体平均 + 3-A組平均
     const overall = worksheet.getRow(3) // header=1, 空行=2, 全体平均=3
@@ -126,7 +126,7 @@ describe("appendClassAverageRows", () => {
       makeStudent("S2", 80, 8),
       makeStudent("S3", null, null),
     ]
-    appendClassAverageRows(worksheet, all, [], [], QUESTION_REGIONS)
+    appendClassroomAverageRows(worksheet, all, [], [], QUESTION_REGIONS)
     expect(worksheet.getRow(3).getCell(TOTAL_COL).value).toBe(70)
   })
 
@@ -134,7 +134,7 @@ describe("appendClassAverageRows", () => {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("点数一覧")
     worksheet.addRow(["氏名", "合計点"])
-    appendClassAverageRows(worksheet, [], [], [], QUESTION_REGIONS)
+    appendClassroomAverageRows(worksheet, [], [], [], QUESTION_REGIONS)
     expect(worksheet.rowCount).toBe(1)
   })
 })

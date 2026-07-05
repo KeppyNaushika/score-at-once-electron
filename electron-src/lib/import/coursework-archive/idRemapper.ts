@@ -100,7 +100,7 @@ export async function resolveStudents(
 }
 
 /** 学級を解決する。返り値は archiveClassroomId → 実 classroomId のマップ。 */
-export async function resolveClasses(
+export async function resolveClassrooms(
   tx: TransactionClient,
   classes: ArchiveCwClass[],
   options: { allowCreate: boolean }
@@ -143,7 +143,7 @@ export async function resolveClasses(
       data: {
         id: classroom.id,
         name: uniqueName,
-        classCode: classroom.classCode,
+        classroomCode: classroom.classroomCode,
         grade: classroom.grade,
         description: classroom.description,
         isVisible: classroom.isVisible,
@@ -193,11 +193,11 @@ export async function restoreMemberships(
   tx: TransactionClient,
   memberships: ArchiveCwMembership[],
   studentMap: IdMap,
-  classMap: IdMap
+  classroomMap: IdMap
 ): Promise<void> {
   for (const membership of memberships) {
     const studentId = studentMap.get(membership.studentId)
-    const classroomId = classMap.get(membership.classroomId)
+    const classroomId = classroomMap.get(membership.classroomId)
     if (!studentId || !classroomId) continue
     const exists = await tx.studentClassroomMembership.findFirst({
       where: { studentId, classroomId },

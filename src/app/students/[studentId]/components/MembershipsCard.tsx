@@ -97,12 +97,12 @@ export function MembershipsCard({
                           <span className="font-medium">
                             {membership.classroom.name}
                           </span>
-                          {membership.classroom.classCode && (
+                          {membership.classroom.classroomCode && (
                             <Badge
                               variant="outline"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
                             >
-                              {membership.classroom.classCode}
+                              {membership.classroom.classroomCode}
                             </Badge>
                           )}
                           {isCurrent ? (

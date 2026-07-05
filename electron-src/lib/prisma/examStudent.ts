@@ -6,7 +6,7 @@ import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveStudentLabel } from "./auditScope"
-import { getAvailableClassesForTarget } from "./availableClassrooms"
+import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
 
@@ -306,7 +306,10 @@ export async function updateStudentOrders(
  * @param activeOnly true なら基準日(examDate)時点で在籍中の生徒のみ数える（既定）。
  *   false なら過去所属も含めて数える。
  */
-export async function getClassesNotInExam(examId: string, activeOnly = true) {
+export async function getClassroomsNotInExam(
+  examId: string,
+  activeOnly = true
+) {
   try {
     const referenceDate = await getExamReferenceDate(examId)
     const examStudents = await prisma.examStudent.findMany({
@@ -314,7 +317,7 @@ export async function getClassesNotInExam(examId: string, activeOnly = true) {
       select: { studentId: true },
     })
 
-    const classes = await getAvailableClassesForTarget({
+    const classrooms = await getAvailableClassroomsForTarget({
       existingClassroomIds: [],
       excludeStudentIds: examStudents.map(
         (examStudent) => examStudent.studentId
@@ -323,12 +326,12 @@ export async function getClassesNotInExam(examId: string, activeOnly = true) {
       activeOnly,
     })
 
-    return { success: true, classes }
+    return { success: true, classrooms }
   } catch (error) {
-    console.error("Error fetching classes not in exam:", error)
+    console.error("Error fetching classrooms not in exam:", error)
     return {
       success: false,
-      error: "Failed to fetch available classes",
+      error: "Failed to fetch available classrooms",
     }
   }
 }

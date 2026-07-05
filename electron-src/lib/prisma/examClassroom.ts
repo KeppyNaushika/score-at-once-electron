@@ -51,7 +51,7 @@ export interface ReorderExamClassroomsOptions {
 }
 
 /**
- * Get all classes associated with a exam
+ * Get all classrooms associated with a exam
  */
 export const getExamClassrooms = async (
   examId: string
@@ -80,15 +80,15 @@ export const getExamClassrooms = async (
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     })
   } catch (error) {
-    console.error(`Failed to get exam classes for ${examId}:`, error)
+    console.error(`Failed to get exam classrooms for ${examId}:`, error)
     throw error
   }
 }
 
 /**
- * Get classes marked as administered (for adding students)
+ * Get classrooms marked as administered (for adding students)
  */
-export const getAdministeredClasses = async (
+export const getAdministeredClassrooms = async (
   examId: string
 ): Promise<ExamClassroomWithMemberships[]> => {
   try {
@@ -118,7 +118,7 @@ export const getAdministeredClasses = async (
       orderBy: { createdAt: "asc" },
     })
   } catch (error) {
-    console.error(`Failed to get administered classes for ${examId}:`, error)
+    console.error(`Failed to get administered classrooms for ${examId}:`, error)
     throw error
   }
 }
@@ -208,7 +208,7 @@ export const updateExamClassroom = async (
 }
 
 /**
- * Reorder exam classes
+ * Reorder exam classrooms
  */
 export const reorderExamClassrooms = async (
   options: ReorderExamClassroomsOptions
@@ -225,7 +225,7 @@ export const reorderExamClassrooms = async (
       )
     )
   } catch (error) {
-    console.error("Failed to reorder exam classes:", error)
+    console.error("Failed to reorder exam classrooms:", error)
     throw error
   }
 }
@@ -303,22 +303,22 @@ export const removeExamClassroomByIds = async (
 }
 
 /**
- * Get all classes that are NOT in ExamClassroom for a exam
- * Used by ClassroomExamManager to show available classes to add
+ * Get all classrooms that are NOT in ExamClassroom for a exam
+ * Used by ClassroomExamManager to show available classrooms to add
  */
-export const getAvailableClassesForExam = async (
+export const getAvailableClassroomsForExam = async (
   examId: string
 ): Promise<
   {
     id: string
     name: string
-    classCode: string | null
+    classroomCode: string | null
     grade: number | null
     studentCount: number
   }[]
 > => {
   try {
-    // Get classes already associated with this exam
+    // Get classrooms already associated with this exam
     const existingExamClassrooms = await prisma.examClassroom.findMany({
       where: { examId },
       select: { classroomId: true },
@@ -327,8 +327,8 @@ export const getAvailableClassesForExam = async (
       (examClassroom) => examClassroom.classroomId
     )
 
-    // Get all classes not in ExamClassroom
-    const availableClasses = await prisma.classroom.findMany({
+    // Get all classrooms not in ExamClassroom
+    const availableClassrooms = await prisma.classroom.findMany({
       where: {
         id: {
           notIn:
@@ -341,15 +341,18 @@ export const getAvailableClassesForExam = async (
       orderBy: [{ grade: "asc" }, { name: "asc" }],
     })
 
-    return availableClasses.map((classroom) => ({
+    return availableClassrooms.map((classroom) => ({
       id: classroom.id,
       name: classroom.name,
-      classCode: classroom.classCode,
+      classroomCode: classroom.classroomCode,
       grade: classroom.grade,
       studentCount: classroom.memberships.length,
     }))
   } catch (error) {
-    console.error(`Failed to get available classes for exam ${examId}:`, error)
+    console.error(
+      `Failed to get available classrooms for exam ${examId}:`,
+      error
+    )
     throw error
   }
 }
@@ -362,7 +365,7 @@ export const getAvailableClassesForExam = async (
  *
  * @returns 追加された生徒数とスキップされた生徒数
  */
-export const addStudentsFromClass = async (
+export const addStudentsFromClassroom = async (
   examId: string,
   classroomId: string,
   activeOnly = true
@@ -478,7 +481,7 @@ export const addStudentsFromClass = async (
  * （Excel は teacherStatistics、個人成績表は studentReport）。所属生徒IDは
  * `ec.classroom.memberships.map((m) => m.studentId)` で取得する。
  */
-export const getClassMembersForExam = async (
+export const getClassroomMembersForExam = async (
   examId: string
 ): Promise<ExamClassroomWithMembers[]> => {
   try {

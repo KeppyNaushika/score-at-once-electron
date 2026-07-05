@@ -31,10 +31,10 @@ export async function processClassroomIdIntegration(
   tx: PrismaTransaction,
   updateDecisions?: UpdateDecisions
 ): Promise<void> {
-  const classPreMatch = preMatchResult.classroom
+  const classroomPreMatch = preMatchResult.classroom
 
   // ID一致したもの
-  for (const match of classPreMatch.byId) {
+  for (const match of classroomPreMatch.byId) {
     idMappings.classroom[match.importId] = match.existingId
   }
 
@@ -43,13 +43,13 @@ export async function processClassroomIdIntegration(
     decision: IdIntegrationDecision | undefined,
     defaultExistingId: string | undefined
   ) => {
-    const importClass = data.classesData.classrooms.find(
+    const importClassroom = data.classesData.classrooms.find(
       (classroom) => classroom.id === importId
     )
-    if (!importClass) return
+    if (!importClassroom) return
 
     if (!decision || decision.decisionType === "create_new") {
-      const uniqueName = await generateUniqueClassName(tx, importClass.name)
+      const uniqueName = await generateUniqueClassName(tx, importClassroom.name)
 
       const existingById = await tx.classroom.findUnique({
         where: { id: importId },
@@ -61,24 +61,24 @@ export async function processClassroomIdIntegration(
           data: {
             id: importId,
             name: uniqueName,
-            classCode: importClass.classCode ?? null,
-            grade: importClass.grade ?? null,
-            description: importClass.description ?? null,
+            classroomCode: importClassroom.classroomCode ?? null,
+            grade: importClassroom.grade ?? null,
+            description: importClassroom.description ?? null,
           },
         })
         idMappings.classroom[importId] = importId
         counts.created.classrooms++
 
-        if (uniqueName !== importClass.name) {
+        if (uniqueName !== importClassroom.name) {
           warnings.push(
-            `学級「${importClass.name}」を「${uniqueName}」として新規作成しました（重複回避）`
+            `学級「${importClassroom.name}」を「${uniqueName}」として新規作成しました（重複回避）`
           )
         }
       }
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId
       if (!existingId) {
-        warnings.push(`学級「${importClass.name}」の既存IDが見つかりません`)
+        warnings.push(`学級「${importClassroom.name}」の既存IDが見つかりません`)
         return
       }
 
@@ -87,20 +87,20 @@ export async function processClassroomIdIntegration(
       // フィールド更新処理
       const updateKey = `classroom:${importId}`
       const fieldDecisions = updateDecisions?.[updateKey]
-      if (fieldDecisions && importClass) {
+      if (fieldDecisions && importClassroom) {
         const updateData: Record<string, unknown> = {}
         const fieldMap: Record<string, unknown> = {
-          name: importClass.name,
-          classCode: importClass.classCode,
-          grade: importClass.grade,
-          description: importClass.description,
+          name: importClassroom.name,
+          classroomCode: importClassroom.classroomCode,
+          grade: importClassroom.grade,
+          description: importClassroom.description,
         }
         for (const [field, strategy] of Object.entries(fieldDecisions)) {
           if (strategy === "use_import" && field in fieldMap) {
             updateData[field] = fieldMap[field]
           } else if (strategy === "use_newer" && field in fieldMap) {
-            const importUpdatedAt = importClass.updatedAt
-              ? new Date(importClass.updatedAt)
+            const importUpdatedAt = importClassroom.updatedAt
+              ? new Date(importClassroom.updatedAt)
               : null
             if (importUpdatedAt) {
               const existing = await tx.classroom.findUnique({
@@ -134,8 +134,8 @@ export async function processClassroomIdIntegration(
   }
 
   // 名前一致
-  if (classPreMatch.byName) {
-    for (const match of classPreMatch.byName) {
+  if (classroomPreMatch.byName) {
+    for (const match of classroomPreMatch.byName) {
       const decision = config.decisions.find(
         (decision) => decision.importId === match.importId
       )
@@ -167,7 +167,7 @@ export async function processClassroomIdIntegration(
   }
 
   // どれにも一致しない
-  for (const item of classPreMatch.noMatch) {
+  for (const item of classroomPreMatch.noMatch) {
     if (idMappings.classroom[item.importId]) continue
 
     const decision = config.decisions.find(

@@ -92,8 +92,8 @@ export async function collectGradeArchiveData(
     },
   })
 
-  const classIds = new Set(
-    grade.gradeClassrooms.map((gradeClass) => gradeClass.classroomId)
+  const classroomIds = new Set(
+    grade.gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId)
   )
 
   const gradeItems = grade.gradeItems.map((gradeItem) => ({
@@ -166,13 +166,13 @@ export async function collectGradeArchiveData(
       dataSourceName: dataSource.name,
     }))
 
-  const classRefs = grade.gradeClassrooms.map((gradeClass) => ({
-    name: gradeClass.classroom.name,
+  const classroomRefs = grade.gradeClassrooms.map((gradeClassroom) => ({
+    name: gradeClassroom.classroom.name,
   }))
 
   const studentRefs = grade.gradeStudents.map((gradeStudent) => {
     const membership = gradeStudent.student.memberships.find(
-      (studentMembership) => classIds.has(studentMembership.classroomId)
+      (studentMembership) => classroomIds.has(studentMembership.classroomId)
     )
     return {
       studentNumber: gradeStudent.student.studentNumber,
@@ -251,7 +251,7 @@ export async function collectGradeArchiveData(
         ? { settingsJson: grade.exportSettings.settingsJson }
         : null,
       gradeItems,
-      classRefs,
+      classroomRefs,
       examRefs,
       studentRefs,
       gradeItemExclusions:
@@ -268,7 +268,7 @@ export async function collectGradeArchiveData(
       manualScores: manualScoresCount,
       boundarySets: boundarySets.length,
       boundaries: totalBoundaries,
-      classrooms: classRefs.length,
+      classrooms: classroomRefs.length,
       students: studentRefs.length,
     },
   }

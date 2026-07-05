@@ -4,7 +4,7 @@ import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
 
 export interface SortableStudentTableProps {
-  classes: RosterClassroomOption[]
+  classrooms: RosterClassroomOption[]
   onStudentStatusUpdate: (
     studentId: string,
     status: ExamStudentStatus
@@ -23,7 +23,7 @@ export interface SortableStudentTableProps {
   searchTerm: string
   onSearchChange: (value: string) => void
   selectedClassroomId: string
-  onClassChange: (value: string) => void
+  onClassroomChange: (value: string) => void
   statusFilter: ExamStudentStatus | "all"
   onStatusChange: (value: ExamStudentStatus | "all") => void
 }

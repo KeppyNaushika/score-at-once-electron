@@ -61,12 +61,12 @@ export function IndividualReportSettings({
               options.showAverage === "both"
             }
             onChange={(value) => {
-              const showClass =
+              const showClassroom =
                 options.showAverage === "class" ||
                 options.showAverage === "both"
-              if (value && showClass) updateOption("showAverage", "both")
+              if (value && showClassroom) updateOption("showAverage", "both")
               else if (value) updateOption("showAverage", "overall")
-              else if (showClass) updateOption("showAverage", "class")
+              else if (showClassroom) updateOption("showAverage", "class")
               else updateOption("showAverage", "none")
             }}
           />
@@ -103,14 +103,14 @@ export function IndividualReportSettings({
               (options.rankType === "overall" || options.rankType === "both")
             }
             onChange={(value) => {
-              const showClass =
+              const showClassroom =
                 options.showRank &&
                 (options.rankType === "class" || options.rankType === "both")
-              if (value && showClass) {
+              if (value && showClassroom) {
                 onChange({ ...options, showRank: true, rankType: "both" })
               } else if (value) {
                 onChange({ ...options, showRank: true, rankType: "overall" })
-              } else if (showClass) {
+              } else if (showClassroom) {
                 onChange({ ...options, rankType: "class" })
               } else {
                 onChange({ ...options, showRank: false })

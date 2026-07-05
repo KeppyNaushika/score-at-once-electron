@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 
 import { EditableTable } from "@/components/common/EditableTable"
 
-interface ClassStudentImportRow {
+interface ClassroomStudentImportRow {
   studentId: string
   attendanceNumber: string
   startDate: string
@@ -12,15 +12,15 @@ interface ClassStudentImportRow {
 }
 
 interface ClassroomStudentImportTableProps {
-  data: ClassStudentImportRow[]
-  onDataChange: (data: ClassStudentImportRow[]) => void
+  data: ClassroomStudentImportRow[]
+  onDataChange: (data: ClassroomStudentImportRow[]) => void
 }
 
 export default function ClassroomStudentImportTable({
   data,
   onDataChange,
 }: ClassroomStudentImportTableProps) {
-  const columns: ColumnDef<ClassStudentImportRow>[] = [
+  const columns: ColumnDef<ClassroomStudentImportRow>[] = [
     {
       id: "studentId",
       header: "学籍番号",

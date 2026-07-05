@@ -58,7 +58,7 @@ interface StudentSortable {
 export default function StudentTable() {
   const router = useRouter()
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
-  const [classes, setClasses] = useState<ClassroomWithMemberships[]>([])
+  const [classrooms, setClassrooms] = useState<ClassroomWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
     useState<string>("current_unassigned")
@@ -86,9 +86,9 @@ export default function StudentTable() {
     const fetchData = async () => {
       try {
         const fetchedStudents = await window.electronAPI.fetchStudents()
-        const fetchedClasses = await window.electronAPI.fetchClasses()
+        const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
         setStudents(fetchedStudents || [])
-        setClasses(fetchedClasses || [])
+        setClassrooms(fetchedClassrooms || [])
       } catch (error) {
         console.error("Failed to fetch data:", error)
       }
@@ -107,12 +107,12 @@ export default function StudentTable() {
         student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())
 
       if (filterClassroomId !== "all") {
-        const belongsToClass = student.memberships.some(
+        const belongsToClassroom = student.memberships.some(
           (membership) =>
             membership.classroom.id === filterClassroomId &&
             isCurrentMembership(membership)
         )
-        if (!belongsToClass) return false
+        if (!belongsToClassroom) return false
       }
 
       if (filterMembershipStatus === "current_unassigned") {
@@ -285,9 +285,9 @@ export default function StudentTable() {
   const refreshData = async () => {
     try {
       const fetchedStudents = await window.electronAPI.fetchStudents()
-      const fetchedClasses = await window.electronAPI.fetchClasses()
+      const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
       setStudents(fetchedStudents || [])
-      setClasses(fetchedClasses || [])
+      setClassrooms(fetchedClassrooms || [])
     } catch (error) {
       console.error("Failed to refresh data:", error)
     }
@@ -305,8 +305,8 @@ export default function StudentTable() {
     })
   }
 
-  // Get current classes for display
-  const getCurrentClasses = (student: StudentWithMemberships) => {
+  // Get current classrooms for display
+  const getCurrentClassrooms = (student: StudentWithMemberships) => {
     return student.memberships
       .filter((membership) => isCurrentMembership(membership))
       .map((membership) => ({
@@ -387,7 +387,7 @@ export default function StudentTable() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべての学級</SelectItem>
-              {classes
+              {classrooms
                 .filter((classroom) => classroom.isVisible !== false)
                 .sort((classroomA, classroomB) =>
                   classroomA.name.localeCompare(classroomB.name)
@@ -469,7 +469,7 @@ export default function StudentTable() {
             </TableHeader>
             <TableBody>
               {sortedData.map(({ original: student }) => {
-                const currentClasses = getCurrentClasses(student)
+                const currentClassrooms = getCurrentClassrooms(student)
                 const isSelected = selectedStudentIds.has(student.id)
 
                 return (
@@ -502,7 +502,7 @@ export default function StudentTable() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
-                        {currentClasses.map((classroom, idx) => (
+                        {currentClassrooms.map((classroom, idx) => (
                           <Badge
                             key={idx}
                             variant="secondary"
@@ -511,7 +511,7 @@ export default function StudentTable() {
                             {classroom.name}
                           </Badge>
                         ))}
-                        {currentClasses.length === 0 && (
+                        {currentClassrooms.length === 0 && (
                           <span className="text-muted-foreground text-sm">
                             未所属
                           </span>

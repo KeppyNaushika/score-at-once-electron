@@ -27,7 +27,7 @@ function createMinimalStats(): StatisticsData {
       boxPlot: { min: 50, q1: 60, median: 70, q3: 80, max: 90 },
       total: 3,
     },
-    classes: [
+    classrooms: [
       {
         classroomId: "cA",
         className: "A",
@@ -184,7 +184,7 @@ describe("computeFilteredStats", () => {
 
     expect(result.personal.deviation).toBe(0)
     expect(result.personal.overallRank).toBe(0)
-    expect(result.classes[0].rank).toBe(0)
+    expect(result.classrooms[0].rank).toBe(0)
   })
 
   it("全ステータス有効時はフィルタリングせず元の統計を返す", () => {

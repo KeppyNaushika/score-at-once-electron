@@ -154,7 +154,7 @@ const buildS3Database = async () => {
   )
   await exec(`CREATE UNIQUE INDEX "User_username_key" ON "User"("username")`)
   await exec(
-    `CREATE TABLE "classes" ("id" TEXT NOT NULL PRIMARY KEY, "name" TEXT NOT NULL, "classCode" TEXT, "grade" INTEGER, "description" TEXT, "isVisible" BOOLEAN NOT NULL DEFAULT true, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`
+    `CREATE TABLE "classes" ("id" TEXT NOT NULL PRIMARY KEY, "name" TEXT NOT NULL, "classroomCode" TEXT, "grade" INTEGER, "description" TEXT, "isVisible" BOOLEAN NOT NULL DEFAULT true, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`
   )
   await exec(`CREATE UNIQUE INDEX "classes_name_key" ON "classes"("name")`)
   await exec(

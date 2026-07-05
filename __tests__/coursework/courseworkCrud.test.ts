@@ -17,7 +17,7 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
-  addStudentsFromClassToCoursework,
+  addStudentsFromClassroomToCoursework,
   addStudentsToCoursework,
   batchUpsertCourseworkScores,
   createCoursework,
@@ -26,13 +26,13 @@ import {
   deleteCourseworkItem,
   getCourseworkById,
   getCourseworkCandidates,
-  getCourseworkClasses,
-  getCourseworkClassRemovalPreview,
+  getCourseworkClassroomRemovalPreview,
+  getCourseworkClassrooms,
   getCourseworkScoresByItemId,
   getCourseworkStudents,
-  removeClassFromCoursework,
+  removeClassroomFromCoursework,
   removeStudentsFromCoursework,
-  setCourseworkClassOrders,
+  setCourseworkClassroomOrders,
   updateCoursework,
   updateCourseworkItem,
   updateCourseworkStudentOrders,
@@ -238,14 +238,14 @@ describe("Coursework CRUD", () => {
   })
 
   describe("学級の並び替え・削除（Phase 5）", () => {
-    /** 資料 + classA(s1,s2) + classB(s3) を作り、両学級を資料へ登録する */
+    /** 資料 + classroomA(s1,s2) + classroomB(s3) を作り、両学級を資料へ登録する */
     async function createClassData() {
       const courseworkResult = await createCoursework({ name: "学級操作資料" })
       const courseworkId = courseworkResult.coursework!.id
-      const classA = await testPrisma.classroom.create({
+      const classroomA = await testPrisma.classroom.create({
         data: { name: "1年A組", grade: 1 },
       })
-      const classB = await testPrisma.classroom.create({
+      const classroomB = await testPrisma.classroom.create({
         data: { name: "1年B組", grade: 1 },
       })
       const { student1, student2 } = await createStudents()
@@ -261,41 +261,48 @@ describe("Coursework CRUD", () => {
       await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student1.id,
-          classroomId: classA.id,
+          classroomId: classroomA.id,
           attendanceNumber: 1,
         },
       })
       await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student2.id,
-          classroomId: classA.id,
+          classroomId: classroomA.id,
           attendanceNumber: 2,
         },
       })
       await testPrisma.studentClassroomMembership.create({
         data: {
           studentId: student3.id,
-          classroomId: classB.id,
+          classroomId: classroomB.id,
           attendanceNumber: 1,
         },
       })
-      await addStudentsFromClassToCoursework(courseworkId, classA.id)
-      await addStudentsFromClassToCoursework(courseworkId, classB.id)
-      return { courseworkId, classA, classB, student1, student2, student3 }
+      await addStudentsFromClassroomToCoursework(courseworkId, classroomA.id)
+      await addStudentsFromClassroomToCoursework(courseworkId, classroomB.id)
+      return {
+        courseworkId,
+        classroomA,
+        classroomB,
+        student1,
+        student2,
+        student3,
+      }
     }
 
-    it("setCourseworkClassOrders で学級の並び順を更新できる", async () => {
-      const { courseworkId, classA, classB } = await createClassData()
+    it("setCourseworkClassroomOrders で学級の並び順を更新できる", async () => {
+      const { courseworkId, classroomA, classroomB } = await createClassData()
 
-      const result = await setCourseworkClassOrders(courseworkId, [
-        classB.id,
-        classA.id,
+      const result = await setCourseworkClassroomOrders(courseworkId, [
+        classroomB.id,
+        classroomA.id,
       ])
       expect(result.success).toBe(true)
 
-      const classes = await getCourseworkClasses(courseworkId)
+      const classrooms = await getCourseworkClassrooms(courseworkId)
       const byName = new Map(
-        classes.classes!.map((classroom) => [
+        classrooms.classrooms!.map((classroom) => [
           classroom.className,
           classroom.order,
         ])
@@ -304,39 +311,42 @@ describe("Coursework CRUD", () => {
       expect(byName.get("1年A組")).toBe(1)
     })
 
-    it("getCourseworkClassRemovalPreview が専属生徒数を返す", async () => {
-      const { courseworkId, classA } = await createClassData()
+    it("getCourseworkClassroomRemovalPreview が専属生徒数を返す", async () => {
+      const { courseworkId, classroomA } = await createClassData()
 
-      const preview = await getCourseworkClassRemovalPreview(
+      const preview = await getCourseworkClassroomRemovalPreview(
         courseworkId,
-        classA.id
+        classroomA.id
       )
       expect(preview.success).toBe(true)
-      // classA の s1,s2 は他学級に属さない → 2名
+      // classroomA の s1,s2 は他学級に属さない → 2名
       expect(preview.exclusiveCount).toBe(2)
     })
 
     it("deleteStudents=false なら登録解除のみで生徒は残る", async () => {
-      const { courseworkId, classA } = await createClassData()
+      const { courseworkId, classroomA } = await createClassData()
 
-      const result = await removeClassFromCoursework(
+      const result = await removeClassroomFromCoursework(
         courseworkId,
-        classA.id,
+        classroomA.id,
         false
       )
       expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(0)
 
-      const classes = await getCourseworkClasses(courseworkId)
-      expect(classes.classes).toHaveLength(1) // classB のみ
+      const classrooms = await getCourseworkClassrooms(courseworkId)
+      expect(classrooms.classrooms).toHaveLength(1) // classroomB のみ
       const students = await getCourseworkStudents(courseworkId)
       expect(students.students).toHaveLength(3) // 生徒は全員残る
     })
 
     it("deleteStudents=true（既定）なら専属生徒を削除する", async () => {
-      const { courseworkId, classA } = await createClassData()
+      const { courseworkId, classroomA } = await createClassData()
 
-      const result = await removeClassFromCoursework(courseworkId, classA.id)
+      const result = await removeClassroomFromCoursework(
+        courseworkId,
+        classroomA.id
+      )
       expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(2) // s1,s2
 

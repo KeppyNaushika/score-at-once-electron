@@ -60,15 +60,15 @@ import {
   upsertGradeOverride,
 } from "../lib/prisma/gradeOverride"
 import {
-  addStudentsFromClassToGrade,
+  addStudentsFromClassroomToGrade,
   addStudentsToGrade,
-  getAvailableClassesForGrade,
+  getAvailableClassroomsForGrade,
   getAvailableStudentsForGrade,
-  getGradeClasses,
-  getGradeClassRemovalPreview,
+  getGradeClassroomRemovalPreview,
+  getGradeClassrooms,
   getStudentsByGradeId,
-  removeClassFromGrade,
-  setGradeClassOrders,
+  removeClassroomFromGrade,
+  setGradeClassroomOrders,
   updateGradeStudentOrders,
 } from "../lib/prisma/gradeStudent"
 import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
@@ -138,14 +138,14 @@ export function setupGradeHandlers(): void {
     return getStudentsByGradeId(gradeId)
   })
 
-  registerHandler("grade:getClasses", async (gradeId: string) => {
-    return getGradeClasses(gradeId)
+  registerHandler("grade:getClassrooms", async (gradeId: string) => {
+    return getGradeClassrooms(gradeId)
   })
 
   registerHandler(
-    "grade:getAvailableClasses",
+    "grade:getAvailableClassrooms",
     async (gradeId: string, activeOnly = true) => {
-      return getAvailableClassesForGrade(gradeId, activeOnly)
+      return getAvailableClassroomsForGrade(gradeId, activeOnly)
     }
   )
 
@@ -157,9 +157,9 @@ export function setupGradeHandlers(): void {
   )
 
   registerHandler(
-    "grade:addStudentsFromClass",
+    "grade:addStudentsFromClassroom",
     async (gradeId: string, classroomId: string, activeOnly = true) => {
-      return addStudentsFromClassToGrade(gradeId, classroomId, activeOnly)
+      return addStudentsFromClassroomToGrade(gradeId, classroomId, activeOnly)
     }
   )
 
@@ -171,23 +171,23 @@ export function setupGradeHandlers(): void {
   )
 
   registerHandler(
-    "grade:removeClass",
+    "grade:removeClassroom",
     async (gradeId: string, classroomId: string, deleteStudents = true) => {
-      return removeClassFromGrade(gradeId, classroomId, deleteStudents)
+      return removeClassroomFromGrade(gradeId, classroomId, deleteStudents)
     }
   )
 
   registerHandler(
-    "grade:classRemovalPreview",
+    "grade:classroomRemovalPreview",
     async (gradeId: string, classroomId: string) => {
-      return getGradeClassRemovalPreview(gradeId, classroomId)
+      return getGradeClassroomRemovalPreview(gradeId, classroomId)
     }
   )
 
   registerHandler(
-    "grade:setClassOrders",
+    "grade:setClassroomOrders",
     async (gradeId: string, orderedClassroomIds: string[]) => {
-      return setGradeClassOrders(gradeId, orderedClassroomIds)
+      return setGradeClassroomOrders(gradeId, orderedClassroomIds)
     }
   )
 

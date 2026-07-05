@@ -57,14 +57,14 @@ export function RosterTableRow({
         </div>
       </TableCell>
       <TableCell className="text-center font-medium">
-        {row.classInfo.attendanceNumber ?? "-"}
+        {row.classroomInfo.attendanceNumber ?? "-"}
       </TableCell>
       <TableCell className="font-mono">{row.studentNumber}</TableCell>
       <TableCell className="font-medium">
         {row.lastName} {row.firstName}
       </TableCell>
       <TableCell className="text-muted-foreground">{row.kana}</TableCell>
-      <TableCell>{row.classInfo.className ?? "-"}</TableCell>
+      <TableCell>{row.classroomInfo.className ?? "-"}</TableCell>
       {additionalColumns.map((column) => (
         <TableCell key={column.key} className={column.cellClassName}>
           {column.cell(row)}

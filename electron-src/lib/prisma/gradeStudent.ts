@@ -1,19 +1,19 @@
 /**
- * GradeStudent / GradeClass のPrisma操作関数
+ * GradeStudent / GradeClassroom のPrisma操作関数
  */
 
 import { resolveGradeScope } from "./auditScope"
-import { getAvailableClassesForTarget } from "./availableClassrooms"
+import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
 import {
   type RosterAdapter,
   rosterAddStudents,
-  rosterAddStudentsFromClass,
-  rosterClassRemovalPreview,
-  rosterRemoveClass,
-  rosterSetClassOrders,
+  rosterAddStudentsFromClassroom,
+  rosterClassroomRemovalPreview,
+  rosterRemoveClassroom,
+  rosterSetClassroomOrders,
   rosterUpdateStudentOrders,
 } from "./rosterManager"
 
@@ -57,10 +57,10 @@ export async function getStudentsByGradeId(gradeId: string) {
 /**
  * 成績算出試験の登録学級一覧を取得
  */
-export async function getGradeClasses(gradeId: string) {
+export async function getGradeClassrooms(gradeId: string) {
   try {
     const referenceDate = await getExamReferenceDate(gradeId)
-    const classes = await prisma.gradeClassroom.findMany({
+    const classrooms = await prisma.gradeClassroom.findMany({
       where: { gradeId },
       include: {
         classroom: {
@@ -76,16 +76,16 @@ export async function getGradeClasses(gradeId: string) {
     })
     return {
       success: true,
-      classes: classes.map((gradeClass) => ({
-        id: gradeClass.id,
-        classroomId: gradeClass.classroomId,
-        className: gradeClass.classroom.name,
-        order: gradeClass.order,
-        studentCount: gradeClass.classroom.memberships.length,
+      classrooms: classrooms.map((gradeClassroom) => ({
+        id: gradeClassroom.id,
+        classroomId: gradeClassroom.classroomId,
+        className: gradeClassroom.classroom.name,
+        order: gradeClassroom.order,
+        studentCount: gradeClassroom.classroom.memberships.length,
       })),
     }
   } catch (error) {
-    console.error("Error getting grade exam classes:", error)
+    console.error("Error getting grade exam classrooms:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -100,7 +100,7 @@ export async function getGradeClasses(gradeId: string) {
  *   falseなら在籍期間に関わらず学級に在籍歴のある全生徒を数える。
  *   いずれの場合も、対象生徒が0名の学級は候補から除外する。
  */
-export async function getAvailableClassesForGrade(
+export async function getAvailableClassroomsForGrade(
   gradeId: string,
   activeOnly = true
 ) {
@@ -117,9 +117,9 @@ export async function getAvailableClassesForGrade(
       }),
     ])
 
-    const classes = await getAvailableClassesForTarget({
+    const classrooms = await getAvailableClassroomsForTarget({
       existingClassroomIds: existing.map(
-        (gradeClass) => gradeClass.classroomId
+        (gradeClassroom) => gradeClassroom.classroomId
       ),
       excludeStudentIds: gradeStudents.map(
         (gradeStudent) => gradeStudent.studentId
@@ -128,9 +128,9 @@ export async function getAvailableClassesForGrade(
       activeOnly,
     })
 
-    return { success: true, classes }
+    return { success: true, classrooms }
   } catch (error) {
-    console.error("Error getting available classes:", error)
+    console.error("Error getting available classrooms:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -201,21 +201,21 @@ const gradeRosterAdapter: RosterAdapter = {
       )
     )
   },
-  classMaxOrder: async (targetId) => {
+  classroomMaxOrder: async (targetId) => {
     const result = await prisma.gradeClassroom.aggregate({
       where: { gradeId: targetId },
       _max: { order: true },
     })
     return result._max.order
   },
-  upsertClass: async (targetId, classroomId, order) => {
+  upsertClassroom: async (targetId, classroomId, order) => {
     await prisma.gradeClassroom.upsert({
       where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
       create: { gradeId: targetId, classroomId, order },
       update: {},
     })
   },
-  setClassOrders: async (targetId, orders) => {
+  setClassroomOrders: async (targetId, orders) => {
     await prisma.$transaction(
       orders.map((order) =>
         prisma.gradeClassroom.updateMany({
@@ -230,9 +230,9 @@ const gradeRosterAdapter: RosterAdapter = {
       where: { gradeId: targetId, classroomId: { not: exceptClassroomId } },
       select: { classroomId: true },
     })
-    return rows.map((gradeClass) => gradeClass.classroomId)
+    return rows.map((gradeClassroom) => gradeClassroom.classroomId)
   },
-  removeClassAndStudents: async (targetId, classroomId, studentIds) => {
+  removeClassroomAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([
       prisma.gradeStudent.deleteMany({
         where: { gradeId: targetId, studentId: { in: studentIds } },
@@ -245,15 +245,15 @@ const gradeRosterAdapter: RosterAdapter = {
   scope: (targetId) => resolveGradeScope(targetId),
   audit: {
     studentEntity: "GradeStudent",
-    classEntity: "GradeClassroom",
+    classroomEntity: "GradeClassroom",
     addAction: "grade.student.add",
     removeAction: "grade.student.remove",
     reorderAction: "grade.student.reorder",
     reorderCoalescePrefix: "grade_student_reorder",
-    addFromClassSummary: (count) =>
+    addFromClassroomSummary: (count) =>
       `学級から成績対象生徒を${count}名追加しました`,
     addIndividualSummary: (count) => `成績対象生徒を${count}名追加しました`,
-    removeClassSummary: (count) =>
+    removeClassroomSummary: (count) =>
       `学級を成績から外し、生徒${count}名を削除しました`,
   },
 }
@@ -263,12 +263,12 @@ const gradeRosterAdapter: RosterAdapter = {
  *
  * @param activeOnly trueなら基準日時点で在籍中の生徒のみ追加する（既定）。
  */
-export function addStudentsFromClassToGrade(
+export function addStudentsFromClassroomToGrade(
   gradeId: string,
   classroomId: string,
   activeOnly = true
 ) {
-  return rosterAddStudentsFromClass(
+  return rosterAddStudentsFromClassroom(
     gradeRosterAdapter,
     gradeId,
     classroomId,
@@ -290,19 +290,23 @@ export function updateGradeStudentOrders(
 }
 
 /** 学級の並び順を更新 */
-export function setGradeClassOrders(
+export function setGradeClassroomOrders(
   gradeId: string,
   orderedClassroomIds: string[]
 ) {
-  return rosterSetClassOrders(gradeRosterAdapter, gradeId, orderedClassroomIds)
+  return rosterSetClassroomOrders(
+    gradeRosterAdapter,
+    gradeId,
+    orderedClassroomIds
+  )
 }
 
 /** 学級削除のプレビュー（専属生徒の削除数） */
-export function getGradeClassRemovalPreview(
+export function getGradeClassroomRemovalPreview(
   gradeId: string,
   classroomId: string
 ) {
-  return rosterClassRemovalPreview(gradeRosterAdapter, gradeId, classroomId)
+  return rosterClassroomRemovalPreview(gradeRosterAdapter, gradeId, classroomId)
 }
 
 /**
@@ -310,12 +314,12 @@ export function getGradeClassRemovalPreview(
  *
  * @param deleteStudents trueなら専属生徒も削除（既定）。falseなら登録解除のみ。
  */
-export function removeClassFromGrade(
+export function removeClassroomFromGrade(
   gradeId: string,
   classroomId: string,
   deleteStudents = true
 ) {
-  return rosterRemoveClass(
+  return rosterRemoveClassroom(
     gradeRosterAdapter,
     gradeId,
     classroomId,

@@ -309,10 +309,10 @@ describe("collectExamData", () => {
     // メンバーシップが学級と生徒を結びつけている
     expect(data.classesData.memberships.length).toBe(2)
     for (const membership of data.classesData.memberships) {
-      const classMatch = data.classesData.classrooms.find(
+      const classroomMatch = data.classesData.classrooms.find(
         (classroom) => classroom.id === membership.classroomId
       )
-      expect(classMatch).toBeDefined()
+      expect(classroomMatch).toBeDefined()
     }
   })
 })

@@ -75,8 +75,8 @@ export function GradeImportDialog({
 
   if (!preview) return null
 
-  const classMatched = preview.classMatches.filter(
-    (classMatch) => classMatch.found
+  const classroomMatched = preview.classroomMatches.filter(
+    (classroomMatch) => classroomMatch.found
   ).length
   const examMatched = preview.examMatches.filter(
     (examMatch) => examMatch.found
@@ -106,7 +106,7 @@ export function GradeImportDialog({
           {/* 照合サマリ */}
           <div className="mb-4 flex flex-wrap gap-2 text-sm">
             <Badge variant="outline">
-              学級 {classMatched}/{preview.classMatches.length} 一致
+              学級 {classroomMatched}/{preview.classroomMatches.length} 一致
             </Badge>
             <Badge variant="outline">
               試験 {examMatched}/{preview.examMatches.length} 一致

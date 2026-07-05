@@ -29,25 +29,27 @@ interface StatisticsClassroomSelectorProps {
 export function StatisticsClassroomSelector({
   examId,
 }: StatisticsClassroomSelectorProps) {
-  const [classes, setClasses] = useState<ExamClassroomWithMemberships[]>([])
+  const [classrooms, setClassrooms] = useState<ExamClassroomWithMemberships[]>(
+    []
+  )
   const [loading, setLoading] = useState(true)
 
-  const fetchClasses = useCallback(async () => {
+  const fetchClassrooms = useCallback(async () => {
     if (!examId) return
     setLoading(true)
     try {
       const result = await window.electronAPI.examClassroom.getAll(examId)
-      setClasses(result ?? [])
+      setClassrooms(result ?? [])
     } catch (err) {
-      console.error("Failed to load exam classes:", err)
+      console.error("Failed to load exam classrooms:", err)
     } finally {
       setLoading(false)
     }
   }, [examId])
 
   useEffect(() => {
-    fetchClasses()
-  }, [fetchClasses])
+    fetchClassrooms()
+  }, [fetchClassrooms])
 
   const updateFlag = useCallback(
     async (
@@ -55,7 +57,7 @@ export function StatisticsClassroomSelector({
       patch: { teacherStatistics?: boolean; studentReport?: boolean }
     ) => {
       // 楽観的更新
-      setClasses((prev) =>
+      setClassrooms((prev) =>
         prev.map((examClassroom) =>
           examClassroom.id === examClassroomId
             ? { ...examClassroom, ...patch }
@@ -70,10 +72,10 @@ export function StatisticsClassroomSelector({
       } catch (err) {
         console.error("Failed to update exam class flags:", err)
         // 失敗時は再取得して整合
-        fetchClasses()
+        fetchClassrooms()
       }
     },
-    [fetchClasses]
+    [fetchClassrooms]
   )
 
   if (loading) {
@@ -84,7 +86,7 @@ export function StatisticsClassroomSelector({
     )
   }
 
-  if (classes.length === 0) {
+  if (classrooms.length === 0) {
     return (
       <div className="text-muted-foreground rounded-md border py-8 text-center text-sm">
         <p>統計対象にできる学級がありません</p>
@@ -123,7 +125,7 @@ export function StatisticsClassroomSelector({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {classes.map((examClassroom) => (
+            {classrooms.map((examClassroom) => (
               <TableRow key={examClassroom.id}>
                 <TableCell className="font-medium">
                   {examClassroom.classroom.name}

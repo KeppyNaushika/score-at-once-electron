@@ -142,15 +142,15 @@ export async function detectAllConflicts(
     })
 
     // 学級
-    const classConflicts = createConflictItems(
+    const classroomConflicts = createConflictItems(
       matchResults.classes,
-      "Class",
+      "Classroom",
       (classroom) => classroom.name
     )
     results.push({
-      category: "Class",
+      category: "Classroom",
       summary: createMatchingSummary(matchResults.classes),
-      conflictItems: classConflicts,
+      conflictItems: classroomConflicts,
       idMapping: createIdMapping(matchResults.classes),
     })
 

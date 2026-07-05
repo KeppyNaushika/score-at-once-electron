@@ -14,7 +14,9 @@ type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
 }>
 
 /** 全学級を取得する（memberships.student リレーション含む、出席番号順） */
-export const fetchClasses = async (): Promise<ClassroomWithMemberships[]> => {
+export const fetchClassrooms = async (): Promise<
+  ClassroomWithMemberships[]
+> => {
   try {
     return await prisma.classroom.findMany({
       include: {
@@ -31,18 +33,18 @@ export const fetchClasses = async (): Promise<ClassroomWithMemberships[]> => {
       },
     })
   } catch (error) {
-    console.error("Failed to fetch classes:", error)
+    console.error("Failed to fetch classrooms:", error)
     throw error
   }
 }
 
 /** 学級を新規作成する（memberships.student リレーション含む） */
-export const createClass = async (
-  classData: Prisma.ClassroomCreateInput
+export const createClassroom = async (
+  classroomData: Prisma.ClassroomCreateInput
 ): Promise<ClassroomWithMemberships> => {
   try {
     const created = await prisma.classroom.create({
-      data: classData,
+      data: classroomData,
       include: {
         memberships: {
           include: {
@@ -72,14 +74,19 @@ export const createClass = async (
 }
 
 /** 学級情報を更新する（memberships.student リレーション含む） */
-export const updateClass = async (
-  classData: Prisma.ClassroomUpdateInput & { id: string }
+export const updateClassroom = async (
+  classroomData: Prisma.ClassroomUpdateInput & { id: string }
 ): Promise<ClassroomWithMemberships> => {
-  const { id, ...data } = classData
+  const { id, ...data } = classroomData
   try {
     const before = await prisma.classroom.findUnique({
       where: { id },
-      select: { name: true, grade: true, classCode: true, description: true },
+      select: {
+        name: true,
+        grade: true,
+        classroomCode: true,
+        description: true,
+      },
     })
 
     const updated = await prisma.classroom.update({
@@ -109,13 +116,13 @@ export const updateClass = async (
         {
           name: updated.name,
           grade: updated.grade,
-          classCode: updated.classCode,
+          classroomCode: updated.classroomCode,
           description: updated.description,
         },
         [
           { field: "name", label: "学級名" },
           { field: "grade", label: "学年" },
-          { field: "classCode", label: "学級コード" },
+          { field: "classroomCode", label: "学級コード" },
           { field: "description", label: "説明" },
         ]
       ),
@@ -129,7 +136,7 @@ export const updateClass = async (
 }
 
 /** 学級を削除する（現在所属中の生徒がいる場合はエラー） */
-export const deleteClass = async (
+export const deleteClassroom = async (
   classroomId: string
 ): Promise<Classroom | void> => {
   try {

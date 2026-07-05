@@ -25,19 +25,19 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 import type {
-  ClassRemovalMode,
-  ClassRemovalPreview,
+  ClassroomRemovalMode,
+  ClassroomRemovalPreview,
   ClassroomRosterEntry,
 } from "./types"
 
 interface ClassroomRemovalDialogProps {
   /** 削除対象（null のとき閉じている） */
   entry: ClassroomRosterEntry | null
-  mode: ClassRemovalMode
+  mode: ClassroomRemovalMode
   /** can-delete-students モードで削除対象になる生徒数を取得 */
   fetchRemovalPreview?: (
     entry: ClassroomRosterEntry
-  ) => Promise<ClassRemovalPreview>
+  ) => Promise<ClassroomRemovalPreview>
   /** 実行。deleteStudents=true で専属生徒も削除 */
   onConfirm: (
     entry: ClassroomRosterEntry,

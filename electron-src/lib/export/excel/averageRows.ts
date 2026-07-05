@@ -68,16 +68,16 @@ function buildAverageRow(
  *
  * - 1行目: 全体平均（受験者＝合計点 non-null）
  * - 以降: teacherStatistics=true の登録学級ごとの学級平均
- *   母集団は「学級全体」（受験日所属者・getClassMembersForExam）。生徒選択チェックとは無関係。
+ *   母集団は「学級全体」（受験日所属者・getClassroomMembersForExam）。生徒選択チェックとは無関係。
  *   1人の生徒は所属する全学級の平均に重複カウントされる。
  *
  * @param allScoringData 全受験生徒の採点データ（選択生徒ではなく試験全体）
- * @param teacherStatisticsClasses teacherStatistics=true の登録学級（受験日所属生徒つき）
+ * @param teacherStatisticsClassrooms teacherStatistics=true の登録学級（受験日所属生徒つき）
  */
-export function appendClassAverageRows(
+export function appendClassroomAverageRows(
   worksheet: ExcelJS.Worksheet,
   allScoringData: ScoringData[],
-  teacherStatisticsClasses: ExamClassroomWithMembers[],
+  teacherStatisticsClassrooms: ExamClassroomWithMembers[],
   subtotalColumns: SubtotalColumn[],
   questionRegions: CropRegion[]
 ): void {
@@ -101,7 +101,7 @@ export function appendClassAverageRows(
   const byId = new Map(
     allScoringData.map((scoringData) => [scoringData.studentId, scoringData])
   )
-  for (const examClassroom of teacherStatisticsClasses) {
+  for (const examClassroom of teacherStatisticsClassrooms) {
     const members = examClassroom.classroom.memberships
       .map((membership) => byId.get(membership.studentId))
       .filter(

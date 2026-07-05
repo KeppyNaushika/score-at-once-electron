@@ -43,8 +43,15 @@ describe("normalizeLegacyClassroomKeys（旧アーカイブ学級キーの後方
     })
   })
 
-  it("classCode など無関係な類似キーは変換しない", () => {
-    const value = { classCode: "A", classroomId: "c1" }
+  it("classCode → classroomCode に変換する", () => {
+    const old = { items: [{ id: "c1", classCode: "A" }] }
+    expect(normalizeLegacyClassroomKeys(old)).toEqual({
+      items: [{ id: "c1", classroomCode: "A" }],
+    })
+  })
+
+  it("マップにない類似キー（classLevel など）は変換しない", () => {
+    const value = { classLevel: "A", classroomId: "c1" }
     expect(normalizeLegacyClassroomKeys(value)).toEqual(value)
   })
 

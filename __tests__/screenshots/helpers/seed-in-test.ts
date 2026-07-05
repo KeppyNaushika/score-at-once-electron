@@ -316,10 +316,10 @@ export async function seedClasses(
   studentIds: string[]
 ): Promise<{ classAId: string; classBId: string }> {
   const db = getPrisma()
-  const classA = await db.classroom.create({
+  const classroomA = await db.classroom.create({
     data: { id: randomUUID(), name: "2年A組", grade: 2 },
   })
-  const classB = await db.classroom.create({
+  const classroomB = await db.classroom.create({
     data: { id: randomUUID(), name: "2年B組", grade: 2 },
   })
   for (let i = 0; i < 20; i++) {
@@ -327,7 +327,7 @@ export async function seedClasses(
       data: {
         id: randomUUID(),
         studentId: studentIds[i],
-        classroomId: classA.id,
+        classroomId: classroomA.id,
         attendanceNumber: i + 1,
       },
     })
@@ -337,13 +337,13 @@ export async function seedClasses(
       data: {
         id: randomUUID(),
         studentId: studentIds[i],
-        classroomId: classB.id,
+        classroomId: classroomB.id,
         attendanceNumber: i - 19,
       },
     })
   }
   console.log(`  [SEED] 学級 2クラス 追加`)
-  return { classAId: classA.id, classBId: classB.id }
+  return { classAId: classroomA.id, classBId: classroomB.id }
 }
 
 // ---------------------------------------------------------------------------

@@ -115,9 +115,9 @@ export interface CourseworkAPI {
       students?: import("../coursework.types").CourseworkStudentWithDetails[]
       error?: string
     }>
-    getClasses: (courseworkId: string) => Promise<{
+    getClassrooms: (courseworkId: string) => Promise<{
       success: boolean
-      classes?: {
+      classrooms?: {
         id: string
         classroomId: string
         className: string
@@ -126,12 +126,12 @@ export interface CourseworkAPI {
       }[]
       error?: string
     }>
-    getAvailableClasses: (
+    getAvailableClassrooms: (
       courseworkId: string,
       activeOnly?: boolean
     ) => Promise<{
       success: boolean
-      classes?: {
+      classrooms?: {
         id: string
         name: string
         studentCount: number
@@ -152,7 +152,7 @@ export interface CourseworkAPI {
       }[]
       error?: string
     }>
-    addStudentsFromClass: (
+    addStudentsFromClassroom: (
       courseworkId: string,
       classroomId: string,
       activeOnly?: boolean
@@ -179,7 +179,7 @@ export interface CourseworkAPI {
       courseworkId: string,
       studentIds: string[]
     ) => Promise<{ success: boolean; removedCount?: number; error?: string }>
-    removeClass: (
+    removeClassroom: (
       courseworkId: string,
       classroomId: string,
       deleteStudents?: boolean
@@ -188,7 +188,7 @@ export interface CourseworkAPI {
       removedStudents?: number
       error?: string
     }>
-    classRemovalPreview: (
+    classroomRemovalPreview: (
       courseworkId: string,
       classroomId: string
     ) => Promise<{
@@ -196,7 +196,7 @@ export interface CourseworkAPI {
       exclusiveCount?: number
       error?: string
     }>
-    setClassOrders: (
+    setClassroomOrders: (
       courseworkId: string,
       orderedClassroomIds: string[]
     ) => Promise<{ success: boolean; error?: string }>

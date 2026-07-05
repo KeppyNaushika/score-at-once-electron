@@ -106,8 +106,8 @@ export async function calculateGrades(gradeId: string): Promise<{
       orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
     })
 
-    const classIds = grade.gradeClassrooms.map(
-      (gradeClass) => gradeClass.classroomId
+    const classroomIds = grade.gradeClassrooms.map(
+      (gradeClassroom) => gradeClassroom.classroomId
     )
 
     // 3. 上書きデータを取得
@@ -284,7 +284,7 @@ export async function calculateGrades(gradeId: string): Promise<{
     for (const examStudent of examStudents) {
       const student = examStudent.student
       const membership = student.memberships.find((membership) =>
-        classIds.includes(membership.classroomId)
+        classroomIds.includes(membership.classroomId)
       )
       const gradeItemResults: GradeItemResult[] = []
 
@@ -512,7 +512,7 @@ export async function calculateGrades(gradeId: string): Promise<{
         gradeId: grade.id,
         gradeName: grade.name,
         classNames: grade.gradeClassrooms.map(
-          (gradeClass) => gradeClass.classroom.name
+          (gradeClassroom) => gradeClassroom.classroom.name
         ),
         gradeItems: grade.gradeItems.map((gradeItem) => ({
           id: gradeItem.id,

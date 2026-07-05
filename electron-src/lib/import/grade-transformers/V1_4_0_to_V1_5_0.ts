@@ -70,7 +70,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
     const classesData: ArchiveCwClass[] = [...classNames].map((name) => ({
       id: synthClassroomId(name),
       name,
-      classCode: null,
+      classroomCode: null,
       grade: null,
       description: null,
       isVisible: true,

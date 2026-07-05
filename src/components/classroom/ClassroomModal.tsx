@@ -19,17 +19,17 @@ import { Textarea } from "@/components/ui/textarea"
 interface ClassroomModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (classData: {
+  onSave: (classroomData: {
     name: string
-    classCode?: string
+    classroomCode?: string
     grade?: number
     description?: string
     isVisible?: boolean
   }) => void
-  classToEdit?: {
+  classroomToEdit?: {
     id: string
     name: string
-    classCode?: string | null
+    classroomCode?: string | null
     grade?: number | null
     description?: string | null
     isVisible?: boolean | null
@@ -42,10 +42,10 @@ export default function ClassroomModal({
   isOpen,
   onClose,
   onSave,
-  classToEdit,
+  classroomToEdit,
 }: ClassroomModalProps) {
   const [name, setName] = useState("")
-  const [classCode, setClassCode] = useState("")
+  const [classroomCode, setClassroomCode] = useState("")
   const [grade, setGrade] = useState<number | undefined>(undefined)
   const [description, setDescription] = useState("")
   const [isVisible, setIsVisible] = useState(true)
@@ -59,15 +59,15 @@ export default function ClassroomModal({
         return
       }
 
-      if (classToEdit) {
-        setName(classToEdit.name)
-        setClassCode(classToEdit.classCode ?? "")
-        setGrade(classToEdit.grade ?? undefined)
-        setDescription(classToEdit.description ?? "")
-        setIsVisible(classToEdit.isVisible ?? true)
+      if (classroomToEdit) {
+        setName(classroomToEdit.name)
+        setClassroomCode(classroomToEdit.classroomCode ?? "")
+        setGrade(classroomToEdit.grade ?? undefined)
+        setDescription(classroomToEdit.description ?? "")
+        setIsVisible(classroomToEdit.isVisible ?? true)
       } else {
         setName("")
-        setClassCode("")
+        setClassroomCode("")
         setGrade(undefined)
         setDescription("")
         setIsVisible(true)
@@ -79,7 +79,7 @@ export default function ClassroomModal({
       cancelled = true
       cancelAnimationFrame(frame)
     }
-  }, [classToEdit, isOpen])
+  }, [classroomToEdit, isOpen])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -99,14 +99,14 @@ export default function ClassroomModal({
 
     onSave({
       name: name.trim(),
-      classCode: classCode.trim() || undefined,
+      classroomCode: classroomCode.trim() || undefined,
       grade: grade === undefined ? undefined : Number(grade),
       description: description.trim() || undefined,
       isVisible,
     })
   }
 
-  // isSubjectClass の判定は削除
+  // isSubjectClassroom の判定は削除
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -122,7 +122,7 @@ export default function ClassroomModal({
       >
         <DialogHeader>
           <DialogTitle>
-            {classToEdit ? "学級情報を編集" : "新しい学級を作成"}
+            {classroomToEdit ? "学級情報を編集" : "新しい学級を作成"}
           </DialogTitle>
           <DialogDescription>
             学級の詳細情報を入力してください。
@@ -154,16 +154,16 @@ export default function ClassroomModal({
           {/* クラスコード */}
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
-              htmlFor="classCode"
+              htmlFor="classroomCode"
               className="text-muted-foreground text-right font-normal"
             >
               クラスコード
             </Label>
             <div className="col-span-3">
               <Input
-                id="classCode"
-                value={classCode}
-                onChange={(e) => setClassCode(e.target.value)}
+                id="classroomCode"
+                value={classroomCode}
+                onChange={(e) => setClassroomCode(e.target.value)}
                 placeholder="例: E1、M2、1A (任意)"
               />
               <p className="text-muted-foreground mt-1 text-xs">
@@ -225,14 +225,14 @@ export default function ClassroomModal({
           {/* 説明 */}
           <div className="grid grid-cols-4 items-start gap-x-4 gap-y-1">
             <Label
-              htmlFor="classDescription"
+              htmlFor="classroomDescription"
               className="text-muted-foreground pt-2 text-right font-normal"
             >
               説明
             </Label>
             <div className="col-span-3">
               <Textarea
-                id="classDescription"
+                id="classroomDescription"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="学級の説明・特徴など（任意）"

@@ -30,7 +30,7 @@ import {
   useClassroomManagement,
 } from "@/hooks/useClassroomManagement"
 
-export default function ClassDetailPage() {
+export default function ClassroomDetailPage() {
   const params = useParams()
   const router = useRouter()
   const classroomId =
@@ -38,7 +38,7 @@ export default function ClassDetailPage() {
 
   const {
     loading,
-    classData,
+    classroomData,
     students,
     isClassroomModalOpen,
     setIsClassroomModalOpen,
@@ -48,12 +48,12 @@ export default function ClassDetailPage() {
     setIsMembershipModalOpen,
     membershipToEdit,
     setMembershipToEdit,
-    handleSaveClass,
+    handleSaveClassroom,
     handleStudentImportSuccess,
     handleSaveMembership,
     handleDeleteMembership,
     handleBulkDeleteMemberships,
-    handleDeleteClass,
+    handleDeleteClassroom,
   } = useClassroomManagement(classroomId)
 
   const { studentResults, loading: analyticsLoading } =
@@ -74,7 +74,7 @@ export default function ClassDetailPage() {
   }
 
   const handleDeleteWithNavigation = async () => {
-    await handleDeleteClass()
+    await handleDeleteClassroom()
     router.push("/classrooms")
   }
 
@@ -89,7 +89,7 @@ export default function ClassDetailPage() {
     )
   }
 
-  if (!classData) {
+  if (!classroomData) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -114,23 +114,25 @@ export default function ClassDetailPage() {
     <ProtectedRoute>
       <div className="flex h-full flex-col">
         <PageHeader
-          title={classData.name}
+          title={classroomData.name}
           subtitle={
             <>
-              {classData.classCode && (
+              {classroomData.classroomCode && (
                 <Badge
                   variant="outline"
                   className="rounded-full px-2 py-0.5 text-xs font-normal"
                 >
-                  {classData.classCode}
+                  {classroomData.classroomCode}
                 </Badge>
               )}
-              {classData.grade && (
+              {classroomData.grade && (
                 <span className="bg-muted/50 rounded px-2 py-0.5 text-xs">
-                  {classData.grade}年
+                  {classroomData.grade}年
                 </span>
               )}
-              {classData.description && <span>{classData.description}</span>}
+              {classroomData.description && (
+                <span>{classroomData.description}</span>
+              )}
             </>
           }
         >
@@ -211,7 +213,7 @@ export default function ClassDetailPage() {
 
               <TabsContent value="membership">
                 <MembershipTable
-                  memberships={classData.memberships}
+                  memberships={classroomData.memberships}
                   onEdit={handleEditMembership}
                   onViewStudent={handleViewStudent}
                   onDelete={handleDeleteMembership}
@@ -226,8 +228,8 @@ export default function ClassDetailPage() {
         <ClassroomModal
           isOpen={isClassroomModalOpen}
           onClose={() => setIsClassroomModalOpen(false)}
-          onSave={handleSaveClass}
-          classToEdit={classData}
+          onSave={handleSaveClassroom}
+          classroomToEdit={classroomData}
         />
 
         <ClassroomStudentImportModal
@@ -235,7 +237,7 @@ export default function ClassDetailPage() {
           onClose={() => setIsStudentImportModalOpen(false)}
           onImportSuccess={handleStudentImportSuccess}
           classroomId={classroomId}
-          className={classData?.name || ""}
+          className={classroomData?.name || ""}
         />
 
         <StudentClassroomMembershipModal
@@ -245,7 +247,7 @@ export default function ClassDetailPage() {
           studentId={membershipToEdit?.studentId}
           classroomId={classroomId}
           availableStudents={students}
-          availableClasses={[]}
+          availableClassrooms={[]}
           membershipToEdit={membershipToEdit}
         />
       </div>
