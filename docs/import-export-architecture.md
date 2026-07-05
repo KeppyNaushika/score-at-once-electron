@@ -107,7 +107,7 @@ interface ArchiveManifest {
 | `examStudents`               | 試験-生徒紐づけ                                         |
 | `userExams`                  | 空配列 (v0.3.0+、インポート時に現在のユーザーで再作成)  |
 | `examSubtotalGroups`         | 試験-小計グループ紐づけ                                 |
-| `examClasses`                | 試験-学級紐づけ                                         |
+| `examClassrooms`             | 試験-学級紐づけ                                         |
 | `examMarkingFormats`         | 採点マーク設定 (v1.4.0+)                                |
 | `examExportSettings`         | エクスポート設定 (v1.4.0+)                              |
 | `cropRegionMarkingOverrides` | 領域別マーク上書き設定 (v1.4.0+)                        |
@@ -138,7 +138,7 @@ flowchart TD
 | 1    | Prisma `exam.findUnique` + includes    | examPages, cropRegions, questionScores, drawingAnnotations を一括取得 |
 | 2    | 関連する生徒IDを収集                   | examStudents, studentAnswerImages, questionScores から                |
 | 3    | 生徒データを取得                       | `student.findMany`                                                    |
-| 4    | 学級と所属を取得                       | StudentClassMembership 経由                                           |
+| 4    | 学級と所属を取得                       | StudentClassroomMembership 経由                                       |
 | 5    | 現在ユーザーのみ取得                   | **パスワード除外** (`select` で passcode を除外)                      |
 | 6    | (欠番)                                 | -                                                                     |
 | 7    | 小計グループ・小計を取得               | examSubtotalGroups 経由                                               |
@@ -190,7 +190,7 @@ flowchart TD
 
     subgraph "Stage 1: 単一トランザクション"
         I --> J[processStudentIdIntegration]
-        J --> K[processClassIdIntegration]
+        J --> K[processClassroomIdIntegration]
         K --> L[processSubtotalGroupIdIntegration]
         L --> M[processSubtotals]
         M --> N[processExam]
@@ -225,7 +225,7 @@ flowchart TD
 | 順序 | 関数                                | 処理内容                                       |
 | ---- | ----------------------------------- | ---------------------------------------------- |
 | 1    | `processStudentIdIntegration`       | 生徒のID照合 + 新規作成/既存紐づけ             |
-| 2    | `processClassIdIntegration`         | 学級のID照合 + 新規作成/既存紐づけ             |
+| 2    | `processClassroomIdIntegration`     | 学級のID照合 + 新規作成/既存紐づけ             |
 | 3    | `processSubtotalGroupIdIntegration` | 小計グループのID照合 + 新規作成/既存紐づけ     |
 | 4    | `processSubtotals`                  | 小計のマージ (名前+グループで重複チェック)     |
 | 5    | `processExam`                       | 試験作成 or 既存マージ判定                     |
@@ -317,7 +317,7 @@ flowchart TD
 | カテゴリ                     | UUID照合 | 二次照合キー                      |
 | ---------------------------- | -------- | --------------------------------- |
 | 生徒 (Student)               | id       | studentNumber, lastName+firstName |
-| 学級 (Class)                 | id       | name, classCode                   |
+| 学級 (Classroom)             | id       | name, classroomCode               |
 | 小計グループ (SubtotalGroup) | id       | name                              |
 | ユーザー (User)              | id       | username                          |
 | 試験 (Exam)                  | id       | (なし - ID一致のみ)               |
@@ -453,7 +453,7 @@ flowchart TD
         DB_QS[QuestionScore]
         DB_DA[DrawingAnnotation]
         DB_S[Student]
-        DB_C[Class]
+        DB_C[Classroom]
         DB_U[User]
         DB_SG[SubtotalGroup]
         DB_MI[MasterImage]
@@ -569,7 +569,7 @@ flowchart TD
 | ---------------------------------------------------------------- | ----------------------------------------------------------- |
 | `electron-src/lib/import/merge/matcher.ts`                       | 全カテゴリのマッチング統合、事前照合 (`performPreMatching`) |
 | `electron-src/lib/import/merge/matchers/studentMatcher.ts`       | 生徒のマッチング (UUID、学籍番号、氏名)                     |
-| `electron-src/lib/import/merge/matchers/classMatcher.ts`         | 学級のマッチング (UUID、名前、classCode)                    |
+| `electron-src/lib/import/merge/matchers/classroomMatcher.ts`     | 学級のマッチング (UUID、名前、classroomCode)                |
 | `electron-src/lib/import/merge/matchers/subtotalGroupMatcher.ts` | 小計グループのマッチング (UUID、名前)                       |
 | `electron-src/lib/import/merge/matchers/userMatcher.ts`          | ユーザーのマッチング (UUID、username)                       |
 | `electron-src/lib/import/merge/matchers/types.ts`                | マッチャー共通型定義                                        |

@@ -25,7 +25,7 @@ export async function previewGradeArchiveImport(
   const { gradeData } = data
   const courseworkArchive = data.courseworkArchive
 
-  // Class照合（複数学級対応）
+  // Classroom照合（複数学級対応）
   const classroomMatches = await Promise.all(
     gradeData.classroomRefs.map(async (ref) => {
       const existing = await prisma.classroom.findUnique({
@@ -35,7 +35,7 @@ export async function previewGradeArchiveImport(
     })
   )
 
-  // ExamExam照合
+  // Exam照合
   const examMatches = await Promise.all(
     gradeData.examRefs.map(async (ref) => {
       const exams = await prisma.exam.findMany({
@@ -164,7 +164,7 @@ export async function importGradeArchive(
           })
         }
 
-        // 2. Class照合→GradeClassroom作成
+        // 2. Classroom照合→GradeClassroom作成
         for (let i = 0; i < gradeData.classroomRefs.length; i++) {
           const ref = gradeData.classroomRefs[i]
           const classroom = await tx.classroom.findUnique({

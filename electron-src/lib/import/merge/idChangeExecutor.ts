@@ -2,18 +2,18 @@
  * ID変更処理
  *
  * 「書き出したPCに合わせる」を選んだ場合、既存IDを.scoreのIDに変更する。
- * 旧レコードを削除して新IDで作り直す方式のため、対象（Student/Class/SubtotalGroup）に
+ * 旧レコードを削除して新IDで作り直す方式のため、対象（Student/Classroom/SubtotalGroup）に
  * onDelete:Cascade で紐づく子テーブルは、旧レコード削除の前に必ず新IDへ移し替える
  * 必要がある。移し替え漏れがあると旧レコード削除時にサイレントにカスケード削除される。
  *
  * 【規約 / convention-as-code】
  * 対象への onDelete:Cascade 子テーブルを schema.prisma に追加したら、必ず対応する
- * CascadeMover を下記レジストリ（STUDENT/CLASS/SUBTOTAL_GROUP_CASCADE_MOVERS）へ
+ * CascadeMover を下記レジストリ（STUDENT/CLASSROOM/SUBTOTAL_GROUP_CASCADE_MOVERS）へ
  * 追加すること。レジストリと schema のカスケード子が一致しているかは
  * __tests__/import-export/unit/cascadeCoverage.test.ts が schema.prisma を解析して
  * 自動検証する（追加忘れはテストが赤くなって検出される）。
  *
- * UNIQUE制約のあるフィールド（Student.studentNumber, Class.name）は temp-value方式で回避:
+ * UNIQUE制約のあるフィールド（Student.studentNumber, Classroom.name）は temp-value方式で回避:
  * 既存レコードのUNIQUEフィールドを一時値に変更してから新レコードを作成し、旧を削除する。
  */
 
@@ -204,9 +204,9 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
 ]
 
 /**
- * Class に onDelete:Cascade で紐づく子テーブル全件。
+ * Classroom に onDelete:Cascade で紐づく子テーブル全件。
  */
-export const CLASS_CASCADE_MOVERS: CascadeMover[] = [
+export const CLASSROOM_CASCADE_MOVERS: CascadeMover[] = [
   {
     model: "StudentClassroomMembership",
     move: (tx, from, to) =>
@@ -382,7 +382,7 @@ async function changeStudentId(
 
 /**
  * 学級IDの変更（temp-value方式 + カスケード子の移し替え）
- * 移し替え対象は CLASS_CASCADE_MOVERS を参照（schema と一致をテストで強制）。
+ * 移し替え対象は CLASSROOM_CASCADE_MOVERS を参照（schema と一致をテストで強制）。
  */
 async function changeClassroomId(
   tx: PrismaTransaction,
@@ -417,7 +417,7 @@ async function changeClassroomId(
 
   // 3. カスケード子を全件移し替え（旧学級削除前に必須）
   await moveCascadeChildren(
-    CLASS_CASCADE_MOVERS,
+    CLASSROOM_CASCADE_MOVERS,
     tx,
     target.existingId,
     target.newId

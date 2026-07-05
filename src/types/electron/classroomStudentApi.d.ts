@@ -41,7 +41,7 @@ interface ClassroomStudentExamResult {
  * 学級・生徒・所属関連API
  */
 export interface ClassroomStudentAPI {
-  // Class related
+  // Classroom related
   fetchClassrooms: () => Promise<ClassroomWithMemberships[]>
   getClassroomsNotInExam: (
     examId: string,
@@ -99,7 +99,7 @@ export interface ClassroomStudentAPI {
     error?: string
   }>
 
-  // Student Class Membership related
+  // Student Classroom Membership related
   createStudentClassroomMembership: (
     membershipData: Prisma.StudentClassroomMembershipCreateInput
   ) => Promise<StudentClassroomMembershipWithDetails>

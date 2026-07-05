@@ -83,8 +83,8 @@ npx prisma studio
 ├── /src/app                     # Next.js App Router
 │   ├── /answer-sheet-builder    # 答案用紙ビルダー
 │   │   └── /[definitionId]      # 個別定義
-│   ├── /classes                 # 学級管理
-│   │   └── /[classId]           # 個別学級管理
+│   ├── /classrooms              # 学級管理
+│   │   └── /[classroomId]       # 個別学級管理
 │   ├── /dashboard               # ダッシュボード
 │   ├── /exams                   # 試験管理
 │   │   └── /[examId]            # 個別試験（8段階ワークフロー）
@@ -114,7 +114,7 @@ npx prisma studio
 ├── /src/components              # Reactコンポーネント
 │   ├── /answer-sheet-builder    # 答案用紙ビルダー
 │   ├── /auth                    # 認証コンポーネント
-│   ├── /class                   # 学級管理コンポーネント
+│   ├── /classroom               # 学級管理コンポーネント
 │   ├── /common                  # 共通コンポーネント
 │   ├── /drawing                 # 描画・アノテーション
 │   ├── /exams                   # 試験関連（8段階ワークフロー対応）

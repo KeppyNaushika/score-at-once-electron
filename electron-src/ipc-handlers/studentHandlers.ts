@@ -62,7 +62,7 @@ export function setupStudentHandlers(): void {
     return await deleteStudent(id)
   })
 
-  // Student Class Membership handlers
+  // Student Classroom Membership handlers
   registerHandler(
     "create-student-class-membership",
     async (membershipData: Prisma.StudentClassroomMembershipCreateInput) => {

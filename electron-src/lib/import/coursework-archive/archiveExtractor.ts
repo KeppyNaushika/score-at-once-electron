@@ -61,7 +61,7 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
       return { success: false, error: "マニフェストファイルが見つかりません" }
     }
 
-    // 学級リネーム前の旧キー（classroomId/classes）は読取り時に現行キーへ正規化
+    // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
     const courseworks = normalizeLegacyClassroomKeys(
       readJsonFile<ArchiveCourseworkRef[]>(tempDir, "courseworks.json") ?? []
     )
