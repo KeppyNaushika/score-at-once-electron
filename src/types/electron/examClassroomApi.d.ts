@@ -1,39 +1,11 @@
-import type { Classroom, Exam, ExamClassroom } from "@prisma/client"
+import type { ExamClassroom } from "@prisma/client"
 
-import type { ClassroomWithMemberships } from "../prismaExtensions"
-
-/**
- * ExamClassroom with class details
- */
-export interface ExamClassroomWithDetails {
-  id: string
-  examId: string
-  classroomId: string
-  administered: boolean
-  teacherStatistics: boolean
-  studentReport: boolean
-  order: number
-  createdAt: Date
-  updatedAt: Date
-  classroom: Classroom
-  exam: Exam
-}
-
-/**
- * ExamClassroom with class and membership details
- */
-export interface ExamClassroomWithMemberships {
-  id: string
-  examId: string
-  classroomId: string
-  administered: boolean
-  teacherStatistics: boolean
-  studentReport: boolean
-  order: number
-  createdAt: Date
-  updatedAt: Date
-  classroom: ClassroomWithMemberships
-}
+import type {
+  AddExamClassroomOptions,
+  ExamClassroomWithDetails,
+  ExamClassroomWithMemberships,
+  UpdateExamClassroomOptions,
+} from "@/electron-src/lib/prisma/examClassroom"
 
 /**
  * Available class for adding to ExamClassroom
@@ -69,24 +41,14 @@ export interface ExamClassroomAPI {
     /**
      * 試験にクラスを追加
      */
-    add: (options: {
-      examId: string
-      classroomId: string
-      administered?: boolean
-      teacherStatistics?: boolean
-      studentReport?: boolean
-    }) => Promise<ExamClassroomWithDetails>
+    add: (options: AddExamClassroomOptions) => Promise<ExamClassroomWithDetails>
 
     /**
      * ExamClassroomを更新
      */
-    update: (options: {
-      id: string
-      administered?: boolean
-      teacherStatistics?: boolean
-      studentReport?: boolean
-      order?: number
-    }) => Promise<ExamClassroomWithDetails>
+    update: (
+      options: UpdateExamClassroomOptions
+    ) => Promise<ExamClassroomWithDetails>
 
     /**
      * ExamClassroomを削除 (idで指定)

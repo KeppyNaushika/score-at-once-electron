@@ -1,6 +1,6 @@
 import type { Classroom } from "@prisma/client"
 
-import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroomApi"
+import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
 
 /**
  * 採番学級の解決結果（studentId → 表示学級・出席番号・学級順）。

@@ -9,7 +9,7 @@ import {
   type ClassroomRosterFlagColumn,
   ClassroomRosterManager,
 } from "@/components/common/classroom-roster"
-import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroomApi"
+import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
 
 interface ClassroomExamManagerProps {
   examId: string

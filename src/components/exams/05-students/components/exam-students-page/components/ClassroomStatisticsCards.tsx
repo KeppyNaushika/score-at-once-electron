@@ -1,6 +1,6 @@
 "use client"
 
-import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroomApi"
+import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
 
 interface ClassroomStatisticsCardsProps {
   examClassrooms: ExamClassroomWithMemberships[]

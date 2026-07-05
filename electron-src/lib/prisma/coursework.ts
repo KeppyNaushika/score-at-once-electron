@@ -24,11 +24,7 @@ import {
   rosterSetClassroomOrders,
   rosterUpdateStudentOrders,
 } from "./rosterManager"
-
-/** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
-function serialize<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data))
-}
+import { serializePrisma } from "./serializePrisma"
 
 /** Coursework の実施日（在籍判定の基準日）を取得 */
 async function getCourseworkDate(courseworkId: string): Promise<Date | null> {
@@ -52,7 +48,7 @@ export async function getCourseworks() {
       },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     })
-    return { success: true, courseworks: serialize(courseworks) }
+    return { success: true, courseworks: serializePrisma(courseworks) }
   } catch (error) {
     console.error("Error getting courseworks:", error)
     return {
@@ -90,7 +86,7 @@ export async function getCourseworkById(id: string) {
     if (!coursework) {
       return { success: false, error: "Coursework not found" }
     }
-    return { success: true, coursework: serialize(coursework) }
+    return { success: true, coursework: serializePrisma(coursework) }
   } catch (error) {
     console.error("Error getting coursework:", error)
     return {
@@ -124,7 +120,7 @@ export async function createCoursework(data: {
       target: coursework.name,
     })
 
-    return { success: true, coursework: serialize(coursework) }
+    return { success: true, coursework: serializePrisma(coursework) }
   } catch (error) {
     console.error("Error creating coursework:", error)
     return {
@@ -169,7 +165,7 @@ export async function updateCoursework(
       target: coursework.name,
     })
 
-    return { success: true, coursework: serialize(coursework) }
+    return { success: true, coursework: serializePrisma(coursework) }
   } catch (error) {
     console.error("Error updating coursework:", error)
     return {
@@ -304,7 +300,7 @@ export async function createCourseworkItem(data: {
       target: data.name,
     })
 
-    return { success: true, item: serialize(item) }
+    return { success: true, item: serializePrisma(item) }
   } catch (error) {
     console.error("Error creating coursework item:", error)
     return {
@@ -357,7 +353,7 @@ export async function updateCourseworkItem(
       target: item.name,
     })
 
-    return { success: true, item: serialize(item) }
+    return { success: true, item: serializePrisma(item) }
   } catch (error) {
     console.error("Error updating coursework item:", error)
     return {
@@ -452,7 +448,7 @@ export async function getCourseworkScoresByItemId(courseworkItemId: string) {
       },
       orderBy: { student: { studentNumber: "asc" } },
     })
-    return { success: true, scores: serialize(scores) }
+    return { success: true, scores: serializePrisma(scores) }
   } catch (error) {
     console.error("Error getting coursework scores:", error)
     return {
@@ -556,7 +552,7 @@ export async function getCourseworkStudents(courseworkId: string) {
       },
       orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
     })
-    return { success: true, students: serialize(students) }
+    return { success: true, students: serializePrisma(students) }
   } catch (error) {
     console.error("Error getting coursework students:", error)
     return {
@@ -927,7 +923,7 @@ export async function getCourseworkCandidates() {
       },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     })
-    return { success: true, courseworks: serialize(courseworks) }
+    return { success: true, courseworks: serializePrisma(courseworks) }
   } catch (error) {
     console.error("Error getting coursework candidates:", error)
     return {

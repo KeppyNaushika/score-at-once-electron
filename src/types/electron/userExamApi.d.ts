@@ -1,37 +1,11 @@
-import type { Exam, User, UserExam } from "@prisma/client"
+import type { UserExam } from "@prisma/client"
 
 import type { UserRole } from "@/electron-src/lib/prisma/userExam"
 
-/**
- * UserExam with user and inviter details
- */
-export interface UserExamWithUserAndInviter {
-  id: string
-  userId: string
-  examId: string
-  role: string
-  invitedAt: Date
-  invitedBy: string | null
-  createdAt: Date
-  updatedAt: Date
-  user: User
-  inviter: User | null
-}
-
-/**
- * UserExam with exam details
- */
-export interface UserExamWithExamDetails {
-  id: string
-  userId: string
-  examId: string
-  role: string
-  invitedAt: Date
-  invitedBy: string | null
-  createdAt: Date
-  updatedAt: Date
-  exam: Exam
-}
+import type {
+  UserExamWithExam,
+  UserExamWithUserAndInviter,
+} from "../prismaExtensions"
 
 /**
  * UserExam権限管理関連API
@@ -96,7 +70,7 @@ export interface UserExamAPI {
     /**
      * ユーザーが参加している全試験を取得
      */
-    getUserExams: (userId: string) => Promise<UserExamWithExamDetails[]>
+    getUserExams: (userId: string) => Promise<UserExamWithExam[]>
 
     /**
      * 試験のオーナーを取得

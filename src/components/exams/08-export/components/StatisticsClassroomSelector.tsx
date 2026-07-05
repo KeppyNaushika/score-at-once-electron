@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { ExamClassroomWithMemberships } from "@/types/electron/examClassroomApi"
+import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
 
 interface StatisticsClassroomSelectorProps {
   examId: string

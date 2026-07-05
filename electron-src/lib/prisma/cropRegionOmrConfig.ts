@@ -2,20 +2,13 @@
  * CropRegionOmrConfig CRUD操作
  */
 
-import type {
-  CropRegionOmrChoiceOption,
-  CropRegionOmrConfig,
-  CropRegionOmrDigitBox,
-} from "@prisma/client"
+import type { CropRegionOmrConfig } from "@prisma/client"
+
+import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion } from "./auditScope"
 import prisma from "./client"
-
-export type CropRegionOmrConfigWithOptions = CropRegionOmrConfig & {
-  choiceOptions: CropRegionOmrChoiceOption[]
-  digitBoxes: CropRegionOmrDigitBox[]
-}
 
 export interface UpsertOmrConfigData {
   cropRegionId: string

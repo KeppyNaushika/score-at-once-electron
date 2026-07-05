@@ -2,78 +2,13 @@
  * Grade（成績算出試験）のPrisma操作関数
  */
 
-import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
-import { computeLiveMaxScore } from "./gradeDataSource"
-
-/** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
-function serialize<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data))
-}
-
-/** DataSourceのestimationSourceIds (JSON string) を配列にデシリアライズ */
-function deserializeDataSources<T extends { gradeItems?: unknown[] }>(
-  data: T
-): T {
-  if (!data || !Array.isArray((data as Record<string, unknown>).gradeItems))
-    return data
-  const gradeItems = (data as Record<string, unknown[]>).gradeItems as Array<{
-    dataSources?: Array<Record<string, unknown>>
-  }>
-  for (const gradeItem of gradeItems) {
-    if (!Array.isArray(gradeItem.dataSources)) continue
-    for (const dataSource of gradeItem.dataSources) {
-      if (typeof dataSource.estimationSourceIds === "string") {
-        try {
-          dataSource.estimationSourceIds = JSON.parse(
-            dataSource.estimationSourceIds as string
-          )
-        } catch {
-          dataSource.estimationSourceIds = []
-        }
-      }
-    }
-  }
-  return data
-}
-
-/**
- * gradeItems[].dataSources[] に、元データからライブ算出した満点(maxScore)を付与する。
- * maxScore はDB列ではなく仮想（計算）フィールドのため、レンダラへ返す前に毎回算出する。
- */
-async function hydrateLiveMaxScores<
-  T extends {
-    gradeItems?: Array<{
-      dataSources?: Array<GradeDataSourceMaxScoreRef & { maxScore?: number }>
-    }>
-  },
->(grade: T): Promise<T> {
-  for (const gradeItem of grade.gradeItems ?? []) {
-    for (const dataSource of gradeItem.dataSources ?? []) {
-      dataSource.maxScore = await computeLiveMaxScore(dataSource)
-    }
-  }
-  return grade
-}
-
-const gradeItemInclude = {
-  dataSources: {
-    include: {
-      exam: { select: { id: true, examName: true, examDate: true } },
-      subtotal: { select: { id: true, name: true, order: true } },
-      cropRegion: { select: { id: true, label: true, points: true } },
-      courseworkItem: {
-        include: {
-          coursework: { select: { id: true, name: true } },
-          letterScales: { orderBy: { order: "asc" as const } },
-          _count: { select: { scores: true, gradeDataSources: true } },
-        },
-      },
-    },
-    orderBy: { order: "asc" as const },
-  },
-}
+import {
+  gradeItemWithDataSourcesInclude,
+  hydrateGrade,
+} from "./gradeDataSource"
+import { serializePrisma } from "./serializePrisma"
 
 /**
  * 全成績算出試験を取得
@@ -87,7 +22,7 @@ export async function getAllGrades() {
           orderBy: { order: "asc" },
         },
         gradeItems: {
-          include: gradeItemInclude,
+          include: gradeItemWithDataSourcesInclude,
           orderBy: { order: "asc" },
         },
         _count: {
@@ -102,7 +37,7 @@ export async function getAllGrades() {
     })
     return {
       success: true,
-      grades: grades.map((grade) => deserializeDataSources(serialize(grade))),
+      grades: grades.map((grade) => hydrateGrade(serializePrisma(grade))),
     }
   } catch (error) {
     console.error("Error getting grade exams:", error)
@@ -126,7 +61,7 @@ export async function getGradeById(id: string) {
           orderBy: { order: "asc" },
         },
         gradeItems: {
-          include: gradeItemInclude,
+          include: gradeItemWithDataSourcesInclude,
           orderBy: { order: "asc" },
         },
         _count: {
@@ -143,9 +78,7 @@ export async function getGradeById(id: string) {
     }
     return {
       success: true,
-      grade: await hydrateLiveMaxScores(
-        deserializeDataSources(serialize(grade))
-      ),
+      grade: hydrateGrade(serializePrisma(grade)),
     }
   } catch (error) {
     console.error("Error getting grade exam:", error)
@@ -177,7 +110,7 @@ export async function createGrade(data: {
           orderBy: { order: "asc" },
         },
         gradeItems: {
-          include: gradeItemInclude,
+          include: gradeItemWithDataSourcesInclude,
           orderBy: { order: "asc" },
         },
       },
@@ -194,7 +127,7 @@ export async function createGrade(data: {
 
     return {
       success: true,
-      grade: deserializeDataSources(serialize(grade)),
+      grade: hydrateGrade(serializePrisma(grade)),
     }
   } catch (error) {
     console.error("Error creating grade exam:", error)
@@ -239,7 +172,7 @@ export async function updateGrade(
           orderBy: { order: "asc" },
         },
         gradeItems: {
-          include: gradeItemInclude,
+          include: gradeItemWithDataSourcesInclude,
           orderBy: { order: "asc" },
         },
       },
@@ -264,7 +197,7 @@ export async function updateGrade(
 
     return {
       success: true,
-      grade: deserializeDataSources(serialize(grade)),
+      grade: hydrateGrade(serializePrisma(grade)),
     }
   } catch (error) {
     console.error("Error updating grade exam:", error)

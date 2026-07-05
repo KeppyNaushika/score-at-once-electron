@@ -1,23 +1,43 @@
 /**
  * 成績算出試験の共有型定義
+ *
+ * リレーション付きの型はすべて Prisma モデル（`@prisma/client`）から派生する（型規則: Prisma型を最優先）。
+ * IPC 境界では electron-src/lib/prisma の serializePrisma() が Decimal を number へ変換し、
+ * grade lib の hydrate が estimationSourceIds を string[] へ正規化し仮想 maxScore を付与するため、
+ * それらのフィールドのみ Prisma モデルから上書きする（coursework.types.ts と同じパターン）。
+ * 実施日（referenceDate）は string | null とする。
+ * ネストした select は electron-src/lib/prisma/gradeDataSource.ts の gradeDataSourceInclude と対を成す。
  */
+
+import type {
+  Classroom,
+  Coursework,
+  CropRegion,
+  Exam,
+  Grade,
+  GradeBoundary,
+  GradeBoundarySet,
+  GradeClassroom,
+  GradeConstraint,
+  GradeDataSource,
+  GradeItem,
+  Subtotal,
+} from "@prisma/client"
 
 import type { CourseworkItemWithDetails } from "./coursework.types"
 
+/** 欠測時推定方法 */
+export type AbsentMethod = "null" | "zero" | "average" | "regression"
+
+/** 推定ソース選択モード */
+export type EstimationMode = "all" | "selected"
+
 /** 成績算出試験（リレーション付き） */
-export interface GradeWithDetails {
-  id: string
-  name: string
-  description: string | null
+export type GradeWithDetails = Omit<Grade, "referenceDate"> & {
   referenceDate: string | null
-  createdAt: Date
-  updatedAt: Date
-  gradeClassrooms: {
-    id: string
-    classroomId: string
-    classroom: { id: string; name: string }
-    order: number
-  }[]
+  gradeClassrooms: (Pick<GradeClassroom, "id" | "classroomId" | "order"> & {
+    classroom: Pick<Classroom, "id" | "name">
+  })[]
   gradeItems: GradeItemWithDetails[]
   _count?: {
     gradeItems: number
@@ -27,76 +47,61 @@ export interface GradeWithDetails {
 }
 
 /** 評価項目（リレーション付き） */
-export interface GradeItemWithDetails {
-  id: string
-  gradeId: string
-  name: string
-  order: number
+export type GradeItemWithDetails = Pick<
+  GradeItem,
+  "id" | "gradeId" | "name" | "order"
+> & {
   dataSources: GradeDataSourceWithDetails[]
 }
 
-/** 欠測時推定方法 */
-export type AbsentMethod = "null" | "zero" | "average" | "regression"
-
-/** 推定ソース選択モード */
-export type EstimationMode = "all" | "selected"
-
 /** データソース（リレーション付き） */
-export interface GradeDataSourceWithDetails {
-  id: string
-  gradeItemId: string
+export type GradeDataSourceWithDetails = Omit<
+  GradeDataSource,
+  | "type"
+  | "weight"
+  | "absentMethod"
+  | "absentRatio"
+  | "absentOffset"
+  | "estimationMode"
+  | "estimationSourceIds"
+> & {
   type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"
-  examId: string | null
-  subtotalId: string | null
-  cropRegionId: string | null
-  courseworkItemId: string | null
-  courseworkId: string | null
-  name: string
-  maxScore: number
   weight: number
-  order: number
   absentMethod: AbsentMethod
   absentRatio: number
   absentOffset: number
-  treatExpectedAsMissing: boolean
   estimationMode: EstimationMode
   estimationSourceIds: string[]
-  createdAt: Date
-  updatedAt: Date
-  exam: { id: string; examName: string; examDate: Date | null } | null
-  subtotal: { id: string; name: string; order: number } | null
-  cropRegion: {
-    id: string
-    label: string
-    points: number | null
-  } | null
+  /** 仮想フィールド。元データ（設問配点/評価項目満点）からライブ算出して付与される。 */
+  maxScore: number
+  exam: Pick<Exam, "id" | "examName" | "examDate"> | null
+  subtotal: Pick<Subtotal, "id" | "name" | "order"> | null
+  cropRegion: Pick<CropRegion, "id" | "label" | "points"> | null
   /** coursework型が参照する評価項目（資料名・項目名・満点・入力モード・変換表） */
   courseworkItem:
     | (CourseworkItemWithDetails & {
-        coursework: { id: string; name: string }
+        coursework: Pick<Coursework, "id" | "name">
       })
     | null
   /** coursework_total型が参照する資料（全評価項目を合算する対象） */
-  coursework: { id: string; name: string } | null
+  coursework: Pick<Coursework, "id" | "name"> | null
 }
 
 /** 境界セット（境界リスト付き） */
-export interface GradeBoundarySetWithDetails {
-  id: string
-  gradeId: string
-  targetType: string // "grade_item" | "overall"
-  gradeItemId: string | null
-  gradeItem: { id: string; name: string; order: number } | null
+export type GradeBoundarySetWithDetails = Pick<
+  GradeBoundarySet,
+  "id" | "gradeId" | "targetType" | "gradeItemId"
+> & {
+  gradeItem: Pick<GradeItem, "id" | "name" | "order"> | null
   boundaries: GradeBoundaryData[]
 }
 
 /** 境界データ */
-export interface GradeBoundaryData {
-  id: string
-  gradeBoundarySetId: string
-  label: string
+export type GradeBoundaryData = Omit<
+  GradeBoundary,
+  "minPercentage" | "createdAt" | "updatedAt"
+> & {
   minPercentage: number
-  order: number
 }
 
 /** 生徒別成績結果 */
@@ -215,20 +220,16 @@ export interface MutualExclusionConfig {
   labels: string[]
 }
 
-/** DBに保存される制約ルール1件 */
-export interface GradeConstraintData {
-  id: string
-  gradeId: string
-  name: string
+/**
+ * DBに保存される制約ルール1件。
+ * config は kind別の設定JSON文字列（ConsistencyConfig / MutualExclusionConfig）、
+ * expression は kind="expression" 時の式。kind のみ union へ narrowing する。
+ */
+export type GradeConstraintData = Omit<
+  GradeConstraint,
+  "kind" | "createdAt" | "updatedAt"
+> & {
   kind: GradeConstraintKind
-  /** kind別の設定JSON文字列（ConsistencyConfig / MutualExclusionConfig） */
-  config: string
-  /** kind="expression" 時の式 */
-  expression: string
-  color: string
-  message: string | null
-  enabled: boolean
-  order: number
 }
 
 /** 制約ルールの作成・更新入力 */

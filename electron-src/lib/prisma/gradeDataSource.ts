@@ -2,24 +2,203 @@
  * GradeDataSource（成績データソース）のPrisma操作関数
  */
 
+import type { Prisma } from "@prisma/client"
+
 import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
+import { serializePrisma } from "./serializePrisma"
 
-/** Prisma Decimal等の非シリアライズ型をプレーン値に変換 */
-function serialize<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data))
+/**
+ * DataSource が参照するリレーションの include（単一 SSOT）。
+ * 全生成元（grade / gradeItem / dataSource）でこれを使い、返り値の形状を一致させる。
+ * coursework（coursework_total 型が参照する資料）まで含む完全版。
+ */
+export const gradeDataSourceInclude = {
+  exam: {
+    select: {
+      id: true,
+      examName: true,
+      examDate: true,
+      // maxScore(exam_total) を追加クエリ無しで算出するための元データ。
+      examPages: {
+        select: {
+          cropRegions: {
+            where: { type: "QUESTION_ANSWER" },
+            select: { points: true },
+          },
+        },
+      },
+    },
+  },
+  subtotal: {
+    select: {
+      id: true,
+      name: true,
+      order: true,
+      // maxScore(subtotal) を追加クエリ無しで算出するための元データ。
+      cropSubtotals: {
+        where: { assignmentType: "QUESTION_ASSIGNMENT" },
+        select: {
+          cropRegion: {
+            select: { points: true, examPage: { select: { examId: true } } },
+          },
+        },
+      },
+    },
+  },
+  cropRegion: { select: { id: true, label: true, points: true } },
+  courseworkItem: {
+    include: {
+      coursework: { select: { id: true, name: true } },
+      letterScales: { orderBy: { order: "asc" } },
+      _count: { select: { scores: true, gradeDataSources: true } },
+    },
+  },
+  coursework: {
+    select: {
+      id: true,
+      name: true,
+      // maxScore(coursework_total) を追加クエリ無しで算出するための元データ。
+      items: { select: { maxScore: true } },
+    },
+  },
+} satisfies Prisma.GradeDataSourceInclude
+
+/** GradeItem を dataSources 込みで取得する際の include（上記を内包）。 */
+export const gradeItemWithDataSourcesInclude = {
+  dataSources: {
+    include: gradeDataSourceInclude,
+    orderBy: { order: "asc" },
+  },
+} satisfies Prisma.GradeItemInclude
+
+/** estimationSourceIds（JSON文字列 or 既に配列）を string[] へ正規化する。 */
+function parseEstimationSourceIds(value: unknown): string[] {
+  if (Array.isArray(value)) return value as string[]
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
 }
 
 /**
- * データソースに、元データからライブ算出した満点(maxScore)を付与する。
- * maxScore はDB列ではなく仮想（計算）フィールド。レンダラへ返す経路で常に付与する。
+ * maxScore 算出に必要な元データ（gradeDataSourceInclude で同梱される）を型で表す。
+ * 集計元まで payload に載っているため、算出は追加クエリ無し・完全同期で行える。
  */
-async function withLiveMaxScore<T extends GradeDataSourceMaxScoreRef>(
-  dataSource: T
-): Promise<T & { maxScore: number }> {
-  return { ...dataSource, maxScore: await computeLiveMaxScore(dataSource) }
+type MaxScorePayloadSource = GradeDataSourceMaxScoreRef & {
+  cropRegion?: { points: number | null } | null
+  courseworkItem?: { maxScore: unknown } | null
+  coursework?: { items: Array<{ maxScore: unknown }> } | null
+  exam?: {
+    examPages: Array<{ cropRegions: Array<{ points: number | null }> }>
+  } | null
+  subtotal?: {
+    cropSubtotals: Array<{
+      cropRegion: { points: number | null; examPage: { examId: string } }
+    }>
+  } | null
+}
+
+/**
+ * enriched payload（gradeDataSourceInclude 同梱の元データ）から maxScore を同期算出する。
+ * 満点は DB 列ではなく元データ（設問配点/評価項目満点）から毎回導くが、必要な元データは
+ * 主クエリで既に取得済みのため、ここでは追加の DB アクセスを行わない。
+ */
+function computeMaxScoreFromPayload(dataSource: MaxScorePayloadSource): number {
+  switch (dataSource.type) {
+    case "crop_region":
+      return dataSource.cropRegion?.points ?? 0
+    case "coursework":
+      return Number(dataSource.courseworkItem?.maxScore ?? 0)
+    case "coursework_total":
+      return (dataSource.coursework?.items ?? []).reduce(
+        (sum, item) => sum + Number(item.maxScore),
+        0
+      )
+    case "exam_total":
+      return (dataSource.exam?.examPages ?? [])
+        .flatMap((examPage) => examPage.cropRegions)
+        .reduce((sum, cropRegion) => sum + (cropRegion.points ?? 0), 0)
+    case "subtotal":
+      return (dataSource.subtotal?.cropSubtotals ?? [])
+        .filter(
+          (cropSubtotal) =>
+            cropSubtotal.cropRegion.examPage.examId === dataSource.examId
+        )
+        .reduce(
+          (sum, cropSubtotal) => sum + (cropSubtotal.cropRegion.points ?? 0),
+          0
+        )
+    default:
+      return 0
+  }
+}
+
+/** gradeDataSourceInclude で取得した DataSource（集計元同梱）の型。 */
+type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
+  include: typeof gradeDataSourceInclude
+}>
+
+/**
+ * serialize 済み DataSource に、仮想フィールド maxScore を（同梱済み元データから）付与し、
+ * estimationSourceIds を string[] へ正規化する。レンダラへ返す全経路で必ず通す。
+ *
+ * maxScore 算出専用に同梱した集計元（exam.examPages / subtotal.cropSubtotals /
+ * coursework.items）は、算出後に落として renderer 返却形状（grade.types の Pick）へ一致させる
+ * — untyped な集計元を IPC で送らないため。
+ */
+export function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
+  const maxScore = computeMaxScoreFromPayload(dataSource)
+  const { exam, subtotal, coursework, ...rest } = dataSource
+  return {
+    ...rest,
+    estimationSourceIds: parseEstimationSourceIds(
+      dataSource.estimationSourceIds
+    ),
+    maxScore,
+    exam: exam && {
+      id: exam.id,
+      examName: exam.examName,
+      examDate: exam.examDate,
+    },
+    subtotal: subtotal && {
+      id: subtotal.id,
+      name: subtotal.name,
+      order: subtotal.order,
+    },
+    coursework: coursework && { id: coursework.id, name: coursework.name },
+  }
+}
+
+type EnrichedGradeItem = { dataSources: EnrichedGradeDataSource[] }
+
+/** GradeItem 1件の dataSources を全てハイドレートする。 */
+export function hydrateGradeItem<GI extends EnrichedGradeItem>(gradeItem: GI) {
+  return {
+    ...gradeItem,
+    dataSources: gradeItem.dataSources.map(hydrateGradeDataSource),
+  }
+}
+
+/** GradeItem 配列を全てハイドレートする。 */
+export function hydrateGradeItems<GI extends EnrichedGradeItem>(
+  gradeItems: GI[]
+) {
+  return gradeItems.map(hydrateGradeItem)
+}
+
+/** Grade 全体（gradeItems[].dataSources[]）をハイドレートする。 */
+export function hydrateGrade<G extends { gradeItems: EnrichedGradeItem[] }>(
+  grade: G
+) {
+  return { ...grade, gradeItems: hydrateGradeItems(grade.gradeItems) }
 }
 
 /**
@@ -29,22 +208,13 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
   try {
     const dataSources = await prisma.gradeDataSource.findMany({
       where: { gradeItemId },
-      include: {
-        exam: { select: { id: true, examName: true, examDate: true } },
-        subtotal: { select: { id: true, name: true, order: true } },
-        cropRegion: { select: { id: true, label: true, points: true } },
-        courseworkItem: {
-          include: {
-            coursework: { select: { id: true, name: true } },
-            letterScales: { orderBy: { order: "asc" } },
-            _count: { select: { scores: true, gradeDataSources: true } },
-          },
-        },
-        coursework: { select: { id: true, name: true } },
-      },
+      include: gradeDataSourceInclude,
       orderBy: { order: "asc" },
     })
-    return { success: true, dataSources: serialize(dataSources) }
+    return {
+      success: true,
+      dataSources: serializePrisma(dataSources).map(hydrateGradeDataSource),
+    }
   } catch (error) {
     console.error("Error getting data sources:", error)
     return {
@@ -113,19 +283,7 @@ export async function createDataSource(data: {
           estimationSourceIds: JSON.stringify(data.estimationSourceIds),
         }),
       },
-      include: {
-        exam: { select: { id: true, examName: true, examDate: true } },
-        subtotal: { select: { id: true, name: true, order: true } },
-        cropRegion: { select: { id: true, label: true, points: true } },
-        courseworkItem: {
-          include: {
-            coursework: { select: { id: true, name: true } },
-            letterScales: { orderBy: { order: "asc" } },
-            _count: { select: { scores: true, gradeDataSources: true } },
-          },
-        },
-        coursework: { select: { id: true, name: true } },
-      },
+      include: gradeDataSourceInclude,
     })
 
     const scope = await resolveGradeScopeByItem(data.gradeItemId)
@@ -140,7 +298,7 @@ export async function createDataSource(data: {
 
     return {
       success: true,
-      dataSource: await withLiveMaxScore(serialize(dataSource)),
+      dataSource: hydrateGradeDataSource(serializePrisma(dataSource)),
     }
   } catch (error) {
     console.error("Error creating data source:", error)
@@ -176,19 +334,7 @@ export async function updateDataSource(
     const dataSource = await prisma.gradeDataSource.update({
       where: { id },
       data: updateData,
-      include: {
-        exam: { select: { id: true, examName: true, examDate: true } },
-        subtotal: { select: { id: true, name: true, order: true } },
-        cropRegion: { select: { id: true, label: true, points: true } },
-        courseworkItem: {
-          include: {
-            coursework: { select: { id: true, name: true } },
-            letterScales: { orderBy: { order: "asc" } },
-            _count: { select: { scores: true, gradeDataSources: true } },
-          },
-        },
-        coursework: { select: { id: true, name: true } },
-      },
+      include: gradeDataSourceInclude,
     })
 
     const scope = await resolveGradeScopeByItem(dataSource.gradeItemId)
@@ -203,7 +349,7 @@ export async function updateDataSource(
 
     return {
       success: true,
-      dataSource: await withLiveMaxScore(serialize(dataSource)),
+      dataSource: hydrateGradeDataSource(serializePrisma(dataSource)),
     }
   } catch (error) {
     console.error("Error updating data source:", error)
@@ -389,7 +535,7 @@ export async function getExamCropRegions(examId: string) {
       orderBy: { pageNumber: "asc" },
     })
     const cropRegions = pages.flatMap((page) => page.cropRegions)
-    return { success: true, cropRegions: serialize(cropRegions) }
+    return { success: true, cropRegions: serializePrisma(cropRegions) }
   } catch (error) {
     console.error("Error getting exam crop regions:", error)
     return {
@@ -405,74 +551,79 @@ export async function getExamCropRegions(examId: string) {
  * GradeDataSource.maxScore 列はスナップショットに過ぎず、表示・計算では常にこの関数の
  * 算出値を使う（元データを後から変更しても追従させるため）。
  *
- * 入力は識別フィールド（種別・各ID）だけで、満点は常に元データを引いて求める。
+ * 入力は識別フィールド（種別・各ID）だけの場面（新規追加の見積り等）向け。集計元だけを
+ * 個別クエリで取得し、**満点算出のルール自体は payload 版（`computeMaxScoreFromPayload`）に
+ * 委譲する**（分岐ロジックの単一ソース化）。gradeDataSourceInclude 同梱の payload がある
+ * 経路では `hydrateGradeDataSource` が同期算出するため、この関数は通らない。
  */
 export async function computeLiveMaxScore(
   ds: GradeDataSourceMaxScoreRef
 ): Promise<number> {
-  // coursework: 評価項目の満点
-  if (ds.type === "coursework") {
-    if (!ds.courseworkItemId) return 0
-    const item = await prisma.courseworkItem.findUnique({
-      where: { id: ds.courseworkItemId },
-      select: { maxScore: true },
-    })
-    return Number(item?.maxScore ?? 0)
+  switch (ds.type) {
+    case "crop_region": {
+      const cropRegion = ds.cropRegionId
+        ? await prisma.cropRegion.findUnique({
+            where: { id: ds.cropRegionId },
+            select: { points: true },
+          })
+        : null
+      return computeMaxScoreFromPayload({ ...ds, cropRegion })
+    }
+    case "coursework": {
+      const courseworkItem = ds.courseworkItemId
+        ? await prisma.courseworkItem.findUnique({
+            where: { id: ds.courseworkItemId },
+            select: { maxScore: true },
+          })
+        : null
+      return computeMaxScoreFromPayload({ ...ds, courseworkItem })
+    }
+    case "coursework_total": {
+      const items = ds.courseworkId
+        ? await prisma.courseworkItem.findMany({
+            where: { courseworkId: ds.courseworkId },
+            select: { maxScore: true },
+          })
+        : []
+      return computeMaxScoreFromPayload({ ...ds, coursework: { items } })
+    }
+    case "exam_total": {
+      const examPages = ds.examId
+        ? await prisma.examPage.findMany({
+            where: { examId: ds.examId },
+            select: {
+              cropRegions: {
+                where: { type: "QUESTION_ANSWER" },
+                select: { points: true },
+              },
+            },
+          })
+        : []
+      return computeMaxScoreFromPayload({ ...ds, exam: { examPages } })
+    }
+    case "subtotal": {
+      const cropSubtotals =
+        ds.subtotalId && ds.examId
+          ? await prisma.cropSubtotal.findMany({
+              where: {
+                subtotalId: ds.subtotalId,
+                assignmentType: "QUESTION_ASSIGNMENT",
+              },
+              select: {
+                cropRegion: {
+                  select: {
+                    points: true,
+                    examPage: { select: { examId: true } },
+                  },
+                },
+              },
+            })
+          : []
+      return computeMaxScoreFromPayload({ ...ds, subtotal: { cropSubtotals } })
+    }
+    default:
+      return 0
   }
-
-  // coursework_total: 資料全体（全評価項目）の満点合計
-  if (ds.type === "coursework_total") {
-    if (!ds.courseworkId) return 0
-    const items = await prisma.courseworkItem.findMany({
-      where: { courseworkId: ds.courseworkId },
-      select: { maxScore: true },
-    })
-    return items.reduce((sum, item) => sum + Number(item.maxScore), 0)
-  }
-
-  // crop_region: 設問の配点
-  if (ds.type === "crop_region") {
-    if (!ds.cropRegionId) return 0
-    const cropRegion = await prisma.cropRegion.findUnique({
-      where: { id: ds.cropRegionId },
-      select: { points: true },
-    })
-    return Number(cropRegion?.points ?? 0)
-  }
-
-  // exam_total: 全QUESTION_ANSWER CropRegionのpoints合計
-  if (ds.type === "exam_total" && ds.examId) {
-    const pages = await prisma.examPage.findMany({
-      where: { examId: ds.examId },
-      include: { cropRegions: { where: { type: "QUESTION_ANSWER" } } },
-    })
-    return pages
-      .flatMap((page) => page.cropRegions)
-      .reduce((sum, cropRegion) => sum + (cropRegion.points ?? 0), 0)
-  }
-
-  // subtotal: 観点に割り当てられたCropRegion（QUESTION_ASSIGNMENT）のpoints合計
-  if (ds.type === "subtotal" && ds.subtotalId && ds.examId) {
-    const cropSubtotals = await prisma.cropSubtotal.findMany({
-      where: {
-        subtotalId: ds.subtotalId,
-        assignmentType: "QUESTION_ASSIGNMENT",
-      },
-      include: {
-        cropRegion: { include: { examPage: { select: { examId: true } } } },
-      },
-    })
-    return cropSubtotals
-      .filter(
-        (cropSubtotal) => cropSubtotal.cropRegion.examPage.examId === ds.examId
-      )
-      .reduce(
-        (sum, cropSubtotal) => sum + (cropSubtotal.cropRegion.points ?? 0),
-        0
-      )
-  }
-
-  return 0
 }
 
 /**
