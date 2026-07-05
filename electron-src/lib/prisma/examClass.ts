@@ -448,7 +448,7 @@ export const addStudentsFromClass = async (
         data: studentsToAdd.map(({ studentId, customOrder }) => ({
           examId,
           studentId,
-          status: "PARTICIPATING",
+          status: "participating",
           customOrder,
         })),
       })

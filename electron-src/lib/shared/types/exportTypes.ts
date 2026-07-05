@@ -1,7 +1,7 @@
 // Excel・PDF出力で共通的に使用される型定義
 
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
-import type { StudentStatus } from "@/types/studentStatus.types"
 
 export interface ExportGradingDataOptions {
   examId: string
@@ -17,7 +17,7 @@ export interface ScoringData {
   grade?: string
   className?: string
   attendanceNumber?: number | null
-  status?: StudentStatus
+  status?: ExamStudentStatus
   scores: ScoreDetail[]
   totalScore: number | null
   totalMaxScore: number

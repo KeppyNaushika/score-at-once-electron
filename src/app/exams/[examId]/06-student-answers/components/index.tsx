@@ -14,7 +14,7 @@ import type {
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
@@ -27,7 +27,7 @@ export interface StudentData {
   firstNameKana: string
   studentNumber: string
   attendanceNumber?: number | null
-  status?: StudentStatus
+  status?: ExamStudentStatus
   customOrder?: number | null
 }
 

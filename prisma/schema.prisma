@@ -110,7 +110,7 @@ model ExamStudent {
   id          String   @id @default(uuid())
   examId      String
   studentId   String
-  status      String   @default("PARTICIPATING")
+  status      String
   customOrder Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

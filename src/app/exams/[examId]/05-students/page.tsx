@@ -43,7 +43,7 @@ export default function StudentsPage() {
     setShowRemovalConfirm,
     setStudentsToRemove,
     selectedStudentsForRemoval,
-    gradingDataInfo,
+    gradingItemCount,
     refreshStudentData,
     updateStudentStatus,
     updateStudentOrders,
@@ -189,8 +189,8 @@ export default function StudentsPage() {
         }}
         onConfirm={confirmStudentRemoval}
         studentsToRemove={studentsForRemovalData}
-        hasGradingData={gradingDataInfo.hasData}
-        gradingDataCount={gradingDataInfo.totalItems}
+        hasGradingData={gradingItemCount > 0}
+        gradingDataCount={gradingItemCount}
       />
     </div>
   )

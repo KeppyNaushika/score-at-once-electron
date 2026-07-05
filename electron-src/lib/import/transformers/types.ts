@@ -61,9 +61,10 @@ export type ArchiveVersion =
   | "1.14.0"
   | "1.15.0"
   | "1.16.0"
+  | "1.17.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.16.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.17.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -84,6 +85,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.14.0",
   "1.15.0",
   "1.16.0",
+  "1.17.0",
 ] as const
 
 // =============================================================================

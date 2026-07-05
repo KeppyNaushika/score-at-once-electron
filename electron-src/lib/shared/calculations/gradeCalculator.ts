@@ -261,14 +261,14 @@ export async function calculateGrades(gradeId: string): Promise<{
         )
 
         // 見込→欠測対応: treatExpectedAsMissing が true かつ
-        // 試験試験の ExamStudent.status === "EXPECTED" → null扱い
+        // 試験試験の ExamStudent.status === "expected" → null扱い
         if (
           raw !== null &&
           dataSource.treatExpectedAsMissing &&
           dataSource.examId
         ) {
           const statusMap = examExamStudentStatusMap.get(dataSource.examId)
-          if (statusMap?.get(examStudent.student.id) === "EXPECTED") {
+          if (statusMap?.get(examStudent.student.id) === "expected") {
             raw = null
           }
         }

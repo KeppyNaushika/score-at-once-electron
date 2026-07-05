@@ -12,16 +12,8 @@ import type {
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamPageWithDetails } from "@/types/prismaExtensions"
-import type { StudentWithMemberships } from "@/types/prismaExtensions"
-import type { StudentStatus } from "@/types/studentStatus.types"
 
 import type { StudentData } from "../components"
-
-// APIから返される生徒データの型（StudentWithMembershipsに試験固有フィールドを追加）
-interface ExamStudentData extends StudentWithMemberships {
-  status: StudentStatus
-  customOrder: number | null
-}
 
 export function useStudentAnswersData(examId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
@@ -47,7 +39,7 @@ export function useStudentAnswersData(examId: string) {
         await window.electronAPI.getStudentsForExam(examId)
       if (examStudentsResult.success && examStudentsResult.students) {
         const sortedStudents = examStudentsResult.students
-          .sort((studentA: ExamStudentData, studentB: ExamStudentData) => {
+          .sort((studentA, studentB) => {
             if (
               studentA.customOrder !== null &&
               studentA.customOrder !== undefined &&
@@ -78,7 +70,7 @@ export function useStudentAnswersData(examId: string) {
             const studentBName = `${studentB.lastName}${studentB.firstName}`
             return studentAName.localeCompare(studentBName)
           })
-          .map((student: ExamStudentData) => ({
+          .map((student) => ({
             id: student.id,
             lastName: student.lastName,
             firstName: student.firstName,
@@ -109,7 +101,7 @@ export function useStudentAnswersData(examId: string) {
             pageNumber: img.examPage.pageNumber,
             originalImagePath: img.imagePath,
             isAbsent:
-              img.student?.examStudents?.[0]?.status === "ABSENT" || false,
+              img.student?.examStudents?.[0]?.status === "absent" || false,
             student: img.student
               ? {
                   id: img.student.id,

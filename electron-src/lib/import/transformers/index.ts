@@ -30,3 +30,7 @@ export {
   convertScoresDataToV1_13,
   V1_12_0_to_V1_13_0_Transformer,
 } from "./V1_12_0_to_V1_13_0"
+export {
+  normalizeExamStudentStatuses,
+  V1_16_0_to_V1_17_0_Transformer,
+} from "./V1_16_0_to_V1_17_0"

@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
-import type { StudentStatus } from "@/types/studentStatus.types"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 /** 試験名簿の Student を共通の RosterRow へ変換 */
 function toRosterRow(student: Student): RosterRow {
@@ -170,7 +170,7 @@ export function SortableStudentTableContainer(
     () => ({
       header: "受験状態",
       render: (row) => {
-        const status = row.extras?.status as StudentStatus | undefined
+        const status = row.extras?.status as ExamStudentStatus | undefined
         return (
           <div className="flex gap-1">
             <Button
