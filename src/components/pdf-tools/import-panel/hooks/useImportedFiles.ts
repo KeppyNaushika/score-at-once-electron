@@ -36,7 +36,6 @@ export function useImportedFiles() {
         nUp: {
           enabled: false,
           layout: "2x1",
-          order: "left-right",
         },
         rotation: 0,
       }

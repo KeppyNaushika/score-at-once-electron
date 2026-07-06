@@ -12,14 +12,10 @@ export type PdfExportMode = "merge" | "split" | "interleave"
 /** 2-in-1 レイアウト */
 export type NUpLayout = "2x1" | "1x2" // 横並び / 縦並び
 
-/** ページ順序 */
-export type PageOrder = "left-right" | "right-left"
-
 /** 2-in-1 (Nアップ) 設定 */
 export interface NUpConfig {
   enabled: boolean
   layout: NUpLayout
-  order: PageOrder
 }
 
 /** インポートされたファイル */
@@ -59,14 +55,6 @@ export interface FileTransform {
 export interface InterleaveConfig {
   enabled: boolean
   transforms: FileTransform[]
-}
-
-/** IPC: 2-in-1変換オプション */
-export interface NUpOptions {
-  filePath: string
-  layout: NUpLayout
-  order: PageOrder
-  outputPath: string
 }
 
 /** IPC: 汎用レスポンス */

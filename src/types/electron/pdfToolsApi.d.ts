@@ -20,12 +20,6 @@ export interface PdfToolsAPI {
       outputDir: string
       prefix?: string
     }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
-    applyNUp: (options: {
-      filePath: string
-      layout: "2x1" | "1x2"
-      order: "left-right" | "right-left"
-      outputPath: string
-    }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
     rotatePages: (options: {
       filePath: string
       rotations: Array<{ pageNumber: number; rotation: 0 | 90 | 180 | 270 }>
