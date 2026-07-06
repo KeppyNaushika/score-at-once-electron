@@ -22,12 +22,6 @@ export function createPdfToolsApi() {
         outputDir: string
         prefix?: string
       }) => ipcRenderer.invoke("pdf-tools:split-pdf", options),
-      applyNUp: (options: {
-        filePath: string
-        layout: "2x1" | "1x2"
-        order: "left-right" | "right-left"
-        outputPath: string
-      }) => ipcRenderer.invoke("pdf-tools:apply-nup", options),
       rotatePages: (options: {
         filePath: string
         rotations: Array<{

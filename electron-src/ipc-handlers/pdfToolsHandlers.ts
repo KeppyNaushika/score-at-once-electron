@@ -6,14 +6,9 @@ import * as fs from "fs"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
-import type {
-  NUpOptions,
-  PdfToolsResult,
-  RotationDegree,
-} from "@/types/pdfTools.types"
+import type { PdfToolsResult, RotationDegree } from "@/types/pdfTools.types"
 
 import { type MergePageInput, mergePdfs } from "../lib/pdf-tools/pdfMerger"
-import { applyNUp } from "../lib/pdf-tools/pdfNUp"
 import {
   type RotatePageInput,
   rotatePdfPages,
@@ -44,19 +39,6 @@ export function setupPdfToolsHandlers(): void {
       prefix?: string
     }): Promise<PdfToolsResult> => {
       return await splitPdf(options.filePath, options.outputDir, options.prefix)
-    }
-  )
-
-  // 2-in-1変換
-  registerHandler(
-    "pdf-tools:apply-nup",
-    async (options: NUpOptions): Promise<PdfToolsResult> => {
-      return await applyNUp(
-        options.filePath,
-        options.layout,
-        options.order,
-        options.outputPath
-      )
     }
   )
 

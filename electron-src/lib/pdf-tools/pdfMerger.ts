@@ -6,6 +6,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { degrees, PDFDocument } from "pdf-lib"
 
+import { computeNUpLayout } from "@/lib/pdf-tools/nUpLayout"
 import type { NUpLayout, RotationDegree } from "@/types/pdfTools.types"
 
 // A4サイズ (ポイント単位: 1pt = 1/72 inch)
@@ -128,15 +129,12 @@ async function addNUpPage(
   layout: NUpLayout,
   rotation?: RotationDegree
 ): Promise<void> {
-  // A4サイズの新しいページを作成
-  const newPage = targetPdf.addPage([A4_WIDTH, A4_HEIGHT])
-
-  // 各ページを埋め込み
-  const embeddedPages: {
+  // 各ページをスロット順(=pageNumbers順)に埋め込む。範囲外ページは空スロット(null)
+  const slots: ({
     page: Awaited<ReturnType<typeof targetPdf.embedPages>>[0]
     width: number
     height: number
-  }[] = []
+  } | null)[] = []
 
   for (const pageNum of pageNumbers) {
     const pageIndex = pageNum - 1
@@ -144,54 +142,37 @@ async function addNUpPage(
       const srcPage = sourcePdf.getPage(pageIndex)
       const { width, height } = srcPage.getSize()
       const [embedded] = await targetPdf.embedPages([srcPage])
-      embeddedPages.push({ page: embedded, width, height })
+      slots.push({ page: embedded, width, height })
+    } else {
+      slots.push(null)
     }
   }
 
-  if (embeddedPages.length === 0) return
+  if (slots.every((slot) => slot === null)) return
 
-  if (layout === "2x1") {
-    // 横並び: 各ページを出力ページの半分の幅に収める
-    const slotWidth = A4_WIDTH / 2
-    const slotHeight = A4_HEIGHT
+  // スロット配置はPNG出力(canvas)と共有する純粋関数で計算する
+  const { pageWidth, pageHeight, placements } = computeNUpLayout(
+    layout,
+    slots.map((slot) =>
+      slot ? { width: slot.width, height: slot.height } : null
+    ),
+    { width: A4_WIDTH, height: A4_HEIGHT }
+  )
 
-    embeddedPages.forEach((item, index) => {
-      const scale = Math.min(slotWidth / item.width, slotHeight / item.height)
-      const scaledW = item.width * scale
-      const scaledH = item.height * scale
-      const offsetX = (slotWidth - scaledW) / 2
-      const offsetY = (slotHeight - scaledH) / 2
-      const x = index === 0 ? offsetX : slotWidth + offsetX
+  const newPage = targetPdf.addPage([pageWidth, pageHeight])
 
-      newPage.drawPage(item.page, {
-        x,
-        y: offsetY,
-        xScale: scale,
-        yScale: scale,
-      })
+  placements.forEach((placement, index) => {
+    const slot = slots[index]
+    if (!placement || !slot) return
+    // computeNUpLayout は左上原点。pdf-lib は左下原点なので y を変換する
+    const y = pageHeight - (placement.yTop + placement.height)
+    newPage.drawPage(slot.page, {
+      x: placement.x,
+      y,
+      width: placement.width,
+      height: placement.height,
     })
-  } else {
-    // 縦並び (1x2): 各ページを出力ページの半分の高さに収める
-    const slotWidth = A4_WIDTH
-    const slotHeight = A4_HEIGHT / 2
-
-    embeddedPages.forEach((item, index) => {
-      const scale = Math.min(slotWidth / item.width, slotHeight / item.height)
-      const scaledW = item.width * scale
-      const scaledH = item.height * scale
-      const offsetX = (slotWidth - scaledW) / 2
-      const offsetY = (slotHeight - scaledH) / 2
-      // index 0 = 上、index 1 = 下
-      const y = index === 0 ? slotHeight + offsetY : offsetY
-
-      newPage.drawPage(item.page, {
-        x: offsetX,
-        y,
-        xScale: scale,
-        yScale: scale,
-      })
-    })
-  }
+  })
 
   // 回転を適用
   if (rotation) {
