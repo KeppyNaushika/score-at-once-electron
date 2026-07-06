@@ -25,8 +25,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-import type { ExamResult } from "../hooks/useStudentExamResults"
+import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
 // ── 型定義 ──
 
@@ -60,7 +59,7 @@ const SERIES_COLORS = [
 // ── コンポーネント ──
 
 interface TagAnalyticsCardProps {
-  results: ExamResult[]
+  results: StudentExamResult[]
 }
 
 export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {

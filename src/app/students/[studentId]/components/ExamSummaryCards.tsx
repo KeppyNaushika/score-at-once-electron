@@ -4,11 +4,10 @@ import { BarChart3, FileCheck, TrendingUp } from "lucide-react"
 import { useMemo } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
-import type { ExamResult } from "../hooks/useStudentExamResults"
+import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
 interface ExamSummaryCardsProps {
-  results: ExamResult[]
+  results: StudentExamResult[]
 }
 
 export function ExamSummaryCards({ results }: ExamSummaryCardsProps) {

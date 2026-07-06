@@ -1,9 +1,5 @@
 import type { StudentAnswerImageWithDetails } from "../prismaExtensions"
 
-// AnswerSheetWithDetails is used inline but not exported from prismaExtensions
-// It comes from the existing codebase as StudentAnswerImageWithDetails
-type AnswerSheetWithDetails = StudentAnswerImageWithDetails
-
 export interface UploadStudentAnswerFileData {
   name: string
   fileName: string
@@ -49,7 +45,7 @@ export interface StudentAnswerAPI {
     studentId: string
   ) => Promise<{
     success: boolean
-    answerSheet?: AnswerSheetWithDetails
+    answerSheet?: StudentAnswerImageWithDetails
     error?: string
   }>
   setStudentAnswerAbsent: (
@@ -57,12 +53,12 @@ export interface StudentAnswerAPI {
     isAbsent: boolean
   ) => Promise<{
     success: boolean
-    answerSheet?: AnswerSheetWithDetails
+    answerSheet?: StudentAnswerImageWithDetails
     error?: string
   }>
   getStudentAnswerById: (studentAnswerId: string) => Promise<{
     success: boolean
-    answerSheet?: AnswerSheetWithDetails
+    answerSheet?: StudentAnswerImageWithDetails
     error?: string
   }>
   updateStudentAnswerPlacement: (
@@ -71,7 +67,7 @@ export interface StudentAnswerAPI {
     pageNumber: number
   ) => Promise<{
     success: boolean
-    answerSheet?: AnswerSheetWithDetails
+    answerSheet?: StudentAnswerImageWithDetails
     error?: string
   }>
   swapStudentAnswerPlacements: (
@@ -79,7 +75,7 @@ export interface StudentAnswerAPI {
     studentAnswerId2: string
   ) => Promise<{
     success: boolean
-    answerSheets?: AnswerSheetWithDetails[]
+    answerSheets?: StudentAnswerImageWithDetails[]
     error?: string
   }>
   swapStudentAnswerPlacementsWithScoring: (
@@ -87,7 +83,7 @@ export interface StudentAnswerAPI {
     studentAnswerId2: string
   ) => Promise<{
     success: boolean
-    answerSheets?: AnswerSheetWithDetails[]
+    answerSheets?: StudentAnswerImageWithDetails[]
     error?: string
   }>
   batchUpdateStudentAnswerPlacements: (

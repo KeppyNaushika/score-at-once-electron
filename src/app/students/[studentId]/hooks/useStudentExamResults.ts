@@ -1,29 +1,9 @@
 import { useEffect, useState } from "react"
 
-export interface SubtotalScoreResult {
-  subtotalId: string
-  subtotalName: string
-  subtotalGroupId: string
-  subtotalGroupName: string
-  score: number
-  maxScore: number
-}
-
-export interface ExamResult {
-  examId: string
-  examName: string
-  examDate: Date | null
-  tags: string[]
-  totalScore: number
-  maxScore: number
-  scoredCount: number
-  totalQuestions: number
-  status: "complete" | "partial" | "unscored"
-  subtotalScores: SubtotalScoreResult[]
-}
+import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
 export function useStudentExamResults(studentId: string) {
-  const [results, setResults] = useState<ExamResult[]>([])
+  const [results, setResults] = useState<StudentExamResult[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
