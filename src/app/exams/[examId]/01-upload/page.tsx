@@ -45,11 +45,12 @@ export default function MasterAnswerStepPage() {
     if (!examId) return
     setIsLoading(true)
     try {
-      const fetchedExam = await window.electronAPI.fetchExamById(examId) // ExamWithDetails 型
-      if (fetchedExam && fetchedExam.examPages) {
+      // masterImages を含む examPages のみ必要な軽量クエリ
+      const fetchedPages = await window.electronAPI.getExamPagesByExamId(examId)
+      if (fetchedPages && fetchedPages.length > 0) {
         // examPages から master answers を抽出してソート
         const masterAnswers = convertExamPagesToMasterAnswers(
-          fetchedExam.examPages
+          fetchedPages
         ).sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
         setMasterAnswers(masterAnswers)
       } else {

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/table"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
-import type { GradeWithDetails } from "@/types/grade.types"
+import type { GradeWithRelations } from "@/types/grade.types"
 import type {
   GradeArchiveData,
   GradeArchiveImportPreview,
@@ -61,7 +61,7 @@ const STEP_ICONS: Record<
  */
 export function GradeListContainer() {
   const router = useRouter()
-  const [grades, setGrades] = useState<GradeWithDetails[]>([])
+  const [grades, setGrades] = useState<GradeWithRelations[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態

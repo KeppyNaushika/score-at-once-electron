@@ -1,11 +1,11 @@
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /** 生徒をcustomOrder昇順にソートした新しい配列を返す */
 export function sortStudentsByCustomOrder(
-  students: ExamStudentWithDetails[]
-): ExamStudentWithDetails[] {
+  students: ExamStudentWithMemberships[]
+): ExamStudentWithMemberships[] {
   return [...students].sort((studentA, studentB) => {
     const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
     const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
@@ -16,7 +16,7 @@ export function sortStudentsByCustomOrder(
 /** 確認モードで答案が存在しないテーブル位置を無効化するSetを返す */
 export function calculateDynamicDisabledPositions(
   files: UnifiedFile[],
-  sortedStudents: ExamStudentWithDetails[],
+  sortedStudents: ExamStudentWithMemberships[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view"
@@ -68,7 +68,7 @@ export function calculateDynamicDisabledPositions(
 /** 既存の答案が割り当てられているテーブル位置のSetを返す（警告オーバーレイ用） */
 export function calculatePositionsWithExistingAnswers(
   files: UnifiedFile[],
-  sortedStudents: ExamStudentWithDetails[],
+  sortedStudents: ExamStudentWithMemberships[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view",

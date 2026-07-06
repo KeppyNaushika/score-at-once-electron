@@ -6,7 +6,7 @@ import { useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { GradeDataSourceWithDetails } from "@/types/grade.types"
+import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
 interface ManualScoresContainerProps {
   gradeId: string
@@ -21,7 +21,7 @@ interface ManualScoresContainerProps {
  */
 export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
   const [courseworkSources, setCourseworkSources] = useState<
-    GradeDataSourceWithDetails[]
+    GradeDataSourceWithRelations[]
   >([])
   // dataSourceId → この成績の対象生徒のうち実際に入力済み（非null）の人数
   const [enteredCounts, setEnteredCounts] = useState<Record<string, number>>({})

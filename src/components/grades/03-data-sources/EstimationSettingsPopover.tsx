@@ -22,7 +22,7 @@ import {
 import type {
   AbsentMethod,
   EstimationMode,
-  GradeDataSourceWithDetails,
+  GradeDataSourceWithRelations,
 } from "@/types/grade.types"
 
 const ABSENT_METHOD_LABELS: Record<AbsentMethod, string> = {
@@ -33,9 +33,9 @@ const ABSENT_METHOD_LABELS: Record<AbsentMethod, string> = {
 }
 
 interface EstimationSettingsPopoverProps {
-  dataSource: GradeDataSourceWithDetails
+  dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（自ソース含む、チェックリスト用） */
-  allDataSources: GradeDataSourceWithDetails[]
+  allDataSources: GradeDataSourceWithRelations[]
   onUpdate: (
     id: string,
     data: {

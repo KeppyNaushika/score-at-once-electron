@@ -2,7 +2,7 @@
  * テーブルDnD準拠の型定義
  * 06-student-answersページ専用の統一型定義
  *
- * 受験生徒は Prisma 拡張型 `ExamStudentWithDetails` をそのまま持ち回るため、
+ * 受験生徒は Prisma 拡張型 `ExamStudentWithMemberships` をそのまま持ち回るため、
  * 独自の生徒 view-model は定義しない（採番学級などの派生表示値が要る場合はフックで導出する）。
  */
 

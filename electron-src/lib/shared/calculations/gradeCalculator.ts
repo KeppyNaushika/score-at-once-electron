@@ -21,11 +21,11 @@ import { calculateActualScore } from "../../prisma/questionScore"
 import { resolveEffectiveScores } from "./scoreResolution"
 import {
   calculateSubtotalScoreBySubtotalId,
-  type QuestionScoreData,
+  type QuestionScoreForSubtotal,
 } from "./subtotalCalculator"
 
 interface ExamDataCache {
-  questionScores: QuestionScoreData[]
+  questionScores: QuestionScoreForSubtotal[]
   cropRegions: { id: string; type: string; points: number | null }[]
 }
 

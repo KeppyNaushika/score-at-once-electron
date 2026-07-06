@@ -1,6 +1,6 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 // Processed student answer format for component compatibility
 export interface ProcessedStudentAnswer {
@@ -24,7 +24,7 @@ export interface ProcessedStudentAnswer {
 // Local component-specific types
 export interface StudentAnswerUploadProps {
   examId: string
-  students: ExamStudentWithDetails[]
+  students: ExamStudentWithMemberships[]
   modelAnswerCount: number
   onUploadComplete?: () => void
   existingStudentAnswers?: ProcessedStudentAnswer[]

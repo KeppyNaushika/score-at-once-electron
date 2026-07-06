@@ -7,7 +7,7 @@
 import type { Prisma, QuestionScore } from "@prisma/client"
 
 /** Prisma拡張型をprismaExtensions.tsからインポート */
-import type { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
+import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 import {
   type ScoringStatus,
   toScoringStatus,
@@ -15,10 +15,11 @@ import {
 
 /**
  * StudentAnswerImageを学生とExamStudents情報で拡張した型
- * StudentAnswerImageWithDetailsのエイリアス（型統一のため）
+ * StudentAnswerImageWithExamPageAndStudentのエイリアス（型統一のため）
  * 変数名: studentAnswerImage, studentAnswerImages
  */
-export type StudentAnswerImageWithExamStudents = StudentAnswerImageWithDetails
+export type StudentAnswerImageWithExamStudents =
+  StudentAnswerImageWithExamPageAndStudent
 
 /**
  * CropRegionをExamPage情報で拡張したPrisma生成型

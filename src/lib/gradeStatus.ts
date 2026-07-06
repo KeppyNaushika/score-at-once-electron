@@ -5,7 +5,7 @@
  * 詳細ページでフェーズカード+進捗を表示するために使用
  */
 
-import type { GradeWithDetails } from "@/types/grade.types"
+import type { GradeWithRelations } from "@/types/grade.types"
 
 export interface GradeStatus {
   step: number
@@ -31,7 +31,7 @@ export interface GradeStepCompletion {
  * 成績算出試験の各ステップ完了状態を取得
  */
 export function getGradeCompletion(
-  grade: GradeWithDetails
+  grade: GradeWithRelations
 ): GradeStepCompletion {
   const studentCount = grade._count?.gradeStudents ?? 0
   const boundarySetsCount = grade._count?.boundarySets ?? 0
@@ -65,7 +65,7 @@ export function getGradeCompletion(
 /**
  * 成績算出試験の現在のステータス（次のステップ）を判定
  */
-export function getGradeStatus(grade: GradeWithDetails): GradeStatus {
+export function getGradeStatus(grade: GradeWithRelations): GradeStatus {
   const id = grade.id
   const completion = getGradeCompletion(grade)
 

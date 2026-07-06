@@ -19,7 +19,7 @@ import {
   validateConstraintExpression,
 } from "@/lib/gradeConstraints"
 import type {
-  GradeBoundarySetWithDetails,
+  GradeBoundarySetWithItemAndBoundaries,
   GradeCalculationResult,
   GradeConstraintData,
   GradeConstraintInput,
@@ -35,7 +35,7 @@ import {
 interface ConstraintRulesEditorProps {
   gradeId: string
   gradeItems: { id: string; name: string; order: number }[]
-  boundarySets: GradeBoundarySetWithDetails[]
+  boundarySets: GradeBoundarySetWithItemAndBoundaries[]
 }
 
 const KIND_LABELS: Record<GradeConstraintKind, string> = {
@@ -57,7 +57,9 @@ const EXPRESSION_HELP = [
 ].join("\n")
 
 /** boundarySets から観点別評価に登場しうるラベルの一覧を作る */
-function collectLabels(boundarySets: GradeBoundarySetWithDetails[]): string[] {
+function collectLabels(
+  boundarySets: GradeBoundarySetWithItemAndBoundaries[]
+): string[] {
   const set = new Set<string>()
   for (const boundarySet of boundarySets) {
     if (boundarySet.targetType !== "grade_item") continue

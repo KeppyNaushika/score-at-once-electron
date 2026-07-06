@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { GradeDataSourceWithDetails } from "@/types/grade.types"
+import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"
 
@@ -19,9 +19,9 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 interface DataSourceRowProps {
-  dataSource: GradeDataSourceWithDetails
+  dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（推定ソース選択用） */
-  allDataSources: GradeDataSourceWithDetails[]
+  allDataSources: GradeDataSourceWithRelations[]
   onUpdate: (
     id: string,
     data: {

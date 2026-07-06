@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type {
-  CourseworkItemWithDetails,
+  CourseworkItemWithLetterScales,
   InputMode,
 } from "@/types/coursework.types"
 
@@ -44,7 +44,7 @@ interface ItemDraft {
   letterScales: LetterScaleDraft[]
 }
 
-function toDraft(item: CourseworkItemWithDetails): ItemDraft {
+function toDraft(item: CourseworkItemWithLetterScales): ItemDraft {
   return {
     name: item.name,
     maxScore: String(item.maxScore),
@@ -82,10 +82,10 @@ function isDraftValid(draft: ItemDraft): boolean {
 }
 
 interface SortableItemRowProps {
-  item: CourseworkItemWithDetails
+  item: CourseworkItemWithLetterScales
   draft: ItemDraft
   onUpdate: (itemId: string, patch: Partial<ItemDraft>) => void
-  onDelete: (item: CourseworkItemWithDetails) => void
+  onDelete: (item: CourseworkItemWithLetterScales) => void
 }
 
 /** ドラッグ&ドロップで並べ替え可能な、常時インライン編集の評価項目1行 */
@@ -182,7 +182,7 @@ function SortableItemRow({
 export function CourseworkItemsContainer({
   courseworkId,
 }: CourseworkItemsContainerProps) {
-  const [items, setItems] = useState<CourseworkItemWithDetails[]>([])
+  const [items, setItems] = useState<CourseworkItemWithLetterScales[]>([])
   const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({})
   const [loading, setLoading] = useState(true)
   const [newItemName, setNewItemName] = useState("")
@@ -299,7 +299,7 @@ export function CourseworkItemsContainer({
     }
   }
 
-  const handleDelete = async (item: CourseworkItemWithDetails) => {
+  const handleDelete = async (item: CourseworkItemWithLetterScales) => {
     await flushAll()
     const result = await window.electronAPI.coursework.deleteItem(item.id)
     if (result.success) {

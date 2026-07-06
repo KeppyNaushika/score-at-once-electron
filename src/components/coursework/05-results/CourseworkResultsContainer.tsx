@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { CourseworkItemWithDetails } from "@/types/coursework.types"
+import type { CourseworkItemWithLetterScales } from "@/types/coursework.types"
 
 import { useCourseworkScores } from "../04-scores/hooks/useCourseworkScores"
 
@@ -20,7 +20,7 @@ interface CourseworkResultsContainerProps {
 
 /** 文字評価記号を換算点に変換（変換表に無い記号は null） */
 function letterToScore(
-  item: CourseworkItemWithDetails,
+  item: CourseworkItemWithLetterScales,
   letterValue: string | null
 ): number | null {
   if (letterValue == null) return null

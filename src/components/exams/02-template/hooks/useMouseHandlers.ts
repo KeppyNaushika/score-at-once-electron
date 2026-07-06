@@ -53,7 +53,7 @@ export function useMouseHandlers({
     label?: string
   }[]
   onAddAreaByDrag: (
-    type: import("@/types/common.types").CropRegionAreaType,
+    type: import("@/types/cropRegionAreaType.types").CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (

@@ -4,7 +4,7 @@ import type {
   UnifiedFile,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 import type { FileState } from "./dragDropTypes"
 
@@ -21,7 +21,7 @@ export interface UploadModalState {
 
 export interface StudentAnswerTableProps {
   examId: string
-  students: ExamStudentWithDetails[]
+  students: ExamStudentWithMemberships[]
   files: UnifiedFile[]
   modelAnswerCount: number
   fileOrder?: PlacementStrategy

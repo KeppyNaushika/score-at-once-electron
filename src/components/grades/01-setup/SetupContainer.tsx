@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import type { GradeWithDetails } from "@/types/grade.types"
+import type { GradeWithRelations } from "@/types/grade.types"
 
 interface SetupContainerProps {
   gradeId: string
@@ -16,7 +16,7 @@ interface SetupContainerProps {
 
 export function SetupContainer({ gradeId }: SetupContainerProps) {
   const router = useRouter()
-  const [exam, setExam] = useState<GradeWithDetails | null>(null)
+  const [exam, setExam] = useState<GradeWithRelations | null>(null)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [referenceDate, setReferenceDate] = useState("")

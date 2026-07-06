@@ -13,13 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentRemovalConfirmModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
-  studentsToRemove: ExamStudentWithDetails[]
+  studentsToRemove: ExamStudentWithMemberships[]
   /** ExamClassroom 由来の表示学級情報（studentId キーの side data） */
   placementByStudent: Record<string, ExamClassroomPlacement>
   hasGradingData: boolean

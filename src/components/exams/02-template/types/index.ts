@@ -2,9 +2,35 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import { Exam, User } from "@prisma/client"
+import { type CropRegion, User } from "@prisma/client"
 
-import { CropRegionArea } from "@/types/common.types"
+import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
+
+/**
+ * UI表示用のCropRegion型。
+ * Prisma の CropRegion を採点領域エディタで扱いやすい形に拡張したもの。
+ * 保存前は id/examPageId/timestamps が未確定のため optional。
+ * type は SSOT の CropRegionAreaType に narrowing、points はフォーム入力時に string を許容。
+ */
+export type CropRegionArea = Omit<
+  CropRegion,
+  | "id"
+  | "examPageId"
+  | "orderIndex"
+  | "createdAt"
+  | "updatedAt"
+  | "type"
+  | "points"
+> &
+  Partial<
+    Pick<
+      CropRegion,
+      "id" | "examPageId" | "orderIndex" | "createdAt" | "updatedAt"
+    >
+  > & {
+    type: CropRegionAreaType
+    points?: number | string | null
+  }
 
 // ============================================================================
 // Core Type Definitions
@@ -117,8 +143,6 @@ export type DatabaseOperation = "create" | "update"
  * 初期データ読み込みの状態
  */
 export interface InitialDataState {
-  /** 試験情報 */
-  exam: Exam | null
   /** 現在のユーザー */
   currentUser: User | null
   /** マスター画像一覧 */
@@ -190,7 +214,7 @@ export interface UseImageCanvasInteractionProps {
   examPageId: string | null
   areas: CropRegionArea[]
   onAddAreaByDrag: (
-    type: import("@/types/common.types").CropRegionAreaType,
+    type: CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (

@@ -2,10 +2,11 @@ import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import {
+  CropRegionArea,
   ImageDimensions,
   InitialDataState,
 } from "@/components/exams/02-template/types"
-import { CropRegionArea, toCropRegionAreaType } from "@/types/common.types"
+import { toCropRegionAreaType } from "@/types/cropRegionAreaType.types"
 type MasterImage = {
   id: string
   examId: string
@@ -24,7 +25,6 @@ type MasterImage = {
 export function useTemplateData(examId: string | undefined) {
   // 初期データの状態管理
   const [initialData, setInitialData] = useState<InitialDataState>({
-    exam: null,
     currentUser: null,
     masterImages: [],
     selectedMasterImage: null,
@@ -77,23 +77,22 @@ export function useTemplateData(examId: string | undefined) {
       // ユーザー情報を取得
       const user = await window.electronAPI.getCurrentUser()
 
-      // 試験情報を取得
-      const fetchedExam = await window.electronAPI.fetchExamById(examId)
-
-      if (!fetchedExam) {
+      // examPages（masterImages 含む）を取得。試験が存在しなければ null（不存在を検知）
+      const exam = await window.electronAPI.getExamWithPages(examId)
+      if (!exam) {
         toast.error("試験が見つかりません。")
-        setInitialData((prev) => ({
-          ...prev,
-          exam: null,
+        setInitialData({
           currentUser: user,
           masterImages: [],
           selectedMasterImage: null,
           backgroundImageUrl: null,
           imageDimensions: null,
           cropRegions: [],
-        }))
+          layoutId: undefined,
+        })
         return
       }
+      const examPages = exam.examPages
 
       // マスター画像の処理
       let processedMasterImages: MasterImage[] = []
@@ -101,9 +100,9 @@ export function useTemplateData(examId: string | undefined) {
       let backgroundUrl: string | null = null
       let dimensions: ImageDimensions | null = null
 
-      if (fetchedExam.examPages && fetchedExam.examPages.length > 0) {
+      if (examPages && examPages.length > 0) {
         // examPagesからmaster imagesを抽出してソート
-        const masterImages = fetchedExam.examPages
+        const masterImages = examPages
           .filter((page) => page.masterImages && page.masterImages.length > 0)
           .map((page) => {
             const masterImage = page.masterImages?.[0]
@@ -168,9 +167,8 @@ export function useTemplateData(examId: string | undefined) {
         regions = []
       }
 
-      // 状態を更新
+      // 状態を更新（exam 本体は 02 では未使用のため null）
       setInitialData({
-        exam: fetchedExam,
         currentUser: user,
         masterImages: processedMasterImages,
         selectedMasterImage: selectedImage,

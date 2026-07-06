@@ -48,7 +48,7 @@ export type CourseworkScoreWithStudent = Omit<
 }
 
 /** 評価項目（リレーション付き） */
-export type CourseworkItemWithDetails = Omit<
+export type CourseworkItemWithLetterScales = Omit<
   Prisma.CourseworkItemGetPayload<{
     include: {
       letterScales: true
@@ -64,7 +64,7 @@ export type CourseworkItemWithDetails = Omit<
 }
 
 /** 試験外成績資料（リレーション付き） */
-export type CourseworkWithDetails = Omit<
+export type CourseworkWithRelations = Omit<
   Prisma.CourseworkGetPayload<{
     include: {
       classrooms: {
@@ -85,21 +85,22 @@ export type CourseworkWithDetails = Omit<
   "date" | "items"
 > & {
   date: string | null
-  items: CourseworkItemWithDetails[]
+  items: CourseworkItemWithLetterScales[]
 }
 
 /** 名簿1行（生徒・所属付き） */
-export type CourseworkStudentWithDetails = Prisma.CourseworkStudentGetPayload<{
-  include: {
-    student: {
-      include: {
-        memberships: {
-          include: { classroom: { select: { id: true; name: true } } }
+export type CourseworkStudentWithMemberships =
+  Prisma.CourseworkStudentGetPayload<{
+    include: {
+      student: {
+        include: {
+          memberships: {
+            include: { classroom: { select: { id: true; name: true } } }
+          }
         }
       }
     }
-  }
-}>
+  }>
 
 /** 一覧表示用の軽量サマリ */
 export type CourseworkSummary = Omit<

@@ -9,11 +9,11 @@ import type {
   PlacementStrategy,
   UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface UseTableDataGenerationParams {
   files: UnifiedFile[]
-  sortedStudents: ExamStudentWithDetails[]
+  sortedStudents: ExamStudentWithMemberships[]
   modelAnswerCount: number
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState

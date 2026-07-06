@@ -8,7 +8,7 @@ import * as path from "path"
 import { getDataDirectory } from "../../dataManager"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "./archiveExtractor"
-import type { IdMappings } from "./idRemapper"
+import type { ExamArchiveIdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
 
 /**
@@ -63,7 +63,7 @@ export async function copyImages(
  */
 export async function createImageRecords(
   data: ExtractedArchiveData,
-  mappings: IdMappings,
+  mappings: ExamArchiveIdMappings,
   newExamId: string
 ): Promise<void> {
   // v1.2.0+ 形式: masterImages と studentAnswerImages が存在する場合

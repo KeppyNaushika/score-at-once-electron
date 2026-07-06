@@ -8,7 +8,7 @@ import {
   resolveExamClassroomPlacement,
 } from "@/lib/examClassroomPlacement"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface UseExamStudentsDataProps {
   examId: string
@@ -22,8 +22,8 @@ function compareExamStudents(
   placementByStudent: Record<string, ExamClassroomPlacement>
 ) {
   return (
-    examStudentA: ExamStudentWithDetails,
-    examStudentB: ExamStudentWithDetails
+    examStudentA: ExamStudentWithMemberships,
+    examStudentB: ExamStudentWithMemberships
   ): number => {
     // customOrder が設定されている場合はそれを優先
     if (
@@ -62,8 +62,10 @@ function compareExamStudents(
 /** 試験の受験生徒一覧の取得・フィルタ・ステータス更新・並び替え・削除を管理するフック */
 export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [loading, setLoading] = useState(true)
-  const [examStudents, setExamStudents] = useState<ExamStudentWithDetails[]>([]) // 順序付き受験生徒リスト
-  // ExamClassroom(administered=true) 由来の表示学級情報。ExamStudentWithDetails にマージせず
+  const [examStudents, setExamStudents] = useState<
+    ExamStudentWithMemberships[]
+  >([]) // 順序付き受験生徒リスト
+  // ExamClassroom(administered=true) 由来の表示学級情報。ExamStudentWithMemberships にマージせず
   // studentId をキーに別持ちする side data（getStudentsForExam の戻り値には含まれない）。
   const [placementByStudent, setPlacementByStudent] = useState<
     Record<string, ExamClassroomPlacement>
@@ -207,7 +209,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
   // 表示用フィルタ（検索・受験状態・学級）に合致するか
   const matchesFilters = useCallback(
-    (examStudent: ExamStudentWithDetails): boolean => {
+    (examStudent: ExamStudentWithMemberships): boolean => {
       const student = examStudent.student
       const fullName = `${student.lastName} ${student.firstName}`
       const fullKana = `${student.lastNameKana} ${student.firstNameKana}`

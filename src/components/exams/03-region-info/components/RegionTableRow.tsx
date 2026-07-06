@@ -32,7 +32,7 @@ import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegi
 import {
   CROP_REGION_AREA_TYPES,
   CropRegionAreaType,
-} from "@/types/common.types"
+} from "@/types/cropRegionAreaType.types"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 // AreaTypeの日本語表示マッピング

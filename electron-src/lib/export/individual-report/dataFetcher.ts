@@ -16,7 +16,7 @@ import {
 } from "../../shared/calculations/scoreResolution"
 import {
   calculateSubtotalScoreBySubtotalId,
-  type QuestionScoreData,
+  type QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
 import type {
   SubtotalGroupData,
@@ -273,7 +273,7 @@ async function buildSubtotalScoresFromGroups(
   questionRegions: CropRegion[]
 ): Promise<SubtotalScore[]> {
   // 採点データを変換
-  const questionScoreData: QuestionScoreData[] = allQuestionScores.map(
+  const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
     (score) => ({
       studentId: score.studentId,
       cropRegionId: score.cropRegionId,

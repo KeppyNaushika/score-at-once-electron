@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
 import { getGradeCompletion, type GradeStepCompletion } from "@/lib/gradeStatus"
-import type { GradeWithDetails } from "@/types/grade.types"
+import type { GradeWithRelations } from "@/types/grade.types"
 
 interface WorkflowStep {
   id: string
@@ -201,7 +201,7 @@ export default function GradeDetailPage() {
   const router = useRouter()
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
-  const [exam, setExam] = useState<GradeWithDetails | null>(null)
+  const [exam, setExam] = useState<GradeWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
 
   const loadExam = useCallback(async () => {

@@ -11,7 +11,7 @@ import type { ExtractedArchiveData } from "./archiveExtractor"
 /**
  * IDマッピング結果
  */
-export interface IdMappings {
+export interface ExamArchiveIdMappings {
   /** 試験ID: 旧ID -> 新ID */
   exam: Record<string, string>
   /** ExamPage ID: 旧ID -> 新ID */
@@ -88,8 +88,10 @@ export interface IdMappings {
  * @param data - 展開されたアーカイブデータ
  * @returns IDマッピング
  */
-export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
-  const mappings: IdMappings = {
+export function generateNewIdMappings(
+  data: ExtractedArchiveData
+): ExamArchiveIdMappings {
+  const mappings: ExamArchiveIdMappings = {
     exam: {},
     examPage: {},
     cropRegion: {},

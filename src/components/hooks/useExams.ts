@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
-import type { ExamListItem } from "@/types/common.types"
+import type { ExamSummary } from "@/lib/examStatus"
 
 /** 試験一覧の取得・新規作成を行うフック */
 export const useExams = () => {
   const { user } = useAuth()
-  const [exams, setExams] = useState<ExamListItem[]>([])
+  const [exams, setExams] = useState<ExamSummary[]>([])
 
   const loadExams = useCallback(async () => {
     if (!user) {

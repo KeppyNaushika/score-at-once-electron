@@ -1,9 +1,9 @@
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-// 生徒データの型 = getStudentsForExam の戻り値（ExamStudentWithDetails）。
+// 生徒データの型 = getStudentsForExam の戻り値（ExamStudentWithMemberships）。
 // 08結果出力では学級情報は classroomInfoMap 経由で解決し、受験生徒の識別・所属・
 // 受験状態・並び順のみを examStudent.student(.memberships) / status / customOrder で参照する。
-export type Student = ExamStudentWithDetails
+export type Student = ExamStudentWithMemberships
 
 // PDF用紙の向きの型
 export type PdfOrientation = "portrait" | "landscape"

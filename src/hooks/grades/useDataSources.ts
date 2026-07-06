@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
 
-import type { GradeWithDetails } from "@/types/grade.types"
+import type { GradeWithRelations } from "@/types/grade.types"
 
 /** 成績評定項目とデータソースのCRUD操作を管理するフック */
 export function useDataSources(gradeId: string) {
-  const [exam, setExam] = useState<GradeWithDetails | null>(null)
+  const [exam, setExam] = useState<GradeWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {

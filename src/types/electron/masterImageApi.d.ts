@@ -7,7 +7,7 @@ import type {
   MasterImageWithPageMeta,
 } from "@/electron-src/lib/prisma/masterAnswer"
 
-import type { StudentAnswerImageWithDetails } from "../prismaExtensions"
+import type { StudentAnswerImageWithExamPageAndStudent } from "../prismaExtensions"
 
 /**
  * ExamPage・マスター画像・答案画像関連API
@@ -32,7 +32,7 @@ export interface MasterImageAPI {
   ) => Promise<MasterImageWithPageMeta[]>
   getStudentAnswerImagesByExamId: (
     examId: string
-  ) => Promise<StudentAnswerImageWithDetails[]>
+  ) => Promise<StudentAnswerImageWithExamPageAndStudent[]>
 
   uploadMasterAnswers: (
     examId: string,

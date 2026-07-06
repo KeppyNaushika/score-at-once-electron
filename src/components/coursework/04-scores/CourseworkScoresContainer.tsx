@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef } from "react"
 
 import { EditableTable } from "@/components/common/EditableTable"
 import { Button } from "@/components/ui/button"
-import type { CourseworkItemWithDetails } from "@/types/coursework.types"
+import type { CourseworkItemWithLetterScales } from "@/types/coursework.types"
 
 import {
   type CourseworkCellPatch,
@@ -189,7 +189,7 @@ export function CourseworkScoresContainer({
       }[] = []
 
       const pushPatch = (
-        item: CourseworkItemWithDetails,
+        item: CourseworkItemWithLetterScales,
         studentId: string,
         patch: CourseworkCellPatch
       ) => {

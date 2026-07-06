@@ -23,7 +23,7 @@ import StudentClassroomMembershipModal from "@/components/student/StudentClassro
 import StudentModal from "@/components/student/StudentModal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { StudentClassroomMembershipWithDetails } from "@/types/prismaExtensions"
+import type { StudentClassroomMembershipWithStudentAndClassroom } from "@/types/prismaExtensions"
 
 export default function StudentDetailPage() {
   const params = useParams()
@@ -46,7 +46,7 @@ export default function StudentDetailPage() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] =
-    useState<StudentClassroomMembershipWithDetails | null>(null)
+    useState<StudentClassroomMembershipWithStudentAndClassroom | null>(null)
 
   const handleEditStudentClick = () => {
     setIsStudentModalOpen(true)
@@ -68,7 +68,7 @@ export default function StudentDetailPage() {
   }
 
   const handleEditMembership = (
-    membership: StudentClassroomMembershipWithDetails
+    membership: StudentClassroomMembershipWithStudentAndClassroom
   ) => {
     setMembershipToEdit(membership)
     setIsMembershipModalOpen(true)

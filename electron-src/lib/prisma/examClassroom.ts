@@ -8,7 +8,7 @@ import prisma from "./client"
 import { getExamReferenceDate } from "./examStudent"
 import { membershipFilterAt } from "./membershipFilter"
 
-export type ExamClassroomWithDetails = Prisma.ExamClassroomGetPayload<{
+export type ExamClassroomWithClassroomAndExam = Prisma.ExamClassroomGetPayload<{
   include: {
     classroom: true
     exam: true
@@ -128,7 +128,7 @@ export const getAdministeredClassrooms = async (
  */
 export const addExamClassroom = async (
   options: AddExamClassroomOptions
-): Promise<ExamClassroomWithDetails> => {
+): Promise<ExamClassroomWithClassroomAndExam> => {
   const {
     examId,
     classroomId,
@@ -184,7 +184,7 @@ export const addExamClassroom = async (
  */
 export const updateExamClassroom = async (
   options: UpdateExamClassroomOptions
-): Promise<ExamClassroomWithDetails> => {
+): Promise<ExamClassroomWithClassroomAndExam> => {
   const { id, administered, teacherStatistics, studentReport, order } = options
 
   try {

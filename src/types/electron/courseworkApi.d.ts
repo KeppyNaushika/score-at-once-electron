@@ -11,7 +11,7 @@ export interface CourseworkAPI {
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      coursework?: import("../coursework.types").CourseworkWithDetails
+      coursework?: import("../coursework.types").CourseworkWithRelations
       error?: string
     }>
     create: (data: {
@@ -20,7 +20,7 @@ export interface CourseworkAPI {
       date?: string | null
     }) => Promise<{
       success: boolean
-      coursework?: import("../coursework.types").CourseworkWithDetails
+      coursework?: import("../coursework.types").CourseworkWithRelations
       error?: string
     }>
     update: (
@@ -32,7 +32,7 @@ export interface CourseworkAPI {
       }
     ) => Promise<{
       success: boolean
-      coursework?: import("../coursework.types").CourseworkWithDetails
+      coursework?: import("../coursework.types").CourseworkWithRelations
       error?: string
     }>
     delete: (id: string) => Promise<{
@@ -66,7 +66,7 @@ export interface CourseworkAPI {
       letterScales?: { label: string; score: number; order: number }[]
     }) => Promise<{
       success: boolean
-      item?: import("../coursework.types").CourseworkItemWithDetails
+      item?: import("../coursework.types").CourseworkItemWithLetterScales
       error?: string
     }>
     updateItem: (
@@ -79,7 +79,7 @@ export interface CourseworkAPI {
       }
     ) => Promise<{
       success: boolean
-      item?: import("../coursework.types").CourseworkItemWithDetails
+      item?: import("../coursework.types").CourseworkItemWithLetterScales
       error?: string
     }>
     deleteItem: (id: string) => Promise<{
@@ -112,7 +112,7 @@ export interface CourseworkAPI {
     // 名簿
     getStudents: (courseworkId: string) => Promise<{
       success: boolean
-      students?: import("../coursework.types").CourseworkStudentWithDetails[]
+      students?: import("../coursework.types").CourseworkStudentWithMemberships[]
       error?: string
     }>
     getClassrooms: (courseworkId: string) => Promise<{

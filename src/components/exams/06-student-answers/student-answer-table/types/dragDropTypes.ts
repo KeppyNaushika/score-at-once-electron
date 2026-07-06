@@ -9,7 +9,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 // ファイル状態管理用の型定義
 export interface FileState {
@@ -24,7 +24,7 @@ export interface UseDragDropParams {
   onFilesChange: (files: UnifiedFile[]) => void
   getEnabledFiles: () => UnifiedFile[]
   getDisabledFiles: () => UnifiedFile[]
-  students?: ExamStudentWithDetails[]
+  students?: ExamStudentWithMemberships[]
   modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy

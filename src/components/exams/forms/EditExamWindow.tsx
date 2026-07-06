@@ -1,5 +1,6 @@
 "use client"
 
+import type { Exam } from "@prisma/client"
 import { Tag as TagIcon, X as XIcon } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 
@@ -16,12 +17,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import type { ExamWithDetails } from "@/types/common.types"
 
 interface EditExamWindowProps {
-  examToEdit: ExamWithDetails
+  examToEdit: Exam
   setIsShowEditExamWindow: (isOpen: boolean) => void
-  onSave: (updatedExamData: ExamWithDetails) => Promise<void>
+  onSave: (updatedExamData: Exam) => Promise<void>
 }
 
 const EditExamWindow = ({
@@ -79,7 +79,7 @@ const EditExamWindow = ({
       console.error("Failed to save tags:", error)
     }
 
-    const updatedExamPayload: ExamWithDetails = {
+    const updatedExamPayload: Exam = {
       ...examToEdit,
       examName: examName.trim(),
       examDate: examDate ?? null,

@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
-type StudentClassroomMembershipWithDetails =
+type StudentClassroomMembershipWithStudentAndClassroom =
   Prisma.StudentClassroomMembershipGetPayload<{
     include: {
       student: true
@@ -37,7 +37,7 @@ type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
 /** 生徒の学級所属レコードを作成する（student・class含む） */
 export const createStudentClassroomMembership = async (
   membershipData: Prisma.StudentClassroomMembershipCreateInput
-): Promise<StudentClassroomMembershipWithDetails> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom> => {
   try {
     return await prisma.studentClassroomMembership.create({
       data: membershipData,
@@ -56,7 +56,7 @@ export const createStudentClassroomMembership = async (
 export const updateStudentClassroomMembership = async (
   id: string,
   membershipData: Prisma.StudentClassroomMembershipUpdateInput
-): Promise<StudentClassroomMembershipWithDetails> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom> => {
   try {
     return await prisma.studentClassroomMembership.update({
       where: { id },
@@ -107,7 +107,7 @@ export const deleteStudentClassroomMembership = async (
 /** 生徒の現在所属中の学級一覧を取得する（endDateがnullのもの、student・class含む） */
 export const getCurrentMembershipsByStudentId = async (
   studentId: string
-): Promise<StudentClassroomMembershipWithDetails[]> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom[]> => {
   try {
     return await prisma.studentClassroomMembership.findMany({
       where: {
@@ -131,7 +131,7 @@ export const getCurrentMembershipsByStudentId = async (
 /** 生徒の全所属履歴を取得する（過去分含む、student・class含む） */
 export const getAllMembershipsByStudentId = async (
   studentId: string
-): Promise<StudentClassroomMembershipWithDetails[]> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom[]> => {
   try {
     return await prisma.studentClassroomMembership.findMany({
       where: { studentId },
@@ -152,7 +152,7 @@ export const getAllMembershipsByStudentId = async (
 /** 学級の現在所属中の生徒一覧を取得する（出席番号順、student・class含む） */
 export const getCurrentMembershipsByClassroomId = async (
   classroomId: string
-): Promise<StudentClassroomMembershipWithDetails[]> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom[]> => {
   try {
     return await prisma.studentClassroomMembership.findMany({
       where: {
@@ -184,7 +184,7 @@ export const addStudentToClassroom = async (
   startDate: Date = new Date(),
   attendanceNumber?: number,
   notes?: string
-): Promise<StudentClassroomMembershipWithDetails> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom> => {
   try {
     const existingActive = await prisma.studentClassroomMembership.findMany({
       where: {
@@ -225,7 +225,7 @@ export const addStudentToClassroom = async (
 export const endStudentMembership = async (
   membershipId: string,
   endDate: Date = new Date()
-): Promise<StudentClassroomMembershipWithDetails> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom> => {
   try {
     return await updateStudentClassroomMembership(membershipId, {
       endDate,
@@ -240,7 +240,7 @@ export const endStudentMembership = async (
 export const getMembershipsByDateRange = async (
   startDate: Date,
   endDate?: Date
-): Promise<StudentClassroomMembershipWithDetails[]> => {
+): Promise<StudentClassroomMembershipWithStudentAndClassroom[]> => {
   try {
     const whereCondition: Prisma.StudentClassroomMembershipWhereInput = {
       OR: [
@@ -275,6 +275,6 @@ export const getMembershipsByDateRange = async (
 
 export {
   type ClassroomWithMemberships,
-  type StudentClassroomMembershipWithDetails,
+  type StudentClassroomMembershipWithStudentAndClassroom,
   type StudentWithMemberships,
 }

@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import type { ComponentType } from "react"
 
-import { CropRegionArea } from "@/types/common.types"
+import { CropRegionArea } from "@/components/exams/02-template/types"
 
 type CropRegionListProps = {
   areas: CropRegionArea[]

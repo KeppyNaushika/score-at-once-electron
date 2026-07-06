@@ -1,8 +1,9 @@
 import { User } from "@prisma/client"
 import { toast } from "sonner"
 
+import { CropRegionArea } from "@/components/exams/02-template/types"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
-import { CropRegionArea, toCropRegionAreaType } from "@/types/common.types"
+import { toCropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 /**
  * テンプレート保存処理
