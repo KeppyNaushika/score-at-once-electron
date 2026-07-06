@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type {
-  CourseworkItemWithDetails,
+  CourseworkItemWithLetterScales,
   CourseworkScoreWithStudent,
 } from "@/types/coursework.types"
 
@@ -51,7 +51,7 @@ const EMPTY_CELL: CourseworkCell = {
  * @param courseworkId - 対象の資料ID
  */
 export function useCourseworkScores(courseworkId: string) {
-  const [items, setItems] = useState<CourseworkItemWithDetails[]>([])
+  const [items, setItems] = useState<CourseworkItemWithLetterScales[]>([])
   const [studentRows, setStudentRows] = useState<CourseworkStudentRow[]>([])
   const [loading, setLoading] = useState(true)
   const pendingChanges = useRef<

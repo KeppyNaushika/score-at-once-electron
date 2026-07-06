@@ -7,7 +7,7 @@ import type {
 
 import type {
   ClassroomWithMemberships,
-  StudentClassroomMembershipWithDetails,
+  StudentClassroomMembershipWithStudentAndClassroom,
   StudentWithMemberships,
 } from "../prismaExtensions"
 
@@ -76,34 +76,34 @@ export interface ClassroomStudentAPI {
   // Student Classroom Membership related
   createStudentClassroomMembership: (
     membershipData: Prisma.StudentClassroomMembershipCreateInput
-  ) => Promise<StudentClassroomMembershipWithDetails>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
   updateStudentClassroomMembership: (
     id: string,
     membershipData: Prisma.StudentClassroomMembershipUpdateInput
-  ) => Promise<StudentClassroomMembershipWithDetails>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
   deleteStudentClassroomMembership: (id: string) => Promise<void>
   getCurrentMembershipsByStudentId: (
     studentId: string
-  ) => Promise<StudentClassroomMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
   getAllMembershipsByStudentId: (
     studentId: string
-  ) => Promise<StudentClassroomMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
   getCurrentMembershipsByClassroomId: (
     classroomId: string
-  ) => Promise<StudentClassroomMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
   addStudentToClassroom: (
     studentId: string,
     classroomId: string,
     startDate?: Date,
     attendanceNumber?: number,
     notes?: string
-  ) => Promise<StudentClassroomMembershipWithDetails>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
   endStudentMembership: (
     membershipId: string,
     endDate?: Date
-  ) => Promise<StudentClassroomMembershipWithDetails>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
   getMembershipsByDateRange: (
     startDate: Date,
     endDate?: Date
-  ) => Promise<StudentClassroomMembershipWithDetails[]>
+  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
 }

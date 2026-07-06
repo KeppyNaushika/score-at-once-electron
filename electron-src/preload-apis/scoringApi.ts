@@ -1,9 +1,9 @@
 import { ipcRenderer } from "electron"
 
-import {
-  QuestionScoreCreateData,
-  QuestionScoreUpdateData,
-} from "../../src/types/common.types"
+import type {
+  CreateQuestionScoreArgs,
+  UpdateQuestionScoreArgs,
+} from "../../src/types/electron/scoringApi"
 
 /** 採点スコアのIPC API（設問スコアCRUD・一括更新・進捗取得・採点初期化） */
 export function createScoringApi() {
@@ -15,11 +15,11 @@ export function createScoringApi() {
       ipcRenderer.invoke("get-question-scores-for-exam", examId, userId),
     getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
       ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
-    createQuestionScore: (data: QuestionScoreCreateData) =>
+    createQuestionScore: (data: CreateQuestionScoreArgs) =>
       ipcRenderer.invoke("create-question-score", data),
     updateQuestionScore: (
       id: string,
-      data: QuestionScoreUpdateData,
+      data: UpdateQuestionScoreArgs,
       expectedVersion: number
     ) => ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
     deleteQuestionScore: (id: string) =>
@@ -34,7 +34,7 @@ export function createScoringApi() {
       answerSheetId: string,
       cropRegionId: string,
       userId: string,
-      scoreData: QuestionScoreUpdateData
+      scoreData: UpdateQuestionScoreArgs
     ) =>
       ipcRenderer.invoke(
         "finalize-question-score",

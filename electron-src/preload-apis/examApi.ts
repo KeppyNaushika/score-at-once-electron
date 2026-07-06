@@ -7,11 +7,13 @@ import type { ExamStudentStatus } from "../../src/types/examStudentStatus.types"
 /** 試験管理のIPC API（CRUD・模範解答・受験生徒管理・学級連携） */
 export function createExamApi() {
   return {
-    fetchExams: (userId: string) => ipcRenderer.invoke("fetch-exams", userId),
     fetchExamsSummary: (userId: string) =>
       ipcRenderer.invoke("fetch-exams-summary", userId),
     fetchExamById: (examId: string) =>
       ipcRenderer.invoke("fetch-exam-by-id", examId),
+    getExam: (examId: string) => ipcRenderer.invoke("get-exam", examId),
+    getExamWithPages: (examId: string) =>
+      ipcRenderer.invoke("get-exam-with-pages", examId),
     createExam: (props: CreateExamArgs, userId: string) => {
       return ipcRenderer.invoke("create-exam", props, userId)
     },

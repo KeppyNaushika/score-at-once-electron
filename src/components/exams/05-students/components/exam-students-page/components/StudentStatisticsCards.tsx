@@ -1,9 +1,9 @@
 "use client"
 
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentStatisticsCardsProps {
-  students: ExamStudentWithDetails[]
+  students: ExamStudentWithMemberships[]
 }
 
 export function StudentStatisticsCards({

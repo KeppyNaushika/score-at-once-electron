@@ -12,10 +12,10 @@ import type {
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 export function useStudentAnswersData(examId: string) {
-  const [students, setStudents] = useState<ExamStudentWithDetails[]>([])
+  const [students, setStudents] = useState<ExamStudentWithMemberships[]>([])
   const [studentAnswers, setStudentAnswers] = useState<
     ProcessedStudentAnswer[]
   >([])
@@ -33,7 +33,7 @@ export function useStudentAnswersData(examId: string) {
         setIsLoading(true)
       }
 
-      // Load students（受験生徒を ExamStudentWithDetails のまま保持する）
+      // Load students（受験生徒を ExamStudentWithMemberships のまま保持する）
       const examStudentsResult =
         await window.electronAPI.getStudentsForExam(examId)
       if (examStudentsResult.success && examStudentsResult.students) {
@@ -119,7 +119,7 @@ export function useStudentAnswersData(examId: string) {
 
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
-  students?: ExamStudentWithDetails[],
+  students?: ExamStudentWithMemberships[],
   studentAnswers?: ProcessedStudentAnswer[]
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])

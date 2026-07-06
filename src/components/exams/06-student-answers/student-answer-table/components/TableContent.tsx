@@ -13,7 +13,7 @@ import {
   TableHeader as UITableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface TableContentProps {
   tableData: Array<
@@ -21,11 +21,11 @@ interface TableContentProps {
       type: "file" | "empty" | "disabled"
       position: number
       file?: UnifiedFile
-      student?: ExamStudentWithDetails
+      student?: ExamStudentWithMemberships
       pageNumber?: number
     }>
   >
-  sortedStudents: ExamStudentWithDetails[]
+  sortedStudents: ExamStudentWithMemberships[]
   maxPages: number
   disabledState: {
     rows: Set<number>
@@ -253,13 +253,13 @@ interface EmptyTableCellWithLogicProps {
   cellData: {
     type: "empty" | "disabled" | "file"
     position: number
-    student?: ExamStudentWithDetails
+    student?: ExamStudentWithMemberships
     pageNumber?: number
     file?: UnifiedFile
   }
   studentIndex: number
   pageIndex: number
-  sortedStudents: ExamStudentWithDetails[]
+  sortedStudents: ExamStudentWithMemberships[]
   disabledState: {
     rows: Set<number>
     cols: Set<number>

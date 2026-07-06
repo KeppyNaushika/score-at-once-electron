@@ -4,11 +4,11 @@ import type { Exam } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import type { ExamWithDetails } from "@/types/common.types"
+import type { ExamForDetail } from "@/types/prismaExtensions"
 
 /** 試験詳細ページ用のデータ取得・更新フック（生徒数・設問領域数・答案数等の集計を含む） */
 export function useExamDetail(examId: string) {
-  const [exam, setExam] = useState<ExamWithDetails | null>(null)
+  const [exam, setExam] = useState<ExamForDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [studentCount, setStudentCount] = useState(0)
   const [questionRegionCount, setQuestionRegionCount] = useState(0)

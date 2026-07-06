@@ -137,7 +137,7 @@ export function useStudentAnswerUpload(
     let cancelled = false
     ;(async () => {
       try {
-        const exam = await window.electronAPI.fetchExamById(examId)
+        const exam = await window.electronAPI.getExam(examId)
         if (cancelled || !exam) return
         setMarkerCorrectionEnabledState(exam.markerCorrectionEnabled)
       } catch {

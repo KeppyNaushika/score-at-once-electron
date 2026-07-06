@@ -16,7 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useDataSources } from "@/hooks/grades/useDataSources"
-import type { AbsentMethod, GradeItemWithDetails } from "@/types/grade.types"
+import type {
+  AbsentMethod,
+  GradeItemWithDataSources,
+} from "@/types/grade.types"
 
 import { AddDataSourceInline } from "./AddDataSourceInline"
 import { DataSourceRow } from "./DataSourceRow"
@@ -97,7 +100,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     setNewItemName("")
   }
 
-  const handleStartEditItem = (item: GradeItemWithDetails) => {
+  const handleStartEditItem = (item: GradeItemWithDataSources) => {
     setEditingItemId(item.id)
     setEditingItemName(item.name)
   }

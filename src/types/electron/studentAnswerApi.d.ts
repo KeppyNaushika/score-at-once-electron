@@ -1,4 +1,4 @@
-import type { StudentAnswerImageWithDetails } from "../prismaExtensions"
+import type { StudentAnswerImageWithExamPageAndStudent } from "../prismaExtensions"
 
 export interface UploadStudentAnswerFileData {
   name: string
@@ -33,7 +33,7 @@ export interface StudentAnswerAPI {
   }>
   getStudentAnswersByExamId: (examId: string) => Promise<{
     success: boolean
-    studentAnswerImages?: StudentAnswerImageWithDetails[]
+    studentAnswerImages?: StudentAnswerImageWithExamPageAndStudent[]
     error?: string
   }>
   deleteStudentAnswer: (studentAnswerId: string) => Promise<{
@@ -45,7 +45,7 @@ export interface StudentAnswerAPI {
     studentId: string
   ) => Promise<{
     success: boolean
-    answerSheet?: StudentAnswerImageWithDetails
+    answerSheet?: StudentAnswerImageWithExamPageAndStudent
     error?: string
   }>
   setStudentAnswerAbsent: (
@@ -53,12 +53,12 @@ export interface StudentAnswerAPI {
     isAbsent: boolean
   ) => Promise<{
     success: boolean
-    answerSheet?: StudentAnswerImageWithDetails
+    answerSheet?: StudentAnswerImageWithExamPageAndStudent
     error?: string
   }>
   getStudentAnswerById: (studentAnswerId: string) => Promise<{
     success: boolean
-    answerSheet?: StudentAnswerImageWithDetails
+    answerSheet?: StudentAnswerImageWithExamPageAndStudent
     error?: string
   }>
   updateStudentAnswerPlacement: (
@@ -67,7 +67,7 @@ export interface StudentAnswerAPI {
     pageNumber: number
   ) => Promise<{
     success: boolean
-    answerSheet?: StudentAnswerImageWithDetails
+    answerSheet?: StudentAnswerImageWithExamPageAndStudent
     error?: string
   }>
   swapStudentAnswerPlacements: (
@@ -75,7 +75,7 @@ export interface StudentAnswerAPI {
     studentAnswerId2: string
   ) => Promise<{
     success: boolean
-    answerSheets?: StudentAnswerImageWithDetails[]
+    answerSheets?: StudentAnswerImageWithExamPageAndStudent[]
     error?: string
   }>
   swapStudentAnswerPlacementsWithScoring: (
@@ -83,7 +83,7 @@ export interface StudentAnswerAPI {
     studentAnswerId2: string
   ) => Promise<{
     success: boolean
-    answerSheets?: StudentAnswerImageWithDetails[]
+    answerSheets?: StudentAnswerImageWithExamPageAndStudent[]
     error?: string
   }>
   batchUpdateStudentAnswerPlacements: (

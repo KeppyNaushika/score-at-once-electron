@@ -1,5 +1,6 @@
 "use client"
 
+import type { Exam } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
@@ -13,7 +14,6 @@ import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   type IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
-import type { ExamWithDetails } from "@/types/common.types"
 
 /** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */
 export function useExportPage() {
@@ -22,7 +22,7 @@ export function useExportPage() {
   const initializedRef = useRef(false)
 
   // 基本状態
-  const [exam, setExam] = useState<ExamWithDetails | null>(null)
+  const [exam, setExam] = useState<Exam | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -249,7 +249,7 @@ export function useExportPage() {
     try {
       setLoading(true)
       const [examResponse, studentsResponse] = await Promise.all([
-        window.electronAPI.fetchExamById(examId),
+        window.electronAPI.getExam(examId),
         window.electronAPI.getStudentsForExam(examId),
       ])
 

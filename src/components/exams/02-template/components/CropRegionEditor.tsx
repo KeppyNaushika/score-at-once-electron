@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+import { CropRegionArea } from "@/components/exams/02-template/types"
+import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 import { useFrameDetection } from "../hooks/useFrameDetection"
 import { DetectedRect } from "../types"

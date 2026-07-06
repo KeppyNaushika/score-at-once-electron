@@ -5,12 +5,12 @@ export interface GradeAPI {
   grade: {
     getAll: () => Promise<{
       success: boolean
-      grades?: import("../grade.types").GradeWithDetails[]
+      grades?: import("../grade.types").GradeWithRelations[]
       error?: string
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithDetails
+      grade?: import("../grade.types").GradeWithRelations
       error?: string
     }>
     create: (data: {
@@ -19,7 +19,7 @@ export interface GradeAPI {
       referenceDate?: string | null
     }) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithDetails
+      grade?: import("../grade.types").GradeWithRelations
       error?: string
     }>
     update: (
@@ -31,7 +31,7 @@ export interface GradeAPI {
       }
     ) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithDetails
+      grade?: import("../grade.types").GradeWithRelations
       error?: string
     }>
     delete: (id: string) => Promise<{ success: boolean; error?: string }>
@@ -138,12 +138,12 @@ export interface GradeAPI {
     // GradeItem
     getGradeItems: (gradeId: string) => Promise<{
       success: boolean
-      gradeItems?: import("../grade.types").GradeItemWithDetails[]
+      gradeItems?: import("../grade.types").GradeItemWithDataSources[]
       error?: string
     }>
     createGradeItem: (data: { gradeId: string; name: string }) => Promise<{
       success: boolean
-      gradeItem?: import("../grade.types").GradeItemWithDetails
+      gradeItem?: import("../grade.types").GradeItemWithDataSources
       error?: string
     }>
     updateGradeItem: (
@@ -151,7 +151,7 @@ export interface GradeAPI {
       data: { name?: string }
     ) => Promise<{
       success: boolean
-      gradeItem?: import("../grade.types").GradeItemWithDetails
+      gradeItem?: import("../grade.types").GradeItemWithDataSources
       error?: string
     }>
     deleteGradeItem: (
@@ -179,7 +179,7 @@ export interface GradeAPI {
       estimationSourceIds?: string[]
     }) => Promise<{
       success: boolean
-      dataSource?: import("../grade.types").GradeDataSourceWithDetails
+      dataSource?: import("../grade.types").GradeDataSourceWithRelations
       error?: string
     }>
     updateDataSource: (
@@ -196,7 +196,7 @@ export interface GradeAPI {
       }
     ) => Promise<{
       success: boolean
-      dataSource?: import("../grade.types").GradeDataSourceWithDetails
+      dataSource?: import("../grade.types").GradeDataSourceWithRelations
       error?: string
     }>
     deleteDataSource: (
@@ -218,7 +218,7 @@ export interface GradeAPI {
     ) => Promise<{ success: boolean; error?: string }>
     getBoundarySets: (gradeId: string) => Promise<{
       success: boolean
-      boundarySets?: import("../grade.types").GradeBoundarySetWithDetails[]
+      boundarySets?: import("../grade.types").GradeBoundarySetWithItemAndBoundaries[]
       error?: string
     }>
     upsertBoundarySet: (data: {
@@ -228,7 +228,7 @@ export interface GradeAPI {
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => Promise<{
       success: boolean
-      boundarySet?: import("../grade.types").GradeBoundarySetWithDetails
+      boundarySet?: import("../grade.types").GradeBoundarySetWithItemAndBoundaries
       error?: string
     }>
     deleteBoundarySet: (

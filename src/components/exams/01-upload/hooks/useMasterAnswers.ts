@@ -128,12 +128,11 @@ export function useMasterAnswers(
           )
           toast.success(message)
 
-          // Get updated exam data
-          const updatedExam = await window.electronAPI.fetchExamById(examId)
-          if (updatedExam && updatedExam.examPages) {
-            const masterAnswers = convertExamPagesToMasterAnswers(
-              updatedExam.examPages
-            )
+          // Get updated exam pages (masterImages を含む軽量クエリ)
+          const updatedPages =
+            await window.electronAPI.getExamPagesByExamId(examId)
+          if (updatedPages && updatedPages.length > 0) {
+            const masterAnswers = convertExamPagesToMasterAnswers(updatedPages)
             const sortedUpdatedAnswers = sortImagesByPageNumber(masterAnswers)
 
             setState((prev) => ({ ...prev, answers: sortedUpdatedAnswers }))

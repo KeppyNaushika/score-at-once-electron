@@ -175,7 +175,7 @@ export async function getPdfExportData(options: {
     )
 
     // 生徒情報を取得。PDF 出力層は内部で flat な Student 射影（student.id = 生徒ID）を
-    // 消費するため、IPC 契約の nested な ExamStudentWithDetails をここで境界フラット化する。
+    // 消費するため、IPC 契約の nested な ExamStudentWithMemberships をここで境界フラット化する。
     const studentsResult = await getStudentsForExam(examId)
     const allStudents = (studentsResult.students || []).map((examStudent) => ({
       ...examStudent.student,

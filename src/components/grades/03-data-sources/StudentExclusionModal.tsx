@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useGradeItemExclusions } from "@/hooks/grades/useGradeItemExclusions"
-import type { GradeItemWithDetails } from "@/types/grade.types"
+import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 interface ExclusionStudent {
   id: string
@@ -45,7 +45,7 @@ interface StudentExclusionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   gradeId: string
-  gradeItems: GradeItemWithDetails[]
+  gradeItems: GradeItemWithDataSources[]
   students: ExclusionStudent[]
   classroomIds: string[]
 }

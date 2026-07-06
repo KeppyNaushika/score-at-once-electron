@@ -1,7 +1,7 @@
 import type { RosterClassroomOption } from "@/components/common/roster-table"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 export interface SortableStudentTableProps {
   classrooms: RosterClassroomOption[]
@@ -16,7 +16,7 @@ export interface SortableStudentTableProps {
   selectedStudents: Set<string>
   onStudentSelectionChange: (studentId: string, isSelected: boolean) => void
   onSelectAll: (isSelected: boolean) => void
-  filteredStudents: ExamStudentWithDetails[]
+  filteredStudents: ExamStudentWithMemberships[]
   /** ExamClassroom 由来の表示学級情報（studentId キーの side data） */
   placementByStudent: Record<string, ExamClassroomPlacement>
   examId: string

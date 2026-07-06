@@ -79,7 +79,7 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
  * 表現できないための一点拡張で、SerializedQuestionScore の Decimal→number や ScoringStatus と
  * 同じパターン）。それ以外に手書きの graft は持たない。
  */
-export type ExamStudentWithDetails = Omit<
+export type ExamStudentWithMemberships = Omit<
   Prisma.ExamStudentGetPayload<{
     include: {
       student: {
@@ -96,7 +96,7 @@ export type ExamStudentWithDetails = Omit<
 /**
  * 生徒と学級を含む学級所属型
  */
-export type StudentClassroomMembershipWithDetails =
+export type StudentClassroomMembershipWithStudentAndClassroom =
   Prisma.StudentClassroomMembershipGetPayload<{
     include: {
       student: true
@@ -140,8 +140,55 @@ export type QuestionScoreWithUser = Prisma.QuestionScoreGetPayload<{
 
 // =============================================================================
 // Exam関連型
-// NOTE: IPCハンドラーが返す ExamWithDetails は common.types.ts で定義
 // =============================================================================
+
+/**
+ * IPCハンドラー fetch-exam-by-id が返す Exam 型（詳細ページ専用の広ロード）。
+ *
+ * getExamById（main SSOT）と同一の include を Prisma から自己完結で導出する
+ * （prismaExtensions の他型と同じ GetPayload 様式。renderer は electron-src の
+ * ランタイム型を root tsconfig で解決できないため payload 直参照はしない）。
+ * IPC 側で付加する平坦化 cropRegions / 抽出 answerImages を graft する。
+ */
+export type ExamForDetail = Prisma.ExamGetPayload<{
+  include: {
+    userExams: { include: { user: true } }
+    examPages: {
+      include: {
+        masterImages: true
+        studentAnswerImages: { include: { student: true } }
+        cropRegions: {
+          // 進捗計算は questionScores のスカラー（status/studentId/partialScore）のみ読むため
+          // student/user は join しない（over-fetch 排除）
+          include: { questionScores: true }
+        }
+      }
+    }
+    examSubtotalGroups: {
+      include: { subtotalGroup: { include: { subtotals: true } } }
+    }
+    examStudents: { include: { student: true } }
+    examTags: {
+      select: { tag: { select: { id: true; name: true; color: true } } }
+    }
+  }
+}> & {
+  /** IPCハンドラーで平坦化されるcropRegions（進捗計算用・スコアは軽量／partialScore は number にシリアライズ済み） */
+  cropRegions?: (Omit<
+    Prisma.CropRegionGetPayload<{ include: { questionScores: true } }>,
+    "questionScores"
+  > & {
+    questionScores: (Omit<QuestionScore, "partialScore"> & {
+      partialScore: number | null
+    })[]
+  })[]
+  /** IPCハンドラーで抽出されるanswerImages */
+  answerImages?: (Prisma.StudentAnswerImageGetPayload<{
+    include: { student: true }
+  }> & {
+    pageNumber: number
+  })[]
+}
 
 // =============================================================================
 // StudentAnswerImage関連型
@@ -151,7 +198,7 @@ export type QuestionScoreWithUser = Prisma.QuestionScoreGetPayload<{
  * 詳細情報を含むStudentAnswerImage型
  * 採点機能で使用する際はexamStudentsも含む
  */
-export type StudentAnswerImageWithDetails =
+export type StudentAnswerImageWithExamPageAndStudent =
   Prisma.StudentAnswerImageGetPayload<{
     include: {
       examPage: true

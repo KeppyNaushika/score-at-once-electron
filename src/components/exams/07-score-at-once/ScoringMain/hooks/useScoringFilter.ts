@@ -16,7 +16,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
-import type { ExamWithDetails } from "@/types/common.types"
+import type { ExamWithPages } from "@/types/electron/examApi"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 const areArraysEqual = (a: string[], b: string[]) => {
@@ -48,7 +48,7 @@ interface UseScoringFilterProps {
   questionScores: QuestionScore[]
   selectedStudentAnswerImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
-  exam: ExamWithDetails | null
+  exam: ExamWithPages | null
   gradingMode: GradingMode
   questionChangeVersion: number
   manualSelectionVersion: number

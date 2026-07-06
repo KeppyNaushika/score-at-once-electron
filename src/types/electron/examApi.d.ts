@@ -1,8 +1,16 @@
 import type { Exam, Prisma } from "@prisma/client"
 
-import type { ExamListItem, ExamWithDetails } from "../common.types"
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import type { ExamSummary } from "@/lib/examStatus"
+
 import type { ExamStudentStatus } from "../examStudentStatus.types"
-import type { ExamStudentWithDetails } from "../prismaExtensions"
+import type {
+  ExamForDetail,
+  ExamStudentWithMemberships,
+} from "../prismaExtensions"
+
+/** 試験スカラー + examPages（masterImages 含む）。採点画面が1クエリで取得する形。 */
+export type ExamWithPages = Exam & { examPages: ExamPageWithContent[] }
 
 // Exam作成/更新用の引数型
 export interface CreateExamArgs {
@@ -19,23 +27,26 @@ export interface UpdateExamArgs extends Partial<CreateExamArgs> {
  * 試験CRUD + 試験-生徒関連API
  */
 export interface ExamAPI {
-  fetchExams: (userId: string) => Promise<ExamWithDetails[]>
-  fetchExamsSummary: (userId: string) => Promise<ExamListItem[]>
-  fetchExamById: (examId: string) => Promise<ExamWithDetails | null>
+  fetchExamsSummary: (userId: string) => Promise<ExamSummary[]>
+  fetchExamById: (examId: string) => Promise<ExamForDetail | null>
+  /** 試験の基本スカラーのみ（リレーション無し・軽量）。編集/スカラー参照用途。 */
+  getExam: (examId: string) => Promise<Exam | null>
+  /** 試験スカラー + examPages を1クエリで（採点画面用）。 */
+  getExamWithPages: (examId: string) => Promise<ExamWithPages | null>
   createExam: (
     examData: CreateExamArgs,
     userId: string
-  ) => Promise<ExamWithDetails>
+  ) => Promise<ExamForDetail>
   updateExam: (
     examId: string,
     data: Prisma.ExamUpdateInput
-  ) => Promise<ExamWithDetails>
+  ) => Promise<ExamForDetail>
   deleteExam: (examId: string) => Promise<Exam | void>
 
   // Exam-Student relationship
   getStudentsForExam: (examId: string) => Promise<{
     success: boolean
-    students?: ExamStudentWithDetails[]
+    students?: ExamStudentWithMemberships[]
     error?: string
   }>
   addStudentsToExam: (

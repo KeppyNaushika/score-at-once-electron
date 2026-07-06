@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import type { CourseworkWithDetails } from "@/types/coursework.types"
+import type { CourseworkWithRelations } from "@/types/coursework.types"
 
 interface TagOption {
   id: string
@@ -32,7 +32,7 @@ export function CourseworkSetupContainer({
   courseworkId,
 }: CourseworkSetupContainerProps) {
   const router = useRouter()
-  const [coursework, setCoursework] = useState<CourseworkWithDetails | null>(
+  const [coursework, setCoursework] = useState<CourseworkWithRelations | null>(
     null
   )
   const [name, setName] = useState("")

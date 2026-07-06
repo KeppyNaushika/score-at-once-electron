@@ -2,6 +2,7 @@ import type { Prisma as PrismaTypes } from "@prisma/client"
 
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { examPageWithContentInclude } from "./examPage"
 
 /** 試験一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得、ユーザーでフィルタリング） */
 export const getExamsForList = async (userId: string) => {
@@ -66,76 +67,6 @@ export type ExamForListPayload = Awaited<
   ReturnType<typeof getExamsForList>
 >[number]
 
-/** 試験一覧を全リレーション付きで取得する（詳細ページ用、userExams・examPages・examSubtotalGroups・examStudents含む） */
-export const getExams = async (userId: string) => {
-  return prisma.exam.findMany({
-    where: {
-      userExams: {
-        some: {
-          userId,
-        },
-      },
-    },
-    include: {
-      userExams: {
-        include: {
-          user: true,
-        },
-      },
-      examPages: {
-        include: {
-          masterImages: true,
-          studentAnswerImages: {
-            include: {
-              student: true,
-            },
-          },
-          cropRegions: {
-            include: {
-              questionScores: {
-                include: {
-                  student: true,
-                  user: true,
-                },
-              },
-            },
-            orderBy: {
-              orderIndex: "asc",
-            },
-          },
-        },
-        orderBy: {
-          pageNumber: "asc",
-        },
-      },
-      examSubtotalGroups: {
-        include: {
-          subtotalGroup: {
-            include: {
-              subtotals: true,
-            },
-          },
-        },
-      },
-      examStudents: true,
-      examTags: {
-        select: {
-          tag: {
-            select: { id: true, name: true, color: true },
-          },
-        },
-        orderBy: { tag: { order: "asc" } },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  })
-}
-
-// getExams の戻り値の型
-export type ExamPayload = Awaited<ReturnType<typeof getExams>>[number]
-
 /** IDで試験を取得する（全リレーション含む: userExams・examPages・examSubtotalGroups・examStudents） */
 export const getExamById = async (id: string) => {
   return prisma.exam.findUnique({
@@ -155,13 +86,9 @@ export const getExamById = async (id: string) => {
             },
           },
           cropRegions: {
+            // 進捗計算は questionScores のスカラーのみ読むため student/user は join しない
             include: {
-              questionScores: {
-                include: {
-                  student: true,
-                  user: true,
-                },
-              },
+              questionScores: true,
             },
             orderBy: {
               orderIndex: "asc",
@@ -206,7 +133,28 @@ export const getExamById = async (id: string) => {
 }
 
 // getExamById の戻り値の型
-export type ExamWithDetailsPayload = Awaited<ReturnType<typeof getExamById>>
+export type ExamWithRelationsPayload = Awaited<ReturnType<typeof getExamById>>
+
+/** 試験の基本スカラーのみを取得する（リレーション無し・軽量）。編集/スカラー参照用途向け。 */
+export const getExam = async (id: string) => {
+  return prisma.exam.findUnique({ where: { id } })
+}
+
+/**
+ * 試験スカラー + examPages（masterImages 含む）を1クエリで取得する。
+ * 採点画面（07）がタイトル用 examName とページ画像を必要とする用途向け。
+ */
+export const getExamWithPages = async (id: string) => {
+  return prisma.exam.findUnique({
+    where: { id },
+    include: {
+      examPages: {
+        include: examPageWithContentInclude,
+        orderBy: { pageNumber: "asc" },
+      },
+    },
+  })
+}
 
 /** 試験を作成し、指定ユーザーをOWNERとしてUserExamに登録する */
 export const createExam = async (

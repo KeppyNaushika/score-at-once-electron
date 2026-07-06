@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type {
-  GradeBoundarySetWithDetails,
-  GradeWithDetails,
+  GradeBoundarySetWithItemAndBoundaries,
+  GradeWithRelations,
 } from "@/types/grade.types"
 
 /** 成績評定の境界値セットの取得・保存を管理するフック */
 export function useBoundaries(gradeId: string) {
-  const [exam, setExam] = useState<GradeWithDetails | null>(null)
+  const [exam, setExam] = useState<GradeWithRelations | null>(null)
   const [boundarySets, setBoundarySets] = useState<
-    GradeBoundarySetWithDetails[]
+    GradeBoundarySetWithItemAndBoundaries[]
   >([])
   const [loading, setLoading] = useState(true)
 

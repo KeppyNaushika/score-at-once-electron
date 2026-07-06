@@ -10,7 +10,7 @@ import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 import { resolveExamClassroomOutputFlags } from "../examClassroomFlags"
 import type { ExtractedArchiveData } from "./archiveExtractor"
-import type { IdMappings } from "./idRemapper"
+import type { ExamArchiveIdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
 import { copyImages, createImageRecords } from "./imageHandler"
 import {
@@ -42,7 +42,7 @@ export interface DataCreationResult {
  */
 export async function createImportedData(
   data: ExtractedArchiveData,
-  mappings: IdMappings,
+  mappings: ExamArchiveIdMappings,
   currentUserId: string
 ): Promise<DataCreationResult> {
   const warnings: string[] = []

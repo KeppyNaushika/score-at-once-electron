@@ -55,51 +55,53 @@ export default function RegionInfoPage() {
       const user = await window.electronAPI.getCurrentUser()
       setCurrentUser(user)
 
-      const fetchedExam = await window.electronAPI.fetchExamById(examId)
-      if (fetchedExam) {
-        if (fetchedExam.examPages && fetchedExam.examPages.length > 0) {
-          const sortedExamPages = [...fetchedExam.examPages].sort(
-            (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
-          )
-          setExamPages(sortedExamPages)
-          setSelectedExamPage(sortedExamPages[0])
-
-          // 全ページの画像URLを取得
-          const urls: { [key: string]: string } = {}
-          for (const page of sortedExamPages) {
-            const masterImage = page.masterImages?.[0]
-            if (masterImage) {
-              const url = await window.electronAPI.resolveFileProtocolPath(
-                masterImage.imagePath
-              )
-              urls[page.id] = url
-            }
-          }
-          setBackgroundImageUrls(urls)
-        } else {
-          setExamPages([])
-          setSelectedExamPage(null)
-          setBackgroundImageUrls({})
-        }
-
-        // 既存の作物領域を取得
-        try {
-          const existingRegions =
-            await window.electronAPI.getCropRegionsByExamId(examId)
-          if (existingRegions && existingRegions.length > 0) {
-            setCropRegions(existingRegions)
-          } else {
-            setCropRegions([])
-          }
-        } catch (regionError) {
-          console.error("Failed to load crop regions:", regionError)
-          setCropRegions([])
-        }
-      } else {
+      // examPages（masterImages 含む）を取得。試験が存在しなければ null（不存在を検知）
+      const exam = await window.electronAPI.getExamWithPages(examId)
+      if (!exam) {
         toast.error("試験が見つかりません。")
         setExamPages([])
         setSelectedExamPage(null)
         setBackgroundImageUrls({})
+        setCropRegions([])
+        return
+      }
+      const fetchedPages = exam.examPages
+      if (fetchedPages && fetchedPages.length > 0) {
+        const sortedExamPages = [...fetchedPages].sort(
+          (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
+        )
+        setExamPages(sortedExamPages)
+        setSelectedExamPage(sortedExamPages[0])
+
+        // 全ページの画像URLを取得
+        const urls: { [key: string]: string } = {}
+        for (const page of sortedExamPages) {
+          const masterImage = page.masterImages?.[0]
+          if (masterImage) {
+            const url = await window.electronAPI.resolveFileProtocolPath(
+              masterImage.imagePath
+            )
+            urls[page.id] = url
+          }
+        }
+        setBackgroundImageUrls(urls)
+      } else {
+        setExamPages([])
+        setSelectedExamPage(null)
+        setBackgroundImageUrls({})
+      }
+
+      // 既存の作物領域を取得
+      try {
+        const existingRegions =
+          await window.electronAPI.getCropRegionsByExamId(examId)
+        if (existingRegions && existingRegions.length > 0) {
+          setCropRegions(existingRegions)
+        } else {
+          setCropRegions([])
+        }
+      } catch (regionError) {
+        console.error("Failed to load crop regions:", regionError)
         setCropRegions([])
       }
     } catch (error) {

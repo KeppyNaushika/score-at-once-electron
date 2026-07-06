@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 import type {
   ClassroomWithMemberships,
-  StudentClassroomMembershipWithDetails,
+  StudentClassroomMembershipWithStudentAndClassroom,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
 
@@ -75,7 +75,7 @@ export function useStudentDetail(studentId: string) {
     membershipData: Partial<StudentClassroomMembership> & {
       classroomId: string
     },
-    membershipToEdit?: StudentClassroomMembershipWithDetails | null
+    membershipToEdit?: StudentClassroomMembershipWithStudentAndClassroom | null
   ) => {
     try {
       if (membershipToEdit) {

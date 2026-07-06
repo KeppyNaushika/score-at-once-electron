@@ -47,14 +47,18 @@ import {
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
 import { useTableSort } from "@/hooks/useTableSort"
-import type { ExamListItem } from "@/types/common.types"
+import {
+  type ExamSummary,
+  getExamProgress,
+  getExamWorkflowStatus,
+} from "@/lib/examStatus"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 interface ExamSortable {
   id: string
   examName: string
   examDate: string | null
-  original: ExamListItem
+  original: ExamSummary
 }
 
 const File = () => {
@@ -127,12 +131,12 @@ const File = () => {
     storageKey: "examList-sort",
   })
 
-  const handleStartScoring = (exam: ExamListItem) => {
+  const handleStartScoring = (exam: ExamSummary) => {
     router.push(`/exams/${exam.id}`)
   }
 
-  const handleNextStep = (exam: ExamListItem) => {
-    router.push(exam.status.url)
+  const handleNextStep = (url: string) => {
+    router.push(url)
   }
 
   const handleImportComplete = (examId: string) => {
@@ -481,6 +485,10 @@ const File = () => {
               </TableHeader>
               <TableBody>
                 {sortedData.map(({ original: exam }) => {
+                  const workflow = getExamWorkflowStatus(
+                    getExamProgress(exam),
+                    exam.id
+                  )
                   return (
                     <TableRow
                       key={exam.id}
@@ -548,34 +556,34 @@ const File = () => {
                       >
                         <Button
                           size="sm"
-                          onClick={() => handleNextStep(exam)}
+                          onClick={() => handleNextStep(workflow.url)}
                           className="w-48 justify-start rounded-lg text-left"
                         >
-                          {exam.status.step === 1 && (
+                          {workflow.step === 1 && (
                             <FileImage className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 2 && (
+                          {workflow.step === 2 && (
                             <Settings className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 3 && (
+                          {workflow.step === 3 && (
                             <Edit className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 4 && (
+                          {workflow.step === 4 && (
                             <Calculator className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 5 && (
+                          {workflow.step === 5 && (
                             <Users className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 6 && (
+                          {workflow.step === 6 && (
                             <Upload className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 7 && (
+                          {workflow.step === 7 && (
                             <PlayCircle className="mr-1 h-4 w-4" />
                           )}
-                          {exam.status.step === 8 && (
+                          {workflow.step === 8 && (
                             <Download className="mr-1 h-4 w-4" />
                           )}
-                          <span className="text-xs">{exam.status.text}</span>
+                          <span className="text-xs">{workflow.text}</span>
                         </Button>
                       </TableCell>
                     </TableRow>

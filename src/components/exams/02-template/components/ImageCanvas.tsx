@@ -16,7 +16,8 @@
 
 import { useMemo } from "react"
 
-import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+import { CropRegionArea } from "@/components/exams/02-template/types"
+import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"

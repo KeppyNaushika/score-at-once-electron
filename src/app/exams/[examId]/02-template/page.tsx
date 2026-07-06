@@ -13,11 +13,11 @@ import {
   AreaType,
   RegionCoordinates,
 } from "@/components/exams/02-template/types"
+import { CropRegionArea } from "@/components/exams/02-template/types"
 import { canProceedToNextStep } from "@/components/exams/02-template/utils/templateActions"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import { CropRegionArea } from "@/types/common.types"
 
 export default function TemplateStepPage() {
   const params = useParams()

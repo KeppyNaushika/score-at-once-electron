@@ -2,13 +2,13 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
-import { ExamWithDetails, isValidExam } from "@/types/common.types"
-import { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
+import type { ExamWithPages } from "@/types/electron/examApi"
+import { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 
 interface ScoringDataLoaderResult {
   loading: boolean
-  exam: ExamWithDetails | null
-  studentAnswerImages: StudentAnswerImageWithDetails[]
+  exam: ExamWithPages | null
+  studentAnswerImages: StudentAnswerImageWithExamPageAndStudent[]
   cropRegions: CropRegionWithExamPage[]
   currentUserId: string | null
 }
@@ -19,9 +19,9 @@ export function useScoringDataLoader(
   authUserId: string | null
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
-  const [exam, setExam] = useState<ExamWithDetails | null>(null)
+  const [exam, setExam] = useState<ExamWithPages | null>(null)
   const [studentAnswerImages, setStudentAnswerImages] = useState<
-    StudentAnswerImageWithDetails[]
+    StudentAnswerImageWithExamPageAndStudent[]
   >([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithExamPage[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -31,13 +31,10 @@ export function useScoringDataLoader(
       try {
         setLoading(true)
 
-        // 試験データの読み込み
-        const examData = await window.electronAPI.fetchExamById(examId)
+        // 試験データの読み込み（スカラー + examPages を1クエリ。重データは別クエリ）
+        const examData = await window.electronAPI.getExamWithPages(examId)
         if (!examData) {
           throw new Error("試験が見つかりません")
-        }
-        if (!isValidExam(examData)) {
-          throw new Error("試験データの形式が正しくありません")
         }
         setExam(examData)
 

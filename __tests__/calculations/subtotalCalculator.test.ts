@@ -31,7 +31,7 @@ vi.mock("@/electron-src/lib/prisma/questionScore", () => ({
 import {
   calculateSubtotalScoreBySubtotalId,
   calculateSubtotalScoreForStudent,
-  type QuestionScoreData,
+  type QuestionScoreForSubtotal,
 } from "@/electron-src/lib/shared/calculations/subtotalCalculator"
 
 // ================== ヘルパー ==================
@@ -64,7 +64,7 @@ function createQuestionScore(
   cropRegionId: string,
   status: string,
   partialScore: number | null = null
-): QuestionScoreData {
+): QuestionScoreForSubtotal {
   return { studentId, cropRegionId, status, partialScore }
 }
 
@@ -100,7 +100,7 @@ describe("calculateSubtotalScoreBySubtotalId", () => {
   })
 
   it("全設問採点済み → score に合計点を返す", async () => {
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "correct"),
       createQuestionScore("s1", "q2", "incorrect"),
       createQuestionScore("s1", "q3", "partial", 15),
@@ -124,7 +124,7 @@ describe("calculateSubtotalScoreBySubtotalId", () => {
   })
 
   it("全設問未採点 → score が null", async () => {
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "unscored"),
       createQuestionScore("s1", "q2", "unscored"),
       createQuestionScore("s1", "q3", "unscored"),
@@ -145,7 +145,7 @@ describe("calculateSubtotalScoreBySubtotalId", () => {
   })
 
   it("一部未採点 → 採点済み分のみの合計を返す", async () => {
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "correct"),
       createQuestionScore("s1", "q2", "unscored"),
       createQuestionScore("s1", "q3", "correct"),
@@ -168,7 +168,7 @@ describe("calculateSubtotalScoreBySubtotalId", () => {
   })
 
   it("全問不正解（0点） → score が 0（null ではない）", async () => {
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "incorrect"),
       createQuestionScore("s1", "q2", "incorrect"),
       createQuestionScore("s1", "q3", "incorrect"),
@@ -202,7 +202,7 @@ describe("calculateSubtotalScoreBySubtotalId", () => {
 
   it("採点データが存在しない設問は加算されない", async () => {
     // s1 は q1 のみ採点済み、q2,q3 は採点データ自体が無い
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "correct"),
     ]
     mockCalculateActualScore.mockReturnValueOnce(10)
@@ -255,7 +255,7 @@ describe("calculateSubtotalScoreForStudent", () => {
   })
 
   it("全設問採点済み → score に合計点", async () => {
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "correct"),
       createQuestionScore("s1", "q2", "correct"),
     ]
@@ -273,7 +273,7 @@ describe("calculateSubtotalScoreForStudent", () => {
   })
 
   it("全設問未採点 → score が null", async () => {
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "unscored"),
       createQuestionScore("s1", "q2", "unscored"),
     ]
@@ -292,7 +292,7 @@ describe("calculateSubtotalScoreForStudent", () => {
   it("グループ定義が無い場合のフォールバックでも null 対応", async () => {
     mockGetCropSubtotalsByCropRegionId.mockResolvedValue([])
 
-    const scores: QuestionScoreData[] = [
+    const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "unscored"),
       createQuestionScore("s1", "q2", "unscored"),
     ]

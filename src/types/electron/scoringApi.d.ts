@@ -6,6 +6,22 @@ import type {
 } from "../prismaExtensions"
 import type { ScoringStatus } from "../scoringStatus.types"
 
+/**
+ * QuestionScore 作成引数（IPC）。SSOT の SerializedQuestionScore から
+ * 生成列を減算し、partialScore（number）と status（union）は任意で注入する。
+ */
+export type CreateQuestionScoreArgs = Omit<
+  SerializedQuestionScore,
+  "id" | "createdAt" | "updatedAt" | "partialScore" | "status"
+> & { partialScore?: number | null; status?: ScoringStatus }
+
+/**
+ * QuestionScore 更新引数（IPC）。SerializedQuestionScore の可変列の部分集合。
+ */
+export type UpdateQuestionScoreArgs = Partial<
+  Pick<SerializedQuestionScore, "partialScore" | "status">
+>
+
 // OWNERによる確定スコア（IPC経由でscoreはnumberに変換済み）
 export interface ScoreDecisionForComparison {
   id: string

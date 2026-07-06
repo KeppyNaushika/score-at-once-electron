@@ -7,7 +7,7 @@ import type {
   WorkflowStep,
 } from "@/components/exams/detail/types"
 import { getExamProgress } from "@/lib/examStatus"
-import type { ExamWithDetails } from "@/types/common.types"
+import type { ExamForDetail } from "@/types/prismaExtensions"
 
 /**
  * ワークフローデータを生成するカスタムフック
@@ -17,7 +17,7 @@ import type { ExamWithDetails } from "@/types/common.types"
  */
 export function useWorkflowData(
   stats: WorkflowStats,
-  exam: ExamWithDetails | null
+  exam: ExamForDetail | null
 ): ExamWorkflowData {
   const {
     masterImageCount,

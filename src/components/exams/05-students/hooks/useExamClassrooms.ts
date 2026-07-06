@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type {
-  ExamClassroomWithDetails,
+  ExamClassroomWithClassroomAndExam,
   ExamClassroomWithMemberships,
 } from "@/electron-src/lib/prisma/examClassroom"
 
@@ -28,7 +28,7 @@ interface UseExamClassroomsReturn {
       teacherStatistics?: boolean
       studentReport?: boolean
     }
-  ) => Promise<ExamClassroomWithDetails | null>
+  ) => Promise<ExamClassroomWithClassroomAndExam | null>
 }
 
 /**
@@ -87,7 +87,7 @@ export function useExamClassrooms({
         teacherStatistics?: boolean
         studentReport?: boolean
       }
-    ): Promise<ExamClassroomWithDetails | null> => {
+    ): Promise<ExamClassroomWithClassroomAndExam | null> => {
       try {
         const result = await window.electronAPI.examClassroom.update({
           id: examClassroomId,

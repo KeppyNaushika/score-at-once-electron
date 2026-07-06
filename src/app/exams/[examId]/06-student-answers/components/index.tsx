@@ -14,7 +14,7 @@ import type {
   ScoringDataOption,
 } from "@/components/exams/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
@@ -67,7 +67,7 @@ export function StudentAnswersTabsNavigation({
 
 interface StudentAnswersTabContentProps {
   examId: string
-  students: ExamStudentWithDetails[]
+  students: ExamStudentWithMemberships[]
   modelAnswerCount: number
   studentAnswers: ProcessedStudentAnswer[]
   pendingChanges: PendingChange[]

@@ -24,7 +24,7 @@ import type {
   Subtotal,
 } from "@prisma/client"
 
-import type { CourseworkItemWithDetails } from "./coursework.types"
+import type { CourseworkItemWithLetterScales } from "./coursework.types"
 import { defineStringUnion } from "./stringUnion"
 
 /** 欠測時推定方法 */
@@ -78,12 +78,12 @@ export const { is: isGradeBoundaryTargetType, to: toGradeBoundaryTargetType } =
   defineStringUnion(GRADE_BOUNDARY_TARGET_TYPES, "grade_item")
 
 /** 成績算出試験（リレーション付き） */
-export type GradeWithDetails = Omit<Grade, "referenceDate"> & {
+export type GradeWithRelations = Omit<Grade, "referenceDate"> & {
   referenceDate: string | null
   gradeClassrooms: (Pick<GradeClassroom, "id" | "classroomId" | "order"> & {
     classroom: Pick<Classroom, "id" | "name">
   })[]
-  gradeItems: GradeItemWithDetails[]
+  gradeItems: GradeItemWithDataSources[]
   _count?: {
     gradeItems: number
     gradeStudents: number
@@ -92,15 +92,15 @@ export type GradeWithDetails = Omit<Grade, "referenceDate"> & {
 }
 
 /** 評価項目（リレーション付き） */
-export type GradeItemWithDetails = Pick<
+export type GradeItemWithDataSources = Pick<
   GradeItem,
   "id" | "gradeId" | "name" | "order"
 > & {
-  dataSources: GradeDataSourceWithDetails[]
+  dataSources: GradeDataSourceWithRelations[]
 }
 
 /** データソース（リレーション付き） */
-export type GradeDataSourceWithDetails = Omit<
+export type GradeDataSourceWithRelations = Omit<
   GradeDataSource,
   | "type"
   | "weight"
@@ -124,7 +124,7 @@ export type GradeDataSourceWithDetails = Omit<
   cropRegion: Pick<CropRegion, "id" | "label" | "points"> | null
   /** coursework型が参照する評価項目（資料名・項目名・満点・入力モード・変換表） */
   courseworkItem:
-    | (CourseworkItemWithDetails & {
+    | (CourseworkItemWithLetterScales & {
         coursework: Pick<Coursework, "id" | "name">
       })
     | null
@@ -133,7 +133,7 @@ export type GradeDataSourceWithDetails = Omit<
 }
 
 /** 境界セット（境界リスト付き） */
-export type GradeBoundarySetWithDetails = Omit<
+export type GradeBoundarySetWithItemAndBoundaries = Omit<
   Pick<GradeBoundarySet, "id" | "gradeId" | "targetType" | "gradeItemId">,
   "targetType"
 > & {

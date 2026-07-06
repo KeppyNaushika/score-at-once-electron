@@ -3,13 +3,13 @@ import type {
   PlacementStrategy,
   UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /** FileState配列と配置戦略からDnD用の順序付きファイル配列を構築する */
 export function buildDnDArrayFromFileStates(
   fileStates: FileState[],
   strategy: PlacementStrategy,
-  students: ExamStudentWithDetails[],
+  students: ExamStudentWithMemberships[],
   masterImageCount: number,
   files: UnifiedFile[]
 ): UnifiedFile[] {

@@ -7,8 +7,8 @@ import {
   DatabaseOperation,
   RegionCoordinates,
 } from "@/components/exams/02-template/types"
+import { CropRegionArea } from "@/components/exams/02-template/types"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
-import { CropRegionArea } from "@/types/common.types"
 
 /**
  * 領域保存処理を担当するカスタムフック

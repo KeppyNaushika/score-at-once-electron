@@ -17,7 +17,7 @@ import {
 } from "../../shared/calculations/scoreResolution"
 import {
   calculateSubtotalScoreBySubtotalId,
-  QuestionScoreData,
+  QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
 import {
   ScoreDetail,
@@ -93,7 +93,7 @@ export async function fetchExportData(
     // 選択された生徒のフィルタリングとソート
     // 空配列の場合は全生徒を取得（統計計算用）
     // Excel 出力層は内部で flat な Student 射影（student.id = 生徒ID）を消費するため、
-    // IPC/renderer 契約の nested な ExamStudentWithDetails をここで境界フラット化する。
+    // IPC/renderer 契約の nested な ExamStudentWithMemberships をここで境界フラット化する。
     // customOrder / status は ExamStudent 実列を平坦に畳み、表示学級（grade/className/
     // attendanceNumber）は renderer が採番解決して渡した studentPlacements を優先する。
     const selectedStudents = (studentsResult.students || [])
@@ -317,7 +317,7 @@ async function buildSubtotalScores(
   allQuestionScores: EffectiveScore[]
 ): Promise<SubtotalScore[]> {
   // 設問スコアデータを変換
-  const questionScoreData: QuestionScoreData[] = allQuestionScores.map(
+  const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
     (score) => ({
       studentId: score.studentId,
       cropRegionId: score.cropRegionId,

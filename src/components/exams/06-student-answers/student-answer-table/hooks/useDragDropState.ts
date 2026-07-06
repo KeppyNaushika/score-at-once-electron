@@ -6,11 +6,11 @@ import type {
   PlacementStrategy,
   UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface UseDragDropStateParams {
   files: UnifiedFile[]
-  students?: ExamStudentWithDetails[]
+  students?: ExamStudentWithMemberships[]
   modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy

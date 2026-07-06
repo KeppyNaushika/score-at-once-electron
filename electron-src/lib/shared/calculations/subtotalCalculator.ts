@@ -1,4 +1,4 @@
-import type { CropRegion } from "@prisma/client"
+import type { CropRegion, QuestionScore } from "@prisma/client"
 
 import {
   type CropSubtotalWithCropRegion,
@@ -16,13 +16,15 @@ export interface SubtotalScoreDetail {
   status?: string
 }
 
-// 設問スコアの型定義（PDF exportと互換性を保つため）
-export interface QuestionScoreData {
-  studentId: string
-  cropRegionId: string
-  status: string
-  partialScore?: number | null
-}
+/**
+ * 小計計算の入力となる、解決済み設問スコアの最小射影（生徒×設問の得点1件）。
+ * identity フィールドは QuestionScore に追随。status は calculateActualScore が
+ * 旧値（final/proposed）を特別扱いするため String のまま広く保つ。
+ */
+export type QuestionScoreForSubtotal = Omit<
+  QuestionScore,
+  "id" | "userId" | "createdAt" | "updatedAt" | "partialScore"
+> & { partialScore?: number | null }
 
 export interface SubtotalScoreResult {
   score: number | null
@@ -40,7 +42,7 @@ export interface SubtotalScoreResult {
 export async function calculateSubtotalScoreForStudent(
   studentId: string,
   subtotalRegionId: string,
-  allQuestionScores: QuestionScoreData[],
+  allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegion[]
 ): Promise<SubtotalScoreResult> {
   try {
@@ -173,7 +175,7 @@ export async function calculateSubtotalScoreForStudent(
  */
 function calculateStudentTotalScoreWithMax(
   studentId: string,
-  allQuestionScores: QuestionScoreData[],
+  allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegion[]
 ): SubtotalScoreResult {
   const studentScores = allQuestionScores.filter(
@@ -226,7 +228,7 @@ function calculateStudentTotalScoreWithMax(
 export async function calculateSubtotalScoreBySubtotalId(
   studentId: string,
   subtotalId: string,
-  allQuestionScores: QuestionScoreData[],
+  allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegion[]
 ): Promise<SubtotalScoreResult> {
   try {

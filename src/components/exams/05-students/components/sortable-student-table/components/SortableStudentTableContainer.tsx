@@ -39,11 +39,11 @@ import {
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamStudentWithDetails } from "@/types/prismaExtensions"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /** 受験生徒（ExamStudent）と表示学級情報を共通の RosterRow へ変換 */
 function toRosterRow(
-  examStudent: ExamStudentWithDetails,
+  examStudent: ExamStudentWithMemberships,
   placement: ExamClassroomPlacement | undefined
 ): RosterRow {
   const student = examStudent.student
@@ -107,7 +107,7 @@ export function SortableStudentTableContainer(
   // RosterRow に無型の extras を積んで as で取り出すのを避ける。
   const examStudentByStudentId = useMemo(
     () =>
-      new Map<string, ExamStudentWithDetails>(
+      new Map<string, ExamStudentWithMemberships>(
         filteredStudents.map((examStudent) => [
           examStudent.studentId,
           examStudent,

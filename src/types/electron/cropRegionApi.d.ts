@@ -22,11 +22,32 @@ import type {
   SubtotalGroupWithSubtotalsAndExams,
 } from "@/electron-src/lib/prisma/subtotalGroup"
 
+import type { CropRegionAreaType } from "../cropRegionAreaType.types"
+
 // CropRegion作成/更新用の引数型
 export type SaveCropRegionArgs = Omit<
   Prisma.CropRegionUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
 > & { id?: string; examPageId: string }
+
+/**
+ * CropRegion 作成引数（IPC）。CreateManyInput（スカラーのみ）から生成列を減算し、
+ * type は SSOT の CropRegionAreaType へ narrowing 注入する。
+ */
+export type CreateCropRegionArgs = Omit<
+  Prisma.CropRegionCreateManyInput,
+  "id" | "createdAt" | "updatedAt" | "type"
+> & { type: CropRegionAreaType }
+
+/**
+ * CropRegion 更新引数（IPC）。examPageId を除く可変列の部分集合＋type union。
+ */
+export type UpdateCropRegionArgs = Partial<
+  Omit<
+    Prisma.CropRegionCreateManyInput,
+    "id" | "examPageId" | "createdAt" | "updatedAt" | "type"
+  >
+> & { type?: CropRegionAreaType }
 
 // SubtotalGroup作成/更新用の引数型
 export type CreateSubtotalGroupArgs = Omit<

@@ -2,7 +2,7 @@ import type { ExamClassroom } from "@prisma/client"
 
 import type {
   AddExamClassroomOptions,
-  ExamClassroomWithDetails,
+  ExamClassroomWithClassroomAndExam,
   ExamClassroomWithMemberships,
   UpdateExamClassroomOptions,
 } from "@/electron-src/lib/prisma/examClassroom"
@@ -41,14 +41,16 @@ export interface ExamClassroomAPI {
     /**
      * 試験にクラスを追加
      */
-    add: (options: AddExamClassroomOptions) => Promise<ExamClassroomWithDetails>
+    add: (
+      options: AddExamClassroomOptions
+    ) => Promise<ExamClassroomWithClassroomAndExam>
 
     /**
      * ExamClassroomを更新
      */
     update: (
       options: UpdateExamClassroomOptions
-    ) => Promise<ExamClassroomWithDetails>
+    ) => Promise<ExamClassroomWithClassroomAndExam>
 
     /**
      * ExamClassroomを削除 (idで指定)
