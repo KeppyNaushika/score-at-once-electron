@@ -87,6 +87,7 @@ export interface ScoringAPI {
     userId: string,
     scoreData: {
       partialScore?: number
+      /** ScoreDecision の verdict、または旧API互換の "final"（点数有無から verdict を導出）。 */
       status: string
       comments?: string
       sourceQuestionScoreId?: string
@@ -121,7 +122,7 @@ export interface ScoringAPI {
     entries: Array<{
       studentId: string
       cropRegionId: string
-      status: string
+      status: ScoringStatus
       partialScore: number | null
       userId: string
     }>

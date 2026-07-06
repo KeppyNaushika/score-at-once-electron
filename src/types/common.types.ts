@@ -10,6 +10,9 @@
 
 import type { Prisma } from "@prisma/client"
 
+import type { ScoringStatus } from "./scoringStatus.types"
+import { defineStringUnion } from "./stringUnion"
+
 /**
  * IPCハンドラーが返すExam型
  * getExamsクエリの戻り値 + 平坦化されたcropRegionsとanswerImages
@@ -130,6 +133,13 @@ export const CROP_REGION_AREA_TYPES = [
 export type CropRegionAreaType = (typeof CROP_REGION_AREA_TYPES)[number]
 
 /**
+ * 型ガード `isCropRegionAreaType` と境界コンバータ `toCropRegionAreaType`
+ * （想定外値は OTHER）。DB 上は String 保存のため境界で narrowing する。
+ */
+export const { is: isCropRegionAreaType, to: toCropRegionAreaType } =
+  defineStringUnion(CROP_REGION_AREA_TYPES, "OTHER")
+
+/**
  * UI表示用のCropRegion型
  * Prisma型のCropRegionをUIで扱いやすい形に変換したもの
  */
@@ -137,7 +147,7 @@ export interface CropRegionArea {
   id?: string
   examPageId?: string
   label: string
-  type: string
+  type: CropRegionAreaType
   x: number
   y: number
   width: number
@@ -163,7 +173,7 @@ export interface QuestionScoreData {
   cropRegionId: string
   studentId: string
   partialScore: number | null
-  status: string // unscored, correct, incorrect, partial, no_answer
+  status: ScoringStatus
   userId: string
   createdAt: Date
   updatedAt: Date
@@ -179,7 +189,7 @@ export interface QuestionScoreCreateData {
   studentId: string
   partialScore?: number | null
   userId: string
-  status?: string
+  status?: ScoringStatus
 }
 
 /**
@@ -188,7 +198,7 @@ export interface QuestionScoreCreateData {
  */
 export interface QuestionScoreUpdateData {
   partialScore?: number | null
-  status?: string
+  status?: ScoringStatus
 }
 
 /**

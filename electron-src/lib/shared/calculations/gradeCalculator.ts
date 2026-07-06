@@ -11,6 +11,10 @@ import type {
   SourceScoreResult,
   StudentGradeResult,
 } from "../../../../src/types/grade.types"
+import {
+  toGradeBoundaryTargetType,
+  toGradeDataSourceType,
+} from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { computeLiveMaxScore } from "../../prisma/gradeDataSource"
 import { calculateActualScore } from "../../prisma/questionScore"
@@ -372,7 +376,7 @@ export async function calculateGrades(gradeId: string): Promise<{
           sourceScores.push({
             dataSourceId: dataSource.id,
             dataSourceName: dataSource.name,
-            type: dataSource.type,
+            type: toGradeDataSourceType(dataSource.type),
             rawScore,
             maxScore,
             weight,
@@ -521,7 +525,7 @@ export async function calculateGrades(gradeId: string): Promise<{
         })),
         students,
         boundarySets: grade.boundarySets.map((boundarySet) => ({
-          targetType: boundarySet.targetType,
+          targetType: toGradeBoundaryTargetType(boundarySet.targetType),
           gradeItemId: boundarySet.gradeItemId,
           boundaries: [...boundarySet.boundaries]
             .sort(

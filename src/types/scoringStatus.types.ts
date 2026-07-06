@@ -8,6 +8,8 @@
  *
  * 「保留」は `pending`（export/描画層で "hold" と別名にしない）。
  */
+import { defineStringUnion } from "./stringUnion"
+
 export const SCORING_STATUSES = [
   "unscored",
   "correct",
@@ -20,21 +22,11 @@ export const SCORING_STATUSES = [
 
 export type ScoringStatus = (typeof SCORING_STATUSES)[number]
 
-/** 任意の値が採点状態（ScoringStatus）かを判定する型ガード */
-export function isScoringStatus(value: unknown): value is ScoringStatus {
-  return (
-    typeof value === "string" &&
-    (SCORING_STATUSES as readonly string[]).includes(value)
-  )
-}
-
 /**
- * DB/JSON由来のstatus文字列を安全にScoringStatusへ変換する。
- * QuestionScore.status は常に7値のいずれか（保留=pending）だが、
- * 想定外値は未採点(unscored)にフォールバックする。
+ * 型ガード `isScoringStatus` と境界コンバータ `toScoringStatus`（想定外値は未採点 unscored）。
+ * QuestionScore.status は常に7値のいずれか（保留=pending）。
  */
-export function toScoringStatus(
-  value: string | null | undefined
-): ScoringStatus {
-  return isScoringStatus(value) ? value : "unscored"
-}
+export const { is: isScoringStatus, to: toScoringStatus } = defineStringUnion(
+  SCORING_STATUSES,
+  "unscored"
+)

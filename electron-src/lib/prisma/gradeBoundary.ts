@@ -4,6 +4,7 @@
 
 import type { Prisma } from "@prisma/client"
 
+import { toGradeBoundaryTargetType } from "../../../src/types/grade.types"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
@@ -22,7 +23,13 @@ export async function getBoundarySetsByGradeId(gradeId: string) {
       },
       orderBy: [{ targetType: "asc" }, { gradeItem: { order: "asc" } }],
     })
-    return { success: true, boundarySets: serializePrisma(boundarySets) }
+    return {
+      success: true,
+      boundarySets: serializePrisma(boundarySets).map((boundarySet) => ({
+        ...boundarySet,
+        targetType: toGradeBoundaryTargetType(boundarySet.targetType),
+      })),
+    }
   } catch (error) {
     console.error("Error getting boundary sets:", error)
     return {
@@ -102,7 +109,14 @@ export async function upsertBoundarySet(data: {
       scopeLabel: scope.scopeLabel,
     })
 
-    return { success: true, boundarySet: serializePrisma(result) }
+    const boundarySet = serializePrisma(result)
+    return {
+      success: true,
+      boundarySet: boundarySet && {
+        ...boundarySet,
+        targetType: toGradeBoundaryTargetType(boundarySet.targetType),
+      },
+    }
   } catch (error) {
     console.error("Error upserting boundary set:", error)
     return {

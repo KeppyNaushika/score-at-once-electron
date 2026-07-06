@@ -12,6 +12,7 @@ import type {
   OMRCellConfig,
   OMRSheetResult,
 } from "@/types/omr.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   type AutoScoreEntry,
@@ -347,7 +348,7 @@ export function useOmrAutoScoring(examId: string) {
         const entries: Array<{
           studentId: string
           cropRegionId: string
-          status: string
+          status: ScoringStatus
           partialScore: number | null
           userId: string
         }> = []
