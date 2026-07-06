@@ -16,12 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useTableSort } from "@/hooks/useTableSort"
-
 import type {
-  ClassroomStudentResult,
-  ExamResult,
-} from "../hooks/useClassroomExamResults"
+  ClassroomStudentExamResult,
+  StudentExamResult,
+} from "@/electron-src/lib/prisma/student"
+import { useTableSort } from "@/hooks/useTableSort"
 
 // ── 型定義 ──
 
@@ -85,7 +84,7 @@ const SLOPE_THRESHOLD = 1.5
 // ── コンポーネント ──
 
 interface StudentInsightsCardProps {
-  studentResults: ClassroomStudentResult[]
+  studentResults: ClassroomStudentExamResult[]
 }
 
 export function StudentInsightsCard({
@@ -120,7 +119,7 @@ export function StudentInsightsCard({
     const fromTime = dateFrom ? new Date(dateFrom).getTime() : null
     const toTime = dateTo ? new Date(dateTo).getTime() : null
 
-    const filterExams = (exams: ExamResult[]) =>
+    const filterExams = (exams: StudentExamResult[]) =>
       exams.filter((examResult) => {
         if (!examResult.examDate || examResult.maxScore === 0) return false
         if (examResult.status !== "complete" && examResult.status !== "partial")

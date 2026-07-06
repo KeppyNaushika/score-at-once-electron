@@ -15,9 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 import { useTableSort } from "@/hooks/useTableSort"
-
-import type { ExamResult } from "../hooks/useStudentExamResults"
 
 interface ExamResultSortable {
   examId: string
@@ -25,11 +24,11 @@ interface ExamResultSortable {
   tags: string[]
   examDate: string | null
   totalScore: number
-  original: ExamResult
+  original: StudentExamResult
 }
 
 interface ExamResultsCardProps {
-  results: ExamResult[]
+  results: StudentExamResult[]
 }
 
 export function ExamResultsCard({ results }: ExamResultsCardProps) {
@@ -57,7 +56,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
     return new Date(date).toLocaleDateString("ja-JP")
   }
 
-  const getStatusBadge = (result: ExamResult) => {
+  const getStatusBadge = (result: StudentExamResult) => {
     if (result.status === "complete") {
       return (
         <Badge className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-normal">
@@ -84,7 +83,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
     )
   }
 
-  const getScoreDisplay = (result: ExamResult) => {
+  const getScoreDisplay = (result: StudentExamResult) => {
     if (result.status === "unscored") {
       return <span className="text-muted-foreground">—</span>
     }

@@ -1,41 +1,15 @@
 import type { Classroom, Prisma, Student } from "@prisma/client"
 
 import type {
+  ClassroomStudentExamResult,
+  StudentExamResult,
+} from "@/electron-src/lib/prisma/student"
+
+import type {
   ClassroomWithMemberships,
   StudentClassroomMembershipWithDetails,
   StudentWithMemberships,
 } from "../prismaExtensions"
-
-interface SubtotalScoreResult {
-  subtotalId: string
-  subtotalName: string
-  subtotalGroupId: string
-  subtotalGroupName: string
-  score: number
-  maxScore: number
-}
-
-// Student exam result type
-interface StudentExamResult {
-  examId: string
-  examName: string
-  examDate: Date | null
-  tags: string[]
-  totalScore: number
-  maxScore: number
-  scoredCount: number
-  totalQuestions: number
-  status: "complete" | "partial" | "unscored"
-  subtotalScores: SubtotalScoreResult[]
-}
-
-interface ClassroomStudentExamResult {
-  studentId: string
-  studentNumber: string
-  studentName: string
-  attendanceNumber: number | null
-  examResults: StudentExamResult[]
-}
 
 /**
  * 学級・生徒・所属関連API
