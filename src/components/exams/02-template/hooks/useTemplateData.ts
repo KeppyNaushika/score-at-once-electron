@@ -2,11 +2,10 @@ import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import {
-  AreaType,
   ImageDimensions,
   InitialDataState,
 } from "@/components/exams/02-template/types"
-import { CropRegionArea } from "@/types/common.types"
+import { CropRegionArea, toCropRegionAreaType } from "@/types/common.types"
 type MasterImage = {
   id: string
   examId: string
@@ -153,7 +152,7 @@ export function useTemplateData(examId: string | undefined) {
 
           regions = currentImageRegions.map((region) => ({
             id: region.id,
-            type: region.type as AreaType,
+            type: toCropRegionAreaType(region.type),
             x: region.x,
             y: region.y,
             width: region.width,
@@ -219,7 +218,7 @@ export function useTemplateData(examId: string | undefined) {
           currentImageRegions.length > 0
             ? currentImageRegions.map((region) => ({
                 id: region.id,
-                type: region.type as AreaType,
+                type: toCropRegionAreaType(region.type),
                 x: region.x,
                 y: region.y,
                 width: region.width,

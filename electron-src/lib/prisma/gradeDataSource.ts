@@ -4,6 +4,7 @@
 
 import type { Prisma } from "@prisma/client"
 
+import { toGradeDataSourceType } from "../../../src/types/grade.types"
 import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
@@ -159,6 +160,7 @@ export function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
   const { exam, subtotal, coursework, ...rest } = dataSource
   return {
     ...rest,
+    type: toGradeDataSourceType(dataSource.type),
     estimationSourceIds: parseEstimationSourceIds(
       dataSource.estimationSourceIds
     ),

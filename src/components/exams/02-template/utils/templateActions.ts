@@ -2,7 +2,7 @@ import { User } from "@prisma/client"
 import { toast } from "sonner"
 
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
-import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+import { CropRegionArea, toCropRegionAreaType } from "@/types/common.types"
 
 /**
  * テンプレート保存処理
@@ -67,7 +67,7 @@ export async function saveTemplate(
       )
       .map((region: CropRegionWithSubtotals) => ({
         id: region.id,
-        type: region.type as CropRegionAreaType,
+        type: toCropRegionAreaType(region.type),
         x: region.x,
         y: region.y,
         width: region.width,

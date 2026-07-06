@@ -25,12 +25,57 @@ import type {
 } from "@prisma/client"
 
 import type { CourseworkItemWithDetails } from "./coursework.types"
+import { defineStringUnion } from "./stringUnion"
 
 /** 欠測時推定方法 */
 export type AbsentMethod = "null" | "zero" | "average" | "regression"
 
 /** 推定ソース選択モード */
 export type EstimationMode = "all" | "selected"
+
+/**
+ * データソース種別の唯一の定義源（SSOT）。
+ * `GradeDataSource.type` は SQLite が enum 非対応のため DB 上 `String`。値の集合を型で
+ * 保証できるのはこの定義のみで、各所での union 手書き重複は禁止（scoringStatus.types と同方針）。
+ *
+ * `manual` は Coursework 昇格前の旧型（migration 20260623100000 で既存行は `coursework` へ
+ * 変換され、archive も transformer で変換される）。現行 UI は生成しないが、未移行データや
+ * 直接生成では現れうるため、値を偽らないよう legacy として列挙する（満点算出は 0 = 不活性）。
+ */
+export const GRADE_DATA_SOURCE_TYPES = [
+  "exam_total",
+  "subtotal",
+  "crop_region",
+  "coursework",
+  "coursework_total",
+  "manual",
+] as const
+
+export type GradeDataSourceType = (typeof GRADE_DATA_SOURCE_TYPES)[number]
+
+/**
+ * 型ガード `isGradeDataSourceType` と境界コンバータ `toGradeDataSourceType`。
+ * 想定外値は不活性な legacy `manual`（満点0・算出ソース無し）へフォールバックする
+ * — 満点を捏造する `exam_total` 等へ倒すより安全なため。
+ */
+export const { is: isGradeDataSourceType, to: toGradeDataSourceType } =
+  defineStringUnion(GRADE_DATA_SOURCE_TYPES, "manual")
+
+/**
+ * 境界セットの対象種別の唯一の定義源（SSOT）。
+ * `GradeBoundarySet.targetType` も DB 上 `String`。観点別（grade_item）か総合（overall）か。
+ */
+export const GRADE_BOUNDARY_TARGET_TYPES = ["grade_item", "overall"] as const
+
+export type GradeBoundaryTargetType =
+  (typeof GRADE_BOUNDARY_TARGET_TYPES)[number]
+
+/**
+ * 型ガード `isGradeBoundaryTargetType` と境界コンバータ `toGradeBoundaryTargetType`
+ * （想定外値は grade_item）。targetType は grade_item|overall の2値ハード不変。
+ */
+export const { is: isGradeBoundaryTargetType, to: toGradeBoundaryTargetType } =
+  defineStringUnion(GRADE_BOUNDARY_TARGET_TYPES, "grade_item")
 
 /** 成績算出試験（リレーション付き） */
 export type GradeWithDetails = Omit<Grade, "referenceDate"> & {
@@ -65,7 +110,7 @@ export type GradeDataSourceWithDetails = Omit<
   | "estimationMode"
   | "estimationSourceIds"
 > & {
-  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"
+  type: GradeDataSourceType
   weight: number
   absentMethod: AbsentMethod
   absentRatio: number
@@ -88,10 +133,11 @@ export type GradeDataSourceWithDetails = Omit<
 }
 
 /** 境界セット（境界リスト付き） */
-export type GradeBoundarySetWithDetails = Pick<
-  GradeBoundarySet,
-  "id" | "gradeId" | "targetType" | "gradeItemId"
+export type GradeBoundarySetWithDetails = Omit<
+  Pick<GradeBoundarySet, "id" | "gradeId" | "targetType" | "gradeItemId">,
+  "targetType"
 > & {
+  targetType: GradeBoundaryTargetType
   gradeItem: Pick<GradeItem, "id" | "name" | "order"> | null
   boundaries: GradeBoundaryData[]
 }
@@ -152,7 +198,7 @@ export interface GradeItemResult {
 export interface SourceScoreResult {
   dataSourceId: string
   dataSourceName: string
-  type: string
+  type: GradeDataSourceType
   /** 最終スコア（manual型は変換・加減点・クランプ適用後） */
   rawScore: number | null
   maxScore: number
@@ -178,7 +224,7 @@ export interface GradeCalculationResult {
   students: StudentGradeResult[]
   /** 境界セットデータ（override方向判定用） */
   boundarySets: {
-    targetType: string
+    targetType: GradeBoundaryTargetType
     gradeItemId: string | null
     boundaries: { label: string; minPercentage: number }[]
   }[]
