@@ -3,8 +3,13 @@ import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
 import { EmptyTableCell } from "@/components/exams/06-student-answers/student-answer-table/components/EmptyTableCell"
 import { FilePreviewCell } from "@/components/exams/06-student-answers/student-answer-table/components/FilePreviewCell"
 import { SortableTableCell } from "@/components/exams/06-student-answers/student-answer-table/components/SortableTableCell"
-import type { PreviewMode } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type {
+  ExtendedDisabledState,
+  PreviewMode,
+} from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
+import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import { lookupHasCell } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
 import {
   Table,
@@ -19,24 +24,17 @@ interface TableContentProps {
   tableData: Array<
     Array<{
       type: "file" | "empty" | "disabled"
-      position: number
       file?: UnifiedFile
-      student?: ExamStudentWithMemberships
-      pageNumber?: number
+      disabledReason?: DisabledReason
     }>
   >
   sortedStudents: ExamStudentWithMemberships[]
   maxPages: number
-  disabledState: {
-    rows: Set<number>
-    cols: Set<number>
-    positions: Set<number>
-    files: Set<string>
-  }
+  disabledState: ExtendedDisabledState
   mode: "upload" | "view"
   previewMode: PreviewMode
   nameRegionAvailable: Record<number, boolean>
-  positionsWithExistingAnswers: Set<number>
+  cellsWithExistingAnswers: CellLookup
   allowOverwrite: boolean
   files: UnifiedFile[]
   affectedCells?: Set<string>
@@ -49,12 +47,11 @@ interface TableContentProps {
     file: UnifiedFile,
     pageNumber: number
   ) => Promise<string | null>
-  toggleRowDisabled: (index: number) => void
-  toggleColDisabled: (index: number) => void
-  togglePositionDisabled: (position: number) => void
+  toggleRowDisabled: (examStudentId: string) => void
+  toggleColDisabled: (pageNumber: number) => void
+  toggleCellDisabled: (studentId: string, pageNumber: number) => void
   toggleFileDisabled: (fileId: string) => void
   onUploadModalOpen: (
-    position: number,
     studentName: string | undefined,
     pageNumber: number | undefined
   ) => void
@@ -69,7 +66,7 @@ export function TableContent({
   mode,
   previewMode,
   nameRegionAvailable,
-  positionsWithExistingAnswers,
+  cellsWithExistingAnswers,
   allowOverwrite,
   files,
   affectedCells,
@@ -81,7 +78,7 @@ export function TableContent({
   drawNameRegionCanvas,
   toggleRowDisabled,
   toggleColDisabled,
-  togglePositionDisabled,
+  toggleCellDisabled,
   toggleFileDisabled,
   onUploadModalOpen,
   onDeleteAnswerSheet,
@@ -95,32 +92,30 @@ export function TableContent({
         <UITableHeader>
           <TableRow>
             {/* 生徒名列ヘッダー */}
-            <TableHead
-              className={`w-32 border text-center ${mode === "upload" ? "cursor-pointer" : ""}`}
-              onClick={
-                mode === "upload" ? () => toggleColDisabled(-1) : undefined
-              }
-            >
-              生徒名
-            </TableHead>
+            <TableHead className="w-32 border text-center">生徒名</TableHead>
             {/* ページ列ヘッダー */}
-            {Array.from({ length: maxPages }, (_, pageIndex) => (
-              <TableHead
-                key={pageIndex}
-                className={`w-32 border text-center ${
-                  mode === "upload" ? "cursor-pointer" : ""
-                } ${
-                  disabledState.cols.has(pageIndex) ? "bg-gray-200" : "bg-white"
-                }`}
-                onClick={
-                  mode === "upload"
-                    ? () => toggleColDisabled(pageIndex)
-                    : undefined
-                }
-              >
-                ページ {pageIndex + 1}
-              </TableHead>
-            ))}
+            {Array.from({ length: maxPages }, (_, pageIndex) => {
+              const pageNumber = pageIndex + 1
+              return (
+                <TableHead
+                  key={pageNumber}
+                  className={`w-32 border text-center ${
+                    mode === "upload" ? "cursor-pointer" : ""
+                  } ${
+                    disabledState.cols.includes(pageNumber)
+                      ? "bg-gray-200"
+                      : "bg-white"
+                  }`}
+                  onClick={
+                    mode === "upload"
+                      ? () => toggleColDisabled(pageNumber)
+                      : undefined
+                  }
+                >
+                  ページ {pageNumber}
+                </TableHead>
+              )
+            })}
           </TableRow>
         </UITableHeader>
         <TableBody>
@@ -131,13 +126,13 @@ export function TableContent({
                 className={`border text-center ${
                   mode === "upload" ? "cursor-pointer" : ""
                 } ${
-                  disabledState.rows.has(studentIndex)
+                  disabledState.rows.includes(sortedStudents[studentIndex].id)
                     ? "bg-gray-200"
                     : "bg-white"
                 }`}
                 onClick={
                   mode === "upload"
-                    ? () => toggleRowDisabled(studentIndex)
+                    ? () => toggleRowDisabled(sortedStudents[studentIndex].id)
                     : undefined
                 }
               >
@@ -154,22 +149,23 @@ export function TableContent({
 
               {/* ファイルセル */}
               {row.map((cellData, pageIndex) => {
+                // セル座標から生徒・ページを投射（セルは同一性を保持しない）
+                const examStudent = sortedStudents[studentIndex]
+                const pageNumber = pageIndex + 1
+
                 if (cellData.type === "disabled" || cellData.type === "empty") {
                   return (
                     <EmptyTableCellWithLogic
-                      key={cellData.position}
+                      key={pageNumber}
                       cellData={cellData}
-                      studentIndex={studentIndex}
-                      pageIndex={pageIndex}
-                      sortedStudents={sortedStudents}
-                      disabledState={disabledState}
+                      examStudent={examStudent}
+                      pageNumber={pageNumber}
                       mode={mode}
-                      positionsWithExistingAnswers={
-                        positionsWithExistingAnswers
-                      }
+                      cellsWithExistingAnswers={cellsWithExistingAnswers}
                       allowOverwrite={allowOverwrite}
                       files={files}
-                      togglePositionDisabled={togglePositionDisabled}
+                      disabledFiles={disabledState.files}
+                      toggleCellDisabled={toggleCellDisabled}
                       toggleFileDisabled={toggleFileDisabled}
                       onUploadModalOpen={onUploadModalOpen}
                     />
@@ -181,7 +177,11 @@ export function TableContent({
                 const isFileDisabled = disabledState.files.has(file.id)
                 const hasExistingAnswer =
                   mode === "upload" &&
-                  positionsWithExistingAnswers.has(cellData.position)
+                  lookupHasCell(
+                    cellsWithExistingAnswers,
+                    examStudent.studentId,
+                    pageNumber
+                  )
                 // 上書き無効時で既存答案がある場合はドラッグ無効
                 const isDragDisabledByOverwrite =
                   hasExistingAnswer && !allowOverwrite
@@ -190,13 +190,16 @@ export function TableContent({
                   <SortableTableCell
                     key={file.id}
                     id={file.id}
-                    position={cellData.position}
                     hasFile={true}
                     isPositionDisabled={isDragDisabledByOverwrite}
                     isFileDisabled={isFileDisabled}
                     onTogglePosition={
                       mode === "upload"
-                        ? () => togglePositionDisabled(cellData.position)
+                        ? () =>
+                            toggleCellDisabled(
+                              examStudent.studentId,
+                              pageNumber
+                            )
                         : () => {}
                     }
                     onToggleFileDisabled={
@@ -209,11 +212,11 @@ export function TableContent({
                     observerRef={observerRef}
                     mode={mode}
                     studentName={
-                      cellData.student
-                        ? `${cellData.student.student.lastName} ${cellData.student.student.firstName}`
+                      examStudent
+                        ? `${examStudent.student.lastName} ${examStudent.student.firstName}`
                         : undefined
                     }
-                    pageNumber={cellData.pageNumber ?? undefined}
+                    pageNumber={pageNumber}
                     hasScoreData={true}
                     onDeleteFileWithScoring={() => {
                       if (onDeleteAnswerSheet) {
@@ -223,12 +226,10 @@ export function TableContent({
                   >
                     <FilePreviewCell
                       file={file}
-                      pageNumber={cellData.pageNumber || 1}
+                      pageNumber={pageNumber}
                       previewMode={previewMode}
                       isFileDisabled={isFileDisabled}
-                      nameRegionAvailable={
-                        nameRegionAvailable[cellData.pageNumber || 1]
-                      }
+                      nameRegionAvailable={nameRegionAvailable[pageNumber]}
                       getFileColor={getFileColor}
                       drawNameRegionCanvas={drawNameRegionCanvas}
                       imageLoadState={imageLoadStates[file.id]}
@@ -248,32 +249,24 @@ export function TableContent({
   )
 }
 
-// 空セルのロジックを分離したコンポーネント
+// 空セル・無効セルの表示ロジック。無効理由は生成側で確定済みのものを
+// 受け取り（cellData.disabledReason）、ここでは再計算せず「流す」だけ。
 interface EmptyTableCellWithLogicProps {
   cellData: {
     type: "empty" | "disabled" | "file"
-    position: number
-    student?: ExamStudentWithMemberships
-    pageNumber?: number
     file?: UnifiedFile
+    disabledReason?: DisabledReason
   }
-  studentIndex: number
-  pageIndex: number
-  sortedStudents: ExamStudentWithMemberships[]
-  disabledState: {
-    rows: Set<number>
-    cols: Set<number>
-    positions: Set<number>
-    files: Set<string>
-  }
+  examStudent: ExamStudentWithMemberships
+  pageNumber: number
   mode: "upload" | "view"
-  positionsWithExistingAnswers: Set<number>
+  cellsWithExistingAnswers: CellLookup
   allowOverwrite: boolean
   files: UnifiedFile[]
-  togglePositionDisabled: (position: number) => void
+  disabledFiles: Set<string>
+  toggleCellDisabled: (studentId: string, pageNumber: number) => void
   toggleFileDisabled: (fileId: string) => void
   onUploadModalOpen: (
-    position: number,
     studentName: string | undefined,
     pageNumber: number | undefined
   ) => void
@@ -281,82 +274,48 @@ interface EmptyTableCellWithLogicProps {
 
 function EmptyTableCellWithLogic({
   cellData,
-  studentIndex,
-  pageIndex,
-  sortedStudents,
-  disabledState,
+  examStudent,
+  pageNumber,
   mode,
-  positionsWithExistingAnswers,
+  cellsWithExistingAnswers,
   allowOverwrite,
   files,
-  togglePositionDisabled,
+  disabledFiles,
+  toggleCellDisabled,
   toggleFileDisabled,
   onUploadModalOpen,
 }: EmptyTableCellWithLogicProps) {
-  // 既存答案があるかチェック（空セルまたは無効セル用）
+  // 既存答案があるか（オーバーレイ用）
   const hasExistingAnswerForEmpty =
     mode === "upload" &&
     (cellData.type === "empty" || cellData.type === "disabled") &&
-    positionsWithExistingAnswers.has(cellData.position)
+    lookupHasCell(cellsWithExistingAnswers, examStudent.studentId, pageNumber)
 
-  // そのセルに新しく追加しようとしている画像ファイルがあるかチェック
+  // そのセルに新しく追加しようとしている画像ファイルがあるか
   const newFileInCell = files.find(
     (file) =>
-      file.studentId === cellData.student?.id &&
-      file.pageNumber === cellData.pageNumber &&
-      !disabledState.files.has(file.id)
+      file.studentId === examStudent.studentId &&
+      file.pageNumber === pageNumber &&
+      !disabledFiles.has(file.id)
   )
   const hasNewFileToUpload = !!newFileInCell
 
-  // 無効化の理由を判定
-  let disabledReason: DisabledReason = undefined
-  if (cellData.type === "disabled") {
-    const student = sortedStudents[studentIndex]
-
-    if (disabledState.rows.has(studentIndex)) {
-      // 行無効の場合、欠席生徒かどうかをチェック
-      if (student?.status === "absent") {
-        disabledReason = "absent_student"
-      } else {
-        disabledReason = "row"
-      }
-    } else if (disabledState.cols.has(pageIndex)) {
-      disabledReason = "column"
-    } else if (disabledState.positions.has(cellData.position)) {
-      disabledReason = "position"
-    } else if (
-      mode === "upload" &&
-      !allowOverwrite &&
-      positionsWithExistingAnswers.has(cellData.position)
-    ) {
-      disabledReason = "existing_answer"
-    } else {
-      // 他の理由で無効化されている場合はundefinedのまま
-      disabledReason = undefined
-    }
-  }
+  const studentName = `${examStudent.student.lastName} ${examStudent.student.firstName}`
 
   return (
     <EmptyTableCell
-      position={cellData.position}
-      student={cellData.student || null}
-      pageNumber={cellData.pageNumber || null}
+      examStudent={examStudent}
+      pageNumber={pageNumber}
       isPositionDisabled={cellData.type === "disabled"}
       isPendingChange={false}
       mode={mode}
       hasExistingAnswer={hasExistingAnswerForEmpty}
       allowOverwrite={allowOverwrite}
-      disabledReason={disabledReason}
-      onTogglePosition={() => togglePositionDisabled(cellData.position)}
-      onUploadToCell={() => {
-        onUploadModalOpen(
-          cellData.position,
-          cellData.student
-            ? `${cellData.student.student.lastName} ${cellData.student.student.firstName}`
-            : undefined,
-          cellData.pageNumber ?? undefined
-        )
-      }}
+      disabledReason={cellData.disabledReason}
+      onTogglePosition={() =>
+        toggleCellDisabled(examStudent.studentId, pageNumber)
+      }
+      onUploadToCell={() => onUploadModalOpen(studentName, pageNumber)}
       onToggleAnswerDisabled={() => {
         if (newFileInCell) {
           toggleFileDisabled(newFileInCell.id)

@@ -3,11 +3,12 @@ import { useCallback, useMemo } from "react"
 import { useTableDataGeneration } from "@/components/exams/06-student-answers/student-answer-table/hooks/useTableDataGeneration"
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import {
-  calculateDynamicDisabledPositions,
-  calculatePositionsWithExistingAnswers,
+  calculateCellsWithExistingAnswers,
+  calculateDynamicDisabledCells,
   getDisabledFiles,
   getEnabledFiles,
   getFileColor,
+  lookupHasCell,
   sortStudentsByCustomOrder,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
@@ -22,7 +23,10 @@ interface UseTableDataParams {
   modelAnswerCount: number
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
-  isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean
+  isCellDisabled: (
+    examStudent: ExamStudentWithMemberships,
+    pageNumber: number
+  ) => boolean
   mode?: "upload" | "view"
   existingStudentAnswers?: Array<{
     id: string
@@ -41,7 +45,7 @@ export function useTableData({
   modelAnswerCount,
   fileOrder,
   disabledState,
-  isPositionDisabled,
+  isCellDisabled,
   mode,
   existingStudentAnswers,
   allowOverwrite = false,
@@ -51,9 +55,9 @@ export function useTableData({
     return sortStudentsByCustomOrder(students)
   }, [students])
 
-  // 動的無効化位置の計算
-  const dynamicDisabledPositions = useMemo(() => {
-    return calculateDynamicDisabledPositions(
+  // 動的無効化セルの計算
+  const dynamicDisabledCells = useMemo(() => {
+    return calculateDynamicDisabledCells(
       files,
       sortedStudents,
       modelAnswerCount,
@@ -62,23 +66,25 @@ export function useTableData({
     )
   }, [files, sortedStudents, modelAnswerCount, disabledState, mode])
 
-  // 拡張されたisPositionDisabled関数
-  const enhancedIsPositionDisabled = useCallback(
-    (studentIndex: number, pageIndex: number) => {
-      const position = studentIndex * modelAnswerCount + pageIndex
-
+  // 手動無効化 + 動的無効化を合わせたセル無効判定
+  const enhancedIsCellDisabled = useCallback(
+    (examStudent: ExamStudentWithMemberships, pageNumber: number) => {
       // 元の無効化チェック
-      if (isPositionDisabled(studentIndex, pageIndex)) return true
+      if (isCellDisabled(examStudent, pageNumber)) return true
 
       // 動的無効化チェック
-      return dynamicDisabledPositions.has(position)
+      return lookupHasCell(
+        dynamicDisabledCells,
+        examStudent.studentId,
+        pageNumber
+      )
     },
-    [isPositionDisabled, modelAnswerCount, dynamicDisabledPositions]
+    [isCellDisabled, dynamicDisabledCells]
   )
 
-  // 既存答案がある位置の計算（警告オーバーレイ用）
-  const positionsWithExistingAnswers = useMemo(() => {
-    return calculatePositionsWithExistingAnswers(
+  // 既存答案があるセルの計算（警告オーバーレイ用）
+  const cellsWithExistingAnswers = useMemo(() => {
+    return calculateCellsWithExistingAnswers(
       files,
       sortedStudents,
       modelAnswerCount,
@@ -117,7 +123,7 @@ export function useTableData({
     fileOrder,
     disabledState,
     mode,
-    enhancedIsPositionDisabled,
+    enhancedIsCellDisabled,
     allowOverwrite,
     existingStudentAnswers,
   })
@@ -128,6 +134,6 @@ export function useTableData({
     getDisabledFiles: getDisabledFilesCallback,
     getFileColor: getFileColorCallback,
     tableData,
-    positionsWithExistingAnswers,
+    cellsWithExistingAnswers,
   }
 }

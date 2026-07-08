@@ -4,7 +4,10 @@ import type {
   CellData,
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
-import { getEnabledFiles } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import {
+  getEnabledFiles,
+  manualDisabledReason,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   PlacementStrategy,
   UnifiedFile,
@@ -18,9 +21,9 @@ interface UseTableDataGenerationParams {
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   mode?: "upload" | "view"
-  enhancedIsPositionDisabled: (
-    studentIndex: number,
-    pageIndex: number
+  enhancedIsCellDisabled: (
+    examStudent: ExamStudentWithMemberships,
+    pageNumber: number
   ) => boolean
   allowOverwrite?: boolean
   existingStudentAnswers?: Array<{
@@ -40,7 +43,7 @@ export function useTableDataGeneration({
   fileOrder,
   disabledState,
   mode,
-  enhancedIsPositionDisabled,
+  enhancedIsCellDisabled,
   allowOverwrite = false,
   existingStudentAnswers = [],
 }: UseTableDataGenerationParams) {
@@ -60,8 +63,9 @@ export function useTableDataGeneration({
         studentIndex < sortedStudents.length;
         studentIndex++
       ) {
+        const examStudent = sortedStudents[studentIndex]
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          if (!enhancedIsPositionDisabled(studentIndex, pageIndex)) {
+          if (!enhancedIsCellDisabled(examStudent, pageIndex + 1)) {
             validPositions.push({ studentIndex, pageIndex })
           }
         }
@@ -102,41 +106,24 @@ export function useTableDataGeneration({
         studentIndex < sortedStudents.length;
         studentIndex++
       ) {
-        const student = sortedStudents[studentIndex]
+        const examStudent = sortedStudents[studentIndex]
         const row: CellData[] = []
 
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const position = studentIndex * modelAnswerCount + pageIndex
-          const isDisabled = enhancedIsPositionDisabled(studentIndex, pageIndex)
+          const isDisabled = enhancedIsCellDisabled(examStudent, pageIndex + 1)
 
           if (isDisabled) {
-            // 無効セル（手動無効化 + 動的無効化）
-            row.push({
-              type: "disabled",
-              position,
-              student,
-              pageNumber: pageIndex + 1,
-            })
+            // 無効セル（手動無効化 + 動的無効化）。確認モードは表示上「答案なし」
+            row.push({ type: "disabled" })
           } else {
             // 有効セル: ファイルがマッピングされていればファイルセル、なければ空セル
             const key = `${studentIndex}-${pageIndex}`
             const file = filePositionMap.get(key)
 
             if (file) {
-              row.push({
-                type: "file",
-                position,
-                student,
-                pageNumber: pageIndex + 1,
-                file,
-              })
+              row.push({ type: "file", file })
             } else {
-              row.push({
-                type: "empty",
-                position,
-                student,
-                pageNumber: pageIndex + 1,
-              })
+              row.push({ type: "empty" })
             }
           }
         }
@@ -171,17 +158,17 @@ export function useTableDataGeneration({
         studentIndex < sortedStudents.length;
         studentIndex++
       ) {
+        const examStudent = sortedStudents[studentIndex]
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const position = studentIndex * modelAnswerCount + pageIndex
-          const positionKey = `${studentIndex}-${pageIndex}`
+          const pageNumber = pageIndex + 1
+          const placementKey = `${studentIndex}-${pageIndex}`
 
           const isManuallyDisabled =
-            disabledState.rows.has(studentIndex) ||
-            disabledState.cols.has(pageIndex) ||
-            disabledState.positions.has(position)
+            manualDisabledReason(disabledState, examStudent, pageNumber) !==
+            undefined
 
           // 既存答案がある場合は上書き設定をチェック
-          const hasExistingAnswer = existingAnswerPositions.has(positionKey)
+          const hasExistingAnswer = existingAnswerPositions.has(placementKey)
           const shouldSkipExisting = hasExistingAnswer && !allowOverwrite
 
           if (!isManuallyDisabled && !shouldSkipExisting) {
@@ -235,27 +222,22 @@ export function useTableDataGeneration({
         studentIndex < sortedStudents.length;
         studentIndex++
       ) {
-        const student = sortedStudents[studentIndex]
+        const examStudent = sortedStudents[studentIndex]
         const row: CellData[] = []
 
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const position = studentIndex * modelAnswerCount + pageIndex
           const pageNumber = pageIndex + 1
 
-          // 位置無効化チェック（手動無効化のみ）
-          const isManuallyDisabled =
-            disabledState.rows.has(studentIndex) ||
-            disabledState.cols.has(pageIndex) ||
-            disabledState.positions.has(position)
+          // 手動無効化の判定と理由を1回の評価で確定（ちゃんとやる側）
+          const manualReason = manualDisabledReason(
+            disabledState,
+            examStudent,
+            pageNumber
+          )
 
-          if (isManuallyDisabled) {
-            // 手動無効化セル
-            row.push({
-              type: "disabled",
-              position,
-              student,
-              pageNumber,
-            })
+          if (manualReason) {
+            // 手動無効化セル（無効理由も権威的にここで確定）
+            row.push({ type: "disabled", disabledReason: manualReason })
           } else {
             // 有効セル: ファイルがマッピングされていればファイルセル、なければ空セル
             const key = `${studentIndex}-${pageIndex}`
@@ -267,30 +249,13 @@ export function useTableDataGeneration({
 
             if (file) {
               // ファイルあり（自動配置されたファイル）
-              row.push({
-                type: "file",
-                position,
-                student,
-                pageNumber,
-                file: file,
-              })
+              row.push({ type: "file", file })
             } else if (shouldShowAsDisabled) {
               // 既存答案があり上書き無効の場合は無効セルとして表示
-              row.push({
-                type: "disabled",
-                position,
-                student,
-                pageNumber,
-                disabledReason: "existing_answer",
-              })
+              row.push({ type: "disabled", disabledReason: "existing_answer" })
             } else {
               // ファイルなし（空セル）
-              row.push({
-                type: "empty",
-                position,
-                student,
-                pageNumber,
-              })
+              row.push({ type: "empty" })
             }
           }
         }
@@ -307,7 +272,7 @@ export function useTableDataGeneration({
     fileOrder,
     disabledState,
     mode,
-    enhancedIsPositionDisabled,
+    enhancedIsCellDisabled,
     allowOverwrite,
     existingStudentAnswers,
   ])

@@ -26,13 +26,13 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
     disabledState,
     toggleRowDisabled,
     toggleColDisabled,
-    togglePositionDisabled,
+    toggleCellDisabled,
     toggleFileDisabled,
     sortedStudents,
     getEnabledFiles,
     getFileColor,
     tableData,
-    positionsWithExistingAnswers,
+    cellsWithExistingAnswers,
     sensors,
     activeFile,
     handleDragStart,
@@ -113,7 +113,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
                 mode={mode}
                 previewMode={previewMode}
                 nameRegionAvailable={nameRegionAvailable}
-                positionsWithExistingAnswers={positionsWithExistingAnswers}
+                cellsWithExistingAnswers={cellsWithExistingAnswers}
                 allowOverwrite={allowOverwrite}
                 files={props.files}
                 affectedCells={affectedCells}
@@ -125,7 +125,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
                 drawNameRegionCanvas={drawNameRegionCanvas}
                 toggleRowDisabled={toggleRowDisabled}
                 toggleColDisabled={toggleColDisabled}
-                togglePositionDisabled={togglePositionDisabled}
+                toggleCellDisabled={toggleCellDisabled}
                 toggleFileDisabled={toggleFileDisabled}
                 onUploadModalOpen={handleUploadModalOpen}
                 onDeleteAnswerSheet={handleDeleteAnswerSheet}
