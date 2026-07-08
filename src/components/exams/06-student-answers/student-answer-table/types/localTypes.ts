@@ -14,7 +14,6 @@ import type { FileState } from "./dragDropTypes"
 
 export interface UploadModalState {
   isOpen: boolean
-  position?: number
   studentName?: string
   pageNumber?: number
 }

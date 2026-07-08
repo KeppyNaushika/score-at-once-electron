@@ -1,6 +1,73 @@
-import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type {
+  DisabledCell,
+  ExtendedDisabledState,
+} from "@/components/exams/06-student-answers/student-answer-table/types"
+import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
 import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+
+/**
+ * セルレコード配列に (studentId, pageNumber) が含まれるかを判定する。
+ * 文字列合成キーを使わず identity のフィールド比較で照合する（DnD の FileState と同流儀）。
+ * ユーザートグル由来の小さな配列（disabledState.cells）専用。
+ */
+export function hasCell(
+  cells: DisabledCell[],
+  studentId: string,
+  pageNumber: number
+): boolean {
+  return cells.some(
+    (cell) => cell.studentId === studentId && cell.pageNumber === pageNumber
+  )
+}
+
+/**
+ * (studentId, pageNumber) の集合を O(1) 照合するルックアップ。
+ * 文字列合成キー（`${a}:${b}`）を使わず studentId → pageNumber集合 の入れ子で持つ。
+ * グリッド全体分に膨らみうる派生集合（既存答案・動的無効）向け。
+ */
+export type CellLookup = Map<string, Set<number>>
+
+export function addCellToLookup(
+  lookup: CellLookup,
+  studentId: string,
+  pageNumber: number
+): void {
+  const pages = lookup.get(studentId)
+  if (pages) {
+    pages.add(pageNumber)
+  } else {
+    lookup.set(studentId, new Set([pageNumber]))
+  }
+}
+
+export function lookupHasCell(
+  lookup: CellLookup,
+  studentId: string,
+  pageNumber: number
+): boolean {
+  return lookup.get(studentId)?.has(pageNumber) ?? false
+}
+
+/**
+ * 手動無効化（行・列・個別セル）の理由を返す唯一の場所。無効でなければ undefined。
+ * 「無効か」の真偽と「なぜ無効か」を1回の評価で確定する（判定の二重走査を避ける）。
+ * 既存答案(existing_answer)・確認モードの動的無効はここでは扱わない（呼び出し側の責務）。
+ */
+export function manualDisabledReason(
+  disabledState: ExtendedDisabledState,
+  examStudent: ExamStudentWithMemberships,
+  pageNumber: number
+): DisabledReason {
+  if (disabledState.rows.includes(examStudent.id)) {
+    return examStudent.status === "absent" ? "absent_student" : "row"
+  }
+  if (disabledState.cols.includes(pageNumber)) return "column"
+  if (hasCell(disabledState.cells, examStudent.studentId, pageNumber)) {
+    return "position"
+  }
+  return undefined
+}
 
 /** 生徒をcustomOrder昇順にソートした新しい配列を返す */
 export function sortStudentsByCustomOrder(
@@ -13,49 +80,38 @@ export function sortStudentsByCustomOrder(
   })
 }
 
-/** 確認モードで答案が存在しないテーブル位置を無効化するSetを返す */
-export function calculateDynamicDisabledPositions(
+/** 確認モードで答案が存在しないセル（無効化対象）を O(1) 照合ルックアップで返す */
+export function calculateDynamicDisabledCells(
   files: UnifiedFile[],
   sortedStudents: ExamStudentWithMemberships[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view"
-): Set<number> {
-  const dynamicDisabled = new Set<number>()
+): CellLookup {
+  const dynamicDisabled: CellLookup = new Map()
 
-  // 確認モードでは答案がない位置のみ無効化
+  // 確認モードでは答案がないセルのみ無効化
   if (mode === "view") {
-    for (
-      let studentIndex = 0;
-      studentIndex < sortedStudents.length;
-      studentIndex++
-    ) {
-      const student = sortedStudents[studentIndex]
-
+    for (const examStudent of sortedStudents) {
       for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
         const pageNumber = pageIndex + 1
-        const position = studentIndex * masterImageCount + pageIndex
 
-        // 手動無効化済みの位置はスキップ
-        if (
-          disabledState.rows.has(studentIndex) ||
-          disabledState.cols.has(pageIndex) ||
-          disabledState.positions.has(position)
-        ) {
+        // 手動無効化済みのセルはスキップ
+        if (manualDisabledReason(disabledState, examStudent, pageNumber)) {
           continue
         }
 
-        // その位置に対応する答案があるかチェック
-        const hasAnswerForPosition = files.some(
+        // そのセルに対応する答案があるかチェック
+        const hasAnswerForCell = files.some(
           (file) =>
-            file.studentId === student.studentId &&
+            file.studentId === examStudent.studentId &&
             file.pageNumber === pageNumber &&
             !disabledState.files.has(file.id)
         )
 
         // 答案がない場合は動的無効化
-        if (!hasAnswerForPosition) {
-          dynamicDisabled.add(position)
+        if (!hasAnswerForCell) {
+          addCellToLookup(dynamicDisabled, examStudent.studentId, pageNumber)
         }
       }
     }
@@ -65,8 +121,8 @@ export function calculateDynamicDisabledPositions(
   return dynamicDisabled
 }
 
-/** 既存の答案が割り当てられているテーブル位置のSetを返す（警告オーバーレイ用） */
-export function calculatePositionsWithExistingAnswers(
+/** 既存の答案が割り当てられているセルを O(1) 照合ルックアップで返す（警告オーバーレイ用） */
+export function calculateCellsWithExistingAnswers(
   files: UnifiedFile[],
   sortedStudents: ExamStudentWithMemberships[],
   masterImageCount: number,
@@ -77,48 +133,40 @@ export function calculatePositionsWithExistingAnswers(
     studentId: string | null
     pageNumber: number
   }>
-): Set<number> {
-  const positions = new Set<number>()
+): CellLookup {
+  const cells: CellLookup = new Map()
 
-  // sortedStudentsを使用してテーブル表示順序と一致させる
-  for (
-    let studentIndex = 0;
-    studentIndex < sortedStudents.length;
-    studentIndex++
-  ) {
-    const student = sortedStudents[studentIndex]
-
+  for (const examStudent of sortedStudents) {
     for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
       const pageNumber = pageIndex + 1
-      const position = studentIndex * masterImageCount + pageIndex
 
-      // その位置に対応する答案があるかチェック
-      let hasAnswerForPosition = false
+      // そのセルに対応する答案があるかチェック
+      let hasAnswerForCell = false
 
       if (mode === "upload" && existingAnswerSheets) {
         // アップロードモード: existingAnswerSheets から判定
-        hasAnswerForPosition = existingAnswerSheets.some(
+        hasAnswerForCell = existingAnswerSheets.some(
           (sheet) =>
-            sheet.studentId === student.studentId &&
+            sheet.studentId === examStudent.studentId &&
             sheet.pageNumber === pageNumber
         )
       } else {
         // 確認モード: files から判定
-        hasAnswerForPosition = files.some(
+        hasAnswerForCell = files.some(
           (file) =>
-            file.studentId === student.studentId &&
+            file.studentId === examStudent.studentId &&
             file.pageNumber === pageNumber &&
             !disabledState.files.has(file.id)
         )
       }
 
-      if (hasAnswerForPosition) {
-        positions.add(position)
+      if (hasAnswerForCell) {
+        addCellToLookup(cells, examStudent.studentId, pageNumber)
       }
     }
   }
 
-  return positions
+  return cells
 }
 
 /** 無効化されていないファイルのみをフィルタリングして返す */

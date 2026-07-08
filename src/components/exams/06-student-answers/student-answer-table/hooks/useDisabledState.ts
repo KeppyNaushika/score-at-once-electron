@@ -1,103 +1,112 @@
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import { manualDisabledReason } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-/** 答案テーブルの行・列・セル単位の無効化状態と上書きモードを管理するフック */
+/**
+ * 答案テーブルの行・列・セル単位の無効化状態と上書きモードを管理するフック。
+ * 同一性でキーする: 行 = examStudentId[]、列 = pageNumber[]、
+ * セル = {studentId, pageNumber}[]（いずれも少数なので配列）、
+ * files = Set<fileId>（アップロードで多数になりうるので O(1)）。
+ */
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
-    rows: new Set(),
-    cols: new Set(),
-    positions: new Set(),
+    rows: [],
+    cols: [],
+    cells: [],
     files: new Set(),
   })
 
   // 既存答案上書きモードの状態管理
   const [allowOverwrite, setAllowOverwrite] = useState(false)
 
-  const toggleRowDisabled = useCallback((rowIndex: number) => {
-    setDisabledState((prev) => {
-      const newRows = new Set(prev.rows)
-      if (newRows.has(rowIndex)) {
-        newRows.delete(rowIndex)
-      } else {
-        newRows.add(rowIndex)
-      }
-      return { ...prev, rows: newRows }
-    })
+  const toggleRowDisabled = useCallback((examStudentId: string) => {
+    setDisabledState((prev) => ({
+      ...prev,
+      rows: prev.rows.includes(examStudentId)
+        ? prev.rows.filter(
+            (rowExamStudentId) => rowExamStudentId !== examStudentId
+          )
+        : [...prev.rows, examStudentId],
+    }))
   }, [])
 
-  const toggleColDisabled = useCallback((colIndex: number) => {
-    setDisabledState((prev) => {
-      const newCols = new Set(prev.cols)
-      if (newCols.has(colIndex)) {
-        newCols.delete(colIndex)
-      } else {
-        newCols.add(colIndex)
-      }
-      return { ...prev, cols: newCols }
-    })
+  const toggleColDisabled = useCallback((pageNumber: number) => {
+    setDisabledState((prev) => ({
+      ...prev,
+      cols: prev.cols.includes(pageNumber)
+        ? prev.cols.filter((colPageNumber) => colPageNumber !== pageNumber)
+        : [...prev.cols, pageNumber],
+    }))
   }, [])
 
-  const togglePositionDisabled = useCallback((position: number) => {
-    setDisabledState((prev) => {
-      const newPositions = new Set(prev.positions)
-      if (newPositions.has(position)) {
-        newPositions.delete(position)
-      } else {
-        newPositions.add(position)
-      }
-      return { ...prev, positions: newPositions }
-    })
-  }, [])
+  const toggleCellDisabled = useCallback(
+    (studentId: string, pageNumber: number) => {
+      setDisabledState((prev) => {
+        const alreadyDisabled = prev.cells.some(
+          (cell) =>
+            cell.studentId === studentId && cell.pageNumber === pageNumber
+        )
+        return {
+          ...prev,
+          cells: alreadyDisabled
+            ? prev.cells.filter(
+                (cell) =>
+                  !(
+                    cell.studentId === studentId &&
+                    cell.pageNumber === pageNumber
+                  )
+              )
+            : [...prev.cells, { studentId, pageNumber }],
+        }
+      })
+    },
+    []
+  )
 
   const toggleFileDisabled = useCallback((fileId: string) => {
     setDisabledState((prev) => {
-      const newFiles = new Set(prev.files)
-      if (newFiles.has(fileId)) {
-        newFiles.delete(fileId)
+      const nextFiles = new Set(prev.files)
+      if (nextFiles.has(fileId)) {
+        nextFiles.delete(fileId)
       } else {
-        newFiles.add(fileId)
+        nextFiles.add(fileId)
       }
-      return { ...prev, files: newFiles }
+      return { ...prev, files: nextFiles }
     })
   }, [])
 
-  const isPositionDisabled = useCallback(
-    (studentIndex: number, pageIndex: number) => {
-      const position = studentIndex * 100 + pageIndex // Simple position calculation
+  const isCellDisabled = useCallback(
+    (examStudent: ExamStudentWithMemberships, pageNumber: number) => {
       return (
-        disabledState.rows.has(studentIndex) ||
-        disabledState.cols.has(pageIndex) ||
-        disabledState.positions.has(position)
+        manualDisabledReason(disabledState, examStudent, pageNumber) !==
+        undefined
       )
     },
     [disabledState]
   )
 
-  // 初期化関数（現在は何もしない）
+  // 欠席生徒を初期状態で行無効にする。初回ロード時のみ適用し、以降は
+  // students の参照変化で再適用しない（教員が手動で有効化した行を握り潰さないため）。
+  const didInitAbsentRef = useRef(false)
   const initializeStudentsWithoutAnswers = useCallback(
     (students: ExamStudentWithMemberships[]) => {
-      // 欠席生徒を初期状態で行無効にする（ユーザーが手動で有効化可能）
-      const sortedStudents = [...students].sort((studentA, studentB) => {
-        const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-        const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-        return studentAOrder - studentBOrder
-      })
+      if (didInitAbsentRef.current || students.length === 0) return
+      didInitAbsentRef.current = true
 
-      const absentStudentRows = new Set<number>()
-      sortedStudents.forEach((student, index) => {
-        if (student.status === "absent") {
-          absentStudentRows.add(index)
-        }
-      })
+      const absentExamStudentIds = students
+        .filter((examStudent) => examStudent.status === "absent")
+        .map((examStudent) => examStudent.id)
 
-      // 欠席生徒がいる場合のみ状態を更新
-      if (absentStudentRows.size > 0) {
-        setDisabledState((prev) => ({
-          ...prev,
-          rows: new Set([...prev.rows, ...absentStudentRows]),
-        }))
+      if (absentExamStudentIds.length > 0) {
+        setDisabledState((prev) => {
+          const merged = [...prev.rows]
+          for (const examStudentId of absentExamStudentIds) {
+            if (!merged.includes(examStudentId)) merged.push(examStudentId)
+          }
+          return { ...prev, rows: merged }
+        })
       }
     },
     []
@@ -107,9 +116,9 @@ export function useDisabledState() {
     disabledState,
     toggleRowDisabled,
     toggleColDisabled,
-    togglePositionDisabled,
+    toggleCellDisabled,
     toggleFileDisabled,
-    isPositionDisabled,
+    isCellDisabled,
     initializeStudentsWithoutAnswers,
     allowOverwrite,
     setAllowOverwrite,

@@ -57,7 +57,6 @@ export function convertAnswerSheetsToFiles(
 
       // テーブルDnD統合用
       color: undefined,
-      position: undefined,
     }
   })
 }

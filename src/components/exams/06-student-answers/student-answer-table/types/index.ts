@@ -7,20 +7,29 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 // Preview mode for different display options
 export type PreviewMode = "full" | "name-only"
 
-// Extended disabled state for table management
-export interface ExtendedDisabledState {
-  rows: Set<number>
-  cols: Set<number>
-  positions: Set<number>
-  files: Set<string>
+// セル同一性 = (studentId, pageNumber)。Set の合成文字列キーをやめ、
+// 型付きレコードで持つ（DnD の FileState と同じ identity 照合の流儀）。
+export interface DisabledCell {
+  studentId: string
+  pageNumber: number
 }
 
-// Cell data structure for table rendering
+// Extended disabled state for table management.
+// index やフラット position ではなく、安定した同一性でキーする
+// （並べ替え・フィルタ・生徒追加でズレないため）。Set は使わず配列で持つ。
+export interface ExtendedDisabledState {
+  rows: string[] // examStudentId（ExamStudent.id）— 無効行は少数なので配列
+  cols: number[] // pageNumber（1始まりの序数）— 無効列は少数なので配列
+  cells: DisabledCell[] // (studentId, pageNumber) — 個別無効セルは少数なので配列
+  files: Set<string> // fileId — アップロードで多数になりうるので Set（O(1)）
+}
+
+// Cell data structure for table rendering.
+// セルは「そのマスに置かれた物（file）と無効理由」だけを持つ。
+// 生徒・ページ・position はグリッド座標 [studentIndex][pageIndex] と
+// sortedStudents から投射する（セルにエンティティを複製させない）。
 export interface CellData {
   type: "file" | "empty" | "disabled"
-  position: number
-  student?: ExamStudentWithMemberships
-  pageNumber?: number
   file?: UnifiedFile
   disabledReason?:
     "row" | "column" | "position" | "existing_answer" | "absent_student"
@@ -43,7 +52,6 @@ export interface FilePreviewCellProps {
 
 export interface SortableTableCellProps {
   id: string
-  position: number
   hasFile: boolean
   isPositionDisabled: boolean
   isFileDisabled: boolean
@@ -61,8 +69,7 @@ export interface SortableTableCellProps {
 }
 
 export interface EmptyTableCellProps {
-  position: number
-  student: ExamStudentWithMemberships | null
+  examStudent: ExamStudentWithMemberships | null
   pageNumber: number | null
   isPositionDisabled: boolean
   isPendingChange?: boolean

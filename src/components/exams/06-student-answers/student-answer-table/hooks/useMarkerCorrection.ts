@@ -57,11 +57,12 @@ export function useMarkerCorrection({
     const targetMap = new Map<string, number>()
     if (markerCorrectionEnabled) {
       for (const row of tableData) {
-        for (const cell of row) {
-          if (cell.file && cell.pageNumber) {
-            targetMap.set(cell.file.id, cell.pageNumber)
+        // マスターページ番号はセルの列位置から投射（pageIndex + 1）
+        row.forEach((cell, pageIndex) => {
+          if (cell.file) {
+            targetMap.set(cell.file.id, pageIndex + 1)
           }
-        }
+        })
       }
     }
 

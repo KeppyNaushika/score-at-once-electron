@@ -49,9 +49,9 @@ export function useStudentAnswerTableLogic({
     disabledState,
     toggleRowDisabled,
     toggleColDisabled,
-    togglePositionDisabled,
+    toggleCellDisabled,
     toggleFileDisabled,
-    isPositionDisabled,
+    isCellDisabled,
     initializeStudentsWithoutAnswers,
     allowOverwrite,
     setAllowOverwrite,
@@ -63,14 +63,14 @@ export function useStudentAnswerTableLogic({
     getDisabledFiles,
     getFileColor,
     tableData,
-    positionsWithExistingAnswers,
+    cellsWithExistingAnswers,
   } = useTableData({
     files,
     students,
     modelAnswerCount,
     fileOrder,
     disabledState,
-    isPositionDisabled,
+    isCellDisabled,
     mode,
     existingStudentAnswers,
     allowOverwrite,
@@ -168,23 +168,20 @@ export function useStudentAnswerTableLogic({
   const handleUpload = () => {
     const uploadData: UploadData[] = []
 
-    // 動的テーブルデータから配置済みファイルのアップロードデータを生成
-    tableData.forEach((row) => {
-      row.forEach((cell) => {
-        if (
-          cell.type === "file" &&
-          cell.file &&
-          cell.student &&
-          cell.pageNumber
-        ) {
+    // 動的テーブルデータから配置済みファイルのアップロードデータを生成。
+    // 生徒とページはセル座標 [studentIndex][pageIndex] から投射する。
+    tableData.forEach((row, studentIndex) => {
+      row.forEach((cell, pageIndex) => {
+        if (cell.type === "file" && cell.file) {
+          const examStudent = sortedStudents[studentIndex]
           uploadData.push({
             name: cell.file.name,
             fileName: cell.file.name,
             originalFileName: cell.file.originalFileName,
             type: cell.file.type,
             buffer: cell.file.buffer,
-            studentId: cell.student.id,
-            pageNumber: cell.pageNumber,
+            studentId: examStudent.studentId,
+            pageNumber: pageIndex + 1,
             overwrite: allowOverwrite,
             correctWithMarkers: false, // クライアント側で補正済み
             correctionStatus: cell.file.correctionStatus,
@@ -197,13 +194,11 @@ export function useStudentAnswerTableLogic({
   }
 
   const handleUploadModalOpen = (
-    position: number,
     studentName: string | undefined,
     pageNumber: number | undefined
   ) => {
     setUploadModalState({
       isOpen: true,
-      position,
       studentName,
       pageNumber,
     })
@@ -216,7 +211,7 @@ export function useStudentAnswerTableLogic({
   const handleUploadToCell = (file: File, pageNumber?: number) => {
     // TODO: 指定されたセル位置にファイルをアップロード
     console.log(
-      `Uploading to position ${uploadModalState.position}:`,
+      `Uploading to ${uploadModalState.studentName ?? "?"} p${uploadModalState.pageNumber ?? "?"}:`,
       file.name,
       pageNumber
     )
@@ -239,13 +234,13 @@ export function useStudentAnswerTableLogic({
     disabledState,
     toggleRowDisabled,
     toggleColDisabled,
-    togglePositionDisabled,
+    toggleCellDisabled,
     toggleFileDisabled,
     sortedStudents,
     getEnabledFiles,
     getFileColor,
     tableData,
-    positionsWithExistingAnswers,
+    cellsWithExistingAnswers,
     sensors,
     activeFile,
     handleDragStart,

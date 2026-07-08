@@ -13,7 +13,7 @@ import {
 import { TableCell } from "@/components/ui/table"
 
 export function EmptyTableCell({
-  student,
+  examStudent,
   pageNumber,
   isPositionDisabled,
   isPendingChange = false,
@@ -75,9 +75,10 @@ export function EmptyTableCell({
             ) : (
               <div className="text-xs text-gray-400">
                 {hasExistingAnswer ? "答案画像あり" : "空セル"}
-                {student && (
+                {examStudent && (
                   <div className="mt-1">
-                    {student.student.lastName} {student.student.firstName}
+                    {examStudent.student.lastName}{" "}
+                    {examStudent.student.firstName}
                   </div>
                 )}
                 {pageNumber && <div>P{pageNumber}</div>}
