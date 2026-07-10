@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
 import { FileUploadZone } from "@/components/exams/06-student-answers/student-answer-management/components/FileUploadZone"
 import { useStudentAnswerUpload } from "@/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload"
@@ -29,6 +29,18 @@ export function StudentAnswerUpload({
 }: StudentAnswerUploadProps) {
   const finalModelAnswerCount = modelAnswerCount
   const finalExistingAnswers = existingStudentAnswers
+
+  // 表・DnD が占有信号として読む最小形（{id, studentId, pageNumber}）に射影する。
+  // DB答案は Prisma 型のまま持ち回り、テーブル境界でだけ座標へ落とす。
+  const existingAnswerOccupancy = useMemo(
+    () =>
+      finalExistingAnswers?.map((answerSheet) => ({
+        id: answerSheet.id,
+        studentId: answerSheet.studentId,
+        pageNumber: answerSheet.examPage.pageNumber,
+      })),
+    [finalExistingAnswers]
+  )
   const {
     // State
     isUploading,
@@ -145,7 +157,7 @@ export function StudentAnswerUpload({
         pendingChanges={pendingChanges}
         affectedCells={affectedCells}
         onUpdatePendingChanges={onUpdatePendingChanges}
-        existingStudentAnswers={finalExistingAnswers}
+        existingStudentAnswers={existingAnswerOccupancy}
       />
     )
   }
@@ -176,7 +188,7 @@ export function StudentAnswerUpload({
           observerRef={observerRef}
           mode={mode}
           onReloadData={onUploadComplete}
-          existingStudentAnswers={finalExistingAnswers}
+          existingStudentAnswers={existingAnswerOccupancy}
           markerCorrectionEnabled={markerCorrectionEnabled}
           markerCorrectionAvailable={markerCorrectionAvailable}
           markerDiagnostics={markerDiagnostics}

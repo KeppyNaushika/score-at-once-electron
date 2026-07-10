@@ -75,5 +75,13 @@ export function createAnswerSheetApi() {
         moves,
         withScoring
       ),
+    applyStudentAnswerPlacements: (
+      moves: Array<{
+        fileId: string
+        finalStudentId: string | null
+        finalPageNumber: number
+        scorePolicy: "carry" | "discard"
+      }>
+    ) => ipcRenderer.invoke("apply-answer-sheet-placements", moves),
   }
 }

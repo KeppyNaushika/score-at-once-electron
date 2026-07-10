@@ -12,6 +12,7 @@ import {
   sortStudentsByCustomOrder,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
+  AnswerItem,
   PlacementStrategy,
   UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
@@ -111,7 +112,7 @@ export function useTableData({
   }, [files, disabledState])
 
   // ファイルカラーの取得
-  const getFileColorCallback = useCallback((file: UnifiedFile) => {
+  const getFileColorCallback = useCallback((file: AnswerItem) => {
     return getFileColor(file)
   }, [])
 

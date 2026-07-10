@@ -97,6 +97,17 @@ export interface StudentAnswerAPI {
     success: boolean
     error?: string
   }>
+  applyStudentAnswerPlacements: (
+    moves: Array<{
+      fileId: string
+      finalStudentId: string | null
+      finalPageNumber: number
+      scorePolicy: "carry" | "discard"
+    }>
+  ) => Promise<{
+    success: boolean
+    error?: string
+  }>
   getImageData: (relativePath: string) => Promise<{
     success: boolean
     data?: string

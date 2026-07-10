@@ -11,6 +11,24 @@
 // ============================================================================
 
 /**
+ * セルに載る要素の「描画ビュー」（表・DnD・プレビューが読む最小共通形）。
+ * 未保存画像（PendingImage 相当）と DB答案（ExistingAnswer 相当）の**両ソースを射影**した
+ * 表示専用の投射であって、エンティティの併合ではない（"Unified" とは呼ばない）。
+ * `UnifiedFile` はこれを満たす上位型（buffer 等の upload 専用フィールドを追加で持つ）。
+ */
+export interface AnswerItem {
+  id: string
+  studentId?: string // 配置済みの生徒ID（= Student.id）
+  pageNumber: number // マス列（1始まりの序数）
+  name: string // 表示・alt 用
+  preview?: string // 未保存は blob URL、DB答案は遅延読込前は無し
+  imagePath?: string | null // DB答案の遅延読込パス
+  correctionStatus?: "corrected" | "skipped" | "not_requested"
+  correctionError?: string
+  color?: string
+}
+
+/**
  * 統一されたファイル型定義
  * ConvertedFile + TestFileの統合版
  */
@@ -18,8 +36,10 @@ export interface UnifiedFile {
   id: string
   name: string
   type: string
-  size: number
-  buffer: ArrayBuffer
+  // 未保存（ドロップ変換）の画像だけが本物の buffer/size を持つ。
+  // DB答案（imagePath で遅延読込）は持たない（偽の 0埋めはしない）。
+  size?: number
+  buffer?: ArrayBuffer
   preview?: string
   studentId?: string // 配置済みの場合の生徒ID
   pageNumber: number // ページ番号（1から開始）
@@ -94,8 +114,9 @@ export interface PendingChange {
 }
 
 /**
- * 採点データ処理オプション
+ * 移動1件ごとの採点データ処理方針（view 方式B）。
+ * - carry: 採点も追従（同一ページの生徒付け替えのみ可）
+ * - discard: 採点を破棄（要再採点。ページ跨ぎは常にこれ）
+ * バックエンド `applyStudentAnswerPlacements` の scorePolicy と一致させる。
  */
-export type ScoringDataOption =
-  | "image-only" // 答案画像のみ入れ替え
-  | "with-scoring" // 採点情報も一緒に入れ替え
+export type PlacementScorePolicy = "carry" | "discard"

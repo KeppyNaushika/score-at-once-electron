@@ -9,14 +9,18 @@
 
 // 全ての関数を再エクスポート
 export {
+  // 採点安全な配置適用（view 方式B）
+  applyStudentAnswerPlacements,
   associateStudentAnswerWithStudent,
   // 一括操作
   batchUpdateStudentAnswerPlacements,
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
+  type PlacementScorePolicy,
   // ステータス管理
   setStudentAnswerAbsent,
+  type StudentAnswerPlacementMove,
   swapStudentAnswerPlacements,
   swapStudentAnswerPlacementsWithScoring,
   // 配置管理

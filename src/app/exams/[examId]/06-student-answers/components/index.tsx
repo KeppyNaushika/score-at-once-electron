@@ -6,15 +6,17 @@ import { Eye, Grid3X3 } from "lucide-react"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { StudentAnswerUpload } from "@/components/exams/06-student-answers/student-answer-management/components/StudentAnswerUpload"
-import type { ProcessedStudentAnswer } from "@/components/exams/06-student-answers/student-answer-management/types"
 import { ConfirmChangesModal } from "@/components/exams/06-student-answers/student-answer-table/components/ConfirmChangesModal"
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   PendingChange,
-  ScoringDataOption,
+  PlacementScorePolicy,
 } from "@/components/exams/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type {
+  ExamStudentWithMemberships,
+  StudentAnswerImageWithExamPageAndStudent,
+} from "@/types/prismaExtensions"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
@@ -69,7 +71,7 @@ interface StudentAnswersTabContentProps {
   examId: string
   students: ExamStudentWithMemberships[]
   modelAnswerCount: number
-  studentAnswers: ProcessedStudentAnswer[]
+  studentAnswers: StudentAnswerImageWithExamPageAndStudent[]
   pendingChanges: PendingChange[]
   affectedCells: Set<string>
   onUploadComplete: () => void
@@ -83,7 +85,9 @@ interface StudentAnswersTabContentProps {
   ) => void
   isConfirmModalOpen: boolean
   onCloseConfirmModal: () => void
-  onApplyChanges: (option: ScoringDataOption) => Promise<void>
+  onApplyChanges: (
+    policies: Record<string, PlacementScorePolicy>
+  ) => Promise<void>
   onResetChanges: () => Promise<void>
   onUploadFileCountChange?: (count: number) => void
   correctionStatusMap?: Map<string, "corrected" | "skipped">

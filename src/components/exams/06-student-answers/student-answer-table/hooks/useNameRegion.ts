@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react"
 
-import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 
 /** 答案画像から氏名欄領域をクリッピングして表示するためのフック */
 export function useNameRegion(examId: string) {
@@ -34,7 +34,7 @@ export function useNameRegion(examId: string) {
 
   // 氏名欄クリッピング用のcanvas描画
   const drawNameRegionCanvas = useCallback(
-    async (file: UnifiedFile, pageNumber: number) => {
+    async (file: AnswerItem, pageNumber: number) => {
       const canvas = canvasRef.current
       if (!canvas) {
         return null

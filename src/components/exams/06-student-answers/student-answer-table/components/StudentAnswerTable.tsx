@@ -1,6 +1,7 @@
 "use client"
 
 import { closestCenter, DndContext } from "@dnd-kit/core"
+import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
 import { FileImage } from "lucide-react"
 
 import { TableContent } from "@/components/exams/06-student-answers/student-answer-table/components/TableContent"
@@ -105,31 +106,36 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
 
           <CardContent className="p-4">
             <div className="min-h-96">
-              <TableContent
-                tableData={tableData}
-                sortedStudents={sortedStudents}
-                maxPages={maxPages}
-                disabledState={disabledState}
-                mode={mode}
-                previewMode={previewMode}
-                nameRegionAvailable={nameRegionAvailable}
-                cellsWithExistingAnswers={cellsWithExistingAnswers}
-                allowOverwrite={allowOverwrite}
-                files={props.files}
-                affectedCells={affectedCells}
-                imageLoadStates={imageLoadStates}
-                observerRef={observerRef}
-                correctingFileIds={correctingFileIds}
-                getEnabledFiles={getEnabledFiles}
-                getFileColor={getFileColor}
-                drawNameRegionCanvas={drawNameRegionCanvas}
-                toggleRowDisabled={toggleRowDisabled}
-                toggleColDisabled={toggleColDisabled}
-                toggleCellDisabled={toggleCellDisabled}
-                toggleFileDisabled={toggleFileDisabled}
-                onUploadModalOpen={handleUploadModalOpen}
-                onDeleteAnswerSheet={handleDeleteAnswerSheet}
-              />
+              {/* DnD 文脈（並べ替え）は表の外側で与える。表本体は DnD 非依存。 */}
+              <SortableContext
+                items={getEnabledFiles().map((file) => file.id)}
+                strategy={rectSortingStrategy}
+              >
+                <TableContent
+                  tableData={tableData}
+                  sortedStudents={sortedStudents}
+                  maxPages={maxPages}
+                  disabledState={disabledState}
+                  mode={mode}
+                  previewMode={previewMode}
+                  nameRegionAvailable={nameRegionAvailable}
+                  cellsWithExistingAnswers={cellsWithExistingAnswers}
+                  allowOverwrite={allowOverwrite}
+                  files={props.files}
+                  affectedCells={affectedCells}
+                  imageLoadStates={imageLoadStates}
+                  observerRef={observerRef}
+                  correctingFileIds={correctingFileIds}
+                  getFileColor={getFileColor}
+                  drawNameRegionCanvas={drawNameRegionCanvas}
+                  toggleRowDisabled={toggleRowDisabled}
+                  toggleColDisabled={toggleColDisabled}
+                  toggleCellDisabled={toggleCellDisabled}
+                  toggleFileDisabled={toggleFileDisabled}
+                  onUploadModalOpen={handleUploadModalOpen}
+                  onDeleteAnswerSheet={handleDeleteAnswerSheet}
+                />
+              </SortableContext>
             </div>
           </CardContent>
         </Card>

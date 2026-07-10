@@ -67,11 +67,16 @@ export function useMarkerCorrection({
     }
 
     // 処理が必要なファイルを抽出
-    type Task = { file: UnifiedFile; target: number | undefined }
+    type Task = {
+      file: UnifiedFile
+      buffer: ArrayBuffer
+      target: number | undefined
+    }
     const tasks: Task[] = []
     for (const file of files) {
-      // DB読み込み済みの既存答案（imagePathあり、buffer空）は対象外
-      if (file.imagePath) continue
+      // DB読み込み済みの既存答案（imagePathあり）や buffer 無しは対象外
+      if (file.imagePath || !file.buffer) continue
+      const buffer = file.buffer
       const rawTarget = targetMap.get(file.id)
       // マスターが存在しないページは対象外（undefined扱いで復元）
       const target =
@@ -84,10 +89,10 @@ export function useMarkerCorrection({
           file.correctedForPage !== undefined ||
           file.correctionStatus !== undefined
         ) {
-          tasks.push({ file, target: undefined })
+          tasks.push({ file, buffer, target: undefined })
         }
       } else if (file.correctedForPage !== target) {
-        tasks.push({ file, target })
+        tasks.push({ file, buffer, target })
       }
     }
 
@@ -109,10 +114,10 @@ export function useMarkerCorrection({
 
     const processTasks = async () => {
       const processed = await Promise.all(
-        tasks.map(async ({ file, target }) => {
+        tasks.map(async ({ file, buffer, target }) => {
           // 元バッファを初回のみ記憶
           if (!originalBuffersRef.current.has(file.id)) {
-            originalBuffersRef.current.set(file.id, file.buffer)
+            originalBuffersRef.current.set(file.id, buffer)
           }
           const origBuffer = originalBuffersRef.current.get(file.id)!
 

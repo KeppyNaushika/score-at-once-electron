@@ -16,12 +16,14 @@ import {
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
+  applyStudentAnswerPlacements,
   associateStudentAnswerWithStudent,
   batchUpdateStudentAnswerPlacements,
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
   setStudentAnswerAbsent,
+  type StudentAnswerPlacementMove,
   swapStudentAnswerPlacements,
   swapStudentAnswerPlacementsWithScoring,
   updateStudentAnswerPlacement,
@@ -224,6 +226,18 @@ export function setupMiscHandlers(): void {
         moves,
         withScoring
       )
+      if (!result.success) {
+        const errorMessage = "error" in result ? result.error : "Unknown error"
+        throw new Error(errorMessage)
+      }
+      return result
+    }
+  )
+
+  registerHandler(
+    "apply-answer-sheet-placements",
+    async (moves: StudentAnswerPlacementMove[]) => {
+      const result = await applyStudentAnswerPlacements(moves)
       if (!result.success) {
         const errorMessage = "error" in result ? result.error : "Unknown error"
         throw new Error(errorMessage)

@@ -5,19 +5,21 @@
 import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { ProcessedStudentAnswer } from "@/components/exams/06-student-answers/student-answer-management/types"
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   PendingChange,
-  ScoringDataOption,
+  PlacementScorePolicy,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type {
+  ExamStudentWithMemberships,
+  StudentAnswerImageWithExamPageAndStudent,
+} from "@/types/prismaExtensions"
 
 export function useStudentAnswersData(examId: string) {
   const [students, setStudents] = useState<ExamStudentWithMemberships[]>([])
   const [studentAnswers, setStudentAnswers] = useState<
-    ProcessedStudentAnswer[]
+    StudentAnswerImageWithExamPageAndStudent[]
   >([])
   const [modelAnswerCount, setModelAnswerCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -57,29 +59,8 @@ export function useStudentAnswersData(examId: string) {
         studentAnswersResult.success &&
         studentAnswersResult.studentAnswerImages
       ) {
-        // Convert Prisma型をProcessedStudentAnswer型に変換
-        const processedAnswers: ProcessedStudentAnswer[] =
-          studentAnswersResult.studentAnswerImages.map((img) => ({
-            id: img.id,
-            studentId: img.studentId,
-            pageNumber: img.examPage.pageNumber,
-            originalImagePath: img.imagePath,
-            isAbsent:
-              img.student?.examStudents?.[0]?.status === "absent" || false,
-            student: img.student
-              ? {
-                  id: img.student.id,
-                  lastName: img.student.lastName,
-                  firstName: img.student.firstName,
-                  lastNameKana: img.student.lastNameKana,
-                  firstNameKana: img.student.firstNameKana,
-                  studentNumber: img.student.studentNumber,
-                }
-              : null,
-            examId: img.examPage.examId,
-            status: "ready" as const,
-          }))
-        setStudentAnswers(processedAnswers)
+        // Prisma 型（examPage/student 込み）をそのまま保持する。手写しの中間層は置かない。
+        setStudentAnswers(studentAnswersResult.studentAnswerImages)
       }
 
       // Load model answer count
@@ -120,7 +101,7 @@ export function useStudentAnswersData(examId: string) {
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
   students?: ExamStudentWithMemberships[],
-  studentAnswers?: ProcessedStudentAnswer[]
+  studentAnswers?: StudentAnswerImageWithExamPageAndStudent[]
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())
@@ -155,7 +136,7 @@ export function usePendingChanges(
           const targetFile = studentAnswers?.find(
             (sheet) =>
               sheet.studentId === toState.studentId &&
-              sheet.pageNumber === toState.pageNumber &&
+              sheet.examPage.pageNumber === toState.pageNumber &&
               sheet.id !== fileId // 移動されたファイル自体は除外
           )
 
@@ -166,7 +147,7 @@ export function usePendingChanges(
               ? {
                   id: targetFile.id,
                   studentId: targetFile.studentId,
-                  pageNumber: targetFile.pageNumber,
+                  pageNumber: targetFile.examPage.pageNumber,
                 }
               : null,
             totalStudentAnswers: studentAnswers?.length || 0,
@@ -204,58 +185,43 @@ export function usePendingChanges(
   )
 
   const handleApplyChanges = useCallback(
-    async (option: ScoringDataOption) => {
+    async (policies: Record<string, PlacementScorePolicy>) => {
       try {
-        // 全ての変更を一方向移動として収集
-        const allMoves: Array<{
-          fileId: string
-          finalStudentId: string | null
-          finalPageNumber: number
-        }> = []
-
-        for (const change of pendingChanges) {
-          // 移動されるファイルの最終位置
-          allMoves.push({
+        // 各変更を最終位置＋採点方針(carry/discard)付きの move へ。
+        // ページ変化の move は carry を受け付けない（バックエンドでもガード）。
+        const moves = pendingChanges.map((change) => {
+          const pageChanged =
+            change.fromPosition.pageNumber !== change.toPosition.pageNumber
+          const requested = policies[change.id] ?? "carry"
+          const scorePolicy: PlacementScorePolicy = pageChanged
+            ? "discard"
+            : requested
+          return {
             fileId: change.movedFileId,
             finalStudentId: change.toPosition.studentId,
             finalPageNumber: change.toPosition.pageNumber,
-          })
-        }
-
-        console.log("🔄 Batch moves to apply:", {
-          totalMoves: allMoves.length,
-          moves: allMoves.map((move) => ({
-            fileId: move.fileId.substring(0, 8) + "...",
-            to: `${move.finalStudentId?.substring(0, 8) || "null"}...page${move.finalPageNumber}`,
-          })),
+            scorePolicy,
+          }
         })
 
-        // 一括移動処理：トランザクション内で全ての移動を同時実行
-        console.log("📝 Calling batch placement update...")
         const result =
-          await window.electronAPI.batchUpdateStudentAnswerPlacements(
-            allMoves,
-            option === "with-scoring"
-          )
-
-        console.log("✅ Batch placement update result:", result)
+          await window.electronAPI.applyStudentAnswerPlacements(moves)
 
         if (!result || !result.success) {
-          throw new Error(result?.error || "一括配置変更に失敗しました")
+          throw new Error(result?.error || "配置変更の適用に失敗しました")
         }
 
-        console.log("🔄 Clearing pending changes and reloading data...")
         setPendingChanges([])
         setAffectedCells(new Set())
-
-        console.log("🔄 Calling onDataReload...")
         await onDataReload()
-        console.log("✅ Data reload completed")
 
-        const optionText =
-          option === "with-scoring" ? "採点情報込み" : "答案画像のみ"
+        const discardCount = moves.filter(
+          (move) => move.scorePolicy === "discard"
+        ).length
         toast.success(
-          `${pendingChanges.length}件の変更を適用しました（${optionText}）`
+          discardCount > 0
+            ? `${moves.length}件を反映しました（採点破棄 ${discardCount}件）`
+            : `${moves.length}件を反映しました`
         )
       } catch (error) {
         console.error("変更の適用に失敗しました:", error)

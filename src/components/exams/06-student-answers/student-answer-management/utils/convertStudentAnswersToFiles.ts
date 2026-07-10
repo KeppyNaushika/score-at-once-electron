@@ -1,50 +1,22 @@
-import type { ProcessedStudentAnswer } from "@/components/exams/06-student-answers/student-answer-management/types"
-import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import type {
+  AnswerItem,
+  UnifiedFile,
+} from "@/components/exams/06-student-answers/types"
+import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 
-// For backward compatibility, support both processed and raw formats
-type AnswerSheetInput =
-  | ProcessedStudentAnswer
-  | {
-      // Raw Prisma format
-      id: string
-      studentId: string | null
-      imagePath: string
-      student: {
-        id: string
-        lastName: string
-        firstName: string
-        lastNameKana: string
-        firstNameKana: string
-        studentId: string
-      } | null
-      examPage: {
-        pageNumber: number
-      }
-    }
-
-/** DB取得済みの答案データをテーブル表示用のUnifiedFile配列に変換する */
+/** DB取得済みの答案データ（Prisma型）をテーブル表示用のUnifiedFile配列に変換する */
 export function convertAnswerSheetsToFiles(
-  answerSheets: AnswerSheetInput[]
+  answerSheets: StudentAnswerImageWithExamPageAndStudent[]
 ): UnifiedFile[] {
   return answerSheets.map((answerSheet) => {
-    // Handle both processed format (originalImagePath) and raw format (imagePath)
-    const imagePath =
-      "originalImagePath" in answerSheet
-        ? answerSheet.originalImagePath
-        : answerSheet.imagePath
-
-    // Handle both processed format (pageNumber) and raw format (examPage.pageNumber)
-    const pageNumber =
-      "pageNumber" in answerSheet
-        ? answerSheet.pageNumber
-        : answerSheet.examPage.pageNumber
+    const imagePath = answerSheet.imagePath
+    const pageNumber = answerSheet.examPage.pageNumber
 
     return {
       id: answerSheet.id,
       name: `${answerSheet.studentId || "unknown"}_page${pageNumber}`,
       type: imagePath?.split(".").pop() || "image",
-      size: 0, // 既存ファイルのサイズは取得不可
-      buffer: new ArrayBuffer(0), // 既存ファイルのバッファは遅延読み込み
+      // DB答案は size/buffer を持たない（遅延読込。偽の 0埋めはしない）。
       preview: undefined, // 遅延読み込みでBase64データを設定
       studentId: answerSheet.studentId || undefined,
       pageNumber: pageNumber || 1,
@@ -61,9 +33,9 @@ export function convertAnswerSheetsToFiles(
   })
 }
 
-/** UnifiedFileから答案画像をBase64データURLとして読み込む（遅延読み込み対応） */
+/** 答案画像をBase64データURLとして読み込む（遅延読み込み対応） */
 export async function loadStudentAnswerImage(
-  file: UnifiedFile
+  file: AnswerItem
 ): Promise<string> {
   // 新規ファイル（メモリ内）の場合はpreviewを返す
   if (file.preview && !file.imagePath) {

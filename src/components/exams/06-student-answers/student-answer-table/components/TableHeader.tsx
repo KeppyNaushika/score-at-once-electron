@@ -139,9 +139,11 @@ export function TableHeader({
                           <p className="truncate text-sm font-medium">
                             {file.name.split(" - ページ")[0] || file.name}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            {(file.size / 1024).toFixed(1)}KB
-                          </p>
+                          {file.size !== undefined && (
+                            <p className="text-xs text-gray-500">
+                              {(file.size / 1024).toFixed(1)}KB
+                            </p>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
