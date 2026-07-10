@@ -5,19 +5,15 @@
  * - ExamStudent.status を小文字に統一（participating / expected / absent）。
  *   旧アーカイブは大文字（PARTICIPATING / EXPECTED / ABSENT）で保存されている。
  *   DBマイグレーション 20260705000000_lowercase_examstudent_status と同一の正規化。
- *
- * 実際のインポートフロー（archiveExtractor）からは
- * normalizeExamStudentStatuses を直接利用する
- * （normalizeLegacyClassroomKeys と同じフィールド単位の互換処理パターン）。
  */
 
-import type { ArchiveExamData } from "../../../../src/types/examArchive.types"
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ArchiveExamData,
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
 /**
  * examData の ExamStudent.status を小文字へ正規化する。
@@ -37,11 +33,11 @@ export function normalizeExamStudentStatuses(
   }
 }
 
-export class V1_16_0_to_V1_17_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.16.0"
-  readonly toVersion: ArchiveVersion = "1.17.0"
+export class V1_16_0_to_V1_17_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.16.0"
+  readonly toVersion: ExamArchiveVersion = "1.17.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     return {
       data: {
         ...data,

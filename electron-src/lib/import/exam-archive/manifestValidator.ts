@@ -5,10 +5,8 @@
  */
 
 import type { ArchiveManifest } from "../../../../src/types/examArchive.types"
-import { CURRENT_VERSION } from "../transformers/types"
-
-/** 現在のアーカイブ形式バージョン (transformers/types.tsから参照) */
-export const CURRENT_ARCHIVE_VERSION = CURRENT_VERSION
+import { EXAM_CURRENT_VERSION } from "../../../../src/types/examArchive.types"
+import { compareVersions } from "../../shared/utilities/semver"
 
 /** 対応可能な最小バージョン (v0.2.z 互換) */
 export const MIN_SUPPORTED_VERSION = "1.0.0"
@@ -26,25 +24,6 @@ export interface CompatibilityInfo {
 }
 
 /**
- * バージョン文字列を比較
- *
- * @returns 負: v1 < v2, 0: v1 == v2, 正: v1 > v2
- */
-function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.split(".").map(Number)
-  const parts2 = v2.split(".").map(Number)
-
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0
-    const p2 = parts2[i] || 0
-    if (p1 !== p2) {
-      return p1 - p2
-    }
-  }
-  return 0
-}
-
-/**
  * マニフェストのバージョン互換性を検証
  *
  * @param manifest - 検証するマニフェスト
@@ -56,10 +35,7 @@ export function validateCompatibility(
   const warnings: string[] = []
 
   // アーカイブバージョンが現在より新しい場合はエラー
-  const versionCompare = compareVersions(
-    manifest.version,
-    CURRENT_ARCHIVE_VERSION
-  )
+  const versionCompare = compareVersions(manifest.version, EXAM_CURRENT_VERSION)
   if (versionCompare > 0) {
     return {
       isCompatible: false,

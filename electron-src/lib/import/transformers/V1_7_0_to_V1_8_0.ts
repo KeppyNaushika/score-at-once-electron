@@ -4,14 +4,19 @@
  * 変更点:
  * - MasterImage に pageSize フィールドを追加（デフォルト: "A4"）
  * - DrawingAnnotation の strokeWidth / fontSize をピクセル値からmm値に変換
+ *
+ * ⚠️ px→mm 変換は値からは px か mm か判別できないため【冪等でない】。
+ * 本変換器が二重適用されないよう、バージョン検出の形状フロア
+ * （transformers/index.ts の SHAPE_VERSION_FLOORS）は 1.7.0 以下への
+ * 引き下げを「現行キーが欠落した本物の旧形状」に限定している。
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
 /**
  * 用紙サイズ（mm）
@@ -43,11 +48,11 @@ function pxToMm(px: number, pageSize: string): number {
   return Math.round(((px * paper.width) / imageWidthPx) * 100) / 100
 }
 
-export class V1_7_0_to_V1_8_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.7.0"
-  readonly toVersion: ArchiveVersion = "1.8.0"
+export class V1_7_0_to_V1_8_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.7.0"
+  readonly toVersion: ExamArchiveVersion = "1.8.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const warnings: string[] = []
 
     // 1. MasterImage に pageSize を追加

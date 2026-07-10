@@ -11,18 +11,15 @@
  * 2. final 行の描画注釈を同じ採点者の既存提案行へ移動（あれば）
  * 3. 同じ採点者の提案行がある final 行は削除、無ければ判定のみの提案行へ変換
  * 4. proposed は partial / pending へ変換
- *
- * 実際のインポートフロー（archiveExtractor）からは convertScoresDataToV1_13 を
- * 直接利用する（フィールド単位の互換処理パターンに合わせるため）。
  */
 
-import type { ArchiveScoresData } from "../../../../src/types/examArchive.types"
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ArchiveScoresData,
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
 type ArchiveQuestionScore = ArchiveScoresData["questionScores"][number]
 
@@ -166,11 +163,11 @@ export function convertScoresDataToV1_13(scoresData: ArchiveScoresData): {
   }
 }
 
-export class V1_12_0_to_V1_13_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.12.0"
-  readonly toVersion: ArchiveVersion = "1.13.0"
+export class V1_12_0_to_V1_13_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.12.0"
+  readonly toVersion: ExamArchiveVersion = "1.13.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const { scoresData, warnings } = convertScoresDataToV1_13(data.scoresData)
     return {
       data: {

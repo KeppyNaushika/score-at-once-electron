@@ -6,17 +6,17 @@
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
-export class V1_5_0_to_V1_6_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.5.0"
-  readonly toVersion: ArchiveVersion = "1.6.0"
+export class V1_5_0_to_V1_6_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.5.0"
+  readonly toVersion: ExamArchiveVersion = "1.6.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const warnings: string[] = []
 
     // DrawingAnnotation に isFavorite を追加

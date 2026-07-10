@@ -12,17 +12,17 @@
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
-export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.4.0"
-  readonly toVersion: ArchiveVersion = "1.5.0"
+export class V1_4_0_to_V1_5_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.4.0"
+  readonly toVersion: ExamArchiveVersion = "1.5.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const warnings: string[] = []
 
     warnings.push(
@@ -57,6 +57,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements VersionTransformer {
 
     // project → exam のキーリネーム
     const keyRenames: [string, string][] = [
+      ["project", "exam"],
       ["projectPages", "examPages"],
       ["projectStudents", "examStudents"],
       ["userProjects", "userExams"],

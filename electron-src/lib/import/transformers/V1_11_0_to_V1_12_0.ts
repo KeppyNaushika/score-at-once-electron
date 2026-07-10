@@ -9,17 +9,17 @@
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
-export class V1_11_0_to_V1_12_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.11.0"
-  readonly toVersion: ArchiveVersion = "1.12.0"
+export class V1_11_0_to_V1_12_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.11.0"
+  readonly toVersion: ExamArchiveVersion = "1.12.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     return {
       data: {
         ...data,

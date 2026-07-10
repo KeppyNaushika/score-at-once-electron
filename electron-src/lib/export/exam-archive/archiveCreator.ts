@@ -13,8 +13,8 @@ import type {
   ArchiveExportMode,
   ArchiveManifest,
 } from "../../../../src/types/examArchive.types"
+import { EXAM_CURRENT_VERSION } from "../../../../src/types/examArchive.types"
 import { getDataDirectory } from "../../dataManager"
-import { CURRENT_VERSION } from "../../import/transformers/types"
 import type { CollectedData } from "./dataCollector"
 
 /**
@@ -83,7 +83,7 @@ function createManifest(
   exportMode?: ArchiveExportMode
 ): ArchiveManifest {
   return {
-    version: CURRENT_VERSION,
+    version: EXAM_CURRENT_VERSION,
     schemaVersion: getSchemaVersion(),
     appVersion: getAppVersion(),
     exportedAt: new Date().toISOString(),

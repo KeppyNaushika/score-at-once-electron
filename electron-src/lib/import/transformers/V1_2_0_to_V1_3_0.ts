@@ -11,11 +11,11 @@
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
 /**
  * v1.2.0 の Student 形式（旧フィールド名）
@@ -52,11 +52,11 @@ interface V1_3_0_Student {
  *
  * Student.studentId → Student.studentNumber のリネーム変換を行う
  */
-export class V1_2_0_to_V1_3_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.2.0"
-  readonly toVersion: ArchiveVersion = "1.3.0"
+export class V1_2_0_to_V1_3_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.2.0"
+  readonly toVersion: ExamArchiveVersion = "1.3.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const warnings: string[] = []
 
     // Student データの変換（旧フォーマット配列をバリデーション）

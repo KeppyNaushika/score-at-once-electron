@@ -13,18 +13,20 @@
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
 /**
  * v1.1.0 の PageImage 形式
+ * （実アーカイブのフィールドは projectPageId。examPageId は将来キーとの両対応）
  */
 interface V1_1_0_PageImage {
   id: string
-  examPageId: string
+  examPageId?: string
+  projectPageId?: string
   studentId: string | null
   imagePath: string
   imageType: string // "MODEL_ANSWER" | "STUDENT_ANSWER"
@@ -97,6 +99,7 @@ interface V1_1_0_DrawingAnnotation {
   displayY: number
   createdByUserId?: string | null // 旧フィールド名
   userId?: string | null // 新フィールド名（既に変換済みの場合）
+  isFavorite?: boolean // v1.6.0+（既に変換済みの場合のみ存在）
   createdAt: string
   updatedAt: string
 }
@@ -104,11 +107,11 @@ interface V1_1_0_DrawingAnnotation {
 /**
  * v1.1.0 → v1.2.0 変換器
  */
-export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.1.0"
-  readonly toVersion: ArchiveVersion = "1.2.0"
+export class V1_1_0_to_V1_2_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.1.0"
+  readonly toVersion: ExamArchiveVersion = "1.2.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const warnings: string[] = []
 
     // PageImage → MasterImage / StudentAnswerImage に分離（旧フォーマット配列をバリデーション）
@@ -178,10 +181,16 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         },
         examData: {
           ...data.examData,
-          masterImages: masterImages.map((masterImage) => ({ ...masterImage })),
-          studentAnswerImages: studentAnswerImages.map(
-            (studentAnswerImage) => ({ ...studentAnswerImage })
-          ),
+          // 既に分離済み（現行形式）のデータは保持する（冪等）。
+          // 分離前の実アーカイブには masterImages/studentAnswerImages キー自体が無い
+          masterImages:
+            data.examData.masterImages ??
+            masterImages.map((masterImage) => ({ ...masterImage })),
+          studentAnswerImages:
+            data.examData.studentAnswerImages ??
+            studentAnswerImages.map((studentAnswerImage) => ({
+              ...studentAnswerImage,
+            })),
         },
         scoresData: {
           questionScores: questionScores.map((questionScore) => ({
@@ -189,7 +198,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
           })),
           drawingAnnotations: drawingAnnotations.map((drawingAnnotation) => ({
             ...drawingAnnotation,
-            isFavorite: false,
+            isFavorite: drawingAnnotation.isFavorite ?? false,
           })),
         },
       },
@@ -211,10 +220,16 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
     let skippedCount = 0
 
     for (const pageImage of pageImages) {
+      // v1.1.0 実アーカイブの参照フィールドは projectPageId（examId系リネームは v1.5.0）
+      const examPageId = pageImage.examPageId ?? pageImage.projectPageId
+      if (!examPageId) {
+        skippedCount++
+        continue
+      }
       if (pageImage.imageType === "MODEL_ANSWER") {
         masterImages.push({
           id: pageImage.id,
-          examPageId: pageImage.examPageId,
+          examPageId,
           imagePath: pageImage.imagePath,
           createdAt: pageImage.createdAt,
           updatedAt: pageImage.updatedAt,
@@ -223,7 +238,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         if (pageImage.studentId) {
           studentAnswerImages.push({
             id: pageImage.id,
-            examPageId: pageImage.examPageId,
+            examPageId,
             studentId: pageImage.studentId,
             imagePath: pageImage.imagePath,
             createdAt: pageImage.createdAt,
@@ -238,7 +253,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
 
     if (skippedCount > 0) {
       imageWarnings.push(
-        `studentIdが未設定の答案画像${skippedCount}件がスキップされました。`
+        `参照先ページまたはstudentIdが未設定の画像${skippedCount}件がスキップされました。`
       )
     }
 
@@ -341,6 +356,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
       displayX: number
       displayY: number
       userId: string
+      isFavorite?: boolean
       createdAt: string
       updatedAt: string
     }>
@@ -390,6 +406,7 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
           displayX: drawingAnnotation.displayX,
           displayY: drawingAnnotation.displayY,
           userId,
+          isFavorite: drawingAnnotation.isFavorite,
           createdAt: drawingAnnotation.createdAt,
           updatedAt: drawingAnnotation.updatedAt,
         }

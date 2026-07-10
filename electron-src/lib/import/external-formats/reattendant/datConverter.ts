@@ -25,7 +25,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 
-import { CURRENT_VERSION } from "../../transformers/types"
+import { EXAM_CURRENT_VERSION } from "../../../../../src/types/examArchive.types"
 import type {
   DatAbcData,
   DatAngle,
@@ -310,7 +310,7 @@ export async function convertDatToScore(
 
     // 14. manifest 生成
     const manifest = {
-      version: CURRENT_VERSION,
+      version: EXAM_CURRENT_VERSION,
       schemaVersion: "dat-import",
       appVersion: "0.0.0",
       exportedAt: now,
