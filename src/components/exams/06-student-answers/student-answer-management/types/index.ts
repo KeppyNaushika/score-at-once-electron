@@ -1,25 +1,9 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
-
-// Processed student answer format for component compatibility
-export interface ProcessedStudentAnswer {
-  id: string
-  studentId: string | null
-  pageNumber: number
-  originalImagePath: string | null
-  isAbsent: boolean
-  student: {
-    id: string
-    lastName: string
-    firstName: string
-    lastNameKana: string
-    firstNameKana: string
-    studentNumber: string
-  } | null
-  examId: string
-  status: "ready"
-}
+import type {
+  ExamStudentWithMemberships,
+  StudentAnswerImageWithExamPageAndStudent,
+} from "@/types/prismaExtensions"
 
 // Local component-specific types
 export interface StudentAnswerUploadProps {
@@ -27,7 +11,8 @@ export interface StudentAnswerUploadProps {
   students: ExamStudentWithMemberships[]
   modelAnswerCount: number
   onUploadComplete?: () => void
-  existingStudentAnswers?: ProcessedStudentAnswer[]
+  // DB答案は Prisma 型（examPage/student 込み）をそのまま持ち回る。手写し中間層は置かない。
+  existingStudentAnswers?: StudentAnswerImageWithExamPageAndStudent[]
   mode?: "upload" | "view"
 
   // 変更状態管理用（確認モードのみ）

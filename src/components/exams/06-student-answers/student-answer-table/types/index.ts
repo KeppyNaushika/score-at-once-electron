@@ -1,4 +1,5 @@
 import type {
+  AnswerItem,
   PlacementStrategy,
   UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
@@ -37,14 +38,14 @@ export interface CellData {
 
 // Component props interfaces
 export interface FilePreviewCellProps {
-  file: UnifiedFile
+  file: AnswerItem
   pageNumber: number
   previewMode: PreviewMode
   isFileDisabled: boolean
   nameRegionAvailable: boolean
-  getFileColor: (file: UnifiedFile) => string
+  getFileColor: (file: AnswerItem) => string
   drawNameRegionCanvas: (
-    file: UnifiedFile,
+    file: AnswerItem,
     pageNumber: number
   ) => Promise<string | null>
   imageLoadState?: "pending" | "loading" | "loaded" | "error"

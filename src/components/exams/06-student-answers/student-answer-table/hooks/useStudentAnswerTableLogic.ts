@@ -172,7 +172,8 @@ export function useStudentAnswerTableLogic({
     // 生徒とページはセル座標 [studentIndex][pageIndex] から投射する。
     tableData.forEach((row, studentIndex) => {
       row.forEach((cell, pageIndex) => {
-        if (cell.type === "file" && cell.file) {
+        // 未保存画像のみ本物の buffer を持つ（DB答案は buffer なし＝アップロード対象外）。
+        if (cell.type === "file" && cell.file && cell.file.buffer) {
           const examStudent = sortedStudents[studentIndex]
           uploadData.push({
             name: cell.file.name,

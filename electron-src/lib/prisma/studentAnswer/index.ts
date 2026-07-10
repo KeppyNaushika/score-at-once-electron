@@ -29,3 +29,10 @@ export {
   batchUpdateStudentAnswerPlacements,
   swapStudentAnswerPlacementsWithScoring,
 } from "./batch"
+
+// 採点安全な配置適用（view 方式B: 2軸移動 + carry/discard）
+export {
+  applyStudentAnswerPlacements,
+  type PlacementScorePolicy,
+  type StudentAnswerPlacementMove,
+} from "./placementApply"

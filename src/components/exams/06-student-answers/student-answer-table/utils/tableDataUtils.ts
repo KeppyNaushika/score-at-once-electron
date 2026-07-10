@@ -3,7 +3,10 @@ import type {
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
-import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import type {
+  AnswerItem,
+  UnifiedFile,
+} from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /**
@@ -186,7 +189,7 @@ export function getDisabledFiles(
 }
 
 /** ファイルIDのハッシュからTailwind背景色クラスを決定する */
-export function getFileColor(file: UnifiedFile): string {
+export function getFileColor(file: AnswerItem): string {
   const colors = [
     "bg-red-200",
     "bg-blue-200",

@@ -2,14 +2,14 @@ import { DragOverlay } from "@dnd-kit/core"
 
 import { FilePreviewCell } from "@/components/exams/06-student-answers/student-answer-table/components/FilePreviewCell"
 import type { PreviewMode } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 
 interface TableDragOverlayProps {
-  activeFile: UnifiedFile | null
+  activeFile: AnswerItem | null
   previewMode: PreviewMode
-  getFileColor: (file: UnifiedFile) => string
+  getFileColor: (file: AnswerItem) => string
   drawNameRegionCanvas: (
-    file: UnifiedFile,
+    file: AnswerItem,
     pageNumber: number
   ) => Promise<string | null>
 }
