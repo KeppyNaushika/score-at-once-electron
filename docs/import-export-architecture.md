@@ -35,7 +35,7 @@ flowchart LR
 
     subgraph インポート
         D --> E[archiveExtractor]
-        E --> F[versionedImporter<br/>バージョン変換]
+        E --> F[transformExamArchiveToLatest<br/>バージョン変換チェーン]
         F --> G[matcher<br/>事前照合]
         G --> H[ウィザードUI<br/>ユーザー判断]
         H --> I[idIntegrationImporter<br/>Stage 1 + Stage 2]
@@ -49,13 +49,13 @@ flowchart LR
 
 ### 基本仕様
 
-| 項目             | 値                            |
-| ---------------- | ----------------------------- |
-| ファイル拡張子   | `.score`                      |
-| 内部形式         | ZIP (archiver ライブラリ使用) |
-| 圧縮レベル       | zlib level 9 (最高圧縮率)     |
-| 展開ライブラリ   | adm-zip                       |
-| 現在のバージョン | `1.4.0`                       |
+| 項目             | 値                                                         |
+| ---------------- | ---------------------------------------------------------- |
+| ファイル拡張子   | `.score`                                                   |
+| 内部形式         | ZIP (archiver ライブラリ使用)                              |
+| 圧縮レベル       | zlib level 9 (最高圧縮率)                                  |
+| 展開ライブラリ   | adm-zip                                                    |
+| 現在のバージョン | `EXAM_CURRENT_VERSION`（`src/types/examArchive.types.ts`） |
 
 ### アーカイブ内部構造
 
@@ -83,7 +83,7 @@ archive.score (ZIP)
 
 ```typescript
 interface ArchiveManifest {
-  version: ArchiveVersion // "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0" | "1.4.0"
+  version: string // ExamArchiveVersion ("1.0.0" 〜 EXAM_CURRENT_VERSION)
   schemaVersion: string // Prismaマイグレーション名
   appVersion: string // アプリバージョン
   exportedAt: string // ISO 8601 日時
@@ -180,7 +180,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[".score ファイル選択"] --> B[archiveExtractor<br/>ZIP展開 + JSON読み込み]
-    B --> C[versionedImporter<br/>バージョン変換チェーン]
+    B --> C[transformExamArchiveToLatest<br/>バージョン変換チェーン]
     C --> D[manifestValidator<br/>マニフェスト検証]
     D --> E[performPreMatching<br/>事前照合]
     E --> F["ウィザード UI (6ステップ)"]
@@ -373,13 +373,15 @@ flowchart TD
 
 ### 連鎖変換パターン
 
-古いバージョンのアーカイブは、現在のバージョンまで段階的に変換される。
+古いバージョンのアーカイブは、現在のバージョン（`EXAM_CURRENT_VERSION`）まで段階的に変換される。
 
 ```
-1.0.0 → 1.1.0 → 1.2.0 → 1.3.0 → 1.4.0
+1.0.0 → 1.1.0 → 1.2.0 → … → 1.16.0 → 1.17.0
 ```
 
 ### バージョン履歴
+
+全履歴は `src/types/examArchive.types.ts` の `ExamArchiveVersion` コメントに記録。代表例:
 
 | バージョン | アプリバージョン | 主な変更                                                                                            |
 | ---------- | ---------------- | --------------------------------------------------------------------------------------------------- |
@@ -388,18 +390,26 @@ flowchart TD
 | `1.2.0`    | v0.4.x           | MasterImage/StudentAnswerImage分離、userId/studentId非NULL化                                        |
 | `1.3.0`    | v0.5.x           | Student.studentId → Student.studentNumber リネーム                                                  |
 | `1.4.0`    | v0.5.x           | ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加 |
+| `1.5.0`    | v0.6.x           | Project→Exam リネーム（JSON キー project\* → exam\*、project.json → exam.json）                     |
+| `1.15.0`   | v0.14.x          | 学級統計再設計（statistics 廃止 → teacherStat/studentReport、selectedForTable/selectedForBoxPlot）  |
+| `1.16.0`   | v0.14.x          | Class→Classroom リネーム（examClasses→examClassrooms、classId→classroomId、teacherStatistics）      |
+| `1.17.0`   | v0.15.x          | ExamStudent.status 小文字統一                                                                       |
 
 ### 変換器インターフェース
 
 ```typescript
-interface VersionTransformer {
-  readonly fromVersion: ArchiveVersion
-  readonly toVersion: ArchiveVersion
-  transform(data: ArchiveData): TransformResult
+interface ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion
+  readonly toVersion: ExamArchiveVersion
+  transform(data: ExamArchiveData): ExamTransformResult
 }
 ```
 
-各変換器は1段階のみの変換を担当し、`versionedImporter.ts` がチェーンを構築して順次適用する。
+各変換器は1段階のみの変換を担当し、`transformers/index.ts` の `transformExamArchiveToLatest` がチェーンを構築して順次適用する。チェーンは `archiveExtractor.extractArchive` 内で実行されるため、全インポート経路（事前照合・競合検出・ID統合インポート）が自動的に最新形式のデータを受け取る。
+
+### バージョン検出（manifest + 形状ベース下方補正）
+
+`detectExamArchiveVersion` は manifest.version を基点に判定するが、旧形式にしか現れない形状マーカー（`examClasses` キー、`statistics` フラグ、final/proposed 採点行、大文字 status 等）を検出した場合は、そのマーカーを処理する変換器が必ず走るバージョンまで検出結果を引き下げる。全変換器は冪等のため、引き下げすぎても余分な no-op 変換が走るだけで実害はない。
 
 ---
 
@@ -553,15 +563,13 @@ flowchart TD
 
 ### インポート関連 - バージョン変換
 
-| ファイルパス                                               | 責務                                   |
-| ---------------------------------------------------------- | -------------------------------------- |
-| `electron-src/lib/import/transformers/types.ts`            | バージョン定義、変換器インターフェース |
-| `electron-src/lib/import/transformers/index.ts`            | 変換チェーンの構築と実行               |
-| `electron-src/lib/import/transformers/V1_0_0_to_V1_1_0.ts` | v1.0.0 → v1.1.0 変換                   |
-| `electron-src/lib/import/transformers/V1_1_0_to_V1_2_0.ts` | v1.1.0 → v1.2.0 変換                   |
-| `electron-src/lib/import/transformers/V1_2_0_to_V1_3_0.ts` | v1.2.0 → v1.3.0 変換                   |
-| `electron-src/lib/import/transformers/V1_3_0_to_V1_4_0.ts` | v1.3.0 → v1.4.0 変換                   |
-| `electron-src/lib/import/versionedImporter.ts`             | バージョン付きインポートの統合         |
+| ファイルパス                                               | 責務                                                                                     |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/types/examArchive.types.ts`                           | バージョン定義（`ExamArchiveVersion`/`EXAM_CURRENT_VERSION`）、変換器インターフェース    |
+| `electron-src/lib/import/shared/transformChain.ts`         | 全アーカイブ共通のチェーン基盤（範囲判定・連鎖適用。exam/coursework/asb/student 共有）   |
+| `electron-src/lib/import/transformers/index.ts`            | exam変換チェーンの構築と実行（`transformExamArchiveToLatest`、形状ベースバージョン検出） |
+| `electron-src/lib/import/transformers/V<FROM>_to_V<TO>.ts` | 各1段階の変換器（`V1_0_0_to_V1_1_0.ts` 〜 `V1_16_0_to_V1_17_0.ts` の17個）               |
+| `electron-src/lib/import/shared/legacyClassroomKeys.ts`    | 学級リネーム前の JSON キー正規化（`V1_15_0_to_V1_16_0` から利用）                        |
 
 ### インポート関連 - マッチングとマージ
 

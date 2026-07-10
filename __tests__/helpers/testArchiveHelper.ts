@@ -19,6 +19,7 @@ import type {
   ArchiveTagsData,
   ArchiveUsersData,
 } from "../../src/types/examArchive.types"
+import { EXAM_CURRENT_VERSION } from "../../src/types/examArchive.types"
 
 /**
  * テスト用アーカイブを作成
@@ -42,8 +43,10 @@ export function createTestArchive(
   const zip = new AdmZip()
 
   // マニフェスト
+  // NOTE: collectedData は現行形式なので、版数を偽ると変換チェーンが
+  // 旧→新変換を誤適用する。旧版アーカイブを模す場合のみ options.version を指定する
   const manifest: ArchiveManifest = {
-    version: options.version ?? "1.4.0",
+    version: options.version ?? EXAM_CURRENT_VERSION,
     schemaVersion: "test",
     appVersion: "0.5.0-test",
     exportedAt: new Date().toISOString(),

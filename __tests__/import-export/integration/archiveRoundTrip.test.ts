@@ -14,6 +14,7 @@ import * as os from "os"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { EXAM_CURRENT_VERSION } from "../../../src/types/examArchive.types"
 import {
   createMinimalCollectedData,
   createTestArchive,
@@ -121,7 +122,7 @@ describe("archiveRoundTrip", () => {
     )
 
     const contents = verifyArchiveContents(archivePath)
-    expect(contents.manifest.version).toBe("1.4.0")
+    expect(contents.manifest.version).toBe(EXAM_CURRENT_VERSION)
     expect(contents.manifest.examId).toBe("rt-exam-2")
     expect(contents.manifest.examName).toBe("マニフェストテスト")
     expect(contents.manifest.exportedAt).toBeDefined()

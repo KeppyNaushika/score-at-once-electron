@@ -3,6 +3,7 @@
  *
  * 初版（1.0.0）では変換器は空。将来バージョン追加時に V<FROM>_to_V<TO> を作成し
  * STUDENT_TRANSFORMERS へ登録する（exam/asb/coursework の transformers に倣う）。
+ * チェーン実行は shared/transformChain の共通実装を使う。
  */
 
 import type {
@@ -13,7 +14,10 @@ import {
   STUDENT_CURRENT_VERSION,
   STUDENT_SUPPORTED_VERSIONS,
 } from "../../../../src/types/studentArchive.types"
-import { compareVersions } from "../../shared/utilities/semver"
+import {
+  detectVersionInRange,
+  runTransformChain,
+} from "../shared/transformChain"
 import type { ExtractedStudentArchiveData } from "../student-archive/archiveExtractor"
 
 export interface StudentTransformResult {
@@ -33,28 +37,7 @@ const STUDENT_TRANSFORMERS: StudentVersionTransformer[] = []
 export function detectStudentVersion(
   manifest: StudentArchiveManifest
 ): StudentArchiveVersion | "unknown" {
-  const version = manifest.version
-  for (let i = STUDENT_SUPPORTED_VERSIONS.length - 1; i >= 0; i--) {
-    const supported = STUDENT_SUPPORTED_VERSIONS[i]
-    const nextVersion = STUDENT_SUPPORTED_VERSIONS[i + 1]
-    if (nextVersion) {
-      if (
-        compareVersions(version, supported) >= 0 &&
-        compareVersions(version, nextVersion) < 0
-      ) {
-        return supported
-      }
-    } else if (compareVersions(version, supported) >= 0) {
-      return supported
-    }
-  }
-  if (
-    STUDENT_SUPPORTED_VERSIONS.length > 0 &&
-    compareVersions(version, STUDENT_SUPPORTED_VERSIONS[0]) < 0
-  ) {
-    return STUDENT_SUPPORTED_VERSIONS[0]
-  }
-  return "unknown"
+  return detectVersionInRange(manifest.version, STUDENT_SUPPORTED_VERSIONS)
 }
 
 /** アーカイブデータを変換チェーンを通じて最新バージョンへ変換する（初版は素通し） */
@@ -62,25 +45,19 @@ export function transformStudentToLatest(
   data: ExtractedStudentArchiveData,
   targetVersion: StudentArchiveVersion = STUDENT_CURRENT_VERSION
 ): { data: ExtractedStudentArchiveData; warnings: string[] } {
-  let current = data
-  const warnings: string[] = []
-  let version = detectStudentVersion(current.manifest)
-  if (version === "unknown") return { data: current, warnings }
-
-  let guard = 0
-  while (version !== targetVersion) {
-    const transformer = STUDENT_TRANSFORMERS.find(
-      (candidate) => candidate.fromVersion === version
-    )
-    if (!transformer) break
-    const result = transformer.transform(current)
-    current = result.data
-    warnings.push(...result.warnings)
-    version = transformer.toVersion
-    if (++guard > 100) break
+  const originalVersion = detectStudentVersion(data.manifest)
+  // 版数が読めないアーカイブは従来どおり素通し（インポート側のバリデーションに委ねる）
+  if (originalVersion === "unknown") {
+    return { data, warnings: [] }
   }
-
-  return { data: current, warnings }
+  const outcome = runTransformChain({
+    data,
+    originalVersion,
+    targetVersion,
+    transformers: STUDENT_TRANSFORMERS,
+    archiveLabel: "student",
+  })
+  return { data: outcome.data, warnings: outcome.warnings }
 }
 
 export { STUDENT_CURRENT_VERSION, STUDENT_SUPPORTED_VERSIONS }

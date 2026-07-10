@@ -21,7 +21,6 @@ import type {
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
-import { resolveExamClassroomOutputFlags } from "../examClassroomFlags"
 import { isNewerByLww } from "./decisionMergePolicy"
 import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
@@ -67,7 +66,8 @@ export async function executeIdIntegrationImport(
   scoringConflictConfig?: ScoringConflictConfig,
   updateDecisions?: UpdateDecisions
 ): Promise<IdIntegrationImportResult> {
-  const warnings: string[] = []
+  // 旧バージョンアーカイブの変換チェーン警告を結果へ引き継ぐ
+  const warnings: string[] = [...data.transformWarnings]
   const counts: ImportCounts = {
     created: createEmptyCounts(),
     updated: createEmptyCounts(),
@@ -1264,8 +1264,9 @@ async function processExamClassrooms(
           examId: newExamId,
           classroomId: newClassroomId,
           administered: examClassroom.administered,
-          // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-          ...resolveExamClassroomOutputFlags(examClassroom),
+          // 旧フラグ(statistics/teacherStat)は変換チェーンが現行フラグへ移行済み
+          teacherStatistics: examClassroom.teacherStatistics ?? false,
+          studentReport: examClassroom.studentReport ?? false,
           order: examClassroom.order,
         },
       })

@@ -1,7 +1,9 @@
 /**
  * アーカイブ展開モジュール
  *
- * ZIPアーカイブを展開し、データを読み込む
+ * ZIPアーカイブを展開し、バージョン変換チェーン（transformers）を通した
+ * 最新形式のデータを返す。旧バージョン互換はチェーンが一手に担い、
+ * ここではファイル名の違い（exam.json ?? project.json）のみ吸収する。
  */
 
 import AdmZip from "adm-zip"
@@ -20,35 +22,22 @@ import type {
   ArchiveSubtotalsData,
   ArchiveTagsData,
   ArchiveUsersData,
+  ExamArchiveData,
 } from "../../../../src/types/examArchive.types"
-import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
-import { convertScoresDataToV1_13 } from "../transformers/V1_12_0_to_V1_13_0"
-import { normalizeExamStudentStatuses } from "../transformers/V1_16_0_to_V1_17_0"
+import { transformExamArchiveToLatest } from "../transformers"
 
 /**
- * 展開されたアーカイブデータ
+ * 展開されたアーカイブデータ（バージョン変換チェーン適用済み・最新形式）
  */
-export interface ExtractedArchiveData {
-  /** マニフェスト */
-  manifest: ArchiveManifest
-  /** 試験データ */
-  examData: ArchiveExamData
-  /** 生徒データ */
-  studentsData: ArchiveStudentsData
-  /** 学級データ */
-  classesData: ArchiveClassesData
-  /** ユーザーデータ */
-  usersData: ArchiveUsersData
-  /** 小計データ */
-  subtotalsData: ArchiveSubtotalsData
-  /** 採点データ */
-  scoresData: ArchiveScoresData
+export interface ExtractedArchiveData extends ExamArchiveData {
   /** タグデータ (v1.4.0-v1.9.0, deprecated) */
   subjectsData: ArchiveSubjectsData
   /** タグデータ (v1.10.0+) */
   tagsData: ArchiveTagsData
   /** 削除記録データ (v1.9.0+) */
   deletedRecordsData: ArchiveDeletedRecordsData
+  /** バージョン変換チェーンの警告（旧版アーカイブの読込時のみ非空） */
+  transformWarnings: string[]
   /** 一時展開ディレクトリパス */
   tempDir: string
   /** マスター画像のパス一覧 (展開後のフルパス) */
@@ -96,54 +85,38 @@ export async function extractArchive(archivePath: string): Promise<{
 
     // 各JSONファイルを読み込み
     // v1.5.0+: exam.json, v1.4.0以前: project.json にフォールバック
-    // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
-    const legacyNormalizedExamData = normalizeLegacyClassroomKeys(
+    const examData =
       readJsonFile<ArchiveExamData>(tempDir, "exam.json") ??
-        readJsonFile<ArchiveExamData>(tempDir, "project.json")
-    )
-    // v1.17.0未満: ExamStudent.status の大文字を小文字へ正規化（冪等）
-    const examData = legacyNormalizedExamData
-      ? normalizeExamStudentStatuses(legacyNormalizedExamData)
-      : legacyNormalizedExamData
+      readJsonFile<ArchiveExamData>(tempDir, "project.json")
     const studentsData = readJsonFile<ArchiveStudentsData>(
       tempDir,
       "students.json"
     )
-    const classesData = normalizeLegacyClassroomKeys(
-      readJsonFile<ArchiveClassesData>(tempDir, "classes.json")
+    const classesData = readJsonFile<ArchiveClassesData>(
+      tempDir,
+      "classes.json"
     )
     const usersData = readJsonFile<ArchiveUsersData>(tempDir, "users.json")
     const subtotalsData = readJsonFile<ArchiveSubtotalsData>(
       tempDir,
       "subtotals.json"
     )
-    // v1.13.0+: scoreDecisions（旧形式の final/proposed 行は読み込み時に変換）
-    const rawScoresData = readJsonFile<ArchiveScoresData>(
-      tempDir,
-      "scores.json"
-    )
-    const scoresData = rawScoresData
-      ? convertScoresDataToV1_13(rawScoresData).scoresData
-      : null
+    const scoresData = readJsonFile<ArchiveScoresData>(tempDir, "scores.json")
 
-    // v1.4.0-v1.9.0: タグデータ（存在しない場合はデフォルト値）
-    const subjectsData = readJsonFile<ArchiveSubjectsData>(
-      tempDir,
-      "subjects.json"
-    ) ?? { subjects: [], subjectSubtotalGroups: [] }
+    // v1.4.0-v1.9.0: 教科データ（ファイルが無ければ undefined のままチェーンへ）
+    const subjectsData =
+      readJsonFile<ArchiveSubjectsData>(tempDir, "subjects.json") ?? undefined
 
-    // v1.10.0+: タグデータ（存在しない場合はデフォルト値）
-    const tagsData = readJsonFile<ArchiveTagsData>(tempDir, "tags.json") ?? {
-      tags: [],
-      tagSubtotalGroups: [],
-      examTags: [],
-    }
+    // v1.10.0+: タグデータ
+    const tagsData =
+      readJsonFile<ArchiveTagsData>(tempDir, "tags.json") ?? undefined
 
-    // v1.9.0+: 削除記録データ（存在しない場合はデフォルト値）
-    const deletedRecordsData = readJsonFile<ArchiveDeletedRecordsData>(
-      tempDir,
-      "deleted-records.json"
-    ) ?? { deletedRecords: [] }
+    // v1.9.0+: 削除記録データ
+    const deletedRecordsData =
+      readJsonFile<ArchiveDeletedRecordsData>(
+        tempDir,
+        "deleted-records.json"
+      ) ?? undefined
 
     if (
       !examData ||
@@ -157,6 +130,21 @@ export async function extractArchive(archivePath: string): Promise<{
       return { success: false, error: "必要なJSONファイルが見つかりません" }
     }
 
+    // 旧バージョンのアーカイブを変換チェーンで最新形式へ
+    const chainResult = transformExamArchiveToLatest({
+      manifest,
+      examData,
+      studentsData,
+      classesData,
+      usersData,
+      subtotalsData,
+      scoresData,
+      subjectsData,
+      tagsData,
+      deletedRecordsData,
+    })
+    const transformed = chainResult.data
+
     // 画像パスを収集
     const masterImagesDir = path.join(tempDir, "master-images")
     const answerSheetsDir = path.join(tempDir, "answer-sheets")
@@ -167,16 +155,20 @@ export async function extractArchive(archivePath: string): Promise<{
     return {
       success: true,
       data: {
-        manifest,
-        examData,
-        studentsData,
-        classesData,
-        usersData,
-        subtotalsData,
-        scoresData,
-        subjectsData,
-        tagsData,
-        deletedRecordsData,
+        ...transformed,
+        subjectsData: transformed.subjectsData ?? {
+          subjects: [],
+          subjectSubtotalGroups: [],
+        },
+        tagsData: transformed.tagsData ?? {
+          tags: [],
+          tagSubtotalGroups: [],
+          examTags: [],
+        },
+        deletedRecordsData: transformed.deletedRecordsData ?? {
+          deletedRecords: [],
+        },
+        transformWarnings: chainResult.warnings,
         tempDir,
         masterImagePaths,
         answerSheetPaths,

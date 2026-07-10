@@ -297,15 +297,17 @@ npx prisma studio
 **必須ワークフロー**:
 
 1. **アーカイブバージョンを上げる**
-   - `electron-src/lib/import/transformers/types.ts` の `CURRENT_ARCHIVE_VERSION` を更新
+   - `src/types/examArchive.types.ts` の `EXAM_CURRENT_VERSION` を更新し、`ExamArchiveVersion` / `EXAM_SUPPORTED_VERSIONS` に新バージョンを追加
    - バージョンは semver 形式（例: `1.9.0` → `1.10.0`）
 
 2. **バージョントランスフォーマーを作成**
    - `electron-src/lib/import/transformers/` に `V<FROM>_to_V<TO>.ts` を追加
-   - `VersionTransformer` インターフェースを実装
+   - `ExamVersionTransformer` インターフェースを実装
    - 旧バージョンのアーカイブを新バージョンの形式に変換するロジックを記述
    - 新規フィールドにはデフォルト値（`[]`, `null`, `""` 等）を設定
-   - トランスフォーマー配列（`TRANSFORMERS`）に登録してチェーンに組み込む
+   - `transformers/index.ts` のトランスフォーマー配列（`EXAM_TRANSFORMERS`）に登録してチェーンに組み込む
+   - チェーンは `extractArchive`（`exam-archive/archiveExtractor.ts`）が全インポート経路で自動適用する。バージョン検出は manifest.version ＋ 形状ベース下方補正（`detectExamArchiveVersion`）
+   - 検証は `__tests__/import-export/unit/examTransformerChain.test.ts` に旧形状フィクスチャを追加
 
 3. **アーカイブ型定義を更新**
    - `src/types/examArchive.types.ts` の `ArchiveData` や関連型にフィールドを追加・変更
@@ -319,14 +321,14 @@ npx prisma studio
    - `electron-src/lib/import/exam-archive/idRemapper.ts` でID再マッピング対応
    - `electron-src/lib/import/exam-archive/archiveExtractor.ts` でデータ抽出対応
 
-**トランスフォーマーの実装パターン**（参考: `V1_3_0_to_V1_4_0.ts`）:
+**トランスフォーマーの実装パターン**（参考: `V1_13_0_to_V1_14_0.ts`）:
 
 ```typescript
-export class V1_9_0_to_V1_10_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.9.0"
-  readonly toVersion: ArchiveVersion = "1.10.0"
+export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.9.0"
+  readonly toVersion: ExamArchiveVersion = "1.10.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     return {
       data: {
         ...data,
@@ -340,14 +342,17 @@ export class V1_9_0_to_V1_10_0_Transformer implements VersionTransformer {
 }
 ```
 
-**バージョン履歴**（`types.ts` 内に記録）:
+**バージョン履歴**（全履歴は `src/types/examArchive.types.ts` の `ExamArchiveVersion` コメントに記録）:
 
-| バージョン | 対応アプリ | 変更内容                         |
-| ---------- | ---------- | -------------------------------- |
-| 1.0.0      | v0.2.x     | 初期バージョン                   |
-| 1.4.0      | v0.5.x     | Subject, ExamMarkingFormat等追加 |
-| 1.5.0      | v0.6.x     | Project→Examリネーム             |
-| 1.9.0      | v0.9.x     | DeletedRecord tombstone追加      |
+| バージョン | 対応アプリ | 変更内容                                      |
+| ---------- | ---------- | --------------------------------------------- |
+| 1.0.0      | v0.2.x     | 初期バージョン                                |
+| 1.4.0      | v0.5.x     | Subject, ExamMarkingFormat等追加              |
+| 1.5.0      | v0.6.x     | Project→Examリネーム                          |
+| 1.9.0      | v0.9.x     | DeletedRecord tombstone追加                   |
+| 1.15.0     | v0.14.x    | 学級統計再設計（teacherStat/studentReport等） |
+| 1.16.0     | v0.14.x    | Class→Classroomリネーム（examClassrooms等）   |
+| 1.17.0     | v0.15.x    | ExamStudent.status小文字統一                  |
 
 **試験外成績資料アーカイブ（.coursework）** — exam-archive と同型の独立アーカイブ。`electron-src/lib/export|import/coursework-archive/`。id一次照合 + 名前マッチング（付加）+ スコア LWW。トランスフォーマー機構あり（`COURSEWORK_CURRENT_VERSION`、初版 1.0.0 は変換器ゼロ）。
 

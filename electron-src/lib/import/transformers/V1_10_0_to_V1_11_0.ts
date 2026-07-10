@@ -12,33 +12,34 @@
  */
 
 import type {
-  ArchiveData,
-  ArchiveVersion,
-  TransformResult,
-  VersionTransformer,
-} from "./types"
+  ExamArchiveData,
+  ExamArchiveVersion,
+  ExamTransformResult,
+  ExamVersionTransformer,
+} from "../../../../src/types/examArchive.types"
 
-export class V1_10_0_to_V1_11_0_Transformer implements VersionTransformer {
-  readonly fromVersion: ArchiveVersion = "1.10.0"
-  readonly toVersion: ArchiveVersion = "1.11.0"
+export class V1_10_0_to_V1_11_0_Transformer implements ExamVersionTransformer {
+  readonly fromVersion: ExamArchiveVersion = "1.10.0"
+  readonly toVersion: ExamArchiveVersion = "1.11.0"
 
-  transform(data: ArchiveData): TransformResult {
+  transform(data: ExamArchiveData): ExamTransformResult {
     const warnings: string[] = []
     warnings.push(
       `アーカイブはv0.9.x形式(archive v${this.fromVersion})で作成されています。` +
         `OMRバブル位置・数字欄位置・複合回答データはデフォルト値で補完されます。`
     )
 
-    // choiceOptions にバブル位置フィールドを追加（null = 未設定）
+    // choiceOptions にバブル位置フィールドを追加（null = 未設定）。
+    // 既存値があれば保持する（冪等）
     const examData = { ...data.examData }
     if (examData.omrChoiceOptions) {
       examData.omrChoiceOptions = examData.omrChoiceOptions.map((opt) => ({
         ...opt,
-        shape: null,
-        normalizedCx: null,
-        normalizedCy: null,
-        normalizedWidth: null,
-        normalizedHeight: null,
+        shape: opt.shape ?? null,
+        normalizedCx: opt.normalizedCx ?? null,
+        normalizedCy: opt.normalizedCy ?? null,
+        normalizedWidth: opt.normalizedWidth ?? null,
+        normalizedHeight: opt.normalizedHeight ?? null,
       }))
     }
 
@@ -52,20 +53,20 @@ export class V1_10_0_to_V1_11_0_Transformer implements VersionTransformer {
       })
     }
 
-    // 新規フィールドをデフォルト空配列で追加
-    examData.omrDigitBoxes = []
-    examData.compoundAnswers = []
-    examData.compoundAnswerMembers = []
-    examData.compoundAnswerScores = []
+    // 新規フィールドをデフォルト空配列で追加（既存値があれば保持・冪等）
+    examData.omrDigitBoxes = examData.omrDigitBoxes ?? []
+    examData.compoundAnswers = examData.compoundAnswers ?? []
+    examData.compoundAnswerMembers = examData.compoundAnswerMembers ?? []
+    examData.compoundAnswerScores = examData.compoundAnswerScores ?? []
 
-    // Tag に order/color フィールドを追加（デフォルト値）
+    // Tag に order/color フィールドを追加（既存値があれば保持・冪等）
     const tagsData = data.tagsData
       ? {
           ...data.tagsData,
           tags: data.tagsData.tags.map((tag) => ({
             ...tag,
-            order: 0,
-            color: null,
+            order: tag.order ?? 0,
+            color: tag.color ?? null,
           })),
         }
       : undefined

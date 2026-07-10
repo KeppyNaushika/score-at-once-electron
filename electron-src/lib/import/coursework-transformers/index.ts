@@ -3,6 +3,7 @@
  *
  * 初版（1.0.0）では変換器は空。将来バージョン追加時に V<FROM>_to_V<TO> を作成し
  * COURSEWORK_TRANSFORMERS へ登録する（exam/asb の transformers に倣う）。
+ * チェーン実行は shared/transformChain の共通実装を使う。
  */
 
 import type {
@@ -16,7 +17,10 @@ import {
   COURSEWORK_CURRENT_VERSION,
   COURSEWORK_SUPPORTED_VERSIONS,
 } from "../../../../src/types/courseworkArchive.types"
-import { compareVersions } from "../../shared/utilities/semver"
+import {
+  detectVersionInRange,
+  runTransformChain,
+} from "../shared/transformChain"
 
 const COURSEWORK_TRANSFORMERS: CourseworkVersionTransformer[] = []
 
@@ -24,50 +28,7 @@ const COURSEWORK_TRANSFORMERS: CourseworkVersionTransformer[] = []
 export function detectCourseworkVersion(
   manifest: CourseworkArchiveManifest
 ): CourseworkArchiveVersion | "unknown" {
-  const version = manifest.version
-  for (let i = COURSEWORK_SUPPORTED_VERSIONS.length - 1; i >= 0; i--) {
-    const supported = COURSEWORK_SUPPORTED_VERSIONS[i]
-    const nextVersion = COURSEWORK_SUPPORTED_VERSIONS[i + 1]
-    if (nextVersion) {
-      if (
-        compareVersions(version, supported) >= 0 &&
-        compareVersions(version, nextVersion) < 0
-      ) {
-        return supported
-      }
-    } else if (compareVersions(version, supported) >= 0) {
-      return supported
-    }
-  }
-  if (
-    COURSEWORK_SUPPORTED_VERSIONS.length > 0 &&
-    compareVersions(version, COURSEWORK_SUPPORTED_VERSIONS[0]) < 0
-  ) {
-    return COURSEWORK_SUPPORTED_VERSIONS[0]
-  }
-  return "unknown"
-}
-
-function buildChain(
-  fromVersion: CourseworkArchiveVersion,
-  toVersion: CourseworkArchiveVersion
-): CourseworkVersionTransformer[] {
-  const chain: CourseworkVersionTransformer[] = []
-  let current = fromVersion
-  while (current !== toVersion) {
-    const transformer = COURSEWORK_TRANSFORMERS.find(
-      (candidate) => candidate.fromVersion === current
-    )
-    if (!transformer) {
-      throw new Error(
-        `No coursework transformer found for version ${current}. ` +
-          `Cannot transform from ${fromVersion} to ${toVersion}.`
-      )
-    }
-    chain.push(transformer)
-    current = transformer.toVersion
-  }
-  return chain
+  return detectVersionInRange(manifest.version, COURSEWORK_SUPPORTED_VERSIONS)
 }
 
 /** アーカイブデータを変換チェーンを通じて最新バージョンへ変換する */
@@ -82,40 +43,13 @@ export function transformCourseworkToLatest(
         `Supported versions: ${COURSEWORK_SUPPORTED_VERSIONS.join(", ")}`
     )
   }
-  if (originalVersion === targetVersion) {
-    return {
-      data,
-      originalVersion,
-      finalVersion: targetVersion,
-      appliedTransformations: [],
-      warnings: [],
-    }
-  }
-
-  const chain = buildChain(originalVersion, targetVersion)
-  let currentData = data
-  const appliedTransformations: {
-    from: CourseworkArchiveVersion
-    to: CourseworkArchiveVersion
-  }[] = []
-  const allWarnings: string[] = []
-  for (const transformer of chain) {
-    const result = transformer.transform(currentData)
-    currentData = result.data
-    allWarnings.push(...result.warnings)
-    appliedTransformations.push({
-      from: transformer.fromVersion,
-      to: transformer.toVersion,
-    })
-  }
-
-  return {
-    data: currentData,
+  return runTransformChain({
+    data,
     originalVersion,
-    finalVersion: targetVersion,
-    appliedTransformations,
-    warnings: allWarnings,
-  }
+    targetVersion,
+    transformers: COURSEWORK_TRANSFORMERS,
+    archiveLabel: "coursework",
+  })
 }
 
 export { COURSEWORK_CURRENT_VERSION, COURSEWORK_SUPPORTED_VERSIONS }

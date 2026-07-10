@@ -5,19 +5,19 @@
 import { describe, expect, test } from "vitest"
 
 import {
-  CURRENT_ARCHIVE_VERSION,
   MIN_SUPPORTED_VERSION,
   validateCompatibility,
   validateManifest,
   validateManifestFields,
 } from "../../../electron-src/lib/import/exam-archive/manifestValidator"
 import type { ArchiveManifest } from "../../../src/types/examArchive.types"
+import { EXAM_CURRENT_VERSION } from "../../../src/types/examArchive.types"
 
 function createValidManifest(
   overrides: Partial<ArchiveManifest> = {}
 ): ArchiveManifest {
   return {
-    version: CURRENT_ARCHIVE_VERSION,
+    version: EXAM_CURRENT_VERSION,
     schemaVersion: "test",
     appVersion: "0.5.0",
     exportedAt: new Date().toISOString(),
@@ -128,7 +128,7 @@ describe("manifestValidator", () => {
   // MV-7: 現在バージョンはrequiresUpgrade=false
   test("MV-7: 現在バージョンはrequiresUpgrade=falseとなる", () => {
     const manifest = createValidManifest({
-      version: CURRENT_ARCHIVE_VERSION,
+      version: EXAM_CURRENT_VERSION,
     })
     const compatibility = validateCompatibility(manifest)
 

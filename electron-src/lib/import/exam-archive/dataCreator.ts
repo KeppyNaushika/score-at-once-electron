@@ -8,7 +8,6 @@ import { randomUUID } from "crypto"
 
 import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
-import { resolveExamClassroomOutputFlags } from "../examClassroomFlags"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { ExamArchiveIdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
@@ -325,6 +324,7 @@ export async function createImportedData(
       }
 
       // 9.5. ExamClassroomを作成 (v1.1.0+)
+      // 旧フラグ(statistics/teacherStat)は変換チェーンが現行フラグへ移行済み
       for (const examClassroom of data.examData.examClassrooms || []) {
         const newClassroomId = remapId(
           examClassroom.classroomId,
@@ -337,8 +337,8 @@ export async function createImportedData(
               examId: newExamId,
               classroomId: newClassroomId,
               administered: examClassroom.administered,
-              // v1.15.0+。旧アーカイブは旧フラグ(statistics/administered)から補完
-              ...resolveExamClassroomOutputFlags(examClassroom),
+              teacherStatistics: examClassroom.teacherStatistics ?? false,
+              studentReport: examClassroom.studentReport ?? false,
               order: examClassroom.order,
             },
           })

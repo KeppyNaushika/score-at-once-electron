@@ -42,10 +42,10 @@
 
 ### ⏳ 残（未着手）
 
-| 区分             | 内容                                                                                                                                                                                                                  | 方針                                                   |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 1-B 補足（残り） | `QuestionScoreData`（common.types 死型 vs subtotalCalculator 計算入力）/`SubtotalGroupData`（export vs merge）/`IdMappings`（merge vs exam-archive）の**同名別物**、gradeApi↔courseworkApi の名簿系匿名ペイロード重複 | 記述名化・共有型化（命名選択が主観的なため要方針決定） |
-| 配置3            | `transformers/types.ts`（exam だけ framework が `electron-src` 配下）の統一                                                                                                                                           | src/types へ寄せるか全アーカイブを electron-src へ     |
+| 区分             | 内容                                                                                                                                                                                                                                                                                                                      | 方針                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1-B 補足（残り） | `QuestionScoreData`（common.types 死型 vs subtotalCalculator 計算入力）/`SubtotalGroupData`（export vs merge）/`IdMappings`（merge vs exam-archive）の**同名別物**、gradeApi↔courseworkApi の名簿系匿名ペイロード重複                                                                                                     | 記述名化・共有型化（命名選択が主観的なため要方針決定） |
+| 配置3            | ~~`transformers/types.ts`（exam だけ framework が `electron-src` 配下）の統一~~ **解消済（#912）**: exam framework 型を `src/types/examArchive.types.ts` へ移動（`ExamArchiveVersion`/`EXAM_CURRENT_VERSION`/`ExamVersionTransformer` 等）。electron-src 案は grade の `GradeArchiveData` renderer 消費により不成立と判明 | src/types へ統一（完了）                               |
 
 > 命名方針: `WithDetails`/`Data`/`Info` 等の濁り名を廃し、**include 内容を名前で言う**（`<Entity>With<Relations>`）。docs/coding-style.md §命名規則準拠。
 
