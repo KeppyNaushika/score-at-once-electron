@@ -80,8 +80,9 @@ export function useStudentAnswerUpload(
         try {
           if (file.type === "application/pdf") {
             // PDF処理 - 画像変換を実行（パスワードリトライ対応）
-            const pdfImages = await convertPdfWithRetry(file)
-            if (pdfImages) {
+            const pdfConversion = await convertPdfWithRetry(file)
+            if (pdfConversion) {
+              const pdfImages = pdfConversion.images
               for (let i = 0; i < pdfImages.length; i++) {
                 const image = pdfImages[i]
                 const blob = new Blob([image.buffer], { type: image.type })

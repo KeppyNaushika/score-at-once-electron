@@ -105,6 +105,15 @@ app.on("ready", async () => {
       }
     })
 
+    // 前回セッションで残ったパスワード保護PDFの復号済み複製を掃除する
+    try {
+      const { cleanupDecryptedPdfCopies } =
+        await import("./lib/pdf-tools/decryptedPdfCopy")
+      cleanupDecryptedPdfCopies()
+    } catch (error) {
+      console.warn("Failed to clean up decrypted PDF copies:", error)
+    }
+
     // アプリケーションの初期化
     await initializeApp()
 

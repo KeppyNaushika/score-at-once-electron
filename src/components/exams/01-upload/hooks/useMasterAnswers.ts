@@ -96,12 +96,12 @@ export function useMasterAnswers(
 
           if (file.type === "application/pdf") {
             // Convert PDF to individual page images with password handling
-            const pdfImages = await convertPdfWithRetry(file)
-            if (pdfImages === null) {
+            const pdfConversion = await convertPdfWithRetry(file)
+            if (pdfConversion === null) {
               // ユーザーがパスワード入力をキャンセルした場合はアップロードを中断
               return
             }
-            allFilesData.push(...pdfImages)
+            allFilesData.push(...pdfConversion.images)
           } else {
             // Handle regular image files
             const imageData = await createUploadData(file)

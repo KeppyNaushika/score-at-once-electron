@@ -38,6 +38,18 @@ export function createPdfToolsApi() {
         }>
         outputDir: string
       }) => ipcRenderer.invoke("pdf-tools:export-as-png", options),
+      createDecryptedCopy: (options: {
+        pageImages: Uint8Array[]
+        pixelsPerPoint: number
+      }) =>
+        ipcRenderer.invoke(
+          "pdf-tools:create-decrypted-copy",
+          options
+        ) as Promise<{
+          success: boolean
+          path?: string
+          error?: string
+        }>,
       selectSavePath: (options: {
         type: "pdf" | "directory"
         defaultName?: string

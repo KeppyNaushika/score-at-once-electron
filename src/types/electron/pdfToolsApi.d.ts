@@ -33,6 +33,11 @@ export interface PdfToolsAPI {
       }>
       outputDir: string
     }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
+    /** パスワード保護PDFの復号済み複製（一時ファイル）を復号済みページ画像から作成 */
+    createDecryptedCopy: (options: {
+      pageImages: Uint8Array[]
+      pixelsPerPoint: number
+    }) => Promise<{ success: boolean; path?: string; error?: string }>
     selectSavePath: (options: {
       type: "pdf" | "directory"
       defaultName?: string

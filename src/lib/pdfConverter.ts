@@ -44,6 +44,12 @@ export interface ConvertedImage {
   buffer: ArrayBuffer
 }
 
+/**
+ * PDF→画像変換のレンダリング倍率（1ポイントあたりのピクセル数）。
+ * 変換画像からPDFページ寸法へ逆算する側（復号済み複製の生成等）と共有する。
+ */
+export const PDF_RENDER_SCALE = 2.0
+
 export interface PdfConversionError {
   type: "password-required" | "invalid-password" | "general-error"
   message: string
@@ -111,8 +117,7 @@ export async function convertPdfToImages(
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum)
-      const scale = 2.0 // Higher scale for better quality
-      const viewport = page.getViewport({ scale })
+      const viewport = page.getViewport({ scale: PDF_RENDER_SCALE })
 
       const canvas = document.createElement("canvas")
       const context = canvas.getContext("2d")!
