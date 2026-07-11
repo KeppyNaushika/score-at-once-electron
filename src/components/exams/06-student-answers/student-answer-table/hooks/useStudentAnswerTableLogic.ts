@@ -87,6 +87,7 @@ export function useStudentAnswerTableLogic({
     fileOrder,
     onReloadData,
     onUpdatePendingChanges,
+    existingStudentAnswers,
   })
 
   // ============================================================================

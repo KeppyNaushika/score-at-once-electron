@@ -53,52 +53,24 @@ export function useTableDataGeneration({
     const data: CellData[][] = []
 
     if (mode === "view") {
-      // 確認モード: ファイル配列の順序に基づく配置戦略適用（動的無効化対応）
-
-      // 有効セル（無効でないセル）の位置を事前に計算（動的無効化考慮）
-      const validPositions: Array<{ studentIndex: number; pageIndex: number }> =
-        []
-      for (
-        let studentIndex = 0;
-        studentIndex < sortedStudents.length;
-        studentIndex++
-      ) {
-        const examStudent = sortedStudents[studentIndex]
-        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          if (!enhancedIsCellDisabled(examStudent, pageIndex + 1)) {
-            validPositions.push({ studentIndex, pageIndex })
-          }
-        }
-      }
-
-      // 配置戦略に基づいて有効セルをソート
-      if (fileOrder === "page-first") {
-        // ページ順: ページ番号を優先してソート
-        validPositions.sort((positionA, positionB) => {
-          if (positionA.pageIndex !== positionB.pageIndex) {
-            return positionA.pageIndex - positionB.pageIndex
-          }
-          return positionA.studentIndex - positionB.studentIndex
-        })
-      } else {
-        // 生徒順: 生徒番号を優先してソート（デフォルトで既にこの順序）
-        validPositions.sort((positionA, positionB) => {
-          if (positionA.studentIndex !== positionB.studentIndex) {
-            return positionA.studentIndex - positionB.studentIndex
-          }
-          return positionA.pageIndex - positionB.pageIndex
-        })
-      }
-
-      // ファイルと有効セルをマッピング（ファイル配列の順序で）
-      const filePositionMap = new Map<string, UnifiedFile>()
-      validPositions.forEach((position, fileIndex) => {
-        const file = enabledFiles[fileIndex]
-        if (file) {
-          const key = `${position.studentIndex}-${position.pageIndex}`
-          filePositionMap.set(key, file)
-        }
+      // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, pageNumber) に配置する。
+      // 配列順ではなく座標基準にすることで、DnD の move/swap が座標更新だけで完結し、
+      // 任意マスへの移動・占有マスとの入れ替えが素直に描画へ反映される。
+      // studentId → 行インデックスを1回だけ引けるようにする（O(files×students) を避ける）
+      const studentIndexById = new Map<string, number>()
+      sortedStudents.forEach((examStudent, studentIndex) => {
+        studentIndexById.set(examStudent.studentId, studentIndex)
       })
+
+      const fileByCell = new Map<string, UnifiedFile>()
+      for (const file of enabledFiles) {
+        if (!file.studentId) continue
+        const studentIndex = studentIndexById.get(file.studentId)
+        if (studentIndex === undefined) continue
+        const pageIndex = file.pageNumber - 1
+        if (pageIndex < 0 || pageIndex >= modelAnswerCount) continue
+        fileByCell.set(`${studentIndex}-${pageIndex}`, file)
+      }
 
       // テーブルデータを生成
       for (
@@ -110,21 +82,16 @@ export function useTableDataGeneration({
         const row: CellData[] = []
 
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const isDisabled = enhancedIsCellDisabled(examStudent, pageIndex + 1)
+          const file = fileByCell.get(`${studentIndex}-${pageIndex}`)
 
-          if (isDisabled) {
-            // 無効セル（手動無効化 + 動的無効化）。確認モードは表示上「答案なし」
+          if (file) {
+            // 答案が居るセルは常にファイルセル（動的無効化は答案なしセルにのみ効く）
+            row.push({ type: "file", file })
+          } else if (enhancedIsCellDisabled(examStudent, pageIndex + 1)) {
+            // 答案なしセル。確認モードは表示上「答案なし」
             row.push({ type: "disabled" })
           } else {
-            // 有効セル: ファイルがマッピングされていればファイルセル、なければ空セル
-            const key = `${studentIndex}-${pageIndex}`
-            const file = filePositionMap.get(key)
-
-            if (file) {
-              row.push({ type: "file", file })
-            } else {
-              row.push({ type: "empty" })
-            }
+            row.push({ type: "empty" })
           }
         }
 

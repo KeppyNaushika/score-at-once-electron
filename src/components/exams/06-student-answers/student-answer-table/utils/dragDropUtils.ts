@@ -75,6 +75,148 @@ export function buildDnDArrayFromFileStates(
   return orderedFiles
 }
 
+/**
+ * view 方式B のセル droppable ID を (studentId, pageNumber) から生成する。
+ * studentId は uuid（コロンを含まない）前提。ファイルID（uuid）と衝突しないよう
+ * `cell:` 接頭辞で名前空間を分ける。
+ */
+export function encodeCellDroppableId(
+  studentId: string,
+  pageNumber: number
+): string {
+  return `cell:${studentId}:${pageNumber}`
+}
+
+/** セル droppable ID を (studentId, pageNumber) に復号する。cell: 接頭辞でなければ null */
+export function decodeCellDroppableId(
+  droppableId: string
+): { studentId: string; pageNumber: number } | null {
+  const prefix = "cell:"
+  if (!droppableId.startsWith(prefix)) return null
+  const rest = droppableId.slice(prefix.length)
+  const lastColon = rest.lastIndexOf(":")
+  if (lastColon <= 0) return null
+  const studentId = rest.slice(0, lastColon)
+  const pageText = rest.slice(lastColon + 1)
+  const pageNumber = Number(pageText)
+  // ページ番号は1始まり。空文字（Number("")→0）や小数・非数は不正。
+  if (!studentId || pageText === "" || !Number.isInteger(pageNumber)) {
+    return null
+  }
+  if (pageNumber < 1) return null
+  return { studentId, pageNumber }
+}
+
+/**
+ * view 方式B: ドラッグした答案を対象セル (studentId, pageNumber) へ配置する。
+ * 対象セルに別の答案が既にある場合は 2 セルの座標を入れ替える（swap）。
+ * 採点データの追従/破棄は後段の確認モーダル（PlacementScorePolicy）で解決するため、
+ * ここでは座標だけを更新する（新しい配列を返す。変更が無ければ元の配列を返す）。
+ */
+export function applyCellMoveOrSwap(
+  files: UnifiedFile[],
+  activeFileId: string,
+  target: { studentId: string; pageNumber: number },
+  // 占有判定を「表に見えている答案」に限定するための任意フィルタ。
+  // trash 等で非表示の答案を隠れて swap しないため（view は無効ファイル無しだが防御的に受ける）。
+  occupantEligibleIds?: Set<string>
+): UnifiedFile[] {
+  const activeFile = files.find((file) => file.id === activeFileId)
+  if (!activeFile) return files
+
+  const sourceStudentId = activeFile.studentId
+  const sourcePageNumber = activeFile.pageNumber
+
+  // 同一セルへのドロップは変更なし
+  if (
+    sourceStudentId === target.studentId &&
+    sourcePageNumber === target.pageNumber
+  ) {
+    return files
+  }
+
+  const occupant = files.find(
+    (file) =>
+      file.id !== activeFileId &&
+      file.studentId === target.studentId &&
+      file.pageNumber === target.pageNumber &&
+      (occupantEligibleIds ? occupantEligibleIds.has(file.id) : true)
+  )
+
+  return files.map((file) => {
+    if (file.id === activeFileId) {
+      return {
+        ...file,
+        studentId: target.studentId,
+        pageNumber: target.pageNumber,
+      }
+    }
+    if (occupant && file.id === occupant.id) {
+      // 空セルへの移動なら occupant は無く、この分岐は通らない。
+      // 占有セルなら元の答案を移動元へ入れ替える。
+      return {
+        ...file,
+        studentId: sourceStudentId,
+        pageNumber: sourcePageNumber,
+      }
+    }
+    return file
+  })
+}
+
+/** DB 上の答案の基準座標（(studentId, pageNumber)）。view 方式B の差分基準。 */
+export interface AnswerCellBaseline {
+  id: string
+  studentId: string | null
+  pageNumber: number
+}
+
+/**
+ * view 方式B: 現在のファイル配置（working copy）を DB baseline と突き合わせ、
+ * 座標が変わったファイルだけを PendingChange 生成用の差分（fromState=DB / toState=現在）で返す。
+ *
+ * 可変 ref（initialFileStatesRef）に依存せず毎回 DB 真実から算出するため、
+ * 複数回ドラッグ・反映後の再読込でも累積差分が常に正しい（親は全置換して安全）。
+ * baseline に無い id（新規・除籍等）は対象外。
+ */
+export function diffFilesAgainstBaseline(
+  files: UnifiedFile[],
+  baseline: AnswerCellBaseline[]
+): Array<{ fileId: string; fromState: FileState; toState: FileState }> {
+  const baselineById = new Map(baseline.map((cell) => [cell.id, cell]))
+  const changedFiles: Array<{
+    fileId: string
+    fromState: FileState
+    toState: FileState
+  }> = []
+
+  for (const file of files) {
+    const base = baselineById.get(file.id)
+    if (!base) continue
+    const currentStudentId = file.studentId ?? null
+    if (
+      base.studentId !== currentStudentId ||
+      base.pageNumber !== file.pageNumber
+    ) {
+      changedFiles.push({
+        fileId: file.id,
+        fromState: {
+          fileId: file.id,
+          studentId: base.studentId,
+          pageNumber: base.pageNumber,
+        },
+        toState: {
+          fileId: file.id,
+          studentId: currentStudentId,
+          pageNumber: file.pageNumber,
+        },
+      })
+    }
+  }
+
+  return changedFiles
+}
+
 /** DnD後のファイル配列からFileState（ファイルID・生徒ID・ページ番号の組）を再生成する */
 export function updateFileStatesFromDnDArray(
   dndArray: UnifiedFile[]
