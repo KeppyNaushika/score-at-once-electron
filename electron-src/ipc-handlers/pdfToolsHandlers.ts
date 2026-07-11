@@ -8,6 +8,7 @@ import { PDFDocument } from "pdf-lib"
 
 import type { PdfToolsResult, RotationDegree } from "@/types/pdfTools.types"
 
+import { writeDecryptedPdfCopy } from "../lib/pdf-tools/decryptedPdfCopy"
 import { type MergePageInput, mergePdfs } from "../lib/pdf-tools/pdfMerger"
 import {
   type RotatePageInput,
@@ -70,6 +71,22 @@ export function setupPdfToolsHandlers(): void {
       outputDir: string
     }): Promise<PdfToolsResult> => {
       return await exportPagesToPng(options.imageBuffers, options.outputDir)
+    }
+  )
+
+  // パスワード保護PDFの復号済み複製を一時ファイルとして作成
+  // （pdf-lib は暗号化PDFを読めないため、復号済みページ画像から再構成する）
+  registerSafeHandler(
+    "pdf-tools:create-decrypted-copy",
+    async (options: {
+      pageImages: Uint8Array[]
+      pixelsPerPoint: number
+    }): Promise<{ success: boolean; path?: string; error?: string }> => {
+      const outputPath = await writeDecryptedPdfCopy(
+        options.pageImages,
+        options.pixelsPerPoint
+      )
+      return { success: true, path: outputPath }
     }
   )
 

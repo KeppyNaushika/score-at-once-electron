@@ -19,6 +19,12 @@ const CLOSED_DIALOG: PdfPasswordDialogState = {
   isLoading: false,
 }
 
+/** 変換結果と、そのPDFがパスワード保護されていたかどうか */
+export interface PdfConversionOutcome {
+  images: ConvertedImage[]
+  passwordProtected: boolean
+}
+
 /**
  * パスワード保護PDFの変換を、パスワード入力ダイアログ付きで処理する共通フック。
  *
@@ -64,16 +70,17 @@ export function usePdfPasswordConversion() {
   /**
    * パスワード付きPDFを画像へ変換する（リトライ対応）。
    * @param file 変換対象のPDFファイル
-   * @returns 変換された画像配列。ユーザーがパスワード入力をキャンセルした場合は null。
+   * @returns 変換画像とパスワード保護有無。ユーザーがパスワード入力をキャンセルした場合は null。
    * @throws パスワード以外の理由で変換に失敗した場合
    */
   const convertPdfWithRetry = useCallback(
-    async (file: File): Promise<ConvertedImage[] | null> => {
+    async (file: File): Promise<PdfConversionOutcome | null> => {
       let hasError = false
 
       // まずパスワードなしで試行
       try {
-        return await convertPdfToImages(file)
+        const images = await convertPdfToImages(file)
+        return { images, passwordProtected: false }
       } catch (error) {
         if (
           !(error instanceof Error) ||
@@ -119,7 +126,7 @@ export function usePdfPasswordConversion() {
         try {
           const images = await convertPdfToImages(file, password)
           setPasswordDialog(CLOSED_DIALOG)
-          return images
+          return { images, passwordProtected: true }
         } catch (retryError) {
           if (
             retryError instanceof Error &&

@@ -1,7 +1,8 @@
 import { useCallback } from "react"
+import { toast } from "sonner"
 
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
-import type { ConvertedImage } from "@/lib/pdfConverter"
+import { type ConvertedImage, PDF_RENDER_SCALE } from "@/lib/pdfConverter"
 import type { ImportedFile } from "@/types/pdfTools.types"
 
 /** PDFファイルの読み込み・ページ情報取得・サムネイル生成を行うフック */
@@ -43,6 +44,43 @@ export function useImportedFiles() {
     []
   )
 
+  // 1ファイル分の共通処理: 画像変換し、パスワード保護PDFはパスを復号済み複製へ差し替える
+  const importFile = useCallback(
+    async (file: File, originalPath: string): Promise<ImportedFile | null> => {
+      // パスワード対応でPDFを画像変換（ページ数・サムネイルを一度に取得）
+      const conversion = await convertPdfWithRetry(file)
+      if (!conversion) {
+        // パスワード入力がキャンセルされた → このファイルはスキップ
+        return null
+      }
+
+      // 書き出し(pdf-lib)は暗号化PDFを読めないため、保護されていたPDFは
+      // 復号済みページ画像から再構成した一時PDFのパスに差し替える
+      let filePath = originalPath
+      if (conversion.passwordProtected) {
+        try {
+          filePath = await createDecryptedCopy(conversion.images)
+        } catch (error) {
+          // 複製の作成に失敗したら、無言で落とさずエラーを通知して当該ファイルを飛ばす
+          console.error(
+            `Failed to create decrypted copy for ${file.name}:`,
+            error
+          )
+          toast.error(
+            `「${file.name}」の復号済み複製の作成に失敗したため、取り込めませんでした`
+          )
+          return null
+        }
+        toast.info(
+          `「${file.name}」はパスワード保護されているため、画像化した複製を使用します`
+        )
+      }
+
+      return buildImportedFile(file.name, filePath, conversion.images)
+    },
+    [convertPdfWithRetry, buildImportedFile]
+  )
+
   // Fileオブジェクトから処理（ドラッグ&ドロップ用）
   const processFiles = useCallback(
     async (files: File[]): Promise<ImportedFile[]> => {
@@ -53,14 +91,10 @@ export function useImportedFiles() {
           // webUtils.getPathForFile でファイルパスを取得
           const filePath = window.electronAPI.pdfTools.getPathForFile(file)
 
-          // パスワード対応でPDFを画像変換（ページ数・サムネイルを一度に取得）
-          const images = await convertPdfWithRetry(file)
-          if (!images) {
-            // パスワード入力がキャンセルされた → このファイルはスキップ
-            continue
+          const importedFile = await importFile(file, filePath)
+          if (importedFile) {
+            processedFiles.push(importedFile)
           }
-
-          processedFiles.push(buildImportedFile(file.name, filePath, images))
         } catch (error) {
           console.error(`Error processing file ${file.name}:`, error)
         }
@@ -68,7 +102,7 @@ export function useImportedFiles() {
 
       return processedFiles
     },
-    [convertPdfWithRetry, buildImportedFile]
+    [importFile]
   )
 
   // ファイルパスから処理（Electronダイアログ用）
@@ -81,14 +115,10 @@ export function useImportedFiles() {
           // appimg:/// プロトコルでローカルファイルを読み込み、Fileオブジェクト化
           const file = await loadFileFromPath(filePath)
 
-          // パスワード対応でPDFを画像変換（ページ数・サムネイルを一度に取得）
-          const images = await convertPdfWithRetry(file)
-          if (!images) {
-            // パスワード入力がキャンセルされた → このファイルはスキップ
-            continue
+          const importedFile = await importFile(file, filePath)
+          if (importedFile) {
+            processedFiles.push(importedFile)
           }
-
-          processedFiles.push(buildImportedFile(file.name, filePath, images))
         } catch (error) {
           console.error(`Error processing file ${filePath}:`, error)
         }
@@ -96,7 +126,7 @@ export function useImportedFiles() {
 
       return processedFiles
     },
-    [convertPdfWithRetry, buildImportedFile]
+    [importFile]
   )
 
   return {
@@ -106,6 +136,18 @@ export function useImportedFiles() {
     handlePasswordSubmit,
     handlePasswordCancel,
   }
+}
+
+/** 復号済みページ画像から一時PDF（復号済み複製）を作成し、そのパスを返す */
+async function createDecryptedCopy(images: ConvertedImage[]): Promise<string> {
+  const result = await window.electronAPI.pdfTools.createDecryptedCopy({
+    pageImages: images.map((image) => new Uint8Array(image.buffer)),
+    pixelsPerPoint: PDF_RENDER_SCALE,
+  })
+  if (!result.success || !result.path) {
+    throw new Error(result.error || "復号済みPDFの作成に失敗しました")
+  }
+  return result.path
 }
 
 /** ローカルパスからFileオブジェクトを読み込む */
