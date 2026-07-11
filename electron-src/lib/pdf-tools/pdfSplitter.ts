@@ -22,7 +22,12 @@ export async function splitPdf(
 ): Promise<SplitResult> {
   try {
     const fileBuffer = fs.readFileSync(filePath)
-    const sourcePdf = await PDFDocument.load(fileBuffer)
+    // owner-password のみの暗号化PDF（印刷/コピー制限）はユーザーパスワード無しで
+    // 内容を読めるため、ignoreEncryption で pdf-lib の EncryptedPDFError を回避する。
+    // ユーザーパスワード付きPDFはインポート時に復号済み複製へ差し替え済み。
+    const sourcePdf = await PDFDocument.load(fileBuffer, {
+      ignoreEncryption: true,
+    })
     const pageCount = sourcePdf.getPageCount()
 
     // 出力ディレクトリを作成
