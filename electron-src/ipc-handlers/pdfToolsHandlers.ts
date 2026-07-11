@@ -135,7 +135,10 @@ export function setupPdfToolsHandlers(): void {
       }
 
       const fileBuffer = fs.readFileSync(filePath)
-      const pdfDoc = await PDFDocument.load(fileBuffer)
+      // owner-password のみの暗号化PDFでもページ数を取得できるよう ignoreEncryption を付ける
+      const pdfDoc = await PDFDocument.load(fileBuffer, {
+        ignoreEncryption: true,
+      })
       const pageCount = pdfDoc.getPageCount()
       const name = path.basename(filePath)
 
