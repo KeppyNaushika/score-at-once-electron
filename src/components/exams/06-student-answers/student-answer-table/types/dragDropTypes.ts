@@ -36,6 +36,12 @@ export interface UseDragDropParams {
       toState: FileState
     }>
   ) => void
+  // view 方式B の差分基準（DB 上の答案座標）。可変 ref ではなくこれと突き合わせる。
+  existingStudentAnswers?: Array<{
+    id: string
+    studentId: string | null
+    pageNumber: number
+  }>
 }
 
 // ドラッグ&ドロップフックの戻り値型

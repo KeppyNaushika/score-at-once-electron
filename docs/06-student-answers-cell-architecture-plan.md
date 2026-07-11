@@ -21,10 +21,27 @@
   - テスト `__tests__/exam/integration/studentAnswerPlacementApply.test.ts`（**7件パス**）。
   - **コードレビュー(high)反映済み**: (F1/F2) carry で**移動先セルの残存採点（moving 集合外）を stale として掃除**（QuestionScore 二重計上・ScoreDecision unique 違反を修正）。(F3) `finalStudentId=null` は**拒否**（削除は deleteStudentAnswer 専用・ファイル/監査漏れ回避）。(F4) 移動先が batch 外答案で**占有時は明示エラー**（上書きしない）。残: F5=トランザクション内の逐次クエリ（性能・非破損、未対応）。
 - **Phase 3a**: view 適用を新 API へ配線（`handleApplyChanges`）。`ConfirmChangesModal` をハイブリッド（追従/破棄グルーピング・破棄は行ごとチェック必須＋2段階確認）へ全面改修。`ScoringDataOption` 撤去、`PlacementScorePolicy` 導入。
+  - **Phase 0〜3a は main にマージ済み**（`34f9c54b` / PR #972 / Issue #971）。
+- **Phase 3b**: view の DnD を **method B（グリッドドロップ+swap）** へ。**（実装完了・型/lint/テストグリーン。DnD の実挙動のみ要手動確認）**
+  - view の `tableData` 配置を**配列順 → ファイル自身の座標 (studentId, pageNumber) 基準**へ（`useTableDataGeneration` の view 分岐）。これで DnD は座標更新だけで完結し、`arrayMove`/`buildDnDArray` の脆い index 依存が view から外れた。
+  - 空セルを `useDroppable`（`EmptyTableCell`、view のみ・id=`cell:${studentId}:${pageNumber}`）。占有セルは `useSortable`（file）が droppable を兼ねる。`handleDragEnd` を view 分岐化し、over が空セル(cell:)でもファイル(fileId)でも対象セル座標を求め、`applyCellMoveOrSwap` で **空=移動 / 占有=座標swap**。採点の追従/破棄は従来通り確認モーダル(`PlacementScorePolicy`)で解決。
+  - 並び順トグルは view で**非表示**（`TableHeader`）。view の答案は実セルに固定表示するため再配置が無意味なため（ユーザー承認済み）。
+  - upload=method A 経路は**不変**（`EmptyTableCell` の droppable は upload では `disabled`、`handleDragEnd` の arrayMove 分岐は upload 専用に整理・dead な view 分岐を除去）。
+  - 純粋ロジックのテスト `__tests__/renderer/utils/dragDropUtils.test.ts`（**13件パス**）：codec 往復/不正入力、move/swap/対角swap/同一セル no-op/未知ID/occupant フィルタ/baseline 差分。
+  - **要手動検証（`npm run dev`）**: グリッド上のドラッグ描画（view で `rectSortingStrategy` の「隙間を空ける」アニメが残るため swap 時の見た目は手動確認で微調整）。
+
+- **Phase 3b コードレビュー(high)反映済み**（重大6・cleanup2 のうち下記を修正）:
+  - **[3]/[7] 累積差分の取りこぼし（最重大）**: `initialFileStatesRef` は `useDragDropState` effect が files 変化のたび post-move にリセットするため、可変 ref 依存の差分は 2 回目のドラッグで 1 回目を落とす（親は `setPendingChanges` 全置換）。→ **可変 ref を撤去し、毎回 DB baseline（`existingStudentAnswers`）と現在配置を突き合わせる stateless 差分 `diffFilesAgainstBaseline`** に変更。反映後再読込でも常に正しい。記録できない場合（baseline/コールバック欠如）は見た目も動かさない。
+  - **[1] 欠席生徒へのドロップ**: `EmptyTableCell` の droppable を `status==="absent"` で `disabled`。
+  - **[2] 隠れ答案の巻き込み swap**: `applyCellMoveOrSwap` の occupant 判定を `getEnabledFiles` の id 集合に限定（view は trash 無しだが防御）。
+  - **[6] O(files×students)**: view 配置生成で `studentId→行index` の Map を1回構築。
+  - **[8] 誤解を招く toast**: `newFiles===files` でアクティブ答案が存在する同一セル時のみ「元の位置に戻されました」。
+  - **未対応=[4]/[5]（要相談）**: baseline に居るが「除籍で studentId が現ロスターに無い／ページ数削減で範囲外」の答案は座標配置できず**表から不可視**になる。旧 index 方式は別生徒のマスへ誤配置して見せていた（データ整合的には旧方式も難あり）。恒久対応は「未配置/孤立答案」枠の新設＝別スコープ。
 
 ### 残り（次の作業）
 
-- **Phase 3b**: view の DnD を **method B（グリッドドロップ+swap）** へ。各マス `useDroppable`・各答案 `useDraggable`・空=移動/埋=swap。pendingChange 生成は現状 method A のまま（apply/modal は DnD 非依存で流用可）。
+- **[4]/[5] 孤立答案の扱い**（除籍・ページ範囲外で不可視）: **対応要否を含め次セッションで判断**。旧 index 方式は誤帰属で見せていたため単純な「戻し」は不可。要対応なら「未配置/孤立答案」専用枠を新設（別 issue 候補）。
+
 - **Phase 3c**: セルの掴む/落とす部分（`SortableTableCell`）を**スロット化**して表本体を DnD 非依存に。upload=method A を注入。ここで `UnifiedFile` を `PendingImage`/`AnswerItem` へ**3分割**（単一 `files` state が両モード兼用のため Phase 3 と不可分）。
 - **Phase 6 相当**: 旧 `batch.ts`/`placement.ts`/`swap`（**FK強制下で壊れる temp studentId 方式**）の撤去、デッドコード整理（#965）、§6 手動検証（**DnD 挙動は要実機確認**）。
 
@@ -32,8 +49,9 @@
 
 - **FK は実行時強制**。既存 `batchUpdateStudentAnswerPlacements`/`swap*`/`updateStudentAnswerPlacement` は偽 studentId の一時ID方式で**FK違反で壊れる**（旧挙動破綻の一因）。新 `applyStudentAnswerPlacements` は基本 Prisma で回避済み。3b/3c で旧関数を撤去。
 - **sqlite-nas-sync 安全性を実コードで確認**: 二次 `@@unique` は `conflict.ts` ケース2 で LWW 収束（全表汎用）。delete→**同一id**再作成は `sync.ts` の tombstone-ignore（現存すれば再作成とみなす）で安全。→ 新コードは id 保持で delete+再作成している。
-- **並行セッション**が `electron-src/lib/import/*`（transformers WIP）を編集中。型チェックの `transformWarnings`/`EXAM_CURRENT_VERSION` エラーは無関係。自分のファイルのみ扱う。
-- 未コミット。git-workflow は未実行（自分のファイルのみ add する）。
+- **並行セッション**が `electron-src/lib/import/*`（transformers WIP）を編集中。自分のファイルのみ扱う（その import 変更は `94d8cd72` で main 済み）。
+- **view 配置は座標基準（3b で確定）**: `useTableDataGeneration` の view 分岐は `file.studentId`/`pageNumber` でマスへ配置する。`calculateDynamicDisabledCells`（答案なし=無効）も座標一致判定なので整合。view には手動無効（行/列/セル）UI が無く `disabledState` は空のまま＝無効セルは常に「答案なし」＝ドロップ可。
+- Phase 0〜3a は `34f9c54b` で main 済み。**Phase 3b は未コミット**（本セッションの変更・git-workflow 未実行、自分のファイルのみ add する）。
 
 ### 主要な触点ファイル
 

@@ -1,8 +1,10 @@
 "use client"
 
+import { useDroppable } from "@dnd-kit/core"
 import { Ban, FileX, Upload, X } from "lucide-react"
 
 import type { EmptyTableCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
+import { encodeCellDroppableId } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -56,10 +58,27 @@ export function EmptyTableCell({
   // 右クリックメニューを表示するかの判定（uploadモードでは無効セルでもメニュー表示）
   const shouldShowContextMenu = mode === "upload"
 
+  // 確認モード（方式B）: 空セルも答案のドロップ先にする。
+  // セル座標を droppable ID にして handleDragEnd で (studentId, pageNumber) を復号する。
+  // upload では disabled にして方式A（ファイル間の並べ替え）に影響させない。
+  // 欠席生徒のマスは「答案なし」表示だが、欠席者に答案を割り当てないようドロップ不可にする。
+  const isAbsentStudent = examStudent?.status === "absent"
+  const { setNodeRef, isOver } = useDroppable({
+    id: encodeCellDroppableId(
+      examStudent?.studentId ?? "none",
+      pageNumber ?? 0
+    ),
+    disabled: mode !== "view" || !examStudent || isAbsentStudent,
+  })
+  const isDropTarget = mode === "view" && isOver
+
   return (
     <TableCell
-      className={`relative h-32 w-32 border p-1 ${
+      ref={setNodeRef}
+      className={`relative h-32 w-32 border p-1 transition-colors ${
         isPositionDisabled ? "bg-gray-100" : "bg-white"
+      } ${
+        isDropTarget ? "bg-blue-100 outline outline-2 outline-blue-500" : ""
       }`}
     >
       <ContextMenu>

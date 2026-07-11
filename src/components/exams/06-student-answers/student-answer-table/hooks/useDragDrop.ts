@@ -21,6 +21,7 @@ export function useDragDrop({
   fileOrder,
   onReloadData,
   onUpdatePendingChanges,
+  existingStudentAnswers,
 }: UseDragDropParams): UseDragDropReturn {
   // 状態管理
   const { activeFile, setActiveFile, fileStatesRef, initialFileStatesRef } =
@@ -45,6 +46,7 @@ export function useDragDrop({
     fileOrder,
     onReloadData,
     onUpdatePendingChanges,
+    existingStudentAnswers,
     setActiveFile,
     fileStatesRef,
     initialFileStatesRef,
