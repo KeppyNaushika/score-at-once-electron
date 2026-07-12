@@ -6,8 +6,34 @@
  * - regression: OLS重回帰による予測（サンプル不足・特異行列時は average にフォールバック）
  */
 
-import type { AbsentMethod } from "../../../../src/types/grade.types"
+import type {
+  AbsentMethod,
+  EstimationFallbackReason,
+  EstimationRegressionTerm,
+  EstimationSourceContribution,
+} from "../../../../src/types/grade.types"
 import type { DataSourceInfo } from "./gradeCalculatorTypes"
+
+/**
+ * 欠測推定の生の結果（乗率・加減点の適用前）。
+ * gradeCalculator が乗率・加減点を適用して最終的な EstimationDetail を組み立てる。
+ */
+export interface AbsentEstimation {
+  /** 推定素点（内部クランプ済み、乗率・加減点適用前） */
+  value: number
+  /** 実際に使われた推定方法（regressionがaverageにフォールバックした場合は"average"） */
+  effectiveMethod: AbsentMethod
+  /** 平均比率法（フォールバック含む）で使用したソース内訳 */
+  averageSources?: EstimationSourceContribution[]
+  /** 平均比率法の平均比率 */
+  averageRatio?: number
+  /** 重回帰法の切片（β0） */
+  intercept?: number
+  /** 重回帰法の各説明変数の項 */
+  regressionTerms?: EstimationRegressionTerm[]
+  /** 重回帰法がaverageにフォールバックした理由 */
+  fallbackReason?: EstimationFallbackReason
+}
 
 /**
  * 欠測時の代替スコアを推定
@@ -19,9 +45,9 @@ export function estimateAbsentScore(
   maxScore: number,
   rawScoreMap: Map<string, Map<string, number | null>>,
   allDataSources: DataSourceInfo[]
-): number | null {
+): AbsentEstimation | null {
   if (method === "zero") {
-    return 0
+    return { value: 0, effectiveMethod: "zero" }
   }
   if (method === "average") {
     return estimateByAverage(
@@ -54,25 +80,37 @@ function estimateByAverage(
   maxScore: number,
   rawScoreMap: Map<string, Map<string, number | null>>,
   allDataSources: DataSourceInfo[]
-): number | null {
+): AbsentEstimation | null {
   const studentScores = rawScoreMap.get(studentId)
   if (!studentScores) return null
 
+  const averageSources: EstimationSourceContribution[] = []
   let ratioSum = 0
-  let ratioCount = 0
 
   for (const dataSource of allDataSources) {
     if (dataSource.id === dataSourceId) continue
     if (dataSource.maxScore <= 0) continue
     const score = studentScores.get(dataSource.id)
     if (score === null || score === undefined) continue
-    ratioSum += score / dataSource.maxScore
-    ratioCount++
+    const ratio = score / dataSource.maxScore
+    averageSources.push({
+      id: dataSource.id,
+      name: dataSource.name,
+      score,
+      maxScore: dataSource.maxScore,
+      ratio,
+    })
+    ratioSum += ratio
   }
 
-  if (ratioCount === 0) return null
-  const avgRatio = ratioSum / ratioCount
-  return clamp(avgRatio * maxScore, 0, maxScore)
+  if (averageSources.length === 0) return null
+  const averageRatio = ratioSum / averageSources.length
+  return {
+    value: clamp(averageRatio * maxScore, 0, maxScore),
+    effectiveMethod: "average",
+    averageSources,
+    averageRatio,
+  }
 }
 
 /**
@@ -87,7 +125,12 @@ function estimateByRegression(
   maxScore: number,
   rawScoreMap: Map<string, Map<string, number | null>>,
   allDataSources: DataSourceInfo[]
-): number | null {
+): AbsentEstimation | null {
+  // predictor ID → 表示名（説明変数の項名に使う）
+  const nameByDataSourceId = new Map(
+    allDataSources.map((dataSource) => [dataSource.id, dataSource.name])
+  )
+
   // 他DataSourceのID一覧（predictor変数）
   const predictorDsIds = allDataSources
     .filter(
@@ -138,12 +181,13 @@ function estimateByRegression(
   const minSamples = availablePredictors.length + 2
   if (X.length < minSamples) {
     // サンプル不足の場合、平均比率法にフォールバック
-    return estimateByAverage(
+    return fallbackToAverage(
       studentId,
       dataSourceId,
       maxScore,
       rawScoreMap,
-      allDataSources
+      allDataSources,
+      "insufficient_samples"
     )
   }
 
@@ -152,12 +196,13 @@ function estimateByRegression(
   const beta = solveOLS(X, Y, p)
   if (!beta) {
     // 特異行列の場合、平均比率法にフォールバック
-    return estimateByAverage(
+    return fallbackToAverage(
       studentId,
       dataSourceId,
       maxScore,
       rawScoreMap,
-      allDataSources
+      allDataSources,
+      "singular_matrix"
     )
   }
 
@@ -172,7 +217,45 @@ function estimateByRegression(
     predicted += beta[j] * xTarget[j]
   }
 
-  return clamp(predicted, 0, maxScore)
+  // 説明変数の項（beta[0]=切片、beta[j+1]=predictor jの係数）
+  const regressionTerms: EstimationRegressionTerm[] = availablePredictors.map(
+    (predId, index) => ({
+      id: predId,
+      name: nameByDataSourceId.get(predId) ?? predId,
+      value: targetStudentScores.get(predId)!,
+      coefficient: beta[index + 1],
+    })
+  )
+
+  return {
+    value: clamp(predicted, 0, maxScore),
+    effectiveMethod: "regression",
+    intercept: beta[0],
+    regressionTerms,
+  }
+}
+
+/**
+ * 重回帰法がサンプル不足/特異行列で平均比率法に落ちた場合の共通処理。
+ * averageの推定結果にフォールバック理由を付与して返す。
+ */
+function fallbackToAverage(
+  studentId: string,
+  dataSourceId: string,
+  maxScore: number,
+  rawScoreMap: Map<string, Map<string, number | null>>,
+  allDataSources: DataSourceInfo[],
+  reason: EstimationFallbackReason
+): AbsentEstimation | null {
+  const fallback = estimateByAverage(
+    studentId,
+    dataSourceId,
+    maxScore,
+    rawScoreMap,
+    allDataSources
+  )
+  if (fallback === null) return null
+  return { ...fallback, fallbackReason: reason }
 }
 
 /**
@@ -249,6 +332,19 @@ function solveOLS(X: number[][], Y: number[], p: number): number[] | null {
 }
 
 /**
+ * 乗率・加減点を適用した生の値（クランプ前）: estimated × ratio + offset。
+ * applyAdjustmentAndClamp と結果画面の内訳表示が同じ式を共有するための単一実装
+ * （表示側で式を再導出しないための SSOT）。
+ */
+export function adjustEstimate(
+  estimated: number,
+  ratio: number,
+  offset: number
+): number {
+  return estimated * ratio + offset
+}
+
+/**
  * 調整(ratio/offset)を適用し、[0, maxScore]にクランプ
  */
 export function applyAdjustmentAndClamp(
@@ -257,8 +353,11 @@ export function applyAdjustmentAndClamp(
   offset: number,
   maxScore: number
 ): number {
-  const adjusted = estimated * ratio + offset
-  return Math.round(clamp(adjusted, 0, maxScore) * 100) / 100
+  return (
+    Math.round(
+      clamp(adjustEstimate(estimated, ratio, offset), 0, maxScore) * 100
+    ) / 100
+  )
 }
 
 /**

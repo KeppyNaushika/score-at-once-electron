@@ -19,6 +19,7 @@ export interface ExamDataCache {
  */
 export interface DataSourceInfo {
   id: string
+  name: string
   maxScore: number
   absentMethod: AbsentMethod
   absentRatio: number

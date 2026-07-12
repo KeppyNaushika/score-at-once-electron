@@ -1186,6 +1186,7 @@ describe("estimateAbsentScore", () => {
     const result = estimateAbsentScore("zero", "s1", "ds1", 100, rawScoreMap, [
       {
         id: "ds1",
+        name: "ds1",
         maxScore: 100,
         absentMethod: "zero",
         absentRatio: 1,
@@ -1193,7 +1194,8 @@ describe("estimateAbsentScore", () => {
         ...dataSourceDefaults,
       },
     ])
-    expect(result).toBe(0)
+    expect(result?.value).toBe(0)
+    expect(result?.effectiveMethod).toBe("zero")
   })
 
   it("method='average' → 他DataSourceの比率から推定", () => {
@@ -1212,6 +1214,7 @@ describe("estimateAbsentScore", () => {
     const allDataSources = [
       {
         id: "ds1",
+        name: "ds1",
         maxScore: 200,
         absentMethod: "average" as const,
         absentRatio: 1,
@@ -1220,6 +1223,7 @@ describe("estimateAbsentScore", () => {
       },
       {
         id: "ds2",
+        name: "ds2",
         maxScore: 100,
         absentMethod: "null" as const,
         absentRatio: 1,
@@ -1228,6 +1232,7 @@ describe("estimateAbsentScore", () => {
       },
       {
         id: "ds3",
+        name: "ds3",
         maxScore: 50,
         absentMethod: "null" as const,
         absentRatio: 1,
@@ -1243,7 +1248,10 @@ describe("estimateAbsentScore", () => {
       rawScoreMap,
       allDataSources
     )
-    expect(result).toBeCloseTo(140)
+    expect(result?.value).toBeCloseTo(140)
+    expect(result?.effectiveMethod).toBe("average")
+    expect(result?.averageRatio).toBeCloseTo(0.7)
+    expect(result?.averageSources).toHaveLength(2)
   })
 
   it("method='average' → 他DataSourceがない場合はnull", () => {
@@ -1252,6 +1260,7 @@ describe("estimateAbsentScore", () => {
     const allDataSources = [
       {
         id: "ds1",
+        name: "ds1",
         maxScore: 100,
         absentMethod: "average" as const,
         absentRatio: 1,
@@ -1308,6 +1317,7 @@ describe("estimateAbsentScore", () => {
     const allDataSources = [
       {
         id: "ds1",
+        name: "ds1",
         maxScore: 100,
         absentMethod: "regression" as const,
         absentRatio: 1,
@@ -1316,6 +1326,7 @@ describe("estimateAbsentScore", () => {
       },
       {
         id: "ds2",
+        name: "ds2",
         maxScore: 100,
         absentMethod: "null" as const,
         absentRatio: 1,
@@ -1333,8 +1344,14 @@ describe("estimateAbsentScore", () => {
     )
     // 結果はOLS回帰の予測値で、0-100の範囲内であること
     expect(result).not.toBeNull()
-    expect(result!).toBeGreaterThanOrEqual(0)
-    expect(result!).toBeLessThanOrEqual(100)
+    expect(result!.value).toBeGreaterThanOrEqual(0)
+    expect(result!.value).toBeLessThanOrEqual(100)
+    expect(result!.effectiveMethod).toBe("regression")
+    expect(result!.intercept).not.toBeUndefined()
+    // 説明変数は ds2 の1つ
+    expect(result!.regressionTerms).toHaveLength(1)
+    expect(result!.regressionTerms![0].name).toBe("ds2")
+    expect(result!.regressionTerms![0].value).toBe(60)
   })
 
   it("method='regression' → サンプル不足は平均比率法にフォールバック", () => {
@@ -1358,6 +1375,7 @@ describe("estimateAbsentScore", () => {
     const allDataSources = [
       {
         id: "ds1",
+        name: "ds1",
         maxScore: 100,
         absentMethod: "regression" as const,
         absentRatio: 1,
@@ -1366,6 +1384,7 @@ describe("estimateAbsentScore", () => {
       },
       {
         id: "ds2",
+        name: "ds2",
         maxScore: 100,
         absentMethod: "null" as const,
         absentRatio: 1,
@@ -1382,7 +1401,9 @@ describe("estimateAbsentScore", () => {
       allDataSources
     )
     // averageフォールバック: s1のds2比率=60/100=0.6 → 0.6*100=60
-    expect(result).toBeCloseTo(60)
+    expect(result?.value).toBeCloseTo(60)
+    expect(result?.effectiveMethod).toBe("average")
+    expect(result?.fallbackReason).toBe("insufficient_samples")
   })
 
   it("method='regression' → 説明変数なしはnull", () => {
@@ -1393,6 +1414,7 @@ describe("estimateAbsentScore", () => {
     const allDataSources = [
       {
         id: "ds1",
+        name: "ds1",
         maxScore: 100,
         absentMethod: "regression" as const,
         absentRatio: 1,

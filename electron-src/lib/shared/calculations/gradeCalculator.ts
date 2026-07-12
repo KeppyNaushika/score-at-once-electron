@@ -6,6 +6,7 @@
 
 import type {
   AbsentMethod,
+  EstimationDetail,
   GradeCalculationResult,
   GradeItemResult,
   SourceScoreResult,
@@ -18,6 +19,7 @@ import {
 import prisma from "../../prisma/client"
 import { computeLiveMaxScore } from "../../prisma/gradeDataSource"
 import {
+  adjustEstimate,
   applyAdjustmentAndClamp,
   estimateAbsentScore,
 } from "./absentEstimation"
@@ -228,6 +230,7 @@ export async function calculateGrades(gradeId: string): Promise<{
         }
         return {
           id: dataSource.id,
+          name: dataSource.name,
           maxScore: liveMaxScoreMap.get(dataSource.id) ?? 0,
           absentMethod: (dataSource.absentMethod ?? "null") as AbsentMethod,
           absentRatio: Number(dataSource.absentRatio ?? 1),
@@ -316,6 +319,7 @@ export async function calculateGrades(gradeId: string): Promise<{
           const studentScores = rawScoreMap.get(student.id)
           let rawScore = studentScores?.get(dataSource.id) ?? null
           let isEstimated = false
+          let estimationDetail: EstimationDetail | null = null
 
           // rawScoreがnullかつ推定設定がある場合、代替スコアを算出
           if (rawScore === null && absentMethod !== "null") {
@@ -327,7 +331,7 @@ export async function calculateGrades(gradeId: string): Promise<{
                   )
                 : dataSourceInfos
 
-            const estimated = estimateAbsentScore(
+            const estimation = estimateAbsentScore(
               absentMethod,
               student.id,
               dataSource.id,
@@ -335,15 +339,35 @@ export async function calculateGrades(gradeId: string): Promise<{
               rawScoreMap,
               sourcesToUse
             )
-            if (estimated !== null) {
+            if (estimation !== null) {
               // 調整 + クランプ
               rawScore = applyAdjustmentAndClamp(
-                estimated,
+                estimation.value,
                 absentRatio,
                 absentOffset,
                 maxScore
               )
               isEstimated = true
+              // 結果画面のpopoverで「どう推定したか」を表示するための内訳。
+              // adjustedScore は applyAdjustmentAndClamp と同じ adjustEstimate を共有し、
+              // 表示側で式を再導出しない（SSOT）。
+              estimationDetail = {
+                effectiveMethod: estimation.effectiveMethod,
+                baseEstimate: estimation.value,
+                ratio: absentRatio,
+                offset: absentOffset,
+                adjustedScore: adjustEstimate(
+                  estimation.value,
+                  absentRatio,
+                  absentOffset
+                ),
+                finalScore: rawScore,
+                averageSources: estimation.averageSources,
+                averageRatio: estimation.averageRatio,
+                intercept: estimation.intercept,
+                regressionTerms: estimation.regressionTerms,
+                fallbackReason: estimation.fallbackReason,
+              }
             }
           }
 
@@ -369,6 +393,7 @@ export async function calculateGrades(gradeId: string): Promise<{
             weight,
             weightedScore,
             isEstimated,
+            estimation: estimationDetail,
             letterValue: courseworkScore?.letterValue ?? null,
             adjustment:
               courseworkScore?.adjustment !== null &&
