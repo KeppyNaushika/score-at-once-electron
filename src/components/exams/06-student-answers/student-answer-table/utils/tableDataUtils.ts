@@ -131,11 +131,7 @@ export function calculateCellsWithExistingAnswers<
   examPages: ExamPageColumn[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view",
-  existingAnswers?: Array<{
-    id: string
-    studentId: string | null
-    examPageId: string | null
-  }>
+  existingAnswers?: AnswerImageIdentity[]
 ): CellLookup {
   const cells: CellLookup = new Map()
 

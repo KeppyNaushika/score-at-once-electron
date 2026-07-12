@@ -3,10 +3,7 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
-import type {
-  AnswerCellBaseline,
-  FileState,
-} from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import {
   applyCellMoveOrSwap,
   decodeCellDroppableId,
@@ -36,7 +33,7 @@ interface UseDragDropHandlersParams<TItem extends AnswerImageIdentity> {
       toState: FileState
     }>
   ) => void
-  existingAnswers?: AnswerCellBaseline[]
+  existingAnswers?: AnswerImageIdentity[]
   setActiveFile: (file: TItem | null) => void
 }
 

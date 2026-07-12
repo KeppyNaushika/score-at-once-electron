@@ -1,7 +1,4 @@
-import type {
-  AnswerCellBaseline,
-  FileState,
-} from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**
@@ -111,7 +108,7 @@ export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
  */
 export function diffFilesAgainstBaseline<T extends AnswerImageIdentity>(
   files: T[],
-  baseline: AnswerCellBaseline[]
+  baseline: AnswerImageIdentity[]
 ): Array<{ fileId: string; fromState: FileState; toState: FileState }> {
   const baselineById = new Map(baseline.map((cell) => [cell.id, cell]))
   const changedFiles: Array<{

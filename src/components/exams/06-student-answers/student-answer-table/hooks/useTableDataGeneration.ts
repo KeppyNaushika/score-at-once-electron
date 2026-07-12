@@ -28,11 +28,7 @@ interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
     examPageId: string
   ) => boolean
   allowOverwrite?: boolean
-  existingAnswers?: Array<{
-    id: string
-    studentId: string | null
-    examPageId: string | null
-  }>
+  existingAnswers?: AnswerImageIdentity[]
 }
 
 /**

@@ -1,4 +1,5 @@
 import type {
+  AnswerImageIdentity,
   ExamPageColumn,
   PlacementStrategy,
   UnsavedAnswerImage,
@@ -9,7 +10,7 @@ import type {
   PlacedAnswerImage,
 } from "@/types/prismaExtensions"
 
-import type { AnswerCellBaseline, FileState } from "./dragDropTypes"
+import type { FileState } from "./dragDropTypes"
 
 // ============================================================================
 // answer-table コンポーネントの型定義
@@ -22,8 +23,9 @@ export interface AnswerTableBaseProps {
   examPages: ExamPageColumn[]
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   onReloadData?: () => void
-  // upload: 既存答案の占有信号 / view: DnD 差分の DB baseline（いずれも id で同定）
-  existingAnswers?: AnswerCellBaseline[]
+  // 既存答案（PlacedAnswerImage 実体をそのまま渡す）。upload では占有信号、view では
+  // DnD 差分の DB baseline として使う。読み取り契約は AnswerImageIdentity（id で同定）。
+  existingAnswers?: AnswerImageIdentity[]
 }
 
 /** アップロード（新規追加）モードのテーブル。ファイルは未保存の UnsavedAnswerImage。 */
