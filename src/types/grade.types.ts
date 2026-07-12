@@ -205,6 +205,8 @@ export interface SourceScoreResult {
   weight: number
   weightedScore: number | null
   isEstimated: boolean
+  /** 欠測推定の内訳（isEstimated=true のときのみ。どの方法・式で推定したか） */
+  estimation: EstimationDetail | null
   /** 文字モード時に入力された評価記号（manual型のみ） */
   letterValue: string | null
   /** 適用された加点・減点（manual型のみ。0なら調整なし） */
@@ -213,6 +215,61 @@ export interface SourceScoreResult {
   adjustmentReason: string | null
   /** コメント（manual型のみ。成績通知書に表示） */
   comment: string | null
+}
+
+/** 平均比率法で使用した1ソースの寄与（score/maxScore = ratio） */
+export interface EstimationSourceContribution {
+  /** 元ソースの GradeDataSource.id（表示名は衝突しうるため React key はこれを使う） */
+  id: string
+  name: string
+  score: number
+  maxScore: number
+  ratio: number
+}
+
+/** 重回帰法の1説明変数の項（coefficient × value） */
+export interface EstimationRegressionTerm {
+  /** 説明変数となった GradeDataSource.id（React key 用） */
+  id: string
+  name: string
+  value: number
+  coefficient: number
+}
+
+/** 重回帰法がフォールバックした理由 */
+export type EstimationFallbackReason =
+  "insufficient_samples" | "singular_matrix"
+
+/**
+ * 欠測推定の内訳。
+ * 「どの方法で・どのソースから・どんな式で推定したか」を結果画面のpopoverに表示するために持つ。
+ */
+export interface EstimationDetail {
+  /**
+   * 実際に使われた推定方法（regressionがサンプル不足/特異行列でaverageに落ちた場合は"average"）。
+   * 設定された方法との差異は fallbackReason で表す。
+   */
+  effectiveMethod: AbsentMethod
+  /** 推定素点（乗率・加減点の適用前、内部クランプ済み） */
+  baseEstimate: number
+  /** 乗率 */
+  ratio: number
+  /** 加減点 */
+  offset: number
+  /** 乗率・加減点を適用した値（クランプ前）。= baseEstimate × ratio + offset */
+  adjustedScore: number
+  /** 最終スコア（= clamp(adjustedScore)。SourceScoreResult.rawScoreと同値） */
+  finalScore: number
+  /** 平均比率法（重回帰のフォールバック含む）で使用したソース内訳 */
+  averageSources?: EstimationSourceContribution[]
+  /** 平均比率法の平均比率 */
+  averageRatio?: number
+  /** 重回帰法の切片（β0） */
+  intercept?: number
+  /** 重回帰法の各説明変数の項 */
+  regressionTerms?: EstimationRegressionTerm[]
+  /** 重回帰法がaverageにフォールバックした理由（あれば） */
+  fallbackReason?: EstimationFallbackReason
 }
 
 /** 成績算出結果全体 */

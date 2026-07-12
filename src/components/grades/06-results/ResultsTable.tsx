@@ -14,6 +14,7 @@ import type {
   GradeCalculationResult,
   GradeConstraintData,
   GradeItemResult,
+  SourceScoreResult,
 } from "@/types/grade.types"
 
 interface ResultsTableProps {
@@ -32,6 +33,175 @@ type SortKey = "registrationOrder" | "attendanceNumber" | string
 // ---------------------------------------------------------------------------
 // ScoreBreakdownPopover – %クリックで算出根拠を表示
 // ---------------------------------------------------------------------------
+
+const ABSENT_METHOD_LABELS: Record<string, string> = {
+  zero: "0点",
+  average: "平均比率法",
+  regression: "重回帰法",
+}
+
+const FALLBACK_REASON_LABELS: Record<string, string> = {
+  insufficient_samples: "サンプル不足",
+  singular_matrix: "多重共線性（特異行列）",
+}
+
+/** 数値を小数digits桁で表示（末尾の余分な0は残す＝式の桁を揃える） */
+function fmt(value: number, digits = 2): string {
+  return value.toFixed(digits)
+}
+
+/** クランプ判定の許容誤差（丸め・浮動小数のブレを吸収） */
+const CLAMP_EPSILON = 0.005
+
+/**
+ * クランプ前の値 rawValue が最終値 finalValue と乖離＝[0, maxScore]にクランプされた場合の
+ * 注記文字列を返す（乖離がなければ空文字）。内訳表示の各所で共有する。
+ */
+function clampNote(
+  rawValue: number,
+  finalValue: number,
+  maxScore: number
+): string {
+  return Math.abs(rawValue - finalValue) > CLAMP_EPSILON
+    ? `（0〜${fmt(maxScore)}にクランプ）`
+    : ""
+}
+
+/**
+ * 欠測推定の内訳（どの方法・どの式で推定したか）を表示するブロック。
+ * average は使用ソースの比率と平均、regression は切片+係数の線形式まで見せる。
+ */
+function EstimationExplain({
+  sourceScore,
+}: {
+  sourceScore: SourceScoreResult
+}) {
+  const estimation = sourceScore.estimation
+  if (!estimation) return null
+
+  const methodLabel =
+    ABSENT_METHOD_LABELS[estimation.effectiveMethod] ??
+    estimation.effectiveMethod
+  const targetMaxScore = sourceScore.maxScore
+  const hasAdjustment = estimation.ratio !== 1 || estimation.offset !== 0
+  // クランプ前の値。乗率・加減点があれば adjustedScore（backendが adjustEstimate で算出）、
+  // なければ推定素点そのもの。これと finalScore の乖離でクランプ有無を判定する。
+  const preClampScore = hasAdjustment
+    ? estimation.adjustedScore
+    : estimation.baseEstimate
+
+  return (
+    <div className="rounded-md bg-amber-50 p-2.5 text-[10px] leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      <p className="font-semibold">
+        {sourceScore.dataSourceName}（欠測推定: {methodLabel}）
+      </p>
+
+      {estimation.fallbackReason && (
+        <p className="text-amber-700 dark:text-amber-300">
+          ※ 重回帰法は
+          {FALLBACK_REASON_LABELS[estimation.fallbackReason] ??
+            estimation.fallbackReason}
+          のため平均比率法にフォールバック
+        </p>
+      )}
+
+      {/* zero法 */}
+      {estimation.effectiveMethod === "zero" && <p>欠測 → 0点</p>}
+
+      {/* average法（フォールバック含む） */}
+      {estimation.averageSources && estimation.averageRatio !== undefined && (
+        <div className="mt-0.5">
+          {estimation.averageSources.map((source) => (
+            <p key={source.id} className="tabular-nums">
+              {source.name}: {fmt(source.score)} / {fmt(source.maxScore)} ={" "}
+              {fmt(source.ratio, 3)}
+            </p>
+          ))}
+          <p className="tabular-nums">
+            平均比率 = {fmt(estimation.averageRatio, 3)}
+          </p>
+          <p className="tabular-nums">
+            推定素点 = {fmt(estimation.averageRatio, 3)} × {fmt(targetMaxScore)}{" "}
+            = {fmt(estimation.baseEstimate)}
+            {clampNote(
+              estimation.averageRatio * targetMaxScore,
+              estimation.baseEstimate,
+              targetMaxScore
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* regression法 */}
+      {estimation.effectiveMethod === "regression" &&
+        estimation.intercept !== undefined &&
+        estimation.regressionTerms && (
+          <RegressionFormula
+            intercept={estimation.intercept}
+            terms={estimation.regressionTerms}
+            baseEstimate={estimation.baseEstimate}
+            maxScore={targetMaxScore}
+          />
+        )}
+
+      {/* 乗率・加減点 */}
+      {hasAdjustment && (
+        <p className="tabular-nums">
+          乗率×加減点 = {fmt(estimation.baseEstimate)} × {estimation.ratio}{" "}
+          {estimation.offset >= 0 ? "+" : "−"}{" "}
+          {fmt(Math.abs(estimation.offset))} = {fmt(estimation.adjustedScore)}
+        </p>
+      )}
+
+      <p className="font-medium tabular-nums">
+        最終 = {fmt(estimation.finalScore)}
+        {clampNote(preClampScore, estimation.finalScore, targetMaxScore)}
+      </p>
+    </div>
+  )
+}
+
+/** 重回帰の線形式: β0 + β1×x1 + ... = 予測値（クランプ注記付き） */
+function RegressionFormula({
+  intercept,
+  terms,
+  baseEstimate,
+  maxScore,
+}: {
+  intercept: number
+  terms: { id: string; name: string; value: number; coefficient: number }[]
+  baseEstimate: number
+  maxScore: number
+}) {
+  const rawSum =
+    intercept +
+    terms.reduce((sum, term) => sum + term.coefficient * term.value, 0)
+
+  const expr = terms.reduce((acc, term) => {
+    const sign = term.coefficient >= 0 ? "+" : "−"
+    return `${acc} ${sign} ${fmt(Math.abs(term.coefficient), 3)}×${fmt(term.value)}`
+  }, fmt(intercept))
+
+  return (
+    <div className="mt-0.5">
+      <p className="break-all tabular-nums">
+        予測 = {expr} = {fmt(rawSum)}
+      </p>
+      {terms.map((term) => (
+        <p
+          key={term.id}
+          className="text-amber-700 tabular-nums dark:text-amber-300"
+        >
+          {term.name}: 係数 {fmt(term.coefficient, 3)} × 素点 {fmt(term.value)}
+        </p>
+      ))}
+      <p className="tabular-nums">
+        推定素点 = {fmt(baseEstimate)}
+        {clampNote(rawSum, baseEstimate, maxScore)}
+      </p>
+    </div>
+  )
+}
 
 /** GradeItem列の%ポップオーバー: データソース別の内訳 */
 function GradeItemBreakdownPopover({
@@ -71,7 +241,7 @@ function GradeItemBreakdownPopover({
           {pctText}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" align="start">
+      <PopoverContent className="w-80 p-3" align="start">
         <p className="mb-1 text-xs font-semibold">{itemResult.gradeItemName}</p>
         <p className="text-muted-foreground mb-2 text-[10px]">
           換算 = (素点 ÷ 満点) × 換算満点 ※欠点は除外
@@ -95,9 +265,24 @@ function GradeItemBreakdownPopover({
                   className={`border-b last:border-0 ${isMissing ? "text-muted-foreground line-through" : ""}`}
                 >
                   <td className="py-1 pr-1">
-                    {sourceScore.dataSourceName}
-                    {sourceScore.isEstimated && (
-                      <span className="ml-0.5 text-amber-600">*</span>
+                    {sourceScore.isEstimated && sourceScore.estimation ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="cursor-pointer text-left text-amber-600 hover:underline"
+                            title="クリックで推定の計算式を表示"
+                          >
+                            {sourceScore.dataSourceName}
+                            <span className="ml-0.5">*</span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="start">
+                          <EstimationExplain sourceScore={sourceScore} />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      sourceScore.dataSourceName
                     )}
                   </td>
                   <td className="py-1 text-right tabular-nums">
