@@ -179,25 +179,40 @@ export function useDragDropHandlers({
       // アップロードモード（方式A）: arrayMove で並べ替え、各位置の studentId/pageNumber は固定。
       // 新規ファイルの自動配置順を手で入れ替えるための経路（view の座標 move/swap とは別物）。
       if (activeContainer === overContainer && activeId !== overId) {
-        const newFiles = [...files]
-        const oldIndex = newFiles.findIndex((file) => file.id === activeId)
-        const newIndex = newFiles.findIndex((file) => file.id === overId)
+        // 同一コンテナ内のファイル（main=有効 / trash=無効）だけを並べ替え対象にする。
+        // 全 files を arrayMove すると、old〜new index 間に挟まった trash スロットへ
+        // 隣接スロットの studentId/pageNumber が誤って再代入される（#964）。
+        const containerFiles =
+          activeContainer === "main" ? getEnabledFiles() : getDisabledFiles()
+        const oldIndex = containerFiles.findIndex(
+          (file) => file.id === activeId
+        )
+        const newIndex = containerFiles.findIndex((file) => file.id === overId)
 
         if (oldIndex !== -1 && newIndex !== -1) {
-          // 1. fileIdのみを入れ替え、各位置のstudentIdとpageNumberは固定
-          const originalFiles = [...newFiles]
+          // fileId のみを入れ替え、各スロット（元の位置）の studentId/pageNumber は固定
           const reorderedFileIds = arrayMove(
-            newFiles.map((file) => file.id),
+            containerFiles.map((file) => file.id),
             oldIndex,
             newIndex
           )
 
-          // 2. 各位置に対して、新しいfileIdと元の論理位置を組み合わせ
-          const reorderedFiles = originalFiles.map((originalFile, index) => ({
-            ...files.find((file) => file.id === reorderedFileIds[index])!, // 新しいfileIdのファイルオブジェクト
-            studentId: originalFile.studentId, // 元の位置のstudentId
-            pageNumber: originalFile.pageNumber, // 元の位置のpageNumber
-          }))
+          // 各スロット id → 移動後の fileId のファイル（座標は元スロットのまま）
+          const remappedBySlotId = new Map(
+            containerFiles.map((slot, index) => [
+              slot.id,
+              {
+                ...files.find((file) => file.id === reorderedFileIds[index])!,
+                studentId: slot.studentId,
+                pageNumber: slot.pageNumber,
+              },
+            ])
+          )
+
+          // 元の files 並びを保ち、当該コンテナのスロットのみ差し替える（trash は据え置き）
+          const reorderedFiles = files.map(
+            (file) => remappedBySlotId.get(file.id) ?? file
+          )
 
           onFilesChange(reorderedFiles)
           toast.success("答案の配置を変更しました")
