@@ -18,18 +18,6 @@ export {
 // ステータス管理
 export { setStudentAnswerAbsent } from "./status"
 
-// 配置管理
-export {
-  swapStudentAnswerPlacements,
-  updateStudentAnswerPlacement,
-} from "./placement"
-
-// 一括操作
-export {
-  batchUpdateStudentAnswerPlacements,
-  swapStudentAnswerPlacementsWithScoring,
-} from "./batch"
-
 // 採点安全な配置適用（view 方式B: 2軸移動 + carry/discard）
 export {
   applyStudentAnswerPlacements,

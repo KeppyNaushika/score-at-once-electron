@@ -135,7 +135,6 @@ export function StudentAnswersTabContent({
           onUploadComplete={onStudentAnswerUpdate}
           existingStudentAnswers={studentAnswers}
           mode="view"
-          pendingChanges={pendingChanges}
           affectedCells={affectedCells}
           onUpdatePendingChanges={onUpdatePendingChanges}
           correctionStatusMap={correctionStatusMap}

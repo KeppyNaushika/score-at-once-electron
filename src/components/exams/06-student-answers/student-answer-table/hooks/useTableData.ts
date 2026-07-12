@@ -14,12 +14,11 @@ import {
 import type {
   AnswerItem,
   PlacementStrategy,
-  UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-interface UseTableDataParams {
-  files: UnifiedFile[]
+interface UseTableDataParams<TItem extends AnswerItem> {
+  files: TItem[]
   students: ExamStudentWithMemberships[]
   modelAnswerCount: number
   fileOrder: PlacementStrategy
@@ -40,7 +39,7 @@ interface UseTableDataParams {
 /**
  * テーブルデータの管理を行うメインフック（リファクタリング版）
  */
-export function useTableData({
+export function useTableData<TItem extends AnswerItem>({
   files,
   students,
   modelAnswerCount,
@@ -50,7 +49,7 @@ export function useTableData({
   mode,
   existingStudentAnswers,
   allowOverwrite = false,
-}: UseTableDataParams) {
+}: UseTableDataParams<TItem>) {
   // 生徒のソート（customOrder準拠）
   const sortedStudents = useMemo(() => {
     return sortStudentsByCustomOrder(students)
@@ -117,7 +116,7 @@ export function useTableData({
   }, [])
 
   // テーブルデータの生成
-  const { tableData } = useTableDataGeneration({
+  const { tableData, orphanItems } = useTableDataGeneration({
     files,
     sortedStudents,
     modelAnswerCount,
@@ -135,6 +134,7 @@ export function useTableData({
     getDisabledFiles: getDisabledFilesCallback,
     getFileColor: getFileColorCallback,
     tableData,
+    orphanItems,
     cellsWithExistingAnswers,
   }
 }

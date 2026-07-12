@@ -1,79 +1,5 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
-import type {
-  PlacementStrategy,
-  UnifiedFile,
-} from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
-
-/** FileState配列と配置戦略からDnD用の順序付きファイル配列を構築する */
-export function buildDnDArrayFromFileStates(
-  fileStates: FileState[],
-  strategy: PlacementStrategy,
-  students: ExamStudentWithMemberships[],
-  masterImageCount: number,
-  files: UnifiedFile[]
-): UnifiedFile[] {
-  if (!students || !masterImageCount || fileStates.length === 0) return []
-
-  // 生徒のソート（受験生徒順：customOrder準拠）
-  const sortedStudents = [...students].sort((studentA, studentB) => {
-    const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
-    const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
-    return studentAOrder - studentBOrder
-  })
-
-  // 配置戦略に基づいて論理位置の順序を決定（Math.floor不使用）
-  const orderedPositions: Array<{
-    studentId: string | null
-    pageNumber: number
-  }> = []
-
-  if (strategy === "student-first") {
-    // 生徒順: s1p1, s1p2, s2p1, s2p2, ...
-    sortedStudents.forEach((student) => {
-      for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
-        orderedPositions.push({
-          studentId: student.studentId,
-          pageNumber: pageNum,
-        })
-      }
-    })
-  } else {
-    // ページ順: s1p1, s2p1, s3p1, ..., s1p2, s2p2, s3p2, ...
-    for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
-      sortedStudents.forEach((student) => {
-        orderedPositions.push({
-          studentId: student.studentId,
-          pageNumber: pageNum,
-        })
-      })
-    }
-  }
-
-  // 論理位置の順序に基づいてファイルを配置
-  const orderedFiles: UnifiedFile[] = []
-
-  orderedPositions.forEach((position) => {
-    // 3つ組から対応するファイルを検索
-    const matchingFileState = fileStates.find(
-      (state) =>
-        state.studentId === position.studentId &&
-        state.pageNumber === position.pageNumber
-    )
-
-    if (matchingFileState) {
-      // 元のfiles配列から実際のUnifiedFileオブジェクトを取得
-      const actualFile = files.find(
-        (file) => file.id === matchingFileState.fileId
-      )
-      if (actualFile) {
-        orderedFiles.push(actualFile)
-      }
-    }
-  })
-
-  return orderedFiles
-}
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 
 /**
  * view 方式B のセル droppable ID を (studentId, pageNumber) から生成する。
@@ -112,15 +38,22 @@ export function decodeCellDroppableId(
  * 対象セルに別の答案が既にある場合は 2 セルの座標を入れ替える（swap）。
  * 採点データの追従/破棄は後段の確認モーダル（PlacementScorePolicy）で解決するため、
  * ここでは座標だけを更新する（新しい配列を返す。変更が無ければ元の配列を返す）。
+ *
+ * ただし移動元が「配置できない座標」（孤立答案＝除籍生徒・ページ範囲外）のときは、
+ * 占有セルへの swap を拒否する（占有していた有効答案を孤立座標へ押し出して消してしまい、
+ * さらに反映で除籍生徒への再配置が永続化される事故を防ぐ）。孤立答案の救済は空セルへの
+ * 移動のみ許す。
  */
-export function applyCellMoveOrSwap(
-  files: UnifiedFile[],
+export function applyCellMoveOrSwap<T extends AnswerItem>(
+  files: T[],
   activeFileId: string,
   target: { studentId: string; pageNumber: number },
   // 占有判定を「表に見えている答案」に限定するための任意フィルタ。
   // trash 等で非表示の答案を隠れて swap しないため（view は無効ファイル無しだが防御的に受ける）。
-  occupantEligibleIds?: Set<string>
-): UnifiedFile[] {
+  occupantEligibleIds?: Set<string>,
+  // 移動元が配置可能な座標か（孤立答案なら false）。false のとき占有セルへの swap は拒否する。
+  isSourcePlaceable: boolean = true
+): T[] {
   const activeFile = files.find((file) => file.id === activeFileId)
   if (!activeFile) return files
 
@@ -142,6 +75,12 @@ export function applyCellMoveOrSwap(
       file.pageNumber === target.pageNumber &&
       (occupantEligibleIds ? occupantEligibleIds.has(file.id) : true)
   )
+
+  // 孤立答案（移動元が配置不能）を占有セルへ落とす swap は拒否する。
+  // occupant を移動元の不正座標へ押し出してしまうため。
+  if (occupant && !isSourcePlaceable) {
+    return files
+  }
 
   return files.map((file) => {
     if (file.id === activeFileId) {
@@ -179,8 +118,8 @@ export interface AnswerCellBaseline {
  * 複数回ドラッグ・反映後の再読込でも累積差分が常に正しい（親は全置換して安全）。
  * baseline に無い id（新規・除籍等）は対象外。
  */
-export function diffFilesAgainstBaseline(
-  files: UnifiedFile[],
+export function diffFilesAgainstBaseline<T extends AnswerItem>(
+  files: T[],
   baseline: AnswerCellBaseline[]
 ): Array<{ fileId: string; fromState: FileState; toState: FileState }> {
   const baselineById = new Map(baseline.map((cell) => [cell.id, cell]))
@@ -213,53 +152,6 @@ export function diffFilesAgainstBaseline(
       })
     }
   }
-
-  return changedFiles
-}
-
-/** DnD後のファイル配列からFileState（ファイルID・生徒ID・ページ番号の組）を再生成する */
-export function updateFileStatesFromDnDArray(
-  dndArray: UnifiedFile[]
-): FileState[] {
-  // ファイルの実データをそのまま使用（推測ではない）
-  return dndArray.map((file) => ({
-    fileId: file.id,
-    studentId: file.studentId || null, // ファイルの実データ
-    pageNumber: file.pageNumber, // ファイルの実データ
-  }))
-}
-
-/** 初期状態と現在状態を比較し、生徒IDまたはページ番号が変更されたファイルを返す */
-export function compareFileStates(
-  initialStates: FileState[],
-  currentStates: FileState[]
-) {
-  const changedFiles: Array<{
-    fileId: string
-    fromState: FileState
-    toState: FileState
-  }> = []
-
-  // 各ファイルについて、初期状態と現在状態を比較
-  currentStates.forEach((currentState) => {
-    const initialState = initialStates.find(
-      (state) => state.fileId === currentState.fileId
-    )
-
-    if (initialState) {
-      // studentId または pageNumber が変わった場合
-      if (
-        initialState.studentId !== currentState.studentId ||
-        initialState.pageNumber !== currentState.pageNumber
-      ) {
-        changedFiles.push({
-          fileId: currentState.fileId,
-          fromState: initialState,
-          toState: currentState,
-        })
-      }
-    }
-  })
 
   return changedFiles
 }

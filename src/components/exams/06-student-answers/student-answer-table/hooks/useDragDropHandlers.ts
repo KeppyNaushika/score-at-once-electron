@@ -10,16 +10,16 @@ import {
   diffFilesAgainstBaseline,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
 import type {
+  AnswerItem,
   PlacementStrategy,
-  UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-interface UseDragDropHandlersParams {
-  files: UnifiedFile[]
-  onFilesChange: (files: UnifiedFile[]) => void
-  getEnabledFiles: () => UnifiedFile[]
-  getDisabledFiles: () => UnifiedFile[]
+interface UseDragDropHandlersParams<TItem extends AnswerItem> {
+  files: TItem[]
+  onFilesChange: (files: TItem[]) => void
+  getEnabledFiles: () => TItem[]
+  getDisabledFiles: () => TItem[]
   students?: ExamStudentWithMemberships[]
   modelAnswerCount?: number
   mode?: "upload" | "view"
@@ -37,24 +37,24 @@ interface UseDragDropHandlersParams {
     studentId: string | null
     pageNumber: number
   }>
-  setActiveFile: (file: UnifiedFile | null) => void
-  fileStatesRef: React.MutableRefObject<FileState[]>
-  initialFileStatesRef: React.MutableRefObject<FileState[]>
+  setActiveFile: (file: TItem | null) => void
 }
 
 /**
  * ドラッグ&ドロップのイベントハンドラーを管理するカスタムフック
  */
-export function useDragDropHandlers({
+export function useDragDropHandlers<TItem extends AnswerItem>({
   files,
   onFilesChange,
   getEnabledFiles,
   getDisabledFiles,
+  students,
+  modelAnswerCount,
   mode,
   onUpdatePendingChanges,
   existingStudentAnswers,
   setActiveFile,
-}: UseDragDropHandlersParams) {
+}: UseDragDropHandlersParams<TItem>) {
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const { active } = event
@@ -99,22 +99,34 @@ export function useDragDropHandlers({
           return
         }
 
-        const target =
-          decodeCellDroppableId(overId) ??
-          (() => {
-            const overFile = files.find((file) => file.id === overId)
-            return overFile?.studentId
-              ? {
-                  studentId: overFile.studentId,
-                  pageNumber: overFile.pageNumber,
-                }
-              : null
-          })()
-
+        // 方式B の drop 先は「マス」（占有マスも空マスも cell: droppable）だけ。
+        // 孤立答案カードは draggable のみ（droppable ではない）ので over にならない。
+        // よって対象セル座標は droppable ID から一意に復号できる。
+        const target = decodeCellDroppableId(overId)
         if (!target) {
           setActiveFile(null)
           return
         }
+
+        // 「そのマスに配置できる座標か」（除籍生徒＝名簿外／ページ範囲外を弾く）。
+        // 移動元が孤立答案（配置不能座標）なら占有マスへの swap を拒否するために使う。
+        const rosterStudentIds = new Set(
+          (students ?? []).map((examStudent) => examStudent.studentId)
+        )
+        const isPlaceable = (
+          studentId: string | undefined,
+          pageNumber: number
+        ): boolean =>
+          !!studentId &&
+          rosterStudentIds.has(studentId) &&
+          pageNumber >= 1 &&
+          pageNumber <= (modelAnswerCount ?? 0)
+
+        // 移動元（ドラッグした答案）が配置可能座標か。孤立答案なら false → 占有セルへの swap を拒否。
+        const activeItem = files.find((file) => file.id === activeId)
+        const isSourcePlaceable = activeItem
+          ? isPlaceable(activeItem.studentId, activeItem.pageNumber)
+          : false
 
         // 占有判定は「表に見えている答案」だけに限定する（trash 等の隠れ答案を巻き込まない）
         const enabledFileIds = new Set(getEnabledFiles().map((file) => file.id))
@@ -122,7 +134,8 @@ export function useDragDropHandlers({
           files,
           activeId,
           target,
-          enabledFileIds
+          enabledFileIds,
+          isSourcePlaceable
         )
         if (newFiles === files) {
           // 実質変更なし（同一セルへのドロップのみ通知。対象/アクティブ不明時は無言）
@@ -226,6 +239,8 @@ export function useDragDropHandlers({
       onFilesChange,
       getEnabledFiles,
       getDisabledFiles,
+      students,
+      modelAnswerCount,
       mode,
       onUpdatePendingChanges,
       existingStudentAnswers,

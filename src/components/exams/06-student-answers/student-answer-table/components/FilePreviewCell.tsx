@@ -4,7 +4,10 @@ import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
-import { loadStudentAnswerImage } from "@/components/exams/06-student-answers/student-answer-management/utils/convertStudentAnswersToFiles"
+import {
+  getCachedStudentAnswerImage,
+  loadStudentAnswerImage,
+} from "@/components/exams/06-student-answers/student-answer-management/utils/convertStudentAnswersToFiles"
 import type { FilePreviewCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
 import {
   Tooltip,
@@ -45,8 +48,13 @@ export function FilePreviewCell({
     null
   )
   const [isNameRegionLoading, setIsNameRegionLoading] = useState(false)
+  // 初期プレビューは preview（未保存の blob）→ 読込済みキャッシュ（DB答案）の順で同期取得する。
+  // これにより DragOverlay の複製セルも、グリッドで読込済みの画像を即座に表示できる。
   const [imagePreview, setImagePreview] = useState<string | null>(
-    file.preview || null
+    file.preview ??
+      (file.imagePath
+        ? (getCachedStudentAnswerImage(file.imagePath) ?? null)
+        : null)
   )
   const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -55,11 +63,16 @@ export function FilePreviewCell({
   const fileRef = useRef(file)
   fileRef.current = file
 
-  /** ファイルIDが変わった時にプレビュー状態をリセット */
+  /** ファイルIDが変わった時にプレビュー状態をリセット（キャッシュがあれば即座に反映） */
   useEffect(() => {
-    setImagePreview(file.preview || null)
+    setImagePreview(
+      file.preview ??
+        (file.imagePath
+          ? (getCachedStudentAnswerImage(file.imagePath) ?? null)
+          : null)
+    )
     setIsImageLoading(false)
-  }, [file.id, file.preview])
+  }, [file.id, file.preview, file.imagePath])
 
   /**
    * 既存画像の遅延読み込み

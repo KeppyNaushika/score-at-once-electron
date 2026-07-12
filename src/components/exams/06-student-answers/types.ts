@@ -14,7 +14,8 @@
  * セルに載る要素の「描画ビュー」（表・DnD・プレビューが読む最小共通形）。
  * 未保存画像（PendingImage 相当）と DB答案（ExistingAnswer 相当）の**両ソースを射影**した
  * 表示専用の投射であって、エンティティの併合ではない（"Unified" とは呼ばない）。
- * `UnifiedFile` はこれを満たす上位型（buffer 等の upload 専用フィールドを追加で持つ）。
+ * upload 源（`PendingImage`）はこれを満たす上位型。DB答案（`ExistingAnswer`）は
+ * テーブル境界で `convertAnswerSheetsToFiles` によりこの形へ射影する。
  */
 export interface AnswerItem {
   id: string
@@ -29,30 +30,20 @@ export interface AnswerItem {
 }
 
 /**
- * 統一されたファイル型定義
- * ConvertedFile + TestFileの統合版
+ * 未保存画像（アップロード源）。ドロップ→変換した画像で、DB にはまだ無い。
+ * 本物の `buffer`/`size` を持ち、マーカー補正の対象になる。
+ * `AnswerItem` を満たす上位型（buffer 等の upload 専用フィールドを追加で持つ）で、
+ * upload モードのパイプライン（`useStudentAnswerUpload`・DnD 方式A・マーカー補正）は
+ * この型で流れる。DB答案（`ExistingAnswer`）とは併合しない（偽の 0埋めはしない）。
  */
-export interface UnifiedFile {
-  id: string
-  name: string
+export interface PendingImage extends AnswerItem {
   type: string
-  // 未保存（ドロップ変換）の画像だけが本物の buffer/size を持つ。
-  // DB答案（imagePath で遅延読込）は持たない（偽の 0埋めはしない）。
-  size?: number
-  buffer?: ArrayBuffer
-  preview?: string
-  studentId?: string // 配置済みの場合の生徒ID
-  pageNumber: number // ページ番号（1から開始）
+  size?: number // バイト数（表示用）
+  buffer?: ArrayBuffer // 未変換で残ることはないが補正前後で差し替わるため任意
   isSelected: boolean // UI選択状態
   originalFileName: string // 元ファイル名保持
   pageLabel?: string // 表示用ラベル
-
-  // テーブルDnD統合用
-  color?: string // 表示色（テスト・デバッグ用）
-  imagePath?: string | null // 既存画像ファイルのパス（遅延読み込み用）
-  correctionStatus?: "corrected" | "skipped" | "not_requested" // マーカー補正結果
   correctedForPage?: number // 補正時に対応付けたマスターページ番号
-  correctionError?: string // 補正失敗時の理由
 }
 
 // ============================================================================
