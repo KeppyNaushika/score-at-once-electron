@@ -12,6 +12,7 @@ export {
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
+  getStudentAnswersDataset,
   uploadStudentAnswers,
 } from "./crud"
 

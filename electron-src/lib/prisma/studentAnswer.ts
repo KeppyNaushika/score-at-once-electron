@@ -15,6 +15,7 @@ export {
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
+  getStudentAnswersDataset,
   type PlacementScorePolicy,
   // ステータス管理
   setStudentAnswerAbsent,

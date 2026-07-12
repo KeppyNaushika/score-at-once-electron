@@ -21,6 +21,7 @@ import {
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
+  getStudentAnswersDataset,
   setStudentAnswerAbsent,
   type StudentAnswerPlacementMove,
   uploadStudentAnswers,
@@ -99,7 +100,7 @@ export function setupMiscHandlers(): void {
         type: string
         buffer: ArrayBuffer
         studentId?: string
-        pageNumber?: number
+        examPageId: string
         overwrite?: boolean
         correctWithMarkers?: boolean
       }[]
@@ -121,6 +122,19 @@ export function setupMiscHandlers(): void {
       }
     }
   )
+
+  // 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）
+  registerSafeHandler("get-student-answers-dataset", async (examId: string) => {
+    const result = await getStudentAnswersDataset(examId)
+    if (!result.success) {
+      return { success: false, error: result.error }
+    }
+    return {
+      success: true,
+      examStudents: result.examStudents,
+      examPages: result.examPages,
+    }
+  })
 
   registerHandler("delete-answer-sheet", async (answerSheetId: string) => {
     return await deleteStudentAnswer(answerSheetId)

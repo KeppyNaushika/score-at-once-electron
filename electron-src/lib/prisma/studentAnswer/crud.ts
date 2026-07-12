@@ -29,27 +29,23 @@ type MasterMarkerInfo = {
 }
 
 /**
- * マスター画像のマーカーを取得（ページごとにキャッシュ）
+ * マスター画像のマーカーを取得（ExamPage ごとに id でキャッシュ）
  */
-async function getMasterMarkersForPage(
-  examId: string,
-  pageNumber: number,
-  cache: Map<number, MasterMarkerInfo | null>,
+async function getMasterMarkersForExamPage(
+  examPageId: string,
+  cache: Map<string, MasterMarkerInfo | null>,
   colorThreshold: number = 128
 ): Promise<MasterMarkerInfo | null> {
-  if (cache.has(pageNumber)) {
-    return cache.get(pageNumber) ?? null
+  if (cache.has(examPageId)) {
+    return cache.get(examPageId) ?? null
   }
 
   const masterImage = await prisma.masterImage.findFirst({
-    where: {
-      examPage: { examId, pageNumber },
-    },
-    include: { examPage: true },
+    where: { examPageId },
   })
 
   if (!masterImage) {
-    cache.set(pageNumber, null)
+    cache.set(examPageId, null)
     return null
   }
 
@@ -61,7 +57,7 @@ async function getMasterMarkersForPage(
   )
 
   if (!result.success) {
-    cache.set(pageNumber, null)
+    cache.set(examPageId, null)
     return null
   }
 
@@ -70,7 +66,7 @@ async function getMasterMarkersForPage(
     width: result.imageWidth,
     height: result.imageHeight,
   }
-  cache.set(pageNumber, info)
+  cache.set(examPageId, info)
   return info
 }
 
@@ -84,7 +80,7 @@ export async function uploadStudentAnswers(
     type: string
     buffer: ArrayBuffer
     studentId?: string
-    pageNumber?: number
+    examPageId: string
     overwrite?: boolean
     correctWithMarkers?: boolean
   }[]
@@ -103,19 +99,19 @@ export async function uploadStudentAnswers(
       correctionError?: string
     }> = []
 
-    // 補正用のマスターマーカーキャッシュ（ページ番号→マーカー情報）
-    const masterMarkerCache = new Map<number, MasterMarkerInfo | null>()
+    // 補正用のマスターマーカーキャッシュ（examPageId→マーカー情報）
+    const masterMarkerCache = new Map<string, MasterMarkerInfo | null>()
 
     // ================================================================
     // Phase 1: 画像補正を並列実行（CPU集中処理）
     // ================================================================
-    // マスターマーカーキャッシュの初期化（全ページ分を事前取得）
-    const pageNumbers = [
-      ...new Set(filesData.map((fileData) => fileData.pageNumber || 1)),
+    // マスターマーカーキャッシュの初期化（全 ExamPage 分を事前取得）
+    const examPageIds = [
+      ...new Set(filesData.map((fileData) => fileData.examPageId)),
     ]
     await Promise.all(
-      pageNumbers.map((pageNumber) =>
-        getMasterMarkersForPage(examId, pageNumber, masterMarkerCache)
+      examPageIds.map((examPageId) =>
+        getMasterMarkersForExamPage(examPageId, masterMarkerCache)
       )
     )
 
@@ -128,7 +124,7 @@ export async function uploadStudentAnswers(
         let correctionError: string | undefined
 
         if (fileData.correctWithMarkers) {
-          const masterInfo = masterMarkerCache.get(fileData.pageNumber || 1)
+          const masterInfo = masterMarkerCache.get(fileData.examPageId)
 
           if (masterInfo) {
             const result = await correctImage(
@@ -171,25 +167,11 @@ export async function uploadStudentAnswers(
         throw new Error(`Student ID is required for file: ${fileData.name}`)
       }
 
-      let examPage = await prisma.examPage.findFirst({
-        where: {
-          examId: examId,
-          pageNumber: fileData.pageNumber || 1,
-        },
-      })
-
-      if (!examPage) {
-        examPage = await prisma.examPage.create({
-          data: {
-            examId: examId,
-            pageNumber: fileData.pageNumber || 1,
-          },
-        })
-      }
-
+      // 配置先 ExamPage は id 直指定（列＝ExamPage 実体から供給される）。
+      // pageNumber からの find/create はしない（id 一次同定）。
       const existingRecord = await prisma.studentAnswerImage.findFirst({
         where: {
-          examPageId: examPage.id,
+          examPageId: fileData.examPageId,
           studentId: fileData.studentId,
         },
       })
@@ -236,7 +218,7 @@ export async function uploadStudentAnswers(
 
         const answerSheet = await prisma.studentAnswerImage.create({
           data: {
-            examPageId: examPage.id,
+            examPageId: fileData.examPageId,
             studentId: fileData.studentId,
             imagePath: relativePath,
           },
@@ -323,6 +305,64 @@ export async function getStudentAnswersByExamId(examId: string) {
       success: false,
       error:
         error instanceof Error ? error.message : "答案の取得に失敗しました",
+    }
+  }
+}
+
+/**
+ * 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）。
+ *
+ * 行＝examStudents（ExamStudent 実体）／列＝examPages（ExamPage 実体）／
+ * セル＝examPages[].studentAnswerImages（実体）という entity-first の供給。
+ * Prisma の include が作るグラフをそのまま返し、renderer は射影せず保持する
+ * （pageNumber・氏名は表示時にエンティティから導出する）。
+ * 05/07/08 が共有する getStudentsForExam / getStudentAnswersByExamId は変更しない。
+ */
+export async function getStudentAnswersDataset(examId: string) {
+  try {
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        examStudents: {
+          orderBy: [
+            { customOrder: "asc" },
+            { student: { studentNumber: "asc" } },
+          ],
+          include: {
+            student: {
+              include: {
+                memberships: { include: { classroom: true } },
+                _count: { select: { studentAnswerImages: true } },
+              },
+            },
+          },
+        },
+        examPages: {
+          orderBy: { pageNumber: "asc" },
+          include: {
+            studentAnswerImages: { include: { student: true } },
+          },
+        },
+      },
+    })
+
+    if (!exam) {
+      return { success: false as const, error: "試験が見つかりません" }
+    }
+
+    return {
+      success: true as const,
+      examStudents: exam.examStudents,
+      examPages: exam.examPages,
+    }
+  } catch (error) {
+    console.error("Error fetching student answers dataset:", error)
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : "答案データセットの取得に失敗しました",
     }
   }
 }
