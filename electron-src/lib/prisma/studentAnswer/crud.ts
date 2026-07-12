@@ -86,6 +86,29 @@ export async function uploadStudentAnswers(
   }[]
 ) {
   try {
+    // 配置先 ExamPage が当該試験に属することを書き込み前に検証する。
+    // （id 直指定に切り替えたため、他教員のページ削除等で stale な examPageId が来ると
+    //  raw な FK エラーで途中まで書き込んだ部分適用になる。ここで早期に弾く。
+    //  applyStudentAnswerPlacements と同じく id 一次検証。）
+    const requestedExamPageIds = [
+      ...new Set(filesData.map((fileData) => fileData.examPageId)),
+    ]
+    const validExamPages = await prisma.examPage.findMany({
+      where: { examId, id: { in: requestedExamPageIds } },
+      select: { id: true },
+    })
+    const validExamPageIds = new Set(validExamPages.map((page) => page.id))
+    const staleExamPageId = requestedExamPageIds.find(
+      (examPageId) => !validExamPageIds.has(examPageId)
+    )
+    if (staleExamPageId) {
+      return {
+        success: false,
+        error:
+          "配置先ページが見つかりません（他の教員がページを変更した可能性があります）。ページを再読み込みしてください。",
+      }
+    }
+
     const examDir = getAnswerSheetsDirectory(examId)
 
     // 試験ディレクトリを作成
@@ -350,10 +373,33 @@ export async function getStudentAnswersDataset(examId: string) {
       return { success: false as const, error: "試験が見つかりません" }
     }
 
+    // 重複除去フォールバック（@@unique 適用前データ・NAS sync 由来の重複対策）。
+    // getStudentAnswersByExamId と同じ (studentId, examPageId) 単位で updatedAt 最新のみ残す。
+    // 05/07/08（getStudentAnswersByExamId 経由）と 06 で表示が食い違わないようにする。
+    const examPages = exam.examPages.map((examPage) => {
+      const latestByStudentId = new Map<
+        string,
+        (typeof examPage.studentAnswerImages)[number]
+      >()
+      for (const answerImage of examPage.studentAnswerImages) {
+        const existing = latestByStudentId.get(answerImage.studentId)
+        if (
+          !existing ||
+          new Date(answerImage.updatedAt) > new Date(existing.updatedAt)
+        ) {
+          latestByStudentId.set(answerImage.studentId, answerImage)
+        }
+      }
+      return {
+        ...examPage,
+        studentAnswerImages: Array.from(latestByStudentId.values()),
+      }
+    })
+
     return {
       success: true as const,
       examStudents: exam.examStudents,
-      examPages: exam.examPages,
+      examPages,
     }
   } catch (error) {
     console.error("Error fetching student answers dataset:", error)

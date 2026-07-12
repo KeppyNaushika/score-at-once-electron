@@ -7,8 +7,8 @@ import { useStudentAnswerUpload } from "@/components/exams/06-student-answers/st
 import type { StudentAnswerUploadProps } from "@/components/exams/06-student-answers/student-answer-management/types"
 import { UploadAnswerTable } from "@/components/exams/06-student-answers/student-answer-table/components/UploadAnswerTable"
 import { ViewAnswerTable } from "@/components/exams/06-student-answers/student-answer-table/components/ViewAnswerTable"
-import type { PlacedAnswerImage } from "@/components/exams/06-student-answers/types"
 import { PasswordDialog } from "@/components/ui/password-dialog"
+import type { PlacedAnswerImage } from "@/types/prismaExtensions"
 
 export function StudentAnswerUpload({
   examId,

@@ -7,7 +7,6 @@ import {
   calculateDynamicDisabledCells,
   getDisabledFiles,
   getEnabledFiles,
-  getFileColor,
   lookupHasCell,
   sortStudentsByCustomOrder,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
@@ -105,11 +104,6 @@ export function useTableData<TItem extends AnswerImageIdentity>({
     return getDisabledFiles(files, disabledState)
   }, [files, disabledState])
 
-  // ファイルカラーの取得
-  const getFileColorCallback = useCallback((file: AnswerImageIdentity) => {
-    return getFileColor(file)
-  }, [])
-
   // テーブルデータの生成
   const { tableData, orphanItems } = useTableDataGeneration({
     files,
@@ -127,7 +121,6 @@ export function useTableData<TItem extends AnswerImageIdentity>({
     sortedStudents,
     getEnabledFiles: getEnabledFilesCallback,
     getDisabledFiles: getDisabledFilesCallback,
-    getFileColor: getFileColorCallback,
     tableData,
     orphanItems,
     cellsWithExistingAnswers,

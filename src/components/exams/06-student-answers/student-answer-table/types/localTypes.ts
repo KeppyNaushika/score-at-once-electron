@@ -1,11 +1,13 @@
 import type {
   ExamPageColumn,
-  PlacedAnswerImage,
   PlacementStrategy,
   UnsavedAnswerImage,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type {
+  ExamStudentWithMemberships,
+  PlacedAnswerImage,
+} from "@/types/prismaExtensions"
 
 import type { AnswerCellBaseline, FileState } from "./dragDropTypes"
 

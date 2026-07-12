@@ -12,8 +12,6 @@
  * 恒久的に key になり得ない。
  */
 
-import type { PlacedAnswerImage } from "@/types/prismaExtensions"
-
 // ============================================================================
 // セル要素の同定（表・DnD・生成ロジックが共通で読む最小形）
 // ============================================================================
@@ -28,8 +26,8 @@ export interface AnswerImageIdentity {
   examPageId: string | null // 配置済みの ExamPage.id。未配置は null
 }
 
-// 保存済み答案の実体は Prisma payload をそのまま使う（再エクスポートで所在を明示）。
-export type { PlacedAnswerImage }
+// 保存済み答案の実体は Prisma payload（`PlacedAnswerImage`＝@/types/prismaExtensions）を
+// そのまま使う。所在を隠す再エクスポートは置かず、各消費者が prismaExtensions から直接 import する。
 
 /**
  * 表の列となる ExamPage の最小契約（同定＝id、表示＝pageNumber）。
