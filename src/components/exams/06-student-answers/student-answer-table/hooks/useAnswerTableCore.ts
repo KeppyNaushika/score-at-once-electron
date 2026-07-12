@@ -76,7 +76,6 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     sortedStudents,
     getEnabledFiles,
     getDisabledFiles,
-    getFileColor,
     tableData,
     orphanItems,
     cellsWithExistingAnswers,
@@ -166,7 +165,6 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     // テーブルデータ
     sortedStudents,
     getEnabledFiles,
-    getFileColor,
     tableData,
     orphanItems,
     cellsWithExistingAnswers,

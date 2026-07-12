@@ -6,7 +6,7 @@ import { AnswerTableShell } from "@/components/exams/06-student-answers/student-
 import { useAnswerTableCore } from "@/components/exams/06-student-answers/student-answer-table/hooks/useAnswerTableCore"
 import type { FilePreviewSource } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { ViewAnswerTableProps } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
-import type { PlacedAnswerImage } from "@/components/exams/06-student-answers/types"
+import type { PlacedAnswerImage } from "@/types/prismaExtensions"
 
 // 参照安定な既定値（view は補正しないため常に空）
 const EMPTY_CORRECTING: Set<string> = new Set()
