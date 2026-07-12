@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
-  PendingImage,
   PlacementStrategy,
+  UnsavedAnswerImage,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
@@ -20,7 +20,7 @@ export function useStudentAnswerUpload(
   // State管理
   const [isUploading, setIsUploading] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
-  const [files, setFiles] = useState<PendingImage[]>([])
+  const [files, setFiles] = useState<UnsavedAnswerImage[]>([])
   const [pdfProcessingProgress, setPdfProcessingProgress] = useState(0)
   const [fileOrder, setFileOrder] = useState<PlacementStrategy>("page-first")
 
@@ -33,8 +33,8 @@ export function useStudentAnswerUpload(
   const [markerAvailablePages, setMarkerAvailablePages] = useState<Set<number>>(
     new Set()
   )
-  const filesRef = useRef<PendingImage[]>([])
-  const prevFilesRef = useRef<PendingImage[]>([])
+  const filesRef = useRef<UnsavedAnswerImage[]>([])
+  const prevFilesRef = useRef<UnsavedAnswerImage[]>([])
 
   // 前回描画と比較し、削除されたファイルのblob URLを解放
   useEffect(() => {
@@ -69,8 +69,8 @@ export function useStudentAnswerUpload(
 
   // ファイル変換処理
   const convertFiles = useCallback(
-    async (rawFiles: File[]): Promise<PendingImage[]> => {
-      const results: PendingImage[] = []
+    async (rawFiles: File[]): Promise<UnsavedAnswerImage[]> => {
+      const results: UnsavedAnswerImage[] = []
       let processedCount = 0
 
       for (const file of rawFiles) {
@@ -87,13 +87,15 @@ export function useStudentAnswerUpload(
 
                 results.push({
                   id: crypto.randomUUID(),
+                  studentId: null,
+                  examPageId: null,
+                  imagePath: null,
                   name: image.name,
                   originalFileName: file.name,
-                  type: image.type,
+                  fileType: image.type,
                   size: image.buffer.byteLength,
                   buffer: image.buffer,
                   preview,
-                  pageNumber: i + 1,
                   isSelected: false,
                 })
               }
@@ -103,13 +105,15 @@ export function useStudentAnswerUpload(
             const buffer = await file.arrayBuffer()
             results.push({
               id: crypto.randomUUID(),
+              studentId: null,
+              examPageId: null,
+              imagePath: null,
               name: file.name,
               originalFileName: file.name,
-              type: file.type,
+              fileType: file.type,
               size: file.size,
               buffer,
               preview: URL.createObjectURL(file),
-              pageNumber: 1,
               isSelected: false,
             })
           }
@@ -255,7 +259,7 @@ export function useStudentAnswerUpload(
       setIsUploading(true)
 
       try {
-        // クライアント側補正結果からマップ構築（uploadDataの(studentId,pageNumber)=生徒×マスターページ）
+        // クライアント側補正結果からマップ構築（キーは (studentId, examPageId)＝セル同定）
         const correctionMap = new Map<string, "corrected" | "skipped">()
         for (const uploadItem of uploadData) {
           if (
@@ -263,7 +267,7 @@ export function useStudentAnswerUpload(
             uploadItem.correctionStatus !== "not_requested" &&
             uploadItem.studentId
           ) {
-            const key = `${uploadItem.studentId}-${uploadItem.pageNumber}`
+            const key = `${uploadItem.studentId}-${uploadItem.examPageId}`
             correctionMap.set(
               key,
               uploadItem.correctionStatus as "corrected" | "skipped"

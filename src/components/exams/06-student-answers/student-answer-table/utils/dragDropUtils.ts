@@ -1,40 +1,38 @@
-import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
-import type { AnswerItem } from "@/components/exams/06-student-answers/types"
+import type {
+  AnswerCellBaseline,
+  FileState,
+} from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**
- * view 方式B のセル droppable ID を (studentId, pageNumber) から生成する。
- * studentId は uuid（コロンを含まない）前提。ファイルID（uuid）と衝突しないよう
- * `cell:` 接頭辞で名前空間を分ける。
+ * view 方式B のセル droppable ID を (studentId, examPageId) から生成する。
+ * studentId・examPageId はいずれも uuid（コロンを含まない）前提。ファイルID（uuid）と
+ * 衝突しないよう `cell:` 接頭辞で名前空間を分ける。
  */
 export function encodeCellDroppableId(
   studentId: string,
-  pageNumber: number
+  examPageId: string
 ): string {
-  return `cell:${studentId}:${pageNumber}`
+  return `cell:${studentId}:${examPageId}`
 }
 
-/** セル droppable ID を (studentId, pageNumber) に復号する。cell: 接頭辞でなければ null */
+/** セル droppable ID を (studentId, examPageId) に復号する。cell: 接頭辞でなければ null */
 export function decodeCellDroppableId(
   droppableId: string
-): { studentId: string; pageNumber: number } | null {
+): { studentId: string; examPageId: string } | null {
   const prefix = "cell:"
   if (!droppableId.startsWith(prefix)) return null
   const rest = droppableId.slice(prefix.length)
   const lastColon = rest.lastIndexOf(":")
   if (lastColon <= 0) return null
   const studentId = rest.slice(0, lastColon)
-  const pageText = rest.slice(lastColon + 1)
-  const pageNumber = Number(pageText)
-  // ページ番号は1始まり。空文字（Number("")→0）や小数・非数は不正。
-  if (!studentId || pageText === "" || !Number.isInteger(pageNumber)) {
-    return null
-  }
-  if (pageNumber < 1) return null
-  return { studentId, pageNumber }
+  const examPageId = rest.slice(lastColon + 1)
+  if (!studentId || !examPageId) return null
+  return { studentId, examPageId }
 }
 
 /**
- * view 方式B: ドラッグした答案を対象セル (studentId, pageNumber) へ配置する。
+ * view 方式B: ドラッグした答案を対象セル (studentId, examPageId) へ配置する。
  * 対象セルに別の答案が既にある場合は 2 セルの座標を入れ替える（swap）。
  * 採点データの追従/破棄は後段の確認モーダル（PlacementScorePolicy）で解決するため、
  * ここでは座標だけを更新する（新しい配列を返す。変更が無ければ元の配列を返す）。
@@ -44,10 +42,10 @@ export function decodeCellDroppableId(
  * さらに反映で除籍生徒への再配置が永続化される事故を防ぐ）。孤立答案の救済は空セルへの
  * 移動のみ許す。
  */
-export function applyCellMoveOrSwap<T extends AnswerItem>(
+export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
   files: T[],
   activeFileId: string,
-  target: { studentId: string; pageNumber: number },
+  target: { studentId: string; examPageId: string },
   // 占有判定を「表に見えている答案」に限定するための任意フィルタ。
   // trash 等で非表示の答案を隠れて swap しないため（view は無効ファイル無しだが防御的に受ける）。
   occupantEligibleIds?: Set<string>,
@@ -58,12 +56,12 @@ export function applyCellMoveOrSwap<T extends AnswerItem>(
   if (!activeFile) return files
 
   const sourceStudentId = activeFile.studentId
-  const sourcePageNumber = activeFile.pageNumber
+  const sourceExamPageId = activeFile.examPageId
 
   // 同一セルへのドロップは変更なし
   if (
     sourceStudentId === target.studentId &&
-    sourcePageNumber === target.pageNumber
+    sourceExamPageId === target.examPageId
   ) {
     return files
   }
@@ -72,7 +70,7 @@ export function applyCellMoveOrSwap<T extends AnswerItem>(
     (file) =>
       file.id !== activeFileId &&
       file.studentId === target.studentId &&
-      file.pageNumber === target.pageNumber &&
+      file.examPageId === target.examPageId &&
       (occupantEligibleIds ? occupantEligibleIds.has(file.id) : true)
   )
 
@@ -87,7 +85,7 @@ export function applyCellMoveOrSwap<T extends AnswerItem>(
       return {
         ...file,
         studentId: target.studentId,
-        pageNumber: target.pageNumber,
+        examPageId: target.examPageId,
       }
     }
     if (occupant && file.id === occupant.id) {
@@ -96,18 +94,11 @@ export function applyCellMoveOrSwap<T extends AnswerItem>(
       return {
         ...file,
         studentId: sourceStudentId,
-        pageNumber: sourcePageNumber,
+        examPageId: sourceExamPageId,
       }
     }
     return file
   })
-}
-
-/** DB 上の答案の基準座標（(studentId, pageNumber)）。view 方式B の差分基準。 */
-export interface AnswerCellBaseline {
-  id: string
-  studentId: string | null
-  pageNumber: number
 }
 
 /**
@@ -118,7 +109,7 @@ export interface AnswerCellBaseline {
  * 複数回ドラッグ・反映後の再読込でも累積差分が常に正しい（親は全置換して安全）。
  * baseline に無い id（新規・除籍等）は対象外。
  */
-export function diffFilesAgainstBaseline<T extends AnswerItem>(
+export function diffFilesAgainstBaseline<T extends AnswerImageIdentity>(
   files: T[],
   baseline: AnswerCellBaseline[]
 ): Array<{ fileId: string; fromState: FileState; toState: FileState }> {
@@ -133,21 +124,22 @@ export function diffFilesAgainstBaseline<T extends AnswerItem>(
     const base = baselineById.get(file.id)
     if (!base) continue
     const currentStudentId = file.studentId ?? null
+    const currentExamPageId = file.examPageId ?? null
     if (
       base.studentId !== currentStudentId ||
-      base.pageNumber !== file.pageNumber
+      base.examPageId !== currentExamPageId
     ) {
       changedFiles.push({
         fileId: file.id,
         fromState: {
           fileId: file.id,
           studentId: base.studentId,
-          pageNumber: base.pageNumber,
+          examPageId: base.examPageId,
         },
         toState: {
           fileId: file.id,
           studentId: currentStudentId,
-          pageNumber: file.pageNumber,
+          examPageId: currentExamPageId,
         },
       })
     }

@@ -43,7 +43,7 @@ export default function StudentAnswersPage() {
   >(new Map())
 
   // Data loading hook
-  const { students, studentAnswers, modelAnswerCount, isLoading, loadData } =
+  const { students, examPages, isLoading, loadData } =
     useStudentAnswersData(examId)
 
   // Pending changes management hook
@@ -56,7 +56,7 @@ export default function StudentAnswersPage() {
     handleResetChanges,
     openConfirmModal,
     closeConfirmModal,
-  } = usePendingChanges(loadData, students, studentAnswers)
+  } = usePendingChanges(loadData, students, examPages)
 
   // Navigation guard
   const isDirty = uploadFileCount > 0 || pendingChanges.length > 0
@@ -143,8 +143,7 @@ export default function StudentAnswersPage() {
             <StudentAnswersTabContent
               examId={examId}
               students={students}
-              modelAnswerCount={modelAnswerCount}
-              studentAnswers={studentAnswers}
+              examPages={examPages}
               pendingChanges={pendingChanges}
               affectedCells={affectedCells}
               onUploadComplete={handleUploadComplete}

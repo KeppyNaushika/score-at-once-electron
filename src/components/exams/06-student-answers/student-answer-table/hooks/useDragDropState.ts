@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import type { AnswerItem } from "@/components/exams/06-student-answers/types"
+import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**
  * ドラッグ&ドロップの状態管理（現在ドラッグ中のアクティブ対象のみ）。
@@ -10,7 +10,7 @@ import type { AnswerItem } from "@/components/exams/06-student-answers/types"
  * この再構築は不要になった。むしろ view ではマウント時に発火して孤立答案（除籍・ページ範囲外）を
  * 配列から取りこぼし、救済ストリップごと消してしまう害があったため撤去した。
  */
-export function useDragDropState<TItem extends AnswerItem>() {
+export function useDragDropState<TItem extends AnswerImageIdentity>() {
   const [activeFile, setActiveFile] = useState<TItem | null>(null)
 
   return { activeFile, setActiveFile }

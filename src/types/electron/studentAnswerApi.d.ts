@@ -39,7 +39,9 @@ export interface StudentAnswerAPI {
     studentAnswerImages?: StudentAnswerImageWithExamPageAndStudent[]
     error?: string
   }>
-  getStudentAnswersDataset: (examId: string) => Promise<
+  getStudentAnswersDataset: (
+    examId: string
+  ) => Promise<
     | ({ success: true } & StudentAnswersDataset)
     | { success: false; error?: string }
   >

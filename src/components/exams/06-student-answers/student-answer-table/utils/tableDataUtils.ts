@@ -3,50 +3,53 @@ import type {
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
-import type { AnswerItem } from "@/components/exams/06-student-answers/types"
+import type {
+  AnswerImageIdentity,
+  ExamPageColumn,
+} from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /**
- * セルレコード配列に (studentId, pageNumber) が含まれるかを判定する。
+ * セルレコード配列に (studentId, examPageId) が含まれるかを判定する。
  * 文字列合成キーを使わず identity のフィールド比較で照合する（DnD の FileState と同流儀）。
  * ユーザートグル由来の小さな配列（disabledState.cells）専用。
  */
 export function hasCell(
   cells: DisabledCell[],
   studentId: string,
-  pageNumber: number
+  examPageId: string
 ): boolean {
   return cells.some(
-    (cell) => cell.studentId === studentId && cell.pageNumber === pageNumber
+    (cell) => cell.studentId === studentId && cell.examPageId === examPageId
   )
 }
 
 /**
- * (studentId, pageNumber) の集合を O(1) 照合するルックアップ。
- * 文字列合成キー（`${a}:${b}`）を使わず studentId → pageNumber集合 の入れ子で持つ。
+ * (studentId, examPageId) の集合を O(1) 照合するルックアップ。
+ * 文字列合成キー（`${a}:${b}`）を使わず studentId → examPageId集合 の入れ子で持つ。
  * グリッド全体分に膨らみうる派生集合（既存答案・動的無効）向け。
  */
-export type CellLookup = Map<string, Set<number>>
+export type CellLookup = Map<string, Set<string>>
 
 export function addCellToLookup(
   lookup: CellLookup,
   studentId: string,
-  pageNumber: number
+  examPageId: string
 ): void {
   const pages = lookup.get(studentId)
   if (pages) {
-    pages.add(pageNumber)
+    pages.add(examPageId)
   } else {
-    lookup.set(studentId, new Set([pageNumber]))
+    lookup.set(studentId, new Set([examPageId]))
   }
 }
 
 export function lookupHasCell(
   lookup: CellLookup,
   studentId: string,
-  pageNumber: number
+  examPageId: string
 ): boolean {
-  return lookup.get(studentId)?.has(pageNumber) ?? false
+  return lookup.get(studentId)?.has(examPageId) ?? false
 }
 
 /**
@@ -57,13 +60,13 @@ export function lookupHasCell(
 export function manualDisabledReason(
   disabledState: ExtendedDisabledState,
   examStudent: ExamStudentWithMemberships,
-  pageNumber: number
+  examPageId: string
 ): DisabledReason {
   if (disabledState.rows.includes(examStudent.id)) {
     return examStudent.status === "absent" ? "absent_student" : "row"
   }
-  if (disabledState.cols.includes(pageNumber)) return "column"
-  if (hasCell(disabledState.cells, examStudent.studentId, pageNumber)) {
+  if (disabledState.cols.includes(examPageId)) return "column"
+  if (hasCell(disabledState.cells, examStudent.studentId, examPageId)) {
     return "position"
   }
   return undefined
@@ -81,10 +84,10 @@ export function sortStudentsByCustomOrder(
 }
 
 /** 確認モードで答案が存在しないセル（無効化対象）を O(1) 照合ルックアップで返す */
-export function calculateDynamicDisabledCells<T extends AnswerItem>(
+export function calculateDynamicDisabledCells<T extends AnswerImageIdentity>(
   files: T[],
   sortedStudents: ExamStudentWithMemberships[],
-  masterImageCount: number,
+  examPages: ExamPageColumn[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view"
 ): CellLookup {
@@ -93,11 +96,9 @@ export function calculateDynamicDisabledCells<T extends AnswerItem>(
   // 確認モードでは答案がないセルのみ無効化
   if (mode === "view") {
     for (const examStudent of sortedStudents) {
-      for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-        const pageNumber = pageIndex + 1
-
+      for (const examPage of examPages) {
         // 手動無効化済みのセルはスキップ
-        if (manualDisabledReason(disabledState, examStudent, pageNumber)) {
+        if (manualDisabledReason(disabledState, examStudent, examPage.id)) {
           continue
         }
 
@@ -105,13 +106,13 @@ export function calculateDynamicDisabledCells<T extends AnswerItem>(
         const hasAnswerForCell = files.some(
           (file) =>
             file.studentId === examStudent.studentId &&
-            file.pageNumber === pageNumber &&
+            file.examPageId === examPage.id &&
             !disabledState.files.has(file.id)
         )
 
         // 答案がない場合は動的無効化
         if (!hasAnswerForCell) {
-          addCellToLookup(dynamicDisabled, examStudent.studentId, pageNumber)
+          addCellToLookup(dynamicDisabled, examStudent.studentId, examPage.id)
         }
       }
     }
@@ -122,46 +123,46 @@ export function calculateDynamicDisabledCells<T extends AnswerItem>(
 }
 
 /** 既存の答案が割り当てられているセルを O(1) 照合ルックアップで返す（警告オーバーレイ用） */
-export function calculateCellsWithExistingAnswers<T extends AnswerItem>(
+export function calculateCellsWithExistingAnswers<
+  T extends AnswerImageIdentity,
+>(
   files: T[],
   sortedStudents: ExamStudentWithMemberships[],
-  masterImageCount: number,
+  examPages: ExamPageColumn[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view",
-  existingAnswerSheets?: Array<{
+  existingAnswers?: Array<{
     id: string
     studentId: string | null
-    pageNumber: number
+    examPageId: string | null
   }>
 ): CellLookup {
   const cells: CellLookup = new Map()
 
   for (const examStudent of sortedStudents) {
-    for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-      const pageNumber = pageIndex + 1
-
+    for (const examPage of examPages) {
       // そのセルに対応する答案があるかチェック
       let hasAnswerForCell = false
 
-      if (mode === "upload" && existingAnswerSheets) {
-        // アップロードモード: existingAnswerSheets から判定
-        hasAnswerForCell = existingAnswerSheets.some(
-          (sheet) =>
-            sheet.studentId === examStudent.studentId &&
-            sheet.pageNumber === pageNumber
+      if (mode === "upload" && existingAnswers) {
+        // アップロードモード: existingAnswers（DB答案の占有信号）から判定
+        hasAnswerForCell = existingAnswers.some(
+          (answer) =>
+            answer.studentId === examStudent.studentId &&
+            answer.examPageId === examPage.id
         )
       } else {
         // 確認モード: files から判定
         hasAnswerForCell = files.some(
           (file) =>
             file.studentId === examStudent.studentId &&
-            file.pageNumber === pageNumber &&
+            file.examPageId === examPage.id &&
             !disabledState.files.has(file.id)
         )
       }
 
       if (hasAnswerForCell) {
-        addCellToLookup(cells, examStudent.studentId, pageNumber)
+        addCellToLookup(cells, examStudent.studentId, examPage.id)
       }
     }
   }
@@ -170,7 +171,7 @@ export function calculateCellsWithExistingAnswers<T extends AnswerItem>(
 }
 
 /** 無効化されていないファイルのみをフィルタリングして返す */
-export function getEnabledFiles<T extends AnswerItem>(
+export function getEnabledFiles<T extends AnswerImageIdentity>(
   files: T[],
   disabledState: ExtendedDisabledState
 ): T[] {
@@ -178,7 +179,7 @@ export function getEnabledFiles<T extends AnswerItem>(
 }
 
 /** 無効化されたファイルのみをフィルタリングして返す */
-export function getDisabledFiles<T extends AnswerItem>(
+export function getDisabledFiles<T extends AnswerImageIdentity>(
   files: T[],
   disabledState: ExtendedDisabledState
 ): T[] {
@@ -189,22 +190,28 @@ export function getDisabledFiles<T extends AnswerItem>(
  * 確認モード（方式B）: 答案アイテムを「表のマスに置けるもの」と「置けない孤立答案」に分ける。
  *
  * マスに置ける条件は (1) studentId が現在の受験生徒（ロスター）に居る かつ
- * (2) pageNumber が 1..modelAnswerCount の範囲内、の両方。どちらかを満たさない答案は
- * 除籍（studentId が現ロスターに無い）・ページ数削減（範囲外）などで座標配置できず、
+ * (2) examPageId が現在の列（examPages）に含まれる、の両方。どちらかを満たさない答案は
+ * 除籍（studentId が現ロスターに無い）・ページ削除（列に無い examPageId）などで座標配置できず、
  * 表からは不可視になる（＝孤立答案）。呼び出し側で専用枠に描画して再配置できるようにする。
  *
- * placedByCell のキーは `${studentIndex}-${pageIndex}`（0始まり）。
+ * placedByCell のキーは `${studentIndex}-${pageIndex}`（0始まりのグリッド座標）。
  * 同一セルに複数の配置可能答案が解決された場合は先着のみを配置し、後続は孤立扱いに
- * する（黙って上書きして消さない＝表からも孤立枠からも見えなくなる事故を防ぐ）。
+ * する（黙って上書きして消さない＝表からも孤立枠からも見えなくなる事故を防ぐ。
+ * 実データは @@unique([examPageId, studentId]) によりセル衝突は構造的に起きないが、
+ * 「解決不能な画像を黙って落とさない」原則をここで担保する）。
  */
-export function partitionAnswerItemsByPlacement<T extends AnswerItem>(
+export function partitionAnswerItemsByPlacement<T extends AnswerImageIdentity>(
   items: T[],
   sortedStudentIds: string[],
-  modelAnswerCount: number
+  examPageIds: string[]
 ): { placedByCell: Map<string, T>; orphans: T[] } {
   const studentIndexById = new Map<string, number>()
   sortedStudentIds.forEach((studentId, studentIndex) => {
     studentIndexById.set(studentId, studentIndex)
+  })
+  const pageIndexById = new Map<string, number>()
+  examPageIds.forEach((examPageId, pageIndex) => {
+    pageIndexById.set(examPageId, pageIndex)
   })
 
   const placedByCell = new Map<string, T>()
@@ -214,12 +221,11 @@ export function partitionAnswerItemsByPlacement<T extends AnswerItem>(
     const studentIndex = answerItem.studentId
       ? studentIndexById.get(answerItem.studentId)
       : undefined
-    const pageIndex = answerItem.pageNumber - 1
+    const pageIndex = answerItem.examPageId
+      ? pageIndexById.get(answerItem.examPageId)
+      : undefined
+    const isPlaceable = studentIndex !== undefined && pageIndex !== undefined
     const cellKey = `${studentIndex}-${pageIndex}`
-    const isPlaceable =
-      studentIndex !== undefined &&
-      pageIndex >= 0 &&
-      pageIndex < modelAnswerCount
 
     // 配置可能でも同一セルが既に埋まっていれば孤立へ退避する（上書きで消さない）
     if (isPlaceable && !placedByCell.has(cellKey)) {
@@ -233,7 +239,7 @@ export function partitionAnswerItemsByPlacement<T extends AnswerItem>(
 }
 
 /** ファイルIDのハッシュからTailwind背景色クラスを決定する */
-export function getFileColor(file: AnswerItem): string {
+export function getFileColor(file: AnswerImageIdentity): string {
   const colors = [
     "bg-red-200",
     "bg-blue-200",

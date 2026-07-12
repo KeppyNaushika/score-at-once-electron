@@ -15,7 +15,7 @@ import type {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   ExamStudentWithMemberships,
-  StudentAnswerImageWithExamPageAndStudent,
+  StudentAnswerDatasetExamPage,
 } from "@/types/prismaExtensions"
 
 // Types
@@ -70,8 +70,7 @@ export function StudentAnswersTabsNavigation({
 interface StudentAnswersTabContentProps {
   examId: string
   students: ExamStudentWithMemberships[]
-  modelAnswerCount: number
-  studentAnswers: StudentAnswerImageWithExamPageAndStudent[]
+  examPages: StudentAnswerDatasetExamPage[]
   pendingChanges: PendingChange[]
   affectedCells: Set<string>
   onUploadComplete: () => void
@@ -97,8 +96,7 @@ interface StudentAnswersTabContentProps {
 export function StudentAnswersTabContent({
   examId,
   students,
-  modelAnswerCount,
-  studentAnswers,
+  examPages,
   pendingChanges,
   affectedCells,
   onUploadComplete,
@@ -118,10 +116,9 @@ export function StudentAnswersTabContent({
         <StudentAnswerUpload
           examId={examId}
           students={students}
-          modelAnswerCount={modelAnswerCount}
+          examPages={examPages}
           onUploadComplete={onUploadComplete}
           mode="upload"
-          existingStudentAnswers={studentAnswers}
           onUploadFileCountChange={onUploadFileCountChange}
           onCorrectionStatusUpdate={onCorrectionStatusUpdate}
         />
@@ -131,9 +128,8 @@ export function StudentAnswersTabContent({
         <StudentAnswerUpload
           examId={examId}
           students={students}
-          modelAnswerCount={modelAnswerCount}
+          examPages={examPages}
           onUploadComplete={onStudentAnswerUpdate}
-          existingStudentAnswers={studentAnswers}
           mode="view"
           affectedCells={affectedCells}
           onUpdatePendingChanges={onUpdatePendingChanges}

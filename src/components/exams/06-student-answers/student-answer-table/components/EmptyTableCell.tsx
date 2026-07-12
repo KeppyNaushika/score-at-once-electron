@@ -16,7 +16,7 @@ import { TableCell } from "@/components/ui/table"
 
 export function EmptyTableCell({
   examStudent,
-  pageNumber,
+  examPage,
   isPositionDisabled,
   isPendingChange = false,
   mode = "upload",
@@ -65,7 +65,7 @@ export function EmptyTableCell({
   const { setNodeRef, isOver } = useDroppable({
     id: encodeCellDroppableId(
       examStudent?.studentId ?? "none",
-      pageNumber ?? 0
+      examPage?.id ?? "none"
     ),
     disabled: mode !== "view" || !examStudent || isAbsentStudent,
   })
@@ -99,7 +99,7 @@ export function EmptyTableCell({
                     {examStudent.student.firstName}
                   </div>
                 )}
-                {pageNumber && <div>P{pageNumber}</div>}
+                {examPage && <div>P{examPage.pageNumber}</div>}
               </div>
             )}
           </div>

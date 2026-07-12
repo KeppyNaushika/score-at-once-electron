@@ -10,45 +10,46 @@ import {
   partitionAnswerItemsByPlacement,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
-  AnswerItem,
+  AnswerImageIdentity,
+  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-interface UseTableDataGenerationParams<TItem extends AnswerItem> {
+interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
   sortedStudents: ExamStudentWithMemberships[]
-  modelAnswerCount: number
+  examPages: ExamPageColumn[]
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   mode?: "upload" | "view"
   enhancedIsCellDisabled: (
     examStudent: ExamStudentWithMemberships,
-    pageNumber: number
+    examPageId: string
   ) => boolean
   allowOverwrite?: boolean
-  existingStudentAnswers?: Array<{
+  existingAnswers?: Array<{
     id: string
     studentId: string | null
-    pageNumber: number
+    examPageId: string | null
   }>
 }
 
 /**
- * テーブルデータの生成を行うカスタムフック。
- * view では、表のマスに配置できない答案（除籍・ページ範囲外＝孤立答案）を
- * `orphanItems` として返す（呼び出し側が専用枠で可視化・再配置できるようにする）。
+ * テーブルデータの生成を行うカスタムフック（entity-first）。
+ * 列は ExamPage 実体で回す。view では、表のマスに配置できない答案（除籍・列に無い
+ * examPageId＝孤立答案）を `orphanItems` として返す（呼び出し側が専用枠で再配置できる）。
  */
-export function useTableDataGeneration<TItem extends AnswerItem>({
+export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
   files,
   sortedStudents,
-  modelAnswerCount,
+  examPages,
   fileOrder,
   disabledState,
   mode,
   enhancedIsCellDisabled,
   allowOverwrite = false,
-  existingStudentAnswers = [],
+  existingAnswers = [],
 }: UseTableDataGenerationParams<TItem>) {
   const { tableData, orphanItems } = useMemo(() => {
     const enabledFiles = getEnabledFiles(files, disabledState)
@@ -57,15 +58,15 @@ export function useTableDataGeneration<TItem extends AnswerItem>({
     const orphans: TItem[] = []
 
     if (mode === "view") {
-      // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, pageNumber) に配置する。
+      // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, examPageId) に配置する。
       // 配列順ではなく座標基準にすることで、DnD の move/swap が座標更新だけで完結し、
       // 任意マスへの移動・占有マスとの入れ替えが素直に描画へ反映される。
-      // 配置できない答案（除籍・ページ範囲外）は placeable にならず orphans に落ちる。
+      // 配置できない答案（除籍・列に無い examPageId）は placeable にならず orphans に落ちる。
       const { placedByCell, orphans: orphanItems } =
         partitionAnswerItemsByPlacement(
           enabledFiles,
           sortedStudents.map((examStudent) => examStudent.studentId),
-          modelAnswerCount
+          examPages.map((examPage) => examPage.id)
         )
       orphans.push(...orphanItems)
 
@@ -78,13 +79,14 @@ export function useTableDataGeneration<TItem extends AnswerItem>({
         const examStudent = sortedStudents[studentIndex]
         const row: CellData<TItem>[] = []
 
-        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
+        for (let pageIndex = 0; pageIndex < examPages.length; pageIndex++) {
+          const examPage = examPages[pageIndex]
           const file = placedByCell.get(`${studentIndex}-${pageIndex}`)
 
           if (file) {
             // 答案が居るセルは常にファイルセル（動的無効化は答案なしセルにのみ効く）
             row.push({ type: "file", file })
-          } else if (enhancedIsCellDisabled(examStudent, pageIndex + 1)) {
+          } else if (enhancedIsCellDisabled(examStudent, examPage.id)) {
             // 答案なしセル。確認モードは表示上「答案なし」
             row.push({ type: "disabled" })
           } else {
@@ -98,18 +100,23 @@ export function useTableDataGeneration<TItem extends AnswerItem>({
       // アップロードモード: 配置戦略に基づく自動配置（新規ファイル用）
 
       // 既存答案がある位置を特定（上書き無効時にスキップするため）
+      const examPageIndexById = new Map<string, number>()
+      examPages.forEach((examPage, pageIndex) => {
+        examPageIndexById.set(examPage.id, pageIndex)
+      })
+      const studentIndexById = new Map<string, number>()
+      sortedStudents.forEach((examStudent, studentIndex) => {
+        studentIndexById.set(examStudent.studentId, studentIndex)
+      })
+
       const existingAnswerPositions = new Set<string>()
-      if (!allowOverwrite && existingStudentAnswers) {
-        existingStudentAnswers.forEach((answerSheet) => {
-          if (answerSheet.studentId && answerSheet.pageNumber) {
-            // 既存答案の学生IDとページ番号から位置を特定
-            const studentIndex = sortedStudents.findIndex(
-              (examStudent) => examStudent.studentId === answerSheet.studentId
-            )
-            const pageIndex = answerSheet.pageNumber - 1
-            if (studentIndex >= 0 && pageIndex >= 0) {
-              existingAnswerPositions.add(`${studentIndex}-${pageIndex}`)
-            }
+      if (!allowOverwrite && existingAnswers) {
+        existingAnswers.forEach((answer) => {
+          if (!answer.studentId || !answer.examPageId) return
+          const studentIndex = studentIndexById.get(answer.studentId)
+          const pageIndex = examPageIndexById.get(answer.examPageId)
+          if (studentIndex !== undefined && pageIndex !== undefined) {
+            existingAnswerPositions.add(`${studentIndex}-${pageIndex}`)
           }
         })
       }
@@ -123,12 +130,12 @@ export function useTableDataGeneration<TItem extends AnswerItem>({
         studentIndex++
       ) {
         const examStudent = sortedStudents[studentIndex]
-        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const pageNumber = pageIndex + 1
+        for (let pageIndex = 0; pageIndex < examPages.length; pageIndex++) {
+          const examPage = examPages[pageIndex]
           const placementKey = `${studentIndex}-${pageIndex}`
 
           const isManuallyDisabled =
-            manualDisabledReason(disabledState, examStudent, pageNumber) !==
+            manualDisabledReason(disabledState, examStudent, examPage.id) !==
             undefined
 
           // 既存答案がある場合は上書き設定をチェック
@@ -189,14 +196,14 @@ export function useTableDataGeneration<TItem extends AnswerItem>({
         const examStudent = sortedStudents[studentIndex]
         const row: CellData<TItem>[] = []
 
-        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const pageNumber = pageIndex + 1
+        for (let pageIndex = 0; pageIndex < examPages.length; pageIndex++) {
+          const examPage = examPages[pageIndex]
 
           // 手動無効化の判定と理由を1回の評価で確定（ちゃんとやる側）
           const manualReason = manualDisabledReason(
             disabledState,
             examStudent,
-            pageNumber
+            examPage.id
           )
 
           if (manualReason) {
@@ -232,13 +239,13 @@ export function useTableDataGeneration<TItem extends AnswerItem>({
   }, [
     files,
     sortedStudents,
-    modelAnswerCount,
+    examPages,
     fileOrder,
     disabledState,
     mode,
     enhancedIsCellDisabled,
     allowOverwrite,
-    existingStudentAnswers,
+    existingAnswers,
   ])
 
   return { tableData, orphanItems }

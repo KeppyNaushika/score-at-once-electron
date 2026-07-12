@@ -1,17 +1,16 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   ExamStudentWithMemberships,
-  StudentAnswerImageWithExamPageAndStudent,
+  StudentAnswerDatasetExamPage,
 } from "@/types/prismaExtensions"
 
 // Local component-specific types
 export interface StudentAnswerUploadProps {
   examId: string
   students: ExamStudentWithMemberships[]
-  modelAnswerCount: number
+  // 列＝ExamPage 実体（配置済み答案を子に持つ）。Prisma include のまま持ち回る。
+  examPages: StudentAnswerDatasetExamPage[]
   onUploadComplete?: () => void
-  // DB答案は Prisma 型（examPage/student 込み）をそのまま持ち回る。手写し中間層は置かない。
-  existingStudentAnswers?: StudentAnswerImageWithExamPageAndStudent[]
   mode?: "upload" | "view"
 
   // 変更状態管理用（確認モードのみ）

@@ -6,6 +6,7 @@ import { useState } from "react"
 
 import { DeleteConfirmationModal } from "@/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal"
 import { encodeCellDroppableId } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
+import type { ExamPageColumn } from "@/components/exams/06-student-answers/types"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -17,9 +18,9 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface DraggableAnswerCellProps {
   fileId: string
-  // 生徒は Prisma 構造のまま受け取る（座標 droppable の生成と削除確認の氏名表示に使う）
+  // 生徒・ページは実体のまま受け取る（座標 droppable の examPageId・削除確認の氏名/ページ表示に使う）
   examStudent: ExamStudentWithMemberships
-  pageNumber: number
+  examPage: ExamPageColumn
   hasScoreData?: boolean
   onDelete: () => void
   children: React.ReactNode
@@ -36,7 +37,7 @@ interface DraggableAnswerCellProps {
 export function DraggableAnswerCell({
   fileId,
   examStudent,
-  pageNumber,
+  examPage,
   hasScoreData = false,
   onDelete,
   children,
@@ -44,9 +45,9 @@ export function DraggableAnswerCell({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const studentName = `${examStudent.student.lastName} ${examStudent.student.firstName}`
 
-  // マス（ドロップ受け皿）: 占有マスも空マスと同じ座標 droppable にする
+  // マス（ドロップ受け皿）: 占有マスも空マスと同じ座標 droppable（examPageId）にする
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: encodeCellDroppableId(examStudent.studentId, pageNumber),
+    id: encodeCellDroppableId(examStudent.studentId, examPage.id),
   })
 
   // 答案（掴む対象）
@@ -92,7 +93,7 @@ export function DraggableAnswerCell({
         onClose={() => setShowDeleteModal(false)}
         onConfirm={onDelete}
         studentName={studentName}
-        pageNumber={pageNumber}
+        pageNumber={examPage.pageNumber}
         hasScoreData={hasScoreData}
       />
     </TableCell>

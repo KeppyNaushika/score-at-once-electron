@@ -25,11 +25,13 @@ import { TableHeader } from "@/components/exams/06-student-answers/student-answe
 import type {
   CellData,
   ExtendedDisabledState,
+  FilePreviewSource,
   PreviewMode,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
-  AnswerItem,
+  AnswerImageIdentity,
+  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,6 +42,7 @@ interface AnswerTableShellProps {
 
   // ヘッダー
   maxPages: number
+  examPages: ExamPageColumn[]
   enabledFilesCount: number
   trashFiles: Array<{ id: string; name: string; size?: number }>
   onFileRestore: (fileId: string) => void
@@ -59,34 +62,35 @@ interface AnswerTableShellProps {
 
   // DnD
   sensors: SensorDescriptor<SensorOptions>[]
-  activeFile: AnswerItem | null
+  activeFile: AnswerImageIdentity | null
   sortableItemIds: string[]
   onDragStart: (event: DragStartEvent) => void
   onDragEnd: (event: DragEndEvent) => void
 
   // テーブルデータ
-  tableData: CellData<AnswerItem>[][]
+  tableData: CellData<AnswerImageIdentity>[][]
   sortedStudents: ExamStudentWithMemberships[]
   disabledState: ExtendedDisabledState
   nameRegionAvailable: Record<number, boolean>
   cellsWithExistingAnswers: CellLookup
-  files: AnswerItem[]
+  files: AnswerImageIdentity[]
   affectedCells?: Set<string>
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   correctingFileIds?: Set<string>
-  getFileColor: (file: AnswerItem) => string
+  // fileId → 表示ソース（プレビュー・パス・氏名・補正）。同定と分離した表示専用の派生。
+  fileDisplayById: Map<string, FilePreviewSource>
   drawNameRegionCanvas: (
-    file: AnswerItem,
+    previewUrl: string | null,
     pageNumber: number
   ) => Promise<string | null>
   toggleRowDisabled: (examStudentId: string) => void
-  toggleColDisabled: (pageNumber: number) => void
-  toggleCellDisabled: (studentId: string, pageNumber: number) => void
+  toggleColDisabled: (examPageId: string) => void
+  toggleCellDisabled: (studentId: string, examPageId: string) => void
   toggleFileDisabled: (fileId: string) => void
   onDeleteAnswerSheet?: (fileId: string) => void
 
   // 孤立答案（view のみ）
-  orphanItems: AnswerItem[]
+  orphanItems: AnswerImageIdentity[]
 
   // 氏名欄クリッピング用 canvas
   canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -100,6 +104,7 @@ interface AnswerTableShellProps {
 export function AnswerTableShell({
   mode,
   maxPages,
+  examPages,
   enabledFilesCount,
   trashFiles,
   onFileRestore,
@@ -130,7 +135,7 @@ export function AnswerTableShell({
   affectedCells,
   imageLoadStates = {},
   correctingFileIds,
-  getFileColor,
+  fileDisplayById,
   drawNameRegionCanvas,
   toggleRowDisabled,
   toggleColDisabled,
@@ -157,22 +162,31 @@ export function AnswerTableShell({
 
   // 孤立答案のカード（表示ラベル付き）。孤立が無いときは Set も確保しない。
   // 分類は partitionAnswerItemsByPlacement（tableDataUtils）の配置可能規則に対応する
-  // ——名簿外（除籍）か、ページ範囲外か。規則を増やす場合は両者を揃えること。
+  // ——名簿外（除籍）か、列に無い examPageId（ページ削除）か。規則を増やす場合は両者を揃えること。
   const orphanCards =
     mode === "view" && orphanItems.length > 0
       ? (() => {
           const rosterStudentIds = new Set(
             sortedStudents.map((examStudent) => examStudent.studentId)
           )
-          return orphanItems.map((answerItem) => ({
-            answerItem,
+          return orphanItems.map((orphan) => ({
+            orphan,
             reasonLabel:
-              answerItem.studentId && rosterStudentIds.has(answerItem.studentId)
-                ? `ページ${answerItem.pageNumber}（範囲外）`
+              orphan.studentId && rosterStudentIds.has(orphan.studentId)
+                ? "ページ削除などで配置先の列がありません"
                 : "配置先の生徒が名簿にありません",
           }))
         })()
       : []
+
+  // ドラッグ中の答案の表示ソースと、その配置ページ番号（氏名欄クリップ用）を導出する。
+  const activeDisplay = activeFile
+    ? (fileDisplayById.get(activeFile.id) ?? null)
+    : null
+  const activePageNumber = activeFile?.examPageId
+    ? (examPages.find((examPage) => examPage.id === activeFile.examPageId)
+        ?.pageNumber ?? 0)
+    : 0
 
   // ファイルセルの DnD ラッパー（モード別に注入）:
   // - upload（方式A）: SortableTableCell（sortable による並べ替え）
@@ -183,7 +197,7 @@ export function AnswerTableShell({
       <DraggableAnswerCell
         fileId={slot.fileId}
         examStudent={slot.examStudent}
-        pageNumber={slot.pageNumber}
+        examPage={slot.examPage}
         hasScoreData
         onDelete={slot.onDelete}
       >
@@ -207,7 +221,7 @@ export function AnswerTableShell({
   const renderEmptyCell = (slot: EmptyCellSlotProps) => (
     <EmptyTableCell
       examStudent={slot.examStudent}
-      pageNumber={slot.pageNumber}
+      examPage={slot.examPage}
       isPositionDisabled={slot.isPositionDisabled}
       isPendingChange={false}
       mode={mode}
@@ -226,7 +240,7 @@ export function AnswerTableShell({
       <TableContent
         tableData={tableData}
         sortedStudents={sortedStudents}
-        maxPages={maxPages}
+        examPages={examPages}
         disabledState={disabledState}
         mode={mode}
         previewMode={previewMode}
@@ -237,7 +251,7 @@ export function AnswerTableShell({
         affectedCells={affectedCells}
         imageLoadStates={imageLoadStates}
         correctingFileIds={correctingFileIds}
-        getFileColor={getFileColor}
+        fileDisplayById={fileDisplayById}
         drawNameRegionCanvas={drawNameRegionCanvas}
         toggleRowDisabled={toggleRowDisabled}
         toggleColDisabled={toggleColDisabled}
@@ -258,13 +272,15 @@ export function AnswerTableShell({
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {orphanCards.map(({ answerItem, reasonLabel }) => (
+            {orphanCards.map(({ orphan, reasonLabel }) => (
               <OrphanAnswerCard
-                key={answerItem.id}
-                item={answerItem}
+                key={orphan.id}
+                fileId={orphan.id}
+                display={
+                  fileDisplayById.get(orphan.id) ?? { altName: orphan.id }
+                }
                 reasonLabel={reasonLabel}
                 previewMode={previewMode}
-                getFileColor={getFileColor}
                 drawNameRegionCanvas={drawNameRegionCanvas}
               />
             ))}
@@ -324,12 +340,12 @@ export function AnswerTableShell({
         </Card>
 
         <TableDragOverlay
-          activeFile={activeFile}
+          activeDisplay={activeDisplay}
+          pageNumber={activePageNumber}
           previewMode={previewMode}
           nameRegionAvailable={
-            activeFile ? nameRegionAvailable[activeFile.pageNumber] : false
+            activePageNumber ? nameRegionAvailable[activePageNumber] : false
           }
-          getFileColor={getFileColor}
           drawNameRegionCanvas={drawNameRegionCanvas}
         />
       </DndContext>
