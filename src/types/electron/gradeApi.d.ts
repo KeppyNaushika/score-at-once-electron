@@ -210,17 +210,6 @@ export interface GradeAPI {
     reorderDataSources: (
       items: { id: string; order: number }[]
     ) => Promise<{ success: boolean; error?: string }>
-    batchUpdateAbsentPolicy: (
-      dataSourceIds: string[],
-      policy: {
-        absentMethod: string
-        absentRatio: number
-        absentOffset: number
-        treatExpectedAsMissing?: boolean
-        estimationMode?: string
-        estimationSourceIds?: string[]
-      }
-    ) => Promise<{ success: boolean; error?: string }>
     getBoundarySets: (gradeId: string) => Promise<{
       success: boolean
       boundarySets?: import("../grade.types").GradeBoundarySetWithItemAndBoundaries[]

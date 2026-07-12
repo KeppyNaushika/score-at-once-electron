@@ -422,55 +422,6 @@ export async function reorderDataSources(
 }
 
 /**
- * 複数DataSourceの欠席ポリシーを一括更新
- */
-export async function batchUpdateAbsentPolicy(
-  dataSourceIds: string[],
-  policy: {
-    absentMethod: string
-    absentRatio: number
-    absentOffset: number
-    treatExpectedAsMissing?: boolean
-    estimationMode?: string
-    estimationSourceIds?: string[]
-  }
-) {
-  try {
-    const updateData: Record<string, unknown> = {
-      absentMethod: policy.absentMethod,
-      absentRatio: policy.absentRatio,
-      absentOffset: policy.absentOffset,
-    }
-    if (policy.treatExpectedAsMissing !== undefined) {
-      updateData.treatExpectedAsMissing = policy.treatExpectedAsMissing
-    }
-    if (policy.estimationMode !== undefined) {
-      updateData.estimationMode = policy.estimationMode
-    }
-    if (policy.estimationSourceIds !== undefined) {
-      updateData.estimationSourceIds = JSON.stringify(
-        policy.estimationSourceIds
-      )
-    }
-    await prisma.$transaction(
-      dataSourceIds.map((id) =>
-        prisma.gradeDataSource.update({
-          where: { id },
-          data: updateData,
-        })
-      )
-    )
-    return { success: true }
-  } catch (error) {
-    console.error("Error batch updating absent policy:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/**
  * 全試験試験候補を取得（SubtotalGroupフィルタなし）
  */
 export async function getExamCandidates() {
