@@ -3,8 +3,10 @@
 import { Check, Pencil, Trash2, X } from "lucide-react"
 import { useState } from "react"
 
+import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
@@ -22,6 +24,12 @@ interface DataSourceRowProps {
   dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（推定ソース選択用） */
   allDataSources: GradeDataSourceWithRelations[]
+  /** 欠測一括設定モード中はチェックボックスを表示する */
+  batchMode: boolean
+  /** 一括設定の選択状態 */
+  selected: boolean
+  /** チェックボックスの選択トグル */
+  onToggleSelect: (id: string) => void
   onUpdate: (
     id: string,
     data: {
@@ -41,9 +49,13 @@ interface DataSourceRowProps {
 export function DataSourceRow({
   dataSource,
   allDataSources,
+  batchMode,
+  selected,
+  onToggleSelect,
   onUpdate,
   onDelete,
 }: DataSourceRowProps) {
+  const { setNodeRef, style, dragHandleProps } = useSortableRow(dataSource.id)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(dataSource.name)
   const [weight, setWeight] = useState(String(dataSource.weight))
@@ -66,8 +78,18 @@ export function DataSourceRow({
 
   if (editing) {
     return (
-      <div className="space-y-2 rounded border p-2">
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="space-y-2 rounded border p-2"
+      >
         <div className="flex items-center gap-2">
+          {batchMode && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={() => onToggleSelect(dataSource.id)}
+            />
+          )}
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -124,8 +146,19 @@ export function DataSourceRow({
   })()
 
   return (
-    <div className="flex items-center justify-between rounded border p-2">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-background flex items-center justify-between rounded border p-2"
+    >
       <div className="flex items-center gap-3">
+        <DragHandle dragHandleProps={dragHandleProps} />
+        {batchMode && (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggleSelect(dataSource.id)}
+          />
+        )}
         <Badge variant={isCoursework ? "secondary" : "default"}>
           {typeLabel}
         </Badge>

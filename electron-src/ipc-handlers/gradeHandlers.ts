@@ -34,7 +34,6 @@ import {
   updateGradeConstraint,
 } from "../lib/prisma/gradeConstraint"
 import {
-  batchUpdateAbsentPolicy,
   calculateSourceMaxScore,
   createDataSource,
   deleteDataSource,
@@ -293,23 +292,6 @@ export function setupGradeHandlers(): void {
     "grade:reorderDataSources",
     async (items: { id: string; order: number }[]) => {
       return reorderDataSources(items)
-    }
-  )
-
-  registerHandler(
-    "grade:batchUpdateAbsentPolicy",
-    async (
-      dataSourceIds: string[],
-      policy: {
-        absentMethod: string
-        absentRatio: number
-        absentOffset: number
-        treatExpectedAsMissing?: boolean
-        estimationMode?: string
-        estimationSourceIds?: string[]
-      }
-    ) => {
-      return batchUpdateAbsentPolicy(dataSourceIds, policy)
     }
   )
 

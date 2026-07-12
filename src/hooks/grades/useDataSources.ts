@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
 
-import type { GradeWithRelations } from "@/types/grade.types"
+import type {
+  AbsentMethod,
+  EstimationMode,
+  GradeWithRelations,
+} from "@/types/grade.types"
 
 /** 成績評定項目とデータソースのCRUD操作を管理するフック */
 export function useDataSources(gradeId: string) {
@@ -106,19 +110,44 @@ export function useDataSources(gradeId: string) {
     [loadData]
   )
 
-  const batchUpdateAbsentPolicy = useCallback(
+  // 一括更新は専用IPCを持たず、普遍的な個別更新IPCをターゲット分だけ回す。
+  // 自ソース除外などターゲットごとの差分は呼び出し側で組み立て済みの前提。
+  //
+  // 【設計判断】$transaction による原子性(all-or-nothing)は意図的に持たない。
+  // 「一括適用」は同じ操作を各対象へ繰り返すだけの作業であり、部分適用が残っても
+  // 意味が通り、再度「適用」を押せば回復できる（呼び出し側は失敗時に選択を保持し
+  // 再適用可能にしている）。原子性のためだけに専用の一括IPC/トランザクションを
+  // backendへ復活させないこと（普遍的な個別更新IPCのみを保つのが本設計の狙い）。
+  const batchUpdateDataSources = useCallback(
     async (
-      dataSourceIds: string[],
-      policy: {
-        absentMethod: string
-        absentRatio: number
-        absentOffset: number
-      }
+      updates: {
+        id: string
+        data: {
+          absentMethod?: AbsentMethod
+          absentRatio?: number
+          absentOffset?: number
+          treatExpectedAsMissing?: boolean
+          estimationMode?: EstimationMode
+          estimationSourceIds?: string[]
+        }
+      }[]
     ) => {
-      const result = await window.electronAPI.grade.batchUpdateAbsentPolicy(
-        dataSourceIds,
-        policy
+      const results = await Promise.all(
+        updates.map((update) =>
+          window.electronAPI.grade.updateDataSource(update.id, update.data)
+        )
       )
+      // 個別更新は独立にコミットされ、一部失敗でもDBは変わり得る。
+      // UIを実DBへ追従させるため成否に関わらず必ず再読込する。
+      await loadData()
+      return { success: results.every((result) => result.success) }
+    },
+    [loadData]
+  )
+
+  const deleteDataSource = useCallback(
+    async (id: string) => {
+      const result = await window.electronAPI.grade.deleteDataSource(id)
       if (result.success) {
         await loadData()
       }
@@ -127,9 +156,9 @@ export function useDataSources(gradeId: string) {
     [loadData]
   )
 
-  const deleteDataSource = useCallback(
-    async (id: string) => {
-      const result = await window.electronAPI.grade.deleteDataSource(id)
+  const reorderDataSources = useCallback(
+    async (items: { id: string; order: number }[]) => {
+      const result = await window.electronAPI.grade.reorderDataSources(items)
       if (result.success) {
         await loadData()
       }
@@ -146,8 +175,9 @@ export function useDataSources(gradeId: string) {
     deleteGradeItem,
     createDataSource,
     updateDataSource,
-    batchUpdateAbsentPolicy,
+    batchUpdateDataSources,
     deleteDataSource,
+    reorderDataSources,
     reload: loadData,
   }
 }

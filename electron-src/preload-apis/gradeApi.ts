@@ -118,22 +118,6 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:deleteDataSource", id),
       reorderDataSources: (items: { id: string; order: number }[]) =>
         ipcRenderer.invoke("grade:reorderDataSources", items),
-      batchUpdateAbsentPolicy: (
-        dataSourceIds: string[],
-        policy: {
-          absentMethod: string
-          absentRatio: number
-          absentOffset: number
-          treatExpectedAsMissing?: boolean
-          estimationMode?: string
-          estimationSourceIds?: string[]
-        }
-      ) =>
-        ipcRenderer.invoke(
-          "grade:batchUpdateAbsentPolicy",
-          dataSourceIds,
-          policy
-        ),
       getBoundarySets: (gradeId: string) =>
         ipcRenderer.invoke("grade:getBoundarySets", gradeId),
       upsertBoundarySet: (data: {
