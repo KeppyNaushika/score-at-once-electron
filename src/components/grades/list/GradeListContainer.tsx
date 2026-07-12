@@ -3,6 +3,7 @@
 import {
   BarChart3,
   ClipboardEdit,
+  Copy,
   Eye,
   FolderInput,
   FolderOutput,
@@ -101,6 +102,21 @@ export function GradeListContainer() {
       }
     } catch (error) {
       console.error("Error deleting grade exam:", error)
+    }
+  }
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      const result = await window.electronAPI.grade.duplicate(id)
+      if (result.success && result.grade) {
+        await loadGrades()
+        toast.success(`「${result.grade.name}」を複製しました`)
+      } else if (!result.success) {
+        toast.error("複製に失敗しました", { description: result.error })
+      }
+    } catch (error) {
+      console.error("Error duplicating grade exam:", error)
+      toast.error("複製に失敗しました")
     }
   }
 
@@ -275,6 +291,12 @@ export function GradeListContainer() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleDuplicate(grade.id)}
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              複製
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
                                 window.electronAPI.grade.exportArchive(grade.id)

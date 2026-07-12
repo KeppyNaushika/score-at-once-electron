@@ -274,6 +274,11 @@ export const AUDIT_ACTIONS = {
     verb: "delete",
     label: "成績「{target}」を削除しました",
   },
+  "grade.duplicate": {
+    category: "grade",
+    verb: "create",
+    label: "成績「{target}」を複製しました",
+  },
   "grade.export": {
     category: "grade",
     verb: "export",

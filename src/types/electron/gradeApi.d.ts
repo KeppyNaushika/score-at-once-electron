@@ -35,6 +35,11 @@ export interface GradeAPI {
       error?: string
     }>
     delete: (id: string) => Promise<{ success: boolean; error?: string }>
+    duplicate: (id: string) => Promise<{
+      success: boolean
+      grade?: import("../grade.types").GradeWithRelations
+      error?: string
+    }>
     // 生徒・学級管理
     getStudents: (gradeId: string) => Promise<{
       success: boolean
