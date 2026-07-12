@@ -28,11 +28,7 @@ interface UseTableDataParams<TItem extends AnswerImageIdentity> {
     examPageId: string
   ) => boolean
   mode?: "upload" | "view"
-  existingAnswers?: Array<{
-    id: string
-    studentId: string | null
-    examPageId: string | null
-  }>
+  existingAnswers?: AnswerImageIdentity[]
   allowOverwrite?: boolean
 }
 

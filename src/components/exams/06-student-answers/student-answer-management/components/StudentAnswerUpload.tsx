@@ -28,16 +28,9 @@ export function StudentAnswerUpload({
     [examPages]
   )
 
-  // view 方式B の差分基準（DB baseline）／upload の占有信号。いずれも id で同定。
-  const existingAnswers = useMemo(
-    () =>
-      placedAnswers.map((answer) => ({
-        id: answer.id,
-        studentId: answer.studentId,
-        examPageId: answer.examPageId,
-      })),
-    [placedAnswers]
-  )
+  // view 方式B の差分基準（DB baseline）／upload の占有信号は、DB答案の実体
+  // （placedAnswers = PlacedAnswerImage[]）をそのまま渡す（id 3つ組へ射影しない）。
+  // 受け手は AnswerImageIdentity 契約で id を読むだけ。
 
   const {
     isUploading,
@@ -95,7 +88,7 @@ export function StudentAnswerUpload({
         onReloadData={onUploadComplete}
         affectedCells={affectedCells}
         onUpdatePendingChanges={onUpdatePendingChanges}
-        existingAnswers={existingAnswers}
+        existingAnswers={placedAnswers}
         correctionStatusMap={correctionStatusMap}
       />
     )
@@ -125,7 +118,7 @@ export function StudentAnswerUpload({
           onFilesChange={setFiles}
           onUpload={handleUpload}
           onReloadData={onUploadComplete}
-          existingAnswers={existingAnswers}
+          existingAnswers={placedAnswers}
           markerCorrectionEnabled={markerCorrectionEnabled}
           markerCorrectionAvailable={markerCorrectionAvailable}
           markerDiagnostics={markerDiagnostics}
