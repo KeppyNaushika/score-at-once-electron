@@ -11,13 +11,15 @@ export function createAnswerSheetApi() {
         type: string
         buffer: ArrayBuffer
         studentId?: string
-        pageNumber?: number
+        examPageId: string
         overwrite?: boolean
         correctWithMarkers?: boolean
       }[]
     ) => ipcRenderer.invoke("upload-answer-sheets", examId, filesData),
     getStudentAnswersByExamId: (examId: string) =>
       ipcRenderer.invoke("get-answer-sheets-by-exam-id", examId),
+    getStudentAnswersDataset: (examId: string) =>
+      ipcRenderer.invoke("get-student-answers-dataset", examId),
     deleteStudentAnswer: (answerSheetId: string) =>
       ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
     associateStudentAnswerWithStudent: (
@@ -37,7 +39,7 @@ export function createAnswerSheetApi() {
       moves: Array<{
         fileId: string
         finalStudentId: string | null
-        finalPageNumber: number
+        finalExamPageId: string
         scorePolicy: "carry" | "discard"
       }>
     ) => ipcRenderer.invoke("apply-answer-sheet-placements", moves),

@@ -1,8 +1,8 @@
 /**
  * 答案配置の採点安全な一括適用（view の方式B: 任意マスへ移動・衝突swap）
  *
- * 設計（docs/06-student-answers-cell-architecture-plan.md §3-3/§3-4）:
- * - 2軸移動: studentId だけでなく examPageId も更新する（finalPageNumber を ExamPage に解決）。
+ * 設計（docs/06-student-answers-entity-first-plan.md §5）:
+ * - 2軸移動: studentId だけでなく examPageId も更新する（移動先 ExamPage は id 直指定で受ける）。
  * - 採点はページ scoped: 移動元ページの CropRegion × 現生徒の QuestionScore/ScoreDecision のみ対象。
  * - carry（追従・同一ページのみ）:
  *   - QuestionScore は unique が無いので **id 指定の updateMany で studentId 付け替え**（id 保持 →
@@ -28,7 +28,7 @@ export type PlacementScorePolicy = "carry" | "discard"
 export interface StudentAnswerPlacementMove {
   fileId: string
   finalStudentId: string | null // null は不可（本APIは削除を扱わない）
-  finalPageNumber: number
+  finalExamPageId: string
   scorePolicy: PlacementScorePolicy
 }
 
@@ -89,15 +89,19 @@ export async function applyStudentAnswerPlacements(
         const current = currentAnswers[index]!
         const finalStudentId = move.finalStudentId! // null は上で除外済み
 
+        // 移動先 ExamPage は id 直指定。同一試験のページであることのみ検証する
+        // （pageNumber 序数への解決はしない＝id 一次同定）。
         const targetPage = await tx.examPage.findFirst({
           where: {
+            id: move.finalExamPageId,
             examId: current.examPage.examId,
-            pageNumber: move.finalPageNumber,
           },
           select: { id: true },
         })
         if (!targetPage) {
-          throw new Error(`ページ${move.finalPageNumber}が見つかりません`)
+          throw new Error(
+            `移動先ページが見つかりません: ${move.finalExamPageId}`
+          )
         }
 
         const pageChanged = current.examPageId !== targetPage.id

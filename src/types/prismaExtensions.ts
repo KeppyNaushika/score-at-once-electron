@@ -210,6 +210,33 @@ export type StudentAnswerImageWithExamPageAndStudent =
     }
   }>
 
+/**
+ * 保存済み答案（配置済み）を Prisma include のまま持つ実体型（06 entity-first）。
+ * 列＝ExamPage 実体から供給されるため、答案は自身の examPage を再同梱しない
+ * （examPageId で列に照合し、pageNumber は列の ExamPage から表示時に導出する）。
+ * 孤立答案の氏名表示のため student は同梱する。
+ */
+export type PlacedAnswerImage = Prisma.StudentAnswerImageGetPayload<{
+  include: { student: true }
+}>
+
+/**
+ * 06 データセットの列となる ExamPage 実体（配置済み答案を子に持つ）。
+ */
+export type StudentAnswerDatasetExamPage = Prisma.ExamPageGetPayload<{
+  include: { studentAnswerImages: { include: { student: true } } }
+}>
+
+/**
+ * 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）。
+ * 行＝examStudents（ExamStudentWithMemberships）／列＝examPages（実体）。
+ * IPC 返り値の SSOT。status は ExamStudentWithMemberships と同様に narrowing する。
+ */
+export interface StudentAnswersDataset {
+  examStudents: ExamStudentWithMemberships[]
+  examPages: StudentAnswerDatasetExamPage[]
+}
+
 // =============================================================================
 // UserExam/ExamSubtotalGroup関連型
 // =============================================================================

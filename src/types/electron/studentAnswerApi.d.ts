@@ -1,4 +1,7 @@
-import type { StudentAnswerImageWithExamPageAndStudent } from "../prismaExtensions"
+import type {
+  StudentAnswerImageWithExamPageAndStudent,
+  StudentAnswersDataset,
+} from "../prismaExtensions"
 
 export interface UploadStudentAnswerFileData {
   name: string
@@ -7,7 +10,7 @@ export interface UploadStudentAnswerFileData {
   type: string
   buffer: ArrayBuffer
   studentId: string
-  pageNumber: number
+  examPageId: string
   overwrite: boolean
   correctWithMarkers?: boolean
 }
@@ -36,6 +39,10 @@ export interface StudentAnswerAPI {
     studentAnswerImages?: StudentAnswerImageWithExamPageAndStudent[]
     error?: string
   }>
+  getStudentAnswersDataset: (examId: string) => Promise<
+    | ({ success: true } & StudentAnswersDataset)
+    | { success: false; error?: string }
+  >
   deleteStudentAnswer: (studentAnswerId: string) => Promise<{
     success: boolean
     error?: string
@@ -65,7 +72,7 @@ export interface StudentAnswerAPI {
     moves: Array<{
       fileId: string
       finalStudentId: string | null
-      finalPageNumber: number
+      finalExamPageId: string
       scorePolicy: "carry" | "discard"
     }>
   ) => Promise<{
