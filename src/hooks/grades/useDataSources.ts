@@ -132,7 +132,12 @@ export function useDataSources(gradeId: string) {
         }
       }[]
     ) => {
-      const results = await Promise.all(
+      // 個別更新IPC(grade:updateDataSource)は registerHandler 登録のため、
+      // backend例外時は reject する。allSettled で reject を吸収しないと
+      // 直後の loadData()/return に到達せず、呼び出し側の toast も再読込も
+      // 走らないまま無反応になる。allSettled なら reject も「失敗した1件」
+      // として畳み込め、下の「必ず再読込」の不変条件を守れる。
+      const results = await Promise.allSettled(
         updates.map((update) =>
           window.electronAPI.grade.updateDataSource(update.id, update.data)
         )
@@ -140,7 +145,12 @@ export function useDataSources(gradeId: string) {
       // 個別更新は独立にコミットされ、一部失敗でもDBは変わり得る。
       // UIを実DBへ追従させるため成否に関わらず必ず再読込する。
       await loadData()
-      return { success: results.every((result) => result.success) }
+      return {
+        success: results.every(
+          (settledResult) =>
+            settledResult.status === "fulfilled" && settledResult.value.success
+        ),
+      }
     },
     [loadData]
   )
