@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
+  PendingImage,
   PlacementStrategy,
-  UnifiedFile,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
@@ -20,7 +20,7 @@ export function useStudentAnswerUpload(
   // State管理
   const [isUploading, setIsUploading] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
-  const [files, setFiles] = useState<UnifiedFile[]>([])
+  const [files, setFiles] = useState<PendingImage[]>([])
   const [pdfProcessingProgress, setPdfProcessingProgress] = useState(0)
   const [fileOrder, setFileOrder] = useState<PlacementStrategy>("page-first")
 
@@ -33,8 +33,8 @@ export function useStudentAnswerUpload(
   const [markerAvailablePages, setMarkerAvailablePages] = useState<Set<number>>(
     new Set()
   )
-  const filesRef = useRef<UnifiedFile[]>([])
-  const prevFilesRef = useRef<UnifiedFile[]>([])
+  const filesRef = useRef<PendingImage[]>([])
+  const prevFilesRef = useRef<PendingImage[]>([])
 
   // 前回描画と比較し、削除されたファイルのblob URLを解放
   useEffect(() => {
@@ -67,13 +67,10 @@ export function useStudentAnswerUpload(
     handlePasswordCancel,
   } = usePdfPasswordConversion()
 
-  // Intersection Observer for lazy loading (無効化)
-  const observerRef = useRef<IntersectionObserver | null>(null)
-
   // ファイル変換処理
   const convertFiles = useCallback(
-    async (rawFiles: File[]): Promise<UnifiedFile[]> => {
-      const results: UnifiedFile[] = []
+    async (rawFiles: File[]): Promise<PendingImage[]> => {
+      const results: PendingImage[] = []
       let processedCount = 0
 
       for (const file of rawFiles) {
@@ -312,7 +309,6 @@ export function useStudentAnswerUpload(
     passwordDialog,
     handlePasswordSubmit,
     handlePasswordCancel,
-    observerRef,
 
     // Marker correction
     markerCorrectionEnabled,

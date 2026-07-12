@@ -18,15 +18,11 @@ import {
 import {
   applyStudentAnswerPlacements,
   associateStudentAnswerWithStudent,
-  batchUpdateStudentAnswerPlacements,
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
   setStudentAnswerAbsent,
   type StudentAnswerPlacementMove,
-  swapStudentAnswerPlacements,
-  swapStudentAnswerPlacementsWithScoring,
-  updateStudentAnswerPlacement,
   uploadStudentAnswers,
 } from "../lib/prisma/studentAnswer"
 import {
@@ -154,85 +150,6 @@ export function setupMiscHandlers(): void {
       ...result.answerSheet,
     }
   })
-
-  registerHandler(
-    "update-answer-sheet-placement",
-    async (
-      answerSheetId: string,
-      studentId: string | null,
-      pageNumber: number
-    ) => {
-      const result = await updateStudentAnswerPlacement(
-        answerSheetId,
-        studentId,
-        pageNumber
-      )
-      if (!result.success) {
-        throw new Error(result.error)
-      }
-      return {
-        ...result.answerSheet,
-      }
-    }
-  )
-
-  registerHandler(
-    "swap-answer-sheet-placements",
-    async (answerSheetId1: string, answerSheetId2: string) => {
-      const result = await swapStudentAnswerPlacements(
-        answerSheetId1,
-        answerSheetId2
-      )
-      if (!result.success) {
-        throw new Error(result.error)
-      }
-      return (result.answerSheets || [])
-        .filter((sheet) => sheet !== null)
-        .map((sheet) => ({
-          ...sheet,
-        }))
-    }
-  )
-
-  registerHandler(
-    "swap-answer-sheet-placements-with-scoring",
-    async (answerSheetId1: string, answerSheetId2: string) => {
-      const result = await swapStudentAnswerPlacementsWithScoring(
-        answerSheetId1,
-        answerSheetId2
-      )
-      if (!result.success) {
-        throw new Error(result.error)
-      }
-      return (result.answerSheets || [])
-        .filter((sheet) => sheet !== null)
-        .map((sheet) => ({
-          ...sheet,
-        }))
-    }
-  )
-
-  registerHandler(
-    "batch-update-answer-sheet-placements",
-    async (
-      moves: Array<{
-        fileId: string
-        finalStudentId: string | null
-        finalPageNumber: number
-      }>,
-      withScoring: boolean = false
-    ) => {
-      const result = await batchUpdateStudentAnswerPlacements(
-        moves,
-        withScoring
-      )
-      if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Unknown error"
-        throw new Error(errorMessage)
-      }
-      return result
-    }
-  )
 
   registerHandler(
     "apply-answer-sheet-placements",

@@ -36,14 +36,25 @@
   - **[2] 隠れ答案の巻き込み swap**: `applyCellMoveOrSwap` の occupant 判定を `getEnabledFiles` の id 集合に限定（view は trash 無しだが防御）。
   - **[6] O(files×students)**: view 配置生成で `studentId→行index` の Map を1回構築。
   - **[8] 誤解を招く toast**: `newFiles===files` でアクティブ答案が存在する同一セル時のみ「元の位置に戻されました」。
-  - **未対応=[4]/[5]（要相談）**: baseline に居るが「除籍で studentId が現ロスターに無い／ページ数削減で範囲外」の答案は座標配置できず**表から不可視**になる。旧 index 方式は別生徒のマスへ誤配置して見せていた（データ整合的には旧方式も難あり）。恒久対応は「未配置/孤立答案」枠の新設＝別スコープ。
+  - **[4]/[5] 対応済み**（下記 Phase 3c で実装）: 座標配置できない答案（除籍・ページ範囲外）を `partitionAnswerItemsByPlacement` で **orphanItems** として算出し、view の「未配置の答案」ストリップ（`OrphanAnswerCard`）にドラッグ可能に描画。正しいマスへドロップで救済。
+
+- **Phase 3c 完了**（型/lint/test グリーン。**DnD 実挙動のみ要手動確認**）:
+  - **型3分割**: `UnifiedFile` を廃止し `AnswerItem`（共通描画ビュー・基底）／`PendingImage extends AnswerItem`（upload源・buffer 等）／`ExistingAnswer`（Prisma 型）に分離。共有パイプライン（`tableDataUtils`/`dragDropUtils`/`dragDropTypes`/`useDragDrop*`/`useTableData*`/`CellData`）を `<TItem extends AnswerItem>` ジェネリック化しランタイム不変を保持。`useStudentAnswerUpload`＝`PendingImage[]`、view state＝`AnswerItem[]`（`convertAnswerSheetsToFiles` が全件射影＝孤立答案も含む）。`useMarkerCorrection` は buffer を要すため `PendingImage` 固定。
+  - **スロット化**: `TableContent` を DnD 非依存化（`@dnd-kit`・sortable/droppable セルを import しない）。セルの掴む/落とす部分は `renderFileCell`/`renderEmptyCell` スロットで注入。`StudentAnswerTable`/`useStudentAnswerTableLogic` を廃し、`useAnswerTableCore<T>`（共有）＋`AnswerTableShell`（描画）＋`UploadAnswerTable`（補正・handleUpload）／`ViewAnswerTable`（孤立答案）に分割。`StudentAnswerUpload` はモード別に配線。`reorderFilesByStrategy.ts` は view の座標配置化で不要になり撤去。
+  - テスト: `dragDropUtils.test.ts` に `partitionAnswerItemsByPlacement`（[4]/[5]）4件追加（計17件パス）。
+
+- **Phase 6 完了**（型/lint/test グリーン）:
+  - 旧 `batch.ts`（`batchUpdateStudentAnswerPlacements`/`swapStudentAnswerPlacementsWithScoring`）・`placement.ts`（`updateStudentAnswerPlacement`/`swapStudentAnswerPlacements`）＝**FK強制下で壊れる temp studentId 方式**を撤去。IPC（`miscHandlers` の 4 ハンドラー）・preload（`answerSheetApi`）・型（`studentAnswerApi.d.ts`）の配線も除去。renderer からの呼び出しは元々ゼロ・テスト参照もゼロを確認済み。残る配置適用は `applyStudentAnswerPlacements`（`apply-answer-sheet-placements`）のみ。
+  - #965 デッドコード整理: `observerRef`（IntersectionObserver を一度も生成しない死配線）を全経路から除去。`handleUploadToCell`（旧コードでも常にスタブ＝クリックしても実アップロードしない非機能）と `UploadToCellModal`/`UploadModalWrapper` 一式・関連コンテキストメニュー項目を撤去。
+
+- **Phase 3c/6 コードレビュー(high)反映済み**（correctness 3・cleanup 2）:
+  - **[最重大] 孤立答案がマウント時に消える**: `useDragDropState` の旧・配置戦略リセット（`buildDnDArray`）が view マウント時に発火し、座標に載らない孤立答案を配列から除去→救済ストリップごと消していた。この機構は upload=`tableDataGeneration`／view=座標配置へ移行済みで完全に死んでいたため撤去（`useDragDropState` は `activeFile` 管理のみに）。関連死関数（`buildDnDArrayFromFileStates`/`updateFileStatesFromDnDArray`/`compareFileStates`・`fileStatesRef`/`initialFileStatesRef`）も除去。
+  - **孤立答案の swap 事故（両方向）**: `handleDragEnd`(view) に配置可能判定（名簿在籍＋ページ範囲内）を追加。(a) 孤立答案カードは対象セルにしない（有効答案を孤立座標へ動かさない）、(b) 移動元が孤立なら占有セルへの swap を拒否（`applyCellMoveOrSwap` に `isSourcePlaceable`）。孤立答案の救済は空セルへの移動のみ許可。テスト2件追加（計19件）。
+  - **cleanup**: 死んだ `pendingChanges` prop（`StudentAnswerUploadProps`＋親の受け渡し）を撤去。`orphanReasonLabel` の roster Set を孤立答案があるときだけ確保するよう限定。
 
 ### 残り（次の作業）
 
-- **[4]/[5] 孤立答案の扱い**（除籍・ページ範囲外で不可視）: **対応要否を含め次セッションで判断**。旧 index 方式は誤帰属で見せていたため単純な「戻し」は不可。要対応なら「未配置/孤立答案」専用枠を新設（別 issue 候補）。
-
-- **Phase 3c**: セルの掴む/落とす部分（`SortableTableCell`）を**スロット化**して表本体を DnD 非依存に。upload=method A を注入。ここで `UnifiedFile` を `PendingImage`/`AnswerItem` へ**3分割**（単一 `files` state が両モード兼用のため Phase 3 と不可分）。
-- **Phase 6 相当**: 旧 `batch.ts`/`placement.ts`/`swap`（**FK強制下で壊れる temp studentId 方式**）の撤去、デッドコード整理（#965）、§6 手動検証（**DnD 挙動は要実機確認**）。
+- **DnD 実挙動の手動確認**（`npm run dev`）: upload=方式A の並べ替え、view=方式B の move/swap、孤立答案ストリップからのドラッグ救済（空セルへ=移動、占有セルへ=拒否）。ドラッグ操作は自動テストで担保できないため実機確認が必要。
 
 ### 重要な発見・地雷（再開時に忘れない）
 
@@ -55,9 +66,9 @@
 
 ### 主要な触点ファイル
 
-- 型: `src/components/exams/06-student-answers/types.ts`（`AnswerItem`/`PlacementScorePolicy`/`UnifiedFile`）
-- 表: `student-answer-table/components/{TableContent,StudentAnswerTable,SortableTableCell,ConfirmChangesModal}.tsx`
-- DnD: `student-answer-table/hooks/{useDragDrop,useDragDropHandlers,useDragDropState}.ts` + `utils/dragDropUtils.ts`
+- 型: `src/components/exams/06-student-answers/types.ts`（`AnswerItem`/`PendingImage`/`PlacementScorePolicy`。`UnifiedFile` は廃止）
+- 表: `student-answer-table/components/{AnswerTableShell,UploadAnswerTable,ViewAnswerTable,TableContent,SortableTableCell,EmptyTableCell,OrphanAnswerCard,ConfirmChangesModal}.tsx` + `hooks/useAnswerTableCore.ts`
+- DnD: `student-answer-table/hooks/{useDragDrop,useDragDropHandlers,useDragDropState}.ts` + `utils/dragDropUtils.ts`（すべて `<TItem extends AnswerItem>`）
 - 配線: `src/app/exams/[examId]/06-student-answers/{hooks,components}/index.tsx`
 - バックエンド: `electron-src/lib/prisma/studentAnswer/placementApply.ts`（+ `index.ts`/`studentAnswer.ts` の export、`ipc-handlers/miscHandlers.ts`、`preload-apis/answerSheetApi.ts`、`src/types/electron/studentAnswerApi.d.ts`）
 

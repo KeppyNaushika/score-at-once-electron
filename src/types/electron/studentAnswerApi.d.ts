@@ -61,42 +61,6 @@ export interface StudentAnswerAPI {
     answerSheet?: StudentAnswerImageWithExamPageAndStudent
     error?: string
   }>
-  updateStudentAnswerPlacement: (
-    studentAnswerId: string,
-    studentId: string | null,
-    pageNumber: number
-  ) => Promise<{
-    success: boolean
-    answerSheet?: StudentAnswerImageWithExamPageAndStudent
-    error?: string
-  }>
-  swapStudentAnswerPlacements: (
-    studentAnswerId1: string,
-    studentAnswerId2: string
-  ) => Promise<{
-    success: boolean
-    answerSheets?: StudentAnswerImageWithExamPageAndStudent[]
-    error?: string
-  }>
-  swapStudentAnswerPlacementsWithScoring: (
-    studentAnswerId1: string,
-    studentAnswerId2: string
-  ) => Promise<{
-    success: boolean
-    answerSheets?: StudentAnswerImageWithExamPageAndStudent[]
-    error?: string
-  }>
-  batchUpdateStudentAnswerPlacements: (
-    moves: Array<{
-      fileId: string
-      finalStudentId: string | null
-      finalPageNumber: number
-    }>,
-    withScoring: boolean
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
   applyStudentAnswerPlacements: (
     moves: Array<{
       fileId: string

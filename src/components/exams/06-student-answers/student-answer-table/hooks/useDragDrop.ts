@@ -6,11 +6,12 @@ import type {
   UseDragDropParams,
   UseDragDropReturn,
 } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 
 /**
  * ドラッグ&ドロップ機能を提供するメインフック（リファクタリング版）
  */
-export function useDragDrop({
+export function useDragDrop<TItem extends AnswerItem>({
   files,
   onFilesChange,
   getEnabledFiles,
@@ -22,17 +23,9 @@ export function useDragDrop({
   onReloadData,
   onUpdatePendingChanges,
   existingStudentAnswers,
-}: UseDragDropParams): UseDragDropReturn {
-  // 状態管理
-  const { activeFile, setActiveFile, fileStatesRef, initialFileStatesRef } =
-    useDragDropState({
-      files,
-      students,
-      modelAnswerCount,
-      mode,
-      fileOrder,
-      onFilesChange,
-    })
+}: UseDragDropParams<TItem>): UseDragDropReturn<TItem> {
+  // 状態管理（アクティブなドラッグ対象のみ）
+  const { activeFile, setActiveFile } = useDragDropState<TItem>()
 
   // イベントハンドラー
   const { handleDragStart, handleDragEnd } = useDragDropHandlers({
@@ -48,8 +41,6 @@ export function useDragDrop({
     onUpdatePendingChanges,
     existingStudentAnswers,
     setActiveFile,
-    fileStatesRef,
-    initialFileStatesRef,
   })
 
   // ドラッグ&ドロップセンサー設定

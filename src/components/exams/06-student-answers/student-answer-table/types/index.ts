@@ -1,7 +1,6 @@
 import type {
   AnswerItem,
   PlacementStrategy,
-  UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
@@ -29,9 +28,10 @@ export interface ExtendedDisabledState {
 // セルは「そのマスに置かれた物（file）と無効理由」だけを持つ。
 // 生徒・ページ・position はグリッド座標 [studentIndex][pageIndex] と
 // sortedStudents から投射する（セルにエンティティを複製させない）。
-export interface CellData {
+// upload は file が PendingImage、view は AnswerItem。既定は共通描画ビュー AnswerItem。
+export interface CellData<TItem extends AnswerItem = AnswerItem> {
   type: "file" | "empty" | "disabled"
-  file?: UnifiedFile
+  file?: TItem
   disabledReason?:
     "row" | "column" | "position" | "existing_answer" | "absent_student"
 }
@@ -51,6 +51,7 @@ export interface FilePreviewCellProps {
   imageLoadState?: "pending" | "loading" | "loaded" | "error"
 }
 
+// アップロード（方式A）専用の並べ替えセル props。
 export interface SortableTableCellProps {
   id: string
   hasFile: boolean
@@ -58,15 +59,8 @@ export interface SortableTableCellProps {
   isFileDisabled: boolean
   onTogglePosition: () => void
   onToggleFileDisabled: () => void
-  onUploadToCell: () => void
-  mode?: "upload" | "view"
   fileId?: string
-  observerRef?: React.RefObject<IntersectionObserver | null>
   children: React.ReactNode
-  onDeleteFileWithScoring?: () => void
-  studentName?: string
-  pageNumber?: number
-  hasScoreData?: boolean
 }
 
 export interface EmptyTableCellProps {
@@ -80,7 +74,6 @@ export interface EmptyTableCellProps {
   disabledReason?:
     "row" | "column" | "position" | "existing_answer" | "absent_student"
   onTogglePosition?: () => void
-  onUploadToCell?: () => void
   onToggleAnswerDisabled?: () => void
   hasNewFileToUpload?: boolean
 }
@@ -88,7 +81,8 @@ export interface EmptyTableCellProps {
 export interface TableHeaderProps {
   maxPages: number
   enabledFilesCount: number
-  trashFiles: UnifiedFile[]
+  // ゴミ箱は upload 専用（無効化した PendingImage）。表示に必要な最小形だけを受ける。
+  trashFiles: Array<{ id: string; name: string; size?: number }>
   onFileRestore: (fileId: string) => void
   isUploading: boolean
   mode: "upload" | "view"

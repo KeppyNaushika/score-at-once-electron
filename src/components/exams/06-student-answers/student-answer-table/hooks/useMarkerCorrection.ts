@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { CellData } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import type { PendingImage } from "@/components/exams/06-student-answers/types"
 
 interface UseMarkerCorrectionArgs {
   examId: string
-  files: UnifiedFile[]
-  tableData: CellData[][]
+  files: PendingImage[]
+  tableData: CellData<PendingImage>[][]
   markerCorrectionEnabled: boolean
   markerAvailablePages: Set<number>
-  onFilesChange: (files: UnifiedFile[]) => void
+  onFilesChange: (files: PendingImage[]) => void
 }
 
 interface UseMarkerCorrectionResult {
@@ -68,7 +68,7 @@ export function useMarkerCorrection({
 
     // 処理が必要なファイルを抽出
     type Task = {
-      file: UnifiedFile
+      file: PendingImage
       buffer: ArrayBuffer
       target: number | undefined
     }
@@ -218,9 +218,9 @@ export function useMarkerCorrection({
 
 /** 元バッファから preview を作り直して復元 */
 function restoreFromOriginal(
-  file: UnifiedFile,
+  file: PendingImage,
   origBuffer: ArrayBuffer
-): UnifiedFile {
+): PendingImage {
   if (file.buffer === origBuffer) {
     return {
       ...file,

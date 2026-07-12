@@ -3,10 +3,7 @@ import type {
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
-import type {
-  AnswerItem,
-  UnifiedFile,
-} from "@/components/exams/06-student-answers/types"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /**
@@ -84,8 +81,8 @@ export function sortStudentsByCustomOrder(
 }
 
 /** 確認モードで答案が存在しないセル（無効化対象）を O(1) 照合ルックアップで返す */
-export function calculateDynamicDisabledCells(
-  files: UnifiedFile[],
+export function calculateDynamicDisabledCells<T extends AnswerItem>(
+  files: T[],
   sortedStudents: ExamStudentWithMemberships[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
@@ -125,8 +122,8 @@ export function calculateDynamicDisabledCells(
 }
 
 /** 既存の答案が割り当てられているセルを O(1) 照合ルックアップで返す（警告オーバーレイ用） */
-export function calculateCellsWithExistingAnswers(
-  files: UnifiedFile[],
+export function calculateCellsWithExistingAnswers<T extends AnswerItem>(
+  files: T[],
   sortedStudents: ExamStudentWithMemberships[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
@@ -173,19 +170,66 @@ export function calculateCellsWithExistingAnswers(
 }
 
 /** 無効化されていないファイルのみをフィルタリングして返す */
-export function getEnabledFiles(
-  files: UnifiedFile[],
+export function getEnabledFiles<T extends AnswerItem>(
+  files: T[],
   disabledState: ExtendedDisabledState
-): UnifiedFile[] {
+): T[] {
   return files.filter((file) => !disabledState.files.has(file.id))
 }
 
 /** 無効化されたファイルのみをフィルタリングして返す */
-export function getDisabledFiles(
-  files: UnifiedFile[],
+export function getDisabledFiles<T extends AnswerItem>(
+  files: T[],
   disabledState: ExtendedDisabledState
-): UnifiedFile[] {
+): T[] {
   return files.filter((file) => disabledState.files.has(file.id))
+}
+
+/**
+ * 確認モード（方式B）: 答案アイテムを「表のマスに置けるもの」と「置けない孤立答案」に分ける。
+ *
+ * マスに置ける条件は (1) studentId が現在の受験生徒（ロスター）に居る かつ
+ * (2) pageNumber が 1..modelAnswerCount の範囲内、の両方。どちらかを満たさない答案は
+ * 除籍（studentId が現ロスターに無い）・ページ数削減（範囲外）などで座標配置できず、
+ * 表からは不可視になる（＝孤立答案）。呼び出し側で専用枠に描画して再配置できるようにする。
+ *
+ * placedByCell のキーは `${studentIndex}-${pageIndex}`（0始まり）。
+ * 同一セルに複数の配置可能答案が解決された場合は先着のみを配置し、後続は孤立扱いに
+ * する（黙って上書きして消さない＝表からも孤立枠からも見えなくなる事故を防ぐ）。
+ */
+export function partitionAnswerItemsByPlacement<T extends AnswerItem>(
+  items: T[],
+  sortedStudentIds: string[],
+  modelAnswerCount: number
+): { placedByCell: Map<string, T>; orphans: T[] } {
+  const studentIndexById = new Map<string, number>()
+  sortedStudentIds.forEach((studentId, studentIndex) => {
+    studentIndexById.set(studentId, studentIndex)
+  })
+
+  const placedByCell = new Map<string, T>()
+  const orphans: T[] = []
+
+  for (const answerItem of items) {
+    const studentIndex = answerItem.studentId
+      ? studentIndexById.get(answerItem.studentId)
+      : undefined
+    const pageIndex = answerItem.pageNumber - 1
+    const cellKey = `${studentIndex}-${pageIndex}`
+    const isPlaceable =
+      studentIndex !== undefined &&
+      pageIndex >= 0 &&
+      pageIndex < modelAnswerCount
+
+    // 配置可能でも同一セルが既に埋まっていれば孤立へ退避する（上書きで消さない）
+    if (isPlaceable && !placedByCell.has(cellKey)) {
+      placedByCell.set(cellKey, answerItem)
+    } else {
+      orphans.push(answerItem)
+    }
+  }
+
+  return { placedByCell, orphans }
 }
 
 /** ファイルIDのハッシュからTailwind背景色クラスを決定する */

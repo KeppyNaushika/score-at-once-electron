@@ -6,8 +6,8 @@ import type {
 } from "@dnd-kit/core"
 
 import type {
+  AnswerItem,
   PlacementStrategy,
-  UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
@@ -18,12 +18,12 @@ export interface FileState {
   pageNumber: number
 }
 
-// ドラッグ&ドロップフックの引数型
-export interface UseDragDropParams {
-  files: UnifiedFile[]
-  onFilesChange: (files: UnifiedFile[]) => void
-  getEnabledFiles: () => UnifiedFile[]
-  getDisabledFiles: () => UnifiedFile[]
+// ドラッグ&ドロップフックの引数型。upload は PendingImage、view は AnswerItem で流れる。
+export interface UseDragDropParams<TItem extends AnswerItem = AnswerItem> {
+  files: TItem[]
+  onFilesChange: (files: TItem[]) => void
+  getEnabledFiles: () => TItem[]
+  getDisabledFiles: () => TItem[]
   students?: ExamStudentWithMemberships[]
   modelAnswerCount?: number
   mode?: "upload" | "view"
@@ -45,9 +45,9 @@ export interface UseDragDropParams {
 }
 
 // ドラッグ&ドロップフックの戻り値型
-export interface UseDragDropReturn {
+export interface UseDragDropReturn<TItem extends AnswerItem = AnswerItem> {
   sensors: SensorDescriptor<SensorOptions>[]
-  activeFile: UnifiedFile | null
+  activeFile: TItem | null
   handleDragStart: (event: DragStartEvent) => void
   handleDragEnd: (event: DragEndEvent) => void
 }

@@ -1,5 +1,4 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
-import type { PendingChange } from "@/components/exams/06-student-answers/types"
 import type {
   ExamStudentWithMemberships,
   StudentAnswerImageWithExamPageAndStudent,
@@ -16,7 +15,6 @@ export interface StudentAnswerUploadProps {
   mode?: "upload" | "view"
 
   // 変更状態管理用（確認モードのみ）
-  pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (
     changedFiles: Array<{

@@ -1,17 +1,13 @@
-import { EmptyTableCell } from "@/components/exams/06-student-answers/student-answer-table/components/EmptyTableCell"
 import { FilePreviewCell } from "@/components/exams/06-student-answers/student-answer-table/components/FilePreviewCell"
-import { SortableTableCell } from "@/components/exams/06-student-answers/student-answer-table/components/SortableTableCell"
 import type {
+  CellData,
   ExtendedDisabledState,
   PreviewMode,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
 import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { lookupHasCell } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
-import type {
-  AnswerItem,
-  UnifiedFile,
-} from "@/components/exams/06-student-answers/types"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 import {
   Table,
   TableBody,
@@ -21,14 +17,42 @@ import {
 } from "@/components/ui/table"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
+// ============================================================================
+// セルの DnD ラッパーはスロット（render prop）で外から注入する。
+// 表本体（TableContent）は @dnd-kit も sortable/droppable セルも import せず、
+// グリッドのレイアウトとセル中身の描画（プレビュー・空・無効理由）だけを担う。
+// upload は sortable セル、view は droppable セルをそれぞれ注入する。
+// ============================================================================
+
+/** ファイルセル（答案あり）のラッパーへ渡す情報。children は FilePreviewCell。
+ * 生徒は Prisma 構造（ExamStudentWithMemberships）のまま渡す（studentId/氏名を手で
+ * バラした scalar にしない＝EmptyCellSlotProps と同じ流儀）。 */
+export interface FileCellSlotProps {
+  fileId: string
+  examStudent: ExamStudentWithMemberships
+  pageNumber: number
+  isDragDisabled: boolean
+  isFileDisabled: boolean
+  onTogglePosition: () => void
+  onToggleFileDisabled: () => void
+  onDelete: () => void
+  children: React.ReactNode
+}
+
+/** 空セル・無効セルのラッパーへ渡す情報（中身の描画もラッパー側が行う）。 */
+export interface EmptyCellSlotProps {
+  examStudent: ExamStudentWithMemberships
+  pageNumber: number
+  isPositionDisabled: boolean
+  hasExistingAnswer: boolean
+  disabledReason?: DisabledReason
+  hasNewFileToUpload: boolean
+  onTogglePosition: () => void
+  onToggleAnswerDisabled: () => void
+}
+
 interface TableContentProps {
-  tableData: Array<
-    Array<{
-      type: "file" | "empty" | "disabled"
-      file?: UnifiedFile
-      disabledReason?: DisabledReason
-    }>
-  >
+  tableData: CellData<AnswerItem>[][]
   sortedStudents: ExamStudentWithMemberships[]
   maxPages: number
   disabledState: ExtendedDisabledState
@@ -37,10 +61,9 @@ interface TableContentProps {
   nameRegionAvailable: Record<number, boolean>
   cellsWithExistingAnswers: CellLookup
   allowOverwrite: boolean
-  files: UnifiedFile[]
+  files: AnswerItem[]
   affectedCells?: Set<string>
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
-  observerRef?: React.RefObject<IntersectionObserver | null>
   correctingFileIds?: Set<string>
   getFileColor: (file: AnswerItem) => string
   drawNameRegionCanvas: (
@@ -51,11 +74,10 @@ interface TableContentProps {
   toggleColDisabled: (pageNumber: number) => void
   toggleCellDisabled: (studentId: string, pageNumber: number) => void
   toggleFileDisabled: (fileId: string) => void
-  onUploadModalOpen: (
-    studentName: string | undefined,
-    pageNumber: number | undefined
-  ) => void
   onDeleteAnswerSheet?: (fileId: string) => void
+  // DnD ラッパー（モード別に注入）
+  renderFileCell: (props: FileCellSlotProps) => React.ReactNode
+  renderEmptyCell: (props: EmptyCellSlotProps) => React.ReactNode
 }
 
 export function TableContent({
@@ -71,7 +93,6 @@ export function TableContent({
   files,
   affectedCells,
   imageLoadStates = {},
-  observerRef,
   correctingFileIds,
   getFileColor,
   drawNameRegionCanvas,
@@ -79,8 +100,9 @@ export function TableContent({
   toggleColDisabled,
   toggleCellDisabled,
   toggleFileDisabled,
-  onUploadModalOpen,
   onDeleteAnswerSheet,
+  renderFileCell,
+  renderEmptyCell,
 }: TableContentProps) {
   return (
     <Table>
@@ -149,21 +171,41 @@ export function TableContent({
               const pageNumber = pageIndex + 1
 
               if (cellData.type === "disabled" || cellData.type === "empty") {
+                // 既存答案があるか（オーバーレイ用・upload のみ）
+                const hasExistingAnswerForEmpty =
+                  mode === "upload" &&
+                  lookupHasCell(
+                    cellsWithExistingAnswers,
+                    examStudent.studentId,
+                    pageNumber
+                  )
+
+                // そのセルに新しく追加しようとしている画像ファイルがあるか
+                const newFileInCell = files.find(
+                  (file) =>
+                    file.studentId === examStudent.studentId &&
+                    file.pageNumber === pageNumber &&
+                    !disabledState.files.has(file.id)
+                )
+
                 return (
-                  <EmptyTableCellWithLogic
-                    key={pageNumber}
-                    cellData={cellData}
-                    examStudent={examStudent}
-                    pageNumber={pageNumber}
-                    mode={mode}
-                    cellsWithExistingAnswers={cellsWithExistingAnswers}
-                    allowOverwrite={allowOverwrite}
-                    files={files}
-                    disabledFiles={disabledState.files}
-                    toggleCellDisabled={toggleCellDisabled}
-                    toggleFileDisabled={toggleFileDisabled}
-                    onUploadModalOpen={onUploadModalOpen}
-                  />
+                  <ClientCell key={pageNumber}>
+                    {renderEmptyCell({
+                      examStudent,
+                      pageNumber,
+                      isPositionDisabled: cellData.type === "disabled",
+                      hasExistingAnswer: hasExistingAnswerForEmpty,
+                      disabledReason: cellData.disabledReason,
+                      hasNewFileToUpload: !!newFileInCell,
+                      onTogglePosition: () =>
+                        toggleCellDisabled(examStudent.studentId, pageNumber),
+                      onToggleAnswerDisabled: () => {
+                        if (newFileInCell) {
+                          toggleFileDisabled(newFileInCell.id)
+                        }
+                      },
+                    })}
+                  </ClientCell>
                 )
               }
 
@@ -182,55 +224,35 @@ export function TableContent({
                 hasExistingAnswer && !allowOverwrite
 
               return (
-                <SortableTableCell
-                  key={file.id}
-                  id={file.id}
-                  hasFile={true}
-                  isPositionDisabled={isDragDisabledByOverwrite}
-                  isFileDisabled={isFileDisabled}
-                  onTogglePosition={
-                    mode === "upload"
-                      ? () =>
-                          toggleCellDisabled(examStudent.studentId, pageNumber)
-                      : () => {}
-                  }
-                  onToggleFileDisabled={
-                    mode === "upload"
-                      ? () => toggleFileDisabled(file.id)
-                      : () => {}
-                  }
-                  onUploadToCell={() => {}}
-                  fileId={file.id}
-                  observerRef={observerRef}
-                  mode={mode}
-                  studentName={
-                    examStudent
-                      ? `${examStudent.student.lastName} ${examStudent.student.firstName}`
-                      : undefined
-                  }
-                  pageNumber={pageNumber}
-                  hasScoreData={true}
-                  onDeleteFileWithScoring={() => {
-                    if (onDeleteAnswerSheet) {
-                      onDeleteAnswerSheet(file.id)
-                    }
-                  }}
-                >
-                  <FilePreviewCell
-                    file={file}
-                    pageNumber={pageNumber}
-                    previewMode={previewMode}
-                    isFileDisabled={isFileDisabled}
-                    nameRegionAvailable={nameRegionAvailable[pageNumber]}
-                    getFileColor={getFileColor}
-                    drawNameRegionCanvas={drawNameRegionCanvas}
-                    imageLoadState={imageLoadStates[file.id]}
-                    isPendingChange={affectedCells?.has(file.id) || false}
-                    hasExistingAnswer={hasExistingAnswer}
-                    allowOverwrite={allowOverwrite}
-                    isCorrecting={correctingFileIds?.has(file.id) || false}
-                  />
-                </SortableTableCell>
+                <ClientCell key={file.id}>
+                  {renderFileCell({
+                    fileId: file.id,
+                    examStudent,
+                    pageNumber,
+                    isDragDisabled: isDragDisabledByOverwrite,
+                    isFileDisabled,
+                    onTogglePosition: () =>
+                      toggleCellDisabled(examStudent.studentId, pageNumber),
+                    onToggleFileDisabled: () => toggleFileDisabled(file.id),
+                    onDelete: () => onDeleteAnswerSheet?.(file.id),
+                    children: (
+                      <FilePreviewCell
+                        file={file}
+                        pageNumber={pageNumber}
+                        previewMode={previewMode}
+                        isFileDisabled={isFileDisabled}
+                        nameRegionAvailable={nameRegionAvailable[pageNumber]}
+                        getFileColor={getFileColor}
+                        drawNameRegionCanvas={drawNameRegionCanvas}
+                        imageLoadState={imageLoadStates[file.id]}
+                        isPendingChange={affectedCells?.has(file.id) || false}
+                        hasExistingAnswer={hasExistingAnswer}
+                        allowOverwrite={allowOverwrite}
+                        isCorrecting={correctingFileIds?.has(file.id) || false}
+                      />
+                    ),
+                  })}
+                </ClientCell>
               )
             })}
           </TableRow>
@@ -240,79 +262,8 @@ export function TableContent({
   )
 }
 
-// 空セル・無効セルの表示ロジック。無効理由は生成側で確定済みのものを
-// 受け取り（cellData.disabledReason）、ここでは再計算せず「流す」だけ。
-interface EmptyTableCellWithLogicProps {
-  cellData: {
-    type: "empty" | "disabled" | "file"
-    file?: UnifiedFile
-    disabledReason?: DisabledReason
-  }
-  examStudent: ExamStudentWithMemberships
-  pageNumber: number
-  mode: "upload" | "view"
-  cellsWithExistingAnswers: CellLookup
-  allowOverwrite: boolean
-  files: UnifiedFile[]
-  disabledFiles: Set<string>
-  toggleCellDisabled: (studentId: string, pageNumber: number) => void
-  toggleFileDisabled: (fileId: string) => void
-  onUploadModalOpen: (
-    studentName: string | undefined,
-    pageNumber: number | undefined
-  ) => void
-}
-
-function EmptyTableCellWithLogic({
-  cellData,
-  examStudent,
-  pageNumber,
-  mode,
-  cellsWithExistingAnswers,
-  allowOverwrite,
-  files,
-  disabledFiles,
-  toggleCellDisabled,
-  toggleFileDisabled,
-  onUploadModalOpen,
-}: EmptyTableCellWithLogicProps) {
-  // 既存答案があるか（オーバーレイ用）
-  const hasExistingAnswerForEmpty =
-    mode === "upload" &&
-    (cellData.type === "empty" || cellData.type === "disabled") &&
-    lookupHasCell(cellsWithExistingAnswers, examStudent.studentId, pageNumber)
-
-  // そのセルに新しく追加しようとしている画像ファイルがあるか
-  const newFileInCell = files.find(
-    (file) =>
-      file.studentId === examStudent.studentId &&
-      file.pageNumber === pageNumber &&
-      !disabledFiles.has(file.id)
-  )
-  const hasNewFileToUpload = !!newFileInCell
-
-  const studentName = `${examStudent.student.lastName} ${examStudent.student.firstName}`
-
-  return (
-    <EmptyTableCell
-      examStudent={examStudent}
-      pageNumber={pageNumber}
-      isPositionDisabled={cellData.type === "disabled"}
-      isPendingChange={false}
-      mode={mode}
-      hasExistingAnswer={hasExistingAnswerForEmpty}
-      allowOverwrite={allowOverwrite}
-      disabledReason={cellData.disabledReason}
-      onTogglePosition={() =>
-        toggleCellDisabled(examStudent.studentId, pageNumber)
-      }
-      onUploadToCell={() => onUploadModalOpen(studentName, pageNumber)}
-      onToggleAnswerDisabled={() => {
-        if (newFileInCell) {
-          toggleFileDisabled(newFileInCell.id)
-        }
-      }}
-      hasNewFileToUpload={hasNewFileToUpload}
-    />
-  )
+// スロットが返すセル（TableCell）をそのまま行に並べるための素通しラッパー。
+// renderFileCell/renderEmptyCell は <TableCell> を返すため、ここでは Fragment で受ける。
+function ClientCell({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
 }

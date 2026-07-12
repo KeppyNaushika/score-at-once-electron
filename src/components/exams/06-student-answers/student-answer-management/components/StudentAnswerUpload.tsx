@@ -1,16 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { FileUploadZone } from "@/components/exams/06-student-answers/student-answer-management/components/FileUploadZone"
 import { useStudentAnswerUpload } from "@/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload"
 import type { StudentAnswerUploadProps } from "@/components/exams/06-student-answers/student-answer-management/types"
-import {
-  buildOrderedFileArrayFromStudentAnswers,
-  reorderFilesByStrategy,
-} from "@/components/exams/06-student-answers/student-answer-management/utils/reorderFilesByStrategy"
-import { StudentAnswerTable } from "@/components/exams/06-student-answers/student-answer-table/components/StudentAnswerTable"
-import type { PlacementStrategy } from "@/components/exams/06-student-answers/types"
+import { convertAnswerSheetsToFiles } from "@/components/exams/06-student-answers/student-answer-management/utils/convertStudentAnswersToFiles"
+import { UploadAnswerTable } from "@/components/exams/06-student-answers/student-answer-table/components/UploadAnswerTable"
+import { ViewAnswerTable } from "@/components/exams/06-student-answers/student-answer-table/components/ViewAnswerTable"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 import { PasswordDialog } from "@/components/ui/password-dialog"
 
 export function StudentAnswerUpload({
@@ -20,7 +18,6 @@ export function StudentAnswerUpload({
   onUploadComplete,
   existingStudentAnswers,
   mode = "upload",
-  pendingChanges,
   affectedCells,
   onUpdatePendingChanges,
   onUploadFileCountChange,
@@ -30,7 +27,7 @@ export function StudentAnswerUpload({
   const finalModelAnswerCount = modelAnswerCount
   const finalExistingAnswers = existingStudentAnswers
 
-  // 表・DnD が占有信号として読む最小形（{id, studentId, pageNumber}）に射影する。
+  // 表・DnD が占有信号／差分基準として読む最小形（{id, studentId, pageNumber}）に射影する。
   // DB答案は Prisma 型のまま持ち回り、テーブル境界でだけ座標へ落とす。
   const existingAnswerOccupancy = useMemo(
     () =>
@@ -41,8 +38,8 @@ export function StudentAnswerUpload({
       })),
     [finalExistingAnswers]
   )
+
   const {
-    // State
     isUploading,
     isConverting,
     files,
@@ -51,16 +48,11 @@ export function StudentAnswerUpload({
     passwordDialog,
     handlePasswordSubmit,
     handlePasswordCancel,
-    observerRef,
-
-    // Marker correction
     markerCorrectionEnabled,
     markerCorrectionAvailable,
     markerDiagnostics,
     markerAvailablePages,
     setMarkerCorrectionEnabled,
-
-    // Actions
     setFiles,
     setFileOrder,
     handleDrop,
@@ -72,46 +64,32 @@ export function StudentAnswerUpload({
     mode
   )
 
-  // 確認モード用の初期化処理
-  // existingStudentAnswers の参照が変わったとき（初回・削除/反映後の再読み込み）に
-  // files を再構築する。ドラッグ操作では existingStudentAnswers は変化しないため、
-  // 配置中の並び替えを巻き込んで再構築することはない。
+  // 確認モード用の答案配列（DB答案の投射 AnswerItem[]）。孤立答案も含めて全件持つ。
+  // existingStudentAnswers の参照が変わったとき（初回・削除/反映後の再読み込み）にのみ
+  // 再構築する。ドラッグ操作では参照が変わらないため配置中の並びを巻き込まない。
+  const [viewFiles, setViewFiles] = useState<AnswerItem[]>([])
   const syncedAnswersRef = useRef<typeof finalExistingAnswers | null>(null)
   useEffect(() => {
     if (mode !== "view" || !finalExistingAnswers) return
     if (syncedAnswersRef.current === finalExistingAnswers) return
     syncedAnswersRef.current = finalExistingAnswers
 
-    // 既存答案を配置戦略に基づいて配列構築
-    let initialFiles = buildOrderedFileArrayFromStudentAnswers(
-      finalExistingAnswers,
-      students,
-      finalModelAnswerCount,
-      fileOrder
-    )
-    // correctionStatusMapから補正ステータスを注入
+    let initialFiles = convertAnswerSheetsToFiles(finalExistingAnswers)
+    // correctionStatusMap から補正ステータスを注入
     if (correctionStatusMap && correctionStatusMap.size > 0) {
-      initialFiles = initialFiles.map((file) => {
-        if (file.studentId) {
-          const key = `${file.studentId}-${file.pageNumber}`
+      initialFiles = initialFiles.map((item) => {
+        if (item.studentId) {
+          const key = `${item.studentId}-${item.pageNumber}`
           const status = correctionStatusMap.get(key)
           if (status) {
-            return { ...file, correctionStatus: status }
+            return { ...item, correctionStatus: status }
           }
         }
-        return file
+        return item
       })
     }
-    setFiles(initialFiles)
-  }, [
-    mode,
-    finalExistingAnswers,
-    students,
-    finalModelAnswerCount,
-    fileOrder,
-    setFiles,
-    correctionStatusMap,
-  ])
+    setViewFiles(initialFiles)
+  }, [mode, finalExistingAnswers, correctionStatusMap])
 
   // ナビゲーションガード用: アップロード待ちファイル数の通知
   useEffect(() => {
@@ -120,41 +98,16 @@ export function StudentAnswerUpload({
     }
   }, [mode, files.length, onUploadFileCountChange])
 
-  // 確認モード用の配置戦略変更ハンドラー
-  const handleFileOrderChangeInViewMode = useCallback(
-    (newFileOrder: PlacementStrategy) => {
-      if (mode === "view" && files.length > 0) {
-        // 現在のファイル配列を新しい配置戦略で再配置
-        const reorderedFiles = reorderFilesByStrategy(
-          files,
-          students,
-          finalModelAnswerCount,
-          newFileOrder
-        )
-        setFiles(reorderedFiles)
-      }
-      setFileOrder(newFileOrder)
-    },
-    [mode, files, students, finalModelAnswerCount, setFiles, setFileOrder]
-  )
-
   // 表示モードでは既存の答案をテーブル表示
   if (mode === "view" && finalExistingAnswers) {
     return (
-      <StudentAnswerTable
+      <ViewAnswerTable
         examId={examId}
         students={students}
-        files={files}
+        files={viewFiles}
         modelAnswerCount={finalModelAnswerCount}
-        fileOrder={fileOrder}
-        isUploading={false} // 確認モードではアップロード不可
-        onFileOrderChange={handleFileOrderChangeInViewMode}
-        onFilesChange={setFiles}
-        onUpload={handleUpload}
-        observerRef={observerRef}
-        mode="view"
+        onFilesChange={setViewFiles}
         onReloadData={onUploadComplete}
-        pendingChanges={pendingChanges}
         affectedCells={affectedCells}
         onUpdatePendingChanges={onUpdatePendingChanges}
         existingStudentAnswers={existingAnswerOccupancy}
@@ -175,7 +128,7 @@ export function StudentAnswerUpload({
 
       {/* 答案配置テーブル */}
       <div>
-        <StudentAnswerTable
+        <UploadAnswerTable
           examId={examId}
           students={students}
           files={files}
@@ -185,8 +138,6 @@ export function StudentAnswerUpload({
           onFileOrderChange={setFileOrder}
           onFilesChange={setFiles}
           onUpload={handleUpload}
-          observerRef={observerRef}
-          mode={mode}
           onReloadData={onUploadComplete}
           existingStudentAnswers={existingAnswerOccupancy}
           markerCorrectionEnabled={markerCorrectionEnabled}

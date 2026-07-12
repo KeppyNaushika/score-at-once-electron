@@ -1,7 +1,7 @@
 "use client"
 
 import { useDroppable } from "@dnd-kit/core"
-import { Ban, FileX, Upload, X } from "lucide-react"
+import { Ban, FileX, X } from "lucide-react"
 
 import type { EmptyTableCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
 import { encodeCellDroppableId } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
@@ -24,7 +24,6 @@ export function EmptyTableCell({
   allowOverwrite = false,
   disabledReason,
   onTogglePosition,
-  onUploadToCell,
   onToggleAnswerDisabled,
   hasNewFileToUpload = false,
 }: EmptyTableCellProps) {
@@ -123,9 +122,9 @@ export function EmptyTableCell({
                 </>
               )}
             </ContextMenuItem>
-            <ContextMenuSeparator />
             {hasNewFileToUpload && (
               <>
+                <ContextMenuSeparator />
                 <ContextMenuItem
                   onClick={onToggleAnswerDisabled}
                   className="flex items-center gap-2"
@@ -133,16 +132,8 @@ export function EmptyTableCell({
                   <FileX className="h-4 w-4" />
                   答案無効
                 </ContextMenuItem>
-                <ContextMenuSeparator />
               </>
             )}
-            <ContextMenuItem
-              onClick={onUploadToCell}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              このセルに答案を追加
-            </ContextMenuItem>
           </ContextMenuContent>
         )}
       </ContextMenu>

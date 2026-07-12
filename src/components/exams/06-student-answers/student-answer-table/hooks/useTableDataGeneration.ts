@@ -7,15 +7,16 @@ import type {
 import {
   getEnabledFiles,
   manualDisabledReason,
+  partitionAnswerItemsByPlacement,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
+  AnswerItem,
   PlacementStrategy,
-  UnifiedFile,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-interface UseTableDataGenerationParams {
-  files: UnifiedFile[]
+interface UseTableDataGenerationParams<TItem extends AnswerItem> {
+  files: TItem[]
   sortedStudents: ExamStudentWithMemberships[]
   modelAnswerCount: number
   fileOrder: PlacementStrategy
@@ -34,9 +35,11 @@ interface UseTableDataGenerationParams {
 }
 
 /**
- * テーブルデータの生成を行うカスタムフック
+ * テーブルデータの生成を行うカスタムフック。
+ * view では、表のマスに配置できない答案（除籍・ページ範囲外＝孤立答案）を
+ * `orphanItems` として返す（呼び出し側が専用枠で可視化・再配置できるようにする）。
  */
-export function useTableDataGeneration({
+export function useTableDataGeneration<TItem extends AnswerItem>({
   files,
   sortedStudents,
   modelAnswerCount,
@@ -46,31 +49,25 @@ export function useTableDataGeneration({
   enhancedIsCellDisabled,
   allowOverwrite = false,
   existingStudentAnswers = [],
-}: UseTableDataGenerationParams) {
-  const tableData = useMemo(() => {
+}: UseTableDataGenerationParams<TItem>) {
+  const { tableData, orphanItems } = useMemo(() => {
     const enabledFiles = getEnabledFiles(files, disabledState)
 
-    const data: CellData[][] = []
+    const data: CellData<TItem>[][] = []
+    const orphans: TItem[] = []
 
     if (mode === "view") {
       // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, pageNumber) に配置する。
       // 配列順ではなく座標基準にすることで、DnD の move/swap が座標更新だけで完結し、
       // 任意マスへの移動・占有マスとの入れ替えが素直に描画へ反映される。
-      // studentId → 行インデックスを1回だけ引けるようにする（O(files×students) を避ける）
-      const studentIndexById = new Map<string, number>()
-      sortedStudents.forEach((examStudent, studentIndex) => {
-        studentIndexById.set(examStudent.studentId, studentIndex)
-      })
-
-      const fileByCell = new Map<string, UnifiedFile>()
-      for (const file of enabledFiles) {
-        if (!file.studentId) continue
-        const studentIndex = studentIndexById.get(file.studentId)
-        if (studentIndex === undefined) continue
-        const pageIndex = file.pageNumber - 1
-        if (pageIndex < 0 || pageIndex >= modelAnswerCount) continue
-        fileByCell.set(`${studentIndex}-${pageIndex}`, file)
-      }
+      // 配置できない答案（除籍・ページ範囲外）は placeable にならず orphans に落ちる。
+      const { placedByCell, orphans: orphanItems } =
+        partitionAnswerItemsByPlacement(
+          enabledFiles,
+          sortedStudents.map((examStudent) => examStudent.studentId),
+          modelAnswerCount
+        )
+      orphans.push(...orphanItems)
 
       // テーブルデータを生成
       for (
@@ -79,10 +76,10 @@ export function useTableDataGeneration({
         studentIndex++
       ) {
         const examStudent = sortedStudents[studentIndex]
-        const row: CellData[] = []
+        const row: CellData<TItem>[] = []
 
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
-          const file = fileByCell.get(`${studentIndex}-${pageIndex}`)
+          const file = placedByCell.get(`${studentIndex}-${pageIndex}`)
 
           if (file) {
             // 答案が居るセルは常にファイルセル（動的無効化は答案なしセルにのみ効く）
@@ -174,7 +171,7 @@ export function useTableDataGeneration({
       })
 
       // ファイルと有効セルをマッピング（ファイル配列の順序で自動配置）
-      const filePositionMap = new Map<string, UnifiedFile>()
+      const filePositionMap = new Map<string, TItem>()
       validPositions.forEach((position, fileIndex) => {
         const file = enabledFiles[fileIndex]
         if (file) {
@@ -190,7 +187,7 @@ export function useTableDataGeneration({
         studentIndex++
       ) {
         const examStudent = sortedStudents[studentIndex]
-        const row: CellData[] = []
+        const row: CellData<TItem>[] = []
 
         for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
           const pageNumber = pageIndex + 1
@@ -231,7 +228,7 @@ export function useTableDataGeneration({
       }
     }
 
-    return data
+    return { tableData: data, orphanItems: orphans }
   }, [
     files,
     sortedStudents,
@@ -244,5 +241,5 @@ export function useTableDataGeneration({
     existingStudentAnswers,
   ])
 
-  return { tableData }
+  return { tableData, orphanItems }
 }

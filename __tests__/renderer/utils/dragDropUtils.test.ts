@@ -14,20 +14,18 @@ import {
   diffFilesAgainstBaseline,
   encodeCellDroppableId,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
-import type { UnifiedFile } from "@/components/exams/06-student-answers/types"
+import { partitionAnswerItemsByPlacement } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 
 function makeFile(
   id: string,
   studentId: string | undefined,
   pageNumber: number
-): UnifiedFile {
+): AnswerItem {
   return {
     id,
     name: `answer-${id}`,
-    type: "image/png",
     pageNumber,
-    isSelected: false,
-    originalFileName: `answer-${id}.png`,
     studentId,
   }
 }
@@ -124,6 +122,40 @@ describe("applyCellMoveOrSwap", () => {
     expect(result).toBe(files)
   })
 
+  it("移動元が配置不能（孤立答案）なら占有セルへの swap を拒否する（有効答案の巻き込み防止）", () => {
+    const withdrawn = "99999999-9999-4999-8999-999999999999"
+    const files = [
+      makeFile("orphan", withdrawn, 1),
+      makeFile("valid", STUDENT_A, 1),
+    ]
+    // 孤立答案 orphan を valid の居場所（占有セル）へ → source 配置不能なので拒否
+    const result = applyCellMoveOrSwap(
+      files,
+      "orphan",
+      { studentId: STUDENT_A, pageNumber: 1 },
+      new Set(["orphan", "valid"]),
+      false // isSourcePlaceable
+    )
+    expect(result).toBe(files) // 変更なし（valid を除籍座標へ押し出さない）
+  })
+
+  it("移動元が配置不能でも空セルへの移動は許す（孤立答案の救済）", () => {
+    const withdrawn = "99999999-9999-4999-8999-999999999999"
+    const files = [makeFile("orphan", withdrawn, 1)]
+    const result = applyCellMoveOrSwap(
+      files,
+      "orphan",
+      { studentId: STUDENT_A, pageNumber: 2 },
+      new Set(["orphan"]),
+      false
+    )
+    expect(result).not.toBe(files)
+    expect(result.find((file) => file.id === "orphan")).toMatchObject({
+      studentId: STUDENT_A,
+      pageNumber: 2,
+    })
+  })
+
   it("occupantEligibleIds に含まれない占有ファイルは swap 対象にしない（隠れ答案の巻き込み防止）", () => {
     // f2 は移動先座標に居るが「表に見えていない」→ swap せず、移動先に移すだけ
     const files = [makeFile("f1", STUDENT_A, 1), makeFile("f2", STUDENT_B, 1)]
@@ -180,5 +212,56 @@ describe("diffFilesAgainstBaseline", () => {
   it("baseline に無い id（新規・除籍等）は差分対象外", () => {
     const files = [makeFile("unknown", STUDENT_A, 3)]
     expect(diffFilesAgainstBaseline(files, baseline)).toHaveLength(0)
+  })
+})
+
+describe("partitionAnswerItemsByPlacement（孤立答案 [4]/[5]）", () => {
+  const roster = [STUDENT_A, STUDENT_B]
+  const modelAnswerCount = 2
+
+  it("ロスター内かつページ範囲内の答案はマスに配置される", () => {
+    const items = [makeFile("f1", STUDENT_A, 1), makeFile("f2", STUDENT_B, 2)]
+    const { placedByCell, orphans } = partitionAnswerItemsByPlacement(
+      items,
+      roster,
+      modelAnswerCount
+    )
+    expect(orphans).toHaveLength(0)
+    // studentIndex-pageIndex（0始まり）
+    expect(placedByCell.get("0-0")?.id).toBe("f1")
+    expect(placedByCell.get("1-1")?.id).toBe("f2")
+  })
+
+  it("[4] studentId が現ロスターに無い答案（除籍）は孤立答案になる", () => {
+    const withdrawn = "99999999-9999-4999-8999-999999999999"
+    const items = [makeFile("f1", withdrawn, 1)]
+    const { placedByCell, orphans } = partitionAnswerItemsByPlacement(
+      items,
+      roster,
+      modelAnswerCount
+    )
+    expect(placedByCell.size).toBe(0)
+    expect(orphans.map((item) => item.id)).toEqual(["f1"])
+  })
+
+  it("[5] pageNumber が範囲外（ページ数削減）の答案は孤立答案になる", () => {
+    const items = [makeFile("f1", STUDENT_A, 3)] // modelAnswerCount=2 の範囲外
+    const { placedByCell, orphans } = partitionAnswerItemsByPlacement(
+      items,
+      roster,
+      modelAnswerCount
+    )
+    expect(placedByCell.size).toBe(0)
+    expect(orphans.map((item) => item.id)).toEqual(["f1"])
+  })
+
+  it("studentId 未設定の答案も孤立答案になる", () => {
+    const items = [makeFile("f1", undefined, 1)]
+    const { orphans } = partitionAnswerItemsByPlacement(
+      items,
+      roster,
+      modelAnswerCount
+    )
+    expect(orphans.map((item) => item.id)).toEqual(["f1"])
   })
 })

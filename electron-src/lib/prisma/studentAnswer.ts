@@ -12,8 +12,6 @@ export {
   // 採点安全な配置適用（view 方式B）
   applyStudentAnswerPlacements,
   associateStudentAnswerWithStudent,
-  // 一括操作
-  batchUpdateStudentAnswerPlacements,
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
@@ -21,10 +19,6 @@ export {
   // ステータス管理
   setStudentAnswerAbsent,
   type StudentAnswerPlacementMove,
-  swapStudentAnswerPlacements,
-  swapStudentAnswerPlacementsWithScoring,
-  // 配置管理
-  updateStudentAnswerPlacement,
   // CRUD操作
   uploadStudentAnswers,
 } from "./studentAnswer/index"

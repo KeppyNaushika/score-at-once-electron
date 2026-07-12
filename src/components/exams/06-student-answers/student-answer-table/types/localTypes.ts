@@ -1,7 +1,7 @@
 import type {
-  PendingChange,
+  AnswerItem,
+  PendingImage,
   PlacementStrategy,
-  UnifiedFile,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
@@ -9,32 +9,45 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 import type { FileState } from "./dragDropTypes"
 
 // ============================================================================
-// StudentAnswerTable専用の型定義
+// answer-table コンポーネントの型定義
 // ============================================================================
 
-export interface UploadModalState {
-  isOpen: boolean
-  studentName?: string
-  pageNumber?: number
-}
-
-export interface StudentAnswerTableProps {
+/** upload / view の答案テーブルが共有する基底プロパティ */
+export interface AnswerTableBaseProps {
   examId: string
   students: ExamStudentWithMemberships[]
-  files: UnifiedFile[]
   modelAnswerCount: number
+  imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
+  onReloadData?: () => void
+  // upload: 既存答案の占有信号 / view: DnD 差分の DB baseline
+  existingStudentAnswers?: Array<{
+    id: string
+    studentId: string | null
+    pageNumber: number
+  }>
+}
+
+/** アップロード（新規追加）モードのテーブル。ファイルは未保存の PendingImage。 */
+export interface UploadAnswerTableProps extends AnswerTableBaseProps {
+  files: PendingImage[]
   fileOrder?: PlacementStrategy
   isUploading?: boolean
   onFileOrderChange?: (order: PlacementStrategy) => void
-  onFilesChange: (files: UnifiedFile[]) => void
+  onFilesChange: (files: PendingImage[]) => void
   onUpload: (data: UploadData[]) => void
-  imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
-  observerRef?: React.RefObject<IntersectionObserver | null>
-  mode?: "upload" | "view"
-  onReloadData?: () => void
 
-  // 変更状態管理用（確認モードのみ）
-  pendingChanges?: PendingChange[]
+  // マーカー補正状態（親フックから注入）
+  markerCorrectionEnabled?: boolean
+  markerCorrectionAvailable?: boolean
+  markerDiagnostics?: string
+  markerAvailablePages?: Set<number>
+  onMarkerCorrectionChange?: (enabled: boolean) => void
+}
+
+/** 確認（配置済み答案）モードのテーブル。ファイルは DB答案の投射 AnswerItem。 */
+export interface ViewAnswerTableProps extends AnswerTableBaseProps {
+  files: AnswerItem[]
+  onFilesChange: (files: AnswerItem[]) => void
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (
     changedFiles: Array<{
@@ -43,20 +56,6 @@ export interface StudentAnswerTableProps {
       toState: FileState
     }>
   ) => void
-
-  // 上書き制御用（アップロードモードでの既存答案情報）
-  existingStudentAnswers?: Array<{
-    id: string
-    studentId: string | null
-    pageNumber: number
-  }>
-
-  // マーカー補正状態（親フックから注入）
-  markerCorrectionEnabled?: boolean
-  markerCorrectionAvailable?: boolean
-  markerDiagnostics?: string
-  markerAvailablePages?: Set<number>
-  onMarkerCorrectionChange?: (enabled: boolean) => void
 }
 
 export type DisabledReason =

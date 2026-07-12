@@ -7,6 +7,8 @@ import type { AnswerItem } from "@/components/exams/06-student-answers/types"
 interface TableDragOverlayProps {
   activeFile: AnswerItem | null
   previewMode: PreviewMode
+  // ドラッグ中の答案が属するページに氏名欄があるか（name-only プレビュー用）
+  nameRegionAvailable?: boolean
   getFileColor: (file: AnswerItem) => string
   drawNameRegionCanvas: (
     file: AnswerItem,
@@ -17,6 +19,7 @@ interface TableDragOverlayProps {
 export function TableDragOverlay({
   activeFile,
   previewMode,
+  nameRegionAvailable = false,
   getFileColor,
   drawNameRegionCanvas,
 }: TableDragOverlayProps) {
@@ -26,10 +29,11 @@ export function TableDragOverlay({
         <div className="h-32 w-32 scale-110 rotate-3 transform rounded border-2 border-blue-400 bg-white shadow-2xl">
           <FilePreviewCell
             file={activeFile}
-            pageNumber={1}
+            // ドラッグ中の答案の実ページで描画する（氏名欄クリップも正しいページ基準になる）
+            pageNumber={activeFile.pageNumber}
             previewMode={previewMode}
             isFileDisabled={false}
-            nameRegionAvailable={false}
+            nameRegionAvailable={nameRegionAvailable}
             getFileColor={getFileColor}
             drawNameRegionCanvas={drawNameRegionCanvas}
             imageLoadState="loaded"
