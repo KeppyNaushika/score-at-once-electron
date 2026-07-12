@@ -71,9 +71,9 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
 
 import {
   applyAdjustmentAndClamp,
-  calculateGrades,
   estimateAbsentScore,
-} from "@/electron-src/lib/shared/calculations/gradeCalculator"
+} from "@/electron-src/lib/shared/calculations/absentEstimation"
+import { calculateGrades } from "@/electron-src/lib/shared/calculations/gradeCalculator"
 
 // === ヘルパー ===
 
