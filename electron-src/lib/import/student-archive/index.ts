@@ -16,7 +16,7 @@ import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "../merge/idChangeExecutor"
-import { processMemberships } from "../merge/idIntegrationImporter"
+import { processMemberships } from "../merge/importSyncRecords"
 import { preMatchClassrooms } from "../merge/matchers/classroomMatcher"
 import { preMatchStudents } from "../merge/matchers/studentMatcher"
 import {
