@@ -6,8 +6,8 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /**
  * 答案テーブルの行・列・セル単位の無効化状態と上書きモードを管理するフック。
- * 同一性でキーする: 行 = examStudentId[]、列 = pageNumber[]、
- * セル = {studentId, pageNumber}[]（いずれも少数なので配列）、
+ * 同一性でキーする: 行 = examStudentId[]、列 = examPageId[]、
+ * セル = {studentId, examPageId}[]（いずれも少数なので配列）、
  * files = Set<fileId>（アップロードで多数になりうるので O(1)）。
  */
 export function useDisabledState() {
@@ -32,21 +32,21 @@ export function useDisabledState() {
     }))
   }, [])
 
-  const toggleColDisabled = useCallback((pageNumber: number) => {
+  const toggleColDisabled = useCallback((examPageId: string) => {
     setDisabledState((prev) => ({
       ...prev,
-      cols: prev.cols.includes(pageNumber)
-        ? prev.cols.filter((colPageNumber) => colPageNumber !== pageNumber)
-        : [...prev.cols, pageNumber],
+      cols: prev.cols.includes(examPageId)
+        ? prev.cols.filter((colExamPageId) => colExamPageId !== examPageId)
+        : [...prev.cols, examPageId],
     }))
   }, [])
 
   const toggleCellDisabled = useCallback(
-    (studentId: string, pageNumber: number) => {
+    (studentId: string, examPageId: string) => {
       setDisabledState((prev) => {
         const alreadyDisabled = prev.cells.some(
           (cell) =>
-            cell.studentId === studentId && cell.pageNumber === pageNumber
+            cell.studentId === studentId && cell.examPageId === examPageId
         )
         return {
           ...prev,
@@ -55,10 +55,10 @@ export function useDisabledState() {
                 (cell) =>
                   !(
                     cell.studentId === studentId &&
-                    cell.pageNumber === pageNumber
+                    cell.examPageId === examPageId
                   )
               )
-            : [...prev.cells, { studentId, pageNumber }],
+            : [...prev.cells, { studentId, examPageId }],
         }
       })
     },
@@ -78,9 +78,9 @@ export function useDisabledState() {
   }, [])
 
   const isCellDisabled = useCallback(
-    (examStudent: ExamStudentWithMemberships, pageNumber: number) => {
+    (examStudent: ExamStudentWithMemberships, examPageId: string) => {
       return (
-        manualDisabledReason(disabledState, examStudent, pageNumber) !==
+        manualDisabledReason(disabledState, examStudent, examPageId) !==
         undefined
       )
     },

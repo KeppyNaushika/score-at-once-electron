@@ -12,42 +12,44 @@ import {
   sortStudentsByCustomOrder,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
-  AnswerItem,
+  AnswerImageIdentity,
+  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-interface UseTableDataParams<TItem extends AnswerItem> {
+interface UseTableDataParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
   students: ExamStudentWithMemberships[]
-  modelAnswerCount: number
+  examPages: ExamPageColumn[]
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   isCellDisabled: (
     examStudent: ExamStudentWithMemberships,
-    pageNumber: number
+    examPageId: string
   ) => boolean
   mode?: "upload" | "view"
-  existingStudentAnswers?: Array<{
+  existingAnswers?: Array<{
     id: string
     studentId: string | null
-    pageNumber: number
+    examPageId: string | null
   }>
   allowOverwrite?: boolean
 }
 
 /**
- * テーブルデータの管理を行うメインフック（リファクタリング版）
+ * テーブルデータの管理を行うメインフック（entity-first 版）。
+ * 列は ExamPage 実体で回し、セルの同定・照合は examPageId で行う。
  */
-export function useTableData<TItem extends AnswerItem>({
+export function useTableData<TItem extends AnswerImageIdentity>({
   files,
   students,
-  modelAnswerCount,
+  examPages,
   fileOrder,
   disabledState,
   isCellDisabled,
   mode,
-  existingStudentAnswers,
+  existingAnswers,
   allowOverwrite = false,
 }: UseTableDataParams<TItem>) {
   // 生徒のソート（customOrder準拠）
@@ -60,23 +62,23 @@ export function useTableData<TItem extends AnswerItem>({
     return calculateDynamicDisabledCells(
       files,
       sortedStudents,
-      modelAnswerCount,
+      examPages,
       disabledState,
       mode
     )
-  }, [files, sortedStudents, modelAnswerCount, disabledState, mode])
+  }, [files, sortedStudents, examPages, disabledState, mode])
 
   // 手動無効化 + 動的無効化を合わせたセル無効判定
   const enhancedIsCellDisabled = useCallback(
-    (examStudent: ExamStudentWithMemberships, pageNumber: number) => {
+    (examStudent: ExamStudentWithMemberships, examPageId: string) => {
       // 元の無効化チェック
-      if (isCellDisabled(examStudent, pageNumber)) return true
+      if (isCellDisabled(examStudent, examPageId)) return true
 
       // 動的無効化チェック
       return lookupHasCell(
         dynamicDisabledCells,
         examStudent.studentId,
-        pageNumber
+        examPageId
       )
     },
     [isCellDisabled, dynamicDisabledCells]
@@ -87,19 +89,12 @@ export function useTableData<TItem extends AnswerItem>({
     return calculateCellsWithExistingAnswers(
       files,
       sortedStudents,
-      modelAnswerCount,
+      examPages,
       disabledState,
       mode,
-      existingStudentAnswers
+      existingAnswers
     )
-  }, [
-    files,
-    sortedStudents,
-    modelAnswerCount,
-    disabledState,
-    mode,
-    existingStudentAnswers,
-  ])
+  }, [files, sortedStudents, examPages, disabledState, mode, existingAnswers])
 
   // 有効/無効ファイルの取得
   const getEnabledFilesCallback = useCallback(() => {
@@ -111,7 +106,7 @@ export function useTableData<TItem extends AnswerItem>({
   }, [files, disabledState])
 
   // ファイルカラーの取得
-  const getFileColorCallback = useCallback((file: AnswerItem) => {
+  const getFileColorCallback = useCallback((file: AnswerImageIdentity) => {
     return getFileColor(file)
   }, [])
 
@@ -119,13 +114,13 @@ export function useTableData<TItem extends AnswerItem>({
   const { tableData, orphanItems } = useTableDataGeneration({
     files,
     sortedStudents,
-    modelAnswerCount,
+    examPages,
     fileOrder,
     disabledState,
     mode,
     enhancedIsCellDisabled,
     allowOverwrite,
-    existingStudentAnswers,
+    existingAnswers,
   })
 
   return {

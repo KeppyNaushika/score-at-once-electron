@@ -4,11 +4,11 @@ import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
+import type { FilePreviewCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
 import {
   getCachedStudentAnswerImage,
-  loadStudentAnswerImage,
-} from "@/components/exams/06-student-answers/student-answer-management/utils/convertStudentAnswersToFiles"
-import type { FilePreviewCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
+  loadStudentAnswerImageSource,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/studentAnswerImageCache"
 import {
   Tooltip,
   TooltipContent,
@@ -19,75 +19,58 @@ import {
 /**
  * ファイルプレビューセルコンポーネント
  *
- * 答案画像のサムネイルを表示するセル。
- * 既存画像の遅延読み込み、氏名欄プレビュー生成、各種状態オーバーレイ表示を行う。
- *
- * @remarks
- * fileオブジェクトへの参照はuseRefで保持し、依存配列にはfile.idとfile.imagePathのみを含める。
- * これにより親コンポーネントの再レンダリング時にuseEffectが不要に再実行されることを防ぐ。
+ * 答案画像のサムネイルを表示するセル。表示ソース（未保存 blob = previewUrl / DB答案の
+ * imagePath）と表示値（altName・pageNumber・補正ステータス）は呼び出し側がエンティティ
+ * ／未保存項目から導出して渡す（このコンポーネントは答案の同定・実体には依存しない）。
  */
 export function FilePreviewCell({
-  file,
+  previewUrl,
+  imagePath,
+  altName,
   pageNumber,
   previewMode,
   isFileDisabled,
   nameRegionAvailable,
   drawNameRegionCanvas,
   imageLoadState = "pending",
+  correctionStatus,
+  correctionError,
   isPendingChange = false,
   hasExistingAnswer = false,
   allowOverwrite = false,
   isCorrecting = false,
-}: FilePreviewCellProps & {
-  isPendingChange?: boolean
-  hasExistingAnswer?: boolean
-  allowOverwrite?: boolean
-  isCorrecting?: boolean
-}) {
+}: FilePreviewCellProps) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
     null
   )
   const [isNameRegionLoading, setIsNameRegionLoading] = useState(false)
-  // 初期プレビューは preview（未保存の blob）→ 読込済みキャッシュ（DB答案）の順で同期取得する。
+  // 初期プレビューは previewUrl（未保存 blob）→ 読込済みキャッシュ（DB答案）の順で同期取得する。
   // これにより DragOverlay の複製セルも、グリッドで読込済みの画像を即座に表示できる。
   const [imagePreview, setImagePreview] = useState<string | null>(
-    file.preview ??
-      (file.imagePath
-        ? (getCachedStudentAnswerImage(file.imagePath) ?? null)
-        : null)
+    previewUrl ??
+      (imagePath ? (getCachedStudentAnswerImage(imagePath) ?? null) : null)
   )
   const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
 
-  /** fileオブジェクトへの参照（useEffect内から最新の値にアクセスするため） */
-  const fileRef = useRef(file)
-  fileRef.current = file
-
-  /** ファイルIDが変わった時にプレビュー状態をリセット（キャッシュがあれば即座に反映） */
+  /** 表示ソースが変わった時にプレビュー状態をリセット（キャッシュがあれば即座に反映） */
   useEffect(() => {
     setImagePreview(
-      file.preview ??
-        (file.imagePath
-          ? (getCachedStudentAnswerImage(file.imagePath) ?? null)
-          : null)
+      previewUrl ??
+        (imagePath ? (getCachedStudentAnswerImage(imagePath) ?? null) : null)
     )
     setIsImageLoading(false)
-  }, [file.id, file.preview, file.imagePath])
+  }, [previewUrl, imagePath])
 
   /**
-   * 既存画像の遅延読み込み
-   *
-   * DB保存済みの画像をElectron API経由でBase64として取得し表示する。
-   * 依存配列にはfile.idとfile.imagePathのみを含め、fileオブジェクト全体は含めない。
-   * isImageLoadingは依存配列に含めない（含めるとstate変更→cleanup→cancelled=trueで読み込みが完了しない）。
+   * 既存画像の遅延読み込み（DB保存済みの画像を Electron API 経由で取得）。
    */
   useEffect(() => {
     let mounted = true
-    const currentFile = fileRef.current
 
-    if (!imagePreview && currentFile.imagePath) {
+    if (!imagePreview && imagePath) {
       setIsImageLoading(true)
-      loadStudentAnswerImage(currentFile)
+      loadStudentAnswerImageSource(previewUrl, imagePath)
         .then((dataUrl) => {
           if (!mounted) return
           setImagePreview(dataUrl)
@@ -105,23 +88,19 @@ export function FilePreviewCell({
     return () => {
       mounted = false
     }
-  }, [file.id, file.imagePath, imagePreview])
+  }, [previewUrl, imagePath, imagePreview])
 
   /**
-   * 氏名欄プレビューの生成
-   *
-   * previewModeが"name-only"の場合、画像から氏名欄領域を切り出して表示する。
+   * 氏名欄プレビューの生成（previewModeが"name-only"の場合）。
    */
   useEffect(() => {
-    const currentFile = fileRef.current
     if (previewMode === "name-only" && nameRegionAvailable && imagePreview) {
       let cancelled = false
       const frame = requestAnimationFrame(() => {
         if (cancelled) return
 
         setIsNameRegionLoading(true)
-        const tempFile = { ...currentFile, preview: imagePreview }
-        drawNameRegionCanvas(tempFile, pageNumber)
+        drawNameRegionCanvas(imagePreview, pageNumber)
           .then((canvas) => {
             if (cancelled) return
             setNameRegionPreview(canvas)
@@ -140,7 +119,6 @@ export function FilePreviewCell({
       }
     }
   }, [
-    file.id,
     pageNumber,
     previewMode,
     nameRegionAvailable,
@@ -150,7 +128,6 @@ export function FilePreviewCell({
 
   /**
    * 画像プレビューをレンダリング
-   * @returns プレビューモードと読み込み状態に応じたJSX要素
    */
   const renderImagePreview = () => {
     if (previewMode === "name-only") {
@@ -175,19 +152,12 @@ export function FilePreviewCell({
           <div className="relative h-full w-full">
             <Image
               src={nameRegionPreview}
-              alt={`${file.name} - 氏名欄`}
+              alt={`${altName} - 氏名欄`}
               className="h-full w-full object-contain"
               width={200}
               height={200}
               unoptimized
             />
-            {process.env.NODE_ENV === "development" && (
-              <div className="bg-opacity-75 absolute top-0 left-0 bg-black p-1 font-mono text-xs text-white">
-                <div>ID: {file.id.slice(0, 8)}</div>
-                <div>SID: {file.studentId?.slice(0, 8) || "undefined"}</div>
-                <div>P: {file.pageNumber}</div>
-              </div>
-            )}
           </div>
         )
       }
@@ -207,7 +177,7 @@ export function FilePreviewCell({
           <Image
             ref={imgRef}
             src={imagePreview}
-            alt={file.name}
+            alt={altName}
             className="h-full w-full object-contain"
             width={200}
             height={200}
@@ -226,7 +196,6 @@ export function FilePreviewCell({
 
   /**
    * 読み込み状態インジケーターをレンダリング
-   * @returns imageLoadStateに応じたインジケーター要素
    */
   const renderLoadingState = () => {
     switch (imageLoadState) {
@@ -269,14 +238,14 @@ export function FilePreviewCell({
         <div className="pointer-events-none absolute inset-0 z-30 border-2 border-orange-500 bg-orange-500/20" />
       )}
 
-      {file.correctionStatus === "corrected" && (
+      {correctionStatus === "corrected" && (
         <div
           className={`pointer-events-none absolute z-20 border-2 border-blue-500 ${
             hasExistingAnswer && allowOverwrite ? "inset-[3px]" : "inset-0"
           }`}
         />
       )}
-      {file.correctionStatus === "skipped" && (
+      {correctionStatus === "skipped" && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -290,10 +259,8 @@ export function FilePreviewCell({
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
               <p className="font-medium">マーカー補正スキップ</p>
-              {file.correctionError && (
-                <p className="mt-1 text-xs text-gray-300">
-                  {file.correctionError}
-                </p>
+              {correctionError && (
+                <p className="mt-1 text-xs text-gray-300">{correctionError}</p>
               )}
             </TooltipContent>
           </Tooltip>

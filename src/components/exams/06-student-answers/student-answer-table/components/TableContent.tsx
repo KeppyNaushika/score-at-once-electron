@@ -2,12 +2,16 @@ import { FilePreviewCell } from "@/components/exams/06-student-answers/student-a
 import type {
   CellData,
   ExtendedDisabledState,
+  FilePreviewSource,
   PreviewMode,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
 import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { lookupHasCell } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
-import type { AnswerItem } from "@/components/exams/06-student-answers/types"
+import type {
+  AnswerImageIdentity,
+  ExamPageColumn,
+} from "@/components/exams/06-student-answers/types"
 import {
   Table,
   TableBody,
@@ -21,16 +25,16 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 // セルの DnD ラッパーはスロット（render prop）で外から注入する。
 // 表本体（TableContent）は @dnd-kit も sortable/droppable セルも import せず、
 // グリッドのレイアウトとセル中身の描画（プレビュー・空・無効理由）だけを担う。
-// upload は sortable セル、view は droppable セルをそれぞれ注入する。
+// 列は ExamPage 実体で回し、セルの同定・照合は examPageId で行う。表示値（pageNumber・
+// 氏名・プレビュー）は行（ExamStudent 実体）・列（ExamPage 実体）・fileDisplayById から導出する。
 // ============================================================================
 
 /** ファイルセル（答案あり）のラッパーへ渡す情報。children は FilePreviewCell。
- * 生徒は Prisma 構造（ExamStudentWithMemberships）のまま渡す（studentId/氏名を手で
- * バラした scalar にしない＝EmptyCellSlotProps と同じ流儀）。 */
+ * 生徒・ページは Prisma 構造（ExamStudentWithMemberships / ExamPage 実体）のまま渡す。 */
 export interface FileCellSlotProps {
   fileId: string
   examStudent: ExamStudentWithMemberships
-  pageNumber: number
+  examPage: ExamPageColumn
   isDragDisabled: boolean
   isFileDisabled: boolean
   onTogglePosition: () => void
@@ -42,7 +46,7 @@ export interface FileCellSlotProps {
 /** 空セル・無効セルのラッパーへ渡す情報（中身の描画もラッパー側が行う）。 */
 export interface EmptyCellSlotProps {
   examStudent: ExamStudentWithMemberships
-  pageNumber: number
+  examPage: ExamPageColumn
   isPositionDisabled: boolean
   hasExistingAnswer: boolean
   disabledReason?: DisabledReason
@@ -52,27 +56,28 @@ export interface EmptyCellSlotProps {
 }
 
 interface TableContentProps {
-  tableData: CellData<AnswerItem>[][]
+  tableData: CellData<AnswerImageIdentity>[][]
   sortedStudents: ExamStudentWithMemberships[]
-  maxPages: number
+  examPages: ExamPageColumn[]
   disabledState: ExtendedDisabledState
   mode: "upload" | "view"
   previewMode: PreviewMode
   nameRegionAvailable: Record<number, boolean>
   cellsWithExistingAnswers: CellLookup
   allowOverwrite: boolean
-  files: AnswerItem[]
+  files: AnswerImageIdentity[]
   affectedCells?: Set<string>
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   correctingFileIds?: Set<string>
-  getFileColor: (file: AnswerItem) => string
+  // fileId → 表示ソース（プレビュー・パス・氏名・補正）。同定と分離した表示専用の派生。
+  fileDisplayById: Map<string, FilePreviewSource>
   drawNameRegionCanvas: (
-    file: AnswerItem,
+    previewUrl: string | null,
     pageNumber: number
   ) => Promise<string | null>
   toggleRowDisabled: (examStudentId: string) => void
-  toggleColDisabled: (pageNumber: number) => void
-  toggleCellDisabled: (studentId: string, pageNumber: number) => void
+  toggleColDisabled: (examPageId: string) => void
+  toggleCellDisabled: (studentId: string, examPageId: string) => void
   toggleFileDisabled: (fileId: string) => void
   onDeleteAnswerSheet?: (fileId: string) => void
   // DnD ラッパー（モード別に注入）
@@ -83,7 +88,7 @@ interface TableContentProps {
 export function TableContent({
   tableData,
   sortedStudents,
-  maxPages,
+  examPages,
   disabledState,
   mode,
   previewMode,
@@ -94,7 +99,7 @@ export function TableContent({
   affectedCells,
   imageLoadStates = {},
   correctingFileIds,
-  getFileColor,
+  fileDisplayById,
   drawNameRegionCanvas,
   toggleRowDisabled,
   toggleColDisabled,
@@ -110,29 +115,26 @@ export function TableContent({
         <TableRow>
           {/* 生徒名列ヘッダー */}
           <TableHead className="w-32 border text-center">生徒名</TableHead>
-          {/* ページ列ヘッダー */}
-          {Array.from({ length: maxPages }, (_, pageIndex) => {
-            const pageNumber = pageIndex + 1
-            return (
-              <TableHead
-                key={pageNumber}
-                className={`w-32 border text-center ${
-                  mode === "upload" ? "cursor-pointer" : ""
-                } ${
-                  disabledState.cols.includes(pageNumber)
-                    ? "bg-gray-200"
-                    : "bg-white"
-                }`}
-                onClick={
-                  mode === "upload"
-                    ? () => toggleColDisabled(pageNumber)
-                    : undefined
-                }
-              >
-                ページ {pageNumber}
-              </TableHead>
-            )
-          })}
+          {/* ページ列ヘッダー（列＝ExamPage 実体） */}
+          {examPages.map((examPage) => (
+            <TableHead
+              key={examPage.id}
+              className={`w-32 border text-center ${
+                mode === "upload" ? "cursor-pointer" : ""
+              } ${
+                disabledState.cols.includes(examPage.id)
+                  ? "bg-gray-200"
+                  : "bg-white"
+              }`}
+              onClick={
+                mode === "upload"
+                  ? () => toggleColDisabled(examPage.id)
+                  : undefined
+              }
+            >
+              ページ {examPage.pageNumber}
+            </TableHead>
+          ))}
         </TableRow>
       </UITableHeader>
       <TableBody>
@@ -166,9 +168,9 @@ export function TableContent({
 
             {/* ファイルセル */}
             {row.map((cellData, pageIndex) => {
-              // セル座標から生徒・ページを投射（セルは同一性を保持しない）
+              // セル座標から生徒・ページ（実体）を導出（セルは同一性を保持しない）
               const examStudent = sortedStudents[studentIndex]
-              const pageNumber = pageIndex + 1
+              const examPage = examPages[pageIndex]
 
               if (cellData.type === "disabled" || cellData.type === "empty") {
                 // 既存答案があるか（オーバーレイ用・upload のみ）
@@ -177,28 +179,28 @@ export function TableContent({
                   lookupHasCell(
                     cellsWithExistingAnswers,
                     examStudent.studentId,
-                    pageNumber
+                    examPage.id
                   )
 
                 // そのセルに新しく追加しようとしている画像ファイルがあるか
                 const newFileInCell = files.find(
                   (file) =>
                     file.studentId === examStudent.studentId &&
-                    file.pageNumber === pageNumber &&
+                    file.examPageId === examPage.id &&
                     !disabledState.files.has(file.id)
                 )
 
                 return (
-                  <ClientCell key={pageNumber}>
+                  <ClientCell key={examPage.id}>
                     {renderEmptyCell({
                       examStudent,
-                      pageNumber,
+                      examPage,
                       isPositionDisabled: cellData.type === "disabled",
                       hasExistingAnswer: hasExistingAnswerForEmpty,
                       disabledReason: cellData.disabledReason,
                       hasNewFileToUpload: !!newFileInCell,
                       onTogglePosition: () =>
-                        toggleCellDisabled(examStudent.studentId, pageNumber),
+                        toggleCellDisabled(examStudent.studentId, examPage.id),
                       onToggleAnswerDisabled: () => {
                         if (newFileInCell) {
                           toggleFileDisabled(newFileInCell.id)
@@ -217,34 +219,44 @@ export function TableContent({
                 lookupHasCell(
                   cellsWithExistingAnswers,
                   examStudent.studentId,
-                  pageNumber
+                  examPage.id
                 )
               // 上書き無効時で既存答案がある場合はドラッグ無効
               const isDragDisabledByOverwrite =
                 hasExistingAnswer && !allowOverwrite
+
+              const display = fileDisplayById.get(file.id)
 
               return (
                 <ClientCell key={file.id}>
                   {renderFileCell({
                     fileId: file.id,
                     examStudent,
-                    pageNumber,
+                    examPage,
                     isDragDisabled: isDragDisabledByOverwrite,
                     isFileDisabled,
                     onTogglePosition: () =>
-                      toggleCellDisabled(examStudent.studentId, pageNumber),
+                      toggleCellDisabled(examStudent.studentId, examPage.id),
                     onToggleFileDisabled: () => toggleFileDisabled(file.id),
                     onDelete: () => onDeleteAnswerSheet?.(file.id),
                     children: (
                       <FilePreviewCell
-                        file={file}
-                        pageNumber={pageNumber}
+                        previewUrl={display?.previewUrl}
+                        imagePath={display?.imagePath}
+                        altName={
+                          display?.altName ??
+                          `${examStudent.student.lastName} ${examStudent.student.firstName}`
+                        }
+                        pageNumber={examPage.pageNumber}
                         previewMode={previewMode}
                         isFileDisabled={isFileDisabled}
-                        nameRegionAvailable={nameRegionAvailable[pageNumber]}
-                        getFileColor={getFileColor}
+                        nameRegionAvailable={
+                          nameRegionAvailable[examPage.pageNumber]
+                        }
                         drawNameRegionCanvas={drawNameRegionCanvas}
                         imageLoadState={imageLoadStates[file.id]}
+                        correctionStatus={display?.correctionStatus}
+                        correctionError={display?.correctionError}
                         isPendingChange={affectedCells?.has(file.id) || false}
                         hasExistingAnswer={hasExistingAnswer}
                         allowOverwrite={allowOverwrite}

@@ -1,12 +1,13 @@
 import type {
-  AnswerItem,
-  PendingImage,
+  ExamPageColumn,
+  PlacedAnswerImage,
   PlacementStrategy,
+  UnsavedAnswerImage,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
-import type { FileState } from "./dragDropTypes"
+import type { AnswerCellBaseline, FileState } from "./dragDropTypes"
 
 // ============================================================================
 // answer-table コンポーネントの型定義
@@ -16,24 +17,20 @@ import type { FileState } from "./dragDropTypes"
 export interface AnswerTableBaseProps {
   examId: string
   students: ExamStudentWithMemberships[]
-  modelAnswerCount: number
+  examPages: ExamPageColumn[]
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   onReloadData?: () => void
-  // upload: 既存答案の占有信号 / view: DnD 差分の DB baseline
-  existingStudentAnswers?: Array<{
-    id: string
-    studentId: string | null
-    pageNumber: number
-  }>
+  // upload: 既存答案の占有信号 / view: DnD 差分の DB baseline（いずれも id で同定）
+  existingAnswers?: AnswerCellBaseline[]
 }
 
-/** アップロード（新規追加）モードのテーブル。ファイルは未保存の PendingImage。 */
+/** アップロード（新規追加）モードのテーブル。ファイルは未保存の UnsavedAnswerImage。 */
 export interface UploadAnswerTableProps extends AnswerTableBaseProps {
-  files: PendingImage[]
+  files: UnsavedAnswerImage[]
   fileOrder?: PlacementStrategy
   isUploading?: boolean
   onFileOrderChange?: (order: PlacementStrategy) => void
-  onFilesChange: (files: PendingImage[]) => void
+  onFilesChange: (files: UnsavedAnswerImage[]) => void
   onUpload: (data: UploadData[]) => void
 
   // マーカー補正状態（親フックから注入）
@@ -44,10 +41,10 @@ export interface UploadAnswerTableProps extends AnswerTableBaseProps {
   onMarkerCorrectionChange?: (enabled: boolean) => void
 }
 
-/** 確認（配置済み答案）モードのテーブル。ファイルは DB答案の投射 AnswerItem。 */
+/** 確認（配置済み答案）モードのテーブル。ファイルは保存済み実体 PlacedAnswerImage。 */
 export interface ViewAnswerTableProps extends AnswerTableBaseProps {
-  files: AnswerItem[]
-  onFilesChange: (files: AnswerItem[]) => void
+  files: PlacedAnswerImage[]
+  onFilesChange: (files: PlacedAnswerImage[]) => void
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (
     changedFiles: Array<{

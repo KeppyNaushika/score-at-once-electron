@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { CellData } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { PendingImage } from "@/components/exams/06-student-answers/types"
+import type {
+  ExamPageColumn,
+  UnsavedAnswerImage,
+} from "@/components/exams/06-student-answers/types"
 
 interface UseMarkerCorrectionArgs {
   examId: string
-  files: PendingImage[]
-  tableData: CellData<PendingImage>[][]
+  files: UnsavedAnswerImage[]
+  tableData: CellData<UnsavedAnswerImage>[][]
+  examPages: ExamPageColumn[]
   markerCorrectionEnabled: boolean
   markerAvailablePages: Set<number>
-  onFilesChange: (files: PendingImage[]) => void
+  onFilesChange: (files: UnsavedAnswerImage[]) => void
 }
 
 interface UseMarkerCorrectionResult {
@@ -28,6 +32,7 @@ export function useMarkerCorrection({
   examId,
   files,
   tableData,
+  examPages,
   markerCorrectionEnabled,
   markerAvailablePages,
   onFilesChange,
@@ -57,10 +62,11 @@ export function useMarkerCorrection({
     const targetMap = new Map<string, number>()
     if (markerCorrectionEnabled) {
       for (const row of tableData) {
-        // マスターページ番号はセルの列位置から投射（pageIndex + 1）
+        // マスターページ番号はセルの列（ExamPage 実体）の pageNumber から導出する
         row.forEach((cell, pageIndex) => {
-          if (cell.file) {
-            targetMap.set(cell.file.id, pageIndex + 1)
+          const examPage = examPages[pageIndex]
+          if (cell.file && examPage) {
+            targetMap.set(cell.file.id, examPage.pageNumber)
           }
         })
       }
@@ -68,7 +74,7 @@ export function useMarkerCorrection({
 
     // 処理が必要なファイルを抽出
     type Task = {
-      file: PendingImage
+      file: UnsavedAnswerImage
       buffer: ArrayBuffer
       target: number | undefined
     }
@@ -148,7 +154,7 @@ export function useMarkerCorrection({
               return {
                 ...file,
                 buffer: correctedAB,
-                type: "image/png",
+                fileType: "image/png",
                 preview: URL.createObjectURL(blob),
                 correctionStatus: "corrected" as const,
                 correctedForPage: target,
@@ -208,6 +214,7 @@ export function useMarkerCorrection({
     examId,
     files,
     tableData,
+    examPages,
     markerCorrectionEnabled,
     markerAvailablePages,
     onFilesChange,
@@ -218,9 +225,9 @@ export function useMarkerCorrection({
 
 /** 元バッファから preview を作り直して復元 */
 function restoreFromOriginal(
-  file: PendingImage,
+  file: UnsavedAnswerImage,
   origBuffer: ArrayBuffer
-): PendingImage {
+): UnsavedAnswerImage {
   if (file.buffer === origBuffer) {
     return {
       ...file,
@@ -232,7 +239,7 @@ function restoreFromOriginal(
   if (file.preview && file.preview.startsWith("blob:")) {
     URL.revokeObjectURL(file.preview)
   }
-  const blob = new Blob([origBuffer], { type: file.type })
+  const blob = new Blob([origBuffer], { type: file.fileType })
   return {
     ...file,
     buffer: origBuffer,

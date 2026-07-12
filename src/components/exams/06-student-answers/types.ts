@@ -1,49 +1,65 @@
 /**
- * テーブルDnD準拠の型定義
- * 06-student-answersページ専用の統一型定義
+ * 06-student-answers ページ専用の型定義（entity-first）
  *
- * 受験生徒は Prisma 拡張型 `ExamStudentWithMemberships` をそのまま持ち回るため、
- * 独自の生徒 view-model は定義しない（採番学級などの派生表示値が要る場合はフックで導出する）。
+ * 保存済み答案（view）は Prisma `include` が作るエンティティ（`PlacedAnswerImage`）を
+ * そのまま持ち回る（射影・平坦化・scalar 抜き出しをしない）。表示値（pageNumber・氏名）は
+ * 列（ExamPage 実体）・行（ExamStudent 実体）から表示時に導出する。
+ * 未保存答案（upload）だけは DB レコードが存在しないため、同定フィールド＋未永続バイトを持つ
+ * 投射型（`UnsavedAnswerImage`）で扱う（アップロード前に限り許容される投射）。
+ *
+ * 同定・key は必ず id（`studentAnswerImage.id` / `studentId` / `examPageId`）。
+ * sqlite-nas-sync では id 以外の unique が同期違反となるため、pageNumber 等の序数は
+ * 恒久的に key になり得ない。
  */
 
+import type { PlacedAnswerImage } from "@/types/prismaExtensions"
+
 // ============================================================================
-// 基本的な型定義
+// セル要素の同定（表・DnD・生成ロジックが共通で読む最小形）
 // ============================================================================
 
 /**
- * セルに載る要素の「描画ビュー」（表・DnD・プレビューが読む最小共通形）。
- * 未保存画像（PendingImage 相当）と DB答案（ExistingAnswer 相当）の**両ソースを射影**した
- * 表示専用の投射であって、エンティティの併合ではない（"Unified" とは呼ばない）。
- * upload 源（`PendingImage`）はこれを満たす上位型。DB答案（`ExistingAnswer`）は
- * テーブル境界で `convertAnswerSheetsToFiles` によりこの形へ射影する。
+ * 表・DnD が扱うセル要素の同定。保存済み（`PlacedAnswerImage`）・未保存
+ * （`UnsavedAnswerImage`）の両方が満たす。座標は id のみ（examPageId・studentId）。
  */
-export interface AnswerItem {
+export interface AnswerImageIdentity {
   id: string
-  studentId?: string // 配置済みの生徒ID（= Student.id）
-  pageNumber: number // マス列（1始まりの序数）
-  name: string // 表示・alt 用
-  preview?: string // 未保存は blob URL、DB答案は遅延読込前は無し
-  imagePath?: string | null // DB答案の遅延読込パス
-  correctionStatus?: "corrected" | "skipped" | "not_requested"
-  correctionError?: string
-  color?: string
+  studentId: string | null // 配置済みの生徒（= Student.id）。未配置は null
+  examPageId: string | null // 配置済みの ExamPage.id。未配置は null
+}
+
+// 保存済み答案の実体は Prisma payload をそのまま使う（再エクスポートで所在を明示）。
+export type { PlacedAnswerImage }
+
+/**
+ * 表の列となる ExamPage の最小契約（同定＝id、表示＝pageNumber）。
+ * 供給の `StudentAnswerDatasetExamPage`（ExamPage 実体）がこれを満たすため、
+ * 呼び出し側は実体をそのまま渡し、表は id/pageNumber だけを読む。
+ */
+export interface ExamPageColumn {
+  id: string
+  pageNumber: number
 }
 
 /**
- * 未保存画像（アップロード源）。ドロップ→変換した画像で、DB にはまだ無い。
- * 本物の `buffer`/`size` を持ち、マーカー補正の対象になる。
- * `AnswerItem` を満たす上位型（buffer 等の upload 専用フィールドを追加で持つ）で、
- * upload モードのパイプライン（`useStudentAnswerUpload`・DnD 方式A・マーカー補正）は
- * この型で流れる。DB答案（`ExistingAnswer`）とは併合しない（偽の 0埋めはしない）。
+ * 未保存答案（アップロード源）。ドロップ→変換した画像で、DB にはまだ無い。
+ * `PlacedAnswerImage` と同じ同定フィールド（id/studentId/examPageId）を満たしつつ、
+ * バイトは state 上の `buffer`（`imagePath` は保存まで null）で持つ。
+ * upload の配置は「配列順＋配置戦略」で決まるため studentId/examPageId は未使用
+ * （型統一のため保持し、確定時は列＝ExamPage 実体・行＝ExamStudent 実体から導出する）。
  */
-export interface PendingImage extends AnswerItem {
-  type: string
-  size?: number // バイト数（表示用）
+export interface UnsavedAnswerImage extends AnswerImageIdentity {
+  imagePath: string | null // 保存まで null
   buffer?: ArrayBuffer // 未変換で残ることはないが補正前後で差し替わるため任意
-  isSelected: boolean // UI選択状態
+  preview?: string // blob URL（サムネイル表示用）
+  name: string // 保存ファイル名の素・alt 用
   originalFileName: string // 元ファイル名保持
-  pageLabel?: string // 表示用ラベル
+  fileType: string // MIME タイプ
+  size?: number // バイト数（表示用）
+  isSelected: boolean // UI選択状態
+  correctionStatus?: "corrected" | "skipped" | "not_requested"
   correctedForPage?: number // 補正時に対応付けたマスターページ番号
+  correctionError?: string
 }
 
 // ============================================================================
@@ -52,7 +68,6 @@ export interface PendingImage extends AnswerItem {
 
 /**
  * 配置戦略
- * テーブルDnDと同じ定義
  */
 export type PlacementStrategy = "page-first" | "student-first"
 
@@ -61,8 +76,8 @@ export type PlacementStrategy = "page-first" | "student-first"
 // ============================================================================
 
 /**
- * ElectronAPI用のアップロードデータ形式
- * 既存のuploadAnswerSheets APIとの互換性確保
+ * ElectronAPI用のアップロードデータ形式（uploadStudentAnswers の入力）。
+ * 配置先は examPageId 直指定（列＝ExamPage 実体から導出）。
  */
 export interface UploadData {
   name: string
@@ -70,8 +85,8 @@ export interface UploadData {
   originalFileName: string
   type: string
   buffer: ArrayBuffer
-  studentId: string // 受験生徒ID
-  pageNumber: number // ページ番号
+  studentId: string // 受験生徒ID（= Student.id）
+  examPageId: string // 配置先 ExamPage.id
   overwrite: boolean // 上書きフラグ
   correctWithMarkers?: boolean // マーカー補正フラグ
   correctionStatus?: "corrected" | "skipped" | "not_requested" // クライアント側補正結果
@@ -82,26 +97,25 @@ export interface UploadData {
 // ============================================================================
 
 /**
- * 保留中の変更データ
- * 2つのファイルの位置入れ替えを表現
+ * 保留中の変更データ（view 方式B の move/swap を確認モーダルへ渡す view-model）。
+ * 同定は id（examPageId/studentId）。studentName・pageNumber は確認モーダル表示用に
+ * 生成時点でエンティティから導出して持つ（DBデータの射影ではなく UI 差分の表示補助）。
  */
 export interface PendingChange {
   id: string // ユニークID
-  movedFileId: string // 移動されたファイルのID
+  movedFileId: string // 移動されたファイルのID（= StudentAnswerImage.id）
   targetFileId: string | null // 移動先にあったファイルのID（空の場合はnull）
   timestamp: Date // 変更時刻
-  fromPosition: {
-    // 移動元の位置
-    studentId: string | null
-    pageNumber: number
-    studentName?: string // 表示用
-  }
-  toPosition: {
-    // 移動先の位置
-    studentId: string | null
-    pageNumber: number
-    studentName?: string // 表示用
-  }
+  fromPosition: PendingChangePosition // 移動元の位置
+  toPosition: PendingChangePosition // 移動先の位置
+}
+
+/** 変更の移動元/移動先の位置。同定は examPageId/studentId、表示は導出値。 */
+export interface PendingChangePosition {
+  studentId: string | null
+  examPageId: string
+  pageNumber: number // 表示用（列 ExamPage から導出）
+  studentName?: string // 表示用（行 ExamStudent から導出）
 }
 
 /**

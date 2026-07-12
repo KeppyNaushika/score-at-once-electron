@@ -1,7 +1,5 @@
 import { useCallback, useRef, useState } from "react"
 
-import type { AnswerItem } from "@/components/exams/06-student-answers/types"
-
 /** 答案画像から氏名欄領域をクリッピングして表示するためのフック */
 export function useNameRegion(examId: string) {
   const [nameRegionAvailable, setNameRegionAvailable] = useState<
@@ -32,9 +30,10 @@ export function useNameRegion(examId: string) {
     }
   }, [examId])
 
-  // 氏名欄クリッピング用のcanvas描画
+  // 氏名欄クリッピング用のcanvas描画。表示ソース（データURL）を直接受け取る
+  // （答案の同定・実体には依存しない＝表示専用の純関数）。
   const drawNameRegionCanvas = useCallback(
-    async (file: AnswerItem, pageNumber: number) => {
+    async (previewUrl: string | null, pageNumber: number) => {
       const canvas = canvasRef.current
       if (!canvas) {
         return null
@@ -60,7 +59,7 @@ export function useNameRegion(examId: string) {
             region.type === "STUDENT_NAME" && region.examPageId === examPage.id
         )
 
-        if (!nameRegion || !file.preview) {
+        if (!nameRegion || !previewUrl) {
           return null
         }
 
@@ -103,7 +102,7 @@ export function useNameRegion(examId: string) {
           img.onerror = () => {
             resolve(null)
           }
-          img.src = file.preview || ""
+          img.src = previewUrl
         })
       } catch (error) {
         console.error("氏名欄クリッピングエラー:", error)

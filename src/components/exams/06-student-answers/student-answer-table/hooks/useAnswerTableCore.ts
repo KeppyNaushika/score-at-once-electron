@@ -6,23 +6,27 @@ import { useDragDrop } from "@/components/exams/06-student-answers/student-answe
 import { useNameRegion } from "@/components/exams/06-student-answers/student-answer-table/hooks/useNameRegion"
 import { useTableData } from "@/components/exams/06-student-answers/student-answer-table/hooks/useTableData"
 import type { PreviewMode } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
-  AnswerItem,
+  AnswerCellBaseline,
+  FileState,
+} from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type {
+  AnswerImageIdentity,
+  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /**
  * upload / view の両テーブルが共有する中核ロジック（DnD・無効状態・テーブルデータ生成・
- * 削除・氏名領域）。マーカー補正と handleUpload は PendingImage を要するため upload 側の
- * ラッパー（UploadAnswerTable）が担い、ここには置かない（型の false merge を避ける）。
+ * 削除・氏名領域）。マーカー補正と handleUpload は未保存項目（UnsavedAnswerImage）を要するため
+ * upload 側のラッパー（UploadAnswerTable）が担い、ここには置かない（型の false merge を避ける）。
  */
-export interface UseAnswerTableCoreParams<TItem extends AnswerItem> {
+export interface UseAnswerTableCoreParams<TItem extends AnswerImageIdentity> {
   examId: string
   students: ExamStudentWithMemberships[]
   files: TItem[]
-  modelAnswerCount: number
+  examPages: ExamPageColumn[]
   fileOrder?: PlacementStrategy
   mode?: "upload" | "view"
   onFilesChange: (files: TItem[]) => void
@@ -34,24 +38,20 @@ export interface UseAnswerTableCoreParams<TItem extends AnswerItem> {
       toState: FileState
     }>
   ) => void
-  existingStudentAnswers?: Array<{
-    id: string
-    studentId: string | null
-    pageNumber: number
-  }>
+  existingAnswers?: AnswerCellBaseline[]
 }
 
-export function useAnswerTableCore<TItem extends AnswerItem>({
+export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   examId,
   students,
   files,
-  modelAnswerCount,
+  examPages,
   fileOrder = "page-first",
   mode = "upload",
   onFilesChange,
   onReloadData,
   onUpdatePendingChanges,
-  existingStudentAnswers = [],
+  existingAnswers = [],
 }: UseAnswerTableCoreParams<TItem>) {
   const {
     nameRegionAvailable,
@@ -83,12 +83,12 @@ export function useAnswerTableCore<TItem extends AnswerItem>({
   } = useTableData<TItem>({
     files,
     students,
-    modelAnswerCount,
+    examPages,
     fileOrder,
     disabledState,
     isCellDisabled,
     mode,
-    existingStudentAnswers,
+    existingAnswers,
     allowOverwrite,
   })
 
@@ -99,12 +99,12 @@ export function useAnswerTableCore<TItem extends AnswerItem>({
       getEnabledFiles,
       getDisabledFiles,
       students,
-      modelAnswerCount,
+      examPages,
       mode,
       fileOrder,
       onReloadData,
       onUpdatePendingChanges,
-      existingStudentAnswers,
+      existingAnswers,
     })
 
   const [previewMode, setPreviewMode] = useState<PreviewMode>("full")
@@ -146,7 +146,7 @@ export function useAnswerTableCore<TItem extends AnswerItem>({
     setPreviewMode(nextPreviewMode)
   }
 
-  const maxPages = modelAnswerCount
+  const maxPages = examPages.length
   const trashFiles = getDisabledFiles()
   const hasNameRegion = Object.values(nameRegionAvailable).some(Boolean)
 

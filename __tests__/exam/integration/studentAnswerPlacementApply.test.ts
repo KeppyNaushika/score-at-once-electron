@@ -110,13 +110,13 @@ describe("applyStudentAnswerPlacements", () => {
       {
         fileId: image(page1.id, studentA.id).id,
         finalStudentId: studentB.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
       {
         fileId: image(page1.id, studentB.id).id,
         finalStudentId: studentA.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
     ])
@@ -167,13 +167,13 @@ describe("applyStudentAnswerPlacements", () => {
       {
         fileId: image(page1.id, studentA.id).id,
         finalStudentId: studentB.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
       {
         fileId: image(page1.id, studentB.id).id,
         finalStudentId: studentA.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
     ])
@@ -204,13 +204,13 @@ describe("applyStudentAnswerPlacements", () => {
       {
         fileId: imgP1A.id,
         finalStudentId: studentA.id,
-        finalPageNumber: 2,
+        finalExamPageId: page2.id,
         scorePolicy: "discard",
       },
       {
         fileId: imgP2A.id,
         finalStudentId: studentA.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
     ])
@@ -240,14 +240,14 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("carry かつページ変化はエラー（DBは不変）", async () => {
-    const { studentA, page1, image } = await buildSimpleExam()
+    const { studentA, page1, page2, image } = await buildSimpleExam()
     const imgP1A = image(page1.id, studentA.id)
 
     const result = await applyStudentAnswerPlacements([
       {
         fileId: imgP1A.id,
         finalStudentId: studentA.id,
-        finalPageNumber: 2, // ページ変化
+        finalExamPageId: page2.id, // ページ変化
         scorePolicy: "carry", // 追従は不可
       },
     ])
@@ -274,7 +274,7 @@ describe("applyStudentAnswerPlacements", () => {
       {
         fileId: image(page1.id, studentA.id).id,
         finalStudentId: studentB.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
     ])
@@ -296,7 +296,7 @@ describe("applyStudentAnswerPlacements", () => {
       {
         fileId: imgP1A.id,
         finalStudentId: null,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
     ])
@@ -317,7 +317,7 @@ describe("applyStudentAnswerPlacements", () => {
       {
         fileId: imgP1A.id,
         finalStudentId: studentB.id,
-        finalPageNumber: 1,
+        finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
     ])

@@ -6,23 +6,23 @@ import type {
   UseDragDropParams,
   UseDragDropReturn,
 } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
-import type { AnswerItem } from "@/components/exams/06-student-answers/types"
+import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**
  * ドラッグ&ドロップ機能を提供するメインフック（リファクタリング版）
  */
-export function useDragDrop<TItem extends AnswerItem>({
+export function useDragDrop<TItem extends AnswerImageIdentity>({
   files,
   onFilesChange,
   getEnabledFiles,
   getDisabledFiles,
   students,
-  modelAnswerCount,
+  examPages,
   mode,
   fileOrder,
   onReloadData,
   onUpdatePendingChanges,
-  existingStudentAnswers,
+  existingAnswers,
 }: UseDragDropParams<TItem>): UseDragDropReturn<TItem> {
   // 状態管理（アクティブなドラッグ対象のみ）
   const { activeFile, setActiveFile } = useDragDropState<TItem>()
@@ -34,12 +34,12 @@ export function useDragDrop<TItem extends AnswerItem>({
     getEnabledFiles,
     getDisabledFiles,
     students,
-    modelAnswerCount,
+    examPages,
     mode,
     fileOrder,
     onReloadData,
     onUpdatePendingChanges,
-    existingStudentAnswers,
+    existingAnswers,
     setActiveFile,
   })
 
