@@ -10,6 +10,7 @@ import { setupExamHandlers } from "./examHandlers"
 import { setupExportHandlers } from "./exportHandlers"
 import { setupGradeHandlers } from "./gradeHandlers"
 import { setupMiscHandlers } from "./miscHandlers"
+import { setupNavigationHandlers } from "./navigationHandlers"
 import { setupOmrConfigHandlers } from "./omrConfigHandlers"
 import { setupOMRHandlers } from "./omrHandlers"
 import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
@@ -49,4 +50,5 @@ export function setupAllIPCHandlers(): void {
   registerStudentArchiveHandlers()
   setupSyncHandlers()
   setupAuditLogHandlers()
+  setupNavigationHandlers()
 }

@@ -8,9 +8,9 @@ import {
   ClipboardList,
   FileEdit,
   FileStack,
-  Home,
   LogIn,
   LogOut,
+  PencilSparkles,
   School,
   Settings,
   Tag,
@@ -21,6 +21,7 @@ import { usePathname } from "next/navigation"
 import { Fragment } from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
+import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -42,7 +43,7 @@ interface NavItem {
 const navGroups: NavItem[][] = [
   [
     { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
-    { href: "/exams", label: "試験一覧", icon: Home },
+    { href: "/exams", label: "試験一覧", icon: PencilSparkles },
     { href: "/coursework", label: "試験外成績資料", icon: ClipboardList },
     { href: "/grades", label: "成績算出", icon: BarChart3 },
   ],
@@ -79,13 +80,19 @@ export default function Navigation({
       <div
         className={cn(
           "flex h-16 items-center border-b px-2",
-          isSidebarMinimized ? "justify-center" : "justify-between px-6"
+          isSidebarMinimized ? "justify-center" : "justify-between px-4"
         )}
       >
         {!isSidebarMinimized && (
-          <GuardedLink href="/exams" className="text-lg font-semibold">
-            一括採点
-          </GuardedLink>
+          <div className="flex min-w-0 items-center gap-1">
+            <GuardedLink
+              href="/exams"
+              className="truncate text-lg font-semibold"
+            >
+              一括採点
+            </GuardedLink>
+            <HistoryNavButtons />
+          </div>
         )}
         <Button
           variant="ghost"

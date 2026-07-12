@@ -13,6 +13,7 @@ import { createExamClassroomApi } from "./preload-apis/examClassroomApi"
 import { createExportApi } from "./preload-apis/exportApi"
 import { createGradeApi } from "./preload-apis/gradeApi"
 import { createMiscApi } from "./preload-apis/miscApi"
+import { createNavigationApi } from "./preload-apis/navigationApi"
 import { createOmrApi } from "./preload-apis/omrApi"
 import { createPdfToolsApi } from "./preload-apis/pdfToolsApi"
 import { createScoringApi } from "./preload-apis/scoringApi"
@@ -53,6 +54,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createOmrApi(),
   ...createAnswerSheetBuilderApi(),
   ...createMiscApi(),
+  ...createNavigationApi(),
   ...createSyncApi(),
   ...createAuditLogApi(),
 })

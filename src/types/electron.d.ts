@@ -23,6 +23,7 @@ import type { ExamClassroomAPI } from "./electron/examClassroomApi"
 import type { ExportAPI } from "./electron/exportApi"
 import type { GradeAPI } from "./electron/gradeApi"
 import type { MasterImageAPI } from "./electron/masterImageApi"
+import type { NavigationAPI } from "./electron/navigationApi"
 import type { OmrAPI } from "./electron/omrApi"
 import type { PdfToolsAPI } from "./electron/pdfToolsApi"
 import type { ScoringAPI } from "./electron/scoringApi"
@@ -94,6 +95,7 @@ export interface MyAPI
     OmrAPI,
     DataManagementAPI,
     SyncAPI,
+    NavigationAPI,
     AuditLogAPI {}
 
 // ---------------------------------------------------------------------------
