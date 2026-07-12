@@ -1,0 +1,154 @@
+/**
+ * DataSource種別ごとのrawScore（推定前の実スコア）算出
+ * exam_total / crop_region は examScoreCalculator へ委譲し、
+ * subtotal / coursework / coursework_total を本モジュールで扱う。
+ */
+
+import {
+  calculateCropRegionScore,
+  calculateExamTotalScore,
+} from "./examScoreCalculator"
+import type { ExamDataCache } from "./gradeCalculatorTypes"
+import { calculateSubtotalScoreBySubtotalId } from "./subtotalCalculator"
+
+/**
+ * coursework / coursework_total で参照する評価項目の構造（Prisma include のサブセット）
+ */
+interface CourseworkItemForRawScore {
+  maxScore: unknown
+  inputMode: string
+  scores: {
+    studentId: string
+    score: unknown
+    letterValue?: string | null
+    adjustment?: unknown
+  }[]
+  letterScales: { label: string; score: unknown }[]
+}
+
+/**
+ * DataSourceからrawScoreを取得（推定前の実スコア）
+ */
+export async function getRawScore(
+  studentId: string,
+  dataSource: {
+    type: string
+    examId: string | null
+    subtotalId: string | null
+    cropRegionId: string | null
+    courseworkItem?: CourseworkItemForRawScore | null
+    coursework?: {
+      items: CourseworkItemForRawScore[]
+    } | null
+  },
+  examDataCache: Map<string, ExamDataCache>
+): Promise<number | null> {
+  if (dataSource.type === "exam_total" && dataSource.examId) {
+    return calculateExamTotalScore(studentId, dataSource.examId, examDataCache)
+  } else if (
+    dataSource.type === "subtotal" &&
+    dataSource.subtotalId &&
+    dataSource.examId
+  ) {
+    const examData = examDataCache.get(dataSource.examId)
+    if (examData) {
+      const result = await calculateSubtotalScoreBySubtotalId(
+        studentId,
+        dataSource.subtotalId,
+        examData.questionScores,
+        examData.cropRegions as Parameters<
+          typeof calculateSubtotalScoreBySubtotalId
+        >[3]
+      )
+      return result.score
+    }
+  } else if (
+    dataSource.type === "crop_region" &&
+    dataSource.cropRegionId &&
+    dataSource.examId
+  ) {
+    return calculateCropRegionScore(
+      studentId,
+      dataSource.cropRegionId,
+      dataSource.examId,
+      examDataCache
+    )
+  } else if (dataSource.type === "coursework" && dataSource.courseworkItem) {
+    return getCourseworkRawScore(studentId, dataSource.courseworkItem)
+  } else if (dataSource.type === "coursework_total" && dataSource.coursework) {
+    return getCourseworkTotalRawScore(studentId, dataSource.coursework.items)
+  }
+  return null
+}
+
+/**
+ * coursework_total型データソース（試験外成績資料の全評価項目合計）の実スコアを算出する。
+ * 各評価項目のスコアを getCourseworkRawScore で求めて合算する。
+ * exam_total と同様、採点済み項目のみを合算し、全項目が未入力なら null を返す。
+ */
+function getCourseworkTotalRawScore(
+  studentId: string,
+  items: CourseworkItemForRawScore[]
+): number | null {
+  let total = 0
+  let hasScored = false
+  for (const item of items) {
+    const score = getCourseworkRawScore(studentId, item)
+    if (score !== null) {
+      hasScored = true
+      total += score
+    }
+  }
+  return hasScored ? total : null
+}
+
+/**
+ * coursework型データソース（試験外成績資料の評価項目）の実スコアを算出する。
+ * - letterモード: 入力された評価記号を変換表で点数化
+ * - numericモード: 入力された数値をそのまま使用
+ * いずれも加点・減点(adjustment)を加算し、結果はクランプしない。
+ * 実際に入力された得点は配点超え（100%超）も負値（減点で0未満）もそのまま反映する。
+ * （推定で算出した代替スコアは別途 applyAdjustmentAndClamp で [0, 満点] に収める。
+ * 実入力と推定値で扱いを分け、推定値だけが配点を超えないようにするため。）
+ * 満点は評価項目（CourseworkItem.maxScore）を live 参照する。
+ */
+function getCourseworkRawScore(
+  studentId: string,
+  item: CourseworkItemForRawScore
+): number | null {
+  const courseworkScore = item.scores.find(
+    (score) => score.studentId === studentId
+  )
+  if (!courseworkScore) return null
+
+  // 基準スコア（変換前・加減点前）を決定
+  let base: number | null
+  if (item.inputMode === "letter") {
+    if (
+      courseworkScore.letterValue === null ||
+      courseworkScore.letterValue === undefined
+    ) {
+      base = null
+    } else {
+      const scale = item.letterScales.find(
+        (letterScale) => letterScale.label === courseworkScore.letterValue
+      )
+      base = scale ? Number(scale.score) : null
+    }
+  } else {
+    base =
+      courseworkScore.score !== null && courseworkScore.score !== undefined
+        ? Number(courseworkScore.score)
+        : null
+  }
+
+  if (base === null || Number.isNaN(base)) return null
+
+  const adjustment =
+    courseworkScore.adjustment !== null &&
+    courseworkScore.adjustment !== undefined
+      ? Number(courseworkScore.adjustment)
+      : 0
+  // クランプしない。配点超え・負値のいずれも入力どおり成績算出に反映する。
+  return base + adjustment
+}
