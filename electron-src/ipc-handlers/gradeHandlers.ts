@@ -15,6 +15,7 @@ import {
 import {
   createGrade,
   deleteGrade,
+  duplicateGrade,
   getAllGrades,
   getGradeById,
   getGradeExportSettings,
@@ -115,6 +116,10 @@ export function setupGradeHandlers(): void {
 
   registerHandler("grade:delete", async (id: string) => {
     return deleteGrade(id)
+  })
+
+  registerHandler("grade:duplicate", async (id: string) => {
+    return duplicateGrade(id)
   })
 
   registerSafeHandler("grade:getExportSettings", async (gradeId: string) => {

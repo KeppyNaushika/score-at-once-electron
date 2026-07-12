@@ -76,7 +76,7 @@ export const gradeItemWithDataSourcesInclude = {
 } satisfies Prisma.GradeItemInclude
 
 /** estimationSourceIds（JSON文字列 or 既に配列）を string[] へ正規化する。 */
-function parseEstimationSourceIds(value: unknown): string[] {
+export function parseEstimationSourceIds(value: unknown): string[] {
   if (Array.isArray(value)) return value as string[]
   if (typeof value === "string") {
     try {

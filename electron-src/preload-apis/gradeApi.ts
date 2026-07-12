@@ -21,6 +21,7 @@ export function createGradeApi() {
         }
       ) => ipcRenderer.invoke("grade:update", id, data),
       delete: (id: string) => ipcRenderer.invoke("grade:delete", id),
+      duplicate: (id: string) => ipcRenderer.invoke("grade:duplicate", id),
       // 生徒・学級管理
       getStudents: (gradeId: string) =>
         ipcRenderer.invoke("grade:getStudents", gradeId),
