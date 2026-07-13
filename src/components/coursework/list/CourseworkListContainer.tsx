@@ -32,6 +32,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import { useRowSelection } from "@/hooks/useRowSelection"
+import { collectClassroomOptions } from "@/lib/filterOptions"
 import type { CourseworkSummary } from "@/types/coursework.types"
 import type {
   CourseworkArchiveImportPreview,
@@ -78,7 +80,6 @@ export function CourseworkListContainer() {
     null
   )
   const [importing, setImporting] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
 
   const loadCourseworks = useCallback(async () => {
@@ -111,7 +112,8 @@ export function CourseworkListContainer() {
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
-    router.push(`/coursework/${id}/01-setup`)
+    // 作成直後は基本設定を促すため編集モーダルを開いた状態で開く
+    router.push(`/coursework/${id}?setup=1`)
   }
 
   const handleDelete = async (coursework: CourseworkSummary) => {
@@ -212,18 +214,6 @@ export function CourseworkListContainer() {
     setImportArchivePath(null)
   }
 
-  const toggleSelect = useCallback((courseworkId: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (checked) {
-        next.add(courseworkId)
-      } else {
-        next.delete(courseworkId)
-      }
-      return next
-    })
-  }, [])
-
   // 選択中の各資料へ、既存タグを保持したままタグを追加する
   const handleBulkAddTag = async (tagName: string) => {
     try {
@@ -244,7 +234,7 @@ export function CourseworkListContainer() {
       toast.success("タグを追加しました", {
         description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
       })
-      setSelectedIds(new Set())
+      clearSelection()
       setAllTags(await window.electronAPI.tagGetAll())
       await loadCourseworks()
     } catch (error) {
@@ -253,18 +243,15 @@ export function CourseworkListContainer() {
     }
   }
 
-  const classroomOptions = useMemo(() => {
-    const nameById = new Map<string, string>()
-    for (const coursework of courseworks) {
-      for (const courseworkClassroom of coursework.classrooms) {
-        nameById.set(
-          courseworkClassroom.classroom.id,
-          courseworkClassroom.classroom.name
+  const classroomOptions = useMemo(
+    () =>
+      collectClassroomOptions(courseworks, (coursework) =>
+        coursework.classrooms.map(
+          (courseworkClassroom) => courseworkClassroom.classroom
         )
-      }
-    }
-    return [...nameById.entries()].map(([id, name]) => ({ id, name }))
-  }, [courseworks])
+      ),
+    [courseworks]
+  )
 
   const {
     filteredItems: filteredCourseworks,
@@ -282,26 +269,13 @@ export function CourseworkListContainer() {
     setDateTo,
   } = useListFilter(courseworks, COURSEWORK_FILTER_ACCESSORS)
 
-  const allSelected =
-    filteredCourseworks.length > 0 &&
-    filteredCourseworks.every((coursework) => selectedIds.has(coursework.id))
-
-  const toggleSelectAll = useCallback(
-    (checked: boolean) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        for (const coursework of filteredCourseworks) {
-          if (checked) {
-            next.add(coursework.id)
-          } else {
-            next.delete(coursework.id)
-          }
-        }
-        return next
-      })
-    },
-    [filteredCourseworks]
-  )
+  const {
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    allSelected,
+    clearSelection,
+  } = useRowSelection(filteredCourseworks)
 
   if (loading) {
     return (
@@ -462,12 +436,12 @@ export function CourseworkListContainer() {
                       <Button
                         size="sm"
                         onClick={() =>
-                          router.push(`/coursework/${coursework.id}/01-setup`)
+                          router.push(`/coursework/${coursework.id}`)
                         }
                         className="rounded-lg"
                       >
                         <ClipboardEdit className="mr-1 h-4 w-4" />
-                        編集
+                        詳細
                       </Button>
                     </TableCell>
 

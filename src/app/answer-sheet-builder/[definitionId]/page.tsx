@@ -2,9 +2,9 @@
 
 import { useParams } from "next/navigation"
 
-import { AnswerSheetBuilderMainView } from "@/components/answer-sheet-builder/AnswerSheetBuilderMainView"
+import { AnswerSheetDefinitionDetail } from "@/components/answer-sheet-builder/AnswerSheetDefinitionDetail"
 
-export default function AnswerSheetBuilderEditorPage() {
+export default function AnswerSheetBuilderDetailPage() {
   const params = useParams<{ definitionId: string }>()
-  return <AnswerSheetBuilderMainView definitionId={params.definitionId} />
+  return <AnswerSheetDefinitionDetail definitionId={params.definitionId} />
 }

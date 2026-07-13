@@ -146,7 +146,7 @@ export async function updateGrade(
   id: string,
   data: {
     name?: string
-    description?: string
+    description?: string | null
     referenceDate?: string | null
   }
 ) {

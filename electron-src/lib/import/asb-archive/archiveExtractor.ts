@@ -8,13 +8,21 @@ import * as os from "os"
 import * as path from "path"
 
 import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
-import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
+import type {
+  ArchiveAsbTag,
+  AsbArchiveManifest,
+  AsbDefinitionTagRef,
+} from "../../../../src/types/asbArchive.types"
 
 export interface ExtractedAsbData {
   manifest: AsbArchiveManifest
   definition: AnswerSheetDefinition
   tempDir: string
   imagePaths: string[]
+  /** タグ本体（v1.2.0+）。旧アーカイブや未同梱時は空配列。 */
+  tagsData: ArchiveAsbTag[]
+  /** 定義へのタグ参照（v1.2.0+）。旧アーカイブや未同梱時は空配列。 */
+  asbDefinitionTags: AsbDefinitionTagRef[]
 }
 
 /**
@@ -62,9 +70,29 @@ export async function extractAsbArchive(archivePath: string): Promise<{
     const imagesDir = path.join(tempDir, "images")
     const imagePaths = collectImagePaths(imagesDir)
 
+    // tags.json（v1.2.0+。旧アーカイブには存在しない）
+    let tagsData: ArchiveAsbTag[] = []
+    let asbDefinitionTags: AsbDefinitionTagRef[] = []
+    const tagsPath = path.join(tempDir, "tags.json")
+    if (fs.existsSync(tagsPath)) {
+      const tagsFile: {
+        tagsData?: ArchiveAsbTag[]
+        asbDefinitionTags?: AsbDefinitionTagRef[]
+      } = JSON.parse(fs.readFileSync(tagsPath, "utf-8"))
+      tagsData = tagsFile.tagsData ?? []
+      asbDefinitionTags = tagsFile.asbDefinitionTags ?? []
+    }
+
     return {
       success: true,
-      data: { manifest, definition, tempDir, imagePaths },
+      data: {
+        manifest,
+        definition,
+        tempDir,
+        imagePaths,
+        tagsData,
+        asbDefinitionTags,
+      },
     }
   } catch (error) {
     cleanupAsbTempDir(tempDir)

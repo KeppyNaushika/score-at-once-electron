@@ -83,6 +83,19 @@ export async function createAsbArchive(
         name: "definition.json",
       })
 
+      // tags.json（v1.2.0+: タグ本体 + 定義への参照）
+      archive.append(
+        JSON.stringify(
+          {
+            tagsData: collected.tagsData,
+            asbDefinitionTags: collected.asbDefinitionTags,
+          },
+          null,
+          2
+        ),
+        { name: "tags.json" }
+      )
+
       // images/
       const dataDir = getDataDirectory()
       for (const relativePath of collected.imagePaths) {

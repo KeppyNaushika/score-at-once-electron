@@ -15,11 +15,10 @@ import {
 import { Button } from "@/components/ui/button"
 
 const workflowSteps = [
-  { id: "01-setup", label: "1. 基本設定", path: "01-setup" },
-  { id: "02-students", label: "2. 生徒管理", path: "02-students" },
-  { id: "03-items", label: "3. 評価項目", path: "03-items" },
-  { id: "04-scores", label: "4. 点数入力", path: "04-scores" },
-  { id: "05-results", label: "5. 結果", path: "05-results" },
+  { id: "02-students", label: "1. 生徒管理", path: "02-students" },
+  { id: "03-items", label: "2. 評価項目", path: "03-items" },
+  { id: "04-scores", label: "3. 点数入力", path: "04-scores" },
+  { id: "05-results", label: "4. 結果", path: "05-results" },
 ]
 
 export default function CourseworkWorkflowLayout({
@@ -82,6 +81,9 @@ export default function CourseworkWorkflowLayout({
               {courseworkName}
             </span>
           )}
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/coursework/${courseworkId}`}>詳細</Link>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/coursework">一覧に戻る</Link>
           </Button>
