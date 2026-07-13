@@ -9,10 +9,14 @@ import {
   Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
+import { ListFilterBar } from "@/components/common/ListFilterBar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import type { CourseworkSummary } from "@/types/coursework.types"
 import type {
   CourseworkArchiveImportPreview,
@@ -35,6 +40,25 @@ import type {
 
 import { CourseworkCreateDialog } from "./CourseworkCreateDialog"
 import { CourseworkImportDialog } from "./CourseworkImportDialog"
+
+/** 試験外成績資料一覧のフィルタ対象値（名前・説明・タグ名・学級名／タグ／学級／実施日） */
+const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
+  searchTexts: (coursework) => [
+    coursework.name,
+    coursework.description,
+    ...coursework.tags.map((courseworkTag) => courseworkTag.tag.name),
+    ...coursework.classrooms.map(
+      (courseworkClassroom) => courseworkClassroom.classroom.name
+    ),
+  ],
+  tagIds: (coursework) =>
+    coursework.tags.map((courseworkTag) => courseworkTag.tag.id),
+  classroomIds: (coursework) =>
+    coursework.classrooms.map(
+      (courseworkClassroom) => courseworkClassroom.classroomId
+    ),
+  date: (coursework) => coursework.date,
+}
 
 /**
  * 試験外成績資料（Coursework）の一覧コンテナ
@@ -54,6 +78,8 @@ export function CourseworkListContainer() {
     null
   )
   const [importing, setImporting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
 
   const loadCourseworks = useCallback(async () => {
     try {
@@ -71,6 +97,17 @@ export function CourseworkListContainer() {
   useEffect(() => {
     loadCourseworks()
   }, [loadCourseworks])
+
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        setAllTags(await window.electronAPI.tagGetAll())
+      } catch (error) {
+        console.error("Error loading tags:", error)
+      }
+    }
+    void loadTags()
+  }, [])
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
@@ -175,6 +212,97 @@ export function CourseworkListContainer() {
     setImportArchivePath(null)
   }
 
+  const toggleSelect = useCallback((courseworkId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(courseworkId)
+      } else {
+        next.delete(courseworkId)
+      }
+      return next
+    })
+  }, [])
+
+  // 選択中の各資料へ、既存タグを保持したままタグを追加する
+  const handleBulkAddTag = async (tagName: string) => {
+    try {
+      const tag = await window.electronAPI.tagFindOrCreate(tagName)
+      const targetCourseworks = courseworks.filter((coursework) =>
+        selectedIds.has(coursework.id)
+      )
+      for (const coursework of targetCourseworks) {
+        // 既存タグを保持したまま1件追加（全置換 setTags による stale 消失を回避）
+        const result = await window.electronAPI.coursework.addTag(
+          coursework.id,
+          tag.id
+        )
+        if (!result.success) {
+          throw new Error(result.error ?? "タグの追加に失敗しました")
+        }
+      }
+      toast.success("タグを追加しました", {
+        description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
+      })
+      setSelectedIds(new Set())
+      setAllTags(await window.electronAPI.tagGetAll())
+      await loadCourseworks()
+    } catch (error) {
+      console.error("Error bulk adding tag:", error)
+      toast.error("タグの追加に失敗しました")
+    }
+  }
+
+  const classroomOptions = useMemo(() => {
+    const nameById = new Map<string, string>()
+    for (const coursework of courseworks) {
+      for (const courseworkClassroom of coursework.classrooms) {
+        nameById.set(
+          courseworkClassroom.classroom.id,
+          courseworkClassroom.classroom.name
+        )
+      }
+    }
+    return [...nameById.entries()].map(([id, name]) => ({ id, name }))
+  }, [courseworks])
+
+  const {
+    filteredItems: filteredCourseworks,
+    searchTerm,
+    setSearchTerm,
+    filterTagIds,
+    toggleTagId,
+    clearTagIds,
+    filterClassroomIds,
+    toggleClassroomId,
+    clearClassroomIds,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+  } = useListFilter(courseworks, COURSEWORK_FILTER_ACCESSORS)
+
+  const allSelected =
+    filteredCourseworks.length > 0 &&
+    filteredCourseworks.every((coursework) => selectedIds.has(coursework.id))
+
+  const toggleSelectAll = useCallback(
+    (checked: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const coursework of filteredCourseworks) {
+          if (checked) {
+            next.add(coursework.id)
+          } else {
+            next.delete(coursework.id)
+          }
+        }
+        return next
+      })
+    },
+    [filteredCourseworks]
+  )
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -203,7 +331,47 @@ export function CourseworkListContainer() {
             <FolderInput className="mr-2 h-4 w-4" />
             .coursework 読み込み
           </Button>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-muted-foreground text-sm">
+                {selectedIds.size}件選択中
+              </span>
+              <BulkTagAssignButton
+                selectedCount={selectedIds.size}
+                allTags={allTags}
+                onAssign={handleBulkAddTag}
+              />
+            </>
+          )}
         </div>
+        {courseworks.length > 0 && (
+          <ListFilterBar
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            searchPlaceholder="資料名・タグ・学級で検索"
+            totalCount={courseworks.length}
+            filteredCount={filteredCourseworks.length}
+            tagFilter={{
+              options: allTags,
+              selectedIds: filterTagIds,
+              onToggle: toggleTagId,
+              onClear: clearTagIds,
+            }}
+            classroomFilter={{
+              options: classroomOptions,
+              selectedIds: filterClassroomIds,
+              onToggle: toggleClassroomId,
+              onClear: clearClassroomIds,
+            }}
+            dateRangeFilter={{
+              label: "実施日",
+              from: dateFrom,
+              to: dateTo,
+              onFromChange: setDateFrom,
+              onToChange: setDateTo,
+            }}
+          />
+        )}
       </div>
 
       <div className="min-h-0 flex-1 p-4">
@@ -222,6 +390,15 @@ export function CourseworkListContainer() {
             <Table wrapperClassName="h-full">
               <TableHeader className="bg-card sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) =>
+                        toggleSelectAll(checked === true)
+                      }
+                      aria-label="全選択"
+                    />
+                  </TableHead>
                   <TableHead>資料名</TableHead>
                   <TableHead className="w-40 text-center">実施日</TableHead>
                   <TableHead className="w-40 text-center">編集</TableHead>
@@ -229,8 +406,27 @@ export function CourseworkListContainer() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {courseworks.map((coursework) => (
+                {filteredCourseworks.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-muted-foreground py-8 text-center"
+                    >
+                      条件に一致する資料がありません
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filteredCourseworks.map((coursework) => (
                   <TableRow key={coursework.id} className="group">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(coursework.id)}
+                        onCheckedChange={(checked) =>
+                          toggleSelect(coursework.id, checked === true)
+                        }
+                        aria-label={`${coursework.name} を選択`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{coursework.name}</div>
@@ -240,6 +436,19 @@ export function CourseworkListContainer() {
                           生徒: {coursework._count.students}名 / 評価項目:{" "}
                           {coursework._count.items}
                         </div>
+                        {coursework.tags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {coursework.tags.map((courseworkTag) => (
+                              <Badge
+                                key={courseworkTag.tag.id}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {courseworkTag.tag.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
 

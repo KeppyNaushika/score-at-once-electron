@@ -135,6 +135,8 @@ export function createCourseworkApi() {
       // タグ
       setTags: (courseworkId: string, tagIds: string[]) =>
         ipcRenderer.invoke("coursework:setTags", courseworkId, tagIds),
+      addTag: (courseworkId: string, tagId: string) =>
+        ipcRenderer.invoke("coursework:addTag", courseworkId, tagId),
 
       // アーカイブ（.coursework のエクスポート／インポート）
       exportArchive: (courseworkId: string) =>

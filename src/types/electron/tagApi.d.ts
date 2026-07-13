@@ -1,4 +1,10 @@
-import type { ExamTag, Prisma, Tag, TagSubtotalGroup } from "@prisma/client"
+import type {
+  AsbDefinitionTag,
+  ExamTag,
+  Prisma,
+  Tag,
+  TagSubtotalGroup,
+} from "@prisma/client"
 
 /**
  * Tag（タグ）・TagSubtotalGroup・ExamTag関連API
@@ -6,6 +12,11 @@ import type { ExamTag, Prisma, Tag, TagSubtotalGroup } from "@prisma/client"
 
 /** タグ同梱の ExamTag（`examTagGetByExamId`/`examTagSetExamTags` が返す実形状）。 */
 export type ExamTagWithTag = Prisma.ExamTagGetPayload<{
+  include: { tag: true }
+}>
+
+/** タグ同梱の AsbDefinitionTag（getByDefinitionId/setDefinitionTags が返す実形状）。 */
+export type AsbDefinitionTagWithTag = Prisma.AsbDefinitionTagGetPayload<{
   include: { tag: true }
 }>
 
@@ -35,4 +46,17 @@ export interface TagAPI {
     examId: string,
     tagIds: string[]
   ) => Promise<ExamTagWithTag[]>
+
+  asbDefinitionTagGetByDefinitionId: (
+    asbDefinitionId: string
+  ) => Promise<AsbDefinitionTagWithTag[]>
+  asbDefinitionTagCreate: (data: {
+    asbDefinitionId: string
+    tagId: string
+  }) => Promise<AsbDefinitionTag>
+  asbDefinitionTagDelete: (id: string) => Promise<void>
+  asbDefinitionTagSetDefinitionTags: (
+    asbDefinitionId: string,
+    tagIds: string[]
+  ) => Promise<AsbDefinitionTagWithTag[]>
 }

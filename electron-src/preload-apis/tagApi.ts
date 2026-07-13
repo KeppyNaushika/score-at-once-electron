@@ -33,5 +33,24 @@ export function createTagApi() {
     examTagDelete: (id: string) => ipcRenderer.invoke("examTag:delete", id),
     examTagSetExamTags: (examId: string, tagIds: string[]) =>
       ipcRenderer.invoke("examTag:setExamTags", examId, tagIds),
+
+    // AsbDefinitionTag（解答用紙定義-タグ関連）
+    asbDefinitionTagGetByDefinitionId: (asbDefinitionId: string) =>
+      ipcRenderer.invoke("asbDefinitionTag:getByDefinitionId", asbDefinitionId),
+    asbDefinitionTagCreate: (data: {
+      asbDefinitionId: string
+      tagId: string
+    }) => ipcRenderer.invoke("asbDefinitionTag:create", data),
+    asbDefinitionTagDelete: (id: string) =>
+      ipcRenderer.invoke("asbDefinitionTag:delete", id),
+    asbDefinitionTagSetDefinitionTags: (
+      asbDefinitionId: string,
+      tagIds: string[]
+    ) =>
+      ipcRenderer.invoke(
+        "asbDefinitionTag:setDefinitionTags",
+        asbDefinitionId,
+        tagIds
+      ),
   }
 }

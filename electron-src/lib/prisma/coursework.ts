@@ -45,6 +45,13 @@ export async function getCourseworks() {
     const courseworks = await prisma.coursework.findMany({
       include: {
         _count: { select: { items: true, students: true } },
+        tags: {
+          include: { tag: { select: { id: true, name: true, color: true } } },
+        },
+        classrooms: {
+          include: { classroom: { select: { id: true, name: true } } },
+          orderBy: { order: "asc" },
+        },
       },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     })
@@ -891,6 +898,24 @@ export async function setCourseworkTags(
     return { success: true }
   } catch (error) {
     console.error("Error setting coursework tags:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/** 資料にタグを1件追加（既存タグは保持・冪等）。一括付与での既存タグ消失を避ける */
+export async function addCourseworkTag(courseworkId: string, tagId: string) {
+  try {
+    await prisma.courseworkTag.upsert({
+      where: { courseworkId_tagId: { courseworkId, tagId } },
+      update: {},
+      create: { courseworkId, tagId },
+    })
+    return { success: true }
+  } catch (error) {
+    console.error("Error adding coursework tag:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

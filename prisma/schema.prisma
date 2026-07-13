@@ -422,6 +422,7 @@ model Tag {
   tagSubtotalGroups TagSubtotalGroup[]
   examTags          ExamTag[]
   courseworkTags    CourseworkTag[]
+  asbDefinitionTags AsbDefinitionTag[]
 }
 
 model TagSubtotalGroup {
@@ -451,6 +452,22 @@ model ExamTag {
 
   @@unique([examId, tagId])
   @@index([examId])
+  @@index([tagId])
+}
+
+/// 解答用紙定義のタグ（既存 Tag と多対多）
+model AsbDefinitionTag {
+  id              String   @id @default(uuid())
+  asbDefinitionId String
+  tagId           String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  asbDefinition AsbDefinition @relation(fields: [asbDefinitionId], references: [id], onDelete: Cascade)
+  tag           Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([asbDefinitionId, tagId])
+  @@index([asbDefinitionId])
   @@index([tagId])
 }
 
@@ -1082,6 +1099,7 @@ model AsbDefinition {
 
   majorQuestions AsbMajorQuestion[]
   headerFields   AsbHeaderField[]
+  tags           AsbDefinitionTag[]
 
   @@index([userId])
 }

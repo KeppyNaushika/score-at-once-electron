@@ -206,6 +206,10 @@ export interface CourseworkAPI {
       courseworkId: string,
       tagIds: string[]
     ) => Promise<{ success: boolean; error?: string }>
+    addTag: (
+      courseworkId: string,
+      tagId: string
+    ) => Promise<{ success: boolean; error?: string }>
 
     // アーカイブ（.coursework のエクスポート／インポート）
     exportArchive: (
