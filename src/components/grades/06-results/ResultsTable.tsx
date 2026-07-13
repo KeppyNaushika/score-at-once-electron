@@ -139,6 +139,7 @@ function EstimationExplain({
           <RegressionFormula
             intercept={estimation.intercept}
             terms={estimation.regressionTerms}
+            droppedPredictors={estimation.droppedPredictors}
             baseEstimate={estimation.baseEstimate}
             maxScore={targetMaxScore}
           />
@@ -165,11 +166,13 @@ function EstimationExplain({
 function RegressionFormula({
   intercept,
   terms,
+  droppedPredictors,
   baseEstimate,
   maxScore,
 }: {
   intercept: number
   terms: { id: string; name: string; value: number; coefficient: number }[]
+  droppedPredictors?: { id: string; name: string }[]
   baseEstimate: number
   maxScore: number
 }) {
@@ -195,6 +198,14 @@ function RegressionFormula({
           {term.name}: 係数 {fmt(term.coefficient, 3)} × 素点 {fmt(term.value)}
         </p>
       ))}
+      {droppedPredictors && droppedPredictors.length > 0 && (
+        <p className="text-amber-700 dark:text-amber-300">
+          ※ 多重共線性・定数列のため回帰から除外:{" "}
+          {droppedPredictors
+            .map((droppedPredictor) => droppedPredictor.name)
+            .join("、")}
+        </p>
+      )}
       <p className="tabular-nums">
         推定素点 = {fmt(baseEstimate)}
         {clampNote(rawSum, baseEstimate, maxScore)}

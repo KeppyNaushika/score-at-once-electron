@@ -366,6 +366,7 @@ export async function calculateGrades(gradeId: string): Promise<{
                 averageRatio: estimation.averageRatio,
                 intercept: estimation.intercept,
                 regressionTerms: estimation.regressionTerms,
+                droppedPredictors: estimation.droppedPredictors,
                 fallbackReason: estimation.fallbackReason,
               }
             }

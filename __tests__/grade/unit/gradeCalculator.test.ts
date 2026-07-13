@@ -1432,6 +1432,141 @@ describe("estimateAbsentScore", () => {
     )
     expect(result).toBeNull()
   })
+
+  it("method='regression' → 多重共線性の従属列はランク落ち除外して回帰継続", () => {
+    // ds4 = ds2 + ds3（合計＝小計の和）で完全従属 → ds4 を除外し ds2,ds3 で回帰する。
+    // 目的変数 ds1 は s1 が欠測、s2-s6 が訓練データ。
+    // predictor は ds2,ds3,ds4 の3つ → minSamples=5、訓練 s2-s6 の5人でちょうど満たす。
+    const rawScoreMap = new Map<string, Map<string, number | null>>()
+    const rows: Record<string, [number | null, number, number]> = {
+      // studentId: [ds1(目的), ds2, ds3]（ds4 = ds2 + ds3）
+      s1: [null, 60, 20],
+      s2: [70, 40, 30],
+      s3: [90, 80, 10],
+      s4: [60, 30, 40],
+      s5: [85, 50, 50],
+      s6: [75, 20, 60],
+    }
+    for (const [studentId, [ds1, ds2, ds3]] of Object.entries(rows)) {
+      rawScoreMap.set(
+        studentId,
+        new Map<string, number | null>([
+          ["ds1", ds1],
+          ["ds2", ds2],
+          ["ds3", ds3],
+          ["ds4", ds2 + ds3],
+        ])
+      )
+    }
+
+    const predictorNames = ["ds2", "ds3", "ds4"]
+    const allDataSources = [
+      {
+        id: "ds1",
+        name: "ds1",
+        maxScore: 100,
+        absentMethod: "regression" as const,
+        absentRatio: 1,
+        absentOffset: 0,
+        ...dataSourceDefaults,
+      },
+      ...predictorNames.map((predictorName) => ({
+        id: predictorName,
+        name: predictorName,
+        maxScore: 100,
+        absentMethod: "null" as const,
+        absentRatio: 1,
+        absentOffset: 0,
+        ...dataSourceDefaults,
+      })),
+    ]
+
+    const result = estimateAbsentScore(
+      "regression",
+      "s1",
+      "ds1",
+      100,
+      rawScoreMap,
+      allDataSources
+    )
+
+    // フォールバックせず回帰のまま
+    expect(result).not.toBeNull()
+    expect(result!.effectiveMethod).toBe("regression")
+    expect(result!.fallbackReason).toBeUndefined()
+    // 従属列 ds4 が除外され、独立列 ds2,ds3 だけで項が構成される
+    expect(result!.droppedPredictors).toHaveLength(1)
+    expect(result!.droppedPredictors![0].name).toBe("ds4")
+    expect(result!.regressionTerms!.map((term) => term.name)).toEqual([
+      "ds2",
+      "ds3",
+    ])
+    expect(result!.value).toBeGreaterThanOrEqual(0)
+    expect(result!.value).toBeLessThanOrEqual(100)
+  })
+
+  it("method='regression' → サンプル妥当性は生の説明変数数でなく独立列数で判定する", () => {
+    // ds4 = ds2 + ds3 の従属を含む3説明変数だが、独立は ds2,ds3 の2つ。
+    // 独立パラメータ数(切片+2=3) 基準では minSamples=4 で訓練4人（s2-s5）で成立する。
+    // 生の説明変数数(3)基準の旧判定 minSamples=5 なら average に落ちていた境界ケース。
+    const rawScoreMap = new Map<string, Map<string, number | null>>()
+    const rows: Record<string, [number | null, number, number]> = {
+      s1: [null, 50, 30],
+      s2: [65, 40, 20],
+      s3: [88, 70, 30],
+      s4: [70, 30, 50],
+      s5: [72, 60, 10],
+    }
+    for (const [studentId, [ds1, ds2, ds3]] of Object.entries(rows)) {
+      rawScoreMap.set(
+        studentId,
+        new Map<string, number | null>([
+          ["ds1", ds1],
+          ["ds2", ds2],
+          ["ds3", ds3],
+          ["ds4", ds2 + ds3],
+        ])
+      )
+    }
+
+    const predictorNames = ["ds2", "ds3", "ds4"]
+    const allDataSources = [
+      {
+        id: "ds1",
+        name: "ds1",
+        maxScore: 100,
+        absentMethod: "regression" as const,
+        absentRatio: 1,
+        absentOffset: 0,
+        ...dataSourceDefaults,
+      },
+      ...predictorNames.map((predictorName) => ({
+        id: predictorName,
+        name: predictorName,
+        maxScore: 100,
+        absentMethod: "null" as const,
+        absentRatio: 1,
+        absentOffset: 0,
+        ...dataSourceDefaults,
+      })),
+    ]
+
+    const result = estimateAbsentScore(
+      "regression",
+      "s1",
+      "ds1",
+      100,
+      rawScoreMap,
+      allDataSources
+    )
+
+    // 4サンプルでも average に落ちず回帰が成立すること
+    expect(result!.effectiveMethod).toBe("regression")
+    expect(result!.fallbackReason).toBeUndefined()
+    expect(result!.droppedPredictors!.map((dropped) => dropped.name)).toEqual([
+      "ds4",
+    ])
+  })
 })
 
 describe("applyAdjustmentAndClamp", () => {

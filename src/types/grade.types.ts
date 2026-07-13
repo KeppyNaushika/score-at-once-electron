@@ -236,6 +236,13 @@ export interface EstimationRegressionTerm {
   coefficient: number
 }
 
+/** 多重共線性でランク落ち除外された説明変数（従属列） */
+export interface EstimationDroppedPredictor {
+  /** 除外された GradeDataSource.id（React key 用） */
+  id: string
+  name: string
+}
+
 /** 重回帰法がフォールバックした理由 */
 export type EstimationFallbackReason =
   "insufficient_samples" | "singular_matrix"
@@ -266,8 +273,10 @@ export interface EstimationDetail {
   averageRatio?: number
   /** 重回帰法の切片（β0） */
   intercept?: number
-  /** 重回帰法の各説明変数の項 */
+  /** 重回帰法の各説明変数の項（採用＝従属でない列のみ） */
   regressionTerms?: EstimationRegressionTerm[]
+  /** 多重共線性でランク落ち除外した説明変数（従属列） */
+  droppedPredictors?: EstimationDroppedPredictor[]
   /** 重回帰法がaverageにフォールバックした理由（あれば） */
   fallbackReason?: EstimationFallbackReason
 }

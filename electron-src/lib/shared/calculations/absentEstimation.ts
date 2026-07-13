@@ -3,11 +3,14 @@
  * rawScoreMap には推定前の実スコアのみが格納される（循環推定の防止）。
  * - zero: 0点
  * - average: 同一生徒の他DataSource比率の平均 × 満点
- * - regression: OLS重回帰による予測（サンプル不足・特異行列時は average にフォールバック）
+ * - regression: OLS重回帰による予測。多重共線性（合計＝小計の和など）で線形従属になった
+ *   説明変数はランク落ちで除外して残りの独立列で継続する。独立列が1つも残らない場合や
+ *   サンプル不足の場合のみ average にフォールバックする。
  */
 
 import type {
   AbsentMethod,
+  EstimationDroppedPredictor,
   EstimationFallbackReason,
   EstimationRegressionTerm,
   EstimationSourceContribution,
@@ -29,8 +32,10 @@ export interface AbsentEstimation {
   averageRatio?: number
   /** 重回帰法の切片（β0） */
   intercept?: number
-  /** 重回帰法の各説明変数の項 */
+  /** 重回帰法の各説明変数の項（採用＝従属でない列のみ） */
   regressionTerms?: EstimationRegressionTerm[]
+  /** 多重共線性でランク落ち除外した説明変数（従属列） */
+  droppedPredictors?: EstimationDroppedPredictor[]
   /** 重回帰法がaverageにフォールバックした理由 */
   fallbackReason?: EstimationFallbackReason
 }
@@ -177,10 +182,18 @@ function estimateByRegression(
     Y.push(y)
   }
 
-  // 最低でも説明変数+1のサンプルが必要（＋余裕を持って）
-  const minSamples = availablePredictors.length + 2
+  // OLS: β = (X^T X)^(-1) X^T Y。多重共線性がある列はランク落ちで除外して解く。
+  const p = X[0].length // パラメータ数（切片含む）
+
+  // 従属列を先に見極める。サンプル妥当性は「独立パラメータ数（＝ランク落ち後の実効自由度）」で
+  // 判定する。生の説明変数数で判定すると、合計＝小計の和のように従属列を含むだけで
+  // サンプル要件が跳ね上がり、ランク落ち回帰が成立するはずの境界ケースまで average に落ちてしまう。
+  const retainedColumns = selectIndependentColumns(X, p)
+
+  // 最低でも「独立パラメータ数 + 1」のサンプルが必要（残差自由度1以上）。
+  // 独立列は X.length を超えられない（rank ≤ n）ので、この判定は劣決定系も自動的に弾く。
+  const minSamples = retainedColumns.length + 1
   if (X.length < minSamples) {
-    // サンプル不足の場合、平均比率法にフォールバック
     return fallbackToAverage(
       studentId,
       dataSourceId,
@@ -191,11 +204,8 @@ function estimateByRegression(
     )
   }
 
-  // OLS: β = (X^T X)^(-1) X^T Y
-  const p = X[0].length // パラメータ数（切片含む）
-  const beta = solveOLS(X, Y, p)
-  if (!beta) {
-    // 特異行列の場合、平均比率法にフォールバック
+  // 独立な説明変数が1つも残らない（切片のみ）＝回帰不能 → 平均比率法にフォールバック
+  if (retainedColumns.length <= 1) {
     return fallbackToAverage(
       studentId,
       dataSourceId,
@@ -206,7 +216,29 @@ function estimateByRegression(
     )
   }
 
-  // 対象生徒のpredictor値で予測
+  // 独立列だけで正規方程式を解く（この部分行列は正則）
+  const reducedBeta = solveNormalEquations(X, Y, retainedColumns)
+  if (!reducedBeta) {
+    return fallbackToAverage(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources,
+      "singular_matrix"
+    )
+  }
+
+  // 全長 p の β に戻す（従属列＝係数0）。以降は retainedColumnSet で採用/除外を判定する
+  // （列メンバーシップの単一ソース）。
+  const beta = Array(p).fill(0)
+  retainedColumns.forEach((column, k) => {
+    beta[column] = reducedBeta[k]
+  })
+  const retainedColumnSet = new Set(retainedColumns)
+
+  // 対象生徒のpredictor値で予測（従属列は係数0なので寄与しない）。
+  // 構造的恒等式（合計＝小計の和）は対象生徒でも成り立つため、どの従属列を落としても予測値は不変。
   const xTarget = [1]
   for (const predId of availablePredictors) {
     xTarget.push(targetStudentScores.get(predId)!)
@@ -217,21 +249,31 @@ function estimateByRegression(
     predicted += beta[j] * xTarget[j]
   }
 
-  // 説明変数の項（beta[0]=切片、beta[j+1]=predictor jの係数）
-  const regressionTerms: EstimationRegressionTerm[] = availablePredictors.map(
-    (predId, index) => ({
-      id: predId,
-      name: nameByDataSourceId.get(predId) ?? predId,
-      value: targetStudentScores.get(predId)!,
-      coefficient: beta[index + 1],
-    })
-  )
+  // 採用列（beta[0]=切片、beta[index+1]=predictor indexの係数）は regressionTerms、
+  // ランク落ち除外した従属列は droppedPredictors に回す。
+  const regressionTerms: EstimationRegressionTerm[] = []
+  const droppedPredictors: EstimationDroppedPredictor[] = []
+  availablePredictors.forEach((predId, index) => {
+    const column = index + 1
+    const name = nameByDataSourceId.get(predId) ?? predId
+    if (retainedColumnSet.has(column)) {
+      regressionTerms.push({
+        id: predId,
+        name,
+        value: targetStudentScores.get(predId)!,
+        coefficient: beta[column],
+      })
+    } else {
+      droppedPredictors.push({ id: predId, name })
+    }
+  })
 
   return {
     value: clamp(predicted, 0, maxScore),
     effectiveMethod: "regression",
     intercept: beta[0],
     regressionTerms,
+    ...(droppedPredictors.length > 0 && { droppedPredictors }),
   }
 }
 
@@ -259,48 +301,103 @@ function fallbackToAverage(
 }
 
 /**
- * OLS正規方程式を解く: β = (X^T X)^(-1) X^T Y
- * ガウス消去法で (X^T X) β = X^T Y を解く
+ * 設計行列 X の列から線形独立な列を選ぶ（変形グラム・シュミット）。
+ * 既に採用した列が張る空間への直交残差ノルムが元のノルムに対して極小な列は、
+ * 従属列とみなして落とす。列0（切片）から入力順に処理する。
+ * @returns 採用した列インデックスの配列（入力順、切片列0を含む）
  */
-function solveOLS(X: number[][], Y: number[], p: number): number[] | null {
+function selectIndependentColumns(
+  X: number[][],
+  p: number,
+  relativeTolerance = 1e-8
+): number[] {
   const n = X.length
+  const retainedColumns: number[] = []
+  const orthonormalBasis: number[][] = []
 
-  // X^T X (p×p)
-  const XtX: number[][] = Array.from({ length: p }, () => Array(p).fill(0))
-  for (let i = 0; i < p; i++) {
-    for (let j = 0; j < p; j++) {
+  for (let column = 0; column < p; column++) {
+    const vector = X.map((row) => row[column])
+    const originalNorm = Math.sqrt(
+      vector.reduce((sum, value) => sum + value * value, 0)
+    )
+    if (originalNorm < 1e-12) continue // ゼロ列は落とす
+
+    // 既存の正規直交基底に対して直交化した残差を求める
+    const residual = vector.slice()
+    for (const basisVector of orthonormalBasis) {
+      let dot = 0
+      for (let i = 0; i < n; i++) dot += residual[i] * basisVector[i]
+      for (let i = 0; i < n; i++) residual[i] -= dot * basisVector[i]
+    }
+    const residualNorm = Math.sqrt(
+      residual.reduce((sum, value) => sum + value * value, 0)
+    )
+    if (residualNorm / originalNorm < relativeTolerance) continue // 従属列 → 除外
+
+    for (let i = 0; i < n; i++) residual[i] /= residualNorm
+    orthonormalBasis.push(residual)
+    retainedColumns.push(column)
+  }
+  return retainedColumns
+}
+
+/**
+ * 指定した列サブセットだけで正規方程式 (Xr^T Xr) β = Xr^T Y を組み、ガウス消去で解く。
+ * columns で選んだ独立列のみを使うため、この部分系は正則（解ければ非null）。
+ */
+function solveNormalEquations(
+  X: number[][],
+  Y: number[],
+  columns: number[]
+): number[] | null {
+  const n = X.length
+  const r = columns.length
+
+  const XtX: number[][] = Array.from({ length: r }, () => Array(r).fill(0))
+  for (let i = 0; i < r; i++) {
+    for (let j = 0; j < r; j++) {
       let sum = 0
       for (let k = 0; k < n; k++) {
-        sum += X[k][i] * X[k][j]
+        sum += X[k][columns[i]] * X[k][columns[j]]
       }
       XtX[i][j] = sum
     }
   }
 
-  // X^T Y (p)
-  const XtY: number[] = Array(p).fill(0)
-  for (let i = 0; i < p; i++) {
+  const XtY: number[] = Array(r).fill(0)
+  for (let i = 0; i < r; i++) {
     let sum = 0
     for (let k = 0; k < n; k++) {
-      sum += X[k][i] * Y[k]
+      sum += X[k][columns[i]] * Y[k]
     }
     XtY[i] = sum
   }
 
-  // 拡大係数行列 [XtX | XtY] → ガウス消去法
-  const aug: number[][] = XtX.map((row, i) => [...row, XtY[i]])
+  return gaussianEliminationSolve(XtX, XtY, r)
+}
 
-  for (let col = 0; col < p; col++) {
+/**
+ * 連立一次方程式 A β = b をガウス消去法（部分ピボット選択）で解く。
+ * ピボットが極小（特異）なら null を返す。
+ */
+function gaussianEliminationSolve(
+  A: number[][],
+  b: number[],
+  m: number
+): number[] | null {
+  const aug: number[][] = A.map((row, i) => [...row, b[i]])
+
+  for (let col = 0; col < m; col++) {
     // ピボット選択
     let maxRow = col
     let maxVal = Math.abs(aug[col][col])
-    for (let row = col + 1; row < p; row++) {
+    for (let row = col + 1; row < m; row++) {
       if (Math.abs(aug[row][col]) > maxVal) {
         maxVal = Math.abs(aug[row][col])
         maxRow = row
       }
     }
-    if (maxVal < 1e-12) return null // 特異行列
+    if (maxVal < 1e-12) return null // 特異
 
     // 行交換
     if (maxRow !== col) {
@@ -309,26 +406,26 @@ function solveOLS(X: number[][], Y: number[], p: number): number[] | null {
 
     // 前進消去
     const pivot = aug[col][col]
-    for (let row = col + 1; row < p; row++) {
+    for (let row = col + 1; row < m; row++) {
       const factor = aug[row][col] / pivot
-      for (let j = col; j <= p; j++) {
+      for (let j = col; j <= m; j++) {
         aug[row][j] -= factor * aug[col][j]
       }
     }
   }
 
   // 後退代入
-  const beta = Array(p).fill(0)
-  for (let i = p - 1; i >= 0; i--) {
+  const solution = Array(m).fill(0)
+  for (let i = m - 1; i >= 0; i--) {
     if (Math.abs(aug[i][i]) < 1e-12) return null
-    let sum = aug[i][p]
-    for (let j = i + 1; j < p; j++) {
-      sum -= aug[i][j] * beta[j]
+    let sum = aug[i][m]
+    for (let j = i + 1; j < m; j++) {
+      sum -= aug[i][j] * solution[j]
     }
-    beta[i] = sum / aug[i][i]
+    solution[i] = sum / aug[i][i]
   }
 
-  return beta
+  return solution
 }
 
 /**
