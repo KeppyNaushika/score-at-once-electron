@@ -264,7 +264,11 @@ function estimateByRegression(
         coefficient: beta[column],
       })
     } else {
-      droppedPredictors.push({ id: predId, name })
+      droppedPredictors.push({
+        id: predId,
+        name,
+        value: targetStudentScores.get(predId)!,
+      })
     }
   })
 

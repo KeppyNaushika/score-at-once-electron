@@ -241,6 +241,8 @@ export interface EstimationDroppedPredictor {
   /** 除外された GradeDataSource.id（React key 用） */
   id: string
   name: string
+  /** 対象生徒の当該ソース素点（除外行にも素点を並べて表示するため保持） */
+  value: number
 }
 
 /** 重回帰法がフォールバックした理由 */
