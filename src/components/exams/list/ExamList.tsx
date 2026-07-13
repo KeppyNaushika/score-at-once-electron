@@ -6,22 +6,20 @@ import {
   Edit,
   Eye,
   FileImage,
-  Filter,
   FolderInput,
   FolderOutput,
   PlayCircle,
   PlusCircle,
-  Search,
   Settings,
-  Tag,
   Upload,
   Users,
-  X as XIcon,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
+import { ListFilterBar } from "@/components/common/ListFilterBar"
 import ExportModeModal from "@/components/exams/detail/ExportModeModal"
 import CreateExamWindow from "@/components/exams/forms/CreateExamWindow"
 import { useExams } from "@/components/hooks/useExams"
@@ -30,12 +28,6 @@ import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
@@ -46,6 +38,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
+import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import { useRowSelection } from "@/hooks/useRowSelection"
 import { useTableSort } from "@/hooks/useTableSort"
 import {
   type ExamSummary,
@@ -61,20 +55,23 @@ interface ExamSortable {
   original: ExamSummary
 }
 
+/** 試験一覧のフィルタ対象値の取り出し（検索=試験名・説明・タグ名、タグ絞り込み=タグ id） */
+const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
+  searchTexts: (exam) => [
+    exam.examName,
+    exam.description,
+    ...exam.tags.map((tag) => tag.name),
+  ],
+  tagIds: (exam) => exam.tags.map((tag) => tag.id),
+}
+
 const File = () => {
   const { exams, loadExams } = useExams()
   const { user } = useAuth()
   const [showImportModal, setShowImportModal] = useState(false)
-  const [selectedExamIds, setSelectedExamIds] = useState<Set<string>>(new Set())
   const [isBulkExporting, setIsBulkExporting] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)
-
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
-  const [bulkTagInput, setBulkTagInput] = useState("")
-  const [showBulkTagPopover, setShowBulkTagPopover] = useState(false)
-  const bulkTagInputRef = useRef<HTMLInputElement>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterTagIds, setFilterTagIds] = useState<Set<string>>(new Set())
 
   const { createExamModal } = useFileActions()
   const router = useRouter()
@@ -92,28 +89,14 @@ const File = () => {
     void loadTags()
   }, [])
 
-  // フィルタリング
-  const filteredExams = useMemo(() => {
-    return exams.filter((exam) => {
-      // テキスト検索
-      if (searchTerm.trim()) {
-        const term = searchTerm.trim().toLowerCase()
-        const nameMatch = exam.examName.toLowerCase().includes(term)
-        const descMatch = exam.description?.toLowerCase().includes(term)
-        const tagMatch = exam.tags.some((tag) =>
-          tag.name.toLowerCase().includes(term)
-        )
-        if (!nameMatch && !descMatch && !tagMatch) return false
-      }
-      // タグフィルタ
-      if (filterTagIds.size > 0) {
-        const examTagIds = new Set(exam.tags.map((tag) => tag.id))
-        const hasMatch = [...filterTagIds].some((id) => examTagIds.has(id))
-        if (!hasMatch) return false
-      }
-      return true
-    })
-  }, [exams, searchTerm, filterTagIds])
+  const {
+    filteredItems: filteredExams,
+    searchTerm,
+    setSearchTerm,
+    filterTagIds,
+    toggleTagId,
+    clearTagIds,
+  } = useListFilter(exams, EXAM_FILTER_ACCESSORS)
 
   // ソート用データに変換
   const sortableData = useMemo<ExamSortable[]>(() => {
@@ -131,6 +114,14 @@ const File = () => {
     storageKey: "examList-sort",
   })
 
+  const {
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    allSelected,
+    clearSelection,
+  } = useRowSelection(sortedData)
+
   const handleStartScoring = (exam: ExamSummary) => {
     router.push(`/exams/${exam.id}`)
   }
@@ -144,33 +135,12 @@ const File = () => {
     router.push(`/exams/${examId}`)
   }
 
-  const handleToggleSelect = useCallback((examId: string) => {
-    setSelectedExamIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(examId)) {
-        next.delete(examId)
-      } else {
-        next.add(examId)
-      }
-      return next
-    })
-  }, [])
-
-  const handleToggleSelectAll = useCallback(() => {
-    setSelectedExamIds((prev) => {
-      if (prev.size === sortedData.length) {
-        return new Set()
-      }
-      return new Set(sortedData.map((sortedItem) => sortedItem.id))
-    })
-  }, [sortedData])
-
   const handleBulkAddTag = useCallback(
     async (tagName: string) => {
-      if (!tagName.trim() || selectedExamIds.size === 0) return
+      if (!tagName.trim() || selectedIds.size === 0) return
       try {
         const tag = await window.electronAPI.tagFindOrCreate(tagName.trim())
-        for (const examId of selectedExamIds) {
+        for (const examId of selectedIds) {
           try {
             await window.electronAPI.examTagCreate({
               examId,
@@ -181,11 +151,9 @@ const File = () => {
           }
         }
         toast.success("タグを追加しました", {
-          description: `${selectedExamIds.size}件の試験に「${tagName.trim()}」を追加`,
+          description: `${selectedIds.size}件の試験に「${tagName.trim()}」を追加`,
         })
-        setBulkTagInput("")
-        setShowBulkTagPopover(false)
-        setSelectedExamIds(new Set())
+        clearSelection()
         // タグ一覧を再取得
         const tags = await window.electronAPI.tagGetAll()
         setAllTags(tags)
@@ -195,21 +163,21 @@ const File = () => {
         console.error(error)
       }
     },
-    [selectedExamIds, loadExams]
+    [selectedIds, clearSelection, loadExams]
   )
 
   const handleBulkExport = useCallback(
     async (exportMode: ArchiveExportMode) => {
-      if (!user || selectedExamIds.size === 0) return
+      if (!user || selectedIds.size === 0) return
 
       setIsBulkExporting(true)
       toast("書き出し中...", {
-        description: `${selectedExamIds.size}件の試験を書き出しています。`,
+        description: `${selectedIds.size}件の試験を書き出しています。`,
       })
 
       try {
         const result = await window.electronAPI.archive.bulkExportExams({
-          examIds: Array.from(selectedExamIds),
+          examIds: Array.from(selectedIds),
           userId: user.id,
           exportMode,
         })
@@ -236,7 +204,7 @@ const File = () => {
           })
         }
 
-        setSelectedExamIds(new Set())
+        clearSelection()
         setShowBulkExportModal(false)
       } catch (error) {
         toast.error("書き出しに失敗しました", {
@@ -249,7 +217,7 @@ const File = () => {
         setIsBulkExporting(false)
       }
     },
-    [user, selectedExamIds]
+    [user, selectedIds, clearSelection]
   )
 
   return (
@@ -272,176 +240,61 @@ const File = () => {
         isExporting={isBulkExporting}
       />
       <div className="flex h-full min-w-full flex-col">
-        <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              onClick={createExamModal.open}
-              variant="outline"
-              className="rounded-lg"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              新規試験作成
-            </Button>
-            <Button
-              onClick={() => setShowImportModal(true)}
-              variant="outline"
-              className="rounded-lg"
-            >
-              <FolderInput className="mr-2 h-4 w-4" />
-              .score 読み込み
-            </Button>
-            {selectedExamIds.size > 0 && (
+        <div className="border-b px-4 py-3">
+          <ListFilterBar
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            searchPlaceholder="試験名・タグで検索"
+            totalCount={exams.length}
+            filteredCount={filteredExams.length}
+            tagFilter={{
+              options: allTags,
+              selectedIds: filterTagIds,
+              onToggle: toggleTagId,
+              onClear: clearTagIds,
+            }}
+            leading={
               <>
-                <span className="text-muted-foreground text-sm">
-                  {selectedExamIds.size}件選択中
-                </span>
-                <Popover
-                  open={showBulkTagPopover}
-                  onOpenChange={setShowBulkTagPopover}
-                >
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="rounded-lg">
-                      <Tag className="mr-2 h-4 w-4" />
-                      タグを一括追加
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-3" align="start">
-                    <div className="space-y-2">
-                      <p className="text-muted-foreground text-xs">
-                        選択中の{selectedExamIds.size}
-                        件にタグを追加
-                      </p>
-                      <Input
-                        ref={bulkTagInputRef}
-                        value={bulkTagInput}
-                        onChange={(e) => setBulkTagInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                            e.preventDefault()
-                            void handleBulkAddTag(bulkTagInput)
-                          }
-                        }}
-                        placeholder="タグ名を入力してEnter"
-                        className="h-8 text-sm"
-                        autoFocus
-                      />
-                      {allTags.length > 0 && (
-                        <div className="max-h-28 overflow-y-auto">
-                          {allTags
-                            .filter(
-                              (tag) =>
-                                !bulkTagInput.trim() ||
-                                tag.name
-                                  .toLowerCase()
-                                  .includes(bulkTagInput.trim().toLowerCase())
-                            )
-                            .map((tag) => (
-                              <button
-                                key={tag.id}
-                                type="button"
-                                className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm"
-                                onClick={() => void handleBulkAddTag(tag.name)}
-                              >
-                                <Tag className="h-3 w-3 opacity-50" />
-                                {tag.name}
-                              </button>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
                 <Button
-                  onClick={() => setShowBulkExportModal(true)}
+                  onClick={createExamModal.open}
                   variant="outline"
                   className="rounded-lg"
-                  disabled={isBulkExporting}
                 >
-                  <FolderOutput className="mr-2 h-4 w-4" />
-                  .score 一括書き出し
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  新規試験作成
                 </Button>
-              </>
-            )}
-          </div>
-
-          {/* 検索・フィルタ */}
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-              <Input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="試験名・タグで検索"
-                className="h-8 w-48 pl-8 text-sm"
-              />
-            </div>
-            {allTags.length > 0 && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={
-                      filterTagIds.size > 0 ? "border-primary text-primary" : ""
-                    }
-                  >
-                    <Filter className="mr-1.5 h-3.5 w-3.5" />
-                    タグ
-                    {filterTagIds.size > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-1.5 h-5 min-w-5 px-1 text-xs"
-                      >
-                        {filterTagIds.size}
-                      </Badge>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-2" align="start">
-                  <div className="max-h-48 space-y-1 overflow-y-auto">
-                    {allTags.map((tag) => (
-                      <label
-                        key={tag.id}
-                        className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
-                      >
-                        <Checkbox
-                          checked={filterTagIds.has(tag.id)}
-                          onCheckedChange={(checked) => {
-                            setFilterTagIds((prev) => {
-                              const next = new Set(prev)
-                              if (checked) {
-                                next.add(tag.id)
-                              } else {
-                                next.delete(tag.id)
-                              }
-                              return next
-                            })
-                          }}
-                        />
-                        {tag.name}
-                      </label>
-                    ))}
-                  </div>
-                  {filterTagIds.size > 0 && (
+                <Button
+                  onClick={() => setShowImportModal(true)}
+                  variant="outline"
+                  className="rounded-lg"
+                >
+                  <FolderInput className="mr-2 h-4 w-4" />
+                  .score 読み込み
+                </Button>
+                {selectedIds.size > 0 && (
+                  <>
+                    <span className="text-muted-foreground text-sm">
+                      {selectedIds.size}件選択中
+                    </span>
+                    <BulkTagAssignButton
+                      selectedCount={selectedIds.size}
+                      allTags={allTags}
+                      onAssign={handleBulkAddTag}
+                    />
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-1 w-full text-xs"
-                      onClick={() => setFilterTagIds(new Set())}
+                      onClick={() => setShowBulkExportModal(true)}
+                      variant="outline"
+                      className="rounded-lg"
+                      disabled={isBulkExporting}
                     >
-                      <XIcon className="mr-1 h-3 w-3" />
-                      フィルタをクリア
+                      <FolderOutput className="mr-2 h-4 w-4" />
+                      .score 一括書き出し
                     </Button>
-                  )}
-                </PopoverContent>
-              </Popover>
-            )}
-            <span className="text-muted-foreground text-xs">
-              {filteredExams.length === exams.length
-                ? `${exams.length}件`
-                : `${filteredExams.length} / ${exams.length}件`}
-            </span>
-          </div>
+                  </>
+                )}
+              </>
+            }
+          />
         </div>
 
         {/* テーブルエリア */}
@@ -452,11 +305,10 @@ const File = () => {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-10 text-center">
                     <Checkbox
-                      checked={
-                        sortedData.length > 0 &&
-                        selectedExamIds.size === sortedData.length
+                      checked={allSelected}
+                      onCheckedChange={(checked) =>
+                        toggleSelectAll(checked === true)
                       }
-                      onCheckedChange={handleToggleSelectAll}
                       aria-label="全選択"
                     />
                   </TableHead>
@@ -493,12 +345,16 @@ const File = () => {
                     <TableRow
                       key={exam.id}
                       className="group cursor-pointer"
-                      onClick={() => handleToggleSelect(exam.id)}
+                      onClick={() =>
+                        toggleSelect(exam.id, !selectedIds.has(exam.id))
+                      }
                     >
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={selectedExamIds.has(exam.id)}
-                          onCheckedChange={() => handleToggleSelect(exam.id)}
+                          checked={selectedIds.has(exam.id)}
+                          onCheckedChange={(checked) =>
+                            toggleSelect(exam.id, checked === true)
+                          }
                           onClick={(e) => e.stopPropagation()}
                           aria-label={`${exam.examName}を選択`}
                         />
