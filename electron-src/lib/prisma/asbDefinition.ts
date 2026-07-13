@@ -121,6 +121,11 @@ export async function listAsbDefinitions(
       orientation: true,
       updatedAt: true,
       createdAt: true,
+      tags: {
+        select: {
+          tag: true,
+        },
+      },
       majorQuestions: {
         select: {
           subQuestions: {
@@ -169,6 +174,7 @@ export async function listAsbDefinitions(
       orientation: row.orientation,
       questionCount,
       totalPoints,
+      tags: row.tags.map((asbDefinitionTag) => asbDefinitionTag.tag),
       updatedAt: row.updatedAt.toISOString(),
       createdAt: row.createdAt.toISOString(),
     }

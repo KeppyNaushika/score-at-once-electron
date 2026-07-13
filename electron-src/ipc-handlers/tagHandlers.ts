@@ -3,6 +3,12 @@
  */
 
 import {
+  createAsbDefinitionTag,
+  deleteAsbDefinitionTag,
+  getAsbDefinitionTags,
+  setAsbDefinitionTags,
+} from "../lib/prisma/asbDefinitionTag"
+import {
   createExamTag,
   deleteExamTag,
   getExamTags,
@@ -97,6 +103,32 @@ export function setupTagHandlers(): void {
     "examTag:setExamTags",
     async (examId: string, tagIds: string[]) => {
       return setExamTags(examId, tagIds)
+    }
+  )
+
+  // AsbDefinitionTag CRUD
+  registerHandler(
+    "asbDefinitionTag:getByDefinitionId",
+    async (asbDefinitionId: string) => {
+      return getAsbDefinitionTags(asbDefinitionId)
+    }
+  )
+
+  registerHandler(
+    "asbDefinitionTag:create",
+    async (data: { asbDefinitionId: string; tagId: string }) => {
+      return createAsbDefinitionTag(data)
+    }
+  )
+
+  registerHandler("asbDefinitionTag:delete", async (id: string) => {
+    return deleteAsbDefinitionTag(id)
+  })
+
+  registerHandler(
+    "asbDefinitionTag:setDefinitionTags",
+    async (asbDefinitionId: string, tagIds: string[]) => {
+      return setAsbDefinitionTags(asbDefinitionId, tagIds)
     }
   )
 }

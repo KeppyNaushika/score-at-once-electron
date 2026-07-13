@@ -15,9 +15,10 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { ListFilterBar } from "@/components/common/ListFilterBar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeWithRelations } from "@/types/grade.types"
@@ -53,6 +55,20 @@ const STEP_ICONS: Record<
   4: ClipboardEdit,
   5: Sliders,
   6: BarChart3,
+}
+
+/** 成績算出一覧のフィルタ対象値（名前・説明・学級名／学級／基準日） */
+const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeWithRelations> = {
+  searchTexts: (grade) => [
+    grade.name,
+    grade.description,
+    ...grade.gradeClassrooms.map(
+      (gradeClassroom) => gradeClassroom.classroom.name
+    ),
+  ],
+  classroomIds: (grade) =>
+    grade.gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId),
+  date: (grade) => grade.referenceDate,
 }
 
 /**
@@ -176,6 +192,30 @@ export function GradeListContainer() {
     setImportArchiveData(null)
   }
 
+  // 一覧に出現する学級を集約してフィルタ選択肢にする
+  const classroomOptions = useMemo(() => {
+    const nameById = new Map<string, string>()
+    for (const grade of grades) {
+      for (const gradeClassroom of grade.gradeClassrooms) {
+        nameById.set(gradeClassroom.classroom.id, gradeClassroom.classroom.name)
+      }
+    }
+    return [...nameById.entries()].map(([id, name]) => ({ id, name }))
+  }, [grades])
+
+  const {
+    filteredItems: filteredGrades,
+    searchTerm,
+    setSearchTerm,
+    filterClassroomIds,
+    toggleClassroomId,
+    clearClassroomIds,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+  } = useListFilter(grades, GRADE_FILTER_ACCESSORS)
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -205,6 +245,28 @@ export function GradeListContainer() {
             .grade 読み込み
           </Button>
         </div>
+        {grades.length > 0 && (
+          <ListFilterBar
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            searchPlaceholder="試験名・学級で検索"
+            totalCount={grades.length}
+            filteredCount={filteredGrades.length}
+            classroomFilter={{
+              options: classroomOptions,
+              selectedIds: filterClassroomIds,
+              onToggle: toggleClassroomId,
+              onClear: clearClassroomIds,
+            }}
+            dateRangeFilter={{
+              label: "基準日",
+              from: dateFrom,
+              to: dateTo,
+              onFromChange: setDateFrom,
+              onToChange: setDateTo,
+            }}
+          />
+        )}
       </div>
 
       <div className="min-h-0 flex-1 p-4">
@@ -232,7 +294,17 @@ export function GradeListContainer() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {grades.map((grade) => {
+                {filteredGrades.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-muted-foreground py-8 text-center"
+                    >
+                      条件に一致する試験がありません
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filteredGrades.map((grade) => {
                   const status = getGradeStatus(grade)
                   const StepIcon = STEP_ICONS[status.step] ?? BarChart3
 
@@ -274,8 +346,10 @@ export function GradeListContainer() {
                           onClick={() => router.push(status.url)}
                           className="w-48 justify-start rounded-lg text-left"
                         >
-                          <StepIcon className="mr-1 h-4 w-4" />
-                          <span className="text-xs">{status.text}</span>
+                          <StepIcon className="mr-1 h-4 w-4 shrink-0" />
+                          <span className="min-w-0 truncate text-xs">
+                            {status.text}
+                          </span>
                         </Button>
                       </TableCell>
 

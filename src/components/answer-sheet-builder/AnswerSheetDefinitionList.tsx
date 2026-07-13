@@ -10,10 +10,24 @@ import {
   Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
+import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
+import { ListFilterBar } from "@/components/common/ListFilterBar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,11 +44,23 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
+import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
 
 type SortKey = "name" | "updatedAt" | "questionCount" | "totalPoints"
 type SortDir = "asc" | "desc"
+
+/** 解答用紙一覧のフィルタ対象値（名前・タグ名／タグ／更新日） */
+const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
+  searchTexts: (definition) => [
+    definition.name,
+    ...(definition.tags ?? []).map((tag) => tag.name),
+  ],
+  tagIds: (definition) => (definition.tags ?? []).map((tag) => tag.id),
+  date: (definition) => definition.updatedAt ?? null,
+}
 
 /**
  * 解答用紙定義の一覧表示・作成・複製・削除を行うコンポーネント。
@@ -52,6 +78,36 @@ export function AnswerSheetDefinitionList() {
 
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string
+    name: string
+  } | null>(null)
+
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        setAllTags(await window.electronAPI.tagGetAll())
+      } catch (error) {
+        console.error("Error loading tags:", error)
+      }
+    }
+    void loadTags()
+  }, [])
+
+  const {
+    filteredItems: filteredDefinitions,
+    searchTerm,
+    setSearchTerm,
+    filterTagIds,
+    toggleTagId,
+    clearTagIds,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+  } = useListFilter(definitions, ASB_FILTER_ACCESSORS)
 
   const toggleSort = useCallback(
     (key: SortKey) => {
@@ -65,7 +121,7 @@ export function AnswerSheetDefinitionList() {
     [sortKey]
   )
 
-  const sorted = [...definitions].sort((definitionA, definitionB) => {
+  const sorted = [...filteredDefinitions].sort((definitionA, definitionB) => {
     const direction = sortDir === "asc" ? 1 : -1
     switch (sortKey) {
       case "name":
@@ -92,6 +148,64 @@ export function AnswerSheetDefinitionList() {
     }
   })
 
+  const toggleSelect = useCallback((definitionId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(definitionId)
+      } else {
+        next.delete(definitionId)
+      }
+      return next
+    })
+  }, [])
+
+  const allSelected =
+    sorted.length > 0 &&
+    sorted.every((definition) => selectedIds.has(definition.id))
+
+  const toggleSelectAll = useCallback(
+    (checked: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const definition of sorted) {
+          if (checked) {
+            next.add(definition.id)
+          } else {
+            next.delete(definition.id)
+          }
+        }
+        return next
+      })
+    },
+    [sorted]
+  )
+
+  const handleBulkAddTag = async (tagName: string) => {
+    try {
+      const tag = await window.electronAPI.tagFindOrCreate(tagName)
+      for (const definitionId of selectedIds) {
+        try {
+          await window.electronAPI.asbDefinitionTagCreate({
+            asbDefinitionId: definitionId,
+            tagId: tag.id,
+          })
+        } catch {
+          // 既に紐づいている場合は unique 制約で失敗するが無視
+        }
+      }
+      toast.success("タグを追加しました", {
+        description: `${selectedIds.size}件の解答用紙に「${tagName}」を追加`,
+      })
+      setSelectedIds(new Set())
+      setAllTags(await window.electronAPI.tagGetAll())
+      await loadDefinitions()
+    } catch (error) {
+      console.error("Error bulk adding tag:", error)
+      toast.error("タグの追加に失敗しました")
+    }
+  }
+
   const handleCreate = useCallback(async () => {
     if (!user?.id) return
     const api = window.electronAPI?.answerSheetBuilder
@@ -115,13 +229,17 @@ export function AnswerSheetDefinitionList() {
     [router]
   )
 
-  const handleDelete = useCallback(
-    async (id: string, name: string) => {
-      if (!confirm(`「${name}」を削除しますか？`)) return
-      await deleteDefinition(id)
-    },
-    [deleteDefinition]
-  )
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    await deleteDefinition(deleteTarget.id)
+    // 削除した定義の id を選択から除く（stale id への一括タグ付与を防ぐ）
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      next.delete(deleteTarget.id)
+      return next
+    })
+    setDeleteTarget(null)
+  }
 
   const handleExport = useCallback(async (definitionId: string) => {
     const api = window.electronAPI?.answerSheetBuilder
@@ -207,11 +325,45 @@ export function AnswerSheetDefinitionList() {
             <FolderInput className="mr-2 h-4 w-4" />
             .asb 読み込み
           </Button>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-muted-foreground text-sm">
+                {selectedIds.size}件選択中
+              </span>
+              <BulkTagAssignButton
+                selectedCount={selectedIds.size}
+                allTags={allTags}
+                onAssign={handleBulkAddTag}
+              />
+            </>
+          )}
         </div>
+        {definitions.length > 0 && (
+          <ListFilterBar
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            searchPlaceholder="名前・タグで検索"
+            totalCount={definitions.length}
+            filteredCount={filteredDefinitions.length}
+            tagFilter={{
+              options: allTags,
+              selectedIds: filterTagIds,
+              onToggle: toggleTagId,
+              onClear: clearTagIds,
+            }}
+            dateRangeFilter={{
+              label: "更新日",
+              from: dateFrom,
+              to: dateTo,
+              onFromChange: setDateFrom,
+              onToChange: setDateTo,
+            }}
+          />
+        )}
       </div>
 
       <div className="min-h-0 flex-1 p-4">
-        {sorted.length === 0 ? (
+        {definitions.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
             <p className="text-muted-foreground mb-2">
               解答用紙定義がありません
@@ -226,6 +378,15 @@ export function AnswerSheetDefinitionList() {
             <Table wrapperClassName="h-full">
               <TableHeader className="bg-card sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) =>
+                        toggleSelectAll(checked === true)
+                      }
+                      aria-label="全選択"
+                    />
+                  </TableHead>
                   <TableHead
                     className="cursor-pointer select-none"
                     onClick={() => toggleSort("name")}
@@ -255,14 +416,46 @@ export function AnswerSheetDefinitionList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {sorted.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="text-muted-foreground py-8 text-center"
+                    >
+                      条件に一致する解答用紙がありません
+                    </TableCell>
+                  </TableRow>
+                )}
                 {sorted.map((definition) => (
                   <TableRow
                     key={definition.id}
                     className="group cursor-pointer"
                     onClick={() => handleEdit(definition.id)}
                   >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(definition.id)}
+                        onCheckedChange={(checked) =>
+                          toggleSelect(definition.id, checked === true)
+                        }
+                        aria-label={`${definition.name} を選択`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {definition.name}
+                      {definition.tags && definition.tags.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {definition.tags.map((tag) => (
+                            <Badge
+                              key={tag.id}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {tag.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {definition.paperSize ?? "-"}{" "}
@@ -317,7 +510,10 @@ export function AnswerSheetDefinitionList() {
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() =>
-                              handleDelete(definition.id, definition.name)
+                              setDeleteTarget({
+                                id: definition.id,
+                                name: definition.name,
+                              })
                             }
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -333,6 +529,32 @@ export function AnswerSheetDefinitionList() {
           </div>
         )}
       </div>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>解答用紙を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              「{deleteTarget?.name}」を削除します。この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmDelete()
+              }}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

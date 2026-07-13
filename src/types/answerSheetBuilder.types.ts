@@ -5,6 +5,8 @@
  * レイアウト計算結果型は answerSheetLayout.types.ts を参照。
  */
 
+import type { Tag } from "@prisma/client"
+
 import type { AnswerSheetDefinition } from "./answerSheetDefinition.types"
 import type { ComputedMultiPageLayout } from "./answerSheetLayout.types"
 
@@ -72,6 +74,7 @@ export interface ASBDefinitionListItem {
   orientation?: string
   questionCount?: number
   totalPoints?: number
+  tags?: Tag[]
   updatedAt?: string
   createdAt?: string
 }

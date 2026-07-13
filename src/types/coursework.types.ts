@@ -102,10 +102,18 @@ export type CourseworkStudentWithMemberships =
     }
   }>
 
-/** 一覧表示用の軽量サマリ */
+/** 一覧表示用の軽量サマリ（フィルタ用に tags/classrooms を同梱） */
 export type CourseworkSummary = Omit<
   Prisma.CourseworkGetPayload<{
-    include: { _count: { select: { items: true; students: true } } }
+    include: {
+      _count: { select: { items: true; students: true } }
+      tags: {
+        include: { tag: { select: { id: true; name: true; color: true } } }
+      }
+      classrooms: {
+        include: { classroom: { select: { id: true; name: true } } }
+      }
+    }
   }>,
   "date"
 > & {

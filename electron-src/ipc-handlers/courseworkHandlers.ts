@@ -16,6 +16,7 @@ import {
   previewCourseworkImport,
 } from "../lib/import/coursework-archive"
 import {
+  addCourseworkTag,
   addStudentsFromClassroomToCoursework,
   addStudentsToCoursework,
   batchUpsertCourseworkScores,
@@ -237,6 +238,13 @@ export function setupCourseworkHandlers(): void {
     "coursework:setTags",
     async (courseworkId: string, tagIds: string[]) => {
       return setCourseworkTags(courseworkId, tagIds)
+    }
+  )
+
+  registerHandler(
+    "coursework:addTag",
+    async (courseworkId: string, tagId: string) => {
+      return addCourseworkTag(courseworkId, tagId)
     }
   )
 
