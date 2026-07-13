@@ -35,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeWithRelations } from "@/types/grade.types"
@@ -107,7 +108,8 @@ export function GradeListContainer() {
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
-    router.push(`/grades/${id}/01-setup`)
+    // 作成直後は基本設定（基準日など）を促すため編集モーダルを開いた状態で開く
+    router.push(`/grades/${id}?setup=1`)
   }
 
   const handleDelete = async (id: string) => {
@@ -174,7 +176,7 @@ export function GradeListContainer() {
             }
           )
         }
-        router.push(`/grades/${importResult.gradeId}/01-setup`)
+        router.push(`/grades/${importResult.gradeId}`)
       } else if (!importResult.success) {
         toast.error("インポートに失敗しました", {
           description: importResult.error,
@@ -193,15 +195,13 @@ export function GradeListContainer() {
   }
 
   // 一覧に出現する学級を集約してフィルタ選択肢にする
-  const classroomOptions = useMemo(() => {
-    const nameById = new Map<string, string>()
-    for (const grade of grades) {
-      for (const gradeClassroom of grade.gradeClassrooms) {
-        nameById.set(gradeClassroom.classroom.id, gradeClassroom.classroom.name)
-      }
-    }
-    return [...nameById.entries()].map(([id, name]) => ({ id, name }))
-  }, [grades])
+  const classroomOptions = useMemo(
+    () =>
+      collectClassroomOptions(grades, (grade) =>
+        grade.gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroom)
+      ),
+    [grades]
+  )
 
   const {
     filteredItems: filteredGrades,

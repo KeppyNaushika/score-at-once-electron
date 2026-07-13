@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import { useRowSelection } from "@/hooks/useRowSelection"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
@@ -78,7 +79,6 @@ export function AnswerSheetDefinitionList() {
 
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
@@ -148,38 +148,13 @@ export function AnswerSheetDefinitionList() {
     }
   })
 
-  const toggleSelect = useCallback((definitionId: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (checked) {
-        next.add(definitionId)
-      } else {
-        next.delete(definitionId)
-      }
-      return next
-    })
-  }, [])
-
-  const allSelected =
-    sorted.length > 0 &&
-    sorted.every((definition) => selectedIds.has(definition.id))
-
-  const toggleSelectAll = useCallback(
-    (checked: boolean) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        for (const definition of sorted) {
-          if (checked) {
-            next.add(definition.id)
-          } else {
-            next.delete(definition.id)
-          }
-        }
-        return next
-      })
-    },
-    [sorted]
-  )
+  const {
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    allSelected,
+    clearSelection,
+  } = useRowSelection(sorted)
 
   const handleBulkAddTag = async (tagName: string) => {
     try {
@@ -197,7 +172,7 @@ export function AnswerSheetDefinitionList() {
       toast.success("タグを追加しました", {
         description: `${selectedIds.size}件の解答用紙に「${tagName}」を追加`,
       })
-      setSelectedIds(new Set())
+      clearSelection()
       setAllTags(await window.electronAPI.tagGetAll())
       await loadDefinitions()
     } catch (error) {
@@ -218,13 +193,23 @@ export function AnswerSheetDefinitionList() {
 
     const result = await api.saveDefinition(definition, user.id)
     if (result.success) {
-      router.push(`/answer-sheet-builder/${newId}`)
+      // 作成直後は編集したいので作成ページへ直行
+      router.push(`/answer-sheet-builder/${newId}/01-edit`)
     }
   }, [user?.id, router])
 
+  // 行クリック: 概要（detail）へ
   const handleEdit = useCallback(
     (id: string) => {
       router.push(`/answer-sheet-builder/${id}`)
+    },
+    [router]
+  )
+
+  // ドロップダウン「編集」: 作成ページ（エディタ）へ直行
+  const handleOpenEditor = useCallback(
+    (id: string) => {
+      router.push(`/answer-sheet-builder/${id}/01-edit`)
     },
     [router]
   )
@@ -233,11 +218,7 @@ export function AnswerSheetDefinitionList() {
     if (!deleteTarget) return
     await deleteDefinition(deleteTarget.id)
     // 削除した定義の id を選択から除く（stale id への一括タグ付与を防ぐ）
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.delete(deleteTarget.id)
-      return next
-    })
+    toggleSelect(deleteTarget.id, false)
     setDeleteTarget(null)
   }
 
@@ -489,7 +470,7 @@ export function AnswerSheetDefinitionList() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <DropdownMenuItem
-                            onClick={() => handleEdit(definition.id)}
+                            onClick={() => handleOpenEditor(definition.id)}
                           >
                             <Pencil className="mr-2 h-4 w-4" />
                             編集

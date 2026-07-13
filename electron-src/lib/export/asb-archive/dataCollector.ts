@@ -3,19 +3,26 @@
  */
 
 import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
-import type { AsbArchiveDataCounts } from "../../../../src/types/asbArchive.types"
+import type {
+  ArchiveAsbTag,
+  AsbArchiveDataCounts,
+  AsbDefinitionTagRef,
+} from "../../../../src/types/asbArchive.types"
 
 export interface CollectedAsbData {
   definition: AnswerSheetDefinition
   counts: AsbArchiveDataCounts
   imagePaths: string[]
+  tagsData: ArchiveAsbTag[]
+  asbDefinitionTags: AsbDefinitionTagRef[]
 }
 
 /**
  * 定義ツリーを走査して画像パスとカウント情報を収集
  */
 export function collectAsbData(
-  definition: AnswerSheetDefinition
+  definition: AnswerSheetDefinition,
+  tagsData: ArchiveAsbTag[]
 ): CollectedAsbData {
   const imagePaths: string[] = []
   let textElements = 0
@@ -64,7 +71,10 @@ export function collectAsbData(
       charGuides,
       omrConfigs,
       images: imagePaths.length,
+      tags: tagsData.length,
     },
     imagePaths,
+    tagsData,
+    asbDefinitionTags: tagsData.map((tag) => ({ tagId: tag.id })),
   }
 }

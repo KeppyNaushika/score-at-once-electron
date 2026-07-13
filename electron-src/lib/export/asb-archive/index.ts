@@ -4,7 +4,9 @@
 
 import { dialog } from "electron"
 
+import type { ArchiveAsbTag } from "../../../../src/types/asbArchive.types"
 import { getAsbDefinition } from "../../prisma/asbDefinition"
+import { getAsbDefinitionTags } from "../../prisma/asbDefinitionTag"
 import { recordAuditLog } from "../../prisma/auditLog"
 import { createAsbArchive, generateAsbExportFileName } from "./archiveCreator"
 import { collectAsbData } from "./dataCollector"
@@ -22,8 +24,17 @@ export async function exportAsbDefinition(
       return { success: false, error: "定義が見つかりません" }
     }
 
-    // 2. データ収集
-    const collected = collectAsbData(definition)
+    // 2. データ収集（タグ本体を同梱）
+    const asbDefinitionTags = await getAsbDefinitionTags(definitionId)
+    const tagsData: ArchiveAsbTag[] = asbDefinitionTags.map(
+      (asbDefinitionTag) => ({
+        id: asbDefinitionTag.tag.id,
+        name: asbDefinitionTag.tag.name,
+        order: asbDefinitionTag.tag.order,
+        color: asbDefinitionTag.tag.color,
+      })
+    )
+    const collected = collectAsbData(definition, tagsData)
 
     // 3. 保存先を選択
     const defaultFileName = generateAsbExportFileName(definition.name)

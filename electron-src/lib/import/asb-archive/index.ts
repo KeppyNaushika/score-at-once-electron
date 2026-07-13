@@ -51,7 +51,8 @@ export async function importAsbDefinition(
     }
     tempDir = extractResult.data.tempDir
 
-    const { manifest, definition, imagePaths } = extractResult.data
+    const { manifest, definition, imagePaths, tagsData, asbDefinitionTags } =
+      extractResult.data
 
     // 2. マニフェスト検証
     const validation = validateAsbManifest(manifest)
@@ -60,9 +61,16 @@ export async function importAsbDefinition(
     }
 
     // 3. バージョン変換
-    const transformResult = transformAsbToLatest({ manifest, definition })
+    const transformResult = transformAsbToLatest({
+      manifest,
+      definition,
+      tagsData,
+      asbDefinitionTags,
+    })
     const warnings = [...transformResult.warnings]
     const transformedDefinition = transformResult.data.definition
+    const transformedTagsData = transformResult.data.tagsData ?? []
+    const transformedTags = transformResult.data.asbDefinitionTags ?? []
 
     // 4. IDリマッピング
     const mappings = generateAsbIdMappings(transformedDefinition)
@@ -74,8 +82,14 @@ export async function importAsbDefinition(
     // 6. 画像コピー + パス更新
     copyImagesAndUpdatePaths(remapped, imagePaths)
 
-    // 7. DB保存
-    await createImportedAsbDefinition(remapped, userId)
+    // 7. DB保存（定義本体 → タグ join）。タグ紐付け失敗は警告として返る
+    const tagWarnings = await createImportedAsbDefinition(
+      remapped,
+      userId,
+      transformedTagsData,
+      transformedTags
+    )
+    warnings.push(...tagWarnings)
 
     await recordAuditLog({
       action: "answer_sheet.import",

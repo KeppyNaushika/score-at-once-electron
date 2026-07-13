@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Download, FolderOpen, Redo2, Undo2 } from "lucide-react"
+import { ArrowLeft, FolderOpen, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -14,8 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
 
+import { countAsbQuestions } from "./answerSheetStats"
 import { ExamIntegrationDialog } from "./components/export/ExamIntegrationDialog"
-import { ExportDialog } from "./components/export/ExportDialog"
 import { GlobalSettingsForm } from "./components/form/GlobalSettingsForm"
 import { HeaderFieldEditor } from "./components/form/HeaderFieldEditor"
 import { LineStylePicker } from "./components/form/LineStylePicker"
@@ -113,31 +113,14 @@ export function AnswerSheetBuilderMainView({
 
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
-  const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [examDialogOpen, setExamDialogOpen] = useState(false)
 
-  // 問題統計（定義データから集計）
+  // 問題統計（設問数はレイアウトの解答セル数、合計配点は定義から集計）
   const allCells = multiPageLayout.pages.flatMap((page) => page.cells)
   const totalQuestions = allCells.filter(
     (cell) => cell.cellType === "answer"
   ).length
-  let totalPoints = 0
-  for (const majorQuestion of definition.majorQuestions) {
-    for (const subQuestion of majorQuestion.subQuestions) {
-      if (subQuestion.branchQuestions.length > 0) {
-        if (subQuestion.usesBranchPoints === false) {
-          totalPoints += subQuestion.points
-        } else {
-          totalPoints += subQuestion.branchQuestions.reduce(
-            (sum, branchQuestion) => sum + branchQuestion.points,
-            0
-          )
-        }
-      } else {
-        totalPoints += subQuestion.points
-      }
-    }
-  }
+  const { totalPoints } = countAsbQuestions(definition.majorQuestions)
 
   const handleRenderModeChange = useCallback(
     (mode: RenderMode) => {
@@ -155,7 +138,7 @@ export function AnswerSheetBuilderMainView({
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-full">
       {/* 左パネル: フォーム */}
       <div className="flex w-1/2 max-w-2xl shrink-0 flex-col overflow-hidden border-r">
         {/* 名前入力 */}
@@ -200,15 +183,6 @@ export function AnswerSheetBuilderMainView({
             <Redo2 className="h-3.5 w-3.5" />
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5 self-center" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => setExportDialogOpen(true)}
-          >
-            <Download className="mr-1 h-3 w-3" />
-            出力
-          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -361,11 +335,6 @@ export function AnswerSheetBuilderMainView({
       </div>
 
       {/* ダイアログ */}
-      <ExportDialog
-        open={exportDialogOpen}
-        onOpenChange={setExportDialogOpen}
-        definition={definition}
-      />
       <ExamIntegrationDialog
         open={examDialogOpen}
         onOpenChange={setExamDialogOpen}

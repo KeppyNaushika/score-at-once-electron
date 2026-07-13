@@ -15,17 +15,16 @@ import {
 import { Button } from "@/components/ui/button"
 
 const workflowSteps = [
-  { id: "01-setup", label: "1. 基本設定", path: "01-setup" },
-  { id: "02-students", label: "2. 生徒管理", path: "02-students" },
-  { id: "03-data-sources", label: "3. データソース", path: "03-data-sources" },
+  { id: "02-students", label: "1. 生徒管理", path: "02-students" },
+  { id: "03-data-sources", label: "2. データソース", path: "03-data-sources" },
   {
     id: "04-manual-scores",
-    label: "4. 外部成績",
+    label: "3. 外部成績",
     path: "04-manual-scores",
   },
-  { id: "05-boundaries", label: "5. 成績境界", path: "05-boundaries" },
-  { id: "06-results", label: "6. 結果", path: "06-results" },
-  { id: "07-export", label: "7. 出力", path: "07-export" },
+  { id: "05-boundaries", label: "4. 成績境界", path: "05-boundaries" },
+  { id: "06-results", label: "5. 結果", path: "06-results" },
+  { id: "07-export", label: "6. 出力", path: "07-export" },
 ]
 
 export default function GradeWorkflowLayout({
@@ -85,6 +84,9 @@ export default function GradeWorkflowLayout({
           {examName && (
             <span className="text-muted-foreground text-sm">{examName}</span>
           )}
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/grades/${gradeId}`}>詳細</Link>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/grades">一覧に戻る</Link>
           </Button>

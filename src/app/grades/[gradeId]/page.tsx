@@ -14,9 +14,10 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
+import { EditGradeWindow } from "@/components/grades/EditGradeWindow"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -59,15 +60,6 @@ function buildPhases(
   completion: GradeStepCompletion
 ): WorkflowPhase[] {
   const phase1Steps: WorkflowStep[] = [
-    {
-      id: "01-setup",
-      title: "基本設定",
-      description: "試験名・基準日の設定",
-      path: `/grades/${examId}/01-setup`,
-      icon: Edit,
-      isCompleted: completion.hasSetup,
-      canStart: true,
-    },
     {
       id: "02-students",
       title: "生徒管理",
@@ -199,10 +191,15 @@ function buildPhases(
 export default function GradeDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   const [exam, setExam] = useState<GradeWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
+  // 新規作成直後（?setup=1）は基準日などの基本設定を促すため編集モーダルを開く
+  const [showEditModal, setShowEditModal] = useState(
+    () => searchParams.get("setup") === "1"
+  )
 
   const loadExam = useCallback(async () => {
     try {
@@ -248,7 +245,6 @@ export default function GradeDetailPage() {
   const phases = buildPhases(gradeId, completion)
 
   const completionSteps = [
-    completion.hasSetup,
     completion.hasStudents,
     completion.hasDataSources,
     completion.hasManualScores,
@@ -292,7 +288,7 @@ export default function GradeDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(`/grades/${gradeId}/01-setup`)}
+                onClick={() => setShowEditModal(true)}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 編集
@@ -474,6 +470,21 @@ export default function GradeDetailPage() {
           ))}
         </div>
       </div>
+
+      {showEditModal && (
+        <EditGradeWindow
+          gradeId={gradeId}
+          initialName={exam.name}
+          initialDescription={exam.description ?? ""}
+          initialReferenceDate={
+            exam.referenceDate
+              ? new Date(exam.referenceDate).toISOString().split("T")[0]
+              : ""
+          }
+          onClose={() => setShowEditModal(false)}
+          onSaved={loadExam}
+        />
+      )}
     </div>
   )
 }
