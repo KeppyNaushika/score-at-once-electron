@@ -142,7 +142,19 @@ function withTimeout<T>(
   })
 }
 
-/** SVG文字列をPNGのdataURLへ変換する（共有ウィンドウを直列利用） */
+/** capturePage 前にコンポジタを温める待機時間。
+ * capturePage をオフスクリーンサーフェス確保の直後に呼ぶと、Viz コンポジタが
+ * まだフレームを生成できず `UnknownVizError` を投げることがある（特に大量注釈の
+ * 連続変換・並列描画で負荷が高いとき）。初回キャプチャ前に少し待つと発生率が
+ * 大きく下がる。 */
+const SVG_COMPOSITOR_SETTLE_MS = 120
+
+/** convertSvgToPngInternal が capturePage の一過性エラーで作り直す最大回数。 */
+const SVG_CONVERT_MAX_ATTEMPTS = 4
+
+/** SVG文字列をPNGのdataURLへ変換する（共有ウィンドウを直列利用）。
+ * capturePage は Viz コンポジタの一過性エラー（`UnknownVizError` 等）を稀に
+ * 投げるため、投げられたら共有ウィンドウを作り直して数回までリトライする。 */
 async function convertSvgToPngInternal(svgString: string): Promise<{
   success: boolean
   dataUrl?: string
@@ -154,9 +166,6 @@ async function convertSvgToPngInternal(svgString: string): Promise<{
   const heightMatch = svgString.match(/height="([\d.]+)"/)
   const width = widthMatch ? Math.ceil(parseFloat(widthMatch[1])) : 200
   const height = heightMatch ? Math.ceil(parseFloat(heightMatch[1])) : 50
-
-  const win = getSharedSvgWindow()
-  win.setContentSize(width + 20, height + 20)
 
   const html = `
     <!DOCTYPE html>
@@ -174,41 +183,60 @@ async function convertSvgToPngInternal(svgString: string): Promise<{
   `
   const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`
 
-  const capture = () =>
-    withTimeout(
-      win.webContents.capturePage({ x: 0, y: 0, width, height }),
-      SVG_RENDER_TIMEOUT_MS,
-      "capturePage"
-    )
+  let lastError: unknown = null
 
-  try {
-    await withTimeout(win.loadURL(dataUri), SVG_RENDER_TIMEOUT_MS, "loadURL")
+  for (let attempt = 0; attempt < SVG_CONVERT_MAX_ATTEMPTS; attempt++) {
+    const win = getSharedSvgWindow()
+    win.setContentSize(width + 20, height + 20)
 
-    // オフスクリーン描画が完了するまで待機。capturePageが空画像を返す場合は
-    // 描画未完了なので短い間隔でリトライする（低速機の初回ペイント対策に
-    // 最大15回 = 約600msまで待つ）。
-    let image = await capture()
-    for (let attempt = 0; attempt < 15 && image.isEmpty(); attempt++) {
-      await delay(40)
-      image = await capture()
-    }
+    const capture = () =>
+      withTimeout(
+        win.webContents.capturePage({ x: 0, y: 0, width, height }),
+        SVG_RENDER_TIMEOUT_MS,
+        "capturePage"
+      )
 
-    if (image.isEmpty()) {
-      // 描画リソースが壊れている可能性があるためウィンドウを作り直す
-      destroySharedSvgWindow()
-      return {
-        success: false,
-        error: `capturePage returned an empty image (${width}x${height})`,
+    try {
+      await withTimeout(win.loadURL(dataUri), SVG_RENDER_TIMEOUT_MS, "loadURL")
+
+      // コンポジタが最初のフレームを生成できるよう少し待ってからキャプチャする。
+      await delay(SVG_COMPOSITOR_SETTLE_MS)
+
+      // capturePageが空画像を返す場合は描画未完了なので短い間隔でリトライする
+      // （低速機の初回ペイント対策に最大15回 = 約600msまで待つ）。
+      let image = await capture()
+      for (let empties = 0; empties < 15 && image.isEmpty(); empties++) {
+        await delay(40)
+        image = await capture()
       }
-    }
 
-    const dataUrl = `data:image/png;base64,${image.toPNG().toString("base64")}`
-    return { success: true, dataUrl, width, height }
-  } catch (err) {
-    // ハング・GPUクラッシュした可能性があるため共有ウィンドウを破棄し、
-    // 次回要求で新しいウィンドウを再生成して回復させる。
-    destroySharedSvgWindow()
-    throw err
+      if (image.isEmpty()) {
+        // 描画リソースが壊れている可能性があるためウィンドウを作り直して再試行
+        destroySharedSvgWindow()
+        lastError = new Error(
+          `capturePage returned an empty image (${width}x${height})`
+        )
+        await delay(80)
+        continue
+      }
+
+      const dataUrl = `data:image/png;base64,${image.toPNG().toString("base64")}`
+      return { success: true, dataUrl, width, height }
+    } catch (err) {
+      // capturePage/loadURL の一過性エラー（UnknownVizError・GPUストール等）。
+      // 共有ウィンドウを破棄して作り直し、次の試行で回復を図る。
+      lastError = err
+      destroySharedSvgWindow()
+      await delay(80)
+    }
+  }
+
+  return {
+    success: false,
+    error:
+      lastError instanceof Error
+        ? lastError.message
+        : "SVG to PNG conversion failed",
   }
 }
 
