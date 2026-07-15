@@ -198,6 +198,8 @@ export function createGradeApi() {
         ),
       calculateGrades: (gradeId: string) =>
         ipcRenderer.invoke("grade:calculateGrades", gradeId),
+      computeSourceFits: (gradeId: string) =>
+        ipcRenderer.invoke("grade:computeSourceFits", gradeId),
       getExamCandidates: () => ipcRenderer.invoke("grade:getExamCandidates"),
       getExamSubtotalGroups: (examId: string) =>
         ipcRenderer.invoke("grade:getExamSubtotalGroups", examId),

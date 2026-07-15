@@ -41,6 +41,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
   const {
     exam,
     loading,
+    sourceFits,
     createGradeItem,
     updateGradeItem,
     deleteGradeItem,
@@ -158,7 +159,10 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
   }
 
   const usesEstimationSources =
-    batchMethod === "average" || batchMethod === "regression"
+    batchMethod === "average" ||
+    batchMethod === "regression" ||
+    batchMethod === "equipercentile" ||
+    batchMethod === "zscore"
 
   const toggleBatchEstimationSourceId = (id: string) => {
     setBatchEstimationSourceIds((prev) =>
@@ -277,6 +281,8 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
                 <SelectItem value="zero">0点</SelectItem>
                 <SelectItem value="average">平均比率法</SelectItem>
                 <SelectItem value="regression">重回帰法</SelectItem>
+                <SelectItem value="equipercentile">順位法</SelectItem>
+                <SelectItem value="zscore">標準偏差法</SelectItem>
               </SelectContent>
             </Select>
             {batchMethod !== "null" && batchMethod !== "zero" && (
@@ -432,6 +438,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
                     key={dataSource.id}
                     dataSource={dataSource}
                     allDataSources={allDataSources}
+                    sourceFit={sourceFits[dataSource.id]}
                     batchMode={batchMode}
                     selected={selectedDataSourceIds.has(dataSource.id)}
                     onToggleSelect={toggleDsSelection}

@@ -6,10 +6,29 @@ import type {
   GradeWithRelations,
 } from "@/types/grade.types"
 
+/** 各データソースのモデル適合度 R（このソースが他ソースからどれだけ当てられるか） */
+export type SourceFitMap = Record<
+  string,
+  { correlation: number; sampleSize: number } | null
+>
+
 /** 成績評定項目とデータソースのCRUD操作を管理するフック */
 export function useDataSources(gradeId: string) {
   const [exam, setExam] = useState<GradeWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
+  // モデル適合度Rは重い算出のため本体読込と切り離し、非同期に後追いで反映する
+  const [sourceFits, setSourceFits] = useState<SourceFitMap>({})
+
+  const loadSourceFits = useCallback(async () => {
+    try {
+      const result = await window.electronAPI.grade.computeSourceFits(gradeId)
+      if (result.success && result.fits) {
+        setSourceFits(result.fits)
+      }
+    } catch (error) {
+      console.error("Error computing source fits:", error)
+    }
+  }, [gradeId])
 
   const loadData = useCallback(async () => {
     try {
@@ -27,6 +46,13 @@ export function useDataSources(gradeId: string) {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // R の再算出は buildGradeCalcContext（全試験のスコア取得＋解決）を伴い重いため、
+  // loadData には載せず初回マウントと「Rに影響する変更」のみで走らせる（名前・換算満点・
+  // 並べ替え・評価項目リネームでは再算出しない）。
+  useEffect(() => {
+    void loadSourceFits()
+  }, [loadSourceFits])
 
   const createGradeItem = useCallback(
     async (name: string) => {
@@ -60,10 +86,12 @@ export function useDataSources(gradeId: string) {
       const result = await window.electronAPI.grade.deleteGradeItem(id)
       if (result.success) {
         await loadData()
+        // 評価項目削除は配下ソース（＝予測変数の集合）を減らすため R を再算出
+        void loadSourceFits()
       }
       return result
     },
-    [loadData]
+    [loadData, loadSourceFits]
   )
 
   const createDataSource = useCallback(
@@ -81,10 +109,12 @@ export function useDataSources(gradeId: string) {
       const result = await window.electronAPI.grade.createDataSource(data)
       if (result.success) {
         await loadData()
+        // ソース追加は予測変数/対象を増やすため R を再算出
+        void loadSourceFits()
       }
       return result
     },
-    [loadData]
+    [loadData, loadSourceFits]
   )
 
   const updateDataSource = useCallback(
@@ -104,10 +134,20 @@ export function useDataSources(gradeId: string) {
       const result = await window.electronAPI.grade.updateDataSource(id, data)
       if (result.success) {
         await loadData()
+        // 推定に影響する変更（推定法・ソース選択・見込→欠測）のときのみ R を再算出。
+        // 名前・換算満点のみの編集では R は変わらないので重い再算出をしない。
+        if (
+          data.absentMethod !== undefined ||
+          data.estimationMode !== undefined ||
+          data.estimationSourceIds !== undefined ||
+          data.treatExpectedAsMissing !== undefined
+        ) {
+          void loadSourceFits()
+        }
       }
       return result
     },
-    [loadData]
+    [loadData, loadSourceFits]
   )
 
   // 一括更新は専用IPCを持たず、普遍的な個別更新IPCをターゲット分だけ回す。
@@ -145,6 +185,8 @@ export function useDataSources(gradeId: string) {
       // 個別更新は独立にコミットされ、一部失敗でもDBは変わり得る。
       // UIを実DBへ追従させるため成否に関わらず必ず再読込する。
       await loadData()
+      // 一括設定は推定法・ソース選択を変えるため R を再算出
+      void loadSourceFits()
       return {
         success: results.every(
           (settledResult) =>
@@ -152,7 +194,7 @@ export function useDataSources(gradeId: string) {
         ),
       }
     },
-    [loadData]
+    [loadData, loadSourceFits]
   )
 
   const deleteDataSource = useCallback(
@@ -160,10 +202,12 @@ export function useDataSources(gradeId: string) {
       const result = await window.electronAPI.grade.deleteDataSource(id)
       if (result.success) {
         await loadData()
+        // ソース削除は予測変数の集合を減らすため R を再算出
+        void loadSourceFits()
       }
       return result
     },
-    [loadData]
+    [loadData, loadSourceFits]
   )
 
   const reorderDataSources = useCallback(
@@ -180,6 +224,7 @@ export function useDataSources(gradeId: string) {
   return {
     exam,
     loading,
+    sourceFits,
     createGradeItem,
     updateGradeItem,
     deleteGradeItem,

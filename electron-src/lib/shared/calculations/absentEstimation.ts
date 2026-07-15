@@ -38,6 +38,20 @@ export interface AbsentEstimation {
   droppedPredictors?: EstimationDroppedPredictor[]
   /** 重回帰法がaverageにフォールバックした理由 */
   fallbackReason?: EstimationFallbackReason
+  /**
+   * 当てはまりの重相関 R（訓練データの実測 vs 予測、0〜1）。
+   * 予測は「実力の R 倍」まで広がる縮小率そのもの。1−R が中心（平均）へ寄る度合い。
+   * R=1 は定義上のつながり（合計=小計の和 等）で完全復元されている合図。
+   */
+  correlation?: number
+  /** 標準偏差法（zscore）: 対象生徒の他ソース平均標準得点（±何SD） */
+  standardizedStanding?: number
+  /** 順位法（equipercentile）: 対象生徒の他ソース平均パーセンタイル（0〜1） */
+  percentileRank?: number
+  /** 標準偏差法・順位法の載せ替え先となる当ソース実測分布の平均 */
+  targetMean?: number
+  /** 標準偏差法の載せ替え先となる当ソース実測分布の標準偏差 */
+  targetStandardDeviation?: number
 }
 
 /**
@@ -72,7 +86,249 @@ export function estimateAbsentScore(
       allDataSources
     )
   }
+  if (method === "equipercentile") {
+    return estimateByEquipercentile(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources
+    )
+  }
+  if (method === "zscore") {
+    return estimateByZScore(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources
+    )
+  }
   return null
+}
+
+/**
+ * 当ソース(dataSourceId)を実測した他生徒の素点分布（平均・母標準偏差・整列済み素点列）。
+ * 対象生徒自身は欠測なので母数から自然に外れる。標準偏差法・順位法の載せ替え先に使う。
+ */
+function collectTargetDistribution(
+  studentId: string,
+  dataSourceId: string,
+  rawScoreMap: Map<string, Map<string, number | null>>
+): { mean: number; sd: number; sorted: number[] } | null {
+  const scores: number[] = []
+  for (const [otherStudentId, otherScores] of rawScoreMap) {
+    if (otherStudentId === studentId) continue
+    const score = otherScores.get(dataSourceId)
+    if (score !== null && score !== undefined) scores.push(score)
+  }
+  if (scores.length < 2) return null
+  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length
+  const variance =
+    scores.reduce((sum, score) => sum + (score - mean) ** 2, 0) / scores.length
+  const sorted = [...scores].sort((scoreA, scoreB) => scoreA - scoreB)
+  return { mean, sd: Math.sqrt(variance), sorted }
+}
+
+/**
+ * 対象生徒が実測を持つ他ソースを、標準偏差法・順位法の説明変数として集める。
+ * average と同じく「自ソース以外・満点>0・対象生徒が実測を持つ」ソースが対象。
+ */
+function collectPredictorContributions(
+  studentId: string,
+  dataSourceId: string,
+  rawScoreMap: Map<string, Map<string, number | null>>,
+  allDataSources: DataSourceInfo[]
+): EstimationSourceContribution[] {
+  const studentScores = rawScoreMap.get(studentId)
+  if (!studentScores) return []
+  const contributions: EstimationSourceContribution[] = []
+  for (const dataSource of allDataSources) {
+    if (dataSource.id === dataSourceId) continue
+    if (dataSource.maxScore <= 0) continue
+    const score = studentScores.get(dataSource.id)
+    if (score === null || score === undefined) continue
+    contributions.push({
+      id: dataSource.id,
+      name: dataSource.name,
+      score,
+      maxScore: dataSource.maxScore,
+      ratio: score / dataSource.maxScore,
+    })
+  }
+  return contributions
+}
+
+/**
+ * 標準偏差法（線形イコーティング / z法）推定:
+ * 対象生徒の他ソースでの平均標準得点 z̄（±何SD の立ち位置）を、
+ * 当ソースを実測した生徒の実平均 μ・標準偏差 σ へ載せ替える: 予測 = μ + z̄・σ。
+ * 縮小（平均回帰）を打ち消し、当ソースのバラつきを保つ。
+ * どのソースにも分散が無い / 対象生徒に使える他ソースが無い場合は average にフォールバック。
+ */
+function estimateByZScore(
+  studentId: string,
+  dataSourceId: string,
+  maxScore: number,
+  rawScoreMap: Map<string, Map<string, number | null>>,
+  allDataSources: DataSourceInfo[]
+): AbsentEstimation | null {
+  const predictors = collectPredictorContributions(
+    studentId,
+    dataSourceId,
+    rawScoreMap,
+    allDataSources
+  )
+  if (predictors.length === 0) return null
+
+  // 各他ソースでの標準得点 z = (素点 − そのソースの平均) / そのソースのSD を平均する
+  const zValues: number[] = []
+  for (const predictor of predictors) {
+    const distribution = collectTargetDistribution(
+      studentId,
+      predictor.id,
+      rawScoreMap
+    )
+    if (!distribution || distribution.sd <= 0) continue
+    zValues.push((predictor.score - distribution.mean) / distribution.sd)
+  }
+  if (zValues.length === 0) {
+    return fallbackToAverage(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources,
+      "insufficient_samples"
+    )
+  }
+
+  const target = collectTargetDistribution(studentId, dataSourceId, rawScoreMap)
+  if (!target || target.sd <= 0) {
+    return fallbackToAverage(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources,
+      "insufficient_samples"
+    )
+  }
+
+  const standardizedStanding =
+    zValues.reduce((sum, z) => sum + z, 0) / zValues.length
+  const predicted = target.mean + standardizedStanding * target.sd
+
+  return {
+    value: clamp(predicted, 0, maxScore),
+    effectiveMethod: "zscore",
+    averageSources: predictors,
+    standardizedStanding,
+    targetMean: target.mean,
+    targetStandardDeviation: target.sd,
+  }
+}
+
+/**
+ * 順位法（等パーセンタイル・イコーティング）推定:
+ * 対象生徒の他ソースでの平均パーセンタイル（0〜1、上位ほど1）を求め、
+ * 当ソース実分布の同順位の点へ変換する。分布形を保存し、縮小しない。
+ * 使える他ソースが無い / 当ソースの実測が2名未満なら average にフォールバック。
+ */
+function estimateByEquipercentile(
+  studentId: string,
+  dataSourceId: string,
+  maxScore: number,
+  rawScoreMap: Map<string, Map<string, number | null>>,
+  allDataSources: DataSourceInfo[]
+): AbsentEstimation | null {
+  const predictors = collectPredictorContributions(
+    studentId,
+    dataSourceId,
+    rawScoreMap,
+    allDataSources
+  )
+  if (predictors.length === 0) return null
+
+  // 各他ソースでの対象生徒のパーセンタイル（中間順位法）を平均する
+  const percentiles: number[] = []
+  for (const predictor of predictors) {
+    const distribution = collectTargetDistribution(
+      studentId,
+      predictor.id,
+      rawScoreMap
+    )
+    if (!distribution) continue
+    percentiles.push(percentileRankOf(predictor.score, distribution.sorted))
+  }
+  if (percentiles.length === 0) {
+    return fallbackToAverage(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources,
+      "insufficient_samples"
+    )
+  }
+
+  const target = collectTargetDistribution(studentId, dataSourceId, rawScoreMap)
+  if (!target) {
+    return fallbackToAverage(
+      studentId,
+      dataSourceId,
+      maxScore,
+      rawScoreMap,
+      allDataSources,
+      "insufficient_samples"
+    )
+  }
+
+  const percentileRank =
+    percentiles.reduce((sum, percentile) => sum + percentile, 0) /
+    percentiles.length
+  const predicted = quantileOf(percentileRank, target.sorted)
+
+  return {
+    value: clamp(predicted, 0, maxScore),
+    effectiveMethod: "equipercentile",
+    averageSources: predictors,
+    percentileRank,
+    targetMean: target.mean,
+  }
+}
+
+/**
+ * value が昇順配列 sorted の中で占めるパーセンタイル（0〜1）を中間順位法で返す。
+ * = (value 未満の個数 + 同値の個数/2) / 全体数。分布の端でも 0/1 に貼り付かない。
+ */
+function percentileRankOf(value: number, sorted: number[]): number {
+  const n = sorted.length
+  if (n === 0) return 0.5
+  let below = 0
+  let equal = 0
+  for (const score of sorted) {
+    if (score < value) below++
+    else if (score === value) equal++
+  }
+  return (below + equal / 2) / n
+}
+
+/**
+ * パーセンタイル p（0〜1）に対応する昇順配列 sorted の点を線形補間で返す（順位法の逆変換）。
+ * 位置 = p × (n − 1) の前後を按分する。
+ */
+function quantileOf(p: number, sorted: number[]): number {
+  const n = sorted.length
+  if (n === 0) return 0
+  if (n === 1) return sorted[0]
+  const clampedP = Math.max(0, Math.min(1, p))
+  const position = clampedP * (n - 1)
+  const lowerIndex = Math.floor(position)
+  const upperIndex = Math.ceil(position)
+  if (lowerIndex === upperIndex) return sorted[lowerIndex]
+  const fraction = position - lowerIndex
+  return sorted[lowerIndex] * (1 - fraction) + sorted[upperIndex] * fraction
 }
 
 /**
@@ -272,12 +528,21 @@ function estimateByRegression(
     }
   })
 
+  // 当てはまりの重相関 R（自由度補正済み）＝縮小率。採用列数−1 が独立説明変数の数。
+  const correlation = multipleCorrelationR(
+    X,
+    Y,
+    beta,
+    retainedColumns.length - 1
+  )
+
   return {
     value: clamp(predicted, 0, maxScore),
     effectiveMethod: "regression",
     intercept: beta[0],
     regressionTerms,
     ...(droppedPredictors.length > 0 && { droppedPredictors }),
+    ...(correlation !== undefined && { correlation }),
   }
 }
 
@@ -430,6 +695,106 @@ function gaussianEliminationSolve(
   }
 
   return solution
+}
+
+/**
+ * 当てはまりの重相関 R（0〜1）を自由度補正済みで返す。訓練データの実測 vs 予測から
+ * 調整済み決定係数 adjR² = 1 − (1−R²)(n−1)/(n−k−1) を出し R=√max(0, adjR²) とする。
+ * 素の R²（=1−SS_res/SS_tot）は説明変数 k が多く標本 n が小さいほど1へ膨らむため、
+ * 残差自由度 n−k−1 で補正して過大評価を抑える。予測は「実力の R 倍」まで広がる縮小率。
+ * @param X 設計行列（各行 [1, x1, …]、切片列含む）
+ * @param Y 実測値
+ * @param beta 係数（全長 p、従属列は0）
+ * @param predictorCount 独立な説明変数の数（切片を除く採用列数 = 採用列数−1）
+ * @returns 補正済み R、または算出不能（分散ゼロ / 残差自由度なし）時 undefined
+ */
+function multipleCorrelationR(
+  X: number[][],
+  Y: number[],
+  beta: number[],
+  predictorCount: number
+): number | undefined {
+  const n = X.length
+  const p = beta.length
+  const meanY = Y.reduce((sum, y) => sum + y, 0) / n
+  let ssRes = 0
+  let ssTot = 0
+  for (let k = 0; k < n; k++) {
+    let fitted = 0
+    for (let j = 0; j < p; j++) fitted += beta[j] * X[k][j]
+    ssRes += (Y[k] - fitted) ** 2
+    ssTot += (Y[k] - meanY) ** 2
+  }
+  if (ssTot <= 0) return undefined
+  const dfResidual = n - predictorCount - 1
+  if (dfResidual <= 0) return undefined // 残差自由度なし＝R²は必ず1（無意味）
+  const r2 = 1 - ssRes / ssTot
+  const adjustedR2 = 1 - ((1 - r2) * (n - 1)) / dfResidual
+  return Math.sqrt(Math.max(0, adjustedR2))
+}
+
+/**
+ * 当ソース(dataSourceId)を predictorIds からどれだけ説明できるかのモデル適合度 R（重相関、0〜1）。
+ * 欠測者の有無に依らず「当ソースを実測した全生徒」で回帰を当て、実測 vs 予測の R を返す。
+ * データ側の予測しやすさ＝重回帰の縮小率でもあり、手法選択時の判断材料として表示する。
+ *
+ * 訓練行は「当ソース＋全 predictor が揃った生徒」のみ（complete-case）。多重共線性の列は
+ * ランク落ちで除外。独立列が無い / サンプル不足 / 当ソースに分散が無い場合は null。
+ * @returns { correlation, sampleSize } または算出不能時 null
+ */
+export function computeSourceFit(
+  dataSourceId: string,
+  predictorIds: string[],
+  rawScoreMap: Map<string, Map<string, number | null>>
+): { correlation: number; sampleSize: number } | null {
+  if (predictorIds.length === 0) return null
+
+  const X: number[][] = []
+  const Y: number[] = []
+  for (const [, scores] of rawScoreMap) {
+    const y = scores.get(dataSourceId)
+    if (y === null || y === undefined) continue
+    const row: number[] = [1]
+    let complete = true
+    for (const predictorId of predictorIds) {
+      const x = scores.get(predictorId)
+      if (x === null || x === undefined) {
+        complete = false
+        break
+      }
+      row.push(x)
+    }
+    if (!complete) continue
+    X.push(row)
+    Y.push(y)
+  }
+
+  if (X.length < 3) return null
+  const p = X[0].length
+  const retainedColumns = selectIndependentColumns(X, p)
+  // 切片のみ（独立な説明変数ゼロ）や残差自由度が無いサンプル数では R を出さない
+  if (retainedColumns.length <= 1) return null
+  if (X.length < retainedColumns.length + 1) return null
+
+  const reducedBeta = solveNormalEquations(X, Y, retainedColumns)
+  if (!reducedBeta) return null
+  const beta = Array(p).fill(0)
+  retainedColumns.forEach((column, k) => {
+    beta[column] = reducedBeta[k]
+  })
+
+  const correlation = multipleCorrelationR(
+    X,
+    Y,
+    beta,
+    retainedColumns.length - 1
+  )
+  if (correlation === undefined) return null
+
+  return {
+    correlation,
+    sampleSize: X.length,
+  }
 }
 
 /**

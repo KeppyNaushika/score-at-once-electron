@@ -18,6 +18,8 @@ const ABSENT_METHOD_LABELS: Record<string, string> = {
   zero: "0点",
   average: "平均比率法",
   regression: "重回帰法",
+  equipercentile: "順位法",
+  zscore: "標準偏差法",
 }
 
 const FALLBACK_REASON_LABELS: Record<string, string> = {
@@ -342,7 +344,7 @@ function EstimationExplain({
 
       {estimation.fallbackReason && (
         <p className="text-amber-700 dark:text-amber-300">
-          ※ 重回帰法は
+          ※ 選択した推定法は
           {FALLBACK_REASON_LABELS[estimation.fallbackReason] ??
             estimation.fallbackReason}
           のため平均比率法にフォールバック
@@ -367,6 +369,41 @@ function EstimationExplain({
           droppedPredictors={estimation.droppedPredictors}
         />
       )}
+
+      {isRegression && estimation.correlation !== undefined && (
+        <p className="mt-1 text-amber-700/80 dark:text-amber-300/80">
+          予測の確かさ: 相関 R = {fmt(estimation.correlation, 2)}
+          {estimation.correlation >= 0.999
+            ? "（他ソースから完全再現＝定義上のつながり。予測ではなく復元）"
+            : `（実力の約${Math.round(estimation.correlation * 100)}%を反映／残り約${100 - Math.round(estimation.correlation * 100)}%は中心へ寄る）`}
+        </p>
+      )}
+
+      {estimation.effectiveMethod === "zscore" &&
+        estimation.standardizedStanding !== undefined &&
+        estimation.targetMean !== undefined &&
+        estimation.targetStandardDeviation !== undefined && (
+          <p className="mt-1 text-amber-700/80 dark:text-amber-300/80">
+            他ソースでの平均標準得点 z ={" "}
+            {estimation.standardizedStanding >= 0 ? "+" : ""}
+            {fmt(
+              estimation.standardizedStanding,
+              2
+            )} を、当ソース分布（平均 {fmt(estimation.targetMean)} ／ 標準偏差{" "}
+            {fmt(estimation.targetStandardDeviation)}
+            ）へ載せ替え（縮小を打ち消す）
+          </p>
+        )}
+
+      {estimation.effectiveMethod === "equipercentile" &&
+        estimation.percentileRank !== undefined && (
+          <p className="mt-1 text-amber-700/80 dark:text-amber-300/80">
+            他ソースでの平均順位 上位{" "}
+            {Math.round((1 - estimation.percentileRank) * 100)}
+            %（パーセンタイル {Math.round(estimation.percentileRank * 100)}
+            ）を、 当ソース実分布の同順位の点へ変換（分布を保存）
+          </p>
+        )}
 
       <div className="mt-1.5 space-y-0.5 border-t border-amber-300/60 pt-1 dark:border-amber-700/60">
         <EstimationFlowRow
@@ -453,6 +490,18 @@ export function GradeItemBreakdownPopover({
       ? `${itemResult.percentage.toFixed(1)}%`
       : "-",
   ])
+  // 各ソース（テスト）の実測分布。素点がクラスのどこに位置するかの判断材料として
+  // 平均列・標準偏差列を右側に併記する（分布が無ければ "—"）。列内は桁揃え。
+  const distMeanColumn = alignColumn(
+    sources.map((source) =>
+      source.distribution ? fmt(source.distribution.mean) : "—"
+    )
+  )
+  const distSdColumn = alignColumn(
+    sources.map((source) =>
+      source.distribution ? fmt(source.distribution.standardDeviation) : "—"
+    )
+  )
 
   return (
     <Popover>
@@ -465,10 +514,11 @@ export function GradeItemBreakdownPopover({
           {pctText}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[32rem] p-3" align="start">
+      <PopoverContent className="w-[40rem] p-3" align="start">
         <p className="mb-1 text-xs font-semibold">{itemResult.gradeItemName}</p>
         <p className="text-muted-foreground mb-2 text-[10px]">
-          換算 = (素点 ÷ 満点) × 換算満点 ※欠点は除外
+          換算 = (素点 ÷ 満点) × 換算満点 ※欠点は除外／平均・標準偏差 =
+          この試験を受けた生徒の実測分布（素点の位置づけ用）
         </p>
         <table className="w-full table-fixed text-xs">
           <thead>
@@ -478,6 +528,8 @@ export function GradeItemBreakdownPopover({
               <th className={PARENT_TH_NUM}>満点</th>
               <th className={PARENT_TH_NUM}>換算</th>
               <th className={PARENT_TH_NUM}>換算満点</th>
+              <th className={PARENT_TH_NUM}>平均</th>
+              <th className={PARENT_TH_NUM}>標準偏差</th>
             </tr>
           </thead>
           <tbody>
@@ -513,6 +565,12 @@ export function GradeItemBreakdownPopover({
                   <NumCell className="py-1">{maxScoreColumn[index]}</NumCell>
                   <NumCell className="py-1">{weightedColumn[index]}</NumCell>
                   <NumCell className="py-1">{weightMaxColumn[index]}</NumCell>
+                  <NumCell className="text-muted-foreground py-1">
+                    {distMeanColumn[index]}
+                  </NumCell>
+                  <NumCell className="text-muted-foreground py-1">
+                    {distSdColumn[index]}
+                  </NumCell>
                 </tr>
               )
             })}
@@ -528,6 +586,8 @@ export function GradeItemBreakdownPopover({
               <NumCell className="pt-1">
                 {weightMaxColumn[weightMaxColumn.length - 2]}
               </NumCell>
+              <NumCell className="text-muted-foreground pt-1">—</NumCell>
+              <NumCell className="text-muted-foreground pt-1">—</NumCell>
             </tr>
             <tr className="font-medium">
               <td className="pt-1" colSpan={4}>
@@ -536,6 +596,8 @@ export function GradeItemBreakdownPopover({
               <NumCell className="pt-1">
                 {weightMaxColumn[weightMaxColumn.length - 1]}
               </NumCell>
+              <NumCell className="text-muted-foreground pt-1">—</NumCell>
+              <NumCell className="text-muted-foreground pt-1">—</NumCell>
             </tr>
           </tfoot>
         </table>

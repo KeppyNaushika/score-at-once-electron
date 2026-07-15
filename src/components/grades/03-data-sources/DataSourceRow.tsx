@@ -24,6 +24,8 @@ interface DataSourceRowProps {
   dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（推定ソース選択用） */
   allDataSources: GradeDataSourceWithRelations[]
+  /** このソースのモデル適合度 R（手法選択popoverの判断材料） */
+  sourceFit?: { correlation: number; sampleSize: number } | null
   /** 欠測一括設定モード中はチェックボックスを表示する */
   batchMode: boolean
   /** 一括設定の選択状態 */
@@ -49,6 +51,7 @@ interface DataSourceRowProps {
 export function DataSourceRow({
   dataSource,
   allDataSources,
+  sourceFit,
   batchMode,
   selected,
   onToggleSelect,
@@ -177,6 +180,7 @@ export function DataSourceRow({
         <EstimationSettingsPopover
           dataSource={dataSource}
           allDataSources={allDataSources}
+          sourceFit={sourceFit}
           onUpdate={onUpdate}
         />
       </div>
