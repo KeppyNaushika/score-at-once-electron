@@ -30,12 +30,26 @@ const ABSENT_METHOD_LABELS: Record<AbsentMethod, string> = {
   zero: "0点",
   average: "平均比率法",
   regression: "重回帰法",
+  equipercentile: "順位法",
+  zscore: "標準偏差法",
+}
+
+/** 他ソースを説明変数に使う推定方法（推定ソース選択UI・R表示の対象） */
+function methodUsesPredictors(method: AbsentMethod): boolean {
+  return (
+    method === "average" ||
+    method === "regression" ||
+    method === "equipercentile" ||
+    method === "zscore"
+  )
 }
 
 interface EstimationSettingsPopoverProps {
   dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（自ソース含む、チェックリスト用） */
   allDataSources: GradeDataSourceWithRelations[]
+  /** このソースのモデル適合度 R（他ソースからの予測しやすさ） */
+  sourceFit?: { correlation: number; sampleSize: number } | null
   onUpdate: (
     id: string,
     data: {
@@ -52,6 +66,7 @@ interface EstimationSettingsPopoverProps {
 export function EstimationSettingsPopover({
   dataSource,
   allDataSources,
+  sourceFit,
   onUpdate,
 }: EstimationSettingsPopoverProps) {
   const [open, setOpen] = useState(false)
@@ -173,8 +188,39 @@ export function EstimationSettingsPopover({
                 <SelectItem value="zero">0点</SelectItem>
                 <SelectItem value="average">平均比率法</SelectItem>
                 <SelectItem value="regression">重回帰法</SelectItem>
+                <SelectItem value="equipercentile">順位法</SelectItem>
+                <SelectItem value="zscore">標準偏差法</SelectItem>
               </SelectContent>
             </Select>
+            {/* このソースが他ソースからどれだけ当てられるか（手法選択の判断材料）。
+                R は手法に依らないデータ側の予測しやすさ＝重回帰の縮小率。
+                高いほど重回帰でも中心へ寄りにくく、低いほど順位法・標準偏差法の
+                「縮小を避ける」利点が効く。 */}
+            {methodUsesPredictors(method) &&
+              (sourceFit ? (
+                <p className="text-muted-foreground text-xs">
+                  予測しやすさ 相関 R ={" "}
+                  <span className="font-medium tabular-nums">
+                    {sourceFit.correlation.toFixed(2)}
+                  </span>
+                  {sourceFit.correlation >= 0.999 ? (
+                    <span className="text-amber-700 dark:text-amber-300">
+                      （他ソースから完全再現＝定義上のつながり。予測ではなく復元）
+                    </span>
+                  ) : (
+                    <>
+                      （実力の約{Math.round(sourceFit.correlation * 100)}
+                      %を反映／残り約
+                      {100 - Math.round(sourceFit.correlation * 100)}
+                      %は中心へ寄る・n={sourceFit.sampleSize}）
+                    </>
+                  )}
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  予測しやすさ R: 算出不能（サンプルまたは共通ソース不足）
+                </p>
+              ))}
           </div>
 
           {method !== "null" && (
@@ -205,8 +251,8 @@ export function EstimationSettingsPopover({
                 </div>
               )}
 
-              {/* ソース選択（average/regressionのみ） */}
-              {(method === "average" || method === "regression") && (
+              {/* ソース選択（他ソースを説明変数に使う手法のみ） */}
+              {methodUsesPredictors(method) && (
                 <div className="space-y-2">
                   <Label className="text-xs">推定に使用するソース</Label>
                   <RadioGroup

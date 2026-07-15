@@ -290,6 +290,12 @@ export interface GradeAPI {
       result?: import("../grade.types").GradeCalculationResult
       error?: string
     }>
+    /** 各データソースのモデル適合度 R（手法選択画面の判断材料）を保存設定で算出 */
+    computeSourceFits: (gradeId: string) => Promise<{
+      success: boolean
+      fits?: Record<string, { correlation: number; sampleSize: number } | null>
+      error?: string
+    }>
     getExamCandidates: () => Promise<{
       success: boolean
       exams?: Array<{ id: string; examName: string; examDate: Date | null }>

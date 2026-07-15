@@ -71,7 +71,10 @@ import {
   setGradeClassroomOrders,
   updateGradeStudentOrders,
 } from "../lib/prisma/gradeStudent"
-import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
+import {
+  calculateGrades,
+  computeSourceFits,
+} from "../lib/shared/calculations/gradeCalculator"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 /** 成績（Grade）のCRUD・生徒管理・データソース・成績算出・Excel出力・アーカイブに関するIPCチャンネルを登録する */
@@ -439,6 +442,10 @@ export function setupGradeHandlers(): void {
 
   registerHandler("grade:calculateGrades", async (gradeId: string) => {
     return calculateGrades(gradeId)
+  })
+
+  registerHandler("grade:computeSourceFits", async (gradeId: string) => {
+    return computeSourceFits(gradeId)
   })
 
   // =====================================================================

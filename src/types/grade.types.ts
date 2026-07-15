@@ -27,8 +27,14 @@ import type {
 import type { CourseworkItemWithLetterScales } from "./coursework.types"
 import { defineStringUnion } from "./stringUnion"
 
-/** 欠測時推定方法 */
-export type AbsentMethod = "null" | "zero" | "average" | "regression"
+/**
+ * 欠測時推定方法。
+ * - regression: OLS重回帰。二乗誤差最小＝中心へ縮小（平均回帰）あり。当てやすいが低得点層で甘く出やすい。
+ * - equipercentile（順位法）: 他ソースでの平均順位を、当ソース実分布の同順位の点へ変換。分布を保存し縮小しない。
+ * - zscore（標準偏差法）: 他ソースでの平均標準得点(±SD)を、当ソースの実平均±SDへ載せ替え。縮小を打ち消す。
+ */
+export type AbsentMethod =
+  "null" | "zero" | "average" | "regression" | "equipercentile" | "zscore"
 
 /** 推定ソース選択モード */
 export type EstimationMode = "all" | "selected"
@@ -207,6 +213,12 @@ export interface SourceScoreResult {
   isEstimated: boolean
   /** 欠測推定の内訳（isEstimated=true のときのみ。どの方法・式で推定したか） */
   estimation: EstimationDetail | null
+  /**
+   * このデータソース（テスト）を実際に受けた生徒の素点分布。
+   * 素点がクラスの実態のどこに位置するか（説明責任の判断材料）を内訳表に併記する。
+   * 実測（他生徒の非null素点）のみから算出。2名未満は undefined。
+   */
+  distribution?: EstimationTargetDistribution
   /** 文字モード時に入力された評価記号（manual型のみ） */
   letterValue: string | null
   /** 適用された加点・減点（manual型のみ。0なら調整なし） */
@@ -281,6 +293,35 @@ export interface EstimationDetail {
   droppedPredictors?: EstimationDroppedPredictor[]
   /** 重回帰法がaverageにフォールバックした理由（あれば） */
   fallbackReason?: EstimationFallbackReason
+  /**
+   * 重回帰の当てはまりの相関 R（0〜1）。予測が実力を追える度合い＝縮小率。
+   * R が高いほど中心（平均）へ寄りにくく、推定の信頼度が高い。
+   */
+  correlation?: number
+  /**
+   * 標準偏差法（zscore）: 他ソースでの平均標準得点（±何SD）。
+   * これを当ソースの実平均±SDへ載せ替えて予測する（縮小を打ち消す）。
+   */
+  standardizedStanding?: number
+  /**
+   * 順位法（equipercentile）: 他ソースでの平均パーセンタイル（0〜1、上位ほど1）。
+   * これを当ソース実分布の同順位の点へ変換して予測する（分布を保存）。
+   */
+  percentileRank?: number
+  /** 標準偏差法・順位法の載せ替え先となる当ソース実測分布の平均 */
+  targetMean?: number
+  /** 標準偏差法の載せ替え先となる当ソース実測分布の標準偏差 */
+  targetStandardDeviation?: number
+}
+
+/** 推定対象データソースの実測素点分布（評価者向けの判断材料） */
+export interface EstimationTargetDistribution {
+  /** 実測がある生徒数（この統計の母数） */
+  sampleSize: number
+  /** 実測素点の平均 */
+  mean: number
+  /** 実測素点の標準偏差（母標準偏差） */
+  standardDeviation: number
 }
 
 /** 成績算出結果全体 */
