@@ -6,19 +6,10 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
-
-// アンカー方向（8方向 + center）
-export type AnchorDirection =
-  | "top-left"
-  | "top"
-  | "top-right"
-  | "left"
-  | "center"
-  | "right"
-  | "bottom-left"
-  | "bottom"
-  | "bottom-right"
+import type {
+  AnchorDirection,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
 
 // 描画要素の型定義
 export interface DrawingElement {
@@ -45,7 +36,7 @@ export interface DrawingElement {
 }
 
 // 描画ツールの型定義
-export type DrawingTool =
+export type CanvasTool =
   "hand" | "text" | "line" | "rectangle" | "ellipse" | "select"
 
 // 線の編集モード
@@ -111,7 +102,7 @@ export interface SelectionRectangle {
 
 // 描画状態管理用のインターフェース
 export interface DrawingState {
-  currentTool: DrawingTool
+  currentTool: CanvasTool
   strokeColor: string
   strokeWidth: number
   lineStyle: LineStyle
@@ -142,7 +133,7 @@ export interface DrawingState {
 
 // 描画アクション
 export interface DrawingActions {
-  setCurrentTool: (tool: DrawingTool) => void
+  setCurrentTool: (tool: CanvasTool) => void
   setStrokeColor: (color: string) => void
   setStrokeWidth: (width: number) => void
   setLineStyle: (style: LineStyle) => void

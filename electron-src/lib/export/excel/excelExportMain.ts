@@ -1,10 +1,7 @@
 import * as ExcelJS from "exceljs"
 
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
-import {
-  ExportGradingDataOptions,
-  ExportResult,
-} from "../../shared/types/exportTypes"
+import { ExportGradingDataOptions, ExportResult } from "../../shared/types"
 import {
   buildConflictIdentifiers,
   validateScoringData,

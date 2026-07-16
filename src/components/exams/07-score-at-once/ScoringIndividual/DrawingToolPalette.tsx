@@ -24,7 +24,7 @@ import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
-import type { DrawingElement, DrawingTool } from "./types/answerIndividualTypes"
+import type { CanvasTool, DrawingElement } from "./types"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
 
@@ -40,8 +40,8 @@ interface DrawingToolPaletteProps {
   currentCropRegion?: CropRegionWithExamPage
 
   // Tool selection
-  currentTool: DrawingTool
-  onToolChange: (tool: DrawingTool) => void
+  currentTool: CanvasTool
+  onToolChange: (tool: CanvasTool) => void
 
   // Drawing settings
   strokeColor: string

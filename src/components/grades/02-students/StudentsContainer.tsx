@@ -19,7 +19,7 @@ import type {
   AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
-} from "@/components/common/student-add-panel/types/studentAddPanelTypes"
+} from "@/components/common/student-add-panel/types"
 import { Button } from "@/components/ui/button"
 
 interface GradeClassroom {

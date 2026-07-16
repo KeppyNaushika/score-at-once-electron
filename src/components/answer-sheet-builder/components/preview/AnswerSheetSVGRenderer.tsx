@@ -4,7 +4,7 @@ import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParse
 import { parseInlineMarkup } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import type {
   BorderConfig,
-  LineStyle,
+  BorderLineStyle,
   RenderMode,
 } from "@/types/answerSheetDefinition.types"
 import type {
@@ -624,7 +624,7 @@ export function AnswerSheetSVGRenderer({
           // 区切り罫線を「置き換え」るため、どの内部罫線セグメントを差し替えるか先に収集。
           // 縦線セグメント: key `${ci}:${row}` / 横線セグメント: key `${ri}:${col}`
           type BoundarySpec = {
-            style: LineStyle
+            style: BorderLineStyle
             width: number
             dashRatio: number
             gapRatio: number

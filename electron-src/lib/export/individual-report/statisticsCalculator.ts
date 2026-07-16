@@ -10,10 +10,7 @@ import {
   rank as calculateRank,
   stdDev as calculateStdDev,
 } from "../../shared/calculations/numericStats"
-import type {
-  DiscriminationLevel,
-  ScoringData,
-} from "../../shared/types/exportTypes"
+import type { DiscriminationLevel, ScoringData } from "../../shared/types"
 import type {
   ClassroomStatisticsEntry,
   RawTotalScoreEntry,

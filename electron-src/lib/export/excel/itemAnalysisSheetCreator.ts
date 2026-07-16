@@ -5,10 +5,7 @@ import {
   computeItemAnalysis,
   type ItemAnalysisInputStudent,
 } from "../../shared/calculations/itemAnalysis"
-import type {
-  DiscriminationLevel,
-  ScoringData,
-} from "../../shared/types/exportTypes"
+import type { DiscriminationLevel, ScoringData } from "../../shared/types"
 import {
   applyCellStyle,
   autoFitColumns,

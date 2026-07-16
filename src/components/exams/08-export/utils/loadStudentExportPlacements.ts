@@ -1,4 +1,4 @@
-import type { StudentExportPlacement } from "@/electron-src/lib/shared/types/exportTypes"
+import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
 import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 
 /**

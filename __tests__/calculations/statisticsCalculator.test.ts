@@ -13,7 +13,7 @@ import {
   calculateSubtotalStatistics,
   collectSubtotalRawScores,
 } from "@/electron-src/lib/export/individual-report/statisticsCalculator"
-import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
+import type { ScoringData } from "@/electron-src/lib/shared/types"
 
 // ================== ヘルパー ==================
 

@@ -4,7 +4,7 @@ import {
   computeSpTable,
   type SpInputStudent,
 } from "../../shared/calculations/spAnalysis"
-import type { ScoringData } from "../../shared/types/exportTypes"
+import type { ScoringData } from "../../shared/types"
 import {
   applyCellStyle,
   autoFitColumns,

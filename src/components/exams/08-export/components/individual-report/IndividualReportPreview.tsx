@@ -20,6 +20,7 @@ import {
   computeFilteredStats,
   getVisibleSectionIndices,
 } from "./computeReportData"
+import type { PageAllocation } from "./generatePrintHtml"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"
 import {
   CommentSectionView,
@@ -37,12 +38,6 @@ const A4_HEIGHT_MM = 297
 const PAGE_PADDING_MM = 5
 /** コンテンツエリアの高さ（mm） */
 const CONTENT_HEIGHT_MM = A4_HEIGHT_MM - PAGE_PADDING_MM * 2
-
-/** ページ振り分け結果 */
-export interface PageAllocation {
-  pageIndex: number
-  sectionIndices: number[]
-}
 
 interface IndividualReportPreviewProps {
   report: IndividualReportData

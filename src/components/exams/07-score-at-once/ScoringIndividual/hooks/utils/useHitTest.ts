@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from "react"
 
 import { DRAWING_TOLERANCES } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
-import type {
-  AnchorDirection,
-  DrawingElement,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 /**
  * アンカー方向に基づいてテキストの左上位置を計算

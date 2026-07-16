@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from "electron"
 
 import { fetchExportData } from "../lib/export/excel/dataFetcher"
+import { exportGradingDataExcel } from "../lib/export/excel/excelExportMain"
 import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
 import {
   fetchIndividualReportData,
@@ -11,7 +12,6 @@ import {
   type ExportRDataOptions,
 } from "../lib/export/r-exametrika/rDataExporter"
 import { resolveMathJaxSrc, waitForRendering } from "../lib/printUtils"
-import { exportGradingDataExcel } from "../lib/prisma/excelExport"
 import {
   addPageToStreamingSession,
   cancelStreamingSession,
@@ -24,7 +24,7 @@ import {
   captureReturnSnapshot,
   getReturnDiff,
 } from "../lib/prisma/returnSnapshot"
-import type { StudentExportPlacement } from "../lib/shared/types/exportTypes"
+import type { StudentExportPlacement } from "../lib/shared/types"
 import {
   buildConflictIdentifiers,
   validateScoringData,

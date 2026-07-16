@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import { Student } from "@/app/exams/[examId]/08-export/types"
+import { Student } from "@/components/exams/08-export/types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"

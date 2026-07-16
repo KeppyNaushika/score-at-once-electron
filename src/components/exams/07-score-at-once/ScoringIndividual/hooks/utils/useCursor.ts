@@ -4,7 +4,7 @@
  */
 import { useCallback } from "react"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 
 /** カーソルスタイルの種類 */
 export type CursorStyle =

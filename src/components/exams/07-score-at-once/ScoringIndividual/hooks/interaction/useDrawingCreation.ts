@@ -4,7 +4,7 @@
  */
 import { useCallback, useRef } from "react"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 /** 新規描画作成フックのプロパティ */

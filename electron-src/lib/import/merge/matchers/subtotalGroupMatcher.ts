@@ -11,7 +11,7 @@ import type {
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import type { MatchResult, SubtotalGroupData } from "./types"
+import type { MatchResult, MatchSubtotalGroupData } from "./types"
 
 /**
  * 小計グループデータのマッチングを実行
@@ -23,8 +23,8 @@ import type { MatchResult, SubtotalGroupData } from "./types"
 export async function matchSubtotalGroups(
   importData: ExtractedArchiveData,
   method: SubtotalGroupMatchingMethod
-): Promise<MatchResult<SubtotalGroupData>[]> {
-  const results: MatchResult<SubtotalGroupData>[] = []
+): Promise<MatchResult<MatchSubtotalGroupData>[]> {
+  const results: MatchResult<MatchSubtotalGroupData>[] = []
 
   const existingGroups = await prisma.subtotalGroup.findMany()
 

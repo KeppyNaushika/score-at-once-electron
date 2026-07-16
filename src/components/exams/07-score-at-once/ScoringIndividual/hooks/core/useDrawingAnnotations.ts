@@ -13,7 +13,7 @@ import type {
 } from "@/types/drawingAnnotation.types"
 
 // 既存の描画システム型と互換性を保つため
-import type { DrawingElement } from "../../types/answerIndividualTypes"
+import type { DrawingElement } from "../../types"
 
 // QuestionScore自動作成用のコンテキスト情報
 interface DrawingContext {

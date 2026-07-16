@@ -5,11 +5,9 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
-import type {
-  PendingChange,
-  PlacementScorePolicy,
-} from "@/components/exams/06-student-answers/types"
+import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type { PendingChange } from "@/components/exams/06-student-answers/types"
+import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
 import type {
   ExamStudentWithMemberships,
   StudentAnswerDatasetExamPage,

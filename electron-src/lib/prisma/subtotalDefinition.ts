@@ -1,4 +1,4 @@
-import type { Prisma, Subtotal } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
@@ -67,5 +67,3 @@ export type SubtotalWithRelations = Prisma.SubtotalGetPayload<{
     cropSubtotals: true
   }
 }>
-
-export type SubtotalPayload = Subtotal

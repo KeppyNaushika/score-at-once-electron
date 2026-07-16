@@ -1,4 +1,4 @@
-import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**

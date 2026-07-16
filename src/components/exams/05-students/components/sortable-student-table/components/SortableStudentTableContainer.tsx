@@ -17,7 +17,7 @@ import {
   useRosterTable,
 } from "@/components/common/roster-table"
 import { SortableTableProvider } from "@/components/common/sortable-table"
-import type { SortableStudentTableProps } from "@/components/exams/05-students/components/sortable-student-table/types/studentTableTypes"
+import type { SortableStudentTableProps } from "@/components/exams/05-students/components/sortable-student-table/types"
 import {
   AlertDialog,
   AlertDialogAction,

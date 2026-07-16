@@ -6,7 +6,7 @@
  * - ユーザー設定はDBに保存される
  */
 
-import type { KeyBinding } from "../ScoringMain/contexts/shortcutContext.types"
+import type { KeyBinding } from "../types"
 
 export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================

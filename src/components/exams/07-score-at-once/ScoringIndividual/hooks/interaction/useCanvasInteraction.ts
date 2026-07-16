@@ -8,7 +8,7 @@ import { useCursor } from "@/components/exams/07-score-at-once/ScoringIndividual
 import type {
   DrawingElement,
   SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { useDrawingCreation } from "./useDrawingCreation"

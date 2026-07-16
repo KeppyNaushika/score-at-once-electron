@@ -25,7 +25,7 @@ import {
   StudentExportPlacement,
   SubtotalGroupData,
   SubtotalScore,
-} from "../../shared/types/exportTypes"
+} from "../../shared/types"
 
 /** SubtotalGroupから構築した小計列情報（Excel出力用） */
 export interface SubtotalColumn {

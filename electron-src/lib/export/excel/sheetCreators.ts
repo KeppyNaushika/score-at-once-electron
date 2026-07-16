@@ -3,7 +3,7 @@ import * as ExcelJS from "exceljs"
 
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
-import { ScoringData } from "../../shared/types/exportTypes"
+import { ScoringData } from "../../shared/types"
 import { autoFitColumns } from "../../shared/utilities/excelUtilities"
 import { appendClassroomAverageRows } from "./averageRows"
 import type { SubtotalColumn } from "./dataFetcher"

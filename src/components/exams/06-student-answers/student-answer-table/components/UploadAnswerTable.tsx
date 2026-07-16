@@ -6,7 +6,7 @@ import { AnswerTableShell } from "@/components/exams/06-student-answers/student-
 import { useAnswerTableCore } from "@/components/exams/06-student-answers/student-answer-table/hooks/useAnswerTableCore"
 import { useMarkerCorrection } from "@/components/exams/06-student-answers/student-answer-table/hooks/useMarkerCorrection"
 import type { FilePreviewSource } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { UploadAnswerTableProps } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
+import type { UploadAnswerTableProps } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
   UnsavedAnswerImage,
   UploadData,

@@ -2,7 +2,6 @@
  * OMRモジュール バレルエクスポート
  */
 
-export type { AutoScoreEntry } from "./autoScorer"
 export { convertToScoreEntriesFromDb } from "./autoScorer"
 export {
   createTransform,

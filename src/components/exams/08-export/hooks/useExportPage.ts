@@ -4,12 +4,12 @@ import type { Exam } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { ExportOptions, Student } from "@/app/exams/[examId]/08-export/types"
 import {
   defaultScoringMarkConfig,
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/ScoringMarkSettings"
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
+import { ExportOptions, Student } from "@/components/exams/08-export/types"
 import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   type IndividualReportOptions,

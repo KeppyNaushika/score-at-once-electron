@@ -14,7 +14,7 @@
  *   消費者・集計セマンティクスが異なるため別実装。こちらは「シートとプレビューの一致」を担保する。
  */
 
-import type { DiscriminationLevel } from "../types/exportTypes"
+import type { DiscriminationLevel } from "../types"
 
 /** 設問1問分の生徒応答（正規化済み） */
 export interface ItemAnalysisInputItem {

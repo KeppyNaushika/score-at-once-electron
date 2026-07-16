@@ -6,7 +6,7 @@ import { useDragDrop } from "@/components/exams/06-student-answers/student-answe
 import { useNameRegion } from "@/components/exams/06-student-answers/student-answer-table/hooks/useNameRegion"
 import { useTableData } from "@/components/exams/06-student-answers/student-answer-table/hooks/useTableData"
 import type { PreviewMode } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
   AnswerImageIdentity,
   ExamPageColumn,

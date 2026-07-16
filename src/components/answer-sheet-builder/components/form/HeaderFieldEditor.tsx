@@ -19,9 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type {
+  BorderLineStyle,
   HeaderFieldDefinition,
   HeaderFieldType,
-  LineStyle,
   LinkedRegionType,
 } from "@/types/answerSheetDefinition.types"
 
@@ -228,7 +228,7 @@ export function HeaderFieldEditor({
                     <Select
                       value={field.lineStyle}
                       onValueChange={(v) =>
-                        onUpdate(field.id, { lineStyle: v as LineStyle })
+                        onUpdate(field.id, { lineStyle: v as BorderLineStyle })
                       }
                     >
                       <SelectTrigger className="h-7 text-xs">

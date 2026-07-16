@@ -2,7 +2,7 @@
 
 import { Calculator, Edit, Trash2 } from "lucide-react"
 
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
+import type { SubtotalGroup } from "@/components/subtotal-groups/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

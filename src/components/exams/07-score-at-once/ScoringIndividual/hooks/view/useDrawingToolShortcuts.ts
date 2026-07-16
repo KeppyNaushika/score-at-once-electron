@@ -6,12 +6,12 @@ import { useCallback } from "react"
 
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 
-import type { DrawingTool } from "../../types/answerIndividualTypes"
+import type { CanvasTool } from "../../types"
 
 /** 描画ツールキーボードショートカットフックのパラメータ */
 export interface UseDrawingToolShortcutsParams {
   /** 現在のツール設定関数 */
-  setCurrentTool: (tool: DrawingTool) => void
+  setCurrentTool: (tool: CanvasTool) => void
   /** 全体表示ハンドラー */
   handleMaximizeView: () => void
   /** 設問表示ハンドラー */

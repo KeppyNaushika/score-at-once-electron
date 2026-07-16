@@ -5,7 +5,7 @@ import { useMemo } from "react"
 import { AnswerTableShell } from "@/components/exams/06-student-answers/student-answer-table/components/AnswerTableShell"
 import { useAnswerTableCore } from "@/components/exams/06-student-answers/student-answer-table/hooks/useAnswerTableCore"
 import type { FilePreviewSource } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { ViewAnswerTableProps } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
+import type { ViewAnswerTableProps } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { PlacedAnswerImage } from "@/types/prismaExtensions"
 
 // 参照安定な既定値（view は補正しないため常に空）

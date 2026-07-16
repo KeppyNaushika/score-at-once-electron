@@ -17,13 +17,13 @@ import type {
 import type {
   AnswerSheetDefinition,
   BorderConfig,
+  BorderLineStyle,
   BranchQuestion,
   CellImageElement,
   CellTextElement,
   FontConfig,
   GlobalSettings,
   HeaderFieldDefinition,
-  LineStyle,
   LinkedRegionType,
   MajorQuestion,
   ManuscriptCharGuide,
@@ -207,11 +207,11 @@ export function flattenGlobalSettings(
  */
 function dbCharGuides(rows: AsbCharGuide[]): ManuscriptCharGuide[] | undefined {
   if (rows.length === 0) return undefined
-  const VALID_STYLES = new Set<LineStyle>(["solid", "dashed", "dotted"])
+  const VALID_STYLES = new Set<BorderLineStyle>(["solid", "dashed", "dotted"])
   return rows.map((row): ManuscriptCharGuide => {
     const boundary =
-      row.boundary !== null && VALID_STYLES.has(row.boundary as LineStyle)
-        ? (row.boundary as LineStyle)
+      row.boundary !== null && VALID_STYLES.has(row.boundary as BorderLineStyle)
+        ? (row.boundary as BorderLineStyle)
         : undefined
     return {
       id: row.id,
@@ -318,7 +318,7 @@ function unflattenGlobalSettings(row: AsbDefinition): GlobalSettings {
       enabled: row.multiColumnEnabled,
       columnCount: row.multiColumnCount as 2 | 3,
       columnGapMm: row.multiColumnGapMm,
-      dividerLine: (row.multiColumnDividerLine as LineStyle) ?? null,
+      dividerLine: (row.multiColumnDividerLine as BorderLineStyle) ?? null,
       dividerLineWidth: row.multiColumnDividerLineWidth,
     },
     headerFields: [],
@@ -400,7 +400,7 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
         widthMm: headerField.widthMm,
         heightMm: headerField.heightMm,
         gridCount: headerField.gridCount,
-        lineStyle: headerField.lineStyle as LineStyle,
+        lineStyle: headerField.lineStyle as BorderLineStyle,
         lineWidth: headerField.lineWidth,
         order: headerField.order,
         fontSize: headerField.fontSize ?? undefined,

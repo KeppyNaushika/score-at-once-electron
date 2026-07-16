@@ -18,7 +18,7 @@ import type {
   AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
-} from "@/components/common/student-add-panel/types/studentAddPanelTypes"
+} from "@/components/common/student-add-panel/types"
 
 interface CourseworkClassroom {
   id: string

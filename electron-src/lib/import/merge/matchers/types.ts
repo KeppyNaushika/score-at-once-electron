@@ -47,7 +47,7 @@ export type UserData = Pick<User, "id" | "username" | "name" | "role"> & {
 }
 
 /** 小計グループデータ */
-export type SubtotalGroupData = Pick<SubtotalGroup, "id" | "name"> & {
+export type MatchSubtotalGroupData = Pick<SubtotalGroup, "id" | "name"> & {
   updatedAt: string | Date
 }
 
@@ -58,5 +58,5 @@ export interface AllMatchResults {
   students: MatchResult<MatchStudentData>[]
   classes: MatchResult<ClassroomData>[]
   users: MatchResult<UserData>[]
-  subtotalGroups: MatchResult<SubtotalGroupData>[]
+  subtotalGroups: MatchResult<MatchSubtotalGroupData>[]
 }

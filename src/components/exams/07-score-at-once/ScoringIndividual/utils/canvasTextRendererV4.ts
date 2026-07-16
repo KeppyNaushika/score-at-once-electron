@@ -7,7 +7,7 @@ import {
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
 import type { AnchorDirection } from "@/lib/textbox-canvas/types"
 
-import type { DrawingElement } from "../types/answerIndividualTypes"
+import type { DrawingElement } from "../types"
 
 /** SVGキャッシュ（elementId → {text, color, fontSize, svg}） */
 const svgCache = new Map<

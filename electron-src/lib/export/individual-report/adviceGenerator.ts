@@ -3,7 +3,7 @@
  * 復習問題: 正答率が閾値以上で、生徒が正答でなかった問題
  */
 
-import type { ScoreDetail } from "../../shared/types/exportTypes"
+import type { ScoreDetail } from "../../shared/types"
 import type { AdviceOptions, AdviceQuestion, LearningAdviceData } from "./types"
 
 /**

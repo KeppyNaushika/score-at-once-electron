@@ -18,12 +18,12 @@ import {
   type MatchResult,
   type MatchStudentData,
   matchStudents,
+  type MatchSubtotalGroupData,
   matchSubtotalGroups,
   matchUsers,
   preMatchClassrooms,
   preMatchStudents,
   preMatchSubtotalGroups,
-  type SubtotalGroupData,
   type UserData,
 } from "./matchers"
 import {
@@ -37,7 +37,7 @@ export type {
   ClassroomData,
   MatchResult,
   MatchStudentData,
-  SubtotalGroupData,
+  MatchSubtotalGroupData,
   UserData,
 }
 

@@ -15,7 +15,7 @@ import type {
   IndividualReportData,
   StatisticsData,
 } from "@/electron-src/lib/export/individual-report/types"
-import type { SubtotalScore } from "@/electron-src/lib/shared/types/exportTypes"
+import type { SubtotalScore } from "@/electron-src/lib/shared/types"
 
 // ================== ヘルパー ==================
 

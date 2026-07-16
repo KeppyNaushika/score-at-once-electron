@@ -5,7 +5,7 @@ import { useBatchScoring } from "@/components/exams/07-score-at-once/ScoringData
 import type {
   CropRegionWithExamPage,
   StudentAnswerImageWithExamStudents,
-} from "@/components/exams/07-score-at-once/ScoringData/types/scoringDataTypes"
+} from "@/components/exams/07-score-at-once/ScoringData/types"
 import { loadQuestionScores } from "@/components/exams/07-score-at-once/ScoringData/utils/dataLoader"
 import { calculateQuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/utils/progressCalculator"
 

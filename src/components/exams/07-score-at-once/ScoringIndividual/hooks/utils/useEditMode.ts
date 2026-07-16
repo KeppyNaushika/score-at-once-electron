@@ -5,7 +5,7 @@ import type {
   DrawingElement,
   LineEditMode,
   RectangleEditMode,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 
 /** 線・矩形要素の編集モード（移動・端点・リサイズ）を座標から判定するユーティリティフック */
 export function useEditModeUtils() {

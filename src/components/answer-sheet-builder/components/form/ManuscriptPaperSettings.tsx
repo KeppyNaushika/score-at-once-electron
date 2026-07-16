@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import type {
-  LineStyle,
+  BorderLineStyle,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
   ManuscriptPaperConfig,
@@ -281,7 +281,7 @@ export function ManuscriptPaperSettings({
                       guide.id,
                       v === BOUNDARY_NONE
                         ? { boundary: undefined }
-                        : { boundary: v as LineStyle }
+                        : { boundary: v as BorderLineStyle }
                     )
                   }
                 >

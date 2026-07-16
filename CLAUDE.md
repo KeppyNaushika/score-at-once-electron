@@ -162,9 +162,10 @@ npx prisma studio
 │   ├── pdfConverter.ts          # PDF変換ユーティリティ
 │   └── utils.ts                 # 汎用ユーティリティ
 ├── /src/types                   # グローバル型定義
-│   ├── common.types.ts          # 共通型定義
+│   ├── prismaExtensions.ts      # Prisma型のIPC用拡張・共有include型
 │   ├── examArchive.types.ts     # 試験アーカイブ型
 │   ├── grade.types.ts           # 成績型定義
+│   ├── scoringStatus.types.ts   # 採点ステータス（renderer/electron共有union）
 │   ├── electron.d.ts            # Electron API型定義
 │   └── electron/                # Electron API型定義（分割）
 ├── /src/contexts                # Reactコンテキスト
@@ -440,7 +441,7 @@ export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
 ```typescript
 // トップレベル配置の例
 /hooks/useExam.ts       # 複数画面で使用される試験管理
-/types/common.types.ts     # ExamData, StudentDataなど全体共通型
+/types/scoringStatus.types.ts  # ScoringStatus など renderer/electron 横断の共通型
 /lib/utils.ts             # 日付フォーマット、バリデーション等の汎用関数
 ```
 
@@ -461,7 +462,7 @@ export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
 // 機能内配置の例
 /components/exams/06-student-answers/
 ├── hooks/useStudentAnswerUpload.ts   # 答案アップロード専用ロジック
-├── types/student-answer.types.ts    # PendingChange, ScoringDataOption等
+├── types.ts                          # PendingChange 等の機能内共有型
 └── utils/file-processing.ts         # ファイル変換・検証の専用関数
 ```
 
@@ -471,7 +472,7 @@ export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
 
 ```typescript
 import { useExam } from "@/hooks/useExam"
-import { ExamData } from "@/types/common.types"
+import { ScoringStatus } from "@/types/scoringStatus.types"
 import { formatDate } from "@/lib/utils"
 ```
 
@@ -479,7 +480,7 @@ import { formatDate } from "@/lib/utils"
 
 ```typescript
 import { useAnswerSheetUpload } from "./hooks/useAnswerSheetUpload"
-import { PendingChange } from "./types/answer-sheet.types"
+import { PendingChange } from "./types"
 import { validateFile } from "./utils/file-processing"
 ```
 
@@ -574,7 +575,8 @@ export function useScoring(options: UseScoringOptions) { ... }
 
 **複数ファイルで使用する型**:
 
-- 上位ディレクトリの`types.ts`に配置
+- 上位ディレクトリの`types.ts`（フラットな単一ファイル）に配置
+- `types/index.ts` や `types/xxxTypes.ts` 形式のディレクトリは作らない（2026-07に`types.ts`へ統一済み）
 - 例: 機能ディレクトリ内の複数コンポーネントで共有する型
 
 ```typescript
@@ -589,16 +591,16 @@ export type ScoreStatus = 'correct' | 'incorrect' | 'partial' | ...
 - 大規模で主要な機能の型はここに置くと全体像が把握しやすい
 
 ```typescript
-// /types/exam-archive.types.ts - インポート/エクスポート機能の型
-// /types/common.types.ts - 汎用的な共通型
+// /types/examArchive.types.ts - インポート/エクスポート機能の型
+// /types/prismaExtensions.ts - Prisma型のIPC用拡張・共有include型
 ```
 
 #### Prisma型の拡張
 
-IPCでの受け渡し時にDecimal→number変換が必要な場合など、Prisma型の拡張は`types/prisma-extensions.ts`に集約します。
+IPCでの受け渡し時にDecimal→number変換が必要な場合など、Prisma型の拡張は`types/prismaExtensions.ts`に集約します。
 
 ```typescript
-// types/prisma-extensions.ts
+// types/prismaExtensions.ts
 import type { QuestionScore } from "@prisma/client"
 
 // IPC用にシリアライズされた型

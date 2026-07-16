@@ -6,7 +6,7 @@ import { useCallback, useMemo } from "react"
 
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
 
-import type { DrawingElement } from "../../types/answerIndividualTypes"
+import type { DrawingElement } from "../../types"
 import { useTextboxV4Integration } from "../text/useTextboxIntegration"
 
 /** Canvas初期化およびV4統合フックのパラメータ */

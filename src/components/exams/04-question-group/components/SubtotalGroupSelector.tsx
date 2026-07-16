@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
+import type { SubtotalGroup } from "@/components/subtotal-groups/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

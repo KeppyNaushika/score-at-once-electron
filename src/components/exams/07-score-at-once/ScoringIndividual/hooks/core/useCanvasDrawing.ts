@@ -10,7 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 import type {
   DrawingElement,
   SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
   CropRegionWithExamPage,
   ScoringData,
@@ -18,7 +18,7 @@ import type {
 import type {
   MarkPosition,
   ScoringMarkConfig,
-} from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+} from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"

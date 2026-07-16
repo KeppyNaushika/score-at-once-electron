@@ -7,8 +7,8 @@ import type {
   AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
-} from "@/components/common/student-add-panel/types/studentAddPanelTypes"
-import type { ExamStudentAddModalProps } from "@/components/exams/05-students/components/exam-student-add-modal/types/examStudentAddTypes"
+} from "@/components/common/student-add-panel/types"
+import type { ExamStudentAddModalProps } from "@/components/exams/05-students/components/exam-student-add-modal/types"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

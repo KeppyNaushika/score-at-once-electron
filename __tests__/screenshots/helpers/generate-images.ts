@@ -13,9 +13,9 @@ import sharp from "sharp"
 import { computeMultiPageLayoutFromDefinition } from "@/components/answer-sheet-builder/hooks/layout/computeMultiPageLayout"
 import type {
   AnswerSheetDefinition,
+  BorderLineStyle,
   BranchQuestion,
   HeaderFieldType,
-  LineStyle,
   LinkedRegionType,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -50,7 +50,7 @@ function templateToDefinition(
     widthMm: headerField.widthMm as number,
     heightMm: headerField.heightMm as number,
     gridCount: headerField.gridCount as number,
-    lineStyle: headerField.lineStyle as LineStyle,
+    lineStyle: headerField.lineStyle as BorderLineStyle,
     lineWidth: headerField.lineWidth as number,
     order: headerField.order as number,
     fontSize: (headerField.fontSize as number) ?? undefined,
@@ -142,15 +142,16 @@ function templateToDefinition(
         headerHeight: templateRecord.headerHeight as number,
       },
       borderConfig: {
-        outerBorder: templateRecord.borderOuterBorder as LineStyle,
-        majorDivider: templateRecord.borderMajorDivider as LineStyle,
-        subDivider: templateRecord.borderSubDivider as LineStyle,
-        branchDivider: templateRecord.borderBranchDivider as LineStyle,
+        outerBorder: templateRecord.borderOuterBorder as BorderLineStyle,
+        majorDivider: templateRecord.borderMajorDivider as BorderLineStyle,
+        subDivider: templateRecord.borderSubDivider as BorderLineStyle,
+        branchDivider: templateRecord.borderBranchDivider as BorderLineStyle,
         majorNumberDivider:
-          templateRecord.borderMajorNumberDivider as LineStyle,
-        subNumberDivider: templateRecord.borderSubNumberDivider as LineStyle,
+          templateRecord.borderMajorNumberDivider as BorderLineStyle,
+        subNumberDivider:
+          templateRecord.borderSubNumberDivider as BorderLineStyle,
         branchNumberDivider:
-          templateRecord.borderBranchNumberDivider as LineStyle,
+          templateRecord.borderBranchNumberDivider as BorderLineStyle,
         outerBorderWidth:
           (templateRecord.borderOuterBorderWidth as number) ?? undefined,
         majorDividerWidth:
@@ -184,7 +185,7 @@ function templateToDefinition(
         columnCount: (templateRecord.multiColumnCount as 2 | 3) ?? 2,
         columnGapMm: templateRecord.multiColumnGapMm as number,
         dividerLine:
-          (templateRecord.multiColumnDividerLine as LineStyle) ?? null,
+          (templateRecord.multiColumnDividerLine as BorderLineStyle) ?? null,
         dividerLineWidth:
           (templateRecord.multiColumnDividerLineWidth as number) ?? 0.3,
       },
