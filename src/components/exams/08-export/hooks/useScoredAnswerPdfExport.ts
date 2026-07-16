@@ -14,8 +14,8 @@ import type {
   ExportOptions,
   RenderedPageData,
   RenderProgress,
-} from "@/app/exams/[examId]/08-export/types"
-import type { PdfExportPageData } from "@/components/exams/08-export/components/PdfCanvasRenderer"
+} from "@/components/exams/08-export/types"
+import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 
 interface UseScoredAnswerPdfExportParams {
   exam: Exam | null

@@ -17,11 +17,8 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef } from "react"
 
-import type {
-  CommandHandler,
-  CommandMetadata,
-} from "../ScoringMain/contexts/shortcutContext.types"
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
+import type { CommandHandler, CommandMetadata } from "../types"
 
 /**
  * メタデータの同値性を判定するために安定したシグネチャを生成

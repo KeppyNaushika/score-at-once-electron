@@ -5,7 +5,7 @@ import { useDragDropState } from "@/components/exams/06-student-answers/student-
 import type {
   UseDragDropParams,
   UseDragDropReturn,
-} from "@/components/exams/06-student-answers/student-answer-table/types/dragDropTypes"
+} from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**

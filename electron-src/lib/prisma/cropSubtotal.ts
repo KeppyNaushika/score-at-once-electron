@@ -1,4 +1,4 @@
-import type { CropSubtotal, Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
@@ -292,5 +292,3 @@ export type CropSubtotalWithCropRegion = Prisma.CropSubtotalGetPayload<{
     }
   }
 }>
-
-export type CropSubtotalPayload = CropSubtotal

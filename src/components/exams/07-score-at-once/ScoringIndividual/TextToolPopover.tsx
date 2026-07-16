@@ -14,11 +14,11 @@ import {
 import { cn } from "@/lib/utils"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
-import type { DrawingTool } from "./types/answerIndividualTypes"
+import type { CanvasTool } from "./types"
 
 interface TextToolPopoverProps {
-  currentTool: DrawingTool
-  onToolChange: (tool: DrawingTool) => void
+  currentTool: CanvasTool
+  onToolChange: (tool: CanvasTool) => void
   textColor: string
   onTextColorChange: (color: string) => void
   hasSelectedElement?: boolean // 選択中のテキストがあるかどうか

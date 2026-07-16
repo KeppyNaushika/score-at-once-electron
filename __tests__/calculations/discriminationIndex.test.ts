@@ -11,10 +11,7 @@ import {
   calculateDiscriminationIndices,
   getDiscriminationLevel,
 } from "@/electron-src/lib/export/individual-report/statisticsCalculator"
-import type {
-  ScoreDetail,
-  ScoringData,
-} from "@/electron-src/lib/shared/types/exportTypes"
+import type { ScoreDetail, ScoringData } from "@/electron-src/lib/shared/types"
 
 // ================== ヘルパー ==================
 

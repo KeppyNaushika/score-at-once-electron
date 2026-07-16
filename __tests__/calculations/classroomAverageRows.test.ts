@@ -10,7 +10,7 @@ import * as ExcelJS from "exceljs"
 import { describe, expect, it } from "vitest"
 
 import { appendClassroomAverageRows } from "@/electron-src/lib/export/excel/averageRows"
-import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
+import type { ScoringData } from "@/electron-src/lib/shared/types"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 /** ExamClassroomWithMembers の最小モック（テストで使う teacherStatistics / class.name / memberships のみ） */

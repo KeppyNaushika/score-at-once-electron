@@ -4,7 +4,7 @@ import { Plus, Search, UserPlus } from "lucide-react"
 
 import { SortableClassroomList } from "@/components/common/student-add-panel/components/SortableClassroomList"
 import { useStudentAddPanel } from "@/components/common/student-add-panel/hooks/useStudentAddPanel"
-import type { StudentAddPanelProps } from "@/components/common/student-add-panel/types/studentAddPanelTypes"
+import type { StudentAddPanelProps } from "@/components/common/student-add-panel/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

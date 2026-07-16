@@ -8,14 +8,14 @@ import {
 
 import { DEFAULT_DRAWING_SETTINGS } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
+  CanvasTool,
   DrawingActions,
   DrawingElement,
   DrawingState,
-  DrawingTool,
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 // データベース統合フックのインポート
@@ -46,7 +46,7 @@ export function useDrawingState(
     loadFromDatabase: () => Promise<void>
   } {
   // 基本的な描画設定
-  const [currentTool, setCurrentTool] = useState<DrawingTool>("hand")
+  const [currentTool, setCurrentTool] = useState<CanvasTool>("hand")
   const [strokeColor, setStrokeColor] = useState(
     DEFAULT_DRAWING_SETTINGS.strokeColor
   )

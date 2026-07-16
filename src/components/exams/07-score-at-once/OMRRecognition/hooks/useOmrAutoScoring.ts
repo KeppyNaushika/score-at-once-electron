@@ -15,8 +15,8 @@ import type {
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
-  type AutoScoreEntry,
   recommendAreaThreshold,
+  type ReevaluatedScoreEntry,
   reevaluateWithThreshold,
   type ScoringResultSummary,
 } from "../utils/reevaluateResults"
@@ -35,7 +35,7 @@ export interface OmrAutoScoringState {
   /** 初回バッチの不変コピー（閾値再評価のソース） */
   originalSheetResults: OMRSheetResult[]
   /** 自動採点エントリ（全生徒分） */
-  scoreEntries: Map<string, AutoScoreEntry[]>
+  scoreEntries: Map<string, ReevaluatedScoreEntry[]>
   /** 結果サマリー */
   summary: ScoringResultSummary | null
   /** エラー */

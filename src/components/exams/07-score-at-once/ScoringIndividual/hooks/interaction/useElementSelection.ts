@@ -4,7 +4,7 @@ import type {
   DrawingElement,
   LineEditMode,
   RectangleEditMode,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 
 interface UseElementSelectionProps {
   currentTool: string

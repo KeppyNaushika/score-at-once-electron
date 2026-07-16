@@ -6,7 +6,7 @@
  */
 import { useCallback } from "react"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"

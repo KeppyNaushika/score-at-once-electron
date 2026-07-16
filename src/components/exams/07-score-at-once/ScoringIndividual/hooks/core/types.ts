@@ -4,13 +4,13 @@
 import type {
   DrawingElement,
   SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
   CropRegionWithExamPage,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 

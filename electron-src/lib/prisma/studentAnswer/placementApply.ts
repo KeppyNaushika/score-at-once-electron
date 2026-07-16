@@ -23,6 +23,11 @@ import type { Prisma } from "@prisma/client"
 import prisma from "../client"
 import { recordDrawingAnnotationDeletionsForQuestionScores } from "../deletedRecord"
 
+/**
+ * 移動1件ごとの採点データ処理方針（view 方式B）。
+ * - carry: 採点も追従（同一ページの生徒付け替えのみ可）
+ * - discard: 採点を破棄（要再採点。ページ跨ぎは常にこれ）
+ */
 export type PlacementScorePolicy = "carry" | "discard"
 
 export interface StudentAnswerPlacementMove {

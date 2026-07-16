@@ -13,7 +13,7 @@ import type {
 } from "@/types/omr.types"
 
 /** 自動採点エントリ */
-export interface AutoScoreEntry {
+export interface ReevaluatedScoreEntry {
   label: string
   cropRegionId?: string
   questionPath: number[]
@@ -49,7 +49,7 @@ export interface ReevaluationInput {
 
 export interface ReevaluationOutput {
   updatedSheetResults: OMRSheetResult[]
-  scoreEntries: Map<string, AutoScoreEntry[]>
+  scoreEntries: Map<string, ReevaluatedScoreEntry[]>
   summary: ScoringResultSummary
 }
 
@@ -70,7 +70,7 @@ export function reevaluateWithThreshold(
     confidenceThreshold,
   } = input
 
-  const allEntries = new Map<string, AutoScoreEntry[]>()
+  const allEntries = new Map<string, ReevaluatedScoreEntry[]>()
   const updatedSheetResults: OMRSheetResult[] = []
 
   for (const sheet of sheetResults) {
@@ -80,7 +80,7 @@ export function reevaluateWithThreshold(
     }
 
     const updatedCellResults: OMRCellResult[] = []
-    const entries: AutoScoreEntry[] = []
+    const entries: ReevaluatedScoreEntry[] = []
 
     for (const cellResult of sheet.cellResults) {
       const cropRegionId = cellResult.label
@@ -198,16 +198,16 @@ function reevaluateChoiceCell(
 }
 
 /**
- * OMRCellResultからAutoScoreEntryを構築（部分点・低信頼チェック含む）
+ * OMRCellResultからReevaluatedScoreEntryを構築（部分点・低信頼チェック含む）
  */
 function buildEntryFromCellResult(
   cellResult: OMRCellResult,
   config: CropRegionOmrConfigWithOptions | undefined,
   maxPoints: number,
   confidenceThreshold: number
-): AutoScoreEntry {
+): ReevaluatedScoreEntry {
   const cropRegionId = cellResult.label
-  let status: AutoScoreEntry["status"]
+  let status: ReevaluatedScoreEntry["status"]
   let score: number
 
   switch (cellResult.autoScoreStatus) {
@@ -275,7 +275,7 @@ function buildEntryFromCellResult(
 
 /** エントリのstatusからサマリーを集計 */
 function countSummary(
-  allEntries: Map<string, AutoScoreEntry[]>
+  allEntries: Map<string, ReevaluatedScoreEntry[]>
 ): ScoringResultSummary {
   let correct = 0,
     incorrect = 0,

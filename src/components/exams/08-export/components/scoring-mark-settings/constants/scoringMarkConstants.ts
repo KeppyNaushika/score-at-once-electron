@@ -2,7 +2,7 @@ import type {
   MarkPosition,
   ScoreTextConfig,
   ScoringMarkConfig,
-} from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+} from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // 既定色（点数印字・採点記号マーク）

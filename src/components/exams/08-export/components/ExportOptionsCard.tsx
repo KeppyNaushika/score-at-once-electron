@@ -2,14 +2,14 @@
 
 import { Download } from "lucide-react"
 
-import {
-  ExportOptions,
-  PdfOrientation,
-} from "@/app/exams/[examId]/08-export/types"
 import { IndividualReportSettings } from "@/components/exams/08-export/components/IndividualReportSettings"
 import ScoringMarkSettings, {
   ScoringMarkConfig,
 } from "@/components/exams/08-export/components/ScoringMarkSettings"
+import {
+  ExportOptions,
+  PdfOrientation,
+} from "@/components/exams/08-export/types"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"

@@ -1,12 +1,12 @@
 import { useCallback } from "react"
 
 import type {
+  CanvasTool,
   DrawingElement,
-  DrawingTool,
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
@@ -34,7 +34,7 @@ interface UseAnswerDisplayEventsProps {
   pageSpacing?: number
 
   // Drawing state
-  currentTool: DrawingTool
+  currentTool: CanvasTool
   drawingElements: DrawingElement[]
   selectedElementIds: string[]
   isDraggingElement: boolean

@@ -7,8 +7,8 @@
 
 import type {
   BorderConfig,
+  BorderLineStyle,
   GlobalSettings,
-  LineStyle,
   NextPlacement,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -443,7 +443,7 @@ export function addBorderLines(
   t: number,
   r: number,
   b: number,
-  style: LineStyle,
+  style: BorderLineStyle,
   borderConfig: BorderConfig
 ) {
   const sw = getLineWidth("outer", borderConfig)
@@ -495,7 +495,7 @@ export function addSteppedBorderLines(
   contentTop: number,
   contentRight: number,
   contentBottom: number,
-  style: LineStyle,
+  style: BorderLineStyle,
   borderConfig: BorderConfig,
   rowRightEdges: { yTop: number; yBottom: number; rightX: number }[],
   rowLeftEdges?: { yTop: number; yBottom: number; leftX: number }[]

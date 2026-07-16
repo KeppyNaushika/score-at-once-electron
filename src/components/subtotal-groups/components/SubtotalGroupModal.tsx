@@ -23,7 +23,7 @@ import { useEffect, useState } from "react"
 import type {
   SubtotalGroup,
   SubtotalGroupFormData,
-} from "@/components/subtotal-groups/types/subtotalGroupTypes"
+} from "@/components/subtotal-groups/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

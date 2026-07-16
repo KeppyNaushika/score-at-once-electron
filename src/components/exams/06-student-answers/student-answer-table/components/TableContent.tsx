@@ -5,7 +5,7 @@ import type {
   FilePreviewSource,
   PreviewMode,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
+import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { lookupHasCell } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {

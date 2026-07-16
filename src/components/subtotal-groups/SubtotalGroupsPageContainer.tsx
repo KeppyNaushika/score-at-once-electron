@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
+import type { SubtotalGroup } from "@/components/subtotal-groups/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 

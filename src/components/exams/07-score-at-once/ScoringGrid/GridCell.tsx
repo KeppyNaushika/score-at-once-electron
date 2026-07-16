@@ -2,7 +2,7 @@ import {
   getDynamicScoreStatusConfig,
   type ScoreStatusKey,
 } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
-import type { GridAnswerItem } from "@/components/exams/07-score-at-once/ScoringGrid/types/gridTypes"
+import type { GridAnswerItem } from "@/components/exams/07-score-at-once/ScoringGrid/types"
 import CroppedAnswerImage from "@/components/exams/07-score-at-once/ScoringMain/CroppedAnswerImage"
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"

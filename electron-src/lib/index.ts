@@ -9,7 +9,7 @@ export type {
   ScoreDetail,
   ScoringData,
   SubtotalScore,
-} from "./shared/types/exportTypes"
+} from "./shared/types"
 export {
   applyCellStyle,
   autoFitColumns,

@@ -171,7 +171,7 @@ export const deleteStudent = async (id: string): Promise<void> => {
   }
 }
 
-export interface SubtotalScoreResult {
+export interface StudentSubtotalScore {
   subtotalId: string
   subtotalName: string
   subtotalGroupId: string
@@ -190,7 +190,7 @@ export interface StudentExamResult {
   scoredCount: number
   totalQuestions: number
   status: "complete" | "partial" | "unscored"
-  subtotalScores: SubtotalScoreResult[]
+  subtotalScores: StudentSubtotalScore[]
 }
 
 /** 生徒の全試験成績を取得する（得点・配点・採点状況を集計、試験日降順） */
@@ -314,7 +314,7 @@ export const getStudentExamResults = async (
         status = "partial"
       }
 
-      const subtotalScores: SubtotalScoreResult[] = Array.from(
+      const subtotalScores: StudentSubtotalScore[] = Array.from(
         subtotalMap.entries()
       ).map(([subtotalId, data]) => ({
         subtotalId,

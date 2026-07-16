@@ -1,3 +1,5 @@
+import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
+
 import type {
   StudentAnswerImageWithExamPageAndStudent,
   StudentAnswersDataset,
@@ -75,7 +77,7 @@ export interface StudentAnswerAPI {
       fileId: string
       finalStudentId: string | null
       finalExamPageId: string
-      scorePolicy: "carry" | "discard"
+      scorePolicy: PlacementScorePolicy | "discard"
     }>
   ) => Promise<{
     success: boolean

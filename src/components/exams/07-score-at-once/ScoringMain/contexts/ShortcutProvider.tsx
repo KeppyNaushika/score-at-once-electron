@@ -30,7 +30,7 @@ import type {
   KeyBinding,
   ScoringContextState,
   ShortcutContextValue,
-} from "./shortcutContext.types"
+} from "../../types"
 
 // ============================================
 // コンテキスト作成

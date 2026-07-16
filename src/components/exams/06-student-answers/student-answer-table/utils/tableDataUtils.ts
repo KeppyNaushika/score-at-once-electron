@@ -2,7 +2,7 @@ import type {
   DisabledCell,
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types/localTypes"
+import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
   AnswerImageIdentity,
   ExamPageColumn,

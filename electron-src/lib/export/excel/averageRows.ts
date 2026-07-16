@@ -4,7 +4,7 @@ import * as ExcelJS from "exceljs"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
 import { average as mean } from "../../shared/calculations/numericStats"
-import type { ScoringData } from "../../shared/types/exportTypes"
+import type { ScoringData } from "../../shared/types"
 import { applyCellStyle } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"
 

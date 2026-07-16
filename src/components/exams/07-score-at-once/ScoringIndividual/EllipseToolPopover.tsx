@@ -15,11 +15,11 @@ import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
-import type { DrawingTool } from "./types/answerIndividualTypes"
+import type { CanvasTool } from "./types"
 
 interface EllipseToolPopoverProps {
-  currentTool: DrawingTool
-  onToolChange: (tool: DrawingTool) => void
+  currentTool: CanvasTool
+  onToolChange: (tool: CanvasTool) => void
   strokeColor: string
   strokeWidth: number
   onStrokeColorChange: (color: string) => void

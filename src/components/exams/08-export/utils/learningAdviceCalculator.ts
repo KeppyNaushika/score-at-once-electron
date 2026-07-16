@@ -8,7 +8,7 @@ import type {
   AdviceQuestion,
   LearningAdviceData,
 } from "@/electron-src/lib/export/individual-report/types"
-import type { ScoreDetail } from "@/electron-src/lib/shared/types/exportTypes"
+import type { ScoreDetail } from "@/electron-src/lib/shared/types"
 
 /**
  * 生徒が間違えた問題かどうかを判定

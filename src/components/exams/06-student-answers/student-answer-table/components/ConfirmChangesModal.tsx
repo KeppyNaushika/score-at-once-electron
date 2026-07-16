@@ -8,10 +8,7 @@ import {
 } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import type {
-  PendingChange,
-  PlacementScorePolicy,
-} from "@/components/exams/06-student-answers/types"
+import type { PendingChange } from "@/components/exams/06-student-answers/types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -23,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
+import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
 
 interface ConfirmChangesModalProps {
   isOpen: boolean

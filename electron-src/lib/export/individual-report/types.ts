@@ -7,10 +7,7 @@ import type { SubtotalGroup } from "@prisma/client"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import type { BoxPlotData } from "../../shared/calculations/numericStats"
-import type {
-  ScoringData,
-  StudentExportPlacement,
-} from "../../shared/types/exportTypes"
+import type { ScoringData, StudentExportPlacement } from "../../shared/types"
 
 // ================== 表示モード関連 ==================
 

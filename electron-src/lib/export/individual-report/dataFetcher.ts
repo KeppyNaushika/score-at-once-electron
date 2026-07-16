@@ -18,10 +18,7 @@ import {
   calculateSubtotalScoreBySubtotalId,
   type QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
-import type {
-  SubtotalGroupData,
-  SubtotalScore,
-} from "../../shared/types/exportTypes"
+import type { SubtotalGroupData, SubtotalScore } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {

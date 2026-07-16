@@ -13,7 +13,7 @@ import type { OMRCellConfig } from "./omr.types"
 
 export type PaperSize = "A4" | "B4" | "A3" | "B5"
 export type Orientation = "portrait" | "landscape"
-export type LineStyle = "solid" | "dashed" | "dotted"
+export type BorderLineStyle = "solid" | "dashed" | "dotted"
 export type MajorNumberDisplayMode = "multirow" | "boxed-top"
 export type RenderMode = "answer-sheet" | "model-answer"
 export type HorizontalAlign = "left" | "center" | "right"
@@ -55,10 +55,10 @@ export interface CellImageElement {
 // =====================
 
 export interface BorderStyles {
-  top?: LineStyle
-  bottom?: LineStyle
-  left?: LineStyle
-  right?: LineStyle
+  top?: BorderLineStyle
+  bottom?: BorderLineStyle
+  left?: BorderLineStyle
+  right?: BorderLineStyle
 }
 
 // =====================
@@ -83,7 +83,7 @@ export interface ManuscriptCharGuide {
   /** 表示テキスト（空文字列 = 数字非表示） */
   label: string
   /** 区切り罫線の線種。未指定 = 罫線なし。N文字目の「次」の境界を置き換える */
-  boundary?: LineStyle
+  boundary?: BorderLineStyle
   /** 区切り罫線の太さ（mm）。未指定 = 既定 */
   boundaryWidth?: number
   /** 破線のダッシュ長（線幅に対する倍率）。未指定 = 既定 */
@@ -193,13 +193,13 @@ export interface SpacingConfig {
 // =====================
 
 export interface BorderConfig {
-  outerBorder: LineStyle
-  majorDivider: LineStyle
-  subDivider: LineStyle
-  branchDivider: LineStyle
-  majorNumberDivider: LineStyle
-  subNumberDivider: LineStyle
-  branchNumberDivider: LineStyle
+  outerBorder: BorderLineStyle
+  majorDivider: BorderLineStyle
+  subDivider: BorderLineStyle
+  branchDivider: BorderLineStyle
+  majorNumberDivider: BorderLineStyle
+  subNumberDivider: BorderLineStyle
+  branchNumberDivider: BorderLineStyle
   outerBorderWidth?: number
   majorDividerWidth?: number
   subDividerWidth?: number
@@ -208,9 +208,9 @@ export interface BorderConfig {
   subNumberDividerWidth?: number
   branchNumberDividerWidth?: number
   /** 原稿用紙: 文字を区切る罫線（行方向＝字間）。既定 dashed */
-  manuscriptCharDivider?: LineStyle
+  manuscriptCharDivider?: BorderLineStyle
   /** 原稿用紙: 行を区切る罫線（行間）。既定 solid */
-  manuscriptLineDivider?: LineStyle
+  manuscriptLineDivider?: BorderLineStyle
   manuscriptCharDividerWidth?: number
   manuscriptLineDividerWidth?: number
   // 破線/点線のダッシュ長・間隔（いずれも線幅に対する倍率）。
@@ -265,7 +265,7 @@ export interface MultiColumnConfig {
   enabled: boolean
   columnCount: 2 | 3
   columnGapMm: number
-  dividerLine: LineStyle | null
+  dividerLine: BorderLineStyle | null
   dividerLineWidth: number
 }
 
@@ -285,7 +285,7 @@ export interface HeaderFieldDefinition {
   widthMm: number
   heightMm: number
   gridCount: number
-  lineStyle: LineStyle
+  lineStyle: BorderLineStyle
   lineWidth: number
   order: number
   /** label タイプのフォントサイズ (mm) */

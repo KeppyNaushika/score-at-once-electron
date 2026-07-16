@@ -115,11 +115,3 @@ export interface PendingChangePosition {
   pageNumber: number // 表示用（列 ExamPage から導出）
   studentName?: string // 表示用（行 ExamStudent から導出）
 }
-
-/**
- * 移動1件ごとの採点データ処理方針（view 方式B）。
- * - carry: 採点も追従（同一ページの生徒付け替えのみ可）
- * - discard: 採点を破棄（要再採点。ページ跨ぎは常にこれ）
- * バックエンド `applyStudentAnswerPlacements` の scorePolicy と一致させる。
- */
-export type PlacementScorePolicy = "carry" | "discard"

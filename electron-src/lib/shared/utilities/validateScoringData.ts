@@ -1,4 +1,4 @@
-import type { ScoringData } from "../types/exportTypes"
+import type { ScoringData } from "../types"
 
 /**
  * リゾルバの競合一覧を「生徒名 - 設問ラベル」の識別子に変換する

@@ -267,7 +267,7 @@ npm run lint
 
 ```
 /hooks/useExam.ts       // 複数画面で使用される試験管理
-/types/common.types.ts     // ExamData, StudentDataなど全体共通型
+/types/scoringStatus.types.ts  // ScoringStatus など renderer/electron 横断の共通型
 /lib/utils.ts              // 日付フォーマット、バリデーション等の汎用関数
 ```
 
@@ -286,7 +286,7 @@ npm run lint
 // 機能内配置の例
 /components/exams/06-answer-sheets/
 ├── hooks/useAnswerSheetUpload.ts     // 答案アップロード専用ロジック
-├── types/answer-sheet.types.ts       // PendingChange, ScoringDataOption等
+├── types.ts                          // PendingChange 等の機能内共有型
 └── utils/file-processing.ts          // ファイル変換・検証の専用関数
 ```
 
@@ -379,20 +379,20 @@ Prisma 型のうち renderer で扱いにくい一部（Decimal、SQLite に enu
 
 Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。
 
-| 型の種類     | 参照元                                   |
-| ------------ | ---------------------------------------- |
-| Prisma基本型 | `@prisma/client` から直接 import         |
-| Prisma拡張型 | `/types/prismaExtensions.ts` から import |
-| 共通型       | `/types/common.types.ts` から import     |
+| 型の種類       | 参照元                                                               |
+| -------------- | -------------------------------------------------------------------- |
+| Prisma基本型   | `@prisma/client` から直接 import                                     |
+| Prisma拡張型   | `/types/prismaExtensions.ts` から import                             |
+| 共通ドメイン型 | `/types/scoringStatus.types.ts` 等の `/types/*.types.ts` から import |
 
 ```typescript
 // ✅ OK: Main/Renderer両方で同じ型を参照
 // electron-src/ipc-handlers/exam-handlers.ts
-import type { ExamWithDetails } from "../../types/common.types"
-import type { StudentWithMemberships } from "../../types/prismaExtensions"
+import type { ScoringStatus } from "../../src/types/scoringStatus.types"
+import type { StudentWithMemberships } from "../../src/types/prismaExtensions"
 
 // components/exams/ExamList.tsx
-import type { ExamWithDetails } from "@/types/common.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 // ❌ NG: Main側とRenderer側で別々に型を定義
@@ -407,11 +407,11 @@ interface ExamData { ... }  // Renderer独自（微妙に違う可能性）
 
 ### 型定義の配置ルール
 
-| スコープ         | 配置場所                      | 例                                                   |
-| ---------------- | ----------------------------- | ---------------------------------------------------- |
-| 単一ファイル     | ファイル内で宣言              | Props型、ローカルな状態型                            |
-| 機能内で共有     | 機能ディレクトリの `types.ts` | `components/exams/07-score-at-once/types.ts`         |
-| アプリ全体で共有 | `/types/` ディレクトリ        | `types/common.types.ts`, `types/prismaExtensions.ts` |
+| スコープ         | 配置場所                                                                                                    | 例                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 単一ファイル     | ファイル内で宣言                                                                                            | Props型、ローカルな状態型                                 |
+| 機能内で共有     | 機能ディレクトリの `types.ts`（フラット単一ファイル。`types/index.ts`・`types/xxxTypes.ts` 形式は使わない） | `components/exams/07-score-at-once/types.ts`              |
+| アプリ全体で共有 | `/types/` ディレクトリ                                                                                      | `types/examArchive.types.ts`, `types/prismaExtensions.ts` |
 
 ### Prisma拡張型の管理
 
@@ -612,7 +612,7 @@ import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import { useExam } from "@/hooks/useExam"
-import type { ExamData } from "@/types/common.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { FeatureHeader } from "./components/FeatureHeader"
 import { useFeature } from "./hooks/useFeature"
@@ -646,11 +646,11 @@ import { something } from "../../../shared/utils" // → @/を使用
 
 ```typescript
 // ✅ 型のみのインポート
-import type { ExamData } from "@/types/common.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // ✅ 値と型の混在
 import { useExam } from "@/hooks/useExam"
-import type { ExamData } from "@/types/common.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // または
 import { useExam, type ExamData } from "@/hooks/useExam"

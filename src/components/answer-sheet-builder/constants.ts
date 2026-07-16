@@ -1,9 +1,9 @@
 import type {
   AnswerSheetDefinition,
+  BorderLineStyle,
   BranchQuestion,
   GlobalSettings,
   HeaderFieldDefinition,
-  LineStyle,
   MajorQuestion,
   ManuscriptGuidePosition,
   PaperSize,
@@ -15,9 +15,9 @@ import type {
 // =====================
 
 /** 行方向（字間）の罫線は破線が一般的 */
-export const DEFAULT_MANUSCRIPT_CHAR_DIVIDER: LineStyle = "dashed"
+export const DEFAULT_MANUSCRIPT_CHAR_DIVIDER: BorderLineStyle = "dashed"
 /** 行間（行の区切り）の罫線は実線 */
-export const DEFAULT_MANUSCRIPT_LINE_DIVIDER: LineStyle = "solid"
+export const DEFAULT_MANUSCRIPT_LINE_DIVIDER: BorderLineStyle = "solid"
 /** 原稿用紙マス罫線の太さ（mm）。輪転印刷でかすれないよう黒・実用太さ */
 export const DEFAULT_MANUSCRIPT_DIVIDER_WIDTH = 0.2
 /** 文字数ガイドの既定文字サイズ（1マス＝1とした相対値。マス比） */

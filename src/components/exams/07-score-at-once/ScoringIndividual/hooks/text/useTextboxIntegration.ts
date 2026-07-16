@@ -10,12 +10,10 @@ import {
   textBoxToDrawingElement,
 } from "@/lib/textbox-canvas/coordinateConversion"
 import type { TextBox } from "@/lib/textbox-canvas/types"
+import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
-import type {
-  AnchorDirection,
-  DrawingElement,
-} from "../../types/answerIndividualTypes"
+import type { DrawingElement } from "../../types"
 
 interface UseTextboxV4IntegrationProps {
   /** Canvas/画像の幅（px） */

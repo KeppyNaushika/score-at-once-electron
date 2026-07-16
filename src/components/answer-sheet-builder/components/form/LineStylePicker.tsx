@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 import type {
   BorderConfig,
-  LineStyle,
+  BorderLineStyle,
 } from "@/types/answerSheetDefinition.types"
 
 import { DEFAULT_DASH_RATIO, DEFAULT_GAP_RATIO } from "../../constants"
@@ -16,7 +16,7 @@ interface LineStylePickerProps {
   onUpdate: (config: Partial<BorderConfig>) => void
 }
 
-const LINE_STYLES: { value: LineStyle; title: string }[] = [
+const LINE_STYLES: { value: BorderLineStyle; title: string }[] = [
   { value: "solid", title: "実線" },
   { value: "dashed", title: "破線" },
   { value: "dotted", title: "点線" },
@@ -32,7 +32,7 @@ interface BorderField {
   label: string
   defaultWidth: number
   /** 値未設定時に選択表示する線種（任意フィールド用） */
-  defaultStyle?: LineStyle
+  defaultStyle?: BorderLineStyle
 }
 
 const DIVIDER_FIELDS: BorderField[] = [
@@ -118,7 +118,7 @@ const NUMBER_FIELDS: BorderField[] = [
   },
 ]
 
-function LineIcon({ style }: { style: LineStyle }) {
+function LineIcon({ style }: { style: BorderLineStyle }) {
   const sw = 1.5
   const lineLen = 18 // x2 - x1 = 19 - 1
 
@@ -236,7 +236,7 @@ function BorderFieldRow({
   const width =
     (borderConfig[field.widthKey] as number | undefined) ?? field.defaultWidth
   const activeStyle =
-    (borderConfig[field.styleKey] as LineStyle | undefined) ??
+    (borderConfig[field.styleKey] as BorderLineStyle | undefined) ??
     field.defaultStyle
   const dashRatio =
     (borderConfig[field.dashRatioKey] as number | undefined) ??
@@ -265,7 +265,9 @@ function BorderFieldRow({
                   : "text-muted-foreground"
               )}
               onClick={() =>
-                onUpdate({ [field.styleKey]: lineStyle.value as LineStyle })
+                onUpdate({
+                  [field.styleKey]: lineStyle.value as BorderLineStyle,
+                })
               }
             >
               <LineIcon style={lineStyle.value} />

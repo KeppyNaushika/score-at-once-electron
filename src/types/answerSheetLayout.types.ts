@@ -6,10 +6,10 @@
  */
 
 import type {
+  BorderLineStyle,
   BranchQuestion,
   CellImageElement,
   CellTextElement,
-  LineStyle,
   MajorNumberDisplayMode,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
@@ -52,11 +52,11 @@ export interface ManuscriptGrid {
   /** 縦書き（縦組み・右→左）か。false = 横書き */
   vertical: boolean
   /** 文字を区切る罫線（行方向＝字間）の線種 */
-  charDividerStyle: LineStyle
+  charDividerStyle: BorderLineStyle
   /** 文字を区切る罫線の太さ（mm） */
   charDividerWidth: number
   /** 行を区切る罫線（行間）の線種 */
-  lineDividerStyle: LineStyle
+  lineDividerStyle: BorderLineStyle
   /** 行を区切る罫線の太さ（mm） */
   lineDividerWidth: number
   /** 文字数ガイド（先頭からN文字目のマスに表示） */
@@ -128,7 +128,7 @@ export interface ComputedLine {
   y1: number
   x2: number
   y2: number
-  style: LineStyle
+  style: BorderLineStyle
   /** 線幅 (mm) */
   strokeWidth?: number
   /** 線種: outer / major / sub / branch / numberColumn / subHorizontalDivider */
@@ -167,7 +167,7 @@ export interface ComputedHeaderField {
   width: number
   height: number
   gridCount: number
-  lineStyle: LineStyle
+  lineStyle: BorderLineStyle
   lineWidth: number
   gridCellWidthMm?: number
   /** label タイプのフォントサイズ (mm) */

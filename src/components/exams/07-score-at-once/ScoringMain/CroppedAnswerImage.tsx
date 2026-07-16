@@ -6,7 +6,7 @@ import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once
 import { PAPER_DIMENSIONS } from "@/lib/paperSize"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
-import type { DrawingElement } from "../ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingElement } from "../ScoringIndividual/types"
 import { renderTextElementV4 } from "../ScoringIndividual/utils/canvasTextRendererV4"
 
 /**

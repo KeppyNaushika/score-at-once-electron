@@ -2,7 +2,7 @@ import * as ExcelJS from "exceljs"
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
-import { ScoringData } from "../../shared/types/exportTypes"
+import { ScoringData } from "../../shared/types"
 import {
   applyCellStyle,
   getExcelColumnLetter,

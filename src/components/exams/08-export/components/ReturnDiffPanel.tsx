@@ -3,7 +3,7 @@
 import { ArrowRight, FileCheck, Filter, PencilLine } from "lucide-react"
 import { useState } from "react"
 
-import type { Student } from "@/app/exams/[examId]/08-export/types"
+import type { Student } from "@/components/exams/08-export/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

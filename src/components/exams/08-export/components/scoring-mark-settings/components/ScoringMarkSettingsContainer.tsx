@@ -17,7 +17,7 @@ import type {
   ScoreTextConfig,
   ScoringMarkConfig,
   TextAlignment,
-} from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+} from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import { Button } from "@/components/ui/button"
 import { InlineColorPicker } from "@/components/ui/color-picker"
 import { Input } from "@/components/ui/input"

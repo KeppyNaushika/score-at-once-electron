@@ -12,7 +12,7 @@ import {
 
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
 import { defaultConfig as defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { DrawingToolPalette } from "./DrawingToolPalette"
@@ -29,7 +29,7 @@ import {
   useZoomAndScroll,
 } from "./hooks/view"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
-import type { AnswerIndividualViewProps } from "./types/answerIndividualTypes"
+import type { AnswerIndividualViewProps } from "./types"
 
 export default function AnswerIndividualView({
   scoringDatas,

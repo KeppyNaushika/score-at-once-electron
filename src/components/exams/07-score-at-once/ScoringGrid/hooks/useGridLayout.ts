@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react"
 
-import type { GridAnswerItem } from "@/components/exams/07-score-at-once/ScoringGrid/types/gridTypes"
+import type { GridAnswerItem } from "@/components/exams/07-score-at-once/ScoringGrid/types"
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 
 interface UseGridLayoutProps {

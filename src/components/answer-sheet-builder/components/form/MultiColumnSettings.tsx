@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import type {
+  BorderLineStyle,
   GlobalSettings,
-  LineStyle,
   MultiColumnConfig,
 } from "@/types/answerSheetDefinition.types"
 
@@ -83,7 +83,7 @@ export function MultiColumnSettings({
               value={multiColumn.dividerLine ?? "none"}
               onValueChange={(v) =>
                 update({
-                  dividerLine: v === "none" ? null : (v as LineStyle),
+                  dividerLine: v === "none" ? null : (v as BorderLineStyle),
                 })
               }
             >

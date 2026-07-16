@@ -55,7 +55,7 @@ export function createExportApi() {
         options: import("../lib/export/individual-report").IndividualReportOptions
         studentPlacements?: Record<
           string,
-          import("../lib/shared/types/exportTypes").StudentExportPlacement
+          import("../lib/shared/types").StudentExportPlacement
         >
       }) => ipcRenderer.invoke("export:getIndividualReportData", options),
       getSubtotalGroupsForReport: (examId: string) =>
@@ -91,7 +91,7 @@ export function createExportApi() {
         selectedStudentIds: string[]
         studentPlacements?: Record<
           string,
-          import("../lib/shared/types/exportTypes").StudentExportPlacement
+          import("../lib/shared/types").StudentExportPlacement
         >
       }) => ipcRenderer.invoke("export:getExcelPreviewData", options),
       // 印刷ダイアログを開く
@@ -118,7 +118,7 @@ export function createExportApi() {
       outputPath?: string
       studentPlacements?: Record<
         string,
-        import("../lib/shared/types/exportTypes").StudentExportPlacement
+        import("../lib/shared/types").StudentExportPlacement
       >
     }) => ipcRenderer.invoke("export-grading-data-excel", options),
 

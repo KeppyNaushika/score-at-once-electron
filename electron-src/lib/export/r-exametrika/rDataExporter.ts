@@ -8,7 +8,7 @@
 import { dialog } from "electron"
 import * as fs from "fs/promises"
 
-import type { ExportResult } from "../../shared/types/exportTypes"
+import type { ExportResult } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
 
 export interface ExportRDataOptions {

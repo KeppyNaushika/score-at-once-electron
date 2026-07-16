@@ -4,11 +4,12 @@ import type {
   SubtotalGroupsForReportResult,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ExportRDataOptions } from "@/electron-src/lib/export/r-exametrika/rDataExporter"
+import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 import type {
   CaptureReturnSnapshotResult,
   ReturnDiffResult,
 } from "@/electron-src/lib/prisma/returnSnapshot"
-import type { StudentExportPlacement } from "@/electron-src/lib/shared/types/exportTypes"
+import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -41,71 +42,7 @@ export interface ExportAPI {
     }) => Promise<{
       success: boolean
       examName?: string
-      pages?: Array<{
-        studentId: string
-        studentName: string
-        pageNumber: number
-        imagePath: string
-        imageUrl: string
-        pageSize: string
-        scoringData: Array<{
-          questionScoreId: string
-          status: string
-          partialScore: number | null
-          cropRegion: {
-            id: string
-            x: number
-            y: number
-            width: number
-            height: number
-            label: string
-            maxScore: number | null
-            pageNumber: number
-          }
-        }>
-        subtotalData: Array<{
-          regionId: string
-          label: string
-          score: number | null
-          x: number
-          y: number
-          width: number
-          height: number
-          pageNumber: number
-        }>
-        totalScoreData: Array<{
-          regionId: string
-          score: number | null
-          maxScore: number
-          x: number
-          y: number
-          width: number
-          height: number
-          pageNumber: number
-        }>
-        totalScore: number | null
-        totalMaxScore: number | null
-        annotations: Array<{
-          id: string
-          questionScoreId: string
-          type: string
-          x: number
-          y: number
-          color: string
-          strokeWidth: number
-          width: number
-          height: number
-          endX: number
-          endY: number
-          lineStyle: string
-          text: string
-          fontSize: number
-          displayX: number
-          displayY: number
-          anchorDirection: string
-          userId: string
-        }>
-      }>
+      pages?: PdfExportPageData[]
       error?: string
     }>
 

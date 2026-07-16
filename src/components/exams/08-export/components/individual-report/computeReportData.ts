@@ -15,7 +15,7 @@ import {
   rank,
   stdDev,
 } from "@/electron-src/lib/shared/calculations/numericStats"
-import type { SubtotalScore } from "@/electron-src/lib/shared/types/exportTypes"
+import type { SubtotalScore } from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 /** 受験状態フィルタ */

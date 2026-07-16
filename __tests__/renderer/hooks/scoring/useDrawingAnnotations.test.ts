@@ -13,7 +13,7 @@ import {
   type DrawingPersistenceCallbacks,
   useDrawingAnnotations,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useDrawingAnnotations"
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {

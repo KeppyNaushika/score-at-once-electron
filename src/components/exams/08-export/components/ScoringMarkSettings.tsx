@@ -1,7 +1,7 @@
 "use client"
 
 import { ScoringMarkSettingsContainer } from "@/components/exams/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 
 // Re-export types for backward compatibility
 export {
@@ -16,7 +16,7 @@ export type {
   ScoreTextConfig,
   ScoringMarkConfig,
   TextAlignment,
-} from "@/components/exams/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+} from "@/components/exams/08-export/components/scoring-mark-settings/types"
 
 interface ScoringMarkSettingsProps {
   config: ScoringMarkConfig

@@ -14,8 +14,8 @@
 
 import { useEffect } from "react"
 
-import type { ScoringContextState } from "../ScoringMain/contexts/shortcutContext.types"
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
+import type { ScoringContextState } from "../types"
 
 /**
  * コンテキスト値を設定するフック

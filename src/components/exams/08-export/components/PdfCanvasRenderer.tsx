@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type {
   RenderedPageData,
   RenderProgress,
-} from "@/app/exams/[examId]/08-export/types"
+} from "@/components/exams/08-export/types"
+import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {
@@ -16,79 +17,6 @@ import {
   type SubtotalDataForPdf,
   type TotalScoreDataForPdf,
 } from "../utils/pdfCanvasRenderer"
-
-/**
- * PDF出力ページデータ
- */
-export interface PdfExportPageData {
-  studentId: string
-  studentName: string
-  pageNumber: number
-  imagePath: string
-  imageUrl: string
-  /** 用紙サイズ（mm→px変換基準。個別表示と一致させるため getPdfExportData が付与） */
-  pageSize: string
-  scoringData: Array<{
-    questionScoreId: string
-    status: string
-    partialScore: number | null
-    cropRegion: {
-      id: string
-      x: number
-      y: number
-      width: number
-      height: number
-      label: string
-      maxScore: number | null
-      pageNumber: number
-    }
-  }>
-  // 小計点データ
-  subtotalData?: Array<{
-    regionId: string
-    label: string
-    score: number | null
-    x: number
-    y: number
-    width: number
-    height: number
-    pageNumber: number
-  }>
-  // 合計点領域データ
-  totalScoreData?: Array<{
-    regionId: string
-    score: number | null
-    maxScore: number
-    x: number
-    y: number
-    width: number
-    height: number
-    pageNumber: number
-  }>
-  // 合計点データ（後方互換性のため維持）
-  totalScore?: number | null
-  totalMaxScore?: number | null
-  annotations: Array<{
-    id: string
-    questionScoreId: string
-    type: string
-    x: number
-    y: number
-    color: string
-    strokeWidth: number
-    width: number
-    height: number
-    endX: number
-    endY: number
-    lineStyle: string
-    text: string
-    fontSize: number
-    displayX: number
-    displayY: number
-    anchorDirection: string
-    userId: string
-  }>
-}
 
 /** Canvas Pool のアイテム */
 interface CanvasPoolItem {

@@ -6,7 +6,7 @@ import type {
   AddPanelClassroomItem,
   AddPanelStudentItem,
   StudentAddPanelAdapter,
-} from "@/components/common/student-add-panel/types/studentAddPanelTypes"
+} from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
 
 interface SelectableClassroom extends AddPanelClassroomItem {
