@@ -5,8 +5,6 @@
  *   （ログ欠落 < 主操作の失敗）。アクション定義は auditActions.ts を参照。
  */
 
-import type { PrismaClient } from "@prisma/client"
-
 import {
   type AuditActionKey,
   buildAuditSummary,
@@ -14,8 +12,7 @@ import {
 } from "./auditActions"
 import { getCurrentActorUserId } from "./auditActor"
 import prisma from "./client"
-
-type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0]
+import type { Tx } from "./transactionClient"
 
 /** 単一フィールドの変更（before→after 差分） */
 export interface AuditChange {

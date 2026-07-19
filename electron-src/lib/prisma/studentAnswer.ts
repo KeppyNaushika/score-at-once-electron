@@ -15,11 +15,13 @@ export {
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
+  getStudentAnswerScoreSummary,
   getStudentAnswersDataset,
   type PlacementScorePolicy,
   // ステータス管理
   setStudentAnswerAbsent,
   type StudentAnswerPlacementMove,
+  type StudentAnswerScoreSummary,
   // CRUD操作
   uploadStudentAnswers,
 } from "./studentAnswer/index"

@@ -192,6 +192,81 @@ describe("applyStudentAnswerPlacements", () => {
     expect(annotations).toHaveLength(0)
   })
 
+  it("複合回答の採点も carry で追従し、discard で破棄される", async () => {
+    const { studentA, studentB, page1, page2, image } = await buildSimpleExam()
+    const user = await testPrisma.user.findFirstOrThrow()
+
+    const compoundAnswer = await testPrisma.compoundAnswer.create({
+      data: {
+        id: crypto.randomUUID(),
+        examPageId: page1.id,
+        label: "アイ",
+        answerFormat: "multi-digit",
+        correctAnswer: "42",
+        points: 5,
+      },
+    })
+    const compoundScoreA = await testPrisma.compoundAnswerScore.create({
+      data: {
+        id: crypto.randomUUID(),
+        compoundAnswerId: compoundAnswer.id,
+        studentId: studentA.id,
+        userId: user.id,
+        status: "correct",
+        recognizedAnswer: "42",
+      },
+    })
+
+    // 同一ページで A → B へ carry（B 側に複合採点は無いので単独移動）
+    const carried = await applyStudentAnswerPlacements([
+      {
+        fileId: image(page1.id, studentA.id).id,
+        finalStudentId: studentB.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "carry",
+      },
+      {
+        fileId: image(page1.id, studentB.id).id,
+        finalStudentId: studentA.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "carry",
+      },
+    ])
+    expect(carried.success).toBe(true)
+
+    // 複合採点が B へ追従（unique 違反を起こさず1件のまま）
+    const afterCarry = await testPrisma.compoundAnswerScore.findMany({
+      where: { compoundAnswerId: compoundAnswer.id },
+    })
+    expect(afterCarry).toHaveLength(1)
+    expect(afterCarry[0].studentId).toBe(studentB.id)
+    expect(afterCarry[0].recognizedAnswer).toBe("42")
+    expect(afterCarry[0].id).toBe(compoundScoreA.id)
+
+    // ページ跨ぎ（discard）で複合採点は破棄される。
+    // carry 後この画像は B のもの。p2×B と入れ替える形で p1→p2 へ動かす。
+    const discarded = await applyStudentAnswerPlacements([
+      {
+        fileId: image(page1.id, studentA.id).id,
+        finalStudentId: studentB.id,
+        finalExamPageId: page2.id,
+        scorePolicy: "discard",
+      },
+      {
+        fileId: image(page2.id, studentB.id).id,
+        finalStudentId: studentB.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "discard",
+      },
+    ])
+    expect(discarded.success).toBe(true)
+    expect(
+      await testPrisma.compoundAnswerScore.count({
+        where: { compoundAnswerId: compoundAnswer.id },
+      })
+    ).toBe(0)
+  })
+
   it("② ページ跨ぎ移動(discard): examPageId が更新され、移動元ページの採点が破棄される", async () => {
     const { studentA, page1, page2, region1, region2, image, score } =
       await buildSimpleExam()
@@ -264,7 +339,8 @@ describe("applyStudentAnswerPlacements", () => {
     const { studentA, studentB, page1, region1, image } =
       await buildSimpleExam()
 
-    // B の p1 画像を削除（採点は孤立して残る = deleteStudentAnswer 相当）。
+    // B の p1 画像だけを直接削除し、採点を孤立させる（deleteStudentAnswer は採点も
+    // 消すので、ここでは孤立状態を作るために低レベル API を使う）。
     // これで移動先 (p1,B) は空マスになり、B は r1 に孤立採点だけを持つ。
     await testPrisma.studentAnswerImage.delete({
       where: { id: image(page1.id, studentB.id).id },

@@ -21,7 +21,6 @@ interface DraggableAnswerCellProps {
   // 生徒・ページは実体のまま受け取る（座標 droppable の examPageId・削除確認の氏名/ページ表示に使う）
   examStudent: ExamStudentWithMemberships
   examPage: ExamPageColumn
-  hasScoreData?: boolean
   onDelete: () => void
   children: React.ReactNode
 }
@@ -38,7 +37,6 @@ export function DraggableAnswerCell({
   fileId,
   examStudent,
   examPage,
-  hasScoreData = false,
   onDelete,
   children,
 }: DraggableAnswerCellProps) {
@@ -92,9 +90,9 @@ export function DraggableAnswerCell({
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={onDelete}
+        fileId={fileId}
         studentName={studentName}
         pageNumber={examPage.pageNumber}
-        hasScoreData={hasScoreData}
       />
     </TableCell>
   )

@@ -21,6 +21,7 @@ import {
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
+  getStudentAnswerScoreSummary,
   getStudentAnswersDataset,
   setStudentAnswerAbsent,
   type StudentAnswerPlacementMove,
@@ -135,6 +136,14 @@ export function setupMiscHandlers(): void {
       examPages: result.examPages,
     }
   })
+
+  // 削除確認モーダルで「何が消えるか」を提示するための事前照会
+  registerSafeHandler(
+    "get-answer-sheet-score-summary",
+    async (answerSheetId: string) => {
+      return await getStudentAnswerScoreSummary(answerSheetId)
+    }
+  )
 
   registerHandler("delete-answer-sheet", async (answerSheetId: string) => {
     return await deleteStudentAnswer(answerSheetId)

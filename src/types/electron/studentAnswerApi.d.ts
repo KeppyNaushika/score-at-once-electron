@@ -1,3 +1,4 @@
+import type { StudentAnswerScoreSummary } from "@/electron-src/lib/prisma/studentAnswer/crud"
 import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
 
 import type {
@@ -47,8 +48,16 @@ export interface StudentAnswerAPI {
     | ({ success: true } & StudentAnswersDataset)
     | { success: false; error?: string }
   >
+  getStudentAnswerScoreSummary: (
+    studentAnswerId: string
+  ) => Promise<
+    | { success: true; summary: StudentAnswerScoreSummary }
+    | { success: false; error?: string }
+  >
   deleteStudentAnswer: (studentAnswerId: string) => Promise<{
     success: boolean
+    /** 削除直前に数えた採点実績（削除確認モーダルと同じ定義） */
+    deletedSummary?: StudentAnswerScoreSummary
     error?: string
   }>
   associateStudentAnswerWithStudent: (

@@ -20,6 +20,8 @@ export function createAnswerSheetApi() {
       ipcRenderer.invoke("get-answer-sheets-by-exam-id", examId),
     getStudentAnswersDataset: (examId: string) =>
       ipcRenderer.invoke("get-student-answers-dataset", examId),
+    getStudentAnswerScoreSummary: (answerSheetId: string) =>
+      ipcRenderer.invoke("get-answer-sheet-score-summary", answerSheetId),
     deleteStudentAnswer: (answerSheetId: string) =>
       ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
     associateStudentAnswerWithStudent: (

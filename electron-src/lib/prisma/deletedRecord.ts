@@ -3,11 +3,8 @@
  * @description 物理削除されたレコードの追跡。インポート時の復活防止およびsqlite-nas-sync連携用。
  */
 
-import type { PrismaClient } from "@prisma/client"
-
 import prisma from "./client"
-
-type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0]
+import type { Tx } from "./transactionClient"
 
 interface RecordDeletionOptions {
   userId?: string

@@ -198,7 +198,6 @@ export function AnswerTableShell({
         fileId={slot.fileId}
         examStudent={slot.examStudent}
         examPage={slot.examPage}
-        hasScoreData
         onDelete={slot.onDelete}
       >
         {slot.children}

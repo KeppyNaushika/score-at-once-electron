@@ -34,6 +34,20 @@ export function useBatchScoring({
   const questionScoresRef = useRef(questionScores)
   questionScoresRef.current = questionScores
 
+  /** 採点行を画面状態から取り除く（ref も同期してループ中の次反復に反映させる） */
+  const removeScoreFromState = useCallback(
+    (scoreId: string) => {
+      setQuestionScores((prev) =>
+        prev.filter((questionScore) => questionScore.id !== scoreId)
+      )
+      questionScoresRef.current = questionScoresRef.current.filter(
+        (questionScore) => questionScore.id !== scoreId
+      )
+    },
+    [setQuestionScores]
+  )
+
+  /** 楽観更新を DB の実値へ戻す。行ごと消えていた場合は画面からも取り除く。 */
   const rollbackUpdate = useCallback(
     async (scoreId: string) => {
       try {
@@ -55,13 +69,22 @@ export function useBatchScoring({
                 : questionScore
             )
           )
+          toast.error("採点の保存に失敗しました")
+          return
         }
+
+        // DB に無い＝他の教員が答案ごと削除した。楽観更新を残すと「保存済み」に
+        // 見えてしまうので画面からも消し、原因が分かる文言を出す。
+        removeScoreFromState(scoreId)
+        toast.error(
+          "この答案は削除されたため採点を保存できません（Shift+R で再読み込みしてください）"
+        )
       } catch {
         // ロールバック自体が失敗 → Shift+Rでの再読み込みに委ねる
+        toast.error("採点の保存に失敗しました")
       }
-      toast.error("採点の保存に失敗しました")
     },
-    [setQuestionScores]
+    [removeScoreFromState, setQuestionScores]
   )
 
   const rollbackCreate = useCallback(
@@ -235,6 +258,12 @@ export function useBatchScoring({
                       : questionScore
                   )
                 )
+              } else if (result.reason === "target-deleted") {
+                // 他の教員が答案ごと削除した。再照会しても無いので即座に取り除く。
+                removeScoreFromState(scoreId)
+                toast.error(
+                  "この答案は削除されたため採点を保存できません（Shift+R で再読み込みしてください）"
+                )
               } else {
                 // DB保存失敗 → ロールバック
                 rollbackUpdate(scoreId)
@@ -310,6 +339,7 @@ export function useBatchScoring({
       currentCropRegionId,
       studentAnswerImages,
       setQuestionScores,
+      removeScoreFromState,
       rollbackUpdate,
       rollbackCreate,
     ]
