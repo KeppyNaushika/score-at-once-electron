@@ -260,21 +260,20 @@ export async function updateStudentOrders(
   studentOrders: { studentId: string; customOrder: number }[]
 ) {
   try {
-    // 各生徒の並び順を更新
-    for (const { studentId, customOrder } of studentOrders) {
-      // customOrderが-1の場合はnullにリセット（デフォルト順序）
-      const orderValue = customOrder === -1 ? null : customOrder
-
-      await prisma.examStudent.updateMany({
-        where: {
-          examId,
-          studentId,
-        },
-        data: {
-          customOrder: orderValue,
-        },
-      })
-    }
+    // 各生徒の並び順を単一トランザクションで更新
+    await prisma.$transaction(
+      studentOrders.map(({ studentId, customOrder }) =>
+        prisma.examStudent.updateMany({
+          where: {
+            examId,
+            studentId,
+          },
+          data: {
+            customOrder,
+          },
+        })
+      )
+    )
 
     const scope = await resolveExamScope(examId)
     await recordAuditLog({

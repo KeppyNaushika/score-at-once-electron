@@ -22,7 +22,7 @@ function compareByCustomOrder(rowA: RosterRow, rowB: RosterRow): number {
   return compareByDefault(rowA, rowB)
 }
 
-/** 学級順→出席番号順（デフォルト順） */
+/** 学級順→出席番号順（デフォルト順）。同順位はふりがな→生徒番号で決定的に順序付ける */
 function compareByDefault(rowA: RosterRow, rowB: RosterRow): number {
   const rowAClassroomOrder = rowA.classroomInfo.classroomOrder ?? 99999
   const rowBClassroomOrder = rowB.classroomInfo.classroomOrder ?? 99999
@@ -31,10 +31,17 @@ function compareByDefault(rowA: RosterRow, rowB: RosterRow): number {
   }
   const rowAAttendance = rowA.classroomInfo.attendanceNumber ?? 99999
   const rowBAttendance = rowB.classroomInfo.attendanceNumber ?? 99999
-  return rowAAttendance - rowBAttendance
+  if (rowAAttendance !== rowBAttendance) {
+    return rowAAttendance - rowBAttendance
+  }
+  const kanaComparison = rowA.kana.localeCompare(rowB.kana, "ja")
+  if (kanaComparison !== 0) return kanaComparison
+  return rowA.studentNumber.localeCompare(rowB.studentNumber, "ja")
 }
 
 interface UseRosterTableParams {
+  /** 全対象の行（フィルタ未適用。順序リセットはこちらを対象にする） */
+  allRows: RosterRow[]
   /** 表示対象（フィルタ適用済み）の行 */
   filteredRows: RosterRow[]
   /** 選択中の studentId 集合（制御） */
@@ -55,6 +62,7 @@ interface UseRosterTableParams {
  * 試験名簿の挙動（複数選択ドラッグ・Shift範囲選択・学級順リセット）を踏襲する。
  */
 export function useRosterTable({
+  allRows,
   filteredRows,
   selectedIds,
   onSelectionChange,
@@ -177,15 +185,17 @@ export function useRosterTable({
     [onSelectAll]
   )
 
-  // リセット（学級順→出席番号順で customOrder を振り直す）
+  // リセット（学級順→出席番号順で customOrder を振り直す。
+  // 表示中の行だけでなく全対象を振り直さないと、フィルタ適用中のリセットで
+  // 非表示行の旧 customOrder と衝突して並びが壊れる）
   const handleResetOrder = useCallback(async () => {
-    const defaultSorted = [...sortedRows].sort(compareByDefault)
+    const defaultSorted = [...allRows].sort(compareByDefault)
     const newOrders = defaultSorted.map((row, index) => ({
       studentId: row.id,
       customOrder: index,
     }))
     await onOrderUpdate(newOrders)
-  }, [sortedRows, onOrderUpdate])
+  }, [allRows, onOrderUpdate])
 
   const activeRow = useMemo(
     () =>

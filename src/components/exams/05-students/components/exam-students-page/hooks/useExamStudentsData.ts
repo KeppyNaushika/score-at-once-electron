@@ -55,7 +55,17 @@ function compareExamStudents(
 
     const attendanceA = placementA?.attendanceNumber ?? 99999
     const attendanceB = placementB?.attendanceNumber ?? 99999
-    return attendanceA - attendanceB
+    if (attendanceA !== attendanceB) return attendanceA - attendanceB
+
+    // 同順位はふりがな→生徒番号で決定的に順序付ける
+    const kanaA = `${examStudentA.student.lastNameKana} ${examStudentA.student.firstNameKana}`
+    const kanaB = `${examStudentB.student.lastNameKana} ${examStudentB.student.firstNameKana}`
+    const kanaComparison = kanaA.localeCompare(kanaB, "ja")
+    if (kanaComparison !== 0) return kanaComparison
+    return examStudentA.student.studentNumber.localeCompare(
+      examStudentB.student.studentNumber,
+      "ja"
+    )
   }
 }
 
