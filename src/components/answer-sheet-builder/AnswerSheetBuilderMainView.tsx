@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, FolderOpen, Redo2, Undo2 } from "lucide-react"
+import { ArrowLeft, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -15,7 +15,6 @@ import { useAuth } from "@/contexts/AuthContext"
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
 
 import { countAsbQuestions } from "./answerSheetStats"
-import { ExamIntegrationDialog } from "./components/export/ExamIntegrationDialog"
 import { GlobalSettingsForm } from "./components/form/GlobalSettingsForm"
 import { HeaderFieldEditor } from "./components/form/HeaderFieldEditor"
 import { LineStylePicker } from "./components/form/LineStylePicker"
@@ -113,8 +112,6 @@ export function AnswerSheetBuilderMainView({
 
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
-  const [examDialogOpen, setExamDialogOpen] = useState(false)
-
   // 問題統計（設問数はレイアウトの解答セル数、合計配点は定義から集計）
   const allCells = multiPageLayout.pages.flatMap((page) => page.cells)
   const totalQuestions = allCells.filter(
@@ -181,16 +178,6 @@ export function AnswerSheetBuilderMainView({
             title="やり直し (Ctrl+Shift+Z)"
           >
             <Redo2 className="h-3.5 w-3.5" />
-          </Button>
-          <Separator orientation="vertical" className="mx-1 h-5 self-center" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => setExamDialogOpen(true)}
-          >
-            <FolderOpen className="mr-1 h-3 w-3" />
-            変換
           </Button>
         </div>
 
@@ -333,15 +320,6 @@ export function AnswerSheetBuilderMainView({
           borderConfig={definition.settings.borderConfig}
         />
       </div>
-
-      {/* ダイアログ */}
-      <ExamIntegrationDialog
-        open={examDialogOpen}
-        onOpenChange={setExamDialogOpen}
-        definition={definition}
-        totalQuestions={totalQuestions}
-        totalPoints={totalPoints}
-      />
     </div>
   )
 }
