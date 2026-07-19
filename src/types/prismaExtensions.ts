@@ -171,6 +171,7 @@ export type ExamForDetail = Prisma.ExamGetPayload<{
     examTags: {
       select: { tag: { select: { id: true; name: true; color: true } } }
     }
+    gradeDataSources: { select: { id: true } }
   }
 }> & {
   /** IPCハンドラーで平坦化されるcropRegions（進捗計算用・スコアは軽量／partialScore は number にシリアライズ済み） */

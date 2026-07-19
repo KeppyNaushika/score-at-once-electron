@@ -1,5 +1,7 @@
 import type { Prisma as PrismaTypes } from "@prisma/client"
+import * as fs from "fs/promises"
 
+import { getExamDirectory } from "../dataManager"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { examPageWithContentInclude } from "./examPage"
@@ -127,6 +129,10 @@ export const getExamById = async (id: string) => {
           },
         },
         orderBy: { tag: { order: "asc" } },
+      },
+      // 試験削除時に参照を失う（examIdがSetNull・cropRegion経由はcascade削除）成績データソース
+      gradeDataSources: {
+        select: { id: true },
       },
     },
   })
@@ -260,7 +266,7 @@ export const updateExam = async (
   return exam
 }
 
-/** 試験を削除する */
+/** 試験を削除する（DBレコードのcascade削除に加え、画像ファイルのディレクトリも削除する） */
 export const deleteExam = async (id: string) => {
   const before = await prisma.exam.findUnique({
     where: { id },
@@ -270,6 +276,14 @@ export const deleteExam = async (id: string) => {
   const exam = await prisma.exam.delete({
     where: { id },
   })
+
+  // 模範解答・答案の画像はDBのcascadeでは消えないため、試験ディレクトリごと削除する。
+  // ファイル削除の失敗で試験削除自体を巻き戻さない（DBは既に削除済み）。
+  try {
+    await fs.rm(getExamDirectory(id), { recursive: true, force: true })
+  } catch (fileError) {
+    console.warn(`Failed to delete exam directory for ${id}:`, fileError)
+  }
 
   await recordAuditLog({
     action: "exam.delete",

@@ -38,6 +38,7 @@ export default function ExamDetailPage() {
     modelAnswerCount,
     answerSheetCount,
     cropRegionCount,
+    gradeDataSourceCount,
     updateExam,
   } = useExamDetail(examId)
 
@@ -196,6 +197,10 @@ export default function ExamDetailPage() {
           {exam && (
             <DeleteExamModal
               exam={exam}
+              masterImageCount={modelAnswerCount}
+              answerSheetCount={answerSheetCount}
+              cropRegionCount={cropRegionCount}
+              gradeDataSourceCount={gradeDataSourceCount}
               open={showDeleteModal}
               onOpenChange={setShowDeleteModal}
               onExamDeleted={handleExamDeleted}
