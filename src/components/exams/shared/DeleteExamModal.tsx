@@ -1,18 +1,21 @@
 "use client"
 
-import { Exam } from "@prisma/client"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
+import type { ExamForDetail } from "@/types/prismaExtensions"
 
 interface DeleteExamModalProps {
-  exam: Exam & {
-    masterImages?: unknown[]
-    answerSheets?: unknown[]
-    cropRegions?: unknown[]
-    examTags?: { tag: { id: string; name: string } }[]
-  }
+  exam: ExamForDetail
+  /** 模範解答画像の件数（useExamDetailで集計） */
+  masterImageCount: number
+  /** 答案画像の件数（useExamDetailで集計） */
+  answerSheetCount: number
+  /** 採点領域の件数（useExamDetailで集計） */
+  cropRegionCount: number
+  /** この試験を参照している成績データソースの件数 */
+  gradeDataSourceCount: number
   open: boolean
   onOpenChange: (open: boolean) => void
   onExamDeleted: () => void
@@ -20,30 +23,15 @@ interface DeleteExamModalProps {
 
 export default function DeleteExamModal({
   exam,
+  masterImageCount,
+  answerSheetCount,
+  cropRegionCount,
+  gradeDataSourceCount,
   open,
   onOpenChange,
   onExamDeleted,
 }: DeleteExamModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [examData, setExamData] = useState<{
-    masterImageCount: number
-    answerSheetCount: number
-    cropRegionCount: number
-  }>({
-    masterImageCount: 0,
-    answerSheetCount: 0,
-    cropRegionCount: 0,
-  })
-
-  useEffect(() => {
-    if (exam) {
-      setExamData({
-        masterImageCount: exam.masterImages?.length || 0,
-        answerSheetCount: exam.answerSheets?.length || 0,
-        cropRegionCount: exam.cropRegions?.length || 0,
-      })
-    }
-  }, [exam])
 
   const handleDelete = async () => {
     if (!exam) return
@@ -62,10 +50,15 @@ export default function DeleteExamModal({
     }
   }
 
-  const hasData =
-    examData.masterImageCount > 0 ||
-    examData.answerSheetCount > 0 ||
-    examData.cropRegionCount > 0
+  const deletedDataLabels = [
+    { label: "模範解答", count: masterImageCount },
+    { label: "採点領域", count: cropRegionCount },
+    { label: "答案", count: answerSheetCount },
+  ]
+    .filter((entry) => entry.count > 0)
+    .map((entry) => `${entry.label}${entry.count}件`)
+
+  const hasData = deletedDataLabels.length > 0
 
   // 試験情報をアイテムとして構成
   const examItems = exam
@@ -103,7 +96,15 @@ export default function DeleteExamModal({
       ? [
           {
             type: "warning" as const,
-            message: `削除されるデータ: 模範解答${examData.masterImageCount}件、採点領域${examData.cropRegionCount}件、答案${examData.answerSheetCount}件`,
+            message: `削除されるデータ: ${deletedDataLabels.join("、")}（採点結果と画像ファイルを含む）`,
+          },
+        ]
+      : []),
+    ...(gradeDataSourceCount > 0
+      ? [
+          {
+            type: "warning" as const,
+            message: `この試験を参照している成績データソース${gradeDataSourceCount}件が参照を失います。該当する成績の評価項目を確認してください。`,
           },
         ]
       : []),
