@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
+import { ExamIntegrationCard } from "./components/export/ExamIntegrationCard"
 import { useAnswerSheetExport } from "./hooks/useAnswerSheetExport"
 
 interface AnswerSheetExportViewProps {
@@ -126,6 +127,8 @@ export function AnswerSheetExportView({
           </div>
         </div>
       </Button>
+
+      <ExamIntegrationCard definition={definition} />
     </div>
   )
 }
