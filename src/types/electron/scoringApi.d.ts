@@ -1,5 +1,7 @@
 import type { QuestionScore } from "@prisma/client"
 
+import type { SCORE_TARGET_DELETED } from "@/electron-src/lib/prisma/questionScore"
+
 import type {
   QuestionScoreWithUser,
   SerializedQuestionScore,
@@ -52,6 +54,11 @@ export interface QuestionScoreOperationResult {
   success: boolean
   score?: SerializedQuestionScore
   error?: string
+  /**
+   * 失敗理由の機械可読コード。"target-deleted" は対象の採点が既に無い＝答案ごと
+   * 削除された場合（協調採点で他教員が削除）。単なる保存失敗と区別して扱うこと。
+   */
+  reason?: typeof SCORE_TARGET_DELETED
   conflictData?: SerializedQuestionScore
 }
 

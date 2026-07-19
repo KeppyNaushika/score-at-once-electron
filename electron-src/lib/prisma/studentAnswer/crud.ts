@@ -2,6 +2,7 @@
  * 答案のCRUD操作
  * - アップロード、取得、削除、関連付け
  */
+import type { Prisma } from "@prisma/client"
 import * as fs from "fs/promises"
 import * as path from "path"
 
@@ -20,6 +21,9 @@ import { correctImage } from "../../omr/imageCorrector"
 import { recordAuditLog } from "../auditLog"
 import { resolveExamScope, resolveExamScopeByPage } from "../auditScope"
 import prisma from "../client"
+import { recordDrawingAnnotationDeletionsForQuestionScores } from "../deletedRecord"
+import type { Tx } from "../transactionClient"
+import { getPageScoreScope, type PageScoreScope } from "./pageScope"
 
 /** ページごとのマスターマーカーキャッシュ */
 type MasterMarkerInfo = {
@@ -416,6 +420,151 @@ export async function getStudentAnswersDataset(examId: string) {
 /**
  * 答案の削除
  */
+/** 答案1枚に紐づく「実際に採点された」データの件数（削除確認モーダルの表示用） */
+export interface StudentAnswerScoreSummary {
+  /**
+   * 採点済みの設問数。協調採点では1設問に教員ごとの QuestionScore 行が並ぶため、
+   * 行数ではなく CropRegion 数で数える（行数だと教員数だけ水増しされる）。
+   */
+  scoredQuestionCount: number
+  /** 確定済みスコア（ScoreDecision）の件数 */
+  scoreDecisionCount: number
+  /** 答案上の書き込み（DrawingAnnotation）の件数 */
+  drawingAnnotationCount: number
+  /** 採点済みの複合回答数 */
+  scoredCompoundAnswerCount: number
+  /** 上記のいずれかが1件以上あるか */
+  hasScoreData: boolean
+}
+
+/**
+ * 「実際に採点された」QuestionScore の条件。
+ *
+ * `scoringInitializer` が全マスに status="unscored" の行を先行作成するため、行の有無を
+ * そのまま「採点済み」と扱うと常に true になる。判定と削除で定義がずれないよう定数にする
+ * （削除側は unscored の初期化行も含めて全て消す＝この条件は使わない）。
+ */
+const SCORED_QUESTION_SCORE_FILTER = {
+  OR: [{ status: { not: "unscored" } }, { partialScore: { not: null } }],
+} satisfies Prisma.QuestionScoreWhereInput
+
+/** 「実際に採点された」CompoundAnswerScore の条件（部分点のみ入力済みの状態も拾う） */
+const SCORED_COMPOUND_ANSWER_SCORE_FILTER = {
+  OR: [
+    { status: { not: "unscored" } },
+    { partialScore: { not: null } },
+    { recognizedAnswer: { not: null } },
+  ],
+} satisfies Prisma.CompoundAnswerScoreWhereInput
+
+/** 答案1枚（ページ scope × 生徒）の採点実績を数える */
+async function countStudentAnswerScoreData(
+  client: typeof prisma | Tx,
+  scope: PageScoreScope,
+  studentId: string
+): Promise<StudentAnswerScoreSummary> {
+  const { cropRegionIds, compoundAnswerIds } = scope
+
+  const [
+    scoredQuestionRegions,
+    scoreDecisionCount,
+    drawingAnnotationCount,
+    scoredCompoundAnswerCount,
+  ] = await Promise.all([
+    cropRegionIds.length === 0
+      ? []
+      : client.questionScore.findMany({
+          where: {
+            studentId,
+            cropRegionId: { in: cropRegionIds },
+            ...SCORED_QUESTION_SCORE_FILTER,
+          },
+          select: { cropRegionId: true },
+          distinct: ["cropRegionId"],
+        }),
+    cropRegionIds.length === 0
+      ? 0
+      : client.scoreDecision.count({
+          where: { studentId, cropRegionId: { in: cropRegionIds } },
+        }),
+    cropRegionIds.length === 0
+      ? 0
+      : client.drawingAnnotation.count({
+          where: {
+            questionScore: { studentId, cropRegionId: { in: cropRegionIds } },
+          },
+        }),
+    compoundAnswerIds.length === 0
+      ? 0
+      : client.compoundAnswerScore.count({
+          where: {
+            studentId,
+            compoundAnswerId: { in: compoundAnswerIds },
+            ...SCORED_COMPOUND_ANSWER_SCORE_FILTER,
+          },
+        }),
+  ])
+
+  const scoredQuestionCount = scoredQuestionRegions.length
+
+  return {
+    scoredQuestionCount,
+    scoreDecisionCount,
+    drawingAnnotationCount,
+    scoredCompoundAnswerCount,
+    hasScoreData:
+      scoredQuestionCount > 0 ||
+      scoreDecisionCount > 0 ||
+      drawingAnnotationCount > 0 ||
+      scoredCompoundAnswerCount > 0,
+  }
+}
+
+/**
+ * 答案1枚に紐づく採点データの件数を取得する（削除確認モーダルの事前照会）。
+ */
+export async function getStudentAnswerScoreSummary(answerSheetId: string) {
+  try {
+    const answerSheet = await prisma.studentAnswerImage.findUnique({
+      where: { id: answerSheetId },
+      select: { examPageId: true, studentId: true },
+    })
+
+    if (!answerSheet) {
+      throw new Error("答案が見つかりません")
+    }
+
+    const scope = await getPageScoreScope(prisma, answerSheet.examPageId)
+    const summary = await countStudentAnswerScoreData(
+      prisma,
+      scope,
+      answerSheet.studentId
+    )
+
+    return { success: true as const, summary }
+  } catch (error) {
+    console.error("Error loading answer sheet score summary:", error)
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : "採点データの確認に失敗しました",
+    }
+  }
+}
+
+/**
+ * 答案画像を採点データごと削除する。
+ *
+ * `StudentAnswerImage` には採点系の子リレーションが無く cascade は走らないため、
+ * ページ scoped で QuestionScore / ScoreDecision / CompoundAnswerScore を明示削除する
+ * （placementApply の discard と同じ手順。DrawingAnnotation は tombstone 記録後、
+ * 親 QuestionScore の cascade で消える）。
+ *
+ * DB をトランザクションで確定させてからファイルを消す。逆順だと DB 失敗時に画像だけが
+ * 失われて復旧できない（孤立ファイルが残る方が害が小さい）。
+ */
 export async function deleteStudentAnswer(answerSheetId: string) {
   try {
     const answerSheet = await prisma.studentAnswerImage.findUnique({
@@ -426,31 +575,100 @@ export async function deleteStudentAnswer(answerSheetId: string) {
       throw new Error("答案が見つかりません")
     }
 
-    // ファイルを削除
-    const { getAbsolutePathFromData } = await import("../../dataManager")
-    const filePath = getAbsolutePathFromData(answerSheet.imagePath)
+    const { summary, removedRows } = await prisma.$transaction(
+      async (tx) => {
+        const scope = await getPageScoreScope(tx, answerSheet.examPageId)
+        const studentId = answerSheet.studentId
+        const { cropRegionIds, compoundAnswerIds } = scope
 
+        // 削除前に「利用者から見た採点実績」を数えておく（モーダルの表示と同じ定義）。
+        // 削除自体は unscored の初期化行も含めて全て消すので、行数とは一致しない。
+        const scoreSummary = await countStudentAnswerScoreData(
+          tx,
+          scope,
+          studentId
+        )
+
+        let questionScoreRows = 0
+        let drawingAnnotationRows = 0
+        let scoreDecisionRows = 0
+        let compoundAnswerScoreRows = 0
+
+        if (cropRegionIds.length > 0) {
+          // QuestionScore: 子の DrawingAnnotation を tombstone してから削除（cascade で道連れ）
+          const questionScores = await tx.questionScore.findMany({
+            where: { studentId, cropRegionId: { in: cropRegionIds } },
+            select: { id: true },
+          })
+          const questionScoreIds = questionScores.map(
+            (questionScore) => questionScore.id
+          )
+
+          if (questionScoreIds.length > 0) {
+            drawingAnnotationRows = await tx.drawingAnnotation.count({
+              where: { questionScoreId: { in: questionScoreIds } },
+            })
+            await recordDrawingAnnotationDeletionsForQuestionScores(
+              questionScoreIds,
+              { tx }
+            )
+            const removed = await tx.questionScore.deleteMany({
+              where: { id: { in: questionScoreIds } },
+            })
+            questionScoreRows = removed.count
+          }
+
+          const removedDecisions = await tx.scoreDecision.deleteMany({
+            where: { studentId, cropRegionId: { in: cropRegionIds } },
+          })
+          scoreDecisionRows = removedDecisions.count
+        }
+
+        if (compoundAnswerIds.length > 0) {
+          const removedCompound = await tx.compoundAnswerScore.deleteMany({
+            where: { studentId, compoundAnswerId: { in: compoundAnswerIds } },
+          })
+          compoundAnswerScoreRows = removedCompound.count
+        }
+
+        await tx.studentAnswerImage.delete({ where: { id: answerSheetId } })
+
+        return {
+          summary: scoreSummary,
+          removedRows: {
+            questionScoreRows,
+            scoreDecisionRows,
+            drawingAnnotationRows,
+            compoundAnswerScoreRows,
+          },
+        }
+      },
+      // tombstone は SQLite に skipDuplicates が無く1行ずつ upsert するため、書き込みの多い
+      // 答案では既定の 5s を超えうる（超えると P2028 で削除ごとロールバックする）。
+      { timeout: 30000 }
+    )
+
+    // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
+    // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
     try {
-      await fs.unlink(filePath)
+      const { getAbsolutePathFromData } = await import("../../dataManager")
+      await fs.unlink(getAbsolutePathFromData(answerSheet.imagePath))
     } catch (fileError) {
       console.warn("Failed to delete file:", fileError)
     }
 
-    // データベースから削除
-    await prisma.studentAnswerImage.delete({
-      where: { id: answerSheetId },
-    })
-
-    const scope = await resolveExamScopeByPage(answerSheet.examPageId)
+    const auditScope = await resolveExamScopeByPage(answerSheet.examPageId)
     await recordAuditLog({
       action: "exam.answer.delete",
       entityType: "StudentAnswerImage",
       entityId: answerSheetId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
+      scopeId: auditScope.scopeId,
+      scopeLabel: auditScope.scopeLabel,
+      // 監査ログには実際に消えた行数を残す（未採点の初期化行を含む実データの記録）
+      summary: `答案画像を削除（QuestionScore ${removedRows.questionScoreRows} 行 / ScoreDecision ${removedRows.scoreDecisionRows} 行 / DrawingAnnotation ${removedRows.drawingAnnotationRows} 行 / CompoundAnswerScore ${removedRows.compoundAnswerScoreRows} 行を同時削除）`,
     })
 
-    return { success: true }
+    return { success: true, deletedSummary: summary }
   } catch (error) {
     console.error("Error deleting answer sheet:", error)
     return {
