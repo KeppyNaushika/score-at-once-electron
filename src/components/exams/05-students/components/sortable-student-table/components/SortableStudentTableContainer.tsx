@@ -81,6 +81,7 @@ export function SortableStudentTableContainer(
     onSelectAll,
     onStudentStatusUpdate,
     onStudentOrderUpdate,
+    students,
     filteredStudents,
     placementByStudent,
     examId,
@@ -94,6 +95,14 @@ export function SortableStudentTableContainer(
 
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+
+  const allRows = useMemo(
+    () =>
+      students.map((examStudent) =>
+        toRosterRow(examStudent, placementByStudent[examStudent.studentId])
+      ),
+    [students, placementByStudent]
+  )
 
   const filteredRows = useMemo(
     () =>
@@ -125,6 +134,7 @@ export function SortableStudentTableContainer(
     handleSelectAll,
     handleResetOrder,
   } = useRosterTable({
+    allRows,
     filteredRows,
     selectedIds: selectedStudents,
     onSelectionChange: onStudentSelectionChange,
@@ -309,7 +319,7 @@ export function SortableStudentTableContainer(
             <AlertDialogTitle>並び順をリセットしますか？</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                手動で設定した並び順を、学級の関連付け設定に基づいて再設定します。
+                手動で設定した並び順を、学級の関連付け設定に基づいて再設定します（検索・フィルタ中でも全生徒が対象になります）。
               </span>
               <span className="block font-medium">リセット後の並び順：</span>
               <span className="text-muted-foreground block pl-4">

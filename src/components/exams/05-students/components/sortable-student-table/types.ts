@@ -16,6 +16,8 @@ export interface SortableStudentTableProps {
   selectedStudents: Set<string>
   onStudentSelectionChange: (studentId: string, isSelected: boolean) => void
   onSelectAll: (isSelected: boolean) => void
+  /** 全受験生徒（フィルタ未適用。順序リセットの対象） */
+  students: ExamStudentWithMemberships[]
   filteredStudents: ExamStudentWithMemberships[]
   /** ExamClassroom 由来の表示学級情報（studentId キーの side data） */
   placementByStudent: Record<string, ExamClassroomPlacement>

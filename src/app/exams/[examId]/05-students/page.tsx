@@ -141,6 +141,7 @@ export default function StudentsPage() {
               selectedStudents={selectedStudentsForRemoval}
               onStudentSelectionChange={handleStudentSelectionChange}
               onSelectAll={handleSelectAll}
+              students={students}
               filteredStudents={filteredStudents}
               placementByStudent={placementByStudent}
               examId={examId}
