@@ -1,29 +1,32 @@
 "use client"
 
-import { ArrowRight, FileCheck, Filter, PencilLine } from "lucide-react"
+import {
+  ArrowRight,
+  FileCheck,
+  Filter,
+  HelpCircle,
+  PencilLine,
+} from "lucide-react"
 import { useState } from "react"
 
+import { CaptureReturnVersionButton } from "@/components/exams/08-export/components/CaptureReturnVersionButton"
 import type { Student } from "@/components/exams/08-export/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import type {
   ReturnScoreCellState,
   ReturnStudentDiff,
 } from "@/electron-src/lib/prisma/returnSnapshot"
-
-import { useReturnDiff } from "../hooks/useReturnDiff"
 
 /** 採点判定コードを日本語表示に変換 */
 const statusLabel = (status: string): string => {
@@ -56,32 +59,39 @@ const cellText = (cell: ReturnScoreCellState | null): string => {
 }
 
 interface ReturnDiffPanelProps {
-  examId: string
   /** 表示名解決用の生徒一覧（フィルタ前の全件が望ましい） */
   students: Student[]
   /** 現在の選択（「返却版として記録」対象・件数表示に使う） */
   selectedStudentIds: string[]
   /** 選択を差し替える（「変更があった生徒のみ選択」） */
   onSelectStudentIds: (studentIds: string[]) => void
+  /** 生徒ID → 返却版との差分 */
+  diffByStudent: Map<string, ReturnStudentDiff>
+  /** 返却版から変更があった生徒IDの集合 */
+  changedStudentIds: Set<string>
+  /** 返却版スナップショットが1件でも存在するか */
+  hasAnySnapshot: boolean
+  /** 返却版記録の実行中フラグ */
+  capturing: boolean
+  /** 指定生徒を返却版として記録する */
+  capture: (studentIds: string[]) => Promise<boolean>
 }
 
 /**
  * 答案返却・差分パネル。
  * 「返却版として記録」と、前回返却分から変更があった生徒の検出・絞り込みを行う。
+ * 返却差分の状態は親（ExportMainView）で管理し props で受け取る。
  */
 export function ReturnDiffPanel({
-  examId,
   students,
   selectedStudentIds,
   onSelectStudentIds,
+  diffByStudent,
+  changedStudentIds,
+  hasAnySnapshot,
+  capturing,
+  capture,
 }: ReturnDiffPanelProps) {
-  const {
-    diffByStudent,
-    changedStudentIds,
-    hasAnySnapshot,
-    capturing,
-    capture,
-  } = useReturnDiff(examId)
   const [detailOpen, setDetailOpen] = useState(false)
 
   // 変更があった生徒の差分（受験生徒実体をペアで保持。順序は students の並びに従う）
@@ -99,110 +109,115 @@ export function ReturnDiffPanel({
     onSelectStudentIds(Array.from(changedStudentIds))
   }
 
-  const handleCapture = async () => {
-    await capture(selectedStudentIds)
-  }
-
   return (
-    <Card className="shrink-0">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <FileCheck className="h-4 w-4" />
-          答案返却・差分
-        </CardTitle>
-        <CardDescription>
-          現在の採点内容を「返却版」として記録すると、以降に採点（スコア・採点マーク）を
-          修正した生徒だけを抽出して再印刷できます。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <CaptureReturnVersionButton
+          selectedStudentIds={selectedStudentIds}
+          capturing={capturing}
+          capture={capture}
+          label={`選択中の${selectedStudentIds.length}名を返却版として記録`}
+        />
+
+        {hasAnySnapshot && (
           <Button
             variant="outline"
             size="sm"
-            onClick={handleCapture}
-            disabled={capturing || selectedStudentIds.length === 0}
+            onClick={selectChangedOnly}
+            disabled={changedStudentIds.size === 0}
           >
-            <FileCheck className="mr-1 h-4 w-4" />
-            選択中の{selectedStudentIds.length}名を返却版として記録
+            <Filter className="mr-1 h-4 w-4" />
+            変更があった生徒のみ選択（{changedStudentIds.size}名）
           </Button>
+        )}
 
-          {hasAnySnapshot && (
+        {/* 機能説明（Popover） */}
+        <Popover>
+          <PopoverTrigger asChild>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={selectChangedOnly}
-              disabled={changedStudentIds.size === 0}
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground h-8 w-8"
+              aria-label="答案返却・差分の説明"
             >
-              <Filter className="mr-1 h-4 w-4" />
-              変更があった生徒のみ選択（{changedStudentIds.size}名）
+              <HelpCircle className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <FileCheck className="h-4 w-4" />
+              答案返却・差分
+            </div>
+            <p className="text-muted-foreground mt-2">
+              現在の採点内容を「返却版」として記録すると、以降に採点（スコア・採点マーク）を
+              修正した生徒だけを抽出して再印刷できます。
+            </p>
+          </PopoverContent>
+        </Popover>
+      </div>
 
-        {hasAnySnapshot ? (
-          changedDiffs.length > 0 ? (
-            <Collapsible open={detailOpen} onOpenChange={setDetailOpen}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="px-2">
-                  {detailOpen ? "変更内容を隠す" : "変更内容を表示"}（
-                  {changedDiffs.length}名）
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
-                {changedDiffs.map(({ examStudent, diff }) => (
-                  <div
-                    key={diff.studentId}
-                    className="border-border rounded-md border p-3 text-sm"
-                  >
-                    <div className="mb-1 flex items-center gap-2 font-medium">
-                      {examStudent.student.lastName}{" "}
-                      {examStudent.student.firstName}
-                      {diff.annotationChanged && (
-                        <Badge variant="secondary" className="gap-1">
-                          <PencilLine className="h-3 w-3" />
-                          採点マーク変更
-                        </Badge>
-                      )}
-                    </div>
-                    {diff.scoreChanges.length > 0 ? (
-                      <ul className="text-muted-foreground space-y-0.5">
-                        {diff.scoreChanges.map((scoreChange) => (
-                          <li
-                            key={scoreChange.cropRegionId}
-                            className="flex items-center gap-1.5"
-                          >
-                            <span className="text-foreground">
-                              {scoreChange.label || "設問"}:
-                            </span>
-                            <span>{cellText(scoreChange.before)}</span>
-                            <ArrowRight className="h-3 w-3 shrink-0" />
-                            <span className="text-foreground">
-                              {cellText(scoreChange.after)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="text-muted-foreground">
-                        採点マークのみ変更
-                      </div>
+      {hasAnySnapshot ? (
+        changedDiffs.length > 0 ? (
+          <Collapsible open={detailOpen} onOpenChange={setDetailOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="px-2">
+                {detailOpen ? "変更内容を隠す" : "変更内容を表示"}（
+                {changedDiffs.length}名）
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
+              {changedDiffs.map(({ examStudent, diff }) => (
+                <div
+                  key={diff.studentId}
+                  className="border-border rounded-md border p-3 text-sm"
+                >
+                  <div className="mb-1 flex items-center gap-2 font-medium">
+                    {examStudent.student.lastName}{" "}
+                    {examStudent.student.firstName}
+                    {diff.annotationChanged && (
+                      <Badge variant="secondary" className="gap-1">
+                        <PencilLine className="h-3 w-3" />
+                        採点マーク変更
+                      </Badge>
                     )}
                   </div>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              前回返却時から変更があった生徒はいません。
-            </p>
-          )
+                  {diff.scoreChanges.length > 0 ? (
+                    <ul className="text-muted-foreground space-y-0.5">
+                      {diff.scoreChanges.map((scoreChange) => (
+                        <li
+                          key={scoreChange.cropRegionId}
+                          className="flex items-center gap-1.5"
+                        >
+                          <span className="text-foreground">
+                            {scoreChange.label || "設問"}:
+                          </span>
+                          <span>{cellText(scoreChange.before)}</span>
+                          <ArrowRight className="h-3 w-3 shrink-0" />
+                          <span className="text-foreground">
+                            {cellText(scoreChange.after)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      採点マークのみ変更
+                    </div>
+                  )}
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         ) : (
           <p className="text-muted-foreground text-sm">
-            まだ返却版が記録されていません。出力対象の生徒を選んで「返却版として記録」してください。
+            前回返却時から変更があった生徒はいません。
           </p>
-        )}
-      </CardContent>
-    </Card>
+        )
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          まだ返却版が記録されていません。出力対象の生徒を選んで「返却版として記録」してください。
+        </p>
+      )}
+    </div>
   )
 }

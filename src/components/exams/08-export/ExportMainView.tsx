@@ -10,12 +10,12 @@ import {
 import ExportProgressModal from "@/components/exams/08-export/components/ExportProgressModal"
 import ExportWarningModal from "@/components/exams/08-export/components/ExportWarningModal"
 import { PdfCanvasRenderer } from "@/components/exams/08-export/components/PdfCanvasRenderer"
-import { ReturnDiffPanel } from "@/components/exams/08-export/components/ReturnDiffPanel"
 import { StudentSelectionCard } from "@/components/exams/08-export/components/StudentSelectionCard"
 import { useDataFileExports } from "@/components/exams/08-export/hooks/useDataFileExports"
 import { useExcelPreview } from "@/components/exams/08-export/hooks/useExcelPreview"
 import { useExportPage } from "@/components/exams/08-export/hooks/useExportPage"
 import { useIndividualReportPreview } from "@/components/exams/08-export/hooks/useIndividualReportPreview"
+import { useReturnDiff } from "@/components/exams/08-export/hooks/useReturnDiff"
 import { useScoredAnswerPdfExport } from "@/components/exams/08-export/hooks/useScoredAnswerPdfExport"
 import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useScoredAnswerPreview"
 import { buildScoringMarkConfigForPdf } from "@/components/exams/08-export/utils/buildScoringMarkConfigForPdf"
@@ -39,6 +39,7 @@ export default function ExportMainView() {
   const {
     exam,
     students,
+    allStudents,
     availableClassrooms,
     loading,
     searchTerm,
@@ -75,6 +76,15 @@ export default function ExportMainView() {
     () => Array.from(selectedStudents),
     [selectedStudents]
   )
+
+  // 答案返却・差分（左カードのパネルと右カードの記録ボタンで状態を共有）
+  const {
+    diffByStudent,
+    changedStudentIds,
+    hasAnySnapshot,
+    capturing: capturingReturn,
+    capture: captureReturn,
+  } = useReturnDiff(exam?.id ?? "")
 
   const {
     previewData,
@@ -267,14 +277,7 @@ export default function ExportMainView() {
       <PageHeader title="採点結果のファイル出力" helpButton={helpButton} />
 
       <div className="container mx-auto flex min-h-0 flex-1 flex-col gap-6 px-4 py-6">
-        <ReturnDiffPanel
-          examId={exam?.id ?? ""}
-          students={students}
-          selectedStudentIds={selectedStudentIds}
-          onSelectStudentIds={replaceSelection}
-        />
-
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2 lg:grid-rows-1">
           <div className="h-full min-h-0">
             <StudentSelectionCard
               examId={exam?.id}
@@ -290,6 +293,16 @@ export default function ExportMainView() {
               toggleStudent={toggleStudent}
               addStudents={addStudents}
               removeStudents={removeStudents}
+              // 答案返却・差分（生徒選択タブ内に表示）
+              // 差分の件数・詳細は表示フィルタと独立させるため未フィルタの全生徒を渡す
+              allStudents={allStudents}
+              selectedStudentIds={selectedStudentIds}
+              onSelectStudentIds={replaceSelection}
+              diffByStudent={diffByStudent}
+              changedStudentIds={changedStudentIds}
+              hasAnySnapshot={hasAnySnapshot}
+              capturingReturn={capturingReturn}
+              captureReturn={captureReturn}
               // プレビュー関連
               exportTab={exportTab}
               previewData={previewData}
@@ -329,6 +342,8 @@ export default function ExportMainView() {
               onExportGradingData={handleExportGradingData}
               onExportRData={handleExportRData}
               onExportIndividualReports={handleExportIndividualReports}
+              captureReturn={captureReturn}
+              capturingReturn={capturingReturn}
               activeTab={exportTab}
               onTabChange={setExportTab}
             />
