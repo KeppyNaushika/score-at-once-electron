@@ -336,6 +336,8 @@ export function useExportPage() {
     // データ
     exam,
     students: filteredStudents,
+    // 表示フィルタ前の全生徒（返却差分の件数・詳細を表示フィルタと独立させるため）
+    allStudents: students,
     availableClassrooms,
     loading,
 

@@ -35,11 +35,13 @@ import type {
   IndividualReportData,
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
+import type { ReturnStudentDiff } from "@/electron-src/lib/prisma/returnSnapshot"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
 import { ExcelPreview } from "./ExcelPreview"
 import type { ExportTabType } from "./ExportOptionsCard"
 import { IndividualReportPreview } from "./individual-report/IndividualReportPreview"
+import { ReturnDiffPanel } from "./ReturnDiffPanel"
 import { ScoredAnswerPreview } from "./ScoredAnswerPreview"
 import { StatisticsClassroomSelector } from "./StatisticsClassroomSelector"
 
@@ -57,6 +59,16 @@ interface StudentSelectionCardProps {
   toggleStudent: (studentId: string) => void
   addStudents: (studentIds: string[]) => void
   removeStudents: (studentIds: string[]) => void
+  // 答案返却・差分（生徒選択タブ内に表示）
+  /** 表示フィルタ前の全生徒（差分の件数・詳細を表示フィルタと独立させるため） */
+  allStudents: Student[]
+  selectedStudentIds: string[]
+  onSelectStudentIds: (studentIds: string[]) => void
+  diffByStudent: Map<string, ReturnStudentDiff>
+  changedStudentIds: Set<string>
+  hasAnySnapshot: boolean
+  capturingReturn: boolean
+  captureReturn: (studentIds: string[]) => Promise<boolean>
   // プレビュー関連
   exportTab?: ExportTabType
   previewData?: IndividualReportData | null
@@ -92,6 +104,14 @@ export function StudentSelectionCard({
   toggleStudent,
   addStudents,
   removeStudents,
+  allStudents,
+  selectedStudentIds,
+  onSelectStudentIds,
+  diffByStudent,
+  changedStudentIds,
+  hasAnySnapshot,
+  capturingReturn,
+  captureReturn,
   exportTab,
   previewData,
   isPreviewLoading,
@@ -292,6 +312,20 @@ export function StudentSelectionCard({
           </div>
         </div>
 
+        {/* 答案返却・差分（生徒一覧の上） */}
+        <div className="mb-2 shrink-0">
+          <ReturnDiffPanel
+            students={allStudents}
+            selectedStudentIds={selectedStudentIds}
+            onSelectStudentIds={onSelectStudentIds}
+            diffByStudent={diffByStudent}
+            changedStudentIds={changedStudentIds}
+            hasAnySnapshot={hasAnySnapshot}
+            capturing={capturingReturn}
+            capture={captureReturn}
+          />
+        </div>
+
         {/* 3行目: 生徒リスト - 残りの高さを使用 */}
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
@@ -300,7 +334,7 @@ export function StudentSelectionCard({
               {selectedStudents.size}人選択中 / {students.length}人表示中
             </span>
           </div>
-          <div className="flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
+          <div className="relative flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
             {students.map((examStudent) => (
               <div
                 key={examStudent.studentId}
