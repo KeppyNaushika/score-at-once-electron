@@ -143,9 +143,21 @@ module.exports = {
       }
 
       // bare-*パッケージの非ターゲットプリビルドバイナリを削除
-      // RPMビルド時にbrp-stripが.bareファイルをstripできず失敗するのを防止
+      // RPMビルド時にbrp-stripが.bareファイルをstripできず失敗するのを防止。
+      // ハードコードのリストは新しいbare-*依存で取りこぼす（bare-pathが漏れて
+      // RPMビルドが壊れた実績あり）ため、node_modules配下のprebuildsを持つ
+      // bare-*パッケージを自動検出する。
       const removeNonTargetBarePrebuilds = (basePath) => {
-        const bareModules = ["bare-url", "bare-os", "bare-fs"]
+        const nodeModulesPath = path.join(basePath, "node_modules")
+        const bareModules = fs.existsSync(nodeModulesPath)
+          ? fs
+              .readdirSync(nodeModulesPath)
+              .filter(
+                (name) =>
+                  name.startsWith("bare-") &&
+                  fs.existsSync(path.join(nodeModulesPath, name, "prebuilds"))
+              )
+          : []
         const targetPlatform =
           options.platform === "darwin"
             ? "darwin"
