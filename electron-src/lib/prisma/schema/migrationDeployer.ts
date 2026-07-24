@@ -1,112 +1,121 @@
-import { PrismaClient } from "@prisma/client"
+import Database from "better-sqlite3"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 
-import { tableExists } from "../databaseUtils"
+import { getDatabasePath } from "../databaseInitializer"
+import { hasTable, type SqliteDatabase } from "../sqliteSchemaUtils"
 import { createBackup, restoreBackup } from "./bridgeMigrations"
+
+/** _prisma_migrations から適用済みマイグレーション名の集合を取得する */
+const listAppliedMigrationNames = (db: SqliteDatabase): Set<string> => {
+  const rows = db
+    .prepare(
+      `SELECT "migration_name" FROM "_prisma_migrations" WHERE "rolled_back_at" IS NULL`
+    )
+    .all() as { migration_name: string }[]
+  return new Set(rows.map((row) => row.migration_name))
+}
 
 /**
  * prisma/migrations/ ディレクトリから未適用のマイグレーションを検出し、順番に適用する。
  * _prisma_migrationsテーブルを参照・更新して適用状態を管理する。
  * 適用前にDBファイルをバックアップし、失敗時は復元する。
+ *
+ * SQLの実行は better-sqlite3 の exec に委ね、複数文・PRAGMA・文字列リテラル内の
+ * セミコロンを SQLite 本体に正しく解釈させる（自前の `split(";")` は使わない）。
+ * また各文は自動コミットで実行されるため、RENAME 系マイグレーションの
+ * `PRAGMA foreign_keys` が意図どおり効く。
  */
-export const deployPendingMigrations = async (
-  prisma: PrismaClient
-): Promise<number> => {
-  if (!(await tableExists(prisma, "_prisma_migrations"))) {
-    console.warn(
-      "deployPendingMigrations: _prisma_migrations table not found, skipping"
-    )
-    return 0
-  }
-
-  const migrationsDir = getMigrationsDir()
+export const deployPendingMigrations = (options?: {
+  migrationsDir?: string
+}): number => {
+  const migrationsDir = options?.migrationsDir ?? getMigrationsDir()
   if (!migrationsDir || !fs.existsSync(migrationsDir)) {
     console.warn(`Migrations directory not found: ${migrationsDir}`)
     return 0
   }
 
-  // 適用済みマイグレーション名を取得
-  const applied = await prisma.$queryRawUnsafe<{ migration_name: string }[]>(
-    `SELECT "migration_name" FROM "_prisma_migrations" WHERE "rolled_back_at" IS NULL ORDER BY "migration_name"`
-  )
-  const appliedNames = new Set(applied.map((row) => row.migration_name))
+  const db = new Database(path.resolve(getDatabasePath()))
+  db.pragma("busy_timeout = 5000")
 
-  // 未適用のマイグレーションを抽出
-  const pendingDirs = listLocalMigrationNames().filter((dirName) => {
-    if (appliedNames.has(dirName)) return false
-    return fs.existsSync(path.join(migrationsDir, dirName, "migration.sql"))
-  })
-
-  if (pendingDirs.length === 0) return 0
-
-  // 適用前にバックアップを作成（PRAGMAを含むSQLはトランザクション化できないため、
-  // 失敗時はファイルレベルで復元する）
-  const backupPath = createBackup()
-
-  let appliedCount = 0
-
-  for (const dirName of pendingDirs) {
-    const sqlPath = path.join(migrationsDir, dirName, "migration.sql")
-    const sql = fs.readFileSync(sqlPath, "utf-8")
-    const checksum = crypto.createHash("sha256").update(sql).digest("hex")
-
-    console.info(`Applying migration: ${dirName}`)
-    const startedAt = new Date().toISOString()
-
-    try {
-      // SQLを文単位で分割して実行
-      // コメント行を除去してからSQL本体の有無を判定する
-      const statements = sql
-        .split(";")
-        .map((statement) => statement.trim())
-        .filter((statement) => {
-          if (statement.length === 0) return false
-          // ブロックコメント・行コメントを除去した後に実行可能なSQLが残るか判定
-          const stripped = statement
-            .replace(/\/\*[\s\S]*?\*\//g, "") // ブロックコメント除去
-            .replace(/--[^\n]*/g, "") // 行コメント除去
-            .trim()
-          return stripped.length > 0
-        })
-
-      for (const stmt of statements) {
-        await prisma.$executeRawUnsafe(stmt)
-      }
-
-      // 適用成功を記録
-      const migrationId = generateUuid()
-      const finishedAt = new Date().toISOString()
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "started_at", "applied_steps_count")
-         VALUES ('${migrationId}', '${checksum}', '${finishedAt}', '${dirName}', '${startedAt}', 1)`
+  try {
+    if (!hasTable(db, "_prisma_migrations")) {
+      console.warn(
+        "deployPendingMigrations: _prisma_migrations table not found, skipping"
       )
-
-      appliedCount++
-      console.info(`Migration applied: ${dirName}`)
-    } catch (error) {
-      console.error(`Migration failed: ${dirName}`, error)
-      if (backupPath) {
-        console.info("Restoring database from pre-migration backup...")
-        restoreBackup(backupPath)
-      }
-      throw new Error(
-        `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`
-      )
+      return 0
     }
-  }
 
-  if (appliedCount > 0) {
-    console.info(`${appliedCount} migration(s) applied successfully`)
-  }
+    const appliedNames = listAppliedMigrationNames(db)
 
-  return appliedCount
+    // 未適用のマイグレーションを抽出
+    const pendingDirs = listLocalMigrationNames(migrationsDir).filter(
+      (dirName) => {
+        if (appliedNames.has(dirName)) return false
+        return fs.existsSync(path.join(migrationsDir, dirName, "migration.sql"))
+      }
+    )
+
+    if (pendingDirs.length === 0) return 0
+
+    // 適用前にバックアップを作成（PRAGMAを含むSQLはトランザクション化できないため、
+    // 失敗時はファイルレベルで復元する）
+    const backupPath = createBackup()
+
+    const recordApplied = db.prepare(
+      `INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "started_at", "applied_steps_count")
+       VALUES (?, ?, ?, ?, ?, 1)`
+    )
+
+    let appliedCount = 0
+
+    for (const dirName of pendingDirs) {
+      const sqlPath = path.join(migrationsDir, dirName, "migration.sql")
+      const sql = fs.readFileSync(sqlPath, "utf-8")
+      const checksum = crypto.createHash("sha256").update(sql).digest("hex")
+
+      console.info(`Applying migration: ${dirName}`)
+      const startedAt = new Date().toISOString()
+
+      try {
+        db.exec(sql)
+        recordApplied.run(
+          crypto.randomUUID(),
+          checksum,
+          new Date().toISOString(),
+          dirName,
+          startedAt
+        )
+        appliedCount++
+        console.info(`Migration applied: ${dirName}`)
+      } catch (error) {
+        console.error(`Migration failed: ${dirName}`, error)
+        // restore はファイル上書きのため、先に接続を閉じる（Windowsでのロック回避）
+        db.close()
+        if (backupPath) {
+          console.info("Restoring database from pre-migration backup...")
+          restoreBackup(backupPath)
+        }
+        throw new Error(
+          `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`
+        )
+      }
+    }
+
+    if (appliedCount > 0) {
+      console.info(`${appliedCount} migration(s) applied successfully`)
+    }
+
+    return appliedCount
+  } finally {
+    if (db.open) db.close()
+  }
 }
 
 /** prisma/migrations/ に同梱されているマイグレーション名を昇順で返す */
-export const listLocalMigrationNames = (): string[] => {
-  const migrationsDir = getMigrationsDir()
+export const listLocalMigrationNames = (dir?: string): string[] => {
+  const migrationsDir = dir ?? getMigrationsDir()
   if (!migrationsDir || !fs.existsSync(migrationsDir)) return []
   return fs
     .readdirSync(migrationsDir, { withFileTypes: true })
@@ -138,12 +147,4 @@ const getMigrationsDir = (): string | null => {
   }
 
   return null
-}
-
-const generateUuid = (): string => {
-  const hex = (charCount: number) =>
-    Array.from({ length: charCount }, () =>
-      Math.floor(Math.random() * 16).toString(16)
-    ).join("")
-  return `${hex(8)}-${hex(4)}-4${hex(3)}-${(8 + Math.floor(Math.random() * 4)).toString(16)}${hex(3)}-${hex(12)}`
 }

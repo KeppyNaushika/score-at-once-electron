@@ -735,12 +735,6 @@ CREATE INDEX "ExamStudent_examId_customOrder_idx" ON "ExamStudent"("examId", "cu
 CREATE UNIQUE INDEX "ExamStudent_examId_studentId_key" ON "ExamStudent"("examId", "studentId");
 
 -- CreateIndex
-CREATE INDEX "Subtotal_subtotalGroupId_idx" ON "Subtotal"("subtotalGroupId");
-
--- CreateIndex
-CREATE INDEX "Subtotal_subtotalGroupId_order_idx" ON "Subtotal"("subtotalGroupId", "order");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Subtotal_subtotalGroupId_name_key" ON "Subtotal"("subtotalGroupId", "name");
 
 -- CreateIndex

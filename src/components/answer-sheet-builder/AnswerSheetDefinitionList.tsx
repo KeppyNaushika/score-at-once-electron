@@ -63,6 +63,34 @@ const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
   date: (definition) => definition.updatedAt ?? null,
 }
 
+/** preload API を取得する。未初期化ならトーストで通知して null を返す */
+function requireBuilderApi() {
+  const api = window.electronAPI?.answerSheetBuilder
+  if (!api) {
+    toast.error("アプリの初期化が完了していません", {
+      description: "アプリを再起動してください",
+    })
+    return null
+  }
+  return api
+}
+
+/**
+ * ユーザーIDと preload API をまとめて取得する。
+ * どちらかが欠けていればトーストで通知して null を返す。
+ */
+function requireBuilderContext(userId: string | undefined) {
+  if (!userId) {
+    toast.error("ログイン情報を取得できませんでした", {
+      description: "一度ログアウトして再ログインしてください",
+    })
+    return null
+  }
+  const api = requireBuilderApi()
+  if (!api) return null
+  return { userId, api }
+}
+
 /**
  * 解答用紙定義の一覧表示・作成・複製・削除を行うコンポーネント。
  */
@@ -182,19 +210,30 @@ export function AnswerSheetDefinitionList() {
   }
 
   const handleCreate = useCallback(async () => {
-    if (!user?.id) return
-    const api = window.electronAPI?.answerSheetBuilder
-    if (!api) return
+    const context = requireBuilderContext(user?.id)
+    if (!context) return
+    const { api, userId } = context
 
-    const newId = crypto.randomUUID()
-    const { createDefaultDefinition } = await import("./constants")
-    const definition = createDefaultDefinition()
-    definition.id = newId
+    try {
+      const newId = crypto.randomUUID()
+      const { createDefaultDefinition } = await import("./constants")
+      const definition = createDefaultDefinition()
+      definition.id = newId
 
-    const result = await api.saveDefinition(definition, user.id)
-    if (result.success) {
+      const result = await api.saveDefinition(definition, userId)
+      if (!result.success) {
+        toast.error("解答用紙の作成に失敗しました", {
+          description: result.error,
+        })
+        return
+      }
       // 作成直後は編集したいので作成ページへ直行
       router.push(`/answer-sheet-builder/${newId}/01-edit`)
+    } catch (error) {
+      console.error("Error creating definition:", error)
+      toast.error("解答用紙の作成に失敗しました", {
+        description: error instanceof Error ? error.message : String(error),
+      })
     }
   }, [user?.id, router])
 
@@ -223,7 +262,7 @@ export function AnswerSheetDefinitionList() {
   }
 
   const handleExport = useCallback(async (definitionId: string) => {
-    const api = window.electronAPI?.answerSheetBuilder
+    const api = requireBuilderApi()
     if (!api) return
 
     const result = await api.exportDefinition(definitionId)
@@ -235,19 +274,16 @@ export function AnswerSheetDefinitionList() {
   }, [])
 
   const handleImport = useCallback(async () => {
-    if (!user?.id) return
-    const api = window.electronAPI?.answerSheetBuilder
-    if (!api) return
+    const context = requireBuilderContext(user?.id)
+    if (!context) return
+    const { api, userId } = context
 
     // 1. ファイル選択
     const fileResult = await api.selectImportFile()
     if (!fileResult.success || !fileResult.filePath) return
 
     // 2. インポート実行
-    const importResult = await api.importDefinition(
-      fileResult.filePath,
-      user.id
-    )
+    const importResult = await api.importDefinition(fileResult.filePath, userId)
     if (importResult.success) {
       toast.success("定義を読み込みました")
       if (importResult.warnings?.length) {

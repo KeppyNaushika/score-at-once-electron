@@ -5,6 +5,15 @@ import { defineConfig, devices } from "@playwright/test"
  */
 export default defineConfig({
   testDir: "./tests/electron",
+  /* 起動前に main/preload ビルドと better-sqlite3 の Electron ABI を用意する */
+  globalSetup: "./tests/electron/globalSetup.ts",
+  /* レンダラーが参照する Next.js dev サーバー（既存があれば再利用） */
+  webServer: {
+    command: "npx next dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: true,
+    timeout: 120 * 1000,
+  },
   /* 並列実行を制限（Electronアプリの同時起動を避ける） */
   fullyParallel: false,
   workers: 1,
