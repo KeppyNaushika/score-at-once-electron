@@ -197,6 +197,7 @@ describe("DateTime正規化マイグレーション", () => {
   // 歴史migrationは編集禁止のため、ここで明示的にホワイトリスト管理する。
   const POST_MIGRATION_TABLES = new Set([
     "AsbCharGuide",
+    "AsbDefinitionTag", // 20260713000000 で追加。normalize migration より後で ISO text 生成
     "AuditLog",
     "Coursework",
     "CourseworkClassroom", // 旧 CourseworkClass（20260704010000 でリネーム）

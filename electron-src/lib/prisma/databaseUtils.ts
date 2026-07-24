@@ -1,7 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import * as fs from "fs/promises"
-
-import { getDatabasePath } from "./databaseInitializer"
 
 /** 指定テーブルのカラム名一覧をPRAGMA table_infoで取得する */
 export const getTableColumns = async (
@@ -27,16 +24,4 @@ export const tableExists = async (
     `SELECT name FROM sqlite_master WHERE type='table' AND name='${tableName}'`
   )
   return result.length > 0
-}
-
-/** データベースファイル（database.db）がディスク上に存在するか確認する */
-export const checkDatabaseExists = async (): Promise<boolean> => {
-  const databasePath = getDatabasePath()
-
-  try {
-    await fs.access(databasePath)
-    return true
-  } catch {
-    return false
-  }
 }

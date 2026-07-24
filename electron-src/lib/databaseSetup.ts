@@ -1,36 +1,16 @@
 import { PrismaClient } from "@prisma/client"
-import * as fs from "fs"
-import * as path from "path"
 
-import {
-  createSharedPrismaClient,
-  getDatabasePath,
-} from "./prisma/databaseInitializer"
+import { createSharedPrismaClient } from "./prisma/databaseInitializer"
 
 /**
  * データベースセットアップユーティリティ
  */
 export class DatabaseSetup {
   private prisma: PrismaClient
-  private dbPath: string
 
   constructor() {
     // パッケージ化環境対応のPrismaクライアントを使用
     this.prisma = createSharedPrismaClient()
-    this.dbPath = getDatabasePath()
-  }
-
-  /**
-   * データベースファイルが存在するかチェック
-   */
-  isDatabaseExists(): boolean {
-    const absolutePath = path.resolve(this.dbPath)
-    try {
-      return fs.existsSync(absolutePath)
-    } catch (error) {
-      console.error(`❌ Error checking database existence:`, error)
-      return false
-    }
   }
 
   /**
@@ -44,23 +24,6 @@ export class DatabaseSetup {
     } catch (error) {
       console.error("❌ Database content check failed:", error)
       return true // エラーの場合は空とみなす
-    }
-  }
-
-  /**
-   * データベースディレクトリを作成
-   */
-  ensureDatabaseDirectory(): void {
-    const dbDir = path.dirname(path.resolve(this.dbPath))
-    try {
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 })
-      }
-    } catch (error) {
-      console.error(`❌ Failed to create database directory: ${dbDir}`, error)
-      throw new Error(
-        `Database directory creation failed: ${error instanceof Error ? error.message : error}`
-      )
     }
   }
 
@@ -196,35 +159,45 @@ export class DatabaseSetup {
   }
 
   /**
+   * 未適用マイグレーションを適用する。
+   *
+   * deployPendingMigrations は独自の better-sqlite3 接続でDDLを実行するため、
+   * 実行前に this.prisma を切断して同一DBファイルへの二重接続を避ける。
+   * これにより DDL 実行中のロック競合と、失敗時のバックアップ復元（ファイル上書き）が
+   * Windows で this.prisma のファイルロックに阻まれる問題を防ぐ。
+   * this.prisma は次回クエリ時に自動再接続される。
+   */
+  private async runDeployPendingMigrations(): Promise<void> {
+    const { deployPendingMigrations } =
+      await import("./prisma/schema/migrationDeployer")
+    await this.prisma.$disconnect()
+    deployPendingMigrations()
+  }
+
+  /**
    * データベースの初期セットアップを実行
    */
   async setupIfNeeded(): Promise<boolean> {
     try {
-      const dbExists = this.isDatabaseExists()
       let setupPerformed = false
 
-      if (!dbExists) {
+      // DBファイルの作成とスキーマ適用（判定はテーブルの有無に基づく）
+      const { initializeDatabase } =
+        await import("./prisma/databaseInitializer")
+      const result = initializeDatabase()
+
+      if (result === "created") {
         // --- 新規DB ---
-        this.ensureDatabaseDirectory()
+        // ベースラインを挿入（将来のprisma migrate用）
+        const { createBaseline } =
+          await import("./prisma/schema/baselineMigrations")
+        await createBaseline(this.prisma)
 
-        const { initializeDatabase } =
-          await import("./prisma/databaseInitializer")
-        const wasCreated = await initializeDatabase()
+        // 初期スキーマ以降の未適用マイグレーションを適用
+        await this.runDeployPendingMigrations()
 
-        if (wasCreated) {
-          // ベースラインを挿入（将来のprisma migrate用）
-          const { createBaseline } =
-            await import("./prisma/schema/baselineMigrations")
-          await createBaseline(this.prisma)
-
-          // 初期スキーマ以降の未適用マイグレーションを適用
-          const { deployPendingMigrations } =
-            await import("./prisma/schema/migrationDeployer")
-          await deployPendingMigrations(this.prisma)
-
-          await this.runSeed()
-          setupPerformed = true
-        }
+        await this.runSeed()
+        setupPerformed = true
       } else {
         // --- 既存DB ---
         await this.migrateExistingDatabase()
@@ -281,9 +254,7 @@ export class DatabaseSetup {
       await ensureBaselineUpToDate(this.prisma)
 
       // 将来のマイグレーションのみ適用
-      const { deployPendingMigrations } =
-        await import("./prisma/schema/migrationDeployer")
-      await deployPendingMigrations(this.prisma)
+      await this.runDeployPendingMigrations()
       return
     }
 
@@ -301,9 +272,7 @@ export class DatabaseSetup {
       await createBaseline(this.prisma)
 
       // 将来のマイグレーション適用
-      const { deployPendingMigrations } =
-        await import("./prisma/schema/migrationDeployer")
-      await deployPendingMigrations(this.prisma)
+      await this.runDeployPendingMigrations()
 
       console.info(
         `Database migrated from ${version} to current schema with Prisma baseline`
