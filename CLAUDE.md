@@ -4,16 +4,6 @@
 
 この試験は、複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像をデジタル採点し、結果をExcel/PDFとして出力できます。
 
-## 技術スタック
-
-- **フロントエンド**: Next.js 15, React, TypeScript, Tailwind CSS v4
-- **デスクトップ**: Electron
-- **データベース**: Prisma ORM + SQLite (共有フォルダに配置)
-- **UIコンポーネント**: Radix UI / shadcn/ui
-- **画像処理**: sharp, opencv.js (予定)
-- **PDF処理**: PDF.js (react-pdf, pdfjs-dist)
-- **ファイル出力**: exceljs (Excel), pdf-lib (PDF)
-
 ## ⚠️ 重要な開発ルール
 
 **データに影響する操作は必ず事前許可を取得すること**
@@ -42,174 +32,18 @@
 
 ## 主要コマンド
 
+`package.json` の scripts を参照（`dev` / `build` / `lint` / `lint:fix` / `format` / `typecheck` / `check-all` 等）。以下は scripts に無いので直接実行する：
+
 ```bash
-# 開発サーバー起動
-npm run dev
-
-# ビルド
-npm run build
-
-# Lintチェック（eslint + prettier --check）
-npm run lint
-
-# Lint自動修正（eslint --fix + prettier --write）
-npm run lint:fix
-
-# フォーマット（prettier --write）
-npm run format
-
-# 型チェック（Next.js + electron-src 両方）
-npm run typecheck
-
-# 全チェック（型・lint）
-npm run check-all
-
 # テスト実行（Vitest。npm scriptは未定義なので直接実行）
 npx vitest run              # 全テスト
 npx vitest run __tests__/import-export/   # 特定ディレクトリのみ
 npx vitest                 # ウォッチモード
-
-# データベースマイグレーション
-npx prisma migrate dev
-
-# Prisma Studio (DB閲覧)
-npx prisma studio
 ```
 
 ## ディレクトリ構造
 
-```
-/score-at-once-electron
-├── /src/app                     # Next.js App Router
-│   ├── /answer-sheet-builder    # 答案用紙ビルダー
-│   │   └── /[definitionId]      # 個別定義
-│   ├── /classrooms              # 学級管理
-│   │   └── /[classroomId]       # 個別学級管理
-│   ├── /dashboard               # ダッシュボード
-│   ├── /exams                   # 試験管理
-│   │   └── /[examId]            # 個別試験（8段階ワークフロー）
-│   │       ├── /01-upload           # 模範解答アップロード
-│   │       ├── /02-template         # 採点領域作成
-│   │       ├── /03-region-info      # 領域情報
-│   │       ├── /04-question-group   # 設問グループ
-│   │       ├── /05-students         # 受験生徒管理
-│   │       ├── /06-student-answers  # 生徒答案管理
-│   │       ├── /07-score-at-once    # 採点実行
-│   │       └── /08-export           # 結果出力
-│   ├── /grades                  # 成績管理（7段階ワークフロー）
-│   │   └── /[gradeId]
-│   │       ├── /01-setup            # 初期設定
-│   │       ├── /02-students         # 生徒管理
-│   │       ├── /03-data-sources     # データソース
-│   │       ├── /04-manual-scores    # 手動スコア
-│   │       ├── /05-boundaries       # 境界設定
-│   │       ├── /06-results          # 結果
-│   │       └── /07-export           # 出力
-│   ├── /login                   # ログイン
-│   ├── /pdf-tools               # PDFツール
-│   ├── /settings                # 設定
-│   ├── /students                # 生徒管理
-│   │   └── /[studentId]         # 個別生徒詳細
-│   └── /subtotal-groups         # 小計グループ管理
-├── /src/components              # Reactコンポーネント
-│   ├── /answer-sheet-builder    # 答案用紙ビルダー
-│   ├── /auth                    # 認証コンポーネント
-│   ├── /classroom               # 学級管理コンポーネント
-│   ├── /common                  # 共通コンポーネント
-│   ├── /drawing                 # 描画・アノテーション
-│   ├── /exams                   # 試験関連（8段階ワークフロー対応）
-│   │   ├── /01-upload           # 模範解答アップロード
-│   │   ├── /02-template         # 採点領域作成
-│   │   ├── /03-region-info      # 領域情報
-│   │   ├── /04-question-group   # 設問グループ
-│   │   ├── /05-students         # 受験生徒管理
-│   │   ├── /06-student-answers  # 生徒答案管理
-│   │   │   ├── /student-answer-management  # 答案管理システム
-│   │   │   └── /student-answer-table       # 答案テーブル管理
-│   │   ├── /07-score-at-once    # 採点実行
-│   │   ├── /08-export           # 結果出力
-│   │   ├── /detail              # 試験詳細
-│   │   ├── /forms               # 試験作成・編集
-│   │   ├── /list                # 試験一覧
-│   │   └── /shared              # 共有コンポーネント
-│   ├── /grades                  # 成績管理コンポーネント
-│   │   ├── /01-setup 〜 /07-export  # 各段階のコンポーネント
-│   │   └── /list                # 成績一覧
-│   ├── /help                    # ヘルプ・ガイダンス
-│   ├── /hooks                   # コンポーネント固有のカスタムフック
-│   ├── /import                  # インポート機能
-│   ├── /layout                  # レイアウト関連
-│   ├── /pdf-tools               # PDFツール
-│   ├── /settings                # 設定
-│   ├── /student                 # 生徒関連
-│   ├── /student-import          # 生徒インポート
-│   ├── /subtotal-groups         # 小計グループ
-│   └── /ui                      # 基礎UIコンポーネント（shadcn/ui）
-├── /src/hooks                   # グローバルカスタムフック
-│   ├── /07-score-at-once        # 採点実行専用
-│   ├── /grades                  # 成績管理専用
-│   ├── /import                  # インポート専用
-│   ├── /student-import          # 生徒インポート専用
-│   ├── useExam.ts               # 試験管理
-│   ├── useExamDetail.ts         # 試験詳細
-│   ├── useClassManagement.ts    # 学級管理
-│   ├── useStudentImport.ts      # 生徒インポート
-│   ├── usePdfPasswordConversion.ts # PDFパスワード変換
-│   ├── useNavigationGuard.ts    # ナビゲーションガード
-│   └── useTableSort.ts          # テーブルソート
-│   # 注: useMasterAnswers.ts は機能内配置（components/exams/01-upload/hooks/）
-├── /src/lib                     # グローバルユーティリティ
-│   ├── pdfConverter.ts          # PDF変換ユーティリティ
-│   └── utils.ts                 # 汎用ユーティリティ
-├── /src/types                   # グローバル型定義
-│   ├── prismaExtensions.ts      # Prisma型のIPC用拡張・共有include型
-│   ├── examArchive.types.ts     # 試験アーカイブ型
-│   ├── grade.types.ts           # 成績型定義
-│   ├── scoringStatus.types.ts   # 採点ステータス（renderer/electron共有union）
-│   ├── electron.d.ts            # Electron API型定義
-│   └── electron/                # Electron API型定義（分割）
-├── /src/contexts                # Reactコンテキスト
-│   ├── AuthContext.tsx          # 認証コンテキスト
-│   └── NavigationGuardContext.tsx # ナビゲーションガード
-├── /prisma                      # データベース関連
-│   ├── schema.prisma            # データベーススキーマ
-│   ├── /migrations              # マイグレーションファイル
-│   └── /data                    # データベースファイル
-├── /electron-src                # Electronメインプロセス
-│   ├── /ipc-handlers            # IPC通信ハンドラー（機能別に分割）
-│   ├── /preload-apis            # プリロードAPI（機能別に分割）
-│   ├── /lib                     # Electronライブラリ
-│   │   ├── /answer-sheet-builder # 答案用紙ビルダー
-│   │   ├── /export              # 出力機能
-│   │   │   ├── /exam-archive    # 試験アーカイブ出力
-│   │   │   ├── /excel           # Excel出力モジュール
-│   │   │   ├── /grade-archive   # 成績アーカイブ出力
-│   │   │   ├── /gradeExcel      # 成績Excel出力
-│   │   │   ├── /individual-report # 個人レポート出力
-│   │   │   ├── /asb-archive     # 答案用紙アーカイブ出力
-│   │   │   └── /student-archive # 生徒アーカイブ出力
-│   │   ├── /import              # インポート機能
-│   │   │   ├── /exam-archive    # 試験アーカイブ読込
-│   │   │   ├── /grade-archive   # 成績アーカイブ読込
-│   │   │   ├── /asb-archive     # 答案用紙アーカイブ読込
-│   │   │   ├── /student-archive # 生徒アーカイブ読込
-│   │   │   ├── /external-formats # 外部フォーマット読込
-│   │   │   ├── /merge           # マージ処理
-│   │   │   └── /transformers    # バージョントランスフォーマー
-│   │   ├── /omr                 # OMR（光学マーク認識）
-│   │   ├── /pdf-tools           # PDFツール
-│   │   ├── /prisma              # データベース操作（多数のモジュール）
-│   │   ├── /shared              # 共有ライブラリ
-│   │   └── /sync                # データ同期
-│   ├── index.ts                 # メインプロセス
-│   ├── preload.ts               # プリロードスクリプト
-│   └── window-manager.ts        # ウィンドウ管理
-├── /public                      # 静的ファイル
-├── /data                        # アプリケーションデータ
-├── /docs                        # ドキュメント
-├── /main                        # ビルド済みElectronファイル
-└── /scripts                     # 開発スクリプト
-```
+構成は実ツリーを参照（`ls src/app` / `ls src/components` / `ls electron-src/lib`）。ディレクトリの意図・段階ワークフローの各段（`/exams/[examId]/NN-*`, `/grades/[gradeId]/NN-*`）の意味は下記「確立済みワークフロー」を参照。
 
 ## 確立済みワークフロー
 
@@ -245,6 +79,16 @@ npx prisma studio
 8. **結果出力** (`/exams/[examId]/08-export`)
    - Excel/PDF出力
    - 採点マーク設定
+
+### 📋 7段階成績ワークフロー
+
+1. **初期設定** (`/grades/[gradeId]/01-setup`)
+2. **生徒管理** (`/grades/[gradeId]/02-students`)
+3. **データソース** (`/grades/[gradeId]/03-data-sources`)
+4. **手動スコア** (`/grades/[gradeId]/04-manual-scores`)
+5. **境界設定** (`/grades/[gradeId]/05-boundaries`)
+6. **結果** (`/grades/[gradeId]/06-results`)
+7. **出力** (`/grades/[gradeId]/07-export`)
 
 ### 🔄 ナビゲーション統一原則
 
