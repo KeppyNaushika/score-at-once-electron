@@ -110,7 +110,7 @@ export function useTableData<TItem extends AnswerImageIdentity>({
     mode,
     enhancedIsCellDisabled,
     allowOverwrite,
-    existingAnswers,
+    cellsWithExistingAnswers,
   })
 
   return {

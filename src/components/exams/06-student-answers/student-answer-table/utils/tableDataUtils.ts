@@ -25,37 +25,9 @@ export function hasCell(
 }
 
 /**
- * (studentId, examPageId) の集合を O(1) 照合するルックアップ。
- * 文字列合成キー（`${a}:${b}`）を使わず studentId → examPageId集合 の入れ子で持つ。
- * グリッド全体分に膨らみうる派生集合（既存答案・動的無効）向け。
- */
-export type CellLookup = Map<string, Set<string>>
-
-export function addCellToLookup(
-  lookup: CellLookup,
-  studentId: string,
-  examPageId: string
-): void {
-  const pages = lookup.get(studentId)
-  if (pages) {
-    pages.add(examPageId)
-  } else {
-    lookup.set(studentId, new Set([examPageId]))
-  }
-}
-
-export function lookupHasCell(
-  lookup: CellLookup,
-  studentId: string,
-  examPageId: string
-): boolean {
-  return lookup.get(studentId)?.has(examPageId) ?? false
-}
-
-/**
  * (studentId, examPageId) → 値 を O(1) で引く入れ子マップ。
- * CellLookup が「そのセルに該当するか」の真偽だけを持つのに対し、こちらはセルに
- * 紐づく実体（配置された答案など）を保持する。合成文字列キーも序数も使わない。
+ * 文字列合成キー（`${a}:${b}`）も序数も使わず、studentId → examPageId → 値 で持つ。
+ * グリッド全体分に膨らみうる派生（既存答案・動的無効・配置解決）向け。
  */
 export type CellValueMap<T> = Map<string, Map<string, T>>
 
@@ -79,6 +51,25 @@ export function getCellValue<T>(
   examPageId: string
 ): T | undefined {
   return cellValues.get(studentId)?.get(examPageId)
+}
+
+/** 値を持たず所属だけを表すセル集合（CellValueMap の存在判定専用の姿）。 */
+export type CellLookup = CellValueMap<true>
+
+export function addCellToLookup(
+  lookup: CellLookup,
+  studentId: string,
+  examPageId: string
+): void {
+  setCellValue(lookup, studentId, examPageId, true)
+}
+
+export function lookupHasCell(
+  lookup: CellLookup,
+  studentId: string,
+  examPageId: string
+): boolean {
+  return getCellValue(lookup, studentId, examPageId) ?? false
 }
 
 /**
