@@ -5,13 +5,6 @@
 import { BrowserWindow, ipcMain, powerSaveBlocker } from "electron"
 
 import {
-  bulkUpsertCropRegionMarkingOverrides,
-  getCropRegionMarkingOverrides,
-  getExamCropRegionMarkingOverrides,
-  type MarkingOverrideData,
-  resetCropRegionMarkingOverrides,
-} from "../lib/prisma/cropRegionMarkingOverride"
-import {
   bulkUpsertExamMarkingFormats,
   getExamExportSettings,
   getExamMarkingFormats,
@@ -184,42 +177,6 @@ export function registerSettingsHandlers() {
     async (examId: string, settings: Record<string, unknown>) => {
       await upsertExamExportSettings(examId, settings)
       return { success: true }
-    }
-  )
-
-  // =========================================================================
-  // CropRegionMarkingOverride (機能H)
-  // =========================================================================
-
-  registerSafeHandler(
-    "settings:getCropRegionMarkingOverrides",
-    async (cropRegionId: string) => {
-      const overrides = await getCropRegionMarkingOverrides(cropRegionId)
-      return { success: true, overrides }
-    }
-  )
-
-  registerSafeHandler(
-    "settings:saveCropRegionMarkingOverrides",
-    async (cropRegionId: string, overrides: MarkingOverrideData[]) => {
-      await bulkUpsertCropRegionMarkingOverrides(cropRegionId, overrides)
-      return { success: true }
-    }
-  )
-
-  registerSafeHandler(
-    "settings:resetCropRegionMarkingOverrides",
-    async (cropRegionId: string) => {
-      await resetCropRegionMarkingOverrides(cropRegionId)
-      return { success: true }
-    }
-  )
-
-  registerSafeHandler(
-    "settings:getExamCropRegionMarkingOverrides",
-    async (examId: string) => {
-      const overrides = await getExamCropRegionMarkingOverrides(examId)
-      return { success: true, overrides }
     }
   )
 }

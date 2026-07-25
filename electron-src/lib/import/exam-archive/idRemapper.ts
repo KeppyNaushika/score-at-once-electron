@@ -58,8 +58,6 @@ export interface ExamArchiveIdMappings {
   examMarkingFormat: Record<string, string>
   /** ExamExportSettings ID: 旧ID -> 新ID (v1.4.0+) */
   examExportSettings: Record<string, string>
-  /** CropRegionMarkingOverride ID: 旧ID -> 新ID (v1.4.0+) */
-  cropRegionMarkingOverride: Record<string, string>
   /** Tag ID: 旧ID -> 新ID (v1.10.0+, 旧Subject) */
   tag: Record<string, string>
   /** TagSubtotalGroup ID: 旧ID -> 新ID (v1.10.0+, 旧SubjectSubtotalGroup) */
@@ -115,7 +113,6 @@ export function generateNewIdMappings(
     drawingAnnotation: {},
     examMarkingFormat: {},
     examExportSettings: {},
-    cropRegionMarkingOverride: {},
     tag: {},
     tagSubtotalGroup: {},
     examTag: {},
@@ -238,13 +235,6 @@ export function generateNewIdMappings(
   // v1.4.0+: ExamExportSettings
   if (data.examData.examExportSettings) {
     mappings.examExportSettings[data.examData.examExportSettings.id] =
-      randomUUID()
-  }
-
-  // v1.4.0+: CropRegionMarkingOverride
-  for (const cropRegionMarkingOverride of data.examData
-    .cropRegionMarkingOverrides || []) {
-    mappings.cropRegionMarkingOverride[cropRegionMarkingOverride.id] =
       randomUUID()
   }
 

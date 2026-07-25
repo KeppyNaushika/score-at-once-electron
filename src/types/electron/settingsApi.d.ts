@@ -1,20 +1,6 @@
-import type {
-  CropRegionMarkingOverride,
-  ExamMarkingFormat,
-  Prisma,
-} from "@prisma/client"
+import type { ExamMarkingFormat } from "@prisma/client"
 
-import type { MarkingOverrideData } from "@/electron-src/lib/prisma/cropRegionMarkingOverride"
 import type { MarkingFormatData } from "@/electron-src/lib/prisma/examSettings"
-
-/**
- * 設問別採点記号オーバーライド設定（CropRegion情報付き）。
- * `getExamCropRegionMarkingOverrides` が返す実形状（cropRegion は id/label/type を select）。
- */
-export type CropRegionMarkingOverrideWithRegion =
-  Prisma.CropRegionMarkingOverrideGetPayload<{
-    include: { cropRegion: { select: { id: true; label: true; type: true } } }
-  }>
 
 /**
  * 設定関連API
@@ -99,24 +85,5 @@ export interface SettingsAPI {
       examId: string,
       settings: Record<string, unknown>
     ) => Promise<{ success: boolean; error?: string }>
-
-    // CropRegionMarkingOverride (機能H)
-    getCropRegionMarkingOverrides: (cropRegionId: string) => Promise<{
-      success: boolean
-      overrides?: CropRegionMarkingOverride[]
-      error?: string
-    }>
-    saveCropRegionMarkingOverrides: (
-      cropRegionId: string,
-      overrides: MarkingOverrideData[]
-    ) => Promise<{ success: boolean; error?: string }>
-    resetCropRegionMarkingOverrides: (
-      cropRegionId: string
-    ) => Promise<{ success: boolean; error?: string }>
-    getExamCropRegionMarkingOverrides: (examId: string) => Promise<{
-      success: boolean
-      overrides?: CropRegionMarkingOverrideWithRegion[]
-      error?: string
-    }>
   }
 }

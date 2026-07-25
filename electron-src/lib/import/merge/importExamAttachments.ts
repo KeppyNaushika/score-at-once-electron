@@ -1,7 +1,7 @@
 /**
  * ID統合インポート: 試験に付随する各種データの処理
  *
- * - ExamMarkingFormat / ExamExportSettings / CropRegionMarkingOverride（採点マーク・出力設定）
+ * - ExamMarkingFormat / ExamExportSettings（採点マーク・出力設定）
  * - CropRegionOmrConfig（＋ChoiceOption/DigitBox）（OMR設定）
  * - CompoundAnswer（＋Member）（複合解答の構造）
  * - Tag / TagSubtotalGroup / ExamTag（タグ）
@@ -69,42 +69,6 @@ export async function processExamExportSettings(
         settingsJson: settings.settingsJson,
       },
     })
-  }
-}
-
-export async function processCropRegionMarkingOverrides(
-  data: ExtractedArchiveData,
-  idMappings: IdMappings,
-  tx: PrismaTransaction
-): Promise<void> {
-  const overrides = data.examData.cropRegionMarkingOverrides ?? []
-  for (const markingOverride of overrides) {
-    const newCropRegionId = idMappings.cropRegion[markingOverride.cropRegionId]
-    if (!newCropRegionId) continue
-
-    const existing = await tx.cropRegionMarkingOverride.findFirst({
-      where: {
-        cropRegionId: newCropRegionId,
-        markType: markingOverride.markType,
-      },
-    })
-    if (existing) continue
-
-    const existingById = await tx.cropRegionMarkingOverride.findUnique({
-      where: { id: markingOverride.id },
-    })
-    if (!existingById) {
-      await tx.cropRegionMarkingOverride.create({
-        data: {
-          id: markingOverride.id,
-          cropRegionId: newCropRegionId,
-          markType: markingOverride.markType,
-          symbol: markingOverride.symbol,
-          color: markingOverride.color,
-          visible: markingOverride.visible,
-        },
-      })
-    }
   }
 }
 

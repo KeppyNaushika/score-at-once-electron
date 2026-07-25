@@ -59,37 +59,6 @@ export function createSettingsApi() {
         settings: Record<string, unknown>
       ) =>
         ipcRenderer.invoke("settings:saveExamExportSettings", examId, settings),
-
-      // CropRegionMarkingOverride (機能H)
-      getCropRegionMarkingOverrides: (cropRegionId: string) =>
-        ipcRenderer.invoke(
-          "settings:getCropRegionMarkingOverrides",
-          cropRegionId
-        ),
-      saveCropRegionMarkingOverrides: (
-        cropRegionId: string,
-        overrides: Array<{
-          markType: string
-          symbol?: string | null
-          color?: string | null
-          visible?: boolean
-        }>
-      ) =>
-        ipcRenderer.invoke(
-          "settings:saveCropRegionMarkingOverrides",
-          cropRegionId,
-          overrides
-        ),
-      resetCropRegionMarkingOverrides: (cropRegionId: string) =>
-        ipcRenderer.invoke(
-          "settings:resetCropRegionMarkingOverrides",
-          cropRegionId
-        ),
-      getExamCropRegionMarkingOverrides: (examId: string) =>
-        ipcRenderer.invoke(
-          "settings:getExamCropRegionMarkingOverrides",
-          examId
-        ),
     },
   }
 }

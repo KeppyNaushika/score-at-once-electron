@@ -390,24 +390,7 @@ export async function createImportedData(
         })
       }
 
-      // 12.5. CropRegionMarkingOverrideを作成 (v1.4.0+)
-      for (const crmo of data.examData.cropRegionMarkingOverrides || []) {
-        const newCropRegionId = remapId(crmo.cropRegionId, mappings.cropRegion)
-        if (newCropRegionId) {
-          await tx.cropRegionMarkingOverride.create({
-            data: {
-              id: remapIdRequired(crmo.id, mappings.cropRegionMarkingOverride),
-              cropRegionId: newCropRegionId,
-              markType: crmo.markType,
-              symbol: crmo.symbol,
-              color: crmo.color,
-              visible: crmo.visible,
-            },
-          })
-        }
-      }
-
-      // 12.7. CropRegionOmrConfigを作成 (v1.7.0+)
+      // 12.5. CropRegionOmrConfigを作成 (v1.7.0+)
       for (const cfg of data.examData.omrConfigs || []) {
         const newCropRegionId = remapId(cfg.cropRegionId, mappings.cropRegion)
         if (newCropRegionId) {
@@ -427,7 +410,7 @@ export async function createImportedData(
         }
       }
 
-      // 12.8. CropRegionOmrChoiceOptionを作成 (v1.7.0+)
+      // 12.6. CropRegionOmrChoiceOptionを作成 (v1.7.0+)
       for (const opt of data.examData.omrChoiceOptions || []) {
         const newOmrConfigId = remapId(
           opt.omrConfigId,
@@ -451,7 +434,7 @@ export async function createImportedData(
         }
       }
 
-      // 12.9. CropRegionOmrDigitBoxを作成 (v1.11.0+)
+      // 12.7. CropRegionOmrDigitBoxを作成 (v1.11.0+)
       for (const box of data.examData.omrDigitBoxes || []) {
         const newOmrConfigId = remapId(
           box.omrConfigId,
@@ -472,7 +455,7 @@ export async function createImportedData(
         }
       }
 
-      // 12.10. CompoundAnswerを作成 (v1.11.0+)
+      // 12.8. CompoundAnswerを作成 (v1.11.0+)
       for (const compoundAnswer of data.examData.compoundAnswers || []) {
         const newExamPageId = remapId(
           compoundAnswer.examPageId,
@@ -495,7 +478,7 @@ export async function createImportedData(
         }
       }
 
-      // 12.11. CompoundAnswerMemberを作成 (v1.11.0+)
+      // 12.9. CompoundAnswerMemberを作成 (v1.11.0+)
       for (const compoundAnswerMember of data.examData.compoundAnswerMembers ||
         []) {
         const newCompoundAnswerId = remapId(
@@ -523,7 +506,7 @@ export async function createImportedData(
         }
       }
 
-      // 12.12. CompoundAnswerScoreを作成 (v1.11.0+)
+      // 12.10. CompoundAnswerScoreを作成 (v1.11.0+)
       for (const compoundAnswerScore of data.examData.compoundAnswerScores ||
         []) {
         const newCompoundAnswerId = remapId(

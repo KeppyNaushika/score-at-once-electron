@@ -1082,70 +1082,7 @@ describe("executeIdIntegrationImport", () => {
     expect(settings!.settingsJson).toContain("includeImages")
   })
 
-  // II-14: v1.4.0: CropRegionMarkingOverride作成
-  it("II-14: v1.4.0のCropRegionMarkingOverrideが作成される", async () => {
-    const { data, examId, regionId } = createBasicTestData()
-
-    data.examData.cropRegionMarkingOverrides = [
-      {
-        id: generateId(),
-        cropRegionId: regionId,
-        markType: "correct",
-        symbol: "◎",
-        color: "#0000ff",
-        visible: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    const preMatch = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    expect(result.success).toBe(true)
-
-    const overrides = await prisma.cropRegionMarkingOverride.findMany({
-      where: { cropRegionId: regionId },
-    })
-    expect(overrides.length).toBe(1)
-    expect(overrides[0].markType).toBe("correct")
-  })
-
-  // II-15: Tag/TagSubtotalGroup作成
+  // II-15: Tag/TagSubtotalGroup作成（II-14 は CropRegionMarkingOverride 廃止に伴い欠番）
   it("II-15: Tag/TagSubtotalGroupが作成される", async () => {
     const { data, examId, groupId } = createBasicTestData()
 

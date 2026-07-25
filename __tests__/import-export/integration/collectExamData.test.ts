@@ -250,9 +250,6 @@ describe("collectExamData", () => {
     expect(data.examData.examExportSettings!.settingsJson).toContain(
       "includeImages"
     )
-
-    expect(data.examData.cropRegionMarkingOverrides).toBeDefined()
-    expect(data.examData.cropRegionMarkingOverrides!.length).toBeGreaterThan(0)
   })
 
   // DC-10: Tag/TagSubtotalGroupデータの収集

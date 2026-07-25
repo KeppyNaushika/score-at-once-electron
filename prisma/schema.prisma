@@ -31,7 +31,7 @@ model User {
 model Classroom {
   id                   String                       @id @default(uuid())
   name                 String                       @unique
-  classroomCode            String?
+  classroomCode        String?
   grade                Int?
   description          String?
   isVisible            Boolean                      @default(true)
@@ -166,7 +166,7 @@ model StudentAnswerImage {
 }
 
 model CropRegion {
-  id                 String                      @id @default(uuid())
+  id                 String                @id @default(uuid())
   examPageId         String
   label              String
   type               String
@@ -176,12 +176,11 @@ model CropRegion {
   height             Float
   points             Int?
   orderIndex         Int?
-  createdAt          DateTime                    @default(now())
-  updatedAt          DateTime                    @default(now()) @updatedAt
-  examPage           ExamPage                    @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now()) @updatedAt
+  examPage           ExamPage              @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   cropSubtotals      CropSubtotal[]
   questionScores     QuestionScore[]
-  markingOverrides   CropRegionMarkingOverride[]
   gradeDataSources   GradeDataSource[]
   omrConfig          CropRegionOmrConfig?
   compoundMembership CompoundAnswerMember?
@@ -527,22 +526,6 @@ model ExamExportSettings {
   updatedAt    DateTime @updatedAt
 
   exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
-}
-
-model CropRegionMarkingOverride {
-  id           String   @id @default(uuid())
-  cropRegionId String
-  markType     String
-  symbol       String?
-  color        String?
-  visible      Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  cropRegion CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
-
-  @@unique([cropRegionId, markType])
-  @@index([cropRegionId])
 }
 
 /// CropRegionに紐づくOMR設定（1:1）

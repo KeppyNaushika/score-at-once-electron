@@ -153,7 +153,6 @@ export async function convertHszToScore(
       examClassrooms: [],
       examMarkingFormats: [],
       examExportSettings: null,
-      cropRegionMarkingOverrides: [],
     }
 
     // 9. manifest 生成

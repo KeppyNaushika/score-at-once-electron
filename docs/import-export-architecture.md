@@ -96,21 +96,20 @@ interface ArchiveManifest {
 
 ### exam.json の主要フィールド (v1.4.0)
 
-| フィールド                   | 説明                                                    |
-| ---------------------------- | ------------------------------------------------------- |
-| `exam`                       | 試験基本情報 (examName, examDate, subject, description) |
-| `examPages`                  | ページ一覧 (id, examId, pageNumber)                     |
-| `cropRegions`                | 採点領域一覧 (座標、ラベル、配点等)                     |
-| `masterImages`               | 模範解答画像レコード (v1.2.0+)                          |
-| `studentAnswerImages`        | 答案画像レコード (v1.2.0+)                              |
-| `pageImages`                 | レガシー画像レコード (v1.1.0以前との後方互換性、空配列) |
-| `examStudents`               | 試験-生徒紐づけ                                         |
-| `userExams`                  | 空配列 (v0.3.0+、インポート時に現在のユーザーで再作成)  |
-| `examSubtotalGroups`         | 試験-小計グループ紐づけ                                 |
-| `examClassrooms`             | 試験-学級紐づけ                                         |
-| `examMarkingFormats`         | 採点マーク設定 (v1.4.0+)                                |
-| `examExportSettings`         | エクスポート設定 (v1.4.0+)                              |
-| `cropRegionMarkingOverrides` | 領域別マーク上書き設定 (v1.4.0+)                        |
+| フィールド            | 説明                                                    |
+| --------------------- | ------------------------------------------------------- |
+| `exam`                | 試験基本情報 (examName, examDate, subject, description) |
+| `examPages`           | ページ一覧 (id, examId, pageNumber)                     |
+| `cropRegions`         | 採点領域一覧 (座標、ラベル、配点等)                     |
+| `masterImages`        | 模範解答画像レコード (v1.2.0+)                          |
+| `studentAnswerImages` | 答案画像レコード (v1.2.0+)                              |
+| `pageImages`          | レガシー画像レコード (v1.1.0以前との後方互換性、空配列) |
+| `examStudents`        | 試験-生徒紐づけ                                         |
+| `userExams`           | 空配列 (v0.3.0+、インポート時に現在のユーザーで再作成)  |
+| `examSubtotalGroups`  | 試験-小計グループ紐づけ                                 |
+| `examClassrooms`      | 試験-学級紐づけ                                         |
+| `examMarkingFormats`  | 採点マーク設定 (v1.4.0+)                                |
+| `examExportSettings`  | エクスポート設定 (v1.4.0+)                              |
 
 ---
 
@@ -144,8 +143,7 @@ flowchart TD
 | 7    | 小計グループ・小計を取得               | examSubtotalGroups 経由                                               |
 | 7.5  | ExamMarkingFormat 取得                 | v1.4.0+                                                               |
 | 7.6  | ExamExportSettings 取得                | v1.4.0+                                                               |
-| 7.7  | CropRegionMarkingOverride 取得         | v1.4.0+                                                               |
-| 7.8  | Subject / SubjectSubtotalGroup 取得    | v1.4.0+                                                               |
+| 7.7  | Subject / SubjectSubtotalGroup 取得    | v1.4.0+                                                               |
 | 8    | 画像パスを収集                         | masterImages, studentAnswerImages                                     |
 | 9    | QuestionScore / DrawingAnnotation 収集 | **ログインユーザーのデータのみ** (v0.3.0+)                            |
 | 10   | データを整形                           | 全データをJSON化可能な構造に変換                                      |
@@ -394,6 +392,7 @@ flowchart TD
 | `1.15.0`   | v0.14.x          | 学級統計再設計（statistics 廃止 → teacherStat/studentReport、selectedForTable/selectedForBoxPlot）  |
 | `1.16.0`   | v0.14.x          | Class→Classroom リネーム（examClasses→examClassrooms、classId→classroomId、teacherStatistics）      |
 | `1.17.0`   | v0.15.x          | ExamStudent.status 小文字統一                                                                       |
+| `1.18.0`   | v0.16.x          | CropRegionMarkingOverride 廃止（UI・出力反映が無いまま入出力のみ維持されていたため削除）            |
 
 ### 変換器インターフェース
 
@@ -470,7 +469,6 @@ flowchart TD
         DB_SAI[StudentAnswerImage]
         DB_PMF[ExamMarkingFormat]
         DB_PES[ExamExportSettings]
-        DB_CRMO[CropRegionMarkingOverride]
         DB_SUB[Subject]
     end
 
@@ -493,7 +491,6 @@ flowchart TD
     DB_SAI --> DC
     DB_PMF --> DC
     DB_PES --> DC
-    DB_CRMO --> DC
     DB_SUB --> DC
 
     subgraph "archiveCreator.ts"
@@ -625,29 +622,31 @@ flowchart TD
 
 ## 付録: アーカイブバージョンと対応するデータ
 
-| データ                    | v1.0.0 | v1.1.0 | v1.2.0 | v1.3.0 | v1.4.0 |
-| ------------------------- | :----: | :----: | :----: | :----: | :----: |
-| Exam 基本情報             |   o    |   o    |   o    |   o    |   o    |
-| ExamPage                  |   o    |   o    |   o    |   o    |   o    |
-| CropRegion                |   o    |   o    |   o    |   o    |   o    |
-| PageImage (レガシー)      |   o    |   o    |   -    |   -    |   -    |
-| MasterImage               |   -    |   -    |   o    |   o    |   o    |
-| StudentAnswerImage        |   -    |   -    |   o    |   o    |   o    |
-| Student                   |   o    |   o    |   o    |  o\*   |  o\*   |
-| Class                     |   o    |   o    |   o    |   o    |   o    |
-| StudentClassMembership    |   o    |   o    |   o    |   o    |   o    |
-| User (パスワード除外)     |   o    |   o    |   o    |   o    |   o    |
-| UserExam                  |   o    | 空配列 | 空配列 | 空配列 | 空配列 |
-| SubtotalGroup / Subtotal  |   o    |   o    |   o    |   o    |   o    |
-| CropSubtotal              |   o    |   o    |   o    |   o    |   o    |
-| QuestionScore             |   o    |   o    |   o    |   o    |   o    |
-| DrawingAnnotation         |   o    |   o    |   o    |   o    |   o    |
-| ExamClass                 |   -    |   o    |   o    |   o    |   o    |
-| ExamSubtotalGroup         |   o    |   o    |   o    |   o    |   o    |
-| ExamMarkingFormat         |   -    |   -    |   -    |   -    |   o    |
-| ExamExportSettings        |   -    |   -    |   -    |   -    |   o    |
-| CropRegionMarkingOverride |   -    |   -    |   -    |   -    |   o    |
-| Subject                   |   -    |   -    |   -    |   -    |   o    |
-| SubjectSubtotalGroup      |   -    |   -    |   -    |   -    |   o    |
+| データ                        | v1.0.0 | v1.1.0 | v1.2.0 | v1.3.0 | v1.4.0 |
+| ----------------------------- | :----: | :----: | :----: | :----: | :----: |
+| Exam 基本情報                 |   o    |   o    |   o    |   o    |   o    |
+| ExamPage                      |   o    |   o    |   o    |   o    |   o    |
+| CropRegion                    |   o    |   o    |   o    |   o    |   o    |
+| PageImage (レガシー)          |   o    |   o    |   -    |   -    |   -    |
+| MasterImage                   |   -    |   -    |   o    |   o    |   o    |
+| StudentAnswerImage            |   -    |   -    |   o    |   o    |   o    |
+| Student                       |   o    |   o    |   o    |  o\*   |  o\*   |
+| Class                         |   o    |   o    |   o    |   o    |   o    |
+| StudentClassMembership        |   o    |   o    |   o    |   o    |   o    |
+| User (パスワード除外)         |   o    |   o    |   o    |   o    |   o    |
+| UserExam                      |   o    | 空配列 | 空配列 | 空配列 | 空配列 |
+| SubtotalGroup / Subtotal      |   o    |   o    |   o    |   o    |   o    |
+| CropSubtotal                  |   o    |   o    |   o    |   o    |   o    |
+| QuestionScore                 |   o    |   o    |   o    |   o    |   o    |
+| DrawingAnnotation             |   o    |   o    |   o    |   o    |   o    |
+| ExamClass                     |   -    |   o    |   o    |   o    |   o    |
+| ExamSubtotalGroup             |   o    |   o    |   o    |   o    |   o    |
+| ExamMarkingFormat             |   -    |   -    |   -    |   -    |   o    |
+| ExamExportSettings            |   -    |   -    |   -    |   -    |   o    |
+| CropRegionMarkingOverride\*\* |   -    |   -    |   -    |   -    |   o    |
+| Subject                       |   -    |   -    |   -    |   -    |   o    |
+| SubjectSubtotalGroup          |   -    |   -    |   -    |   -    |   o    |
 
 `*` v1.3.0 で `studentId` フィールドが `studentNumber` にリネーム
+
+`**` v0.16.x で廃止（issue #852）。旧アーカイブには実在するが、取り込み側は読み捨てる

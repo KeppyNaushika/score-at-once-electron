@@ -297,7 +297,6 @@ describe("exportImportRoundTrip", () => {
     const data = exportResult.data!
     expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
     expect(data.examData.examExportSettings).not.toBeNull()
-    expect(data.examData.cropRegionMarkingOverrides!.length).toBeGreaterThan(0)
     expect(data.tagsData.tags.length).toBeGreaterThan(0)
     expect(data.tagsData.tagSubtotalGroups.length).toBeGreaterThan(0)
 

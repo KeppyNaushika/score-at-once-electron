@@ -107,11 +107,6 @@ export interface FullTestExam {
     examId: string
     settingsJson: string
   } | null
-  cropRegionMarkingOverrides: Array<{
-    id: string
-    cropRegionId: string
-    markType: string
-  }>
   tag: { id: string; name: string } | null
   tagSubtotalGroup: {
     id: string
@@ -394,7 +389,6 @@ export async function createFullTestExam(
   // 16. v1.4.0+ データ
   const examMarkingFormats = []
   let examExportSettings = null
-  const cropRegionMarkingOverrides = []
   let tag = null
   let tagSubtotalGroup = null
 
@@ -421,22 +415,6 @@ export async function createFullTestExam(
         settingsJson: JSON.stringify({ includeImages: true }),
       },
     })
-
-    // CropRegionMarkingOverride（最初のregionに）
-    if (cropRegions.length > 0) {
-      const cropRegionMarkingOverride =
-        await prisma.cropRegionMarkingOverride.create({
-          data: {
-            id: randomUUID(),
-            cropRegionId: cropRegions[0].id,
-            markType: "correct",
-            symbol: "◎",
-            color: "#0000ff",
-            visible: true,
-          },
-        })
-      cropRegionMarkingOverrides.push(cropRegionMarkingOverride)
-    }
 
     // Tag + TagSubtotalGroup
     tag = await prisma.tag.create({
@@ -534,13 +512,6 @@ export async function createFullTestExam(
           settingsJson: examExportSettings.settingsJson,
         }
       : null,
-    cropRegionMarkingOverrides: cropRegionMarkingOverrides.map(
-      (cropRegionMarkingOverride) => ({
-        id: cropRegionMarkingOverride.id,
-        cropRegionId: cropRegionMarkingOverride.cropRegionId,
-        markType: cropRegionMarkingOverride.markType,
-      })
-    ),
     tag: tag ? { id: tag.id, name: tag.name } : null,
     tagSubtotalGroup: tagSubtotalGroup
       ? {

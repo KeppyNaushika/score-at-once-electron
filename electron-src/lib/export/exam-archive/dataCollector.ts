@@ -187,16 +187,7 @@ export async function collectExamData(
       where: { examId },
     })
 
-    // 7.7. CropRegionMarkingOverrideを取得
-    const cropRegionIds = exam.examPages.flatMap((page) =>
-      page.cropRegions.map((cropRegion) => cropRegion.id)
-    )
-    const cropRegionMarkingOverrides =
-      await prisma.cropRegionMarkingOverride.findMany({
-        where: { cropRegionId: { in: cropRegionIds } },
-      })
-
-    // 7.8. Tag/TagSubtotalGroup/ExamTagを取得（subtotalGroup経由、templateモードでは空）
+    // 7.7. Tag/TagSubtotalGroup/ExamTagを取得（subtotalGroup経由、templateモードでは空）
     const subtotalGroupIdArray = Array.from(subtotalGroupIds)
     const tagSubtotalGroups = includeSubtotals
       ? await prisma.tagSubtotalGroup.findMany({
@@ -587,18 +578,6 @@ export async function collectExamData(
             updatedAt: examExportSettings.updatedAt.toISOString(),
           }
         : null,
-      cropRegionMarkingOverrides: cropRegionMarkingOverrides.map(
-        (cropRegionMarkingOverride) => ({
-          id: cropRegionMarkingOverride.id,
-          cropRegionId: cropRegionMarkingOverride.cropRegionId,
-          markType: cropRegionMarkingOverride.markType,
-          symbol: cropRegionMarkingOverride.symbol,
-          color: cropRegionMarkingOverride.color,
-          visible: cropRegionMarkingOverride.visible,
-          createdAt: cropRegionMarkingOverride.createdAt.toISOString(),
-          updatedAt: cropRegionMarkingOverride.updatedAt.toISOString(),
-        })
-      ),
     }
 
     const studentsData: ArchiveStudentsData = {
