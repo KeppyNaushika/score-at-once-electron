@@ -51,7 +51,7 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   existingAnswers = [],
 }: UseAnswerTableCoreParams<TItem>) {
   const {
-    nameRegionAvailable,
+    nameRegionExamPageIds,
     canvasRef,
     checkNameRegionAvailability,
     drawNameRegionCanvas,
@@ -149,11 +149,11 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
 
   const maxPages = examPages.length
   const trashFiles = getDisabledFiles()
-  const hasNameRegion = Object.values(nameRegionAvailable).some(Boolean)
+  const hasNameRegion = nameRegionExamPageIds.size > 0
 
   return {
     // 氏名領域
-    nameRegionAvailable,
+    nameRegionExamPageIds,
     canvasRef,
     drawNameRegionCanvas,
     // 無効状態

@@ -17,7 +17,7 @@ interface OrphanAnswerCardProps {
   previewMode: PreviewMode
   drawNameRegionCanvas: (
     previewUrl: string | null,
-    pageNumber: number
+    examPageId: string | null
   ) => Promise<string | null>
 }
 
@@ -52,8 +52,8 @@ export function OrphanAnswerCard({
           previewUrl={display.previewUrl}
           imagePath={display.imagePath}
           altName={display.altName}
-          // 孤立答案は列に対応する ExamPage が無いため氏名欄クリップ対象外（pageNumber は表示のみ）
-          pageNumber={0}
+          // 孤立答案は列に対応する ExamPage が無いため氏名欄クリップ対象外
+          examPageId={null}
           previewMode={previewMode}
           isFileDisabled={false}
           nameRegionAvailable={false}

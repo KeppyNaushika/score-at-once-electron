@@ -26,7 +26,10 @@ import prisma from "../lib/prisma/client"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 /**
- * マスターマーカー検出キャッシュ (キー: "examId:pageNumber:colorThreshold")
+ * マスターマーカー検出キャッシュ (キー: "examPageId:colorThreshold")
+ *
+ * ページの同定は ExamPage.id。序数 pageNumber はページ挿入・並べ替えでシフトし、
+ * 別ページの検出結果を引いてしまうためキーに使わない。
  *
  * 画像ファイルのmtimeを保持し、ファイルが差し替えられた場合は
  * キャッシュを無効とみなして再検出する（アプリ外でのファイル差し替えにも追従）。
@@ -35,6 +38,11 @@ const masterMarkerCache = new Map<
   string,
   { mtimeMs: number; result: MarkerDetectionResult }
 >()
+
+/** マスターマーカー検出キャッシュのキー */
+function markerCacheKey(examPageId: string, colorThreshold?: number): string {
+  return `${examPageId}:${colorThreshold ?? 128}`
+}
 
 /** 画像のmtimeを取得（取得できない場合はnull＝キャッシュ不使用） */
 function getMtimeMs(imagePath: string): number | null {
@@ -56,15 +64,6 @@ function getCachedMarkerResult(
     return cached.result
   }
   return null
-}
-
-/** キャッシュ無効化（マスター画像変更時に呼び出す） */
-export function invalidateMasterMarkerCache(examId: string): void {
-  for (const key of masterMarkerCache.keys()) {
-    if (key.startsWith(`${examId}:`)) {
-      masterMarkerCache.delete(key)
-    }
-  }
 }
 
 /** OMR（光学マーク認識）のマーカー検出・シート認識・バッチ処理に関するIPCチャンネルを登録する */
@@ -334,7 +333,11 @@ export function setupOMRHandlers(): void {
       colorThreshold?: number
     ): Promise<{
       success: boolean
-      pages: Array<{ pageNumber: number; result: MarkerDetectionResult }>
+      pages: Array<{
+        examPageId: string
+        pageNumber: number
+        result: MarkerDetectionResult
+      }>
       error?: string
     }> => {
       // マスター画像を取得
@@ -355,6 +358,7 @@ export function setupOMRHandlers(): void {
       }
 
       const pages: Array<{
+        examPageId: string
         pageNumber: number
         result: MarkerDetectionResult
       }> = []
@@ -362,15 +366,16 @@ export function setupOMRHandlers(): void {
       const dataDir = getDataDirectory()
 
       for (const masterImage of masterImages) {
+        const examPageId = masterImage.examPageId
         const pageNumber = masterImage.examPage.pageNumber
-        const cacheKey = `${examId}:${pageNumber}:${colorThreshold ?? 128}`
+        const cacheKey = markerCacheKey(examPageId, colorThreshold)
         const imagePath = path.join(dataDir, masterImage.imagePath)
         const mtimeMs = getMtimeMs(imagePath)
 
         // キャッシュチェック（ファイル差し替えを検知したら再検出）
         const cached = getCachedMarkerResult(cacheKey, mtimeMs)
         if (cached) {
-          pages.push({ pageNumber, result: cached })
+          pages.push({ examPageId, pageNumber, result: cached })
           continue
         }
 
@@ -379,7 +384,7 @@ export function setupOMRHandlers(): void {
         if (mtimeMs !== null) {
           masterMarkerCache.set(cacheKey, { mtimeMs, result })
         }
-        pages.push({ pageNumber, result })
+        pages.push({ examPageId, pageNumber, result })
       }
 
       // 全ページで4マーカー検出できたか
@@ -402,8 +407,7 @@ export function setupOMRHandlers(): void {
   registerSafeHandler(
     "omr:correct-image",
     async (
-      examId: string,
-      pageNumber: number,
+      examPageId: string,
       buffer: Uint8Array,
       colorThreshold?: number
     ): Promise<{
@@ -412,10 +416,10 @@ export function setupOMRHandlers(): void {
       status: "corrected" | "skipped"
       error?: string
     }> => {
-      const cacheKey = `${examId}:${pageNumber}:${colorThreshold ?? 128}`
+      const cacheKey = markerCacheKey(examPageId, colorThreshold)
+      // マスター画像は ExamPage.id 直指定で引く（序数 pageNumber では引かない）。
       const masterImage = await prisma.masterImage.findFirst({
-        where: { examPage: { examId, pageNumber } },
-        include: { examPage: true },
+        where: { examPageId },
       })
       if (!masterImage) {
         return {

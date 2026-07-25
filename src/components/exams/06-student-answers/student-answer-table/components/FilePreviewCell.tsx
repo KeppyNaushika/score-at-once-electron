@@ -20,14 +20,15 @@ import {
  * ファイルプレビューセルコンポーネント
  *
  * 答案画像のサムネイルを表示するセル。表示ソース（未保存 blob = previewUrl / DB答案の
- * imagePath）と表示値（altName・pageNumber・補正ステータス）は呼び出し側がエンティティ
- * ／未保存項目から導出して渡す（このコンポーネントは答案の同定・実体には依存しない）。
+ * imagePath）と表示値（altName・補正ステータス）は呼び出し側がエンティティ／未保存項目から
+ * 導出して渡す（このコンポーネントは答案の同定・実体には依存しない）。氏名欄クリップの
+ * 対象ページだけは id（examPageId）で受ける（序数 pageNumber では引かない）。
  */
 export function FilePreviewCell({
   previewUrl,
   imagePath,
   altName,
-  pageNumber,
+  examPageId,
   previewMode,
   isFileDisabled,
   nameRegionAvailable,
@@ -100,7 +101,7 @@ export function FilePreviewCell({
         if (cancelled) return
 
         setIsNameRegionLoading(true)
-        drawNameRegionCanvas(imagePreview, pageNumber)
+        drawNameRegionCanvas(imagePreview, examPageId)
           .then((canvas) => {
             if (cancelled) return
             setNameRegionPreview(canvas)
@@ -119,7 +120,7 @@ export function FilePreviewCell({
       }
     }
   }, [
-    pageNumber,
+    examPageId,
     previewMode,
     nameRegionAvailable,
     drawNameRegionCanvas,

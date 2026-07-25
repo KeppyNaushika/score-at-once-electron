@@ -30,7 +30,7 @@ interface DraggableAnswerCellProps {
  *
  * sortable（並べ替えリスト）ではなく素の droppable（マス）＋ draggable（答案）で構成する。
  * これにより掴んでも他マスに reflow transform が当たらず、ドラッグ中に周囲が散らばらない。
- * セル自体が `cell:studentId:pageNumber` の droppable なので、占有マスへのドロップ＝swap も
+ * セル自体が `cell:studentId:examPageId` の droppable なので、占有マスへのドロップ＝swap も
  * `decodeCellDroppableId` で素直に解決できる（空マスの EmptyTableCell と同じ座標スキーム）。
  */
 export function DraggableAnswerCell({

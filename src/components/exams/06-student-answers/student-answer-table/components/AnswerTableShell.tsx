@@ -69,7 +69,7 @@ interface AnswerTableShellProps {
   // テーブルデータ（行に ExamStudent 実体、各マスに ExamPage 実体を同梱）
   tableRows: AnswerTableRow<AnswerImageIdentity>[]
   disabledState: ExtendedDisabledState
-  nameRegionAvailable: Record<number, boolean>
+  nameRegionExamPageIds: Set<string>
   cellsWithExistingAnswers: CellLookup
   files: AnswerImageIdentity[]
   affectedCells?: Set<string>
@@ -79,7 +79,7 @@ interface AnswerTableShellProps {
   fileDisplayById: Map<string, FilePreviewSource>
   drawNameRegionCanvas: (
     previewUrl: string | null,
-    pageNumber: number
+    examPageId: string | null
   ) => Promise<string | null>
   toggleRowDisabled: (examStudentId: string) => void
   toggleColDisabled: (examPageId: string) => void
@@ -126,7 +126,7 @@ export function AnswerTableShell({
   onDragEnd,
   tableRows,
   disabledState,
-  nameRegionAvailable,
+  nameRegionExamPageIds,
   cellsWithExistingAnswers,
   files,
   affectedCells,
@@ -176,14 +176,12 @@ export function AnswerTableShell({
         })()
       : []
 
-  // ドラッグ中の答案の表示ソースと、その配置ページ番号（氏名欄クリップ用）を導出する。
+  // ドラッグ中の答案の表示ソースと、その配置ページ（氏名欄クリップ用）を導出する。
+  // ページは id で持つ（未配置・孤立は null。偽の番兵ページ番号は置かない）。
   const activeDisplay = activeFile
     ? (fileDisplayById.get(activeFile.id) ?? null)
     : null
-  const activePageNumber = activeFile?.examPageId
-    ? (examPages.find((examPage) => examPage.id === activeFile.examPageId)
-        ?.pageNumber ?? 0)
-    : 0
+  const activeExamPageId = activeFile?.examPageId ?? null
 
   // ファイルセルの DnD ラッパー（モード別に注入）:
   // - upload（方式A）: SortableTableCell（sortable による並べ替え）
@@ -239,7 +237,7 @@ export function AnswerTableShell({
         disabledState={disabledState}
         mode={mode}
         previewMode={previewMode}
-        nameRegionAvailable={nameRegionAvailable}
+        nameRegionExamPageIds={nameRegionExamPageIds}
         cellsWithExistingAnswers={cellsWithExistingAnswers}
         allowOverwrite={allowOverwrite}
         files={files}
@@ -336,10 +334,12 @@ export function AnswerTableShell({
 
         <TableDragOverlay
           activeDisplay={activeDisplay}
-          pageNumber={activePageNumber}
+          examPageId={activeExamPageId}
           previewMode={previewMode}
           nameRegionAvailable={
-            activePageNumber ? nameRegionAvailable[activePageNumber] : false
+            activeExamPageId
+              ? nameRegionExamPageIds.has(activeExamPageId)
+              : false
           }
           drawNameRegionCanvas={drawNameRegionCanvas}
         />

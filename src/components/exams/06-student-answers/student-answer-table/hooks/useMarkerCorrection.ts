@@ -4,11 +4,10 @@ import type { AnswerTableRow } from "@/components/exams/06-student-answers/stude
 import type { UnsavedAnswerImage } from "@/components/exams/06-student-answers/types"
 
 interface UseMarkerCorrectionArgs {
-  examId: string
   files: UnsavedAnswerImage[]
   tableRows: AnswerTableRow<UnsavedAnswerImage>[]
   markerCorrectionEnabled: boolean
-  markerAvailablePages: Set<number>
+  markerAvailableExamPageIds: Set<string>
   onFilesChange: (files: UnsavedAnswerImage[]) => void
 }
 
@@ -20,16 +19,15 @@ interface UseMarkerCorrectionResult {
  * 配置戦略に応じた動的マーカー補正フック
  *
  * 仕組み:
- * - tableRows から各ファイルのマスターページ番号を決定
- * - file.correctedForPage と異なれば再補正（または復元）
+ * - tableRows から各ファイルの配置先ページ（ExamPage.id）を決定
+ * - file.correctedForExamPageId と異なれば再補正（または復元）
  * - トグルOFF、マスター無し、未配置ファイルは元に戻す
  */
 export function useMarkerCorrection({
-  examId,
   files,
   tableRows,
   markerCorrectionEnabled,
-  markerAvailablePages,
+  markerAvailableExamPageIds,
   onFilesChange,
 }: UseMarkerCorrectionArgs): UseMarkerCorrectionResult {
   const originalBuffersRef = useRef<Map<string, ArrayBuffer>>(new Map())
@@ -53,14 +51,14 @@ export function useMarkerCorrection({
   useEffect(() => {
     const runId = ++runIdRef.current
 
-    // ファイルID → 対応マスターページ番号 のマップを構築
-    const targetMap = new Map<string, number>()
+    // ファイルID → 対応マスターページ（ExamPage.id）のマップを構築
+    const targetMap = new Map<string, string>()
     if (markerCorrectionEnabled) {
       for (const row of tableRows) {
-        // マスターページ番号はマスが持つ列（ExamPage 実体）の pageNumber から導出する
+        // 補正対象ページはマスが持つ列（ExamPage 実体）の id で同定する（序数は使わない）
         for (const cell of row.cells) {
           if (cell.file) {
-            targetMap.set(cell.file.id, cell.examPage.pageNumber)
+            targetMap.set(cell.file.id, cell.examPage.id)
           }
         }
       }
@@ -70,7 +68,7 @@ export function useMarkerCorrection({
     type Task = {
       file: UnsavedAnswerImage
       buffer: ArrayBuffer
-      target: number | undefined
+      target: string | undefined
     }
     const tasks: Task[] = []
     for (const file of files) {
@@ -80,18 +78,18 @@ export function useMarkerCorrection({
       const rawTarget = targetMap.get(file.id)
       // マスターが存在しないページは対象外（undefined扱いで復元）
       const target =
-        rawTarget !== undefined && markerAvailablePages.has(rawTarget)
+        rawTarget !== undefined && markerAvailableExamPageIds.has(rawTarget)
           ? rawTarget
           : undefined
 
       if (target === undefined) {
         if (
-          file.correctedForPage !== undefined ||
+          file.correctedForExamPageId !== undefined ||
           file.correctionStatus !== undefined
         ) {
           tasks.push({ file, buffer, target: undefined })
         }
-      } else if (file.correctedForPage !== target) {
+      } else if (file.correctedForExamPageId !== target) {
         tasks.push({ file, buffer, target })
       }
     }
@@ -131,7 +129,6 @@ export function useMarkerCorrection({
             const sendBuffer = new Uint8Array(origBuffer.byteLength)
             sendBuffer.set(new Uint8Array(origBuffer))
             const result = await window.electronAPI.omr.correctImage(
-              examId,
               target,
               sendBuffer
             )
@@ -151,19 +148,17 @@ export function useMarkerCorrection({
                 fileType: "image/png",
                 preview: URL.createObjectURL(blob),
                 correctionStatus: "corrected" as const,
-                correctedForPage: target,
+                correctedForExamPageId: target,
                 correctionError: undefined,
               }
             }
             const reason = result.error ?? "不明なエラー"
-            console.warn(
-              `補正スキップ (${file.name}, 対象p${target}): ${reason}`
-            )
+            console.warn(`補正スキップ (${file.name}): ${reason}`)
             const restored = restoreFromOriginal(file, origBuffer)
             return {
               ...restored,
               correctionStatus: "skipped" as const,
-              correctedForPage: target,
+              correctedForExamPageId: target,
               correctionError: reason,
             }
           } catch (error) {
@@ -174,7 +169,7 @@ export function useMarkerCorrection({
             return {
               ...restored,
               correctionStatus: "skipped" as const,
-              correctedForPage: target,
+              correctedForExamPageId: target,
               correctionError: reason,
             }
           }
@@ -205,11 +200,10 @@ export function useMarkerCorrection({
 
     processTasks()
   }, [
-    examId,
     files,
     tableRows,
     markerCorrectionEnabled,
-    markerAvailablePages,
+    markerAvailableExamPageIds,
     onFilesChange,
   ])
 
@@ -225,7 +219,7 @@ function restoreFromOriginal(
     return {
       ...file,
       correctionStatus: undefined,
-      correctedForPage: undefined,
+      correctedForExamPageId: undefined,
       correctionError: undefined,
     }
   }
@@ -238,7 +232,7 @@ function restoreFromOriginal(
     buffer: origBuffer,
     preview: URL.createObjectURL(blob),
     correctionStatus: undefined,
-    correctedForPage: undefined,
+    correctedForExamPageId: undefined,
     correctionError: undefined,
   }
 }
