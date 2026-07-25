@@ -60,11 +60,13 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
   allowOverwrite = false,
   cellsWithExistingAnswers,
 }: UseTableDataGenerationParams<TItem>) {
-  const { tableRows, orphanItems } = useMemo(() => {
+  const { tableRows, orphanItems, unplacedItems } = useMemo(() => {
     const enabledFiles = getEnabledFiles(files, disabledState)
 
     const rows: AnswerTableRow<TItem>[] = []
     const orphans: TItem[] = []
+    // upload で有効マスに収まりきらなかったファイル（＝アップロード対象にならない）
+    const unplaced: TItem[] = []
 
     if (mode === "view") {
       // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, examPageId) に配置する。
@@ -148,7 +150,6 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
       }
 
       // ファイルと有効セルをマッピング（ファイル配列の順序で自動配置）。
-      // 有効セルより多いファイルは配置されない（＝アップロード対象にならない）。
       const filePlacement: CellValueMap<TItem> = new Map()
       validPositions.forEach((position, fileIndex) => {
         const file = enabledFiles[fileIndex]
@@ -161,6 +162,10 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
           )
         }
       })
+
+      // 有効マスより多いファイルは置き場が無く、アップロードされないまま消える。
+      // 黙って落とさないよう呼び出し側へ渡し、送信前に警告できるようにする。
+      unplaced.push(...enabledFiles.slice(validPositions.length))
 
       for (const examStudent of sortedStudents) {
         const cells = examPages.map<AnswerTableCell<TItem>>((examPage) => {
@@ -206,7 +211,7 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
       }
     }
 
-    return { tableRows: rows, orphanItems: orphans }
+    return { tableRows: rows, orphanItems: orphans, unplacedItems: unplaced }
   }, [
     files,
     sortedStudents,
@@ -219,5 +224,5 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
     cellsWithExistingAnswers,
   ])
 
-  return { tableRows, orphanItems }
+  return { tableRows, orphanItems, unplacedItems }
 }

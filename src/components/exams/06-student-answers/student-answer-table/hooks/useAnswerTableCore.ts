@@ -74,6 +74,7 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     getDisabledFiles,
     tableRows,
     orphanItems,
+    unplacedItems,
     cellsWithExistingAnswers,
   } = useTableData<TItem>({
     files,
@@ -167,6 +168,7 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     getEnabledFiles,
     tableRows,
     orphanItems,
+    unplacedItems,
     cellsWithExistingAnswers,
     // DnD
     sensors,
