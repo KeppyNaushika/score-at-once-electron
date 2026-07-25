@@ -1,7 +1,7 @@
 "use client"
 
 import { AlertCircle, Lock } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 interface PasswordDialogProps {
   isOpen: boolean
@@ -36,7 +37,7 @@ export function PasswordDialog({
 }: PasswordDialogProps) {
   const [password, setPassword] = useState("")
   const [isShaking, setIsShaking] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const { inputRef, onOpenAutoFocus } = useDialogAutoFocus(isOpen)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,6 +99,17 @@ export function PasswordDialog({
     }
   }, [isOpen])
 
+  // パスワード違いの再試行では、呼び出し側（usePdfPasswordConversion）が
+  // isOpen を true のまま isLoading だけ戻すため、Dialog は再マウントされず
+  // onOpenAutoFocus も [isOpen] のリセット効果も再発火しない。
+  // 誤ったパスワードが残ったまま無フォーカスになるので、ここで入力を作り直す。
+  useEffect(() => {
+    if (isOpen && !isLoading && error && !isFirstAttempt) {
+      setPassword("")
+      inputRef.current?.focus()
+    }
+  }, [isOpen, isLoading, error, isFirstAttempt, inputRef])
+
   const handleClose = () => {
     setPassword("")
     onClose()
@@ -105,7 +117,7 @@ export function PasswordDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={onOpenAutoFocus}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5 text-amber-600" />
@@ -130,7 +142,6 @@ export function PasswordDialog({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="PDFのパスワードを入力"
-              autoFocus
               disabled={isLoading}
               className={isShaking ? "animate-pulse border-red-500" : ""}
               style={{

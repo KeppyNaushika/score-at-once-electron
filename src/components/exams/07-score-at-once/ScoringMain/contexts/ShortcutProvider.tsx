@@ -393,18 +393,24 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
       // input要素内では、モーダル制御キー以外をスルー
       // これにより、通常の文字入力（0-9, a-z, .等）とBackspace等は正常に動作する
       if (isInputElement) {
-        // ユーザー設定から部分点・保留・キャンセルのキーを取得
+        // モーダル用コマンド（modal.*）は when 句が partialScoreModalOpen だけで
+        // !inputFocus を含まない＝モーダルのinputにフォーカスがある状態でも
+        // 動く前提で登録されている。ここで弾くと再割当したキーが死ぬため、
+        // modal.* の割当キーは部分点・保留と同様に後続の評価へ通す。
+        // モーダルが開いていなければ when 句が偽になり通常の入力として扱われる。
         const modalControlKeys = [
           keyBindings["scoring.partial"],
           keyBindings["scoring.pending"],
-          keyBindings["modal.cancel"],
+          ...Object.entries(keyBindings)
+            .filter(([commandId]) => commandId.startsWith("modal."))
+            .map(([, boundKey]) => boundKey),
         ].filter(Boolean)
 
         if (!modalControlKeys.includes(key)) {
           // モーダル制御キー以外は通常の入力として処理（Backspace含む）
           return
         }
-        // 部分点/保留/キャンセルキーの場合は、後続のコマンド評価に進む
+        // 部分点/保留/モーダル操作キーの場合は、後続のコマンド評価に進む
       }
 
       // 逆引き: key -> commandId[] (複数のコマンドが同じキーにバインドされている可能性)

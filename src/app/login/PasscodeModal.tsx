@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +18,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 interface PasscodeModalProps {
   isOpen: boolean
@@ -39,6 +40,18 @@ export function PasscodeModal({
   const [passcode, setPasscode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const { inputRef: passcodeInputRef, onOpenAutoFocus } =
+    useDialogAutoFocus(isOpen)
+
+  // 呼び出し側（login/page.tsx）は選択中ユーザーを保持したまま isOpen だけを
+  // 落とすため、このコンポーネントはアンマウントされず state が残る。
+  // 前回の誤ったパスコードとエラーを持ち越さないよう、開くたびに作り直す。
+  useEffect(() => {
+    if (isOpen) {
+      setPasscode("")
+      setError("")
+    }
+  }, [isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,6 +79,7 @@ export function PasscodeModal({
     if (user.passcodeType === "4digit") {
       return (
         <InputOTP
+          ref={passcodeInputRef}
           maxLength={4}
           value={passcode}
           onChange={setPasscode}
@@ -84,6 +98,7 @@ export function PasscodeModal({
     if (user.passcodeType === "6digit") {
       return (
         <InputOTP
+          ref={passcodeInputRef}
           maxLength={6}
           value={passcode}
           onChange={setPasscode}
@@ -104,11 +119,12 @@ export function PasscodeModal({
     if (user.passcodeType === "alphanumeric") {
       return (
         <Input
+          ref={passcodeInputRef}
+          id="passcode"
           type="password"
           value={passcode}
           onChange={(e) => setPasscode(e.target.value)}
           placeholder="パスコードを入力"
-          autoFocus
         />
       )
     }
@@ -131,7 +147,10 @@ export function PasscodeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[350px]">
+      <DialogContent
+        className="sm:max-w-[350px]"
+        onOpenAutoFocus={onOpenAutoFocus}
+      >
         <DialogHeader>
           <DialogTitle>{user.name}</DialogTitle>
           <DialogDescription>
