@@ -344,8 +344,7 @@ export function setupGradeHandlers(): void {
     "grade:upsertBoundarySet",
     async (data: {
       gradeId: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => {
       return upsertBoundarySet(data)
@@ -365,8 +364,7 @@ export function setupGradeHandlers(): void {
     async (data: {
       gradeId: string
       studentId: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
       overrideLabel: string
     }) => {
       return upsertGradeOverride(data)
@@ -378,8 +376,7 @@ export function setupGradeHandlers(): void {
     async (data: {
       gradeId: string
       studentId: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
     }) => {
       return deleteGradeOverride(data)
     }

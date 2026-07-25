@@ -123,8 +123,7 @@ function buildGrade(
     }[]
     boundarySets?: {
       id: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
       boundaries: {
         label: string
         minPercentage: unknown
@@ -267,18 +266,7 @@ describe("calculateGrades", () => {
       boundarySets: [
         {
           id: "bs1",
-          targetType: "grade_item",
           gradeItemId: "gi1",
-          boundaries: [
-            { label: "A", minPercentage: 80, order: 0 },
-            { label: "B", minPercentage: 60, order: 1 },
-            { label: "C", minPercentage: 0, order: 2 },
-          ],
-        },
-        {
-          id: "bs2",
-          targetType: "overall",
-          gradeItemId: null,
           boundaries: [
             { label: "A", minPercentage: 80, order: 0 },
             { label: "B", minPercentage: 60, order: 1 },
@@ -304,10 +292,6 @@ describe("calculateGrades", () => {
     expect(gradeItemResult.percentage).toBeCloseTo(85, 1)
     expect(gradeItemResult.gradeLabel).toBe("A")
     expect(gradeItemResult.isAllMissing).toBe(false)
-
-    // 総合
-    expect(student.overallPercentage).toBeCloseTo(85, 1)
-    expect(student.overallGradeLabel).toBe("A")
   })
 
   it("複数GradeItemの重み付け合計が正しく計算される", async () => {
@@ -374,10 +358,6 @@ describe("calculateGrades", () => {
     // gi2: 40/50 * 50 = 40 (50max → 80%)
     expect(student.gradeItemResults[1].weightedScore).toBeCloseTo(40)
     expect(student.gradeItemResults[1].percentage).toBeCloseTo(80)
-
-    // overall: (40 + 40) / (50 + 50) * 100 = 80%
-    expect(student.overallScore).toBeCloseTo(80)
-    expect(student.overallPercentage).toBeCloseTo(80)
   })
 
   it("manualScoreがnullの場合は換算合計0点として成績算出する", async () => {
@@ -418,8 +398,6 @@ describe("calculateGrades", () => {
     expect(student.gradeItemResults[0].weightedMaxScore).toBe(100)
     expect(student.gradeItemResults[0].percentage).toBe(0)
     expect(student.gradeItemResults[0].isAllMissing).toBe(true)
-    expect(student.overallScore).toBe(0)
-    expect(student.overallPercentage).toBe(0)
   })
 
   it("境界ラベルが降順で正しくマッチする", async () => {
@@ -451,8 +429,7 @@ describe("calculateGrades", () => {
       boundarySets: [
         {
           id: "bs1",
-          targetType: "overall",
-          gradeItemId: null,
+          gradeItemId: "gi1",
           boundaries: [
             { label: "A", minPercentage: 80, order: 0 },
             { label: "B", minPercentage: 60, order: 1 },
@@ -469,7 +446,7 @@ describe("calculateGrades", () => {
     const student = result.result!.students[0]
 
     // 65% → B (60以上80未満)
-    expect(student.overallGradeLabel).toBe("B")
+    expect(student.gradeItemResults[0].gradeLabel).toBe("B")
   })
 
   it("GradeItem内の複数DataSourceが正しく合算される", async () => {
@@ -689,13 +666,13 @@ describe("calculateGrades", () => {
     expect(student.gradeItemResults[1].percentage).toBeNull()
     expect(student.gradeItemResults[1].sourceScores).toHaveLength(0)
 
-    // 総合スコアはgi1のみ（100点満点で85%）
-    expect(student.overallMaxScore).toBe(100)
-    expect(student.overallScore).toBeCloseTo(85)
-    expect(student.overallPercentage).toBeCloseTo(85)
+    // 除外されていない gi1 は通常どおり算出される（100点満点で85%）
+    expect(student.gradeItemResults[0].weightedMaxScore).toBe(100)
+    expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(85)
+    expect(student.gradeItemResults[0].percentage).toBeCloseTo(85)
   })
 
-  it("全GradeItem除外時は総合スコアnull", async () => {
+  it("全GradeItem除外時は各項目のスコアがnullになる", async () => {
     const grade = buildGrade({
       gradeItems: [
         {
@@ -733,9 +710,9 @@ describe("calculateGrades", () => {
     const student = result.result!.students[0]
 
     expect(student.gradeItemResults[0].isExcluded).toBe(true)
-    expect(student.overallMaxScore).toBe(0)
-    expect(student.overallScore).toBeNull()
-    expect(student.overallPercentage).toBeNull()
+    expect(student.gradeItemResults[0].weightedMaxScore).toBe(0)
+    expect(student.gradeItemResults[0].weightedScore).toBeNull()
+    expect(student.gradeItemResults[0].percentage).toBeNull()
   })
 
   it("除外なしの既存動作維持（isExcluded: false）", async () => {
@@ -774,7 +751,7 @@ describe("calculateGrades", () => {
 
     expect(student.gradeItemResults[0].isExcluded).toBe(false)
     expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(80)
-    expect(student.overallPercentage).toBeCloseTo(80)
+    expect(student.gradeItemResults[0].percentage).toBeCloseTo(80)
   })
 
   // ===========================================================================
@@ -816,7 +793,6 @@ describe("calculateGrades", () => {
       boundarySets: [
         {
           id: "bs1",
-          targetType: "grade_item",
           gradeItemId: "gi1",
           boundaries: [
             { label: "A", minPercentage: 90, order: 0 },

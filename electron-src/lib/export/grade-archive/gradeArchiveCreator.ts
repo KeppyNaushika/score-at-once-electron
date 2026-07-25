@@ -7,6 +7,7 @@ import { app } from "electron"
 import * as fs from "fs"
 
 import type { GradeArchiveManifest } from "../../../../src/types/gradeArchive.types"
+import { GRADE_CURRENT_VERSION } from "../../../../src/types/gradeArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import { collectGradeArchiveData } from "./gradeArchiveDataCollector"
 
@@ -26,10 +27,10 @@ export async function createGradeArchive(
     const data = await collectGradeArchiveData(gradeId)
 
     const manifest: GradeArchiveManifest = {
-      // v1.6.0: GradeDataSource.maxScore 廃止（満点はライブ算出・export では未出力）。
-      //   v1.5.0: 試験外成績資料を coursework-archive 形式（UUIDベース）で内包。
-      //   ※ v1.5.0 以前は読み取り後方互換のみ。バージョン履歴は gradeArchive.types.ts 参照。
-      version: "1.6.0",
+      // バージョンは定数から取る。文字列を直書きすると GRADE_CURRENT_VERSION を上げても
+      // 書き出す manifest が古いままになる（exam / coursework / asb と同じ扱いに揃える）。
+      // バージョン履歴は gradeArchive.types.ts の GradeArchiveVersion コメント参照。
+      version: GRADE_CURRENT_VERSION,
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
       gradeId,

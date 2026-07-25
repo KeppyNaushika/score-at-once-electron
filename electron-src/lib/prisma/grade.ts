@@ -301,11 +301,10 @@ export async function duplicateGrade(id: string) {
           new Set(allGrades.map((grade) => grade.name))
         )
 
-        // 旧gradeItemId → 新gradeItemId。非nullなのに解決できなければ複製元が壊れて
-        // いるため throw してロールバックする（矛盾した行を作らない）。
+        // 旧gradeItemId → 新gradeItemId。解決できなければ複製元が壊れているため
+        // throw してロールバックする（矛盾した行を作らない）。
         const itemIdMap = new Map<string, string>()
-        const remapItemId = (oldId: string | null): string | null => {
-          if (!oldId) return null
+        const remapItemId = (oldId: string): string => {
           const newId = itemIdMap.get(oldId)
           if (!newId) {
             throw new Error(`GradeItem ${oldId} の複製先が見つかりません`)
@@ -426,7 +425,6 @@ export async function duplicateGrade(id: string) {
           const newBoundarySet = await tx.gradeBoundarySet.create({
             data: {
               gradeId: grade.id,
-              targetType: boundarySet.targetType,
               gradeItemId: remapItemId(boundarySet.gradeItemId),
             },
           })
@@ -448,7 +446,6 @@ export async function duplicateGrade(id: string) {
             data: source.gradeOverrides.map((gradeOverride) => ({
               gradeId: grade.id,
               studentId: gradeOverride.studentId,
-              targetType: gradeOverride.targetType,
               gradeItemId: remapItemId(gradeOverride.gradeItemId),
               overrideLabel: gradeOverride.overrideLabel,
             })),

@@ -21,7 +21,6 @@ export function createGradeResultSheet(
     headers.push(`${gradeItem.name} (%)`)
     headers.push(`${gradeItem.name} 成績`)
   }
-  headers.push("総合 (%)", "総合成績")
 
   const headerRow = sheet.addRow(headers)
   headerRow.font = { bold: true }
@@ -78,13 +77,6 @@ export function createGradeResultSheet(
       }
     }
 
-    row.push(
-      student.overallPercentage !== null
-        ? Math.round(student.overallPercentage * 10) / 10
-        : null
-    )
-    row.push(student.overallGradeLabel)
-
     const excelRow = sheet.addRow(row)
 
     // 除外セルにスタイル適用
@@ -124,21 +116,16 @@ export function createDetailSheet(
 ): void {
   const sheet = workbook.addWorksheet("詳細")
 
-  // ヘッダー: 番号 / 氏名 / 各GradeItem内の各dataSource
+  // ヘッダー: 番号 / 氏名 / 各GradeItem内の各dataSource。
+  // 列は評価項目そのものの dataSources から決める。特定の生徒の sourceScores を
+  // 基準にしてはならない（除外された生徒は空になり、行ごとに列数が食い違う）。
   const headers = ["番号", "氏名"]
   for (const gradeItem of result.gradeItems) {
-    const firstStudent = result.students[0]
-    const gradeItemResult = firstStudent?.gradeItemResults.find(
-      (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
-    )
-    if (gradeItemResult) {
-      for (const sourceScore of gradeItemResult.sourceScores) {
-        headers.push(`${gradeItem.name}/${sourceScore.dataSourceName}`)
-      }
+    for (const dataSource of gradeItem.dataSources) {
+      headers.push(`${gradeItem.name}/${dataSource.name}`)
     }
     headers.push(`${gradeItem.name} 合計`)
   }
-  headers.push("総合")
 
   const headerRow = sheet.addRow(headers)
   headerRow.font = { bold: true }
@@ -153,7 +140,7 @@ export function createDetailSheet(
     }
   })
 
-  // 番号・氏名以外のヘッダー（データソース名・各観点の合計・総合）はすべて縦書きに
+  // 番号・氏名以外のヘッダー（データソース名・各評価項目の合計）はすべて縦書きに
   // （名前が長く横幅を取るため）
   for (let i = 3; i <= headers.length; i++) {
     headerRow.getCell(i).alignment = {
@@ -174,53 +161,48 @@ export function createDetailSheet(
     const detailExcludedCellIndices: number[] = []
     let colIndex = 2 // 0=番号, 1=氏名
 
+    // ヘッダーと同じく評価項目の dataSources を列の定義として使い、除外でも結果欠落でも
+    // 必ず「dataSources 件数 + 合計1列」を出す。行ごとの列数を構造で揃え、ずれを起こさない。
     for (const gradeItem of result.gradeItems) {
       const gradeItemResult = student.gradeItemResults.find(
         (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
       )
-      if (gradeItemResult) {
-        if (gradeItemResult.isExcluded) {
-          // 除外: DataSource列分 + 合計列の全てを「除外」表示
-          const firstStudent = result.students[0]
-          const referenceGradeItemResult = firstStudent?.gradeItemResults.find(
-            (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
-          )
-          const sourceCount = referenceGradeItemResult?.sourceScores.length ?? 0
-          for (let i = 0; i < sourceCount; i++) {
-            row.push("除外")
-            detailExcludedCellIndices.push(colIndex)
-            colIndex++
-          }
+      const isExcluded = gradeItemResult?.isExcluded ?? false
+
+      for (const dataSource of gradeItem.dataSources) {
+        if (isExcluded) {
           row.push("除外")
           detailExcludedCellIndices.push(colIndex)
-          colIndex++
         } else {
-          for (const sourceScore of gradeItemResult.sourceScores) {
-            row.push(
-              sourceScore.weightedScore !== null
-                ? Math.round(sourceScore.weightedScore * 100) / 100
-                : null
-            )
-            if (sourceScore.isEstimated) {
-              estimatedCellIndices.push(colIndex)
-            }
-            colIndex++
-          }
+          // 位置ではなく dataSourceId で引く（順序の一致に依存しない）
+          const sourceScore = gradeItemResult?.sourceScores.find(
+            (sourceScore) => sourceScore.dataSourceId === dataSource.id
+          )
           row.push(
-            gradeItemResult.weightedScore !== null
-              ? Math.round(gradeItemResult.weightedScore * 100) / 100
+            sourceScore !== undefined && sourceScore.weightedScore !== null
+              ? Math.round(sourceScore.weightedScore * 100) / 100
               : null
           )
-          colIndex++
+          if (sourceScore?.isEstimated) {
+            estimatedCellIndices.push(colIndex)
+          }
         }
+        colIndex++
       }
-    }
 
-    row.push(
-      student.overallScore !== null
-        ? Math.round(student.overallScore * 100) / 100
-        : null
-    )
+      if (isExcluded) {
+        row.push("除外")
+        detailExcludedCellIndices.push(colIndex)
+      } else {
+        row.push(
+          gradeItemResult !== undefined &&
+            gradeItemResult.weightedScore !== null
+            ? Math.round(gradeItemResult.weightedScore * 100) / 100
+            : null
+        )
+      }
+      colIndex++
+    }
 
     const excelRow = sheet.addRow(row)
 

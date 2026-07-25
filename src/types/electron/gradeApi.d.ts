@@ -217,8 +217,7 @@ export interface GradeAPI {
     }>
     upsertBoundarySet: (data: {
       gradeId: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => Promise<{
       success: boolean
@@ -231,15 +230,13 @@ export interface GradeAPI {
     upsertGradeOverride: (data: {
       gradeId: string
       studentId: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
       overrideLabel: string
     }) => Promise<{ success: boolean; override?: unknown; error?: string }>
     deleteGradeOverride: (data: {
       gradeId: string
       studentId: string
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
     }) => Promise<{ success: boolean; error?: string }>
     getGradeConstraints: (gradeId: string) => Promise<{
       success: boolean

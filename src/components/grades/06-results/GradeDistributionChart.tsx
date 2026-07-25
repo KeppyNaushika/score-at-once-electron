@@ -40,9 +40,7 @@ export function GradeDistributionChart({
 
           // boundarySetsからminPercentage降順でソート
           const boundarySet = result.boundarySets?.find(
-            (candidateSet) =>
-              candidateSet.targetType === "grade_item" &&
-              candidateSet.gradeItemId === gradeItem.id
+            (candidateSet) => candidateSet.gradeItemId === gradeItem.id
           )
           const labelOrder = new Map<string, number>()
           if (boundarySet) {

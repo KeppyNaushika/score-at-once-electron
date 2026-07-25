@@ -103,6 +103,8 @@ export async function collectGradeArchiveData(
   )
 
   const gradeItems = grade.gradeItems.map((gradeItem) => ({
+    // 照合の一次キー。名前は unique でないので id を必ず持ち出す
+    id: gradeItem.id,
     name: gradeItem.name,
     order: gradeItem.order,
     dataSources: gradeItem.dataSources.map((dataSource) => ({
@@ -151,6 +153,11 @@ export async function collectGradeArchiveData(
         dataSource.type === "coursework"
           ? (dataSource.courseworkItem?.name ?? null)
           : null,
+      // 参照の一次キー。試験名・小計名・領域ラベルはいずれも同定に足りないので
+      // id を持ち出す（小計名はグループ内でしか一意でない）
+      examId: dataSource.examId,
+      subtotalId: dataSource.subtotalId,
+      cropRegionId: dataSource.cropRegionId,
     })),
   }))
 
@@ -167,12 +174,14 @@ export async function collectGradeArchiveData(
         dataSource.exam
     )
     .map((dataSource) => ({
+      id: dataSource.examId ?? undefined,
       examName: dataSource.exam!.examName,
       examDate: dataSource.exam!.examDate?.toISOString() ?? null,
       dataSourceName: dataSource.name,
     }))
 
   const classroomRefs = grade.gradeClassrooms.map((gradeClassroom) => ({
+    id: gradeClassroom.classroomId,
     name: gradeClassroom.classroom.name,
   }))
 
@@ -181,6 +190,7 @@ export async function collectGradeArchiveData(
       (studentMembership) => classroomIds.has(studentMembership.classroomId)
     )
     return {
+      id: gradeStudent.studentId,
       studentNumber: gradeStudent.student.studentNumber,
       classroomName: membership?.classroom.name ?? null,
       customOrder: gradeStudent.customOrder,
@@ -202,8 +212,8 @@ export async function collectGradeArchiveData(
   const manualScoresCount = courseworkArchive.counts.scores
 
   const boundarySets = grade.boundarySets.map((boundarySet) => ({
-    targetType: boundarySet.targetType,
-    gradeItemName: boundarySet.gradeItem?.name ?? null,
+    gradeItemId: boundarySet.gradeItemId,
+    gradeItemName: boundarySet.gradeItem.name,
     boundaries: boundarySet.boundaries.map((boundary) => ({
       label: boundary.label,
       minPercentage: Number(boundary.minPercentage),
@@ -224,14 +234,15 @@ export async function collectGradeArchiveData(
   const gradeItemExclusions = grade.gradeItemExclusions.map(
     (gradeItemExclusion) => ({
       studentNumber: gradeItemExclusion.student.studentNumber,
+      gradeItemId: gradeItemExclusion.gradeItemId,
       gradeItemName: gradeItemExclusion.gradeItem.name,
     })
   )
 
   const gradeOverrides = grade.gradeOverrides.map((gradeOverride) => ({
     studentNumber: gradeOverride.student.studentNumber,
-    targetType: gradeOverride.targetType,
-    gradeItemName: gradeOverride.gradeItem?.name ?? null,
+    gradeItemId: gradeOverride.gradeItemId,
+    gradeItemName: gradeOverride.gradeItem.name,
     overrideLabel: gradeOverride.overrideLabel,
   }))
 
@@ -239,6 +250,7 @@ export async function collectGradeArchiveData(
   // 無いため出さない（取り込み側で null＝操作者不明になる）。
   const gradeFrozenScores = grade.gradeFrozenScores.map((gradeFrozenScore) => ({
     studentNumber: gradeFrozenScore.student.studentNumber,
+    gradeItemId: gradeFrozenScore.gradeItemId,
     gradeItemName: gradeFrozenScore.gradeItem.name,
     weightedScore:
       gradeFrozenScore.weightedScore !== null

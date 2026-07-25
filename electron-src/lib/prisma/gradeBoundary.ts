@@ -4,7 +4,6 @@
 
 import type { Prisma } from "@prisma/client"
 
-import { toGradeBoundaryTargetType } from "../../../src/types/grade.types"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
@@ -21,15 +20,9 @@ export async function getBoundarySetsByGradeId(gradeId: string) {
         gradeItem: { select: { id: true, name: true, order: true } },
         boundaries: { orderBy: { order: "asc" } },
       },
-      orderBy: [{ targetType: "asc" }, { gradeItem: { order: "asc" } }],
+      orderBy: { gradeItem: { order: "asc" } },
     })
-    return {
-      success: true,
-      boundarySets: serializePrisma(boundarySets).map((boundarySet) => ({
-        ...boundarySet,
-        targetType: toGradeBoundaryTargetType(boundarySet.targetType),
-      })),
-    }
+    return { success: true, boundarySets: serializePrisma(boundarySets) }
   } catch (error) {
     console.error("Error getting boundary sets:", error)
     return {
@@ -44,19 +37,19 @@ export async function getBoundarySetsByGradeId(gradeId: string) {
  */
 export async function upsertBoundarySet(data: {
   gradeId: string
-  targetType: string // "grade_item" | "overall"
-  gradeItemId: string | null
+  gradeItemId: string
   boundaries: { label: string; minPercentage: number; order: number }[]
 }) {
   try {
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
         // 既存セットを検索
-        const existing = await tx.gradeBoundarySet.findFirst({
+        const existing = await tx.gradeBoundarySet.findUnique({
           where: {
-            gradeId: data.gradeId,
-            targetType: data.targetType,
-            gradeItemId: data.gradeItemId,
+            gradeId_gradeItemId: {
+              gradeId: data.gradeId,
+              gradeItemId: data.gradeItemId,
+            },
           },
         })
 
@@ -69,11 +62,7 @@ export async function upsertBoundarySet(data: {
           })
         } else {
           const newSet = await tx.gradeBoundarySet.create({
-            data: {
-              gradeId: data.gradeId,
-              targetType: data.targetType,
-              gradeItemId: data.gradeItemId,
-            },
+            data: { gradeId: data.gradeId, gradeItemId: data.gradeItemId },
           })
           setId = newSet.id
         }
@@ -109,14 +98,7 @@ export async function upsertBoundarySet(data: {
       scopeLabel: scope.scopeLabel,
     })
 
-    const boundarySet = serializePrisma(result)
-    return {
-      success: true,
-      boundarySet: boundarySet && {
-        ...boundarySet,
-        targetType: toGradeBoundaryTargetType(boundarySet.targetType),
-      },
-    }
+    return { success: true, boundarySet: serializePrisma(result) }
   } catch (error) {
     console.error("Error upserting boundary set:", error)
     return {

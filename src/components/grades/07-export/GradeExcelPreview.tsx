@@ -45,32 +45,6 @@ export function GradeExcelPreview({
     [result.students, selectedSet]
   )
 
-  // 詳細シートの列構成（GradeItemごとのデータソース名）。
-  // 除外などで空にならないよう、各GradeItemで非除外の結果を持つ生徒から導出する。
-  const detailColumns = useMemo(
-    () =>
-      result.gradeItems.map((gradeItem) => {
-        let sourceNames: string[] = []
-        for (const student of result.students) {
-          const gradeItemResult = student.gradeItemResults.find(
-            (gradeItemResult) => gradeItemResult.gradeItemId === gradeItem.id
-          )
-          if (
-            gradeItemResult &&
-            !gradeItemResult.isExcluded &&
-            gradeItemResult.sourceScores.length > 0
-          ) {
-            sourceNames = gradeItemResult.sourceScores.map(
-              (sourceScore) => sourceScore.dataSourceName
-            )
-            break
-          }
-        }
-        return { gradeItem, sourceNames }
-      }),
-    [result.gradeItems, result.students]
-  )
-
   const studentName = (student: StudentGradeResult) =>
     `${student.lastName} ${student.firstName}`
 
@@ -106,9 +80,6 @@ export function GradeExcelPreview({
                     {gradeItem.name}
                   </th>
                 ))}
-                <th colSpan={2} className="border px-1 py-0.5 text-center">
-                  総合
-                </th>
               </tr>
               <tr>
                 <th className="border px-1 py-0.5" />
@@ -116,7 +87,6 @@ export function GradeExcelPreview({
                 {result.gradeItems.map((gradeItem) => (
                   <ResultSubHeader key={gradeItem.id} />
                 ))}
-                <ResultSubHeader />
               </tr>
             </thead>
             <tbody>
@@ -148,11 +118,6 @@ export function GradeExcelPreview({
                       />
                     )
                   })}
-                  <ResultCells
-                    percentage={round1(student.overallPercentage)}
-                    label={student.overallGradeLabel}
-                    className="font-medium"
-                  />
                 </tr>
               ))}
             </tbody>
@@ -166,27 +131,25 @@ export function GradeExcelPreview({
               <tr>
                 <th className="border px-1 py-0.5 text-left">番号</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
-                {detailColumns.map(({ gradeItem, sourceNames }) => (
+                {result.gradeItems.map((gradeItem) => (
                   <th
                     key={gradeItem.id}
-                    colSpan={sourceNames.length + 1}
+                    colSpan={gradeItem.dataSources.length + 1}
                     className="border px-1 py-0.5 text-center"
                   >
                     {gradeItem.name}
                   </th>
                 ))}
-                <th className="border px-1 py-0.5 text-center">総合</th>
               </tr>
               <tr>
                 <th className="border px-1 py-0.5" />
                 <th className="border px-1 py-0.5" />
-                {detailColumns.map(({ gradeItem, sourceNames }) => (
+                {result.gradeItems.map((gradeItem) => (
                   <DetailSubHeaders
                     key={gradeItem.id}
-                    sourceNames={sourceNames}
+                    dataSources={gradeItem.dataSources}
                   />
                 ))}
-                <VerticalHeader>合計</VerticalHeader>
               </tr>
             </thead>
             <tbody>
@@ -198,7 +161,7 @@ export function GradeExcelPreview({
                   <td className="border px-1 py-0.5 whitespace-nowrap">
                     {studentName(student)}
                   </td>
-                  {detailColumns.map(({ gradeItem, sourceNames }) => {
+                  {result.gradeItems.map((gradeItem) => {
                     const itemResult = student.gradeItemResults.find(
                       (gradeItemResult) =>
                         gradeItemResult.gradeItemId === gradeItem.id
@@ -207,21 +170,18 @@ export function GradeExcelPreview({
                       return (
                         <ExcludedCells
                           key={gradeItem.id}
-                          count={sourceNames.length + 1}
+                          count={gradeItem.dataSources.length + 1}
                         />
                       )
                     }
                     return (
                       <DetailCells
                         key={gradeItem.id}
-                        gir={itemResult}
-                        sourceCount={sourceNames.length}
+                        gradeItemResult={itemResult}
+                        dataSources={gradeItem.dataSources}
                       />
                     )
                   })}
-                  <td className="border px-1 py-0.5 text-right font-medium">
-                    {round2(student.overallScore) ?? "-"}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -262,12 +222,17 @@ function ResultCells({
   )
 }
 
-function DetailSubHeaders({ sourceNames }: { sourceNames: string[] }) {
+function DetailSubHeaders({
+  dataSources,
+}: {
+  dataSources: GradeCalculationResult["gradeItems"][number]["dataSources"]
+}) {
   return (
     <>
-      {sourceNames.map((name, i) => (
-        <VerticalHeader key={i} normal>
-          {name}
+      {dataSources.map((dataSource) => (
+        // key は安定した id（表示名は重複しうる）
+        <VerticalHeader key={dataSource.id} normal>
+          {dataSource.name}
         </VerticalHeader>
       ))}
       <VerticalHeader>合計</VerticalHeader>
@@ -300,23 +265,25 @@ function VerticalHeader({
 }
 
 function DetailCells({
-  gir,
-  sourceCount,
+  gradeItemResult,
+  dataSources,
 }: {
-  gir:
+  gradeItemResult:
     | GradeCalculationResult["students"][number]["gradeItemResults"][number]
     | undefined
-  sourceCount: number
+  dataSources: GradeCalculationResult["gradeItems"][number]["dataSources"]
 }) {
-  // 表示する列数を sourceCount に合わせる（生徒間で列数を揃える）
-  const cells: React.ReactNode[] = []
-  for (let i = 0; i < sourceCount; i++) {
-    const sourceScore = gir?.sourceScores[i]
+  // 列は評価項目の dataSources が決める。値は添字ではなく dataSourceId で引くので、
+  // 生徒ごとに sourceScores の並びや件数が違っても対応がずれない。
+  const cells: React.ReactNode[] = dataSources.map((dataSource) => {
+    const sourceScore = gradeItemResult?.sourceScores.find(
+      (sourceScore) => sourceScore.dataSourceId === dataSource.id
+    )
     const value = sourceScore ? (round2(sourceScore.weightedScore) ?? "-") : "-"
     const estimated = sourceScore?.isEstimated ?? false
-    cells.push(
+    return (
       <td
-        key={i}
+        key={dataSource.id}
         className={`border px-1 py-0.5 text-right ${
           estimated ? "text-amber-600 italic" : ""
         }`}
@@ -325,10 +292,10 @@ function DetailCells({
         {value}
       </td>
     )
-  }
+  })
   cells.push(
     <td key="total" className="border px-1 py-0.5 text-right font-medium">
-      {round2(gir?.weightedScore ?? null) ?? "-"}
+      {round2(gradeItemResult?.weightedScore ?? null) ?? "-"}
     </td>
   )
   return <>{cells}</>

@@ -97,11 +97,7 @@ async function buildFixture(): Promise<Fixture> {
   })
 
   const boundarySet = await testPrisma.gradeBoundarySet.create({
-    data: {
-      gradeId: grade.id,
-      targetType: "grade_item",
-      gradeItemId: gradeItem.id,
-    },
+    data: { gradeId: grade.id, gradeItemId: gradeItem.id },
   })
   await testPrisma.gradeBoundary.createMany({
     data: [
@@ -228,7 +224,6 @@ describe("成績値の確定（凍結）", () => {
       data: {
         gradeId: fixture.gradeId,
         studentId: fixture.studentId,
-        targetType: "grade_item",
         gradeItemId: fixture.gradeItemId,
         overrideLabel: "B",
       },
@@ -255,7 +250,6 @@ describe("成績値の確定（凍結）", () => {
       data: {
         gradeId: fixture.gradeId,
         studentId: fixture.studentId,
-        targetType: "grade_item",
         gradeItemId: fixture.gradeItemId,
         overrideLabel: "C",
       },

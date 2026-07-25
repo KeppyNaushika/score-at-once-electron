@@ -18,8 +18,7 @@ interface ResultsTableProps {
   constraints?: GradeConstraintData[]
   onGradeOverride: (params: {
     studentId: string
-    targetType: "grade_item" | "overall"
-    gradeItemId: string | null
+    gradeItemId: string
     overrideLabel: string | null
   }) => void
   /** 対象セルを現在のライブ値で確定し直す */
@@ -33,7 +32,7 @@ type SortKey = "registrationOrder" | "attendanceNumber" | string
 /**
  * 成績算出結果の一覧テーブル
  *
- * 生徒ごとの各評価項目パーセンテージ・成績ラベル・総合成績を表示する。
+ * 生徒ごとの各評価項目パーセンテージ・成績ラベルを表示する（評定も評価項目の一つ）。
  * 各列ヘッダーをクリックしてソート可能。
  */
 export function ResultsTable({
@@ -58,15 +57,13 @@ export function ResultsTable({
     [constraints]
   )
 
-  // 各列に対応するboundaryLabels（minPercentage降順）を算出
+  // 評価項目ごとのboundaryLabels（minPercentage降順）を算出
   const boundaryLabelsMap = useMemo(() => {
     const map: Record<string, string[]> = {}
     for (const boundarySet of result.boundarySets ?? []) {
-      const key =
-        boundarySet.targetType === "overall"
-          ? "__overall__"
-          : (boundarySet.gradeItemId ?? "__unknown__")
-      map[key] = boundarySet.boundaries.map((boundary) => boundary.label)
+      map[boundarySet.gradeItemId] = boundarySet.boundaries.map(
+        (boundary) => boundary.label
+      )
     }
     return map
   }, [result.boundarySets])
@@ -235,7 +232,6 @@ export function ResultsTable({
                             onCommit={(newLabel) =>
                               onGradeOverride({
                                 studentId: student.studentId,
-                                targetType: "grade_item",
                                 gradeItemId: gradeItem.id,
                                 overrideLabel: newLabel,
                               })

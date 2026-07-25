@@ -62,7 +62,6 @@ function collectLabels(
 ): string[] {
   const set = new Set<string>()
   for (const boundarySet of boundarySets) {
-    if (boundarySet.targetType !== "grade_item") continue
     for (const boundary of boundarySet.boundaries) set.add(boundary.label)
   }
   return Array.from(set)

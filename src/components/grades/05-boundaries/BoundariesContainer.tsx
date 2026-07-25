@@ -29,24 +29,18 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
 
   const gradeItems = exam.gradeItems
 
-  const getExistingBoundaries = (
-    targetType: string,
-    gradeItemId: string | null
-  ) => {
+  const getExistingBoundaries = (gradeItemId: string) => {
     const matchedBoundarySet = boundarySets.find(
-      (boundarySet) =>
-        boundarySet.targetType === targetType &&
-        boundarySet.gradeItemId === gradeItemId
+      (boundarySet) => boundarySet.gradeItemId === gradeItemId
     )
     return matchedBoundarySet?.boundaries ?? []
   }
 
   const handleSave = async (
-    targetType: string,
-    gradeItemId: string | null,
+    gradeItemId: string,
     boundaries: { label: string; minPercentage: number; order: number }[]
   ) => {
-    await saveBoundarySet({ targetType, gradeItemId, boundaries })
+    await saveBoundarySet({ gradeItemId, boundaries })
   }
 
   return (
@@ -61,15 +55,11 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
           <Card key={gradeItem.id} className="space-y-3 p-4">
             <h3 className="text-base font-semibold">{gradeItem.name}</h3>
             <BoundaryPresetSelector
-              onSelect={(boundaries) =>
-                handleSave("grade_item", gradeItem.id, boundaries)
-              }
+              onSelect={(boundaries) => handleSave(gradeItem.id, boundaries)}
             />
             <BoundaryEditor
-              boundaries={getExistingBoundaries("grade_item", gradeItem.id)}
-              onSave={(boundaries) =>
-                handleSave("grade_item", gradeItem.id, boundaries)
-              }
+              boundaries={getExistingBoundaries(gradeItem.id)}
+              onSave={(boundaries) => handleSave(gradeItem.id, boundaries)}
             />
           </Card>
         ))}

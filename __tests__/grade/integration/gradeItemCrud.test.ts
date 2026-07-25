@@ -316,26 +316,7 @@ describe("GradeBoundary CRUD", () => {
     await cleanupTestDatabase()
   })
 
-  it("overall境界セットを作成できる", async () => {
-    const grade = await createTestGrade()
-
-    const result = await upsertBoundarySet({
-      gradeId: grade.id,
-      targetType: "overall",
-      gradeItemId: null,
-      boundaries: [
-        { label: "A", minPercentage: 80, order: 0 },
-        { label: "B", minPercentage: 60, order: 1 },
-        { label: "C", minPercentage: 0, order: 2 },
-      ],
-    })
-
-    expect(result.success).toBe(true)
-    expect(result.boundarySet!.boundaries).toHaveLength(3)
-    expect(result.boundarySet!.targetType).toBe("overall")
-  })
-
-  it("grade_item境界セットを作成できる", async () => {
+  it("評価項目の境界セットを作成できる", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
@@ -344,7 +325,6 @@ describe("GradeBoundary CRUD", () => {
 
     const result = await upsertBoundarySet({
       gradeId: grade.id,
-      targetType: "grade_item",
       gradeItemId: gradeItemResult.gradeItem!.id,
       boundaries: [
         { label: "A", minPercentage: 90, order: 0 },
@@ -358,18 +338,20 @@ describe("GradeBoundary CRUD", () => {
 
   it("同一キーで再upsertすると境界が置換される", async () => {
     const grade = await createTestGrade()
+    const gradeItemResult = await createGradeItem({
+      gradeId: grade.id,
+      name: "知識・技能",
+    })
 
     await upsertBoundarySet({
       gradeId: grade.id,
-      targetType: "overall",
-      gradeItemId: null,
+      gradeItemId: gradeItemResult.gradeItem!.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
 
     const result = await upsertBoundarySet({
       gradeId: grade.id,
-      targetType: "overall",
-      gradeItemId: null,
+      gradeItemId: gradeItemResult.gradeItem!.id,
       boundaries: [
         { label: "S", minPercentage: 95, order: 0 },
         { label: "A", minPercentage: 80, order: 1 },
@@ -384,21 +366,23 @@ describe("GradeBoundary CRUD", () => {
 
   it("getBoundarySetsByGradeIdで全セットを取得できる", async () => {
     const grade = await createTestGrade()
-    const gradeItemResult = await createGradeItem({
+    const firstItem = await createGradeItem({
       gradeId: grade.id,
-      name: "項目",
+      name: "項目1",
+    })
+    const secondItem = await createGradeItem({
+      gradeId: grade.id,
+      name: "項目2",
     })
 
     await upsertBoundarySet({
       gradeId: grade.id,
-      targetType: "overall",
-      gradeItemId: null,
+      gradeItemId: firstItem.gradeItem!.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
     await upsertBoundarySet({
       gradeId: grade.id,
-      targetType: "grade_item",
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: secondItem.gradeItem!.id,
       boundaries: [{ label: "B", minPercentage: 70, order: 0 }],
     })
 

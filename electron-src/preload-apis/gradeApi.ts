@@ -122,8 +122,7 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:getBoundarySets", gradeId),
       upsertBoundarySet: (data: {
         gradeId: string
-        targetType: string
-        gradeItemId: string | null
+        gradeItemId: string
         boundaries: {
           label: string
           minPercentage: number
@@ -135,15 +134,13 @@ export function createGradeApi() {
       upsertGradeOverride: (data: {
         gradeId: string
         studentId: string
-        targetType: string
-        gradeItemId: string | null
+        gradeItemId: string
         overrideLabel: string
       }) => ipcRenderer.invoke("grade:upsertGradeOverride", data),
       deleteGradeOverride: (data: {
         gradeId: string
         studentId: string
-        targetType: string
-        gradeItemId: string | null
+        gradeItemId: string
       }) => ipcRenderer.invoke("grade:deleteGradeOverride", data),
       getGradeConstraints: (gradeId: string) =>
         ipcRenderer.invoke("grade:getGradeConstraints", gradeId),

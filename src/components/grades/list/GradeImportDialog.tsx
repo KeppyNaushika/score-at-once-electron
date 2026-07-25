@@ -1,5 +1,6 @@
 "use client"
 
+import { TriangleAlert } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -118,6 +119,21 @@ export function GradeImportDialog({
               </Badge>
             )}
           </div>
+
+          {/* 変換で失われるデータの警告（取り込み前に見せる） */}
+          {preview.warnings.length > 0 && (
+            <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+              <div className="mb-1 flex items-center gap-1.5 font-medium text-amber-800 dark:text-amber-300">
+                <TriangleAlert className="h-4 w-4" />
+                取り込み時に失われるデータがあります
+              </div>
+              <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
+                {preview.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* 資料ごとの判断 */}
           {preview.courseworkMatches.length === 0 ? (

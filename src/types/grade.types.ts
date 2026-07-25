@@ -67,22 +67,6 @@ export type GradeDataSourceType = (typeof GRADE_DATA_SOURCE_TYPES)[number]
 export const { is: isGradeDataSourceType, to: toGradeDataSourceType } =
   defineStringUnion(GRADE_DATA_SOURCE_TYPES, "manual")
 
-/**
- * 境界セットの対象種別の唯一の定義源（SSOT）。
- * `GradeBoundarySet.targetType` も DB 上 `String`。観点別（grade_item）か総合（overall）か。
- */
-export const GRADE_BOUNDARY_TARGET_TYPES = ["grade_item", "overall"] as const
-
-export type GradeBoundaryTargetType =
-  (typeof GRADE_BOUNDARY_TARGET_TYPES)[number]
-
-/**
- * 型ガード `isGradeBoundaryTargetType` と境界コンバータ `toGradeBoundaryTargetType`
- * （想定外値は grade_item）。targetType は grade_item|overall の2値ハード不変。
- */
-export const { is: isGradeBoundaryTargetType, to: toGradeBoundaryTargetType } =
-  defineStringUnion(GRADE_BOUNDARY_TARGET_TYPES, "grade_item")
-
 /** 成績算出試験（リレーション付き） */
 export type GradeWithRelations = Omit<Grade, "referenceDate"> & {
   referenceDate: string | null
@@ -138,13 +122,12 @@ export type GradeDataSourceWithRelations = Omit<
   coursework: Pick<Coursework, "id" | "name"> | null
 }
 
-/** 境界セット（境界リスト付き） */
-export type GradeBoundarySetWithItemAndBoundaries = Omit<
-  Pick<GradeBoundarySet, "id" | "gradeId" | "targetType" | "gradeItemId">,
-  "targetType"
+/** 境界セット（境界リスト付き）。対象は必ず評価項目で、総合は存在しない */
+export type GradeBoundarySetWithItemAndBoundaries = Pick<
+  GradeBoundarySet,
+  "id" | "gradeId" | "gradeItemId"
 > & {
-  targetType: GradeBoundaryTargetType
-  gradeItem: Pick<GradeItem, "id" | "name" | "order"> | null
+  gradeItem: Pick<GradeItem, "id" | "name" | "order">
   boundaries: GradeBoundaryData[]
 }
 
@@ -164,18 +147,8 @@ export interface StudentGradeResult {
   firstName: string
   attendanceNumber: number | null
   className: string | null
-  /** GradeItemごとの成績 */
+  /** GradeItemごとの成績。評定もこの中の一項目で、これとは別の「総合」は持たない */
   gradeItemResults: GradeItemResult[]
-  /** 総合スコア */
-  overallScore: number | null
-  overallMaxScore: number
-  overallPercentage: number | null
-  /** 実効値（上書きがあればそれ、なければ自動算出値） */
-  overallGradeLabel: string | null
-  /** 自動算出値（常に設定） */
-  originalOverallGradeLabel: string | null
-  /** 上書き値（nullなら上書きなし） */
-  overrideOverallGradeLabel: string | null
 }
 
 /**
@@ -358,12 +331,22 @@ export interface GradeCalculationResult {
   gradeId: string
   gradeName: string
   classNames: string[]
-  gradeItems: { id: string; name: string; order: number }[]
+  /**
+   * 評価項目とその内訳列の定義。
+   * dataSources は「その評価項目が何列で構成されるか」の唯一の根拠で、出力の列は
+   * 必ずここから決める。特定の生徒の sourceScores から列数を導いてはならない
+   * （除外された生徒は sourceScores が空になるため、行ごとに列数が食い違う）。
+   */
+  gradeItems: {
+    id: string
+    name: string
+    order: number
+    dataSources: { id: string; name: string }[]
+  }[]
   students: StudentGradeResult[]
-  /** 境界セットデータ（override方向判定用） */
+  /** 境界セットデータ（override方向判定用）。対象は必ず評価項目 */
   boundarySets: {
-    targetType: GradeBoundaryTargetType
-    gradeItemId: string | null
+    gradeItemId: string
     boundaries: { label: string; minPercentage: number }[]
   }[]
 }

@@ -1,6 +1,6 @@
 /**
  * 成績算出エンジン
- * GradeItem × DataSource ベースで観点別・総合成績を算出
+ * GradeItem × DataSource ベースで評価項目ごとの成績を算出（評定も評価項目の一つ）
  * 欠測時の代替スコア推定（average / regression / zero）に対応
  */
 
@@ -13,10 +13,7 @@ import type {
   SourceScoreResult,
   StudentGradeResult,
 } from "../../../../src/types/grade.types"
-import {
-  toGradeBoundaryTargetType,
-  toGradeDataSourceType,
-} from "../../../../src/types/grade.types"
+import { toGradeDataSourceType } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { computeLiveMaxScore } from "../../prisma/gradeDataSource"
 import {
@@ -106,7 +103,7 @@ async function buildGradeCalcContext(gradeId: string) {
   })
   const overrideMap = new Map<string, string>()
   for (const override of overrides) {
-    const key = `${override.studentId}:${override.targetType}:${override.gradeItemId ?? "__overall__"}`
+    const key = `${override.studentId}:${override.gradeItemId}`
     overrideMap.set(key, override.overrideLabel)
   }
 
@@ -635,15 +632,13 @@ export async function calculateGrades(
 
         // 境界セットからラベルを決定
         const boundarySet = grade.boundarySets.find(
-          (boundarySet) =>
-            boundarySet.targetType === "grade_item" &&
-            boundarySet.gradeItemId === gradeItem.id
+          (boundarySet) => boundarySet.gradeItemId === gradeItem.id
         )
         const originalGradeLabel = determineGradeLabel(
           percentage,
           boundarySet?.boundaries ?? []
         )
-        const itemOverrideKey = `${student.id}:grade_item:${gradeItem.id}`
+        const itemOverrideKey = `${student.id}:${gradeItem.id}`
         const overrideGradeLabel = overrideMap.get(itemOverrideKey) ?? null
         // ライブの実効値＝自動算出を手動上書きで調整した後の値。確定操作はこれを取り込む。
         const liveGradeLabel = overrideGradeLabel ?? originalGradeLabel
@@ -704,40 +699,6 @@ export async function calculateGrades(
         })
       }
 
-      // 総合スコア（除外・欠点のGradeItemは分母・分子から除外）
-      const includedResults = gradeItemResults.filter(
-        (gradeItemResult) => !gradeItemResult.isExcluded
-      )
-      const nonNullItems = includedResults.filter(
-        (gradeItemResult) => gradeItemResult.weightedScore !== null
-      )
-      const overallMaxScore = nonNullItems.reduce(
-        (sum, gradeItemResult) => sum + gradeItemResult.weightedMaxScore,
-        0
-      )
-      const overallScore =
-        nonNullItems.length > 0
-          ? nonNullItems.reduce(
-              (sum, gradeItemResult) => sum + gradeItemResult.weightedScore!,
-              0
-            )
-          : null
-      const overallPercentage =
-        overallScore !== null && overallMaxScore > 0
-          ? (overallScore / overallMaxScore) * 100
-          : null
-
-      const overallBoundarySet = grade.boundarySets.find(
-        (boundarySet) => boundarySet.targetType === "overall"
-      )
-      const originalOverallGradeLabel = determineGradeLabel(
-        overallPercentage,
-        overallBoundarySet?.boundaries ?? []
-      )
-      const overallOverrideKey = `${student.id}:overall:__overall__`
-      const overrideOverallGradeLabel =
-        overrideMap.get(overallOverrideKey) ?? null
-
       students.push({
         studentId: student.id,
         studentNumber: student.studentNumber,
@@ -746,13 +707,6 @@ export async function calculateGrades(
         attendanceNumber: membership?.attendanceNumber ?? null,
         className: membership?.classroom.name ?? null,
         gradeItemResults,
-        overallScore,
-        overallMaxScore,
-        overallPercentage,
-        overallGradeLabel:
-          overrideOverallGradeLabel ?? originalOverallGradeLabel,
-        originalOverallGradeLabel,
-        overrideOverallGradeLabel,
       })
     }
 
@@ -768,10 +722,14 @@ export async function calculateGrades(
           id: gradeItem.id,
           name: gradeItem.name,
           order: gradeItem.order,
+          // 内訳列の定義。生徒の除外に左右されない項目そのものの構成を渡す
+          dataSources: gradeItem.dataSources.map((dataSource) => ({
+            id: dataSource.id,
+            name: dataSource.name,
+          })),
         })),
         students,
         boundarySets: grade.boundarySets.map((boundarySet) => ({
-          targetType: toGradeBoundaryTargetType(boundarySet.targetType),
           gradeItemId: boundarySet.gradeItemId,
           boundaries: [...boundarySet.boundaries]
             .sort(
