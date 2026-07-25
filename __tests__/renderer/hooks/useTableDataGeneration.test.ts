@@ -261,6 +261,53 @@ describe("useTableDataGeneration", () => {
     }
   })
 
+  it("upload: 有効マスに収まらない答案は unplacedItems へ回す", () => {
+    // 2生徒 × 2ページ ＝ 4マスに対して6件
+    const files = ["f1", "f2", "f3", "f4", "f5", "f6"].map(makeUnsavedAnswer)
+
+    const { result } = renderHook(() =>
+      useTableDataGeneration<UnsavedAnswerImage>({
+        files,
+        sortedStudents,
+        examPages: EXAM_PAGES,
+        fileOrder: "student-first",
+        disabledState: EMPTY_DISABLED_STATE,
+        mode: "upload",
+        enhancedIsCellDisabled: () => false,
+        cellsWithExistingAnswers: NO_EXISTING_ANSWERS,
+      })
+    )
+
+    // あふれた2件は配置されず、呼び出し側が送信前に警告できるよう返る
+    expect(result.current.unplacedItems.map((file) => file.id)).toEqual([
+      "f5",
+      "f6",
+    ])
+    const placedFileIds = result.current.tableRows.flatMap((row) =>
+      row.cells.map((cell) => cell.file?.id).filter(Boolean)
+    )
+    expect(placedFileIds).toEqual(["f1", "f2", "f3", "f4"])
+  })
+
+  it("upload: 全て収まるときは unplacedItems が空", () => {
+    const files = [makeUnsavedAnswer("f1"), makeUnsavedAnswer("f2")]
+
+    const { result } = renderHook(() =>
+      useTableDataGeneration<UnsavedAnswerImage>({
+        files,
+        sortedStudents,
+        examPages: EXAM_PAGES,
+        fileOrder: "student-first",
+        disabledState: EMPTY_DISABLED_STATE,
+        mode: "upload",
+        enhancedIsCellDisabled: () => false,
+        cellsWithExistingAnswers: NO_EXISTING_ANSWERS,
+      })
+    )
+
+    expect(result.current.unplacedItems).toHaveLength(0)
+  })
+
   it("upload: 上書き無効なら既存答案のマスは埋めずに飛ばす", () => {
     const files = [makeUnsavedAnswer("f1")]
 
