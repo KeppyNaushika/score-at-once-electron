@@ -1,6 +1,6 @@
 import { FilePreviewCell } from "@/components/exams/06-student-answers/student-answer-table/components/FilePreviewCell"
 import type {
-  CellData,
+  AnswerTableRow,
   ExtendedDisabledState,
   FilePreviewSource,
   PreviewMode,
@@ -25,8 +25,9 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 // セルの DnD ラッパーはスロット（render prop）で外から注入する。
 // 表本体（TableContent）は @dnd-kit も sortable/droppable セルも import せず、
 // グリッドのレイアウトとセル中身の描画（プレビュー・空・無効理由）だけを担う。
-// 列は ExamPage 実体で回し、セルの同定・照合は examPageId で行う。表示値（pageNumber・
-// 氏名・プレビュー）は行（ExamStudent 実体）・列（ExamPage 実体）・fileDisplayById から導出する。
+// 行は AnswerTableRow が持つ ExamStudent 実体、列は各マスが持つ ExamPage 実体で回す
+// （添字で別配列と突き合わせない）。表示値（pageNumber・氏名・プレビュー）は行・列の実体と
+// fileDisplayById から導出する。
 // ============================================================================
 
 /** ファイルセル（答案あり）のラッパーへ渡す情報。children は FilePreviewCell。
@@ -56,8 +57,8 @@ export interface EmptyCellSlotProps {
 }
 
 interface TableContentProps {
-  tableData: CellData<AnswerImageIdentity>[][]
-  sortedStudents: ExamStudentWithMemberships[]
+  // 行（ExamStudent 実体）とマス（ExamPage 実体を同梱）。列ヘッダーだけは examPages で描く。
+  tableRows: AnswerTableRow<AnswerImageIdentity>[]
   examPages: ExamPageColumn[]
   disabledState: ExtendedDisabledState
   mode: "upload" | "view"
@@ -86,8 +87,7 @@ interface TableContentProps {
 }
 
 export function TableContent({
-  tableData,
-  sortedStudents,
+  tableRows,
   examPages,
   disabledState,
   mode,
@@ -138,39 +138,37 @@ export function TableContent({
         </TableRow>
       </UITableHeader>
       <TableBody>
-        {tableData.map((row, studentIndex) => (
-          <TableRow key={sortedStudents[studentIndex].studentId}>
+        {tableRows.map(({ examStudent, cells }) => (
+          <TableRow key={examStudent.id}>
             {/* 生徒名セル */}
             <TableHead
               className={`border text-center ${
                 mode === "upload" ? "cursor-pointer" : ""
               } ${
-                disabledState.rows.includes(sortedStudents[studentIndex].id)
+                disabledState.rows.includes(examStudent.id)
                   ? "bg-gray-200"
                   : "bg-white"
               }`}
               onClick={
                 mode === "upload"
-                  ? () => toggleRowDisabled(sortedStudents[studentIndex].id)
+                  ? () => toggleRowDisabled(examStudent.id)
                   : undefined
               }
             >
               <div className="px-2 py-1">
                 <div className="text-sm font-medium">
-                  {sortedStudents[studentIndex].student.lastName}{" "}
-                  {sortedStudents[studentIndex].student.firstName}
+                  {examStudent.student.lastName} {examStudent.student.firstName}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {sortedStudents[studentIndex].student.studentNumber}
+                  {examStudent.student.studentNumber}
                 </div>
               </div>
             </TableHead>
 
             {/* ファイルセル */}
-            {row.map((cellData, pageIndex) => {
-              // セル座標から生徒・ページ（実体）を導出（セルは同一性を保持しない）
-              const examStudent = sortedStudents[studentIndex]
-              const examPage = examPages[pageIndex]
+            {cells.map((cellData) => {
+              // 列（ExamPage 実体）はマス自身が持つ。行の実体は上の分割代入から使う。
+              const examPage = cellData.examPage
 
               if (cellData.type === "disabled" || cellData.type === "empty") {
                 // 既存答案があるか（オーバーレイ用・upload のみ）

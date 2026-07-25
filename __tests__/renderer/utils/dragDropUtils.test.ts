@@ -14,7 +14,10 @@ import {
   diffFilesAgainstBaseline,
   encodeCellDroppableId,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
-import { partitionAnswerItemsByPlacement } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import {
+  getCellValue,
+  partitionAnswerItemsByPlacement,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 function makeFile(
@@ -245,9 +248,9 @@ describe("partitionAnswerItemsByPlacement（孤立答案 [4]/[5]）", () => {
       examPageIds
     )
     expect(orphans).toHaveLength(0)
-    // studentIndex-pageIndex（0始まり）
-    expect(placedByCell.get("0-0")?.id).toBe("f1")
-    expect(placedByCell.get("1-1")?.id).toBe("f2")
+    // 配置は (studentId, examPageId) で引く（序数キーではない）
+    expect(getCellValue(placedByCell, STUDENT_A, PAGE_1)?.id).toBe("f1")
+    expect(getCellValue(placedByCell, STUDENT_B, PAGE_2)?.id).toBe("f2")
   })
 
   it("[4] studentId が現ロスターに無い答案（除籍）は孤立答案になる", () => {

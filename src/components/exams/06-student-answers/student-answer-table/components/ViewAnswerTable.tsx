@@ -76,8 +76,7 @@ export function ViewAnswerTable(
       sortableItemIds={[]}
       onDragStart={core.handleDragStart}
       onDragEnd={core.handleDragEnd}
-      tableData={core.tableData}
-      sortedStudents={core.sortedStudents}
+      tableRows={core.tableRows}
       disabledState={core.disabledState}
       nameRegionAvailable={core.nameRegionAvailable}
       cellsWithExistingAnswers={core.cellsWithExistingAnswers}

@@ -53,6 +53,35 @@ export function lookupHasCell(
 }
 
 /**
+ * (studentId, examPageId) → 値 を O(1) で引く入れ子マップ。
+ * CellLookup が「そのセルに該当するか」の真偽だけを持つのに対し、こちらはセルに
+ * 紐づく実体（配置された答案など）を保持する。合成文字列キーも序数も使わない。
+ */
+export type CellValueMap<T> = Map<string, Map<string, T>>
+
+export function setCellValue<T>(
+  cellValues: CellValueMap<T>,
+  studentId: string,
+  examPageId: string,
+  value: T
+): void {
+  const pages = cellValues.get(studentId)
+  if (pages) {
+    pages.set(examPageId, value)
+  } else {
+    cellValues.set(studentId, new Map([[examPageId, value]]))
+  }
+}
+
+export function getCellValue<T>(
+  cellValues: CellValueMap<T>,
+  studentId: string,
+  examPageId: string
+): T | undefined {
+  return cellValues.get(studentId)?.get(examPageId)
+}
+
+/**
  * 手動無効化（行・列・個別セル）の理由を返す唯一の場所。無効でなければ undefined。
  * 「無効か」の真偽と「なぜ無効か」を1回の評価で確定する（判定の二重走査を避ける）。
  * 既存答案(existing_answer)・確認モードの動的無効はここでは扱わない（呼び出し側の責務）。
@@ -190,7 +219,7 @@ export function getDisabledFiles<T extends AnswerImageIdentity>(
  * 除籍（studentId が現ロスターに無い）・ページ削除（列に無い examPageId）などで座標配置できず、
  * 表からは不可視になる（＝孤立答案）。呼び出し側で専用枠に描画して再配置できるようにする。
  *
- * placedByCell のキーは `${studentIndex}-${pageIndex}`（0始まりのグリッド座標）。
+ * placedByCell は (studentId, examPageId) で引く CellValueMap（序数キーは使わない）。
  * 同一セルに複数の配置可能答案が解決された場合は先着のみを配置し、後続は孤立扱いに
  * する（黙って上書きして消さない＝表からも孤立枠からも見えなくなる事故を防ぐ。
  * 実データは @@unique([examPageId, studentId]) によりセル衝突は構造的に起きないが、
@@ -198,34 +227,29 @@ export function getDisabledFiles<T extends AnswerImageIdentity>(
  */
 export function partitionAnswerItemsByPlacement<T extends AnswerImageIdentity>(
   items: T[],
-  sortedStudentIds: string[],
+  rosterStudentIds: string[],
   examPageIds: string[]
-): { placedByCell: Map<string, T>; orphans: T[] } {
-  const studentIndexById = new Map<string, number>()
-  sortedStudentIds.forEach((studentId, studentIndex) => {
-    studentIndexById.set(studentId, studentIndex)
-  })
-  const pageIndexById = new Map<string, number>()
-  examPageIds.forEach((examPageId, pageIndex) => {
-    pageIndexById.set(examPageId, pageIndex)
-  })
+): { placedByCell: CellValueMap<T>; orphans: T[] } {
+  const rosterStudentIdSet = new Set(rosterStudentIds)
+  const columnPageIdSet = new Set(examPageIds)
 
-  const placedByCell = new Map<string, T>()
+  const placedByCell: CellValueMap<T> = new Map()
   const orphans: T[] = []
 
   for (const answerItem of items) {
-    const studentIndex = answerItem.studentId
-      ? studentIndexById.get(answerItem.studentId)
-      : undefined
-    const pageIndex = answerItem.examPageId
-      ? pageIndexById.get(answerItem.examPageId)
-      : undefined
-    const isPlaceable = studentIndex !== undefined && pageIndex !== undefined
-    const cellKey = `${studentIndex}-${pageIndex}`
+    const { studentId, examPageId } = answerItem
+    const isPlaceable =
+      studentId !== null &&
+      examPageId !== null &&
+      rosterStudentIdSet.has(studentId) &&
+      columnPageIdSet.has(examPageId)
 
     // 配置可能でも同一セルが既に埋まっていれば孤立へ退避する（上書きで消さない）
-    if (isPlaceable && !placedByCell.has(cellKey)) {
-      placedByCell.set(cellKey, answerItem)
+    if (
+      isPlaceable &&
+      getCellValue(placedByCell, studentId, examPageId) === undefined
+    ) {
+      setCellValue(placedByCell, studentId, examPageId, answerItem)
     } else {
       orphans.push(answerItem)
     }
