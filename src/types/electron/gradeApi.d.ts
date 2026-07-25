@@ -296,6 +296,22 @@ export interface GradeAPI {
       fits?: Record<string, { correlation: number; sampleSize: number } | null>
       error?: string
     }>
+    /**
+     * 成績値を確定（凍結）する。確定時点の実効値（自動算出→手動上書き適用後）を保存し、
+     * 以後は参照資料・境界の変更に追従させない。既に確定済みのセルを含めれば再確定になる。
+     * targets 未指定は Grade 全体の一括確定。対象の同定は (studentId, gradeItemId)。
+     */
+    freezeGradeScores: (data: {
+      gradeId: string
+      targets?: { studentId: string; gradeItemId: string }[]
+      frozenByUserId?: string | null
+    }) => Promise<{ success: boolean; frozenCount?: number; error?: string }>
+    /** 成績値の確定を解除する（リアルタイム算出値へ戻す）。targets 未指定は Grade 全体 */
+    unfreezeGradeScores: (data: {
+      gradeId: string
+      targets?: { studentId: string; gradeItemId: string }[]
+      userId?: string | null
+    }) => Promise<{ success: boolean; unfrozenCount?: number; error?: string }>
     getExamCandidates: () => Promise<{
       success: boolean
       exams?: Array<{ id: string; examName: string; examDate: Date | null }>

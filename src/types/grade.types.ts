@@ -178,6 +178,29 @@ export interface StudentGradeResult {
   overrideOverallGradeLabel: string | null
 }
 
+/**
+ * 成績値の確定（凍結）情報。そのセルに確定値が適用されているときのみ非 null。
+ *
+ * 確定済みのとき GradeItemResult の weightedScore / weightedMaxScore / percentage /
+ * gradeLabel には確定値が入る。ここにはライブ算出値を並べ、「確定後に元資料や境界が
+ * 変わって値が食い違っているか（isStale）」と「解除すると何に戻るか」を示す。
+ */
+export interface GradeFrozenInfo {
+  /** 確定した日時（ISO text） */
+  frozenAt: string
+  /**
+   * 確定後に元資料・境界が変わり、現在のリアルタイム算出値と食い違っているか。
+   * 判定は入力のハッシュではなく算出結果そのものの比較で行う（値が動かない変更を
+   * 「再確定推奨」と誤って煽らないため。差分の中身をそのまま提示できる利点もある）。
+   */
+  isStale: boolean
+  /** 現在のリアルタイム算出値。確定を解除するとこの値に戻る */
+  liveWeightedScore: number | null
+  liveWeightedMaxScore: number
+  livePercentage: number | null
+  liveGradeLabel: string | null
+}
+
 /** GradeItem単位の成績結果 */
 export interface GradeItemResult {
   gradeItemId: string
@@ -186,18 +209,24 @@ export interface GradeItemResult {
   isExcluded: boolean
   /** 全DataSourceのスコアがnullで0点扱いになっているか */
   isAllMissing: boolean
-  /** データソース別スコア */
+  /**
+   * データソース別スコア。確定済みでも内訳は現在の資料から算出したライブ値のまま
+   * （確定するのは成績値であって資料の中身ではない）。確定値と内訳が食い違う状態は
+   * frozen.isStale で示す。
+   */
   sourceScores: SourceScoreResult[]
-  /** 重み付け後の合計 */
+  /** 重み付け後の合計（確定済みなら確定値） */
   weightedScore: number | null
   weightedMaxScore: number
   percentage: number | null
-  /** 実効値（上書きがあればそれ、なければ自動算出値） */
+  /** 実効値。採用順は 確定値 > 手動上書き > 自動算出値 */
   gradeLabel: string | null
   /** 自動算出値（常に設定） */
   originalGradeLabel: string | null
   /** 上書き値（nullなら上書きなし） */
   overrideGradeLabel: string | null
+  /** 確定（凍結）情報。未確定なら null */
+  frozen: GradeFrozenInfo | null
 }
 
 /** データソース別スコア */

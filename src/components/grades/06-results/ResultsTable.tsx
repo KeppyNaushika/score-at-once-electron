@@ -10,6 +10,7 @@ import type {
 
 import { ConstraintLegend } from "./ConstraintLegend"
 import { EditableGradeLabel } from "./EditableGradeLabel"
+import { FrozenCellControl } from "./FrozenCellControl"
 import { GradeItemBreakdownPopover } from "./GradeItemBreakdownPopover"
 
 interface ResultsTableProps {
@@ -21,6 +22,10 @@ interface ResultsTableProps {
     gradeItemId: string | null
     overrideLabel: string | null
   }) => void
+  /** 対象セルを現在のライブ値で確定し直す */
+  onRefreezeCell: (target: { studentId: string; gradeItemId: string }) => void
+  /** 対象セルの確定を解除する */
+  onUnfreezeCell: (target: { studentId: string; gradeItemId: string }) => void
 }
 
 type SortKey = "registrationOrder" | "attendanceNumber" | string
@@ -35,6 +40,8 @@ export function ResultsTable({
   result,
   constraints = [],
   onGradeOverride,
+  onRefreezeCell,
+  onUnfreezeCell,
 }: ResultsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("registrationOrder")
   const [sortAsc, setSortAsc] = useState(true)
@@ -234,6 +241,25 @@ export function ResultsTable({
                               })
                             }
                           />
+                          {itemResult?.frozen && (
+                            <FrozenCellControl
+                              frozen={itemResult.frozen}
+                              frozenPercentage={itemResult.percentage}
+                              frozenGradeLabel={itemResult.gradeLabel}
+                              onRefreeze={() =>
+                                onRefreezeCell({
+                                  studentId: student.studentId,
+                                  gradeItemId: gradeItem.id,
+                                })
+                              }
+                              onUnfreeze={() =>
+                                onUnfreezeCell({
+                                  studentId: student.studentId,
+                                  gradeItemId: gradeItem.id,
+                                })
+                              }
+                            />
+                          )}
                         </div>
                       </td>
                     )

@@ -1008,6 +1008,87 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(imported[1].color).toBe("#fde68a")
   })
 
+  it("成績値の確定(GradeFrozenScore)が往復で保持される (v1.9.0)", async () => {
+    const suffix = Date.now()
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `SF${suffix}`,
+        lastName: "確定",
+        firstName: "太郎",
+        lastNameKana: "カクテイ",
+        firstNameKana: "タロウ",
+      },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `成績_frozen_${suffix}` },
+    })
+    await prisma.gradeStudent.create({
+      data: { gradeId: grade.id, studentId: student.id },
+    })
+    const gradeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    const frozenAt = new Date("2026-07-20T09:00:00.000Z")
+    await prisma.gradeFrozenScore.create({
+      data: {
+        gradeId: grade.id,
+        studentId: student.id,
+        gradeItemId: gradeItem.id,
+        weightedScore: 0.8,
+        weightedMaxScore: 1,
+        percentage: 80,
+        gradeLabel: "A",
+        frozenAt,
+      },
+    })
+
+    // 収集（export）: 外部参照は学籍番号・評価項目名の名前ベース
+    const collected = await collectGradeArchiveData(grade.id)
+    expect(collected.gradeData.gradeFrozenScores).toHaveLength(1)
+    expect(collected.gradeData.gradeFrozenScores![0]).toMatchObject({
+      studentNumber: `SF${suffix}`,
+      gradeItemName: "知識・技能",
+      weightedScore: 0.8,
+      weightedMaxScore: 1,
+      percentage: 80,
+      gradeLabel: "A",
+    })
+
+    // インポート（新規Gradeとして作成される）
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+
+    const imported = await prisma.gradeFrozenScore.findMany({
+      where: { gradeId: result.gradeId! },
+    })
+    expect(imported).toHaveLength(1)
+    expect(Number(imported[0].percentage)).toBe(80)
+    expect(Number(imported[0].weightedScore)).toBe(0.8)
+    expect(Number(imported[0].weightedMaxScore)).toBe(1)
+    expect(imported[0].gradeLabel).toBe("A")
+    expect(imported[0].studentId).toBe(student.id)
+    expect(new Date(imported[0].frozenAt).toISOString()).toBe(
+      frozenAt.toISOString()
+    )
+    // 確定操作者は持ち出さないので取り込み先では不明になる
+    expect(imported[0].frozenByUserId).toBeNull()
+  })
+
+  it("gradeFrozenScores が無いGradeも問題なく往復する（後方互換）", async () => {
+    const grade = await prisma.grade.create({
+      data: { name: `成績_nofrozen_${Date.now()}` },
+    })
+    const collected = await collectGradeArchiveData(grade.id)
+    expect(collected.gradeData.gradeFrozenScores).toBeUndefined()
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+    const imported = await prisma.gradeFrozenScore.findMany({
+      where: { gradeId: result.gradeId! },
+    })
+    expect(imported).toHaveLength(0)
+  })
+
   it("gradeConstraints が無いGradeも問題なく往復する（後方互換）", async () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_noconstraint_${Date.now()}` },

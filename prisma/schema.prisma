@@ -25,6 +25,7 @@ model User {
   answerSheetDefinitions AsbDefinition[]
   compoundAnswerScores   CompoundAnswerScore[]
   scoreDecisions         ScoreDecision[]
+  gradeFrozenScores      GradeFrozenScore[]
 }
 
 model Classroom {
@@ -58,6 +59,7 @@ model Student {
   memberships          StudentClassroomMembership[]
   gradeStudents        GradeStudent[]
   gradeOverrides       GradeOverride[]
+  gradeFrozenScores    GradeFrozenScore[]
   gradeItemExclusions  GradeItemExclusion[]
   compoundAnswerScores CompoundAnswerScore[]
   scoreDecisions       ScoreDecision[]
@@ -677,6 +679,7 @@ model Grade {
   gradeClassrooms     GradeClassroom[]
   gradeStudents       GradeStudent[]
   gradeOverrides      GradeOverride[]
+  gradeFrozenScores   GradeFrozenScore[]
   gradeItemExclusions GradeItemExclusion[]
   gradeConstraints    GradeConstraint[]
   exportSettings      GradeExportSettings?
@@ -715,6 +718,7 @@ model GradeItem {
   dataSources         GradeDataSource[]
   boundarySets        GradeBoundarySet[]
   gradeOverrides      GradeOverride[]
+  gradeFrozenScores   GradeFrozenScore[]
   gradeItemExclusions GradeItemExclusion[]
 
   @@index([gradeId])
@@ -846,6 +850,48 @@ model GradeOverride {
   gradeItem GradeItem? @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
   @@unique([gradeId, studentId, targetType, gradeItemId])
+  @@index([gradeId])
+  @@index([studentId])
+  @@index([gradeItemId])
+}
+
+/// 成績値の確定（凍結）。確定操作を行った時点の実効値（自動算出 → 手動上書きを適用した後の値）を
+/// そのまま保存し、以後は参照資料（試験スコア・試験外成績資料）や境界設定を変更しても追従させない。
+///
+/// GradeOverride とは意味論が別なので相乗りしない — あちらは「教員が評定を意図的に変えた」という
+/// 調整の記録で、こちらは「その調整の結果を含む今の値をこれで確定する」という凍結。
+/// 算出時の採用順は 確定値 > 手動上書き > リアルタイム算出値。
+///
+/// 対象は生徒×評価項目のみ。総合（overall）の行は作らない — 総合の境界セットを作る導線が
+/// UI に存在せず評定自体が GradeItem の一つとして運用されているため。これにより gradeItemId を
+/// NOT NULL にでき、SQLite が unique 制約で NULL を互いに別物と扱う罠も踏まない。
+model GradeFrozenScore {
+  id          String @id @default(uuid())
+  gradeId     String
+  studentId   String
+  gradeItemId String
+
+  /// 確定時の重み付け得点。全ソース欠測など算出不能なら null
+  weightedScore Decimal?
+  /// 確定時の重み付け満点（重みの合計）
+  weightedMaxScore Decimal
+  /// 確定時の達成率(%)。算出不能なら null
+  percentage Decimal?
+  /// 確定時の成績ラベル。境界未設定なら null
+  gradeLabel String?
+
+  /// 確定操作を行った操作者。システム操作は null
+  frozenByUserId String?
+  frozenAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  frozenBy  User?     @relation(fields: [frozenByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([gradeId, studentId, gradeItemId])
   @@index([gradeId])
   @@index([studentId])
   @@index([gradeItemId])

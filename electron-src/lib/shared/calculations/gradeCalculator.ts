@@ -371,14 +371,37 @@ export async function computeSourceFits(gradeId: string): Promise<{
   }
 }
 
+/** float の丸め誤差で確定値とライブ値の食い違いを誤検知しないよう小数4桁で比較する */
+const roundForCompare = (value: number): number => Math.round(value * 1e4) / 1e4
+
+const sameNumber = (left: number | null, right: number | null): boolean =>
+  left === null || right === null
+    ? left === right
+    : roundForCompare(left) === roundForCompare(right)
+
+const toIsoString = (value: Date | string): string =>
+  typeof value === "string" ? value : value.toISOString()
+
 /**
- * 成績を算出する
+ * 成績を算出する。
+ *
+ * 確定（凍結）済みのセルは既定で確定値を最優先で返す（採用順は 確定値 > 手動上書き >
+ * 自動算出値）。結果表・Excel・個票・制約評価はすべてこの関数を通るため、ここで差し替える
+ * ことで全出力が確定値で一貫する。
+ *
+ * @param options.applyFrozen 確定値を適用するか（既定 true）。確定操作そのものは
+ *   「今のライブ値を取り込む」ものなので false で呼ぶ。true のまま呼ぶと再確定が
+ *   確定値自身を焼き直すだけになる。
  */
-export async function calculateGrades(gradeId: string): Promise<{
+export async function calculateGrades(
+  gradeId: string,
+  options?: { applyFrozen?: boolean }
+): Promise<{
   success: boolean
   result?: GradeCalculationResult
   error?: string
 }> {
+  const applyFrozen = options?.applyFrozen ?? true
   try {
     // 素点行列と付随データ（推定に必要な文脈）をまとめて構築。
     // computeSourceFits（手法選択画面のモデル適合度R）と共有する（SSOT）。
@@ -396,6 +419,24 @@ export async function calculateGrades(gradeId: string): Promise<{
       dataSourceInfos,
       rawScoreMap,
     } = context
+
+    // 確定（凍結）済みセルを (studentId, gradeItemId) で引けるようにする。
+    // 序数ではなく id の組でキーする（生徒の並べ替え・項目の追加でずれないため）。
+    const frozenByCell = new Map<
+      string,
+      Awaited<ReturnType<typeof prisma.gradeFrozenScore.findMany>>[number]
+    >()
+    if (applyFrozen) {
+      const frozenScores = await prisma.gradeFrozenScore.findMany({
+        where: { gradeId: grade.id },
+      })
+      for (const frozenScore of frozenScores) {
+        frozenByCell.set(
+          `${frozenScore.studentId}:${frozenScore.gradeItemId}`,
+          frozenScore
+        )
+      }
+    }
 
     // 各ソースの実測素点分布（平均・標準偏差）はソース単位で一定なので、生徒ループの外で
     // 1ソース1回だけ算出してマップ化する。閲覧生徒は除外しない（＝クラスの実測分布として
@@ -436,6 +477,7 @@ export async function calculateGrades(gradeId: string): Promise<{
             gradeLabel: null,
             originalGradeLabel: null,
             overrideGradeLabel: null,
+            frozen: null,
           })
           continue
         }
@@ -603,6 +645,48 @@ export async function calculateGrades(gradeId: string): Promise<{
         )
         const itemOverrideKey = `${student.id}:grade_item:${gradeItem.id}`
         const overrideGradeLabel = overrideMap.get(itemOverrideKey) ?? null
+        // ライブの実効値＝自動算出を手動上書きで調整した後の値。確定操作はこれを取り込む。
+        const liveGradeLabel = overrideGradeLabel ?? originalGradeLabel
+
+        const frozenScore = frozenByCell.get(`${student.id}:${gradeItem.id}`)
+        if (frozenScore) {
+          const frozenWeightedScore =
+            frozenScore.weightedScore !== null
+              ? Number(frozenScore.weightedScore)
+              : null
+          const frozenWeightedMaxScore = Number(frozenScore.weightedMaxScore)
+          const frozenPercentage =
+            frozenScore.percentage !== null
+              ? Number(frozenScore.percentage)
+              : null
+
+          gradeItemResults.push({
+            gradeItemId: gradeItem.id,
+            gradeItemName: gradeItem.name,
+            isExcluded: false,
+            isAllMissing,
+            sourceScores,
+            weightedScore: frozenWeightedScore,
+            weightedMaxScore: frozenWeightedMaxScore,
+            percentage: frozenPercentage,
+            gradeLabel: frozenScore.gradeLabel,
+            originalGradeLabel,
+            overrideGradeLabel,
+            frozen: {
+              frozenAt: toIsoString(frozenScore.frozenAt),
+              isStale:
+                !sameNumber(frozenPercentage, percentage) ||
+                !sameNumber(frozenWeightedScore, weightedScore) ||
+                !sameNumber(frozenWeightedMaxScore, weightedMax) ||
+                frozenScore.gradeLabel !== liveGradeLabel,
+              liveWeightedScore: weightedScore,
+              liveWeightedMaxScore: weightedMax,
+              livePercentage: percentage,
+              liveGradeLabel,
+            },
+          })
+          continue
+        }
 
         gradeItemResults.push({
           gradeItemId: gradeItem.id,
@@ -613,9 +697,10 @@ export async function calculateGrades(gradeId: string): Promise<{
           weightedScore,
           weightedMaxScore: weightedMax,
           percentage,
-          gradeLabel: overrideGradeLabel ?? originalGradeLabel,
+          gradeLabel: liveGradeLabel,
           originalGradeLabel,
           overrideGradeLabel,
+          frozen: null,
         })
       }
 
