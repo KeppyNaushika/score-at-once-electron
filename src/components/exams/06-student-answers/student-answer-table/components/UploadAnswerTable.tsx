@@ -14,7 +14,7 @@ import type {
 } from "@/components/exams/06-student-answers/types"
 
 // 参照安定な既定値（毎レンダーで新規 Set を作らないため）
-const EMPTY_PAGES: Set<number> = new Set()
+const EMPTY_EXAM_PAGE_IDS: Set<string> = new Set()
 
 /**
  * 新規追加（upload）モードの答案テーブル。未保存の UnsavedAnswerImage を配置（方式A＝並べ替え）し、
@@ -35,11 +35,11 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
 
   // マーカー補正（UnsavedAnswerImage の buffer を扱うため upload 専用）
   const { correctingFileIds } = useMarkerCorrection({
-    examId: props.examId,
     files: props.files,
     tableRows: core.tableRows,
     markerCorrectionEnabled: props.markerCorrectionEnabled ?? false,
-    markerAvailablePages: props.markerAvailablePages ?? EMPTY_PAGES,
+    markerAvailableExamPageIds:
+      props.markerAvailableExamPageIds ?? EMPTY_EXAM_PAGE_IDS,
     onFilesChange: props.onFilesChange,
   })
 
@@ -132,7 +132,7 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
         onDragEnd={core.handleDragEnd}
         tableRows={core.tableRows}
         disabledState={core.disabledState}
-        nameRegionAvailable={core.nameRegionAvailable}
+        nameRegionExamPageIds={core.nameRegionExamPageIds}
         cellsWithExistingAnswers={core.cellsWithExistingAnswers}
         files={props.files}
         imageLoadStates={props.imageLoadStates}

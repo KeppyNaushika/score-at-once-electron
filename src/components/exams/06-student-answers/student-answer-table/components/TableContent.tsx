@@ -63,7 +63,7 @@ interface TableContentProps {
   disabledState: ExtendedDisabledState
   mode: "upload" | "view"
   previewMode: PreviewMode
-  nameRegionAvailable: Record<number, boolean>
+  nameRegionExamPageIds: Set<string>
   cellsWithExistingAnswers: CellLookup
   allowOverwrite: boolean
   files: AnswerImageIdentity[]
@@ -74,7 +74,7 @@ interface TableContentProps {
   fileDisplayById: Map<string, FilePreviewSource>
   drawNameRegionCanvas: (
     previewUrl: string | null,
-    pageNumber: number
+    examPageId: string | null
   ) => Promise<string | null>
   toggleRowDisabled: (examStudentId: string) => void
   toggleColDisabled: (examPageId: string) => void
@@ -92,7 +92,7 @@ export function TableContent({
   disabledState,
   mode,
   previewMode,
-  nameRegionAvailable,
+  nameRegionExamPageIds,
   cellsWithExistingAnswers,
   allowOverwrite,
   files,
@@ -245,12 +245,12 @@ export function TableContent({
                           display?.altName ??
                           `${examStudent.student.lastName} ${examStudent.student.firstName}`
                         }
-                        pageNumber={examPage.pageNumber}
+                        examPageId={examPage.id}
                         previewMode={previewMode}
                         isFileDisabled={isFileDisabled}
-                        nameRegionAvailable={
-                          nameRegionAvailable[examPage.pageNumber]
-                        }
+                        nameRegionAvailable={nameRegionExamPageIds.has(
+                          examPage.id
+                        )}
                         drawNameRegionCanvas={drawNameRegionCanvas}
                         imageLoadState={imageLoadStates[file.id]}
                         correctionStatus={display?.correctionStatus}

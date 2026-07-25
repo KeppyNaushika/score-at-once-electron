@@ -9,20 +9,20 @@ import type {
 interface TableDragOverlayProps {
   // ドラッグ中の答案の表示ソース（呼び出し側がエンティティ／未保存項目から導出）
   activeDisplay: FilePreviewSource | null
-  // ドラッグ中の答案が置かれているページ番号（氏名欄クリップ用。列 ExamPage から導出、無ければ 0）
-  pageNumber: number
+  // ドラッグ中の答案が置かれているページの id（氏名欄クリップ用。未配置・孤立は null）
+  examPageId: string | null
   previewMode: PreviewMode
   // ドラッグ中の答案が属するページに氏名欄があるか（name-only プレビュー用）
   nameRegionAvailable?: boolean
   drawNameRegionCanvas: (
     previewUrl: string | null,
-    pageNumber: number
+    examPageId: string | null
   ) => Promise<string | null>
 }
 
 export function TableDragOverlay({
   activeDisplay,
-  pageNumber,
+  examPageId,
   previewMode,
   nameRegionAvailable = false,
   drawNameRegionCanvas,
@@ -35,7 +35,7 @@ export function TableDragOverlay({
             previewUrl={activeDisplay.previewUrl}
             imagePath={activeDisplay.imagePath}
             altName={activeDisplay.altName}
-            pageNumber={pageNumber}
+            examPageId={examPageId}
             previewMode={previewMode}
             isFileDisabled={false}
             nameRegionAvailable={nameRegionAvailable}

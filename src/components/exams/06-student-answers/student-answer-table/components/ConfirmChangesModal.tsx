@@ -30,9 +30,9 @@ interface ConfirmChangesModalProps {
   onReset?: () => Promise<void>
 }
 
-/** ページが変わる移動か（＝採点は追従不可・破棄一択） */
+/** ページが変わる移動か（＝採点は追従不可・破棄一択）。同定は examPageId で行う */
 function isPageChange(change: PendingChange): boolean {
-  return change.fromPosition.pageNumber !== change.toPosition.pageNumber
+  return change.fromPosition.examPageId !== change.toPosition.examPageId
 }
 
 /**

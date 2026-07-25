@@ -2,9 +2,11 @@ import { useCallback, useRef, useState } from "react"
 
 /** 答案画像から氏名欄領域をクリッピングして表示するためのフック */
 export function useNameRegion(examId: string) {
-  const [nameRegionAvailable, setNameRegionAvailable] = useState<
-    Record<number, boolean>
-  >({})
+  // 氏名欄（STUDENT_NAME の CropRegion）を持つ ExamPage の id 集合。
+  // 序数 pageNumber ではなく id でキーする（ページ挿入・並べ替えでずれないため）。
+  const [nameRegionExamPageIds, setNameRegionExamPageIds] = useState<
+    Set<string>
+  >(new Set())
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // 氏名欄領域の存在確認
@@ -12,30 +14,26 @@ export function useNameRegion(examId: string) {
     try {
       const cropRegions =
         await window.electronAPI.getCropRegionsByExamId(examId)
-      const examPages = await window.electronAPI.getExamPagesByExamId(examId)
 
-      const availability: Record<number, boolean> = {}
-
-      for (const examPage of examPages) {
-        const nameRegion = cropRegions.find(
-          (region) =>
-            region.type === "STUDENT_NAME" && region.examPageId === examPage.id
+      setNameRegionExamPageIds(
+        new Set(
+          cropRegions
+            .filter((region) => region.type === "STUDENT_NAME")
+            .map((region) => region.examPageId)
         )
-        availability[examPage.pageNumber] = !!nameRegion
-      }
-
-      setNameRegionAvailable(availability)
+      )
     } catch (error) {
       console.error("氏名欄領域確認エラー:", error)
     }
   }, [examId])
 
-  // 氏名欄クリッピング用のcanvas描画。表示ソース（データURL）を直接受け取る
-  // （答案の同定・実体には依存しない＝表示専用の純関数）。
+  // 氏名欄クリッピング用のcanvas描画。表示ソース（データURL）と対象ページの id を受け取る
+  // （答案の同定・実体には依存しない＝表示専用の純関数）。列に対応する ExamPage が無い
+  // 孤立答案は examPageId が null で、クリップ対象外として null を返す。
   const drawNameRegionCanvas = useCallback(
-    async (previewUrl: string | null, pageNumber: number) => {
+    async (previewUrl: string | null, examPageId: string | null) => {
       const canvas = canvasRef.current
-      if (!canvas) {
+      if (!canvas || !examPageId) {
         return null
       }
 
@@ -44,19 +42,9 @@ export function useNameRegion(examId: string) {
         const cropRegions =
           await window.electronAPI.getCropRegionsByExamId(examId)
 
-        // ページ番号に基づいてexamPageIdを取得
-        const examPages = await window.electronAPI.getExamPagesByExamId(examId)
-        const examPage = examPages.find(
-          (page) => page.pageNumber === pageNumber
-        )
-
-        if (!examPage) {
-          return null
-        }
-
         const nameRegion = cropRegions.find(
           (region) =>
-            region.type === "STUDENT_NAME" && region.examPageId === examPage.id
+            region.type === "STUDENT_NAME" && region.examPageId === examPageId
         )
 
         if (!nameRegion || !previewUrl) {
@@ -113,7 +101,7 @@ export function useNameRegion(examId: string) {
   )
 
   return {
-    nameRegionAvailable,
+    nameRegionExamPageIds,
     canvasRef,
     checkNameRegionAvailability,
     drawNameRegionCanvas,

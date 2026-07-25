@@ -39,15 +39,16 @@ export interface OmrAPI {
       colorThreshold?: number
     ) => Promise<{
       success: boolean
+      // 同定は examPageId。pageNumber は診断メッセージの表示用。
       pages: Array<{
+        examPageId: string
         pageNumber: number
         result: import("../omr.types").MarkerDetectionResult
       }>
       error?: string
     }>
     correctImage: (
-      examId: string,
-      pageNumber: number,
+      examPageId: string,
       buffer: Uint8Array,
       colorThreshold?: number
     ) => Promise<{

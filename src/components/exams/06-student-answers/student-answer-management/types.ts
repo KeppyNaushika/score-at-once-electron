@@ -38,9 +38,3 @@ export interface FileUploadZoneProps {
   modelAnswerCount: number
   pdfProcessingProgress: number
 }
-
-export interface GridHeaderProps {
-  maxPages: number
-  pageStates: Set<number>
-  onTogglePage: (pageNumber: number) => void
-}

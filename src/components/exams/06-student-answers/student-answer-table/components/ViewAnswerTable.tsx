@@ -78,7 +78,7 @@ export function ViewAnswerTable(
       onDragEnd={core.handleDragEnd}
       tableRows={core.tableRows}
       disabledState={core.disabledState}
-      nameRegionAvailable={core.nameRegionAvailable}
+      nameRegionExamPageIds={core.nameRegionExamPageIds}
       cellsWithExistingAnswers={core.cellsWithExistingAnswers}
       files={props.files}
       affectedCells={props.affectedCells}

@@ -30,9 +30,10 @@ export function useStudentAnswerUpload(
   const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
     useState(false)
   const [markerDiagnostics, setMarkerDiagnostics] = useState("")
-  const [markerAvailablePages, setMarkerAvailablePages] = useState<Set<number>>(
-    new Set()
-  )
+  // マスターマーカーを検出できた ExamPage の id 集合（序数 pageNumber ではキーしない）
+  const [markerAvailableExamPageIds, setMarkerAvailableExamPageIds] = useState<
+    Set<string>
+  >(new Set())
   const filesRef = useRef<UnsavedAnswerImage[]>([])
   const prevFilesRef = useRef<UnsavedAnswerImage[]>([])
 
@@ -174,26 +175,28 @@ export function useStudentAnswerUpload(
       try {
         const result = await window.electronAPI.omr.detectMasterMarkers(examId)
         if (cancelled) return
-        // マスターマーカーを検出できたページを記録
-        const availablePages = new Set<number>()
+        // マスターマーカーを検出できたページを記録（同定は ExamPage.id）
+        const availableExamPageIds = new Set<string>()
         if (result.pages) {
           for (const page of result.pages) {
             if (page.result.success) {
-              availablePages.add(page.pageNumber)
+              availableExamPageIds.add(page.examPageId)
             }
           }
         }
         // 内容が同じなら既存参照を維持（effect誤発火防止）
-        setMarkerAvailablePages((prev) => {
+        setMarkerAvailableExamPageIds((prev) => {
           if (
-            prev.size === availablePages.size &&
-            [...prev].every((pageNumber) => availablePages.has(pageNumber))
+            prev.size === availableExamPageIds.size &&
+            [...prev].every((examPageId) =>
+              availableExamPageIds.has(examPageId)
+            )
           ) {
             return prev
           }
-          return availablePages
+          return availableExamPageIds
         })
-        setMarkerCorrectionAvailable(availablePages.size > 0)
+        setMarkerCorrectionAvailable(availableExamPageIds.size > 0)
         if (!result.success && result.pages) {
           const lines: string[] = []
           for (const page of result.pages) {
@@ -318,7 +321,7 @@ export function useStudentAnswerUpload(
     markerCorrectionEnabled,
     markerCorrectionAvailable,
     markerDiagnostics,
-    markerAvailablePages,
+    markerAvailableExamPageIds,
     setMarkerCorrectionEnabled,
 
     // Actions

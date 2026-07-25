@@ -56,7 +56,7 @@ export interface UnsavedAnswerImage extends AnswerImageIdentity {
   size?: number // バイト数（表示用）
   isSelected: boolean // UI選択状態
   correctionStatus?: "corrected" | "skipped" | "not_requested"
-  correctedForPage?: number // 補正時に対応付けたマスターページ番号
+  correctedForExamPageId?: string // 補正時に対応付けたマスターページ（ExamPage.id）
   correctionError?: string
 }
 

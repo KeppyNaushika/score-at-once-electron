@@ -74,13 +74,13 @@ export interface FilePreviewCellProps {
   previewUrl?: string // 未保存 blob or 読込済みキャッシュ（同期初期値）
   imagePath?: string | null // DB答案の遅延読込パス
   altName: string // alt・dev 表示用
-  pageNumber: number // 表示・氏名欄クリップ対象ページ（列 ExamPage から導出）
+  examPageId: string | null // 氏名欄クリップ対象ページ（列 ExamPage の id。孤立答案は null）
   previewMode: PreviewMode
   isFileDisabled: boolean
   nameRegionAvailable: boolean
   drawNameRegionCanvas: (
     previewUrl: string | null,
-    pageNumber: number
+    examPageId: string | null
   ) => Promise<string | null>
   imageLoadState?: "pending" | "loading" | "loaded" | "error"
   correctionStatus?: "corrected" | "skipped" | "not_requested"
@@ -223,7 +223,7 @@ export interface UploadAnswerTableProps extends AnswerTableBaseProps {
   markerCorrectionEnabled?: boolean
   markerCorrectionAvailable?: boolean
   markerDiagnostics?: string
-  markerAvailablePages?: Set<number>
+  markerAvailableExamPageIds?: Set<string>
   onMarkerCorrectionChange?: (enabled: boolean) => void
 }
 

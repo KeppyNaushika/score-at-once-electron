@@ -44,7 +44,7 @@ export function StudentAnswerUpload({
     markerCorrectionEnabled,
     markerCorrectionAvailable,
     markerDiagnostics,
-    markerAvailablePages,
+    markerAvailableExamPageIds,
     setMarkerCorrectionEnabled,
     setFiles,
     setFileOrder,
@@ -122,7 +122,7 @@ export function StudentAnswerUpload({
           markerCorrectionEnabled={markerCorrectionEnabled}
           markerCorrectionAvailable={markerCorrectionAvailable}
           markerDiagnostics={markerDiagnostics}
-          markerAvailablePages={markerAvailablePages}
+          markerAvailableExamPageIds={markerAvailableExamPageIds}
           onMarkerCorrectionChange={setMarkerCorrectionEnabled}
         />
       </div>
