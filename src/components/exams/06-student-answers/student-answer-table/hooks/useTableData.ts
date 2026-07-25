@@ -101,7 +101,7 @@ export function useTableData<TItem extends AnswerImageIdentity>({
   }, [files, disabledState])
 
   // テーブル行の生成（行に ExamStudent 実体、各マスに ExamPage 実体を同梱）
-  const { tableRows, orphanItems } = useTableDataGeneration({
+  const { tableRows, orphanItems, unplacedItems } = useTableDataGeneration({
     files,
     sortedStudents,
     examPages,
@@ -118,6 +118,7 @@ export function useTableData<TItem extends AnswerImageIdentity>({
     getDisabledFiles: getDisabledFilesCallback,
     tableRows,
     orphanItems,
+    unplacedItems,
     cellsWithExistingAnswers,
   }
 }
