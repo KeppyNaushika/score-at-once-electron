@@ -13,6 +13,8 @@ import { describe, expect, it } from "vitest"
 
 import { useTableDataGeneration } from "@/components/exams/06-student-answers/student-answer-table/hooks/useTableDataGeneration"
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import { addCellToLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   ExamPageColumn,
   UnsavedAnswerImage,
@@ -79,12 +81,21 @@ function makePlacedAnswer(
   return { ...makeUnsavedAnswer(id), studentId, examPageId }
 }
 
+/** 指定マスだけ「既存答案あり」とするルックアップ */
+function existingAnswerAt(studentId: string, examPageId: string): CellLookup {
+  const lookup: CellLookup = new Map()
+  addCellToLookup(lookup, studentId, examPageId)
+  return lookup
+}
+
 const EMPTY_DISABLED_STATE: ExtendedDisabledState = {
   rows: [],
   cols: [],
   cells: [],
   files: new Set(),
 }
+
+const NO_EXISTING_ANSWERS: CellLookup = new Map()
 
 const EXAM_PAGES: ExamPageColumn[] = [
   { id: PAGE_1, pageNumber: 1 },
@@ -126,6 +137,7 @@ describe("useTableDataGeneration", () => {
         disabledState: EMPTY_DISABLED_STATE,
         mode: "upload",
         enhancedIsCellDisabled: () => false,
+        cellsWithExistingAnswers: NO_EXISTING_ANSWERS,
       })
     )
 
@@ -160,6 +172,7 @@ describe("useTableDataGeneration", () => {
         disabledState: EMPTY_DISABLED_STATE,
         mode: "upload",
         enhancedIsCellDisabled: () => false,
+        cellsWithExistingAnswers: NO_EXISTING_ANSWERS,
       })
     )
 
@@ -193,6 +206,7 @@ describe("useTableDataGeneration", () => {
         disabledState: EMPTY_DISABLED_STATE,
         mode: "view",
         enhancedIsCellDisabled: () => true,
+        cellsWithExistingAnswers: NO_EXISTING_ANSWERS,
       })
     )
 
@@ -232,6 +246,7 @@ describe("useTableDataGeneration", () => {
         disabledState: EMPTY_DISABLED_STATE,
         mode: "view",
         enhancedIsCellDisabled: () => true,
+        cellsWithExistingAnswers: NO_EXISTING_ANSWERS,
       })
     )
 
@@ -260,7 +275,7 @@ describe("useTableDataGeneration", () => {
         enhancedIsCellDisabled: () => false,
         allowOverwrite: false,
         // 先頭マス（生徒B・p1）は既に DB 答案が居る
-        existingAnswers: [makePlacedAnswer("db1", STUDENT_B, PAGE_1)],
+        cellsWithExistingAnswers: existingAnswerAt(STUDENT_B, PAGE_1),
       })
     )
 

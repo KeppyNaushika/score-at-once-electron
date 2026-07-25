@@ -10,7 +10,6 @@ import type {
   CellValueMap,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import {
-  addCellToLookup,
   getCellValue,
   getEnabledFiles,
   lookupHasCell,
@@ -37,14 +36,16 @@ interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
     examPageId: string
   ) => boolean
   allowOverwrite?: boolean
-  existingAnswers?: AnswerImageIdentity[]
+  // 既存答案（DB答案の占有信号）があるマス。呼び出し側が導出済みのものを受け取り、
+  // ここで組み直さない（オーバーレイ表示と配置判断で同じ集合を使うため）。
+  cellsWithExistingAnswers: CellLookup
 }
 
 /**
  * テーブル行の生成を行うカスタムフック（entity-first）。
  * 行は ExamStudent 実体、列は ExamPage 実体で回し、各マスに列の実体を同梱して返す。
- * 生徒・ページの同定は常に id（studentId / examPageId）で行い、配列の添字は
- * upload の配置順を決めるソートキーとしてのみ使う（同定には使わない）。
+ * 生徒・ページの同定は常に id（studentId / examPageId）で行い、序数は一切使わない
+ * （upload の配置順もループの入れ子の向きで表現する）。
  * view では、表のマスに配置できない答案（除籍・列に無い examPageId＝孤立答案）を
  * `orphanItems` として返す（呼び出し側が専用枠で再配置できる）。
  */
@@ -57,7 +58,7 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
   mode,
   enhancedIsCellDisabled,
   allowOverwrite = false,
-  existingAnswers = [],
+  cellsWithExistingAnswers,
 }: UseTableDataGenerationParams<TItem>) {
   const { tableRows, orphanItems } = useMemo(() => {
     const enabledFiles = getEnabledFiles(files, disabledState)
@@ -102,89 +103,52 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
     } else {
       // アップロードモード: 配置戦略に基づく自動配置（新規ファイル用）
 
-      // 既存答案（DB答案の占有信号）があるセルを id 対で引けるようにする。
-      // 上書き有効時は収集しない（＝上書き可なら占有を無視して素直に詰める既存動作）。
-      const existingAnswerCells: CellLookup = new Map()
-      if (!allowOverwrite) {
-        for (const answer of existingAnswers) {
-          if (!answer.studentId || !answer.examPageId) continue
-          addCellToLookup(
-            existingAnswerCells,
-            answer.studentId,
-            answer.examPageId
-          )
-        }
-      }
+      // 上書き無効のときだけ、既存答案（DB答案の占有信号）のあるマスを避けて詰める。
+      const skipsExistingAnswers = !allowOverwrite
 
-      // 有効セル（無効でないセル）を実体で列挙する。studentIndex / pageIndex は
-      // 「どの順にファイルを詰めるか」の並べ替えキー専用で、セルの同定には使わない。
+      // 有効セル（無効でないセル）を詰める順に列挙する。順序は入れ子の向きで表現し、
+      // page-first は列を外側、student-first は行を外側に回す（序数の比較子を持たない）。
       const validPositions: Array<{
         examStudent: ExamStudentWithMemberships
         examPage: ExamPageColumn
-        studentIndex: number
-        pageIndex: number
       }> = []
-      sortedStudents.forEach((examStudent, studentIndex) => {
-        examPages.forEach((examPage, pageIndex) => {
-          const isManuallyDisabled =
-            manualDisabledReason(disabledState, examStudent, examPage.id) !==
-            undefined
-
-          // 既存答案がある場合は上書き設定をチェック
-          const hasExistingAnswer = lookupHasCell(
-            existingAnswerCells,
+      const collectPosition = (
+        examStudent: ExamStudentWithMemberships,
+        examPage: ExamPageColumn
+      ) => {
+        const isManuallyDisabled =
+          manualDisabledReason(disabledState, examStudent, examPage.id) !==
+          undefined
+        const shouldSkipExisting =
+          skipsExistingAnswers &&
+          lookupHasCell(
+            cellsWithExistingAnswers,
             examStudent.studentId,
             examPage.id
           )
-          const shouldSkipExisting = hasExistingAnswer && !allowOverwrite
 
-          if (!isManuallyDisabled && !shouldSkipExisting) {
-            validPositions.push({
-              examStudent,
-              examPage,
-              studentIndex,
-              pageIndex,
-            })
-          }
-        })
-      })
-
-      // 既存答案がある位置を優先してソート（上書き有効時のみ）
-      validPositions.sort((positionA, positionB) => {
-        const positionAHasExisting = lookupHasCell(
-          existingAnswerCells,
-          positionA.examStudent.studentId,
-          positionA.examPage.id
-        )
-        const positionBHasExisting = lookupHasCell(
-          existingAnswerCells,
-          positionB.examStudent.studentId,
-          positionB.examPage.id
-        )
-
-        // 既存答案がある位置を優先（上書き有効時）
-        if (allowOverwrite && positionAHasExisting && !positionBHasExisting)
-          return -1
-        if (allowOverwrite && !positionAHasExisting && positionBHasExisting)
-          return 1
-
-        // 同じ条件の場合は配置戦略に基づいてソート
-        if (fileOrder === "page-first") {
-          // ページ順: ページ番号を優先してソート
-          if (positionA.pageIndex !== positionB.pageIndex) {
-            return positionA.pageIndex - positionB.pageIndex
-          }
-          return positionA.studentIndex - positionB.studentIndex
-        } else {
-          // 生徒順: 生徒番号を優先してソート（デフォルト）
-          if (positionA.studentIndex !== positionB.studentIndex) {
-            return positionA.studentIndex - positionB.studentIndex
-          }
-          return positionA.pageIndex - positionB.pageIndex
+        if (!isManuallyDisabled && !shouldSkipExisting) {
+          validPositions.push({ examStudent, examPage })
         }
-      })
+      }
+      if (fileOrder === "page-first") {
+        // ページ順: 同一ページを生徒順に埋めてから次のページへ
+        for (const examPage of examPages) {
+          for (const examStudent of sortedStudents) {
+            collectPosition(examStudent, examPage)
+          }
+        }
+      } else {
+        // 生徒順（デフォルト）: 同一生徒のページを埋めてから次の生徒へ
+        for (const examStudent of sortedStudents) {
+          for (const examPage of examPages) {
+            collectPosition(examStudent, examPage)
+          }
+        }
+      }
 
-      // ファイルと有効セルをマッピング（ファイル配列の順序で自動配置）
+      // ファイルと有効セルをマッピング（ファイル配列の順序で自動配置）。
+      // 有効セルより多いファイルは配置されない（＝アップロード対象にならない）。
       const filePlacement: CellValueMap<TItem> = new Map()
       validPositions.forEach((position, fileIndex) => {
         const file = enabledFiles[fileIndex]
@@ -220,12 +184,14 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
           if (file) return { examPage, type: "file", file }
 
           // 既存答案があり上書き無効の場合は無効セルとして表示
-          const hasExistingAnswer = lookupHasCell(
-            existingAnswerCells,
-            examStudent.studentId,
-            examPage.id
-          )
-          if (hasExistingAnswer && !allowOverwrite) {
+          if (
+            skipsExistingAnswers &&
+            lookupHasCell(
+              cellsWithExistingAnswers,
+              examStudent.studentId,
+              examPage.id
+            )
+          ) {
             return {
               examPage,
               type: "disabled",
@@ -250,7 +216,7 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
     mode,
     enhancedIsCellDisabled,
     allowOverwrite,
-    existingAnswers,
+    cellsWithExistingAnswers,
   ])
 
   return { tableRows, orphanItems }
