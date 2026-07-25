@@ -18,9 +18,9 @@ import type {
 } from "@/types/grade.types"
 
 const GRADE_ITEMS = [
-  { id: "gi-knowledge", name: "知識・技能", order: 0 },
-  { id: "gi-thinking", name: "思考・判断・表現", order: 1 },
-  { id: "gi-attitude", name: "態度", order: 2 },
+  { id: "gi-knowledge", name: "知識・技能", order: 0, dataSources: [] },
+  { id: "gi-thinking", name: "思考・判断・表現", order: 1, dataSources: [] },
+  { id: "gi-attitude", name: "態度", order: 2, dataSources: [] },
 ]
 
 /** 観点3つのラベルから生徒結果を作る */
@@ -49,12 +49,6 @@ function makeStudent(
       overrideGradeLabel: null,
       frozen: null,
     })),
-    overallScore: null,
-    overallMaxScore: 0,
-    overallPercentage: null,
-    overallGradeLabel: null,
-    originalOverallGradeLabel: null,
-    overrideOverallGradeLabel: null,
   }
 }
 
@@ -94,10 +88,10 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
   // 実データ構成: 知識・技能/思考・判断・表現/態度(A/B/C) + 評定(5..1) の4項目。
   // すべて GradeItem 同士の比較。評定 GradeItem を比較先にする。
   const ITEMS_WITH_HYOTEI = [
-    { id: "gi-k", name: "知識・技能", order: 0 },
-    { id: "gi-s", name: "思考・判断・表現", order: 1 },
-    { id: "gi-a", name: "態度", order: 2 },
-    { id: "gi-h", name: "評定", order: 3 },
+    { id: "gi-k", name: "知識・技能", order: 0, dataSources: [] },
+    { id: "gi-s", name: "思考・判断・表現", order: 1, dataSources: [] },
+    { id: "gi-a", name: "態度", order: 2, dataSources: [] },
+    { id: "gi-h", name: "評定", order: 3, dataSources: [] },
   ]
 
   function makeStudent4(
@@ -134,12 +128,6 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
         overrideGradeLabel: null,
         frozen: null,
       })),
-      overallScore: null,
-      overallMaxScore: 1,
-      overallPercentage: null,
-      overallGradeLabel: null, // overall は未設定
-      originalOverallGradeLabel: null,
-      overrideOverallGradeLabel: null,
     }
   }
 
@@ -152,7 +140,6 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
       students,
       boundarySets: [
         {
-          targetType: "grade_item",
           gradeItemId: "gi-h",
           boundaries: [
             { label: "5", minPercentage: 80 },

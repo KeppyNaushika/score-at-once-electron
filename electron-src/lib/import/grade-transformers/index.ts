@@ -11,6 +11,7 @@
  *                                        点数の有無に関わらず変換し "manual" 型を残さない）
  *   - courseworks（名前ベース配列）あり → 1.4.0 → 1.5.0（courseworkArchive へ）
  *   - courseworkArchive あり           → 既に現行形式（1.5.0/1.6.0 とも同形。変換不要）
+ *   - 境界セット/上書きに targetType あり → 1.9.0 → 1.10.0（総合エントリを破棄）
  * 1.6.0 は GradeDataSource.maxScore 列の廃止のみで、外部成績の構造は 1.5.0 と同形のため
  * 専用の transformer は持たない（ArchiveDataSource.maxScore は optional で旧読込互換）。
  */
@@ -24,6 +25,7 @@ import type {
 import { GRADE_CURRENT_VERSION } from "../../../../src/types/gradeArchive.types"
 import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
+import { V1_9_0_to_V1_10_0_Transformer } from "./V1_9_0_to_V1_10_0"
 
 const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
   courseworks: [],
@@ -36,6 +38,24 @@ const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
 
 const v1_3_0 = new V1_3_0_to_V1_4_0_Transformer()
 const v1_4_0 = new V1_4_0_to_V1_5_0_Transformer()
+const v1_9_0 = new V1_9_0_to_V1_10_0_Transformer()
+
+/**
+ * 総合（overall）の名残を持つか。境界セット・手動上書きのどちらかに targetType があるか、
+ * 対象評価項目名を持たないエントリがあれば 1.9.0 以前の形。
+ */
+function hasOverallResidue(data: GradeArchiveData): boolean {
+  const boundaryResidue = data.boundariesData.boundarySets.some(
+    (boundarySet) =>
+      boundarySet.targetType !== undefined || boundarySet.gradeItemName === null
+  )
+  const overrideResidue = (data.gradeData.gradeOverrides ?? []).some(
+    (gradeOverride) =>
+      gradeOverride.targetType !== undefined ||
+      gradeOverride.gradeItemName === null
+  )
+  return boundaryResidue || overrideResidue
+}
 
 /** manual 型 DataSource を持つか（点数未入力でも true） */
 function hasManualDataSource(data: GradeArchiveData): boolean {
@@ -44,11 +64,16 @@ function hasManualDataSource(data: GradeArchiveData): boolean {
   )
 }
 
-/** データ形状から元バージョンを推定（報告用） */
+/**
+ * データ形状から元バージョンを推定（報告用）。
+ * 総合の名残の判定は外部成績の形より先に見る — courseworkArchive を持つ 1.9.0 でも
+ * 総合エントリが残っていれば元は 1.9.0 であり、現行版と報告してはいけない
+ * （appliedTransformations に 1.9.0→1.10.0 を積みながら originalVersion=1.10.0 という矛盾になる）。
+ */
 function detectOriginalVersion(data: GradeArchiveData): GradeArchiveVersion {
-  if (data.courseworkArchive) return GRADE_CURRENT_VERSION
   if (data.courseworks) return "1.4.0"
   if (hasManualDataSource(data) || data.manualScoresData) return "1.3.0"
+  if (hasOverallResidue(data)) return "1.9.0"
   return GRADE_CURRENT_VERSION
 }
 
@@ -85,6 +110,14 @@ export function transformGradeToLatest(
   // 外部成績を持たない旧アーカイブは空の courseworkArchive を補う
   if (!current.courseworkArchive) {
     current = { ...current, courseworkArchive: EMPTY_COURSEWORK_ARCHIVE }
+  }
+
+  // 1.9.0 → 1.10.0: 総合（overall）の撤去。移し先が無いので破棄し warning で知らせる
+  if (hasOverallResidue(current)) {
+    const result = v1_9_0.transform(current)
+    current = result.data
+    warnings.push(...result.warnings)
+    appliedTransformations.push({ from: "1.9.0", to: "1.10.0" })
   }
 
   // マニフェストを現行バージョンへ

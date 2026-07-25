@@ -800,39 +800,41 @@ model GradeItemExclusion {
   @@index([gradeItemId])
 }
 
-/// 成績境界セット（GradeItemごとまたは総合）
+/// 評価項目ごとの成績境界セット。
+///
+/// 「総合」という対象は持たない — 評定は評価項目（GradeItem）の一つとして扱うのが本来で、
+/// 総合は全評価項目の加重平均という意味を成さない集計だった（評定そのものを観点と一緒に
+/// 平均へ混ぜていた）。UI にも総合の境界を作る導線が無く、残っていたのは残骸。
 model GradeBoundarySet {
   id          String   @id @default(uuid())
   gradeId     String
-  targetType  String // "grade_item" | "overall"
-  gradeItemId String?
+  gradeItemId String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   grade      Grade           @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  gradeItem  GradeItem?      @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  gradeItem  GradeItem       @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
   boundaries GradeBoundary[]
 
-  @@unique([gradeId, targetType, gradeItemId])
+  @@unique([gradeId, gradeItemId])
   @@index([gradeId])
 }
 
-/// 成績ラベルの手動上書き
+/// 成績ラベルの手動上書き（生徒×評価項目）。総合の行は持たない（GradeBoundarySet と同じ理由）
 model GradeOverride {
   id            String   @id @default(uuid())
   gradeId       String
   studentId     String
-  targetType    String // "grade_item" | "overall"
-  gradeItemId   String?
+  gradeItemId   String
   overrideLabel String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  grade     Grade      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradeItem GradeItem? @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeId, studentId, targetType, gradeItemId])
+  @@unique([gradeId, studentId, gradeItemId])
   @@index([gradeId])
   @@index([studentId])
   @@index([gradeItemId])
@@ -855,13 +857,13 @@ model GradeFrozenScore {
   gradeItemId String
 
   /// 確定時の重み付け得点。全ソース欠測など算出不能なら null
-  weightedScore Decimal?
+  weightedScore    Decimal?
   /// 確定時の重み付け満点（重みの合計）
   weightedMaxScore Decimal
   /// 確定時の達成率(%)。算出不能なら null
-  percentage Decimal?
+  percentage       Decimal?
   /// 確定時の成績ラベル。境界未設定なら null
-  gradeLabel String?
+  gradeLabel       String?
 
   /// 確定操作を行った操作者。システム操作は null
   frozenByUserId String?

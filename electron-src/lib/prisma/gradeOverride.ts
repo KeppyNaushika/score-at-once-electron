@@ -2,8 +2,6 @@
  * GradeOverride（成績ラベル上書き）のPrisma操作関数
  */
 
-import type { Prisma } from "@prisma/client"
-
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
@@ -27,45 +25,32 @@ export async function getGradeOverridesByExamId(gradeId: string) {
 }
 
 /**
- * 上書きを upsert（findFirst + create/update パターン: SQLite の NULL 制約問題回避）
+ * 上書きを upsert。対象は生徒×評価項目で、gradeItemId は NOT NULL なので
+ * 複合uniqueをそのまま使える（NULL が unique 制約をすり抜ける問題は起きない）。
  */
 export async function upsertGradeOverride(data: {
   gradeId: string
   studentId: string
-  targetType: string
-  gradeItemId: string | null
+  gradeItemId: string
   overrideLabel: string
 }) {
   try {
-    const result = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const existing = await tx.gradeOverride.findFirst({
-          where: {
-            gradeId: data.gradeId,
-            studentId: data.studentId,
-            targetType: data.targetType,
-            gradeItemId: data.gradeItemId,
-          },
-        })
-
-        if (existing) {
-          return tx.gradeOverride.update({
-            where: { id: existing.id },
-            data: { overrideLabel: data.overrideLabel },
-          })
-        } else {
-          return tx.gradeOverride.create({
-            data: {
-              gradeId: data.gradeId,
-              studentId: data.studentId,
-              targetType: data.targetType,
-              gradeItemId: data.gradeItemId,
-              overrideLabel: data.overrideLabel,
-            },
-          })
-        }
-      }
-    )
+    const result = await prisma.gradeOverride.upsert({
+      where: {
+        gradeId_studentId_gradeItemId: {
+          gradeId: data.gradeId,
+          studentId: data.studentId,
+          gradeItemId: data.gradeItemId,
+        },
+      },
+      create: {
+        gradeId: data.gradeId,
+        studentId: data.studentId,
+        gradeItemId: data.gradeItemId,
+        overrideLabel: data.overrideLabel,
+      },
+      update: { overrideLabel: data.overrideLabel },
+    })
 
     const scope = await resolveGradeScope(data.gradeId)
     await recordAuditLog({
@@ -92,16 +77,16 @@ export async function upsertGradeOverride(data: {
 export async function deleteGradeOverride(data: {
   gradeId: string
   studentId: string
-  targetType: string
-  gradeItemId: string | null
+  gradeItemId: string
 }) {
   try {
-    const existing = await prisma.gradeOverride.findFirst({
+    const existing = await prisma.gradeOverride.findUnique({
       where: {
-        gradeId: data.gradeId,
-        studentId: data.studentId,
-        targetType: data.targetType,
-        gradeItemId: data.gradeItemId,
+        gradeId_studentId_gradeItemId: {
+          gradeId: data.gradeId,
+          studentId: data.studentId,
+          gradeItemId: data.gradeItemId,
+        },
       },
     })
     if (existing) {

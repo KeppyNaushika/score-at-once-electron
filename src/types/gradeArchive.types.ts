@@ -56,13 +56,21 @@ export interface ArchiveGradeData {
   /** 成績出力設定（後方互換: v1.2.0+。GradeExportSettingsと1:1） */
   exportSettings?: { settingsJson: string } | null
   gradeItems: ArchiveGradeItem[]
-  classroomRefs: { name: string }[]
+  /**
+   * 対象学級。v1.10.0+ は uuid を持ち、照合は uuid 一次・名前二次
+   * （exam / coursework アーカイブと同じ方式）。旧アーカイブには id が無い。
+   */
+  classroomRefs: { id?: string; name: string }[]
+  /** 参照する試験。v1.10.0+ は uuid を持ち、照合は uuid 一次・試験名二次 */
   examRefs: {
+    id?: string
     examName: string
     examDate: string | null
     dataSourceName: string
   }[]
+  /** 対象生徒。v1.10.0+ は uuid を持ち、照合は uuid 一次・学籍番号二次 */
   studentRefs: {
+    id?: string
     studentNumber: string
     classroomName: string | null
     customOrder: number | null
@@ -70,12 +78,22 @@ export interface ArchiveGradeData {
   /** GradeItem除外設定（後方互換: optional） */
   gradeItemExclusions?: {
     studentNumber: string
+    /** v1.10.0+: 参照先評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
+    gradeItemId?: string
+    /** 参照先評価項目名（uuid不一致時・旧アーカイブのフォールバック） */
     gradeItemName: string
   }[]
   /** 成績ラベル手動上書き（後方互換: optional） */
   gradeOverrides?: {
     studentNumber: string
-    targetType: string
+    /**
+     * @deprecated v1.10.0 で総合（overall）を撤去。旧アーカイブにのみ現れる。
+     * "overall" の行は transformer が破棄する。
+     */
+    targetType?: string
+    /** v1.10.0+: 対象評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
+    gradeItemId?: string
+    /** 対象評価項目名。v1.10.0 以降は必ず非null（旧アーカイブでは null = 総合） */
     gradeItemName: string | null
     overrideLabel: string
   }[]
@@ -88,6 +106,9 @@ export interface ArchiveGradeData {
    */
   gradeFrozenScores?: {
     studentNumber: string
+    /** v1.10.0+: 対象評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
+    gradeItemId?: string
+    /** 対象評価項目名（uuid不一致時・旧アーカイブのフォールバック） */
     gradeItemName: string
     weightedScore: number | null
     weightedMaxScore: number
@@ -109,6 +130,13 @@ export interface ArchiveGradeData {
 }
 
 export interface ArchiveGradeItem {
+  /**
+   * v1.10.0+: export元の評価項目uuid（照合の一次キー）。
+   * 評価項目名は unique でなく（GradeItem に (gradeId, name) の制約は無い）教員が
+   * 自由に付けられるため、名前だけでは同名の項目を区別できない。旧アーカイブには
+   * 無いので optional で、その場合のみ名前フォールバックへ落ちる。
+   */
+  id?: string
   name: string
   order: number
   dataSources: ArchiveDataSource[]
@@ -146,6 +174,19 @@ export interface ArchiveDataSource {
   courseworkName?: string | null
   /** v1.4.0+: type==="coursework" の参照先評価項目名（名前フォールバック） */
   courseworkItemName?: string | null
+  /** v1.10.0+: 参照先試験のuuid（照合の一次キー）。旧アーカイブには無い */
+  examId?: string | null
+  /**
+   * v1.10.0+: 参照先小計のuuid（照合の一次キー）。旧アーカイブには無い。
+   * 小計名は `@@unique([subtotalGroupId, name])` でグループ内でしか一意でなく、
+   * 名前だけでは別の試験の同名小計に当たりうる。
+   */
+  subtotalId?: string | null
+  /**
+   * v1.10.0+: 参照先採点領域のuuid（照合の一次キー）。旧アーカイブには無い。
+   * 領域ラベルは同一試験内でも重複しうる。
+   */
+  cropRegionId?: string | null
   /**
    * 旧 v1.3.0 の入力モード（"numeric" | "letter"）。読取専用の後方互換用。
    * v1.4.0 以降は CourseworkItem.inputMode が保持する。
@@ -233,7 +274,14 @@ export interface ArchiveManualScoresData {
 
 export interface ArchiveBoundariesData {
   boundarySets: {
-    targetType: string // "grade_item" | "overall"
+    /**
+     * @deprecated v1.10.0 で総合（overall）を撤去。旧アーカイブにのみ現れる。
+     * "overall" のセットは transformer が破棄する。
+     */
+    targetType?: string
+    /** v1.10.0+: 対象評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
+    gradeItemId?: string
+    /** 対象評価項目名。v1.10.0 以降は必ず非null（旧アーカイブでは null = 総合） */
     gradeItemName: string | null
     boundaries: {
       label: string
@@ -255,6 +303,12 @@ export interface GradeArchiveImportPreview {
   studentMissingCount: number
   /** v1.4.0+: 埋め込み資料ごとのマッチング候補（ユーザー判断用） */
   courseworkMatches: GradeArchiveCourseworkMatch[]
+  /**
+   * 旧バージョンからの変換で失われるデータの警告（取り込み前に見せる）。
+   * 例: v1.10.0 で撤去された総合の境界セット・上書きの破棄。
+   * 取り込み後のトーストだけでは「確定してから知る」ことになるため preview にも載せる。
+   */
+  warnings: string[]
 }
 
 // =============================================================================
@@ -276,13 +330,19 @@ export interface GradeArchiveImportPreview {
  *   専用 transformer は無し（加算的変更）。
  * - 1.9.0: 成績値の確定（GradeFrozenScore）を追加。gradeFrozenScores は optional で
  *   旧アーカイブ読込時は「確定なし」扱い。構造は加算的なため専用 transformer は無し。
+ * - 1.10.0: 総合（overall）を撤去。境界セット・手動上書きの targetType を廃し、対象は
+ *   必ず評価項目になった。旧アーカイブの総合エントリは破棄されるため、加算的変更ではなく
+ *   専用 transformer（V1_9_0_to_V1_10_0）を持つ。
+ *   併せて外部参照（評価項目・生徒・学級・試験・小計・採点領域）の照合を
+ *   uuid 一次・名前二次へ（exam / coursework アーカイブと同じ方式）。
+ *   これらの名前・ラベルはいずれも同定に足りず、名前だけでは取り違える。
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
  */
 export type GradeArchiveVersion =
-  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0" | "1.9.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.9.0"
+  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0" | "1.9.0" | "1.10.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.10.0"
 
 export interface GradeTransformResult {
   data: GradeArchiveData

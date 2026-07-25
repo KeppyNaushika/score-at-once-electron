@@ -5,8 +5,7 @@ import type { GradeCalculationResult } from "@/types/grade.types"
 
 interface SetGradeOverrideParams {
   studentId: string
-  targetType: "grade_item" | "overall"
-  gradeItemId: string | null
+  gradeItemId: string
   /** 上書きラベル。null の場合は上書きを削除（自動計算に戻す） */
   overrideLabel: string | null
 }
@@ -69,15 +68,12 @@ export function useGradeResults(gradeId: string) {
 
       // 確定済みセルは確定値が最優先なので、上書きを保存しただけでは表示が動かない。
       // 調整の結果をその場で取り込み直す（＝そのセルだけ再確定）必要がある。
-      const editedItemResult =
-        params.gradeItemId === null
-          ? undefined
-          : result.students
-              .find((student) => student.studentId === params.studentId)
-              ?.gradeItemResults.find(
-                (gradeItemResult) =>
-                  gradeItemResult.gradeItemId === params.gradeItemId
-              )
+      const editedItemResult = result.students
+        .find((student) => student.studentId === params.studentId)
+        ?.gradeItemResults.find(
+          (gradeItemResult) =>
+            gradeItemResult.gradeItemId === params.gradeItemId
+        )
       const wasFrozen = Boolean(editedItemResult?.frozen)
 
       // 楽観的更新（再確定が要る場合は確定後の再計算で反映するので行わない）
@@ -88,16 +84,6 @@ export function useGradeResults(gradeId: string) {
             ...prev,
             students: prev.students.map((student) => {
               if (student.studentId !== params.studentId) return student
-
-              if (params.targetType === "overall") {
-                const effectiveLabel =
-                  params.overrideLabel ?? student.originalOverallGradeLabel
-                return {
-                  ...student,
-                  overallGradeLabel: effectiveLabel,
-                  overrideOverallGradeLabel: params.overrideLabel,
-                }
-              }
 
               return {
                 ...student,
@@ -123,7 +109,6 @@ export function useGradeResults(gradeId: string) {
           await window.electronAPI.grade.upsertGradeOverride({
             gradeId,
             studentId: params.studentId,
-            targetType: params.targetType,
             gradeItemId: params.gradeItemId,
             overrideLabel: params.overrideLabel,
           })
@@ -131,12 +116,11 @@ export function useGradeResults(gradeId: string) {
           await window.electronAPI.grade.deleteGradeOverride({
             gradeId,
             studentId: params.studentId,
-            targetType: params.targetType,
             gradeItemId: params.gradeItemId,
           })
         }
 
-        if (wasFrozen && params.gradeItemId !== null) {
+        if (wasFrozen) {
           await window.electronAPI.grade.freezeGradeScores({
             gradeId,
             targets: [

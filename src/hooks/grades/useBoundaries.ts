@@ -39,8 +39,7 @@ export function useBoundaries(gradeId: string) {
 
   const saveBoundarySet = useCallback(
     async (data: {
-      targetType: string
-      gradeItemId: string | null
+      gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => {
       const result = await window.electronAPI.grade.upsertBoundarySet({

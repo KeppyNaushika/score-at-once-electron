@@ -657,12 +657,7 @@ export async function seedGradeProject(
   ]
   for (const gradeItemId of gradeItemIds) {
     const boundarySet = await db.gradeBoundarySet.create({
-      data: {
-        id: randomUUID(),
-        gradeId,
-        targetType: "grade_item",
-        gradeItemId,
-      },
+      data: { id: randomUUID(), gradeId, gradeItemId },
     })
     for (
       let boundaryIndex = 0;
@@ -679,24 +674,6 @@ export async function seedGradeProject(
         },
       })
     }
-  }
-  const overallBoundarySet = await db.gradeBoundarySet.create({
-    data: { id: randomUUID(), gradeId, targetType: "overall" },
-  })
-  for (
-    let boundaryIndex = 0;
-    boundaryIndex < boundaryLabels.length;
-    boundaryIndex++
-  ) {
-    await db.gradeBoundary.create({
-      data: {
-        id: randomUUID(),
-        gradeBoundarySetId: overallBoundarySet.id,
-        label: boundaryLabels[boundaryIndex].label,
-        minPercentage: boundaryLabels[boundaryIndex].minPercentage,
-        order: boundaryIndex,
-      },
-    })
   }
 
   console.log(`  [SEED] 成績算出プロジェクト (gradeId=${gradeId})`)

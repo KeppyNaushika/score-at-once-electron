@@ -73,8 +73,6 @@ function buildOrderedLabelsMap(
   )
   const byName = new Map<string, string[]>()
   for (const boundarySet of result.boundarySets) {
-    if (boundarySet.targetType !== "grade_item" || !boundarySet.gradeItemId)
-      continue
     const name = idToName.get(boundarySet.gradeItemId)
     if (!name) continue
     // minPercentage 昇順 = 弱い評価が先頭

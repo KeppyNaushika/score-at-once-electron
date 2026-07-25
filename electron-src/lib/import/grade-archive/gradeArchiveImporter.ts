@@ -14,23 +14,52 @@ import prisma from "../../prisma/client"
 import { importCourseworkData } from "../coursework-archive/dataCreator"
 import { transformGradeToLatest } from "../grade-transformers"
 
+/** アーカイブ側の生徒参照の最小形（uuid一次・学籍番号二次で解決する） */
+interface ArchiveStudentReference {
+  id?: string
+  studentNumber: string
+}
+
+/**
+ * アーカイブの生徒参照から既存 Student を解決する。
+ * uuid 一次（同一PC由来／exam-archive 経由で uuid ごと作られた生徒に当たる）、
+ * 学籍番号二次（別PCで先に登録された生徒に当たる）。
+ * grade-archive は生徒マスタを作らない（既存への lookup のみ）方針なので、
+ * どちらでも当たらなければ null を返し、呼び出し側がスキップする。
+ */
+async function resolveStudent(
+  tx: Prisma.TransactionClient,
+  reference: ArchiveStudentReference
+) {
+  if (reference.id) {
+    const byId = await tx.student.findUnique({ where: { id: reference.id } })
+    if (byId) return byId
+  }
+  return tx.student.findUnique({
+    where: { studentNumber: reference.studentNumber },
+  })
+}
+
 /**
  * インポート前のプレビュー（照合結果）
  */
 export async function previewGradeArchiveImport(
   rawData: GradeArchiveData
 ): Promise<GradeArchiveImportPreview> {
-  // 旧バージョンを現行（courseworkArchive 形式）へ正規化してから照合する
-  const { data } = transformGradeToLatest(rawData)
+  // 旧バージョンを現行（courseworkArchive 形式）へ正規化してから照合する。
+  // 変換で失われるデータの警告は取り込み前に見せる必要があるので捨てない。
+  const { data, warnings } = transformGradeToLatest(rawData)
   const { gradeData } = data
   const courseworkArchive = data.courseworkArchive
 
   // Classroom照合（複数学級対応）
   const classroomMatches = await Promise.all(
     gradeData.classroomRefs.map(async (ref) => {
-      const existing = await prisma.classroom.findUnique({
-        where: { name: ref.name },
-      })
+      const existing =
+        (ref.id
+          ? await prisma.classroom.findUnique({ where: { id: ref.id } })
+          : null) ??
+        (await prisma.classroom.findUnique({ where: { name: ref.name } }))
       return { found: !!existing, name: ref.name }
     })
   )
@@ -38,10 +67,18 @@ export async function previewGradeArchiveImport(
   // Exam照合
   const examMatches = await Promise.all(
     gradeData.examRefs.map(async (ref) => {
-      const exams = await prisma.exam.findMany({
-        where: { examName: ref.examName },
-        select: { id: true },
-      })
+      const byId = ref.id
+        ? await prisma.exam.findUnique({
+            where: { id: ref.id },
+            select: { id: true },
+          })
+        : null
+      const exams = byId
+        ? [byId]
+        : await prisma.exam.findMany({
+            where: { examName: ref.examName },
+            select: { id: true },
+          })
       return {
         examName: ref.examName,
         found: exams.length > 0,
@@ -60,21 +97,45 @@ export async function previewGradeArchiveImport(
     })
   )
 
-  // Student照合
-  const courseworkStudentNumbers =
-    courseworkArchive?.studentsData.map((student) => student.studentNumber) ??
-    []
-  const studentNumbers = [
-    ...courseworkStudentNumbers,
-    ...gradeData.studentRefs.map((studentRef) => studentRef.studentNumber),
+  // Student照合（uuid一次・学籍番号二次）。import 本体と同じ順序で数えないと
+  // 「見つかりません」の件数が実際の取り込み結果とずれる。
+  const studentReferences = [
+    ...(courseworkArchive?.studentsData ?? []),
+    ...gradeData.studentRefs,
   ]
-  const uniqueNumbers = [...new Set(studentNumbers)]
+  const uniqueStudentReferences = new Map<
+    string,
+    { id?: string; studentNumber: string }
+  >()
+  for (const studentReference of studentReferences) {
+    // 学籍番号で名寄せする（同じ生徒が資料側と成績側の両方に現れる）
+    if (!uniqueStudentReferences.has(studentReference.studentNumber)) {
+      uniqueStudentReferences.set(studentReference.studentNumber, {
+        id: studentReference.id,
+        studentNumber: studentReference.studentNumber,
+      })
+    }
+  }
   const existingStudents = await prisma.student.findMany({
-    where: { studentNumber: { in: uniqueNumbers } },
-    select: { studentNumber: true },
+    select: { id: true, studentNumber: true },
   })
+  const existingStudentIds = new Set(
+    existingStudents.map((student) => student.id)
+  )
   const existingNumberSet = new Set(
     existingStudents.map((student) => student.studentNumber)
+  )
+  const resolvedStudentNumbers = [...uniqueStudentReferences.values()].filter(
+    (studentReference) =>
+      (studentReference.id !== undefined &&
+        existingStudentIds.has(studentReference.id)) ||
+      existingNumberSet.has(studentReference.studentNumber)
+  )
+  const uniqueNumbers = [...uniqueStudentReferences.keys()]
+  const resolvedNumberSet = new Set(
+    resolvedStudentNumbers.map(
+      (studentReference) => studentReference.studentNumber
+    )
   )
 
   // 埋め込み資料のマッチング候補（uuid一次・名前二次）を算出
@@ -109,13 +170,12 @@ export async function previewGradeArchiveImport(
     manifest: data.manifest,
     classroomMatches,
     examMatches,
-    studentMatchCount: uniqueNumbers.filter((studentNumber) =>
-      existingNumberSet.has(studentNumber)
-    ).length,
+    studentMatchCount: resolvedNumberSet.size,
     studentMissingCount: uniqueNumbers.filter(
-      (studentNumber) => !existingNumberSet.has(studentNumber)
+      (studentNumber) => !resolvedNumberSet.has(studentNumber)
     ).length,
     courseworkMatches,
+    warnings,
   }
 }
 
@@ -164,12 +224,14 @@ export async function importGradeArchive(
           })
         }
 
-        // 2. Classroom照合→GradeClassroom作成
+        // 2. Classroom照合→GradeClassroom作成（uuid一次・名前二次）
         for (let i = 0; i < gradeData.classroomRefs.length; i++) {
           const ref = gradeData.classroomRefs[i]
-          const classroom = await tx.classroom.findUnique({
-            where: { name: ref.name },
-          })
+          const classroom =
+            (ref.id
+              ? await tx.classroom.findUnique({ where: { id: ref.id } })
+              : null) ??
+            (await tx.classroom.findUnique({ where: { name: ref.name } }))
           if (classroom) {
             await tx.gradeClassroom.create({
               data: {
@@ -181,11 +243,9 @@ export async function importGradeArchive(
           }
         }
 
-        // 3. Student照合→GradeStudent作成
+        // 3. Student照合→GradeStudent作成（uuid一次・学籍番号二次）
         for (const studentRef of gradeData.studentRefs) {
-          const student = await tx.student.findUnique({
-            where: { studentNumber: studentRef.studentNumber },
-          })
+          const student = await resolveStudent(tx, studentRef)
           if (student) {
             await tx.gradeStudent.create({
               data: {
@@ -201,6 +261,45 @@ export async function importGradeArchive(
         //   transformGradeToLatest により旧 v1.3.0(manual)/v1.4.0(名前ベース) は
         //   現行の courseworkArchive 形式へ正規化済み。独立 coursework モジュールへ委譲し、
         //   既存生徒・学級への lookup のみ（allowCreate=false）で grade の従来挙動を維持する。
+        // 評価項目の参照解決。アーカイブ側の uuid → 作成した GradeItem.id という
+        // 「旧世界→新世界」の対応で、DB のどこにも存在しない取り込み固有の情報
+        // （coursework の itemIdToActual と同じ性質）。DB にある構造の写しではない。
+        /** アーカイブ評価項目uuid → 作成した GradeItem.id（照合の一次キー） */
+        const gradeItemIdByArchiveId = new Map<string, string>()
+        /**
+         * 評価項目名 → 作成した GradeItem.id。uuid を持たない v1.9.0 以前の
+         * アーカイブ専用のフォールバック。GradeItem には (gradeId, name) の unique が
+         * 無く名前は衝突しうるので、一次キーには使わない。
+         */
+        const gradeItemIdByName = new Map<string, string>()
+        /** 名前が重複し、名前フォールバックでは一意に定まらない評価項目名 */
+        const ambiguousGradeItemNames = new Set<string>()
+
+        /**
+         * アーカイブ側の評価項目参照から、作成した GradeItem.id を解決する。
+         * uuid 一次・名前二次。名前が曖昧なときは取り違えるより落として警告する
+         * （境界・上書き・確定値は成績そのもので、誤った項目へ付けるほうが害が大きい）。
+         */
+        const resolveGradeItemId = (
+          reference: { gradeItemId?: string; gradeItemName: string | null },
+          describeTarget: () => string
+        ): string | null => {
+          if (reference.gradeItemId) {
+            const byArchiveId = gradeItemIdByArchiveId.get(
+              reference.gradeItemId
+            )
+            if (byArchiveId) return byArchiveId
+          }
+          if (!reference.gradeItemName) return null
+          if (ambiguousGradeItemNames.has(reference.gradeItemName)) {
+            warnings.push(
+              `${describeTarget()}: 同名の評価項目「${reference.gradeItemName}」が複数あり対象を特定できないため取り込みませんでした`
+            )
+            return null
+          }
+          return gradeItemIdByName.get(reference.gradeItemName) ?? null
+        }
+
         /** アーカイブ項目uuid → 実 CourseworkItem.id（DataSource 再リンクの一次キー） */
         const itemIdToActual = new Map<string, string>()
         /** `${courseworkName}:${itemName}` → 実 CourseworkItem.id（名前フォールバック） */
@@ -231,13 +330,23 @@ export async function importGradeArchive(
 
         // 4. GradeItem + DataSource作成
         for (const giData of gradeData.gradeItems) {
-          const gi = await tx.gradeItem.create({
+          const gradeItem = await tx.gradeItem.create({
             data: {
               gradeId: grade.id,
               name: giData.name,
               order: giData.order,
             },
           })
+          // 作った直後に対応を控える。後段の参照解決はこれで賄い、
+          // 書き込みトランザクション中に評価項目を引き直さない。
+          if (giData.id) {
+            gradeItemIdByArchiveId.set(giData.id, gradeItem.id)
+          }
+          if (gradeItemIdByName.has(giData.name)) {
+            ambiguousGradeItemNames.add(giData.name)
+          } else {
+            gradeItemIdByName.set(giData.name, gradeItem.id)
+          }
 
           for (const dsData of giData.dataSources) {
             // 旧アーカイブ互換: project_total → exam_total
@@ -298,15 +407,26 @@ export async function importGradeArchive(
               }
             }
 
+            // 試験照合。uuid 一次（同一PC由来なら確実に当たる）→ ユーザーが
+            // ウィザードで指定したマッピング → 試験名。試験名は unique でないため
+            // 名前だけだと同名試験を取り違える。
             let examId: string | null = null
             if (
-              dsData.examName &&
-              (dsData.type === "exam_total" ||
-                dsData.type === "subtotal" ||
-                dsData.type === "crop_region")
+              dsData.type === "exam_total" ||
+              dsData.type === "subtotal" ||
+              dsData.type === "crop_region"
             ) {
-              examId = examMapping?.[dsData.examName] ?? null
-              if (!examId) {
+              if (dsData.examId) {
+                const byId = await tx.exam.findUnique({
+                  where: { id: dsData.examId },
+                  select: { id: true },
+                })
+                examId = byId?.id ?? null
+              }
+              if (!examId && dsData.examName) {
+                examId = examMapping?.[dsData.examName] ?? null
+              }
+              if (!examId && dsData.examName) {
                 const exams = await tx.exam.findMany({
                   where: { examName: dsData.examName },
                   select: { id: true },
@@ -315,34 +435,58 @@ export async function importGradeArchive(
               }
             }
 
-            // Subtotal照合（名前ベース）
+            // Subtotal照合（uuid一次・名前二次）。
+            // 名前フォールバックは必ず当該試験の小計グループへ絞る。小計名は
+            // グループ内でしか一意でなく、絞らないと別の試験の同名小計に当たる。
             let subtotalId: string | null = null
-            if (dsData.type === "subtotal" && dsData.subtotalName && examId) {
-              const subtotals = await tx.subtotal.findMany({
-                where: { name: dsData.subtotalName },
-              })
-              subtotalId = subtotals[0]?.id ?? null
+            if (dsData.type === "subtotal" && examId) {
+              if (dsData.subtotalId) {
+                const byId = await tx.subtotal.findUnique({
+                  where: { id: dsData.subtotalId },
+                  select: { id: true },
+                })
+                subtotalId = byId?.id ?? null
+              }
+              if (!subtotalId && dsData.subtotalName) {
+                const subtotals = await tx.subtotal.findMany({
+                  where: {
+                    name: dsData.subtotalName,
+                    subtotalGroup: {
+                      examSubtotalGroups: { some: { examId } },
+                    },
+                  },
+                  select: { id: true },
+                })
+                subtotalId = subtotals[0]?.id ?? null
+              }
             }
 
-            // CropRegion照合（ラベルベース）
+            // CropRegion照合（uuid一次・ラベル二次）。
+            // ラベルは同一試験内でも重複しうるので一次キーにはしない。
             let cropRegionId: string | null = null
-            if (
-              dsData.type === "crop_region" &&
-              dsData.cropRegionLabel &&
-              examId
-            ) {
-              const regions = await tx.cropRegion.findMany({
-                where: {
-                  label: dsData.cropRegionLabel,
-                  examPage: { examId: examId },
-                },
-              })
-              cropRegionId = regions[0]?.id ?? null
+            if (dsData.type === "crop_region" && examId) {
+              if (dsData.cropRegionId) {
+                const byId = await tx.cropRegion.findUnique({
+                  where: { id: dsData.cropRegionId },
+                  select: { id: true },
+                })
+                cropRegionId = byId?.id ?? null
+              }
+              if (!cropRegionId && dsData.cropRegionLabel) {
+                const regions = await tx.cropRegion.findMany({
+                  where: {
+                    label: dsData.cropRegionLabel,
+                    examPage: { examId: examId },
+                  },
+                  select: { id: true },
+                })
+                cropRegionId = regions[0]?.id ?? null
+              }
             }
 
             await tx.gradeDataSource.create({
               data: {
-                gradeItemId: gi.id,
+                gradeItemId: gradeItem.id,
                 type: dsData.type,
                 examId,
                 subtotalId,
@@ -370,25 +514,16 @@ export async function importGradeArchive(
 
         // 6. BoundarySet/Boundary挿入
         for (const bsData of boundariesData.boundarySets) {
-          let gradeItemId: string | null = null
-          if (bsData.gradeItemName) {
-            // GradeItem名で照合（同じ試験内）
-            const gradeItem = await tx.gradeItem.findFirst({
-              where: {
-                gradeId: grade.id,
-                name: bsData.gradeItemName,
-              },
-            })
-            gradeItemId = gradeItem?.id ?? null
-            if (!gradeItemId) continue
-          }
+          // 対象は必ず評価項目（総合は v1.10.0 で撤去済み。transformer が破棄する）
+          if (!bsData.gradeItemName) continue
+          const gradeItemId = resolveGradeItemId(
+            bsData,
+            () => `成績境界セット（${bsData.gradeItemName}）`
+          )
+          if (gradeItemId === null) continue
 
           const boundarySet = await tx.gradeBoundarySet.create({
-            data: {
-              gradeId: grade.id,
-              targetType: bsData.targetType,
-              gradeItemId,
-            },
+            data: { gradeId: grade.id, gradeItemId },
           })
 
           if (bsData.boundaries.length > 0) {
@@ -409,24 +544,20 @@ export async function importGradeArchive(
           gradeData.gradeItemExclusions.length > 0
         ) {
           for (const excl of gradeData.gradeItemExclusions) {
-            const student = await tx.student.findUnique({
-              where: { studentNumber: excl.studentNumber },
-            })
+            const student = await resolveStudent(tx, excl)
             if (!student) continue
 
-            const gradeItem = await tx.gradeItem.findFirst({
-              where: {
-                gradeId: grade.id,
-                name: excl.gradeItemName,
-              },
-            })
-            if (!gradeItem) continue
+            const gradeItemId = resolveGradeItemId(
+              excl,
+              () => `生徒「${excl.studentNumber}」の評価項目除外`
+            )
+            if (gradeItemId === null) continue
 
             await tx.gradeItemExclusion.create({
               data: {
                 gradeId: grade.id,
                 studentId: student.id,
-                gradeItemId: gradeItem.id,
+                gradeItemId,
               },
             })
           }
@@ -435,28 +566,21 @@ export async function importGradeArchive(
         // 8. GradeOverride挿入（後方互換: optionalフィールド）
         if (gradeData.gradeOverrides && gradeData.gradeOverrides.length > 0) {
           for (const gradeOverride of gradeData.gradeOverrides) {
-            const student = await tx.student.findUnique({
-              where: { studentNumber: gradeOverride.studentNumber },
-            })
+            const student = await resolveStudent(tx, gradeOverride)
             if (!student) continue
 
-            let gradeItemId: string | null = null
-            if (gradeOverride.gradeItemName) {
-              const gradeItem = await tx.gradeItem.findFirst({
-                where: {
-                  gradeId: grade.id,
-                  name: gradeOverride.gradeItemName,
-                },
-              })
-              if (!gradeItem) continue
-              gradeItemId = gradeItem.id
-            }
+            // 対象は必ず評価項目（総合は v1.10.0 で撤去済み。transformer が破棄する）
+            if (!gradeOverride.gradeItemName) continue
+            const gradeItemId = resolveGradeItemId(
+              gradeOverride,
+              () => `生徒「${gradeOverride.studentNumber}」の成績上書き`
+            )
+            if (gradeItemId === null) continue
 
             await tx.gradeOverride.create({
               data: {
                 gradeId: grade.id,
                 studentId: student.id,
-                targetType: gradeOverride.targetType,
                 gradeItemId,
                 overrideLabel: gradeOverride.overrideLabel,
               },
@@ -471,24 +595,20 @@ export async function importGradeArchive(
           gradeData.gradeFrozenScores.length > 0
         ) {
           for (const gradeFrozenScore of gradeData.gradeFrozenScores) {
-            const student = await tx.student.findUnique({
-              where: { studentNumber: gradeFrozenScore.studentNumber },
-            })
+            const student = await resolveStudent(tx, gradeFrozenScore)
             if (!student) continue
 
-            const gradeItem = await tx.gradeItem.findFirst({
-              where: {
-                gradeId: grade.id,
-                name: gradeFrozenScore.gradeItemName,
-              },
-            })
-            if (!gradeItem) continue
+            const gradeItemId = resolveGradeItemId(
+              gradeFrozenScore,
+              () => `生徒「${gradeFrozenScore.studentNumber}」の確定成績値`
+            )
+            if (gradeItemId === null) continue
 
             await tx.gradeFrozenScore.create({
               data: {
                 gradeId: grade.id,
                 studentId: student.id,
-                gradeItemId: gradeItem.id,
+                gradeItemId,
                 weightedScore: gradeFrozenScore.weightedScore,
                 weightedMaxScore: gradeFrozenScore.weightedMaxScore,
                 percentage: gradeFrozenScore.percentage,

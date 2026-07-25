@@ -53,11 +53,14 @@ describe("GradeBoundary 追加テスト", () => {
       const grade = await testPrisma.grade.create({
         data: { name: "PJ" },
       })
+      const gradeItemResult = await createGradeItem({
+        gradeId: grade.id,
+        name: "知識・技能",
+      })
 
       const upserted = await upsertBoundarySet({
         gradeId: grade.id,
-        targetType: "overall",
-        gradeItemId: null,
+        gradeItemId: gradeItemResult.gradeItem!.id,
         boundaries: [
           { label: "A", minPercentage: 80, order: 0 },
           { label: "B", minPercentage: 60, order: 1 },
@@ -78,11 +81,14 @@ describe("GradeBoundary 追加テスト", () => {
       const grade = await testPrisma.grade.create({
         data: { name: "PJ" },
       })
+      const gradeItemResult = await createGradeItem({
+        gradeId: grade.id,
+        name: "知識・技能",
+      })
 
       const upserted = await upsertBoundarySet({
         gradeId: grade.id,
-        targetType: "overall",
-        gradeItemId: null,
+        gradeItemId: gradeItemResult.gradeItem!.id,
         boundaries: [
           { label: "A", minPercentage: 80, order: 0 },
           { label: "B", minPercentage: 60, order: 1 },
