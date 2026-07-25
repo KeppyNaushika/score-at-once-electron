@@ -299,7 +299,6 @@ describe("collectExamData - エクスポートモード", () => {
 
       expect(data.examData.examMarkingFormats).toBeDefined()
       expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
-      expect(data.examData.cropRegionMarkingOverrides).toBeDefined()
     })
 
     it("EM-T9: ユーザーデータは保持される", async () => {

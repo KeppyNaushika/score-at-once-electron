@@ -75,6 +75,7 @@ export interface ArchiveDataCounts {
  * - 1.15.0: v0.14.x (ExamClassroom に teacherStat/studentReport、ExamSubtotalGroup に selectedForTable/selectedForBoxPlot 追加 — 学級統計再設計。statistics 廃止)
  * - 1.16.0: v0.14.x (物理テーブル名を Classroom 系へ統一、JSON キー examClasses→examClassrooms / classId→classroomId、ExamClassroom.teacherStat → teacherStatistics リネーム)
  * - 1.17.0: v0.15.x (ExamStudent.status を小文字へ統一)
+ * - 1.18.0: v0.16.x (CropRegionMarkingOverride 廃止 — UI・出力反映が無いまま入出力のみ維持されていたため削除)
  */
 export type ExamArchiveVersion =
   | "1.0.0"
@@ -95,9 +96,10 @@ export type ExamArchiveVersion =
   | "1.15.0"
   | "1.16.0"
   | "1.17.0"
+  | "1.18.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.17.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.18.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -119,6 +121,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.15.0",
   "1.16.0",
   "1.17.0",
+  "1.18.0",
 ] as const
 
 /**
@@ -877,17 +880,6 @@ export interface ArchiveExamData {
     createdAt: string
     updatedAt: string
   } | null
-  /** v1.4.0+ 設問別マークオーバーライド */
-  cropRegionMarkingOverrides?: Array<{
-    id: string
-    cropRegionId: string
-    markType: string
-    symbol: string | null
-    color: string | null
-    visible: boolean
-    createdAt: string
-    updatedAt: string
-  }>
 }
 
 /**

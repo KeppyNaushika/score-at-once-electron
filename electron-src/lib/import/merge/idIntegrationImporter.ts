@@ -29,7 +29,6 @@ import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
 import {
   processCompoundAnswers,
-  processCropRegionMarkingOverrides,
   processExamClassrooms,
   processExamExportSettings,
   processExamMarkingFormats,
@@ -229,19 +228,16 @@ export async function executeIdIntegrationImport(
         // 10b. ExamExportSettings (v1.4.0+)
         await processExamExportSettings(data, newExamId, tx)
 
-        // 10c. CropRegionMarkingOverride (v1.4.0+)
-        await processCropRegionMarkingOverrides(data, idMappings, tx)
-
-        // 10d. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
+        // 10c. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
         await processTags(data, idMappings, tx)
 
-        // 10e. ExamClassroom (v1.1.0+)
+        // 10d. ExamClassroom (v1.1.0+)
         await processExamClassrooms(data, newExamId, idMappings, tx)
 
-        // 10f. OMR設定（CropRegionOmrConfig/ChoiceOption/DigitBox） (v1.7.0+/v1.11.0+)
+        // 10e. OMR設定（CropRegionOmrConfig/ChoiceOption/DigitBox） (v1.7.0+/v1.11.0+)
         await processOmrConfigs(data, idMappings, tx)
 
-        // 10g. 複合解答（CompoundAnswer/Member） (v1.11.0+)
+        // 10f. 複合解答（CompoundAnswer/Member） (v1.11.0+)
         await processCompoundAnswers(data, idMappings, tx)
 
         // 11. CropSubtotal

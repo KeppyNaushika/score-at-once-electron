@@ -2,8 +2,11 @@
  * v1.3.0 → v1.4.0 変換器
  *
  * 主な変更点:
- * - ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride を試験データに追加
+ * - ExamMarkingFormat, ExamExportSettings を試験データに追加
  * - Subject, SubjectSubtotalGroup をタグデータとして追加
+ *
+ * ※ 当時同時に追加された CropRegionMarkingOverride は v1.18.0 で廃止したため、
+ *   ここでの補完対象から外している（V1_17_0_to_V1_18_0 が読み捨てる）。
  *
  * v1.3.0形式のアーカイブにはこれらのフィールドが存在しないため、
  * デフォルト値（空配列/null）を設定する
@@ -25,7 +28,7 @@ export class V1_3_0_to_V1_4_0_Transformer implements ExamVersionTransformer {
 
     warnings.push(
       `アーカイブはv0.5.x形式(archive v${this.fromVersion})で作成されています。` +
-        `採点マーク設定・エクスポート設定・設問別マークオーバーライド・タグデータが追加されます。`
+        `採点マーク設定・エクスポート設定・タグデータが追加されます。`
     )
 
     return {
@@ -39,8 +42,6 @@ export class V1_3_0_to_V1_4_0_Transformer implements ExamVersionTransformer {
           ...data.examData,
           examMarkingFormats: data.examData.examMarkingFormats ?? [],
           examExportSettings: data.examData.examExportSettings ?? null,
-          cropRegionMarkingOverrides:
-            data.examData.cropRegionMarkingOverrides ?? [],
         },
         subjectsData: data.subjectsData ?? {
           subjects: [],

@@ -305,7 +305,6 @@ export async function convertDatToScore(
       examClassrooms: [],
       examMarkingFormats: [],
       examExportSettings: null,
-      cropRegionMarkingOverrides: [],
     }
 
     // 14. manifest 生成

@@ -259,7 +259,6 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
       ],
       examMarkingFormats: [],
       examExportSettings: null,
-      cropRegionMarkingOverrides: [],
       omrConfigs: [],
       omrChoiceOptions: [],
       omrDigitBoxes: [],
@@ -333,10 +332,10 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
   return raw as unknown as ExamArchiveData
 }
 
-/** 現行 (v1.17.0) 最小形状 */
+/** 現行 (v1.18.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.17.0"),
+    manifest: createManifest("1.18.0"),
     examData: {
       exam: {
         id: "exam-1",
@@ -358,7 +357,6 @@ function createCurrentArchiveData(): ExamArchiveData {
       examClassrooms: [],
       examMarkingFormats: [],
       examExportSettings: null,
-      cropRegionMarkingOverrides: [],
     },
     studentsData: { students: [] },
     classesData: { classrooms: [], memberships: [] },
@@ -377,13 +375,13 @@ function createCurrentArchiveData(): ExamArchiveData {
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全17変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全18変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.17.0")
-    expect(result.appliedTransformations).toHaveLength(17)
-    expect(result.data.manifest.version).toBe("1.17.0")
+    expect(result.finalVersion).toBe("1.18.0")
+    expect(result.appliedTransformations).toHaveLength(18)
+    expect(result.data.manifest.version).toBe("1.18.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -470,6 +468,7 @@ describe("transformExamArchiveToLatest", () => {
     expect(result.appliedTransformations).toEqual([
       { from: "1.15.0", to: "1.16.0" },
       { from: "1.16.0", to: "1.17.0" },
+      { from: "1.17.0", to: "1.18.0" },
     ])
 
     const examData = result.data.examData
@@ -537,7 +536,7 @@ describe("transformExamArchiveToLatest", () => {
 
   test("形状ベース下方補正: manifest が現行版でも examClasses があれば変換される（クラッシュ回帰）", () => {
     const data = createV1_15_0_ArchiveData()
-    data.manifest.version = "1.17.0" // 実形状より新しい版数を名乗る
+    data.manifest.version = "1.18.0" // 実形状より新しい版数を名乗る
 
     const detection = detectExamArchiveVersion(data)
     expect(detection.version).toBe("1.15.0")
@@ -588,7 +587,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.17.0")
+    expect(detection.version).toBe("1.18.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -606,7 +605,7 @@ describe("transformExamArchiveToLatest", () => {
     // 現行キー配下に旧フィールドのレコード、という中間状態を模す
     examDataRecord.examClassrooms = examDataRecord.examClasses
     delete examDataRecord.examClasses
-    data.manifest.version = "1.17.0"
+    data.manifest.version = "1.18.0"
 
     const detection = detectExamArchiveVersion(data)
     expect(detection.version).toBe("1.15.0")
@@ -660,11 +659,56 @@ describe("transformExamArchiveToLatest", () => {
     expect(examClassroom.teacherStatistics).toBe(false)
   })
 
+  test("v1.17.0 の設問別マーク上書き（廃止済み）は読み捨てられ、件数が警告に出る", () => {
+    const data = createCurrentArchiveData()
+    const examDataRecord = data.examData as unknown as Record<string, unknown>
+    // v1.17.0 までの実形状: 廃止前の cropRegionMarkingOverrides を持つ
+    examDataRecord.cropRegionMarkingOverrides = [
+      {
+        id: "cropregionmarkingoverride-1",
+        cropRegionId: "region-1",
+        markType: "correct",
+        symbol: "◎",
+        color: "#0000ff",
+        visible: true,
+        createdAt: TIMESTAMP,
+        updatedAt: TIMESTAMP,
+      },
+    ]
+    data.manifest.version = "1.17.0"
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.appliedTransformations).toEqual([
+      { from: "1.17.0", to: "1.18.0" },
+    ])
+    // キーごと落ちる（取り込み先が存在しないため）
+    const transformedExamData = result.data.examData as unknown as Record<
+      string,
+      unknown
+    >
+    expect("cropRegionMarkingOverrides" in transformedExamData).toBe(false)
+    // 読み飛ばした件数が利用者に伝わる
+    expect(
+      result.warnings.some((warning) => warning.includes("1件を読み飛ばし"))
+    ).toBe(true)
+  })
+
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.18.0 になる", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.17.0"
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.finalVersion).toBe("1.18.0")
+    expect(result.warnings).toEqual([])
+  })
+
   test("現行形式は無変換で素通しされる", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.17.0")
+    expect(result.originalVersion).toBe("1.18.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)

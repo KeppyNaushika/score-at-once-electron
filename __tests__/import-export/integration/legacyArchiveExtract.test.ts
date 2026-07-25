@@ -102,7 +102,6 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
         ],
         examMarkingFormats: [],
         examExportSettings: null,
-        cropRegionMarkingOverrides: [],
       },
       "students.json": { students: [] },
       "classes.json": {
@@ -152,7 +151,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
 
     // チェーン警告が伝播する
     expect(data.transformWarnings.length).toBeGreaterThan(0)
-    expect(data.manifest.version).toBe("1.17.0")
+    expect(data.manifest.version).toBe("1.18.0")
 
     cleanupTempDir(data.tempDir)
   })
@@ -223,7 +222,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     const data = result.data!
     createdPaths.push(data.tempDir)
 
-    expect(data.manifest.version).toBe("1.17.0")
+    expect(data.manifest.version).toBe("1.18.0")
     expect(data.examData.exam.id).toBe("exam-1")
     expect(data.examData.examPages).toHaveLength(1)
     expect(data.examData.examClassrooms).toEqual([])
@@ -240,7 +239,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
 
   test("現行形式のアーカイブは無変換（transformWarnings が空）", async () => {
     const archivePath = writeArchive({
-      "manifest.json": createManifest("1.17.0"),
+      "manifest.json": createManifest("1.18.0"),
       "exam.json": {
         exam: {
           id: "exam-1",
@@ -262,7 +261,6 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
         examClassrooms: [],
         examMarkingFormats: [],
         examExportSettings: null,
-        cropRegionMarkingOverrides: [],
       },
       "students.json": { students: [] },
       "classes.json": { classrooms: [], memberships: [] },
@@ -284,7 +282,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     createdPaths.push(data.tempDir)
 
     expect(data.transformWarnings).toEqual([])
-    expect(data.manifest.version).toBe("1.17.0")
+    expect(data.manifest.version).toBe("1.18.0")
 
     cleanupTempDir(data.tempDir)
   })

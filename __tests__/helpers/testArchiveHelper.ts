@@ -204,7 +204,6 @@ export function createMinimalCollectedData(
       examClassrooms: [],
       examMarkingFormats: [],
       examExportSettings: null,
-      cropRegionMarkingOverrides: [],
     },
     studentsData: { students: [] },
     classesData: { classrooms: [], memberships: [] },

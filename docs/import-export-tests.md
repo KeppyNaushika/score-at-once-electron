@@ -310,7 +310,6 @@ DBから試験データを収集する `collectExamData` 関数を検証。
 | II-10 | 別PC: create_new決定                                 | 新規生徒としてインポート |
 | II-12 | v1.4.0: ExamMarkingFormatが作成される                | 新規データ型の処理       |
 | II-13 | v1.4.0: ExamExportSettingsが作成される               | 新規データ型の処理       |
-| II-14 | v1.4.0: CropRegionMarkingOverrideが作成される        | 新規データ型の処理       |
 | II-15 | v1.4.0: Subject/SubjectSubtotalGroupが作成される     | 教科データの処理         |
 | II-16 | B11修正: QuestionScoreの重複が回避される             | 既知バグの再発防止       |
 | II-17 | メンバーシップの冪等性                               | 重複作成されない確認     |
@@ -439,7 +438,6 @@ Stage 2のID変更処理（レコード再作成 + FK更新 + 旧レコード削
 | B2     | 画像レコード作成がトランザクション内に移動された                  | todo |
 | B3     | ExamMarkingFormatがインポートで処理されることを確認               | パス |
 | B3     | ExamExportSettingsがインポートで処理されることを確認              | パス |
-| B3     | CropRegionMarkingOverrideがインポートで処理されることを確認       | パス |
 | B3     | Subject/SubjectSubtotalGroupがインポートで処理されることを確認    | パス |
 | B3     | ExamClassroomがインポートで処理されることを確認                   | パス |
 | B4     | ID変更時のUNIQUE制約がtemp-value方式で回避される                  | todo |
