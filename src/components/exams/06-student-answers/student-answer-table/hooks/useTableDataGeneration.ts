@@ -1,13 +1,22 @@
 import { useMemo } from "react"
 
 import type {
-  CellData,
+  AnswerTableCell,
+  AnswerTableRow,
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type {
+  CellLookup,
+  CellValueMap,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import {
+  addCellToLookup,
+  getCellValue,
   getEnabledFiles,
+  lookupHasCell,
   manualDisabledReason,
   partitionAnswerItemsByPlacement,
+  setCellValue,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   AnswerImageIdentity,
@@ -32,9 +41,12 @@ interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
 }
 
 /**
- * テーブルデータの生成を行うカスタムフック（entity-first）。
- * 列は ExamPage 実体で回す。view では、表のマスに配置できない答案（除籍・列に無い
- * examPageId＝孤立答案）を `orphanItems` として返す（呼び出し側が専用枠で再配置できる）。
+ * テーブル行の生成を行うカスタムフック（entity-first）。
+ * 行は ExamStudent 実体、列は ExamPage 実体で回し、各マスに列の実体を同梱して返す。
+ * 生徒・ページの同定は常に id（studentId / examPageId）で行い、配列の添字は
+ * upload の配置順を決めるソートキーとしてのみ使う（同定には使わない）。
+ * view では、表のマスに配置できない答案（除籍・列に無い examPageId＝孤立答案）を
+ * `orphanItems` として返す（呼び出し側が専用枠で再配置できる）。
  */
 export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
   files,
@@ -47,15 +59,15 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
   allowOverwrite = false,
   existingAnswers = [],
 }: UseTableDataGenerationParams<TItem>) {
-  const { tableData, orphanItems } = useMemo(() => {
+  const { tableRows, orphanItems } = useMemo(() => {
     const enabledFiles = getEnabledFiles(files, disabledState)
 
-    const data: CellData<TItem>[][] = []
+    const rows: AnswerTableRow<TItem>[] = []
     const orphans: TItem[] = []
 
     if (mode === "view") {
       // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, examPageId) に配置する。
-      // 配列順ではなく座標基準にすることで、DnD の move/swap が座標更新だけで完結し、
+      // 配列順ではなく id 対を基準にすることで、DnD の move/swap が座標更新だけで完結し、
       // 任意マスへの移動・占有マスとの入れ替えが素直に描画へ反映される。
       // 配置できない答案（除籍・列に無い examPageId）は placeable にならず orphans に落ちる。
       const { placedByCell, orphans: orphanItems } =
@@ -66,90 +78,89 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
         )
       orphans.push(...orphanItems)
 
-      // テーブルデータを生成
-      for (
-        let studentIndex = 0;
-        studentIndex < sortedStudents.length;
-        studentIndex++
-      ) {
-        const examStudent = sortedStudents[studentIndex]
-        const row: CellData<TItem>[] = []
+      for (const examStudent of sortedStudents) {
+        const cells = examPages.map<AnswerTableCell<TItem>>((examPage) => {
+          const file = getCellValue(
+            placedByCell,
+            examStudent.studentId,
+            examPage.id
+          )
 
-        for (let pageIndex = 0; pageIndex < examPages.length; pageIndex++) {
-          const examPage = examPages[pageIndex]
-          const file = placedByCell.get(`${studentIndex}-${pageIndex}`)
+          // 答案が居るセルは常にファイルセル（動的無効化は答案なしセルにのみ効く）
+          if (file) return { examPage, type: "file", file }
 
-          if (file) {
-            // 答案が居るセルは常にファイルセル（動的無効化は答案なしセルにのみ効く）
-            row.push({ type: "file", file })
-          } else if (enhancedIsCellDisabled(examStudent, examPage.id)) {
-            // 答案なしセル。確認モードは表示上「答案なし」
-            row.push({ type: "disabled" })
-          } else {
-            row.push({ type: "empty" })
+          // 答案なしセル。確認モードは表示上「答案なし」
+          if (enhancedIsCellDisabled(examStudent, examPage.id)) {
+            return { examPage, type: "disabled" }
           }
-        }
 
-        data.push(row)
+          return { examPage, type: "empty" }
+        })
+
+        rows.push({ examStudent, cells })
       }
     } else {
       // アップロードモード: 配置戦略に基づく自動配置（新規ファイル用）
 
-      // 既存答案がある位置を特定（上書き無効時にスキップするため）
-      const examPageIndexById = new Map<string, number>()
-      examPages.forEach((examPage, pageIndex) => {
-        examPageIndexById.set(examPage.id, pageIndex)
-      })
-      const studentIndexById = new Map<string, number>()
-      sortedStudents.forEach((examStudent, studentIndex) => {
-        studentIndexById.set(examStudent.studentId, studentIndex)
-      })
-
-      const existingAnswerPositions = new Set<string>()
-      if (!allowOverwrite && existingAnswers) {
-        existingAnswers.forEach((answer) => {
-          if (!answer.studentId || !answer.examPageId) return
-          const studentIndex = studentIndexById.get(answer.studentId)
-          const pageIndex = examPageIndexById.get(answer.examPageId)
-          if (studentIndex !== undefined && pageIndex !== undefined) {
-            existingAnswerPositions.add(`${studentIndex}-${pageIndex}`)
-          }
-        })
+      // 既存答案（DB答案の占有信号）があるセルを id 対で引けるようにする。
+      // 上書き有効時は収集しない（＝上書き可なら占有を無視して素直に詰める既存動作）。
+      const existingAnswerCells: CellLookup = new Map()
+      if (!allowOverwrite) {
+        for (const answer of existingAnswers) {
+          if (!answer.studentId || !answer.examPageId) continue
+          addCellToLookup(
+            existingAnswerCells,
+            answer.studentId,
+            answer.examPageId
+          )
+        }
       }
 
-      // 有効セル（無効でないセル）の位置を事前に計算
-      const validPositions: Array<{ studentIndex: number; pageIndex: number }> =
-        []
-      for (
-        let studentIndex = 0;
-        studentIndex < sortedStudents.length;
-        studentIndex++
-      ) {
-        const examStudent = sortedStudents[studentIndex]
-        for (let pageIndex = 0; pageIndex < examPages.length; pageIndex++) {
-          const examPage = examPages[pageIndex]
-          const placementKey = `${studentIndex}-${pageIndex}`
-
+      // 有効セル（無効でないセル）を実体で列挙する。studentIndex / pageIndex は
+      // 「どの順にファイルを詰めるか」の並べ替えキー専用で、セルの同定には使わない。
+      const validPositions: Array<{
+        examStudent: ExamStudentWithMemberships
+        examPage: ExamPageColumn
+        studentIndex: number
+        pageIndex: number
+      }> = []
+      sortedStudents.forEach((examStudent, studentIndex) => {
+        examPages.forEach((examPage, pageIndex) => {
           const isManuallyDisabled =
             manualDisabledReason(disabledState, examStudent, examPage.id) !==
             undefined
 
           // 既存答案がある場合は上書き設定をチェック
-          const hasExistingAnswer = existingAnswerPositions.has(placementKey)
+          const hasExistingAnswer = lookupHasCell(
+            existingAnswerCells,
+            examStudent.studentId,
+            examPage.id
+          )
           const shouldSkipExisting = hasExistingAnswer && !allowOverwrite
 
           if (!isManuallyDisabled && !shouldSkipExisting) {
-            validPositions.push({ studentIndex, pageIndex })
+            validPositions.push({
+              examStudent,
+              examPage,
+              studentIndex,
+              pageIndex,
+            })
           }
-        }
-      }
+        })
+      })
 
       // 既存答案がある位置を優先してソート（上書き有効時のみ）
       validPositions.sort((positionA, positionB) => {
-        const positionAKey = `${positionA.studentIndex}-${positionA.pageIndex}`
-        const positionBKey = `${positionB.studentIndex}-${positionB.pageIndex}`
-        const positionAHasExisting = existingAnswerPositions.has(positionAKey)
-        const positionBHasExisting = existingAnswerPositions.has(positionBKey)
+        const positionAHasExisting = lookupHasCell(
+          existingAnswerCells,
+          positionA.examStudent.studentId,
+          positionA.examPage.id
+        )
+        const positionBHasExisting = lookupHasCell(
+          existingAnswerCells,
+          positionB.examStudent.studentId,
+          positionB.examPage.id
+        )
 
         // 既存答案がある位置を優先（上書き有効時）
         if (allowOverwrite && positionAHasExisting && !positionBHasExisting)
@@ -174,64 +185,62 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
       })
 
       // ファイルと有効セルをマッピング（ファイル配列の順序で自動配置）
-      const filePositionMap = new Map<string, TItem>()
+      const filePlacement: CellValueMap<TItem> = new Map()
       validPositions.forEach((position, fileIndex) => {
         const file = enabledFiles[fileIndex]
         if (file) {
-          const key = `${position.studentIndex}-${position.pageIndex}`
-          filePositionMap.set(key, file)
+          setCellValue(
+            filePlacement,
+            position.examStudent.studentId,
+            position.examPage.id,
+            file
+          )
         }
       })
 
-      // テーブルデータを生成
-      for (
-        let studentIndex = 0;
-        studentIndex < sortedStudents.length;
-        studentIndex++
-      ) {
-        const examStudent = sortedStudents[studentIndex]
-        const row: CellData<TItem>[] = []
-
-        for (let pageIndex = 0; pageIndex < examPages.length; pageIndex++) {
-          const examPage = examPages[pageIndex]
-
+      for (const examStudent of sortedStudents) {
+        const cells = examPages.map<AnswerTableCell<TItem>>((examPage) => {
           // 手動無効化の判定と理由を1回の評価で確定（ちゃんとやる側）
           const manualReason = manualDisabledReason(
             disabledState,
             examStudent,
             examPage.id
           )
-
           if (manualReason) {
             // 手動無効化セル（無効理由も権威的にここで確定）
-            row.push({ type: "disabled", disabledReason: manualReason })
-          } else {
-            // 有効セル: ファイルがマッピングされていればファイルセル、なければ空セル
-            const key = `${studentIndex}-${pageIndex}`
-            const file = filePositionMap.get(key)
+            return { examPage, type: "disabled", disabledReason: manualReason }
+          }
 
-            // 既存答案がある場合の処理
-            const hasExistingAnswer = existingAnswerPositions.has(key)
-            const shouldShowAsDisabled = hasExistingAnswer && !allowOverwrite
+          // 有効セル: ファイルがマッピングされていればファイルセル、なければ空セル
+          const file = getCellValue(
+            filePlacement,
+            examStudent.studentId,
+            examPage.id
+          )
+          if (file) return { examPage, type: "file", file }
 
-            if (file) {
-              // ファイルあり（自動配置されたファイル）
-              row.push({ type: "file", file })
-            } else if (shouldShowAsDisabled) {
-              // 既存答案があり上書き無効の場合は無効セルとして表示
-              row.push({ type: "disabled", disabledReason: "existing_answer" })
-            } else {
-              // ファイルなし（空セル）
-              row.push({ type: "empty" })
+          // 既存答案があり上書き無効の場合は無効セルとして表示
+          const hasExistingAnswer = lookupHasCell(
+            existingAnswerCells,
+            examStudent.studentId,
+            examPage.id
+          )
+          if (hasExistingAnswer && !allowOverwrite) {
+            return {
+              examPage,
+              type: "disabled",
+              disabledReason: "existing_answer",
             }
           }
-        }
 
-        data.push(row)
+          return { examPage, type: "empty" }
+        })
+
+        rows.push({ examStudent, cells })
       }
     }
 
-    return { tableData: data, orphanItems: orphans }
+    return { tableRows: rows, orphanItems: orphans }
   }, [
     files,
     sortedStudents,
@@ -244,5 +253,5 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
     existingAnswers,
   ])
 
-  return { tableData, orphanItems }
+  return { tableRows, orphanItems }
 }

@@ -36,18 +36,25 @@ export interface ExtendedDisabledState {
   files: Set<string> // fileId — アップロードで多数になりうるので Set（O(1)）
 }
 
-// Cell data structure for table rendering.
-// セルは「そのマスに置かれた物（file）と無効理由」だけを持つ。
-// 生徒・ページ・position はグリッド座標 [studentIndex][pageIndex] と
-// sortedStudents / examPages から導出する（セルにエンティティを複製させない）。
+// 表の1マス。列の実体（ExamPage）を同梱し、そのマスに置かれた物（file）と無効理由を持つ。
+// 行（AnswerTableRow）が生徒の実体を持つため、「行・列とマスの対応」は添字の一致という
+// 暗黙の約束ではなく構造で保証される（序数を同定に使わない）。
 // upload は file が UnsavedAnswerImage、view は PlacedAnswerImage。
-export interface CellData<
+export interface AnswerTableCell<
   TItem extends AnswerImageIdentity = AnswerImageIdentity,
 > {
+  examPage: ExamPageColumn
   type: "file" | "empty" | "disabled"
   file?: TItem
-  disabledReason?:
-    "row" | "column" | "position" | "existing_answer" | "absent_student"
+  disabledReason?: DisabledReason
+}
+
+// 表の1行。行の実体（ExamStudent）と、その行のマスを列順（examPages の順）に持つ。
+export interface AnswerTableRow<
+  TItem extends AnswerImageIdentity = AnswerImageIdentity,
+> {
+  examStudent: ExamStudentWithMemberships
+  cells: AnswerTableCell<TItem>[]
 }
 
 /**

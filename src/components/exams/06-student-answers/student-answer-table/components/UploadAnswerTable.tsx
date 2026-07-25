@@ -36,8 +36,7 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
   const { correctingFileIds } = useMarkerCorrection({
     examId: props.examId,
     files: props.files,
-    tableData: core.tableData,
-    examPages: props.examPages,
+    tableRows: core.tableRows,
     markerCorrectionEnabled: props.markerCorrectionEnabled ?? false,
     markerAvailablePages: props.markerAvailablePages ?? EMPTY_PAGES,
     onFilesChange: props.onFilesChange,
@@ -58,31 +57,28 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
     return map
   }, [props.files])
 
-  // 配置済みファイルのアップロードデータを生成。生徒・配置先ページはセル座標（行 ExamStudent・
-  // 列 ExamPage 実体）から導出し、examPageId を直指定する。
+  // 配置済みファイルのアップロードデータを生成。書き込み先の生徒・ページは行が持つ
+  // ExamStudent 実体・マスが持つ ExamPage 実体から直に取る（別配列との添字突き合わせをしない）。
   const handleUpload = () => {
     const uploadData: UploadData[] = []
-    core.tableData.forEach((row, studentIndex) => {
-      row.forEach((cell, pageIndex) => {
+    for (const { examStudent, cells } of core.tableRows) {
+      for (const cell of cells) {
         // 未保存画像のみ本物の buffer を持つ（占有信号は buffer なし＝対象外）。
-        if (cell.type === "file" && cell.file && cell.file.buffer) {
-          const examStudent = core.sortedStudents[studentIndex]
-          const examPage = props.examPages[pageIndex]
-          uploadData.push({
-            name: cell.file.name,
-            fileName: cell.file.name,
-            originalFileName: cell.file.originalFileName,
-            type: cell.file.fileType,
-            buffer: cell.file.buffer,
-            studentId: examStudent.studentId,
-            examPageId: examPage.id,
-            overwrite: core.allowOverwrite,
-            correctWithMarkers: false, // クライアント側で補正済み
-            correctionStatus: cell.file.correctionStatus,
-          })
-        }
-      })
-    })
+        if (cell.type !== "file" || !cell.file?.buffer) continue
+        uploadData.push({
+          name: cell.file.name,
+          fileName: cell.file.name,
+          originalFileName: cell.file.originalFileName,
+          type: cell.file.fileType,
+          buffer: cell.file.buffer,
+          studentId: examStudent.studentId,
+          examPageId: cell.examPage.id,
+          overwrite: core.allowOverwrite,
+          correctWithMarkers: false, // クライアント側で補正済み
+          correctionStatus: cell.file.correctionStatus,
+        })
+      }
+    }
     props.onUpload(uploadData)
   }
 
@@ -118,8 +114,7 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
       sortableItemIds={enabledFiles.map((file) => file.id)}
       onDragStart={core.handleDragStart}
       onDragEnd={core.handleDragEnd}
-      tableData={core.tableData}
-      sortedStudents={core.sortedStudents}
+      tableRows={core.tableRows}
       disabledState={core.disabledState}
       nameRegionAvailable={core.nameRegionAvailable}
       cellsWithExistingAnswers={core.cellsWithExistingAnswers}

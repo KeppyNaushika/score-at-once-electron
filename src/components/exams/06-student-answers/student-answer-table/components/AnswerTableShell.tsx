@@ -23,7 +23,7 @@ import {
 import { TableDragOverlay } from "@/components/exams/06-student-answers/student-answer-table/components/TableDragOverlay"
 import { TableHeader } from "@/components/exams/06-student-answers/student-answer-table/components/TableHeader"
 import type {
-  CellData,
+  AnswerTableRow,
   ExtendedDisabledState,
   FilePreviewSource,
   PreviewMode,
@@ -35,7 +35,6 @@ import type {
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import { Card, CardContent } from "@/components/ui/card"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface AnswerTableShellProps {
   mode: "upload" | "view"
@@ -67,9 +66,8 @@ interface AnswerTableShellProps {
   onDragStart: (event: DragStartEvent) => void
   onDragEnd: (event: DragEndEvent) => void
 
-  // テーブルデータ
-  tableData: CellData<AnswerImageIdentity>[][]
-  sortedStudents: ExamStudentWithMemberships[]
+  // テーブルデータ（行に ExamStudent 実体、各マスに ExamPage 実体を同梱）
+  tableRows: AnswerTableRow<AnswerImageIdentity>[]
   disabledState: ExtendedDisabledState
   nameRegionAvailable: Record<number, boolean>
   cellsWithExistingAnswers: CellLookup
@@ -126,8 +124,7 @@ export function AnswerTableShell({
   sortableItemIds,
   onDragStart,
   onDragEnd,
-  tableData,
-  sortedStudents,
+  tableRows,
   disabledState,
   nameRegionAvailable,
   cellsWithExistingAnswers,
@@ -167,7 +164,7 @@ export function AnswerTableShell({
     mode === "view" && orphanItems.length > 0
       ? (() => {
           const rosterStudentIds = new Set(
-            sortedStudents.map((examStudent) => examStudent.studentId)
+            tableRows.map((row) => row.examStudent.studentId)
           )
           return orphanItems.map((orphan) => ({
             orphan,
@@ -237,8 +234,7 @@ export function AnswerTableShell({
   const tableBody = (
     <>
       <TableContent
-        tableData={tableData}
-        sortedStudents={sortedStudents}
+        tableRows={tableRows}
         examPages={examPages}
         disabledState={disabledState}
         mode={mode}

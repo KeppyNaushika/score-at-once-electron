@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 
-import type { CellData } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type {
-  ExamPageColumn,
-  UnsavedAnswerImage,
-} from "@/components/exams/06-student-answers/types"
+import type { AnswerTableRow } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type { UnsavedAnswerImage } from "@/components/exams/06-student-answers/types"
 
 interface UseMarkerCorrectionArgs {
   examId: string
   files: UnsavedAnswerImage[]
-  tableData: CellData<UnsavedAnswerImage>[][]
-  examPages: ExamPageColumn[]
+  tableRows: AnswerTableRow<UnsavedAnswerImage>[]
   markerCorrectionEnabled: boolean
   markerAvailablePages: Set<number>
   onFilesChange: (files: UnsavedAnswerImage[]) => void
@@ -24,15 +20,14 @@ interface UseMarkerCorrectionResult {
  * 配置戦略に応じた動的マーカー補正フック
  *
  * 仕組み:
- * - tableData から各ファイルのマスターページ番号を決定
+ * - tableRows から各ファイルのマスターページ番号を決定
  * - file.correctedForPage と異なれば再補正（または復元）
  * - トグルOFF、マスター無し、未配置ファイルは元に戻す
  */
 export function useMarkerCorrection({
   examId,
   files,
-  tableData,
-  examPages,
+  tableRows,
   markerCorrectionEnabled,
   markerAvailablePages,
   onFilesChange,
@@ -61,14 +56,13 @@ export function useMarkerCorrection({
     // ファイルID → 対応マスターページ番号 のマップを構築
     const targetMap = new Map<string, number>()
     if (markerCorrectionEnabled) {
-      for (const row of tableData) {
-        // マスターページ番号はセルの列（ExamPage 実体）の pageNumber から導出する
-        row.forEach((cell, pageIndex) => {
-          const examPage = examPages[pageIndex]
-          if (cell.file && examPage) {
-            targetMap.set(cell.file.id, examPage.pageNumber)
+      for (const row of tableRows) {
+        // マスターページ番号はマスが持つ列（ExamPage 実体）の pageNumber から導出する
+        for (const cell of row.cells) {
+          if (cell.file) {
+            targetMap.set(cell.file.id, cell.examPage.pageNumber)
           }
-        })
+        }
       }
     }
 
@@ -213,8 +207,7 @@ export function useMarkerCorrection({
   }, [
     examId,
     files,
-    tableData,
-    examPages,
+    tableRows,
     markerCorrectionEnabled,
     markerAvailablePages,
     onFilesChange,

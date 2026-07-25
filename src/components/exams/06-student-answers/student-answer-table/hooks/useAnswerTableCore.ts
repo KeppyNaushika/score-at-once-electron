@@ -70,10 +70,9 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   } = useDisabledState()
 
   const {
-    sortedStudents,
     getEnabledFiles,
     getDisabledFiles,
-    tableData,
+    tableRows,
     orphanItems,
     cellsWithExistingAnswers,
   } = useTableData<TItem>({
@@ -165,9 +164,8 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     allowOverwrite,
     setAllowOverwrite,
     // テーブルデータ
-    sortedStudents,
     getEnabledFiles,
-    tableData,
+    tableRows,
     orphanItems,
     cellsWithExistingAnswers,
     // DnD
