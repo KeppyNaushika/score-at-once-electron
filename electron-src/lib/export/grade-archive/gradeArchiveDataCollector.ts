@@ -85,6 +85,12 @@ export async function collectGradeArchiveData(
           gradeItem: { select: { name: true } },
         },
       },
+      gradeFrozenScores: {
+        include: {
+          student: { select: { studentNumber: true } },
+          gradeItem: { select: { name: true } },
+        },
+      },
       gradeConstraints: {
         orderBy: { order: "asc" },
       },
@@ -229,6 +235,24 @@ export async function collectGradeArchiveData(
     overrideLabel: gradeOverride.overrideLabel,
   }))
 
+  // 確定値は成績そのものなので必ず持ち出す。確定操作者は移動先に同じ User が居る保証が
+  // 無いため出さない（取り込み側で null＝操作者不明になる）。
+  const gradeFrozenScores = grade.gradeFrozenScores.map((gradeFrozenScore) => ({
+    studentNumber: gradeFrozenScore.student.studentNumber,
+    gradeItemName: gradeFrozenScore.gradeItem.name,
+    weightedScore:
+      gradeFrozenScore.weightedScore !== null
+        ? Number(gradeFrozenScore.weightedScore)
+        : null,
+    weightedMaxScore: Number(gradeFrozenScore.weightedMaxScore),
+    percentage:
+      gradeFrozenScore.percentage !== null
+        ? Number(gradeFrozenScore.percentage)
+        : null,
+    gradeLabel: gradeFrozenScore.gradeLabel,
+    frozenAt: gradeFrozenScore.frozenAt.toISOString(),
+  }))
+
   const gradeConstraints = grade.gradeConstraints.map((gradeConstraint) => ({
     name: gradeConstraint.name,
     kind: gradeConstraint.kind,
@@ -257,6 +281,8 @@ export async function collectGradeArchiveData(
       gradeItemExclusions:
         gradeItemExclusions.length > 0 ? gradeItemExclusions : undefined,
       gradeOverrides: gradeOverrides.length > 0 ? gradeOverrides : undefined,
+      gradeFrozenScores:
+        gradeFrozenScores.length > 0 ? gradeFrozenScores : undefined,
       gradeConstraints:
         gradeConstraints.length > 0 ? gradeConstraints : undefined,
     },

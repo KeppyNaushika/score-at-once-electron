@@ -194,6 +194,14 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       }),
   },
   {
+    model: "GradeFrozenScore",
+    move: (tx, from, to) =>
+      tx.gradeFrozenScore.updateMany({
+        where: { studentId: from },
+        data: { studentId: to },
+      }),
+  },
+  {
     model: "GradeItemExclusion",
     move: (tx, from, to) =>
       tx.gradeItemExclusion.updateMany({

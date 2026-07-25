@@ -79,6 +79,22 @@ export interface ArchiveGradeData {
     gradeItemName: string | null
     overrideLabel: string
   }[]
+  /**
+   * 成績値の確定（凍結）（後方互換: v1.9.0+。古いアーカイブではundefined）。
+   * 生徒×評価項目のみ（総合の行は存在しない）。外部参照は他の grade-archive 要素と
+   * 揃えて名前ベース（生徒=学籍番号 / 評価項目=項目名）。
+   * 確定操作者（frozenByUserId）はアーカイブの移動先に同じ User が居る保証が無いため
+   * 持ち出さない（取り込み時は null＝操作者不明になる）。
+   */
+  gradeFrozenScores?: {
+    studentNumber: string
+    gradeItemName: string
+    weightedScore: number | null
+    weightedMaxScore: number
+    percentage: number | null
+    gradeLabel: string | null
+    frozenAt: string
+  }[]
   /** 観点間の制約ルール（後方互換: v1.7.0+。古いアーカイブではundefined） */
   gradeConstraints?: {
     name: string
@@ -258,13 +274,15 @@ export interface GradeArchiveImportPreview {
  *   既存の ArchiveDataSource.courseworkId / courseworkName（optional）で表現するため
  *   新規フィールドは無く、旧アーカイブには coursework_total が存在しないだけなので
  *   専用 transformer は無し（加算的変更）。
+ * - 1.9.0: 成績値の確定（GradeFrozenScore）を追加。gradeFrozenScores は optional で
+ *   旧アーカイブ読込時は「確定なし」扱い。構造は加算的なため専用 transformer は無し。
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
  */
 export type GradeArchiveVersion =
-  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.8.0"
+  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0" | "1.9.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.9.0"
 
 export interface GradeTransformResult {
   data: GradeArchiveData

@@ -464,6 +464,41 @@ export async function importGradeArchive(
           }
         }
 
+        // 9. GradeFrozenScore 挿入（v1.9.0+。旧アーカイブでは undefined ＝確定なし）。
+        // 確定操作者は持ち出していないため frozenByUserId は付けない（＝操作者不明）。
+        if (
+          gradeData.gradeFrozenScores &&
+          gradeData.gradeFrozenScores.length > 0
+        ) {
+          for (const gradeFrozenScore of gradeData.gradeFrozenScores) {
+            const student = await tx.student.findUnique({
+              where: { studentNumber: gradeFrozenScore.studentNumber },
+            })
+            if (!student) continue
+
+            const gradeItem = await tx.gradeItem.findFirst({
+              where: {
+                gradeId: grade.id,
+                name: gradeFrozenScore.gradeItemName,
+              },
+            })
+            if (!gradeItem) continue
+
+            await tx.gradeFrozenScore.create({
+              data: {
+                gradeId: grade.id,
+                studentId: student.id,
+                gradeItemId: gradeItem.id,
+                weightedScore: gradeFrozenScore.weightedScore,
+                weightedMaxScore: gradeFrozenScore.weightedMaxScore,
+                percentage: gradeFrozenScore.percentage,
+                gradeLabel: gradeFrozenScore.gradeLabel,
+                frozenAt: new Date(gradeFrozenScore.frozenAt),
+              },
+            })
+          }
+        }
+
         // 観点間の制約ルール（v1.7.0+。式は観点名参照のためID再マップ不要）
         if (
           gradeData.gradeConstraints &&

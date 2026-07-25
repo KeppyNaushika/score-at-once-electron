@@ -207,6 +207,7 @@ describe("DateTime正規化マイグレーション", () => {
     "CourseworkStudent",
     "CourseworkTag",
     "GradeConstraint",
+    "GradeFrozenScore", // 20260725150000 で追加。normalize migration より後で ISO text 生成
     "ReturnSnapshot",
   ])
 

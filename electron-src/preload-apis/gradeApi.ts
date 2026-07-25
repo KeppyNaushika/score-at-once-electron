@@ -200,6 +200,18 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:calculateGrades", gradeId),
       computeSourceFits: (gradeId: string) =>
         ipcRenderer.invoke("grade:computeSourceFits", gradeId),
+      // 成績値の確定（凍結）。targets 未指定は Grade 全体の一括確定・一括解除。
+      // 対象セルの同定は (studentId, gradeItemId)。総合の行は存在しない。
+      freezeGradeScores: (data: {
+        gradeId: string
+        targets?: { studentId: string; gradeItemId: string }[]
+        frozenByUserId?: string | null
+      }) => ipcRenderer.invoke("grade:freezeGradeScores", data),
+      unfreezeGradeScores: (data: {
+        gradeId: string
+        targets?: { studentId: string; gradeItemId: string }[]
+        userId?: string | null
+      }) => ipcRenderer.invoke("grade:unfreezeGradeScores", data),
       getExamCandidates: () => ipcRenderer.invoke("grade:getExamCandidates"),
       getExamSubtotalGroups: (examId: string) =>
         ipcRenderer.invoke("grade:getExamSubtotalGroups", examId),

@@ -365,6 +365,16 @@ export const AUDIT_ACTIONS = {
     verb: "update",
     label: "成績の上書きを更新しました",
   },
+  "grade.frozenScore.freeze": {
+    category: "grade",
+    verb: "update",
+    label: "成績値を確定しました",
+  },
+  "grade.frozenScore.unfreeze": {
+    category: "grade",
+    verb: "delete",
+    label: "成績値の確定を解除しました",
+  },
   "grade.constraint.create": {
     category: "grade",
     verb: "create",

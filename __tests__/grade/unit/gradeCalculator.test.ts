@@ -26,6 +26,8 @@ vi.mock("@/electron-src/lib/prisma/questionScore", () => ({
 const mockFindUnique = vi.fn()
 const mockFindMany = vi.fn()
 const mockGradeItemExclusionFindMany = vi.fn().mockResolvedValue([])
+// 成績値の確定（凍結）。既定は「確定なし」で、確定の検証をするテストだけ差し替える。
+const mockGradeFrozenScoreFindMany = vi.fn().mockResolvedValue([])
 
 // computeLiveMaxScore は coursework 型の満点を courseworkItem.findUnique で引く。
 // buildGrade が courseworkItemId → maxScore を登録し、モックはそれを返す。
@@ -54,6 +56,9 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
     gradeOverride: { findMany: vi.fn().mockResolvedValue([]) },
+    gradeFrozenScore: {
+      findMany: (...args: unknown[]) => mockGradeFrozenScoreFindMany(...args),
+    },
     gradeItemExclusion: {
       findMany: (...args: unknown[]) => mockGradeItemExclusionFindMany(...args),
     },

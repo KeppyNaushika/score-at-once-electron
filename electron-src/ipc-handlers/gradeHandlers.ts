@@ -44,6 +44,11 @@ import {
   updateDataSource,
 } from "../lib/prisma/gradeDataSource"
 import {
+  freezeGradeScores,
+  type GradeFrozenTarget,
+  unfreezeGradeScores,
+} from "../lib/prisma/gradeFrozenScore"
+import {
   createGradeItem,
   deleteGradeItem,
   getGradeItemsByExamId,
@@ -447,6 +452,33 @@ export function setupGradeHandlers(): void {
   registerHandler("grade:computeSourceFits", async (gradeId: string) => {
     return computeSourceFits(gradeId)
   })
+
+  // =====================================================================
+  // 成績値の確定（凍結）
+  // =====================================================================
+
+  // targets 未指定は Grade 全体の一括確定・一括解除。
+  registerHandler(
+    "grade:freezeGradeScores",
+    async (data: {
+      gradeId: string
+      targets?: GradeFrozenTarget[]
+      frozenByUserId?: string | null
+    }) => {
+      return freezeGradeScores(data)
+    }
+  )
+
+  registerHandler(
+    "grade:unfreezeGradeScores",
+    async (data: {
+      gradeId: string
+      targets?: GradeFrozenTarget[]
+      userId?: string | null
+    }) => {
+      return unfreezeGradeScores(data)
+    }
+  )
 
   // =====================================================================
   // Excel出力
