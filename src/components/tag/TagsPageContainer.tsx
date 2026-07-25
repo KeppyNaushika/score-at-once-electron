@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 interface TagItem {
   id: string
@@ -131,6 +132,7 @@ function TagModal({
 }) {
   const [name, setName] = useState("")
   const [color, setColor] = useState<string | null>(null)
+  const { inputRef: nameInputRef, onOpenAutoFocus } = useDialogAutoFocus(open)
 
   useEffect(() => {
     if (open) {
@@ -150,7 +152,7 @@ function TagModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm" onOpenAutoFocus={onOpenAutoFocus}>
         <DialogHeader>
           <DialogTitle>{tag ? "タグを編集" : "新規タグ作成"}</DialogTitle>
         </DialogHeader>
@@ -158,6 +160,7 @@ function TagModal({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">タグ名</Label>
             <Input
+              ref={nameInputRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
@@ -168,7 +171,6 @@ function TagModal({
               }}
               className="col-span-3"
               placeholder="例: 数学"
-              autoFocus
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

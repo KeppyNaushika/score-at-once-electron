@@ -1,7 +1,7 @@
 "use client"
 
 import { Tag } from "lucide-react"
-import { useRef, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 interface BulkTagAssignButtonProps {
   /** 選択中の件数（0 のときは呼び出し側で非表示にする想定） */
@@ -31,11 +32,19 @@ export function BulkTagAssignButton({
 }: BulkTagAssignButtonProps) {
   const [open, setOpen] = useState(false)
   const [tagInput, setTagInput] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isAssigning, setIsAssigning] = useState(false)
+  const { inputRef, onOpenAutoFocus } = useDialogAutoFocus(open)
 
   const handleAssign = async (tagName: string) => {
-    if (!tagName.trim()) return
-    await onAssign(tagName.trim())
+    // onAssign は選択中の全件へ付与するため、Enter 連打や連続クリックで
+    // 二重に走らせると付与が二巡し、選択解除後の空振りと重複エラーになる。
+    if (!tagName.trim() || isAssigning) return
+    setIsAssigning(true)
+    try {
+      await onAssign(tagName.trim())
+    } finally {
+      setIsAssigning(false)
+    }
     setTagInput("")
     setOpen(false)
   }
@@ -48,7 +57,11 @@ export function BulkTagAssignButton({
           タグを一括追加
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="start">
+      <PopoverContent
+        className="w-64 p-3"
+        align="start"
+        onOpenAutoFocus={onOpenAutoFocus}
+      >
         <div className="space-y-2">
           <p className="text-muted-foreground text-xs">
             選択中の{selectedCount}件にタグを追加
@@ -65,7 +78,6 @@ export function BulkTagAssignButton({
             }}
             placeholder="タグ名を入力してEnter"
             className="h-8 text-sm"
-            autoFocus
           />
           {allTags.length > 0 && (
             <div className="max-h-28 overflow-y-auto">

@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 /** キーバインディングの型 */
 interface KeyBindings {
@@ -65,6 +66,9 @@ export default function PartialScoreModal({
   const pendingKeyDisplay = formatKeyDisplay(pendingKey)
   const cancelKeyDisplay = formatKeyDisplay(cancelKey)
 
+  const { inputRef: scoreInputRef, onOpenAutoFocus } =
+    useDialogAutoFocus(isOpen)
+
   /** Input内でのキーボードハンドラー */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -105,7 +109,7 @@ export default function PartialScoreModal({
   )
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={onOpenAutoFocus}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             部分点入力
@@ -119,6 +123,7 @@ export default function PartialScoreModal({
           {/* 入力表示エリア */}
           <div className="relative">
             <Input
+              ref={scoreInputRef}
               value={value}
               className="h-16 border-blue-300 bg-blue-50 text-center font-mono text-2xl text-blue-700"
               placeholder="0"
@@ -128,7 +133,6 @@ export default function PartialScoreModal({
                 }
               }}
               onKeyDown={handleKeyDown}
-              autoFocus
             />
             {value.endsWith(".") && (
               <div className="absolute top-1/2 right-4 -translate-y-1/2 transform animate-pulse text-2xl text-blue-500">

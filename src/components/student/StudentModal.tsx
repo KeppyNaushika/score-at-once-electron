@@ -1,7 +1,7 @@
 "use client"
 
 import type { Prisma } from "@prisma/client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 // StudentModalに必要な最小限のフィールド（createdAt/updatedAtは不要）
 interface StudentForEdit {
@@ -50,7 +51,8 @@ export default function StudentModal({
     undefined
   )
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const studentIdInputRef = useRef<HTMLInputElement>(null)
+  const { inputRef: studentIdInputRef, onOpenAutoFocus } =
+    useDialogAutoFocus(isOpen)
 
   useEffect(() => {
     let canceled = false
@@ -125,16 +127,7 @@ export default function StudentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="sm:max-w-md"
-        onOpenAutoFocus={(e) => {
-          // autoFocus属性はRadixのFocusScope・開いた直後のstateリセット再レンダーと
-          // 競合し、本番ビルドではフォーカスがinputに乗らないことがある。
-          // ここで明示的に学籍番号inputへフォーカスを確定させる。
-          e.preventDefault()
-          studentIdInputRef.current?.focus()
-        }}
-      >
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={onOpenAutoFocus}>
         <DialogHeader>
           <DialogTitle>
             {studentToEdit ? "生徒情報を編集" : "新しい生徒を追加"}

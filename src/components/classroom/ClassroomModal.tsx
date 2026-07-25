@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 interface ClassroomModalProps {
   isOpen: boolean
@@ -50,7 +51,7 @@ export default function ClassroomModal({
   const [description, setDescription] = useState("")
   const [isVisible, setIsVisible] = useState(true)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const nameInputRef = useRef<HTMLInputElement>(null)
+  const { inputRef: nameInputRef, onOpenAutoFocus } = useDialogAutoFocus(isOpen)
 
   useEffect(() => {
     let cancelled = false
@@ -110,16 +111,7 @@ export default function ClassroomModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="sm:max-w-md"
-        onOpenAutoFocus={(e) => {
-          // autoFocus属性はRadixのFocusScope・開いた直後のstateリセット再レンダーと
-          // 競合し、本番ビルドではフォーカスがinputに乗らないことがある。
-          // ここで明示的に学級名inputへフォーカスを確定させる。
-          e.preventDefault()
-          nameInputRef.current?.focus()
-        }}
-      >
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={onOpenAutoFocus}>
         <DialogHeader>
           <DialogTitle>
             {classroomToEdit ? "学級情報を編集" : "新しい学級を作成"}

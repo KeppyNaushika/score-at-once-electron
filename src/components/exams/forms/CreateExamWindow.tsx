@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 interface CreateExamWindowProps {
   onClose: () => void
@@ -34,6 +35,9 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   const [currentTagInput, setCurrentTagInput] = useState("")
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  // このコンポーネントは親が条件付きでマウントする＝常に開いた状態
+  const { inputRef: examNameInputRef, onOpenAutoFocus } =
+    useDialogAutoFocus(true)
   const { createExam } = useExams()
 
   // 既存タグを取得
@@ -111,7 +115,7 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={onOpenAutoFocus}>
         <DialogHeader>
           <DialogTitle>新規試験作成</DialogTitle>
           <DialogDescription>
@@ -125,11 +129,11 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
             </Label>
             <Input
               id="examName"
+              ref={examNameInputRef}
               value={examName}
               onChange={(e) => setExamName(e.target.value)}
               className="col-span-3"
               placeholder="例: 2学期中間試験"
-              autoFocus
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
