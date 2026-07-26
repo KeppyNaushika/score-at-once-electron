@@ -80,7 +80,6 @@ export function ViewAnswerTable(
       disabledState={core.disabledState}
       nameRegionExamPageIds={core.nameRegionExamPageIds}
       cellsWithExistingAnswers={core.cellsWithExistingAnswers}
-      files={props.files}
       affectedCells={props.affectedCells}
       imageLoadStates={props.imageLoadStates}
       correctingFileIds={EMPTY_CORRECTING}

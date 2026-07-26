@@ -61,13 +61,17 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     disabledState,
     toggleRowDisabled,
     toggleColDisabled,
+    disableRowsExcept,
+    disableColsExcept,
+    enableAllRows,
+    enableAllCols,
     toggleCellDisabled,
     toggleFileDisabled,
     isCellDisabled,
     initializeStudentsWithoutAnswers,
     allowOverwrite,
     setAllowOverwrite,
-  } = useDisabledState()
+  } = useDisabledState({ students, examPages })
 
   const {
     getEnabledFiles,
@@ -140,8 +144,8 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
 
   // 答案がない生徒の自動無効化（DBベース）
   useEffect(() => {
-    initializeStudentsWithoutAnswers(students)
-  }, [students, initializeStudentsWithoutAnswers])
+    initializeStudentsWithoutAnswers()
+  }, [initializeStudentsWithoutAnswers])
 
   const handlePreviewModeChange = (nextPreviewMode: PreviewMode) => {
     setPreviewMode(nextPreviewMode)
@@ -160,6 +164,10 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     disabledState,
     toggleRowDisabled,
     toggleColDisabled,
+    disableRowsExcept,
+    disableColsExcept,
+    enableAllRows,
+    enableAllCols,
     toggleCellDisabled,
     toggleFileDisabled,
     allowOverwrite,
