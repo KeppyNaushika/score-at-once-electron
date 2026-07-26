@@ -86,7 +86,7 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
     manuscriptCharDividerWidth: DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
     manuscriptLineDividerWidth: DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
   },
-  omrMarkers: { enabled: false, sizeMm: 5, offsetMm: 6 },
+  omrMarkers: { enabled: true, sizeMm: 5, offsetMm: 6 },
   fonts: {
     family: "Noto Sans JP",
     defaultSize: 6,
