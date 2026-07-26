@@ -1,6 +1,10 @@
 import { ipcRenderer } from "electron"
 
 import type {
+  WhitenessTargetAnswerImage,
+  WhitenessTargetRegion,
+} from "../../src/types/answerWhiteness.types"
+import type {
   CreateQuestionScoreArgs,
   UpdateQuestionScoreArgs,
 } from "../../src/types/electron/scoringApi"
@@ -58,5 +62,9 @@ export function createScoringApi() {
         userId: string
       }>
     ) => ipcRenderer.invoke("batch-update-question-scores", entries),
+    measureAnswerWhiteness: (args: {
+      answerImages: WhitenessTargetAnswerImage[]
+      regions: WhitenessTargetRegion[]
+    }) => ipcRenderer.invoke("measure-answer-whiteness", args),
   }
 }

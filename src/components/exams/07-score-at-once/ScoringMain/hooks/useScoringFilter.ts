@@ -8,7 +8,9 @@ import {
   useState,
 } from "react"
 
+import type { WhitenessByAnswerId } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import type {
+  AnswerSortOrder,
   CropRegionWithExamPage,
   GradingMode,
   MasterGridItem,
@@ -52,6 +54,8 @@ interface UseScoringFilterProps {
   gradingMode: GradingMode
   questionChangeVersion: number
   manualSelectionVersion: number
+  answerSortOrder: AnswerSortOrder
+  whitenessByAnswerId: WhitenessByAnswerId
 }
 
 /** 採点ステータスによるフィルタリングと表示対象の答案リスト管理を行うフック */
@@ -66,6 +70,8 @@ export function useScoringFilter({
   gradingMode,
   questionChangeVersion,
   manualSelectionVersion,
+  answerSortOrder,
+  whitenessByAnswerId,
 }: UseScoringFilterProps) {
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
     unscored: true,
@@ -184,8 +190,44 @@ export function useScoringFilter({
       }
     )
 
+    // 白さ順・濃さ順（一覧表示のみ）。並べる基準は平均輝度のみで、閾値は持たない
+    // （実採点データの「無答」を正解として比較した結果に基づく。
+    //   詳細は electron-src/lib/scoring/regionWhiteness.ts の冒頭コメント）。
+    // sortは安定なので、輝度が同値の答案は直前の表示順（customOrder）のまま残る。
+    // 白さが未算出の答案は、どちらの向きでも末尾へ送る。
+    if (
+      gradingMode === "grid" &&
+      (answerSortOrder === "whiteness" || answerSortOrder === "darkness")
+    ) {
+      const cropRegionId = currentCropRegion.id
+      // 濃さ順は白さ順の逆向き
+      const direction = answerSortOrder === "darkness" ? -1 : 1
+
+      studentScoringData.sort((scoringDataA, scoringDataB) => {
+        const whitenessA = whitenessByAnswerId
+          .get(scoringDataA.id)
+          ?.get(cropRegionId)
+        const whitenessB = whitenessByAnswerId
+          .get(scoringDataB.id)
+          ?.get(cropRegionId)
+
+        if (!whitenessA && !whitenessB) return 0
+        if (!whitenessA) return 1
+        if (!whitenessB) return -1
+
+        return direction * (whitenessB.meanLuminance - whitenessA.meanLuminance)
+      })
+    }
+
     return studentScoringData
-  }, [currentCropRegion, studentAnswerImages, questionScores])
+  }, [
+    currentCropRegion,
+    studentAnswerImages,
+    questionScores,
+    gradingMode,
+    answerSortOrder,
+    whitenessByAnswerId,
+  ])
 
   const updateVisibleAnswers = useCallback(
     (customFilterSettings?: FilterSettings) => {

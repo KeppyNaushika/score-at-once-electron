@@ -3,6 +3,11 @@ import type { QuestionScore } from "@prisma/client"
 import type { SCORE_TARGET_DELETED } from "@/electron-src/lib/prisma/questionScore"
 
 import type {
+  AnswerWhiteness,
+  WhitenessTargetAnswerImage,
+  WhitenessTargetRegion,
+} from "../answerWhiteness.types"
+import type {
   QuestionScoreWithUser,
   SerializedQuestionScore,
 } from "../prismaExtensions"
@@ -152,6 +157,15 @@ export interface ScoringAPI {
   ) => Promise<{
     success: boolean
     updatedCount: number
+    error?: string
+  }>
+  /** 答案画像ごとに、指定した全採点領域の白さ（空欄らしさ）を算出する */
+  measureAnswerWhiteness: (args: {
+    answerImages: WhitenessTargetAnswerImage[]
+    regions: WhitenessTargetRegion[]
+  }) => Promise<{
+    success: boolean
+    answers?: AnswerWhiteness[]
     error?: string
   }>
 }

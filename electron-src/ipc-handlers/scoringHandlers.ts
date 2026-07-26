@@ -1,5 +1,12 @@
+import path from "path"
+
+import type {
+  WhitenessTargetAnswerImage,
+  WhitenessTargetRegion,
+} from "../../src/types/answerWhiteness.types"
 import type { SerializedQuestionScore } from "../../src/types/prismaExtensions"
 import { toScoringStatus } from "../../src/types/scoringStatus.types"
+import { getAbsolutePathFromData } from "../lib/dataManager"
 import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
@@ -17,7 +24,8 @@ import {
 } from "../lib/prisma/questionScore"
 import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
 import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
-import { registerHandler } from "./ipcHandlerUtils"
+import { measureAnswerWhiteness } from "../lib/scoring/regionWhiteness"
+import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
 /**
  * QuestionScoreをIPC用に変換（Decimal→number、Dateはそのまま、
@@ -208,4 +216,26 @@ export function setupScoringHandlers(): void {
   registerHandler("initialize-scoring-records", async (examId: string) => {
     return await initializeScoringRecords(examId)
   })
+
+  // グリッド採点の白さ順ソート用: 答案画像ごとに全採点領域の白さを算出する
+  registerSafeHandler(
+    "measure-answer-whiteness",
+    async (args: {
+      answerImages: WhitenessTargetAnswerImage[]
+      regions: WhitenessTargetRegion[]
+    }) => {
+      const answerImages = args.answerImages.map((answerImage) => ({
+        studentAnswerImageId: answerImage.studentAnswerImageId,
+        imagePath: path.isAbsolute(answerImage.imagePath)
+          ? answerImage.imagePath
+          : getAbsolutePathFromData(answerImage.imagePath),
+      }))
+
+      return {
+        success: true,
+        answers: await measureAnswerWhiteness(answerImages, args.regions),
+      }
+    },
+    "答案の白さ算出に失敗しました"
+  )
 }

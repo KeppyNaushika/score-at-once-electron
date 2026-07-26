@@ -43,6 +43,16 @@ export type LayoutDirection =
   "right-down" | "left-down" | "down-right" | "down-left"
 
 /**
+ * 一覧表示の並び順
+ * - "custom": 表示順（ExamStudent.customOrder）
+ * - "whiteness": 白さ順（空欄に近い答案が先頭）
+ * - "darkness": 濃さ順（記入の多い答案が先頭）
+ *
+ * 白さ順・濃さ順は一覧表示でのみ適用される。
+ */
+export type AnswerSortOrder = "custom" | "whiteness" | "darkness"
+
+/**
  * クライアントサイド用のQuestionScore型
  * partialScoreをDecimalからnumberに変更（UI状態管理用）
  */

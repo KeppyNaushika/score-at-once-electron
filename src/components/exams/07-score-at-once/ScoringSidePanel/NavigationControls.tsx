@@ -1,6 +1,9 @@
 "use client"
 
-import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
+import type {
+  AnswerSortOrder,
+  LayoutDirection,
+} from "@/components/exams/07-score-at-once/types"
 import {
   Select,
   SelectContent,
@@ -18,6 +21,10 @@ interface NavigationControlsProps {
   gradingMode?: "grid" | "individual"
   expandMargin?: number
   onExpandMarginChange?: (value: number) => void
+  answerSortOrder?: AnswerSortOrder
+  onAnswerSortOrderChange?: (order: AnswerSortOrder) => void
+  /** 白さの算出が完了しているか（未完了なら白さ順を選べない） */
+  isWhitenessReady?: boolean
 }
 
 const LAYOUT_OPTIONS = [
@@ -25,6 +32,12 @@ const LAYOUT_OPTIONS = [
   { value: "left-down", label: "左→下", description: "左に進んでから下へ" },
   { value: "down-right", label: "下→右", description: "下に進んでから右へ" },
   { value: "down-left", label: "下→左", description: "下に進んでから左へ" },
+]
+
+const SORT_OPTIONS = [
+  { value: "custom", label: "表示順", needsWhiteness: false },
+  { value: "whiteness", label: "白さ順", needsWhiteness: true },
+  { value: "darkness", label: "濃さ順", needsWhiteness: true },
 ]
 
 export default function NavigationControls({
@@ -35,6 +48,9 @@ export default function NavigationControls({
   gradingMode = "grid",
   expandMargin,
   onExpandMarginChange,
+  answerSortOrder,
+  onAnswerSortOrderChange,
+  isWhitenessReady = false,
 }: NavigationControlsProps) {
   const isColumnLayout =
     layoutDirection === "down-right" || layoutDirection === "down-left"
@@ -88,6 +104,37 @@ export default function NavigationControls({
               {expandMargin}%
             </span>
           </div>
+        </div>
+      )}
+
+      {/* 並び順 */}
+      {answerSortOrder && onAnswerSortOrderChange && (
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-xs text-gray-500">並び順</span>
+          <Select
+            value={answerSortOrder}
+            onValueChange={(value) =>
+              onAnswerSortOrderChange(value as AnswerSortOrder)
+            }
+          >
+            <SelectTrigger className="h-7 flex-1 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((option) => {
+                const isPending = option.needsWhiteness && !isWhitenessReady
+                return (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    disabled={isPending}
+                  >
+                    {isPending ? `${option.label}（解析中…）` : option.label}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
         </div>
       )}
 

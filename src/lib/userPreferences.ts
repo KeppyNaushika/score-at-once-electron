@@ -14,6 +14,11 @@ export const USER_PREFERENCE_SCHEMA = {
     validate: (v: string) =>
       ["right-down", "left-down", "down-right", "down-left"].includes(v),
   },
+  answerSortOrder: {
+    type: "string" as const,
+    default: "custom",
+    validate: (v: string) => ["custom", "whiteness", "darkness"].includes(v),
+  },
   expandMargin: { type: "number" as const, default: 0 },
   selectionBorderColor: {
     type: "string?" as const,
@@ -59,6 +64,7 @@ export type PreferenceValueType = {
   autoScroll: boolean
   itemsPerLine: number
   layoutDirection: string
+  answerSortOrder: string
   expandMargin: number
   selectionBorderColor: string | null
   scoringStatusColors: string | null
