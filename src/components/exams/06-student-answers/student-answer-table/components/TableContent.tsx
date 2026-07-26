@@ -1,3 +1,5 @@
+import { Ban, X } from "lucide-react"
+
 import { FilePreviewCell } from "@/components/exams/06-student-answers/student-answer-table/components/FilePreviewCell"
 import type {
   AnswerTableRow,
@@ -12,6 +14,12 @@ import type {
   AnswerImageIdentity,
   ExamPageColumn,
 } from "@/components/exams/06-student-answers/types"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import {
   Table,
   TableBody,
@@ -51,9 +59,15 @@ export interface EmptyCellSlotProps {
   isPositionDisabled: boolean
   hasExistingAnswer: boolean
   disabledReason?: DisabledReason
-  hasNewFileToUpload: boolean
   onTogglePosition: () => void
-  onToggleAnswerDisabled: () => void
+}
+
+/** 行・列をまとめて無効化する操作。upload でのみ提供され、有無がメニューの表示可否になる。 */
+export interface BulkDisablingHandlers {
+  disableRowsExcept: (keptExamStudentId: string) => void
+  disableColsExcept: (keptExamPageId: string) => void
+  enableAllRows: () => void
+  enableAllCols: () => void
 }
 
 interface TableContentProps {
@@ -66,7 +80,6 @@ interface TableContentProps {
   nameRegionExamPageIds: Set<string>
   cellsWithExistingAnswers: CellLookup
   allowOverwrite: boolean
-  files: AnswerImageIdentity[]
   affectedCells?: Set<string>
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   correctingFileIds?: Set<string>
@@ -78,6 +91,8 @@ interface TableContentProps {
   ) => Promise<string | null>
   toggleRowDisabled: (examStudentId: string) => void
   toggleColDisabled: (examPageId: string) => void
+  // 行・列の一括無効化（upload のみ。view は行・列無効が配置に効かないので渡さない）
+  bulkDisabling?: BulkDisablingHandlers
   toggleCellDisabled: (studentId: string, examPageId: string) => void
   toggleFileDisabled: (fileId: string) => void
   onDeleteAnswerSheet?: (fileId: string) => void
@@ -95,7 +110,6 @@ export function TableContent({
   nameRegionExamPageIds,
   cellsWithExistingAnswers,
   allowOverwrite,
-  files,
   affectedCells,
   imageLoadStates = {},
   correctingFileIds,
@@ -103,6 +117,7 @@ export function TableContent({
   drawNameRegionCanvas,
   toggleRowDisabled,
   toggleColDisabled,
+  bulkDisabling,
   toggleCellDisabled,
   toggleFileDisabled,
   onDeleteAnswerSheet,
@@ -132,7 +147,31 @@ export function TableContent({
                   : undefined
               }
             >
-              ページ {examPage.pageNumber}
+              <ContextMenu>
+                <ContextMenuTrigger asChild disabled={!bulkDisabling}>
+                  <div>ページ {examPage.pageNumber}</div>
+                </ContextMenuTrigger>
+                {bulkDisabling && (
+                  <ContextMenuContent>
+                    <ContextMenuItem
+                      onClick={() =>
+                        bulkDisabling.disableColsExcept(examPage.id)
+                      }
+                      className="flex items-center gap-2"
+                    >
+                      <Ban className="h-4 w-4" />
+                      この列以外を無効
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={bulkDisabling.enableAllCols}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      列の無効をすべて解除
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                )}
+              </ContextMenu>
             </TableHead>
           ))}
         </TableRow>
@@ -155,14 +194,39 @@ export function TableContent({
                   : undefined
               }
             >
-              <div className="px-2 py-1">
-                <div className="text-sm font-medium">
-                  {examStudent.student.lastName} {examStudent.student.firstName}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {examStudent.student.studentNumber}
-                </div>
-              </div>
+              <ContextMenu>
+                <ContextMenuTrigger asChild disabled={!bulkDisabling}>
+                  <div className="px-2 py-1">
+                    <div className="text-sm font-medium">
+                      {examStudent.student.lastName}{" "}
+                      {examStudent.student.firstName}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {examStudent.student.studentNumber}
+                    </div>
+                  </div>
+                </ContextMenuTrigger>
+                {bulkDisabling && (
+                  <ContextMenuContent>
+                    <ContextMenuItem
+                      onClick={() =>
+                        bulkDisabling.disableRowsExcept(examStudent.id)
+                      }
+                      className="flex items-center gap-2"
+                    >
+                      <Ban className="h-4 w-4" />
+                      この行以外を無効
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={bulkDisabling.enableAllRows}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      行の無効を解除（欠席を除く）
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                )}
+              </ContextMenu>
             </TableHead>
 
             {/* ファイルセル */}
@@ -180,14 +244,6 @@ export function TableContent({
                     examPage.id
                   )
 
-                // そのセルに新しく追加しようとしている画像ファイルがあるか
-                const newFileInCell = files.find(
-                  (file) =>
-                    file.studentId === examStudent.studentId &&
-                    file.examPageId === examPage.id &&
-                    !disabledState.files.has(file.id)
-                )
-
                 return (
                   <ClientCell key={examPage.id}>
                     {renderEmptyCell({
@@ -196,14 +252,8 @@ export function TableContent({
                       isPositionDisabled: cellData.type === "disabled",
                       hasExistingAnswer: hasExistingAnswerForEmpty,
                       disabledReason: cellData.disabledReason,
-                      hasNewFileToUpload: !!newFileInCell,
                       onTogglePosition: () =>
                         toggleCellDisabled(examStudent.studentId, examPage.id),
-                      onToggleAnswerDisabled: () => {
-                        if (newFileInCell) {
-                          toggleFileDisabled(newFileInCell.id)
-                        }
-                      },
                     })}
                   </ClientCell>
                 )

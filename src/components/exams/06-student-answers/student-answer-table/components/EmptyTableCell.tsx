@@ -1,7 +1,7 @@
 "use client"
 
 import { useDroppable } from "@dnd-kit/core"
-import { Ban, FileX, X } from "lucide-react"
+import { Ban, X } from "lucide-react"
 
 import type { EmptyTableCellProps } from "@/components/exams/06-student-answers/student-answer-table/types"
 import { encodeCellDroppableId } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
@@ -9,7 +9,6 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
@@ -24,8 +23,6 @@ export function EmptyTableCell({
   allowOverwrite = false,
   disabledReason,
   onTogglePosition,
-  onToggleAnswerDisabled,
-  hasNewFileToUpload = false,
 }: EmptyTableCellProps) {
   // 無効化理由のテキストを取得
   const getDisabledReasonText = () => {
@@ -122,18 +119,6 @@ export function EmptyTableCell({
                 </>
               )}
             </ContextMenuItem>
-            {hasNewFileToUpload && (
-              <>
-                <ContextMenuSeparator />
-                <ContextMenuItem
-                  onClick={onToggleAnswerDisabled}
-                  className="flex items-center gap-2"
-                >
-                  <FileX className="h-4 w-4" />
-                  答案無効
-                </ContextMenuItem>
-              </>
-            )}
           </ContextMenuContent>
         )}
       </ContextMenu>

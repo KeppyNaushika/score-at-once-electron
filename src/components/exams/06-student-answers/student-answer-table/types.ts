@@ -114,8 +114,6 @@ export interface EmptyTableCellProps {
   disabledReason?:
     "row" | "column" | "position" | "existing_answer" | "absent_student"
   onTogglePosition?: () => void
-  onToggleAnswerDisabled?: () => void
-  hasNewFileToUpload?: boolean
 }
 
 export interface TableHeaderProps {

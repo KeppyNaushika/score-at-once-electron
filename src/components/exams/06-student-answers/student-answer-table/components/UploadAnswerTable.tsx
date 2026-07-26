@@ -134,13 +134,18 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
         disabledState={core.disabledState}
         nameRegionExamPageIds={core.nameRegionExamPageIds}
         cellsWithExistingAnswers={core.cellsWithExistingAnswers}
-        files={props.files}
         imageLoadStates={props.imageLoadStates}
         correctingFileIds={correctingFileIds}
         fileDisplayById={fileDisplayById}
         drawNameRegionCanvas={core.drawNameRegionCanvas}
         toggleRowDisabled={core.toggleRowDisabled}
         toggleColDisabled={core.toggleColDisabled}
+        bulkDisabling={{
+          disableRowsExcept: core.disableRowsExcept,
+          disableColsExcept: core.disableColsExcept,
+          enableAllRows: core.enableAllRows,
+          enableAllCols: core.enableAllCols,
+        }}
         toggleCellDisabled={core.toggleCellDisabled}
         toggleFileDisabled={core.toggleFileDisabled}
         orphanItems={core.orphanItems}

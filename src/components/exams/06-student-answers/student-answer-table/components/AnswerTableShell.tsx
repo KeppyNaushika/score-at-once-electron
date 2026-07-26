@@ -16,6 +16,7 @@ import { EmptyTableCell } from "@/components/exams/06-student-answers/student-an
 import { OrphanAnswerCard } from "@/components/exams/06-student-answers/student-answer-table/components/OrphanAnswerCard"
 import { SortableTableCell } from "@/components/exams/06-student-answers/student-answer-table/components/SortableTableCell"
 import {
+  type BulkDisablingHandlers,
   type EmptyCellSlotProps,
   type FileCellSlotProps,
   TableContent,
@@ -71,7 +72,6 @@ interface AnswerTableShellProps {
   disabledState: ExtendedDisabledState
   nameRegionExamPageIds: Set<string>
   cellsWithExistingAnswers: CellLookup
-  files: AnswerImageIdentity[]
   affectedCells?: Set<string>
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   correctingFileIds?: Set<string>
@@ -83,6 +83,7 @@ interface AnswerTableShellProps {
   ) => Promise<string | null>
   toggleRowDisabled: (examStudentId: string) => void
   toggleColDisabled: (examPageId: string) => void
+  bulkDisabling?: BulkDisablingHandlers
   toggleCellDisabled: (studentId: string, examPageId: string) => void
   toggleFileDisabled: (fileId: string) => void
   onDeleteAnswerSheet?: (fileId: string) => void
@@ -128,7 +129,6 @@ export function AnswerTableShell({
   disabledState,
   nameRegionExamPageIds,
   cellsWithExistingAnswers,
-  files,
   affectedCells,
   imageLoadStates = {},
   correctingFileIds,
@@ -136,6 +136,7 @@ export function AnswerTableShell({
   drawNameRegionCanvas,
   toggleRowDisabled,
   toggleColDisabled,
+  bulkDisabling,
   toggleCellDisabled,
   toggleFileDisabled,
   onDeleteAnswerSheet,
@@ -223,8 +224,6 @@ export function AnswerTableShell({
       allowOverwrite={allowOverwrite}
       disabledReason={slot.disabledReason}
       onTogglePosition={slot.onTogglePosition}
-      onToggleAnswerDisabled={slot.onToggleAnswerDisabled}
-      hasNewFileToUpload={slot.hasNewFileToUpload}
     />
   )
 
@@ -240,7 +239,6 @@ export function AnswerTableShell({
         nameRegionExamPageIds={nameRegionExamPageIds}
         cellsWithExistingAnswers={cellsWithExistingAnswers}
         allowOverwrite={allowOverwrite}
-        files={files}
         affectedCells={affectedCells}
         imageLoadStates={imageLoadStates}
         correctingFileIds={correctingFileIds}
@@ -248,6 +246,7 @@ export function AnswerTableShell({
         drawNameRegionCanvas={drawNameRegionCanvas}
         toggleRowDisabled={toggleRowDisabled}
         toggleColDisabled={toggleColDisabled}
+        bulkDisabling={bulkDisabling}
         toggleCellDisabled={toggleCellDisabled}
         toggleFileDisabled={toggleFileDisabled}
         onDeleteAnswerSheet={onDeleteAnswerSheet}
