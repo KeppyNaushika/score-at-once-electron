@@ -20,6 +20,7 @@ import type {
   ComputedOMRBubble,
   CoordinateTransform,
   OMRCellConfig,
+  OMRCellResult,
   OMRRecognitionParams,
   RawImageData,
 } from "../../../src/types/omr.types"
@@ -48,6 +49,22 @@ function createIdentityTransform(
     imageWidth: width,
     imageHeight: height,
   }
+}
+
+/**
+ * choiceIndex で塗りつぶし率を引く
+ *
+ * 配列の位置ではなく実体の同定情報で引くため、位置未設定の選択肢が脱落しても
+ * 別の選択肢を掴まない。
+ */
+function fillRatioOf(result: OMRCellResult, choiceIndex: number): number {
+  const measurement = result.bubbleMeasurements?.find(
+    (candidate) => candidate.choiceIndex === choiceIndex
+  )
+  if (!measurement) {
+    throw new Error(`choiceIndex ${choiceIndex} の測定値がありません`)
+  }
+  return measurement.fillRatio
 }
 
 const DEFAULT_PARAMS: OMRRecognitionParams = {
@@ -296,7 +313,7 @@ describe("markRecognizer", () => {
     expect(result.recognizedValues).toHaveLength(2)
   })
 
-  it("fillRatiosが各バブルの値を返す", async () => {
+  it("bubbleMeasurementsが各バブルの値を返す", async () => {
     const image = createTestImage(imgWidth, imgHeight, bubbles, [1])
     const cell = makeCell(bubbles)
     const result = await recognizeCell(
@@ -307,13 +324,13 @@ describe("markRecognizer", () => {
       DEFAULT_PARAMS
     )
 
-    expect(result.fillRatios).toHaveLength(4)
+    expect(result.bubbleMeasurements).toHaveLength(4)
     // 塗ったバブルは高い塗りつぶし率
-    expect(result.fillRatios![1]).toBeGreaterThan(0.8)
+    expect(fillRatioOf(result, 1)).toBeGreaterThan(0.8)
     // 塗っていないバブルは低い塗りつぶし率
-    expect(result.fillRatios![0]).toBeLessThan(0.1)
-    expect(result.fillRatios![2]).toBeLessThan(0.1)
-    expect(result.fillRatios![3]).toBeLessThan(0.1)
+    expect(fillRatioOf(result, 0)).toBeLessThan(0.1)
+    expect(fillRatioOf(result, 2)).toBeLessThan(0.1)
+    expect(fillRatioOf(result, 3)).toBeLessThan(0.1)
   })
 
   it("omrBubblesが空の場合は no_answer", async () => {
@@ -444,7 +461,7 @@ describe("markRecognizer", () => {
       )
 
       expect(result.autoScoreStatus).toBe("correct")
-      expect(result.fillRatios![1]).toBeGreaterThan(0.4)
+      expect(fillRatioOf(result, 1)).toBeGreaterThan(0.4)
     })
 
     it("非常に薄い塗り（gray=140）→ 閾値以上なので認識されない", async () => {
@@ -462,7 +479,7 @@ describe("markRecognizer", () => {
       )
 
       expect(result.autoScoreStatus).toBe("no_answer")
-      expect(result.fillRatios![1]).toBe(0)
+      expect(fillRatioOf(result, 1)).toBe(0)
     })
   })
 
@@ -483,9 +500,9 @@ describe("markRecognizer", () => {
       )
 
       // 消し残しはareaThreshold(0.4)未満なのでマークと判定しない
-      expect(result.fillRatios![0]).toBeLessThan(0.4)
+      expect(fillRatioOf(result, 0)).toBeLessThan(0.4)
       // 本命は認識される
-      expect(result.fillRatios![1]).toBeGreaterThan(0.8)
+      expect(fillRatioOf(result, 1)).toBeGreaterThan(0.8)
       expect(result.autoScoreStatus).toBe("correct")
       expect(result.recognizedValues).toEqual(["②"])
     })
@@ -504,7 +521,7 @@ describe("markRecognizer", () => {
         DEFAULT_PARAMS
       )
 
-      expect(result.fillRatios![0]).toBeLessThan(0.4)
+      expect(fillRatioOf(result, 0)).toBeLessThan(0.4)
       expect(result.autoScoreStatus).toBe("correct")
     })
   })
@@ -545,7 +562,7 @@ describe("markRecognizer", () => {
       )
 
       // ③の塗りが閾値を超えたかどうかで結果が分かれる
-      if (result.fillRatios![3]! >= 0.4) {
+      if (fillRatioOf(result, 3) >= 0.4) {
         expect(result.autoScoreStatus).toBe("ambiguous")
         expect(result.recognizedValues).toHaveLength(2)
       } else {
@@ -568,7 +585,7 @@ describe("markRecognizer", () => {
         DEFAULT_PARAMS
       )
 
-      expect(result.fillRatios![3]).toBeLessThan(0.4)
+      expect(fillRatioOf(result, 3)).toBeLessThan(0.4)
       expect(result.autoScoreStatus).toBe("correct")
       expect(result.recognizedValues).toEqual(["②"])
     })
@@ -589,7 +606,7 @@ describe("markRecognizer", () => {
       )
 
       // 上半分 ≈ 50%の塗り → areaThreshold(0.4)を超えるので認識される
-      expect(result.fillRatios![1]).toBeGreaterThan(0.4)
+      expect(fillRatioOf(result, 1)).toBeGreaterThan(0.4)
       expect(result.autoScoreStatus).toBe("correct")
     })
 
@@ -607,7 +624,7 @@ describe("markRecognizer", () => {
         DEFAULT_PARAMS
       )
 
-      expect(result.fillRatios![1]).toBeGreaterThan(0.4)
+      expect(fillRatioOf(result, 1)).toBeGreaterThan(0.4)
       expect(result.autoScoreStatus).toBe("correct")
     })
 
@@ -625,7 +642,74 @@ describe("markRecognizer", () => {
         DEFAULT_PARAMS
       )
 
-      expect(result.fillRatios![1]).toBeLessThan(0.4)
+      expect(fillRatioOf(result, 1)).toBeLessThan(0.4)
+      expect(result.autoScoreStatus).toBe("no_answer")
+    })
+  })
+
+  describe("色しきい値の自動決定", () => {
+    /** colorThreshold: null は「バブル領域の輝度分布から自動算出」を意味する */
+    const AUTO_PARAMS: OMRRecognitionParams = {
+      colorThreshold: null,
+      areaThreshold: 0.4,
+    }
+
+    it("固定値では拾えない薄い鉛筆（gray=180）を自動なら認識する", async () => {
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+        { index: 1, gray: 180, coverage: 1, pattern: "solid" },
+      ])
+      const cell = makeCell(bubbles)
+
+      // 固定128では gray=180 は「暗くない」ので拾えない
+      const fixed = await recognizeCell(
+        cell,
+        config,
+        image,
+        transform,
+        DEFAULT_PARAMS
+      )
+      expect(fixed.autoScoreStatus).toBe("no_answer")
+
+      // 自動なら紙(255)と鉛筆(180)の間に境界が引かれる
+      const auto = await recognizeCell(
+        cell,
+        config,
+        image,
+        transform,
+        AUTO_PARAMS
+      )
+      expect(auto.autoScoreStatus).toBe("correct")
+      expect(auto.recognizedValues).toEqual(["②"])
+    })
+
+    it("マークが無い答案では既定値へフォールバックする", async () => {
+      // 全て白 → 2群に分ける意味がないので自動決定を採用しない
+      const image = createTestImage(imgWidth, imgHeight, bubbles, [])
+      const cell = makeCell(bubbles)
+
+      const result = await recognizeCell(
+        cell,
+        config,
+        image,
+        transform,
+        AUTO_PARAMS
+      )
+
+      expect(result.autoScoreStatus).toBe("no_answer")
+      expect(fillRatioOf(result, 1)).toBe(0)
+    })
+
+    it("明示的な colorThreshold は自動算出より優先される", async () => {
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+        { index: 1, gray: 180, coverage: 1, pattern: "solid" },
+      ])
+      const cell = makeCell(bubbles)
+
+      const result = await recognizeCell(cell, config, image, transform, {
+        colorThreshold: 128,
+        areaThreshold: 0.4,
+      })
+
       expect(result.autoScoreStatus).toBe("no_answer")
     })
   })
@@ -649,7 +733,7 @@ describe("markRecognizer", () => {
         looseParams
       )
 
-      expect(result.fillRatios![1]).toBeGreaterThan(0.2)
+      expect(fillRatioOf(result, 1)).toBeGreaterThan(0.2)
       expect(result.autoScoreStatus).toBe("correct")
     })
 

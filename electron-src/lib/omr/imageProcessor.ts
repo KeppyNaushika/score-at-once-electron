@@ -154,6 +154,45 @@ export function computeCircularFillRatio(
 }
 
 /**
+ * 楕円形領域のピクセル輝度を度数分布に積む
+ *
+ * 大津法で暗さ閾値を自動決定するための母集団収集。
+ * 画像全体ではなくバブル領域だけを積むことで、余白に埋もれず2峰性が残る。
+ *
+ * @param histogram 長さ256の度数配列（直接加算する）
+ */
+export function accumulateEllipticalLuminanceHistogram(
+  rawData: RawImageData,
+  centerX: number,
+  centerY: number,
+  halfWidth: number,
+  halfHeight: number,
+  histogram: number[]
+): void {
+  const { data, width, height, channels } = rawData
+
+  const x0 = Math.max(0, Math.floor(centerX - halfWidth))
+  const x1 = Math.min(width - 1, Math.ceil(centerX + halfWidth))
+  const y0 = Math.max(0, Math.floor(centerY - halfHeight))
+  const y1 = Math.min(height - 1, Math.ceil(centerY + halfHeight))
+
+  for (let py = y0; py <= y1; py++) {
+    for (let px = x0; px <= x1; px++) {
+      const dx = (px - centerX) / halfWidth
+      const dy = (py - centerY) / halfHeight
+      if (dx * dx + dy * dy > 1) continue
+
+      const idx = (py * width + px) * channels
+      const luminance =
+        channels >= 3
+          ? 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
+          : data[idx]
+      histogram[Math.min(255, Math.max(0, Math.round(luminance)))]++
+    }
+  }
+}
+
+/**
  * 楕円形領域のピクセルの塗りつぶし率を計算
  *
  * 共通テスト風の横長楕円マーク認識用。

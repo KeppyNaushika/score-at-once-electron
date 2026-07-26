@@ -6,8 +6,15 @@
  * 塗りつぶし率からマーク状態を判定する。
  */
 
+import { evaluateChoiceBubbles } from "../../../src/lib/omr/choiceEvaluation"
+import {
+  computeOtsuFromHistogram,
+  type OtsuOptions,
+} from "../../../src/lib/omr/otsuThreshold"
 import type { ComputedCell } from "../../../src/types/answerSheetLayout.types"
 import type {
+  BubbleMeasurement,
+  ComputedOMRBubble,
   CoordinateTransform,
   OMRCellConfig,
   OMRCellResult,
@@ -16,24 +23,98 @@ import type {
 } from "../../../src/types/omr.types"
 import { normalizedToPixel } from "./coordinateTransform"
 import { recognizeDigitCell } from "./digitRecognizer"
-import { computeEllipticalFillRatio } from "./imageProcessor"
+import {
+  accumulateEllipticalLuminanceHistogram,
+  computeEllipticalFillRatio,
+} from "./imageProcessor"
+
+/** 大津法が使えないときに使う既定の暗さ閾値 */
+export const DEFAULT_COLOR_THRESHOLD = 128
+
+/** 輝度ヒストグラムのビン設定（8bitグレースケール） */
+const LUMINANCE_OPTIONS: OtsuOptions = { min: 0, max: 256, bins: 256 }
+
+/**
+ * 自動決定を採用する最小の輝度差（0-255）
+ *
+ * 鉛筆と紙はこれ以上離れる。白紙だけの答案では2群が接近するので固定値へ退く。
+ */
+const MIN_LUMINANCE_SEPARATION = 60
 
 /**
  * 1つのセルのマーク認識を実行
+ *
+ * @param colorThreshold 解決済みの暗さ閾値。省略時はこのセル単独で自動算出する
  */
 export async function recognizeCell(
   cell: ComputedCell,
   omrConfig: OMRCellConfig,
   rawImage: RawImageData,
   transform: CoordinateTransform,
-  params: OMRRecognitionParams
+  params: OMRRecognitionParams,
+  colorThreshold?: number
 ): Promise<OMRCellResult> {
+  const resolvedColorThreshold =
+    colorThreshold ?? resolveColorThreshold([cell], rawImage, transform, params)
+
   if (omrConfig.type === "choice") {
-    return recognizeChoiceCell(cell, omrConfig, rawImage, transform, params)
+    return recognizeChoiceCell(
+      cell,
+      omrConfig,
+      rawImage,
+      transform,
+      params,
+      resolvedColorThreshold
+    )
   }
 
   // handwritten-digit: ONNX Runtime による手書き数字認識
-  return recognizeDigitCell(cell, rawImage, transform, params)
+  return recognizeDigitCell(cell, rawImage, transform, resolvedColorThreshold)
+}
+
+/**
+ * 暗さ閾値を解決する
+ *
+ * params.colorThreshold が指定されていればそれを使う（ユーザーの明示的な上書き）。
+ * null の場合はバブル領域の輝度分布から大津法で自動算出し、
+ * 2群の輝度差が小さいとき（＝白紙に近く分けても意味がないとき）は既定値へ退く。
+ *
+ * 母集団を画像全体ではなくバブル領域に限るのは、余白が支配的な答案画像では
+ * 全体ヒストグラムが単峰になり大津法が破綻するため。
+ */
+function resolveColorThreshold(
+  cells: ComputedCell[],
+  rawImage: RawImageData,
+  transform: CoordinateTransform,
+  params: OMRRecognitionParams
+): number {
+  if (params.colorThreshold != null) return params.colorThreshold
+
+  const histogram = new Array<number>(LUMINANCE_OPTIONS.bins).fill(0)
+  for (const cell of cells) {
+    for (const bubble of cell.omrBubbles ?? []) {
+      const center = normalizedToPixel(
+        bubble.normalizedCx,
+        bubble.normalizedCy,
+        transform
+      )
+      accumulateEllipticalLuminanceHistogram(
+        rawImage,
+        center.x,
+        center.y,
+        (bubble.normalizedWidth * rawImage.width) / 2,
+        (bubble.normalizedHeight * rawImage.height) / 2,
+        histogram
+      )
+    }
+  }
+
+  const otsu = computeOtsuFromHistogram(histogram, LUMINANCE_OPTIONS)
+  if (otsu === null || otsu.meanDistance < MIN_LUMINANCE_SEPARATION) {
+    return DEFAULT_COLOR_THRESHOLD
+  }
+
+  return otsu.threshold
 }
 
 /**
@@ -44,7 +125,8 @@ function recognizeChoiceCell(
   config: OMRCellConfig & { type: "choice" },
   rawImage: RawImageData,
   transform: CoordinateTransform,
-  params: OMRRecognitionParams
+  params: OMRRecognitionParams,
+  colorThreshold: number
 ): OMRCellResult {
   if (!cell.omrBubbles || cell.omrBubbles.length === 0) {
     return {
@@ -56,83 +138,57 @@ function recognizeChoiceCell(
     }
   }
 
-  const fillRatios: number[] = []
-  const markedIndices: number[] = []
-
-  for (const bubble of cell.omrBubbles) {
-    // 正規化座標→ピクセル座標
-    const center = normalizedToPixel(
-      bubble.normalizedCx,
-      bubble.normalizedCy,
-      transform
-    )
-
-    const halfWidthPx = (bubble.normalizedWidth * rawImage.width) / 2
-    const halfHeightPx = (bubble.normalizedHeight * rawImage.height) / 2
-    const ratio = computeEllipticalFillRatio(
-      rawImage,
-      center.x,
-      center.y,
-      halfWidthPx,
-      halfHeightPx,
-      params.colorThreshold
-    )
-    fillRatios.push(ratio)
-
-    if (ratio >= params.areaThreshold) {
-      markedIndices.push(bubble.choiceIndex)
-    }
-  }
-
-  // 認識結果を構築
-  const recognizedValues = markedIndices.map(
-    (idx) => config.labels[idx] ?? String(idx)
+  const bubbleMeasurements: BubbleMeasurement[] = cell.omrBubbles.map(
+    (bubble) => ({
+      choiceIndex: bubble.choiceIndex,
+      label: bubble.label,
+      fillRatio: measureBubbleFillRatio(
+        bubble,
+        rawImage,
+        transform,
+        colorThreshold
+      ),
+    })
   )
 
-  // 信頼度計算
-  let confidence: number
-  if (markedIndices.length === 0) {
-    // 未回答: 全て低い塗りつぶし率なら高信頼
-    const maxRatio = Math.max(...fillRatios)
-    confidence = 1 - maxRatio / params.areaThreshold
-  } else if (markedIndices.length === 1) {
-    // 単一回答: マーク済みの塗りつぶし率が高いほど、他との差が大きいほど高信頼
-    const markedRatio = fillRatios[markedIndices[0]]
-    const otherMaxRatio = Math.max(
-      ...fillRatios.filter((_, i) => !markedIndices.includes(i)),
-      0
-    )
-    confidence = Math.min(
-      markedRatio / params.areaThreshold,
-      1 - otherMaxRatio / params.areaThreshold
-    )
-    confidence = Math.max(0, Math.min(1, confidence))
-  } else {
-    // 複数マーク: 信頼度は低い
-    confidence = 0.3
-  }
-
-  // 自動採点
-  let autoScoreStatus: OMRCellResult["autoScoreStatus"]
-  if (markedIndices.length === 0) {
-    autoScoreStatus = "no_answer"
-  } else if (markedIndices.length > config.correctAnswers.length) {
-    autoScoreStatus = "ambiguous"
-  } else {
-    const isCorrect =
-      markedIndices.length === config.correctAnswers.length &&
-      markedIndices.every((idx) => config.correctAnswers.includes(idx))
-    autoScoreStatus = isCorrect ? "correct" : "incorrect"
-  }
+  const evaluation = evaluateChoiceBubbles({
+    bubbleMeasurements,
+    correctChoiceIndices: config.correctAnswers,
+    areaThreshold: params.areaThreshold,
+  })
 
   return {
     label: cell.label,
     questionPath: cell.questionPath,
-    recognizedValues,
-    fillRatios,
-    confidence,
-    autoScoreStatus,
+    recognizedValues: evaluation.recognizedValues,
+    bubbleMeasurements,
+    confidence: evaluation.confidence,
+    autoScoreStatus: evaluation.autoScoreStatus,
   }
+}
+
+/** バブル1つの塗りつぶし率を測定する */
+function measureBubbleFillRatio(
+  bubble: ComputedOMRBubble,
+  rawImage: RawImageData,
+  transform: CoordinateTransform,
+  colorThreshold: number
+): number {
+  // 正規化座標→ピクセル座標
+  const center = normalizedToPixel(
+    bubble.normalizedCx,
+    bubble.normalizedCy,
+    transform
+  )
+
+  return computeEllipticalFillRatio(
+    rawImage,
+    center.x,
+    center.y,
+    (bubble.normalizedWidth * rawImage.width) / 2,
+    (bubble.normalizedHeight * rawImage.height) / 2,
+    colorThreshold
+  )
 }
 
 /**
@@ -145,13 +201,30 @@ export async function recognizeCells(
   transform: CoordinateTransform,
   params: OMRRecognitionParams
 ): Promise<OMRCellResult[]> {
+  // 暗さ閾値は1枚の答案全体で1つ。セルごとに振れると同一答案内で基準が変わる
+  const colorThreshold = resolveColorThreshold(
+    cells,
+    rawImage,
+    transform,
+    params
+  )
+
   const results: OMRCellResult[] = []
 
   for (const cell of cells) {
     const config = cellConfigs[cell.label]
     if (!config) continue
 
-    results.push(await recognizeCell(cell, config, rawImage, transform, params))
+    results.push(
+      await recognizeCell(
+        cell,
+        config,
+        rawImage,
+        transform,
+        params,
+        colorThreshold
+      )
+    )
   }
 
   return results

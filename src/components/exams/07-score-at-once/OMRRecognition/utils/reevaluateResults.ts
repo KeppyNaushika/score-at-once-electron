@@ -1,11 +1,13 @@
 /**
  * OMR認識結果の閾値再評価ユーティリティ
  *
- * キャッシュ済みfillRatiosに対して新しいareaThresholdを適用し、
+ * キャッシュ済みの測定値に対して新しいareaThresholdを適用し、
  * 認識結果・採点ステータス・サマリーを再計算する。
  * IPC不要のレンダラー完結処理。
  */
 
+import { evaluateChoiceBubbles } from "@/lib/omr/choiceEvaluation"
+import { computeOtsuThreshold } from "@/lib/omr/otsuThreshold"
 import type {
   CropRegionOmrConfigWithOptions,
   OMRCellResult,
@@ -54,10 +56,10 @@ export interface ReevaluationOutput {
 }
 
 /**
- * キャッシュ済みfillRatiosから閾値を変えて認識結果を再評価する
+ * キャッシュ済みの測定値から閾値を変えて認識結果を再評価する
  *
- * markRecognizer.ts の recognizeChoiceCell と同一ロジックを
- * fillRatios起点で再計算する。手書き数字型セルは元の結果をそのまま保持。
+ * 判定は main 側の認識と同じ evaluateChoiceBubbles に委ねる。
+ * 手書き数字型セルは測定値を持たないので元の結果をそのまま保持する。
  */
 export function reevaluateWithThreshold(
   input: ReevaluationInput
@@ -89,8 +91,12 @@ export function reevaluateWithThreshold(
       )
       const maxPoints = pointsMap[cropRegionId] ?? 0
 
-      // fillRatiosがない場合（手書き数字型など）は元の結果をそのまま使用
-      if (!cellResult.fillRatios || !omrConfig || omrConfig.type !== "choice") {
+      // 測定値がない場合（手書き数字型など）は元の結果をそのまま使用
+      if (
+        !cellResult.bubbleMeasurements ||
+        !omrConfig ||
+        omrConfig.type !== "choice"
+      ) {
         updatedCellResults.push(cellResult)
         entries.push(
           buildEntryFromCellResult(
@@ -103,7 +109,7 @@ export function reevaluateWithThreshold(
         continue
       }
 
-      // fillRatiosからareaThresholdで再判定
+      // 測定値からareaThresholdで再判定
       const updatedCell = reevaluateChoiceCell(
         cellResult,
         omrConfig,
@@ -131,69 +137,28 @@ export function reevaluateWithThreshold(
 }
 
 /**
- * 選択式セルのfillRatiosから新しいareaThresholdで再判定する
- * markRecognizer.ts recognizeChoiceCell のfillRatio以降ロジックと同一
+ * 選択式セルの測定値から新しいareaThresholdで再判定する
+ *
+ * 判定ロジックは main 側の認識と同じ evaluateChoiceBubbles を使う。
  */
 function reevaluateChoiceCell(
   cellResult: OMRCellResult,
   config: CropRegionOmrConfigWithOptions,
   areaThreshold: number
 ): OMRCellResult {
-  const fillRatios = cellResult.fillRatios!
-  const correctAnswers = config.choiceOptions
-    .filter((option) => option.isCorrect)
-    .map((option) => option.choiceIndex)
-  const labels = config.choiceOptions.map((option) => option.label)
-
-  const markedIndices: number[] = []
-  for (let i = 0; i < fillRatios.length; i++) {
-    if (fillRatios[i] >= areaThreshold) {
-      markedIndices.push(i)
-    }
-  }
-
-  const recognizedValues = markedIndices.map(
-    (markedIndex) => labels[markedIndex] ?? String(markedIndex)
-  )
-
-  // 信頼度計算（markRecognizer.ts と同一）
-  let confidence: number
-  if (markedIndices.length === 0) {
-    const maxRatio = Math.max(...fillRatios)
-    confidence = 1 - maxRatio / areaThreshold
-  } else if (markedIndices.length === 1) {
-    const markedRatio = fillRatios[markedIndices[0]]
-    const otherMaxRatio = Math.max(
-      ...fillRatios.filter((_, i) => !markedIndices.includes(i)),
-      0
-    )
-    confidence = Math.min(
-      markedRatio / areaThreshold,
-      1 - otherMaxRatio / areaThreshold
-    )
-    confidence = Math.max(0, Math.min(1, confidence))
-  } else {
-    confidence = 0.3
-  }
-
-  // 自動採点ステータス
-  let autoScoreStatus: OMRCellResult["autoScoreStatus"]
-  if (markedIndices.length === 0) {
-    autoScoreStatus = "no_answer"
-  } else if (markedIndices.length > correctAnswers.length) {
-    autoScoreStatus = "ambiguous"
-  } else {
-    const isCorrect =
-      markedIndices.length === correctAnswers.length &&
-      markedIndices.every((markedIndex) => correctAnswers.includes(markedIndex))
-    autoScoreStatus = isCorrect ? "correct" : "incorrect"
-  }
+  const evaluation = evaluateChoiceBubbles({
+    bubbleMeasurements: cellResult.bubbleMeasurements!,
+    correctChoiceIndices: config.choiceOptions
+      .filter((option) => option.isCorrect)
+      .map((option) => option.choiceIndex),
+    areaThreshold,
+  })
 
   return {
     ...cellResult,
-    recognizedValues,
-    confidence,
-    autoScoreStatus,
+    recognizedValues: evaluation.recognizedValues,
+    confidence: evaluation.confidence,
+    autoScoreStatus: evaluation.autoScoreStatus,
   }
 }
 
@@ -320,47 +285,38 @@ function countSummary(
   }
 }
 
+/** 塗りつぶし率ヒストグラムのビン設定（1%刻み） */
+const FILL_RATIO_OPTIONS = { min: 0, max: 1, bins: 100 }
+
 /**
- * 全シートのfillRatio分布から最適なareaThresholdを推奨する
+ * 自動決定を採用する最小の塗りつぶし率の差（0-1）
  *
- * 全セルのfillRatioをフラットに収集し、ソート済み配列の[0.05, 0.85]区間で
- * 隣接値間の最大ギャップを探索、ギャップの中点を推奨閾値とする。
+ * マーク済みと未マークはこれ以上離れる。全員未回答に近い設問構成では
+ * 2群が接近するので、算出値を捨てて既定値のままにする。
+ */
+const MIN_FILL_RATIO_SEPARATION = 0.25
+
+/**
+ * 全シートのfillRatio分布から最適なareaThresholdを算出する
+ *
+ * 全セルの測定値をフラットに収集し、大津法で「マークあり群 / なし群」の境界を求める。
+ * 分布を足切りせず全体を使うため、母数が増えても境界が求まる。
+ *
+ * @returns サンプル不足・2群が離れていない場合は null
  */
 export function recommendAreaThreshold(
   sheetResults: OMRSheetResult[]
 ): number | null {
-  const allRatios: number[] = []
+  const allRatios = sheetResults
+    .filter((sheet) => sheet.success)
+    .flatMap((sheet) => sheet.cellResults)
+    .flatMap((cell) => cell.bubbleMeasurements ?? [])
+    .map((measurement) => measurement.fillRatio)
 
-  for (const sheet of sheetResults) {
-    if (!sheet.success) continue
-    for (const cell of sheet.cellResults) {
-      if (cell.fillRatios) {
-        allRatios.push(...cell.fillRatios)
-      }
-    }
+  const otsu = computeOtsuThreshold(allRatios, FILL_RATIO_OPTIONS)
+  if (otsu === null || otsu.meanDistance < MIN_FILL_RATIO_SEPARATION) {
+    return null
   }
 
-  if (allRatios.length < 2) return null
-
-  const sorted = allRatios
-    .filter((ratio) => ratio >= 0.05 && ratio <= 0.85)
-    .sort((ratioA, ratioB) => ratioA - ratioB)
-
-  if (sorted.length < 2) return null
-
-  let maxGap = 0
-  let gapMidpoint = 0.4
-
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const gap = sorted[i + 1] - sorted[i]
-    if (gap > maxGap) {
-      maxGap = gap
-      gapMidpoint = (sorted[i] + sorted[i + 1]) / 2
-    }
-  }
-
-  // ギャップが小さすぎる場合は推奨不可
-  if (maxGap < 0.05) return null
-
-  return Math.round(gapMidpoint * 100) / 100
+  return Math.round(otsu.threshold * 100) / 100
 }

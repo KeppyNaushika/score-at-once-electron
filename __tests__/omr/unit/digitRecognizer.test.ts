@@ -7,11 +7,13 @@
 
 import { describe, expect, it } from "vitest"
 
-import { recognizeDigitCell } from "../../../electron-src/lib/omr/digitRecognizer"
+import {
+  recognizeDigitCell,
+  toInkThreshold,
+} from "../../../electron-src/lib/omr/digitRecognizer"
 import type { ComputedCell } from "../../../src/types/answerSheetLayout.types"
 import type {
   CoordinateTransform,
-  OMRRecognitionParams,
   RawImageData,
 } from "../../../src/types/omr.types"
 
@@ -38,10 +40,8 @@ function createIdentityTransform(
   }
 }
 
-const DEFAULT_PARAMS: OMRRecognitionParams = {
-  colorThreshold: 25,
-  areaThreshold: 0.4,
-}
+/** 空欄判定に使う暗さ閾値 */
+const COLOR_THRESHOLD = 25
 
 describe("digitRecognizer", () => {
   it("モデル不在時: 空の認識結果が返る（graceful fallback）", async () => {
@@ -85,7 +85,7 @@ describe("digitRecognizer", () => {
       cell,
       rawImage,
       transform,
-      DEFAULT_PARAMS
+      COLOR_THRESHOLD
     )
 
     expect(result).toBeDefined()
@@ -126,7 +126,7 @@ describe("digitRecognizer", () => {
       cell,
       rawImage,
       transform,
-      DEFAULT_PARAMS
+      COLOR_THRESHOLD
     )
 
     expect(result.autoScoreStatus).toBe("no_answer")
@@ -174,7 +174,7 @@ describe("digitRecognizer", () => {
       cell,
       rawImage,
       transform,
-      DEFAULT_PARAMS
+      COLOR_THRESHOLD
     )
 
     // モデルが利用可能でも白い画像は空欄として検出されるはず
@@ -223,8 +223,40 @@ describe("digitRecognizer", () => {
       cell,
       rawImage,
       transform,
-      DEFAULT_PARAMS
+      COLOR_THRESHOLD
     )
     expect(result).toBeDefined()
+  })
+
+  describe("toInkThreshold", () => {
+    /**
+     * MNIST入力テンソルは反転済み（(255-luminance)/255、大きいほど濃い）。
+     * 「輝度が colorThreshold 未満なら濃い」を反転スケールで表すと
+     * tensor > (255 - colorThreshold) / 255 になる。
+     */
+    function tensorValueOf(luminance: number): number {
+      return (255 - luminance) / 255
+    }
+
+    it("暗さ閾値の境界がテンソルスケールでも同じ輝度を指す", () => {
+      for (const colorThreshold of [25, 50, 128, 180, 218]) {
+        const inkThreshold = toInkThreshold(colorThreshold)
+
+        // 閾値より暗い輝度は「濃い」と判定される
+        expect(tensorValueOf(colorThreshold - 1)).toBeGreaterThan(inkThreshold)
+        // 閾値より明るい輝度は判定されない
+        expect(tensorValueOf(colorThreshold + 1)).toBeLessThan(inkThreshold)
+      }
+    })
+
+    it("自動算出された高い閾値でも鉛筆の濃さを拾える", () => {
+      // 紙(255)と薄い鉛筆(180)から大津法が返す境界の例
+      const inkThreshold = toInkThreshold(218)
+
+      expect(tensorValueOf(180)).toBeGreaterThan(inkThreshold)
+      expect(tensorValueOf(255)).toBeLessThan(inkThreshold)
+      // 反転を忘れた式（colorThreshold / 255）だと鉛筆を空欄扱いしてしまう
+      expect(tensorValueOf(180)).toBeLessThan(218 / 255)
+    })
   })
 })

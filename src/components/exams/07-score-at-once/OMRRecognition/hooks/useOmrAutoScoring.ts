@@ -21,6 +21,12 @@ import {
   type ScoringResultSummary,
 } from "../utils/reevaluateResults"
 
+/** 分布から算出できなかったときに使う塗りつぶし判定閾値 */
+const DEFAULT_AREA_THRESHOLD = 0.4
+
+/** 低信頼として保留に落とす閾値 */
+const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
+
 export interface OmrAutoScoringState {
   /** OMR設定リスト */
   omrConfigs: CropRegionOmrConfigWithOptions[]
@@ -46,7 +52,7 @@ export interface OmrAutoScoringState {
   confidenceThreshold: number
   /** 配点マップ（cropRegionId → points） */
   pointsMap: Record<string, number>
-  /** 推奨areaThreshold */
+  /** 分布から算出した推奨areaThreshold（算出不能なら null） */
   recommendedAreaThreshold: number | null
 }
 
@@ -64,8 +70,8 @@ export function useOmrAutoScoring(examId: string) {
     scoreEntries: new Map(),
     summary: null,
     error: null,
-    areaThreshold: 0.4,
-    confidenceThreshold: 0.7,
+    areaThreshold: DEFAULT_AREA_THRESHOLD,
+    confidenceThreshold: DEFAULT_CONFIDENCE_THRESHOLD,
     pointsMap: {},
     recommendedAreaThreshold: null,
   })
@@ -174,10 +180,11 @@ export function useOmrAutoScoring(examId: string) {
           }
         }
       }
+      // null は「自動算出」。ユーザーが明示した上書き値だけをそのまま渡す
       const recognitionParams = {
-        colorThreshold: configs[0].colorThreshold ?? 128,
-        areaThreshold: configs[0].areaThreshold ?? 0.4,
-        confidenceThreshold: 0.7,
+        colorThreshold: configs[0].colorThreshold,
+        areaThreshold: configs[0].areaThreshold ?? DEFAULT_AREA_THRESHOLD,
+        confidenceThreshold: DEFAULT_CONFIDENCE_THRESHOLD,
       }
 
       // 4. 答案画像を取得（全生徒分）
@@ -300,10 +307,13 @@ export function useOmrAutoScoring(examId: string) {
         )
       }
 
-      // 再評価ユーティリティで採点結果を構築
-      const initialAreaThreshold = recognitionParams.areaThreshold
+      // 塗りつぶし閾値を分布から算出。ユーザーが明示した上書き値があればそれを優先し、
+      // 算出できなければ既定値のままにする
+      const recommended = recommendAreaThreshold(results)
+      const initialAreaThreshold =
+        configs[0].areaThreshold ?? recommended ?? DEFAULT_AREA_THRESHOLD
       const initialConfidenceThreshold =
-        recognitionParams.confidenceThreshold ?? 0.7
+        recognitionParams.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD
 
       const { updatedSheetResults, scoreEntries, summary } =
         reevaluateWithThreshold({
@@ -313,9 +323,6 @@ export function useOmrAutoScoring(examId: string) {
           areaThreshold: initialAreaThreshold,
           confidenceThreshold: initialConfidenceThreshold,
         })
-
-      // 推奨閾値を算出
-      const recommended = recommendAreaThreshold(results)
 
       setState((prev) => ({
         ...prev,
