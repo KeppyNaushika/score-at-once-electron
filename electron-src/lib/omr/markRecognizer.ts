@@ -16,6 +16,7 @@ import type {
   BubbleMeasurement,
   ComputedOMRBubble,
   CoordinateTransform,
+  EllipticalInkStats,
   OMRCellConfig,
   OMRCellResult,
   OMRRecognitionParams,
@@ -25,7 +26,7 @@ import { normalizedToPixel } from "./coordinateTransform"
 import { recognizeDigitCell } from "./digitRecognizer"
 import {
   accumulateEllipticalLuminanceHistogram,
-  computeEllipticalFillRatio,
+  computeEllipticalInkStats,
 } from "./imageProcessor"
 
 /** 大津法が使えないときに使う既定の暗さ閾値 */
@@ -142,12 +143,7 @@ function recognizeChoiceCell(
     (bubble) => ({
       choiceIndex: bubble.choiceIndex,
       label: bubble.label,
-      fillRatio: measureBubbleFillRatio(
-        bubble,
-        rawImage,
-        transform,
-        colorThreshold
-      ),
+      ...measureBubbleInk(bubble, rawImage, transform, colorThreshold),
     })
   )
 
@@ -155,6 +151,9 @@ function recognizeChoiceCell(
     bubbleMeasurements,
     correctChoiceIndices: config.correctAnswers,
     areaThreshold: params.areaThreshold,
+    // 消し跡の棄却基準は答案群の濃さ分布から決めるので、1枚だけを見る
+    // ここでは判断しない。renderer 側がバッチ全体で算出して再評価する
+    minInkDarkness: null,
   })
 
   return {
@@ -162,18 +161,19 @@ function recognizeChoiceCell(
     questionPath: cell.questionPath,
     recognizedValues: evaluation.recognizedValues,
     bubbleMeasurements,
+    residueChoiceIndices: evaluation.residueChoiceIndices,
     confidence: evaluation.confidence,
     autoScoreStatus: evaluation.autoScoreStatus,
   }
 }
 
-/** バブル1つの塗りつぶし率を測定する */
-function measureBubbleFillRatio(
+/** バブル1つの塗り具合を測定する */
+function measureBubbleInk(
   bubble: ComputedOMRBubble,
   rawImage: RawImageData,
   transform: CoordinateTransform,
   colorThreshold: number
-): number {
+): EllipticalInkStats {
   // 正規化座標→ピクセル座標
   const center = normalizedToPixel(
     bubble.normalizedCx,
@@ -181,7 +181,7 @@ function measureBubbleFillRatio(
     transform
   )
 
-  return computeEllipticalFillRatio(
+  return computeEllipticalInkStats(
     rawImage,
     center.x,
     center.y,

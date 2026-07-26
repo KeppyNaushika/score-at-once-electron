@@ -7,7 +7,11 @@
 
 import sharp from "sharp"
 
-import type { BoundingBox, RawImageData } from "../../../src/types/omr.types"
+import type {
+  BoundingBox,
+  EllipticalInkStats,
+  RawImageData,
+} from "../../../src/types/omr.types"
 
 /**
  * 画像をRAWピクセルバッファとして読み込む
@@ -193,23 +197,39 @@ export function accumulateEllipticalLuminanceHistogram(
 }
 
 /**
- * 楕円形領域のピクセルの塗りつぶし率を計算
+ * 中心側の領域を分ける正規化半径の2乗
+ *
+ * 楕円の面積のうち内側がちょうど半分になる位置（r = 1/√2）。
+ * 中心側と縁側のピクセル数が揃うので、両者の比較が偏らない。
+ */
+const INNER_RADIUS_SQUARED = 0.5
+
+/**
+ * 楕円形領域の塗り具合を測る
  *
  * 共通テスト風の横長楕円マーク認識用。
  * (x/rx)^2 + (y/ry)^2 <= 1 の楕円内のピクセルのみを対象とする。
+ *
+ * 塗りつぶし率だけでは「濃く塗ったマーク」と「薄く広がった消し跡」を区別できない。
+ * 中心側／縁側の塗りつぶし率と濃さを併せて測り、判定側で使い分ける。
  */
-export function computeEllipticalFillRatio(
+export function computeEllipticalInkStats(
   rawData: RawImageData,
   centerX: number,
   centerY: number,
   halfWidth: number,
   halfHeight: number,
   threshold: number
-): number {
+): EllipticalInkStats {
   const { data, width, height, channels } = rawData
 
   let totalPixels = 0
   let darkCount = 0
+  let innerTotalPixels = 0
+  let innerDarkCount = 0
+  let rimTotalPixels = 0
+  let rimDarkCount = 0
+  let darknessSum = 0
 
   const x0 = Math.max(0, Math.floor(centerX - halfWidth))
   const x1 = Math.min(width - 1, Math.ceil(centerX + halfWidth))
@@ -220,20 +240,47 @@ export function computeEllipticalFillRatio(
     for (let px = x0; px <= x1; px++) {
       const dx = (px - centerX) / halfWidth
       const dy = (py - centerY) / halfHeight
-      if (dx * dx + dy * dy <= 1) {
-        totalPixels++
-        const idx = (py * width + px) * channels
-        // グレースケール輝度で判定（RGB加重平均）
-        const luminance =
-          channels >= 3
-            ? 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
-            : data[idx]
-        if (luminance < threshold) {
-          darkCount++
-        }
+      const radiusSquared = dx * dx + dy * dy
+      if (radiusSquared > 1) continue
+
+      const idx = (py * width + px) * channels
+      // グレースケール輝度で判定（RGB加重平均）
+      const luminance =
+        channels >= 3
+          ? 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
+          : data[idx]
+      const isDark = luminance < threshold
+      const isInner = radiusSquared <= INNER_RADIUS_SQUARED
+
+      totalPixels++
+      if (isInner) innerTotalPixels++
+      else rimTotalPixels++
+
+      if (isDark) {
+        darkCount++
+        darknessSum += 1 - luminance / 255
+        if (isInner) innerDarkCount++
+        else rimDarkCount++
       }
     }
   }
 
-  return totalPixels === 0 ? 0 : darkCount / totalPixels
+  const fillRatio = ratioOf(darkCount, totalPixels)
+
+  return {
+    fillRatio,
+    // バブルが画像端で切れて中心側の画素が1つも入らないことがある。
+    // ここで0を返すと判定側が「中心が塗られていない」と読んで正しいマークを
+    // 消し跡として退けてしまうので、測れないときは全体の値で代用する
+    innerFillRatio:
+      innerTotalPixels === 0 ? fillRatio : innerDarkCount / innerTotalPixels,
+    rimFillRatio:
+      rimTotalPixels === 0 ? fillRatio : rimDarkCount / rimTotalPixels,
+    inkDarkness: ratioOf(darknessSum, darkCount),
+  }
+}
+
+/** 母数が0のときに NaN を返さない除算 */
+function ratioOf(numerator: number, denominator: number): number {
+  return denominator === 0 ? 0 : numerator / denominator
 }

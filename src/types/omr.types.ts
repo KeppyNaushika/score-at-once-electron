@@ -119,18 +119,33 @@ export interface OMRRecognitionParams {
 // =====================
 
 /**
+ * 楕円領域の塗り具合。
+ *
+ * 塗りつぶし率だけでは「濃く塗ったマーク」と「薄く広がった消し跡」を区別できないため、
+ * 中心側／縁側の分布と濃さを併せて測る。
+ */
+export interface EllipticalInkStats {
+  /** 楕円全体の塗りつぶし率（0-1） */
+  fillRatio: number
+  /** 中心側（面積の内半分）の塗りつぶし率（0-1） */
+  innerFillRatio: number
+  /** 縁側（面積の外半分）の塗りつぶし率（0-1） */
+  rimFillRatio: number
+  /** 暗いと判定したピクセルの平均濃さ（0-1、1が真っ黒）。暗いピクセルが無ければ0 */
+  inkDarkness: number
+}
+
+/**
  * バブル1つ分の測定値。
  *
- * 塗りつぶし率と選択肢の同定情報を同梱する。選択肢を配列の位置で指さないため、
+ * 塗り具合と選択肢の同定情報を同梱する。選択肢を配列の位置で指さないため、
  * 位置未設定の選択肢が脱落しても main/renderer で指す選択肢がずれない。
  */
-export interface BubbleMeasurement {
+export interface BubbleMeasurement extends EllipticalInkStats {
   /** 選択肢インデックス（配列位置ではなく実体の同定に使う） */
   choiceIndex: number
   /** 選択肢ラベル（"ア", "①" など） */
   label: string
-  /** 塗りつぶし率（0-1） */
-  fillRatio: number
 }
 
 export interface OMRCellResult {
@@ -142,6 +157,12 @@ export interface OMRCellResult {
   recognizedValues: string[]
   /** 各バブルの測定値（choiceセルのみ） */
   bubbleMeasurements?: BubbleMeasurement[]
+  /**
+   * 塗りつぶし率は閾値を超えたが、消し跡と判断して退けた choiceIndex（choiceセルのみ）。
+   *
+   * 退けた判断が得点を変えるので、このセルは保留にして人が確認する。
+   */
+  residueChoiceIndices?: number[]
   /** 認識信頼度（0-1） */
   confidence: number
   /** 自動採点結果 */

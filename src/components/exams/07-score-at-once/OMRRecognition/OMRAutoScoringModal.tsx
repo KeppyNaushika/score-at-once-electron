@@ -139,6 +139,14 @@ export function OMRAutoScoringModal({
                     </span>
                   </div>
                 )}
+                {summary.residue > 0 && (
+                  <div className="col-span-2 flex items-center justify-between rounded border border-orange-200 bg-orange-50 p-2">
+                    <span>消し跡を除外（保留）</span>
+                    <span className="font-bold text-orange-600">
+                      {summary.residue}
+                    </span>
+                  </div>
+                )}
                 {summary.partial > 0 && (
                   <div className="col-span-2 flex items-center justify-between rounded border p-2">
                     <span>部分正解</span>
