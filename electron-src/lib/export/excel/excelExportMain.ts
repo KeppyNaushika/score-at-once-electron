@@ -2,10 +2,7 @@ import * as ExcelJS from "exceljs"
 
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
 import { ExportGradingDataOptions, ExportResult } from "../../shared/types"
-import {
-  buildConflictIdentifiers,
-  validateScoringData,
-} from "../../shared/utilities/validateScoringData"
+import { validateScoringData } from "../../shared/utilities/validateScoringData"
 import { fetchExportData } from "./dataFetcher"
 import { saveWorkbook } from "./fileSaver"
 import { createFrequencyDistributionSheet } from "./frequencyDistributionSheetCreator"
@@ -58,12 +55,11 @@ export async function exportGradingDataExcel(
       return { success: false, error: "選択された生徒が見つかりません" }
     }
 
-    // 採点データの検証と警告の生成（強制実行でない場合のみ）
+    // 採点データの検証と警告の生成（強制実行でない場合のみ）。
+    // 採点者間の食い違いは renderer の出力前検証（export:validateScoringData）が
+    // 裁定サマリ込みで担うため、ここは選択生徒の未採点・部分点漏れのみを見る。
     if (!options.forceExport) {
-      const validationResult = validateScoringData(
-        scoringData,
-        buildConflictIdentifiers(scoringData, dataResult.scoreConflicts ?? [])
-      )
+      const validationResult = validateScoringData(scoringData)
       if (validationResult.hasWarnings) {
         return {
           success: false,

@@ -8,6 +8,13 @@ import type { SerializedQuestionScore } from "../../src/types/prismaExtensions"
 import { toScoringStatus } from "../../src/types/scoringStatus.types"
 import { getAbsolutePathFromData } from "../lib/dataManager"
 import {
+  assignCropRegion,
+  canManageAssignments,
+  countExamMembers,
+  getAssignmentsForExam,
+  unassignCropRegion,
+} from "../lib/prisma/cropRegionAssignment"
+import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
   createQuestionScore,
@@ -16,13 +23,13 @@ import {
   getAnswerSheetProgress,
   getExamProgress,
   getQuestionScoreById,
-  getQuestionScoreComparison,
   getQuestionScoresForExam,
   getQuestionScoresForStudent,
   updateQuestionScore,
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
 import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
+import { getExamDecisionSummary } from "../lib/prisma/scoreDecisionSummary"
 import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
 import { measureAnswerWhiteness } from "../lib/scoring/regionWhiteness"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
@@ -129,25 +136,6 @@ export function setupScoringHandlers(): void {
   })
 
   registerHandler(
-    "get-question-score-comparison",
-    async (studentId: string, cropRegionId: string) => {
-      const result = await getQuestionScoreComparison(studentId, cropRegionId)
-      if (!result.success || !("decision" in result)) return result
-      return {
-        ...result,
-        decision: result.decision
-          ? {
-              ...result.decision,
-              score: result.decision.score
-                ? Number(result.decision.score)
-                : null,
-            }
-          : null,
-      }
-    }
-  )
-
-  registerHandler(
     "finalize-question-score",
     async (
       studentId: string,
@@ -203,6 +191,51 @@ export function setupScoringHandlers(): void {
   registerHandler("get-exam-progress", async (examId: string) => {
     return await getExamProgress(examId)
   })
+
+  // 裁定サマリ（競合・確定後の新提案）— 確定パネルと出力前警告が共有する
+  registerSafeHandler(
+    "get-exam-decision-summary",
+    async (examId: string, userId: string) => {
+      return await getExamDecisionSummary(examId, userId)
+    }
+  )
+
+  // 設問ごとの採点担当。採点画面の設問絞り込みが使う軽量な取得
+  registerSafeHandler(
+    "get-crop-region-assignments",
+    async (examId: string, userId: string) => {
+      const [result, permission] = await Promise.all([
+        getAssignmentsForExam(examId),
+        canManageAssignments(examId, userId),
+      ])
+      if (!result.success) return result
+      return {
+        success: true as const,
+        assignments: result.assignments.map((assignment) => ({
+          cropRegionId: assignment.cropRegionId,
+          userId: assignment.userId,
+          userName: assignment.user.name,
+        })),
+        canManage: permission.allowed,
+        // 協調採点かどうかの安価な判定材料（重い裁定サマリを引くかの判断に使う）
+        memberCount: await countExamMembers(examId),
+      }
+    }
+  )
+
+  registerSafeHandler(
+    "assign-crop-region",
+    async (cropRegionId: string, userId: string, assignedByUserId: string) => {
+      return await assignCropRegion(cropRegionId, userId, assignedByUserId)
+    }
+  )
+
+  registerSafeHandler(
+    "unassign-crop-region",
+    async (cropRegionId: string, userId: string, requestedByUserId: string) => {
+      return await unassignCropRegion(cropRegionId, userId, requestedByUserId)
+    }
+  )
 
   // QuestionScore 一括更新（OMR自動採点結果反映）
   registerHandler(

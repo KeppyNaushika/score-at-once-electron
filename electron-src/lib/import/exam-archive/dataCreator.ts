@@ -8,6 +8,7 @@ import { randomUUID } from "crypto"
 
 import type { ArchiveDataCounts } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
+import { buildAssignmentId } from "../../prisma/cropRegionAssignment"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { ExamArchiveIdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
@@ -614,6 +615,59 @@ export async function createImportedData(
               ),
             },
           })
+        }
+      }
+
+      // 14.55. CropRegionAssignment（設問ごとの採点担当）を作成 (v1.20.0+)
+      // ユーザーはアーカイブを越えないので username で移行先DBを引く。
+      // 解決できない担当は破棄する（新規ユーザーは作らない）。
+      // idは (cropRegionId, userId) から決定論的に再生成する — 同じペアなら
+      // どの端末でインポートしても同一idになり、同期で1行へ収束する。
+      const archivedAssignments = data.scoresData.cropRegionAssignments || []
+      if (archivedAssignments.length > 0) {
+        const usernames = [
+          ...new Set(
+            archivedAssignments.map((assignment) => assignment.username)
+          ),
+        ]
+        const resolvedUsers = await tx.user.findMany({
+          where: { username: { in: usernames } },
+          select: { id: true, username: true },
+        })
+        const userIdByUsername = new Map(
+          resolvedUsers.map((user) => [user.username, user.id])
+        )
+
+        const unresolvedUsernames = new Set<string>()
+        for (const assignment of archivedAssignments) {
+          const newCropRegionId = remapId(
+            assignment.cropRegionId,
+            mappings.cropRegion
+          )
+          const assigneeUserId = userIdByUsername.get(assignment.username)
+          if (!newCropRegionId) continue
+          if (!assigneeUserId) {
+            unresolvedUsernames.add(assignment.username)
+            continue
+          }
+
+          await tx.cropRegionAssignment.create({
+            data: {
+              id: buildAssignmentId(newCropRegionId, assigneeUserId),
+              cropRegionId: newCropRegionId,
+              userId: assigneeUserId,
+              assignedBy: currentUserId,
+              createdAt: new Date(assignment.createdAt),
+              updatedAt: new Date(assignment.updatedAt),
+            },
+          })
+        }
+
+        if (unresolvedUsernames.size > 0) {
+          warnings.push(
+            `採点担当のうち ${unresolvedUsernames.size} 名（${[...unresolvedUsernames].join(", ")}）は` +
+              `このデータベースに存在しないため割当を取り込みませんでした。担当0人の設問は全員が採点できます。`
+          )
         }
       }
 

@@ -4,12 +4,14 @@
  * - QuestionScore（設問スコア。事前照合済みの競合はresolveScoringConflictで解決）
  * - ScoreDecision（OWNER確定スコア。decidedAt LWWで競合解決）
  * - CompoundAnswerScore（複合解答スコア。updatedAt LWWで競合解決）
+ * - CropRegionAssignment（設問ごとの採点担当。usernameで照合）
  */
 
 import type {
   FileOverviewData,
   ScoringConflictConfig,
 } from "../../../../src/types/examArchive.types"
+import { buildAssignmentId } from "../../prisma/cropRegionAssignment"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { isNewerByLww } from "./decisionMergePolicy"
 import { resolveScoringConflict } from "./scoringConflictResolver"
@@ -274,4 +276,77 @@ export async function processCompoundAnswerScores(
       compoundAnswerScore.id
     counts.created.scores++
   }
+}
+
+/**
+ * CropRegionAssignment（設問ごとの採点担当）を処理
+ *
+ * 担当者は `username` で移行先DBを引く（ユーザーはアーカイブを越えない）。
+ * 解決できない担当は取り込まない。idは (cropRegionId, userId) から決定論的に
+ * 再生成するので、両端で同じペアを割り当てていれば1行に収束する。
+ * 既に同じ割当があれば何もしない（担当は有無だけの情報でLWWの対象が無い）。
+ */
+export async function processCropRegionAssignments(
+  data: ExtractedArchiveData,
+  currentUserId: string,
+  idMappings: IdMappings,
+  counts: ImportCounts,
+  tx: PrismaTransaction
+): Promise<string[]> {
+  const archivedAssignments = data.scoresData.cropRegionAssignments ?? []
+  if (archivedAssignments.length === 0) return []
+
+  const usernames = [
+    ...new Set(archivedAssignments.map((assignment) => assignment.username)),
+  ]
+  const resolvedUsers = await tx.user.findMany({
+    where: { username: { in: usernames } },
+    select: { id: true, username: true },
+  })
+  const userIdByUsername = new Map(
+    resolvedUsers.map((user) => [user.username, user.id])
+  )
+
+  const unresolvedUsernames = new Set<string>()
+  for (const assignment of archivedAssignments) {
+    const newRegionId = idMappings.cropRegion[assignment.cropRegionId]
+    if (!newRegionId) continue
+
+    const assigneeUserId = userIdByUsername.get(assignment.username)
+    if (!assigneeUserId) {
+      unresolvedUsernames.add(assignment.username)
+      continue
+    }
+
+    const existing = await tx.cropRegionAssignment.findUnique({
+      where: {
+        cropRegionId_userId: {
+          cropRegionId: newRegionId,
+          userId: assigneeUserId,
+        },
+      },
+    })
+    if (existing) {
+      counts.unchanged.scores++
+      continue
+    }
+
+    await tx.cropRegionAssignment.create({
+      data: {
+        id: buildAssignmentId(newRegionId, assigneeUserId),
+        cropRegionId: newRegionId,
+        userId: assigneeUserId,
+        assignedBy: currentUserId,
+        createdAt: new Date(assignment.createdAt),
+        updatedAt: new Date(assignment.updatedAt),
+      },
+    })
+    counts.created.scores++
+  }
+
+  if (unresolvedUsernames.size === 0) return []
+  return [
+    `採点担当のうち ${unresolvedUsernames.size} 名（${[...unresolvedUsernames].join(", ")}）は` +
+      `このデータベースに存在しないため割当を取り込みませんでした。担当0人の設問は全員が採点できます。`,
+  ]
 }

@@ -26,6 +26,8 @@ model User {
   compoundAnswerScores   CompoundAnswerScore[]
   scoreDecisions         ScoreDecision[]
   gradeFrozenScores      GradeFrozenScore[]
+  cropRegionAssignments  CropRegionAssignment[]
+  assignedCropRegions    CropRegionAssignment[] @relation("AssignedByUser")
 }
 
 model Classroom {
@@ -185,6 +187,32 @@ model CropRegion {
   omrConfig          CropRegionOmrConfig?
   compoundMembership CompoundAnswerMember?
   scoreDecisions     ScoreDecision[]
+  assignments        CropRegionAssignment[]
+}
+
+/// 設問（採点領域）ごとの採点担当。1設問に複数担当を許す（ダブルチェック）。
+///
+/// 担当は権限拒否ではなく「その人が採点画面で選べる設問集合」を定義する。
+/// 担当が0人の設問は全員担当とみなす（割当漏れによる採点不能の回避と、
+/// 割当を使っていない既存試験の後方互換）。
+///
+/// idは uuidv5(cropRegionId + userId) で決定論的に生成する。`@default(uuid())` だと
+/// 2端末が同じ(設問, 担当者)ペアを割り当てたとき、uuidが違い@@uniqueが同値の行が
+/// できてNAS同期で衝突する。同一idなら行レベルLWWで1行へ収束する。
+model CropRegionAssignment {
+  id           String     @id
+  cropRegionId String
+  userId       String
+  /// 割り当てたOWNER（監査用）。ユーザー削除時はnullにして割当自体は残す
+  assignedBy   String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @default(now()) @updatedAt
+  cropRegion   CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assigner     User?      @relation("AssignedByUser", fields: [assignedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@unique([cropRegionId, userId])
+  @@index([userId])
 }
 
 model SubtotalGroup {

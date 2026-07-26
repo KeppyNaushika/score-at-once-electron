@@ -1,7 +1,7 @@
 "use client"
 
 import Head from "next/head"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
@@ -12,6 +12,7 @@ import {
   useShortcutContext,
 } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
+import { useAssignedCropRegions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions"
 import { useBatchScoringWithProgress } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { usePartialScore } from "@/components/exams/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringActions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringActions"
@@ -25,6 +26,8 @@ import { useScoringNavigation } from "@/components/exams/07-score-at-once/Scorin
 import { useScoringSettings } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringSettings"
 import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
+import { useExamDecisionSummary } from "@/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/hooks/useExamDecisionSummary"
+import { ScoreDecisionPanel } from "@/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/ScoreDecisionPanel"
 import { ScoringContentArea } from "@/components/exams/07-score-at-once/ScoringMain/ScoringContentArea"
 import { ScoringHeaderControls } from "@/components/exams/07-score-at-once/ScoringMain/ScoringHeaderControls"
 import { ScoringModals } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModals"
@@ -42,6 +45,7 @@ import { useAuth } from "@/contexts/AuthContext"
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const examId = params.examId as string
   const { user: authUser } = useAuth()
   const { helpButton } = usePageHelp()
@@ -135,10 +139,9 @@ function ScoringMainViewContent() {
     /** 個別の状態 */
     gradingMode,
     selectedStudentAnswerImageIds,
-    currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,
-    showScoreComparison,
+    showScoreDecisionPanel,
     showSidePanel,
     modifierKeyLabel,
     /** アクション関数 */
@@ -147,7 +150,7 @@ function ScoringMainViewContent() {
     setCurrentStudentIndex,
     setCurrentCropRegionId,
     setShowKeyboardHelp,
-    setShowScoreComparison,
+    setShowScoreDecisionPanel,
     setShowSidePanel,
     /** ヘルパー関数 */
     handleAnswerSelect,
@@ -155,26 +158,26 @@ function ScoringMainViewContent() {
     manualSelectionVersion,
   } = useScoringMainState()
 
-  /** 現在の答案と設問 */
-  const currentAnswerSheet = useMemo(() => {
-    if (
-      gradingMode === "individual" &&
-      selectedStudentAnswerImageIds.size > 0
-    ) {
-      const selectedAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
-      return studentAnswerImages.find((sheet) => sheet.id === selectedAnswerId)
-    }
-    return studentAnswerImages[currentStudentIndex]
-  }, [
-    gradingMode,
-    selectedStudentAnswerImageIds,
-    studentAnswerImages,
-    currentStudentIndex,
-  ])
-
+  /** 現在の設問 */
   const currentCropRegion = cropRegions.find(
     (cropRegion) => cropRegion.id === currentCropRegionId
   )
+
+  /**
+   * 採点担当による設問の絞り込み。
+   * 自動選択・前後移動・設問ナビゲーターの選択肢だけをこの集合に置き換える
+   * （描画やスコア引き当ては全設問を見る必要があるため差し替えない）。
+   */
+  const {
+    selectableCropRegions,
+    memberCount,
+    refresh: refreshAssignments,
+    isFiltered: isQuestionSetFiltered,
+  } = useAssignedCropRegions({
+    examId,
+    userId: currentUserId ?? undefined,
+    cropRegions,
+  })
 
   /** 白さ順ソート用: 一覧表示中のページの白さを先読みする */
   const { whitenessByAnswerId, isWhitenessReady } = useAnswerWhiteness({
@@ -189,7 +192,7 @@ function ScoringMainViewContent() {
     gradingMode,
     selectedStudentAnswerImageIds,
     studentAnswerImages,
-    cropRegions,
+    cropRegions: selectableCropRegions,
     currentCropRegionId,
     setSelectedPageImageIds,
     setCurrentCropRegionId,
@@ -231,6 +234,41 @@ function ScoringMainViewContent() {
     const scores = await loadQuestionScores(examId)
     setQuestionScores(scores)
   }, [loadQuestionScores, examId, setQuestionScores])
+
+  /** 裁定状況（採点者間の食い違い・確定後の新提案） */
+  const {
+    summary: decisionSummary,
+    loading: decisionLoading,
+    error: decisionError,
+    refresh: refreshDecisionSummary,
+  } = useExamDecisionSummary(
+    examId,
+    currentUserId ?? undefined,
+    // 単独利用（メンバー1人）では裁定サマリを引かない。全採点行の走査を
+    // 画面入場ごとに払わないため（競合は構造的にゼロで結果は常に空）。
+    memberCount > 1
+  )
+
+  const pendingDecisionCount =
+    (decisionSummary?.conflictCount ?? 0) + (decisionSummary?.staleCount ?? 0)
+
+  /**
+   * 単独利用では割当・確定のUIを一切出さない。
+   * メンバーが1人なら分担する相手がおらず、提案も常に1件なので
+   * 競合は構造的にゼロになる（＝このパネルに用が無い）。
+   * 裁定サマリを引くかの条件と同じものを使い、両者がずれないようにする。
+   */
+  const showDecisionEntry = memberCount > 1
+
+  /** 確定後は裁定状況と採点データの両方を取り直す */
+  const handleScoreDecided = useCallback(async () => {
+    await Promise.all([refreshDecisionSummary(), handleQuestionScoreCreated()])
+  }, [refreshDecisionSummary, handleQuestionScoreCreated])
+
+  /** 担当割当の変更は、裁定サマリと採点画面の選択可能設問の両方に効く */
+  const handleAssignmentChanged = useCallback(async () => {
+    await Promise.all([refreshDecisionSummary(), refreshAssignments()])
+  }, [refreshDecisionSummary, refreshAssignments])
 
   /** フィルタリング管理hook */
   const {
@@ -299,7 +337,7 @@ function ScoringMainViewContent() {
       layoutDirection: layoutDirection,
       getGridAnswerData,
       effectiveColumns: itemsPerLine[0],
-      cropRegions: cropRegions,
+      cropRegions: selectableCropRegions,
     })
 
   /** 1行あたりの表示件数を増減（ショートカットキー =/-） */
@@ -608,8 +646,29 @@ function ScoringMainViewContent() {
   useContextValue("hasSelectedAnswers", selectedStudentAnswerImageIds.size > 0)
   useContextValue("sidePanelVisible", showSidePanel)
   useContextValue("partialScoreModalOpen", showPartialScoreModal)
-  useContextValue("modalOpen", showPartialScoreModal || showScoreComparison)
+  useContextValue("modalOpen", showPartialScoreModal || showScoreDecisionPanel)
   useContextValue("scoringOperationMode", effectiveMode)
+
+  /**
+   * 担当が外れて選べなくなった設問に留まらせない。
+   * null に戻すと useScoringEffects が担当集合の先頭を選び直す。
+   */
+  useEffect(() => {
+    if (!currentCropRegionId || selectableCropRegions.length === 0) return
+    const isSelectable = selectableCropRegions.some(
+      (cropRegion) => cropRegion.id === currentCropRegionId
+    )
+    if (!isSelectable) {
+      setCurrentCropRegionId(null)
+    }
+  }, [currentCropRegionId, selectableCropRegions, setCurrentCropRegionId])
+
+  /** 出力前警告からの誘導（?decide=1）で確定パネルを開く */
+  useEffect(() => {
+    if (searchParams?.get("decide") === "1") {
+      setShowScoreDecisionPanel(true)
+    }
+  }, [searchParams, setShowScoreDecisionPanel])
 
   /** キーボードショートカット登録 */
   useScoringShortcuts({
@@ -683,6 +742,12 @@ function ScoringMainViewContent() {
           modifierKeyLabel={modifierKeyLabel}
           helpButton={helpButton}
           onOmrRecognitionClick={() => setShowOmrModal(true)}
+          onScoreDecisionClick={
+            showDecisionEntry
+              ? () => setShowScoreDecisionPanel(true)
+              : undefined
+          }
+          pendingDecisionCount={pendingDecisionCount}
         />
       </PageHeader>
 
@@ -735,7 +800,7 @@ function ScoringMainViewContent() {
           <div className="h-full w-96">
             <ScoringSidePanel
               examId={examId}
-              cropRegions={cropRegions}
+              cropRegions={selectableCropRegions}
               currentCropRegion={currentCropRegion}
               onCropRegionChange={(cropRegion) => {
                 setCurrentCropRegionId(cropRegion?.id || null)
@@ -743,6 +808,7 @@ function ScoringMainViewContent() {
               onPrevQuestion={handlePrevQuestion}
               onNextQuestion={handleNextQuestion}
               questionProgress={questionProgress}
+              isQuestionSetFiltered={isQuestionSetFiltered}
               selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
               selectedAnswersCount={selectedStudentAnswerImageIds.size}
               filterSettings={filterSettings}
@@ -817,6 +883,17 @@ function ScoringMainViewContent() {
         onScoresApplied={handleQuestionScoreCreated}
       />
 
+      {/* 採点結果の確定（裁定）パネル */}
+      <ScoreDecisionPanel
+        isOpen={showScoreDecisionPanel}
+        onClose={() => setShowScoreDecisionPanel(false)}
+        summary={decisionSummary}
+        loading={decisionLoading}
+        error={decisionError}
+        onRefresh={handleScoreDecided}
+        onAssignmentChanged={handleAssignmentChanged}
+      />
+
       {/* モード選択モーダル */}
       <ScoringModeModal
         open={showModeSelectionModal}
@@ -840,9 +917,6 @@ function ScoringMainViewContent() {
         onPartialScoreDigit={handlePartialScoreInput}
         onPartialScoreBackspace={handlePartialScoreBackspace}
         keyBindings={modalKeyBindings}
-        showScoreComparison={showScoreComparison}
-        onScoreComparisonClose={() => setShowScoreComparison(false)}
-        currentAnswerSheet={currentAnswerSheet}
       />
     </div>
   )

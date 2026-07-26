@@ -12,6 +12,8 @@ import {
   type ExportRDataOptions,
 } from "../lib/export/r-exametrika/rDataExporter"
 import { resolveMathJaxSrc, waitForRendering } from "../lib/printUtils"
+import { recordAuditLog } from "../lib/prisma/auditLog"
+import { resolveExamScope } from "../lib/prisma/auditScope"
 import {
   addPageToStreamingSession,
   cancelStreamingSession,
@@ -24,9 +26,10 @@ import {
   captureReturnSnapshot,
   getReturnDiff,
 } from "../lib/prisma/returnSnapshot"
+import { getExamDecisionSummary } from "../lib/prisma/scoreDecisionSummary"
 import type { StudentExportPlacement } from "../lib/shared/types"
 import {
-  buildConflictIdentifiers,
+  buildConflictWarnings,
   validateScoringData,
 } from "../lib/shared/utilities/validateScoringData"
 import { registerSafeHandler } from "./ipcHandlerUtils"
@@ -245,7 +248,11 @@ export function setupExportHandlers(): void {
   // 採点データバリデーション（全エクスポート共通）
   registerSafeHandler(
     "export:validateScoringData",
-    async (options: { examId: string; selectedStudentIds: string[] }) => {
+    async (options: {
+      examId: string
+      selectedStudentIds: string[]
+      userId: string
+    }) => {
       const result = await fetchExportData(
         options.examId,
         options.selectedStudentIds
@@ -256,14 +263,56 @@ export function setupExportHandlers(): void {
           error: result.error || "データ取得に失敗しました",
         }
       }
-      const validationResult = validateScoringData(
-        result.scoringData,
-        buildConflictIdentifiers(
-          result.scoringData,
-          result.scoreConflicts ?? []
-        )
+
+      // 食い違いの内訳（採点者ごとの判定・点数影響）は裁定サマリから供給する。
+      // 確定パネルと同じ計算を通すことで、警告と裁定画面の件数がずれない。
+      const decisionSummary = await getExamDecisionSummary(
+        options.examId,
+        options.userId
       )
+      const validationResult = decisionSummary.success
+        ? validateScoringData(
+            result.scoringData,
+            buildConflictWarnings(
+              decisionSummary.summary,
+              options.selectedStudentIds
+            )
+          )
+        : // 検査できなかったことを空配列（＝食い違いなし）に化けさせない
+          validateScoringData(result.scoringData, [], decisionSummary.error)
+
       return { success: true, ...validationResult }
+    }
+  )
+
+  // 未解決の食い違いを含んだまま出力したことを監査ログに残す。
+  // 出力そのものは止めない（配布物も汚さない）が、後から辿れるようにする。
+  registerSafeHandler(
+    "export:recordUnresolvedConflicts",
+    async (options: {
+      examId: string
+      userId: string
+      exportType: string
+      conflicts: Array<{ studentName: string; questionLabel: string }>
+      scoreImpact: number
+    }) => {
+      const scope = await resolveExamScope(options.examId)
+      await recordAuditLog({
+        action: "exam.score.export_unresolved",
+        userId: options.userId,
+        entityType: "Exam",
+        entityId: options.examId,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+        summary: `未解決の食い違い${options.conflicts.length}件を含む採点結果を出力しました（合計点が最大${options.scoreImpact}点低く出ます）`,
+        extra: {
+          exportType: options.exportType,
+          conflicts: options.conflicts.map(
+            (conflict) => `${conflict.studentName} - ${conflict.questionLabel}`
+          ),
+        },
+      })
+      return { success: true }
     }
   )
 

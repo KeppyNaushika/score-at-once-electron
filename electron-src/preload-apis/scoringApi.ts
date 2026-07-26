@@ -28,12 +28,6 @@ export function createScoringApi() {
     ) => ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
     deleteQuestionScore: (id: string) =>
       ipcRenderer.invoke("delete-question-score", id),
-    getQuestionScoreComparison: (answerSheetId: string, cropRegionId: string) =>
-      ipcRenderer.invoke(
-        "get-question-score-comparison",
-        answerSheetId,
-        cropRegionId
-      ),
     finalizeQuestionScore: (
       answerSheetId: string,
       cropRegionId: string,
@@ -51,6 +45,32 @@ export function createScoringApi() {
       ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
     getExamProgress: (examId: string) =>
       ipcRenderer.invoke("get-exam-progress", examId),
+    getExamDecisionSummary: (examId: string, userId: string) =>
+      ipcRenderer.invoke("get-exam-decision-summary", examId, userId),
+    getCropRegionAssignments: (examId: string, userId: string) =>
+      ipcRenderer.invoke("get-crop-region-assignments", examId, userId),
+    assignCropRegion: (
+      cropRegionId: string,
+      userId: string,
+      assignedByUserId: string
+    ) =>
+      ipcRenderer.invoke(
+        "assign-crop-region",
+        cropRegionId,
+        userId,
+        assignedByUserId
+      ),
+    unassignCropRegion: (
+      cropRegionId: string,
+      userId: string,
+      requestedByUserId: string
+    ) =>
+      ipcRenderer.invoke(
+        "unassign-crop-region",
+        cropRegionId,
+        userId,
+        requestedByUserId
+      ),
     initializeScoringRecords: (examId: string) =>
       ipcRenderer.invoke("initialize-scoring-records", examId),
     batchUpdateQuestionScores: (

@@ -43,6 +43,8 @@ interface QuestionNavigatorProps {
   collapsible?: boolean
   isOpen?: boolean
   onToggle?: () => void
+  /** 採点担当により設問が絞られている（見えない設問がある理由を伝える） */
+  isFilteredByAssignment?: boolean
 }
 
 export default function QuestionNavigator({
@@ -55,6 +57,7 @@ export default function QuestionNavigator({
   collapsible = false,
   isOpen = true,
   onToggle,
+  isFilteredByAssignment = false,
 }: QuestionNavigatorProps) {
   const currentIndex = currentCropRegion
     ? questionRegions.findIndex(
@@ -92,6 +95,12 @@ export default function QuestionNavigator({
         isOpen={isOpen}
         onToggle={onToggle}
       >
+        {isFilteredByAssignment && (
+          <div className="mb-2 rounded bg-blue-50 px-2 py-1 text-[10px] text-blue-700">
+            自分が担当する設問のみ表示しています
+          </div>
+        )}
+
         {/* ナビゲーション: [前] [設問プルダウン] [次] */}
         <div className="flex items-center gap-2">
           <Tooltip>

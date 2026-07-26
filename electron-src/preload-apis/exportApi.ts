@@ -10,7 +10,15 @@ export function createExportApi() {
       validateScoringData: (options: {
         examId: string
         selectedStudentIds: string[]
+        userId: string
       }) => ipcRenderer.invoke("export:validateScoringData", options),
+      recordUnresolvedConflicts: (options: {
+        examId: string
+        userId: string
+        exportType: string
+        conflicts: Array<{ studentName: string; questionLabel: string }>
+        scoreImpact: number
+      }) => ipcRenderer.invoke("export:recordUnresolvedConflicts", options),
       getPdfExportData: (options: {
         examId: string
         selectedStudentIds: string[]

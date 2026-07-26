@@ -35,11 +35,35 @@ export interface UpsertScoreDecisionData {
 }
 
 /**
- * 確定権限のチェック。
+ * 試験単位の確定権限チェック。
  *
  * 試験に UserExam が登録されている場合は OWNER のみ確定できる。
- * UserExam が1件も無い試験（個人利用・旧データ）は制限しない。
+ * UserExam が1件も無い試験（旧データ）は制限しない
+ * — createExam / アーカイブインポートは作成者を必ず OWNER として登録するため、
+ * 新規試験でこのフォールバックに入ることはない。
  */
+export const canDecideExamScores = async (
+  examId: string,
+  userId: string
+): Promise<{ allowed: boolean; reason?: string }> => {
+  const members = await prisma.userExam.findMany({
+    where: { examId },
+    select: { userId: true, role: true },
+  })
+
+  // メンバー管理なしの旧データは制限しない
+  if (members.length === 0) return { allowed: true }
+
+  const currentMember = members.find((member) => member.userId === userId)
+  if (currentMember?.role === "OWNER") return { allowed: true }
+
+  return {
+    allowed: false,
+    reason: "採点結果の確定は試験の所有者（OWNER）のみが行えます",
+  }
+}
+
+/** 設問（採点領域）から試験を引いて確定権限をチェックする */
 export const canDecideScore = async (
   cropRegionId: string,
   userId: string
@@ -52,21 +76,7 @@ export const canDecideScore = async (
     return { allowed: false, reason: "採点領域が見つかりません" }
   }
 
-  const members = await prisma.userExam.findMany({
-    where: { examId: cropRegion.examPage.examId },
-    select: { userId: true, role: true },
-  })
-
-  // 個人利用（メンバー管理なし）の試験は制限しない
-  if (members.length === 0) return { allowed: true }
-
-  const currentMember = members.find((member) => member.userId === userId)
-  if (currentMember?.role === "OWNER") return { allowed: true }
-
-  return {
-    allowed: false,
-    reason: "採点結果の確定は試験の所有者（OWNER）のみが行えます",
-  }
+  return canDecideExamScores(cropRegion.examPage.examId, userId)
 }
 
 /**

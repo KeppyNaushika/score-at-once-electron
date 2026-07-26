@@ -84,6 +84,8 @@ interface ScoringSidePanelProps {
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress: QuestionProgress
+  /** 採点担当により設問が絞られている */
+  isQuestionSetFiltered?: boolean
   // Scoring Toolbar props
   selectedAnswersCount: number
   filterSettings: {
@@ -188,6 +190,7 @@ export function ScoringSidePanel({
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
+  isQuestionSetFiltered,
   selectedAnswersCount,
   filterSettings,
   onScore,
@@ -321,6 +324,7 @@ export function ScoringSidePanel({
             onPrevQuestion={onPrevQuestion}
             onNextQuestion={onNextQuestion}
             questionProgress={questionProgress}
+            isFilteredByAssignment={isQuestionSetFiltered}
             collapsible
             isOpen={isSectionOpen("question")}
             onToggle={() => toggleSection("question")}

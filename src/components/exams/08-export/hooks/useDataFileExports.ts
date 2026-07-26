@@ -27,8 +27,9 @@ export function useDataFileExports({
   individualReportOptions,
   setIsExporting,
 }: UseDataFileExportsParams) {
-  const executeExportGradingData = async () => {
-    if (!exam) return
+  /** @returns 出力が実際に完了したか（監査ログの記録可否の判断に使う） */
+  const executeExportGradingData = async (): Promise<boolean> => {
+    if (!exam) return false
     setIsExporting(true)
 
     try {
@@ -46,12 +47,14 @@ export function useDataFileExports({
         alert(
           `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`
         )
-      } else {
-        alert(`出力に失敗しました: ${result.error}`)
+        return true
       }
+      alert(`出力に失敗しました: ${result.error}`)
+      return false
     } catch (error) {
       console.error("Export error:", error)
       alert("出力中にエラーが発生しました")
+      return false
     } finally {
       setIsExporting(false)
     }
@@ -80,8 +83,9 @@ export function useDataFileExports({
     }
   }
 
-  const executeExportIndividualReports = async () => {
-    if (!exam) return
+  /** @returns 出力が実際に完了したか（監査ログの記録可否の判断に使う） */
+  const executeExportIndividualReports = async (): Promise<boolean> => {
+    if (!exam) return false
     setIsExporting(true)
 
     try {
@@ -116,11 +120,13 @@ export function useDataFileExports({
       if (!result.success) {
         throw new Error(result.error || "印刷ダイアログを開けませんでした")
       }
+      return true
     } catch (error) {
       console.error("Individual report export error:", error)
       alert(
         `エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
       )
+      return false
     } finally {
       setIsExporting(false)
     }

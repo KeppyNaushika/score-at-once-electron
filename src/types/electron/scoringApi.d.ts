@@ -7,10 +7,11 @@ import type {
   WhitenessTargetAnswerImage,
   WhitenessTargetRegion,
 } from "../answerWhiteness.types"
+import type { SerializedQuestionScore } from "../prismaExtensions"
 import type {
-  QuestionScoreWithUser,
-  SerializedQuestionScore,
-} from "../prismaExtensions"
+  CropRegionAssignmentSummary,
+  ExamDecisionSummary,
+} from "../scoreDecision.types"
 import type { ScoringStatus } from "../scoringStatus.types"
 
 /**
@@ -41,17 +42,6 @@ export interface ScoreDecisionForComparison {
   decidedAt: Date | string
   sourceQuestionScoreId: string | null
   decidedBy: { id: string; name: string; username: string }
-}
-
-// QuestionScore comparison result type
-export interface QuestionScoreComparisonResult {
-  success: boolean
-  /** OWNERによる確定。未確定の場合はnull */
-  decision?: ScoreDecisionForComparison | null
-  /** 採点者ごとの提案（unscoredを除く） */
-  proposedScores?: QuestionScoreWithUser[]
-  hasConflict?: boolean
-  error?: string
 }
 
 // QuestionScore operation result type (create/update)
@@ -105,10 +95,6 @@ export interface ScoringAPI {
     expectedVersion?: number
   ) => Promise<QuestionScoreOperationResult>
   deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
-  getQuestionScoreComparison: (
-    studentId: string,
-    cropRegionId: string
-  ) => Promise<QuestionScoreComparisonResult>
   finalizeQuestionScore: (
     studentId: string,
     cropRegionId: string,
@@ -117,7 +103,7 @@ export interface ScoringAPI {
       partialScore?: number
       /** ScoreDecision の verdict、または旧API互換の "final"（点数有無から verdict を導出）。 */
       status: string
-      comments?: string
+      comment?: string
       sourceQuestionScoreId?: string
     }
   ) => Promise<{
@@ -140,6 +126,37 @@ export interface ScoringAPI {
     scoredPercentage: number
     finalizedPercentage: number
   }>
+  /** 裁定サマリ（解決できなかった競合・確定後に新提案が入ったセル） */
+  getExamDecisionSummary: (
+    examId: string,
+    userId: string
+  ) => Promise<{
+    success: boolean
+    summary?: ExamDecisionSummary
+    error?: string
+  }>
+  /** 設問ごとの採点担当（採点画面の設問絞り込み用の軽量版） */
+  getCropRegionAssignments: (
+    examId: string,
+    userId: string
+  ) => Promise<{
+    success: boolean
+    assignments?: CropRegionAssignmentSummary[]
+    canManage?: boolean
+    /** 試験のメンバー数（協調採点かの安価な判定材料） */
+    memberCount?: number
+    error?: string
+  }>
+  assignCropRegion: (
+    cropRegionId: string,
+    userId: string,
+    assignedByUserId: string
+  ) => Promise<{ success: boolean; error?: string }>
+  unassignCropRegion: (
+    cropRegionId: string,
+    userId: string,
+    requestedByUserId: string
+  ) => Promise<{ success: boolean; error?: string }>
   initializeScoringRecords: (examId: string) => Promise<{
     success: boolean
     initialized?: number

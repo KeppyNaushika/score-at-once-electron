@@ -335,7 +335,7 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
 /** 現行 (v1.19.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.19.0"),
+    manifest: createManifest("1.20.0"),
     examData: {
       exam: {
         id: "exam-1",
@@ -366,6 +366,7 @@ function createCurrentArchiveData(): ExamArchiveData {
       questionScores: [],
       drawingAnnotations: [],
       scoreDecisions: [],
+      cropRegionAssignments: [],
       returnSnapshots: [],
     },
     tagsData: { tags: [], tagSubtotalGroups: [], examTags: [] },
@@ -374,13 +375,13 @@ function createCurrentArchiveData(): ExamArchiveData {
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全19変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全20変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.19.0")
-    expect(result.appliedTransformations).toHaveLength(19)
-    expect(result.data.manifest.version).toBe("1.19.0")
+    expect(result.finalVersion).toBe("1.20.0")
+    expect(result.appliedTransformations).toHaveLength(20)
+    expect(result.data.manifest.version).toBe("1.20.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -470,6 +471,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.16.0", to: "1.17.0" },
       { from: "1.17.0", to: "1.18.0" },
       { from: "1.18.0", to: "1.19.0" },
+      { from: "1.19.0", to: "1.20.0" },
     ])
 
     const examData = result.data.examData
@@ -588,7 +590,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.19.0")
+    expect(detection.version).toBe("1.20.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -683,6 +685,7 @@ describe("transformExamArchiveToLatest", () => {
     expect(result.appliedTransformations).toEqual([
       { from: "1.17.0", to: "1.18.0" },
       { from: "1.18.0", to: "1.19.0" },
+      { from: "1.19.0", to: "1.20.0" },
     ])
     // キーごと落ちる（取り込み先が存在しないため）
     const transformedExamData = result.data.examData as unknown as Record<
@@ -696,13 +699,13 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
-  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.19.0 になる", () => {
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.20.0 になる", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.17.0"
 
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.finalVersion).toBe("1.19.0")
+    expect(result.finalVersion).toBe("1.20.0")
     expect(result.warnings).toEqual([])
   })
 
@@ -728,6 +731,7 @@ describe("transformExamArchiveToLatest", () => {
 
     expect(result.appliedTransformations).toEqual([
       { from: "1.18.0", to: "1.19.0" },
+      { from: "1.19.0", to: "1.20.0" },
     ])
     // キーごと落ちる（アーカイブは正本であり復活防止をしないため）
     const transformedRecord = result.data as unknown as Record<string, unknown>
@@ -738,11 +742,24 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
+  test("1.19.0 → 1.20.0: 採点担当は空配列で補完される（担当0人＝全員担当）", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.19.0"
+    delete data.scoresData.cropRegionAssignments
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.appliedTransformations).toEqual([
+      { from: "1.19.0", to: "1.20.0" },
+    ])
+    expect(result.data.scoresData.cropRegionAssignments).toEqual([])
+  })
+
   test("現行形式は無変換で素通しされる", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.19.0")
+    expect(result.originalVersion).toBe("1.20.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)

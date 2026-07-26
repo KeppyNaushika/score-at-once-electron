@@ -28,6 +28,8 @@ interface UseScoredAnswerPdfExportParams {
     SetStateAction<"processing" | "completed" | "error">
   >
   setCurrentStep: Dispatch<SetStateAction<string>>
+  /** PDFの保存が実際に完了したときに呼ばれる（監査記録など後処理用） */
+  onExportCompleted?: () => void
 }
 
 /**
@@ -47,6 +49,7 @@ export function useScoredAnswerPdfExport({
   setExportProgress,
   setExportStatus,
   setCurrentStep,
+  onExportCompleted,
 }: UseScoredAnswerPdfExportParams) {
   // Canvas描画用の状態
   const [pdfExportPages, setPdfExportPages] = useState<PdfExportPageData[]>([])
@@ -376,6 +379,7 @@ export function useScoredAnswerPdfExport({
           setExportProgress(100)
           setExportStatus("completed")
           setCurrentStep("完了しました")
+          onExportCompleted?.()
         } else {
           setExportStatus("error")
           setCurrentStep(`エラー: ${result.error}`)
@@ -403,6 +407,7 @@ export function useScoredAnswerPdfExport({
     setExportProgress,
     setCurrentStep,
     setExportStatus,
+    onExportCompleted,
     setIsExporting,
   ])
 
