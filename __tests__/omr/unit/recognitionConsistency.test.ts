@@ -196,6 +196,8 @@ function reevaluate(
     pointsMap: { [CROP_REGION_ID]: 5 },
     areaThreshold: AREA_THRESHOLD,
     confidenceThreshold: 0.7,
+    // main 側と同条件で比較するため、濃さによる棄却は双方とも無効にする
+    minInkDarkness: null,
   })
 
   return updatedSheetResults[0].cellResults[0]

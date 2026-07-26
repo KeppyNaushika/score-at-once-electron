@@ -19,6 +19,8 @@ export interface ReevaluatedScoreEntry {
   label: string
   cropRegionId?: string
   questionPath: number[]
+  /** 消し跡と判断して退けた塗りがあるか（保留の理由の区別に使う） */
+  hasResidue: boolean
   status:
     | "correct"
     | "incorrect"
@@ -38,6 +40,8 @@ export interface ScoringResultSummary {
   doubleMark: number
   partial: number
   pending: number
+  /** 消し跡と判断して塗りを退けたセル数（pending の内訳） */
+  residue: number
   total: number
 }
 
@@ -47,6 +51,8 @@ export interface ReevaluationInput {
   pointsMap: Record<string, number>
   areaThreshold: number
   confidenceThreshold: number
+  /** マークと見なす濃さの下限（消し跡の棄却に使う）。null なら濃さでは棄却しない */
+  minInkDarkness: number | null
 }
 
 export interface ReevaluationOutput {
@@ -70,6 +76,7 @@ export function reevaluateWithThreshold(
     pointsMap,
     areaThreshold,
     confidenceThreshold,
+    minInkDarkness,
   } = input
 
   const allEntries = new Map<string, ReevaluatedScoreEntry[]>()
@@ -113,7 +120,8 @@ export function reevaluateWithThreshold(
       const updatedCell = reevaluateChoiceCell(
         cellResult,
         omrConfig,
-        areaThreshold
+        areaThreshold,
+        minInkDarkness
       )
       updatedCellResults.push(updatedCell)
       entries.push(
@@ -144,7 +152,8 @@ export function reevaluateWithThreshold(
 function reevaluateChoiceCell(
   cellResult: OMRCellResult,
   config: CropRegionOmrConfigWithOptions,
-  areaThreshold: number
+  areaThreshold: number,
+  minInkDarkness: number | null
 ): OMRCellResult {
   const evaluation = evaluateChoiceBubbles({
     bubbleMeasurements: cellResult.bubbleMeasurements!,
@@ -152,11 +161,13 @@ function reevaluateChoiceCell(
       .filter((option) => option.isCorrect)
       .map((option) => option.choiceIndex),
     areaThreshold,
+    minInkDarkness,
   })
 
   return {
     ...cellResult,
     recognizedValues: evaluation.recognizedValues,
+    residueChoiceIndices: evaluation.residueChoiceIndices,
     confidence: evaluation.confidence,
     autoScoreStatus: evaluation.autoScoreStatus,
   }
@@ -227,10 +238,23 @@ function buildEntryFromCellResult(
     score = 0
   }
 
+  // 消し跡として退けたバブルがあるセルは必ず保留にする。
+  // 退けた判断は得点を変える（未回答にする／競合を消して正解にする）ので、
+  // 人が一度も見ないまま確定させない。
+  //
+  // 信頼度に頼れないのは、未回答は低信頼チェックの対象外であることと、
+  // 信頼度閾値がユーザー操作で0まで下げられることの2点による。
+  const hasResidue = Boolean(cellResult.residueChoiceIndices?.length)
+  if (hasResidue) {
+    status = "pending"
+    score = 0
+  }
+
   return {
     label: cellResult.label,
     cropRegionId,
     questionPath: cellResult.questionPath,
+    hasResidue,
     status,
     score,
     maxPoints,
@@ -247,10 +271,12 @@ function countSummary(
     noAnswer = 0,
     doubleMark = 0,
     partial = 0,
-    pending = 0
+    pending = 0,
+    residue = 0
 
   for (const entries of allEntries.values()) {
     for (const entry of entries) {
+      if (entry.hasResidue) residue++
       switch (entry.status) {
         case "correct":
           correct++
@@ -281,6 +307,7 @@ function countSummary(
     doubleMark,
     partial,
     pending,
+    residue,
     total: correct + incorrect + noAnswer + doubleMark + partial + pending,
   }
 }
@@ -319,4 +346,63 @@ export function recommendAreaThreshold(
   }
 
   return Math.round(otsu.threshold * 100) / 100
+}
+
+/** 濃さヒストグラムのビン設定（1%刻み） */
+const INK_DARKNESS_OPTIONS = { min: 0, max: 1, bins: 100 }
+
+/**
+ * 消し跡と見なす濃さの差の下限（0-1）
+ *
+ * 消し跡と本来のマークはこれ以上離れる。全てが同程度の濃さなら消し跡は
+ * 混ざっていないので、棄却を働かせない。
+ */
+const MIN_INK_DARKNESS_SEPARATION = 0.2
+
+/**
+ * 消し跡として退けてよい割合の上限
+ *
+ * 消し跡は一部の設問にしか出ない。塗られたバブルの多くが「薄い側」に入るなら、
+ * それは消し跡ではなく**筆圧の弱い生徒がいる**だけ。そのまま退けると
+ * その生徒の解答が丸ごと消えるので、濃さによる棄却自体を諦める。
+ *
+ * 大津法は必ず2群に割るので、この歯止めが無いと「濃い生徒群 / 薄い生徒群」の
+ * 境界を消し跡の境界と取り違える。
+ */
+const MAX_RESIDUE_RATIO = 0.2
+
+/**
+ * 全シートの濃さ分布からマークと見なす濃さの下限を算出する
+ *
+ * 塗りつぶし率が閾値を超えたバブルだけを母集団とし、大津法で
+ * 「本来のマーク群 / 消し跡群」の境界を求める。
+ *
+ * 濃さを絶対値で決め打ちしないのは、「薄い」が鉛筆とスキャナ次第で変わるため。
+ * 固定値にすると、薄いマークを拾えるようにする色しきい値の自動決定と衝突する。
+ *
+ * @returns サンプル不足・2群が離れていない（＝消し跡が無い）場合は null
+ */
+export function recommendMinInkDarkness(
+  sheetResults: OMRSheetResult[],
+  areaThreshold: number
+): number | null {
+  const inkedDarkness = sheetResults
+    .filter((sheet) => sheet.success)
+    .flatMap((sheet) => sheet.cellResults)
+    .flatMap((cell) => cell.bubbleMeasurements ?? [])
+    .filter((measurement) => measurement.fillRatio >= areaThreshold)
+    .map((measurement) => measurement.inkDarkness)
+
+  const otsu = computeOtsuThreshold(inkedDarkness, INK_DARKNESS_OPTIONS)
+  if (otsu === null || otsu.meanDistance < MIN_INK_DARKNESS_SEPARATION) {
+    return null
+  }
+
+  // 薄い側が多数派なら消し跡ではなく筆圧の個人差。棄却しない
+  const residueCount = inkedDarkness.filter(
+    (darkness) => darkness < otsu.threshold
+  ).length
+  if (residueCount > inkedDarkness.length * MAX_RESIDUE_RATIO) return null
+
+  return otsu.threshold
 }

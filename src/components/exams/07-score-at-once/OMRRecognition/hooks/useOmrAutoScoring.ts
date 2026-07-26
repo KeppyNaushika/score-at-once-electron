@@ -16,6 +16,7 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   recommendAreaThreshold,
+  recommendMinInkDarkness,
   type ReevaluatedScoreEntry,
   reevaluateWithThreshold,
   type ScoringResultSummary,
@@ -54,6 +55,8 @@ export interface OmrAutoScoringState {
   pointsMap: Record<string, number>
   /** 分布から算出した推奨areaThreshold（算出不能なら null） */
   recommendedAreaThreshold: number | null
+  /** 分布から算出したマークと見なす濃さの下限（消し跡が無ければ null） */
+  minInkDarkness: number | null
 }
 
 /**
@@ -74,6 +77,7 @@ export function useOmrAutoScoring(examId: string) {
     confidenceThreshold: DEFAULT_CONFIDENCE_THRESHOLD,
     pointsMap: {},
     recommendedAreaThreshold: null,
+    minInkDarkness: null,
   })
 
   /** OMR設定をDBから読み込み */
@@ -315,6 +319,12 @@ export function useOmrAutoScoring(examId: string) {
       const initialConfidenceThreshold =
         recognitionParams.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD
 
+      // 消し跡の棄却基準も答案群の濃さ分布から決める
+      const minInkDarkness = recommendMinInkDarkness(
+        results,
+        initialAreaThreshold
+      )
+
       const { updatedSheetResults, scoreEntries, summary } =
         reevaluateWithThreshold({
           sheetResults: results,
@@ -322,6 +332,7 @@ export function useOmrAutoScoring(examId: string) {
           pointsMap,
           areaThreshold: initialAreaThreshold,
           confidenceThreshold: initialConfidenceThreshold,
+          minInkDarkness,
         })
 
       setState((prev) => ({
@@ -335,6 +346,7 @@ export function useOmrAutoScoring(examId: string) {
         areaThreshold: initialAreaThreshold,
         confidenceThreshold: initialConfidenceThreshold,
         recommendedAreaThreshold: recommended,
+        minInkDarkness,
       }))
     } catch (error) {
       setState((prev) => ({
@@ -412,6 +424,11 @@ export function useOmrAutoScoring(examId: string) {
   const updateAreaThreshold = useCallback(
     (newThreshold: number) => {
       if (state.originalSheetResults.length === 0) return
+      // 塗りつぶし閾値が変われば濃さ判定の母集団も変わるので引き直す
+      const minInkDarkness = recommendMinInkDarkness(
+        state.originalSheetResults,
+        newThreshold
+      )
       const { updatedSheetResults, scoreEntries, summary } =
         reevaluateWithThreshold({
           sheetResults: state.originalSheetResults,
@@ -419,6 +436,7 @@ export function useOmrAutoScoring(examId: string) {
           pointsMap: state.pointsMap,
           areaThreshold: newThreshold,
           confidenceThreshold: state.confidenceThreshold,
+          minInkDarkness,
         })
       setState((prev) => ({
         ...prev,
@@ -426,6 +444,7 @@ export function useOmrAutoScoring(examId: string) {
         sheetResults: updatedSheetResults,
         scoreEntries,
         summary,
+        minInkDarkness,
       }))
     },
     [
@@ -447,6 +466,7 @@ export function useOmrAutoScoring(examId: string) {
           pointsMap: state.pointsMap,
           areaThreshold: state.areaThreshold,
           confidenceThreshold: newThreshold,
+          minInkDarkness: state.minInkDarkness,
         })
       setState((prev) => ({
         ...prev,
@@ -461,6 +481,7 @@ export function useOmrAutoScoring(examId: string) {
       state.omrConfigs,
       state.pointsMap,
       state.areaThreshold,
+      state.minInkDarkness,
     ]
   )
 
