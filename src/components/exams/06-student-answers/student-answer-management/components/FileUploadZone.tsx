@@ -1,5 +1,7 @@
 "use client"
 
+import { fromEvent } from "file-selector"
+import { COMMON_MIME_TYPES } from "file-selector/mime"
 import { RefreshCw, Upload } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
@@ -7,6 +9,19 @@ import type { FileUploadZoneProps } from "@/components/exams/06-student-answers/
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+
+/**
+ * 拡張子から MIME を補完してから File を渡す。
+ *
+ * file-selector v4 で拡張子→MIME の変換表が既定の同梱から外れたため、明示的に
+ * COMMON_MIME_TYPES を渡して従来の網羅性を保つ。ドロップの受理自体は accept に
+ * 拡張子を列挙しているので変換表が無くても通るが、変換後の `useStudentAnswerUpload`
+ * が `file.type === "application/pdf"` で PDF 変換の要否を分岐しているため、
+ * type が空だと PDF が画像として扱われて静かに壊れる。
+ */
+const getFilesFromEventWithMimeTypes = (
+  event: Parameters<typeof fromEvent>[0]
+) => fromEvent(event, { mimeTypes: COMMON_MIME_TYPES })
 
 export function FileUploadZone({
   onDrop,
@@ -23,6 +38,7 @@ export function FileUploadZone({
     },
     multiple: true,
     disabled: disabled || isConverting,
+    getFilesFromEvent: getFilesFromEventWithMimeTypes,
   })
 
   return (
