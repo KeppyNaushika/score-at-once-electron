@@ -11,6 +11,7 @@ import {
   ShortcutProvider,
   useShortcutContext,
 } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
+import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import { useBatchScoringWithProgress } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { usePartialScore } from "@/components/exams/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringActions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringActions"
@@ -78,6 +79,7 @@ function ScoringMainViewContent() {
     autoScroll,
     showStudentNames,
     layoutDirection,
+    answerSortOrder,
     expandMargin,
     clickScoringConfig,
     clickScoringDebounceMs,
@@ -88,6 +90,7 @@ function ScoringMainViewContent() {
     setAutoScroll,
     setShowStudentNames,
     setLayoutDirection,
+    setAnswerSortOrder,
     setExpandMargin,
     setClickAction,
     setClickScoringDebounceMs,
@@ -173,6 +176,14 @@ function ScoringMainViewContent() {
     (cropRegion) => cropRegion.id === currentCropRegionId
   )
 
+  /** 白さ順ソート用: 一覧表示中のページの白さを先読みする */
+  const { whitenessByAnswerId, isWhitenessReady } = useAnswerWhiteness({
+    studentAnswerImages,
+    cropRegions,
+    currentExamPageId: currentCropRegion?.examPageId ?? null,
+    enabled: gradingMode === "grid",
+  })
+
   /** Effect処理フック */
   useScoringEffects({
     gradingMode,
@@ -247,6 +258,8 @@ function ScoringMainViewContent() {
     gradingMode,
     questionChangeVersion,
     manualSelectionVersion,
+    answerSortOrder,
+    whitenessByAnswerId,
   })
 
   const handleReplaceSelection = useCallback(
@@ -754,6 +767,9 @@ function ScoringMainViewContent() {
               autoScroll={autoScroll}
               onAutoScrollChange={handleAutoScrollChange}
               gradingMode={gradingMode}
+              answerSortOrder={answerSortOrder}
+              onAnswerSortOrderChange={setAnswerSortOrder}
+              isWhitenessReady={isWhitenessReady}
               expandMargin={expandMargin}
               onExpandMarginChange={setExpandMargin}
               students={students}

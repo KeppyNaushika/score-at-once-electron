@@ -24,6 +24,7 @@ import NavigationControls from "@/components/exams/07-score-at-once/ScoringSideP
 import QuestionNavigator from "@/components/exams/07-score-at-once/ScoringSidePanel/QuestionNavigator"
 import ScoringToolbar from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringToolbar"
 import type {
+  AnswerSortOrder,
   CropRegionWithExamPage,
   LayoutDirection,
   MasterAnswerDisplayMode,
@@ -122,6 +123,10 @@ interface ScoringSidePanelProps {
   autoScroll: boolean
   onAutoScrollChange: (enabled: boolean) => void
   gradingMode: "grid" | "individual"
+  // 一覧表示の並び順
+  answerSortOrder: AnswerSortOrder
+  onAnswerSortOrderChange: (order: AnswerSortOrder) => void
+  isWhitenessReady: boolean
   // 表示領域拡張
   expandMargin?: number
   onExpandMarginChange?: (value: number) => void
@@ -206,6 +211,9 @@ export function ScoringSidePanel({
   autoScroll,
   onAutoScrollChange,
   gradingMode,
+  answerSortOrder,
+  onAnswerSortOrderChange,
+  isWhitenessReady,
   expandMargin,
   onExpandMarginChange,
   students,
@@ -422,6 +430,9 @@ export function ScoringSidePanel({
                 gradingMode={gradingMode}
                 expandMargin={expandMargin}
                 onExpandMarginChange={onExpandMarginChange}
+                answerSortOrder={answerSortOrder}
+                onAnswerSortOrderChange={onAnswerSortOrderChange}
+                isWhitenessReady={isWhitenessReady}
               />
             </div>
           </SidePanelSection>

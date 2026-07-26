@@ -3,6 +3,7 @@
  * @description 各設定は独立したフックで管理され、このフックは互換性のために統合して返す。
  */
 
+import { useAnswerSortOrder } from "./useAnswerSortOrder"
 import { useAutoScroll } from "./useAutoScroll"
 import { useClickScoringConfig } from "./useClickScoringConfig"
 import { useExpandMargin } from "./useExpandMargin"
@@ -17,6 +18,7 @@ export function useScoringSettings() {
   const { autoScroll, setAutoScroll } = useAutoScroll()
   const { showStudentNames, setShowStudentNames } = useShowStudentNames()
   const { layoutDirection, setLayoutDirection } = useLayoutDirection()
+  const { answerSortOrder, setAnswerSortOrder } = useAnswerSortOrder()
   const { expandMargin, setExpandMargin } = useExpandMargin()
   const {
     clickScoringConfig,
@@ -38,6 +40,7 @@ export function useScoringSettings() {
     autoScroll,
     showStudentNames,
     layoutDirection,
+    answerSortOrder,
     expandMargin,
     clickScoringConfig,
     clickScoringDebounceMs,
@@ -48,6 +51,7 @@ export function useScoringSettings() {
     setAutoScroll,
     setShowStudentNames,
     setLayoutDirection,
+    setAnswerSortOrder,
     setExpandMargin,
     setClickAction,
     setClickScoringDebounceMs,
