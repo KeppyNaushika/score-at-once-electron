@@ -102,8 +102,12 @@ export interface CoordinateTransform {
 // =====================
 
 export interface OMRRecognitionParams {
-  /** ピクセル暗さ閾値（0-255、デフォルト25） */
-  colorThreshold: number
+  /**
+   * ピクセル暗さ閾値（0-255）。
+   * null の場合はバブル領域の輝度分布から自動算出（大津の二値化法）し、
+   * 分離度が不足するときのみ DEFAULT_COLOR_THRESHOLD へフォールバックする。
+   */
+  colorThreshold: number | null
   /** 塗りつぶし面積閾値（0-1、デフォルト0.4） */
   areaThreshold: number
   /** 信頼度閾値（この値未満は low_confidence としてフラグ、デフォルト0.7） */
@@ -114,6 +118,21 @@ export interface OMRRecognitionParams {
 // OMR認識結果
 // =====================
 
+/**
+ * バブル1つ分の測定値。
+ *
+ * 塗りつぶし率と選択肢の同定情報を同梱する。選択肢を配列の位置で指さないため、
+ * 位置未設定の選択肢が脱落しても main/renderer で指す選択肢がずれない。
+ */
+export interface BubbleMeasurement {
+  /** 選択肢インデックス（配列位置ではなく実体の同定に使う） */
+  choiceIndex: number
+  /** 選択肢ラベル（"ア", "①" など） */
+  label: string
+  /** 塗りつぶし率（0-1） */
+  fillRatio: number
+}
+
 export interface OMRCellResult {
   /** セルラベル */
   label: string
@@ -121,8 +140,8 @@ export interface OMRCellResult {
   questionPath: number[]
   /** 認識された値（選択肢ラベル or 数字） */
   recognizedValues: string[]
-  /** 各選択肢の塗りつぶし率（choiceセルのみ） */
-  fillRatios?: number[]
+  /** 各バブルの測定値（choiceセルのみ） */
+  bubbleMeasurements?: BubbleMeasurement[]
   /** 認識信頼度（0-1） */
   confidence: number
   /** 自動採点結果 */

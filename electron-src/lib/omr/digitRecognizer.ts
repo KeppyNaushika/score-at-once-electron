@@ -21,7 +21,6 @@ import type {
   BoundingBox,
   CoordinateTransform,
   OMRCellResult,
-  OMRRecognitionParams,
   RawImageData,
 } from "../../../src/types/omr.types"
 import { normalizedRectToPixelRect } from "./coordinateTransform"
@@ -190,13 +189,27 @@ async function inferDigit(
 }
 
 /**
+ * 暗さ閾値をMNIST入力テンソルのスケールへ変換する
+ *
+ * colorThreshold は「輝度がこの値未満なら暗い」（0-255、小さいほど暗い）。
+ * 一方 prepareDigitInput のテンソルは反転済みで「大きいほど濃い」（0-1）。
+ * よって `luminance < colorThreshold` は `tensor > (255 - colorThreshold) / 255` になる。
+ *
+ * 反転を忘れて `colorThreshold / 255` とすると、既定値128付近では
+ * 偶然ほぼ同値（0.502 対 0.498）になって気付けないが、閾値が離れるほど破綻する。
+ */
+export function toInkThreshold(colorThreshold: number): number {
+  return (255 - colorThreshold) / 255
+}
+
+/**
  * 1つのセルの手書き数字を認識
  */
 export async function recognizeDigitCell(
   cell: ComputedCell,
   rawImage: RawImageData,
   transform: CoordinateTransform,
-  params: OMRRecognitionParams
+  colorThreshold: number
 ): Promise<OMRCellResult> {
   const modelAvailable = await ensureSession()
 
@@ -231,10 +244,9 @@ export async function recognizeDigitCell(
     const input = await prepareDigitInput(rawImage, pixelRect)
 
     // 空欄チェック: ほとんど白い場合はスキップ
-    // colorThresholdを0-1スケールに変換して空欄判定に利用
-    const blankThreshold = params.colorThreshold / 255
+    const inkThreshold = toInkThreshold(colorThreshold)
     const nonZeroCount = input.filter(
-      (pixelValue) => pixelValue > blankThreshold
+      (pixelValue) => pixelValue > inkThreshold
     ).length
     if (nonZeroCount < 10) {
       recognizedDigits.push("")

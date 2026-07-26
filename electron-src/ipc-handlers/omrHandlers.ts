@@ -106,9 +106,11 @@ export function setupOMRHandlers(): void {
     ): Promise<OMRSheetResult> => {
       try {
         // 1. マーカー検出
+        // マーカー検出の閾値は据え置き（印刷された黒マーカーは鉛筆と最適値が違う）。
+        // null=自動 はバブル判定側だけに効かせ、検出結果キャッシュのキーを安定させる
         const markerResult = await detectCornerMarkers(
           args.imagePath,
-          args.params.colorThreshold
+          args.params.colorThreshold ?? undefined
         )
         if (!markerResult.success) {
           return {
@@ -229,7 +231,7 @@ export function setupOMRHandlers(): void {
 
           const markerResult = await detectCornerMarkers(
             absolutePath,
-            args.params.colorThreshold
+            args.params.colorThreshold ?? undefined
           )
 
           if (!markerResult.success) {
