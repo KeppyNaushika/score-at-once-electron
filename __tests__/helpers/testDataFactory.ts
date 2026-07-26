@@ -294,7 +294,6 @@ export function createExtractedArchiveData(
     scoresData: overrides.scoresData ?? createArchiveScoresData(),
     subjectsData: { subjects: [], subjectSubtotalGroups: [] },
     tagsData: overrides.tagsData ?? createArchiveTagsData(),
-    deletedRecordsData: { deletedRecords: [] },
     transformWarnings: [],
     tempDir: "/tmp/test-archive",
     masterImagePaths: [],

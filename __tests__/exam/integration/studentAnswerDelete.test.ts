@@ -7,7 +7,7 @@
  *
  * 検証対象:
  * - 削除でページ scoped の QuestionScore / ScoreDecision / CompoundAnswerScore が消える
- * - DrawingAnnotation は親の cascade で消え、DeletedRecord に tombstone が残る
+ * - DrawingAnnotation は親の cascade で消える
  * - 他生徒・他ページの採点は巻き添えにしない
  * - サマリは unscored の初期化行を「採点データあり」と誤判定しない
  */
@@ -206,7 +206,7 @@ describe("deleteStudentAnswer", () => {
     ).not.toBeNull()
   })
 
-  it("削除した DrawingAnnotation は tombstone に記録される（import での復活防止）", async () => {
+  it("削除した DrawingAnnotation は親 QuestionScore の cascade で消える", async () => {
     const { studentA, page1, region1, image, score, user } =
       await buildSimpleExam()
 
@@ -224,15 +224,13 @@ describe("deleteStudentAnswer", () => {
     const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
     expect(result.success).toBe(true)
 
-    const tombstone = await testPrisma.deletedRecord.findUnique({
-      where: {
-        tableName_recordId: {
-          tableName: "DrawingAnnotation",
-          recordId: annotation.id,
-        },
-      },
-    })
-    expect(tombstone).not.toBeNull()
+    // 削除の伝搬は sqlite-nas-sync の `_tombstone` が担うため、
+    // アプリ側で削除記録を持つ必要はない（issue #918）
+    expect(
+      await testPrisma.drawingAnnotation.findUnique({
+        where: { id: annotation.id },
+      })
+    ).toBeNull()
   })
 
   it("削除直前の採点実績を返す（モーダルと同じ定義）", async () => {

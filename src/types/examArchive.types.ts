@@ -76,6 +76,7 @@ export interface ArchiveDataCounts {
  * - 1.16.0: v0.14.x (物理テーブル名を Classroom 系へ統一、JSON キー examClasses→examClassrooms / classId→classroomId、ExamClassroom.teacherStat → teacherStatistics リネーム)
  * - 1.17.0: v0.15.x (ExamStudent.status を小文字へ統一)
  * - 1.18.0: v0.16.x (CropRegionMarkingOverride 廃止 — UI・出力反映が無いまま入出力のみ維持されていたため削除)
+ * - 1.19.0: v0.16.x (DeletedRecord tombstone 廃止 — アーカイブは正本であり import は忠実に復元する。削除の伝搬は sqlite-nas-sync の `_tombstone` に一本化)
  */
 export type ExamArchiveVersion =
   | "1.0.0"
@@ -97,9 +98,10 @@ export type ExamArchiveVersion =
   | "1.16.0"
   | "1.17.0"
   | "1.18.0"
+  | "1.19.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.18.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.19.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -122,6 +124,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.16.0",
   "1.17.0",
   "1.18.0",
+  "1.19.0",
 ] as const
 
 /**
@@ -142,7 +145,7 @@ export interface ExamArchiveData {
   subjectsData?: ArchiveSubjectsData
   /** v1.10.0+ タグデータ (v1.10.0でSubject→Tagにリネーム) */
   tagsData?: ArchiveTagsData
-  /** v1.9.0+ 削除記録データ */
+  /** v1.9.0-v1.18.0 削除記録データ (deprecated, v1.19.0で廃止。読み捨てのため変換器のみが参照する) */
   deletedRecordsData?: ArchiveDeletedRecordsData
 }
 
@@ -1039,6 +1042,22 @@ export interface ArchiveScoresData {
 }
 
 /**
+ * 削除記録データ (deleted-records.json) - v1.9.0-v1.18.0
+ * @deprecated v1.19.0で廃止。アーカイブは正本であり削除記録による復活防止は行わない（issue #918）。
+ *   旧アーカイブの読み捨てのため V1_18_0_to_V1_19_0_Transformer のみが参照する
+ */
+export interface ArchiveDeletedRecordsData {
+  deletedRecords: Array<{
+    id: string
+    tableName: string
+    recordId: string
+    deletedAt: string
+    userId: string | null
+    examId: string | null
+  }>
+}
+
+/**
  * タグデータ (subjects.json) - v1.4.0-v1.9.0
  * @deprecated v1.10.0以降は ArchiveTagsData を使用
  */
@@ -1086,20 +1105,6 @@ export interface ArchiveTagsData {
     tagId: string
     createdAt: string
     updatedAt: string
-  }>
-}
-
-/**
- * 削除記録データ (deleted-records.json) - v1.9.0+
- */
-export interface ArchiveDeletedRecordsData {
-  deletedRecords: Array<{
-    id: string
-    tableName: string
-    recordId: string
-    deletedAt: string
-    userId: string | null
-    examId: string | null
   }>
 }
 

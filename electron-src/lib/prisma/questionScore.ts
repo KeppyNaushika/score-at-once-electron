@@ -3,7 +3,6 @@ import { Decimal } from "@prisma/client/runtime/client"
 import { type AuditChange, recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion, resolveStudentLabel } from "./auditScope"
 import prisma from "./client"
-import { recordDrawingAnnotationDeletionsForQuestionScores } from "./deletedRecord"
 
 /**
  * 採点対象が既に無いことを表す機械可読な理由コード。
@@ -495,9 +494,6 @@ export const deleteQuestionScore = async (id: string) => {
         status: true,
       },
     })
-
-    // cascade削除前にDrawingAnnotationのtombstoneを記録
-    await recordDrawingAnnotationDeletionsForQuestionScores([id])
 
     await prisma.questionScore.delete({
       where: { id },

@@ -172,6 +172,14 @@ describe("新規インストールの初期化連鎖", () => {
       }
     }
 
+    // 逆方向: 基準に無いテーブルが chain に残っていないこと
+    // （DROP TABLE のマイグレーション漏れを検知する）
+    for (const tableName of chain.keys()) {
+      if (!truth.has(tableName)) {
+        drift.push(`テーブル余分: ${tableName}`)
+      }
+    }
+
     expect(drift).toEqual([])
   })
 })

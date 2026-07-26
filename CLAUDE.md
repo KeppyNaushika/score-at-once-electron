@@ -198,6 +198,7 @@ export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
 | 1.15.0     | v0.14.x    | 学級統計再設計（teacherStat/studentReport等） |
 | 1.16.0     | v0.14.x    | Class→Classroomリネーム（examClassrooms等）   |
 | 1.17.0     | v0.15.x    | ExamStudent.status小文字統一                  |
+| 1.19.0     | v0.16.x    | DeletedRecord tombstone廃止（1.9.0を撤回）    |
 
 **試験外成績資料アーカイブ（.coursework）** — exam-archive と同型の独立アーカイブ。`electron-src/lib/export|import/coursework-archive/`。id一次照合 + 名前マッチング（付加）+ スコア LWW。トランスフォーマー機構あり（`COURSEWORK_CURRENT_VERSION`、初版 1.0.0 は変換器ゼロ）。
 

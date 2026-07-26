@@ -12,7 +12,7 @@
  * - importSubtotals: Subtotal・CropSubtotal
  * - importExamAttachments: 採点マーク/出力設定・OMR・複合解答構造・タグ・学級関連
  * - importScoring: QuestionScore・ScoreDecision・CompoundAnswerScore
- * - importSyncRecords: DeletedRecord・DrawingAnnotation・Membership
+ * - importSyncRecords: DrawingAnnotation・Membership
  */
 
 import type {
@@ -50,7 +50,6 @@ import {
 } from "./importScoring"
 import { processCropSubtotals, processSubtotals } from "./importSubtotals"
 import {
-  processDeletedRecords,
   processDrawingAnnotations,
   processMemberships,
 } from "./importSyncRecords"
@@ -272,10 +271,7 @@ export async function executeIdIntegrationImport(
           tx
         )
 
-        // 12a. 削除記録の処理（tombstone伝搬）
-        await processDeletedRecords(data, tx)
-
-        // 13. DrawingAnnotation（tombstoneチェック付き）
+        // 13. DrawingAnnotation
         await processDrawingAnnotations(
           data,
           currentUserId,

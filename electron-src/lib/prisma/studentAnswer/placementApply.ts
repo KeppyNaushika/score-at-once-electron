@@ -10,8 +10,8 @@
  *     子の DrawingAnnotation を温存。swap も id 指定なので途中衝突なし）。
  *   - ScoreDecision は `@@unique([cropRegionId, studentId])` があるため **delete → 最終位置へ再作成**。
  *   - CompoundAnswerScore も `@@unique([compoundAnswerId, studentId])` があるため同じく再作成方式。
- * - discard: DrawingAnnotation を tombstone してから各スコア表（QuestionScore /
- *   ScoreDecision / CompoundAnswerScore）を削除。
+ * - discard: 各スコア表（QuestionScore / ScoreDecision / CompoundAnswerScore）を削除。
+ *   DrawingAnnotation は QuestionScore の cascade で道連れになる。
  * - **移動先セルの残存採点を掃除**: 移動先 (finalStudentId, 移動先ページの CropRegion /
  *   CompoundAnswer) に既存の採点があり、それが「移動してくる採点（moving 集合）」でない場合は
  *   stale として削除する（さもないと carry で QuestionScore が二重計上、ScoreDecision と
@@ -25,7 +25,6 @@
 import type { Prisma } from "@prisma/client"
 
 import prisma from "../client"
-import { recordDrawingAnnotationDeletionsForQuestionScores } from "../deletedRecord"
 import { getPageScoreScope, type PageScoreScope } from "./pageScope"
 
 /**
@@ -329,12 +328,8 @@ export async function applyStudentAnswerPlacements(
           }
         }
 
-        // 4. QuestionScore: DrawingAnnotation を tombstone してから削除
+        // 4. QuestionScore を削除（DrawingAnnotation は cascade で道連れ）
         if (questionScoreIdsToDelete.length > 0) {
-          await recordDrawingAnnotationDeletionsForQuestionScores(
-            questionScoreIdsToDelete,
-            { tx }
-          )
           await tx.questionScore.deleteMany({
             where: { id: { in: questionScoreIdsToDelete } },
           })

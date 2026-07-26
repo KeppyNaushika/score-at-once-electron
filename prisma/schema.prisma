@@ -353,22 +353,9 @@ model ReturnSnapshot {
   @@index([studentId])
 }
 
-model DeletedRecord {
-  id        String   @id @default(uuid())
-  tableName String
-  recordId  String
-  deletedAt DateTime @default(now())
-  userId    String?
-  examId    String?
-
-  @@unique([tableName, recordId])
-  @@index([examId])
-  @@index([deletedAt])
-}
-
 /// 監査ログ（Discord風の操作履歴）。
 /// 追記専用・不変。状態を変える全操作とエクスポートを記録する（閲覧は対象外）。
-/// userIdはFKを張らず素の文字列とし、ユーザー削除後もログが残るようにする（DeletedRecord同様）。
+/// userIdはFKを張らず素の文字列とし、ユーザー削除後もログが残るようにする。
 model AuditLog {
   id          String   @id @default(uuid())
   createdAt   DateTime @default(now()) // 初回操作日時（ISO text）

@@ -21,7 +21,6 @@ import { correctImage } from "../../omr/imageCorrector"
 import { recordAuditLog } from "../auditLog"
 import { resolveExamScope, resolveExamScopeByPage } from "../auditScope"
 import prisma from "../client"
-import { recordDrawingAnnotationDeletionsForQuestionScores } from "../deletedRecord"
 import type { Tx } from "../transactionClient"
 import { getPageScoreScope, type PageScoreScope } from "./pageScope"
 
@@ -595,7 +594,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
         let compoundAnswerScoreRows = 0
 
         if (cropRegionIds.length > 0) {
-          // QuestionScore: 子の DrawingAnnotation を tombstone してから削除（cascade で道連れ）
+          // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
           const questionScores = await tx.questionScore.findMany({
             where: { studentId, cropRegionId: { in: cropRegionIds } },
             select: { id: true },
@@ -608,10 +607,6 @@ export async function deleteStudentAnswer(answerSheetId: string) {
             drawingAnnotationRows = await tx.drawingAnnotation.count({
               where: { questionScoreId: { in: questionScoreIds } },
             })
-            await recordDrawingAnnotationDeletionsForQuestionScores(
-              questionScoreIds,
-              { tx }
-            )
             const removed = await tx.questionScore.deleteMany({
               where: { id: { in: questionScoreIds } },
             })
@@ -643,8 +638,8 @@ export async function deleteStudentAnswer(answerSheetId: string) {
           },
         }
       },
-      // tombstone は SQLite に skipDuplicates が無く1行ずつ upsert するため、書き込みの多い
-      // 答案では既定の 5s を超えうる（超えると P2028 で削除ごとロールバックする）。
+      // 採点済み答案では削除対象の行数が多く、既定の 5s を超えうる
+      // （超えると P2028 で削除ごとロールバックする）。
       { timeout: 30000 }
     )
 

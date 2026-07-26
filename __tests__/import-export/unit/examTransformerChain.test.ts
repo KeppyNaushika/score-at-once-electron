@@ -332,10 +332,10 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
   return raw as unknown as ExamArchiveData
 }
 
-/** 現行 (v1.18.0) 最小形状 */
+/** 現行 (v1.19.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.18.0"),
+    manifest: createManifest("1.19.0"),
     examData: {
       exam: {
         id: "exam-1",
@@ -369,19 +369,18 @@ function createCurrentArchiveData(): ExamArchiveData {
       returnSnapshots: [],
     },
     tagsData: { tags: [], tagSubtotalGroups: [], examTags: [] },
-    deletedRecordsData: { deletedRecords: [] },
   }
   return raw as unknown as ExamArchiveData
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全18変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全19変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.18.0")
-    expect(result.appliedTransformations).toHaveLength(18)
-    expect(result.data.manifest.version).toBe("1.18.0")
+    expect(result.finalVersion).toBe("1.19.0")
+    expect(result.appliedTransformations).toHaveLength(19)
+    expect(result.data.manifest.version).toBe("1.19.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -457,7 +456,8 @@ describe("transformExamArchiveToLatest", () => {
     // 後発バージョンの初期化
     expect(result.data.scoresData.returnSnapshots).toEqual([])
     expect(result.data.tagsData).toBeDefined()
-    expect(result.data.deletedRecordsData).toEqual({ deletedRecords: [] })
+    // v1.9.0 で追加された削除記録は v1.19.0 で廃止され読み捨てられる
+    expect(result.data.deletedRecordsData).toBeUndefined()
     expect(examData.exam.markerCorrectionEnabled).toBe(false)
   })
 
@@ -469,6 +469,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.15.0", to: "1.16.0" },
       { from: "1.16.0", to: "1.17.0" },
       { from: "1.17.0", to: "1.18.0" },
+      { from: "1.18.0", to: "1.19.0" },
     ])
 
     const examData = result.data.examData
@@ -536,7 +537,7 @@ describe("transformExamArchiveToLatest", () => {
 
   test("形状ベース下方補正: manifest が現行版でも examClasses があれば変換される（クラッシュ回帰）", () => {
     const data = createV1_15_0_ArchiveData()
-    data.manifest.version = "1.18.0" // 実形状より新しい版数を名乗る
+    data.manifest.version = "1.19.0" // 実形状より新しい版数を名乗る
 
     const detection = detectExamArchiveVersion(data)
     expect(detection.version).toBe("1.15.0")
@@ -587,7 +588,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.18.0")
+    expect(detection.version).toBe("1.19.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -605,7 +606,7 @@ describe("transformExamArchiveToLatest", () => {
     // 現行キー配下に旧フィールドのレコード、という中間状態を模す
     examDataRecord.examClassrooms = examDataRecord.examClasses
     delete examDataRecord.examClasses
-    data.manifest.version = "1.18.0"
+    data.manifest.version = "1.19.0"
 
     const detection = detectExamArchiveVersion(data)
     expect(detection.version).toBe("1.15.0")
@@ -681,6 +682,7 @@ describe("transformExamArchiveToLatest", () => {
 
     expect(result.appliedTransformations).toEqual([
       { from: "1.17.0", to: "1.18.0" },
+      { from: "1.18.0", to: "1.19.0" },
     ])
     // キーごと落ちる（取り込み先が存在しないため）
     const transformedExamData = result.data.examData as unknown as Record<
@@ -694,21 +696,53 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
-  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.18.0 になる", () => {
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.19.0 になる", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.17.0"
 
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.finalVersion).toBe("1.18.0")
+    expect(result.finalVersion).toBe("1.19.0")
     expect(result.warnings).toEqual([])
+  })
+
+  test("v1.18.0 の削除記録（廃止済み）は読み捨てられ、件数が警告に出る", () => {
+    const data = createCurrentArchiveData()
+    const archiveRecord = data as unknown as Record<string, unknown>
+    // v1.18.0 までの実形状: 廃止前の deletedRecordsData を持つ
+    archiveRecord.deletedRecordsData = {
+      deletedRecords: [
+        {
+          id: "deletedrecord-1",
+          tableName: "DrawingAnnotation",
+          recordId: "drawingannotation-1",
+          deletedAt: TIMESTAMP,
+          userId: null,
+          examId: "exam-1",
+        },
+      ],
+    }
+    data.manifest.version = "1.18.0"
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.appliedTransformations).toEqual([
+      { from: "1.18.0", to: "1.19.0" },
+    ])
+    // キーごと落ちる（アーカイブは正本であり復活防止をしないため）
+    const transformedRecord = result.data as unknown as Record<string, unknown>
+    expect("deletedRecordsData" in transformedRecord).toBe(false)
+    // 読み飛ばした件数が利用者に伝わる
+    expect(
+      result.warnings.some((warning) => warning.includes("1件を読み飛ばし"))
+    ).toBe(true)
   })
 
   test("現行形式は無変換で素通しされる", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.18.0")
+    expect(result.originalVersion).toBe("1.19.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)

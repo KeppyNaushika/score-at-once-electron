@@ -6,9 +6,11 @@
  *
  * sync有効時はローカルDBを使用し、NAS経由で他PCと同期する。
  * sync無効時はNAS上のDBを直接使用する（従来動作）。
+ *
+ * 削除の伝搬はライブラリの `_tombstone`（deletedAt と updatedAt のLWW）に一本化している。
+ * 時刻を見ずに id を消し続けるアプリ側の削除記録は持たない（issue #918）。
  */
 
-import type Database from "better-sqlite3"
 import { BrowserWindow } from "electron"
 import * as fs from "fs"
 import type { SyncInstance, SyncResult } from "sqlite-nas-sync"
@@ -65,39 +67,6 @@ function broadcastSyncStatus(): void {
     } catch {
       // ウィンドウが既に閉じられている場合は無視
     }
-  }
-}
-
-/** enforceTombstonesの対象テーブル名を取得（DeletedRecord自身を除外） */
-function getTombstoneTargetTables(): Set<string> {
-  if (!syncInstance) return new Set()
-  return new Set(
-    syncInstance.getSyncedTables().filter((table) => table !== "DeletedRecord")
-  )
-}
-
-/**
- * sync後のtombstone適用
- *
- * DeletedRecordに記録された全テーブルの削除済みレコードを物理削除する。
- * SQLインジェクション防止のため、同期対象テーブル名のみ許可。
- */
-function enforceTombstones(db: Database.Database): void {
-  try {
-    const targetTables = getTombstoneTargetTables()
-    const tombstones = db
-      .prepare(
-        `SELECT recordId, tableName FROM "DeletedRecord" GROUP BY tableName, recordId`
-      )
-      .all() as Array<{ recordId: string; tableName: string }>
-
-    for (const { recordId, tableName } of tombstones) {
-      if (!targetTables.has(tableName)) continue
-
-      db.prepare(`DELETE FROM "${tableName}" WHERE "id" = ?`).run(recordId)
-    }
-  } catch (error) {
-    console.error("Failed to enforce tombstones:", error)
   }
 }
 
@@ -189,8 +158,7 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
     intervalMs: config.intervalMs,
     changelogRetentionDays: config.changelogRetentionDays,
     schemaVersion: getSchemaVersion(),
-    onAfterSync: (db: Database.Database, result: SyncResult) => {
-      enforceTombstones(db)
+    onAfterSync: (_localDb, result) => {
       updateStatus({
         state: "idle",
         lastSyncTime: new Date().toISOString(),
