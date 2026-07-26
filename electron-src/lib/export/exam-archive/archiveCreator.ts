@@ -202,11 +202,6 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
       archive.append(JSON.stringify(collectedData.tagsData, null, 2), {
         name: "tags.json",
       })
-      archive.append(
-        JSON.stringify(collectedData.deletedRecordsData, null, 2),
-        { name: "deleted-records.json" }
-      )
-
       // 3. マスター画像を追加
       // 注意: relativePathはdataディレクトリからの相対パス（例: exams/{examId}/master-answers/image.png）
       const dataDir = getDataDir()

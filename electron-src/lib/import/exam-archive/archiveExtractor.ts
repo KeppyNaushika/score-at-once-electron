@@ -34,8 +34,6 @@ export interface ExtractedArchiveData extends ExamArchiveData {
   subjectsData: ArchiveSubjectsData
   /** タグデータ (v1.10.0+) */
   tagsData: ArchiveTagsData
-  /** 削除記録データ (v1.9.0+) */
-  deletedRecordsData: ArchiveDeletedRecordsData
   /** バージョン変換チェーンの警告（旧版アーカイブの読込時のみ非空） */
   transformWarnings: string[]
   /** 一時展開ディレクトリパス */
@@ -111,7 +109,7 @@ export async function extractArchive(archivePath: string): Promise<{
     const tagsData =
       readJsonFile<ArchiveTagsData>(tempDir, "tags.json") ?? undefined
 
-    // v1.9.0+: 削除記録データ
+    // v1.9.0-v1.18.0: 削除記録データ。v1.19.0で廃止したので変換器が読み捨てる（issue #918）
     const deletedRecordsData =
       readJsonFile<ArchiveDeletedRecordsData>(
         tempDir,
@@ -164,9 +162,6 @@ export async function extractArchive(archivePath: string): Promise<{
           tags: [],
           tagSubtotalGroups: [],
           examTags: [],
-        },
-        deletedRecordsData: transformed.deletedRecordsData ?? {
-          deletedRecords: [],
         },
         transformWarnings: chainResult.warnings,
         tempDir,

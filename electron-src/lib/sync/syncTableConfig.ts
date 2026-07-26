@@ -26,10 +26,6 @@ export const SYNC_EXCLUDE_TABLES: string[] = [
 
 /** テーブル別の同期オプション */
 export const SYNC_TABLE_OPTIONS: Record<string, TableOptions> = {
-  DeletedRecord: {
-    timestampColumn: "deletedAt",
-    deleteProtected: true,
-  },
   // 監査ログ。連続操作の集約で既存行を上書きするため、LWWは updatedAt で収束させる。
   // 削除はされない（deleteProtected）。
   AuditLog: {

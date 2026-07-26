@@ -1996,4 +1996,56 @@ describe("executeIdIntegrationImport", () => {
       })
     ).toBe(1)
   })
+
+  // II-26: アーカイブは正本。存在については忠実に復元する（issue #918）
+  it("II-26: DrawingAnnotationがアーカイブから復元される", async () => {
+    const { data, examId, scoreId } = createBasicTestData()
+
+    const annotationId = generateId()
+    const now = new Date().toISOString()
+    data.scoresData.drawingAnnotations = [
+      {
+        id: annotationId,
+        questionScoreId: scoreId,
+        type: "circle",
+        x: 5,
+        y: 5,
+        color: "#ff0000",
+        strokeWidth: 2,
+        width: 10,
+        height: 10,
+        endX: 0,
+        endY: 0,
+        lineStyle: "solid",
+        text: "",
+        fontSize: 12,
+        textBoxWidth: 0,
+        textBoxHeight: 0,
+        horizontalAlign: "center",
+        verticalAlign: "middle",
+        anchorDirection: "none",
+        displayX: 0,
+        displayY: 0,
+        isFavorite: false,
+        userId: currentUser.id,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    const result = await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result.success).toBe(true)
+
+    // アーカイブに在るものは作る。削除記録による復活防止は行わない
+    expect(
+      await prisma.drawingAnnotation.findUnique({ where: { id: annotationId } })
+    ).not.toBeNull()
+    expect(result.summary?.skipped.annotations).toBe(0)
+  })
 })

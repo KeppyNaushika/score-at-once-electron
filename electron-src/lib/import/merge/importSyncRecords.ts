@@ -1,49 +1,18 @@
 /**
- * ID統合インポート: 同期記録（tombstone伝搬・アノテーション）と学級所属の処理
+ * ID統合インポート: アノテーションと学級所属の処理
  *
- * - DeletedRecord（tombstone）をupsertし、DrawingAnnotationの削除を伝搬
- * - DrawingAnnotation（tombstoneチェック付きで復活を防止）
+ * - DrawingAnnotation（アーカイブに在るものは作る。tombstoneによる復活防止はしない）
  * - StudentClassroomMembership（学級所属。student-archiveからも再利用される）
+ *
+ * アーカイブは正本であり、存在については忠実に復元する。アーカイブはスナップショットで
+ * 削除を表現できず「無い」が曖昧なため、削除を推論せず追加とマージのみを行う。
+ * 削除の伝搬は sqlite-nas-sync の `_tombstone`（deletedAt と updatedAt のLWW）が担う。
+ * 値の競合は従来どおりLWWと競合UIで解決する（issue #918）。
  */
 
 import type { ArchiveClassesData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
-
-export async function processDeletedRecords(
-  data: ExtractedArchiveData,
-  tx: PrismaTransaction
-): Promise<void> {
-  const deletedRecords = data.deletedRecordsData?.deletedRecords ?? []
-  if (deletedRecords.length === 0) return
-
-  for (const deletedRecord of deletedRecords) {
-    // tombstoneをローカルDBにupsert
-    await tx.deletedRecord.upsert({
-      where: {
-        tableName_recordId: {
-          tableName: deletedRecord.tableName,
-          recordId: deletedRecord.recordId,
-        },
-      },
-      update: {},
-      create: {
-        tableName: deletedRecord.tableName,
-        recordId: deletedRecord.recordId,
-        deletedAt: new Date(deletedRecord.deletedAt),
-        userId: deletedRecord.userId,
-        examId: deletedRecord.examId,
-      },
-    })
-
-    // ローカルに該当レコードが残っていれば削除（削除の伝搬）
-    if (deletedRecord.tableName === "DrawingAnnotation") {
-      await tx.drawingAnnotation.deleteMany({
-        where: { id: deletedRecord.recordId },
-      })
-    }
-  }
-}
 
 export async function processDrawingAnnotations(
   data: ExtractedArchiveData,
@@ -52,26 +21,11 @@ export async function processDrawingAnnotations(
   counts: ImportCounts,
   tx: PrismaTransaction
 ): Promise<void> {
-  // tombstoneを一括取得してSetに格納
-  const localTombstones = await tx.deletedRecord.findMany({
-    where: { tableName: "DrawingAnnotation" },
-    select: { recordId: true },
-  })
-  const deletedIds = new Set(
-    localTombstones.map((tombstone) => tombstone.recordId)
-  )
-
   for (const drawingAnnotation of data.scoresData.drawingAnnotations) {
     const newScoreId =
       idMappings.questionScore[drawingAnnotation.questionScoreId]
 
     if (newScoreId) {
-      // tombstoneチェック: 削除済みならスキップ
-      if (deletedIds.has(drawingAnnotation.id)) {
-        counts.skipped.annotations++
-        continue
-      }
-
       const existingById = await tx.drawingAnnotation.findUnique({
         where: { id: drawingAnnotation.id },
       })

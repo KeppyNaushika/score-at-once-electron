@@ -14,10 +14,6 @@ import type {
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveExamScopeByQuestionScore } from "./auditScope"
 import prisma from "./client"
-import {
-  recordDeletion,
-  recordDrawingAnnotationDeletionsBeforeDelete,
-} from "./deletedRecord"
 
 /**
  * 描画アノテーションを作成する
@@ -514,10 +510,8 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
       where: { id },
     })
 
-    // tombstone記録（削除成功後）
     if (annotation) {
       const examId = annotation.questionScore.cropRegion.examPage.examId
-      await recordDeletion("DrawingAnnotation", id, { examId })
 
       // 監査ログ: 採点マーク削除（個別記録）
       const scope = await resolveExamScope(examId)
@@ -550,9 +544,6 @@ export async function deleteDrawingAnnotationsByQuestionScore(
       questionScoreId,
       ...(type && { type }),
     }
-
-    // 削除前にtombstone記録
-    await recordDrawingAnnotationDeletionsBeforeDelete(where)
 
     await prisma.drawingAnnotation.deleteMany({ where })
   } catch (error) {

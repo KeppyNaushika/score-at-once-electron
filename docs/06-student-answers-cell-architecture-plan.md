@@ -16,7 +16,7 @@
 - **Phase 2（大部分）**: 共通描画型 **`AnswerItem`** を `types.ts` に導入し描画層（`FilePreviewCell`/`TableDragOverlay`/`getFileColor`/`drawNameRegionCanvas`/`loadStudentAnswerImage`）を decouple。`SortableContext` を `TableContent` から `StudentAnswerTable` へ引き上げ。
 - **Phase 0（バックエンド・テスト付き）**: 新規 `electron-src/lib/prisma/studentAnswer/placementApply.ts` の `applyStudentAnswerPlacements(moves)`。
   - moves: `{ fileId, finalStudentId, finalPageNumber, scorePolicy:"carry"|"discard" }[]`。
-  - 2軸移動（examPageId 更新）／carry=**QuestionScore を id 指定 updateMany で付け替え（DrawingAnnotation 温存）**＋ScoreDecision は id 保持で delete→再作成／discard=tombstone→両スコア表削除／画像は id 保持で delete→再作成。
+  - 2軸移動（examPageId 更新）／carry=**QuestionScore を id 指定 updateMany で付け替え（DrawingAnnotation 温存）**＋ScoreDecision は id 保持で delete→再作成／discard=両スコア表削除（`DrawingAnnotation` は cascade で道連れ）／画像は id 保持で delete→再作成。
   - **基本 Prisma のみ**（一時ID退避・`defer_foreign_keys` 不使用）。IPC: `apply-answer-sheet-placements`。
   - テスト `__tests__/exam/integration/studentAnswerPlacementApply.test.ts`（**7件パス**）。
   - **コードレビュー(high)反映済み**: (F1/F2) carry で**移動先セルの残存採点（moving 集合外）を stale として掃除**（QuestionScore 二重計上・ScoreDecision unique 違反を修正）。(F3) `finalStudentId=null` は**拒否**（削除は deleteStudentAnswer 専用・ファイル/監査漏れ回避）。(F4) 移動先が batch 外答案で**占有時は明示エラー**（上書きしない）。残: F5=トランザクション内の逐次クエリ（性能・非破損、未対応）。
@@ -381,7 +381,7 @@ view の方式B（任意マスへ移動＋swap）は、既存のDB配置APIで�
 - **選択肢は「入れ替え（追従）」か「破棄」の二択のみ。** 据え置き（画像のみ移動・採点そのまま）は完全廃止。
 - **追従（入れ替え）は①のみ提示可**。しかも**そのページの枠のスコアだけ**を付け替える（全スコアchurn廃止）。
 - **②③はページが変わるので追従不可 → 破棄一択**。破棄時は **モーダルで2回確認**。①でも**破棄を選んだら2回確認**。
-- **全ケースで `QuestionScore` と `ScoreDecision` を同時に処理**（追従 or 破棄）。破棄は tombstone/監査を残す。`DrawingAnnotation` は既存 tombstone 機構。
+- **全ケースで `QuestionScore` と `ScoreDecision` を同時に処理**（追従 or 破棄）。破棄は監査ログを残す。`DrawingAnnotation` は `QuestionScore` の cascade で道連れになる。
 
 ---
 
@@ -399,7 +399,7 @@ view の方式B（任意マスへ移動＋swap）は、既存のDB配置APIで�
   - **carry**（ページscoped）:
     - `QuestionScore` は unique が無いので **id 指定の `updateMany` で studentId 付け替え**（id 保持 → `DrawingAnnotation` 温存。swap も id 指定で途中衝突なし）。
     - `ScoreDecision`（unique あり・子なし）は **delete → 最終位置へ再作成**。
-  - **discard**: `DrawingAnnotation` を tombstone → `QuestionScore`＋`ScoreDecision` 削除。
+  - **discard**: `QuestionScore`＋`ScoreDecision` を削除（`DrawingAnnotation` は cascade で道連れ）。
   - **画像**: unique の 2-cycle 回避に **delete → 同一 id で再作成**（id・imagePath・createdAt 保持、ファイル実体は不触）。
   - **ガード**: carry×ページ変化はエラー。
   - **基本 Prisma のみ（findMany/updateMany/deleteMany/createMany）。一時ID退避も `defer_foreign_keys` も使わない。** ⚠️ 既存 `batch.ts`/`swap`/`placement.ts` は偽 studentId の一時ID方式で、FK 強制下では壊れる（旧 batchUpdate 破綻の一因）。Phase 3 置換時に撤去。
@@ -413,8 +413,8 @@ view の方式B（任意マスへ移動＋swap）は、既存のDB配置APIで�
 1. **2軸移動**: `batchUpdateStudentAnswerPlacements`（`batch.ts`）を `examPageId` も更新するよう拡張。`finalPageNumber` を `examId` で `ExamPage.findFirst` 解決（模範解答ページは既存前提・無ければエラー）。`@@unique([examPageId, studentId])` 回避の一時ID方式を `(examPageId, studentId)` の2軸へ拡張。swap も 2 答案の `(examPageId, studentId)` ペア交換に拡張。
 2. **スコア処理を分類駆動に**（§3-4 の①②③）。適用時に各移動を分類し:
    - ①入れ替え（追従）: **そのページの枠**の `QuestionScore` と `ScoreDecision` を studentId 付け替え（全スコアchurn廃止）。
-   - ②③破棄: 影響スロットの `QuestionScore` と `ScoreDecision` を削除（tombstone/監査記録）。要再採点。
-3. **両スコア表を必ず処理**: 現状無視されている `ScoreDecision`（返却成績）を追従/破棄の対象に含める。`DrawingAnnotation` は既存 tombstone 機構を流用。
+   - ②③破棄: 影響スロットの `QuestionScore` と `ScoreDecision` を削除（監査記録）。要再採点。
+3. **両スコア表を必ず処理**: 現状無視されている `ScoreDecision`（返却成績）を追従/破棄の対象に含める。`DrawingAnnotation` は `QuestionScore` の cascade で道連れになる。
 4. **ガード**: ②③（ページ変化）では「追従（入れ替え）」を受け付けない（破棄のみ）。据え置き（採点そのまま）経路はAPIレベルで廃止。
 5. 適用の引数を「分類＋スコア処理方針（carry/discard）」を運べる形へ拡張（`{fileId, finalStudentId, finalPageNumber, scorePolicy}` 等）。IPC 契約（`preload-apis/answerSheetApi.ts` / `ipc-handlers/miscHandlers.ts`）を合わせて更新。
 6. **確認UX**（`ConfirmChangesModal` 改修・ハイブリッド方式に確定）:

@@ -4,7 +4,7 @@
  * 検証対象（docs/06-student-answers-cell-architecture-plan.md §3-4）:
  * - 2軸移動: examPageId が実際に更新される（旧 batchUpdate は finalPageNumber を無視していた）
  * - carry（同一ページ）: 採点が studentId 付け替えで追従し、DrawingAnnotation が温存される
- * - discard: 影響採点（両スコア表）が削除され、注釈は tombstone される
+ * - discard: 影響採点（両スコア表）が削除され、注釈は cascade で道連れになる
  * - ガード: carry かつページ変化はエラー（DBは不変）
  */
 import * as path from "path"

@@ -211,7 +211,6 @@ export function createMinimalCollectedData(
     subtotalsData: { subtotalGroups: [], subtotals: [], cropSubtotals: [] },
     scoresData: { questionScores: [], drawingAnnotations: [] },
     tagsData: { tags: [], tagSubtotalGroups: [], examTags: [] },
-    deletedRecordsData: { deletedRecords: [] },
     counts: {
       students: 0,
       classrooms: 0,
