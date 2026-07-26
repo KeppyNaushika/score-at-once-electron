@@ -77,6 +77,7 @@ export interface ArchiveDataCounts {
  * - 1.17.0: v0.15.x (ExamStudent.status を小文字へ統一)
  * - 1.18.0: v0.16.x (CropRegionMarkingOverride 廃止 — UI・出力反映が無いまま入出力のみ維持されていたため削除)
  * - 1.19.0: v0.16.x (DeletedRecord tombstone 廃止 — アーカイブは正本であり import は忠実に復元する。削除の伝搬は sqlite-nas-sync の `_tombstone` に一本化)
+ * - 1.20.0: v0.16.x (CropRegionAssignment 追加 — 設問ごとの採点担当。ユーザーはアーカイブを越えないため username で照合する)
  */
 export type ExamArchiveVersion =
   | "1.0.0"
@@ -99,9 +100,10 @@ export type ExamArchiveVersion =
   | "1.17.0"
   | "1.18.0"
   | "1.19.0"
+  | "1.20.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.19.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.20.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -125,6 +127,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.17.0",
   "1.18.0",
   "1.19.0",
+  "1.20.0",
 ] as const
 
 /**
@@ -1024,6 +1027,20 @@ export interface ArchiveScoresData {
     decidedByUserId: string
     decidedAt: string
     sourceQuestionScoreId: string | null
+    createdAt: string
+    updatedAt: string
+  }>
+  /**
+   * v1.20.0+ 設問ごとの採点担当。
+   *
+   * ユーザーはアーカイブを越えない（users.json は currentUser のみ、UserExam は空）ため
+   * `userId` ではなく `username` を denormalize して持ち、import 時に移行先DBの
+   * `User.username` で lookup する。解決できない担当は破棄して警告する（新規ユーザーは作らない）。
+   * id は (cropRegionId, userId) から決定論的に再生成するので、ここでは持ち回らない。
+   */
+  cropRegionAssignments?: Array<{
+    cropRegionId: string
+    username: string
     createdAt: string
     updatedAt: string
   }>

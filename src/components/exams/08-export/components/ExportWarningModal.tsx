@@ -1,6 +1,13 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Gavel,
+} from "lucide-react"
+import { useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -10,30 +17,126 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import type {
+  ConflictWarning,
+  QuestionWarning,
+  ScoringValidationWarnings,
+} from "@/types/exportValidation.types"
 
 interface ExportWarningModalProps {
   isOpen: boolean
   onClose: () => void
   onContinue: () => void
-  warnings: {
-    noScoringData: string[]
-    unscored: string[]
-    missingPartialScore: string[]
-    conflicted?: string[]
-  }
+  /** 確定パネル（07）へ誘導する。競合があるときだけ表示される */
+  onOpenDecisionPanel: () => void
+  warnings: ScoringValidationWarnings
+  /** 食い違いを未解決のまま出力した場合に合計点から失われる最大値 */
+  conflictScoreImpact: number
+  /** 食い違いの検査自体に失敗した理由（この場合 conflicted は当てにならない） */
+  conflictCheckError?: string
+}
+
+/** 内訳に出す生徒名。多いときは先頭だけ出して残りは件数で示す */
+const MAX_LISTED_NAMES = 5
+
+function summarizeStudentNames(studentNames: string[]): string {
+  if (studentNames.length <= MAX_LISTED_NAMES) return studentNames.join("、")
+  return `${studentNames.slice(0, MAX_LISTED_NAMES).join("、")} ほか${
+    studentNames.length - MAX_LISTED_NAMES
+  }名`
+}
+
+/** 設問ごとに集約した警告のグループ（既定は折りたたみ） */
+function CollapsibleWarningGroup({
+  title,
+  questions,
+}: {
+  title: string
+  questions: QuestionWarning[]
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const total = questions.reduce((sum, question) => sum + question.count, 0)
+
+  if (questions.length === 0) return null
+
+  return (
+    <div className="rounded-md border border-gray-200">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-gray-50"
+      >
+        <span className="flex items-center gap-1 text-gray-700">
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          {title}
+        </span>
+        <span className="font-medium text-gray-600">{total}件</span>
+      </button>
+      {isOpen && (
+        <div className="space-y-1 border-t border-gray-100 px-3 py-2 text-sm">
+          {questions.map((question) => (
+            <div key={question.cropRegionId}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate text-gray-700">
+                  {question.questionLabel}
+                </span>
+                <span className="shrink-0 text-gray-500">
+                  {question.count}名
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">
+                {summarizeStudentNames(question.studentNames)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 対処が必要な食い違い1件の内訳（誰が何点を付けたか） */
+function ConflictRow({ conflict }: { conflict: ConflictWarning }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-1">
+      <span className="font-medium">{conflict.studentName}</span>
+      <span className="text-purple-700">
+        {conflict.questionLabel}（{conflict.maxScore}点）
+      </span>
+      <span className="text-purple-600">
+        {conflict.proposals
+          .map(
+            (proposal) =>
+              `${proposal.userName}: ${SCORING_STATUS_LABELS[proposal.status]} ${
+                proposal.scoreValue ?? "-"
+              }点`
+          )
+          .join(" / ")}
+      </span>
+    </div>
+  )
 }
 
 export default function ExportWarningModal({
   isOpen,
   onClose,
   onContinue,
+  onOpenDecisionPanel,
   warnings,
+  conflictScoreImpact,
+  conflictCheckError,
 }: ExportWarningModalProps) {
+  const conflicted = warnings?.conflicted ?? []
   const hasWarnings =
+    conflictCheckError !== undefined ||
+    conflicted.length > 0 ||
     (warnings?.noScoringData?.length ?? 0) > 0 ||
-    (warnings?.unscored?.length ?? 0) > 0 ||
-    (warnings?.missingPartialScore?.length ?? 0) > 0 ||
-    (warnings?.conflicted?.length ?? 0) > 0
+    (warnings?.ungraded?.length ?? 0) > 0 ||
+    (warnings?.missingPartialScore?.length ?? 0) > 0
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -46,81 +149,78 @@ export default function ExportWarningModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 採点データがない設問答案 */}
-          {(warnings?.noScoringData?.length ?? 0) > 0 && (
-            <Alert className="border-red-200 bg-red-50">
+          {/* 食い違いを確認できなかった場合。「食い違いなし」と誤読させない */}
+          {conflictCheckError !== undefined && (
+            <Alert className="border-red-300 bg-red-50">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
-                <div className="mb-2 font-medium">
-                  次の設問答案の採点データがありません
+                <div className="mb-1 font-medium">
+                  採点者間の食い違いを確認できませんでした
                 </div>
-                <div className="space-y-1 text-sm">
-                  {(warnings?.noScoringData ?? []).map((item, index) => (
-                    <div key={index} className="pl-2">
-                      • {item}
-                    </div>
-                  ))}
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* 未採点の設問答案 */}
-          {(warnings?.unscored?.length ?? 0) > 0 && (
-            <Alert className="border-orange-200 bg-orange-50">
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <AlertDescription className="text-orange-800">
-                <div className="mb-2 font-medium">次の設問答案が未採点です</div>
-                <div className="space-y-1 text-sm">
-                  {(warnings?.unscored ?? []).map((item, index) => (
-                    <div key={index} className="pl-2">
-                      • {item}
-                    </div>
-                  ))}
+                <div className="text-sm">
+                  {conflictCheckError}
+                  <br />
+                  食い違いが無いことの確認は取れていません。出力し直すか、
+                  採点画面の確定パネルで状況を確認してください。
                 </div>
               </AlertDescription>
             </Alert>
           )}
 
-          {/* 採点の競合（複数採点者の値が食い違い、未確定） */}
-          {(warnings?.conflicted?.length ?? 0) > 0 && (
-            <Alert className="border-purple-200 bg-purple-50">
+          {/* 対処が必要: 採点者間の食い違い（値が出ない・OWNERしか直せない） */}
+          {conflicted.length > 0 && (
+            <Alert className="border-purple-300 bg-purple-50">
               <AlertTriangle className="h-4 w-4 text-purple-600" />
               <AlertDescription className="text-purple-800">
-                <div className="mb-2 font-medium">
-                  次の設問答案は採点者間で結果が食い違っています（未採点として出力されます）
+                <div className="mb-1 font-medium">
+                  採点者間で結果が食い違っています {conflicted.length}件
                 </div>
                 <div className="mb-2 text-sm">
-                  採点画面の比較モーダルから、試験の所有者が結果を確定してください。
+                  この設問答案は未採点として出力されます（合計点が最大{" "}
+                  {conflictScoreImpact} 点低く出ます）。
                 </div>
-                <div className="space-y-1 text-sm">
-                  {(warnings?.conflicted ?? []).map((item, index) => (
-                    <div key={index} className="pl-2">
-                      • {item}
-                    </div>
+                <div className="mb-3 space-y-0.5 text-sm">
+                  {conflicted.map((conflict) => (
+                    <ConflictRow
+                      key={`${conflict.cropRegionId}:${conflict.studentId}`}
+                      conflict={conflict}
+                    />
                   ))}
                 </div>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={onOpenDecisionPanel}
+                >
+                  <Gavel className="mr-1 h-4 w-4" />
+                  確定パネルを開いて解決する
+                </Button>
               </AlertDescription>
             </Alert>
           )}
 
-          {/* 部分点が入力されていない設問 */}
-          {(warnings?.missingPartialScore?.length ?? 0) > 0 && (
-            <Alert className="border-yellow-200 bg-yellow-50">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
-                <div className="mb-2 font-medium">
-                  次の部分点が入力されていません
-                </div>
-                <div className="space-y-1 text-sm">
-                  {(warnings?.missingPartialScore ?? []).map((item, index) => (
-                    <div key={index} className="pl-2">
-                      • {item}
-                    </div>
-                  ))}
-                </div>
-              </AlertDescription>
-            </Alert>
+          {/* 確認: 採点途中なら正常。件数と設問別内訳だけ示す */}
+          {(warnings?.noScoringData?.length ?? 0) +
+            (warnings?.ungraded?.length ?? 0) +
+            (warnings?.missingPartialScore?.length ?? 0) >
+            0 && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-600">
+                確認（このまま出力できます）
+              </div>
+              <CollapsibleWarningGroup
+                title="採点データがありません"
+                questions={warnings?.noScoringData ?? []}
+              />
+              <CollapsibleWarningGroup
+                title="未採点"
+                questions={warnings?.ungraded ?? []}
+              />
+              <CollapsibleWarningGroup
+                title="部分点が入力されていません"
+                questions={warnings?.missingPartialScore ?? []}
+              />
+            </div>
           )}
 
           {!hasWarnings && (
@@ -132,29 +232,17 @@ export default function ExportWarningModal({
             </Alert>
           )}
 
-          <div className="rounded-lg bg-gray-50 p-4">
-            <p className="text-sm text-gray-600">
-              {hasWarnings ? (
-                <>
-                  上記の問題がある状態で出力すると、該当箇所は適切に表示されない可能性があります。
-                  それでも続行する場合は「警告を無視して続行」をクリックしてください。
-                </>
-              ) : (
-                "すべての採点データが正常に入力されています。出力を続行できます。"
-              )}
-            </p>
-          </div>
-
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>
               キャンセル
             </Button>
             <Button
               onClick={onContinue}
-              variant={hasWarnings ? "destructive" : "default"}
-              className={hasWarnings ? "bg-orange-600 hover:bg-orange-700" : ""}
+              className={
+                hasWarnings ? "bg-orange-600 hover:bg-orange-700" : undefined
+              }
             >
-              {hasWarnings ? "警告を無視して続行" : "続行"}
+              {hasWarnings ? "このまま出力" : "続行"}
             </Button>
           </div>
         </div>

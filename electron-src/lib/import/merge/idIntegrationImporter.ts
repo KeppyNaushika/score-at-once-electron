@@ -45,6 +45,7 @@ import {
 } from "./importExamCore"
 import {
   processCompoundAnswerScores,
+  processCropRegionAssignments,
   processQuestionScores,
   processScoreDecisions,
 } from "./importScoring"
@@ -269,6 +270,17 @@ export async function executeIdIntegrationImport(
           idMappings,
           counts,
           tx
+        )
+
+        // 12d. CropRegionAssignment（設問ごとの採点担当。usernameで照合） (v1.20.0+)
+        warnings.push(
+          ...(await processCropRegionAssignments(
+            data,
+            currentUserId,
+            idMappings,
+            counts,
+            tx
+          ))
         )
 
         // 13. DrawingAnnotation

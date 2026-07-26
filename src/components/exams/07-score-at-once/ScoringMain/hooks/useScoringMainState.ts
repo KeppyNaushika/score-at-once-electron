@@ -24,8 +24,8 @@ export function useScoringMainState() {
   )
   /** キーボードヘルプ表示状態 */
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
-  /** 採点結果比較表示状態 */
-  const [showScoreComparison, setShowScoreComparison] = useState(false)
+  /** 採点結果の確定（裁定）パネル表示状態 */
+  const [showScoreDecisionPanel, setShowScoreDecisionPanel] = useState(false)
   /** サイドパネル表示状態 */
   const [showSidePanel, setShowSidePanel] = useState(true)
   /** ショートカットで利用する修飾キー表示ラベル */
@@ -86,7 +86,7 @@ export function useScoringMainState() {
     currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,
-    showScoreComparison,
+    showScoreDecisionPanel,
     showSidePanel,
     modifierKeyLabel,
     manualSelectionVersion,
@@ -96,7 +96,7 @@ export function useScoringMainState() {
     setCurrentStudentIndex,
     setCurrentCropRegionId,
     setShowKeyboardHelp,
-    setShowScoreComparison,
+    setShowScoreDecisionPanel,
     setShowSidePanel,
     /** ヘルパー関数 */
     handleAnswerSelect,

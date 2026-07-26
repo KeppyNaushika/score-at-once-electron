@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useCallback, useMemo, useRef, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import {
@@ -21,17 +22,28 @@ import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useSc
 import { buildScoringMarkConfigForPdf } from "@/components/exams/08-export/utils/buildScoringMarkConfigForPdf"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
+import { useAuth } from "@/contexts/AuthContext"
+import type {
+  ConflictWarning,
+  ScoringValidationWarnings,
+} from "@/types/exportValidation.types"
 
 export default function ExportMainView() {
   const { helpButton } = usePageHelp()
+  const { user } = useAuth()
+  const router = useRouter()
   const [exportTab, setExportTab] = useState<ExportTabType>("scored-answers")
   const [showWarningModal, setShowWarningModal] = useState(false)
-  const [warningData, setWarningData] = useState({
-    noScoringData: [] as string[],
-    unscored: [] as string[],
-    missingPartialScore: [] as string[],
-    conflicted: [] as string[],
+  const [warningData, setWarningData] = useState<ScoringValidationWarnings>({
+    noScoringData: [],
+    ungraded: [],
+    missingPartialScore: [],
+    conflicted: [],
   })
+  const [conflictScoreImpact, setConflictScoreImpact] = useState(0)
+  const [conflictCheckError, setConflictCheckError] = useState<
+    string | undefined
+  >(undefined)
   const [pendingExportType, setPendingExportType] = useState<
     "scored-answers" | "grading-data" | "individual-reports" | null
   >(null)
@@ -142,6 +154,35 @@ export default function ExportMainView() {
       !!exam?.id && selectedStudents.size > 0 && exportTab === "scored-answers",
   })
 
+  /**
+   * 「このまま出力」で承知した食い違い。
+   * 出力が実際に完了した時点で監査ログへ書く（保存ダイアログのキャンセルや
+   * 失敗で「配った」という嘘の記録が残らないように、記録は完了後に限る）。
+   */
+  const acknowledgedConflictsRef = useRef<{
+    conflicts: ConflictWarning[]
+    scoreImpact: number
+  } | null>(null)
+
+  const recordUnresolvedConflictExport = useCallback(
+    async (exportType: string) => {
+      const acknowledged = acknowledgedConflictsRef.current
+      if (!exam || !user || !acknowledged) return
+      acknowledgedConflictsRef.current = null
+      await window.electronAPI.export.recordUnresolvedConflicts({
+        examId: exam.id,
+        userId: user.id,
+        exportType,
+        conflicts: acknowledged.conflicts.map((conflict) => ({
+          studentName: conflict.studentName,
+          questionLabel: conflict.questionLabel,
+        })),
+        scoreImpact: acknowledged.scoreImpact,
+      })
+    },
+    [exam, user]
+  )
+
   // 採点済み答案の Canvas 描画ベース PDF 出力（ストリーミング処理）
   const {
     executeExportScoredAnswers,
@@ -163,6 +204,8 @@ export default function ExportMainView() {
     setExportProgress,
     setExportStatus,
     setCurrentStep,
+    // 採点済み答案PDFは非同期のストリーミング処理なので、保存完了時に記録する
+    onExportCompleted: () => recordUnresolvedConflictExport("scored-answers"),
   })
 
   // Canvas 描画を伴わないファイル出力（採点データExcel・R データ・個人成績表印刷）
@@ -185,23 +228,27 @@ export default function ExportMainView() {
     exportType: "scored-answers" | "grading-data" | "individual-reports"
   ): Promise<boolean> => {
     if (!exam) return false
+    // 無言で何も起きない状態を作らない（runValidatedExport の catch が表に出す）
+    if (!user) {
+      throw new Error(
+        "ログイン情報を取得できませんでした。再ログインしてから出力してください"
+      )
+    }
     const selectedStudentIds = Array.from(selectedStudents)
     const result = await window.electronAPI.export.validateScoringData({
       examId: exam.id,
       selectedStudentIds,
+      userId: user.id,
     })
 
     if (!result.success) {
       throw new Error(result.error || "バリデーションに失敗しました")
     }
 
-    if (result.hasWarnings && result.warnings) {
-      setWarningData({
-        noScoringData: result.warnings.noScoringData,
-        unscored: result.warnings.ungraded,
-        missingPartialScore: result.warnings.missingPartialScore,
-        conflicted: result.warnings.conflicted ?? [],
-      })
+    if (result.hasWarnings) {
+      setWarningData(result.warnings)
+      setConflictScoreImpact(result.conflictScoreImpact)
+      setConflictCheckError(result.conflictCheckError)
       setPendingExportType(exportType)
       setShowWarningModal(true)
       return false
@@ -217,7 +264,9 @@ export default function ExportMainView() {
    */
   const runValidatedExport = async (
     exportType: "scored-answers" | "grading-data" | "individual-reports",
-    execute: () => Promise<void>
+    // 警告なしで通った経路なので食い違いはゼロ＝監査記録は不要。
+    // execute の成否（boolean を返すものもある）はここでは見ない。
+    execute: () => Promise<void | boolean>
   ): Promise<void> => {
     if (selectedStudents.size === 0) {
       alert("出力する生徒を選択してください")
@@ -250,17 +299,39 @@ export default function ExportMainView() {
   const handleExportIndividualReports = () =>
     runValidatedExport("individual-reports", executeExportIndividualReports)
 
+  /** 出力前警告から採点画面の確定パネルへ移動する */
+  const handleOpenDecisionPanel = () => {
+    if (!exam) return
+    setShowWarningModal(false)
+    setPendingExportType(null)
+    router.push(`/exams/${exam.id}/07-score-at-once?decide=1`)
+  }
+
   const handleContinueExport = async () => {
     setShowWarningModal(false)
     const exportType = pendingExportType
     setPendingExportType(null)
 
+    // 未解決の食い違いを承知したことを控える。記録は出力の完了後（下記）。
+    acknowledgedConflictsRef.current =
+      warningData.conflicted.length > 0
+        ? {
+            conflicts: warningData.conflicted,
+            scoreImpact: conflictScoreImpact,
+          }
+        : null
+
     if (exportType === "grading-data") {
-      await executeExportGradingData()
+      if (await executeExportGradingData()) {
+        await recordUnresolvedConflictExport("grading-data")
+      }
     } else if (exportType === "scored-answers") {
+      // 保存完了は onExportCompleted 経由で通知される（この await では終わらない）
       await executeExportScoredAnswers()
     } else if (exportType === "individual-reports") {
-      await executeExportIndividualReports()
+      if (await executeExportIndividualReports()) {
+        await recordUnresolvedConflictExport("individual-reports")
+      }
     }
   }
 
@@ -367,7 +438,10 @@ export default function ExportMainView() {
           isOpen={showWarningModal}
           onClose={() => setShowWarningModal(false)}
           onContinue={handleContinueExport}
+          onOpenDecisionPanel={handleOpenDecisionPanel}
           warnings={warningData}
+          conflictScoreImpact={conflictScoreImpact}
+          conflictCheckError={conflictCheckError}
         />
 
         {/* Canvas描画コンポーネント（非表示） */}

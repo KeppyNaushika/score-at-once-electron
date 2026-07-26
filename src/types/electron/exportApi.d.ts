@@ -11,6 +11,7 @@ import type {
 } from "@/electron-src/lib/prisma/returnSnapshot"
 import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { ScoringValidationResult } from "@/types/exportValidation.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
@@ -23,17 +24,20 @@ export interface ExportAPI {
     validateScoringData: (options: {
       examId: string
       selectedStudentIds: string[]
-    }) => Promise<{
-      success: boolean
-      error?: string
-      hasWarnings?: boolean
-      warnings?: {
-        noScoringData: string[]
-        ungraded: string[]
-        missingPartialScore: string[]
-        conflicted: string[]
-      }
-    }>
+      userId: string
+    }) => Promise<
+      | { success: false; error: string }
+      | ({ success: true } & ScoringValidationResult)
+    >
+
+    /** 未解決の食い違いを含めて出力したことを監査ログに残す（出力は止めない） */
+    recordUnresolvedConflicts: (options: {
+      examId: string
+      userId: string
+      exportType: string
+      conflicts: Array<{ studentName: string; questionLabel: string }>
+      scoreImpact: number
+    }) => Promise<{ success: boolean; error?: string }>
 
     // PDF出力に必要なデータを取得
     getPdfExportData: (options: {

@@ -50,6 +50,7 @@ vi.mock("../../../electron-src/lib/import/merge/imageImporter", () => ({
 }))
 
 import { executeIdIntegrationImport } from "../../../electron-src/lib/import/merge/idIntegrationImporter"
+import { buildAssignmentId } from "../../../electron-src/lib/prisma/cropRegionAssignment"
 
 const prisma = getTestPrismaClient()
 
@@ -1675,6 +1676,110 @@ describe("executeIdIntegrationImport", () => {
     expect(decisions.length).toBe(1)
     expect(decisions[0].verdict).toBe("correct")
     expect(decisions[0].decidedByUserId).toBe(currentUser.id)
+  })
+
+  // II-22b: v1.20.0: 採点担当（CropRegionAssignment）が merge 経路でも復元される
+  it("II-22b: 採点担当がmerge経路で作成され、idは決定論的になる", async () => {
+    const { data, examId, regionId } = createBasicTestData()
+
+    const now = new Date().toISOString()
+    data.scoresData.cropRegionAssignments = [
+      {
+        cropRegionId: regionId,
+        username: currentUser.username,
+        createdAt: now,
+        updatedAt: now,
+      },
+      // 移行先に存在しないユーザーは取り込まず、警告で伝える
+      {
+        cropRegionId: regionId,
+        username: "no_such_user",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    const result = await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result.success).toBe(true)
+
+    const assignments = await prisma.cropRegionAssignment.findMany({
+      where: { cropRegionId: regionId },
+    })
+    expect(assignments.length).toBe(1)
+    expect(assignments[0].userId).toBe(currentUser.id)
+    // idはアーカイブから持ち回らず (設問, 担当者) から再生成する
+    expect(assignments[0].id).toBe(buildAssignmentId(regionId, currentUser.id))
+
+    expect(
+      result.warnings?.some((warning) => warning.includes("no_such_user"))
+    ).toBe(true)
+  })
+
+  // II-22c: 同一試験の再インポートで採点担当が重複しない（冪等）
+  it("II-22c: 同じ採点担当の再インポートは重複を作らない", async () => {
+    const { data, examId, studentId, classroomId, regionId, groupId } =
+      createBasicTestData()
+
+    const now = new Date().toISOString()
+    data.scoresData.cropRegionAssignments = [
+      {
+        cropRegionId: regionId,
+        username: currentUser.username,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+
+    await executeIdIntegrationImport(
+      data,
+      buildNoMatchPreMatch(data, examId),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    // 2回目は同一試験としてリインポート（II-4 と同じ形の突合）
+    const rematch = createFileOverviewData({
+      student: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: studentId, existingId: studentId }),
+        ],
+      }),
+      classroom: createPreMatchingResult({
+        byId: [
+          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+        ],
+      }),
+      subtotalGroup: createPreMatchingResult({
+        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
+      }),
+      exam: {
+        isIdMatch: true,
+        importExamId: examId,
+        existingExamId: examId,
+        importData: {},
+        existingData: {},
+        displayLabel: "テスト",
+      },
+    })
+
+    const second = await executeIdIntegrationImport(
+      data,
+      rematch,
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(second.success).toBe(true)
+    const assignments = await prisma.cropRegionAssignment.findMany({
+      where: { cropRegionId: regionId },
+    })
+    expect(assignments.length).toBe(1)
   })
 
   // II-23: ScoreDecisionのLWW競合解決（decidedAtが新しい方を採用）

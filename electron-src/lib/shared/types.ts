@@ -1,6 +1,10 @@
 // Excel・PDF出力で共通的に使用される型定義
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type {
+  ScoringValidationResult,
+  ScoringValidationWarnings,
+} from "@/types/exportValidation.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
@@ -82,19 +86,8 @@ export interface ExportResult {
   success: boolean
   outputPath?: string
   error?: string
-  warnings?: {
-    noScoringData: string[]
-    ungraded: string[]
-    missingPartialScore: string[]
-  }
-  validationResult?: {
-    hasWarnings: boolean
-    warnings: {
-      noScoringData: string[]
-      ungraded: string[]
-      missingPartialScore: string[]
-    }
-  }
+  warnings?: ScoringValidationWarnings
+  validationResult?: ScoringValidationResult
 }
 
 // 問題分析関連の型定義

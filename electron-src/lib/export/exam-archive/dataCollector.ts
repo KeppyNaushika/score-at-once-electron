@@ -254,6 +254,7 @@ export async function collectExamData(
     const questionScores: ArchiveScoresData["questionScores"] = []
     const drawingAnnotations: ArchiveScoresData["drawingAnnotations"] = []
     const scoreDecisions: ArchiveScoresData["scoreDecisions"] = []
+    const cropRegionAssignments: ArchiveScoresData["cropRegionAssignments"] = []
     const returnSnapshots: ArchiveScoresData["returnSnapshots"] = []
 
     if (!isTemplate) {
@@ -332,6 +333,23 @@ export async function collectExamData(
           sourceQuestionScoreId: decision.sourceQuestionScoreId,
           createdAt: decision.createdAt.toISOString(),
           updatedAt: decision.updatedAt.toISOString(),
+        })
+      }
+
+      // 9.55. CropRegionAssignment（設問ごとの採点担当）を収集 (v1.20.0+)
+      // 担当は試験ごとに1セットなので採点者フィルタはしない。
+      // ユーザーはアーカイブを越えないので username を denormalize する
+      // （assignedBy は監査用の付随情報なので持ち回らない）。
+      const assignments = await prisma.cropRegionAssignment.findMany({
+        where: { cropRegion: { examPage: { examId } } },
+        include: { user: { select: { username: true } } },
+      })
+      for (const assignment of assignments) {
+        cropRegionAssignments.push({
+          cropRegionId: assignment.cropRegionId,
+          username: assignment.user.username,
+          createdAt: assignment.createdAt.toISOString(),
+          updatedAt: assignment.updatedAt.toISOString(),
         })
       }
 
@@ -658,6 +676,7 @@ export async function collectExamData(
       questionScores,
       drawingAnnotations,
       scoreDecisions,
+      cropRegionAssignments,
       returnSnapshots,
     }
 

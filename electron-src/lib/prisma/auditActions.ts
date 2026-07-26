@@ -178,6 +178,21 @@ export const AUDIT_ACTIONS = {
     verb: "update",
     label: "採点を一括反映しました",
   },
+  "exam.score.export_unresolved": {
+    category: "exam",
+    verb: "export",
+    label: "未解決の食い違いを含む採点結果を出力しました",
+  },
+  "exam.score.assign": {
+    category: "exam",
+    verb: "create",
+    label: "設問の採点担当を割り当てました",
+  },
+  "exam.score.unassign": {
+    category: "exam",
+    verb: "delete",
+    label: "設問の採点担当を解除しました",
+  },
 
   "exam.annotation.create": {
     category: "exam",

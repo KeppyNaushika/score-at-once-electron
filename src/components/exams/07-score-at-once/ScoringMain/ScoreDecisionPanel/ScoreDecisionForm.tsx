@@ -1,0 +1,281 @@
+"use client"
+
+import { CheckCircle, Clock, Info } from "lucide-react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/AuthContext"
+import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import type { ScoreDecisionCell } from "@/types/scoreDecision.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
+
+/** 確定できる判定（未採点は確定の対象にならない） */
+const VERDICTS: ScoringStatus[] = [
+  "correct",
+  "partial",
+  "pending",
+  "incorrect",
+  "no_answer",
+  "double_mark",
+]
+
+/** 点数の手入力が必要な判定（他は判定自体が点数を決める） */
+const NEEDS_SCORE: ScoringStatus[] = ["partial", "pending"]
+
+const formatDateTime = (isoString: string): string =>
+  new Date(isoString).toLocaleString("ja-JP")
+
+interface ScoreDecisionFormProps {
+  cell: ScoreDecisionCell
+  questionLabel: string
+  maxScore: number
+  canDecide: boolean
+  onDecided: () => void
+}
+
+/**
+ * 1セル分の比較・確定フォーム（裁定パネルの右ペイン）。
+ *
+ * 表示に必要な提案・既存確定はサマリに同梱されているため、ここでは再取得しない。
+ */
+export function ScoreDecisionForm({
+  cell,
+  questionLabel,
+  maxScore,
+  canDecide,
+  onDecided,
+}: ScoreDecisionFormProps) {
+  const { user } = useAuth()
+  const [verdict, setVerdict] = useState<ScoringStatus>("correct")
+  const [score, setScore] = useState("")
+  const [comment, setComment] = useState("")
+  const [sourceQuestionScoreId, setSourceQuestionScoreId] = useState<
+    string | null
+  >(null)
+  const [deciding, setDeciding] = useState(false)
+
+  // セルを切り替えたら、既存の確定（あれば）を初期値としてフォームを組み直す
+  useEffect(() => {
+    if (cell.decision) {
+      setVerdict(cell.decision.verdict)
+      setScore(cell.decision.score !== null ? String(cell.decision.score) : "")
+      setComment(cell.decision.comment ?? "")
+      setSourceQuestionScoreId(cell.decision.sourceQuestionScoreId)
+    } else {
+      setVerdict(cell.proposals[0]?.status ?? "correct")
+      setScore(
+        cell.proposals[0]?.partialScore !== null &&
+          cell.proposals[0]?.partialScore !== undefined
+          ? String(cell.proposals[0].partialScore)
+          : ""
+      )
+      setComment("")
+      setSourceQuestionScoreId(cell.proposals[0]?.questionScoreId ?? null)
+    }
+  }, [cell])
+
+  const needsScore = NEEDS_SCORE.includes(verdict)
+  const parsedScore = score === "" ? null : Number(score)
+  const scoreIsInvalid =
+    needsScore &&
+    (parsedScore === null ||
+      Number.isNaN(parsedScore) ||
+      parsedScore < 0 ||
+      parsedScore > maxScore)
+
+  const handleDecide = async () => {
+    if (!user) return
+    setDeciding(true)
+    try {
+      const result = await window.electronAPI.finalizeQuestionScore(
+        cell.studentId,
+        cell.cropRegionId,
+        user.id,
+        {
+          status: verdict,
+          partialScore: needsScore ? (parsedScore ?? 0) : undefined,
+          comment: comment || undefined,
+          sourceQuestionScoreId: sourceQuestionScoreId ?? undefined,
+        }
+      )
+      if (result.success) {
+        toast.success("採点結果を確定しました")
+        onDecided()
+      } else {
+        toast.error(result.error ?? "採点結果の確定に失敗しました")
+      }
+    } catch (error) {
+      console.error("Failed to finalize score:", error)
+      toast.error("採点結果の確定に失敗しました")
+    } finally {
+      setDeciding(false)
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-gray-200 px-4 py-3">
+        <div className="text-base font-semibold">{cell.studentName}</div>
+        <div className="text-sm text-gray-500">
+          {questionLabel}（{maxScore}点）
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
+        {cell.reason === "stale" && cell.decision && (
+          <div className="flex gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+            <div className="text-yellow-800">
+              <div className="font-medium">確定後に新しい採点が入りました</div>
+              <div className="text-yellow-700">
+                現在は {formatDateTime(cell.decision.decidedAt)} の確定値が出力
+                されます。内容を確認し、必要なら再確定してください。
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cell.reason === "conflict" && (
+          <div className="flex gap-2 rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
+            <div className="text-purple-800">
+              採点者間で結果が食い違っているため、このセルは
+              <span className="font-medium">未採点として出力されます</span>
+              （合計点が最大 {cell.scoreImpact} 点低く出ます）。
+            </div>
+          </div>
+        )}
+
+        {/* 採点者ごとの提案 */}
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-gray-700">
+            採点者ごとの結果（{cell.proposals.length}件）
+          </div>
+          {cell.proposals.map((proposal) => (
+            <div
+              key={proposal.questionScoreId}
+              className={`flex items-center justify-between rounded-lg border p-3 ${
+                sourceQuestionScoreId === proposal.questionScoreId
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200"
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {SCORING_STATUS_LABELS[proposal.status]}
+                  </Badge>
+                  <span className="font-semibold">
+                    {proposal.scoreValue ?? "-"} / {maxScore} 点
+                  </span>
+                </div>
+                <div className="mt-1 truncate text-xs text-gray-500">
+                  {proposal.userName} ・ {formatDateTime(proposal.updatedAt)}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!canDecide}
+                onClick={() => {
+                  setVerdict(proposal.status)
+                  setScore(
+                    proposal.partialScore !== null
+                      ? String(proposal.partialScore)
+                      : ""
+                  )
+                  setSourceQuestionScoreId(proposal.questionScoreId)
+                }}
+              >
+                採用
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        {/* 確定内容 */}
+        <div className="space-y-3 rounded-lg border border-gray-200 p-3">
+          <div className="text-sm font-medium text-gray-700">確定する判定</div>
+          <div className="grid grid-cols-3 gap-2">
+            {VERDICTS.map((candidate) => (
+              <Button
+                key={candidate}
+                size="sm"
+                variant={verdict === candidate ? "default" : "outline"}
+                disabled={!canDecide}
+                onClick={() => {
+                  setVerdict(candidate)
+                  // 手動で判定を変えたら採用元の紐付けを解除する
+                  setSourceQuestionScoreId(null)
+                }}
+              >
+                {SCORING_STATUS_LABELS[candidate]}
+              </Button>
+            ))}
+          </div>
+
+          {needsScore && (
+            <div>
+              <Label htmlFor="decisionScore">得点（0〜{maxScore}）</Label>
+              <Input
+                id="decisionScore"
+                type="number"
+                min={0}
+                max={maxScore}
+                value={score}
+                disabled={!canDecide}
+                onChange={(event) => {
+                  setScore(event.target.value)
+                  setSourceQuestionScoreId(null)
+                }}
+              />
+            </div>
+          )}
+
+          <div>
+            <Label htmlFor="decisionComment">コメント（任意）</Label>
+            <Textarea
+              id="decisionComment"
+              rows={2}
+              value={comment}
+              disabled={!canDecide}
+              placeholder="裁定の理由など"
+              onChange={(event) => setComment(event.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-200 px-4 py-3">
+        {canDecide ? (
+          <Button
+            className="w-full"
+            onClick={handleDecide}
+            disabled={deciding || scoreIsInvalid}
+          >
+            {deciding ? (
+              <>
+                <Clock className="mr-1 h-4 w-4 animate-spin" />
+                確定中...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="mr-1 h-4 w-4" />
+                この内容で確定する
+              </>
+            )}
+          </Button>
+        ) : (
+          <p className="text-center text-sm text-gray-500">
+            採点結果の確定は試験の所有者（OWNER）のみが行えます
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}

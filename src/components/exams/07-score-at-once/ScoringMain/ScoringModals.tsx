@@ -1,11 +1,7 @@
 "use client"
 
 import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
-import ScoreComparisonModal from "@/components/exams/07-score-at-once/ScoringMain/ScoreComparisonModal"
-import type {
-  CropRegionWithExamPage,
-  StudentAnswerImageWithExamStudents,
-} from "@/components/exams/07-score-at-once/types"
+import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 
 /** キーバインディングの型 */
 interface ModalKeyBindings {
@@ -26,10 +22,6 @@ interface ScoringModalsProps {
   onPartialScoreDigit?: (key: string) => void
   onPartialScoreBackspace?: () => void
   keyBindings?: ModalKeyBindings
-  // Score Comparison Modal props
-  showScoreComparison: boolean
-  onScoreComparisonClose: () => void
-  currentAnswerSheet?: StudentAnswerImageWithExamStudents
 }
 
 export function ScoringModals({
@@ -43,9 +35,6 @@ export function ScoringModals({
   onPartialScoreDigit,
   onPartialScoreBackspace,
   keyBindings,
-  showScoreComparison,
-  onScoreComparisonClose,
-  currentAnswerSheet,
 }: ScoringModalsProps) {
   return (
     <div>
@@ -64,23 +53,6 @@ export function ScoringModals({
         onDigit={onPartialScoreDigit}
         onBackspace={onPartialScoreBackspace}
         keyBindings={keyBindings}
-      />
-
-      {/* 採点比較モーダル */}
-      <ScoreComparisonModal
-        isOpen={showScoreComparison}
-        onClose={onScoreComparisonClose}
-        studentId={currentAnswerSheet?.studentId || ""}
-        cropRegionId={currentCropRegion?.id || ""}
-        questionLabel={
-          currentCropRegion?.label || `問${currentCropRegion?.orderIndex || 1}`
-        }
-        maxScore={currentCropRegion?.points || 0}
-        studentName={
-          currentAnswerSheet?.student
-            ? `${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}`
-            : ""
-        }
       />
     </div>
   )
