@@ -943,38 +943,66 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(dataSource!.courseworkItem!.courseworkId).toBe(existing.id)
   })
 
-  it("観点間の制約ルール(GradeConstraint)が往復で保持される (v1.7.0)", async () => {
+  it("観点間の制約ルール(GradeConstraint)が往復で保持される (v1.7.0/v1.11.0)", async () => {
     const suffix = Date.now()
     const grade = await prisma.grade.create({
       data: { name: `成績_constraint_${suffix}` },
     })
-    await prisma.gradeItem.create({
+    const knowledgeItem = await prisma.gradeItem.create({
       data: { gradeId: grade.id, name: "知識・技能", order: 0 },
     })
-    await prisma.gradeConstraint.create({
+    const hyoteiItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "評定", order: 1 },
+    })
+
+    const exclusionConstraint = await prisma.gradeConstraint.create({
       data: {
         gradeId: grade.id,
         name: "A・C混在禁止",
         kind: "mutual_exclusion",
-        config: JSON.stringify({ labels: ["A", "C"] }),
         expression: "",
         color: "#fecaca",
         message: "AとCは混在しません",
         enabled: true,
         order: 0,
+        exclusionLabels: {
+          create: [
+            { id: `x-${suffix}-A`, label: "A", order: 0 },
+            { id: `x-${suffix}-C`, label: "C", order: 1 },
+          ],
+        },
       },
     })
+
+    // v1.11.0: 比較先・集計対象は評価項目への参照として持つ（issue #1063）
     await prisma.gradeConstraint.create({
       data: {
         gradeId: grade.id,
         name: "評定と観点の整合",
-        kind: "expression",
-        config: "{}",
-        expression: 'abs(item("評定") - mean("知識・技能")) > 1',
+        kind: "consistency",
+        targetGradeItemId: hyoteiItem.id,
+        aggregate: "sum",
+        tolerance: 2,
+        expression: "",
         color: "#fde68a",
         message: null,
         enabled: false,
         order: 1,
+        viewpoints: {
+          create: [
+            {
+              id: `v-${suffix}-k`,
+              gradeItemId: knowledgeItem.id,
+              order: 0,
+            },
+          ],
+        },
+        labelValues: {
+          create: [
+            { id: `l-${suffix}-A`, label: "A", value: 5, order: 0 },
+            { id: `l-${suffix}-C`, label: "C", value: 1, order: 1 },
+          ],
+        },
       },
     })
 
@@ -985,14 +1013,33 @@ describe("grade-archive ラウンドトリップ", () => {
       (constraint) => constraint.kind === "mutual_exclusion"
     )!
     expect(exclusion.name).toBe("A・C混在禁止")
-    expect(exclusion.config).toBe(JSON.stringify({ labels: ["A", "C"] }))
+    expect(exclusion.exclusionLabels).toEqual(["A", "C"])
+    expect(exclusion.config).toBeUndefined()
+
+    const consistency = collected.gradeData.gradeConstraints!.find(
+      (constraint) => constraint.kind === "consistency"
+    )!
+    // uuid 一次・名前二次で持ち出す
+    expect(consistency.targetGradeItemId).toBe(hyoteiItem.id)
+    expect(consistency.targetGradeItemName).toBe("評定")
+    expect(consistency.viewpointGradeItemIds).toEqual([knowledgeItem.id])
+    expect(consistency.viewpointGradeItemNames).toEqual(["知識・技能"])
+    expect(consistency.labelValues).toEqual({ A: 5, C: 1 })
+    expect(consistency.aggregate).toBe("sum")
+    expect(consistency.tolerance).toBe(2)
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
+    expect(exclusionConstraint.gradeId).toBe(grade.id)
 
     const imported = await prisma.gradeConstraint.findMany({
       where: { gradeId: result.gradeId! },
+      include: {
+        viewpoints: { orderBy: { order: "asc" } },
+        labelValues: { orderBy: { order: "asc" } },
+        exclusionLabels: { orderBy: { order: "asc" } },
+      },
       orderBy: { order: "asc" },
     })
     expect(imported).toHaveLength(2)
@@ -1000,10 +1047,38 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(imported[0].kind).toBe("mutual_exclusion")
     expect(imported[0].message).toBe("AとCは混在しません")
     expect(imported[0].enabled).toBe(true)
-    expect(imported[1].kind).toBe("expression")
-    expect(imported[1].expression).toBe(
-      'abs(item("評定") - mean("知識・技能")) > 1'
-    )
+    expect(imported[0].exclusionLabels.map((label) => label.label)).toEqual([
+      "A",
+      "C",
+    ])
+
+    // 参照は取り込み先の評価項目を指す（元Gradeの項目idのままではない）
+    const importedItems = await prisma.gradeItem.findMany({
+      where: { gradeId: result.gradeId! },
+    })
+    const importedHyotei = importedItems.find(
+      (gradeItem) => gradeItem.name === "評定"
+    )!
+    const importedKnowledge = importedItems.find(
+      (gradeItem) => gradeItem.name === "知識・技能"
+    )!
+    expect(importedHyotei.id).not.toBe(hyoteiItem.id)
+    expect(imported[1].kind).toBe("consistency")
+    expect(imported[1].targetGradeItemId).toBe(importedHyotei.id)
+    expect(
+      imported[1].viewpoints.map((viewpoint) => viewpoint.gradeItemId)
+    ).toEqual([importedKnowledge.id])
+    expect(imported[1].aggregate).toBe("sum")
+    expect(Number(imported[1].tolerance)).toBe(2)
+    expect(
+      imported[1].labelValues.map((labelValue) => [
+        labelValue.label,
+        Number(labelValue.value),
+      ])
+    ).toEqual([
+      ["A", 5],
+      ["C", 1],
+    ])
     expect(imported[1].enabled).toBe(false)
     expect(imported[1].color).toBe("#fde68a")
   })

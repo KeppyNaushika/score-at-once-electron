@@ -3,7 +3,7 @@
  *
  * リレーション付きの型はすべて Prisma モデル（`@prisma/client`）から派生する（型規則: Prisma型を最優先）。
  * IPC 境界では electron-src/lib/prisma の serializePrisma() が Decimal を number へ変換し、
- * grade lib の hydrate が estimationSourceIds を string[] へ正規化し仮想 maxScore を付与するため、
+ * grade lib の hydrate が仮想 maxScore を付与するため、
  * それらのフィールドのみ Prisma モデルから上書きする（coursework.types.ts と同じパターン）。
  * 実施日（referenceDate）は string | null とする。
  * ネストした select は electron-src/lib/prisma/gradeDataSource.ts の gradeDataSourceInclude と対を成す。
@@ -19,7 +19,11 @@ import type {
   GradeBoundarySet,
   GradeClassroom,
   GradeConstraint,
+  GradeConstraintExclusionLabel,
+  GradeConstraintLabelValue,
+  GradeConstraintViewpoint,
   GradeDataSource,
+  GradeDataSourceEstimationSource,
   GradeItem,
   Subtotal,
 } from "@prisma/client"
@@ -98,7 +102,6 @@ export type GradeDataSourceWithRelations = Omit<
   | "absentRatio"
   | "absentOffset"
   | "estimationMode"
-  | "estimationSourceIds"
 > & {
   type: GradeDataSourceType
   weight: number
@@ -106,7 +109,16 @@ export type GradeDataSourceWithRelations = Omit<
   absentRatio: number
   absentOffset: number
   estimationMode: EstimationMode
-  estimationSourceIds: string[]
+  /**
+   * estimationMode="selected" のとき推定に使う他データソース。
+   * 旧 estimationSourceIds（JSON配列）と違い FK で守られているため、参照先が消えれば行ごと消える。
+   */
+  estimationSources: Array<
+    Pick<
+      GradeDataSourceEstimationSource,
+      "id" | "dataSourceId" | "sourceDataSourceId" | "order"
+    >
+  >
   /** 仮想フィールド。元データ（設問配点/評価項目満点）からライブ算出して付与される。 */
   maxScore: number
   exam: Pick<Exam, "id" | "examName" | "examDate"> | null
@@ -361,49 +373,59 @@ export type GradeConstraintKind =
   | "mutual_exclusion" // 特定ラベルの混在禁止（A・C混在など）
   | "expression" // 上級者向け自由記述式
 
-/** 整合ルールの設定 */
-export interface ConsistencyConfig {
-  /** ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }） */
-  labelValues: Record<string, number>
-  /** 観点の集計方法 */
-  aggregate: "average" | "sum"
-  /** 許容する評定との差（これを超えたら違反） */
-  tolerance: number
-  /**
-   * 比較先の「評定」にあたる GradeItem 名（例「評定」）。
-   * その項目を評定とみなし、下の viewpointItems を集計して比較する。
-   */
-  target: string
-  /**
-   * 集計対象の観点 GradeItem 名の配列（例 知識・技能／思考・判断・表現／態度）。
-   * 空/未指定なら target 以外の全 GradeItem を対象にする。
-   */
-  viewpointItems?: string[]
-}
-
-/** 混在禁止ルールの設定 */
-export interface MutualExclusionConfig {
-  /** 同時に現れてはいけないラベル集合（例 ["A", "C"]） */
-  labels: string[]
-}
+/** 観点の集計方法 */
+export type ConstraintAggregate = "average" | "sum"
 
 /**
- * DBに保存される制約ルール1件。
- * config は kind別の設定JSON文字列（ConsistencyConfig / MutualExclusionConfig）、
- * expression は kind="expression" 時の式。kind のみ union へ narrowing する。
+ * DBに保存される制約ルール1件（設定リレーション込み）。
+ *
+ * 設定は kind 別のJSONではなくリレーションで持つ（issue #1063）。比較先・集計対象は
+ * 評価項目への FK なので、項目をリネームしても参照は切れない。
+ * expression は kind="expression" 時のみ使う。
+ * kind / aggregate は union へ、Decimal は number へ narrowing する。
  */
 export type GradeConstraintData = Omit<
   GradeConstraint,
-  "kind" | "createdAt" | "updatedAt"
+  "kind" | "aggregate" | "tolerance" | "createdAt" | "updatedAt"
 > & {
   kind: GradeConstraintKind
+  aggregate: ConstraintAggregate
+  tolerance: number
+  /** 集計対象の観点（空なら比較先以外の全項目が対象という意味になる） */
+  viewpoints: Array<
+    Pick<GradeConstraintViewpoint, "id" | "gradeItemId" | "order">
+  >
+  /** ラベル→数値の対応（例 A=5, B=3, C=1） */
+  labelValues: Array<
+    Pick<GradeConstraintLabelValue, "id" | "label" | "order"> & {
+      value: number
+    }
+  >
+  /** 混在禁止ラベル（mutual_exclusion 用） */
+  exclusionLabels: Array<
+    Pick<GradeConstraintExclusionLabel, "id" | "label" | "order">
+  >
 }
 
-/** 制約ルールの作成・更新入力 */
+/**
+ * 制約ルールの作成・更新入力。
+ * 設定部分（viewpointGradeItemIds / labelValues / exclusionLabels）は指定されたら総入れ替え、
+ * 未指定なら据え置き。
+ */
 export interface GradeConstraintInput {
   name: string
   kind: GradeConstraintKind
-  config: string
+  /** 比較先の「評定」にあたる評価項目。未選択なら null */
+  targetGradeItemId: string | null
+  aggregate: ConstraintAggregate
+  /** 許容する評定との差（これを超えたら違反） */
+  tolerance: number
+  /** 集計対象の観点の評価項目id。空配列なら「比較先以外の全項目」 */
+  viewpointGradeItemIds: string[]
+  /** ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }） */
+  labelValues: Record<string, number>
+  /** 同時に現れてはいけないラベル集合（例 ["A", "C"]） */
+  exclusionLabels: string[]
   expression: string
   color: string
   message: string | null

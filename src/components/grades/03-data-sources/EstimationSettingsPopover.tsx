@@ -77,7 +77,9 @@ export function EstimationSettingsPopover({
     dataSource.estimationMode
   )
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>(
-    dataSource.estimationSourceIds ?? []
+    dataSource.estimationSources.map(
+      (estimationSource) => estimationSource.sourceDataSourceId
+    )
   )
   const [treatExpectedAsMissing, setTreatExpectedAsMissing] = useState(
     dataSource.treatExpectedAsMissing
@@ -107,7 +109,11 @@ export function EstimationSettingsPopover({
       setRatio(String(dataSource.absentRatio))
       setOffset(String(dataSource.absentOffset))
       setEstimationMode(dataSource.estimationMode)
-      setSelectedSourceIds(dataSource.estimationSourceIds ?? [])
+      setSelectedSourceIds(
+        dataSource.estimationSources.map(
+          (estimationSource) => estimationSource.sourceDataSourceId
+        )
+      )
       setTreatExpectedAsMissing(dataSource.treatExpectedAsMissing)
     }
     setOpen(newOpen)
@@ -127,7 +133,7 @@ export function EstimationSettingsPopover({
     const methodLabel = ABSENT_METHOD_LABELS[dataSource.absentMethod]
     const sourceCount =
       dataSource.estimationMode === "selected"
-        ? (dataSource.estimationSourceIds ?? []).length
+        ? dataSource.estimationSources.length
         : allDataSources.filter(
             (candidateSource) => candidateSource.id !== dataSource.id
           ).length

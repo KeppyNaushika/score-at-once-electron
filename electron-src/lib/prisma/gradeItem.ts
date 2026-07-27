@@ -114,6 +114,11 @@ export async function updateGradeItem(id: string, data: { name?: string }) {
 
 /**
  * GradeItemを削除（Cascadeでdatasonrces も削除）
+ *
+ * 集計対象にこの項目を含む制約ルールは先に無効化する。`GradeConstraintViewpoint` は
+ * FK の Cascade で消えるため、放っておくと集計対象が黙って1つ減り、残った項目だけで
+ * 平均を取って別の判定に化ける（issue #1063 で潰したのと同じ形の無言failure）。
+ * 比較先（targetGradeItemId）は SetNull になり「評定が未選択」として検知されるので触らない。
  */
 export async function deleteGradeItem(id: string) {
   try {
@@ -122,7 +127,23 @@ export async function deleteGradeItem(id: string) {
       select: { name: true, gradeId: true },
     })
 
-    await prisma.gradeItem.delete({ where: { id } })
+    const disabledConstraintNames = await prisma.$transaction(async (tx) => {
+      const affected = await tx.gradeConstraint.findMany({
+        where: { viewpoints: { some: { gradeItemId: id } }, enabled: true },
+        select: { id: true, name: true },
+      })
+      // 理由は disabledReason へ。message は教員が書いた違反の説明で、結果表の
+      // ツールチップに出るため汚さない。
+      const reason = `評価項目「${before?.name ?? ""}」の削除で集計対象が変わるため無効化しました。再設定してください。`
+      for (const constraint of affected) {
+        await tx.gradeConstraint.update({
+          where: { id: constraint.id },
+          data: { enabled: false, disabledReason: reason },
+        })
+      }
+      await tx.gradeItem.delete({ where: { id } })
+      return affected.map((constraint) => constraint.name)
+    })
 
     const scope = before ? await resolveGradeScope(before.gradeId) : null
     await recordAuditLog({
@@ -134,7 +155,7 @@ export async function deleteGradeItem(id: string) {
       target: before?.name ?? null,
     })
 
-    return { success: true }
+    return { success: true, disabledConstraintNames }
   } catch (error) {
     console.error("Error deleting grade item:", error)
     return {

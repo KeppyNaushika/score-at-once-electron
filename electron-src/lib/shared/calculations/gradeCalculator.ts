@@ -48,6 +48,7 @@ async function buildGradeCalcContext(gradeId: string) {
               exam: true,
               subtotal: true,
               cropRegion: true,
+              estimationSources: { orderBy: { order: "asc" } },
               courseworkItem: {
                 include: {
                   scores: true,
@@ -213,14 +214,9 @@ async function buildGradeCalcContext(gradeId: string) {
 
   // DataSource情報をまとめる（推定で使用）
   const dataSourceInfos: DataSourceInfo[] = allDataSources.map((dataSource) => {
-    let sourceIds: string[] = []
-    if (typeof dataSource.estimationSourceIds === "string") {
-      try {
-        sourceIds = JSON.parse(dataSource.estimationSourceIds)
-      } catch {
-        sourceIds = []
-      }
-    }
+    const sourceIds = dataSource.estimationSources.map(
+      (estimationSource) => estimationSource.sourceDataSourceId
+    )
     return {
       id: dataSource.id,
       name: dataSource.name,

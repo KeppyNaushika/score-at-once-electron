@@ -208,6 +208,11 @@ describe("DateTime正規化マイグレーション", () => {
     "CourseworkTag",
     "CropRegionAssignment", // 20260726100000 で追加。normalize migration より後で ISO text 生成
     "GradeConstraint",
+    // 20260726110000 で追加（制約ルールの設定JSON正規化）。normalize migration より後で ISO text 生成
+    "GradeConstraintExclusionLabel",
+    "GradeConstraintLabelValue",
+    "GradeConstraintViewpoint",
+    "GradeDataSourceEstimationSource",
     "GradeFrozenScore", // 20260725150000 で追加。normalize migration より後で ISO text 生成
     "ReturnSnapshot",
   ])

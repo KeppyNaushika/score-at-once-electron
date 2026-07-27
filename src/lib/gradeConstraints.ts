@@ -10,26 +10,28 @@
 import { Parser, type Value } from "expr-eval"
 
 import type {
-  ConsistencyConfig,
+  ConstraintAggregate,
   ConstraintViolation,
   GradeCalculationResult,
   GradeConstraintData,
-  MutualExclusionConfig,
   StudentGradeResult,
 } from "@/types/grade.types"
 
-/** 整合ルールの既定設定（Excel流: A=5, B=3, C=1 の平均、許容±1）。target は項目選択時に設定 */
-export const DEFAULT_CONSISTENCY_CONFIG: ConsistencyConfig = {
-  labelValues: { A: 5, B: 3, C: 1 },
-  aggregate: "average",
-  tolerance: 1,
-  target: "",
+/** 整合ルールの既定のラベル→数値対応（Excel流: A=5, B=3, C=1） */
+export const DEFAULT_CONSTRAINT_LABEL_VALUES: Record<string, number> = {
+  A: 5,
+  B: 3,
+  C: 1,
 }
 
-/** 混在禁止ルールの既定設定（A・C混在禁止） */
-export const DEFAULT_MUTUAL_EXCLUSION_CONFIG: MutualExclusionConfig = {
-  labels: ["A", "C"],
-}
+/** 整合ルールの既定の集計方法 */
+export const DEFAULT_CONSTRAINT_AGGREGATE: ConstraintAggregate = "average"
+
+/** 整合ルールの既定の許容差 */
+export const DEFAULT_CONSTRAINT_TOLERANCE = 1
+
+/** 混在禁止ルールの既定ラベル（A・C混在禁止） */
+export const DEFAULT_EXCLUSION_LABELS = ["A", "C"]
 
 /** 制約ルールの既定色（薄い赤） */
 export const DEFAULT_CONSTRAINT_COLOR = "#fecaca"
@@ -57,24 +59,20 @@ const parser = new Parser({
 })
 
 interface ViewpointLabel {
+  gradeItemId: string
   name: string
   label: string
 }
 
 /**
- * 各 GradeItem の境界ラベルを昇順（弱→強）に並べ、項目名で引けるようにする。
+ * 各 GradeItem の境界ラベルを昇順（弱→強）に並べ、評価項目idで引けるようにする。
  * ラベルが数値でも labelValues にも無い場合の順位換算に使う。
  */
 function buildOrderedLabelsMap(
   result: GradeCalculationResult
 ): Map<string, string[]> {
-  const idToName = new Map(
-    result.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
-  )
-  const byName = new Map<string, string[]>()
+  const byGradeItemId = new Map<string, string[]>()
   for (const boundarySet of result.boundarySets) {
-    const name = idToName.get(boundarySet.gradeItemId)
-    if (!name) continue
     // minPercentage 昇順 = 弱い評価が先頭
     const ordered = [...boundarySet.boundaries]
       .sort(
@@ -82,9 +80,18 @@ function buildOrderedLabelsMap(
           boundaryA.minPercentage - boundaryB.minPercentage
       )
       .map((boundary) => boundary.label)
-    byName.set(name, ordered)
+    byGradeItemId.set(boundarySet.gradeItemId, ordered)
   }
-  return byName
+  return byGradeItemId
+}
+
+/** ラベル→数値の対応行を引きやすい形へ畳む。 */
+function toLabelValueMap(
+  labelValues: GradeConstraintData["labelValues"]
+): Record<string, number> {
+  return Object.fromEntries(
+    labelValues.map((labelValue) => [labelValue.label, labelValue.value])
+  )
 }
 
 /**
@@ -115,6 +122,7 @@ function collectViewpointLabels(student: StudentGradeResult): ViewpointLabel[] {
   return student.gradeItemResults
     .filter((gradeItemResult) => !gradeItemResult.isExcluded)
     .map((gradeItemResult) => ({
+      gradeItemId: gradeItemResult.gradeItemId,
       name: gradeItemResult.gradeItemName,
       label: gradeItemResult.gradeLabel,
     }))
@@ -123,55 +131,74 @@ function collectViewpointLabels(student: StudentGradeResult): ViewpointLabel[] {
     )
 }
 
+/**
+ * 比較先（評定）と集計対象の観点を突き合わせる。
+ *
+ * 参照は評価項目idで引く。ここで対象が見つからないのは「その生徒では除外/未算出」
+ * のときだけで、設定の壊れ（項目の削除など）は evaluateConstraints の事前検証が
+ * エラーとして先に捕まえている。
+ */
 function evalConsistency(
-  config: ConsistencyConfig,
+  constraint: GradeConstraintData,
   viewpoints: ViewpointLabel[],
   ordered: Map<string, string[]>
 ): boolean {
-  // 「評定」を担う GradeItem を比較先にし、指定の観点（未指定なら残り全部）を集計対象にする
+  const { targetGradeItemId } = constraint
+  if (!targetGradeItemId) return false
+
   const targetItem = viewpoints.find(
-    (viewpoint) => viewpoint.name === config.target
+    (viewpoint) => viewpoint.gradeItemId === targetGradeItemId
   )
   if (!targetItem) return false
+
+  const labelValues = toLabelValueMap(constraint.labelValues)
   const targetVal = labelToValue(
     targetItem.label,
-    config.labelValues,
-    ordered.get(config.target)
+    labelValues,
+    ordered.get(targetGradeItemId)
   )
   if (targetVal === null) return false
 
-  const selected = config.viewpointItems ?? []
+  // 指定が無ければ比較先以外の全項目を集計対象にする
+  const selectedIds = new Set(
+    constraint.viewpoints.map((viewpoint) => viewpoint.gradeItemId)
+  )
   const aggregationViewpoints =
-    selected.length > 0
-      ? viewpoints.filter((viewpoint) => selected.includes(viewpoint.name))
-      : viewpoints.filter((viewpoint) => viewpoint.name !== config.target)
+    selectedIds.size > 0
+      ? viewpoints.filter((viewpoint) => selectedIds.has(viewpoint.gradeItemId))
+      : viewpoints.filter(
+          (viewpoint) => viewpoint.gradeItemId !== targetGradeItemId
+        )
   if (aggregationViewpoints.length === 0) return false
 
   const values = aggregationViewpoints
     .map((viewpoint) =>
       labelToValue(
         viewpoint.label,
-        config.labelValues,
-        ordered.get(viewpoint.name)
+        labelValues,
+        ordered.get(viewpoint.gradeItemId)
       )
     )
     .filter((value): value is number => value !== null)
   if (values.length === 0) return false
 
   const sum = values.reduce((acc, value) => acc + value, 0)
-  const aggregate = config.aggregate === "sum" ? sum : sum / values.length
+  const aggregate = constraint.aggregate === "sum" ? sum : sum / values.length
 
-  return Math.abs(targetVal - aggregate) > config.tolerance
+  return Math.abs(targetVal - aggregate) > constraint.tolerance
 }
 
 function evalMutualExclusion(
-  config: MutualExclusionConfig,
+  constraint: GradeConstraintData,
   viewpoints: ViewpointLabel[]
 ): boolean {
+  const forbidden = constraint.exclusionLabels.map(
+    (exclusionLabel) => exclusionLabel.label
+  )
   const present = new Set(
     viewpoints
       .map((viewpoint) => viewpoint.label)
-      .filter((label) => config.labels.includes(label))
+      .filter((label) => forbidden.includes(label))
   )
   return present.size >= 2
 }
@@ -186,9 +213,10 @@ function buildExpressionScope(
   ordered: Map<string, string[]>,
   allItemNames: Set<string>
 ): Record<string, Value> {
-  // 各項目の数値（ラベル値: 数値ラベルはそのまま、A/B/C等は弱→強の順位）
+  // 各項目の数値（ラベル値: 数値ラベルはそのまま、A/B/C等は弱→強の順位）。
+  // ordered は評価項目idで引く（式の中では項目を名前で書くが、順位表のキーはid）。
   const itemValue = (viewpoint: ViewpointLabel) =>
-    labelToValue(viewpoint.label, undefined, ordered.get(viewpoint.name))
+    labelToValue(viewpoint.label, undefined, ordered.get(viewpoint.gradeItemId))
 
   // 存在しない項目名の参照はタイプミスとみなしエラーにする（無言失火を防ぐ）。
   // 実在する項目だが当該生徒が除外されている場合は throw せず未定義扱い。
@@ -252,15 +280,6 @@ function buildExpressionScope(
   }
 }
 
-/** kind別の設定JSONを既定値にマージして復元する（不正JSONは既定値にフォールバック） */
-export function parseConfig<T>(raw: string, fallback: T): T {
-  try {
-    return { ...fallback, ...(JSON.parse(raw || "{}") as Partial<T>) }
-  } catch {
-    return fallback
-  }
-}
-
 /**
  * 式を検証（構文チェック）。問題なければ null、あればエラーメッセージ。
  */
@@ -291,13 +310,20 @@ export function evaluateConstraints(
   const allItemNames = new Set(
     result.gradeItems.map((gradeItem) => gradeItem.name)
   )
+  const knownGradeItemIds = new Set(
+    result.gradeItems.map((gradeItem) => gradeItem.id)
+  )
   const active = constraints
     .filter((constraint) => constraint.enabled)
     .sort((constraintA, constraintB) => constraintA.order - constraintB.order)
 
   // 事前検証（無言失火を防ぐためルール単位でエラーを記録）
   //  - expression: 構文チェックしてコンパイル
-  //  - consistency: 比較先（評定）の項目が選択済みかつ実在するか
+  //  - consistency: 比較先・集計対象の項目が選択済みかつ実在するか
+  //  - mutual_exclusion: 禁止ラベルが2つ以上あるか（1つ以下では原理的に違反しえない）
+  //
+  // 参照はFKで守られているため通常は壊れない。アーカイブ取込直後など、算出対象の
+  // 項目集合と食い違う復元経路でだけ起きうる。そのとき黙って「違反なし」に落とさない。
   const compiled = new Map<string, ReturnType<typeof parser.parse> | null>()
   for (const constraint of active) {
     if (constraint.kind === "expression") {
@@ -311,17 +337,25 @@ export function evaluateConstraints(
         )
       }
     } else if (constraint.kind === "consistency") {
-      const consistencyConfig = parseConfig(
-        constraint.config,
-        DEFAULT_CONSISTENCY_CONFIG
+      const missingViewpoints = constraint.viewpoints.filter(
+        (viewpoint) => !knownGradeItemIds.has(viewpoint.gradeItemId)
       )
-      if (!consistencyConfig.target) {
+      if (!constraint.targetGradeItemId) {
         errors.set(constraint.id, "評定（比較先の項目）が未選択です")
-      } else if (!allItemNames.has(consistencyConfig.target)) {
+      } else if (!knownGradeItemIds.has(constraint.targetGradeItemId)) {
         errors.set(
           constraint.id,
-          `評定の項目「${consistencyConfig.target}」が見つかりません`
+          "評定（比較先の項目）が算出対象に見つかりません"
         )
+      } else if (missingViewpoints.length > 0) {
+        errors.set(
+          constraint.id,
+          `集計対象の観点${missingViewpoints.length}件が算出対象に見つかりません`
+        )
+      }
+    } else if (constraint.kind === "mutual_exclusion") {
+      if (constraint.exclusionLabels.length < 2) {
+        errors.set(constraint.id, "混在を禁止するラベルを2つ以上選んでください")
       }
     }
   }
@@ -334,16 +368,9 @@ export function evaluateConstraints(
       let violated = false
       try {
         if (constraint.kind === "consistency") {
-          violated = evalConsistency(
-            parseConfig(constraint.config, DEFAULT_CONSISTENCY_CONFIG),
-            viewpoints,
-            ordered
-          )
+          violated = evalConsistency(constraint, viewpoints, ordered)
         } else if (constraint.kind === "mutual_exclusion") {
-          violated = evalMutualExclusion(
-            parseConfig(constraint.config, DEFAULT_MUTUAL_EXCLUSION_CONFIG),
-            viewpoints
-          )
+          violated = evalMutualExclusion(constraint, viewpoints)
         } else if (constraint.kind === "expression") {
           const compiledExpression = compiled.get(constraint.id)
           if (!compiledExpression) continue // パースエラーは着色しない

@@ -1,11 +1,156 @@
 /**
  * GradeConstraint（観点間の制約ルール）のPrisma操作関数
+ *
+ * 設定は kind 別のJSONではなくリレーションで持つ（issue #1063）。比較先・集計対象は
+ * 評価項目への FK なので、項目をリネームしても参照は切れない。
  */
+
+import type { Prisma } from "@prisma/client"
 
 import type { GradeConstraintInput } from "../../../src/types/grade.types"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
+import {
+  buildConstraintExclusionLabelId,
+  buildConstraintLabelValueId,
+  buildConstraintViewpointId,
+} from "./deterministicId"
+import { serializePrisma } from "./serializePrisma"
+
+/**
+ * 制約ルールが持つ設定リレーションの include（単一 SSOT）。
+ * 全生成元でこれを使い、返り値の形状を一致させる。
+ */
+export const gradeConstraintInclude = {
+  viewpoints: { orderBy: { order: "asc" } },
+  labelValues: { orderBy: { order: "asc" } },
+  exclusionLabels: { orderBy: { order: "asc" } },
+} satisfies Prisma.GradeConstraintInclude
+
+/** 集計対象の観点（GradeItem）の nested create 行。重複は畳む（`@@unique` 違反回避）。 */
+export function buildConstraintViewpointRows(
+  constraintId: string,
+  gradeItemIds: string[]
+) {
+  const unique = [...new Set(gradeItemIds)]
+  return unique.map((gradeItemId, index) => ({
+    id: buildConstraintViewpointId(constraintId, gradeItemId),
+    gradeItemId,
+    order: index,
+  }))
+}
+
+/** ラベル→数値の対応の nested create 行。 */
+export function buildConstraintLabelValueRows(
+  constraintId: string,
+  labelValues: Record<string, number>
+) {
+  return Object.entries(labelValues).map(([label, value], index) => ({
+    id: buildConstraintLabelValueId(constraintId, label),
+    label,
+    value,
+    order: index,
+  }))
+}
+
+/** 混在禁止ラベルの nested create 行。重複は畳む。 */
+export function buildConstraintExclusionLabelRows(
+  constraintId: string,
+  labels: string[]
+) {
+  const unique = [...new Set(labels)]
+  return unique.map((label, index) => ({
+    id: buildConstraintExclusionLabelId(constraintId, label),
+    label,
+    order: index,
+  }))
+}
+
+/**
+ * 制約ルールの設定リレーションを書く（作成・更新・複製・アーカイブ取込の共通経路）。
+ * 未指定（undefined）の項目は触らない。指定されたものは総入れ替えする。
+ *
+ * 据え置く行は update で通し、実際に外れた行だけ削除する。決定論idを使っているため
+ * 同一idの delete → create にすると、sqlite-nas-sync の tombstone（秒解像度）が
+ * 再作成行の updatedAt より後になったとき相手側で INSERT が抑止され、その端末だけ
+ * 設定が消える。
+ *
+ * 子行のidは親idから決まるので、親を作った後に呼ぶ。呼び出し側は必ず同一トランザクション
+ * で包むこと（本体だけ出来て設定が入らないと、viewpointsゼロ＝「比較先以外の全項目」
+ * という設定していないルールとして動き出す）。
+ */
+export async function writeConstraintConfig(
+  tx: Prisma.TransactionClient,
+  constraintId: string,
+  constraint: Partial<GradeConstraintInput>
+) {
+  if (constraint.viewpointGradeItemIds !== undefined) {
+    const rows = buildConstraintViewpointRows(
+      constraintId,
+      constraint.viewpointGradeItemIds
+    )
+    await tx.gradeConstraintViewpoint.deleteMany({
+      where: {
+        constraintId,
+        ...(rows.length > 0 && {
+          gradeItemId: { notIn: rows.map((row) => row.gradeItemId) },
+        }),
+      },
+    })
+    for (const row of rows) {
+      await tx.gradeConstraintViewpoint.upsert({
+        where: { id: row.id },
+        create: { ...row, constraintId },
+        update: { order: row.order },
+      })
+    }
+  }
+
+  if (constraint.labelValues !== undefined) {
+    const rows = buildConstraintLabelValueRows(
+      constraintId,
+      constraint.labelValues
+    )
+    await tx.gradeConstraintLabelValue.deleteMany({
+      where: {
+        constraintId,
+        ...(rows.length > 0 && {
+          label: { notIn: rows.map((row) => row.label) },
+        }),
+      },
+    })
+    for (const row of rows) {
+      await tx.gradeConstraintLabelValue.upsert({
+        where: { id: row.id },
+        create: { ...row, constraintId },
+        update: { value: row.value, order: row.order },
+      })
+    }
+  }
+
+  if (constraint.exclusionLabels !== undefined) {
+    const rows = buildConstraintExclusionLabelRows(
+      constraintId,
+      constraint.exclusionLabels
+    )
+    await tx.gradeConstraintExclusionLabel.deleteMany({
+      where: {
+        constraintId,
+        ...(rows.length > 0 && {
+          label: { notIn: rows.map((row) => row.label) },
+        }),
+      },
+    })
+    for (const row of rows) {
+      await tx.gradeConstraintExclusionLabel.upsert({
+        where: { id: row.id },
+        create: { ...row, constraintId },
+        update: { order: row.order },
+      })
+    }
+  }
+}
 
 /**
  * 成績の全制約ルールを取得（order昇順）
@@ -14,9 +159,12 @@ export async function getGradeConstraints(gradeId: string) {
   try {
     const constraints = await prisma.gradeConstraint.findMany({
       where: { gradeId },
+      include: gradeConstraintInclude,
       orderBy: { order: "asc" },
     })
-    return { success: true, constraints }
+    // tolerance / labelValues.value は Decimal 列。IPC を跨ぐ前に number へ倒さないと
+    // renderer 側の数値比較が黙って壊れる（型は number を主張するので気づけない）。
+    return { success: true, constraints: serializePrisma(constraints) }
   } catch (error) {
     console.error("Error getting grade constraints:", error)
     return {
@@ -34,18 +182,31 @@ export async function createGradeConstraint(data: {
   constraint: GradeConstraintInput
 }) {
   try {
-    const created = await prisma.gradeConstraint.create({
-      data: {
-        gradeId: data.gradeId,
-        name: data.constraint.name,
-        kind: data.constraint.kind,
-        config: data.constraint.config,
-        expression: data.constraint.expression,
-        color: data.constraint.color,
-        message: data.constraint.message,
-        enabled: data.constraint.enabled,
-        order: data.constraint.order,
-      },
+    // 本体と設定は同一トランザクションで書く。設定の書き込みが失敗したときに
+    // 本体だけ残ると、viewpointsゼロ＝「比較先以外の全項目」という設定していない
+    // ルールが結果表を着色しはじめる。
+    const created = await prisma.$transaction(async (tx) => {
+      const constraint = await tx.gradeConstraint.create({
+        data: {
+          gradeId: data.gradeId,
+          name: data.constraint.name,
+          kind: data.constraint.kind,
+          targetGradeItemId: data.constraint.targetGradeItemId,
+          aggregate: data.constraint.aggregate,
+          tolerance: data.constraint.tolerance,
+          expression: data.constraint.expression,
+          color: data.constraint.color,
+          message: data.constraint.message,
+          enabled: data.constraint.enabled,
+          order: data.constraint.order,
+        },
+      })
+      // 設定リレーションのidは自分のidから決定論的に作るため、本体作成後に書く
+      await writeConstraintConfig(tx, constraint.id, data.constraint)
+      return tx.gradeConstraint.findUniqueOrThrow({
+        where: { id: constraint.id },
+        include: gradeConstraintInclude,
+      })
     })
 
     const scope = await resolveGradeScope(data.gradeId)
@@ -57,7 +218,7 @@ export async function createGradeConstraint(data: {
       scopeLabel: scope.scopeLabel,
     })
 
-    return { success: true, constraint: created }
+    return { success: true, constraint: serializePrisma(created) }
   } catch (error) {
     console.error("Error creating grade constraint:", error)
     return {
@@ -75,18 +236,29 @@ export async function updateGradeConstraint(data: {
   constraint: Partial<GradeConstraintInput>
 }) {
   try {
-    const updated = await prisma.gradeConstraint.update({
-      where: { id: data.id },
-      data: {
-        name: data.constraint.name,
-        kind: data.constraint.kind,
-        config: data.constraint.config,
-        expression: data.constraint.expression,
-        color: data.constraint.color,
-        message: data.constraint.message,
-        enabled: data.constraint.enabled,
-        order: data.constraint.order,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.gradeConstraint.update({
+        where: { id: data.id },
+        data: {
+          name: data.constraint.name,
+          kind: data.constraint.kind,
+          targetGradeItemId: data.constraint.targetGradeItemId,
+          aggregate: data.constraint.aggregate,
+          tolerance: data.constraint.tolerance,
+          expression: data.constraint.expression,
+          color: data.constraint.color,
+          message: data.constraint.message,
+          enabled: data.constraint.enabled,
+          order: data.constraint.order,
+          // 自動で無効化した理由は、利用者が有効へ戻した時点で役目を終える
+          ...(data.constraint.enabled === true && { disabledReason: null }),
+        },
+      })
+      await writeConstraintConfig(tx, data.id, data.constraint)
+      return tx.gradeConstraint.findUniqueOrThrow({
+        where: { id: data.id },
+        include: gradeConstraintInclude,
+      })
     })
 
     const scope = await resolveGradeScope(updated.gradeId)
@@ -98,7 +270,7 @@ export async function updateGradeConstraint(data: {
       scopeLabel: scope.scopeLabel,
     })
 
-    return { success: true, constraint: updated }
+    return { success: true, constraint: serializePrisma(updated) }
   } catch (error) {
     console.error("Error updating grade constraint:", error)
     return {

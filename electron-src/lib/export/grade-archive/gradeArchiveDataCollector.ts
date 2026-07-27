@@ -45,6 +45,7 @@ export async function collectGradeArchiveData(
               cropRegion: true,
               courseworkItem: { include: { coursework: true } },
               coursework: { select: { id: true, name: true } },
+              estimationSources: { orderBy: { order: "asc" } },
             },
             orderBy: { order: "asc" },
           },
@@ -92,6 +93,15 @@ export async function collectGradeArchiveData(
         },
       },
       gradeConstraints: {
+        include: {
+          targetGradeItem: { select: { name: true } },
+          viewpoints: {
+            include: { gradeItem: { select: { name: true } } },
+            orderBy: { order: "asc" },
+          },
+          labelValues: { orderBy: { order: "asc" } },
+          exclusionLabels: { orderBy: { order: "asc" } },
+        },
         orderBy: { order: "asc" },
       },
       exportSettings: true,
@@ -108,6 +118,8 @@ export async function collectGradeArchiveData(
     name: gradeItem.name,
     order: gradeItem.order,
     dataSources: gradeItem.dataSources.map((dataSource) => ({
+      // 照合の一次キー。estimationSourceIds の解決に使う
+      id: dataSource.id,
       type: dataSource.type,
       name: dataSource.name,
       // v1.6.0: maxScore は廃止（満点は import 後に元データからライブ算出）。出力しない。
@@ -122,14 +134,9 @@ export async function collectGradeArchiveData(
       treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
       estimationMode: dataSource.estimationMode,
       estimationSourceIds: (() => {
-        if (typeof dataSource.estimationSourceIds === "string") {
-          try {
-            return JSON.parse(dataSource.estimationSourceIds)
-          } catch {
-            return []
-          }
-        }
-        return []
+        return dataSource.estimationSources.map(
+          (estimationSource) => estimationSource.sourceDataSourceId
+        )
       })(),
       // coursework: 評価項目参照（courseworkId は親資料 / courseworkItemId は項目）
       // coursework_total: 資料全体参照（courseworkId のみ・項目参照は null）
@@ -265,10 +272,29 @@ export async function collectGradeArchiveData(
     frozenAt: gradeFrozenScore.frozenAt.toISOString(),
   }))
 
+  // v1.11.0: 設定JSONを廃し、評価項目参照は uuid 一次・名前二次で持ち出す（issue #1063）
   const gradeConstraints = grade.gradeConstraints.map((gradeConstraint) => ({
     name: gradeConstraint.name,
     kind: gradeConstraint.kind,
-    config: gradeConstraint.config,
+    targetGradeItemId: gradeConstraint.targetGradeItemId,
+    targetGradeItemName: gradeConstraint.targetGradeItem?.name ?? null,
+    aggregate: gradeConstraint.aggregate,
+    tolerance: Number(gradeConstraint.tolerance),
+    viewpointGradeItemIds: gradeConstraint.viewpoints.map(
+      (viewpoint) => viewpoint.gradeItemId
+    ),
+    viewpointGradeItemNames: gradeConstraint.viewpoints.map(
+      (viewpoint) => viewpoint.gradeItem.name
+    ),
+    labelValues: Object.fromEntries(
+      gradeConstraint.labelValues.map((labelValue) => [
+        labelValue.label,
+        Number(labelValue.value),
+      ])
+    ),
+    exclusionLabels: gradeConstraint.exclusionLabels.map(
+      (exclusionLabel) => exclusionLabel.label
+    ),
     expression: gradeConstraint.expression,
     color: gradeConstraint.color,
     message: gradeConstraint.message,

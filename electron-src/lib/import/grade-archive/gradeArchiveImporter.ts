@@ -11,6 +11,8 @@ import type {
 } from "../../../../src/types/gradeArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
+import { writeConstraintConfig } from "../../prisma/gradeConstraint"
+import { buildEstimationSourceRows } from "../../prisma/gradeDataSource"
 import { importCourseworkData } from "../coursework-archive/dataCreator"
 import { transformGradeToLatest } from "../grade-transformers"
 
@@ -275,6 +277,14 @@ export async function importGradeArchive(
         /** 名前が重複し、名前フォールバックでは一意に定まらない評価項目名 */
         const ambiguousGradeItemNames = new Set<string>()
 
+        /** アーカイブデータソースuuid → 作成した GradeDataSource.id（推定参照の解決用） */
+        const dataSourceIdByArchiveId = new Map<string, string>()
+        /** 推定の参照。全データソース作成後に張るため一旦ためる（前方参照があるため） */
+        const estimationLinks: {
+          dataSourceId: string
+          archiveSourceIds: string[]
+        }[] = []
+
         /**
          * アーカイブ側の評価項目参照から、作成した GradeItem.id を解決する。
          * uuid 一次・名前二次。名前が曖昧なときは取り違えるより落として警告する
@@ -484,7 +494,7 @@ export async function importGradeArchive(
               }
             }
 
-            await tx.gradeDataSource.create({
+            const createdDataSource = await tx.gradeDataSource.create({
               data: {
                 gradeItemId: gradeItem.id,
                 type: dsData.type,
@@ -502,12 +512,51 @@ export async function importGradeArchive(
                 absentOffset: dsData.absentOffset ?? 0,
                 treatExpectedAsMissing: dsData.treatExpectedAsMissing ?? false,
                 estimationMode: dsData.estimationMode ?? "all",
-                estimationSourceIds: JSON.stringify(
-                  dsData.estimationSourceIds ?? []
-                ),
               },
             })
+            // 推定の参照は全データソース作成後にまとめて張る（前方参照があるため）
+            if (dsData.id) {
+              dataSourceIdByArchiveId.set(dsData.id, createdDataSource.id)
+            }
+            if (dsData.estimationSourceIds?.length) {
+              estimationLinks.push({
+                dataSourceId: createdDataSource.id,
+                archiveSourceIds: dsData.estimationSourceIds,
+              })
+            }
           }
+        }
+
+        // 4.5. 推定に使う他データソースを張る。
+        //   export元idを新idへ解決できたものだけ作る。旧アーカイブ（v1.11.0未満）は
+        //   データソースidを持たないため解決できず、参照は捨てて警告する
+        //   （旧importerはexport元idをそのまま書き戻しており dangling になっていた）。
+        for (const estimationLink of estimationLinks) {
+          const resolvedSourceIds = estimationLink.archiveSourceIds
+            .map((archiveSourceId) =>
+              dataSourceIdByArchiveId.get(archiveSourceId)
+            )
+            .filter((sourceId): sourceId is string => sourceId !== undefined)
+          const droppedCount =
+            estimationLink.archiveSourceIds.length - resolvedSourceIds.length
+          if (droppedCount > 0) {
+            warnings.push(
+              `欠損推定の参照${droppedCount}件を解決できなかったため取り込みませんでした。` +
+                `該当データソースの推定設定を確認してください。`
+            )
+          }
+          if (resolvedSourceIds.length === 0) continue
+          await tx.gradeDataSource.update({
+            where: { id: estimationLink.dataSourceId },
+            data: {
+              estimationSources: {
+                create: buildEstimationSourceRows(
+                  estimationLink.dataSourceId,
+                  resolvedSourceIds
+                ),
+              },
+            },
+          })
         }
 
         // 5. （v1.4.0で廃止）旧 ManualScore 挿入は Coursework 復元(3.5)に統合済み
@@ -619,24 +668,91 @@ export async function importGradeArchive(
           }
         }
 
-        // 観点間の制約ルール（v1.7.0+。式は観点名参照のためID再マップ不要）
+        // 観点間の制約ルール（v1.7.0+）。
+        //   比較先・集計対象は評価項目への参照なので uuid 一次・名前二次で解決する
+        //   （v1.11.0 で設定JSONから昇格。issue #1063）。
+        //   式（expression）だけは自由記述で項目名を含むため文字列のまま取り込む。
         if (
           gradeData.gradeConstraints &&
           gradeData.gradeConstraints.length > 0
         ) {
           for (const gradeConstraint of gradeData.gradeConstraints) {
-            await tx.gradeConstraint.create({
+            const targetGradeItemId = resolveGradeItemId(
+              {
+                gradeItemId: gradeConstraint.targetGradeItemId ?? undefined,
+                gradeItemName: gradeConstraint.targetGradeItemName ?? null,
+              },
+              () => `制約ルール「${gradeConstraint.name}」の比較先`
+            )
+            const targetWasSpecified = Boolean(
+              gradeConstraint.targetGradeItemId ??
+              gradeConstraint.targetGradeItemName
+            )
+
+            const viewpointReferences = gradeConstraint.viewpointGradeItemIds
+              ?.length
+              ? gradeConstraint.viewpointGradeItemIds.map(
+                  (gradeItemId, index) => ({
+                    gradeItemId,
+                    gradeItemName:
+                      gradeConstraint.viewpointGradeItemNames?.[index] ?? null,
+                  })
+                )
+              : (gradeConstraint.viewpointGradeItemNames ?? []).map(
+                  (gradeItemName) => ({ gradeItemName })
+                )
+            const resolvedViewpointIds = viewpointReferences
+              .map((viewpointReference) =>
+                resolveGradeItemId(
+                  viewpointReference,
+                  () => `制約ルール「${gradeConstraint.name}」の集計対象`
+                )
+              )
+              .filter(
+                (gradeItemId): gradeItemId is string => gradeItemId !== null
+              )
+
+            // 参照を1つでも失うと判定の意味が変わる（集計対象が減れば平均が動き、
+            // 空になれば「比較先以外の全項目」という別の設定に化ける）。
+            // 黙って別物として動かさず、無効化して再設定を促す。
+            const lostTarget = targetWasSpecified && targetGradeItemId === null
+            const lostViewpoint =
+              resolvedViewpointIds.length !== viewpointReferences.length
+            const brokenReason = lostTarget
+              ? "取り込み時に比較先の評価項目を解決できなかったため無効化しました。再設定してください。"
+              : lostViewpoint
+                ? "取り込み時に集計対象の観点を解決できなかったため無効化しました。再設定してください。"
+                : null
+            if (brokenReason) {
+              warnings.push(
+                `制約ルール「${gradeConstraint.name}」: ${brokenReason}`
+              )
+            }
+
+            const createdConstraint = await tx.gradeConstraint.create({
               data: {
                 gradeId: grade.id,
                 name: gradeConstraint.name,
                 kind: gradeConstraint.kind,
-                config: gradeConstraint.config,
+                targetGradeItemId,
+                aggregate: gradeConstraint.aggregate ?? "average",
+                tolerance: gradeConstraint.tolerance ?? 1,
                 expression: gradeConstraint.expression,
                 color: gradeConstraint.color,
+                // 診断は disabledReason へ。message は教員が書いた違反の説明で、
+                // 結果表のツールチップに出るため汚さない。
                 message: gradeConstraint.message,
-                enabled: gradeConstraint.enabled,
+                disabledReason: brokenReason,
+                enabled: gradeConstraint.enabled && !brokenReason,
                 order: gradeConstraint.order,
               },
+            })
+
+            // 設定リレーションのidは親idから決定論的に作るため本体作成後に書く
+            await writeConstraintConfig(tx, createdConstraint.id, {
+              viewpointGradeItemIds: resolvedViewpointIds,
+              labelValues: gradeConstraint.labelValues ?? {},
+              exclusionLabels: gradeConstraint.exclusionLabels ?? [],
             })
           }
         }

@@ -168,7 +168,7 @@ model StudentAnswerImage {
 }
 
 model CropRegion {
-  id                 String                @id @default(uuid())
+  id                 String                 @id @default(uuid())
   examPageId         String
   label              String
   type               String
@@ -178,9 +178,9 @@ model CropRegion {
   height             Float
   points             Int?
   orderIndex         Int?
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @default(now()) @updatedAt
-  examPage           ExamPage              @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @default(now()) @updatedAt
+  examPage           ExamPage               @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   cropSubtotals      CropSubtotal[]
   questionScores     QuestionScore[]
   gradeDataSources   GradeDataSource[]
@@ -684,23 +684,99 @@ model Grade {
 }
 
 /// 観点間の制約ルール（不適切な観点/評定の組合せを検知して着色）
+///
+/// 旧 `config`（kind別の設定JSON）は評価項目を「名前」で参照していたため、項目を
+/// リネームすると制約が失効した。集計対象（viewpointItems）は失効しても検証されず、
+/// 一部だけ空振りすると残りだけで平均を取って判定が通っていた。id参照へ昇格して
+/// リレーションで守る（issue #1063）。
 model GradeConstraint {
-  id         String   @id @default(uuid())
-  gradeId    String
-  name       String
-  kind       String // "consistency" | "mutual_exclusion" | "expression"
-  config     String   @default("{}") // ビルダー設定のJSON（kind別）
-  expression String   @default("") // kind="expression" 時のみ使用
-  color      String // 着色色（hex等）
-  message    String?
-  enabled    Boolean  @default(true)
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default(uuid())
+  gradeId           String
+  name              String
+  kind              String // "consistency" | "mutual_exclusion" | "expression"
+  /// kind="consistency": 比較先の「評定」項目。項目削除時はnullにし、ルール自体は残して
+  /// 「評定が未選択」として検知させる（黙って違反なしにしない）
+  targetGradeItemId String?
+  /// kind="consistency": 観点の集計方法 "average" | "sum"
+  aggregate         String   @default("average")
+  /// kind="consistency": 評定との許容差（これを超えたら違反）
+  tolerance         Decimal  @default(1)
+  expression        String   @default("") // kind="expression" 時のみ使用
+  color             String // 着色色（hex等）
+  /// 違反時に表示する教員の説明文。移行や取り込みの診断はここへ書かない
+  message           String?
+  /// 移行・取り込み・項目削除でこのルールを自動で無効化したときの理由。
+  /// message（教員が書いた違反の説明。結果表のツールチップに出る）を汚さないよう別に持つ
+  disabledReason    String?
+  enabled           Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  grade           Grade                           @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  targetGradeItem GradeItem?                      @relation("GradeConstraintTarget", fields: [targetGradeItemId], references: [id], onDelete: SetNull)
+  viewpoints      GradeConstraintViewpoint[]
+  labelValues     GradeConstraintLabelValue[]
+  exclusionLabels GradeConstraintExclusionLabel[]
 
   @@index([gradeId])
+  @@index([targetGradeItemId])
+}
+
+/// consistency ルールの集計対象となる観点（旧 config.viewpointItems）。
+/// 空なら target 以外の全項目を対象にする、という既定の意味は評価側が持つ。
+///
+/// idは決定論的に生成する（`buildConstraintViewpointId`）。`@default(uuid())` だと
+/// 2端末が同じ(ルール, 項目)を追加したときid違い・`@@unique`同値の行ができてNAS同期で
+/// 衝突する。同一idなら行レベルLWWで1行へ収束する。
+model GradeConstraintViewpoint {
+  id           String   @id
+  constraintId String
+  gradeItemId  String
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  constraint GradeConstraint @relation(fields: [constraintId], references: [id], onDelete: Cascade)
+  gradeItem  GradeItem       @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+
+  @@unique([constraintId, gradeItemId])
+  @@index([constraintId])
+  @@index([gradeItemId])
+}
+
+/// consistency ルールのラベル→数値の対応（旧 config.labelValues。例 A=5, B=3, C=1）。
+/// labelは境界ラベルの文字列であり実体参照ではないため、そのまま値として持つ。
+/// idは決定論的に生成する（`buildConstraintLabelValueId`）。理由は GradeConstraintViewpoint と同じ。
+model GradeConstraintLabelValue {
+  id           String   @id
+  constraintId String
+  label        String
+  value        Decimal
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  constraint GradeConstraint @relation(fields: [constraintId], references: [id], onDelete: Cascade)
+
+  @@unique([constraintId, label])
+  @@index([constraintId])
+}
+
+/// mutual_exclusion ルールの混在禁止ラベル集合（旧 config.labels。例 ["A", "C"]）。
+/// idは決定論的に生成する（`buildConstraintExclusionLabelId`）。理由は GradeConstraintViewpoint と同じ。
+model GradeConstraintExclusionLabel {
+  id           String   @id
+  constraintId String
+  label        String
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  constraint GradeConstraint @relation(fields: [constraintId], references: [id], onDelete: Cascade)
+
+  @@unique([constraintId, label])
+  @@index([constraintId])
 }
 
 /// 評価項目（知識・技能、思考・判断・表現、評定 等）
@@ -712,12 +788,14 @@ model GradeItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  grade               Grade                @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  dataSources         GradeDataSource[]
-  boundarySets        GradeBoundarySet[]
-  gradeOverrides      GradeOverride[]
-  gradeFrozenScores   GradeFrozenScore[]
-  gradeItemExclusions GradeItemExclusion[]
+  grade                Grade                      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  dataSources          GradeDataSource[]
+  boundarySets         GradeBoundarySet[]
+  gradeOverrides       GradeOverride[]
+  gradeFrozenScores    GradeFrozenScore[]
+  gradeItemExclusions  GradeItemExclusion[]
+  constraintTargets    GradeConstraint[]          @relation("GradeConstraintTarget")
+  constraintViewpoints GradeConstraintViewpoint[]
 
   @@index([gradeId])
 }
@@ -777,7 +855,6 @@ model GradeDataSource {
   absentOffset           Decimal  @default(0)
   treatExpectedAsMissing Boolean  @default(false)
   estimationMode         String   @default("all") // "all" | "selected"
-  estimationSourceIds    String   @default("[]") // JSON array of DataSource IDs
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -788,12 +865,39 @@ model GradeDataSource {
   courseworkItem CourseworkItem? @relation(fields: [courseworkItemId], references: [id], onDelete: SetNull)
   coursework     Coursework?     @relation(fields: [courseworkId], references: [id], onDelete: SetNull)
 
+  /// estimationMode="selected" のとき推定に使う他データソース（旧 estimationSourceIds のJSON配列）
+  estimationSources      GradeDataSourceEstimationSource[] @relation("EstimationTarget")
+  /// 自分を推定材料として参照している側（削除時のカスケード用）
+  estimationReferencedBy GradeDataSourceEstimationSource[] @relation("EstimationSource")
+
   @@index([gradeItemId])
   @@index([examId])
   @@index([subtotalId])
   @@index([cropRegionId])
   @@index([courseworkItemId])
   @@index([courseworkId])
+}
+
+/// 欠損推定に使う他データソース（旧 GradeDataSource.estimationSourceIds のJSON配列）。
+/// JSON配列ではFKが効かず、参照先データソースを削除してもdangling idが残っていた（issue #1063）。
+///
+/// idは決定論的に生成する（`buildEstimationSourceId`）。理由は GradeConstraintViewpoint と同じ。
+model GradeDataSourceEstimationSource {
+  id                 String   @id
+  /// 推定を行う側
+  dataSourceId       String
+  /// 推定の材料に使う側（同一Grade内の他データソース）
+  sourceDataSourceId String
+  order              Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  dataSource       GradeDataSource @relation("EstimationTarget", fields: [dataSourceId], references: [id], onDelete: Cascade)
+  sourceDataSource GradeDataSource @relation("EstimationSource", fields: [sourceDataSourceId], references: [id], onDelete: Cascade)
+
+  @@unique([dataSourceId, sourceDataSourceId])
+  @@index([dataSourceId])
+  @@index([sourceDataSourceId])
 }
 
 /// 評価項目ごとの対象生徒除外設定
