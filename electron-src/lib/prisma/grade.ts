@@ -5,9 +5,13 @@
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import {
+  gradeConstraintInclude,
+  writeConstraintConfig,
+} from "./gradeConstraint"
+import {
+  buildEstimationSourceRows,
   gradeItemWithDataSourcesInclude,
   hydrateGrade,
-  parseEstimationSourceIds,
 } from "./gradeDataSource"
 import { serializePrisma } from "./serializePrisma"
 
@@ -280,7 +284,12 @@ export async function duplicateGrade(id: string) {
             gradeClassrooms: { orderBy: { order: "asc" } },
             gradeStudents: true,
             gradeItems: {
-              include: { dataSources: { orderBy: { order: "asc" } } },
+              include: {
+                dataSources: {
+                  include: { estimationSources: { orderBy: { order: "asc" } } },
+                  orderBy: { order: "asc" },
+                },
+              },
               orderBy: { order: "asc" },
             },
             boundarySets: {
@@ -288,7 +297,10 @@ export async function duplicateGrade(id: string) {
             },
             gradeOverrides: true,
             gradeItemExclusions: true,
-            gradeConstraints: { orderBy: { order: "asc" } },
+            gradeConstraints: {
+              include: gradeConstraintInclude,
+              orderBy: { order: "asc" },
+            },
             exportSettings: true,
           },
         })
@@ -392,12 +404,11 @@ export async function duplicateGrade(id: string) {
                 absentOffset: dataSource.absentOffset,
                 treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
                 estimationMode: dataSource.estimationMode,
-                estimationSourceIds: dataSource.estimationSourceIds,
               },
             })
             dataSourceIdMap.set(dataSource.id, newDataSource.id)
-            const oldEstimationSourceIds = parseEstimationSourceIds(
-              dataSource.estimationSourceIds
+            const oldEstimationSourceIds = dataSource.estimationSources.map(
+              (estimationSource) => estimationSource.sourceDataSourceId
             )
             if (oldEstimationSourceIds.length > 0) {
               dataSourcesToRelink.push({
@@ -408,7 +419,7 @@ export async function duplicateGrade(id: string) {
           }
         }
 
-        // 5.5. estimationSourceIds を新DataSource IDへ remap
+        // 5.5. 推定に使う他データソースを新DataSource IDへ remap
         //   （元Grade内に見つからないID＝不整合は落とす）。
         for (const relink of dataSourcesToRelink) {
           const remapped = relink.oldEstimationSourceIds
@@ -416,7 +427,11 @@ export async function duplicateGrade(id: string) {
             .filter((newSourceId): newSourceId is string => !!newSourceId)
           await tx.gradeDataSource.update({
             where: { id: relink.newId },
-            data: { estimationSourceIds: JSON.stringify(remapped) },
+            data: {
+              estimationSources: {
+                create: buildEstimationSourceRows(relink.newId, remapped),
+              },
+            },
           })
         }
 
@@ -471,20 +486,43 @@ export async function duplicateGrade(id: string) {
           })
         }
 
-        // 9. 観点間の制約ルール（式・configは観点名参照のためID再マップ不要／独立行）
-        if (source.gradeConstraints.length > 0) {
-          await tx.gradeConstraint.createMany({
-            data: source.gradeConstraints.map((gradeConstraint) => ({
+        // 9. 観点間の制約ルール。
+        //   比較先・集計対象は評価項目への参照なので新gradeItemIdへ再マップする
+        //   （旧configの観点名参照だったころは再マップ不要だった）。
+        //   式（expression）だけは自由記述で項目名を含むため、文字列のまま複製する。
+        for (const gradeConstraint of source.gradeConstraints) {
+          const newConstraint = await tx.gradeConstraint.create({
+            data: {
               gradeId: grade.id,
               name: gradeConstraint.name,
               kind: gradeConstraint.kind,
-              config: gradeConstraint.config,
+              targetGradeItemId: gradeConstraint.targetGradeItemId
+                ? remapItemId(gradeConstraint.targetGradeItemId)
+                : null,
+              aggregate: gradeConstraint.aggregate,
+              tolerance: gradeConstraint.tolerance,
               expression: gradeConstraint.expression,
               color: gradeConstraint.color,
               message: gradeConstraint.message,
               enabled: gradeConstraint.enabled,
               order: gradeConstraint.order,
-            })),
+            },
+          })
+
+          // 設定リレーションのidは親idから決定論的に作るため本体作成後に書く
+          await writeConstraintConfig(tx, newConstraint.id, {
+            viewpointGradeItemIds: gradeConstraint.viewpoints.map((viewpoint) =>
+              remapItemId(viewpoint.gradeItemId)
+            ),
+            labelValues: Object.fromEntries(
+              gradeConstraint.labelValues.map((labelValue) => [
+                labelValue.label,
+                Number(labelValue.value),
+              ])
+            ),
+            exclusionLabels: gradeConstraint.exclusionLabels.map(
+              (exclusionLabel) => exclusionLabel.label
+            ),
           })
         }
 

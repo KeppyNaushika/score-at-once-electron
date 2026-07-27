@@ -3,12 +3,14 @@
  */
 
 import type { Prisma } from "@prisma/client"
+import { randomUUID } from "crypto"
 
 import { toGradeDataSourceType } from "../../../src/types/grade.types"
 import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
+import { buildEstimationSourceId } from "./deterministicId"
 import { serializePrisma } from "./serializePrisma"
 
 /**
@@ -65,6 +67,8 @@ export const gradeDataSourceInclude = {
       items: { select: { maxScore: true } },
     },
   },
+  // estimationMode="selected" のとき推定に使う他データソース（旧 estimationSourceIds のJSON配列）
+  estimationSources: { orderBy: { order: "asc" } },
 } satisfies Prisma.GradeDataSourceInclude
 
 /** GradeItem を dataSources 込みで取得する際の include（上記を内包）。 */
@@ -75,18 +79,22 @@ export const gradeItemWithDataSourcesInclude = {
   },
 } satisfies Prisma.GradeItemInclude
 
-/** estimationSourceIds（JSON文字列 or 既に配列）を string[] へ正規化する。 */
-export function parseEstimationSourceIds(value: unknown): string[] {
-  if (Array.isArray(value)) return value as string[]
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
-  return []
+/**
+ * 推定に使う他データソースの nested create 行を組み立てる。
+ * 自分自身への参照は推定の材料になりえないため落とす。重複も畳む（`@@unique` 違反回避）。
+ */
+export function buildEstimationSourceRows(
+  dataSourceId: string,
+  sourceDataSourceIds: string[]
+) {
+  const unique = [...new Set(sourceDataSourceIds)].filter(
+    (sourceDataSourceId) => sourceDataSourceId !== dataSourceId
+  )
+  return unique.map((sourceDataSourceId, index) => ({
+    id: buildEstimationSourceId(dataSourceId, sourceDataSourceId),
+    sourceDataSourceId,
+    order: index,
+  }))
 }
 
 /**
@@ -148,8 +156,12 @@ type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
 }>
 
 /**
- * serialize 済み DataSource に、仮想フィールド maxScore を（同梱済み元データから）付与し、
- * estimationSourceIds を string[] へ正規化する。レンダラへ返す全経路で必ず通す。
+ * serialize 済み DataSource に、仮想フィールド maxScore を（同梱済み元データから）付与する。
+ * レンダラへ返す全経路で必ず通す。
+ *
+ * 推定に使う他データソース（estimationSources）は中間テーブルの行をそのまま渡す。
+ * 旧 estimationSourceIds（JSON配列）と違い FK で守られているため、参照先が消えれば
+ * 行ごと消える。
  *
  * maxScore 算出専用に同梱した集計元（exam.examPages / subtotal.cropSubtotals /
  * coursework.items）は、算出後に落として renderer 返却形状（grade.types の Pick）へ一致させる
@@ -161,9 +173,6 @@ export function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
   return {
     ...rest,
     type: toGradeDataSourceType(dataSource.type),
-    estimationSourceIds: parseEstimationSourceIds(
-      dataSource.estimationSourceIds
-    ),
     maxScore,
     exam: exam && {
       id: exam.id,
@@ -254,8 +263,12 @@ export async function createDataSource(data: {
     })
     const nextOrder = (maxOrder._max.order ?? -1) + 1
 
+    // estimationSources のidは自分のidから決定論的に作るため、先にidを確定させる
+    const dataSourceId = randomUUID()
+
     const dataSource = await prisma.gradeDataSource.create({
       data: {
+        id: dataSourceId,
         gradeItemId: data.gradeItemId,
         type: data.type,
         examId: data.examId,
@@ -282,7 +295,12 @@ export async function createDataSource(data: {
           estimationMode: data.estimationMode,
         }),
         ...(data.estimationSourceIds !== undefined && {
-          estimationSourceIds: JSON.stringify(data.estimationSourceIds),
+          estimationSources: {
+            create: buildEstimationSourceRows(
+              dataSourceId,
+              data.estimationSourceIds
+            ),
+          },
         }),
       },
       include: gradeDataSourceInclude,
@@ -329,9 +347,13 @@ export async function updateDataSource(
 ) {
   try {
     const { estimationSourceIds, ...rest } = data
-    const updateData: Record<string, unknown> = { ...rest }
+    const updateData: Prisma.GradeDataSourceUpdateInput = { ...rest }
     if (estimationSourceIds !== undefined) {
-      updateData.estimationSourceIds = JSON.stringify(estimationSourceIds)
+      // 選択の置き換え。決定論idなので、同じ組み合わせを選び直せば同じ行に戻る。
+      updateData.estimationSources = {
+        deleteMany: {},
+        create: buildEstimationSourceRows(id, estimationSourceIds),
+      }
     }
     const dataSource = await prisma.gradeDataSource.update({
       where: { id },

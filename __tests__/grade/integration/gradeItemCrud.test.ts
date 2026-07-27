@@ -392,3 +392,127 @@ describe("GradeBoundary CRUD", () => {
     expect(result.boundarySets).toHaveLength(2)
   })
 })
+
+describe("評価項目の削除と制約ルール（issue #1063）", () => {
+  beforeEach(async () => {
+    await cleanupTestDatabase()
+  })
+
+  afterAll(async () => {
+    await disconnectTestPrisma()
+  })
+
+  /** 比較先＝評定、集計対象＝渡した項目 の整合ルールを作る */
+  async function createConsistencyConstraint(
+    gradeId: string,
+    targetGradeItemId: string,
+    viewpointGradeItemIds: string[]
+  ) {
+    return testPrisma.gradeConstraint.create({
+      data: {
+        gradeId,
+        name: "評定と観点の整合",
+        kind: "consistency",
+        targetGradeItemId,
+        aggregate: "average",
+        tolerance: 1,
+        expression: "",
+        color: "#fecaca",
+        enabled: true,
+        order: 0,
+        viewpoints: {
+          create: viewpointGradeItemIds.map((gradeItemId, index) => ({
+            id: `${targetGradeItemId}:${gradeItemId}`,
+            gradeItemId,
+            order: index,
+          })),
+        },
+      },
+    })
+  }
+
+  // 集計対象が1つ減ると残りだけで平均を取り、判定の意味が黙って変わる。
+  // viewpoint 行は FK の Cascade で消えるため、削除側で無効化しないと検知できない。
+  it("集計対象の評価項目を削除すると、その制約ルールを無効化して知らせる", async () => {
+    const grade = await createTestGrade("削除と制約")
+    const knowledge = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    const thinking = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "思考・判断・表現", order: 1 },
+    })
+    const hyotei = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "評定", order: 2 },
+    })
+    const constraint = await createConsistencyConstraint(grade.id, hyotei.id, [
+      knowledge.id,
+      thinking.id,
+    ])
+
+    const result = await deleteGradeItem(thinking.id)
+
+    expect(result.success).toBe(true)
+    expect(result.disabledConstraintNames).toEqual(["評定と観点の整合"])
+
+    const after = await testPrisma.gradeConstraint.findUnique({
+      where: { id: constraint.id },
+      include: { viewpoints: true },
+    })
+    // 集計対象は Cascade で減るが、ルールは無効化され理由が残る。
+    // 理由は disabledReason へ書き、教員が書いた message は触らない
+    // （message は結果表のツールチップに違反理由として出るため）。
+    expect(after!.viewpoints).toHaveLength(1)
+    expect(after!.enabled).toBe(false)
+    expect(after!.disabledReason).toContain("思考・判断・表現")
+    expect(after!.message).toBeNull()
+  })
+
+  it("比較先の評価項目を削除すると参照はnullになり、ルールは残る", async () => {
+    const grade = await createTestGrade("削除と比較先")
+    const knowledge = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    const hyotei = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "評定", order: 1 },
+    })
+    const constraint = await createConsistencyConstraint(grade.id, hyotei.id, [
+      knowledge.id,
+    ])
+
+    const result = await deleteGradeItem(hyotei.id)
+
+    expect(result.success).toBe(true)
+    // 比較先の欠落は評価時に「未選択」として検知されるので、無効化はしない
+    expect(result.disabledConstraintNames).toEqual([])
+
+    const after = await testPrisma.gradeConstraint.findUnique({
+      where: { id: constraint.id },
+    })
+    expect(after!.targetGradeItemId).toBeNull()
+    expect(after!.enabled).toBe(true)
+  })
+
+  it("集計対象を含まない制約ルールは無効化されない", async () => {
+    const grade = await createTestGrade("削除と無関係ルール")
+    const knowledge = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    const unrelated = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "無関係", order: 1 },
+    })
+    const hyotei = await testPrisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "評定", order: 2 },
+    })
+    const constraint = await createConsistencyConstraint(grade.id, hyotei.id, [
+      knowledge.id,
+    ])
+
+    const result = await deleteGradeItem(unrelated.id)
+
+    expect(result.disabledConstraintNames).toEqual([])
+    const after = await testPrisma.gradeConstraint.findUnique({
+      where: { id: constraint.id },
+    })
+    expect(after!.enabled).toBe(true)
+  })
+})

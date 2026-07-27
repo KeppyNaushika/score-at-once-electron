@@ -9,44 +9,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DEFAULT_CONSISTENCY_CONFIG, parseConfig } from "@/lib/gradeConstraints"
-import type { ConsistencyConfig } from "@/types/grade.types"
-
-/** 整合ルールの設定JSONを復元 */
-export function parseConsistency(raw: string): ConsistencyConfig {
-  return parseConfig(raw, DEFAULT_CONSISTENCY_CONFIG)
-}
+import type {
+  ConstraintAggregate,
+  GradeConstraintInput,
+} from "@/types/grade.types"
 
 interface ConsistencyFieldsProps {
-  config: ConsistencyConfig
+  /** 比較先の「評定」にあたる評価項目。未選択なら null */
+  targetGradeItemId: string | null
+  aggregate: ConstraintAggregate
+  tolerance: number
+  /** 集計対象の観点の評価項目id。空なら比較先以外の全項目が対象 */
+  viewpointGradeItemIds: string[]
+  /** ラベル→数値の対応 */
+  labelValues: Record<string, number>
+  /** 境界セットに登場する全ラベル */
   labels: string[]
-  itemNames: string[]
-  onChange: (config: ConsistencyConfig) => void
+  gradeItems: { id: string; name: string }[]
+  onChange: (patch: Partial<GradeConstraintInput>) => void
 }
 
 export function ConsistencyFields({
-  config,
+  targetGradeItemId,
+  aggregate,
+  tolerance,
+  viewpointGradeItemIds,
+  labelValues,
   labels,
-  itemNames,
+  gradeItems,
   onChange,
 }: ConsistencyFieldsProps) {
   // ラベル値は A/B/C 等の非数値ラベルのみ（数値ラベルはそのまま数値化される）
   const valueLabels = (
-    labels.length > 0 ? labels : Object.keys(config.labelValues)
+    labels.length > 0 ? labels : Object.keys(labelValues)
   ).filter((label) => Number.isNaN(Number(label)))
 
-  const target = config.target
-  const viewpointNames = itemNames.filter((itemName) => itemName !== target)
-  const effectiveViewpoints =
-    config.viewpointItems && config.viewpointItems.length > 0
-      ? config.viewpointItems
-      : viewpointNames
+  const viewpointCandidates = gradeItems.filter(
+    (gradeItem) => gradeItem.id !== targetGradeItemId
+  )
+  // 未指定は「比較先以外の全項目」を意味するので、表示上は全候補を選択済みとして扱う
+  const effectiveViewpointIds =
+    viewpointGradeItemIds.length > 0
+      ? viewpointGradeItemIds
+      : viewpointCandidates.map((gradeItem) => gradeItem.id)
 
-  const toggleViewpoint = (name: string) => {
-    const viewpointSet = new Set(effectiveViewpoints)
-    if (viewpointSet.has(name)) viewpointSet.delete(name)
-    else viewpointSet.add(name)
-    onChange({ ...config, viewpointItems: [...viewpointSet] })
+  const targetName =
+    gradeItems.find((gradeItem) => gradeItem.id === targetGradeItemId)?.name ??
+    ""
+
+  const toggleViewpoint = (gradeItemId: string) => {
+    const viewpointSet = new Set(effectiveViewpointIds)
+    if (viewpointSet.has(gradeItemId)) viewpointSet.delete(gradeItemId)
+    else viewpointSet.add(gradeItemId)
+    onChange({ viewpointGradeItemIds: [...viewpointSet] })
   }
 
   return (
@@ -57,14 +72,13 @@ export function ConsistencyFields({
             評定（比較先の項目）
           </Label>
           <Select
-            value={target}
+            value={targetGradeItemId ?? ""}
             onValueChange={(value) =>
               onChange({
-                ...config,
-                target: value,
-                viewpointItems: itemNames.filter(
-                  (itemName) => itemName !== value
-                ),
+                targetGradeItemId: value,
+                viewpointGradeItemIds: gradeItems
+                  .filter((gradeItem) => gradeItem.id !== value)
+                  .map((gradeItem) => gradeItem.id),
               })
             }
           >
@@ -72,9 +86,9 @@ export function ConsistencyFields({
               <SelectValue placeholder="項目を選択" />
             </SelectTrigger>
             <SelectContent>
-              {itemNames.map((itemName) => (
-                <SelectItem key={itemName} value={itemName}>
-                  {itemName}
+              {gradeItems.map((gradeItem) => (
+                <SelectItem key={gradeItem.id} value={gradeItem.id}>
+                  {gradeItem.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -83,12 +97,9 @@ export function ConsistencyFields({
         <div>
           <Label className="text-muted-foreground text-xs">集計</Label>
           <Select
-            value={config.aggregate}
+            value={aggregate}
             onValueChange={(value) =>
-              onChange({
-                ...config,
-                aggregate: value as ConsistencyConfig["aggregate"],
-              })
+              onChange({ aggregate: value as ConstraintAggregate })
             }
           >
             <SelectTrigger className="mt-1 h-8 w-28">
@@ -105,10 +116,8 @@ export function ConsistencyFields({
           <Input
             type="number"
             step="0.1"
-            value={config.tolerance}
-            onChange={(e) =>
-              onChange({ ...config, tolerance: Number(e.target.value) })
-            }
+            value={tolerance}
+            onChange={(e) => onChange({ tolerance: Number(e.target.value) })}
             className="mt-1 h-8 w-20"
           />
         </div>
@@ -116,24 +125,24 @@ export function ConsistencyFields({
 
       <div>
         <Label className="text-muted-foreground text-xs">
-          集計する観点（{config.aggregate === "sum" ? "合計" : "平均"}
+          集計する観点（{aggregate === "sum" ? "合計" : "平均"}
           をとる項目）
         </Label>
         <div className="mt-1 flex flex-wrap gap-2">
-          {viewpointNames.map((name) => {
-            const active = effectiveViewpoints.includes(name)
+          {viewpointCandidates.map((gradeItem) => {
+            const active = effectiveViewpointIds.includes(gradeItem.id)
             return (
               <button
-                key={name}
+                key={gradeItem.id}
                 type="button"
-                onClick={() => toggleViewpoint(name)}
+                onClick={() => toggleViewpoint(gradeItem.id)}
                 className={`rounded border px-2 py-1 text-xs ${
                   active
                     ? "border-primary bg-primary/10 text-foreground font-medium"
                     : "text-muted-foreground"
                 }`}
               >
-                {name}
+                {gradeItem.name}
               </button>
             )
           })}
@@ -151,12 +160,11 @@ export function ConsistencyFields({
                 <span className="w-5 text-center font-medium">{label}</span>
                 <Input
                   type="number"
-                  value={config.labelValues[label] ?? 0}
+                  value={labelValues[label] ?? 0}
                   onChange={(e) =>
                     onChange({
-                      ...config,
                       labelValues: {
-                        ...config.labelValues,
+                        ...labelValues,
                         [label]: Number(e.target.value),
                       },
                     })
@@ -170,8 +178,8 @@ export function ConsistencyFields({
       )}
 
       <p className="text-muted-foreground text-xs">
-        「{target || "（未選択）"}」と、選んだ観点の
-        {config.aggregate === "sum" ? "合計" : "平均"}の差が {config.tolerance}{" "}
+        「{targetName || "（未選択）"}」と、選んだ観点の
+        {aggregate === "sum" ? "合計" : "平均"}の差が {tolerance}{" "}
         を超えたら違反とみなします。
       </p>
     </div>

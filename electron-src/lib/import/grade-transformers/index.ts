@@ -26,6 +26,7 @@ import { GRADE_CURRENT_VERSION } from "../../../../src/types/gradeArchive.types"
 import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 import { V1_9_0_to_V1_10_0_Transformer } from "./V1_9_0_to_V1_10_0"
+import { V1_10_0_to_V1_11_0_Transformer } from "./V1_10_0_to_V1_11_0"
 
 const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
   courseworks: [],
@@ -39,6 +40,7 @@ const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
 const v1_3_0 = new V1_3_0_to_V1_4_0_Transformer()
 const v1_4_0 = new V1_4_0_to_V1_5_0_Transformer()
 const v1_9_0 = new V1_9_0_to_V1_10_0_Transformer()
+const v1_10_0 = new V1_10_0_to_V1_11_0_Transformer()
 
 /**
  * 総合（overall）の名残を持つか。境界セット・手動上書きのどちらかに targetType があるか、
@@ -55,6 +57,13 @@ function hasOverallResidue(data: GradeArchiveData): boolean {
       gradeOverride.gradeItemName === null
   )
   return boundaryResidue || overrideResidue
+}
+
+/** 制約ルールが旧 config（設定JSON）を持つか。持てば 1.10.0 以前の形 */
+function hasLegacyConstraintConfig(data: GradeArchiveData): boolean {
+  return (data.gradeData.gradeConstraints ?? []).some(
+    (gradeConstraint) => gradeConstraint.config !== undefined
+  )
 }
 
 /** manual 型 DataSource を持つか（点数未入力でも true） */
@@ -74,6 +83,7 @@ function detectOriginalVersion(data: GradeArchiveData): GradeArchiveVersion {
   if (data.courseworks) return "1.4.0"
   if (hasManualDataSource(data) || data.manualScoresData) return "1.3.0"
   if (hasOverallResidue(data)) return "1.9.0"
+  if (hasLegacyConstraintConfig(data)) return "1.10.0"
   return GRADE_CURRENT_VERSION
 }
 
@@ -118,6 +128,14 @@ export function transformGradeToLatest(
     current = result.data
     warnings.push(...result.warnings)
     appliedTransformations.push({ from: "1.9.0", to: "1.10.0" })
+  }
+
+  // 1.10.0 → 1.11.0: 制約ルールの設定JSON（config）を構造化フィールドへ展開
+  if (hasLegacyConstraintConfig(current)) {
+    const result = v1_10_0.transform(current)
+    current = result.data
+    warnings.push(...result.warnings)
+    appliedTransformations.push({ from: "1.10.0", to: "1.11.0" })
   }
 
   // マニフェストを現行バージョンへ

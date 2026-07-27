@@ -45,11 +45,12 @@ export function ResultsTable({
   const [sortKey, setSortKey] = useState<SortKey>("registrationOrder")
   const [sortAsc, setSortAsc] = useState(true)
 
-  // 制約ルール違反を評価（studentId → 違反一覧）
-  const violationsByStudent = useMemo(
-    () => evaluateConstraints(result, constraints).violations,
+  // 制約ルールを評価。違反（studentId → 違反一覧）と、評価できなかったルールの理由を得る
+  const constraintEvaluation = useMemo(
+    () => evaluateConstraints(result, constraints),
     [result, constraints]
   )
+  const violationsByStudent = constraintEvaluation.violations
 
   // 凡例に表示する有効ルール
   const activeConstraints = useMemo(
@@ -129,7 +130,10 @@ export function ResultsTable({
   return (
     <>
       {activeConstraints.length > 0 && (
-        <ConstraintLegend constraints={activeConstraints} />
+        <ConstraintLegend
+          constraints={activeConstraints}
+          errors={constraintEvaluation.errors}
+        />
       )}
       <div className="mt-6 overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">

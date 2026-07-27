@@ -117,16 +117,45 @@ export interface ArchiveGradeData {
     frozenAt: string
   }[]
   /** 観点間の制約ルール（後方互換: v1.7.0+。古いアーカイブではundefined） */
-  gradeConstraints?: {
-    name: string
-    kind: string
-    config: string
-    expression: string
-    color: string
-    message: string | null
-    enabled: boolean
-    order: number
-  }[]
+  gradeConstraints?: ArchiveGradeConstraint[]
+}
+
+/**
+ * 観点間の制約ルール1件。
+ *
+ * v1.11.0 で設定JSON（config）を廃し、評価項目への参照を uuid 一次・名前二次で持つ
+ * （issue #1063）。旧 config は名前だけで参照していたため、評価項目をリネームすると
+ * 制約が失効した。ArchiveGradeItem と同じ照合方式に揃える。
+ */
+export interface ArchiveGradeConstraint {
+  name: string
+  kind: string
+  /**
+   * @deprecated v1.11.0 で廃止。kind別の設定JSON（評価項目を名前で参照していた）。
+   * 旧アーカイブの読込にのみ使う。v1.11.0+ の export では出力しない。
+   */
+  config?: string
+  /** v1.11.0+: 比較先（評定）の評価項目uuid（照合の一次キー） */
+  targetGradeItemId?: string | null
+  /** v1.11.0+: 比較先の評価項目名（uuid不一致時の二次フォールバック） */
+  targetGradeItemName?: string | null
+  /** v1.11.0+: 観点の集計方法 "average" | "sum" */
+  aggregate?: string
+  /** v1.11.0+: 許容する評定との差 */
+  tolerance?: number
+  /** v1.11.0+: 集計対象の観点の評価項目uuid（照合の一次キー） */
+  viewpointGradeItemIds?: string[]
+  /** v1.11.0+: 集計対象の観点名（uuid不一致時の二次フォールバック。上の配列と同順） */
+  viewpointGradeItemNames?: string[]
+  /** v1.11.0+: ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }） */
+  labelValues?: Record<string, number>
+  /** v1.11.0+: 混在禁止ラベル（mutual_exclusion 用） */
+  exclusionLabels?: string[]
+  expression: string
+  color: string
+  message: string | null
+  enabled: boolean
+  order: number
 }
 
 export interface ArchiveGradeItem {
@@ -143,6 +172,12 @@ export interface ArchiveGradeItem {
 }
 
 export interface ArchiveDataSource {
+  /**
+   * v1.11.0+: export元のデータソースuuid。estimationSourceIds の解決に使う。
+   * これが無い旧アーカイブでは estimationSourceIds を解決できず、推定の参照は捨てられる
+   * （旧importerは解決せずexport元idをそのまま書き戻しており、dangling idになっていた）。
+   */
+  id?: string
   type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"（旧: "manual"）
   name: string
   /**
@@ -341,8 +376,16 @@ export interface GradeArchiveImportPreview {
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
  */
 export type GradeArchiveVersion =
-  "1.3.0" | "1.4.0" | "1.5.0" | "1.6.0" | "1.7.0" | "1.8.0" | "1.9.0" | "1.10.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.10.0"
+  | "1.3.0"
+  | "1.4.0"
+  | "1.5.0"
+  | "1.6.0"
+  | "1.7.0"
+  | "1.8.0"
+  | "1.9.0"
+  | "1.10.0"
+  | "1.11.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.11.0"
 
 export interface GradeTransformResult {
   data: GradeArchiveData

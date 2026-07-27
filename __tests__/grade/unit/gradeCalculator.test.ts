@@ -116,7 +116,7 @@ function buildGrade(
         absentOffset?: number
         treatExpectedAsMissing?: boolean
         estimationMode?: string
-        estimationSourceIds?: string
+        estimationSourceIds?: string[]
         inputMode?: string
         letterScales?: { label: string; score: number; order: number }[]
       }[]
@@ -145,7 +145,20 @@ function buildGrade(
   // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
   const gradeItems = (overrides.gradeItems ?? []).map((gradeItem) => ({
     ...gradeItem,
-    dataSources: gradeItem.dataSources.map((dataSource) => {
+    dataSources: gradeItem.dataSources.map((rawDataSource) => {
+      // 推定に使う他データソースは中間テーブル（gradeDataSourceInclude 同梱）。
+      // テストケースは id 配列で書けるようにし、ここで行の形へ寄せる。
+      const dataSource = {
+        ...rawDataSource,
+        estimationSources: (rawDataSource.estimationSourceIds ?? []).map(
+          (sourceDataSourceId, index) => ({
+            id: `${rawDataSource.id}:${sourceDataSourceId}`,
+            dataSourceId: rawDataSource.id,
+            sourceDataSourceId,
+            order: index,
+          })
+        ),
+      }
       const isCoursework =
         dataSource.type === "manual" ||
         dataSource.type === "coursework" ||
@@ -1121,7 +1134,8 @@ describe("calculateGrades", () => {
               absentOffset: 0,
               treatExpectedAsMissing: false,
               estimationMode: "all",
-              estimationSourceIds: "[]",
+              // このケースは buildGrade を通さないので中間テーブルの形で持つ
+              estimationSources: [],
             },
           ],
         },

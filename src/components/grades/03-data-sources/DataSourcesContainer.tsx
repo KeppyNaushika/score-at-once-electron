@@ -420,7 +420,16 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
               variant="ghost"
               size="icon"
               className="text-destructive h-7 w-7"
-              onClick={() => deleteGradeItem(gradeItem.id)}
+              onClick={async () => {
+                const result = await deleteGradeItem(gradeItem.id)
+                // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
+                // 黙って着色が消えるのを避け、その場で知らせる。
+                if (result.disabledConstraintNames?.length) {
+                  toast.warning(
+                    `制約ルール「${result.disabledConstraintNames.join("」「")}」を無効化しました（集計対象が変わったため再設定してください）`
+                  )
+                }
+              }}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -1,34 +1,27 @@
 "use client"
 
 import { Label } from "@/components/ui/label"
-import {
-  DEFAULT_MUTUAL_EXCLUSION_CONFIG,
-  parseConfig,
-} from "@/lib/gradeConstraints"
-import type { MutualExclusionConfig } from "@/types/grade.types"
-
-/** 混在禁止ルールの設定JSONを復元 */
-export function parseMutualExclusion(raw: string): MutualExclusionConfig {
-  return parseConfig(raw, DEFAULT_MUTUAL_EXCLUSION_CONFIG)
-}
+import type { GradeConstraintInput } from "@/types/grade.types"
 
 interface MutualExclusionFieldsProps {
-  config: MutualExclusionConfig
+  /** 同時に現れてはいけないラベル集合 */
+  exclusionLabels: string[]
+  /** 境界セットに登場する全ラベル（選択肢） */
   labels: string[]
-  onChange: (config: MutualExclusionConfig) => void
+  onChange: (patch: Partial<GradeConstraintInput>) => void
 }
 
 export function MutualExclusionFields({
-  config,
+  exclusionLabels,
   labels,
   onChange,
 }: MutualExclusionFieldsProps) {
-  const displayLabels = labels.length > 0 ? labels : config.labels
+  const displayLabels = labels.length > 0 ? labels : exclusionLabels
   const toggle = (label: string) => {
-    const next = config.labels.includes(label)
-      ? config.labels.filter((existingLabel) => existingLabel !== label)
-      : [...config.labels, label]
-    onChange({ ...config, labels: next })
+    const next = exclusionLabels.includes(label)
+      ? exclusionLabels.filter((existingLabel) => existingLabel !== label)
+      : [...exclusionLabels, label]
+    onChange({ exclusionLabels: next })
   }
   return (
     <div className="space-y-2 text-sm">
@@ -37,7 +30,7 @@ export function MutualExclusionFields({
       </Label>
       <div className="flex flex-wrap gap-2">
         {displayLabels.map((label) => {
-          const active = config.labels.includes(label)
+          const active = exclusionLabels.includes(label)
           return (
             <button
               key={label}

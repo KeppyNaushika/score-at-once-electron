@@ -16,6 +16,7 @@ import type {
   GradeArchiveData,
   GradeArchiveManifest,
 } from "../../../src/types/gradeArchive.types"
+import { GRADE_CURRENT_VERSION } from "../../../src/types/gradeArchive.types"
 
 const manifest: GradeArchiveManifest = {
   version: "1.9.0",
@@ -129,7 +130,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
       transformGradeToLatest(buildV1_9_0Archive())
 
     expect(originalVersion).toBe("1.9.0")
-    expect(finalVersion).toBe("1.10.0")
+    expect(finalVersion).toBe(GRADE_CURRENT_VERSION)
     expect(appliedTransformations).toContainEqual({
       from: "1.9.0",
       to: "1.10.0",
@@ -139,7 +140,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
   it("manifest.version が現行へ更新される", () => {
     const { data } = transformGradeToLatest(buildV1_9_0Archive())
 
-    expect(data.manifest.version).toBe("1.10.0")
+    expect(data.manifest.version).toBe(GRADE_CURRENT_VERSION)
   })
 
   it("総合の名残が無い現行アーカイブは変換されず warning も出ない", () => {
@@ -164,7 +165,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
 
     expect(warnings).toEqual([])
     expect(appliedTransformations).toEqual([])
-    expect(originalVersion).toBe("1.10.0")
+    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
   })
 
   it("gradeOverrides を持たない旧アーカイブでも境界セットだけ正規化できる", () => {
@@ -179,5 +180,155 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     expect(warnings.some((warning) => warning.includes("手動上書き"))).toBe(
       false
     )
+  })
+})
+
+/**
+ * v1.10.0 が実際に書き出していた形。制約ルールの設定は kind 別の JSON 文字列
+ * （config）で、評価項目を「名前」で参照していた（issue #1063 以前）。
+ */
+function buildV1_10_0Archive(): GradeArchiveData {
+  const archive = buildV1_9_0Archive()
+  // 総合の名残を取り除いて 1.10.0 相当の形にする
+  archive.boundariesData.boundarySets = [
+    {
+      gradeItemName: "知識・技能",
+      boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
+    },
+  ]
+  archive.gradeData.gradeOverrides = []
+  archive.gradeData.gradeItems = [
+    { name: "知識・技能", order: 0, dataSources: [] },
+    { name: "評定", order: 1, dataSources: [] },
+  ]
+  archive.gradeData.gradeConstraints = [
+    {
+      name: "評定と観点の整合",
+      kind: "consistency",
+      config: JSON.stringify({
+        labelValues: { A: 5, B: 3, C: 1 },
+        aggregate: "sum",
+        tolerance: 2,
+        target: "評定",
+        viewpointItems: ["知識・技能"],
+      }),
+      expression: "",
+      color: "#fecaca",
+      message: "観点と評定が合いません",
+      enabled: true,
+      order: 0,
+    },
+    {
+      name: "A・C混在禁止",
+      kind: "mutual_exclusion",
+      config: JSON.stringify({ labels: ["A", "C"] }),
+      expression: "",
+      color: "#fde68a",
+      message: null,
+      enabled: true,
+      order: 1,
+    },
+    {
+      name: "壊れたconfig",
+      kind: "consistency",
+      config: "これはJSONではない",
+      expression: "",
+      color: "#fecaca",
+      message: null,
+      enabled: true,
+      order: 2,
+    },
+  ]
+  return archive
+}
+
+describe("transformGradeToLatest: 1.10.0 → 1.11.0（制約ルールの設定JSON展開）", () => {
+  it("config を構造化フィールドへ展開し、評価項目は名前で残す", () => {
+    const { data, appliedTransformations, originalVersion } =
+      transformGradeToLatest(buildV1_10_0Archive())
+
+    expect(originalVersion).toBe("1.10.0")
+    expect(appliedTransformations).toContainEqual({
+      from: "1.10.0",
+      to: "1.11.0",
+    })
+
+    const constraints = data.gradeData.gradeConstraints!
+    const consistency = constraints.find(
+      (constraint) => constraint.kind === "consistency"
+    )!
+    // uuid は旧アーカイブに無いので名前だけ（importer が名前フォールバックで解決する）
+    expect(consistency.targetGradeItemName).toBe("評定")
+    expect(consistency.targetGradeItemId).toBeUndefined()
+    expect(consistency.viewpointGradeItemNames).toEqual(["知識・技能"])
+    expect(consistency.labelValues).toEqual({ A: 5, B: 3, C: 1 })
+    expect(consistency.aggregate).toBe("sum")
+    expect(consistency.tolerance).toBe(2)
+    // 教員が書いた違反メッセージは触らない
+    expect(consistency.message).toBe("観点と評定が合いません")
+    // 展開後は config を残さない
+    expect(consistency.config).toBeUndefined()
+
+    const exclusion = constraints.find(
+      (constraint) => constraint.kind === "mutual_exclusion"
+    )!
+    expect(exclusion.exclusionLabels).toEqual(["A", "C"])
+    expect(exclusion.config).toBeUndefined()
+  })
+
+  it("壊れた config は既定値へ倒して取り込める形にする", () => {
+    const { data } = transformGradeToLatest(buildV1_10_0Archive())
+
+    const broken = data.gradeData.gradeConstraints!.find(
+      (constraint) => constraint.name === "壊れたconfig"
+    )!
+    // 旧 parseConfig の既定値フォールバックと同じ挙動（JSON.parse 失敗で既定値）
+    expect(broken.targetGradeItemName).toBeNull()
+    expect(broken.aggregate).toBe("average")
+    expect(broken.tolerance).toBe(1)
+    expect(broken.viewpointGradeItemNames).toEqual([])
+    expect(broken.config).toBeUndefined()
+  })
+
+  it("マニフェストを現行へ上げ、変換した件数を warning で知らせる", () => {
+    const { data, warnings } = transformGradeToLatest(buildV1_10_0Archive())
+
+    expect(data.manifest.version).toBe(GRADE_CURRENT_VERSION)
+    expect(warnings.some((warning) => warning.includes("1.10.0→1.11.0"))).toBe(
+      true
+    )
+  })
+
+  it("既に 1.11.0 の形なら変換しない", () => {
+    const archive = buildV1_10_0Archive()
+    archive.gradeData.gradeConstraints = [
+      {
+        name: "整合",
+        kind: "consistency",
+        targetGradeItemId: "gi-h",
+        targetGradeItemName: "評定",
+        aggregate: "average",
+        tolerance: 1,
+        viewpointGradeItemIds: ["gi-k"],
+        viewpointGradeItemNames: ["知識・技能"],
+        labelValues: { A: 5 },
+        exclusionLabels: [],
+        expression: "",
+        color: "#fecaca",
+        message: null,
+        enabled: true,
+        order: 0,
+      },
+    ]
+
+    const { appliedTransformations, originalVersion } =
+      transformGradeToLatest(archive)
+
+    expect(
+      appliedTransformations.some(
+        (transformation) => transformation.to === "1.11.0"
+      )
+    ).toBe(false)
+    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
   })
 })

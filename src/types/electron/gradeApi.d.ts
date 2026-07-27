@@ -159,9 +159,12 @@ export interface GradeAPI {
       gradeItem?: import("../grade.types").GradeItemWithDataSources
       error?: string
     }>
-    deleteGradeItem: (
-      id: string
-    ) => Promise<{ success: boolean; error?: string }>
+    deleteGradeItem: (id: string) => Promise<{
+      success: boolean
+      error?: string
+      /** 集計対象がこの項目を含むため無効化した制約ルール名（利用者へ知らせる） */
+      disabledConstraintNames?: string[]
+    }>
     reorderGradeItems: (
       items: { id: string; order: number }[]
     ) => Promise<{ success: boolean; error?: string }>

@@ -12,9 +12,11 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useGradeConstraints } from "@/hooks/grades/useGradeConstraints"
 import {
-  DEFAULT_CONSISTENCY_CONFIG,
+  DEFAULT_CONSTRAINT_AGGREGATE,
   DEFAULT_CONSTRAINT_COLOR,
-  DEFAULT_MUTUAL_EXCLUSION_CONFIG,
+  DEFAULT_CONSTRAINT_LABEL_VALUES,
+  DEFAULT_CONSTRAINT_TOLERANCE,
+  DEFAULT_EXCLUSION_LABELS,
   evaluateConstraints,
   validateConstraintExpression,
 } from "@/lib/gradeConstraints"
@@ -26,11 +28,8 @@ import type {
   GradeConstraintKind,
 } from "@/types/grade.types"
 
-import { ConsistencyFields, parseConsistency } from "./ConsistencyFields"
-import {
-  MutualExclusionFields,
-  parseMutualExclusion,
-} from "./MutualExclusionFields"
+import { ConsistencyFields } from "./ConsistencyFields"
+import { MutualExclusionFields } from "./MutualExclusionFields"
 
 interface ConstraintRulesEditorProps {
   gradeId: string
@@ -68,18 +67,13 @@ function collectLabels(
 }
 
 /** 「評定」にあたる項目を推測（名前に「評定」を含む最後の項目、無ければ末尾） */
-function guessTargetItem(itemNames: string[]): string {
-  const byName = [...itemNames]
+function guessTargetGradeItem(
+  gradeItems: { id: string; name: string }[]
+): { id: string; name: string } | null {
+  const byName = [...gradeItems]
     .reverse()
-    .find((itemName) => itemName.includes("評定"))
-  return byName ?? itemNames[itemNames.length - 1] ?? ""
-}
-
-function defaultConfigFor(kind: GradeConstraintKind): string {
-  if (kind === "consistency") return JSON.stringify(DEFAULT_CONSISTENCY_CONFIG)
-  if (kind === "mutual_exclusion")
-    return JSON.stringify(DEFAULT_MUTUAL_EXCLUSION_CONFIG)
-  return "{}"
+    .find((gradeItem) => gradeItem.name.includes("評定"))
+  return byName ?? gradeItems[gradeItems.length - 1] ?? null
 }
 
 export function ConstraintRulesEditor({
@@ -95,11 +89,6 @@ export function ConstraintRulesEditor({
   )
 
   const labels = useMemo(() => collectLabels(boundarySets), [boundarySets])
-  // 項目名は同期的に得られる gradeItems から作る（calcResult の読込を待たない）
-  const itemNames = useMemo(
-    () => gradeItems.map((gradeItem) => gradeItem.name),
-    [gradeItems]
-  )
 
   // プレビュー用に成績算出結果を取得
   const loadCalc = useCallback(async () => {
@@ -121,16 +110,9 @@ export function ConstraintRulesEditor({
   }, [calcResult, constraints])
 
   const handleAdd = async (kind: GradeConstraintKind) => {
-    let config = defaultConfigFor(kind)
     // 整合ルールは現在の項目構成から「評定」と集計対象を推測して初期化
-    if (kind === "consistency" && itemNames.length > 0) {
-      const target = guessTargetItem(itemNames)
-      config = JSON.stringify({
-        ...DEFAULT_CONSISTENCY_CONFIG,
-        target,
-        viewpointItems: itemNames.filter((itemName) => itemName !== target),
-      })
-    }
+    const target =
+      kind === "consistency" ? guessTargetGradeItem(gradeItems) : null
     const input: GradeConstraintInput = {
       name:
         kind === "consistency"
@@ -139,7 +121,18 @@ export function ConstraintRulesEditor({
             ? "A・C混在禁止"
             : "新しいルール",
       kind,
-      config,
+      targetGradeItemId: target?.id ?? null,
+      aggregate: DEFAULT_CONSTRAINT_AGGREGATE,
+      tolerance: DEFAULT_CONSTRAINT_TOLERANCE,
+      viewpointGradeItemIds: target
+        ? gradeItems
+            .filter((gradeItem) => gradeItem.id !== target.id)
+            .map((gradeItem) => gradeItem.id)
+        : [],
+      labelValues:
+        kind === "consistency" ? DEFAULT_CONSTRAINT_LABEL_VALUES : {},
+      exclusionLabels:
+        kind === "mutual_exclusion" ? DEFAULT_EXCLUSION_LABELS : [],
       expression: kind === "expression" ? 'has("A") and has("C")' : "",
       color: DEFAULT_CONSTRAINT_COLOR,
       message: null,
@@ -197,7 +190,7 @@ export function ConstraintRulesEditor({
             key={constraint.id}
             constraint={constraint}
             labels={labels}
-            itemNames={itemNames}
+            gradeItems={gradeItems}
             hitCount={evaluation?.counts.get(constraint.id) ?? 0}
             errorMessage={evaluation?.errors.get(constraint.id) ?? null}
             onUpdate={(patch) => updateConstraint(constraint.id, patch)}
@@ -212,7 +205,7 @@ export function ConstraintRulesEditor({
 interface ConstraintCardProps {
   constraint: GradeConstraintData
   labels: string[]
-  itemNames: string[]
+  gradeItems: { id: string; name: string; order: number }[]
   hitCount: number
   errorMessage: string | null
   onUpdate: (patch: Partial<GradeConstraintInput>) => void
@@ -222,7 +215,7 @@ interface ConstraintCardProps {
 function ConstraintCard({
   constraint,
   labels,
-  itemNames,
+  gradeItems,
   hitCount,
   errorMessage,
   onUpdate,
@@ -284,18 +277,31 @@ function ConstraintCard({
 
       {constraint.kind === "consistency" && (
         <ConsistencyFields
-          config={parseConsistency(constraint.config)}
+          targetGradeItemId={constraint.targetGradeItemId}
+          aggregate={constraint.aggregate}
+          tolerance={constraint.tolerance}
+          viewpointGradeItemIds={constraint.viewpoints.map(
+            (viewpoint) => viewpoint.gradeItemId
+          )}
+          labelValues={Object.fromEntries(
+            constraint.labelValues.map((labelValue) => [
+              labelValue.label,
+              labelValue.value,
+            ])
+          )}
           labels={labels}
-          itemNames={itemNames}
-          onChange={(config) => onUpdate({ config: JSON.stringify(config) })}
+          gradeItems={gradeItems}
+          onChange={onUpdate}
         />
       )}
 
       {constraint.kind === "mutual_exclusion" && (
         <MutualExclusionFields
-          config={parseMutualExclusion(constraint.config)}
+          exclusionLabels={constraint.exclusionLabels.map(
+            (exclusionLabel) => exclusionLabel.label
+          )}
           labels={labels}
-          onChange={(config) => onUpdate({ config: JSON.stringify(config) })}
+          onChange={onUpdate}
         />
       )}
 
@@ -335,6 +341,12 @@ function ConstraintCard({
           placeholder="違反時にホバーで表示される説明（任意）"
         />
       </div>
+
+      {constraint.disabledReason && (
+        <p className="text-destructive text-xs">
+          自動で無効化されました: {constraint.disabledReason}
+        </p>
+      )}
 
       <div className="text-muted-foreground text-xs">
         {errorMessage ? (
