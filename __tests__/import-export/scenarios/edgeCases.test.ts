@@ -181,9 +181,10 @@ describe("edgeCases", () => {
       cropRegionsPerPage: 1,
     })
 
+    const examStudentId = generateId()
     examData.examStudents = [
       {
-        id: generateId(),
+        id: examStudentId,
         examId,
         studentId,
         status: "PARTICIPATING",
@@ -203,7 +204,7 @@ describe("edgeCases", () => {
       scoresData: createArchiveScoresData([
         {
           cropRegionId: regionId,
-          studentId,
+          examStudentId,
           status: "unscored",
           partialScore: null,
           userId: currentUser.id,
@@ -260,9 +261,10 @@ describe("edgeCases", () => {
       cropRegionsPerPage: 1,
     })
 
+    const examStudentId = generateId()
     examData.examStudents = [
       {
-        id: generateId(),
+        id: examStudentId,
         examId,
         studentId,
         status: "PARTICIPATING",
@@ -284,7 +286,7 @@ describe("edgeCases", () => {
           {
             id: scoreId,
             cropRegionId: regionId,
-            studentId,
+            examStudentId,
             status: "correct",
             partialScore: "10",
             userId: currentUser.id,
@@ -449,9 +451,10 @@ describe("edgeCases", () => {
       cropRegionsPerPage: 1,
     })
 
+    const examStudentId = generateId()
     examData.examStudents = [
       {
-        id: generateId(),
+        id: examStudentId,
         examId,
         studentId,
         status: "PARTICIPATING",
@@ -501,7 +504,7 @@ describe("edgeCases", () => {
       scoresData: createArchiveScoresData([
         {
           cropRegionId: regionId,
-          studentId,
+          examStudentId,
           status: "correct",
           partialScore: "10",
           userId: currentUser.id,
@@ -588,7 +591,7 @@ describe("edgeCases", () => {
     expect(examCount).toBe(1)
 
     const scoreCount = await prisma.questionScore.count({
-      where: { cropRegionId: regionId, studentId },
+      where: { cropRegionId: regionId, examStudent: { studentId } },
     })
     expect(scoreCount).toBe(1)
   })
@@ -690,11 +693,15 @@ describe("edgeCases", () => {
       },
     })
 
+    const existingExamStudent = await prisma.examStudent.findUniqueOrThrow({
+      where: { examId_studentId: { examId, studentId } },
+      select: { id: true },
+    })
     const existingScore = await prisma.questionScore.create({
       data: {
         id: generateId(),
         cropRegionId: region.id,
-        studentId,
+        examStudentId: existingExamStudent.id,
         userId: currentUser.id,
         status: "correct",
         partialScore: 10,
@@ -712,9 +719,10 @@ describe("edgeCases", () => {
     examData.cropRegions[0].id = region.id
     examData.cropRegions[0].examPageId = page.id
 
+    const examStudentId = generateId()
     examData.examStudents = [
       {
-        id: generateId(),
+        id: examStudentId,
         examId,
         studentId,
         status: "PARTICIPATING",
@@ -733,7 +741,7 @@ describe("edgeCases", () => {
         {
           id: scoreId,
           cropRegionId: region.id,
-          studentId,
+          examStudentId,
           status: "incorrect",
           partialScore: "0",
           userId: currentUser.id,

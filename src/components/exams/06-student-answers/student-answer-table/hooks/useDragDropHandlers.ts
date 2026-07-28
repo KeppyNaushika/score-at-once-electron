@@ -86,7 +86,7 @@ export function useDragDropHandlers<TItem extends AnswerImageIdentity>({
 
       // 確認モード（方式B）: 対象セル座標へ move、占有セルなら swap。
       // over は空セルの droppable（cell:...）か、占有セルのファイル（fileId）。
-      // どちらでも対象セルの (studentId, examPageId) を求め、座標だけ更新する。
+      // どちらでも対象セルの (examStudentId, examPageId) を求め、座標だけ更新する。
       if (mode === "view") {
         // 差分は DB baseline（existingAnswers）と突き合わせて毎回算出する。
         // これが無いと配置変更を pending として記録できない＝黙って取りこぼすので、
@@ -107,25 +107,25 @@ export function useDragDropHandlers<TItem extends AnswerImageIdentity>({
 
         // 「そのマスに配置できる座標か」（除籍生徒＝名簿外／列に無い examPageId を弾く）。
         // 移動元が孤立答案（配置不能座標）なら占有マスへの swap を拒否するために使う。
-        const rosterStudentIds = new Set(
-          (students ?? []).map((examStudent) => examStudent.studentId)
+        const rosterExamStudentIds = new Set(
+          (students ?? []).map((examStudent) => examStudent.id)
         )
         const columnExamPageIds = new Set(
           (examPages ?? []).map((examPage) => examPage.id)
         )
         const isPlaceable = (
-          studentId: string | null,
+          examStudentId: string | null,
           examPageId: string | null
         ): boolean =>
-          !!studentId &&
+          !!examStudentId &&
           !!examPageId &&
-          rosterStudentIds.has(studentId) &&
+          rosterExamStudentIds.has(examStudentId) &&
           columnExamPageIds.has(examPageId)
 
         // 移動元（ドラッグした答案）が配置可能座標か。孤立答案なら false → 占有セルへの swap を拒否。
         const activeItem = files.find((file) => file.id === activeId)
         const isSourcePlaceable = activeItem
-          ? isPlaceable(activeItem.studentId, activeItem.examPageId)
+          ? isPlaceable(activeItem.examStudentId, activeItem.examPageId)
           : false
 
         // 占有判定は「表に見えている答案」だけに限定する（trash 等の隠れ答案を巻き込まない）
@@ -186,12 +186,12 @@ export function useDragDropHandlers<TItem extends AnswerImageIdentity>({
       const activeContainer = findContainer(activeId)
       const overContainer = findContainer(overId)
 
-      // アップロードモード（方式A）: arrayMove で並べ替え、各位置の studentId/examPageId は固定。
+      // アップロードモード（方式A）: arrayMove で並べ替え、各位置の examStudentId/examPageId は固定。
       // 新規ファイルの自動配置順を手で入れ替えるための経路（view の座標 move/swap とは別物）。
       if (activeContainer === overContainer && activeId !== overId) {
         // 同一コンテナ内のファイル（main=有効 / trash=無効）だけを並べ替え対象にする。
         // 全 files を arrayMove すると、old〜new index 間に挟まった trash スロットへ
-        // 隣接スロットの studentId/examPageId が誤って再代入される（#964）。
+        // 隣接スロットの examStudentId/examPageId が誤って再代入される（#964）。
         const containerFiles =
           activeContainer === "main" ? getEnabledFiles() : getDisabledFiles()
         const oldIndex = containerFiles.findIndex(
@@ -200,7 +200,7 @@ export function useDragDropHandlers<TItem extends AnswerImageIdentity>({
         const newIndex = containerFiles.findIndex((file) => file.id === overId)
 
         if (oldIndex !== -1 && newIndex !== -1) {
-          // fileId のみを入れ替え、各スロット（元の位置）の studentId/examPageId は固定
+          // fileId のみを入れ替え、各スロット（元の位置）の examStudentId/examPageId は固定
           const reorderedFileIds = arrayMove(
             containerFiles.map((file) => file.id),
             oldIndex,
@@ -213,7 +213,7 @@ export function useDragDropHandlers<TItem extends AnswerImageIdentity>({
               slot.id,
               {
                 ...files.find((file) => file.id === reorderedFileIds[index])!,
-                studentId: slot.studentId,
+                examStudentId: slot.examStudentId,
                 examPageId: slot.examPageId,
               },
             ])

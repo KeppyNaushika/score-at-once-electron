@@ -17,17 +17,17 @@ import {
 function serializeQuestionScore(score: {
   id: string
   cropRegionId: string
-  studentId: string | null
+  examStudentId: string
   partialScore: { toNumber(): number } | null
   status: string
-  userId: string | null
+  userId: string
   createdAt: Date
   updatedAt: Date
 }) {
   return {
     id: score.id,
     cropRegionId: score.cropRegionId,
-    studentId: score.studentId,
+    examStudentId: score.examStudentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: score.status,
     userId: score.userId,
@@ -44,10 +44,10 @@ function serializeCropRegion<
     questionScores?: Array<{
       id: string
       cropRegionId: string
-      studentId: string | null
+      examStudentId: string
       partialScore: { toNumber(): number } | null
       status: string
-      userId: string | null
+      userId: string
       createdAt: Date
       updatedAt: Date
     }>

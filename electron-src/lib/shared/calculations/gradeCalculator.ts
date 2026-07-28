@@ -22,6 +22,7 @@ import {
   computeSourceFit,
   estimateAbsentScore,
 } from "./absentEstimation"
+import { findExamStudentScores } from "./examScoreCalculator"
 import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
 import { determineGradeLabel } from "./gradeLabel"
 import { getRawScore } from "./rawScoreCalculator"
@@ -136,31 +137,43 @@ async function buildGradeCalcContext(gradeId: string) {
     ),
   ]
 
-  // 5. 試験試験のスコアデータを事前取得
+  // 5. 試験のスコアデータを事前取得
+  //
+  // 起点は ExamStudent（その試験の受験者）で、採点行はその子として引く。
+  // 「試験から外した生徒の採点行」は受験者が居ないので構造的に集まらない
+  // （以前は CropRegion 起点で引いており、外したはずの生徒の得点が
+  //  成績算出でだけ算入されていた）。受験状態も同じ行から取れるので、
+  //  見込→欠測の判定に別途 status のプリロードを持たない。
   const examDataCache = new Map<string, ExamDataCache>()
 
   for (const examId of examIds) {
-    const [questionScores, scoreDecisions, examPages] = await Promise.all([
-      prisma.questionScore.findMany({
-        where: { cropRegion: { examPage: { examId: examId } } },
+    const [examStudentRows, examPages] = await Promise.all([
+      prisma.examStudent.findMany({
+        where: { examId },
         select: {
           id: true,
           studentId: true,
-          cropRegionId: true,
           status: true,
-          partialScore: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.scoreDecision.findMany({
-        where: { cropRegion: { examPage: { examId: examId } } },
-        select: {
-          studentId: true,
-          cropRegionId: true,
-          verdict: true,
-          score: true,
-          decidedAt: true,
-          sourceQuestionScoreId: true,
+          questionScores: {
+            select: {
+              id: true,
+              examStudentId: true,
+              cropRegionId: true,
+              status: true,
+              partialScore: true,
+              updatedAt: true,
+            },
+          },
+          scoreDecisions: {
+            select: {
+              examStudentId: true,
+              cropRegionId: true,
+              verdict: true,
+              score: true,
+              decidedAt: true,
+              sourceQuestionScoreId: true,
+            },
+          },
         },
       }),
       prisma.examPage.findMany({
@@ -169,39 +182,32 @@ async function buildGradeCalcContext(gradeId: string) {
       }),
     ])
     const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)
-    // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
-    const { resolved: resolvedScores } = resolveEffectiveScores(
-      questionScores,
-      scoreDecisions
-    )
+
     examDataCache.set(examId, {
-      questionScores: resolvedScores.map((resolvedScore) => ({
-        studentId: resolvedScore.studentId,
-        cropRegionId: resolvedScore.cropRegionId,
-        status: resolvedScore.status,
-        partialScore: resolvedScore.partialScore,
-      })),
+      examStudents: examStudentRows.map((examStudentRow) => {
+        // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+        const { resolved: resolvedScores } = resolveEffectiveScores(
+          examStudentRow.questionScores,
+          examStudentRow.scoreDecisions
+        )
+        return {
+          examStudentId: examStudentRow.id,
+          studentId: examStudentRow.studentId,
+          status: examStudentRow.status,
+          questionScores: resolvedScores.map((resolvedScore) => ({
+            examStudentId: resolvedScore.examStudentId,
+            cropRegionId: resolvedScore.cropRegionId,
+            status: resolvedScore.status,
+            partialScore: resolvedScore.partialScore,
+          })),
+        }
+      }),
       cropRegions: cropRegions.map((cropRegion) => ({
         id: cropRegion.id,
         type: cropRegion.type,
         points: cropRegion.points,
       })),
     })
-  }
-
-  // 5.5. 見込→欠測対応: examIdごとのExamStudent状態をプリロード
-  // Map<examId, Map<studentId, status>>
-  const examExamStudentStatusMap = new Map<string, Map<string, string>>()
-  for (const examId of examIds) {
-    const examStudentStatuses = await prisma.examStudent.findMany({
-      where: { examId: examId },
-      select: { studentId: true, status: true },
-    })
-    const statusMap = new Map<string, string>()
-    for (const examStudent of examStudentStatuses) {
-      statusMap.set(examStudent.studentId, examStudent.status)
-    }
-    examExamStudentStatusMap.set(examId, statusMap)
   }
 
   // 満点は元データ（設問配点 / 評価項目満点）からライブ算出する。
@@ -243,14 +249,18 @@ async function buildGradeCalcContext(gradeId: string) {
       )
 
       // 見込→欠測対応: treatExpectedAsMissing が true かつ
-      // 試験試験の ExamStudent.status === "expected" → null扱い
+      // その試験の ExamStudent.status === "expected" → null扱い
       if (
         raw !== null &&
         dataSource.treatExpectedAsMissing &&
         dataSource.examId
       ) {
-        const statusMap = examExamStudentStatusMap.get(dataSource.examId)
-        if (statusMap?.get(examStudent.student.id) === "expected") {
+        const examStudentScores = findExamStudentScores(
+          examStudent.student.id,
+          dataSource.examId,
+          examDataCache
+        )
+        if (examStudentScores?.status === "expected") {
           raw = null
         }
       }

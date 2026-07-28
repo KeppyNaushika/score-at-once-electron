@@ -440,9 +440,11 @@ async function importExam(
     return ai.attendance - bi.attendance
   })
 
+  /** studentId → ExamStudent.id（採点データの親） */
+  const examStudentIdByStudentId = new Map<string, string>()
   for (let i = 0; i < sortedAllStudents.length; i++) {
     const sid = sortedAllStudents[i]
-    await prisma.examStudent.create({
+    const examStudent = await prisma.examStudent.create({
       data: {
         id: crypto.randomUUID(),
         examId,
@@ -453,6 +455,7 @@ async function importExam(
         updatedAt: now,
       },
     })
+    examStudentIdByStudentId.set(sid, examStudent.id)
   }
 
   console.log(
@@ -499,12 +502,13 @@ async function importExam(
       const answerRows = [...mm.entries()]
         .map(([idx, sid]) => {
           const rp = answerRelPaths.get(`${pi}-${idx}`)
-          if (!rp || seenStudents.has(sid)) return null
+          const examStudentId = examStudentIdByStudentId.get(sid)
+          if (!rp || !examStudentId || seenStudents.has(sid)) return null
           seenStudents.add(sid)
           return {
             id: crypto.randomUUID(),
             examPageId,
-            studentId: sid,
+            examStudentId,
             imagePath: rp,
             createdAt: now,
             updatedAt: now,
@@ -559,7 +563,7 @@ async function importExam(
       const scoreRows: Array<{
         id: string
         cropRegionId: string
-        studentId: string
+        examStudentId: string
         partialScore: number | null
         status: string
         userId: string
@@ -570,6 +574,8 @@ async function importExam(
       for (let mi = 0; mi < question.score.length; mi++) {
         const sid = mm.get(mi)
         if (!sid) continue
+        const examStudentId = examStudentIdByStudentId.get(sid)
+        if (!examStudentId) continue
         const scoreEntry = question.score[mi]
         if (scoreEntry.status === "unscored") continue
 
@@ -581,7 +587,7 @@ async function importExam(
         scoreRows.push({
           id: crypto.randomUUID(),
           cropRegionId,
-          studentId: sid,
+          examStudentId,
           partialScore: ps,
           status: scoreEntry.status,
           userId: USER_ID,

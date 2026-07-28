@@ -22,14 +22,21 @@ export interface StudentExportPlacement {
 
 export interface ExportGradingDataOptions {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   outputPath?: string
   forceExport?: boolean // 警告を無視して強制実行
-  /** renderer が採番解決して渡す表示学級情報（studentId キー）。Excel 出力で使用 */
+  /**
+   * renderer が採番解決して渡す表示学級情報。**キーは Student.id**
+   * （学級所属は人に紐づくので、採番学級の解決も Student キーになる）。
+   * 受験者IDではないことに注意 — 両方 string なので取り違えても型検査は通る。
+   */
   studentPlacements?: Record<string, StudentExportPlacement>
 }
 
 export interface ScoringData {
+  /** 採点データの同定に使う受験者ID（ExamStudent.id） */
+  examStudentId: string
+  /** 人としての生徒ID。学級所属（Student キー）との突き合わせに使う */
   studentId: string
   studentName: string
   studentNumber: string

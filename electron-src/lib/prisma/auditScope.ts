@@ -199,6 +199,23 @@ export async function resolveStudentLabel(
   }
 }
 
+/** examStudentId から「姓 名」ラベルを解決 */
+export async function resolveExamStudentLabel(
+  examStudentId: string
+): Promise<string | null> {
+  try {
+    const examStudent = await prisma.examStudent.findUnique({
+      where: { id: examStudentId },
+      select: { student: { select: { lastName: true, firstName: true } } },
+    })
+    if (!examStudent) return null
+    const { lastName, firstName } = examStudent.student
+    return `${lastName} ${firstName}`.trim()
+  } catch {
+    return null
+  }
+}
+
 /** userId から表示名を解決 */
 export async function resolveUserLabel(userId: string): Promise<string | null> {
   try {

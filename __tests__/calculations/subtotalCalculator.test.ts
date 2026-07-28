@@ -60,12 +60,12 @@ function createCropRegion(
 }
 
 function createQuestionScore(
-  studentId: string,
+  examStudentId: string,
   cropRegionId: string,
   status: string,
   partialScore: number | null = null
 ): QuestionScoreForSubtotal {
-  return { studentId, cropRegionId, status, partialScore }
+  return { examStudentId, cropRegionId, status, partialScore }
 }
 
 // ================== calculateSubtotalScoreBySubtotalId ==================

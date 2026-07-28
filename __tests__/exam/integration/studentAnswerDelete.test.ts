@@ -2,7 +2,7 @@
  * deleteStudentAnswer / getStudentAnswerScoreSummary の採点データ整合性テスト
  *
  * 背景: StudentAnswerImage は採点系の子リレーションを持たず（採点は
- * `(cropRegionId, studentId)` / `(compoundAnswerId, studentId)` 座標に紐づく）、
+ * `(cropRegionId, examStudentId)` / `(compoundAnswerId, examStudentId)` 座標に紐づく）、
  * 画像を消しても cascade は走らない。かつて画像だけを削除していたため採点が孤児化していた。
  *
  * 検証対象:
@@ -52,7 +52,7 @@ async function buildSimpleExam() {
     includeStudentAnswerImages: true,
   })
 
-  const [studentA, studentB] = exam.students
+  const [examStudentA, examStudentB] = exam.examStudents
   const page1 = exam.pages.find((page) => page.pageNumber === 1)!
   const page2 = exam.pages.find((page) => page.pageNumber === 2)!
   const region1 = exam.cropRegions.find(
@@ -62,24 +62,25 @@ async function buildSimpleExam() {
     (region) => region.examPageId === page2.id
   )!
 
-  const image = (pageId: string, studentId: string) =>
+  const image = (pageId: string, examStudentId: string) =>
     exam.studentAnswerImages.find(
       (answerImage) =>
-        answerImage.examPageId === pageId && answerImage.studentId === studentId
+        answerImage.examPageId === pageId &&
+        answerImage.examStudentId === examStudentId
     )!
-  const score = (cropRegionId: string, studentId: string) =>
+  const score = (cropRegionId: string, examStudentId: string) =>
     exam.questionScores.find(
       (questionScore) =>
         questionScore.cropRegionId === cropRegionId &&
-        questionScore.studentId === studentId
+        questionScore.examStudentId === examStudentId
     )!
 
   const user = await testPrisma.user.findFirstOrThrow()
 
   return {
     exam,
-    studentA,
-    studentB,
+    examStudentA,
+    examStudentB,
     page1,
     page2,
     region1,
@@ -103,8 +104,8 @@ describe("deleteStudentAnswer", () => {
 
   it("答案削除でそのマスの採点データが全て消え、他マスは残る", async () => {
     const {
-      studentA,
-      studentB,
+      examStudentA,
+      examStudentB,
       page1,
       page2,
       region1,
@@ -114,11 +115,11 @@ describe("deleteStudentAnswer", () => {
       user,
     } = await buildSimpleExam()
 
-    // studentA の p1 に確定値・注釈・複合回答の採点を足す
+    // examStudentA の p1 に確定値・注釈・複合回答の採点を足す
     const annotation = await testPrisma.drawingAnnotation.create({
       data: {
         id: crypto.randomUUID(),
-        questionScoreId: score(region1.id, studentA.id).id,
+        questionScoreId: score(region1.id, examStudentA.id).id,
         type: "circle",
         x: 5,
         y: 5,
@@ -129,7 +130,7 @@ describe("deleteStudentAnswer", () => {
       data: {
         id: crypto.randomUUID(),
         cropRegionId: region1.id,
-        studentId: studentA.id,
+        examStudentId: examStudentA.id,
         verdict: "correct",
         decidedByUserId: user.id,
       },
@@ -148,37 +149,42 @@ describe("deleteStudentAnswer", () => {
       data: {
         id: crypto.randomUUID(),
         compoundAnswerId: compoundAnswer.id,
-        studentId: studentA.id,
+        examStudentId: examStudentA.id,
         userId: user.id,
         status: "correct",
         recognizedAnswer: "42",
       },
     })
 
-    const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
+    const result = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id
+    )
     expect(result.success).toBe(true)
 
     // 画像本体
     expect(
       await testPrisma.studentAnswerImage.findUnique({
-        where: { id: image(page1.id, studentA.id).id },
+        where: { id: image(page1.id, examStudentA.id).id },
       })
     ).toBeNull()
 
     // 当該マス (p1 × A) の採点は全滅
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region1.id, studentId: studentA.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       })
     ).toBe(0)
     expect(
       await testPrisma.scoreDecision.count({
-        where: { cropRegionId: region1.id, studentId: studentA.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       })
     ).toBe(0)
     expect(
       await testPrisma.compoundAnswerScore.count({
-        where: { compoundAnswerId: compoundAnswer.id, studentId: studentA.id },
+        where: {
+          compoundAnswerId: compoundAnswer.id,
+          examStudentId: examStudentA.id,
+        },
       })
     ).toBe(0)
     // DrawingAnnotation は親 QuestionScore の cascade で消える
@@ -191,29 +197,29 @@ describe("deleteStudentAnswer", () => {
     // 他生徒（p1 × B）・他ページ（p2 × A）は巻き添えにしない
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region1.id, studentId: studentB.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentB.id },
       })
     ).toBe(1)
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region2.id, studentId: studentA.id },
+        where: { cropRegionId: region2.id, examStudentId: examStudentA.id },
       })
     ).toBe(1)
     expect(
       await testPrisma.studentAnswerImage.findUnique({
-        where: { id: image(page2.id, studentA.id).id },
+        where: { id: image(page2.id, examStudentA.id).id },
       })
     ).not.toBeNull()
   })
 
   it("削除した DrawingAnnotation は親 QuestionScore の cascade で消える", async () => {
-    const { studentA, page1, region1, image, score, user } =
+    const { examStudentA, page1, region1, image, score, user } =
       await buildSimpleExam()
 
     const annotation = await testPrisma.drawingAnnotation.create({
       data: {
         id: crypto.randomUUID(),
-        questionScoreId: score(region1.id, studentA.id).id,
+        questionScoreId: score(region1.id, examStudentA.id).id,
         type: "circle",
         x: 5,
         y: 5,
@@ -221,7 +227,9 @@ describe("deleteStudentAnswer", () => {
       },
     })
 
-    const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
+    const result = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id
+    )
     expect(result.success).toBe(true)
 
     // 削除の伝搬は sqlite-nas-sync の `_tombstone` が担うため、
@@ -234,29 +242,34 @@ describe("deleteStudentAnswer", () => {
   })
 
   it("削除直前の採点実績を返す（モーダルと同じ定義）", async () => {
-    const { studentA, page1, image } = await buildSimpleExam()
+    const { examStudentA, page1, image } = await buildSimpleExam()
 
-    const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
+    const result = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id
+    )
     expect(result.success).toBe(true)
     expect(result.deletedSummary?.hasScoreData).toBe(true)
     expect(result.deletedSummary?.scoredQuestionCount).toBe(1)
   })
 
   it("未採点の答案では採点実績なしを返す（トーストの文言が変わる）", async () => {
-    const { studentA, page1, region1, image } = await buildSimpleExam()
+    const { examStudentA, page1, region1, image } = await buildSimpleExam()
 
     await testPrisma.questionScore.updateMany({
-      where: { cropRegionId: region1.id, studentId: studentA.id },
+      where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       data: { status: "unscored", partialScore: null },
     })
 
-    const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
+    const result = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id
+    )
     expect(result.success).toBe(true)
     expect(result.deletedSummary?.hasScoreData).toBe(false)
   })
 
   it("協調採点では全教員分の採点行が消える（自分の行だけ残さない）", async () => {
-    const { studentA, page1, region1, image, user } = await buildSimpleExam()
+    const { examStudentA, page1, region1, image, user } =
+      await buildSimpleExam()
 
     // 別教員2名の提案行を同じマスに追加（QuestionScore に unique は無い）
     const otherTeachers = await Promise.all(
@@ -275,7 +288,7 @@ describe("deleteStudentAnswer", () => {
         data: {
           id: crypto.randomUUID(),
           cropRegionId: region1.id,
-          studentId: studentA.id,
+          examStudentId: examStudentA.id,
           userId: teacher.id,
           status: "incorrect",
         },
@@ -284,17 +297,19 @@ describe("deleteStudentAnswer", () => {
     // 3教員（元の1名 + 追加2名）分の行がある状態
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region1.id, studentId: studentA.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       })
     ).toBe(3)
 
-    const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
+    const result = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id
+    )
     expect(result.success).toBe(true)
 
     // 教員を問わず全滅している（userId で絞っていないことの保証）
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region1.id, studentId: studentA.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       })
     ).toBe(0)
     for (const teacher of [user, ...otherTeachers]) {
@@ -302,7 +317,7 @@ describe("deleteStudentAnswer", () => {
         await testPrisma.questionScore.count({
           where: {
             cropRegionId: region1.id,
-            studentId: studentA.id,
+            examStudentId: examStudentA.id,
             userId: teacher.id,
           },
         })
@@ -311,12 +326,13 @@ describe("deleteStudentAnswer", () => {
   })
 
   it("削除後に別教員が同じ採点を保存すると target-deleted を返す（協調採点）", async () => {
-    const { studentA, page1, region1, image, score } = await buildSimpleExam()
-    const scoreId = score(region1.id, studentA.id).id
+    const { examStudentA, page1, region1, image, score } =
+      await buildSimpleExam()
+    const scoreId = score(region1.id, examStudentA.id).id
 
     // 教員Aが答案を削除 → 教員Bが開いたままの採点を保存しようとする
     expect(
-      (await deleteStudentAnswer(image(page1.id, studentA.id).id)).success
+      (await deleteStudentAnswer(image(page1.id, examStudentA.id).id)).success
     ).toBe(true)
 
     const result = await updateQuestionScore(scoreId, { status: "correct" })
@@ -327,13 +343,13 @@ describe("deleteStudentAnswer", () => {
   })
 
   it("存在しない答案は失敗し、DB は変化しない", async () => {
-    const { region1, studentA } = await buildSimpleExam()
+    const { region1, examStudentA } = await buildSimpleExam()
 
     const result = await deleteStudentAnswer(crypto.randomUUID())
     expect(result.success).toBe(false)
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region1.id, studentId: studentA.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       })
     ).toBe(1)
   })
@@ -351,13 +367,13 @@ describe("getStudentAnswerScoreSummary", () => {
   })
 
   it("採点済みなら hasScoreData=true と内訳を返す", async () => {
-    const { studentA, page1, region1, image, score, user } =
+    const { examStudentA, page1, region1, image, score, user } =
       await buildSimpleExam()
 
     await testPrisma.drawingAnnotation.create({
       data: {
         id: crypto.randomUUID(),
-        questionScoreId: score(region1.id, studentA.id).id,
+        questionScoreId: score(region1.id, examStudentA.id).id,
         type: "circle",
         x: 5,
         y: 5,
@@ -366,7 +382,7 @@ describe("getStudentAnswerScoreSummary", () => {
     })
 
     const result = await getStudentAnswerScoreSummary(
-      image(page1.id, studentA.id).id
+      image(page1.id, examStudentA.id).id
     )
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -377,7 +393,7 @@ describe("getStudentAnswerScoreSummary", () => {
   })
 
   it("協調採点で1設問に複数教員の行があっても設問数で数える", async () => {
-    const { studentA, page1, region1, image } = await buildSimpleExam()
+    const { examStudentA, page1, region1, image } = await buildSimpleExam()
 
     // 別教員の提案行を同じ設問に追加（QuestionScore に unique は無い）
     const otherTeacher = await testPrisma.user.create({
@@ -391,14 +407,14 @@ describe("getStudentAnswerScoreSummary", () => {
       data: {
         id: crypto.randomUUID(),
         cropRegionId: region1.id,
-        studentId: studentA.id,
+        examStudentId: examStudentA.id,
         userId: otherTeacher.id,
         status: "incorrect",
       },
     })
 
     const result = await getStudentAnswerScoreSummary(
-      image(page1.id, studentA.id).id
+      image(page1.id, examStudentA.id).id
     )
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -407,12 +423,12 @@ describe("getStudentAnswerScoreSummary", () => {
   })
 
   it("部分点のみ入力された複合回答も採点済みとして数える", async () => {
-    const { studentA, page1, region1, image } = await buildSimpleExam()
+    const { examStudentA, page1, region1, image } = await buildSimpleExam()
     const user = await testPrisma.user.findFirstOrThrow()
 
     // 設問側は未採点に戻し、複合回答の部分点だけがある状態にする
     await testPrisma.questionScore.updateMany({
-      where: { cropRegionId: region1.id, studentId: studentA.id },
+      where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       data: { status: "unscored", partialScore: null },
     })
     const compoundAnswer = await testPrisma.compoundAnswer.create({
@@ -429,7 +445,7 @@ describe("getStudentAnswerScoreSummary", () => {
       data: {
         id: crypto.randomUUID(),
         compoundAnswerId: compoundAnswer.id,
-        studentId: studentA.id,
+        examStudentId: examStudentA.id,
         userId: user.id,
         status: "unscored",
         recognizedAnswer: null,
@@ -438,7 +454,7 @@ describe("getStudentAnswerScoreSummary", () => {
     })
 
     const result = await getStudentAnswerScoreSummary(
-      image(page1.id, studentA.id).id
+      image(page1.id, examStudentA.id).id
     )
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -447,16 +463,16 @@ describe("getStudentAnswerScoreSummary", () => {
   })
 
   it("unscored の初期化行だけなら hasScoreData=false", async () => {
-    const { studentA, page1, region1, image } = await buildSimpleExam()
+    const { examStudentA, page1, region1, image } = await buildSimpleExam()
 
     // 初期化直後の状態（status=unscored・部分点なし）に戻す
     await testPrisma.questionScore.updateMany({
-      where: { cropRegionId: region1.id, studentId: studentA.id },
+      where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       data: { status: "unscored", partialScore: null },
     })
 
     const result = await getStudentAnswerScoreSummary(
-      image(page1.id, studentA.id).id
+      image(page1.id, examStudentA.id).id
     )
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -465,18 +481,20 @@ describe("getStudentAnswerScoreSummary", () => {
   })
 
   it("未採点でも削除時は初期化行ごと消える", async () => {
-    const { studentA, page1, region1, image } = await buildSimpleExam()
+    const { examStudentA, page1, region1, image } = await buildSimpleExam()
 
     await testPrisma.questionScore.updateMany({
-      where: { cropRegionId: region1.id, studentId: studentA.id },
+      where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       data: { status: "unscored", partialScore: null },
     })
 
-    const result = await deleteStudentAnswer(image(page1.id, studentA.id).id)
+    const result = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id
+    )
     expect(result.success).toBe(true)
     expect(
       await testPrisma.questionScore.count({
-        where: { cropRegionId: region1.id, studentId: studentA.id },
+        where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
       })
     ).toBe(0)
   })

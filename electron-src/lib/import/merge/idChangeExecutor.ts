@@ -56,74 +56,8 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       }),
   },
   {
-    // UNIQUE([examPageId, studentId]) があるため移行先の重複を回避しつつ更新する
-    model: "StudentAnswerImage",
-    move: async (tx, from, to) => {
-      const images = await tx.studentAnswerImage.findMany({
-        where: { studentId: from },
-      })
-      for (const image of images) {
-        const duplicate = await tx.studentAnswerImage.findFirst({
-          where: { examPageId: image.examPageId, studentId: to },
-        })
-        if (duplicate) {
-          await tx.studentAnswerImage.delete({ where: { id: image.id } })
-        } else {
-          await tx.studentAnswerImage.update({
-            where: { id: image.id },
-            data: { studentId: to },
-          })
-        }
-      }
-    },
-  },
-  {
-    model: "QuestionScore",
-    move: (tx, from, to) =>
-      tx.questionScore.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    model: "ScoreDecision",
-    move: (tx, from, to) =>
-      tx.scoreDecision.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    model: "CompoundAnswerScore",
-    move: (tx, from, to) =>
-      tx.compoundAnswerScore.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    // UNIQUE([examId, studentId]) があるため移行先の重複を回避しつつ更新する
-    model: "ReturnSnapshot",
-    move: async (tx, from, to) => {
-      const snapshots = await tx.returnSnapshot.findMany({
-        where: { studentId: from },
-      })
-      for (const snapshot of snapshots) {
-        const duplicate = await tx.returnSnapshot.findFirst({
-          where: { examId: snapshot.examId, studentId: to },
-        })
-        if (duplicate) {
-          await tx.returnSnapshot.delete({ where: { id: snapshot.id } })
-        } else {
-          await tx.returnSnapshot.update({
-            where: { id: snapshot.id },
-            data: { studentId: to },
-          })
-        }
-      }
-    },
-  },
-  {
+    // 答案・採点・確定・複合回答・返却版は ExamStudent の子であり、
+    // ExamStudent.id は変わらないので移し替えは要らない（上の ExamStudent で追従する）。
     model: "GradeStudent",
     move: (tx, from, to) =>
       tx.gradeStudent.updateMany({

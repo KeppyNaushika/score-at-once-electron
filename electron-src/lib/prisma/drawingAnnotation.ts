@@ -11,6 +11,7 @@ import type {
   DrawingType,
   DrawingUpdateData,
 } from "../../../src/types/drawingAnnotation.types"
+import { narrowAnnotationUnions } from "../../../src/types/drawingAnnotation.types"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveExamScopeByQuestionScore } from "./auditScope"
 import prisma from "./client"
@@ -224,16 +225,14 @@ export async function getDrawingAnnotationsByQuestionScore(
 }
 
 /**
- * 特定の学生・試験の全描画アノテーションを取得する（透明度制御用）
- * @param studentId 学生ID
- * @param examId 試験ID
+ * 特定の受験者の全描画アノテーションを取得する（透明度制御用）
+ * @param examStudentId 試験の受験者ID（ExamStudent.id）
  * @param type フィルタする描画タイプ（オプション）
  * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
  * @returns Promise<DrawingAnnotationWithQuestionScore[]> 描画アノテーション配列（設問情報付き）
  */
-export async function getDrawingAnnotationsByStudent(
-  studentId: string,
-  examId: string,
+export async function getDrawingAnnotationsByExamStudent(
+  examStudentId: string,
   type?: DrawingType,
   userId?: string
 ): Promise<DrawingAnnotation[]> {
@@ -241,12 +240,7 @@ export async function getDrawingAnnotationsByStudent(
     const result = await prisma.drawingAnnotation.findMany({
       where: {
         questionScore: {
-          studentId: studentId,
-          cropRegion: {
-            examPage: {
-              examId: examId,
-            },
-          },
+          examStudentId,
         },
         ...(type && { type }),
         // userIdが指定されている場合、そのユーザーのアノテーション、または作成者不明（null）のものを取得
@@ -314,7 +308,7 @@ export async function getDrawingAnnotationsByExam(
         }),
       },
       orderBy: [
-        { questionScore: { studentId: "asc" } },
+        { questionScore: { examStudentId: "asc" } },
         { questionScore: { cropRegionId: "asc" } },
         { createdAt: "asc" },
       ],
@@ -329,7 +323,7 @@ export async function getDrawingAnnotationsByExam(
         questionScore: {
           select: {
             id: true,
-            studentId: true,
+            examStudentId: true,
             cropRegionId: true,
             cropRegion: {
               select: {
@@ -337,12 +331,17 @@ export async function getDrawingAnnotationsByExam(
                 label: true,
               },
             },
-            student: {
+            examStudent: {
               select: {
                 id: true,
-                studentNumber: true,
-                lastName: true,
-                firstName: true,
+                student: {
+                  select: {
+                    id: true,
+                    studentNumber: true,
+                    lastName: true,
+                    firstName: true,
+                  },
+                },
               },
             },
           },
@@ -361,12 +360,16 @@ export async function getDrawingAnnotationsByExam(
  * CropRegion（設問）に紐づく全学生の描画アノテーションを取得する（Grid表示用）
  * @param cropRegionId CropRegionのID
  * @param userId 作成者のユーザーID（オプション）
- * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列（studentId付き）
+ * @returns Promise<AnnotationWithContext[]> 描画アノテーション配列（questionScore 同梱）
+ *
+ * 返り値を `DrawingAnnotation[]` と名乗って `as` で潰すと、下の `select` から
+ * examStudentId を落としても型検査が通り、グリッドの注釈が実行時に消える。
+ * include した形をそのまま型で表明する。
  */
 export async function getDrawingAnnotationsByCropRegion(
   cropRegionId: string,
   userId?: string
-): Promise<DrawingAnnotation[]> {
+): Promise<AnnotationWithContext[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
       where: {
@@ -387,7 +390,7 @@ export async function getDrawingAnnotationsByCropRegion(
         questionScore: {
           select: {
             id: true,
-            studentId: true,
+            examStudentId: true,
             cropRegionId: true,
             cropRegion: {
               select: {
@@ -400,7 +403,8 @@ export async function getDrawingAnnotationsByCropRegion(
       },
     })
 
-    return result as DrawingAnnotation[]
+    // status 同様、DB 上 String の union 列を境界で literal union へ絞る
+    return result.map(narrowAnnotationUnions)
   } catch (error) {
     console.error("設問別描画アノテーション取得エラー:", error)
     throw error
@@ -732,7 +736,7 @@ export async function toggleAnnotationFavorite(
         questionScore: {
           select: {
             id: true,
-            studentId: true,
+            examStudentId: true,
             cropRegionId: true,
             cropRegion: {
               select: {
@@ -740,12 +744,17 @@ export async function toggleAnnotationFavorite(
                 label: true,
               },
             },
-            student: {
+            examStudent: {
               select: {
                 id: true,
-                studentNumber: true,
-                lastName: true,
-                firstName: true,
+                student: {
+                  select: {
+                    id: true,
+                    studentNumber: true,
+                    lastName: true,
+                    firstName: true,
+                  },
+                },
               },
             },
           },
@@ -791,7 +800,7 @@ export async function getAnnotationsForBrowse(
         questionScore: {
           select: {
             id: true,
-            studentId: true,
+            examStudentId: true,
             cropRegionId: true,
             cropRegion: {
               select: {
@@ -799,12 +808,17 @@ export async function getAnnotationsForBrowse(
                 label: true,
               },
             },
-            student: {
+            examStudent: {
               select: {
                 id: true,
-                studentNumber: true,
-                lastName: true,
-                firstName: true,
+                student: {
+                  select: {
+                    id: true,
+                    studentNumber: true,
+                    lastName: true,
+                    firstName: true,
+                  },
+                },
               },
             },
           },
@@ -812,7 +826,10 @@ export async function getAnnotationsForBrowse(
       },
     })
 
-    return result as AnnotationWithContext[]
+    // getDrawingAnnotationsByCropRegion と同じく、include した形を型で表明する
+    // （`as` で潰すと select から examStudent を落としても型検査が通り、
+    //  注釈ブラウザの氏名表示と生徒フィルタが実行時に壊れる）
+    return result.map(narrowAnnotationUnions)
   } catch (error) {
     console.error("ブラウズ用アノテーション取得エラー:", error)
     throw error

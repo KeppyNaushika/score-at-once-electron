@@ -24,7 +24,7 @@ function score(overrides: Partial<ResolvableScore> = {}): ResolvableScore {
   seq++
   return {
     id: `id-${String(seq).padStart(4, "0")}`,
-    studentId: "student-1",
+    examStudentId: "student-1",
     cropRegionId: "region-1",
     status: "correct",
     partialScore: null,
@@ -37,7 +37,7 @@ function decision(
   overrides: Partial<ResolvableDecision> = {}
 ): ResolvableDecision {
   return {
-    studentId: "student-1",
+    examStudentId: "student-1",
     cropRegionId: "region-1",
     verdict: "partial",
     score: 5,
@@ -55,7 +55,7 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     const { resolved, conflicts } = resolveEffectiveScores([scoreRow])
     expect(resolved).toHaveLength(1)
     expect(resolved[0]).toMatchObject({
-      studentId: "student-1",
+      examStudentId: "student-1",
       cropRegionId: "region-1",
       status: "correct",
       partialScore: null,
@@ -67,9 +67,9 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   })
 
   it("生徒×設問ごとに独立して解決される", () => {
-    const scoreA = score({ studentId: "s1", cropRegionId: "r1" })
-    const scoreB = score({ studentId: "s1", cropRegionId: "r2" })
-    const scoreC = score({ studentId: "s2", cropRegionId: "r1" })
+    const scoreA = score({ examStudentId: "s1", cropRegionId: "r1" })
+    const scoreB = score({ examStudentId: "s1", cropRegionId: "r2" })
+    const scoreC = score({ examStudentId: "s2", cropRegionId: "r1" })
     const { resolved, conflicts } = resolveEffectiveScores([
       scoreA,
       scoreB,
@@ -121,7 +121,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     const { resolved, conflicts } = resolveEffectiveScores([teacherA, teacherB])
     expect(resolved).toEqual([])
     expect(conflicts).toEqual([
-      { studentId: "student-1", cropRegionId: "region-1", candidateCount: 2 },
+      {
+        examStudentId: "student-1",
+        cropRegionId: "region-1",
+        candidateCount: 2,
+      },
     ])
   })
 
@@ -155,13 +159,6 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     const result2 = resolveEffectiveScores([scoreB, scoreA])
     expect(result1.resolved[0].questionScoreId).toBe("id-zzz")
     expect(result2.resolved[0].questionScoreId).toBe("id-zzz")
-  })
-
-  it("studentIdがnullの行は無視される", () => {
-    const orphan = score({ studentId: null })
-    const { resolved, conflicts } = resolveEffectiveScores([orphan])
-    expect(resolved).toEqual([])
-    expect(conflicts).toEqual([])
   })
 
   it("旧データのfinal行は提案より優先される（耐性）", () => {

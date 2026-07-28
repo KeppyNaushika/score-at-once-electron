@@ -83,7 +83,7 @@ export function reevaluateWithThreshold(
   const updatedSheetResults: OMRSheetResult[] = []
 
   for (const sheet of sheetResults) {
-    if (!sheet.success || !sheet.studentId) {
+    if (!sheet.success || !sheet.examStudentId) {
       updatedSheetResults.push(sheet)
       continue
     }
@@ -135,7 +135,7 @@ export function reevaluateWithThreshold(
     }
 
     updatedSheetResults.push({ ...sheet, cellResults: updatedCellResults })
-    allEntries.set(sheet.studentId, entries)
+    allEntries.set(sheet.examStudentId, entries)
   }
 
   // サマリーはエントリのstatusから集計

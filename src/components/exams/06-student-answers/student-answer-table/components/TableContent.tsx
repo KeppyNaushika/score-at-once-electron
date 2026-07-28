@@ -8,7 +8,11 @@ import type {
   PreviewMode,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import type {
+  CellColumn,
+  CellLookup,
+  CellRow,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { lookupHasCell } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   AnswerImageIdentity,
@@ -93,7 +97,7 @@ interface TableContentProps {
   toggleColDisabled: (examPageId: string) => void
   // 行・列の一括無効化（upload のみ。view は行・列無効が配置に効かないので渡さない）
   bulkDisabling?: BulkDisablingHandlers
-  toggleCellDisabled: (studentId: string, examPageId: string) => void
+  toggleCellDisabled: (examStudent: CellRow, examPage: CellColumn) => void
   toggleFileDisabled: (fileId: string) => void
   onDeleteAnswerSheet?: (fileId: string) => void
   // DnD ラッパー（モード別に注入）
@@ -238,11 +242,7 @@ export function TableContent({
                 // 既存答案があるか（オーバーレイ用・upload のみ）
                 const hasExistingAnswerForEmpty =
                   mode === "upload" &&
-                  lookupHasCell(
-                    cellsWithExistingAnswers,
-                    examStudent.studentId,
-                    examPage.id
-                  )
+                  lookupHasCell(cellsWithExistingAnswers, examStudent, examPage)
 
                 return (
                   <ClientCell key={examPage.id}>
@@ -253,7 +253,7 @@ export function TableContent({
                       hasExistingAnswer: hasExistingAnswerForEmpty,
                       disabledReason: cellData.disabledReason,
                       onTogglePosition: () =>
-                        toggleCellDisabled(examStudent.studentId, examPage.id),
+                        toggleCellDisabled(examStudent, examPage),
                     })}
                   </ClientCell>
                 )
@@ -264,11 +264,7 @@ export function TableContent({
               const isFileDisabled = disabledState.files.has(file.id)
               const hasExistingAnswer =
                 mode === "upload" &&
-                lookupHasCell(
-                  cellsWithExistingAnswers,
-                  examStudent.studentId,
-                  examPage.id
-                )
+                lookupHasCell(cellsWithExistingAnswers, examStudent, examPage)
               // 上書き無効時で既存答案がある場合はドラッグ無効
               const isDragDisabledByOverwrite =
                 hasExistingAnswer && !allowOverwrite
@@ -284,7 +280,7 @@ export function TableContent({
                     isDragDisabled: isDragDisabledByOverwrite,
                     isFileDisabled,
                     onTogglePosition: () =>
-                      toggleCellDisabled(examStudent.studentId, examPage.id),
+                      toggleCellDisabled(examStudent, examPage),
                     onToggleFileDisabled: () => toggleFileDisabled(file.id),
                     onDelete: () => onDeleteAnswerSheet?.(file.id),
                     children: (

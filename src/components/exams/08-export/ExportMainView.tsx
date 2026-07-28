@@ -84,15 +84,15 @@ export default function ExportMainView() {
   } = useExportPage()
 
   // プレビュー用のデータ取得
-  const selectedStudentIds = useMemo(
+  const selectedExamStudentIds = useMemo(
     () => Array.from(selectedStudents),
     [selectedStudents]
   )
 
   // 答案返却・差分（左カードのパネルと右カードの記録ボタンで状態を共有）
   const {
-    diffByStudent,
-    changedStudentIds,
+    diffByExamStudent,
+    changedExamStudentIds,
     hasAnySnapshot,
     capturing: capturingReturn,
     capture: captureReturn,
@@ -106,7 +106,7 @@ export default function ExportMainView() {
     setPreviewStudentId,
   } = useIndividualReportPreview({
     examId: exam?.id || "",
-    selectedStudentIds,
+    selectedExamStudentIds,
     options: individualReportOptions,
     enabled: !!exam?.id && selectedStudents.size > 0,
   })
@@ -118,7 +118,7 @@ export default function ExportMainView() {
     error: excelPreviewError,
   } = useExcelPreview({
     examId: exam?.id || "",
-    selectedStudentIds,
+    selectedExamStudentIds,
     enabled:
       !!exam?.id && selectedStudents.size > 0 && exportTab === "grading-data",
   })
@@ -126,9 +126,9 @@ export default function ExportMainView() {
   // プレビュー用の生徒リスト
   const previewStudentList = useMemo(() => {
     return students
-      .filter((examStudent) => selectedStudents.has(examStudent.studentId))
+      .filter((examStudent) => selectedStudents.has(examStudent.id))
       .map((examStudent) => ({
-        id: examStudent.studentId,
+        id: examStudent.id,
         name: `${examStudent.student.lastName} ${examStudent.student.firstName}`,
       }))
   }, [students, selectedStudents])
@@ -148,7 +148,7 @@ export default function ExportMainView() {
     setPreviewStudentId: setScoredAnswerPreviewStudentId,
   } = useScoredAnswerPreview({
     examId: exam?.id || "",
-    selectedStudentIds,
+    selectedExamStudentIds,
     scoringMarkConfig: scoringMarkConfigForPdf,
     enabled:
       !!exam?.id && selectedStudents.size > 0 && exportTab === "scored-answers",
@@ -234,10 +234,10 @@ export default function ExportMainView() {
         "ログイン情報を取得できませんでした。再ログインしてから出力してください"
       )
     }
-    const selectedStudentIds = Array.from(selectedStudents)
+    const selectedExamStudentIds = Array.from(selectedStudents)
     const result = await window.electronAPI.export.validateScoringData({
       examId: exam.id,
-      selectedStudentIds,
+      selectedExamStudentIds,
       userId: user.id,
     })
 
@@ -367,10 +367,10 @@ export default function ExportMainView() {
               // 答案返却・差分（生徒選択タブ内に表示）
               // 差分の件数・詳細は表示フィルタと独立させるため未フィルタの全生徒を渡す
               allStudents={allStudents}
-              selectedStudentIds={selectedStudentIds}
-              onSelectStudentIds={replaceSelection}
-              diffByStudent={diffByStudent}
-              changedStudentIds={changedStudentIds}
+              selectedExamStudentIds={selectedExamStudentIds}
+              onSelectExamStudentIds={replaceSelection}
+              diffByExamStudent={diffByExamStudent}
+              changedExamStudentIds={changedExamStudentIds}
               hasAnySnapshot={hasAnySnapshot}
               capturingReturn={capturingReturn}
               captureReturn={captureReturn}

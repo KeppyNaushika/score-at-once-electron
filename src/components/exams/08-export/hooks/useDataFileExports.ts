@@ -33,12 +33,12 @@ export function useDataFileExports({
     setIsExporting(true)
 
     try {
-      const selectedStudentIds = Array.from(selectedStudents)
+      const selectedExamStudentIds = Array.from(selectedStudents)
       const studentPlacements = await loadStudentExportPlacements(exam.id)
 
       const result = await window.electronAPI.exportGradingDataExcel({
         examId: exam.id,
-        selectedStudentIds,
+        selectedExamStudentIds,
         forceExport: true,
         studentPlacements,
       })
@@ -64,10 +64,10 @@ export function useDataFileExports({
     if (!exam) return
     setIsExporting(true)
     try {
-      const selectedStudentIds = Array.from(selectedStudents)
+      const selectedExamStudentIds = Array.from(selectedStudents)
       const result = await window.electronAPI.exportRData({
         examId: exam.id,
-        selectedStudentIds,
+        selectedExamStudentIds,
         format,
       })
       if (result.success) {
@@ -89,14 +89,14 @@ export function useDataFileExports({
     setIsExporting(true)
 
     try {
-      const selectedStudentIds = Array.from(selectedStudents)
+      const selectedExamStudentIds = Array.from(selectedStudents)
       const studentPlacements = await loadStudentExportPlacements(exam.id)
 
       // 1. データ取得（統計・アドバイス含む）
       const dataResult =
         await window.electronAPI.export.getIndividualReportData({
           examId: exam.id,
-          selectedStudentIds,
+          selectedExamStudentIds,
           options: individualReportOptions,
           studentPlacements,
         })

@@ -82,7 +82,7 @@ export async function uploadStudentAnswers(
     name: string
     type: string
     buffer: ArrayBuffer
-    studentId?: string
+    examStudentId?: string
     examPageId: string
     overwrite?: boolean
     correctWithMarkers?: boolean
@@ -189,8 +189,8 @@ export async function uploadStudentAnswers(
       correctionStatus,
       correctionError,
     } of correctedFiles) {
-      if (!fileData.studentId) {
-        throw new Error(`Student ID is required for file: ${fileData.name}`)
+      if (!fileData.examStudentId) {
+        throw new Error(`ExamStudent ID is required for file: ${fileData.name}`)
       }
 
       // 配置先 ExamPage は id 直指定（列＝ExamPage 実体から供給される）。
@@ -198,7 +198,7 @@ export async function uploadStudentAnswers(
       const existingRecord = await prisma.studentAnswerImage.findFirst({
         where: {
           examPageId: fileData.examPageId,
-          studentId: fileData.studentId,
+          examStudentId: fileData.examStudentId,
         },
       })
 
@@ -245,7 +245,7 @@ export async function uploadStudentAnswers(
         const answerSheet = await prisma.studentAnswerImage.create({
           data: {
             examPageId: fileData.examPageId,
-            studentId: fileData.studentId,
+            examStudentId: fileData.examStudentId,
             imagePath: relativePath,
           },
         })
@@ -298,22 +298,16 @@ export async function getStudentAnswersByExamId(examId: string) {
         },
       },
       include: {
-        student: {
-          include: {
-            examStudents: {
-              where: { examId },
-            },
-          },
-        },
+        examStudent: { include: { student: true } },
         examPage: true,
       },
-      orderBy: [{ studentId: "asc" }, { examPage: { pageNumber: "asc" } }],
+      orderBy: [{ examStudentId: "asc" }, { examPage: { pageNumber: "asc" } }],
     })
 
     // 重複除去フォールバック（@@unique制約適用前のデータ対策）
     const seen = new Map<string, (typeof studentAnswerImages)[0]>()
     for (const studentAnswerImage of studentAnswerImages) {
-      const key = `${studentAnswerImage.studentId}-${studentAnswerImage.examPageId}`
+      const key = `${studentAnswerImage.examStudentId}-${studentAnswerImage.examPageId}`
       const existing = seen.get(key)
       if (
         !existing ||
@@ -358,15 +352,17 @@ export async function getStudentAnswersDataset(examId: string) {
             student: {
               include: {
                 memberships: { include: { classroom: true } },
-                _count: { select: { studentAnswerImages: true } },
               },
             },
+            _count: { select: { studentAnswerImages: true } },
           },
         },
         examPages: {
           orderBy: { pageNumber: "asc" },
           include: {
-            studentAnswerImages: { include: { student: true } },
+            studentAnswerImages: {
+              include: { examStudent: { include: { student: true } } },
+            },
           },
         },
       },
@@ -377,25 +373,25 @@ export async function getStudentAnswersDataset(examId: string) {
     }
 
     // 重複除去フォールバック（@@unique 適用前データ・NAS sync 由来の重複対策）。
-    // getStudentAnswersByExamId と同じ (studentId, examPageId) 単位で updatedAt 最新のみ残す。
+    // getStudentAnswersByExamId と同じ (examStudentId, examPageId) 単位で updatedAt 最新のみ残す。
     // 05/07/08（getStudentAnswersByExamId 経由）と 06 で表示が食い違わないようにする。
     const examPages = exam.examPages.map((examPage) => {
-      const latestByStudentId = new Map<
+      const latestByExamStudentId = new Map<
         string,
         (typeof examPage.studentAnswerImages)[number]
       >()
       for (const answerImage of examPage.studentAnswerImages) {
-        const existing = latestByStudentId.get(answerImage.studentId)
+        const existing = latestByExamStudentId.get(answerImage.examStudentId)
         if (
           !existing ||
           new Date(answerImage.updatedAt) > new Date(existing.updatedAt)
         ) {
-          latestByStudentId.set(answerImage.studentId, answerImage)
+          latestByExamStudentId.set(answerImage.examStudentId, answerImage)
         }
       }
       return {
         ...examPage,
-        studentAnswerImages: Array.from(latestByStudentId.values()),
+        studentAnswerImages: Array.from(latestByExamStudentId.values()),
       }
     })
 
@@ -460,7 +456,7 @@ const SCORED_COMPOUND_ANSWER_SCORE_FILTER = {
 async function countStudentAnswerScoreData(
   client: typeof prisma | Tx,
   scope: PageScoreScope,
-  studentId: string
+  examStudentId: string
 ): Promise<StudentAnswerScoreSummary> {
   const { cropRegionIds, compoundAnswerIds } = scope
 
@@ -474,7 +470,7 @@ async function countStudentAnswerScoreData(
       ? []
       : client.questionScore.findMany({
           where: {
-            studentId,
+            examStudentId,
             cropRegionId: { in: cropRegionIds },
             ...SCORED_QUESTION_SCORE_FILTER,
           },
@@ -484,20 +480,23 @@ async function countStudentAnswerScoreData(
     cropRegionIds.length === 0
       ? 0
       : client.scoreDecision.count({
-          where: { studentId, cropRegionId: { in: cropRegionIds } },
+          where: { examStudentId, cropRegionId: { in: cropRegionIds } },
         }),
     cropRegionIds.length === 0
       ? 0
       : client.drawingAnnotation.count({
           where: {
-            questionScore: { studentId, cropRegionId: { in: cropRegionIds } },
+            questionScore: {
+              examStudentId,
+              cropRegionId: { in: cropRegionIds },
+            },
           },
         }),
     compoundAnswerIds.length === 0
       ? 0
       : client.compoundAnswerScore.count({
           where: {
-            studentId,
+            examStudentId,
             compoundAnswerId: { in: compoundAnswerIds },
             ...SCORED_COMPOUND_ANSWER_SCORE_FILTER,
           },
@@ -526,7 +525,7 @@ export async function getStudentAnswerScoreSummary(answerSheetId: string) {
   try {
     const answerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
-      select: { examPageId: true, studentId: true },
+      select: { examPageId: true, examStudentId: true },
     })
 
     if (!answerSheet) {
@@ -537,7 +536,7 @@ export async function getStudentAnswerScoreSummary(answerSheetId: string) {
     const summary = await countStudentAnswerScoreData(
       prisma,
       scope,
-      answerSheet.studentId
+      answerSheet.examStudentId
     )
 
     return { success: true as const, summary }
@@ -577,7 +576,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
     const { summary, removedRows } = await prisma.$transaction(
       async (tx) => {
         const scope = await getPageScoreScope(tx, answerSheet.examPageId)
-        const studentId = answerSheet.studentId
+        const { examStudentId } = answerSheet
         const { cropRegionIds, compoundAnswerIds } = scope
 
         // 削除前に「利用者から見た採点実績」を数えておく（モーダルの表示と同じ定義）。
@@ -585,7 +584,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
         const scoreSummary = await countStudentAnswerScoreData(
           tx,
           scope,
-          studentId
+          examStudentId
         )
 
         let questionScoreRows = 0
@@ -596,7 +595,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
         if (cropRegionIds.length > 0) {
           // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
           const questionScores = await tx.questionScore.findMany({
-            where: { studentId, cropRegionId: { in: cropRegionIds } },
+            where: { examStudentId, cropRegionId: { in: cropRegionIds } },
             select: { id: true },
           })
           const questionScoreIds = questionScores.map(
@@ -614,14 +613,17 @@ export async function deleteStudentAnswer(answerSheetId: string) {
           }
 
           const removedDecisions = await tx.scoreDecision.deleteMany({
-            where: { studentId, cropRegionId: { in: cropRegionIds } },
+            where: { examStudentId, cropRegionId: { in: cropRegionIds } },
           })
           scoreDecisionRows = removedDecisions.count
         }
 
         if (compoundAnswerIds.length > 0) {
           const removedCompound = await tx.compoundAnswerScore.deleteMany({
-            where: { studentId, compoundAnswerId: { in: compoundAnswerIds } },
+            where: {
+              examStudentId,
+              compoundAnswerId: { in: compoundAnswerIds },
+            },
           })
           compoundAnswerScoreRows = removedCompound.count
         }
@@ -679,14 +681,14 @@ export async function deleteStudentAnswer(answerSheetId: string) {
  */
 export async function associateStudentAnswerWithStudent(
   answerSheetId: string,
-  studentId: string
+  examStudentId: string
 ) {
   try {
     const answerSheet = await prisma.studentAnswerImage.update({
       where: { id: answerSheetId },
-      data: { studentId },
+      data: { examStudentId },
       include: {
-        student: true,
+        examStudent: { include: { student: true } },
         examPage: {
           include: {
             exam: true,
@@ -695,9 +697,9 @@ export async function associateStudentAnswerWithStudent(
       },
     })
 
-    const studentName = answerSheet.student
-      ? `${answerSheet.student.lastName} ${answerSheet.student.firstName}`.trim()
-      : null
+    const { student } = answerSheet.examStudent
+    const studentName =
+      `${student.lastName} ${student.firstName}`.trim() || null
     await recordAuditLog({
       action: "exam.answer.assign",
       entityType: "StudentAnswerImage",
@@ -728,7 +730,7 @@ export async function getStudentAnswerById(answerSheetId: string) {
     const answerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
       include: {
-        student: true,
+        examStudent: { include: { student: true } },
         examPage: {
           include: {
             exam: {

@@ -95,17 +95,26 @@ export async function createImageRecords(
         studentAnswerImage.examPageId,
         mappings.examPage
       )
-      const newStudentId = remapId(
-        studentAnswerImage.studentId,
-        mappings.student
+      const newExamStudentId = remapId(
+        studentAnswerImage.examStudentId,
+        mappings.examStudent
       )
-      if (!newExamPageId || !newStudentId) continue
+      if (!newExamPageId || !newExamStudentId) continue
 
-      // 同一(examPageId, studentId)の重複チェック
+      // mappings.examStudent は全行分の uuid を先に振るだけで、受験者が実際に
+      // 作られたかは表さない（生徒を解決できないアーカイブ行は作られない）。
+      // 存在しない親を指すと FK 違反でインポート全体が落ちるので、ここで確かめる。
+      const parentExamStudent = await prisma.examStudent.findUnique({
+        where: { id: newExamStudentId },
+        select: { id: true },
+      })
+      if (!parentExamStudent) continue
+
+      // 同一(examPageId, examStudentId)の重複チェック
       const existing = await prisma.studentAnswerImage.findFirst({
         where: {
           examPageId: newExamPageId,
-          studentId: newStudentId,
+          examStudentId: newExamStudentId,
         },
       })
       if (existing) continue
@@ -125,7 +134,7 @@ export async function createImageRecords(
             mappings.studentAnswerImage
           ),
           examPageId: newExamPageId,
-          studentId: newStudentId,
+          examStudentId: newExamStudentId,
           imagePath: newImagePath,
         },
       })
@@ -158,11 +167,21 @@ export async function createImageRecords(
       const newStudentId = remapId(pageImage.studentId, mappings.student)
       if (!newStudentId) continue
 
-      // 同一(examPageId, studentId)の重複チェック
+      // 旧 pageImages は生徒直結だったので、受験者へ解決する
+      // （受験者に居ない生徒の答案は取り込まない）
+      const examStudent = await prisma.examStudent.findUnique({
+        where: {
+          examId_studentId: { examId: newExamId, studentId: newStudentId },
+        },
+        select: { id: true },
+      })
+      if (!examStudent) continue
+
+      // 同一(examPageId, examStudentId)の重複チェック
       const existing = await prisma.studentAnswerImage.findFirst({
         where: {
           examPageId: newExamPageId,
-          studentId: newStudentId,
+          examStudentId: examStudent.id,
         },
       })
       if (existing) continue
@@ -179,7 +198,7 @@ export async function createImageRecords(
         data: {
           id: remapIdRequired(pageImage.id, mappings.pageImage),
           examPageId: newExamPageId,
-          studentId: newStudentId,
+          examStudentId: examStudent.id,
           imagePath: newImagePath,
         },
       })

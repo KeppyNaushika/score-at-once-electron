@@ -505,9 +505,10 @@ export async function seedExamWithScoring(
     allScores.push(generateStudentScores(i, REGION_DEFINITIONS))
   }
 
+  const examStudentIds: string[] = []
   for (let i = 0; i < studentIds.length; i++) {
     const studentId = studentIds[i]
-    await db.examStudent.create({
+    const examStudent = await db.examStudent.create({
       data: {
         id: randomUUID(),
         examId,
@@ -516,6 +517,7 @@ export async function seedExamWithScoring(
         customOrder: i + 1,
       },
     })
+    examStudentIds.push(examStudent.id)
     // 手書き風の解答をオーバーレイした答案画像を生成
     await generateStudentAnswerImage(
       answerDir,
@@ -533,7 +535,7 @@ export async function seedExamWithScoring(
       data: {
         id: randomUUID(),
         examPageId: examPage.id,
-        studentId,
+        examStudentId: examStudent.id,
         imagePath: relAnswerPath,
       },
     })
@@ -547,7 +549,7 @@ export async function seedExamWithScoring(
         data: {
           id: randomUUID(),
           cropRegionId: cropRegionIds[scoreEntry.regionIndex],
-          studentId: studentIds[i],
+          examStudentId: examStudentIds[i],
           partialScore: scoreEntry.score,
           status: scoreEntry.status,
           userId,

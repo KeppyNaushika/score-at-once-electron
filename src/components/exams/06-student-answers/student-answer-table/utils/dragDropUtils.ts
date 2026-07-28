@@ -1,35 +1,43 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type {
+  CellColumn,
+  CellRow,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
 /**
- * view 方式B のセル droppable ID を (studentId, examPageId) から生成する。
- * studentId・examPageId はいずれも uuid（コロンを含まない）前提。ファイルID（uuid）と
+ * view 方式B のセル droppable ID を (受験者, ページ) から生成する。
+ *
+ * dnd-kit の droppable id は文字列でなければならない（技術的制約）ので、ここだけは
+ * id を連結する。ただし**実体を引数に取る**ことで、呼び出し側が `examStudent.studentId`
+ * のような別の id を渡せないようにする（両方 `string` なので型検査では守れないため）。
+ * examStudentId・examPageId はいずれも uuid（コロンを含まない）前提。ファイルID（uuid）と
  * 衝突しないよう `cell:` 接頭辞で名前空間を分ける。
  */
 export function encodeCellDroppableId(
-  studentId: string,
-  examPageId: string
+  examStudent: CellRow,
+  examPage: CellColumn
 ): string {
-  return `cell:${studentId}:${examPageId}`
+  return `cell:${examStudent.id}:${examPage.id}`
 }
 
-/** セル droppable ID を (studentId, examPageId) に復号する。cell: 接頭辞でなければ null */
+/** セル droppable ID を (examStudentId, examPageId) に復号する。cell: 接頭辞でなければ null */
 export function decodeCellDroppableId(
   droppableId: string
-): { studentId: string; examPageId: string } | null {
+): { examStudentId: string; examPageId: string } | null {
   const prefix = "cell:"
   if (!droppableId.startsWith(prefix)) return null
   const rest = droppableId.slice(prefix.length)
   const lastColon = rest.lastIndexOf(":")
   if (lastColon <= 0) return null
-  const studentId = rest.slice(0, lastColon)
+  const examStudentId = rest.slice(0, lastColon)
   const examPageId = rest.slice(lastColon + 1)
-  if (!studentId || !examPageId) return null
-  return { studentId, examPageId }
+  if (!examStudentId || !examPageId) return null
+  return { examStudentId, examPageId }
 }
 
 /**
- * view 方式B: ドラッグした答案を対象セル (studentId, examPageId) へ配置する。
+ * view 方式B: ドラッグした答案を対象セル (examStudentId, examPageId) へ配置する。
  * 対象セルに別の答案が既にある場合は 2 セルの座標を入れ替える（swap）。
  * 採点データの追従/破棄は後段の確認モーダル（PlacementScorePolicy）で解決するため、
  * ここでは座標だけを更新する（新しい配列を返す。変更が無ければ元の配列を返す）。
@@ -42,7 +50,7 @@ export function decodeCellDroppableId(
 export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
   files: T[],
   activeFileId: string,
-  target: { studentId: string; examPageId: string },
+  target: { examStudentId: string; examPageId: string },
   // 占有判定を「表に見えている答案」に限定するための任意フィルタ。
   // trash 等で非表示の答案を隠れて swap しないため（view は無効ファイル無しだが防御的に受ける）。
   occupantEligibleIds?: Set<string>,
@@ -52,12 +60,12 @@ export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
   const activeFile = files.find((file) => file.id === activeFileId)
   if (!activeFile) return files
 
-  const sourceStudentId = activeFile.studentId
+  const sourceExamStudentId = activeFile.examStudentId
   const sourceExamPageId = activeFile.examPageId
 
   // 同一セルへのドロップは変更なし
   if (
-    sourceStudentId === target.studentId &&
+    sourceExamStudentId === target.examStudentId &&
     sourceExamPageId === target.examPageId
   ) {
     return files
@@ -66,7 +74,7 @@ export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
   const occupant = files.find(
     (file) =>
       file.id !== activeFileId &&
-      file.studentId === target.studentId &&
+      file.examStudentId === target.examStudentId &&
       file.examPageId === target.examPageId &&
       (occupantEligibleIds ? occupantEligibleIds.has(file.id) : true)
   )
@@ -81,7 +89,7 @@ export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
     if (file.id === activeFileId) {
       return {
         ...file,
-        studentId: target.studentId,
+        examStudentId: target.examStudentId,
         examPageId: target.examPageId,
       }
     }
@@ -90,7 +98,7 @@ export function applyCellMoveOrSwap<T extends AnswerImageIdentity>(
       // 占有セルなら元の答案を移動元へ入れ替える。
       return {
         ...file,
-        studentId: sourceStudentId,
+        examStudentId: sourceExamStudentId,
         examPageId: sourceExamPageId,
       }
     }
@@ -120,22 +128,22 @@ export function diffFilesAgainstBaseline<T extends AnswerImageIdentity>(
   for (const file of files) {
     const base = baselineById.get(file.id)
     if (!base) continue
-    const currentStudentId = file.studentId ?? null
+    const currentExamStudentId = file.examStudentId ?? null
     const currentExamPageId = file.examPageId ?? null
     if (
-      base.studentId !== currentStudentId ||
+      base.examStudentId !== currentExamStudentId ||
       base.examPageId !== currentExamPageId
     ) {
       changedFiles.push({
         fileId: file.id,
         fromState: {
           fileId: file.id,
-          studentId: base.studentId,
+          examStudentId: base.examStudentId,
           examPageId: base.examPageId,
         },
         toState: {
           fileId: file.id,
-          studentId: currentStudentId,
+          examStudentId: currentExamStudentId,
           examPageId: currentExamPageId,
         },
       })

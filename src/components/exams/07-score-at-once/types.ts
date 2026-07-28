@@ -105,8 +105,8 @@ export function calculateActualScore(
 export interface ScoringData {
   /** StudentAnswerImage.id */
   id: string
-  /** Student.id (UUID) */
-  studentId: string
+  /** ExamStudent.id (UUID) */
+  examStudentId: string
   /** 生徒氏名 */
   studentName: string
   /** 画像URL (appimg://...) */
@@ -154,7 +154,7 @@ export type MasterStatus = "master"
 
 export interface MasterGridItem {
   id: string
-  studentId: "MASTER"
+  examStudentId: "MASTER"
   studentName: string
   imageUrl: string
   maxScore: number
@@ -170,12 +170,13 @@ export interface MasterGridItem {
  */
 export function findQuestionScore(
   questionScores: QuestionScore[],
-  studentId: string,
+  examStudentId: string,
   cropRegionId: string
 ): QuestionScore | undefined {
   return questionScores.find(
     (score) =>
-      score.studentId === studentId && score.cropRegionId === cropRegionId
+      score.examStudentId === examStudentId &&
+      score.cropRegionId === cropRegionId
   )
 }
 
@@ -184,12 +185,12 @@ export function findQuestionScore(
  */
 export function getScoringStatusFromArray(
   questionScores: QuestionScore[],
-  studentId: string,
+  examStudentId: string,
   cropRegionId?: string
 ): ScoringStatus {
   if (!cropRegionId) return "unscored"
 
-  const score = findQuestionScore(questionScores, studentId, cropRegionId)
+  const score = findQuestionScore(questionScores, examStudentId, cropRegionId)
   return toScoringStatus(score?.status)
 }
 

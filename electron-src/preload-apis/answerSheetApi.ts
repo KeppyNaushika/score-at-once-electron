@@ -10,7 +10,7 @@ export function createAnswerSheetApi() {
         name: string
         type: string
         buffer: ArrayBuffer
-        studentId?: string
+        examStudentId?: string
         examPageId: string
         overwrite?: boolean
         correctWithMarkers?: boolean
@@ -26,12 +26,12 @@ export function createAnswerSheetApi() {
       ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
     associateStudentAnswerWithStudent: (
       answerSheetId: string,
-      studentId: string
+      examStudentId: string
     ) =>
       ipcRenderer.invoke(
         "associate-answer-sheet-with-student",
         answerSheetId,
-        studentId
+        examStudentId
       ),
     setStudentAnswerAbsent: (answerSheetId: string, isAbsent: boolean) =>
       ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
@@ -40,7 +40,7 @@ export function createAnswerSheetApi() {
     applyStudentAnswerPlacements: (
       moves: Array<{
         fileId: string
-        finalStudentId: string | null
+        finalExamStudentId: string | null
         finalExamPageId: string
         scorePolicy: "carry" | "discard"
       }>

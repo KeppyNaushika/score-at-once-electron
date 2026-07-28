@@ -2,24 +2,93 @@
  * @fileoverview 描画アノテーション型定義
  * @description 全描画ツール（テキスト・直線・長方形・楕円）の統合型定義
  */
+import { defineStringUnion } from "./stringUnion"
 
 // 基本型定義
-export type DrawingType = "text" | "line" | "rectangle" | "ellipse"
+/**
+ * 描画種別。SQLite に enum が無いため DB 上は String 列で、境界で `toDrawingType`
+ * を通して literal union へ絞り込む（Decimal→number / ScoringStatus と同じ型注入）。
+ */
+export const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
+export type DrawingType = (typeof DRAWING_TYPES)[number]
+
+export const { is: isDrawingType, to: toDrawingType } = defineStringUnion(
+  DRAWING_TYPES,
+  "line"
+)
 export type DrawingTool = "select" | "text" | "line" | "rectangle" | "ellipse"
-export type LineStyle =
-  "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow"
-export type AnnotationHorizontalAlign = "left" | "center" | "right"
-export type AnnotationVerticalAlign = "top" | "center" | "bottom"
-export type AnchorDirection =
-  | "top-left"
-  | "top"
-  | "top-right"
-  | "left"
-  | "center"
-  | "right"
-  | "bottom-left"
-  | "bottom"
-  | "bottom-right"
+
+export const LINE_STYLES = [
+  "solid",
+  "wave",
+  "zigzag",
+  "double",
+  "arrow",
+  "both_arrow",
+] as const
+export type LineStyle = (typeof LINE_STYLES)[number]
+
+export const ANNOTATION_HORIZONTAL_ALIGNS = ["left", "center", "right"] as const
+export type AnnotationHorizontalAlign =
+  (typeof ANNOTATION_HORIZONTAL_ALIGNS)[number]
+
+export const ANNOTATION_VERTICAL_ALIGNS = ["top", "center", "bottom"] as const
+export type AnnotationVerticalAlign =
+  (typeof ANNOTATION_VERTICAL_ALIGNS)[number]
+
+export const ANCHOR_DIRECTIONS = [
+  "top-left",
+  "top",
+  "top-right",
+  "left",
+  "center",
+  "right",
+  "bottom-left",
+  "bottom",
+  "bottom-right",
+] as const
+export type AnchorDirection = (typeof ANCHOR_DIRECTIONS)[number]
+
+/**
+ * 型ガードと境界コンバータ。想定外値は既定へ倒す（DB 直書き・旧データへの耐性）。
+ * scoringStatus.types.ts / cropRegionAreaType.types.ts と同じ factory から生成する。
+ */
+export const { is: isLineStyle, to: toLineStyle } = defineStringUnion(
+  LINE_STYLES,
+  "solid"
+)
+export const {
+  is: isAnnotationHorizontalAlign,
+  to: toAnnotationHorizontalAlign,
+} = defineStringUnion(ANNOTATION_HORIZONTAL_ALIGNS, "left")
+export const { is: isAnnotationVerticalAlign, to: toAnnotationVerticalAlign } =
+  defineStringUnion(ANNOTATION_VERTICAL_ALIGNS, "top")
+export const { is: isAnchorDirection, to: toAnchorDirection } =
+  defineStringUnion(ANCHOR_DIRECTIONS, "top-left")
+
+/**
+ * DB 行（union 列がすべて String）を境界で 1 回だけ絞り込む。
+ * SQLite に enum が無いための型注入で、`as` で潰さずここを通すことで
+ * include の形が変わったときに型検査が効く。
+ */
+export const narrowAnnotationUnions = <
+  T extends {
+    type: string
+    lineStyle: string
+    horizontalAlign: string
+    verticalAlign: string
+    anchorDirection: string
+  },
+>(
+  row: T
+) => ({
+  ...row,
+  type: toDrawingType(row.type),
+  lineStyle: toLineStyle(row.lineStyle),
+  horizontalAlign: toAnnotationHorizontalAlign(row.horizontalAlign),
+  verticalAlign: toAnnotationVerticalAlign(row.verticalAlign),
+  anchorDirection: toAnchorDirection(row.anchorDirection),
+})
 
 // データベース対応統合インターフェース
 export interface DrawingAnnotation {
@@ -77,7 +146,7 @@ export interface DrawingCreateData {
   strokeWidth?: number
 
   // コンテキスト情報（参照用、自動作成には使用しない）
-  studentId?: string
+  examStudentId?: string
   cropRegionId?: string
 
   // 全プロパティ（デフォルト値はデータベース側で設定）
@@ -131,14 +200,17 @@ export interface DrawingAnnotationStats {
 export interface AnnotationWithContext extends DrawingAnnotation {
   questionScore?: {
     id: string
-    studentId: string
+    examStudentId: string
     cropRegionId: string
     cropRegion?: { id: string; label: string }
-    student?: {
+    examStudent?: {
       id: string
-      studentNumber: string
-      lastName: string
-      firstName: string
+      student: {
+        id: string
+        studentNumber: string
+        lastName: string
+        firstName: string
+      }
     }
   } | null
   user?: {

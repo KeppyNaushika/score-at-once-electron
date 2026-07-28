@@ -8,7 +8,7 @@
  *   - loadAnnotations(examId) → getForBrowseで試験全体のアノテーション取得
  *
  * [フィルタ変更]
- *   - cropRegionId / studentId / type / favoritesOnlyフィルタ → displayItemsの再計算
+ *   - cropRegionId / examStudentId / type / favoritesOnlyフィルタ → displayItemsの再計算
  *
  * [重複グルーピング]
  *   - 同一プロパティのアノテーションをグループ化して表示（count + representative）
@@ -49,7 +49,7 @@ function createMockAnnotationWithContext(
     ...base,
     questionScore: {
       id: "qs-1",
-      studentId: "student-1",
+      examStudentId: "student-1",
       cropRegionId: "cr-1",
       cropRegion: { id: "cr-1", label: "問1" },
       student: {
@@ -138,7 +138,7 @@ describe("useAnnotationBrowser", () => {
             id: "a1",
             questionScore: {
               id: "qs-1",
-              studentId: "s1",
+              examStudentId: "s1",
               cropRegionId: "cr-1",
               cropRegion: { id: "cr-1", label: "問1" },
             },
@@ -147,7 +147,7 @@ describe("useAnnotationBrowser", () => {
             id: "a2",
             questionScore: {
               id: "qs-2",
-              studentId: "s1",
+              examStudentId: "s1",
               cropRegionId: "cr-2",
               cropRegion: { id: "cr-2", label: "問2" },
             },

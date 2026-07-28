@@ -20,13 +20,13 @@ export interface ExamProgressSource {
     type: string
     questionScores: {
       status: string
-      studentId: string | null
+      examStudentId: string
       partialScore: number | null
     }[]
   }[]
   /** 平坦化済み答案画像 */
-  answerImages?: { studentId: string | null }[]
-  examStudents: { studentId: string; status: string }[]
+  answerImages?: { examStudentId: string }[]
+  examStudents: { id: string; status: string }[]
   examSubtotalGroups: { id: string }[]
 }
 
@@ -93,23 +93,22 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
       .length || 0
 
   // 受験・見込み生徒のIDリストを取得（欠席生徒を除外）
-  const participatingStudentIds =
+  const participatingExamStudentIds =
     exam.examStudents
       ?.filter(
         (examStudent) =>
           examStudent.status === "participating" ||
           examStudent.status === "expected"
       )
-      ?.map((examStudent) => examStudent.studentId) || []
+      ?.map((examStudent) => examStudent.id) || []
 
   // 受験・見込み生徒の数をカウント（複数ページの答案でも1人1回のみ）
   const answerSheetCount = new Set(
     exam.answerImages
-      ?.filter(
-        (img) =>
-          img.studentId && participatingStudentIds.includes(img.studentId)
+      ?.filter((answerImage) =>
+        participatingExamStudentIds.includes(answerImage.examStudentId)
       )
-      ?.map((img) => img.studentId)
+      ?.map((answerImage) => answerImage.examStudentId)
   ).size
 
   const expectedScoringCount = questionAnswerCount * answerSheetCount
@@ -122,8 +121,7 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
         const validQuestionScores = region.questionScores.filter(
           (score) =>
             score.status !== "unscored" &&
-            score.studentId !== null &&
-            participatingStudentIds.includes(score.studentId) &&
+            participatingExamStudentIds.includes(score.examStudentId) &&
             // partial/pending は partialScore が入力済みの場合のみ採点済みとする
             !(
               (score.status === "partial" || score.status === "pending") &&

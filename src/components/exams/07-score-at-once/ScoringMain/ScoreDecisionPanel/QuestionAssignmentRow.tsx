@@ -198,11 +198,11 @@ export function QuestionAssignmentRow({
       {isExpanded &&
         question.cells.map((cell) => (
           <button
-            key={`${cell.cropRegionId}:${cell.studentId}`}
+            key={`${cell.cropRegionId}:${cell.examStudentId}`}
             onClick={() => onSelectCell(cell)}
             className={`flex w-full items-center justify-between gap-2 py-1.5 pr-3 pl-9 text-left text-sm hover:bg-blue-50 ${
               selectedCell?.cropRegionId === cell.cropRegionId &&
-              selectedCell?.studentId === cell.studentId
+              selectedCell?.examStudentId === cell.examStudentId
                 ? "bg-blue-50 font-medium"
                 : ""
             }`}

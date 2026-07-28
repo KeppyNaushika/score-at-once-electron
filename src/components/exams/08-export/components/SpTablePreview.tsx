@@ -42,7 +42,7 @@ export function SpTablePreview({ data }: SpTablePreviewProps) {
         </thead>
         <tbody>
           {students.map((student, rowIdx) => (
-            <tr key={student.studentId} className="hover:bg-muted/50">
+            <tr key={student.examStudentId} className="hover:bg-muted/50">
               <td className="border px-1 py-0.5 whitespace-nowrap">
                 {student.studentName}
               </td>

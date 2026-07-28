@@ -61,7 +61,7 @@ export interface DetailedProgressState {
 // レンダリングされたページデータ
 export interface RenderedPageData {
   pageIndex: number
-  studentId: string
+  examStudentId: string
   pageNumber: number
   imageData: ArrayBuffer
 }

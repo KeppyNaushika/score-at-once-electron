@@ -125,55 +125,34 @@ export function useScoringFilter({
 
     const sortedAnswerSheets = [...pageFilteredSheets].sort(
       (sheetA, sheetB) => {
-        const aOrder =
-          sheetA.student?.examStudents?.[0]?.customOrder !== undefined
-            ? sheetA.student.examStudents[0].customOrder
-            : 999999
-        const bOrder =
-          sheetB.student?.examStudents?.[0]?.customOrder !== undefined
-            ? sheetB.student.examStudents[0].customOrder
-            : 999999
+        const aOrder = sheetA.examStudent.customOrder ?? 999999
+        const bOrder = sheetB.examStudent.customOrder ?? 999999
 
         if (aOrder === bOrder) {
-          const aName = `${sheetA.student?.lastName ?? ""}${sheetA.student?.firstName ?? ""}`
-          const bName = `${sheetB.student?.lastName ?? ""}${sheetB.student?.firstName ?? ""}`
+          const studentA = sheetA.examStudent.student
+          const studentB = sheetB.examStudent.student
+          const aName = `${studentA.lastName}${studentA.firstName}`
+          const bName = `${studentB.lastName}${studentB.firstName}`
           return aName.localeCompare(bName, "ja")
         }
 
-        const sortResult = (aOrder || 0) - (bOrder || 0)
-
-        return sortResult
+        return aOrder - bOrder
       }
     )
 
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
       (pageImage) => {
-        if (!pageImage.studentId) {
-          return {
-            id: pageImage.id,
-            studentId: "",
-            studentName: "不明",
-            imageUrl: pageImage.imagePath
-              ? `appimg:///${pageImage.imagePath}`
-              : "",
-            currentScore: undefined,
-            maxScore: currentCropRegion.points ?? 0,
-            status: "unscored",
-            questionRegion: currentCropRegion,
-            customOrder: 999999,
-          }
-        }
-
         const score = findQuestionScore(
           questionScores,
-          pageImage.studentId,
+          pageImage.examStudentId,
           currentCropRegion.id
         )
+        const { student } = pageImage.examStudent
 
         return {
           id: pageImage.id,
-          studentId: pageImage.studentId,
-          studentName: `${pageImage.student?.lastName ?? ""} ${pageImage.student?.firstName ?? ""}`,
+          examStudentId: pageImage.examStudentId,
+          studentName: `${student.lastName} ${student.firstName}`,
           imageUrl: pageImage.imagePath
             ? `appimg:///${pageImage.imagePath}`
             : "",
@@ -184,8 +163,7 @@ export function useScoringFilter({
           maxScore: currentCropRegion.points ?? 0,
           status: toScoringStatus(score?.status),
           questionRegion: currentCropRegion,
-          customOrder:
-            pageImage.student?.examStudents?.[0]?.customOrder || 999999,
+          customOrder: pageImage.examStudent.customOrder ?? 999999,
         }
       }
     )
@@ -578,7 +556,7 @@ export function useScoringFilter({
 
     return {
       id: `master-${currentCropRegion.id}`,
-      studentId: "MASTER",
+      examStudentId: "MASTER",
       studentName: "模範解答",
       imageUrl: masterImagePath ? `appimg:///${masterImagePath}` : "",
       maxScore: currentCropRegion.points || 0,

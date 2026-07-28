@@ -160,7 +160,7 @@ export async function getCompoundAnswersByExamId(
  */
 export async function upsertCompoundAnswerScore(data: {
   compoundAnswerId: string
-  studentId: string
+  examStudentId: string
   userId: string
   recognizedAnswer?: string | null
   status: string
@@ -168,14 +168,14 @@ export async function upsertCompoundAnswerScore(data: {
 }): Promise<CompoundAnswerScore> {
   const result = await prisma.compoundAnswerScore.upsert({
     where: {
-      compoundAnswerId_studentId: {
+      compoundAnswerId_examStudentId: {
         compoundAnswerId: data.compoundAnswerId,
-        studentId: data.studentId,
+        examStudentId: data.examStudentId,
       },
     },
     create: {
       compoundAnswerId: data.compoundAnswerId,
-      studentId: data.studentId,
+      examStudentId: data.examStudentId,
       userId: data.userId,
       recognizedAnswer: data.recognizedAnswer ?? null,
       status: data.status,

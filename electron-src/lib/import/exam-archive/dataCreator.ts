@@ -347,19 +347,50 @@ export async function createImportedData(
       }
 
       // 10. ExamStudentを作成
+      //
+      // 生徒を解決できないアーカイブ行は受験者を作れない。採点層は受験者の子なので、
+      // 「実際に作った受験者」を控えておき、後段の採点行はこの集合で絞る。
+      // mappings.examStudent は全行分の uuid が先に振られており、作成の有無を表さない
+      // （それを作成済みとみなすと、存在しない親を指す行を作って FK 違反で全体が落ちる）。
+      const createdExamStudentIds = new Set<string>()
       for (const examStudent of data.examData.examStudents) {
         const newStudentId = remapId(examStudent.studentId, mappings.student)
         if (newStudentId) {
+          const newExamStudentId = remapIdRequired(
+            examStudent.id,
+            mappings.examStudent
+          )
           await tx.examStudent.create({
             data: {
-              id: remapIdRequired(examStudent.id, mappings.examStudent),
+              id: newExamStudentId,
               examId: newExamId,
               studentId: newStudentId,
               status: examStudent.status,
               customOrder: examStudent.customOrder,
             },
           })
+          createdExamStudentIds.add(newExamStudentId)
         }
+      }
+
+      /**
+       * 実際に作成した QuestionScore の id。手書き注釈はこの子なので、
+       * 受験者が解決できず採点行を飛ばした分の注釈も落とす必要がある
+       * （mappings.questionScore は全行分の uuid を先に振るだけで作成を表さない）。
+       */
+      const createdQuestionScoreIds = new Set<string>()
+
+      /** 受験者が実際に作られている採点行だけを通す */
+      const resolveCreatedExamStudentId = (
+        archiveExamStudentId: string
+      ): string | null => {
+        const newExamStudentId = remapId(
+          archiveExamStudentId,
+          mappings.examStudent
+        )
+        return newExamStudentId && createdExamStudentIds.has(newExamStudentId)
+          ? newExamStudentId
+          : null
       }
 
       // 11. ExamPageを作成
@@ -514,11 +545,10 @@ export async function createImportedData(
           compoundAnswerScore.compoundAnswerId,
           mappings.compoundAnswer
         )
-        const newStudentId = remapId(
-          compoundAnswerScore.studentId,
-          mappings.student
+        const newExamStudentId = resolveCreatedExamStudentId(
+          compoundAnswerScore.examStudentId
         )
-        if (newCompoundAnswerId && newStudentId) {
+        if (newCompoundAnswerId && newExamStudentId) {
           await tx.compoundAnswerScore.create({
             data: {
               id: remapIdRequired(
@@ -526,7 +556,7 @@ export async function createImportedData(
                 mappings.compoundAnswerScore
               ),
               compoundAnswerId: newCompoundAnswerId,
-              studentId: newStudentId,
+              examStudentId: newExamStudentId,
               userId: currentUserId,
               recognizedAnswer: compoundAnswerScore.recognizedAnswer,
               status: compoundAnswerScore.status,
@@ -562,21 +592,27 @@ export async function createImportedData(
 
       // 14. QuestionScoreを作成
       // v0.3.0以降: userIdを現在のログインユーザーで上書き
-      // v0.4.0以降: studentIdは必須フィールド
+      // v1.21.0以降: 採点行は受験者（ExamStudent）に紐づく
       for (const questionScore of data.scoresData.questionScores) {
         const newCropRegionId = remapId(
           questionScore.cropRegionId,
           mappings.cropRegion
         )
-        const newStudentId = remapId(questionScore.studentId, mappings.student)
+        const newExamStudentId = resolveCreatedExamStudentId(
+          questionScore.examStudentId
+        )
 
-        // studentIdは必須フィールド
-        if (newCropRegionId && newStudentId) {
+        if (newCropRegionId && newExamStudentId) {
+          const newQuestionScoreId = remapIdRequired(
+            questionScore.id,
+            mappings.questionScore
+          )
+          createdQuestionScoreIds.add(newQuestionScoreId)
           await tx.questionScore.create({
             data: {
-              id: remapIdRequired(questionScore.id, mappings.questionScore),
+              id: newQuestionScoreId,
               cropRegionId: newCropRegionId,
-              studentId: newStudentId,
+              examStudentId: newExamStudentId,
               partialScore: questionScore.partialScore
                 ? parseFloat(questionScore.partialScore)
                 : null,
@@ -594,14 +630,16 @@ export async function createImportedData(
           scoreDecision.cropRegionId,
           mappings.cropRegion
         )
-        const newStudentId = remapId(scoreDecision.studentId, mappings.student)
+        const newExamStudentId = resolveCreatedExamStudentId(
+          scoreDecision.examStudentId
+        )
 
-        if (newCropRegionId && newStudentId) {
+        if (newCropRegionId && newExamStudentId) {
           await tx.scoreDecision.create({
             data: {
               id: remapIdRequired(scoreDecision.id, mappings.scoreDecision),
               cropRegionId: newCropRegionId,
-              studentId: newStudentId,
+              examStudentId: newExamStudentId,
               verdict: scoreDecision.verdict,
               score: scoreDecision.score
                 ? parseFloat(scoreDecision.score)
@@ -674,15 +712,15 @@ export async function createImportedData(
       // 14.6. ReturnSnapshot（返却版スナップショット）を作成 (v1.14.0+)
       // capturedByUserId は現在のログインユーザーで上書き
       for (const returnSnapshot of data.scoresData.returnSnapshots || []) {
-        const newExamId = remapId(returnSnapshot.examId, mappings.exam)
-        const newStudentId = remapId(returnSnapshot.studentId, mappings.student)
+        const newExamStudentId = resolveCreatedExamStudentId(
+          returnSnapshot.examStudentId
+        )
 
-        if (newExamId && newStudentId) {
+        if (newExamStudentId) {
           await tx.returnSnapshot.create({
             data: {
               id: remapIdRequired(returnSnapshot.id, mappings.returnSnapshot),
-              examId: newExamId,
-              studentId: newStudentId,
+              examStudentId: newExamStudentId,
               scoresJson: returnSnapshot.scoresJson,
               totalScore: returnSnapshot.totalScore
                 ? parseFloat(returnSnapshot.totalScore)
@@ -696,11 +734,18 @@ export async function createImportedData(
 
       // 15. DrawingAnnotationを作成
       // v0.3.0以降: userIdを現在のログインユーザーで上書き
+      // 親の QuestionScore を作れなかった注釈は落とす（存在しない親を指すと
+      // FK 違反でインポート全体がロールバックする）。
       for (const drawingAnnotation of data.scoresData.drawingAnnotations) {
-        const newQuestionScoreId = remapId(
+        const remappedQuestionScoreId = remapId(
           drawingAnnotation.questionScoreId,
           mappings.questionScore
         )
+        const newQuestionScoreId =
+          remappedQuestionScoreId &&
+          createdQuestionScoreIds.has(remappedQuestionScoreId)
+            ? remappedQuestionScoreId
+            : null
 
         if (newQuestionScoreId) {
           await tx.drawingAnnotation.create({

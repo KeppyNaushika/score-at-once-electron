@@ -43,6 +43,7 @@ function makeStudent(
   q1: number | null
 ): ScoringData {
   return {
+    examStudentId: id,
     studentId: id,
     studentName: id,
     studentNumber: id,

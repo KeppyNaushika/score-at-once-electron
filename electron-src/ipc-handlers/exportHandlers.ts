@@ -250,12 +250,12 @@ export function setupExportHandlers(): void {
     "export:validateScoringData",
     async (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       userId: string
     }) => {
       const result = await fetchExportData(
         options.examId,
-        options.selectedStudentIds
+        options.selectedExamStudentIds
       )
       if (!result.success || !result.scoringData) {
         return {
@@ -275,7 +275,7 @@ export function setupExportHandlers(): void {
             result.scoringData,
             buildConflictWarnings(
               decisionSummary.summary,
-              options.selectedStudentIds
+              options.selectedExamStudentIds
             )
           )
         : // 検査できなかったことを空配列（＝食い違いなし）に化けさせない
@@ -321,7 +321,7 @@ export function setupExportHandlers(): void {
     "export-grading-data-excel",
     async (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       outputPath?: string
       studentPlacements?: Record<string, StudentExportPlacement>
     }) => {
@@ -339,12 +339,12 @@ export function setupExportHandlers(): void {
     "export:getExcelPreviewData",
     async (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       studentPlacements?: Record<string, StudentExportPlacement>
     }) => {
       const result = await fetchExportData(
         options.examId,
-        options.selectedStudentIds,
+        options.selectedExamStudentIds,
         options.studentPlacements
       )
       if (!result.success) {
@@ -364,7 +364,7 @@ export function setupExportHandlers(): void {
       }))
 
       const scoringData = result.scoringData?.map((studentScoring) => ({
-        studentId: studentScoring.studentId,
+        examStudentId: studentScoring.examStudentId,
         studentName: studentScoring.studentName,
         studentNumber: studentScoring.studentNumber,
         grade: studentScoring.grade,
@@ -407,7 +407,7 @@ export function setupExportHandlers(): void {
   // Canvas描画用PDF出力データ取得
   registerSafeHandler(
     "export:getPdfExportData",
-    async (options: { examId: string; selectedStudentIds: string[] }) => {
+    async (options: { examId: string; selectedExamStudentIds: string[] }) => {
       return await getPdfExportData(options)
     }
   )
@@ -418,7 +418,7 @@ export function setupExportHandlers(): void {
     async (options: {
       examId: string
       renderedPages: Array<{
-        studentId: string
+        examStudentId: string
         pageNumber: number
         imageData: ArrayBuffer
       }>
@@ -910,10 +910,10 @@ export function setupExportHandlers(): void {
   // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録する
   registerSafeHandler(
     "export:captureReturnSnapshot",
-    async (options: { examId: string; studentIds: string[] }) => {
+    async (options: { examId: string; examStudentIds: string[] }) => {
       return await captureReturnSnapshot({
         examId: options.examId,
-        studentIds: options.studentIds,
+        examStudentIds: options.examStudentIds,
       })
     }
   )

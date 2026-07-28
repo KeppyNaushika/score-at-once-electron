@@ -40,6 +40,7 @@ function makeScoringData(
       ? totalScore
       : scores.reduce((sum, score) => sum + (score.score ?? 0), 0)
   return {
+    examStudentId: `exam-${studentId}`,
     studentId,
     studentName: `生徒${studentId}`,
     studentNumber: studentId,

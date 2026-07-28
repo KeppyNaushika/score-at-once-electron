@@ -102,7 +102,7 @@ describe("collectExamData", () => {
       data: {
         id: generateId(),
         cropRegionId: testExam.cropRegions[0].id,
-        studentId: testExam.students[0].id,
+        examStudentId: testExam.examStudents[0].id,
         userId: otherUser.id,
         status: "incorrect",
         partialScore: 0,

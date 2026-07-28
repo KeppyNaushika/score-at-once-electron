@@ -101,7 +101,7 @@ export function setupOMRHandlers(): void {
         ]
         params: OMRRecognitionParams
         pageIndex?: number
-        studentId?: string
+        examStudentId?: string
       }
     ): Promise<OMRSheetResult> => {
       try {
@@ -156,7 +156,7 @@ export function setupOMRHandlers(): void {
 
         return {
           success: true,
-          studentId: args.studentId,
+          examStudentId: args.examStudentId,
           pageIndex: args.pageIndex ?? 0,
           markerDetection: markerResult,
           cellResults,
@@ -190,7 +190,11 @@ export function setupOMRHandlers(): void {
     async (
       _event,
       args: {
-        imagePaths: { path: string; studentId?: string; studentName?: string }[]
+        imagePaths: {
+          path: string
+          examStudentId?: string
+          studentName?: string
+        }[]
         cells: ComputedCell[]
         cellConfigs: Record<string, OMRCellConfig>
         expectedCorners: [
@@ -237,7 +241,7 @@ export function setupOMRHandlers(): void {
           if (!markerResult.success) {
             results.push({
               success: false,
-              studentId: entry.studentId,
+              examStudentId: entry.examStudentId,
               pageIndex: args.pageIndex ?? 0,
               markerDetection: markerResult,
               cellResults: [],
@@ -283,7 +287,7 @@ export function setupOMRHandlers(): void {
 
             results.push({
               success: true,
-              studentId: entry.studentId,
+              examStudentId: entry.examStudentId,
               pageIndex: args.pageIndex ?? 0,
               markerDetection: markerResult,
               cellResults,
@@ -293,7 +297,7 @@ export function setupOMRHandlers(): void {
         } catch (error) {
           results.push({
             success: false,
-            studentId: entry.studentId,
+            examStudentId: entry.examStudentId,
             pageIndex: args.pageIndex ?? 0,
             markerDetection: {
               success: false,

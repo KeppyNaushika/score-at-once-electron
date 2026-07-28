@@ -9,7 +9,7 @@ export function createExportApi() {
     export: {
       validateScoringData: (options: {
         examId: string
-        selectedStudentIds: string[]
+        selectedExamStudentIds: string[]
         userId: string
       }) => ipcRenderer.invoke("export:validateScoringData", options),
       recordUnresolvedConflicts: (options: {
@@ -21,12 +21,12 @@ export function createExportApi() {
       }) => ipcRenderer.invoke("export:recordUnresolvedConflicts", options),
       getPdfExportData: (options: {
         examId: string
-        selectedStudentIds: string[]
+        selectedExamStudentIds: string[]
       }) => ipcRenderer.invoke("export:getPdfExportData", options),
       createPdfFromRenderedImages: (options: {
         examId: string
         renderedPages: Array<{
-          studentId: string
+          examStudentId: string
           pageNumber: number
           imageData: ArrayBuffer
         }>
@@ -59,7 +59,7 @@ export function createExportApi() {
       // 個人成績表PDF API
       getIndividualReportData: (options: {
         examId: string
-        selectedStudentIds: string[]
+        selectedExamStudentIds: string[]
         options: import("../lib/export/individual-report").IndividualReportOptions
         studentPlacements?: Record<
           string,
@@ -96,7 +96,7 @@ export function createExportApi() {
       // Excelプレビューデータ取得
       getExcelPreviewData: (options: {
         examId: string
-        selectedStudentIds: string[]
+        selectedExamStudentIds: string[]
         studentPlacements?: Record<
           string,
           import("../lib/shared/types").StudentExportPlacement
@@ -112,7 +112,7 @@ export function createExportApi() {
       // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録
       captureReturnSnapshot: (options: {
         examId: string
-        studentIds: string[]
+        examStudentIds: string[]
       }) => ipcRenderer.invoke("export:captureReturnSnapshot", options),
       // 返却版と現在状態の差分（変更があった生徒の検出）
       getReturnDiff: (examId: string) =>
@@ -122,7 +122,7 @@ export function createExportApi() {
     // Excel Export related
     exportGradingDataExcel: (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       outputPath?: string
       studentPlacements?: Record<
         string,

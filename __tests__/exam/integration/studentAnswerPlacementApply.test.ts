@@ -1,9 +1,9 @@
 /**
  * applyStudentAnswerPlacements（view 方式B: 2軸移動 + carry/discard）の採点安全性テスト
  *
- * 検証対象（docs/06-student-answers-cell-architecture-plan.md §3-4）:
+ * 検証対象:
  * - 2軸移動: examPageId が実際に更新される（旧 batchUpdate は finalPageNumber を無視していた）
- * - carry（同一ページ）: 採点が studentId 付け替えで追従し、DrawingAnnotation が温存される
+ * - carry（同一ページ）: 採点が examStudentId 付け替えで追従し、DrawingAnnotation が温存される
  * - discard: 影響採点（両スコア表）が削除され、注釈は cascade で道連れになる
  * - ガード: carry かつページ変化はエラー（DBは不変）
  */
@@ -41,7 +41,7 @@ async function buildSimpleExam() {
     includeStudentAnswerImages: true,
   })
 
-  const [studentA, studentB] = exam.students
+  const [examStudentA, examStudentB] = exam.examStudents
   const page1 = exam.pages.find((page) => page.pageNumber === 1)!
   const page2 = exam.pages.find((page) => page.pageNumber === 2)!
   const region1 = exam.cropRegions.find(
@@ -51,22 +51,23 @@ async function buildSimpleExam() {
     (region) => region.examPageId === page2.id
   )!
 
-  const image = (pageId: string, studentId: string) =>
+  const image = (pageId: string, examStudentId: string) =>
     exam.studentAnswerImages.find(
       (answerImage) =>
-        answerImage.examPageId === pageId && answerImage.studentId === studentId
+        answerImage.examPageId === pageId &&
+        answerImage.examStudentId === examStudentId
     )!
-  const score = (cropRegionId: string, studentId: string) =>
+  const score = (cropRegionId: string, examStudentId: string) =>
     exam.questionScores.find(
       (questionScore) =>
         questionScore.cropRegionId === cropRegionId &&
-        questionScore.studentId === studentId
+        questionScore.examStudentId === examStudentId
     )!
 
   return {
     exam,
-    studentA,
-    studentB,
+    examStudentA,
+    examStudentB,
     page1,
     page2,
     region1,
@@ -88,13 +89,13 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("① 同一ページの生徒swap: carry で採点が追従し DrawingAnnotation が温存される", async () => {
-    const { studentA, studentB, page1, region1, image, score } =
+    const { examStudentA, examStudentB, page1, region1, image, score } =
       await buildSimpleExam()
 
-    const scoreA = score(region1.id, studentA.id)
-    const scoreB = score(region1.id, studentB.id)
+    const scoreA = score(region1.id, examStudentA.id)
+    const scoreB = score(region1.id, examStudentB.id)
 
-    // scoreA（studentA の r1 採点）に注釈を付ける
+    // scoreA（examStudentA の r1 採点）に注釈を付ける
     const annotation = await testPrisma.drawingAnnotation.create({
       data: {
         id: crypto.randomUUID(),
@@ -108,36 +109,36 @@ describe("applyStudentAnswerPlacements", () => {
 
     const result = await applyStudentAnswerPlacements([
       {
-        fileId: image(page1.id, studentA.id).id,
-        finalStudentId: studentB.id,
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
       {
-        fileId: image(page1.id, studentB.id).id,
-        finalStudentId: studentA.id,
+        fileId: image(page1.id, examStudentB.id).id,
+        finalExamStudentId: examStudentA.id,
         finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
     ])
     expect(result.success).toBe(true)
 
-    // 画像の studentId が入れ替わり、ページは p1 のまま
+    // 画像の examStudentId が入れ替わり、ページは p1 のまま
     const imgAfterA = await testPrisma.studentAnswerImage.findUniqueOrThrow({
-      where: { id: image(page1.id, studentA.id).id },
+      where: { id: image(page1.id, examStudentA.id).id },
     })
-    expect(imgAfterA.studentId).toBe(studentB.id)
+    expect(imgAfterA.examStudentId).toBe(examStudentB.id)
     expect(imgAfterA.examPageId).toBe(page1.id)
 
-    // 採点が studentId 付け替えで追従（行=id は保持）
+    // 採点が examStudentId 付け替えで追従（行=id は保持）
     const scoreAAfter = await testPrisma.questionScore.findUniqueOrThrow({
       where: { id: scoreA.id },
     })
     const scoreBAfter = await testPrisma.questionScore.findUniqueOrThrow({
       where: { id: scoreB.id },
     })
-    expect(scoreAAfter.studentId).toBe(studentB.id)
-    expect(scoreBAfter.studentId).toBe(studentA.id)
+    expect(scoreAAfter.examStudentId).toBe(examStudentB.id)
+    expect(scoreBAfter.examStudentId).toBe(examStudentA.id)
 
     // DrawingAnnotation は同じ questionScore に紐付いたまま温存
     const annotationAfter = await testPrisma.drawingAnnotation.findUnique({
@@ -148,10 +149,10 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("① 同一ページ discard: 影響採点が削除され注釈も消える", async () => {
-    const { studentA, studentB, page1, region1, image, score } =
+    const { examStudentA, examStudentB, page1, region1, image, score } =
       await buildSimpleExam()
 
-    const scoreA = score(region1.id, studentA.id)
+    const scoreA = score(region1.id, examStudentA.id)
     await testPrisma.drawingAnnotation.create({
       data: {
         id: crypto.randomUUID(),
@@ -165,14 +166,14 @@ describe("applyStudentAnswerPlacements", () => {
 
     const result = await applyStudentAnswerPlacements([
       {
-        fileId: image(page1.id, studentA.id).id,
-        finalStudentId: studentB.id,
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
       {
-        fileId: image(page1.id, studentB.id).id,
-        finalStudentId: studentA.id,
+        fileId: image(page1.id, examStudentB.id).id,
+        finalExamStudentId: examStudentA.id,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
@@ -193,7 +194,8 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("複合回答の採点も carry で追従し、discard で破棄される", async () => {
-    const { studentA, studentB, page1, page2, image } = await buildSimpleExam()
+    const { examStudentA, examStudentB, page1, page2, image } =
+      await buildSimpleExam()
     const user = await testPrisma.user.findFirstOrThrow()
 
     const compoundAnswer = await testPrisma.compoundAnswer.create({
@@ -210,7 +212,7 @@ describe("applyStudentAnswerPlacements", () => {
       data: {
         id: crypto.randomUUID(),
         compoundAnswerId: compoundAnswer.id,
-        studentId: studentA.id,
+        examStudentId: examStudentA.id,
         userId: user.id,
         status: "correct",
         recognizedAnswer: "42",
@@ -220,14 +222,14 @@ describe("applyStudentAnswerPlacements", () => {
     // 同一ページで A → B へ carry（B 側に複合採点は無いので単独移動）
     const carried = await applyStudentAnswerPlacements([
       {
-        fileId: image(page1.id, studentA.id).id,
-        finalStudentId: studentB.id,
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
       {
-        fileId: image(page1.id, studentB.id).id,
-        finalStudentId: studentA.id,
+        fileId: image(page1.id, examStudentB.id).id,
+        finalExamStudentId: examStudentA.id,
         finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
@@ -239,7 +241,7 @@ describe("applyStudentAnswerPlacements", () => {
       where: { compoundAnswerId: compoundAnswer.id },
     })
     expect(afterCarry).toHaveLength(1)
-    expect(afterCarry[0].studentId).toBe(studentB.id)
+    expect(afterCarry[0].examStudentId).toBe(examStudentB.id)
     expect(afterCarry[0].recognizedAnswer).toBe("42")
     expect(afterCarry[0].id).toBe(compoundScoreA.id)
 
@@ -247,14 +249,14 @@ describe("applyStudentAnswerPlacements", () => {
     // carry 後この画像は B のもの。p2×B と入れ替える形で p1→p2 へ動かす。
     const discarded = await applyStudentAnswerPlacements([
       {
-        fileId: image(page1.id, studentA.id).id,
-        finalStudentId: studentB.id,
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page2.id,
         scorePolicy: "discard",
       },
       {
-        fileId: image(page2.id, studentB.id).id,
-        finalStudentId: studentB.id,
+        fileId: image(page2.id, examStudentB.id).id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
@@ -268,23 +270,23 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("② ページ跨ぎ移動(discard): examPageId が更新され、移動元ページの採点が破棄される", async () => {
-    const { studentA, page1, page2, region1, region2, image, score } =
+    const { examStudentA, page1, page2, region1, region2, image, score } =
       await buildSimpleExam()
 
-    const imgP1A = image(page1.id, studentA.id)
-    const imgP2A = image(page2.id, studentA.id)
+    const imgP1A = image(page1.id, examStudentA.id)
+    const imgP2A = image(page2.id, examStudentA.id)
 
     // A の p1画像 と p2画像 を入れ替え（両方ページが変わる→discard）
     const result = await applyStudentAnswerPlacements([
       {
         fileId: imgP1A.id,
-        finalStudentId: studentA.id,
+        finalExamStudentId: examStudentA.id,
         finalExamPageId: page2.id,
         scorePolicy: "discard",
       },
       {
         fileId: imgP2A.id,
-        finalStudentId: studentA.id,
+        finalExamStudentId: examStudentA.id,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
@@ -304,24 +306,24 @@ describe("applyStudentAnswerPlacements", () => {
     // A の r1・r2 採点は破棄
     expect(
       await testPrisma.questionScore.findUnique({
-        where: { id: score(region1.id, studentA.id).id },
+        where: { id: score(region1.id, examStudentA.id).id },
       })
     ).toBeNull()
     expect(
       await testPrisma.questionScore.findUnique({
-        where: { id: score(region2.id, studentA.id).id },
+        where: { id: score(region2.id, examStudentA.id).id },
       })
     ).toBeNull()
   })
 
   it("carry かつページ変化はエラー（DBは不変）", async () => {
-    const { studentA, page1, page2, image } = await buildSimpleExam()
-    const imgP1A = image(page1.id, studentA.id)
+    const { examStudentA, page1, page2, image } = await buildSimpleExam()
+    const imgP1A = image(page1.id, examStudentA.id)
 
     const result = await applyStudentAnswerPlacements([
       {
         fileId: imgP1A.id,
-        finalStudentId: studentA.id,
+        finalExamStudentId: examStudentA.id,
         finalExamPageId: page2.id, // ページ変化
         scorePolicy: "carry", // 追従は不可
       },
@@ -336,20 +338,20 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("carry: 移動先生徒の孤立採点は掃除され二重計上しない", async () => {
-    const { studentA, studentB, page1, region1, image } =
+    const { examStudentA, examStudentB, page1, region1, image } =
       await buildSimpleExam()
 
     // B の p1 画像だけを直接削除し、採点を孤立させる（deleteStudentAnswer は採点も
     // 消すので、ここでは孤立状態を作るために低レベル API を使う）。
     // これで移動先 (p1,B) は空マスになり、B は r1 に孤立採点だけを持つ。
     await testPrisma.studentAnswerImage.delete({
-      where: { id: image(page1.id, studentB.id).id },
+      where: { id: image(page1.id, examStudentB.id).id },
     })
 
     const result = await applyStudentAnswerPlacements([
       {
-        fileId: image(page1.id, studentA.id).id,
-        finalStudentId: studentB.id,
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "carry",
       },
@@ -361,17 +363,17 @@ describe("applyStudentAnswerPlacements", () => {
       where: { cropRegionId: region1.id },
     })
     expect(r1Scores).toHaveLength(1)
-    expect(r1Scores[0].studentId).toBe(studentB.id)
+    expect(r1Scores[0].examStudentId).toBe(examStudentB.id)
   })
 
-  it("finalStudentId=null（削除）は拒否され、画像は残る", async () => {
-    const { studentA, page1, image } = await buildSimpleExam()
-    const imgP1A = image(page1.id, studentA.id)
+  it("finalExamStudentId=null（削除）は拒否され、画像は残る", async () => {
+    const { examStudentA, page1, image } = await buildSimpleExam()
+    const imgP1A = image(page1.id, examStudentA.id)
 
     const result = await applyStudentAnswerPlacements([
       {
         fileId: imgP1A.id,
-        finalStudentId: null,
+        finalExamStudentId: null,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
@@ -385,14 +387,14 @@ describe("applyStudentAnswerPlacements", () => {
   })
 
   it("移動先が batch 外の答案で占有されていればエラー（上書きしない）", async () => {
-    const { studentA, studentB, page1, image } = await buildSimpleExam()
-    const imgP1A = image(page1.id, studentA.id)
+    const { examStudentA, examStudentB, page1, image } = await buildSimpleExam()
+    const imgP1A = image(page1.id, examStudentA.id)
 
     // A の p1 を、占有済みの (p1,B) へ単独移動（入れ替えでない）→ 拒否
     const result = await applyStudentAnswerPlacements([
       {
         fileId: imgP1A.id,
-        finalStudentId: studentB.id,
+        finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
       },
@@ -403,7 +405,7 @@ describe("applyStudentAnswerPlacements", () => {
     const imgAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({
       where: { id: imgP1A.id },
     })
-    expect(imgAfter.studentId).toBe(studentA.id)
+    expect(imgAfter.examStudentId).toBe(examStudentA.id)
     expect(imgAfter.examPageId).toBe(page1.id)
   })
 })

@@ -57,7 +57,7 @@ export function GridCell({
   const config = statusConfig[statusKey]
   const Icon = config.icon
   const isMaster =
-    answer.studentId === "MASTER" || answer.studentName === "模範解答"
+    answer.examStudentId === "MASTER" || answer.studentName === "模範解答"
 
   // 基本のセルクラス
   const cellClasses = ["flex shrink-0 flex-col gap-1 p-2 border-2"]

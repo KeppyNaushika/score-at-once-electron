@@ -23,7 +23,7 @@ export interface ExportAPI {
     // 採点データバリデーション（全エクスポート共通）
     validateScoringData: (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       userId: string
     }) => Promise<
       | { success: false; error: string }
@@ -42,7 +42,7 @@ export interface ExportAPI {
     // PDF出力に必要なデータを取得
     getPdfExportData: (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
     }) => Promise<{
       success: boolean
       examName?: string
@@ -54,7 +54,7 @@ export interface ExportAPI {
     createPdfFromRenderedImages: (options: {
       examId: string
       renderedPages: Array<{
-        studentId: string
+        examStudentId: string
         pageNumber: number
         imageData: ArrayBuffer
       }>
@@ -133,7 +133,7 @@ export interface ExportAPI {
     // 個人成績表用データ取得
     getIndividualReportData: (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       options: IndividualReportOptions
       studentPlacements?: Record<string, StudentExportPlacement>
     }) => Promise<GetIndividualReportDataResult>
@@ -192,7 +192,7 @@ export interface ExportAPI {
     // Excelプレビューデータ取得
     getExcelPreviewData: (options: {
       examId: string
-      selectedStudentIds: string[]
+      selectedExamStudentIds: string[]
       studentPlacements?: Record<string, StudentExportPlacement>
     }) => Promise<{
       success: boolean
@@ -207,7 +207,7 @@ export interface ExportAPI {
         label: string
       }>
       scoringData?: Array<{
-        studentId: string
+        examStudentId: string
         studentName: string
         studentNumber: string
         grade?: string
@@ -247,7 +247,7 @@ export interface ExportAPI {
     // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録
     captureReturnSnapshot: (options: {
       examId: string
-      studentIds: string[]
+      examStudentIds: string[]
     }) => Promise<CaptureReturnSnapshotResult>
 
     // 返却版と現在状態の差分（変更があった生徒の検出）
@@ -257,7 +257,7 @@ export interface ExportAPI {
   // Excel Export related
   exportGradingDataExcel: (options: {
     examId: string
-    selectedStudentIds: string[]
+    selectedExamStudentIds: string[]
     outputPath?: string
     forceExport?: boolean
     studentPlacements?: Record<string, StudentExportPlacement>

@@ -42,24 +42,18 @@ export function setupDrawingHandlers() {
     "描画アノテーション取得に失敗しました"
   )
 
-  /** 特定の学生・試験の全描画アノテーション取得（透明度制御用） */
+  /** 特定の受験者の全描画アノテーション取得（透明度制御用） */
   registerSafeHandler(
-    "drawing:getByStudent",
-    async (
-      studentId: string,
-      examId: string,
-      type?: DrawingType,
-      userId?: string
-    ) => {
-      const result = await drawingService.getDrawingAnnotationsByStudent(
-        studentId,
-        examId,
+    "drawing:getByExamStudent",
+    async (examStudentId: string, type?: DrawingType, userId?: string) => {
+      const result = await drawingService.getDrawingAnnotationsByExamStudent(
+        examStudentId,
         type,
         userId
       )
       return { success: true, data: result }
     },
-    "学生別描画アノテーション取得に失敗しました"
+    "受験者別描画アノテーション取得に失敗しました"
   )
 
   /** 試験全体の描画アノテーション取得（PDF出力用） */

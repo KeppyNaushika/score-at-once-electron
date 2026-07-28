@@ -12,7 +12,7 @@ export interface UploadStudentAnswerFileData {
   originalFileName: string
   type: string
   buffer: ArrayBuffer
-  studentId: string
+  examStudentId: string
   examPageId: string
   overwrite: boolean
   correctWithMarkers?: boolean
@@ -62,7 +62,7 @@ export interface StudentAnswerAPI {
   }>
   associateStudentAnswerWithStudent: (
     studentAnswerId: string,
-    studentId: string
+    examStudentId: string
   ) => Promise<{
     success: boolean
     answerSheet?: StudentAnswerImageWithExamPageAndStudent
@@ -84,7 +84,7 @@ export interface StudentAnswerAPI {
   applyStudentAnswerPlacements: (
     moves: Array<{
       fileId: string
-      finalStudentId: string | null
+      finalExamStudentId: string | null
       finalExamPageId: string
       scorePolicy: PlacementScorePolicy | "discard"
     }>

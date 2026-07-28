@@ -140,7 +140,7 @@ interface ScoringSidePanelProps {
     firstName: string
     customOrder: number
   }[]
-  onStudentChange?: (studentId: string) => void
+  onStudentChange?: (examStudentId: string) => void
   selectedStudentAnswerImageIds?: Set<string>
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   scoringBehavior?: "next-student" | "next-question" | "stay"
@@ -152,10 +152,10 @@ interface ScoringSidePanelProps {
   selectedScoringDataIds?: string[]
   questionScores?: Array<{
     id: string
-    studentId: string
+    examStudentId: string
     cropRegionId: string
   }>
-  allScoringData?: Array<{ id: string; studentId: string }>
+  allScoringData?: Array<{ id: string; examStudentId: string }>
   onQuestionScoreCreated?: () => void
   /** キャンバスでアノテーション変更時にブラウザ一覧をリロードするキー */
   annotationRefreshKey?: number
@@ -272,7 +272,7 @@ export function ScoringSidePanel({
 
   // アノテーションの生徒・設問に移動
   const handleNavigateTo = useCallback(
-    (studentId: string, cropRegionId: string) => {
+    (examStudentId: string, cropRegionId: string) => {
       const targetCropRegion = cropRegions.find(
         (cropRegion) => cropRegion.id === cropRegionId
       )
@@ -280,20 +280,20 @@ export function ScoringSidePanel({
         onCropRegionChange(targetCropRegion)
       }
       if (onStudentChange) {
-        onStudentChange(studentId)
+        onStudentChange(examStudentId)
       }
     },
     [cropRegions, onCropRegionChange, onStudentChange]
   )
 
-  // 現在のstudentIdを取得
-  const currentStudentId = (() => {
+  // 現在のexamStudentIdを取得
+  const currentExamStudentId = (() => {
     if (!selectedStudentAnswerImageIds || !studentAnswerImages) return undefined
     const selectedId = Array.from(selectedStudentAnswerImageIds)[0]
     const selectedAnswer = studentAnswerImages.find(
       (studentAnswerImage) => studentAnswerImage.id === selectedId
     )
-    return selectedAnswer?.student?.id
+    return selectedAnswer?.examStudentId
   })()
 
   return (
@@ -527,7 +527,7 @@ export function ScoringSidePanel({
             examId={examId}
             currentUserId={currentUserId}
             currentCropRegionId={currentCropRegion?.id}
-            currentStudentId={currentStudentId}
+            currentExamStudentId={currentExamStudentId}
             cropRegions={cropRegions}
             gradingMode={gradingMode}
             displayItems={annotationBrowser.displayItems}

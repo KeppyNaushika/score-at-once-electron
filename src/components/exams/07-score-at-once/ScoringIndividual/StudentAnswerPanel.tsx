@@ -22,13 +22,13 @@ interface Student {
 
 interface StudentAnswerPanelProps {
   students: Student[]
-  currentStudentId: string
+  currentExamStudentId: string
   onStudentChange: (studentId: string) => void
 }
 
 export function StudentAnswerPanel({
   students,
-  currentStudentId,
+  currentExamStudentId,
   onStudentChange,
 }: StudentAnswerPanelProps) {
   // 受験生徒順にソート
@@ -36,12 +36,12 @@ export function StudentAnswerPanel({
     (studentA, studentB) => studentA.customOrder - studentB.customOrder
   )
   const currentStudent = sortedStudents.find(
-    (student) => student.id === currentStudentId
+    (student) => student.id === currentExamStudentId
   )
 
   const handlePrevStudent = () => {
     const currentIndex = sortedStudents.findIndex(
-      (student) => student.id === currentStudentId
+      (student) => student.id === currentExamStudentId
     )
     if (currentIndex > 0) {
       onStudentChange(sortedStudents[currentIndex - 1].id)
@@ -50,7 +50,7 @@ export function StudentAnswerPanel({
 
   const handleNextStudent = () => {
     const currentIndex = sortedStudents.findIndex(
-      (student) => student.id === currentStudentId
+      (student) => student.id === currentExamStudentId
     )
     if (currentIndex < sortedStudents.length - 1) {
       onStudentChange(sortedStudents[currentIndex + 1].id)
@@ -67,13 +67,13 @@ export function StudentAnswerPanel({
           onClick={handlePrevStudent}
           disabled={
             sortedStudents.findIndex(
-              (student) => student.id === currentStudentId
+              (student) => student.id === currentExamStudentId
             ) === 0
           }
         >
           ←
         </Button>
-        <Select value={currentStudentId} onValueChange={onStudentChange}>
+        <Select value={currentExamStudentId} onValueChange={onStudentChange}>
           <SelectTrigger className="flex-1">
             <SelectValue>
               {currentStudent
@@ -95,7 +95,7 @@ export function StudentAnswerPanel({
           onClick={handleNextStudent}
           disabled={
             sortedStudents.findIndex(
-              (student) => student.id === currentStudentId
+              (student) => student.id === currentExamStudentId
             ) ===
             sortedStudents.length - 1
           }
@@ -107,7 +107,7 @@ export function StudentAnswerPanel({
       {/* 現在の位置表示 */}
       <div className="text-center text-xs text-gray-500">
         {sortedStudents.findIndex(
-          (student) => student.id === currentStudentId
+          (student) => student.id === currentExamStudentId
         ) + 1}{" "}
         / {sortedStudents.length}
       </div>

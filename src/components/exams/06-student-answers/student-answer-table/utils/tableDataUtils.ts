@@ -10,47 +10,63 @@ import type {
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /**
- * セルレコード配列に (studentId, examPageId) が含まれるかを判定する。
+ * セルレコード配列に (受験者, ページ) が含まれるかを判定する。
  * 文字列合成キーを使わず identity のフィールド比較で照合する（DnD の FileState と同流儀）。
  * ユーザートグル由来の小さな配列（disabledState.cells）専用。
  */
 export function hasCell(
   cells: DisabledCell[],
-  studentId: string,
-  examPageId: string
+  examStudent: CellRow,
+  examPage: CellColumn
 ): boolean {
   return cells.some(
-    (cell) => cell.studentId === studentId && cell.examPageId === examPageId
+    (cell) =>
+      cell.examStudentId === examStudent.id && cell.examPageId === examPage.id
   )
 }
 
 /**
- * (studentId, examPageId) → 値 を O(1) で引く入れ子マップ。
- * 文字列合成キー（`${a}:${b}`）も序数も使わず、studentId → examPageId → 値 で持つ。
+ * セルの行＝受験者、列＝ページ。**実体をそのまま受け取る**（呼び出し側に
+ * `examStudent.id` を書かせない）。
+ *
+ * `ExamStudent.id` と `Student.id` はどちらも `string` なので、id を引数に取ると
+ * 取り違えても型検査が通ってしまう（実際にそれで表が全滅した）。実体を要求すれば
+ * `examStudent.studentId` を渡した時点でコンパイルエラーになる。
+ *
+ * さらに、行と列で**必須フィールドを重ならせない**（行は `studentId`、列は `pageNumber`）。
+ * 両方を `{ id: string }` にすると互いに代入可能で、引数を転置しても
+ * コンパイルが通ってしまう（＝表が全滅するのに気付けない）。
+ */
+export type CellRow = Pick<ExamStudentWithMemberships, "id" | "studentId">
+export type CellColumn = ExamPageColumn
+
+/**
+ * (受験者, ページ) → 値 を O(1) で引く入れ子マップ。
+ * 文字列合成キー（`${a}:${b}`）も序数も使わず、examStudentId → examPageId → 値 で持つ。
  * グリッド全体分に膨らみうる派生（既存答案・動的無効・配置解決）向け。
  */
 export type CellValueMap<T> = Map<string, Map<string, T>>
 
 export function setCellValue<T>(
   cellValues: CellValueMap<T>,
-  studentId: string,
-  examPageId: string,
+  examStudent: CellRow,
+  examPage: CellColumn,
   value: T
 ): void {
-  const pages = cellValues.get(studentId)
+  const pages = cellValues.get(examStudent.id)
   if (pages) {
-    pages.set(examPageId, value)
+    pages.set(examPage.id, value)
   } else {
-    cellValues.set(studentId, new Map([[examPageId, value]]))
+    cellValues.set(examStudent.id, new Map([[examPage.id, value]]))
   }
 }
 
 export function getCellValue<T>(
   cellValues: CellValueMap<T>,
-  studentId: string,
-  examPageId: string
+  examStudent: CellRow,
+  examPage: CellColumn
 ): T | undefined {
-  return cellValues.get(studentId)?.get(examPageId)
+  return cellValues.get(examStudent.id)?.get(examPage.id)
 }
 
 /** 値を持たず所属だけを表すセル集合（CellValueMap の存在判定専用の姿）。 */
@@ -58,18 +74,18 @@ export type CellLookup = CellValueMap<true>
 
 export function addCellToLookup(
   lookup: CellLookup,
-  studentId: string,
-  examPageId: string
+  examStudent: CellRow,
+  examPage: CellColumn
 ): void {
-  setCellValue(lookup, studentId, examPageId, true)
+  setCellValue(lookup, examStudent, examPage, true)
 }
 
 export function lookupHasCell(
   lookup: CellLookup,
-  studentId: string,
-  examPageId: string
+  examStudent: CellRow,
+  examPage: CellColumn
 ): boolean {
-  return getCellValue(lookup, studentId, examPageId) ?? false
+  return getCellValue(lookup, examStudent, examPage) ?? false
 }
 
 /**
@@ -80,13 +96,13 @@ export function lookupHasCell(
 export function manualDisabledReason(
   disabledState: ExtendedDisabledState,
   examStudent: ExamStudentWithMemberships,
-  examPageId: string
+  examPage: CellColumn
 ): DisabledReason {
   if (disabledState.rows.includes(examStudent.id)) {
     return examStudent.status === "absent" ? "absent_student" : "row"
   }
-  if (disabledState.cols.includes(examPageId)) return "column"
-  if (hasCell(disabledState.cells, examStudent.studentId, examPageId)) {
+  if (disabledState.cols.includes(examPage.id)) return "column"
+  if (hasCell(disabledState.cells, examStudent, examPage)) {
     return "position"
   }
   return undefined
@@ -118,21 +134,21 @@ export function calculateDynamicDisabledCells<T extends AnswerImageIdentity>(
     for (const examStudent of sortedStudents) {
       for (const examPage of examPages) {
         // 手動無効化済みのセルはスキップ
-        if (manualDisabledReason(disabledState, examStudent, examPage.id)) {
+        if (manualDisabledReason(disabledState, examStudent, examPage)) {
           continue
         }
 
         // そのセルに対応する答案があるかチェック
         const hasAnswerForCell = files.some(
           (file) =>
-            file.studentId === examStudent.studentId &&
+            file.examStudentId === examStudent.id &&
             file.examPageId === examPage.id &&
             !disabledState.files.has(file.id)
         )
 
         // 答案がない場合は動的無効化
         if (!hasAnswerForCell) {
-          addCellToLookup(dynamicDisabled, examStudent.studentId, examPage.id)
+          addCellToLookup(dynamicDisabled, examStudent, examPage)
         }
       }
     }
@@ -164,21 +180,21 @@ export function calculateCellsWithExistingAnswers<
         // アップロードモード: existingAnswers（DB答案の占有信号）から判定
         hasAnswerForCell = existingAnswers.some(
           (answer) =>
-            answer.studentId === examStudent.studentId &&
+            answer.examStudentId === examStudent.id &&
             answer.examPageId === examPage.id
         )
       } else {
         // 確認モード: files から判定
         hasAnswerForCell = files.some(
           (file) =>
-            file.studentId === examStudent.studentId &&
+            file.examStudentId === examStudent.id &&
             file.examPageId === examPage.id &&
             !disabledState.files.has(file.id)
         )
       }
 
       if (hasAnswerForCell) {
-        addCellToLookup(cells, examStudent.studentId, examPage.id)
+        addCellToLookup(cells, examStudent, examPage)
       }
     }
   }
@@ -205,42 +221,50 @@ export function getDisabledFiles<T extends AnswerImageIdentity>(
 /**
  * 確認モード（方式B）: 答案アイテムを「表のマスに置けるもの」と「置けない孤立答案」に分ける。
  *
- * マスに置ける条件は (1) studentId が現在の受験生徒（ロスター）に居る かつ
- * (2) examPageId が現在の列（examPages）に含まれる、の両方。どちらかを満たさない答案は
- * 除籍（studentId が現ロスターに無い）・ページ削除（列に無い examPageId）などで座標配置できず、
- * 表からは不可視になる（＝孤立答案）。呼び出し側で専用枠に描画して再配置できるようにする。
+ * マスに置ける条件は (1) 答案の受験者が現在のロスター（sortedStudents）に居る かつ
+ * (2) 答案のページが現在の列（examPages）に含まれる、の両方。どちらかを満たさない答案は
+ * 試験から外された・ページ削除などで座標配置できず、表からは不可視になる（＝孤立答案）。
+ * 呼び出し側で専用枠に描画して再配置できるようにする。
  *
- * placedByCell は (studentId, examPageId) で引く CellValueMap（序数キーは使わない）。
+ * ロスターと列は **実体の配列**で受け取る（呼び出し側が id を選ばない）。
+ * placedByCell は (受験者, ページ) で引く CellValueMap（序数キーは使わない）。
  * 同一セルに複数の配置可能答案が解決された場合は先着のみを配置し、後続は孤立扱いに
  * する（黙って上書きして消さない＝表からも孤立枠からも見えなくなる事故を防ぐ。
- * 実データは @@unique([examPageId, studentId]) によりセル衝突は構造的に起きないが、
+ * 実データは @@unique([examPageId, examStudentId]) によりセル衝突は構造的に起きないが、
  * 「解決不能な画像を黙って落とさない」原則をここで担保する）。
  */
 export function partitionAnswerItemsByPlacement<T extends AnswerImageIdentity>(
   items: T[],
-  rosterStudentIds: string[],
-  examPageIds: string[]
+  sortedStudents: CellRow[],
+  examPages: CellColumn[]
 ): { placedByCell: CellValueMap<T>; orphans: T[] } {
-  const rosterStudentIdSet = new Set(rosterStudentIds)
-  const columnPageIdSet = new Set(examPageIds)
+  const rosterByExamStudentId = new Map(
+    sortedStudents.map((examStudent) => [examStudent.id, examStudent])
+  )
+  const columnByExamPageId = new Map(
+    examPages.map((examPage) => [examPage.id, examPage])
+  )
 
   const placedByCell: CellValueMap<T> = new Map()
   const orphans: T[] = []
 
   for (const answerItem of items) {
-    const { studentId, examPageId } = answerItem
-    const isPlaceable =
-      studentId !== null &&
-      examPageId !== null &&
-      rosterStudentIdSet.has(studentId) &&
-      columnPageIdSet.has(examPageId)
+    const { examStudentId, examPageId } = answerItem
+    // 答案が持つ id をロスター・列の実体へ解決する。解決できない＝置き場が無い
+    const examStudent =
+      examStudentId !== null
+        ? rosterByExamStudentId.get(examStudentId)
+        : undefined
+    const examPage =
+      examPageId !== null ? columnByExamPageId.get(examPageId) : undefined
 
     // 配置可能でも同一セルが既に埋まっていれば孤立へ退避する（上書きで消さない）
     if (
-      isPlaceable &&
-      getCellValue(placedByCell, studentId, examPageId) === undefined
+      examStudent &&
+      examPage &&
+      getCellValue(placedByCell, examStudent, examPage) === undefined
     ) {
-      setCellValue(placedByCell, studentId, examPageId, answerItem)
+      setCellValue(placedByCell, examStudent, examPage, answerItem)
     } else {
       orphans.push(answerItem)
     }

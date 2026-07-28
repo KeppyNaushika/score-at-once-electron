@@ -27,7 +27,7 @@ export interface ScoreUpdateData {
 }
 
 export interface ScoreCreateData {
-  studentId: string
+  examStudentId: string
   cropRegionId: string
   partialScore?: number
   status: ScoringStatus

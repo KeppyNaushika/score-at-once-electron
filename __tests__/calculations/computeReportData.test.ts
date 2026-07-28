@@ -73,6 +73,7 @@ function createMinimalReport(
       tags: [],
     },
     scoringData: {
+      examStudentId: "es1",
       studentId: "s1",
       studentName: "テスト太郎",
       studentNumber: "001",

@@ -696,13 +696,13 @@ function ScoringMainViewContent() {
     scoringOperationMode: effectiveMode,
   })
 
-  const currentStudentId = useMemo(() => {
+  const currentExamStudentId = useMemo(() => {
     if (selectedStudentAnswerImageIds.size > 0) {
       const selectedAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
       const selectedAnswer = studentAnswerImages.find(
         (answerImage) => answerImage.id === selectedAnswerId
       )
-      return selectedAnswer?.student?.id || ""
+      return selectedAnswer?.examStudentId || ""
     }
     return ""
   }, [selectedStudentAnswerImageIds, studentAnswerImages])
@@ -771,7 +771,7 @@ function ScoringMainViewContent() {
             itemsPerLine={itemsPerLine}
             autoScroll={autoScroll}
             showStudentNames={showStudentNames}
-            currentStudentId={currentStudentId || undefined}
+            currentExamStudentId={currentExamStudentId || undefined}
             currentUserId={currentUserId || undefined}
             questionScores={questionScores}
             onQuestionScoreCreated={handleQuestionScoreCreated}

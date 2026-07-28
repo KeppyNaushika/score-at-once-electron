@@ -7,7 +7,7 @@
  * 未保存答案（upload）だけは DB レコードが存在しないため、同定フィールド＋未永続バイトを持つ
  * 投射型（`UnsavedAnswerImage`）で扱う（アップロード前に限り許容される投射）。
  *
- * 同定・key は必ず id（`studentAnswerImage.id` / `studentId` / `examPageId`）。
+ * 同定・key は必ず id（`studentAnswerImage.id` / `examStudentId` / `examPageId`）。
  * sqlite-nas-sync では id 以外の unique が同期違反となるため、pageNumber 等の序数は
  * 恒久的に key になり得ない。
  */
@@ -18,11 +18,11 @@
 
 /**
  * 表・DnD が扱うセル要素の同定。保存済み（`PlacedAnswerImage`）・未保存
- * （`UnsavedAnswerImage`）の両方が満たす。座標は id のみ（examPageId・studentId）。
+ * （`UnsavedAnswerImage`）の両方が満たす。座標は id のみ（examPageId・examStudentId）。
  */
 export interface AnswerImageIdentity {
   id: string
-  studentId: string | null // 配置済みの生徒（= Student.id）。未配置は null
+  examStudentId: string | null // 配置済みの受験者（= ExamStudent.id）。未配置は null
   examPageId: string | null // 配置済みの ExamPage.id。未配置は null
 }
 
@@ -41,9 +41,9 @@ export interface ExamPageColumn {
 
 /**
  * 未保存答案（アップロード源）。ドロップ→変換した画像で、DB にはまだ無い。
- * `PlacedAnswerImage` と同じ同定フィールド（id/studentId/examPageId）を満たしつつ、
+ * `PlacedAnswerImage` と同じ同定フィールド（id/examStudentId/examPageId）を満たしつつ、
  * バイトは state 上の `buffer`（`imagePath` は保存まで null）で持つ。
- * upload の配置は「配列順＋配置戦略」で決まるため studentId/examPageId は未使用
+ * upload の配置は「配列順＋配置戦略」で決まるため examStudentId/examPageId は未使用
  * （型統一のため保持し、確定時は列＝ExamPage 実体・行＝ExamStudent 実体から導出する）。
  */
 export interface UnsavedAnswerImage extends AnswerImageIdentity {
@@ -83,7 +83,7 @@ export interface UploadData {
   originalFileName: string
   type: string
   buffer: ArrayBuffer
-  studentId: string // 受験生徒ID（= Student.id）
+  examStudentId: string // 受験者ID（= ExamStudent.id）
   examPageId: string // 配置先 ExamPage.id
   overwrite: boolean // 上書きフラグ
   correctWithMarkers?: boolean // マーカー補正フラグ
@@ -96,7 +96,7 @@ export interface UploadData {
 
 /**
  * 保留中の変更データ（view 方式B の move/swap を確認モーダルへ渡す view-model）。
- * 同定は id（examPageId/studentId）。studentName・pageNumber は確認モーダル表示用に
+ * 同定は id（examPageId/examStudentId）。studentName・pageNumber は確認モーダル表示用に
  * 生成時点でエンティティから導出して持つ（DBデータの射影ではなく UI 差分の表示補助）。
  */
 export interface PendingChange {
@@ -108,9 +108,9 @@ export interface PendingChange {
   toPosition: PendingChangePosition // 移動先の位置
 }
 
-/** 変更の移動元/移動先の位置。同定は examPageId/studentId、表示は導出値。 */
+/** 変更の移動元/移動先の位置。同定は examPageId/examStudentId、表示は導出値。 */
 export interface PendingChangePosition {
-  studentId: string | null
+  examStudentId: string | null
   examPageId: string
   pageNumber: number // 表示用（列 ExamPage から導出）
   studentName?: string // 表示用（行 ExamStudent から導出）

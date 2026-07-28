@@ -18,17 +18,17 @@ import { registerHandler } from "./ipcHandlerUtils"
 function serializeQuestionScore(score: {
   id: string
   cropRegionId: string
-  studentId: string | null
+  examStudentId: string
   partialScore: { toNumber(): number } | null
   status: string
-  userId: string | null
+  userId: string
   createdAt: Date
   updatedAt: Date
 }) {
   return {
     id: score.id,
     cropRegionId: score.cropRegionId,
-    studentId: score.studentId,
+    examStudentId: score.examStudentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: score.status,
     userId: score.userId,
@@ -58,14 +58,16 @@ export function setupExamHandlers(): void {
           type: region.type,
           questionScores: region.questionScores.map((score) => ({
             status: score.status,
-            studentId: score.studentId,
+            examStudentId: score.examStudentId,
             partialScore:
               score.partialScore == null ? null : Number(score.partialScore),
           })),
         }))
       ),
       answerImages: exam.examPages.flatMap((page) =>
-        page.studentAnswerImages.map((img) => ({ studentId: img.studentId }))
+        page.studentAnswerImages.map((img) => ({
+          examStudentId: img.examStudentId,
+        }))
       ),
       examStudents: exam.examStudents,
       examSubtotalGroups: exam.examSubtotalGroups,

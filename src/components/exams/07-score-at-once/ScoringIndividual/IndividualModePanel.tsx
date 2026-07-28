@@ -22,7 +22,7 @@ interface IndividualModePanelProps {
   students: Student[]
   selectedAnswers?: Set<string> // TODO: selectedPageImageIdsに統一予定
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
-  onStudentChange: (studentId: string) => void
+  onStudentChange: (examStudentId: string) => void
   scoringBehavior: ScoringBehavior
   onScoringBehaviorChange: (behavior: ScoringBehavior) => void
 }
@@ -36,13 +36,13 @@ export function IndividualModePanel({
   onScoringBehaviorChange,
 }: IndividualModePanelProps) {
   // selectedAnswersから現在の生徒IDを取得
-  const currentStudentId = useMemo(() => {
+  const currentExamStudentId = useMemo(() => {
     if (selectedAnswers && selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
       const selectedAnswer = studentAnswerImages?.find(
         (studentAnswerImage) => studentAnswerImage.id === selectedAnswerId
       )
-      return selectedAnswer?.student?.id || ""
+      return selectedAnswer?.examStudentId || ""
     }
     return ""
   }, [selectedAnswers, studentAnswerImages])
@@ -50,7 +50,7 @@ export function IndividualModePanel({
     <>
       <StudentAnswerPanel
         students={students}
-        currentStudentId={currentStudentId}
+        currentExamStudentId={currentExamStudentId}
         onStudentChange={onStudentChange}
       />
 

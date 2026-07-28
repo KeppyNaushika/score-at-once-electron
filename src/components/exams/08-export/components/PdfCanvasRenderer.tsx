@@ -44,7 +44,7 @@ interface PdfCanvasRendererProps {
   /** 全ページのレンダリング完了時のコールバック */
   onComplete?: (
     renderedPages: Array<{
-      studentId: string
+      examStudentId: string
       pageNumber: number
       imageData: ArrayBuffer
     }>
@@ -285,7 +285,7 @@ export function PdfCanvasRenderer({
 
       return {
         pageIndex,
-        studentId: page.studentId,
+        examStudentId: page.examStudentId,
         pageNumber: page.pageNumber,
         imageData: arrayBuffer,
       }
@@ -397,7 +397,7 @@ export function PdfCanvasRenderer({
 
       // 結果を順序通りに並べて返す
       const orderedResults: Array<{
-        studentId: string
+        examStudentId: string
         pageNumber: number
         imageData: ArrayBuffer
       }> = []
@@ -405,7 +405,7 @@ export function PdfCanvasRenderer({
         const result = renderedPages.get(i)
         if (result) {
           orderedResults.push({
-            studentId: result.studentId,
+            examStudentId: result.examStudentId,
             pageNumber: result.pageNumber,
             imageData: result.imageData,
           })

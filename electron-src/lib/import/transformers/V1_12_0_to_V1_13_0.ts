@@ -14,14 +14,19 @@
  */
 
 import type {
-  ArchiveScoresData,
   ExamArchiveData,
   ExamArchiveVersion,
   ExamTransformResult,
   ExamVersionTransformer,
 } from "../../../../src/types/examArchive.types"
+import type {
+  LegacyQuestionScore,
+  LegacyScoresData,
+} from "./shared/legacyStudentKeyedScores"
 
-type ArchiveQuestionScore = ArchiveScoresData["questionScores"][number]
+// この変換器が扱うのは 1.13.0 時点の形状（採点層はまだ studentId 直結）。
+// examStudentId への付け替えは V1_20_0_to_V1_21_0 が行う。
+type ArchiveQuestionScore = LegacyQuestionScore
 
 const cellKey = (questionScore: ArchiveQuestionScore): string =>
   `${questionScore.studentId} ${questionScore.cropRegionId}`
@@ -43,8 +48,8 @@ const pickLatest = (rows: ArchiveQuestionScore[]): ArchiveQuestionScore =>
  *
  * v1.13.0 アーカイブ（final/proposed 行なし・scoreDecisions あり）には無変更で冪等。
  */
-export function convertScoresDataToV1_13(scoresData: ArchiveScoresData): {
-  scoresData: ArchiveScoresData
+export function convertScoresDataToV1_13(scoresData: LegacyScoresData): {
+  scoresData: LegacyScoresData
   warnings: string[]
 } {
   const warnings: string[] = []
@@ -168,12 +173,14 @@ export class V1_12_0_to_V1_13_0_Transformer implements ExamVersionTransformer {
   readonly toVersion: ExamArchiveVersion = "1.13.0"
 
   transform(data: ExamArchiveData): ExamTransformResult {
-    const { scoresData, warnings } = convertScoresDataToV1_13(data.scoresData)
+    const { scoresData, warnings } = convertScoresDataToV1_13(
+      data.scoresData as unknown as LegacyScoresData
+    )
     return {
       data: {
         ...data,
         manifest: { ...data.manifest, version: this.toVersion },
-        scoresData,
+        scoresData: scoresData as unknown as ExamArchiveData["scoresData"],
       },
       warnings: warnings.map((warning) => `1.12.0→1.13.0: ${warning}`),
     }

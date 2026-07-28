@@ -50,46 +50,72 @@ export async function detectScoringConflicts(
     },
     include: {
       cropRegion: true,
-      student: true,
+      examStudent: { include: { student: true } },
     },
   })
 
-  // 既存スコアをキー（studentId + cropRegionId）でインデックス化
+  // 既存スコアをキー（examStudentId + cropRegionId）でインデックス化
   const existingScoreMap = new Map<string, (typeof existingScores)[0]>()
   for (const score of existingScores) {
-    const key = `${score.studentId}:${score.cropRegionId}`
+    const key = `${score.examStudentId}:${score.cropRegionId}`
     existingScoreMap.set(key, score)
   }
 
-  // CropRegionのラベル・配点を取得
+  // CropRegionのラベル・配点を取得（試験の同定にも使う）
   const cropRegions = await prisma.cropRegion.findMany({
     where: { id: { in: existingCropRegionIds } },
+    include: { examPage: { select: { examId: true } } },
   })
   const cropRegionMap = new Map(
     cropRegions.map((cropRegion) => [cropRegion.id, cropRegion])
   )
+  const existingExamId = cropRegions[0]?.examPage.examId
 
-  // 生徒情報を取得
-  const studentIds = Object.values(studentIdMapping)
-  const students = await prisma.student.findMany({
-    where: { id: { in: studentIds } },
-  })
-  const studentMap = new Map(students.map((student) => [student.id, student]))
+  // 採点行は受験者に紐づくので、アーカイブ側の受験者→生徒を引けるようにする
+  const importStudentIdByExamStudentId = new Map(
+    importData.examData.examStudents.map((examStudent) => [
+      examStudent.id,
+      examStudent.studentId,
+    ])
+  )
+
+  // 既存DBの受験者を生徒IDで引けるようにする（氏名表示もここから取る）
+  const existingExamStudents = existingExamId
+    ? await prisma.examStudent.findMany({
+        where: {
+          examId: existingExamId,
+          studentId: { in: Object.values(studentIdMapping) },
+        },
+        include: { student: true },
+      })
+    : []
+  const existingExamStudentByStudentId = new Map(
+    existingExamStudents.map((examStudent) => [
+      examStudent.studentId,
+      examStudent,
+    ])
+  )
 
   // インポートデータの各QuestionScoreについて競合をチェック
   for (const importScore of importData.scoresData.questionScores) {
-    const mappedStudentId = importScore.studentId
-      ? studentIdMapping[importScore.studentId]
+    const importStudentId = importStudentIdByExamStudentId.get(
+      importScore.examStudentId
+    )
+    const mappedStudentId = importStudentId
+      ? studentIdMapping[importStudentId]
       : null
     const mappedCropRegionId = cropRegionIdMapping[importScore.cropRegionId]
+    const existingExamStudent = mappedStudentId
+      ? existingExamStudentByStudentId.get(mappedStudentId)
+      : undefined
 
-    if (!mappedStudentId || !mappedCropRegionId) {
+    if (!mappedStudentId || !mappedCropRegionId || !existingExamStudent) {
       // マッピングがない場合は新規
       newCount++
       continue
     }
 
-    const key = `${mappedStudentId}:${mappedCropRegionId}`
+    const key = `${existingExamStudent.id}:${mappedCropRegionId}`
     const existingScore = existingScoreMap.get(key)
 
     if (!existingScore) {
@@ -115,15 +141,13 @@ export async function detectScoringConflicts(
       unchangedCount++
     } else {
       // データが異なる — 競合として記録
-      const student = studentMap.get(mappedStudentId)
+      const { student } = existingExamStudent
       const cropRegion = cropRegionMap.get(mappedCropRegionId)
 
       conflicts.push({
         importScoreId: importScore.id,
         existingScoreId: existingScore.id,
-        studentName: student
-          ? `${student.lastName}${student.firstName}`
-          : "不明",
+        studentName: `${student.lastName}${student.firstName}`,
         studentId: mappedStudentId,
         questionLabel: cropRegion?.label ?? "不明",
         cropRegionId: mappedCropRegionId,

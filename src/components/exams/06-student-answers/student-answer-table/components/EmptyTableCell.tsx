@@ -60,10 +60,10 @@ export function EmptyTableCell({
   // 欠席生徒のマスは「答案なし」表示だが、欠席者に答案を割り当てないようドロップ不可にする。
   const isAbsentStudent = examStudent?.status === "absent"
   const { setNodeRef, isOver } = useDroppable({
-    id: encodeCellDroppableId(
-      examStudent?.studentId ?? "none",
-      examPage?.id ?? "none"
-    ),
+    id:
+      examStudent && examPage
+        ? encodeCellDroppableId(examStudent, examPage)
+        : "cell:none:none",
     disabled: mode !== "view" || !examStudent || isAbsentStudent,
   })
   const isDropTarget = mode === "view" && isOver

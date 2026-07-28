@@ -13,12 +13,12 @@ import {
 
 /** 二値パターンから SpInputStudent を作る。1=正答, 0=誤答, null=未採点 */
 function makeStudent(
-  studentId: string,
+  examStudentId: string,
   pattern: (0 | 1 | null)[]
 ): SpInputStudent {
   return {
-    studentId,
-    studentName: studentId,
+    examStudentId,
+    studentName: examStudentId,
     items: pattern.map((value, i) => ({
       questionId: `q${i + 1}`,
       label: `q${i + 1}`,
@@ -41,7 +41,7 @@ describe("computeSpTable", () => {
     expect(result).not.toBeNull()
     const spTable = result!
     // 生徒は正答数降順
-    expect(spTable.students.map((student) => student.studentId)).toEqual([
+    expect(spTable.students.map((student) => student.examStudentId)).toEqual([
       "S1",
       "S2",
       "S3",
@@ -71,10 +71,10 @@ describe("computeSpTable", () => {
     expect(result.problems[0].correctCount).toBe(3)
 
     const student3 = result.students.find(
-      (student) => student.studentId === "S3"
+      (student) => student.examStudentId === "S3"
     )!
     const student4 = result.students.find(
-      (student) => student.studentId === "S4"
+      (student) => student.examStudentId === "S4"
     )!
     // 手計算: S3 CS=1.5, S4 CS=0
     expect(student3.cautionIndex).toBeCloseTo(1.5, 6)
@@ -90,7 +90,7 @@ describe("computeSpTable", () => {
     const spTable = computeSpTable(data)!
     // S2 は p1,p2 正答・p3 誤答（並びは p1,p2,p3）
     const student2 = spTable.students.find(
-      (student) => student.studentId === "S2"
+      (student) => student.examStudentId === "S2"
     )!
     expect(student2.cells).toEqual([true, true, false])
   })
@@ -105,7 +105,7 @@ describe("computeSpTable", () => {
     const spTable = computeSpTable(data)!
     expect(spTable.studentCount).toBe(3)
     expect(
-      spTable.students.find((student) => student.studentId === "S4")
+      spTable.students.find((student) => student.examStudentId === "S4")
     ).toBeUndefined()
   })
 

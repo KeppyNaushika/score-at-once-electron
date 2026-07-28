@@ -10,7 +10,7 @@ import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 /** 全設問アノテーション読み込みフックのパラメータ */
 export interface UseAllStudentAnnotationsParams {
   /** 現在の学生ID */
-  currentStudentId?: string
+  currentExamStudentId?: string
   /** 現在の設問領域（試験ID取得用） */
   currentCropRegion?: CropRegionWithExamPage | null
   /** 現在のユーザーID（アノテーション取得のフィルタリング用） */
@@ -37,7 +37,7 @@ export interface UseAllStudentAnnotationsReturn {
  * @returns 全設問のアノテーション
  */
 export function useAllStudentAnnotations({
-  currentStudentId,
+  currentExamStudentId,
   currentCropRegion,
   currentUserId,
   refreshKey,
@@ -48,23 +48,22 @@ export function useAllStudentAnnotations({
 
   useEffect(() => {
     const loadAllAnnotations = async () => {
-      if (!currentStudentId || !currentCropRegion?.examPage?.examId) {
+      if (!currentExamStudentId || !currentCropRegion?.examPage?.examId) {
         setAllStudentAnnotations([])
         return
       }
 
       try {
         console.log("🎨 透明度制御: 全設問アノテーション読み込み開始", {
-          studentId: currentStudentId,
+          studentId: currentExamStudentId,
           examId: currentCropRegion.examPage.examId,
           userId: currentUserId,
         })
 
         // ElectronAPIを直接呼び出してフック依存関係を回避
         // currentUserIdを渡してログインユーザーのアノテーションのみ取得
-        const result = await window.electronAPI.drawing.getByStudent(
-          currentStudentId,
-          currentCropRegion.examPage.examId,
+        const result = await window.electronAPI.drawing.getByExamStudent(
+          currentExamStudentId,
           undefined, // type
           currentUserId
         )
@@ -87,7 +86,7 @@ export function useAllStudentAnnotations({
 
     loadAllAnnotations()
   }, [
-    currentStudentId,
+    currentExamStudentId,
     currentCropRegion?.examPage?.examId,
     currentCropRegion?.id,
     currentUserId,

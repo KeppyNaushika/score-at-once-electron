@@ -29,7 +29,11 @@ import type {
   FilePreviewSource,
   PreviewMode,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
+import type {
+  CellColumn,
+  CellLookup,
+  CellRow,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   AnswerImageIdentity,
   ExamPageColumn,
@@ -84,7 +88,7 @@ interface AnswerTableShellProps {
   toggleRowDisabled: (examStudentId: string) => void
   toggleColDisabled: (examPageId: string) => void
   bulkDisabling?: BulkDisablingHandlers
-  toggleCellDisabled: (studentId: string, examPageId: string) => void
+  toggleCellDisabled: (examStudent: CellRow, examPage: CellColumn) => void
   toggleFileDisabled: (fileId: string) => void
   onDeleteAnswerSheet?: (fileId: string) => void
 
@@ -164,13 +168,14 @@ export function AnswerTableShell({
   const orphanCards =
     mode === "view" && orphanItems.length > 0
       ? (() => {
-          const rosterStudentIds = new Set(
-            tableRows.map((row) => row.examStudent.studentId)
+          const rosterExamStudentIds = new Set(
+            tableRows.map((row) => row.examStudent.id)
           )
           return orphanItems.map((orphan) => ({
             orphan,
             reasonLabel:
-              orphan.studentId && rosterStudentIds.has(orphan.studentId)
+              orphan.examStudentId &&
+              rosterExamStudentIds.has(orphan.examStudentId)
                 ? "ページ削除などで配置先の列がありません"
                 : "配置先の生徒が名簿にありません",
           }))

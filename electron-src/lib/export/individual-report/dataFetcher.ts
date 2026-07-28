@@ -47,7 +47,7 @@ export async function fetchIndividualReportData(
 ): Promise<GetIndividualReportDataResult> {
   const {
     examId,
-    selectedStudentIds,
+    selectedExamStudentIds,
     options: reportOptions,
     studentPlacements,
   } = options
@@ -65,7 +65,7 @@ export async function fetchIndividualReportData(
     // 選択された生徒のデータを取得
     const selectedDataResult = await fetchExportData(
       examId,
-      selectedStudentIds,
+      selectedExamStudentIds,
       studentPlacements
     )
     if (!selectedDataResult.success || !selectedDataResult.scoringData) {
@@ -102,7 +102,7 @@ export async function fetchIndividualReportData(
     )
     const questionScoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
-    // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+    // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
     const { resolved: allQuestionScores } = resolveEffectiveScores(
       questionScoresResult.success ? (questionScoresResult.scores ?? []) : [],
       decisionsResult.success ? (decisionsResult.decisions ?? []) : []
@@ -112,7 +112,7 @@ export async function fetchIndividualReportData(
     const allScoringData = await Promise.all(
       allScoringDataFromExcel.map(async (scoringData) => {
         const subtotalScores = await buildSubtotalScoresFromGroups(
-          scoringData.studentId,
+          scoringData.examStudentId,
           subtotalGroupsData,
           allQuestionScores,
           questionRegions
@@ -125,7 +125,7 @@ export async function fetchIndividualReportData(
     const selectedScoringData = await Promise.all(
       selectedScoringDataFromExcel.map(async (scoringData) => {
         const subtotalScores = await buildSubtotalScoresFromGroups(
-          scoringData.studentId,
+          scoringData.examStudentId,
           subtotalGroupsData,
           allQuestionScores,
           questionRegions
@@ -264,7 +264,7 @@ async function getSubtotalGroupsWithSubtotals(
  * CropRegion（SUBTOTAL_SCORE）を使わず、Subtotalから直接計算
  */
 async function buildSubtotalScoresFromGroups(
-  studentId: string,
+  examStudentId: string,
   subtotalGroups: SubtotalGroupData[],
   allQuestionScores: EffectiveScore[],
   questionRegions: CropRegion[]
@@ -272,7 +272,7 @@ async function buildSubtotalScoresFromGroups(
   // 採点データを変換
   const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
     (score) => ({
-      studentId: score.studentId,
+      examStudentId: score.examStudentId,
       cropRegionId: score.cropRegionId,
       status: score.status,
       partialScore: score.partialScore,
@@ -284,7 +284,7 @@ async function buildSubtotalScoresFromGroups(
   for (const group of subtotalGroups) {
     for (const subtotal of group.subtotals) {
       const scoreResult = await calculateSubtotalScoreBySubtotalId(
-        studentId,
+        examStudentId,
         subtotal.id,
         questionScoreData,
         questionRegions

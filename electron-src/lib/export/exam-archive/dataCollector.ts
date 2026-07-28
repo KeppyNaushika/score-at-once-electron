@@ -104,16 +104,8 @@ export async function collectExamData(
       for (const examStudent of exam.examStudents) {
         studentIds.add(examStudent.studentId)
       }
-      for (const page of exam.examPages) {
-        for (const studentAnswerImage of page.studentAnswerImages) {
-          studentIds.add(studentAnswerImage.studentId)
-        }
-        for (const region of page.cropRegions) {
-          for (const questionScore of region.questionScores) {
-            studentIds.add(questionScore.studentId)
-          }
-        }
-      }
+      // 採点層は ExamStudent の子なので、受験者を集めれば生徒も網羅される
+      // （受験者に紐づかない採点行はそもそも存在しえない）
     }
 
     // 3. 生徒データを取得（templateモードでは空）
@@ -269,7 +261,7 @@ export async function collectExamData(
             questionScores.push({
               id: questionScore.id,
               cropRegionId: questionScore.cropRegionId,
-              studentId: questionScore.studentId,
+              examStudentId: questionScore.examStudentId,
               partialScore: questionScore.partialScore?.toString() ?? null,
               status: questionScore.status,
               userId: questionScore.userId,
@@ -324,7 +316,7 @@ export async function collectExamData(
         scoreDecisions.push({
           id: decision.id,
           cropRegionId: decision.cropRegionId,
-          studentId: decision.studentId,
+          examStudentId: decision.examStudentId,
           verdict: decision.verdict,
           score: decision.score?.toString() ?? null,
           comment: decision.comment,
@@ -354,15 +346,14 @@ export async function collectExamData(
       }
 
       // 9.6. ReturnSnapshot（返却版スナップショット）を収集 (v1.14.0+)
-      // 返却版は試験ごとに1セット（生徒×試験で1行）なので採点者フィルタはしない
+      // 返却版は試験ごとに1セット（受験者ごとに1行）なので採点者フィルタはしない
       const snapshots = await prisma.returnSnapshot.findMany({
-        where: { examId },
+        where: { examStudent: { examId } },
       })
       for (const snapshot of snapshots) {
         returnSnapshots.push({
           id: snapshot.id,
-          examId: snapshot.examId,
-          studentId: snapshot.studentId,
+          examStudentId: snapshot.examStudentId,
           scoresJson: snapshot.scoresJson,
           totalScore: snapshot.totalScore?.toString() ?? null,
           capturedByUserId: snapshot.capturedByUserId,
@@ -501,7 +492,7 @@ export async function collectExamData(
                 .map((score) => ({
                   id: score.id,
                   compoundAnswerId: score.compoundAnswerId,
-                  studentId: score.studentId,
+                  examStudentId: score.examStudentId,
                   userId: score.userId,
                   recognizedAnswer: score.recognizedAnswer,
                   status: score.status,
@@ -530,7 +521,7 @@ export async function collectExamData(
             page.studentAnswerImages.map((studentAnswerImage) => ({
               id: studentAnswerImage.id,
               examPageId: studentAnswerImage.examPageId,
-              studentId: studentAnswerImage.studentId,
+              examStudentId: studentAnswerImage.examStudentId,
               imagePath: studentAnswerImage.imagePath,
               createdAt: studentAnswerImage.createdAt.toISOString(),
               updatedAt: studentAnswerImage.updatedAt.toISOString(),

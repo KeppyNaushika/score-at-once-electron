@@ -312,10 +312,11 @@ describe("executeIdChanges", () => {
       expect(warnings).toHaveLength(0)
     })
 
-    it("ScoreDecision/CompoundAnswerScore がカスケード削除されず新IDへ移し替えられる", async () => {
+    it("ScoreDecision/CompoundAnswerScore がカスケード削除されず受験者ごと引き継がれる", async () => {
       const existingStudentId = generateId()
       const newStudentId = generateId()
       const examId = generateId()
+      const examStudentId = generateId()
       const pageId = generateId()
       const regionId = generateId()
       const userId = generateId()
@@ -336,6 +337,14 @@ describe("executeIdChanges", () => {
         },
       })
       await prisma.exam.create({ data: { id: examId, examName: "確定テスト" } })
+      await prisma.examStudent.create({
+        data: {
+          id: examStudentId,
+          examId,
+          studentId: existingStudentId,
+          status: "participating",
+        },
+      })
       await prisma.examPage.create({
         data: { id: pageId, examId, pageNumber: 1 },
       })
@@ -358,7 +367,7 @@ describe("executeIdChanges", () => {
         data: {
           id: decisionId,
           cropRegionId: regionId,
-          studentId: existingStudentId,
+          examStudentId,
           verdict: "correct",
           score: 10,
           decidedByUserId: userId,
@@ -381,7 +390,7 @@ describe("executeIdChanges", () => {
         data: {
           id: compoundAnswerScoreId,
           compoundAnswerId: compoundId,
-          studentId: existingStudentId,
+          examStudentId,
           userId,
           status: "correct",
         },
@@ -401,19 +410,25 @@ describe("executeIdChanges", () => {
         await executeIdChanges(targets, idMappings, warnings, tx)
       })
 
-      // ScoreDecision は削除されず、新IDへ移し替えられている
+      // 受験者（ExamStudent）が新IDへ移し替えられている
+      const examStudent = await prisma.examStudent.findUnique({
+        where: { id: examStudentId },
+      })
+      expect(examStudent).not.toBeNull()
+      expect(examStudent!.studentId).toBe(newStudentId)
+
+      // 採点層は受験者の子なので、id を保ったまま生き残る
       const decision = await prisma.scoreDecision.findUnique({
         where: { id: decisionId },
       })
       expect(decision).not.toBeNull()
-      expect(decision!.studentId).toBe(newStudentId)
+      expect(decision!.examStudentId).toBe(examStudentId)
 
-      // CompoundAnswerScore も同様
       const compoundAnswerScore = await prisma.compoundAnswerScore.findUnique({
         where: { id: compoundAnswerScoreId },
       })
       expect(compoundAnswerScore).not.toBeNull()
-      expect(compoundAnswerScore!.studentId).toBe(newStudentId)
+      expect(compoundAnswerScore!.examStudentId).toBe(examStudentId)
     })
   })
 

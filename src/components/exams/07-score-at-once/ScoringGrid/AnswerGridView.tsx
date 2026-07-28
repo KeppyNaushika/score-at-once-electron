@@ -148,7 +148,7 @@ export default function AnswerGridView({
   const scoringColors = useScoringStatusColors()
 
   /** アノテーション取得（設問ごとに全学生分を一括取得） */
-  const { annotationsByStudent } = useGridAnnotations({
+  const { annotationsByExamStudent } = useGridAnnotations({
     cropRegionId: currentCropRegion?.id,
     currentUserId,
     refreshKey: annotationRefreshKey,
@@ -358,7 +358,7 @@ export default function AnswerGridView({
               selectionBorderColor={selectionBorderColor}
               scoringColors={scoringColors}
               expandMargin={expandMargin}
-              annotations={annotationsByStudent.get(answer.studentId)}
+              annotations={annotationsByExamStudent.get(answer.examStudentId)}
               pageSize={pageSize}
               onMouseDown={onCellMouseDown}
             />

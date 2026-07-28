@@ -1,26 +1,37 @@
 /**
  * 答案配置の採点安全な一括適用（view の方式B: 任意マスへ移動・衝突swap）
  *
- * 設計（docs/06-student-answers-entity-first-plan.md §5）:
- * - 2軸移動: studentId だけでなく examPageId も更新する（移動先 ExamPage は id 直指定で受ける）。
+ * 設計:
+ * - 2軸移動: examStudentId だけでなく examPageId も更新する（移動先 ExamPage は id 直指定で受ける）。
  * - 採点はページ scoped: 移動元ページの CropRegion / CompoundAnswer × 現生徒の
  *   QuestionScore / ScoreDecision / CompoundAnswerScore のみ対象。
  * - carry（追従・同一ページのみ）:
- *   - QuestionScore は unique が無いので **id 指定の updateMany で studentId 付け替え**（id 保持 →
+ *   - QuestionScore は unique が無いので **id 指定の updateMany で examStudentId 付け替え**（id 保持 →
  *     子の DrawingAnnotation を温存。swap も id 指定なので途中衝突なし）。
- *   - ScoreDecision は `@@unique([cropRegionId, studentId])` があるため **delete → 最終位置へ再作成**。
- *   - CompoundAnswerScore も `@@unique([compoundAnswerId, studentId])` があるため同じく再作成方式。
+ *   - ScoreDecision は `@@unique([cropRegionId, examStudentId])` があるため **delete → 最終位置へ再作成**。
+ *   - CompoundAnswerScore も `@@unique([compoundAnswerId, examStudentId])` があるため同じく再作成方式。
  * - discard: 各スコア表（QuestionScore / ScoreDecision / CompoundAnswerScore）を削除。
  *   DrawingAnnotation は QuestionScore の cascade で道連れになる。
- * - **移動先セルの残存採点を掃除**: 移動先 (finalStudentId, 移動先ページの CropRegion /
+ * - **移動先セルの残存採点を掃除**: 移動先 (finalExamStudentId, 移動先ページの CropRegion /
  *   CompoundAnswer) に既存の採点があり、それが「移動してくる採点（moving 集合）」でない場合は
  *   stale として削除する（さもないと carry で QuestionScore が二重計上、ScoreDecision と
  *   CompoundAnswerScore は unique 違反になる）。
- * - 画像は `@@unique([examPageId, studentId])` の 2-cycle を避けるため **delete → 同一 id で再作成**。
- * - ガード: carry かつページ変化はエラー。finalStudentId=null（削除）は不可（削除は別操作）。
+ * - 画像は `@@unique([examPageId, examStudentId])` の 2-cycle を避けるため **delete → 同一 id で再作成**。
+ * - ガード: carry かつページ変化はエラー。finalExamStudentId=null（削除）は不可（削除は別操作）。
  *   移動先が batch 外の答案で占有されている場合もエラー（上書きはしない）。
  *
  * いずれも基本的な Prisma 操作のみ（findMany/updateMany/deleteMany/createMany）。
+ *
+ * ## 前提（実コードで確認済み・崩すと壊れる）
+ *
+ * - **FK は実行時強制**。衝突回避のために偽IDの一時レコードを挟む方式は FK 違反で壊れる
+ *   （旧 `batchUpdateStudentAnswerPlacements`/`swap*` がそれで破綻していた）。
+ *   本APIが一時IDを使わず delete → 再作成で表現しているのはこのため。
+ * - **delete → 同一 id での再作成は sqlite-nas-sync 上で安全**。`sync.ts` の tombstone-ignore が
+ *   「現存すれば再作成とみなす」ため、削除が同期先で復活を潰さない。**必ず id を保持すること**
+ *   （新しい id を振ると別レコードとして増える）。
+ * - 二次 `@@unique`（`[cropRegionId, examStudentId]` 等）の衝突は `conflict.ts` ケース2 が
+ *   LWW で単一行に収束させる。全表汎用なので個別対応は不要。
  */
 import type { Prisma } from "@prisma/client"
 
@@ -36,7 +47,7 @@ export type PlacementScorePolicy = "carry" | "discard"
 
 export interface StudentAnswerPlacementMove {
   fileId: string
-  finalStudentId: string | null // null は不可（本APIは削除を扱わない）
+  finalExamStudentId: string | null // null は不可（本APIは削除を扱わない）
   finalExamPageId: string
   scorePolicy: PlacementScorePolicy
 }
@@ -51,7 +62,7 @@ export async function applyStudentAnswerPlacements(
   if (moves.length === 0) return { success: true }
 
   // 本APIは配置の移動/入れ替え専用。削除は deleteStudentAnswer（ファイル削除・監査込み）を使う。
-  const nullMove = moves.find((move) => move.finalStudentId === null)
+  const nullMove = moves.find((move) => move.finalExamStudentId === null)
   if (nullMove) {
     return {
       success: false,
@@ -70,7 +81,7 @@ export async function applyStudentAnswerPlacements(
               where: { id: move.fileId },
               select: {
                 id: true,
-                studentId: true,
+                examStudentId: true,
                 examPageId: true,
                 imagePath: true,
                 createdAt: true,
@@ -90,14 +101,14 @@ export async function applyStudentAnswerPlacements(
         type PlacementPlan = {
           move: StudentAnswerPlacementMove
           current: NonNullable<(typeof currentAnswers)[number]>
-          finalStudentId: string
+          finalExamStudentId: string
           targetExamPageId: string
         }
         const plans: PlacementPlan[] = []
         for (let index = 0; index < moves.length; index++) {
           const move = moves[index]
           const current = currentAnswers[index]!
-          const finalStudentId = move.finalStudentId! // null は上で除外済み
+          const finalExamStudentId = move.finalExamStudentId! // null は上で除外済み
 
           // 移動先 ExamPage は id 直指定。同一試験のページであることのみ検証する
           // （pageNumber 序数への解決はしない＝id 一次同定）。
@@ -124,7 +135,7 @@ export async function applyStudentAnswerPlacements(
           plans.push({
             move,
             current,
-            finalStudentId,
+            finalExamStudentId,
             targetExamPageId: targetPage.id,
           })
         }
@@ -135,7 +146,7 @@ export async function applyStudentAnswerPlacements(
           const occupant = await tx.studentAnswerImage.findFirst({
             where: {
               examPageId: plan.targetExamPageId,
-              studentId: plan.finalStudentId,
+              examStudentId: plan.finalExamStudentId,
               id: { notIn: batchFileIds },
             },
             select: { id: true },
@@ -152,11 +163,11 @@ export async function applyStudentAnswerPlacements(
         const scoreDecisionIdsToDelete: string[] = [] // discard/carry source + stale destination
         const questionScoreCarryUpdates: Array<{
           ids: string[]
-          finalStudentId: string
+          finalExamStudentId: string
         }> = []
         const scoreDecisionsToRecreate: Prisma.ScoreDecisionCreateManyInput[] =
           []
-        // 複合回答も CropRegion と同じくページ scoped。`@@unique([compoundAnswerId, studentId])`
+        // 複合回答も CropRegion と同じくページ scoped。`@@unique([compoundAnswerId, examStudentId])`
         // があるため ScoreDecision と同様 delete → 再作成で付け替える。
         const compoundAnswerScoreIdsToDelete: string[] = []
         const compoundAnswerScoresToRecreate: Prisma.CompoundAnswerScoreCreateManyInput[] =
@@ -164,9 +175,9 @@ export async function applyStudentAnswerPlacements(
         const movingQuestionScoreIds = new Set<string>()
         const movingScoreDecisionIds = new Set<string>()
         const movingCompoundAnswerScoreIds = new Set<string>()
-        // 移動先掃除のための (finalStudentId, 移動先ページの cropRegionIds/compoundAnswerIds)
+        // 移動先掃除のための (finalExamStudentId, 移動先ページの cropRegionIds/compoundAnswerIds)
         const destinationScopes: Array<{
-          finalStudentId: string
+          finalExamStudentId: string
           cropRegionIds: string[]
           compoundAnswerIds: string[]
         }> = []
@@ -188,7 +199,7 @@ export async function applyStudentAnswerPlacements(
           const sourceCropRegionIds = sourceScope.cropRegionIds
           const sourceCompoundAnswerIds = sourceScope.compoundAnswerIds
           destinationScopes.push({
-            finalStudentId: plan.finalStudentId,
+            finalExamStudentId: plan.finalExamStudentId,
             cropRegionIds: targetScope.cropRegionIds,
             compoundAnswerIds: targetScope.compoundAnswerIds,
           })
@@ -197,7 +208,7 @@ export async function applyStudentAnswerPlacements(
           if (sourceCompoundAnswerIds.length > 0) {
             const compoundAnswerScores = await tx.compoundAnswerScore.findMany({
               where: {
-                studentId: plan.current.studentId,
+                examStudentId: plan.current.examStudentId,
                 compoundAnswerId: { in: sourceCompoundAnswerIds },
               },
             })
@@ -214,7 +225,7 @@ export async function applyStudentAnswerPlacements(
                 ...compoundAnswerScores.map((compoundAnswerScore) => ({
                   id: compoundAnswerScore.id,
                   compoundAnswerId: compoundAnswerScore.compoundAnswerId,
-                  studentId: plan.finalStudentId,
+                  examStudentId: plan.finalExamStudentId,
                   userId: compoundAnswerScore.userId,
                   recognizedAnswer: compoundAnswerScore.recognizedAnswer,
                   status: compoundAnswerScore.status,
@@ -229,14 +240,14 @@ export async function applyStudentAnswerPlacements(
 
           const questionScores = await tx.questionScore.findMany({
             where: {
-              studentId: plan.current.studentId,
+              examStudentId: plan.current.examStudentId,
               cropRegionId: { in: sourceCropRegionIds },
             },
             select: { id: true },
           })
           const scoreDecisions = await tx.scoreDecision.findMany({
             where: {
-              studentId: plan.current.studentId,
+              examStudentId: plan.current.examStudentId,
               cropRegionId: { in: sourceCropRegionIds },
             },
           })
@@ -255,11 +266,11 @@ export async function applyStudentAnswerPlacements(
               ...scoreDecisions.map((scoreDecision) => scoreDecision.id)
             )
           } else {
-            // carry: QuestionScore は id 指定で studentId 付け替え（注釈を温存）
+            // carry: QuestionScore は id 指定で examStudentId 付け替え（注釈を温存）
             if (questionScores.length > 0) {
               questionScoreCarryUpdates.push({
                 ids: questionScores.map((questionScore) => questionScore.id),
-                finalStudentId: plan.finalStudentId,
+                finalExamStudentId: plan.finalExamStudentId,
               })
             }
             // ScoreDecision は unique 回避のため delete → id 保持で最終位置へ再作成
@@ -270,7 +281,7 @@ export async function applyStudentAnswerPlacements(
               ...scoreDecisions.map((scoreDecision) => ({
                 id: scoreDecision.id,
                 cropRegionId: scoreDecision.cropRegionId,
-                studentId: plan.finalStudentId,
+                examStudentId: plan.finalExamStudentId,
                 verdict: scoreDecision.verdict,
                 score: scoreDecision.score,
                 comment: scoreDecision.comment,
@@ -289,7 +300,7 @@ export async function applyStudentAnswerPlacements(
             const staleCompoundAnswerScores =
               await tx.compoundAnswerScore.findMany({
                 where: {
-                  studentId: scope.finalStudentId,
+                  examStudentId: scope.finalExamStudentId,
                   compoundAnswerId: { in: scope.compoundAnswerIds },
                 },
                 select: { id: true },
@@ -304,14 +315,14 @@ export async function applyStudentAnswerPlacements(
           if (scope.cropRegionIds.length === 0) continue
           const staleQuestionScores = await tx.questionScore.findMany({
             where: {
-              studentId: scope.finalStudentId,
+              examStudentId: scope.finalExamStudentId,
               cropRegionId: { in: scope.cropRegionIds },
             },
             select: { id: true },
           })
           const staleScoreDecisions = await tx.scoreDecision.findMany({
             where: {
-              studentId: scope.finalStudentId,
+              examStudentId: scope.finalExamStudentId,
               cropRegionId: { in: scope.cropRegionIds },
             },
             select: { id: true },
@@ -335,11 +346,11 @@ export async function applyStudentAnswerPlacements(
           })
         }
 
-        // 5. carry の QuestionScore: id 指定で studentId 付け替え（行=注釈を保持）
+        // 5. carry の QuestionScore: id 指定で examStudentId 付け替え（行=注釈を保持）
         for (const carryUpdate of questionScoreCarryUpdates) {
           await tx.questionScore.updateMany({
             where: { id: { in: carryUpdate.ids } },
-            data: { studentId: carryUpdate.finalStudentId },
+            data: { examStudentId: carryUpdate.finalExamStudentId },
           })
         }
 
@@ -373,7 +384,7 @@ export async function applyStudentAnswerPlacements(
           data: plans.map((plan) => ({
             id: plan.move.fileId,
             examPageId: plan.targetExamPageId,
-            studentId: plan.finalStudentId,
+            examStudentId: plan.finalExamStudentId,
             imagePath: plan.current.imagePath,
             createdAt: plan.current.createdAt,
           })),

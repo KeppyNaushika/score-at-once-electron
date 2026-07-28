@@ -16,7 +16,7 @@ import {
 
 interface UseScoredAnswerPreviewProps {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   scoringMarkConfig: ScoringMarkConfigForPdf
   enabled: boolean
 }
@@ -46,7 +46,7 @@ const RENDER_DEBOUNCE_MS = 150
  */
 export function useScoredAnswerPreview({
   examId,
-  selectedStudentIds,
+  selectedExamStudentIds,
   scoringMarkConfig,
   enabled,
 }: UseScoredAnswerPreviewProps) {
@@ -67,15 +67,18 @@ export function useScoredAnswerPreview({
 
   // 選択生徒が変更されたときにpreviewStudentIdを初期化
   useEffect(() => {
-    if (selectedStudentIds.length > 0) {
-      if (!previewStudentId || !selectedStudentIds.includes(previewStudentId)) {
-        setPreviewStudentId(selectedStudentIds[0])
+    if (selectedExamStudentIds.length > 0) {
+      if (
+        !previewStudentId ||
+        !selectedExamStudentIds.includes(previewStudentId)
+      ) {
+        setPreviewStudentId(selectedExamStudentIds[0])
       }
     } else {
       setPreviewStudentId(null)
       setPreviewImageUrls([])
     }
-  }, [selectedStudentIds, previewStudentId])
+  }, [selectedExamStudentIds, previewStudentId])
 
   // enabled が false になったらリセット
   useEffect(() => {
@@ -110,7 +113,7 @@ export function useScoredAnswerPreview({
       try {
         const dataResult = await window.electronAPI.export.getPdfExportData({
           examId,
-          selectedStudentIds: [previewStudentId],
+          selectedExamStudentIds: [previewStudentId],
         })
 
         if (cancelled) return

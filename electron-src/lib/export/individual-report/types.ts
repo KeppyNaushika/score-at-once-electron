@@ -269,9 +269,9 @@ export interface IndividualReportData {
 /** 個人成績表データ取得オプション */
 export interface GetIndividualReportDataOptions {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   options: IndividualReportOptions
-  /** renderer が採番解決して渡す表示学級情報（studentId キー） */
+  /** renderer が採番解決して渡す表示学級情報（**Student.id キー**。学級所属は人に紐づく） */
   studentPlacements?: Record<string, StudentExportPlacement>
 }
 

@@ -75,7 +75,7 @@ export function UploadAnswerTable(props: UploadAnswerTableProps) {
           originalFileName: cell.file.originalFileName,
           type: cell.file.fileType,
           buffer: cell.file.buffer,
-          studentId: examStudent.studentId,
+          examStudentId: examStudent.id,
           examPageId: cell.examPage.id,
           overwrite: core.allowOverwrite,
           correctWithMarkers: false, // クライアント側で補正済み

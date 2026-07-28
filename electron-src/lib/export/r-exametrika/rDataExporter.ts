@@ -13,7 +13,7 @@ import { fetchExportData } from "../excel/dataFetcher"
 
 export interface ExportRDataOptions {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   format: "csv" | "json"
   outputPath?: string
 }
@@ -50,9 +50,9 @@ export async function exportRData(
   options: ExportRDataOptions
 ): Promise<ExportResult> {
   try {
-    const { examId, selectedStudentIds, format } = options
+    const { examId, selectedExamStudentIds, format } = options
 
-    const dataResult = await fetchExportData(examId, selectedStudentIds)
+    const dataResult = await fetchExportData(examId, selectedExamStudentIds)
     if (!dataResult.success || !dataResult.scoringData) {
       return {
         success: false,

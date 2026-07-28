@@ -7,6 +7,9 @@ import { resolveExamClassroomPlacement } from "@/lib/examClassroomPlacement"
  * 採番学級の解決は renderer が単一ソースで担い（`resolveExamClassroomPlacement`）、
  * main へは書き出しに必要な値だけ（学級名・学年・出席番号）を lean な形で渡す。
  * main 側は placement を解決せず、渡された値をそのまま出力に使う（export は型制限の対象外）。
+ *
+ * **返り値のキーは Student.id**。学級所属（StudentClassroomMembership）は人に紐づくので、
+ * 受験者ID（ExamStudent.id）ではない。main 側の引き当ても Student.id で行うこと。
  */
 export async function loadStudentExportPlacements(
   examId: string

@@ -46,28 +46,23 @@ model Classroom {
 }
 
 model Student {
-  id                   String                       @id @default(uuid())
-  studentNumber        String                       @unique
-  lastName             String
-  firstName            String
-  lastNameKana         String
-  firstNameKana        String
-  enrollmentYear       Int?
-  createdAt            DateTime                     @default(now())
-  updatedAt            DateTime                     @updatedAt
-  studentAnswerImages  StudentAnswerImage[]
-  examStudents         ExamStudent[]
-  questionScores       QuestionScore[]
-  memberships          StudentClassroomMembership[]
-  gradeStudents        GradeStudent[]
-  gradeOverrides       GradeOverride[]
-  gradeFrozenScores    GradeFrozenScore[]
-  gradeItemExclusions  GradeItemExclusion[]
-  compoundAnswerScores CompoundAnswerScore[]
-  scoreDecisions       ScoreDecision[]
-  returnSnapshots      ReturnSnapshot[]
-  courseworkStudents   CourseworkStudent[]
-  courseworkScores     CourseworkScore[]
+  id                  String                       @id @default(uuid())
+  studentNumber       String                       @unique
+  lastName            String
+  firstName           String
+  lastNameKana        String
+  firstNameKana       String
+  enrollmentYear      Int?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  examStudents        ExamStudent[]
+  memberships         StudentClassroomMembership[]
+  gradeStudents       GradeStudent[]
+  gradeOverrides      GradeOverride[]
+  gradeFrozenScores   GradeFrozenScore[]
+  gradeItemExclusions GradeItemExclusion[]
+  courseworkStudents  CourseworkStudent[]
+  courseworkScores    CourseworkScore[]
 }
 
 model StudentClassroomMembership {
@@ -107,19 +102,26 @@ model Exam {
   exportSettings          ExamExportSettings?
   gradeDataSources        GradeDataSource[]
   examTags                ExamTag[]
-  returnSnapshots         ReturnSnapshot[]
 }
 
+/// 試験の受験対象者。答案・採点・確定・返却スナップショットはすべてこの行を親とする
+/// （Student 直結にすると、試験から外した生徒の採点データが孤児として残り、
+/// 試験側には現れないのに成績算出でだけ算入されてしまうため）。
 model ExamStudent {
-  id          String   @id @default(uuid())
-  examId      String
-  studentId   String
-  status      String
-  customOrder Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id                   String                @id @default(uuid())
+  examId               String
+  studentId            String
+  status               String
+  customOrder          Int?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  exam                 Exam                  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student              Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentAnswerImages  StudentAnswerImage[]
+  questionScores       QuestionScore[]
+  scoreDecisions       ScoreDecision[]
+  compoundAnswerScores CompoundAnswerScore[]
+  returnSnapshots      ReturnSnapshot[]
 
   @@unique([examId, studentId])
   @@index([examId])
@@ -153,18 +155,18 @@ model MasterImage {
 
 /// 答案画像
 model StudentAnswerImage {
-  id         String   @id @default(uuid())
-  examPageId String
-  studentId  String
-  imagePath  String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
-  examPage   ExamPage @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id            String      @id @default(uuid())
+  examPageId    String
+  examStudentId String
+  imagePath     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
+  examPage      ExamPage    @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  examStudent   ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([examPageId, studentId])
+  @@unique([examPageId, examStudentId])
   @@index([examPageId])
-  @@index([studentId])
+  @@index([examStudentId])
 }
 
 model CropRegion {
@@ -282,7 +284,7 @@ model ExamSubtotalGroup {
 model QuestionScore {
   id                 String              @id @default(uuid())
   cropRegionId       String
-  studentId          String
+  examStudentId      String
   partialScore       Decimal?
   status             String              @default("unscored")
   userId             String
@@ -290,34 +292,36 @@ model QuestionScore {
   updatedAt          DateTime            @default(now()) @updatedAt
   drawingAnnotations DrawingAnnotation[]
   cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  examStudent        ExamStudent         @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user               User                @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([examStudentId])
 }
 
 /// 生徒×設問ごとの確定スコア（試験OWNERによる裁定）。
 /// QuestionScore（採点者ごとの提案）とは別に1セル1行で保持し、upsertのみで運用する
 /// （削除・再作成しない — LWW同期でセカンダリUNIQUEにより単一行へ収束させるため）。
 model ScoreDecision {
-  id                    String     @id @default(uuid())
+  id                    String      @id @default(uuid())
   cropRegionId          String
-  studentId             String
+  examStudentId         String
   /// 確定した採点判定（correct | incorrect | partial | pending | no_answer | double_mark）
   verdict               String
   /// 確定点。correct等のverdict自体が点数を決める場合はnull可
   score                 Decimal?
   comment               String?
   decidedByUserId       String
-  decidedAt             DateTime   @default(now())
+  decidedAt             DateTime    @default(now())
   /// 採用元の提案（QuestionScore）のID。手入力で確定した場合はnull
   sourceQuestionScoreId String?
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @default(now()) @updatedAt
-  cropRegion            CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  student               Student    @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  decidedBy             User       @relation(fields: [decidedByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @default(now()) @updatedAt
+  cropRegion            CropRegion  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  examStudent           ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  decidedBy             User        @relation(fields: [decidedByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([cropRegionId, studentId])
-  @@index([studentId])
+  @@unique([cropRegionId, examStudentId])
+  @@index([examStudentId])
 }
 
 model DrawingAnnotation {
@@ -361,9 +365,8 @@ model DrawingAnnotation {
 /// 変更があった生徒だけを絞り込む。scoresJson は resolveEffectiveScores() の出力と
 /// 印刷対象の DrawingAnnotation を正規化シリアライズした文字列。
 model ReturnSnapshot {
-  id               String   @id @default(uuid())
-  examId           String
-  studentId        String
+  id               String      @id @default(uuid())
+  examStudentId    String      @unique
   /// 有効スコア＋注釈の正規化JSON（直接比較で差分判定する）
   scoresJson       String
   /// 返却時点の合計点（表示用。null可）
@@ -371,14 +374,10 @@ model ReturnSnapshot {
   /// 返却操作を行った操作者。システム操作はnull
   capturedByUserId String?
   /// 返却版として記録した日時（ISO text）
-  capturedAt       DateTime @default(now())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @default(now()) @updatedAt
-  exam             Exam     @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([examId, studentId])
-  @@index([studentId])
+  capturedAt       DateTime    @default(now())
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @default(now()) @updatedAt
+  examStudent      ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// 監査ログ（Discord風の操作履歴）。
@@ -646,7 +645,7 @@ model CompoundAnswerMember {
 model CompoundAnswerScore {
   id               String   @id @default(uuid())
   compoundAnswerId String
-  studentId        String
+  examStudentId    String
   userId           String
   recognizedAnswer String? // 組み立てた回答文字列
   status           String   @default("unscored")
@@ -655,12 +654,12 @@ model CompoundAnswerScore {
   updatedAt        DateTime @default(now()) @updatedAt
 
   compoundAnswer CompoundAnswer @relation(fields: [compoundAnswerId], references: [id], onDelete: Cascade)
-  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  examStudent    ExamStudent    @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user           User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([compoundAnswerId, studentId])
+  @@unique([compoundAnswerId, examStudentId])
   @@index([compoundAnswerId])
-  @@index([studentId])
+  @@index([examStudentId])
 }
 
 /// 成績算出プロジェクト

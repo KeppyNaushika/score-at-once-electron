@@ -3,7 +3,7 @@
  * 06-student-answers 答案テーブルの行生成（useTableDataGeneration）の検証。
  *
  * 守りたい不変条件は「行の生徒とマスのページが、そのマスに置かれた答案の
- * 書き込み先（studentId / examPageId）と必ず一致すること」。
+ * 書き込み先（examStudentId / examPageId）と必ず一致すること」。
  * ここがずれると別の生徒の答案として保存されるため、表示ではなく保存の正しさに直結する。
  * 行は ExamStudent 実体、マスは ExamPage 実体を同梱して返るので、添字の一致に依存しない。
  */
@@ -24,7 +24,9 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 const EXAM_ID = "eeeeeeee-0000-4000-8000-000000000000"
 const EPOCH = new Date("2026-01-01T00:00:00.000Z")
 
+const EXAM_STUDENT_A = "es-a"
 const STUDENT_A = "11111111-1111-4111-8111-111111111111"
+const EXAM_STUDENT_B = "es-b"
 const STUDENT_B = "22222222-2222-4222-8222-222222222222"
 const PAGE_1 = "aaaaaaaa-0001-4001-8001-000000000001"
 const PAGE_2 = "aaaaaaaa-0002-4002-8002-000000000002"
@@ -43,6 +45,7 @@ function makeExamStudent(
     customOrder,
     createdAt: EPOCH,
     updatedAt: EPOCH,
+    _count: { studentAnswerImages: 0 },
     student: {
       id: studentId,
       studentNumber,
@@ -54,7 +57,6 @@ function makeExamStudent(
       createdAt: EPOCH,
       updatedAt: EPOCH,
       memberships: [],
-      _count: { studentAnswerImages: 0 },
     },
   }
 }
@@ -62,7 +64,7 @@ function makeExamStudent(
 function makeUnsavedAnswer(id: string): UnsavedAnswerImage {
   return {
     id,
-    studentId: null,
+    examStudentId: null,
     examPageId: null,
     imagePath: null,
     buffer: new ArrayBuffer(1),
@@ -75,16 +77,23 @@ function makeUnsavedAnswer(id: string): UnsavedAnswerImage {
 
 function makePlacedAnswer(
   id: string,
-  studentId: string | null,
+  examStudentId: string | null,
   examPageId: string | null
 ): UnsavedAnswerImage {
-  return { ...makeUnsavedAnswer(id), studentId, examPageId }
+  return { ...makeUnsavedAnswer(id), examStudentId, examPageId }
 }
 
 /** 指定マスだけ「既存答案あり」とするルックアップ */
-function existingAnswerAt(studentId: string, examPageId: string): CellLookup {
+function existingAnswerAt(
+  examStudentId: string,
+  examPageId: string
+): CellLookup {
   const lookup: CellLookup = new Map()
-  addCellToLookup(lookup, studentId, examPageId)
+  addCellToLookup(
+    lookup,
+    { id: examStudentId, studentId: `student-of-${examStudentId}` },
+    { id: examPageId, pageNumber: 1 }
+  )
   return lookup
 }
 
@@ -109,7 +118,7 @@ function summarize(
   >["tableRows"]
 ) {
   return tableRows.map((row) => ({
-    studentId: row.examStudent.studentId,
+    examStudentId: row.examStudent.id,
     cells: row.cells.map((cell) => ({
       examPageId: cell.examPage.id,
       type: cell.type,
@@ -121,8 +130,8 @@ function summarize(
 describe("useTableDataGeneration", () => {
   // 生徒の並びは customOrder 順（B が先）。行の実体がその並びに追随することを見る。
   const sortedStudents = [
-    makeExamStudent("es-b", STUDENT_B, "002", 1),
-    makeExamStudent("es-a", STUDENT_A, "001", 2),
+    makeExamStudent(EXAM_STUDENT_B, STUDENT_B, "002", 1),
+    makeExamStudent(EXAM_STUDENT_A, STUDENT_A, "001", 2),
   ]
 
   it("upload: 自動配置された答案は、その行の生徒とマスのページに対応する", () => {
@@ -144,14 +153,14 @@ describe("useTableDataGeneration", () => {
     // student-first なので先頭生徒（customOrder 1 の B）の p1・p2 から順に埋まる
     expect(summarize(result.current.tableRows)).toEqual([
       {
-        studentId: STUDENT_B,
+        examStudentId: EXAM_STUDENT_B,
         cells: [
           { examPageId: PAGE_1, type: "file", fileId: "f1" },
           { examPageId: PAGE_2, type: "file", fileId: "f2" },
         ],
       },
       {
-        studentId: STUDENT_A,
+        examStudentId: EXAM_STUDENT_A,
         cells: [
           { examPageId: PAGE_1, type: "empty", fileId: null },
           { examPageId: PAGE_2, type: "empty", fileId: null },
@@ -177,13 +186,13 @@ describe("useTableDataGeneration", () => {
     )
 
     const rows = summarize(result.current.tableRows)
-    expect(rows[0].studentId).toBe(STUDENT_B)
+    expect(rows[0].examStudentId).toBe(EXAM_STUDENT_B)
     expect(rows[0].cells[0]).toEqual({
       examPageId: PAGE_1,
       type: "file",
       fileId: "f1",
     })
-    expect(rows[1].studentId).toBe(STUDENT_A)
+    expect(rows[1].examStudentId).toBe(EXAM_STUDENT_A)
     expect(rows[1].cells[0]).toEqual({
       examPageId: PAGE_1,
       type: "file",
@@ -191,10 +200,10 @@ describe("useTableDataGeneration", () => {
     })
   })
 
-  it("view: 答案は自身の (studentId, examPageId) のマスに載る", () => {
+  it("view: 答案は自身の (examStudentId, examPageId) のマスに載る", () => {
     const files = [
-      makePlacedAnswer("f1", STUDENT_A, PAGE_2),
-      makePlacedAnswer("f2", STUDENT_B, PAGE_1),
+      makePlacedAnswer("f1", EXAM_STUDENT_A, PAGE_2),
+      makePlacedAnswer("f2", EXAM_STUDENT_B, PAGE_1),
     ]
 
     const { result } = renderHook(() =>
@@ -213,14 +222,14 @@ describe("useTableDataGeneration", () => {
     expect(result.current.orphanItems).toHaveLength(0)
     expect(summarize(result.current.tableRows)).toEqual([
       {
-        studentId: STUDENT_B,
+        examStudentId: EXAM_STUDENT_B,
         cells: [
           { examPageId: PAGE_1, type: "file", fileId: "f2" },
           { examPageId: PAGE_2, type: "disabled", fileId: null },
         ],
       },
       {
-        studentId: STUDENT_A,
+        examStudentId: EXAM_STUDENT_A,
         cells: [
           { examPageId: PAGE_1, type: "disabled", fileId: null },
           { examPageId: PAGE_2, type: "file", fileId: "f1" },
@@ -234,7 +243,7 @@ describe("useTableDataGeneration", () => {
     const removedPage = "aaaaaaaa-0009-4009-8009-000000000009"
     const files = [
       makePlacedAnswer("f1", withdrawn, PAGE_1),
-      makePlacedAnswer("f2", STUDENT_A, removedPage),
+      makePlacedAnswer("f2", EXAM_STUDENT_A, removedPage),
     ]
 
     const { result } = renderHook(() =>
@@ -322,7 +331,7 @@ describe("useTableDataGeneration", () => {
         enhancedIsCellDisabled: () => false,
         allowOverwrite: false,
         // 先頭マス（生徒B・p1）は既に DB 答案が居る
-        cellsWithExistingAnswers: existingAnswerAt(STUDENT_B, PAGE_1),
+        cellsWithExistingAnswers: existingAnswerAt(EXAM_STUDENT_B, PAGE_1),
       })
     )
 

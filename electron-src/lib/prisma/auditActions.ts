@@ -601,6 +601,17 @@ export const AUDIT_ACTIONS = {
     verb: "delete",
     label: "ユーザー「{target}」を削除しました",
   },
+
+  // ── システム（system） ───────────────────────────────────────
+  /**
+   * データベース移行時に、試験の受験者として登録されていない生徒の採点データ
+   * （孤児）を破棄したことの記録。migration SQL から直接 INSERT される。
+   */
+  "system.migration.cleanup_orphaned_scores": {
+    category: "system",
+    verb: "delete",
+    label: "{target}",
+  },
 } as const satisfies Record<string, AuditActionDef>
 
 /** 定義済みアクションキーの型 */

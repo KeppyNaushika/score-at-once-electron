@@ -125,14 +125,15 @@ async function createStudentAnswerImageRecords(
 ): Promise<void> {
   for (const studentAnswerImage of data.examData.studentAnswerImages!) {
     const newExamPageId = idMappings.examPage[studentAnswerImage.examPageId]
-    const newStudentId = idMappings.student[studentAnswerImage.studentId]
-    if (!newExamPageId || !newStudentId) continue
+    const newExamStudentId =
+      idMappings.examStudent[studentAnswerImage.examStudentId]
+    if (!newExamPageId || !newExamStudentId) continue
 
     // 既存のStudentAnswerImageレコードをチェック
     const existing = await tx.studentAnswerImage.findFirst({
       where: {
         examPageId: newExamPageId,
-        studentId: newStudentId,
+        examStudentId: newExamStudentId,
       },
     })
     if (existing) continue
@@ -153,7 +154,7 @@ async function createStudentAnswerImageRecords(
         data: {
           id: studentAnswerImage.id,
           examPageId: newExamPageId,
-          studentId: newStudentId,
+          examStudentId: newExamStudentId,
           imagePath: newImagePath,
         },
       })
@@ -204,11 +205,20 @@ async function createLegacyImageRecords(
       const newStudentId = idMappings.student[pageImage.studentId]
       if (!newStudentId) continue
 
+      // 旧 pageImages は生徒直結だったので、受験者へ解決する
+      const examStudent = await tx.examStudent.findUnique({
+        where: {
+          examId_studentId: { examId: newExamId, studentId: newStudentId },
+        },
+        select: { id: true },
+      })
+      if (!examStudent) continue
+
       // 既存のStudentAnswerImageレコードをチェック
       const existingAnswer = await tx.studentAnswerImage.findFirst({
         where: {
           examPageId: newExamPageId,
-          studentId: newStudentId,
+          examStudentId: examStudent.id,
         },
       })
       if (existingAnswer) continue
@@ -229,7 +239,7 @@ async function createLegacyImageRecords(
           data: {
             id: pageImage.id,
             examPageId: newExamPageId,
-            studentId: newStudentId,
+            examStudentId: examStudent.id,
             imagePath: newImagePath,
           },
         })

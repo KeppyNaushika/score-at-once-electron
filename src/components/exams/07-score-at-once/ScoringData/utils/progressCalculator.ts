@@ -32,20 +32,16 @@ export function calculateQuestionProgress(
       (pageImage) => pageImage.examPageId === cropRegion.examPageId
     )
 
-    // studentIdフィルタリング
-    const relevantPageImages = samePageImages.filter(
-      (pageImage) => pageImage.studentId
-    )
+    // 答案は必ず受験者に紐づくので、ここでの絞り込みは不要
+    const relevantPageImages = samePageImages
 
     const totalAnswers = relevantPageImages.length
     let gradedAnswers = 0
 
-    relevantPageImages.forEach((pageImage, _index) => {
-      if (!pageImage.studentId) return // studentIdがnullの場合はスキップ
-
+    relevantPageImages.forEach((pageImage) => {
       const score = findQuestionScore(
         questionScores,
-        pageImage.studentId,
+        pageImage.examStudentId,
         cropRegion.id
       )
       const isGraded =

@@ -15,13 +15,13 @@ import type { ScoringData } from "../types"
  */
 export function buildConflictWarnings(
   summary: ExamDecisionSummary,
-  selectedStudentIds: string[] = []
+  selectedExamStudentIds: string[] = []
 ): ConflictWarning[] {
-  const selected = new Set(selectedStudentIds)
+  const selected = new Set(selectedExamStudentIds)
   return summary.questions.flatMap((question) =>
     question.cells
       .filter((cell) => cell.reason === "conflict")
-      .filter((cell) => selected.size === 0 || selected.has(cell.studentId))
+      .filter((cell) => selected.size === 0 || selected.has(cell.examStudentId))
       .map((cell) => ({
         ...cell,
         questionLabel: question.questionLabel,

@@ -20,9 +20,9 @@ import type {
 // Preview mode for different display options
 export type PreviewMode = "full" | "name-only"
 
-// セル同一性 = (studentId, examPageId)。序数 pageNumber は key にしない。
+// セル同一性 = (examStudentId, examPageId)。序数 pageNumber は key にしない。
 export interface DisabledCell {
-  studentId: string
+  examStudentId: string
   examPageId: string
 }
 
@@ -32,7 +32,7 @@ export interface DisabledCell {
 export interface ExtendedDisabledState {
   rows: string[] // examStudentId（ExamStudent.id）— 無効行は少数なので配列
   cols: string[] // examPageId（ExamPage.id）— 無効列は少数なので配列
-  cells: DisabledCell[] // (studentId, examPageId) — 個別無効セルは少数なので配列
+  cells: DisabledCell[] // (examStudentId, examPageId) — 個別無効セルは少数なので配列
   files: Set<string> // fileId — アップロードで多数になりうるので Set（O(1)）
 }
 
@@ -150,10 +150,10 @@ export interface PreviewModeToggleProps {
 }
 
 // ファイル状態管理用の型定義。DnD の移動 from/to はセル座標（移動先は空マス＝実体が
-// 無いこともある）なので、実体ではなく id（studentId, examPageId）で持つ。
+// 無いこともある）なので、実体ではなく id（examStudentId, examPageId）で持つ。
 export interface FileState {
   fileId: string
-  studentId: string | null
+  examStudentId: string | null
   examPageId: string | null
 }
 

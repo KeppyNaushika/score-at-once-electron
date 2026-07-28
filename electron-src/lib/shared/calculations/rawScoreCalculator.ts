@@ -7,6 +7,7 @@
 import {
   calculateCropRegionScore,
   calculateExamTotalScore,
+  findExamStudentScores,
 } from "./examScoreCalculator"
 import type { ExamDataCache } from "./gradeCalculatorTypes"
 import { calculateSubtotalScoreBySubtotalId } from "./subtotalCalculator"
@@ -51,11 +52,16 @@ export async function getRawScore(
     dataSource.examId
   ) {
     const examData = examDataCache.get(dataSource.examId)
-    if (examData) {
+    const examStudent = findExamStudentScores(
+      studentId,
+      dataSource.examId,
+      examDataCache
+    )
+    if (examData && examStudent) {
       const result = await calculateSubtotalScoreBySubtotalId(
-        studentId,
+        examStudent.examStudentId,
         dataSource.subtotalId,
-        examData.questionScores,
+        examStudent.questionScores,
         examData.cropRegions as Parameters<
           typeof calculateSubtotalScoreBySubtotalId
         >[3]
