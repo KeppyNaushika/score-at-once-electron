@@ -7,7 +7,9 @@
  * - Student.studentId → Student.studentNumber にリネーム
  *   - 学籍番号フィールド名の明確化（FKのstudentIdとの混同を防ぐ）
  *
- * @see docs/schema-history/README.md
+ * 当時のDBスキーマ: `git show v0.4.5-alpha.0:prisma/schema.prisma`
+ * （ただし本変換器が扱うのはアーカイブJSONの形状であり、DBスキーマとは一致しない。
+ *   旧形状は下の V1_2_0_* 型が正）
  */
 
 import type {

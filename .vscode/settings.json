@@ -33,8 +33,5 @@
   "files.trimTrailingWhitespace": true,
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "prisma.pinToPrisma6": true,
-  "prisma.schemaPath": "prisma/schema.prisma",
-  "files.exclude": {
-    "docs/schema-history/*.prisma": true
-  }
+  "prisma.schemaPath": "prisma/schema.prisma"
 }

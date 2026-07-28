@@ -8,7 +8,9 @@
  * - ExamClassroom テーブル追加
  * - その他新規テーブル追加（インポート時は空で初期化）
  *
- * @see docs/schema-history/README.md
+ * 当時のDBスキーマ: `git show v0.2.21-alpha.0:prisma/schema.prisma`
+ * （ただし本変換器が扱うのはアーカイブJSONの形状であり、DBスキーマとは一致しない。
+ *   旧形状は下の V1_0_0_* 型が正）
  */
 
 import type {
