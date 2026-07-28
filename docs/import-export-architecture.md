@@ -12,7 +12,6 @@
 8. [インポートウィザードUI](#インポートウィザードui)
 9. [データフロー図](#データフロー図)
 10. [ファイル責務一覧](#ファイル責務一覧)
-11. [既知のバグ](#既知のバグ)
 
 ---
 
@@ -393,6 +392,8 @@ flowchart TD
 | `1.16.0`   | v0.14.x          | Class→Classroom リネーム（examClasses→examClassrooms、classId→classroomId、teacherStatistics）      |
 | `1.17.0`   | v0.15.x          | ExamStudent.status 小文字統一                                                                       |
 | `1.18.0`   | v0.16.x          | CropRegionMarkingOverride 廃止（UI・出力反映が無いまま入出力のみ維持されていたため削除）            |
+| `1.19.0`   | v0.16.x          | DeletedRecord tombstone 廃止（1.9.0を撤回。削除の伝搬は sqlite-nas-sync の `_tombstone` へ一本化）  |
+| `1.20.0`   | v0.16.x          | CropRegionAssignment 追加（設問ごとの採点担当。User はアーカイブを越えないため username で照合）    |
 
 ### 変換器インターフェース
 
@@ -586,11 +587,16 @@ flowchart TD
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `electron-src/lib/import/merge/idIntegrationImporter.ts`             | **Stage 1**: 単一トランザクションでの全データ挿入。`executeIdIntegrationImport` がメインエントリーポイント |
 | `electron-src/lib/import/merge/processors/studentProcessor.ts`       | 生徒のID統合処理 (新規作成、既存紐づけ、フィールド更新、ID変更予約)                                        |
-| `electron-src/lib/import/merge/processors/classProcessor.ts`         | 学級のID統合処理                                                                                           |
+| `electron-src/lib/import/merge/processors/classroomProcessor.ts`     | 学級のID統合処理                                                                                           |
 | `electron-src/lib/import/merge/processors/subtotalGroupProcessor.ts` | 小計グループのID統合処理                                                                                   |
 | `electron-src/lib/import/merge/processors/index.ts`                  | プロセッサーの再エクスポート                                                                               |
 | `electron-src/lib/import/merge/idChangeExecutor.ts`                  | **Stage 2**: ID変更処理 (レコード複製 → FK更新 → 旧レコード削除)                                           |
 | `electron-src/lib/import/merge/imageImporter.ts`                     | 画像ファイルのコピーとDBレコード作成                                                                       |
+| `electron-src/lib/import/merge/importExamCore.ts`                    | 試験骨格（Exam根・ExamPage・CropRegion・UserExam/ExamSubtotalGroup/ExamStudent）の処理                     |
+| `electron-src/lib/import/merge/importExamAttachments.ts`             | 試験付随データ（採点マーク・出力設定・OMR設定・複合解答・タグ・ExamClassroom）の処理                       |
+| `electron-src/lib/import/merge/importSubtotals.ts`                   | 小計・CropSubtotal の処理（明示マッピング → `__new__` → 名前ベース自動マッチの順で解決）                   |
+| `electron-src/lib/import/merge/importScoring.ts`                     | 採点レイヤー（QuestionScore・ScoreDecision・CompoundAnswerScore・CropRegionAssignment）の処理              |
+| `electron-src/lib/import/merge/importSyncRecords.ts`                 | DrawingAnnotation・StudentClassroomMembership の処理（追加とマージのみ。削除は推論しない）                 |
 | `electron-src/lib/import/merge/types.ts`                             | IdMappings, IdChangeTarget, ImportCounts 等の型定義                                                        |
 
 ### インポート関連 - 競合処理
@@ -599,9 +605,8 @@ flowchart TD
 | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `electron-src/lib/import/merge/scoringConflictDetector.ts` | 採点競合の検出 (studentId + cropRegionId キーで既存と比較)             |
 | `electron-src/lib/import/merge/scoringConflictResolver.ts` | 採点競合の解決 (4戦略: import_wins, existing_wins, newer_wins, manual) |
-| `electron-src/lib/import/merge/conflictDetector.ts`        | 汎用競合検出                                                           |
-| `electron-src/lib/import/merge/conflictResolver.ts`        | 汎用競合解決                                                           |
-| `electron-src/lib/import/merge/mergeImageHandler.ts`       | マージ時の画像処理                                                     |
+| `electron-src/lib/import/merge/conflictDetector.ts`        | 汎用競合検出（マッチング結果から競合項目と詳細情報を生成）             |
+| `electron-src/lib/import/merge/decisionMergePolicy.ts`     | 確定レイヤー（ScoreDecision/CompoundAnswerScore）の解決を LWW に一本化 |
 
 ### UI / フロントエンド
 

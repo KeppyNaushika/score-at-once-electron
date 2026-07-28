@@ -3,8 +3,9 @@
 対象: **#839（匿名採点モード）**、および新規 issue 候補（採点者の段階アクセス制御 / 生徒別担当割当）。
 検討日: 2026-07-26。**#840 の実装済み仕様に対する訂正を含む**（→ 3-2）。
 
-前提となる設計は [scoring-assignment-and-decision-design.md](./scoring-assignment-and-decision-design.md)（#840）。
-本書はその上に載る。**一気通貫で実施する前提**で、着手は後日。
+前提は **#840（設問別の採点担当割当と確定フロー、実装済み・コミット `99a89502`）**。本書はその上に載る。
+当時の設計文書は役目を終えたため削除済み（必要なら `git show 002ab128:docs/scoring-assignment-and-decision-design.md`）。
+**一気通貫で実施する前提**で、着手は後日。
 
 ---
 
@@ -179,8 +180,8 @@ if (assignments.length === 0 || canManage || !userId) return cropRegions
 裁定のために全設問を見たいケースは実在するが、自動バイパスではなく明示トグルであるべき。
 確定パネル自体は割り当てと無関係に全競合を出すので影響を受けない。
 
-あわせて `docs/scoring-assignment-and-decision-design.md` の **§2-2「OWNER は担当に関係なく全設問を選択可」**、
-および `electron-src/lib/prisma/cropRegionAssignment.ts` の冒頭コメントを訂正する。
+あわせて `electron-src/lib/prisma/cropRegionAssignment.ts` の冒頭コメントを訂正する（「OWNER は担当に関係なく
+全設問を選択可」という #840 当時の前提が書かれている）。
 
 **自分への割り当ては既に可能**（`assignCropRegion` は割当先を `UserExam` メンバーに限り OWNER もメンバー、
 `QuestionAssignmentRow` のプルダウンも `members` をそのまま出す）。ここは変更不要。
@@ -249,7 +250,7 @@ model UserExam {
 
 なおパターンBでは担当生徒が排他なので競合自体が起きず、この論点は顕在化しない。
 
-`scoring-assignment-and-decision-design.md` は「試験OWNERによる裁定」を単数前提で書いているため、書き直しが要る。
+#840 の実装は「試験OWNERによる裁定」を単数前提で組んでいるため、複数OWNERを許すなら見直しが要る。
 
 ### 3-5. 匿名採点（#839）は OWNER が試験単位で固定できる
 
