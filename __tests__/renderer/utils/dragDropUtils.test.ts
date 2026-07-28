@@ -22,10 +22,10 @@ import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/
 
 function makeFile(
   id: string,
-  studentId: string | null,
+  examStudentId: string | null,
   examPageId: string | null
 ): AnswerImageIdentity {
-  return { id, studentId, examPageId }
+  return { id, examStudentId, examPageId }
 }
 
 const STUDENT_A = "11111111-1111-4111-8111-111111111111"
@@ -34,12 +34,19 @@ const PAGE_1 = "aaaaaaaa-0001-4001-8001-000000000001"
 const PAGE_2 = "aaaaaaaa-0002-4002-8002-000000000002"
 const PAGE_3 = "aaaaaaaa-0003-4003-8003-000000000003"
 
+/**
+ * セルの行・列は実体で渡す（id を呼び出し側で選ばない＝本番と同じ呼び方）。
+ * 行は studentId、列は pageNumber を必須にしてあるので、転置するとコンパイルが通らない。
+ */
+const row = (id: string) => ({ id, studentId: `student-of-${id}` })
+const column = (id: string, pageNumber = 1) => ({ id, pageNumber })
+
 describe("encodeCellDroppableId / decodeCellDroppableId", () => {
   it("エンコードとデコードが往復で一致する", () => {
-    const encoded = encodeCellDroppableId(STUDENT_A, PAGE_1)
+    const encoded = encodeCellDroppableId(row(STUDENT_A), column(PAGE_1))
     expect(encoded).toBe(`cell:${STUDENT_A}:${PAGE_1}`)
     expect(decodeCellDroppableId(encoded)).toEqual({
-      studentId: STUDENT_A,
+      examStudentId: STUDENT_A,
       examPageId: PAGE_1,
     })
   })
@@ -58,13 +65,13 @@ describe("applyCellMoveOrSwap", () => {
   it("空セルへの移動: ドラッグした答案の座標だけが更新される", () => {
     const files = [makeFile("f1", STUDENT_A, PAGE_1)]
     const result = applyCellMoveOrSwap(files, "f1", {
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_2,
     })
 
     expect(result).not.toBe(files)
     expect(result.find((file) => file.id === "f1")).toMatchObject({
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_2,
     })
   })
@@ -76,16 +83,16 @@ describe("applyCellMoveOrSwap", () => {
     ]
     // f1 を studentB, page1（f2 の居場所）へ → swap
     const result = applyCellMoveOrSwap(files, "f1", {
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_1,
     })
 
     expect(result.find((file) => file.id === "f1")).toMatchObject({
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_1,
     })
     expect(result.find((file) => file.id === "f2")).toMatchObject({
-      studentId: STUDENT_A,
+      examStudentId: STUDENT_A,
       examPageId: PAGE_1,
     })
   })
@@ -96,16 +103,16 @@ describe("applyCellMoveOrSwap", () => {
       makeFile("f2", STUDENT_B, PAGE_2),
     ]
     const result = applyCellMoveOrSwap(files, "f1", {
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_2,
     })
 
     expect(result.find((file) => file.id === "f1")).toMatchObject({
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_2,
     })
     expect(result.find((file) => file.id === "f2")).toMatchObject({
-      studentId: STUDENT_A,
+      examStudentId: STUDENT_A,
       examPageId: PAGE_1,
     })
   })
@@ -113,7 +120,7 @@ describe("applyCellMoveOrSwap", () => {
   it("同一セルへのドロップは変更なし（同じ配列参照を返す）", () => {
     const files = [makeFile("f1", STUDENT_A, PAGE_1)]
     const result = applyCellMoveOrSwap(files, "f1", {
-      studentId: STUDENT_A,
+      examStudentId: STUDENT_A,
       examPageId: PAGE_1,
     })
     expect(result).toBe(files)
@@ -122,7 +129,7 @@ describe("applyCellMoveOrSwap", () => {
   it("存在しない activeFileId は変更なし", () => {
     const files = [makeFile("f1", STUDENT_A, PAGE_1)]
     const result = applyCellMoveOrSwap(files, "missing", {
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_2,
     })
     expect(result).toBe(files)
@@ -138,7 +145,7 @@ describe("applyCellMoveOrSwap", () => {
     const result = applyCellMoveOrSwap(
       files,
       "orphan",
-      { studentId: STUDENT_A, examPageId: PAGE_1 },
+      { examStudentId: STUDENT_A, examPageId: PAGE_1 },
       new Set(["orphan", "valid"]),
       false // isSourcePlaceable
     )
@@ -151,13 +158,13 @@ describe("applyCellMoveOrSwap", () => {
     const result = applyCellMoveOrSwap(
       files,
       "orphan",
-      { studentId: STUDENT_A, examPageId: PAGE_2 },
+      { examStudentId: STUDENT_A, examPageId: PAGE_2 },
       new Set(["orphan"]),
       false
     )
     expect(result).not.toBe(files)
     expect(result.find((file) => file.id === "orphan")).toMatchObject({
-      studentId: STUDENT_A,
+      examStudentId: STUDENT_A,
       examPageId: PAGE_2,
     })
   })
@@ -171,16 +178,16 @@ describe("applyCellMoveOrSwap", () => {
     const result = applyCellMoveOrSwap(
       files,
       "f1",
-      { studentId: STUDENT_B, examPageId: PAGE_1 },
+      { examStudentId: STUDENT_B, examPageId: PAGE_1 },
       new Set(["f1"]) // f2 は対象外
     )
     expect(result.find((file) => file.id === "f1")).toMatchObject({
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_1,
     })
     // f2 は動かない（隠れて座標を書き換えられない）
     expect(result.find((file) => file.id === "f2")).toMatchObject({
-      studentId: STUDENT_B,
+      examStudentId: STUDENT_B,
       examPageId: PAGE_1,
     })
   })
@@ -188,8 +195,8 @@ describe("applyCellMoveOrSwap", () => {
 
 describe("diffFilesAgainstBaseline", () => {
   const baseline = [
-    { id: "f1", studentId: STUDENT_A, examPageId: PAGE_1 },
-    { id: "f2", studentId: STUDENT_B, examPageId: PAGE_1 },
+    { id: "f1", examStudentId: STUDENT_A, examPageId: PAGE_1 },
+    { id: "f2", examStudentId: STUDENT_B, examPageId: PAGE_1 },
   ]
 
   it("DB 基準から座標が変わったファイルだけを from(DB)/to(現在) で返す", () => {
@@ -203,8 +210,8 @@ describe("diffFilesAgainstBaseline", () => {
     expect(diff).toHaveLength(1)
     expect(diff[0]).toMatchObject({
       fileId: "f1",
-      fromState: { studentId: STUDENT_A, examPageId: PAGE_1 },
-      toState: { studentId: STUDENT_B, examPageId: PAGE_2 },
+      fromState: { examStudentId: STUDENT_A, examPageId: PAGE_1 },
+      toState: { examStudentId: STUDENT_B, examPageId: PAGE_2 },
     })
   })
 
@@ -234,8 +241,8 @@ describe("diffFilesAgainstBaseline", () => {
 })
 
 describe("partitionAnswerItemsByPlacement（孤立答案 [4]/[5]）", () => {
-  const roster = [STUDENT_A, STUDENT_B]
-  const examPageIds = [PAGE_1, PAGE_2]
+  const roster = [row(STUDENT_A), row(STUDENT_B)]
+  const examPageIds = [column(PAGE_1), column(PAGE_2)]
 
   it("ロスター内かつ列にある examPageId の答案はマスに配置される", () => {
     const items = [
@@ -248,12 +255,16 @@ describe("partitionAnswerItemsByPlacement（孤立答案 [4]/[5]）", () => {
       examPageIds
     )
     expect(orphans).toHaveLength(0)
-    // 配置は (studentId, examPageId) で引く（序数キーではない）
-    expect(getCellValue(placedByCell, STUDENT_A, PAGE_1)?.id).toBe("f1")
-    expect(getCellValue(placedByCell, STUDENT_B, PAGE_2)?.id).toBe("f2")
+    // 配置は (examStudentId, examPageId) で引く（序数キーではない）
+    expect(getCellValue(placedByCell, row(STUDENT_A), column(PAGE_1))?.id).toBe(
+      "f1"
+    )
+    expect(getCellValue(placedByCell, row(STUDENT_B), column(PAGE_2))?.id).toBe(
+      "f2"
+    )
   })
 
-  it("[4] studentId が現ロスターに無い答案（除籍）は孤立答案になる", () => {
+  it("[4] examStudentId が現ロスターに無い答案（除籍）は孤立答案になる", () => {
     const withdrawn = "99999999-9999-4999-8999-999999999999"
     const items = [makeFile("f1", withdrawn, PAGE_1)]
     const { placedByCell, orphans } = partitionAnswerItemsByPlacement(
@@ -276,7 +287,7 @@ describe("partitionAnswerItemsByPlacement（孤立答案 [4]/[5]）", () => {
     expect(orphans.map((item) => item.id)).toEqual(["f1"])
   })
 
-  it("studentId 未設定の答案も孤立答案になる", () => {
+  it("examStudentId 未設定の答案も孤立答案になる", () => {
     const items = [makeFile("f1", null, PAGE_1)]
     const { orphans } = partitionAnswerItemsByPlacement(
       items,

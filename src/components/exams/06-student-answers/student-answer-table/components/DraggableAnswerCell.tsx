@@ -45,7 +45,7 @@ export function DraggableAnswerCell({
 
   // マス（ドロップ受け皿）: 占有マスも空マスと同じ座標 droppable（examPageId）にする
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: encodeCellDroppableId(examStudent.studentId, examPage.id),
+    id: encodeCellDroppableId(examStudent, examPage),
   })
 
   // 答案（掴む対象）

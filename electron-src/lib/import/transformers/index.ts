@@ -57,6 +57,7 @@ import { V1_16_0_to_V1_17_0_Transformer } from "./V1_16_0_to_V1_17_0"
 import { V1_17_0_to_V1_18_0_Transformer } from "./V1_17_0_to_V1_18_0"
 import { V1_18_0_to_V1_19_0_Transformer } from "./V1_18_0_to_V1_19_0"
 import { V1_19_0_to_V1_20_0_Transformer } from "./V1_19_0_to_V1_20_0"
+import { V1_20_0_to_V1_21_0_Transformer } from "./V1_20_0_to_V1_21_0"
 
 const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
@@ -79,6 +80,7 @@ const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_17_0_to_V1_18_0_Transformer(),
   new V1_18_0_to_V1_19_0_Transformer(),
   new V1_19_0_to_V1_20_0_Transformer(),
+  new V1_20_0_to_V1_21_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
@@ -105,6 +107,13 @@ function rawExamClassroomRecords(
  * 現行データに旧キーの残骸が併存するだけでは発火しない（過剰引き下げは
  * 非冪等変換器 — px→mm・pageImages 分割 — によるデータ破壊を招くため）。
  */
+/**
+ * 採点層の行が「旧キー studentId を持ち、現行キー examStudentId を持たない」か。
+ * `in` 演算子で判定するので、行の型を Record へ潰す必要が無い（`as` を使わない）。
+ */
+const hasLegacyStudentKey = (rows: readonly object[] | undefined): boolean =>
+  (rows ?? []).some((row) => "studentId" in row && !("examStudentId" in row))
+
 const SHAPE_VERSION_FLOORS: {
   maxVersion: ExamArchiveVersion
   marker: string
@@ -203,6 +212,21 @@ const SHAPE_VERSION_FLOORS: {
           typeof examStudent.status === "string" &&
           examStudent.status !== examStudent.status.toLowerCase()
       ),
+  },
+  {
+    // 採点層が ExamStudent 経由になる前の studentId キー（V1_20_0_to_V1_21_0 が処理）。
+    // 現行キー examStudentId が併存する場合は発火しない（変換は非冪等で、
+    // 2度目は解決できず全行を孤児として破棄してしまうため）。
+    maxVersion: "1.20.0",
+    marker: "採点層の studentId キー",
+    applies: (data) =>
+      [
+        data.scoresData.questionScores,
+        data.scoresData.scoreDecisions,
+        data.scoresData.returnSnapshots,
+        data.examData.studentAnswerImages,
+        data.examData.compoundAnswerScores,
+      ].some(hasLegacyStudentKey),
   },
 ]
 

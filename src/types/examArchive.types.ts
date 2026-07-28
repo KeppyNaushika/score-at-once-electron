@@ -78,6 +78,7 @@ export interface ArchiveDataCounts {
  * - 1.18.0: v0.16.x (CropRegionMarkingOverride 廃止 — UI・出力反映が無いまま入出力のみ維持されていたため削除)
  * - 1.19.0: v0.16.x (DeletedRecord tombstone 廃止 — アーカイブは正本であり import は忠実に復元する。削除の伝搬は sqlite-nas-sync の `_tombstone` に一本化)
  * - 1.20.0: v0.16.x (CropRegionAssignment 追加 — 設問ごとの採点担当。ユーザーはアーカイブを越えないため username で照合する)
+ * - 1.21.0: v0.16.x (採点層を ExamStudent 経由へ配線変更 — studentAnswerImages / questionScores / scoreDecisions / compoundAnswerScores / returnSnapshots の studentId を examStudentId へ。ReturnSnapshot.examId は ExamStudent が持つため削除)
  */
 export type ExamArchiveVersion =
   | "1.0.0"
@@ -101,9 +102,10 @@ export type ExamArchiveVersion =
   | "1.18.0"
   | "1.19.0"
   | "1.20.0"
+  | "1.21.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.20.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.21.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -128,6 +130,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.18.0",
   "1.19.0",
   "1.20.0",
+  "1.21.0",
 ] as const
 
 /**
@@ -781,7 +784,8 @@ export interface ArchiveExamData {
   compoundAnswerScores?: Array<{
     id: string
     compoundAnswerId: string
-    studentId: string
+    /** v1.21.0+ 受験者ID（ExamStudent.id）。それ以前は studentId */
+    examStudentId: string
     userId: string
     recognizedAnswer: string | null
     status: string
@@ -813,7 +817,8 @@ export interface ArchiveExamData {
   studentAnswerImages?: Array<{
     id: string
     examPageId: string
-    studentId: string
+    /** v1.21.0+ 受験者ID（ExamStudent.id）。それ以前は studentId */
+    examStudentId: string
     imagePath: string
     createdAt: string
     updatedAt: string
@@ -982,7 +987,8 @@ export interface ArchiveScoresData {
   questionScores: Array<{
     id: string
     cropRegionId: string
-    studentId: string
+    /** v1.21.0+ 受験者ID（ExamStudent.id）。それ以前は studentId */
+    examStudentId: string
     partialScore: string | null // Decimal as string
     status: string
     userId: string
@@ -1020,7 +1026,8 @@ export interface ArchiveScoresData {
   scoreDecisions?: Array<{
     id: string
     cropRegionId: string
-    studentId: string
+    /** v1.21.0+ 受験者ID（ExamStudent.id）。それ以前は studentId */
+    examStudentId: string
     verdict: string
     score: string | null // Decimal as string
     comment: string | null
@@ -1044,11 +1051,11 @@ export interface ArchiveScoresData {
     createdAt: string
     updatedAt: string
   }>
-  /** v1.14.0+ 答案返却版スナップショット（生徒×試験で1行）。旧バージョンのアーカイブには存在しない */
+  /** v1.14.0+ 答案返却版スナップショット（受験者ごとに1行）。旧バージョンのアーカイブには存在しない */
   returnSnapshots?: Array<{
     id: string
-    examId: string
-    studentId: string
+    /** v1.21.0+ 受験者ID（ExamStudent.id）。それ以前は examId + studentId */
+    examStudentId: string
     scoresJson: string
     totalScore: string | null // Decimal as string
     capturedByUserId: string | null

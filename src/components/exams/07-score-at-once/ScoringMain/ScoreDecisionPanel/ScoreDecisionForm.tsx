@@ -93,7 +93,7 @@ export function ScoreDecisionForm({
     setDeciding(true)
     try {
       const result = await window.electronAPI.finalizeQuestionScore(
-        cell.studentId,
+        cell.examStudentId,
         cell.cropRegionId,
         user.id,
         {

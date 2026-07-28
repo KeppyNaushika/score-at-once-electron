@@ -34,7 +34,7 @@ export type UpdateQuestionScoreArgs = Partial<
 export interface ScoreDecisionForComparison {
   id: string
   cropRegionId: string
-  studentId: string
+  examStudentId: string
   verdict: string
   score: number | null
   comment: string | null
@@ -78,7 +78,7 @@ export interface ScoringAPI {
   }>
   createQuestionScore: (data: {
     cropRegionId: string
-    studentId: string // v0.4.0+: required
+    examStudentId: string
     partialScore?: number
     status: ScoringStatus
     userId: string // v0.4.0+: required
@@ -96,7 +96,7 @@ export interface ScoringAPI {
   ) => Promise<QuestionScoreOperationResult>
   deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
   finalizeQuestionScore: (
-    studentId: string,
+    examStudentId: string,
     cropRegionId: string,
     userId: string,
     scoreData: {
@@ -165,7 +165,7 @@ export interface ScoringAPI {
   }>
   batchUpdateQuestionScores: (
     entries: Array<{
-      studentId: string
+      examStudentId: string
       cropRegionId: string
       status: ScoringStatus
       partialScore: number | null

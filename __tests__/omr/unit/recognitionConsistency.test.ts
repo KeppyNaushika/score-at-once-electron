@@ -179,7 +179,7 @@ function reevaluate(
 ): OMRCellResult {
   const sheetResult: OMRSheetResult = {
     success: true,
-    studentId: "student-uuid",
+    examStudentId: "student-uuid",
     pageIndex: 0,
     markerDetection: {
       success: true,

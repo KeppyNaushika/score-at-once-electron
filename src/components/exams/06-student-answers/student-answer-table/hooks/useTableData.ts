@@ -25,7 +25,7 @@ interface UseTableDataParams<TItem extends AnswerImageIdentity> {
   disabledState: ExtendedDisabledState
   isCellDisabled: (
     examStudent: ExamStudentWithMemberships,
-    examPageId: string
+    examPage: ExamPageColumn
   ) => boolean
   mode?: "upload" | "view"
   existingAnswers?: AnswerImageIdentity[]
@@ -65,16 +65,12 @@ export function useTableData<TItem extends AnswerImageIdentity>({
 
   // 手動無効化 + 動的無効化を合わせたセル無効判定
   const enhancedIsCellDisabled = useCallback(
-    (examStudent: ExamStudentWithMemberships, examPageId: string) => {
+    (examStudent: ExamStudentWithMemberships, examPage: ExamPageColumn) => {
       // 元の無効化チェック
-      if (isCellDisabled(examStudent, examPageId)) return true
+      if (isCellDisabled(examStudent, examPage)) return true
 
       // 動的無効化チェック
-      return lookupHasCell(
-        dynamicDisabledCells,
-        examStudent.studentId,
-        examPageId
-      )
+      return lookupHasCell(dynamicDisabledCells, examStudent, examPage)
     },
     [isCellDisabled, dynamicDisabledCells]
   )

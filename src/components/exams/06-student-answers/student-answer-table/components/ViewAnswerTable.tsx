@@ -12,7 +12,7 @@ import type { PlacedAnswerImage } from "@/types/prismaExtensions"
 const EMPTY_CORRECTING: Set<string> = new Set()
 
 interface ViewAnswerTableExtraProps {
-  // 直近アップロードのマーカー補正結果（(studentId, examPageId) → status）。表示オーバーレイ専用。
+  // 直近アップロードのマーカー補正結果（(examStudentId, examPageId) → status）。表示オーバーレイ専用。
   correctionStatusMap?: Map<string, "corrected" | "skipped">
 }
 
@@ -42,13 +42,11 @@ export function ViewAnswerTable(
     const map = new Map<string, FilePreviewSource>()
     for (const answer of props.files) {
       const correctionStatus = correctionStatusMap?.get(
-        `${answer.studentId}-${answer.examPageId}`
+        `${answer.examStudentId}-${answer.examPageId}`
       )
       map.set(answer.id, {
         imagePath: answer.imagePath,
-        altName: answer.student
-          ? `${answer.student.lastName} ${answer.student.firstName}`
-          : answer.id,
+        altName: `${answer.examStudent.student.lastName} ${answer.examStudent.student.firstName}`,
         correctionStatus,
       })
     }

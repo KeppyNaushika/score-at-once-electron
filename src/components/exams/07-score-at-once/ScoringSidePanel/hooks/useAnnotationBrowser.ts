@@ -23,7 +23,7 @@ export interface AnnotationDisplayItem {
 // フィルタ設定
 export interface AnnotationFilters {
   cropRegionId: string | null
-  studentId: string | null
+  examStudentId: string | null
   type: DrawingType | null
   favoritesOnly: boolean
 }
@@ -117,7 +117,7 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [filters, setFiltersState] = useState<AnnotationFilters>({
     cropRegionId: null,
-    studentId: null,
+    examStudentId: null,
     type: null,
     favoritesOnly: false,
   })
@@ -150,10 +150,10 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
           annotation.questionScore?.cropRegionId === filters.cropRegionId
       )
     }
-    if (filters.studentId) {
+    if (filters.examStudentId) {
       filtered = filtered.filter(
         (annotation) =>
-          annotation.questionScore?.studentId === filters.studentId
+          annotation.questionScore?.examStudentId === filters.examStudentId
       )
     }
     if (filters.type) {

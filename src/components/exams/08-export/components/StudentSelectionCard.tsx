@@ -56,26 +56,26 @@ interface StudentSelectionCardProps {
   selectedStatuses: string[]
   setSelectedStatuses: (statuses: string[]) => void
   selectedStudents: Set<string>
-  toggleStudent: (studentId: string) => void
-  addStudents: (studentIds: string[]) => void
-  removeStudents: (studentIds: string[]) => void
+  toggleStudent: (examStudentId: string) => void
+  addStudents: (examStudentIds: string[]) => void
+  removeStudents: (examStudentIds: string[]) => void
   // 答案返却・差分（生徒選択タブ内に表示）
   /** 表示フィルタ前の全生徒（差分の件数・詳細を表示フィルタと独立させるため） */
   allStudents: Student[]
-  selectedStudentIds: string[]
-  onSelectStudentIds: (studentIds: string[]) => void
-  diffByStudent: Map<string, ReturnStudentDiff>
-  changedStudentIds: Set<string>
+  selectedExamStudentIds: string[]
+  onSelectExamStudentIds: (examStudentIds: string[]) => void
+  diffByExamStudent: Map<string, ReturnStudentDiff>
+  changedExamStudentIds: Set<string>
   hasAnySnapshot: boolean
   capturingReturn: boolean
-  captureReturn: (studentIds: string[]) => Promise<boolean>
+  captureReturn: (examStudentIds: string[]) => Promise<boolean>
   // プレビュー関連
   exportTab?: ExportTabType
   previewData?: IndividualReportData | null
   isPreviewLoading?: boolean
   previewError?: string | null
   previewStudentId?: string
-  onPreviewStudentChange?: (studentId: string) => void
+  onPreviewStudentChange?: (examStudentId: string) => void
   previewStudentList?: Array<{ id: string; name: string }>
   individualReportOptions?: IndividualReportOptions
   // 採点済み答案プレビュー
@@ -83,7 +83,7 @@ interface StudentSelectionCardProps {
   isScoredAnswerPreviewLoading?: boolean
   scoredAnswerPreviewError?: string | null
   scoredAnswerPreviewStudentId?: string | null
-  onScoredAnswerPreviewStudentChange?: (studentId: string) => void
+  onScoredAnswerPreviewStudentChange?: (examStudentId: string) => void
   // Excelプレビュー
   excelPreviewData?: ExcelPreviewData | null
   isExcelPreviewLoading?: boolean
@@ -105,10 +105,10 @@ export function StudentSelectionCard({
   addStudents,
   removeStudents,
   allStudents,
-  selectedStudentIds,
-  onSelectStudentIds,
-  diffByStudent,
-  changedStudentIds,
+  selectedExamStudentIds,
+  onSelectExamStudentIds,
+  diffByExamStudent,
+  changedExamStudentIds,
   hasAnySnapshot,
   capturingReturn,
   captureReturn,
@@ -142,11 +142,11 @@ export function StudentSelectionCard({
         : "scored-answers"
 
   const selectAllFiltered = () => {
-    addStudents(students.map((examStudent) => examStudent.studentId))
+    addStudents(students.map((examStudent) => examStudent.id))
   }
 
   const deselectAllFiltered = () => {
-    removeStudents(students.map((examStudent) => examStudent.studentId))
+    removeStudents(students.map((examStudent) => examStudent.id))
   }
 
   const toggleClassroomFilter = (classroomId: string) => {
@@ -316,10 +316,10 @@ export function StudentSelectionCard({
         <div className="mb-2 shrink-0">
           <ReturnDiffPanel
             students={allStudents}
-            selectedStudentIds={selectedStudentIds}
-            onSelectStudentIds={onSelectStudentIds}
-            diffByStudent={diffByStudent}
-            changedStudentIds={changedStudentIds}
+            selectedExamStudentIds={selectedExamStudentIds}
+            onSelectExamStudentIds={onSelectExamStudentIds}
+            diffByExamStudent={diffByExamStudent}
+            changedExamStudentIds={changedExamStudentIds}
             hasAnySnapshot={hasAnySnapshot}
             capturing={capturingReturn}
             capture={captureReturn}
@@ -337,17 +337,17 @@ export function StudentSelectionCard({
           <div className="relative flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
             {students.map((examStudent) => (
               <div
-                key={examStudent.studentId}
+                key={examStudent.id}
                 className="hover:bg-muted flex items-center space-x-2 rounded p-1"
               >
                 <Checkbox
-                  id={`student-${examStudent.studentId}`}
-                  checked={selectedStudents.has(examStudent.studentId)}
-                  onCheckedChange={() => toggleStudent(examStudent.studentId)}
+                  id={`student-${examStudent.id}`}
+                  checked={selectedStudents.has(examStudent.id)}
+                  onCheckedChange={() => toggleStudent(examStudent.id)}
                   className="h-4 w-4"
                 />
                 <Label
-                  htmlFor={`student-${examStudent.studentId}`}
+                  htmlFor={`student-${examStudent.id}`}
                   className="flex-1 cursor-pointer"
                 >
                   <div className="flex items-center justify-between">

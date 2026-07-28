@@ -12,11 +12,11 @@ import type {
  * 答案返却スナップショットの記録と差分検出を管理するフック。
  *
  * - capture: 選択中の生徒を「返却版」として記録する
- * - diffByStudent: 生徒ID → 差分（返却版との比較結果）
- * - changedStudentIds: 返却版から変更があった生徒IDの集合
+ * - diffByExamStudent: 生徒ID → 差分（返却版との比較結果）
+ * - changedExamStudentIds: 返却版から変更があった生徒IDの集合
  */
 export function useReturnDiff(examId: string) {
-  const [diffByStudent, setDiffByStudent] = useState<
+  const [diffByExamStudent, setDiffByStudent] = useState<
     Map<string, ReturnStudentDiff>
   >(new Map())
   const [hasAnySnapshot, setHasAnySnapshot] = useState(false)
@@ -31,7 +31,7 @@ export function useReturnDiff(examId: string) {
         await window.electronAPI.export.getReturnDiff(examId)
       if (result.success) {
         setDiffByStudent(
-          new Map(result.diffs.map((diff) => [diff.studentId, diff]))
+          new Map(result.diffs.map((diff) => [diff.examStudentId, diff]))
         )
         setHasAnySnapshot(result.hasAnySnapshot)
       } else {
@@ -50,13 +50,13 @@ export function useReturnDiff(examId: string) {
 
   /** 指定生徒を返却版として記録する */
   const capture = useCallback(
-    async (studentIds: string[]): Promise<boolean> => {
-      if (!examId || studentIds.length === 0) return false
+    async (examStudentIds: string[]): Promise<boolean> => {
+      if (!examId || examStudentIds.length === 0) return false
       setCapturing(true)
       try {
         const result = await window.electronAPI.export.captureReturnSnapshot({
           examId,
-          studentIds,
+          examStudentIds,
         })
         if (result.success) {
           toast.success(`${result.capturedCount}名を返却版として記録しました`)
@@ -76,17 +76,17 @@ export function useReturnDiff(examId: string) {
     [examId, refresh]
   )
 
-  const changedStudentIds = useMemo(() => {
+  const changedExamStudentIds = useMemo(() => {
     const ids = new Set<string>()
-    for (const diff of diffByStudent.values()) {
-      if (diff.changed) ids.add(diff.studentId)
+    for (const diff of diffByExamStudent.values()) {
+      if (diff.changed) ids.add(diff.examStudentId)
     }
     return ids
-  }, [diffByStudent])
+  }, [diffByExamStudent])
 
   return {
-    diffByStudent,
-    changedStudentIds,
+    diffByExamStudent,
+    changedExamStudentIds,
     hasAnySnapshot,
     loading,
     capturing,

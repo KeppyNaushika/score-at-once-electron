@@ -39,7 +39,7 @@ export default function AnswerIndividualView({
   studentAnswerImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
-  currentStudentId,
+  currentExamStudentId,
   currentUserId,
   questionScores,
   onQuestionScoreCreated,
@@ -100,16 +100,16 @@ export default function AnswerIndividualView({
   // 全設問の採点ステータスと点数を計算（全設問マーク・点数描画用）
   const allCropRegionsWithStatus = useMemo(() => {
     if (!cropRegions || !questionScores || !currentScoringData) return []
-    const studentId = currentScoringData.studentId
+    const examStudentId = currentScoringData.examStudentId
     return cropRegions.map((cropRegion) => {
       const status = getScoringStatusFromArray(
         questionScores,
-        studentId,
+        examStudentId,
         cropRegion.id
       )
       const questionScore = questionScores.find(
         (candidateQuestionScore) =>
-          candidateQuestionScore.studentId === studentId &&
+          candidateQuestionScore.examStudentId === examStudentId &&
           candidateQuestionScore.cropRegionId === cropRegion.id
       )
       const maxScore = cropRegion.points ?? 0
@@ -136,7 +136,7 @@ export default function AnswerIndividualView({
 
   // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
   const { currentQuestionScoreId } = useAutoCreateQuestionScore({
-    currentStudentId,
+    currentExamStudentId,
     currentCropRegionId: currentCropRegion?.id,
     currentUserId,
     questionScores,
@@ -148,7 +148,7 @@ export default function AnswerIndividualView({
     currentQuestionScoreId,
     true, // データベース永続化を有効化
     {
-      currentStudentId,
+      currentExamStudentId,
       currentCropRegionId: currentCropRegion?.id,
       currentUserId,
     },
@@ -172,7 +172,7 @@ export default function AnswerIndividualView({
   // 透明度制御用：全設問のアノテーション読み込み
   // currentUserIdを渡してログインユーザーのアノテーションのみ取得
   const { allStudentAnnotations } = useAllStudentAnnotations({
-    currentStudentId,
+    currentExamStudentId,
     currentCropRegion,
     currentUserId,
     refreshKey: annotationRefreshKey,

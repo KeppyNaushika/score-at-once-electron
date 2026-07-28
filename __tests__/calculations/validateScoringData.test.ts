@@ -36,6 +36,7 @@ function studentData(
   scores: ReturnType<typeof scoreDetail>[]
 ): ScoringData {
   return {
+    examStudentId: `exam-student-${studentName}`,
     studentId: `student-${studentName}`,
     studentName,
     studentNumber: "1",
@@ -156,7 +157,7 @@ function summary(): ExamDecisionSummary {
         decidedCount: 1,
         cells: [
           {
-            studentId: "student-A",
+            examStudentId: "student-A",
             studentName: "田中 太郎",
             cropRegionId: "region-1",
             reason: "conflict",
@@ -165,7 +166,7 @@ function summary(): ExamDecisionSummary {
             scoreImpact: 5,
           },
           {
-            studentId: "student-B",
+            examStudentId: "student-B",
             studentName: "鈴木 花子",
             cropRegionId: "region-1",
             reason: "stale",
@@ -186,7 +187,7 @@ function summary(): ExamDecisionSummary {
         decidedCount: 0,
         cells: [
           {
-            studentId: "student-C",
+            examStudentId: "student-C",
             studentName: "佐藤 次郎",
             cropRegionId: "region-2",
             reason: "conflict",
@@ -204,7 +205,7 @@ describe("buildConflictWarnings", () => {
   it("stale（確定後の新提案）は出力前警告に出さない — 確定値が出力されるため", () => {
     const warnings = buildConflictWarnings(summary())
 
-    expect(warnings.map((warning) => warning.studentId)).toEqual([
+    expect(warnings.map((warning) => warning.examStudentId)).toEqual([
       "student-A",
       "student-C",
     ])
@@ -220,7 +221,9 @@ describe("buildConflictWarnings", () => {
 
   it("選択生徒でフィルタする（空配列は全生徒）", () => {
     expect(
-      buildConflictWarnings(summary(), ["student-C"]).map((w) => w.studentId)
+      buildConflictWarnings(summary(), ["student-C"]).map(
+        (w) => w.examStudentId
+      )
     ).toEqual(["student-C"])
     expect(buildConflictWarnings(summary(), []).length).toBe(2)
   })

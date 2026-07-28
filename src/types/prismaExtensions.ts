@@ -72,7 +72,8 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
  * 実体は Exam×Student×Classroom の結合を生徒1人へ畳んだもので、基底は Student ではなく
  * **ExamStudent**。受験状態（status）・並び順（customOrder）は ExamStudent の実列、
  * 生徒識別・学級所属は `examStudent.student(.memberships.classroom)`、答案枚数は
- * `examStudent.student._count.studentAnswerImages` として Prisma スキーマに完全追随する。
+ * `examStudent._count.studentAnswerImages` として Prisma スキーマに完全追随する
+ * （答案は ExamStudent の子なので、試験での絞り込みは不要）。
  * 機能ごとに手書きで重複宣言せず、05/06/08・electron 出力すべてがこの型を参照する。
  *
  * status のみ ExamStudentStatus へ narrowing する（DB 上は string。Prisma+SQLite が enum を
@@ -85,9 +86,9 @@ export type ExamStudentWithMemberships = Omit<
       student: {
         include: {
           memberships: { include: { classroom: true } }
-          _count: { select: { studentAnswerImages: true } }
         }
       }
+      _count: { select: { studentAnswerImages: true } }
     }
   }>,
   "status"
@@ -156,10 +157,12 @@ export type ExamForDetail = Prisma.ExamGetPayload<{
     examPages: {
       include: {
         masterImages: true
-        studentAnswerImages: { include: { student: true } }
+        studentAnswerImages: {
+          include: { examStudent: { include: { student: true } } }
+        }
         cropRegions: {
-          // 進捗計算は questionScores のスカラー（status/studentId/partialScore）のみ読むため
-          // student/user は join しない（over-fetch 排除）
+          // 進捗計算は questionScores のスカラー（status/examStudentId/partialScore）のみ読むため
+          // examStudent/user は join しない（over-fetch 排除）
           include: { questionScores: true }
         }
       }
@@ -185,7 +188,7 @@ export type ExamForDetail = Prisma.ExamGetPayload<{
   })[]
   /** IPCハンドラーで抽出されるanswerImages */
   answerImages?: (Prisma.StudentAnswerImageGetPayload<{
-    include: { student: true }
+    include: { examStudent: { include: { student: true } } }
   }> & {
     pageNumber: number
   })[]
@@ -203,9 +206,9 @@ export type StudentAnswerImageWithExamPageAndStudent =
   Prisma.StudentAnswerImageGetPayload<{
     include: {
       examPage: true
-      student: {
+      examStudent: {
         include: {
-          examStudents: true
+          student: true
         }
       }
     }
@@ -215,17 +218,21 @@ export type StudentAnswerImageWithExamPageAndStudent =
  * 保存済み答案（配置済み）を Prisma include のまま持つ実体型（06 entity-first）。
  * 列＝ExamPage 実体から供給されるため、答案は自身の examPage を再同梱しない
  * （examPageId で列に照合し、pageNumber は列の ExamPage から表示時に導出する）。
- * 孤立答案の氏名表示のため student は同梱する。
+ * 氏名表示のため受験者（と生徒）は同梱する。
  */
 export type PlacedAnswerImage = Prisma.StudentAnswerImageGetPayload<{
-  include: { student: true }
+  include: { examStudent: { include: { student: true } } }
 }>
 
 /**
  * 06 データセットの列となる ExamPage 実体（配置済み答案を子に持つ）。
  */
 export type StudentAnswerDatasetExamPage = Prisma.ExamPageGetPayload<{
-  include: { studentAnswerImages: { include: { student: true } } }
+  include: {
+    studentAnswerImages: {
+      include: { examStudent: { include: { student: true } } }
+    }
+  }
 }>
 
 /**

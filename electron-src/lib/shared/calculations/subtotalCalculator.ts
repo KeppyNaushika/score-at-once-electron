@@ -40,15 +40,15 @@ export interface SubtotalScoreResult {
  * @returns スコアと最大点の両方を返す
  */
 export async function calculateSubtotalScoreForStudent(
-  studentId: string,
+  examStudentId: string,
   subtotalRegionId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegion[]
 ): Promise<SubtotalScoreResult> {
   try {
     // この生徒の全採点データを取得
-    const studentScores = allQuestionScores.filter(
-      (score) => score.studentId === studentId
+    const examStudentScores = allQuestionScores.filter(
+      (score) => score.examStudentId === examStudentId
     )
 
     // 小計点領域に関連付けられたグループ項目を取得
@@ -57,7 +57,7 @@ export async function calculateSubtotalScoreForStudent(
     // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
     if (!cropSubtotals || cropSubtotals.length === 0) {
       return calculateStudentTotalScoreWithMax(
-        studentId,
+        examStudentId,
         allQuestionScores,
         cropRegions
       )
@@ -80,7 +80,7 @@ export async function calculateSubtotalScoreForStudent(
 
     if (groupMap.size === 0) {
       return calculateStudentTotalScoreWithMax(
-        studentId,
+        examStudentId,
         allQuestionScores,
         cropRegions
       )
@@ -139,7 +139,7 @@ export async function calculateSubtotalScoreForStudent(
     let hasScoredQuestion = false
 
     for (const questionId of finalQuestionIds) {
-      const scoreData = studentScores.find(
+      const scoreData = examStudentScores.find(
         (questionScore) => questionScore.cropRegionId === questionId
       )
       if (scoreData) {
@@ -163,7 +163,7 @@ export async function calculateSubtotalScoreForStudent(
     }
   } catch (error) {
     console.error(
-      `Error calculating subtotal score for student ${studentId}, region ${subtotalRegionId}:`,
+      `Error calculating subtotal score for student ${examStudentId}, region ${subtotalRegionId}:`,
       error
     )
     return { score: null, maxScore: 0, hasQuestionAssignments: false }
@@ -174,12 +174,12 @@ export async function calculateSubtotalScoreForStudent(
  * 生徒の全設問合計点とその最大点を計算する（フォールバック用）
  */
 function calculateStudentTotalScoreWithMax(
-  studentId: string,
+  examStudentId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegion[]
 ): SubtotalScoreResult {
-  const studentScores = allQuestionScores.filter(
-    (score) => score.studentId === studentId
+  const examStudentScores = allQuestionScores.filter(
+    (score) => score.examStudentId === examStudentId
   )
 
   let totalScore = 0
@@ -194,7 +194,7 @@ function calculateStudentTotalScoreWithMax(
   }
 
   // 採点データがある設問の得点を合計
-  for (const scoreData of studentScores) {
+  for (const scoreData of examStudentScores) {
     const cropRegion = cropRegions.find(
       (cropRegion) => cropRegion.id === scoreData.cropRegionId
     )
@@ -219,22 +219,22 @@ function calculateStudentTotalScoreWithMax(
  * Subtotal IDから直接小計点を計算する関数（個人成績表用）
  * SUBTOTAL_SCORE CropRegionを介さず、Subtotalから直接計算
  *
- * @param studentId 生徒ID
+ * @param examStudentId 生徒ID
  * @param subtotalId Subtotal ID
  * @param allQuestionScores 全採点データ
  * @param cropRegions 全CropRegion（QUESTION_ANSWER用）
  * @returns 小計点と最大点
  */
 export async function calculateSubtotalScoreBySubtotalId(
-  studentId: string,
+  examStudentId: string,
   subtotalId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegion[]
 ): Promise<SubtotalScoreResult> {
   try {
     // この生徒の全採点データを取得
-    const studentScores = allQuestionScores.filter(
-      (score) => score.studentId === studentId
+    const examStudentScores = allQuestionScores.filter(
+      (score) => score.examStudentId === examStudentId
     )
 
     // SubtotalからQUESTION_ASSIGNMENTのCropSubtotalを直接取得
@@ -281,7 +281,7 @@ export async function calculateSubtotalScoreBySubtotalId(
       const questionMaxScore = cropRegion.points || 0
       totalMaxScore += questionMaxScore
 
-      const scoreData = studentScores.find(
+      const scoreData = examStudentScores.find(
         (questionScore) => questionScore.cropRegionId === questionId
       )
       if (scoreData) {
@@ -300,7 +300,7 @@ export async function calculateSubtotalScoreBySubtotalId(
     }
   } catch (error) {
     console.error(
-      `Error calculating subtotal score for student ${studentId}, subtotal ${subtotalId}:`,
+      `Error calculating subtotal score for student ${examStudentId}, subtotal ${subtotalId}:`,
       error
     )
     return { score: null, maxScore: 0, hasQuestionAssignments: false }

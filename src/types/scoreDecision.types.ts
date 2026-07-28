@@ -36,9 +36,9 @@ export type ScoreDecisionReason =
   /** 確定済みだが、その後に新しい提案が入った（再確認が必要） */
   | "stale"
 
-/** 裁定対象の生徒×設問セル */
+/** 裁定対象の受験者×設問セル */
 export interface ScoreDecisionCell {
-  studentId: string
+  examStudentId: string
   studentName: string
   cropRegionId: string
   reason: ScoreDecisionReason
@@ -72,7 +72,7 @@ export interface ScoreDecisionQuestion {
    * 担当者ごとの進捗もここに畳む（設問×担当者を添字で突き合わせない）。
    */
   assignees: AssignedGrader[]
-  /** 答案がある生徒数（この設問の分母） */
+  /** 答案がある受験者数（この設問の分母） */
   totalStudents: number
   /** 誰か1人でも採点したセル数 */
   scoredCount: number

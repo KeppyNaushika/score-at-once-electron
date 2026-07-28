@@ -263,10 +263,8 @@ export function useOmrAutoScoring(examId: string) {
       // 画像パス（DB相対パス）を収集 — メインプロセス側で絶対パスに解決
       const imagePaths = answerImages.map((answerImage) => ({
         path: answerImage.imagePath,
-        studentId: answerImage.studentId,
-        studentName: answerImage.student
-          ? `${answerImage.student.lastName} ${answerImage.student.firstName}`
-          : undefined,
+        examStudentId: answerImage.examStudentId,
+        studentName: `${answerImage.examStudent.student.lastName} ${answerImage.examStudent.student.firstName}`,
       }))
 
       // 6. バッチ認識実行
@@ -296,7 +294,7 @@ export function useOmrAutoScoring(examId: string) {
         console.warn(
           `OMR: ${failedSheets.length}/${results.length} 枚でマーカー検出失敗`,
           failedSheets.map((sheet) => ({
-            studentId: sheet.studentId,
+            examStudentId: sheet.examStudentId,
             error: sheet.error,
           }))
         )
@@ -365,17 +363,17 @@ export function useOmrAutoScoring(examId: string) {
       setState((prev) => ({ ...prev, isApplying: true, error: null }))
       try {
         const entries: Array<{
-          studentId: string
+          examStudentId: string
           cropRegionId: string
           status: ScoringStatus
           partialScore: number | null
           userId: string
         }> = []
 
-        for (const [studentId, scoreEntries] of state.scoreEntries) {
+        for (const [examStudentId, scoreEntries] of state.scoreEntries) {
           for (const entry of scoreEntries) {
             entries.push({
-              studentId,
+              examStudentId,
               cropRegionId: entry.cropRegionId!,
               status: entry.status,
               partialScore: entry.status === "partial" ? entry.score : null,

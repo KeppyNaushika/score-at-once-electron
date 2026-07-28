@@ -125,17 +125,17 @@ export function useScoringEffects(params: UseScoringEffectsParams): void {
         const currentAnswer = currentPageImages.find(
           (pageImage) => pageImage.id === currentAnswerId
         )
-        if (currentAnswer?.student?.id) {
+        if (currentAnswer?.examStudentId) {
           // 新しい設問のcropRegionを取得
           const newCropRegion = currentCropRegions.find(
             (cropRegion) => cropRegion.id === currentCropRegionId
           )
           if (newCropRegion) {
             // 同じ生徒の新しいページに対応するpageImageを探す
-            const studentId = currentAnswer.student?.id
+            const examStudentId = currentAnswer.examStudentId
             const newPageImage = currentPageImages.find(
               (pageImage) =>
-                pageImage.student?.id === studentId &&
+                pageImage.examStudentId === examStudentId &&
                 pageImage.examPageId === newCropRegion.examPageId
             )
             if (newPageImage) {

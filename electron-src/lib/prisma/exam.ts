@@ -35,7 +35,7 @@ export const getExamsForList = async (userId: string) => {
         select: {
           id: true,
           studentAnswerImages: {
-            select: { studentId: true },
+            select: { examStudentId: true },
           },
           cropRegions: {
             select: {
@@ -43,7 +43,7 @@ export const getExamsForList = async (userId: string) => {
               questionScores: {
                 select: {
                   status: true,
-                  studentId: true,
+                  examStudentId: true,
                   partialScore: true,
                 },
               },
@@ -55,7 +55,9 @@ export const getExamsForList = async (userId: string) => {
         select: { id: true },
       },
       examStudents: {
-        select: { studentId: true, status: true },
+        // 進捗計算（renderer の getExamProgress）は受験者IDで答案・採点を突き合わせるので
+        // id が要る。select で主キーを落とすとこの突き合わせが黙って全滅する。
+        select: { id: true, status: true },
       },
     },
     orderBy: {
@@ -84,11 +86,11 @@ export const getExamById = async (id: string) => {
           masterImages: true,
           studentAnswerImages: {
             include: {
-              student: true,
+              examStudent: { include: { student: true } },
             },
           },
           cropRegions: {
-            // 進捗計算は questionScores のスカラーのみ読むため student/user は join しない
+            // 進捗計算は questionScores のスカラーのみ読むため examStudent/user は join しない
             include: {
               questionScores: true,
             },

@@ -44,12 +44,12 @@ function measurement(
 
 /** 測定値の並びを1枚の答案の認識結果に仕立てる */
 function createSheet(
-  studentId: string,
+  examStudentId: string,
   cells: BubbleMeasurement[][]
 ): OMRSheetResult {
   return {
     success: true,
-    studentId,
+    examStudentId,
     pageIndex: 0,
     markerDetection: {
       success: true,
@@ -69,12 +69,12 @@ function createSheet(
 
 /** 4択のうち1つを塗った設問を questionCount 問ぶん並べた答案 */
 function createAnsweredSheet(
-  studentId: string,
+  examStudentId: string,
   questionCount: number,
   markedInk: Partial<Omit<EllipticalInkStats, "fillRatio">> = {}
 ): OMRSheetResult {
   return createSheet(
-    studentId,
+    examStudentId,
     Array.from({ length: questionCount }, () => [
       measurement(0, 0.02),
       measurement(1, 0.92, markedInk),

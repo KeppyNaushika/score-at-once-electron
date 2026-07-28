@@ -7,10 +7,26 @@ import type { AbsentMethod } from "../../../../src/types/grade.types"
 import type { QuestionScoreForSubtotal } from "./subtotalCalculator"
 
 /**
+ * 試験の受験者1人分の解決済みスコア。
+ *
+ * 成績算出のループ軸は Student（試験横断で同一人物を追う）なので、この行が
+ * 「その人がその試験を受験しているか」の解決結果そのものになる。
+ * ここに現れない生徒はその試験を受験していない＝データなしであり、
+ * 採点データだけが残っている孤児を拾うことは構造的に起こらない。
+ */
+export interface ExamStudentScores {
+  examStudentId: string
+  studentId: string
+  /** 受験状態（participating | expected | absent）。見込→欠測の判定に使う */
+  status: string
+  questionScores: QuestionScoreForSubtotal[]
+}
+
+/**
  * 試験ごとに事前取得したスコア・領域データ（生徒ループ外で1回だけ構築）
  */
 export interface ExamDataCache {
-  questionScores: QuestionScoreForSubtotal[]
+  examStudents: ExamStudentScores[]
   cropRegions: { id: string; type: string; points: number | null }[]
 }
 

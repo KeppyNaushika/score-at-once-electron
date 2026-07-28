@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type {
+  CellColumn,
+  CellRow,
+} from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { manualDisabledReason } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type { ExamPageColumn } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
@@ -8,7 +12,7 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 /**
  * 答案テーブルの行・列・セル単位の無効化状態と上書きモードを管理するフック。
  * 同一性でキーする: 行 = examStudentId[]、列 = examPageId[]、
- * セル = {studentId, examPageId}[]（いずれも少数なので配列）、
+ * セル = {examStudentId, examPageId}[]（いずれも少数なので配列）、
  * files = Set<fileId>（アップロードで多数になりうるので O(1)）。
  * 一括操作は名簿・ページ一覧を要するので、行・列の実体をフックが受け取る。
  */
@@ -96,12 +100,17 @@ export function useDisabledState({
     setDisabledState((prev) => ({ ...prev, cols: [] }))
   }, [])
 
+  // 実体で受ける（id を呼び出し側で選ばせない）。ExamStudent.id と Student.id は
+  // どちらも string なので、id 引数だと取り違えても型検査が通ってしまう。
   const toggleCellDisabled = useCallback(
-    (studentId: string, examPageId: string) => {
+    (examStudent: CellRow, examPage: CellColumn) => {
+      const examStudentId = examStudent.id
+      const examPageId = examPage.id
       setDisabledState((prev) => {
         const alreadyDisabled = prev.cells.some(
           (cell) =>
-            cell.studentId === studentId && cell.examPageId === examPageId
+            cell.examStudentId === examStudentId &&
+            cell.examPageId === examPageId
         )
         return {
           ...prev,
@@ -109,11 +118,11 @@ export function useDisabledState({
             ? prev.cells.filter(
                 (cell) =>
                   !(
-                    cell.studentId === studentId &&
+                    cell.examStudentId === examStudentId &&
                     cell.examPageId === examPageId
                   )
               )
-            : [...prev.cells, { studentId, examPageId }],
+            : [...prev.cells, { examStudentId, examPageId }],
         }
       })
     },
@@ -133,10 +142,9 @@ export function useDisabledState({
   }, [])
 
   const isCellDisabled = useCallback(
-    (examStudent: ExamStudentWithMemberships, examPageId: string) => {
+    (examStudent: ExamStudentWithMemberships, examPage: CellColumn) => {
       return (
-        manualDisabledReason(disabledState, examStudent, examPageId) !==
-        undefined
+        manualDisabledReason(disabledState, examStudent, examPage) !== undefined
       )
     },
     [disabledState]

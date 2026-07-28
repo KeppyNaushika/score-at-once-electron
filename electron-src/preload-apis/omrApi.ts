@@ -19,12 +19,12 @@ export function createOmrApi() {
         ]
         params: { colorThreshold: number; areaThreshold: number }
         pageIndex?: number
-        studentId?: string
+        examStudentId?: string
       }) => ipcRenderer.invoke("omr:recognize-sheet", args),
       batchRecognize: (args: {
         imagePaths: {
           path: string
-          studentId?: string
+          examStudentId?: string
           studentName?: string
         }[]
         cells: unknown[]

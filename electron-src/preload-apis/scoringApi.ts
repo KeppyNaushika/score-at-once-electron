@@ -75,7 +75,7 @@ export function createScoringApi() {
       ipcRenderer.invoke("initialize-scoring-records", examId),
     batchUpdateQuestionScores: (
       entries: Array<{
-        studentId: string
+        examStudentId: string
         cropRegionId: string
         status: string
         partialScore: number | null

@@ -56,7 +56,7 @@ export interface AnswerIndividualViewProps {
   cropRegions?: CropRegionWithExamPage[] // 全採点領域（全設問マーク描画用）
 
   // QuestionScore自動作成用のコンテキスト情報
-  currentStudentId?: string
+  currentExamStudentId?: string
   currentUserId?: string
 
   // アノテーション用: QuestionScore配列（正しいquestionScoreIdを取得するため）

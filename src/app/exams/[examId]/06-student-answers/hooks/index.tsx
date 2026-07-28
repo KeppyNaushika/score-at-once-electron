@@ -90,27 +90,27 @@ export function usePendingChanges(
         ({ fileId, fromState, toState }) => {
           // 生徒名を解決（表示用）
           const fromStudent = students?.find(
-            (examStudent) => examStudent.studentId === fromState.studentId
+            (examStudent) => examStudent.id === fromState.examStudentId
           )
           const toStudent = students?.find(
-            (examStudent) => examStudent.studentId === toState.studentId
+            (examStudent) => examStudent.id === toState.examStudentId
           )
 
-          // 移動先にある既存ファイルを特定（(studentId, examPageId) で同定）
+          // 移動先にある既存ファイルを特定（(examStudentId, examPageId) で同定）
           const targetFile = placedAnswers.find(
             (answer) =>
-              answer.studentId === toState.studentId &&
+              answer.examStudentId === toState.examStudentId &&
               answer.examPageId === toState.examPageId &&
               answer.id !== fileId // 移動されたファイル自体は除外
           )
 
           const change: PendingChange = {
-            id: `${fileId}-change-${Date.now()}-${fromState.studentId}-${fromState.examPageId}-${toState.studentId}-${toState.examPageId}`,
+            id: `${fileId}-change-${Date.now()}-${fromState.examStudentId}-${fromState.examPageId}-${toState.examStudentId}-${toState.examPageId}`,
             movedFileId: fileId,
             targetFileId: targetFile?.id || null, // 移動先にファイルがない場合はnull
             timestamp: new Date(),
             fromPosition: {
-              studentId: fromState.studentId,
+              examStudentId: fromState.examStudentId,
               examPageId: fromState.examPageId ?? "",
               pageNumber: fromState.examPageId
                 ? (pageNumberByExamPageId.get(fromState.examPageId) ?? 0)
@@ -120,7 +120,7 @@ export function usePendingChanges(
                 : undefined,
             },
             toPosition: {
-              studentId: toState.studentId,
+              examStudentId: toState.examStudentId,
               examPageId: toState.examPageId ?? "",
               pageNumber: toState.examPageId
                 ? (pageNumberByExamPageId.get(toState.examPageId) ?? 0)
@@ -155,7 +155,7 @@ export function usePendingChanges(
             : requested
           return {
             fileId: change.movedFileId,
-            finalStudentId: change.toPosition.studentId,
+            finalExamStudentId: change.toPosition.examStudentId,
             finalExamPageId: change.toPosition.examPageId,
             scorePolicy,
           }

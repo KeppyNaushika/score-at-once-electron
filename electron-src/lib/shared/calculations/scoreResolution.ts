@@ -2,8 +2,8 @@
  * 有効スコアの解決（リゾルバ）
  *
  * 採点データは2層で保持される:
- * - QuestionScore: 採点者ごとの「提案」（生徒×設問×採点者）
- * - ScoreDecision: 試験OWNERによる「確定」（生徒×設問ごとに高々1行）
+ * - QuestionScore: 採点者ごとの「提案」（受験者×設問×採点者）
+ * - ScoreDecision: 試験OWNERによる「確定」（受験者×設問ごとに高々1行）
  *
  * 集計・出力系（Excel出力・個人レポート・PDF出力・小計・成績連携）は
  * 必ずこのモジュールで生徒×設問ごとに1つの有効スコアへ解決してから処理する。
@@ -21,7 +21,7 @@
  */
 
 export interface ResolvableScore {
-  studentId: string | null
+  examStudentId: string
   cropRegionId: string
   status: string
   partialScore: number | string | { toString(): string } | null
@@ -30,7 +30,7 @@ export interface ResolvableScore {
 }
 
 export interface ResolvableDecision {
-  studentId: string
+  examStudentId: string
   cropRegionId: string
   verdict: string
   score: number | string | { toString(): string } | null
@@ -38,9 +38,9 @@ export interface ResolvableDecision {
   sourceQuestionScoreId?: string | null
 }
 
-/** 生徒×設問ごとに解決された有効スコア */
+/** 受験者×設問ごとに解決された有効スコア */
 export interface EffectiveScore {
-  studentId: string
+  examStudentId: string
   cropRegionId: string
   /** 採点判定（correct | incorrect | partial | pending | no_answer | double_mark | unscored） */
   status: string
@@ -57,7 +57,7 @@ export interface EffectiveScore {
 }
 
 export interface ScoreConflict {
-  studentId: string
+  examStudentId: string
   cropRegionId: string
   /** 競合した採点行の数（unscored を除く） */
   candidateCount: number
@@ -90,14 +90,14 @@ const pickLatest = <T extends ResolvableScore>(group: T[]): T =>
     return (current.id ?? "") > (latest.id ?? "") ? current : latest
   })
 
-const cellKey = (studentId: string, cropRegionId: string): string =>
-  `${studentId} ${cropRegionId}`
+const cellKey = (examStudentId: string, cropRegionId: string): string =>
+  `${examStudentId} ${cropRegionId}`
 
 const proposalToEffective = (
   proposal: ResolvableScore,
   isStale = false
 ): EffectiveScore => ({
-  studentId: proposal.studentId as string,
+  examStudentId: proposal.examStudentId,
   cropRegionId: proposal.cropRegionId,
   status: proposal.status,
   partialScore: normalizeScore(proposal.partialScore),
@@ -112,8 +112,7 @@ export function resolveEffectiveScores(
 ): ResolveResult {
   const groups = new Map<string, ResolvableScore[]>()
   for (const score of scores) {
-    if (!score.studentId) continue
-    const key = cellKey(score.studentId, score.cropRegionId)
+    const key = cellKey(score.examStudentId, score.cropRegionId)
     const group = groups.get(key)
     if (group) {
       group.push(score)
@@ -128,7 +127,7 @@ export function resolveEffectiveScores(
 
   // 1) 明示的な確定（ScoreDecision）が最優先
   for (const decision of decisions) {
-    const key = cellKey(decision.studentId, decision.cropRegionId)
+    const key = cellKey(decision.examStudentId, decision.cropRegionId)
     if (decidedCells.has(key)) continue // 不正データ耐性（uniqueにより通常は発生しない）
     decidedCells.add(key)
 
@@ -140,7 +139,7 @@ export function resolveEffectiveScores(
     )
 
     resolved.push({
-      studentId: decision.studentId,
+      examStudentId: decision.examStudentId,
       cropRegionId: decision.cropRegionId,
       status: decision.verdict,
       partialScore: normalizeScore(decision.score),
@@ -179,7 +178,7 @@ export function resolveEffectiveScores(
       resolved.push(proposalToEffective(pickLatest(candidates)))
     } else {
       conflicts.push({
-        studentId: first.studentId as string,
+        examStudentId: first.examStudentId,
         cropRegionId: first.cropRegionId,
         candidateCount: candidates.length,
       })

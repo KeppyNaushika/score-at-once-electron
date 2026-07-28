@@ -159,12 +159,12 @@ export function useBatchScoring({
         )
         if (!studentAnswerImage) continue
 
-        if (!studentAnswerImage.studentId) continue
+        if (!studentAnswerImage.examStudentId) continue
 
         // refから最新のquestionScoresを取得
         const currentScore = findQuestionScore(
           questionScoresRef.current,
-          studentAnswerImage.studentId,
+          studentAnswerImage.examStudentId,
           currentCropRegion.id
         )
 
@@ -279,7 +279,7 @@ export function useBatchScoring({
           const optimisticScore: QuestionScore = {
             id: tempId,
             cropRegionId: currentCropRegion.id,
-            studentId: studentAnswerImage.studentId,
+            examStudentId: studentAnswerImage.examStudentId,
             partialScore:
               newScore !== null
                 ? (newScore as unknown as QuestionScore["partialScore"])
@@ -298,7 +298,7 @@ export function useBatchScoring({
 
           // DB保存をfire-and-forget
           const scoreData = {
-            studentId: studentAnswerImage.studentId,
+            examStudentId: studentAnswerImage.examStudentId,
             cropRegionId: currentCropRegion.id,
             partialScore: newScore !== null ? newScore : undefined,
             status: scoringStatus,

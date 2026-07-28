@@ -13,7 +13,7 @@ import {
 /** ScoringData を S-P表入力（二値）へ正規化 */
 function toSpInput(scoringData: ScoringData[]): SpInputStudent[] {
   return scoringData.map((student) => ({
-    studentId: student.studentId,
+    examStudentId: student.examStudentId,
     studentName: student.studentName,
     items: student.scores.map((score) => ({
       questionId: score.questionId,

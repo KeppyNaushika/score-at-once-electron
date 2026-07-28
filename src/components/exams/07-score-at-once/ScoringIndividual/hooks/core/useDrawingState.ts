@@ -32,7 +32,7 @@ export function useDrawingState(
   questionScoreId?: string | null,
   enablePersistence: boolean = true,
   context?: {
-    currentStudentId?: string
+    currentExamStudentId?: string
     currentCropRegionId?: string
     currentUserId?: string
   },

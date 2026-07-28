@@ -41,7 +41,7 @@ interface AnnotationBrowserPanelProps {
   examId: string
   currentUserId?: string
   currentCropRegionId?: string
-  currentStudentId?: string
+  currentExamStudentId?: string
   cropRegions: CropRegionWithExamPage[]
   gradingMode: "grid" | "individual"
   // ブラウザーhookから
@@ -55,16 +55,16 @@ interface AnnotationBrowserPanelProps {
   // QuestionScore確保用
   questionScores: Array<{
     id: string
-    studentId: string
+    examStudentId: string
     cropRegionId: string
   }>
   selectedScoringDataIds: string[]
-  allScoringData: Array<{ id: string; studentId: string }>
+  allScoringData: Array<{ id: string; examStudentId: string }>
   onQuestionScoreCreated?: () => void
   /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
   onAnnotationAddedFromBrowser?: () => void
   /** アノテーションの生徒・設問に移動 */
-  onNavigateTo?: (studentId: string, cropRegionId: string) => void
+  onNavigateTo?: (examStudentId: string, cropRegionId: string) => void
   /** グループ内全アノテーション参照用 */
   allAnnotations?: AnnotationWithContext[]
 }
@@ -105,8 +105,8 @@ function getSourceInfo(annotation: AnnotationWithContext): string {
   if (annotation.questionScore?.cropRegion?.label) {
     parts.push(annotation.questionScore.cropRegion.label)
   }
-  if (annotation.questionScore?.student) {
-    const student = annotation.questionScore.student
+  if (annotation.questionScore?.examStudent?.student) {
+    const { student } = annotation.questionScore.examStudent
     parts.push(`${student.lastName}${student.firstName}`)
   }
   return parts.join(" / ") || "—"
@@ -116,7 +116,7 @@ export function AnnotationBrowserPanel({
   examId,
   currentUserId,
   currentCropRegionId,
-  currentStudentId,
+  currentExamStudentId,
   cropRegions,
   gradingMode,
   displayItems,
@@ -139,36 +139,42 @@ export function AnnotationBrowserPanel({
     onLoadAnnotations(examId)
   }, [examId, onLoadAnnotations])
 
-  // ユニークな生徒リスト
-  const uniqueStudents = useMemo(() => {
-    const studentMap = new Map<
+  // 絞り込み候補の受験者一覧。フィルタは questionScore.examStudentId と突き合わせるので、
+  // 実体（examStudent）をそのまま持ち、氏名は表示時に student から導出する
+  // （ここで Student.id へ畳むと、同じ string 型ゆえフィルタが永久に一致しなくなる）。
+  const uniqueExamStudents = useMemo(() => {
+    const examStudentMap = new Map<
       string,
-      { id: string; studentNumber: string; name: string }
+      NonNullable<
+        NonNullable<AnnotationWithContext["questionScore"]>["examStudent"]
+      >
     >()
     for (const item of displayItems) {
-      const student = item.representative.questionScore?.student
-      if (student && !studentMap.has(student.id)) {
-        studentMap.set(student.id, {
-          id: student.id,
-          studentNumber: student.studentNumber,
-          name: `${student.lastName}${student.firstName}`,
-        })
+      const examStudent = item.representative.questionScore?.examStudent
+      if (examStudent && !examStudentMap.has(examStudent.id)) {
+        examStudentMap.set(examStudent.id, examStudent)
       }
     }
-    return Array.from(studentMap.values()).sort((studentA, studentB) =>
-      studentA.studentNumber.localeCompare(studentB.studentNumber, "ja", {
-        numeric: true,
-      })
+    return Array.from(examStudentMap.values()).sort(
+      (examStudentA, examStudentB) =>
+        examStudentA.student.studentNumber.localeCompare(
+          examStudentB.student.studentNumber,
+          "ja",
+          { numeric: true }
+        )
     )
   }, [displayItems])
 
   // QuestionScoreを確保または取得する
   const ensureQuestionScore = useCallback(
-    async (studentId: string, cropRegionId: string): Promise<string | null> => {
+    async (
+      examStudentId: string,
+      cropRegionId: string
+    ): Promise<string | null> => {
       // 既存のQuestionScoreを探す
       const existing = questionScores.find(
         (questionScore) =>
-          questionScore.studentId === studentId &&
+          questionScore.examStudentId === examStudentId &&
           questionScore.cropRegionId === cropRegionId
       )
       if (existing) return existing.id
@@ -178,7 +184,7 @@ export function AnnotationBrowserPanel({
       try {
         const result = await window.electronAPI.createQuestionScore({
           cropRegionId,
-          studentId,
+          examStudentId,
           userId: currentUserId,
           status: "unscored",
         })
@@ -212,9 +218,9 @@ export function AnnotationBrowserPanel({
 
         if (gradingMode === "individual") {
           // 個別モード: 現在の生徒+設問に追加
-          if (!currentStudentId || !currentCropRegionId) return
+          if (!currentExamStudentId || !currentCropRegionId) return
           const qsId = await ensureQuestionScore(
-            currentStudentId,
+            currentExamStudentId,
             currentCropRegionId
           )
           if (!qsId) return
@@ -231,21 +237,21 @@ export function AnnotationBrowserPanel({
           if (selectedScoringDataIds.length === 0 || !currentCropRegionId)
             return
 
-          // selectedScoringDataIdsからstudentIdをマッピング
+          // selectedScoringDataIdsからexamStudentIdをマッピング
           const targetStudentIds = selectedScoringDataIds
             .map((scoringDataId) => {
               const scoringData = allScoringData.find(
                 (candidate) => candidate.id === scoringDataId
               )
-              return scoringData?.studentId
+              return scoringData?.examStudentId
             })
             .filter((id): id is string => !!id)
 
           // 各生徒のQuestionScoreを確保
           const targetQsIds: string[] = []
-          for (const studentId of targetStudentIds) {
+          for (const examStudentId of targetStudentIds) {
             const qsId = await ensureQuestionScore(
-              studentId,
+              examStudentId,
               currentCropRegionId
             )
             if (qsId) targetQsIds.push(qsId)
@@ -278,7 +284,7 @@ export function AnnotationBrowserPanel({
     },
     [
       currentUserId,
-      currentStudentId,
+      currentExamStudentId,
       currentCropRegionId,
       gradingMode,
       selectedScoringDataIds,
@@ -318,9 +324,9 @@ export function AnnotationBrowserPanel({
 
           {/* 生徒フィルタ */}
           <Select
-            value={filters.studentId ?? "all"}
+            value={filters.examStudentId ?? "all"}
             onValueChange={(v) =>
-              onFiltersChange({ studentId: v === "all" ? null : v })
+              onFiltersChange({ examStudentId: v === "all" ? null : v })
             }
           >
             <SelectTrigger className="h-8 text-xs">
@@ -328,9 +334,11 @@ export function AnnotationBrowserPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全生徒</SelectItem>
-              {uniqueStudents.map((student) => (
-                <SelectItem key={student.id} value={student.id}>
-                  {student.studentNumber} {student.name}
+              {uniqueExamStudents.map((examStudent) => (
+                <SelectItem key={examStudent.id} value={examStudent.id}>
+                  {examStudent.student.studentNumber}{" "}
+                  {examStudent.student.lastName}
+                  {examStudent.student.firstName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -443,7 +451,7 @@ export function AnnotationBrowserPanel({
 
                 {/* 移動ボタン（左クリック: 代表に移動, 右クリック: 生徒選択メニュー） */}
                 {onNavigateTo &&
-                  item.representative.questionScore?.studentId &&
+                  item.representative.questionScore?.examStudentId &&
                   item.representative.questionScore?.cropRegionId &&
                   (item.count > 1 ? (
                     <ContextMenu>
@@ -455,7 +463,7 @@ export function AnnotationBrowserPanel({
                           title="クリック: 移動 / 右クリック: 生徒選択"
                           onClick={() =>
                             onNavigateTo(
-                              item.representative.questionScore!.studentId!,
+                              item.representative.questionScore!.examStudentId!,
                               item.representative.questionScore!.cropRegionId!
                             )
                           }
@@ -472,14 +480,18 @@ export function AnnotationBrowserPanel({
                           )
                           .filter(
                             (annotation): annotation is AnnotationWithContext =>
-                              !!annotation?.questionScore?.studentId &&
+                              !!annotation?.questionScore?.examStudentId &&
                               !!annotation?.questionScore?.cropRegionId
                           )
                           .map((annotation) => {
-                            const student = annotation.questionScore!.student
+                            const student =
+                              annotation.questionScore!.examStudent?.student
                             const label = student
                               ? `${student.studentNumber} ${student.lastName}${student.firstName}`
-                              : annotation.questionScore!.studentId!.slice(0, 8)
+                              : annotation.questionScore!.examStudentId!.slice(
+                                  0,
+                                  8
+                                )
                             const question =
                               annotation.questionScore!.cropRegion?.label ?? ""
                             return (
@@ -487,7 +499,7 @@ export function AnnotationBrowserPanel({
                                 key={annotation.id}
                                 onClick={() =>
                                   onNavigateTo(
-                                    annotation.questionScore!.studentId!,
+                                    annotation.questionScore!.examStudentId!,
                                     annotation.questionScore!.cropRegionId!
                                   )
                                 }
@@ -511,7 +523,7 @@ export function AnnotationBrowserPanel({
                       title="この生徒・設問に移動"
                       onClick={() =>
                         onNavigateTo(
-                          item.representative.questionScore!.studentId!,
+                          item.representative.questionScore!.examStudentId!,
                           item.representative.questionScore!.cropRegionId!
                         )
                       }

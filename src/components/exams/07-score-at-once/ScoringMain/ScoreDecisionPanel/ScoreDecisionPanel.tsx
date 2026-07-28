@@ -31,7 +31,7 @@ interface ScoreDecisionPanelProps {
 /** 選択中セルの所在（設問とセルは必ずペアで持つ — 添字では引かない） */
 interface SelectedCell {
   cropRegionId: string
-  studentId: string
+  examStudentId: string
 }
 
 /**
@@ -64,7 +64,7 @@ export function ScoreDecisionPanel({
       cellEntries.find(
         (entry) =>
           entry.cell.cropRegionId === selected?.cropRegionId &&
-          entry.cell.studentId === selected?.studentId
+          entry.cell.examStudentId === selected?.examStudentId
       ) ?? null,
     [cellEntries, selected]
   )
@@ -78,7 +78,7 @@ export function ScoreDecisionPanel({
       first
         ? {
             cropRegionId: first.cell.cropRegionId,
-            studentId: first.cell.studentId,
+            examStudentId: first.cell.examStudentId,
           }
         : null
     )
@@ -129,7 +129,7 @@ export function ScoreDecisionPanel({
                 onSelectCell={(cell) =>
                   setSelected({
                     cropRegionId: cell.cropRegionId,
-                    studentId: cell.studentId,
+                    examStudentId: cell.examStudentId,
                   })
                 }
                 onAssignmentChanged={onAssignmentChanged}
@@ -141,7 +141,7 @@ export function ScoreDecisionPanel({
           <div className="min-w-0 flex-1">
             {selectedEntry ? (
               <ScoreDecisionForm
-                key={`${selectedEntry.cell.cropRegionId}:${selectedEntry.cell.studentId}`}
+                key={`${selectedEntry.cell.cropRegionId}:${selectedEntry.cell.examStudentId}`}
                 cell={selectedEntry.cell}
                 questionLabel={selectedEntry.question.questionLabel}
                 maxScore={selectedEntry.question.maxScore}

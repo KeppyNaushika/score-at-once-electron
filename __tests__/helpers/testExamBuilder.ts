@@ -75,7 +75,7 @@ export interface FullTestExam {
   questionScores: Array<{
     id: string
     cropRegionId: string
-    studentId: string
+    examStudentId: string
     userId: string
     status: string
     partialScore: number | null
@@ -93,7 +93,7 @@ export interface FullTestExam {
   studentAnswerImages: Array<{
     id: string
     examPageId: string
-    studentId: string
+    examStudentId: string
     imagePath: string
   }>
   // v1.4.0+
@@ -211,6 +211,8 @@ export async function createFullTestExam(
   const students = []
   const memberships = []
   const examStudents = []
+  /** studentId → その試験の ExamStudent（採点データの親） */
+  const examStudentByStudentId = new Map<string, { id: string }>()
   for (let i = 0; i < studentCount; i++) {
     const student = await prisma.student.create({
       data: {
@@ -246,6 +248,7 @@ export async function createFullTestExam(
       },
     })
     examStudents.push(examStudent)
+    examStudentByStudentId.set(student.id, examStudent)
   }
 
   // 8. ExamClassroom作成
@@ -316,7 +319,7 @@ export async function createFullTestExam(
           data: {
             id: randomUUID(),
             cropRegionId: region.id,
-            studentId: student.id,
+            examStudentId: examStudentByStudentId.get(student.id)!.id,
             userId: user.id,
             status: "correct",
             partialScore: region.points,
@@ -325,7 +328,7 @@ export async function createFullTestExam(
         questionScores.push({
           id: questionScore.id,
           cropRegionId: questionScore.cropRegionId,
-          studentId: questionScore.studentId,
+          examStudentId: questionScore.examStudentId,
           userId: questionScore.userId,
           status: questionScore.status,
           partialScore: questionScore.partialScore
@@ -377,7 +380,7 @@ export async function createFullTestExam(
           data: {
             id: randomUUID(),
             examPageId: page.id,
-            studentId: student.id,
+            examStudentId: examStudentByStudentId.get(student.id)!.id,
             imagePath: `exams/${exam.id}/answer-sheets/${student.studentNumber}_page${page.pageNumber}.png`,
           },
         })
@@ -497,7 +500,7 @@ export async function createFullTestExam(
     studentAnswerImages: studentAnswerImages.map((studentAnswerImage) => ({
       id: studentAnswerImage.id,
       examPageId: studentAnswerImage.examPageId,
-      studentId: studentAnswerImage.studentId,
+      examStudentId: studentAnswerImage.examStudentId,
       imagePath: studentAnswerImage.imagePath,
     })),
     examMarkingFormats: examMarkingFormats.map((examMarkingFormat) => ({

@@ -45,15 +45,10 @@ export async function getStudentsForExam(examId: string) {
                 startDate: "desc",
               },
             },
-            _count: {
-              select: {
-                studentAnswerImages: {
-                  where: { examPage: { examId } },
-                },
-              },
-            },
           },
         },
+        // 答案は ExamStudent の子なので、この試験の枚数がそのまま得られる
+        _count: { select: { studentAnswerImages: true } },
       },
     })
 
@@ -146,29 +141,20 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
 
 /**
  * 試験から生徒を削除
+ *
+ * 答案画像・採点・確定・複合回答・返却スナップショットは ExamStudent の子なので、
+ * この 1 回の deleteMany が DB の cascade でまとめて消す
+ * （手書きで子テーブルを列挙すると、テーブルが増えたときに必ず取りこぼす）。
  */
 export async function removeStudentsFromExam(
   examId: string,
   studentIds: string[]
 ) {
   try {
-    // 試験から生徒を削除
     await prisma.examStudent.deleteMany({
       where: {
         examId,
         studentId: { in: studentIds },
-      },
-    })
-
-    // 関連するAnswerSheetを削除 (StudentAnswerImageから)
-    await prisma.studentAnswerImage.deleteMany({
-      where: {
-        studentId: {
-          in: studentIds,
-        },
-        examPage: {
-          examId: examId,
-        },
       },
     })
 

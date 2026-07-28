@@ -25,7 +25,7 @@ export function useSpAnalysis(
     if (!data || data.rows.length === 0) return null
 
     const input: SpInputStudent[] = data.rows.map((row) => ({
-      studentId: row.studentId,
+      examStudentId: row.examStudentId,
       studentName: row.studentName,
       items: row.scores.map((questionScore) => ({
         questionId: questionScore.questionId,

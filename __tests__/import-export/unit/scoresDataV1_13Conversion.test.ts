@@ -7,10 +7,15 @@
  */
 import { describe, expect, it } from "vitest"
 
+import type {
+  LegacyQuestionScore,
+  LegacyScoresData,
+} from "../../../electron-src/lib/import/transformers/shared/legacyStudentKeyedScores"
 import { convertScoresDataToV1_13 } from "../../../electron-src/lib/import/transformers/V1_12_0_to_V1_13_0"
 import type { ArchiveScoresData } from "../../../src/types/examArchive.types"
 
-type ArchiveQuestionScore = ArchiveScoresData["questionScores"][number]
+// この変換器が扱うのは 1.13.0 時点の形状（採点層はまだ studentId 直結）
+type ArchiveQuestionScore = LegacyQuestionScore
 type ArchiveAnnotation = ArchiveScoresData["drawingAnnotations"][number]
 
 let seq = 0
@@ -66,7 +71,7 @@ function annotation(questionScoreId: string): ArchiveAnnotation {
 function scoresData(
   questionScores: ArchiveQuestionScore[],
   drawingAnnotations: ArchiveAnnotation[] = []
-): ArchiveScoresData {
+): LegacyScoresData {
   return { questionScores, drawingAnnotations }
 }
 
@@ -162,7 +167,7 @@ describe("convertScoresDataToV1_13", () => {
   })
 
   it("v1.13.0形式（final/proposedなし・scoreDecisionsあり）には冪等", () => {
-    const data: ArchiveScoresData = {
+    const data: LegacyScoresData = {
       questionScores: [makeQuestionScore({ status: "correct" })],
       drawingAnnotations: [],
       scoreDecisions: [],

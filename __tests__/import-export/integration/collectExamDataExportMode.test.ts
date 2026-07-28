@@ -123,8 +123,7 @@ describe("collectExamData - エクスポートモード", () => {
       // 返却版スナップショットを1件作成
       await getTestPrismaClient().returnSnapshot.create({
         data: {
-          examId: testExam.exam.id,
-          studentId: testExam.students[0].id,
+          examStudentId: testExam.examStudents[0].id,
           scoresJson: JSON.stringify({ v: 1, scores: [], annotations: [] }),
           totalScore: 42,
           capturedByUserId: testExam.user.id,
@@ -140,7 +139,7 @@ describe("collectExamData - エクスポートモード", () => {
       expect(result.success).toBe(true)
       const snapshots = result.data!.scoresData.returnSnapshots ?? []
       expect(snapshots).toHaveLength(1)
-      expect(snapshots[0].studentId).toBe(testExam.students[0].id)
+      expect(snapshots[0].examStudentId).toBe(testExam.examStudents[0].id)
       expect(snapshots[0].totalScore).toBe("42")
     })
   })
@@ -200,8 +199,7 @@ describe("collectExamData - エクスポートモード", () => {
     it("EM-T3b: ReturnSnapshot（返却版）もtemplateモードで空になる", async () => {
       await getTestPrismaClient().returnSnapshot.create({
         data: {
-          examId: testExam.exam.id,
-          studentId: testExam.students[0].id,
+          examStudentId: testExam.examStudents[0].id,
           scoresJson: JSON.stringify({ v: 1, scores: [], annotations: [] }),
           totalScore: 42,
           capturedByUserId: testExam.user.id,

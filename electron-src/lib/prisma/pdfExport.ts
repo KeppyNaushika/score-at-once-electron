@@ -26,26 +26,16 @@ function sanitizeFileName(name: string): string {
 }
 
 /**
- * getStudentAnswersByExamIdの戻り値の型
- * studentのフィールドはPrismaのスキーマに合わせてnullableを許容
+ * getStudentAnswersByExamId の戻り値から、PDF 出力が使う分だけを取り出した形。
  */
 interface StudentAnswerData {
   id: string
-  studentId: string | null
+  examStudentId: string
   pageNumber: number
   examPageId: string
   imagePath: string
   originalImagePath: string
   isAbsent: boolean
-  student: {
-    id: string
-    lastName: string
-    firstName: string
-    lastNameKana: string | null
-    firstNameKana: string | null
-    studentNumber: string | null
-    examStudents: Array<{ customOrder: number | null; status: string }>
-  } | null
   examId: string
   status: "ready"
 }
@@ -58,7 +48,7 @@ interface StudentAnswerData {
  * PDF出力に必要なデータを取得する型定義
  */
 export interface PdfExportPageData {
-  studentId: string
+  examStudentId: string
   studentName: string
   pageNumber: number
   imagePath: string
@@ -140,9 +130,9 @@ export interface PdfExportData {
  */
 export async function getPdfExportData(options: {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
 }): Promise<PdfExportData> {
-  const { examId, selectedStudentIds } = options
+  const { examId, selectedExamStudentIds } = options
 
   try {
     // 試験情報を取得
@@ -166,7 +156,7 @@ export async function getPdfExportData(options: {
     // 採点領域を取得
     const cropRegions = await getCropRegionsByExamId(examId)
 
-    // 採点スコアと確定を取得し、生徒×設問ごとに有効スコア1件へ解決
+    // 採点スコアと確定を取得し、受験者×設問ごとに有効スコア1件へ解決
     const scoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
     const { resolved: allScores } = resolveEffectiveScores(
@@ -174,14 +164,9 @@ export async function getPdfExportData(options: {
       decisionsResult.success ? (decisionsResult.decisions ?? []) : []
     )
 
-    // 生徒情報を取得。PDF 出力層は内部で flat な Student 射影（student.id = 生徒ID）を
-    // 消費するため、IPC 契約の nested な ExamStudentWithMemberships をここで境界フラット化する。
+    // 受験者を取得（ExamStudent 実体のまま保持する）
     const studentsResult = await getStudentsForExam(examId)
-    const allStudents = (studentsResult.students || []).map((examStudent) => ({
-      ...examStudent.student,
-      customOrder: examStudent.customOrder,
-      status: examStudent.status,
-    }))
+    const allExamStudents = studentsResult.students || []
 
     // 答案画像を取得
     const studentAnswersResult = await getStudentAnswersByExamId(examId)
@@ -195,39 +180,28 @@ export async function getPdfExportData(options: {
     const studentAnswers: StudentAnswerData[] =
       studentAnswersResult.studentAnswerImages.map((image) => ({
         id: image.id,
-        studentId: image.studentId,
+        examStudentId: image.examStudentId,
         pageNumber: image.examPage.pageNumber,
         examPageId: image.examPageId,
         imagePath: image.imagePath,
         originalImagePath: image.imagePath,
-        isAbsent:
-          image.student?.examStudents?.[0]?.status === "absent" || false,
-        student: image.student
-          ? {
-              id: image.student.id,
-              lastName: image.student.lastName,
-              firstName: image.student.firstName,
-              lastNameKana: image.student.lastNameKana,
-              firstNameKana: image.student.firstNameKana,
-              studentNumber: image.student.studentNumber,
-              examStudents: image.student.examStudents,
-            }
-          : null,
+        isAbsent: image.examStudent.status === "absent",
         examId: image.examPage.examId,
         status: "ready" as const,
       }))
 
-    // 選択された生徒のみフィルタリング
-    const selectedStudents = allStudents.filter((student) =>
-      selectedStudentIds.includes(student.id)
+    // 選択された受験者のみフィルタリング
+    const selectedExamStudents = allExamStudents.filter((examStudent) =>
+      selectedExamStudentIds.includes(examStudent.id)
     )
 
     const pages: PdfExportPageData[] = []
 
-    for (const student of selectedStudents) {
-      // この生徒の答案画像を取得
+    for (const examStudent of selectedExamStudents) {
+      const { student } = examStudent
+      // この受験者の答案画像を取得
       const studentAnswerList = studentAnswers.filter(
-        (studentAnswer) => studentAnswer.studentId === student.id
+        (studentAnswer) => studentAnswer.examStudentId === examStudent.id
       )
 
       if (studentAnswerList.length === 0) continue
@@ -258,7 +232,7 @@ export async function getPdfExportData(options: {
             const score = allScores.find(
               (resolvedScore) =>
                 resolvedScore.cropRegionId === region.id &&
-                resolvedScore.studentId === student.id
+                resolvedScore.examStudentId === examStudent.id
             )
             return {
               questionScoreId: score?.questionScoreId || "",
@@ -344,10 +318,10 @@ export async function getPdfExportData(options: {
 
           // 小計点を計算
           const subtotalResult = await calculateSubtotalScoreForStudent(
-            student.id,
+            examStudent.id,
             subtotalRegion.id,
             allScores.map((score) => ({
-              studentId: score.studentId,
+              examStudentId: score.examStudentId,
               cropRegionId: score.cropRegionId,
               status: score.status,
               partialScore: score.partialScore,
@@ -378,7 +352,7 @@ export async function getPdfExportData(options: {
           const score = allScores.find(
             (resolvedScore) =>
               resolvedScore.cropRegionId === region.id &&
-              resolvedScore.studentId === student.id
+              resolvedScore.examStudentId === examStudent.id
           )
           if (score) {
             const maxScore = region.points !== null ? Number(region.points) : 0
@@ -424,7 +398,7 @@ export async function getPdfExportData(options: {
         }
 
         pages.push({
-          studentId: student.id,
+          examStudentId: examStudent.id,
           studentName: `${student.lastName} ${student.firstName}`,
           pageNumber,
           imagePath,
@@ -440,14 +414,16 @@ export async function getPdfExportData(options: {
       }
     }
 
-    // ページを生徒順（customOrder順）・ページ番号順でソート
-    // selectedStudents は getStudentsForExam が customOrder 順で返すため、
-    // その順序を生徒の並び順として使う（選択操作の順序には依存させない）
-    const orderedStudentIds = selectedStudents.map((student) => student.id)
+    // ページを受験者順（customOrder順）・ページ番号順でソート
+    // selectedExamStudents は getStudentsForExam が customOrder 順で返すため、
+    // その順序を受験者の並び順として使う（選択操作の順序には依存させない）
+    const orderedExamStudentIds = selectedExamStudents.map(
+      (examStudent) => examStudent.id
+    )
     pages.sort((pageA, pageB) => {
       const studentCompare =
-        orderedStudentIds.indexOf(pageA.studentId) -
-        orderedStudentIds.indexOf(pageB.studentId)
+        orderedExamStudentIds.indexOf(pageA.examStudentId) -
+        orderedExamStudentIds.indexOf(pageB.examStudentId)
       if (studentCompare !== 0) return studentCompare
       return pageA.pageNumber - pageB.pageNumber
     })
@@ -472,7 +448,7 @@ export async function getPdfExportData(options: {
 export async function createPdfFromRenderedImages(options: {
   examId: string
   renderedPages: Array<{
-    studentId: string
+    examStudentId: string
     pageNumber: number
     imageData: ArrayBuffer
   }>

@@ -17,7 +17,7 @@ import type { DrawingElement } from "../../types"
 
 // QuestionScore自動作成用のコンテキスト情報
 interface DrawingContext {
-  currentStudentId?: string
+  currentExamStudentId?: string
   currentCropRegionId?: string
   currentUserId?: string
 }

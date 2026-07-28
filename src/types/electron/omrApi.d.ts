@@ -19,10 +19,14 @@ export interface OmrAPI {
       ]
       params: import("../omr.types").OMRRecognitionParams
       pageIndex?: number
-      studentId?: string
+      examStudentId?: string
     }) => Promise<import("../omr.types").OMRSheetResult>
     batchRecognize: (args: {
-      imagePaths: { path: string; studentId?: string; studentName?: string }[]
+      imagePaths: {
+        path: string
+        examStudentId?: string
+        studentName?: string
+      }[]
       cells: import("../answerSheetBuilder.types").ComputedCell[]
       cellConfigs: Record<string, import("../omr.types").OMRCellConfig>
       expectedCorners: [

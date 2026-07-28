@@ -2,10 +2,30 @@
  * 試験（Exam）由来のrawScore算出
  * - exam_total: 全QUESTION_ANSWER CropRegionスコア合計
  * - crop_region: 単一CropRegionのスコア
+ *
+ * 生徒からスコアへ到達する経路は必ず「その試験の受験者（ExamStudent）」を1回通す。
+ * 受験者として登録されていない生徒はスコアを引けず、データなし（null）になる。
  */
 
 import { calculateActualScore } from "../../prisma/questionScore"
-import type { ExamDataCache } from "./gradeCalculatorTypes"
+import type { ExamDataCache, ExamStudentScores } from "./gradeCalculatorTypes"
+
+/**
+ * 生徒をその試験の受験者へ解決する。受験していなければ null。
+ */
+export function findExamStudentScores(
+  studentId: string,
+  examId: string,
+  examDataCache: Map<string, ExamDataCache>
+): ExamStudentScores | null {
+  const examData = examDataCache.get(examId)
+  if (!examData) return null
+  return (
+    examData.examStudents.find(
+      (examStudent) => examStudent.studentId === studentId
+    ) ?? null
+  )
+}
 
 /**
  * exam_total: 試験の全QUESTION_ANSWER CropRegionスコア合計
@@ -18,9 +38,9 @@ export function calculateExamTotalScore(
   const examData = examDataCache.get(examId)
   if (!examData) return null
 
-  const studentScores = examData.questionScores.filter(
-    (questionScore) => questionScore.studentId === studentId
-  )
+  const examStudent = findExamStudentScores(studentId, examId, examDataCache)
+  if (!examStudent) return null
+
   const questionRegions = examData.cropRegions.filter(
     (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
   )
@@ -29,7 +49,7 @@ export function calculateExamTotalScore(
   let hasScored = false
 
   for (const cropRegion of questionRegions) {
-    const scoreData = studentScores.find(
+    const scoreData = examStudent.questionScores.find(
       (questionScore) => questionScore.cropRegionId === cropRegion.id
     )
     if (scoreData) {
@@ -64,10 +84,11 @@ export function calculateCropRegionScore(
   )
   if (!cropRegion) return null
 
-  const scoreData = examData.questionScores.find(
-    (questionScore) =>
-      questionScore.studentId === studentId &&
-      questionScore.cropRegionId === cropRegionId
+  const examStudent = findExamStudentScores(studentId, examId, examDataCache)
+  if (!examStudent) return null
+
+  const scoreData = examStudent.questionScores.find(
+    (questionScore) => questionScore.cropRegionId === cropRegionId
   )
   if (!scoreData) return null
 

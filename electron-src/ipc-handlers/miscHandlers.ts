@@ -100,7 +100,7 @@ export function setupMiscHandlers(): void {
         name: string
         type: string
         buffer: ArrayBuffer
-        studentId?: string
+        examStudentId?: string
         examPageId: string
         overwrite?: boolean
         correctWithMarkers?: boolean
@@ -151,8 +151,11 @@ export function setupMiscHandlers(): void {
 
   registerHandler(
     "associate-answer-sheet-with-student",
-    async (answerSheetId: string, studentId: string) => {
-      return await associateStudentAnswerWithStudent(answerSheetId, studentId)
+    async (answerSheetId: string, examStudentId: string) => {
+      return await associateStudentAnswerWithStudent(
+        answerSheetId,
+        examStudentId
+      )
     }
   )
 

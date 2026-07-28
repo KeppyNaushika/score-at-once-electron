@@ -171,7 +171,7 @@ export interface OMRCellResult {
 
 export interface OMRSheetResult {
   success: boolean
-  studentId?: string
+  examStudentId?: string
   pageIndex: number
   markerDetection: MarkerDetectionResult
   cellResults: OMRCellResult[]

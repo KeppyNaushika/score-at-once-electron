@@ -24,7 +24,7 @@ import {
   getExamProgress,
   getQuestionScoreById,
   getQuestionScoresForExam,
-  getQuestionScoresForStudent,
+  getQuestionScoresForExamStudent,
   updateQuestionScore,
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
@@ -41,7 +41,7 @@ import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 function serializeScore(score: {
   id: string
   cropRegionId: string
-  studentId: string
+  examStudentId: string
   partialScore: { toNumber(): number } | null
   status: string
   userId: string
@@ -51,7 +51,7 @@ function serializeScore(score: {
   return {
     id: score.id,
     cropRegionId: score.cropRegionId,
-    studentId: score.studentId,
+    examStudentId: score.examStudentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: toScoringStatus(score.status),
     userId: score.userId,
@@ -78,9 +78,12 @@ export function setupScoringHandlers(): void {
   )
 
   registerHandler(
-    "get-question-scores-for-student",
-    async (studentId: string, userId?: string) => {
-      const result = await getQuestionScoresForStudent(studentId, userId)
+    "get-question-scores-for-exam-student",
+    async (examStudentId: string, userId?: string) => {
+      const result = await getQuestionScoresForExamStudent(
+        examStudentId,
+        userId
+      )
 
       if (!result.success) {
         return result
@@ -138,7 +141,7 @@ export function setupScoringHandlers(): void {
   registerHandler(
     "finalize-question-score",
     async (
-      studentId: string,
+      examStudentId: string,
       cropRegionId: string,
       userId: string,
       scoreData: {
@@ -159,7 +162,7 @@ export function setupScoringHandlers(): void {
 
       const result = await upsertScoreDecision({
         cropRegionId,
-        studentId,
+        examStudentId,
         verdict,
         score: scoreData.partialScore ?? null,
         comment: scoreData.comment ?? null,

@@ -33,11 +33,11 @@ export async function processQuestionScores(
 
   for (const questionScore of data.scoresData.questionScores) {
     const newRegionId = idMappings.cropRegion[questionScore.cropRegionId]
-    const newStudentId = questionScore.studentId
-      ? idMappings.student[questionScore.studentId]
+    const newExamStudentId = questionScore.examStudentId
+      ? idMappings.examStudent[questionScore.examStudentId]
       : null
 
-    if (newRegionId && newStudentId) {
+    if (newRegionId && newExamStudentId) {
       const conflict = conflictMap.get(questionScore.id)
 
       if (conflict) {
@@ -81,7 +81,7 @@ export async function processQuestionScores(
         const existingByComposite = await tx.questionScore.findFirst({
           where: {
             cropRegionId: newRegionId,
-            studentId: newStudentId,
+            examStudentId: newExamStudentId,
           },
         })
         if (existingByComposite) {
@@ -99,7 +99,7 @@ export async function processQuestionScores(
               data: {
                 id: questionScore.id,
                 cropRegionId: newRegionId,
-                studentId: newStudentId,
+                examStudentId: newExamStudentId,
                 partialScore: questionScore.partialScore
                   ? parseFloat(questionScore.partialScore)
                   : null,
@@ -131,8 +131,8 @@ export async function processScoreDecisions(
 ): Promise<void> {
   for (const scoreDecision of data.scoresData.scoreDecisions ?? []) {
     const newRegionId = idMappings.cropRegion[scoreDecision.cropRegionId]
-    const newStudentId = idMappings.student[scoreDecision.studentId]
-    if (!newRegionId || !newStudentId) continue
+    const newExamStudentId = idMappings.examStudent[scoreDecision.examStudentId]
+    if (!newRegionId || !newExamStudentId) continue
 
     const newSourceQsId = scoreDecision.sourceQuestionScoreId
       ? (idMappings.questionScore[scoreDecision.sourceQuestionScoreId] ?? null)
@@ -141,9 +141,9 @@ export async function processScoreDecisions(
 
     const existing = await tx.scoreDecision.findUnique({
       where: {
-        cropRegionId_studentId: {
+        cropRegionId_examStudentId: {
           cropRegionId: newRegionId,
-          studentId: newStudentId,
+          examStudentId: newExamStudentId,
         },
       },
     })
@@ -183,7 +183,7 @@ export async function processScoreDecisions(
       data: {
         id: scoreDecision.id,
         cropRegionId: newRegionId,
-        studentId: newStudentId,
+        examStudentId: newExamStudentId,
         verdict: scoreDecision.verdict,
         score: scoreDecision.score ? parseFloat(scoreDecision.score) : null,
         comment: scoreDecision.comment,
@@ -213,16 +213,17 @@ export async function processCompoundAnswerScores(
   for (const compoundAnswerScore of data.examData.compoundAnswerScores ?? []) {
     const newCompoundAnswerId =
       idMappings.compoundAnswer[compoundAnswerScore.compoundAnswerId]
-    const newStudentId = idMappings.student[compoundAnswerScore.studentId]
-    if (!newCompoundAnswerId || !newStudentId) continue
+    const newExamStudentId =
+      idMappings.examStudent[compoundAnswerScore.examStudentId]
+    if (!newCompoundAnswerId || !newExamStudentId) continue
 
     const incomingUpdatedAt = new Date(compoundAnswerScore.updatedAt)
 
     const existing = await tx.compoundAnswerScore.findUnique({
       where: {
-        compoundAnswerId_studentId: {
+        compoundAnswerId_examStudentId: {
           compoundAnswerId: newCompoundAnswerId,
-          studentId: newStudentId,
+          examStudentId: newExamStudentId,
         },
       },
     })
@@ -263,7 +264,7 @@ export async function processCompoundAnswerScores(
       data: {
         id: compoundAnswerScore.id,
         compoundAnswerId: newCompoundAnswerId,
-        studentId: newStudentId,
+        examStudentId: newExamStudentId,
         userId: currentUserId,
         recognizedAnswer: compoundAnswerScore.recognizedAnswer,
         status: compoundAnswerScore.status,

@@ -7,12 +7,6 @@ import prisma from "./client"
 export const initializeScoringRecords = async (examId: string) => {
   try {
     return await prisma.$transaction(async (tx) => {
-      // 試験の全ての生徒を取得
-      const examStudents = await tx.examStudent.findMany({
-        where: { examId },
-        select: { studentId: true },
-      })
-
       // 試験の全ての採点領域を取得
       const questionRegions = await tx.cropRegion.findMany({
         where: {
@@ -30,35 +24,38 @@ export const initializeScoringRecords = async (examId: string) => {
         throw new Error("No default user found for scoring initialization")
       }
 
-      const studentIds = examStudents.map(
-        (examStudent) => examStudent.studentId
-      )
       const regionIds = questionRegions.map((region) => region.id)
 
-      // 既存レコードを一括取得してSetで管理
-      const existingScores = await tx.questionScore.findMany({
-        where: {
-          studentId: { in: studentIds },
-          cropRegionId: { in: regionIds },
-          userId: defaultUser.id,
+      // 受験者ごとに、その受験者が既に持つ採点行を子として同梱して引く。
+      // 採点行は ExamStudent の子なので、受験者の内側だけで既存判定が閉じる
+      // （生徒IDと設問IDを連結した文字列キーで突き合わせる必要が無い）。
+      const examStudents = await tx.examStudent.findMany({
+        where: { examId },
+        select: {
+          id: true,
+          questionScores: {
+            where: {
+              cropRegionId: { in: regionIds },
+              userId: defaultUser.id,
+            },
+            select: { cropRegionId: true },
+          },
         },
-        select: { studentId: true, cropRegionId: true },
       })
-      const existingSet = new Set(
-        existingScores.map(
-          (score) => `${score.studentId}#${score.cropRegionId}`
-        )
-      )
 
       const scoringRecords = []
 
-      // 全ての生徒×採点領域の組み合わせを作成
+      // 全ての受験者×採点領域の組み合わせを作成
       for (const examStudent of examStudents) {
+        const scoredRegionIds = new Set(
+          examStudent.questionScores.map(
+            (questionScore) => questionScore.cropRegionId
+          )
+        )
         for (const region of questionRegions) {
-          const key = `${examStudent.studentId}#${region.id}`
-          if (!existingSet.has(key)) {
+          if (!scoredRegionIds.has(region.id)) {
             scoringRecords.push({
-              studentId: examStudent.studentId,
+              examStudentId: examStudent.id,
               cropRegionId: region.id,
               partialScore: null,
               status: "unscored",

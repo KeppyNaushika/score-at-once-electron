@@ -217,7 +217,8 @@ export const getStudentExamResults = async (
                   where: { type: "QUESTION_ANSWER" },
                   include: {
                     questionScores: {
-                      where: { studentId },
+                      // 同一試験の受験者は1人だけなので、生徒での絞り込みと同値
+                      where: { examStudent: { studentId } },
                     },
                     cropSubtotals: {
                       where: { assignmentType: "QUESTION_ASSIGNMENT" },

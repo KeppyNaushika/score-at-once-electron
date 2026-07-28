@@ -20,14 +20,14 @@ export interface SpInputItem {
 
 /** 生徒1人分の入力 */
 export interface SpInputStudent {
-  studentId: string
+  examStudentId: string
   studentName: string
   items: SpInputItem[]
 }
 
 /** S-P表の生徒行（合計正答数の降順に並ぶ） */
 export interface SpStudentRow {
-  studentId: string
+  examStudentId: string
   studentName: string
   /** 正答数（行和 n_i） */
   correctCount: number
@@ -134,7 +134,7 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
   }))
 
   const studentRows: SpStudentRow[] = studentOrder.map((i) => ({
-    studentId: students[i].studentId,
+    examStudentId: students[i].examStudentId,
     studentName: students[i].studentName,
     correctCount: rowSum[i],
     cautionIndex: studentCaution(i),

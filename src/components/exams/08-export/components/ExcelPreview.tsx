@@ -110,7 +110,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
             </thead>
             <tbody>
               {data.rows.map((row, rowIdx) => (
-                <tr key={row.studentId} className="hover:bg-muted/50">
+                <tr key={row.examStudentId} className="hover:bg-muted/50">
                   <td className="border px-1 py-0.5 text-center">
                     {rowIdx + 1}
                   </td>
@@ -168,7 +168,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
             </thead>
             <tbody>
               {data.rows.map((row, rowIdx) => (
-                <tr key={row.studentId} className="hover:bg-muted/50">
+                <tr key={row.examStudentId} className="hover:bg-muted/50">
                   <td className="border px-1 py-0.5 text-center">
                     {rowIdx + 1}
                   </td>

@@ -35,7 +35,7 @@ export function useExportPage() {
 
   // 選択状態（Set の変異は useStudentSelection のインテントメソッドに閉じ込める）
   const {
-    selectedStudentIds,
+    selectedExamStudentIds,
     replaceSelection,
     toggleStudent,
     addStudents,
@@ -269,11 +269,11 @@ export function useExportPage() {
         )
 
         setStudents(sortedStudents)
-        // デフォルトで参加中の学生を選択
-        const participatingStudents = sortedStudents
+        // デフォルトで参加中の受験者を選択（選択集合は ExamStudent.id で持つ）
+        const participatingExamStudentIds = sortedStudents
           .filter((examStudent) => examStudent.status === "participating")
-          .map((examStudent) => examStudent.studentId)
-        replaceSelection(participatingStudents)
+          .map((examStudent) => examStudent.id)
+        replaceSelection(participatingExamStudentIds)
       }
     } catch (error) {
       console.error("Failed to load data:", error)
@@ -350,7 +350,7 @@ export function useExportPage() {
     setSelectedStatuses,
 
     // 選択
-    selectedStudents: selectedStudentIds,
+    selectedStudents: selectedExamStudentIds,
     replaceSelection,
     toggleStudent,
     addStudents,

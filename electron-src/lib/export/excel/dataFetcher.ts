@@ -1,6 +1,6 @@
-import type { CropRegion, Exam, ExamStudent, Student } from "@prisma/client"
+import type { CropRegion, Exam } from "@prisma/client"
 
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
@@ -27,6 +27,20 @@ import {
   SubtotalScore,
 } from "../../shared/types"
 
+/**
+ * 出力対象の受験者（ExamStudent 実体 ＋ 表示学級の解決結果）。
+ *
+ * 主語は Student ではなく ExamStudent。採点データは受験者に紐づくため、
+ * 生徒を主語にすると「その試験の受験者かどうか」が型から落ちる。
+ * grade / className / attendanceNumber は renderer が採番解決した表示値で、
+ * 書き出し専用のため DB のスキーマには対応しない（export は型制限の対象外）。
+ */
+export type ExportExamStudent = ExamStudentWithMemberships & {
+  grade?: string
+  className?: string
+  attendanceNumber?: number | null
+}
+
 /** SubtotalGroupから構築した小計列情報（Excel出力用） */
 export interface SubtotalColumn {
   subtotalId: string
@@ -40,7 +54,7 @@ export interface ExportDataResult {
   success: boolean
   error?: string
   exam?: Exam
-  selectedStudents?: (Student & { examStudent?: ExamStudent })[]
+  selectedExamStudents?: ExportExamStudent[]
   questionRegions?: CropRegion[]
   subtotalRegions?: CropRegion[]
   subtotalColumns?: SubtotalColumn[]
@@ -53,12 +67,12 @@ export interface ExportDataResult {
  * 出力用データを取得する
  *
  * @param examId - 試験ID
- * @param selectedStudentIds - 選択された生徒のID配列
+ * @param selectedExamStudentIds - 選択された受験者のID配列（ExamStudent.id）
  * @returns 出力用データまたはエラー情報
  */
 export async function fetchExportData(
   examId: string,
-  selectedStudentIds: string[],
+  selectedExamStudentIds: string[],
   studentPlacements?: Record<string, StudentExportPlacement>
 ): Promise<ExportDataResult> {
   try {
@@ -77,7 +91,7 @@ export async function fetchExportData(
     const questionScoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
 
-    // 生徒×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+    // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
     const { resolved: questionScores, conflicts: scoreConflicts } =
       resolveEffectiveScores(
         questionScoresResult.success ? (questionScoresResult.scores ?? []) : [],
@@ -90,26 +104,27 @@ export async function fetchExportData(
       )
     }
 
-    // 選択された生徒のフィルタリングとソート
-    // 空配列の場合は全生徒を取得（統計計算用）
-    // Excel 出力層は内部で flat な Student 射影（student.id = 生徒ID）を消費するため、
-    // IPC/renderer 契約の nested な ExamStudentWithMemberships をここで境界フラット化する。
-    // customOrder / status は ExamStudent 実列を平坦に畳み、表示学級（grade/className/
-    // attendanceNumber）は renderer が採番解決して渡した studentPlacements を優先する。
-    const selectedStudents = (studentsResult.students || [])
+    // 選択された受験者のフィルタリングとソート
+    // 空配列の場合は全受験者を取得（統計計算用）
+    // ExamStudent 実体をそのまま保持し、表示学級（grade/className/attendanceNumber）だけを
+    // renderer が採番解決して渡した studentPlacements から graft する（採番学級の SSOT は renderer）。
+    const selectedExamStudents: ExportExamStudent[] = (
+      studentsResult.students || []
+    )
       .filter(
         (examStudent) =>
-          selectedStudentIds.length === 0 ||
-          selectedStudentIds.includes(examStudent.studentId)
+          selectedExamStudentIds.length === 0 ||
+          selectedExamStudentIds.includes(examStudent.id)
       )
       .map((examStudent) => {
-        const student = examStudent.student
-
-        // renderer が採番解決して渡した表示学級情報を優先（採番学級の SSOT は renderer）
-        const resolved = studentPlacements?.[examStudent.studentId]
+        // studentPlacements のキーは Student.id（学級所属は人に紐づくため、
+        // 採番学級を解決する resolveExamClassroomPlacement も Student キー）。
+        // ここで examStudent.id を使うと全件 undefined になり、黙って
+        // memberships[0] へフォールバックする（＝学級名・出席番号が誤る）。
+        const resolved = studentPlacements?.[examStudent.student.id]
 
         // 未指定（administered学級に未所属等）は memberships[0] へフォールバック
-        const fallbackMembership = student.memberships?.[0]
+        const fallbackMembership = examStudent.student.memberships?.[0]
         const fallbackClassroom = fallbackMembership?.classroom
 
         const grade = resolved?.grade ?? fallbackClassroom?.grade ?? null
@@ -118,21 +133,19 @@ export async function fetchExportData(
           resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
 
         return {
-          ...student,
-          customOrder: examStudent.customOrder,
-          status: examStudent.status,
+          ...examStudent,
           grade: grade != null ? grade.toString() : undefined,
           className: className ?? undefined,
           attendanceNumber: attendanceNumber ?? undefined,
         }
       })
-      .sort((studentA, studentB) => {
-        const aOrder = studentA.customOrder ?? 999999
-        const bOrder = studentB.customOrder ?? 999999
+      .sort((examStudentA, examStudentB) => {
+        const aOrder = examStudentA.customOrder ?? 999999
+        const bOrder = examStudentB.customOrder ?? 999999
         return aOrder - bOrder
       })
 
-    if (selectedStudents.length === 0) {
+    if (selectedExamStudents.length === 0) {
       return { success: false, error: "選択された生徒が見つかりません" }
     }
 
@@ -185,7 +198,7 @@ export async function fetchExportData(
 
     // 採点データの構造化
     const scoringData = await buildScoringData(
-      selectedStudents,
+      selectedExamStudents,
       questionRegions,
       subtotalGroupsData,
       questionScores
@@ -194,7 +207,7 @@ export async function fetchExportData(
     return {
       success: true,
       exam,
-      selectedStudents,
+      selectedExamStudents,
       questionRegions,
       subtotalRegions,
       subtotalColumns,
@@ -214,33 +227,27 @@ export async function fetchExportData(
 /**
  * 採点データを構造化する
  *
- * @param selectedStudents - 選択された生徒配列
+ * @param selectedExamStudents - 選択された受験者配列
  * @param questionRegions - 設問領域配列
  * @param subtotalGroups - 小計点グループ配列
  * @param questionScores - 設問スコア
  * @returns 構造化された採点データ
  */
 async function buildScoringData(
-  selectedStudents: (Student & {
-    customOrder?: number | null
-    grade?: string
-    className?: string
-    attendanceNumber?: number | null
-    status?: ExamStudentStatus
-  })[],
+  selectedExamStudents: ExportExamStudent[],
   questionRegions: CropRegion[],
   subtotalGroups: SubtotalGroupData[],
   questionScores: EffectiveScore[]
 ): Promise<ScoringData[]> {
   return Promise.all(
-    selectedStudents.map(async (student) => {
-      const studentScores = questionScores.filter(
-        (score) => score.studentId === student.id
+    selectedExamStudents.map(async (examStudent) => {
+      const examStudentScores = questionScores.filter(
+        (score) => score.examStudentId === examStudent.id
       )
 
-      const scores = buildScoreDetails(studentScores, questionRegions)
+      const scores = buildScoreDetails(examStudentScores, questionRegions)
       const subtotalScores = await buildSubtotalScores(
-        student.id,
+        examStudent.id,
         subtotalGroups,
         questionRegions,
         questionScores
@@ -255,14 +262,16 @@ async function buildScoringData(
         0
       )
 
+      const { student } = examStudent
       return {
+        examStudentId: examStudent.id,
         studentId: student.id,
         studentName: `${student.lastName} ${student.firstName}`,
         studentNumber: student.studentNumber,
-        grade: student.grade,
-        className: student.className,
-        attendanceNumber: student.attendanceNumber,
-        status: student.status,
+        grade: examStudent.grade,
+        className: examStudent.className,
+        attendanceNumber: examStudent.attendanceNumber,
+        status: examStudent.status,
         scores,
         totalScore,
         totalMaxScore,
@@ -275,16 +284,16 @@ async function buildScoringData(
 /**
  * 設問別スコア詳細を構築する
  *
- * @param studentScores - 生徒の設問スコア配列
+ * @param examStudentScores - 受験者の設問スコア配列
  * @param questionRegions - 設問領域配列
  * @returns 設問別スコア詳細配列
  */
 function buildScoreDetails(
-  studentScores: EffectiveScore[],
+  examStudentScores: EffectiveScore[],
   questionRegions: CropRegion[]
 ): ScoreDetail[] {
   return questionRegions.map((region: CropRegion) => {
-    const scoreRecord = studentScores.find(
+    const scoreRecord = examStudentScores.find(
       (score) => score.cropRegionId === region.id
     )
     const actualScore = scoreRecord
@@ -304,14 +313,14 @@ function buildScoreDetails(
 /**
  * 小計スコアを構築する（Subtotal単位）
  *
- * @param studentId - 生徒ID
+ * @param examStudentId - 受験者ID（ExamStudent.id）
  * @param subtotalGroups - 小計点グループ配列
  * @param questionRegions - 設問領域配列
- * @param allQuestionScores - 全生徒の設問スコア配列
+ * @param allQuestionScores - 全受験者の設問スコア配列
  * @returns 小計スコア配列
  */
 async function buildSubtotalScores(
-  studentId: string,
+  examStudentId: string,
   subtotalGroups: SubtotalGroupData[],
   questionRegions: CropRegion[],
   allQuestionScores: EffectiveScore[]
@@ -319,7 +328,7 @@ async function buildSubtotalScores(
   // 設問スコアデータを変換
   const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
     (score) => ({
-      studentId: score.studentId,
+      examStudentId: score.examStudentId,
       cropRegionId: score.cropRegionId,
       status: score.status,
       partialScore: score.partialScore,
@@ -331,7 +340,7 @@ async function buildSubtotalScores(
   for (const group of subtotalGroups) {
     for (const subtotal of group.subtotals) {
       const scoreResult = await calculateSubtotalScoreBySubtotalId(
-        studentId,
+        examStudentId,
         subtotal.id,
         questionScoreData,
         questionRegions

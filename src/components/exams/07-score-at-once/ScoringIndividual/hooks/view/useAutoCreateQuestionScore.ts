@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef } from "react"
 
 export interface UseAutoCreateQuestionScoreParams {
   /** 現在の生徒ID */
-  currentStudentId?: string
+  currentExamStudentId?: string
   /** 現在の設問領域ID */
   currentCropRegionId?: string
   /** 現在のユーザーID */
@@ -15,7 +15,7 @@ export interface UseAutoCreateQuestionScoreParams {
   /** QuestionScore配列（既存のスコアを検索用） */
   questionScores?: Array<{
     id: string
-    studentId: string
+    examStudentId: string
     cropRegionId: string
   }>
   /** QuestionScore作成後のコールバック（リストの更新用） */
@@ -31,7 +31,7 @@ export interface UseAutoCreateQuestionScoreReturn {
  * 設問表示時にQuestionScoreを自動作成するフック
  */
 export function useAutoCreateQuestionScore({
-  currentStudentId,
+  currentExamStudentId,
   currentCropRegionId,
   currentUserId,
   questionScores,
@@ -44,17 +44,17 @@ export function useAutoCreateQuestionScore({
   const currentQuestionScoreId =
     questionScores?.find(
       (questionScore) =>
-        questionScore.studentId === currentStudentId &&
+        questionScore.examStudentId === currentExamStudentId &&
         questionScore.cropRegionId === currentCropRegionId
     )?.id ?? null
 
   // QuestionScore作成関数
   const createQuestionScore = useCallback(async () => {
-    if (!currentStudentId || !currentCropRegionId || !currentUserId) {
+    if (!currentExamStudentId || !currentCropRegionId || !currentUserId) {
       return
     }
 
-    const key = `${currentStudentId}-${currentCropRegionId}-${currentUserId}`
+    const key = `${currentExamStudentId}-${currentCropRegionId}-${currentUserId}`
 
     // 既に作成中の場合はスキップ
     if (creatingRef.current === key) {
@@ -65,7 +65,7 @@ export function useAutoCreateQuestionScore({
 
     try {
       const result = await window.electronAPI.createQuestionScore({
-        studentId: currentStudentId,
+        examStudentId: currentExamStudentId,
         cropRegionId: currentCropRegionId,
         userId: currentUserId,
         status: "unscored",
@@ -87,7 +87,7 @@ export function useAutoCreateQuestionScore({
       }
     }
   }, [
-    currentStudentId,
+    currentExamStudentId,
     currentCropRegionId,
     currentUserId,
     onQuestionScoreCreated,
@@ -96,7 +96,7 @@ export function useAutoCreateQuestionScore({
   // 設問表示時にQuestionScoreが存在しない場合は自動作成
   useEffect(() => {
     if (
-      currentStudentId &&
+      currentExamStudentId &&
       currentCropRegionId &&
       currentUserId &&
       currentQuestionScoreId === null
@@ -104,7 +104,7 @@ export function useAutoCreateQuestionScore({
       createQuestionScore()
     }
   }, [
-    currentStudentId,
+    currentExamStudentId,
     currentCropRegionId,
     currentUserId,
     currentQuestionScoreId,

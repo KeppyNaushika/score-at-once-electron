@@ -21,6 +21,7 @@ function createScoringData(
   overrides: Partial<ScoringData> & { studentId: string }
 ): ScoringData {
   return {
+    examStudentId: `exam-${overrides.studentId}`,
     studentName: "テスト生徒",
     studentNumber: "001",
     scores: [],
@@ -37,6 +38,7 @@ describe("calculateSubtotalStatistics", () => {
   it("score が null の生徒を統計から除外する", () => {
     const data: ScoringData[] = [
       createScoringData({
+        examStudentId: "s1",
         studentId: "s1",
         subtotalScores: [
           {
@@ -51,6 +53,7 @@ describe("calculateSubtotalStatistics", () => {
         ],
       }),
       createScoringData({
+        examStudentId: "s2",
         studentId: "s2",
         subtotalScores: [
           {
@@ -65,6 +68,7 @@ describe("calculateSubtotalStatistics", () => {
         ],
       }),
       createScoringData({
+        examStudentId: "s3",
         studentId: "s3",
         subtotalScores: [
           {
@@ -89,6 +93,7 @@ describe("calculateSubtotalStatistics", () => {
   it("全員 null の場合は空配列で統計計算（平均0）", () => {
     const data: ScoringData[] = [
       createScoringData({
+        examStudentId: "s1",
         studentId: "s1",
         subtotalScores: [
           {
@@ -103,6 +108,7 @@ describe("calculateSubtotalStatistics", () => {
         ],
       }),
       createScoringData({
+        examStudentId: "s2",
         studentId: "s2",
         subtotalScores: [
           {
@@ -127,6 +133,7 @@ describe("calculateSubtotalStatistics", () => {
   it("0点の生徒は統計に含まれる", () => {
     const data: ScoringData[] = [
       createScoringData({
+        examStudentId: "s1",
         studentId: "s1",
         subtotalScores: [
           {
@@ -141,6 +148,7 @@ describe("calculateSubtotalStatistics", () => {
         ],
       }),
       createScoringData({
+        examStudentId: "s2",
         studentId: "s2",
         subtotalScores: [
           {
@@ -168,6 +176,7 @@ describe("collectSubtotalRawScores", () => {
   it("score が null の生徒を除外する", () => {
     const data: ScoringData[] = [
       createScoringData({
+        examStudentId: "s1",
         studentId: "s1",
         status: "participating",
         subtotalScores: [
@@ -183,6 +192,7 @@ describe("collectSubtotalRawScores", () => {
         ],
       }),
       createScoringData({
+        examStudentId: "s2",
         studentId: "s2",
         status: "participating",
         subtotalScores: [
@@ -209,6 +219,7 @@ describe("collectSubtotalRawScores", () => {
   it("0点は除外されない", () => {
     const data: ScoringData[] = [
       createScoringData({
+        examStudentId: "s1",
         studentId: "s1",
         status: "participating",
         subtotalScores: [

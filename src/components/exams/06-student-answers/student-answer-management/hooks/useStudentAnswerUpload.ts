@@ -88,7 +88,7 @@ export function useStudentAnswerUpload(
 
                 results.push({
                   id: crypto.randomUUID(),
-                  studentId: null,
+                  examStudentId: null,
                   examPageId: null,
                   imagePath: null,
                   name: image.name,
@@ -106,7 +106,7 @@ export function useStudentAnswerUpload(
             const buffer = await file.arrayBuffer()
             results.push({
               id: crypto.randomUUID(),
-              studentId: null,
+              examStudentId: null,
               examPageId: null,
               imagePath: null,
               name: file.name,
@@ -262,15 +262,15 @@ export function useStudentAnswerUpload(
       setIsUploading(true)
 
       try {
-        // クライアント側補正結果からマップ構築（キーは (studentId, examPageId)＝セル同定）
+        // クライアント側補正結果からマップ構築（キーは (examStudentId, examPageId)＝セル同定）
         const correctionMap = new Map<string, "corrected" | "skipped">()
         for (const uploadItem of uploadData) {
           if (
             uploadItem.correctionStatus &&
             uploadItem.correctionStatus !== "not_requested" &&
-            uploadItem.studentId
+            uploadItem.examStudentId
           ) {
-            const key = `${uploadItem.studentId}-${uploadItem.examPageId}`
+            const key = `${uploadItem.examStudentId}-${uploadItem.examPageId}`
             correctionMap.set(
               key,
               uploadItem.correctionStatus as "corrected" | "skipped"

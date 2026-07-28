@@ -19,8 +19,8 @@ import prisma from "./client"
 import { calculateActualScore } from "./questionScore"
 import { canDecideExamScores } from "./scoreDecision"
 
-const cellKey = (studentId: string, cropRegionId: string): string =>
-  `${studentId} ${cropRegionId}`
+const cellKey = (examStudentId: string, cropRegionId: string): string =>
+  `${examStudentId} ${cropRegionId}`
 
 export const getExamDecisionSummary = async (
   examId: string,
@@ -53,7 +53,7 @@ export const getExamDecisionSummary = async (
         select: {
           id: true,
           cropRegionId: true,
-          studentId: true,
+          examStudentId: true,
           userId: true,
           status: true,
           partialScore: true,
@@ -68,7 +68,7 @@ export const getExamDecisionSummary = async (
       }),
       prisma.examStudent.findMany({
         where: { examId },
-        select: { studentId: true, customOrder: true },
+        select: { id: true, customOrder: true },
       }),
       canDecideExamScores(examId, userId),
       // 担当は「現在この試験のメンバーである人」に限る。非メンバーを担当として
@@ -85,11 +85,11 @@ export const getExamDecisionSummary = async (
         where: { examId },
         include: { user: { select: { id: true, name: true } } },
       }),
-      // 設問の分母は「答案画像がある生徒数」（getExamProgress と同じ数え方）
+      // 設問の分母は「答案画像がある受験者数」（getExamProgress と同じ数え方）
       prisma.studentAnswerImage.findMany({
         where: { examPage: { examId } },
-        select: { studentId: true },
-        distinct: ["studentId"],
+        select: { examStudentId: true },
+        distinct: ["examStudentId"],
       }),
     ])
 
@@ -97,12 +97,12 @@ export const getExamDecisionSummary = async (
 
     // 裁定対象セル: 解決できなかった競合と、確定後に新しい提案が入ったもの
     const targets: Array<{
-      studentId: string
+      examStudentId: string
       cropRegionId: string
       reason: "conflict" | "stale"
     }> = [
       ...conflicts.map((conflict) => ({
-        studentId: conflict.studentId,
+        examStudentId: conflict.examStudentId,
         cropRegionId: conflict.cropRegionId,
         reason: "conflict" as const,
       })),
@@ -111,7 +111,7 @@ export const getExamDecisionSummary = async (
           (effective) => effective.source === "decision" && effective.isStale
         )
         .map((effective) => ({
-          studentId: effective.studentId,
+          examStudentId: effective.examStudentId,
           cropRegionId: effective.cropRegionId,
           reason: "stale" as const,
         })),
@@ -122,13 +122,13 @@ export const getExamDecisionSummary = async (
     )
     const decisionByCell = new Map(
       decisions.map((decision) => [
-        cellKey(decision.studentId, decision.cropRegionId),
+        cellKey(decision.examStudentId, decision.cropRegionId),
         decision,
       ])
     )
-    const customOrderByStudent = new Map(
+    const customOrderByExamStudent = new Map(
       examStudents.map((examStudent) => [
-        examStudent.studentId,
+        examStudent.id,
         examStudent.customOrder ?? Number.MAX_SAFE_INTEGER,
       ])
     )
@@ -146,7 +146,7 @@ export const getExamDecisionSummary = async (
       if (score.status === "unscored") continue
       gradedUserIds.add(score.userId)
 
-      const key = cellKey(score.studentId, score.cropRegionId)
+      const key = cellKey(score.examStudentId, score.cropRegionId)
       const group = proposalsByCell.get(key)
       if (group) {
         group.push(score)
@@ -183,20 +183,26 @@ export const getExamDecisionSummary = async (
     }, new Map<string, AssignedGrader[]>())
 
     // 氏名は裁定対象セルの分だけ引く（全採点行に join を効かせない）
-    const targetStudentIds = [
-      ...new Set(targets.map((target) => target.studentId)),
+    const targetExamStudentIds = [
+      ...new Set(targets.map((target) => target.examStudentId)),
     ]
-    const [students, users] = await Promise.all([
-      prisma.student.findMany({
-        where: { id: { in: targetStudentIds } },
-        select: { id: true, lastName: true, firstName: true },
+    const [targetExamStudents, users] = await Promise.all([
+      prisma.examStudent.findMany({
+        where: { id: { in: targetExamStudentIds } },
+        select: {
+          id: true,
+          student: { select: { lastName: true, firstName: true } },
+        },
       }),
-      targetStudentIds.length > 0
+      targetExamStudentIds.length > 0
         ? prisma.user.findMany({ select: { id: true, name: true } })
         : Promise.resolve([]),
     ])
-    const studentById = new Map(
-      students.map((student) => [student.id, student])
+    const studentByExamStudentId = new Map(
+      targetExamStudents.map((examStudent) => [
+        examStudent.id,
+        examStudent.student,
+      ])
     )
     const userNameById = new Map(users.map((user) => [user.id, user.name]))
 
@@ -224,7 +230,7 @@ export const getExamDecisionSummary = async (
     let totalScoreImpact = 0
 
     for (const target of targets) {
-      const key = cellKey(target.studentId, target.cropRegionId)
+      const key = cellKey(target.examStudentId, target.cropRegionId)
       const group = proposalsByCell.get(key)
       if (!group || group.length === 0) continue
 
@@ -249,13 +255,13 @@ export const getExamDecisionSummary = async (
       totalScoreImpact += scoreImpact
 
       const decision = decisionByCell.get(key)
-      const student = studentById.get(target.studentId)
+      const student = studentByExamStudentId.get(target.examStudentId)
 
       const cell: ScoreDecisionCell = {
-        studentId: target.studentId,
+        examStudentId: target.examStudentId,
         studentName: student
           ? `${student.lastName} ${student.firstName}`
-          : target.studentId,
+          : target.examStudentId,
         cropRegionId: target.cropRegionId,
         reason: target.reason,
         proposals,
@@ -300,9 +306,9 @@ export const getExamDecisionSummary = async (
         scoredCount: scoredCellsByRegion.get(cropRegion.id)?.size ?? 0,
         cells: (cellsByRegion.get(cropRegion.id) ?? []).sort(
           (cellA, cellB) =>
-            (customOrderByStudent.get(cellA.studentId) ??
+            (customOrderByExamStudent.get(cellA.examStudentId) ??
               Number.MAX_SAFE_INTEGER) -
-            (customOrderByStudent.get(cellB.studentId) ??
+            (customOrderByExamStudent.get(cellB.examStudentId) ??
               Number.MAX_SAFE_INTEGER)
         ),
         decidedCount: decidedCountByRegion.get(cropRegion.id) ?? 0,

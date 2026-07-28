@@ -182,7 +182,7 @@ export default function ExportWarningModal({
                 <div className="mb-3 space-y-0.5 text-sm">
                   {conflicted.map((conflict) => (
                     <ConflictRow
-                      key={`${conflict.cropRegionId}:${conflict.studentId}`}
+                      key={`${conflict.cropRegionId}:${conflict.examStudentId}`}
                       conflict={conflict}
                     />
                   ))}

@@ -33,7 +33,7 @@ interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
   mode?: "upload" | "view"
   enhancedIsCellDisabled: (
     examStudent: ExamStudentWithMemberships,
-    examPageId: string
+    examPage: ExamPageColumn
   ) => boolean
   allowOverwrite?: boolean
   // 既存答案（DB答案の占有信号）があるマス。呼び出し側が導出済みのものを受け取り、
@@ -69,31 +69,23 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
     const unplaced: TItem[] = []
 
     if (mode === "view") {
-      // 確認モード（方式B）: 各答案を自身の実セル座標 (studentId, examPageId) に配置する。
+      // 確認モード（方式B）: 各答案を自身の実セル座標 (受験者, ページ) に配置する。
       // 配列順ではなく id 対を基準にすることで、DnD の move/swap が座標更新だけで完結し、
       // 任意マスへの移動・占有マスとの入れ替えが素直に描画へ反映される。
       // 配置できない答案（除籍・列に無い examPageId）は placeable にならず orphans に落ちる。
       const { placedByCell, orphans: orphanItems } =
-        partitionAnswerItemsByPlacement(
-          enabledFiles,
-          sortedStudents.map((examStudent) => examStudent.studentId),
-          examPages.map((examPage) => examPage.id)
-        )
+        partitionAnswerItemsByPlacement(enabledFiles, sortedStudents, examPages)
       orphans.push(...orphanItems)
 
       for (const examStudent of sortedStudents) {
         const cells = examPages.map<AnswerTableCell<TItem>>((examPage) => {
-          const file = getCellValue(
-            placedByCell,
-            examStudent.studentId,
-            examPage.id
-          )
+          const file = getCellValue(placedByCell, examStudent, examPage)
 
           // 答案が居るセルは常にファイルセル（動的無効化は答案なしセルにのみ効く）
           if (file) return { examPage, type: "file", file }
 
           // 答案なしセル。確認モードは表示上「答案なし」
-          if (enhancedIsCellDisabled(examStudent, examPage.id)) {
+          if (enhancedIsCellDisabled(examStudent, examPage)) {
             return { examPage, type: "disabled" }
           }
 
@@ -119,15 +111,11 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
         examPage: ExamPageColumn
       ) => {
         const isManuallyDisabled =
-          manualDisabledReason(disabledState, examStudent, examPage.id) !==
+          manualDisabledReason(disabledState, examStudent, examPage) !==
           undefined
         const shouldSkipExisting =
           skipsExistingAnswers &&
-          lookupHasCell(
-            cellsWithExistingAnswers,
-            examStudent.studentId,
-            examPage.id
-          )
+          lookupHasCell(cellsWithExistingAnswers, examStudent, examPage)
 
         if (!isManuallyDisabled && !shouldSkipExisting) {
           validPositions.push({ examStudent, examPage })
@@ -156,8 +144,8 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
         if (file) {
           setCellValue(
             filePlacement,
-            position.examStudent.studentId,
-            position.examPage.id,
+            position.examStudent,
+            position.examPage,
             file
           )
         }
@@ -173,7 +161,7 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
           const manualReason = manualDisabledReason(
             disabledState,
             examStudent,
-            examPage.id
+            examPage
           )
           if (manualReason) {
             // 手動無効化セル（無効理由も権威的にここで確定）
@@ -181,21 +169,13 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
           }
 
           // 有効セル: ファイルがマッピングされていればファイルセル、なければ空セル
-          const file = getCellValue(
-            filePlacement,
-            examStudent.studentId,
-            examPage.id
-          )
+          const file = getCellValue(filePlacement, examStudent, examPage)
           if (file) return { examPage, type: "file", file }
 
           // 既存答案があり上書き無効の場合は無効セルとして表示
           if (
             skipsExistingAnswers &&
-            lookupHasCell(
-              cellsWithExistingAnswers,
-              examStudent.studentId,
-              examPage.id
-            )
+            lookupHasCell(cellsWithExistingAnswers, examStudent, examPage)
           ) {
             return {
               examPage,

@@ -46,7 +46,9 @@ export function useImageLoader({
       if (showMultiplePages && studentAnswerImages) {
         // 複数ページ表示：同一生徒の全ページを取得
         const studentAnswerSheets = studentAnswerImages
-          .filter((sheet) => sheet.studentId === currentScoringData.studentId)
+          .filter(
+            (sheet) => sheet.examStudentId === currentScoringData.examStudentId
+          )
           .sort(
             (sheetA, sheetB) =>
               (sheetA.examPage?.pageNumber || 1) -

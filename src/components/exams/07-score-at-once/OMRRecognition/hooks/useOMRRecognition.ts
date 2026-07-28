@@ -24,7 +24,7 @@ interface OMRRecognitionState {
   /** シートごとの認識結果 */
   sheetResults: OMRSheetResult[]
   /** 全セル結果のフラットリスト */
-  allCellResults: Array<OMRCellResult & { studentId?: string }>
+  allCellResults: Array<OMRCellResult & { examStudentId?: string }>
   /** エラーメッセージ */
   error: string | null
 }
@@ -41,11 +41,11 @@ interface UseOMRRecognitionReturn extends OMRRecognitionState {
   /** 単一画像の認識を実行 */
   recognizeSingle: (
     imagePath: string,
-    studentId?: string
+    examStudentId?: string
   ) => Promise<OMRSheetResult | null>
   /** バッチ認識を実行 */
   recognizeBatch: (
-    entries: { path: string; studentId?: string; studentName?: string }[]
+    entries: { path: string; examStudentId?: string; studentName?: string }[]
   ) => Promise<void>
   /** 結果をクリア */
   clearResults: () => void
@@ -98,7 +98,7 @@ export function useOMRRecognition(
   const recognizeSingle = useCallback(
     async (
       imagePath: string,
-      studentId?: string
+      examStudentId?: string
     ): Promise<OMRSheetResult | null> => {
       if (!window.electronAPI?.omr) {
         setState((prev) => ({
@@ -122,7 +122,7 @@ export function useOMRRecognition(
           expectedCorners,
           params: currentParams,
           pageIndex,
-          studentId,
+          examStudentId,
         })
 
         setState((prev) => ({
@@ -133,7 +133,7 @@ export function useOMRRecognition(
             ...prev.allCellResults,
             ...result.cellResults.map((cellResult) => ({
               ...cellResult,
-              studentId: result.studentId,
+              examStudentId: result.examStudentId,
             })),
           ],
         }))
@@ -153,7 +153,7 @@ export function useOMRRecognition(
 
   const recognizeBatch = useCallback(
     async (
-      entries: { path: string; studentId?: string; studentName?: string }[]
+      entries: { path: string; examStudentId?: string; studentName?: string }[]
     ) => {
       if (!window.electronAPI?.omr) {
         setState((prev) => ({
@@ -186,10 +186,13 @@ export function useOMRRecognition(
           pageIndex,
         })
 
-        const allCells: Array<OMRCellResult & { studentId?: string }> = []
+        const allCells: Array<OMRCellResult & { examStudentId?: string }> = []
         for (const result of results) {
           for (const cellResult of result.cellResults) {
-            allCells.push({ ...cellResult, studentId: result.studentId })
+            allCells.push({
+              ...cellResult,
+              examStudentId: result.examStudentId,
+            })
           }
         }
 

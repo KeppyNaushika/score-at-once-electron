@@ -221,7 +221,7 @@ export function createArchiveScoresData(
   scores: Array<{
     id?: string
     cropRegionId: string
-    studentId: string
+    examStudentId: string
     status?: string
     partialScore?: string | null
     userId?: string
@@ -231,7 +231,7 @@ export function createArchiveScoresData(
     questionScores: scores.map((score) => ({
       id: score.id ?? generateId(),
       cropRegionId: score.cropRegionId,
-      studentId: score.studentId,
+      examStudentId: score.examStudentId,
       partialScore: score.partialScore ?? null,
       status: score.status ?? "unscored",
       userId: score.userId ?? generateId(),

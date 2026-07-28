@@ -85,12 +85,12 @@ export function useScoredAnswerPdfExport({
       savePathResultRef.current = null
       isExportCancelledRef.current = false
 
-      const selectedStudentIds = Array.from(selectedStudents)
+      const selectedExamStudentIds = Array.from(selectedStudents)
 
       // 1. データ取得
       const dataResult = await window.electronAPI.export.getPdfExportData({
         examId: exam.id,
-        selectedStudentIds,
+        selectedExamStudentIds,
       })
 
       if (!dataResult.success || !dataResult.pages) {
@@ -256,7 +256,7 @@ export function useScoredAnswerPdfExport({
   const handleCanvasComplete = useCallback(
     async (
       _renderedPages: Array<{
-        studentId: string
+        examStudentId: string
         pageNumber: number
         imageData: ArrayBuffer
       }>

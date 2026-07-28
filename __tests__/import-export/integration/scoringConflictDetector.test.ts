@@ -41,6 +41,37 @@ import {
 const prisma = getTestPrismaClient()
 
 /**
+ * DB に受験者（ExamStudent）を作成し、その id を返す。
+ * 採点行は受験者の子なので、採点を作る前に必ず必要になる。
+ */
+async function createExamStudentRow(
+  examId: string,
+  studentId: string
+): Promise<string> {
+  const examStudent = await prisma.examStudent.create({
+    data: { id: generateId(), examId, studentId, status: "participating" },
+  })
+  return examStudent.id
+}
+
+/** アーカイブ側の受験者行（インポートする採点行の親） */
+function archiveExamStudent(
+  importExamStudentId: string,
+  examId: string,
+  studentId: string
+) {
+  return {
+    id: importExamStudentId,
+    examId,
+    studentId,
+    status: "participating",
+    customOrder: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+/**
  * テスト用の試験・ページ・CropRegionをDBに作成するヘルパー
  */
 async function createExamWithCropRegions(options: {
@@ -124,14 +155,21 @@ describe("detectScoringConflicts", () => {
           enrollmentYear: 2024,
         },
       })
+      await createExamStudentRow(examId, studentId)
+      const importExamStudentId = generateId()
 
       // 既存のQuestionScoreはなし
 
+      const importExamData = createArchiveExamData({ examId })
+      importExamData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, studentId),
+      ]
       const importData = createExtractedArchiveData({
+        examData: importExamData,
         scoresData: createArchiveScoresData([
           {
             cropRegionId: cropRegionId,
-            studentId: studentId,
+            examStudentId: importExamStudentId,
             status: "correct",
             partialScore: "10",
             userId: user.id,
@@ -186,13 +224,15 @@ describe("detectScoringConflicts", () => {
           enrollmentYear: 2024,
         },
       })
+      const examStudentId = await createExamStudentRow(examId, studentId)
+      const importExamStudentId = generateId()
 
       // 既存のQuestionScore（incorrect）
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId,
-          studentId,
+          examStudentId,
           status: "incorrect",
           partialScore: 0,
           userId: user.id,
@@ -200,11 +240,16 @@ describe("detectScoringConflicts", () => {
       })
 
       // インポートデータ（correct）
+      const importExamData = createArchiveExamData({ examId })
+      importExamData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, studentId),
+      ]
       const importData = createExtractedArchiveData({
+        examData: importExamData,
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId,
+            examStudentId: importExamStudentId,
             status: "correct",
             partialScore: "10",
             userId: user.id,
@@ -265,13 +310,15 @@ describe("detectScoringConflicts", () => {
           enrollmentYear: 2024,
         },
       })
+      const examStudentId = await createExamStudentRow(examId, studentId)
+      const importExamStudentId = generateId()
 
       // 既存: partial=5
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId,
-          studentId,
+          examStudentId,
           status: "partial",
           partialScore: 5,
           userId: user.id,
@@ -279,11 +326,16 @@ describe("detectScoringConflicts", () => {
       })
 
       // インポート: partial=8
+      const importExamData = createArchiveExamData({ examId })
+      importExamData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, studentId),
+      ]
       const importData = createExtractedArchiveData({
+        examData: importExamData,
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId,
+            examStudentId: importExamStudentId,
             status: "partial",
             partialScore: "8",
             userId: user.id,
@@ -330,24 +382,31 @@ describe("detectScoringConflicts", () => {
           enrollmentYear: 2024,
         },
       })
+      const examStudentId = await createExamStudentRow(examId, studentId)
+      const importExamStudentId = generateId()
 
       // 既存と同じスコア
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId,
-          studentId,
+          examStudentId,
           status: "correct",
           partialScore: 10,
           userId: user.id,
         },
       })
 
+      const importExamData = createArchiveExamData({ examId })
+      importExamData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, studentId),
+      ]
       const importData = createExtractedArchiveData({
+        examData: importExamData,
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId,
+            examStudentId: importExamStudentId,
             status: "correct",
             partialScore: "10",
             userId: user.id,
@@ -376,7 +435,7 @@ describe("detectScoringConflicts", () => {
         scoresData: createArchiveScoresData([
           {
             cropRegionId: generateId(),
-            studentId: generateId(),
+            examStudentId: generateId(),
             status: "correct",
             partialScore: "10",
           },
@@ -394,7 +453,7 @@ describe("detectScoringConflicts", () => {
       const user = await createTestUser()
       const examId = generateId()
       const cropRegionId = generateId()
-      const unmappedStudentId = generateId()
+      const unmappedExamStudentId = generateId()
 
       await createExamWithCropRegions({
         examId,
@@ -406,7 +465,7 @@ describe("detectScoringConflicts", () => {
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId: unmappedStudentId,
+            examStudentId: unmappedExamStudentId,
             status: "correct",
             partialScore: "10",
           },
@@ -459,13 +518,17 @@ describe("detectScoringConflicts", () => {
           },
         })
       }
+      const examStudent1 = await createExamStudentRow(examId, student1)
+      await createExamStudentRow(examId, student2)
+      const importExamStudent1 = generateId()
+      const importExamStudent2 = generateId()
 
       // 既存スコア: student1+cropRegion1=correct, student1+cropRegion2=incorrect
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId: cropRegion1,
-          studentId: student1,
+          examStudentId: examStudent1,
           status: "correct",
           partialScore: 10,
           userId: user.id,
@@ -475,7 +538,7 @@ describe("detectScoringConflicts", () => {
         data: {
           id: generateId(),
           cropRegionId: cropRegion2,
-          studentId: student1,
+          examStudentId: examStudent1,
           status: "incorrect",
           partialScore: 0,
           userId: user.id,
@@ -486,23 +549,29 @@ describe("detectScoringConflicts", () => {
       // student1+cropRegion1=correct (同一 -> unchanged)
       // student1+cropRegion2=correct (異なる -> conflict)
       // student2+cropRegion3=correct (新規 -> new)
+      const importExamData = createArchiveExamData({ examId })
+      importExamData.examStudents = [
+        archiveExamStudent(importExamStudent1, examId, student1),
+        archiveExamStudent(importExamStudent2, examId, student2),
+      ]
       const importData = createExtractedArchiveData({
+        examData: importExamData,
         scoresData: createArchiveScoresData([
           {
             cropRegionId: cropRegion1,
-            studentId: student1,
+            examStudentId: importExamStudent1,
             status: "correct",
             partialScore: "10",
           },
           {
             cropRegionId: cropRegion2,
-            studentId: student1,
+            examStudentId: importExamStudent1,
             status: "correct",
             partialScore: "10",
           },
           {
             cropRegionId: cropRegion3,
-            studentId: student2,
+            examStudentId: importExamStudent2,
             status: "correct",
             partialScore: "10",
           },
@@ -550,7 +619,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         scoresData: createArchiveScoresData([
           {
             cropRegionId: generateId(),
-            studentId: generateId(),
+            examStudentId: generateId(),
             status: "correct",
             partialScore: "10",
           },
@@ -608,13 +677,15 @@ describe("detectScoringConflictsWithUserDecisions", () => {
           enrollmentYear: 2024,
         },
       })
+      const examStudentId = await createExamStudentRow(examId, studentId)
+      const importExamStudentId = generateId()
 
       // 既存スコア
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId,
-          studentId,
+          examStudentId,
           status: "incorrect",
           partialScore: 0,
           userId: user.id,
@@ -643,6 +714,9 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         },
       ]
 
+      examData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, studentId),
+      ]
       const importData = createExtractedArchiveData({
         examData,
         studentsData: createArchiveStudentsData([
@@ -656,7 +730,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId,
+            examStudentId: importExamStudentId,
             status: "correct",
             partialScore: "10",
             userId: user.id,
@@ -725,13 +799,18 @@ describe("detectScoringConflictsWithUserDecisions", () => {
           enrollmentYear: 2024,
         },
       })
+      const examStudentId = await createExamStudentRow(
+        examId,
+        existingStudentId
+      )
+      const importExamStudentId = generateId()
 
       // 既存スコア
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId,
-          studentId: existingStudentId,
+          examStudentId,
           status: "incorrect",
           partialScore: 0,
           userId: user.id,
@@ -759,6 +838,9 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         },
       ]
 
+      examData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, importStudentId),
+      ]
       const importData = createExtractedArchiveData({
         examData,
         studentsData: createArchiveStudentsData([
@@ -772,7 +854,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId: importStudentId,
+            examStudentId: importExamStudentId,
             status: "correct",
             partialScore: "10",
             userId: user.id,
@@ -844,12 +926,17 @@ describe("detectScoringConflictsWithUserDecisions", () => {
           enrollmentYear: 2024,
         },
       })
+      const examStudentId = await createExamStudentRow(
+        examId,
+        existingStudentId
+      )
+      const importExamStudentId = generateId()
 
       await prisma.questionScore.create({
         data: {
           id: generateId(),
           cropRegionId,
-          studentId: existingStudentId,
+          examStudentId,
           status: "incorrect",
           partialScore: 0,
           userId: user.id,
@@ -877,6 +964,9 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         },
       ]
 
+      examData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, importStudentId),
+      ]
       const importData = createExtractedArchiveData({
         examData,
         studentsData: createArchiveStudentsData([
@@ -890,7 +980,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            studentId: importStudentId,
+            examStudentId: importExamStudentId,
             status: "correct",
             partialScore: "10",
             userId: user.id,

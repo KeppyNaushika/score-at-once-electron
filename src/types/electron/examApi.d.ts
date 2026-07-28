@@ -85,14 +85,11 @@ export interface ExamAPI {
     success: boolean
     hasAnyData?: boolean
     totalGradingItems?: number
+    // main 側の SSOT をそのまま参照する（手書きで写すと今回のように
+    // フィールド名と数える範囲がずれ、削除確認の表示が実態とずれる）
     studentData?: Record<
       string,
-      {
-        hasData: boolean
-        studentAnswerCount: number
-        questionScoreCount: number
-        totalGradingItems: number
-      }
+      import("@/electron-src/lib/prisma/gradingData").GradingDataInfo
     >
     error?: string
   }>

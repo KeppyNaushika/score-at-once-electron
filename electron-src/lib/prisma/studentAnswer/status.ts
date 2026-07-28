@@ -25,7 +25,7 @@ export async function setStudentAnswerAbsent(
     const answerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
       include: {
-        student: true,
+        examStudent: { include: { student: true } },
         examPage: {
           include: {
             exam: true,

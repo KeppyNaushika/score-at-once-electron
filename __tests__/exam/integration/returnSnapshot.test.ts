@@ -50,14 +50,16 @@ describe("ReturnSnapshot capture/diff", () => {
       includeScores: true,
       includeAnnotations: true,
     })
-    const studentIds = fixture.students.map((student) => student.id)
+    const examStudentIds = fixture.examStudents.map(
+      (examStudent) => examStudent.id
+    )
 
     const captureResult = await captureReturnSnapshot({
       examId: fixture.exam.id,
-      studentIds,
+      examStudentIds,
     })
     expect(captureResult.success).toBe(true)
-    expect(captureResult.capturedCount).toBe(studentIds.length)
+    expect(captureResult.capturedCount).toBe(examStudentIds.length)
 
     const diff = await getReturnDiff(fixture.exam.id)
     expect(diff.success).toBe(true)
@@ -74,8 +76,10 @@ describe("ReturnSnapshot capture/diff", () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
     })
-    const studentIds = fixture.students.map((student) => student.id)
-    await captureReturnSnapshot({ examId: fixture.exam.id, studentIds })
+    const examStudentIds = fixture.examStudents.map(
+      (examStudent) => examStudent.id
+    )
+    await captureReturnSnapshot({ examId: fixture.exam.id, examStudentIds })
 
     // 1件の採点を correct → incorrect に変更
     const target = fixture.questionScores[0]
@@ -89,7 +93,7 @@ describe("ReturnSnapshot capture/diff", () => {
     expect(changed).toHaveLength(1)
 
     const studentDiff = changed[0]
-    expect(studentDiff.studentId).toBe(target.studentId)
+    expect(studentDiff.examStudentId).toBe(target.examStudentId)
     const cell = studentDiff.scoreChanges.find(
       (scoreChange) => scoreChange.cropRegionId === target.cropRegionId
     )
@@ -106,8 +110,10 @@ describe("ReturnSnapshot capture/diff", () => {
       includeScores: true,
       includeAnnotations: true,
     })
-    const studentIds = fixture.students.map((student) => student.id)
-    await captureReturnSnapshot({ examId: fixture.exam.id, studentIds })
+    const examStudentIds = fixture.examStudents.map(
+      (examStudent) => examStudent.id
+    )
+    await captureReturnSnapshot({ examId: fixture.exam.id, examStudentIds })
 
     // 注釈のテキストを変更
     const annotation = fixture.drawingAnnotations[0]
@@ -128,8 +134,10 @@ describe("ReturnSnapshot capture/diff", () => {
       includeScores: true,
       includeAnnotations: true,
     })
-    const studentIds = fixture.students.map((student) => student.id)
-    await captureReturnSnapshot({ examId: fixture.exam.id, studentIds })
+    const examStudentIds = fixture.examStudents.map(
+      (examStudent) => examStudent.id
+    )
+    await captureReturnSnapshot({ examId: fixture.exam.id, examStudentIds })
 
     await testPrisma.drawingAnnotation.delete({
       where: { id: fixture.drawingAnnotations[0].id },
@@ -146,20 +154,22 @@ describe("ReturnSnapshot capture/diff", () => {
       includeScores: true,
     })
     // 1人だけ返却版として記録する
-    const [first, ...rest] = fixture.students.map((student) => student.id)
+    const [first, ...rest] = fixture.examStudents.map(
+      (examStudent) => examStudent.id
+    )
     await captureReturnSnapshot({
       examId: fixture.exam.id,
-      studentIds: [first],
+      examStudentIds: [first],
     })
 
     const diff = await getReturnDiff(fixture.exam.id)
     const firstDiff = diff.diffs.find(
-      (studentDiff) => studentDiff.studentId === first
+      (studentDiff) => studentDiff.examStudentId === first
     )
     expect(firstDiff?.hasSnapshot).toBe(true)
     for (const id of rest) {
       const studentDiff = diff.diffs.find(
-        (candidate) => candidate.studentId === id
+        (candidate) => candidate.examStudentId === id
       )
       expect(studentDiff?.hasSnapshot).toBe(false)
       expect(studentDiff?.changed).toBe(false)

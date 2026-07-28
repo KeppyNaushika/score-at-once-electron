@@ -62,19 +62,19 @@ interface ReturnDiffPanelProps {
   /** 表示名解決用の生徒一覧（フィルタ前の全件が望ましい） */
   students: Student[]
   /** 現在の選択（「返却版として記録」対象・件数表示に使う） */
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   /** 選択を差し替える（「変更があった生徒のみ選択」） */
-  onSelectStudentIds: (studentIds: string[]) => void
+  onSelectExamStudentIds: (examStudentIds: string[]) => void
   /** 生徒ID → 返却版との差分 */
-  diffByStudent: Map<string, ReturnStudentDiff>
+  diffByExamStudent: Map<string, ReturnStudentDiff>
   /** 返却版から変更があった生徒IDの集合 */
-  changedStudentIds: Set<string>
+  changedExamStudentIds: Set<string>
   /** 返却版スナップショットが1件でも存在するか */
   hasAnySnapshot: boolean
   /** 返却版記録の実行中フラグ */
   capturing: boolean
   /** 指定生徒を返却版として記録する */
-  capture: (studentIds: string[]) => Promise<boolean>
+  capture: (examStudentIds: string[]) => Promise<boolean>
 }
 
 /**
@@ -84,10 +84,10 @@ interface ReturnDiffPanelProps {
  */
 export function ReturnDiffPanel({
   students,
-  selectedStudentIds,
-  onSelectStudentIds,
-  diffByStudent,
-  changedStudentIds,
+  selectedExamStudentIds,
+  onSelectExamStudentIds,
+  diffByExamStudent,
+  changedExamStudentIds,
   hasAnySnapshot,
   capturing,
   capture,
@@ -98,7 +98,7 @@ export function ReturnDiffPanel({
   const changedDiffs = students
     .map((examStudent) => ({
       examStudent,
-      diff: diffByStudent.get(examStudent.studentId),
+      diff: diffByExamStudent.get(examStudent.id),
     }))
     .filter(
       (pair): pair is { examStudent: Student; diff: ReturnStudentDiff } =>
@@ -106,17 +106,17 @@ export function ReturnDiffPanel({
     )
 
   const selectChangedOnly = () => {
-    onSelectStudentIds(Array.from(changedStudentIds))
+    onSelectExamStudentIds(Array.from(changedExamStudentIds))
   }
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <CaptureReturnVersionButton
-          selectedStudentIds={selectedStudentIds}
+          selectedExamStudentIds={selectedExamStudentIds}
           capturing={capturing}
           capture={capture}
-          label={`選択中の${selectedStudentIds.length}名を返却版として記録`}
+          label={`選択中の${selectedExamStudentIds.length}名を返却版として記録`}
         />
 
         {hasAnySnapshot && (
@@ -124,10 +124,10 @@ export function ReturnDiffPanel({
             variant="outline"
             size="sm"
             onClick={selectChangedOnly}
-            disabled={changedStudentIds.size === 0}
+            disabled={changedExamStudentIds.size === 0}
           >
             <Filter className="mr-1 h-4 w-4" />
-            変更があった生徒のみ選択（{changedStudentIds.size}名）
+            変更があった生徒のみ選択（{changedExamStudentIds.size}名）
           </Button>
         )}
 
@@ -168,7 +168,7 @@ export function ReturnDiffPanel({
             <CollapsibleContent className="mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
               {changedDiffs.map(({ examStudent, diff }) => (
                 <div
-                  key={diff.studentId}
+                  key={diff.examStudentId}
                   className="border-border rounded-md border p-3 text-sm"
                 >
                   <div className="mb-1 flex items-center gap-2 font-medium">

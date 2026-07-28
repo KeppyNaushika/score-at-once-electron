@@ -34,7 +34,7 @@ interface ScoringContentAreaProps {
   showStudentNames: boolean
   expandMargin?: number
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
-  currentStudentId?: string
+  currentExamStudentId?: string
   currentUserId?: string
   questionScores?: QuestionScore[]
   onQuestionScoreCreated?: () => void
@@ -73,7 +73,7 @@ export function ScoringContentArea({
   showStudentNames,
   expandMargin,
   studentAnswerImages,
-  currentStudentId,
+  currentExamStudentId,
   currentUserId,
   questionScores,
   onQuestionScoreCreated,
@@ -244,7 +244,7 @@ export function ScoringContentArea({
       currentCropRegion={currentCropRegion}
       cropRegions={cropRegions}
       studentAnswerImages={studentAnswerImages}
-      currentStudentId={currentStudentId}
+      currentExamStudentId={currentExamStudentId}
       currentUserId={currentUserId}
       questionScores={questionScores}
       onQuestionScoreCreated={onQuestionScoreCreated}

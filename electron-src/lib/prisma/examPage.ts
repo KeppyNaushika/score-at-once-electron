@@ -12,13 +12,13 @@ export const examPageWithContentInclude = {
   masterImages: true,
   studentAnswerImages: {
     include: {
-      student: true,
+      examStudent: { include: { student: true } },
     },
   },
   cropRegions: true,
 } satisfies Prisma.ExamPageInclude
 
-/** masterImages・studentAnswerImages.student・cropRegions を含む ExamPage */
+/** masterImages・studentAnswerImages.examStudent.student・cropRegions を含む ExamPage */
 export type ExamPageWithContent = Prisma.ExamPageGetPayload<{
   include: typeof examPageWithContentInclude
 }>
@@ -108,7 +108,7 @@ export const deleteExamPage = async (id: string) => {
   return page
 }
 
-/** 試験IDで全ページを取得する（masterImages・studentAnswerImages.student・cropRegions リレーション含む、ページ番号順） */
+/** 試験IDで全ページを取得する（masterImages・studentAnswerImages.examStudent.student・cropRegions リレーション含む、ページ番号順） */
 export const getExamPagesByExamId = async (examId: string) => {
   return prisma.examPage.findMany({
     where: { examId },
@@ -117,7 +117,7 @@ export const getExamPagesByExamId = async (examId: string) => {
   })
 }
 
-/** IDで試験ページを取得する（masterImages・studentAnswerImages.student・cropRegions リレーション含む） */
+/** IDで試験ページを取得する（masterImages・studentAnswerImages.examStudent.student・cropRegions リレーション含む） */
 export const getExamPageById = async (id: string) => {
   return prisma.examPage.findUnique({
     where: { id },

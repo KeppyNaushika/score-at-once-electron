@@ -19,16 +19,14 @@ export function createDrawingApi() {
           type,
           userId
         ),
-      getByStudent: (
-        studentId: string,
-        examId: string,
+      getByExamStudent: (
+        examStudentId: string,
         type?: string,
         userId?: string
       ) =>
         ipcRenderer.invoke(
-          "drawing:getByStudent",
-          studentId,
-          examId,
+          "drawing:getByExamStudent",
+          examStudentId,
           type,
           userId
         ),

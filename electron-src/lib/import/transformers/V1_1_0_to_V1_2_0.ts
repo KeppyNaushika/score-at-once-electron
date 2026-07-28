@@ -9,7 +9,9 @@
  * - DrawingAnnotation: createdByUserId → userId (非NULL化)
  * - studentId の非NULL化
  *
- * @see docs/schema-history/README.md
+ * 当時のDBスキーマ: `git show v0.3.2-beta.0:prisma/schema.prisma`
+ * （ただし本変換器が扱うのはアーカイブJSONの形状であり、DBスキーマとは一致しない。
+ *   旧形状は下の V1_1_0_* 型が正）
  */
 
 import type {
@@ -182,20 +184,22 @@ export class V1_1_0_to_V1_2_0_Transformer implements ExamVersionTransformer {
         examData: {
           ...data.examData,
           // 既に分離済み（現行形式）のデータは保持する（冪等）。
-          // 分離前の実アーカイブには masterImages/studentAnswerImages キー自体が無い
+          // 分離前の実アーカイブには masterImages/studentAnswerImages キー自体が無い。
+          // この時点の答案・採点はまだ studentId 直結（examStudentId への
+          // 付け替えは V1_20_0_to_V1_21_0 が行う）ので、最新版の型とは形が違う。
           masterImages:
             data.examData.masterImages ??
             masterImages.map((masterImage) => ({ ...masterImage })),
           studentAnswerImages:
             data.examData.studentAnswerImages ??
-            studentAnswerImages.map((studentAnswerImage) => ({
+            (studentAnswerImages.map((studentAnswerImage) => ({
               ...studentAnswerImage,
-            })),
+            })) as unknown as ExamArchiveData["examData"]["studentAnswerImages"]),
         },
         scoresData: {
           questionScores: questionScores.map((questionScore) => ({
             ...questionScore,
-          })),
+          })) as unknown as ExamArchiveData["scoresData"]["questionScores"],
           drawingAnnotations: drawingAnnotations.map((drawingAnnotation) => ({
             ...drawingAnnotation,
             isFavorite: drawingAnnotation.isFavorite ?? false,

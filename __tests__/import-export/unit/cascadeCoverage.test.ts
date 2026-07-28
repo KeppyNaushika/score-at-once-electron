@@ -78,3 +78,33 @@ describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () =
     )
   })
 })
+
+/**
+ * 試験の採点層が「その試験の受験者」の子であることの固定（#962）。
+ *
+ * かつて採点層は Student 直結で、ExamStudent を参照する子テーブルが1つも無かった。
+ * そのため「試験から生徒を外す」操作では DB の cascade が働かず、削除経路が手書きで
+ * 消し忘れた行が孤児として残り、試験側の画面・出力には現れないのに成績算出でだけ
+ * 算入されていた。新しい採点系テーブルを Student 直結で足すとこの穴が再発するため、
+ * 親が ExamStudent であることを schema 駆動で固定する。
+ */
+describe("採点層の親は ExamStudent（#962 の再発防止）", () => {
+  const SCORING_TABLES = [
+    "CompoundAnswerScore",
+    "QuestionScore",
+    "ReturnSnapshot",
+    "ScoreDecision",
+    "StudentAnswerImage",
+  ]
+
+  it("採点系5テーブルは ExamStudent の onDelete:Cascade 子である", () => {
+    expect(cascadeChildrenFromSchema("ExamStudent")).toEqual(SCORING_TABLES)
+  })
+
+  it("採点系5テーブルは Student 直結ではない", () => {
+    const studentChildren = cascadeChildrenFromSchema("Student")
+    for (const table of SCORING_TABLES) {
+      expect(studentChildren).not.toContain(table)
+    }
+  })
+})

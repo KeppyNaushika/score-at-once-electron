@@ -20,7 +20,7 @@ export async function exportGradingDataExcel(
   options: ExportGradingDataOptions
 ): Promise<ExportResult> {
   try {
-    const { examId, selectedStudentIds } = options
+    const { examId, selectedExamStudentIds } = options
 
     // 学級平均行の母集団は「試験全体」（生徒選択に無関係）なので、全受験生徒データを
     // 1回だけ取得し、選択生徒分は in-memory で絞る（部分出力時の二重フェッチを回避）。
@@ -44,12 +44,12 @@ export async function exportGradingDataExcel(
     }
 
     const allScoringData = dataResult.scoringData
-    const selectedSet = new Set(selectedStudentIds)
+    const selectedSet = new Set(selectedExamStudentIds)
     const scoringData =
-      selectedStudentIds.length === 0
+      selectedExamStudentIds.length === 0
         ? allScoringData
         : allScoringData.filter((studentScoringData) =>
-            selectedSet.has(studentScoringData.studentId)
+            selectedSet.has(studentScoringData.examStudentId)
           )
     if (scoringData.length === 0) {
       return { success: false, error: "選択された生徒が見つかりません" }

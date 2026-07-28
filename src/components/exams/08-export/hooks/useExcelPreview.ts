@@ -22,7 +22,7 @@ interface ExcelPreviewSubtotalScore {
 }
 
 export interface ExcelPreviewRow {
-  studentId: string
+  examStudentId: string
   studentName: string
   studentNumber: string
   grade?: string
@@ -48,25 +48,25 @@ export interface ExcelPreviewData {
 
 interface UseExcelPreviewProps {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   enabled: boolean
 }
 
 /** Excel出力用のプレビューデータ（設問別得点・小計・合計）をデバウンス付きで取得するフック */
 export function useExcelPreview({
   examId,
-  selectedStudentIds,
+  selectedExamStudentIds,
   enabled,
 }: UseExcelPreviewProps) {
   const [previewData, setPreviewData] = useState<ExcelPreviewData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // selectedStudentIdsのJSON文字列でオブジェクト参照変化を無視
-  const selectedStudentIdsKey = JSON.stringify(selectedStudentIds)
+  // selectedExamStudentIdsのJSON文字列でオブジェクト参照変化を無視
+  const selectedExamStudentIdsKey = JSON.stringify(selectedExamStudentIds)
 
   useEffect(() => {
-    if (!enabled || !examId || selectedStudentIds.length === 0) {
+    if (!enabled || !examId || selectedExamStudentIds.length === 0) {
       setPreviewData(null)
       setError(null)
       setIsLoading(false)
@@ -87,7 +87,7 @@ export function useExcelPreview({
         const studentPlacements = await loadStudentExportPlacements(examId)
         const result = await window.electronAPI.export.getExcelPreviewData({
           examId,
-          selectedStudentIds,
+          selectedExamStudentIds,
           studentPlacements,
         })
 
@@ -115,7 +115,7 @@ export function useExcelPreview({
         }
 
         const rows: ExcelPreviewRow[] = result.scoringData.map((data) => ({
-          studentId: data.studentId,
+          examStudentId: data.examStudentId,
           studentName: data.studentName,
           studentNumber: data.studentNumber,
           grade: data.grade,
@@ -146,7 +146,7 @@ export function useExcelPreview({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, selectedStudentIdsKey, enabled])
+  }, [examId, selectedExamStudentIdsKey, enabled])
 
   return { previewData, isLoading, error }
 }

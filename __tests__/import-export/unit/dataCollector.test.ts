@@ -128,11 +128,11 @@ describe("アーカイブデータ構造", () => {
   describe("ArchiveScoresData", () => {
     it("採点データが正しい形式で生成される", () => {
       const cropRegionId = generateId()
-      const studentId = generateId()
+      const examStudentId = generateId()
       const data = createArchiveScoresData([
         {
           cropRegionId,
-          studentId,
+          examStudentId,
           status: "correct",
           partialScore: "10",
         },
@@ -140,7 +140,7 @@ describe("アーカイブデータ構造", () => {
 
       expect(data.questionScores).toHaveLength(1)
       expect(data.questionScores[0].cropRegionId).toBe(cropRegionId)
-      expect(data.questionScores[0].studentId).toBe(studentId)
+      expect(data.questionScores[0].examStudentId).toBe(examStudentId)
       expect(data.questionScores[0].status).toBe("correct")
       expect(data.questionScores[0].partialScore).toBe("10")
       expect(data.drawingAnnotations).toEqual([])
@@ -150,7 +150,7 @@ describe("アーカイブデータ構造", () => {
       const data = createArchiveScoresData([
         {
           cropRegionId: generateId(),
-          studentId: generateId(),
+          examStudentId: generateId(),
           status: "unscored",
           partialScore: null,
         },
@@ -214,12 +214,12 @@ describe("データ整合性チェック", () => {
     const scores = createArchiveScoresData([
       {
         cropRegionId: generateId(),
-        studentId: generateId(),
+        examStudentId: generateId(),
         partialScore: "5.5",
       },
       {
         cropRegionId: generateId(),
-        studentId: generateId(),
+        examStudentId: generateId(),
         partialScore: null,
       },
     ])

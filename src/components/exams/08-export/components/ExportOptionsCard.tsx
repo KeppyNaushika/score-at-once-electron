@@ -35,7 +35,7 @@ interface ExportOptionsCardProps {
   onExportRData: (format: "csv" | "json") => void
   onExportIndividualReports: () => void
   /** 指定生徒を返却版として記録する */
-  captureReturn: (studentIds: string[]) => Promise<boolean>
+  captureReturn: (examStudentIds: string[]) => Promise<boolean>
   /** 返却版記録の実行中フラグ */
   capturingReturn: boolean
   activeTab: ExportTabType
@@ -107,7 +107,7 @@ export function ExportOptionsCard({
   // 記録ボタンは全タブ共通（左カードの ReturnDiffPanel と同一コンポーネント）
   const captureButton = (
     <CaptureReturnVersionButton
-      selectedStudentIds={Array.from(selectedStudents)}
+      selectedExamStudentIds={Array.from(selectedStudents)}
       capturing={capturingReturn}
       capture={captureReturn}
       label="返却版として記録"

@@ -13,8 +13,8 @@
  * [データなし]
  *   - cropRegionId未指定 → 空のMapを返す
  *
- * [studentIdグループ化]
- *   - 取得結果をstudentIdでグループ化してMapに格納
+ * [examStudentIdグループ化]
+ *   - 取得結果をexamStudentIdでグループ化してMapに格納
  */
 
 import { renderHook, waitFor } from "@testing-library/react"
@@ -42,19 +42,31 @@ describe("useGridAnnotations", () => {
   })
 
   describe("cropRegionId変更（設問切り替え）", () => {
-    it("cropRegionId指定で全学生のアノテーションを取得しstudentIdでグループ化する", async () => {
+    it("cropRegionId指定で全受験者のアノテーションを取得しexamStudentIdでグループ化する", async () => {
       const annotations = [
         {
           ...createMockAnnotation({ id: "a1" }),
-          questionScore: { studentId: "s1", cropRegionId: "cr-1", id: "qs-1" },
+          questionScore: {
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            id: "qs-1",
+          },
         },
         {
           ...createMockAnnotation({ id: "a2" }),
-          questionScore: { studentId: "s1", cropRegionId: "cr-1", id: "qs-2" },
+          questionScore: {
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            id: "qs-2",
+          },
         },
         {
           ...createMockAnnotation({ id: "a3" }),
-          questionScore: { studentId: "s2", cropRegionId: "cr-1", id: "qs-3" },
+          questionScore: {
+            examStudentId: "s2",
+            cropRegionId: "cr-1",
+            id: "qs-3",
+          },
         },
       ]
       mockAPI.getByCropRegion.mockResolvedValue({
@@ -70,11 +82,11 @@ describe("useGridAnnotations", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.annotationsByStudent.size).toBe(2)
+        expect(result.current.annotationsByExamStudent.size).toBe(2)
       })
 
-      expect(result.current.annotationsByStudent.get("s1")).toHaveLength(2)
-      expect(result.current.annotationsByStudent.get("s2")).toHaveLength(1)
+      expect(result.current.annotationsByExamStudent.get("s1")).toHaveLength(2)
+      expect(result.current.annotationsByExamStudent.get("s2")).toHaveLength(1)
     })
 
     it("cropRegionIdが変更されると新しいデータを取得する", async () => {
@@ -84,7 +96,7 @@ describe("useGridAnnotations", () => {
           {
             ...createMockAnnotation({ id: "a1" }),
             questionScore: {
-              studentId: "s1",
+              examStudentId: "s1",
               cropRegionId: "cr-1",
               id: "qs-1",
             },
@@ -99,7 +111,7 @@ describe("useGridAnnotations", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.annotationsByStudent.size).toBe(1)
+        expect(result.current.annotationsByExamStudent.size).toBe(1)
       })
 
       mockAPI.getByCropRegion.mockResolvedValue({
@@ -108,7 +120,7 @@ describe("useGridAnnotations", () => {
           {
             ...createMockAnnotation({ id: "b1" }),
             questionScore: {
-              studentId: "s2",
+              examStudentId: "s2",
               cropRegionId: "cr-2",
               id: "qs-4",
             },
@@ -116,7 +128,7 @@ describe("useGridAnnotations", () => {
           {
             ...createMockAnnotation({ id: "b2" }),
             questionScore: {
-              studentId: "s3",
+              examStudentId: "s3",
               cropRegionId: "cr-2",
               id: "qs-5",
             },
@@ -127,11 +139,11 @@ describe("useGridAnnotations", () => {
       rerender({ cropRegionId: "cr-2" })
 
       await waitFor(() => {
-        expect(result.current.annotationsByStudent.size).toBe(2)
+        expect(result.current.annotationsByExamStudent.size).toBe(2)
       })
 
-      expect(result.current.annotationsByStudent.has("s2")).toBe(true)
-      expect(result.current.annotationsByStudent.has("s3")).toBe(true)
+      expect(result.current.annotationsByExamStudent.has("s2")).toBe(true)
+      expect(result.current.annotationsByExamStudent.has("s3")).toBe(true)
     })
   })
 
@@ -144,7 +156,7 @@ describe("useGridAnnotations", () => {
         })
       )
 
-      expect(result.current.annotationsByStudent.size).toBe(0)
+      expect(result.current.annotationsByExamStudent.size).toBe(0)
       expect(mockAPI.getByCropRegion).not.toHaveBeenCalled()
     })
   })
@@ -157,7 +169,7 @@ describe("useGridAnnotations", () => {
           {
             ...createMockAnnotation({ id: "a1" }),
             questionScore: {
-              studentId: "s1",
+              examStudentId: "s1",
               cropRegionId: "cr-1",
               id: "qs-1",
             },
@@ -176,7 +188,7 @@ describe("useGridAnnotations", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.annotationsByStudent.size).toBe(1)
+        expect(result.current.annotationsByExamStudent.size).toBe(1)
       })
 
       mockAPI.getByCropRegion.mockResolvedValue({
@@ -185,7 +197,7 @@ describe("useGridAnnotations", () => {
           {
             ...createMockAnnotation({ id: "a1" }),
             questionScore: {
-              studentId: "s1",
+              examStudentId: "s1",
               cropRegionId: "cr-1",
               id: "qs-1",
             },
@@ -193,7 +205,7 @@ describe("useGridAnnotations", () => {
           {
             ...createMockAnnotation({ id: "a2" }),
             questionScore: {
-              studentId: "s1",
+              examStudentId: "s1",
               cropRegionId: "cr-1",
               id: "qs-2",
             },
@@ -204,7 +216,9 @@ describe("useGridAnnotations", () => {
       rerender({ refreshKey: 1 })
 
       await waitFor(() => {
-        expect(result.current.annotationsByStudent.get("s1")).toHaveLength(2)
+        expect(result.current.annotationsByExamStudent.get("s1")).toHaveLength(
+          2
+        )
       })
     })
   })
@@ -224,7 +238,7 @@ describe("useGridAnnotations", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.annotationsByStudent.size).toBe(0)
+        expect(result.current.annotationsByExamStudent.size).toBe(0)
       })
     })
   })

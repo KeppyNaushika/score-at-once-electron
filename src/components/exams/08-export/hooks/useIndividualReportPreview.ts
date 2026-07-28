@@ -8,7 +8,7 @@ import type { IndividualReportData } from "@/electron-src/lib/export/individual-
 
 interface UseIndividualReportPreviewOptions {
   examId: string
-  selectedStudentIds: string[]
+  selectedExamStudentIds: string[]
   options: IndividualReportOptions
   enabled?: boolean
 }
@@ -28,7 +28,7 @@ interface UseIndividualReportPreviewResult {
  */
 export function useIndividualReportPreview({
   examId,
-  selectedStudentIds,
+  selectedExamStudentIds,
   options,
   enabled = true,
 }: UseIndividualReportPreviewOptions): UseIndividualReportPreviewResult {
@@ -46,16 +46,19 @@ export function useIndividualReportPreview({
 
   // 選択された生徒が変わったらプレビュー対象をリセット
   useEffect(() => {
-    if (selectedStudentIds.length > 0) {
+    if (selectedExamStudentIds.length > 0) {
       // 現在のプレビュー対象が選択リストにない場合、最初の生徒にリセット
-      if (!previewStudentId || !selectedStudentIds.includes(previewStudentId)) {
-        setPreviewStudentId(selectedStudentIds[0])
+      if (
+        !previewStudentId ||
+        !selectedExamStudentIds.includes(previewStudentId)
+      ) {
+        setPreviewStudentId(selectedExamStudentIds[0])
       }
     } else {
       setPreviewStudentId(null)
       setPreviewData(null)
     }
-  }, [selectedStudentIds, previewStudentId])
+  }, [selectedExamStudentIds, previewStudentId])
 
   const fetchPreviewData = useCallback(async () => {
     if (!enabled || !examId || !previewStudentId) {
@@ -70,7 +73,7 @@ export function useIndividualReportPreview({
       const studentPlacements = await loadStudentExportPlacements(examId)
       const result = await window.electronAPI.export.getIndividualReportData({
         examId,
-        selectedStudentIds: [previewStudentId],
+        selectedExamStudentIds: [previewStudentId],
         options: optionsRef.current,
         studentPlacements,
       })

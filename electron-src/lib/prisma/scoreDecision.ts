@@ -1,7 +1,10 @@
 import { Decimal } from "@prisma/client/runtime/client"
 
 import { recordAuditLog } from "./auditLog"
-import { resolveExamScopeByCropRegion, resolveStudentLabel } from "./auditScope"
+import {
+  resolveExamScopeByCropRegion,
+  resolveExamStudentLabel,
+} from "./auditScope"
 import prisma from "./client"
 
 /** verdict コードを日本語表示に変換（監査ログ差分用） */
@@ -26,7 +29,7 @@ const verdictLabel = (verdict: string | null | undefined): string => {
 
 export interface UpsertScoreDecisionData {
   cropRegionId: string
-  studentId: string
+  examStudentId: string
   verdict: string
   score?: number | null
   comment?: string | null
@@ -103,9 +106,9 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
     // 差分記録用に変更前の確定を取得
     const previous = await prisma.scoreDecision.findUnique({
       where: {
-        cropRegionId_studentId: {
+        cropRegionId_examStudentId: {
           cropRegionId: data.cropRegionId,
-          studentId: data.studentId,
+          examStudentId: data.examStudentId,
         },
       },
       select: { verdict: true, score: true },
@@ -113,14 +116,14 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
 
     const decision = await prisma.scoreDecision.upsert({
       where: {
-        cropRegionId_studentId: {
+        cropRegionId_examStudentId: {
           cropRegionId: data.cropRegionId,
-          studentId: data.studentId,
+          examStudentId: data.examStudentId,
         },
       },
       create: {
         cropRegionId: data.cropRegionId,
-        studentId: data.studentId,
+        examStudentId: data.examStudentId,
         verdict: data.verdict,
         score,
         comment: data.comment ?? null,
@@ -143,7 +146,7 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
 
     // 監査ログ: 採点確定（OWNERによる確定。提案連打は記録しない）
     const scope = await resolveExamScopeByCropRegion(data.cropRegionId)
-    const studentLabel = await resolveStudentLabel(data.studentId)
+    const studentLabel = await resolveExamStudentLabel(data.examStudentId)
     const prevScore = previous?.score != null ? Number(previous.score) : null
     const newScore = score != null ? Number(score) : null
     await recordAuditLog({
@@ -200,15 +203,15 @@ export const getScoreDecisionsForExam = async (examId: string) => {
   }
 }
 
-/** 特定の生徒×設問の確定スコアを取得する */
+/** 特定の受験者×設問の確定スコアを取得する */
 export const getScoreDecision = async (
-  studentId: string,
+  examStudentId: string,
   cropRegionId: string
 ) => {
   try {
     const decision = await prisma.scoreDecision.findUnique({
       where: {
-        cropRegionId_studentId: { cropRegionId, studentId },
+        cropRegionId_examStudentId: { cropRegionId, examStudentId },
       },
       include: {
         decidedBy: true,

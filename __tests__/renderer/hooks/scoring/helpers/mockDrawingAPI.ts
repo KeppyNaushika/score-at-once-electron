@@ -80,7 +80,7 @@ export interface MockDrawingAPI {
   update: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
   getByQuestionScore: ReturnType<typeof vi.fn>
-  getByStudent: ReturnType<typeof vi.fn>
+  getByExamStudent: ReturnType<typeof vi.fn>
   getByExam: ReturnType<typeof vi.fn>
   getByCropRegion: ReturnType<typeof vi.fn>
   batchCreate: ReturnType<typeof vi.fn>
@@ -109,7 +109,7 @@ export function createMockDrawingAPI(): MockDrawingAPI {
       success: true,
       data: [],
     }),
-    getByStudent: vi.fn().mockResolvedValue({
+    getByExamStudent: vi.fn().mockResolvedValue({
       success: true,
       data: [],
     }),

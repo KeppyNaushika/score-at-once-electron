@@ -1,7 +1,10 @@
 import { Decimal } from "@prisma/client/runtime/client"
 
 import { type AuditChange, recordAuditLog } from "./auditLog"
-import { resolveExamScopeByCropRegion, resolveStudentLabel } from "./auditScope"
+import {
+  resolveExamScopeByCropRegion,
+  resolveExamStudentLabel,
+} from "./auditScope"
 import prisma from "./client"
 
 /**
@@ -54,12 +57,12 @@ async function recordScoreAudit(opts: {
   action: "exam.score.propose" | "exam.score.update" | "exam.score.delete"
   scoreId: string
   cropRegionId: string
-  studentId: string
+  examStudentId: string
   userId: string
   changes?: AuditChange[]
 }): Promise<void> {
   const scope = await resolveExamScopeByCropRegion(opts.cropRegionId)
-  const studentLabel = await resolveStudentLabel(opts.studentId)
+  const studentLabel = await resolveExamStudentLabel(opts.examStudentId)
   const verb =
     opts.action === "exam.score.propose"
       ? "提案しました"
@@ -122,7 +125,7 @@ export const calculateActualScore = (
 // 注: "proposed"/"final" は廃止済み。QuestionScoreは常に採点者ごとの「提案」であり、
 // 確定はScoreDecision（scoreDecision.ts）で表現する。
 export interface CreateQuestionScoreData {
-  studentId: string
+  examStudentId: string
   cropRegionId: string
   partialScore?: number // 部分点・保留時のみ使用
   status:
@@ -172,7 +175,7 @@ export const getQuestionScoresForExam = async (
         ...(userId && { userId: userId }),
       },
       include: {
-        student: true,
+        examStudent: { include: { student: true } },
         cropRegion: {
           include: {
             examPage: true,
@@ -181,8 +184,8 @@ export const getQuestionScoresForExam = async (
         user: true,
       },
       orderBy: [
-        { student: { lastName: "asc" } },
-        { student: { firstName: "asc" } },
+        { examStudent: { student: { lastName: "asc" } } },
+        { examStudent: { student: { firstName: "asc" } } },
         { cropRegion: { orderIndex: "asc" } },
       ],
     })
@@ -198,18 +201,18 @@ export const getQuestionScoresForExam = async (
 }
 
 /**
- * 特定の生徒の採点データを取得
- * @param studentId 生徒ID
+ * 特定の受験者の採点データを取得
+ * @param examStudentId 試験の受験者ID（ExamStudent.id）
  * @param userId 採点者のユーザーID（指定時はそのユーザーの採点データのみ取得）
  */
-export const getQuestionScoresForStudent = async (
-  studentId: string,
+export const getQuestionScoresForExamStudent = async (
+  examStudentId: string,
   userId?: string
 ) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
-        studentId: studentId,
+        examStudentId,
         // userIdが指定されている場合、そのユーザーの採点データのみ取得
         ...(userId && { userId: userId }),
       },
@@ -241,7 +244,7 @@ export const getQuestionScoreById = async (id: string) => {
     const score = await prisma.questionScore.findUnique({
       where: { id },
       include: {
-        student: true,
+        examStudent: { include: { student: true } },
         cropRegion: true,
         user: true,
       },
@@ -269,7 +272,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
     // 同じ生徒・設問・採点者の組み合わせで既存レコードをチェック
     const existing = await prisma.questionScore.findFirst({
       where: {
-        studentId: data.studentId,
+        examStudentId: data.examStudentId,
         cropRegionId: data.cropRegionId,
         userId: data.userId,
       },
@@ -287,7 +290,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
           status: data.status,
         },
         include: {
-          student: true,
+          examStudent: { include: { student: true } },
           cropRegion: true,
           user: true,
         },
@@ -297,7 +300,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         action: "exam.score.update",
         scoreId: updated.id,
         cropRegionId: data.cropRegionId,
-        studentId: data.studentId,
+        examStudentId: data.examStudentId,
         userId: data.userId,
         changes: [
           {
@@ -326,7 +329,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       // 新規作成
       const created = await prisma.questionScore.create({
         data: {
-          studentId: data.studentId,
+          examStudentId: data.examStudentId,
           cropRegionId: data.cropRegionId,
           partialScore:
             data.partialScore !== null && data.partialScore !== undefined
@@ -336,7 +339,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
           userId: data.userId,
         },
         include: {
-          student: true,
+          examStudent: { include: { student: true } },
           cropRegion: true,
           user: true,
         },
@@ -346,7 +349,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         action: "exam.score.propose",
         scoreId: created.id,
         cropRegionId: data.cropRegionId,
-        studentId: data.studentId,
+        examStudentId: data.examStudentId,
         userId: data.userId,
         changes: [
           {
@@ -431,7 +434,7 @@ export const updateQuestionScore = async (
         status: data.status,
       },
       include: {
-        student: true,
+        examStudent: { include: { student: true } },
         cropRegion: true,
         user: true,
       },
@@ -441,7 +444,7 @@ export const updateQuestionScore = async (
       action: "exam.score.update",
       scoreId: updated.id,
       cropRegionId: updated.cropRegionId,
-      studentId: updated.studentId,
+      examStudentId: updated.examStudentId,
       userId: updated.userId,
       changes: [
         {
@@ -489,7 +492,7 @@ export const deleteQuestionScore = async (id: string) => {
       where: { id },
       select: {
         cropRegionId: true,
-        studentId: true,
+        examStudentId: true,
         userId: true,
         status: true,
       },
@@ -504,7 +507,7 @@ export const deleteQuestionScore = async (id: string) => {
         action: "exam.score.delete",
         scoreId: id,
         cropRegionId: before.cropRegionId,
-        studentId: before.studentId,
+        examStudentId: before.examStudentId,
         userId: before.userId,
         changes: [
           {
@@ -549,8 +552,8 @@ export const getExamProgress = async (examId: string) => {
       where: {
         examPage: { examId },
       },
-      select: { studentId: true },
-      distinct: ["studentId"],
+      select: { examStudentId: true },
+      distinct: ["examStudentId"],
     })
     const totalStudents = studentsWithAnswers.length
 
@@ -651,7 +654,7 @@ export const getExamProgress = async (examId: string) => {
 }
 
 export interface BatchScoreEntry {
-  studentId: string
+  examStudentId: string
   cropRegionId: string
   status: string
   partialScore: number | null
@@ -671,7 +674,7 @@ export async function batchUpdateQuestionScores(
         // 既存レコードを検索
         const existing = await tx.questionScore.findFirst({
           where: {
-            studentId: entry.studentId,
+            examStudentId: entry.examStudentId,
             cropRegionId: entry.cropRegionId,
             userId: entry.userId,
           },
@@ -691,7 +694,7 @@ export async function batchUpdateQuestionScores(
         } else {
           await tx.questionScore.create({
             data: {
-              studentId: entry.studentId,
+              examStudentId: entry.examStudentId,
               cropRegionId: entry.cropRegionId,
               userId: entry.userId,
               status: entry.status,

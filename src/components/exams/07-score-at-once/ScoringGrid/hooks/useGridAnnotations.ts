@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 interface UseGridAnnotationsProps {
   cropRegionId: string | undefined
@@ -10,27 +10,28 @@ interface UseGridAnnotationsProps {
 }
 
 interface UseGridAnnotationsReturn {
-  /** studentId → DrawingAnnotation[] のマップ */
-  annotationsByStudent: Map<string, DrawingAnnotation[]>
+  /** examStudentId（ExamStudent.id）→ その受験者の注釈 */
+  annotationsByExamStudent: Map<string, AnnotationWithContext[]>
 }
 
 /**
- * Grid表示用アノテーション取得フック
- * 指定されたcropRegionの全学生のアノテーションを一括取得し、studentIdでグループ化する
+ * Grid表示用アノテーション取得フック。
+ * 指定 cropRegion の全受験者の注釈を一括取得し、examStudentId でグループ化する。
+ * グリッドの行は受験者なので、キーは Student.id ではない。
  */
 export function useGridAnnotations({
   cropRegionId,
   currentUserId,
   refreshKey,
 }: UseGridAnnotationsProps): UseGridAnnotationsReturn {
-  const [annotationsByStudent, setAnnotationsByStudent] = useState<
-    Map<string, DrawingAnnotation[]>
+  const [annotationsByExamStudent, setAnnotationsByExamStudent] = useState<
+    Map<string, AnnotationWithContext[]>
   >(new Map())
   const lastFetchedRef = useRef<string>("")
 
   const fetchAnnotations = useCallback(async () => {
     if (!cropRegionId) {
-      setAnnotationsByStudent(new Map())
+      setAnnotationsByExamStudent(new Map())
       return
     }
 
@@ -47,27 +48,23 @@ export function useGridAnnotations({
       if (result.success && result.data) {
         // フェッチ成功後にキーを設定（失敗時のリトライを阻害しない）
         lastFetchedRef.current = fetchKey
-        const grouped = new Map<string, DrawingAnnotation[]>()
+        const grouped = new Map<string, AnnotationWithContext[]>()
         for (const annotation of result.data) {
-          // questionScore.studentId を使用してグループ化
-          const studentId = (
-            annotation as DrawingAnnotation & {
-              questionScore?: { studentId?: string }
-            }
-          ).questionScore?.studentId
-          if (!studentId) continue
+          // グリッドの行は受験者なので questionScore.examStudentId でまとめる
+          const examStudentId = annotation.questionScore?.examStudentId
+          if (!examStudentId) continue
 
-          const existing = grouped.get(studentId) || []
+          const existing = grouped.get(examStudentId) || []
           existing.push(annotation)
-          grouped.set(studentId, existing)
+          grouped.set(examStudentId, existing)
         }
-        setAnnotationsByStudent(grouped)
+        setAnnotationsByExamStudent(grouped)
       } else {
-        setAnnotationsByStudent(new Map())
+        setAnnotationsByExamStudent(new Map())
       }
     } catch (error) {
       console.error("Grid用アノテーション取得エラー:", error)
-      setAnnotationsByStudent(new Map())
+      setAnnotationsByExamStudent(new Map())
     }
   }, [cropRegionId, currentUserId])
 
@@ -77,5 +74,5 @@ export function useGridAnnotations({
     fetchAnnotations()
   }, [fetchAnnotations, refreshKey])
 
-  return { annotationsByStudent }
+  return { annotationsByExamStudent }
 }
