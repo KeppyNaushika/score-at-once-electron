@@ -5,8 +5,9 @@
  * Electron/OFFLINEビルドでリソース欠損を防ぐ
  *
  * コピーされるアセット:
- * - MathJax woff-v2 フォント（数式表示用）
+ * - MathJax バンドル（数式表示用。tex-svg.js と SRE）
  * - PDF.js Worker（PDF変換用）
+ * - PDF.js WASM デコーダ
  * - Noto Sans JP フォント（個人成績表PDF用）
  */
 
@@ -14,21 +15,6 @@ const fs = require("fs")
 const path = require("path")
 
 const repoRoot = path.resolve(__dirname, "..")
-const CANDIDATE_PATHS = [
-  ["mathjax", "es5", "output", "chtml", "fonts", "woff-v2"],
-  ["mathjax", "output", "chtml", "fonts", "woff-v2"],
-  ["mathjax-full", "es5", "output", "chtml", "fonts", "woff-v2"],
-]
-const targetDir = path.join(
-  repoRoot,
-  "public",
-  "js",
-  "mathjax",
-  "output",
-  "chtml",
-  "fonts",
-  "woff-v2"
-)
 
 const ensureDir = (dir) => {
   if (!fs.existsSync(dir)) {
@@ -48,26 +34,43 @@ const copyRecursive = (src, dest) => {
   }
 }
 
-const sourceDir = CANDIDATE_PATHS.map((segments) =>
-  path.join(repoRoot, "node_modules", ...segments)
-).find((candidate) => fs.existsSync(candidate))
+// MathJax バンドルのセットアップ
+// layout.tsx が /js/mathjax/tex-svg.js を読み込むため public へ配置する。
+//
+// NOTE: MathJax 4 では woff フォントが本体から @mathjax/*-font パッケージへ分離された。
+// ただしこのアプリは SVG 出力（tex-svg.js）を使っており、SVG はグリフをパスで描くため
+// Web フォントを一切必要としない。v3 時代の output/chtml/fonts/woff-v2 のコピーは
+// 不要になったので廃止した。
+const mathJaxSourceDir = path.join(repoRoot, "node_modules", "mathjax")
+const mathJaxTargetDir = path.join(repoRoot, "public", "js", "mathjax")
 
-if (!sourceDir) {
-  console.error(
-    "MathJaxフォントのソースが見つかりません: " +
-      CANDIDATE_PATHS.map((segments) =>
-        path.join("node_modules", ...segments)
-      ).join(", ")
-  )
+// tex-svg.js は数式本体、sre は読み上げ規則（tex-svg.js が相対パスで遅延読み込みする）
+const MATHJAX_ASSETS = ["tex-svg.js", "sre"]
+
+if (!fs.existsSync(mathJaxSourceDir)) {
+  console.error("MathJaxパッケージが見つかりません: " + mathJaxSourceDir)
   process.exit(1)
 }
 
-console.log(`✓ MathJax font source: ${sourceDir}`)
+ensureDir(mathJaxTargetDir)
+for (const asset of MATHJAX_ASSETS) {
+  const src = path.join(mathJaxSourceDir, asset)
+  if (!fs.existsSync(src)) {
+    console.error(
+      `MathJaxアセットが見つかりません: ${path.join("node_modules", "mathjax", asset)}`
+    )
+    process.exit(1)
+  }
+  copyRecursive(src, path.join(mathJaxTargetDir, asset))
+}
 
-ensureDir(targetDir)
-copyRecursive(sourceDir, targetDir)
-
-console.log("✓ MathJax woff-v2 fonts copied to public assets")
+const mathJaxVersion = require(
+  path.join(mathJaxSourceDir, "package.json")
+).version
+console.log(
+  `✓ MathJax ${mathJaxVersion} bundle copied (${MATHJAX_ASSETS.join(", ")})`
+)
+console.log(`  to ${mathJaxTargetDir}`)
 
 // PDF.js workerファイルのセットアップ
 // NOTE: src/lib/pdfConverter.ts は legacy ビルド (pdfjs-dist/legacy/build/pdf.min.mjs)

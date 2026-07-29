@@ -48,14 +48,6 @@ export default function RootLayout({
                   displayAlign: 'left',
                   displayIndent: '0'
                 },
-                chtml: {
-                  scale: 1.0,
-                  minScale: 0.5,
-                  mtextInheritFont: false,
-                  merrorInheritFont: true,
-                  matchFontHeight: false,
-                  fontURL: '/js/mathjax/output/chtml/fonts/woff-v2'
-                },
                 options: {
                   skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
                   ignoreHtmlClass: 'no-mathjax',
