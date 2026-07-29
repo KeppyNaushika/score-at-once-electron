@@ -163,7 +163,7 @@ async function buildEntry(
   return { label, section }
 }
 
-export interface UseNavigationHistoryResult {
+interface UseNavigationHistoryResult {
   canGoBack: boolean
   canGoForward: boolean
   /** activeIndex を含む全履歴エントリ（新しい順に反転済み） */
@@ -171,7 +171,6 @@ export interface UseNavigationHistoryResult {
   goBack: () => void
   goForward: () => void
   goToIndex: (index: number) => void
-  refresh: () => void
 }
 
 /**
@@ -239,6 +238,5 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
     goBack: () => router.back(),
     goForward: () => router.forward(),
     goToIndex,
-    refresh,
   }
 }

@@ -18,7 +18,7 @@ import { useElementSelection } from "./useElementSelection"
 import { useRectangleSelection } from "./useRectangleSelection"
 
 /** キャンバスインタラクションフックのプロパティ */
-export interface UseCanvasInteractionProps {
+interface UseCanvasInteractionProps {
   /** キャンバス参照 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** 現在のツール */
@@ -111,7 +111,7 @@ export interface UseCanvasInteractionProps {
 }
 
 /** キャンバスインタラクションフックの戻り値 */
-export interface UseCanvasInteractionReturn {
+interface UseCanvasInteractionReturn {
   handleSelectionMouseDown: (
     imageCoords: { x: number; y: number },
     originalEvent?: PointerEvent | MouseEvent

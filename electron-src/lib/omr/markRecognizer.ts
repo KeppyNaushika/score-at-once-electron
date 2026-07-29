@@ -30,7 +30,7 @@ import {
 } from "./imageProcessor"
 
 /** 大津法が使えないときに使う既定の暗さ閾値 */
-export const DEFAULT_COLOR_THRESHOLD = 128
+const DEFAULT_COLOR_THRESHOLD = 128
 
 /** 輝度ヒストグラムのビン設定（8bitグレースケール） */
 const LUMINANCE_OPTIONS: OtsuOptions = { min: 0, max: 256, bins: 256 }

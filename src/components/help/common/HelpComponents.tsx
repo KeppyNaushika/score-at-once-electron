@@ -79,22 +79,4 @@ export function TipItem({ children, type = "info" }: TipItemProps) {
   )
 }
 
-interface ShortcutItemProps {
-  keys: string
-  description: string
-}
-
-export function ShortcutItem({ keys, description }: ShortcutItemProps) {
-  return (
-    <div className="flex items-center justify-between py-1">
-      <kbd className="rounded border bg-gray-100 px-2 py-1 font-mono text-xs font-semibold">
-        {keys}
-      </kbd>
-      <span className="text-muted-foreground ml-3 flex-1 text-sm">
-        {description}
-      </span>
-    </div>
-  )
-}
-
 export { Badge }

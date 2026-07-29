@@ -11,7 +11,7 @@ interface SetGradeOverrideParams {
 }
 
 /** 確定・解除の対象セル（生徒×評価項目）。未指定なら Grade 全体が対象 */
-export interface GradeFrozenTarget {
+interface GradeFrozenTarget {
   studentId: string
   gradeItemId: string
 }

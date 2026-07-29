@@ -58,7 +58,7 @@ export interface ItemAnalysisResult {
 }
 
 /** 識別係数・D値の判定帯（0.2/0.3/0.4） */
-export function getDiscriminationLevel(r: number | null): DiscriminationLevel {
+function getDiscriminationLevel(r: number | null): DiscriminationLevel {
   if (r === null) return "insufficient"
   if (r < 0) return "negative"
   if (r < 0.2) return "poor"

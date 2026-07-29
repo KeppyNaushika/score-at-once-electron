@@ -24,7 +24,7 @@ import { upsertOmrConfig } from "../prisma/cropRegionOmrConfig"
 import { createExam } from "../prisma/exam"
 import { createExamPage } from "../prisma/examPage"
 
-export interface ConvertToExamResult {
+interface ConvertToExamResult {
   success: boolean
   examId?: string
   error?: string

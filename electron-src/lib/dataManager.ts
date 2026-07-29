@@ -73,7 +73,7 @@ export const getAsbImagesDirectory = (definitionId: string): string => {
 }
 
 /** Excel・PDF等の出力ファイル保存ディレクトリのパスを取得する */
-export const getExportsDirectory = (): string => {
+const getExportsDirectory = (): string => {
   return path.join(getDataDirectory(), "exports")
 }
 

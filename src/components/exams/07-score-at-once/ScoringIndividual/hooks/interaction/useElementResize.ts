@@ -15,7 +15,7 @@ export interface ResizeOriginalBounds {
 }
 
 /** 要素リサイズフックのプロパティ */
-export interface UseElementResizeProps {
+interface UseElementResizeProps {
   /** Shiftキー押下状態 */
   isShiftPressed: boolean
   /** 画像のアスペクト比（width/height） */
@@ -33,7 +33,7 @@ export interface UseElementResizeProps {
 }
 
 /** 要素リサイズフックの戻り値 */
-export interface UseElementResizeReturn {
+interface UseElementResizeReturn {
   /** リサイズハンドルを取得 */
   getResizeHandle: (
     normalizedX: number,

@@ -56,10 +56,10 @@ export const USER_PREFERENCE_SCHEMA = {
 } as const
 
 /** 設定キーの型 */
-export type PreferenceKey = keyof typeof USER_PREFERENCE_SCHEMA
+type PreferenceKey = keyof typeof USER_PREFERENCE_SCHEMA
 
 /** 各キーのランタイム型マッピング */
-export type PreferenceValueType = {
+type PreferenceValueType = {
   showStudentNames: boolean
   autoScroll: boolean
   itemsPerLine: number

@@ -53,51 +53,6 @@ export type LayoutDirection =
 export type AnswerSortOrder = "custom" | "whiteness" | "darkness"
 
 /**
- * クライアントサイド用のQuestionScore型
- * partialScoreをDecimalからnumberに変更（UI状態管理用）
- */
-export interface ClientQuestionScore extends Omit<
-  QuestionScore,
-  "partialScore"
-> {
-  partialScore: number | null
-}
-
-/**
- * 採点データレコード（クライアントサイド用）
- */
-export interface ScoringDataRecord {
-  [key: string]: ClientQuestionScore
-}
-
-/**
- * 実際の得点を計算する関数
- * DBには partialScore のみ保存し、表示時に適切な値を計算
- */
-export function calculateActualScore(
-  score: ClientQuestionScore | null,
-  maxScore: number
-): number | null {
-  if (!score) return null
-
-  switch (score.status) {
-    case "correct":
-      return maxScore
-    case "incorrect":
-    case "no_answer":
-    case "double_mark":
-      return 0
-    case "unscored":
-      return null
-    case "partial":
-    case "pending":
-      return score.partialScore
-    default:
-      return null
-  }
-}
-
-/**
  * 採点データの基本インターフェース
  * QuestionScore + Student + CropRegion + StudentAnswerImage の結合データから変換されたもの
  * 注意: 学生データのみを管理し、模範解答は別途管理する

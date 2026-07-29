@@ -25,5 +25,7 @@ export type CropRegionAreaType = (typeof CROP_REGION_AREA_TYPES)[number]
  * 型ガード `isCropRegionAreaType` と境界コンバータ `toCropRegionAreaType`
  * （想定外値は OTHER）。DB 上は String 保存のため境界で narrowing する。
  */
-export const { is: isCropRegionAreaType, to: toCropRegionAreaType } =
-  defineStringUnion(CROP_REGION_AREA_TYPES, "OTHER")
+export const { to: toCropRegionAreaType } = defineStringUnion(
+  CROP_REGION_AREA_TYPES,
+  "OTHER"
+)

@@ -26,13 +26,13 @@ import {
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-// V4統合: テキストボックスCanvas機能をインポート
+// テキストボックスCanvas機能をインポート
 import type { AnchorDirection, TextBox } from "@/lib/textbox-canvas/types"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { EnhancedCanvasPreview } from "./EnhancedCanvasPreview"
 
-interface RichTextEditorModalV4Props {
+interface RichTextEditorModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   value: string
@@ -42,7 +42,7 @@ interface RichTextEditorModalV4Props {
   onSubmit: () => void
   onCancel: () => void
   title?: string
-  // V4統合: 座標情報（個別採点画面の0-1座標系）
+  // 座標情報（個別採点画面の0-1座標系）
   position?: { x: number; y: number } // 0.0-1.0
   canvasWidth?: number
   canvasHeight?: number
@@ -55,7 +55,7 @@ interface RichTextEditorModalV4Props {
   onAnchorDirectionChange?: (direction: AnchorDirection) => void
 }
 
-export function RichTextEditorModalV4({
+export function RichTextEditorModal({
   open,
   onOpenChange,
   value,
@@ -73,13 +73,13 @@ export function RichTextEditorModalV4({
   onFontSizeChange,
   anchorDirection: initialAnchorDirection = "top-left",
   onAnchorDirectionChange,
-}: RichTextEditorModalV4Props) {
+}: RichTextEditorModalProps) {
   const [fontSize, setFontSizeLocal] = useState(initialFontSize)
   const [isBold, setIsBold] = useState(false)
   const [isItalic, setIsItalic] = useState(false)
   const [isUnderline, setIsUnderline] = useState(false)
 
-  // V4統合: アンカー方向の設定
+  // アンカー方向の設定
   const [anchorDirection, setAnchorDirectionLocal] = useState<AnchorDirection>(
     initialAnchorDirection
   )
@@ -119,7 +119,7 @@ export function RichTextEditorModalV4({
     null
   )
 
-  // V4統合: プレビュー用のTextBoxオブジェクトを作成
+  // プレビュー用のTextBoxオブジェクトを作成
   const previewTextBox: TextBox = {
     id: "preview",
     x: position.x * canvasWidth, // 相対座標を絶対座標に変換
@@ -512,7 +512,7 @@ export function RichTextEditorModalV4({
             />
           </div>
 
-          {/* V4統合: 拡張Canvasプレビュー */}
+          {/* 拡張Canvasプレビュー */}
           {value.trim() && (
             <div>
               <div className="mb-2 flex items-center justify-between">

@@ -1,16 +1,16 @@
 /**
- * @fileoverview Canvas初期化およびV4統合フック
- * キャンバスサイズ計算、アスペクト比、V4テキスト統合のロジックを提供
+ * @fileoverview Canvas初期化およびテキストボックス統合フック
+ * キャンバスサイズ計算、アスペクト比、テキスト統合のロジックを提供
  */
 import { useCallback, useMemo } from "react"
 
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
 
 import type { DrawingElement } from "../../types"
-import { useTextboxV4Integration } from "../text/useTextboxIntegration"
+import { useTextboxIntegration } from "../text/useTextboxIntegration"
 
-/** Canvas初期化およびV4統合フックのパラメータ */
-export interface UseCanvasV4IntegrationParams {
+/** Canvas初期化およびテキストボックス統合フックのパラメータ */
+interface UseCanvasIntegrationParams {
   /** 読み込み済み画像配列 */
   loadedImages: HTMLImageElement[]
   /** 描画要素配列 */
@@ -30,8 +30,8 @@ export interface UseCanvasV4IntegrationParams {
   currentScoringData: ScoringData | null
 }
 
-/** Canvas初期化およびV4統合フックの戻り値 */
-export interface UseCanvasV4IntegrationReturn {
+/** Canvas初期化およびテキストボックス統合フックの戻り値 */
+interface UseCanvasIntegrationReturn {
   /** Canvas幅 */
   canvasWidth: number
   /** Canvas高さ */
@@ -40,8 +40,8 @@ export interface UseCanvasV4IntegrationReturn {
   imageAspectRatio: number
   /** 背景画像URL */
   backgroundImageUrl: string | undefined
-  /** V4統合フックの戻り値 */
-  v4Integration: ReturnType<typeof useTextboxV4Integration>
+  /** テキストボックス統合フックの戻り値 */
+  textboxIntegration: ReturnType<typeof useTextboxIntegration>
   /** テキストアンカークリックハンドラー */
   handleTextAnchorClick: (position: { x: number; y: number }) => void
   /** テキスト要素再編集ハンドラー */
@@ -55,26 +55,23 @@ export interface UseCanvasV4IntegrationReturn {
 }
 
 /**
- * Canvas初期化およびV4統合フック
+ * Canvas初期化およびテキストボックス統合フック
  *
  * @description
  * キャンバスのサイズ計算、画像アスペクト比の算出、
- * V4テキストエディタ統合の初期化を行うフック。
+ * テキストエディタ統合の初期化を行うフック。
  *
  * @param params - フックパラメータ
- * @returns Canvas関連の値とV4統合
+ * @returns Canvas関連の値とテキストボックス統合
  */
-export function useCanvasV4Integration({
+export function useCanvasIntegration({
   loadedImages,
   drawingElements,
   setDrawingElements,
   addDrawingElement,
   updateDrawingElement,
   currentScoringData,
-}: UseCanvasV4IntegrationParams): UseCanvasV4IntegrationReturn {
-  // V4統合: 常にV4モードを使用
-  const useV4Mode = true
-
+}: UseCanvasIntegrationParams): UseCanvasIntegrationReturn {
   // Canvas幅・高さ（画像サイズが確定してから初期化）
   const canvasWidth = loadedImages.length > 0 ? loadedImages[0].width : 800
   const canvasHeight = loadedImages.length > 0 ? loadedImages[0].height : 600
@@ -91,8 +88,8 @@ export function useCanvasV4Integration({
   // 答案画像のURL取得（appimg://プロトコルをそのまま使用）
   const backgroundImageUrl = currentScoringData?.imageUrl
 
-  // V4統合フック
-  const v4Integration = useTextboxV4Integration({
+  // テキストボックス統合フック
+  const textboxIntegration = useTextboxIntegration({
     canvasWidth,
     canvasHeight,
     drawingElements,
@@ -101,24 +98,15 @@ export function useCanvasV4Integration({
     updateDrawingElement,
   })
 
-  // V4統合: テキストアンカークリック処理
+  // テキストアンカークリック処理
   const handleTextAnchorClick = useCallback(
     (position: { x: number; y: number }) => {
-      if (useV4Mode) {
-        // V4統合モード: V4統合モーダルを開く
-        v4Integration.openV4Modal(position)
-      } else {
-        // レガシーモード: 古いモーダルを開く（既存のロジック維持）
-        // 注：この部分は将来的に削除予定
-        console.warn(
-          "レガシーテキストモードは非推奨です。V4統合モードをご利用ください。"
-        )
-      }
+      textboxIntegration.openTextboxModal(position)
     },
-    [useV4Mode, v4Integration]
+    [textboxIntegration]
   )
 
-  // V4統合: テキスト要素の再編集処理
+  // テキスト要素の再編集処理
   const handleTextElementReClick = useCallback(
     (element: {
       x: number
@@ -127,15 +115,15 @@ export function useCanvasV4Integration({
       id: string
       color?: string
     }) => {
-      // V4統合モード: V4統合モーダルを開く
-      v4Integration.openV4Modal(
+      // テキスト編集モーダルを開く
+      textboxIntegration.openTextboxModal(
         { x: element.x, y: element.y },
         element.text || "",
         element.id
       )
-      v4Integration.setCurrentTextColor(element.color || "#000000")
+      textboxIntegration.setCurrentTextColor(element.color || "#000000")
     },
-    [v4Integration]
+    [textboxIntegration]
   )
 
   return {
@@ -143,7 +131,7 @@ export function useCanvasV4Integration({
     canvasHeight,
     imageAspectRatio,
     backgroundImageUrl,
-    v4Integration,
+    textboxIntegration,
     handleTextAnchorClick,
     handleTextElementReClick,
   }

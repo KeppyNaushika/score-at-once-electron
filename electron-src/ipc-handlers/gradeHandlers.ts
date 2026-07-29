@@ -5,13 +5,13 @@
 import { dialog } from "electron"
 
 import type { GradeConstraintInput } from "../../src/types/grade.types"
-import { createGradeArchive } from "../lib/export/grade-archive"
-import { exportGradeExcel } from "../lib/export/gradeExcel"
+import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
+import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
+import { extractGradeArchive } from "../lib/import/grade-archive/gradeArchiveExtractor"
 import {
-  extractGradeArchive,
   importGradeArchive,
   previewGradeArchiveImport,
-} from "../lib/import/grade-archive"
+} from "../lib/import/grade-archive/gradeArchiveImporter"
 import {
   createGrade,
   deleteGrade,

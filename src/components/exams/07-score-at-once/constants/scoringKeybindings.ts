@@ -126,17 +126,3 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "tool.rectangle": "b",
   "tool.ellipse": "y",
 } as const
-
-/**
- * キーバインディングのカテゴリ定義
- * 設定画面でのグルーピングに使用
- */
-export const KEYBINDING_CATEGORIES = {
-  scoring: "採点",
-  selection: "選択",
-  navigation: "ナビゲーション",
-  filter: "フィルタ",
-  view: "表示",
-  modal: "モーダル",
-  tool: "描画ツール",
-} as const

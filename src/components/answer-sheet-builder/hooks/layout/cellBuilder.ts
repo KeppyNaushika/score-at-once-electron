@@ -54,7 +54,7 @@ export function computeSubHeight(
  * 共通テスト準拠の横長楕円（角丸長方形）形状。
  * ラベルは楕円内部に配置される。
  */
-export function computeOMRBubbles(
+function computeOMRBubbles(
   cellX: number,
   cellY: number,
   cellWidth: number,
@@ -109,7 +109,7 @@ export function computeOMRBubbles(
 /**
  * OMR handwritten-digitセルの数字欄位置を計算（0-1正規化座標）
  */
-export function computeOMRDigitBoxes(
+function computeOMRDigitBoxes(
   cellX: number,
   cellY: number,
   cellWidth: number,

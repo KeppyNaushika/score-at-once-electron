@@ -26,8 +26,8 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   clearSvgCache,
-  renderTextElementV4,
-} from "../../utils/canvasTextRendererV4"
+  renderTextElement,
+} from "../../utils/canvasTextRenderer"
 import type { CropRegionWithStatus } from "./types"
 import { useDrawingRenderer } from "./useDrawingRenderer"
 import { getScoringMarkKey } from "./useScoringMarks"
@@ -925,7 +925,7 @@ export function useCanvasDrawing({
             annotPageHeight
           )
           const pxElement = { ...element, fontSize: fontSizePx }
-          const result = await renderTextElementV4(
+          const result = await renderTextElement(
             ctx,
             pxElement,
             canvasWidth,
@@ -980,7 +980,7 @@ export function useCanvasDrawing({
               currentPageHeight
             )
             const pxElement = { ...element, fontSize: fontSizePx }
-            const result = await renderTextElementV4(
+            const result = await renderTextElement(
               ctx,
               pxElement,
               canvasWidth,

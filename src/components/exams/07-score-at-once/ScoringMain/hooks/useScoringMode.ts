@@ -25,7 +25,6 @@ interface UseScoringModeReturn {
   /** モーダルを閉じる */
   closeModeSelectionModal: () => void
   /** モーダルを開く */
-  openModeSelectionModal: () => void
   /** 現在のマウスブラシ */
   mouseBrush: MouseBrushAction
   /** マウスブラシを設定 */
@@ -90,17 +89,12 @@ export function useScoringMode(): UseScoringModeReturn {
     setShowModeSelectionModal(false)
   }, [])
 
-  const openModeSelectionModal = useCallback(() => {
-    setShowModeSelectionModal(true)
-  }, [])
-
   return {
     scoringOperationMode,
     showModeSelectionModal,
     selectMode,
     setScoringOperationMode,
     closeModeSelectionModal,
-    openModeSelectionModal,
     mouseBrush,
     setMouseBrush,
   }

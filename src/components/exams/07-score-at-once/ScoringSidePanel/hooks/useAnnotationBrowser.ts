@@ -98,7 +98,7 @@ export interface AddToTargetsResult {
   skipped: number
 }
 
-export interface UseAnnotationBrowserReturn {
+interface UseAnnotationBrowserReturn {
   allAnnotations: AnnotationWithContext[]
   displayItems: AnnotationDisplayItem[]
   isLoading: boolean

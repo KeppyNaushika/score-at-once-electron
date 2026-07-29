@@ -21,7 +21,7 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 
-export interface AnswerGridViewProps {
+interface AnswerGridViewProps {
   /** 統一されたデータ引数 */
   allScoringData: ScoringData[]
   /** Grid表示用の模範解答データ */

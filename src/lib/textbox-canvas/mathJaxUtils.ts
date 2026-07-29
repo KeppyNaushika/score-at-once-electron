@@ -1,5 +1,5 @@
 /**
- * @fileoverview MathJax処理ユーティリティ (V3 - scrollWidth/scrollHeight専用版)
+ * @fileoverview MathJax処理ユーティリティ（scrollWidth/scrollHeight でサイズ測定する版）
  * @description MathJax数式処理とSVG生成の高度な機能を提供
  */
 
@@ -169,7 +169,7 @@ export function cleanupElementStyles(container: HTMLElement): void {
  * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns Promise<MeasuredSize> 測定されたサイズ
  */
-export async function measureMathJaxContentSize(
+async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
   initialHeight: number,
@@ -262,7 +262,7 @@ function extractMathJaxDefs(): string {
  * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns 生成されたSVG要素
  */
-export async function createOptimizedSVG(
+async function createOptimizedSVG(
   htmlContent: string,
   measuredSize: MeasuredSize,
   fontSize: number = FONT_SETTINGS.DEFAULT_SIZE

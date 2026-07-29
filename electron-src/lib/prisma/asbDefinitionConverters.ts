@@ -40,7 +40,7 @@ import type { DbDefinitionFull } from "./asbDefinition"
 // GlobalSettings ↔ DBフラットカラム
 // =============================================================================
 
-export type FlatGlobalSettings = {
+type FlatGlobalSettings = {
   paperSize: string
   orientation: string
   verticalLayout: boolean
@@ -554,7 +554,7 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
 // OMRConfig作成
 // =============================================================================
 
-export type TxClient = Omit<
+type TxClient = Omit<
   PrismaClient,
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >

@@ -15,5 +15,7 @@ export type ExamStudentStatus = (typeof EXAM_STUDENT_STATUSES)[number]
  * 型ガード `isExamStudentStatus` と境界コンバータ `toExamStudentStatus`
  * （想定外値は受験 participating）。
  */
-export const { is: isExamStudentStatus, to: toExamStudentStatus } =
-  defineStringUnion(EXAM_STUDENT_STATUSES, "participating")
+export const { to: toExamStudentStatus } = defineStringUnion(
+  EXAM_STUDENT_STATUSES,
+  "participating"
+)

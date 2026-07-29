@@ -29,10 +29,7 @@ interface LetterScaleEditorProps {
 }
 
 /** 変換表の行を1つ生成（UI編集用の安定 id を付与） */
-export function createLetterScaleDraft(
-  label = "",
-  score = ""
-): LetterScaleDraft {
+function createLetterScaleDraft(label = "", score = ""): LetterScaleDraft {
   return { id: crypto.randomUUID(), label, score }
 }
 

@@ -23,7 +23,7 @@ export interface StatusColorConfig {
 export type ScoringStatusColors = Record<ScoringStatus, StatusColorConfig>
 
 /** カラープリセット定義 */
-export interface ScoringColorPreset {
+interface ScoringColorPreset {
   id: string
   name: string
   description: string

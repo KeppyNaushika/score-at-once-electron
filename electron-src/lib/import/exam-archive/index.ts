@@ -52,9 +52,3 @@ export async function analyzeArchive(
     }
   }
 }
-
-// Re-export for convenience
-export * from "./archiveExtractor"
-export * from "./dataCreator"
-export * from "./idRemapper"
-export * from "./manifestValidator"

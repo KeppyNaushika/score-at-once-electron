@@ -81,7 +81,7 @@ export function isDragInfoEqual(
 }
 
 /** InlineSegment から React CSSProperties を生成する */
-export function getSegmentStyle(
+function getSegmentStyle(
   seg: InlineSegment,
   renderMode?: RenderMode
 ): React.CSSProperties {

@@ -11,7 +11,7 @@ import {
 } from "react"
 
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
-import { defaultConfig as defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import { defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
@@ -22,11 +22,11 @@ import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useAllStudentAnnotations } from "./hooks/view/useAllStudentAnnotations"
 import { useAutoCreateQuestionScore } from "./hooks/view/useAutoCreateQuestionScore"
-import { useCanvasV4Integration } from "./hooks/view/useCanvasV4Integration"
+import { useCanvasIntegration } from "./hooks/view/useCanvasIntegration"
 import { useDrawingToolShortcuts } from "./hooks/view/useDrawingToolShortcuts"
 import { useQuestionAutoScroll } from "./hooks/view/useQuestionAutoScroll"
 import { useZoomAndScroll } from "./hooks/view/useZoomAndScroll"
-import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
+import { RichTextEditorModal } from "./RichTextEditorModal"
 import type { AnswerIndividualViewProps } from "./types"
 
 export default function AnswerIndividualView({
@@ -237,16 +237,16 @@ export default function AnswerIndividualView({
     }
   })
 
-  // Canvas・V4統合フック
+  // Canvas・テキストボックス統合フック
   const {
     canvasWidth,
     canvasHeight,
     imageAspectRatio,
     backgroundImageUrl,
-    v4Integration,
+    textboxIntegration,
     handleTextAnchorClick,
     handleTextElementReClick,
-  } = useCanvasV4Integration({
+  } = useCanvasIntegration({
     loadedImages,
     drawingElements: drawingState.drawingElements,
     setDrawingElements: drawingState.setDrawingElements,
@@ -320,7 +320,7 @@ export default function AnswerIndividualView({
       lineEditMode: drawingState.lineEditMode,
       rectangleEditMode: drawingState.rectangleEditMode,
       // テキスト編集モーダル表示中はキーボードショートカットを無効化
-      isTextEditing: v4Integration.showV4Modal,
+      isTextEditing: textboxIntegration.showTextboxModal,
       isDraggingHandle: drawingState.isDraggingHandle,
       currentHandle: drawingState.currentHandle,
       hoveredElementId: drawingState.hoveredElementId,
@@ -350,7 +350,7 @@ export default function AnswerIndividualView({
       addDrawingElement: drawingState.addDrawingElement,
       updateDrawingElement: drawingState.updateDrawingElement,
       removeDrawingElement: drawingState.removeDrawingElement,
-      // V4統合: テキストアンカー・再編集機能
+      // テキストアンカー・再編集機能
       onTextAnchorClick: handleTextAnchorClick,
       onTextElementReClick: handleTextElementReClick,
       // Shift制約で正円/正方形にするため
@@ -701,25 +701,25 @@ export default function AnswerIndividualView({
         favoriteElementIds={favoriteElementIds}
       />
 
-      {/* V4統合: 高品質テキストエディターモーダル */}
-      <RichTextEditorModalV4
-        open={v4Integration.showV4Modal}
-        onOpenChange={(open) => !open && v4Integration.closeV4Modal()}
-        value={v4Integration.currentTextValue}
-        onValueChange={v4Integration.setCurrentTextValue}
-        color={v4Integration.currentTextColor}
-        onColorChange={v4Integration.setCurrentTextColor}
-        onSubmit={v4Integration.confirmText}
-        onCancel={v4Integration.cancelEdit}
-        title="高品質テキスト編集 (V4統合)"
-        position={v4Integration.currentPosition}
+      {/* 高品質テキストエディターモーダル */}
+      <RichTextEditorModal
+        open={textboxIntegration.showTextboxModal}
+        onOpenChange={(open) => !open && textboxIntegration.closeTextboxModal()}
+        value={textboxIntegration.currentTextValue}
+        onValueChange={textboxIntegration.setCurrentTextValue}
+        color={textboxIntegration.currentTextColor}
+        onColorChange={textboxIntegration.setCurrentTextColor}
+        onSubmit={textboxIntegration.confirmText}
+        onCancel={textboxIntegration.cancelEdit}
+        title="高品質テキスト編集"
+        position={textboxIntegration.currentPosition}
         canvasWidth={canvasWidth}
         canvasHeight={canvasHeight}
         backgroundImageUrl={backgroundImageUrl}
-        fontSize={v4Integration.currentFontSize}
-        onFontSizeChange={v4Integration.setCurrentFontSize}
-        anchorDirection={v4Integration.currentAnchorDirection}
-        onAnchorDirectionChange={v4Integration.setCurrentAnchorDirection}
+        fontSize={textboxIntegration.currentFontSize}
+        onFontSizeChange={textboxIntegration.setCurrentFontSize}
+        anchorDirection={textboxIntegration.currentAnchorDirection}
+        onAnchorDirectionChange={textboxIntegration.setCurrentAnchorDirection}
       />
 
       {/* 隠しimg要素（Canvas描画用） */}

@@ -20,7 +20,7 @@ export interface ListFilterAccessors<T> {
   date?: (listItem: T) => string | null
 }
 
-export interface UseListFilterResult<T> {
+interface UseListFilterResult<T> {
   filteredItems: T[]
   searchTerm: string
   setSearchTerm: (value: string) => void

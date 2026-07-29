@@ -151,7 +151,7 @@ export interface StudentImportWizardState {
 /**
  * デフォルトのID統合設定
  */
-export const DEFAULT_STUDENT_ID_INTEGRATION_CONFIG: StudentArchiveIdIntegrationConfig =
+const DEFAULT_STUDENT_ID_INTEGRATION_CONFIG: StudentArchiveIdIntegrationConfig =
   {
     student: { strategy: "by_student_number", decisions: [] },
     classroom: { strategy: "by_name", decisions: [] },

@@ -12,44 +12,16 @@ import type {
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import {
-  type AllMatchResults,
-  type ClassroomData,
   matchClassrooms,
-  type MatchResult,
-  type MatchStudentData,
-  matchStudents,
-  type MatchSubtotalGroupData,
-  matchSubtotalGroups,
-  matchUsers,
   preMatchClassrooms,
-  preMatchStudents,
-  preMatchSubtotalGroups,
-  type UserData,
-} from "./matchers"
+} from "./matchers/classroomMatcher"
+import { matchStudents, preMatchStudents } from "./matchers/studentMatcher"
 import {
-  detectScoringConflicts,
-  detectScoringConflictsWithUserDecisions,
-} from "./scoringConflictDetector"
-
-// 型の再エクスポート
-export type {
-  AllMatchResults,
-  ClassroomData,
-  MatchResult,
-  MatchStudentData,
-  MatchSubtotalGroupData,
-  UserData,
-}
-
-// 関数の再エクスポート
-export {
-  detectScoringConflicts,
-  detectScoringConflictsWithUserDecisions,
-  matchClassrooms,
-  matchStudents,
   matchSubtotalGroups,
-  matchUsers,
-}
+  preMatchSubtotalGroups,
+} from "./matchers/subtotalGroupMatcher"
+import type { AllMatchResults } from "./matchers/types"
+import { matchUsers } from "./matchers/userMatcher"
 
 /**
  * 全カテゴリのマッチングを実行

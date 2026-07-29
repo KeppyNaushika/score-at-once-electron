@@ -234,17 +234,6 @@ export interface MatchingConfig {
   subtotalGroup: SubtotalGroupMatchingMethod
 }
 
-/**
- * デフォルトのマッチング設定
- */
-export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
-  student: "studentNumber",
-  classroom: "name",
-  user: "username",
-  exam: "always_new",
-  subtotalGroup: "name",
-}
-
 // =============================================================================
 // Step 2: ファイル概要説明 用の型
 // =============================================================================
@@ -473,7 +462,7 @@ export interface ConflictItem {
  * 変更されるフィールドの情報
  * UI表示例: 「氏名カナ: ヤマダ → ヤマダタロウ」
  */
-export interface FieldChange {
+interface FieldChange {
   /** 内部フィールド名（例: "firstNameKana"） */
   field: string
   /** UI表示用ラベル（例: "氏名カナ"） */
@@ -1151,17 +1140,7 @@ export type ImportWizardStep =
   | "id_integration" // Step 3: データの統合（ID選択）
   | "update_confirm" // Step 4: 情報の更新確認（情報を上書きするか）
   | "final_confirm" // Step 5: 最終確認（サマリー表示）
-  | "execute" // Step 6: 実行中/完了
-
-/**
- * デフォルトのID統合設定
- */
-export const DEFAULT_ID_INTEGRATION_CONFIG: IdIntegrationConfig = {
-  student: { strategy: "by_student_number", decisions: [] },
-  classroom: { strategy: "by_name", decisions: [] },
-  subtotalGroup: { strategy: "by_name", decisions: [] },
-}
-
+  | "execute"
 /**
  * ウィザードの状態
  */
@@ -1198,36 +1177,6 @@ export interface ImportWizardState {
   hszOriginalPath?: string
   /** .hszの元タイトル */
   hszOriginalTitle?: string
-}
-
-/**
- * デフォルトの採点結果競合解決設定
- */
-export const DEFAULT_SCORING_CONFLICT_CONFIG: ScoringConflictConfig = {
-  strategy: "newer_wins",
-  manualResolutions: {},
-}
-
-/**
- * 初期ウィザード状態
- */
-export const INITIAL_WIZARD_STATE: ImportWizardState = {
-  currentStep: "file_select",
-  archivePath: null,
-  manifest: null,
-  fileOverviewData: null,
-  idIntegrationConfig: DEFAULT_ID_INTEGRATION_CONFIG,
-  scoringConflictConfig: DEFAULT_SCORING_CONFLICT_CONFIG,
-  matchingConfig: DEFAULT_MATCHING_CONFIG,
-  isProcessing: false,
-  error: null,
-  matchingSummaries: [],
-  matchingDecisions: {},
-  updateDecisions: {},
-  sourceFormat: undefined,
-  showHszDisclaimer: false,
-  hszOriginalPath: undefined,
-  hszOriginalTitle: undefined,
 }
 
 // =============================================================================

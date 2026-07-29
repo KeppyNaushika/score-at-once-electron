@@ -17,7 +17,7 @@ export interface ChainTransformer<Version extends string, Data> {
 }
 
 /** チェーン実行結果（各アーカイブの *ChainTransformResult と構造互換） */
-export interface ChainOutcome<Version extends string, Data> {
+interface ChainOutcome<Version extends string, Data> {
   data: Data
   originalVersion: Version
   finalVersion: Version

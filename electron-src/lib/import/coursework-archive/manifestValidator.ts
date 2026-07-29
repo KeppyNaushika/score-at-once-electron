@@ -21,7 +21,7 @@ function isCourseworkArchiveManifest(
   )
 }
 
-export interface CourseworkCompatibilityInfo {
+interface CourseworkCompatibilityInfo {
   compatible: boolean
   requiresTransform: boolean
   warnings: string[]

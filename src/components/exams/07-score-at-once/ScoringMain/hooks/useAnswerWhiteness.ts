@@ -54,7 +54,6 @@ export function useAnswerWhiteness({
   const [measuredExamPageIds, setMeasuredExamPageIds] = useState<Set<string>>(
     new Set()
   )
-  const [isMeasuring, setIsMeasuring] = useState(false)
 
   /** ページごとの算出済みシグネチャ（答案が増減したら再算出する） */
   const measuredSignatureRef = useRef<Map<string, string>>(new Map())
@@ -103,7 +102,6 @@ export function useAnswerWhiteness({
     const token = measurementTokenRef.current
 
     const measure = async () => {
-      setIsMeasuring(true)
       try {
         const result = await window.electronAPI.measureAnswerWhiteness({
           answerImages: pageAnswerImages.map((answerImage) => ({
@@ -140,10 +138,6 @@ export function useAnswerWhiteness({
       } catch (error) {
         measuredSignatureRef.current.delete(examPageId)
         console.error("答案の白さ算出に失敗しました:", error)
-      } finally {
-        if (token === measurementTokenRef.current) {
-          setIsMeasuring(false)
-        }
       }
     }
 
@@ -156,6 +150,5 @@ export function useAnswerWhiteness({
     isWhitenessReady: currentExamPageId
       ? measuredExamPageIds.has(currentExamPageId)
       : false,
-    isMeasuringWhiteness: isMeasuring,
   }
 }

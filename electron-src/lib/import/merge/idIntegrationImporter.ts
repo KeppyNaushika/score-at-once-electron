@@ -63,7 +63,7 @@ import type { IdChangeTarget, IdMappings, ImportCounts } from "./types"
 import { createEmptyCounts } from "./types"
 
 /** インポート結果 */
-export interface IdIntegrationImportResult {
+interface IdIntegrationImportResult {
   success: boolean
   examId?: string
   summary?: {

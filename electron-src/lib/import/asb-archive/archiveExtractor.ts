@@ -14,7 +14,7 @@ import type {
   AsbDefinitionTagRef,
 } from "../../../../src/types/asbArchive.types"
 
-export interface ExtractedAsbData {
+interface ExtractedAsbData {
   manifest: AsbArchiveManifest
   definition: AnswerSheetDefinition
   tempDir: string

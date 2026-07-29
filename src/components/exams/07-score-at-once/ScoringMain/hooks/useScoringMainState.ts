@@ -17,7 +17,6 @@ export function useScoringMainState() {
   const [manualSelectionVersion, setManualSelectionVersion] = useState(0)
   const suppressSelectionUpdateRef = useRef(false)
   /** 現在選択中の生徒インデックス */
-  const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   /** 選択中の設問領域ID */
   const [currentCropRegionId, setCurrentCropRegionId] = useState<string | null>(
     null
@@ -83,7 +82,6 @@ export function useScoringMainState() {
     /** 個別の状態 */
     gradingMode,
     selectedStudentAnswerImageIds,
-    currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,
     showScoreDecisionPanel,
@@ -93,7 +91,6 @@ export function useScoringMainState() {
     /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
-    setCurrentStudentIndex,
     setCurrentCropRegionId,
     setShowKeyboardHelp,
     setShowScoreDecisionPanel,

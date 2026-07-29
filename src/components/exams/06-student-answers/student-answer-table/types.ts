@@ -197,7 +197,7 @@ export interface UseDragDropReturn<
 // ============================================================================
 
 /** upload / view の答案テーブルが共有する基底プロパティ */
-export interface AnswerTableBaseProps {
+interface AnswerTableBaseProps {
   examId: string
   students: ExamStudentWithMemberships[]
   examPages: ExamPageColumn[]

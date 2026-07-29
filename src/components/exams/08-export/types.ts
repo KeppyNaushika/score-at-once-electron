@@ -21,10 +21,6 @@ export interface ExportOptions {
   parallelCount: number // 並列処理数（1-8）
 }
 
-// PDF出力フェーズの型
-export type ExportPhase =
-  "initializing" | "rendering" | "embedding" | "saving" | "complete"
-
 // Canvas描画の詳細プログレス
 export interface RenderProgress {
   phase: "preload" | "rendering" | "complete"
@@ -32,30 +28,6 @@ export interface RenderProgress {
   completed: number
   inProgress: number // 現在描画中のページ数
   currentPages: number[] // 描画中のページインデックス
-}
-
-// PDF埋め込みの詳細プログレス
-export interface EmbedProgress {
-  total: number
-  completed: number
-}
-
-// 詳細なプログレス状態
-export interface DetailedProgressState {
-  overallPercentage: number
-  phase: ExportPhase
-
-  // Canvas描画の詳細
-  rendering: RenderProgress
-
-  // PDF埋め込みの詳細
-  embedding: EmbedProgress
-
-  // タイミング情報
-  timing: {
-    startTime: number
-    estimatedRemaining: number | null // 秒
-  }
 }
 
 // レンダリングされたページデータ

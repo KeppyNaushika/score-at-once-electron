@@ -50,10 +50,3 @@ export const getSubtotalDefinitionsByQuestionGroupItemId = async (
   )
   return []
 }
-
-export type SubtotalWithRelations = Prisma.SubtotalGetPayload<{
-  include: {
-    subtotalGroup: true
-    cropSubtotals: true
-  }
-}>

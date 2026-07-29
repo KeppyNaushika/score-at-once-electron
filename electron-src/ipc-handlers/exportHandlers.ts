@@ -2,11 +2,11 @@ import { BrowserWindow, dialog, ipcMain } from "electron"
 
 import { fetchExportData } from "../lib/export/excel/dataFetcher"
 import { exportGradingDataExcel } from "../lib/export/excel/excelExportMain"
-import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
 import {
   fetchIndividualReportData,
   fetchSubtotalGroupsForReport,
-} from "../lib/export/individual-report"
+} from "../lib/export/individual-report/dataFetcher"
+import type { GetIndividualReportDataOptions } from "../lib/export/individual-report/types"
 import {
   exportRData,
   type ExportRDataOptions,

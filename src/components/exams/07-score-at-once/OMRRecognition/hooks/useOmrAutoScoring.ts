@@ -28,7 +28,7 @@ const DEFAULT_AREA_THRESHOLD = 0.4
 /** 低信頼として保留に落とす閾値 */
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 
-export interface OmrAutoScoringState {
+interface OmrAutoScoringState {
   /** OMR設定リスト */
   omrConfigs: CropRegionOmrConfigWithOptions[]
   /** 認識処理中か */

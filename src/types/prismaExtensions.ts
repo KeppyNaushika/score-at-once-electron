@@ -130,15 +130,6 @@ export type SerializedQuestionScore = Omit<
   status: ScoringStatus
 }
 
-/**
- * 採点者情報を含むQuestionScore型（比較用）
- */
-export type QuestionScoreWithUser = Prisma.QuestionScoreGetPayload<{
-  include: {
-    user: true
-  }
-}>
-
 // =============================================================================
 // Exam関連型
 // =============================================================================
@@ -254,13 +245,6 @@ export interface StudentAnswersDataset {
  */
 export type UserExamWithExam = Prisma.UserExamGetPayload<{
   include: { exam: true }
-}>
-
-/**
- * ユーザーを含むUserExam型
- */
-export type UserExamWithUser = Prisma.UserExamGetPayload<{
-  include: { user: true }
 }>
 
 /**

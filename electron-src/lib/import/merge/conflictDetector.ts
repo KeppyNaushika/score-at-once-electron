@@ -13,7 +13,8 @@ import type {
   MatchingSummary,
 } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
-import { type MatchResult, performAllMatching } from "./matcher"
+import { performAllMatching } from "./matcher"
+import type { MatchResult } from "./matchers/types"
 
 /**
  * 2つの値が異なるかどうかを比較

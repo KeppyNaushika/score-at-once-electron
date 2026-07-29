@@ -52,7 +52,7 @@ interface UseAnswerDisplayEventsProps {
   rectangleEditMode: RectangleEditMode
   // テキスト編集モーダル表示中フラグ（キーボードショートカット無効化用）
   isTextEditing: boolean
-  // V4統合: テキストアンカー処理
+  // テキストアンカー処理
   onTextAnchorClick?: (position: { x: number; y: number }) => void
   isDraggingHandle: boolean
   currentHandle: string | null

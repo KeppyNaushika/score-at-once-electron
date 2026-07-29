@@ -102,7 +102,3 @@ export async function exportExam(
     }
   }
 }
-
-// Re-export types
-export * from "./archiveCreator"
-export * from "./dataCollector"

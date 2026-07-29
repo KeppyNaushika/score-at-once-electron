@@ -397,5 +397,3 @@ export const getClassroomExamResults = async (
     throw error
   }
 }
-
-export { type StudentWithMemberships }

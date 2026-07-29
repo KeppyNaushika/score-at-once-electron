@@ -134,29 +134,3 @@ export async function assertCompoundAnswersInSameExam(
     "複合回答"
   )
 }
-
-/** 答案ページ（ExamPage）と受験者が同じ試験のものか検査する */
-export async function assertExamPagesInSameExam(
-  pairs: { examPageId: string; examStudentId: string }[],
-  client: PrismaLike = prisma
-): Promise<void> {
-  if (pairs.length === 0) return
-  const [examPages, examIdByExamStudent] = await Promise.all([
-    client.examPage.findMany({
-      where: { id: { in: [...new Set(pairs.map((pair) => pair.examPageId))] } },
-      select: { id: true, examId: true },
-    }),
-    resolveExamIdByExamStudent(client, [
-      ...new Set(pairs.map((pair) => pair.examStudentId)),
-    ]),
-  ])
-  assertPairs(
-    pairs.map((pair) => ({
-      targetId: pair.examPageId,
-      examStudentId: pair.examStudentId,
-    })),
-    new Map(examPages.map((examPage) => [examPage.id, examPage.examId])),
-    examIdByExamStudent,
-    "答案ページ"
-  )
-}

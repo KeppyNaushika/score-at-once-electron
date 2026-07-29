@@ -5,7 +5,7 @@
 import { useCallback } from "react"
 
 /** 座標フックのプロパティ */
-export interface UseCoordinatesProps {
+interface UseCoordinatesProps {
   /** キャンバス参照 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** 画像参照 */
@@ -19,7 +19,7 @@ export interface UseCoordinatesProps {
 }
 
 /** 座標フックの戻り値 */
-export interface UseCoordinatesReturn {
+interface UseCoordinatesReturn {
   /** イベントから画像座標（正規化）を取得 */
   getImageCoordinatesFromEvent: (
     e: React.MouseEvent | React.PointerEvent

@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react"
 import { type ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 
 /** パスワード入力ダイアログの表示状態 */
-export interface PdfPasswordDialogState {
+interface PdfPasswordDialogState {
   isOpen: boolean
   fileName: string
   hasError: boolean
@@ -20,7 +20,7 @@ const CLOSED_DIALOG: PdfPasswordDialogState = {
 }
 
 /** 変換結果と、そのPDFがパスワード保護されていたかどうか */
-export interface PdfConversionOutcome {
+interface PdfConversionOutcome {
   images: ConvertedImage[]
   passwordProtected: boolean
 }

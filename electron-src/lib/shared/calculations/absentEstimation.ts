@@ -21,7 +21,7 @@ import type { DataSourceInfo } from "./gradeCalculatorTypes"
  * 欠測推定の生の結果（乗率・加減点の適用前）。
  * gradeCalculator が乗率・加減点を適用して最終的な EstimationDetail を組み立てる。
  */
-export interface AbsentEstimation {
+interface AbsentEstimation {
   /** 推定素点（内部クランプ済み、乗率・加減点適用前） */
   value: number
   /** 実際に使われた推定方法（regressionがaverageにフォールバックした場合は"average"） */

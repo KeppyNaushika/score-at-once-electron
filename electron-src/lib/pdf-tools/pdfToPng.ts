@@ -8,13 +8,7 @@ import sharp from "sharp"
 
 import type { RotationDegree } from "@/types/pdfTools.types"
 
-export interface PngExportInput {
-  filePath: string
-  pageNumber: number // 1-indexed
-  rotation?: RotationDegree
-}
-
-export interface PngExportResult {
+interface PngExportResult {
   success: boolean
   outputPaths?: string[]
   error?: string

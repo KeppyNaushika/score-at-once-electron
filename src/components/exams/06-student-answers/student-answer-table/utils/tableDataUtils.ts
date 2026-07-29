@@ -14,7 +14,7 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
  * 文字列合成キーを使わず identity のフィールド比較で照合する（DnD の FileState と同流儀）。
  * ユーザートグル由来の小さな配列（disabledState.cells）専用。
  */
-export function hasCell(
+function hasCell(
   cells: DisabledCell[],
   examStudent: CellRow,
   examPage: CellColumn

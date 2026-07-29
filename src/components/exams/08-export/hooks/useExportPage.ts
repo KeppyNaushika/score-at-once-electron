@@ -4,10 +4,8 @@ import type { Exam } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import {
-  defaultScoringMarkConfig,
-  ScoringMarkConfig,
-} from "@/components/exams/08-export/components/ScoringMarkSettings"
+import { defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
 import { ExportOptions, Student } from "@/components/exams/08-export/types"
 import {

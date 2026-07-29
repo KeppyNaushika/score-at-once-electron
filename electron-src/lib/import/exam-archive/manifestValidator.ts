@@ -14,7 +14,7 @@ export const MIN_SUPPORTED_VERSION = "1.0.0"
 /**
  * バージョン互換性情報
  */
-export interface CompatibilityInfo {
+interface CompatibilityInfo {
   /** 互換性があるか */
   isCompatible: boolean
   /** アップグレードが必要か（古いバージョンからの読み込み） */

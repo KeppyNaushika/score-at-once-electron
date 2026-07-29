@@ -21,7 +21,7 @@ export type DecisionType = "same_person" | "create_new" | "skip"
 export type NoMatchDecisionType = "create_new" | "skip"
 
 /** エンティティごとのラベル設定 */
-export interface EntityLabels {
+interface EntityLabels {
   samePerson: string
   createNew: string
   skip: string
@@ -55,7 +55,7 @@ export const ENTITY_LABELS: Record<EntityType, EntityLabels> = {
 }
 
 /** 統合パネルの共通Props */
-export interface IntegrationPanelBaseProps {
+interface IntegrationPanelBaseProps {
   wizard: UseImportWizardReturn
 }
 

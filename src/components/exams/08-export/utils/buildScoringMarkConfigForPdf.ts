@@ -1,4 +1,4 @@
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/ScoringMarkSettings"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { ScoringMarkConfigForPdf } from "@/components/exams/08-export/utils/pdfCanvasRenderer"
 
 /**

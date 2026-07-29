@@ -13,8 +13,7 @@ import {
   ModalTitle,
 } from "@/components/ui/modal"
 
-export type ModalVariant =
-  "default" | "destructive" | "success" | "warning" | "info"
+type ModalVariant = "default" | "destructive" | "success" | "warning" | "info"
 
 interface BaseModalProps {
   open: boolean

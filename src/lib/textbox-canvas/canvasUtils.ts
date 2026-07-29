@@ -7,38 +7,6 @@ import { CANVAS_SETTINGS } from "./constants"
 import type { AnchorDirection, Point, SvgRenderResult } from "./types"
 
 /**
- * デバッグプレビュー設定用の状態管理インターフェース
- */
-export interface DebugPreviewState {
-  setSvgDataUrl: (url: string | null) => void
-  setSvgInfo: (info: string) => void
-}
-
-/**
- * デバッグプレビューを設定する
- * @param svgElement プレビュー対象のSVG要素
- * @param width SVG幅
- * @param height SVG高さ
- * @param state デバッグ状態管理オブジェクト
- */
-export function setupDebugPreview(
-  svgElement: SVGSVGElement,
-  width: number,
-  height: number,
-  state: DebugPreviewState
-): void {
-  try {
-    const svgData = new XMLSerializer().serializeToString(svgElement)
-    const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`
-    state.setSvgDataUrl(svgDataUrl)
-    state.setSvgInfo(`生成SVG: ${width}x${height}px`)
-  } catch {
-    state.setSvgDataUrl(null)
-    state.setSvgInfo("プレビュー生成エラー")
-  }
-}
-
-/**
  * SVG要素をCanvasに高品質描画する（実測サイズベース）
  * @param svgElement 描画するSVG要素
  * @param ctx Canvas描画コンテキスト
@@ -171,70 +139,6 @@ function drawDebugBorder(
 }
 
 /**
- * テキストボックスの枠線を描画する
- * @param ctx Canvas描画コンテキスト
- * @param x X座標
- * @param y Y座標
- * @param width 幅
- * @param height 高さ
- * @param isSelected 選択状態かどうか
- */
-export function drawTextBoxBorder(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  isSelected: boolean
-): void {
-  ctx.save()
-
-  // 枠線の色と太さを設定
-  ctx.strokeStyle = isSelected
-    ? CANVAS_SETTINGS.SELECTED_BORDER_COLOR
-    : CANVAS_SETTINGS.UNSELECTED_BORDER_COLOR
-  ctx.lineWidth = isSelected ? 2 : 1
-  ctx.setLineDash([])
-
-  // 枠線を描画
-  ctx.strokeRect(x, y, width, height)
-
-  // 選択状態の場合は背景も塗る
-  if (isSelected) {
-    ctx.fillStyle = CANVAS_SETTINGS.SELECTED_BACKGROUND_COLOR
-    ctx.fillRect(x, y, width, height)
-  }
-
-  ctx.restore()
-}
-
-/**
- * 作成中のテキストボックスを描画する（点線）
- * @param ctx Canvas描画コンテキスト
- * @param x X座標
- * @param y Y座標
- * @param width 幅
- * @param height 高さ
- */
-export function drawCreatingTextBox(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): void {
-  ctx.save()
-
-  ctx.strokeStyle = CANVAS_SETTINGS.CREATING_BORDER_COLOR
-  ctx.lineWidth = 2
-  ctx.setLineDash([5, 5]) // 点線パターン
-  ctx.strokeRect(x, y, width, height)
-  ctx.setLineDash([]) // 点線リセット
-
-  ctx.restore()
-}
-
-/**
  * LucideのAnchorアイコンをCanvasに描画する
  * @param ctx Canvas描画コンテキスト
  * @param x アンカーのX座標
@@ -292,26 +196,6 @@ export async function drawAnchor(
       resolve()
     }
   })
-}
-
-/**
- * アンカーがクリックされたかどうかを判定する
- * @param mouseX マウスのX座標
- * @param mouseY マウスのY座標
- * @param anchorX アンカーのX座標
- * @param anchorY アンカーのY座標
- * @returns アンカーがクリックされた場合はtrue
- */
-export function isAnchorClicked(
-  mouseX: number,
-  mouseY: number,
-  anchorX: number,
-  anchorY: number
-): boolean {
-  const distance = Math.sqrt(
-    Math.pow(mouseX - anchorX, 2) + Math.pow(mouseY - anchorY, 2)
-  )
-  return distance <= CANVAS_SETTINGS.ANCHOR_RADIUS * 2 // クリック範囲を少し大きめにする
 }
 
 /**

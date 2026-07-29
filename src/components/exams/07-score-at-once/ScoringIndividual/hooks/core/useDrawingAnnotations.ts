@@ -27,7 +27,7 @@ interface DrawingContext {
  * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
  * @throws Error questionScoreIdがない場合
  */
-export function convertElementToCreateData(
+function convertElementToCreateData(
   element: DrawingElement,
   questionScoreId: string,
   userId: string
@@ -106,9 +106,8 @@ export interface DrawingPersistenceCallbacks {
 /**
  * フックの戻り値型
  */
-export interface UseDrawingAnnotationsReturn {
+interface UseDrawingAnnotationsReturn {
   // 状態
-  annotations: DrawingAnnotation[]
   isLoading: boolean
   error: string | null
 
@@ -139,7 +138,6 @@ export function useDrawingAnnotations(
   context?: DrawingContext
 ): UseDrawingAnnotationsReturn {
   // 状態管理
-  const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // 参照
@@ -182,7 +180,6 @@ export function useDrawingAnnotations(
           context?.currentUserId
         )
         if (result.success && result.data) {
-          setAnnotations(result.data)
           return result.data
         } else {
           handleError(result.error || "アノテーション読み込みに失敗しました")
@@ -226,7 +223,6 @@ export function useDrawingAnnotations(
         const result = await window.electronAPI.drawing.create(createData)
 
         if (result.success && result.data) {
-          setAnnotations((prev) => [...prev, result.data!])
           callbacksRef.current.onAnnotationCreated?.(result.data!)
           return result.data!
         } else {
@@ -277,11 +273,6 @@ export function useDrawingAnnotations(
         )
 
         if (result.success && result.data) {
-          setAnnotations((prev) =>
-            prev.map((annotation) =>
-              annotation.id === element.id ? result.data! : annotation
-            )
-          )
           callbacksRef.current.onAnnotationUpdated?.(result.data!)
           return result.data!
         } else {
@@ -310,9 +301,6 @@ export function useDrawingAnnotations(
         const result = await window.electronAPI.drawing.delete(elementId)
 
         if (result.success) {
-          setAnnotations((prev) =>
-            prev.filter((annotation) => annotation.id !== elementId)
-          )
           callbacksRef.current.onAnnotationDeleted?.(elementId)
           return true
         } else {
@@ -344,24 +332,6 @@ export function useDrawingAnnotations(
         )
 
         if (result.success) {
-          // ローカル状態からも削除
-          if (type) {
-            setAnnotations((prev) =>
-              prev.filter(
-                (annotation) =>
-                  !(
-                    annotation.questionScoreId === questionScoreId &&
-                    annotation.type === type
-                  )
-              )
-            )
-          } else {
-            setAnnotations((prev) =>
-              prev.filter(
-                (annotation) => annotation.questionScoreId !== questionScoreId
-              )
-            )
-          }
           return true
         } else {
           handleError(result.error || "タイプ別削除に失敗しました")
@@ -413,7 +383,6 @@ export function useDrawingAnnotations(
           await window.electronAPI.drawing.batchCreate(createDataList)
 
         if (result.success && result.data) {
-          setAnnotations(result.data)
           return result.data
         } else {
           handleError(result.error || "描画要素の同期に失敗しました")
@@ -431,7 +400,6 @@ export function useDrawingAnnotations(
 
   return {
     // 状態
-    annotations,
     isLoading,
     error,
 

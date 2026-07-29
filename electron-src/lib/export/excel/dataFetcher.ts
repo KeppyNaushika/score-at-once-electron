@@ -35,7 +35,7 @@ import {
  * grade / className / attendanceNumber は renderer が採番解決した表示値で、
  * 書き出し専用のため DB のスキーマには対応しない（export は型制限の対象外）。
  */
-export type ExportExamStudent = ExamStudentWithMemberships & {
+type ExportExamStudent = ExamStudentWithMemberships & {
   grade?: string
   className?: string
   attendanceNumber?: number | null
@@ -50,7 +50,7 @@ export interface SubtotalColumn {
 /**
  * 出力用データの取得結果
  */
-export interface ExportDataResult {
+interface ExportDataResult {
   success: boolean
   error?: string
   exam?: Exam

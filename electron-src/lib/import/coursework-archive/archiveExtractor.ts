@@ -25,7 +25,7 @@ import { isLegacyCourseworkTree } from "../coursework-transformers/legacyShape"
 import type { AnyCourseworkArchiveData } from "../coursework-transformers/types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 
-export interface ExtractedCourseworkArchive {
+interface ExtractedCourseworkArchive {
   manifest: CourseworkArchiveManifest
   /** 版が確定していない生データ。現行の形への正規化は変換チェーンが行う */
   data: AnyCourseworkArchiveData
@@ -173,36 +173,5 @@ export function cleanupCourseworkTempDir(tempDir: string): void {
     }
   } catch (error) {
     console.error("Error cleaning up temp directory:", error)
-  }
-}
-
-/** マニフェストのみ読み込む（プレビュー用、全展開なし） */
-export async function readCourseworkManifestOnly(archivePath: string): Promise<{
-  success: boolean
-  manifest?: CourseworkArchiveManifest
-  error?: string
-}> {
-  try {
-    if (!fs.existsSync(archivePath)) {
-      return { success: false, error: "アーカイブファイルが見つかりません" }
-    }
-    const zip = new AdmZip(archivePath)
-    const entry = zip.getEntry("manifest.json")
-    if (!entry) {
-      return { success: false, error: "マニフェストファイルが見つかりません" }
-    }
-    const manifest: CourseworkArchiveManifest = JSON.parse(
-      zip.readAsText(entry)
-    )
-    return { success: true, manifest }
-  } catch (error) {
-    console.error("Error reading coursework manifest:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "マニフェストの読み込みに失敗しました",
-    }
   }
 }

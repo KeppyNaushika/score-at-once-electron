@@ -5,7 +5,7 @@ import { smartFillCheckbox } from "../utils/smartFill"
 /**
  * セル位置を表す型
  */
-export interface CellPosition {
+interface CellPosition {
   rowId: string
   colId: string
   rowIndex: number

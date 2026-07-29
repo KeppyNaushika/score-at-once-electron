@@ -9,7 +9,7 @@ import type { KeyBinding } from "../types"
 /**
  * キーバインディング管理の結果
  */
-export interface UseKeyBindingsResult {
+interface UseKeyBindingsResult {
   /** 現在のキーバインディング */
   keyBindings: KeyBinding
 }

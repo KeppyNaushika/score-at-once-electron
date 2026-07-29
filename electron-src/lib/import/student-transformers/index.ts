@@ -20,12 +20,12 @@ import {
 } from "../shared/transformChain"
 import type { ExtractedStudentArchiveData } from "../student-archive/archiveExtractor"
 
-export interface StudentTransformResult {
+interface StudentTransformResult {
   data: ExtractedStudentArchiveData
   warnings: string[]
 }
 
-export interface StudentVersionTransformer {
+interface StudentVersionTransformer {
   readonly fromVersion: StudentArchiveVersion
   readonly toVersion: StudentArchiveVersion
   transform(data: ExtractedStudentArchiveData): StudentTransformResult

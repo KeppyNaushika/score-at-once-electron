@@ -116,7 +116,7 @@ npx vitest                 # ウォッチモード
 
 **禁止事項**:
 
-- `migrationRunner.ts` への手書きSQL追加（**廃止済み** — `bridgeMigrations.ts` に置換）
+- 手書きSQLの追加（旧 `migrationRunner.ts` は `bridgeMigrations.ts` に置換され**ファイルごと削除済み**）
 - `migrationSql.ts` の直接編集（**廃止予定**）
 - `PRAGMA table_info()` によるスキーマ検出（バージョン検出以外で使用しない）
 - `prisma db push` の本番使用（テスト専用）
@@ -162,9 +162,11 @@ npx vitest                 # ウォッチモード
    - `electron-src/lib/export/exam-archive/archiveCreator.ts` でアーカイブに含める
 
 5. **Import側を更新**
-   - `electron-src/lib/import/exam-archive/dataCreator.ts` で新データをDB挿入
-   - `electron-src/lib/import/exam-archive/idRemapper.ts` でID再マッピング対応
+   - `electron-src/lib/import/merge/idIntegrationImporter.ts` で新データをDB挿入（`executeIdIntegrationImport` が唯一の投入経路）
+   - `electron-src/lib/import/merge/types.ts` の `IdMappings` と `merge/processors/` でID再マッピング対応
    - `electron-src/lib/import/exam-archive/archiveExtractor.ts` でデータ抽出対応
+
+   旧 `exam-archive/dataCreator.ts` と `exam-archive/idRemapper.ts` は merge 経路へ置き換わって未使用化していたため削除済み。
 
 **トランスフォーマーの実装パターン**（参考: `V1_13_0_to_V1_14_0.ts`）:
 

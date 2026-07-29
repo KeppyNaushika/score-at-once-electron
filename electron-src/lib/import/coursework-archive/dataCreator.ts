@@ -22,14 +22,13 @@ import type {
 import type { TransactionClient } from "../exam-archive/uniqueNameGenerators"
 import { isNewerByLww } from "../merge/decisionMergePolicy"
 import {
-  type IdMap,
   resolveClassrooms,
   resolveStudents,
   resolveTags,
   restoreMemberships,
 } from "./idRemapper"
 
-export interface ImportCourseworkResult {
+interface ImportCourseworkResult {
   createdCourseworkIds: string[]
   /** アーカイブ評価項目 uuid → 実 CourseworkItem.id（grade の DataSource 再リンク用） */
   itemIdMap: Map<string, string>
@@ -37,7 +36,7 @@ export interface ImportCourseworkResult {
 }
 
 /** importCourseworkData が必要とするデータ断面（manifest 不要）。grade-archive も同形を渡せる。 */
-export type CourseworkImportSections = Pick<
+type CourseworkImportSections = Pick<
   CourseworkArchiveData,
   | "courseworks"
   | "courseworkClassrooms"
@@ -442,5 +441,3 @@ export async function importCourseworkData(
 
   return { createdCourseworkIds, itemIdMap, warnings }
 }
-
-export type { IdMap }

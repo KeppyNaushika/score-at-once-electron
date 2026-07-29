@@ -437,7 +437,7 @@ export function renderBranchQuestions(
 }
 
 /** 矩形外枠線を追加する */
-export function addBorderLines(
+function addBorderLines(
   lines: ComputedLine[],
   l: number,
   t: number,

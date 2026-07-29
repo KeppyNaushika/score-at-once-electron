@@ -12,11 +12,7 @@ import { defineStringUnion } from "./stringUnion"
 export const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
 export type DrawingType = (typeof DRAWING_TYPES)[number]
 
-export const { is: isDrawingType, to: toDrawingType } = defineStringUnion(
-  DRAWING_TYPES,
-  "line"
-)
-export type DrawingTool = "select" | "text" | "line" | "rectangle" | "ellipse"
+export const { to: toDrawingType } = defineStringUnion(DRAWING_TYPES, "line")
 
 export const LINE_STYLES = [
   "solid",
@@ -28,11 +24,11 @@ export const LINE_STYLES = [
 ] as const
 export type LineStyle = (typeof LINE_STYLES)[number]
 
-export const ANNOTATION_HORIZONTAL_ALIGNS = ["left", "center", "right"] as const
+const ANNOTATION_HORIZONTAL_ALIGNS = ["left", "center", "right"] as const
 export type AnnotationHorizontalAlign =
   (typeof ANNOTATION_HORIZONTAL_ALIGNS)[number]
 
-export const ANNOTATION_VERTICAL_ALIGNS = ["top", "center", "bottom"] as const
+const ANNOTATION_VERTICAL_ALIGNS = ["top", "center", "bottom"] as const
 export type AnnotationVerticalAlign =
   (typeof ANNOTATION_VERTICAL_ALIGNS)[number]
 
@@ -53,18 +49,19 @@ export type AnchorDirection = (typeof ANCHOR_DIRECTIONS)[number]
  * 型ガードと境界コンバータ。想定外値は既定へ倒す（DB 直書き・旧データへの耐性）。
  * scoringStatus.types.ts / cropRegionAreaType.types.ts と同じ factory から生成する。
  */
-export const { is: isLineStyle, to: toLineStyle } = defineStringUnion(
-  LINE_STYLES,
-  "solid"
+export const { to: toLineStyle } = defineStringUnion(LINE_STYLES, "solid")
+export const { to: toAnnotationHorizontalAlign } = defineStringUnion(
+  ANNOTATION_HORIZONTAL_ALIGNS,
+  "left"
 )
-export const {
-  is: isAnnotationHorizontalAlign,
-  to: toAnnotationHorizontalAlign,
-} = defineStringUnion(ANNOTATION_HORIZONTAL_ALIGNS, "left")
-export const { is: isAnnotationVerticalAlign, to: toAnnotationVerticalAlign } =
-  defineStringUnion(ANNOTATION_VERTICAL_ALIGNS, "top")
-export const { is: isAnchorDirection, to: toAnchorDirection } =
-  defineStringUnion(ANCHOR_DIRECTIONS, "top-left")
+export const { to: toAnnotationVerticalAlign } = defineStringUnion(
+  ANNOTATION_VERTICAL_ALIGNS,
+  "top"
+)
+export const { to: toAnchorDirection } = defineStringUnion(
+  ANCHOR_DIRECTIONS,
+  "top-left"
+)
 
 /**
  * DB 行（union 列がすべて String）を境界で 1 回だけ絞り込む。
@@ -119,7 +116,7 @@ export interface DrawingAnnotation {
   horizontalAlign: AnnotationHorizontalAlign
   verticalAlign: AnnotationVerticalAlign
 
-  // V4統合フィールド
+  // テキストボックス統合フィールド
   anchorDirection: AnchorDirection
 
   // 表示プロパティ

@@ -297,7 +297,7 @@ export interface SubtotalGroupsForReportResult {
 // ================== デフォルト値 ==================
 
 /** デフォルトのグラフオプション */
-export const DEFAULT_GRAPH_OPTIONS: GraphOptions = {
+const DEFAULT_GRAPH_OPTIONS: GraphOptions = {
   showBarChart: true,
   showRadarChart: true,
   showBoxPlot: true,
@@ -314,7 +314,7 @@ export const DEFAULT_GRAPH_OPTIONS: GraphOptions = {
 }
 
 /** デフォルトのアドバイスオプション */
-export const DEFAULT_ADVICE_OPTIONS: AdviceOptions = {
+const DEFAULT_ADVICE_OPTIONS: AdviceOptions = {
   reviewRateMin: 70, // 正答率70%以上
   reviewRateMax: null, // 上限なし
   reviewQuestionCount: 5, // 上位5問を表示

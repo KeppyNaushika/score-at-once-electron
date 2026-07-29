@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
-export interface MembershipSaveData {
+interface MembershipSaveData {
   studentId: string
   classroomId: string
   startDate?: Date

@@ -19,7 +19,7 @@ import type {
  * examData の ExamStudent.status を小文字へ正規化する。
  * 既に小文字の v1.17.0 アーカイブには無変更で冪等。
  */
-export function normalizeExamStudentStatuses(
+function normalizeExamStudentStatuses(
   examData: ArchiveExamData
 ): ArchiveExamData {
   return {

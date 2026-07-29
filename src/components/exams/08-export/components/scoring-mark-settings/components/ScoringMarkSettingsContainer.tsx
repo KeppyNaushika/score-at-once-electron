@@ -5,8 +5,8 @@ import { Settings } from "lucide-react"
 import { StatusDisplaySection } from "@/components/exams/08-export/components/scoring-mark-settings/components/StatusDisplaySection"
 import {
   DEFAULT_MARK_COLOR,
-  defaultConfig,
   defaultPartialScoreConfig,
+  defaultScoringMarkConfig,
   defaultSubtotalScoreConfig,
   defaultTotalScoreConfig,
   positionLabels,
@@ -87,7 +87,7 @@ export function ScoringMarkSettingsContainer({
   }
 
   const resetToDefaults = () => {
-    onChange(defaultConfig)
+    onChange(defaultScoringMarkConfig)
   }
 
   // 見出し右側に並べる色・不透明度

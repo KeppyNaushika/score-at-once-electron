@@ -25,7 +25,7 @@ export interface ExamSubtotalGroup {
   updatedAt: Date
 }
 
-export interface CropRegionSubtotal {
+interface CropRegionSubtotal {
   id: string
   cropRegionId: string
   subtotalId: string

@@ -9,7 +9,7 @@ import type {
   OMRCellResult,
 } from "../../../src/types/omr.types"
 
-export interface AutoScoreEntry {
+interface AutoScoreEntry {
   /** CropRegionラベル（QuestionScore特定用） */
   label: string
   /** CropRegion ID（DB直接参照用） */

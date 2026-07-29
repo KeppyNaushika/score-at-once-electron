@@ -21,7 +21,7 @@ export interface FilterOption {
 }
 
 /** タグ・学級など複数選択フィルタの設定 */
-export interface MultiSelectFilterConfig {
+interface MultiSelectFilterConfig {
   options: FilterOption[]
   selectedIds: Set<string>
   onToggle: (id: string, checked: boolean) => void
@@ -29,7 +29,7 @@ export interface MultiSelectFilterConfig {
 }
 
 /** 日付範囲フィルタの設定（値は YYYY-MM-DD、空文字は未指定） */
-export interface DateRangeFilterConfig {
+interface DateRangeFilterConfig {
   label: string
   from: string
   to: string

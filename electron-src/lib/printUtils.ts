@@ -43,7 +43,7 @@ export function resolveMathJaxSrc(html: string): string {
 }
 
 /** キャプチャ計画: ウィンドウが目標サイズを確保できたかと、実際にキャプチャする矩形 */
-export interface CapturePlan {
+interface CapturePlan {
   /** ウィンドウサイズが画面にクランプされ、縮小キャプチャ→拡大が必要か */
   clamped: boolean
   captureWidth: number

@@ -12,7 +12,7 @@ import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
 import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
-import { renderTextElementV4 } from "../../utils/canvasTextRendererV4"
+import { renderTextElement } from "../../utils/canvasTextRenderer"
 
 interface UseDrawingRendererReturn {
   convertAnnotationToDrawingElement: (
@@ -220,7 +220,7 @@ async function drawTextElement(
   if (!element.text) return
 
   try {
-    await renderTextElementV4(
+    await renderTextElement(
       ctx,
       element,
       baseImg.naturalWidth,
@@ -229,7 +229,7 @@ async function drawTextElement(
       showAnchor
     )
   } catch (error) {
-    console.error("V4テキスト描画エラー:", error)
+    console.error("テキスト描画エラー:", error)
     // フォールバック: シンプルテキスト描画
     ctx.font = `${element.fontSize || 16}px sans-serif`
     ctx.fillStyle = element.color

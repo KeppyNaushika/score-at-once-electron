@@ -18,7 +18,7 @@ import type {
 // ArchiveManifest
 // ---------------------------------------------------------------------------
 
-export function createMockCounts(
+function createMockCounts(
   overrides?: Partial<ArchiveDataCounts>
 ): ArchiveDataCounts {
   return {
@@ -55,9 +55,7 @@ export function createMockManifest(
 // PreMatchingResult / FileOverviewData
 // ---------------------------------------------------------------------------
 
-export function createMockMatchedItem(
-  overrides?: Partial<MatchedItem>
-): MatchedItem {
+function createMockMatchedItem(overrides?: Partial<MatchedItem>): MatchedItem {
   return {
     importId: "import-student-1",
     existingId: "existing-student-1",
@@ -69,9 +67,7 @@ export function createMockMatchedItem(
   }
 }
 
-export function createMockImportItem(
-  overrides?: Partial<ImportItem>
-): ImportItem {
+function createMockImportItem(overrides?: Partial<ImportItem>): ImportItem {
   return {
     importId: "import-new-1",
     importData: { lastName: "新規", firstName: "生徒", studentNumber: "099" },
@@ -80,7 +76,7 @@ export function createMockImportItem(
   }
 }
 
-export function createMockPreMatchingResult(opts?: {
+function createMockPreMatchingResult(opts?: {
   byIdCount?: number
   byStudentNumberCount?: number
   byNameCount?: number
@@ -145,7 +141,7 @@ export function createMockFileOverviewData(
   }
 }
 
-export function createMockExamPreMatchingResult(
+function createMockExamPreMatchingResult(
   overrides?: Partial<ExamPreMatchingResult>
 ): ExamPreMatchingResult {
   return {
@@ -163,7 +159,7 @@ export function createMockExamPreMatchingResult(
 // ScoringConflictData
 // ---------------------------------------------------------------------------
 
-export function createMockScoringConflict(
+function createMockScoringConflict(
   overrides?: Partial<ScoringConflict>
 ): ScoringConflict {
   return {

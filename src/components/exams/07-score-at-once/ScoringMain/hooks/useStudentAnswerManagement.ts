@@ -16,7 +16,7 @@ import type {
 /**
  * 生徒データの型定義（UIコンポーネント用）
  */
-export interface AnswerManagementStudent {
+interface AnswerManagementStudent {
   /** 受験者ID（ExamStudent.id / UUID） */
   id: string
   /** 学籍番号 */
@@ -44,7 +44,6 @@ interface UseStudentAnswerManagementParams {
   /** 選択ページ画像IDを設定する関数 */
   setSelectedPageImageIds: (ids: Set<string>) => void
   /** 現在の生徒インデックスを設定する関数 */
-  setCurrentStudentIndex: (index: number) => void
 }
 
 /**
@@ -76,7 +75,6 @@ export function useStudentAnswerManagement(
     gradingMode,
     currentCropRegion,
     setSelectedPageImageIds,
-    setCurrentStudentIndex,
   } = params
 
   /**
@@ -124,21 +122,9 @@ export function useStudentAnswerManagement(
 
         const targetSheet = currentPageSheet || studentSheets[0]
         setSelectedPageImageIds(new Set([targetSheet.id]))
-
-        const studentIndex = studentAnswerImages.findIndex(
-          (sheet) => sheet.id === targetSheet.id
-        )
-        if (studentIndex !== -1) {
-          setCurrentStudentIndex(studentIndex)
-        }
       }
     },
-    [
-      studentAnswerImages,
-      setSelectedPageImageIds,
-      setCurrentStudentIndex,
-      currentCropRegion,
-    ]
+    [studentAnswerImages, setSelectedPageImageIds, currentCropRegion]
   )
 
   /**

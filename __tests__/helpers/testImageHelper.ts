@@ -4,9 +4,6 @@
  * テスト用の最小PNGファイルと画像ディレクトリ構造を作成
  */
 
-import * as fs from "fs"
-import * as path from "path"
-
 /**
  * 最小の1x1 PNGバッファを生成（68バイト固定）
  */
@@ -18,68 +15,4 @@ export function createMinimalPngBuffer(): Buffer {
       "000049454e44ae426082",
     "hex"
   )
-}
-
-/**
- * 最小PNGファイルを作成
- */
-export function createMinimalPng(filePath: string): void {
-  const dir = path.dirname(filePath)
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
-  }
-  fs.writeFileSync(filePath, createMinimalPngBuffer())
-}
-
-/**
- * テスト用の画像ファイル構造を作成
- *
- * baseDir/
- *   exams/{examId}/
- *     master-images/
- *       page1.png, page2.png, ...
- *     answer-sheets/
- *       {studentNumber}_page1.png, ...
- */
-export function createTestImageFiles(
-  baseDir: string,
-  examId: string,
-  pageCount: number,
-  studentNumbers: string[]
-): { masterImagePaths: string[]; answerSheetPaths: string[] } {
-  const masterImagePaths: string[] = []
-  const answerSheetPaths: string[] = []
-
-  // マスター画像
-  for (let i = 1; i <= pageCount; i++) {
-    const relativePath = `exams/${examId}/master-images/page${i}.png`
-    const absolutePath = path.join(baseDir, relativePath)
-    createMinimalPng(absolutePath)
-    masterImagePaths.push(relativePath)
-  }
-
-  // 答案画像
-  for (const studentNumber of studentNumbers) {
-    for (let i = 1; i <= pageCount; i++) {
-      const relativePath = `exams/${examId}/answer-sheets/${studentNumber}_page${i}.png`
-      const absolutePath = path.join(baseDir, relativePath)
-      createMinimalPng(absolutePath)
-      answerSheetPaths.push(relativePath)
-    }
-  }
-
-  return { masterImagePaths, answerSheetPaths }
-}
-
-/**
- * 一時ディレクトリを削除
- */
-export function cleanupTempDir(dir: string): void {
-  try {
-    if (fs.existsSync(dir)) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-  } catch {
-    // ignore
-  }
 }

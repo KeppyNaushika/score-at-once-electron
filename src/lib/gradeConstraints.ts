@@ -36,7 +36,7 @@ export const DEFAULT_EXCLUSION_LABELS = ["A", "C"]
 /** 制約ルールの既定色（薄い赤） */
 export const DEFAULT_CONSTRAINT_COLOR = "#fecaca"
 
-export interface ConstraintEvaluation {
+interface ConstraintEvaluation {
   /** studentId → 違反ルール一覧 */
   violations: Map<string, ConstraintViolation[]>
   /** constraintId → 該当生徒数（プレビュー用） */

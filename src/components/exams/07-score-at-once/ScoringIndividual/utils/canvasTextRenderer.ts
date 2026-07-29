@@ -1,7 +1,6 @@
 import {
   drawAnchor,
   getTextPositionFromAnchor,
-  isAnchorClicked,
   renderSvgToCanvas,
 } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
@@ -66,7 +65,7 @@ function cacheSvg(
   })
 }
 
-export interface V4TextRenderResult {
+interface TextRenderResult {
   success: boolean
   width: number
   height: number
@@ -83,7 +82,7 @@ function getAnchorDirection(element: DrawingElement): AnchorDirection {
 }
 
 /**
- * V4テキスト要素をCanvasに描画する
+ * テキスト要素をCanvasに描画する
  * @param ctx Canvas描画コンテキスト
  * @param element 描画する要素
  * @param canvasWidth Canvasの幅
@@ -93,7 +92,7 @@ function getAnchorDirection(element: DrawingElement): AnchorDirection {
  * @param opacity 透明度（0.0-1.0）
  * @returns 描画結果
  */
-export async function renderTextElementV4(
+export async function renderTextElement(
   ctx: CanvasRenderingContext2D,
   element: DrawingElement,
   canvasWidth: number,
@@ -101,7 +100,7 @@ export async function renderTextElementV4(
   isSelected: boolean = false,
   showAnchor: boolean = true,
   opacity: number = 1.0
-): Promise<V4TextRenderResult> {
+): Promise<TextRenderResult> {
   try {
     if (element.type !== "text" || !element.text) {
       return {
@@ -193,85 +192,4 @@ export async function renderTextElementV4(
       textBounds: { x: 0, y: 0, width: 0, height: 0 },
     }
   }
-}
-
-/**
- * テキスト要素のアンカーがクリックされたかどうかを判定する
- */
-export function isTextAnchorClicked(
-  mouseX: number,
-  mouseY: number,
-  element: DrawingElement,
-  canvasWidth: number,
-  canvasHeight: number
-): boolean {
-  if (element.type !== "text") return false
-
-  const anchorX = element.x * canvasWidth
-  const anchorY = element.y * canvasHeight
-
-  return isAnchorClicked(mouseX, mouseY, anchorX, anchorY)
-}
-
-/**
- * 複数のV4テキスト要素をCanvasに描画する
- */
-export async function renderTextElementsV4(
-  ctx: CanvasRenderingContext2D,
-  elements: DrawingElement[],
-  canvasWidth: number,
-  canvasHeight: number,
-  selectedElementIds: string[] = []
-): Promise<V4TextRenderResult[]> {
-  const results: V4TextRenderResult[] = []
-  const textElements = elements.filter(
-    (element) => element.type === "text" && element.text
-  )
-
-  for (const element of textElements) {
-    const isSelected = selectedElementIds.includes(element.id)
-    const result = await renderTextElementV4(
-      ctx,
-      element,
-      canvasWidth,
-      canvasHeight,
-      isSelected
-    )
-    results.push(result)
-  }
-
-  return results
-}
-
-/**
- * テキスト要素のヒットテストを行う
- * @returns "anchor" | "text" | null
- */
-export function hitTestTextElement(
-  mouseX: number,
-  mouseY: number,
-  element: DrawingElement,
-  canvasWidth: number,
-  canvasHeight: number,
-  renderResult?: V4TextRenderResult
-): "anchor" | "text" | null {
-  if (element.type !== "text") return null
-
-  if (isTextAnchorClicked(mouseX, mouseY, element, canvasWidth, canvasHeight)) {
-    return "anchor"
-  }
-
-  if (renderResult && renderResult.success) {
-    const { x, y, width, height } = renderResult.textBounds
-    if (
-      mouseX >= x &&
-      mouseX <= x + width &&
-      mouseY >= y &&
-      mouseY <= y + height
-    ) {
-      return "text"
-    }
-  }
-
-  return null
 }

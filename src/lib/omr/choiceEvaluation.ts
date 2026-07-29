@@ -11,7 +11,7 @@
 
 import type { BubbleMeasurement } from "@/types/omr.types"
 
-export interface ChoiceEvaluationInput {
+interface ChoiceEvaluationInput {
   /** バブルごとの塗り具合（選択肢の同定情報を同梱） */
   bubbleMeasurements: BubbleMeasurement[]
   /** 正解の choiceIndex 集合 */
@@ -28,7 +28,7 @@ export interface ChoiceEvaluationInput {
   minInkDarkness: number | null
 }
 
-export interface ChoiceEvaluation {
+interface ChoiceEvaluation {
   /** 認識された選択肢ラベル */
   recognizedValues: string[]
   /** マーク済みと判定された choiceIndex */

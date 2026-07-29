@@ -30,7 +30,7 @@ export function stdDev(values: number[]): number {
 }
 
 /** ソート済み配列の中央値（空配列は0） */
-export function median(sortedValues: number[]): number {
+function median(sortedValues: number[]): number {
   const n = sortedValues.length
   if (n === 0) return 0
   if (n === 1) return sortedValues[0]

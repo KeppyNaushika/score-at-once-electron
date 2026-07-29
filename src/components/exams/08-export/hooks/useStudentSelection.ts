@@ -10,7 +10,7 @@ import { useCallback, useState } from "react"
  * 生の setState を prop 境界へ渡さない。各画面（StudentSelectionCard / ReturnDiffPanel 等）は
  * 「トグルする」「まとめて追加する」といった意図だけを呼び、Set の複製ロジックを重複させない。
  */
-export interface StudentSelection {
+interface StudentSelection {
   /** 選択中の生徒ID集合（描画時の `.has()` / `.size` 参照用。書き込みは各メソッド経由） */
   selectedExamStudentIds: Set<string>
   /** 選択集合を丸ごと差し替える（初期化・「変更があった生徒のみ」等） */

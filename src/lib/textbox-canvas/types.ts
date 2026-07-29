@@ -61,20 +61,6 @@ export interface Point {
 }
 
 /**
- * ドラッグ操作の状態
- */
-export interface DragState {
-  /** ドラッグ開始X座標 */
-  startX: number
-  /** ドラッグ開始Y座標 */
-  startY: number
-  /** 現在のX座標 */
-  currentX: number
-  /** 現在のY座標 */
-  currentY: number
-}
-
-/**
  * サイズ測定結果
  */
 export interface MeasuredSize {
@@ -104,30 +90,4 @@ export interface CoordinateConversionOptions {
   canvasWidth: number
   /** Canvas/画像の高さ */
   canvasHeight: number
-}
-
-/**
- * 座標変換ユーティリティの型定義
- */
-export interface CoordinateConversionUtils {
-  /** 相対座標を絶対座標に変換 */
-  relativeToAbsolute: (
-    point: Point,
-    options: CoordinateConversionOptions
-  ) => Point
-  /** 絶対座標を相対座標に変換 */
-  absoluteToRelative: (
-    point: Point,
-    options: CoordinateConversionOptions
-  ) => Point
-  /** TextBoxを相対座標系に変換 */
-  textBoxToRelative: (
-    textBox: TextBox,
-    options: CoordinateConversionOptions
-  ) => TextBox
-  /** TextBoxを絶対座標系に変換 */
-  textBoxToAbsolute: (
-    textBox: TextBox,
-    options: CoordinateConversionOptions
-  ) => TextBox
 }

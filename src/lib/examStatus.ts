@@ -31,7 +31,7 @@ export interface ExamProgressSource {
 }
 
 // 詳細な試験進捗情報
-export interface ExamProgress {
+interface ExamProgress {
   hasImages: boolean
   hasLayout: boolean
   hasRegionInfo: boolean
@@ -156,7 +156,7 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
  * 試験一覧の「次のステップ」表示（8段階ワークフローの現在地）。
  * 表示文言・遷移 URL・着手可否という presentation 情報であり、renderer 側で導出する。
  */
-export interface ExamWorkflowStatus {
+interface ExamWorkflowStatus {
   step: number
   action: string
   text: string

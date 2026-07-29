@@ -1,4 +1,4 @@
-import type { Prisma, SubtotalGroup } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
@@ -128,5 +128,3 @@ export const getQuestionGroupById = async (id: string) => {
     exam: subtotalGroup.examSubtotalGroups[0]?.exam || null,
   }
 }
-
-export type QuestionGroupPayload = SubtotalGroup

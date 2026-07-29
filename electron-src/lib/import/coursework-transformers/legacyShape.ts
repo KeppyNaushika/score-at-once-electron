@@ -49,7 +49,7 @@ export interface LegacyArchiveCourseworkItemRef {
 }
 
 /** v1.0.0 の点数（人＝Student の uuid を指していた） */
-export interface LegacyArchiveCourseworkScoreRef {
+interface LegacyArchiveCourseworkScoreRef {
   studentId: string
   score: number | null
   letterValue: string | null
@@ -141,7 +141,7 @@ export function isCurrentCollectedCourseworkData(
   )
 }
 
-export interface FlattenedLegacyCourseworks {
+interface FlattenedLegacyCourseworks {
   sections: CourseworkSections
   /** 名簿に載っていない生徒の点数として破棄した件数 */
   discardedScoreCount: number

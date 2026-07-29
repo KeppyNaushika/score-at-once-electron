@@ -45,7 +45,7 @@ export interface ScoringResultSummary {
   total: number
 }
 
-export interface ReevaluationInput {
+interface ReevaluationInput {
   sheetResults: OMRSheetResult[]
   omrConfigs: CropRegionOmrConfigWithOptions[]
   pointsMap: Record<string, number>
@@ -55,7 +55,7 @@ export interface ReevaluationInput {
   minInkDarkness: number | null
 }
 
-export interface ReevaluationOutput {
+interface ReevaluationOutput {
   updatedSheetResults: OMRSheetResult[]
   scoreEntries: Map<string, ReevaluatedScoreEntry[]>
   summary: ScoringResultSummary

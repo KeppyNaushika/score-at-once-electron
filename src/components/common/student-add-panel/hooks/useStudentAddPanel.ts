@@ -25,7 +25,7 @@ interface UseStudentAddPanelParams {
 }
 
 /** 学級候補が空になった理由（空表示メッセージの出し分け用） */
-export type ClassroomEmptyReason =
+type ClassroomEmptyReason =
   /** システムに生徒が1人も登録されていない（要・生徒登録） */
   | "noStudents"
   /** 生徒はいるが、どの学級にも所属していない */
@@ -36,7 +36,7 @@ export type ClassroomEmptyReason =
   | "allAdded"
 
 /** 生徒候補が空になった理由（空表示メッセージの出し分け用） */
-export type StudentEmptyReason =
+type StudentEmptyReason =
   /** システムに生徒が1人も登録されていない（要・生徒登録） */
   | "noStudents"
   /** 未在籍・在籍中（スイッチON条件）が0名で、過去在籍の生徒のみ存在 */
@@ -271,7 +271,6 @@ export function useStudentAddPanel({
     setActiveTab,
     classrooms,
     selectedClassrooms,
-    students,
     filteredStudents,
     searchTerm,
     setSearchTerm,

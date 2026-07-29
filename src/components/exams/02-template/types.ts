@@ -67,38 +67,6 @@ export type AreaType =
   | "OTHER"
 
 /**
- * 採点領域の基本情報
- */
-export interface CropRegionData {
-  /** データベースID（新規作成時は未定義） */
-  id?: string
-  /** 試験ID */
-  examId?: string
-  /** 領域のタイプ */
-  type: AreaType
-  /** X座標（相対座標 0-1） */
-  x: number
-  /** Y座標（相対座標 0-1） */
-  y: number
-  /** 幅（相対座標 0-1） */
-  width: number
-  /** 高さ（相対座標 0-1） */
-  height: number
-  /** 領域のラベル */
-  label: string
-  /** 配点（CropRegionArea互換性のため） */
-  points?: number | string | null
-  /** 順序インデックス */
-  orderIndex?: number | null
-  /** 関連するマスター画像のID */
-  masterImageId?: string
-  /** 作成日時 */
-  createdAt?: Date
-  /** 更新日時 */
-  updatedAt?: Date
-}
-
-/**
  * 座標情報のみを表す型
  */
 export interface RegionCoordinates {
@@ -120,14 +88,6 @@ export interface ImageDimensions {
   width: number
   /** 画像の高さ（ピクセル） */
   height: number
-}
-
-/**
- * テンプレートページのプロパティ型
- */
-export interface TemplatePageProps {
-  /** 試験ID */
-  examId: string
 }
 
 /**
@@ -157,20 +117,6 @@ export interface InitialDataState {
   cropRegions: CropRegionArea[]
   /** レイアウトID */
   layoutId: string | undefined
-}
-
-/**
- * UI状態の管理
- */
-export interface UIState {
-  /** 選択中の行インデックス */
-  selectedRowIndex: number | null
-  /** 読み込み中フラグ */
-  isLoading: boolean
-  /** 保存中フラグ */
-  isSaving: boolean
-  /** 検出中フラグ */
-  isDetecting: boolean
 }
 
 // ============================================================================

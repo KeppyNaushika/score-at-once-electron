@@ -202,22 +202,6 @@ export const getSubtotalDefinitionsByCropRegionId = async (
   })
 }
 
-export type CropSubtotalWithRegionPageAndSubtotalGroup =
-  Prisma.CropSubtotalGetPayload<{
-    include: {
-      cropRegion: {
-        include: {
-          examPage: true
-        }
-      }
-      subtotal: {
-        include: {
-          subtotalGroup: true
-        }
-      }
-    }
-  }>
-
 /** getCropSubtotalsByCropRegionIdの戻り値型 */
 export type CropSubtotalWithSubtotal = Prisma.CropSubtotalGetPayload<{
   include: {

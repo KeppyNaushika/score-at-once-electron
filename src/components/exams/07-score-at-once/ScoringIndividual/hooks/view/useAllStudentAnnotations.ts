@@ -8,7 +8,7 @@ import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** 全設問アノテーション読み込みフックのパラメータ */
-export interface UseAllStudentAnnotationsParams {
+interface UseAllStudentAnnotationsParams {
   /** 現在の学生ID */
   currentExamStudentId?: string
   /** 現在の設問領域（試験ID取得用） */
@@ -20,7 +20,7 @@ export interface UseAllStudentAnnotationsParams {
 }
 
 /** 全設問アノテーション読み込みフックの戻り値 */
-export interface UseAllStudentAnnotationsReturn {
+interface UseAllStudentAnnotationsReturn {
   /** 全設問のアノテーション */
   allStudentAnnotations: DrawingAnnotation[]
 }

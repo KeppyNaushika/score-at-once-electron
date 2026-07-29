@@ -117,7 +117,7 @@ export interface PdfExportPageData {
   }>
 }
 
-export interface PdfExportData {
+interface PdfExportData {
   success: boolean
   examName?: string
   pages?: PdfExportPageData[]
