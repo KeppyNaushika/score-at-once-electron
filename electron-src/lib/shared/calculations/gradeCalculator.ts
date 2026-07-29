@@ -25,7 +25,7 @@ import {
 import { findExamStudentScores } from "./examScoreCalculator"
 import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
 import { determineGradeLabel } from "./gradeLabel"
-import { getRawScore } from "./rawScoreCalculator"
+import { findCourseworkStudentScore, getRawScore } from "./rawScoreCalculator"
 import { resolveEffectiveScores } from "./scoreResolution"
 
 /**
@@ -50,9 +50,11 @@ async function buildGradeCalcContext(gradeId: string) {
               subtotal: true,
               cropRegion: true,
               estimationSources: { orderBy: { order: "asc" } },
+              // 点数は資料の対象者（CourseworkStudent）経由でのみ引ける。
+              // 名簿から外された生徒の点数は存在しえないため算出に混ざらない（#962）。
               courseworkItem: {
                 include: {
-                  scores: true,
+                  scores: { include: { courseworkStudent: true } },
                   letterScales: { orderBy: { order: "asc" } },
                 },
               },
@@ -60,7 +62,7 @@ async function buildGradeCalcContext(gradeId: string) {
                 include: {
                   items: {
                     include: {
-                      scores: true,
+                      scores: { include: { courseworkStudent: true } },
                       letterScales: { orderBy: { order: "asc" } },
                     },
                   },
@@ -568,9 +570,10 @@ export async function calculateGrades(
 
           // coursework型: 入力された評価記号・加減点・コメントを結果に添付
           const courseworkScore =
-            dataSource.type === "coursework"
-              ? dataSource.courseworkItem?.scores.find(
-                  (score) => score.studentId === student.id
+            dataSource.type === "coursework" && dataSource.courseworkItem
+              ? findCourseworkStudentScore(
+                  student.id,
+                  dataSource.courseworkItem
                 )
               : undefined
 

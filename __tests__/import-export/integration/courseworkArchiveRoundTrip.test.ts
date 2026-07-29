@@ -47,6 +47,12 @@ function toArchive(collected: CollectedCourseworkData): CourseworkArchiveData {
       counts: collected.counts,
     },
     courseworks: collected.courseworks,
+    courseworkClassrooms: collected.courseworkClassrooms,
+    courseworkTags: collected.courseworkTags,
+    courseworkStudents: collected.courseworkStudents,
+    courseworkItems: collected.courseworkItems,
+    courseworkLetterScales: collected.courseworkLetterScales,
+    courseworkScores: collected.courseworkScores,
     studentsData: collected.studentsData,
     classesData: collected.classesData,
     membershipsData: collected.membershipsData,
@@ -93,10 +99,18 @@ async function seedCoursework(suffix: number) {
       inputMode: "numeric",
     },
   })
+  const courseworkStudent = await prisma.courseworkStudent.findUniqueOrThrow({
+    where: {
+      courseworkId_studentId: {
+        courseworkId: coursework.id,
+        studentId: student.id,
+      },
+    },
+  })
   const score = await prisma.courseworkScore.create({
     data: {
       courseworkItemId: item.id,
-      studentId: student.id,
+      courseworkStudentId: courseworkStudent.id,
       score: 85,
       adjustment: -5,
       adjustmentReason: "提出遅延",
@@ -121,9 +135,11 @@ describe("coursework-archive ラウンドトリップ", () => {
 
     const collected = await collectCourseworkArchiveData([seeded.coursework.id])
     expect(collected.courseworks).toHaveLength(1)
-    const coursework = collected.courseworks[0]
-    expect(coursework.items).toHaveLength(1)
-    expect(coursework.items[0].scores[0].updatedAt).toBeDefined()
+    expect(collected.courseworkItems).toHaveLength(1)
+    expect(collected.courseworkScores[0].updatedAt).toBeDefined()
+    expect(collected.courseworkScores[0].courseworkStudentId).toBe(
+      collected.courseworkStudents[0].id
+    )
     expect(collected.studentsData[0].studentNumber).toBe(`CW_${suffix}`)
     expect(collected.tagsData[0].name).toBe(`タグ_${suffix}`)
 
@@ -152,13 +168,19 @@ describe("coursework-archive ラウンドトリップ", () => {
 
     const item = await prisma.courseworkItem.findFirst({
       where: { name: "提出物" },
-      include: { scores: { include: { student: true } } },
+      include: {
+        scores: {
+          include: { courseworkStudent: { include: { student: true } } },
+        },
+      },
     })
     expect(item).not.toBeNull()
     expect(item!.scores).toHaveLength(1)
     expect(Number(item!.scores[0].score)).toBe(85)
     expect(Number(item!.scores[0].adjustment)).toBe(-5)
-    expect(item!.scores[0].student.studentNumber).toBe(`CW_${suffix}`)
+    expect(item!.scores[0].courseworkStudent.student.studentNumber).toBe(
+      `CW_${suffix}`
+    )
 
     const classroom = await prisma.classroom.findUnique({
       where: { name: `学級_${suffix}` },
@@ -205,7 +227,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     expect(students[0].id).toBe(reborn.id)
 
     const score = await prisma.courseworkScore.findFirst({
-      where: { studentId: reborn.id },
+      where: { courseworkStudent: { studentId: reborn.id } },
     })
     expect(score).not.toBeNull()
     expect(Number(score!.score)).toBe(85)
@@ -224,7 +246,7 @@ describe("coursework-archive ラウンドトリップ", () => {
 
     // アーカイブ側 updatedAt を過去にして再インポート → 既存(50)を維持
     const archive = toArchive(collected)
-    archive.courseworks[0].items[0].scores[0].updatedAt = new Date(
+    archive.courseworkScores[0].updatedAt = new Date(
       "2000-01-01T00:00:00.000Z"
     ).toISOString()
     const oldResult = await importCourseworkArchive(archive)
@@ -235,7 +257,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     expect(Number(afterOld!.score)).toBe(50)
 
     // アーカイブ側 updatedAt を未来にして再インポート → アーカイブ(85)で上書き
-    archive.courseworks[0].items[0].scores[0].updatedAt = new Date(
+    archive.courseworkScores[0].updatedAt = new Date(
       "2099-01-01T00:00:00.000Z"
     ).toISOString()
     const newResult = await importCourseworkArchive(archive)
@@ -244,6 +266,31 @@ describe("coursework-archive ラウンドトリップ", () => {
       where: { id: seeded.score.id },
     })
     expect(Number(afterNew!.score)).toBe(85)
+  })
+
+  it("取り込み先に生徒が居ない場合は、孤児とは別の警告になる", async () => {
+    const suffix = Date.now()
+    const seeded = await seedCoursework(suffix)
+    const collected = await collectCourseworkArchiveData([seeded.coursework.id])
+
+    // 別環境想定。生徒を作らせない設定（grade-archive 内包と同じ allowCreate:false）
+    await cleanupTestDatabase()
+
+    const result = await importCourseworkArchive(toArchive(collected), {
+      allowCreate: false,
+    })
+    expect(result.success).toBe(true)
+
+    const warnings = result.warnings ?? []
+    // 名簿には載っているが取り込み先に居ない ＝ アーカイブの不整合ではない
+    expect(
+      warnings.some((warning) => warning.includes("この環境に存在しない生徒"))
+    ).toBe(true)
+    expect(
+      warnings.some((warning) =>
+        warning.includes("対象生徒として登録されていない生徒")
+      )
+    ).toBe(false)
   })
 
   it("previewCourseworkImport が UUID一致と名前候補を返す", async () => {

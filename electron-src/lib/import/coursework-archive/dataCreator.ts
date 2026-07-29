@@ -3,7 +3,10 @@
  *
  * - 外部参照（生徒/学級/タグ）は idRemapper で UUID 一次 + 名前マッチング解決。
  * - 資料本体は UUID 一次照合（decision 未指定）/ ユーザー判断（reuse/new）で流用 or 新規。
- * - 点数は @@unique([courseworkItemId, studentId]) を updatedAt の LWW で upsert。
+ * - 点数は @@unique([courseworkItemId, courseworkStudentId]) を updatedAt の LWW で upsert。
+ *
+ * アーカイブはテーブルごとの平坦なセクションで来るので、courseworkId / courseworkItemId で
+ * 束ね直してから資料単位に処理する。
  *
  * grade-archive はこの importCourseworkData をトランザクション内で呼び出して内包する。
  */
@@ -11,8 +14,8 @@
 import { randomUUID } from "crypto"
 
 import type {
-  ArchiveCourseworkItemRef,
-  ArchiveCourseworkRef,
+  ArchiveCourseworkItemRow,
+  ArchiveCourseworkRow,
   CourseworkArchiveData,
   CourseworkImportOptions,
 } from "../../../../src/types/courseworkArchive.types"
@@ -37,11 +40,39 @@ export interface ImportCourseworkResult {
 export type CourseworkImportSections = Pick<
   CourseworkArchiveData,
   | "courseworks"
+  | "courseworkClassrooms"
+  | "courseworkTags"
+  | "courseworkStudents"
+  | "courseworkItems"
+  | "courseworkLetterScales"
+  | "courseworkScores"
   | "studentsData"
   | "classesData"
   | "membershipsData"
   | "tagsData"
 >
+
+/**
+ * 点数の書き込み先となる名簿。
+ * アーカイブの CourseworkStudent.id → 取り込み先の CourseworkStudent.id と、
+ * 「名簿には居るが取り込み先にその生徒が居ない」対象者の集合を持つ。
+ */
+interface CourseworkRoster {
+  byArchiveId: Map<string, string>
+  unresolvedArchiveIds: Set<string>
+}
+
+/** 行の配列を親 id で束ねる */
+function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
+  const grouped = new Map<string, T[]>()
+  for (const row of rows) {
+    const key = keyOf(row)
+    const bucket = grouped.get(key)
+    if (bucket) bucket.push(row)
+    else grouped.set(key, [row])
+  }
+  return grouped
+}
 
 /**
  * 試験外成績資料をトランザクション内で DB へ反映する。
@@ -57,6 +88,31 @@ export async function importCourseworkData(
   const warnings: string[] = []
   const createdCourseworkIds: string[] = []
   const itemIdMap = new Map<string, string>()
+
+  const classroomsByCoursework = groupBy(
+    data.courseworkClassrooms,
+    (courseworkClassroom) => courseworkClassroom.courseworkId
+  )
+  const tagsByCoursework = groupBy(
+    data.courseworkTags,
+    (courseworkTag) => courseworkTag.courseworkId
+  )
+  const studentsByCoursework = groupBy(
+    data.courseworkStudents,
+    (courseworkStudent) => courseworkStudent.courseworkId
+  )
+  const itemsByCoursework = groupBy(
+    data.courseworkItems,
+    (item) => item.courseworkId
+  )
+  const letterScalesByItem = groupBy(
+    data.courseworkLetterScales,
+    (letterScale) => letterScale.courseworkItemId
+  )
+  const scoresByItem = groupBy(
+    data.courseworkScores,
+    (score) => score.courseworkItemId
+  )
 
   // 1. 外部参照の解決
   const students = await resolveStudents(tx, data.studentsData, {
@@ -76,35 +132,79 @@ export async function importCourseworkData(
     )
   }
 
-  /** 点数を LWW で upsert する */
+  /**
+   * 書き込めなかった点数の件数。原因を分けて数える。
+   *
+   * - orphaned: アーカイブの名簿にそもそも載っていない生徒の点数（アーカイブ側の不整合）
+   * - unresolved: 名簿には居るが、取り込み先にその生徒が居ない（取り込み先の不足）
+   *
+   * どちらも結果は「点数が入らない」だが、利用者が取るべき行動が違う。
+   * 一緒くたにすると「アーカイブが壊れている」と誤解させる。
+   */
+  interface SkippedScoreCounts {
+    orphaned: number
+    unresolved: number
+  }
+
+  const warnSkippedScores = (
+    courseworkName: string,
+    skipped: SkippedScoreCounts
+  ) => {
+    if (skipped.orphaned > 0) {
+      warnings.push(
+        `試験外成績資料「${courseworkName}」: 対象生徒として登録されていない生徒の点数 ${skipped.orphaned} 件を破棄しました`
+      )
+    }
+    if (skipped.unresolved > 0) {
+      warnings.push(
+        `試験外成績資料「${courseworkName}」: この環境に存在しない生徒の点数 ${skipped.unresolved} 件を取り込めませんでした`
+      )
+    }
+  }
+
+  /**
+   * 点数を LWW で upsert する。
+   *
+   * 点数の主語は資料の対象者（CourseworkStudent）。取り込み先では名簿行の id が
+   * 別物になるため、アーカイブの対象者 id を roster で引き直す。名簿に対応行が
+   * 無い点数（旧アーカイブに残りうる孤児）は破棄する。
+   */
   const upsertScores = async (
+    archiveItemId: string,
     courseworkItemId: string,
-    item: ArchiveCourseworkItemRef,
-    courseworkName: string
-  ): Promise<void> => {
-    for (const courseworkScore of item.scores) {
-      const studentId = students.map.get(courseworkScore.studentId)
-      if (!studentId) {
-        warnings.push(
-          `試験外成績資料「${courseworkName}」評価項目「${item.name}」: 生徒の点数を解決できずスキップしました`
-        )
+    roster: CourseworkRoster
+  ): Promise<SkippedScoreCounts> => {
+    const skipped: SkippedScoreCounts = { orphaned: 0, unresolved: 0 }
+    for (const archiveScore of scoresByItem.get(archiveItemId) ?? []) {
+      const courseworkStudentId = roster.byArchiveId.get(
+        archiveScore.courseworkStudentId
+      )
+      if (!courseworkStudentId) {
+        if (roster.unresolvedArchiveIds.has(archiveScore.courseworkStudentId)) {
+          skipped.unresolved++
+        } else {
+          skipped.orphaned++
+        }
         continue
       }
       const existing = await tx.courseworkScore.findUnique({
         where: {
-          courseworkItemId_studentId: { courseworkItemId, studentId },
+          courseworkItemId_courseworkStudentId: {
+            courseworkItemId,
+            courseworkStudentId,
+          },
         },
       })
       const payload = {
-        score: courseworkScore.score,
-        letterValue: courseworkScore.letterValue,
-        adjustment: courseworkScore.adjustment ?? 0,
-        adjustmentReason: courseworkScore.adjustmentReason,
-        comment: courseworkScore.comment,
+        score: archiveScore.score,
+        letterValue: archiveScore.letterValue,
+        adjustment: archiveScore.adjustment ?? 0,
+        adjustmentReason: archiveScore.adjustmentReason,
+        comment: archiveScore.comment,
       }
       if (existing) {
         if (
-          isNewerByLww(new Date(courseworkScore.updatedAt), existing.updatedAt)
+          isNewerByLww(new Date(archiveScore.updatedAt), existing.updatedAt)
         ) {
           await tx.courseworkScore.update({
             where: { id: existing.id },
@@ -113,18 +213,20 @@ export async function importCourseworkData(
         }
       } else {
         await tx.courseworkScore.create({
-          data: { courseworkItemId, studentId, ...payload },
+          data: { courseworkItemId, courseworkStudentId, ...payload },
         })
       }
     }
+    return skipped
   }
 
   /** 評価項目を作成（変換表も投入）し実 ID を返す */
   const createItem = async (
     courseworkId: string,
     itemId: string | undefined,
-    item: ArchiveCourseworkItemRef
+    item: ArchiveCourseworkItemRow
   ): Promise<string> => {
+    const letterScales = letterScalesByItem.get(item.id) ?? []
     const created = await tx.courseworkItem.create({
       data: {
         ...(itemId ? { id: itemId } : {}),
@@ -133,9 +235,9 @@ export async function importCourseworkData(
         order: item.order,
         maxScore: item.maxScore,
         inputMode: item.inputMode || "numeric",
-        ...(item.letterScales.length > 0 && {
+        ...(letterScales.length > 0 && {
           letterScales: {
-            create: item.letterScales.map((letterScale) => ({
+            create: letterScales.map((letterScale) => ({
               label: letterScale.label,
               score: letterScale.score,
               order: letterScale.order,
@@ -147,12 +249,20 @@ export async function importCourseworkData(
     return created.id
   }
 
-  /** 学級・タグ・名簿の join を冪等に張る */
+  /**
+   * 学級・タグ・名簿の join を冪等に張り、点数の書き込み先となる名簿
+   * （アーカイブの CourseworkStudent.id → 取り込み先の CourseworkStudent.id）を返す。
+   *
+   * 名簿行の id は取り込み先で新しく採番する。結合行そのものに外部から参照される
+   * 意味は無く、旧アーカイブ由来の id は uuid ですらないため。
+   */
   const ensureJoins = async (
     courseworkId: string,
-    coursework: ArchiveCourseworkRef
-  ): Promise<void> => {
-    for (const classroomRef of coursework.classrooms) {
+    archiveCourseworkId: string
+  ): Promise<CourseworkRoster> => {
+    for (const classroomRef of classroomsByCoursework.get(
+      archiveCourseworkId
+    ) ?? []) {
       const classroomId = classes.map.get(classroomRef.classroomId)
       if (!classroomId) continue
       const exists = await tx.courseworkClassroom.findUnique({
@@ -165,7 +275,8 @@ export async function importCourseworkData(
         })
       }
     }
-    for (const tagRef of coursework.tags) {
+
+    for (const tagRef of tagsByCoursework.get(archiveCourseworkId) ?? []) {
       const tagId = tagMap.get(tagRef.tagId)
       if (!tagId) continue
       const exists = await tx.courseworkTag.findUnique({
@@ -176,9 +287,19 @@ export async function importCourseworkData(
         await tx.courseworkTag.create({ data: { courseworkId, tagId } })
       }
     }
-    for (const studentRef of coursework.students) {
+
+    /** アーカイブの対象者 id → 取り込み先の生徒 id（この後 DB の名簿と突き合わせる） */
+    const archiveStudentIdByCourseworkStudent = new Map<string, string>()
+    /** 名簿には居るが、取り込み先にその生徒が居なかった対象者 */
+    const unresolvedArchiveIds = new Set<string>()
+    for (const studentRef of studentsByCoursework.get(archiveCourseworkId) ??
+      []) {
       const studentId = students.map.get(studentRef.studentId)
-      if (!studentId) continue
+      if (!studentId) {
+        unresolvedArchiveIds.add(studentRef.id)
+        continue
+      }
+      archiveStudentIdByCourseworkStudent.set(studentRef.id, studentId)
       const exists = await tx.courseworkStudent.findUnique({
         where: { courseworkId_studentId: { courseworkId, studentId } },
         select: { id: true },
@@ -193,6 +314,58 @@ export async function importCourseworkData(
         })
       }
     }
+
+    // 既存資料への統合では、アーカイブの名簿に載っていない対象者が既に居ることがある。
+    // 点数の宛先は DB の名簿が正なので、張り終えた後に全件を読み直す。
+    const dbRoster = await tx.courseworkStudent.findMany({
+      where: { courseworkId },
+      select: { id: true, studentId: true },
+    })
+    const dbIdByStudent = new Map(
+      dbRoster.map((courseworkStudent) => [
+        courseworkStudent.studentId,
+        courseworkStudent.id,
+      ])
+    )
+    const byArchiveId = new Map<string, string>()
+    for (const [
+      archiveCourseworkStudentId,
+      studentId,
+    ] of archiveStudentIdByCourseworkStudent) {
+      const dbCourseworkStudentId = dbIdByStudent.get(studentId)
+      if (dbCourseworkStudentId) {
+        byArchiveId.set(archiveCourseworkStudentId, dbCourseworkStudentId)
+      } else {
+        unresolvedArchiveIds.add(archiveCourseworkStudentId)
+      }
+    }
+    return { byArchiveId, unresolvedArchiveIds }
+  }
+
+  /** 資料1件の評価項目と点数を取り込む。書き込めなかった点数の件数を返す */
+  const importItems = async (
+    coursework: ArchiveCourseworkRow,
+    courseworkId: string,
+    roster: CourseworkRoster,
+    existingItemIdByName: Map<string, string>,
+    preserveUuids: boolean
+  ): Promise<SkippedScoreCounts> => {
+    const skipped: SkippedScoreCounts = { orphaned: 0, unresolved: 0 }
+    for (const item of itemsByCoursework.get(coursework.id) ?? []) {
+      let actualItemId = existingItemIdByName.get(item.name)
+      if (!actualItemId) {
+        actualItemId = await createItem(
+          courseworkId,
+          preserveUuids ? item.id : randomUUID(),
+          item
+        )
+      }
+      const itemSkipped = await upsertScores(item.id, actualItemId, roster)
+      skipped.orphaned += itemSkipped.orphaned
+      skipped.unresolved += itemSkipped.unresolved
+      itemIdMap.set(item.id, actualItemId)
+    }
+    return skipped
   }
 
   // 2. 資料本体
@@ -221,22 +394,24 @@ export async function importCourseworkData(
 
     if (reuseId) {
       // 既存資料へ統合: 名簿/学級/タグの不足を補い、項目は名前で突合、点数は LWW
-      await ensureJoins(reuseId, coursework)
+      const roster = await ensureJoins(reuseId, coursework.id)
       const existing = await tx.coursework.findUnique({
         where: { id: reuseId },
         include: { items: { select: { id: true, name: true } } },
       })
-      const existingByName = new Map(
+      const existingItemIdByName = new Map(
         (existing?.items ?? []).map((item) => [item.name, item.id])
       )
-      for (const item of coursework.items) {
-        let actualItemId = existingByName.get(item.name)
-        if (!actualItemId) {
-          actualItemId = await createItem(reuseId, randomUUID(), item)
-        }
-        await upsertScores(actualItemId, item, coursework.name)
-        if (item.id) itemIdMap.set(item.id, actualItemId)
-      }
+      warnSkippedScores(
+        coursework.name,
+        await importItems(
+          coursework,
+          reuseId,
+          roster,
+          existingItemIdByName,
+          false
+        )
+      )
       continue
     }
 
@@ -252,16 +427,17 @@ export async function importCourseworkData(
       },
     })
     createdCourseworkIds.push(created.id)
-    await ensureJoins(created.id, coursework)
-    for (const item of coursework.items) {
-      const actualItemId = await createItem(
+    const roster = await ensureJoins(created.id, coursework.id)
+    warnSkippedScores(
+      coursework.name,
+      await importItems(
+        coursework,
         created.id,
-        preserveUuids ? item.id : randomUUID(),
-        item
+        roster,
+        new Map(),
+        preserveUuids
       )
-      await upsertScores(actualItemId, item, coursework.name)
-      if (item.id) itemIdMap.set(item.id, actualItemId)
-    }
+    )
   }
 
   return { createdCourseworkIds, itemIdMap, warnings }

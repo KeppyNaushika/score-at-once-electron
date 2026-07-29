@@ -168,10 +168,18 @@ describe("grade-archive ラウンドトリップ", () => {
         },
       },
     })
+    const courseworkStudent = await prisma.courseworkStudent.findUniqueOrThrow({
+      where: {
+        courseworkId_studentId: {
+          courseworkId: coursework.id,
+          studentId: student.id,
+        },
+      },
+    })
     await prisma.courseworkScore.create({
       data: {
         courseworkItemId: numItem.id,
-        studentId: student.id,
+        courseworkStudentId: courseworkStudent.id,
         score: 85,
         adjustment: -5,
         adjustmentReason: "提出遅延",
@@ -181,7 +189,7 @@ describe("grade-archive ラウンドトリップ", () => {
     await prisma.courseworkScore.create({
       data: {
         courseworkItemId: letterItem.id,
-        studentId: student.id,
+        courseworkStudentId: courseworkStudent.id,
         letterValue: "B",
         comment: "発表が活発でした",
       },
@@ -218,9 +226,8 @@ describe("grade-archive ラウンドトリップ", () => {
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.courseworkArchive.courseworks).toHaveLength(1)
-    const archivedCoursework = collected.courseworkArchive.courseworks[0]
-    expect(archivedCoursework.items).toHaveLength(2)
-    expect(archivedCoursework.classrooms).toHaveLength(1)
+    expect(collected.courseworkArchive.courseworkItems).toHaveLength(2)
+    expect(collected.courseworkArchive.courseworkClassrooms).toHaveLength(1)
     expect(collected.courseworkArchive.tagsData[0].name).toBe(`タグ_${suffix}`)
     expect(collected.courseworkArchive.studentsData[0].studentNumber).toBe(
       `CW_${suffix}`
@@ -248,7 +255,9 @@ describe("grade-archive ラウンドトリップ", () => {
         courseworkItem: {
           include: {
             coursework: true,
-            scores: { include: { student: true } },
+            scores: {
+              include: { courseworkStudent: { include: { student: true } } },
+            },
           },
         },
       },
@@ -366,12 +375,18 @@ describe("grade-archive ラウンドトリップ", () => {
 
     const importedItem = await prisma.courseworkItem.findFirst({
       where: { coursework: { name: `埋込資料_${suffix}` }, name: "課題1" },
-      include: { scores: { include: { student: true } } },
+      include: {
+        scores: {
+          include: { courseworkStudent: { include: { student: true } } },
+        },
+      },
     })
     expect(importedItem).not.toBeNull()
     expect(importedItem!.scores).toHaveLength(1)
     expect(Number(importedItem!.scores[0].score)).toBe(72)
-    expect(importedItem!.scores[0].student.studentNumber).toBe(`CW2_${suffix}`)
+    expect(
+      importedItem!.scores[0].courseworkStudent.student.studentNumber
+    ).toBe(`CW2_${suffix}`)
 
     const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "資料参照" },
@@ -1655,7 +1670,7 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // 旧形式でも Coursework と点数が復元され、DataSource が解決される
     const score = await prisma.courseworkScore.findFirst({
-      where: { studentId: student.id },
+      where: { courseworkStudent: { studentId: student.id } },
       include: { item: { include: { coursework: true } } },
     })
     expect(score).not.toBeNull()

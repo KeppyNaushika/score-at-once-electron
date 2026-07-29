@@ -1,5 +1,7 @@
 import { ipcRenderer } from "electron"
 
+import type { CourseworkScoreUpsertInput } from "../../src/types/coursework.types"
+
 /** 試験外成績資料（Coursework）の IPC API（資料・評価項目・点数・名簿・タグ） */
 export function createCourseworkApi() {
   return {
@@ -48,17 +50,8 @@ export function createCourseworkApi() {
       // 点数
       getScores: (courseworkItemId: string) =>
         ipcRenderer.invoke("coursework:getScores", courseworkItemId),
-      batchUpsertScores: (
-        scores: {
-          courseworkItemId: string
-          studentId: string
-          score?: number | null
-          letterValue?: string | null
-          adjustment?: number | null
-          adjustmentReason?: string | null
-          comment?: string | null
-        }[]
-      ) => ipcRenderer.invoke("coursework:batchUpsertScores", scores),
+      batchUpsertScores: (scores: CourseworkScoreUpsertInput[]) =>
+        ipcRenderer.invoke("coursework:batchUpsertScores", scores),
 
       // 名簿
       getStudents: (courseworkId: string) =>

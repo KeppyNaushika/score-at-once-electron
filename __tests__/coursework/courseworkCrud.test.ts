@@ -127,21 +127,36 @@ describe("Coursework CRUD", () => {
   it("点数を一括 upsert・部分更新・取得できる", async () => {
     const { student1, student2 } = await createStudents()
     const courseworkResult = await createCoursework({ name: "資料" })
+    const courseworkId = courseworkResult.coursework!.id
     const item = await createCourseworkItem({
-      courseworkId: courseworkResult.coursework!.id,
+      courseworkId,
       name: "知識",
       maxScore: 100,
     })
     const itemId = item.item!.id
 
+    // 点数は資料の対象者にぶら下がるため、先に名簿へ載せる
+    await addStudentsToCoursework(courseworkId, [student1.id, student2.id])
+    const roster = await getCourseworkStudents(courseworkId)
+    const courseworkStudent1 = roster.students!.find(
+      (courseworkStudent) => courseworkStudent.studentId === student1.id
+    )!
+    const courseworkStudent2 = roster.students!.find(
+      (courseworkStudent) => courseworkStudent.studentId === student2.id
+    )!
+
     await batchUpsertCourseworkScores([
       {
         courseworkItemId: itemId,
-        studentId: student1.id,
+        courseworkStudentId: courseworkStudent1.id,
         score: 85,
         comment: "良い",
       },
-      { courseworkItemId: itemId, studentId: student2.id, score: 70 },
+      {
+        courseworkItemId: itemId,
+        courseworkStudentId: courseworkStudent2.id,
+        score: 70,
+      },
     ])
 
     let scores = await getCourseworkScoresByItemId(itemId)
@@ -149,15 +164,93 @@ describe("Coursework CRUD", () => {
 
     // 部分更新（adjustment のみ。score/comment は保持）
     await batchUpsertCourseworkScores([
-      { courseworkItemId: itemId, studentId: student1.id, adjustment: -5 },
+      {
+        courseworkItemId: itemId,
+        courseworkStudentId: courseworkStudent1.id,
+        adjustment: -5,
+      },
     ])
     scores = await getCourseworkScoresByItemId(itemId)
     const student1Score = scores.scores!.find(
-      (score) => score.studentId === student1.id
+      (score) => score.courseworkStudentId === courseworkStudent1.id
     )!
     expect(Number(student1Score.score)).toBe(85)
     expect(Number(student1Score.adjustment)).toBe(-5)
     expect(student1Score.comment).toBe("良い")
+  })
+
+  it("資料から生徒を外すと、その生徒の点数も消える（#962）", async () => {
+    const { student1, student2 } = await createStudents()
+    const courseworkResult = await createCoursework({ name: "資料" })
+    const courseworkId = courseworkResult.coursework!.id
+    const item = await createCourseworkItem({
+      courseworkId,
+      name: "知識",
+      maxScore: 100,
+    })
+    const itemId = item.item!.id
+
+    await addStudentsToCoursework(courseworkId, [student1.id, student2.id])
+    const roster = await getCourseworkStudents(courseworkId)
+    const courseworkStudent1 = roster.students!.find(
+      (courseworkStudent) => courseworkStudent.studentId === student1.id
+    )!
+    const courseworkStudent2 = roster.students!.find(
+      (courseworkStudent) => courseworkStudent.studentId === student2.id
+    )!
+
+    await batchUpsertCourseworkScores([
+      {
+        courseworkItemId: itemId,
+        courseworkStudentId: courseworkStudent1.id,
+        score: 85,
+      },
+      {
+        courseworkItemId: itemId,
+        courseworkStudentId: courseworkStudent2.id,
+        score: 70,
+      },
+    ])
+
+    await removeStudentsFromCoursework(courseworkId, [student1.id])
+
+    // 外した生徒の点数だけが消え、残った生徒は巻き添えにならない
+    const remaining = await getCourseworkScoresByItemId(itemId)
+    expect(remaining.scores).toHaveLength(1)
+    expect(remaining.scores![0].courseworkStudentId).toBe(courseworkStudent2.id)
+
+    // 同じ生徒を追加し直しても、以前の点数は復活しない
+    await addStudentsToCoursework(courseworkId, [student1.id])
+    const afterReadd = await getCourseworkScoresByItemId(itemId)
+    expect(afterReadd.scores).toHaveLength(1)
+  })
+
+  it("別の資料の対象者に点数を書こうとすると拒否される", async () => {
+    const { student1 } = await createStudents()
+    const courseworkA = await createCoursework({ name: "資料A" })
+    const courseworkB = await createCoursework({ name: "資料B" })
+    const itemA = await createCourseworkItem({
+      courseworkId: courseworkA.coursework!.id,
+      name: "知識",
+      maxScore: 100,
+    })
+
+    // 生徒は資料Bの名簿にだけ載せる
+    await addStudentsToCoursework(courseworkB.coursework!.id, [student1.id])
+    const rosterB = await getCourseworkStudents(courseworkB.coursework!.id)
+
+    // 資料Aの評価項目 × 資料Bの対象者。FK は両方の実在しか見ないので通ってしまう
+    const result = await batchUpsertCourseworkScores([
+      {
+        courseworkItemId: itemA.item!.id,
+        courseworkStudentId: rosterB.students![0].id,
+        score: 85,
+      },
+    ])
+
+    expect(result.success).toBe(false)
+    const written = await getCourseworkScoresByItemId(itemA.item!.id)
+    expect(written.scores).toHaveLength(0)
   })
 
   it("名簿に生徒を追加・並べ替え・削除できる", async () => {

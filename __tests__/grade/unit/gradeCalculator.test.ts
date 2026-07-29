@@ -178,7 +178,12 @@ function buildGrade(
         courseworkItem: {
           maxScore: dataSource.maxScore,
           inputMode: dataSource.inputMode ?? "numeric",
-          scores: dataSource.manualScores ?? [],
+          // 点数は資料の対象者（CourseworkStudent）にぶら下がる。テストケースは
+          // 生徒idで書けるようにし、ここで対象者を1段かませた形へ寄せる。
+          scores: (dataSource.manualScores ?? []).map((manualScore) => ({
+            ...manualScore,
+            courseworkStudent: { studentId: manualScore.studentId },
+          })),
           letterScales: dataSource.letterScales ?? [],
         },
       }
@@ -1116,13 +1121,23 @@ describe("calculateGrades", () => {
                   {
                     maxScore: 50,
                     inputMode: "numeric",
-                    scores: [{ studentId: "s1", score: 40 }],
+                    scores: [
+                      {
+                        courseworkStudent: { studentId: "s1" },
+                        score: 40,
+                      },
+                    ],
                     letterScales: [],
                   },
                   {
                     maxScore: 30,
                     inputMode: "numeric",
-                    scores: [{ studentId: "s1", score: 30 }],
+                    scores: [
+                      {
+                        courseworkStudent: { studentId: "s1" },
+                        score: 30,
+                      },
+                    ],
                     letterScales: [],
                   },
                 ],

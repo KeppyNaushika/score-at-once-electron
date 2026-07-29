@@ -26,16 +26,25 @@ export type CourseworkLetterScaleData = Omit<
   score: number
 }
 
-/** 生徒×評価項目の点数（生徒情報付き） */
-export type CourseworkScoreWithStudent = Omit<
+/**
+ * 資料の対象者×評価項目の点数（対象者・生徒情報付き）。
+ *
+ * 点数の主語は「その資料の対象者」（CourseworkStudent）であり、人（Student）ではない。
+ * 名簿から外された生徒の点数は存在しえない（#962）。
+ */
+export type CourseworkScoreWithCourseworkStudent = Omit<
   Prisma.CourseworkScoreGetPayload<{
     include: {
-      student: {
-        select: {
-          id: true
-          studentNumber: true
-          lastName: true
-          firstName: true
+      courseworkStudent: {
+        include: {
+          student: {
+            select: {
+              id: true
+              studentNumber: true
+              lastName: true
+              firstName: true
+            }
+          }
         }
       }
     }
@@ -45,6 +54,23 @@ export type CourseworkScoreWithStudent = Omit<
   score: number | null
   /** 加点・減点（期限超過等） */
   adjustment: number | null
+}
+
+/**
+ * 点数のセル単位更新の入力（IPC 境界の唯一の定義）。
+ *
+ * renderer → preload → handler → DB 層の4層が同じ形を書いていたため、
+ * 1層だけ直しても余剰プロパティ検査が効かず typecheck が通ってしまう
+ * （実行時にだけ点数が保存されない）。定義はここ1箇所に集約する。
+ */
+export interface CourseworkScoreUpsertInput {
+  courseworkItemId: string
+  courseworkStudentId: string
+  score?: number | null
+  letterValue?: string | null
+  adjustment?: number | null
+  adjustmentReason?: string | null
+  comment?: string | null
 }
 
 /** 評価項目（リレーション付き） */

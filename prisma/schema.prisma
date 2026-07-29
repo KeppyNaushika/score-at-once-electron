@@ -62,7 +62,6 @@ model Student {
   gradeFrozenScores   GradeFrozenScore[]
   gradeItemExclusions GradeItemExclusion[]
   courseworkStudents  CourseworkStudent[]
-  courseworkScores    CourseworkScore[]
 }
 
 model StudentClassroomMembership {
@@ -1073,8 +1072,9 @@ model CourseworkStudent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  coursework Coursework @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
-  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  coursework Coursework        @relation(fields: [courseworkId], references: [id], onDelete: Cascade)
+  student    Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  scores     CourseworkScore[]
 
   @@unique([courseworkId, studentId])
   @@index([courseworkId])
@@ -1117,25 +1117,25 @@ model CourseworkItem {
   @@index([courseworkId])
 }
 
-/// 生徒×評価項目の点数（加減点・コメント含む）
+/// 資料の対象者×評価項目の点数（加減点・コメント含む）
 model CourseworkScore {
-  id               String   @id @default(uuid())
-  courseworkItemId String
-  studentId        String
-  score            Decimal?
-  letterValue      String? // 文字モード時の評価記号（"A"/"B"/"C" 等）
-  adjustment       Decimal? @default(0) // 加点・減点（期限超過等）
-  adjustmentReason String? // 加減点の理由
-  comment          String? // 成績通知書に表示するコメント
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  courseworkItemId    String
+  courseworkStudentId String
+  score               Decimal?
+  letterValue         String? // 文字モード時の評価記号（"A"/"B"/"C" 等）
+  adjustment          Decimal? @default(0) // 加点・減点（期限超過等）
+  adjustmentReason    String? // 加減点の理由
+  comment             String? // 成績通知書に表示するコメント
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  item    CourseworkItem @relation(fields: [courseworkItemId], references: [id], onDelete: Cascade)
-  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  item              CourseworkItem    @relation(fields: [courseworkItemId], references: [id], onDelete: Cascade)
+  courseworkStudent CourseworkStudent @relation(fields: [courseworkStudentId], references: [id], onDelete: Cascade)
 
-  @@unique([courseworkItemId, studentId])
+  @@unique([courseworkItemId, courseworkStudentId])
   @@index([courseworkItemId])
-  @@index([studentId])
+  @@index([courseworkStudentId])
 }
 
 /// 文字評価→点数の変換表（評価項目単位。例: A=100, B=80, C=60）

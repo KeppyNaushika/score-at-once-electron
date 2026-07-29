@@ -3,6 +3,9 @@ import prisma from "./client"
 /**
  * 試験の採点レコードを初期化する
  * 全ての答案と採点領域の組み合わせに対して初期の採点レコードを作成
+ *
+ * 採点領域も受験者も同じ examId から引くため、両者が別の試験のものになることは
+ * 構造的に起こらない（examScopeGuard による検査を足す必要が無い唯一の書き込み経路）。
  */
 export const initializeScoringRecords = async (examId: string) => {
   try {

@@ -3,10 +3,22 @@
  *
  * 指定した coursework を、生徒・学級・タグの full レコード（元 UUID 付き）込みで
  * 自己完結に収集する。grade-archive の内包収集もこの関数へ委譲する。
+ *
+ * 【原則】Prisma のクエリが返した行をそのまま JSON として持つ。射影・詰め替えはしない。
+ * JSON に載らない型だけを JSON.stringify と同じ規則で文字列にする
+ * （DateTime → ISO 文字列、Decimal → decimal.js の toJSON と同じ文字列）。
  */
 
+import type { Prisma } from "@prisma/client"
+
 import type {
-  ArchiveCourseworkRef,
+  ArchiveCourseworkClassroomRow,
+  ArchiveCourseworkItemRow,
+  ArchiveCourseworkLetterScaleRow,
+  ArchiveCourseworkRow,
+  ArchiveCourseworkScoreRow,
+  ArchiveCourseworkStudentRow,
+  ArchiveCourseworkTagRow,
   ArchiveCwClass,
   ArchiveCwMembership,
   ArchiveCwStudent,
@@ -14,6 +26,11 @@ import type {
   CollectedCourseworkData,
 } from "../../../../src/types/courseworkArchive.types"
 import prisma from "../../prisma/client"
+
+/** Decimal を JSON.stringify と同じ文字列表現にする */
+const decimalToJson = (value: Prisma.Decimal): string => value.toString()
+const nullableDecimalToJson = (value: Prisma.Decimal | null): string | null =>
+  value === null ? null : value.toString()
 
 /**
  * 指定 coursework 群を full レコード込みで収集する。
@@ -24,75 +41,134 @@ import prisma from "../../prisma/client"
 export async function collectCourseworkArchiveData(
   courseworkIds: string[]
 ): Promise<CollectedCourseworkData> {
-  const rows = await prisma.coursework.findMany({
-    where: { id: { in: courseworkIds } },
-    include: {
-      classrooms: { orderBy: { order: "asc" } },
-      tags: true,
-      students: {
-        orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
-      },
-      items: {
-        include: {
-          letterScales: { orderBy: { order: "asc" } },
-          scores: true,
-        },
-        orderBy: { order: "asc" },
-      },
-    },
-  })
+  const [
+    courseworkRows,
+    classroomJoinRows,
+    tagJoinRows,
+    studentJoinRows,
+    itemRows,
+  ] = await Promise.all([
+    prisma.coursework.findMany({ where: { id: { in: courseworkIds } } }),
+    prisma.courseworkClassroom.findMany({
+      where: { courseworkId: { in: courseworkIds } },
+      orderBy: { order: "asc" },
+    }),
+    prisma.courseworkTag.findMany({
+      where: { courseworkId: { in: courseworkIds } },
+    }),
+    prisma.courseworkStudent.findMany({
+      where: { courseworkId: { in: courseworkIds } },
+      orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
+    }),
+    prisma.courseworkItem.findMany({
+      where: { courseworkId: { in: courseworkIds } },
+      orderBy: { order: "asc" },
+    }),
+  ])
 
-  const courseworks: ArchiveCourseworkRef[] = rows.map((coursework) => ({
-    id: coursework.id,
-    name: coursework.name,
-    description: coursework.description,
-    date: coursework.date?.toISOString() ?? null,
-    classrooms: coursework.classrooms.map((classroom) => ({
-      classroomId: classroom.classroomId,
-      order: classroom.order,
-    })),
-    tags: coursework.tags.map((tag) => ({ tagId: tag.tagId })),
-    students: coursework.students.map((student) => ({
-      studentId: student.studentId,
-      customOrder: student.customOrder,
-    })),
-    items: coursework.items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      order: item.order,
-      maxScore: Number(item.maxScore),
-      inputMode: item.inputMode,
-      letterScales: item.letterScales.map((letterScale) => ({
-        label: letterScale.label,
-        score: Number(letterScale.score),
-        order: letterScale.order,
-      })),
-      scores: item.scores.map((score) => ({
-        studentId: score.studentId,
-        score: score.score !== null ? Number(score.score) : null,
-        letterValue: score.letterValue,
-        adjustment: score.adjustment !== null ? Number(score.adjustment) : null,
-        adjustmentReason: score.adjustmentReason,
-        comment: score.comment,
-        updatedAt: score.updatedAt.toISOString(),
-      })),
-    })),
+  const itemIds = itemRows.map((item) => item.id)
+  const [letterScaleRows, scoreRows] = await Promise.all([
+    prisma.courseworkLetterScale.findMany({
+      where: { courseworkItemId: { in: itemIds } },
+      orderBy: { order: "asc" },
+    }),
+    prisma.courseworkScore.findMany({
+      where: { courseworkItemId: { in: itemIds } },
+    }),
+  ])
+
+  const courseworks: ArchiveCourseworkRow[] = courseworkRows.map(
+    (coursework) => ({
+      id: coursework.id,
+      name: coursework.name,
+      description: coursework.description,
+      date: coursework.date?.toISOString() ?? null,
+      createdAt: coursework.createdAt.toISOString(),
+      updatedAt: coursework.updatedAt.toISOString(),
+    })
+  )
+
+  const courseworkClassrooms: ArchiveCourseworkClassroomRow[] =
+    classroomJoinRows.map((courseworkClassroom) => ({
+      id: courseworkClassroom.id,
+      courseworkId: courseworkClassroom.courseworkId,
+      classroomId: courseworkClassroom.classroomId,
+      order: courseworkClassroom.order,
+      createdAt: courseworkClassroom.createdAt.toISOString(),
+      updatedAt: courseworkClassroom.updatedAt.toISOString(),
+    }))
+
+  const courseworkTags: ArchiveCourseworkTagRow[] = tagJoinRows.map(
+    (courseworkTag) => ({
+      id: courseworkTag.id,
+      courseworkId: courseworkTag.courseworkId,
+      tagId: courseworkTag.tagId,
+      createdAt: courseworkTag.createdAt.toISOString(),
+      updatedAt: courseworkTag.updatedAt.toISOString(),
+    })
+  )
+
+  const courseworkStudents: ArchiveCourseworkStudentRow[] = studentJoinRows.map(
+    (courseworkStudent) => ({
+      id: courseworkStudent.id,
+      courseworkId: courseworkStudent.courseworkId,
+      studentId: courseworkStudent.studentId,
+      customOrder: courseworkStudent.customOrder,
+      createdAt: courseworkStudent.createdAt.toISOString(),
+      updatedAt: courseworkStudent.updatedAt.toISOString(),
+    })
+  )
+
+  const courseworkItems: ArchiveCourseworkItemRow[] = itemRows.map((item) => ({
+    id: item.id,
+    courseworkId: item.courseworkId,
+    name: item.name,
+    order: item.order,
+    maxScore: decimalToJson(item.maxScore),
+    inputMode: item.inputMode,
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
   }))
 
-  // 参照されている生徒・学級・タグの UUID を集約
-  const studentIds = new Set<string>()
-  const classroomIds = new Set<string>()
-  const tagIds = new Set<string>()
-  for (const coursework of rows) {
-    coursework.students.forEach((student) => studentIds.add(student.studentId))
-    coursework.classrooms.forEach((classroom) =>
-      classroomIds.add(classroom.classroomId)
+  const courseworkLetterScales: ArchiveCourseworkLetterScaleRow[] =
+    letterScaleRows.map((letterScale) => ({
+      id: letterScale.id,
+      courseworkItemId: letterScale.courseworkItemId,
+      label: letterScale.label,
+      score: decimalToJson(letterScale.score),
+      order: letterScale.order,
+      createdAt: letterScale.createdAt.toISOString(),
+      updatedAt: letterScale.updatedAt.toISOString(),
+    }))
+
+  const courseworkScores: ArchiveCourseworkScoreRow[] = scoreRows.map(
+    (score) => ({
+      id: score.id,
+      courseworkItemId: score.courseworkItemId,
+      courseworkStudentId: score.courseworkStudentId,
+      score: nullableDecimalToJson(score.score),
+      letterValue: score.letterValue,
+      adjustment: nullableDecimalToJson(score.adjustment),
+      adjustmentReason: score.adjustmentReason,
+      comment: score.comment,
+      createdAt: score.createdAt.toISOString(),
+      updatedAt: score.updatedAt.toISOString(),
+    })
+  )
+
+  // 参照されている生徒・学級・タグの UUID を集約。
+  // 点数は対象者の子なので、名簿を集めれば生徒は網羅される。
+  const studentIds = new Set(
+    courseworkStudents.map((courseworkStudent) => courseworkStudent.studentId)
+  )
+  const classroomIds = new Set(
+    courseworkClassrooms.map(
+      (courseworkClassroom) => courseworkClassroom.classroomId
     )
-    coursework.tags.forEach((tag) => tagIds.add(tag.tagId))
-    coursework.items.forEach((item) =>
-      item.scores.forEach((score) => studentIds.add(score.studentId))
-    )
-  }
+  )
+  const tagIds = new Set(
+    courseworkTags.map((courseworkTag) => courseworkTag.tagId)
+  )
 
   const studentRows = await prisma.student.findMany({
     where: { id: { in: [...studentIds] } },
@@ -149,27 +225,22 @@ export async function collectCourseworkArchiveData(
     color: tag.color,
   }))
 
-  const itemCount = courseworks.reduce(
-    (sum, coursework) => sum + coursework.items.length,
-    0
-  )
-  const scoreCount = courseworks.reduce(
-    (sum, coursework) =>
-      sum +
-      coursework.items.reduce((total, item) => total + item.scores.length, 0),
-    0
-  )
-
   return {
     courseworks,
+    courseworkClassrooms,
+    courseworkTags,
+    courseworkStudents,
+    courseworkItems,
+    courseworkLetterScales,
+    courseworkScores,
     studentsData,
     classesData,
     membershipsData,
     tagsData,
     counts: {
       courseworks: courseworks.length,
-      items: itemCount,
-      scores: scoreCount,
+      items: courseworkItems.length,
+      scores: courseworkScores.length,
       students: studentsData.length,
       classrooms: classesData.length,
     },

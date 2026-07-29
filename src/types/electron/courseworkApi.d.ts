@@ -94,19 +94,11 @@ export interface CourseworkAPI {
     // 点数
     getScores: (courseworkItemId: string) => Promise<{
       success: boolean
-      scores?: import("../coursework.types").CourseworkScoreWithStudent[]
+      scores?: import("../coursework.types").CourseworkScoreWithCourseworkStudent[]
       error?: string
     }>
     batchUpsertScores: (
-      scores: {
-        courseworkItemId: string
-        studentId: string
-        score?: number | null
-        letterValue?: string | null
-        adjustment?: number | null
-        adjustmentReason?: string | null
-        comment?: string | null
-      }[]
+      scores: import("../coursework.types").CourseworkScoreUpsertInput[]
     ) => Promise<{ success: boolean; error?: string }>
 
     // 名簿

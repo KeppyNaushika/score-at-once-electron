@@ -8,19 +8,27 @@ import * as os from "os"
 import * as path from "path"
 
 import type {
-  ArchiveCourseworkRef,
+  ArchiveCourseworkClassroomRow,
+  ArchiveCourseworkItemRow,
+  ArchiveCourseworkLetterScaleRow,
+  ArchiveCourseworkRow,
+  ArchiveCourseworkScoreRow,
+  ArchiveCourseworkStudentRow,
+  ArchiveCourseworkTagRow,
   ArchiveCwClass,
   ArchiveCwMembership,
   ArchiveCwStudent,
   ArchiveCwTag,
-  CourseworkArchiveData,
   CourseworkArchiveManifest,
 } from "../../../../src/types/courseworkArchive.types"
+import { isLegacyCourseworkTree } from "../coursework-transformers/legacyShape"
+import type { AnyCourseworkArchiveData } from "../coursework-transformers/types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 
 export interface ExtractedCourseworkArchive {
   manifest: CourseworkArchiveManifest
-  data: CourseworkArchiveData
+  /** 版が確定していない生データ。現行の形への正規化は変換チェーンが行う */
+  data: AnyCourseworkArchiveData
   tempDir: string
 }
 
@@ -28,6 +36,18 @@ function readJsonFile<T>(dir: string, name: string): T | null {
   const filePath = path.join(dir, name)
   if (!fs.existsSync(filePath)) return null
   return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T
+}
+
+/**
+ * 版の判定に使う配列を、型を主張せずに読む。
+ *
+ * `readJsonFile<T>` は中身を確かめずに T を名乗らせるので、まだ版が判っていない
+ * courseworks.json には使わない。ここでは配列であることだけを実際に確かめ、
+ * 要素の形の判定は型ガード（isLegacyCourseworkTree）に委ねる。
+ */
+function readJsonArray(dir: string, name: string): unknown[] {
+  const parsed = readJsonFile<unknown>(dir, name)
+  return Array.isArray(parsed) ? parsed : []
 }
 
 /**
@@ -62,8 +82,8 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
     }
 
     // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
-    const courseworks = normalizeLegacyClassroomKeys(
-      readJsonFile<ArchiveCourseworkRef[]>(tempDir, "courseworks.json") ?? []
+    const courseworksJson = normalizeLegacyClassroomKeys(
+      readJsonArray(tempDir, "courseworks.json")
     )
     const studentsData =
       readJsonFile<ArchiveCwStudent[]>(tempDir, "students.json") ?? []
@@ -75,13 +95,55 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
     )
     const tagsData = readJsonFile<ArchiveCwTag[]>(tempDir, "tags.json") ?? []
 
+    // 現行の形でなければ旧版の形のまま変換器へ渡す（旧版の知識は変換器が持つ）。
+    // 現行と判った側は、その版の型で読み直す（JSON の型付けは readJsonFile に集約する）。
+    const sections = isLegacyCourseworkTree(courseworksJson)
+      ? { courseworks: courseworksJson }
+      : {
+          courseworks: normalizeLegacyClassroomKeys(
+            readJsonFile<ArchiveCourseworkRow[]>(tempDir, "courseworks.json") ??
+              []
+          ),
+          courseworkClassrooms: normalizeLegacyClassroomKeys(
+            readJsonFile<ArchiveCourseworkClassroomRow[]>(
+              tempDir,
+              "coursework-classrooms.json"
+            ) ?? []
+          ),
+          courseworkTags:
+            readJsonFile<ArchiveCourseworkTagRow[]>(
+              tempDir,
+              "coursework-tags.json"
+            ) ?? [],
+          courseworkStudents:
+            readJsonFile<ArchiveCourseworkStudentRow[]>(
+              tempDir,
+              "coursework-students.json"
+            ) ?? [],
+          courseworkItems:
+            readJsonFile<ArchiveCourseworkItemRow[]>(
+              tempDir,
+              "coursework-items.json"
+            ) ?? [],
+          courseworkLetterScales:
+            readJsonFile<ArchiveCourseworkLetterScaleRow[]>(
+              tempDir,
+              "coursework-letter-scales.json"
+            ) ?? [],
+          courseworkScores:
+            readJsonFile<ArchiveCourseworkScoreRow[]>(
+              tempDir,
+              "coursework-scores.json"
+            ) ?? [],
+        }
+
     return {
       success: true,
       data: {
         manifest,
         data: {
           manifest,
-          courseworks,
+          ...sections,
           studentsData,
           classesData,
           membershipsData,

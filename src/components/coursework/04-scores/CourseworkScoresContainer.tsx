@@ -18,7 +18,7 @@ interface CourseworkScoresContainerProps {
 }
 
 interface ScoreRow {
-  _studentId: string
+  _courseworkStudentId: string
   attendanceNumber: string
   className: string
   studentName: string
@@ -49,7 +49,7 @@ export function CourseworkScoresContainer({
   const tableData = useMemo(() => {
     const data = studentRows.map((row): ScoreRow => {
       const tableRow: ScoreRow = {
-        _studentId: row.studentId,
+        _courseworkStudentId: row.courseworkStudentId,
         attendanceNumber:
           row.attendanceNumber != null ? String(row.attendanceNumber) : "-",
         className: row.className ?? "-",
@@ -184,16 +184,20 @@ export function CourseworkScoresContainer({
       const prev = prevDataRef.current
       const changes: {
         courseworkItemId: string
-        studentId: string
+        courseworkStudentId: string
         patch: CourseworkCellPatch
       }[] = []
 
       const pushPatch = (
         item: CourseworkItemWithLetterScales,
-        studentId: string,
+        courseworkStudentId: string,
         patch: CourseworkCellPatch
       ) => {
-        changes.push({ courseworkItemId: item.id, studentId, patch })
+        changes.push({
+          courseworkItemId: item.id,
+          courseworkStudentId,
+          patch,
+        })
       }
 
       for (let i = 0; i < newData.length; i++) {
@@ -201,7 +205,7 @@ export function CourseworkScoresContainer({
         const oldRow = prev[i]
         if (!oldRow || !newRow) continue
 
-        const studentId = newRow._studentId
+        const courseworkStudentId = newRow._courseworkStudentId
         for (const item of items) {
           const validLabels = new Set(
             item.letterScales.map((letterScale) => letterScale.label)
@@ -213,14 +217,14 @@ export function CourseworkScoresContainer({
             const trimmed = (newRow[valueColumnId] ?? "").trim()
             if (item.inputMode === "letter") {
               if (trimmed === "") {
-                pushPatch(item, studentId, { letterValue: null })
+                pushPatch(item, courseworkStudentId, { letterValue: null })
               } else if (validLabels.has(trimmed)) {
-                pushPatch(item, studentId, { letterValue: trimmed })
+                pushPatch(item, courseworkStudentId, { letterValue: trimmed })
               }
               // 未定義の評価記号は無視
             } else {
               if (trimmed === "") {
-                pushPatch(item, studentId, { score: null })
+                pushPatch(item, courseworkStudentId, { score: null })
               } else {
                 const parsedValue = Number(trimmed)
                 if (
@@ -228,7 +232,7 @@ export function CourseworkScoresContainer({
                   parsedValue >= 0 &&
                   parsedValue <= item.maxScore
                 ) {
-                  pushPatch(item, studentId, { score: parsedValue })
+                  pushPatch(item, courseworkStudentId, { score: parsedValue })
                 }
                 // 範囲外・無効値は無視
               }
@@ -240,11 +244,13 @@ export function CourseworkScoresContainer({
           if (newRow[adjustmentColumnId] !== oldRow[adjustmentColumnId]) {
             const trimmed = (newRow[adjustmentColumnId] ?? "").trim()
             if (trimmed === "") {
-              pushPatch(item, studentId, { adjustment: null })
+              pushPatch(item, courseworkStudentId, { adjustment: null })
             } else {
               const parsedValue = Number(trimmed)
               if (!isNaN(parsedValue) && isFinite(parsedValue)) {
-                pushPatch(item, studentId, { adjustment: parsedValue })
+                pushPatch(item, courseworkStudentId, {
+                  adjustment: parsedValue,
+                })
               }
               // 無効値は無視
             }
@@ -254,7 +260,7 @@ export function CourseworkScoresContainer({
           const reasonColumnId = reasonColId(item.id)
           if (newRow[reasonColumnId] !== oldRow[reasonColumnId]) {
             const reasonValue = (newRow[reasonColumnId] ?? "").trim()
-            pushPatch(item, studentId, {
+            pushPatch(item, courseworkStudentId, {
               adjustmentReason: reasonValue === "" ? null : reasonValue,
             })
           }
@@ -263,7 +269,7 @@ export function CourseworkScoresContainer({
           const commentColumnId = commentColId(item.id)
           if (newRow[commentColumnId] !== oldRow[commentColumnId]) {
             const commentValue = (newRow[commentColumnId] ?? "").trim()
-            pushPatch(item, studentId, {
+            pushPatch(item, courseworkStudentId, {
               comment: commentValue === "" ? null : commentValue,
             })
           }

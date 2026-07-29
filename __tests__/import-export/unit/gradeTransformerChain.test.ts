@@ -11,6 +11,10 @@
 
 import { describe, expect, it } from "vitest"
 
+import {
+  isCurrentCollectedCourseworkData,
+  isLegacyCollectedCourseworkData,
+} from "../../../electron-src/lib/import/coursework-transformers/legacyShape"
 import { transformGradeToLatest } from "../../../electron-src/lib/import/grade-transformers"
 import type {
   GradeArchiveData,
@@ -65,6 +69,12 @@ function buildV1_9_0Archive(): GradeArchiveData {
     },
     courseworkArchive: {
       courseworks: [],
+      courseworkClassrooms: [],
+      courseworkTags: [],
+      courseworkStudents: [],
+      courseworkItems: [],
+      courseworkLetterScales: [],
+      courseworkScores: [],
       studentsData: [],
       classesData: [],
       membershipsData: [],
@@ -330,5 +340,161 @@ describe("transformGradeToLatest: 1.10.0 → 1.11.0（制約ルールの設定JS
       )
     ).toBe(false)
     expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
+  })
+})
+
+/**
+ * v1.11.0 までが実際に書き出していた内包資料の形（入れ子・射影ツリー）。
+ * 点数は人（Student）の uuid を指していた。
+ */
+function buildV1_11_0Archive(): GradeArchiveData {
+  const archive = buildV1_9_0Archive()
+  archive.manifest = { ...manifest, version: "1.11.0" }
+  // 1.9.0 の名残（総合エントリ）を取り除き、内包資料だけが旧形の状態にする
+  archive.boundariesData.boundarySets = []
+  archive.gradeData.gradeOverrides = []
+  archive.courseworkArchive = undefined
+  archive.legacyCourseworkArchive = {
+    courseworks: [
+      {
+        id: "cw-1",
+        name: "第1回レポート",
+        description: null,
+        date: null,
+        classrooms: [],
+        tags: [],
+        students: [{ studentId: "student-kept", customOrder: 0 }],
+        items: [
+          {
+            id: "item-1",
+            name: "提出物",
+            order: 0,
+            maxScore: 100,
+            inputMode: "numeric",
+            letterScales: [],
+            scores: [
+              {
+                studentId: "student-kept",
+                score: 85,
+                letterValue: null,
+                adjustment: null,
+                adjustmentReason: null,
+                comment: null,
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+              {
+                studentId: "student-orphan",
+                score: 40,
+                letterValue: null,
+                adjustment: null,
+                adjustmentReason: null,
+                comment: null,
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    studentsData: [],
+    classesData: [],
+    membershipsData: [],
+    tagsData: [],
+    counts: {
+      courseworks: 1,
+      items: 1,
+      scores: 2,
+      students: 0,
+      classrooms: 0,
+    },
+  }
+  return archive
+}
+
+describe("transformGradeToLatest: 1.11.0 → 1.12.0（内包資料の平坦化）", () => {
+  it("入れ子の内包資料をテーブルごとのセクションへ展開する", () => {
+    const { data } = transformGradeToLatest(buildV1_11_0Archive())
+
+    expect(data.legacyCourseworkArchive).toBeUndefined()
+    expect(data.courseworkArchive!.courseworks).toHaveLength(1)
+    expect(data.courseworkArchive!.courseworkItems).toHaveLength(1)
+    expect(data.courseworkArchive!.courseworkStudents).toHaveLength(1)
+  })
+
+  it("点数が資料の対象者を指し、名簿外の点数は破棄される", () => {
+    const { data, warnings } = transformGradeToLatest(buildV1_11_0Archive())
+
+    const scores = data.courseworkArchive!.courseworkScores
+    expect(scores).toHaveLength(1)
+    expect(scores[0].courseworkStudentId).toBe(
+      data.courseworkArchive!.courseworkStudents[0].id
+    )
+    expect(scores[0].score).toBe("85")
+    expect(warnings.some((warning) => warning.includes("1 件を破棄"))).toBe(
+      true
+    )
+  })
+
+  it("元バージョンを 1.11.0 と報告し、適用した変換と矛盾しない", () => {
+    const { originalVersion, appliedTransformations } = transformGradeToLatest(
+      buildV1_11_0Archive()
+    )
+
+    expect(originalVersion).toBe("1.11.0")
+    expect(appliedTransformations).toContainEqual({
+      from: "1.11.0",
+      to: "1.12.0",
+    })
+  })
+})
+
+/**
+ * 資料を1件も参照していない成績。収集器は内包資料を「空だが形はある」オブジェクトとして
+ * 必ず書き出すので、旧アーカイブの大多数がこの形になる。
+ * 中身（courseworks の要素）で新旧を見分けようとすると空配列で判別できず、
+ * 旧アーカイブが現行の形と誤認されて取り込みが落ちていた。
+ */
+const EMPTY_LEGACY_EMBEDDED = {
+  courseworks: [],
+  studentsData: [],
+  classesData: [],
+  membershipsData: [],
+  tagsData: [],
+  counts: { courseworks: 0, items: 0, scores: 0, students: 0, classrooms: 0 },
+}
+
+describe("内包資料が空の旧アーカイブ", () => {
+  it("現行の形と誤認せず、旧形式として扱う", () => {
+    expect(isLegacyCollectedCourseworkData(EMPTY_LEGACY_EMBEDDED)).toBe(true)
+    expect(isCurrentCollectedCourseworkData(EMPTY_LEGACY_EMBEDDED)).toBe(false)
+  })
+
+  it("現行の形（全セクションが揃っている）は旧形式と誤認しない", () => {
+    const current = {
+      ...EMPTY_LEGACY_EMBEDDED,
+      courseworkClassrooms: [],
+      courseworkTags: [],
+      courseworkStudents: [],
+      courseworkItems: [],
+      courseworkLetterScales: [],
+      courseworkScores: [],
+    }
+    expect(isCurrentCollectedCourseworkData(current)).toBe(true)
+    expect(isLegacyCollectedCourseworkData(current)).toBe(false)
+  })
+
+  it("変換後は全セクションが揃い、取り込み側が undefined を踏まない", () => {
+    const archive = buildV1_11_0Archive()
+    archive.legacyCourseworkArchive = EMPTY_LEGACY_EMBEDDED
+
+    const { data } = transformGradeToLatest(archive)
+
+    expect(data.courseworkArchive!.courseworks).toEqual([])
+    expect(data.courseworkArchive!.courseworkClassrooms).toEqual([])
+    expect(data.courseworkArchive!.courseworkTags).toEqual([])
+    expect(data.courseworkArchive!.courseworkStudents).toEqual([])
+    expect(data.courseworkArchive!.courseworkItems).toEqual([])
+    expect(data.courseworkArchive!.courseworkLetterScales).toEqual([])
+    expect(data.courseworkArchive!.courseworkScores).toEqual([])
   })
 })

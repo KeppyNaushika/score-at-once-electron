@@ -3,7 +3,6 @@
  */
 
 import type {
-  CourseworkArchiveData,
   CourseworkArchiveImportPreview,
   CourseworkArchiveImportResult,
   CourseworkArchiveMatch,
@@ -12,6 +11,7 @@ import type {
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import { transformCourseworkToLatest } from "../coursework-transformers"
+import type { AnyCourseworkArchiveData } from "../coursework-transformers/types"
 import { importCourseworkData } from "./dataCreator"
 import { validateCourseworkManifest } from "./manifestValidator"
 
@@ -27,7 +27,7 @@ export { importCourseworkData } from "./dataCreator"
  * インポート前のプレビュー（資料ごとの照合候補）を作る。
  */
 export async function previewCourseworkImport(
-  data: CourseworkArchiveData
+  data: AnyCourseworkArchiveData
 ): Promise<{
   success: boolean
   preview?: CourseworkArchiveImportPreview
@@ -53,8 +53,12 @@ export async function previewCourseworkImport(
     matches.push({
       archiveId: coursework.id,
       name: coursework.name,
-      itemCount: coursework.items.length,
-      studentCount: coursework.students.length,
+      itemCount: normalized.courseworkItems.filter(
+        (item) => item.courseworkId === coursework.id
+      ).length,
+      studentCount: normalized.courseworkStudents.filter(
+        (courseworkStudent) => courseworkStudent.courseworkId === coursework.id
+      ).length,
       uuidMatch: uuidMatch ?? null,
       nameCandidates,
     })
@@ -74,7 +78,7 @@ export async function previewCourseworkImport(
  * 試験外成績資料アーカイブをインポートする（単体・新規トランザクション）。
  */
 export async function importCourseworkArchive(
-  data: CourseworkArchiveData,
+  data: AnyCourseworkArchiveData,
   options: CourseworkImportOptions = {}
 ): Promise<CourseworkArchiveImportResult> {
   try {

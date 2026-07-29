@@ -200,11 +200,12 @@ export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
 | 1.17.0     | v0.15.x    | ExamStudent.status小文字統一                  |
 | 1.19.0     | v0.16.x    | DeletedRecord tombstone廃止（1.9.0を撤回）    |
 
-**試験外成績資料アーカイブ（.coursework）** — exam-archive と同型の独立アーカイブ。`electron-src/lib/export|import/coursework-archive/`。id一次照合 + 名前マッチング（付加）+ スコア LWW。トランスフォーマー機構あり（`COURSEWORK_CURRENT_VERSION`、初版 1.0.0 は変換器ゼロ）。
+**試験外成績資料アーカイブ（.coursework）** — exam-archive と同型の独立アーカイブ。`electron-src/lib/export|import/coursework-archive/`。id一次照合 + 名前マッチング（付加）+ スコア LWW。トランスフォーマー機構あり（`COURSEWORK_CURRENT_VERSION`）。**版ごとの「アーカイブ全体の型」と旧版の形は `import/coursework-transformers/types.ts` / `legacyShape.ts` が持ち、`src/types/courseworkArchive.types.ts` は現行の形だけを宣言する。**
 
-| バージョン | 変更内容                                          |
-| ---------- | ------------------------------------------------- |
-| 1.0.0      | 初版（独立化）。UUID参照 + full生徒/学級/タグ同梱 |
+| バージョン | 変更内容                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| 1.0.0      | 初版（独立化）。UUID参照 + full生徒/学級/タグ同梱。資料1件を入れ子ツリーへ射影             |
+| 1.1.0      | テーブルごとの平坦なセクションへ。Prisma の行をそのまま持つ。点数が courseworkStudentId へ |
 
 **成績アーカイブ（.grade）の Coursework 内包** — 収集・生成は coursework-archive モジュールへ委譲（二重実装の解消）。
 
@@ -212,6 +213,7 @@ export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
 | ---------- | ----------------------------------------------------------------------------- |
 | 1.4.0      | Coursework を名前ベースで `courseworks.json` に埋め込み（読込互換のみ）       |
 | 1.5.0      | `courseworks.json` を coursework-archive 形式（UUIDベース）へ。旧版は読込互換 |
+| 1.12.0     | 内包資料を coursework 1.1.0（平坦なセクション）へ。旧入れ子形式は読込互換     |
 
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 

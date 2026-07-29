@@ -125,6 +125,21 @@ export async function applyStudentAnswerPlacements(
             )
           }
 
+          // 移動先の受験者も同一試験のものであること。ページと受験者は別々の FK なので、
+          // ページだけ検証しても「試験Aのページに試験Bの受験者の答案」が作れてしまう。
+          const targetExamStudent = await tx.examStudent.findFirst({
+            where: {
+              id: finalExamStudentId,
+              examId: current.examPage.examId,
+            },
+            select: { id: true },
+          })
+          if (!targetExamStudent) {
+            throw new Error(
+              `移動先の受験者が見つかりません: ${finalExamStudentId}`
+            )
+          }
+
           const pageChanged = current.examPageId !== targetPage.id
           if (move.scorePolicy === "carry" && pageChanged) {
             throw new Error(

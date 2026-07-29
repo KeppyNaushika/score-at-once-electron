@@ -6,6 +6,7 @@
  * courseworkItemId で項目単位に参照される（点数そのものを共有・再利用）。
  */
 
+import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import { recordAuditLog } from "./auditLog"
 import {
   resolveCourseworkScope,
@@ -438,22 +439,26 @@ export async function reorderCourseworkItems(
 // CourseworkScore（点数）
 // =============================================================================
 
-/** 評価項目の全点数（生徒情報付き）を取得 */
+/** 評価項目の全点数（資料の対象者・生徒情報付き）を取得 */
 export async function getCourseworkScoresByItemId(courseworkItemId: string) {
   try {
     const scores = await prisma.courseworkScore.findMany({
       where: { courseworkItemId },
       include: {
-        student: {
-          select: {
-            id: true,
-            studentNumber: true,
-            lastName: true,
-            firstName: true,
+        courseworkStudent: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                studentNumber: true,
+                lastName: true,
+                firstName: true,
+              },
+            },
           },
         },
       },
-      orderBy: { student: { studentNumber: "asc" } },
+      orderBy: { courseworkStudent: { student: { studentNumber: "asc" } } },
     })
     return { success: true, scores: serializePrisma(scores) }
   } catch (error) {
@@ -466,20 +471,66 @@ export async function getCourseworkScoresByItemId(courseworkItemId: string) {
 }
 
 /**
+ * 評価項目と対象者が同じ資料に属していることを確かめる。
+ *
+ * FK は「CourseworkItem が実在すること」「CourseworkStudent が実在すること」しか
+ * 保証せず、両者が同じ Coursework に属することは強制しない。食い違ったまま書けると、
+ * 資料 A の項目に資料 B の名簿の生徒の点数がぶら下がり、A の名簿に居ない生徒の点数が
+ * 成績算出に算入される — #962 で塞いだのと同じ穴が別の入口から開く。
+ */
+async function assertSameCoursework(
+  scores: CourseworkScoreUpsertInput[]
+): Promise<void> {
+  const [items, courseworkStudents] = await Promise.all([
+    prisma.courseworkItem.findMany({
+      where: {
+        id: { in: [...new Set(scores.map((s) => s.courseworkItemId))] },
+      },
+      select: { id: true, courseworkId: true },
+    }),
+    prisma.courseworkStudent.findMany({
+      where: {
+        id: { in: [...new Set(scores.map((s) => s.courseworkStudentId))] },
+      },
+      select: { id: true, courseworkId: true },
+    }),
+  ])
+  const courseworkIdByItem = new Map(
+    items.map((item) => [item.id, item.courseworkId])
+  )
+  const courseworkIdByStudent = new Map(
+    courseworkStudents.map((courseworkStudent) => [
+      courseworkStudent.id,
+      courseworkStudent.courseworkId,
+    ])
+  )
+
+  for (const score of scores) {
+    const itemCourseworkId = courseworkIdByItem.get(score.courseworkItemId)
+    const studentCourseworkId = courseworkIdByStudent.get(
+      score.courseworkStudentId
+    )
+    if (!itemCourseworkId || !studentCourseworkId) {
+      throw new Error("評価項目または対象生徒が見つかりません")
+    }
+    if (itemCourseworkId !== studentCourseworkId) {
+      throw new Error("評価項目と対象生徒が別の試験外成績資料に属しています")
+    }
+  }
+}
+
+/**
  * 点数を一括更新（upsert）。各フィールドは optional（セル単位編集対応）。
+ *
+ * 点数の主語は「その資料の対象者」（CourseworkStudent）であり、人（Student）ではない。
+ * 名簿に載っていない生徒の点数は書けない（FK が拒否する）。
  */
 export async function batchUpsertCourseworkScores(
-  scores: {
-    courseworkItemId: string
-    studentId: string
-    score?: number | null
-    letterValue?: string | null
-    adjustment?: number | null
-    adjustmentReason?: string | null
-    comment?: string | null
-  }[]
+  scores: CourseworkScoreUpsertInput[]
 ) {
   try {
+    if (scores.length > 0) await assertSameCoursework(scores)
+
     await prisma.$transaction(
       scores.map((score) => {
         const fields: {
@@ -499,14 +550,14 @@ export async function batchUpsertCourseworkScores(
 
         return prisma.courseworkScore.upsert({
           where: {
-            courseworkItemId_studentId: {
+            courseworkItemId_courseworkStudentId: {
               courseworkItemId: score.courseworkItemId,
-              studentId: score.studentId,
+              courseworkStudentId: score.courseworkStudentId,
             },
           },
           create: {
             courseworkItemId: score.courseworkItemId,
-            studentId: score.studentId,
+            courseworkStudentId: score.courseworkStudentId,
             ...fields,
           },
           update: fields,
@@ -743,6 +794,7 @@ const courseworkRosterAdapter: RosterAdapter = {
     })
     return rows.map((courseworkClassroom) => courseworkClassroom.classroomId)
   },
+  // 名簿行を消せば点数は cascade で落ちる（CourseworkScore は CourseworkStudent の子）
   removeClassroomAndStudents: async (targetId, classroomId, studentIds) => {
     await prisma.$transaction([
       prisma.courseworkStudent.deleteMany({
@@ -804,7 +856,13 @@ export function updateCourseworkStudentOrders(
   )
 }
 
-/** 生徒を個別に削除 */
+/**
+ * 生徒を個別に削除。
+ *
+ * 点数（CourseworkScore）は CourseworkStudent の onDelete:Cascade 子なので DB が消す。
+ * ここで手書きの DELETE を足してはいけない（消し忘れが孤児になり、資料の画面には
+ * 現れないのに成績算出でだけ算入される、という #962 の穴が再発する）。
+ */
 export async function removeStudentsFromCoursework(
   courseworkId: string,
   studentIds: string[]
