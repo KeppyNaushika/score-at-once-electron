@@ -10,16 +10,22 @@
  * 旧 .grade（v1.4.0、名前ベース埋め込み）の読込互換は grade 側の legacy 経路で維持。
  */
 
-/** アーカイブバージョン（追加時にユニオンへ足す） */
-export type CourseworkArchiveVersion = "1.0.0"
+/**
+ * アーカイブバージョン（追加時にユニオンへ足す）
+ *
+ * - 1.0.0: 初版（独立化）。資料1件を入れ子ツリーへ射影して持っていた
+ * - 1.1.0: テーブルごとの平坦なセクションへ変更し、各行を Prisma の行のまま持つ。
+ *   点数の参照が studentId → courseworkStudentId（#962 Phase B）
+ */
+export type CourseworkArchiveVersion = "1.0.0" | "1.1.0"
 /** 現行アーカイブバージョン */
-export const COURSEWORK_CURRENT_VERSION: CourseworkArchiveVersion = "1.0.0"
+export const COURSEWORK_CURRENT_VERSION: CourseworkArchiveVersion = "1.1.0"
 /** 読込可能な最小バージョン */
 export const COURSEWORK_MIN_SUPPORTED_VERSION: CourseworkArchiveVersion =
   "1.0.0"
 /** サポート対象バージョン（昇順） */
 export const COURSEWORK_SUPPORTED_VERSIONS: readonly CourseworkArchiveVersion[] =
-  ["1.0.0"] as const
+  ["1.0.0", "1.1.0"] as const
 
 export interface CourseworkArchiveManifest {
   version: string
@@ -34,35 +40,96 @@ export interface CourseworkArchiveManifest {
   }
 }
 
-/** 名簿・学級・タグ参照は UUID で持つ（名前は studentsData 等から逆引き可能） */
-export interface ArchiveCourseworkRef {
+// =============================================================================
+// v1.1.0: テーブルごとの平坦なセクション（Prisma の行をそのまま持つ）
+//
+// Prisma の型のうち JSON にそのまま載らないものだけを、JSON.stringify と同じ規則で
+// 文字列にする（DateTime → ISO 文字列、Decimal → decimal.js の toJSON と同じ文字列）。
+// 射影・詰め替えはしない。列を足したらここにも足すこと。
+// =============================================================================
+
+/** Coursework の行 */
+export interface ArchiveCourseworkRow {
   id: string
   name: string
   description: string | null
   date: string | null
-  classrooms: { classroomId: string; order: number }[]
-  tags: { tagId: string }[]
-  students: { studentId: string; customOrder: number | null }[]
-  items: ArchiveCourseworkItemRef[]
+  createdAt: string
+  updatedAt: string
 }
 
-export interface ArchiveCourseworkItemRef {
+/** CourseworkClassroom（資料×学級）の行 */
+export interface ArchiveCourseworkClassroomRow {
   id: string
+  courseworkId: string
+  classroomId: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** CourseworkTag（資料×タグ）の行 */
+export interface ArchiveCourseworkTagRow {
+  id: string
+  courseworkId: string
+  tagId: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** CourseworkStudent（資料の対象者＝名簿）の行 */
+export interface ArchiveCourseworkStudentRow {
+  id: string
+  courseworkId: string
+  studentId: string
+  customOrder: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** CourseworkItem（評価項目）の行 */
+export interface ArchiveCourseworkItemRow {
+  id: string
+  courseworkId: string
   name: string
   order: number
-  maxScore: number
+  /** Decimal */
+  maxScore: string
   inputMode: string
-  letterScales: { label: string; score: number; order: number }[]
-  scores: ArchiveCourseworkScoreRef[]
+  createdAt: string
+  updatedAt: string
 }
 
-export interface ArchiveCourseworkScoreRef {
-  studentId: string
-  score: number | null
+/** CourseworkLetterScale（文字評価→点数の変換表）の行 */
+export interface ArchiveCourseworkLetterScaleRow {
+  id: string
+  courseworkItemId: string
+  label: string
+  /** Decimal */
+  score: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** CourseworkScore（対象者×評価項目の点数）の行 */
+export interface ArchiveCourseworkScoreRow {
+  id: string
+  courseworkItemId: string
+  /**
+   * 資料の対象者（CourseworkStudent.id）。取り込み先では名簿行の id が別物になるため、
+   * import 時に「アーカイブの対象者 id → 取り込み先の対象者 id」へ解決する。
+   * 名簿に対応行が無い点数（旧アーカイブに残りうる孤児）は破棄する。
+   */
+  courseworkStudentId: string
+  /** Decimal */
+  score: string | null
   letterValue: string | null
-  adjustment: number | null
+  /** Decimal */
+  adjustment: string | null
   adjustmentReason: string | null
   comment: string | null
+  createdAt: string
   /** LWW 競合解決に使用 */
   updatedAt: string
 }
@@ -107,23 +174,37 @@ export interface ArchiveCwTag {
   color: string | null
 }
 
-/** アーカイブ全体（manifest + 各セクション）。grade-archive へ内包する際もこの形を流用する。 */
-export interface CourseworkArchiveData {
-  manifest: CourseworkArchiveManifest
-  courseworks: ArchiveCourseworkRef[]
+/**
+ * 資料本体のセクション群（テーブルごとに平坦）。
+ * grade-archive へ内包する際もこの形を流用する。
+ */
+export interface CourseworkSections {
+  courseworks: ArchiveCourseworkRow[]
+  courseworkClassrooms: ArchiveCourseworkClassroomRow[]
+  courseworkTags: ArchiveCourseworkTagRow[]
+  courseworkStudents: ArchiveCourseworkStudentRow[]
+  courseworkItems: ArchiveCourseworkItemRow[]
+  courseworkLetterScales: ArchiveCourseworkLetterScaleRow[]
+  courseworkScores: ArchiveCourseworkScoreRow[]
+}
+
+/** 外部参照（生徒・学級・所属・タグ）の full レコード */
+export interface CourseworkExternalSections {
   studentsData: ArchiveCwStudent[]
   classesData: ArchiveCwClass[]
   membershipsData: ArchiveCwMembership[]
   tagsData: ArchiveCwTag[]
 }
 
+/** アーカイブ全体（manifest + 各セクション） */
+export interface CourseworkArchiveData
+  extends CourseworkSections, CourseworkExternalSections {
+  manifest: CourseworkArchiveManifest
+}
+
 /** dataCollector が返す収集結果（manifest を除いた本体 + counts） */
-export interface CollectedCourseworkData {
-  courseworks: ArchiveCourseworkRef[]
-  studentsData: ArchiveCwStudent[]
-  classesData: ArchiveCwClass[]
-  membershipsData: ArchiveCwMembership[]
-  tagsData: ArchiveCwTag[]
+export interface CollectedCourseworkData
+  extends CourseworkSections, CourseworkExternalSections {
   counts: CourseworkArchiveManifest["counts"]
 }
 
@@ -192,28 +273,6 @@ export interface CourseworkArchiveImportResult {
   error?: string
 }
 
-// =============================================================================
-// バージョントランスフォーマー
-// =============================================================================
-
-export interface CourseworkTransformResult {
-  data: CourseworkArchiveData
-  warnings: string[]
-}
-
-export interface CourseworkVersionTransformer {
-  readonly fromVersion: CourseworkArchiveVersion
-  readonly toVersion: CourseworkArchiveVersion
-  transform(data: CourseworkArchiveData): CourseworkTransformResult
-}
-
-export interface CourseworkChainTransformResult {
-  data: CourseworkArchiveData
-  originalVersion: CourseworkArchiveVersion
-  finalVersion: CourseworkArchiveVersion
-  appliedTransformations: {
-    from: CourseworkArchiveVersion
-    to: CourseworkArchiveVersion
-  }[]
-  warnings: string[]
-}
+// バージョン変換の型（旧版の形・変換器・チェーン）は
+// electron-src/lib/import/coursework-transformers/types.ts が持つ。
+// このファイルは現行の形だけを宣言する。

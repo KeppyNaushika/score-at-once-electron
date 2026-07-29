@@ -94,8 +94,12 @@ export async function previewGradeArchiveImport(
     (coursework) => ({
       id: coursework.id,
       name: coursework.name,
-      itemCount: coursework.items.length,
-      studentCount: coursework.students.length,
+      itemCount: (courseworkArchive?.courseworkItems ?? []).filter(
+        (item) => item.courseworkId === coursework.id
+      ).length,
+      studentCount: (courseworkArchive?.courseworkStudents ?? []).filter(
+        (courseworkStudent) => courseworkStudent.courseworkId === coursework.id
+      ).length,
     })
   )
 
@@ -329,11 +333,17 @@ export async function importGradeArchive(
           for (const [archiveItemId, actualId] of cwResult.itemIdMap) {
             itemIdToActual.set(archiveItemId, actualId)
           }
-          for (const coursework of data.courseworkArchive.courseworks) {
-            for (const item of coursework.items) {
-              const actual = cwResult.itemIdMap.get(item.id)
-              if (actual)
-                itemNameToActual.set(`${coursework.name}:${item.name}`, actual)
+          const courseworkNameById = new Map(
+            data.courseworkArchive.courseworks.map((coursework) => [
+              coursework.id,
+              coursework.name,
+            ])
+          )
+          for (const item of data.courseworkArchive.courseworkItems) {
+            const actual = cwResult.itemIdMap.get(item.id)
+            const courseworkName = courseworkNameById.get(item.courseworkId)
+            if (actual && courseworkName) {
+              itemNameToActual.set(`${courseworkName}:${item.name}`, actual)
             }
           }
         }

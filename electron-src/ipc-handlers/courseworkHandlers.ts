@@ -4,6 +4,7 @@
 
 import { dialog, ipcMain } from "electron"
 
+import type { CourseworkScoreUpsertInput } from "../../src/types/coursework.types"
 import type {
   CourseworkImportDecisions,
   CourseworkMatchingMethod,
@@ -131,17 +132,7 @@ export function setupCourseworkHandlers(): void {
 
   registerHandler(
     "coursework:batchUpsertScores",
-    async (
-      scores: {
-        courseworkItemId: string
-        studentId: string
-        score?: number | null
-        letterValue?: string | null
-        adjustment?: number | null
-        adjustmentReason?: string | null
-        comment?: string | null
-      }[]
-    ) => {
+    async (scores: CourseworkScoreUpsertInput[]) => {
       return batchUpsertCourseworkScores(scores)
     }
   )

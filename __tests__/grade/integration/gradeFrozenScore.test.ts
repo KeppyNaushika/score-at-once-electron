@@ -70,10 +70,13 @@ async function buildFixture(): Promise<Fixture> {
       order: 0,
     },
   })
+  const courseworkStudent = await testPrisma.courseworkStudent.create({
+    data: { courseworkId: coursework.id, studentId: student.id },
+  })
   await testPrisma.courseworkScore.create({
     data: {
       courseworkItemId: courseworkItem.id,
-      studentId: student.id,
+      courseworkStudentId: courseworkStudent.id,
       score: 80,
     },
   })
@@ -146,7 +149,7 @@ async function updateSourceScore(
   await testPrisma.courseworkScore.updateMany({
     where: {
       courseworkItemId: fixture.courseworkItemId,
-      studentId: fixture.studentId,
+      courseworkStudent: { studentId: fixture.studentId },
     },
     data: { score },
   })

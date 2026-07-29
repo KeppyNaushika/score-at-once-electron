@@ -6,6 +6,7 @@ import {
   resolveExamStudentLabel,
 } from "./auditScope"
 import prisma from "./client"
+import { assertCropRegionsInSameExam } from "./examScopeGuard"
 
 /**
  * 採点対象が既に無いことを表す機械可読な理由コード。
@@ -269,6 +270,14 @@ export const getQuestionScoreById = async (id: string) => {
  */
 export const createQuestionScore = async (data: CreateQuestionScoreData) => {
   try {
+    // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
+    await assertCropRegionsInSameExam([
+      {
+        cropRegionId: data.cropRegionId,
+        examStudentId: data.examStudentId,
+      },
+    ])
+
     // 同じ生徒・設問・採点者の組み合わせで既存レコードをチェック
     const existing = await prisma.questionScore.findFirst({
       where: {
@@ -667,6 +676,9 @@ export async function batchUpdateQuestionScores(
 ): Promise<{ success: boolean; updatedCount: number; error?: string }> {
   try {
     let updatedCount = 0
+
+    // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
+    await assertCropRegionsInSameExam(entries)
 
     // トランザクション内で一括処理
     await prisma.$transaction(async (tx) => {

@@ -2,6 +2,7 @@
  * 成績算出アーカイブ(.grade)の型定義
  */
 
+import type { LegacyCollectedCourseworkData } from "../../electron-src/lib/import/coursework-transformers/legacyShape"
 import type {
   CollectedCourseworkData,
   CourseworkImportDecisions,
@@ -39,10 +40,16 @@ export interface GradeArchiveData {
    */
   courseworks?: ArchiveCoursework[]
   /**
-   * v1.5.0+: 試験外成績資料を coursework-archive と同じ UUID ベースの形で内包する。
-   * 収集・生成ロジックは独立 coursework モジュールへ委譲（二重実装の解消）。
+   * v1.12.0+: 試験外成績資料を coursework-archive と同じ形（テーブルごとの平坦な
+   * セクション）で内包する。収集・生成ロジックは独立 coursework モジュールへ委譲。
    */
   courseworkArchive?: CollectedCourseworkData
+  /**
+   * v1.5.0〜1.11.0 が内包していた入れ子・射影形式の資料データ。
+   * 形の定義は変換器側（coursework-transformers）が持ち、
+   * V1_11_0_to_V1_12_0 が courseworkArchive へ展開する。
+   */
+  legacyCourseworkArchive?: LegacyCollectedCourseworkData
   boundariesData: ArchiveBoundariesData
 }
 
@@ -385,7 +392,8 @@ export type GradeArchiveVersion =
   | "1.9.0"
   | "1.10.0"
   | "1.11.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.11.0"
+  | "1.12.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.12.0"
 
 export interface GradeTransformResult {
   data: GradeArchiveData

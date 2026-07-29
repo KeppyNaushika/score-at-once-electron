@@ -104,7 +104,7 @@ export function CourseworkResultsContainer({
                 .filter((comment): comment is string => comment != null)
 
               return (
-                <TableRow key={row.studentId}>
+                <TableRow key={row.courseworkStudentId}>
                   <TableCell className="text-center text-sm">
                     {row.attendanceNumber != null ? row.attendanceNumber : "-"}
                   </TableCell>

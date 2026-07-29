@@ -69,8 +69,28 @@ export async function createCourseworkArchive(
       archive.append(JSON.stringify(manifest, null, 2), {
         name: "manifest.json",
       })
+      // テーブルごとに1ファイル（v1.1.0）。旧 v1.0.0 は courseworks.json に
+      // 入れ子ツリーを1本だけ書いていた
       archive.append(JSON.stringify(data.courseworks, null, 2), {
         name: "courseworks.json",
+      })
+      archive.append(JSON.stringify(data.courseworkClassrooms, null, 2), {
+        name: "coursework-classrooms.json",
+      })
+      archive.append(JSON.stringify(data.courseworkTags, null, 2), {
+        name: "coursework-tags.json",
+      })
+      archive.append(JSON.stringify(data.courseworkStudents, null, 2), {
+        name: "coursework-students.json",
+      })
+      archive.append(JSON.stringify(data.courseworkItems, null, 2), {
+        name: "coursework-items.json",
+      })
+      archive.append(JSON.stringify(data.courseworkLetterScales, null, 2), {
+        name: "coursework-letter-scales.json",
+      })
+      archive.append(JSON.stringify(data.courseworkScores, null, 2), {
+        name: "coursework-scores.json",
       })
       archive.append(JSON.stringify(data.studentsData, null, 2), {
         name: "students.json",

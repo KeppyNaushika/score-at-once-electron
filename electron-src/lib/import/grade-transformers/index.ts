@@ -23,13 +23,21 @@ import type {
   GradeChainTransformResult,
 } from "../../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../../src/types/gradeArchive.types"
+import { isLegacyCollectedCourseworkData } from "../coursework-transformers/legacyShape"
 import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 import { V1_9_0_to_V1_10_0_Transformer } from "./V1_9_0_to_V1_10_0"
 import { V1_10_0_to_V1_11_0_Transformer } from "./V1_10_0_to_V1_11_0"
+import { V1_11_0_to_V1_12_0_Transformer } from "./V1_11_0_to_V1_12_0"
 
 const EMPTY_COURSEWORK_ARCHIVE: CollectedCourseworkData = {
   courseworks: [],
+  courseworkClassrooms: [],
+  courseworkTags: [],
+  courseworkStudents: [],
+  courseworkItems: [],
+  courseworkLetterScales: [],
+  courseworkScores: [],
   studentsData: [],
   classesData: [],
   membershipsData: [],
@@ -41,6 +49,7 @@ const v1_3_0 = new V1_3_0_to_V1_4_0_Transformer()
 const v1_4_0 = new V1_4_0_to_V1_5_0_Transformer()
 const v1_9_0 = new V1_9_0_to_V1_10_0_Transformer()
 const v1_10_0 = new V1_10_0_to_V1_11_0_Transformer()
+const v1_11_0 = new V1_11_0_to_V1_12_0_Transformer()
 
 /**
  * 総合（overall）の名残を持つか。境界セット・手動上書きのどちらかに targetType があるか、
@@ -84,6 +93,11 @@ function detectOriginalVersion(data: GradeArchiveData): GradeArchiveVersion {
   if (hasManualDataSource(data) || data.manualScoresData) return "1.3.0"
   if (hasOverallResidue(data)) return "1.9.0"
   if (hasLegacyConstraintConfig(data)) return "1.10.0"
+  // 内包資料が入れ子形式なら 1.5.0〜1.11.0 のいずれか。この形だけでは区別できないので
+  // 上限の 1.11.0 と報告する（既存の粒度と同じ）
+  if (isLegacyCollectedCourseworkData(data.legacyCourseworkArchive)) {
+    return "1.11.0"
+  }
   return GRADE_CURRENT_VERSION
 }
 
@@ -100,26 +114,24 @@ export function transformGradeToLatest(
   const appliedTransformations: GradeChainTransformResult["appliedTransformations"] =
     []
 
+  const hasCoursework = (candidate: GradeArchiveData) =>
+    Boolean(candidate.courseworkArchive || candidate.legacyCourseworkArchive)
+
   // 1.3.0 → 1.4.0: manual 型の外部成績を名前ベース資料へ
   //   点数の有無に関わらず、manual 型 DataSource が残らないよう変換する。
-  if (!current.courseworkArchive && hasManualDataSource(current)) {
+  if (!hasCoursework(current) && hasManualDataSource(current)) {
     const result = v1_3_0.transform(current)
     current = result.data
     warnings.push(...result.warnings)
     appliedTransformations.push({ from: "1.3.0", to: "1.4.0" })
   }
 
-  // 1.4.0 → 1.5.0: 名前ベース資料を courseworkArchive 形式へ（空配列でも変換して統一）
-  if (!current.courseworkArchive && current.courseworks !== undefined) {
+  // 1.4.0 → 1.5.0: 名前ベース資料を入れ子形式の内包資料へ（空配列でも変換して統一）
+  if (!hasCoursework(current) && current.courseworks !== undefined) {
     const result = v1_4_0.transform(current)
     current = result.data
     warnings.push(...result.warnings)
     appliedTransformations.push({ from: "1.4.0", to: "1.5.0" })
-  }
-
-  // 外部成績を持たない旧アーカイブは空の courseworkArchive を補う
-  if (!current.courseworkArchive) {
-    current = { ...current, courseworkArchive: EMPTY_COURSEWORK_ARCHIVE }
   }
 
   // 1.9.0 → 1.10.0: 総合（overall）の撤去。移し先が無いので破棄し warning で知らせる
@@ -136,6 +148,19 @@ export function transformGradeToLatest(
     current = result.data
     warnings.push(...result.warnings)
     appliedTransformations.push({ from: "1.10.0", to: "1.11.0" })
+  }
+
+  // 1.11.0 → 1.12.0: 内包資料をテーブルごとの平坦なセクションへ展開
+  if (isLegacyCollectedCourseworkData(current.legacyCourseworkArchive)) {
+    const result = v1_11_0.transform(current)
+    current = result.data
+    warnings.push(...result.warnings)
+    appliedTransformations.push({ from: "1.11.0", to: "1.12.0" })
+  }
+
+  // 外部成績を持たない旧アーカイブは空の courseworkArchive を補う
+  if (!current.courseworkArchive) {
+    current = { ...current, courseworkArchive: EMPTY_COURSEWORK_ARCHIVE }
   }
 
   // マニフェストを現行バージョンへ

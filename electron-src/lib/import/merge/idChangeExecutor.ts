@@ -66,7 +66,11 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       }),
   },
   {
-    // UNIQUE([courseworkId, studentId]) があるため移行先の重複を回避しつつ更新する
+    // UNIQUE([courseworkId, studentId]) があるため移行先の重複を回避しつつ更新する。
+    //
+    // 点数（CourseworkScore）は CourseworkStudent の onDelete:Cascade 子なので、
+    // 重複行をそのまま delete すると点数が道連れになる。移行先に同じ評価項目の点数が
+    // 無いものは先に付け替え、衝突するものだけを（移行先の値を残して）捨てる。
     model: "CourseworkStudent",
     move: async (tx, from, to) => {
       const rows = await tx.courseworkStudent.findMany({
@@ -79,43 +83,34 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
             studentId: to,
           },
         })
-        if (duplicate) {
-          await tx.courseworkStudent.delete({
-            where: { id: courseworkStudent.id },
-          })
-        } else {
+        if (!duplicate) {
           await tx.courseworkStudent.update({
             where: { id: courseworkStudent.id },
             data: { studentId: to },
           })
+          continue
         }
-      }
-    },
-  },
-  {
-    // UNIQUE([courseworkItemId, studentId]) があるため移行先の重複を回避しつつ更新する
-    model: "CourseworkScore",
-    move: async (tx, from, to) => {
-      const rows = await tx.courseworkScore.findMany({
-        where: { studentId: from },
-      })
-      for (const courseworkScore of rows) {
-        const duplicate = await tx.courseworkScore.findFirst({
-          where: {
-            courseworkItemId: courseworkScore.courseworkItemId,
-            studentId: to,
-          },
+
+        const scores = await tx.courseworkScore.findMany({
+          where: { courseworkStudentId: courseworkStudent.id },
         })
-        if (duplicate) {
-          await tx.courseworkScore.delete({
-            where: { id: courseworkScore.id },
+        for (const courseworkScore of scores) {
+          const conflicting = await tx.courseworkScore.findFirst({
+            where: {
+              courseworkItemId: courseworkScore.courseworkItemId,
+              courseworkStudentId: duplicate.id,
+            },
           })
-        } else {
+          if (conflicting) continue // 移行先の点数を残す（衝突分は下の delete で cascade 削除）
           await tx.courseworkScore.update({
             where: { id: courseworkScore.id },
-            data: { studentId: to },
+            data: { courseworkStudentId: duplicate.id },
           })
         }
+
+        await tx.courseworkStudent.delete({
+          where: { id: courseworkStudent.id },
+        })
       }
     },
   },

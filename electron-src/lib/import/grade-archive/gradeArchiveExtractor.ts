@@ -11,6 +11,11 @@ import type {
   GradeArchiveData,
   GradeArchiveManifest,
 } from "../../../../src/types/gradeArchive.types"
+import {
+  isCurrentCollectedCourseworkData,
+  isLegacyCollectedCourseworkData,
+  type LegacyCollectedCourseworkData,
+} from "../coursework-transformers/legacyShape"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 
 // archiver で作った ZIP を展開するために unzipper を使用
@@ -53,18 +58,25 @@ export async function extractGradeArchive(
       files["boundaries.json"] ?? '{"boundarySets":[]}'
     )
     // 試験外成績資料の埋め込み。
-    //   v1.5.0+: courseworks.json は coursework-archive 形式のオブジェクト（UUID ベース）。
+    //   v1.12.0+: courseworks.json は coursework-archive 形式（テーブルごとの平坦なセクション）。
+    //   v1.5.0〜1.11.0: 同じくオブジェクトだが入れ子・射影形式。変換器が展開する。
     //   v1.4.0 : courseworks.json は名前ベースの ArchiveCoursework[] 配列。
     let courseworks: ArchiveCoursework[] | undefined
     let courseworkArchive: CollectedCourseworkData | undefined
+    let legacyCourseworkArchive: LegacyCollectedCourseworkData | undefined
     if (files["courseworks.json"]) {
       const parsed = normalizeLegacyClassroomKeys(
         JSON.parse(files["courseworks.json"])
       )
+      // 現行の形は「全セクションが揃っていること」を実際に確かめてから名乗らせる。
+      // 中身で新旧を見分けようとすると、資料を1件も参照していない成績（内包資料が
+      // 空で書き出される。旧アーカイブの大多数がこれ）を判別できない。
       if (Array.isArray(parsed)) {
         courseworks = parsed
-      } else if (parsed && typeof parsed === "object") {
+      } else if (isCurrentCollectedCourseworkData(parsed)) {
         courseworkArchive = parsed
+      } else if (isLegacyCollectedCourseworkData(parsed)) {
+        legacyCourseworkArchive = parsed
       }
     }
     // 旧 v1.3.0 以前: manual-scores.json があれば後方互換用に読む
@@ -82,6 +94,7 @@ export async function extractGradeArchive(
         boundariesData,
         courseworks,
         courseworkArchive,
+        legacyCourseworkArchive,
         manualScoresData,
       },
     }

@@ -387,3 +387,73 @@ transformer の `warnings` に件数を載せる（2026-07-28 確定）。
 経路も `rawScoreCalculator.ts:116` の1本なので小さい（20 ファイル前後）。Phase C は grade 3 テーブルに
 加えて §3.3 の Map 解消（`absentEstimation.ts` の 9 引数を含む）とセル実体化が乗るため、
 Phase A と同等かそれ以上になる。
+
+## 12. Phase B の実施結果（2026-07-29）
+
+**完了。** `CourseworkScore` を `courseworkStudentId` へ配線変更した。見立てどおり小さく収まった。
+
+計画から外れた点・追加で判明した点:
+
+- **`.coursework` を入れ子の射影ツリーから、テーブルごとの平坦なセクションへ作り直した**
+  （coursework 1.1.0 / grade 1.12.0）。当初は「名簿に id が無いので点数の参照だけ変えると
+  変換器が id を作る羽目になる」として形状据え置きを提案したが、OWNER 裁定により
+  **exam-archive と揃え、Prisma のクエリが返した行をそのまま JSON に持つ**方針とした。
+  - 収集は射影しない。JSON に載らない型だけを `JSON.stringify` と同じ規則で文字列にする
+    （DateTime → ISO 文字列、Decimal → 文字列。exam-archive の `partialScore` と同じ）
+  - 旧 1.0.0 の結合行（学級・タグ・名簿・点数・変換表）は id を持たないが、いずれも
+    `@@unique` を持つ中間テーブルなので **自然キーから id を組み立てる**
+    （`deterministicId.ts` と同じ規則。同じアーカイブを何度読んでも同じ id ＝冪等）。
+    組み立てた id はアーカイブ内の結合キーとしてのみ使い、DB へは書き込まない
+  - 旧形式に無い `createdAt`/`updatedAt` は復元できないため下限値を入れ、warning で伝える
+- **旧版の形の知識は変換器ディレクトリへ閉じ込めた。** `src/types/courseworkArchive.types.ts`
+  は現行の形だけを宣言し、`coursework-transformers/types.ts` が版ごとの
+  「アーカイブ全体の型」（`CourseworkArchiveDataV1_0_0`）と変換器・チェーンの型を持つ。
+  変換器は `V1_0_0 → V1_1_0` として型付けされ、`unknown` もキャストも使っていない
+  （版が変わらない外部参照セクションは共有し、実際に変わった部分だけ版ごとに書く）
+- **旧アーカイブ内の孤児は破棄し、資料ごとに1本の警告へまとめた。** 従来は点数1件ごとに
+  警告を積んでいたため、孤児が多いアーカイブでは警告が溢れていた
+- **`idChangeExecutor` の `CourseworkStudent` mover が data-loss 経路になっていた。**
+  `CourseworkScore` mover は Student 直結ではなくなったので消えるが、`CourseworkStudent` の
+  重複行を `delete` する既存分岐が cascade で点数を道連れにする。移行先に同じ評価項目の
+  点数が無いものを先に付け替えてから delete するようにして、旧来の
+  「移行先の点数を残し、衝突した元の点数を捨てる」挙動を保った（`project_idchange_cascade_hazard`）
+- **IPC の点数 upsert 入力が 4 層（renderer / preload / handler / DB 層）で同じ形を
+  重複定義していた。** Phase A で踏んだ「余剰プロパティ検査が効かず 1 層直し忘れても
+  typecheck が通る」型の罠なので、`CourseworkScoreUpsertInput` として 1 箇所に集約した
+- **`prisma.updateMany` の `where` は余剰プロパティ検査が効かない。**
+  `gradeFrozenScore.test.ts` の `where: { studentId }` は typecheck を通り、実行時にだけ
+  `PrismaClientValidationError` で落ちた。`findMany`/`create` は捕まえるので油断しやすい
+
+追加したテスト:
+
+- `__tests__/coursework/courseworkCrud.test.ts` — 資料から生徒を外すと点数も消え、
+  他生徒は巻き添えにならず、再追加しても復元されない
+- `__tests__/migration/rewireCourseworkScoreToCourseworkStudent.test.ts` — 付け替え・
+  孤児破棄・AuditLog 記録・`RENAME TO` 後の FK 参照名
+- `__tests__/grade/integration/gradeCourseworkStudentScope.test.ts` — 資料から外した生徒の
+  点数が成績算出に算入されないこと
+- `cascadeCoverage.test.ts` に「`CourseworkScore` の親は `CourseworkStudent`・Student 直結ではない」
+- `__tests__/import-export/unit/courseworkTransformerChain.test.ts` — 1.0.0 → 1.1.0 の展開・
+  点数の付け替え・孤児破棄・冪等性・version 偽装時の形状ベース下方補正
+- `gradeTransformerChain.test.ts` に 1.11.0 → 1.12.0（内包資料の平坦化）の3本
+
+- **採点対象と受験者・対象者が同じ親に属することを、書き込みの入口で検査するようにした。**
+  FK は「それぞれが実在すること」しか保証せず、両者が同じ Exam / Coursework に属することは
+  強制されない。id はどちらも string なので取り違えてもコンパイルが通り、書けてしまうと
+  「その試験の受験者一覧に居ない生徒の得点」が成績算出に算入される — §2.3 の非対称が
+  別の入口から復活する。`examScopeGuard.ts` に集約し、Phase A で残していた試験側
+  （`QuestionScore` / `ScoreDecision` / `CompoundAnswerScore` / `StudentAnswerImage`）も
+  併せて塞いだ。`initializeScoringRecords` だけは採点領域も受験者も同じ `examId` から
+  引くため構造的に安全で、検査を足していない（その旨を doc コメントに明記）
+  - **守れるのはアプリのコードが書く経路だけ。** NAS 同期はライブラリから DB へ直接書く。
+    ただし同期は行単位で運ぶため食い違ったペアを新たに作ることは無い（`cropRegionId` と
+    `examStudentId` は同じ 1 行にあり、列ごとのマージはしていない）。同期で起こりうるのは
+    参照先が消えた行が残ること
+
+**未着手のまま残した項目**:
+
+- **資料・成績の名簿からの生徒削除には確認ダイアログが無い。** 試験（05）は
+  `StudentRemovalConfirmModal` で破棄を明示しているが、`RosterTable` の `enableRemove` は
+  無確認で削除する（`slots.onBeforeRemove` は用意されているだけで利用者ゼロ）。
+  Phase B で削除が破壊的になったため、確認の必要性が上がった。ただし grade の名簿も
+  同じ形なので、Phase C でまとめて入れる方が一貫する

@@ -68,8 +68,11 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
               await window.electronAPI.coursework.getScores(itemId)
             const scores = scoreResult.success ? (scoreResult.scores ?? []) : []
             enteredByItem[itemId] = scores.filter(
+              // 成績の対象生徒は人（Student）で数えるので、対象者から生徒へ1段辿る
               (courseworkScore) =>
-                gradeStudentIds.has(courseworkScore.studentId) &&
+                gradeStudentIds.has(
+                  courseworkScore.courseworkStudent.studentId
+                ) &&
                 (courseworkScore.score !== null ||
                   courseworkScore.letterValue !== null)
             ).length

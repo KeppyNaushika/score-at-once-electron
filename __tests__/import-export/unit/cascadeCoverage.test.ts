@@ -108,3 +108,23 @@ describe("採点層の親は ExamStudent（#962 の再発防止）", () => {
     }
   })
 })
+
+/**
+ * 試験外成績資料の点数が「その資料の対象者」の子であることの固定（#962 Phase B）。
+ *
+ * 採点層（ExamStudent）と同じ穴が Coursework にもあった。名簿から生徒を外しても
+ * 点数は消えず、資料の画面には現れないのに成績算出でだけ算入されていた。
+ */
+describe("資料の点数の親は CourseworkStudent（#962 の再発防止）", () => {
+  it("CourseworkScore は CourseworkStudent の onDelete:Cascade 子である", () => {
+    expect(cascadeChildrenFromSchema("CourseworkStudent")).toEqual([
+      "CourseworkScore",
+    ])
+  })
+
+  it("CourseworkScore は Student 直結ではない", () => {
+    expect(cascadeChildrenFromSchema("Student")).not.toContain(
+      "CourseworkScore"
+    )
+  })
+})

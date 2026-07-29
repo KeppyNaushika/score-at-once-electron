@@ -6,6 +6,7 @@ import {
   resolveExamStudentLabel,
 } from "./auditScope"
 import prisma from "./client"
+import { assertCropRegionsInSameExam } from "./examScopeGuard"
 
 /** verdict コードを日本語表示に変換（監査ログ差分用） */
 const verdictLabel = (verdict: string | null | undefined): string => {
@@ -102,6 +103,14 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
       data.score !== null && data.score !== undefined
         ? new Decimal(data.score)
         : null
+
+    // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
+    await assertCropRegionsInSameExam([
+      {
+        cropRegionId: data.cropRegionId,
+        examStudentId: data.examStudentId,
+      },
+    ])
 
     // 差分記録用に変更前の確定を取得
     const previous = await prisma.scoreDecision.findUnique({

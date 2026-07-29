@@ -13,6 +13,7 @@ import type {
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByPage } from "./auditScope"
 import prisma from "./client"
+import { assertCompoundAnswersInSameExam } from "./examScopeGuard"
 
 export type CompoundAnswerWithMembers = CompoundAnswer & {
   members: (CompoundAnswerMember & {
@@ -166,6 +167,14 @@ export async function upsertCompoundAnswerScore(data: {
   status: string
   partialScore?: Prisma.Decimal | null
 }): Promise<CompoundAnswerScore> {
+  // 複合回答と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
+  await assertCompoundAnswersInSameExam([
+    {
+      compoundAnswerId: data.compoundAnswerId,
+      examStudentId: data.examStudentId,
+    },
+  ])
+
   const result = await prisma.compoundAnswerScore.upsert({
     where: {
       compoundAnswerId_examStudentId: {

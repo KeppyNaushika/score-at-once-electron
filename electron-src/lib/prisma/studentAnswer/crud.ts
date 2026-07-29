@@ -112,6 +112,29 @@ export async function uploadStudentAnswers(
       }
     }
 
+    // 受験者も当該試験のものであること。ページと受験者は別々の FK なので、
+    // 片方だけ検証しても「試験Aのページに試験Bの受験者の答案」が書けてしまう。
+    const requestedExamStudentIds = [
+      ...new Set(
+        filesData
+          .map((fileData) => fileData.examStudentId)
+          .filter((examStudentId): examStudentId is string => !!examStudentId)
+      ),
+    ]
+    if (requestedExamStudentIds.length > 0) {
+      const validExamStudents = await prisma.examStudent.findMany({
+        where: { examId, id: { in: requestedExamStudentIds } },
+        select: { id: true },
+      })
+      if (validExamStudents.length !== requestedExamStudentIds.length) {
+        return {
+          success: false,
+          error:
+            "配置先の受験者が見つかりません（他の教員が受験生徒を変更した可能性があります）。再読み込みしてください。",
+        }
+      }
+    }
+
     const examDir = getAnswerSheetsDirectory(examId)
 
     // 試験ディレクトリを作成

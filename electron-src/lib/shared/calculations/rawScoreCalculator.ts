@@ -14,17 +14,31 @@ import { calculateSubtotalScoreBySubtotalId } from "./subtotalCalculator"
 
 /**
  * coursework / coursework_total で参照する評価項目の構造（Prisma include のサブセット）
+ *
+ * 点数は資料の対象者（CourseworkStudent）にぶら下がるため、生徒から点数へ到達する経路は
+ * 必ず対象者を1回通る。名簿から外された生徒は点数を引けず、データなし（null）になる。
  */
 interface CourseworkItemForRawScore {
   maxScore: unknown
   inputMode: string
   scores: {
-    studentId: string
+    courseworkStudent: { studentId: string }
     score: unknown
     letterValue?: string | null
     adjustment?: unknown
   }[]
   letterScales: { label: string; score: unknown }[]
+}
+
+/**
+ * 生徒をその資料の対象者の点数へ解決する。名簿に載っていなければ undefined。
+ */
+export function findCourseworkStudentScore<
+  T extends { courseworkStudent: { studentId: string } },
+>(studentId: string, item: { scores: T[] }): T | undefined {
+  return item.scores.find(
+    (score) => score.courseworkStudent.studentId === studentId
+  )
 }
 
 /**
@@ -122,9 +136,7 @@ function getCourseworkRawScore(
   studentId: string,
   item: CourseworkItemForRawScore
 ): number | null {
-  const courseworkScore = item.scores.find(
-    (score) => score.studentId === studentId
-  )
+  const courseworkScore = findCourseworkStudentScore(studentId, item)
   if (!courseworkScore) return null
 
   // 基準スコア（変換前・加減点前）を決定
