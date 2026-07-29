@@ -205,9 +205,6 @@ export interface CropRegionAPI {
   deleteSubtotal: (id: string) => Promise<Subtotal | void>
   getSubtotalsByGroupId: (subtotalGroupId: string) => Promise<Subtotal[]>
   getSubtotalById: (id: string) => Promise<SubtotalWithGroupAndCrops | null>
-  updateSubtotalOrders: (
-    orders: { id: string; order: number }[]
-  ) => Promise<Prisma.BatchPayload>
 
   // CropSubtotal related
   createCropSubtotal: (

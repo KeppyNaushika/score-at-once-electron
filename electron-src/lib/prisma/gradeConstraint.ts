@@ -29,7 +29,7 @@ export const gradeConstraintInclude = {
 } satisfies Prisma.GradeConstraintInclude
 
 /** 集計対象の観点（GradeItem）の nested create 行。重複は畳む（`@@unique` 違反回避）。 */
-export function buildConstraintViewpointRows(
+function buildConstraintViewpointRows(
   constraintId: string,
   gradeItemIds: string[]
 ) {
@@ -42,7 +42,7 @@ export function buildConstraintViewpointRows(
 }
 
 /** ラベル→数値の対応の nested create 行。 */
-export function buildConstraintLabelValueRows(
+function buildConstraintLabelValueRows(
   constraintId: string,
   labelValues: Record<string, number>
 ) {
@@ -55,7 +55,7 @@ export function buildConstraintLabelValueRows(
 }
 
 /** 混在禁止ラベルの nested create 行。重複は畳む。 */
-export function buildConstraintExclusionLabelRows(
+function buildConstraintExclusionLabelRows(
   constraintId: string,
   labels: string[]
 ) {

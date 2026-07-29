@@ -22,7 +22,7 @@ import type { Tx } from "./transactionClient"
 type PrismaLike = typeof prisma | Tx
 
 /** 検査に失敗したときのエラー。呼び出し側は success:false へ倒す */
-export class ExamScopeMismatchError extends Error {
+class ExamScopeMismatchError extends Error {
   constructor(message: string) {
     super(message)
     this.name = "ExamScopeMismatchError"

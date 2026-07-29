@@ -26,26 +26,6 @@ export async function getUserKeyboardShortcuts(userId: string) {
 }
 
 /**
- * キーボードショートカットを追加/更新
- * @param userId - ユーザーID
- * @param action - アクション名
- * @param key - 割り当てるキー
- */
-export async function upsertUserKeyboardShortcut(
-  userId: string,
-  action: string,
-  key: string
-) {
-  return prisma.userKeyboardShortcut.upsert({
-    where: {
-      userId_action: { userId, action },
-    },
-    update: { key },
-    create: { userId, action, key },
-  })
-}
-
-/**
  * 複数のキーボードショートカットを一括で追加/更新
  * @param userId - ユーザーID
  * @param shortcuts - action -> key のマッピング
@@ -64,20 +44,6 @@ export async function bulkUpsertUserKeyboardShortcuts(
     })
   )
   return prisma.$transaction(operations)
-}
-
-/**
- * キーボードショートカットを削除
- * @param userId - ユーザーID
- * @param action - 削除するアクション名
- */
-export async function deleteUserKeyboardShortcut(
-  userId: string,
-  action: string
-) {
-  return prisma.userKeyboardShortcut.deleteMany({
-    where: { userId, action },
-  })
 }
 
 /**

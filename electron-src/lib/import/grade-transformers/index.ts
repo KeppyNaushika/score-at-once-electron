@@ -177,5 +177,3 @@ export function transformGradeToLatest(
     warnings,
   }
 }
-
-export { GRADE_CURRENT_VERSION }

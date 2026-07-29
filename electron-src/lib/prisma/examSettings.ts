@@ -25,49 +25,6 @@ export async function getExamMarkingFormats(examId: string) {
   })
 }
 
-/** 試験の特定マーク種別の採点マーク設定を取得する */
-export async function getExamMarkingFormat(examId: string, markType: string) {
-  return prisma.examMarkingFormat.findUnique({
-    where: {
-      examId_markType: { examId, markType },
-    },
-  })
-}
-
-/** 採点マーク設定を作成または更新する（examId+markTypeで一意） */
-export async function upsertExamMarkingFormat(
-  examId: string,
-  data: MarkingFormatData
-) {
-  const format = await prisma.examMarkingFormat.upsert({
-    where: {
-      examId_markType: { examId, markType: data.markType },
-    },
-    update: {
-      symbol: data.symbol,
-      color: data.color,
-      fontSize: data.fontSize,
-      strokeWidth: data.strokeWidth,
-    },
-    create: {
-      examId,
-      ...data,
-    },
-  })
-
-  const scope = await resolveExamScope(examId)
-  await recordAuditLog({
-    action: "exam.marking_format.update",
-    entityType: "ExamMarkingFormat",
-    entityId: format.id,
-    scopeId: scope.scopeId,
-    scopeLabel: scope.scopeLabel,
-    coalesceKey: `marking_format:${examId}`,
-  })
-
-  return format
-}
-
 /** 複数の採点マーク設定を一括で作成または更新する（トランザクション内で実行） */
 export async function bulkUpsertExamMarkingFormats(
   examId: string,
@@ -104,16 +61,6 @@ export async function bulkUpsertExamMarkingFormats(
   })
 
   return result
-}
-
-/** 指定マーク種別の採点マーク設定を削除する */
-export async function deleteExamMarkingFormat(
-  examId: string,
-  markType: string
-) {
-  return prisma.examMarkingFormat.deleteMany({
-    where: { examId, markType },
-  })
 }
 
 // =============================================================================
@@ -156,11 +103,4 @@ export async function upsertExamExportSettings(
   })
 
   return result
-}
-
-/** 試験のエクスポート設定を削除する */
-export async function deleteExamExportSettings(examId: string) {
-  return prisma.examExportSettings.deleteMany({
-    where: { examId },
-  })
 }

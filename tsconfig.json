@@ -33,7 +33,6 @@
     "**/*.js",
     "**/*.tsx",
     "./tailwind.config.js",
-    "./electron-src/prisma.ts",
     ".next/types/**/*.ts",
     "src/types/**/*.d.ts",
     ".next/dev/types/**/*.ts"

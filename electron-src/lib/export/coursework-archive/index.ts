@@ -14,12 +14,6 @@ import {
   generateCourseworkExportFileName,
 } from "./archiveCreator"
 
-export {
-  createCourseworkArchive,
-  generateCourseworkExportFileName,
-} from "./archiveCreator"
-export { collectCourseworkArchiveData } from "./dataCollector"
-
 /**
  * 試験外成績資料を .coursework アーカイブとしてエクスポートする。
  * outputPath 未指定なら保存ダイアログを表示する。

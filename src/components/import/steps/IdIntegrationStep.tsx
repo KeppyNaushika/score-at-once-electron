@@ -7,12 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 
-import {
-  type CategoryType,
-  ClassroomIntegrationPanel,
-  StudentIntegrationPanel,
-  SubtotalGroupIntegrationPanel,
-} from "./id-integration"
+import { ClassroomIntegrationPanel } from "./id-integration/ClassroomIntegrationPanel"
+import { StudentIntegrationPanel } from "./id-integration/StudentIntegrationPanel"
+import { SubtotalGroupIntegrationPanel } from "./id-integration/SubtotalGroupIntegrationPanel"
+import type { CategoryType } from "./id-integration/types"
 
 interface IdIntegrationStepProps {
   wizard: UseImportWizardReturn

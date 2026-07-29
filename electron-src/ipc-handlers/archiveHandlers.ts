@@ -22,8 +22,8 @@ import {
   cleanupTempDir,
   extractArchive,
 } from "../lib/import/exam-archive"
-import { convertHszToScore } from "../lib/import/external-formats/hsz"
-import { convertDatToScore } from "../lib/import/external-formats/reattendant"
+import { convertHszToScore } from "../lib/import/external-formats/hsz/hszConverter"
+import { convertDatToScore } from "../lib/import/external-formats/reattendant/datConverter"
 import {
   detectAllConflicts,
   detectScoringConflictsWithUserDecisions,

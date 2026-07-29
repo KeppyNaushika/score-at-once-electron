@@ -16,17 +16,19 @@ import {
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
-  applyStudentAnswerPlacements,
   associateStudentAnswerWithStudent,
   deleteStudentAnswer,
   getStudentAnswerById,
   getStudentAnswersByExamId,
   getStudentAnswerScoreSummary,
   getStudentAnswersDataset,
-  setStudentAnswerAbsent,
-  type StudentAnswerPlacementMove,
   uploadStudentAnswers,
-} from "../lib/prisma/studentAnswer"
+} from "../lib/prisma/studentAnswer/crud"
+import {
+  applyStudentAnswerPlacements,
+  type StudentAnswerPlacementMove,
+} from "../lib/prisma/studentAnswer/placementApply"
+import { setStudentAnswerAbsent } from "../lib/prisma/studentAnswer/status"
 import {
   createUser as createUserWithPasscode,
   fetchUsers,

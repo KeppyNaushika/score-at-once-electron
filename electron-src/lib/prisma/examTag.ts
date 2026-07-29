@@ -17,18 +17,6 @@ export async function getExamTags(examId: string) {
 }
 
 /**
- * タグに紐づく試験を取得
- */
-export async function getExamsByTagId(tagId: string) {
-  return prisma.examTag.findMany({
-    where: { tagId },
-    include: {
-      exam: true,
-    },
-  })
-}
-
-/**
  * 試験-タグ関連を作成
  */
 export async function createExamTag(data: { examId: string; tagId: string }) {

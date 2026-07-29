@@ -20,14 +20,12 @@ import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
-import {
-  useAllStudentAnnotations,
-  useAutoCreateQuestionScore,
-  useCanvasV4Integration,
-  useDrawingToolShortcuts,
-  useQuestionAutoScroll,
-  useZoomAndScroll,
-} from "./hooks/view"
+import { useAllStudentAnnotations } from "./hooks/view/useAllStudentAnnotations"
+import { useAutoCreateQuestionScore } from "./hooks/view/useAutoCreateQuestionScore"
+import { useCanvasV4Integration } from "./hooks/view/useCanvasV4Integration"
+import { useDrawingToolShortcuts } from "./hooks/view/useDrawingToolShortcuts"
+import { useQuestionAutoScroll } from "./hooks/view/useQuestionAutoScroll"
+import { useZoomAndScroll } from "./hooks/view/useZoomAndScroll"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import type { AnswerIndividualViewProps } from "./types"
 

@@ -70,20 +70,3 @@ export const getSubtotalById = async (id: string) => {
     include: subtotalWithGroupAndCropsInclude,
   })
 }
-
-/** 小計項目の表示順序をトランザクション内で一括更新する */
-export const updateSubtotalOrders = async (
-  orders: { id: string; order: number }[]
-) => {
-  const updates = orders.map(({ id, order }) =>
-    prisma.subtotal.update({
-      where: { id },
-      data: { order },
-    })
-  )
-
-  const result = await prisma.$transaction(updates)
-
-  // BatchPayload形式で返す
-  return { count: result.length }
-}
