@@ -178,7 +178,7 @@ export function BoxPlotChart({
 // BoxPlotChartView（純粋ビュー）
 // ============================
 
-export interface BoxPlotChartViewProps {
+interface BoxPlotChartViewProps {
   subtotalStats: ComputedSubtotalStat[]
   getStudentScore: (subtotalId: string) => number
   fontScale: number

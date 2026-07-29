@@ -3,44 +3,12 @@
  * 複合回答（共通テスト数学の分数、SAT Grid-Inなど）の管理
  */
 
-import type {
-  CompoundAnswer,
-  CompoundAnswerMember,
-  CompoundAnswerScore,
-  Prisma,
-} from "@prisma/client"
+import type { CompoundAnswerScore, Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByPage } from "./auditScope"
 import prisma from "./client"
 import { assertCompoundAnswersInSameExam } from "./examScopeGuard"
-
-export type CompoundAnswerWithMembers = CompoundAnswer & {
-  members: (CompoundAnswerMember & {
-    cropRegion: { id: string; label: string }
-  })[]
-}
-
-export type CompoundAnswerWithAll = CompoundAnswerWithMembers & {
-  scores: CompoundAnswerScore[]
-}
-
-export interface CreateCompoundAnswerData {
-  examPageId: string
-  label: string
-  answerFormat: string
-  correctAnswer: string
-  points?: number
-  orderIndex?: number
-  alternativeAnswers?: string | null
-  requireReduced?: boolean
-  members: Array<{
-    cropRegionId: string
-    order: number
-    roleLabel?: string | null
-    separator?: string | null
-  }>
-}
 
 /**
  * 複合回答の採点結果をupsert

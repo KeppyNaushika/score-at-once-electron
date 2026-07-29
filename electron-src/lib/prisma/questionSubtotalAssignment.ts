@@ -1,4 +1,4 @@
-import type { CropSubtotal, Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion } from "./auditScope"
@@ -78,5 +78,3 @@ export const getAssignmentsByQuestionGroupItemId = async (
     },
   })
 }
-
-export type QuestionSubtotalAssignmentPayload = CropSubtotal

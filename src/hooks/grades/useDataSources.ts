@@ -7,7 +7,7 @@ import type {
 } from "@/types/grade.types"
 
 /** 各データソースのモデル適合度 R（このソースが他ソースからどれだけ当てられるか） */
-export type SourceFitMap = Record<
+type SourceFitMap = Record<
   string,
   { correlation: number; sampleSize: number } | null
 >

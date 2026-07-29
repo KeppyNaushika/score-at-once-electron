@@ -9,7 +9,7 @@ import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand
 import type { CanvasTool } from "../../types"
 
 /** 描画ツールキーボードショートカットフックのパラメータ */
-export interface UseDrawingToolShortcutsParams {
+interface UseDrawingToolShortcutsParams {
   /** 現在のツール設定関数 */
   setCurrentTool: (tool: CanvasTool) => void
   /** 全体表示ハンドラー */

@@ -6,7 +6,7 @@ import { degrees, PDFDocument } from "pdf-lib"
 
 import type { RotationDegree } from "@/types/pdfTools.types"
 
-export interface RotateResult {
+interface RotateResult {
   success: boolean
   outputPath?: string
   error?: string

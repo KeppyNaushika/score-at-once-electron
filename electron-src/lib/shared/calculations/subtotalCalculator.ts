@@ -8,14 +8,6 @@ import {
 } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "../../prisma/questionScore"
 
-// 小計点計算で使用する型定義
-export interface SubtotalScoreDetail {
-  questionId: string
-  score: number | null
-  maxScore: number
-  status?: string
-}
-
 /**
  * 小計計算の入力となる、解決済み設問スコアの最小射影（生徒×設問の得点1件）。
  * identity フィールドは QuestionScore に追随。status は calculateActualScore が
@@ -26,7 +18,7 @@ export type QuestionScoreForSubtotal = Omit<
   "id" | "userId" | "createdAt" | "updatedAt" | "partialScore"
 > & { partialScore?: number | null }
 
-export interface SubtotalScoreResult {
+interface SubtotalScoreResult {
   score: number | null
   maxScore: number
   /** QUESTION_ASSIGNMENTが存在するか */

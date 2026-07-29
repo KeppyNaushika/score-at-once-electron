@@ -11,29 +11,6 @@ type StudentClassroomMembershipWithStudentAndClassroom =
     }
   }>
 
-type StudentWithMemberships = Prisma.StudentGetPayload<{
-  include: {
-    memberships: {
-      include: {
-        classroom: true
-      }
-      orderBy: {
-        startDate: "desc"
-      }
-    }
-  }
-}>
-
-type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
-  include: {
-    memberships: {
-      include: {
-        student: true
-      }
-    }
-  }
-}>
-
 /** 生徒の学級所属レコードを作成する（student・class含む） */
 export const createStudentClassroomMembership = async (
   membershipData: Prisma.StudentClassroomMembershipCreateInput
@@ -271,10 +248,4 @@ export const getMembershipsByDateRange = async (
     console.error("Failed to fetch memberships by date range:", error)
     throw error
   }
-}
-
-export {
-  type ClassroomWithMemberships,
-  type StudentClassroomMembershipWithStudentAndClassroom,
-  type StudentWithMemberships,
 }

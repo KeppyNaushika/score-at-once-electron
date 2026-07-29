@@ -52,7 +52,7 @@ export type EstimationMode = "all" | "selected"
  * 変換され、archive も transformer で変換される）。現行 UI は生成しないが、未移行データや
  * 直接生成では現れうるため、値を偽らないよう legacy として列挙する（満点算出は 0 = 不活性）。
  */
-export const GRADE_DATA_SOURCE_TYPES = [
+const GRADE_DATA_SOURCE_TYPES = [
   "exam_total",
   "subtotal",
   "crop_region",
@@ -68,8 +68,10 @@ export type GradeDataSourceType = (typeof GRADE_DATA_SOURCE_TYPES)[number]
  * 想定外値は不活性な legacy `manual`（満点0・算出ソース無し）へフォールバックする
  * — 満点を捏造する `exam_total` 等へ倒すより安全なため。
  */
-export const { is: isGradeDataSourceType, to: toGradeDataSourceType } =
-  defineStringUnion(GRADE_DATA_SOURCE_TYPES, "manual")
+export const { to: toGradeDataSourceType } = defineStringUnion(
+  GRADE_DATA_SOURCE_TYPES,
+  "manual"
+)
 
 /** 成績算出試験（リレーション付き） */
 export type GradeWithRelations = Omit<Grade, "referenceDate"> & {

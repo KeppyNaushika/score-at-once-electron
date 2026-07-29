@@ -46,9 +46,7 @@ export function createMockAnnotation(
 }
 
 /** DrawingCreateDataからアノテーションを生成（createのモック用） */
-export function annotationFromCreateData(
-  data: DrawingCreateData
-): DrawingAnnotation {
+function annotationFromCreateData(data: DrawingCreateData): DrawingAnnotation {
   return createMockAnnotation({
     id: data.id || `annotation-${crypto.randomUUID().slice(0, 8)}`,
     questionScoreId: data.questionScoreId,

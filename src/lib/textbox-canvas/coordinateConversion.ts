@@ -3,12 +3,7 @@
  * @description 絶対座標（ピクセル）と相対座標（0-1）間の変換を行う
  */
 
-import type {
-  CoordinateConversionOptions,
-  CoordinateConversionUtils,
-  Point,
-  TextBox,
-} from "./types"
+import type { CoordinateConversionOptions, Point, TextBox } from "./types"
 
 /**
  * 相対座標を絶対座標に変換
@@ -16,7 +11,7 @@ import type {
  * @param options 変換オプション
  * @returns 絶対座標（px）
  */
-export function relativeToAbsolute(
+function relativeToAbsolute(
   point: Point,
   options: CoordinateConversionOptions
 ): Point {
@@ -32,7 +27,7 @@ export function relativeToAbsolute(
  * @param options 変換オプション
  * @returns 相対座標（0.0-1.0）
  */
-export function absoluteToRelative(
+function absoluteToRelative(
   point: Point,
   options: CoordinateConversionOptions
 ): Point {
@@ -48,7 +43,7 @@ export function absoluteToRelative(
  * @param options 変換オプション
  * @returns 相対座標系のTextBox
  */
-export function textBoxToRelative(
+function textBoxToRelative(
   textBox: TextBox,
   options: CoordinateConversionOptions
 ): TextBox {
@@ -68,44 +63,6 @@ export function textBoxToRelative(
     y: relativePoint.y,
     coordinateSystem: "relative",
   }
-}
-
-/**
- * TextBoxを絶対座標系に変換
- * @param textBox 変換対象のTextBox
- * @param options 変換オプション
- * @returns 絶対座標系のTextBox
- */
-export function textBoxToAbsolute(
-  textBox: TextBox,
-  options: CoordinateConversionOptions
-): TextBox {
-  // 既に絶対座標系の場合、またはcoordinateSystemが未定義（デフォルト）の場合はそのまま返す
-  if (textBox.coordinateSystem === "absolute" || !textBox.coordinateSystem) {
-    return textBox
-  }
-
-  const absolutePoint = relativeToAbsolute(
-    { x: textBox.x, y: textBox.y },
-    options
-  )
-
-  return {
-    ...textBox,
-    x: absolutePoint.x,
-    y: absolutePoint.y,
-    coordinateSystem: "absolute",
-  }
-}
-
-/**
- * 座標変換ユーティリティオブジェクト
- */
-export const coordinateConversionUtils: CoordinateConversionUtils = {
-  relativeToAbsolute,
-  absoluteToRelative,
-  textBoxToRelative,
-  textBoxToAbsolute,
 }
 
 /**

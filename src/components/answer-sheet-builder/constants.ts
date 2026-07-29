@@ -51,9 +51,6 @@ export const PAPER_SIZES: Record<PaperSize, { width: number; height: number }> =
     A3: { width: 297, height: 420 },
   }
 
-/** 1mm = 2.835pt (pdf-lib用) */
-export const MM_TO_PT = 2.835
-
 // =====================
 // デフォルト設定
 // =====================

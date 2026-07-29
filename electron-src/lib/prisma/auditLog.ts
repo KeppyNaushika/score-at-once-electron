@@ -23,7 +23,7 @@ export interface AuditChange {
   after: unknown
 }
 
-export interface RecordAuditLogInput {
+interface RecordAuditLogInput {
   /** アクションキー（カタログ参照。型補完のため AuditActionKey を推奨） */
   action: AuditActionKey | (string & {})
   /**

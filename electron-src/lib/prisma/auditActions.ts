@@ -21,7 +21,7 @@ export type AuditCategory =
 export type AuditVerb =
   "create" | "update" | "delete" | "export" | "import" | "other"
 
-export interface AuditActionDef {
+interface AuditActionDef {
   category: AuditCategory
   verb: AuditVerb
   /**

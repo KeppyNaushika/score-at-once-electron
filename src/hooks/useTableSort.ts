@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 export type SortDirection = "asc" | "desc" | null
 
-export interface SortConfig<T> {
+interface SortConfig<T> {
   key: (keyof T & string) | null
   direction: SortDirection
 }
@@ -146,21 +146,10 @@ export function useTableSort<T extends object>(
     })
   }, [])
 
-  /**
-   * ソート設定を直接指定する
-   */
-  const setSort = useCallback(
-    (key: keyof T & string, direction: SortDirection) => {
-      setSortConfig({ key, direction })
-    },
-    []
-  )
-
   return {
     sortedData,
     sortConfig,
     requestSort,
-    setSort,
   }
 }
 

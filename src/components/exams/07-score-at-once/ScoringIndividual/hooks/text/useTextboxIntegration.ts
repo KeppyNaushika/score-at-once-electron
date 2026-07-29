@@ -1,6 +1,6 @@
 /**
  * @fileoverview テキストボックスCanvas統合フック
- * @description 個別採点画面でV4のテキストボックス機能を使用するためのフック
+ * @description 個別採点画面でテキストボックス機能を使用するためのフック
  */
 
 import { useCallback, useState } from "react"
@@ -15,7 +15,7 @@ import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
 import type { DrawingElement } from "../../types"
 
-interface UseTextboxV4IntegrationProps {
+interface UseTextboxIntegrationProps {
   /** Canvas/画像の幅（px） */
   canvasWidth: number
   /** Canvas/画像の高さ（px） */
@@ -33,17 +33,17 @@ interface UseTextboxV4IntegrationProps {
   ) => void | Promise<void>
 }
 
-interface UseTextboxV4IntegrationReturn {
-  /** V4統合モーダルの表示状態 */
-  showV4Modal: boolean
-  /** V4統合モーダルを開く */
-  openV4Modal: (
+interface UseTextboxIntegrationReturn {
+  /** テキスト編集モーダルの表示状態 */
+  showTextboxModal: boolean
+  /** テキスト編集モーダルを開く */
+  openTextboxModal: (
     position: { x: number; y: number },
     initialText?: string,
     elementId?: string
   ) => void
-  /** V4統合モーダルを閉じる */
-  closeV4Modal: () => void
+  /** テキスト編集モーダルを閉じる */
+  closeTextboxModal: () => void
   /** 現在編集中のテキスト値 */
   currentTextValue: string
   /** テキスト値を更新 */
@@ -73,16 +73,16 @@ interface UseTextboxV4IntegrationReturn {
 }
 
 /** 個別採点画面でテキストボックスの追加・編集・座標変換を統合するフック */
-export function useTextboxV4Integration({
+export function useTextboxIntegration({
   canvasWidth,
   canvasHeight,
   drawingElements,
   updateDrawingElements,
   addDrawingElement,
   updateDrawingElement,
-}: UseTextboxV4IntegrationProps): UseTextboxV4IntegrationReturn {
+}: UseTextboxIntegrationProps): UseTextboxIntegrationReturn {
   // モーダル表示状態
-  const [showV4Modal, setShowV4Modal] = useState(false)
+  const [showTextboxModal, setShowTextboxModal] = useState(false)
   const [currentTextValue, setCurrentTextValue] = useState("")
   const [currentTextColor, setCurrentTextColor] = useState("#ef4444")
   const [currentPosition, setCurrentPosition] = useState({ x: 0.5, y: 0.5 })
@@ -93,8 +93,8 @@ export function useTextboxV4Integration({
     useState<AnchorDirection>("top-left")
   const [editingElementId, setEditingElementId] = useState<string | null>(null)
 
-  // V4統合モーダルを開く
-  const openV4Modal = useCallback(
+  // テキスト編集モーダルを開く
+  const openTextboxModal = useCallback(
     (
       position: { x: number; y: number },
       initialText: string = "",
@@ -123,14 +123,14 @@ export function useTextboxV4Integration({
         setCurrentAnchorDirection("top-left")
       }
 
-      setShowV4Modal(true)
+      setShowTextboxModal(true)
     },
     [drawingElements]
   )
 
-  // V4統合モーダルを閉じる
-  const closeV4Modal = useCallback(() => {
-    setShowV4Modal(false)
+  // テキスト編集モーダルを閉じる
+  const closeTextboxModal = useCallback(() => {
+    setShowTextboxModal(false)
     setCurrentTextValue("")
     setCurrentTextColor("#000000")
     setCurrentFontSize(DEFAULT_DRAWING_SETTINGS.fontSize)
@@ -141,7 +141,7 @@ export function useTextboxV4Integration({
   // テキストを確定してDrawingElementとして追加/更新
   const confirmText = useCallback(async () => {
     if (!currentTextValue.trim()) {
-      closeV4Modal()
+      closeTextboxModal()
       return
     }
 
@@ -198,7 +198,7 @@ export function useTextboxV4Integration({
       }
     }
 
-    closeV4Modal()
+    closeTextboxModal()
   }, [
     currentTextValue,
     currentTextColor,
@@ -210,13 +210,13 @@ export function useTextboxV4Integration({
     updateDrawingElements,
     addDrawingElement,
     updateDrawingElement,
-    closeV4Modal,
+    closeTextboxModal,
   ])
 
   // 編集をキャンセル
   const cancelEdit = useCallback(() => {
-    closeV4Modal()
-  }, [closeV4Modal])
+    closeTextboxModal()
+  }, [closeTextboxModal])
 
   // DrawingElementをTextBoxに変換
   const convertToTextBox = useCallback(
@@ -263,9 +263,9 @@ export function useTextboxV4Integration({
   )
 
   return {
-    showV4Modal,
-    openV4Modal,
-    closeV4Modal,
+    showTextboxModal,
+    openTextboxModal,
+    closeTextboxModal,
     currentTextValue,
     setCurrentTextValue,
     currentTextColor,

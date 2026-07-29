@@ -8,7 +8,7 @@
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
 
-export interface AvailableClassroomItem {
+interface AvailableClassroomItem {
   id: string
   name: string
   classroomCode: string | null

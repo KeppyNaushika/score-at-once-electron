@@ -17,19 +17,17 @@ import type {
 } from "../../src/types/examArchive.types"
 import { exportExam } from "../lib/export/exam-archive"
 import { generateExportFileName } from "../lib/export/exam-archive/archiveCreator"
+import { analyzeArchive } from "../lib/import/exam-archive"
 import {
-  analyzeArchive,
   cleanupTempDir,
   extractArchive,
-} from "../lib/import/exam-archive"
+} from "../lib/import/exam-archive/archiveExtractor"
 import { convertHszToScore } from "../lib/import/external-formats/hsz/hszConverter"
 import { convertDatToScore } from "../lib/import/external-formats/reattendant/datConverter"
-import {
-  detectAllConflicts,
-  detectScoringConflictsWithUserDecisions,
-  executeIdIntegrationImport,
-  performPreMatching,
-} from "../lib/import/merge"
+import { detectAllConflicts } from "../lib/import/merge/conflictDetector"
+import { executeIdIntegrationImport } from "../lib/import/merge/idIntegrationImporter"
+import { performPreMatching } from "../lib/import/merge/matcher"
+import { detectScoringConflictsWithUserDecisions } from "../lib/import/merge/scoringConflictDetector"
 import { getExamById } from "../lib/prisma/exam"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 

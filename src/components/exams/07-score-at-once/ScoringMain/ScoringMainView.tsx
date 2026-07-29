@@ -147,7 +147,6 @@ function ScoringMainViewContent() {
     /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
-    setCurrentStudentIndex,
     setCurrentCropRegionId,
     setShowKeyboardHelp,
     setShowScoreDecisionPanel,
@@ -211,7 +210,6 @@ function ScoringMainViewContent() {
     gradingMode,
     currentCropRegion,
     setSelectedPageImageIds,
-    setCurrentStudentIndex,
   })
 
   /** 採点データ管理hook */

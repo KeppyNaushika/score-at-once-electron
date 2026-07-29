@@ -33,7 +33,7 @@ export interface ClickScoringConfig {
 }
 
 /** デフォルト設定 */
-export const DEFAULT_CLICK_SCORING_CONFIG: ClickScoringConfig = {
+const DEFAULT_CLICK_SCORING_CONFIG: ClickScoringConfig = {
   2: "incorrect",
   3: "partial_modal",
   4: "individual",

@@ -25,7 +25,7 @@ import type { IdChangeTarget, IdMappings, PrismaTransaction } from "./types"
  * `model` はスキーマ上のモデル名（PascalCase）。cascadeCoverage テストが
  * schema.prisma のカスケード子集合と突合するためのキーとして使う。
  */
-export interface CascadeMover {
+interface CascadeMover {
   model: string
   move: (
     tx: PrismaTransaction,

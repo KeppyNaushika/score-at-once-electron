@@ -178,7 +178,7 @@ function parseDiscordMarkdown(text: string): string {
  * @param text 変換対象のテキスト
  * @returns string 変換されたHTML
  */
-export function parseTextWithMath(text: string): string {
+function parseTextWithMath(text: string): string {
   // 1. LaTeX記法を$記法に正規化
   const normalizedText = preprocessMathSyntax(text)
 
@@ -224,44 +224,6 @@ function destroyMathJaxContainer(container: HTMLDivElement): void {
   if (container && container.parentNode) {
     container.parentNode.removeChild(container)
   }
-}
-
-/**
- * MathJax処理を実行する共通ロジック（MathJax 4対応版）
- * DIVプレビューとSVG変換で共通使用
- * @param container 処理対象のDOM要素
- * @param htmlContent 処理するHTML内容
- */
-export async function processMathJaxContent(
-  container: HTMLDivElement,
-  htmlContent: string
-): Promise<void> {
-  // 1. HTML内容を設定
-  container.innerHTML = htmlContent
-
-  // 2. 初期レンダリング完了まで待機
-  await waitForRenderingComplete(2)
-
-  // 3. MathJax初期化確認
-  const MathJax = window.MathJax
-  if (!MathJax) {
-    return
-  }
-
-  // 4. MathJax処理
-  await processMathJax(container)
-
-  // 5. MathJax要素の確認
-  const mathElements = container.querySelectorAll("mjx-container")
-
-  if (mathElements.length > 0) {
-    // MathJax要素が存在する場合は追加待機
-    await waitForRenderingComplete(3)
-  }
-
-  // 6. スタイルクリーンアップ
-  cleanupElementStyles(container)
-  await waitForRenderingComplete(1)
 }
 
 /**
@@ -313,15 +275,6 @@ function displaySvgPreview(svgElement: SVGSVGElement | null): void {
     previewContainer.innerHTML =
       '<div class="text-red-500 text-sm">SVG生成失敗</div>'
   }
-}
-
-/**
- * 安全な文字列置換のテスト用関数
- * @param text テスト対象のテキスト
- * @returns string 処理結果のデバッグ情報
- */
-export function testSafeReplace(text: string): string {
-  return parseDiscordMarkdown(text)
 }
 
 export async function convertTextToSvg(

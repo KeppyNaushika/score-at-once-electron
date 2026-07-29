@@ -1,22 +1,5 @@
 import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 
-// キーの表示名マッピング
-export const KEY_DISPLAY_NAMES: { [key: string]: string } = {
-  q: "Q",
-  e: "E",
-  f: "F",
-  j: "J",
-  o: "O",
-  p: "P",
-  ArrowRight: "→",
-  ArrowLeft: "←",
-  ArrowDown: "↓",
-  ArrowUp: "↑",
-  "=": "=",
-  "-": "-",
-  "0": "0",
-}
-
 // 各コマンドの日本語名（新しいコマンドID形式）
 export const SHORTCUT_LABELS: {
   [key in keyof typeof DEFAULT_KEYBINDINGS]: string

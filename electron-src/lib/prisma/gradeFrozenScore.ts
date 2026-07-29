@@ -22,14 +22,14 @@ export interface GradeFrozenTarget {
   gradeItemId: string
 }
 
-export interface FreezeGradeScoresResult {
+interface FreezeGradeScoresResult {
   success: boolean
   /** 確定した（＝書き込んだ）セル数 */
   frozenCount?: number
   error?: string
 }
 
-export interface UnfreezeGradeScoresResult {
+interface UnfreezeGradeScoresResult {
   success: boolean
   /** 解除した確定行の件数 */
   unfrozenCount?: number

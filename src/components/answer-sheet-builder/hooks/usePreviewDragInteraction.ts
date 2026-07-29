@@ -19,7 +19,7 @@ interface DragState {
   startValueMm: number
 }
 
-export interface PreviewDragResult {
+interface PreviewDragResult {
   /** ホバー中の線のdragInfo */
   hoveredDragInfo: DragInfo | null
   /** SVG要素のマウスイベントハンドラ */

@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef } from "react"
 
-export interface UseAutoCreateQuestionScoreParams {
+interface UseAutoCreateQuestionScoreParams {
   /** 現在の生徒ID */
   currentExamStudentId?: string
   /** 現在の設問領域ID */
@@ -22,7 +22,7 @@ export interface UseAutoCreateQuestionScoreParams {
   onQuestionScoreCreated?: () => void
 }
 
-export interface UseAutoCreateQuestionScoreReturn {
+interface UseAutoCreateQuestionScoreReturn {
   /** 現在のQuestionScoreのID（存在しない場合はnull） */
   currentQuestionScoreId: string | null
 }

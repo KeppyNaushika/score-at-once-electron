@@ -35,7 +35,7 @@ function createMetadataSignature(metadata?: CommandMetadata): string {
 /**
  * useCommandのオプション
  */
-export interface UseCommandOptions {
+interface UseCommandOptions {
   /**
    * 実行条件を表すwhen句（JavaScript式として評価される）
    * デフォルト: "true" （常に有効）

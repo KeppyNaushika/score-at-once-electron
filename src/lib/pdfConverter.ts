@@ -50,11 +50,6 @@ export interface ConvertedImage {
  */
 export const PDF_RENDER_SCALE = 2.0
 
-export interface PdfConversionError {
-  type: "password-required" | "invalid-password" | "general-error"
-  message: string
-}
-
 // PDF.js 6.x は JBIG2 / JPEG2000 画像のデコードに WASM モジュールを使う。
 // スキャナ生成PDF（JBIG2/CCITT等）はこれが無いとデコードに失敗し白紙になる
 // （"JBig2 failed to initialize" → "Dependent image isn't ready yet" → 白紙）。
@@ -66,35 +61,6 @@ const PDFJS_OPTIONS = {
   isOffscreenCanvasSupported: false,
   isImageDecoderSupported: false,
 } as const
-
-/** PDFファイルの総ページ数を取得する */
-export async function getPdfPageCount(
-  file: File,
-  password?: string
-): Promise<number> {
-  const pdfjs = await initializePdfjs()
-
-  try {
-    const arrayBuffer = await file.arrayBuffer()
-    const loadingTask = pdfjs.getDocument({
-      data: arrayBuffer,
-      password: password,
-      ...PDFJS_OPTIONS,
-    })
-    const pdf = await loadingTask.promise
-    return pdf.numPages
-  } catch (error: unknown) {
-    if (error && typeof error === "object" && "name" in error) {
-      if (error.name === "PasswordException") {
-        throw new Error("password-required")
-      } else if (error.name === "InvalidPDFException" && password) {
-        throw new Error("invalid-password")
-      }
-    }
-    const errorMessage = error instanceof Error ? error.message : "不明なエラー"
-    throw new Error(`PDF読み込みエラー: ${errorMessage}`)
-  }
-}
 
 /** PDFファイルを各ページのPNG画像に変換する */
 export async function convertPdfToImages(

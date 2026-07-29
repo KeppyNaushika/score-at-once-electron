@@ -24,7 +24,7 @@ import {
 } from "../exam-archive/uniqueNameGenerators"
 
 /** アーカイブ内 UUID → 実 DB ID のマッピング */
-export type IdMap = Map<string, string>
+type IdMap = Map<string, string>
 
 /**
  * 生徒を解決する。返り値は archiveStudentId → 実 studentId のマップ。

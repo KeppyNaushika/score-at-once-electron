@@ -8,7 +8,7 @@
  * なので、両者を別々に実装する必要はない。
  */
 
-export interface OtsuResult {
+interface OtsuResult {
   /** 算出された境界値（入力と同じスケール） */
   threshold: number
   /**

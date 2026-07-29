@@ -17,7 +17,6 @@ interface UseAuditLogsResult {
   setFilter: (filter: AuditLogFilter) => void
   hasMore: boolean
   loadMore: () => void
-  reload: () => void
 }
 
 /**
@@ -102,6 +101,5 @@ export function useAuditLogs(): UseAuditLogsResult {
     setFilter,
     hasMore: entries.length < total,
     loadMore,
-    reload,
   }
 }

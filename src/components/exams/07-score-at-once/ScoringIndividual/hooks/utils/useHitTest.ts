@@ -69,7 +69,7 @@ function getTextBoundsFromAnchor(
  * - "body" : 要素本体（移動用）
  * - null : ヒットなし
  */
-export type HitTestResult = string | null
+type HitTestResult = string | null
 
 interface UseHitTestUtilsProps {
   /** 現在のズーム倍率（画面上のピクセルサイズを一定にするため） */

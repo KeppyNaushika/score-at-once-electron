@@ -1,4 +1,4 @@
-import type { Prisma, Subtotal } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import prisma from "./client"
 
@@ -78,5 +78,3 @@ export const updateQuestionGroupItemOrders = async (
   // BatchPayload形式で返す
   return { count: result.length }
 }
-
-export type QuestionGroupItemPayload = Subtotal

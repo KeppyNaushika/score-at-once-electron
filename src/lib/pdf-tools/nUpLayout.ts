@@ -8,20 +8,20 @@
  */
 import type { NUpLayout } from "@/types/pdfTools.types"
 
-export interface NUpSize {
+interface NUpSize {
   width: number
   height: number
 }
 
 /** スロットに収めた1ページの描画矩形（左上原点） */
-export interface NUpPlacement {
+interface NUpPlacement {
   x: number
   yTop: number
   width: number
   height: number
 }
 
-export interface NUpLayoutResult {
+interface NUpLayoutResult {
   pageWidth: number
   pageHeight: number
   /** items と同じ並び・同じ長さ。null は空スロット（描画しない） */

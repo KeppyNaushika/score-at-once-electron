@@ -13,7 +13,7 @@ interface ImagePosition {
 }
 
 /** 画像ナビゲーションフックの戻り値 */
-export interface UseImageNavigationReturn {
+interface UseImageNavigationReturn {
   /** 現在のズーム倍率 */
   zoom: number
   /** 現在の位置 */

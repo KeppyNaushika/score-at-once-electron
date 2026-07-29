@@ -11,7 +11,7 @@ import { Prisma } from "@prisma/client"
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
 
-export type AvailableStudentItem = Prisma.StudentGetPayload<{
+type AvailableStudentItem = Prisma.StudentGetPayload<{
   include: {
     memberships: {
       include: { classroom: true }

@@ -8,7 +8,6 @@ import type {
 /** 観点間の制約ルールの取得・作成・更新・削除・並べ替えを管理するフック */
 export function useGradeConstraints(gradeId: string) {
   const [constraints, setConstraints] = useState<GradeConstraintData[]>([])
-  const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
     try {
@@ -18,8 +17,6 @@ export function useGradeConstraints(gradeId: string) {
       }
     } catch (error) {
       console.error("Error loading grade constraints:", error)
-    } finally {
-      setLoading(false)
     }
   }, [gradeId])
 
@@ -62,10 +59,8 @@ export function useGradeConstraints(gradeId: string) {
 
   return {
     constraints,
-    loading,
     createConstraint,
     updateConstraint,
     deleteConstraint,
-    reload: loadData,
   }
 }

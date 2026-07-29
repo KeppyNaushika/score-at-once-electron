@@ -34,9 +34,3 @@ export const ZOOM_SETTINGS = {
   wheelDelta: 0.9, // ズームアウト時の倍率
   zoomInDelta: 1.1, // ズームイン時の倍率
 } as const
-
-// パン設定
-export const PAN_SETTINGS = {
-  arrowKeyStep: 20, // 矢印キーでのパン量
-  pageKeyStep: 100, // Page Up/Downでのパン量
-} as const

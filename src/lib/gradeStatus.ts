@@ -7,7 +7,7 @@
 
 import type { GradeWithRelations } from "@/types/grade.types"
 
-export interface GradeStatus {
+interface GradeStatus {
   step: number
   text: string
   url: string

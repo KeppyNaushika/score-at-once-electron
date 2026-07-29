@@ -4,9 +4,8 @@ import { Download } from "lucide-react"
 
 import { CaptureReturnVersionButton } from "@/components/exams/08-export/components/CaptureReturnVersionButton"
 import { IndividualReportSettings } from "@/components/exams/08-export/components/IndividualReportSettings"
-import ScoringMarkSettings, {
-  ScoringMarkConfig,
-} from "@/components/exams/08-export/components/ScoringMarkSettings"
+import { ScoringMarkSettingsContainer } from "@/components/exams/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
+import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import {
   ExportOptions,
   PdfOrientation,
@@ -220,7 +219,7 @@ export function ExportOptionsCard({
           </div>
 
           {/* 採点マーク設定 */}
-          <ScoringMarkSettings
+          <ScoringMarkSettingsContainer
             config={scoringMarkConfig}
             onChange={setScoringMarkConfig}
           />

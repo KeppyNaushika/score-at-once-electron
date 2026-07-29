@@ -6,7 +6,7 @@ import type { GradeCalculationResult } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { calculateGrades } from "../../shared/calculations/gradeCalculator"
 
-export interface GradeExportData {
+interface GradeExportData {
   result: GradeCalculationResult
   examName: string
   classNames: string[]

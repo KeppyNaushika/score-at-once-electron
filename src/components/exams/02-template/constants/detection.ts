@@ -28,14 +28,6 @@ export const DETECTION_MODE_LABELS: Record<DetectionMode, string> = {
 }
 
 /**
- * 検出モードの説明
- */
-export const DETECTION_MODE_DESCRIPTIONS: Record<DetectionMode, string> = {
-  auto: "枠を自動検出してスナップ補正",
-  manual: "手動で領域を作成",
-}
-
-/**
  * オーバーレイ表示のスタイル設定
  */
 export const OVERLAY_STYLES = {

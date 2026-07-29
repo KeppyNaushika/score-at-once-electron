@@ -69,7 +69,6 @@ export function useAssignedCropRegions({
 
   return {
     selectableCropRegions,
-    canManage,
     /**
      * 試験のメンバー数。1以下なら協調採点ではないので、重い裁定サマリを
      * 引く必要がない（競合は構造的にゼロ）。

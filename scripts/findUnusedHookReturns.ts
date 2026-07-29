@@ -2,10 +2,7 @@
  * @fileoverview フックの未使用返り値を検出するスクリプト
  *
  * 使用方法:
- *   npx ts-node scripts/find-unused-hook-returns.ts
- *
- * または package.json に追加:
- *   "check:hooks": "ts-node scripts/find-unused-hook-returns.ts"
+ *   npm run check:hooks
  */
 
 import * as fs from "fs"

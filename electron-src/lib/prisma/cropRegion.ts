@@ -1,4 +1,4 @@
-import type { CropRegion, Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import {
@@ -302,5 +302,3 @@ export const updateCropRegionOrders = async (
 
   return result
 }
-
-export type CropRegionPayload = CropRegion

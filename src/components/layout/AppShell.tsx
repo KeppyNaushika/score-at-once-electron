@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 
 export type SidebarBehavior = "collapse" | "expand" | "none"
 
-export interface SidebarSectionConfig {
+interface SidebarSectionConfig {
   key: string
   label: string
   storageKey: string

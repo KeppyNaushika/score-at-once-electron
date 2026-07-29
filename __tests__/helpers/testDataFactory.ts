@@ -242,7 +242,7 @@ export function createArchiveScoresData(
   }
 }
 
-export function createArchiveTagsData(): ArchiveTagsData {
+function createArchiveTagsData(): ArchiveTagsData {
   return {
     tags: [],
     tagSubtotalGroups: [],

@@ -28,7 +28,7 @@ const MAX_PROCESSING_EDGE = 2000
 /**
  * 枠検出クラス（Worker委譲版）
  */
-export class FrameDetector {
+class FrameDetector {
   private worker: Worker | null = null
 
   /**

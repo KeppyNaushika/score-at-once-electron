@@ -7,7 +7,7 @@ import { useCallback } from "react"
 import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 
 /** カーソルスタイルの種類 */
-export type CursorStyle =
+type CursorStyle =
   | "normal"
   | "move"
   | "crosshair"
@@ -21,7 +21,7 @@ export type CursorStyle =
   | "nwse-resize"
 
 /** カーソル管理フックのプロパティ */
-export interface UseCursorProps {
+interface UseCursorProps {
   /** キャンバス参照 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** ヒットテストハンドル関数（オプション） */
@@ -33,7 +33,7 @@ export interface UseCursorProps {
 }
 
 /** カーソル管理フックの戻り値 */
-export interface UseCursorReturn {
+interface UseCursorReturn {
   /** カーソルスタイルを設定 */
   setCursor: (cursorStyle: CursorStyle) => void
   /** カーソルをリセット（normalに戻す） */

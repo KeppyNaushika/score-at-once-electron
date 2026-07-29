@@ -10,7 +10,7 @@ import type {
 import prisma from "../../prisma/client"
 import { collectCourseworkArchiveData } from "../coursework-archive/dataCollector"
 
-export interface CollectedGradeData {
+interface CollectedGradeData {
   gradeData: ArchiveGradeData
   /**
    * v1.5.0+: 参照中の試験外成績資料（Coursework）を coursework-archive と同じ

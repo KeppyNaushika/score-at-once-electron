@@ -23,7 +23,7 @@ export interface MergePageInput {
   nUpLayout?: NUpLayout // "2x1" | "1x2"
 }
 
-export interface MergeResult {
+interface MergeResult {
   success: boolean
   outputPath?: string
   error?: string

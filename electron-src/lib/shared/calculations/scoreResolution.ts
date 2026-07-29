@@ -63,7 +63,7 @@ export interface ScoreConflict {
   candidateCount: number
 }
 
-export interface ResolveResult {
+interface ResolveResult {
   /** 生徒×設問ごとに高々1件へ解決済みの有効スコア配列 */
   resolved: EffectiveScore[]
   /** 確定が無く、提案の値も食い違って解決できなかった生徒×設問の一覧 */

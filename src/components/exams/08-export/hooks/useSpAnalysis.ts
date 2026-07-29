@@ -12,7 +12,7 @@ import {
 
 import type { ExcelPreviewData } from "./useExcelPreview"
 
-export interface SpAnalysisResult {
+interface SpAnalysisResult {
   spTable: SpTableResult | null
   frequency: FrequencyDistributionResult | null
 }

@@ -24,7 +24,7 @@ const SKIP_HISTORY_ACTIONS = new Set([
   "REDO",
 ])
 
-export interface UndoableResult<S, A> {
+interface UndoableResult<S, A> {
   state: S
   dispatch: (action: A) => void
   canUndo: boolean

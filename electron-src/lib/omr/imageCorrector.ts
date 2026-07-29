@@ -20,14 +20,14 @@ import type {
 import { detectCornerMarkersFromRaw } from "./cornerMarkerDetector"
 import { loadImageRawFromBuffer } from "./imageProcessor"
 
-export interface RigidTransformParams {
+interface RigidTransformParams {
   cosTheta: number
   sinTheta: number
   tx: number // x平行移動
   ty: number // y平行移動
 }
 
-export interface ImageCorrectionResult {
+interface ImageCorrectionResult {
   success: boolean
   correctedBuffer?: Buffer
   error?: string

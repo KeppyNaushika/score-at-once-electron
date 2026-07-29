@@ -9,7 +9,7 @@
  * - 右上寄せ: 拗促音（小書き仮名）と句読点（縦書きではマス右上に置く）
  */
 
-export interface VerticalGlyphAdjust {
+interface VerticalGlyphAdjust {
   /** 回転角度（度・時計回り）。0なら回転なし */
   rotate: number
   /** マス中心からのXオフセット（cellSizeMm に対する比） */

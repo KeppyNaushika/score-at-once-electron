@@ -6,9 +6,9 @@ import type {
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // 既定色（点数印字・採点記号マーク）
-export const DEFAULT_PARTIAL_SCORE_COLOR = "#ef4444" // 部分点・配点（赤）
-export const DEFAULT_SUMMARY_SCORE_COLOR = "#2563eb" // 小計（青）
-export const DEFAULT_TOTAL_SCORE_COLOR = "#16a34a" // 合計（緑）
+const DEFAULT_PARTIAL_SCORE_COLOR = "#ef4444" // 部分点・配点（赤）
+const DEFAULT_SUMMARY_SCORE_COLOR = "#2563eb" // 小計（青）
+const DEFAULT_TOTAL_SCORE_COLOR = "#16a34a" // 合計（緑）
 export const DEFAULT_MARK_COLOR = "#ef4444" // 採点記号マーク（赤）
 
 // カラーパレット（一括採点アノテーションと同じ基本色）+ 任意のRGBを追加で選択可能
@@ -35,7 +35,7 @@ export const defaultPartialScoreConfig: ScoreTextConfig = {
 }
 
 // 小計・合計点用デフォルト設定（後方互換性のため維持）
-export const defaultSummaryScoreConfig: ScoreTextConfig = {
+const defaultSummaryScoreConfig: ScoreTextConfig = {
   position: "middle-center",
   offsetX: 0,
   offsetY: 0,
@@ -68,7 +68,7 @@ export const defaultTotalScoreConfig: ScoreTextConfig = {
 }
 
 // デフォルト設定
-export const defaultConfig: ScoringMarkConfig = {
+export const defaultScoringMarkConfig: ScoringMarkConfig = {
   showMarkForStatus: {
     unscored: false,
     correct: true,

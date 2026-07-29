@@ -12,7 +12,7 @@ import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
 
 /** 名簿操作の結果型 */
-export interface RosterMutationResult {
+interface RosterMutationResult {
   success: boolean
   error?: string
 }

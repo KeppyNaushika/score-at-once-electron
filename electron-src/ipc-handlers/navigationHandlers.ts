@@ -1,13 +1,13 @@
 import { ipcMain } from "electron"
 
 /** ナビゲーション履歴の1エントリ（URLと履歴内インデックス） */
-export interface NavigationHistoryEntry {
+interface NavigationHistoryEntry {
   index: number
   url: string
 }
 
 /** renderer のブラウザ的な戻る/進む UI に渡すナビゲーション状態 */
-export interface NavigationState {
+interface NavigationState {
   canGoBack: boolean
   canGoForward: boolean
   activeIndex: number

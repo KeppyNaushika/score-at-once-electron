@@ -7,7 +7,7 @@ import { useEffect } from "react"
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 
 /** 設問変更時自動スクロールフックのパラメータ */
-export interface UseQuestionAutoScrollParams {
+interface UseQuestionAutoScrollParams {
   /** コンテナ要素のRef */
   containerRef: React.RefObject<HTMLDivElement | null>
   /** 現在のズーム倍率 */

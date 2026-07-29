@@ -8,7 +8,7 @@ import type { DrawingElement } from "@/components/exams/07-score-at-once/Scoring
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 /** 新規描画作成フックのプロパティ */
-export interface UseDrawingCreationProps {
+interface UseDrawingCreationProps {
   /** 現在のツール */
   currentTool: string
   /** 描画中フラグ */
@@ -38,7 +38,7 @@ export interface UseDrawingCreationProps {
 }
 
 /** 新規描画作成フックの戻り値 */
-export interface UseDrawingCreationReturn {
+interface UseDrawingCreationReturn {
   /** マウスダウン時の処理 */
   handleNewDrawingMouseDown: (imageCoords: { x: number; y: number }) => boolean
   /** マウス移動時の処理 */

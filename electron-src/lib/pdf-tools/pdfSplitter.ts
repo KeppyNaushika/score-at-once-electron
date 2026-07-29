@@ -6,7 +6,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
-export interface SplitResult {
+interface SplitResult {
   success: boolean
   outputPaths?: string[]
   error?: string

@@ -158,7 +158,7 @@ export function SubtotalTablePreview({
 // SubtotalTableView（純粋ビュー）
 // ============================
 
-export interface SubtotalTableViewProps {
+interface SubtotalTableViewProps {
   groupTableDataList: {
     groupId: string
     groupName: string

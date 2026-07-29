@@ -7,7 +7,7 @@ import { PAPER_DIMENSIONS } from "@/lib/paperSize"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import type { DrawingElement } from "../ScoringIndividual/types"
-import { renderTextElementV4 } from "../ScoringIndividual/utils/canvasTextRendererV4"
+import { renderTextElement } from "../ScoringIndividual/utils/canvasTextRenderer"
 
 /**
  * 画像表示について：
@@ -219,7 +219,7 @@ export default function CroppedAnswerImage({
 /**
  * Grid表示用アノテーション描画
  * アノテーションの0-1相対座標をクロップ領域→Canvasピクセル座標に変換して描画
- * テキストはrenderTextElementV4を使用してMathJax対応
+ * テキストはrenderTextElementを使用してMathJax対応
  */
 async function drawAnnotations(
   ctx: CanvasRenderingContext2D,
@@ -255,7 +255,7 @@ async function drawAnnotations(
 
     switch (anno.type) {
       case "text":
-        await drawGridTextV4(
+        await drawGridText(
           ctx,
           anno,
           visibleX,
@@ -330,10 +330,10 @@ function toCanvasY(
 }
 
 /**
- * テキスト描画（V4レンダラー使用: MathJax/SVG対応）
- * DrawingAnnotationをDrawingElementに変換し、renderTextElementV4で描画
+ * テキスト描画（テキストレンダラー使用: MathJax/SVG対応）
+ * DrawingAnnotationをDrawingElementに変換し、renderTextElementで描画
  */
-async function drawGridTextV4(
+async function drawGridText(
   ctx: CanvasRenderingContext2D,
   anno: DrawingAnnotation,
   visibleX: number,
@@ -347,7 +347,7 @@ async function drawGridTextV4(
   if (!anno.text) return
 
   // DrawingAnnotation → DrawingElement に変換
-  // renderTextElementV4は element.x * canvasWidth でアンカーピクセル位置を計算するため、
+  // renderTextElementは element.x * canvasWidth でアンカーピクセル位置を計算するため、
   // Grid Canvas空間での0-1座標に変換する
   const element: DrawingElement = {
     id: `grid-${anno.id}`,
@@ -361,7 +361,7 @@ async function drawGridTextV4(
     anchorDirection: anno.anchorDirection || "top-left",
   }
 
-  await renderTextElementV4(
+  await renderTextElement(
     ctx,
     element,
     canvasWidth,

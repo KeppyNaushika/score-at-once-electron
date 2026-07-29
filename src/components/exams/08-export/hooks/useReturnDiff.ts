@@ -20,12 +20,10 @@ export function useReturnDiff(examId: string) {
     Map<string, ReturnStudentDiff>
   >(new Map())
   const [hasAnySnapshot, setHasAnySnapshot] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [capturing, setCapturing] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!examId || !window.electronAPI?.export?.getReturnDiff) return
-    setLoading(true)
     try {
       const result: ReturnDiffResult =
         await window.electronAPI.export.getReturnDiff(examId)
@@ -39,8 +37,6 @@ export function useReturnDiff(examId: string) {
       }
     } catch (error) {
       console.error("返却差分の取得に失敗しました:", error)
-    } finally {
-      setLoading(false)
     }
   }, [examId])
 
@@ -88,9 +84,7 @@ export function useReturnDiff(examId: string) {
     diffByExamStudent,
     changedExamStudentIds,
     hasAnySnapshot,
-    loading,
     capturing,
     capture,
-    refresh,
   }
 }

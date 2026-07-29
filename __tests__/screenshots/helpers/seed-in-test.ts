@@ -41,7 +41,7 @@ export async function disconnectPrisma() {
 // ---------------------------------------------------------------------------
 // 生徒名データ（40名）
 // ---------------------------------------------------------------------------
-export const STUDENT_DATA = [
+const STUDENT_DATA = [
   {
     lastName: "佐藤",
     firstName: "翔太",

@@ -196,5 +196,3 @@ export function AreaRenderer({
     </>
   )
 }
-
-export default AreaRenderer

@@ -19,7 +19,7 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
  * 削除・氏名領域）。マーカー補正と handleUpload は未保存項目（UnsavedAnswerImage）を要するため
  * upload 側のラッパー（UploadAnswerTable）が担い、ここには置かない（型の false merge を避ける）。
  */
-export interface UseAnswerTableCoreParams<TItem extends AnswerImageIdentity> {
+interface UseAnswerTableCoreParams<TItem extends AnswerImageIdentity> {
   examId: string
   students: ExamStudentWithMemberships[]
   files: TItem[]

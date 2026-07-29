@@ -60,7 +60,7 @@ export function createExportApi() {
       getIndividualReportData: (options: {
         examId: string
         selectedExamStudentIds: string[]
-        options: import("../lib/export/individual-report").IndividualReportOptions
+        options: import("../lib/export/individual-report/types").IndividualReportOptions
         studentPlacements?: Record<
           string,
           import("../lib/shared/types").StudentExportPlacement

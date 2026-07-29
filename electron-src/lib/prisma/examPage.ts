@@ -1,4 +1,4 @@
-import type { ExamPage, Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
@@ -56,5 +56,3 @@ export const getExamPagesByExamId = async (examId: string) => {
     orderBy: { pageNumber: "asc" },
   })
 }
-
-export type ExamPagePayload = ExamPage

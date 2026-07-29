@@ -36,7 +36,7 @@ export interface ComputedSubtotalStat {
 }
 
 /** グループ化された小計データ */
-export interface GroupedSubtotalData {
+interface GroupedSubtotalData {
   groupId: string
   groupName: string
   items: SubtotalScore[]

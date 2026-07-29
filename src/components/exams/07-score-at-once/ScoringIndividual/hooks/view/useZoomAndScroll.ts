@@ -9,7 +9,7 @@ import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once
 import { ZOOM_SETTINGS } from "../../constants/drawingConstants"
 
 /** ズーム・スクロール操作フックのパラメータ */
-export interface UseZoomAndScrollParams {
+interface UseZoomAndScrollParams {
   /** コンテナ要素のRef */
   containerRef: React.RefObject<HTMLDivElement | null>
   /** 現在のズーム倍率 */
@@ -29,7 +29,7 @@ export interface UseZoomAndScrollParams {
 }
 
 /** ズーム・スクロール操作フックの戻り値 */
-export interface UseZoomAndScrollReturn {
+interface UseZoomAndScrollReturn {
   /** ズームイン */
   handleZoomIn: () => void
   /** ズームアウト */

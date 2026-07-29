@@ -21,8 +21,8 @@ import type {
 } from "@/types/answerSheetDefinition.types"
 
 // 解答用紙（B4, 200dpi相当）の画像サイズ
-export const SHEET_WIDTH = 2024
-export const SHEET_HEIGHT = 2866
+const SHEET_WIDTH = 2024
+const SHEET_HEIGHT = 2866
 
 interface RegionDef {
   label: string
@@ -290,37 +290,6 @@ export function computeRegionDefinitions(templatePath: string): RegionDef[] {
     points: cell.points,
     orderIndex: i,
   }))
-}
-
-/**
- * 配点合計を計算
- */
-export function computeTotalPoints(regions: RegionDef[]): number {
-  return regions.reduce((sum, region) => sum + region.points, 0)
-}
-
-/**
- * プレースホルダーマスター画像を生成（白背景）
- * テスト実行時にASBプレビューで上書きされる
- */
-export async function generatePlaceholderMasterImage(
-  outputDir: string
-): Promise<string> {
-  fs.mkdirSync(outputDir, { recursive: true })
-  const outputPath = path.join(outputDir, "master-page-1.png")
-
-  await sharp({
-    create: {
-      width: SHEET_WIDTH,
-      height: SHEET_HEIGHT,
-      channels: 3,
-      background: { r: 255, g: 255, b: 255 },
-    },
-  })
-    .png()
-    .toFile(outputPath)
-
-  return outputPath
 }
 
 // ---------------------------------------------------------------------------

@@ -28,7 +28,7 @@ const verdictLabel = (verdict: string | null | undefined): string => {
   }
 }
 
-export interface UpsertScoreDecisionData {
+interface UpsertScoreDecisionData {
   cropRegionId: string
   examStudentId: string
   verdict: string

@@ -66,11 +66,6 @@ export const getExamsForList = async (userId: string) => {
   })
 }
 
-// getExamsForList の戻り値の型
-export type ExamForListPayload = Awaited<
-  ReturnType<typeof getExamsForList>
->[number]
-
 /** IDで試験を取得する（全リレーション含む: userExams・examPages・examSubtotalGroups・examStudents） */
 export const getExamById = async (id: string) => {
   return prisma.exam.findUnique({
@@ -139,9 +134,6 @@ export const getExamById = async (id: string) => {
     },
   })
 }
-
-// getExamById の戻り値の型
-export type ExamWithRelationsPayload = Awaited<ReturnType<typeof getExamById>>
 
 /** 試験の基本スカラーのみを取得する（リレーション無し・軽量）。編集/スカラー参照用途向け。 */
 export const getExam = async (id: string) => {
