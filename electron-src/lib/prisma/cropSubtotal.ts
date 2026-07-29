@@ -151,21 +151,6 @@ export const createManyCropSubtotals = async (
   })
 }
 
-/** 設問-小計紐付けを更新する（cropRegion・subtotal リレーション含む） */
-export const updateCropSubtotal = async (
-  id: string,
-  data: Prisma.CropSubtotalUpdateInput
-) => {
-  return prisma.cropSubtotal.update({
-    where: { id },
-    data,
-    include: {
-      cropRegion: true,
-      subtotal: true,
-    },
-  })
-}
-
 /** 設問-小計紐付けを削除する */
 export const deleteCropSubtotal = async (id: string) => {
   return prisma.cropSubtotal.delete({
@@ -208,44 +193,6 @@ export const getSubtotalDefinitionsByCropRegionId = async (
       assignmentType: "SUBTOTAL_DEFINITION",
     },
     include: {
-      subtotal: {
-        include: {
-          subtotalGroup: true,
-        },
-      },
-    },
-  })
-}
-
-/** 設問領域IDでQUESTION_ASSIGNMENT型の紐付けを取得する（旧QuestionSubtotalAssignment互換） */
-export const getQuestionSubtotalAssignmentsByCropRegionId = async (
-  cropRegionId: string
-) => {
-  return prisma.cropSubtotal.findMany({
-    where: {
-      cropRegionId,
-      assignmentType: "QUESTION_ASSIGNMENT",
-    },
-    include: {
-      subtotal: {
-        include: {
-          subtotalGroup: true,
-        },
-      },
-    },
-  })
-}
-
-/** IDで設問-小計紐付けを取得する（cropRegion.examPage・subtotal.subtotalGroup リレーション含む） */
-export const getCropSubtotalById = async (id: string) => {
-  return prisma.cropSubtotal.findUnique({
-    where: { id },
-    include: {
-      cropRegion: {
-        include: {
-          examPage: true,
-        },
-      },
       subtotal: {
         include: {
           subtotalGroup: true,

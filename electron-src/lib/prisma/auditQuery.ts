@@ -186,7 +186,7 @@ export async function getAuditLogScopes(): Promise<AuditScopeFacet[]> {
 }
 
 /** 監査ログの既定保持日数（これより古いエントリは起動時プルーニングの対象） */
-export const DEFAULT_AUDIT_RETENTION_DAYS = 730 // 2年
+const DEFAULT_AUDIT_RETENTION_DAYS = 730 // 2年
 
 /**
  * 保持期間を超えた監査ログを削除する（無制限な肥大化の防止）。

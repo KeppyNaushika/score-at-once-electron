@@ -14,7 +14,7 @@ import { getExamById } from "./exam"
 import { getStudentsForExam } from "./examStudent"
 import { calculateActualScore, getQuestionScoresForExam } from "./questionScore"
 import { getScoreDecisionsForExam } from "./scoreDecision"
-import { getStudentAnswersByExamId } from "./studentAnswer"
+import { getStudentAnswersByExamId } from "./studentAnswer/crud"
 
 /**
  * ファイル名として安全でない文字を置換する

@@ -24,24 +24,6 @@ export async function getTagById(id: string) {
 }
 
 /**
- * SubtotalGroup IDリストに関連するTagを取得
- */
-export async function getTagsBySubtotalGroupIds(subtotalGroupIds: string[]) {
-  return prisma.tag.findMany({
-    where: {
-      tagSubtotalGroups: {
-        some: {
-          subtotalGroupId: { in: subtotalGroupIds },
-        },
-      },
-    },
-    include: {
-      tagSubtotalGroups: true,
-    },
-  })
-}
-
-/**
  * タグを作成（orderは自動採番）
  */
 export async function createTag(data: { name: string; color?: string }) {

@@ -90,28 +90,6 @@ export async function resolveGradeScopeByItem(
   }
 }
 
-/** gradeDataSourceId から成績スコープを解決 */
-export async function resolveGradeScopeByDataSource(
-  dataSourceId: string
-): Promise<{ scopeId: string | null; scopeLabel: string | null }> {
-  try {
-    const dataSource = await prisma.gradeDataSource.findUnique({
-      where: { id: dataSourceId },
-      select: {
-        gradeItem: {
-          select: { gradeId: true, grade: { select: { name: true } } },
-        },
-      },
-    })
-    return {
-      scopeId: dataSource?.gradeItem.gradeId ?? null,
-      scopeLabel: dataSource?.gradeItem.grade?.name ?? null,
-    }
-  } catch {
-    return { scopeId: null, scopeLabel: null }
-  }
-}
-
 /** examPageId から試験スコープを解決 */
 export async function resolveExamScopeByPage(
   examPageId: string

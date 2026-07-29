@@ -184,18 +184,3 @@ export async function getOmrConfigsByExamId(
     },
   })
 }
-
-/**
- * CropRegion IDに紐づくOMR設定を取得
- */
-export async function getOmrConfigByCropRegionId(
-  cropRegionId: string
-): Promise<CropRegionOmrConfigWithOptions | null> {
-  return prisma.cropRegionOmrConfig.findUnique({
-    where: { cropRegionId },
-    include: {
-      choiceOptions: { orderBy: { choiceIndex: "asc" } },
-      digitBoxes: { orderBy: { digitIndex: "asc" } },
-    },
-  })
-}

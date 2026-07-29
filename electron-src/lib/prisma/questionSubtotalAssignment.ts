@@ -58,33 +58,12 @@ export const deleteQuestionSubtotalAssignment = async (id: string) => {
   return result
 }
 
-/** 採点領域IDに紐づく全ての小計関連付けを削除する */
-export const deleteAssignmentsByQuestionLayoutRegionId = async (
-  cropRegionId: string
-) => {
-  return prisma.cropSubtotal.deleteMany({
-    where: { cropRegionId },
-  })
-}
-
 /** 小計項目IDに紐づく全ての採点領域関連付けを削除する */
 export const deleteAssignmentsByQuestionGroupItemId = async (
   subtotalId: string
 ) => {
   return prisma.cropSubtotal.deleteMany({
     where: { subtotalId },
-  })
-}
-
-/** 採点領域IDで小計関連付け一覧を取得する（subtotal含む） */
-export const getAssignmentsByQuestionLayoutRegionId = async (
-  cropRegionId: string
-) => {
-  return prisma.cropSubtotal.findMany({
-    where: { cropRegionId },
-    include: {
-      subtotal: true,
-    },
   })
 }
 

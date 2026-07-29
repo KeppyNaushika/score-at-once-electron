@@ -34,7 +34,7 @@ export interface StudentVersionTransformer {
 const STUDENT_TRANSFORMERS: StudentVersionTransformer[] = []
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
-export function detectStudentVersion(
+function detectStudentVersion(
   manifest: StudentArchiveManifest
 ): StudentArchiveVersion | "unknown" {
   return detectVersionInRange(manifest.version, STUDENT_SUPPORTED_VERSIONS)
@@ -59,5 +59,3 @@ export function transformStudentToLatest(
   })
   return { data: outcome.data, warnings: outcome.warnings }
 }
-
-export { STUDENT_CURRENT_VERSION, STUDENT_SUPPORTED_VERSIONS }

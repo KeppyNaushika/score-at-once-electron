@@ -51,16 +51,6 @@ export const getSubtotalDefinitionsByQuestionGroupItemId = async (
   return []
 }
 
-/** 採点領域IDで小計定義一覧を取得する（未実装：新スキーマ対応待ち） */
-export const getSubtotalDefinitionsByCropRegionId = async (
-  _cropRegionId: string
-) => {
-  console.warn(
-    "getSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema"
-  )
-  return []
-}
-
 export type SubtotalWithRelations = Prisma.SubtotalGetPayload<{
   include: {
     subtotalGroup: true

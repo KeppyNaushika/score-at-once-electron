@@ -37,7 +37,7 @@ const COURSEWORK_TRANSFORMERS: CourseworkVersionTransformer[] = [
  * 実データの形が manifest より古ければそちらへ下方補正する（version が実態と
  * ずれたアーカイブが実在したため。exam の形状ベース検出と同じ理由）。
  */
-export function detectCourseworkVersion(
+function detectCourseworkVersion(
   manifest: CourseworkArchiveManifest,
   data?: AnyCourseworkArchiveData
 ): CourseworkArchiveVersion | "unknown" {
@@ -78,5 +78,3 @@ export function transformCourseworkToLatest(
   }
   return { ...outcome, data: outcome.data }
 }
-
-export { COURSEWORK_CURRENT_VERSION, COURSEWORK_SUPPORTED_VERSIONS }

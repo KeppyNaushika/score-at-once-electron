@@ -18,7 +18,7 @@ import { serializePrisma } from "./serializePrisma"
  * 全生成元（grade / gradeItem / dataSource）でこれを使い、返り値の形状を一致させる。
  * coursework（coursework_total 型が参照する資料）まで含む完全版。
  */
-export const gradeDataSourceInclude = {
+const gradeDataSourceInclude = {
   exam: {
     select: {
       id: true,
@@ -167,7 +167,7 @@ type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
  * coursework.items）は、算出後に落として renderer 返却形状（grade.types の Pick）へ一致させる
  * — untyped な集計元を IPC で送らないため。
  */
-export function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
+function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
   const maxScore = computeMaxScoreFromPayload(dataSource)
   const { exam, subtotal, coursework, ...rest } = dataSource
   return {

@@ -10,7 +10,6 @@ import type {
   StudentArchiveFileOverviewData,
   StudentArchiveIdIntegrationConfig,
   StudentArchiveImportResult,
-  StudentArchiveManifest,
 } from "../../../../src/types/studentArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
@@ -40,16 +39,6 @@ function toCompatibleData(
     studentsData: data.studentsData,
     classesData: data.classesData,
   }
-}
-
-/**
- * マニフェストを解析（Step 1）
- */
-export function analyzeStudentArchive(manifest: StudentArchiveManifest): {
-  success: boolean
-  manifest: StudentArchiveManifest
-} {
-  return { success: true, manifest }
 }
 
 /**

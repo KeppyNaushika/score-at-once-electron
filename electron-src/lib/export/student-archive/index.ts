@@ -87,6 +87,3 @@ export async function exportStudentsArchive(
     }
   }
 }
-
-export { createStudentArchive } from "./archiveCreator"
-export { collectStudentArchiveData } from "./dataCollector"

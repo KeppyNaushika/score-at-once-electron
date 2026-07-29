@@ -119,5 +119,3 @@ export async function importAsbDefinition(
     }
   }
 }
-
-export { cleanupAsbTempDir } from "./archiveExtractor"

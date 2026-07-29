@@ -15,13 +15,11 @@ import type {
   OMRSheetResult,
 } from "../../src/types/omr.types"
 import { getDataDirectory } from "../lib/dataManager"
-import {
-  correctImage,
-  createTransform,
-  detectCornerMarkers,
-  loadImageRaw,
-  recognizeCells,
-} from "../lib/omr"
+import { createTransform } from "../lib/omr/coordinateTransform"
+import { detectCornerMarkers } from "../lib/omr/cornerMarkerDetector"
+import { correctImage } from "../lib/omr/imageCorrector"
+import { loadImageRaw } from "../lib/omr/imageProcessor"
+import { recognizeCells } from "../lib/omr/markRecognizer"
 import prisma from "../lib/prisma/client"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 

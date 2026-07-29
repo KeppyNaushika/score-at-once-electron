@@ -68,7 +68,7 @@ export const canDecideExamScores = async (
 }
 
 /** 設問（採点領域）から試験を引いて確定権限をチェックする */
-export const canDecideScore = async (
+const canDecideScore = async (
   cropRegionId: string,
   userId: string
 ): Promise<{ allowed: boolean; reason?: string }> => {
@@ -205,30 +205,6 @@ export const getScoreDecisionsForExam = async (examId: string) => {
     return { success: true, decisions }
   } catch (error) {
     console.error("Failed to get score decisions for exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/** 特定の受験者×設問の確定スコアを取得する */
-export const getScoreDecision = async (
-  examStudentId: string,
-  cropRegionId: string
-) => {
-  try {
-    const decision = await prisma.scoreDecision.findUnique({
-      where: {
-        cropRegionId_examStudentId: { cropRegionId, examStudentId },
-      },
-      include: {
-        decidedBy: true,
-      },
-    })
-    return { success: true, decision }
-  } catch (error) {
-    console.error("Failed to get score decision:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

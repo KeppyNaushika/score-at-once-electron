@@ -27,7 +27,7 @@ export const getDatabasePath = (): string => {
 }
 
 /** 指定パスのSQLiteファイルに接続するPrismaClientを生成する */
-export const createPrismaClientForPath = (dbPath: string): PrismaClient => {
+const createPrismaClientForPath = (dbPath: string): PrismaClient => {
   const absolutePath = path.resolve(dbPath)
   const adapter = new PrismaBetterSqlite3({ url: absolutePath })
 

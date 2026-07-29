@@ -15,13 +15,10 @@ import type { AnyCourseworkArchiveData } from "../coursework-transformers/types"
 import { importCourseworkData } from "./dataCreator"
 import { validateCourseworkManifest } from "./manifestValidator"
 
-export type { ExtractedCourseworkArchive } from "./archiveExtractor"
 export {
   cleanupCourseworkTempDir,
   extractCourseworkArchive,
-  readCourseworkManifestOnly,
 } from "./archiveExtractor"
-export { importCourseworkData } from "./dataCreator"
 
 /**
  * インポート前のプレビュー（資料ごとの照合候補）を作る。

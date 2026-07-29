@@ -7,24 +7,6 @@ import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
 
 /**
- * 試験の全上書きを取得
- */
-export async function getGradeOverridesByExamId(gradeId: string) {
-  try {
-    const overrides = await prisma.gradeOverride.findMany({
-      where: { gradeId },
-    })
-    return { success: true, overrides }
-  } catch (error) {
-    console.error("Error getting grade overrides:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/**
  * 上書きを upsert。対象は生徒×評価項目で、gradeItemId は NOT NULL なので
  * 複合uniqueをそのまま使える（NULL が unique 制約をすり抜ける問題は起きない）。
  */

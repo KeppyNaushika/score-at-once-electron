@@ -18,7 +18,7 @@ import { assertCropRegionsInSameExam } from "./examScopeGuard"
 export const SCORE_TARGET_DELETED = "target-deleted" as const
 
 /** 上記を利用者へ伝える文言（renderer はこれをそのまま表示してよい） */
-export const SCORE_TARGET_DELETED_MESSAGE =
+const SCORE_TARGET_DELETED_MESSAGE =
   "この答案は削除されたため採点を保存できません"
 
 /** Prisma の「更新/削除対象が見つからない」エラー（P2025）か */

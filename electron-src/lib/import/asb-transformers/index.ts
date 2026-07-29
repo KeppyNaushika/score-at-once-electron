@@ -55,5 +55,3 @@ export function transformAsbToLatest(
     archiveLabel: "ASB",
   })
 }
-
-export { ASB_CURRENT_VERSION, ASB_SUPPORTED_VERSIONS }
