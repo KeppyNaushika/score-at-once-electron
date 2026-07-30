@@ -3,8 +3,34 @@
  * gradeCalculator / rawScoreCalculator / examScoreCalculator / absentEstimation で共有する。
  */
 
+import type { Prisma } from "@prisma/client"
+
 import type { AbsentMethod } from "../../../../src/types/grade.types"
 import type { QuestionScoreForSubtotal } from "./subtotalCalculator"
+
+/**
+ * 成績算出が読む対象者1行分の include。
+ *
+ * 上書き・確定値・除外設定は対象者の子なので、行と一緒に引けば「その対象者のセル」が
+ * 経路上に必ず現れる。名簿に居ない生徒の設定を拾うことは構造的に起こらない（#962）。
+ */
+export const gradeStudentForCalcInclude = {
+  student: {
+    include: {
+      memberships: {
+        include: { classroom: { select: { id: true, name: true } } },
+      },
+    },
+  },
+  overrides: true,
+  frozenScores: true,
+  itemExclusions: true,
+} satisfies Prisma.GradeStudentInclude
+
+/** 成績算出のループ軸となる対象者1行（人・所属・セル設定つき） */
+export type GradeStudentForCalc = Prisma.GradeStudentGetPayload<{
+  include: typeof gradeStudentForCalcInclude
+}>
 
 /**
  * 試験の受験者1人分の解決済みスコア。

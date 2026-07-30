@@ -24,12 +24,15 @@ import {
 } from "./absentEstimation"
 import { findExamStudentScores } from "./examScoreCalculator"
 import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
+import { gradeStudentForCalcInclude } from "./gradeCalculatorTypes"
 import { determineGradeLabel } from "./gradeLabel"
 import { findCourseworkStudentScore, getRawScore } from "./rawScoreCalculator"
+import type { RawScoreCell, RawScoreRow } from "./rawScoreMatrix"
+import { RawScoreMatrix } from "./rawScoreMatrix"
 import { resolveEffectiveScores } from "./scoreResolution"
 
 /**
- * 素点行列（rawScoreMap）と推定に必要な付随データを構築する。
+ * 素点行列と推定に必要な付随データを構築する。
  * calculateGrades のパス1と computeSourceFits が共有する（素点組み立ての単一実装＝SSOT）。
  * @returns 構築した文脈。Grade が存在しない場合は null。
  */
@@ -82,18 +85,14 @@ async function buildGradeCalcContext(gradeId: string) {
 
   if (!grade) return null
 
-  // 2. 試験の登録生徒一覧を取得
-  const examStudents = await prisma.gradeStudent.findMany({
+  // 2. 成績の対象者一覧を取得。
+  //
+  // 上書き・確定値・除外設定は対象者の子として同じクエリで引く。以前は Grade 単位で
+  // 別々に引いて `${studentId}:${gradeItemId}` の文字列キーで突き合わせており、
+  // 名簿に居ない生徒の設定も一緒に読み込んでいた（#962 §3.3）。
+  const gradeStudents = await prisma.gradeStudent.findMany({
     where: { gradeId },
-    include: {
-      student: {
-        include: {
-          memberships: {
-            include: { classroom: { select: { id: true, name: true } } },
-          },
-        },
-      },
-    },
+    include: gradeStudentForCalcInclude,
     orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
   })
 
@@ -101,27 +100,7 @@ async function buildGradeCalcContext(gradeId: string) {
     (gradeClassroom) => gradeClassroom.classroomId
   )
 
-  // 3. 上書きデータを取得
-  const overrides = await prisma.gradeOverride.findMany({
-    where: { gradeId },
-  })
-  const overrideMap = new Map<string, string>()
-  for (const override of overrides) {
-    const key = `${override.studentId}:${override.gradeItemId}`
-    overrideMap.set(key, override.overrideLabel)
-  }
-
-  // 3.5. 除外データを取得
-  const exclusions = await prisma.gradeItemExclusion.findMany({
-    where: { gradeId },
-  })
-  const exclusionSet = new Set(
-    exclusions.map(
-      (exclusion) => `${exclusion.studentId}:${exclusion.gradeItemId}`
-    )
-  )
-
-  // 4. 全DataSourceから使用される試験試験IDを収集
+  // 3. 全DataSourceから使用される試験試験IDを収集
   const allDataSources = grade.gradeItems.flatMap(
     (gradeItem) => gradeItem.dataSources
   )
@@ -139,7 +118,7 @@ async function buildGradeCalcContext(gradeId: string) {
     ),
   ]
 
-  // 5. 試験のスコアデータを事前取得
+  // 4. 試験のスコアデータを事前取得
   //
   // 起点は ExamStudent（その試験の受験者）で、採点行はその子として引く。
   // 「試験から外した生徒の採点行」は受験者が居ないので構造的に集まらない
@@ -237,15 +216,19 @@ async function buildGradeCalcContext(gradeId: string) {
     }
   })
 
-  // === パス1: 全生徒 × 全DataSourceの rawScore を収集 ===
-  // Map<studentId, Map<dataSourceId, number | null>>
-  const rawScoreMap = new Map<string, Map<string, number | null>>()
+  // データソース id → 実体。素点行列のセルへ列の実体を同梱するために引く
+  const dataSourceInfoById = new Map(
+    dataSourceInfos.map((dataSourceInfo) => [dataSourceInfo.id, dataSourceInfo])
+  )
 
-  for (const examStudent of examStudents) {
-    const studentScores = new Map<string, number | null>()
+  // === パス1: 全対象者 × 全DataSourceの rawScore を収集して素点行列を組む ===
+  const rawScoreRows: RawScoreRow[] = []
+
+  for (const gradeStudent of gradeStudents) {
+    const cells: RawScoreCell[] = []
     for (const dataSource of allDataSources) {
       let raw = await getRawScore(
-        examStudent.student.id,
+        gradeStudent.studentId,
         dataSource,
         examDataCache
       )
@@ -258,7 +241,7 @@ async function buildGradeCalcContext(gradeId: string) {
         dataSource.examId
       ) {
         const examStudentScores = findExamStudentScores(
-          examStudent.student.id,
+          gradeStudent.studentId,
           dataSource.examId,
           examDataCache
         )
@@ -267,20 +250,19 @@ async function buildGradeCalcContext(gradeId: string) {
         }
       }
 
-      studentScores.set(dataSource.id, raw)
+      const dataSourceInfo = dataSourceInfoById.get(dataSource.id)
+      if (dataSourceInfo)
+        cells.push({ dataSource: dataSourceInfo, rawScore: raw })
     }
-    rawScoreMap.set(examStudent.student.id, studentScores)
+    rawScoreRows.push({ gradeStudent, cells })
   }
 
   return {
     grade,
-    examStudents,
     classroomIds,
-    overrideMap,
-    exclusionSet,
     liveMaxScoreMap,
     dataSourceInfos,
-    rawScoreMap,
+    rawScoreMatrix: new RawScoreMatrix(rawScoreRows),
     allDataSources,
   }
 }
@@ -322,7 +304,7 @@ export async function computeSourceFits(gradeId: string): Promise<{
     if (!context) {
       return { success: false, error: "Grade exam not found" }
     }
-    const { dataSourceInfos, rawScoreMap, allDataSources } = context
+    const { dataSourceInfos, rawScoreMatrix, allDataSources } = context
 
     // 構造的兄弟（同一試験/資料）の同定キー。R算出時に説明変数から除外する。
     const groupKeyById = new Map<string, string>()
@@ -345,7 +327,7 @@ export async function computeSourceFits(gradeId: string): Promise<{
       // 派生値なので「兄弟だけ在る partial 欠測」は起きず、Rと推定が乖離するケースは生じない。
       // selected で兄弟のみ選んだ退化構成では R=算出不能 になるが、その構成では実推定も兄弟を使えず
       // average へ落ちるため、算出不能の表示は誠実（レビュー指摘#1への回答）。
-      const predictorIds = (
+      const predictors = (
         dataSourceInfo.estimationMode === "selected"
           ? dataSourceInfos.filter((candidate) =>
               dataSourceInfo.estimationSourceIds.includes(candidate.id)
@@ -358,12 +340,11 @@ export async function computeSourceFits(gradeId: string): Promise<{
         .filter(
           (candidate) => groupKeyById.get(candidate.id) !== targetGroupKey
         )
-        .map((candidate) => candidate.id)
 
       fits[dataSourceInfo.id] = computeSourceFit(
-        dataSourceInfo.id,
-        predictorIds,
-        rawScoreMap
+        dataSourceInfo,
+        predictors,
+        rawScoreMatrix
       )
     }
     return { success: true, fits }
@@ -416,32 +397,11 @@ export async function calculateGrades(
     }
     const {
       grade,
-      examStudents,
       classroomIds,
-      overrideMap,
-      exclusionSet,
       liveMaxScoreMap,
       dataSourceInfos,
-      rawScoreMap,
+      rawScoreMatrix,
     } = context
-
-    // 確定（凍結）済みセルを (studentId, gradeItemId) で引けるようにする。
-    // 序数ではなく id の組でキーする（生徒の並べ替え・項目の追加でずれないため）。
-    const frozenByCell = new Map<
-      string,
-      Awaited<ReturnType<typeof prisma.gradeFrozenScore.findMany>>[number]
-    >()
-    if (applyFrozen) {
-      const frozenScores = await prisma.gradeFrozenScore.findMany({
-        where: { gradeId: grade.id },
-      })
-      for (const frozenScore of frozenScores) {
-        frozenByCell.set(
-          `${frozenScore.studentId}:${frozenScore.gradeItemId}`,
-          frozenScore
-        )
-      }
-    }
 
     // 各ソースの実測素点分布（平均・標準偏差）はソース単位で一定なので、生徒ループの外で
     // 1ソース1回だけ算出してマップ化する。閲覧生徒は除外しない（＝クラスの実測分布として
@@ -453,23 +413,27 @@ export async function calculateGrades(
     for (const dataSourceInfo of dataSourceInfos) {
       distributionBySource.set(
         dataSourceInfo.id,
-        computeSourceDistribution(dataSourceInfo.id, rawScoreMap)
+        computeSourceDistribution(dataSourceInfo, rawScoreMatrix)
       )
     }
 
     // === パス2: 推定 + 重み付け ===
     const students: StudentGradeResult[] = []
 
-    for (const examStudent of examStudents) {
-      const student = examStudent.student
+    for (const rawScoreRow of rawScoreMatrix.rows) {
+      const gradeStudent = rawScoreRow.gradeStudent
+      const student = gradeStudent.student
       const membership = student.memberships.find((membership) =>
         classroomIds.includes(membership.classroomId)
       )
       const gradeItemResults: GradeItemResult[] = []
 
       for (const gradeItem of grade.gradeItems) {
-        // 除外チェック
-        if (exclusionSet.has(`${student.id}:${gradeItem.id}`)) {
+        // 除外チェック。除外設定は対象者の子なので、この対象者の分しか見えない
+        const isExcluded = gradeStudent.itemExclusions.some(
+          (itemExclusion) => itemExclusion.gradeItemId === gradeItem.id
+        )
+        if (isExcluded) {
           gradeItemResults.push({
             gradeItemId: gradeItem.id,
             gradeItemName: gradeItem.name,
@@ -502,16 +466,17 @@ export async function calculateGrades(
             (sourceInfo) => sourceInfo.id === dataSource.id
           )
 
-          const studentScores = rawScoreMap.get(student.id)
-          let rawScore = studentScores?.get(dataSource.id) ?? null
+          let rawScore = dataSourceInfo
+            ? rawScoreMatrix.scoreOf(rawScoreRow, dataSourceInfo)
+            : null
           let isEstimated = false
           let estimationDetail: EstimationDetail | null = null
 
           // rawScoreがnullかつ推定設定がある場合、代替スコアを算出
-          if (rawScore === null && absentMethod !== "null") {
+          if (rawScore === null && absentMethod !== "null" && dataSourceInfo) {
             // ソース選択対応: estimationMode === "selected" の場合、指定IDのみ使用
             const sourcesToUse =
-              dataSourceInfo?.estimationMode === "selected"
+              dataSourceInfo.estimationMode === "selected"
                 ? dataSourceInfos.filter((sourceInfo) =>
                     dataSourceInfo.estimationSourceIds.includes(sourceInfo.id)
                   )
@@ -519,10 +484,9 @@ export async function calculateGrades(
 
             const estimation = estimateAbsentScore(
               absentMethod,
-              student.id,
-              dataSource.id,
-              maxScore,
-              rawScoreMap,
+              rawScoreRow,
+              dataSourceInfo,
+              rawScoreMatrix,
               sourcesToUse
             )
             if (estimation !== null) {
@@ -647,12 +611,20 @@ export async function calculateGrades(
           percentage,
           boundarySet?.boundaries ?? []
         )
-        const itemOverrideKey = `${student.id}:${gradeItem.id}`
-        const overrideGradeLabel = overrideMap.get(itemOverrideKey) ?? null
+        // 上書き・確定値も対象者の子。この対象者の分しか見えないので、名簿から外した
+        // 生徒の設定を拾うことは構造的に起こらない
+        const overrideGradeLabel =
+          gradeStudent.overrides.find(
+            (override) => override.gradeItemId === gradeItem.id
+          )?.overrideLabel ?? null
         // ライブの実効値＝自動算出を手動上書きで調整した後の値。確定操作はこれを取り込む。
         const liveGradeLabel = overrideGradeLabel ?? originalGradeLabel
 
-        const frozenScore = frozenByCell.get(`${student.id}:${gradeItem.id}`)
+        const frozenScore = applyFrozen
+          ? gradeStudent.frozenScores.find(
+              (candidate) => candidate.gradeItemId === gradeItem.id
+            )
+          : undefined
         if (frozenScore) {
           const frozenWeightedScore =
             frozenScore.weightedScore !== null
@@ -709,6 +681,7 @@ export async function calculateGrades(
       }
 
       students.push({
+        gradeStudentId: gradeStudent.id,
         studentId: student.id,
         studentNumber: student.studentNumber,
         lastName: student.lastName,
@@ -772,14 +745,10 @@ export async function calculateGrades(
  * 意味論が異なる（あちらは対象生徒を母数から除く leave-one-out ＋整列列を返す）ため別実装。
  */
 function computeSourceDistribution(
-  dataSourceId: string,
-  rawScoreMap: Map<string, Map<string, number | null>>
+  dataSource: DataSourceInfo,
+  rawScoreMatrix: RawScoreMatrix
 ): EstimationTargetDistribution | undefined {
-  const scores: number[] = []
-  for (const [, studentScores] of rawScoreMap) {
-    const score = studentScores.get(dataSourceId)
-    if (score !== null && score !== undefined) scores.push(score)
-  }
+  const scores = rawScoreMatrix.measuredColumn(dataSource)
   if (scores.length < 2) return undefined
   const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length
   const variance =

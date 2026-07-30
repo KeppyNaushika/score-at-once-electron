@@ -9,21 +9,18 @@
  * 展開の実体は coursework-transformers/legacyShape が持つ（二重実装の回避）。
  */
 
-import type {
-  GradeArchiveData,
-  GradeTransformResult,
-  GradeVersionTransformer,
-} from "../../../../src/types/gradeArchive.types"
 import {
   flattenLegacyCourseworks,
   isLegacyCollectedCourseworkData,
 } from "../coursework-transformers/legacyShape"
+import type { LegacyGradeArchiveData } from "./legacyShape"
+import type { GradeTransformResult, GradeVersionTransformer } from "./types"
 
 export class V1_11_0_to_V1_12_0_Transformer implements GradeVersionTransformer {
   readonly fromVersion = "1.11.0" as const
   readonly toVersion = "1.12.0" as const
 
-  transform(data: GradeArchiveData): GradeTransformResult {
+  transform(data: LegacyGradeArchiveData): GradeTransformResult {
     const legacy = data.legacyCourseworkArchive
     if (!isLegacyCollectedCourseworkData(legacy)) {
       return { data, warnings: [] }

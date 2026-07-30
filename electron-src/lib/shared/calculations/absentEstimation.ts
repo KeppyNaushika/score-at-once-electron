@@ -1,11 +1,14 @@
 /**
  * 欠測時の代替スコア推定
- * rawScoreMap には推定前の実スコアのみが格納される（循環推定の防止）。
+ * 素点行列（RawScoreMatrix）には推定前の実スコアのみが格納される（循環推定の防止）。
  * - zero: 0点
  * - average: 同一生徒の他DataSource比率の平均 × 満点
  * - regression: OLS重回帰による予測。多重共線性（合計＝小計の和など）で線形従属になった
  *   説明変数はランク落ちで除外して残りの独立列で継続する。独立列が1つも残らない場合や
  *   サンプル不足の場合のみ average にフォールバックする。
+ *
+ * 推定対象は行（対象者）と列（データソース）の実体で指定する。以前は studentId と
+ * dataSourceId をそれぞれ string で受けており、取り違えても型では捕まらなかった。
  */
 
 import type {
@@ -16,6 +19,15 @@ import type {
   EstimationSourceContribution,
 } from "../../../../src/types/grade.types"
 import type { DataSourceInfo } from "./gradeCalculatorTypes"
+import type {
+  RawScoreMatrix,
+  RawScoreRow,
+  RawScoreRowEntity,
+} from "./rawScoreMatrix"
+
+/** 推定は行を識別できれば足りるので、行の実体は最小限の形で受ける */
+type EstimationRow = RawScoreRow<RawScoreRowEntity>
+type EstimationMatrix = RawScoreMatrix<RawScoreRowEntity>
 
 /**
  * 欠測推定の生の結果（乗率・加減点の適用前）。
@@ -59,69 +71,44 @@ interface AbsentEstimation {
  */
 export function estimateAbsentScore(
   method: AbsentMethod,
-  studentId: string,
-  dataSourceId: string,
-  maxScore: number,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[]
 ): AbsentEstimation | null {
   if (method === "zero") {
     return { value: 0, effectiveMethod: "zero" }
   }
   if (method === "average") {
-    return estimateByAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
-      allDataSources
-    )
+    return estimateByAverage(targetRow, dataSource, matrix, allDataSources)
   }
   if (method === "regression") {
-    return estimateByRegression(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
-      allDataSources
-    )
+    return estimateByRegression(targetRow, dataSource, matrix, allDataSources)
   }
   if (method === "equipercentile") {
     return estimateByEquipercentile(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources
     )
   }
   if (method === "zscore") {
-    return estimateByZScore(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
-      allDataSources
-    )
+    return estimateByZScore(targetRow, dataSource, matrix, allDataSources)
   }
   return null
 }
 
 /**
- * 当ソース(dataSourceId)を実測した他生徒の素点分布（平均・母標準偏差・整列済み素点列）。
+ * 当ソースを実測した他生徒の素点分布（平均・母標準偏差・整列済み素点列）。
  * 対象生徒自身は欠測なので母数から自然に外れる。標準偏差法・順位法の載せ替え先に使う。
  */
 function collectTargetDistribution(
-  studentId: string,
-  dataSourceId: string,
-  rawScoreMap: Map<string, Map<string, number | null>>
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix
 ): { mean: number; sd: number; sorted: number[] } | null {
-  const scores: number[] = []
-  for (const [otherStudentId, otherScores] of rawScoreMap) {
-    if (otherStudentId === studentId) continue
-    const score = otherScores.get(dataSourceId)
-    if (score !== null && score !== undefined) scores.push(score)
-  }
+  const scores = matrix.measuredColumn(dataSource, { except: targetRow })
   if (scores.length < 2) return null
   const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length
   const variance =
@@ -131,32 +118,42 @@ function collectTargetDistribution(
 }
 
 /**
+ * 説明変数1つ分。表示用の内訳（contribution）と、分布の引き直しに使う列の実体を持つ。
+ * 内訳だけだと再び id 文字列からソースを引き当てる必要が生じるため実体を添える。
+ */
+interface PredictorContribution {
+  dataSource: DataSourceInfo
+  contribution: EstimationSourceContribution
+}
+
+/**
  * 対象生徒が実測を持つ他ソースを、標準偏差法・順位法の説明変数として集める。
  * average と同じく「自ソース以外・満点>0・対象生徒が実測を持つ」ソースが対象。
  */
 function collectPredictorContributions(
-  studentId: string,
-  dataSourceId: string,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[]
-): EstimationSourceContribution[] {
-  const studentScores = rawScoreMap.get(studentId)
-  if (!studentScores) return []
-  const contributions: EstimationSourceContribution[] = []
-  for (const dataSource of allDataSources) {
-    if (dataSource.id === dataSourceId) continue
-    if (dataSource.maxScore <= 0) continue
-    const score = studentScores.get(dataSource.id)
-    if (score === null || score === undefined) continue
-    contributions.push({
-      id: dataSource.id,
-      name: dataSource.name,
-      score,
-      maxScore: dataSource.maxScore,
-      ratio: score / dataSource.maxScore,
+): PredictorContribution[] {
+  const predictors: PredictorContribution[] = []
+  for (const predictorSource of allDataSources) {
+    if (predictorSource.id === dataSource.id) continue
+    if (predictorSource.maxScore <= 0) continue
+    const score = matrix.scoreOf(targetRow, predictorSource)
+    if (score === null) continue
+    predictors.push({
+      dataSource: predictorSource,
+      contribution: {
+        id: predictorSource.id,
+        name: predictorSource.name,
+        score,
+        maxScore: predictorSource.maxScore,
+        ratio: score / predictorSource.maxScore,
+      },
     })
   }
-  return contributions
+  return predictors
 }
 
 /**
@@ -167,16 +164,15 @@ function collectPredictorContributions(
  * どのソースにも分散が無い / 対象生徒に使える他ソースが無い場合は average にフォールバック。
  */
 function estimateByZScore(
-  studentId: string,
-  dataSourceId: string,
-  maxScore: number,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[]
 ): AbsentEstimation | null {
   const predictors = collectPredictorContributions(
-    studentId,
-    dataSourceId,
-    rawScoreMap,
+    targetRow,
+    dataSource,
+    matrix,
     allDataSources
   )
   if (predictors.length === 0) return null
@@ -185,31 +181,31 @@ function estimateByZScore(
   const zValues: number[] = []
   for (const predictor of predictors) {
     const distribution = collectTargetDistribution(
-      studentId,
-      predictor.id,
-      rawScoreMap
+      targetRow,
+      predictor.dataSource,
+      matrix
     )
     if (!distribution || distribution.sd <= 0) continue
-    zValues.push((predictor.score - distribution.mean) / distribution.sd)
+    zValues.push(
+      (predictor.contribution.score - distribution.mean) / distribution.sd
+    )
   }
   if (zValues.length === 0) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "insufficient_samples"
     )
   }
 
-  const target = collectTargetDistribution(studentId, dataSourceId, rawScoreMap)
+  const target = collectTargetDistribution(targetRow, dataSource, matrix)
   if (!target || target.sd <= 0) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "insufficient_samples"
     )
@@ -220,9 +216,9 @@ function estimateByZScore(
   const predicted = target.mean + standardizedStanding * target.sd
 
   return {
-    value: clamp(predicted, 0, maxScore),
+    value: clamp(predicted, 0, dataSource.maxScore),
     effectiveMethod: "zscore",
-    averageSources: predictors,
+    averageSources: predictors.map((predictor) => predictor.contribution),
     standardizedStanding,
     targetMean: target.mean,
     targetStandardDeviation: target.sd,
@@ -236,16 +232,15 @@ function estimateByZScore(
  * 使える他ソースが無い / 当ソースの実測が2名未満なら average にフォールバック。
  */
 function estimateByEquipercentile(
-  studentId: string,
-  dataSourceId: string,
-  maxScore: number,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[]
 ): AbsentEstimation | null {
   const predictors = collectPredictorContributions(
-    studentId,
-    dataSourceId,
-    rawScoreMap,
+    targetRow,
+    dataSource,
+    matrix,
     allDataSources
   )
   if (predictors.length === 0) return null
@@ -254,31 +249,31 @@ function estimateByEquipercentile(
   const percentiles: number[] = []
   for (const predictor of predictors) {
     const distribution = collectTargetDistribution(
-      studentId,
-      predictor.id,
-      rawScoreMap
+      targetRow,
+      predictor.dataSource,
+      matrix
     )
     if (!distribution) continue
-    percentiles.push(percentileRankOf(predictor.score, distribution.sorted))
+    percentiles.push(
+      percentileRankOf(predictor.contribution.score, distribution.sorted)
+    )
   }
   if (percentiles.length === 0) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "insufficient_samples"
     )
   }
 
-  const target = collectTargetDistribution(studentId, dataSourceId, rawScoreMap)
+  const target = collectTargetDistribution(targetRow, dataSource, matrix)
   if (!target) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "insufficient_samples"
     )
@@ -290,9 +285,9 @@ function estimateByEquipercentile(
   const predicted = quantileOf(percentileRank, target.sorted)
 
   return {
-    value: clamp(predicted, 0, maxScore),
+    value: clamp(predicted, 0, dataSource.maxScore),
     effectiveMethod: "equipercentile",
-    averageSources: predictors,
+    averageSources: predictors.map((predictor) => predictor.contribution),
     percentileRank,
     targetMean: target.mean,
   }
@@ -336,38 +331,26 @@ function quantileOf(p: number, sorted: number[]): number {
  * → 平均比率 × 当該DataSource.maxScore
  */
 function estimateByAverage(
-  studentId: string,
-  dataSourceId: string,
-  maxScore: number,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[]
 ): AbsentEstimation | null {
-  const studentScores = rawScoreMap.get(studentId)
-  if (!studentScores) return null
-
-  const averageSources: EstimationSourceContribution[] = []
-  let ratioSum = 0
-
-  for (const dataSource of allDataSources) {
-    if (dataSource.id === dataSourceId) continue
-    if (dataSource.maxScore <= 0) continue
-    const score = studentScores.get(dataSource.id)
-    if (score === null || score === undefined) continue
-    const ratio = score / dataSource.maxScore
-    averageSources.push({
-      id: dataSource.id,
-      name: dataSource.name,
-      score,
-      maxScore: dataSource.maxScore,
-      ratio,
-    })
-    ratioSum += ratio
-  }
+  const averageSources = collectPredictorContributions(
+    targetRow,
+    dataSource,
+    matrix,
+    allDataSources
+  ).map((predictor) => predictor.contribution)
 
   if (averageSources.length === 0) return null
-  const averageRatio = ratioSum / averageSources.length
+  const averageRatio =
+    averageSources.reduce(
+      (sum, averageSource) => sum + averageSource.ratio,
+      0
+    ) / averageSources.length
   return {
-    value: clamp(averageRatio * maxScore, 0, maxScore),
+    value: clamp(averageRatio * dataSource.maxScore, 0, dataSource.maxScore),
     effectiveMethod: "average",
     averageSources,
     averageRatio,
@@ -381,35 +364,18 @@ function estimateByAverage(
  * β = (X^T X)^(-1) X^T Y で係数を算出し、対象生徒のスコアを予測。
  */
 function estimateByRegression(
-  studentId: string,
-  dataSourceId: string,
-  maxScore: number,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[]
 ): AbsentEstimation | null {
-  // predictor ID → 表示名（説明変数の項名に使う）
-  const nameByDataSourceId = new Map(
-    allDataSources.map((dataSource) => [dataSource.id, dataSource.name])
+  // 他DataSource（predictor変数）のうち、対象生徒が実測を持つものだけを使う
+  const availablePredictors = allDataSources.filter(
+    (candidate) =>
+      candidate.id !== dataSource.id &&
+      candidate.maxScore > 0 &&
+      matrix.scoreOf(targetRow, candidate) !== null
   )
-
-  // 他DataSourceのID一覧（predictor変数）
-  const predictorDsIds = allDataSources
-    .filter(
-      (dataSource) => dataSource.id !== dataSourceId && dataSource.maxScore > 0
-    )
-    .map((dataSource) => dataSource.id)
-
-  if (predictorDsIds.length === 0) return null
-
-  // 対象生徒のpredictor値を取得
-  const targetStudentScores = rawScoreMap.get(studentId)
-  if (!targetStudentScores) return null
-
-  // 対象生徒が持っているpredictorのみを使用
-  const availablePredictors = predictorDsIds.filter((id) => {
-    const score = targetStudentScores.get(id)
-    return score !== null && score !== undefined
-  })
 
   if (availablePredictors.length === 0) return null
 
@@ -417,16 +383,16 @@ function estimateByRegression(
   const X: number[][] = [] // 各行 = [1, x1, x2, ...] (切片含む)
   const Y: number[] = []
 
-  for (const [otherStudentId, scores] of rawScoreMap) {
-    if (otherStudentId === studentId) continue
-    const y = scores.get(dataSourceId)
-    if (y === null || y === undefined) continue
+  for (const otherRow of matrix.rows) {
+    if (otherRow.gradeStudent.id === targetRow.gradeStudent.id) continue
+    const y = matrix.scoreOf(otherRow, dataSource)
+    if (y === null) continue
 
     const row: number[] = [1] // 切片項
     let complete = true
-    for (const predId of availablePredictors) {
-      const x = scores.get(predId)
-      if (x === null || x === undefined) {
+    for (const predictor of availablePredictors) {
+      const x = matrix.scoreOf(otherRow, predictor)
+      if (x === null) {
         complete = false
         break
       }
@@ -436,6 +402,18 @@ function estimateByRegression(
 
     X.push(row)
     Y.push(y)
+  }
+
+  // 訓練行が1つも集まらなければ回帰は組めない（対象生徒の説明変数を全部揃えた他生徒が
+  // 居ない場合に起こる）。以降は X[0] を参照するのでここで先に落とす。
+  if (X.length === 0) {
+    return fallbackToAverage(
+      targetRow,
+      dataSource,
+      matrix,
+      allDataSources,
+      "insufficient_samples"
+    )
   }
 
   // OLS: β = (X^T X)^(-1) X^T Y。多重共線性がある列はランク落ちで除外して解く。
@@ -451,10 +429,9 @@ function estimateByRegression(
   const minSamples = retainedColumns.length + 1
   if (X.length < minSamples) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "insufficient_samples"
     )
@@ -463,10 +440,9 @@ function estimateByRegression(
   // 独立な説明変数が1つも残らない（切片のみ）＝回帰不能 → 平均比率法にフォールバック
   if (retainedColumns.length <= 1) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "singular_matrix"
     )
@@ -476,10 +452,9 @@ function estimateByRegression(
   const reducedBeta = solveNormalEquations(X, Y, retainedColumns)
   if (!reducedBeta) {
     return fallbackToAverage(
-      studentId,
-      dataSourceId,
-      maxScore,
-      rawScoreMap,
+      targetRow,
+      dataSource,
+      matrix,
       allDataSources,
       "singular_matrix"
     )
@@ -495,10 +470,10 @@ function estimateByRegression(
 
   // 対象生徒のpredictor値で予測（従属列は係数0なので寄与しない）。
   // 構造的恒等式（合計＝小計の和）は対象生徒でも成り立つため、どの従属列を落としても予測値は不変。
-  const xTarget = [1]
-  for (const predId of availablePredictors) {
-    xTarget.push(targetStudentScores.get(predId)!)
-  }
+  // availablePredictors は「対象生徒が実測を持つ」で絞ってあるので scoreOf は非null。
+  const targetScoreOf = (predictor: DataSourceInfo): number =>
+    matrix.scoreOf(targetRow, predictor) ?? 0
+  const xTarget = [1, ...availablePredictors.map(targetScoreOf)]
 
   let predicted = 0
   for (let j = 0; j < p; j++) {
@@ -509,21 +484,20 @@ function estimateByRegression(
   // ランク落ち除外した従属列は droppedPredictors に回す。
   const regressionTerms: EstimationRegressionTerm[] = []
   const droppedPredictors: EstimationDroppedPredictor[] = []
-  availablePredictors.forEach((predId, index) => {
+  availablePredictors.forEach((predictor, index) => {
     const column = index + 1
-    const name = nameByDataSourceId.get(predId) ?? predId
     if (retainedColumnSet.has(column)) {
       regressionTerms.push({
-        id: predId,
-        name,
-        value: targetStudentScores.get(predId)!,
+        id: predictor.id,
+        name: predictor.name,
+        value: targetScoreOf(predictor),
         coefficient: beta[column],
       })
     } else {
       droppedPredictors.push({
-        id: predId,
-        name,
-        value: targetStudentScores.get(predId)!,
+        id: predictor.id,
+        name: predictor.name,
+        value: targetScoreOf(predictor),
       })
     }
   })
@@ -537,7 +511,7 @@ function estimateByRegression(
   )
 
   return {
-    value: clamp(predicted, 0, maxScore),
+    value: clamp(predicted, 0, dataSource.maxScore),
     effectiveMethod: "regression",
     intercept: beta[0],
     regressionTerms,
@@ -551,18 +525,16 @@ function estimateByRegression(
  * averageの推定結果にフォールバック理由を付与して返す。
  */
 function fallbackToAverage(
-  studentId: string,
-  dataSourceId: string,
-  maxScore: number,
-  rawScoreMap: Map<string, Map<string, number | null>>,
+  targetRow: EstimationRow,
+  dataSource: DataSourceInfo,
+  matrix: EstimationMatrix,
   allDataSources: DataSourceInfo[],
   reason: EstimationFallbackReason
 ): AbsentEstimation | null {
   const fallback = estimateByAverage(
-    studentId,
-    dataSourceId,
-    maxScore,
-    rawScoreMap,
+    targetRow,
+    dataSource,
+    matrix,
     allDataSources
   )
   if (fallback === null) return null
@@ -743,29 +715,29 @@ function multipleCorrelationR(
  * @returns { correlation, sampleSize } または算出不能時 null
  */
 export function computeSourceFit(
-  dataSourceId: string,
-  predictorIds: string[],
-  rawScoreMap: Map<string, Map<string, number | null>>
+  dataSource: DataSourceInfo,
+  predictors: DataSourceInfo[],
+  matrix: EstimationMatrix
 ): { correlation: number; sampleSize: number } | null {
-  if (predictorIds.length === 0) return null
+  if (predictors.length === 0) return null
 
   const X: number[][] = []
   const Y: number[] = []
-  for (const [, scores] of rawScoreMap) {
-    const y = scores.get(dataSourceId)
-    if (y === null || y === undefined) continue
-    const row: number[] = [1]
+  for (const row of matrix.rows) {
+    const y = matrix.scoreOf(row, dataSource)
+    if (y === null) continue
+    const designRow: number[] = [1]
     let complete = true
-    for (const predictorId of predictorIds) {
-      const x = scores.get(predictorId)
-      if (x === null || x === undefined) {
+    for (const predictor of predictors) {
+      const x = matrix.scoreOf(row, predictor)
+      if (x === null) {
         complete = false
         break
       }
-      row.push(x)
+      designRow.push(x)
     }
     if (!complete) continue
-    X.push(row)
+    X.push(designRow)
     Y.push(y)
   }
 

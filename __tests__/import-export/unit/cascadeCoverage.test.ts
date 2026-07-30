@@ -72,9 +72,11 @@ describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () =
   }
 
   it("解析が機能していることの保証（Studentは複数のカスケード子を持つ）", () => {
-    // 解析が壊れて空集合になっても上のテストが通ってしまう事故を防ぐ
+    // 解析が壊れて空集合になっても上のテストが通ってしまう事故を防ぐ。
+    // #962 で採点・点数・成績のセルが各メンバーシップの子へ移ったため、
+    // Student 直下に残るのは所属とメンバーシップ4種のみ。
     expect(cascadeChildrenFromSchema("Student").length).toBeGreaterThanOrEqual(
-      5
+      4
     )
   })
 })
@@ -126,5 +128,31 @@ describe("資料の点数の親は CourseworkStudent（#962 の再発防止）",
     expect(cascadeChildrenFromSchema("Student")).not.toContain(
       "CourseworkScore"
     )
+  })
+})
+
+/**
+ * 成績のセルが「その成績の対象者」の子であることの固定（#962 Phase C）。
+ *
+ * 上書き・確定値・除外設定は (gradeId, studentId) の2列で人を直に指していた。
+ * GradeStudent を参照する子テーブルが1つも無いため名簿から外しても消えず、
+ * 同じ生徒を再び追加すると過去の設定が甦っていた（特に確定値は実害が大きい）。
+ */
+describe("成績のセルの親は GradeStudent（#962 の再発防止）", () => {
+  const GRADE_CELL_TABLES = [
+    "GradeFrozenScore",
+    "GradeItemExclusion",
+    "GradeOverride",
+  ]
+
+  it("成績のセル3種は GradeStudent の onDelete:Cascade 子である", () => {
+    expect(cascadeChildrenFromSchema("GradeStudent")).toEqual(GRADE_CELL_TABLES)
+  })
+
+  it("成績のセル3種は Student 直結ではない", () => {
+    const studentChildren = cascadeChildrenFromSchema("Student")
+    for (const table of GRADE_CELL_TABLES) {
+      expect(studentChildren).not.toContain(table)
+    }
   })
 })

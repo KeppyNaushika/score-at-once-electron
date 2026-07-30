@@ -5,7 +5,9 @@ import { useMemo, useState } from "react"
 import { evaluateConstraints } from "@/lib/gradeConstraints"
 import type {
   GradeCalculationResult,
+  GradeCellTarget,
   GradeConstraintData,
+  GradeOverrideInput,
 } from "@/types/grade.types"
 
 import { ConstraintLegend } from "./ConstraintLegend"
@@ -16,15 +18,11 @@ import { GradeItemBreakdownPopover } from "./GradeItemBreakdownPopover"
 interface ResultsTableProps {
   result: GradeCalculationResult
   constraints?: GradeConstraintData[]
-  onGradeOverride: (params: {
-    studentId: string
-    gradeItemId: string
-    overrideLabel: string | null
-  }) => void
+  onGradeOverride: (params: GradeOverrideInput) => void
   /** 対象セルを現在のライブ値で確定し直す */
-  onRefreezeCell: (target: { studentId: string; gradeItemId: string }) => void
+  onRefreezeCell: (target: GradeCellTarget) => void
   /** 対象セルの確定を解除する */
-  onUnfreezeCell: (target: { studentId: string; gradeItemId: string }) => void
+  onUnfreezeCell: (target: GradeCellTarget) => void
 }
 
 type SortKey = "registrationOrder" | "attendanceNumber" | string
@@ -45,7 +43,7 @@ export function ResultsTable({
   const [sortKey, setSortKey] = useState<SortKey>("registrationOrder")
   const [sortAsc, setSortAsc] = useState(true)
 
-  // 制約ルールを評価。違反（studentId → 違反一覧）と、評価できなかったルールの理由を得る
+  // 制約ルールを評価。違反（gradeStudentId → 違反一覧）と、評価できなかったルールの理由を得る
   const constraintEvaluation = useMemo(
     () => evaluateConstraints(result, constraints),
     [result, constraints]
@@ -78,20 +76,22 @@ export function ResultsTable({
     }
   }
 
-  // 登録順（result.students の元順序）の1始まり順位を studentId で引ける Map。
+  // 登録順（result.students の元順序）の1始まり順位を対象者で引ける Map。
   // レンダー毎・比較毎の indexOf(O(n)) を避けるため一度だけ構築する。
-  const registrationRankByStudentId = useMemo(
+  const registrationRankByGradeStudentId = useMemo(
     () =>
       new Map(
-        result.students.map((student, index) => [student.studentId, index])
+        result.students.map((student, index) => [student.gradeStudentId, index])
       ),
     [result.students]
   )
 
   const sortedStudents = [...result.students].sort((studentA, studentB) => {
     if (sortKey === "registrationOrder") {
-      const aIndex = registrationRankByStudentId.get(studentA.studentId) ?? 0
-      const bIndex = registrationRankByStudentId.get(studentB.studentId) ?? 0
+      const aIndex =
+        registrationRankByGradeStudentId.get(studentA.gradeStudentId) ?? 0
+      const bIndex =
+        registrationRankByGradeStudentId.get(studentB.gradeStudentId) ?? 0
       return sortAsc ? aIndex - bIndex : bIndex - aIndex
     }
     let comparison = 0
@@ -154,7 +154,7 @@ export function ResultsTable({
           <tbody>
             {sortedStudents.map((student) => {
               const violations =
-                violationsByStudent.get(student.studentId) ?? []
+                violationsByStudent.get(student.gradeStudentId) ?? []
               const rowColor = violations[0]?.color
               const rowTitle =
                 violations.length > 0
@@ -168,14 +168,15 @@ export function ResultsTable({
                   : undefined
               return (
                 <tr
-                  key={student.studentId}
+                  key={student.gradeStudentId}
                   className="border-t"
                   style={rowColor ? { backgroundColor: rowColor } : undefined}
                   title={rowTitle}
                 >
                   <td className="text-muted-foreground px-2 py-1.5 text-center">
-                    {(registrationRankByStudentId.get(student.studentId) ?? 0) +
-                      1}
+                    {(registrationRankByGradeStudentId.get(
+                      student.gradeStudentId
+                    ) ?? 0) + 1}
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     {student.attendanceNumber ?? "-"}
@@ -235,7 +236,7 @@ export function ResultsTable({
                             }
                             onCommit={(newLabel) =>
                               onGradeOverride({
-                                studentId: student.studentId,
+                                gradeStudentId: student.gradeStudentId,
                                 gradeItemId: gradeItem.id,
                                 overrideLabel: newLabel,
                               })
@@ -248,13 +249,13 @@ export function ResultsTable({
                               frozenGradeLabel={itemResult.gradeLabel}
                               onRefreeze={() =>
                                 onRefreezeCell({
-                                  studentId: student.studentId,
+                                  gradeStudentId: student.gradeStudentId,
                                   gradeItemId: gradeItem.id,
                                 })
                               }
                               onUnfreeze={() =>
                                 onUnfreezeCell({
-                                  studentId: student.studentId,
+                                  gradeStudentId: student.gradeStudentId,
                                   gradeItemId: gradeItem.id,
                                 })
                               }

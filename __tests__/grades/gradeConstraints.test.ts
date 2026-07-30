@@ -29,6 +29,7 @@ function makeStudent(
   labels: [string, string, string]
 ): StudentGradeResult {
   return {
+    gradeStudentId: `gs:${id}`,
     studentId: id,
     studentNumber: id,
     lastName: id,
@@ -63,12 +64,21 @@ function makeResult(students: StudentGradeResult[]): GradeCalculationResult {
   }
 }
 
+/**
+ * 違反した生徒の id 一覧。
+ *
+ * 違反は「その成績の対象者」（GradeStudent）でキーされるので、テストの可読性のため
+ * 人の id へ1段戻す。対象者 id と人の id が食い違っていれば空になり露見する。
+ */
 function violatedIds(
   result: GradeCalculationResult,
   constraints: GradeConstraintData[]
 ): string[] {
   const { violations } = evaluateConstraints(result, constraints)
-  return [...violations.keys()].sort()
+  return result.students
+    .filter((student) => violations.has(student.gradeStudentId))
+    .map((student) => student.studentId)
+    .sort()
 }
 
 const baseConstraint: Omit<GradeConstraintData, "kind" | "expression"> = {
@@ -149,6 +159,7 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
       "gi-h": hyotei,
     }
     return {
+      gradeStudentId: `gs:${id}`,
       studentId: id,
       studentNumber: id,
       lastName: id,
@@ -370,6 +381,7 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
     labels: Record<string, string>
   ): StudentGradeResult {
     return {
+      gradeStudentId: "gs:s1",
       studentId: "s1",
       studentNumber: "s1",
       lastName: "s1",
@@ -487,9 +499,9 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
       viewpoints: [],
     }
 
-    const { violations, errors } = evaluateConstraints(result, [expr])
+    const { errors } = evaluateConstraints(result, [expr])
     expect(errors.size).toBe(0)
-    expect([...violations.keys()]).toEqual(["s1"])
+    expect(violatedIds(result, [expr])).toEqual(["s1"])
   })
 
   it("式ルールの mean() が非数値ラベルを集計できる", () => {
@@ -520,9 +532,9 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
       viewpoints: [],
     }
 
-    const { violations, errors } = evaluateConstraints(result, [expr])
+    const { errors } = evaluateConstraints(result, [expr])
     expect(errors.size).toBe(0)
-    expect([...violations.keys()]).toEqual(["s1"])
+    expect(violatedIds(result, [expr])).toEqual(["s1"])
   })
 
   it("混在禁止ラベルが1つ以下なら無言失火せずエラーになる", () => {

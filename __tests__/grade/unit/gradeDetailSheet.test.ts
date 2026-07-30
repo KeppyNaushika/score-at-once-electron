@@ -90,6 +90,7 @@ function makeStudent(
   excludedItemIds: string[] = []
 ): StudentGradeResult {
   return {
+    gradeStudentId: `gs:${id}`,
     studentId: id,
     studentNumber: id,
     lastName: id,

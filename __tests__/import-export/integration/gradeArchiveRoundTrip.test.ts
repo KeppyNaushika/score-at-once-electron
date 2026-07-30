@@ -13,6 +13,7 @@
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/grade-transformers/legacyShape"
 import type { GradeArchiveData } from "../../../src/types/gradeArchive.types"
 import {
   cleanupTestDatabase,
@@ -40,18 +41,194 @@ function toArchive(
   gradeId: string,
   collected: Awaited<ReturnType<typeof collectGradeArchiveData>>
 ): GradeArchiveData {
+  const { counts, ...sections } = collected
   return {
     manifest: {
-      version: "1.5.0",
+      version: "1.13.0",
       appVersion: "test",
       exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
       gradeId,
-      gradeName: collected.gradeData.grade.name,
+      gradeName: collected.grades[0]?.name ?? "",
+      counts,
+    },
+    ...sections,
+  }
+}
+
+/**
+ * 収集結果を v1.12.0 以前の射影形式へ落とす（旧アーカイブの再現用）。
+ * 変換器の逆向きで、旧形式の読込互換を検証するテストだけが使う。
+ */
+function toLegacyArchive(
+  gradeId: string,
+  collected: Awaited<ReturnType<typeof collectGradeArchiveData>>
+): LegacyGradeArchiveData {
+  const gradeItemNameById = new Map(
+    collected.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
+  )
+  const studentNumberByGradeStudentId = new Map(
+    collected.gradeStudents.map((gradeStudent) => [
+      gradeStudent.id,
+      collected.studentsData.find(
+        (student) => student.id === gradeStudent.studentId
+      )!.studentNumber,
+    ])
+  )
+  const legacyCell = (cell: {
+    gradeStudentId: string
+    gradeItemId: string
+  }) => ({
+    studentNumber: studentNumberByGradeStudentId.get(cell.gradeStudentId)!,
+    gradeItemId: cell.gradeItemId,
+    gradeItemName: gradeItemNameById.get(cell.gradeItemId)!,
+  })
+
+  return {
+    manifest: {
+      version: "1.12.0",
+      appVersion: "test",
+      exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
+      gradeId,
+      gradeName: collected.grades[0]?.name ?? "",
       counts: collected.counts,
     },
-    gradeData: collected.gradeData,
+    gradeData: {
+      grade: {
+        name: collected.grades[0].name,
+        description: collected.grades[0].description,
+        referenceDate: collected.grades[0].referenceDate,
+      },
+      exportSettings: collected.gradeExportSettings[0]
+        ? { settingsJson: collected.gradeExportSettings[0].settingsJson }
+        : null,
+      gradeItems: collected.gradeItems.map((gradeItem) => ({
+        id: gradeItem.id,
+        name: gradeItem.name,
+        order: gradeItem.order,
+        dataSources: collected.gradeDataSources
+          .filter((dataSource) => dataSource.gradeItemId === gradeItem.id)
+          .map((dataSource) => ({
+            id: dataSource.id,
+            type: dataSource.type,
+            name: dataSource.name,
+            weight: Number(dataSource.weight),
+            order: dataSource.order,
+            examName:
+              collected.examRefs.find(
+                (examRef) => examRef.id === dataSource.examId
+              )?.examName ?? null,
+            subtotalName:
+              collected.subtotalRefs.find(
+                (subtotalRef) => subtotalRef.id === dataSource.subtotalId
+              )?.name ?? null,
+            cropRegionLabel:
+              collected.cropRegionRefs.find(
+                (cropRegionRef) => cropRegionRef.id === dataSource.cropRegionId
+              )?.label ?? null,
+            absentMethod: dataSource.absentMethod,
+            absentRatio: Number(dataSource.absentRatio),
+            absentOffset: Number(dataSource.absentOffset),
+            treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
+            estimationMode: dataSource.estimationMode,
+            estimationSourceIds: collected.gradeDataSourceEstimationSources
+              .filter(
+                (estimationSource) =>
+                  estimationSource.dataSourceId === dataSource.id
+              )
+              .map((estimationSource) => estimationSource.sourceDataSourceId),
+            examId: dataSource.examId,
+            subtotalId: dataSource.subtotalId,
+            cropRegionId: dataSource.cropRegionId,
+            courseworkId: dataSource.courseworkId,
+            courseworkItemId: dataSource.courseworkItemId,
+          })),
+      })),
+      classroomRefs: collected.gradeClassrooms.map((gradeClassroom) => ({
+        id: gradeClassroom.classroomId,
+        name: collected.classesData.find(
+          (classroom) => classroom.id === gradeClassroom.classroomId
+        )!.name,
+      })),
+      examRefs: collected.examRefs.map((examRef) => ({
+        id: examRef.id,
+        examName: examRef.examName,
+        examDate: examRef.examDate,
+        dataSourceName:
+          collected.gradeDataSources.find(
+            (dataSource) => dataSource.examId === examRef.id
+          )?.name ?? "",
+      })),
+      studentRefs: collected.gradeStudents.map((gradeStudent) => ({
+        id: gradeStudent.studentId,
+        studentNumber: studentNumberByGradeStudentId.get(gradeStudent.id)!,
+        classroomName: null,
+        customOrder: gradeStudent.customOrder,
+      })),
+      gradeItemExclusions: collected.gradeItemExclusions.map(legacyCell),
+      gradeOverrides: collected.gradeOverrides.map((override) => ({
+        ...legacyCell(override),
+        overrideLabel: override.overrideLabel,
+      })),
+      gradeFrozenScores: collected.gradeFrozenScores.map((frozenScore) => ({
+        ...legacyCell(frozenScore),
+        weightedScore:
+          frozenScore.weightedScore === null
+            ? null
+            : Number(frozenScore.weightedScore),
+        weightedMaxScore: Number(frozenScore.weightedMaxScore),
+        percentage:
+          frozenScore.percentage === null
+            ? null
+            : Number(frozenScore.percentage),
+        gradeLabel: frozenScore.gradeLabel,
+        frozenAt: frozenScore.frozenAt,
+      })),
+      gradeConstraints: collected.gradeConstraints.map((constraint) => ({
+        name: constraint.name,
+        kind: constraint.kind,
+        targetGradeItemId: constraint.targetGradeItemId,
+        targetGradeItemName: constraint.targetGradeItemId
+          ? (gradeItemNameById.get(constraint.targetGradeItemId) ?? null)
+          : null,
+        aggregate: constraint.aggregate,
+        tolerance: Number(constraint.tolerance),
+        viewpointGradeItemIds: collected.gradeConstraintViewpoints
+          .filter((viewpoint) => viewpoint.constraintId === constraint.id)
+          .map((viewpoint) => viewpoint.gradeItemId),
+        viewpointGradeItemNames: collected.gradeConstraintViewpoints
+          .filter((viewpoint) => viewpoint.constraintId === constraint.id)
+          .map((viewpoint) => gradeItemNameById.get(viewpoint.gradeItemId)!),
+        labelValues: Object.fromEntries(
+          collected.gradeConstraintLabelValues
+            .filter((labelValue) => labelValue.constraintId === constraint.id)
+            .map((labelValue) => [labelValue.label, Number(labelValue.value)])
+        ),
+        exclusionLabels: collected.gradeConstraintExclusionLabels
+          .filter(
+            (exclusionLabel) => exclusionLabel.constraintId === constraint.id
+          )
+          .map((exclusionLabel) => exclusionLabel.label),
+        expression: constraint.expression,
+        color: constraint.color,
+        message: constraint.message,
+        enabled: constraint.enabled,
+        order: constraint.order,
+      })),
+    },
     courseworkArchive: collected.courseworkArchive,
-    boundariesData: collected.boundariesData,
+    boundariesData: {
+      boundarySets: collected.gradeBoundarySets.map((boundarySet) => ({
+        gradeItemId: boundarySet.gradeItemId,
+        gradeItemName: gradeItemNameById.get(boundarySet.gradeItemId)!,
+        boundaries: collected.gradeBoundaries
+          .filter((boundary) => boundary.gradeBoundarySetId === boundarySet.id)
+          .map((boundary) => ({
+            label: boundary.label,
+            minPercentage: Number(boundary.minPercentage),
+            order: boundary.order,
+          })),
+      })),
+    },
   }
 }
 
@@ -85,10 +262,8 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.grade.referenceDate).toBe(
-      referenceDate.toISOString()
-    )
-    expect(collected.gradeData.exportSettings?.settingsJson).toBe(settingsJson)
+    expect(collected.grades[0].referenceDate).toBe(referenceDate.toISOString())
+    expect(collected.gradeExportSettings[0].settingsJson).toBe(settingsJson)
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
@@ -232,11 +407,21 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(collected.courseworkArchive.studentsData[0].studentNumber).toBe(
       `CW_${suffix}`
     )
-    const collectedNumDs = collected.gradeData.gradeItems[0].dataSources.find(
+    const collectedNumDs = collected.gradeDataSources.find(
       (dataSource) => dataSource.name === "提出物参照"
     )!
-    expect(collectedNumDs.courseworkName).toBe(`第2回レポート_${suffix}`)
-    expect(collectedNumDs.courseworkItemName).toBe("提出物")
+    // 参照先の資料・評価項目は内包する courseworkArchive の行として carry される。
+    // データソースの行は uuid だけを持つ（名前を二重に持たない）
+    expect(collectedNumDs.courseworkItemId).not.toBeNull()
+    const referencedItem = collected.courseworkArchive.courseworkItems.find(
+      (item) => item.id === collectedNumDs.courseworkItemId
+    )!
+    expect(referencedItem.name).toBe("提出物")
+    expect(
+      collected.courseworkArchive.courseworks.find(
+        (coursework) => coursework.id === referencedItem.courseworkId
+      )!.name
+    ).toBe(`第2回レポート_${suffix}`)
 
     // インポート（新規 Grade + Coursework が作成される。同名Courseworkは無い前提）
     // 既存 Coursework と名前衝突しないよう、元の資料は残るが import 時は
@@ -287,7 +472,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     // アーカイブを手組み（DBには Coursework を作らず、埋め込みのみ）
-    const archive: GradeArchiveData = {
+    const archive: LegacyGradeArchiveData = {
       manifest: {
         version: "1.4.0",
         appVersion: "test",
@@ -408,7 +593,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     // 旧 v1.3.0 アーカイブ JSON を手組み（courseworks 無し、manualScoresData あり）
-    const legacy: GradeArchiveData = {
+    const legacy: LegacyGradeArchiveData = {
       manifest: {
         version: "1.3.0",
         appVersion: "test",
@@ -520,7 +705,7 @@ describe("grade-archive ラウンドトリップ", () => {
       },
     })
 
-    const buildLegacy = (): GradeArchiveData => ({
+    const buildLegacy = (): LegacyGradeArchiveData => ({
       manifest: {
         version: "1.3.0",
         appVersion: "test",
@@ -615,7 +800,7 @@ describe("grade-archive ラウンドトリップ", () => {
   //   無効な "manual" 型のまま永続化されないこと（検出ゲートの回帰防止）
   it("v1.3.0: 点数未入力の manual ソースも coursework 型へ変換される", async () => {
     const suffix = Date.now()
-    const archive: GradeArchiveData = {
+    const archive: LegacyGradeArchiveData = {
       manifest: {
         version: "1.3.0",
         appVersion: "test",
@@ -677,8 +862,8 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.grade.referenceDate).toBeNull()
-    expect(collected.gradeData.exportSettings).toBeNull()
+    expect(collected.grades[0].referenceDate).toBeNull()
+    expect(collected.gradeExportSettings).toHaveLength(0)
     expect(collected.courseworkArchive.courseworks).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
@@ -710,7 +895,7 @@ describe("grade-archive ラウンドトリップ", () => {
       },
     })
 
-    const buildArchive = (): GradeArchiveData => ({
+    const buildArchive = (): LegacyGradeArchiveData => ({
       manifest: {
         version: "1.4.0",
         appVersion: "test",
@@ -849,7 +1034,7 @@ describe("grade-archive ラウンドトリップ", () => {
       include: { items: true },
     })
 
-    const archive: GradeArchiveData = {
+    const archive: LegacyGradeArchiveData = {
       manifest: {
         version: "1.4.0",
         appVersion: "test",
@@ -1023,25 +1208,38 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.gradeConstraints).toHaveLength(2)
-    const exclusion = collected.gradeData.gradeConstraints!.find(
+    expect(collected.gradeConstraints).toHaveLength(2)
+    const exclusion = collected.gradeConstraints.find(
       (constraint) => constraint.kind === "mutual_exclusion"
     )!
     expect(exclusion.name).toBe("A・C混在禁止")
-    expect(exclusion.exclusionLabels).toEqual(["A", "C"])
-    expect(exclusion.config).toBeUndefined()
+    // 混在禁止ラベルは中間テーブルの行として持つ（配列へ潰さない）
+    expect(
+      collected.gradeConstraintExclusionLabels
+        .filter((row) => row.constraintId === exclusion.id)
+        .map((row) => row.label)
+    ).toEqual(["A", "C"])
 
-    const consistency = collected.gradeData.gradeConstraints!.find(
+    const consistency = collected.gradeConstraints.find(
       (constraint) => constraint.kind === "consistency"
     )!
-    // uuid 一次・名前二次で持ち出す
+    // 参照は行の uuid のまま。観点・ラベル値も中間テーブルの行として持つ
     expect(consistency.targetGradeItemId).toBe(hyoteiItem.id)
-    expect(consistency.targetGradeItemName).toBe("評定")
-    expect(consistency.viewpointGradeItemIds).toEqual([knowledgeItem.id])
-    expect(consistency.viewpointGradeItemNames).toEqual(["知識・技能"])
-    expect(consistency.labelValues).toEqual({ A: 5, C: 1 })
+    expect(
+      collected.gradeConstraintViewpoints
+        .filter((row) => row.constraintId === consistency.id)
+        .map((row) => row.gradeItemId)
+    ).toEqual([knowledgeItem.id])
+    expect(
+      collected.gradeConstraintLabelValues
+        .filter((row) => row.constraintId === consistency.id)
+        .map((row) => [row.label, Number(row.value)])
+    ).toEqual([
+      ["A", 5],
+      ["C", 1],
+    ])
     expect(consistency.aggregate).toBe("sum")
-    expect(consistency.tolerance).toBe(2)
+    expect(Number(consistency.tolerance)).toBe(2)
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
@@ -1112,7 +1310,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_frozen_${suffix}` },
     })
-    await prisma.gradeStudent.create({
+    const gradeStudent = await prisma.gradeStudent.create({
       data: { gradeId: grade.id, studentId: student.id },
     })
     const gradeItem = await prisma.gradeItem.create({
@@ -1121,8 +1319,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const frozenAt = new Date("2026-07-20T09:00:00.000Z")
     await prisma.gradeFrozenScore.create({
       data: {
-        gradeId: grade.id,
-        studentId: student.id,
+        gradeStudentId: gradeStudent.id,
         gradeItemId: gradeItem.id,
         weightedScore: 0.8,
         weightedMaxScore: 1,
@@ -1132,31 +1329,37 @@ describe("grade-archive ラウンドトリップ", () => {
       },
     })
 
-    // 収集（export）: 外部参照は学籍番号・評価項目名の名前ベース
+    // 収集（export）: 行をそのまま持つ（Decimal は文字列、参照は uuid）
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.gradeFrozenScores).toHaveLength(1)
-    expect(collected.gradeData.gradeFrozenScores![0]).toMatchObject({
-      studentNumber: `SF${suffix}`,
-      gradeItemName: "知識・技能",
-      weightedScore: 0.8,
-      weightedMaxScore: 1,
-      percentage: 80,
+    expect(collected.gradeFrozenScores).toHaveLength(1)
+    expect(collected.gradeFrozenScores[0]).toMatchObject({
+      gradeStudentId: gradeStudent.id,
+      gradeItemId: gradeItem.id,
+      weightedScore: "0.8",
+      weightedMaxScore: "1",
+      percentage: "80",
       gradeLabel: "A",
     })
+    // 生徒は full レコードとして carry される（uuid が当たらなければ学籍番号で当てる）
+    expect(collected.studentsData[0].studentNumber).toBe(`SF${suffix}`)
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
 
     const imported = await prisma.gradeFrozenScore.findMany({
-      where: { gradeId: result.gradeId! },
+      where: { gradeStudent: { gradeId: result.gradeId! } },
     })
     expect(imported).toHaveLength(1)
     expect(Number(imported[0].percentage)).toBe(80)
     expect(Number(imported[0].weightedScore)).toBe(0.8)
     expect(Number(imported[0].weightedMaxScore)).toBe(1)
     expect(imported[0].gradeLabel).toBe("A")
-    expect(imported[0].studentId).toBe(student.id)
+    // 確定値は「その成績の対象者」にぶら下がる。人へは1段辿って確認する
+    const importedGradeStudent = await prisma.gradeStudent.findUniqueOrThrow({
+      where: { id: imported[0].gradeStudentId },
+    })
+    expect(importedGradeStudent.studentId).toBe(student.id)
     expect(new Date(imported[0].frozenAt).toISOString()).toBe(
       frozenAt.toISOString()
     )
@@ -1180,7 +1383,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_dup_${suffix}` },
     })
-    await prisma.gradeStudent.create({
+    const gradeStudent = await prisma.gradeStudent.create({
       data: { gradeId: grade.id, studentId: student.id },
     })
     // 同じ名前の評価項目を2つ作る（1つ目は「寄せられる先」になりうる側）
@@ -1193,8 +1396,7 @@ describe("grade-archive ラウンドトリップ", () => {
     // 確定値・上書き・境界はすべて「2つ目」に付ける
     await prisma.gradeFrozenScore.create({
       data: {
-        gradeId: grade.id,
-        studentId: student.id,
+        gradeStudentId: gradeStudent.id,
         gradeItemId: secondItem.id,
         weightedScore: 0.7,
         weightedMaxScore: 1,
@@ -1204,8 +1406,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
     await prisma.gradeOverride.create({
       data: {
-        gradeId: grade.id,
-        studentId: student.id,
+        gradeStudentId: gradeStudent.id,
         gradeItemId: secondItem.id,
         overrideLabel: "4",
       },
@@ -1224,10 +1425,8 @@ describe("grade-archive ラウンドトリップ", () => {
 
     const collected = await collectGradeArchiveData(grade.id)
     // 参照は uuid を持ち出している
-    expect(collected.gradeData.gradeItems[1].id).toBe(secondItem.id)
-    expect(collected.gradeData.gradeFrozenScores![0].gradeItemId).toBe(
-      secondItem.id
-    )
+    expect(collected.gradeItems[1].id).toBe(secondItem.id)
+    expect(collected.gradeFrozenScores[0].gradeItemId).toBe(secondItem.id)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
@@ -1241,13 +1440,13 @@ describe("grade-archive ラウンドトリップ", () => {
     const importedSecondId = importedItems[1].id
 
     const frozen = await prisma.gradeFrozenScore.findMany({
-      where: { gradeId: result.gradeId! },
+      where: { gradeStudent: { gradeId: result.gradeId! } },
     })
     expect(frozen).toHaveLength(1)
     expect(frozen[0].gradeItemId).toBe(importedSecondId)
 
     const overrides = await prisma.gradeOverride.findMany({
-      where: { gradeId: result.gradeId! },
+      where: { gradeStudent: { gradeId: result.gradeId! } },
     })
     expect(overrides).toHaveLength(1)
     expect(overrides[0].gradeItemId).toBe(importedSecondId)
@@ -1274,7 +1473,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_legacy_${suffix}` },
     })
-    await prisma.gradeStudent.create({
+    const gradeStudent = await prisma.gradeStudent.create({
       data: { gradeId: grade.id, studentId: student.id },
     })
     await prisma.gradeItem.create({
@@ -1285,7 +1484,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     const collected = await collectGradeArchiveData(grade.id)
-    const archive = toArchive(grade.id, collected)
+    const archive = toLegacyArchive(grade.id, collected)
     // uuid を持たない v1.9.0 以前のアーカイブを再現する
     archive.gradeData.gradeItems = archive.gradeData.gradeItems.map(
       (gradeItem) => ({ ...gradeItem, id: undefined })
@@ -1303,7 +1502,7 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // どちらの項目か決められないので取り込まず、その旨を警告する
     const overrides = await prisma.gradeOverride.findMany({
-      where: { gradeId: result.gradeId! },
+      where: { gradeStudent: { gradeId: result.gradeId! } },
     })
     expect(overrides).toHaveLength(0)
     expect(
@@ -1358,11 +1557,9 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.studentRefs[0].id).toBe(student.id)
-    expect(collected.gradeData.classroomRefs[0].id).toBe(classroom.id)
-    expect(collected.gradeData.gradeItems[0].dataSources[0].examId).toBe(
-      exam.id
-    )
+    expect(collected.gradeStudents[0].studentId).toBe(student.id)
+    expect(collected.gradeClassrooms[0].classroomId).toBe(classroom.id)
+    expect(collected.gradeDataSources[0].examId).toBe(exam.id)
 
     // 取り込み前に名前・学籍番号をすべて変える（名前照合なら全滅する状況）
     await prisma.student.update({
@@ -1422,12 +1619,12 @@ describe("grade-archive ラウンドトリップ", () => {
     await prisma.gradeClassroom.create({
       data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
     })
-    await prisma.gradeStudent.create({
+    const gradeStudent = await prisma.gradeStudent.create({
       data: { gradeId: grade.id, studentId: student.id },
     })
 
     const collected = await collectGradeArchiveData(grade.id)
-    const archive = toArchive(grade.id, collected)
+    const archive = toLegacyArchive(grade.id, collected)
     // v1.9.0 以前を再現: 外部参照から uuid を落とす
     archive.gradeData.studentRefs = archive.gradeData.studentRefs.map(
       (studentRef) => ({ ...studentRef, id: undefined })
@@ -1502,9 +1699,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.gradeItems[0].dataSources[0].subtotalId).toBe(
-      targetSubtotal.id
-    )
+    expect(collected.gradeDataSources[0].subtotalId).toBe(targetSubtotal.id)
 
     // uuid あり: 一次照合で対象の小計に当たる
     const withUuid = await importGradeArchive(toArchive(grade.id, collected))
@@ -1516,7 +1711,7 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // uuid なし（v1.9.0 以前）: 名前フォールバックでも試験で絞られ、
     // 無関係な試験の同名小計には当たらない
-    const legacyArchive = toArchive(grade.id, collected)
+    const legacyArchive = toLegacyArchive(grade.id, collected)
     legacyArchive.gradeData.gradeItems = legacyArchive.gradeData.gradeItems.map(
       (item) => ({
         ...item,
@@ -1540,14 +1735,401 @@ describe("grade-archive ラウンドトリップ", () => {
       data: { name: `成績_nofrozen_${Date.now()}` },
     })
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.gradeFrozenScores).toBeUndefined()
+    expect(collected.gradeFrozenScores).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
     const imported = await prisma.gradeFrozenScore.findMany({
-      where: { gradeId: result.gradeId! },
+      where: { gradeStudent: { gradeId: result.gradeId! } },
     })
     expect(imported).toHaveLength(0)
+  })
+
+  it("アーカイブの名簿に無い対象者を指すセルは取り込まず警告する（#962 Phase C）", async () => {
+    const suffix = Date.now()
+    // セルは対象者（GradeStudent）を uuid で指す。その uuid が名簿セクションに
+    // 無ければ、取り込み先で対象者を作れないのでセルも作ってはいけない
+    // （作れてしまうと、どの画面にも出ない孤児が復活する）。
+    const grade = await prisma.grade.create({
+      data: { name: `成績_orphan_${suffix}` },
+    })
+    const gradeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    const collected = await collectGradeArchiveData(grade.id)
+
+    const EPOCH = new Date(0).toISOString()
+    // 名簿（gradeStudents）は空のまま、そこに載っていない対象者を指すセルを差し込む
+    const cell = {
+      gradeStudentId: `orphan-grade-student-${suffix}`,
+      gradeItemId: gradeItem.id,
+      createdAt: EPOCH,
+      updatedAt: EPOCH,
+    }
+    collected.gradeOverrides = [
+      { id: "override-1", ...cell, overrideLabel: "A" },
+    ]
+    collected.gradeFrozenScores = [
+      {
+        id: "frozen-1",
+        ...cell,
+        weightedScore: "0.8",
+        weightedMaxScore: "1",
+        percentage: "80",
+        gradeLabel: "A",
+        frozenByUserId: null,
+        frozenAt: new Date("2026-07-20T09:00:00.000Z").toISOString(),
+      },
+    ]
+    collected.gradeItemExclusions = [{ id: "exclusion-1", ...cell }]
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+
+    const [overrides, frozenScores, itemExclusions] = await Promise.all([
+      prisma.gradeOverride.count({
+        where: { gradeStudent: { gradeId: result.gradeId! } },
+      }),
+      prisma.gradeFrozenScore.count({
+        where: { gradeStudent: { gradeId: result.gradeId! } },
+      }),
+      prisma.gradeItemExclusion.count({
+        where: { gradeStudent: { gradeId: result.gradeId! } },
+      }),
+    ])
+    expect(overrides).toBe(0)
+    expect(frozenScores).toBe(0)
+    expect(itemExclusions).toBe(0)
+
+    // 捨てたことは黙らずに伝える
+    expect(
+      result.warnings?.some((warning) =>
+        warning.includes("上書き・確定値・除外設定 3件")
+      )
+    ).toBe(true)
+  })
+
+  it("取り込み先に居ない生徒・学級は作られ、学級所属も復元される (v1.13.0)", async () => {
+    const suffix = Date.now()
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `SNEW${suffix}`,
+        lastName: "新規",
+        firstName: "太郎",
+        lastNameKana: "シンキ",
+        firstNameKana: "タロウ",
+      },
+    })
+    const classroom = await prisma.classroom.create({
+      data: { name: `新規学級_${suffix}` },
+    })
+    await prisma.studentClassroomMembership.create({
+      data: {
+        studentId: student.id,
+        classroomId: classroom.id,
+        attendanceNumber: 7,
+      },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `成績_new_${suffix}` },
+    })
+    await prisma.gradeClassroom.create({
+      data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
+    })
+    const gradeStudent = await prisma.gradeStudent.create({
+      data: { gradeId: grade.id, studentId: student.id },
+    })
+    const gradeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    await prisma.gradeOverride.create({
+      data: {
+        gradeStudentId: gradeStudent.id,
+        gradeItemId: gradeItem.id,
+        overrideLabel: "A",
+      },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+
+    // 取り込み先から生徒・学級を消して「別PCへ持って行った」状況を作る
+    await prisma.grade.delete({ where: { id: grade.id } })
+    await prisma.studentClassroomMembership.deleteMany({
+      where: { studentId: student.id },
+    })
+    await prisma.student.delete({ where: { id: student.id } })
+    await prisma.classroom.delete({ where: { id: classroom.id } })
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+
+    // 生徒・学級が作られ、学級所属（出席番号つき）まで戻る
+    const restoredStudent = await prisma.student.findUniqueOrThrow({
+      where: { studentNumber: `SNEW${suffix}` },
+      include: { memberships: { include: { classroom: true } } },
+    })
+    expect(restoredStudent.lastName).toBe("新規")
+    expect(restoredStudent.memberships).toHaveLength(1)
+    expect(restoredStudent.memberships[0].classroom.name).toBe(
+      `新規学級_${suffix}`
+    )
+    expect(restoredStudent.memberships[0].attendanceNumber).toBe(7)
+
+    // 名簿と上書きも復元される（作られなければ両方落ちていた）
+    const restoredOverrides = await prisma.gradeOverride.findMany({
+      where: { gradeStudent: { gradeId: result.gradeId! } },
+      include: { gradeStudent: true },
+    })
+    expect(restoredOverrides).toHaveLength(1)
+    expect(restoredOverrides[0].gradeStudent.studentId).toBe(restoredStudent.id)
+    expect(restoredOverrides[0].overrideLabel).toBe("A")
+  })
+
+  it("収集結果は Prisma の行そのままで、射影した名前を持たない (v1.13.0)", async () => {
+    const suffix = Date.now()
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `SROW${suffix}`,
+        lastName: "行",
+        firstName: "太郎",
+        lastNameKana: "ギョウ",
+        firstNameKana: "タロウ",
+      },
+    })
+    const classroom = await prisma.classroom.create({
+      data: { name: `行学級_${suffix}` },
+    })
+    await prisma.studentClassroomMembership.create({
+      data: { studentId: student.id, classroomId: classroom.id },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `成績_row_${suffix}` },
+    })
+    await prisma.gradeClassroom.create({
+      data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
+    })
+    const gradeStudent = await prisma.gradeStudent.create({
+      data: { gradeId: grade.id, studentId: student.id },
+    })
+    const gradeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    await prisma.gradeItemExclusion.create({
+      data: { gradeStudentId: gradeStudent.id, gradeItemId: gradeItem.id },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+
+    // 行は DB の列そのまま。id・作成日時まで持ち、射影した名前を持たない
+    expect(collected.grades[0].id).toBe(grade.id)
+    expect(collected.grades[0].createdAt).toBe(grade.createdAt.toISOString())
+    expect(collected.gradeStudents[0]).toEqual({
+      id: gradeStudent.id,
+      gradeId: grade.id,
+      studentId: student.id,
+      customOrder: null,
+      createdAt: gradeStudent.createdAt.toISOString(),
+      updatedAt: gradeStudent.updatedAt.toISOString(),
+    })
+    expect(collected.gradeStudents[0]).not.toHaveProperty("studentNumber")
+    expect(collected.gradeItemExclusions[0]).not.toHaveProperty("gradeItemName")
+    // 学級所属も carry する（名簿の学級表示の裏付け）
+    expect(collected.membershipsData).toHaveLength(1)
+    expect(collected.membershipsData[0].studentId).toBe(student.id)
+
+    // 往復しても対象者・評価項目の対応が保たれる
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+    const importedExclusions = await prisma.gradeItemExclusion.findMany({
+      where: { gradeStudent: { gradeId: result.gradeId! } },
+      include: {
+        gradeStudent: { include: { student: true } },
+        gradeItem: true,
+      },
+    })
+    expect(importedExclusions).toHaveLength(1)
+    expect(importedExclusions[0].gradeStudent.student.id).toBe(student.id)
+    expect(importedExclusions[0].gradeItem.name).toBe("知識・技能")
+  })
+
+  it("確定操作者は取り込み先に居れば残り、居なければ操作者不明になる (v1.13.0)", async () => {
+    const suffix = Date.now()
+    const user = await prisma.user.create({
+      data: { username: `teacher_${suffix}`, name: "採点 教員" },
+    })
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `SFU${suffix}`,
+        lastName: "凍結",
+        firstName: "花子",
+        lastNameKana: "トウケツ",
+        firstNameKana: "ハナコ",
+      },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `成績_frozenby_${suffix}` },
+    })
+    const gradeStudent = await prisma.gradeStudent.create({
+      data: { gradeId: grade.id, studentId: student.id },
+    })
+    const gradeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
+    })
+    await prisma.gradeFrozenScore.create({
+      data: {
+        gradeStudentId: gradeStudent.id,
+        gradeItemId: gradeItem.id,
+        weightedScore: 0.8,
+        weightedMaxScore: 1,
+        percentage: 80,
+        gradeLabel: "A",
+        frozenByUserId: user.id,
+      },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+    // 行そのままなので確定操作者も持ち出す（旧形式は落としていた）
+    expect(collected.gradeFrozenScores[0].frozenByUserId).toBe(user.id)
+
+    const kept = await importGradeArchive(toArchive(grade.id, collected))
+    expect(
+      (
+        await prisma.gradeFrozenScore.findFirstOrThrow({
+          where: { gradeStudent: { gradeId: kept.gradeId! } },
+        })
+      ).frozenByUserId
+    ).toBe(user.id)
+
+    // 取り込み先に居ない操作者は null（値そのものは残す）
+    collected.gradeFrozenScores[0].frozenByUserId = `missing-user-${suffix}`
+    const dropped = await importGradeArchive(toArchive(grade.id, collected))
+    const restored = await prisma.gradeFrozenScore.findFirstOrThrow({
+      where: { gradeStudent: { gradeId: dropped.gradeId! } },
+    })
+    expect(restored.frozenByUserId).toBeNull()
+    expect(Number(restored.percentage)).toBe(80)
+  })
+
+  it("既存生徒の学級所属は書き換えない（異動先を旧学級で上書きしない）", async () => {
+    const suffix = Date.now()
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `SMOVE${suffix}`,
+        lastName: "異動",
+        firstName: "太郎",
+        lastNameKana: "イドウ",
+        firstNameKana: "タロウ",
+      },
+    })
+    const oldClassroom = await prisma.classroom.create({
+      data: { name: `旧学級_${suffix}` },
+    })
+    await prisma.studentClassroomMembership.create({
+      data: { studentId: student.id, classroomId: oldClassroom.id },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `成績_move_${suffix}` },
+    })
+    await prisma.gradeClassroom.create({
+      data: { gradeId: grade.id, classroomId: oldClassroom.id, order: 0 },
+    })
+    await prisma.gradeStudent.create({
+      data: { gradeId: grade.id, studentId: student.id },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+
+    // 取り込み先では別学級へ異動済み、という状況を作る
+    await prisma.studentClassroomMembership.deleteMany({
+      where: { studentId: student.id },
+    })
+    const newClassroom = await prisma.classroom.create({
+      data: { name: `新学級_${suffix}` },
+    })
+    await prisma.studentClassroomMembership.create({
+      data: { studentId: student.id, classroomId: newClassroom.id },
+    })
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    expect(result.success).toBe(true)
+
+    // 既存生徒なので学級所属は触らない。旧学級の在籍が復活してはいけない
+    const memberships = await prisma.studentClassroomMembership.findMany({
+      where: { studentId: student.id },
+      include: { classroom: true },
+    })
+    expect(memberships).toHaveLength(1)
+    expect(memberships[0].classroom.name).toBe(`新学級_${suffix}`)
+  })
+
+  it("アーカイブの別々の生徒が同じ既存生徒へ一致しても取り込みは失敗しない", async () => {
+    const suffix = Date.now()
+    const student = await prisma.student.create({
+      data: {
+        studentNumber: `SDUP${suffix}`,
+        lastName: "重複",
+        firstName: "太郎",
+        lastNameKana: "ジュウフク",
+        firstNameKana: "タロウ",
+      },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `成績_dupstudent_${suffix}` },
+    })
+    await prisma.gradeStudent.create({
+      data: { gradeId: grade.id, studentId: student.id },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+    const EPOCH = new Date(0).toISOString()
+    // uuid は違うが学籍番号が同じ、という2人目を差し込む（学籍番号の振り直しで起こる）
+    collected.studentsData.push({
+      ...collected.studentsData[0],
+      id: `other-uuid-${suffix}`,
+    })
+    collected.gradeStudents.push({
+      id: `other-grade-student-${suffix}`,
+      gradeId: grade.id,
+      studentId: `other-uuid-${suffix}`,
+      customOrder: 1,
+      createdAt: EPOCH,
+      updatedAt: EPOCH,
+    })
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+
+    // unique 違反で全体がロールバックせず、1名にまとめたことを伝える
+    expect(result.success).toBe(true)
+    expect(
+      await prisma.gradeStudent.count({
+        where: { gradeId: result.gradeId! },
+      })
+    ).toBe(1)
+    expect(
+      result.warnings?.some((warning) => warning.includes("1名にまとめました"))
+    ).toBe(true)
+  })
+
+  it("旧アーカイブから作る学級の id は uuid になる（合成idを主キーにしない）", async () => {
+    const suffix = Date.now()
+    const grade = await prisma.grade.create({
+      data: { name: `成績_clsid_${suffix}` },
+    })
+    const collected = await collectGradeArchiveData(grade.id)
+    const legacy = toLegacyArchive(grade.id, collected)
+    // v1.10.0 未満を再現: 学級参照から uuid を落とす
+    legacy.gradeData.classroomRefs = [{ name: `合成id学級_${suffix}` }]
+
+    const result = await importGradeArchive(legacy)
+    expect(result.success).toBe(true)
+
+    const created = await prisma.classroom.findUniqueOrThrow({
+      where: { name: `合成id学級_${suffix}` },
+    })
+    expect(created.id).not.toContain("legacy-classroom:")
+    expect(created.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    )
   })
 
   it("gradeConstraints が無いGradeも問題なく往復する（後方互換）", async () => {
@@ -1555,7 +2137,7 @@ describe("grade-archive ラウンドトリップ", () => {
       data: { name: `成績_noconstraint_${Date.now()}` },
     })
     const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeData.gradeConstraints).toBeUndefined()
+    expect(collected.gradeConstraints).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
     expect(result.success).toBe(true)
@@ -1581,7 +2163,7 @@ describe("grade-archive ラウンドトリップ", () => {
 
     const archiveItemId = "00000000-0000-4000-8000-000000000abc"
     // v1.4.0 形式の GradeArchiveData を手組み（courseworks は名前ベース配列）
-    const legacy: GradeArchiveData = {
+    const legacy: LegacyGradeArchiveData = {
       manifest: {
         version: "1.4.0",
         appVersion: "test",

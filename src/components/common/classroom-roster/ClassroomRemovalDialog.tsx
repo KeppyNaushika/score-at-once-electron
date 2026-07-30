@@ -43,6 +43,11 @@ interface ClassroomRemovalDialogProps {
     entry: ClassroomRosterEntry,
     deleteStudents: boolean
   ) => Promise<void>
+  /**
+   * 専属生徒を削除したときに連動して消えるものの列挙。
+   * 生徒の削除は対象者ごと消すので、その子データも DB の cascade で失われる（#962）。
+   */
+  deletionLosses?: string[]
   onClose: () => void
 }
 
@@ -61,6 +66,7 @@ export function ClassroomRemovalDialog({
   mode,
   fetchRemovalPreview,
   onConfirm,
+  deletionLosses,
   onClose,
 }: ClassroomRemovalDialogProps) {
   const [choice, setChoice] = useState<RemovalChoice>("unlink")
@@ -239,10 +245,23 @@ export function ClassroomRemovalDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>生徒データを削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              「{finalConfirmEntry?.name}」にのみ所属する {deleteCount}名 の
-              生徒と、その入力済みデータも削除されます。この操作は取り消せません。
-              本当に削除しますか？
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                「{finalConfirmEntry?.name}」にのみ所属する {deleteCount}名 を
+                対象から外します。連動して以下も削除されます：
+              </span>
+              <span className="text-muted-foreground block pl-4">
+                {(deletionLosses ?? ["その生徒の入力済みデータ"]).map(
+                  (loss) => (
+                    <span key={loss} className="block">
+                      ・{loss}
+                    </span>
+                  )
+                )}
+              </span>
+              <span className="block font-medium">
+                この操作は取り消せません。本当に削除しますか？
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

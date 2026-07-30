@@ -25,9 +25,6 @@ vi.mock("@/electron-src/lib/prisma/questionScore", () => ({
 // Prisma client
 const mockFindUnique = vi.fn()
 const mockFindMany = vi.fn()
-const mockGradeItemExclusionFindMany = vi.fn().mockResolvedValue([])
-// 成績値の確定（凍結）。既定は「確定なし」で、確定の検証をするテストだけ差し替える。
-const mockGradeFrozenScoreFindMany = vi.fn().mockResolvedValue([])
 
 // computeLiveMaxScore は coursework 型の満点を courseworkItem.findUnique で引く。
 // buildGrade が courseworkItemId → maxScore を登録し、モックはそれを返す。
@@ -55,13 +52,6 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
     gradeStudent: {
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
-    gradeOverride: { findMany: vi.fn().mockResolvedValue([]) },
-    gradeFrozenScore: {
-      findMany: (...args: unknown[]) => mockGradeFrozenScoreFindMany(...args),
-    },
-    gradeItemExclusion: {
-      findMany: (...args: unknown[]) => mockGradeItemExclusionFindMany(...args),
-    },
     questionScore: { findMany: vi.fn().mockResolvedValue([]) },
     examPage: { findMany: vi.fn().mockResolvedValue([]) },
     examStudent: { findMany: vi.fn().mockResolvedValue([]) },
@@ -79,6 +69,9 @@ import {
   estimateAbsentScore,
 } from "@/electron-src/lib/shared/calculations/absentEstimation"
 import { calculateGrades } from "@/electron-src/lib/shared/calculations/gradeCalculator"
+import type { DataSourceInfo } from "@/electron-src/lib/shared/calculations/gradeCalculatorTypes"
+import type { RawScoreRowEntity } from "@/electron-src/lib/shared/calculations/rawScoreMatrix"
+import { RawScoreMatrix } from "@/electron-src/lib/shared/calculations/rawScoreMatrix"
 
 // === ヘルパー ===
 
@@ -199,23 +192,60 @@ function buildGrade(
   }
 }
 
+/**
+ * 成績の対象者1行。上書き・確定値・除外設定は対象者の子として同じ行に載る
+ * （calculator は Grade 単位で別途引かず、この include から読む）。
+ */
 function buildStudent(
   overrides: {
     id?: string
     studentNumber?: string
     lastName?: string
     firstName?: string
+    /** 除外する評価項目 */
+    excludedGradeItemIds?: string[]
+    /** 手動上書き（gradeItemId → ラベル） */
+    overrideLabels?: Record<string, string>
+    /** 確定済みセル */
+    frozenScores?: {
+      gradeItemId: string
+      weightedScore: unknown
+      weightedMaxScore: unknown
+      percentage: unknown
+      gradeLabel: string | null
+      frozenAt: Date
+    }[]
   } = {}
 ) {
+  const studentId = overrides.id ?? "s1"
+  // テストでは対象者 id を「gs:生徒id」とし、人の id と取り違えたら露見するようにする
+  const gradeStudentId = `gs:${studentId}`
   return {
+    id: gradeStudentId,
+    gradeId: "gp1",
+    studentId,
     student: {
-      id: overrides.id ?? "s1",
+      id: studentId,
       studentNumber: overrides.studentNumber ?? "S001",
       lastName: overrides.lastName ?? "テスト",
       firstName: overrides.firstName ?? "太郎",
       memberships: [],
     },
     customOrder: 0,
+    itemExclusions: (overrides.excludedGradeItemIds ?? []).map(
+      (gradeItemId) => ({ gradeStudentId, gradeItemId })
+    ),
+    overrides: Object.entries(overrides.overrideLabels ?? {}).map(
+      ([gradeItemId, overrideLabel]) => ({
+        gradeStudentId,
+        gradeItemId,
+        overrideLabel,
+      })
+    ),
+    frozenScores: (overrides.frozenScores ?? []).map((frozenScore) => ({
+      gradeStudentId,
+      ...frozenScore,
+    })),
   }
 }
 
@@ -663,10 +693,9 @@ describe("calculateGrades", () => {
       ],
     })
     mockFindUnique.mockResolvedValue(grade)
-    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
     // s1をgi2から除外
-    mockGradeItemExclusionFindMany.mockResolvedValue([
-      { studentId: "s1", gradeItemId: "gi2" },
+    mockFindMany.mockResolvedValue([
+      buildStudent({ id: "s1", excludedGradeItemIds: ["gi2"] }),
     ])
 
     const result = await calculateGrades("gp1")
@@ -718,10 +747,9 @@ describe("calculateGrades", () => {
       ],
     })
     mockFindUnique.mockResolvedValue(grade)
-    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
     // 全項目除外
-    mockGradeItemExclusionFindMany.mockResolvedValue([
-      { studentId: "s1", gradeItemId: "gi1" },
+    mockFindMany.mockResolvedValue([
+      buildStudent({ id: "s1", excludedGradeItemIds: ["gi1"] }),
     ])
 
     const result = await calculateGrades("gp1")
@@ -762,7 +790,6 @@ describe("calculateGrades", () => {
     })
     mockFindUnique.mockResolvedValue(grade)
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
-    mockGradeItemExclusionFindMany.mockResolvedValue([])
 
     const result = await calculateGrades("gp1")
     const student = result.result!.students[0]
@@ -1190,10 +1217,40 @@ describe("estimateAbsentScore", () => {
     estimationSourceIds: [] as string[],
   }
 
+  /**
+   * `studentId → dataSourceId → 素点` の表から素点行列を組むテスト用ヘルパー。
+   * 推定は行を識別して素点を引くだけなので、行の実体は id のみで足りる。
+   */
+  const buildMatrix = (
+    rawScores: Map<string, Map<string, number | null>>,
+    allDataSources: DataSourceInfo[]
+  ) =>
+    new RawScoreMatrix<RawScoreRowEntity>(
+      Array.from(rawScores, ([studentId, scoresBySource]) => ({
+        gradeStudent: { id: studentId },
+        cells: allDataSources.map((dataSource) => ({
+          dataSource,
+          rawScore: scoresBySource.get(dataSource.id) ?? null,
+        })),
+      }))
+    )
+
+  /** 素点行列から対象者の行を取り出す（テスト用の同定は studentId で足りる） */
+  const rowOf = (
+    matrix: RawScoreMatrix<RawScoreRowEntity>,
+    studentId: string
+  ) => {
+    const row = matrix.rows.find(
+      (candidate) => candidate.gradeStudent.id === studentId
+    )
+    if (!row) throw new Error(`row ${studentId} not found`)
+    return row
+  }
+
   it("method='zero' → 0を返す", () => {
     const rawScoreMap = new Map<string, Map<string, number | null>>()
     rawScoreMap.set("s1", new Map([["ds1", null]]))
-    const result = estimateAbsentScore("zero", "s1", "ds1", 100, rawScoreMap, [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1203,7 +1260,15 @@ describe("estimateAbsentScore", () => {
         absentOffset: 0,
         ...dataSourceDefaults,
       },
-    ])
+    ]
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
+    const result = estimateAbsentScore(
+      "zero",
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
+      allDataSources
+    )
     expect(result?.value).toBe(0)
     expect(result?.effectiveMethod).toBe("zero")
   })
@@ -1221,7 +1286,7 @@ describe("estimateAbsentScore", () => {
         ["ds3", 30],
       ])
     )
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1250,12 +1315,12 @@ describe("estimateAbsentScore", () => {
         ...dataSourceDefaults,
       },
     ]
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "average",
-      "s1",
-      "ds1",
-      200,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
     expect(result?.value).toBeCloseTo(140)
@@ -1267,7 +1332,7 @@ describe("estimateAbsentScore", () => {
   it("method='average' → 他DataSourceがない場合はnull", () => {
     const rawScoreMap = new Map<string, Map<string, number | null>>()
     rawScoreMap.set("s1", new Map([["ds1", null]]))
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1278,12 +1343,12 @@ describe("estimateAbsentScore", () => {
         ...dataSourceDefaults,
       },
     ]
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "average",
-      "s1",
-      "ds1",
-      100,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
     expect(result).toBeNull()
@@ -1324,7 +1389,7 @@ describe("estimateAbsentScore", () => {
       ])
     )
 
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1344,12 +1409,12 @@ describe("estimateAbsentScore", () => {
         ...dataSourceDefaults,
       },
     ]
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "regression",
-      "s1",
-      "ds1",
-      100,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
     // 結果はOLS回帰の予測値で、0-100の範囲内であること
@@ -1382,7 +1447,7 @@ describe("estimateAbsentScore", () => {
       ])
     )
 
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1402,12 +1467,12 @@ describe("estimateAbsentScore", () => {
         ...dataSourceDefaults,
       },
     ]
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "regression",
-      "s1",
-      "ds1",
-      100,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
     // averageフォールバック: s1のds2比率=60/100=0.6 → 0.6*100=60
@@ -1421,7 +1486,7 @@ describe("estimateAbsentScore", () => {
     rawScoreMap.set("s1", new Map([["ds1", null]]))
     rawScoreMap.set("s2", new Map([["ds1", 80]]))
 
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1432,12 +1497,12 @@ describe("estimateAbsentScore", () => {
         ...dataSourceDefaults,
       },
     ]
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "regression",
-      "s1",
-      "ds1",
-      100,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
     expect(result).toBeNull()
@@ -1470,7 +1535,7 @@ describe("estimateAbsentScore", () => {
     }
 
     const predictorNames = ["ds2", "ds3", "ds4"]
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1491,12 +1556,12 @@ describe("estimateAbsentScore", () => {
       })),
     ]
 
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "regression",
-      "s1",
-      "ds1",
-      100,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
 
@@ -1540,7 +1605,7 @@ describe("estimateAbsentScore", () => {
     }
 
     const predictorNames = ["ds2", "ds3", "ds4"]
-    const allDataSources = [
+    const allDataSources: DataSourceInfo[] = [
       {
         id: "ds1",
         name: "ds1",
@@ -1561,12 +1626,12 @@ describe("estimateAbsentScore", () => {
       })),
     ]
 
+    const matrix = buildMatrix(rawScoreMap, allDataSources)
     const result = estimateAbsentScore(
       "regression",
-      "s1",
-      "ds1",
-      100,
-      rawScoreMap,
+      rowOf(matrix, "s1"),
+      allDataSources[0],
+      matrix,
       allDataSources
     )
 

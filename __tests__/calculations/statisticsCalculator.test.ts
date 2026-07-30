@@ -272,7 +272,6 @@ describe("calculateStatisticsForStudent", () => {
     ]
 
     const result = calculateStatisticsForStudent(
-      "s2",
       null,
       allData,
       classOf(allData),
@@ -293,7 +292,6 @@ describe("calculateStatisticsForStudent", () => {
     ]
 
     const result = calculateStatisticsForStudent(
-      "s1",
       80,
       allData,
       classOf(allData),
@@ -314,7 +312,6 @@ describe("calculateStatisticsForStudent", () => {
     ]
 
     const result = calculateStatisticsForStudent(
-      "s1",
       null,
       allData,
       classOf(allData),
@@ -335,7 +332,6 @@ describe("calculateStatisticsForStudent", () => {
     ]
 
     const result = calculateStatisticsForStudent(
-      "s1",
       0,
       allData,
       classOf(allData),
@@ -356,7 +352,6 @@ describe("calculateStatisticsForStudent", () => {
     ]
 
     const result = calculateStatisticsForStudent(
-      "s1",
       80,
       allData,
       [],
@@ -375,7 +370,6 @@ describe("calculateStatisticsForStudent", () => {
     ]
 
     const result = calculateStatisticsForStudent(
-      "s1",
       80,
       allData,
       [

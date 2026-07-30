@@ -1,5 +1,10 @@
 import { ipcRenderer } from "electron"
 
+import type {
+  GradeCellTarget,
+  GradeItemExclusionInput,
+} from "../../src/types/grade.types"
+
 /** 成績算出のIPC API（成績CRUD・データソース・評定境界・手動点数・Excel出力） */
 export function createGradeApi() {
   return {
@@ -131,17 +136,11 @@ export function createGradeApi() {
       }) => ipcRenderer.invoke("grade:upsertBoundarySet", data),
       deleteBoundarySet: (id: string) =>
         ipcRenderer.invoke("grade:deleteBoundarySet", id),
-      upsertGradeOverride: (data: {
-        gradeId: string
-        studentId: string
-        gradeItemId: string
-        overrideLabel: string
-      }) => ipcRenderer.invoke("grade:upsertGradeOverride", data),
-      deleteGradeOverride: (data: {
-        gradeId: string
-        studentId: string
-        gradeItemId: string
-      }) => ipcRenderer.invoke("grade:deleteGradeOverride", data),
+      upsertGradeOverride: (
+        data: GradeCellTarget & { overrideLabel: string }
+      ) => ipcRenderer.invoke("grade:upsertGradeOverride", data),
+      deleteGradeOverride: (target: GradeCellTarget) =>
+        ipcRenderer.invoke("grade:deleteGradeOverride", target),
       getGradeConstraints: (gradeId: string) =>
         ipcRenderer.invoke("grade:getGradeConstraints", gradeId),
       createGradeConstraint: (data: {
@@ -174,39 +173,24 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:deleteGradeConstraint", id),
       getGradeItemExclusions: (gradeId: string) =>
         ipcRenderer.invoke("grade:getGradeItemExclusions", gradeId),
-      setGradeItemExclusion: (data: {
-        gradeId: string
-        studentId: string
-        gradeItemId: string
-        excluded: boolean
-      }) => ipcRenderer.invoke("grade:setGradeItemExclusion", data),
-      batchUpdateGradeItemExclusions: (
-        gradeId: string,
-        updates: {
-          studentId: string
-          gradeItemId: string
-          excluded: boolean
-        }[]
-      ) =>
-        ipcRenderer.invoke(
-          "grade:batchUpdateGradeItemExclusions",
-          gradeId,
-          updates
-        ),
+      setGradeItemExclusion: (input: GradeItemExclusionInput) =>
+        ipcRenderer.invoke("grade:setGradeItemExclusion", input),
+      batchUpdateGradeItemExclusions: (updates: GradeItemExclusionInput[]) =>
+        ipcRenderer.invoke("grade:batchUpdateGradeItemExclusions", updates),
       calculateGrades: (gradeId: string) =>
         ipcRenderer.invoke("grade:calculateGrades", gradeId),
       computeSourceFits: (gradeId: string) =>
         ipcRenderer.invoke("grade:computeSourceFits", gradeId),
       // 成績値の確定（凍結）。targets 未指定は Grade 全体の一括確定・一括解除。
-      // 対象セルの同定は (studentId, gradeItemId)。総合の行は存在しない。
+      // 対象セルの同定は (gradeStudentId, gradeItemId)。総合の行は存在しない。
       freezeGradeScores: (data: {
         gradeId: string
-        targets?: { studentId: string; gradeItemId: string }[]
+        targets?: GradeCellTarget[]
         frozenByUserId?: string | null
       }) => ipcRenderer.invoke("grade:freezeGradeScores", data),
       unfreezeGradeScores: (data: {
         gradeId: string
-        targets?: { studentId: string; gradeItemId: string }[]
+        targets?: GradeCellTarget[]
         userId?: string | null
       }) => ipcRenderer.invoke("grade:unfreezeGradeScores", data),
       getExamCandidates: () => ipcRenderer.invoke("grade:getExamCandidates"),

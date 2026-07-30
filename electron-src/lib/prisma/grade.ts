@@ -282,7 +282,11 @@ export async function duplicateGrade(id: string) {
           where: { id },
           include: {
             gradeClassrooms: { orderBy: { order: "asc" } },
-            gradeStudents: true,
+            // 対象者は上書き・除外設定を子として持つ。複製先の対象者へ張り替えるため
+            // 一緒に引く（確定値は複製しない。後述）
+            gradeStudents: {
+              include: { overrides: true, itemExclusions: true },
+            },
             gradeItems: {
               include: {
                 dataSources: {
@@ -295,8 +299,6 @@ export async function duplicateGrade(id: string) {
             boundarySets: {
               include: { boundaries: { orderBy: { order: "asc" } } },
             },
-            gradeOverrides: true,
-            gradeItemExclusions: true,
             gradeConstraints: {
               include: gradeConstraintInclude,
               orderBy: { order: "asc" },
@@ -354,15 +356,18 @@ export async function duplicateGrade(id: string) {
           })
         }
 
-        // 4. 対象生徒（独立行）
-        if (source.gradeStudents.length > 0) {
-          await tx.gradeStudent.createMany({
-            data: source.gradeStudents.map((gradeStudent) => ({
+        // 4. 対象生徒。上書き・除外設定は対象者の子なので、新しい対象者の id を
+        //    後続で使えるよう1件ずつ作って旧→新の対応を持つ。
+        const gradeStudentIdMap = new Map<string, string>()
+        for (const gradeStudent of source.gradeStudents) {
+          const newGradeStudent = await tx.gradeStudent.create({
+            data: {
               gradeId: grade.id,
               studentId: gradeStudent.studentId,
               customOrder: gradeStudent.customOrder,
-            })),
+            },
           })
+          gradeStudentIdMap.set(gradeStudent.id, newGradeStudent.id)
         }
 
         // 5. 評価項目 + データソース。
@@ -455,35 +460,35 @@ export async function duplicateGrade(id: string) {
           }
         }
 
-        // 7. 評定の手動上書き（gradeItemId を再リンク／独立行）
-        if (source.gradeOverrides.length > 0) {
-          await tx.gradeOverride.createMany({
-            data: source.gradeOverrides.map((gradeOverride) => ({
-              gradeId: grade.id,
-              studentId: gradeOverride.studentId,
-              gradeItemId: remapItemId(gradeOverride.gradeItemId),
-              overrideLabel: gradeOverride.overrideLabel,
-            })),
-          })
+        // 7-8. 評定の手動上書きと評価項目ごとの除外。どちらも対象者×評価項目のセルなので、
+        //   複製先の対象者 id と評価項目 id の両方へ再リンクする。解決できなければ
+        //   複製元が壊れているため throw してロールバックする（矛盾した行を作らない）。
+        const remapGradeStudentId = (oldId: string): string => {
+          const newId = gradeStudentIdMap.get(oldId)
+          if (!newId) {
+            throw new Error(`GradeStudent ${oldId} の複製先が見つかりません`)
+          }
+          return newId
+        }
+        const overrideRows = source.gradeStudents.flatMap((gradeStudent) =>
+          gradeStudent.overrides.map((override) => ({
+            gradeStudentId: remapGradeStudentId(gradeStudent.id),
+            gradeItemId: remapItemId(override.gradeItemId),
+            overrideLabel: override.overrideLabel,
+          }))
+        )
+        if (overrideRows.length > 0) {
+          await tx.gradeOverride.createMany({ data: overrideRows })
         }
 
-        // 8. 評価項目ごとの生徒除外（gradeItemId 必須のため remap 結果を非nullで使う／独立行）
-        if (source.gradeItemExclusions.length > 0) {
-          await tx.gradeItemExclusion.createMany({
-            data: source.gradeItemExclusions.map((exclusion) => {
-              const newItemId = itemIdMap.get(exclusion.gradeItemId)
-              if (!newItemId) {
-                throw new Error(
-                  `GradeItem ${exclusion.gradeItemId} の複製先が見つかりません`
-                )
-              }
-              return {
-                gradeId: grade.id,
-                studentId: exclusion.studentId,
-                gradeItemId: newItemId,
-              }
-            }),
-          })
+        const exclusionRows = source.gradeStudents.flatMap((gradeStudent) =>
+          gradeStudent.itemExclusions.map((itemExclusion) => ({
+            gradeStudentId: remapGradeStudentId(gradeStudent.id),
+            gradeItemId: remapItemId(itemExclusion.gradeItemId),
+          }))
+        )
+        if (exclusionRows.length > 0) {
+          await tx.gradeItemExclusion.createMany({ data: exclusionRows })
         }
 
         // 9. 観点間の制約ルール。

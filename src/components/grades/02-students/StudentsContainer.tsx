@@ -229,6 +229,11 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             entries={classroomEntries}
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
+            deletionLosses={[
+              "この成績で確定（凍結）した成績値",
+              "手動で上書きした評定",
+              "評価項目ごとの除外設定",
+            ]}
             onReorder={async (orderedClassroomIds) => {
               const result = await window.electronAPI.grade.setClassroomOrders(
                 gradeId,

@@ -127,7 +127,8 @@ export async function importCourseworkData(
       tx,
       data.membershipsData,
       students.map,
-      classes.map
+      classes.map,
+      students.createdIds
     )
   }
 

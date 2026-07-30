@@ -484,13 +484,17 @@ async function assertSameCoursework(
   const [items, courseworkStudents] = await Promise.all([
     prisma.courseworkItem.findMany({
       where: {
-        id: { in: [...new Set(scores.map((s) => s.courseworkItemId))] },
+        id: {
+          in: [...new Set(scores.map((score) => score.courseworkItemId))],
+        },
       },
       select: { id: true, courseworkId: true },
     }),
     prisma.courseworkStudent.findMany({
       where: {
-        id: { in: [...new Set(scores.map((s) => s.courseworkStudentId))] },
+        id: {
+          in: [...new Set(scores.map((score) => score.courseworkStudentId))],
+        },
       },
       select: { id: true, courseworkId: true },
     }),

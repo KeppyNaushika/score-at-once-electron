@@ -1,9 +1,23 @@
 /**
  * 成績算出アーカイブ(.grade)の型定義
+ *
+ * exam-archive / coursework-archive と同じく「Prisma のクエリが返した行をそのまま JSON に
+ * 持つ」方針。射影・詰め替えはせず、JSON にそのまま載らない型だけを `JSON.stringify` と
+ * 同じ規則で文字列にする（DateTime → ISO 文字列、Decimal → decimal.js の toJSON と同じ文字列）。
+ * 列を足したらここにも足すこと。
+ *
+ * アーカイブに含まれない実体（生徒・学級・試験・小計・採点領域）への参照は、行が持つ uuid を
+ * 一次キーとし、同定情報を別セクションで添える。生徒・学級は full レコードを carry するので
+ * uuid → 学籍番号/学級名 のフォールバックが効く（coursework-archive と同じモデル）。
+ * 試験・小計・採点領域はアーカイブに含められないため、名前・ラベルのヒントだけを添える。
+ *
+ * 旧バージョンの形は変換器側（grade-transformers）が持つ。ここは現行の形だけを宣言する。
  */
 
-import type { LegacyCollectedCourseworkData } from "../../electron-src/lib/import/coursework-transformers/legacyShape"
 import type {
+  ArchiveCwClass,
+  ArchiveCwMembership,
+  ArchiveCwStudent,
   CollectedCourseworkData,
   CourseworkImportDecisions,
 } from "./courseworkArchive.types"
@@ -25,256 +39,301 @@ export interface GradeArchiveManifest {
   }
 }
 
-export interface GradeArchiveData {
-  manifest: GradeArchiveManifest
-  gradeData: ArchiveGradeData
-  /**
-   * 旧 v1.3.0 以前の外部成績(manual型 DataSource)の点数。
-   * v1.4.0 以降は Coursework に昇格したため新規 export では書かない（空配列）。
-   * 旧アーカイブ読込時の後方互換フォールバック用に optional で残す。
-   */
-  manualScoresData?: ArchiveManualScoresData
-  /**
-   * v1.4.0: 参照中の試験外成績資料（Coursework）の名前ベース埋め込み。
-   * 読込後方互換用に残す。v1.5.0 以降は courseworkArchive を使う。
-   */
-  courseworks?: ArchiveCoursework[]
-  /**
-   * v1.12.0+: 試験外成績資料を coursework-archive と同じ形（テーブルごとの平坦な
-   * セクション）で内包する。収集・生成ロジックは独立 coursework モジュールへ委譲。
-   */
-  courseworkArchive?: CollectedCourseworkData
-  /**
-   * v1.5.0〜1.11.0 が内包していた入れ子・射影形式の資料データ。
-   * 形の定義は変換器側（coursework-transformers）が持ち、
-   * V1_11_0_to_V1_12_0 が courseworkArchive へ展開する。
-   */
-  legacyCourseworkArchive?: LegacyCollectedCourseworkData
-  boundariesData: ArchiveBoundariesData
-}
+// =============================================================================
+// 成績本体のセクション（テーブルごとに平坦。Prisma の行をそのまま持つ）
+// =============================================================================
 
-export interface ArchiveGradeData {
-  grade: {
-    name: string
-    description: string | null
-    /** 基準日（後方互換: v1.2.0+。古いアーカイブではundefined） */
-    referenceDate?: string | null
-  }
-  /** 成績出力設定（後方互換: v1.2.0+。GradeExportSettingsと1:1） */
-  exportSettings?: { settingsJson: string } | null
-  gradeItems: ArchiveGradeItem[]
-  /**
-   * 対象学級。v1.10.0+ は uuid を持ち、照合は uuid 一次・名前二次
-   * （exam / coursework アーカイブと同じ方式）。旧アーカイブには id が無い。
-   */
-  classroomRefs: { id?: string; name: string }[]
-  /** 参照する試験。v1.10.0+ は uuid を持ち、照合は uuid 一次・試験名二次 */
-  examRefs: {
-    id?: string
-    examName: string
-    examDate: string | null
-    dataSourceName: string
-  }[]
-  /** 対象生徒。v1.10.0+ は uuid を持ち、照合は uuid 一次・学籍番号二次 */
-  studentRefs: {
-    id?: string
-    studentNumber: string
-    classroomName: string | null
-    customOrder: number | null
-  }[]
-  /** GradeItem除外設定（後方互換: optional） */
-  gradeItemExclusions?: {
-    studentNumber: string
-    /** v1.10.0+: 参照先評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
-    gradeItemId?: string
-    /** 参照先評価項目名（uuid不一致時・旧アーカイブのフォールバック） */
-    gradeItemName: string
-  }[]
-  /** 成績ラベル手動上書き（後方互換: optional） */
-  gradeOverrides?: {
-    studentNumber: string
-    /**
-     * @deprecated v1.10.0 で総合（overall）を撤去。旧アーカイブにのみ現れる。
-     * "overall" の行は transformer が破棄する。
-     */
-    targetType?: string
-    /** v1.10.0+: 対象評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
-    gradeItemId?: string
-    /** 対象評価項目名。v1.10.0 以降は必ず非null（旧アーカイブでは null = 総合） */
-    gradeItemName: string | null
-    overrideLabel: string
-  }[]
-  /**
-   * 成績値の確定（凍結）（後方互換: v1.9.0+。古いアーカイブではundefined）。
-   * 生徒×評価項目のみ（総合の行は存在しない）。外部参照は他の grade-archive 要素と
-   * 揃えて名前ベース（生徒=学籍番号 / 評価項目=項目名）。
-   * 確定操作者（frozenByUserId）はアーカイブの移動先に同じ User が居る保証が無いため
-   * 持ち出さない（取り込み時は null＝操作者不明になる）。
-   */
-  gradeFrozenScores?: {
-    studentNumber: string
-    /** v1.10.0+: 対象評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
-    gradeItemId?: string
-    /** 対象評価項目名（uuid不一致時・旧アーカイブのフォールバック） */
-    gradeItemName: string
-    weightedScore: number | null
-    weightedMaxScore: number
-    percentage: number | null
-    gradeLabel: string | null
-    frozenAt: string
-  }[]
-  /** 観点間の制約ルール（後方互換: v1.7.0+。古いアーカイブではundefined） */
-  gradeConstraints?: ArchiveGradeConstraint[]
-}
-
-/**
- * 観点間の制約ルール1件。
- *
- * v1.11.0 で設定JSON（config）を廃し、評価項目への参照を uuid 一次・名前二次で持つ
- * （issue #1063）。旧 config は名前だけで参照していたため、評価項目をリネームすると
- * 制約が失効した。ArchiveGradeItem と同じ照合方式に揃える。
- */
-export interface ArchiveGradeConstraint {
-  name: string
-  kind: string
-  /**
-   * @deprecated v1.11.0 で廃止。kind別の設定JSON（評価項目を名前で参照していた）。
-   * 旧アーカイブの読込にのみ使う。v1.11.0+ の export では出力しない。
-   */
-  config?: string
-  /** v1.11.0+: 比較先（評定）の評価項目uuid（照合の一次キー） */
-  targetGradeItemId?: string | null
-  /** v1.11.0+: 比較先の評価項目名（uuid不一致時の二次フォールバック） */
-  targetGradeItemName?: string | null
-  /** v1.11.0+: 観点の集計方法 "average" | "sum" */
-  aggregate?: string
-  /** v1.11.0+: 許容する評定との差 */
-  tolerance?: number
-  /** v1.11.0+: 集計対象の観点の評価項目uuid（照合の一次キー） */
-  viewpointGradeItemIds?: string[]
-  /** v1.11.0+: 集計対象の観点名（uuid不一致時の二次フォールバック。上の配列と同順） */
-  viewpointGradeItemNames?: string[]
-  /** v1.11.0+: ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }） */
-  labelValues?: Record<string, number>
-  /** v1.11.0+: 混在禁止ラベル（mutual_exclusion 用） */
-  exclusionLabels?: string[]
-  expression: string
-  color: string
-  message: string | null
-  enabled: boolean
-  order: number
-}
-
-export interface ArchiveGradeItem {
-  /**
-   * v1.10.0+: export元の評価項目uuid（照合の一次キー）。
-   * 評価項目名は unique でなく（GradeItem に (gradeId, name) の制約は無い）教員が
-   * 自由に付けられるため、名前だけでは同名の項目を区別できない。旧アーカイブには
-   * 無いので optional で、その場合のみ名前フォールバックへ落ちる。
-   */
-  id?: string
-  name: string
-  order: number
-  dataSources: ArchiveDataSource[]
-}
-
-export interface ArchiveDataSource {
-  /**
-   * v1.11.0+: export元のデータソースuuid。estimationSourceIds の解決に使う。
-   * これが無い旧アーカイブでは estimationSourceIds を解決できず、推定の参照は捨てられる
-   * （旧importerは解決せずexport元idをそのまま書き戻しており、dangling idになっていた）。
-   */
-  id?: string
-  type: string // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"（旧: "manual"）
-  name: string
-  /**
-   * @deprecated v1.6.0 で GradeDataSource.maxScore 列が廃止された（満点は元データから
-   * computeLiveMaxScore でライブ算出）。v1.6.0+ の export では出力しない。
-   *
-   * 削除せず optional で残す理由: 旧 1.3.0 アーカイブの "manual" 型データソースでは、
-   * この値が CourseworkItem.maxScore（実在する列）の出所になる
-   * （V1_3_0_to_V1_4_0 transformer / importer の manual→coursework 変換）。
-   * このフィールドを別用途へ転用してはならない（必ずアーカイブ版を切ること）。
-   */
-  maxScore?: number
-  weight: number
-  order: number
-  examName: string | null
-  subtotalName: string | null
-  cropRegionLabel: string | null
-  absentMethod?: string
-  absentRatio?: number
-  absentOffset?: number
-  treatExpectedAsMissing?: boolean
-  estimationMode?: string
-  estimationSourceIds?: string[]
-  /** v1.4.0+: type==="coursework"（項目参照）/ v1.8.0+: type==="coursework_total"（資料全体）の参照先資料uuid（照合の一次キー） */
-  courseworkId?: string | null
-  /** v1.4.0+: type==="coursework" の参照先評価項目uuid（照合の一次キー） */
-  courseworkItemId?: string | null
-  /** v1.4.0+: type==="coursework"（項目参照）/ v1.8.0+: type==="coursework_total"（資料全体）の参照先資料名（uuid不一致時の二次フォールバック） */
-  courseworkName?: string | null
-  /** v1.4.0+: type==="coursework" の参照先評価項目名（名前フォールバック） */
-  courseworkItemName?: string | null
-  /** v1.10.0+: 参照先試験のuuid（照合の一次キー）。旧アーカイブには無い */
-  examId?: string | null
-  /**
-   * v1.10.0+: 参照先小計のuuid（照合の一次キー）。旧アーカイブには無い。
-   * 小計名は `@@unique([subtotalGroupId, name])` でグループ内でしか一意でなく、
-   * 名前だけでは別の試験の同名小計に当たりうる。
-   */
-  subtotalId?: string | null
-  /**
-   * v1.10.0+: 参照先採点領域のuuid（照合の一次キー）。旧アーカイブには無い。
-   * 領域ラベルは同一試験内でも重複しうる。
-   */
-  cropRegionId?: string | null
-  /**
-   * 旧 v1.3.0 の入力モード（"numeric" | "letter"）。読取専用の後方互換用。
-   * v1.4.0 以降は CourseworkItem.inputMode が保持する。
-   */
-  inputMode?: string
-  /**
-   * 旧 v1.3.0 の文字評価→点数の変換表。読取専用の後方互換用。
-   * v1.4.0 以降は CourseworkItem.letterScales が保持する。
-   */
-  letterScales?: { label: string; score: number; order: number }[]
-}
-
-/**
- * v1.4.0+: 試験外成績資料（Coursework）の埋め込みデータ。
- * 点数を失わないため自己完結。外部参照は名前ベース
- * （生徒=学籍番号 / 学級=学級名 / タグ=タグ名）。
- */
-export interface ArchiveCoursework {
-  /** v1.4.0+: export元の資料uuid（照合の一次キー） */
+/** Grade の行 */
+export interface ArchiveGradeRow {
   id: string
   name: string
   description: string | null
-  date: string | null
-  classrooms: { classroomName: string; order: number }[]
-  tags: { tagName: string }[]
-  students: { studentNumber: string; customOrder: number | null }[]
-  items: ArchiveCourseworkItem[]
+  referenceDate: string | null
+  createdAt: string
+  updatedAt: string
 }
 
-export interface ArchiveCourseworkItem {
-  /** v1.4.0+: export元の評価項目uuid（照合の一次キー） */
+/** GradeClassroom（成績×学級）の行 */
+export interface ArchiveGradeClassroomRow {
   id: string
+  gradeId: string
+  classroomId: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeStudent（成績の対象者＝名簿）の行 */
+export interface ArchiveGradeStudentRow {
+  id: string
+  gradeId: string
+  studentId: string
+  customOrder: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeItem（評価項目）の行 */
+export interface ArchiveGradeItemRow {
+  id: string
+  gradeId: string
   name: string
   order: number
-  maxScore: number
-  inputMode: string
-  letterScales: { label: string; score: number; order: number }[]
-  scores: {
-    studentNumber: string
-    score: number | null
-    letterValue: string | null
-    adjustment: number | null
-    adjustmentReason: string | null
-    comment: string | null
-  }[]
+  createdAt: string
+  updatedAt: string
 }
+
+/** GradeDataSource（成績データソース）の行 */
+export interface ArchiveGradeDataSourceRow {
+  id: string
+  gradeItemId: string
+  type: string
+  /** 参照先はアーカイブ外。examRefs が同定情報を持つ */
+  examId: string | null
+  subtotalId: string | null
+  cropRegionId: string | null
+  /** 参照先は内包する courseworkArchive の行 */
+  courseworkItemId: string | null
+  courseworkId: string | null
+  name: string
+  /** Decimal */
+  weight: string
+  order: number
+  absentMethod: string
+  /** Decimal */
+  absentRatio: string
+  /** Decimal */
+  absentOffset: string
+  treatExpectedAsMissing: boolean
+  estimationMode: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeDataSourceEstimationSource（欠損推定に使う他データソース）の行 */
+export interface ArchiveGradeDataSourceEstimationSourceRow {
+  id: string
+  dataSourceId: string
+  sourceDataSourceId: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeBoundarySet（評価項目ごとの成績境界セット）の行 */
+export interface ArchiveGradeBoundarySetRow {
+  id: string
+  gradeId: string
+  gradeItemId: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeBoundary（境界1本）の行 */
+export interface ArchiveGradeBoundaryRow {
+  id: string
+  gradeBoundarySetId: string
+  label: string
+  /** Decimal */
+  minPercentage: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeOverride（成績ラベルの手動上書き）の行 */
+export interface ArchiveGradeOverrideRow {
+  id: string
+  gradeStudentId: string
+  gradeItemId: string
+  overrideLabel: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * GradeFrozenScore（成績値の確定）の行。
+ *
+ * `frozenByUserId` は行のまま持ち出すが、取り込み先に同じ User が居る保証は無い。
+ * 解決できなければ null（操作者不明）にして取り込む。
+ */
+export interface ArchiveGradeFrozenScoreRow {
+  id: string
+  gradeStudentId: string
+  gradeItemId: string
+  /** Decimal */
+  weightedScore: string | null
+  /** Decimal */
+  weightedMaxScore: string
+  /** Decimal */
+  percentage: string | null
+  gradeLabel: string | null
+  frozenByUserId: string | null
+  frozenAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeItemExclusion（評価項目ごとの除外設定）の行 */
+export interface ArchiveGradeItemExclusionRow {
+  id: string
+  gradeStudentId: string
+  gradeItemId: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeConstraint（観点間の制約ルール）の行 */
+export interface ArchiveGradeConstraintRow {
+  id: string
+  gradeId: string
+  name: string
+  kind: string
+  targetGradeItemId: string | null
+  aggregate: string
+  /** Decimal */
+  tolerance: string
+  expression: string
+  color: string
+  message: string | null
+  disabledReason: string | null
+  enabled: boolean
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeConstraintViewpoint（制約の集計対象の観点）の行 */
+export interface ArchiveGradeConstraintViewpointRow {
+  id: string
+  constraintId: string
+  gradeItemId: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeConstraintLabelValue（ラベル→数値の対応）の行 */
+export interface ArchiveGradeConstraintLabelValueRow {
+  id: string
+  constraintId: string
+  label: string
+  /** Decimal */
+  value: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeConstraintExclusionLabel（混在禁止ラベル）の行 */
+export interface ArchiveGradeConstraintExclusionLabelRow {
+  id: string
+  constraintId: string
+  label: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** GradeExportSettings（出力設定）の行 */
+export interface ArchiveGradeExportSettingsRow {
+  id: string
+  gradeId: string
+  settingsJson: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 成績本体のセクション群（テーブルごとに平坦） */
+export interface GradeSections {
+  grades: ArchiveGradeRow[]
+  gradeClassrooms: ArchiveGradeClassroomRow[]
+  gradeStudents: ArchiveGradeStudentRow[]
+  gradeItems: ArchiveGradeItemRow[]
+  gradeDataSources: ArchiveGradeDataSourceRow[]
+  gradeDataSourceEstimationSources: ArchiveGradeDataSourceEstimationSourceRow[]
+  gradeBoundarySets: ArchiveGradeBoundarySetRow[]
+  gradeBoundaries: ArchiveGradeBoundaryRow[]
+  gradeOverrides: ArchiveGradeOverrideRow[]
+  gradeFrozenScores: ArchiveGradeFrozenScoreRow[]
+  gradeItemExclusions: ArchiveGradeItemExclusionRow[]
+  gradeConstraints: ArchiveGradeConstraintRow[]
+  gradeConstraintViewpoints: ArchiveGradeConstraintViewpointRow[]
+  gradeConstraintLabelValues: ArchiveGradeConstraintLabelValueRow[]
+  gradeConstraintExclusionLabels: ArchiveGradeConstraintExclusionLabelRow[]
+  gradeExportSettings: ArchiveGradeExportSettingsRow[]
+}
+
+// =============================================================================
+// 外部参照（アーカイブに含めない実体を取り込み先で同定するための情報）
+// =============================================================================
+
+/**
+ * 参照している試験の同定情報。
+ *
+ * 試験そのものは .grade に含められない（答案画像を伴う別アーカイブの領分）ため、
+ * uuid が当たらなければ試験名で当てる。名前は unique ではないので一次キーにはしない。
+ */
+export interface ArchiveGradeExamRef {
+  id: string
+  examName: string
+  examDate: string | null
+}
+
+/**
+ * 参照している小計の同定情報。
+ * 小計名は `@@unique([subtotalGroupId, name])` でグループ内でしか一意でないため、
+ * 名前で当てるときは必ず所属試験で絞る。
+ */
+export interface ArchiveGradeSubtotalRef {
+  id: string
+  examId: string
+  name: string
+}
+
+/**
+ * 参照している採点領域の同定情報。
+ * 領域ラベルは同一試験内でも重複しうるので、名前フォールバックは最初の1件に当たる。
+ */
+export interface ArchiveGradeCropRegionRef {
+  id: string
+  examId: string
+  label: string
+}
+
+/**
+ * 外部参照セクション。
+ *
+ * 生徒・学級・所属は coursework-archive と同形の full レコードで carry し、
+ * uuid 一次 → 学籍番号 / 学級名 のフォールバックで取り込み先の実体へ解決する。
+ * 試験・小計・採点領域は carry できないので同定情報だけを添える。
+ */
+export interface GradeExternalSections {
+  studentsData: ArchiveCwStudent[]
+  classesData: ArchiveCwClass[]
+  membershipsData: ArchiveCwMembership[]
+  examRefs: ArchiveGradeExamRef[]
+  subtotalRefs: ArchiveGradeSubtotalRef[]
+  cropRegionRefs: ArchiveGradeCropRegionRef[]
+}
+
+/** 収集結果（export 側が組み立て、archiveCreator が JSON へ書く） */
+export interface CollectedGradeData
+  extends GradeSections, GradeExternalSections {
+  /** 内包する試験外成績資料。収集・生成は coursework-archive モジュールへ委譲 */
+  courseworkArchive: CollectedCourseworkData
+  counts: GradeArchiveManifest["counts"]
+}
+
+/** アーカイブ全体（manifest + 各セクション） */
+export interface GradeArchiveData extends GradeSections, GradeExternalSections {
+  manifest: GradeArchiveManifest
+  courseworkArchive: CollectedCourseworkData
+}
+
+// =============================================================================
+// インポート
+// =============================================================================
 
 /** インポート実行時のオプション */
 export interface GradeArchiveImportOptions {
@@ -284,7 +343,7 @@ export interface GradeArchiveImportOptions {
   courseworkDecisions?: CourseworkImportDecisions
 }
 
-/** v1.4.0+: 資料1件分のマッチング候補（ウィザードでユーザーに提示） */
+/** 資料1件分のマッチング候補（ウィザードでユーザーに提示） */
 export interface GradeArchiveCourseworkMatch {
   /** アーカイブ内の資料uuid（決定マップのキー） */
   archiveId: string
@@ -297,53 +356,27 @@ export interface GradeArchiveCourseworkMatch {
   nameCandidates: { id: string; name: string }[]
 }
 
-export interface ArchiveManualScoresData {
-  manualScores: {
-    gradeItemName: string
-    dataSourceName: string
-    studentNumber: string
-    score: number | null
-    /** 文字評価記号（後方互換: v1.3.0+） */
-    letterValue?: string | null
-    /** 加点・減点（後方互換: v1.3.0+） */
-    adjustment?: number | null
-    /** 加減点の理由（後方互換: v1.3.0+） */
-    adjustmentReason?: string | null
-    /** コメント（後方互換: v1.3.0+） */
-    comment?: string | null
-  }[]
-}
-
-export interface ArchiveBoundariesData {
-  boundarySets: {
-    /**
-     * @deprecated v1.10.0 で総合（overall）を撤去。旧アーカイブにのみ現れる。
-     * "overall" のセットは transformer が破棄する。
-     */
-    targetType?: string
-    /** v1.10.0+: 対象評価項目のuuid（照合の一次キー）。旧アーカイブには無い */
-    gradeItemId?: string
-    /** 対象評価項目名。v1.10.0 以降は必ず非null（旧アーカイブでは null = 総合） */
-    gradeItemName: string | null
-    boundaries: {
-      label: string
-      minPercentage: number
-      order: number
-    }[]
-  }[]
-}
-
 export interface GradeArchiveImportPreview {
   manifest: GradeArchiveManifest
   classroomMatches: { found: boolean; name: string }[]
+  /** 既存に一致せず、取り込みで新規作成される学級の数 */
+  classroomCreateCount: number
   examMatches: {
     examName: string
     found: boolean
     examId: string | null
   }[]
+  /** uuid または学籍番号で既存の生徒に一致した数 */
   studentMatchCount: number
-  studentMissingCount: number
-  /** v1.4.0+: 埋め込み資料ごとのマッチング候補（ユーザー判断用） */
+  /** 既存に一致せず、取り込みで新規作成される生徒の数 */
+  studentCreateCount: number
+  /**
+   * 既存に一致せず、作成もできない生徒の数。
+   * 旧アーカイブ（v1.12.0 以前）は生徒の氏名を持ち出していないため作成できない。
+   * この生徒の名簿行・上書き・確定値・除外設定は取り込まれない。
+   */
+  studentSkipCount: number
+  /** 埋め込み資料ごとのマッチング候補（ユーザー判断用） */
   courseworkMatches: GradeArchiveCourseworkMatch[]
   /**
    * 旧バージョンからの変換で失われるデータの警告（取り込み前に見せる）。
@@ -354,30 +387,25 @@ export interface GradeArchiveImportPreview {
 }
 
 // =============================================================================
-// バージョントランスフォーマー
+// バージョン
 // =============================================================================
 
 /**
- * トランスフォーマーが扱うバージョン。
+ * アーカイブバージョン（追加時にユニオンへ足す）
+ *
  * - 1.3.0: 外部成績は manual-scores.json（manual型 DataSource）
  * - 1.4.0: courseworks.json に名前ベースで埋め込み
  * - 1.5.0: courseworks.json を coursework-archive 形式（UUIDベース）で内包
- * - 1.6.0: GradeDataSource.maxScore 列を廃止（満点はライブ算出）。外部成績の構造は
- *   1.5.0 と同形のため専用 transformer は無し（ArchiveDataSource.maxScore は optional で旧読込互換）。
- * - 1.7.0: 観点間の制約ルール（GradeConstraint）を追加。gradeConstraints は optional で
- *   旧アーカイブ読込時は空配列扱い。構造は加算的なため専用 transformer は無し。
- * - 1.8.0: 資料全体を参照する coursework_total 型 DataSource を追加。参照先資料は
- *   既存の ArchiveDataSource.courseworkId / courseworkName（optional）で表現するため
- *   新規フィールドは無く、旧アーカイブには coursework_total が存在しないだけなので
- *   専用 transformer は無し（加算的変更）。
- * - 1.9.0: 成績値の確定（GradeFrozenScore）を追加。gradeFrozenScores は optional で
- *   旧アーカイブ読込時は「確定なし」扱い。構造は加算的なため専用 transformer は無し。
- * - 1.10.0: 総合（overall）を撤去。境界セット・手動上書きの targetType を廃し、対象は
- *   必ず評価項目になった。旧アーカイブの総合エントリは破棄されるため、加算的変更ではなく
- *   専用 transformer（V1_9_0_to_V1_10_0）を持つ。
- *   併せて外部参照（評価項目・生徒・学級・試験・小計・採点領域）の照合を
- *   uuid 一次・名前二次へ（exam / coursework アーカイブと同じ方式）。
- *   これらの名前・ラベルはいずれも同定に足りず、名前だけでは取り違える。
+ * - 1.6.0: GradeDataSource.maxScore 列を廃止（満点はライブ算出）
+ * - 1.7.0: 観点間の制約ルール（GradeConstraint）を追加
+ * - 1.8.0: 資料全体を参照する coursework_total 型 DataSource を追加
+ * - 1.9.0: 成績値の確定（GradeFrozenScore）を追加
+ * - 1.10.0: 総合（overall）を撤去。外部参照の照合を uuid 一次・名前二次へ
+ * - 1.11.0: 制約ルールの設定JSON（config）を構造化フィールドへ
+ * - 1.12.0: 内包資料を coursework 1.1.0（テーブルごとの平坦なセクション）へ
+ * - 1.13.0: 成績本体もテーブルごとの平坦なセクションへ変更し、各行を Prisma の行のまま持つ。
+ *   外部参照は uuid 一次・名前二次（生徒・学級は full レコードを carry）。
+ *   上書き・確定値・除外設定の参照が studentNumber → gradeStudentId（#962 Phase C）
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
@@ -393,26 +421,9 @@ export type GradeArchiveVersion =
   | "1.10.0"
   | "1.11.0"
   | "1.12.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.12.0"
+  | "1.13.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.13.0"
 
-export interface GradeTransformResult {
-  data: GradeArchiveData
-  warnings: string[]
-}
-
-export interface GradeVersionTransformer {
-  readonly fromVersion: GradeArchiveVersion
-  readonly toVersion: GradeArchiveVersion
-  transform(data: GradeArchiveData): GradeTransformResult
-}
-
-export interface GradeChainTransformResult {
-  data: GradeArchiveData
-  originalVersion: GradeArchiveVersion
-  finalVersion: GradeArchiveVersion
-  appliedTransformations: {
-    from: GradeArchiveVersion
-    to: GradeArchiveVersion
-  }[]
-  warnings: string[]
-}
+// バージョン変換の型（版ごとのアーカイブ全体の型・変換器・チェーン）は
+// electron-src/lib/import/grade-transformers/types.ts が持つ。
+// 旧版の形の知識をこのファイルへ持ち込まないこと。

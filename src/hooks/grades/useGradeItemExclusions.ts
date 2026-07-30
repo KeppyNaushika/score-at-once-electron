@@ -2,20 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-interface ExclusionRecord {
-  id: string
-  gradeId: string
-  studentId: string
-  gradeItemId: string
-}
+import type { GradeCellTarget } from "@/types/grade.types"
 
-/** 生徒ごとの成績評定項目除外設定の取得・トグル操作を管理するフック */
+/**
+ * 除外セルの同定キー。除外の主語は「その成績の対象者」（GradeStudent）であり、
+ * 人（Student）ではない。どちらも string なので、実体ではなくキーを組み立てる
+ * この一箇所に集約して取り違えを防ぐ。
+ */
+const buildKey = (target: GradeCellTarget) =>
+  `${target.gradeStudentId}:${target.gradeItemId}`
+
+/** 対象者ごとの成績評定項目除外設定の取得・トグル操作を管理するフック */
 export function useGradeItemExclusions(gradeId: string) {
   const [exclusionSet, setExclusionSet] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-
-  const buildKey = (studentId: string, gradeItemId: string) =>
-    `${studentId}:${gradeItemId}`
 
   const loadExclusions = useCallback(async () => {
     setLoading(true)
@@ -23,13 +23,7 @@ export function useGradeItemExclusions(gradeId: string) {
       const result =
         await window.electronAPI.grade.getGradeItemExclusions(gradeId)
       if (result.success && result.exclusions) {
-        setExclusionSet(
-          new Set(
-            result.exclusions.map((exclusion: ExclusionRecord) =>
-              buildKey(exclusion.studentId, exclusion.gradeItemId)
-            )
-          )
-        )
+        setExclusionSet(new Set(result.exclusions.map(buildKey)))
       }
     } catch (error) {
       console.error("Failed to load grade item exclusions:", error)
@@ -43,14 +37,13 @@ export function useGradeItemExclusions(gradeId: string) {
   }, [loadExclusions])
 
   const isExcluded = useCallback(
-    (studentId: string, gradeItemId: string) =>
-      exclusionSet.has(buildKey(studentId, gradeItemId)),
+    (target: GradeCellTarget) => exclusionSet.has(buildKey(target)),
     [exclusionSet]
   )
 
   const toggleExclusion = useCallback(
-    async (studentId: string, gradeItemId: string) => {
-      const key = buildKey(studentId, gradeItemId)
+    async (target: GradeCellTarget) => {
+      const key = buildKey(target)
       const currentlyExcluded = exclusionSet.has(key)
       const newExcluded = !currentlyExcluded
 
@@ -65,27 +58,7 @@ export function useGradeItemExclusions(gradeId: string) {
         return next
       })
 
-      try {
-        const result = await window.electronAPI.grade.setGradeItemExclusion({
-          gradeId,
-          studentId,
-          gradeItemId,
-          excluded: newExcluded,
-        })
-        if (!result.success) {
-          // ロールバック
-          setExclusionSet((prev) => {
-            const next = new Set(prev)
-            if (currentlyExcluded) {
-              next.add(key)
-            } else {
-              next.delete(key)
-            }
-            return next
-          })
-        }
-      } catch {
-        // ロールバック
+      const rollback = () => {
         setExclusionSet((prev) => {
           const next = new Set(prev)
           if (currentlyExcluded) {
@@ -96,8 +69,18 @@ export function useGradeItemExclusions(gradeId: string) {
           return next
         })
       }
+
+      try {
+        const result = await window.electronAPI.grade.setGradeItemExclusion({
+          ...target,
+          excluded: newExcluded,
+        })
+        if (!result.success) rollback()
+      } catch {
+        rollback()
+      }
     },
-    [exclusionSet, gradeId]
+    [exclusionSet]
   )
 
   return {

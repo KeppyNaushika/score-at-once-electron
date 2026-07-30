@@ -37,7 +37,7 @@ export const DEFAULT_EXCLUSION_LABELS = ["A", "C"]
 export const DEFAULT_CONSTRAINT_COLOR = "#fecaca"
 
 interface ConstraintEvaluation {
-  /** studentId → 違反ルール一覧 */
+  /** gradeStudentId（成績の対象者）→ 違反ルール一覧。行の主語は人ではなく対象者 */
   violations: Map<string, ConstraintViolation[]>
   /** constraintId → 該当生徒数（プレビュー用） */
   counts: Map<string, number>
@@ -389,14 +389,14 @@ export function evaluateConstraints(
       }
 
       if (violated) {
-        const list = violations.get(student.studentId) ?? []
+        const list = violations.get(student.gradeStudentId) ?? []
         list.push({
           constraintId: constraint.id,
           name: constraint.name,
           color: constraint.color,
           message: constraint.message,
         })
-        violations.set(student.studentId, list)
+        violations.set(student.gradeStudentId, list)
         counts.set(constraint.id, (counts.get(constraint.id) ?? 0) + 1)
       }
     }

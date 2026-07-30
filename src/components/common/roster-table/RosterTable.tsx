@@ -70,6 +70,12 @@ export function RosterTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  /** 削除確認の対象。null なら確認ダイアログを出していない */
+  const [pendingRemovalIds, setPendingRemovalIds] = useState<string[] | null>(
+    null
+  )
+  const [isRemoving, setIsRemoving] = useState(false)
+  const [removalError, setRemovalError] = useState<string | null>(null)
 
   const additionalColumns = useMemo(
     () => slots?.additionalColumns ?? [],
@@ -207,21 +213,24 @@ export function RosterTable({
     }
   }
 
-  const handleRemoveSelected = async () => {
-    const ids = Array.from(selectedIds)
-    if (ids.length === 0) return
-
-    if (slots?.onBeforeRemove) {
-      const proceed = await slots.onBeforeRemove(ids)
-      if (!proceed) return
-    }
-
+  const handleConfirmRemove = async () => {
+    if (!pendingRemovalIds) return
+    setIsRemoving(true)
+    setRemovalError(null)
     try {
-      await adapter.removeRows(ids)
+      await adapter.removeRows(pendingRemovalIds)
       setSelectedIds(new Set())
       await loadData()
+      setPendingRemovalIds(null)
     } catch (error) {
+      // 失敗はダイアログを開いたまま伝える。閉じてしまうと console 以外に痕跡が残らず、
+      // 消えていないのに消えたように見える
       console.error("Failed to remove rows:", error)
+      setRemovalError(
+        error instanceof Error ? error.message : "削除に失敗しました"
+      )
+    } finally {
+      setIsRemoving(false)
     }
   }
 
@@ -241,7 +250,7 @@ export function RosterTable({
           <Button
             variant="destructive"
             size="sm"
-            onClick={handleRemoveSelected}
+            onClick={() => setPendingRemovalIds(Array.from(selectedIds))}
           >
             選択した生徒を削除 ({selectedIds.size})
           </Button>
@@ -321,6 +330,64 @@ export function RosterTable({
               disabled={isResetting}
             >
               {isResetting ? "リセット中..." : "リセット"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 生徒削除の確認ダイアログ。名簿から外すと子データも cascade で消えるため、
+          何が失われるかを事前に明示する（試験05の削除確認と同じ扱い） */}
+      <AlertDialog
+        open={pendingRemovalIds !== null}
+        onOpenChange={(open) => {
+          if (!open && !isRemoving) {
+            setPendingRemovalIds(null)
+            setRemovalError(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              選択した生徒{pendingRemovalIds?.length ?? 0}名を削除しますか？
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                生徒を削除すると、以下のデータも連動して削除されます：
+              </span>
+              <span className="text-muted-foreground block pl-4">
+                {(slots?.removalLosses ?? ["この名簿に入力された値"]).map(
+                  (loss) => (
+                    <span key={loss} className="block">
+                      ・{loss}
+                    </span>
+                  )
+                )}
+              </span>
+              <span className="block font-medium">
+                この操作は取り消すことができません。
+              </span>
+              {removalError && (
+                <span className="text-destructive block font-medium">
+                  {removalError}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction
+              // 既定の「クリックで閉じる」を止め、削除が終わるまでダイアログを残す。
+              // 閉じてしまうと進行表示も失敗通知も出せない。
+              onClick={(event) => {
+                event.preventDefault()
+                void handleConfirmRemove()
+              }}
+              disabled={isRemoving}
+            >
+              {isRemoving ? "削除中..." : "削除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

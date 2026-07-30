@@ -34,7 +34,7 @@ export async function createGradeArchive(
       appVersion: getAppVersion(),
       exportedAt: new Date().toISOString(),
       gradeId,
-      gradeName: data.gradeData.grade.name,
+      gradeName: data.grades[0]?.name ?? "",
       counts: data.counts,
     }
 
@@ -49,8 +49,8 @@ export async function createGradeArchive(
           entityType: "Grade",
           entityId: gradeId,
           scopeId: gradeId,
-          scopeLabel: data.gradeData.grade.name,
-          target: data.gradeData.grade.name,
+          scopeLabel: data.grades[0]?.name ?? "",
+          target: data.grades[0]?.name ?? "",
           extra: { outputPath },
         })
         resolve({ success: true })
@@ -65,14 +65,14 @@ export async function createGradeArchive(
       archive.append(JSON.stringify(manifest, null, 2), {
         name: "manifest.json",
       })
-      archive.append(JSON.stringify(data.gradeData, null, 2), {
+      // v1.13.0: 成績本体はテーブルごとの平坦なセクション。境界も同じファイルに入る
+      // （旧 boundaries.json は射影形式の名残で、行として持つ今は分ける理由が無い）
+      const { courseworkArchive, counts: _counts, ...sections } = data
+      archive.append(JSON.stringify(sections, null, 2), {
         name: "grade-exam.json",
       })
-      archive.append(JSON.stringify(data.courseworkArchive, null, 2), {
+      archive.append(JSON.stringify(courseworkArchive, null, 2), {
         name: "courseworks.json",
-      })
-      archive.append(JSON.stringify(data.boundariesData, null, 2), {
-        name: "boundaries.json",
       })
 
       archive.finalize()

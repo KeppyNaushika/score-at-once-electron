@@ -62,6 +62,8 @@ interface ClassroomRosterManagerProps {
   fetchRemovalPreview?: (
     entry: ClassroomRosterEntry
   ) => Promise<ClassroomRemovalPreview>
+  /** 専属生徒を削除したときに連動して消えるもの（最終確認に列挙する） */
+  deletionLosses?: string[]
   /** 変更後に親へ再読込を通知 */
   onChanged?: () => void
   /** 追加ダイアログの外部制御（任意） */
@@ -142,6 +144,7 @@ export function ClassroomRosterManager({
   onReorder,
   onRemove,
   fetchRemovalPreview,
+  deletionLosses,
   onChanged,
   showAddDialog: externalShowAddDialog,
   onShowAddDialogChange,
@@ -284,6 +287,7 @@ export function ClassroomRosterManager({
         entry={removalTarget}
         mode={removalMode}
         fetchRemovalPreview={fetchRemovalPreview}
+        deletionLosses={deletionLosses}
         onConfirm={async (entry, deleteStudents) => {
           await onRemove(entry, deleteStudents)
           onChanged?.()

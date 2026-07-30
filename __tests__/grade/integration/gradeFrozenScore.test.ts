@@ -40,6 +40,8 @@ interface Fixture {
   gradeId: string
   gradeItemId: string
   studentId: string
+  /** 成績の対象者。上書き・確定値・除外設定の書き込み先はこちら（人の id ではない） */
+  gradeStudentId: string
   courseworkItemId: string
 }
 
@@ -82,7 +84,7 @@ async function buildFixture(): Promise<Fixture> {
   })
 
   const grade = await testPrisma.grade.create({ data: { name: "1学期成績" } })
-  await testPrisma.gradeStudent.create({
+  const gradeStudent = await testPrisma.gradeStudent.create({
     data: { gradeId: grade.id, studentId: student.id },
   })
   const gradeItem = await testPrisma.gradeItem.create({
@@ -129,6 +131,7 @@ async function buildFixture(): Promise<Fixture> {
     gradeId: grade.id,
     gradeItemId: gradeItem.id,
     studentId: student.id,
+    gradeStudentId: gradeStudent.id,
     courseworkItemId: courseworkItem.id,
   }
 }
@@ -225,8 +228,7 @@ describe("成績値の確定（凍結）", () => {
     // 自動算出は A。教員が B へ調整してから確定する。
     await testPrisma.gradeOverride.create({
       data: {
-        gradeId: fixture.gradeId,
-        studentId: fixture.studentId,
+        gradeStudentId: fixture.gradeStudentId,
         gradeItemId: fixture.gradeItemId,
         overrideLabel: "B",
       },
@@ -235,7 +237,7 @@ describe("成績値の確定（凍結）", () => {
     await freezeGradeScores({ gradeId: fixture.gradeId })
 
     const stored = await testPrisma.gradeFrozenScore.findFirstOrThrow({
-      where: { gradeId: fixture.gradeId },
+      where: { gradeStudent: { gradeId: fixture.gradeId } },
     })
     expect(stored.gradeLabel).toBe("B")
 
@@ -251,8 +253,7 @@ describe("成績値の確定（凍結）", () => {
     // 確定後に上書きを足しても、確定値（A）が採用され続ける
     await testPrisma.gradeOverride.create({
       data: {
-        gradeId: fixture.gradeId,
-        studentId: fixture.studentId,
+        gradeStudentId: fixture.gradeStudentId,
         gradeItemId: fixture.gradeItemId,
         overrideLabel: "C",
       },
@@ -272,7 +273,10 @@ describe("成績値の確定（凍結）", () => {
     await freezeGradeScores({
       gradeId: fixture.gradeId,
       targets: [
-        { studentId: fixture.studentId, gradeItemId: fixture.gradeItemId },
+        {
+          gradeStudentId: fixture.gradeStudentId,
+          gradeItemId: fixture.gradeItemId,
+        },
       ],
     })
 
@@ -282,7 +286,7 @@ describe("成績値の確定（凍結）", () => {
     expect(cell.frozen!.isStale).toBe(false)
     // 再確定は上書きではなく削除→再作成だが、1セル1行のままであること
     const rows = await testPrisma.gradeFrozenScore.findMany({
-      where: { gradeId: fixture.gradeId },
+      where: { gradeStudent: { gradeId: fixture.gradeId } },
     })
     expect(rows).toHaveLength(1)
   })
@@ -306,8 +310,7 @@ describe("成績値の確定（凍結）", () => {
     const fixture = await buildFixture()
     await testPrisma.gradeItemExclusion.create({
       data: {
-        gradeId: fixture.gradeId,
-        studentId: fixture.studentId,
+        gradeStudentId: fixture.gradeStudentId,
         gradeItemId: fixture.gradeItemId,
       },
     })
@@ -328,8 +331,7 @@ describe("成績値の確定（凍結）", () => {
     // 確定後にこの生徒をこの評価項目から除外し、資料も変えたうえで再確定する
     await testPrisma.gradeItemExclusion.create({
       data: {
-        gradeId: fixture.gradeId,
-        studentId: fixture.studentId,
+        gradeStudentId: fixture.gradeStudentId,
         gradeItemId: fixture.gradeItemId,
       },
     })
@@ -339,13 +341,13 @@ describe("成績値の確定（凍結）", () => {
     // 除外セルは確定対象外なので、確定行は残っていてはならない
     expect(
       await testPrisma.gradeFrozenScore.findMany({
-        where: { gradeId: fixture.gradeId },
+        where: { gradeStudent: { gradeId: fixture.gradeId } },
       })
     ).toHaveLength(0)
 
     // 除外を解除すると、古い確定値（80% A）ではなく現在値（30% C）が出る
     await testPrisma.gradeItemExclusion.deleteMany({
-      where: { gradeId: fixture.gradeId },
+      where: { gradeStudent: { gradeId: fixture.gradeId } },
     })
     const cell = await readCell(fixture.gradeId)
     expect(cell.frozen).toBeNull()
@@ -360,7 +362,7 @@ describe("成績値の確定（凍結）", () => {
     await testPrisma.grade.delete({ where: { id: fixture.gradeId } })
 
     const rows = await testPrisma.gradeFrozenScore.findMany({
-      where: { gradeId: fixture.gradeId },
+      where: { gradeStudent: { gradeId: fixture.gradeId } },
     })
     expect(rows).toHaveLength(0)
   })

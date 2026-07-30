@@ -1,9 +1,6 @@
-import type {
-  GradeArchiveData,
-  GradeArchiveVersion,
-  GradeTransformResult,
-  GradeVersionTransformer,
-} from "../../../../src/types/gradeArchive.types"
+import type { GradeArchiveVersion } from "../../../../src/types/gradeArchive.types"
+import type { LegacyGradeArchiveData } from "./legacyShape"
+import type { GradeTransformResult, GradeVersionTransformer } from "./types"
 
 /**
  * 1.9.0 → 1.10.0: 総合（overall）の撤去。
@@ -19,7 +16,7 @@ export class V1_9_0_to_V1_10_0_Transformer implements GradeVersionTransformer {
   readonly fromVersion: GradeArchiveVersion = "1.9.0"
   readonly toVersion: GradeArchiveVersion = "1.10.0"
 
-  transform(data: GradeArchiveData): GradeTransformResult {
+  transform(data: LegacyGradeArchiveData): GradeTransformResult {
     const warnings: string[] = []
 
     const boundarySets = data.boundariesData.boundarySets.filter(
