@@ -6,27 +6,97 @@
  * このスクリプトは以下をテスト:
  * 1. Electron Forgeビルドの実行
  * 2. 重要なオフラインファイルの存在確認
- * 3. ファイルサイズとバージョン確認
+ * 3. 配信アセットが node_modules の供給元と同一かの検証（バージョン・ビルド種別・破損）
  * 4. パッケージ構造の検証
  */
 
+const crypto = require("crypto")
 const fs = require("fs")
 const path = require("path")
 const { execSync } = require("child_process")
 
-const CRITICAL_OFFLINE_FILES = [
-  "public/js/mathjax/tex-svg.js",
-  "public/js/pdf.worker.min.mjs",
-  "public/js/mathjax/sre/speech-worker.js",
+const repoRoot = path.join(__dirname, "..")
+
+// 配信アセット（public 配下）と、その供給元（node_modules 内の正）の対応。
+// postinstall の scripts/setup-mathjax-fonts.js が source から deployed へコピーする。
+//
+// 検証はサイズ閾値ではなく供給元とのハッシュ一致で行う。閾値は当て推量で、
+// 依存を上げるたびに実サイズに追い越されて意味を失う一方、legacy と非legacy の
+// worker（差5%未満）のような致命的な取り違えは通してしまうため。
+const OFFLINE_ASSET_FILES = [
+  {
+    deployed: "public/js/mathjax/tex-svg.js",
+    source: "node_modules/mathjax/tex-svg.js",
+    pkg: "mathjax",
+  },
+  {
+    // tex-svg.js が相対パスで遅延読み込みする読み上げ規則
+    deployed: "public/js/mathjax/sre/speech-worker.js",
+    source: "node_modules/mathjax/sre/speech-worker.js",
+    pkg: "mathjax",
+  },
+  {
+    // legacy ビルドであること自体が要件。src/lib/pdfConverter.ts が legacy 本体を
+    // 読むため、非legacy の worker を混ぜると画像系PDFのデコードが失敗し空白になる。
+    deployed: "public/js/pdf.worker.min.mjs",
+    source: "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+    pkg: "pdfjs-dist",
+  },
 ]
 
-const EXPECTED_SIZES = {
-  "public/js/mathjax/tex-svg.js": { min: 1.5, max: 2.0 }, // MB
-  "public/js/pdf.worker.min.mjs": { min: 0.9, max: 1.2 }, // MB
-}
+// ディレクトリ単位で同期されるアセット。source 側の全ファイルが揃っていることまで見る。
+const OFFLINE_ASSET_DIRS = [
+  {
+    // JBIG2 / JPEG2000 のデコーダ。欠けるとスキャナ生成PDFが白紙になる。
+    deployed: "public/js/wasm",
+    source: "node_modules/pdfjs-dist/wasm",
+    pkg: "pdfjs-dist",
+  },
+]
 
 function formatSize(bytes) {
   return (bytes / 1024 / 1024).toFixed(2) + "MB"
+}
+
+function sha256(filePath) {
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(filePath))
+    .digest("hex")
+}
+
+function packageVersion(pkg) {
+  try {
+    return require(path.join(repoRoot, "node_modules", pkg, "package.json"))
+      .version
+  } catch {
+    return null
+  }
+}
+
+// deployed が source と同一かを検証する。差異はバージョンずれ・legacy取り違え・
+// コピー破損のいずれかで、どれも「postinstall を通っていない」ことを意味する。
+function verifyAgainstSource(deployed, source) {
+  const deployedPath = path.join(repoRoot, deployed)
+  const sourcePath = path.join(repoRoot, source)
+
+  if (!fs.existsSync(sourcePath)) {
+    console.error(`❌ 供給元が見つかりません: ${source}`)
+    console.error("   npm install を実行してください")
+    return false
+  }
+  if (!fs.existsSync(deployedPath)) {
+    console.error(`❌ Missing: ${deployed}`)
+    console.error(`   npm run postinstall で ${source} から同期されます`)
+    return false
+  }
+  if (sha256(deployedPath) !== sha256(sourcePath)) {
+    console.error(`❌ 供給元と不一致: ${deployed}`)
+    console.error(`   期待: ${source}`)
+    console.error("   npm run postinstall で再同期してください")
+    return false
+  }
+  return true
 }
 
 function verifyPreBuildFiles() {
@@ -34,35 +104,44 @@ function verifyPreBuildFiles() {
 
   let allValid = true
 
-  CRITICAL_OFFLINE_FILES.forEach((file) => {
-    const filePath = path.join(__dirname, "..", file)
-
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Missing: ${file}`)
+  for (const { deployed, source, pkg } of OFFLINE_ASSET_FILES) {
+    if (!verifyAgainstSource(deployed, source)) {
       allValid = false
-      return
+      continue
     }
+    const size = formatSize(fs.statSync(path.join(repoRoot, deployed)).size)
+    console.log(`✅ ${deployed} (${size}, ${pkg}@${packageVersion(pkg)})`)
+  }
 
-    const stats = fs.statSync(filePath)
-    const sizeMB = stats.size / 1024 / 1024
-
-    console.log(`✅ Found: ${file} (${formatSize(stats.size)})`)
-
-    // サイズ検証
-    if (EXPECTED_SIZES[file]) {
-      const { min, max } = EXPECTED_SIZES[file]
-      if (sizeMB < min || sizeMB > max) {
-        console.warn(
-          `⚠️  Size warning: ${file} is ${sizeMB.toFixed(2)}MB (expected ${min}-${max}MB)`
-        )
-      }
+  for (const { deployed, source, pkg } of OFFLINE_ASSET_DIRS) {
+    const sourceDir = path.join(repoRoot, source)
+    if (!fs.existsSync(sourceDir)) {
+      console.error(`❌ 供給元が見つかりません: ${source}`)
+      allValid = false
+      continue
     }
-  })
+    const entries = fs
+      .readdirSync(sourceDir)
+      .filter((entry) => fs.statSync(path.join(sourceDir, entry)).isFile())
+    const dirValid = entries.every((entry) =>
+      verifyAgainstSource(
+        path.posix.join(deployed, entry),
+        path.posix.join(source, entry)
+      )
+    )
+    if (dirValid) {
+      console.log(
+        `✅ ${deployed}/ (${entries.length} files, ${pkg}@${packageVersion(pkg)})`
+      )
+    } else {
+      allValid = false
+    }
+  }
 
   if (allValid) {
-    console.log("✅ すべてのオフラインファイルが存在します")
+    console.log("✅ オフラインアセットは供給元と一致しています")
   } else {
-    console.error("❌ 一部のオフラインファイルが見つかりません")
+    console.error("❌ オフラインアセットの検証に失敗しました")
     process.exit(1)
   }
 
@@ -120,9 +199,12 @@ function simulatePackaging() {
   ]
 
   console.log("🔍 パッケージに含まれるべきファイル:")
-  CRITICAL_OFFLINE_FILES.forEach((file) => {
-    console.log(`  - ${file}`)
-  })
+  for (const { deployed } of OFFLINE_ASSET_FILES) {
+    console.log(`  - ${deployed}`)
+  }
+  for (const { deployed } of OFFLINE_ASSET_DIRS) {
+    console.log(`  - ${deployed}/`)
+  }
 
   console.log("📍 パッケージ内パス (macOS): Contents/Resources/")
   console.log("📍 パッケージ内パス (Win/Linux): resources/")
@@ -185,8 +267,10 @@ function generateReport() {
   console.log("=".repeat(50))
 
   console.log("\n✅ 完全オフライン対応済み:")
-  console.log("  - MathJax 4.0.0 (ローカルバンドル)")
-  console.log("  - PDF.js Worker 5.4.149 (ローカルバンドル)")
+  console.log(`  - MathJax ${packageVersion("mathjax")} (ローカルバンドル)`)
+  console.log(
+    `  - PDF.js Worker ${packageVersion("pdfjs-dist")} (ローカルバンドル)`
+  )
   console.log("  - 外部CDN依存なし")
   console.log("  - Electron Forgeビルド設定完了")
 
@@ -206,6 +290,13 @@ function generateReport() {
 
 // メイン実行
 async function main() {
+  // --verify-only はアセット検証だけを行う。ビルド前フック（prebuild）から呼ぶための入口で、
+  // runDryBuild() が npm run build を起動しうるため全部入りの main を繋ぐと再帰する。
+  if (process.argv.includes("--verify-only")) {
+    verifyPreBuildFiles() // 失敗時はこの中で exit(1)
+    return
+  }
+
   console.log("🚀 Score-at-Once オフライン機能ビルドテスト開始")
   console.log("=".repeat(60))
 
