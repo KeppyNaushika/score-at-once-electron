@@ -16,10 +16,8 @@ import {
   isLegacyCollectedCourseworkData,
 } from "../../../electron-src/lib/import/coursework-transformers/legacyShape"
 import { transformGradeToLatest } from "../../../electron-src/lib/import/grade-transformers"
-import type {
-  GradeArchiveData,
-  GradeArchiveManifest,
-} from "../../../src/types/gradeArchive.types"
+import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/grade-transformers/legacyShape"
+import type { GradeArchiveManifest } from "../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../src/types/gradeArchive.types"
 
 const manifest: GradeArchiveManifest = {
@@ -43,7 +41,7 @@ const manifest: GradeArchiveManifest = {
  * v1.9.0 が実際に書き出していた形。境界セット・手動上書きが targetType を持ち、
  * 総合は gradeItemName が null。courseworkArchive は 1.5.0 以降の現行形式。
  */
-function buildV1_9_0Archive(): GradeArchiveData {
+function buildV1_9_0Archive(): LegacyGradeArchiveData {
   return {
     manifest,
     gradeData: {
@@ -51,7 +49,13 @@ function buildV1_9_0Archive(): GradeArchiveData {
       gradeItems: [{ name: "知識・技能", order: 0, dataSources: [] }],
       classroomRefs: [],
       examRefs: [],
-      studentRefs: [],
+      studentRefs: [
+        {
+          studentNumber: "S001",
+          classroomName: null,
+          customOrder: 0,
+        },
+      ],
       gradeOverrides: [
         {
           studentNumber: "S001",
@@ -108,11 +112,18 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
   it("総合の境界セット・手動上書きが破棄され、評価項目のものは残る", () => {
     const { data } = transformGradeToLatest(buildV1_9_0Archive())
 
-    expect(data.boundariesData.boundarySets).toHaveLength(1)
-    expect(data.boundariesData.boundarySets[0].gradeItemName).toBe("知識・技能")
-    expect(data.gradeData.gradeOverrides).toHaveLength(1)
-    expect(data.gradeData.gradeOverrides![0].gradeItemName).toBe("知識・技能")
-    expect(data.gradeData.gradeOverrides![0].overrideLabel).toBe("A")
+    const gradeItemNameById = new Map(
+      data.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
+    )
+    expect(data.gradeBoundarySets).toHaveLength(1)
+    expect(gradeItemNameById.get(data.gradeBoundarySets[0].gradeItemId)).toBe(
+      "知識・技能"
+    )
+    expect(data.gradeOverrides).toHaveLength(1)
+    expect(gradeItemNameById.get(data.gradeOverrides[0].gradeItemId)).toBe(
+      "知識・技能"
+    )
+    expect(data.gradeOverrides[0].overrideLabel).toBe("A")
   })
 
   it("破棄した件数が warning として利用者に伝わる（黙って消さない）", () => {
@@ -128,11 +139,11 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     expect(warnings.join("\n")).toContain("1 件")
   })
 
-  it("targetType は新形式へ持ち越さない", () => {
+  it("targetType は新形式へ持ち越さない（行に列そのものが無い）", () => {
     const { data } = transformGradeToLatest(buildV1_9_0Archive())
 
-    expect(data.boundariesData.boundarySets[0].targetType).toBeUndefined()
-    expect(data.gradeData.gradeOverrides![0].targetType).toBeUndefined()
+    expect(data.gradeBoundarySets[0]).not.toHaveProperty("targetType")
+    expect(data.gradeOverrides[0]).not.toHaveProperty("targetType")
   })
 
   it("元バージョンを 1.9.0 と報告し、適用した変換と矛盾しない", () => {
@@ -173,9 +184,11 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     const { warnings, appliedTransformations, originalVersion } =
       transformGradeToLatest(archive)
 
-    expect(warnings).toEqual([])
-    expect(appliedTransformations).toEqual([])
-    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
+    // 総合の名残が無いので 1.9.0→1.10.0 は当たらない。射影形式である以上
+    // 1.12.0→1.13.0 の平坦化だけは必ず通る
+    expect(warnings.some((warning) => warning.includes("1.9.0"))).toBe(false)
+    expect(appliedTransformations).toEqual([{ from: "1.12.0", to: "1.13.0" }])
+    expect(originalVersion).toBe("1.12.0")
   })
 
   it("gradeOverrides を持たない旧アーカイブでも境界セットだけ正規化できる", () => {
@@ -184,8 +197,8 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
 
     const { data, warnings } = transformGradeToLatest(archive)
 
-    expect(data.boundariesData.boundarySets).toHaveLength(1)
-    expect(data.gradeData.gradeOverrides).toBeUndefined()
+    expect(data.gradeBoundarySets).toHaveLength(1)
+    expect(data.gradeOverrides).toHaveLength(0)
     // 上書きは元々0件なので上書き側の warning は出ない
     expect(warnings.some((warning) => warning.includes("手動上書き"))).toBe(
       false
@@ -197,7 +210,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
  * v1.10.0 が実際に書き出していた形。制約ルールの設定は kind 別の JSON 文字列
  * （config）で、評価項目を「名前」で参照していた（issue #1063 以前）。
  */
-function buildV1_10_0Archive(): GradeArchiveData {
+function buildV1_10_0Archive(): LegacyGradeArchiveData {
   const archive = buildV1_9_0Archive()
   // 総合の名残を取り除いて 1.10.0 相当の形にする
   archive.boundariesData.boundarySets = [
@@ -263,41 +276,63 @@ describe("transformGradeToLatest: 1.10.0 → 1.11.0（制約ルールの設定JS
       to: "1.11.0",
     })
 
-    const constraints = data.gradeData.gradeConstraints!
-    const consistency = constraints.find(
+    const gradeItemIdByName = new Map(
+      data.gradeItems.map((gradeItem) => [gradeItem.name, gradeItem.id])
+    )
+    const consistency = data.gradeConstraints.find(
       (constraint) => constraint.kind === "consistency"
     )!
-    // uuid は旧アーカイブに無いので名前だけ（importer が名前フォールバックで解決する）
-    expect(consistency.targetGradeItemName).toBe("評定")
-    expect(consistency.targetGradeItemId).toBeUndefined()
-    expect(consistency.viewpointGradeItemNames).toEqual(["知識・技能"])
-    expect(consistency.labelValues).toEqual({ A: 5, B: 3, C: 1 })
+    // 旧 config の名前参照は、平坦化の過程で評価項目の行 id へ解決される
+    expect(consistency.targetGradeItemId).toBe(gradeItemIdByName.get("評定"))
+    expect(
+      data.gradeConstraintViewpoints
+        .filter((viewpoint) => viewpoint.constraintId === consistency.id)
+        .map((viewpoint) => viewpoint.gradeItemId)
+    ).toEqual([gradeItemIdByName.get("知識・技能")])
+    expect(
+      data.gradeConstraintLabelValues
+        .filter((labelValue) => labelValue.constraintId === consistency.id)
+        .map((labelValue) => [labelValue.label, Number(labelValue.value)])
+    ).toEqual([
+      ["A", 5],
+      ["B", 3],
+      ["C", 1],
+    ])
     expect(consistency.aggregate).toBe("sum")
-    expect(consistency.tolerance).toBe(2)
+    expect(Number(consistency.tolerance)).toBe(2)
     // 教員が書いた違反メッセージは触らない
     expect(consistency.message).toBe("観点と評定が合いません")
-    // 展開後は config を残さない
-    expect(consistency.config).toBeUndefined()
+    // 展開後は config を残さない（行に列そのものが無い）
+    expect(consistency).not.toHaveProperty("config")
 
-    const exclusion = constraints.find(
+    const exclusion = data.gradeConstraints.find(
       (constraint) => constraint.kind === "mutual_exclusion"
     )!
-    expect(exclusion.exclusionLabels).toEqual(["A", "C"])
-    expect(exclusion.config).toBeUndefined()
+    expect(
+      data.gradeConstraintExclusionLabels
+        .filter(
+          (exclusionLabel) => exclusionLabel.constraintId === exclusion.id
+        )
+        .map((exclusionLabel) => exclusionLabel.label)
+    ).toEqual(["A", "C"])
   })
 
   it("壊れた config は既定値へ倒して取り込める形にする", () => {
     const { data } = transformGradeToLatest(buildV1_10_0Archive())
 
-    const broken = data.gradeData.gradeConstraints!.find(
+    const broken = data.gradeConstraints.find(
       (constraint) => constraint.name === "壊れたconfig"
     )!
     // 旧 parseConfig の既定値フォールバックと同じ挙動（JSON.parse 失敗で既定値）
-    expect(broken.targetGradeItemName).toBeNull()
+    expect(broken.targetGradeItemId).toBeNull()
     expect(broken.aggregate).toBe("average")
-    expect(broken.tolerance).toBe(1)
-    expect(broken.viewpointGradeItemNames).toEqual([])
-    expect(broken.config).toBeUndefined()
+    expect(Number(broken.tolerance)).toBe(1)
+    expect(
+      data.gradeConstraintViewpoints.filter(
+        (viewpoint) => viewpoint.constraintId === broken.id
+      )
+    ).toEqual([])
+    expect(broken).not.toHaveProperty("config")
   })
 
   it("マニフェストを現行へ上げ、変換した件数を warning で知らせる", () => {
@@ -339,7 +374,7 @@ describe("transformGradeToLatest: 1.10.0 → 1.11.0（制約ルールの設定JS
         (transformation) => transformation.to === "1.11.0"
       )
     ).toBe(false)
-    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
+    expect(originalVersion).toBe("1.12.0")
   })
 })
 
@@ -347,7 +382,7 @@ describe("transformGradeToLatest: 1.10.0 → 1.11.0（制約ルールの設定JS
  * v1.11.0 までが実際に書き出していた内包資料の形（入れ子・射影ツリー）。
  * 点数は人（Student）の uuid を指していた。
  */
-function buildV1_11_0Archive(): GradeArchiveData {
+function buildV1_11_0Archive(): LegacyGradeArchiveData {
   const archive = buildV1_9_0Archive()
   archive.manifest = { ...manifest, version: "1.11.0" }
   // 1.9.0 の名残（総合エントリ）を取り除き、内包資料だけが旧形の状態にする
@@ -415,19 +450,19 @@ describe("transformGradeToLatest: 1.11.0 → 1.12.0（内包資料の平坦化�
   it("入れ子の内包資料をテーブルごとのセクションへ展開する", () => {
     const { data } = transformGradeToLatest(buildV1_11_0Archive())
 
-    expect(data.legacyCourseworkArchive).toBeUndefined()
-    expect(data.courseworkArchive!.courseworks).toHaveLength(1)
-    expect(data.courseworkArchive!.courseworkItems).toHaveLength(1)
-    expect(data.courseworkArchive!.courseworkStudents).toHaveLength(1)
+    expect(data).not.toHaveProperty("legacyCourseworkArchive")
+    expect(data.courseworkArchive.courseworks).toHaveLength(1)
+    expect(data.courseworkArchive.courseworkItems).toHaveLength(1)
+    expect(data.courseworkArchive.courseworkStudents).toHaveLength(1)
   })
 
   it("点数が資料の対象者を指し、名簿外の点数は破棄される", () => {
     const { data, warnings } = transformGradeToLatest(buildV1_11_0Archive())
 
-    const scores = data.courseworkArchive!.courseworkScores
+    const scores = data.courseworkArchive.courseworkScores
     expect(scores).toHaveLength(1)
     expect(scores[0].courseworkStudentId).toBe(
-      data.courseworkArchive!.courseworkStudents[0].id
+      data.courseworkArchive.courseworkStudents[0].id
     )
     expect(scores[0].score).toBe("85")
     expect(warnings.some((warning) => warning.includes("1 件を破棄"))).toBe(
@@ -489,12 +524,266 @@ describe("内包資料が空の旧アーカイブ", () => {
 
     const { data } = transformGradeToLatest(archive)
 
-    expect(data.courseworkArchive!.courseworks).toEqual([])
-    expect(data.courseworkArchive!.courseworkClassrooms).toEqual([])
-    expect(data.courseworkArchive!.courseworkTags).toEqual([])
-    expect(data.courseworkArchive!.courseworkStudents).toEqual([])
-    expect(data.courseworkArchive!.courseworkItems).toEqual([])
-    expect(data.courseworkArchive!.courseworkLetterScales).toEqual([])
-    expect(data.courseworkArchive!.courseworkScores).toEqual([])
+    expect(data.courseworkArchive.courseworks).toEqual([])
+    expect(data.courseworkArchive.courseworkClassrooms).toEqual([])
+    expect(data.courseworkArchive.courseworkTags).toEqual([])
+    expect(data.courseworkArchive.courseworkStudents).toEqual([])
+    expect(data.courseworkArchive.courseworkItems).toEqual([])
+    expect(data.courseworkArchive.courseworkLetterScales).toEqual([])
+    expect(data.courseworkArchive.courseworkScores).toEqual([])
+  })
+})
+
+describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化）", () => {
+  it("射影された入れ子をテーブルごとのセクションへ展開する", () => {
+    const { data, appliedTransformations } = transformGradeToLatest(
+      buildV1_11_0Archive()
+    )
+
+    expect(appliedTransformations).toContainEqual({
+      from: "1.12.0",
+      to: "1.13.0",
+    })
+    // 成績本体が入れ子でなく行の配列になっている
+    expect(data).not.toHaveProperty("gradeData")
+    expect(data).not.toHaveProperty("boundariesData")
+    expect(data.grades).toHaveLength(1)
+    expect(data.grades[0].name).toBe("1学期成績")
+    expect(data.gradeItems.length).toBeGreaterThan(0)
+    // 各行が id を持ち、アーカイブ内で結合できる
+    expect(
+      data.gradeDataSources.every((dataSource) =>
+        data.gradeItems.some(
+          (gradeItem) => gradeItem.id === dataSource.gradeItemId
+        )
+      )
+    ).toBe(true)
+  })
+
+  it("生徒・学級は full レコードとして外部参照セクションへ出る", () => {
+    const { data } = transformGradeToLatest(buildV1_9_0Archive())
+
+    expect(data.studentsData.map((student) => student.studentNumber)).toEqual([
+      "S001",
+    ])
+    // 対象者の行は生徒 uuid を指し、その uuid は studentsData に載っている
+    expect(data.gradeStudents[0].studentId).toBe(data.studentsData[0].id)
+  })
+
+  it("旧形式が名前でしか持たない参照を id へ解決する（試験・小計・領域）", () => {
+    const archive = buildV1_9_0Archive()
+    archive.gradeData.gradeItems = [
+      {
+        name: "知識・技能",
+        order: 0,
+        dataSources: [
+          {
+            type: "subtotal",
+            name: "小計参照",
+            weight: 100,
+            order: 0,
+            examName: "1学期中間",
+            subtotalName: "大問1",
+            cropRegionLabel: null,
+          },
+        ],
+      },
+    ]
+
+    const { data } = transformGradeToLatest(archive)
+
+    const dataSource = data.gradeDataSources[0]
+    // 行は uuid だけを持ち、同定情報は refs 側にある
+    expect(dataSource.examId).not.toBeNull()
+    expect(dataSource.subtotalId).not.toBeNull()
+    expect(dataSource).not.toHaveProperty("examName")
+    expect(
+      data.examRefs.find((examRef) => examRef.id === dataSource.examId)
+        ?.examName
+    ).toBe("1学期中間")
+    const subtotalRef = data.subtotalRefs.find(
+      (candidate) => candidate.id === dataSource.subtotalId
+    )!
+    expect(subtotalRef.name).toBe("大問1")
+    // 小計名で当て直すには試験の絞り込みが要るので、試験も併せて持つ
+    expect(subtotalRef.examId).toBe(dataSource.examId)
+  })
+
+  it("旧アーカイブは氏名を持たないので、その旨を警告する（生徒は作れない）", () => {
+    const { data, warnings } = transformGradeToLatest(buildV1_9_0Archive())
+
+    // 学籍番号での照合には使えるが、氏名が無いので取り込み側は生徒を作らない
+    expect(data.studentsData[0].lastName).toBe("")
+    expect(
+      warnings.some((warning) => warning.includes("氏名・学級所属を持ちません"))
+    ).toBe(true)
+    // 在籍期間を捏造しないので学級所属は空
+    expect(data.membershipsData).toEqual([])
+  })
+
+  it("同名の評価項目でもデータソースは片寄せされない（合成idに並び順を混ぜる）", () => {
+    const archive = buildV1_9_0Archive()
+    archive.gradeData.gradeItems = [
+      {
+        name: "観点別評価",
+        order: 0,
+        dataSources: [
+          {
+            type: "exam_total",
+            name: "1つ目",
+            weight: 100,
+            order: 0,
+            examName: null,
+            subtotalName: null,
+            cropRegionLabel: null,
+          },
+        ],
+      },
+      {
+        name: "観点別評価",
+        order: 1,
+        dataSources: [
+          {
+            type: "exam_total",
+            name: "2つ目",
+            weight: 100,
+            order: 0,
+            examName: null,
+            subtotalName: null,
+            cropRegionLabel: null,
+          },
+        ],
+      },
+    ]
+    archive.gradeData.gradeOverrides = []
+    archive.boundariesData.boundarySets = []
+
+    const { data } = transformGradeToLatest(archive)
+
+    // 2項目が別の id を持ち、データソースが1本ずつ付く
+    expect(new Set(data.gradeItems.map((item) => item.id)).size).toBe(2)
+    for (const gradeItem of data.gradeItems) {
+      expect(
+        data.gradeDataSources.filter(
+          (dataSource) => dataSource.gradeItemId === gradeItem.id
+        )
+      ).toHaveLength(1)
+    }
+  })
+
+  it("別試験の同名小計・同ラベル領域は別の参照として扱う", () => {
+    const archive = buildV1_9_0Archive()
+    const buildSource = (
+      name: string,
+      examName: string
+    ): (typeof archive.gradeData.gradeItems)[number]["dataSources"][number] => ({
+      type: "crop_region",
+      name,
+      weight: 100,
+      order: 0,
+      examName,
+      subtotalName: "大問1",
+      cropRegionLabel: "問3",
+    })
+    archive.gradeData.gradeItems = [
+      {
+        name: "知識・技能",
+        order: 0,
+        dataSources: [
+          buildSource("中間の問3", "中間テスト"),
+          buildSource("期末の問3", "期末テスト"),
+        ],
+      },
+    ]
+    archive.gradeData.gradeOverrides = []
+    archive.boundariesData.boundarySets = []
+
+    const { data } = transformGradeToLatest(archive)
+
+    const [midterm, finalExam] = data.gradeDataSources
+    expect(midterm.examId).not.toBe(finalExam.examId)
+    // ラベル・小計名が同じでも、試験が違えば別の参照になる
+    expect(midterm.cropRegionId).not.toBe(finalExam.cropRegionId)
+    expect(midterm.subtotalId).not.toBe(finalExam.subtotalId)
+    // 同定情報も試験ごとに1件ずつ出る
+    expect(data.cropRegionRefs).toHaveLength(2)
+    expect(data.subtotalRefs).toHaveLength(2)
+  })
+
+  it("Project 時代の project_total を exam_total へ直す", () => {
+    const archive = buildV1_9_0Archive()
+    archive.gradeData.gradeItems = [
+      {
+        name: "知識・技能",
+        order: 0,
+        dataSources: [
+          {
+            type: "project_total",
+            name: "試験合計",
+            weight: 100,
+            order: 0,
+            examName: "1学期中間",
+            subtotalName: null,
+            cropRegionLabel: null,
+          },
+        ],
+      },
+    ]
+    archive.gradeData.gradeOverrides = []
+    archive.boundariesData.boundarySets = []
+
+    const { data } = transformGradeToLatest(archive)
+
+    expect(data.gradeDataSources[0].type).toBe("exam_total")
+  })
+
+  it("観点を解決できない制約ルールは無効化して取り込ませる", () => {
+    const archive = buildV1_9_0Archive()
+    archive.gradeData.gradeItems = [
+      { name: "知識・技能", order: 0, dataSources: [] },
+    ]
+    archive.gradeData.gradeConstraints = [
+      {
+        name: "観点と評定の整合",
+        kind: "consistency",
+        targetGradeItemName: "知識・技能",
+        viewpointGradeItemNames: ["知識・技能", "存在しない観点"],
+        expression: "",
+        color: "#fecaca",
+        message: "観点と評定が合いません",
+        enabled: true,
+        order: 0,
+      },
+    ]
+    archive.gradeData.gradeOverrides = []
+    archive.boundariesData.boundarySets = []
+
+    const { data, warnings } = transformGradeToLatest(archive)
+
+    // 集計対象が減った状態で有効のまま通すと、別物のルールとして判定が動く
+    expect(data.gradeConstraints[0].enabled).toBe(false)
+    expect(data.gradeConstraints[0].disabledReason).toContain("集計対象の観点")
+    expect(
+      warnings.some((warning) => warning.includes("観点と評定の整合"))
+    ).toBe(true)
+  })
+
+  it("同名の評価項目を名前でしか指せないセルは破棄して警告する", () => {
+    const archive = buildV1_9_0Archive()
+    archive.gradeData.gradeItems = [
+      { name: "評定", order: 0, dataSources: [] },
+      { name: "評定", order: 1, dataSources: [] },
+    ]
+    archive.gradeData.gradeOverrides = [
+      { studentNumber: "S001", gradeItemName: "評定", overrideLabel: "4" },
+    ]
+    archive.boundariesData.boundarySets = []
+
+    const { data, warnings } = transformGradeToLatest(archive)
+
+    expect(data.gradeOverrides).toHaveLength(0)
+    expect(warnings.some((warning) => warning.includes("同名の評価項目"))).toBe(
+      true
+    )
   })
 })

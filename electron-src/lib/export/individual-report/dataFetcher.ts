@@ -192,7 +192,6 @@ export async function fetchIndividualReportData(
 
         // 統計データ（subtotalScoresから直接グループ情報を取得可能）
         const statistics = calculateStatisticsForStudent(
-          scoringData.studentId,
           scoringData.totalScore,
           allScoringData,
           studentClassrooms,

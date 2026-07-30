@@ -6,13 +6,12 @@
  * 存在しないので、importer が名前フォールバックで解決する。
  */
 
+import type { GradeArchiveVersion } from "../../../../src/types/gradeArchive.types"
 import type {
-  ArchiveGradeConstraint,
-  GradeArchiveData,
-  GradeArchiveVersion,
-  GradeTransformResult,
-  GradeVersionTransformer,
-} from "../../../../src/types/gradeArchive.types"
+  LegacyArchiveGradeConstraint,
+  LegacyGradeArchiveData,
+} from "./legacyShape"
+import type { GradeTransformResult, GradeVersionTransformer } from "./types"
 
 /** 旧 config の形（kind別。壊れたJSONは既定値へ落とす） */
 interface LegacyConstraintConfig {
@@ -38,7 +37,7 @@ export class V1_10_0_to_V1_11_0_Transformer implements GradeVersionTransformer {
   readonly fromVersion: GradeArchiveVersion = "1.10.0"
   readonly toVersion: GradeArchiveVersion = "1.11.0"
 
-  transform(data: GradeArchiveData): GradeTransformResult {
+  transform(data: LegacyGradeArchiveData): GradeTransformResult {
     const warnings: string[] = []
     const legacyConstraints = (data.gradeData.gradeConstraints ?? []).filter(
       (gradeConstraint) => gradeConstraint.config !== undefined
@@ -54,7 +53,7 @@ export class V1_10_0_to_V1_11_0_Transformer implements GradeVersionTransformer {
       }
     }
 
-    const gradeConstraints: ArchiveGradeConstraint[] = (
+    const gradeConstraints: LegacyArchiveGradeConstraint[] = (
       data.gradeData.gradeConstraints ?? []
     ).map((gradeConstraint) => {
       if (gradeConstraint.config === undefined) return gradeConstraint

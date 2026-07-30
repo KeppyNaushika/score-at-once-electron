@@ -11,16 +11,11 @@
 
 import { Decimal } from "@prisma/client/runtime/client"
 
+import type { GradeCellTarget } from "../../../src/types/grade.types"
 import { calculateGrades } from "../shared/calculations/gradeCalculator"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
-
-/** 確定・解除の対象セル（生徒×評価項目）。総合の行は存在しない */
-export interface GradeFrozenTarget {
-  studentId: string
-  gradeItemId: string
-}
 
 interface FreezeGradeScoresResult {
   success: boolean
@@ -37,19 +32,19 @@ interface UnfreezeGradeScoresResult {
 }
 
 /** 対象セルの同定キー。id の組でキーし、行・列の並び順には依存しない */
-const targetKey = (target: GradeFrozenTarget): string =>
-  `${target.studentId}:${target.gradeItemId}`
+const targetKey = (target: GradeCellTarget): string =>
+  `${target.gradeStudentId}:${target.gradeItemId}`
 
 /**
  * 成績値を確定（凍結）する。
  *
- * targets 未指定なら Grade 全体（全生徒 × 全評価項目）を一括で確定する。
+ * targets 未指定なら Grade 全体（全対象者 × 全評価項目）を一括で確定する。
  * 既に確定済みのセルを含めて指定した場合は、その時点のライブ値で確定し直す（再確定）。
  * 除外セル（GradeItemExclusion）は値を持たないため確定対象から外す。
  */
 export async function freezeGradeScores(options: {
   gradeId: string
-  targets?: GradeFrozenTarget[]
+  targets?: GradeCellTarget[]
   frozenByUserId?: string | null
 }): Promise<FreezeGradeScoresResult> {
   const { gradeId, targets, frozenByUserId = null } = options
@@ -67,8 +62,7 @@ export async function freezeGradeScores(options: {
       targets !== undefined ? new Set(targets.map(targetKey)) : null
 
     const rows: {
-      gradeId: string
-      studentId: string
+      gradeStudentId: string
       gradeItemId: string
       weightedScore: Decimal | null
       weightedMaxScore: Decimal
@@ -81,8 +75,8 @@ export async function freezeGradeScores(options: {
 
     for (const student of calculation.result.students) {
       for (const gradeItemResult of student.gradeItemResults) {
-        const target: GradeFrozenTarget = {
-          studentId: student.studentId,
+        const target: GradeCellTarget = {
+          gradeStudentId: student.gradeStudentId,
           gradeItemId: gradeItemResult.gradeItemId,
         }
         if (requestedKeys !== null && !requestedKeys.has(targetKey(target))) {
@@ -92,8 +86,7 @@ export async function freezeGradeScores(options: {
         if (gradeItemResult.isExcluded) continue
 
         rows.push({
-          gradeId,
-          studentId: target.studentId,
+          gradeStudentId: target.gradeStudentId,
           gradeItemId: target.gradeItemId,
           weightedScore:
             gradeItemResult.weightedScore !== null
@@ -120,18 +113,18 @@ export async function freezeGradeScores(options: {
     // 古い確定行が残り、除外を解除した瞬間に過去の値が甦ってしまう。
     const deleteWhere =
       targets === undefined
-        ? { gradeId }
+        ? { gradeStudent: { gradeId } }
         : {
-            gradeId,
+            gradeStudent: { gradeId },
             OR: targets.map((target) => ({
-              studentId: target.studentId,
+              gradeStudentId: target.gradeStudentId,
               gradeItemId: target.gradeItemId,
             })),
           }
 
-    // 再確定を上書きではなく「消して入れ直す」で表現する。unique(gradeId, studentId,
-    // gradeItemId) の1行1セルなので、対象範囲を削除してから作り直せば
-    // 新規確定・再確定のどちらも同じ経路で扱える。
+    // 再確定を上書きではなく「消して入れ直す」で表現する。
+    // unique(gradeStudentId, gradeItemId) の1行1セルなので、対象範囲を削除してから
+    // 作り直せば新規確定・再確定のどちらも同じ経路で扱える。
     await prisma.$transaction(async (tx) => {
       await tx.gradeFrozenScore.deleteMany({ where: deleteWhere })
       if (rows.length > 0) {
@@ -169,7 +162,7 @@ export async function freezeGradeScores(options: {
  */
 export async function unfreezeGradeScores(options: {
   gradeId: string
-  targets?: GradeFrozenTarget[]
+  targets?: GradeCellTarget[]
   userId?: string | null
 }): Promise<UnfreezeGradeScoresResult> {
   const { gradeId, targets, userId = null } = options
@@ -180,11 +173,11 @@ export async function unfreezeGradeScores(options: {
 
     const deleted = await prisma.gradeFrozenScore.deleteMany({
       where: {
-        gradeId,
+        gradeStudent: { gradeId },
         ...(targets !== undefined
           ? {
               OR: targets.map((target) => ({
-                studentId: target.studentId,
+                gradeStudentId: target.gradeStudentId,
                 gradeItemId: target.gradeItemId,
               })),
             }

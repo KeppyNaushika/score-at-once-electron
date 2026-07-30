@@ -16,14 +16,11 @@ import type {
   ArchiveCwTag,
 } from "../../../../src/types/courseworkArchive.types"
 import type {
-  GradeArchiveData,
-  GradeTransformResult,
-  GradeVersionTransformer,
-} from "../../../../src/types/gradeArchive.types"
-import type {
   LegacyArchiveCourseworkRef,
   LegacyCollectedCourseworkData,
 } from "../coursework-transformers/legacyShape"
+import type { LegacyGradeArchiveData } from "./legacyShape"
+import type { GradeTransformResult, GradeVersionTransformer } from "./types"
 
 /** LWW で既存を上書きしないための過去日時 */
 const EPOCH = new Date(0).toISOString()
@@ -38,7 +35,7 @@ export class V1_4_0_to_V1_5_0_Transformer implements GradeVersionTransformer {
   readonly fromVersion = "1.4.0" as const
   readonly toVersion = "1.5.0" as const
 
-  transform(data: GradeArchiveData): GradeTransformResult {
+  transform(data: LegacyGradeArchiveData): GradeTransformResult {
     const legacy = data.courseworks ?? []
 
     const studentNumbers = new Set<string>()

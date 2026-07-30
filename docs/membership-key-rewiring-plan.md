@@ -450,10 +450,195 @@ Phase A と同等かそれ以上になる。
     `examStudentId` は同じ 1 行にあり、列ごとのマージはしていない）。同期で起こりうるのは
     参照先が消えた行が残ること
 
-**未着手のまま残した項目**:
+**未着手のまま残した項目**（Phase C で対応済み）:
 
 - **資料・成績の名簿からの生徒削除には確認ダイアログが無い。** 試験（05）は
   `StudentRemovalConfirmModal` で破棄を明示しているが、`RosterTable` の `enableRemove` は
   無確認で削除する（`slots.onBeforeRemove` は用意されているだけで利用者ゼロ）。
   Phase B で削除が破壊的になったため、確認の必要性が上がった。ただし grade の名簿も
   同じ形なので、Phase C でまとめて入れる方が一貫する
+
+## 13. Phase C の実施結果（2026-07-29）
+
+**完了。** `GradeOverride` / `GradeFrozenScore` / `GradeItemExclusion` を `gradeStudentId` へ
+配線変更し、§3.3 の Map 解消・セル実体化・名簿削除の確認ダイアログまで含めて実施した。
+これで対象 9 テーブル・3 サブシステムがすべて片付き、本計画は完了。
+
+計画から外れた点・追加で判明した点:
+
+- **grade アーカイブを 1.13.0 へ上げ、成績本体もテーブルごとの平坦なセクションへ作り直した。**
+  当初は「3種とも名前ベース外部参照で持ち出しており JSON の形が変わらない」として据え置いたが、
+  OWNER 指摘により **exam / coursework と揃え、Prisma のクエリが返した行をそのまま持つ**方針とした。
+  詳細は §14
+- **`gradeId` / `studentId` の2列は残さず畳んだ。** 両方を残すと
+  `gradeId ≠ gradeStudent.gradeId` が起こりうるため（`ReturnSnapshot.examId` と同じ判断）。
+  `@@unique([gradeId, studentId, gradeItemId])` は `@@unique([gradeStudentId, gradeItemId])` に、
+  `where: { gradeId }` は `where: { gradeStudent: { gradeId } } }` になった
+- **`rawScoreMap` を `RawScoreMatrix` へ実体化した（§3.3 の中心）。**
+  `Map<studentId, Map<dataSourceId, number|null>>` を、行が対象者・セルが列のデータソースを
+  同梱する行列に置き換えた。索引（Map）は実装の内側に閉じ、公開 API は実体しか受け取らない。
+  `absentEstimation` の9関数は `(studentId: string, dataSourceId: string, maxScore: number, map)`
+  から `(targetRow, dataSource, matrix)` になり、**満点は列の実体から取れるので引数が1つ減った**
+  （呼び出し側が別のソースの満点を渡す取り違えが構造的に起こらなくなった）
+- **上書き・確定値・除外設定は対象者の include から読むようになり、3本の findMany が消えた。**
+  `${studentId}:${gradeItemId}` の文字列連結キーで突き合わせていた `overrideMap` /
+  `exclusionSet` / `frozenByCell` は、`gradeStudent.overrides` 等を `find` するだけになった。
+  名簿に居ない生徒の設定を読み込むこと自体が起こらない
+- **`estimateByRegression` に潜在的なクラッシュがあった。** 訓練行が0件のとき
+  `const p = X[0].length` が `undefined` を参照して throw し、成績算出全体が失敗していた
+  （対象生徒の説明変数を全部揃えた他生徒が居ない構成で起こる）。行列化のついでに
+  `insufficient_samples` として average へ落とすガードを入れた
+- **`idChangeExecutor` の `GradeStudent` mover が単純な `updateMany` のままだった。**
+  `@@unique([gradeId, studentId])` があるので移行先が同じ成績に居ると以前から
+  unique 違反で落ちていたが、Phase C で cascade 子が付いたため危険度が上がった。
+  `CourseworkStudent` と同じく「衝突しないセルを先に付け替えてから delete」に揃えた
+- **`duplicateGrade`（成績の複製）が `createMany` で対象者を作っていた。** 新しい対象者の
+  id が要るので1件ずつ作って旧→新の対応を持つ形にした。確定値は元々複製していない
+  （複製は「設定の写し」であって確定という操作の写しではない）ので据え置き
+- **名簿削除の確認ダイアログを共通部品へ入れた。** `RosterTable` に確認を内蔵し、
+  利用者ゼロだった `slots.onBeforeRemove` は `slots.removalLosses`（連動して消えるものの
+  列挙）へ置き換えた。学級ごと外す2段階モーダルにも `deletionLosses` を足し、
+  「その生徒の入力済みデータ」という曖昧な文言を **確定した成績値・上書きした評定・
+  除外設定**（成績）／**点数・加減点・コメント**（資料）と具体的に言うようにした
+- **`statisticsCalculator` の `scoreByStudentId` は人キーのままが正しい**（§3.3 の棚卸し結果）。
+  突き合わせ相手が学級の在籍者一覧（`StudentClassroomMembership` ＝人の所属）なので、
+  受験者キーにすると母集団と噛み合わない。根拠をコメントに残し、未使用だった
+  `_studentId` 引数だけ落とした。`returnSnapshot` の Map は Phase A で受験者キーへ
+  移行済みで、こちらも根拠をコメント化した
+
+追加したテスト:
+
+- `__tests__/migration/rewireGradeCellsToGradeStudent.test.ts` — 付け替え・孤児破棄（3種）・
+  AuditLog 記録・確定値の中身の保存・`RENAME TO` 後の FK 参照名
+- `__tests__/grade/integration/gradeStudentCellRemoval.test.ts` — 学級ごと外すとセル3種が
+  消え、他生徒は巻き添えにならず、再追加しても復元されない
+- `__tests__/grade/integration/gradeScopeGuard.test.ts` — 別の成績の評価項目・存在しない
+  対象者への書き込みが弾かれる
+- `gradeArchiveRoundTrip.test.ts` に「名簿に載らない生徒のセルは取り込まず警告する」
+- `cascadeCoverage.test.ts` に「成績のセル3種の親は `GradeStudent`・Student 直結ではない」
+
+**残る課題**:
+
+- **実 DB のコピーへ migration を当てるリハーサル**は Phase A / B と同様に未実施（実データが要る）
+- **`Student` 直下の cascade 子は所属とメンバーシップ4種だけになった。** 新しい子データを
+  Student 直結で足すと同じ穴が開くが、`cascadeCoverage.test.ts` が schema 駆動で
+  3つのメンバーシップすべての親子関係を固定しているので、追加時には気付ける
+
+## 14. grade アーカイブの作り直し（2026-07-30）
+
+`.grade` を **1.12.0 → 1.13.0** へ上げ、成績本体をテーブルごとの平坦なセクションにして
+各行を Prisma の行のまま持つようにした。exam / coursework と同じ形になり、3つのアーカイブが
+「Prisma のクエリが返した行をそのまま JSON に持つ」という同一の原則に揃った。
+
+### 14.1 何が射影されていたか
+
+1.12.0 までの `.grade` は成績本体を入れ子へ射影し、外部参照を名前で持っていた。
+
+| 対象                                 | 旧（1.12.0）                                                 | 新（1.13.0）                                                         |
+| ------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------------------------- |
+| セル3種                              | `{ studentNumber, gradeItemName, … }`                        | `GradeOverride` などの行そのまま（`gradeStudentId` / `gradeItemId`） |
+| `GradeItem` / `GradeDataSource`      | 入れ子。`examName` 等の名前を同梱                            | 行そのまま。参照は uuid のみ                                         |
+| `GradeConstraint` の子               | `labelValues` を `Record` へ、観点を **2本の平行配列**へ潰す | `GradeConstraintViewpoint` などの行の配列                            |
+| `GradeBoundarySet` / `GradeBoundary` | 別ファイル `boundaries.json` に射影                          | 行として `grade-exam.json` の一セクション                            |
+| Decimal                              | `Number(...)`（原理的に精度が落ちる）                        | 文字列（`JSON.stringify` と同じ規則。exam / coursework と同一）      |
+| `GradeFrozenScore.frozenByUserId`    | 出力しない                                                   | 行のまま持ち出し、取り込み先に居なければ null にする                 |
+
+観点の平行配列は `project_grid_ordinal_coupling_hazard` で潰したのと同じ添字結合だった。
+展開の過程で1行1参照へ解け、対応が添字に依存しなくなった。
+
+### 14.2 「uuid が当たらない」は据え置きの理由にならなかった
+
+名前ベースにしていた根拠は「別PCで登録された生徒は uuid が違うので当たらない」だったが、
+**coursework-archive の `resolveStudents` が既に uuid 一次 → 学籍番号二次 → 作成の三段で
+解いていた**。grade だけが古い実装のまま名前へ落としていたに過ぎない。
+
+1.13.0 では外部参照をこう解く（解決器は coursework と共有する）。
+
+- 生徒・学級 — full レコードを carry し、uuid 一次 → 学籍番号 / 学級名 二次 → **作成**
+- 試験 — uuid 一次 → ウィザードのマッピング → 試験名
+- 小計・採点領域 — uuid 一次 → **当該試験で絞った**名前・ラベル
+- 資料・評価項目 — 内包する coursework アーカイブの取り込み結果から解決
+
+**未一致の生徒・学級は作る（`allowCreate: true`）。学級所属も復元する。** 当初は
+「`.grade` は生徒マスタの持ち主ではない」として lookup のみに据え置いたが、`.exam`
+（`studentProcessor.ts`）も `.coursework` 単体も作っており、grade だけが古い実装のまま
+だった。内包する資料の取り込みも `allowCreate: true` に揃えた（同じ資料が単体では点数まで
+復元されるのに `.grade` 経由だと空になっていた）。試験・小計・採点領域はアーカイブに
+含められないので作れない。解決できなかった参照はその行ごと落とし、必ず warning で伝える。
+
+**ただし氏名を持たないレコードからは作らない**（`resolveStudents` のガード）。旧 `.grade`
+（v1.12.0 以前）は生徒を学籍番号だけで参照しており氏名を持ち出していないため、作ると
+氏名が空の生徒が名簿に並ぶ。作らずに知らせる方が復旧できる。学級所属も旧形式は
+在籍期間・出席番号を持たないので復元しない（在籍期間を捏造すると受験日スナップショットの
+判定が狂う）。どちらも変換時に warning で伝える。
+
+### 14.3 変換器
+
+`V1_12_0_to_V1_13_0` を新設。旧形式の知識は `grade-transformers/legacyShape.ts` へ閉じ込め、
+`src/types/gradeArchive.types.ts` は現行の形だけを宣言する（coursework と同じ構え）。
+既存5本の変換器は `LegacyGradeArchiveData` に型付けし直した。
+
+展開で解いていること:
+
+- id を持たない行（セル・境界・制約の子・名簿・対象学級）の id を自然キーから組み立てる
+  （`deterministicId.ts` と同じ規則で冪等。アーカイブ内の結合キーにのみ使い DB へは書かない）
+- 名前でしか指せなかった参照（試験・小計・採点領域・資料・評価項目）を id へ解決する。
+  試験・小計・領域は uuid が無ければ名前から決定論的な id を合成し、同定情報を refs へ添える
+  — 行は uuid しか持たないという原則を崩さずに名前フォールバックを残すため
+- **同名の評価項目を名前でしか指せないセルは破棄して警告する。** 旧 importer が持っていた
+  曖昧検出（`ambiguousGradeItemNames`）を展開側へ移した。取り違えるより落とす
+- 復元できない `createdAt`/`updatedAt` は下限値を入れ、warning で伝える
+
+### 14.4 チェーンの出口
+
+変換後に射影形式が残っていたら **throw する**。旧形式のまま importer へ流れると実行時に崩れる
+ので、黙って先へ進ませない（coursework の出口判定と同じ）。
+
+追加したテスト:
+
+- `gradeArchiveRoundTrip.test.ts` — 「収集結果は Prisma の行そのままで、射影した名前を持たない」
+  「確定操作者は取り込み先に居れば残り、居なければ操作者不明になる」。
+  旧形式の読込互換テストは `toLegacyArchive`（平坦→射影の逆変換）で射影形式を組んで維持
+- `gradeTransformerChain.test.ts` — 1.12.0 → 1.13.0 の展開・外部参照セクション・
+  名前でしか持たない参照の id 解決・同名評価項目の破棄と警告・旧アーカイブが氏名と
+  学級所属を持たないことの警告
+- `gradeArchiveRoundTrip.test.ts` — 「取り込み先に居ない生徒・学級は作られ、学級所属も
+  復元される」「アーカイブの名簿に無い対象者を指すセルは取り込まず警告する」
+
+### 14.5 レビュー指摘の反映（2026-07-31）
+
+`/code-review high` で9件（すべて correctness）。作り直しで持ち込んだ退行が中心で、全件修正した。
+
+**旧アーカイブの合成 id が衝突していた（3件）**
+
+- 評価項目の合成 id が `${gradeId}:${name}` だけだったため、同名の2項目が1つの id へ潰れ、
+  両方のデータソースが片方へ寄っていた（重み倍・もう片方は全欠測）。並び順を混ぜて解消
+- 小計・採点領域の合成 id も名前だけだったため、別の試験の同名参照と衝突していた。
+  試験を混ぜて解消（小計名はグループ内、領域ラベルは試験内でしか一意でない）
+- 旧 importer にあった `project_total` → `exam_total` の型正規化が落ちていた。
+  残ると gradeCalculator のどの分岐にも一致せず、試験合計が理由も示されず空欄になる
+
+**生徒・学級を作るようにしたことの副作用（4件）**
+
+- **`restoreMemberships` を「この取り込みで新規作成した生徒」に限定した。** 無条件に呼ぶと、
+  取り込み先で別学級へ異動済みの生徒に旧学級の在籍行が復活し、取り込みと無関係な試験の
+  学級別集計・受験日スナップショットの母集団まで変わっていた。`resolveStudents` が
+  `createdIds` を返すようにして区別する（doc コメントの元々の意図どおり。coursework も同時に直る）
+- **合成された非 uuid の id を主キーにしない。** `legacy-classroom:3年A組` がそのまま
+  Classroom の id になっていた。生徒側にあった氏名ガードと同じ性質の穴で、
+  `isUuid` で判定して uuid でなければ Prisma に生成させる
+- **アーカイブの別々の生徒が同じ既存生徒へ解決すると unique 違反で全体が落ちていた**
+  （uuid で当たる生徒と学籍番号で当たる生徒が同一人物になる場合）。先に作った対象者へ寄せ、
+  まとめたことを警告で伝える
+- **プレビューが lookup-only 時代の表示のままだった。** 「見つかりません」ではなく
+  「生徒 N 名を新規登録」「学級 N 件を新規登録」を出し、生徒マスタ・学級マスタへ
+  書き込むことを取り込み前に明示する。旧アーカイブで作れない生徒は別枠で理由を出す
+
+**その他（2件）**
+
+- 制約ルールの観点を変換器が落としたとき、取り込み側からは見えず有効のまま入っていた。
+  落とした時点で `disabledReason` を書いて無効化する（集計対象が減れば別物のルールになる）
+- `coursework_total` の参照を評価項目経由でしか解決していなかったため、評価項目0件の資料への
+  参照が取り込み先に実在しても失われていた。資料を直接引く経路を戻した
+- **内包資料の取り込みを生徒解決より前へ移した。** 旧 .grade は成績側に氏名を持たないが
+  内包資料側は持っているため、逆順だと「生徒は DB に居るのに成績の名簿だけ空」になっていた

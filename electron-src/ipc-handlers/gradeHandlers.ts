@@ -4,7 +4,11 @@
 
 import { dialog } from "electron"
 
-import type { GradeConstraintInput } from "../../src/types/grade.types"
+import type {
+  GradeCellTarget,
+  GradeConstraintInput,
+  GradeItemExclusionInput,
+} from "../../src/types/grade.types"
 import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
 import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
 import { extractGradeArchive } from "../lib/import/grade-archive/gradeArchiveExtractor"
@@ -45,7 +49,6 @@ import {
 } from "../lib/prisma/gradeDataSource"
 import {
   freezeGradeScores,
-  type GradeFrozenTarget,
   unfreezeGradeScores,
 } from "../lib/prisma/gradeFrozenScore"
 import {
@@ -361,24 +364,15 @@ export function setupGradeHandlers(): void {
 
   registerHandler(
     "grade:upsertGradeOverride",
-    async (data: {
-      gradeId: string
-      studentId: string
-      gradeItemId: string
-      overrideLabel: string
-    }) => {
+    async (data: GradeCellTarget & { overrideLabel: string }) => {
       return upsertGradeOverride(data)
     }
   )
 
   registerHandler(
     "grade:deleteGradeOverride",
-    async (data: {
-      gradeId: string
-      studentId: string
-      gradeItemId: string
-    }) => {
-      return deleteGradeOverride(data)
+    async (target: GradeCellTarget) => {
+      return deleteGradeOverride(target)
     }
   )
 
@@ -418,23 +412,15 @@ export function setupGradeHandlers(): void {
 
   registerHandler(
     "grade:setGradeItemExclusion",
-    async (data: {
-      gradeId: string
-      studentId: string
-      gradeItemId: string
-      excluded: boolean
-    }) => {
-      return setGradeItemExclusion(data)
+    async (input: GradeItemExclusionInput) => {
+      return setGradeItemExclusion(input)
     }
   )
 
   registerHandler(
     "grade:batchUpdateGradeItemExclusions",
-    async (
-      gradeId: string,
-      updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
-    ) => {
-      return batchUpdateGradeItemExclusions(gradeId, updates)
+    async (updates: GradeItemExclusionInput[]) => {
+      return batchUpdateGradeItemExclusions(updates)
     }
   )
 
@@ -459,7 +445,7 @@ export function setupGradeHandlers(): void {
     "grade:freezeGradeScores",
     async (data: {
       gradeId: string
-      targets?: GradeFrozenTarget[]
+      targets?: GradeCellTarget[]
       frozenByUserId?: string | null
     }) => {
       return freezeGradeScores(data)
@@ -470,7 +456,7 @@ export function setupGradeHandlers(): void {
     "grade:unfreezeGradeScores",
     async (data: {
       gradeId: string
-      targets?: GradeFrozenTarget[]
+      targets?: GradeCellTarget[]
       userId?: string | null
     }) => {
       return unfreezeGradeScores(data)

@@ -23,6 +23,7 @@ import {
 import { useGradeItemExclusions } from "@/hooks/grades/useGradeItemExclusions"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
+/** 成績の名簿1行。除外の書き込み先は人ではなく対象者（id）なので実体で受け取る */
 interface ExclusionStudent {
   id: string
   gradeId: string
@@ -109,7 +110,7 @@ export function StudentExclusionModal({
                     (candidate) => classroomIdSet.has(candidate.classroomId)
                   )
                   return (
-                    <TableRow key={gradeStudent.studentId}>
+                    <TableRow key={gradeStudent.id}>
                       <TableCell className="sticky left-0 z-10 bg-white">
                         <div className="flex items-center gap-2 text-sm whitespace-nowrap">
                           {membership && (
@@ -127,19 +128,19 @@ export function StudentExclusionModal({
                         </div>
                       </TableCell>
                       {gradeItems.map((gradeItem) => {
-                        const excluded = isExcluded(
-                          gradeStudent.studentId,
-                          gradeItem.id
-                        )
+                        const excluded = isExcluded({
+                          gradeStudentId: gradeStudent.id,
+                          gradeItemId: gradeItem.id,
+                        })
                         return (
                           <TableCell key={gradeItem.id} className="text-center">
                             <Checkbox
                               checked={!excluded}
                               onCheckedChange={() =>
-                                toggleExclusion(
-                                  gradeStudent.studentId,
-                                  gradeItem.id
-                                )
+                                toggleExclusion({
+                                  gradeStudentId: gradeStudent.id,
+                                  gradeItemId: gradeItem.id,
+                                })
                               }
                             />
                           </TableCell>

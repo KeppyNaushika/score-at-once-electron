@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
-import type { GradeCalculationResult } from "@/types/grade.types"
-
-interface SetGradeOverrideParams {
-  studentId: string
-  gradeItemId: string
-  /** 上書きラベル。null の場合は上書きを削除（自動計算に戻す） */
-  overrideLabel: string | null
-}
-
-/** 確定・解除の対象セル（生徒×評価項目）。未指定なら Grade 全体が対象 */
-interface GradeFrozenTarget {
-  studentId: string
-  gradeItemId: string
-}
+import type {
+  GradeCalculationResult,
+  GradeCellTarget,
+  GradeOverrideInput,
+} from "@/types/grade.types"
 
 /**
  * 成績評定の計算結果取得、評定上書き（オーバーライド）、成績値の確定（凍結）を管理するフック。
@@ -63,13 +54,13 @@ export function useGradeResults(gradeId: string) {
   }, [calculate])
 
   const setGradeOverride = useCallback(
-    async (params: SetGradeOverrideParams) => {
+    async (params: GradeOverrideInput) => {
       if (!result) return
 
       // 確定済みセルは確定値が最優先なので、上書きを保存しただけでは表示が動かない。
       // 調整の結果をその場で取り込み直す（＝そのセルだけ再確定）必要がある。
       const editedItemResult = result.students
-        .find((student) => student.studentId === params.studentId)
+        .find((student) => student.gradeStudentId === params.gradeStudentId)
         ?.gradeItemResults.find(
           (gradeItemResult) =>
             gradeItemResult.gradeItemId === params.gradeItemId
@@ -83,7 +74,8 @@ export function useGradeResults(gradeId: string) {
           return {
             ...prev,
             students: prev.students.map((student) => {
-              if (student.studentId !== params.studentId) return student
+              if (student.gradeStudentId !== params.gradeStudentId)
+                return student
 
               return {
                 ...student,
@@ -105,32 +97,38 @@ export function useGradeResults(gradeId: string) {
 
       // DB 永続化
       try {
-        if (params.overrideLabel) {
-          await window.electronAPI.grade.upsertGradeOverride({
-            gradeId,
-            studentId: params.studentId,
-            gradeItemId: params.gradeItemId,
-            overrideLabel: params.overrideLabel,
-          })
-        } else {
-          await window.electronAPI.grade.deleteGradeOverride({
-            gradeId,
-            studentId: params.studentId,
-            gradeItemId: params.gradeItemId,
-          })
+        // 保存の失敗は例外ではなく success:false で返る（DB 層が捕まえて畳むため）。
+        // 見落とすと、書けていない上書きが楽観更新のまま画面に残り続ける。
+        const persisted = params.overrideLabel
+          ? await window.electronAPI.grade.upsertGradeOverride({
+              gradeStudentId: params.gradeStudentId,
+              gradeItemId: params.gradeItemId,
+              overrideLabel: params.overrideLabel,
+            })
+          : await window.electronAPI.grade.deleteGradeOverride({
+              gradeStudentId: params.gradeStudentId,
+              gradeItemId: params.gradeItemId,
+            })
+        if (!persisted.success) {
+          setError(persisted.error ?? "評定の保存に失敗しました")
+          await calculate({ silent: true })
+          return
         }
 
         if (wasFrozen) {
-          await window.electronAPI.grade.freezeGradeScores({
+          const refrozen = await window.electronAPI.grade.freezeGradeScores({
             gradeId,
             targets: [
               {
-                studentId: params.studentId,
+                gradeStudentId: params.gradeStudentId,
                 gradeItemId: params.gradeItemId,
               },
             ],
             frozenByUserId: user?.id ?? null,
           })
+          if (!refrozen.success) {
+            setError(refrozen.error ?? "成績値の再確定に失敗しました")
+          }
           await calculate({ silent: true })
         }
       } catch (err) {
@@ -147,7 +145,7 @@ export function useGradeResults(gradeId: string) {
    * 既に確定済みのセルを含めれば、その時点のライブ値で確定し直す（再確定）。
    */
   const freezeScores = useCallback(
-    async (targets?: GradeFrozenTarget[]) => {
+    async (targets?: GradeCellTarget[]) => {
       try {
         const response = await window.electronAPI.grade.freezeGradeScores({
           gradeId,
@@ -169,7 +167,7 @@ export function useGradeResults(gradeId: string) {
 
   /** 成績値の確定を解除する。targets 未指定なら Grade 全体を一括解除 */
   const unfreezeScores = useCallback(
-    async (targets?: GradeFrozenTarget[]) => {
+    async (targets?: GradeCellTarget[]) => {
       try {
         const response = await window.electronAPI.grade.unfreezeGradeScores({
           gradeId,

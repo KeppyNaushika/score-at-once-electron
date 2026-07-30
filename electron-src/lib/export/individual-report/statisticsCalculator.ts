@@ -34,6 +34,10 @@ export interface StudentClassroomForStatistics {
  * studentId → 合計点の索引を構築する。
  * 生徒ごとに calculateStatisticsForStudent を呼ぶ際、呼び出し側で一度だけ構築し
  * 渡すことで O(生徒数^2) の再構築を避ける。
+ *
+ * ここが人（Student）キーなのは正しい。突き合わせ相手が学級の在籍者一覧
+ * （StudentClassroomMembership＝人の所属）だからで、受験者（ExamStudent）では
+ * 学級の母集団と噛み合わない（#962 §3.3 の棚卸し結果）。
  */
 export function buildScoreByStudentId(
   allScoringData: ScoringData[]
@@ -297,7 +301,6 @@ export function getDiscriminationLevel(r: number | null): DiscriminationLevel {
  *   各学級全体を母集団として学級平均・順位を算出（複数学級対応）。
  */
 export function calculateStatisticsForStudent(
-  _studentId: string,
   studentScore: number | null,
   allScoringData: ScoringData[],
   studentClassrooms: StudentClassroomForStatistics[],

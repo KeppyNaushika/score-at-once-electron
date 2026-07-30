@@ -230,17 +230,14 @@ export interface GradeAPI {
     deleteBoundarySet: (
       id: string
     ) => Promise<{ success: boolean; error?: string }>
-    upsertGradeOverride: (data: {
-      gradeId: string
-      studentId: string
-      gradeItemId: string
-      overrideLabel: string
-    }) => Promise<{ success: boolean; override?: unknown; error?: string }>
-    deleteGradeOverride: (data: {
-      gradeId: string
-      studentId: string
-      gradeItemId: string
-    }) => Promise<{ success: boolean; error?: string }>
+    upsertGradeOverride: (
+      data: import("../grade.types").GradeCellTarget & {
+        overrideLabel: string
+      }
+    ) => Promise<{ success: boolean; override?: unknown; error?: string }>
+    deleteGradeOverride: (
+      target: import("../grade.types").GradeCellTarget
+    ) => Promise<{ success: boolean; error?: string }>
     getGradeConstraints: (gradeId: string) => Promise<{
       success: boolean
       constraints?: import("../grade.types").GradeConstraintData[]
@@ -267,23 +264,14 @@ export interface GradeAPI {
     ) => Promise<{ success: boolean; error?: string }>
     getGradeItemExclusions: (gradeId: string) => Promise<{
       success: boolean
-      exclusions?: Array<{
-        id: string
-        gradeId: string
-        studentId: string
-        gradeItemId: string
-      }>
+      exclusions?: import("@prisma/client").GradeItemExclusion[]
       error?: string
     }>
-    setGradeItemExclusion: (data: {
-      gradeId: string
-      studentId: string
-      gradeItemId: string
-      excluded: boolean
-    }) => Promise<{ success: boolean; error?: string }>
+    setGradeItemExclusion: (
+      input: import("../grade.types").GradeItemExclusionInput
+    ) => Promise<{ success: boolean; error?: string }>
     batchUpdateGradeItemExclusions: (
-      gradeId: string,
-      updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
+      updates: import("../grade.types").GradeItemExclusionInput[]
     ) => Promise<{ success: boolean; error?: string }>
     calculateGrades: (gradeId: string) => Promise<{
       success: boolean
@@ -303,13 +291,13 @@ export interface GradeAPI {
      */
     freezeGradeScores: (data: {
       gradeId: string
-      targets?: { studentId: string; gradeItemId: string }[]
+      targets?: import("../grade.types").GradeCellTarget[]
       frozenByUserId?: string | null
     }) => Promise<{ success: boolean; frozenCount?: number; error?: string }>
     /** 成績値の確定を解除する（リアルタイム算出値へ戻す）。targets 未指定は Grade 全体 */
     unfreezeGradeScores: (data: {
       gradeId: string
-      targets?: { studentId: string; gradeItemId: string }[]
+      targets?: import("../grade.types").GradeCellTarget[]
       userId?: string | null
     }) => Promise<{ success: boolean; unfrozenCount?: number; error?: string }>
     getExamCandidates: () => Promise<{

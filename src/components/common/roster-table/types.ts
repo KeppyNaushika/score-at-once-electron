@@ -97,8 +97,11 @@ export interface RosterTableSlots {
     cellClassName?: string
   }
   /**
-   * 削除前のガード。false を返すと共通側の削除は行わない
-   * （ホスト側で確認モーダルを出すなどに使う）。
+   * 削除確認ダイアログで「連動して消えるもの」として並べる項目。
+   *
+   * 名簿から生徒を外すと、その名簿の対象者にぶら下がる子データも DB の cascade で
+   * 一緒に消える（#962 の配線変更以降）。取り消せない操作なので、試験の
+   * StudentRemovalConfirmModal と同じく何が失われるかを事前に明示する。
    */
-  onBeforeRemove?: (studentIds: string[]) => Promise<boolean> | boolean
+  removalLosses?: string[]
 }

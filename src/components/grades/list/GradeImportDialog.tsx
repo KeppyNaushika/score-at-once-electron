@@ -113,12 +113,60 @@ export function GradeImportDialog({
             <Badge variant="outline">
               生徒 {preview.studentMatchCount} 一致
             </Badge>
-            {preview.studentMissingCount > 0 && (
+            {preview.studentCreateCount > 0 && (
+              <Badge variant="secondary">
+                生徒 {preview.studentCreateCount} 名を新規登録
+              </Badge>
+            )}
+            {preview.classroomCreateCount > 0 && (
+              <Badge variant="secondary">
+                学級 {preview.classroomCreateCount} 件を新規登録
+              </Badge>
+            )}
+            {preview.studentSkipCount > 0 && (
               <Badge variant="destructive">
-                生徒 {preview.studentMissingCount} 名が見つかりません
+                生徒 {preview.studentSkipCount} 名が見つかりません
               </Badge>
             )}
           </div>
+
+          {/* 生徒マスタ・学級マスタへ書き込むことは事前に明示する。
+              取り込みは成績を作るだけでなく、既存に無い生徒・学級を登録する */}
+          {(preview.studentCreateCount > 0 ||
+            preview.classroomCreateCount > 0) && (
+            <div className="border-border/60 bg-muted/40 mb-4 rounded border p-3 text-sm">
+              <div className="mb-1 font-medium">
+                この取り込みで生徒・学級が追加されます
+              </div>
+              <p className="text-muted-foreground">
+                既存の生徒・学級に一致しなかったものを新しく登録します
+                {preview.studentCreateCount > 0 && (
+                  <>（生徒 {preview.studentCreateCount} 名</>
+                )}
+                {preview.studentCreateCount > 0 &&
+                  preview.classroomCreateCount > 0 &&
+                  " / "}
+                {preview.classroomCreateCount > 0 && (
+                  <>学級 {preview.classroomCreateCount} 件</>
+                )}
+                {(preview.studentCreateCount > 0 ||
+                  preview.classroomCreateCount > 0) && <>）</>}
+                。学籍番号・学級名が既存と重なる場合は末尾に連番を付けて登録します。
+              </p>
+            </div>
+          )}
+
+          {preview.studentSkipCount > 0 && (
+            <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+              <div className="mb-1 font-medium text-amber-800 dark:text-amber-300">
+                生徒 {preview.studentSkipCount} 名は取り込めません
+              </div>
+              <p className="text-muted-foreground">
+                古い形式のアーカイブは生徒の氏名を持たないため、この生徒は登録できません。
+                先に生徒を登録してから取り込み直すと、その生徒の成績も一緒に戻ります。
+              </p>
+            </div>
+          )}
 
           {/* 変換で失われるデータの警告（取り込み前に見せる） */}
           {preview.warnings.length > 0 && (

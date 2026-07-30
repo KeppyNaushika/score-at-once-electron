@@ -58,12 +58,32 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
   {
     // 答案・採点・確定・複合回答・返却版は ExamStudent の子であり、
     // ExamStudent.id は変わらないので移し替えは要らない（上の ExamStudent で追従する）。
+    //
+    // UNIQUE([gradeId, studentId]) があるため移行先の重複を回避しつつ更新する。
+    // 上書き・確定値・除外設定は GradeStudent の onDelete:Cascade 子なので、重複行を
+    // そのまま delete すると道連れになる。移行先に同じ評価項目の行が無いものは先に
+    // 付け替え、衝突するものだけを（移行先の値を残して）捨てる。
     model: "GradeStudent",
-    move: (tx, from, to) =>
-      tx.gradeStudent.updateMany({
+    move: async (tx, from, to) => {
+      const rows = await tx.gradeStudent.findMany({
         where: { studentId: from },
-        data: { studentId: to },
-      }),
+      })
+      for (const gradeStudent of rows) {
+        const duplicate = await tx.gradeStudent.findFirst({
+          where: { gradeId: gradeStudent.gradeId, studentId: to },
+        })
+        if (!duplicate) {
+          await tx.gradeStudent.update({
+            where: { id: gradeStudent.id },
+            data: { studentId: to },
+          })
+          continue
+        }
+
+        await moveGradeCells(tx, gradeStudent.id, duplicate.id)
+        await tx.gradeStudent.delete({ where: { id: gradeStudent.id } })
+      }
+    },
   },
   {
     // UNIQUE([courseworkId, studentId]) があるため移行先の重複を回避しつつ更新する。
@@ -114,31 +134,69 @@ export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
       }
     },
   },
-  {
-    model: "GradeOverride",
-    move: (tx, from, to) =>
-      tx.gradeOverride.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    model: "GradeFrozenScore",
-    move: (tx, from, to) =>
-      tx.gradeFrozenScore.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    model: "GradeItemExclusion",
-    move: (tx, from, to) =>
-      tx.gradeItemExclusion.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
 ]
+
+/**
+ * 成績のセル3種を、統合される対象者から移行先の対象者へ移し替える。
+ * 移行先に同じ評価項目の行が既にあるものは移さない（移行先の値を残す＝旧来の挙動）。
+ * 移さなかった行は呼び出し側の GradeStudent 削除で cascade により消える。
+ */
+async function moveGradeCells(
+  tx: PrismaTransaction,
+  fromGradeStudentId: string,
+  toGradeStudentId: string
+): Promise<void> {
+  const overrides = await tx.gradeOverride.findMany({
+    where: { gradeStudentId: fromGradeStudentId },
+  })
+  for (const override of overrides) {
+    const conflicting = await tx.gradeOverride.findFirst({
+      where: {
+        gradeStudentId: toGradeStudentId,
+        gradeItemId: override.gradeItemId,
+      },
+    })
+    if (conflicting) continue
+    await tx.gradeOverride.update({
+      where: { id: override.id },
+      data: { gradeStudentId: toGradeStudentId },
+    })
+  }
+
+  const frozenScores = await tx.gradeFrozenScore.findMany({
+    where: { gradeStudentId: fromGradeStudentId },
+  })
+  for (const frozenScore of frozenScores) {
+    const conflicting = await tx.gradeFrozenScore.findFirst({
+      where: {
+        gradeStudentId: toGradeStudentId,
+        gradeItemId: frozenScore.gradeItemId,
+      },
+    })
+    if (conflicting) continue
+    await tx.gradeFrozenScore.update({
+      where: { id: frozenScore.id },
+      data: { gradeStudentId: toGradeStudentId },
+    })
+  }
+
+  const itemExclusions = await tx.gradeItemExclusion.findMany({
+    where: { gradeStudentId: fromGradeStudentId },
+  })
+  for (const itemExclusion of itemExclusions) {
+    const conflicting = await tx.gradeItemExclusion.findFirst({
+      where: {
+        gradeStudentId: toGradeStudentId,
+        gradeItemId: itemExclusion.gradeItemId,
+      },
+    })
+    if (conflicting) continue
+    await tx.gradeItemExclusion.update({
+      where: { id: itemExclusion.id },
+      data: { gradeStudentId: toGradeStudentId },
+    })
+  }
+}
 
 /**
  * Classroom に onDelete:Cascade で紐づく子テーブル全件。

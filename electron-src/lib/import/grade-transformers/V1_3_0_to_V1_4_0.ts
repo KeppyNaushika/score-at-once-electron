@@ -13,19 +13,18 @@
  */
 
 import type {
-  ArchiveCoursework,
-  ArchiveDataSource,
-  ArchiveGradeItem,
-  GradeArchiveData,
-  GradeTransformResult,
-  GradeVersionTransformer,
-} from "../../../../src/types/gradeArchive.types"
+  LegacyArchiveCoursework,
+  LegacyArchiveDataSource,
+  LegacyArchiveGradeItem,
+  LegacyGradeArchiveData,
+} from "./legacyShape"
+import type { GradeTransformResult, GradeVersionTransformer } from "./types"
 
 export class V1_3_0_to_V1_4_0_Transformer implements GradeVersionTransformer {
   readonly fromVersion = "1.3.0" as const
   readonly toVersion = "1.4.0" as const
 
-  transform(data: GradeArchiveData): GradeTransformResult {
+  transform(data: LegacyGradeArchiveData): GradeTransformResult {
     const warnings: string[] = []
     const manualScores = data.manualScoresData?.manualScores ?? []
     const gradeName = data.manifest.gradeName
@@ -36,71 +35,72 @@ export class V1_3_0_to_V1_4_0_Transformer implements GradeVersionTransformer {
       customOrder: studentRef.customOrder,
     }))
 
-    const generated: ArchiveCoursework[] = []
+    const generated: LegacyArchiveCoursework[] = []
     let converted = false
 
     // gradeItems / dataSources を新規オブジェクトで作り直す（入力は破壊しない）
-    const newGradeItems: ArchiveGradeItem[] = data.gradeData.gradeItems.map(
-      (giData) => ({
+    const newGradeItems: LegacyArchiveGradeItem[] =
+      data.gradeData.gradeItems.map((giData) => ({
         ...giData,
-        dataSources: giData.dataSources.map((dsData): ArchiveDataSource => {
-          if (dsData.type !== "manual") return dsData
-          converted = true
+        dataSources: giData.dataSources.map(
+          (dsData): LegacyArchiveDataSource => {
+            if (dsData.type !== "manual") return dsData
+            converted = true
 
-          // 決定的 id（preview と import で一致させる）
-          const key = `${gradeName}::${giData.name}::${dsData.name}`
-          const courseworkId = `legacy-manual-cw:${key}`
-          const itemId = `legacy-manual-item:${key}`
+            // 決定的 id（preview と import で一致させる）
+            const key = `${gradeName}::${giData.name}::${dsData.name}`
+            const courseworkId = `legacy-manual-cw:${key}`
+            const itemId = `legacy-manual-item:${key}`
 
-          const itemScores = manualScores
-            .filter(
-              (manualScore) =>
-                manualScore.gradeItemName === giData.name &&
-                manualScore.dataSourceName === dsData.name
-            )
-            .map((manualScore) => ({
-              studentNumber: manualScore.studentNumber,
-              score: manualScore.score,
-              letterValue: manualScore.letterValue ?? null,
-              adjustment: manualScore.adjustment ?? null,
-              adjustmentReason: manualScore.adjustmentReason ?? null,
-              comment: manualScore.comment ?? null,
-            }))
+            const itemScores = manualScores
+              .filter(
+                (manualScore) =>
+                  manualScore.gradeItemName === giData.name &&
+                  manualScore.dataSourceName === dsData.name
+              )
+              .map((manualScore) => ({
+                studentNumber: manualScore.studentNumber,
+                score: manualScore.score,
+                letterValue: manualScore.letterValue ?? null,
+                adjustment: manualScore.adjustment ?? null,
+                adjustmentReason: manualScore.adjustmentReason ?? null,
+                comment: manualScore.comment ?? null,
+              }))
 
-          generated.push({
-            id: courseworkId,
-            name: dsData.name,
-            description: null,
-            date: null,
-            classrooms: [],
-            tags: [],
-            students: cwStudents,
-            items: [
-              {
-                id: itemId,
-                name: dsData.name,
-                order: 0,
-                // 旧1.3.0 "manual" の満点 → CourseworkItem.maxScore
-                //（ArchiveDataSource.maxScore は v1.6.0 で optional 化済み）
-                maxScore: dsData.maxScore ?? 0,
-                inputMode: dsData.inputMode ?? "numeric",
-                letterScales: dsData.letterScales ?? [],
-                scores: itemScores,
-              },
-            ],
-          })
+            generated.push({
+              id: courseworkId,
+              name: dsData.name,
+              description: null,
+              date: null,
+              classrooms: [],
+              tags: [],
+              students: cwStudents,
+              items: [
+                {
+                  id: itemId,
+                  name: dsData.name,
+                  order: 0,
+                  // 旧1.3.0 "manual" の満点 → CourseworkItem.maxScore
+                  //（LegacyArchiveDataSource.maxScore は v1.6.0 で optional 化済み）
+                  maxScore: dsData.maxScore ?? 0,
+                  inputMode: dsData.inputMode ?? "numeric",
+                  letterScales: dsData.letterScales ?? [],
+                  scores: itemScores,
+                },
+              ],
+            })
 
-          // manual → coursework へ昇格し、参照先を付与（id 一次・名前二次）
-          return {
-            ...dsData,
-            type: "coursework",
-            courseworkItemId: itemId,
-            courseworkName: dsData.name,
-            courseworkItemName: dsData.name,
+            // manual → coursework へ昇格し、参照先を付与（id 一次・名前二次）
+            return {
+              ...dsData,
+              type: "coursework",
+              courseworkItemId: itemId,
+              courseworkName: dsData.name,
+              courseworkItemName: dsData.name,
+            }
           }
-        }),
-      })
-    )
+        ),
+      }))
 
     if (converted) {
       warnings.push("v1.3.0 の外部成績を試験外成績資料に変換しました")

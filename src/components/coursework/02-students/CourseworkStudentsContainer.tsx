@@ -238,6 +238,11 @@ export function CourseworkStudentsContainer({
             entries={classroomEntries}
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
+            deletionLosses={[
+              "この資料の全評価項目に入力された点数・評価記号",
+              "加減点とその理由",
+              "成績通知書に載せるコメント",
+            ]}
             onReorder={async (orderedClassroomIds) => {
               const result =
                 await window.electronAPI.coursework.setClassroomOrders(
@@ -281,6 +286,13 @@ export function CourseworkStudentsContainer({
       <RosterTable
         adapter={rosterAdapter}
         enableRemove
+        slots={{
+          removalLosses: [
+            "この資料の全評価項目に入力された点数・評価記号",
+            "加減点とその理由",
+            "成績通知書に載せるコメント",
+          ],
+        }}
         registerHandle={setRosterHandle}
         onRowsChange={(rows) => setStudentCount(rows.length)}
       />

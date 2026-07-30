@@ -153,8 +153,41 @@ export type GradeBoundaryData = Omit<
   minPercentage: number
 }
 
+/**
+ * 成績のセル1つを指す座標（IPC 境界の唯一の定義）。
+ *
+ * 行の主語は「その成績の対象者」（GradeStudent）であり、人（Student）ではない。
+ * 名簿から外された生徒の上書き・確定値・除外設定は存在しえない（#962）。
+ *
+ * renderer / preload / handler / DB 層の4層が同じ形を書くと、余剰プロパティ検査が
+ * 効かず1層だけ直しても typecheck が通ってしまう（実行時にだけ壊れる）。定義はここ1箇所。
+ */
+export interface GradeCellTarget {
+  gradeStudentId: string
+  gradeItemId: string
+}
+
+/** 成績ラベルの手動上書きの入力。overrideLabel が null なら上書きを削除する */
+export interface GradeOverrideInput extends GradeCellTarget {
+  overrideLabel: string | null
+}
+
+/** 評価項目の除外設定の入力。excluded=false なら除外を解除する */
+export interface GradeItemExclusionInput extends GradeCellTarget {
+  excluded: boolean
+}
+
 /** 生徒別成績結果 */
 export interface StudentGradeResult {
+  /**
+   * その成績の対象者（GradeStudent）の id。上書き・確定・除外の書き込み先はこれで指す。
+   * 人の id（studentId）とは別物で、どちらも string なので取り違えても型では捕まらない。
+   */
+  gradeStudentId: string
+  /**
+   * 人（Student）の id。学級所属は人に紐づくため、名簿の突き合わせや個票の出力対象の
+   * 指定にはこちらを使う。出力用であり DB へは書き戻さない。
+   */
   studentId: string
   studentNumber: string
   lastName: string

@@ -46,22 +46,19 @@ model Classroom {
 }
 
 model Student {
-  id                  String                       @id @default(uuid())
-  studentNumber       String                       @unique
-  lastName            String
-  firstName           String
-  lastNameKana        String
-  firstNameKana       String
-  enrollmentYear      Int?
-  createdAt           DateTime                     @default(now())
-  updatedAt           DateTime                     @updatedAt
-  examStudents        ExamStudent[]
-  memberships         StudentClassroomMembership[]
-  gradeStudents       GradeStudent[]
-  gradeOverrides      GradeOverride[]
-  gradeFrozenScores   GradeFrozenScore[]
-  gradeItemExclusions GradeItemExclusion[]
-  courseworkStudents  CourseworkStudent[]
+  id                 String                       @id @default(uuid())
+  studentNumber      String                       @unique
+  lastName           String
+  firstName          String
+  lastNameKana       String
+  firstNameKana      String
+  enrollmentYear     Int?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  examStudents       ExamStudent[]
+  memberships        StudentClassroomMembership[]
+  gradeStudents      GradeStudent[]
+  courseworkStudents CourseworkStudent[]
 }
 
 model StudentClassroomMembership {
@@ -670,15 +667,12 @@ model Grade {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  gradeItems          GradeItem[]
-  boundarySets        GradeBoundarySet[]
-  gradeClassrooms     GradeClassroom[]
-  gradeStudents       GradeStudent[]
-  gradeOverrides      GradeOverride[]
-  gradeFrozenScores   GradeFrozenScore[]
-  gradeItemExclusions GradeItemExclusion[]
-  gradeConstraints    GradeConstraint[]
-  exportSettings      GradeExportSettings?
+  gradeItems       GradeItem[]
+  boundarySets     GradeBoundarySet[]
+  gradeClassrooms  GradeClassroom[]
+  gradeStudents    GradeStudent[]
+  gradeConstraints GradeConstraint[]
+  exportSettings   GradeExportSettings?
 }
 
 /// 観点間の制約ルール（不適切な観点/評定の組合せを検知して着色）
@@ -789,9 +783,9 @@ model GradeItem {
   grade                Grade                      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   dataSources          GradeDataSource[]
   boundarySets         GradeBoundarySet[]
-  gradeOverrides       GradeOverride[]
-  gradeFrozenScores    GradeFrozenScore[]
-  gradeItemExclusions  GradeItemExclusion[]
+  overrides            GradeOverride[]
+  frozenScores         GradeFrozenScore[]
+  itemExclusions       GradeItemExclusion[]
   constraintTargets    GradeConstraint[]          @relation("GradeConstraintTarget")
   constraintViewpoints GradeConstraintViewpoint[]
 
@@ -824,8 +818,11 @@ model GradeStudent {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  grade   Grade   @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grade          Grade                @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  student        Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  overrides      GradeOverride[]
+  frozenScores   GradeFrozenScore[]
+  itemExclusions GradeItemExclusion[]
 
   @@unique([gradeId, studentId])
   @@index([gradeId])
@@ -899,21 +896,20 @@ model GradeDataSourceEstimationSource {
 }
 
 /// 評価項目ごとの対象生徒除外設定
+/// 評価項目を成績算出から外す設定。対象は「その成績の対象者（GradeStudent）× 評価項目」で、
+/// 人（Student）ではない。名簿から外された生徒の除外設定は存在しえない（#962）。
 model GradeItemExclusion {
-  id          String   @id @default(uuid())
-  gradeId     String
-  studentId   String
-  gradeItemId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  gradeStudentId String
+  gradeItemId    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  gradeStudent GradeStudent @relation(fields: [gradeStudentId], references: [id], onDelete: Cascade)
+  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeId, studentId, gradeItemId])
-  @@index([gradeId])
-  @@index([studentId])
+  @@unique([gradeStudentId, gradeItemId])
+  @@index([gradeStudentId])
   @@index([gradeItemId])
 }
 
@@ -938,22 +934,21 @@ model GradeBoundarySet {
 }
 
 /// 成績ラベルの手動上書き（生徒×評価項目）。総合の行は持たない（GradeBoundarySet と同じ理由）
+/// 成績ラベルの手動上書き。対象は「その成績の対象者（GradeStudent）× 評価項目」で、
+/// 人（Student）ではない。名簿から外された生徒の上書きは存在しえない（#962）。
 model GradeOverride {
-  id            String   @id @default(uuid())
-  gradeId       String
-  studentId     String
-  gradeItemId   String
-  overrideLabel String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(uuid())
+  gradeStudentId String
+  gradeItemId    String
+  overrideLabel  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  gradeStudent GradeStudent @relation(fields: [gradeStudentId], references: [id], onDelete: Cascade)
+  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeId, studentId, gradeItemId])
-  @@index([gradeId])
-  @@index([studentId])
+  @@unique([gradeStudentId, gradeItemId])
+  @@index([gradeStudentId])
   @@index([gradeItemId])
 }
 
@@ -964,14 +959,15 @@ model GradeOverride {
 /// 調整の記録で、こちらは「その調整の結果を含む今の値をこれで確定する」という凍結。
 /// 算出時の採用順は 確定値 > 手動上書き > リアルタイム算出値。
 ///
-/// 対象は生徒×評価項目のみ。総合（overall）の行は作らない — 総合の境界セットを作る導線が
-/// UI に存在せず評定自体が GradeItem の一つとして運用されているため。これにより gradeItemId を
-/// NOT NULL にでき、SQLite が unique 制約で NULL を互いに別物と扱う罠も踏まない。
+/// 対象は「その成績の対象者（GradeStudent）× 評価項目」のみ。人（Student）ではないので、
+/// 名簿から外された生徒の確定値は存在しえない（#962。以前は外して再追加すると確定値が甦った）。
+/// 総合（overall）の行は作らない — 総合の境界セットを作る導線が UI に存在せず評定自体が
+/// GradeItem の一つとして運用されているため。これにより gradeItemId を NOT NULL にでき、
+/// SQLite が unique 制約で NULL を互いに別物と扱う罠も踏まない。
 model GradeFrozenScore {
-  id          String @id @default(uuid())
-  gradeId     String
-  studentId   String
-  gradeItemId String
+  id             String @id @default(uuid())
+  gradeStudentId String
+  gradeItemId    String
 
   /// 確定時の重み付け得点。全ソース欠測など算出不能なら null
   weightedScore    Decimal?
@@ -988,14 +984,12 @@ model GradeFrozenScore {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
 
-  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
-  frozenBy  User?     @relation(fields: [frozenByUserId], references: [id], onDelete: SetNull)
+  gradeStudent GradeStudent @relation(fields: [gradeStudentId], references: [id], onDelete: Cascade)
+  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  frozenBy     User?        @relation(fields: [frozenByUserId], references: [id], onDelete: SetNull)
 
-  @@unique([gradeId, studentId, gradeItemId])
-  @@index([gradeId])
-  @@index([studentId])
+  @@unique([gradeStudentId, gradeItemId])
+  @@index([gradeStudentId])
   @@index([gradeItemId])
 }
 

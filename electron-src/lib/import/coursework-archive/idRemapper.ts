@@ -27,15 +27,29 @@ import {
 type IdMap = Map<string, string>
 
 /**
+ * uuid の形をしているか。旧アーカイブの変換で合成した id
+ * （`legacy-student:S001` など）を主キーとして DB へ書き込まないための判定。
+ */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isUuid = (value: string): boolean => UUID_PATTERN.test(value)
+
+/**
  * 生徒を解決する。返り値は archiveStudentId → 実 studentId のマップ。
  * 未解決（lookup-only で見つからない）生徒はマップに含めない。
+ *
+ * `createdIds` には**このインポートで新規作成した**生徒の実 id だけが入る。
+ * 学級所属の復元は新規作成した生徒に限る必要があり（既存生徒に適用すると、
+ * 取り込み先で異動済みの生徒に旧学級の在籍行を復活させてしまう）、
+ * 呼び出し側が「既存に一致した生徒」と区別できるようにするため返す。
  */
 export async function resolveStudents(
   tx: TransactionClient,
   students: ArchiveCwStudent[],
   options: { method: CourseworkMatchingMethod; allowCreate: boolean }
-): Promise<{ map: IdMap; warnings: string[] }> {
+): Promise<{ map: IdMap; createdIds: Set<string>; warnings: string[] }> {
   const map: IdMap = new Map()
+  const createdIds = new Set<string>()
   const warnings: string[] = []
   const existing = await tx.student.findMany()
   const byId = new Map(
@@ -78,13 +92,26 @@ export async function resolveStudents(
       )
       continue
     }
+    // 氏名を持たないレコードからは作らない。旧 .grade（v1.12.0 以前）は生徒を
+    // 学籍番号だけで参照しており氏名を持ち出していないため、作ると氏名が空の生徒が
+    // 名簿に並ぶ。作らずに済ませて、先に生徒を登録してもらう方が復旧できる
+    if (!student.lastName && !student.firstName) {
+      warnings.push(
+        `生徒（${student.studentNumber}）は氏名の情報が無いため作成しませんでした。` +
+          `先に生徒を登録してから取り込み直してください`
+      )
+      continue
+    }
     const uniqueNumber = await generateUniqueStudentNumber(
       tx,
       student.studentNumber
     )
     const created = await tx.student.create({
       data: {
-        id: student.id,
+        // 合成された非 uuid の id（旧 .grade 由来の `legacy-student:…`）を主キーへ
+        // 持ち込まない。持ち込むと id は原則 uuid という規約を破ったまま
+        // 以後のアーカイブと同期へ伝播する
+        ...(isUuid(student.id) ? { id: student.id } : {}),
         studentNumber: uniqueNumber,
         lastName: student.lastName,
         firstName: student.firstName,
@@ -94,9 +121,10 @@ export async function resolveStudents(
       },
     })
     map.set(student.id, created.id)
+    createdIds.add(created.id)
   }
 
-  return { map, warnings }
+  return { map, createdIds, warnings }
 }
 
 /** 学級を解決する。返り値は archiveClassroomId → 実 classroomId のマップ。 */
@@ -141,7 +169,8 @@ export async function resolveClassrooms(
     const uniqueName = await generateUniqueClassName(tx, classroom.name)
     const created = await tx.classroom.create({
       data: {
-        id: classroom.id,
+        // 生徒と同じく、合成された非 uuid の id は主キーへ持ち込まない
+        ...(isUuid(classroom.id) ? { id: classroom.id } : {}),
         name: uniqueName,
         classroomCode: classroom.classroomCode,
         grade: classroom.grade,
@@ -188,17 +217,23 @@ export async function resolveTags(
  * 新規作成された生徒の名簿（membership）を復元する。
  * 既存 membership がある (studentId, classroomId) はスキップ（冪等）。
  * lookup-only（allowCreate=false）では呼ばない想定。
+ *
+ * **既存生徒には適用しない。** 取り込み先で別学級へ異動済みの生徒に旧学級の在籍行を
+ * 足してしまうと、成績だけでなく試験の学級別集計・受験日スナップショット・学級からの
+ * 一括追加の母集団まで、取り込みと無関係なところが変わる。
  */
 export async function restoreMemberships(
   tx: TransactionClient,
   memberships: ArchiveCwMembership[],
   studentMap: IdMap,
-  classroomMap: IdMap
+  classroomMap: IdMap,
+  createdStudentIds: Set<string>
 ): Promise<void> {
   for (const membership of memberships) {
     const studentId = studentMap.get(membership.studentId)
     const classroomId = classroomMap.get(membership.classroomId)
     if (!studentId || !classroomId) continue
+    if (!createdStudentIds.has(studentId)) continue
     const exists = await tx.studentClassroomMembership.findFirst({
       where: { studentId, classroomId },
       select: { id: true },

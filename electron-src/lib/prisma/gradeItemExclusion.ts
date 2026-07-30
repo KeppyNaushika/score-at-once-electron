@@ -1,26 +1,23 @@
 /**
  * GradeItemExclusion（評価項目除外設定）データアクセス層
+ *
+ * 除外の主語は「その成績の対象者」（GradeStudent）であり、人（Student）ではない。
+ * 名簿に載っていない生徒の除外設定は書けない（FK が拒否する）。
  */
 
+import type { GradeItemExclusionInput } from "../../../src/types/grade.types"
 import prisma from "./client"
+import { assertGradeCellsInSameGrade } from "./gradeScopeGuard"
 
 /**
- * 試験の全除外設定を取得
+ * 成績の全除外設定を取得
  */
 export async function getGradeItemExclusions(gradeId: string) {
   try {
     const exclusions = await prisma.gradeItemExclusion.findMany({
-      where: { gradeId },
+      where: { gradeStudent: { gradeId } },
     })
-    return {
-      success: true,
-      exclusions: exclusions.map((exclusion) => ({
-        id: exclusion.id,
-        gradeId: exclusion.gradeId,
-        studentId: exclusion.studentId,
-        gradeItemId: exclusion.gradeItemId,
-      })),
-    }
+    return { success: true, exclusions }
   } catch (error) {
     console.error("Error getting grade item exclusions:", error)
     return {
@@ -33,35 +30,28 @@ export async function getGradeItemExclusions(gradeId: string) {
 /**
  * 除外設定の切り替え（excluded=trueで作成、falseで削除）
  */
-export async function setGradeItemExclusion(data: {
-  gradeId: string
-  studentId: string
-  gradeItemId: string
-  excluded: boolean
-}) {
+export async function setGradeItemExclusion(input: GradeItemExclusionInput) {
   try {
-    if (data.excluded) {
+    if (input.excluded) {
+      await assertGradeCellsInSameGrade([input])
       await prisma.gradeItemExclusion.upsert({
         where: {
-          gradeId_studentId_gradeItemId: {
-            gradeId: data.gradeId,
-            studentId: data.studentId,
-            gradeItemId: data.gradeItemId,
+          gradeStudentId_gradeItemId: {
+            gradeStudentId: input.gradeStudentId,
+            gradeItemId: input.gradeItemId,
           },
         },
         update: {},
         create: {
-          gradeId: data.gradeId,
-          studentId: data.studentId,
-          gradeItemId: data.gradeItemId,
+          gradeStudentId: input.gradeStudentId,
+          gradeItemId: input.gradeItemId,
         },
       })
     } else {
       await prisma.gradeItemExclusion.deleteMany({
         where: {
-          gradeId: data.gradeId,
-          studentId: data.studentId,
-          gradeItemId: data.gradeItemId,
+          gradeStudentId: input.gradeStudentId,
+          gradeItemId: input.gradeItemId,
         },
       })
     }
@@ -79,33 +69,32 @@ export async function setGradeItemExclusion(data: {
  * 一括更新（トランザクション）
  */
 export async function batchUpdateGradeItemExclusions(
-  gradeId: string,
-  updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
+  updates: GradeItemExclusionInput[]
 ) {
   try {
+    const added = updates.filter((update) => update.excluded)
+    await assertGradeCellsInSameGrade(added)
+
     await prisma.$transaction(async (tx) => {
       for (const update of updates) {
         if (update.excluded) {
           await tx.gradeItemExclusion.upsert({
             where: {
-              gradeId_studentId_gradeItemId: {
-                gradeId,
-                studentId: update.studentId,
+              gradeStudentId_gradeItemId: {
+                gradeStudentId: update.gradeStudentId,
                 gradeItemId: update.gradeItemId,
               },
             },
             update: {},
             create: {
-              gradeId,
-              studentId: update.studentId,
+              gradeStudentId: update.gradeStudentId,
               gradeItemId: update.gradeItemId,
             },
           })
         } else {
           await tx.gradeItemExclusion.deleteMany({
             where: {
-              gradeId,
-              studentId: update.studentId,
+              gradeStudentId: update.gradeStudentId,
               gradeItemId: update.gradeItemId,
             },
           })

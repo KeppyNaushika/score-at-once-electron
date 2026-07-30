@@ -122,7 +122,13 @@ export interface CaptureReturnSnapshotResult {
 /** float のノイズによる誤検知を防ぐため小数4桁に丸める */
 const round = (value: number): number => Math.round(value * 1e4) / 1e4
 
-/** 試験の現在状態（有効スコア・注釈・領域）をまとめて読み込む */
+/**
+ * 試験の現在状態（有効スコア・注釈・領域）をまとめて読み込む。
+ *
+ * 索引のキーは受験者（ExamStudent）と採点領域（CropRegion）の id で、人（Student）では
+ * ない。返却スナップショットは「その試験の受験者の答案」を対象とするため、受験者を
+ * 主語にするのが正しい（#962 §3.3 の棚卸し結果。Phase A の配線変更で解消済み）。
+ */
 interface ExamState {
   /** cropRegionId -> { label, maxScore } */
   regions: Map<string, { label: string | null; maxScore: number | null }>
