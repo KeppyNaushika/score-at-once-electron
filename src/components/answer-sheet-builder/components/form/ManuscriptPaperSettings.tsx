@@ -124,7 +124,7 @@ export function ManuscriptPaperSettings({
       {current.enabled && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-muted-foreground text-[10px]">列数</Label>
+            <Label className="text-[10px] text-muted-foreground">列数</Label>
             <Input
               type="number"
               className="h-7 text-xs"
@@ -139,7 +139,7 @@ export function ManuscriptPaperSettings({
             />
           </div>
           <div>
-            <Label className="text-muted-foreground text-[10px]">行数</Label>
+            <Label className="text-[10px] text-muted-foreground">行数</Label>
             <Input
               type="number"
               className="h-7 text-xs"
@@ -159,7 +159,7 @@ export function ManuscriptPaperSettings({
       {current.enabled && (
         <div className="space-y-2 rounded border p-2">
           <div className="flex items-center justify-between">
-            <Label className="text-muted-foreground text-[10px]">
+            <Label className="text-[10px] text-muted-foreground">
               文字位置マーカー（数字ガイド・区切り罫線）
             </Label>
             <Button
@@ -176,7 +176,7 @@ export function ManuscriptPaperSettings({
           {guides.length > 0 && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-muted-foreground text-[10px]">
+                <Label className="text-[10px] text-muted-foreground">
                   数字の表示位置
                 </Label>
                 <Select
@@ -252,7 +252,7 @@ export function ManuscriptPaperSettings({
                     })
                   }
                 />
-                <span className="text-muted-foreground text-[10px]">字目</span>
+                <span className="text-[10px] text-muted-foreground">字目</span>
                 <Input
                   className="h-7 flex-1 text-xs"
                   value={guide.label}
@@ -264,14 +264,14 @@ export function ManuscriptPaperSettings({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive h-6 w-6"
+                  className="h-6 w-6 text-destructive"
                   onClick={() => removeGuide(guide.id)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground shrink-0 text-[10px]">
+                <span className="shrink-0 text-[10px] text-muted-foreground">
                   次の罫線
                 </span>
                 <Select
@@ -347,12 +347,12 @@ export function ManuscriptPaperSettings({
           ))}
 
           {guides.length === 0 ? (
-            <p className="text-muted-foreground text-[10px]">
+            <p className="text-[10px] text-muted-foreground">
               「追加」で先頭からの文字数の目印を作成。数字（例:
               80）と区切り罫線（○字以内/以上）を組み合わせられます。罫線のみ使うときは数字を空欄に。
             </p>
           ) : (
-            <p className="text-muted-foreground text-[10px]">
+            <p className="text-[10px] text-muted-foreground">
               区切り罫線は、行末にある小計・大問罫線を置き換えません。
             </p>
           )}

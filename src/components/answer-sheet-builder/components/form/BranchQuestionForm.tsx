@@ -57,14 +57,14 @@ export function BranchQuestionForm({
       branch.goUp! > maxGoUp)
 
   return (
-    <div className="border-muted-foreground/20 ml-4 space-y-1 border-l-2 py-1 pl-4">
+    <div className="ml-4 space-y-1 border-l-2 border-muted-foreground/20 py-1 pl-4">
       {/* 基本設定行 */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex h-7 items-center divide-x overflow-hidden rounded-md border text-xs">
           <div className="flex items-center gap-0.5 px-1.5">
             <span className="text-muted-foreground">番号</span>
             <input
-              className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
+              className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
               value={branch.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
               placeholder=""
@@ -75,7 +75,7 @@ export function BranchQuestionForm({
               <span className="text-muted-foreground">配点</span>
               <input
                 type="number"
-                className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={branch.points}
                 min={0}
                 max={100}
@@ -91,7 +91,7 @@ export function BranchQuestionForm({
             <input
               type="number"
               aria-label={heightLabel}
-              className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               value={branch.heightMultiplier}
               min={1}
               max={30}
@@ -109,7 +109,7 @@ export function BranchQuestionForm({
             <span className="text-muted-foreground">{widthLabel}</span>
             <input
               aria-label={widthLabel}
-              className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
+              className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
               value={branch.layoutWidth ?? ""}
               onChange={(e) => {
                 const value = e.target.value.trim()
@@ -132,7 +132,7 @@ export function BranchQuestionForm({
           <Button
             variant="outline"
             size="icon"
-            className={`h-7 w-7 text-xs ${branch.nextPlacement === "break" ? "bg-primary/10 text-primary border-primary/50 hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`h-7 w-7 text-xs ${branch.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => {
               if (branch.nextPlacement === "break") {
                 onUpdate({ nextPlacement: undefined })
@@ -151,7 +151,7 @@ export function BranchQuestionForm({
             <Button
               variant="outline"
               size="icon"
-              className={`h-7 w-7 text-xs ${goUpActive && branch.goUp! > 0 ? "bg-primary/10 text-primary border-primary/50 hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
+              className={`h-7 w-7 text-xs ${goUpActive && branch.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
               onClick={() => {
                 if (goUpActive) {
                   onUpdate({ goUp: undefined })
@@ -172,7 +172,7 @@ export function BranchQuestionForm({
               <input
                 type="number"
                 aria-label="戻り行数"
-                className={`border-primary/50 h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
+                className={`h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 border-primary/50 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
                 value={branch.goUp || ""}
                 min={1}
                 max={maxGoUp}
@@ -213,7 +213,7 @@ export function BranchQuestionForm({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-7 w-7 rounded-r-none"
+              className="h-7 w-7 rounded-r-none text-muted-foreground"
               onClick={onMoveUp}
               disabled={!onMoveUp}
               title="上へ移動"
@@ -223,7 +223,7 @@ export function BranchQuestionForm({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-7 w-7 rounded-l-none border-l"
+              className="h-7 w-7 rounded-l-none border-l text-muted-foreground"
               onClick={onMoveDown}
               disabled={!onMoveDown}
               title="下へ移動"
@@ -248,7 +248,7 @@ export function BranchQuestionForm({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-destructive h-7 w-7"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
             onClick={onDelete}
             title="枝問を削除"
           >

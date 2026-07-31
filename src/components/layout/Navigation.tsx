@@ -73,7 +73,7 @@ export default function Navigation({
   return (
     <aside
       className={cn(
-        "bg-background fixed top-0 left-0 z-40 flex h-screen flex-col border-r transition-[width] duration-300 ease-in-out",
+        "fixed top-0 left-0 z-40 flex h-screen flex-col border-r bg-background transition-[width] duration-300 ease-in-out",
         isSidebarMinimized ? "w-16" : "w-64"
       )}
     >
@@ -170,7 +170,7 @@ export default function Navigation({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex justify-center">
-                      <User className="text-muted-foreground h-5 w-5" />
+                      <User className="h-5 w-5 text-muted-foreground" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={5}>
@@ -197,10 +197,10 @@ export default function Navigation({
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 px-2 py-1">
-                  <User className="text-muted-foreground h-4 w-4" />
+                  <User className="h-4 w-4 text-muted-foreground" />
                   <div className="flex-1 truncate text-sm">
                     <p className="font-medium">{user.name}</p>
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-xs text-muted-foreground">
                       {user.username}
                     </p>
                   </div>

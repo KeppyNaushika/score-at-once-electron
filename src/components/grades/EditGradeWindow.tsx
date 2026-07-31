@@ -104,7 +104,7 @@ export function EditGradeWindow({
               onChange={(e) => setReferenceDate(e.target.value)}
               className="w-48"
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               学級から生徒を追加する際、この日付時点で在籍中の生徒が対象になります。未設定の場合は本日が基準になります。
             </p>
           </div>

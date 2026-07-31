@@ -46,7 +46,7 @@ export function KeyboardShortcutSection({
           <div key={categoryKey} className="space-y-3">
             <div>
               <h3 className="text-lg font-semibold">{category.label}</h3>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 {category.description}
               </p>
             </div>
@@ -107,9 +107,9 @@ export function KeyboardShortcutSection({
           </div>
         ))}
 
-        <div className="bg-muted mt-6 rounded-lg p-4">
+        <div className="mt-6 rounded-lg bg-muted p-4">
           <h4 className="mb-2 font-medium">使用方法</h4>
-          <div className="text-muted-foreground space-y-1 text-sm">
+          <div className="space-y-1 text-sm text-muted-foreground">
             <p>• 採点画面で上記のキーを押すと、対応する操作が実行されます</p>
             <p>
               • 修飾キーは {modifierKeyLabel} + キーで動作します（例:{" "}

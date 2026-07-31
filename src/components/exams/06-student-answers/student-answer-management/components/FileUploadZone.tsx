@@ -67,28 +67,28 @@ export function FileUploadZone({
 
           {isConverting ? (
             <div className="space-y-4">
-              <RefreshCw className="text-primary mx-auto h-12 w-12 animate-spin" />
+              <RefreshCw className="mx-auto h-12 w-12 animate-spin text-primary" />
               <div className="space-y-2">
                 <p className="text-lg font-medium">ファイルを変換中...</p>
                 <Progress
                   value={pdfProcessingProgress}
                   className="mx-auto w-full max-w-md"
                 />
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                   {pdfProcessingProgress}% 完了
                 </p>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <Upload className="text-muted-foreground mx-auto h-12 w-12" />
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
               <div className="space-y-2">
                 <p className="text-lg font-medium">
                   {isDragActive
                     ? "ここにファイルをドロップしてください"
                     : "ファイルをドラッグ&ドロップまたはクリックしてアップロード"}
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                   PDF、PNG、JPEG、TIFF、BMP ファイルに対応
                 </p>
                 {modelAnswerCount > 0 && (

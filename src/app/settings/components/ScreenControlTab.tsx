@@ -181,7 +181,7 @@ export function ScreenControlTab() {
             <Monitor className="mr-2 inline-block h-5 w-5" />
             画面制御
           </h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             スクリーンセーバーの無効化や、一定時間後の画面消灯を設定できます。
             <kbd className="mx-1 rounded border border-gray-300 px-1 py-0.5 text-xs">
               {navigator.platform?.includes("Mac") ? "⌘" : "Ctrl"}+L
@@ -197,7 +197,7 @@ export function ScreenControlTab() {
               <Label className="text-sm font-medium">
                 プロジェクターモード
               </Label>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 スクリーンセーバーとスリープを無効化します
               </p>
             </div>
@@ -213,7 +213,7 @@ export function ScreenControlTab() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">画面消灯</Label>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 操作がない場合、画面を黒くします。数字パスコード設定時はロック解除が必要です（再読み込みで解除可）
               </p>
             </div>
@@ -225,7 +225,7 @@ export function ScreenControlTab() {
 
           {/* 消灯までの時間 */}
           <div className="flex items-center gap-3 pl-4">
-            <Label className="text-muted-foreground text-sm">
+            <Label className="text-sm text-muted-foreground">
               消灯までの時間
             </Label>
             <div className="flex items-center gap-1.5">
@@ -237,7 +237,7 @@ export function ScreenControlTab() {
                 onChange={(e) => handleBlackoutMinutesChange(e.target.value)}
                 className="w-16"
               />
-              <span className="text-muted-foreground text-sm">分</span>
+              <span className="text-sm text-muted-foreground">分</span>
             </div>
           </div>
 
@@ -249,7 +249,7 @@ export function ScreenControlTab() {
               <Label className="text-sm font-medium">
                 消灯時に自動フルスクリーン
               </Label>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 消灯・ロック時にウィンドウをフルスクリーンにします
               </p>
             </div>
@@ -268,7 +268,7 @@ export function ScreenControlTab() {
             <PanelLeftClose className="mr-2 inline-block h-5 w-5" />
             サイドバー動作
           </h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             各画面を開いた際のサイドバーの動作をセクションごとに設定します
           </p>
         </div>

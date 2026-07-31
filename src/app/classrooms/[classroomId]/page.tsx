@@ -82,8 +82,8 @@ export default function ClassroomDetailPage() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="border-primary mx-auto h-12 w-12 animate-spin rounded-full border-b-2"></div>
-          <p className="text-muted-foreground mt-4">読み込み中...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
     )
@@ -94,7 +94,7 @@ export default function ClassroomDetailPage() {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <p className="mb-2 text-lg font-medium">学級が見つかりません</p>
-          <p className="text-muted-foreground mb-4 text-sm">
+          <p className="mb-4 text-sm text-muted-foreground">
             指定された学級が存在しないか、削除されています。
           </p>
           <Button
@@ -126,7 +126,7 @@ export default function ClassroomDetailPage() {
                 </Badge>
               )}
               {classroomData.grade && (
-                <span className="bg-muted/50 rounded px-2 py-0.5 text-xs">
+                <span className="rounded bg-muted/50 px-2 py-0.5 text-xs">
                   {classroomData.grade}年
                 </span>
               )}
@@ -171,7 +171,7 @@ export default function ClassroomDetailPage() {
           </Button>
           <Button
             variant="ghost"
-            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+            className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             onClick={handleDeleteWithNavigation}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -205,7 +205,7 @@ export default function ClassroomDetailPage() {
                     <StudentInsightsCard studentResults={studentResults} />
                   </>
                 ) : (
-                  <div className="text-muted-foreground py-16 text-center text-sm">
+                  <div className="py-16 text-center text-sm text-muted-foreground">
                     所属生徒がいないか、採点済みの試験がありません
                   </div>
                 )}

@@ -96,7 +96,7 @@ export default function InterleaveSettings({
 
   if (files.length < 2) {
     return (
-      <div className="text-muted-foreground text-sm">
+      <div className="text-sm text-muted-foreground">
         交互挿入には2つ以上のファイルが必要です
       </div>
     )
@@ -115,7 +115,7 @@ export default function InterleaveSettings({
 
       {config.enabled && (
         <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             各ファイルの変換設定を個別に指定できます
           </p>
           {config.transforms.map((transform) => {
@@ -127,10 +127,10 @@ export default function InterleaveSettings({
             return (
               <div
                 key={transform.fileId}
-                className="bg-card rounded-lg border p-3"
+                className="rounded-lg border bg-card p-3"
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <Settings2 className="text-muted-foreground h-4 w-4" />
+                  <Settings2 className="h-4 w-4 text-muted-foreground" />
                   <span className="truncate text-sm font-medium">
                     {file.name}
                   </span>
@@ -198,7 +198,7 @@ export default function InterleaveSettings({
                       className="h-8 w-14 text-center"
                       disabled={disabled}
                     />
-                    <span className="text-muted-foreground text-xs whitespace-nowrap">
+                    <span className="text-xs whitespace-nowrap text-muted-foreground">
                       頁/組
                     </span>
                   </div>

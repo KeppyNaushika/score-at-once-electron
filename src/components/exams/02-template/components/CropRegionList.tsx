@@ -54,10 +54,10 @@ const CropRegionList = ({
 }: CropRegionListProps) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="bg-background shrink-0 border-b p-4">
+      <div className="shrink-0 border-b bg-background p-4">
         <h3 className="text-lg font-medium">領域一覧 ({areas.length})</h3>
         {areas.length > 0 && (
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-muted-foreground">
             領域をクリックして詳細情報を編集
           </p>
         )}
@@ -65,8 +65,8 @@ const CropRegionList = ({
 
       <div className="scrollbar-overlay flex-1 overflow-auto p-4">
         {areas.length === 0 ? (
-          <div className="text-muted-foreground border-muted-foreground/25 rounded-lg border-2 border-dashed py-8 text-center">
-            <Palette className="text-muted-foreground/70 mx-auto mb-3 h-10 w-10" />
+          <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 py-8 text-center text-muted-foreground">
+            <Palette className="mx-auto mb-3 h-10 w-10 text-muted-foreground/70" />
             <p className="text-base font-medium">領域を作成してください</p>
             <p className="mt-2 text-sm">
               左の模範解答上でマウスをドラッグして領域を作成できます
@@ -91,8 +91,8 @@ const CropRegionList = ({
                   disabled={disabled}
                   className={`w-full rounded-lg border p-3 text-left transition-all hover:shadow-md ${
                     isSelected
-                      ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                      : "bg-background hover:bg-accent border-border"
+                      ? "border-primary bg-primary text-primary-foreground shadow-lg"
+                      : "border-border bg-background hover:bg-accent"
                   }`}
                 >
                   <div className="mb-1 flex items-center space-x-2">

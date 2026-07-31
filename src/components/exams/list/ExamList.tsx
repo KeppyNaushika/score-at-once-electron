@@ -273,7 +273,7 @@ const File = () => {
                 </Button>
                 {selectedIds.size > 0 && (
                   <>
-                    <span className="text-muted-foreground text-sm">
+                    <span className="text-sm text-muted-foreground">
                       {selectedIds.size}件選択中
                     </span>
                     <BulkTagAssignButton
@@ -299,9 +299,9 @@ const File = () => {
 
         {/* テーブルエリア */}
         <div className="min-h-0 flex-1 p-4">
-          <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
             <Table wrapperClassName="h-full">
-              <TableHeader className="bg-card sticky top-0 z-10">
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-10 text-center">
                     <Checkbox
@@ -385,7 +385,7 @@ const File = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-center text-sm tabular-nums">
+                      <TableCell className="text-center text-sm text-muted-foreground tabular-nums">
                         {exam.examDate
                           ? new Date(exam.examDate).toLocaleDateString("ja-JP")
                           : "—"}

@@ -48,7 +48,7 @@ export default function CourseworkWorkflowLayout({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="bg-background flex items-center justify-between border-b px-4 py-3">
+      <header className="flex items-center justify-between border-b bg-background px-4 py-3">
         <Breadcrumb>
           <BreadcrumbList>
             {workflowSteps.map((step, index) => {
@@ -77,7 +77,7 @@ export default function CourseworkWorkflowLayout({
 
         <div className="flex items-center space-x-2">
           {courseworkName && (
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-muted-foreground">
               {courseworkName}
             </span>
           )}

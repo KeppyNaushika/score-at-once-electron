@@ -35,10 +35,10 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   if (!result) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 py-16">
-        <Loader2 className="text-primary h-12 w-12 animate-spin" />
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <div className="text-center">
           <h3 className="text-lg font-semibold">インポート中...</h3>
-          <p className="text-muted-foreground mt-2 text-sm">
+          <p className="mt-2 text-sm text-muted-foreground">
             データを処理しています。しばらくお待ちください。
           </p>
         </div>
@@ -55,7 +55,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         </div>
         <div className="text-center">
           <h3 className="text-lg font-semibold">インポートに失敗しました</h3>
-          <p className="text-muted-foreground mt-2 text-sm">{result.error}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{result.error}</p>
         </div>
       </div>
     )
@@ -81,7 +81,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
       {summary && (
         <div className="mx-auto grid w-full max-w-md gap-3">
-          <div className="border-border/50 rounded-lg border p-4">
+          <div className="rounded-lg border border-border/50 p-4">
             <h4 className="mb-2 text-sm font-medium">生徒</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               {summary.created.students > 0 && (
@@ -99,7 +99,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
             </div>
           </div>
 
-          <div className="border-border/50 rounded-lg border p-4">
+          <div className="rounded-lg border border-border/50 p-4">
             <h4 className="mb-2 text-sm font-medium">学級</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               {summary.created.classrooms > 0 && (
@@ -118,7 +118,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
           </div>
 
           {summary.created.memberships > 0 && (
-            <div className="text-muted-foreground text-center text-sm">
+            <div className="text-center text-sm text-muted-foreground">
               所属関係: {summary.created.memberships}件処理
             </div>
           )}

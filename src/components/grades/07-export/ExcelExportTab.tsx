@@ -36,7 +36,7 @@ export function ExcelExportTab({
     <div className="space-y-4">
       <div>
         <h3 className="text-sm font-medium">Excel出力</h3>
-        <p className="text-muted-foreground mt-1 text-xs">
+        <p className="mt-1 text-xs text-muted-foreground">
           成績算出結果をExcelファイルとして出力します。
         </p>
       </div>

@@ -201,7 +201,7 @@ export function StudentSelectionCard({
         {examId ? (
           <StatisticsClassroomSelector examId={examId} />
         ) : (
-          <p className="text-muted-foreground p-4 text-center text-sm">
+          <p className="p-4 text-center text-sm text-muted-foreground">
             試験が読み込まれていません
           </p>
         )}
@@ -216,7 +216,7 @@ export function StudentSelectionCard({
         <div className="mb-2 flex items-center">
           {/* 検索 */}
           <div className="relative w-full">
-            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
+            <Search className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="名前または学籍番号で検索"
               value={searchTerm}
@@ -328,7 +328,7 @@ export function StudentSelectionCard({
 
         {/* 3行目: 生徒リスト - 残りの高さを使用 */}
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+          <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
             <span>生徒一覧</span>
             <span>
               {selectedStudents.size}人選択中 / {students.length}人表示中
@@ -338,7 +338,7 @@ export function StudentSelectionCard({
             {students.map((examStudent) => (
               <div
                 key={examStudent.id}
-                className="hover:bg-muted flex items-center space-x-2 rounded p-1"
+                className="flex items-center space-x-2 rounded p-1 hover:bg-muted"
               >
                 <Checkbox
                   id={`student-${examStudent.id}`}
@@ -358,11 +358,11 @@ export function StudentSelectionCard({
                     <div className="flex items-center gap-1">
                       {examStudent.customOrder !== null &&
                         examStudent.customOrder !== undefined && (
-                          <span className="text-muted-foreground bg-muted rounded px-1 text-xs">
+                          <span className="rounded bg-muted px-1 text-xs text-muted-foreground">
                             {examStudent.customOrder}
                           </span>
                         )}
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-xs text-muted-foreground">
                         {examStudent.student.studentNumber}
                       </span>
                     </div>
@@ -418,11 +418,11 @@ export function StudentSelectionCard({
             // 個人成績表プレビュー
             isPreviewLoading ? (
               <div className="flex flex-1 items-center justify-center">
-                <p className="text-muted-foreground text-sm">読み込み中...</p>
+                <p className="text-sm text-muted-foreground">読み込み中...</p>
               </div>
             ) : previewError ? (
               <div className="flex flex-1 items-center justify-center">
-                <p className="text-destructive text-sm">{previewError}</p>
+                <p className="text-sm text-destructive">{previewError}</p>
               </div>
             ) : previewData && individualReportOptions ? (
               <div className="mx-auto">
@@ -434,7 +434,7 @@ export function StudentSelectionCard({
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center">
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                   {selectedStudents.size === 0
                     ? "生徒を選択してください"
                     : "プレビューする生徒を選択してください"}
@@ -452,17 +452,17 @@ export function StudentSelectionCard({
             // Excelプレビュー
             isExcelPreviewLoading ? (
               <div className="flex flex-1 items-center justify-center">
-                <p className="text-muted-foreground text-sm">読み込み中...</p>
+                <p className="text-sm text-muted-foreground">読み込み中...</p>
               </div>
             ) : excelPreviewError ? (
               <div className="flex flex-1 items-center justify-center">
-                <p className="text-destructive text-sm">{excelPreviewError}</p>
+                <p className="text-sm text-destructive">{excelPreviewError}</p>
               </div>
             ) : excelPreviewData ? (
               <ExcelPreview data={excelPreviewData} />
             ) : (
               <div className="flex flex-1 items-center justify-center">
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                   {selectedStudents.size === 0
                     ? "生徒を選択してください"
                     : "データの取得中..."}

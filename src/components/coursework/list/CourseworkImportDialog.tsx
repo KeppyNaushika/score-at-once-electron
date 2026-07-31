@@ -90,7 +90,7 @@ export function CourseworkImportDialog({
 
         <ScrollArea className="max-h-[60vh] pr-4">
           {preview.matches.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               取り込む試験外成績資料はありません。
             </p>
           ) : (
@@ -101,7 +101,7 @@ export function CourseworkImportDialog({
                     <span className="text-sm font-medium">
                       {coursework.name}
                     </span>
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-xs text-muted-foreground">
                       （評価項目 {coursework.itemCount} ・名簿{" "}
                       {coursework.studentCount}名）
                     </span>

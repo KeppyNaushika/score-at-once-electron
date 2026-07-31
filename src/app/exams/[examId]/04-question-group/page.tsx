@@ -168,7 +168,7 @@ export default function SubtotalGroupPage() {
             <h2 className="text-lg font-semibold text-red-600">
               エラーが発生しました
             </h2>
-            <p className="text-muted-foreground mt-2 text-sm">{error}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <Button onClick={loadData} className="mt-4" variant="outline">
               再読み込み
             </Button>

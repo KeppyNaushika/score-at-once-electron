@@ -116,7 +116,7 @@ export function SubtotalGroupSelector({
     <div className="flex flex-col gap-2">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
-        <Label className="text-muted-foreground text-xs">小計点グループ</Label>
+        <Label className="text-xs text-muted-foreground">小計点グループ</Label>
         <div className="flex gap-1">
           <Button
             variant="ghost"
@@ -146,7 +146,7 @@ export function SubtotalGroupSelector({
               key={group.id}
               className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors ${
                 isSelected
-                  ? "bg-primary/5 border-primary"
+                  ? "border-primary bg-primary/5"
                   : "bg-background hover:bg-muted/50"
               }`}
               onClick={() => handleGroupToggle(group.id, !isSelected)}

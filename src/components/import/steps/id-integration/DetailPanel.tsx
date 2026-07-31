@@ -73,7 +73,7 @@ export function DetailPanel({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">{PANEL_TITLES[entityType]}</CardTitle>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           {showIndividualMessage
             ? "それぞれについてどうするか選んでください"
             : "照合結果です。必要に応じて変更できます。"}
@@ -83,7 +83,7 @@ export function DetailPanel({
         <div className="space-y-3">
           {/* 一括設定ボタン */}
           {byName.length > 0 && onBatchIdChoice && (
-            <div className="bg-muted/30 mb-4 flex items-center gap-2 rounded-lg border p-3">
+            <div className="mb-4 flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
               <span className="text-sm font-medium">一括設定:</span>
               <Button
                 variant="outline"
@@ -132,7 +132,7 @@ export function DetailPanel({
 
           {/* noMatchアイテムの一括設定ボタン */}
           {noMatch.length > 0 && onBatchNoMatchDecision && (
-            <div className="bg-muted/30 mb-1 flex items-center gap-2 rounded-lg border p-3">
+            <div className="mb-1 flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
               <span className="text-sm font-medium">未照合の一括設定:</span>
               <Button
                 variant="outline"

@@ -67,7 +67,7 @@ export function GradeExcelPreview({
         {/* ── 成績一覧シート ── */}
         <TabsContent value="result" className="mt-0 flex-1 overflow-auto">
           <table className="w-full border-collapse text-[10px]">
-            <thead className="bg-muted sticky top-0">
+            <thead className="sticky top-0 bg-muted">
               <tr>
                 <th className="border px-1 py-0.5 text-left">番号</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
@@ -127,7 +127,7 @@ export function GradeExcelPreview({
         {/* ── 詳細シート ── */}
         <TabsContent value="detail" className="mt-0 flex-1 overflow-auto">
           <table className="w-full border-collapse text-[10px]">
-            <thead className="bg-muted sticky top-0">
+            <thead className="sticky top-0 bg-muted">
               <tr>
                 <th className="border px-1 py-0.5 text-left">番号</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
@@ -307,7 +307,7 @@ function ExcludedCells({ count }: { count: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <td
           key={i}
-          className="text-muted-foreground bg-muted/50 border px-1 py-0.5 text-right italic"
+          className="border bg-muted/50 px-1 py-0.5 text-right text-muted-foreground italic"
         >
           除外
         </td>

@@ -168,7 +168,7 @@ export function SubtotalGroupsPageContainer() {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="グループ名、小計項目名で検索"
               value={searchTerm}
@@ -176,7 +176,7 @@ export function SubtotalGroupsPageContainer() {
               className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
-          <span className="text-muted-foreground text-sm tabular-nums">
+          <span className="text-sm text-muted-foreground tabular-nums">
             {filteredGroups.length}件
           </span>
         </div>
@@ -202,7 +202,7 @@ export function SubtotalGroupsPageContainer() {
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {!ipcError && filteredGroups.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="text-muted-foreground mb-2">
+            <p className="mb-2 text-muted-foreground">
               {searchTerm
                 ? "検索結果が見つかりません"
                 : "小計点グループがありません"}

@@ -175,7 +175,7 @@ export default function ExportActions({
 
   return (
     <div className="space-y-3">
-      <div className="text-muted-foreground text-sm">
+      <div className="text-sm text-muted-foreground">
         {fileCount}ファイル / {pageCount}ページを出力
       </div>
       <div className="flex gap-2">

@@ -75,7 +75,7 @@ export function SubtotalMappingEditor({
 
   return (
     <div className="mt-3 rounded border p-3">
-      <div className="text-muted-foreground mb-2 text-xs font-medium">
+      <div className="mb-2 text-xs font-medium text-muted-foreground">
         小計項目の結びつけ
       </div>
       <div className="space-y-2">
@@ -90,7 +90,7 @@ export function SubtotalMappingEditor({
               <span className="w-1/3 truncate text-sm font-medium">
                 {importSub.name}
               </span>
-              <span className="text-muted-foreground text-sm">→</span>
+              <span className="text-sm text-muted-foreground">→</span>
               <div className="flex-1">
                 <Select
                   value={currentValue}

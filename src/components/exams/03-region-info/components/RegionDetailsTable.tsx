@@ -156,7 +156,7 @@ const RegionDetailsTable = ({
   if (filteredRegions.length === 0) {
     return (
       <div className="p-8 text-center">
-        <Palette className="text-muted-foreground/70 mx-auto mb-4 h-12 w-12" />
+        <Palette className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
         <h3 className="mb-2 text-lg font-medium">
           {selectedMasterImageId
             ? "このページに領域がありません"
@@ -173,29 +173,29 @@ const RegionDetailsTable = ({
 
   return (
     <div className="h-full overflow-auto p-6">
-      <table className="border-border w-full border-collapse border">
+      <table className="w-full border-collapse border border-border">
         <thead>
           <tr className="bg-muted/50">
-            <th className="border-border w-8 border px-2 py-1 text-left font-medium"></th>
-            <th className="border-border w-16 border px-2 py-1 text-left font-medium">
+            <th className="w-8 border border-border px-2 py-1 text-left font-medium"></th>
+            <th className="w-16 border border-border px-2 py-1 text-left font-medium">
               #
             </th>
-            <th className="border-border w-16 border px-2 py-1 text-left font-medium">
+            <th className="w-16 border border-border px-2 py-1 text-left font-medium">
               ページ
             </th>
-            <th className="border-border w-36 border px-2 py-1 text-left font-medium">
+            <th className="w-36 border border-border px-2 py-1 text-left font-medium">
               種類
             </th>
-            <th className="border-border w-40 border px-2 py-1 text-left font-medium">
+            <th className="w-40 border border-border px-2 py-1 text-left font-medium">
               ラベル
             </th>
-            <th className="border-border w-24 border px-2 py-1 text-left font-medium">
+            <th className="w-24 border border-border px-2 py-1 text-left font-medium">
               配点
             </th>
-            <th className="border-border w-16 border px-2 py-1 text-center font-medium">
+            <th className="w-16 border border-border px-2 py-1 text-center font-medium">
               OMR
             </th>
-            <th className="border-border w-20 border px-2 py-1 text-center font-medium">
+            <th className="w-20 border border-border px-2 py-1 text-center font-medium">
               操作
             </th>
           </tr>

@@ -79,8 +79,8 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
     <div className="flex h-full flex-col">
       {/* ヘッダー */}
       <div className="mb-6 text-center">
-        <div className="bg-primary/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
-          <FileText className="text-primary h-10 w-10" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+          <FileText className="h-10 w-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">ファイルの内容</h3>
         {state.manifest && (
@@ -106,7 +106,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-muted-foreground mt-4">照合中...</p>
+            <p className="mt-4 text-muted-foreground">照合中...</p>
           </div>
         ) : state.fileOverviewData ? (
           <>
@@ -149,7 +149,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
         ) : (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <HelpCircle className="text-muted-foreground mb-4 h-8 w-8" />
+              <HelpCircle className="mb-4 h-8 w-8 text-muted-foreground" />
               <p className="text-muted-foreground">
                 「次へ」を押して照合を開始してください
               </p>
@@ -160,8 +160,8 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
         {/* 採点者の説明 */}
         <Card className="bg-muted/30">
           <CardContent className="flex items-center gap-3 p-4">
-            <User className="text-muted-foreground h-5 w-5" />
-            <p className="text-muted-foreground text-sm">
+            <User className="h-5 w-5 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
               採点者はログイン中のユーザー（あなた）に紐づきます
             </p>
           </CardContent>
@@ -266,20 +266,20 @@ function CategoryOverviewCard({
         {/* 展開時の詳細 */}
         {autoMatched > 0 && isExpanded && (
           <div className="mt-3 border-t pt-3">
-            <p className="text-muted-foreground mb-2 text-xs">
+            <p className="mb-2 text-xs text-muted-foreground">
               自動で紐づく{label}:
             </p>
             <div className="flex flex-wrap gap-2">
               {autoMatchedItems.slice(0, 10).map((item, index) => (
                 <span
                   key={index}
-                  className="bg-muted rounded px-2 py-1 text-xs"
+                  className="rounded bg-muted px-2 py-1 text-xs"
                 >
                   {item.displayLabel}
                 </span>
               ))}
               {autoMatchedItems.length > 10 && (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-xs text-muted-foreground">
                   ...他 {autoMatchedItems.length - 10}
                   {unit}
                 </span>

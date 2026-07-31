@@ -61,14 +61,14 @@ export function EditableGradeLabel({
   )
 
   if (!gradeLabel && !overrideLabel) {
-    return <span className="text-muted-foreground text-xs">-</span>
+    return <span className="text-xs text-muted-foreground">-</span>
   }
 
   if (editing) {
     return (
       <input
         ref={inputRef}
-        className="border-primary w-12 rounded border bg-white px-1 py-0.5 text-center text-xs focus:outline-none"
+        className="w-12 rounded border border-primary bg-white px-1 py-0.5 text-center text-xs focus:outline-none"
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={commit}

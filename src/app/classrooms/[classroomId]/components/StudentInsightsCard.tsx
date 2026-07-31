@@ -219,7 +219,7 @@ export function StudentInsightsCard({
   if (studentResults.length === 0) return null
 
   return (
-    <Card className="border-border/50 mb-8 shadow-sm">
+    <Card className="mb-8 border-border/50 shadow-sm">
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export function StudentInsightsCard({
         <div className="flex flex-wrap items-center gap-3">
           {allTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1">
-              <span className="text-muted-foreground text-xs">タグ:</span>
+              <span className="text-xs text-muted-foreground">タグ:</span>
               <Badge
                 variant={selectedTags.size === 0 ? "default" : "outline"}
                 className="h-5 cursor-pointer rounded-full px-2 text-[10px] font-normal"
@@ -266,14 +266,14 @@ export function StudentInsightsCard({
             </div>
           )}
           <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-xs">期間:</span>
+            <span className="text-xs text-muted-foreground">期間:</span>
             <Input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="h-7 w-32 rounded px-2 text-xs"
             />
-            <span className="text-muted-foreground text-xs">〜</span>
+            <span className="text-xs text-muted-foreground">〜</span>
             <Input
               type="date"
               value={dateTo}
@@ -286,7 +286,7 @@ export function StudentInsightsCard({
 
       <CardContent>
         {sortedData.length > 0 ? (
-          <div className="border-border/50 overflow-hidden rounded-xl border">
+          <div className="overflow-hidden rounded-xl border border-border/50">
             <Table>
               <TableHeader className="bg-card">
                 <TableRow className="hover:bg-transparent">
@@ -352,7 +352,7 @@ export function StudentInsightsCard({
                     <TableCell className="font-medium">
                       {insight.studentName}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-right tabular-nums">
+                    <TableCell className="text-right text-muted-foreground tabular-nums">
                       {insight.examCount}回
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
@@ -385,7 +385,7 @@ export function StudentInsightsCard({
                         </Badge>
                       )}
                       {insight.trend === "stable" && (
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                           安定
                         </span>
                       )}
@@ -396,7 +396,7 @@ export function StudentInsightsCard({
             </Table>
           </div>
         ) : (
-          <div className="text-muted-foreground py-8 text-center text-sm">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             表示条件に一致する採点済みの試験がありません
           </div>
         )}

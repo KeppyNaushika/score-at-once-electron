@@ -100,7 +100,7 @@ export function DataSourceRow({
             placeholder="名前"
           />
           {/* 満点は元データ追従のため編集不可（表示のみ） */}
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             満点: {displayMaxScore}
           </span>
           <Input
@@ -152,7 +152,7 @@ export function DataSourceRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-background flex items-center justify-between rounded border p-2"
+      className="flex items-center justify-between rounded border bg-background p-2"
     >
       <div className="flex items-center gap-3">
         <DragHandle dragHandleProps={dragHandleProps} />
@@ -167,7 +167,7 @@ export function DataSourceRow({
         </Badge>
         <span className="text-sm font-medium">{dataSource.name}</span>
         {sourceRef && (
-          <span className="text-muted-foreground text-xs">({sourceRef})</span>
+          <span className="text-xs text-muted-foreground">({sourceRef})</span>
         )}
         {isCoursework && dataSource.courseworkItem?.inputMode === "letter" && (
           <Badge variant="outline" className="text-xs font-normal">
@@ -185,7 +185,7 @@ export function DataSourceRow({
         />
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-muted-foreground text-xs">
+        <span className="text-xs text-muted-foreground">
           満点: {displayMaxScore} / 換算満点: {dataSource.weight}
         </span>
         <Button
@@ -199,7 +199,7 @@ export function DataSourceRow({
         <Button
           variant="ghost"
           size="icon"
-          className="text-destructive h-7 w-7"
+          className="h-7 w-7 text-destructive"
           onClick={() => onDelete(dataSource.id)}
         >
           <Trash2 className="h-3 w-3" />

@@ -266,7 +266,7 @@ export default function GradeDetailPage() {
             <div className="flex-1">
               <h1 className="text-3xl font-bold">{exam.name}</h1>
               {exam.description && (
-                <p className="text-muted-foreground mt-2">{exam.description}</p>
+                <p className="mt-2 text-muted-foreground">{exam.description}</p>
               )}
               <div className="mt-3 flex items-center gap-4">
                 <Badge variant="outline">{classNames || "学級未登録"}</Badge>

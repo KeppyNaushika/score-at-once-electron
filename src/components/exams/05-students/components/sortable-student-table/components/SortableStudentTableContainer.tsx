@@ -321,7 +321,7 @@ export function SortableStudentTableContainer(
                 手動で設定した並び順を、学級の関連付け設定に基づいて再設定します（検索・フィルタ中でも全生徒が対象になります）。
               </span>
               <span className="block font-medium">リセット後の並び順：</span>
-              <span className="text-muted-foreground block pl-4">
+              <span className="block pl-4 text-muted-foreground">
                 1. 学級の関連付け順（上から順）
                 <br />
                 2. 学級内の出席番号順

@@ -63,7 +63,7 @@ function ScaleRow({ id, scale, index, onUpdate, onRemove }: ScaleRowProps) {
         className="h-7 w-20 text-xs"
         placeholder="記号"
       />
-      <span className="text-muted-foreground text-xs">=</span>
+      <span className="text-xs text-muted-foreground">=</span>
       <Input
         value={scale.score}
         onChange={(e) => onUpdate(index, { score: e.target.value })}
@@ -121,8 +121,8 @@ export function LetterScaleEditor({
   const rowIds = scales.map((scale) => scale.id)
 
   return (
-    <div className="bg-muted/30 space-y-2 rounded border border-dashed p-2">
-      <p className="text-muted-foreground text-xs font-medium">
+    <div className="space-y-2 rounded border border-dashed bg-muted/30 p-2">
+      <p className="text-xs font-medium text-muted-foreground">
         評価記号 → 点数の変換表
       </p>
       <div className="space-y-1">
@@ -142,7 +142,7 @@ export function LetterScaleEditor({
       <Button
         variant="ghost"
         size="sm"
-        className="text-muted-foreground h-6 text-xs"
+        className="h-6 text-xs text-muted-foreground"
         onClick={addRow}
       >
         <Plus className="mr-1 h-3 w-3" />

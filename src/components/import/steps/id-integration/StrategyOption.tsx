@@ -27,7 +27,7 @@ export function StrategyOption({
             </span>
           )}
         </Label>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
   )

@@ -141,7 +141,7 @@ export function BoundaryEditor({ boundaries, onSave }: BoundaryEditorProps) {
   return (
     <div className="space-y-3">
       {items.length === 0 ? (
-        <p className="text-muted-foreground py-4 text-center text-sm">
+        <p className="py-4 text-center text-sm text-muted-foreground">
           境界が設定されていません。プリセットを選択するか手動で追加してください。
         </p>
       ) : (
@@ -172,7 +172,7 @@ export function BoundaryEditor({ boundaries, onSave }: BoundaryEditorProps) {
           <Plus className="mr-1 h-3 w-3" />
           行を追加
         </Button>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-xs text-muted-foreground">
           変更は自動保存されます
         </span>
       </div>
@@ -232,7 +232,7 @@ function BoundaryRow({
       <Button
         variant="ghost"
         size="icon"
-        className="text-destructive h-8 w-8"
+        className="h-8 w-8 text-destructive"
         onClick={() => onRemove(index)}
       >
         <Trash2 className="h-3 w-3" />

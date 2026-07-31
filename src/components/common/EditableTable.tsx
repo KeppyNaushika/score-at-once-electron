@@ -397,12 +397,12 @@ export function EditableTable<T extends object>({
       <div className="rounded-md border">
         <table className="w-full" onPaste={handlePaste}>
           <thead>
-            <tr className="bg-muted/50 border-b">
+            <tr className="border-b bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) =>
                 headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="text-muted-foreground px-4 py-3 text-left text-sm font-medium"
+                    className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
                     style={{ width: header.getSize() }}
                   >
                     {header.isPlaceholder
@@ -471,7 +471,7 @@ export function EditableTable<T extends object>({
         </div>
       )}
 
-      <div className="text-muted-foreground text-sm">
+      <div className="text-sm text-muted-foreground">
         💡 ヒント: Excelからデータをコピーして、テーブル上で貼り付け (Ctrl+V)
         できます
       </div>

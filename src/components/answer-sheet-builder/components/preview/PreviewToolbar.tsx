@@ -45,7 +45,7 @@ export function PreviewToolbar({
   }
 
   return (
-    <div className="bg-muted/30 flex items-center justify-between border-b px-3 py-1.5">
+    <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
       {/* ズーム */}
       <div className="flex items-center gap-1">
         <Button
@@ -111,7 +111,7 @@ export function PreviewToolbar({
               </Button>
             </div>
           )}
-        <span className="text-muted-foreground text-xs">{pageInfo}</span>
+        <span className="text-xs text-muted-foreground">{pageInfo}</span>
       </div>
 
       {/* モード切替 */}
@@ -126,7 +126,7 @@ export function PreviewToolbar({
         />
         <Label
           htmlFor="render-mode-toggle"
-          className="text-muted-foreground cursor-pointer text-xs"
+          className="cursor-pointer text-xs text-muted-foreground"
         >
           模範解答の表示
         </Label>

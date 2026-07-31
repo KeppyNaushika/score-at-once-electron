@@ -26,11 +26,11 @@ export function RosterTableHeader({
   rowActionButtons,
 }: RosterTableHeaderProps) {
   return (
-    <TableHeader className="bg-background sticky top-0 z-10">
+    <TableHeader className="sticky top-0 z-10 bg-background">
       <TableRow>
         <TableHead className="w-25">
           <div className="flex items-center gap-2">
-            <GripVertical className="text-muted-foreground h-4 w-4" />
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
             <Checkbox
               checked={
                 sortedRows.length > 0 &&

@@ -51,13 +51,13 @@ export function MembershipsCard({
   }, [student.memberships])
 
   return (
-    <Card className="border-border/50 mb-8 shadow-sm">
+    <Card className="mb-8 border-border/50 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             学級所属
-            <span className="text-muted-foreground ml-1 text-lg font-normal tabular-nums">
+            <span className="ml-1 text-lg font-normal text-muted-foreground tabular-nums">
               ({student.memberships.length}件)
             </span>
           </CardTitle>
@@ -73,7 +73,7 @@ export function MembershipsCard({
       </CardHeader>
       <CardContent>
         {sortedMemberships.length > 0 ? (
-          <div className="border-border/50 overflow-hidden rounded-xl border">
+          <div className="overflow-hidden rounded-xl border border-border/50">
             <Table>
               <TableHeader className="bg-card">
                 <TableRow className="hover:bg-transparent">
@@ -147,7 +147,7 @@ export function MembershipsCard({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
                             onClick={() =>
                               onEditMembership({
                                 ...membership,
@@ -161,7 +161,7 @@ export function MembershipsCard({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-muted-foreground hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-muted"
                               onClick={() => onEndMembership(membership.id)}
                             >
                               <Clock className="h-4 w-4" />
@@ -176,7 +176,7 @@ export function MembershipsCard({
             </Table>
           </div>
         ) : (
-          <div className="text-muted-foreground py-12 text-center">
+          <div className="py-12 text-center text-muted-foreground">
             <Users className="mx-auto mb-3 h-12 w-12 opacity-30" />
             <p>学級所属がありません</p>
           </div>

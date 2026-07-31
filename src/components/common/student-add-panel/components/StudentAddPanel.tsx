@@ -147,7 +147,7 @@ export function StudentAddPanel({
             onCheckedChange={setClassroomActiveOnly}
           />
           <span>在籍中の生徒のみ表示</span>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             （オフにすると現在在籍していない生徒も表示します）
           </span>
         </label>
@@ -169,7 +169,7 @@ export function StudentAddPanel({
               {loadingClassrooms ? (
                 <div className="py-4 text-center">読み込み中...</div>
               ) : classrooms.length === 0 ? (
-                <div className="text-muted-foreground py-4 text-center">
+                <div className="py-4 text-center text-muted-foreground">
                   {classroomEmptyMessage}
                 </div>
               ) : (
@@ -258,7 +258,7 @@ export function StudentAddPanel({
             onCheckedChange={setStudentActiveOnly}
           />
           <span>未在籍・在籍中の生徒のみ表示</span>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             （オフにすると過去に在籍した生徒も表示します）
           </span>
         </label>
@@ -273,7 +273,7 @@ export function StudentAddPanel({
             </CardDescription>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="relative">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
                 <Input
                   placeholder="名前、ふりがな、学籍番号で検索"
                   value={searchTerm}
@@ -303,7 +303,7 @@ export function StudentAddPanel({
             {loadingStudents ? (
               <div className="py-4 text-center">読み込み中...</div>
             ) : filteredStudents.length === 0 ? (
-              <div className="text-muted-foreground py-4 text-center">
+              <div className="py-4 text-center text-muted-foreground">
                 {studentEmptyMessage}
               </div>
             ) : (
@@ -327,7 +327,7 @@ export function StudentAddPanel({
                             <div className="font-medium">
                               {student.lastName} {student.firstName}
                             </div>
-                            <div className="text-muted-foreground text-sm">
+                            <div className="text-sm text-muted-foreground">
                               {student.studentNumber}
                             </div>
                           </label>
@@ -338,7 +338,7 @@ export function StudentAddPanel({
                             </div>
                             {student.memberships[0]?.attendanceNumber !=
                               null && (
-                              <div className="text-muted-foreground text-xs">
+                              <div className="text-xs text-muted-foreground">
                                 出席番号:{" "}
                                 {student.memberships[0].attendanceNumber}
                               </div>

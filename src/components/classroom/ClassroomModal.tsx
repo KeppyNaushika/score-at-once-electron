@@ -125,7 +125,7 @@ export default function ClassroomModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="className"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               学級名
             </Label>
@@ -147,7 +147,7 @@ export default function ClassroomModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="classroomCode"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               クラスコード
             </Label>
@@ -158,7 +158,7 @@ export default function ClassroomModal({
                 onChange={(e) => setClassroomCode(e.target.value)}
                 placeholder="例: E1、M2、1A (任意)"
               />
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-muted-foreground">
                 生徒の所属表示で使用される短縮表記
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function ClassroomModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="isVisible"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               表示設定
             </Label>
@@ -182,7 +182,7 @@ export default function ClassroomModal({
                 {isVisible ? "表示" : "非表示"}
               </Label>
               {!isVisible && (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-xs text-muted-foreground">
                   （非表示の学級は生徒一覧やインポートで使用されません）
                 </span>
               )}
@@ -193,7 +193,7 @@ export default function ClassroomModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="grade"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               学年
             </Label>
@@ -218,7 +218,7 @@ export default function ClassroomModal({
           <div className="grid grid-cols-4 items-start gap-x-4 gap-y-1">
             <Label
               htmlFor="classroomDescription"
-              className="text-muted-foreground pt-2 text-right font-normal"
+              className="pt-2 text-right font-normal text-muted-foreground"
             >
               説明
             </Label>

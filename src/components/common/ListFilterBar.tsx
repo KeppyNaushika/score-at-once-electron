@@ -67,7 +67,7 @@ export function ListFilterBar({
       {leading}
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <div className="relative">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
@@ -86,7 +86,7 @@ export function ListFilterBar({
           />
         )}
         {dateRangeFilter && <DateRangeFilter config={dateRangeFilter} />}
-        <span className="text-muted-foreground text-xs">
+        <span className="text-xs text-muted-foreground">
           {filteredCount === totalCount
             ? `${totalCount}件`
             : `${filteredCount} / ${totalCount}件`}
@@ -132,7 +132,7 @@ function MultiSelectFilter({
           {options.map((option) => (
             <label
               key={option.id}
-              className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-accent"
             >
               <Checkbox
                 checked={selectedIds.has(option.id)}
@@ -177,7 +177,7 @@ function DateRangeFilter({ config }: { config: DateRangeFilterConfig }) {
       </PopoverTrigger>
       <PopoverContent className="w-64 space-y-2 p-3" align="start">
         <div className="space-y-1">
-          <span className="text-muted-foreground text-xs">開始</span>
+          <span className="text-xs text-muted-foreground">開始</span>
           <Input
             type="date"
             value={from}
@@ -186,7 +186,7 @@ function DateRangeFilter({ config }: { config: DateRangeFilterConfig }) {
           />
         </div>
         <div className="space-y-1">
-          <span className="text-muted-foreground text-xs">終了</span>
+          <span className="text-xs text-muted-foreground">終了</span>
           <Input
             type="date"
             value={to}

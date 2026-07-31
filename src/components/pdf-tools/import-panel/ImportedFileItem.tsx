@@ -102,19 +102,19 @@ export default function ImportedFileItem({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="bg-card rounded-lg border">
+      <div className="rounded-lg border bg-card">
         <CollapsibleTrigger asChild>
-          <div className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 p-3">
+          <div className="flex cursor-pointer items-center gap-2 p-3 hover:bg-muted/50">
             {isOpen ? (
               <ChevronDown className="h-4 w-4 shrink-0" />
             ) : (
               <ChevronRight className="h-4 w-4 shrink-0" />
             )}
-            <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{file.name}</p>
               <div className="flex items-center gap-1.5">
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   {selectedCount}/{file.pageCount}ページ選択
                 </p>
                 {excludedCount > 0 && (
@@ -220,7 +220,7 @@ export default function ImportedFileItem({
                     className={cn(
                       "relative aspect-3/4 overflow-hidden rounded border-2 transition-all",
                       isSelected
-                        ? "border-primary ring-primary/20 ring-2"
+                        ? "border-primary ring-2 ring-primary/20"
                         : "border-muted hover:border-muted-foreground/50"
                     )}
                   >
@@ -231,8 +231,8 @@ export default function ImportedFileItem({
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="bg-muted flex h-full w-full items-center justify-center">
-                        <span className="text-muted-foreground text-xs">
+                      <div className="flex h-full w-full items-center justify-center bg-muted">
+                        <span className="text-xs text-muted-foreground">
                           {pageNumber}
                         </span>
                       </div>

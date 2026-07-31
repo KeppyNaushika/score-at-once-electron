@@ -80,7 +80,7 @@ export function StatisticsClassroomSelector({
 
   if (loading) {
     return (
-      <p className="text-muted-foreground p-4 text-center text-sm">
+      <p className="p-4 text-center text-sm text-muted-foreground">
         読み込み中...
       </p>
     )
@@ -88,7 +88,7 @@ export function StatisticsClassroomSelector({
 
   if (classrooms.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-md border py-8 text-center text-sm">
+      <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
         <p>統計対象にできる学級がありません</p>
         <p className="mt-1">受験生徒画面で学級を登録してください</p>
       </div>
@@ -97,11 +97,11 @@ export function StatisticsClassroomSelector({
 
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground px-1 text-xs">
+      <p className="px-1 text-xs text-muted-foreground">
         学級ごとに平均点を出す対象を選びます。
-        <span className="text-foreground font-medium">教員集計</span>
+        <span className="font-medium text-foreground">教員集計</span>
         はExcelの学級平均行、
-        <span className="text-foreground font-medium">生徒表示</span>
+        <span className="font-medium text-foreground">生徒表示</span>
         は個人成績表の学級比較に出ます（生徒に渡るので慎重に）。
       </p>
       <div className="rounded-md border">
@@ -130,12 +130,12 @@ export function StatisticsClassroomSelector({
                 <TableCell className="font-medium">
                   {examClassroom.classroom.name}
                   {examClassroom.classroom.grade != null && (
-                    <span className="text-muted-foreground ml-2 text-xs">
+                    <span className="ml-2 text-xs text-muted-foreground">
                       {examClassroom.classroom.grade}年
                     </span>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground text-center text-xs">
+                <TableCell className="text-center text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Users className="h-3 w-3" />
                     {examClassroom.classroom.memberships.length}

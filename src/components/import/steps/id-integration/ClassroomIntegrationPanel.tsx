@@ -45,7 +45,7 @@ export function ClassroomIntegrationPanel({
           <CardTitle className="text-base">
             判断が必要な学級が{needsDecisionCount}クラスあります
           </CardTitle>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             どうやって既存の学級と紐づけますか？
           </p>
         </CardHeader>

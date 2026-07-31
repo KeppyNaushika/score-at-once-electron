@@ -74,7 +74,7 @@ function DownloadRow({
         {captureButton}
       </div>
       {noStudentSelected && (
-        <p className="text-muted-foreground mt-2 text-center text-xs">
+        <p className="mt-2 text-center text-xs text-muted-foreground">
           生徒を選択してください
         </p>
       )}
@@ -212,7 +212,7 @@ export function ExportOptionsCard({
                 step={1}
                 className="mt-2"
               />
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-muted-foreground">
                 値を大きくすると処理が速くなりますが、メモリ使用量が増えます
               </p>
             </div>
@@ -244,7 +244,7 @@ export function ExportOptionsCard({
         <div className="relative min-h-0 flex-1 space-y-4 overflow-y-auto">
           <div className="space-y-3">
             <h4 className="text-base font-semibold">Excel出力設定</h4>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               採点データをExcel形式で出力します。設定は現在ありません。
             </p>
           </div>
@@ -254,7 +254,7 @@ export function ExportOptionsCard({
             <h4 className="text-base font-semibold">
               分析用データ（R / exametrika）
             </h4>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               設問×生徒の正誤行列を出力します。欠席・未採点は欠測値として扱います。
             </p>
             <div className="flex gap-2">

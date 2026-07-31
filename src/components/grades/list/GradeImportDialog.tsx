@@ -134,7 +134,7 @@ export function GradeImportDialog({
               取り込みは成績を作るだけでなく、既存に無い生徒・学級を登録する */}
           {(preview.studentCreateCount > 0 ||
             preview.classroomCreateCount > 0) && (
-            <div className="border-border/60 bg-muted/40 mb-4 rounded border p-3 text-sm">
+            <div className="mb-4 rounded border border-border/60 bg-muted/40 p-3 text-sm">
               <div className="mb-1 font-medium">
                 この取り込みで生徒・学級が追加されます
               </div>
@@ -175,7 +175,7 @@ export function GradeImportDialog({
                 <TriangleAlert className="h-4 w-4" />
                 取り込み時に失われるデータがあります
               </div>
-              <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
+              <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
                 {preview.warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
                 ))}
@@ -185,7 +185,7 @@ export function GradeImportDialog({
 
           {/* 資料ごとの判断 */}
           {preview.courseworkMatches.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               取り込む試験外成績資料はありません。
             </p>
           ) : (
@@ -202,7 +202,7 @@ export function GradeImportDialog({
                     <span className="text-sm font-medium">
                       {courseworkMatch.name}
                     </span>
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-xs text-muted-foreground">
                       （評価項目 {courseworkMatch.itemCount} ・名簿{" "}
                       {courseworkMatch.studentCount}名）
                     </span>

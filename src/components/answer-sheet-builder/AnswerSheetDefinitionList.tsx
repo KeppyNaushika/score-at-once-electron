@@ -317,7 +317,7 @@ export function AnswerSheetDefinitionList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <p className="text-muted-foreground text-sm">読み込み中...</p>
+        <p className="text-sm text-muted-foreground">読み込み中...</p>
       </div>
     )
   }
@@ -344,7 +344,7 @@ export function AnswerSheetDefinitionList() {
           </Button>
           {selectedIds.size > 0 && (
             <>
-              <span className="text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground">
                 {selectedIds.size}件選択中
               </span>
               <BulkTagAssignButton
@@ -382,7 +382,7 @@ export function AnswerSheetDefinitionList() {
       <div className="min-h-0 flex-1 p-4">
         {definitions.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="text-muted-foreground mb-2">
+            <p className="mb-2 text-muted-foreground">
               解答用紙定義がありません
             </p>
             <Button variant="outline" onClick={handleCreate}>
@@ -391,9 +391,9 @@ export function AnswerSheetDefinitionList() {
             </Button>
           </div>
         ) : (
-          <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
             <Table wrapperClassName="h-full">
-              <TableHeader className="bg-card sticky top-0 z-10">
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-10">
                     <Checkbox
@@ -437,7 +437,7 @@ export function AnswerSheetDefinitionList() {
                   <TableRow>
                     <TableCell
                       colSpan={7}
-                      className="text-muted-foreground py-8 text-center"
+                      className="py-8 text-center text-muted-foreground"
                     >
                       条件に一致する解答用紙がありません
                     </TableCell>
@@ -474,7 +474,7 @@ export function AnswerSheetDefinitionList() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       {definition.paperSize ?? "-"}{" "}
                       {definition.orientation === "landscape" ? "横" : "縦"}
                     </TableCell>
@@ -486,7 +486,7 @@ export function AnswerSheetDefinitionList() {
                         ? `${definition.totalPoints}点`
                         : "-"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       {formatDate(definition.updatedAt)}
                     </TableCell>
                     <TableCell>
@@ -561,7 +561,7 @@ export function AnswerSheetDefinitionList() {
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
               onClick={(e) => {
                 e.preventDefault()
                 void confirmDelete()

@@ -179,7 +179,7 @@ export function Figure({
 }) {
   return (
     <figure className="my-6">
-      <div className="flex flex-col items-center gap-5 rounded-xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white px-6 py-8">
+      <div className="flex flex-col items-center gap-5 rounded-xl border border-gray-200 bg-linear-to-b from-gray-50 to-white px-6 py-8">
         {children}
       </div>
       {caption && (

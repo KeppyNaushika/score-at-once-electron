@@ -295,8 +295,8 @@ export function CourseworkScoresContainer({
     return (
       <div className="p-6">
         <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-          <p className="text-muted-foreground mb-2">評価項目がありません</p>
-          <p className="text-muted-foreground text-sm">
+          <p className="mb-2 text-muted-foreground">評価項目がありません</p>
+          <p className="text-sm text-muted-foreground">
             「評価項目」ステップで評価項目を追加してください
           </p>
         </div>
@@ -314,7 +314,7 @@ export function CourseworkScoresContainer({
   return (
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">点数入力</h2>
-      <p className="text-muted-foreground mb-4 text-sm">
+      <p className="mb-4 text-sm text-muted-foreground">
         各生徒の評価項目ごとの点数を入力してください。文字評価の項目は評価記号（例:
         A/B/C）で入力します。加減点・理由・コメントも記入できます。変更は自動保存されます。
       </p>

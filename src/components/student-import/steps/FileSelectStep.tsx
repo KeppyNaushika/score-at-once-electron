@@ -14,15 +14,15 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-12">
-      <div className="bg-primary/10 flex h-20 w-20 items-center justify-center rounded-full">
-        <Users className="text-primary h-10 w-10" />
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+        <Users className="h-10 w-10 text-primary" />
       </div>
 
       <div className="text-center">
         <h3 className="text-lg font-semibold">
           生徒データファイルを選択してください
         </h3>
-        <p className="text-muted-foreground mt-2 text-sm">
+        <p className="mt-2 text-sm text-muted-foreground">
           .studentsファイルを選択して、生徒・学級データをインポートします
         </p>
       </div>
@@ -46,8 +46,8 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
         )}
       </Button>
 
-      <div className="bg-muted/50 rounded-lg p-4">
-        <p className="text-muted-foreground text-center text-xs">
+      <div className="rounded-lg bg-muted/50 p-4">
+        <p className="text-center text-xs text-muted-foreground">
           対応形式: .students（生徒データアーカイブ）
         </p>
       </div>

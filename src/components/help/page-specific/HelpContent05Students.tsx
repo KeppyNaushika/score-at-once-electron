@@ -137,7 +137,7 @@ function ReorderFigure() {
   const row =
     "absolute inset-x-0 top-0 flex items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 shadow-sm"
   return (
-    <div aria-hidden className="relative h-[72px] w-full max-w-xs">
+    <div aria-hidden className="relative h-18 w-full max-w-xs">
       <div className={row} style={{ animation: "help05SwapDown 4s infinite" }}>
         <GripVertical className="h-4 w-4 text-gray-400" />
         <span className="w-5 text-gray-400">1</span>

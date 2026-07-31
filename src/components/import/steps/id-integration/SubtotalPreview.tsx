@@ -27,7 +27,7 @@ export function SubtotalPreview({
   return (
     <div className="mt-2 grid grid-cols-2 gap-3 rounded border p-2 text-xs">
       <div>
-        <div className="text-muted-foreground mb-1 font-medium">
+        <div className="mb-1 font-medium text-muted-foreground">
           ファイルの小計項目
         </div>
         {importSubtotals?.length ? (
@@ -51,7 +51,7 @@ export function SubtotalPreview({
         )}
       </div>
       <div>
-        <div className="text-muted-foreground mb-1 font-medium">
+        <div className="mb-1 font-medium text-muted-foreground">
           このPCの小計項目
         </div>
         {existingSubtotals?.length ? (

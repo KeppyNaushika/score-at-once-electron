@@ -61,7 +61,7 @@ export function IndividualReportTab({
     <div className="space-y-6">
       {/* タイトル */}
       <Section title="基本設定">
-        <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
           <Label className="text-xs whitespace-nowrap">タイトル</Label>
           <Input
             value={options.title}
@@ -118,7 +118,7 @@ export function IndividualReportTab({
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                     <Label className="text-xs whitespace-nowrap">列数</Label>
                     <Input
                       type="number"
@@ -135,7 +135,7 @@ export function IndividualReportTab({
                       }}
                     />
                   </div>
-                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                     <Label className="text-xs whitespace-nowrap">文字</Label>
                     <Input
                       type="number"
@@ -149,7 +149,7 @@ export function IndividualReportTab({
                         }
                       }}
                     />
-                    <span className="text-muted-foreground text-xs">px</span>
+                    <span className="text-xs text-muted-foreground">px</span>
                   </div>
                 </div>
               </div>
@@ -164,7 +164,7 @@ export function IndividualReportTab({
           >
             {options.showSourceBreakdown && (
               <div className="mt-2 flex flex-col gap-2">
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">表示名</Label>
                   <Input
                     placeholder="成績資料"
@@ -211,7 +211,7 @@ export function IndividualReportTab({
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                     <Label className="text-xs whitespace-nowrap">列数</Label>
                     <Input
                       type="number"
@@ -228,7 +228,7 @@ export function IndividualReportTab({
                       }}
                     />
                   </div>
-                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                     <Label className="text-xs whitespace-nowrap">文字</Label>
                     <Input
                       type="number"
@@ -242,7 +242,7 @@ export function IndividualReportTab({
                         }
                       }}
                     />
-                    <span className="text-muted-foreground text-xs">px</span>
+                    <span className="text-xs text-muted-foreground">px</span>
                   </div>
                 </div>
               </div>
@@ -272,7 +272,7 @@ export function IndividualReportTab({
       {/* フッター */}
       <Section title="フッター">
         <div className="flex flex-col gap-2">
-          <div className="bg-muted/50 flex items-start gap-2 rounded-lg border p-2">
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-2">
             <Label className="w-6 shrink-0 pt-1 text-xs">左</Label>
             <Textarea
               value={options.footer.left}
@@ -286,7 +286,7 @@ export function IndividualReportTab({
               className="min-h-0 flex-1 resize-y text-xs"
             />
           </div>
-          <div className="bg-muted/50 flex items-start gap-2 rounded-lg border p-2">
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-2">
             <Label className="w-6 shrink-0 pt-1 text-xs">中</Label>
             <Textarea
               value={options.footer.center}
@@ -300,7 +300,7 @@ export function IndividualReportTab({
               className="min-h-0 flex-1 resize-y text-xs"
             />
           </div>
-          <div className="bg-muted/50 flex items-start gap-2 rounded-lg border p-2">
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-2">
             <Label className="w-6 shrink-0 pt-1 text-xs">右</Label>
             <Textarea
               value={options.footer.right}
@@ -328,7 +328,7 @@ export function IndividualReportTab({
           <Printer className="mr-2 h-4 w-4" />
           {printing ? "準備中..." : `印刷 (${selectedStudentIds.length}名)`}
         </Button>
-        <p className="text-muted-foreground text-center text-[10px]">
+        <p className="text-center text-[10px] text-muted-foreground">
           選択した生徒の通知書を印刷ダイアログで出力
         </p>
       </div>
@@ -345,7 +345,7 @@ function Section({
 }) {
   return (
     <div>
-      <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+      <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h4>
       {children}
@@ -404,7 +404,7 @@ function OptionCardWithChildren({
   return (
     <div
       className={`rounded-lg border p-2 ${
-        checked ? "bg-primary/5 border-primary" : "bg-background"
+        checked ? "border-primary bg-primary/5" : "bg-background"
       }`}
     >
       <div

@@ -16,13 +16,13 @@ export default function PageHeader({
   helpButton,
 }: PageHeaderProps) {
   return (
-    <div className="bg-background border-b px-6 py-4">
+    <div className="border-b bg-background px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <div>
             <h1 className="text-xl font-semibold">{title}</h1>
             {subtitle && (
-              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 {subtitle}
               </div>
             )}

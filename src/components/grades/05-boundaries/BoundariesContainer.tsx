@@ -46,7 +46,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
   return (
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">成績境界設定</h2>
-      <p className="text-muted-foreground mb-4 text-sm">
+      <p className="mb-4 text-sm text-muted-foreground">
         各パーセンテージ閾値以上でその成績ラベルが付与されます。
       </p>
 

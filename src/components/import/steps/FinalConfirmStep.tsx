@@ -327,8 +327,8 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     <div className="flex h-full flex-col items-center justify-center py-8">
       {/* ヘッダー */}
       <div className="mb-8 text-center">
-        <div className="bg-primary/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
-          <ClipboardList className="text-primary h-10 w-10" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+          <ClipboardList className="h-10 w-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">インポート内容の最終確認</h3>
         <p className="text-muted-foreground">以下の内容でインポートします</p>
@@ -377,11 +377,11 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
           <Card>
             <CardContent className="p-4">
               <div className="mb-3 flex items-center gap-2">
-                <Pencil className="text-muted-foreground h-5 w-5" />
+                <Pencil className="h-5 w-5 text-muted-foreground" />
                 <h4 className="font-medium">書き込み</h4>
               </div>
               <ul className="text-sm">
-                <li className="text-muted-foreground flex items-center gap-2">
+                <li className="flex items-center gap-2 text-muted-foreground">
                   <span className="text-blue-500">●</span>
                   新規追加: {manifest.counts.annotations}件
                 </li>
@@ -447,7 +447,7 @@ function SummaryCard({ icon, title, unit, summary }: SummaryCardProps) {
         <ul className="space-y-1 text-sm">
           {!hasAny && <li className="text-muted-foreground">データなし</li>}
           {summary.unchanged > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-green-500">●</span>
               既存と一致（変更なし）: {summary.unchanged}
               {unit}
@@ -455,13 +455,13 @@ function SummaryCard({ icon, title, unit, summary }: SummaryCardProps) {
           )}
           {summary.updated > 0 && (
             <>
-              <li className="text-muted-foreground flex items-center gap-2">
+              <li className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-purple-500">●</span>
                 読み込んだデータで更新: {summary.updated}
                 {unit}
               </li>
               {summary.idChangeToImport > 0 && (
-                <li className="text-muted-foreground ml-6 flex items-center gap-2 text-xs">
+                <li className="ml-6 flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="text-amber-500">└</span>
                   うち{summary.idChangeToImport}
                   {unit}のIDを変更
@@ -472,21 +472,21 @@ function SummaryCard({ icon, title, unit, summary }: SummaryCardProps) {
           {summary.unchanged > 0 &&
             summary.updated === 0 &&
             summary.idChangeToImport > 0 && (
-              <li className="text-muted-foreground ml-6 flex items-center gap-2 text-xs">
+              <li className="ml-6 flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="text-amber-500">└</span>
                 うち{summary.idChangeToImport}
                 {unit}のIDを変更
               </li>
             )}
           {summary.newCount > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-blue-500">●</span>
               新規追加: {summary.newCount}
               {unit}
             </li>
           )}
           {summary.skipped > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-gray-400">●</span>
               インポートしない: {summary.skipped}
               {unit}
@@ -521,30 +521,30 @@ function ScoringSummaryCard({
     <Card>
       <CardContent className="p-4">
         <div className="mb-3 flex items-center gap-2">
-          <ClipboardCheck className="text-muted-foreground h-5 w-5" />
+          <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
           <h4 className="font-medium">採点データ</h4>
         </div>
         <ul className="space-y-1 text-sm">
           {scoringSummary.unchanged > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-green-500">●</span>
               既存と一致（変更なし）: {scoringSummary.unchanged}件
             </li>
           )}
           {scoringSummary.updated > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-purple-500">●</span>
               読み込んだ採点で上書き: {scoringSummary.updated}件
             </li>
           )}
           {scoringSummary.newCount > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-blue-500">●</span>
               新規追加: {scoringSummary.newCount}件
             </li>
           )}
           {scoringSummary.skipped > 0 && (
-            <li className="text-muted-foreground flex items-center gap-2">
+            <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-gray-400">●</span>
               既存の採点を維持: {scoringSummary.skipped}件
             </li>

@@ -67,7 +67,7 @@ export function CourseworkCreateDialog({
               }
             />
           </div>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             評価項目は作成後に「評価項目」ステップで追加できます
           </p>
         </div>

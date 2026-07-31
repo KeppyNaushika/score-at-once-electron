@@ -25,7 +25,7 @@ const LoadingSpinner = React.memo(
         <div className={cn("flex items-center space-x-2", className)}>
           <Loader2 className={cn("animate-spin", sizeClasses[size])} />
           {text && (
-            <span className="text-muted-foreground text-sm">{text}</span>
+            <span className="text-sm text-muted-foreground">{text}</span>
           )}
         </div>
       )
@@ -39,7 +39,7 @@ const LoadingSpinner = React.memo(
         )}
       >
         <Loader2 className={cn("mb-2 animate-spin", sizeClasses[size])} />
-        {text && <p className="text-muted-foreground text-sm">{text}</p>}
+        {text && <p className="text-sm text-muted-foreground">{text}</p>}
       </div>
     )
   }

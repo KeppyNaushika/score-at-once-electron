@@ -63,7 +63,7 @@ export default function OutputPreview({
 
   if (pages.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         ページを選択してください
       </div>
     )
@@ -155,8 +155,8 @@ function SortablePageItem({
             style={page.rotation !== 0 ? rotationStyle : undefined}
           />
         ) : (
-          <div className="bg-muted flex h-full w-full items-center justify-center">
-            <span className="text-muted-foreground text-xs">
+          <div className="flex h-full w-full items-center justify-center bg-muted">
+            <span className="text-xs text-muted-foreground">
               {page.sourcePageNumber}
             </span>
           </div>
@@ -203,7 +203,7 @@ function SortablePageItem({
       </div>
 
       {/* 出力順番号 */}
-      <div className="bg-primary text-primary-foreground absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+      <div className="absolute top-1 right-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
         {index + 1}
       </div>
     </div>

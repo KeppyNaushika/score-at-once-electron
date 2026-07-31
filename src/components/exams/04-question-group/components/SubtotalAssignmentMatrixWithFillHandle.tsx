@@ -274,8 +274,8 @@ export function SubtotalAssignmentMatrixWithFillHandle({
   if (loading) {
     return (
       <div className="py-8 text-center">
-        <div className="border-primary mx-auto h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
-        <p className="text-muted-foreground mt-2">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <p className="mt-2 text-muted-foreground">
           小計点関連付けデータを読み込み中...
         </p>
       </div>
@@ -284,7 +284,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
 
   if (subtotalGroups.length === 0) {
     return (
-      <div className="text-muted-foreground py-8 text-center">
+      <div className="py-8 text-center text-muted-foreground">
         <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>小計点がありません</p>
         <p className="text-sm">まず小計点と項目を作成してください</p>
@@ -294,7 +294,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
 
   if (subtotalRegions.length === 0) {
     return (
-      <div className="text-muted-foreground py-8 text-center">
+      <div className="py-8 text-center text-muted-foreground">
         <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>小計点領域がありません</p>
         <p className="text-sm">採点領域から小計点領域を作成してください</p>
@@ -389,7 +389,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                       key={subtotal.id}
                       className="sticky top-10.25 z-20 bg-gray-50/50 px-2 text-center"
                     >
-                      <div className="text-muted-foreground text-xs">
+                      <div className="text-xs text-muted-foreground">
                         {subtotal.name}
                       </div>
                     </TableHead>
@@ -489,7 +489,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
       </div>
 
       {/* 計算ロジック説明 */}
-      <div className="text-muted-foreground rounded-lg bg-green-50 p-4 text-sm">
+      <div className="rounded-lg bg-green-50 p-4 text-sm text-muted-foreground">
         <h4 className="mb-2 font-medium text-green-800">計算ロジック:</h4>
         <ul className="ml-4 space-y-1">
           <li>

@@ -67,7 +67,7 @@ function SheetBackdrop({ children }: { children: React.ReactNode }) {
   return (
     <div
       aria-hidden
-      className="relative h-[150px] w-[240px] overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm"
+      className="relative h-37.5 w-60 overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm"
     >
       {children}
     </div>

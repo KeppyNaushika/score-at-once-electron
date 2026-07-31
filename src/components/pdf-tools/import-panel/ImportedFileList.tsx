@@ -23,7 +23,7 @@ export default function ImportedFileList({
 }: ImportedFileListProps) {
   if (files.length === 0) {
     return (
-      <div className="text-muted-foreground py-8 text-center text-sm">
+      <div className="py-8 text-center text-sm text-muted-foreground">
         ファイルがありません
       </div>
     )

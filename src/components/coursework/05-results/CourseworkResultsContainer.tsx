@@ -70,13 +70,13 @@ export function CourseworkResultsContainer({
   return (
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">結果</h2>
-      <p className="text-muted-foreground mb-4 text-sm">
+      <p className="mb-4 text-sm text-muted-foreground">
         各生徒の評価項目ごとの値です。文字評価は記号と換算点、加減点・コメントを表示します。
       </p>
 
-      <div className="border-border/50 overflow-x-auto rounded-xl border shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-border/50 shadow-sm">
         <Table>
-          <TableHeader className="bg-card sticky top-0 z-10">
+          <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-16 text-center">出席番号</TableHead>
               <TableHead className="w-20">学級</TableHead>
@@ -84,7 +84,7 @@ export function CourseworkResultsContainer({
               {items.map((item) => (
                 <TableHead key={item.id} className="text-center">
                   {item.name}
-                  <span className="text-muted-foreground ml-1 text-xs font-normal">
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
                     {item.inputMode === "letter"
                       ? "(評価)"
                       : `(/${item.maxScore})`}
@@ -150,7 +150,7 @@ export function CourseworkResultsContainer({
                     )
                   })}
                   {hasComments && (
-                    <TableCell className="text-muted-foreground text-xs">
+                    <TableCell className="text-xs text-muted-foreground">
                       {comments.length > 0 ? comments.join(" / ") : "-"}
                     </TableCell>
                   )}
@@ -161,7 +161,7 @@ export function CourseworkResultsContainer({
               <TableRow>
                 <TableCell
                   colSpan={items.length + (hasComments ? 4 : 3)}
-                  className="text-muted-foreground py-8 text-center text-sm"
+                  className="py-8 text-center text-sm text-muted-foreground"
                 >
                   対象生徒がいません
                 </TableCell>

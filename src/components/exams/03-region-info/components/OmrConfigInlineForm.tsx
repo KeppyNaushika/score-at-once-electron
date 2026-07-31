@@ -126,7 +126,7 @@ export function OmrConfigInlineForm({
   }, [onDelete, cropRegionId])
 
   return (
-    <div className="bg-muted/30 space-y-3 rounded-md border p-3">
+    <div className="space-y-3 rounded-md border bg-muted/30 p-3">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">OMR設定</Label>
         {existingConfig && (
@@ -134,7 +134,7 @@ export function OmrConfigInlineForm({
             variant="ghost"
             size="sm"
             onClick={handleDelete}
-            className="text-destructive hover:text-destructive h-7"
+            className="h-7 text-destructive hover:text-destructive"
           >
             <Trash2 className="mr-1 h-3 w-3" />
             削除
@@ -190,7 +190,7 @@ export function OmrConfigInlineForm({
             />
           </div>
         ))}
-        <span className="text-muted-foreground self-center text-xs">
+        <span className="self-center text-xs text-muted-foreground">
           (正答にチェック)
         </span>
       </div>

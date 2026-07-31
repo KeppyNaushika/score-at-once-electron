@@ -53,7 +53,7 @@ export default function GradeWorkflowLayout({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="bg-background flex items-center justify-between border-b px-4 py-3">
+      <header className="flex items-center justify-between border-b bg-background px-4 py-3">
         <Breadcrumb>
           <BreadcrumbList>
             {workflowSteps.map((step, index) => {
@@ -82,7 +82,7 @@ export default function GradeWorkflowLayout({
 
         <div className="flex items-center space-x-2">
           {examName && (
-            <span className="text-muted-foreground text-sm">{examName}</span>
+            <span className="text-sm text-muted-foreground">{examName}</span>
           )}
           <Button variant="outline" size="sm" asChild>
             <Link href={`/grades/${gradeId}`}>詳細</Link>

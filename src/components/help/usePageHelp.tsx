@@ -108,7 +108,7 @@ export function usePageHelp() {
             使い方
           </Button>
         </DialogTrigger>
-        <DialogContent className="flex h-[92vh] w-[95vw] max-w-[1400px] flex-col gap-0 overflow-hidden border-gray-200 bg-white p-0 sm:max-w-[1400px]">
+        <DialogContent className="flex h-[92vh] w-[95vw] max-w-350 flex-col gap-0 overflow-hidden border-gray-200 bg-white p-0 sm:max-w-350">
           <DialogHeader className="shrink-0 border-b border-gray-100 px-6 py-4 text-left lg:px-10">
             <DialogTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
               <BookOpen className="h-4 w-4 text-blue-600" />

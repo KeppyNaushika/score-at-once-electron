@@ -14,11 +14,11 @@ export function RosterDragOverlay({
   if (!activeRow) return null
 
   return (
-    <div className="bg-background rounded-md border p-2 shadow-lg">
+    <div className="rounded-md border bg-background p-2 shadow-lg">
       <div className="font-medium">
         {activeRow.lastName} {activeRow.firstName}
       </div>
-      <div className="text-muted-foreground text-sm">
+      <div className="text-sm text-muted-foreground">
         {activeRow.classroomInfo.className ?? "-"}
         {selectedIds.size > 1 && ` (+${selectedIds.size - 1}名)`}
       </div>

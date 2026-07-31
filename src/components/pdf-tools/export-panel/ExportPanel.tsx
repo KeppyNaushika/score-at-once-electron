@@ -68,7 +68,7 @@ export default function ExportPanel({
     <div className="flex h-full min-w-0 flex-col">
       <div className="border-b p-4">
         <h2 className="text-lg font-semibold">エクスポート</h2>
-        <p className="text-muted-foreground text-sm">出力設定とプレビュー</p>
+        <p className="text-sm text-muted-foreground">出力設定とプレビュー</p>
       </div>
 
       <div className="border-b p-4">
@@ -92,7 +92,7 @@ export default function ExportPanel({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         <h3 className="mb-2 text-sm font-medium">出力プレビュー</h3>
-        <ScrollArea className="bg-muted/30 min-h-0 flex-1 rounded-lg border p-2">
+        <ScrollArea className="min-h-0 flex-1 rounded-lg border bg-muted/30 p-2">
           <OutputPreview
             pages={outputPages}
             onPagesChange={onOutputPagesChange}

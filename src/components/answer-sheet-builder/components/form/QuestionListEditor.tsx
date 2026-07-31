@@ -96,8 +96,8 @@ export function QuestionListEditor({
   return (
     <div className="space-y-3">
       {/* 既定の番号 */}
-      <div className="bg-muted/30 rounded-lg border p-3">
-        <h4 className="text-muted-foreground mb-2 text-xs font-semibold">
+      <div className="rounded-lg border bg-muted/30 p-3">
+        <h4 className="mb-2 text-xs font-semibold text-muted-foreground">
           既定の番号
         </h4>
         <div className="flex flex-wrap items-center gap-3">
@@ -159,7 +159,7 @@ export function QuestionListEditor({
       </div>
 
       <div className="flex items-center justify-between">
-        <h3 className="text-muted-foreground text-sm font-semibold">
+        <h3 className="text-sm font-semibold text-muted-foreground">
           問題構成
         </h3>
         <Button
@@ -205,7 +205,7 @@ export function QuestionListEditor({
       </div>
 
       {majorQuestions.length === 0 && (
-        <div className="text-muted-foreground py-8 text-center text-sm">
+        <div className="py-8 text-center text-sm text-muted-foreground">
           大問がありません。「大問追加」ボタンで追加してください。
         </div>
       )}

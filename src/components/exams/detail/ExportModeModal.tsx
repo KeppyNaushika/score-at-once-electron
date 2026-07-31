@@ -82,7 +82,7 @@ export default function ExportModeModal({
               className="flex cursor-pointer flex-col gap-1"
             >
               <span className="font-medium">{mode.label}</span>
-              <span className="text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground">
                 {mode.description}
               </span>
             </Label>

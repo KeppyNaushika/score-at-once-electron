@@ -140,7 +140,7 @@ export default function StudentModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="studentId"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               学籍番号
             </Label>
@@ -160,7 +160,7 @@ export default function StudentModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="lastName"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               姓
             </Label>
@@ -179,7 +179,7 @@ export default function StudentModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="firstName"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               名
             </Label>
@@ -198,7 +198,7 @@ export default function StudentModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="lastNameKana"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               姓カナ
             </Label>
@@ -219,7 +219,7 @@ export default function StudentModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="firstNameKana"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               名カナ
             </Label>
@@ -240,7 +240,7 @@ export default function StudentModal({
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="enrollmentYear"
-              className="text-muted-foreground text-right font-normal"
+              className="text-right font-normal text-muted-foreground"
             >
               入学年度
             </Label>
@@ -260,7 +260,7 @@ export default function StudentModal({
                 min="2000"
                 max="2050"
               />
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-muted-foreground">
                 学級所属は別途「所属追加」ボタンから設定してください
               </p>
             </div>

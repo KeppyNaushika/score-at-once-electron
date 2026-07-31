@@ -147,10 +147,10 @@ export function StudentArchiveExportDialog({
         <div className="py-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : relatedClassrooms.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               選択した生徒に紐づく学級はありません。
               <br />
               生徒データのみがエクスポートされます。
@@ -165,9 +165,9 @@ export function StudentArchiveExportDialog({
                 </span>
               </p>
 
-              <div className="border-border/50 max-h-60 overflow-y-auto rounded-lg border">
+              <div className="max-h-60 overflow-y-auto rounded-lg border border-border/50">
                 {/* 全選択 */}
-                <label className="hover:bg-muted/50 flex items-center gap-3 border-b px-4 py-2.5">
+                <label className="flex items-center gap-3 border-b px-4 py-2.5 hover:bg-muted/50">
                   <Checkbox
                     checked={
                       selectedClassroomIds.size === relatedClassrooms.length
@@ -184,7 +184,7 @@ export function StudentArchiveExportDialog({
                 {relatedClassrooms.map((classroom) => (
                   <label
                     key={classroom.id}
-                    className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50"
                   >
                     <Checkbox
                       checked={selectedClassroomIds.has(classroom.id)}

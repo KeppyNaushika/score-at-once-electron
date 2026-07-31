@@ -72,7 +72,7 @@ export function MasterAnswerGallery({
                   key={answer.id}
                   className="group relative flex h-48 w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border"
                 >
-                  <p className="text-muted-foreground text-xs">画像準備中...</p>
+                  <p className="text-xs text-muted-foreground">画像準備中...</p>
                 </div>
               )
             })}

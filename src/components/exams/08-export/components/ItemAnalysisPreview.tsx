@@ -50,9 +50,9 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
 
   return (
     <div className="space-y-2">
-      <div className="text-muted-foreground px-1 text-[11px]">
+      <div className="px-1 text-[11px] text-muted-foreground">
         クロンバックα係数:{" "}
-        <span className="text-foreground font-medium">
+        <span className="font-medium text-foreground">
           {cronbachAlpha !== null ? cronbachAlpha.toFixed(3) : "判定不可"}
         </span>
         <span className="ml-2">
@@ -61,7 +61,7 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
         </span>
       </div>
       <table className="w-full border-collapse text-[10px]">
-        <thead className="bg-muted sticky top-0">
+        <thead className="sticky top-0 bg-muted">
           <tr>
             <th className="border px-1 py-0.5 text-left">設問</th>
             <th className="border px-1 py-0.5 text-right">配点</th>

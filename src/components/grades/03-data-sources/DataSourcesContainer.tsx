@@ -210,7 +210,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-lg font-semibold">データソース</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           評価項目を作成し、各項目にデータソースを追加してください。
         </p>
       </div>
@@ -287,14 +287,14 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             </Select>
             {batchMethod !== "null" && batchMethod !== "zero" && (
               <>
-                <span className="text-muted-foreground text-xs">×</span>
+                <span className="text-xs text-muted-foreground">×</span>
                 <Input
                   value={batchRatio}
                   onChange={(e) => setBatchRatio(e.target.value)}
                   className="h-8 w-20 text-xs"
                   type="text"
                 />
-                <span className="text-muted-foreground text-xs">+</span>
+                <span className="text-xs text-muted-foreground">+</span>
                 <Input
                   value={batchOffset}
                   onChange={(e) => setBatchOffset(e.target.value)}
@@ -419,7 +419,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="text-destructive h-7 w-7"
+              className="h-7 w-7 text-destructive"
               onClick={async () => {
                 const result = await deleteGradeItem(gradeItem.id)
                 // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
@@ -469,7 +469,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       ))}
 
       {exam.gradeItems.length === 0 && (
-        <div className="text-muted-foreground py-8 text-center text-sm">
+        <div className="py-8 text-center text-sm text-muted-foreground">
           評価項目がありません。上のフォームから追加してください。
         </div>
       )}

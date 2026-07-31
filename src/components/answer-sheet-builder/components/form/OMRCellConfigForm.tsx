@@ -150,8 +150,8 @@ export function OMRCellConfigForm({
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Scan className="text-muted-foreground h-3.5 w-3.5" />
-          <Label className="text-muted-foreground text-xs">OMR自動認識</Label>
+          <Scan className="h-3.5 w-3.5 text-muted-foreground" />
+          <Label className="text-xs text-muted-foreground">OMR自動認識</Label>
         </div>
         <Switch
           className="scale-75"
@@ -161,7 +161,7 @@ export function OMRCellConfigForm({
       </div>
 
       {enabled && config && (
-        <div className="border-muted ml-2 space-y-1.5 border-l-2 pl-3">
+        <div className="ml-2 space-y-1.5 border-l-2 border-muted pl-3">
           {/* 選択式設定 */}
           {choiceConfig && (
             <ChoiceConfigFields config={choiceConfig} onChange={onChange} />
@@ -216,7 +216,7 @@ function ChoiceConfigFields({
     <>
       {/* ラベルプリセット */}
       <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-12 text-xs">ラベル</Label>
+        <Label className="min-w-12 text-xs text-muted-foreground">ラベル</Label>
         <Select
           value={currentPresetValue}
           onValueChange={(preset) => {
@@ -261,7 +261,7 @@ function ChoiceConfigFields({
       {/* カスタムラベル入力 */}
       {isCustom && (
         <div className="flex items-center gap-1.5">
-          <Label className="text-muted-foreground min-w-12 text-xs">入力</Label>
+          <Label className="min-w-12 text-xs text-muted-foreground">入力</Label>
           <Input
             className="h-7 w-44 text-xs"
             value={customInput}
@@ -291,12 +291,12 @@ function ChoiceConfigFields({
       {/* 選択肢数（プリセット時のみ調整可能） */}
       {!isCustom && (
         <div className="flex items-center gap-1.5">
-          <Label className="text-muted-foreground min-w-12 text-xs">
+          <Label className="min-w-12 text-xs text-muted-foreground">
             選択肢数
           </Label>
           <input
             type="number"
-            className="border-input h-7 w-14 [appearance:textfield] rounded border px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="h-7 w-14 [appearance:textfield] rounded border border-input px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             value={config.numChoices}
             min={2}
             max={10}
@@ -321,7 +321,7 @@ function ChoiceConfigFields({
 
       {/* 配置方向 */}
       <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-12 text-xs">配置</Label>
+        <Label className="min-w-12 text-xs text-muted-foreground">配置</Label>
         <Select
           value={config.layout}
           onValueChange={(v: "horizontal" | "vertical") =>
@@ -340,7 +340,7 @@ function ChoiceConfigFields({
 
       {/* 正解選択 */}
       <div className="flex items-start gap-1.5">
-        <Label className="text-muted-foreground mt-1 min-w-12 text-xs">
+        <Label className="mt-1 min-w-12 text-xs text-muted-foreground">
           正解
         </Label>
         <div className="flex flex-wrap gap-1">

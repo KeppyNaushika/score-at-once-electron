@@ -151,19 +151,19 @@ export const RegionTableRow = ({
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, globalIndex)}
         onDragEnd={onDragEnd}
-        className={`hover:bg-accent/50 cursor-pointer transition-colors ${
-          isSelected ? "bg-primary/10 border-primary" : ""
+        className={`cursor-pointer transition-colors hover:bg-accent/50 ${
+          isSelected ? "border-primary bg-primary/10" : ""
         } ${isDragged ? "opacity-50" : ""} ${
           isDraggedOver ? "border-t-4 border-t-blue-500" : ""
         }`}
         onClick={() => onSelect(isSelected ? null : globalIndex)}
       >
-        <td className="border-border border px-2 py-1">
+        <td className="border border-border px-2 py-1">
           <div className="flex items-center justify-center">
-            <GripVertical className="text-muted-foreground h-4 w-4 cursor-grab" />
+            <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
           </div>
         </td>
-        <td className="border-border border px-2 py-1">
+        <td className="border border-border px-2 py-1">
           <div className="flex items-center space-x-2">
             <IconComponent
               className={`h-4 w-4 shrink-0 ${
@@ -173,12 +173,12 @@ export const RegionTableRow = ({
             <span className="text-sm font-medium">{globalIndex + 1}</span>
           </div>
         </td>
-        <td className="border-border border px-2 py-1 text-center">
-          <div className="text-muted-foreground text-sm">
+        <td className="border border-border px-2 py-1 text-center">
+          <div className="text-sm text-muted-foreground">
             {region.examPage ? region.examPage.pageNumber : "?"}
           </div>
         </td>
-        <td className="border-border border px-2 py-1">
+        <td className="border border-border px-2 py-1">
           <Select
             value={region.type}
             onValueChange={(value) =>
@@ -198,7 +198,7 @@ export const RegionTableRow = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="border-border border px-2 py-1">
+        <td className="border border-border px-2 py-1">
           <Input
             data-row={globalIndex}
             data-field="label"
@@ -215,7 +215,7 @@ export const RegionTableRow = ({
             className="h-8 w-full min-w-20"
           />
         </td>
-        <td className="border-border border px-2 py-1">
+        <td className="border border-border px-2 py-1">
           {region.type === "QUESTION_ANSWER" ? (
             <Input
               data-row={globalIndex}
@@ -234,11 +234,11 @@ export const RegionTableRow = ({
               className="h-8 w-full min-w-20"
             />
           ) : (
-            <span className="text-muted-foreground text-sm">-</span>
+            <span className="text-sm text-muted-foreground">-</span>
           )}
         </td>
         {/* OMR */}
-        <td className="border-border border px-2 py-1 text-center">
+        <td className="border border-border px-2 py-1 text-center">
           {isQuestionAnswer && (
             <Button
               variant="ghost"
@@ -258,7 +258,7 @@ export const RegionTableRow = ({
             </Button>
           )}
         </td>
-        <td className="border-border border px-2 py-1 text-center">
+        <td className="border border-border px-2 py-1 text-center">
           <Button
             variant="ghost"
             size="sm"
@@ -275,7 +275,7 @@ export const RegionTableRow = ({
       {/* OMR設定アコーディオン展開行 */}
       {omrExpanded && isQuestionAnswer && (
         <tr>
-          <td colSpan={8} className="border-border border px-4 py-2">
+          <td colSpan={8} className="border border-border px-4 py-2">
             <OmrConfigInlineForm
               cropRegionId={region.id}
               existingConfig={omrConfig}

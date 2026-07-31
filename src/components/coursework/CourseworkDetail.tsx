@@ -146,7 +146,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{coursework.name}</h1>
           {coursework.description && (
-            <p className="text-muted-foreground mt-2">
+            <p className="mt-2 text-muted-foreground">
               {coursework.description}
             </p>
           )}
@@ -225,19 +225,19 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
             <Link
               key={step.id}
               href={step.path}
-              className="hover:bg-accent block rounded-lg border p-3 transition-all"
+              className="block rounded-lg border p-3 transition-all hover:bg-accent"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <step.icon className="text-muted-foreground h-4 w-4" />
+                  <step.icon className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <h4 className="text-sm font-medium">{step.title}</h4>
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-xs text-muted-foreground">
                       {step.description}
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="text-muted-foreground h-4 w-4" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
             </Link>
           ))}

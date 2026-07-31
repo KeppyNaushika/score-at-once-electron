@@ -245,7 +245,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
       <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
         <div>
           <h2 className="text-lg font-semibold">出力: {result.gradeName}</h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {result.classNames.join("、") || "学級未登録"} /{" "}
             {result.students.length}名
           </p>
@@ -286,7 +286,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
               >
                 <div className="mb-2 shrink-0">
                   <div className="relative">
-                    <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
+                    <Search className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="名前または学籍番号で検索"
                       value={searchTerm}
@@ -339,7 +339,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
 
                 {/* 生徒リスト（このdivだけスクロール） */}
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="text-muted-foreground mb-1 flex shrink-0 items-center justify-between text-xs">
+                  <div className="mb-1 flex shrink-0 items-center justify-between text-xs text-muted-foreground">
                     <span>生徒一覧</span>
                     <span>
                       {selectedStudents.size}人選択中 /{" "}
@@ -350,7 +350,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                     {filteredStudents.map((student) => (
                       <div
                         key={student.studentId}
-                        className="hover:bg-muted flex items-center space-x-2 rounded p-1"
+                        className="flex items-center space-x-2 rounded p-1 hover:bg-muted"
                       >
                         <Checkbox
                           id={`student-${student.studentId}`}
@@ -370,12 +370,12 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                             </span>
                             <div className="flex items-center gap-1">
                               {student.attendanceNumber != null && (
-                                <span className="text-muted-foreground bg-muted rounded px-1 text-xs">
+                                <span className="rounded bg-muted px-1 text-xs text-muted-foreground">
                                   {student.attendanceNumber}
                                 </span>
                               )}
                               {student.className && (
-                                <span className="text-muted-foreground text-xs">
+                                <span className="text-xs text-muted-foreground">
                                   {student.className}
                                 </span>
                               )}
@@ -396,7 +396,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                 {exportTab === "excel" ? (
                   selectedStudentIds.length === 0 ? (
                     <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-gray-100">
-                      <p className="text-muted-foreground text-sm">
+                      <p className="text-sm text-muted-foreground">
                         生徒を選択してください
                       </p>
                     </div>
@@ -410,7 +410,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                   )
                 ) : selectedStudentIds.length === 0 ? (
                   <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-gray-100">
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-sm text-muted-foreground">
                       生徒を選択してください
                     </p>
                   </div>

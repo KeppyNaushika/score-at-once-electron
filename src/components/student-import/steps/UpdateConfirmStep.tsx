@@ -148,7 +148,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
       <div className="flex flex-col items-center justify-center gap-6 py-12">
         <div className="text-center">
           <h3 className="text-lg font-semibold">更新するデータはありません</h3>
-          <p className="text-muted-foreground mt-2 text-sm">
+          <p className="mt-2 text-sm text-muted-foreground">
             紐づけたデータに差異はありませんでした
           </p>
         </div>
@@ -164,7 +164,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">情報の更新確認</h3>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           紐づけたデータに違いがあります。どちらの情報を使うか選んでください
         </p>
       </div>
@@ -199,7 +199,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
         {updateableItems.map((item) => (
           <div
             key={item.key}
-            className="border-border/50 rounded-lg border p-4"
+            className="rounded-lg border border-border/50 p-4"
           >
             <h4 className="mb-3 font-medium">{item.displayLabel}</h4>
             <div className="space-y-3">
@@ -211,7 +211,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
                 return (
                   <div
                     key={change.field}
-                    className="bg-muted/30 rounded-md p-3"
+                    className="rounded-md bg-muted/30 p-3"
                   >
                     <div className="mb-2 text-sm font-medium">
                       {change.fieldLabel}

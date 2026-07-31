@@ -72,14 +72,14 @@ export function GradeDistributionChart({
                     </span>
                     <div className="flex-1">
                       <div
-                        className="bg-primary h-6 rounded"
+                        className="h-6 rounded bg-primary"
                         style={{
                           width: `${(count / maxCount) * 100}%`,
                           minWidth: "4px",
                         }}
                       />
                     </div>
-                    <span className="text-muted-foreground w-20 text-sm">
+                    <span className="w-20 text-sm text-muted-foreground">
                       {count}名 ({((count / total) * 100).toFixed(0)}%)
                     </span>
                   </div>

@@ -130,7 +130,7 @@ export function NoMatchItemRow({
           {hasSubtotalPreview && (
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-0.5 text-xs"
+              className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
               onClick={() => setShowPreview((v) => !v)}
             >
               {showPreview ? (
@@ -142,7 +142,7 @@ export function NoMatchItemRow({
             </button>
           )}
         </div>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-xs text-muted-foreground">
           このPCに同じデータなし
         </span>
       </div>
@@ -186,7 +186,7 @@ export function NoMatchItemRow({
         {/* 既存グループ選択（手動紐づけ時） */}
         {decision === "same_person" && canManualLink && (
           <div className="mt-1 ml-4 space-y-2">
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               紐づけ先のグループを選択してください
             </p>
             <Select
@@ -217,7 +217,7 @@ export function NoMatchItemRow({
             {/* ID選択 */}
             {selectedExistingId && (
               <>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   どちらに合わせる？
                 </p>
                 <Select value={idChoice} onValueChange={handleIdChoiceChange}>

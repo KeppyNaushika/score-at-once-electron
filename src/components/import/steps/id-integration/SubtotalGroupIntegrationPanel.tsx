@@ -59,7 +59,7 @@ export function SubtotalGroupIntegrationPanel({
           <CardTitle className="text-base">
             判断が必要な小計グループが{needsDecisionCount}グループあります
           </CardTitle>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             どうやって既存の小計グループと紐づけますか？
           </p>
         </CardHeader>

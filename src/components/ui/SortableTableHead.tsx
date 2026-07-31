@@ -47,10 +47,10 @@ export function SortableTableHead<K extends string = string>({
     <th
       data-slot="table-head"
       className={cn(
-        "text-foreground h-12 px-4 text-left align-middle font-medium whitespace-nowrap",
+        "h-12 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground",
         "bg-card first:rounded-tl-lg last:rounded-tr-lg",
-        "hover:bg-muted/60 cursor-pointer transition-colors select-none",
-        "[&:has([role=checkbox])]:pr-0 *:[[role=checkbox]]:translate-y-[2px]",
+        "cursor-pointer transition-colors select-none hover:bg-muted/60",
+        "has-[[role=checkbox]]:pr-0 *:[[role=checkbox]]:translate-y-0.5",
         className
       )}
       onClick={handleClick}
@@ -82,15 +82,15 @@ interface SortIndicatorProps {
 function SortIndicator({ direction, isActive }: SortIndicatorProps) {
   if (!isActive || direction === null) {
     return (
-      <ChevronsUpDown className="text-muted-foreground/50 h-4 w-4 transition-opacity" />
+      <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50 transition-opacity" />
     )
   }
 
   if (direction === "asc") {
-    return <ChevronUp className="text-foreground h-4 w-4" />
+    return <ChevronUp className="h-4 w-4 text-foreground" />
   }
 
-  return <ChevronDown className="text-foreground h-4 w-4" />
+  return <ChevronDown className="h-4 w-4 text-foreground" />
 }
 
 export { SortableTableHead as default }

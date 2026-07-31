@@ -33,7 +33,7 @@ export function GlobalSettingsForm({
 }: GlobalSettingsFormProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-muted-foreground text-sm font-semibold">用紙設定</h3>
+      <h3 className="text-sm font-semibold text-muted-foreground">用紙設定</h3>
 
       {/* 用紙サイズ・向き・大問番号・組み方向（2×2で等幅に統一） */}
       <div className="grid grid-cols-2 gap-3">
@@ -108,7 +108,7 @@ export function GlobalSettingsForm({
 
       {/* 縦書き時の補足：段組みは上下方向になる */}
       {settings.verticalLayout && settings.multiColumn.enabled && (
-        <p className="text-muted-foreground text-[10px]">
+        <p className="text-[10px] text-muted-foreground">
           縦書きでは段組みが上下方向（上下{settings.multiColumn.columnCount}
           段）になります。
         </p>

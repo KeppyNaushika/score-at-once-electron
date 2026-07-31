@@ -96,7 +96,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
         <span className="font-medium tabular-nums">
           {result.totalScore} / {result.maxScore}
         </span>
-        <span className="text-muted-foreground text-sm tabular-nums">
+        <span className="text-sm text-muted-foreground tabular-nums">
           ({percentage}%)
         </span>
       </div>
@@ -104,19 +104,19 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
   }
 
   return (
-    <Card className="border-border/50 mb-8 shadow-sm">
+    <Card className="mb-8 border-border/50 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ClipboardList className="h-5 w-5" />
           試験成績一覧
-          <span className="text-muted-foreground ml-1 text-lg font-normal tabular-nums">
+          <span className="ml-1 text-lg font-normal text-muted-foreground tabular-nums">
             ({results.length}件)
           </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
         {sortedData.length > 0 ? (
-          <div className="border-border/50 overflow-hidden rounded-xl border">
+          <div className="overflow-hidden rounded-xl border border-border/50">
             <Table>
               <TableHeader className="bg-card">
                 <TableRow className="hover:bg-transparent">
@@ -194,7 +194,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
             </Table>
           </div>
         ) : (
-          <div className="text-muted-foreground py-12 text-center">
+          <div className="py-12 text-center text-muted-foreground">
             <ClipboardList className="mx-auto mb-3 h-12 w-12 opacity-30" />
             <p>試験の記録がありません</p>
           </div>

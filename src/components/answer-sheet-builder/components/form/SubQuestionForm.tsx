@@ -127,14 +127,14 @@ export function SubQuestionForm({
     (!Number.isInteger(sub.goUp) || sub.goUp! < 1 || sub.goUp! > maxGoUp)
 
   return (
-    <div className="border-primary/30 space-y-1 border-l-2 pl-4">
+    <div className="space-y-1 border-l-2 border-primary/30 pl-4">
       {/* 小問ヘッダー */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex h-7 items-center divide-x overflow-hidden rounded-md border text-xs">
           <div className="flex items-center gap-0.5 px-1.5">
             <span className="text-muted-foreground">番号</span>
             <input
-              className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
+              className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
               value={sub.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
               aria-label="小問番号"
@@ -147,7 +147,7 @@ export function SubQuestionForm({
               <input
                 type="number"
                 aria-label="配点"
-                className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={sub.points}
                 min={0}
                 max={100}
@@ -165,7 +165,7 @@ export function SubQuestionForm({
               <input
                 type="number"
                 aria-label={heightLabel}
-                className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={sub.heightMultiplier}
                 min={1}
                 max={30}
@@ -185,7 +185,7 @@ export function SubQuestionForm({
               <span className="text-muted-foreground">{widthLabel}</span>
               <input
                 aria-label={widthLabel}
-                className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
+                className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
                 value={sub.layoutWidth ?? ""}
                 onChange={(e) => {
                   const value = e.target.value.trim()
@@ -209,7 +209,7 @@ export function SubQuestionForm({
           <Button
             variant="outline"
             size="icon"
-            className={`h-7 w-7 text-xs ${sub.nextPlacement === "break" ? "bg-primary/10 text-primary border-primary/50 hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`h-7 w-7 text-xs ${sub.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => {
               if (sub.nextPlacement === "break") {
                 onUpdate({ nextPlacement: undefined })
@@ -228,7 +228,7 @@ export function SubQuestionForm({
             <Button
               variant="outline"
               size="icon"
-              className={`h-7 w-7 text-xs ${goUpActive && sub.goUp! > 0 ? "bg-primary/10 text-primary border-primary/50 hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
+              className={`h-7 w-7 text-xs ${goUpActive && sub.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
               onClick={() => {
                 if (goUpActive) {
                   onUpdate({ goUp: undefined })
@@ -249,7 +249,7 @@ export function SubQuestionForm({
               <input
                 type="number"
                 aria-label="戻り行数"
-                className={`border-primary/50 h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
+                className={`h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 border-primary/50 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
                 value={sub.goUp || ""}
                 min={1}
                 max={maxGoUp}
@@ -289,7 +289,7 @@ export function SubQuestionForm({
         {/* 枝問配点スイッチ（枝問がある場合のみ） */}
         {hasBranches && (
           <div className="flex items-center gap-1">
-            <span className="text-muted-foreground text-xs whitespace-nowrap">
+            <span className="text-xs whitespace-nowrap text-muted-foreground">
               枝問配点
             </span>
             <Switch
@@ -306,7 +306,7 @@ export function SubQuestionForm({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-7 w-7 rounded-r-none"
+              className="h-7 w-7 rounded-r-none text-muted-foreground"
               onClick={onMoveUp}
               disabled={!onMoveUp}
               title="上へ移動"
@@ -316,7 +316,7 @@ export function SubQuestionForm({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-7 w-7 rounded-l-none border-l"
+              className="h-7 w-7 rounded-l-none border-l text-muted-foreground"
               onClick={onMoveDown}
               disabled={!onMoveDown}
               title="下へ移動"
@@ -343,7 +343,7 @@ export function SubQuestionForm({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-primary h-7 w-7"
+            className="h-7 w-7 text-muted-foreground hover:text-primary"
             onClick={onAddBranch}
             title="枝問を追加"
           >
@@ -352,7 +352,7 @@ export function SubQuestionForm({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-destructive h-7 w-7"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
             onClick={onDelete}
             title="小問を削除"
           >

@@ -26,11 +26,11 @@ function CategoryOverviewCard({
   const total = autoMatched + secondaryMatched + noMatch
 
   return (
-    <div className="border-border/50 rounded-lg border p-4">
+    <div className="rounded-lg border border-border/50 p-4">
       <div className="mb-3 flex items-center gap-2">
-        <Icon className="text-muted-foreground h-5 w-5" />
+        <Icon className="h-5 w-5 text-muted-foreground" />
         <h4 className="font-medium">{title}</h4>
-        <span className="text-muted-foreground text-sm">（{total}件）</span>
+        <span className="text-sm text-muted-foreground">（{total}件）</span>
       </div>
 
       <div className="space-y-2 text-sm">
@@ -62,7 +62,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
 
   if (!state.fileOverviewData || !state.manifest) {
     return (
-      <div className="text-muted-foreground py-12 text-center">
+      <div className="py-12 text-center text-muted-foreground">
         データを読み込んでいます...
       </div>
     )
@@ -75,7 +75,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">ファイルの内容</h3>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           生徒 {counts.students}名、学級 {counts.classrooms}件、所属{" "}
           {counts.memberships}件
         </p>

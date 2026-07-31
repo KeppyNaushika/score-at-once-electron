@@ -220,7 +220,7 @@ export default function ClassroomManagementTable() {
           </Button>
           {selectedClassroomIds.size > 0 && (
             <>
-              <span className="text-muted-foreground ml-2 text-sm tabular-nums">
+              <span className="ml-2 text-sm text-muted-foreground tabular-nums">
                 {selectedClassroomIds.size}学級選択中
               </span>
               <Button
@@ -237,7 +237,7 @@ export default function ClassroomManagementTable() {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="学級名で検索"
               value={searchTerm}
@@ -245,7 +245,7 @@ export default function ClassroomManagementTable() {
               className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
-          <span className="text-muted-foreground text-sm tabular-nums">
+          <span className="text-sm text-muted-foreground tabular-nums">
             {sortedData.length}学級
           </span>
         </div>
@@ -253,9 +253,9 @@ export default function ClassroomManagementTable() {
 
       {/* Classes Table */}
       <div className="min-h-0 flex-1 p-4">
-        <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+        <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
           <Table wrapperClassName="h-full">
-            <TableHeader className="bg-card sticky top-0 z-10">
+            <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-10">
                   <Checkbox
@@ -343,7 +343,7 @@ export default function ClassroomManagementTable() {
                           {classroomItem.classroomCode}
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
+                        <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">
@@ -357,7 +357,7 @@ export default function ClassroomManagementTable() {
                           {classroomItem.description}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
+                        <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">
@@ -368,7 +368,7 @@ export default function ClassroomManagementTable() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                          className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleEditClassroom(classroomItem)
@@ -379,7 +379,7 @@ export default function ClassroomManagementTable() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
+                          className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDeleteClassroom(classroomItem.id)
@@ -396,7 +396,7 @@ export default function ClassroomManagementTable() {
                 <TableRow>
                   <TableCell
                     colSpan={7}
-                    className="text-muted-foreground h-32 text-center"
+                    className="h-32 text-center text-muted-foreground"
                   >
                     該当する学級が見つかりません。
                   </TableCell>

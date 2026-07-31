@@ -307,7 +307,7 @@ export function CourseworkListContainer() {
           </Button>
           {selectedIds.size > 0 && (
             <>
-              <span className="text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground">
                 {selectedIds.size}件選択中
               </span>
               <BulkTagAssignButton
@@ -351,7 +351,7 @@ export function CourseworkListContainer() {
       <div className="min-h-0 flex-1 p-4">
         {courseworks.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="text-muted-foreground mb-2">
+            <p className="mb-2 text-muted-foreground">
               試験外成績資料がありません
             </p>
             <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
@@ -360,9 +360,9 @@ export function CourseworkListContainer() {
             </Button>
           </div>
         ) : (
-          <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
             <Table wrapperClassName="h-full">
-              <TableHeader className="bg-card sticky top-0 z-10">
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-10">
                     <Checkbox
@@ -384,7 +384,7 @@ export function CourseworkListContainer() {
                   <TableRow>
                     <TableCell
                       colSpan={5}
-                      className="text-muted-foreground py-8 text-center"
+                      className="py-8 text-center text-muted-foreground"
                     >
                       条件に一致する資料がありません
                     </TableCell>
@@ -404,7 +404,7 @@ export function CourseworkListContainer() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{coursework.name}</div>
-                        <div className="text-muted-foreground text-sm">
+                        <div className="text-sm text-muted-foreground">
                           {coursework.description || "説明なし"}
                           {" / "}
                           生徒: {coursework._count.students}名 / 評価項目:{" "}
@@ -426,7 +426,7 @@ export function CourseworkListContainer() {
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-muted-foreground text-center text-sm">
+                    <TableCell className="text-center text-sm text-muted-foreground">
                       {coursework.date
                         ? new Date(coursework.date).toLocaleDateString("ja-JP")
                         : "-"}

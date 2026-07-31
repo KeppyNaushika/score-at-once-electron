@@ -514,15 +514,15 @@ export function GradeItemBreakdownPopover({
           {pctText}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[40rem] p-3" align="start">
+      <PopoverContent className="w-160 p-3" align="start">
         <p className="mb-1 text-xs font-semibold">{itemResult.gradeItemName}</p>
-        <p className="text-muted-foreground mb-2 text-[10px]">
+        <p className="mb-2 text-[10px] text-muted-foreground">
           換算 = (素点 ÷ 満点) × 換算満点 ※欠点は除外／平均・標準偏差 =
           この試験を受けた生徒の実測分布（素点の位置づけ用）
         </p>
         <table className="w-full table-fixed text-xs">
           <thead>
-            <tr className="text-muted-foreground border-b">
+            <tr className="border-b text-muted-foreground">
               <th className="pb-1 text-center font-medium">項目</th>
               <th className={PARENT_TH_NUM}>素点</th>
               <th className={PARENT_TH_NUM}>満点</th>
@@ -553,7 +553,7 @@ export function GradeItemBreakdownPopover({
                             <span className="ml-0.5">*</span>
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[32rem] p-0" align="start">
+                        <PopoverContent className="w-lg p-0" align="start">
                           <EstimationExplain sourceScore={sourceScore} />
                         </PopoverContent>
                       </Popover>
@@ -565,10 +565,10 @@ export function GradeItemBreakdownPopover({
                   <NumCell className="py-1">{maxScoreColumn[index]}</NumCell>
                   <NumCell className="py-1">{weightedColumn[index]}</NumCell>
                   <NumCell className="py-1">{weightMaxColumn[index]}</NumCell>
-                  <NumCell className="text-muted-foreground py-1">
+                  <NumCell className="py-1 text-muted-foreground">
                     {distMeanColumn[index]}
                   </NumCell>
-                  <NumCell className="text-muted-foreground py-1">
+                  <NumCell className="py-1 text-muted-foreground">
                     {distSdColumn[index]}
                   </NumCell>
                 </tr>
@@ -586,8 +586,8 @@ export function GradeItemBreakdownPopover({
               <NumCell className="pt-1">
                 {weightMaxColumn[weightMaxColumn.length - 2]}
               </NumCell>
-              <NumCell className="text-muted-foreground pt-1">—</NumCell>
-              <NumCell className="text-muted-foreground pt-1">—</NumCell>
+              <NumCell className="pt-1 text-muted-foreground">—</NumCell>
+              <NumCell className="pt-1 text-muted-foreground">—</NumCell>
             </tr>
             <tr className="font-medium">
               <td className="pt-1" colSpan={4}>
@@ -596,8 +596,8 @@ export function GradeItemBreakdownPopover({
               <NumCell className="pt-1">
                 {weightMaxColumn[weightMaxColumn.length - 1]}
               </NumCell>
-              <NumCell className="text-muted-foreground pt-1">—</NumCell>
-              <NumCell className="text-muted-foreground pt-1">—</NumCell>
+              <NumCell className="pt-1 text-muted-foreground">—</NumCell>
+              <NumCell className="pt-1 text-muted-foreground">—</NumCell>
             </tr>
           </tfoot>
         </table>

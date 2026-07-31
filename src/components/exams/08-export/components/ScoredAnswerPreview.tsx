@@ -14,7 +14,7 @@ export function ScoredAnswerPreview({
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm">読み込み中...</p>
+        <p className="text-sm text-muted-foreground">読み込み中...</p>
       </div>
     )
   }
@@ -22,7 +22,7 @@ export function ScoredAnswerPreview({
   if (error) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-destructive text-sm">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
       </div>
     )
   }
@@ -30,7 +30,7 @@ export function ScoredAnswerPreview({
   if (imageUrls.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           プレビューする生徒を選択してください
         </p>
       </div>

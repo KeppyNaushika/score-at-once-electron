@@ -208,7 +208,7 @@ export function MemberInviteDialog({
         </DialogHeader>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {error}
           </div>
         )}
@@ -218,7 +218,7 @@ export function MemberInviteDialog({
           <div className="space-y-2">
             <label className="text-sm font-medium">メンバーを招待</label>
             <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="ユーザー名または名前で検索..."
                 value={searchQuery}
@@ -243,7 +243,7 @@ export function MemberInviteDialog({
                       </Avatar>
                       <div>
                         <div className="font-medium">{user.name}</div>
-                        <div className="text-muted-foreground text-xs">
+                        <div className="text-xs text-muted-foreground">
                           @{user.username}
                         </div>
                       </div>
@@ -262,7 +262,7 @@ export function MemberInviteDialog({
             )}
 
             {isSearching && (
-              <div className="text-muted-foreground py-4 text-center text-sm">
+              <div className="py-4 text-center text-sm text-muted-foreground">
                 検索中...
               </div>
             )}
@@ -270,7 +270,7 @@ export function MemberInviteDialog({
             {searchQuery.trim() &&
               !isSearching &&
               searchResults.length === 0 && (
-                <div className="text-muted-foreground py-4 text-center text-sm">
+                <div className="py-4 text-center text-sm text-muted-foreground">
                   該当するユーザーが見つかりません
                 </div>
               )}
@@ -283,11 +283,11 @@ export function MemberInviteDialog({
             現在のメンバー ({members.length}名)
           </label>
           {loading ? (
-            <div className="text-muted-foreground py-8 text-center">
+            <div className="py-8 text-center text-muted-foreground">
               読み込み中...
             </div>
           ) : members.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center">
+            <div className="py-8 text-center text-muted-foreground">
               メンバーがいません
             </div>
           ) : (
@@ -323,7 +323,7 @@ export function MemberInviteDialog({
                               <div className="font-medium">
                                 {member.user.name}
                               </div>
-                              <div className="text-muted-foreground text-xs">
+                              <div className="text-xs text-muted-foreground">
                                 @{member.user.username}
                               </div>
                             </div>
@@ -332,7 +332,7 @@ export function MemberInviteDialog({
                         <TableCell>
                           {getRoleBadge(member.role as UserRole)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
+                        <TableCell className="text-sm text-muted-foreground">
                           {new Date(member.invitedAt).toLocaleDateString(
                             "ja-JP"
                           )}
@@ -351,7 +351,7 @@ export function MemberInviteDialog({
                                 onClick={() => handleRemove(member.user.id)}
                                 disabled={removingUserId === member.user.id}
                               >
-                                <Trash2 className="text-destructive h-4 w-4" />
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             )}
                           </TableCell>
@@ -365,7 +365,7 @@ export function MemberInviteDialog({
         </div>
 
         {/* ヘルプテキスト */}
-        <div className="bg-muted text-muted-foreground mt-4 rounded-md p-3 text-sm">
+        <div className="mt-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
           <p className="font-medium">ロールについて</p>
           <ul className="mt-1 list-inside list-disc space-y-1">
             <li>

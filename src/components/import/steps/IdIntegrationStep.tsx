@@ -66,7 +66,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
         <h3 className="mb-2 text-xl font-semibold">
           すべてのデータが自動で紐づきました
         </h3>
-        <p className="text-muted-foreground mb-8 max-w-md text-center">
+        <p className="mb-8 max-w-md text-center text-muted-foreground">
           同じパソコンで作成されたデータのため、
           すべての生徒・学級・小計グループが自動的に紐づけられました。
         </p>
@@ -89,11 +89,11 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     <div className="flex h-full flex-col">
       {/* ヘッダー */}
       <div className="mb-6 text-center">
-        <div className="bg-primary/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
-          <Settings className="text-primary h-10 w-10" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+          <Settings className="h-10 w-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">データの紐づけ</h3>
-        <p className="text-muted-foreground max-w-lg">
+        <p className="max-w-lg text-muted-foreground">
           判断が必要なデータについて、どうやって既存のデータと紐づけるか選んでください。
         </p>
       </div>

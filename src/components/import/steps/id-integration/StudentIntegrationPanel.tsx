@@ -58,7 +58,7 @@ export function StudentIntegrationPanel({
           <CardTitle className="text-base">
             判断が必要な生徒が{needsDecisionCount}名います
           </CardTitle>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             どうやって既存の生徒と紐づけますか？
           </p>
         </CardHeader>

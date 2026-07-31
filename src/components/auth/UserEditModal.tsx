@@ -89,7 +89,7 @@ export function UserEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>ユーザー情報を編集</DialogTitle>
           <DialogDescription>
