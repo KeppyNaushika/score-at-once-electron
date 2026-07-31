@@ -4,6 +4,7 @@ import type {
   GradeCellTarget,
   GradeItemExclusionInput,
 } from "../../src/types/grade.types"
+import type { GradeArchiveImportOptions } from "../../src/types/gradeArchive.types"
 
 /** 成績算出のIPC API（成績CRUD・データソース・評定境界・手動点数・Excel出力） */
 export function createGradeApi() {
@@ -218,7 +219,7 @@ export function createGradeApi() {
       importArchive: () => ipcRenderer.invoke("grade:importArchive"),
       executeImport: (
         archiveData: unknown,
-        options?: import("../../src/types/gradeArchive.types").GradeArchiveImportOptions
+        options?: GradeArchiveImportOptions
       ) => ipcRenderer.invoke("grade:executeImport", archiveData, options),
     },
   }

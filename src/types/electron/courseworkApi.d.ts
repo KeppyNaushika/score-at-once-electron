@@ -1,17 +1,34 @@
 /**
  * Coursework（試験外成績資料）関連 API
  */
+
+import type {
+  CourseworkItemWithLetterScales,
+  CourseworkScoreUpsertInput,
+  CourseworkScoreWithCourseworkStudent,
+  CourseworkStudentWithMemberships,
+  CourseworkSummary,
+  CourseworkWithRelations,
+} from "../coursework.types"
+import type {
+  CourseworkArchiveImportPreview,
+  CourseworkArchiveImportResult,
+  CourseworkImportDecisions,
+  CourseworkMatchingMethod,
+  ExportCourseworkArchiveResult,
+} from "../courseworkArchive.types"
+
 export interface CourseworkAPI {
   coursework: {
     // Coursework（トップレベル）
     getAll: () => Promise<{
       success: boolean
-      courseworks?: import("../coursework.types").CourseworkSummary[]
+      courseworks?: CourseworkSummary[]
       error?: string
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      coursework?: import("../coursework.types").CourseworkWithRelations
+      coursework?: CourseworkWithRelations
       error?: string
     }>
     create: (data: {
@@ -20,7 +37,7 @@ export interface CourseworkAPI {
       date?: string | null
     }) => Promise<{
       success: boolean
-      coursework?: import("../coursework.types").CourseworkWithRelations
+      coursework?: CourseworkWithRelations
       error?: string
     }>
     update: (
@@ -32,7 +49,7 @@ export interface CourseworkAPI {
       }
     ) => Promise<{
       success: boolean
-      coursework?: import("../coursework.types").CourseworkWithRelations
+      coursework?: CourseworkWithRelations
       error?: string
     }>
     delete: (id: string) => Promise<{
@@ -66,7 +83,7 @@ export interface CourseworkAPI {
       letterScales?: { label: string; score: number; order: number }[]
     }) => Promise<{
       success: boolean
-      item?: import("../coursework.types").CourseworkItemWithLetterScales
+      item?: CourseworkItemWithLetterScales
       error?: string
     }>
     updateItem: (
@@ -79,7 +96,7 @@ export interface CourseworkAPI {
       }
     ) => Promise<{
       success: boolean
-      item?: import("../coursework.types").CourseworkItemWithLetterScales
+      item?: CourseworkItemWithLetterScales
       error?: string
     }>
     deleteItem: (id: string) => Promise<{
@@ -94,17 +111,17 @@ export interface CourseworkAPI {
     // 点数
     getScores: (courseworkItemId: string) => Promise<{
       success: boolean
-      scores?: import("../coursework.types").CourseworkScoreWithCourseworkStudent[]
+      scores?: CourseworkScoreWithCourseworkStudent[]
       error?: string
     }>
     batchUpsertScores: (
-      scores: import("../coursework.types").CourseworkScoreUpsertInput[]
+      scores: CourseworkScoreUpsertInput[]
     ) => Promise<{ success: boolean; error?: string }>
 
     // 名簿
     getStudents: (courseworkId: string) => Promise<{
       success: boolean
-      students?: import("../coursework.types").CourseworkStudentWithMemberships[]
+      students?: CourseworkStudentWithMemberships[]
       error?: string
     }>
     getClassrooms: (courseworkId: string) => Promise<{
@@ -206,9 +223,7 @@ export interface CourseworkAPI {
     // アーカイブ（.coursework のエクスポート／インポート）
     exportArchive: (
       courseworkId: string
-    ) => Promise<
-      import("../courseworkArchive.types").ExportCourseworkArchiveResult
-    >
+    ) => Promise<ExportCourseworkArchiveResult>
     selectImportFile: () => Promise<{
       success: boolean
       filePath?: string
@@ -217,15 +232,13 @@ export interface CourseworkAPI {
     }>
     analyzeArchive: (options: { archivePath: string }) => Promise<{
       success: boolean
-      preview?: import("../courseworkArchive.types").CourseworkArchiveImportPreview
+      preview?: CourseworkArchiveImportPreview
       error?: string
     }>
     importArchive: (options: {
       archivePath: string
-      courseworkDecisions?: import("../courseworkArchive.types").CourseworkImportDecisions
-      studentMatching?: import("../courseworkArchive.types").CourseworkMatchingMethod
-    }) => Promise<
-      import("../courseworkArchive.types").CourseworkArchiveImportResult
-    >
+      courseworkDecisions?: CourseworkImportDecisions
+      studentMatching?: CourseworkMatchingMethod
+    }) => Promise<CourseworkArchiveImportResult>
   }
 }

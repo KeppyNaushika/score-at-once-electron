@@ -1,4 +1,9 @@
-"use client"
+import type {
+  ClickScoringAction,
+  ClickScoringConfig,
+} from "@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig"
+
+;("use client")
 
 import {
   AlertTriangle,
@@ -107,11 +112,11 @@ interface ScoringSidePanelProps {
   onSelectUnscored?: () => void
   onOpenPartialScoreModal?: () => void
   partialScoreInput: string
-  clickScoringConfig?: import("@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig").ClickScoringConfig
+  clickScoringConfig?: ClickScoringConfig
   clickScoringDebounceMs?: number
   onClickActionChange?: (
     clickCount: 2 | 3 | 4,
-    action: import("@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig").ClickScoringAction
+    action: ClickScoringAction
   ) => void
   onClickScoringDebounceMsChange?: (value: number) => void
   // Navigation Controls props

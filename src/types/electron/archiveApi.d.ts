@@ -1,6 +1,32 @@
 /**
  * 試験アーカイブ・生徒アーカイブ（エクスポート/インポート）関連API
  */
+
+import type {
+  AnalyzeArchiveOptions,
+  AnalyzeArchiveResult,
+  ArchiveDataCounts,
+  ArchiveExportMode,
+  BulkExportExamsOptions,
+  BulkExportExamsResult,
+  ConflictDetectionResult,
+  DetectConflictsOptions,
+  ExportExamResult,
+  FileOverviewData,
+  IdIntegrationConfig,
+  ScoringConflictConfig,
+  ScoringConflictData,
+  UpdateDecisions,
+} from "../examArchive.types"
+import type {
+  ExportStudentsArchiveOptions,
+  ExportStudentsArchiveResult,
+  StudentArchiveFileOverviewData,
+  StudentArchiveIdIntegrationConfig,
+  StudentArchiveImportResult,
+  StudentArchiveManifest,
+} from "../studentArchive.types"
+
 export interface ArchiveAPI {
   // =============================================================================
   // 試験アーカイブ（エクスポート/インポート）関連
@@ -13,22 +39,22 @@ export interface ArchiveAPI {
       examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("../examArchive.types").ArchiveExportMode
-    }) => Promise<import("../examArchive.types").ExportExamResult>
+      exportMode?: ArchiveExportMode
+    }) => Promise<ExportExamResult>
 
     /**
      * アーカイブファイルを解析してプレビュー情報を取得
      */
     analyzeArchive: (
-      options: import("../examArchive.types").AnalyzeArchiveOptions
-    ) => Promise<import("../examArchive.types").AnalyzeArchiveResult>
+      options: AnalyzeArchiveOptions
+    ) => Promise<AnalyzeArchiveResult>
 
     /**
      * 事前照合を実行（Step 2: ファイル概要表示用）
      */
     preMatch: (options: { archivePath: string }) => Promise<{
       success: boolean
-      data?: import("../examArchive.types").FileOverviewData
+      data?: FileOverviewData
       error?: string
     }>
 
@@ -36,27 +62,27 @@ export interface ArchiveAPI {
      * 競合を検出（マージインポート用ドライラン）
      */
     detectConflicts: (
-      options: import("../examArchive.types").DetectConflictsOptions
-    ) => Promise<import("../examArchive.types").ConflictDetectionResult>
+      options: DetectConflictsOptions
+    ) => Promise<ConflictDetectionResult>
 
     /**
      * ID統合インポートを実行（新しいフロー）
      */
     idIntegrationImport: (options: {
       archivePath: string
-      preMatchResult: import("../examArchive.types").FileOverviewData
-      integrationConfig: import("../examArchive.types").IdIntegrationConfig
+      preMatchResult: FileOverviewData
+      integrationConfig: IdIntegrationConfig
       currentUserId: string
-      scoringConflictConfig?: import("../examArchive.types").ScoringConflictConfig
-      updateDecisions?: import("../examArchive.types").UpdateDecisions
+      scoringConflictConfig?: ScoringConflictConfig
+      updateDecisions?: UpdateDecisions
     }) => Promise<{
       success: boolean
       examId?: string
       summary?: {
-        created: import("../examArchive.types").ArchiveDataCounts
-        updated: import("../examArchive.types").ArchiveDataCounts
-        skipped: import("../examArchive.types").ArchiveDataCounts
-        unchanged: import("../examArchive.types").ArchiveDataCounts
+        created: ArchiveDataCounts
+        updated: ArchiveDataCounts
+        skipped: ArchiveDataCounts
+        unchanged: ArchiveDataCounts
       }
       warnings?: string[]
       error?: string
@@ -67,11 +93,11 @@ export interface ArchiveAPI {
      */
     detectScoringConflicts: (options: {
       archivePath: string
-      preMatchResult: import("../examArchive.types").FileOverviewData
-      integrationConfig: import("../examArchive.types").IdIntegrationConfig
+      preMatchResult: FileOverviewData
+      integrationConfig: IdIntegrationConfig
     }) => Promise<{
       success: boolean
-      data?: import("../examArchive.types").ScoringConflictData
+      data?: ScoringConflictData
       error?: string
     }>
 
@@ -79,8 +105,8 @@ export interface ArchiveAPI {
      * 複数試験を一括エクスポート
      */
     bulkExportExams: (
-      options: import("../examArchive.types").BulkExportExamsOptions
-    ) => Promise<import("../examArchive.types").BulkExportExamsResult>
+      options: BulkExportExamsOptions
+    ) => Promise<BulkExportExamsResult>
 
     /**
      * インポートファイル選択ダイアログ
@@ -123,8 +149,8 @@ export interface ArchiveAPI {
      * 選択した生徒・学級データを.studentsファイルとしてエクスポート
      */
     exportStudents: (
-      options: import("../studentArchive.types").ExportStudentsArchiveOptions
-    ) => Promise<import("../studentArchive.types").ExportStudentsArchiveResult>
+      options: ExportStudentsArchiveOptions
+    ) => Promise<ExportStudentsArchiveResult>
 
     /**
      * .studentsファイル選択ダイアログ
@@ -141,7 +167,7 @@ export interface ArchiveAPI {
      */
     analyzeArchive: (options: { archivePath: string }) => Promise<{
       success: boolean
-      manifest?: import("../studentArchive.types").StudentArchiveManifest
+      manifest?: StudentArchiveManifest
       error?: string
     }>
 
@@ -150,7 +176,7 @@ export interface ArchiveAPI {
      */
     preMatch: (options: { archivePath: string }) => Promise<{
       success: boolean
-      data?: import("../studentArchive.types").StudentArchiveFileOverviewData
+      data?: StudentArchiveFileOverviewData
       error?: string
     }>
 
@@ -159,9 +185,9 @@ export interface ArchiveAPI {
      */
     import: (options: {
       archivePath: string
-      preMatchResult: import("../studentArchive.types").StudentArchiveFileOverviewData
-      integrationConfig: import("../studentArchive.types").StudentArchiveIdIntegrationConfig
-      updateDecisions?: import("../examArchive.types").UpdateDecisions
-    }) => Promise<import("../studentArchive.types").StudentArchiveImportResult>
+      preMatchResult: StudentArchiveFileOverviewData
+      integrationConfig: StudentArchiveIdIntegrationConfig
+      updateDecisions?: UpdateDecisions
+    }) => Promise<StudentArchiveImportResult>
   }
 }

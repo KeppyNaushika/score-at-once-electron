@@ -1,40 +1,48 @@
 /**
  * 描画アノテーション関連API
  */
+
+import type {
+  AnnotationWithContext,
+  DrawingAnnotation,
+  DrawingAnnotationStats,
+  DrawingCreateData,
+  DrawingType,
+  DrawingUpdateData,
+} from "../drawingAnnotation.types"
+
 export interface DrawingAPI {
   drawing: {
-    create: (
-      data: import("../drawingAnnotation.types").DrawingCreateData
-    ) => Promise<{
+    create: (data: DrawingCreateData) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation
+      data?: DrawingAnnotation
       error?: string
     }>
     getByQuestionScore: (
       questionScoreId: string,
-      type?: import("../drawingAnnotation.types").DrawingType,
+      type?: DrawingType,
       userId?: string
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation[]
+      data?: DrawingAnnotation[]
       error?: string
     }>
     getByExamStudent: (
       examStudentId: string,
-      type?: import("../drawingAnnotation.types").DrawingType,
+      type?: DrawingType,
       userId?: string
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation[]
+      data?: DrawingAnnotation[]
       error?: string
     }>
     getByExam: (
       examId: string,
-      type?: import("../drawingAnnotation.types").DrawingType,
+      type?: DrawingType,
       userId?: string
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation[]
+      data?: DrawingAnnotation[]
       error?: string
     }>
     // main 側は questionScore（examStudentId / cropRegion）を include して返すので、
@@ -45,15 +53,15 @@ export interface DrawingAPI {
       userId?: string
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").AnnotationWithContext[]
+      data?: AnnotationWithContext[]
       error?: string
     }>
     update: (
       id: string,
-      data: import("../drawingAnnotation.types").DrawingUpdateData
+      data: DrawingUpdateData
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation
+      data?: DrawingAnnotation
       error?: string
     }>
     delete: (id: string) => Promise<{
@@ -62,36 +70,34 @@ export interface DrawingAPI {
     }>
     deleteByQuestionScore: (
       questionScoreId: string,
-      type?: import("../drawingAnnotation.types").DrawingType
+      type?: DrawingType
     ) => Promise<{
       success: boolean
       error?: string
     }>
-    batchCreate: (
-      annotations: import("../drawingAnnotation.types").DrawingCreateData[]
-    ) => Promise<{
+    batchCreate: (annotations: DrawingCreateData[]) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation[]
+      data?: DrawingAnnotation[]
       error?: string
     }>
     batchUpdate: (
       updates: Array<{
         id: string
-        data: import("../drawingAnnotation.types").DrawingUpdateData
+        data: DrawingUpdateData
       }>
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation[]
+      data?: DrawingAnnotation[]
       error?: string
     }>
     getStats: (questionScoreId: string) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotationStats
+      data?: DrawingAnnotationStats
       error?: string
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation | null
+      data?: DrawingAnnotation | null
       error?: string
     }>
     toggleFavorite: (
@@ -99,12 +105,12 @@ export interface DrawingAPI {
       isFavorite: boolean
     ) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").DrawingAnnotation
+      data?: DrawingAnnotation
       error?: string
     }>
     getForBrowse: (examId: string) => Promise<{
       success: boolean
-      data?: import("../drawingAnnotation.types").AnnotationWithContext[]
+      data?: AnnotationWithContext[]
       error?: string
     }>
   }
