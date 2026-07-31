@@ -4,7 +4,7 @@
  * テスト用のアーカイブデータ、Prismaレコード、ID統合設定を生成するヘルパー
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type { ExtractedArchiveData } from "../../electron-src/lib/import/exam-archive/archiveExtractor"
 import type {
@@ -34,7 +34,7 @@ import type {
 // =============================================================================
 
 export function generateId(): string {
-  return randomUUID()
+  return crypto.randomUUID()
 }
 
 // =============================================================================

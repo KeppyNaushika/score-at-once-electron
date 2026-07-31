@@ -4,8 +4,12 @@ import { pathToFileURL } from "url"
 
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
+import { destroySharedSvgWindow } from "./ipc-handlers/exportHandlers"
 import { getAbsolutePathFromData } from "./lib/dataManager"
+import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
+import { getPrismaClient } from "./lib/prisma/client"
 import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
+import { stopSync } from "./lib/sync/syncService"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
@@ -107,8 +111,6 @@ app.on("ready", async () => {
 
     // 前回セッションで残ったパスワード保護PDFの復号済み複製を掃除する
     try {
-      const { cleanupDecryptedPdfCopies } =
-        await import("./lib/pdf-tools/decryptedPdfCopy")
       cleanupDecryptedPdfCopies()
     } catch (error) {
       console.warn("Failed to clean up decrypted PDF copies:", error)
@@ -165,8 +167,6 @@ process.on("unhandledRejection", (reason, promise) => {
 app.on("before-quit", async (_event) => {
   // SVG→PNG変換用の共有オフスクリーンウィンドウを破棄
   try {
-    const { destroySharedSvgWindow } =
-      await import("./ipc-handlers/exportHandlers")
     destroySharedSvgWindow()
   } catch (error) {
     console.warn("Failed to destroy shared SVG window:", error)
@@ -174,7 +174,6 @@ app.on("before-quit", async (_event) => {
 
   // NAS同期の停止
   try {
-    const { stopSync } = await import("./lib/sync/syncService")
     await stopSync()
   } catch (error) {
     console.warn("Failed to stop sync service:", error)
@@ -182,7 +181,6 @@ app.on("before-quit", async (_event) => {
 
   // Prismaクライアントのクリーンアップ
   try {
-    const { getPrismaClient } = await import("./lib/prisma/client")
     const prisma = getPrismaClient()
     await prisma.$disconnect()
   } catch (error) {

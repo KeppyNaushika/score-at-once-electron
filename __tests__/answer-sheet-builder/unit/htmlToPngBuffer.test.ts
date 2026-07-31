@@ -202,8 +202,10 @@ describe("htmlToPngBuffer", () => {
     await htmlToPngBuffer(html, 210, 297, 300)
 
     // writeFileSyncに渡されたHTMLを検証
+    // printUtils は名前空間 import（`import * as fs from "fs"`）なので、
+    // モックの default キーではなく名前空間直下の writeFileSync が呼ばれる
     const fs = await import("fs")
-    const writeCall = vi.mocked(fs.default.writeFileSync).mock.calls[0]
+    const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0]
     const writtenHtml = writeCall[1] as string
 
     expect(writtenHtml).toContain("width: 100vw !important")

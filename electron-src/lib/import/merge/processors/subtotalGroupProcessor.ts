@@ -2,7 +2,7 @@
  * 小計グループのID統合処理
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type {
   FileOverviewData,
@@ -57,7 +57,7 @@ export async function processSubtotalGroupIdIntegration(
       if (existingByName) {
         // B5修正: create_new の意図を尊重し、サフィックス付きで新規作成
         const newName = await generateUniqueName(importGroup.name, tx)
-        const newId = randomUUID()
+        const newId = crypto.randomUUID()
         await tx.subtotalGroup.create({
           data: {
             id: newId,
@@ -76,7 +76,7 @@ export async function processSubtotalGroupIdIntegration(
         })
         if (existingById) {
           // IDが衝突する場合は新規IDで作成
-          const newId = randomUUID()
+          const newId = crypto.randomUUID()
           await tx.subtotalGroup.create({
             data: {
               id: newId,
@@ -220,5 +220,5 @@ async function generateUniqueName(
     if (!existing) return candidate
   }
   // フォールバック: ランダム名
-  return `${baseName} (${randomUUID().slice(0, 8)})`
+  return `${baseName} (${crypto.randomUUID().slice(0, 8)})`
 }

@@ -1,5 +1,5 @@
-import type { Prisma as PrismaTypes } from "@prisma/client"
-import * as fs from "fs/promises"
+import type { Prisma } from "@prisma/client"
+import * as fsPromises from "fs/promises"
 
 import { getExamDirectory } from "../dataManager"
 import { diffFields, recordAuditLog } from "./auditLog"
@@ -158,7 +158,7 @@ export const getExamWithPages = async (id: string) => {
 
 /** 試験を作成し、指定ユーザーをOWNERとしてUserExamに登録する */
 export const createExam = async (
-  data: Omit<PrismaTypes.ExamCreateInput, "userExams">,
+  data: Omit<Prisma.ExamCreateInput, "userExams">,
   userId: string
 ) => {
   const exam = await prisma.exam.create({
@@ -220,10 +220,7 @@ export const createExam = async (
 }
 
 /** 試験情報を更新する */
-export const updateExam = async (
-  id: string,
-  data: PrismaTypes.ExamUpdateInput
-) => {
+export const updateExam = async (id: string, data: Prisma.ExamUpdateInput) => {
   // 差分記録用に変更前を取得
   const before = await prisma.exam.findUnique({
     where: { id },
@@ -274,7 +271,7 @@ export const deleteExam = async (id: string) => {
   // 模範解答・答案の画像はDBのcascadeでは消えないため、試験ディレクトリごと削除する。
   // ファイル削除の失敗で試験削除自体を巻き戻さない（DBは既に削除済み）。
   try {
-    await fs.rm(getExamDirectory(id), { recursive: true, force: true })
+    await fsPromises.rm(getExamDirectory(id), { recursive: true, force: true })
   } catch (fileError) {
     console.warn(`Failed to delete exam directory for ${id}:`, fileError)
   }

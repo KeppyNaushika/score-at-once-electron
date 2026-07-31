@@ -1,8 +1,8 @@
 import type { CropRegion } from "@prisma/client"
-import crypto from "crypto"
+import * as crypto from "crypto"
 import { dialog } from "electron"
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 
 import { getAbsolutePathFromData } from "../dataManager"

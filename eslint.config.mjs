@@ -168,12 +168,36 @@ export default [
       // grep もできない。トップレベルの `import type { Foo } from "./x"` を使う。
       // セレクタの TSImportType は型注釈側の記法のみを指し、実行時の動的 import
       // （ImportExpression）は別ノードなので影響しない。
+      // Node 組み込み（path/fs/os/crypto）と exceljs は名前空間 import に統一する。
+      // 呼び出し箇所に出自を残すのが目的で、`crypto.randomUUID()` は `Math.random()`
+      // ではないことを、`os.tmpdir()` は OS の一時ディレクトリであることを、
+      // `path.join()` は配列の join ではないことをその場で示す。
+      // 名前付き import にすると `randomUUID()` `tmpdir()` `join()` となり出自が消える。
+      // 型のみの import（`import type { Stats } from "fs"` 等）は対象外。
       "no-restricted-syntax": [
         "error",
         {
           selector: "TSImportType",
           message:
             'インライン型 import は使わず、トップレベルの `import type { X } from "..."` を使ってください（静的解析が参照を追えなくなります）。',
+        },
+        {
+          selector:
+            'ImportDeclaration[importKind!="type"][source.value=/^(node:)?(path|fs|os|crypto)$|^exceljs$/] > ImportSpecifier[importKind!="type"]',
+          message:
+            'path / fs / os / crypto / exceljs は名前空間 import に統一してください（例: `import * as path from "path"` → `path.join()`）。呼び出し箇所に出自を残すためです。',
+        },
+        {
+          selector:
+            'ImportDeclaration[importKind!="type"][source.value=/^(node:)?(path|fs|os|crypto)$|^exceljs$/] > ImportDefaultSpecifier',
+          message:
+            'path / fs / os / crypto / exceljs は default ではなく名前空間 import に統一してください（例: `import * as fs from "fs"`）。',
+        },
+        {
+          selector:
+            'ImportDeclaration[source.value=/^(node:)?fs\\u002Fpromises$/] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)[local.name="fs"]',
+          message:
+            '同期版の `fs` と区別がつかないため、`import * as fsPromises from "fs/promises"` としてください。',
         },
       ],
     },

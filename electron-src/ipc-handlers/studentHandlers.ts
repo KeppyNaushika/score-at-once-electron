@@ -4,6 +4,7 @@ import * as ExcelJS from "exceljs"
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
+import { fetchClassrooms } from "../lib/prisma/classroom"
 import {
   addStudentsToExam,
   getClassroomsNotInExam,
@@ -18,6 +19,7 @@ import {
   createStudent,
   deleteStudent,
   fetchStudents,
+  getClassroomExamResults,
   getStudentExamResults,
   updateStudent,
 } from "../lib/prisma/student"
@@ -204,7 +206,6 @@ export function setupStudentHandlers(): void {
   })
 
   registerHandler("get-class-exam-results", async (classroomId: string) => {
-    const { getClassroomExamResults } = await import("../lib/prisma/student")
     return await getClassroomExamResults(classroomId)
   })
 
@@ -276,7 +277,6 @@ export function setupStudentHandlers(): void {
   registerSafeHandler(
     "export-classrooms-excel",
     async (selectedClassroomIds: string[]) => {
-      const { fetchClassrooms } = await import("../lib/prisma/classroom")
       const allClassrooms = await fetchClassrooms()
       const selectedSet = new Set(selectedClassroomIds)
       const classrooms = allClassrooms.filter((classroom) =>

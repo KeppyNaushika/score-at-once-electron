@@ -1,13 +1,7 @@
 "use client"
 
 import type { Tag } from "@prisma/client"
-import {
-  ArrowRight,
-  Download,
-  Pencil,
-  Tag as TagIcon,
-  X as XIcon,
-} from "lucide-react"
+import { ArrowRight, Download, Pencil, TagIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"

@@ -1,6 +1,6 @@
 "use client"
 
-import { Tag as TagIcon, X as XIcon } from "lucide-react"
+import { TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 
 import { useExams } from "@/components/hooks/useExams"

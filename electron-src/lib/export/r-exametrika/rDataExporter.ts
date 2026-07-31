@@ -6,7 +6,7 @@
  * 元の status を保持する（JSON）。CSV は欠席/未採点を欠測値（空欄）とする。
  */
 import { dialog } from "electron"
-import * as fs from "fs/promises"
+import * as fsPromises from "fs/promises"
 
 import type { ExportResult } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
@@ -154,7 +154,7 @@ export async function exportRData(
       return { success: false, error: "出力パスが指定されていません" }
     }
 
-    await fs.writeFile(finalOutputPath, content, "utf-8")
+    await fsPromises.writeFile(finalOutputPath, content, "utf-8")
     return { success: true, outputPath: finalOutputPath }
   } catch (error) {
     console.error("R data export error:", error)

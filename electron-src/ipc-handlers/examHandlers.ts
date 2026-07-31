@@ -1,15 +1,15 @@
 import { Prisma } from "@prisma/client"
 
 import {
-  createExam as dbCreateExam,
-  deleteExam as dbDeleteExam,
-  getExam as dbGetExam,
-  getExamById as dbFetchExamById,
-  getExamsForList as dbFetchExamsForList,
-  getExamWithPages as dbGetExamWithPages,
-  updateExam as dbUpdateExam,
+  createExam,
+  deleteExam,
+  getExam,
+  getExamById,
+  getExamsForList,
+  getExamWithPages,
+  updateExam,
 } from "../lib/prisma/exam"
-import { getExamPagesByExamId as dbGetExamPagesByExamId } from "../lib/prisma/examPage"
+import { getExamPagesByExamId } from "../lib/prisma/examPage"
 import { registerHandler } from "./ipcHandlerUtils"
 
 /**
@@ -42,7 +42,7 @@ export function setupExamHandlers(): void {
   // 試験一覧用の軽量エンドポイント。進捗は計算せず「元データ」を返し、
   // renderer の getExamProgress → getExamWorkflowStatus が計算する（計算の唯一の実装は renderer）。
   registerHandler("fetch-exams-summary", async (userId: string) => {
-    const exams = await dbFetchExamsForList(userId)
+    const exams = await getExamsForList(userId)
     return exams.map((exam) => ({
       id: exam.id,
       examName: exam.examName,
@@ -76,16 +76,16 @@ export function setupExamHandlers(): void {
 
   // 試験の基本スカラーのみ（リレーション無し・軽量）。編集/スカラー参照用途向け。
   registerHandler("get-exam", async (examId: string) => {
-    return dbGetExam(examId)
+    return getExam(examId)
   })
 
   // 試験スカラー + examPages（masterImages 含む）を1クエリで。採点画面用。
   registerHandler("get-exam-with-pages", async (examId: string) => {
-    return dbGetExamWithPages(examId)
+    return getExamWithPages(examId)
   })
 
   registerHandler("fetch-exam-by-id", async (examId: string) => {
-    const exam = await dbFetchExamById(examId)
+    const exam = await getExamById(examId)
     if (!exam) {
       return null
     }
@@ -131,7 +131,7 @@ export function setupExamHandlers(): void {
     "create-exam",
     async (examData: Omit<Prisma.ExamCreateInput, "user">, userId: string) => {
       if (!userId) throw new Error("User ID is required to create a exam.")
-      const exam = await dbCreateExam(examData, userId)
+      const exam = await createExam(examData, userId)
 
       // Dateオブジェクトをそのまま返す
       return {
@@ -147,20 +147,20 @@ export function setupExamHandlers(): void {
   registerHandler(
     "update-exam",
     async (examId: string, data: Prisma.ExamUpdateInput) => {
-      const exam = await dbUpdateExam(examId, data)
+      const exam = await updateExam(examId, data)
       // Dateオブジェクトをそのまま返す
       return exam
     }
   )
 
   registerHandler("delete-exam", async (examId: string) => {
-    const exam = await dbDeleteExam(examId)
+    const exam = await deleteExam(examId)
     // Dateオブジェクトをそのまま返す
     return exam
   })
 
   registerHandler("get-exam-pages-by-exam-id", async (examId: string) => {
-    const examPages = await dbGetExamPagesByExamId(examId)
+    const examPages = await getExamPagesByExamId(examId)
     // Dateオブジェクトをそのまま返す
     return examPages
   })

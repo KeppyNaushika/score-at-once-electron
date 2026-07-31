@@ -5,7 +5,7 @@
  */
 
 import type { CropRegion, PrismaClient } from "@prisma/client"
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 interface FullTestExamOptions {
   /** ページ数 (default: 2) */
@@ -138,7 +138,7 @@ export async function createFullTestExam(
   // 1. ユーザー作成
   const user = await prisma.user.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       username: `testuser_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name: "テストユーザー",
       role: "teacher",
@@ -148,7 +148,7 @@ export async function createFullTestExam(
   // 2. 試験作成
   const exam = await prisma.exam.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       examName,
       examDate: new Date("2025-07-01"),
     },
@@ -157,7 +157,7 @@ export async function createFullTestExam(
   // 3. UserExam作成
   const userExam = await prisma.userExam.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       userId: user.id,
       examId: exam.id,
       role: "OWNER",
@@ -169,7 +169,7 @@ export async function createFullTestExam(
   for (let i = 0; i < pageCount; i++) {
     const page = await prisma.examPage.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examId: exam.id,
         pageNumber: i + 1,
       },
@@ -183,7 +183,7 @@ export async function createFullTestExam(
     for (let j = 0; j < cropRegionsPerPage; j++) {
       const region = await prisma.cropRegion.create({
         data: {
-          id: randomUUID(),
+          id: crypto.randomUUID(),
           examPageId: page.id,
           label: `問${cropRegions.length + 1}`,
           type: "QUESTION",
@@ -202,7 +202,7 @@ export async function createFullTestExam(
   // 6. 学級作成
   const classroom = await prisma.classroom.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       name: `${className}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     },
   })
@@ -216,7 +216,7 @@ export async function createFullTestExam(
   for (let i = 0; i < studentCount; i++) {
     const student = await prisma.student.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         studentNumber: `S${String(i + 1).padStart(3, "0")}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         lastName: `姓${i + 1}`,
         firstName: `名${i + 1}`,
@@ -230,7 +230,7 @@ export async function createFullTestExam(
     // メンバーシップ
     const membership = await prisma.studentClassroomMembership.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         studentId: student.id,
         classroomId: classroom.id,
         attendanceNumber: i + 1,
@@ -241,7 +241,7 @@ export async function createFullTestExam(
     // ExamStudent
     const examStudent = await prisma.examStudent.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examId: exam.id,
         studentId: student.id,
         status: "PARTICIPATING",
@@ -254,7 +254,7 @@ export async function createFullTestExam(
   // 8. ExamClassroom作成
   const examClassroom = await prisma.examClassroom.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       examId: exam.id,
       classroomId: classroom.id,
       administered: true,
@@ -267,7 +267,7 @@ export async function createFullTestExam(
   // 9. SubtotalGroup + Subtotal作成
   const subtotalGroup = await prisma.subtotalGroup.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       name: `小計G_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     },
   })
@@ -277,7 +277,7 @@ export async function createFullTestExam(
   for (let i = 0; i < subtotalNames.length; i++) {
     const subtotal = await prisma.subtotal.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         name: subtotalNames[i],
         subtotalGroupId: subtotalGroup.id,
         order: i,
@@ -289,7 +289,7 @@ export async function createFullTestExam(
   // 10. ExamSubtotalGroup作成
   const examSubtotalGroup = await prisma.examSubtotalGroup.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       examId: exam.id,
       subtotalGroupId: subtotalGroup.id,
     },
@@ -301,7 +301,7 @@ export async function createFullTestExam(
     const subtotalIdx = i % subtotals.length
     const cropSubtotal = await prisma.cropSubtotal.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         cropRegionId: cropRegions[i].id,
         subtotalId: subtotals[subtotalIdx].id,
         assignmentType: "auto",
@@ -317,7 +317,7 @@ export async function createFullTestExam(
       for (const student of students) {
         const questionScore = await prisma.questionScore.create({
           data: {
-            id: randomUUID(),
+            id: crypto.randomUUID(),
             cropRegionId: region.id,
             examStudentId: examStudentByStudentId.get(student.id)!.id,
             userId: user.id,
@@ -345,7 +345,7 @@ export async function createFullTestExam(
     // 最初のスコアにだけアノテーションを追加
     const drawingAnnotation = await prisma.drawingAnnotation.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         questionScoreId: questionScores[0].id,
         type: "circle",
         x: 10,
@@ -362,7 +362,7 @@ export async function createFullTestExam(
     for (const page of pages) {
       const masterImage = await prisma.masterImage.create({
         data: {
-          id: randomUUID(),
+          id: crypto.randomUUID(),
           examPageId: page.id,
           imagePath: `exams/${exam.id}/master-images/page${page.pageNumber}.png`,
         },
@@ -378,7 +378,7 @@ export async function createFullTestExam(
       for (const student of students) {
         const studentAnswerImage = await prisma.studentAnswerImage.create({
           data: {
-            id: randomUUID(),
+            id: crypto.randomUUID(),
             examPageId: page.id,
             examStudentId: examStudentByStudentId.get(student.id)!.id,
             imagePath: `exams/${exam.id}/answer-sheets/${student.studentNumber}_page${page.pageNumber}.png`,
@@ -400,7 +400,7 @@ export async function createFullTestExam(
     for (const markType of ["correct", "incorrect"]) {
       const examMarkingFormat = await prisma.examMarkingFormat.create({
         data: {
-          id: randomUUID(),
+          id: crypto.randomUUID(),
           examId: exam.id,
           markType,
           symbol: markType === "correct" ? "○" : "×",
@@ -413,7 +413,7 @@ export async function createFullTestExam(
     // ExamExportSettings
     examExportSettings = await prisma.examExportSettings.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examId: exam.id,
         settingsJson: JSON.stringify({ includeImages: true }),
       },
@@ -422,14 +422,14 @@ export async function createFullTestExam(
     // Tag + TagSubtotalGroup
     tag = await prisma.tag.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         name: `数学_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       },
     })
 
     tagSubtotalGroup = await prisma.tagSubtotalGroup.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         tagId: tag.id,
         subtotalGroupId: subtotalGroup.id,
       },

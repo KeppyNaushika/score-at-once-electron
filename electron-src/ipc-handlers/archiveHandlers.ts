@@ -2,6 +2,7 @@
  * 試験アーカイブ（エクスポート/インポート）IPCハンドラー
  */
 
+import AdmZip from "adm-zip"
 import { dialog, ipcMain } from "electron"
 import * as path from "path"
 
@@ -152,7 +153,6 @@ export function registerArchiveHandlers(): void {
 
       if (ext === ".dat") {
         try {
-          const AdmZip = (await import("adm-zip")).default
           const zip = new AdmZip(filePath)
           const hasVersion = zip
             .getEntries()

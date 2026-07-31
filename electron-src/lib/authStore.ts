@@ -1,6 +1,6 @@
 import { app } from "electron"
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs"
-import { join } from "path"
+import * as fs from "fs"
+import * as path from "path"
 
 interface AuthData {
   authToken: string | null
@@ -8,7 +8,7 @@ interface AuthData {
 
 // 認証データファイルのパス
 const getAuthFilePath = (): string => {
-  return join(app.getPath("userData"), "auth.json")
+  return path.join(app.getPath("userData"), "auth.json")
 }
 
 export class AuthStoreManager {
@@ -18,8 +18,8 @@ export class AuthStoreManager {
   private static readAuthData(): AuthData {
     try {
       const filePath = getAuthFilePath()
-      if (existsSync(filePath)) {
-        const data = readFileSync(filePath, "utf8")
+      if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, "utf8")
         return JSON.parse(data)
       }
     } catch (error) {
@@ -34,7 +34,7 @@ export class AuthStoreManager {
   private static writeAuthData(data: AuthData): void {
     try {
       const filePath = getAuthFilePath()
-      writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8")
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8")
     } catch (error) {
       console.error("Failed to write auth data:", error)
       throw error
@@ -73,8 +73,8 @@ export class AuthStoreManager {
   static clearAll(): void {
     try {
       const filePath = getAuthFilePath()
-      if (existsSync(filePath)) {
-        unlinkSync(filePath)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
       }
     } catch (error) {
       console.error("Failed to clear auth data:", error)

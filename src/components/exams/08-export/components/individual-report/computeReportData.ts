@@ -10,10 +10,10 @@ import type {
   SubtotalStatistics,
 } from "@/electron-src/lib/export/individual-report/types"
 import {
-  average,
-  boxPlot,
-  rank,
-  stdDev,
+  calculateAverage,
+  calculateBoxPlot,
+  calculateRank,
+  calculateStandardDeviation,
 } from "@/electron-src/lib/shared/calculations/numericStats"
 import type { SubtotalScore } from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
@@ -75,8 +75,8 @@ export function computeFilteredStats(
     .map((entry) => entry.totalScore)
     .filter((score): score is number => score !== null)
 
-  const overallAvg = average(allScores)
-  const overallStd = stdDev(allScores)
+  const overallAvg = calculateAverage(allScores)
+  const overallStd = calculateStandardDeviation(allScores)
   const studentScore = report.scoringData.totalScore
   const deviation =
     studentScore === null || overallStd === 0
@@ -96,10 +96,13 @@ export function computeFilteredStats(
       .filter((score): score is number => score !== null)
     return {
       ...classroom,
-      average: average(classroomScores),
-      stdDev: stdDev(classroomScores),
+      average: calculateAverage(classroomScores),
+      stdDev: calculateStandardDeviation(classroomScores),
       total: filteredMembers.length,
-      rank: studentScore !== null ? rank(studentScore, classroomScores) : 0,
+      rank:
+        studentScore !== null
+          ? calculateRank(studentScore, classroomScores)
+          : 0,
     }
   })
 
@@ -115,7 +118,8 @@ export function computeFilteredStats(
     personal: {
       ...report.statistics.personal,
       deviation,
-      overallRank: studentScore !== null ? rank(studentScore, allScores) : 0,
+      overallRank:
+        studentScore !== null ? calculateRank(studentScore, allScores) : 0,
     },
   }
 }
@@ -179,8 +183,8 @@ export function computeFilteredSubtotalStats(
       subtotalId: stat.subtotalId,
       subtotalLabel: stat.subtotalLabel,
       subtotalGroupId: stat.subtotalGroupId,
-      boxPlot: boxPlot(filteredScores),
-      average: average(filteredScores),
+      boxPlot: calculateBoxPlot(filteredScores),
+      average: calculateAverage(filteredScores),
       maxScore: stat.maxScore,
     }
   })
@@ -215,9 +219,9 @@ export function computeFilteredOverallStat(
     subtotalGroupId: "__overall__",
     boxPlot:
       filteredScores.length > 0
-        ? boxPlot(filteredScores)
+        ? calculateBoxPlot(filteredScores)
         : { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
-    average: average(filteredScores),
+    average: calculateAverage(filteredScores),
     maxScore: totalMaxScore,
   }
 }

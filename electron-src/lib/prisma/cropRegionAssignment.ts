@@ -6,7 +6,7 @@
  * 担当0人の設問は全員担当とみなす（絞り込みの規則は renderer の
  * `useAssignedCropRegions` が持つ）。
  */
-import { createHash } from "crypto"
+import * as crypto from "crypto"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion, resolveUserLabel } from "./auditScope"
@@ -34,7 +34,8 @@ export function buildAssignmentId(
     ASSIGNMENT_NAMESPACE.replace(/-/g, ""),
     "hex"
   )
-  const hash = createHash("sha1")
+  const hash = crypto
+    .createHash("sha1")
     .update(namespaceBytes)
     .update(`${cropRegionId}:${userId}`)
     .digest()

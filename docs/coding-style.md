@@ -656,6 +656,67 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 import { useExam, type ExamData } from "@/hooks/useExam"
 ```
 
+インライン型 import（`import("./x").Foo` を型注釈に埋め込む書き方）は**禁止**。型の一部でありモジュール解決の走査から漏れるため、knip 等の静的解析が参照を追えず、実際に使われている型を未使用と誤判定する。grep もできない。ESLint（`no-restricted-syntax` の `TSImportType`）で検出する。
+
+### 名前空間 import（`import * as`）
+
+以下は**名前空間 import に統一する**。ESLint で強制している。
+
+| モジュール    | 名前空間名   |
+| ------------- | ------------ |
+| `path`        | `path`       |
+| `fs`          | `fs`         |
+| `fs/promises` | `fsPromises` |
+| `os`          | `os`         |
+| `crypto`      | `crypto`     |
+| `exceljs`     | `ExcelJS`    |
+
+```typescript
+// ✅ 呼び出し箇所に出自が残る
+import * as crypto from "crypto"
+import * as fsPromises from "fs/promises"
+import * as os from "os"
+import * as path from "path"
+
+const id = crypto.randomUUID() // Math.random() ではないと分かる
+const tmp = path.join(os.tmpdir(), name) // OS の一時ディレクトリだと分かる
+await fsPromises.readFile(tmp) // 同期版 fs ではないと分かる
+
+// ❌ 出自が消える
+import { randomUUID } from "crypto"
+import { tmpdir } from "os"
+import { join } from "path"
+
+const id = randomUUID() // crypto なのか自前ユーティリティなのか読めない
+const tmp = join(tmpdir(), name) // 配列の join かどうかも紛らわしい
+```
+
+**`fs/promises` を `fs` と名付けてはいけない。** 同期版と区別がつかず、実際に「同期 API が必要になった箇所で `const fs = require("fs")` を書いて外側を潰す」という事故が起きていた。
+
+型のみの import（`import type { Stats } from "fs"`）は対象外。
+
+`react` および shadcn/ui・Radix UI（`import * as React from "react"` / `import * as TooltipPrimitive from "@radix-ui/react-tooltip"`）は**ライブラリ側の慣例に従う**。
+
+### 別名 import（`as`）
+
+`as` による改名は、**同名の別束縛と衝突する場合に限る**。
+
+```typescript
+// ✅ DOM グローバルの MouseEvent と衝突する
+import type { MouseEvent as ReactMouseEvent } from "react"
+
+// ✅ ライブラリ側が推奨している形（Playwright の型定義に記載）
+import { _electron as electron } from "playwright"
+
+// ❌ 衝突がないのに改名している（定義側の名前をそのまま使う）
+import { createExam as dbCreateExam } from "../lib/prisma/exam"
+
+// ❌ ライブラリが正式名を用意しているのに自前で別名を付けている
+import { X as XIcon } from "lucide-react" // → import { XIcon } from "lucide-react"
+```
+
+呼び出し側で別名を付けたくなったら、**まず定義側の名前が命名規則に合っているかを疑う**。別名は命名の食い違いを import 文で隠すだけで、定義側の問題は残る。
+
 ---
 
 ## コメント規約

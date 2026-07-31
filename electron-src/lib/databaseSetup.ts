@@ -1,6 +1,18 @@
 import { PrismaClient } from "@prisma/client"
 
-import { createSharedPrismaClient } from "./prisma/databaseInitializer"
+import { pruneAuditLogs } from "./prisma/auditQuery"
+import {
+  createSharedPrismaClient,
+  initializeDatabase,
+} from "./prisma/databaseInitializer"
+import {
+  createBackup,
+  restoreBackup,
+  runBridgeMigration,
+} from "./prisma/schema/bridgeMigrations"
+import { deployPendingMigrations } from "./prisma/schema/migrationDeployer"
+import { assertDatabaseNotNewerThanApp } from "./prisma/schema/migrationGuard"
+import { detectSchemaVersion } from "./prisma/schema/versionDetector"
 
 /**
  * データベースセットアップユーティリティ
@@ -168,8 +180,6 @@ export class DatabaseSetup {
    * this.prisma は次回クエリ時に自動再接続される。
    */
   private async runDeployPendingMigrations(): Promise<void> {
-    const { deployPendingMigrations } =
-      await import("./prisma/schema/migrationDeployer")
     await this.prisma.$disconnect()
     deployPendingMigrations()
   }
@@ -182,8 +192,6 @@ export class DatabaseSetup {
       let setupPerformed = false
 
       // DBファイルの作成とスキーマ適用（判定はテーブルの有無に基づく）
-      const { initializeDatabase } =
-        await import("./prisma/databaseInitializer")
       const result = initializeDatabase()
 
       if (result === "created") {
@@ -211,7 +219,6 @@ export class DatabaseSetup {
 
       // 監査ログの保持期間プルーニング（ベストエフォート。失敗しても起動を妨げない）
       try {
-        const { pruneAuditLogs } = await import("./prisma/auditQuery")
         await pruneAuditLogs()
       } catch (pruneError) {
         console.error("Audit log pruning skipped:", pruneError)
@@ -230,8 +237,6 @@ export class DatabaseSetup {
    * 既存DBのマイグレーション: バージョン検出 → ブリッジ → ベースライン → 将来マイグレーション適用
    */
   private async migrateExistingDatabase(): Promise<void> {
-    const { detectSchemaVersion } =
-      await import("./prisma/schema/versionDetector")
     const version = await detectSchemaVersion(this.prisma)
     console.info(`Detected schema version: ${version}`)
 
@@ -244,8 +249,6 @@ export class DatabaseSetup {
 
     if (version === "MIGRATED") {
       // DBがアプリより新しい場合は書き込み前に起動を中止する
-      const { assertDatabaseNotNewerThanApp } =
-        await import("./prisma/schema/migrationGuard")
       await assertDatabaseNotNewerThanApp(this.prisma)
 
       // 既にPrisma管理下 — ベースラインが最新か確認
@@ -259,9 +262,6 @@ export class DatabaseSetup {
     }
 
     // ブリッジマイグレーション実行（S3〜S9）
-    const { createBackup, restoreBackup, runBridgeMigration } =
-      await import("./prisma/schema/bridgeMigrations")
-
     const backupPath = createBackup()
     try {
       await runBridgeMigration(this.prisma, version)

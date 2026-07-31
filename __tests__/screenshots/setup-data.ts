@@ -15,7 +15,7 @@
  *   npx tsx __tests__/screenshots/setup-data.ts
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -60,7 +60,7 @@ async function main() {
 
   // ========== 1. ユーザー ==========
   console.log("[1/2] ユーザー作成...")
-  const userId = randomUUID()
+  const userId = crypto.randomUUID()
   await prisma.user.create({
     data: {
       id: userId,
@@ -75,7 +75,7 @@ async function main() {
   // ========== 2. 解答用紙ビルダーテンプレート ==========
   console.log("[2/2] 解答用紙ビルダー定義作成...")
   const asbTemplateFile = path.join(TEST_DATA_DIR, "asb-template.json")
-  const asbDefId = randomUUID()
+  const asbDefId = crypto.randomUUID()
 
   if (fs.existsSync(asbTemplateFile)) {
     const template = JSON.parse(fs.readFileSync(asbTemplateFile, "utf-8"))
@@ -92,12 +92,16 @@ async function main() {
 
     for (const headerField of template.headerFields) {
       await prisma.asbHeaderField.create({
-        data: { ...headerField, id: randomUUID(), definitionId: asbDefId },
+        data: {
+          ...headerField,
+          id: crypto.randomUUID(),
+          definitionId: asbDefId,
+        },
       })
     }
 
     for (const majorQuestion of template.majorQuestions) {
-      const newMajorQuestionId = randomUUID()
+      const newMajorQuestionId = crypto.randomUUID()
       await prisma.asbMajorQuestion.create({
         data: {
           id: newMajorQuestionId,
@@ -107,7 +111,7 @@ async function main() {
         },
       })
       for (const subQuestion of majorQuestion.subQuestions) {
-        const newSubQuestionId = randomUUID()
+        const newSubQuestionId = crypto.randomUUID()
         await prisma.asbSubQuestion.create({
           data: {
             id: newSubQuestionId,
@@ -133,7 +137,7 @@ async function main() {
         for (const textElement of subQuestion.textElements || []) {
           await prisma.asbTextElement.create({
             data: {
-              id: randomUUID(),
+              id: crypto.randomUUID(),
               subQuestionId: newSubQuestionId,
               branchQuestionId: null,
               text: textElement.text,
@@ -145,7 +149,7 @@ async function main() {
           })
         }
         if (subQuestion.omrConfig) {
-          const newOmrId = randomUUID()
+          const newOmrId = crypto.randomUUID()
           await prisma.asbOmrConfig.create({
             data: {
               id: newOmrId,
@@ -161,7 +165,7 @@ async function main() {
             []) {
             await prisma.asbOmrChoiceOption.create({
               data: {
-                id: randomUUID(),
+                id: crypto.randomUUID(),
                 omrConfigId: newOmrId,
                 choiceIndex: choiceOption.choiceIndex,
                 label: choiceOption.label,
@@ -173,7 +177,7 @@ async function main() {
         for (const branchQuestion of subQuestion.branchQuestions || []) {
           await prisma.asbBranchQuestion.create({
             data: {
-              id: randomUUID(),
+              id: crypto.randomUUID(),
               subQuestionId: newSubQuestionId,
               label: branchQuestion.label,
               order: branchQuestion.order,

@@ -3,7 +3,7 @@ import type { Server } from "http"
 import type { IncomingMessage, ServerResponse } from "http"
 import type * as NodeModule from "module"
 import type { NextServer } from "next/dist/server/next"
-import { delimiter, join } from "path"
+import * as path from "path"
 
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
@@ -24,9 +24,9 @@ const ensurePackagedNodePath = (basePath: string) => {
     }
 
     const candidatePaths = [
-      join(basePath, "app.asar", "node_modules"),
-      join(basePath, "app.asar.unpacked", "node_modules"),
-      join(basePath, "node_modules"),
+      path.join(basePath, "app.asar", "node_modules"),
+      path.join(basePath, "app.asar.unpacked", "node_modules"),
+      path.join(basePath, "node_modules"),
     ].filter((p: string) => fs.existsSync(p))
 
     if (!candidatePaths.length) {
@@ -37,11 +37,11 @@ const ensurePackagedNodePath = (basePath: string) => {
     }
 
     const existing = process.env.NODE_PATH
-      ? process.env.NODE_PATH.split(delimiter).filter(Boolean)
+      ? process.env.NODE_PATH.split(path.delimiter).filter(Boolean)
       : []
     const updated = Array.from(new Set([...candidatePaths, ...existing]))
 
-    process.env.NODE_PATH = updated.join(delimiter)
+    process.env.NODE_PATH = updated.join(path.delimiter)
     Module._initPaths()
   } catch (error) {
     console.warn("Failed to extend NODE_PATH for packaged runtime:", error)
@@ -71,8 +71,8 @@ export async function startEmbeddedNextServer(): Promise<void> {
       // .nextとpublicディレクトリの存在確認
       try {
         const fs = require("fs")
-        const nextDir = join(appDir, ".next")
-        const publicDir = join(appDir, "public")
+        const nextDir = path.join(appDir, ".next")
+        const publicDir = path.join(appDir, "public")
 
         if (!fs.existsSync(nextDir)) {
           console.warn(`⚠ Warning: .next directory not found at ${nextDir}`)
@@ -82,7 +82,7 @@ export async function startEmbeddedNextServer(): Promise<void> {
         }
 
         // PDF workerファイルの存在確認
-        const pdfWorkerPath = join(publicDir, "js", "pdf.worker.min.mjs")
+        const pdfWorkerPath = path.join(publicDir, "js", "pdf.worker.min.mjs")
         if (!fs.existsSync(pdfWorkerPath)) {
           console.error(`❌ PDF worker file not found at ${pdfWorkerPath}`)
         }

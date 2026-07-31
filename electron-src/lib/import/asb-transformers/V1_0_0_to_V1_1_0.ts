@@ -9,7 +9,7 @@
  * あわせて counts.charGuides を再集計する（旧マニフェストには存在しないカウント）。
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type {
   AsbArchiveData,
@@ -38,7 +38,7 @@ export class V1_0_0_to_V1_1_0_Transformer implements AsbVersionTransformer {
               ...manuscriptPaper,
               charGuides: manuscriptPaper.charGuides.map((charGuide) => ({
                 ...charGuide,
-                id: charGuide.id ?? randomUUID(),
+                id: charGuide.id ?? crypto.randomUUID(),
               })),
             },
           }

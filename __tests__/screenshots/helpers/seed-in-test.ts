@@ -6,7 +6,7 @@
  */
 
 import { PrismaClient } from "@prisma/client"
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import sharp from "sharp"
@@ -294,7 +294,7 @@ export async function seedStudents(): Promise<string[]> {
     const studentData = STUDENT_DATA[i]
     const student = await db.student.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         studentNumber: `S${String(i + 1).padStart(3, "0")}`,
         lastName: studentData.lastName,
         firstName: studentData.firstName,
@@ -317,15 +317,15 @@ export async function seedClasses(
 ): Promise<{ classAId: string; classBId: string }> {
   const db = getPrisma()
   const classroomA = await db.classroom.create({
-    data: { id: randomUUID(), name: "2年A組", grade: 2 },
+    data: { id: crypto.randomUUID(), name: "2年A組", grade: 2 },
   })
   const classroomB = await db.classroom.create({
-    data: { id: randomUUID(), name: "2年B組", grade: 2 },
+    data: { id: crypto.randomUUID(), name: "2年B組", grade: 2 },
   })
   for (let i = 0; i < 20; i++) {
     await db.studentClassroomMembership.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         studentId: studentIds[i],
         classroomId: classroomA.id,
         attendanceNumber: i + 1,
@@ -335,7 +335,7 @@ export async function seedClasses(
   for (let i = 20; i < 40; i++) {
     await db.studentClassroomMembership.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         studentId: studentIds[i],
         classroomId: classroomB.id,
         attendanceNumber: i - 19,
@@ -355,7 +355,7 @@ export async function seedSubtotalAndTag(): Promise<{
 }> {
   const db = getPrisma()
   const subtotalGroup = await db.subtotalGroup.create({
-    data: { id: randomUUID(), name: "観点別評価" },
+    data: { id: crypto.randomUUID(), name: "観点別評価" },
   })
   const subtotalNames = [
     "知識・技能",
@@ -366,7 +366,7 @@ export async function seedSubtotalAndTag(): Promise<{
   for (let i = 0; i < subtotalNames.length; i++) {
     const subtotal = await db.subtotal.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         name: subtotalNames[i],
         subtotalGroupId: subtotalGroup.id,
         order: i,
@@ -375,11 +375,11 @@ export async function seedSubtotalAndTag(): Promise<{
     subtotalIds.push(subtotal.id)
   }
   const tag = await db.tag.create({
-    data: { id: randomUUID(), name: "数学" },
+    data: { id: crypto.randomUUID(), name: "数学" },
   })
   await db.tagSubtotalGroup.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       tagId: tag.id,
       subtotalGroupId: subtotalGroup.id,
     },
@@ -403,7 +403,7 @@ export async function seedExamWithScoring(
   const db = getPrisma()
   const REGION_DEFINITIONS = computeRegionDefinitions(templatePath)
 
-  const examId = randomUUID()
+  const examId = crypto.randomUUID()
   await db.exam.create({
     data: {
       id: examId,
@@ -413,12 +413,12 @@ export async function seedExamWithScoring(
     },
   })
   await db.userExam.create({
-    data: { id: randomUUID(), userId, examId, role: "OWNER" },
+    data: { id: crypto.randomUUID(), userId, examId, role: "OWNER" },
   })
   for (const classroomId of [classAId, classBId]) {
     await db.examClassroom.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examId,
         classroomId,
         administered: true,
@@ -428,11 +428,11 @@ export async function seedExamWithScoring(
     })
   }
   await db.examSubtotalGroup.create({
-    data: { id: randomUUID(), examId, subtotalGroupId },
+    data: { id: crypto.randomUUID(), examId, subtotalGroupId },
   })
 
   const examPage = await db.examPage.create({
-    data: { id: randomUUID(), examId, pageNumber: 1 },
+    data: { id: crypto.randomUUID(), examId, pageNumber: 1 },
   })
 
   // マスター画像（プレースホルダー白PNG）
@@ -455,7 +455,7 @@ export async function seedExamWithScoring(
     .replace(/\\/g, "/")
   await db.masterImage.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       examPageId: examPage.id,
       imagePath: relMasterPath,
     },
@@ -466,7 +466,7 @@ export async function seedExamWithScoring(
   for (const region of REGION_DEFINITIONS) {
     const cropRegion = await db.cropRegion.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examPageId: examPage.id,
         label: region.label,
         type: "QUESTION_ANSWER",
@@ -486,7 +486,7 @@ export async function seedExamWithScoring(
     const subtotalIndex = majorNum <= 3 ? 0 : majorNum <= 5 ? 1 : 2
     await db.cropSubtotal.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         cropRegionId: cropRegion.id,
         subtotalId: subtotalIds[subtotalIndex],
         assignmentType: "QUESTION_ASSIGNMENT",
@@ -510,7 +510,7 @@ export async function seedExamWithScoring(
     const studentId = studentIds[i]
     const examStudent = await db.examStudent.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examId,
         studentId,
         status: "PARTICIPATING",
@@ -533,7 +533,7 @@ export async function seedExamWithScoring(
       .replace(/\\/g, "/")
     await db.studentAnswerImage.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         examPageId: examPage.id,
         examStudentId: examStudent.id,
         imagePath: relAnswerPath,
@@ -547,7 +547,7 @@ export async function seedExamWithScoring(
     for (const scoreEntry of scores) {
       await db.questionScore.create({
         data: {
-          id: randomUUID(),
+          id: crypto.randomUUID(),
           cropRegionId: cropRegionIds[scoreEntry.regionIndex],
           examStudentId: examStudentIds[i],
           partialScore: scoreEntry.score,
@@ -578,7 +578,7 @@ export async function seedGradeProject(
 ): Promise<string> {
   const db = getPrisma()
 
-  const gradeId = randomUUID()
+  const gradeId = crypto.randomUUID()
   await db.grade.create({
     data: {
       id: gradeId,
@@ -589,13 +589,13 @@ export async function seedGradeProject(
   })
   for (const classroomId of [classAId, classBId]) {
     await db.gradeClassroom.create({
-      data: { id: randomUUID(), gradeId, classroomId },
+      data: { id: crypto.randomUUID(), gradeId, classroomId },
     })
   }
   for (let i = 0; i < studentIds.length; i++) {
     await db.gradeStudent.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         gradeId,
         studentId: studentIds[i],
         customOrder: i + 1,
@@ -618,7 +618,12 @@ export async function seedGradeProject(
   const gradeItemIds: string[] = []
   for (let i = 0; i < gradeItemNames.length; i++) {
     const gradeItem = await db.gradeItem.create({
-      data: { id: randomUUID(), gradeId, name: gradeItemNames[i], order: i },
+      data: {
+        id: crypto.randomUUID(),
+        gradeId,
+        name: gradeItemNames[i],
+        order: i,
+      },
     })
     gradeItemIds.push(gradeItem.id)
   }
@@ -626,7 +631,7 @@ export async function seedGradeProject(
   // 評定 → 合計点データソース
   await db.gradeDataSource.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       gradeItemId: gradeItemIds[3],
       type: "exam_total",
       examId,
@@ -639,7 +644,7 @@ export async function seedGradeProject(
   for (let subtotalIndex = 0; subtotalIndex < 3; subtotalIndex++) {
     await db.gradeDataSource.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         gradeItemId: gradeItemIds[subtotalIndex],
         type: "subtotal",
         examId,
@@ -659,7 +664,7 @@ export async function seedGradeProject(
   ]
   for (const gradeItemId of gradeItemIds) {
     const boundarySet = await db.gradeBoundarySet.create({
-      data: { id: randomUUID(), gradeId, gradeItemId },
+      data: { id: crypto.randomUUID(), gradeId, gradeItemId },
     })
     for (
       let boundaryIndex = 0;
@@ -668,7 +673,7 @@ export async function seedGradeProject(
     ) {
       await db.gradeBoundary.create({
         data: {
-          id: randomUUID(),
+          id: crypto.randomUUID(),
           gradeBoundarySetId: boundarySet.id,
           label: boundaryLabels[boundaryIndex].label,
           minPercentage: boundaryLabels[boundaryIndex].minPercentage,
@@ -690,7 +695,7 @@ export async function seedSimpleExam(
   classAId: string
 ): Promise<string> {
   const db = getPrisma()
-  const examId = randomUUID()
+  const examId = crypto.randomUUID()
   await db.exam.create({
     data: {
       id: examId,
@@ -700,11 +705,11 @@ export async function seedSimpleExam(
     },
   })
   await db.userExam.create({
-    data: { id: randomUUID(), userId, examId, role: "OWNER" },
+    data: { id: crypto.randomUUID(), userId, examId, role: "OWNER" },
   })
   await db.examClassroom.create({
     data: {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       examId,
       classroomId: classAId,
       administered: true,
@@ -713,7 +718,7 @@ export async function seedSimpleExam(
     },
   })
   await db.examPage.create({
-    data: { id: randomUUID(), examId, pageNumber: 1 },
+    data: { id: crypto.randomUUID(), examId, pageNumber: 1 },
   })
   console.log(`  [SEED] 通常試験 (examId=${examId})`)
   return examId

@@ -12,8 +12,8 @@
  * 4. 0-1正規化 → ONNX推論 → 数字（0-9）+ 信頼度
  */
 
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import sharp from "sharp"
 
 import type { ComputedCell } from "../../../src/types/answerSheetLayout.types"

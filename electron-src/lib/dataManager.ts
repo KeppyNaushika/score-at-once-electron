@@ -1,5 +1,6 @@
 import { app } from "electron"
-import * as fs from "fs/promises"
+import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 // アプリケーションのルートディレクトリ（実行ファイルがある場所）
@@ -21,7 +22,6 @@ const getAppRootPath = (): string => {
 
     // Windowsでファイルパスが適切に解決されるかチェック
     try {
-      const fs = require("fs")
       const exists = fs.existsSync(rootPath)
       if (!exists) {
         console.error(`Windows root path does not exist: ${rootPath}`)
@@ -84,17 +84,17 @@ export const initializeDataDirectory = async (): Promise<void> => {
   try {
     // 親ディレクトリの存在確認と作成
     const parentDir = path.dirname(dataDir)
-    await fs.mkdir(parentDir, { recursive: true, mode: 0o755 })
+    await fsPromises.mkdir(parentDir, { recursive: true, mode: 0o755 })
 
     // データディレクトリの作成
-    await fs.mkdir(dataDir, { recursive: true, mode: 0o755 })
+    await fsPromises.mkdir(dataDir, { recursive: true, mode: 0o755 })
 
     // サブディレクトリの作成
     const examsDir = path.join(dataDir, "exams")
     const exportsDir = getExportsDirectory()
 
-    await fs.mkdir(examsDir, { recursive: true, mode: 0o755 })
-    await fs.mkdir(exportsDir, { recursive: true, mode: 0o755 })
+    await fsPromises.mkdir(examsDir, { recursive: true, mode: 0o755 })
+    await fsPromises.mkdir(exportsDir, { recursive: true, mode: 0o755 })
   } catch (error) {
     console.error("Failed to initialize data directory:", error)
     console.error("Data directory path:", dataDir)
@@ -114,7 +114,7 @@ export const migrateProjectsToExams = async (): Promise<boolean> => {
   const newExamsDir = path.join(dataDir, "exams")
 
   try {
-    await fs.access(oldProjectsDir)
+    await fsPromises.access(oldProjectsDir)
   } catch {
     // data/projects/ が存在しない場合はスキップ
     return false
@@ -122,17 +122,17 @@ export const migrateProjectsToExams = async (): Promise<boolean> => {
 
   try {
     // data/exams/ を作成
-    await fs.mkdir(newExamsDir, { recursive: true })
+    await fsPromises.mkdir(newExamsDir, { recursive: true })
 
     // 各試験ディレクトリをコピー
-    const examDirs = await fs.readdir(oldProjectsDir)
+    const examDirs = await fsPromises.readdir(oldProjectsDir)
     for (const dir of examDirs) {
       const oldPath = path.join(oldProjectsDir, dir)
       const newPath = path.join(newExamsDir, dir)
 
       // 移行先に既にある場合はスキップ
       try {
-        await fs.access(newPath)
+        await fsPromises.access(newPath)
         console.log(`Skipping already migrated exam directory: ${dir}`)
         continue
       } catch {
@@ -143,7 +143,7 @@ export const migrateProjectsToExams = async (): Promise<boolean> => {
     }
 
     // 旧ディレクトリを削除
-    await fs.rm(oldProjectsDir, { recursive: true, force: true })
+    await fsPromises.rm(oldProjectsDir, { recursive: true, force: true })
     console.log(
       `Successfully migrated data/projects/ → data/exams/ (${examDirs.length} directories)`
     )
@@ -156,9 +156,9 @@ export const migrateProjectsToExams = async (): Promise<boolean> => {
 
 // ディレクトリの再帰的コピー
 const copyDirectory = async (src: string, dest: string): Promise<void> => {
-  await fs.mkdir(dest, { recursive: true })
+  await fsPromises.mkdir(dest, { recursive: true })
 
-  const entries = await fs.readdir(src, { withFileTypes: true })
+  const entries = await fsPromises.readdir(src, { withFileTypes: true })
 
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name)
@@ -167,7 +167,7 @@ const copyDirectory = async (src: string, dest: string): Promise<void> => {
     if (entry.isDirectory()) {
       await copyDirectory(srcPath, destPath)
     } else {
-      await fs.copyFile(srcPath, destPath)
+      await fsPromises.copyFile(srcPath, destPath)
     }
   }
 }
@@ -183,7 +183,7 @@ const getDirectorySize = async (dirPath: string): Promise<number> => {
   let totalSize = 0
 
   try {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    const entries = await fsPromises.readdir(dirPath, { withFileTypes: true })
 
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name)
@@ -191,7 +191,7 @@ const getDirectorySize = async (dirPath: string): Promise<number> => {
       if (entry.isDirectory()) {
         totalSize += await getDirectorySize(fullPath)
       } else {
-        const stats = await fs.stat(fullPath)
+        const stats = await fsPromises.stat(fullPath)
         totalSize += stats.size
       }
     }

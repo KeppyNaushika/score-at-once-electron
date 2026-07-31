@@ -6,7 +6,7 @@ import {
   Menu,
   RenderProcessGoneDetails,
 } from "electron"
-import { join } from "path"
+import * as path from "path"
 
 import menu from "./menu"
 
@@ -20,13 +20,13 @@ export function createMainWindow(): BrowserWindow {
     if (process.platform === "darwin") {
       // macOSの場合は.icnsファイルを使用
       return isDev
-        ? join(__dirname, "../public/icons/icon.icns")
-        : join(process.resourcesPath, "app.asar/public/icons/icon.icns")
+        ? path.join(__dirname, "../public/icons/icon.icns")
+        : path.join(process.resourcesPath, "app.asar/public/icons/icon.icns")
     } else {
       // Windows/Linuxの場合はPNGファイルを使用
       return isDev
-        ? join(__dirname, "../public/icons/icon-win.png")
-        : join(process.resourcesPath, "app.asar/public/icons/icon-win.png")
+        ? path.join(__dirname, "../public/icons/icon-win.png")
+        : path.join(process.resourcesPath, "app.asar/public/icons/icon-win.png")
     }
   }
 
@@ -38,7 +38,7 @@ export function createMainWindow(): BrowserWindow {
     show: false, // 最初は非表示
     icon: iconPath, // アイコンを設定
     webPreferences: {
-      preload: join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: true, // セキュリティ有効化（ローカルファイルアクセスはappimg://プロトコルで対応）

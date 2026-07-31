@@ -3,7 +3,7 @@ import * as ExcelJS from "exceljs"
 
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
-import { average as mean } from "../../shared/calculations/numericStats"
+import { calculateAverage } from "../../shared/calculations/numericStats"
 import type { ScoringData } from "../../shared/types"
 import { applyCellStyle } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"
@@ -12,7 +12,7 @@ import type { SubtotalColumn } from "./dataFetcher"
 function average(values: (number | null | undefined)[]): number | null {
   const numbers = values.filter((value): value is number => value != null)
   if (numbers.length === 0) return null
-  return Math.round(mean(numbers) * 10) / 10
+  return Math.round(calculateAverage(numbers) * 10) / 10
 }
 
 /** 指定生徒集合の 合計点／小計／設問 の平均行（ヘッダー列順）を作る */

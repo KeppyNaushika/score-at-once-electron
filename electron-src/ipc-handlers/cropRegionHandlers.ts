@@ -1,14 +1,14 @@
 import { Prisma } from "@prisma/client"
 
 import {
-  createCropRegion as dbCreateCropRegion,
-  createManyCropRegions as dbCreateManyCropRegions,
-  deleteCropRegion as dbDeleteCropRegion,
-  getCropRegionById as dbGetCropRegionById,
-  getCropRegionsByExamId as dbGetCropRegionsByExamId,
-  getQuestionAnswerRegionsByExamId as dbGetQuestionAnswerRegionsByExamId,
-  updateCropRegion as dbUpdateCropRegion,
-  updateCropRegionOrders as dbUpdateCropRegionOrders,
+  createCropRegion,
+  createManyCropRegions,
+  deleteCropRegion,
+  getCropRegionById,
+  getCropRegionsByExamId,
+  getQuestionAnswerRegionsByExamId,
+  updateCropRegion,
+  updateCropRegionOrders,
 } from "../lib/prisma/cropRegion"
 
 /**
@@ -60,21 +60,21 @@ function serializeCropRegion<
 }
 
 import {
-  createCropSubtotal as dbCreateCropSubtotal,
-  createManyCropSubtotals as dbCreateManyCropSubtotals,
-  deleteCropSubtotal as dbDeleteCropSubtotal,
-  deleteCropSubtotalsByCropRegionId as dbDeleteCropSubtotalsByCropRegionId,
-  getCropSubtotalsByCropRegionId as dbGetCropSubtotalsByCropRegionId,
-  getCropSubtotalsBySubtotalId as dbGetCropSubtotalsBySubtotalId,
-  getSubtotalDefinitionsByCropRegionId as dbGetSubtotalDefsByCropRegionId,
+  createCropSubtotal,
+  createManyCropSubtotals,
+  deleteCropSubtotal,
+  deleteCropSubtotalsByCropRegionId,
+  getCropSubtotalsByCropRegionId,
+  getCropSubtotalsBySubtotalId,
+  getSubtotalDefinitionsByCropRegionId,
 } from "../lib/prisma/cropSubtotal"
 import {
-  createManySubtotals as dbCreateManySubtotals,
-  createSubtotal as dbCreateSubtotal,
-  deleteSubtotal as dbDeleteSubtotal,
-  getSubtotalById as dbGetSubtotalById,
-  getSubtotalsByGroupId as dbGetSubtotalsByGroupId,
-  updateSubtotal as dbUpdateSubtotal,
+  createManySubtotals,
+  createSubtotal,
+  deleteSubtotal,
+  getSubtotalById,
+  getSubtotalsByGroupId,
+  updateSubtotal,
 } from "../lib/prisma/subtotal"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
@@ -84,37 +84,37 @@ export function setupCropRegionHandlers(): void {
   registerHandler(
     "create-crop-region",
     async (data: Prisma.CropRegionUncheckedCreateInput) => {
-      return await dbCreateCropRegion(data)
+      return await createCropRegion(data)
     }
   )
 
   registerHandler(
     "create-many-crop-regions",
     async (data: Prisma.CropRegionCreateManyInput[]) => {
-      return await dbCreateManyCropRegions(data)
+      return await createManyCropRegions(data)
     }
   )
 
   registerHandler(
     "update-crop-region",
     async (id: string, data: Prisma.CropRegionUpdateInput) => {
-      return await dbUpdateCropRegion(id, data)
+      return await updateCropRegion(id, data)
     }
   )
 
   registerHandler(
     "update-crop-region-orders",
     async (updates: Array<{ id: string; orderIndex: number }>) => {
-      return await dbUpdateCropRegionOrders(updates)
+      return await updateCropRegionOrders(updates)
     }
   )
 
   registerHandler("delete-crop-region", async (id: string) => {
-    return await dbDeleteCropRegion(id)
+    return await deleteCropRegion(id)
   })
 
   registerHandler("get-crop-regions-by-exam-id", async (examId: string) => {
-    const result = await dbGetCropRegionsByExamId(examId)
+    const result = await getCropRegionsByExamId(examId)
     // questionScoresのDecimalをnumberに変換
     return result?.map(serializeCropRegion) || []
   })
@@ -122,14 +122,14 @@ export function setupCropRegionHandlers(): void {
   registerHandler(
     "get-question-answer-regions-by-exam-id",
     async (examId: string) => {
-      const result = await dbGetQuestionAnswerRegionsByExamId(examId)
+      const result = await getQuestionAnswerRegionsByExamId(examId)
       // questionScoresのDecimalをnumberに変換
       return result?.map(serializeCropRegion) || []
     }
   )
 
   registerHandler("get-crop-region-by-id", async (id: string) => {
-    const result = await dbGetCropRegionById(id)
+    const result = await getCropRegionById(id)
     // questionScoresのDecimalをnumberに変換
     return result ? serializeCropRegion(result) : null
   })
@@ -138,69 +138,69 @@ export function setupCropRegionHandlers(): void {
   registerHandler(
     "create-subtotal",
     async (data: Prisma.SubtotalUncheckedCreateInput) => {
-      return await dbCreateSubtotal(data)
+      return await createSubtotal(data)
     }
   )
 
   registerHandler(
     "create-many-subtotals",
     async (data: Prisma.SubtotalUncheckedCreateInput[]) => {
-      return await dbCreateManySubtotals(data)
+      return await createManySubtotals(data)
     }
   )
 
   registerHandler(
     "update-subtotal",
     async (id: string, data: Prisma.SubtotalUpdateInput) => {
-      return await dbUpdateSubtotal(id, data)
+      return await updateSubtotal(id, data)
     }
   )
 
   registerHandler("delete-subtotal", async (id: string) => {
-    return await dbDeleteSubtotal(id)
+    return await deleteSubtotal(id)
   })
 
   registerHandler(
     "get-subtotals-by-group-id",
     async (subtotalGroupId: string) => {
-      return await dbGetSubtotalsByGroupId(subtotalGroupId)
+      return await getSubtotalsByGroupId(subtotalGroupId)
     }
   )
 
   registerHandler("get-subtotal-by-id", async (id: string) => {
-    return await dbGetSubtotalById(id)
+    return await getSubtotalById(id)
   })
 
   // --- CropSubtotal Handlers ---
   registerHandler(
     "create-crop-subtotal",
     async (data: Prisma.CropSubtotalUncheckedCreateInput) => {
-      return await dbCreateCropSubtotal(data)
+      return await createCropSubtotal(data)
     }
   )
 
   registerHandler(
     "create-many-crop-subtotals",
     async (data: Prisma.CropSubtotalUncheckedCreateInput[]) => {
-      return await dbCreateManyCropSubtotals(data)
+      return await createManyCropSubtotals(data)
     }
   )
 
   registerHandler("delete-crop-subtotal", async (id: string) => {
-    return await dbDeleteCropSubtotal(id)
+    return await deleteCropSubtotal(id)
   })
 
   registerHandler(
     "delete-crop-subtotals-by-crop-region-id",
     async (cropRegionId: string) => {
-      return await dbDeleteCropSubtotalsByCropRegionId(cropRegionId)
+      return await deleteCropSubtotalsByCropRegionId(cropRegionId)
     }
   )
 
   registerHandler(
     "get-crop-subtotals-by-crop-region-id",
     async (cropRegionId: string) => {
-      return await dbGetCropSubtotalsByCropRegionId(cropRegionId)
+      return await getCropSubtotalsByCropRegionId(cropRegionId)
     }
   )
 
@@ -208,7 +208,7 @@ export function setupCropRegionHandlers(): void {
   registerSafeHandler(
     "get-assignments-by-question-crop-region-id",
     async (cropRegionId: string) => {
-      const assignments = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
+      const assignments = await getCropSubtotalsByCropRegionId(cropRegionId)
       return {
         success: true,
         assignments: assignments || [],
@@ -219,7 +219,7 @@ export function setupCropRegionHandlers(): void {
   registerHandler(
     "get-crop-subtotals-by-subtotal-id",
     async (subtotalId: string) => {
-      return await dbGetCropSubtotalsBySubtotalId(subtotalId)
+      return await getCropSubtotalsBySubtotalId(subtotalId)
     }
   )
 
@@ -227,7 +227,7 @@ export function setupCropRegionHandlers(): void {
   registerHandler(
     "get-subtotal-definitions-by-crop-region-id",
     async (cropRegionId: string) => {
-      return await dbGetSubtotalDefsByCropRegionId(cropRegionId)
+      return await getSubtotalDefinitionsByCropRegionId(cropRegionId)
     }
   )
 }

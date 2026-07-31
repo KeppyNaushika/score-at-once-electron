@@ -1,7 +1,7 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
-import { Tag as TagIcon, X as XIcon } from "lucide-react"
+import { TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"

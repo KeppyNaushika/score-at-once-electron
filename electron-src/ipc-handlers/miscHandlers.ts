@@ -1,7 +1,13 @@
 import { Prisma } from "@prisma/client"
-import * as fs from "fs/promises"
+import { shell } from "electron"
+import * as fsPromises from "fs/promises"
+import * as path from "path"
 
-import { getAbsolutePathFromData } from "../lib/dataManager"
+import {
+  calculateDataSize,
+  getAbsolutePathFromData,
+  getDataDirectory,
+} from "../lib/dataManager"
 import {
   createClassroom,
   deleteClassroom,
@@ -30,9 +36,12 @@ import {
 } from "../lib/prisma/studentAnswer/placementApply"
 import { setStudentAnswerAbsent } from "../lib/prisma/studentAnswer/status"
 import {
-  createUser as createUserWithPasscode,
+  createUser,
   fetchUsers,
   getCurrentUser,
+  updateUser,
+  updateUserPasscode,
+  verifyPasscode,
 } from "../lib/prisma/user"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
@@ -56,7 +65,7 @@ export function setupMiscHandlers(): void {
       passcode?: string
       passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
     }) => {
-      return await createUserWithPasscode({
+      return await createUser({
         username: userData.username,
         name: userData.name,
         passcode: userData.passcode,
@@ -68,7 +77,6 @@ export function setupMiscHandlers(): void {
   registerHandler(
     "verify-passcode",
     async (userId: string, passcode: string) => {
-      const { verifyPasscode } = await import("../lib/prisma/user")
       return await verifyPasscode(userId, passcode)
     }
   )
@@ -76,7 +84,6 @@ export function setupMiscHandlers(): void {
   registerHandler(
     "update-user",
     async (userId: string, userData: { username?: string; name?: string }) => {
-      const { updateUser } = await import("../lib/prisma/user")
       return await updateUser(userId, userData)
     }
   )
@@ -84,7 +91,6 @@ export function setupMiscHandlers(): void {
   registerHandler(
     "update-user-passcode",
     async (userId: string, passcode?: string, passcodeType?: string) => {
-      const { updateUserPasscode } = await import("../lib/prisma/user")
       return await updateUserPasscode(
         userId,
         passcode,
@@ -261,10 +267,6 @@ export function setupMiscHandlers(): void {
   )
 
   registerSafeHandler("read-file-as-base64", async (filePath: string) => {
-    const fs = await import("fs/promises")
-    const path = await import("path")
-    const { getDataDirectory } = await import("../lib/dataManager")
-
     // 相対パスの場合はdataディレクトリからの相対パスとして解決
     const resolvedPath = path.isAbsolute(filePath)
       ? filePath
@@ -272,7 +274,7 @@ export function setupMiscHandlers(): void {
 
     // ファイルの存在確認
     try {
-      await fs.access(resolvedPath)
+      await fsPromises.access(resolvedPath)
     } catch {
       return {
         success: false,
@@ -281,7 +283,7 @@ export function setupMiscHandlers(): void {
     }
 
     // ファイルを読み込んでBase64に変換
-    const buffer = await fs.readFile(resolvedPath)
+    const buffer = await fsPromises.readFile(resolvedPath)
     const base64Data = buffer.toString("base64")
 
     // MIMEタイプを推定
@@ -320,9 +322,6 @@ export function setupMiscHandlers(): void {
 
   // Data management handlers
   registerSafeHandler("get-data-directory-info", async () => {
-    const { getDataDirectory, calculateDataSize } =
-      await import("../lib/dataManager")
-
     const dataDirectory = getDataDirectory()
     const size = await calculateDataSize()
 
@@ -334,9 +333,6 @@ export function setupMiscHandlers(): void {
   })
 
   registerSafeHandler("open-data-directory", async () => {
-    const { shell } = await import("electron")
-    const { getDataDirectory } = await import("../lib/dataManager")
-
     const dataDirectory = getDataDirectory()
     await shell.openPath(dataDirectory)
 
@@ -344,16 +340,13 @@ export function setupMiscHandlers(): void {
   })
 
   registerSafeHandler("delete-all-data", async () => {
-    const { getDataDirectory } = await import("../lib/dataManager")
-    const fs = await import("fs/promises")
-
     const dataDirectory = getDataDirectory()
 
     // データフォルダを完全削除
-    await fs.rm(dataDirectory, { recursive: true, force: true })
+    await fsPromises.rm(dataDirectory, { recursive: true, force: true })
 
     // データディレクトリを再作成
-    await fs.mkdir(dataDirectory, { recursive: true })
+    await fsPromises.mkdir(dataDirectory, { recursive: true })
 
     return { success: true }
   })
@@ -361,7 +354,7 @@ export function setupMiscHandlers(): void {
   // 画像ファイル読み込みハンドラー
   registerSafeHandler("get-image-data", async (relativePath: string) => {
     const absolutePath = getAbsolutePathFromData(relativePath)
-    const imageBuffer = await fs.readFile(absolutePath)
+    const imageBuffer = await fsPromises.readFile(absolutePath)
     const base64 = imageBuffer.toString("base64")
 
     // MIMEタイプを推定
@@ -385,7 +378,7 @@ export function setupMiscHandlers(): void {
   registerSafeHandler("check-file-exists", async (relativePath: string) => {
     const absolutePath = getAbsolutePathFromData(relativePath)
     try {
-      await fs.access(absolutePath)
+      await fsPromises.access(absolutePath)
       return { success: true, exists: true, path: absolutePath }
     } catch (err) {
       return {
