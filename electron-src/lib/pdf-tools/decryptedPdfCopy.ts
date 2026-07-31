@@ -5,7 +5,7 @@
  * パスワード復号してレンダリングしたページ画像から、保護なしのPDFを一時ファイル
  * として再構成する。以後の結合・分割・回転はこの複製のパスに対して行う。
  */
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
@@ -55,7 +55,10 @@ export async function writeDecryptedPdfCopy(
 
   const outputDir = decryptedCopyDir()
   fs.mkdirSync(outputDir, { recursive: true })
-  const outputPath = path.join(outputDir, `decrypted-${randomUUID()}.pdf`)
+  const outputPath = path.join(
+    outputDir,
+    `decrypted-${crypto.randomUUID()}.pdf`
+  )
   fs.writeFileSync(outputPath, await pdfDoc.save())
   return outputPath
 }

@@ -3,8 +3,8 @@
  */
 
 import { BrowserWindow, ipcMain } from "electron"
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 
 import type { ComputedCell } from "../../src/types/answerSheetLayout.types"
 import type {

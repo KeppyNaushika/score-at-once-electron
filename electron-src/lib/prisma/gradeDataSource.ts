@@ -3,7 +3,7 @@
  */
 
 import type { Prisma } from "@prisma/client"
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import { toGradeDataSourceType } from "../../../src/types/grade.types"
 import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
@@ -264,7 +264,7 @@ export async function createDataSource(data: {
     const nextOrder = (maxOrder._max.order ?? -1) + 1
 
     // estimationSources のidは自分のidから決定論的に作るため、先にidを確定させる
-    const dataSourceId = randomUUID()
+    const dataSourceId = crypto.randomUUID()
 
     const dataSource = await prisma.gradeDataSource.create({
       data: {

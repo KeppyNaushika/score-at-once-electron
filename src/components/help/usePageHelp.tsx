@@ -4,17 +4,17 @@ import { BookOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
 import React, { useState } from "react"
 
-import { HelpContent01Upload as UploadHelpContent } from "@/components/help/page-specific/HelpContent01Upload"
-import { HelpContent02Template as TemplateHelpContent } from "@/components/help/page-specific/HelpContent02Template"
-import { HelpContent03RegionInfo as RegionInfoHelpContent } from "@/components/help/page-specific/HelpContent03RegionInfo"
-import { HelpContent04QuestionGroup as QuestionGroupHelpContent } from "@/components/help/page-specific/HelpContent04QuestionGroup"
-import { HelpContent05Students as StudentsHelpContent } from "@/components/help/page-specific/HelpContent05Students"
-import { HelpContent06StudentAnswers as StudentAnswersHelpContent } from "@/components/help/page-specific/HelpContent06StudentAnswers"
-import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent07Scoring"
-import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent08Export"
-import { HelpContentClassrooms as ClassroomsHelpContent } from "@/components/help/page-specific/HelpContentClassrooms"
-import { HelpContentStudents as StudentsMasterHelpContent } from "@/components/help/page-specific/HelpContentStudents"
-import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContentSubtotalGroups"
+import { HelpContent01Upload } from "@/components/help/page-specific/HelpContent01Upload"
+import { HelpContent02Template } from "@/components/help/page-specific/HelpContent02Template"
+import { HelpContent03RegionInfo } from "@/components/help/page-specific/HelpContent03RegionInfo"
+import { HelpContent04QuestionGroup } from "@/components/help/page-specific/HelpContent04QuestionGroup"
+import { HelpContent05Students } from "@/components/help/page-specific/HelpContent05Students"
+import { HelpContent06StudentAnswers } from "@/components/help/page-specific/HelpContent06StudentAnswers"
+import { HelpContent07Scoring } from "@/components/help/page-specific/HelpContent07Scoring"
+import { HelpContent08Export } from "@/components/help/page-specific/HelpContent08Export"
+import { HelpContentClassrooms } from "@/components/help/page-specific/HelpContentClassrooms"
+import { HelpContentStudents } from "@/components/help/page-specific/HelpContentStudents"
+import { HelpContentSubtotalGroups } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,17 +29,17 @@ import {
 const pageHelpComponents: {
   [key: string]: React.ComponentType
 } = {
-  "01-upload": UploadHelpContent,
-  "02-template": TemplateHelpContent,
-  "03-region-info": RegionInfoHelpContent,
-  "04-question-group": QuestionGroupHelpContent,
-  "05-students": StudentsHelpContent,
-  "06-student-answers": StudentAnswersHelpContent,
-  "07-score-at-once": ScoringHelpContent,
-  "08-export": ExportHelpContent,
-  "subtotal-groups": SubtotalGroupsHelpContent,
-  classrooms: ClassroomsHelpContent,
-  students: StudentsMasterHelpContent,
+  "01-upload": HelpContent01Upload,
+  "02-template": HelpContent02Template,
+  "03-region-info": HelpContent03RegionInfo,
+  "04-question-group": HelpContent04QuestionGroup,
+  "05-students": HelpContent05Students,
+  "06-student-answers": HelpContent06StudentAnswers,
+  "07-score-at-once": HelpContent07Scoring,
+  "08-export": HelpContent08Export,
+  "subtotal-groups": HelpContentSubtotalGroups,
+  classrooms: HelpContentClassrooms,
+  students: HelpContentStudents,
 }
 
 /** 現在のページに対応するヘルプコンテンツを全画面モーダルで表示するフック */

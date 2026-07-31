@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Settings, User as UserIcon } from "lucide-react"
+import { Plus, Settings, UserIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 

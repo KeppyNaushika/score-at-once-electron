@@ -6,9 +6,9 @@
  */
 
 import { app, BrowserWindow } from "electron"
-import fs from "fs"
-import os from "os"
-import path from "path"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import sharp from "sharp"
 
 let mathjaxCache: string | null = null

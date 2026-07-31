@@ -7,6 +7,8 @@
  * どちらの形で読んだかだけを見分け、変換器チェーンへ渡す。
  */
 
+import AdmZip from "adm-zip"
+
 import type { CollectedCourseworkData } from "../../../../src/types/courseworkArchive.types"
 import type { GradeArchiveManifest } from "../../../../src/types/gradeArchive.types"
 import {
@@ -28,8 +30,6 @@ import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
 async function extractZip(
   archivePath: string
 ): Promise<Record<string, string>> {
-  // Node.js built-in で ZIP を解凍
-  const AdmZip = (await import("adm-zip")).default
   const zip = new AdmZip(archivePath)
   const entries = zip.getEntries()
   const files: Record<string, string> = {}

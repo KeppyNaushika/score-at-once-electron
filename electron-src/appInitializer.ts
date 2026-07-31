@@ -2,12 +2,16 @@ import {
   initializeDataDirectory,
   migrateProjectsToExams,
 } from "./lib/dataManager"
-import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseHealth"
+import { getPrismaClient } from "./lib/prisma/client"
+import {
+  checkDatabaseHealth,
+  optimizeDatabaseForSharedDrive,
+} from "./lib/prisma/databaseHealth"
+import { initializeSync } from "./lib/sync/syncService"
 
 // DB内の imagePath を projects/ → exams/ に一括更新（v0.6.x リネーム対応）
 async function migrateImagePathsInDatabase(): Promise<void> {
   try {
-    const { getPrismaClient } = await import("./lib/prisma/client")
     const prisma = getPrismaClient()
 
     const [masterResult, answerResult] = await prisma.$transaction([
@@ -66,7 +70,6 @@ export async function initializeApp(): Promise<void> {
     await optimizeDatabaseForSharedDrive()
 
     // データベース接続テスト
-    const { checkDatabaseHealth } = await import("./lib/prisma/databaseHealth")
     const isHealthy = await checkDatabaseHealth()
 
     if (!isHealthy) {
@@ -75,7 +78,6 @@ export async function initializeApp(): Promise<void> {
 
     // NAS同期の初期化（DBが準備完了してから）
     try {
-      const { initializeSync } = await import("./lib/sync/syncService")
       await initializeSync()
     } catch (syncError) {
       // sync初期化失敗はアプリ起動を妨げない

@@ -11,7 +11,7 @@
  * grade-archive はこの importCourseworkData をトランザクション内で呼び出して内包する。
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type {
   ArchiveCourseworkItemRow,
@@ -356,7 +356,7 @@ export async function importCourseworkData(
       if (!actualItemId) {
         actualItemId = await createItem(
           courseworkId,
-          preserveUuids ? item.id : randomUUID(),
+          preserveUuids ? item.id : crypto.randomUUID(),
           item
         )
       }
@@ -417,7 +417,7 @@ export async function importCourseworkData(
 
     // 新規作成。decision 未指定（uuid 不一致の初回取込）のみ元 uuid を保持して冪等化。
     const preserveUuids = !decision
-    const newCourseworkId = preserveUuids ? coursework.id : randomUUID()
+    const newCourseworkId = preserveUuids ? coursework.id : crypto.randomUUID()
     const created = await tx.coursework.create({
       data: {
         id: newCourseworkId,

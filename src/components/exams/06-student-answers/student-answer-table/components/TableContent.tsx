@@ -28,7 +28,7 @@ import {
   Table,
   TableBody,
   TableHead,
-  TableHeader as UITableHeader,
+  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
@@ -130,7 +130,7 @@ export function TableContent({
 }: TableContentProps) {
   return (
     <Table>
-      <UITableHeader>
+      <TableHeader>
         <TableRow>
           {/* 生徒名列ヘッダー */}
           <TableHead className="w-32 border text-center">生徒名</TableHead>
@@ -179,7 +179,7 @@ export function TableContent({
             </TableHead>
           ))}
         </TableRow>
-      </UITableHeader>
+      </TableHeader>
       <TableBody>
         {tableRows.map(({ examStudent, cells }) => (
           <TableRow key={examStudent.id}>

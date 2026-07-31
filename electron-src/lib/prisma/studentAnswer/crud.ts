@@ -3,7 +3,7 @@
  * - アップロード、取得、削除、関連付け
  */
 import type { Prisma } from "@prisma/client"
-import * as fs from "fs/promises"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import type {
@@ -138,7 +138,7 @@ export async function uploadStudentAnswers(
     const examDir = getAnswerSheetsDirectory(examId)
 
     // 試験ディレクトリを作成
-    await fs.mkdir(examDir, { recursive: true })
+    await fsPromises.mkdir(examDir, { recursive: true })
 
     const uploadedSheets: Array<{
       id: string
@@ -233,13 +233,13 @@ export async function uploadStudentAnswers(
 
       if (existingRecord) {
         if (fileData.overwrite) {
-          await fs.writeFile(filePath, buffer)
+          await fsPromises.writeFile(filePath, buffer)
 
           try {
             const oldFilePath = getAbsolutePathFromData(
               existingRecord.imagePath
             )
-            await fs.unlink(oldFilePath)
+            await fsPromises.unlink(oldFilePath)
           } catch {
             // ファイルが存在しない場合は無視
           }
@@ -263,7 +263,7 @@ export async function uploadStudentAnswers(
           })
         }
       } else {
-        await fs.writeFile(filePath, buffer)
+        await fsPromises.writeFile(filePath, buffer)
 
         const answerSheet = await prisma.studentAnswerImage.create({
           data: {
@@ -671,8 +671,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
     // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
     // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
     try {
-      const { getAbsolutePathFromData } = await import("../../dataManager")
-      await fs.unlink(getAbsolutePathFromData(answerSheet.imagePath))
+      await fsPromises.unlink(getAbsolutePathFromData(answerSheet.imagePath))
     } catch (fileError) {
       console.warn("Failed to delete file:", fileError)
     }

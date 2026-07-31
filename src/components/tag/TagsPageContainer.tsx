@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { Edit2, PlusCircle, Trash2, X as XIcon } from "lucide-react"
+import { Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 

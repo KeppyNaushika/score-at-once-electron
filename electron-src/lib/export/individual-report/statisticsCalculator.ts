@@ -5,10 +5,10 @@
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import {
-  average as calculateAverage,
-  boxPlot as calculateBoxPlotData,
-  rank as calculateRank,
-  stdDev as calculateStdDev,
+  calculateAverage,
+  calculateBoxPlot,
+  calculateRank,
+  calculateStandardDeviation,
 } from "../../shared/calculations/numericStats"
 import type { DiscriminationLevel, ScoringData } from "../../shared/types"
 import type {
@@ -164,8 +164,8 @@ export function calculateSubtotalStatistics(
       subtotalLabel: template.subtotalLabel,
       maxScore: template.maxScore,
       average: calculateAverage(scores),
-      stdDev: calculateStdDev(scores),
-      boxPlot: calculateBoxPlotData(scores),
+      stdDev: calculateStandardDeviation(scores),
+      boxPlot: calculateBoxPlot(scores),
       subtotalGroupId: template.subtotalGroupId,
       subtotalGroupName: template.subtotalGroupName,
     }
@@ -257,8 +257,8 @@ export function calculateDiscriminationIndices(
       continue
     }
 
-    const itemStdDev = calculateStdDev(itemScores)
-    const totalStdDev = calculateStdDev(correctedTotals)
+    const itemStdDev = calculateStandardDeviation(itemScores)
+    const totalStdDev = calculateStandardDeviation(correctedTotals)
 
     if (itemStdDev === 0 || totalStdDev === 0) {
       indices[questionId] = null
@@ -320,8 +320,8 @@ export function calculateStatisticsForStudent(
 
   // 全体統計
   const overallAverage = calculateAverage(allScores)
-  const overallStdDev = calculateStdDev(allScores)
-  const overallBoxPlot = calculateBoxPlotData(allScores)
+  const overallStdDev = calculateStandardDeviation(allScores)
+  const overallBoxPlot = calculateBoxPlot(allScores)
 
   // studentId → 合計点の索引（学級母集団の絞り込み用）
   const scoreById = scoreByStudentId ?? buildScoreByStudentId(allScoringData)
@@ -343,8 +343,8 @@ export function calculateStatisticsForStudent(
         grade: classroom.grade,
         memberStudentIds: classroom.memberStudentIds,
         average: calculateAverage(classroomScores),
-        stdDev: calculateStdDev(classroomScores),
-        boxPlot: calculateBoxPlotData(classroomScores),
+        stdDev: calculateStandardDeviation(classroomScores),
+        boxPlot: calculateBoxPlot(classroomScores),
         total: presentIds.length,
         rank:
           studentScore !== null

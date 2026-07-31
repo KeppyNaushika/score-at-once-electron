@@ -5,7 +5,7 @@
  * グループがスキップされた配下の小計・関連データ欠落の紐づけは警告として集約する。
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, PrismaTransaction } from "./types"
@@ -114,7 +114,7 @@ async function createNewSubtotal(
   const existingById = await tx.subtotal.findUnique({
     where: { id: subtotal.id },
   })
-  const newId = existingById ? randomUUID() : subtotal.id
+  const newId = existingById ? crypto.randomUUID() : subtotal.id
 
   await tx.subtotal.create({
     data: {

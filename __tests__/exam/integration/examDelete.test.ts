@@ -4,7 +4,7 @@
  * deleteExam が DB レコードを cascade 削除するだけでなく、
  * 試験ディレクトリ配下の画像ファイルも削除することを検証する。
  */
-import * as fs from "fs/promises"
+import * as fsPromises from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
@@ -46,7 +46,7 @@ describe("deleteExam", () => {
 
   afterAll(async () => {
     await prisma.user.delete({ where: { id: userId } })
-    await fs.rm(TEST_DATA_DIR, { recursive: true, force: true })
+    await fsPromises.rm(TEST_DATA_DIR, { recursive: true, force: true })
     await disconnectTestPrisma()
   })
 
@@ -60,9 +60,9 @@ describe("deleteExam", () => {
       getExamDirectory(exam.id),
       "master-answers"
     )
-    await fs.mkdir(masterAnswersDir, { recursive: true })
+    await fsPromises.mkdir(masterAnswersDir, { recursive: true })
     const imagePath = path.join(masterAnswersDir, "page-1.png")
-    await fs.writeFile(imagePath, "dummy-image")
+    await fsPromises.writeFile(imagePath, "dummy-image")
     await prisma.masterImage.create({
       data: {
         examPageId: examPage.id,
@@ -78,7 +78,7 @@ describe("deleteExam", () => {
       await prisma.examPage.findUnique({ where: { id: examPage.id } })
     ).toBeNull()
     // 画像ファイルとディレクトリが残っていないこと
-    await expect(fs.stat(getExamDirectory(exam.id))).rejects.toThrow()
+    await expect(fsPromises.stat(getExamDirectory(exam.id))).rejects.toThrow()
   })
 
   it("試験ディレクトリが存在しない場合も削除に失敗しない", async () => {

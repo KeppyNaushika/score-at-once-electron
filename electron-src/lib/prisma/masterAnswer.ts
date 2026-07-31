@@ -1,6 +1,6 @@
 import { ExamPage, MasterImage, Prisma } from "@prisma/client"
-import fs from "fs/promises"
-import path from "path"
+import * as fsPromises from "fs/promises"
+import * as path from "path"
 
 import {
   getAbsolutePathFromData,
@@ -51,7 +51,7 @@ export const uploadMasterAnswers = async (
   const uploadedAnswers: MasterImageWithExamPage[] = []
 
   const examAnswerDir = getMasterAnswersDirectory(examId)
-  await fs.mkdir(examAnswerDir, { recursive: true })
+  await fsPromises.mkdir(examAnswerDir, { recursive: true })
 
   for (const [index, fileData] of filesData.entries()) {
     try {
@@ -64,7 +64,7 @@ export const uploadMasterAnswers = async (
       const relativePath = getRelativePathFromData(destinationPath)
 
       // Save file
-      await fs.writeFile(destinationPath, fileBuffer)
+      await fsPromises.writeFile(destinationPath, fileBuffer)
 
       const pageNumber = highestPageNumber + 1 + index
 
@@ -191,7 +191,7 @@ export const deleteMasterAnswer = async (
     })
 
     try {
-      await fs.unlink(filePath)
+      await fsPromises.unlink(filePath)
     } catch (fileError: unknown) {
       if (
         fileError &&

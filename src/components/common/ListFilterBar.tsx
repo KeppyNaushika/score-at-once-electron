@@ -1,7 +1,7 @@
 "use client"
 
 import type { LucideIcon } from "lucide-react"
-import { Calendar, School, Search, Tag, X as XIcon } from "lucide-react"
+import { Calendar, School, Search, Tag, XIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"

@@ -4,7 +4,7 @@
  * インポート時に全IDを新UUIDに置換して競合を防ぐ
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
 import type { AsbIdMappings } from "../../../../src/types/asbArchive.types"
@@ -16,7 +16,7 @@ export function generateAsbIdMappings(
   definition: AnswerSheetDefinition
 ): AsbIdMappings {
   const mappings: AsbIdMappings = {
-    definition: { [definition.id]: randomUUID() },
+    definition: { [definition.id]: crypto.randomUUID() },
     headerField: {},
     majorQuestion: {},
     subQuestion: {},
@@ -28,45 +28,45 @@ export function generateAsbIdMappings(
   }
 
   for (const headerField of definition.settings.headerFields) {
-    mappings.headerField[headerField.id] = randomUUID()
+    mappings.headerField[headerField.id] = crypto.randomUUID()
   }
 
   for (const majorQuestion of definition.majorQuestions) {
-    mappings.majorQuestion[majorQuestion.id] = randomUUID()
+    mappings.majorQuestion[majorQuestion.id] = crypto.randomUUID()
 
     for (const subQuestion of majorQuestion.subQuestions) {
-      mappings.subQuestion[subQuestion.id] = randomUUID()
+      mappings.subQuestion[subQuestion.id] = crypto.randomUUID()
 
       for (const textElement of subQuestion.textElements) {
-        mappings.textElement[textElement.id] = randomUUID()
+        mappings.textElement[textElement.id] = crypto.randomUUID()
       }
       if (subQuestion.imageElements) {
         for (const imageElement of subQuestion.imageElements) {
-          mappings.imageElement[imageElement.id] = randomUUID()
+          mappings.imageElement[imageElement.id] = crypto.randomUUID()
         }
       }
       if (subQuestion.manuscriptPaper?.charGuides) {
         for (const charGuide of subQuestion.manuscriptPaper.charGuides) {
-          mappings.charGuide[charGuide.id] = randomUUID()
+          mappings.charGuide[charGuide.id] = crypto.randomUUID()
         }
       }
       if (subQuestion.omrConfig) {
-        mappings.omrConfig[subQuestion.id] = randomUUID()
+        mappings.omrConfig[subQuestion.id] = crypto.randomUUID()
       }
 
       for (const branchQuestion of subQuestion.branchQuestions) {
-        mappings.branchQuestion[branchQuestion.id] = randomUUID()
+        mappings.branchQuestion[branchQuestion.id] = crypto.randomUUID()
 
         for (const textElement of branchQuestion.textElements) {
-          mappings.textElement[textElement.id] = randomUUID()
+          mappings.textElement[textElement.id] = crypto.randomUUID()
         }
         if (branchQuestion.imageElements) {
           for (const imageElement of branchQuestion.imageElements) {
-            mappings.imageElement[imageElement.id] = randomUUID()
+            mappings.imageElement[imageElement.id] = crypto.randomUUID()
           }
         }
         if (branchQuestion.omrConfig) {
-          mappings.omrConfig[branchQuestion.id] = randomUUID()
+          mappings.omrConfig[branchQuestion.id] = crypto.randomUUID()
         }
       }
     }

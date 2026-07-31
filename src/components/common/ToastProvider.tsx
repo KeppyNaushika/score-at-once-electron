@@ -1,12 +1,12 @@
 "use client"
 
-import { Toaster as Sonner } from "sonner"
+import { Toaster } from "sonner"
 
-type ToasterProps = React.ComponentProps<typeof Sonner>
+type ToasterProps = React.ComponentProps<typeof Toaster>
 
 const ToastProvider = ({ ...props }: ToasterProps) => {
   return (
-    <Sonner
+    <Toaster
       theme="light" // デフォルトのテーマを指定 (必要に応じて変更)
       className="toaster group"
       toastOptions={{

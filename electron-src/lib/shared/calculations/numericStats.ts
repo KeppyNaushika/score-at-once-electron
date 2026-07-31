@@ -16,21 +16,21 @@ export interface BoxPlotData {
 }
 
 /** 母集団の平均（空配列は0） */
-export function average(values: number[]): number {
+export function calculateAverage(values: number[]): number {
   if (values.length === 0) return 0
   return values.reduce((sum, v) => sum + v, 0) / values.length
 }
 
 /** 母標準偏差（空配列は0） */
-export function stdDev(values: number[]): number {
+export function calculateStandardDeviation(values: number[]): number {
   if (values.length === 0) return 0
-  const avg = average(values)
+  const avg = calculateAverage(values)
   const squaredDiffs = values.map((value) => (value - avg) ** 2)
   return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / values.length)
 }
 
 /** ソート済み配列の中央値（空配列は0） */
-function median(sortedValues: number[]): number {
+function calculateMedian(sortedValues: number[]): number {
   const n = sortedValues.length
   if (n === 0) return 0
   if (n === 1) return sortedValues[0]
@@ -46,7 +46,7 @@ function median(sortedValues: number[]): number {
  * データを下位半分と上位半分に分けてそれぞれの中央値を Q1/Q3 とする。
  * n が奇数の場合、中央値は両半分から除外する。
  */
-export function boxPlot(values: number[]): BoxPlotData {
+export function calculateBoxPlot(values: number[]): BoxPlotData {
   if (values.length === 0) {
     return { min: 0, q1: 0, median: 0, q3: 0, max: 0 }
   }
@@ -57,15 +57,15 @@ export function boxPlot(values: number[]): BoxPlotData {
   const upperHalf = sorted.slice(n % 2 === 0 ? midIndex : midIndex + 1)
   return {
     min: sorted[0],
-    q1: median(lowerHalf),
-    median: median(sorted),
-    q3: median(upperHalf),
+    q1: calculateMedian(lowerHalf),
+    median: calculateMedian(sorted),
+    q3: calculateMedian(upperHalf),
     max: sorted[n - 1],
   }
 }
 
 /** 順位（同点同順位。降順ソートで score 以下になる最初の位置+1） */
-export function rank(score: number, allScores: number[]): number {
+export function calculateRank(score: number, allScores: number[]): number {
   const sorted = [...allScores].sort((a, b) => b - a)
   return sorted.findIndex((value) => value <= score) + 1
 }

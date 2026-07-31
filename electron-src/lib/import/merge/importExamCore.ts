@@ -5,7 +5,7 @@
  * 不一致時は新規作成する。UserExam/ExamSubtotalGroup/ExamStudentの参加情報も扱う。
  */
 
-import { randomUUID } from "crypto"
+import * as crypto from "crypto"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
@@ -165,7 +165,7 @@ export async function processUserExam(
     if (!existingUserExam) {
       await tx.userExam.create({
         data: {
-          id: randomUUID(),
+          id: crypto.randomUUID(),
           userId: currentUserId,
           examId: newExamId,
           role: "MEMBER",
@@ -177,7 +177,7 @@ export async function processUserExam(
   } else {
     await tx.userExam.create({
       data: {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         userId: currentUserId,
         examId: newExamId,
         role: "OWNER",

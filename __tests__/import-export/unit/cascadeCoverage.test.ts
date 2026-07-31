@@ -10,8 +10,8 @@
  * 失敗して気付ける（規約をコードで強制する仕組み）。
  */
 
-import { readFileSync } from "fs"
-import { resolve } from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -25,8 +25,8 @@ import {
  * （FKを持つ＝owning側の）モデル名の集合を返す。
  */
 function cascadeChildrenFromSchema(target: string): string[] {
-  const src = readFileSync(
-    resolve(process.cwd(), "prisma/schema.prisma"),
+  const src = fs.readFileSync(
+    path.resolve(process.cwd(), "prisma/schema.prisma"),
     "utf8"
   )
   const modelRe = /^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm
