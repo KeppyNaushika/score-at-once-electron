@@ -192,12 +192,12 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
                   追加
                 </Button>
                 {showSuggestions && suggestions.length > 0 && (
-                  <div className="bg-popover border-border absolute top-full right-10 left-0 z-50 mt-1 max-h-32 overflow-y-auto rounded-md border shadow-md">
+                  <div className="absolute top-full right-10 left-0 z-50 mt-1 max-h-32 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
                     {suggestions.map((tag) => (
                       <button
                         key={tag.id}
                         type="button"
-                        className="hover:bg-accent flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent"
                         onMouseDown={(e) => {
                           e.preventDefault()
                           handleAddTag(tag.name)
@@ -217,7 +217,7 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tagText)}
-                      className="text-secondary-foreground hover:text-destructive ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0"
+                      className="ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0 text-secondary-foreground hover:text-destructive"
                       aria-label={`Remove ${tagText}`}
                     >
                       <XIcon size={14} />

@@ -74,15 +74,15 @@ export function HszDisclaimerModal({ wizard }: HszDisclaimerModalProps) {
 
         <div className="space-y-4 py-2">
           {/* ファイル名表示 */}
-          <div className="bg-muted flex items-center gap-3 rounded-lg p-3">
-            <FileArchive className="text-muted-foreground h-5 w-5 shrink-0" />
+          <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
+            <FileArchive className="h-5 w-5 shrink-0 text-muted-foreground" />
             <span className="text-sm font-medium break-all">{fileName}</span>
           </div>
 
           {/* 変換に関する注意事項 */}
           <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
             <p className="text-sm font-medium">変換に関する注意事項</p>
-            <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+            <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
               <li>
                 採点領域の座標は自動変換されますが、精度を保証するものではありません
               </li>
@@ -98,7 +98,7 @@ export function HszDisclaimerModal({ wizard }: HszDisclaimerModalProps) {
           {/* 免責事項 */}
           <div className="space-y-3 rounded-lg border p-4">
             <p className="text-sm font-medium">免責事項</p>
-            <div className="text-muted-foreground space-y-2 text-xs leading-relaxed">
+            <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
               <p>
                 本ソフトウェアは、{companyName}
                 とは一切の関係がなく、同社からの承認・推奨・技術提供を受けたものではありません。
@@ -129,7 +129,7 @@ export function HszDisclaimerModal({ wizard }: HszDisclaimerModalProps) {
             </div>
 
             {/* 商標表示 */}
-            <div className="text-muted-foreground border-t pt-2 text-[11px] leading-relaxed">
+            <div className="border-t pt-2 text-[11px] leading-relaxed text-muted-foreground">
               <p>
                 「百問繚乱」は、株式会社シンプルエデュケーションの登録商標または商標です。
               </p>

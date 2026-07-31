@@ -67,7 +67,7 @@ export default function ExamWorkflowLayout({
         <title>{examName || "試験"} - 一括採点</title>
       </Head>
       <div className="flex h-full flex-col">
-        <header className="bg-background flex items-center justify-between border-b px-4 py-3">
+        <header className="flex items-center justify-between border-b bg-background px-4 py-3">
           <Breadcrumb>
             <BreadcrumbList>
               {workflowSteps.map((step, index) => {

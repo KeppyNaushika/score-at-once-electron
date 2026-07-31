@@ -63,7 +63,7 @@ export function BulkTagAssignButton({
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             選択中の{selectedCount}件にタグを追加
           </p>
           <Input
@@ -93,7 +93,7 @@ export function BulkTagAssignButton({
                   <button
                     key={tag.id}
                     type="button"
-                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm"
+                    className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-accent"
                     onClick={() => void handleAssign(tag.name)}
                   >
                     <Tag className="h-3 w-3 opacity-50" />

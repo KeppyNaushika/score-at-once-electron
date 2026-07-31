@@ -49,7 +49,7 @@ export function AnswerSheetExportView({
   if (!isLoaded) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground text-sm">読み込み中...</p>
+        <p className="text-sm text-muted-foreground">読み込み中...</p>
       </div>
     )
   }
@@ -57,7 +57,7 @@ export function AnswerSheetExportView({
   if (!definition) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           定義が見つかりませんでした
         </p>
       </div>
@@ -68,7 +68,7 @@ export function AnswerSheetExportView({
     <div className="mx-auto max-w-md space-y-4 p-6">
       <div>
         <h2 className="text-lg font-semibold">解答用紙を書き出し</h2>
-        <p className="text-muted-foreground text-sm">{definition.name}</p>
+        <p className="text-sm text-muted-foreground">{definition.name}</p>
       </div>
 
       <Button
@@ -80,7 +80,7 @@ export function AnswerSheetExportView({
         <FileText className="h-5 w-5 text-red-500" />
         <div className="text-left">
           <div className="text-sm font-medium">PDF出力</div>
-          <div className="text-muted-foreground text-xs">印刷用ベクターPDF</div>
+          <div className="text-xs text-muted-foreground">印刷用ベクターPDF</div>
         </div>
       </Button>
 
@@ -94,13 +94,13 @@ export function AnswerSheetExportView({
           <FileImage className="h-5 w-5 text-blue-500" />
           <div className="text-left">
             <div className="text-sm font-medium">PNG出力</div>
-            <div className="text-muted-foreground text-xs">
+            <div className="text-xs text-muted-foreground">
               ラスター画像（{dpi} DPI）
             </div>
           </div>
         </Button>
         <div className="flex items-center gap-2 pl-2">
-          <Label className="text-muted-foreground text-xs">DPI:</Label>
+          <Label className="text-xs text-muted-foreground">DPI:</Label>
           <Input
             type="number"
             className="h-7 w-20 text-xs"
@@ -122,7 +122,7 @@ export function AnswerSheetExportView({
         <Printer className="h-5 w-5 text-green-500" />
         <div className="text-left">
           <div className="text-sm font-medium">印刷</div>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             システム印刷ダイアログを表示
           </div>
         </div>

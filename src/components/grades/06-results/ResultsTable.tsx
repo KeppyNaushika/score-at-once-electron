@@ -173,7 +173,7 @@ export function ResultsTable({
                   style={rowColor ? { backgroundColor: rowColor } : undefined}
                   title={rowTitle}
                 >
-                  <td className="text-muted-foreground px-2 py-1.5 text-center">
+                  <td className="px-2 py-1.5 text-center text-muted-foreground">
                     {(registrationRankByGradeStudentId.get(
                       student.gradeStudentId
                     ) ?? 0) + 1}
@@ -197,7 +197,7 @@ export function ResultsTable({
                           key={gradeItem.id}
                           className="px-2 py-1.5 text-center"
                         >
-                          <span className="text-muted-foreground text-xs italic">
+                          <span className="text-xs text-muted-foreground italic">
                             除外
                           </span>
                         </td>

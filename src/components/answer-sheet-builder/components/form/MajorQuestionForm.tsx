@@ -116,7 +116,7 @@ export function MajorQuestionForm({
   )
 
   return (
-    <div className="bg-muted/30 rounded-lg border">
+    <div className="rounded-lg border bg-muted/30">
       {/* ── ヘッダーバー ── */}
       <div className="flex items-center gap-2 px-3 py-2">
         <Button
@@ -131,7 +131,7 @@ export function MajorQuestionForm({
             <ChevronRight className="h-4 w-4" />
           )}
         </Button>
-        <span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-xs font-semibold whitespace-nowrap">
+        <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-primary">
           大問 {majorIndex + 1}
         </span>
         <Input
@@ -155,7 +155,7 @@ export function MajorQuestionForm({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-7 w-7 rounded-r-none"
+              className="h-7 w-7 rounded-r-none text-muted-foreground"
               onClick={onMoveUp}
               disabled={!onMoveUp}
               title="上へ移動"
@@ -165,7 +165,7 @@ export function MajorQuestionForm({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-7 w-7 rounded-l-none border-l"
+              className="h-7 w-7 rounded-l-none border-l text-muted-foreground"
               onClick={onMoveDown}
               disabled={!onMoveDown}
               title="下へ移動"
@@ -176,7 +176,7 @@ export function MajorQuestionForm({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-destructive h-7 w-7"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
             onClick={onDelete}
             title="大問を削除"
           >

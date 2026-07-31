@@ -17,21 +17,21 @@ export function FrequencyDistributionChart({
 
   return (
     <div className="space-y-2 p-1">
-      <div className="text-muted-foreground flex gap-4 text-[11px]">
+      <div className="flex gap-4 text-[11px] text-muted-foreground">
         <span>
           平均{" "}
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             {data.mean.toFixed(1)}
           </span>
         </span>
         <span>
           標準偏差{" "}
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             {data.stdDev.toFixed(1)}
           </span>
         </span>
         <span>
-          人数 <span className="text-foreground font-medium">{data.count}</span>
+          人数 <span className="font-medium text-foreground">{data.count}</span>
         </span>
       </div>
       <div className="space-y-0.5">
@@ -41,9 +41,9 @@ export function FrequencyDistributionChart({
           return (
             <div key={i} className="flex items-center gap-2 text-[10px]">
               <span className="w-16 text-right tabular-nums">{bin.label}</span>
-              <div className="bg-muted/40 relative h-4 flex-1 rounded-sm">
+              <div className="relative h-4 flex-1 rounded-sm bg-muted/40">
                 <div
-                  className="bg-primary/70 h-4 rounded-sm"
+                  className="h-4 rounded-sm bg-primary/70"
                   style={{ width: `${widthPct}%` }}
                 />
               </div>

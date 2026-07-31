@@ -59,7 +59,7 @@ export function BoundaryPresetSelector({
 }: BoundaryPresetSelectorProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      <span className="text-muted-foreground self-center text-xs">
+      <span className="self-center text-xs text-muted-foreground">
         プリセット:
       </span>
       {presets.map((preset) => (

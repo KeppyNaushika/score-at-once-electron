@@ -294,7 +294,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
   }
 
   return (
-    <Card className="border-border/50 mb-8 shadow-sm">
+    <Card className="mb-8 border-border/50 shadow-sm">
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -317,7 +317,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
           {seriesList.map((series) => (
             <div
               key={series.id}
-              className="border-border/50 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 px-3 py-2"
             >
               <div
                 className="h-3 w-3 shrink-0 rounded-full"
@@ -376,7 +376,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
               {/* タグフィルタ */}
               {allTags.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-muted-foreground text-xs">タグ:</span>
+                  <span className="text-xs text-muted-foreground">タグ:</span>
                   <Badge
                     variant={series.tags.size === 0 ? "default" : "outline"}
                     className="h-5 cursor-pointer rounded-full px-2 text-[10px] font-normal"
@@ -402,7 +402,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-destructive ml-auto h-6 w-6 shrink-0"
+                  className="ml-auto h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => removeSeries(series.id)}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -448,11 +448,11 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                   const first = payload[0]?.payload
                   if (!first) return null
                   return (
-                    <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
+                    <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
                       <p className="text-sm font-medium">
                         {first.examName as string}
                       </p>
-                      <p className="text-muted-foreground text-xs">
+                      <p className="text-xs text-muted-foreground">
                         {first.date as string}
                       </p>
                       <div className="mt-1.5 space-y-1">
@@ -472,7 +472,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
                                 className="h-2.5 w-2.5 rounded-full"
                                 style={{ backgroundColor: series.color }}
                               />
-                              <span className="text-muted-foreground text-xs">
+                              <span className="text-xs text-muted-foreground">
                                 {series.label}
                               </span>
                               <span className="ml-auto font-semibold tabular-nums">
@@ -514,13 +514,13 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
             </LineChart>
           </ResponsiveContainer>
         ) : hasData && mergedData.length === 1 ? (
-          <div className="text-muted-foreground py-8 text-center text-sm">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             <p>
               データが1件のみです。複数の試験結果があると推移グラフが表示されます
             </p>
           </div>
         ) : (
-          <div className="text-muted-foreground py-8 text-center text-sm">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             表示条件に一致する採点済みの試験がありません
           </div>
         )}

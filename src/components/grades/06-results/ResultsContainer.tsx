@@ -75,7 +75,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center">
-        <p className="text-destructive mb-2">{error}</p>
+        <p className="mb-2 text-destructive">{error}</p>
         <Button variant="outline" onClick={recalculate}>
           <RefreshCw className="mr-2 h-4 w-4" />
           再計算
@@ -93,7 +93,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
           <h2 className="text-lg font-semibold">
             成績結果: {result.gradeName}
           </h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {result.classNames.join("、") || "学級未登録"} /{" "}
             {result.gradeItems.map((gradeItem) => gradeItem.name).join("、") ||
               "評価項目未設定"}{" "}

@@ -94,7 +94,7 @@ function ChangeDiff({ entry }: { entry: AuditLogEntry }) {
   const changes = entry.metadata?.changes
   if (!changes || changes.length === 0) {
     return (
-      <div className="text-muted-foreground mt-2 ml-11 text-sm">
+      <div className="mt-2 ml-11 text-sm text-muted-foreground">
         詳細な変更内容は記録されていません。
       </div>
     )
@@ -109,7 +109,7 @@ function ChangeDiff({ entry }: { entry: AuditLogEntry }) {
           <span className="text-red-600 line-through">
             {formatValue(change.before)}
           </span>
-          <span className="text-muted-foreground mx-1.5">→</span>
+          <span className="mx-1.5 text-muted-foreground">→</span>
           <span className="text-emerald-600">{formatValue(change.after)}</span>
         </div>
       ))}
@@ -125,7 +125,7 @@ function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
   const actor = entry.actorName ?? "不明なユーザー"
 
   return (
-    <div className="hover:bg-muted/40 rounded-md px-2 py-2.5 transition-colors">
+    <div className="rounded-md px-2 py-2.5 transition-colors hover:bg-muted/40">
       <div className="flex items-start gap-3">
         <Avatar className="mt-0.5 h-8 w-8 shrink-0">
           <AvatarFallback className="text-xs">
@@ -138,7 +138,7 @@ function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
             <span className="font-semibold">{actor}</span>
             <span className="text-foreground">が {entry.summary}</span>
           </div>
-          <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="secondary" className="font-normal">
               {CATEGORY_LABELS[entry.category] ?? entry.category}
             </Badge>
@@ -269,7 +269,7 @@ export function AuditLogsTab() {
           className="w-56"
         />
 
-        <span className="text-muted-foreground ml-auto text-sm">
+        <span className="ml-auto text-sm text-muted-foreground">
           {total} 件
         </span>
       </div>
@@ -293,12 +293,12 @@ export function AuditLogsTab() {
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-16">
+        <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
           <History className="h-8 w-8 opacity-50" />
           <p className="text-sm">記録された操作はありません。</p>
         </div>
       ) : (
-        <div className="divide-border/60 divide-y">
+        <div className="divide-y divide-border/60">
           {entries.map((entry) => (
             <AuditLogItem key={entry.id} entry={entry} />
           ))}

@@ -67,7 +67,7 @@ function SortableTagRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="border-border bg-card flex items-center gap-3 rounded-lg border px-3 py-2"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
     >
       <DragHandle dragHandleProps={dragHandleProps} />
       {tag.color && (
@@ -106,7 +106,7 @@ function SortableTagRow({
       <Button
         variant="ghost"
         size="sm"
-        className="text-destructive hover:text-destructive h-7 w-7 p-0"
+        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
         onClick={() => onDelete(tag)}
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -330,7 +330,7 @@ export function TagsPageContainer() {
               <PlusCircle className="mr-2 h-4 w-4" />
               新規タグ作成
             </Button>
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-muted-foreground">
               {tags.length}件
             </span>
           </div>

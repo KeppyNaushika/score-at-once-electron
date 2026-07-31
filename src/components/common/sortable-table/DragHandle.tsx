@@ -20,11 +20,11 @@ export function DragHandle({ dragHandleProps, className }: DragHandleProps) {
     <div
       {...dragHandleProps}
       className={cn(
-        "hover:bg-muted cursor-grab rounded p-1 active:cursor-grabbing",
+        "cursor-grab rounded p-1 hover:bg-muted active:cursor-grabbing",
         className
       )}
     >
-      <GripVertical className="text-muted-foreground h-4 w-4" />
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
     </div>
   )
 }

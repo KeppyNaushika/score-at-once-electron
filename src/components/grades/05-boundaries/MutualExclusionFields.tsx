@@ -25,7 +25,7 @@ export function MutualExclusionFields({
   }
   return (
     <div className="space-y-2 text-sm">
-      <Label className="text-muted-foreground text-xs">
+      <Label className="text-xs text-muted-foreground">
         同時に現れてはいけないラベル（2つ以上選択）
       </Label>
       <div className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ export function MutualExclusionFields({
               onClick={() => toggle(label)}
               className={`rounded border px-3 py-1 text-sm ${
                 active
-                  ? "border-primary bg-primary/10 text-foreground font-medium"
+                  ? "border-primary bg-primary/10 font-medium text-foreground"
                   : "text-muted-foreground"
               }`}
             >
@@ -47,7 +47,7 @@ export function MutualExclusionFields({
           )
         })}
       </div>
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         観点の中に選択したラベルのうち2種以上が現れたら違反とみなします。
       </p>
     </div>

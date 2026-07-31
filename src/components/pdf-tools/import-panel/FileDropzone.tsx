@@ -115,13 +115,13 @@ export default function FileDropzone({
       >
         {isLoading ? (
           <>
-            <Loader2 className="text-muted-foreground mb-2 h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground text-sm">処理中...</p>
+            <Loader2 className="mb-2 h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">処理中...</p>
           </>
         ) : (
           <>
-            <FileUp className="text-muted-foreground mb-2 h-8 w-8" />
-            <p className="text-muted-foreground text-center text-sm">
+            <FileUp className="mb-2 h-8 w-8 text-muted-foreground" />
+            <p className="text-center text-sm text-muted-foreground">
               ドラッグ&ドロップ または クリックしてPDFファイルを選択
             </p>
           </>

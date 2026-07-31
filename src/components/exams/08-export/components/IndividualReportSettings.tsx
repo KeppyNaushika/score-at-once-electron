@@ -63,13 +63,13 @@ export function IndividualReportSettings({
 
         {/* 統計は「種別 × 母集団」で選ぶ。学級は複数ありうるので所属学級それぞれに出る */}
         <div className="mt-2 flex flex-col gap-2">
-          <Label className="text-muted-foreground text-xs">
+          <Label className="text-xs text-muted-foreground">
             統計（所属学級ごと／全体）
           </Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {STATISTIC_KINDS.map((statisticKind) => (
               <div key={statisticKind} className="space-y-1">
-                <Label className="text-muted-foreground text-xs">
+                <Label className="text-xs text-muted-foreground">
                   {STATISTIC_KIND_LABELS[statisticKind]}
                 </Label>
                 {STATISTIC_SCOPES.map((scope) => (
@@ -95,7 +95,7 @@ export function IndividualReportSettings({
         </div>
         {/* 統計に含める受験状態 */}
         <div className="mt-2 flex flex-col gap-2">
-          <Label className="text-muted-foreground text-xs">
+          <Label className="text-xs text-muted-foreground">
             統計に含める受験状態
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -169,7 +169,7 @@ export function IndividualReportSettings({
                   }
                   variant="sub"
                 />
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">列数</Label>
                   <Input
                     type="number"
@@ -189,7 +189,7 @@ export function IndividualReportSettings({
                     }}
                   />
                 </div>
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">文字</Label>
                   <Input
                     type="number"
@@ -203,7 +203,7 @@ export function IndividualReportSettings({
                       }
                     }}
                   />
-                  <span className="text-muted-foreground text-xs">px</span>
+                  <span className="text-xs text-muted-foreground">px</span>
                 </div>
               </div>
             )}
@@ -328,7 +328,7 @@ export function IndividualReportSettings({
                 </div>
                 {/* サイズ調整 */}
                 <div className="flex flex-wrap gap-2">
-                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                     <Label className="text-xs whitespace-nowrap">文字</Label>
                     <Input
                       type="number"
@@ -349,9 +349,9 @@ export function IndividualReportSettings({
                         }
                       }}
                     />
-                    <span className="text-muted-foreground text-xs">px</span>
+                    <span className="text-xs text-muted-foreground">px</span>
                   </div>
-                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                     <Label className="text-xs whitespace-nowrap">間隔</Label>
                     <Input
                       type="number"
@@ -372,7 +372,7 @@ export function IndividualReportSettings({
                         }
                       }}
                     />
-                    <span className="text-muted-foreground text-xs">px</span>
+                    <span className="text-xs text-muted-foreground">px</span>
                   </div>
                 </div>
               </div>
@@ -411,7 +411,7 @@ export function IndividualReportSettings({
                     variant="sub"
                   />
                 </div>
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">列数</Label>
                   <Input
                     type="number"
@@ -431,7 +431,7 @@ export function IndividualReportSettings({
                     }}
                   />
                 </div>
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">文字</Label>
                   <Input
                     type="number"
@@ -445,7 +445,7 @@ export function IndividualReportSettings({
                       }
                     }}
                   />
-                  <span className="text-muted-foreground text-xs">px</span>
+                  <span className="text-xs text-muted-foreground">px</span>
                 </div>
               </div>
             )}
@@ -458,7 +458,7 @@ export function IndividualReportSettings({
           >
             {options.showLearningAdvice && (
               <div className="mt-2 flex flex-col gap-2">
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">正答率</Label>
                   <Input
                     type="text"
@@ -483,7 +483,7 @@ export function IndividualReportSettings({
                       }
                     }}
                   />
-                  <span className="text-muted-foreground text-xs">%以上</span>
+                  <span className="text-xs text-muted-foreground">%以上</span>
                   <Input
                     type="text"
                     className="h-6 flex-1 text-xs"
@@ -507,9 +507,9 @@ export function IndividualReportSettings({
                       }
                     }}
                   />
-                  <span className="text-muted-foreground text-xs">%以下</span>
+                  <span className="text-xs text-muted-foreground">%以下</span>
                 </div>
-                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
                   <Label className="text-xs whitespace-nowrap">問題数</Label>
                   <Input
                     type="text"
@@ -534,7 +534,7 @@ export function IndividualReportSettings({
                       }
                     }}
                   />
-                  <span className="text-muted-foreground text-xs">問</span>
+                  <span className="text-xs text-muted-foreground">問</span>
                 </div>
               </div>
             )}
@@ -570,7 +570,7 @@ function Section({
 }) {
   return (
     <div>
-      <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+      <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h4>
       {children}
@@ -629,7 +629,7 @@ function OptionCardWithChildren({
   return (
     <div
       className={`rounded-lg border p-2 ${
-        checked ? "bg-primary/5 border-primary" : "bg-background"
+        checked ? "border-primary bg-primary/5" : "bg-background"
       }`}
     >
       <div

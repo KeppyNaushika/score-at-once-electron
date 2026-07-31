@@ -33,7 +33,7 @@ function StateIndicator({ state }: { state: string }) {
         </span>
       )
     default:
-      return <span className="text-muted-foreground text-sm">無効</span>
+      return <span className="text-sm text-muted-foreground">無効</span>
   }
 }
 
@@ -44,7 +44,7 @@ export function SyncSettingsTab() {
   if (isLoading || !config) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -89,7 +89,7 @@ export function SyncSettingsTab() {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold">同期設定</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           データディレクトリ内の同期フォルダを介して複数PCのデータを同期します。
         </p>
       </div>
@@ -98,7 +98,7 @@ export function SyncSettingsTab() {
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
           <Label className="text-base">NAS同期</Label>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             データディレクトリ内での自動同期を有効にします
           </p>
         </div>
@@ -116,7 +116,7 @@ export function SyncSettingsTab() {
           readOnly
           className="bg-muted font-mono text-xs"
         />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           データディレクトリ内に自動作成されます
         </p>
       </div>
@@ -208,7 +208,7 @@ export function SyncSettingsTab() {
           readOnly
           className="bg-muted font-mono text-xs"
         />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           このPCを識別するための自動生成IDです
         </p>
       </div>

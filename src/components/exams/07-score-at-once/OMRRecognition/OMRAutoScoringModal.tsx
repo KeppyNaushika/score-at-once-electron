@@ -89,7 +89,7 @@ export function OMRAutoScoringModal({
               {progress && (
                 <>
                   <Progress value={progressPercent} />
-                  <div className="text-muted-foreground text-xs">
+                  <div className="text-xs text-muted-foreground">
                     {progress.processed} / {progress.total} 枚処理済
                     {progress.currentStudentName &&
                       ` (${progress.currentStudentName})`}
@@ -121,7 +121,7 @@ export function OMRAutoScoringModal({
                 </div>
                 <div className="flex items-center justify-between rounded border p-2">
                   <span>無回答</span>
-                  <span className="text-muted-foreground font-bold">
+                  <span className="font-bold text-muted-foreground">
                     {summary.noAnswer}
                   </span>
                 </div>
@@ -156,7 +156,7 @@ export function OMRAutoScoringModal({
                   </div>
                 )}
               </div>
-              <div className="text-muted-foreground text-xs">
+              <div className="text-xs text-muted-foreground">
                 合計 {summary.total} 件（低信頼は保留として反映）
               </div>
 
@@ -211,7 +211,7 @@ export function OMRAutoScoringModal({
 
           {/* 初期状態 */}
           {!isRecognizing && !summary && !error && (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               OMR設定に基づいて全答案のマーク認識を実行し、採点結果を一括反映します。
             </p>
           )}

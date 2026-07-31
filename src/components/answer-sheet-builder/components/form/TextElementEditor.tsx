@@ -129,7 +129,7 @@ export function TextElementEditor({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
               onClick={() => handleRemove(i)}
             >
               <Trash2 className="h-3 w-3" />
@@ -176,7 +176,7 @@ export function TextElementEditor({
       ))}
 
       {textElements.length === 0 && (
-        <p className="text-muted-foreground text-[10px]">
+        <p className="text-[10px] text-muted-foreground">
           テキスト要素はありません
         </p>
       )}

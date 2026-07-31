@@ -174,7 +174,7 @@ export default function StudentClassroomMembershipModal({
             <div className="col-span-3 space-y-2">
               {!initialStudentId && (
                 <div className="relative">
-                  <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
+                  <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="生徒名または学籍番号で検索"
                     value={studentSearchTerm}
@@ -281,7 +281,7 @@ export default function StudentClassroomMembershipModal({
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-muted-foreground">
                 未指定の場合は今日の日付になります
               </p>
             </div>
@@ -299,7 +299,7 @@ export default function StudentClassroomMembershipModal({
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-muted-foreground">
                 未指定の場合は現在所属中（終了日なし）になります
               </p>
             </div>

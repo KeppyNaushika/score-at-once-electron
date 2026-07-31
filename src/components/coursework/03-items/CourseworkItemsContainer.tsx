@@ -160,7 +160,7 @@ function SortableItemRow({
         <Button
           variant="ghost"
           size="icon"
-          className="text-destructive mt-5 h-7 w-7"
+          className="mt-5 h-7 w-7 text-destructive"
           onClick={() => onDelete(item)}
           title="削除"
         >
@@ -343,7 +343,7 @@ export function CourseworkItemsContainer({
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-lg font-semibold">評価項目</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           点数を入力する評価項目を作成してください。満点・入力方式（数値／文字評価）を設定できます。変更は自動保存されます。
         </p>
       </div>
@@ -371,7 +371,7 @@ export function CourseworkItemsContainer({
 
       {/* 評価項目リスト（常時インライン編集・DnD並べ替え） */}
       {items.length === 0 ? (
-        <div className="text-muted-foreground py-8 text-center text-sm">
+        <div className="py-8 text-center text-sm text-muted-foreground">
           評価項目がありません。上のフォームから追加してください。
         </div>
       ) : (

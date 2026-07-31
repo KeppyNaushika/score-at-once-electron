@@ -272,7 +272,7 @@ export function GradeListContainer() {
       <div className="min-h-0 flex-1 p-4">
         {grades.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="text-muted-foreground mb-2">
+            <p className="mb-2 text-muted-foreground">
               成績算出試験がありません
             </p>
             <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
@@ -281,9 +281,9 @@ export function GradeListContainer() {
             </Button>
           </div>
         ) : (
-          <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
             <Table wrapperClassName="h-full">
-              <TableHeader className="bg-card sticky top-0 z-10">
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow className="hover:bg-transparent">
                   <TableHead>試験名</TableHead>
                   <TableHead className="w-32 text-center">詳細</TableHead>
@@ -298,7 +298,7 @@ export function GradeListContainer() {
                   <TableRow>
                     <TableCell
                       colSpan={4}
-                      className="text-muted-foreground py-8 text-center"
+                      className="py-8 text-center text-muted-foreground"
                     >
                       条件に一致する試験がありません
                     </TableCell>
@@ -317,7 +317,7 @@ export function GradeListContainer() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{grade.name}</div>
-                          <div className="text-muted-foreground text-sm">
+                          <div className="text-sm text-muted-foreground">
                             {classNames || "学級未登録"}
                             {" / "}
                             生徒: {grade._count?.gradeStudents ?? 0}名 /

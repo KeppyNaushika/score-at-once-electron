@@ -54,7 +54,7 @@ function EditableValue({
         ref={inputRef}
         type="number"
         aria-label="値を入力"
-        className="border-input bg-background box-border h-5 w-10 shrink-0 rounded border text-center text-[10px] outline-none"
+        className="box-border h-5 w-10 shrink-0 rounded border border-input bg-background text-center text-[10px] outline-none"
         value={editValue}
         min={min}
         max={max}
@@ -70,7 +70,7 @@ function EditableValue({
 
   return (
     <span
-      className="text-muted-foreground inline-flex h-5 w-10 shrink-0 cursor-pointer items-center justify-end text-[10px] select-none hover:underline"
+      className="inline-flex h-5 w-10 shrink-0 cursor-pointer items-center justify-end text-[10px] text-muted-foreground select-none hover:underline"
       onDoubleClick={() => {
         setEditValue(value.toFixed(decimals))
         setEditing(true)
@@ -89,7 +89,7 @@ export function OMRMarkerSettings({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-muted-foreground text-sm font-semibold">
+        <h3 className="text-sm font-semibold text-muted-foreground">
           OMRマーカー
         </h3>
         <Switch
@@ -101,7 +101,7 @@ export function OMRMarkerSettings({
       {config.enabled && (
         <div className="space-y-1.5">
           <div className="flex min-h-6 items-center gap-2">
-            <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+            <span className="w-8 shrink-0 text-[10px] text-muted-foreground">
               サイズ
             </span>
             <Slider
@@ -121,7 +121,7 @@ export function OMRMarkerSettings({
             />
           </div>
           <div className="flex min-h-6 items-center gap-2">
-            <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+            <span className="w-8 shrink-0 text-[10px] text-muted-foreground">
               余白
             </span>
             <Slider

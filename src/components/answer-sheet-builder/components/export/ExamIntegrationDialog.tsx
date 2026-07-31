@@ -65,7 +65,7 @@ export function ExamIntegrationDialog({
             </div>
           </div>
 
-          <div className="text-muted-foreground space-y-1 text-xs">
+          <div className="space-y-1 text-xs text-muted-foreground">
             <p>以下が自動作成されます:</p>
             <ul className="list-disc space-y-0.5 pl-4">
               <li>模範解答画像（PNG）</li>

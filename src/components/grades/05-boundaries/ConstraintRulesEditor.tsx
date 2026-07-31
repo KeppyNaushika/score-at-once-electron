@@ -146,7 +146,7 @@ export function ConstraintRulesEditor({
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">観点間の制約ルール</h3>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           観点別評価と評定の組合せが校内ルールに合わない生徒を、結果表で着色して知らせます。
         </p>
       </div>
@@ -179,7 +179,7 @@ export function ConstraintRulesEditor({
       </div>
 
       {constraints.length === 0 && (
-        <p className="text-muted-foreground text-sm italic">
+        <p className="text-sm text-muted-foreground italic">
           ルールはまだありません。
         </p>
       )}
@@ -318,16 +318,16 @@ function ConstraintCard({
             placeholder='has("A") and has("C")'
           />
           {exprError && (
-            <p className="text-destructive text-xs">式エラー: {exprError}</p>
+            <p className="text-xs text-destructive">式エラー: {exprError}</p>
           )}
-          <pre className="text-muted-foreground bg-muted/50 overflow-x-auto rounded p-2 text-[11px] leading-relaxed">
+          <pre className="overflow-x-auto rounded bg-muted/50 p-2 text-[11px] leading-relaxed text-muted-foreground">
             {EXPRESSION_HELP}
           </pre>
         </div>
       )}
 
       <div className="flex items-center gap-2">
-        <Label className="text-muted-foreground shrink-0 text-xs">
+        <Label className="shrink-0 text-xs text-muted-foreground">
           メッセージ
         </Label>
         <Input
@@ -343,18 +343,18 @@ function ConstraintCard({
       </div>
 
       {constraint.disabledReason && (
-        <p className="text-destructive text-xs">
+        <p className="text-xs text-destructive">
           自動で無効化されました: {constraint.disabledReason}
         </p>
       )}
 
-      <div className="text-muted-foreground text-xs">
+      <div className="text-xs text-muted-foreground">
         {errorMessage ? (
           <span className="text-destructive">評価エラー: {errorMessage}</span>
         ) : (
           <>
             該当:{" "}
-            <span className="text-foreground font-medium">{hitCount}</span> 名
+            <span className="font-medium text-foreground">{hitCount}</span> 名
           </>
         )}
       </div>

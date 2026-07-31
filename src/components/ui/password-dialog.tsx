@@ -127,7 +127,7 @@ export function PasswordDialog({
             <span className="font-medium">{fileName}</span>{" "}
             はパスワードで保護されています。
           </DialogDescription>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="mt-1 text-sm text-muted-foreground">
             パスワードを入力してファイルを読み込んでください。
           </p>
         </DialogHeader>

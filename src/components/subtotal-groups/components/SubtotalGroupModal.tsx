@@ -84,14 +84,14 @@ function SortableSubtotalItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-background flex items-center gap-3 rounded-lg border p-3"
+      className="flex items-center gap-3 rounded-lg border bg-background p-3"
     >
       <div
         {...attributes}
         {...listeners}
         className="cursor-grab hover:cursor-grabbing"
       >
-        <GripVertical className="text-muted-foreground h-4 w-4" />
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
       <Badge variant="outline" className="w-8 text-center">
         {index + 1}
@@ -288,7 +288,7 @@ export function SubtotalGroupModal({
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-base font-medium">小計項目</Label>
-                <div className="text-muted-foreground text-sm">
+                <div className="text-sm text-muted-foreground">
                   項目数: {totalItems}項目
                 </div>
               </div>
@@ -299,7 +299,7 @@ export function SubtotalGroupModal({
             </div>
 
             {subtotals.length === 0 ? (
-              <div className="text-muted-foreground rounded-lg border-2 border-dashed py-8 text-center">
+              <div className="rounded-lg border-2 border-dashed py-8 text-center text-muted-foreground">
                 小計項目がありません。「項目を追加」ボタンで追加してください。
               </div>
             ) : (

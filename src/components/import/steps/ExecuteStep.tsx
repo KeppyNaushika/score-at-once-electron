@@ -69,11 +69,11 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   if (isExecuting) {
     return (
       <div className="flex h-full flex-col items-center justify-center py-16">
-        <div className="bg-primary/10 mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl">
-          <Loader2 className="text-primary h-10 w-10 animate-spin" />
+        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">インポート中...</h3>
-        <p className="text-muted-foreground mb-8">
+        <p className="mb-8 text-muted-foreground">
           データをインポートしています。しばらくお待ちください。
         </p>
         <div className="w-full max-w-sm">
@@ -182,11 +182,11 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center py-8">
       <div className="mb-8 text-center">
-        <div className="bg-destructive/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
-          <XCircle className="text-destructive h-10 w-10" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10">
+          <XCircle className="h-10 w-10 text-destructive" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">インポートに失敗しました</h3>
-        <p className="text-destructive max-w-md">{result?.error}</p>
+        <p className="max-w-md text-destructive">{result?.error}</p>
       </div>
 
       <Button onClick={onClose} variant="outline" size="lg">

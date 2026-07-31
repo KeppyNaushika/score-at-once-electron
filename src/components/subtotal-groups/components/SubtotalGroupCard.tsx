@@ -39,7 +39,7 @@ export function SubtotalGroupCard({
               variant="ghost"
               size="sm"
               onClick={onDelete}
-              className="text-destructive hover:text-destructive h-8 w-8 p-0"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -76,7 +76,7 @@ export function SubtotalGroupCard({
           {/* 小計項目一覧 */}
           {group.subtotals.length > 0 && (
             <div className="space-y-2">
-              <div className="text-muted-foreground text-sm font-medium">
+              <div className="text-sm font-medium text-muted-foreground">
                 小計項目
               </div>
               <div className="space-y-1">
@@ -94,7 +94,7 @@ export function SubtotalGroupCard({
                     </div>
                   ))}
                 {group.subtotals.length > 3 && (
-                  <div className="text-muted-foreground text-center text-xs">
+                  <div className="text-center text-xs text-muted-foreground">
                     他{group.subtotals.length - 3}項目
                   </div>
                 )}
@@ -103,7 +103,7 @@ export function SubtotalGroupCard({
           )}
 
           {/* 作成日 */}
-          <div className="text-muted-foreground border-t pt-2 text-xs">
+          <div className="border-t pt-2 text-xs text-muted-foreground">
             作成: {new Date(group.createdAt).toLocaleDateString("ja-JP")}
           </div>
         </div>

@@ -250,7 +250,7 @@ export function DisplaySettingsTab() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">クリックで採点</h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             一括採点でのマウスクリック操作を設定できます
           </p>
         </div>
@@ -280,7 +280,7 @@ export function DisplaySettingsTab() {
                   {labels[clickCount]}
                 </Label>
                 <select
-                  className="border-input bg-background flex-1 rounded-md border px-3 py-1.5 text-sm"
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                   value={
                     clickScoringConfig[
                       clickCount as keyof typeof clickScoringConfig
@@ -318,7 +318,7 @@ export function DisplaySettingsTab() {
               <span className="shrink-0 text-lg" title="遅い">
                 🐢
               </span>
-              <span className="text-muted-foreground w-14 shrink-0 text-right text-sm">
+              <span className="w-14 shrink-0 text-right text-sm text-muted-foreground">
                 {clickScoringDebounceMs}ms
               </span>
             </div>
@@ -330,7 +330,7 @@ export function DisplaySettingsTab() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">選択枠の色</h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             一括採点における選択答案の枠色を変更できます
           </p>
         </div>
@@ -354,7 +354,7 @@ export function DisplaySettingsTab() {
 
           {/* カスタム色ピッカー */}
           <div className="ml-2 flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">カスタム:</span>
+            <span className="text-sm text-muted-foreground">カスタム:</span>
             <ColorPicker
               value={selectionBorderColor}
               onChange={handleSelectionBorderColorChange}
@@ -372,7 +372,7 @@ export function DisplaySettingsTab() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">採点状態の表示色</h2>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               採点パネル・一覧の背景色を変更できます
             </p>
           </div>
@@ -429,7 +429,7 @@ export function DisplaySettingsTab() {
                   {/* 色設定 */}
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-xs text-muted-foreground">
                         背景
                       </span>
                       <ColorPicker
@@ -440,7 +440,7 @@ export function DisplaySettingsTab() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-xs text-muted-foreground">
                         文字
                       </span>
                       <ColorPicker
@@ -451,7 +451,7 @@ export function DisplaySettingsTab() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-xs text-muted-foreground">
                         アイコン
                       </span>
                       <ColorPicker

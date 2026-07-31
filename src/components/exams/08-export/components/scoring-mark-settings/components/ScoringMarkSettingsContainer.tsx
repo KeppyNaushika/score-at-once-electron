@@ -45,7 +45,7 @@ function PositionSelect({
 }) {
   return (
     <div className="space-y-1">
-      <Label className="text-muted-foreground text-xs">{label}</Label>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="h-9 w-full">
           <SelectValue />
@@ -101,7 +101,7 @@ export function ScoringMarkSettingsContainer({
         <Label className="text-sm font-medium">{title}</Label>
         <div className="flex flex-wrap items-end justify-end gap-3">
           <div className="space-y-1">
-            <Label className="text-muted-foreground text-xs">色</Label>
+            <Label className="text-xs text-muted-foreground">色</Label>
             <InlineColorPicker
               value={style.color}
               onChange={(color) => onUpdate({ color })}
@@ -109,7 +109,7 @@ export function ScoringMarkSettingsContainer({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-muted-foreground text-xs">不透明度(%)</Label>
+            <Label className="text-xs text-muted-foreground">不透明度(%)</Label>
             <Input
               type="number"
               value={style.opacity}
@@ -140,7 +140,7 @@ export function ScoringMarkSettingsContainer({
           onChange={(anchor) => onUpdate({ anchor })}
         />
         <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">左右</Label>
+          <Label className="text-xs text-muted-foreground">左右</Label>
           <Input
             type="number"
             value={style.offsetX}
@@ -153,7 +153,7 @@ export function ScoringMarkSettingsContainer({
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">上下</Label>
+          <Label className="text-xs text-muted-foreground">上下</Label>
           <Input
             type="number"
             value={style.offsetY}
@@ -166,7 +166,7 @@ export function ScoringMarkSettingsContainer({
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">サイズ</Label>
+          <Label className="text-xs text-muted-foreground">サイズ</Label>
           <Input
             type="number"
             value={style.size}

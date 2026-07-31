@@ -27,7 +27,7 @@ export function UserManagementTab({
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">ユーザー管理</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           ユーザー情報とパスコードを管理します
         </p>
       </div>
@@ -40,7 +40,7 @@ export function UserManagementTab({
           >
             <div>
               <div className="font-medium">{user.name}</div>
-              <div className="text-muted-foreground text-sm">
+              <div className="text-sm text-muted-foreground">
                 @{user.username} • {user.role}
                 {user.passcodeType && user.passcodeType !== "none" && (
                   <span className="ml-2 rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">

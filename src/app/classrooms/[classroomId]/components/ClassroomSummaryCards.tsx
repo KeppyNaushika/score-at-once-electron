@@ -55,7 +55,7 @@ export function ClassroomSummaryCards({
     <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Users className="h-4 w-4" />
             在籍生徒数
           </CardTitle>
@@ -63,7 +63,7 @@ export function ClassroomSummaryCards({
         <CardContent>
           <div className="text-3xl font-bold tabular-nums">
             {stats.studentCount}
-            <span className="text-muted-foreground ml-1 text-lg font-normal">
+            <span className="ml-1 text-lg font-normal text-muted-foreground">
               名
             </span>
           </div>
@@ -72,7 +72,7 @@ export function ClassroomSummaryCards({
 
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <BarChart3 className="h-4 w-4" />
             学級平均得点率
           </CardTitle>
@@ -82,12 +82,12 @@ export function ClassroomSummaryCards({
             {stats.avgRate != null ? (
               <>
                 {stats.avgRate}
-                <span className="text-muted-foreground ml-1 text-lg font-normal">
+                <span className="ml-1 text-lg font-normal text-muted-foreground">
                   %
                 </span>
               </>
             ) : (
-              <span className="text-muted-foreground text-lg font-normal">
+              <span className="text-lg font-normal text-muted-foreground">
                 —
               </span>
             )}
@@ -97,7 +97,7 @@ export function ClassroomSummaryCards({
 
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <TrendingUp className="h-4 w-4" />
             標準偏差
           </CardTitle>
@@ -107,12 +107,12 @@ export function ClassroomSummaryCards({
             {stats.stdDev != null ? (
               <>
                 {stats.stdDev}
-                <span className="text-muted-foreground ml-1 text-lg font-normal">
+                <span className="ml-1 text-lg font-normal text-muted-foreground">
                   pt
                 </span>
               </>
             ) : (
-              <span className="text-muted-foreground text-lg font-normal">
+              <span className="text-lg font-normal text-muted-foreground">
                 —
               </span>
             )}

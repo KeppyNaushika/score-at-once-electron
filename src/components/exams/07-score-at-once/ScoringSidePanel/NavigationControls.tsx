@@ -80,7 +80,7 @@ export default function NavigationControls({
               step={1}
               className="flex-1"
             />
-            <span className="text-muted-foreground w-8 shrink-0 text-right text-xs">
+            <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">
               {itemsPerRow[0]}件
             </span>
           </div>
@@ -100,7 +100,7 @@ export default function NavigationControls({
               step={5}
               className="flex-1"
             />
-            <span className="text-muted-foreground w-8 shrink-0 text-right text-xs">
+            <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">
               {expandMargin}%
             </span>
           </div>

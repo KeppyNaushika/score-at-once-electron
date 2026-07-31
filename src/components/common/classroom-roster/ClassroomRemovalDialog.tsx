@@ -191,14 +191,14 @@ export function ClassroomRemovalDialog({
               <RadioGroupItem value="unlink" id="removal-unlink" />
               <Label htmlFor="removal-unlink" className="font-normal">
                 登録だけ解除（生徒は対象に残す）
-                <span className="text-muted-foreground ml-1 text-xs">推奨</span>
+                <span className="ml-1 text-xs text-muted-foreground">推奨</span>
               </Label>
             </div>
             <div className="flex items-start gap-2">
               <RadioGroupItem value="delete-students" id="removal-delete" />
               <Label htmlFor="removal-delete" className="font-normal">
                 登録を解除し、専属の生徒も削除
-                <span className="text-muted-foreground ml-1 block text-xs">
+                <span className="ml-1 block text-xs text-muted-foreground">
                   {exclusiveCount === null
                     ? "対象生徒数を確認中…"
                     : deleteCount === 0
@@ -250,7 +250,7 @@ export function ClassroomRemovalDialog({
                 「{finalConfirmEntry?.name}」にのみ所属する {deleteCount}名 を
                 対象から外します。連動して以下も削除されます：
               </span>
-              <span className="text-muted-foreground block pl-4">
+              <span className="block pl-4 text-muted-foreground">
                 {(deletionLosses ?? ["その生徒の入力済みデータ"]).map(
                   (loss) => (
                     <span key={loss} className="block">
@@ -270,7 +270,7 @@ export function ClassroomRemovalDialog({
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={confirming}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
               onClick={(e) => {
                 e.preventDefault()
                 if (finalConfirmEntry) runConfirm(finalConfirmEntry, true)

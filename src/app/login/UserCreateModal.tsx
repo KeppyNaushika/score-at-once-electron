@@ -173,7 +173,7 @@ export function UserCreateModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>新しいユーザーを作成</DialogTitle>
           <DialogDescription>

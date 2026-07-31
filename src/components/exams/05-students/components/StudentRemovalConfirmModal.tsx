@@ -40,7 +40,7 @@ export default function StudentRemovalConfirmModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="text-destructive h-5 w-5" />
+            <AlertTriangle className="h-5 w-5 text-destructive" />
             生徒の削除確認
           </DialogTitle>
           <DialogDescription>
@@ -74,14 +74,14 @@ export default function StudentRemovalConfirmModal({
 
           {/* 採点データの警告 */}
           {hasGradingData && (
-            <div className="bg-destructive/10 border-destructive/20 rounded-md border p-4">
+            <div className="rounded-md border border-destructive/20 bg-destructive/10 p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                 <div className="space-y-2">
-                  <h4 className="text-destructive font-medium">
+                  <h4 className="font-medium text-destructive">
                     採点データが存在します
                   </h4>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-sm text-muted-foreground">
                     削除する生徒には
                     <strong className="text-destructive">
                       {gradingDataCount}件の採点データ
@@ -89,13 +89,13 @@ export default function StudentRemovalConfirmModal({
                     が関連付けられています。
                     生徒を削除すると、以下のデータも連動して削除されます：
                   </p>
-                  <ul className="text-muted-foreground ml-4 space-y-1 text-sm">
+                  <ul className="ml-4 space-y-1 text-sm text-muted-foreground">
                     <li>• 答案シート情報</li>
                     <li>• 採点結果・コメント</li>
                     <li>• 設問別得点記録</li>
                     <li>• 最終成績情報</li>
                   </ul>
-                  <p className="text-destructive text-sm font-medium">
+                  <p className="text-sm font-medium text-destructive">
                     ※ この操作は取り消すことができません
                   </p>
                 </div>
@@ -105,12 +105,12 @@ export default function StudentRemovalConfirmModal({
 
           {/* 採点データがない場合の確認 */}
           {!hasGradingData && (
-            <div className="bg-muted/50 rounded-md border p-4">
+            <div className="rounded-md border bg-muted/50 p-4">
               <div className="flex items-start gap-3">
-                <Trash2 className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                 <div className="space-y-1">
                   <h4 className="font-medium">試験から削除</h4>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-sm text-muted-foreground">
                     選択した生徒は試験から削除されますが、採点データがないため安全に削除できます。
                     生徒の基本情報は保持され、他の試験には影響しません。
                   </p>

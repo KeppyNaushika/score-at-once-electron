@@ -18,10 +18,10 @@ export default function GradingModeToggle({
 }: GradingModeToggleProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <span className="text-muted-foreground text-sm font-medium">
+      <span className="text-sm font-medium text-muted-foreground">
         採点モード:
       </span>
-      <div className="bg-muted flex rounded-lg border p-1">
+      <div className="flex rounded-lg border bg-muted p-1">
         <Button
           variant={mode === "grid" ? "default" : "ghost"}
           size="sm"

@@ -129,7 +129,7 @@ export function AnswerSheetBuilderMainView({
   if (!isLoaded) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground text-sm">読み込み中...</p>
+        <p className="text-sm text-muted-foreground">読み込み中...</p>
       </div>
     )
   }
@@ -297,7 +297,7 @@ export function AnswerSheetBuilderMainView({
         </Tabs>
 
         {/* フッター統計 */}
-        <div className="text-muted-foreground flex justify-between border-t p-2 text-xs">
+        <div className="flex justify-between border-t p-2 text-xs text-muted-foreground">
           <span>
             {totalQuestions}問
             {multiPageLayout.totalPages > 1 &&

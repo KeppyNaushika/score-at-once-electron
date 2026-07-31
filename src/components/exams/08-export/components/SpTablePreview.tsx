@@ -19,12 +19,12 @@ export function SpTablePreview({ data }: SpTablePreviewProps) {
 
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground px-1 text-[11px]">
+      <p className="px-1 text-[11px] text-muted-foreground">
         生徒{students.length}名 × 設問{problems.length}問。太線は S曲線（行）/
         P曲線（列）。注意係数が高いほど応答パターンが非定型。
       </p>
       <table className="border-collapse text-[10px]">
-        <thead className="bg-muted sticky top-0">
+        <thead className="sticky top-0 bg-muted">
           <tr>
             <th className="border px-1 py-0.5 text-left">生徒</th>
             {problems.map((problem) => (

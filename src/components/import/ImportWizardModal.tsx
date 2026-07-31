@@ -75,7 +75,7 @@ export function ImportWizardModal({
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className="flex max-h-[90vh] min-w-4xl flex-col gap-0 p-0">
           {/* ヘッダー */}
-          <DialogHeader className="bg-muted/30 border-b px-6 py-4">
+          <DialogHeader className="border-b bg-muted/30 px-6 py-4">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-semibold">
                 試験インポート
@@ -103,7 +103,7 @@ export function ImportWizardModal({
                         className={cn(
                           "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all",
                           isActive &&
-                            "bg-primary text-primary-foreground ring-primary/20 ring-4",
+                            "bg-primary text-primary-foreground ring-4 ring-primary/20",
                           isCompleted && "bg-primary text-primary-foreground",
                           !isActive &&
                             !isCompleted &&
@@ -134,12 +134,12 @@ export function ImportWizardModal({
 
           {/* エラー表示 */}
           {state.error && (
-            <div className="bg-destructive/10 border-destructive/20 mx-6 mt-4 rounded-lg border p-4">
+            <div className="mx-6 mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                 <div className="flex-1">
-                  <p className="text-destructive text-sm font-medium">エラー</p>
-                  <p className="text-destructive/80 mt-1 text-sm">
+                  <p className="text-sm font-medium text-destructive">エラー</p>
+                  <p className="mt-1 text-sm text-destructive/80">
                     {state.error}
                   </p>
                 </div>
@@ -147,7 +147,7 @@ export function ImportWizardModal({
                   variant="ghost"
                   size="sm"
                   onClick={wizard.clearError}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
+                  className="-mt-2 -mr-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -186,7 +186,7 @@ export function ImportWizardModal({
           </div>
 
           {/* フッター */}
-          <div className="bg-muted/30 flex items-center justify-between border-t px-6 py-4">
+          <div className="flex items-center justify-between border-t bg-muted/30 px-6 py-4">
             <Button
               variant="ghost"
               onClick={wizard.goBack}

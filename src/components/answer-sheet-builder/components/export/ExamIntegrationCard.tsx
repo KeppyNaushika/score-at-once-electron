@@ -37,7 +37,7 @@ export function ExamIntegrationCard({ definition }: ExamIntegrationCardProps) {
         <FolderOpen className="h-5 w-5 text-amber-500" />
         <div className="text-left">
           <div className="text-sm font-medium">採点試験に変換</div>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             模範解答・採点領域・配点を自動作成
           </div>
         </div>

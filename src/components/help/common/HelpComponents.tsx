@@ -54,7 +54,7 @@ export function StepItem({
       </div>
       <div className="flex-1">
         <p className="text-sm font-medium">{title}</p>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
   )

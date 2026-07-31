@@ -87,7 +87,7 @@ export default function AnswerSheetBuilderDefinitionLayout({
                   "border-b-2 px-3 py-2 text-sm transition-colors",
                   isCurrent
                     ? "border-green-600 font-semibold text-green-600"
-                    : "text-muted-foreground hover:text-foreground border-transparent"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 {step.label}

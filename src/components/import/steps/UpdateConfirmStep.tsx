@@ -233,8 +233,8 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
     <div className="flex h-full flex-col">
       {/* ヘッダー */}
       <div className="mb-6 text-center">
-        <div className="bg-primary/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
-          <RefreshCw className="text-primary h-10 w-10" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+          <RefreshCw className="h-10 w-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">データの更新設定</h3>
         <p className="text-muted-foreground">
@@ -253,7 +253,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
           {/* フィールド更新 */}
           {hasUpdates ? (
             <>
-              <div className="text-muted-foreground text-center text-sm">
+              <div className="text-center text-sm text-muted-foreground">
                 以下のデータに変更があります。フィールドごとに更新方法を選択してください。
               </div>
 
@@ -294,7 +294,7 @@ export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
               )}
             </>
           ) : (
-            <div className="text-muted-foreground text-center text-sm">
+            <div className="text-center text-sm text-muted-foreground">
               生徒・学級・小計グループの情報に変更はありません。
             </div>
           )}
@@ -328,7 +328,7 @@ function ScoringStrategySection({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">採点データの統合方針</CardTitle>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           同じ生徒の同じ設問に対して、ファイルとこのPCで異なる採点がある場合の扱いを選択してください。
         </p>
       </CardHeader>
@@ -348,7 +348,7 @@ function ScoringStrategySection({
             />
             <Label htmlFor="scoring-newer" className="flex-1 cursor-pointer">
               <div className="font-medium">新しい方を優先</div>
-              <div className="text-muted-foreground text-sm">
+              <div className="text-sm text-muted-foreground">
                 更新日時が新しい採点結果を採用します
               </div>
             </Label>
@@ -361,7 +361,7 @@ function ScoringStrategySection({
             />
             <Label htmlFor="scoring-existing" className="flex-1 cursor-pointer">
               <div className="font-medium">このPCを優先</div>
-              <div className="text-muted-foreground text-sm">
+              <div className="text-sm text-muted-foreground">
                 このPCの採点結果を維持します
               </div>
             </Label>
@@ -374,7 +374,7 @@ function ScoringStrategySection({
             />
             <Label htmlFor="scoring-import" className="flex-1 cursor-pointer">
               <div className="font-medium">ファイルを優先</div>
-              <div className="text-muted-foreground text-sm">
+              <div className="text-sm text-muted-foreground">
                 ファイルの採点結果で上書きします
               </div>
             </Label>
@@ -497,7 +497,7 @@ function UpdateCard({
         <div className="mb-3 font-medium">{item.displayLabel}</div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-muted-foreground text-left text-xs">
+            <tr className="text-left text-xs text-muted-foreground">
               <th className="pb-2">項目</th>
               <th className="pb-2">このPC</th>
               <th className="pb-2">ファイル</th>
@@ -509,8 +509,8 @@ function UpdateCard({
               const currentStrategy: UpdateStrategy =
                 fieldDecisions[change.field] ?? "use_newer"
               return (
-                <tr key={change.field} className="border-muted border-t">
-                  <td className="text-muted-foreground py-2 pr-2">
+                <tr key={change.field} className="border-t border-muted">
+                  <td className="py-2 pr-2 text-muted-foreground">
                     {change.fieldLabel}
                   </td>
                   <td className="py-2 pr-2">

@@ -95,7 +95,7 @@ export default function ExamProgressCard({
 
   if (!progress) {
     return (
-      <p className="text-muted-foreground text-xs">進捗データがありません</p>
+      <p className="text-xs text-muted-foreground">進捗データがありません</p>
     )
   }
 

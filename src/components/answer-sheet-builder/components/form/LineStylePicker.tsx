@@ -196,7 +196,7 @@ function EditableValue({
         ref={inputRef}
         type="number"
         aria-label="線の太さ"
-        className="border-input bg-background box-border h-5 w-8 shrink-0 rounded border text-center text-[10px] outline-none"
+        className="box-border h-5 w-8 shrink-0 rounded border border-input bg-background text-center text-[10px] outline-none"
         value={editValue}
         min={min}
         max={max}
@@ -212,7 +212,7 @@ function EditableValue({
 
   return (
     <span
-      className="text-muted-foreground inline-flex h-5 w-8 shrink-0 cursor-pointer items-center justify-end text-[10px] select-none hover:underline"
+      className="inline-flex h-5 w-8 shrink-0 cursor-pointer items-center justify-end text-[10px] text-muted-foreground select-none hover:underline"
       onDoubleClick={() => {
         setEditValue(value.toFixed(1))
         setEditing(true)
@@ -249,17 +249,17 @@ function BorderFieldRow({
   return (
     <div className="space-y-1">
       <div className="flex min-h-6 items-center gap-2">
-        <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+        <span className="w-8 shrink-0 text-[10px] text-muted-foreground">
           {field.label}
         </span>
-        <div className="border-input flex shrink-0 rounded-md border">
+        <div className="flex shrink-0 rounded-md border border-input">
           {LINE_STYLES.map((lineStyle) => (
             <button
               key={lineStyle.value}
               type="button"
               title={lineStyle.title}
               className={cn(
-                "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
+                "flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md hover:bg-accent",
                 activeStyle === lineStyle.value
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground"
@@ -295,7 +295,7 @@ function BorderFieldRow({
           {showDash && (
             <div className="flex flex-1 items-center gap-1.5">
               <span
-                className="text-muted-foreground w-7 shrink-0 text-[9px]"
+                className="w-7 shrink-0 text-[9px] text-muted-foreground"
                 title="ダッシュ長（線幅に対する倍率）"
               >
                 破線
@@ -319,7 +319,7 @@ function BorderFieldRow({
           )}
           <div className="flex flex-1 items-center gap-1.5">
             <span
-              className="text-muted-foreground w-7 shrink-0 text-[9px]"
+              className="w-7 shrink-0 text-[9px] text-muted-foreground"
               title="間隔（線幅に対する倍率）"
             >
               間隔
@@ -353,7 +353,7 @@ export function LineStylePicker({
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <span className="text-muted-foreground text-[10px]">区切り線</span>
+        <span className="text-[10px] text-muted-foreground">区切り線</span>
         {DIVIDER_FIELDS.map((field) => (
           <BorderFieldRow
             key={field.styleKey}
@@ -364,7 +364,7 @@ export function LineStylePicker({
         ))}
       </div>
       <div className="space-y-1.5">
-        <span className="text-muted-foreground text-[10px]">番号列</span>
+        <span className="text-[10px] text-muted-foreground">番号列</span>
         {NUMBER_FIELDS.map((field) => (
           <BorderFieldRow
             key={field.styleKey}
@@ -375,7 +375,7 @@ export function LineStylePicker({
         ))}
       </div>
       <div className="space-y-1.5">
-        <span className="text-muted-foreground text-[10px]">
+        <span className="text-[10px] text-muted-foreground">
           原稿用紙マス目
         </span>
         {MANUSCRIPT_FIELDS.map((field) => (

@@ -88,7 +88,7 @@ function ClassroomRowCells({
       <TableCell className="font-medium">
         {entry.name}
         {entry.classroomCode && (
-          <span className="text-muted-foreground ml-2 text-xs">
+          <span className="ml-2 text-xs text-muted-foreground">
             ({entry.classroomCode})
           </span>
         )}
@@ -107,7 +107,7 @@ function ClassroomRowCells({
       ))}
       <TableCell>
         <Button variant="ghost" size="icon" onClick={() => onRemove(entry)}>
-          <Trash2 className="text-destructive h-4 w-4" />
+          <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </TableCell>
     </>
@@ -263,11 +263,11 @@ export function ClassroomRosterManager({
   return (
     <div className="space-y-4">
       {description && (
-        <p className="text-muted-foreground text-sm">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       )}
 
       {localEntries.length === 0 ? (
-        <div className="text-muted-foreground rounded-md border py-8 text-center">
+        <div className="rounded-md border py-8 text-center text-muted-foreground">
           <p>学級が関連付けられていません</p>
           {emptyHint && <p className="mt-1 text-sm">{emptyHint}</p>}
         </div>
@@ -309,7 +309,7 @@ export function ClassroomRosterManager({
           </DialogHeader>
 
           {availableClassrooms.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center">
+            <div className="py-8 text-center text-muted-foreground">
               <p>追加可能なクラスがありません</p>
               <p className="mt-1 text-sm">
                 「クラス管理」から新しいクラスを作成してください
@@ -352,7 +352,7 @@ export function ClassroomRosterManager({
                       <TableCell className="font-medium">
                         {availableClassroom.name}
                         {availableClassroom.classroomCode && (
-                          <span className="text-muted-foreground ml-2 text-xs">
+                          <span className="ml-2 text-xs text-muted-foreground">
                             ({availableClassroom.classroomCode})
                           </span>
                         )}

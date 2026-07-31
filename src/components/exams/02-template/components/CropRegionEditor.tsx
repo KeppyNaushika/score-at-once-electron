@@ -228,7 +228,7 @@ const CropRegionEditor = ({
       </div>
 
       {/* Right Side - Region List with independent scroll */}
-      <div className="bg-background relative flex h-full w-80 shrink-0 flex-col overflow-hidden border-l">
+      <div className="relative flex h-full w-80 shrink-0 flex-col overflow-hidden border-l bg-background">
         {/* 検出モード切替と設定 */}
         <div className="shrink-0 space-y-3 border-b p-3">
           <DetectionModeToggle

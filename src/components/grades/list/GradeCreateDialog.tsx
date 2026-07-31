@@ -62,7 +62,7 @@ export function GradeCreateDialog({
               placeholder="例: 1学期末評定"
             />
           </div>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             評価項目（観点）は作成後に「データソース」ステップで追加できます
           </p>
         </div>

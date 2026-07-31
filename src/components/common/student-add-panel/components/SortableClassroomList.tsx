@@ -64,7 +64,7 @@ export function SortableClassroomList({
 
   if (selectedClassrooms.length === 0) {
     return (
-      <div className="text-muted-foreground py-4 text-center text-sm">
+      <div className="py-4 text-center text-sm text-muted-foreground">
         学級を選択すると、ここで追加順序を設定できます
       </div>
     )
@@ -96,7 +96,7 @@ export function SortableClassroomList({
       }}
       dragOverlay={
         activeClassroom ? (
-          <Card className="bg-background scale-105 rotate-2 border-2 border-blue-200 p-3 shadow-xl">
+          <Card className="scale-105 rotate-2 border-2 border-blue-200 bg-background p-3 shadow-xl">
             <div className="flex items-center space-x-3">
               <div className="h-4 w-4 text-blue-500" />
               <div className="flex-1">

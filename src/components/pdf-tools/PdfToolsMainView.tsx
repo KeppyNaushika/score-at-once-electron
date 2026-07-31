@@ -143,10 +143,10 @@ export default function PdfToolsMainView() {
 
       {/* リサイズハンドル */}
       <div
-        className="bg-border hover:bg-primary/30 relative flex w-2 cursor-col-resize items-center justify-center transition-colors"
+        className="relative flex w-2 cursor-col-resize items-center justify-center bg-border transition-colors hover:bg-primary/30"
         onMouseDown={handleMouseDown}
       >
-        <div className="bg-muted flex h-6 w-3 items-center justify-center rounded-sm border">
+        <div className="flex h-6 w-3 items-center justify-center rounded-sm border bg-muted">
           <GripVertical className="h-3 w-3" />
         </div>
       </div>

@@ -84,7 +84,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
 
         <TabsContent value="scores" className="mt-0 flex-1 overflow-auto">
           <table className="w-full border-collapse text-[10px]">
-            <thead className="bg-muted sticky top-0">
+            <thead className="sticky top-0 bg-muted">
               <tr>
                 <th className="border px-1 py-0.5 text-left">#</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
@@ -101,7 +101,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
                 {data.headers.questionLabels.map((label, i) => (
                   <th key={i} className="border px-1 py-0.5 text-right">
                     <div>{label}</div>
-                    <div className="text-muted-foreground font-normal">
+                    <div className="font-normal text-muted-foreground">
                       ({data.headers.questionMaxScores[i]})
                     </div>
                   </th>
@@ -145,7 +145,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
 
         <TabsContent value="results" className="mt-0 flex-1 overflow-auto">
           <table className="w-full border-collapse text-[10px]">
-            <thead className="bg-muted sticky top-0">
+            <thead className="sticky top-0 bg-muted">
               <tr>
                 <th className="border px-1 py-0.5 text-left">#</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
@@ -211,7 +211,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
           {itemAnalysisData ? (
             <ItemAnalysisPreview data={itemAnalysisData} />
           ) : (
-            <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
               データがありません
             </div>
           )}
@@ -221,7 +221,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
           {spAnalysis?.spTable ? (
             <SpTablePreview data={spAnalysis.spTable} />
           ) : (
-            <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
               S-P表を作成できる採点データがありません
             </div>
           )}
@@ -231,7 +231,7 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
           {spAnalysis?.frequency ? (
             <FrequencyDistributionChart data={spAnalysis.frequency} />
           ) : (
-            <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
               得点分布を作成できる得点データがありません
             </div>
           )}

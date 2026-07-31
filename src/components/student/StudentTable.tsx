@@ -345,7 +345,7 @@ export default function StudentTable() {
           </Button>
           {selectedStudentIds.size > 0 && (
             <>
-              <span className="text-muted-foreground ml-2 text-sm tabular-nums">
+              <span className="ml-2 text-sm text-muted-foreground tabular-nums">
                 {selectedStudentIds.size}名選択中
               </span>
               <Button
@@ -370,7 +370,7 @@ export default function StudentTable() {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="生徒名・学籍番号で検索"
               value={searchTerm}
@@ -414,7 +414,7 @@ export default function StudentTable() {
               <SelectItem value="past">過去在籍</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground text-sm tabular-nums">
+          <span className="text-sm text-muted-foreground tabular-nums">
             {sortedData.length}名
           </span>
         </div>
@@ -422,9 +422,9 @@ export default function StudentTable() {
 
       {/* Students Table */}
       <div className="min-h-0 flex-1 p-4">
-        <div className="border-border/50 h-full overflow-hidden rounded-xl border shadow-sm">
+        <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
           <Table wrapperClassName="h-full">
-            <TableHeader className="bg-card sticky top-0 z-10">
+            <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-10">
                   <Checkbox
@@ -512,7 +512,7 @@ export default function StudentTable() {
                           </Badge>
                         ))}
                         {currentClassrooms.length === 0 && (
-                          <span className="text-muted-foreground text-sm">
+                          <span className="text-sm text-muted-foreground">
                             未所属
                           </span>
                         )}
@@ -523,7 +523,7 @@ export default function StudentTable() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                          className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleEditStudent(student)
@@ -534,7 +534,7 @@ export default function StudentTable() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
+                          className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDeleteStudent(student.id)
@@ -551,7 +551,7 @@ export default function StudentTable() {
                 <TableRow>
                   <TableCell
                     colSpan={6}
-                    className="text-muted-foreground h-32 text-center"
+                    className="h-32 text-center text-muted-foreground"
                   >
                     該当する生徒が見つかりません。
                   </TableCell>

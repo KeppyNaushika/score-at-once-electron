@@ -120,7 +120,7 @@ export function ColorPicker({
           {/* プリセット色 */}
           {presets.length > 0 && (
             <div>
-              <p className="text-muted-foreground mb-2 text-xs">プリセット</p>
+              <p className="mb-2 text-xs text-muted-foreground">プリセット</p>
               <div className="flex flex-wrap gap-1">
                 {presets.map((color) => (
                   <button

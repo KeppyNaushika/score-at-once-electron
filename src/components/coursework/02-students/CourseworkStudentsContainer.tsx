@@ -220,7 +220,7 @@ export function CourseworkStudentsContainer({
   return (
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">生徒管理</h2>
-      <p className="text-muted-foreground mb-6 text-sm">
+      <p className="mb-6 text-sm text-muted-foreground">
         評価対象の生徒を学級単位で追加してください。ドラッグで並び替えできます。
       </p>
 

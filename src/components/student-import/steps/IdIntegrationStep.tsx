@@ -43,7 +43,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           <h3 className="text-lg font-semibold">
             すべてのデータが自動で紐づきました
           </h3>
-          <p className="text-muted-foreground mt-2 text-sm">
+          <p className="mt-2 text-sm text-muted-foreground">
             同じパソコンで作成されたデータのため、手動の設定は不要です
           </p>
         </div>
@@ -102,7 +102,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">データの紐づけ</h3>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           ファイル内のデータをこのPCのデータとどう紐づけるか設定してください
         </p>
       </div>

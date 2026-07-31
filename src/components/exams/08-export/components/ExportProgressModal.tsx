@@ -371,7 +371,7 @@ export default function ExportProgressModal({
                 <CheckCircle className="mx-auto mb-2 h-12 w-12 text-green-600" />
                 <p className="font-medium">PDF出力が完了しました</p>
                 {outputPath && (
-                  <p className="text-muted-foreground mt-1 text-sm break-all">
+                  <p className="mt-1 text-sm break-all text-muted-foreground">
                     保存先: {outputPath}
                   </p>
                 )}

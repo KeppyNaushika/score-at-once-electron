@@ -105,11 +105,11 @@ export default function StudentDetailPage() {
               <span className="text-muted-foreground">
                 {student.lastNameKana} {student.firstNameKana}
               </span>
-              <span className="bg-muted/50 rounded px-2 py-0.5 font-mono text-xs">
+              <span className="rounded bg-muted/50 px-2 py-0.5 font-mono text-xs">
                 {student.studentNumber}
               </span>
               {student.enrollmentYear && (
-                <span className="bg-muted/50 rounded px-2 py-0.5 text-xs tabular-nums">
+                <span className="rounded bg-muted/50 px-2 py-0.5 text-xs tabular-nums">
                   {student.enrollmentYear}年入学
                 </span>
               )}
@@ -136,7 +136,7 @@ export default function StudentDetailPage() {
           <Button
             onClick={handleDeleteStudent}
             variant="ghost"
-            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+            className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             削除

@@ -126,7 +126,7 @@ export function AnswerSheetDefinitionDetail({
   if (!isLoaded) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground text-sm">読み込み中...</p>
+        <p className="text-sm text-muted-foreground">読み込み中...</p>
       </div>
     )
   }
@@ -134,7 +134,7 @@ export function AnswerSheetDefinitionDetail({
   if (!definition) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           定義が見つかりませんでした
         </p>
       </div>
@@ -151,7 +151,7 @@ export function AnswerSheetDefinitionDetail({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">{definition.name}</h1>
-          <p className="text-muted-foreground text-sm">解答用紙の概要</p>
+          <p className="text-sm text-muted-foreground">解答用紙の概要</p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => router.push(`${base}/01-edit`)}>
@@ -230,12 +230,12 @@ export function AnswerSheetDefinitionDetail({
             </Button>
           </div>
           {showSuggestions && suggestions.length > 0 && (
-            <div className="bg-popover absolute top-full z-50 mt-1 w-full rounded-md border shadow-md">
+            <div className="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
               {suggestions.map((tag) => (
                 <button
                   key={tag.id}
                   type="button"
-                  className="hover:bg-accent flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent"
                   onMouseDown={(e) => {
                     e.preventDefault()
                     handleAddTag(tag.name)
@@ -250,7 +250,7 @@ export function AnswerSheetDefinitionDetail({
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
           {tagNames.length === 0 && (
-            <span className="text-muted-foreground text-xs">
+            <span className="text-xs text-muted-foreground">
               タグはありません
             </span>
           )}

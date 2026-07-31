@@ -169,7 +169,7 @@ export function EstimationSettingsPopover({
           <Button
             variant="outline"
             size="sm"
-            className="text-muted-foreground h-6 rounded-full px-2 text-xs"
+            className="h-6 rounded-full px-2 text-xs text-muted-foreground"
           >
             なし
           </Button>
@@ -204,7 +204,7 @@ export function EstimationSettingsPopover({
                 「縮小を避ける」利点が効く。 */}
             {methodUsesPredictors(method) &&
               (sourceFit ? (
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   予測しやすさ 相関 R ={" "}
                   <span className="font-medium tabular-nums">
                     {sourceFit.correlation.toFixed(2)}
@@ -223,7 +223,7 @@ export function EstimationSettingsPopover({
                   )}
                 </p>
               ) : (
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   予測しやすさ R: 算出不能（サンプルまたは共通ソース不足）
                 </p>
               ))}

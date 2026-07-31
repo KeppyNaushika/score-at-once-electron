@@ -139,7 +139,7 @@ export function ImageElementEditor({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
               onClick={() => handleRemove(i)}
             >
               <Trash2 className="h-3 w-3" />
@@ -187,7 +187,7 @@ export function ImageElementEditor({
 
           {/* Row 3: 不透明度 */}
           <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground shrink-0 text-[10px]">
+            <span className="shrink-0 text-[10px] text-muted-foreground">
               透明度
             </span>
             <Slider
@@ -206,7 +206,7 @@ export function ImageElementEditor({
       ))}
 
       {imageElements.length === 0 && (
-        <p className="text-muted-foreground text-[10px]">
+        <p className="text-[10px] text-muted-foreground">
           画像要素はありません
         </p>
       )}

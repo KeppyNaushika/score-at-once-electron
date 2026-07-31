@@ -78,7 +78,7 @@ export function MatchedItemRow({
           {hasSubtotalPreview && (
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-0.5 text-xs"
+              className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
               onClick={() => setShowPreview((v) => !v)}
             >
               {showPreview ? (
@@ -90,7 +90,7 @@ export function MatchedItemRow({
             </button>
           )}
         </div>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-xs text-muted-foreground">
           {item.matchReason}
         </span>
       </div>
@@ -118,7 +118,7 @@ export function MatchedItemRow({
         {/* 同一として扱う場合のID選択 */}
         {decision === "same_person" && (
           <div className="mt-1 ml-4">
-            <p className="text-muted-foreground mb-1 text-xs">
+            <p className="mb-1 text-xs text-muted-foreground">
               {labels.idChoiceLabel}
             </p>
             <Select value={idChoice} onValueChange={handleIdChoiceChange}>

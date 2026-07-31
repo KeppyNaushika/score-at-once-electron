@@ -63,7 +63,7 @@ export function SliderWithInput({
 
   return (
     <div className="flex min-h-6 items-center gap-2">
-      <span className="text-muted-foreground w-16 shrink-0 text-[10px]">
+      <span className="w-16 shrink-0 text-[10px] text-muted-foreground">
         {label}
       </span>
       <Slider
@@ -79,7 +79,7 @@ export function SliderWithInput({
           ref={inputRef}
           type="number"
           aria-label={label}
-          className="border-input bg-background box-border h-5 w-10 shrink-0 rounded border text-center text-[10px] outline-none"
+          className="box-border h-5 w-10 shrink-0 rounded border border-input bg-background text-center text-[10px] outline-none"
           value={editValue}
           min={Number.isFinite(lo) ? lo : undefined}
           max={Number.isFinite(hi) ? hi : undefined}
@@ -92,7 +92,7 @@ export function SliderWithInput({
         />
       ) : (
         <span
-          className="text-muted-foreground inline-flex h-5 w-10 shrink-0 cursor-pointer items-center justify-end text-[10px] select-none hover:underline"
+          className="inline-flex h-5 w-10 shrink-0 cursor-pointer items-center justify-end text-[10px] text-muted-foreground select-none hover:underline"
           onDoubleClick={startEdit}
           title="ダブルクリックで直接入力"
         >

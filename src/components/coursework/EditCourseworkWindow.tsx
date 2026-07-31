@@ -147,7 +147,7 @@ export function EditCourseworkWindow({
           <div className="space-y-2">
             <Label>タグ（任意）</Label>
             {allTags.length === 0 ? (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 利用可能なタグがありません。タグ管理から作成してください。
               </p>
             ) : (

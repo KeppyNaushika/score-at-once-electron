@@ -91,7 +91,7 @@ export function HeaderFieldEditor({
       </div>
 
       {fields.length === 0 && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           フィールドがありません。追加ボタンからプリセットを選択できます。
         </p>
       )}
@@ -103,7 +103,7 @@ export function HeaderFieldEditor({
             <div className="flex items-center gap-1">
               {/* hfill はラベル不要なのでタイプ表示のみ */}
               {fieldType === "hfill" ? (
-                <span className="text-muted-foreground flex-1 text-xs italic">
+                <span className="flex-1 text-xs text-muted-foreground italic">
                   可変スペース
                 </span>
               ) : (
@@ -137,7 +137,7 @@ export function HeaderFieldEditor({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-destructive h-6 w-6"
+                className="h-6 w-6 text-destructive"
                 onClick={() => onDelete(field.id)}
               >
                 <Trash2 className="h-3 w-3" />

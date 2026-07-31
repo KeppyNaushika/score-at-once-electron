@@ -60,7 +60,7 @@ export function CheckboxCellWithFillHandle({
     <div
       className={cn(
         "group relative flex items-center justify-center",
-        "h-full min-h-[36px] w-full py-1", // セルの高さを小さく、paddingを最小化
+        "h-full min-h-9 w-full py-1", // セルの高さを小さく、paddingを最小化
         // フィル範囲内のセルはハイライト
         isInFillRange && "bg-blue-100 dark:bg-blue-900/20",
         // 選択されているセルは枠線表示

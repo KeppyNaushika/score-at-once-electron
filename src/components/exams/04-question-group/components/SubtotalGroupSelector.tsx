@@ -122,7 +122,7 @@ export function SubtotalGroupSelector({
       </CardHeader>
       <CardContent>
         {activeSubtotalGroups.length === 0 ? (
-          <div className="text-muted-foreground py-8 text-center">
+          <div className="py-8 text-center text-muted-foreground">
             <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>有効化された小計点グループがありません</p>
             <p className="mt-2 text-sm">
@@ -144,7 +144,7 @@ export function SubtotalGroupSelector({
                         {group.subtotals.length}項目
                       </Badge>
                     </div>
-                    <div className="text-muted-foreground mt-1 text-xs">
+                    <div className="mt-1 text-xs text-muted-foreground">
                       項目:{" "}
                       {group.subtotals
                         .map((subtotal) => subtotal.name)
@@ -194,7 +194,7 @@ export function SubtotalGroupSelector({
           <div className="space-y-4">
             {/* 検索 */}
             <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="グループ名、説明で検索..."
                 value={searchTerm}
@@ -209,7 +209,7 @@ export function SubtotalGroupSelector({
                 <LoadingSpinner />
               </div>
             ) : filteredGroups.length === 0 ? (
-              <div className="text-muted-foreground py-8 text-center">
+              <div className="py-8 text-center text-muted-foreground">
                 <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
                 <p>
                   {searchTerm
@@ -228,7 +228,7 @@ export function SubtotalGroupSelector({
                   return (
                     <div
                       key={group.id}
-                      className="hover:bg-accent/50 flex items-center justify-between rounded-lg border p-3"
+                      className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
                     >
                       <div className="flex-1">
                         <div className="mb-1 flex items-center gap-2">
@@ -237,7 +237,7 @@ export function SubtotalGroupSelector({
                             {group.subtotals.length}項目
                           </Badge>
                         </div>
-                        <div className="text-muted-foreground mt-1 text-xs">
+                        <div className="mt-1 text-xs text-muted-foreground">
                           項目:{" "}
                           {group.subtotals
                             .slice(0, 3)

@@ -121,7 +121,7 @@ function CellFocusFigure() {
     <div aria-hidden className="flex flex-col items-center gap-2">
       <div className="grid grid-cols-3 gap-1.5 text-[10px] font-semibold text-gray-400">
         {columns.map((column) => (
-          <span key={column} className="w-[60px] text-center">
+          <span key={column} className="w-15 text-center">
             {column}
           </span>
         ))}
@@ -131,7 +131,7 @@ function CellFocusFigure() {
           {cells.flat().map((value, i) => (
             <div
               key={i}
-              className="flex h-[34px] w-[60px] items-center justify-center rounded-md border border-gray-200 bg-white text-xs text-gray-600"
+              className="flex h-8.5 w-15 items-center justify-center rounded-md border border-gray-200 bg-white text-xs text-gray-600"
             >
               {value}
             </div>
@@ -139,7 +139,7 @@ function CellFocusFigure() {
         </div>
         {/* 移動するフォーカス枠 */}
         <div
-          className="pointer-events-none absolute top-0 left-0 h-[34px] w-[60px] rounded-md border-2 border-blue-500 bg-blue-500/10"
+          className="pointer-events-none absolute top-0 left-0 h-8.5 w-15 rounded-md border-2 border-blue-500 bg-blue-500/10"
           style={{ animation: "help03Focus 8s steps(1, end) infinite" }}
         />
       </div>
@@ -161,7 +161,7 @@ function OmrScanFigure() {
   const correct = 2 // 「ウ」が正解（塗りつぶし）
   return (
     <div aria-hidden className="flex flex-col items-center gap-3">
-      <div className="relative h-12 w-[160px] overflow-hidden rounded-md border border-gray-300 bg-white px-3">
+      <div className="relative h-12 w-40 overflow-hidden rounded-md border border-gray-300 bg-white px-3">
         <div className="flex h-full items-center justify-between">
           {choices.map((choice, i) => (
             <div

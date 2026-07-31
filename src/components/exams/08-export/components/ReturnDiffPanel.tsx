@@ -137,7 +137,7 @@ export function ReturnDiffPanel({
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-8 w-8"
+              className="h-8 w-8 text-muted-foreground"
               aria-label="答案返却・差分の説明"
             >
               <HelpCircle className="h-4 w-4" />
@@ -148,7 +148,7 @@ export function ReturnDiffPanel({
               <FileCheck className="h-4 w-4" />
               答案返却・差分
             </div>
-            <p className="text-muted-foreground mt-2">
+            <p className="mt-2 text-muted-foreground">
               現在の採点内容を「返却版」として記録すると、以降に採点（スコア・採点マーク）を
               修正した生徒だけを抽出して再印刷できます。
             </p>
@@ -169,7 +169,7 @@ export function ReturnDiffPanel({
               {changedDiffs.map(({ examStudent, diff }) => (
                 <div
                   key={diff.examStudentId}
-                  className="border-border rounded-md border p-3 text-sm"
+                  className="rounded-md border border-border p-3 text-sm"
                 >
                   <div className="mb-1 flex items-center gap-2 font-medium">
                     {examStudent.student.lastName}{" "}
@@ -182,7 +182,7 @@ export function ReturnDiffPanel({
                     )}
                   </div>
                   {diff.scoreChanges.length > 0 ? (
-                    <ul className="text-muted-foreground space-y-0.5">
+                    <ul className="space-y-0.5 text-muted-foreground">
                       {diff.scoreChanges.map((scoreChange) => (
                         <li
                           key={scoreChange.cropRegionId}
@@ -209,12 +209,12 @@ export function ReturnDiffPanel({
             </CollapsibleContent>
           </Collapsible>
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             前回返却時から変更があった生徒はいません。
           </p>
         )
       ) : (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           まだ返却版が記録されていません。出力対象の生徒を選んで「返却版として記録」してください。
         </p>
       )}

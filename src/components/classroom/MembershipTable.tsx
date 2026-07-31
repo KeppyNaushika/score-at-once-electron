@@ -141,7 +141,7 @@ export default function MembershipTable({
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               所属一覧
-              <span className="text-muted-foreground ml-1 text-lg font-normal tabular-nums">
+              <span className="ml-1 text-lg font-normal text-muted-foreground tabular-nums">
                 ({displayData.length}名)
               </span>
             </CardTitle>
@@ -177,7 +177,7 @@ export default function MembershipTable({
         </CardHeader>
         <CardContent>
           {displayData.length > 0 ? (
-            <div className="border-border/50 overflow-hidden rounded-xl border">
+            <div className="overflow-hidden rounded-xl border border-border/50">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-muted/40">
@@ -298,7 +298,7 @@ export default function MembershipTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
                             onClick={() => onViewStudent(membership)}
                             title="個人ページを開く"
                           >
@@ -307,7 +307,7 @@ export default function MembershipTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
                             onClick={() => onEdit(membership)}
                             title="所属を編集"
                           >
@@ -316,7 +316,7 @@ export default function MembershipTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
+                            className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => onDelete(membership.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -329,7 +329,7 @@ export default function MembershipTable({
               </Table>
             </div>
           ) : (
-            <div className="text-muted-foreground py-12 text-center">
+            <div className="py-12 text-center text-muted-foreground">
               所属している生徒はいません
             </div>
           )}

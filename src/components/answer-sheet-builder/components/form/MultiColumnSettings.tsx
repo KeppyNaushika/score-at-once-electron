@@ -48,7 +48,7 @@ export function MultiColumnSettings({
       {multiColumn.enabled && (
         <div className="space-y-2 pl-1">
           {vertical && (
-            <p className="text-muted-foreground text-[10px] leading-snug">
+            <p className="text-[10px] leading-snug text-muted-foreground">
               縦組みでは段が上下方向に分割されます（例: 2段＝上下2段）。
             </p>
           )}

@@ -239,7 +239,7 @@ export default function RegionInfoPage() {
                       <h4 className="text-sm font-medium">
                         ページ {displayPageNumber}
                       </h4>
-                      <div className="text-muted-foreground text-xs">
+                      <div className="text-xs text-muted-foreground">
                         ({pageRegions.length}個の領域)
                       </div>
                     </div>
@@ -291,7 +291,7 @@ export default function RegionInfoPage() {
                       </div>
                     ) : (
                       <div className="relative flex aspect-3/4 items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
-                        <div className="text-muted-foreground text-sm">
+                        <div className="text-sm text-muted-foreground">
                           画像が見つかりません
                         </div>
                       </div>
@@ -302,7 +302,7 @@ export default function RegionInfoPage() {
             </div>
           </div>
           {/* フッター統計 */}
-          <div className="text-muted-foreground flex justify-between border-t p-2 text-xs">
+          <div className="flex justify-between border-t p-2 text-xs text-muted-foreground">
             <span>{cropRegions.length}個の領域</span>
             <span>
               合計{" "}
@@ -321,7 +321,7 @@ export default function RegionInfoPage() {
               <h3 className="text-lg font-medium">
                 領域情報テーブル（全ページ統一順序）
               </h3>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 全ページ {cropRegions.length}個の領域を統一順序で表示
                 {selectedExamPage && (
                   <span className="ml-2 text-blue-600">
@@ -329,7 +329,7 @@ export default function RegionInfoPage() {
                   </span>
                 )}
               </p>
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-muted-foreground">
                 各行をクリックして選択し、種類・ラベル・配点などを設定してください。ドラッグ&ドロップで順序を変更できます。
               </p>
             </div>
@@ -347,7 +347,7 @@ export default function RegionInfoPage() {
             />
           </div>
           {/* 合計点フッター（固定表示） */}
-          <div className="bg-muted/30 flex shrink-0 items-center justify-end border-t px-6 py-2">
+          <div className="flex shrink-0 items-center justify-end border-t bg-muted/30 px-6 py-2">
             <span className="text-sm font-medium">
               合計配点：
               <span className="text-lg font-bold">

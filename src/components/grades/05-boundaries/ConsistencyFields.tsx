@@ -68,7 +68,7 @@ export function ConsistencyFields({
     <div className="space-y-3 text-sm">
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <Label className="text-muted-foreground text-xs">
+          <Label className="text-xs text-muted-foreground">
             評定（比較先の項目）
           </Label>
           <Select
@@ -95,7 +95,7 @@ export function ConsistencyFields({
           </Select>
         </div>
         <div>
-          <Label className="text-muted-foreground text-xs">集計</Label>
+          <Label className="text-xs text-muted-foreground">集計</Label>
           <Select
             value={aggregate}
             onValueChange={(value) =>
@@ -112,7 +112,7 @@ export function ConsistencyFields({
           </Select>
         </div>
         <div>
-          <Label className="text-muted-foreground text-xs">許容差 ±</Label>
+          <Label className="text-xs text-muted-foreground">許容差 ±</Label>
           <Input
             type="number"
             step="0.1"
@@ -124,7 +124,7 @@ export function ConsistencyFields({
       </div>
 
       <div>
-        <Label className="text-muted-foreground text-xs">
+        <Label className="text-xs text-muted-foreground">
           集計する観点（{aggregate === "sum" ? "合計" : "平均"}
           をとる項目）
         </Label>
@@ -138,7 +138,7 @@ export function ConsistencyFields({
                 onClick={() => toggleViewpoint(gradeItem.id)}
                 className={`rounded border px-2 py-1 text-xs ${
                   active
-                    ? "border-primary bg-primary/10 text-foreground font-medium"
+                    ? "border-primary bg-primary/10 font-medium text-foreground"
                     : "text-muted-foreground"
                 }`}
               >
@@ -151,7 +151,7 @@ export function ConsistencyFields({
 
       {valueLabels.length > 0 && (
         <div>
-          <Label className="text-muted-foreground text-xs">
+          <Label className="text-xs text-muted-foreground">
             ラベル値（観点の A/B/C 等を数値に換算）
           </Label>
           <div className="mt-1 flex flex-wrap gap-2">
@@ -177,7 +177,7 @@ export function ConsistencyFields({
         </div>
       )}
 
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         「{targetName || "（未選択）"}」と、選んだ観点の
         {aggregate === "sum" ? "合計" : "平均"}の差が {tolerance}{" "}
         を超えたら違反とみなします。

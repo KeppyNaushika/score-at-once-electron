@@ -104,17 +104,17 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
   return (
     <div className="p-6">
       <h2 className="mb-2 text-lg font-semibold">試験外成績資料の確認</h2>
-      <p className="text-muted-foreground mb-4 text-sm">
+      <p className="mb-4 text-sm text-muted-foreground">
         点数の入力は「試験外成績資料」ページで行います。ここでは成績算出が参照している
         評価項目と入力状況を確認できます。点数を編集するには各資料ページを開いてください。
       </p>
 
       {courseworkSources.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-          <p className="text-muted-foreground mb-2">
+          <p className="mb-2 text-muted-foreground">
             試験外成績資料のデータソースがありません
           </p>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             データソース設定で「試験外成績資料」を追加してください
           </p>
         </div>
@@ -132,7 +132,7 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
                   <Badge variant="secondary">資料</Badge>
                   <span className="text-sm font-medium">{dataSource.name}</span>
                   {item && (
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-xs text-muted-foreground">
                       ({item.coursework.name} &gt; {item.name})
                     </span>
                   )}
@@ -143,7 +143,7 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-xs text-muted-foreground">
                     入力済み: {enteredCount}/{studentCount}名 / 満点:{" "}
                     {item?.maxScore ?? dataSource.maxScore}
                   </span>

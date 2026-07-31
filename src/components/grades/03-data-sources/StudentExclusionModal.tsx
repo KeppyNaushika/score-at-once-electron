@@ -86,7 +86,7 @@ export function StudentExclusionModal({
             <p className="text-muted-foreground">読み込み中...</p>
           </div>
         ) : students.length === 0 ? (
-          <div className="text-muted-foreground py-8 text-center text-sm">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             対象生徒がいません。
           </div>
         ) : (
@@ -155,7 +155,7 @@ export function StudentExclusionModal({
         )}
 
         <div className="flex items-center justify-between border-t pt-3">
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             チェック = 含む（デフォルト）、チェックなし = 除外
           </p>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

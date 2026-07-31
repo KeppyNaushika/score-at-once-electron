@@ -85,14 +85,14 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">最終確認</h3>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           以下の内容でインポートを実行します
         </p>
       </div>
 
       <div className="mx-auto grid max-w-lg gap-4">
         {/* 生徒サマリー */}
-        <div className="border-border/50 rounded-lg border p-4">
+        <div className="rounded-lg border border-border/50 p-4">
           <h4 className="mb-3 font-medium">生徒</h4>
           <div className="space-y-2 text-sm">
             {summary.student.merge > 0 && (
@@ -117,7 +117,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         </div>
 
         {/* 学級サマリー */}
-        <div className="border-border/50 rounded-lg border p-4">
+        <div className="rounded-lg border border-border/50 p-4">
           <h4 className="mb-3 font-medium">学級</h4>
           <div className="space-y-2 text-sm">
             {summary.classroom.merge > 0 && (

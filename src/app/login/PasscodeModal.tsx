@@ -148,7 +148,7 @@ export function PasscodeModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-[350px]"
+        className="sm:max-w-87.5"
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <DialogHeader>
