@@ -4,16 +4,40 @@ import type { Exam } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
 import { ExportOptions, Student } from "@/components/exams/08-export/types"
 import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   type IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
+import type { ExamExportSettings } from "@/electron-src/lib/prisma/examSettings"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
+import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 /** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */
+/** 打鍵ごとに共有DBへ書きに行かないための待ち時間（ms） */
+const SETTINGS_SAVE_DEBOUNCE_MS = 400
+
+/**
+ * 選択されたグループID（エンティティ参照）は設定側に持たない。
+ * enabled などの非参照設定のみ保持し、IDは ExamSubtotalGroup のフラグから hydrate する。
+ */
+function withoutSelectedGroupIds(
+  options: IndividualReportOptions
+): IndividualReportOptions {
+  return {
+    ...options,
+    tableSubtotalGroupSelection: {
+      ...options.tableSubtotalGroupSelection,
+      selectedGroupIds: [],
+    },
+    boxPlotSubtotalGroupSelection: {
+      ...options.boxPlotSubtotalGroupSelection,
+      selectedGroupIds: [],
+    },
+  }
+}
+
 export function useExportPage() {
   const params = useParams()
   const examId = params.examId as string
@@ -53,8 +77,8 @@ export function useExportPage() {
     parallelCount: 4,
   })
 
-  const [scoringMarkConfig, setScoringMarkConfigState] =
-    useState<ScoringMarkConfig>(defaultScoringMarkConfig)
+  const [answerOverlaySettings, setAnswerOverlaySettingsState] =
+    useState<AnswerOverlaySettings>(DEFAULT_ANSWER_OVERLAY_SETTINGS)
 
   const [individualReportOptions, setIndividualReportOptionsState] =
     useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
@@ -69,32 +93,16 @@ export function useExportPage() {
         try {
           const result =
             await window.electronAPI.settings.getExamExportSettings(examId)
-          if (result.success && result.settings?.scoringMarkConfig) {
-            const saved = result.settings
-              .scoringMarkConfig as Partial<ScoringMarkConfig>
-            // 後方互換性: subtotalScore/totalScore がない場合、summaryScore からフォールバック
-            const mergedConfig: ScoringMarkConfig = {
-              ...defaultScoringMarkConfig,
-              ...saved,
-            }
-            if (!saved.subtotalScore && saved.summaryScore) {
-              mergedConfig.subtotalScore = { ...saved.summaryScore }
-            }
-            if (!saved.totalScore && saved.summaryScore) {
-              mergedConfig.totalScore = { ...saved.summaryScore }
-            }
-            setScoringMarkConfigState(mergedConfig)
+          if (result.success && result.settings) {
+            setAnswerOverlaySettingsState(result.settings.answerOverlay)
           }
 
-          // 個人成績表オプション（JSON）を基にしつつ、小計グループ選択は
-          // source of truth である ExamSubtotalGroup フラグから hydrate する（P5: 亡霊ID排除）
-          let baseOptions = DEFAULT_INDIVIDUAL_REPORT_OPTIONS
-          if (result.success && result.settings?.individualReportOptions) {
-            baseOptions = {
-              ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-              ...result.settings.individualReportOptions,
-            }
-          }
+          // 小計グループ選択は source of truth である
+          // ExamSubtotalGroup フラグから hydrate する（P5: 亡霊ID排除）
+          let baseOptions =
+            result.success && result.settings
+              ? result.settings.individualReport
+              : DEFAULT_INDIVIDUAL_REPORT_OPTIONS
           const selection =
             await window.electronAPI.getSubtotalGroupSelection(examId)
           if (selection.success) {
@@ -120,32 +128,63 @@ export function useExportPage() {
     loadExamSettings()
   }, [examId])
 
+  /**
+   * 出力設定の保存。
+   *
+   * 数値入力は打鍵ごとに呼ばれるうえ、保存は 20 行以上の upsert を1トランザクションで
+   * 走らせる。共有フォルダ上の SQLite ではロックを取り合うので、書き込みだけ遅らせる。
+   * 画面の状態は即時に更新するので体感は変わらない。
+   */
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSettingsRef = useRef<ExamExportSettings | null>(null)
+
+  const flushSettings = useCallback(async () => {
+    const pending = pendingSettingsRef.current
+    pendingSettingsRef.current = null
+    if (!pending || !examId || !window.electronAPI?.settings) return
+    try {
+      await window.electronAPI.settings.saveExamExportSettings(examId, pending)
+    } catch (error) {
+      console.error("出力設定の保存に失敗しました:", error)
+    }
+  }, [examId])
+
+  const scheduleSettingsSave = useCallback(
+    (settings: ExamExportSettings) => {
+      pendingSettingsRef.current = settings
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = setTimeout(() => {
+        persistTimerRef.current = null
+        void flushSettings()
+      }, SETTINGS_SAVE_DEBOUNCE_MS)
+    },
+    [flushSettings]
+  )
+
+  // 画面を離れるときは書き残しを吐き出す
+  useEffect(() => {
+    return () => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+      void flushSettings()
+    }
+  }, [flushSettings])
+
   // 採点マーク設定の保存
-  const setScoringMarkConfig = useCallback(
-    async (
+  const setAnswerOverlaySettings = useCallback(
+    (
       config:
-        ScoringMarkConfig | ((prev: ScoringMarkConfig) => ScoringMarkConfig)
+        | AnswerOverlaySettings
+        | ((prev: AnswerOverlaySettings) => AnswerOverlaySettings)
     ) => {
       const newConfig =
-        typeof config === "function" ? config(scoringMarkConfig) : config
-      setScoringMarkConfigState(newConfig)
-
-      if (examId && window.electronAPI?.settings) {
-        try {
-          const result =
-            await window.electronAPI.settings.getExamExportSettings(examId)
-          const currentSettings =
-            result.success && result.settings ? result.settings : {}
-          await window.electronAPI.settings.saveExamExportSettings(examId, {
-            ...currentSettings,
-            scoringMarkConfig: newConfig,
-          })
-        } catch (error) {
-          console.error("採点マーク設定の保存に失敗しました:", error)
-        }
-      }
+        typeof config === "function" ? config(answerOverlaySettings) : config
+      setAnswerOverlaySettingsState(newConfig)
+      scheduleSettingsSave({
+        answerOverlay: newConfig,
+        individualReport: withoutSelectedGroupIds(individualReportOptions),
+      })
     },
-    [examId, scoringMarkConfig]
+    [answerOverlaySettings, individualReportOptions, scheduleSettingsSave]
   )
 
   // 個人成績表オプションの保存
@@ -169,33 +208,22 @@ export function useExportPage() {
             newOptions.tableSubtotalGroupSelection.selectedGroupIds,
             newOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
           )
-
-          const result =
-            await window.electronAPI.settings.getExamExportSettings(examId)
-          const currentSettings =
-            result.success && result.settings ? result.settings : {}
-          // JSON には selectedGroupIds（エンティティ参照）を残さない。
-          // enabled などの非参照設定のみ保持し、ID はフラグから hydrate する。
-          await window.electronAPI.settings.saveExamExportSettings(examId, {
-            ...currentSettings,
-            individualReportOptions: {
-              ...newOptions,
-              tableSubtotalGroupSelection: {
-                ...newOptions.tableSubtotalGroupSelection,
-                selectedGroupIds: [],
-              },
-              boxPlotSubtotalGroupSelection: {
-                ...newOptions.boxPlotSubtotalGroupSelection,
-                selectedGroupIds: [],
-              },
-            },
-          })
         } catch (error) {
-          console.error("個人成績表オプションの保存に失敗しました:", error)
+          console.error("小計グループ選択の保存に失敗しました:", error)
         }
       }
+
+      scheduleSettingsSave({
+        answerOverlay: answerOverlaySettings,
+        individualReport: withoutSelectedGroupIds(newOptions),
+      })
     },
-    [examId, individualReportOptions]
+    [
+      answerOverlaySettings,
+      examId,
+      individualReportOptions,
+      scheduleSettingsSave,
+    ]
   )
 
   // マスター画像の縦横比からPDF用紙の向きを自動設定
@@ -357,8 +385,8 @@ export function useExportPage() {
     // 出力設定
     exportOptions,
     setExportOptions,
-    scoringMarkConfig,
-    setScoringMarkConfig,
+    answerOverlaySettings,
+    setAnswerOverlaySettings,
     individualReportOptions,
     setIndividualReportOptions,
 

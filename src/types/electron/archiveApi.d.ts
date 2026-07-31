@@ -9,8 +9,6 @@ import type {
   ArchiveExportMode,
   BulkExportExamsOptions,
   BulkExportExamsResult,
-  ConflictDetectionResult,
-  DetectConflictsOptions,
   ExportExamResult,
   FileOverviewData,
   IdIntegrationConfig,
@@ -57,13 +55,6 @@ export interface ArchiveAPI {
       data?: FileOverviewData
       error?: string
     }>
-
-    /**
-     * 競合を検出（マージインポート用ドライラン）
-     */
-    detectConflicts: (
-      options: DetectConflictsOptions
-    ) => Promise<ConflictDetectionResult>
 
     /**
      * ID統合インポートを実行（新しいフロー）

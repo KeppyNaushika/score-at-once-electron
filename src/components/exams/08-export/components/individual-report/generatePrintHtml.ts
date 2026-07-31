@@ -15,12 +15,14 @@ import { BoxPlotChartView } from "./BoxPlotChart"
 import {
   allocateColumnsDHondt,
   buildStatsItems,
+  computeFilteredClassroomStats,
   computeFilteredOverallStat,
   computeFilteredStats,
   computeFilteredSubtotalStats,
   filterSubtotalScores,
   getVisibleSectionIndices,
   groupSubtotalData,
+  isTotalScoreStat,
   splitItemsIntoColumns,
 } from "./computeReportData"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"
@@ -282,10 +284,22 @@ function renderSectionElement(
       type ComputedStat = (typeof subtotalStats)[number]
       const allStats: ComputedStat[] = []
 
-      if (graphOptions.showOverallBoxPlot) {
+      if (graphOptions.showTotalScoreBoxPlot) {
         allStats.push(
           computeFilteredOverallStat(
             report.statistics.rawTotalScores || [],
+            report.scoringData.totalMaxScore,
+            includeStatuses
+          )
+        )
+      }
+
+      // 所属学級ごとの合計点（複数学級対応）
+      if (options.statistics.boxPlot.classroom) {
+        allStats.push(
+          ...computeFilteredClassroomStats(
+            report.statistics.rawTotalScores || [],
+            report.statistics.classrooms,
             report.scoringData.totalMaxScore,
             includeStatuses
           )
@@ -297,7 +311,7 @@ function renderSectionElement(
       if (allStats.length === 0) return null
 
       const getStudentScore = (id: string): number => {
-        if (id === "__overall__") {
+        if (isTotalScoreStat(id)) {
           return report.scoringData.totalScore ?? 0
         }
         const subtotal = report.scoringData.subtotalScores.find(

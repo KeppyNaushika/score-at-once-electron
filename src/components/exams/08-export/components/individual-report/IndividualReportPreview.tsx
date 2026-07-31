@@ -184,7 +184,8 @@ export function IndividualReportPreview({
           />
         ) : null
       case 4:
-        return options.graphOptions.showBoxPlot ? (
+        return options.statistics.boxPlot.overall ||
+          options.statistics.boxPlot.classroom ? (
           <section style={{ marginBottom: "6mm" }}>
             <h2
               style={{
@@ -213,7 +214,8 @@ export function IndividualReportPreview({
               boxPlotIncludeStatuses={options.boxPlotIncludeStatuses}
               boxPlotFontSize={options.graphOptions.boxPlotFontSize}
               boxPlotItemHeight={options.graphOptions.boxPlotItemHeight}
-              showOverallBoxPlot={options.graphOptions.showOverallBoxPlot}
+              showTotalScoreBoxPlot={options.graphOptions.showTotalScoreBoxPlot}
+              showClassroomBoxPlot={options.statistics.boxPlot.classroom}
             />
           </section>
         ) : null

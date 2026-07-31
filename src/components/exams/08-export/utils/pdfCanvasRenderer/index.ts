@@ -11,7 +11,6 @@ export {
 } from "./renderAnswerSheet"
 export type {
   ScoringDataForPdf,
-  ScoringMarkConfigForPdf,
   SubtotalDataForPdf,
   TotalScoreDataForPdf,
 } from "./types"

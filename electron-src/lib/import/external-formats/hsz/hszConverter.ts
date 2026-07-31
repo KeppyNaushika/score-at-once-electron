@@ -152,7 +152,6 @@ export async function convertHszToScore(
       examSubtotalGroups: subtotalData.examSubtotalGroups,
       examClassrooms: [],
       examMarkingFormats: [],
-      examExportSettings: null,
     }
 
     // 9. manifest 生成

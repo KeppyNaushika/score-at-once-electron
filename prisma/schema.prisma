@@ -81,23 +81,27 @@ model StudentClassroomMembership {
 }
 
 model Exam {
-  id                      String              @id @default(uuid())
-  examName                String
-  examDate                DateTime?
-  description             String?
+  id                                    String                                    @id @default(uuid())
+  examName                              String
+  examDate                              DateTime?
+  description                           String?
   /// 答案アップロード時にOMRマーカーによる位置補正を既定でONにするか（ASB由来かつomrMarkers有効な試験はtrue）
-  markerCorrectionEnabled Boolean             @default(false)
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @default(now()) @updatedAt
-  examPages               ExamPage[]
-  examStudents            ExamStudent[]
-  examSubtotalGroups      ExamSubtotalGroup[]
-  userExams               UserExam[]
-  examClassrooms          ExamClassroom[]
-  markingFormats          ExamMarkingFormat[]
-  exportSettings          ExamExportSettings?
-  gradeDataSources        GradeDataSource[]
-  examTags                ExamTag[]
+  markerCorrectionEnabled               Boolean                                   @default(false)
+  createdAt                             DateTime                                  @default(now())
+  updatedAt                             DateTime                                  @default(now()) @updatedAt
+  examPages                             ExamPage[]
+  examStudents                          ExamStudent[]
+  examSubtotalGroups                    ExamSubtotalGroup[]
+  userExams                             UserExam[]
+  examClassrooms                        ExamClassroom[]
+  answerOverlayStyles                   ExamAnswerOverlayStyle[]
+  answerOverlayVisibilities             ExamAnswerOverlayVisibility[]
+  individualReportSettings              ExamIndividualReportSettings?
+  individualReportTableSections         ExamIndividualReportTableSection[]
+  individualReportGraphSettings         ExamIndividualReportGraphSettings?
+  individualReportStatisticVisibilities ExamIndividualReportStatisticVisibility[]
+  gradeDataSources                      GradeDataSource[]
+  examTags                              ExamTag[]
 }
 
 /// 試験の受験対象者。答案・採点・確定・返却スナップショットはすべてこの行を親とする
@@ -511,29 +515,147 @@ model UserPreference {
   @@index([userId])
 }
 
-model ExamMarkingFormat {
+/// 答案に重ねて描く要素（採点マーク・設問の点数・小計・合計）の配置と見た目。
+/// overlayKind ごとに1行。position/anchor は3×3の基準点（src/types/scoringOverlay.types.ts）
+model ExamAnswerOverlayStyle {
   id          String   @id @default(uuid())
   examId      String
-  markType    String
-  symbol      String
-  color       String
-  fontSize    Int?
-  strokeWidth Int?
+  overlayKind String // "mark" | "partial" | "subtotal" | "total"
+  position    String // 領域内のどこに置くか
+  anchor      String // 描画物のどの点を position に合わせるか
+  offsetX     Int
+  offsetY     Int
+  size        Int // マークは画像の一辺、点数はフォントサイズ
+  color       String // HEX #RRGGBB
+  opacity     Int // 0-100
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 
-  @@unique([examId, markType])
+  @@unique([examId, overlayKind])
   @@index([examId])
 }
 
-model ExamExportSettings {
-  id           String   @id @default(uuid())
-  examId       String   @unique
-  settingsJson String // JSON形式で保存
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+/// 採点状態ごとに、答案へマーク／点数を描くか
+model ExamAnswerOverlayVisibility {
+  id        String   @id @default(uuid())
+  examId    String
+  status    String // ScoringStatus（src/types/scoringStatus.types.ts）
+  showMark  Boolean
+  showScore Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, status])
+  @@index([examId])
+}
+
+/// 個人成績表に何を載せ、どう組むか（試験ごとに1行）
+model ExamIndividualReportSettings {
+  id     String @id @default(uuid())
+  examId String @unique
+
+  displayMode String // "detail" | "subtotal_only"
+
+  showScore Boolean
+  showMarks Boolean
+
+  hideUnassignedSubtotals Boolean
+  showGroupSubtotals      Boolean
+  showCorrectRate         Boolean
+  showScoreRate           Boolean
+
+  showLearningAdvice        Boolean
+  adviceReviewRateMin       Float?
+  adviceReviewRateMax       Float?
+  adviceReviewQuestionCount Int?
+
+  showComment   Boolean
+  showSignature Boolean
+
+  pageLayout      String // "auto" | "single" | "double"
+  pageOrientation String // "portrait" | "landscape"
+
+  /// 小計点テーブル・箱ひげ図それぞれの「グループ選択を使うか」。
+  /// 選択されたグループ自体は ExamSubtotalGroup のフラグが正
+  tableGroupSelectionEnabled Boolean
+
+  /// 統計（平均・偏差値・順位・箱ひげ図）の母集団に含める受験状態。
+  /// ExamStudentStatus は3値固定でコードも名前で引くため列で持つ
+  statisticsIncludesParticipating Boolean
+  statisticsIncludesExpected      Boolean
+  statisticsIncludesAbsent        Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+/// 個人成績表の表形式の節（小計点テーブル／設問テーブル）
+model ExamIndividualReportTableSection {
+  id        String   @id @default(uuid())
+  examId    String
+  tableKind String // "subtotal" | "question"
+  enabled   Boolean
+  columns   Int // 1-10
+  fontSize  Int // px
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, tableKind])
+  @@index([examId])
+}
+
+/// 個人成績表の統計を、種別（平均・偏差値・順位・箱ひげ図）×
+/// 母集団（所属学級ごと・全体）の組で出すかどうか。
+/// 学級は複数ありうるので "classroom" は「所属学級それぞれ」を意味する。
+/// どの学級かは ExamClassroom.studentReport が決める（ここは学級を参照しない）
+model ExamIndividualReportStatisticVisibility {
+  id            String   @id @default(uuid())
+  examId        String
+  statisticKind String // "average" | "deviation" | "rank" | "boxPlot"
+  scope         String // "classroom" | "overall"
+  shown         Boolean
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, statisticKind, scope])
+  @@index([examId])
+}
+
+/// 個人成績表のグラフ設定（試験ごとに1行）
+model ExamIndividualReportGraphSettings {
+  id     String @id @default(uuid())
+  examId String @unique
+
+  showBarChart                 Boolean
+  showRadarChart               Boolean
+  /// 合計点の箱ひげ図（小計別とは別に先頭へ足す。母集団の話ではない）
+  showTotalScoreBoxPlot        Boolean
+  /// 箱ひげ図に載せる小計グループを絞り込むか（選択自体は ExamSubtotalGroup のフラグ）
+  boxPlotGroupSelectionEnabled Boolean
+
+  showBoxPlotMin    Boolean
+  showBoxPlotQ1     Boolean
+  showBoxPlotMedian Boolean
+  showBoxPlotQ3     Boolean
+  showBoxPlotMax    Boolean
+  showAverageLine   Boolean
+  showStudentMarker Boolean
+
+  boxPlotFontSize   Int
+  boxPlotItemHeight Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 }
@@ -542,11 +664,9 @@ model ExamExportSettings {
 model CropRegionOmrConfig {
   id             String   @id @default(uuid())
   cropRegionId   String   @unique
-  type           String // "choice" | "handwritten-digit"
+  type           String // "choice"（旧 "handwritten-digit" は #1103 で廃止）
   numChoices     Int? // choice: 選択肢数(2-10)
   choiceLayout   String? // "horizontal" | "vertical"
-  numDigits      Int? // handwritten-digit: 桁数(1-5)
-  correctAnswer  String? // digit正答("42") / choice正答はchoiceOptionsで管理
   colorThreshold Int? // 認識パラメータ上書き
   areaThreshold  Float? // 認識パラメータ上書き
   createdAt      DateTime @default(now())
@@ -554,7 +674,6 @@ model CropRegionOmrConfig {
 
   cropRegion    CropRegion                  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
   choiceOptions CropRegionOmrChoiceOption[]
-  digitBoxes    CropRegionOmrDigitBox[]
 
   @@index([cropRegionId])
 }
@@ -581,23 +700,6 @@ model CropRegionOmrChoiceOption {
 }
 
 /// OMR数字欄位置（handwritten-digitタイプ用）
-model CropRegionOmrDigitBox {
-  id          String   @id @default(uuid())
-  omrConfigId String
-  digitIndex  Int // 0-based桁位置
-  normalizedX Float // 左端 (0-1正規化)
-  normalizedY Float // 上端 (0-1正規化)
-  normalizedW Float // 幅 (0-1正規化)
-  normalizedH Float // 高さ (0-1正規化)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  omrConfig CropRegionOmrConfig @relation(fields: [omrConfigId], references: [id], onDelete: Cascade)
-
-  @@unique([omrConfigId, digitIndex])
-  @@index([omrConfigId])
-}
-
 /// 複合回答グループ（共通テスト数学の分数、SAT Grid-Inなど）
 /// 複数のCropRegionを1つの論理的な回答としてグループ化
 model CompoundAnswer {
@@ -1401,11 +1503,9 @@ model AsbOmrConfig {
   id               String  @id @default(uuid())
   subQuestionId    String? @unique
   branchQuestionId String? @unique
-  type             String // "choice" | "handwritten-digit"
+  type             String // "choice"（旧 "handwritten-digit" は #1103 で廃止）
   numChoices       Int?
   choiceLayout     String?
-  numDigits        Int?
-  correctAnswer    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

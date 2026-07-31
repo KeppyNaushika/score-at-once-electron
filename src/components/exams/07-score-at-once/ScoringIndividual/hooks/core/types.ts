@@ -10,8 +10,8 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
@@ -54,7 +54,7 @@ export interface UseImageCanvasProps {
   // 全設問の採点ステータス（全設問マーク描画用）
   allCropRegionsWithStatus?: CropRegionWithStatus[]
   // 印字設定（採点マーク・点数表示のプレビュー用）
-  scoringMarkConfig?: ScoringMarkConfig | null
+  scoringMarkConfig?: AnswerOverlaySettings | null
   // 模範解答の用紙サイズ（mm→px変換基準）
   pageSize?: string
 }

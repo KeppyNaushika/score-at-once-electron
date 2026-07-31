@@ -6,25 +6,77 @@ import type { SubtotalGroup } from "@prisma/client"
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
+import { defineStringUnion } from "../../../../src/types/stringUnion"
 import type { BoxPlotData } from "../../shared/calculations/numericStats"
 import type { ScoringData, StudentExportPlacement } from "../../shared/types"
 
 // ================== 表示モード関連 ==================
 
 /** 表示モード */
-export type ReportDisplayMode = "detail" | "subtotal_only"
+export const REPORT_DISPLAY_MODES = ["detail", "subtotal_only"] as const
+export type ReportDisplayMode = (typeof REPORT_DISPLAY_MODES)[number]
+export const { to: toReportDisplayMode } = defineStringUnion(
+  REPORT_DISPLAY_MODES,
+  "detail"
+)
 
 /** 得点率形式 */
 export type ScoreRateFormat = "percentage" | "grade5" | "gradeAE"
 
 /** 平均点表示タイプ */
-export type AverageDisplayType = "class" | "overall" | "both" | "none"
+/** 統計の種別 */
+export const STATISTIC_KINDS = [
+  "average",
+  "deviation",
+  "rank",
+  "boxPlot",
+] as const
+export type StatisticKind = (typeof STATISTIC_KINDS)[number]
+export const { to: toStatisticKind } = defineStringUnion(
+  STATISTIC_KINDS,
+  "average"
+)
+
+/**
+ * 統計の母集団。
+ * "classroom" は「所属学級それぞれ」— 生徒は複数の学級に属しうる。
+ * どの学級かは ExamClassroom.studentReport が決める。
+ */
+export const STATISTIC_SCOPES = ["classroom", "overall"] as const
+export type StatisticScope = (typeof STATISTIC_SCOPES)[number]
+export const { to: toStatisticScope } = defineStringUnion(
+  STATISTIC_SCOPES,
+  "overall"
+)
+
+/** 統計を種別×母集団で出すかどうか */
+export type StatisticVisibility = Record<
+  StatisticKind,
+  Record<StatisticScope, boolean>
+>
 
 /** 順位表示タイプ */
-export type RankDisplayType = "class" | "overall" | "both"
-
 /** テーブル列数（最大10列） */
+export const REPORT_PAGE_LAYOUTS = ["auto", "single", "double"] as const
+export type ReportPageLayout = (typeof REPORT_PAGE_LAYOUTS)[number]
+export const { to: toReportPageLayout } = defineStringUnion(
+  REPORT_PAGE_LAYOUTS,
+  "auto"
+)
+
+export const REPORT_PAGE_ORIENTATIONS = ["portrait", "landscape"] as const
+export type ReportPageOrientation = (typeof REPORT_PAGE_ORIENTATIONS)[number]
+export const { to: toReportPageOrientation } = defineStringUnion(
+  REPORT_PAGE_ORIENTATIONS,
+  "portrait"
+)
+
 export type TableColumns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+
+/** DB の整数列を列数へ絞る（範囲外は1列） */
+export function toTableColumns(value: number): TableColumns {
+  return value >= 1 && value <= 10 ? (value as TableColumns) : 1
+}
 
 /** 設問テーブル列数 */
 export type QuestionTableColumns = TableColumns
@@ -41,9 +93,8 @@ export type FontSizeOption = number
 export interface GraphOptions {
   showBarChart: boolean
   showRadarChart: boolean
-  showBoxPlot: boolean
-  // 箱ひげ図の表示対象
-  showOverallBoxPlot: boolean // 合計点の箱ひげ図を表示
+  /** 合計点の箱ひげ図（小計別とは別に先頭へ足す。母集団の話ではない） */
+  showTotalScoreBoxPlot: boolean
   // 箱ひげ図の詳細オプション
   showBoxPlotMin: boolean // 最小値のヒゲを表示
   showBoxPlotQ1: boolean // Q1（第1四分位数）を表示
@@ -73,13 +124,10 @@ export interface IndividualReportOptions {
   // 基本表示要素
   showScore: boolean
   showMarks: boolean
-  showAverage: AverageDisplayType
   scoreRateFormat: ScoreRateFormat
 
-  // 統計情報
-  showDeviation: boolean
-  showRank: boolean
-  rankType: RankDisplayType
+  /** 統計（平均・偏差値・順位・箱ひげ図）を、所属学級ごと／全体それぞれで出すか */
+  statistics: StatisticVisibility
 
   // 小計点関連
   showSubtotalTable: boolean
@@ -114,8 +162,8 @@ export interface IndividualReportOptions {
   showSignature: boolean
 
   // ページ設定
-  pageLayout: "auto" | "single" | "double"
-  pageOrientation: "portrait" | "landscape"
+  pageLayout: ReportPageLayout
+  pageOrientation: ReportPageOrientation
 }
 
 // ================== データ構造 ==================
@@ -199,6 +247,8 @@ export interface ClassroomStatisticsEntry {
   memberStudentIds: string[]
   average: number
   stdDev: number
+  /** 当該学級を母集団とした偏差値 */
+  deviation: number
   boxPlot: BoxPlotData
   /** 母集団サイズ（受験状態フィルタ前の在籍生徒数。順位の分母表示に使用） */
   total: number
@@ -300,8 +350,7 @@ export interface SubtotalGroupsForReportResult {
 const DEFAULT_GRAPH_OPTIONS: GraphOptions = {
   showBarChart: true,
   showRadarChart: true,
-  showBoxPlot: true,
-  showOverallBoxPlot: false,
+  showTotalScoreBoxPlot: false,
   showBoxPlotMin: true,
   showBoxPlotQ1: true,
   showBoxPlotMedian: true,
@@ -325,11 +374,13 @@ export const DEFAULT_INDIVIDUAL_REPORT_OPTIONS: IndividualReportOptions = {
   displayMode: "detail",
   showScore: true,
   showMarks: true,
-  showAverage: "both",
   scoreRateFormat: "percentage",
-  showDeviation: true,
-  showRank: true,
-  rankType: "both",
+  statistics: {
+    average: { classroom: true, overall: true },
+    deviation: { classroom: false, overall: true },
+    rank: { classroom: true, overall: true },
+    boxPlot: { classroom: false, overall: true },
+  },
   showSubtotalTable: true,
   subtotalTableColumns: 1,
   subtotalTableFontSize: 10,

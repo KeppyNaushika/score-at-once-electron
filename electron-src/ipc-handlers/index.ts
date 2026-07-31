@@ -14,7 +14,6 @@ import { setupNavigationHandlers } from "./navigationHandlers"
 import { setupOmrConfigHandlers } from "./omrConfigHandlers"
 import { setupOMRHandlers } from "./omrHandlers"
 import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
-import { setupQuestionGroupHandlers } from "./questionGroupHandlers"
 import { setupScoringHandlers } from "./scoringHandlers"
 import { registerSettingsHandlers } from "./settingsHandlers"
 import { registerStudentArchiveHandlers } from "./studentArchiveHandlers"
@@ -32,7 +31,6 @@ export function setupAllIPCHandlers(): void {
   setupScoringHandlers()
   setupExportHandlers()
   setupMiscHandlers()
-  setupQuestionGroupHandlers()
   setupAuthHandlers()
   setupSubtotalGroupHandlers()
   setupDrawingHandlers()

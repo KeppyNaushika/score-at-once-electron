@@ -6,18 +6,17 @@ import { statusLabels } from "@/components/exams/08-export/components/scoring-ma
 import { getMarkImagePath } from "@/components/exams/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import type { AnswerOverlayVisibility } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface StatusDisplaySectionProps {
-  showMarkForStatus: Record<ScoringStatus, boolean>
-  showScoreForStatus: Record<ScoringStatus, boolean>
+  visibility: Record<ScoringStatus, AnswerOverlayVisibility>
   onMarkStatusChange: (status: ScoringStatus, show: boolean) => void
   onScoreStatusChange: (status: ScoringStatus, show: boolean) => void
 }
 
 export function StatusDisplaySection({
-  showMarkForStatus,
-  showScoreForStatus,
+  visibility,
   onMarkStatusChange,
   onScoreStatusChange,
 }: StatusDisplaySectionProps) {
@@ -31,7 +30,7 @@ export function StatusDisplaySection({
             <div key={`mark-${status}`} className="flex items-center space-x-3">
               <Checkbox
                 id={`mark-${status}`}
-                checked={showMarkForStatus[status]}
+                checked={visibility[status].showMark}
                 onCheckedChange={(checked) =>
                   onMarkStatusChange(status, checked === true)
                 }
@@ -68,7 +67,7 @@ export function StatusDisplaySection({
             >
               <Checkbox
                 id={`score-${status}`}
-                checked={showScoreForStatus[status]}
+                checked={visibility[status].showScore}
                 onCheckedChange={(checked) =>
                   onScoreStatusChange(status, checked === true)
                 }

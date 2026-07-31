@@ -223,8 +223,6 @@ describe("消し跡を退けたセルの下流での扱い", () => {
       type: "choice",
       numChoices: 2,
       choiceLayout: "horizontal",
-      numDigits: null,
-      correctAnswer: null,
       colorThreshold: null,
       areaThreshold: null,
       createdAt: timestamp,

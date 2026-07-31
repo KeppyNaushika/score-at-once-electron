@@ -78,6 +78,8 @@ export interface ArchiveDataCounts {
  * - 1.18.0: v0.16.x (CropRegionMarkingOverride 廃止 — UI・出力反映が無いまま入出力のみ維持されていたため削除)
  * - 1.19.0: v0.16.x (DeletedRecord tombstone 廃止 — アーカイブは正本であり import は忠実に復元する。削除の伝搬は sqlite-nas-sync の `_tombstone` に一本化)
  * - 1.20.0: v0.16.x (CropRegionAssignment 追加 — 設問ごとの採点担当。ユーザーはアーカイブを越えないため username で照合する)
+ * - 1.22.0: v0.17.x (ExamExportSettings のJSON埋め込みを5テーブルへ正規化。ExamMarkingFormat 廃止 — 採点マークは画像＋配置設定へ移行済み。
+ *            CropRegionOmrDigitBox / numDigits / correctAnswer 廃止 — 手書き数字認識の撤去 #1103)
  * - 1.21.0: v0.16.x (採点層を ExamStudent 経由へ配線変更 — studentAnswerImages / questionScores / scoreDecisions / compoundAnswerScores / returnSnapshots の studentId を examStudentId へ。ReturnSnapshot.examId は ExamStudent が持つため削除)
  */
 export type ExamArchiveVersion =
@@ -103,9 +105,10 @@ export type ExamArchiveVersion =
   | "1.19.0"
   | "1.20.0"
   | "1.21.0"
+  | "1.22.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.21.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.22.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -131,6 +134,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.19.0",
   "1.20.0",
   "1.21.0",
+  "1.22.0",
 ] as const
 
 /**
@@ -419,148 +423,6 @@ export interface IdIntegrationConfig {
 }
 
 // =============================================================================
-// Conflict Resolution
-// =============================================================================
-
-/**
- * 競合カテゴリ
- */
-export type ConflictCategory =
-  | "Student"
-  | "Classroom"
-  | "User"
-  | "Exam"
-  | "SubtotalGroup"
-  | "QuestionScore"
-  | "DrawingAnnotation"
-
-/**
- * 競合アイテム
- */
-export interface ConflictItem {
-  /** 一意識別子 */
-  id: string
-  /** 競合カテゴリ */
-  category: ConflictCategory
-  /** インポートデータ */
-  importData: Record<string, unknown>
-  /** 既存データ */
-  existingData: Record<string, unknown>
-  /** 解決方法 */
-  resolution?: "import" | "existing" | "skip"
-  /** 表示用ラベル */
-  displayLabel?: string
-  /** 詳細情報 */
-  details?: string
-}
-
-// =============================================================================
-// Enhanced UI Types (先生向けUI用の拡張型)
-// =============================================================================
-
-/**
- * 変更されるフィールドの情報
- * UI表示例: 「氏名カナ: ヤマダ → ヤマダタロウ」
- */
-interface FieldChange {
-  /** 内部フィールド名（例: "firstNameKana"） */
-  field: string
-  /** UI表示用ラベル（例: "氏名カナ"） */
-  fieldLabel: string
-  /** 現在の値 */
-  currentValue: unknown
-  /** インポート後の値 */
-  newValue: unknown
-}
-
-/**
- * 確認が必要な生徒/学級の詳細情報
- * Step4「生徒・学級の確認」で使用
- */
-export interface MatchingCandidate extends ConflictItem {
-  /** 変更されるフィールド一覧 */
-  fieldChanges: FieldChange[]
-  /** インポートデータの方が新しいか */
-  isImportNewer: boolean
-  /** インポートデータの最終更新日 */
-  importUpdatedAt: string
-  /** 既存データの最終更新日 */
-  existingUpdatedAt: string
-  /** 一致と判断した理由（例: "学籍番号と氏名が一致"） */
-  matchReason: string
-}
-
-/**
- * ユーザーの照合判断結果
- * 「同じ人」「別の人」「スキップ」
- */
-export type MatchingDecisionType = "same_person" | "different_person" | "skip"
-
-/**
- * カテゴリ別の照合サマリー（先生向け表示用）
- */
-export interface CategoryMatchingSummary {
-  /** カテゴリ */
-  category: ConflictCategory
-  /** 自動で紐づく件数 */
-  autoMatched: number
-  /** 新しく登録される件数 */
-  newItems: number
-  /** 確認が必要な件数 */
-  needsConfirmation: number
-  /** 学籍番号重複などの問題がある件数 */
-  hasConflict: number
-  /** 自動で紐づくアイテムのリスト */
-  autoMatchedItems: Array<{ id: string; displayLabel: string }>
-  /** 新規登録されるアイテムのリスト */
-  newItemsList: Array<{ id: string; displayLabel: string }>
-  /** 確認が必要なアイテムのリスト */
-  confirmationItems: MatchingCandidate[]
-  /** 問題があるアイテムのリスト */
-  conflictItems: MatchingCandidate[]
-}
-
-// =============================================================================
-// Import Preview / Analysis
-// =============================================================================
-
-/**
- * マッチング結果サマリー
- */
-export interface MatchingSummary {
-  /** 一致した件数 */
-  matched: number
-  /** 新規作成される件数 */
-  newItems: number
-  /** 競合している件数 */
-  conflicts: number
-}
-
-/**
- * カテゴリ別のマッチング結果
- */
-export interface CategoryMatchingResult {
-  category: ConflictCategory
-  summary: MatchingSummary
-  /** 競合アイテムリスト */
-  conflictItems: ConflictItem[]
-  /** IDマッピング (import ID -> existing/new ID) */
-  idMapping: Record<string, string>
-}
-
-/**
- * 競合検出結果
- */
-export interface ConflictDetectionResult {
-  success: boolean
-  /** カテゴリ別の結果 */
-  results: CategoryMatchingResult[]
-  /** 警告メッセージ */
-  warnings?: string[]
-  error?: string
-}
-
-// =============================================================================
 // Export Mode
 // =============================================================================
 
@@ -650,14 +512,6 @@ export interface AnalyzeArchiveResult {
     warnings: string[]
   }
   error?: string
-}
-
-/**
- * 競合検出オプション
- */
-export interface DetectConflictsOptions {
-  archivePath: string
-  matchingConfig: MatchingConfig
 }
 
 // =============================================================================
@@ -846,23 +700,95 @@ export interface ArchiveExamData {
     createdAt: string
     updatedAt: string
   }>
-  /** v1.4.0+ 採点マーク設定 */
-  examMarkingFormats?: Array<{
+  /** v1.22.0+ 答案に重ねる要素のスタイル（v1.4.0-v1.21.0 は examExportSettings のJSON内） */
+  answerOverlayStyles?: Array<{
     id: string
     examId: string
-    markType: string
-    symbol: string
+    overlayKind: string
+    position: string
+    anchor: string
+    offsetX: number
+    offsetY: number
+    size: number
     color: string
-    fontSize: number | null
-    strokeWidth: number | null
+    opacity: number
     createdAt: string
     updatedAt: string
   }>
-  /** v1.4.0+ エクスポート設定 */
-  examExportSettings?: {
+  /** v1.22.0+ 採点状態ごとの可視性 */
+  answerOverlayVisibilities?: Array<{
     id: string
     examId: string
-    settingsJson: string
+    status: string
+    showMark: boolean
+    showScore: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.22.0+ 個人成績表の設定 */
+  individualReportSettings?: {
+    id: string
+    examId: string
+    displayMode: string
+    showScore: boolean
+    showMarks: boolean
+    hideUnassignedSubtotals: boolean
+    showGroupSubtotals: boolean
+    showCorrectRate: boolean
+    showScoreRate: boolean
+    showLearningAdvice: boolean
+    adviceReviewRateMin: number | null
+    adviceReviewRateMax: number | null
+    adviceReviewQuestionCount: number | null
+    showComment: boolean
+    showSignature: boolean
+    pageLayout: string
+    pageOrientation: string
+    tableGroupSelectionEnabled: boolean
+    statisticsIncludesParticipating: boolean
+    statisticsIncludesExpected: boolean
+    statisticsIncludesAbsent: boolean
+    createdAt: string
+    updatedAt: string
+  } | null
+  /** v1.22.0+ 個人成績表の表形式の節 */
+  individualReportTableSections?: Array<{
+    id: string
+    examId: string
+    tableKind: string
+    enabled: boolean
+    columns: number
+    fontSize: number
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.22.0+ 統計を種別×母集団で出すか */
+  individualReportStatisticVisibilities?: Array<{
+    id: string
+    examId: string
+    statisticKind: string
+    scope: string
+    shown: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.22.0+ 個人成績表のグラフ設定 */
+  individualReportGraphSettings?: {
+    id: string
+    examId: string
+    showBarChart: boolean
+    showRadarChart: boolean
+    showTotalScoreBoxPlot: boolean
+    boxPlotGroupSelectionEnabled: boolean
+    showBoxPlotMin: boolean
+    showBoxPlotQ1: boolean
+    showBoxPlotMedian: boolean
+    showBoxPlotQ3: boolean
+    showBoxPlotMax: boolean
+    showAverageLine: boolean
+    showStudentMarker: boolean
+    boxPlotFontSize: number
+    boxPlotItemHeight: number
     createdAt: string
     updatedAt: string
   } | null
@@ -1143,16 +1069,10 @@ export interface ImportWizardState {
   idIntegrationConfig: IdIntegrationConfig
   /** 採点結果の競合解決設定（Step 3.5 で設定） */
   scoringConflictConfig: ScoringConflictConfig
-  /** マッチング設定（照合方法の選択）- 後方互換用 */
-  matchingConfig: MatchingConfig
   /** 処理中フラグ */
   isProcessing: boolean
   /** エラーメッセージ */
   error: string | null
-  /** カテゴリ別照合サマリー（先生向け表示用） */
-  matchingSummaries: CategoryMatchingSummary[]
-  /** ユーザーの照合判断（アイテムID -> 判断結果） */
-  matchingDecisions: Record<string, MatchingDecisionType>
   /** ユーザーの更新判断（`${category}:${importId}` -> フィールドごとの戦略） */
   updateDecisions: UpdateDecisions
   /** 外部フォーマットの種別（.hsz/.dat選択時に設定） */

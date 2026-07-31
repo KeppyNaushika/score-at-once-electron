@@ -38,10 +38,20 @@ export class V1_3_0_to_V1_4_0_Transformer implements ExamVersionTransformer {
           ...data.manifest,
           version: this.toVersion,
         },
+        // examMarkingFormats は 1.4.0 で導入され 1.22.0 で廃止された。
+        // 現行型には無いので record として補完し、後段の変換器が読み捨てる。
         examData: {
           ...data.examData,
-          examMarkingFormats: data.examData.examMarkingFormats ?? [],
-          examExportSettings: data.examData.examExportSettings ?? null,
+          // examMarkingFormats / examExportSettings は 1.4.0 で導入され 1.22.0 で
+          // 廃止・正規化された。現行型には無いので record として補完し、後段が処理する
+          ...{
+            examMarkingFormats:
+              (data.examData as unknown as Record<string, unknown>)
+                .examMarkingFormats ?? [],
+            examExportSettings:
+              (data.examData as unknown as Record<string, unknown>)
+                .examExportSettings ?? null,
+          },
         },
         subjectsData: data.subjectsData ?? {
           subjects: [],

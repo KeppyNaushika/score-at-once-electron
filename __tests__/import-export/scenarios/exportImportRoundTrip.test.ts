@@ -295,8 +295,7 @@ describe("exportImportRoundTrip", () => {
 
     // v1.4.0データが含まれている
     const data = exportResult.data!
-    expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
-    expect(data.examData.examExportSettings).not.toBeNull()
+    expect(data.examData.answerOverlayStyles!.length).toBeGreaterThan(0)
     expect(data.tagsData.tags.length).toBeGreaterThan(0)
     expect(data.tagsData.tagSubtotalGroups.length).toBeGreaterThan(0)
 
@@ -328,15 +327,10 @@ describe("exportImportRoundTrip", () => {
     expect(importResult.success).toBe(true)
 
     // v1.4.0データが正しくインポートされた
-    const formats = await prisma.examMarkingFormat.findMany({
+    const styles = await prisma.examAnswerOverlayStyle.findMany({
       where: { examId: importResult.examId! },
     })
-    expect(formats.length).toBeGreaterThan(0)
-
-    const settings = await prisma.examExportSettings.findUnique({
-      where: { examId: importResult.examId! },
-    })
-    expect(settings).not.toBeNull()
+    expect(styles.length).toBeGreaterThan(0)
 
     const tags = await prisma.tag.findMany()
     expect(tags.length).toBeGreaterThan(0)

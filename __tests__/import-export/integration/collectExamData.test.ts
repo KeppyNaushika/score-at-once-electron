@@ -243,13 +243,7 @@ describe("collectExamData", () => {
     expect(result.success).toBe(true)
     const data = result.data!
 
-    expect(data.examData.examMarkingFormats).toBeDefined()
-    expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
-
-    expect(data.examData.examExportSettings).toBeDefined()
-    expect(data.examData.examExportSettings!.settingsJson).toContain(
-      "includeImages"
-    )
+    expect(data.examData.answerOverlayStyles!.length).toBeGreaterThan(0)
   })
 
   // DC-10: Tag/TagSubtotalGroupデータの収集

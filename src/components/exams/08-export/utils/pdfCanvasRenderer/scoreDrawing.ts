@@ -1,18 +1,75 @@
 /**
  * 採点マーク画像・点数テキストのCanvas描画
+ *
+ * 配置はすべて AnswerOverlayStyle（position / anchor / offset / size）で決まる。
+ * 画像も文字も同じアンカー点計算を通し、文字は anchor を textAlign / textBaseline へ写す。
  */
 
 import {
-  calculateMarkPosition,
-  calculatePartialScorePosition,
-} from "./markPosition"
+  resolveAnchorPoint,
+  resolveImageOrigin,
+  resolveTextAnchor,
+} from "@/lib/answerOverlayPlacement"
+import type {
+  AnswerOverlaySettings,
+  AnswerOverlayStyle,
+} from "@/types/scoringOverlay.types"
+
 import { getTintedMark } from "./markTinting"
 import type {
   ScoringDataForPdf,
-  ScoringMarkConfigForPdf,
   SubtotalDataForPdf,
   TotalScoreDataForPdf,
 } from "./types"
+
+interface NormalizedRegion {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** 0-1 正規化された領域を実ピクセルへ展開する */
+function toPixelRegion(
+  region: NormalizedRegion,
+  imageWidth: number,
+  imageHeight: number
+): { x: number; y: number; width: number; height: number } {
+  return {
+    x: region.x * imageWidth,
+    y: region.y * imageHeight,
+    width: region.width * imageWidth,
+    height: region.height * imageHeight,
+  }
+}
+
+/** 点数テキストを1つ描画する（描画対象ごとの差はスタイルと文字列だけ） */
+function drawStyledText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  region: NormalizedRegion,
+  style: AnswerOverlayStyle,
+  imageWidth: number,
+  imageHeight: number
+): void {
+  const pixelRegion = toPixelRegion(region, imageWidth, imageHeight)
+  const { x, y } = resolveAnchorPoint(
+    pixelRegion,
+    style.position,
+    style.offsetX,
+    style.offsetY
+  )
+  const { textAlign, textBaseline } = resolveTextAnchor(style.anchor)
+
+  ctx.save()
+  ctx.globalAlpha = style.opacity / 100
+  ctx.font = `bold ${style.size}px sans-serif`
+  ctx.fillStyle = style.color
+  ctx.textAlign = textAlign
+  ctx.textBaseline = textBaseline
+  ctx.fillText(text, x, y)
+  ctx.restore()
+}
 
 /**
  * 採点マーク画像を描画
@@ -21,142 +78,90 @@ export function drawScoringMark(
   ctx: CanvasRenderingContext2D,
   markImage: HTMLImageElement,
   region: ScoringDataForPdf["cropRegion"],
-  config: ScoringMarkConfigForPdf,
+  config: AnswerOverlaySettings,
   imageWidth: number,
   imageHeight: number
 ): void {
-  const regionX = region.x * imageWidth
-  const regionY = region.y * imageHeight
-  const regionWidth = region.width * imageWidth
-  const regionHeight = region.height * imageHeight
-
-  const markSize = config.markSize
-  const { x, y } = calculateMarkPosition(
-    regionX,
-    regionY,
-    regionWidth,
-    regionHeight,
-    markSize,
-    config.markPosition
+  const style = config.styles.mark
+  const pixelRegion = toPixelRegion(region, imageWidth, imageHeight)
+  const anchorPoint = resolveAnchorPoint(
+    pixelRegion,
+    style.position,
+    style.offsetX,
+    style.offsetY,
+    true
   )
-
-  const opacity = (config.markOpacity ?? 100) / 100
-  // markColor指定時は単色シルエットを着色（未指定なら元画像をそのまま使用）
-  const drawable = config.markColor
-    ? getTintedMark(markImage, config.markColor)
-    : markImage
+  const { x, y } = resolveImageOrigin(anchorPoint, style.anchor, style.size)
 
   ctx.save()
-  ctx.globalAlpha = opacity
-  ctx.drawImage(drawable, x, y, markSize, markSize)
+  ctx.globalAlpha = style.opacity / 100
+  ctx.drawImage(
+    getTintedMark(markImage, style.color),
+    x,
+    y,
+    style.size,
+    style.size
+  )
   ctx.restore()
 }
 
 /**
- * 部分点テキストを描画（色・不透明度は config に従う）
- * @param score - 表示する点数
+ * 設問ごとの点数テキストを描画
  */
 export function drawScoreText(
   ctx: CanvasRenderingContext2D,
   score: number,
   region: ScoringDataForPdf["cropRegion"],
-  config: ScoringMarkConfigForPdf,
+  config: AnswerOverlaySettings,
   imageWidth: number,
   imageHeight: number
 ): void {
-  if (!config.showPartialScore) return
-
-  const regionX = region.x * imageWidth
-  const regionY = region.y * imageHeight
-  const regionWidth = region.width * imageWidth
-  const regionHeight = region.height * imageHeight
-
-  const { x, y } = calculatePartialScorePosition(
-    regionX,
-    regionY,
-    regionWidth,
-    regionHeight,
-    config.partialScorePosition,
-    config.partialScoreOffsetX,
-    config.partialScoreOffsetY
+  drawStyledText(
+    ctx,
+    String(score),
+    region,
+    config.styles.partial,
+    imageWidth,
+    imageHeight
   )
-
-  ctx.save()
-  ctx.globalAlpha = (config.partialScoreOpacity ?? 100) / 100
-  ctx.font = `bold ${config.partialScoreSize}px sans-serif`
-  ctx.fillStyle = config.partialScoreColor || "#ef4444"
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText(String(score), x, y)
-  ctx.restore()
 }
 
 /**
- * 小計点テキストを描画（色・不透明度は config に従う）
+ * 小計点テキストを描画
  */
 export function drawSubtotalScoreText(
   ctx: CanvasRenderingContext2D,
   subtotalData: SubtotalDataForPdf,
-  config: ScoringMarkConfigForPdf,
+  config: AnswerOverlaySettings,
   imageWidth: number,
   imageHeight: number
 ): void {
-  const regionX = subtotalData.x * imageWidth
-  const regionY = subtotalData.y * imageHeight
-  const regionWidth = subtotalData.width * imageWidth
-  const regionHeight = subtotalData.height * imageHeight
-
-  const { x, y } = calculatePartialScorePosition(
-    regionX,
-    regionY,
-    regionWidth,
-    regionHeight,
-    config.subtotalScorePosition,
-    config.subtotalScoreOffsetX,
-    config.subtotalScoreOffsetY
+  drawStyledText(
+    ctx,
+    String(subtotalData.score),
+    subtotalData,
+    config.styles.subtotal,
+    imageWidth,
+    imageHeight
   )
-
-  ctx.save()
-  ctx.globalAlpha = (config.subtotalScoreOpacity ?? 100) / 100
-  ctx.font = `bold ${config.subtotalScoreSize}px sans-serif`
-  ctx.fillStyle = config.subtotalScoreColor || "#2563eb"
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText(String(subtotalData.score), x, y)
-  ctx.restore()
 }
 
 /**
- * 合計点テキストを描画（色・不透明度は config に従う）
+ * 合計点テキストを描画
  */
 export function drawTotalScoreText(
   ctx: CanvasRenderingContext2D,
   totalScoreData: TotalScoreDataForPdf,
-  config: ScoringMarkConfigForPdf,
+  config: AnswerOverlaySettings,
   imageWidth: number,
   imageHeight: number
 ): void {
-  const regionX = totalScoreData.x * imageWidth
-  const regionY = totalScoreData.y * imageHeight
-  const regionWidth = totalScoreData.width * imageWidth
-  const regionHeight = totalScoreData.height * imageHeight
-
-  const { x, y } = calculatePartialScorePosition(
-    regionX,
-    regionY,
-    regionWidth,
-    regionHeight,
-    config.totalScorePosition,
-    config.totalScoreOffsetX,
-    config.totalScoreOffsetY
+  drawStyledText(
+    ctx,
+    String(totalScoreData.score),
+    totalScoreData,
+    config.styles.total,
+    imageWidth,
+    imageHeight
   )
-
-  ctx.save()
-  ctx.globalAlpha = (config.totalScoreOpacity ?? 100) / 100
-  ctx.font = `bold ${config.totalScoreSize}px sans-serif`
-  ctx.fillStyle = config.totalScoreColor || "#2563eb"
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText(String(totalScoreData.score), x, y)
-  ctx.restore()
 }

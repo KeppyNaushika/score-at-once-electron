@@ -58,6 +58,7 @@ import { V1_17_0_to_V1_18_0_Transformer } from "./V1_17_0_to_V1_18_0"
 import { V1_18_0_to_V1_19_0_Transformer } from "./V1_18_0_to_V1_19_0"
 import { V1_19_0_to_V1_20_0_Transformer } from "./V1_19_0_to_V1_20_0"
 import { V1_20_0_to_V1_21_0_Transformer } from "./V1_20_0_to_V1_21_0"
+import { V1_21_0_to_V1_22_0_Transformer } from "./V1_21_0_to_V1_22_0"
 
 const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
@@ -81,6 +82,7 @@ const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_18_0_to_V1_19_0_Transformer(),
   new V1_19_0_to_V1_20_0_Transformer(),
   new V1_20_0_to_V1_21_0_Transformer(),
+  new V1_21_0_to_V1_22_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */

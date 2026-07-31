@@ -24,8 +24,6 @@ function makeChoiceConfig(
     type: "choice",
     numChoices: labels.length,
     choiceLayout: "horizontal",
-    numDigits: null,
-    correctAnswer: null,
 
     colorThreshold: null,
     areaThreshold: null,

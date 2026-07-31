@@ -17,7 +17,6 @@ export interface MockArchive {
   selectImportFile: ReturnType<typeof vi.fn>
   analyzeArchive: ReturnType<typeof vi.fn>
   preMatch: ReturnType<typeof vi.fn>
-  detectConflicts: ReturnType<typeof vi.fn>
   detectScoringConflicts: ReturnType<typeof vi.fn>
   idIntegrationImport: ReturnType<typeof vi.fn>
   exportExam: ReturnType<typeof vi.fn>
@@ -39,10 +38,6 @@ export function createMockElectronAPI() {
     preMatch: vi.fn().mockResolvedValue({
       success: true,
       data: createMockFileOverviewData(),
-    }),
-    detectConflicts: vi.fn().mockResolvedValue({
-      success: true,
-      results: [],
     }),
     detectScoringConflicts: vi.fn().mockResolvedValue({
       success: true,

@@ -166,15 +166,26 @@ export async function collectExamData(
         })
       : []
 
-    // 7.5. ExamMarkingFormatを取得
-    const examMarkingFormats = await prisma.examMarkingFormat.findMany({
-      where: { examId },
-    })
-
-    // 7.6. ExamExportSettingsを取得
-    const examExportSettings = await prisma.examExportSettings.findUnique({
-      where: { examId },
-    })
+    // 7.6. 出力設定（正規化済み5テーブル）を取得
+    const [
+      answerOverlayStyles,
+      answerOverlayVisibilities,
+      individualReportSettings,
+      individualReportTableSections,
+      individualReportGraphSettings,
+      individualReportStatisticVisibilities,
+    ] = await Promise.all([
+      prisma.examAnswerOverlayStyle.findMany({ where: { examId } }),
+      prisma.examAnswerOverlayVisibility.findMany({ where: { examId } }),
+      prisma.examIndividualReportSettings.findUnique({ where: { examId } }),
+      prisma.examIndividualReportTableSection.findMany({ where: { examId } }),
+      prisma.examIndividualReportGraphSettings.findUnique({
+        where: { examId },
+      }),
+      prisma.examIndividualReportStatisticVisibility.findMany({
+        where: { examId },
+      }),
+    ])
 
     // 7.7. Tag/TagSubtotalGroup/ExamTagを取得（subtotalGroup経由、templateモードでは空）
     const subtotalGroupIdArray = Array.from(subtotalGroupIds)
@@ -545,25 +556,43 @@ export async function collectExamData(
             createdAt: examClassroom.createdAt.toISOString(),
             updatedAt: examClassroom.updatedAt.toISOString(),
           })),
-      // v1.4.0+
-      examMarkingFormats: examMarkingFormats.map((examMarkingFormat) => ({
-        id: examMarkingFormat.id,
-        examId: examMarkingFormat.examId,
-        markType: examMarkingFormat.markType,
-        symbol: examMarkingFormat.symbol,
-        color: examMarkingFormat.color,
-        fontSize: examMarkingFormat.fontSize,
-        strokeWidth: examMarkingFormat.strokeWidth,
-        createdAt: examMarkingFormat.createdAt.toISOString(),
-        updatedAt: examMarkingFormat.updatedAt.toISOString(),
+      answerOverlayStyles: answerOverlayStyles.map((style) => ({
+        ...style,
+        createdAt: style.createdAt.toISOString(),
+        updatedAt: style.updatedAt.toISOString(),
       })),
-      examExportSettings: examExportSettings
+      answerOverlayVisibilities: answerOverlayVisibilities.map(
+        (visibility) => ({
+          ...visibility,
+          createdAt: visibility.createdAt.toISOString(),
+          updatedAt: visibility.updatedAt.toISOString(),
+        })
+      ),
+      individualReportSettings: individualReportSettings
         ? {
-            id: examExportSettings.id,
-            examId: examExportSettings.examId,
-            settingsJson: examExportSettings.settingsJson,
-            createdAt: examExportSettings.createdAt.toISOString(),
-            updatedAt: examExportSettings.updatedAt.toISOString(),
+            ...individualReportSettings,
+            createdAt: individualReportSettings.createdAt.toISOString(),
+            updatedAt: individualReportSettings.updatedAt.toISOString(),
+          }
+        : null,
+      individualReportTableSections: individualReportTableSections.map(
+        (section) => ({
+          ...section,
+          createdAt: section.createdAt.toISOString(),
+          updatedAt: section.updatedAt.toISOString(),
+        })
+      ),
+      individualReportStatisticVisibilities:
+        individualReportStatisticVisibilities.map((visibility) => ({
+          ...visibility,
+          createdAt: visibility.createdAt.toISOString(),
+          updatedAt: visibility.updatedAt.toISOString(),
+        })),
+      individualReportGraphSettings: individualReportGraphSettings
+        ? {
+            ...individualReportGraphSettings,
+            createdAt: individualReportGraphSettings.createdAt.toISOString(),
+            updatedAt: individualReportGraphSettings.updatedAt.toISOString(),
           }
         : null,
     }

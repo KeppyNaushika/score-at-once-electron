@@ -286,3 +286,22 @@ export type GradeDataSourceMaxScoreRef = Pick<GradeDataSource, "type"> &
       | "courseworkId"
     >
   >
+
+/**
+ * 試験の出力設定一式（重ね描きのスタイル・可視性・個人成績表の設定/節/グラフ）。
+ * 5テーブルすべてが Exam にぶら下がるので1クエリで引く。
+ * 型（GetPayload）と実クエリの双方がこの const を参照する。
+ */
+export const examWithExportSettingsInclude = {
+  answerOverlayStyles: true,
+  answerOverlayVisibilities: true,
+  individualReportSettings: true,
+  individualReportTableSections: true,
+  individualReportGraphSettings: true,
+  individualReportStatisticVisibilities: true,
+} satisfies Prisma.ExamInclude
+
+/** 出力設定5テーブルを含む Exam */
+export type ExamWithExportSettings = Prisma.ExamGetPayload<{
+  include: typeof examWithExportSettingsInclude
+}>

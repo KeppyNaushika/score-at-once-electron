@@ -19,7 +19,6 @@ import { useIndividualReportPreview } from "@/components/exams/08-export/hooks/u
 import { useReturnDiff } from "@/components/exams/08-export/hooks/useReturnDiff"
 import { useScoredAnswerPdfExport } from "@/components/exams/08-export/hooks/useScoredAnswerPdfExport"
 import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useScoredAnswerPreview"
-import { buildScoringMarkConfigForPdf } from "@/components/exams/08-export/utils/buildScoringMarkConfigForPdf"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
@@ -67,8 +66,8 @@ export default function ExportMainView() {
     removeStudents,
     exportOptions,
     setExportOptions,
-    scoringMarkConfig,
-    setScoringMarkConfig,
+    answerOverlaySettings,
+    setAnswerOverlaySettings,
     individualReportOptions,
     setIndividualReportOptions,
     showProgressModal,
@@ -133,13 +132,7 @@ export default function ExportMainView() {
       }))
   }, [students, selectedStudents])
 
-  // プレビュー用にmemoized configを用意（毎レンダーで新オブジェクト生成→無限ループ防止）
-  const scoringMarkConfigForPdf = useMemo(
-    () => buildScoringMarkConfigForPdf(scoringMarkConfig),
-    [scoringMarkConfig]
-  )
-
-  // 採点済み答案プレビュー（scoringMarkConfigForPdfの後に配置）
+  // 採点済み答案プレビュー
   const {
     previewImageUrls: scoredAnswerPreviewUrls,
     isLoading: isScoredAnswerPreviewLoading,
@@ -149,7 +142,7 @@ export default function ExportMainView() {
   } = useScoredAnswerPreview({
     examId: exam?.id || "",
     selectedExamStudentIds,
-    scoringMarkConfig: scoringMarkConfigForPdf,
+    answerOverlaySettings,
     enabled:
       !!exam?.id && selectedStudents.size > 0 && exportTab === "scored-answers",
   })
@@ -403,8 +396,8 @@ export default function ExportMainView() {
               examId={exam?.id ?? ""}
               exportOptions={exportOptions}
               setExportOptions={setExportOptions}
-              scoringMarkConfig={scoringMarkConfig}
-              setScoringMarkConfig={setScoringMarkConfig}
+              answerOverlaySettings={answerOverlaySettings}
+              setAnswerOverlaySettings={setAnswerOverlaySettings}
               individualReportOptions={individualReportOptions}
               setIndividualReportOptions={setIndividualReportOptions}
               selectedStudents={selectedStudents}
@@ -447,7 +440,7 @@ export default function ExportMainView() {
         {/* Canvas描画コンポーネント（非表示） */}
         <PdfCanvasRenderer
           pages={pdfExportPages}
-          scoringMarkConfig={scoringMarkConfigForPdf}
+          answerOverlaySettings={answerOverlaySettings}
           startRendering={startCanvasRendering}
           poolSize={exportOptions.parallelCount}
           onProgress={handleCanvasProgress}

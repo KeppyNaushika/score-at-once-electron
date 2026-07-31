@@ -3,21 +3,20 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
-import type {
-  ScoringMarkConfigForPdf,
-  SubtotalDataForPdf,
-  TotalScoreDataForPdf,
-} from "../utils/pdfCanvasRenderer"
 import {
   preloadScoringMarkImages,
   renderAnswerSheetToCanvas,
+  type ScoringDataForPdf,
+  type SubtotalDataForPdf,
+  type TotalScoreDataForPdf,
 } from "../utils/pdfCanvasRenderer"
 
 interface UseScoredAnswerPreviewProps {
   examId: string
   selectedExamStudentIds: string[]
-  scoringMarkConfig: ScoringMarkConfigForPdf
+  answerOverlaySettings: AnswerOverlaySettings
   enabled: boolean
 }
 
@@ -47,7 +46,7 @@ const RENDER_DEBOUNCE_MS = 150
 export function useScoredAnswerPreview({
   examId,
   selectedExamStudentIds,
-  scoringMarkConfig,
+  answerOverlaySettings,
   enabled,
 }: UseScoredAnswerPreviewProps) {
   const [previewImageUrls, setPreviewImageUrls] = useState<string[]>([])
@@ -57,8 +56,9 @@ export function useScoredAnswerPreview({
   const [loadedPages, setLoadedPages] = useState<LoadedPage[] | null>(null)
 
   // 設定変更をデバウンスして再描画用configに反映
-  const [renderConfig, setRenderConfig] =
-    useState<ScoringMarkConfigForPdf>(scoringMarkConfig)
+  const [renderConfig, setRenderConfig] = useState<AnswerOverlaySettings>(
+    answerOverlaySettings
+  )
 
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
     null
@@ -92,10 +92,10 @@ export function useScoredAnswerPreview({
   // 設定変更をデバウンスして renderConfig に反映
   useEffect(() => {
     const timer = setTimeout(() => {
-      setRenderConfig(scoringMarkConfig)
+      setRenderConfig(answerOverlaySettings)
     }, RENDER_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [scoringMarkConfig])
+  }, [answerOverlaySettings])
 
   // 答案データ取得＋画像デコード（生徒切替時のみ）
   useEffect(() => {

@@ -5,7 +5,6 @@ import { Download } from "lucide-react"
 import { CaptureReturnVersionButton } from "@/components/exams/08-export/components/CaptureReturnVersionButton"
 import { IndividualReportSettings } from "@/components/exams/08-export/components/IndividualReportSettings"
 import { ScoringMarkSettingsContainer } from "@/components/exams/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import {
   ExportOptions,
   PdfOrientation,
@@ -15,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 export type ExportTabType =
   "scored-answers" | "grading-data" | "individual-reports"
@@ -23,8 +23,8 @@ interface ExportOptionsCardProps {
   examId: string
   exportOptions: ExportOptions
   setExportOptions: (options: ExportOptions) => void
-  scoringMarkConfig: ScoringMarkConfig
-  setScoringMarkConfig: (config: ScoringMarkConfig) => void
+  answerOverlaySettings: AnswerOverlaySettings
+  setAnswerOverlaySettings: (config: AnswerOverlaySettings) => void
   individualReportOptions: IndividualReportOptions
   setIndividualReportOptions: (options: IndividualReportOptions) => void
   selectedStudents: Set<string>
@@ -86,8 +86,8 @@ export function ExportOptionsCard({
   examId,
   exportOptions,
   setExportOptions,
-  scoringMarkConfig,
-  setScoringMarkConfig,
+  answerOverlaySettings,
+  setAnswerOverlaySettings,
   individualReportOptions,
   setIndividualReportOptions,
   selectedStudents,
@@ -220,8 +220,8 @@ export function ExportOptionsCard({
 
           {/* 採点マーク設定 */}
           <ScoringMarkSettingsContainer
-            config={scoringMarkConfig}
-            onChange={setScoringMarkConfig}
+            config={answerOverlaySettings}
+            onChange={setAnswerOverlaySettings}
           />
         </div>
       </TabsContent>

@@ -5,13 +5,10 @@ import { useCallback, useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import type {
   CategoryIdIntegrationConfig,
-  CategoryMatchingSummary,
   FileOverviewData,
   IdChoice,
   IdIntegrationDecision,
   ImportWizardState,
-  MatchingConfig,
-  MatchingDecisionType,
   ScoringConflictResolutionStrategy,
   UpdateStrategy,
 } from "@/types/examArchive.types"
@@ -309,121 +306,6 @@ export function useImportWizard() {
     []
   )
 
-  // マッチング設定更新（後方互換用）
-  const updateMatchingConfig = useCallback(
-    <K extends keyof MatchingConfig>(key: K, value: MatchingConfig[K]) => {
-      setState((prev) => ({
-        ...prev,
-        matchingConfig: {
-          ...prev.matchingConfig,
-          [key]: value,
-        },
-      }))
-    },
-    []
-  )
-
-  // 照合を実行してdata_matchingへ進む（後方互換用）
-  const performMatching = useCallback(async () => {
-    if (!state.archivePath) return false
-
-    setState((prev) => ({ ...prev, isProcessing: true, error: null }))
-
-    try {
-      const result = await window.electronAPI.archive.detectConflicts({
-        archivePath: state.archivePath,
-        matchingConfig: state.matchingConfig,
-      })
-
-      if (!result.success) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error: result.error || "照合に失敗しました",
-        }))
-        return false
-      }
-
-      // 結果をCategoryMatchingSummary形式に変換
-      const summaries: CategoryMatchingSummary[] = (result.results || []).map(
-        (categoryResult) => ({
-          category: categoryResult.category,
-          autoMatched: categoryResult.summary.matched,
-          newItems: categoryResult.summary.newItems,
-          needsConfirmation: categoryResult.summary.conflicts,
-          hasConflict: 0,
-          autoMatchedItems: [],
-          newItemsList: [],
-          confirmationItems: categoryResult.conflictItems.map((item) => ({
-            ...item,
-            fieldChanges: [],
-            isImportNewer: false,
-            importUpdatedAt: "",
-            existingUpdatedAt: "",
-            matchReason: "データが一致",
-          })),
-          conflictItems: [],
-        })
-      )
-
-      // デフォルトの照合判断を設定（全て「同じ人」）
-      const defaultDecisions: Record<string, MatchingDecisionType> = {}
-      for (const summary of summaries) {
-        for (const item of summary.confirmationItems) {
-          defaultDecisions[item.id] = "same_person"
-        }
-      }
-
-      setState((prev) => ({
-        ...prev,
-        matchingSummaries: summaries,
-        matchingDecisions: defaultDecisions,
-        isProcessing: false,
-        currentStep: "id_integration",
-      }))
-
-      return true
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isProcessing: false,
-        error: error instanceof Error ? error.message : "エラーが発生しました",
-      }))
-      return false
-    }
-  }, [state.archivePath, state.matchingConfig])
-
-  // 照合判断を設定
-  const setMatchingDecision = useCallback(
-    (itemId: string, decision: MatchingDecisionType) => {
-      setState((prev) => ({
-        ...prev,
-        matchingDecisions: {
-          ...prev.matchingDecisions,
-          [itemId]: decision,
-        },
-      }))
-    },
-    []
-  )
-
-  // 複数の照合判断を一括設定
-  const setAllMatchingDecisions = useCallback(
-    (itemIds: string[], decision: MatchingDecisionType) => {
-      setState((prev) => {
-        const newDecisions = { ...prev.matchingDecisions }
-        for (const itemId of itemIds) {
-          newDecisions[itemId] = decision
-        }
-        return {
-          ...prev,
-          matchingDecisions: newDecisions,
-        }
-      })
-    },
-    []
-  )
-
   // フィールド単位の更新決定を設定
   const setFieldUpdateDecision = useCallback(
     (itemKey: string, field: string, strategy: UpdateStrategy) => {
@@ -694,10 +576,6 @@ export function useImportWizard() {
     updateIdIntegrationConfig,
     updateIdIntegrationDecision,
     batchUpdateIdIntegrationDecisions,
-    updateMatchingConfig,
-    performMatching,
-    setMatchingDecision,
-    setAllMatchingDecisions,
     setFieldUpdateDecision,
     setBulkUpdateStrategy,
     setScoringConflictStrategy,

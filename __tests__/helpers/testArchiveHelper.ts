@@ -202,8 +202,6 @@ export function createMinimalCollectedData(
       userExams: [],
       examSubtotalGroups: [],
       examClassrooms: [],
-      examMarkingFormats: [],
-      examExportSettings: null,
     },
     studentsData: { students: [] },
     classesData: { classrooms: [], memberships: [] },

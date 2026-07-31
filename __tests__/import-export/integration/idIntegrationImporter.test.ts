@@ -962,20 +962,22 @@ describe("executeIdIntegrationImport", () => {
     expect(result.summary!.created.students).toBeGreaterThanOrEqual(0) // studentProcessor creates via separate count
   })
 
-  // II-12: v1.4.0: ExamMarkingFormat作成
-  it("II-12: v1.4.0のExamMarkingFormatが作成される", async () => {
+  // II-13: 出力設定（正規化済み）の作成
+  it("II-13: 重ね描きのスタイルが作成される", async () => {
     const { data, examId } = createBasicTestData()
 
-    // v1.4.0データを追加
-    data.examData.examMarkingFormats = [
+    data.examData.answerOverlayStyles = [
       {
         id: generateId(),
         examId,
-        markType: "correct",
-        symbol: "○",
-        color: "#00ff00",
-        fontSize: null,
-        strokeWidth: null,
+        overlayKind: "mark",
+        position: "top-left",
+        anchor: "top-left",
+        offsetX: 0,
+        offsetY: 0,
+        size: 50,
+        color: "#ef4444",
+        opacity: 100,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -1020,69 +1022,11 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const formats = await prisma.examMarkingFormat.findMany({
+    const styles = await prisma.examAnswerOverlayStyle.findMany({
       where: { examId: result.examId! },
     })
-    expect(formats.length).toBe(1)
-    expect(formats[0].markType).toBe("correct")
-  })
-
-  // II-13: v1.4.0: ExamExportSettings作成
-  it("II-13: v1.4.0のExamExportSettingsが作成される", async () => {
-    const { data, examId } = createBasicTestData()
-
-    data.examData.examExportSettings = {
-      id: generateId(),
-      examId,
-      settingsJson: JSON.stringify({ includeImages: true }),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    const preMatch = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    expect(result.success).toBe(true)
-
-    const settings = await prisma.examExportSettings.findUnique({
-      where: { examId: result.examId! },
-    })
-    expect(settings).not.toBeNull()
-    expect(settings!.settingsJson).toContain("includeImages")
+    expect(styles.length).toBe(1)
+    expect(styles[0].position).toBe("top-left")
   })
 
   // II-15: Tag/TagSubtotalGroup作成（II-14 は CropRegionMarkingOverride 廃止に伴い欠番）

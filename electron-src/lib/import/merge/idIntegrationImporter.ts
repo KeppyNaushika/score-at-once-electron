@@ -31,7 +31,6 @@ import {
   processCompoundAnswers,
   processExamClassrooms,
   processExamExportSettings,
-  processExamMarkingFormats,
   processOmrConfigs,
   processTags,
 } from "./importExamAttachments"
@@ -223,7 +222,6 @@ export async function executeIdIntegrationImport(
         }
 
         // 10a. ExamMarkingFormat (v1.4.0+)
-        await processExamMarkingFormats(data, newExamId, tx)
 
         // 10b. ExamExportSettings (v1.4.0+)
         await processExamExportSettings(data, newExamId, tx)

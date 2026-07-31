@@ -161,8 +161,6 @@ function createDbConfig(
     type: "choice",
     numChoices: LABELS.length,
     choiceLayout: "horizontal",
-    numDigits: null,
-    correctAnswer: null,
     colorThreshold: null,
     areaThreshold: null,
     createdAt: timestamp,

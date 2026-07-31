@@ -344,6 +344,15 @@ export function calculateStatisticsForStudent(
         memberStudentIds: classroom.memberStudentIds,
         average: calculateAverage(classroomScores),
         stdDev: calculateStandardDeviation(classroomScores),
+        // 当該学級を母集団とした偏差値（全体基準の personal.deviation とは別物）
+        deviation:
+          studentScore !== null
+            ? calculateDeviation(
+                studentScore,
+                calculateAverage(classroomScores),
+                calculateStandardDeviation(classroomScores)
+              )
+            : 0,
         boxPlot: calculateBoxPlot(classroomScores),
         total: presentIds.length,
         rank:

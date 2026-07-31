@@ -207,6 +207,14 @@ describe("DateTime正規化マイグレーション", () => {
     "CourseworkStudent",
     "CourseworkTag",
     "CropRegionAssignment", // 20260726100000 で追加。normalize migration より後で ISO text 生成
+    // 20260731000200 で追加（出力設定のJSON埋め込みを正規化）。
+    // normalize migration より後で ISO text 生成
+    "ExamAnswerOverlayStyle",
+    "ExamAnswerOverlayVisibility",
+    "ExamIndividualReportGraphSettings",
+    "ExamIndividualReportSettings",
+    "ExamIndividualReportStatisticVisibility",
+    "ExamIndividualReportTableSection",
     "GradeConstraint",
     // 20260726110000 で追加（制約ルールの設定JSON正規化）。normalize migration より後で ISO text 生成
     "GradeConstraintExclusionLabel",

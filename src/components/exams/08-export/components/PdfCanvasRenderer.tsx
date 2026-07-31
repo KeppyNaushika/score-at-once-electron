@@ -8,12 +8,12 @@ import type {
 } from "@/components/exams/08-export/types"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import {
   preloadScoringMarkImages,
   renderAnswerSheetToCanvas,
   type ScoringDataForPdf,
-  type ScoringMarkConfigForPdf,
   type SubtotalDataForPdf,
   type TotalScoreDataForPdf,
 } from "../utils/pdfCanvasRenderer"
@@ -32,7 +32,7 @@ interface PdfCanvasRendererProps {
   /** レンダリングするページのリスト */
   pages: PdfExportPageData[]
   /** 採点マーク設定 */
-  scoringMarkConfig: ScoringMarkConfigForPdf
+  answerOverlaySettings: AnswerOverlaySettings
   /** レンダリング開始トリガー */
   startRendering: boolean
   /** Canvas Pool サイズ（デフォルト4） */
@@ -63,7 +63,7 @@ interface PdfCanvasRendererProps {
  */
 export function PdfCanvasRenderer({
   pages,
-  scoringMarkConfig,
+  answerOverlaySettings,
   startRendering,
   poolSize = DEFAULT_POOL_SIZE,
   onProgress,
@@ -273,7 +273,7 @@ export function PdfCanvasRenderer({
         image,
         scoringDataForPdf,
         annotations,
-        scoringMarkConfig,
+        answerOverlaySettings,
         markImages,
         subtotalDataForPdf,
         totalScoreDataForPdf,
@@ -290,7 +290,7 @@ export function PdfCanvasRenderer({
         imageData: arrayBuffer,
       }
     },
-    [loadImage, scoringMarkConfig, pageSize]
+    [loadImage, answerOverlaySettings, pageSize]
   )
 
   /**

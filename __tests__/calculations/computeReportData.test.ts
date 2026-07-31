@@ -35,6 +35,7 @@ function createMinimalStats(): StatisticsData {
         memberStudentIds: ["s1", "s2", "s3"],
         average: 70,
         stdDev: 10,
+        deviation: 50,
         boxPlot: { min: 50, q1: 60, median: 70, q3: 80, max: 90 },
         total: 3,
         rank: 1,

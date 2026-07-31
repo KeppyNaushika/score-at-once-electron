@@ -6,10 +6,30 @@ import { Label } from "@/components/ui/label"
 import type {
   IndividualReportOptions,
   QuestionTableColumns,
+  StatisticKind,
+  StatisticScope,
   SubtotalTableColumns,
+} from "@/electron-src/lib/export/individual-report/types"
+import {
+  STATISTIC_KINDS,
+  STATISTIC_SCOPES,
 } from "@/electron-src/lib/export/individual-report/types"
 
 import { SubtotalGroupSelector } from "./individual-report/SubtotalGroupSelector"
+
+/** 統計種別の見出し */
+const STATISTIC_KIND_LABELS: Record<StatisticKind, string> = {
+  average: "平均",
+  deviation: "偏差値",
+  rank: "順位",
+  boxPlot: "得点分布",
+}
+
+/** 母集団の見出し。学級は複数ありうるため「所属学級」と複数を含意する語にする */
+const STATISTIC_SCOPE_LABELS: Record<StatisticScope, string> = {
+  classroom: "所属学級",
+  overall: "全体",
+}
 
 interface IndividualReportSettingsProps {
   examId: string
@@ -39,84 +59,39 @@ export function IndividualReportSettings({
             checked={options.showScore}
             onChange={(value) => updateOption("showScore", value)}
           />
-          <OptionCard
-            label="学級平均"
-            checked={
-              options.showAverage === "class" || options.showAverage === "both"
-            }
-            onChange={(value) => {
-              const showOverall =
-                options.showAverage === "overall" ||
-                options.showAverage === "both"
-              if (value && showOverall) updateOption("showAverage", "both")
-              else if (value) updateOption("showAverage", "class")
-              else if (showOverall) updateOption("showAverage", "overall")
-              else updateOption("showAverage", "none")
-            }}
-          />
-          <OptionCard
-            label="全体平均"
-            checked={
-              options.showAverage === "overall" ||
-              options.showAverage === "both"
-            }
-            onChange={(value) => {
-              const showClassroom =
-                options.showAverage === "class" ||
-                options.showAverage === "both"
-              if (value && showClassroom) updateOption("showAverage", "both")
-              else if (value) updateOption("showAverage", "overall")
-              else if (showClassroom) updateOption("showAverage", "class")
-              else updateOption("showAverage", "none")
-            }}
-          />
-          <OptionCard
-            label="偏差値"
-            checked={options.showDeviation}
-            onChange={(value) => updateOption("showDeviation", value)}
-          />
-          <OptionCard
-            label="学級順位"
-            checked={
-              options.showRank &&
-              (options.rankType === "class" || options.rankType === "both")
-            }
-            onChange={(value) => {
-              const showOverall =
-                options.showRank &&
-                (options.rankType === "overall" || options.rankType === "both")
-              if (value && showOverall) {
-                onChange({ ...options, showRank: true, rankType: "both" })
-              } else if (value) {
-                onChange({ ...options, showRank: true, rankType: "class" })
-              } else if (showOverall) {
-                onChange({ ...options, rankType: "overall" })
-              } else {
-                onChange({ ...options, showRank: false })
-              }
-            }}
-          />
-          <OptionCard
-            label="全体順位"
-            checked={
-              options.showRank &&
-              (options.rankType === "overall" || options.rankType === "both")
-            }
-            onChange={(value) => {
-              const showClassroom =
-                options.showRank &&
-                (options.rankType === "class" || options.rankType === "both")
-              if (value && showClassroom) {
-                onChange({ ...options, showRank: true, rankType: "both" })
-              } else if (value) {
-                onChange({ ...options, showRank: true, rankType: "overall" })
-              } else if (showClassroom) {
-                onChange({ ...options, rankType: "class" })
-              } else {
-                onChange({ ...options, showRank: false })
-              }
-            }}
-          />
+        </div>
+
+        {/* 統計は「種別 × 母集団」で選ぶ。学級は複数ありうるので所属学級それぞれに出る */}
+        <div className="mt-2 flex flex-col gap-2">
+          <Label className="text-muted-foreground text-xs">
+            統計（所属学級ごと／全体）
+          </Label>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {STATISTIC_KINDS.map((statisticKind) => (
+              <div key={statisticKind} className="space-y-1">
+                <Label className="text-muted-foreground text-xs">
+                  {STATISTIC_KIND_LABELS[statisticKind]}
+                </Label>
+                {STATISTIC_SCOPES.map((scope) => (
+                  <OptionCard
+                    key={scope}
+                    label={STATISTIC_SCOPE_LABELS[scope]}
+                    checked={options.statistics[statisticKind][scope]}
+                    onChange={(shown) =>
+                      updateOption("statistics", {
+                        ...options.statistics,
+                        [statisticKind]: {
+                          ...options.statistics[statisticKind],
+                          [scope]: shown,
+                        },
+                      })
+                    }
+                    variant="sub"
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
         {/* 統計に含める受験状態 */}
         <div className="mt-2 flex flex-col gap-2">
@@ -237,24 +212,29 @@ export function IndividualReportSettings({
           {/* 箱ひげ図 */}
           <OptionCardWithChildren
             label="箱ひげ図"
-            checked={options.graphOptions.showBoxPlot}
+            checked={
+              options.statistics.boxPlot.overall ||
+              options.statistics.boxPlot.classroom
+            }
             onChange={(value) =>
-              updateOption("graphOptions", {
-                ...options.graphOptions,
-                showBoxPlot: value,
+              updateOption("statistics", {
+                ...options.statistics,
+                // 全体側だけを操作する。所属学級側は上の統計グリッドが持つ
+                boxPlot: { ...options.statistics.boxPlot, overall: value },
               })
             }
           >
-            {options.graphOptions.showBoxPlot && (
+            {(options.statistics.boxPlot.overall ||
+              options.statistics.boxPlot.classroom) && (
               <div className="mt-2 flex flex-col gap-4">
                 <div className="flex flex-wrap gap-2">
                   <OptionCard
                     label="合計点"
-                    checked={options.graphOptions.showOverallBoxPlot ?? false}
+                    checked={options.graphOptions.showTotalScoreBoxPlot}
                     onChange={(value) =>
                       updateOption("graphOptions", {
                         ...options.graphOptions,
-                        showOverallBoxPlot: value,
+                        showTotalScoreBoxPlot: value,
                       })
                     }
                     variant="sub"

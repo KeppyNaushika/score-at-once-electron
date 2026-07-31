@@ -109,8 +109,10 @@ export class V1_4_0_to_V1_5_0_Transformer implements ExamVersionTransformer {
       "projectId",
       "examId"
     )!
-    examData.examMarkingFormats = renameField(
-      examData.examMarkingFormats,
+    // 1.22.0 で廃止済みのキー。この版では未変換のまま残さないようリネームだけ行う
+    const examDataRecord = examData as unknown as Record<string, unknown>
+    examDataRecord.examMarkingFormats = renameField(
+      examDataRecord.examMarkingFormats as Parameters<typeof renameField>[0],
       "projectId",
       "examId"
     )!
@@ -132,20 +134,15 @@ export class V1_4_0_to_V1_5_0_Transformer implements ExamVersionTransformer {
       "examPageId"
     )!
 
-    // examExportSettings: projectId → examId
-    if (examData.examExportSettings) {
-      const examExportSettings = examData.examExportSettings as Record<
-        string,
-        unknown
-      >
-      if (
-        "projectId" in examExportSettings &&
-        !("examId" in examExportSettings)
-      ) {
-        const projectId = examExportSettings.projectId
-        examData.examExportSettings = {
-          ...examData.examExportSettings,
-          ...(typeof projectId === "string" ? { examId: projectId } : {}),
+    // examExportSettings: projectId → examId（1.22.0 で正規化され現行型には無い）
+    const legacyExportSettings = examDataRecord.examExportSettings
+    if (legacyExportSettings && typeof legacyExportSettings === "object") {
+      const settingsRecord = legacyExportSettings as Record<string, unknown>
+      const projectId = settingsRecord.projectId
+      if (typeof projectId === "string" && !("examId" in settingsRecord)) {
+        examDataRecord.examExportSettings = {
+          ...settingsRecord,
+          examId: projectId,
         }
       }
     }

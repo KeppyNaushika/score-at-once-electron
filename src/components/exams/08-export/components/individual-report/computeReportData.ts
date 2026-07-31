@@ -94,10 +94,21 @@ export function computeFilteredStats(
     const classroomScores = filteredMembers
       .map((entry) => entry.totalScore)
       .filter((score): score is number => score !== null)
+    const classroomAverage = calculateAverage(classroomScores)
+    const classroomStdDev = calculateStandardDeviation(classroomScores)
     return {
       ...classroom,
-      average: calculateAverage(classroomScores),
-      stdDev: calculateStandardDeviation(classroomScores),
+      average: classroomAverage,
+      stdDev: classroomStdDev,
+      // 偏差値も同じ母集団で算出する（平均・順位と食い違わせない）
+      deviation:
+        studentScore === null
+          ? 0
+          : classroomStdDev === 0
+            ? 50
+            : Math.round(
+                ((studentScore - classroomAverage) / classroomStdDev) * 10 + 50
+              ),
       total: filteredMembers.length,
       rank:
         studentScore !== null
@@ -193,6 +204,58 @@ export function computeFilteredSubtotalStats(
 /**
  * 合計点箱ひげ図の統計を受験状態フィルタ付きで計算
  */
+/** 合計点を母集団全体で見る行のid */
+export const OVERALL_STAT_ID = "__overall__"
+
+/** 学級ごとの合計点を見る行のid接頭辞 */
+export const CLASSROOM_STAT_ID_PREFIX = "__classroom__:"
+
+/**
+ * その行が合計点を対象にしているか（全体・学級のいずれも合計点）。
+ * 本人の得点は小計ではなく合計点を引く必要がある。
+ */
+export function isTotalScoreStat(statId: string): boolean {
+  return (
+    statId === OVERALL_STAT_ID || statId.startsWith(CLASSROOM_STAT_ID_PREFIX)
+  )
+}
+
+/**
+ * 学級ごとの合計点統計（箱ひげ図用）。
+ * 母集団は当該学級の受験日所属生徒に限る（memberStudentIds で絞る）。
+ */
+export function computeFilteredClassroomStats(
+  rawTotalScores: {
+    studentId: string
+    totalScore: number | null
+    status: ExamStudentStatus
+  }[],
+  classrooms: {
+    classroomId: string
+    className: string
+    memberStudentIds: string[]
+  }[],
+  totalMaxScore: number,
+  includeStatuses: BoxPlotIncludeStatuses
+): ComputedSubtotalStat[] {
+  return classrooms.map((classroom) => {
+    const memberIds = new Set(classroom.memberStudentIds)
+    const stat = computeFilteredOverallStat(
+      rawTotalScores.filter((rawTotalScore) =>
+        memberIds.has(rawTotalScore.studentId)
+      ),
+      totalMaxScore,
+      includeStatuses
+    )
+    return {
+      ...stat,
+      subtotalId: `${CLASSROOM_STAT_ID_PREFIX}${classroom.classroomId}`,
+      subtotalLabel: `${classroom.className}（合計点）`,
+      subtotalGroupId: "__classroom__",
+    }
+  })
+}
+
 export function computeFilteredOverallStat(
   rawTotalScores: {
     studentId: string
@@ -214,7 +277,7 @@ export function computeFilteredOverallStat(
     .filter((score): score is number => score !== null)
 
   return {
-    subtotalId: "__overall__",
+    subtotalId: OVERALL_STAT_ID,
     subtotalLabel: "合計点",
     subtotalGroupId: "__overall__",
     boxPlot:
@@ -349,7 +412,11 @@ export function getVisibleSectionIndices(
 ): number[] {
   const indices: number[] = [0, 1, 2] // ヘッダー、生徒情報、統計サマリーは常に表示
   if (options.showSubtotalTable) indices.push(3)
-  if (options.graphOptions.showBoxPlot) indices.push(4)
+  if (
+    options.statistics.boxPlot.overall ||
+    options.statistics.boxPlot.classroom
+  )
+    indices.push(4)
   if (options.showQuestionTable) indices.push(5)
   if (options.showLearningAdvice) indices.push(6)
   if (options.showComment) indices.push(7)
@@ -379,45 +446,49 @@ export function buildStatsItems(
   const classroomLabel = (className: string, suffix: string) =>
     multipleClassrooms ? `${className}${suffix}` : `学級${suffix}`
 
-  if (options.showAverage !== "none") {
-    if (options.showAverage === "class" || options.showAverage === "both") {
-      for (const classroom of filteredStats.classrooms) {
-        items.push({
-          label: classroomLabel(classroom.className, "平均"),
-          value: classroom.average.toFixed(1),
-        })
-      }
-    }
-    if (options.showAverage === "overall" || options.showAverage === "both") {
+  if (options.statistics.average.classroom) {
+    for (const classroom of filteredStats.classrooms) {
       items.push({
-        label: "全体平均",
-        value: filteredStats.overall.average.toFixed(1),
+        label: classroomLabel(classroom.className, "平均"),
+        value: classroom.average.toFixed(1),
       })
     }
   }
+  if (options.statistics.average.overall) {
+    items.push({
+      label: "全体平均",
+      value: filteredStats.overall.average.toFixed(1),
+    })
+  }
 
-  if (options.showDeviation) {
+  if (options.statistics.deviation.classroom) {
+    for (const classroom of filteredStats.classrooms) {
+      items.push({
+        label: classroomLabel(classroom.className, "偏差値"),
+        value: classroom.deviation.toFixed(1),
+      })
+    }
+  }
+  if (options.statistics.deviation.overall) {
     items.push({
       label: "偏差値",
       value: filteredStats.personal.deviation.toFixed(1),
     })
   }
 
-  if (options.showRank) {
-    if (options.rankType === "class" || options.rankType === "both") {
-      for (const classroom of filteredStats.classrooms) {
-        items.push({
-          label: classroomLabel(classroom.className, "順位"),
-          value: `${classroom.rank} / ${classroom.total}`,
-        })
-      }
-    }
-    if (options.rankType === "overall" || options.rankType === "both") {
+  if (options.statistics.rank.classroom) {
+    for (const classroom of filteredStats.classrooms) {
       items.push({
-        label: "全体順位",
-        value: `${filteredStats.personal.overallRank} / ${filteredStats.overall.total}`,
+        label: classroomLabel(classroom.className, "順位"),
+        value: `${classroom.rank} / ${classroom.total}`,
       })
     }
+  }
+  if (options.statistics.rank.overall) {
+    items.push({
+      label: "全体順位",
+      value: `${filteredStats.personal.overallRank} / ${filteredStats.overall.total}`,
+    })
   }
 
   return items

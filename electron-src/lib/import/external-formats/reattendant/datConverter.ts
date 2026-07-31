@@ -304,7 +304,6 @@ export async function convertDatToScore(
       examSubtotalGroups: subtotalData.examSubtotalGroups,
       examClassrooms: [],
       examMarkingFormats: [],
-      examExportSettings: null,
     }
 
     // 14. manifest 生成

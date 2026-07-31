@@ -36,21 +36,6 @@ export function createSettingsApi() {
       getUserPreferences: (userId: string) =>
         ipcRenderer.invoke("settings:getUserPreferences", userId),
 
-      // ExamMarkingFormat
-      getExamMarkingFormats: (examId: string) =>
-        ipcRenderer.invoke("settings:getExamMarkingFormats", examId),
-      saveExamMarkingFormats: (
-        examId: string,
-        formats: Array<{
-          markType: string
-          symbol: string
-          color: string
-          fontSize?: number | null
-          strokeWidth?: number | null
-        }>
-      ) =>
-        ipcRenderer.invoke("settings:saveExamMarkingFormats", examId, formats),
-
       // ExamExportSettings
       getExamExportSettings: (examId: string) =>
         ipcRenderer.invoke("settings:getExamExportSettings", examId),

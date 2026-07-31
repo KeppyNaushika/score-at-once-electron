@@ -11,9 +11,9 @@ import {
 } from "react"
 
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
-import { defaultScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import type { ScoringMarkConfig } from "@/components/exams/08-export/components/scoring-mark-settings/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
+import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { useDrawingState } from "./hooks/core/useDrawingState"
@@ -72,19 +72,16 @@ export default function AnswerIndividualView({
   // 印字設定（採点マーク・点数表示のプレビュー用）をDBからロード
   const params = useParams()
   const examId = params?.examId as string | undefined
-  const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
-    defaultScoringMarkConfig
-  )
+  const [scoringMarkConfig, setAnswerOverlaySettings] =
+    useState<AnswerOverlaySettings>(DEFAULT_ANSWER_OVERLAY_SETTINGS)
 
   useEffect(() => {
     if (!examId || !window.electronAPI?.settings) return
     ;(async () => {
       const result =
         await window.electronAPI.settings.getExamExportSettings(examId)
-      if (result.success && result.settings?.scoringMarkConfig) {
-        const saved = result.settings
-          .scoringMarkConfig as Partial<ScoringMarkConfig>
-        setScoringMarkConfig({ ...defaultScoringMarkConfig, ...saved })
+      if (result.success && result.settings) {
+        setAnswerOverlaySettings(result.settings.answerOverlay)
       }
     })()
   }, [examId])

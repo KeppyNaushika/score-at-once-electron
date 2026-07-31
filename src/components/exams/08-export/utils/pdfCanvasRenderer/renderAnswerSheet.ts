@@ -5,6 +5,8 @@
  */
 
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
+import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   convertAnnotationToDrawingElement,
@@ -18,7 +20,6 @@ import {
 } from "./scoreDrawing"
 import type {
   ScoringDataForPdf,
-  ScoringMarkConfigForPdf,
   SubtotalDataForPdf,
   TotalScoreDataForPdf,
 } from "./types"
@@ -46,7 +47,7 @@ export async function renderAnswerSheetToCanvas(
   image: HTMLImageElement,
   scoringDataList: ScoringDataForPdf[],
   annotations: DrawingAnnotation[],
-  config: ScoringMarkConfigForPdf,
+  config: AnswerOverlaySettings,
   scoringMarkImages: Map<string, HTMLImageElement>,
   subtotalDataList: SubtotalDataForPdf[] = [],
   totalScoreDataList: TotalScoreDataForPdf[] = [],
@@ -82,9 +83,8 @@ export async function renderAnswerSheetToCanvas(
   // 2. 各設問に対して採点マークと部分点を描画
   for (const scoringData of scoringDataList) {
     // ステータスごとのマーク表示判定
-    const shouldShowMark = config.showMarkForStatus
-      ? (config.showMarkForStatus[scoringData.status] ?? true)
-      : scoringData.status !== "unscored"
+    const shouldShowMark =
+      config.visibility[toScoringStatus(scoringData.status)].showMark
     if (!shouldShowMark) {
       // マークは非表示でも点数テキストは別途判定するため、マーク描画だけスキップ
     } else {
@@ -109,10 +109,8 @@ export async function renderAnswerSheetToCanvas(
     }
 
     // 点数テキストの描画
-    // showScoreForStatusがある場合はステータスごとに判定、ない場合は後方互換性のためpartialのみ
-    const shouldShowScore = config.showScoreForStatus
-      ? (config.showScoreForStatus[scoringData.status] ?? false)
-      : scoringData.status === "partial"
+    const shouldShowScore =
+      config.visibility[toScoringStatus(scoringData.status)].showScore
 
     if (shouldShowScore) {
       // ステータスに応じた点数を決定

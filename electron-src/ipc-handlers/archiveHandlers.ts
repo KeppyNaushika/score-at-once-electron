@@ -12,7 +12,6 @@ import type {
   BulkExportExamsResult,
   FileOverviewData,
   IdIntegrationConfig,
-  MatchingConfig,
   ScoringConflictConfig,
   UpdateDecisions,
 } from "../../src/types/examArchive.types"
@@ -25,7 +24,6 @@ import {
 } from "../lib/import/exam-archive/archiveExtractor"
 import { convertHszToScore } from "../lib/import/external-formats/hsz/hszConverter"
 import { convertDatToScore } from "../lib/import/external-formats/reattendant/datConverter"
-import { detectAllConflicts } from "../lib/import/merge/conflictDetector"
 import { executeIdIntegrationImport } from "../lib/import/merge/idIntegrationImporter"
 import { performPreMatching } from "../lib/import/merge/matcher"
 import { detectScoringConflictsWithUserDecisions } from "../lib/import/merge/scoringConflictDetector"
@@ -224,47 +222,6 @@ export function registerArchiveHandlers(): void {
           success: false,
           error:
             error instanceof Error ? error.message : "事前照合に失敗しました",
-        }
-      } finally {
-        if (tempDir) {
-          cleanupTempDir(tempDir)
-        }
-      }
-    }
-  )
-
-  // 競合検出
-  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
-    "archive:detectConflicts",
-    async (
-      _event,
-      options: { archivePath: string; matchingConfig: MatchingConfig }
-    ) => {
-      let tempDir: string | null = null
-
-      try {
-        // アーカイブを展開
-        const extractResult = await extractArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          return { success: false, error: extractResult.error }
-        }
-        tempDir = extractResult.data.tempDir
-
-        // 競合検出
-        const result = await detectAllConflicts(
-          extractResult.data,
-          options.matchingConfig
-        )
-
-        return result
-      } catch (error) {
-        console.error("Error in IPC handler [archive:detectConflicts]:", error)
-        return {
-          success: false,
-          results: [],
-          error:
-            error instanceof Error ? error.message : "競合検出に失敗しました",
         }
       } finally {
         if (tempDir) {

@@ -97,15 +97,10 @@ export interface FullTestExam {
     imagePath: string
   }>
   // v1.4.0+
-  examMarkingFormats: Array<{
-    id: string
-    examId: string
-    markType: string
-  }>
   examExportSettings: {
     id: string
     examId: string
-    settingsJson: string
+    overlayKind: string
   } | null
   tag: { id: string; name: string } | null
   tagSubtotalGroup: {
@@ -390,32 +385,24 @@ export async function createFullTestExam(
   }
 
   // 16. v1.4.0+ データ
-  const examMarkingFormats = []
   let examExportSettings = null
   let tag = null
   let tagSubtotalGroup = null
 
   if (includeV140Data) {
-    // ExamMarkingFormat
-    for (const markType of ["correct", "incorrect"]) {
-      const examMarkingFormat = await prisma.examMarkingFormat.create({
-        data: {
-          id: crypto.randomUUID(),
-          examId: exam.id,
-          markType,
-          symbol: markType === "correct" ? "○" : "×",
-          color: markType === "correct" ? "#00ff00" : "#ff0000",
-        },
-      })
-      examMarkingFormats.push(examMarkingFormat)
-    }
-
-    // ExamExportSettings
-    examExportSettings = await prisma.examExportSettings.create({
+    // 出力設定（正規化済み）: 代表として重ね描きのスタイルを1件入れる
+    examExportSettings = await prisma.examAnswerOverlayStyle.create({
       data: {
-        id: crypto.randomUUID(),
+        id: `${exam.id}:mark`,
         examId: exam.id,
-        settingsJson: JSON.stringify({ includeImages: true }),
+        overlayKind: "mark",
+        position: "middle-center",
+        anchor: "middle-center",
+        offsetX: 0,
+        offsetY: 0,
+        size: 50,
+        color: "#ef4444",
+        opacity: 100,
       },
     })
 
@@ -503,16 +490,11 @@ export async function createFullTestExam(
       examStudentId: studentAnswerImage.examStudentId,
       imagePath: studentAnswerImage.imagePath,
     })),
-    examMarkingFormats: examMarkingFormats.map((examMarkingFormat) => ({
-      id: examMarkingFormat.id,
-      examId: examMarkingFormat.examId,
-      markType: examMarkingFormat.markType,
-    })),
     examExportSettings: examExportSettings
       ? {
           id: examExportSettings.id,
           examId: examExportSettings.examId,
-          settingsJson: examExportSettings.settingsJson,
+          overlayKind: examExportSettings.overlayKind,
         }
       : null,
     tag: tag ? { id: tag.id, name: tag.name } : null,

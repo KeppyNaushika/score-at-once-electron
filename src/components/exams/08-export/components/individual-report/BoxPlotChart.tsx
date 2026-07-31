@@ -19,8 +19,10 @@ import type { ScoringData } from "@/electron-src/lib/shared/types"
 import {
   type BoxPlotIncludeStatuses,
   type ComputedSubtotalStat,
+  computeFilteredClassroomStats,
   computeFilteredOverallStat,
   computeFilteredSubtotalStats,
+  isTotalScoreStat,
 } from "./computeReportData"
 
 const DEFAULT_INCLUDE_STATUSES: BoxPlotIncludeStatuses = {
@@ -45,7 +47,10 @@ interface BoxPlotChartProps {
   boxPlotIncludeStatuses?: BoxPlotIncludeStatuses
   boxPlotFontSize?: number
   boxPlotItemHeight?: number
-  showOverallBoxPlot?: boolean
+  /** 合計点の箱ひげ図を先頭に足す */
+  showTotalScoreBoxPlot?: boolean
+  /** 所属学級ごとの合計点箱ひげ図を足す */
+  showClassroomBoxPlot?: boolean
 }
 
 /**
@@ -67,7 +72,8 @@ export function BoxPlotChart({
   boxPlotIncludeStatuses = DEFAULT_INCLUDE_STATUSES,
   boxPlotFontSize = 11,
   boxPlotItemHeight = 50,
-  showOverallBoxPlot = false,
+  showTotalScoreBoxPlot = false,
+  showClassroomBoxPlot = false,
 }: BoxPlotChartProps) {
   // renderer側で統計を再計算（受験状態フィルタ対応）
   const computedStats = useMemo(() => {
@@ -122,32 +128,50 @@ export function BoxPlotChart({
 
   // 合計点の箱ひげ図データ
   const overallStat = useMemo(() => {
-    if (!showOverallBoxPlot) return null
+    if (!showTotalScoreBoxPlot) return null
     return computeFilteredOverallStat(
       statistics.rawTotalScores || [],
       scoringData.totalMaxScore,
       boxPlotIncludeStatuses
     )
   }, [
-    showOverallBoxPlot,
+    showTotalScoreBoxPlot,
     statistics.rawTotalScores,
     scoringData.totalMaxScore,
     boxPlotIncludeStatuses,
   ])
 
-  // 全項目を合成: [合計点] + [小計別]
+  // 学級ごとの合計点箱ひげ図（複数学級対応）
+  const classroomStats = useMemo(() => {
+    if (!showClassroomBoxPlot) return []
+    return computeFilteredClassroomStats(
+      statistics.rawTotalScores || [],
+      statistics.classrooms,
+      scoringData.totalMaxScore,
+      boxPlotIncludeStatuses
+    )
+  }, [
+    showClassroomBoxPlot,
+    statistics.rawTotalScores,
+    statistics.classrooms,
+    scoringData.totalMaxScore,
+    boxPlotIncludeStatuses,
+  ])
+
+  // 全項目を合成: [合計点] + [学級ごと] + [小計別]
   const allStats = useMemo(() => {
     const items: ComputedSubtotalStat[] = []
     if (overallStat) items.push(overallStat)
+    items.push(...classroomStats)
     items.push(...subtotalStats)
     return items
-  }, [overallStat, subtotalStats])
+  }, [overallStat, classroomStats, subtotalStats])
 
   if (allStats.length === 0) return null
 
   // 各項目の得点を取得
   const getStudentScore = (id: string): number => {
-    if (id === "__overall__") {
+    if (isTotalScoreStat(id)) {
       return scoringData.totalScore ?? 0
     }
     const subtotal = scoringData.subtotalScores.find(

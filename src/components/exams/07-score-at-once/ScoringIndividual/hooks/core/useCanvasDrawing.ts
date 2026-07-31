@@ -15,13 +15,16 @@ import type {
   CropRegionWithExamPage,
   ScoringData,
 } from "@/components/exams/07-score-at-once/types"
-import type {
-  MarkPosition,
-  ScoringMarkConfig,
-} from "@/components/exams/08-export/components/scoring-mark-settings/types"
+import {
+  resolveAnchorPoint,
+  resolveImageOrigin,
+  resolveTextAnchor,
+} from "@/lib/answerOverlayPlacement"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
+import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
@@ -31,122 +34,6 @@ import {
 import type { CropRegionWithStatus } from "./types"
 import { useDrawingRenderer } from "./useDrawingRenderer"
 import { getScoringMarkKey } from "./useScoringMarks"
-
-/**
- * 印字設定に基づくマーク位置計算
- */
-function calculateMarkPosition(
-  regionX: number,
-  regionY: number,
-  regionWidth: number,
-  regionHeight: number,
-  markSize: number,
-  position: MarkPosition,
-  offsetX: number = 0,
-  offsetY: number = 0
-): { x: number; y: number } {
-  const padding = 5
-  let x: number
-  let y: number
-
-  switch (position) {
-    case "top-left":
-      x = regionX + padding
-      y = regionY + padding
-      break
-    case "top-center":
-      x = regionX + (regionWidth - markSize) / 2
-      y = regionY + padding
-      break
-    case "top-right":
-      x = regionX + regionWidth - markSize - padding
-      y = regionY + padding
-      break
-    case "middle-left":
-      x = regionX + padding
-      y = regionY + (regionHeight - markSize) / 2
-      break
-    case "middle-right":
-      x = regionX + regionWidth - markSize - padding
-      y = regionY + (regionHeight - markSize) / 2
-      break
-    case "bottom-left":
-      x = regionX + padding
-      y = regionY + regionHeight - markSize - padding
-      break
-    case "bottom-center":
-      x = regionX + (regionWidth - markSize) / 2
-      y = regionY + regionHeight - markSize - padding
-      break
-    case "bottom-right":
-      x = regionX + regionWidth - markSize - padding
-      y = regionY + regionHeight - markSize - padding
-      break
-    default: // middle-center
-      x = regionX + (regionWidth - markSize) / 2
-      y = regionY + (regionHeight - markSize) / 2
-      break
-  }
-
-  return { x: x + offsetX, y: y + offsetY }
-}
-
-/**
- * 印字設定に基づく点数テキスト位置計算
- */
-function calculateScorePosition(
-  regionX: number,
-  regionY: number,
-  regionWidth: number,
-  regionHeight: number,
-  position: MarkPosition,
-  offsetX: number = 0,
-  offsetY: number = 0
-): { x: number; y: number } {
-  let baseX: number
-  let baseY: number
-
-  switch (position) {
-    case "top-left":
-      baseX = regionX
-      baseY = regionY
-      break
-    case "top-center":
-      baseX = regionX + regionWidth / 2
-      baseY = regionY
-      break
-    case "top-right":
-      baseX = regionX + regionWidth
-      baseY = regionY
-      break
-    case "middle-left":
-      baseX = regionX
-      baseY = regionY + regionHeight / 2
-      break
-    case "middle-right":
-      baseX = regionX + regionWidth
-      baseY = regionY + regionHeight / 2
-      break
-    case "bottom-left":
-      baseX = regionX
-      baseY = regionY + regionHeight
-      break
-    case "bottom-center":
-      baseX = regionX + regionWidth / 2
-      baseY = regionY + regionHeight
-      break
-    case "bottom-right":
-      baseX = regionX + regionWidth
-      baseY = regionY + regionHeight
-      break
-    default: // middle-center
-      baseX = regionX + regionWidth / 2
-      baseY = regionY + regionHeight / 2
-      break
-  }
-
-  return { x: baseX + offsetX, y: baseY + offsetY }
-}
 
 interface UseCanvasDrawingProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -173,7 +60,7 @@ interface UseCanvasDrawingProps {
   currentCropRegionId?: string | null
   hoveredElementId?: string | null
   allCropRegionsWithStatus?: CropRegionWithStatus[]
-  scoringMarkConfig?: ScoringMarkConfig | null
+  scoringMarkConfig?: AnswerOverlaySettings | null
   pageSize?: string
 }
 
@@ -335,9 +222,7 @@ export function useCanvasDrawing({
 
         // 採点記号の描画（印字設定に基づく）
         const shouldShowMark = scoringMarkConfig
-          ? (scoringMarkConfig.showMarkForStatus[
-              status as keyof typeof scoringMarkConfig.showMarkForStatus
-            ] ?? false)
+          ? scoringMarkConfig.visibility[status].showMark
           : status !== "unscored"
 
         if (shouldShowMark) {
@@ -347,63 +232,68 @@ export function useCanvasDrawing({
             : null
 
           if (markImage) {
-            const markSize = scoringMarkConfig?.markSize ?? 50
-
-            const markPos = scoringMarkConfig
-              ? calculateMarkPosition(
-                  regionX,
-                  regionY,
-                  regionWidth,
-                  regionHeight,
-                  markSize,
-                  scoringMarkConfig.markPosition,
-                  scoringMarkConfig.markOffsetX,
-                  scoringMarkConfig.markOffsetY
-                )
-              : {
-                  x: regionX + (regionWidth - markSize) / 2,
-                  y: regionY + (regionHeight - markSize) / 2,
-                }
+            const markStyle =
+              scoringMarkConfig?.styles.mark ??
+              DEFAULT_ANSWER_OVERLAY_SETTINGS.styles.mark
+            const region = {
+              x: regionX,
+              y: regionY,
+              width: regionWidth,
+              height: regionHeight,
+            }
+            const markPos = resolveImageOrigin(
+              resolveAnchorPoint(
+                region,
+                markStyle.position,
+                markStyle.offsetX,
+                markStyle.offsetY,
+                true
+              ),
+              markStyle.anchor,
+              markStyle.size
+            )
 
             ctx.globalAlpha = opacity
-            ctx.drawImage(markImage, markPos.x, markPos.y, markSize, markSize)
+            ctx.drawImage(
+              markImage,
+              markPos.x,
+              markPos.y,
+              markStyle.size,
+              markStyle.size
+            )
           }
         }
 
         // 点数テキストの描画（印字設定に基づく）
         const shouldShowScore = scoringMarkConfig
-          ? (scoringMarkConfig.showScoreForStatus[
-              status as keyof typeof scoringMarkConfig.showScoreForStatus
-            ] ?? false)
+          ? scoringMarkConfig.visibility[status].showScore
           : false
 
         if (shouldShowScore && actualScore !== null) {
           ctx.save()
-          // 印字設定からスコア表示設定を取得（設問ごとの点数は部分点設定を使用、
-          // 旧データで未設定の場合はレガシーフィールドへフォールバック）
-          const scoreConfig = scoringMarkConfig?.partialScore ?? {
-            position: scoringMarkConfig?.scorePosition ?? "bottom-right",
-            offsetX: scoringMarkConfig?.scoreOffsetX ?? 0,
-            offsetY: scoringMarkConfig?.scoreOffsetY ?? 0,
-            size: scoringMarkConfig?.scoreSize ?? 14,
-            alignment: scoringMarkConfig?.scoreAlignment ?? "center",
-          }
+          const scoreStyle =
+            scoringMarkConfig?.styles.partial ??
+            DEFAULT_ANSWER_OVERLAY_SETTINGS.styles.partial
+          const { textAlign, textBaseline } = resolveTextAnchor(
+            scoreStyle.anchor
+          )
 
-          const fontSize = scoreConfig.size
-          ctx.font = `bold ${fontSize}px sans-serif`
-          ctx.fillStyle = "#ef4444" // 赤色
+          ctx.font = `bold ${scoreStyle.size}px sans-serif`
+          ctx.fillStyle = scoreStyle.color
           ctx.globalAlpha = opacity
-          ctx.textAlign = scoreConfig.alignment as CanvasTextAlign
-          ctx.textBaseline = "middle"
+          ctx.textAlign = textAlign
+          ctx.textBaseline = textBaseline
 
-          const scorePos = calculateScorePosition(
-            regionX,
-            regionY,
-            regionWidth,
-            regionHeight,
-            scoreConfig.position as MarkPosition,
-            scoreConfig.offsetX,
-            scoreConfig.offsetY
+          const scorePos = resolveAnchorPoint(
+            {
+              x: regionX,
+              y: regionY,
+              width: regionWidth,
+              height: regionHeight,
+            },
+            scoreStyle.position,
+            scoreStyle.offsetX,
+            scoreStyle.offsetY
           )
           ctx.fillText(String(actualScore), scorePos.x, scorePos.y)
           ctx.restore()

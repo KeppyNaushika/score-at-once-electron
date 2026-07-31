@@ -151,7 +151,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
 
     // チェーン警告が伝播する
     expect(data.transformWarnings.length).toBeGreaterThan(0)
-    expect(data.manifest.version).toBe("1.21.0")
+    expect(data.manifest.version).toBe("1.22.0")
 
     cleanupTempDir(data.tempDir)
   })
@@ -222,7 +222,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     const data = result.data!
     createdPaths.push(data.tempDir)
 
-    expect(data.manifest.version).toBe("1.21.0")
+    expect(data.manifest.version).toBe("1.22.0")
     expect(data.examData.exam.id).toBe("exam-1")
     expect(data.examData.examPages).toHaveLength(1)
     expect(data.examData.examClassrooms).toEqual([])
@@ -281,7 +281,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     createdPaths.push(data.tempDir)
 
     expect(data.transformWarnings).toEqual([])
-    expect(data.manifest.version).toBe("1.21.0")
+    expect(data.manifest.version).toBe("1.22.0")
 
     cleanupTempDir(data.tempDir)
   })

@@ -4,11 +4,9 @@
 
 import { BrowserWindow, ipcMain, powerSaveBlocker } from "electron"
 
+import type { ExamExportSettings } from "../lib/prisma/examSettings"
 import {
-  bulkUpsertExamMarkingFormats,
   getExamExportSettings,
-  getExamMarkingFormats,
-  type MarkingFormatData,
   upsertExamExportSettings,
 } from "../lib/prisma/examSettings"
 import {
@@ -141,26 +139,6 @@ export function registerSettingsHandlers() {
   })
 
   // =========================================================================
-  // ExamMarkingFormat
-  // =========================================================================
-
-  registerSafeHandler(
-    "settings:getExamMarkingFormats",
-    async (examId: string) => {
-      const formats = await getExamMarkingFormats(examId)
-      return { success: true, formats }
-    }
-  )
-
-  registerSafeHandler(
-    "settings:saveExamMarkingFormats",
-    async (examId: string, formats: MarkingFormatData[]) => {
-      await bulkUpsertExamMarkingFormats(examId, formats)
-      return { success: true }
-    }
-  )
-
-  // =========================================================================
   // ExamExportSettings
   // =========================================================================
 
@@ -174,7 +152,7 @@ export function registerSettingsHandlers() {
 
   registerSafeHandler(
     "settings:saveExamExportSettings",
-    async (examId: string, settings: Record<string, unknown>) => {
+    async (examId: string, settings: ExamExportSettings) => {
       await upsertExamExportSettings(examId, settings)
       return { success: true }
     }

@@ -4,7 +4,6 @@ import type {
   ArchiveExportMode,
   FileOverviewData,
   IdIntegrationConfig,
-  MatchingConfig,
   ScoringConflictConfig,
   UpdateDecisions,
 } from "../../src/types/examArchive.types"
@@ -28,10 +27,6 @@ export function createArchiveApi() {
         ipcRenderer.invoke("archive:analyzeArchive", options),
       preMatch: (options: { archivePath: string }) =>
         ipcRenderer.invoke("archive:preMatch", options),
-      detectConflicts: (options: {
-        archivePath: string
-        matchingConfig: MatchingConfig
-      }) => ipcRenderer.invoke("archive:detectConflicts", options),
       idIntegrationImport: (options: {
         archivePath: string
         preMatchResult: FileOverviewData

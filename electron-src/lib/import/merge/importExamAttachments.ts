@@ -1,8 +1,8 @@
 /**
  * ID統合インポート: 試験に付随する各種データの処理
  *
- * - ExamMarkingFormat / ExamExportSettings（採点マーク・出力設定）
- * - CropRegionOmrConfig（＋ChoiceOption/DigitBox）（OMR設定）
+ * - 出力設定（重ね描きのスタイル・可視性・個人成績表の設定/節/グラフ）
+ * - CropRegionOmrConfig（＋ChoiceOption）（OMR設定）
  * - CompoundAnswer（＋Member）（複合解答の構造）
  * - Tag / TagSubtotalGroup / ExamTag（タグ）
  * - ExamClassroom（試験×学級の関連）
@@ -14,61 +14,151 @@
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, PrismaTransaction } from "./types"
 
-export async function processExamMarkingFormats(
-  data: ExtractedArchiveData,
-  newExamId: string,
-  tx: PrismaTransaction
-): Promise<void> {
-  const formats = data.examData.examMarkingFormats ?? []
-  for (const format of formats) {
-    const existing = await tx.examMarkingFormat.findFirst({
-      where: { examId: newExamId, markType: format.markType },
-    })
-    if (existing) continue
-
-    const existingById = await tx.examMarkingFormat.findUnique({
-      where: { id: format.id },
-    })
-    if (!existingById) {
-      await tx.examMarkingFormat.create({
-        data: {
-          id: format.id,
-          examId: newExamId,
-          markType: format.markType,
-          symbol: format.symbol,
-          color: format.color,
-          fontSize: format.fontSize,
-          strokeWidth: format.strokeWidth,
-        },
-      })
-    }
-  }
-}
-
+/**
+ * 出力設定（重ね描きのスタイル・可視性・個人成績表）を復元する。
+ * 既に設定がある試験へは入れない（取り込み先の設定を上書きしないため）。
+ */
 export async function processExamExportSettings(
   data: ExtractedArchiveData,
   newExamId: string,
   tx: PrismaTransaction
 ): Promise<void> {
-  const settings = data.examData.examExportSettings
-  if (!settings) return
+  const examData = data.examData
 
-  const existing = await tx.examExportSettings.findUnique({
-    where: { examId: newExamId },
-  })
-  if (existing) return
-
-  const existingById = await tx.examExportSettings.findUnique({
-    where: { id: settings.id },
-  })
-  if (!existingById) {
-    await tx.examExportSettings.create({
-      data: {
-        id: settings.id,
-        examId: newExamId,
-        settingsJson: settings.settingsJson,
+  for (const style of examData.answerOverlayStyles ?? []) {
+    const existing = await tx.examAnswerOverlayStyle.findUnique({
+      where: {
+        examId_overlayKind: {
+          examId: newExamId,
+          overlayKind: style.overlayKind,
+        },
       },
     })
+    if (existing) continue
+    await tx.examAnswerOverlayStyle.create({
+      data: {
+        id: `${newExamId}:${style.overlayKind}`,
+        examId: newExamId,
+        overlayKind: style.overlayKind,
+        position: style.position,
+        anchor: style.anchor,
+        offsetX: style.offsetX,
+        offsetY: style.offsetY,
+        size: style.size,
+        color: style.color,
+        opacity: style.opacity,
+      },
+    })
+  }
+
+  for (const visibility of examData.answerOverlayVisibilities ?? []) {
+    const existing = await tx.examAnswerOverlayVisibility.findUnique({
+      where: {
+        examId_status: { examId: newExamId, status: visibility.status },
+      },
+    })
+    if (existing) continue
+    await tx.examAnswerOverlayVisibility.create({
+      data: {
+        id: `${newExamId}:${visibility.status}`,
+        examId: newExamId,
+        status: visibility.status,
+        showMark: visibility.showMark,
+        showScore: visibility.showScore,
+      },
+    })
+  }
+
+  const reportSettings = examData.individualReportSettings
+  if (reportSettings) {
+    const existing = await tx.examIndividualReportSettings.findUnique({
+      where: { examId: newExamId },
+    })
+    if (!existing) {
+      const {
+        id: _id,
+        examId: _examId,
+        createdAt,
+        updatedAt,
+        ...values
+      } = reportSettings
+      void _id
+      void _examId
+      void createdAt
+      void updatedAt
+      await tx.examIndividualReportSettings.create({
+        data: { id: newExamId, examId: newExamId, ...values },
+      })
+    }
+  }
+
+  for (const section of examData.individualReportTableSections ?? []) {
+    const existing = await tx.examIndividualReportTableSection.findUnique({
+      where: {
+        examId_tableKind: {
+          examId: newExamId,
+          tableKind: section.tableKind,
+        },
+      },
+    })
+    if (existing) continue
+    await tx.examIndividualReportTableSection.create({
+      data: {
+        id: `${newExamId}:${section.tableKind}`,
+        examId: newExamId,
+        tableKind: section.tableKind,
+        enabled: section.enabled,
+        columns: section.columns,
+        fontSize: section.fontSize,
+      },
+    })
+  }
+
+  for (const visibility of examData.individualReportStatisticVisibilities ??
+    []) {
+    const existing =
+      await tx.examIndividualReportStatisticVisibility.findUnique({
+        where: {
+          examId_statisticKind_scope: {
+            examId: newExamId,
+            statisticKind: visibility.statisticKind,
+            scope: visibility.scope,
+          },
+        },
+      })
+    if (existing) continue
+    await tx.examIndividualReportStatisticVisibility.create({
+      data: {
+        id: `${newExamId}:${visibility.statisticKind}:${visibility.scope}`,
+        examId: newExamId,
+        statisticKind: visibility.statisticKind,
+        scope: visibility.scope,
+        shown: visibility.shown,
+      },
+    })
+  }
+
+  const graphSettings = examData.individualReportGraphSettings
+  if (graphSettings) {
+    const existing = await tx.examIndividualReportGraphSettings.findUnique({
+      where: { examId: newExamId },
+    })
+    if (!existing) {
+      const {
+        id: _id,
+        examId: _examId,
+        createdAt,
+        updatedAt,
+        ...values
+      } = graphSettings
+      void _id
+      void _examId
+      void createdAt
+      void updatedAt
+      await tx.examIndividualReportGraphSettings.create({
+        data: { id: newExamId, examId: newExamId, ...values },
+      })
+    }
   }
 }
 

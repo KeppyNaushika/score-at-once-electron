@@ -1,6 +1,4 @@
-import type { ExamMarkingFormat } from "@prisma/client"
-
-import type { MarkingFormatData } from "@/electron-src/lib/prisma/examSettings"
+import type { ExamExportSettings } from "@/electron-src/lib/prisma/examSettings"
 
 /**
  * 設定関連API
@@ -64,26 +62,15 @@ export interface SettingsAPI {
       error?: string
     }>
 
-    // ExamMarkingFormat
-    getExamMarkingFormats: (examId: string) => Promise<{
-      success: boolean
-      formats?: ExamMarkingFormat[]
-      error?: string
-    }>
-    saveExamMarkingFormats: (
-      examId: string,
-      formats: MarkingFormatData[]
-    ) => Promise<{ success: boolean; error?: string }>
-
     // ExamExportSettings
     getExamExportSettings: (examId: string) => Promise<{
       success: boolean
-      settings?: Record<string, unknown> | null
+      settings?: ExamExportSettings
       error?: string
     }>
     saveExamExportSettings: (
       examId: string,
-      settings: Record<string, unknown>
+      settings: ExamExportSettings
     ) => Promise<{ success: boolean; error?: string }>
   }
 }

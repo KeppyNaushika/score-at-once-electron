@@ -295,8 +295,7 @@ describe("collectExamData - エクスポートモード", () => {
       expect(result.success).toBe(true)
       const data = result.data!
 
-      expect(data.examData.examMarkingFormats).toBeDefined()
-      expect(data.examData.examMarkingFormats!.length).toBeGreaterThan(0)
+      expect(data.examData.answerOverlayStyles).toBeDefined()
     })
 
     it("EM-T9: ユーザーデータは保持される", async () => {

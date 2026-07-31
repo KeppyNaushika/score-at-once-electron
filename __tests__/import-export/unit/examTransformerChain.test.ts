@@ -331,10 +331,10 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
   return raw as unknown as ExamArchiveData
 }
 
-/** 現行 (v1.21.0) 最小形状 */
+/** 現行 (v1.22.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.21.0"),
+    manifest: createManifest("1.22.0"),
     examData: {
       exam: {
         id: "exam-1",
@@ -374,7 +374,7 @@ function createCurrentArchiveData(): ExamArchiveData {
 }
 
 /**
- * 旧形状（1.21.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
+ * 旧形状（1.22.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
  * 旧キーの行は型の外から入れる（`Object.assign` で足りるので `as` は使わない）。
  */
 const putLegacyRows = (
@@ -385,13 +385,13 @@ const putLegacyRows = (
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全21変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全22変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.21.0")
-    expect(result.appliedTransformations).toHaveLength(21)
-    expect(result.data.manifest.version).toBe("1.21.0")
+    expect(result.finalVersion).toBe("1.22.0")
+    expect(result.appliedTransformations).toHaveLength(22)
+    expect(result.data.manifest.version).toBe("1.22.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -483,6 +483,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.18.0", to: "1.19.0" },
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
+      { from: "1.21.0", to: "1.22.0" },
     ])
 
     const examData = result.data.examData
@@ -601,7 +602,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.21.0")
+    expect(detection.version).toBe("1.22.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -698,6 +699,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.18.0", to: "1.19.0" },
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
+      { from: "1.21.0", to: "1.22.0" },
     ])
     // キーごと落ちる（取り込み先が存在しないため）
     const transformedExamData = result.data.examData as unknown as Record<
@@ -711,13 +713,13 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
-  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.21.0 になる", () => {
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.22.0 になる", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.17.0"
 
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.finalVersion).toBe("1.21.0")
+    expect(result.finalVersion).toBe("1.22.0")
     expect(result.warnings).toEqual([])
   })
 
@@ -745,6 +747,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.18.0", to: "1.19.0" },
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
+      { from: "1.21.0", to: "1.22.0" },
     ])
     // キーごと落ちる（アーカイブは正本であり復活防止をしないため）
     const transformedRecord = result.data as unknown as Record<string, unknown>
@@ -765,6 +768,7 @@ describe("transformExamArchiveToLatest", () => {
     expect(result.appliedTransformations).toEqual([
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
+      { from: "1.21.0", to: "1.22.0" },
     ])
     expect(result.data.scoresData.cropRegionAssignments).toEqual([])
   })
@@ -827,6 +831,7 @@ describe("transformExamArchiveToLatest", () => {
 
     expect(result.appliedTransformations).toEqual([
       { from: "1.20.0", to: "1.21.0" },
+      { from: "1.21.0", to: "1.22.0" },
     ])
     expect(result.data.examData.studentAnswerImages).toEqual([
       expect.objectContaining({
@@ -905,11 +910,104 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
+  test("1.21.0 → 1.22.0: 出力設定のJSONが5つのセクションへ展開される", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.21.0"
+    Object.assign(data.examData, {
+      examExportSettings: {
+        id: "settings-1",
+        examId: "exam-1",
+        settingsJson: JSON.stringify({
+          scoringMarkConfig: {
+            markPosition: "bottom-right",
+            markSize: 80,
+            // 小計・合計は後方互換キーからのフォールバック
+            summaryScore: { position: "top-right", size: 26 },
+            showMarkForStatus: { correct: false },
+          },
+          individualReportOptions: {
+            showAverage: "class",
+            showDeviation: false,
+            showRank: true,
+            rankType: "overall",
+            graphOptions: { showOverallBoxPlot: true },
+          },
+        }),
+        createdAt: TIMESTAMP,
+        updatedAt: TIMESTAMP,
+      },
+    })
+
+    const result = transformExamArchiveToLatest(data)
+    const examData = result.data.examData
+
+    // 重ね描きのスタイルは4種。マークの anchor は position と同値
+    const styles = examData.answerOverlayStyles ?? []
+    expect(styles.map((style) => style.overlayKind).sort()).toEqual([
+      "mark",
+      "partial",
+      "subtotal",
+      "total",
+    ])
+    const markStyle = styles.find((style) => style.overlayKind === "mark")
+    expect(markStyle).toMatchObject({
+      position: "bottom-right",
+      anchor: "bottom-right",
+      size: 80,
+    })
+    // summaryScore からのフォールバック
+    expect(
+      styles.find((style) => style.overlayKind === "subtotal")
+    ).toMatchObject({ position: "top-right", size: 26 })
+    expect(styles.find((style) => style.overlayKind === "total")).toMatchObject(
+      {
+        position: "top-right",
+        size: 26,
+      }
+    )
+
+    // 採点状態ごとの可視性は7行。保存値が既定を上書きする
+    const visibilities = examData.answerOverlayVisibilities ?? []
+    expect(visibilities).toHaveLength(7)
+    expect(
+      visibilities.find((visibility) => visibility.status === "correct")
+        ?.showMark
+    ).toBe(false)
+
+    // 統計は種別×母集団の8行へ展開される
+    const statistics = examData.individualReportStatisticVisibilities ?? []
+    expect(statistics).toHaveLength(8)
+    const cell = (statisticKind: string, scope: string) =>
+      statistics.find(
+        (entry) =>
+          entry.statisticKind === statisticKind && entry.scope === scope
+      )?.shown
+    expect(cell("average", "classroom")).toBe(true)
+    expect(cell("average", "overall")).toBe(false)
+    expect(cell("deviation", "overall")).toBe(false)
+    expect(cell("rank", "classroom")).toBe(false)
+    expect(cell("rank", "overall")).toBe(true)
+    // 旧形式に無かったセルは false で始まる
+    expect(cell("deviation", "classroom")).toBe(false)
+    expect(cell("boxPlot", "classroom")).toBe(false)
+
+    // グラフ設定はスキーマの列名で出す（旧キーを残すと取り込みが失敗する）
+    expect(examData.individualReportGraphSettings).toMatchObject({
+      showTotalScoreBoxPlot: true,
+    })
+    expect(
+      Object.keys(examData.individualReportGraphSettings ?? {})
+    ).not.toContain("showBoxPlot")
+
+    // 旧キーは残さない
+    expect(examData).not.toHaveProperty("examExportSettings")
+  })
+
   test("現行形式は無変換で素通しされる", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.21.0")
+    expect(result.originalVersion).toBe("1.22.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)
