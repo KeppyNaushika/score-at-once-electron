@@ -261,7 +261,6 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
       examExportSettings: null,
       omrConfigs: [],
       omrChoiceOptions: [],
-      omrDigitBoxes: [],
       compoundAnswers: [],
       compoundAnswerMembers: [],
       compoundAnswerScores: [],

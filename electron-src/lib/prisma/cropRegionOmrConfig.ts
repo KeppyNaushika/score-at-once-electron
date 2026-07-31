@@ -12,11 +12,9 @@ import prisma from "./client"
 
 export interface UpsertOmrConfigData {
   cropRegionId: string
-  type: "choice" | "handwritten-digit"
+  type: "choice"
   numChoices?: number | null
   choiceLayout?: string | null
-  numDigits?: number | null
-  correctAnswer?: string | null
   colorThreshold?: number | null
   areaThreshold?: number | null
   choiceOptions?: Array<{
@@ -28,13 +26,6 @@ export interface UpsertOmrConfigData {
     normalizedCy?: number | null
     normalizedWidth?: number | null
     normalizedHeight?: number | null
-  }>
-  digitBoxes?: Array<{
-    digitIndex: number
-    normalizedX: number
-    normalizedY: number
-    normalizedW: number
-    normalizedH: number
   }>
 }
 
@@ -60,18 +51,13 @@ export async function upsertOmrConfig(
           type: data.type,
           numChoices: data.numChoices ?? null,
           choiceLayout: data.choiceLayout ?? null,
-          numDigits: data.numDigits ?? null,
-          correctAnswer: data.correctAnswer ?? null,
           colorThreshold: data.colorThreshold ?? null,
           areaThreshold: data.areaThreshold ?? null,
         },
       })
 
-      // 既存のchoiceOptions/digitBoxesを削除して再作成
+      // 既存のchoiceOptionsを削除して再作成
       await tx.cropRegionOmrChoiceOption.deleteMany({
-        where: { omrConfigId: config.id },
-      })
-      await tx.cropRegionOmrDigitBox.deleteMany({
         where: { omrConfigId: config.id },
       })
     } else {
@@ -82,8 +68,6 @@ export async function upsertOmrConfig(
           type: data.type,
           numChoices: data.numChoices ?? null,
           choiceLayout: data.choiceLayout ?? null,
-          numDigits: data.numDigits ?? null,
-          correctAnswer: data.correctAnswer ?? null,
           colorThreshold: data.colorThreshold ?? null,
           areaThreshold: data.areaThreshold ?? null,
         },
@@ -107,26 +91,11 @@ export async function upsertOmrConfig(
       })
     }
 
-    // digitBoxesを作成
-    if (data.digitBoxes && data.digitBoxes.length > 0) {
-      await tx.cropRegionOmrDigitBox.createMany({
-        data: data.digitBoxes.map((box) => ({
-          omrConfigId: config.id,
-          digitIndex: box.digitIndex,
-          normalizedX: box.normalizedX,
-          normalizedY: box.normalizedY,
-          normalizedW: box.normalizedW,
-          normalizedH: box.normalizedH,
-        })),
-      })
-    }
-
     // リレーション込みで返す
     return tx.cropRegionOmrConfig.findUniqueOrThrow({
       where: { id: config.id },
       include: {
         choiceOptions: { orderBy: { choiceIndex: "asc" } },
-        digitBoxes: { orderBy: { digitIndex: "asc" } },
       },
     })
   })
@@ -177,7 +146,6 @@ export async function getOmrConfigsByExamId(
     },
     include: {
       choiceOptions: { orderBy: { choiceIndex: "asc" } },
-      digitBoxes: { orderBy: { digitIndex: "asc" } },
     },
     orderBy: {
       cropRegion: { orderIndex: "asc" },

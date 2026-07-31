@@ -6,7 +6,6 @@ import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegi
 import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type {
   ComputedOMRBubble,
-  ComputedOMRDigitBox,
   CropRegionOmrConfigWithOptions,
   OMRBatchProgress,
   OMRCellConfig,
@@ -175,12 +174,6 @@ export function useOmrAutoScoring(examId: string) {
             layout:
               (omrConfig.choiceLayout as "horizontal" | "vertical") ??
               "horizontal",
-          }
-        } else if (omrConfig.type === "handwritten-digit") {
-          cellConfigs[omrConfig.cropRegionId] = {
-            type: "handwritten-digit",
-            numDigits: omrConfig.numDigits ?? 1,
-            correctAnswer: omrConfig.correctAnswer ?? undefined,
           }
         }
       }
@@ -557,19 +550,6 @@ function buildCellsFromRegions(
       } else {
         cell.omrBubbles = computeBubblesFromRegion(region, config)
       }
-    } else if (config.type === "handwritten-digit") {
-      // DB保存済み数字欄位置を優先、なければ推定計算にフォールバック
-      if (omrConfig.digitBoxes && omrConfig.digitBoxes.length > 0) {
-        cell.omrDigitBoxes = omrConfig.digitBoxes.map((box) => ({
-          normalizedX: box.normalizedX,
-          normalizedY: box.normalizedY,
-          normalizedW: box.normalizedW,
-          normalizedH: box.normalizedH,
-          digitIndex: box.digitIndex,
-        }))
-      } else {
-        cell.omrDigitBoxes = computeDigitBoxesFromRegion(region, config)
-      }
     }
 
     cells.push(cell)
@@ -623,25 +603,4 @@ function computeBubblesFromRegion(
   }
 
   return bubbles
-}
-
-/** CropRegionの正規化座標内に数字欄を等間隔配置 */
-function computeDigitBoxesFromRegion(
-  region: CropRegionWithSubtotals,
-  config: OMRCellConfig & { type: "handwritten-digit" }
-): ComputedOMRDigitBox[] {
-  const numDigits = config.numDigits
-  const boxH = region.height * 0.8
-  const boxW = Math.min(boxH, region.width / (numDigits + 0.5))
-  const totalW = boxW * numDigits
-  const startX = region.x + (region.width - totalW) / 2
-  const startY = region.y + (region.height - boxH) / 2
-
-  return Array.from({ length: numDigits }, (_, i) => ({
-    normalizedX: startX + boxW * i,
-    normalizedY: startY,
-    normalizedW: boxW,
-    normalizedH: boxH,
-    digitIndex: i,
-  }))
 }

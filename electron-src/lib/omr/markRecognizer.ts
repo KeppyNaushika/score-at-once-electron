@@ -23,7 +23,6 @@ import type {
   RawImageData,
 } from "../../../src/types/omr.types"
 import { normalizedToPixel } from "./coordinateTransform"
-import { recognizeDigitCell } from "./digitRecognizer"
 import {
   accumulateEllipticalLuminanceHistogram,
   computeEllipticalInkStats,
@@ -58,19 +57,14 @@ export async function recognizeCell(
   const resolvedColorThreshold =
     colorThreshold ?? resolveColorThreshold([cell], rawImage, transform, params)
 
-  if (omrConfig.type === "choice") {
-    return recognizeChoiceCell(
-      cell,
-      omrConfig,
-      rawImage,
-      transform,
-      params,
-      resolvedColorThreshold
-    )
-  }
-
-  // handwritten-digit: ONNX Runtime による手書き数字認識
-  return recognizeDigitCell(cell, rawImage, transform, resolvedColorThreshold)
+  return recognizeChoiceCell(
+    cell,
+    omrConfig,
+    rawImage,
+    transform,
+    params,
+    resolvedColorThreshold
+  )
 }
 
 /**

@@ -12,11 +12,7 @@ import type {
   ComputedCell,
   ManuscriptGrid,
 } from "@/types/answerSheetLayout.types"
-import type {
-  ComputedOMRBubble,
-  ComputedOMRDigitBox,
-  OMRCellConfig,
-} from "@/types/omr.types"
+import type { ComputedOMRBubble, OMRCellConfig } from "@/types/omr.types"
 
 import {
   DEFAULT_MANUSCRIPT_CHAR_DIVIDER,
@@ -107,41 +103,7 @@ function computeOMRBubbles(
 }
 
 /**
- * OMR handwritten-digitセルの数字欄位置を計算（0-1正規化座標）
- */
-function computeOMRDigitBoxes(
-  cellX: number,
-  cellY: number,
-  cellWidth: number,
-  cellHeight: number,
-  paperWidth: number,
-  paperHeight: number,
-  config: OMRCellConfig & { type: "handwritten-digit" }
-): ComputedOMRDigitBox[] {
-  const boxes: ComputedOMRDigitBox[] = []
-  const n = config.numDigits
-
-  const boxHeight = cellHeight * 0.8
-  const boxWidth = Math.min(boxHeight, cellWidth / (n + 0.5))
-  const totalWidth = boxWidth * n
-  const startX = cellX + (cellWidth - totalWidth) / 2
-  const startY = cellY + (cellHeight - boxHeight) / 2
-
-  for (let i = 0; i < n; i++) {
-    boxes.push({
-      normalizedX: (startX + boxWidth * i) / paperWidth,
-      normalizedY: startY / paperHeight,
-      normalizedW: boxWidth / paperWidth,
-      normalizedH: boxHeight / paperHeight,
-      digitIndex: i,
-    })
-  }
-
-  return boxes
-}
-
-/**
- * セルを作成しOMRバブル/数字欄があれば計算する
+ * セルを作成しOMRバブルがあれば計算する
  */
 export function createCell(
   questionPath: number[],
@@ -180,16 +142,6 @@ export function createCell(
 
   if (omrConfig?.type === "choice") {
     cell.omrBubbles = computeOMRBubbles(
-      x,
-      y,
-      width,
-      height,
-      paper.width,
-      paper.height,
-      omrConfig
-    )
-  } else if (omrConfig?.type === "handwritten-digit") {
-    cell.omrDigitBoxes = computeOMRDigitBoxes(
       x,
       y,
       width,

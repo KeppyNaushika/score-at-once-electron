@@ -708,8 +708,6 @@ export interface ArchiveExamData {
     type: string
     numChoices: number | null
     choiceLayout: string | null
-    numDigits: number | null
-    correctAnswer: string | null
     cellGeometryJson?: string | null // v1.10.0以前の互換用（現在未使用）
     colorThreshold: number | null
     areaThreshold: number | null
@@ -729,18 +727,6 @@ export interface ArchiveExamData {
     normalizedCy?: number | null
     normalizedWidth?: number | null
     normalizedHeight?: number | null
-    createdAt: string
-    updatedAt: string
-  }>
-  /** v1.11.0+ CropRegionOmrDigitBox */
-  omrDigitBoxes?: Array<{
-    id: string
-    omrConfigId: string
-    digitIndex: number
-    normalizedX: number
-    normalizedY: number
-    normalizedW: number
-    normalizedH: number
     createdAt: string
     updatedAt: string
   }>

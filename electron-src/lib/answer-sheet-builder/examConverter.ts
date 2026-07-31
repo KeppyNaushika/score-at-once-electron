@@ -209,45 +209,27 @@ export async function convertToExam(
           },
         })
 
-        // OMR設定をDBに保存（バブル/数字欄の位置情報含む）
+        // OMR設定をDBに保存（バブルの位置情報含む）
         if (cell.omrConfigKey) {
           const omrCfg = omrCellConfigs[cell.omrConfigKey]
           if (omrCfg) {
             const bubbles = cell.sourceCell?.omrBubbles
-            const digitBoxes = cell.sourceCell?.omrDigitBoxes
 
-            await upsertOmrConfig(
-              omrCfg.type === "choice"
-                ? {
-                    cropRegionId: cropRegion.id,
-                    type: "choice",
-                    numChoices: omrCfg.numChoices,
-                    choiceLayout: omrCfg.layout,
-                    choiceOptions: omrCfg.labels.map((label, idx) => ({
-                      choiceIndex: idx,
-                      label,
-                      isCorrect: omrCfg.correctAnswers.includes(idx),
-                      normalizedCx: bubbles?.[idx]?.normalizedCx ?? null,
-                      normalizedCy: bubbles?.[idx]?.normalizedCy ?? null,
-                      normalizedWidth: bubbles?.[idx]?.normalizedWidth ?? null,
-                      normalizedHeight:
-                        bubbles?.[idx]?.normalizedHeight ?? null,
-                    })),
-                  }
-                : {
-                    cropRegionId: cropRegion.id,
-                    type: "handwritten-digit",
-                    numDigits: omrCfg.numDigits,
-                    correctAnswer: omrCfg.correctAnswer ?? null,
-                    digitBoxes: digitBoxes?.map((box) => ({
-                      digitIndex: box.digitIndex,
-                      normalizedX: box.normalizedX,
-                      normalizedY: box.normalizedY,
-                      normalizedW: box.normalizedW,
-                      normalizedH: box.normalizedH,
-                    })),
-                  }
-            )
+            await upsertOmrConfig({
+              cropRegionId: cropRegion.id,
+              type: "choice",
+              numChoices: omrCfg.numChoices,
+              choiceLayout: omrCfg.layout,
+              choiceOptions: omrCfg.labels.map((label, idx) => ({
+                choiceIndex: idx,
+                label,
+                isCorrect: omrCfg.correctAnswers.includes(idx),
+                normalizedCx: bubbles?.[idx]?.normalizedCx ?? null,
+                normalizedCy: bubbles?.[idx]?.normalizedCy ?? null,
+                normalizedWidth: bubbles?.[idx]?.normalizedWidth ?? null,
+                normalizedHeight: bubbles?.[idx]?.normalizedHeight ?? null,
+              })),
+            })
           }
         }
       }

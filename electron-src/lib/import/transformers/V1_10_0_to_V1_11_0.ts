@@ -54,7 +54,6 @@ export class V1_10_0_to_V1_11_0_Transformer implements ExamVersionTransformer {
     }
 
     // 新規フィールドをデフォルト空配列で追加（既存値があれば保持・冪等）
-    examData.omrDigitBoxes = examData.omrDigitBoxes ?? []
     examData.compoundAnswers = examData.compoundAnswers ?? []
     examData.compoundAnswerMembers = examData.compoundAnswerMembers ?? []
     examData.compoundAnswerScores = examData.compoundAnswerScores ?? []

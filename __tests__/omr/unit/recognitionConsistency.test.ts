@@ -169,7 +169,7 @@ function createDbConfig(
     updatedAt: timestamp,
   }
 
-  return { ...config, choiceOptions, digitBoxes: [] }
+  return { ...config, choiceOptions }
 }
 
 /** main側の認識結果を renderer側の再評価に通す */

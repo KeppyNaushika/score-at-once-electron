@@ -157,8 +157,6 @@ async function main() {
               type: subQuestion.omrConfig.type,
               numChoices: subQuestion.omrConfig.numChoices,
               choiceLayout: subQuestion.omrConfig.choiceLayout,
-              numDigits: subQuestion.omrConfig.numDigits,
-              correctAnswer: subQuestion.omrConfig.correctAnswer,
             },
           })
           for (const choiceOption of subQuestion.omrConfig.choiceOptions ||

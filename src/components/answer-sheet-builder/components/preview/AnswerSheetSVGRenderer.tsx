@@ -558,32 +558,6 @@ export function AnswerSheetSVGRenderer({
           })
         )}
 
-      {/* OMR数字欄 */}
-      {cells
-        .filter(
-          (cell) => cell.cellType === "answer" && cell.omrDigitBoxes?.length
-        )
-        .flatMap((cell, cellIdx) =>
-          cell.omrDigitBoxes!.map((box, di) => {
-            const x = box.normalizedX * pageWidthMm
-            const y = box.normalizedY * pageHeightMm
-            const w = box.normalizedW * pageWidthMm
-            const h = box.normalizedH * pageHeightMm
-            return (
-              <rect
-                key={`omr-digit-${cellIdx}-${cell.label}-${di}`}
-                x={x}
-                y={y}
-                width={w}
-                height={h}
-                fill="none"
-                stroke="#666"
-                strokeWidth={0.3}
-              />
-            )
-          })
-        )}
-
       {/* 原稿用紙グリッド */}
       {cells
         .filter((cell) => cell.cellType === "answer" && cell.manuscriptGrid)
