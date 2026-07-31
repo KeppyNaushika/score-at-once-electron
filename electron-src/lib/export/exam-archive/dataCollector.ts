@@ -67,7 +67,6 @@ export async function collectExamData(
                 omrConfig: {
                   include: {
                     choiceOptions: true,
-                    digitBoxes: true,
                   },
                 },
                 questionScores: {
@@ -408,8 +407,6 @@ export async function collectExamData(
             type: region.omrConfig!.type,
             numChoices: region.omrConfig!.numChoices,
             choiceLayout: region.omrConfig!.choiceLayout,
-            numDigits: region.omrConfig!.numDigits,
-            correctAnswer: region.omrConfig!.correctAnswer,
             colorThreshold: region.omrConfig!.colorThreshold,
             areaThreshold: region.omrConfig!.areaThreshold,
             createdAt: region.omrConfig!.createdAt.toISOString(),
@@ -432,22 +429,6 @@ export async function collectExamData(
             normalizedHeight: choiceOption.normalizedHeight,
             createdAt: choiceOption.createdAt.toISOString(),
             updatedAt: choiceOption.updatedAt.toISOString(),
-          }))
-        )
-      ),
-      // v1.11.0+: CropRegionOmrDigitBox
-      omrDigitBoxes: exam.examPages.flatMap((page) =>
-        page.cropRegions.flatMap((region) =>
-          (region.omrConfig?.digitBoxes ?? []).map((box) => ({
-            id: box.id,
-            omrConfigId: box.omrConfigId,
-            digitIndex: box.digitIndex,
-            normalizedX: box.normalizedX,
-            normalizedY: box.normalizedY,
-            normalizedW: box.normalizedW,
-            normalizedH: box.normalizedH,
-            createdAt: box.createdAt.toISOString(),
-            updatedAt: box.updatedAt.toISOString(),
           }))
         )
       ),

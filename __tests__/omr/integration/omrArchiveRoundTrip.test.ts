@@ -107,14 +107,20 @@ beforeAll(async () => {
     },
   })
 
-  // handwritten-digit OMR設定
-  await prisma.cropRegionOmrConfig.create({
+  // 2つ目の choice OMR設定（○×）
+  const config2 = await prisma.cropRegionOmrConfig.create({
     data: {
       cropRegionId: cropRegion2.id,
-      type: "handwritten-digit",
-      numDigits: 3,
-      correctAnswer: "256",
+      type: "choice",
+      numChoices: 2,
+      choiceLayout: "horizontal",
     },
+  })
+  await prisma.cropRegionOmrChoiceOption.createMany({
+    data: [
+      { omrConfigId: config2.id, choiceIndex: 0, label: "○", isCorrect: true },
+      { omrConfigId: config2.id, choiceIndex: 1, label: "×", isCorrect: false },
+    ],
   })
 })
 
@@ -144,14 +150,13 @@ describe("OMR設定の読み書き整合性", () => {
     expect(choiceConfig!.choiceOptions[3].label).toBe("エ")
     expect(choiceConfig!.choiceOptions[3].isCorrect).toBe(false)
 
-    // orderIndex 1 = handwritten-digit
-    const digitConfig = configs.find(
-      (config) => config.type === "handwritten-digit"
+    // orderIndex 1 = 2つ目の choice
+    const secondConfig = configs.find(
+      (config) => config.cropRegionId !== choiceConfig!.cropRegionId
     )
-    expect(digitConfig).toBeDefined()
-    expect(digitConfig!.numDigits).toBe(3)
-    expect(digitConfig!.correctAnswer).toBe("256")
-    expect(digitConfig!.choiceOptions).toHaveLength(0)
+    expect(secondConfig).toBeDefined()
+    expect(secondConfig!.choiceOptions).toHaveLength(2)
+    expect(secondConfig!.choiceOptions[0].label).toBe("○")
   })
 
   it("アーカイブデータ形式にシリアライズ → DBにリストアできる", async () => {
@@ -168,8 +173,6 @@ describe("OMR設定の読み書き整合性", () => {
       type: config.type,
       numChoices: config.numChoices,
       choiceLayout: config.choiceLayout,
-      numDigits: config.numDigits,
-      correctAnswer: config.correctAnswer,
       colorThreshold: config.colorThreshold,
       areaThreshold: config.areaThreshold,
       createdAt: config.createdAt.toISOString(),
@@ -189,7 +192,8 @@ describe("OMR設定の読み書き整合性", () => {
     )
 
     expect(exportedOmrConfigs).toHaveLength(2)
-    expect(exportedChoiceOptions).toHaveLength(4)
+    // 4択 + ○×の2択
+    expect(exportedChoiceOptions).toHaveLength(6)
 
     // --- Import側: 新しい試験としてリストア ---
     const newExam = await prisma.exam.create({
@@ -239,8 +243,6 @@ describe("OMR設定の読み書き整合性", () => {
           type: config.type,
           numChoices: config.numChoices,
           choiceLayout: config.choiceLayout,
-          numDigits: config.numDigits,
-          correctAnswer: config.correctAnswer,
           colorThreshold: config.colorThreshold,
           areaThreshold: config.areaThreshold,
         },
@@ -272,20 +274,19 @@ describe("OMR設定の読み書き整合性", () => {
 
     expect(importedConfigs).toHaveLength(2)
 
-    const importedChoice = importedConfigs.find(
-      (config) => config.type === "choice"
+    const importedFour = importedConfigs.find(
+      (config) => config.numChoices === 4
     )!
-    expect(importedChoice.numChoices).toBe(4)
-    expect(importedChoice.choiceLayout).toBe("horizontal")
-    expect(importedChoice.choiceOptions).toHaveLength(4)
-    expect(importedChoice.choiceOptions[0].label).toBe("ア")
-    expect(importedChoice.choiceOptions[0].isCorrect).toBe(true)
+    expect(importedFour.choiceLayout).toBe("horizontal")
+    expect(importedFour.choiceOptions).toHaveLength(4)
+    expect(importedFour.choiceOptions[0].label).toBe("ア")
+    expect(importedFour.choiceOptions[0].isCorrect).toBe(true)
 
-    const importedDigit = importedConfigs.find(
-      (config) => config.type === "handwritten-digit"
+    const importedTwo = importedConfigs.find(
+      (config) => config.numChoices === 2
     )!
-    expect(importedDigit.numDigits).toBe(3)
-    expect(importedDigit.correctAnswer).toBe("256")
+    expect(importedTwo.choiceOptions).toHaveLength(2)
+    expect(importedTwo.choiceOptions[0].label).toBe("○")
   })
 })
 

@@ -144,31 +144,6 @@ export function OMRCellConfigForm({
     [onChange]
   )
 
-  const handleTypeChange = useCallback(
-    (type: string) => {
-      if (type === "choice") {
-        onChange({
-          type: "choice",
-          numChoices: 4,
-          labels: CHOICE_LABEL_PRESETS[0].labels.slice(0, 4),
-          correctAnswers:
-            config?.type === "choice" ? config.correctAnswers : [],
-          layout: "horizontal",
-        })
-      } else {
-        onChange({
-          type: "handwritten-digit",
-          numDigits: 2,
-          correctAnswer:
-            config?.type === "handwritten-digit"
-              ? config.correctAnswer
-              : undefined,
-        })
-      }
-    },
-    [config, onChange]
-  )
-
   const choiceConfig = config?.type === "choice" ? config : null
 
   return (
@@ -187,30 +162,9 @@ export function OMRCellConfigForm({
 
       {enabled && config && (
         <div className="border-muted ml-2 space-y-1.5 border-l-2 pl-3">
-          {/* 認識タイプ */}
-          <div className="flex items-center gap-1.5">
-            <Label className="text-muted-foreground min-w-12 text-xs">
-              種類
-            </Label>
-            <Select value={config.type} onValueChange={handleTypeChange}>
-              <SelectTrigger className="h-7 w-32 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="choice">選択式</SelectItem>
-                <SelectItem value="handwritten-digit">手書き数字</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* 選択式設定 */}
           {choiceConfig && (
             <ChoiceConfigFields config={choiceConfig} onChange={onChange} />
-          )}
-
-          {/* 手書き数字設定 */}
-          {config.type === "handwritten-digit" && (
-            <DigitConfigFields config={config} onChange={onChange} />
           )}
         </div>
       )}
@@ -413,49 +367,6 @@ function ChoiceConfigFields({
             )
           })}
         </div>
-      </div>
-    </>
-  )
-}
-
-function DigitConfigFields({
-  config,
-  onChange,
-}: {
-  config: OMRCellConfig & { type: "handwritten-digit" }
-  onChange: (config: OMRCellConfig) => void
-}) {
-  return (
-    <>
-      <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-12 text-xs">桁数</Label>
-        <input
-          type="number"
-          className="border-input h-7 w-14 [appearance:textfield] rounded border px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          value={config.numDigits}
-          min={1}
-          max={5}
-          onChange={(e) =>
-            onChange({
-              ...config,
-              numDigits: Math.max(1, Math.min(5, Number(e.target.value) || 2)),
-            })
-          }
-        />
-      </div>
-      <div className="flex items-center gap-1.5">
-        <Label className="text-muted-foreground min-w-12 text-xs">正解</Label>
-        <input
-          className="border-input h-7 w-20 rounded border px-1.5 text-center text-xs"
-          value={config.correctAnswer ?? ""}
-          placeholder="42"
-          onChange={(e) =>
-            onChange({
-              ...config,
-              correctAnswer: e.target.value || undefined,
-            })
-          }
-        />
       </div>
     </>
   )

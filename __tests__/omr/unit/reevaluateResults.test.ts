@@ -230,7 +230,7 @@ describe("消し跡を退けたセルの下流での扱い", () => {
       createdAt: timestamp,
       updatedAt: timestamp,
     }
-    return { ...config, choiceOptions, digitBoxes: [] }
+    return { ...config, choiceOptions }
   }
 
   /** 1セルだけの答案を再評価し、採点エントリを取り出す */

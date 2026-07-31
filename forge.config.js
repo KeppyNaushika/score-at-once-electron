@@ -99,49 +99,6 @@ module.exports = {
       const path = require("path")
       const { spawnSync } = require("child_process")
 
-      // onnxruntime-nodeの非ターゲットアーキテクチャバイナリを削除
-      // RPMビルド時にbrp-stripが異なるアーキテクチャのバイナリをstripできず失敗するのを防止
-      const removeNonTargetOnnxruntimeBinaries = (basePath) => {
-        const onnxBinPath = path.join(
-          basePath,
-          "node_modules",
-          "onnxruntime-node",
-          "bin",
-          "napi-v6"
-        )
-        if (!fs.existsSync(onnxBinPath)) return
-
-        const targetArch = options.arch === "x64" ? "x64" : options.arch
-        const platforms = fs.readdirSync(onnxBinPath)
-        platforms.forEach((platform) => {
-          const platformPath = path.join(onnxBinPath, platform)
-          if (!fs.statSync(platformPath).isDirectory()) return
-          const arches = fs.readdirSync(platformPath)
-          arches.forEach((arch) => {
-            if (arch !== targetArch) {
-              const archPath = path.join(platformPath, arch)
-              console.log(
-                `🧹 Removing non-target onnxruntime binary: ${platform}/${arch}`
-              )
-              fs.rmSync(archPath, { recursive: true, force: true })
-            }
-          })
-          // 現在のビルドプラットフォームと異なるOS用のバイナリも削除
-          const targetPlatform =
-            options.platform === "darwin"
-              ? "darwin"
-              : options.platform === "win32"
-                ? "win32"
-                : "linux"
-          if (platform !== targetPlatform) {
-            console.log(
-              `🧹 Removing non-target onnxruntime platform: ${platform}`
-            )
-            fs.rmSync(platformPath, { recursive: true, force: true })
-          }
-        })
-      }
-
       // bare-*パッケージの非ターゲットプリビルドバイナリを削除
       // RPMビルド時にbrp-stripが.bareファイルをstripできず失敗するのを防止。
       // ハードコードのリストは新しいbare-*依存で取りこぼす（bare-pathが漏れて
@@ -235,7 +192,6 @@ module.exports = {
         // asar.unpackedの非ターゲットバイナリを削除
         const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
         if (fs.existsSync(unpackedPath)) {
-          removeNonTargetOnnxruntimeBinaries(unpackedPath)
           removeNonTargetBarePrebuilds(unpackedPath)
         }
 
@@ -265,7 +221,6 @@ module.exports = {
         // asar.unpackedの非ターゲットバイナリを削除
         const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
         if (fs.existsSync(unpackedPath)) {
-          removeNonTargetOnnxruntimeBinaries(unpackedPath)
           removeNonTargetBarePrebuilds(unpackedPath)
         }
       }

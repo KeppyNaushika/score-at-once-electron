@@ -91,8 +91,6 @@ async function upsertOmrConfig(data: {
   type: string
   numChoices?: number | null
   choiceLayout?: string | null
-  numDigits?: number | null
-  correctAnswer?: string | null
   choiceOptions?: Array<{
     choiceIndex: number
     label: string
@@ -113,8 +111,6 @@ async function upsertOmrConfig(data: {
           type: data.type,
           numChoices: data.numChoices ?? null,
           choiceLayout: data.choiceLayout ?? null,
-          numDigits: data.numDigits ?? null,
-          correctAnswer: data.correctAnswer ?? null,
         },
       })
       await tx.cropRegionOmrChoiceOption.deleteMany({
@@ -128,8 +124,6 @@ async function upsertOmrConfig(data: {
           type: data.type,
           numChoices: data.numChoices ?? null,
           choiceLayout: data.choiceLayout ?? null,
-          numDigits: data.numDigits ?? null,
-          correctAnswer: data.correctAnswer ?? null,
         },
       })
       configId = config.id
@@ -179,20 +173,6 @@ describe("CropRegionOmrConfig upsert", () => {
     expect(config.choiceOptions[1].isCorrect).toBe(false)
   })
 
-  it("handwritten-digit タイプの新規作成", async () => {
-    const config = await upsertOmrConfig({
-      cropRegionId: cropRegionId2,
-      type: "handwritten-digit",
-      numDigits: 3,
-      correctAnswer: "256",
-    })
-
-    expect(config.type).toBe("handwritten-digit")
-    expect(config.numDigits).toBe(3)
-    expect(config.correctAnswer).toBe("256")
-    expect(config.choiceOptions).toHaveLength(0)
-  })
-
   it("既存のchoice設定を更新（choiceOptionsが再作成される）", async () => {
     const first = await upsertOmrConfig({
       cropRegionId: cropRegionId1,
@@ -224,31 +204,6 @@ describe("CropRegionOmrConfig upsert", () => {
     expect(updated.choiceOptions).toHaveLength(4)
     expect(updated.choiceOptions[0].isCorrect).toBe(true)
     expect(updated.choiceOptions[1].isCorrect).toBe(true)
-  })
-
-  it("タイプ変更（choice → handwritten-digit）で choiceOptions がクリアされる", async () => {
-    await upsertOmrConfig({
-      cropRegionId: cropRegionId1,
-      type: "choice",
-      numChoices: 3,
-      choiceOptions: [
-        { choiceIndex: 0, label: "ア", isCorrect: true },
-        { choiceIndex: 1, label: "イ", isCorrect: false },
-        { choiceIndex: 2, label: "ウ", isCorrect: false },
-      ],
-    })
-
-    const updated = await upsertOmrConfig({
-      cropRegionId: cropRegionId1,
-      type: "handwritten-digit",
-      numDigits: 2,
-      correctAnswer: "42",
-    })
-
-    expect(updated.type).toBe("handwritten-digit")
-    expect(updated.numDigits).toBe(2)
-    expect(updated.correctAnswer).toBe("42")
-    expect(updated.choiceOptions).toHaveLength(0)
   })
 })
 
@@ -295,9 +250,12 @@ describe("試験IDによる取得", () => {
     })
     await upsertOmrConfig({
       cropRegionId: cropRegionId2,
-      type: "handwritten-digit",
-      numDigits: 2,
-      correctAnswer: "15",
+      type: "choice",
+      numChoices: 2,
+      choiceOptions: [
+        { choiceIndex: 0, label: "○", isCorrect: true },
+        { choiceIndex: 1, label: "×", isCorrect: false },
+      ],
     })
 
     const configs = await prisma.cropRegionOmrConfig.findMany({
@@ -307,14 +265,8 @@ describe("試験IDによる取得", () => {
     })
 
     expect(configs).toHaveLength(2)
-
-    const choiceConfig = configs.find((config) => config.type === "choice")!
-    expect(choiceConfig.choiceOptions).toHaveLength(4)
-
-    const digitConfig = configs.find(
-      (config) => config.type === "handwritten-digit"
-    )!
-    expect(digitConfig.correctAnswer).toBe("15")
+    expect(configs[0].choiceOptions).toHaveLength(4)
+    expect(configs[1].choiceOptions).toHaveLength(2)
   })
 
   it("OMR設定がない試験IDでは空配列", async () => {

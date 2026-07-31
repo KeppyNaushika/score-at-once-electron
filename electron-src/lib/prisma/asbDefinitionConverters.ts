@@ -361,28 +361,26 @@ function dbImageElements(elements: AsbImageElement[]): CellImageElement[] {
   }))
 }
 
-/** DB OmrConfig 行を OMRCellConfig に変換する */
+/**
+ * DB OmrConfig 行を OMRCellConfig に変換する
+ *
+ * 選択式以外（廃止した手書き数字）の行は OMR 設定なしとして扱う。
+ */
 function dbToOmrConfig(
   config: AsbOmrConfig & {
     choiceOptions: { choiceIndex: number; label: string; isCorrect: boolean }[]
   }
-): OMRCellConfig {
-  if (config.type === "choice") {
-    return {
-      type: "choice",
-      numChoices: config.numChoices ?? 4,
-      labels: config.choiceOptions.map((option) => option.label),
-      correctAnswers: config.choiceOptions
-        .filter((option) => option.isCorrect)
-        .map((option) => option.choiceIndex),
-      layout: (config.choiceLayout ??
-        "horizontal") as OMRChoiceConfig["layout"],
-    }
-  }
+): OMRCellConfig | undefined {
+  if (config.type !== "choice") return undefined
+
   return {
-    type: "handwritten-digit",
-    numDigits: config.numDigits ?? 1,
-    correctAnswer: config.correctAnswer ?? undefined,
+    type: "choice",
+    numChoices: config.numChoices ?? 4,
+    labels: config.choiceOptions.map((option) => option.label),
+    correctAnswers: config.choiceOptions
+      .filter((option) => option.isCorrect)
+      .map((option) => option.choiceIndex),
+    layout: (config.choiceLayout ?? "horizontal") as OMRChoiceConfig["layout"],
   }
 }
 
@@ -567,34 +565,22 @@ export async function createOmrConfig(
 ): Promise<void> {
   const omrConfigId = crypto.randomUUID()
 
-  if (config.type === "choice") {
-    await tx.asbOmrConfig.create({
+  await tx.asbOmrConfig.create({
+    data: {
+      id: omrConfigId,
+      ...parentFK,
+      type: "choice",
+      numChoices: config.numChoices,
+      choiceLayout: config.layout,
+    },
+  })
+  for (let ci = 0; ci < config.labels.length; ci++) {
+    await tx.asbOmrChoiceOption.create({
       data: {
-        id: omrConfigId,
-        ...parentFK,
-        type: "choice",
-        numChoices: config.numChoices,
-        choiceLayout: config.layout,
-      },
-    })
-    for (let ci = 0; ci < config.labels.length; ci++) {
-      await tx.asbOmrChoiceOption.create({
-        data: {
-          omrConfigId,
-          choiceIndex: ci,
-          label: config.labels[ci],
-          isCorrect: config.correctAnswers.includes(ci),
-        },
-      })
-    }
-  } else {
-    await tx.asbOmrConfig.create({
-      data: {
-        id: omrConfigId,
-        ...parentFK,
-        type: "handwritten-digit",
-        numDigits: config.numDigits,
-        correctAnswer: config.correctAnswer ?? null,
+        omrConfigId,
+        choiceIndex: ci,
+        label: config.labels[ci],
+        isCorrect: config.correctAnswers.includes(ci),
       },
     })
   }

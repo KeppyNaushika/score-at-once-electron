@@ -234,7 +234,7 @@ export async function executeIdIntegrationImport(
         // 10d. ExamClassroom (v1.1.0+)
         await processExamClassrooms(data, newExamId, idMappings, tx)
 
-        // 10e. OMR設定（CropRegionOmrConfig/ChoiceOption/DigitBox） (v1.7.0+/v1.11.0+)
+        // 10e. OMR設定（CropRegionOmrConfig/ChoiceOption） (v1.7.0+)
         await processOmrConfigs(data, idMappings, tx)
 
         // 10f. 複合解答（CompoundAnswer/Member） (v1.11.0+)

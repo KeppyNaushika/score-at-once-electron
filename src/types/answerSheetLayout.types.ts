@@ -15,7 +15,7 @@ import type {
   ManuscriptGuidePosition,
   SubQuestion,
 } from "./answerSheetDefinition.types"
-import type { ComputedOMRBubble, ComputedOMRDigitBox } from "./omr.types"
+import type { ComputedOMRBubble } from "./omr.types"
 
 // =====================
 // グリッドセル（buildGridLayout用）
@@ -102,8 +102,6 @@ export interface ComputedCell {
   manuscriptGrid?: ManuscriptGrid
   /** OMRバブル位置（choiceセル用） */
   omrBubbles?: ComputedOMRBubble[]
-  /** OMR数字欄位置（handwritten-digitセル用） */
-  omrDigitBoxes?: ComputedOMRDigitBox[]
 }
 
 export interface DragInfo {

@@ -36,11 +36,9 @@ export function useOmrConfig(examId: string) {
   const upsertOmrConfig = useCallback(
     async (data: {
       cropRegionId: string
-      type: "choice" | "handwritten-digit"
+      type: "choice"
       numChoices?: number | null
       choiceLayout?: string | null
-      numDigits?: number | null
-      correctAnswer?: string | null
       choiceOptions?: Array<{
         choiceIndex: number
         label: string

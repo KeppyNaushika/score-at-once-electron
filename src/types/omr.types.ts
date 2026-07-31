@@ -2,13 +2,12 @@
  * OMR（光学マーク認識）関連の型定義
  *
  * Mark2アルゴリズムをベースとしたOMR認識パイプラインの型。
- * コーナーマーカー検出、座標変換、マーク認識、手書き数字認識、自動採点。
+ * コーナーマーカー検出、座標変換、マーク認識、自動採点。
  */
 
 import type {
   CropRegionOmrChoiceOption,
   CropRegionOmrConfig,
-  CropRegionOmrDigitBox,
 } from "@prisma/client"
 
 // =====================
@@ -36,15 +35,7 @@ export interface OMRChoiceConfig {
   layout: "horizontal" | "vertical"
 }
 
-export interface OMRDigitConfig {
-  type: "handwritten-digit"
-  /** 桁数（1-5） */
-  numDigits: number
-  /** 正解文字列（"42" など） */
-  correctAnswer?: string
-}
-
-export type OMRCellConfig = OMRChoiceConfig | OMRDigitConfig
+export type OMRCellConfig = OMRChoiceConfig
 
 // =====================
 // コーナーマーカー検出
@@ -209,31 +200,17 @@ export interface ComputedOMRBubble {
   label: string
 }
 
-export interface ComputedOMRDigitBox {
-  /** 数字欄左上X（0-1正規化） */
-  normalizedX: number
-  /** 数字欄左上Y（0-1正規化） */
-  normalizedY: number
-  /** 数字欄幅（0-1正規化） */
-  normalizedW: number
-  /** 数字欄高さ（0-1正規化） */
-  normalizedH: number
-  /** 桁インデックス（0始まり） */
-  digitIndex: number
-}
-
 // =====================
 // CropRegion OMR設定（DB管理）
 // =====================
 
 /**
- * CropRegion の OMR 設定（選択肢・数字ボックス同梱）。
+ * CropRegion の OMR 設定（選択肢同梱）。
  * Prisma モデルをそのまま派生する（`upsertOmrConfig` 等が返す実形状）。
  * normalizedXxx は schema 上 `Float`（Decimal ではない）なので number のまま IPC を渡せる。
  */
 export type CropRegionOmrConfigWithOptions = CropRegionOmrConfig & {
   choiceOptions: CropRegionOmrChoiceOption[]
-  digitBoxes: CropRegionOmrDigitBox[]
 }
 
 // =====================

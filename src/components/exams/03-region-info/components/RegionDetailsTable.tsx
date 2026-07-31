@@ -20,11 +20,9 @@ type RegionDetailsTableProps = {
   getOmrConfig: (cropRegionId: string) => CropRegionOmrConfigWithOptions | null
   onOmrSave: (data: {
     cropRegionId: string
-    type: "choice" | "handwritten-digit"
+    type: "choice"
     numChoices?: number | null
     choiceLayout?: string | null
-    numDigits?: number | null
-    correctAnswer?: string | null
     choiceOptions?: Array<{
       choiceIndex: number
       label: string

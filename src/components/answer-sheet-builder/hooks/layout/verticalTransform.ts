@@ -26,7 +26,7 @@ import type {
   ComputedPageLayout,
   ManuscriptGrid,
 } from "@/types/answerSheetLayout.types"
-import type { ComputedOMRBubble, ComputedOMRDigitBox } from "@/types/omr.types"
+import type { ComputedOMRBubble } from "@/types/omr.types"
 
 /** 点 (x, y) を縦組み実座標へ変換する */
 export function transposePoint(
@@ -91,17 +91,6 @@ function transposeBubble(bubble: ComputedOMRBubble): ComputedOMRBubble {
   }
 }
 
-/** OMR数字欄（正規化矩形）を縦組みへ変換する */
-function transposeDigitBox(digitBox: ComputedOMRDigitBox): ComputedOMRDigitBox {
-  return {
-    ...digitBox,
-    normalizedX: 1 - (digitBox.normalizedY + digitBox.normalizedH),
-    normalizedY: digitBox.normalizedX,
-    normalizedW: digitBox.normalizedH,
-    normalizedH: digitBox.normalizedW,
-  }
-}
-
 function transposeCell(
   cell: ComputedCell,
   realWidth: number,
@@ -128,9 +117,6 @@ function transposeCell(
       : {}),
     ...(cell.omrBubbles
       ? { omrBubbles: cell.omrBubbles.map(transposeBubble) }
-      : {}),
-    ...(cell.omrDigitBoxes
-      ? { omrDigitBoxes: cell.omrDigitBoxes.map(transposeDigitBox) }
       : {}),
   }
 }

@@ -1493,7 +1493,7 @@ describe("executeIdIntegrationImport", () => {
     })
   }
 
-  // II-20: v1.7.0/v1.11.0: OMR設定（Config/ChoiceOption/DigitBox）が作成される
+  // II-20: v1.7.0: OMR設定（Config/ChoiceOption）が作成される
   it("II-20: OMR設定一式がmerge経路で作成される", async () => {
     const { data, examId, regionId } = createBasicTestData()
 
@@ -1506,8 +1506,6 @@ describe("executeIdIntegrationImport", () => {
         type: "choice",
         numChoices: 4,
         choiceLayout: "horizontal",
-        numDigits: null,
-        correctAnswer: "1",
         colorThreshold: null,
         areaThreshold: null,
         createdAt: now,
@@ -1526,19 +1524,6 @@ describe("executeIdIntegrationImport", () => {
         normalizedCy: 0.5,
         normalizedWidth: 0.1,
         normalizedHeight: 0.1,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-    data.examData.omrDigitBoxes = [
-      {
-        id: generateId(),
-        omrConfigId: omrConfigId,
-        digitIndex: 0,
-        normalizedX: 0.1,
-        normalizedY: 0.1,
-        normalizedW: 0.1,
-        normalizedH: 0.1,
         createdAt: now,
         updatedAt: now,
       },
@@ -1562,10 +1547,6 @@ describe("executeIdIntegrationImport", () => {
     })
     expect(options.length).toBe(1)
     expect(options[0].shape).toBe("circle")
-    const boxes = await prisma.cropRegionOmrDigitBox.findMany({
-      where: { omrConfigId: configs[0].id },
-    })
-    expect(boxes.length).toBe(1)
   })
 
   // II-21: v1.11.0: 複合解答（CompoundAnswer/Member/Score）が作成される
@@ -1975,8 +1956,6 @@ describe("executeIdIntegrationImport", () => {
         type: "choice",
         numChoices: 4,
         choiceLayout: "horizontal",
-        numDigits: null,
-        correctAnswer: "1",
         colorThreshold: null,
         areaThreshold: null,
         createdAt: now,
@@ -1995,19 +1974,6 @@ describe("executeIdIntegrationImport", () => {
         normalizedCy: 0.5,
         normalizedWidth: 0.1,
         normalizedHeight: 0.1,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-    data.examData.omrDigitBoxes = [
-      {
-        id: generateId(),
-        omrConfigId: omrConfigId,
-        digitIndex: 0,
-        normalizedX: 0.1,
-        normalizedY: 0.1,
-        normalizedW: 0.1,
-        normalizedH: 0.1,
         createdAt: now,
         updatedAt: now,
       },
@@ -2082,7 +2048,7 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    // 全7モデルが復元されていること
+    // 全6モデルが復元されていること
     expect(
       await prisma.cropRegionOmrConfig.count({
         where: { cropRegionId: regionId },
@@ -2093,11 +2059,6 @@ describe("executeIdIntegrationImport", () => {
     })
     expect(
       await prisma.cropRegionOmrChoiceOption.count({
-        where: { omrConfigId: omrConfig!.id },
-      })
-    ).toBe(1)
-    expect(
-      await prisma.cropRegionOmrDigitBox.count({
         where: { omrConfigId: omrConfig!.id },
       })
     ).toBe(1)

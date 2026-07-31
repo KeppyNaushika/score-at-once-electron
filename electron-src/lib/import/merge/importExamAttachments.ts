@@ -191,11 +191,13 @@ export async function processExamClassrooms(
 }
 
 /**
- * OMR設定（CropRegionOmrConfig＋ChoiceOption＋DigitBox）を処理
+ * OMR設定（CropRegionOmrConfig＋ChoiceOption）を処理
  *
  * CropRegionが新規作成された場合のみ作成する。既存リージョンにマッチした場合は
  * 対象側に既にOMR設定が存在するため作成しない（重複防止）。
- * 子（ChoiceOption/DigitBox）は親configを新規作成したときだけ併せて作成する。
+ * 子（ChoiceOption）は親configを新規作成したときだけ併せて作成する。
+ *
+ * 選択式以外（廃止した手書き数字）の設定は取り込まない。
  */
 export async function processOmrConfigs(
   data: ExtractedArchiveData,
@@ -203,6 +205,8 @@ export async function processOmrConfigs(
   tx: PrismaTransaction
 ): Promise<void> {
   for (const omrConfig of data.examData.omrConfigs ?? []) {
+    if (omrConfig.type !== "choice") continue
+
     const newCropRegionId = idMappings.cropRegion[omrConfig.cropRegionId]
     if (!newCropRegionId) continue
 
@@ -230,8 +234,6 @@ export async function processOmrConfigs(
         type: omrConfig.type,
         numChoices: omrConfig.numChoices,
         choiceLayout: omrConfig.choiceLayout,
-        numDigits: omrConfig.numDigits,
-        correctAnswer: omrConfig.correctAnswer,
         colorThreshold: omrConfig.colorThreshold,
         areaThreshold: omrConfig.areaThreshold,
       },
@@ -256,22 +258,6 @@ export async function processOmrConfigs(
         },
       })
       idMappings.cropRegionOmrChoiceOption[choiceOption.id] = choiceOption.id
-    }
-
-    // 新規作成したconfig配下のDigitBoxを作成
-    for (const digitBox of data.examData.omrDigitBoxes ?? []) {
-      if (digitBox.omrConfigId !== omrConfig.id) continue
-      await tx.cropRegionOmrDigitBox.create({
-        data: {
-          id: digitBox.id,
-          omrConfigId: omrConfig.id,
-          digitIndex: digitBox.digitIndex,
-          normalizedX: digitBox.normalizedX,
-          normalizedY: digitBox.normalizedY,
-          normalizedW: digitBox.normalizedW,
-          normalizedH: digitBox.normalizedH,
-        },
-      })
     }
   }
 }

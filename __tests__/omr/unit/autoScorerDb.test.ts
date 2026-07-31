@@ -45,30 +45,6 @@ function makeChoiceConfig(
       createdAt: new Date(),
       updatedAt: new Date(),
     })),
-    digitBoxes: [],
-  }
-}
-
-function makeDigitConfig(
-  cropRegionId: string,
-  numDigits: number,
-  correctAnswer: string
-): CropRegionOmrConfigWithOptions {
-  return {
-    id: `cfg-${cropRegionId}`,
-    cropRegionId,
-    type: "handwritten-digit",
-    numChoices: null,
-    choiceLayout: null,
-    numDigits,
-    correctAnswer,
-
-    colorThreshold: null,
-    areaThreshold: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    choiceOptions: [],
-    digitBoxes: [],
   }
 }
 
@@ -159,25 +135,14 @@ describe("convertToScoreEntriesFromDb", () => {
     expect(entries[0].score).toBe(0)
   })
 
-  it("手書き数字の正解判定", () => {
-    const configs = [makeDigitConfig("cr-2", 2, "42")]
-    const cellResults = [makeCellResult("cr-2", ["4", "2"], "correct")]
-    const pointsMap = { "cr-2": 8 }
-
-    const entries = convertToScoreEntriesFromDb(cellResults, configs, pointsMap)
-
-    expect(entries[0].status).toBe("correct")
-    expect(entries[0].score).toBe(8)
-  })
-
   it("複数の設問を同時に処理", () => {
     const configs = [
       makeChoiceConfig("cr-1", ["ア", "イ", "ウ", "エ"], [2]),
-      makeDigitConfig("cr-2", 3, "256"),
+      makeChoiceConfig("cr-2", ["ア", "イ", "ウ"], [1]),
     ]
     const cellResults = [
       makeCellResult("cr-1", ["ウ"], "correct"),
-      makeCellResult("cr-2", ["2", "5", "7"], "incorrect"),
+      makeCellResult("cr-2", ["ア"], "incorrect"),
     ]
     const pointsMap = { "cr-1": 5, "cr-2": 10 }
 
