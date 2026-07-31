@@ -8,6 +8,7 @@
  * ref: https://github.com/KeppyNaushika/score-at-once-electron/issues/661
  */
 
+import type * as NodeFs from "fs"
 import sharp from "sharp"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -37,7 +38,7 @@ vi.mock("electron", () => ({
 
 // fs モック（一時ファイル書き込み・削除をスキップ）
 vi.mock("fs", async () => {
-  const actual = await vi.importActual<typeof import("fs")>("fs")
+  const actual = await vi.importActual<typeof NodeFs>("fs")
   return {
     ...actual,
     default: {

@@ -1,6 +1,8 @@
 import { ipcRenderer } from "electron"
 
+import type { IndividualReportOptions } from "../lib/export/individual-report/types"
 import type { ExportRDataOptions } from "../lib/export/r-exametrika/rDataExporter"
+import type { StudentExportPlacement } from "../lib/shared/types"
 
 /** 出力機能のIPC API（PDF/Excel出力・ストリーミング生成・個人成績表・印刷） */
 export function createExportApi() {
@@ -60,11 +62,8 @@ export function createExportApi() {
       getIndividualReportData: (options: {
         examId: string
         selectedExamStudentIds: string[]
-        options: import("../lib/export/individual-report/types").IndividualReportOptions
-        studentPlacements?: Record<
-          string,
-          import("../lib/shared/types").StudentExportPlacement
-        >
+        options: IndividualReportOptions
+        studentPlacements?: Record<string, StudentExportPlacement>
       }) => ipcRenderer.invoke("export:getIndividualReportData", options),
       getSubtotalGroupsForReport: (examId: string) =>
         ipcRenderer.invoke("export:getSubtotalGroupsForReport", examId),
@@ -97,10 +96,7 @@ export function createExportApi() {
       getExcelPreviewData: (options: {
         examId: string
         selectedExamStudentIds: string[]
-        studentPlacements?: Record<
-          string,
-          import("../lib/shared/types").StudentExportPlacement
-        >
+        studentPlacements?: Record<string, StudentExportPlacement>
       }) => ipcRenderer.invoke("export:getExcelPreviewData", options),
       // 印刷ダイアログを開く
       openPrintDialog: (options: {
@@ -124,10 +120,7 @@ export function createExportApi() {
       examId: string
       selectedExamStudentIds: string[]
       outputPath?: string
-      studentPlacements?: Record<
-        string,
-        import("../lib/shared/types").StudentExportPlacement
-      >
+      studentPlacements?: Record<string, StudentExportPlacement>
     }) => ipcRenderer.invoke("export-grading-data-excel", options),
 
     // R / exametrika 向けデータ出力（#834）

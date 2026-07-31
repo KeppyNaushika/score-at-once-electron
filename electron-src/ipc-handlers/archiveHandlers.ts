@@ -104,7 +104,7 @@ export function registerArchiveHandlers(): void {
       examId: string
       userId: string
       outputPath?: string
-      exportMode?: import("../../src/types/examArchive.types").ArchiveExportMode
+      exportMode?: ArchiveExportMode
     }) => {
       return await exportExam(options)
     },

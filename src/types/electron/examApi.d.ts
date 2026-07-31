@@ -1,6 +1,7 @@
 import type { Exam, Prisma } from "@prisma/client"
 
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import type { GradingDataInfo } from "@/electron-src/lib/prisma/gradingData"
 import type { ExamSummary } from "@/lib/examStatus"
 
 import type { ExamStudentStatus } from "../examStudentStatus.types"
@@ -87,10 +88,7 @@ export interface ExamAPI {
     totalGradingItems?: number
     // main 側の SSOT をそのまま参照する（手書きで写すと今回のように
     // フィールド名と数える範囲がずれ、削除確認の表示が実態とずれる）
-    studentData?: Record<
-      string,
-      import("@/electron-src/lib/prisma/gradingData").GradingDataInfo
-    >
+    studentData?: Record<string, GradingDataInfo>
     error?: string
   }>
 }

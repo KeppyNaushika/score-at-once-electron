@@ -1,5 +1,18 @@
 import { ipcRenderer } from "electron"
 
+import type {
+  ArchiveExportMode,
+  FileOverviewData,
+  IdIntegrationConfig,
+  MatchingConfig,
+  ScoringConflictConfig,
+  UpdateDecisions,
+} from "../../src/types/examArchive.types"
+import type {
+  StudentArchiveFileOverviewData,
+  StudentArchiveIdIntegrationConfig,
+} from "../../src/types/studentArchive.types"
+
 /** 試験・生徒アーカイブのIPC API（エクスポート・インポート・競合検出・ID統合） */
 export function createArchiveApi() {
   return {
@@ -9,7 +22,7 @@ export function createArchiveApi() {
         examId: string
         userId: string
         outputPath?: string
-        exportMode?: import("../../src/types/examArchive.types").ArchiveExportMode
+        exportMode?: ArchiveExportMode
       }) => ipcRenderer.invoke("archive:exportExam", options),
       analyzeArchive: (options: { archivePath: string }) =>
         ipcRenderer.invoke("archive:analyzeArchive", options),
@@ -17,25 +30,25 @@ export function createArchiveApi() {
         ipcRenderer.invoke("archive:preMatch", options),
       detectConflicts: (options: {
         archivePath: string
-        matchingConfig: import("../../src/types/examArchive.types").MatchingConfig
+        matchingConfig: MatchingConfig
       }) => ipcRenderer.invoke("archive:detectConflicts", options),
       idIntegrationImport: (options: {
         archivePath: string
-        preMatchResult: import("../../src/types/examArchive.types").FileOverviewData
-        integrationConfig: import("../../src/types/examArchive.types").IdIntegrationConfig
+        preMatchResult: FileOverviewData
+        integrationConfig: IdIntegrationConfig
         currentUserId: string
-        scoringConflictConfig?: import("../../src/types/examArchive.types").ScoringConflictConfig
-        updateDecisions?: import("../../src/types/examArchive.types").UpdateDecisions
+        scoringConflictConfig?: ScoringConflictConfig
+        updateDecisions?: UpdateDecisions
       }) => ipcRenderer.invoke("archive:idIntegrationImport", options),
       detectScoringConflicts: (options: {
         archivePath: string
-        preMatchResult: import("../../src/types/examArchive.types").FileOverviewData
-        integrationConfig: import("../../src/types/examArchive.types").IdIntegrationConfig
+        preMatchResult: FileOverviewData
+        integrationConfig: IdIntegrationConfig
       }) => ipcRenderer.invoke("archive:detectScoringConflicts", options),
       bulkExportExams: (options: {
         examIds: string[]
         userId: string
-        exportMode?: import("../../src/types/examArchive.types").ArchiveExportMode
+        exportMode?: ArchiveExportMode
       }) => ipcRenderer.invoke("archive:bulkExportExams", options),
       selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
       convertHszToScore: (options: { hszPath: string }) =>
@@ -58,9 +71,9 @@ export function createArchiveApi() {
         ipcRenderer.invoke("studentArchive:preMatch", options),
       import: (options: {
         archivePath: string
-        preMatchResult: import("../../src/types/studentArchive.types").StudentArchiveFileOverviewData
-        integrationConfig: import("../../src/types/studentArchive.types").StudentArchiveIdIntegrationConfig
-        updateDecisions?: import("../../src/types/examArchive.types").UpdateDecisions
+        preMatchResult: StudentArchiveFileOverviewData
+        integrationConfig: StudentArchiveIdIntegrationConfig
+        updateDecisions?: UpdateDecisions
       }) => ipcRenderer.invoke("studentArchive:import", options),
     },
   }

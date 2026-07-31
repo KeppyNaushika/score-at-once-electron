@@ -11,6 +11,7 @@ import {
   MoveState,
   ResizeState,
 } from "@/components/exams/02-template/types"
+import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 /**
  * Custom hook for handling mouse events on the canvas
@@ -53,7 +54,7 @@ export function useMouseHandlers({
     label?: string
   }[]
   onAddAreaByDrag: (
-    type: import("@/types/cropRegionAreaType.types").CropRegionAreaType,
+    type: CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (

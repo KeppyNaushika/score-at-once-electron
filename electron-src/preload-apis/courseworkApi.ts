@@ -1,6 +1,10 @@
 import { ipcRenderer } from "electron"
 
 import type { CourseworkScoreUpsertInput } from "../../src/types/coursework.types"
+import type {
+  CourseworkImportDecisions,
+  CourseworkMatchingMethod,
+} from "../../src/types/courseworkArchive.types"
 
 /** 試験外成績資料（Coursework）の IPC API（資料・評価項目・点数・名簿・タグ） */
 export function createCourseworkApi() {
@@ -139,8 +143,8 @@ export function createCourseworkApi() {
         ipcRenderer.invoke("coursework:analyzeArchive", options),
       importArchive: (options: {
         archivePath: string
-        courseworkDecisions?: import("../../src/types/courseworkArchive.types").CourseworkImportDecisions
-        studentMatching?: import("../../src/types/courseworkArchive.types").CourseworkMatchingMethod
+        courseworkDecisions?: CourseworkImportDecisions
+        studentMatching?: CourseworkMatchingMethod
       }) => ipcRenderer.invoke("coursework:importArchive", options),
     },
   }

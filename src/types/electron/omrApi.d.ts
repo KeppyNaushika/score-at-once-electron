@@ -1,43 +1,45 @@
 /**
  * OMR（光学マーク認識）・OMR Config関連API
  */
+
+import type { ComputedCell } from "../answerSheetBuilder.types"
+import type {
+  CropRegionOmrConfigWithOptions,
+  MarkerDetectionResult,
+  OMRBatchProgress,
+  OMRCellConfig,
+  OMRRecognitionParams,
+  OMRSheetResult,
+  Point,
+} from "../omr.types"
+
 export interface OmrAPI {
   omr: {
     detectMarkers: (
       imagePath: string,
       colorThreshold?: number
-    ) => Promise<import("../omr.types").MarkerDetectionResult>
+    ) => Promise<MarkerDetectionResult>
     recognizeSheet: (args: {
       imagePath: string
-      cells: import("../answerSheetBuilder.types").ComputedCell[]
-      cellConfigs: Record<string, import("../omr.types").OMRCellConfig>
-      expectedCorners: [
-        import("../omr.types").Point,
-        import("../omr.types").Point,
-        import("../omr.types").Point,
-        import("../omr.types").Point,
-      ]
-      params: import("../omr.types").OMRRecognitionParams
+      cells: ComputedCell[]
+      cellConfigs: Record<string, OMRCellConfig>
+      expectedCorners: [Point, Point, Point, Point]
+      params: OMRRecognitionParams
       pageIndex?: number
       examStudentId?: string
-    }) => Promise<import("../omr.types").OMRSheetResult>
+    }) => Promise<OMRSheetResult>
     batchRecognize: (args: {
       imagePaths: {
         path: string
         examStudentId?: string
         studentName?: string
       }[]
-      cells: import("../answerSheetBuilder.types").ComputedCell[]
-      cellConfigs: Record<string, import("../omr.types").OMRCellConfig>
-      expectedCorners: [
-        import("../omr.types").Point,
-        import("../omr.types").Point,
-        import("../omr.types").Point,
-        import("../omr.types").Point,
-      ]
-      params: import("../omr.types").OMRRecognitionParams
+      cells: ComputedCell[]
+      cellConfigs: Record<string, OMRCellConfig>
+      expectedCorners: [Point, Point, Point, Point]
+      params: OMRRecognitionParams
       pageIndex?: number
-    }) => Promise<import("../omr.types").OMRSheetResult[]>
+    }) => Promise<OMRSheetResult[]>
     detectMasterMarkers: (
       examId: string,
       colorThreshold?: number
@@ -47,7 +49,7 @@ export interface OmrAPI {
       pages: Array<{
         examPageId: string
         pageNumber: number
-        result: import("../omr.types").MarkerDetectionResult
+        result: MarkerDetectionResult
       }>
       error?: string
     }>
@@ -62,7 +64,7 @@ export interface OmrAPI {
       error?: string
     }>
     onBatchProgress: (
-      callback: (progress: import("../omr.types").OMRBatchProgress) => void
+      callback: (progress: OMRBatchProgress) => void
     ) => () => void
   }
 
@@ -95,7 +97,7 @@ export interface OmrAPI {
       }>
     }) => Promise<{
       success: boolean
-      config?: import("../omr.types").CropRegionOmrConfigWithOptions
+      config?: CropRegionOmrConfigWithOptions
       error?: string
     }>
     delete: (cropRegionId: string) => Promise<{
@@ -104,7 +106,7 @@ export interface OmrAPI {
     }>
     getByExam: (examId: string) => Promise<{
       success: boolean
-      configs?: import("../omr.types").CropRegionOmrConfigWithOptions[]
+      configs?: CropRegionOmrConfigWithOptions[]
       error?: string
     }>
   }

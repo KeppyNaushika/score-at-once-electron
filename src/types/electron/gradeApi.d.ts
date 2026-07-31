@@ -1,16 +1,37 @@
 /**
  * Grade（成績算出）関連API
  */
+
+import type { GradeItemExclusion } from "@prisma/client"
+
+import type {
+  GradeBoundarySetWithItemAndBoundaries,
+  GradeCalculationResult,
+  GradeCellTarget,
+  GradeConstraintData,
+  GradeConstraintInput,
+  GradeDataSourceWithRelations,
+  GradeItemExclusionInput,
+  GradeItemWithDataSources,
+  GradeWithRelations,
+} from "../grade.types"
+import type {
+  GradeArchiveData,
+  GradeArchiveImportOptions,
+  GradeArchiveImportPreview,
+} from "../gradeArchive.types"
+import type { StudentWithMemberships } from "../prismaExtensions"
+
 export interface GradeAPI {
   grade: {
     getAll: () => Promise<{
       success: boolean
-      grades?: import("../grade.types").GradeWithRelations[]
+      grades?: GradeWithRelations[]
       error?: string
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithRelations
+      grade?: GradeWithRelations
       error?: string
     }>
     create: (data: {
@@ -19,7 +40,7 @@ export interface GradeAPI {
       referenceDate?: string | null
     }) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithRelations
+      grade?: GradeWithRelations
       error?: string
     }>
     update: (
@@ -31,13 +52,13 @@ export interface GradeAPI {
       }
     ) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithRelations
+      grade?: GradeWithRelations
       error?: string
     }>
     delete: (id: string) => Promise<{ success: boolean; error?: string }>
     duplicate: (id: string) => Promise<{
       success: boolean
-      grade?: import("../grade.types").GradeWithRelations
+      grade?: GradeWithRelations
       error?: string
     }>
     // 生徒・学級管理
@@ -93,7 +114,7 @@ export interface GradeAPI {
       activeOnly?: boolean
     ) => Promise<{
       success: boolean
-      students?: import("../prismaExtensions").StudentWithMemberships[]
+      students?: StudentWithMemberships[]
       error?: string
     }>
     addStudentsFromClassroom: (
@@ -143,12 +164,12 @@ export interface GradeAPI {
     // GradeItem
     getGradeItems: (gradeId: string) => Promise<{
       success: boolean
-      gradeItems?: import("../grade.types").GradeItemWithDataSources[]
+      gradeItems?: GradeItemWithDataSources[]
       error?: string
     }>
     createGradeItem: (data: { gradeId: string; name: string }) => Promise<{
       success: boolean
-      gradeItem?: import("../grade.types").GradeItemWithDataSources
+      gradeItem?: GradeItemWithDataSources
       error?: string
     }>
     updateGradeItem: (
@@ -156,7 +177,7 @@ export interface GradeAPI {
       data: { name?: string }
     ) => Promise<{
       success: boolean
-      gradeItem?: import("../grade.types").GradeItemWithDataSources
+      gradeItem?: GradeItemWithDataSources
       error?: string
     }>
     deleteGradeItem: (id: string) => Promise<{
@@ -187,7 +208,7 @@ export interface GradeAPI {
       estimationSourceIds?: string[]
     }) => Promise<{
       success: boolean
-      dataSource?: import("../grade.types").GradeDataSourceWithRelations
+      dataSource?: GradeDataSourceWithRelations
       error?: string
     }>
     updateDataSource: (
@@ -204,7 +225,7 @@ export interface GradeAPI {
       }
     ) => Promise<{
       success: boolean
-      dataSource?: import("../grade.types").GradeDataSourceWithRelations
+      dataSource?: GradeDataSourceWithRelations
       error?: string
     }>
     deleteDataSource: (
@@ -215,7 +236,7 @@ export interface GradeAPI {
     ) => Promise<{ success: boolean; error?: string }>
     getBoundarySets: (gradeId: string) => Promise<{
       success: boolean
-      boundarySets?: import("../grade.types").GradeBoundarySetWithItemAndBoundaries[]
+      boundarySets?: GradeBoundarySetWithItemAndBoundaries[]
       error?: string
     }>
     upsertBoundarySet: (data: {
@@ -224,39 +245,39 @@ export interface GradeAPI {
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => Promise<{
       success: boolean
-      boundarySet?: import("../grade.types").GradeBoundarySetWithItemAndBoundaries
+      boundarySet?: GradeBoundarySetWithItemAndBoundaries
       error?: string
     }>
     deleteBoundarySet: (
       id: string
     ) => Promise<{ success: boolean; error?: string }>
     upsertGradeOverride: (
-      data: import("../grade.types").GradeCellTarget & {
+      data: GradeCellTarget & {
         overrideLabel: string
       }
     ) => Promise<{ success: boolean; override?: unknown; error?: string }>
     deleteGradeOverride: (
-      target: import("../grade.types").GradeCellTarget
+      target: GradeCellTarget
     ) => Promise<{ success: boolean; error?: string }>
     getGradeConstraints: (gradeId: string) => Promise<{
       success: boolean
-      constraints?: import("../grade.types").GradeConstraintData[]
+      constraints?: GradeConstraintData[]
       error?: string
     }>
     createGradeConstraint: (data: {
       gradeId: string
-      constraint: import("../grade.types").GradeConstraintInput
+      constraint: GradeConstraintInput
     }) => Promise<{
       success: boolean
-      constraint?: import("../grade.types").GradeConstraintData
+      constraint?: GradeConstraintData
       error?: string
     }>
     updateGradeConstraint: (data: {
       id: string
-      constraint: Partial<import("../grade.types").GradeConstraintInput>
+      constraint: Partial<GradeConstraintInput>
     }) => Promise<{
       success: boolean
-      constraint?: import("../grade.types").GradeConstraintData
+      constraint?: GradeConstraintData
       error?: string
     }>
     deleteGradeConstraint: (
@@ -264,18 +285,18 @@ export interface GradeAPI {
     ) => Promise<{ success: boolean; error?: string }>
     getGradeItemExclusions: (gradeId: string) => Promise<{
       success: boolean
-      exclusions?: import("@prisma/client").GradeItemExclusion[]
+      exclusions?: GradeItemExclusion[]
       error?: string
     }>
     setGradeItemExclusion: (
-      input: import("../grade.types").GradeItemExclusionInput
+      input: GradeItemExclusionInput
     ) => Promise<{ success: boolean; error?: string }>
     batchUpdateGradeItemExclusions: (
-      updates: import("../grade.types").GradeItemExclusionInput[]
+      updates: GradeItemExclusionInput[]
     ) => Promise<{ success: boolean; error?: string }>
     calculateGrades: (gradeId: string) => Promise<{
       success: boolean
-      result?: import("../grade.types").GradeCalculationResult
+      result?: GradeCalculationResult
       error?: string
     }>
     /** 各データソースのモデル適合度 R（手法選択画面の判断材料）を保存設定で算出 */
@@ -291,13 +312,13 @@ export interface GradeAPI {
      */
     freezeGradeScores: (data: {
       gradeId: string
-      targets?: import("../grade.types").GradeCellTarget[]
+      targets?: GradeCellTarget[]
       frozenByUserId?: string | null
     }) => Promise<{ success: boolean; frozenCount?: number; error?: string }>
     /** 成績値の確定を解除する（リアルタイム算出値へ戻す）。targets 未指定は Grade 全体 */
     unfreezeGradeScores: (data: {
       gradeId: string
-      targets?: import("../grade.types").GradeCellTarget[]
+      targets?: GradeCellTarget[]
       userId?: string | null
     }) => Promise<{ success: boolean; unfrozenCount?: number; error?: string }>
     getExamCandidates: () => Promise<{
@@ -358,13 +379,13 @@ export interface GradeAPI {
     }>
     importArchive: () => Promise<{
       success: boolean
-      preview?: import("../gradeArchive.types").GradeArchiveImportPreview
-      archiveData?: import("../gradeArchive.types").GradeArchiveData
+      preview?: GradeArchiveImportPreview
+      archiveData?: GradeArchiveData
       error?: string
     }>
     executeImport: (
-      archiveData: import("../gradeArchive.types").GradeArchiveData,
-      options?: import("../gradeArchive.types").GradeArchiveImportOptions
+      archiveData: GradeArchiveData,
+      options?: GradeArchiveImportOptions
     ) => Promise<{
       success: boolean
       gradeId?: string

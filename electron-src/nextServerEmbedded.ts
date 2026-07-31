@@ -1,6 +1,7 @@
 import { app } from "electron"
 import type { Server } from "http"
 import type { IncomingMessage, ServerResponse } from "http"
+import type * as NodeModule from "module"
 import type { NextServer } from "next/dist/server/next"
 import { delimiter, join } from "path"
 
@@ -18,7 +19,7 @@ let httpServer: Server | null = null
 const ensurePackagedNodePath = (basePath: string) => {
   try {
     const fs = require("fs")
-    const Module = require("module") as typeof import("module") & {
+    const Module = require("module") as typeof NodeModule & {
       _initPaths(): void
     }
 

@@ -161,6 +161,21 @@ export default [
       // Import sorting
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
+
+      // 型注釈に埋め込むインライン型 import（`import("./x").Foo`）を禁止する。
+      // 型の一部でありモジュール解決の走査から漏れるため、knip 等の静的解析が
+      // 参照を検出できず、実際には使われている型を未使用と誤判定する（#1082/#1083）。
+      // grep もできない。トップレベルの `import type { Foo } from "./x"` を使う。
+      // セレクタの TSImportType は型注釈側の記法のみを指し、実行時の動的 import
+      // （ImportExpression）は別ノードなので影響しない。
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSImportType",
+          message:
+            'インライン型 import は使わず、トップレベルの `import type { X } from "..."` を使ってください（静的解析が参照を追えなくなります）。',
+        },
+      ],
     },
   },
 ]
