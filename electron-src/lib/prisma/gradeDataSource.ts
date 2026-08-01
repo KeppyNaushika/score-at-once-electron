@@ -77,12 +77,18 @@ const gradeDataSourceInclude = {
   estimationSources: { orderBy: { order: "asc" } },
 } satisfies Prisma.GradeDataSourceInclude
 
-/** GradeItem を dataSources 込みで取得する際の include（上記を内包）。 */
+/**
+ * GradeItem を dataSources 込みで取得する際の include（上記を内包）。
+ *
+ * 成績境界も行のまま同梱する。規約: 計算は renderer 側で行うので、件数を数えるなら
+ * `_count` ではなく行を渡し切って renderer で `.length` を取る。
+ */
 export const gradeItemWithDataSourcesInclude = {
   dataSources: {
     include: gradeDataSourceInclude,
     orderBy: { order: "asc" },
   },
+  boundaries: { orderBy: { order: "asc" } },
 } satisfies Prisma.GradeItemInclude
 
 /**

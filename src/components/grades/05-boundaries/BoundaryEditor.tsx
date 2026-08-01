@@ -13,11 +13,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import type { GradeBoundarySetWithItemAndBoundaries } from "@/types/grade.types"
+import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 interface BoundaryEditorProps {
-  /** 対象評価項目の境界セット。まだ作られていなければ undefined */
-  boundarySet: GradeBoundarySetWithItemAndBoundaries | undefined
+  /** 対象の評価項目。境界が引かれていなければ boundaries は空配列 */
+  gradeItem: GradeItemWithDataSources
   onSave: (
     boundaries: { label: string; minPercentage: number; order: number }[]
   ) => Promise<void>
@@ -37,15 +37,14 @@ let nextId = 1
  * ラベルと最低パーセンテージの組み合わせを編集し、変更を500msデバウンスで自動保存する。
  * DnDで行を並び替え可能。minPercentageが降順でない場合は赤い枠線で警告する。
  */
-export function BoundaryEditor({ boundarySet, onSave }: BoundaryEditorProps) {
+export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
   const [items, setItems] = useState<EditableBoundary[]>([])
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 境界セット自体を依存に取る。未作成のうちは undefined で参照が変わらないため、
-  // 保存前に追加した行が再レンダリングのたびに消えることはない。セットが削除されて
-  // undefined へ戻ったときだけ行が空に戻る。
+  // サーバから読み直した境界だけを依存に取る。再取得は保存が済んだ後にしか起きないので、
+  // 入力中の行がレンダリングのたびに消えることはない。
   useEffect(() => {
-    const sorted = [...(boundarySet?.boundaries ?? [])].sort(
+    const sorted = [...gradeItem.boundaries].sort(
       (firstBoundary, secondBoundary) =>
         secondBoundary.minPercentage - firstBoundary.minPercentage
     )
@@ -56,7 +55,7 @@ export function BoundaryEditor({ boundarySet, onSave }: BoundaryEditorProps) {
         minPercentage: String(boundary.minPercentage),
       }))
     )
-  }, [boundarySet])
+  }, [gradeItem.boundaries])
 
   const debouncedSave = useCallback(
     (updatedItems: EditableBoundary[]) => {

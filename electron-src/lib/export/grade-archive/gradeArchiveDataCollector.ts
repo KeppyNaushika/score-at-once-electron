@@ -19,8 +19,6 @@ import type {
   ArchiveCwStudent,
 } from "../../../../src/types/courseworkArchive.types"
 import type {
-  ArchiveGradeBoundaryRow,
-  ArchiveGradeBoundarySetRow,
   ArchiveGradeClassroomRow,
   ArchiveGradeConstraintExclusionLabelRow,
   ArchiveGradeConstraintLabelValueRow,
@@ -32,6 +30,7 @@ import type {
   ArchiveGradeExamRef,
   ArchiveGradeExportSettingsRow,
   ArchiveGradeFrozenScoreRow,
+  ArchiveGradeItemBoundaryRow,
   ArchiveGradeItemExclusionRow,
   ArchiveGradeItemRow,
   ArchiveGradeOverrideRow,
@@ -68,7 +67,6 @@ export async function collectGradeArchiveData(
     classroomJoinRows,
     studentJoinRows,
     itemRows,
-    boundarySetRows,
     constraintRows,
     exportSettingsRow,
   ] = await Promise.all([
@@ -84,7 +82,6 @@ export async function collectGradeArchiveData(
       where: { gradeId },
       orderBy: { order: "asc" },
     }),
-    prisma.gradeBoundarySet.findMany({ where: { gradeId } }),
     prisma.gradeConstraint.findMany({
       where: { gradeId },
       orderBy: { order: "asc" },
@@ -94,7 +91,6 @@ export async function collectGradeArchiveData(
 
   const gradeItemIds = itemRows.map((gradeItem) => gradeItem.id)
   const gradeStudentIds = studentJoinRows.map((gradeStudent) => gradeStudent.id)
-  const boundarySetIds = boundarySetRows.map((boundarySet) => boundarySet.id)
   const constraintIds = constraintRows.map((constraint) => constraint.id)
 
   const [
@@ -111,8 +107,8 @@ export async function collectGradeArchiveData(
       where: { gradeItemId: { in: gradeItemIds } },
       orderBy: { order: "asc" },
     }),
-    prisma.gradeBoundary.findMany({
-      where: { gradeBoundarySetId: { in: boundarySetIds } },
+    prisma.gradeItemBoundary.findMany({
+      where: { gradeItemId: { in: gradeItemIds } },
       orderBy: { order: "asc" },
     }),
     prisma.gradeOverride.findMany({
@@ -221,20 +217,10 @@ export async function collectGradeArchiveData(
       updatedAt: dateToJson(estimationSource.updatedAt),
     }))
 
-  const gradeBoundarySets: ArchiveGradeBoundarySetRow[] = boundarySetRows.map(
-    (boundarySet) => ({
-      id: boundarySet.id,
-      gradeId: boundarySet.gradeId,
-      gradeItemId: boundarySet.gradeItemId,
-      createdAt: dateToJson(boundarySet.createdAt),
-      updatedAt: dateToJson(boundarySet.updatedAt),
-    })
-  )
-
-  const gradeBoundaries: ArchiveGradeBoundaryRow[] = boundaryRows.map(
+  const gradeItemBoundaries: ArchiveGradeItemBoundaryRow[] = boundaryRows.map(
     (boundary) => ({
       id: boundary.id,
-      gradeBoundarySetId: boundary.gradeBoundarySetId,
+      gradeItemId: boundary.gradeItemId,
       label: boundary.label,
       minPercentage: decimalToJson(boundary.minPercentage),
       order: boundary.order,
@@ -515,8 +501,7 @@ export async function collectGradeArchiveData(
     gradeItems,
     gradeDataSources,
     gradeDataSourceEstimationSources,
-    gradeBoundarySets,
-    gradeBoundaries,
+    gradeItemBoundaries,
     gradeOverrides,
     gradeFrozenScores,
     gradeItemExclusions,
@@ -536,8 +521,7 @@ export async function collectGradeArchiveData(
       gradeItems: gradeItems.length,
       dataSources: gradeDataSources.length,
       manualScores: courseworkArchive.counts.scores,
-      boundarySets: gradeBoundarySets.length,
-      boundaries: gradeBoundaries.length,
+      boundaries: gradeItemBoundaries.length,
       classrooms: gradeClassrooms.length,
       students: gradeStudents.length,
     },

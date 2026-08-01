@@ -124,19 +124,16 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:deleteDataSource", id),
       reorderDataSources: (items: { id: string; order: number }[]) =>
         ipcRenderer.invoke("grade:reorderDataSources", items),
-      getBoundarySets: (gradeId: string) =>
-        ipcRenderer.invoke("grade:getBoundarySets", gradeId),
-      upsertBoundarySet: (data: {
-        gradeId: string
+      replaceGradeItemBoundaries: (data: {
         gradeItemId: string
         boundaries: {
           label: string
           minPercentage: number
           order: number
         }[]
-      }) => ipcRenderer.invoke("grade:upsertBoundarySet", data),
-      deleteBoundarySet: (id: string) =>
-        ipcRenderer.invoke("grade:deleteBoundarySet", id),
+      }) => ipcRenderer.invoke("grade:replaceGradeItemBoundaries", data),
+      deleteGradeItemBoundaries: (gradeItemId: string) =>
+        ipcRenderer.invoke("grade:deleteGradeItemBoundaries", gradeItemId),
       upsertGradeOverride: (
         data: GradeCellTarget & { overrideLabel: string }
       ) => ipcRenderer.invoke("grade:upsertGradeOverride", data),

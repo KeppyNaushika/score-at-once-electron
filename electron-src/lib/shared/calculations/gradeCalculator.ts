@@ -74,11 +74,9 @@ async function buildGradeCalcContext(gradeId: string) {
             },
             orderBy: { order: "asc" },
           },
+          boundaries: { orderBy: { order: "asc" } },
         },
         orderBy: { order: "asc" },
-      },
-      boundarySets: {
-        include: { boundaries: { orderBy: { order: "asc" } } },
       },
     },
   })
@@ -603,13 +601,10 @@ export async function calculateGrades(
             ? (weightedScore / weightedMax) * 100
             : null
 
-        // 境界セットからラベルを決定
-        const boundarySet = grade.boundarySets.find(
-          (boundarySet) => boundarySet.gradeItemId === gradeItem.id
-        )
+        // 評価項目の境界からラベルを決定。境界が1本も無ければラベルは付かない
         const originalGradeLabel = determineGradeLabel(
           percentage,
-          boundarySet?.boundaries ?? []
+          gradeItem.boundaries
         )
         // 上書き・確定値も対象者の子。この対象者の分しか見えないので、名簿から外した
         // 生徒の設定を拾うことは構造的に起こらない
@@ -709,11 +704,7 @@ export async function calculateGrades(
             id: dataSource.id,
             name: dataSource.name,
           })),
-        })),
-        students,
-        boundarySets: grade.boundarySets.map((boundarySet) => ({
-          gradeItemId: boundarySet.gradeItemId,
-          boundaries: [...boundarySet.boundaries]
+          boundaries: [...gradeItem.boundaries]
             .sort(
               (boundaryA, boundaryB) =>
                 Number(boundaryB.minPercentage) -
@@ -724,6 +715,7 @@ export async function calculateGrades(
               minPercentage: Number(boundary.minPercentage),
             })),
         })),
+        students,
       },
     }
   } catch (error) {

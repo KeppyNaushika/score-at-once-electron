@@ -28,12 +28,14 @@ const GRADE_ITEMS: GradeCalculationResult["gradeItems"] = [
       { id: "ds-mid", name: "中間" },
       { id: "ds-final", name: "期末" },
     ],
+    boundaries: [],
   },
   {
     id: "gi-thinking",
     name: "思考・判断・表現",
     order: 1,
     dataSources: [{ id: "ds-report", name: "レポート" }],
+    boundaries: [],
   },
 ]
 
@@ -112,7 +114,6 @@ function makeResult(students: StudentGradeResult[]): GradeCalculationResult {
     classNames: [],
     gradeItems: GRADE_ITEMS,
     students,
-    boundarySets: [],
   }
 }
 

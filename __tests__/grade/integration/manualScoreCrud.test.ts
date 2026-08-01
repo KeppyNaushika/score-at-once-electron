@@ -19,15 +19,15 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
-  deleteBoundarySet,
-  upsertBoundarySet,
-} from "@/electron-src/lib/prisma/gradeBoundary"
-import {
   createDataSource,
   getDataSourcesByGradeItemId,
   reorderDataSources,
 } from "@/electron-src/lib/prisma/gradeDataSource"
 import { createGradeItem } from "@/electron-src/lib/prisma/gradeItem"
+import {
+  deleteGradeItemBoundaries,
+  replaceGradeItemBoundaries,
+} from "@/electron-src/lib/prisma/gradeItemBoundary"
 
 import {
   cleanupTestDatabase,
@@ -48,8 +48,8 @@ describe("GradeBoundary 追加テスト", () => {
     await disconnectTestPrisma()
   })
 
-  describe("deleteBoundarySet", () => {
-    it("境界セットを削除できる", async () => {
+  describe("deleteGradeItemBoundaries", () => {
+    it("評価項目の境界を全て削除できる", async () => {
       const grade = await testPrisma.grade.create({
         data: { name: "PJ" },
       })
@@ -58,8 +58,7 @@ describe("GradeBoundary 追加テスト", () => {
         name: "知識・技能",
       })
 
-      const upserted = await upsertBoundarySet({
-        gradeId: grade.id,
+      await replaceGradeItemBoundaries({
         gradeItemId: gradeItemResult.gradeItem!.id,
         boundaries: [
           { label: "A", minPercentage: 80, order: 0 },
@@ -67,17 +66,18 @@ describe("GradeBoundary 追加テスト", () => {
         ],
       })
 
-      const result = await deleteBoundarySet(upserted.boundarySet!.id)
+      const result = await deleteGradeItemBoundaries(
+        gradeItemResult.gradeItem!.id
+      )
       expect(result.success).toBe(true)
 
-      // 削除後はセットが0件
-      const remaining = await testPrisma.gradeBoundarySet.findMany({
-        where: { gradeId: grade.id },
+      const remaining = await testPrisma.gradeItemBoundary.findMany({
+        where: { gradeItemId: gradeItemResult.gradeItem!.id },
       })
       expect(remaining).toHaveLength(0)
     })
 
-    it("境界セット内のboundaryもカスケード削除される", async () => {
+    it("評価項目を消すと境界もカスケード削除される", async () => {
       const grade = await testPrisma.grade.create({
         data: { name: "PJ" },
       })
@@ -86,8 +86,7 @@ describe("GradeBoundary 追加テスト", () => {
         name: "知識・技能",
       })
 
-      const upserted = await upsertBoundarySet({
-        gradeId: grade.id,
+      await replaceGradeItemBoundaries({
         gradeItemId: gradeItemResult.gradeItem!.id,
         boundaries: [
           { label: "A", minPercentage: 80, order: 0 },
@@ -95,10 +94,12 @@ describe("GradeBoundary 追加テスト", () => {
         ],
       })
 
-      await deleteBoundarySet(upserted.boundarySet!.id)
+      await testPrisma.gradeItem.delete({
+        where: { id: gradeItemResult.gradeItem!.id },
+      })
 
-      const boundaries = await testPrisma.gradeBoundary.findMany({
-        where: { gradeBoundarySetId: upserted.boundarySet!.id },
+      const boundaries = await testPrisma.gradeItemBoundary.findMany({
+        where: { gradeItemId: gradeItemResult.gradeItem!.id },
       })
       expect(boundaries).toHaveLength(0)
     })

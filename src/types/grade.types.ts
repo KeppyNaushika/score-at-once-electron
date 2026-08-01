@@ -15,8 +15,6 @@ import type {
   CropRegion,
   Exam,
   Grade,
-  GradeBoundary,
-  GradeBoundarySet,
   GradeClassroom,
   GradeConstraint,
   GradeConstraintExclusionLabel,
@@ -25,6 +23,7 @@ import type {
   GradeDataSource,
   GradeDataSourceEstimationSource,
   GradeItem,
+  GradeItemBoundary,
   Subtotal,
 } from "@prisma/client"
 
@@ -83,16 +82,16 @@ export type GradeWithRelations = Omit<Grade, "referenceDate"> & {
   _count?: {
     gradeItems: number
     gradeStudents: number
-    boundarySets: number
   }
 }
 
-/** 評価項目（リレーション付き） */
+/** 評価項目（リレーション付き）。成績境界は行のまま同梱される */
 export type GradeItemWithDataSources = Pick<
   GradeItem,
   "id" | "gradeId" | "name" | "order"
 > & {
   dataSources: GradeDataSourceWithRelations[]
+  boundaries: GradeBoundaryData[]
 }
 
 /**
@@ -154,20 +153,8 @@ export type GradeDataSourceWithRelations = Omit<
   coursework: Pick<Coursework, "id" | "name"> | null
 }
 
-/** 境界セット（境界リスト付き）。対象は必ず評価項目で、総合は存在しない */
-export type GradeBoundarySetWithItemAndBoundaries = Pick<
-  GradeBoundarySet,
-  "id" | "gradeId" | "gradeItemId"
-> & {
-  gradeItem: Pick<GradeItem, "id" | "name" | "order">
-  boundaries: GradeBoundaryData[]
-}
-
 /** 境界データ */
-export type GradeBoundaryData = Omit<
-  GradeBoundary,
-  "minPercentage" | "createdAt" | "updatedAt"
-> & {
+export type GradeBoundaryData = Omit<GradeItemBoundary, "minPercentage"> & {
   minPercentage: number
 }
 
@@ -407,13 +394,10 @@ export interface GradeCalculationResult {
     name: string
     order: number
     dataSources: { id: string; name: string }[]
-  }[]
-  students: StudentGradeResult[]
-  /** 境界セットデータ（override方向判定用）。対象は必ず評価項目 */
-  boundarySets: {
-    gradeItemId: string
+    /** その評価項目の成績境界（minPercentage降順）。override方向の判定に使う */
     boundaries: { label: string; minPercentage: number }[]
   }[]
+  students: StudentGradeResult[]
 }
 
 // ─────────────────────────────────────────────────────────────

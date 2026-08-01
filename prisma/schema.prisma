@@ -770,7 +770,6 @@ model Grade {
   updatedAt     DateTime  @updatedAt
 
   gradeItems       GradeItem[]
-  boundarySets     GradeBoundarySet[]
   gradeClassrooms  GradeClassroom[]
   gradeStudents    GradeStudent[]
   gradeConstraints GradeConstraint[]
@@ -884,7 +883,7 @@ model GradeItem {
 
   grade                Grade                      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   dataSources          GradeDataSource[]
-  boundarySets         GradeBoundarySet[]
+  boundaries           GradeItemBoundary[]
   overrides            GradeOverride[]
   frozenScores         GradeFrozenScore[]
   itemExclusions       GradeItemExclusion[]
@@ -1015,27 +1014,7 @@ model GradeItemExclusion {
   @@index([gradeItemId])
 }
 
-/// 評価項目ごとの成績境界セット。
-///
-/// 「総合」という対象は持たない — 評定は評価項目（GradeItem）の一つとして扱うのが本来で、
-/// 総合は全評価項目の加重平均という意味を成さない集計だった（評定そのものを観点と一緒に
-/// 平均へ混ぜていた）。UI にも総合の境界を作る導線が無く、残っていたのは残骸。
-model GradeBoundarySet {
-  id          String   @id @default(uuid())
-  gradeId     String
-  gradeItemId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  grade      Grade           @relation(fields: [gradeId], references: [id], onDelete: Cascade)
-  gradeItem  GradeItem       @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
-  boundaries GradeBoundary[]
-
-  @@unique([gradeId, gradeItemId])
-  @@index([gradeId])
-}
-
-/// 成績ラベルの手動上書き（生徒×評価項目）。総合の行は持たない（GradeBoundarySet と同じ理由）
+/// 成績ラベルの手動上書き（生徒×評価項目）。総合の行は持たない（GradeBoundary と同じ理由）
 /// 成績ラベルの手動上書き。対象は「その成績の対象者（GradeStudent）× 評価項目」で、
 /// 人（Student）ではない。名簿から外された生徒の上書きは存在しえない（#962）。
 model GradeOverride {
@@ -1095,19 +1074,30 @@ model GradeFrozenScore {
   @@index([gradeItemId])
 }
 
-/// 成績境界（ラベルと閾値）
-model GradeBoundary {
-  id                 String   @id @default(uuid())
-  gradeBoundarySetId String
-  label              String
-  minPercentage      Decimal
-  order              Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+/// 評価項目ごとの成績境界。「このパーセンテージ以上ならこのラベル」を1行で表す。
+///
+/// 境界の有無は行の有無そのもの。以前は属性を持たない容器 GradeBoundarySet を挟んでいたが、
+/// あれは「総合（overall）」— 評価項目に属さない境界 — を置くための入れ物で、総合の撤去
+/// （20260725170000）で存在理由を失っていた。容器を残すと境界0件のセット行が生き残り、
+/// 「境界は無いのに設定済み」という状態が作れてしまう。
+///
+/// 「総合」という対象は持たない — 評定は評価項目（GradeItem）の一つとして扱うのが本来で、
+/// 総合は全評価項目の加重平均という意味を成さない集計だった（評定そのものを観点と一緒に
+/// 平均へ混ぜていた）。UI にも総合の境界を作る導線が無く、残っていたのは残骸。
+///
+/// gradeId は持たない。所属する成績は gradeItem.gradeId から辿れる冗長列でしかない。
+model GradeItemBoundary {
+  id            String   @id @default(uuid())
+  gradeItemId   String
+  label         String
+  minPercentage Decimal
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  boundarySet GradeBoundarySet @relation(fields: [gradeBoundarySetId], references: [id], onDelete: Cascade)
+  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
-  @@index([gradeBoundarySetId])
+  @@index([gradeItemId])
 }
 
 /// 成績算出プロジェクトのエクスポート設定

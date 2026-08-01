@@ -34,7 +34,6 @@ export async function getAllGrades() {
           select: {
             gradeItems: true,
             gradeStudents: true,
-            boundarySets: true,
           },
         },
       },
@@ -73,7 +72,6 @@ export async function getGradeById(id: string) {
           select: {
             gradeItems: true,
             gradeStudents: true,
-            boundarySets: true,
           },
         },
       },
@@ -258,14 +256,14 @@ function buildCopyName(base: string, existingNames: Set<string>): string {
 /**
  * 成績算出試験をツリーごと複製する。
  *
- * Grade を頂点に、GradeItem / GradeDataSource / GradeBoundarySet+GradeBoundary /
+ * Grade を頂点に、GradeItem / GradeDataSource / GradeItemBoundary /
  * GradeOverride / GradeItemExclusion / GradeClassroom / GradeStudent /
  * GradeConstraint / GradeExportSettings をすべて新IDで再作成する。
  *
  * 外部参照（examId・studentId・classroomId・cropRegionId・courseworkId 等）は
  * 同一DB内でそのまま流用する（アーカイブ取込と違い名前照合は不要）。
  * Grade 内部を参照するフィールドは新IDへ再リンクする:
- *   - GradeItem を指す子（DataSource / BoundarySet / Override / Exclusion）→ 旧→新 gradeItemId
+ *   - GradeItem を指す子（DataSource / Boundary / Override / Exclusion）→ 旧→新 gradeItemId
  *   - GradeDataSource.estimationSourceIds（同一Grade内の他DataSource ID群）→ 旧→新 dataSourceId
  *
  * ⚠️ Grade に子テーブル／内部参照フィールドを追加した場合は、ここと
@@ -293,11 +291,9 @@ export async function duplicateGrade(id: string) {
                   include: { estimationSources: { orderBy: { order: "asc" } } },
                   orderBy: { order: "asc" },
                 },
+                boundaries: { orderBy: { order: "asc" } },
               },
               orderBy: { order: "asc" },
-            },
-            boundarySets: {
-              include: { boundaries: { orderBy: { order: "asc" } } },
             },
             gradeConstraints: {
               include: gradeConstraintInclude,
@@ -440,24 +436,17 @@ export async function duplicateGrade(id: string) {
           })
         }
 
-        // 6. 評定境界セット + 境界（gradeItemId を再リンク）
-        for (const boundarySet of source.boundarySets) {
-          const newBoundarySet = await tx.gradeBoundarySet.create({
-            data: {
-              gradeId: grade.id,
-              gradeItemId: remapItemId(boundarySet.gradeItemId),
-            },
-          })
-          if (boundarySet.boundaries.length > 0) {
-            await tx.gradeBoundary.createMany({
-              data: boundarySet.boundaries.map((boundary) => ({
-                gradeBoundarySetId: newBoundarySet.id,
-                label: boundary.label,
-                minPercentage: boundary.minPercentage,
-                order: boundary.order,
-              })),
-            })
-          }
+        // 6. 成績境界（gradeItemId を再リンク）
+        const boundaryRows = source.gradeItems.flatMap((sourceGradeItem) =>
+          sourceGradeItem.boundaries.map((boundary) => ({
+            gradeItemId: remapItemId(sourceGradeItem.id),
+            label: boundary.label,
+            minPercentage: boundary.minPercentage,
+            order: boundary.order,
+          }))
+        )
+        if (boundaryRows.length > 0) {
+          await tx.gradeItemBoundary.createMany({ data: boundaryRows })
         }
 
         // 7-8. 評定の手動上書きと評価項目ごとの除外。どちらも対象者×評価項目のセルなので、

@@ -72,15 +72,15 @@ function buildOrderedLabelsMap(
   result: GradeCalculationResult
 ): Map<string, string[]> {
   const byGradeItemId = new Map<string, string[]>()
-  for (const boundarySet of result.boundarySets) {
+  for (const gradeItem of result.gradeItems) {
     // minPercentage 昇順 = 弱い評価が先頭
-    const ordered = [...boundarySet.boundaries]
+    const ordered = [...gradeItem.boundaries]
       .sort(
         (boundaryA, boundaryB) =>
           boundaryA.minPercentage - boundaryB.minPercentage
       )
       .map((boundary) => boundary.label)
-    byGradeItemId.set(boundarySet.gradeItemId, ordered)
+    byGradeItemId.set(gradeItem.id, ordered)
   }
   return byGradeItemId
 }
