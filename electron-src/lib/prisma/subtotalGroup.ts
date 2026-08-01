@@ -2,11 +2,13 @@ import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
  * SubtotalGroup の include 形状（SSOT）。型（GetPayload）と実クエリの双方がこの const を
  * 参照するため両者が乖離しない。create/update/available は subtotals のみ、
- * getSubtotalGroups は examSubtotalGroups.exam（id・examName の部分 select）も取る。
+ * getSubtotalGroups は examSubtotalGroups.exam（id・examName の部分 select）と
+ * tagSubtotalGroups.tag も取る。
  */
 export const subtotalGroupWithSubtotalsInclude = {
   subtotals: {
@@ -14,7 +16,7 @@ export const subtotalGroupWithSubtotalsInclude = {
   },
 } satisfies Prisma.SubtotalGroupInclude
 
-export const subtotalGroupWithSubtotalsAndExamsInclude = {
+export const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
   subtotals: {
     orderBy: { order: "asc" },
   },
@@ -28,6 +30,10 @@ export const subtotalGroupWithSubtotalsAndExamsInclude = {
       },
     },
   },
+  tagSubtotalGroups: {
+    include: tagSubtotalGroupWithTagInclude,
+    orderBy: { tag: { order: "asc" } },
+  },
 } satisfies Prisma.SubtotalGroupInclude
 
 /** subtotals を含む SubtotalGroup（create/update/available の返り値） */
@@ -35,10 +41,13 @@ export type SubtotalGroupWithSubtotals = Prisma.SubtotalGroupGetPayload<{
   include: typeof subtotalGroupWithSubtotalsInclude
 }>
 
-/** subtotals・examSubtotalGroups.exam（部分 select）を含む SubtotalGroup（getSubtotalGroups の返り値） */
-export type SubtotalGroupWithSubtotalsAndExams =
+/**
+ * subtotals・examSubtotalGroups.exam（部分 select）・tagSubtotalGroups.tag を含む
+ * SubtotalGroup（getSubtotalGroups の返り値）
+ */
+export type SubtotalGroupWithSubtotalsExamsAndTags =
   Prisma.SubtotalGroupGetPayload<{
-    include: typeof subtotalGroupWithSubtotalsAndExamsInclude
+    include: typeof subtotalGroupWithSubtotalsExamsAndTagsInclude
   }>
 
 /**
@@ -47,7 +56,7 @@ export type SubtotalGroupWithSubtotalsAndExams =
 export async function getSubtotalGroups() {
   try {
     const subtotalGroups = await prisma.subtotalGroup.findMany({
-      include: subtotalGroupWithSubtotalsAndExamsInclude,
+      include: subtotalGroupWithSubtotalsExamsAndTagsInclude,
       orderBy: { createdAt: "desc" },
     })
 

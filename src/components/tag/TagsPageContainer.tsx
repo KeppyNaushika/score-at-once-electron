@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
+import { Calculator, Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -27,14 +27,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import type { TagSubtotalGroupWithSubtotalGroup } from "@/electron-src/lib/prisma/tagSubtotalGroup"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
-
-interface TagItem {
-  id: string
-  name: string
-  order: number
-  color: string | null
-}
 
 const TAG_COLOR_PRESETS = [
   "#ef4444", // red
@@ -48,18 +43,42 @@ const TAG_COLOR_PRESETS = [
   "#6b7280", // gray
 ]
 
+/**
+ * タグの利用先内訳を1行の文言にする。
+ * タグ自体は用途を持たず、何を分類するタグかは付いた先で決まるため、それを可視化する。
+ */
+function formatTagUsage(tag: TagWithAllRelations): string {
+  const usages = [
+    { label: "試験", links: tag.examTags },
+    { label: "資料", links: tag.courseworkTags },
+    { label: "解答用紙定義", links: tag.asbDefinitionTags },
+    { label: "小計点グループ", links: tag.tagSubtotalGroups },
+  ]
+    .filter((usage) => usage.links.length > 0)
+    .map((usage) => `${usage.label} ${usage.links.length}`)
+
+  return usages.length > 0 ? usages.join(" / ") : "未使用"
+}
+
 // ---------------------------------------------------------------------------
 // Sortable Tag Row
 // ---------------------------------------------------------------------------
 
 function SortableTagRow({
   tag,
+  expanded,
+  linkedSubtotalGroups,
+  onToggleSubtotalGroups,
   onEdit,
   onDelete,
 }: {
-  tag: TagItem
-  onEdit: (tag: TagItem) => void
-  onDelete: (tag: TagItem) => void
+  tag: TagWithAllRelations
+  expanded: boolean
+  /** 展開中タグの紐付け。読み込み中は null */
+  linkedSubtotalGroups: TagSubtotalGroupWithSubtotalGroup[] | null
+  onToggleSubtotalGroups: (tag: TagWithAllRelations) => void
+  onEdit: (tag: TagWithAllRelations) => void
+  onDelete: (tag: TagWithAllRelations) => void
 }) {
   const { setNodeRef, style, dragHandleProps } = useSortableRow(tag.id)
 
@@ -67,50 +86,98 @@ function SortableTagRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
+      className="rounded-lg border border-border bg-card"
     >
-      <DragHandle dragHandleProps={dragHandleProps} />
-      {tag.color && (
+      <div className="flex items-center gap-3 px-3 py-2">
+        <DragHandle dragHandleProps={dragHandleProps} />
+        {tag.color && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="h-4 w-4 shrink-0 cursor-pointer rounded-full border transition-transform hover:scale-125"
+                style={{ backgroundColor: tag.color }}
+                onClick={() => onEdit(tag)}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={5}>
+              クリックして色を変更
+            </TooltipContent>
+          </Tooltip>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">{tag.name}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            {formatTagUsage(tag)}
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className="text-xs font-normal"
+          style={
+            tag.color ? { borderColor: tag.color, color: tag.color } : undefined
+          }
+        >
+          プレビュー
+        </Badge>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="h-4 w-4 shrink-0 cursor-pointer rounded-full border transition-transform hover:scale-125"
-              style={{ backgroundColor: tag.color }}
-              onClick={() => onEdit(tag)}
-            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-7 w-7 p-0 ${expanded ? "text-primary" : ""}`}
+              onClick={() => onToggleSubtotalGroups(tag)}
+            >
+              <Calculator className="h-3.5 w-3.5" />
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={5}>
-            クリックして色を変更
+            紐づく小計点グループを表示
           </TooltipContent>
         </Tooltip>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0"
+          onClick={() => onEdit(tag)}
+        >
+          <Edit2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+          onClick={() => onDelete(tag)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {expanded && (
+        <div className="border-t px-3 py-2">
+          {linkedSubtotalGroups === null ? (
+            <p className="text-xs text-muted-foreground">読み込み中...</p>
+          ) : linkedSubtotalGroups.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              このタグが付いた小計点グループはありません。小計点グループ画面で付けられます。
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-xs text-muted-foreground">
+                小計点グループ
+              </span>
+              {linkedSubtotalGroups.map((tagSubtotalGroup) => (
+                <Badge
+                  key={tagSubtotalGroup.subtotalGroup.id}
+                  variant="secondary"
+                  className="text-xs font-normal"
+                >
+                  {tagSubtotalGroup.subtotalGroup.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
       )}
-      <span className="min-w-0 flex-1 truncate font-medium">{tag.name}</span>
-      <Badge
-        variant="outline"
-        className="text-xs font-normal"
-        style={
-          tag.color ? { borderColor: tag.color, color: tag.color } : undefined
-        }
-      >
-        プレビュー
-      </Badge>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 w-7 p-0"
-        onClick={() => onEdit(tag)}
-      >
-        <Edit2 className="h-3.5 w-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-        onClick={() => onDelete(tag)}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
     </div>
   )
 }
@@ -126,7 +193,7 @@ function TagModal({
   onSave,
 }: {
   open: boolean
-  tag: TagItem | null
+  tag: TagWithAllRelations | null
   onClose: () => void
   onSave: (name: string, color: string | null) => Promise<void>
 }) {
@@ -218,10 +285,14 @@ function TagModal({
 // ---------------------------------------------------------------------------
 
 export function TagsPageContainer() {
-  const [tags, setTags] = useState<TagItem[]>([])
+  const [tags, setTags] = useState<TagWithAllRelations[]>([])
   const [loading, setLoading] = useState(true)
-  const [modalTag, setModalTag] = useState<TagItem | null>(null)
+  const [modalTag, setModalTag] = useState<TagWithAllRelations | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [expandedTagId, setExpandedTagId] = useState<string | null>(null)
+  const [linkedSubtotalGroups, setLinkedSubtotalGroups] = useState<
+    TagSubtotalGroupWithSubtotalGroup[] | null
+  >(null)
 
   const loadTags = useCallback(async () => {
     try {
@@ -254,17 +325,38 @@ export function TagsPageContainer() {
     [tags]
   )
 
+  // 紐づく小計点グループは開いたタグの分だけ取得する
+  const handleToggleSubtotalGroups = useCallback(
+    async (tag: TagWithAllRelations) => {
+      if (expandedTagId === tag.id) {
+        setExpandedTagId(null)
+        return
+      }
+      setExpandedTagId(tag.id)
+      setLinkedSubtotalGroups(null)
+      try {
+        const tagSubtotalGroups =
+          await window.electronAPI.tagSubtotalGroupGetByTagId(tag.id)
+        setLinkedSubtotalGroups(tagSubtotalGroups)
+      } catch {
+        toast.error("小計点グループの取得に失敗しました")
+        setLinkedSubtotalGroups([])
+      }
+    },
+    [expandedTagId]
+  )
+
   const handleCreate = () => {
     setModalTag(null)
     setShowModal(true)
   }
 
-  const handleEdit = (tag: TagItem) => {
+  const handleEdit = (tag: TagWithAllRelations) => {
     setModalTag(tag)
     setShowModal(true)
   }
 
-  const handleDelete = async (tag: TagItem) => {
+  const handleDelete = async (tag: TagWithAllRelations) => {
     if (
       !window.confirm(
         `タグ「${tag.name}」を削除しますか？\n関連する全ての試験からこのタグが外れます。`
@@ -352,6 +444,13 @@ export function TagsPageContainer() {
                     <SortableTagRow
                       key={tag.id}
                       tag={tag}
+                      expanded={expandedTagId === tag.id}
+                      linkedSubtotalGroups={
+                        expandedTagId === tag.id ? linkedSubtotalGroups : null
+                      }
+                      onToggleSubtotalGroups={(tag) =>
+                        void handleToggleSubtotalGroups(tag)
+                      }
                       onEdit={handleEdit}
                       onDelete={(tag) => void handleDelete(tag)}
                     />

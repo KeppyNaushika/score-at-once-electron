@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,10 +16,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
 interface SubtotalGroupSelectorProps {
   examId: string
-  activeSubtotalGroups: SubtotalGroup[]
+  activeSubtotalGroups: SubtotalGroupWithSubtotals[]
   onRefresh: () => void
 }
 
@@ -29,7 +29,9 @@ export function SubtotalGroupSelector({
   activeSubtotalGroups,
   onRefresh,
 }: SubtotalGroupSelectorProps) {
-  const [availableGroups, setAvailableGroups] = useState<SubtotalGroup[]>([])
+  const [availableGroups, setAvailableGroups] = useState<
+    SubtotalGroupWithSubtotals[]
+  >([])
   const [loading, setLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")

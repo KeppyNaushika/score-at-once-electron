@@ -2,13 +2,13 @@
 
 import { Calculator, Edit, Trash2 } from "lucide-react"
 
-import type { SubtotalGroup } from "@/components/subtotal-groups/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
 
 interface SubtotalGroupCardProps {
-  group: SubtotalGroup
+  group: SubtotalGroupWithSubtotalsExamsAndTags
   onEdit: () => void
   onDelete: () => void
 }
@@ -48,6 +48,29 @@ export function SubtotalGroupCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
+          {/* タグ */}
+          {group.tagSubtotalGroups.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {group.tagSubtotalGroups.map((tagSubtotalGroup) => (
+                <Badge
+                  key={tagSubtotalGroup.tag.id}
+                  variant="outline"
+                  className="text-xs font-normal"
+                  style={
+                    tagSubtotalGroup.tag.color
+                      ? {
+                          borderColor: tagSubtotalGroup.tag.color,
+                          color: tagSubtotalGroup.tag.color,
+                        }
+                      : undefined
+                  }
+                >
+                  {tagSubtotalGroup.tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+
           {/* 統計情報 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -56,21 +79,17 @@ export function SubtotalGroupCard({
             </div>
 
             {/* 使用試験数 */}
-            {group.examSubtotalGroups && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">利用試験</span>
-                <Badge
-                  variant={
-                    group.examSubtotalGroups.length > 0
-                      ? "default"
-                      : "secondary"
-                  }
-                  className="text-xs"
-                >
-                  {group.examSubtotalGroups.length}件
-                </Badge>
-              </div>
-            )}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">利用試験</span>
+              <Badge
+                variant={
+                  group.examSubtotalGroups.length > 0 ? "default" : "secondary"
+                }
+                className="text-xs"
+              >
+                {group.examSubtotalGroups.length}件
+              </Badge>
+            </div>
           </div>
 
           {/* 小計項目一覧 */}

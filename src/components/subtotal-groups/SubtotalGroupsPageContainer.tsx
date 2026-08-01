@@ -1,21 +1,41 @@
 "use client"
 
-import { Plus, Search } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Plus } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 
+import { ListFilterBar } from "@/components/common/ListFilterBar"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
+import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+
+/** 小計点グループ一覧のフィルタ対象（グループ名・小計項目名・タグ名で検索、タグで絞り込み） */
+const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupWithSubtotalsExamsAndTags> =
+  {
+    searchTexts: (subtotalGroup) => [
+      subtotalGroup.name,
+      ...subtotalGroup.subtotals.map((subtotal) => subtotal.name),
+      ...subtotalGroup.tagSubtotalGroups.map(
+        (tagSubtotalGroup) => tagSubtotalGroup.tag.name
+      ),
+    ],
+    tagIds: (subtotalGroup) =>
+      subtotalGroup.tagSubtotalGroups.map(
+        (tagSubtotalGroup) => tagSubtotalGroup.tag.id
+      ),
+  }
 
 export function SubtotalGroupsPageContainer() {
-  const [subtotalGroups, setSubtotalGroups] = useState<SubtotalGroup[]>([])
+  const [subtotalGroups, setSubtotalGroups] = useState<
+    SubtotalGroupWithSubtotalsExamsAndTags[]
+  >([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [showModal, setShowModal] = useState(false)
-  const [editingGroup, setEditingGroup] = useState<SubtotalGroup | null>(null)
+  const [editingGroup, setEditingGroup] =
+    useState<SubtotalGroupWithSubtotalsExamsAndTags | null>(null)
   const [ipcError, setIpcError] = useState<string | null>(null)
 
   // データの取得
@@ -51,6 +71,29 @@ export function SubtotalGroupsPageContainer() {
     fetchSubtotalGroups()
   }, [fetchSubtotalGroups])
 
+  // 既存タグ一覧を取得（タグフィルタの選択肢）
+  const fetchTags = useCallback(async () => {
+    try {
+      const tags = await window.electronAPI.tagGetAll()
+      setAllTags(tags)
+    } catch (error) {
+      console.error("Error fetching tags:", error)
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchTags()
+  }, [fetchTags])
+
+  const {
+    filteredItems: filteredGroups,
+    searchTerm,
+    setSearchTerm,
+    filterTagIds,
+    toggleTagId,
+    clearTagIds,
+  } = useListFilter(subtotalGroups, SUBTOTAL_GROUP_FILTER_ACCESSORS)
+
   // 新規作成
   const handleCreate = useCallback(() => {
     setEditingGroup(null)
@@ -78,26 +121,8 @@ export function SubtotalGroupsPageContainer() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [fetchSubtotalGroups, handleCreate, showModal])
 
-  // 検索フィルタリング（グループ名と小計項目名で検索）
-  const filteredGroups = useMemo(() => {
-    if (!searchTerm) return subtotalGroups
-
-    const searchLower = searchTerm.toLowerCase()
-    return subtotalGroups.filter((group) => {
-      // グループ名で検索
-      const matchesGroupName = group.name.toLowerCase().includes(searchLower)
-
-      // 小計項目名で検索
-      const matchesSubtotalName = group.subtotals.some((subtotal) =>
-        subtotal.name.toLowerCase().includes(searchLower)
-      )
-
-      return matchesGroupName || matchesSubtotalName
-    })
-  }, [searchTerm, subtotalGroups])
-
   // 編集
-  const handleEdit = (group: SubtotalGroup) => {
+  const handleEdit = (group: SubtotalGroupWithSubtotalsExamsAndTags) => {
     setEditingGroup(group)
     setShowModal(true)
   }
@@ -133,7 +158,8 @@ export function SubtotalGroupsPageContainer() {
 
   // モーダルの保存処理
   const handleSave = async () => {
-    await fetchSubtotalGroups() // リストを再読み込み
+    // タグは新規作成され得るのでフィルタの選択肢も取り直す
+    await Promise.all([fetchSubtotalGroups(), fetchTags()])
     setShowModal(false)
   }
 
@@ -148,31 +174,30 @@ export function SubtotalGroupsPageContainer() {
   return (
     <div className="flex h-full min-w-full flex-col">
       {/* Action Bar */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={handleCreate}
-            variant="outline"
-            className="rounded-lg"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新規作成
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="グループ名、小計項目名で検索"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 w-56 rounded-lg pl-9"
-            />
-          </div>
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {filteredGroups.length}件
-          </span>
-        </div>
+      <div className="border-b px-4 py-3">
+        <ListFilterBar
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          searchPlaceholder="グループ名、小計項目名、タグで検索"
+          totalCount={subtotalGroups.length}
+          filteredCount={filteredGroups.length}
+          tagFilter={{
+            options: allTags,
+            selectedIds: filterTagIds,
+            onToggle: toggleTagId,
+            onClear: clearTagIds,
+          }}
+          leading={
+            <Button
+              onClick={handleCreate}
+              variant="outline"
+              className="rounded-lg"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              新規作成
+            </Button>
+          }
+        />
       </div>
 
       {/* エラーメッセージ */}
@@ -196,11 +221,11 @@ export function SubtotalGroupsPageContainer() {
         {!ipcError && filteredGroups.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
             <p className="mb-2 text-muted-foreground">
-              {searchTerm
+              {subtotalGroups.length > 0
                 ? "検索結果が見つかりません"
                 : "小計点グループがありません"}
             </p>
-            {!searchTerm && (
+            {subtotalGroups.length === 0 && (
               <Button variant="outline" onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 最初のグループを作成

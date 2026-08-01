@@ -24,9 +24,8 @@ import {
   updateTag,
 } from "../lib/prisma/tag"
 import {
-  createTagSubtotalGroup,
-  deleteTagSubtotalGroup,
   getTagSubtotalGroups,
+  setSubtotalGroupTags,
 } from "../lib/prisma/tagSubtotalGroup"
 import { registerHandler } from "./ipcHandlerUtils"
 
@@ -73,15 +72,11 @@ export function setupTagHandlers(): void {
   })
 
   registerHandler(
-    "tagSubtotalGroup:create",
-    async (data: { tagId: string; subtotalGroupId: string }) => {
-      return createTagSubtotalGroup(data)
+    "tagSubtotalGroup:setTags",
+    async (subtotalGroupId: string, tagIds: string[]) => {
+      return setSubtotalGroupTags(subtotalGroupId, tagIds)
     }
   )
-
-  registerHandler("tagSubtotalGroup:delete", async (id: string) => {
-    return deleteTagSubtotalGroup(id)
-  })
 
   // ExamTag CRUD
   registerHandler("examTag:getByExamId", async (examId: string) => {

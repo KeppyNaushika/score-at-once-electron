@@ -17,13 +17,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
+import React, { useCallback, useEffect, useState } from "react"
 
-import type {
-  SubtotalGroup,
-  SubtotalGroupFormData,
-} from "@/components/subtotal-groups/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,12 +31,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
 
 interface SubtotalGroupModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: () => void
-  editingGroup: SubtotalGroup | null
+  editingGroup: SubtotalGroupWithSubtotalsExamsAndTags | null
 }
 
 interface SubtotalFormData {
@@ -123,10 +120,15 @@ export function SubtotalGroupModal({
 }: SubtotalGroupModalProps) {
   // 呼び出し側（SubtotalGroupsPageContainer）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに editingGroup の内容からフォームが始まる。
-  const [formData, setFormData] = useState<SubtotalGroupFormData>({
-    name: editingGroup?.name ?? "",
-    subtotals: [],
-  })
+  const [name, setName] = useState(editingGroup?.name ?? "")
+  const [tagNames, setTagNames] = useState<string[]>(() =>
+    (editingGroup?.tagSubtotalGroups ?? []).map(
+      (tagSubtotalGroup) => tagSubtotalGroup.tag.name
+    )
+  )
+  const [currentTagInput, setCurrentTagInput] = useState("")
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [subtotals, setSubtotals] = useState<SubtotalFormData[]>(() =>
     [...(editingGroup?.subtotals ?? [])]
       .sort((subtotalA, subtotalB) => subtotalA.order - subtotalB.order)
@@ -143,6 +145,50 @@ export function SubtotalGroupModal({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
+  )
+
+  // 既存タグ一覧を取得（サジェスト用）
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await window.electronAPI.tagGetAll()
+        setAllTags(tags)
+      } catch (error) {
+        console.error("Failed to load tags:", error)
+      }
+    }
+    void loadTags()
+  }, [])
+
+  const handleAddTag = useCallback(
+    (tagName?: string) => {
+      const nameToAdd = (tagName ?? currentTagInput).trim()
+      if (nameToAdd && !tagNames.includes(nameToAdd)) {
+        setTagNames([...tagNames, nameToAdd])
+      }
+      setCurrentTagInput("")
+      setShowSuggestions(false)
+    },
+    [currentTagInput, tagNames]
+  )
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTagNames(tagNames.filter((tagName) => tagName !== tagToRemove))
+  }
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+      e.preventDefault()
+      handleAddTag()
+    }
+  }
+
+  // サジェスト候補
+  const suggestions = allTags.filter(
+    (tag) =>
+      !tagNames.includes(tag.name) &&
+      (currentTagInput.trim() === "" ||
+        tag.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
   )
 
   // 小計項目を追加
@@ -189,7 +235,7 @@ export function SubtotalGroupModal({
 
   // 保存処理
   const handleSave = async () => {
-    if (!formData.name.trim()) {
+    if (!name.trim()) {
       alert("グループ名を入力してください。")
       return
     }
@@ -213,7 +259,7 @@ export function SubtotalGroupModal({
       }))
 
       const groupData = {
-        name: formData.name.trim(),
+        name: name.trim(),
         subtotals: subtotalData,
       }
 
@@ -228,6 +274,23 @@ export function SubtotalGroupModal({
       }
 
       if (result.success) {
+        // タグは他の紐付けと同じく、タグ名から findOrCreate して置換方式で保存する
+        const savedGroupId = result.subtotalGroup?.id
+        if (savedGroupId) {
+          try {
+            const tagIds: string[] = []
+            for (const tagName of tagNames) {
+              const tag = await window.electronAPI.tagFindOrCreate(tagName)
+              tagIds.push(tag.id)
+            }
+            await window.electronAPI.tagSubtotalGroupSetTags(
+              savedGroupId,
+              tagIds
+            )
+          } catch (error) {
+            console.error("Failed to save tags:", error)
+          }
+        }
         onSave()
         onClose()
       } else {
@@ -259,12 +322,70 @@ export function SubtotalGroupModal({
               <Label htmlFor="group-name">グループ名 *</Label>
               <Input
                 id="group-name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="例: 国語小計、数学小計"
               />
+            </div>
+            <div>
+              <Label htmlFor="subtotal-group-tags">タグ</Label>
+              <div className="relative mt-2 mb-2 flex items-center gap-2">
+                <Input
+                  id="subtotal-group-tags"
+                  value={currentTagInput}
+                  onChange={(e) => {
+                    setCurrentTagInput(e.target.value)
+                    setShowSuggestions(true)
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => {
+                    setTimeout(() => setShowSuggestions(false), 200)
+                  }}
+                  onKeyDown={handleTagInputKeyDown}
+                  className="grow"
+                  placeholder="教科名や試験種別などのタグを入力"
+                />
+                <Button
+                  type="button"
+                  onClick={() => handleAddTag()}
+                  variant="outline"
+                >
+                  追加
+                </Button>
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full right-10 left-0 z-50 mt-1 max-h-32 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                    {suggestions.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          handleAddTag(tag.name)
+                        }}
+                      >
+                        <TagIcon className="h-3 w-3 opacity-50" />
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {tagNames.map((tagName) => (
+                  <Badge key={tagName} variant="secondary">
+                    {tagName}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tagName)}
+                      className="ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0 text-secondary-foreground hover:text-destructive"
+                      aria-label={`Remove ${tagName}`}
+                    >
+                      <XIcon size={14} />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
 

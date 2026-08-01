@@ -2,14 +2,35 @@
  * Tag（タグ）のPrisma操作関数
  */
 
+import type { Prisma } from "@prisma/client"
+
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+
+/**
+ * Tag が持つ全リレーション（＝タグが何に付いているか）。タグ本体は用途を持たず、
+ * それを決めるのは結合テーブルなので、各結合行をそのまま返す。
+ * 現在の読み手はタグ管理画面の利用先表示で、件数への集約は renderer 側で行う
+ * （規約: 計算は renderer 側）。Tag にリレーションを足したらここにも足す。
+ */
+const tagWithAllRelationsInclude = {
+  examTags: true,
+  courseworkTags: true,
+  asbDefinitionTags: true,
+  tagSubtotalGroups: true,
+} satisfies Prisma.TagInclude
+
+/** 全リレーションの結合行を含む Tag（`getAllTags` の返り値） */
+export type TagWithAllRelations = Prisma.TagGetPayload<{
+  include: typeof tagWithAllRelationsInclude
+}>
 
 /**
  * 全タグを取得（order昇順、同orderはname昇順）
  */
 export async function getAllTags() {
   return prisma.tag.findMany({
+    include: tagWithAllRelationsInclude,
     orderBy: [{ order: "asc" }, { name: "asc" }],
   })
 }
