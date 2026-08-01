@@ -60,10 +60,6 @@ export function EditableGradeLabel({
     [commit]
   )
 
-  if (!gradeLabel && !overrideLabel) {
-    return <span className="text-xs text-muted-foreground">-</span>
-  }
-
   if (editing) {
     return (
       <input
@@ -76,6 +72,20 @@ export function EditableGradeLabel({
         placeholder={gradeLabel ?? ""}
         autoFocus
       />
+    )
+  }
+
+  // 境界未設定でも上書きは可能。観点別評価のラベルは教員の任意文字列で、境界は
+  // 自動算出の補助にすぎないため、境界が無いことを入力の制約にしてはならない。
+  if (!gradeLabel && !overrideLabel) {
+    return (
+      <span
+        className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+        title="クリックして成績ラベルを手動入力"
+        onClick={startEdit}
+      >
+        -
+      </span>
     )
   }
 

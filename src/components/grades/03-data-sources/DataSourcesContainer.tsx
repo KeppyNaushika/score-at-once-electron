@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { Pencil, Plus, Settings, Trash2, Users } from "lucide-react"
+import { Plus, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
@@ -31,6 +31,7 @@ import type {
 
 import { AddDataSourceInline } from "./AddDataSourceInline"
 import { DataSourceRow } from "./DataSourceRow"
+import { GradeItemSection } from "./GradeItemSection"
 import { StudentExclusionModal } from "./StudentExclusionModal"
 
 interface DataSourcesContainerProps {
@@ -45,6 +46,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     createGradeItem,
     updateGradeItem,
     deleteGradeItem,
+    reorderGradeItems,
     createDataSource,
     updateDataSource,
     batchUpdateDataSources,
@@ -54,8 +56,6 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
   } = useDataSources(gradeId)
 
   const [newItemName, setNewItemName] = useState("")
-  const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [editingItemName, setEditingItemName] = useState("")
 
   // 対象生徒モーダル
   const [exclusionModalOpen, setExclusionModalOpen] = useState(false)
@@ -109,6 +109,49 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     [reorderDataSources]
   )
 
+  const handleGradeItemDragEnd = useCallback(
+    (gradeItems: GradeItemWithDataSources[]) => (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+      const oldIndex = gradeItems.findIndex(
+        (gradeItem) => gradeItem.id === active.id
+      )
+      const newIndex = gradeItems.findIndex(
+        (gradeItem) => gradeItem.id === over.id
+      )
+      if (oldIndex === -1 || newIndex === -1) return
+      const reordered = arrayMove(gradeItems, oldIndex, newIndex)
+      void reorderGradeItems(
+        reordered.map((gradeItem, index) => ({
+          id: gradeItem.id,
+          order: index,
+        }))
+      )
+    },
+    [reorderGradeItems]
+  )
+
+  const handleRenameGradeItem = useCallback(
+    async (gradeItemId: string, name: string) => {
+      await updateGradeItem(gradeItemId, name)
+    },
+    [updateGradeItem]
+  )
+
+  const handleDeleteGradeItem = useCallback(
+    async (gradeItemId: string) => {
+      const result = await deleteGradeItem(gradeItemId)
+      // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
+      // 黙って着色が消えるのを避け、その場で知らせる。
+      if (result.disabledConstraintNames?.length) {
+        toast.warning(
+          `制約ルール「${result.disabledConstraintNames.join("」「")}」を無効化しました（集計対象が変わったため再設定してください）`
+        )
+      }
+    },
+    [deleteGradeItem]
+  )
+
   // 一括欠測設定
   const [batchMode, setBatchMode] = useState(false)
   const [selectedDataSourceIds, setSelectedDataSourceIds] = useState<
@@ -135,18 +178,6 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     if (!newItemName.trim()) return
     await createGradeItem(newItemName.trim())
     setNewItemName("")
-  }
-
-  const handleStartEditItem = (item: GradeItemWithDataSources) => {
-    setEditingItemId(item.id)
-    setEditingItemName(item.name)
-  }
-
-  const handleSaveEditItem = async () => {
-    if (!editingItemId || !editingItemName.trim()) return
-    await updateGradeItem(editingItemId, editingItemName.trim())
-    setEditingItemId(null)
-    setEditingItemName("")
   }
 
   const toggleDsSelection = (dataSourceId: string) => {
@@ -373,100 +404,50 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       )}
 
       {/* GradeItem ごとのセクション */}
-      {exam.gradeItems.map((gradeItem) => (
-        <div key={gradeItem.id} className="mb-8 rounded-lg border p-4">
-          {/* GradeItem ヘッダー */}
-          <div className="mb-3 flex items-center justify-between">
-            {editingItemId === gradeItem.id ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={editingItemName}
-                  onChange={(e) => setEditingItemName(e.target.value)}
-                  className="h-8 w-48"
-                  onKeyDown={(e) =>
-                    e.key === "Enter" &&
-                    !e.nativeEvent.isComposing &&
-                    handleSaveEditItem()
-                  }
-                  autoFocus
-                />
-                <Button variant="ghost" size="sm" onClick={handleSaveEditItem}>
-                  保存
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingItemId(null)}
-                >
-                  取消
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-blue-600">
-                  {gradeItem.name}
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleStartEditItem(gradeItem)}
-                >
-                  <Pencil className="h-3 w-3" />
-                </Button>
-              </div>
+      <SortableTableProvider
+        items={exam.gradeItems.map((gradeItem) => gradeItem.id)}
+        onDragEnd={handleGradeItemDragEnd(exam.gradeItems)}
+      >
+        {exam.gradeItems.map((gradeItem) => (
+          <GradeItemSection
+            key={gradeItem.id}
+            gradeItem={gradeItem}
+            onRename={handleRenameGradeItem}
+            onDelete={handleDeleteGradeItem}
+          >
+            {/* DataSource リスト */}
+            {gradeItem.dataSources.length > 0 && (
+              <SortableTableProvider
+                items={gradeItem.dataSources.map((dataSource) => dataSource.id)}
+                onDragEnd={handleDataSourceDragEnd(gradeItem.dataSources)}
+              >
+                <div className="mb-3 space-y-2">
+                  {gradeItem.dataSources.map((dataSource) => (
+                    <DataSourceRow
+                      key={dataSource.id}
+                      dataSource={dataSource}
+                      allDataSources={allDataSources}
+                      sourceFit={sourceFits[dataSource.id]}
+                      batchMode={batchMode}
+                      selected={selectedDataSourceIds.has(dataSource.id)}
+                      onToggleSelect={toggleDsSelection}
+                      onUpdate={updateDataSource}
+                      onDelete={deleteDataSource}
+                    />
+                  ))}
+                </div>
+              </SortableTableProvider>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-destructive"
-              onClick={async () => {
-                const result = await deleteGradeItem(gradeItem.id)
-                // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
-                // 黙って着色が消えるのを避け、その場で知らせる。
-                if (result.disabledConstraintNames?.length) {
-                  toast.warning(
-                    `制約ルール「${result.disabledConstraintNames.join("」「")}」を無効化しました（集計対象が変わったため再設定してください）`
-                  )
-                }
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
 
-          {/* DataSource リスト */}
-          {gradeItem.dataSources.length > 0 && (
-            <SortableTableProvider
-              items={gradeItem.dataSources.map((dataSource) => dataSource.id)}
-              onDragEnd={handleDataSourceDragEnd(gradeItem.dataSources)}
-            >
-              <div className="mb-3 space-y-2">
-                {gradeItem.dataSources.map((dataSource) => (
-                  <DataSourceRow
-                    key={dataSource.id}
-                    dataSource={dataSource}
-                    allDataSources={allDataSources}
-                    sourceFit={sourceFits[dataSource.id]}
-                    batchMode={batchMode}
-                    selected={selectedDataSourceIds.has(dataSource.id)}
-                    onToggleSelect={toggleDsSelection}
-                    onUpdate={updateDataSource}
-                    onDelete={deleteDataSource}
-                  />
-                ))}
-              </div>
-            </SortableTableProvider>
-          )}
-
-          {/* インラインデータソース追加 */}
-          <AddDataSourceInline
-            gradeItemId={gradeItem.id}
-            onCreate={createDataSource}
-            onCreated={reload}
-          />
-        </div>
-      ))}
+            {/* インラインデータソース追加 */}
+            <AddDataSourceInline
+              gradeItemId={gradeItem.id}
+              onCreate={createDataSource}
+              onCreated={reload}
+            />
+          </GradeItemSection>
+        ))}
+      </SortableTableProvider>
 
       {exam.gradeItems.length === 0 && (
         <div className="py-8 text-center text-sm text-muted-foreground">

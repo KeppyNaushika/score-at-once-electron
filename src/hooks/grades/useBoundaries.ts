@@ -54,5 +54,17 @@ export function useBoundaries(gradeId: string) {
     [gradeId, loadData]
   )
 
-  return { exam, boundarySets, loading, saveBoundarySet }
+  const deleteBoundarySet = useCallback(
+    async (boundarySetId: string) => {
+      const result =
+        await window.electronAPI.grade.deleteBoundarySet(boundarySetId)
+      if (result.success) {
+        await loadData()
+      }
+      return result
+    },
+    [loadData]
+  )
+
+  return { exam, boundarySets, loading, saveBoundarySet, deleteBoundarySet }
 }
