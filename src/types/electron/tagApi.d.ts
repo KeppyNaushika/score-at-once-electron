@@ -1,10 +1,10 @@
+import type { AsbDefinitionTag, ExamTag, Prisma, Tag } from "@prisma/client"
+
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import type {
-  AsbDefinitionTag,
-  ExamTag,
-  Prisma,
-  Tag,
-  TagSubtotalGroup,
-} from "@prisma/client"
+  TagSubtotalGroupWithSubtotalGroup,
+  TagSubtotalGroupWithTag,
+} from "@/electron-src/lib/prisma/tagSubtotalGroup"
 
 /**
  * Tag（タグ）・TagSubtotalGroup・ExamTag関連API
@@ -21,7 +21,7 @@ export type AsbDefinitionTagWithTag = Prisma.AsbDefinitionTagGetPayload<{
 }>
 
 export interface TagAPI {
-  tagGetAll: () => Promise<Tag[]>
+  tagGetAll: () => Promise<TagWithAllRelations[]>
   tagGetById: (id: string) => Promise<Tag | null>
   tagCreate: (data: { name: string; color?: string }) => Promise<Tag>
   tagUpdate: (
@@ -32,12 +32,13 @@ export interface TagAPI {
   tagFindOrCreate: (name: string) => Promise<Tag>
   tagReorder: (tagIds: string[]) => Promise<Tag[]>
 
-  tagSubtotalGroupGetByTagId: (tagId: string) => Promise<TagSubtotalGroup[]>
-  tagSubtotalGroupCreate: (data: {
+  tagSubtotalGroupGetByTagId: (
     tagId: string
-    subtotalGroupId: string
-  }) => Promise<TagSubtotalGroup>
-  tagSubtotalGroupDelete: (id: string) => Promise<void>
+  ) => Promise<TagSubtotalGroupWithSubtotalGroup[]>
+  tagSubtotalGroupSetTags: (
+    subtotalGroupId: string,
+    tagIds: string[]
+  ) => Promise<TagSubtotalGroupWithTag[]>
 
   examTagGetByExamId: (examId: string) => Promise<ExamTagWithTag[]>
   examTagCreate: (data: { examId: string; tagId: string }) => Promise<ExamTag>

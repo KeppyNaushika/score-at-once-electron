@@ -15,15 +15,11 @@ export function createTagApi() {
       ipcRenderer.invoke("tag:findOrCreate", name),
     tagReorder: (tagIds: string[]) => ipcRenderer.invoke("tag:reorder", tagIds),
 
-    // TagSubtotalGroup（タグ-小計グループ関連）
+    // TagSubtotalGroup（タグ-小計点グループ関連）
     tagSubtotalGroupGetByTagId: (tagId: string) =>
       ipcRenderer.invoke("tagSubtotalGroup:getByTagId", tagId),
-    tagSubtotalGroupCreate: (data: {
-      tagId: string
-      subtotalGroupId: string
-    }) => ipcRenderer.invoke("tagSubtotalGroup:create", data),
-    tagSubtotalGroupDelete: (id: string) =>
-      ipcRenderer.invoke("tagSubtotalGroup:delete", id),
+    tagSubtotalGroupSetTags: (subtotalGroupId: string, tagIds: string[]) =>
+      ipcRenderer.invoke("tagSubtotalGroup:setTags", subtotalGroupId, tagIds),
 
     // ExamTag（試験-タグ関連）
     examTagGetByExamId: (examId: string) =>

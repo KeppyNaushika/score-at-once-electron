@@ -19,7 +19,7 @@ import type {
 import type { SubtotalWithGroupAndCrops } from "@/electron-src/lib/prisma/subtotal"
 import type {
   SubtotalGroupWithSubtotals,
-  SubtotalGroupWithSubtotalsAndExams,
+  SubtotalGroupWithSubtotalsExamsAndTags,
 } from "@/electron-src/lib/prisma/subtotalGroup"
 
 import type { CropRegionAreaType } from "../cropRegionAreaType.types"
@@ -103,7 +103,7 @@ export interface CropRegionAPI {
   // SubtotalGroup related
   getSubtotalGroups: () => Promise<{
     success: boolean
-    subtotalGroups?: SubtotalGroupWithSubtotalsAndExams[]
+    subtotalGroups?: SubtotalGroupWithSubtotalsExamsAndTags[]
     error?: string
   }>
   createSubtotalGroup: (data: {
