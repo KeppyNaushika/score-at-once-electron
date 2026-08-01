@@ -171,14 +171,14 @@ export function setupStudentHandlers(): void {
 
   registerHandler(
     "get-classrooms-not-in-exam",
-    async (examId: string, activeOnly = true) => {
+    async (examId: string, activeOnly: boolean = true) => {
       return await getClassroomsNotInExam(examId, activeOnly)
     }
   )
 
   registerHandler(
     "get-students-not-in-exam",
-    async (examId: string, activeOnly = true) => {
+    async (examId: string, activeOnly: boolean = true) => {
       return await getStudentsNotInExam(examId, activeOnly)
     }
   )

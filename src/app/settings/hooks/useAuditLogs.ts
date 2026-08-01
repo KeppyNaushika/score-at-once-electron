@@ -1,6 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
 import type { AuditLogEntry } from "@/types/electron/auditLogApi"
@@ -14,7 +20,8 @@ interface UseAuditLogsResult {
   loadingMore: boolean
   error: string | null
   filter: AuditLogFilter
-  setFilter: (filter: AuditLogFilter) => void
+  /** 直前のフィルタを受け取る更新関数も渡せる（デバウンス中の取りこぼしを防ぐため） */
+  setFilter: Dispatch<SetStateAction<AuditLogFilter>>
   hasMore: boolean
   loadMore: () => void
 }
@@ -87,10 +94,6 @@ export function useAuditLogs(): UseAuditLogsResult {
     })()
   }, [entries.length, fetchPage, filter])
 
-  const setFilter = useCallback((next: AuditLogFilter) => {
-    setFilterState(next)
-  }, [])
-
   return {
     entries,
     total,
@@ -98,7 +101,7 @@ export function useAuditLogs(): UseAuditLogsResult {
     loadingMore,
     error,
     filter,
-    setFilter,
+    setFilter: setFilterState,
     hasMore: entries.length < total,
     loadMore,
   }

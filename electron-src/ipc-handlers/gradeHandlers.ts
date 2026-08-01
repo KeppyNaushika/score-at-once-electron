@@ -159,21 +159,25 @@ export function setupGradeHandlers(): void {
 
   registerHandler(
     "grade:getAvailableClassrooms",
-    async (gradeId: string, activeOnly = true) => {
+    async (gradeId: string, activeOnly: boolean = true) => {
       return getAvailableClassroomsForGrade(gradeId, activeOnly)
     }
   )
 
   registerHandler(
     "grade:getAvailableStudents",
-    async (gradeId: string, activeOnly = true) => {
+    async (gradeId: string, activeOnly: boolean = true) => {
       return getAvailableStudentsForGrade(gradeId, activeOnly)
     }
   )
 
   registerHandler(
     "grade:addStudentsFromClassroom",
-    async (gradeId: string, classroomId: string, activeOnly = true) => {
+    async (
+      gradeId: string,
+      classroomId: string,
+      activeOnly: boolean = true
+    ) => {
       return addStudentsFromClassroomToGrade(gradeId, classroomId, activeOnly)
     }
   )
@@ -187,7 +191,11 @@ export function setupGradeHandlers(): void {
 
   registerHandler(
     "grade:removeClassroom",
-    async (gradeId: string, classroomId: string, deleteStudents = true) => {
+    async (
+      gradeId: string,
+      classroomId: string,
+      deleteStudents: boolean = true
+    ) => {
       return removeClassroomFromGrade(gradeId, classroomId, deleteStudents)
     }
   )

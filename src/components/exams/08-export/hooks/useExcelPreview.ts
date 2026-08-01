@@ -48,6 +48,7 @@ export interface ExcelPreviewData {
 
 interface UseExcelPreviewProps {
   examId: string
+  /** 呼び出し側で安定した参照を渡すこと（毎レンダー新しい配列だと再取得が止まらない） */
   selectedExamStudentIds: string[]
   enabled: boolean
 }
@@ -62,8 +63,6 @@ export function useExcelPreview({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // selectedExamStudentIdsのJSON文字列でオブジェクト参照変化を無視
-  const selectedExamStudentIdsKey = JSON.stringify(selectedExamStudentIds)
 
   useEffect(() => {
     if (!enabled || !examId || selectedExamStudentIds.length === 0) {
@@ -145,8 +144,7 @@ export function useExcelPreview({
         clearTimeout(debounceTimerRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, selectedExamStudentIdsKey, enabled])
+  }, [examId, selectedExamStudentIds, enabled])
 
   return { previewData, isLoading, error }
 }

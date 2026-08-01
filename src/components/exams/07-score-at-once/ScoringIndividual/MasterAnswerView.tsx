@@ -1,6 +1,13 @@
 "use client"
 
-import { forwardRef, useCallback, useEffect, useRef, useState } from "react"
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 interface MasterAnswerViewProps {
   /** 模範解答の画像URL（単一ページ用、後方互換） */
@@ -50,7 +57,12 @@ export const MasterAnswerView = forwardRef<
   },
   ref
 ) {
-  const urls = masterImageUrls ?? (masterImageUrl ? [masterImageUrl] : [])
+  // 単一URLも配列に揃える。毎レンダー新しい配列を作ると読み込みeffectが回り続けるため
+  // memo 化し、呼び出し側（ScoringMainView）が渡す安定した参照をそのまま活かす
+  const urls = useMemo(
+    () => masterImageUrls ?? (masterImageUrl ? [masterImageUrl] : []),
+    [masterImageUrls, masterImageUrl]
+  )
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
   const internalRef = useRef<HTMLDivElement>(null)
 
@@ -100,8 +112,7 @@ export const MasterAnswerView = forwardRef<
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(urls)])
+  }, [urls])
 
   // ホイールズーム: Ctrl/Meta + ホイールを答案側コンテナに転送
   // 答案側の既存のwheelハンドラがzoom計算を行い、onZoomChanged経由で同期される

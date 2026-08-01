@@ -15,7 +15,14 @@
  * ```
  */
 
-import { useCallback, useEffect, useId, useMemo, useRef } from "react"
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  useRef,
+} from "react"
 
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 import type { CommandHandler, CommandMetadata } from "../types"
@@ -93,13 +100,13 @@ export function useCommand(
     handlerRef.current()
   }, [])
 
-  // メタデータを安定化（内容が変わらない限り再登録しない）
+  // メタデータは参照が毎レンダー変わりうるので、再登録の要否は内容の署名で判定する。
+  // 値そのものは Effect Event で読む（読むだけで再登録の引き金にはしない）
   const metadataSignature = useMemo(
     () => createMetadataSignature(options.metadata),
     [options.metadata]
   )
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- metadataSignature already reflects changes to options.metadata
-  const stableMetadata = useMemo(() => options.metadata, [metadataSignature])
+  const readMetadata = useEffectEvent(() => options.metadata)
 
   // when句を安定化
   const when = options.when || "true"
@@ -113,7 +120,7 @@ export function useCommand(
       registrationId,
       handler: stableHandler,
       when,
-      metadata: stableMetadata,
+      metadata: readMetadata(),
     }
 
     // コマンドを登録
@@ -127,7 +134,7 @@ export function useCommand(
     commandId,
     stableHandler,
     when,
-    stableMetadata,
+    metadataSignature,
     registerCommand,
     unregisterCommand,
   ])
