@@ -21,7 +21,6 @@ import {
   CreateQuestionScoreData,
   deleteQuestionScore,
   getAnswerSheetProgress,
-  getExamProgress,
   getQuestionScoreById,
   getQuestionScoresForExam,
   getQuestionScoresForExamStudent,
@@ -190,10 +189,6 @@ export function setupScoringHandlers(): void {
       return await getAnswerSheetProgress(answerSheetId)
     }
   )
-
-  registerHandler("get-exam-progress", async (examId: string) => {
-    return await getExamProgress(examId)
-  })
 
   // 裁定サマリ（競合・確定後の新提案）— 確定パネルと出力前警告が共有する
   registerSafeHandler(

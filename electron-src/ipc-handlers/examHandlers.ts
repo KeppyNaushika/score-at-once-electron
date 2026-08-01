@@ -7,6 +7,7 @@ import {
   getExamById,
   getExamsForList,
   getExamWithPages,
+  toExamProgressSource,
   updateExam,
 } from "../lib/prisma/exam"
 import { getExamPagesByExamId } from "../lib/prisma/examPage"
@@ -51,26 +52,7 @@ export function setupExamHandlers(): void {
       description: exam.description,
       createdAt: exam.createdAt,
       updatedAt: exam.updatedAt,
-      // 進捗の元データ（ExamProgressSource）。partialScore は number へシリアライズ。
-      examPages: exam.examPages.map((page) => ({ id: page.id })),
-      cropRegions: exam.examPages.flatMap((page) =>
-        page.cropRegions.map((region) => ({
-          type: region.type,
-          questionScores: region.questionScores.map((score) => ({
-            status: score.status,
-            examStudentId: score.examStudentId,
-            partialScore:
-              score.partialScore == null ? null : Number(score.partialScore),
-          })),
-        }))
-      ),
-      answerImages: exam.examPages.flatMap((page) =>
-        page.studentAnswerImages.map((img) => ({
-          examStudentId: img.examStudentId,
-        }))
-      ),
-      examStudents: exam.examStudents,
-      examSubtotalGroups: exam.examSubtotalGroups,
+      ...toExamProgressSource(exam),
     }))
   })
 

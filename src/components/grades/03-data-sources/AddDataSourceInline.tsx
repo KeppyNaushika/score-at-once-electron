@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,57 +12,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { GradeDataSourceInput } from "@/types/grade.types"
 
-type DataSourceType = "exam_total" | "subtotal" | "crop_region" | "coursework"
+import { useDataSourceDefaults } from "./hooks/useDataSourceDefaults"
+import {
+  type AddDataSourceSelection,
+  type AddDataSourceType,
+  COURSEWORK_WHOLE,
+  type CourseworkOption,
+  type CropRegionOption,
+  type ExamOption,
+  isSameSelection,
+  type SubtotalGroupOption,
+  toAddDataSourceType,
+} from "./types"
 
-/** 資料の評価項目セレクトで「資料全体（全項目合計）」を表すセンチネル値 */
-const COURSEWORK_WHOLE = "__whole__"
+/** 試験未選択時に渡す空配列。毎レンダー新しい配列を作ると算出フックが回り続けるため定数にする */
+const EMPTY_SUBTOTAL_GROUPS: SubtotalGroupOption[] = []
+const EMPTY_CROP_REGIONS: CropRegionOption[] = []
+
+/** 試験に紐づく選択肢と、それがどの試験のものかの対応。取り違えを型で防ぐ */
+interface ExamScopedOptions {
+  examId: string
+  subtotalGroups: SubtotalGroupOption[]
+  cropRegions: CropRegionOption[]
+}
 
 interface AddDataSourceInlineProps {
   gradeItemId: string
-  onCreate: (data: {
-    gradeItemId: string
-    type: string
-    examId?: string
-    subtotalId?: string
-    cropRegionId?: string
-    courseworkItemId?: string
-    courseworkId?: string
-    name: string
-    weight: number
-  }) => Promise<{ success: boolean }>
+  onCreate: (
+    dataSourceInput: GradeDataSourceInput
+  ) => Promise<{ success: boolean }>
   onCreated: () => void
-}
-
-interface ExamOption {
-  id: string
-  examName: string
-  examDate: Date | null
-}
-
-interface SubtotalGroupOption {
-  id: string
-  name: string
-  subtotals: { id: string; name: string; order: number }[]
-}
-
-interface CropRegionOption {
-  id: string
-  label: string
-  points: number | null
-}
-
-interface CourseworkOption {
-  id: string
-  name: string
-  date: string | null
-  items: {
-    id: string
-    name: string
-    maxScore: number
-    inputMode: string
-    order: number
-  }[]
 }
 
 export function AddDataSourceInline({
@@ -71,22 +52,26 @@ export function AddDataSourceInline({
   onCreated,
 }: AddDataSourceInlineProps) {
   const [open, setOpen] = useState(false)
-  const [type, setType] = useState<DataSourceType>("exam_total")
+  const [type, setType] = useState<AddDataSourceType>("exam_total")
   const [exams, setExams] = useState<ExamOption[]>([])
   const [selectedExamId, setSelectedExamId] = useState("")
-  const [subtotalGroups, setSubtotalGroups] = useState<SubtotalGroupOption[]>(
-    []
-  )
+  const [examScopedOptions, setExamScopedOptions] =
+    useState<ExamScopedOptions | null>(null)
   const [selectedSubtotalGroupId, setSelectedSubtotalGroupId] = useState("")
   const [selectedSubtotalId, setSelectedSubtotalId] = useState("")
-  const [cropRegions, setCropRegions] = useState<CropRegionOption[]>([])
   const [selectedCropRegionId, setSelectedCropRegionId] = useState("")
   // coursework型: 資料→評価項目の2段選択
   const [courseworks, setCourseworks] = useState<CourseworkOption[]>([])
   const [selectedCourseworkId, setSelectedCourseworkId] = useState("")
   const [selectedCourseworkItemId, setSelectedCourseworkItemId] = useState("")
-  const [name, setName] = useState("")
-  const [weight, setWeight] = useState("")
+  // 名前と換算満点は選択内容から導く。ユーザーが手入力したときだけ下書きが優先される。
+  // 「どの選択に対して入力したか」を同梱することで、選択が変われば下書きは自動的に無効になる
+  // （Select ごとに破棄を呼ぶ形にすると、呼び忘れた経路で前の設問の名前が残る）
+  const [draft, setDraft] = useState<{
+    selection: AddDataSourceSelection
+    name: string
+    weight: string
+  } | null>(null)
   const [adding, setAdding] = useState(false)
 
   // 全試験候補をロード
@@ -113,130 +98,82 @@ export function AddDataSourceInline({
     load()
   }, [open])
 
-  // 試験選択時にSubtotalGroups/CropRegionsをロード
+  // 試験選択時にSubtotalGroups/CropRegionsをロード。
+  // どの試験の結果かを一緒に保持することで、切り替え直後に前の試験の選択肢が残らない
   useEffect(() => {
-    if (!selectedExamId) {
-      setSubtotalGroups([])
-      setCropRegions([])
-      return
-    }
+    if (!selectedExamId) return
+    let cancelled = false
     const load = async () => {
       const [subtotalGroupResult, cropRegionResult] = await Promise.all([
         window.electronAPI.grade.getExamSubtotalGroups(selectedExamId),
         window.electronAPI.grade.getExamCropRegions(selectedExamId),
       ])
-      if (subtotalGroupResult.success && subtotalGroupResult.subtotalGroups) {
-        setSubtotalGroups(subtotalGroupResult.subtotalGroups)
-      }
-      if (cropRegionResult.success && cropRegionResult.cropRegions) {
-        setCropRegions(cropRegionResult.cropRegions)
-      }
+      if (cancelled) return
+      setExamScopedOptions({
+        examId: selectedExamId,
+        subtotalGroups:
+          subtotalGroupResult.subtotalGroups ?? EMPTY_SUBTOTAL_GROUPS,
+        cropRegions: cropRegionResult.cropRegions ?? EMPTY_CROP_REGIONS,
+      })
     }
     load()
+    return () => {
+      cancelled = true
+    }
   }, [selectedExamId])
 
-  // 換算満点の初期値を元データの満点から補完（満点自体は保存せず元データ追従）
-  const autoSeedWeight = useCallback(async () => {
-    if (type === "coursework") return
-    if (!selectedExamId) return
+  // 選択中の試験のものだけを採用する（読み込み中・切り替え直後は空）
+  const isCurrentExamLoaded = examScopedOptions?.examId === selectedExamId
+  const subtotalGroups = isCurrentExamLoaded
+    ? examScopedOptions.subtotalGroups
+    : EMPTY_SUBTOTAL_GROUPS
+  const cropRegions = isCurrentExamLoaded
+    ? examScopedOptions.cropRegions
+    : EMPTY_CROP_REGIONS
 
-    const data: {
-      type: string
-      examId?: string
-      subtotalId?: string
-      cropRegionId?: string
-    } = { type }
+  const selection = useMemo(
+    () => ({
+      type,
+      examId: selectedExamId,
+      subtotalId: selectedSubtotalId,
+      cropRegionId: selectedCropRegionId,
+      courseworkId: selectedCourseworkId,
+      courseworkItemId: selectedCourseworkItemId,
+    }),
+    [
+      type,
+      selectedExamId,
+      selectedSubtotalId,
+      selectedCropRegionId,
+      selectedCourseworkId,
+      selectedCourseworkItemId,
+    ]
+  )
 
-    if (type === "exam_total") {
-      data.examId = selectedExamId
-    } else if (type === "subtotal") {
-      data.examId = selectedExamId
-      data.subtotalId = selectedSubtotalId
-    } else if (type === "crop_region") {
-      data.cropRegionId = selectedCropRegionId
-    }
-
-    if (data.examId || data.cropRegionId) {
-      const result =
-        await window.electronAPI.grade.calculateSourceMaxScore(data)
-      // 満点が未確定（0）の段階では weight を埋めない。
-      if (
-        !weight &&
-        result.success &&
-        result.maxScore !== undefined &&
-        result.maxScore > 0
-      ) {
-        setWeight(String(result.maxScore))
-      }
-    }
-  }, [type, selectedExamId, selectedSubtotalId, selectedCropRegionId, weight])
-
-  useEffect(() => {
-    autoSeedWeight()
-  }, [autoSeedWeight])
-
-  // coursework型: 評価項目（または資料全体）選択時に換算満点・名前を補完
-  useEffect(() => {
-    if (type !== "coursework") return
-    const coursework = courseworks.find(
-      (courseworkOption) => courseworkOption.id === selectedCourseworkId
-    )
-    if (!coursework) return
-    if (selectedCourseworkItemId === COURSEWORK_WHOLE) {
-      // 資料全体: 換算満点の初期値は全評価項目の満点合計、名前は「資料名(合計)」
-      // maxScore は IPC 経由で文字列化され得る（Prisma Decimal）ため必ず数値化して加算する
-      const totalMax = coursework.items.reduce(
-        (sum, courseworkItem) => sum + Number(courseworkItem.maxScore),
-        0
-      )
-      setWeight((prev) => (prev ? prev : String(totalMax)))
-      setName(`${coursework.name}(合計)`)
-      return
-    }
-    const item = coursework.items.find(
-      (courseworkItem) => courseworkItem.id === selectedCourseworkItemId
-    )
-    if (item) {
-      setWeight((prev) => (prev ? prev : String(item.maxScore)))
-      setName(`${coursework.name}(${item.name})`)
-    }
-  }, [type, selectedCourseworkId, selectedCourseworkItemId, courseworks])
-
-  // 名前の自動設定（試験系）
-  useEffect(() => {
-    if (type === "coursework") return
-    const exam = exams.find((examOption) => examOption.id === selectedExamId)
-    if (!exam) return
-
-    if (type === "exam_total") {
-      setName(`${exam.examName}(合計)`)
-    } else if (type === "subtotal" && selectedSubtotalId) {
-      const subtotalGroup = subtotalGroups.find((group) =>
-        group.subtotals.some((subtotal) => subtotal.id === selectedSubtotalId)
-      )
-      const subtotal = subtotalGroup?.subtotals.find(
-        (candidateSubtotal) => candidateSubtotal.id === selectedSubtotalId
-      )
-      if (subtotal) {
-        setName(`${exam.examName}(${subtotal.name})`)
-      }
-    } else if (type === "crop_region" && selectedCropRegionId) {
-      const cropRegion = cropRegions.find(
-        (cropRegionOption) => cropRegionOption.id === selectedCropRegionId
-      )
-      if (cropRegion) {
-        setName(`${exam.examName}(${cropRegion.label})`)
-      }
-    }
-  }, [
-    type,
-    selectedExamId,
-    selectedSubtotalId,
-    selectedCropRegionId,
+  const { defaultName, defaultWeight } = useDataSourceDefaults({
+    selection,
     exams,
     subtotalGroups,
     cropRegions,
-  ])
+    courseworks,
+  })
+
+  const activeDraft =
+    draft && isSameSelection(draft.selection, selection) ? draft : null
+
+  // 空文字は「消しただけ」で確定した入力ではないので既定値へ戻す。
+  // そうしないと欄を空にしたまま既定値が復活せず、追加ボタンが押せない袋小路になる
+  const name = activeDraft?.name || defaultName
+  const weight = activeDraft?.weight || defaultWeight
+
+  const editDraft = (edited: { name?: string; weight?: string }) => {
+    setDraft({
+      selection,
+      name: activeDraft?.name ?? "",
+      weight: activeDraft?.weight ?? "",
+      ...edited,
+    })
+  }
 
   const handleAdd = async () => {
     if (!name.trim() || !weight) return
@@ -245,29 +182,30 @@ export function AddDataSourceInline({
       // 資料全体が選ばれた場合は coursework_total 型（資料IDを参照）へ切り替える
       const isWhole =
         type === "coursework" && selectedCourseworkItemId === COURSEWORK_WHOLE
-      const data: Parameters<typeof onCreate>[0] = {
+      const dataSourceInput: GradeDataSourceInput = {
         gradeItemId,
         type: isWhole ? "coursework_total" : type,
         name: name.trim(),
         weight: Number(weight),
       }
       if (type !== "coursework") {
-        data.examId = selectedExamId || undefined
+        dataSourceInput.examId = selectedExamId || undefined
       }
       if (type === "subtotal") {
-        data.subtotalId = selectedSubtotalId || undefined
+        dataSourceInput.subtotalId = selectedSubtotalId || undefined
       }
       if (type === "crop_region") {
-        data.cropRegionId = selectedCropRegionId || undefined
+        dataSourceInput.cropRegionId = selectedCropRegionId || undefined
       }
       if (type === "coursework") {
         if (isWhole) {
-          data.courseworkId = selectedCourseworkId || undefined
+          dataSourceInput.courseworkId = selectedCourseworkId || undefined
         } else {
-          data.courseworkItemId = selectedCourseworkItemId || undefined
+          dataSourceInput.courseworkItemId =
+            selectedCourseworkItemId || undefined
         }
       }
-      const result = await onCreate(data)
+      const result = await onCreate(dataSourceInput)
       if (result.success) {
         resetForm()
         onCreated()
@@ -286,8 +224,7 @@ export function AddDataSourceInline({
     setSelectedCropRegionId("")
     setSelectedCourseworkId("")
     setSelectedCourseworkItemId("")
-    setName("")
-    setWeight("")
+    setDraft(null)
   }
 
   const selectedSubtotals =
@@ -323,15 +260,13 @@ export function AddDataSourceInline({
         <Select
           value={type}
           onValueChange={(value) => {
-            setType(value as DataSourceType)
+            setType(toAddDataSourceType(value))
             setSelectedExamId("")
             setSelectedSubtotalGroupId("")
             setSelectedSubtotalId("")
             setSelectedCropRegionId("")
             setSelectedCourseworkId("")
             setSelectedCourseworkItemId("")
-            setName("")
-            setWeight("")
           }}
         >
           <SelectTrigger className="h-8 w-32">
@@ -428,10 +363,8 @@ export function AddDataSourceInline({
               value={selectedCourseworkId}
               onValueChange={(value) => {
                 setSelectedCourseworkId(value)
-                // 資料を切り替えたら項目選択と補完値をリセット（古い名前/換算満点の残留を防ぐ）
+                // 資料を切り替えたら評価項目の選択をやり直させる
                 setSelectedCourseworkItemId("")
-                setName("")
-                setWeight("")
               }}
             >
               <SelectTrigger className="h-8 w-48">
@@ -473,13 +406,13 @@ export function AddDataSourceInline({
       <div className="flex items-center gap-2">
         <Input
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => editDraft({ name: e.target.value })}
           className="h-8 flex-1"
           placeholder="名前"
         />
         <Input
           value={weight}
-          onChange={(e) => setWeight(e.target.value)}
+          onChange={(e) => editDraft({ weight: e.target.value })}
           className="h-8 w-20"
           type="text"
           placeholder="換算満点"

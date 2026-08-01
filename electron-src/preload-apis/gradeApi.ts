@@ -199,13 +199,6 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:getExamSubtotalGroups", examId),
       getExamCropRegions: (examId: string) =>
         ipcRenderer.invoke("grade:getExamCropRegions", examId),
-      calculateSourceMaxScore: (data: {
-        type: string
-        examId?: string
-        subtotalId?: string
-        cropRegionId?: string
-        courseworkItemId?: string
-      }) => ipcRenderer.invoke("grade:calculateSourceMaxScore", data),
       exportExcel: (gradeId: string, options?: { studentIds?: string[] }) =>
         ipcRenderer.invoke("grade:exportExcel", gradeId, options),
       getExportSettings: (gradeId: string) =>

@@ -343,16 +343,11 @@ export interface GradeAPI {
         type: string
         points: number | null
         orderIndex: number | null
+        /** 小計への割り当て。renderer が満点を追加クエリ無しで算出するために同梱される */
+        cropSubtotals: Array<{ subtotalId: string }>
       }>
       error?: string
     }>
-    calculateSourceMaxScore: (data: {
-      type: string
-      examId?: string
-      subtotalId?: string
-      cropRegionId?: string
-      courseworkItemId?: string
-    }) => Promise<{ success: boolean; maxScore?: number; error?: string }>
     exportExcel: (
       gradeId: string,
       options?: { studentIds?: string[] }

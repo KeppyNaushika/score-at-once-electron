@@ -37,6 +37,7 @@ export function calculateQuestionProgress(
 
     const totalAnswers = relevantPageImages.length
     let gradedAnswers = 0
+    let finalizedAnswers = 0
 
     relevantPageImages.forEach((pageImage) => {
       const score = findQuestionScore(
@@ -55,6 +56,10 @@ export function calculateQuestionProgress(
 
       if (isGraded) {
         gradedAnswers++
+        // 保留は採点済みだが確定ではない
+        if (score.status !== "pending") {
+          finalizedAnswers++
+        }
       }
     })
 
@@ -64,6 +69,7 @@ export function calculateQuestionProgress(
     progress[cropRegion.id] = {
       totalAnswers,
       gradedAnswers,
+      finalizedAnswers,
       percentage,
     }
   })

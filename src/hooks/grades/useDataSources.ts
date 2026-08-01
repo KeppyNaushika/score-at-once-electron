@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import type {
   AbsentMethod,
   EstimationMode,
+  GradeDataSourceInput,
   GradeWithRelations,
 } from "@/types/grade.types"
 
@@ -107,18 +108,9 @@ export function useDataSources(gradeId: string) {
   )
 
   const createDataSource = useCallback(
-    async (data: {
-      gradeItemId: string
-      type: string
-      examId?: string
-      subtotalId?: string
-      cropRegionId?: string
-      courseworkItemId?: string
-      courseworkId?: string
-      name: string
-      weight: number
-    }) => {
-      const result = await window.electronAPI.grade.createDataSource(data)
+    async (dataSourceInput: GradeDataSourceInput) => {
+      const result =
+        await window.electronAPI.grade.createDataSource(dataSourceInput)
       if (result.success) {
         await loadData()
         // ソース追加は予測変数/対象を増やすため R を再算出
