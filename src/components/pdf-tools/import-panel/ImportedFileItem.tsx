@@ -158,6 +158,11 @@ export default function ImportedFileItem({
 
         <CollapsibleContent>
           <div className="border-t p-3">
+            {/* 元PDFの情報 */}
+            <p className="mb-3 text-xs text-muted-foreground">
+              {describeSourcePdf(file)}
+            </p>
+
             {/* 変換設定 */}
             <div className="mb-3 flex flex-wrap gap-2">
               <Select value={nUpValue} onValueChange={handleNUpChange}>
@@ -254,4 +259,26 @@ export default function ImportedFileItem({
       </div>
     </Collapsible>
   )
+}
+
+/** ポイント(1/72 inch)をミリメートルへ換算する */
+function pointToMillimeter(point: number): number {
+  return Math.round((point * 25.4) / 72)
+}
+
+/** 元PDFのページ数・ページサイズ・暗号化有無を1行にまとめる */
+function describeSourcePdf(file: ImportedFile): string {
+  const { sourcePdfMetadata } = file
+  if (!sourcePdfMetadata) {
+    // 元PDFを読めなかった場合はページ数（画像変換から導出）だけを出す
+    return `${file.pageCount}ページ`
+  }
+
+  const pageWidth = pointToMillimeter(sourcePdfMetadata.pageWidth)
+  const pageHeight = pointToMillimeter(sourcePdfMetadata.pageHeight)
+  return [
+    `${sourcePdfMetadata.pageCount}ページ`,
+    `${pageWidth}×${pageHeight}mm`,
+    sourcePdfMetadata.isEncrypted ? "暗号化あり" : "暗号化なし",
+  ].join(" / ")
 }

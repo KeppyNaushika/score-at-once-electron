@@ -8,6 +8,7 @@ import type {
   InterleaveConfig,
   OutputPage,
   PdfExportMode,
+  RotationDegree,
 } from "@/types/pdfTools.types"
 
 import ExportActions from "./ExportActions"
@@ -19,6 +20,7 @@ interface ExportPanelProps {
   importedFiles: ImportedFile[]
   outputPages: OutputPage[]
   excludedPages: Set<string>
+  pageRotations: Map<string, RotationDegree>
   exportMode: PdfExportMode
   interleaveConfig: InterleaveConfig
   isProcessing: boolean
@@ -26,6 +28,7 @@ interface ExportPanelProps {
   onInterleaveConfigChange: (config: InterleaveConfig) => void
   onOutputPagesChange: (pages: OutputPage[]) => void
   onPageExcluded: (page: OutputPage) => void
+  onPageRotated: (page: OutputPage, rotation: RotationDegree) => void
   onProcessingChange: (processing: boolean) => void
 }
 
@@ -38,6 +41,7 @@ export default function ExportPanel({
   importedFiles,
   outputPages,
   excludedPages,
+  pageRotations,
   exportMode,
   interleaveConfig,
   isProcessing,
@@ -45,20 +49,26 @@ export default function ExportPanel({
   onInterleaveConfigChange,
   onOutputPagesChange,
   onPageExcluded,
+  onPageRotated,
   onProcessingChange,
 }: ExportPanelProps) {
-  // excludedPages の最新値をrefで保持（useEffectの依存配列に入れず、再生成時のみ参照）
+  // 除外ページ・ページ別回転の最新値をrefで保持する。
+  // これらはプレビュー上で即時反映済みなので、依存配列に入れず再生成時のみ参照する
+  // （依存に入れると再生成が走り、ドラッグで並べ替えた順序が失われる）
   const excludedPagesRef = useRef(excludedPages)
+  const pageRotationsRef = useRef(pageRotations)
   useEffect(() => {
     excludedPagesRef.current = excludedPages
+    pageRotationsRef.current = pageRotations
   })
 
-  // インポートファイルが変更されたら出力ページを更新（除外ページを反映）
+  // インポートファイルが変更されたら出力ページを更新（除外ページ・ページ別回転を反映）
   useEffect(() => {
     const pages = generateOutputPages(
       importedFiles,
       exportMode,
-      interleaveConfig
+      interleaveConfig,
+      pageRotationsRef.current
     )
     const filtered = pages.filter(
       (page) => !isPageExcluded(page, excludedPagesRef.current)
@@ -99,6 +109,7 @@ export default function ExportPanel({
             pages={outputPages}
             onPagesChange={onOutputPagesChange}
             onDeletePage={onPageExcluded}
+            onRotatePage={onPageRotated}
             disabled={isProcessing}
           />
         </ScrollArea>
@@ -127,22 +138,37 @@ function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
 }
 
 /**
+ * 出力ページに適用する回転角を決める。
+ * プレビューで個別に回した角度があればそれを、無ければファイル単位の設定を使う。
+ */
+function resolveRotation(
+  pageRotations: Map<string, RotationDegree>,
+  fileId: string,
+  pageNumber: number,
+  fileRotation: RotationDegree
+): RotationDegree {
+  return pageRotations.get(`${fileId}:${pageNumber}`) ?? fileRotation
+}
+
+/**
  * インポートされたファイルから出力ページリストを生成
  *
  * @param files - インポートされたファイル一覧
- * @param mode - エクスポートモード（merge, split, interleave）
+ * @param mode - エクスポートモード（merge, interleave）
  * @param interleaveConfig - 交互挿入設定
+ * @param pageRotations - プレビューで個別に指定されたページ別回転（"fileId:pageNumber"）
  * @returns 生成された出力ページ配列
  */
 function generateOutputPages(
   files: ImportedFile[],
   mode: PdfExportMode,
-  interleaveConfig: InterleaveConfig
+  interleaveConfig: InterleaveConfig,
+  pageRotations: Map<string, RotationDegree>
 ): OutputPage[] {
   const pages: OutputPage[] = []
 
-  if (mode === "merge" || mode === "split") {
-    // 結合・分割モード: 選択されたページを順番に追加
+  if (mode === "merge") {
+    // 結合モード: 選択されたページを順番に追加
     for (const file of files) {
       const sortedPages = Array.from(file.selectedPages).sort(
         (pageNumberA, pageNumberB) => pageNumberA - pageNumberB
@@ -161,7 +187,12 @@ function generateOutputPages(
             sourceFileName: file.name,
             sourcePageNumber: page1,
             thumbnail: file.thumbnails[page1 - 1] || "",
-            rotation: file.rotation,
+            rotation: resolveRotation(
+              pageRotations,
+              file.id,
+              page1,
+              file.rotation
+            ),
             isNUpCombined: true,
             combinedPages,
             nUpLayout: file.nUp.layout,
@@ -176,13 +207,18 @@ function generateOutputPages(
             sourceFileName: file.name,
             sourcePageNumber: pageNumber,
             thumbnail: file.thumbnails[pageNumber - 1] || "",
-            rotation: file.rotation,
+            rotation: resolveRotation(
+              pageRotations,
+              file.id,
+              pageNumber,
+              file.rotation
+            ),
             isNUpCombined: false,
           })
         }
       }
     }
-  } else if (mode === "interleave" && interleaveConfig.enabled) {
+  } else {
     // インターリーブモード: 交互に配置
     const filePageGroups: OutputPage[][] = []
 
@@ -207,7 +243,12 @@ function generateOutputPages(
             sourceFileName: file.name,
             sourcePageNumber: page1,
             thumbnail: file.thumbnails[page1 - 1] || "",
-            rotation: transform.rotation,
+            rotation: resolveRotation(
+              pageRotations,
+              file.id,
+              page1,
+              transform.rotation
+            ),
             isNUpCombined: true,
             combinedPages: page2 ? [page1, page2] : [page1],
             nUpLayout: transform.nUp.layout,
@@ -221,7 +262,12 @@ function generateOutputPages(
             sourceFileName: file.name,
             sourcePageNumber: pageNumber,
             thumbnail: file.thumbnails[pageNumber - 1] || "",
-            rotation: transform.rotation,
+            rotation: resolveRotation(
+              pageRotations,
+              file.id,
+              pageNumber,
+              transform.rotation
+            ),
             isNUpCombined: false,
           })
         }
@@ -251,9 +297,6 @@ function generateOutputPages(
         }
       }
     }
-  } else {
-    // インターリーブ無効時はmergeと同じ
-    return generateOutputPages(files, "merge", interleaveConfig)
   }
 
   return pages

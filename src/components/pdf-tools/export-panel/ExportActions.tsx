@@ -1,6 +1,6 @@
 "use client"
 
-import { FileImage, FileText, Loader2 } from "lucide-react"
+import { FileImage, Files, FileText, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -11,6 +11,9 @@ import type {
   NUpLayout,
   OutputPage,
 } from "@/types/pdfTools.types"
+
+/** 実行中の書き出し種別（ボタンごとのスピナー表示に使う） */
+type ExportKind = "merged-pdf" | "split-pdf" | "png"
 
 interface ExportActionsProps {
   outputPages: OutputPage[]
@@ -25,9 +28,26 @@ export default function ExportActions({
   isProcessing,
   onProcessingChange,
 }: ExportActionsProps) {
-  const [exportType, setExportType] = useState<"pdf" | "png" | null>(null)
+  const [exportKind, setExportKind] = useState<ExportKind | null>(null)
 
-  const handleExportPdf = async () => {
+  /** 出力ページを main プロセスへ渡すページ入力に変換する */
+  const buildPageInputs = () =>
+    outputPages.map((page) => {
+      const file = importedFiles.find(
+        (importedFile) => importedFile.id === page.sourceFileId
+      )
+      return {
+        filePath: file?.path || "",
+        pageNumber: page.sourcePageNumber,
+        rotation: page.rotation,
+        // 2-in-1情報
+        isNUpCombined: page.isNUpCombined,
+        combinedPages: page.combinedPages,
+        nUpLayout: page.nUpLayout,
+      }
+    })
+
+  const handleExportMergedPdf = async () => {
     if (outputPages.length === 0) {
       toast.error("出力するページがありません")
       return
@@ -43,37 +63,12 @@ export default function ExportActions({
       return
     }
 
-    setExportType("pdf")
+    setExportKind("merged-pdf")
     onProcessingChange(true)
 
     try {
-      // OutputPagesからMergePageInputを作成
-      const pages = outputPages.map((page) => {
-        const file = importedFiles.find(
-          (importedFile) => importedFile.id === page.sourceFileId
-        )
-        console.log("Creating page input:", {
-          fileId: page.sourceFileId,
-          fileName: file?.name,
-          filePath: file?.path,
-          pageNumber: page.sourcePageNumber,
-          isNUpCombined: page.isNUpCombined,
-          combinedPages: page.combinedPages,
-          nUpLayout: page.nUpLayout,
-        })
-        return {
-          filePath: file?.path || "",
-          pageNumber: page.sourcePageNumber,
-          rotation: page.rotation,
-          // 2-in-1情報
-          isNUpCombined: page.isNUpCombined,
-          combinedPages: page.combinedPages,
-          nUpLayout: page.nUpLayout,
-        }
-      })
-
       const result = await window.electronAPI.pdfTools.mergePdfs({
-        pages,
+        pages: buildPageInputs(),
         outputPath: pathResult.path,
       })
 
@@ -86,7 +81,47 @@ export default function ExportActions({
       console.error("PDF export error:", error)
       toast.error("PDF出力中にエラーが発生しました")
     } finally {
-      setExportType(null)
+      setExportKind(null)
+      onProcessingChange(false)
+    }
+  }
+
+  const handleExportSplitPdf = async () => {
+    if (outputPages.length === 0) {
+      toast.error("出力するページがありません")
+      return
+    }
+
+    // 保存先フォルダを選択
+    const pathResult = await window.electronAPI.pdfTools.selectSavePath({
+      type: "directory",
+    })
+
+    if (pathResult.canceled || !pathResult.path) {
+      return
+    }
+
+    setExportKind("split-pdf")
+    onProcessingChange(true)
+
+    try {
+      const result = await window.electronAPI.pdfTools.splitPdf({
+        pages: buildPageInputs(),
+        outputDir: pathResult.path,
+      })
+
+      if (result.success) {
+        toast.success(
+          `${result.outputPaths?.length ?? 0}個のPDFを保存しました: ${pathResult.path}`
+        )
+      } else {
+        toast.error(`PDF分割出力エラー: ${result.error}`)
+      }
+    } catch (error) {
+      console.error("PDF split export error:", error)
+      toast.error("PDFのページ別出力中にエラーが発生しました")
+    } finally {
+      setExportKind(null)
       onProcessingChange(false)
     }
   }
@@ -106,7 +141,7 @@ export default function ExportActions({
       return
     }
 
-    setExportType("png")
+    setExportKind("png")
     onProcessingChange(true)
 
     try {
@@ -165,7 +200,7 @@ export default function ExportActions({
       console.error("PNG export error:", error)
       toast.error("PNG出力中にエラーが発生しました")
     } finally {
-      setExportType(null)
+      setExportKind(null)
       onProcessingChange(false)
     }
   }
@@ -178,31 +213,47 @@ export default function ExportActions({
       <div className="text-sm text-muted-foreground">
         {fileCount}ファイル / {pageCount}ページを出力
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
-          onClick={handleExportPdf}
+          onClick={handleExportMergedPdf}
           disabled={isProcessing || pageCount === 0}
-          className="flex-1"
+          className="min-w-32 flex-1"
+          title="全ページを1つのPDFにまとめて保存します"
         >
-          {exportType === "pdf" ? (
+          {exportKind === "merged-pdf" ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <FileText className="mr-2 h-4 w-4" />
           )}
-          PDF出力
+          PDF（1ファイル）
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleExportSplitPdf}
+          disabled={isProcessing || pageCount === 0}
+          className="min-w-32 flex-1"
+          title="1ページ1ファイルのPDFに分割して、選んだフォルダへ保存します"
+        >
+          {exportKind === "split-pdf" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Files className="mr-2 h-4 w-4" />
+          )}
+          PDF（ページ別）
         </Button>
         <Button
           variant="outline"
           onClick={handleExportPng}
           disabled={isProcessing || pageCount === 0}
-          className="flex-1"
+          className="min-w-32 flex-1"
+          title="1ページ1ファイルのPNGとして、選んだフォルダへ保存します"
         >
-          {exportType === "png" ? (
+          {exportKind === "png" ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <FileImage className="mr-2 h-4 w-4" />
           )}
-          PNG出力
+          PNG（ページ別）
         </Button>
       </div>
     </div>

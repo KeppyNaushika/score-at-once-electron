@@ -4,7 +4,6 @@ import { RotateCw, Settings2 } from "lucide-react"
 import { useEffect, useRef } from "react"
 
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -12,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import type {
   FileTransform,
   ImportedFile,
@@ -80,10 +78,6 @@ export default function InterleaveSettings({
     }
   }, [files])
 
-  const handleEnabledChange = (enabled: boolean) => {
-    onConfigChange({ ...config, enabled })
-  }
-
   const handleTransformChange = (
     fileId: string,
     updates: Partial<FileTransform>
@@ -105,111 +99,90 @@ export default function InterleaveSettings({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">交互挿入を有効化</Label>
-        <Switch
-          checked={config.enabled}
-          onCheckedChange={handleEnabledChange}
-          disabled={disabled}
-        />
-      </div>
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        各ファイルの変換設定を個別に指定できます
+      </p>
+      {config.transforms.map((transform) => {
+        const file = files.find(
+          (candidateFile) => candidateFile.id === transform.fileId
+        )
+        if (!file) return null
 
-      {config.enabled && (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            各ファイルの変換設定を個別に指定できます
-          </p>
-          {config.transforms.map((transform) => {
-            const file = files.find(
-              (candidateFile) => candidateFile.id === transform.fileId
-            )
-            if (!file) return null
-
-            return (
-              <div
-                key={transform.fileId}
-                className="rounded-lg border bg-card p-3"
+        return (
+          <div key={transform.fileId} className="rounded-lg border bg-card p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              <span className="truncate text-sm font-medium">{file.name}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={transform.nUp.enabled ? transform.nUp.layout : "1in1"}
+                onValueChange={(value) => {
+                  const enabled = value !== "1in1"
+                  const layout = value === "1in1" ? "2x1" : (value as NUpLayout)
+                  handleTransformChange(transform.fileId, {
+                    nUp: { ...transform.nUp, enabled, layout },
+                  })
+                }}
+                disabled={disabled}
               >
-                <div className="mb-2 flex items-center gap-2">
-                  <Settings2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate text-sm font-medium">
-                    {file.name}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Select
-                    value={
-                      transform.nUp.enabled ? transform.nUp.layout : "1in1"
+                <SelectTrigger className="h-8 w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1in1">1in1</SelectItem>
+                  <SelectItem value="2x1">2in1(横)</SelectItem>
+                  <SelectItem value="1x2">2in1(縦)</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={transform.rotation.toString()}
+                onValueChange={(value) => {
+                  handleTransformChange(transform.fileId, {
+                    rotation: parseInt(value) as RotationDegree,
+                  })
+                }}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-8 w-20">
+                  <RotateCw className="mr-1 h-3 w-3" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">0°</SelectItem>
+                  <SelectItem value="90">90°</SelectItem>
+                  <SelectItem value="180">180°</SelectItem>
+                  <SelectItem value="270">270°</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={transform.pagesPerGroup}
+                  onChange={(e) => {
+                    const pagesPerGroup = parseInt(e.target.value)
+                    if (pagesPerGroup >= 1) {
+                      handleTransformChange(transform.fileId, {
+                        pagesPerGroup,
+                      })
                     }
-                    onValueChange={(value) => {
-                      const enabled = value !== "1in1"
-                      const layout =
-                        value === "1in1" ? "2x1" : (value as NUpLayout)
-                      handleTransformChange(transform.fileId, {
-                        nUp: { ...transform.nUp, enabled, layout },
-                      })
-                    }}
-                    disabled={disabled}
-                  >
-                    <SelectTrigger className="h-8 w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1in1">1in1</SelectItem>
-                      <SelectItem value="2x1">2in1(横)</SelectItem>
-                      <SelectItem value="1x2">2in1(縦)</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={transform.rotation.toString()}
-                    onValueChange={(value) => {
-                      handleTransformChange(transform.fileId, {
-                        rotation: parseInt(value) as RotationDegree,
-                      })
-                    }}
-                    disabled={disabled}
-                  >
-                    <SelectTrigger className="h-8 w-20">
-                      <RotateCw className="mr-1 h-3 w-3" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">0°</SelectItem>
-                      <SelectItem value="90">90°</SelectItem>
-                      <SelectItem value="180">180°</SelectItem>
-                      <SelectItem value="270">270°</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={99}
-                      value={transform.pagesPerGroup}
-                      onChange={(e) => {
-                        const pagesPerGroup = parseInt(e.target.value)
-                        if (pagesPerGroup >= 1) {
-                          handleTransformChange(transform.fileId, {
-                            pagesPerGroup,
-                          })
-                        }
-                      }}
-                      className="h-8 w-14 text-center"
-                      disabled={disabled}
-                    />
-                    <span className="text-xs whitespace-nowrap text-muted-foreground">
-                      頁/組
-                    </span>
-                  </div>
-                </div>
+                  }}
+                  className="h-8 w-14 text-center"
+                  disabled={disabled}
+                />
+                <span className="text-xs whitespace-nowrap text-muted-foreground">
+                  頁/組
+                </span>
               </div>
-            )
-          })}
-        </div>
-      )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

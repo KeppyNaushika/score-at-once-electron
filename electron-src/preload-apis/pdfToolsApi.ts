@@ -1,40 +1,24 @@
 import { ipcRenderer, webUtils } from "electron"
 
-/** PDFツールのIPC API（結合・分割・回転・N-up・PNG出力・ファイル選択） */
+import type { PdfPageInput, RotationDegree } from "@/types/pdfTools.types"
+
+/** PDFツールのIPC API（結合・分割・N-up・PNG出力・ファイル選択） */
 export function createPdfToolsApi() {
   return {
     // PDF Tools related
     pdfTools: {
-      mergePdfs: (options: {
-        pages: Array<{
-          filePath: string
-          pageNumber: number
-          rotation?: 0 | 90 | 180 | 270
-          // 2-in-1用
-          isNUpCombined?: boolean
-          combinedPages?: number[]
-          nUpLayout?: "2x1" | "1x2"
-        }>
-        outputPath: string
-      }) => ipcRenderer.invoke("pdf-tools:merge-pdfs", options),
+      mergePdfs: (options: { pages: PdfPageInput[]; outputPath: string }) =>
+        ipcRenderer.invoke("pdf-tools:merge-pdfs", options),
       splitPdf: (options: {
-        filePath: string
+        pages: PdfPageInput[]
         outputDir: string
         prefix?: string
       }) => ipcRenderer.invoke("pdf-tools:split-pdf", options),
-      rotatePages: (options: {
-        filePath: string
-        rotations: Array<{
-          pageNumber: number
-          rotation: 0 | 90 | 180 | 270
-        }>
-        outputPath: string
-      }) => ipcRenderer.invoke("pdf-tools:rotate-pages", options),
       exportAsPng: (options: {
         imageBuffers: Array<{
           buffer: Buffer
           name: string
-          rotation?: 0 | 90 | 180 | 270
+          rotation?: RotationDegree
         }>
         outputDir: string
       }) => ipcRenderer.invoke("pdf-tools:export-as-png", options),
@@ -65,6 +49,9 @@ export function createPdfToolsApi() {
           success: boolean
           pageCount?: number
           name?: string
+          pageWidth?: number
+          pageHeight?: number
+          isEncrypted?: boolean
           error?: string
         }>,
       // ドラッグ&ドロップされたFileオブジェクトからパスを取得
