@@ -4,18 +4,18 @@
 
 import { ipcMain } from "electron"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type HandlerFunction = (...args: any[]) => any
-
 /**
  * IPC ハンドラーを登録し、try-catch + エラーログを自動適用する。
  * エラー時は例外をそのまま再スローする（呼び出し元でハンドリングされる）。
+ *
+ * 引数と戻り値の型は渡した handler から推論する。ipcMain.handle のリスナーは
+ * 可変長引数が any[] で宣言されているため、こちら側で型変数として受け直せる。
  */
-export function registerHandler(
+export function registerHandler<HandlerArgs extends unknown[], HandlerResult>(
   channel: string,
-  handler: HandlerFunction
+  handler: (...args: HandlerArgs) => HandlerResult | Promise<HandlerResult>
 ): void {
-  ipcMain.handle(channel, async (_event, ...args: unknown[]) => {
+  ipcMain.handle(channel, async (_event, ...args: HandlerArgs) => {
     try {
       return await handler(...args)
     } catch (err) {
@@ -29,12 +29,15 @@ export function registerHandler(
  * IPC ハンドラーを登録し、try-catch + エラーログを自動適用する。
  * エラー時は例外をスローせず、{ success: false, error: message } を返す。
  */
-export function registerSafeHandler(
+export function registerSafeHandler<
+  HandlerArgs extends unknown[],
+  HandlerResult,
+>(
   channel: string,
-  handler: HandlerFunction,
+  handler: (...args: HandlerArgs) => HandlerResult | Promise<HandlerResult>,
   fallbackError?: string
 ): void {
-  ipcMain.handle(channel, async (_event, ...args: unknown[]) => {
+  ipcMain.handle(channel, async (_event, ...args: HandlerArgs) => {
     try {
       return await handler(...args)
     } catch (err) {

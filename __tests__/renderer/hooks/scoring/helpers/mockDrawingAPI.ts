@@ -157,6 +157,7 @@ export function createMockDrawingAPI(): MockDrawingAPI {
 
 /** window.electronAPI をクリーンアップ */
 export function cleanupMockDrawingAPI() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (window as any).electronAPI
+  // window.electronAPI は必須プロパティとして宣言されているため delete 演算子は使えない。
+  // Reflect なら型を偽らずに実行時のプロパティだけを取り除ける
+  Reflect.deleteProperty(window, "electronAPI")
 }

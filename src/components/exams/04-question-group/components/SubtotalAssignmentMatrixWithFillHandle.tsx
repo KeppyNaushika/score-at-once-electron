@@ -2,7 +2,7 @@
 
 import type { Subtotal } from "@prisma/client"
 import { Calculator, RotateCcw } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -54,6 +54,48 @@ export function SubtotalAssignmentMatrixWithFillHandle({
 
   // 全ての小計項目をフラットな配列に変換（列データ）
   const allSubtotals = subtotalGroups.flatMap((group) => group.subtotals)
+
+  // 既存の関連付けを読み込み
+  const loadAssignments = useCallback(async () => {
+    setLoading(true)
+    const newAssignments: SubtotalAssignmentState = {}
+
+    for (const region of subtotalRegions) {
+      try {
+        const result = await window.electronAPI.getCropSubtotalsByCropRegionId(
+          region.id
+        )
+
+        if (result && Array.isArray(result)) {
+          newAssignments[region.id] = new Set(
+            result.map(
+              (definition: CropSubtotalWithSubtotalGroup) =>
+                definition.subtotalId
+            )
+          )
+        } else {
+          newAssignments[region.id] = new Set()
+        }
+      } catch (error) {
+        console.error(
+          `Error loading subtotal assignments for region ${region.id}:`,
+          error
+        )
+        newAssignments[region.id] = new Set()
+      }
+    }
+
+    setAssignments(newAssignments)
+    setOriginalAssignments(
+      Object.fromEntries(
+        Object.entries(newAssignments).map(([key, value]) => [
+          key,
+          Array.from(value),
+        ])
+      )
+    )
+    setLoading(false)
+  }, [subtotalRegions])
 
   // フィルハンドルのドラッグ管理
   const {
@@ -123,56 +165,13 @@ export function SubtotalAssignmentMatrixWithFillHandle({
     },
   })
 
-  // 既存の関連付けを読み込み
-  const loadAssignments = async () => {
-    setLoading(true)
-    const newAssignments: SubtotalAssignmentState = {}
-
-    for (const region of subtotalRegions) {
-      try {
-        const result = await window.electronAPI.getCropSubtotalsByCropRegionId(
-          region.id
-        )
-
-        if (result && Array.isArray(result)) {
-          newAssignments[region.id] = new Set(
-            result.map(
-              (definition: CropSubtotalWithSubtotalGroup) =>
-                definition.subtotalId
-            )
-          )
-        } else {
-          newAssignments[region.id] = new Set()
-        }
-      } catch (error) {
-        console.error(
-          `Error loading subtotal assignments for region ${region.id}:`,
-          error
-        )
-        newAssignments[region.id] = new Set()
-      }
-    }
-
-    setAssignments(newAssignments)
-    setOriginalAssignments(
-      Object.fromEntries(
-        Object.entries(newAssignments).map(([key, value]) => [
-          key,
-          Array.from(value),
-        ])
-      )
-    )
-    setLoading(false)
-  }
-
   useEffect(() => {
     if (subtotalRegions.length > 0) {
       loadAssignments()
     } else {
       setLoading(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotalRegions])
+  }, [subtotalRegions, loadAssignments])
 
   // チェックボックスの状態を変更（逐次保存）
   const handleAssignmentChange = async (

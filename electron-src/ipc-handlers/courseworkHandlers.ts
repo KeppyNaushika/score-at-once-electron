@@ -200,7 +200,7 @@ export function setupCourseworkHandlers(): void {
     async (
       courseworkId: string,
       classroomId: string,
-      deleteStudents = true
+      deleteStudents: boolean = true
     ) => {
       return removeClassroomFromCoursework(
         courseworkId,

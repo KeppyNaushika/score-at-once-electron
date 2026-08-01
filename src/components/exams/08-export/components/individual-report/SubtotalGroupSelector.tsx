@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useEffectEvent, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,58 +24,56 @@ export function SubtotalGroupSelector({
   const [groups, setGroups] = useState<SubtotalGroupInfo[]>([])
   const [loading, setLoading] = useState(true)
 
-  // グループ一覧を取得（ページ読み込み時のみ）
+  // 保存済みの選択を、実在するグループだけに整える。取得直後に一度だけ走る初期化であり、
+  // 以後の選択変更で再実行してはならない（全解除を打ち消してしまう）ため Effect Event にする
+  const reconcileSelection = useEffectEvent((availableGroupIds: string[]) => {
+    const restoredGroupIds = selection.selectedGroupIds
+    if (restoredGroupIds.length === 0) {
+      // 保存された選択が無い（初回）ときは全グループを選択
+      onChange({ enabled: true, selectedGroupIds: availableGroupIds })
+      return
+    }
+    const validGroupIds = restoredGroupIds.filter((groupId) =>
+      availableGroupIds.includes(groupId)
+    )
+    if (validGroupIds.length === 0) {
+      // 保存された選択がすべて消えていたら全グループへ戻す
+      onChange({ enabled: true, selectedGroupIds: availableGroupIds })
+      return
+    }
+    if (validGroupIds.length !== restoredGroupIds.length) {
+      // 消えたグループが混ざっていた分だけ取り除く
+      onChange({ enabled: true, selectedGroupIds: validGroupIds })
+    }
+  })
+
+  // グループ一覧を取得する
   useEffect(() => {
+    let cancelled = false
     const fetchGroups = async () => {
       try {
         setLoading(true)
         const result =
           await window.electronAPI.export.getSubtotalGroupsForReport(examId)
+        if (cancelled) return
         if (result.success && result.subtotalGroups) {
           setGroups(result.subtotalGroups)
-          const fetchedGroupIds = result.subtotalGroups.map(
-            (subtotalGroup) => subtotalGroup.id
-          )
-
-          // localStorageから復元された選択がある場合、有効なIDのみにフィルタ
-          // 復元された選択がない（初回）または無効な場合のみ、全グループを選択
-          if (selection.selectedGroupIds.length > 0) {
-            // 有効なグループIDのみにフィルタ
-            const validIds = selection.selectedGroupIds.filter((id) =>
-              fetchedGroupIds.includes(id)
+          if (result.subtotalGroups.length > 0) {
+            reconcileSelection(
+              result.subtotalGroups.map((subtotalGroup) => subtotalGroup.id)
             )
-            if (validIds.length > 0) {
-              // 有効な選択があればそのまま使用（localStorageの値を維持）
-              if (validIds.length !== selection.selectedGroupIds.length) {
-                // 無効なIDがあった場合のみ更新
-                onChange({
-                  enabled: true,
-                  selectedGroupIds: validIds,
-                })
-              }
-            } else {
-              // 有効な選択がない場合は全グループを選択
-              onChange({
-                enabled: true,
-                selectedGroupIds: fetchedGroupIds,
-              })
-            }
-          } else if (result.subtotalGroups.length > 0) {
-            // 初回（選択がない）の場合は全グループを選択
-            onChange({
-              enabled: true,
-              selectedGroupIds: fetchedGroupIds,
-            })
           }
         }
       } catch (error) {
         console.error("Failed to fetch subtotal groups:", error)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     fetchGroups()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true
+    }
   }, [examId])
 
   // グループがない場合は表示しない

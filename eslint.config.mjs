@@ -97,7 +97,10 @@ export default [
     rules: {
       // React Hooks
       "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
+      // 違反ゼロにしたので error。依存を偽る抑制コメントは置かず、
+      // 「effect から最新の props を読むが再実行の引き金にはしない」箇所は
+      // useEffectEvent を使う（ref での代用は宣言順に依存するため避ける）。
+      "react-hooks/exhaustive-deps": "error",
 
       // React Hooks（v7 の React Compiler 由来ルール）
       // recommended は 16 ルールだが上2つしか有効化していなかったため追加する。
@@ -136,7 +139,8 @@ export default [
           ignoreRestSiblings: true,
         },
       ],
-      "@typescript-eslint/no-explicit-any": "warn",
+      // 違反ゼロにしたので error（コード規約の「any は原則禁止」を機械的に担保する）
+      "@typescript-eslint/no-explicit-any": "error",
 
       // Next.js
       // プラグインを登録するだけではルールは有効にならないため個別に指定する。

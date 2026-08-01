@@ -204,14 +204,14 @@ export function AuditLogsTab() {
     })()
   }, [])
 
-  // 検索テキストはデバウンスしてフィルタへ反映
+  // 検索テキストはデバウンスしてフィルタへ反映。
+  // 更新関数形にすることで、待機中に他のフィルタが変わっても上書きしない
   useEffect(() => {
     const id = setTimeout(() => {
-      setFilter({ ...filter, search: searchText || undefined })
+      setFilter((prev) => ({ ...prev, search: searchText || undefined }))
     }, 300)
     return () => clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText])
+  }, [searchText, setFilter])
 
   const categoryOptions = useMemo(
     () => Object.entries(CATEGORY_LABELS) as [AuditCategory, string][],

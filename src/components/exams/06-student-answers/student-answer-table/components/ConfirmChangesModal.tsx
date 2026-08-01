@@ -6,7 +6,7 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
 import { Button } from "@/components/ui/button"
@@ -55,14 +55,18 @@ export function ConfirmChangesModal({
   const [phase, setPhase] = useState<"list" | "confirm">("list")
   const [isApplying, setIsApplying] = useState(false)
 
-  const effectivePolicy = (change: PendingChange): PlacementScorePolicy =>
-    isPageChange(change) ? "discard" : (samePagePolicies[change.id] ?? "carry")
+  const effectivePolicy = useCallback(
+    (change: PendingChange): PlacementScorePolicy =>
+      isPageChange(change)
+        ? "discard"
+        : (samePagePolicies[change.id] ?? "carry"),
+    [samePagePolicies]
+  )
 
   const discardChanges = useMemo(
     () =>
       pendingChanges.filter((change) => effectivePolicy(change) === "discard"),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pendingChanges, samePagePolicies]
+    [pendingChanges, effectivePolicy]
   )
   const carryCount = pendingChanges.length - discardChanges.length
   const unackedCount = discardChanges.filter(
