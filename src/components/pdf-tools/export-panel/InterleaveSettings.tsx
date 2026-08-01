@@ -41,10 +41,12 @@ export default function InterleaveSettings({
 }: InterleaveSettingsProps) {
   // useRefで最新の値を保持（依存配列に入れずに最新値を参照するため）
   const configRef = useRef(config)
-  configRef.current = config
 
   const onConfigChangeRef = useRef(onConfigChange)
-  onConfigChangeRef.current = onConfigChange
+  useEffect(() => {
+    configRef.current = config
+    onConfigChangeRef.current = onConfigChange
+  })
 
   // ファイルが変更されたらtransformsを同期
   useEffect(() => {

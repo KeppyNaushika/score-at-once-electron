@@ -101,7 +101,7 @@ export function useTableSort<T extends object>(
       if (aVal == null) return sortConfig.direction === "asc" ? 1 : -1
       if (bVal == null) return sortConfig.direction === "asc" ? -1 : 1
 
-      let comparison = 0
+      let comparison: number
 
       // 型に応じた比較
       if (typeof aVal === "number" && typeof bVal === "number") {

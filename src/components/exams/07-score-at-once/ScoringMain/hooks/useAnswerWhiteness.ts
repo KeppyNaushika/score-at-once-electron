@@ -71,9 +71,11 @@ export function useAnswerWhiteness({
   // 毎レンダーで新しい配列になるため、effectの依存には入れずrefで最新値を渡す。
   // 再算出の要否はsignature（答案の顔ぶれ）で判定する。
   const pageAnswerImagesRef = useRef(pageAnswerImages)
-  pageAnswerImagesRef.current = pageAnswerImages
   const cropRegionsRef = useRef(cropRegions)
-  cropRegionsRef.current = cropRegions
+  useEffect(() => {
+    pageAnswerImagesRef.current = pageAnswerImages
+    cropRegionsRef.current = cropRegions
+  })
 
   useEffect(() => {
     if (!enabled) return

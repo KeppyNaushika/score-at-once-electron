@@ -20,6 +20,11 @@ export type EntityType = "student" | "classroom" | "subtotalGroup"
 export type DecisionType = "same_person" | "create_new" | "skip"
 export type NoMatchDecisionType = "create_new" | "skip"
 
+/** UIのSelect等が返す string を DecisionType へ絞り込む */
+export function isDecisionType(value: string): value is DecisionType {
+  return value === "same_person" || value === "create_new" || value === "skip"
+}
+
 /** エンティティごとのラベル設定 */
 interface EntityLabels {
   samePerson: string

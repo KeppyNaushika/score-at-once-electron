@@ -69,47 +69,29 @@ export function RichTextEditorModal({
   canvasWidth = 800,
   canvasHeight = 600,
   backgroundImageUrl,
-  fontSize: initialFontSize = 5,
+  // 文字サイズとアンカー方向は親が保持する制御プロパティ。ローカルに複製しない
+  fontSize = 5,
   onFontSizeChange,
-  anchorDirection: initialAnchorDirection = "top-left",
+  anchorDirection = "top-left",
   onAnchorDirectionChange,
 }: RichTextEditorModalProps) {
-  const [fontSize, setFontSizeLocal] = useState(initialFontSize)
   const [isBold, setIsBold] = useState(false)
   const [isItalic, setIsItalic] = useState(false)
   const [isUnderline, setIsUnderline] = useState(false)
 
-  // アンカー方向の設定
-  const [anchorDirection, setAnchorDirectionLocal] = useState<AnchorDirection>(
-    initialAnchorDirection
-  )
-
-  // 親への通知付きsetFontSize
   const setFontSize = useCallback(
     (size: number) => {
-      setFontSizeLocal(size)
       onFontSizeChange?.(size)
     },
     [onFontSizeChange]
   )
 
-  // 親への通知付きsetAnchorDirection
   const setAnchorDirection = useCallback(
     (direction: AnchorDirection) => {
-      setAnchorDirectionLocal(direction)
       onAnchorDirectionChange?.(direction)
     },
     [onAnchorDirectionChange]
   )
-
-  // propsが変更されたときにローカル状態を更新
-  useEffect(() => {
-    setFontSizeLocal(initialFontSize)
-  }, [initialFontSize])
-
-  useEffect(() => {
-    setAnchorDirectionLocal(initialAnchorDirection)
-  }, [initialAnchorDirection])
 
   // 背景画像表示設定
   const [showBackground, setShowBackground] = useState(false)

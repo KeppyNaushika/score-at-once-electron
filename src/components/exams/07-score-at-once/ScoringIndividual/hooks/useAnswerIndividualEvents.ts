@@ -58,10 +58,10 @@ interface UseAnswerDisplayEventsProps {
   currentHandle: string | null
   hoveredElementId: string | null
 
-  // テキスト境界キャッシュ（ヒットテスト用）
-  textBoundsCache?: Map<
-    string,
-    { x: number; y: number; width: number; height: number }
+  // テキスト境界キャッシュ（ヒットテスト用）。中身は描画のたびに書き換わるので
+  // レンダー中ではなくイベントハンドラ内で .current を読む
+  textBoundsCacheRef?: React.MutableRefObject<
+    Map<string, { x: number; y: number; width: number; height: number }>
   >
 
   // Drawing actions
@@ -118,7 +118,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   // Initialize hit test utilities（ズームを渡して画面上の当たり判定サイズを一定に）
   const { hitTestElement, hitTestHandle } = useHitTestUtils({
     zoom,
-    textBoundsCache: props.textBoundsCache,
+    textBoundsCacheRef: props.textBoundsCacheRef,
   })
 
   // Initialize edit mode utilities

@@ -49,7 +49,9 @@ export default function ExportPanel({
 }: ExportPanelProps) {
   // excludedPages の最新値をrefで保持（useEffectの依存配列に入れず、再生成時のみ参照）
   const excludedPagesRef = useRef(excludedPages)
-  excludedPagesRef.current = excludedPages
+  useEffect(() => {
+    excludedPagesRef.current = excludedPages
+  })
 
   // インポートファイルが変更されたら出力ページを更新（除外ページを反映）
   useEffect(() => {

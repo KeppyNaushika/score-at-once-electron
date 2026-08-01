@@ -66,17 +66,19 @@ export function MasterAnswerManager({
       />
 
       {/* パスワード入力ダイアログ */}
-      <PasswordDialog
-        isOpen={passwordDialog.isOpen}
-        onClose={handlePasswordCancel}
-        onSubmit={handlePasswordSubmit}
-        fileName={passwordDialog.fileName}
-        error={
-          passwordDialog.hasError ? "パスワードが正しくありません" : undefined
-        }
-        isLoading={passwordDialog.isLoading}
-        isFirstAttempt={!passwordDialog.hasError}
-      />
+      {passwordDialog.isOpen && (
+        <PasswordDialog
+          isOpen={passwordDialog.isOpen}
+          onClose={handlePasswordCancel}
+          onSubmit={handlePasswordSubmit}
+          fileName={passwordDialog.fileName}
+          error={
+            passwordDialog.hasError ? "パスワードが正しくありません" : undefined
+          }
+          isLoading={passwordDialog.isLoading}
+          isFirstAttempt={!passwordDialog.hasError}
+        />
+      )}
     </div>
   )
 }

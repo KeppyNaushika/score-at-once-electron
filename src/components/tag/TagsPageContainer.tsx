@@ -130,16 +130,11 @@ function TagModal({
   onClose: () => void
   onSave: (name: string, color: string | null) => Promise<void>
 }) {
-  const [name, setName] = useState("")
-  const [color, setColor] = useState<string | null>(null)
+  // 呼び出し側は閉じている間このコンポーネントをマウントしないため、
+  // 開くたびに対象タグの値からフォームが始まる。
+  const [name, setName] = useState(tag?.name ?? "")
+  const [color, setColor] = useState<string | null>(tag?.color ?? null)
   const { inputRef: nameInputRef, onOpenAutoFocus } = useDialogAutoFocus(open)
-
-  useEffect(() => {
-    if (open) {
-      setName(tag?.name ?? "")
-      setColor(tag?.color ?? null)
-    }
-  }, [open, tag])
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -316,12 +311,15 @@ export function TagsPageContainer() {
 
   return (
     <>
-      <TagModal
-        open={showModal}
-        tag={modalTag}
-        onClose={() => setShowModal(false)}
-        onSave={handleSave}
-      />
+      {/* 閉じている間はマウントしない。開くたびに対象タグの値でフォームが作り直される */}
+      {showModal && (
+        <TagModal
+          open={showModal}
+          tag={modalTag}
+          onClose={() => setShowModal(false)}
+          onSave={handleSave}
+        />
+      )}
 
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b px-4 py-3">

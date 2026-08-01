@@ -32,7 +32,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     const studentNoMatch = student.noMatch.length
 
     let studentMerge = studentAutoMatched
-    let studentNew = 0
+    let studentNew: number
     let studentSkip = 0
 
     if (config.student.strategy === "all_new") {
@@ -54,7 +54,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     const classroomNoMatch = classroomResult.noMatch.length
 
     let classroomMerge = classroomAutoMatched
-    let classroomNew = 0
+    let classroomNew: number
     let classroomSkip = 0
 
     if (config.classroom.strategy === "all_new") {

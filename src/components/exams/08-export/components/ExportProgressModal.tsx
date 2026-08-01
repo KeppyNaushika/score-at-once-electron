@@ -122,17 +122,6 @@ export default function ExportProgressModal({
     }
   }, [totalPagesCount, embeddedPagesCount, progressDetails.canvasTotal])
 
-  // isOpenがtrueになったらisClosingをリセット（モーダルが開く時）
-  useEffect(() => {
-    if (isOpen) {
-      // requestAnimationFrameでマイクロタスク後に実行してカスケードを回避
-      const frame = requestAnimationFrame(() => {
-        setIsClosing(false)
-      })
-      return () => cancelAnimationFrame(frame)
-    }
-  }, [isOpen])
-
   useEffect(() => {
     if (status === "completed" && progress === 100) {
       const timer = setTimeout(() => {

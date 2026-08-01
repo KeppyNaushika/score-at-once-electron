@@ -76,7 +76,8 @@ export function ClassroomScoreTrendChart({
 
   const [seriesList, setSeriesList] = useState<SeriesConfig[]>(() => [
     {
-      id: `cs${nextIdRef.current++}`,
+      // 初期系列のidは固定。nextIdRef は追加系列（createId）専用にする
+      id: "cs0",
       label: "学級平均（合計）",
       tags: new Set<string>(),
       subtotalId: "__total__",

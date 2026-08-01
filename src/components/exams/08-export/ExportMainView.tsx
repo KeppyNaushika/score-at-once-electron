@@ -414,17 +414,19 @@ export default function ExportMainView() {
           </div>
         </div>
 
-        {/* プログレスモーダル */}
-        <ExportProgressModal
-          isOpen={showProgressModal}
-          onClose={() => setShowProgressModal(false)}
-          progress={exportProgress}
-          status={exportStatus}
-          currentStep={currentStep}
-          embeddedPagesCount={embeddedPagesCount}
-          totalPagesCount={totalPagesCount}
-          canvasRenderingComplete={canvasRenderingComplete}
-        />
+        {/* プログレスモーダル（閉じている間はマウントしない） */}
+        {showProgressModal && (
+          <ExportProgressModal
+            isOpen={showProgressModal}
+            onClose={() => setShowProgressModal(false)}
+            progress={exportProgress}
+            status={exportStatus}
+            currentStep={currentStep}
+            embeddedPagesCount={embeddedPagesCount}
+            totalPagesCount={totalPagesCount}
+            canvasRenderingComplete={canvasRenderingComplete}
+          />
+        )}
 
         {/* 警告モーダル */}
         <ExportWarningModal

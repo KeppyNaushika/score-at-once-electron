@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -50,25 +50,27 @@ interface PasscodeEditModalProps {
 
 type PasscodeType = "none" | "4digit" | "6digit" | "alphanumeric"
 
+/** DBに入っている文字列を PasscodeType へ絞り込む（未知の値は none 扱い） */
+function toPasscodeType(value: string | null | undefined): PasscodeType {
+  return value === "4digit" || value === "6digit" || value === "alphanumeric"
+    ? value
+    : "none"
+}
+
 export function PasscodeEditModal({
   isOpen,
   onClose,
   onPasscodeUpdated,
   user,
 }: PasscodeEditModalProps) {
-  const [passcodeType, setPasscodeType] = useState<PasscodeType>("none")
+  // 呼び出し側（settings/page.tsx）は閉じている間このコンポーネントを
+  // マウントしないため、開くたびに対象ユーザーの値から始まる。
+  const [passcodeType, setPasscodeType] = useState<PasscodeType>(
+    toPasscodeType(user?.passcodeType)
+  )
   const [passcode, setPasscode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-
-  // ユーザー情報が変更されたときに初期値を設定
-  useEffect(() => {
-    if (user) {
-      setPasscodeType((user.passcodeType as PasscodeType) || "none")
-      setPasscode("")
-      setError("")
-    }
-  }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

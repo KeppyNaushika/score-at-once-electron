@@ -67,9 +67,9 @@ afterEach(() => {
 })
 
 const loadDeployer = async () => {
-  const module =
+  const migrationDeployer =
     await import("../../electron-src/lib/prisma/schema/migrationDeployer")
-  return module.deployPendingMigrations
+  return migrationDeployer.deployPendingMigrations
 }
 
 describe("deployPendingMigrations", () => {

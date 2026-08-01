@@ -102,7 +102,8 @@ export const initializeDataDirectory = async (): Promise<void> => {
     console.error("App is packaged:", app.isPackaged)
 
     throw new Error(
-      `Data directory initialization failed: ${error instanceof Error ? error.message : error}`
+      `Data directory initialization failed: ${error instanceof Error ? error.message : error}`,
+      { cause: error }
     )
   }
 }

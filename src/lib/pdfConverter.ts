@@ -120,14 +120,14 @@ export async function convertPdfToImages(
     // PDF.js エラーハンドリング
     if (error && typeof error === "object" && "name" in error) {
       if (error.name === "PasswordException") {
-        throw new Error("password-required")
+        throw new Error("password-required", { cause: error })
       } else if (error.name === "InvalidPDFException" && password) {
-        throw new Error("invalid-password")
+        throw new Error("invalid-password", { cause: error })
       }
     }
     // パスワード関連以外のエラーのみログ出力
     console.error("PDF変換エラー:", error)
     const errorMessage = error instanceof Error ? error.message : "不明なエラー"
-    throw new Error(`PDF変換エラー: ${errorMessage}`)
+    throw new Error(`PDF変換エラー: ${errorMessage}`, { cause: error })
   }
 }

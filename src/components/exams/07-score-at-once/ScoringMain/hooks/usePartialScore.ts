@@ -75,7 +75,7 @@ export function usePartialScore({
       }
 
       const currentInput = partialScoreInput || ""
-      let newInput = ""
+      let newInput: string
 
       // 小数点の処理
       if (key === ".") {

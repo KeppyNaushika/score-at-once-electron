@@ -267,11 +267,11 @@ export function setupAnswerSheetBuilderHandlers(): void {
   // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle("asb:print", async (_event, args: ASBPrintArgs) => {
     let tempHtmlPath: string | null = null
-    let tempPdfPath: string | null = null
     let win: BrowserWindow | null = null
     try {
       tempHtmlPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.html`)
-      tempPdfPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.pdf`)
+      // プレビュー中は削除しないので finally からは参照しない
+      const tempPdfPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.pdf`)
       fs.writeFileSync(tempHtmlPath, args.html, "utf-8")
 
       win = new BrowserWindow({

@@ -2,7 +2,7 @@
  * グリッドナビゲーションフック
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 interface UseGridNavigationProps {
   externalItemsPerRow?: number[]
@@ -12,18 +12,17 @@ interface UseGridNavigationProps {
 export function useGridNavigation({
   externalItemsPerRow,
 }: UseGridNavigationProps) {
-  const [itemsPerRow, setItemsPerRow] = useState([5])
+  // Alt+[-/+] によるこの画面だけの上書き。null なら外部指定に追従する
+  const [overrideItemsPerRow, setOverrideItemsPerRow] = useState<
+    number[] | null
+  >(null)
+  const itemsPerRow = useMemo(
+    () => overrideItemsPerRow ?? externalItemsPerRow ?? [5],
+    [overrideItemsPerRow, externalItemsPerRow]
+  )
 
-  // 外部からのitemsPerRowを使用
-  useEffect(() => {
-    if (externalItemsPerRow) {
-      setItemsPerRow(externalItemsPerRow)
-    }
-  }, [externalItemsPerRow])
-
-  // itemsPerRowの変更を通知（親コンポーネントで保存）
   const handleItemsPerRowChange = useCallback((value: number[]) => {
-    setItemsPerRow(value)
+    setOverrideItemsPerRow(value)
   }, [])
 
   // 答案表示数の増減機能

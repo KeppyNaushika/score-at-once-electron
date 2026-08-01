@@ -1,7 +1,7 @@
 "use client"
 
 import { TriangleAlert } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,12 +48,22 @@ export function GradeImportDialog({
   onConfirm,
 }: GradeImportDialogProps) {
   // archiveId → 選択値（"new" | "reuse:<id>"）。ユーザーが明示的に変更した分のみ保持。
-  const [selections, setSelections] = useState<Record<string, string>>({})
+  // どの preview に対する選択かを一緒に持ち、preview が切り替わったら前回分は無効になる
+  const [manualSelections, setManualSelections] = useState<{
+    preview: GradeArchiveImportPreview | null
+    values: Record<string, string>
+  }>({ preview: null, values: {} })
+  const selections = useMemo(
+    () => (manualSelections.preview === preview ? manualSelections.values : {}),
+    [manualSelections, preview]
+  )
 
-  // preview が切り替わったら手動選択をリセット（前回インポートの選択が残らないように）
-  useEffect(() => {
-    setSelections({})
-  }, [preview])
+  const selectArchive = (archiveId: string, value: string) => {
+    setManualSelections({
+      preview,
+      values: { ...selections, [archiveId]: value },
+    })
+  }
 
   // preview が変わったら初期選択を計算（uuid一致→統合、無ければ新規）
   const initialSelections = useMemo(() => {
@@ -212,10 +222,7 @@ export function GradeImportDialog({
                       effectiveSelections[courseworkMatch.archiveId] ?? "new"
                     }
                     onValueChange={(value) =>
-                      setSelections((prev) => ({
-                        ...prev,
-                        [courseworkMatch.archiveId]: value,
-                      }))
+                      selectArchive(courseworkMatch.archiveId, value)
                     }
                     className="space-y-1"
                   >

@@ -675,8 +675,8 @@ export function computeMultiPageLayoutFromDefinition(
 
   for (let majorIndex = 0; majorIndex < majorQuestions.length; majorIndex++) {
     const major = majorQuestions[majorIndex]
-    let col = colBoundsArr[currentColIdx]
-    let colHorizWidth = col.contentRight - col.majorNumX - majorNumWidth
+    const col = colBoundsArr[currentColIdx]
+    const colHorizWidth = col.contentRight - col.majorNumX - majorNumWidth
     const majorHeight = computeMajorHeight(
       major,
       baseRowHeight,
@@ -715,9 +715,8 @@ export function computeMultiPageLayoutFromDefinition(
         currentColIdx = 0
         colCurrentY.fill(contentTop)
       }
-
-      col = colBoundsArr[currentColIdx]
-      colHorizWidth = col.contentRight - col.majorNumX - majorNumWidth
+      // 段が変わっても以降は colBoundsArr[currentColIdx] を直接参照するため、
+      // col / colHorizWidth の付け替えは不要（読まれない）
     }
 
     // スペーシング

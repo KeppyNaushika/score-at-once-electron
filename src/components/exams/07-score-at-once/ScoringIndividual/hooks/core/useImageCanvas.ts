@@ -100,6 +100,6 @@ export function useImageCanvas({
     containerRef,
     imageLoaded,
     loadedImages,
-    textBoundsCache: textBoundsCacheRef.current,
+    textBoundsCacheRef,
   }
 }

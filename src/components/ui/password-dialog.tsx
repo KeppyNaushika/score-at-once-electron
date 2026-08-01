@@ -42,6 +42,8 @@ export function PasswordDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (password.trim()) {
+      // 誤りだったときに前回の入力が残らないよう、送信と同時に消す
+      setPassword("")
       onSubmit(password)
     }
   }
@@ -81,31 +83,12 @@ export function PasswordDialog({
     }
   }, [error, isFirstAttempt])
 
-  // ダイアログが開かれた時にパスワードをクリア
-  useEffect(() => {
-    if (isOpen) {
-      let canceled = false
-      const frame = requestAnimationFrame(() => {
-        if (canceled) {
-          return
-        }
-        setPassword("")
-        setIsShaking(false)
-      })
-      return () => {
-        canceled = true
-        cancelAnimationFrame(frame)
-      }
-    }
-  }, [isOpen])
-
   // パスワード違いの再試行では、呼び出し側（usePdfPasswordConversion）が
-  // isOpen を true のまま isLoading だけ戻すため、Dialog は再マウントされず
-  // onOpenAutoFocus も [isOpen] のリセット効果も再発火しない。
-  // 誤ったパスワードが残ったまま無フォーカスになるので、ここで入力を作り直す。
+  // isOpen を true のまま isLoading だけ戻すため Dialog は再マウントされず、
+  // onOpenAutoFocus も再発火しない。入力のクリアは handleSubmit 側で済むので、
+  // ここではフォーカスを戻すだけにする。
   useEffect(() => {
     if (isOpen && !isLoading && error && !isFirstAttempt) {
-      setPassword("")
       inputRef.current?.focus()
     }
   }, [isOpen, isLoading, error, isFirstAttempt, inputRef])

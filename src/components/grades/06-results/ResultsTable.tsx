@@ -27,6 +27,29 @@ interface ResultsTableProps {
 
 type SortKey = "registrationOrder" | "attendanceNumber" | string
 
+/** ソート状態を示す列ヘッダー。クリックでソート対象を切り替える */
+const SortHeader = ({
+  label,
+  sortId,
+  sortKey,
+  sortAsc,
+  onSort,
+}: {
+  label: string
+  sortId: SortKey
+  sortKey: SortKey
+  sortAsc: boolean
+  onSort: (sortId: SortKey) => void
+}) => (
+  <th
+    className="cursor-pointer px-2 py-2 text-center font-medium hover:underline"
+    onClick={() => onSort(sortId)}
+  >
+    {label}
+    {sortKey === sortId && (sortAsc ? " ↑" : " ↓")}
+  </th>
+)
+
 /**
  * 成績算出結果の一覧テーブル
  *
@@ -94,7 +117,7 @@ export function ResultsTable({
         registrationRankByGradeStudentId.get(studentB.gradeStudentId) ?? 0
       return sortAsc ? aIndex - bIndex : bIndex - aIndex
     }
-    let comparison = 0
+    let comparison: number
     if (sortKey === "attendanceNumber") {
       comparison =
         (studentA.attendanceNumber ?? 999) - (studentB.attendanceNumber ?? 999)
@@ -111,22 +134,6 @@ export function ResultsTable({
     return sortAsc ? comparison : -comparison
   })
 
-  const SortHeader = ({
-    label,
-    sortId,
-  }: {
-    label: string
-    sortId: SortKey
-  }) => (
-    <th
-      className="cursor-pointer px-2 py-2 text-center font-medium hover:underline"
-      onClick={() => handleSort(sortId)}
-    >
-      {label}
-      {sortKey === sortId && (sortAsc ? " ↑" : " ↓")}
-    </th>
-  )
-
   return (
     <>
       {activeConstraints.length > 0 && (
@@ -139,14 +146,29 @@ export function ResultsTable({
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <SortHeader label="順序" sortId="registrationOrder" />
-              <SortHeader label="番号" sortId="attendanceNumber" />
+              <SortHeader
+                label="順序"
+                sortId="registrationOrder"
+                sortKey={sortKey}
+                sortAsc={sortAsc}
+                onSort={handleSort}
+              />
+              <SortHeader
+                label="番号"
+                sortId="attendanceNumber"
+                sortKey={sortKey}
+                sortAsc={sortAsc}
+                onSort={handleSort}
+              />
               <th className="px-2 py-2 text-left font-medium">氏名</th>
               {result.gradeItems.map((gradeItem) => (
                 <SortHeader
                   key={gradeItem.id}
                   label={gradeItem.name}
                   sortId={gradeItem.id}
+                  sortKey={sortKey}
+                  sortAsc={sortAsc}
+                  onSort={handleSort}
                 />
               ))}
             </tr>

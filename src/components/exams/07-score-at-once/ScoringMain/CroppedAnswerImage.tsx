@@ -61,18 +61,10 @@ export default function CroppedAnswerImage({
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
-  const [imageLoaded, setImageLoaded] = useState(false)
-
-  // imageUrl変更時にimageLoadedをリセット
-  // リセットしないと、新画像のonLoadでsetImageLoaded(true)がno-opとなり
-  // キャンバスの再描画が発火しない
-  const prevImageUrlRef = useRef(imageUrl)
-  if (prevImageUrlRef.current !== imageUrl) {
-    prevImageUrlRef.current = imageUrl
-    if (imageLoaded) {
-      setImageLoaded(false)
-    }
-  }
+  // 「どのURLを読み終えたか」を持つことで、imageUrl が変われば読み込み済み判定が
+  // 自動的に外れる。真偽値だと新画像のonLoadがno-opになり再描画が発火しない。
+  const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null)
+  const imageLoaded = loadedImageUrl === imageUrl
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -182,7 +174,7 @@ export default function CroppedAnswerImage({
   ])
 
   const handleImageLoad = () => {
-    setImageLoaded(true)
+    setLoadedImageUrl(imageUrl)
   }
 
   // 行表示: 幅100%、高さは自動

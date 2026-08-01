@@ -8,7 +8,6 @@ import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import {
   preloadScoringMarkImages,
   renderAnswerSheetToCanvas,
-  type ScoringDataForPdf,
   type SubtotalDataForPdf,
   type TotalScoreDataForPdf,
 } from "../utils/pdfCanvasRenderer"

@@ -221,13 +221,13 @@ function ConstraintCard({
   onUpdate,
   onDelete,
 }: ConstraintCardProps) {
-  const [name, setName] = useState(constraint.name)
-  const [expression, setExpression] = useState(constraint.expression)
-  const [message, setMessage] = useState(constraint.message ?? "")
-
-  useEffect(() => setName(constraint.name), [constraint.name])
-  useEffect(() => setExpression(constraint.expression), [constraint.expression])
-  useEffect(() => setMessage(constraint.message ?? ""), [constraint.message])
+  // 入力中の下書き。null なら確定済みの constraint をそのまま表示する
+  const [nameDraft, setNameDraft] = useState<string | null>(null)
+  const [expressionDraft, setExpressionDraft] = useState<string | null>(null)
+  const [messageDraft, setMessageDraft] = useState<string | null>(null)
+  const name = nameDraft ?? constraint.name
+  const expression = expressionDraft ?? constraint.expression
+  const message = messageDraft ?? constraint.message ?? ""
 
   const exprError =
     constraint.kind === "expression"
@@ -243,8 +243,11 @@ function ConstraintCard({
         />
         <Input
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => name !== constraint.name && onUpdate({ name })}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onBlur={() => {
+            if (name !== constraint.name) onUpdate({ name })
+            setNameDraft(null)
+          }}
           className="h-8 flex-1"
           placeholder="ルール名"
         />
@@ -309,10 +312,11 @@ function ConstraintCard({
         <div className="space-y-1">
           <Textarea
             value={expression}
-            onChange={(e) => setExpression(e.target.value)}
-            onBlur={() =>
-              expression !== constraint.expression && onUpdate({ expression })
-            }
+            onChange={(e) => setExpressionDraft(e.target.value)}
+            onBlur={() => {
+              if (expression !== constraint.expression) onUpdate({ expression })
+              setExpressionDraft(null)
+            }}
             className="font-mono text-xs"
             rows={2}
             placeholder='has("A") and has("C")'
@@ -332,11 +336,13 @@ function ConstraintCard({
         </Label>
         <Input
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onBlur={() =>
-            (message || null) !== constraint.message &&
-            onUpdate({ message: message || null })
-          }
+          onChange={(e) => setMessageDraft(e.target.value)}
+          onBlur={() => {
+            if ((message || null) !== constraint.message) {
+              onUpdate({ message: message || null })
+            }
+            setMessageDraft(null)
+          }}
           className="h-8"
           placeholder="違反時にホバーで表示される説明（任意）"
         />

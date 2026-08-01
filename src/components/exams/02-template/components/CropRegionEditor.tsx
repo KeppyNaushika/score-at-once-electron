@@ -157,7 +157,8 @@ const CropRegionEditor = ({
         examPageId: examPageId,
       }
 
-      let newAreaSpecifics = {}
+      // switch に default があるため初期値は不要（必ずどこかで代入される）
+      let newAreaSpecifics: Pick<CropRegionArea, "label" | "type" | "points">
       switch (type) {
         case "STUDENT_NAME":
           newAreaSpecifics = {

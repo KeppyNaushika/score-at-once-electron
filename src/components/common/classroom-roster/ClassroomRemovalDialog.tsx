@@ -79,7 +79,9 @@ export function ClassroomRemovalDialog({
   // プレビュー取得関数は毎レンダー identity が変わりうるので ref で持ち、
   // useEffect の再発火を「対象(entry)/モードが変わったとき」だけに限定する。
   const fetchRemovalPreviewRef = useRef(fetchRemovalPreview)
-  fetchRemovalPreviewRef.current = fetchRemovalPreview
+  useEffect(() => {
+    fetchRemovalPreviewRef.current = fetchRemovalPreview
+  })
 
   // 対象が変わるたびに選択をリセットし、削除プレビューを取得
   useEffect(() => {

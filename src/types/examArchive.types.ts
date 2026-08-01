@@ -379,6 +379,11 @@ export type SubtotalGroupMatchingStrategy = "by_name" | "individual" | "all_new"
  */
 export type IdChoice = "use_import_id" | "use_existing_id"
 
+/** UIのSelect等が返す string を IdChoice へ絞り込む */
+export function isIdChoice(value: string): value is IdChoice {
+  return value === "use_import_id" || value === "use_existing_id"
+}
+
 /**
  * 個別のID統合決定
  *
