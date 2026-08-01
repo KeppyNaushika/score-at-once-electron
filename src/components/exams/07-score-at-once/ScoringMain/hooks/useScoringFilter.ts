@@ -551,8 +551,7 @@ export function useScoringFilter({
 
     if (!examPage) return null
 
-    const masterImage = examPage.masterImages?.[0]
-    const masterImagePath = masterImage?.imagePath
+    const masterImagePath = examPage.imagePath
 
     return {
       id: `master-${currentCropRegion.id}`,

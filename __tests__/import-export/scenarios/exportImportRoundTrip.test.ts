@@ -200,6 +200,53 @@ describe("exportImportRoundTrip", () => {
     cleanupTempDir(extractResult.data!.tempDir)
   })
 
+  it("E2E-2b: 模範解答を失ったページはマージ取り込みで復旧する", async () => {
+    // 模範解答画像はページが持つようになったが、ページ作成時にしか書かないと
+    // 「既にあるページの画像を取り込みで補う」経路が消える。画像ファイルだけが
+    // コピーされて参照されないまま残り、教員には復旧手段が無くなる
+    const testExam = await createFullTestExam(prisma, {
+      pageCount: 1,
+      cropRegionsPerPage: 1,
+      studentCount: 1,
+      includeMasterImages: true,
+    })
+
+    const exportResult = await collectExamData(
+      testExam.exam.id,
+      testExam.user.id
+    )
+    const archivePath = path.join(tmpDir, "restore-master.score")
+    createTestArchive(
+      exportResult.data!,
+      archivePath,
+      testExam.exam.id,
+      testExam.exam.examName
+    )
+
+    // 模範解答だけを失った状態を作る（旧バージョンで作れた幽霊ページ）
+    await prisma.examPage.update({
+      where: { id: testExam.pages[0].id },
+      data: { imagePath: null },
+    })
+
+    const extractResult = await extractArchive(archivePath)
+    const preMatch = await performPreMatching(extractResult.data!)
+    const importResult = await executeIdIntegrationImport(
+      extractResult.data!,
+      preMatch,
+      createIdIntegrationConfig(),
+      testExam.user.id
+    )
+    expect(importResult.success).toBe(true)
+
+    const restored = await prisma.examPage.findUnique({
+      where: { id: testExam.pages[0].id },
+    })
+    expect(restored?.imagePath).toBeTruthy()
+
+    cleanupTempDir(extractResult.data!.tempDir)
+  })
+
   // E2E-3: export→import（別ユーザー）: ユーザーフィルタ確認
   it("E2E-3: 別ユーザーのインポートでUserExamが適切に作成される", async () => {
     const testExam = await createFullTestExam(prisma, {

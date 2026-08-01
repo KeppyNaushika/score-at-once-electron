@@ -36,7 +36,7 @@ beforeAll(async () => {
   })
 
   const page = await prisma.examPage.create({
-    data: { examId: exam.id, pageNumber: 1 },
+    data: { examId: exam.id, pageNumber: 1, imagePath: "" },
   })
   examPageId = page.id
 
@@ -203,7 +203,7 @@ describe("OMR設定の読み書き整合性", () => {
       data: { userId, examId: newExam.id, role: "OWNER" },
     })
     const newPage = await prisma.examPage.create({
-      data: { examId: newExam.id, pageNumber: 1 },
+      data: { examId: newExam.id, pageNumber: 1, imagePath: "" },
     })
 
     // CropRegionを新IDで作成（IDマッピングのシミュレーション）

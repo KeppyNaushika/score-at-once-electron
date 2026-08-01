@@ -40,7 +40,7 @@ beforeAll(async () => {
   })
 
   const page = await prisma.examPage.create({
-    data: { examId: exam.id, pageNumber: 1 },
+    data: { examId: exam.id, pageNumber: 1, imagePath: "" },
   })
   examPageId = page.id
 

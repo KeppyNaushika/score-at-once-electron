@@ -6,10 +6,49 @@
  */
 
 import * as crypto from "crypto"
+import * as path from "path"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
+
+/**
+ * アーカイブ内の模範解答画像パスを、取り込み先の試験ディレクトリのパスへ読み替える。
+ * 画像の実体をそこへ置くのは imageImporter の copyImportImages で、
+ * `master-images` という置き先の規則を共有している。
+ */
+function toImportedMasterImagePath(
+  newExamId: string,
+  archiveImagePath: string | null
+): string | null {
+  if (!archiveImagePath) return null
+  return `exams/${newExamId}/master-images/${path.basename(archiveImagePath)}`
+}
+
+/**
+ * 既に存在するページに模範解答画像が無く、アーカイブ側が持っているなら補う。
+ *
+ * 旧実装（imageImporter の createMasterImageRecords）は「対象ページに MasterImage 行が
+ * 無ければ作る」を行っていた。ページ作成時にしか画像を書かないと、模範解答を失った
+ * ページを同じ試験のアーカイブから復旧する手段が無くなる（画像ファイルだけがコピーされ、
+ * 参照されないまま残る）。既にある画像は上書きしない — 取り込みで現物を差し替えない
+ */
+async function backfillMasterImage(
+  existingPage: { id: string; imagePath: string | null },
+  archivePage: { imagePath: string | null; pageSize: string },
+  newExamId: string,
+  tx: PrismaTransaction
+): Promise<void> {
+  if (existingPage.imagePath) return
+
+  const imagePath = toImportedMasterImagePath(newExamId, archivePage.imagePath)
+  if (!imagePath) return
+
+  await tx.examPage.update({
+    where: { id: existingPage.id },
+    data: { imagePath, pageSize: archivePage.pageSize },
+  })
+}
 
 export async function processExam(
   data: ExtractedArchiveData,
@@ -67,10 +106,14 @@ async function mapExistingExamPages(
   const existingExamPages = await tx.examPage.findMany({
     where: { examId: newExamId },
   })
-  const existingPageIds = new Set(existingExamPages.map((page) => page.id))
+  const existingPageById = new Map(
+    existingExamPages.map((page) => [page.id, page])
+  )
 
   for (const page of data.examData.examPages) {
-    if (existingPageIds.has(page.id)) {
+    const existingPage = existingPageById.get(page.id)
+    if (existingPage) {
+      await backfillMasterImage(existingPage, page, newExamId, tx)
       idMappings.examPage[page.id] = page.id
       counts.unchanged.pages++
     } else {
@@ -78,6 +121,7 @@ async function mapExistingExamPages(
         where: { id: page.id },
       })
       if (existingById) {
+        await backfillMasterImage(existingById, page, newExamId, tx)
         idMappings.examPage[page.id] = page.id
         counts.unchanged.pages++
       } else {
@@ -86,6 +130,8 @@ async function mapExistingExamPages(
             id: page.id,
             examId: newExamId,
             pageNumber: page.pageNumber,
+            imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
+            pageSize: page.pageSize,
           },
         })
         idMappings.examPage[page.id] = page.id
@@ -289,6 +335,8 @@ export async function processExamPages(
           id: page.id,
           examId: newExamId,
           pageNumber: page.pageNumber,
+          imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
+          pageSize: page.pageSize,
         },
       })
       idMappings.examPage[page.id] = page.id

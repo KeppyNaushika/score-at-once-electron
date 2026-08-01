@@ -2,7 +2,7 @@
  * 解答用紙定義 → 採点試験変換
  *
  * renderer側から受け取った multiPageLayout + HTML文字列 → BrowserWindow + capturePage でPNG化
- * → Exam + ExamPage + MasterImage + CropRegion 作成
+ * → Exam + ExamPage + CropRegion 作成
  */
 
 import * as fs from "fs"
@@ -106,19 +106,12 @@ export async function convertToExam(
       const templatePath = path.join(masterDir, templateFileName)
       fs.writeFileSync(templatePath, templateBuffers[pi])
 
-      // ExamPage作成
+      // ExamPage作成（模範解答画像はページ自身が持つ）
       const examPage = await createExamPage({
         examId: exam.id,
         pageNumber: pi + 1,
-      })
-
-      // MasterImage作成
-      await prisma.masterImage.create({
-        data: {
-          examPageId: examPage.id,
-          imagePath: relativeMasterPath,
-          pageSize: definition.settings.paperSize ?? "A4",
-        },
+        imagePath: relativeMasterPath,
+        pageSize: definition.settings.paperSize ?? "A4",
       })
 
       // CropRegion作成（このページの解答セルのみ）

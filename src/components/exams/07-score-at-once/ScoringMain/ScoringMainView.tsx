@@ -41,6 +41,7 @@ import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
+import { resolveExamPaperSize } from "@/electron-src/lib/shared/utilities/examPaperSize"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -598,19 +599,11 @@ function ScoringMainViewContent() {
     setMasterAnswerVisible(false)
   }, [])
 
-  /** 用紙サイズ（MasterImageのpageSizeフィールドから取得、デフォルトA4） */
-  const pageSize = useMemo(() => {
-    if (!exam?.examPages) return "A4"
-    for (const page of exam.examPages) {
-      const masterImage = page.masterImages?.[0]
-      if (masterImage?.pageSize) {
-        console.log(`[pageSize] MasterImageから取得: "${masterImage.pageSize}"`)
-        return masterImage.pageSize
-      }
-    }
-    console.log("[pageSize] デフォルト: A4")
-    return "A4"
-  }, [exam])
+  /** 用紙サイズ。PDF出力（pdfExport）と同じ関数で決めて注釈のmm→px変換基準を揃える */
+  const pageSize = useMemo(
+    () => resolveExamPaperSize(exam?.examPages),
+    [exam?.examPages]
+  )
 
   /** 全ページの模範解答画像URL（ページ番号順） */
   const allMasterImageUrls = useMemo(() => {
@@ -618,12 +611,7 @@ function ScoringMainViewContent() {
     return exam.examPages
       .slice()
       .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
-      .map((page) => {
-        const masterImage = page.masterImages?.[0]
-        return masterImage?.imagePath
-          ? `appimg:///${masterImage.imagePath}`
-          : null
-      })
+      .map((page) => (page.imagePath ? `appimg:///${page.imagePath}` : null))
       .filter((url): url is string => url !== null)
   }, [exam])
 

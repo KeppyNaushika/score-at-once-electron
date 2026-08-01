@@ -76,12 +76,10 @@ export default function RegionInfoPage() {
         // 全ページの画像URLを取得
         const urls: { [key: string]: string } = {}
         for (const page of sortedExamPages) {
-          const masterImage = page.masterImages?.[0]
-          if (masterImage) {
-            const url = await window.electronAPI.resolveFileProtocolPath(
-              masterImage.imagePath
+          if (page.imagePath) {
+            urls[page.id] = await window.electronAPI.resolveFileProtocolPath(
+              page.imagePath
             )
-            urls[page.id] = url
           }
         }
         setBackgroundImageUrls(urls)

@@ -1,35 +1,32 @@
 "use client"
 
-import { ArrowLeft, ArrowRight, Loader2, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, ImageUp, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
-import React from "react"
+import React, { useRef, useState } from "react"
 
 import type { MasterAnswerCardProps } from "@/components/exams/01-upload/types"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 
-/**
- * MasterAnswerCard - 個別の模範解答画像カードコンポーネント
- *
- * 機能:
- * - 模範解答画像の表示
- * - 画像の削除操作
- * - 画像の順序変更（左右移動）
- * - 読み込み中・処理中の状態表示
- * - エラー処理
- *
- * @param answer - 模範解答画像データ
- * @param imageUrl - 画像のURL
- * @param index - 配列内のインデックス
- * @param totalImages - 全画像数
- * @param isDeleting - 削除処理中かどうか
- * @param isMoving - 移動処理中かどうか
- * @param onDelete - 削除実行のコールバック関数
- * @param onMoveLeft - 左移動のコールバック関数
- * @param onMoveRight - 右移動のコールバック関数
- * @returns 模範解答画像カードコンポーネント
- */
 const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
 
+/**
+ * MasterAnswerCard - 模範解答ページ1件のカード
+ *
+ * 模範解答の差し替え・ページの削除・順序変更・用紙サイズ変更を行う。
+ *
+ * 削除はページごと消えるため、答案が取り込まれていれば件数を示して確認を取る。
+ * 画像を取り替えたいだけなら差し替えを使う（答案も採点結果も残る）。
+ */
 const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
   ({
     answer,
@@ -37,21 +34,22 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
     index,
     totalAnswers,
     isDeleting,
+    isReplacing,
     isMoving,
     onDelete,
+    onReplace,
     onMoveLeft,
     onMoveRight,
     onPageSizeChange,
   }) => {
-    // 移動可能性の判定
+    const [confirmingDelete, setConfirmingDelete] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
     const canMoveLeft = index > 0
     const canMoveRight = index < totalAnswers - 1
-    const isDisabled = isDeleting || isMoving
+    const isBusy = isDeleting || isMoving || isReplacing
+    const answerImageCount = answer.studentAnswerImages.length
 
-    /**
-     * 画像読み込みエラー時のハンドラー
-     * @param e - エラーイベント
-     */
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
       e.currentTarget.alt = `画像読込エラー: ${answer.imagePath}`
       console.error(
@@ -62,29 +60,53 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
       )
     }
 
+    const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      // 同じファイルを選び直しても change が発火するように値を戻す
+      event.target.value = ""
+      if (file) onReplace(file)
+    }
+
     return (
       <div className="group relative flex h-48 w-40 shrink-0 overflow-hidden rounded-md border">
-        <Image
-          src={imageUrl}
-          alt={`ページ ${answer.pageNumber}`}
-          className="h-full w-full object-cover"
-          width={160}
-          height={192}
-          unoptimized
-          onError={handleImageError}
-        />
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={`ページ ${answer.pageNumber}`}
+            className="h-full w-full object-cover"
+            width={160}
+            height={192}
+            unoptimized
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted px-2 text-center">
+            <p className="text-xs text-muted-foreground">
+              模範解答なし
+              <br />
+              差し替えてください
+            </p>
+          </div>
+        )}
 
-        {/* 処理中オーバーレイ */}
-        {(isDeleting || (isMoving && !isDeleting)) && (
+        {isBusy && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
           </div>
         )}
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={handleFileSelected}
+        />
+
         {/* 操作ボタンオーバーレイ */}
         <div
           className={`absolute inset-0 flex flex-col items-center justify-center bg-black/50 ${
-            isDisabled
+            isBusy
               ? "opacity-0"
               : "opacity-0 transition-opacity group-hover:opacity-100"
           }`}
@@ -94,13 +116,13 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
           </p>
           <select
             className="mt-1 rounded bg-white/20 px-1.5 py-0.5 text-xs text-white backdrop-blur-sm"
-            value={answer.pageSize ?? "A4"}
+            value={answer.pageSize}
             onChange={(e) => {
               e.stopPropagation()
               onPageSizeChange(e.target.value)
             }}
             onClick={(e) => e.stopPropagation()}
-            disabled={isDisabled}
+            disabled={isBusy}
           >
             {PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size} className="text-black">
@@ -114,37 +136,67 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
               variant="ghost"
               className="h-7 w-7 text-white hover:bg-white/20"
               onClick={onMoveLeft}
-              disabled={!canMoveLeft || isDisabled}
+              disabled={!canMoveLeft || isBusy}
               title="左へ移動"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-white hover:bg-white/20"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+              title="模範解答画像を差し替え（答案・採点結果は残る）"
+            >
+              <ImageUp className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
               variant="destructive"
               className="h-7 w-7"
-              onClick={onDelete}
-              disabled={isDisabled}
-              title="削除"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={isBusy}
+              title="このページを削除"
             >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
+              <Trash2 className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
               className="h-7 w-7 text-white hover:bg-white/20"
               onClick={onMoveRight}
-              disabled={!canMoveRight || isDisabled}
+              disabled={!canMoveRight || isBusy}
               title="右へ移動"
             >
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                ページ {answer.pageNumber} を削除しますか？
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {answerImageCount > 0
+                  ? `このページに取り込まれている答案 ${answerImageCount} 件と、その採点結果も一緒に削除されます。模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。`
+                  : "このページと、ページ上の採点領域が削除されます。"}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onDelete}
+                className="bg-destructive text-white hover:bg-destructive/90"
+              >
+                削除する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     )
   }

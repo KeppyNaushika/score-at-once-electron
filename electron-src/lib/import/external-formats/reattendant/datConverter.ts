@@ -192,36 +192,20 @@ export async function convertDatToScore(
       pageUuidMap.set(pageNo, generateUuid())
     }
 
-    // ExamPages 生成
+    // ExamPages 生成（模範解答画像はページが持つ）。
+    // 画像は abc_m01.png … の連番で、ページ番号と1対1に対応する
     const examPages = Array.from(pageUuidMap.entries()).map(([pageNo, id]) => ({
       id,
       examId,
       pageNumber: pageNo,
+      imagePath:
+        pageNo <= masterImageEntries.length
+          ? `abc_m${String(pageNo).padStart(2, "0")}.png`
+          : "",
+      pageSize: "A4",
       createdAt: now,
       updatedAt: now,
     }))
-
-    // MasterImages 生成
-    const masterImages: Array<{
-      id: string
-      examPageId: string
-      imagePath: string
-      createdAt: string
-      updatedAt: string
-    }> = []
-    for (let i = 0; i < masterImageEntries.length; i++) {
-      const pageNo = i + 1
-      const pageId = pageUuidMap.get(pageNo)
-      if (pageId) {
-        masterImages.push({
-          id: generateUuid(),
-          examPageId: pageId,
-          imagePath: `abc_m${String(pageNo).padStart(2, "0")}.png`,
-          createdAt: now,
-          updatedAt: now,
-        })
-      }
-    }
 
     // 9. questions.json, angles.json, question_angles.json 読み込み
     const questionsEntry = entries.find((entry) =>
@@ -297,7 +281,6 @@ export async function convertDatToScore(
       examPages,
       cropRegions,
       pageImages: [],
-      masterImages,
       studentAnswerImages: [],
       examStudents: [],
       userExams: [],
@@ -325,7 +308,7 @@ export async function convertDatToScore(
         scores: 0,
         annotations: 0,
         subtotalGroups: subtotalData.subtotalGroups.length,
-        masterImages: masterImages.length,
+        masterImages: examPages.filter((page) => page.imagePath).length,
         answerSheetImages: 0,
       },
     }

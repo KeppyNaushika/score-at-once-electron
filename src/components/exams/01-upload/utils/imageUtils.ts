@@ -1,35 +1,34 @@
-import { MasterAnswer } from "@/components/exams/01-upload/types"
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { ConvertedImage } from "@/lib/pdfConverter"
 
 /**
- * 画像リストをページ番号順にソートする
- * @param {MasterAnswer[]} answers - ソート対象の解答リスト
- * @returns {MasterAnswer[]} ページ番号順にソートされた解答リスト
+ * 模範解答ページをページ番号順にソートする
  */
 export const sortImagesByPageNumber = (
-  answers: MasterAnswer[]
-): MasterAnswer[] => {
+  answers: ExamPageWithContent[]
+): ExamPageWithContent[] => {
   return [...answers].sort(
     (answerA, answerB) => answerA.pageNumber - answerB.pageNumber
   )
 }
 
 /**
- * 画像URLマップを生成する
- * @param {MasterAnswer[]} answers - 解答リスト
- * @returns {Promise<Record<string, string>>} 解答IDとURLのマッピング
+ * 画像URLマップを生成する（キーは ExamPage.id）
  */
 export const generateImageUrls = async (
-  answers: MasterAnswer[]
+  answers: ExamPageWithContent[]
 ): Promise<Record<string, string>> => {
   const urls: Record<string, string> = {}
 
   for (const answer of answers) {
+    if (!answer.imagePath) {
+      urls[answer.id] = ""
+      continue
+    }
     try {
-      const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(
+      urls[answer.id] = await window.electronAPI.resolveFileProtocolPath(
         answer.imagePath
       )
-      urls[answer.id] = resolvedUrl
     } catch (error) {
       console.error(
         `Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`,
@@ -92,16 +91,13 @@ export const generateUploadSuccessMessage = (
 
 /**
  * 解答の移動操作を実行する
- * @param {MasterAnswer[]} answers - 現在の解答リスト
- * @param {number} fromIndex - 移動元のインデックス
- * @param {"left" | "right"} direction - 移動方向
- * @returns {MasterAnswer[] | null} 移動後の解答リスト（移動不可の場合はnull）
+ * @returns 移動後のリスト（移動不可の場合はnull）
  */
 export const moveImageInList = (
-  answers: MasterAnswer[],
+  answers: ExamPageWithContent[],
   fromIndex: number,
   direction: "left" | "right"
-): MasterAnswer[] | null => {
+): ExamPageWithContent[] | null => {
   const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
 
   if (toIndex < 0 || toIndex >= answers.length) {
@@ -116,58 +112,13 @@ export const moveImageInList = (
 }
 
 /**
- * 解答移動用のページ番号更新リクエストを生成する
- * @param {MasterAnswer[]} answers - 解答リスト
- * @returns {Array<{id: string, pageNumber: number}>} 更新リクエスト配列
+ * 解答移動用のページ番号更新リクエストを生成する（id は ExamPage.id）
  */
 export const generatePageNumberUpdateRequests = (
-  answers: MasterAnswer[]
+  answers: ExamPageWithContent[]
 ): Array<{ id: string; pageNumber: number }> => {
   return answers.map((answer, index) => ({
     id: answer.id,
     pageNumber: index + 1,
   }))
-}
-
-/**
- * ExamPage配列からMasterAnswer配列を生成する
- * @param {ExamPageWithContent[]} examPages - 試験ページ一覧
- * @returns {MasterAnswer[]} MasterAnswer形式の配列
- */
-type MinimalMasterImage = {
-  id: string
-  imagePath: string
-  pageSize?: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-type MinimalExamPage = {
-  id: string
-  examId: string
-  pageNumber: number
-  masterImages?: MinimalMasterImage[]
-}
-
-export const convertExamPagesToMasterAnswers = <T extends MinimalExamPage>(
-  examPages: T[]
-): MasterAnswer[] => {
-  return examPages.flatMap((page) => {
-    const masterImages = page.masterImages || []
-
-    if (masterImages.length === 0) {
-      console.warn(`Exam page ${page.id} has no master images.`)
-      return []
-    }
-
-    return masterImages.map((masterImage) => ({
-      id: masterImage.id,
-      examId: page.examId,
-      imagePath: masterImage.imagePath,
-      pageNumber: page.pageNumber,
-      pageSize: masterImage.pageSize ?? "A4",
-      createdAt: masterImage.createdAt,
-      updatedAt: masterImage.updatedAt,
-    }))
-  })
 }

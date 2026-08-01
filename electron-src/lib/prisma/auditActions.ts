@@ -68,6 +68,11 @@ export const AUDIT_ACTIONS = {
     verb: "create",
     label: "模範解答ページをアップロードしました",
   },
+  "exam.page.replace": {
+    category: "exam",
+    verb: "update",
+    label: "模範解答ページの画像を差し替えました",
+  },
   "exam.page.delete": {
     category: "exam",
     verb: "delete",

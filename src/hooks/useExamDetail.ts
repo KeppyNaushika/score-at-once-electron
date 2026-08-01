@@ -84,10 +84,7 @@ export function useExamDetail(examId: string) {
   }, [loadExam])
 
   const modelAnswerCount =
-    exam?.examPages?.reduce(
-      (count, page) => count + (page.masterImages?.length || 0),
-      0
-    ) || 0
+    exam?.examPages?.filter((page) => page.imagePath).length || 0
   const answerSheetCount =
     exam?.examPages?.reduce(
       (count, page) => count + (page.studentAnswerImages?.length || 0),

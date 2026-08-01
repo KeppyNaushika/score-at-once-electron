@@ -1,5 +1,6 @@
 "use client"
 
+import type { ExamPage } from "@prisma/client"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -10,20 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-type MasterImage = {
-  id: string
-  examId: string
-  imagePath: string
-  pageNumber: number
-  createdAt: Date
-  updatedAt: Date
-}
 
 interface PageNavigationProps {
   /** マスター画像の配列 */
-  masterImages: MasterImage[]
+  masterImages: ExamPage[]
   /** 現在選択中のマスター画像 */
-  selectedMasterImage: MasterImage | null
+  selectedMasterImage: ExamPage | null
   /** 画像変更時のコールバック */
   onImageChange: (imageId: string) => void
   /** 読み込み状態 */

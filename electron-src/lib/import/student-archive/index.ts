@@ -95,7 +95,6 @@ export async function executeStudentImport(
     exam: {},
     examPage: {},
     cropRegion: {},
-    masterImage: {},
     studentAnswerImage: {},
     examStudent: {},
     userExam: {},

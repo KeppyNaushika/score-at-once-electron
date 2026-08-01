@@ -80,6 +80,8 @@ export interface ArchiveDataCounts {
  * - 1.20.0: v0.16.x (CropRegionAssignment 追加 — 設問ごとの採点担当。ユーザーはアーカイブを越えないため username で照合する)
  * - 1.22.0: v0.17.x (ExamExportSettings のJSON埋め込みを5テーブルへ正規化。ExamMarkingFormat 廃止 — 採点マークは画像＋配置設定へ移行済み。
  *            CropRegionOmrDigitBox / numDigits / correctAnswer 廃止 — 手書き数字認識の撤去 #1103)
+ * - 1.23.0: v0.17.x (MasterImage を ExamPage へ畳む — 模範解答画像は1ページ1枚しか作れず、
+ *            読む側は全箇所が masterImages[0] を書いていた。examPages が imagePath / pageSize を直接持つ)
  * - 1.21.0: v0.16.x (採点層を ExamStudent 経由へ配線変更 — studentAnswerImages / questionScores / scoreDecisions / compoundAnswerScores / returnSnapshots の studentId を examStudentId へ。ReturnSnapshot.examId は ExamStudent が持つため削除)
  */
 export type ExamArchiveVersion =
@@ -106,9 +108,10 @@ export type ExamArchiveVersion =
   | "1.20.0"
   | "1.21.0"
   | "1.22.0"
+  | "1.23.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.22.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.23.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -135,6 +138,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.20.0",
   "1.21.0",
   "1.22.0",
+  "1.23.0",
 ] as const
 
 /**
@@ -543,6 +547,11 @@ export interface ArchiveExamData {
     id: string
     examId: string
     pageNumber: number
+    /** v1.23.0+ 模範解答画像のパス。それ以前は masterImages に分かれていた。
+     * 旧バージョンで模範解答だけを削除されたページは null */
+    imagePath: string | null
+    /** v1.23.0+ 用紙サイズ。それ以前は masterImages[].pageSize */
+    pageSize: string
     createdAt: string
     updatedAt: string
   }>
@@ -637,7 +646,7 @@ export interface ArchiveExamData {
     createdAt: string
     updatedAt: string
   }>
-  /** v1.2.0+ 模範解答画像 */
+  /** @deprecated v1.2.0〜v1.22.0。v1.23.0 以降は examPages が画像を直接持つ */
   masterImages?: Array<{
     id: string
     examPageId: string

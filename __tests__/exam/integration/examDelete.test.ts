@@ -53,9 +53,6 @@ describe("deleteExam", () => {
   it("試験ディレクトリの画像ファイルごと削除する", async () => {
     const exam = await createExam({ examName: "削除対象の試験" }, userId)
 
-    const examPage = await prisma.examPage.create({
-      data: { examId: exam.id, pageNumber: 1 },
-    })
     const masterAnswersDir = path.join(
       getExamDirectory(exam.id),
       "master-answers"
@@ -63,9 +60,10 @@ describe("deleteExam", () => {
     await fsPromises.mkdir(masterAnswersDir, { recursive: true })
     const imagePath = path.join(masterAnswersDir, "page-1.png")
     await fsPromises.writeFile(imagePath, "dummy-image")
-    await prisma.masterImage.create({
+    const examPage = await prisma.examPage.create({
       data: {
-        examPageId: examPage.id,
+        examId: exam.id,
+        pageNumber: 1,
         imagePath: path.relative(TEST_DATA_DIR, imagePath),
       },
     })

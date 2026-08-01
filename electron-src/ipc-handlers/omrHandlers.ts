@@ -344,22 +344,11 @@ export function setupOMRHandlers(): void {
       }>
       error?: string
     }> => {
-      // マスター画像を取得
-      const masterImages = await prisma.masterImage.findMany({
-        where: {
-          examPage: { examId },
-        },
-        include: { examPage: true },
-        orderBy: { examPage: { pageNumber: "asc" } },
+      // 模範解答ページを取得
+      const examPages = await prisma.examPage.findMany({
+        where: { examId },
+        orderBy: { pageNumber: "asc" },
       })
-
-      if (masterImages.length === 0) {
-        return {
-          success: false,
-          pages: [],
-          error: "マスター画像が見つかりません",
-        }
-      }
 
       const pages: Array<{
         examPageId: string
@@ -369,11 +358,15 @@ export function setupOMRHandlers(): void {
 
       const dataDir = getDataDirectory()
 
-      for (const masterImage of masterImages) {
-        const examPageId = masterImage.examPageId
-        const pageNumber = masterImage.examPage.pageNumber
+      for (const examPage of examPages) {
+        // 模範解答画像の無いページは検出できない。飛ばさないと例外が
+        // ハンドラ全体を落とし、他ページの検出結果ごと失われる
+        if (!examPage.imagePath) continue
+
+        const examPageId = examPage.id
+        const pageNumber = examPage.pageNumber
         const cacheKey = markerCacheKey(examPageId, colorThreshold)
-        const imagePath = path.join(dataDir, masterImage.imagePath)
+        const imagePath = path.join(dataDir, examPage.imagePath)
         const mtimeMs = getMtimeMs(imagePath)
 
         // キャッシュチェック（ファイル差し替えを検知したら再検出）
@@ -389,6 +382,16 @@ export function setupOMRHandlers(): void {
           masterMarkerCache.set(cacheKey, { mtimeMs, result })
         }
         pages.push({ examPageId, pageNumber, result })
+      }
+
+      // 画像を持つページが1枚も無ければ検出しようがない。
+      // ページ数ではなく検出対象の数で判定する（画像の無いページは上で飛ばしている）
+      if (pages.length === 0) {
+        return {
+          success: false,
+          pages: [],
+          error: "マスター画像が見つかりません",
+        }
       }
 
       // 全ページで4マーカー検出できたか
@@ -421,11 +424,11 @@ export function setupOMRHandlers(): void {
       error?: string
     }> => {
       const cacheKey = markerCacheKey(examPageId, colorThreshold)
-      // マスター画像は ExamPage.id 直指定で引く（序数 pageNumber では引かない）。
-      const masterImage = await prisma.masterImage.findFirst({
-        where: { examPageId },
+      // 模範解答画像は ExamPage.id 直指定で引く（序数 pageNumber では引かない）。
+      const examPage = await prisma.examPage.findUnique({
+        where: { id: examPageId },
       })
-      if (!masterImage) {
+      if (!examPage?.imagePath) {
         return {
           success: false,
           status: "skipped",
@@ -433,7 +436,7 @@ export function setupOMRHandlers(): void {
         }
       }
       const dataDir = getDataDirectory()
-      const imagePath = path.join(dataDir, masterImage.imagePath)
+      const imagePath = path.join(dataDir, examPage.imagePath)
       const mtimeMs = getMtimeMs(imagePath)
 
       let masterResult = getCachedMarkerResult(cacheKey, mtimeMs)

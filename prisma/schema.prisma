@@ -129,28 +129,35 @@ model ExamStudent {
   @@index([examId, customOrder])
 }
 
+/// 解答用紙の1ページ。模範解答画像そのものを持つ。
+///
+/// かつて画像は MasterImage という別テーブルにあったが、ExamPage 1件に対し必ず1枚で、
+/// 2枚以上になる経路も、複数枚を使う読み取りも存在しなかった。1:N のままだったせいで
+/// 読む側は全箇所が `masterImages[0]` を書き、インポートは unique 制約の代わりに手書きの
+/// 重複チェックを持ち、削除は「残り0枚なら」を数えていた。畳んで ExamPage = 1ページとした。
+///
+/// アプリの操作では模範解答の無いページを新たに作れない。削除はページごと消し、画像を
+/// 取り替えたいだけなら差し替え（replaceMasterAnswerImage）を使う。それでも imagePath を
+/// nullable にしているのは、旧バージョンが「答案画像が残っているページから模範解答だけを
+/// 消す」ことを許しており、そのページを移行時に消すと答案と採点結果まで道連れになるため。
+/// **空文字を「画像なし」の代わりに使ってはいけない** — 型が string を主張してしまい、
+/// 画像を読む側が欠落の分岐を書き忘れてもコンパイルが通る。null なら型が分岐を強制する。
 model ExamPage {
-  id                  String               @id @default(uuid())
-  examId              String
-  pageNumber          Int
+  id         String  @id @default(uuid())
+  examId     String
+  pageNumber Int
+  /// 模範解答画像のパス（data ディレクトリからの相対）。旧バージョンで模範解答だけを
+  /// 削除されたページは null。画像を読む前に必ず有無を確かめること
+  imagePath  String?
+  /// 用紙サイズ。注釈のmm換算の基準になるため描画経路すべてで一致させること
+  pageSize   String  @default("A4")
+
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @default(now()) @updatedAt
   cropRegions         CropRegion[]
-  masterImages        MasterImage[]
   studentAnswerImages StudentAnswerImage[]
   compoundAnswers     CompoundAnswer[]
   exam                Exam                 @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-/// 模範解答画像
-model MasterImage {
-  id         String   @id @default(uuid())
-  examPageId String
-  imagePath  String
-  pageSize   String   @default("A4")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
-  examPage   ExamPage @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// 答案画像

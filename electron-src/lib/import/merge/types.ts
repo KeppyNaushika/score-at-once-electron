@@ -14,7 +14,6 @@ export interface IdMappings {
   exam: Record<string, string>
   examPage: Record<string, string>
   cropRegion: Record<string, string>
-  masterImage: Record<string, string>
   studentAnswerImage: Record<string, string>
   examStudent: Record<string, string>
   userExam: Record<string, string>
