@@ -79,16 +79,17 @@ export function ResultsTable({
     [constraints]
   )
 
-  // 評価項目ごとのboundaryLabels（minPercentage降順）を算出
+  // 評価項目ごとの成績ラベル一覧。並びは minPercentage 降順＝強い評価が先頭で、
+  // EditableGradeLabel が添字の前後で上方/下方修正を判定するため順序が意味を持つ。
+  // 並べ替えは今のところ算出側（calculateGrades）が済ませている。算出を renderer へ
+  // 移すときは、ここでソートし直さないと修正方向の矢印が壊れる。
   const boundaryLabelsMap = useMemo(() => {
     const map: Record<string, string[]> = {}
-    for (const boundarySet of result.boundarySets ?? []) {
-      map[boundarySet.gradeItemId] = boundarySet.boundaries.map(
-        (boundary) => boundary.label
-      )
+    for (const gradeItem of result.gradeItems) {
+      map[gradeItem.id] = gradeItem.boundaries.map((boundary) => boundary.label)
     }
     return map
-  }, [result.boundarySets])
+  }, [result.gradeItems])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {

@@ -27,11 +27,6 @@ import {
   upsertGradeExportSettings,
 } from "../lib/prisma/grade"
 import {
-  deleteBoundarySet,
-  getBoundarySetsByGradeId,
-  upsertBoundarySet,
-} from "../lib/prisma/gradeBoundary"
-import {
   createGradeConstraint,
   deleteGradeConstraint,
   getGradeConstraints,
@@ -57,6 +52,10 @@ import {
   reorderGradeItems,
   updateGradeItem,
 } from "../lib/prisma/gradeItem"
+import {
+  deleteGradeItemBoundaries,
+  replaceGradeItemBoundaries,
+} from "../lib/prisma/gradeItemBoundary"
 import {
   batchUpdateGradeItemExclusions,
   getGradeItemExclusions,
@@ -330,27 +329,25 @@ export function setupGradeHandlers(): void {
   })
 
   // =====================================================================
-  // GradeBoundary
+  // GradeItemBoundary
   // =====================================================================
 
-  registerHandler("grade:getBoundarySets", async (gradeId: string) => {
-    return getBoundarySetsByGradeId(gradeId)
-  })
-
   registerHandler(
-    "grade:upsertBoundarySet",
+    "grade:replaceGradeItemBoundaries",
     async (data: {
-      gradeId: string
       gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => {
-      return upsertBoundarySet(data)
+      return replaceGradeItemBoundaries(data)
     }
   )
 
-  registerHandler("grade:deleteBoundarySet", async (id: string) => {
-    return deleteBoundarySet(id)
-  })
+  registerHandler(
+    "grade:deleteGradeItemBoundaries",
+    async (gradeItemId: string) => {
+      return deleteGradeItemBoundaries(gradeItemId)
+    }
+  )
 
   // =====================================================================
   // GradeOverride

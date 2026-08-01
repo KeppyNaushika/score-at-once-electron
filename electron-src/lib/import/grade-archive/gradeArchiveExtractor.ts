@@ -1,7 +1,7 @@
 /**
  * 成績算出アーカイブ (.grade) 展開・解析
  *
- * v1.13.0 の grade-exam.json はテーブルごとの平坦なセクション。
+ * v1.13.0 以降の grade-exam.json はテーブルごとの平坦なセクション。
  * v1.12.0 以前は射影形式（gradeData / boundariesData に分かれていた）で、
  * 形の知識は変換器側（grade-transformers/legacyShape）が持つ。ここでは
  * どちらの形で読んだかだけを見分け、変換器チェーンへ渡す。
@@ -42,7 +42,13 @@ async function extractZip(
   return files
 }
 
-/** v1.13.0 の平坦なセクション形式か（成績本体のセクションが揃っているか） */
+/**
+ * v1.13.0 以降の平坦なセクション形式か（成績本体のセクションが揃っているか）。
+ *
+ * 境界のセクションは版で名前が変わる（1.13.0: gradeBoundarySets + gradeBoundaries /
+ * 1.14.0: gradeItemBoundaries）ため必須キーに含めない。どちらの形かは変換器チェーンが
+ * 判定して正規化する。
+ */
 function isFlatGradeSections(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false
   const sections = value as Record<string, unknown>
@@ -52,8 +58,6 @@ function isFlatGradeSections(value: unknown): boolean {
     "gradeStudents",
     "gradeItems",
     "gradeDataSources",
-    "gradeBoundarySets",
-    "gradeBoundaries",
     "gradeOverrides",
     "gradeFrozenScores",
     "gradeItemExclusions",
@@ -109,7 +113,7 @@ export async function extractGradeArchive(
       }
     }
 
-    // v1.13.0: 成績本体もテーブルごとの平坦なセクション
+    // v1.13.0 以降: 成績本体もテーブルごとの平坦なセクション
     if (isFlatGradeSections(gradeJson)) {
       const sections = gradeJson as Record<string, unknown>
       return {
@@ -125,8 +129,17 @@ export async function extractGradeArchive(
             sections,
             "gradeDataSourceEstimationSources"
           ),
-          gradeBoundarySets: readArray(sections, "gradeBoundarySets"),
-          gradeBoundaries: readArray(sections, "gradeBoundaries"),
+          // 境界は版でセクション名が違う。読めた方だけを載せ、正規化は変換器へ任せる。
+          // 両方を常に載せると 1.14.0 のアーカイブが空の境界セットを持つ 1.13.0 に見え、
+          // 変換器が本物の境界を捨ててしまう
+          ...(Array.isArray(sections.gradeBoundarySets)
+            ? {
+                gradeBoundarySets: readArray(sections, "gradeBoundarySets"),
+                gradeBoundaries: readArray(sections, "gradeBoundaries"),
+              }
+            : {
+                gradeItemBoundaries: readArray(sections, "gradeItemBoundaries"),
+              }),
           gradeOverrides: readArray(sections, "gradeOverrides"),
           gradeFrozenScores: readArray(sections, "gradeFrozenScores"),
           gradeItemExclusions: readArray(sections, "gradeItemExclusions"),

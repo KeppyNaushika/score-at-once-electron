@@ -101,25 +101,22 @@ async function buildFixture(): Promise<Fixture> {
     },
   })
 
-  const boundarySet = await testPrisma.gradeBoundarySet.create({
-    data: { gradeId: grade.id, gradeItemId: gradeItem.id },
-  })
-  await testPrisma.gradeBoundary.createMany({
+  await testPrisma.gradeItemBoundary.createMany({
     data: [
       {
-        gradeBoundarySetId: boundarySet.id,
+        gradeItemId: gradeItem.id,
         label: "A",
         minPercentage: 80,
         order: 0,
       },
       {
-        gradeBoundarySetId: boundarySet.id,
+        gradeItemId: gradeItem.id,
         label: "B",
         minPercentage: 60,
         order: 1,
       },
       {
-        gradeBoundarySetId: boundarySet.id,
+        gradeItemId: gradeItem.id,
         label: "C",
         minPercentage: 0,
         order: 2,
@@ -211,7 +208,7 @@ describe("成績値の確定（凍結）", () => {
     await freezeGradeScores({ gradeId: fixture.gradeId })
 
     // A の閾値を 80 → 90 に上げる。確定していなければ 80% は B に落ちる。
-    await testPrisma.gradeBoundary.updateMany({
+    await testPrisma.gradeItemBoundary.updateMany({
       where: { label: "A" },
       data: { minPercentage: 90 },
     })

@@ -543,32 +543,23 @@ export async function importGradeArchive(
           })
         }
 
-        // ── 4. 境界セット ────────────────────────────────────
-        const boundarySetIdMap: IdMap = new Map()
-        for (const archiveBoundarySet of data.gradeBoundarySets) {
-          const gradeItemId = gradeItemIdMap.get(archiveBoundarySet.gradeItemId)
-          if (!gradeItemId) continue
-          const created = await tx.gradeBoundarySet.create({
-            data: { gradeId: grade.id, gradeItemId },
-          })
-          boundarySetIdMap.set(archiveBoundarySet.id, created.id)
-        }
-        const boundaryRows = data.gradeBoundaries.flatMap((archiveBoundary) => {
-          const gradeBoundarySetId = boundarySetIdMap.get(
-            archiveBoundary.gradeBoundarySetId
-          )
-          if (!gradeBoundarySetId) return []
-          return [
-            {
-              gradeBoundarySetId,
-              label: archiveBoundary.label,
-              minPercentage: archiveBoundary.minPercentage,
-              order: archiveBoundary.order,
-            },
-          ]
-        })
+        // ── 4. 成績境界 ──────────────────────────────────────
+        const boundaryRows = data.gradeItemBoundaries.flatMap(
+          (archiveBoundary) => {
+            const gradeItemId = gradeItemIdMap.get(archiveBoundary.gradeItemId)
+            if (!gradeItemId) return []
+            return [
+              {
+                gradeItemId,
+                label: archiveBoundary.label,
+                minPercentage: archiveBoundary.minPercentage,
+                order: archiveBoundary.order,
+              },
+            ]
+          }
+        )
         if (boundaryRows.length > 0) {
-          await tx.gradeBoundary.createMany({ data: boundaryRows })
+          await tx.gradeItemBoundary.createMany({ data: boundaryRows })
         }
 
         // ── 5. セル3種 ──────────────────────────────────────

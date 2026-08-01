@@ -34,7 +34,11 @@ export function getGradeCompletion(
   grade: GradeWithRelations
 ): GradeStepCompletion {
   const studentCount = grade._count?.gradeStudents ?? 0
-  const boundarySetsCount = grade._count?.boundarySets ?? 0
+  // 境界が引かれている評価項目が1つでもあるか。境界の有無は行の有無そのものなので、
+  // 「境界0本だが設定済み」という状態は作れない
+  const hasAnyBoundary = grade.gradeItems.some(
+    (gradeItem) => gradeItem.boundaries.length > 0
+  )
 
   const dataSources = grade.gradeItems.flatMap(
     (gradeItem) => gradeItem.dataSources
@@ -58,7 +62,7 @@ export function getGradeCompletion(
     hasStudents: studentCount > 0,
     hasDataSources: dataSources.length > 0,
     hasManualScores: allManualScoresEntered,
-    hasBoundaries: boundarySetsCount > 0,
+    hasBoundaries: hasAnyBoundary,
   }
 }
 

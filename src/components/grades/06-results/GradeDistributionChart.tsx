@@ -38,15 +38,10 @@ export function GradeDistributionChart({
             distribution[label] = (distribution[label] ?? 0) + 1
           }
 
-          // boundarySetsからminPercentage降順でソート
-          const boundarySet = result.boundarySets?.find(
-            (candidateSet) => candidateSet.gradeItemId === gradeItem.id
-          )
+          // 評価項目の境界からminPercentage降順でソート
           const labelOrder = new Map<string, number>()
-          if (boundarySet) {
-            for (const boundary of boundarySet.boundaries) {
-              labelOrder.set(boundary.label, boundary.minPercentage)
-            }
+          for (const boundary of gradeItem.boundaries) {
+            labelOrder.set(boundary.label, boundary.minPercentage)
           }
           const entries = Object.entries(distribution).sort(
             (entryA, entryB) =>

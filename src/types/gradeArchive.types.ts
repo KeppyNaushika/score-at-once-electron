@@ -32,7 +32,6 @@ export interface GradeArchiveManifest {
     gradeItems: number
     dataSources: number
     manualScores: number
-    boundarySets: number
     boundaries: number
     classrooms: number
     students: number
@@ -120,19 +119,10 @@ export interface ArchiveGradeDataSourceEstimationSourceRow {
   updatedAt: string
 }
 
-/** GradeBoundarySet（評価項目ごとの成績境界セット）の行 */
-export interface ArchiveGradeBoundarySetRow {
+/** GradeItemBoundary（評価項目の成績境界1本）の行 */
+export interface ArchiveGradeItemBoundaryRow {
   id: string
-  gradeId: string
   gradeItemId: string
-  createdAt: string
-  updatedAt: string
-}
-
-/** GradeBoundary（境界1本）の行 */
-export interface ArchiveGradeBoundaryRow {
-  id: string
-  gradeBoundarySetId: string
   label: string
   /** Decimal */
   minPercentage: string
@@ -252,8 +242,7 @@ export interface GradeSections {
   gradeItems: ArchiveGradeItemRow[]
   gradeDataSources: ArchiveGradeDataSourceRow[]
   gradeDataSourceEstimationSources: ArchiveGradeDataSourceEstimationSourceRow[]
-  gradeBoundarySets: ArchiveGradeBoundarySetRow[]
-  gradeBoundaries: ArchiveGradeBoundaryRow[]
+  gradeItemBoundaries: ArchiveGradeItemBoundaryRow[]
   gradeOverrides: ArchiveGradeOverrideRow[]
   gradeFrozenScores: ArchiveGradeFrozenScoreRow[]
   gradeItemExclusions: ArchiveGradeItemExclusionRow[]
@@ -406,6 +395,8 @@ export interface GradeArchiveImportPreview {
  * - 1.13.0: 成績本体もテーブルごとの平坦なセクションへ変更し、各行を Prisma の行のまま持つ。
  *   外部参照は uuid 一次・名前二次（生徒・学級は full レコードを carry）。
  *   上書き・確定値・除外設定の参照が studentNumber → gradeStudentId（#962 Phase C）
+ * - 1.14.0: 境界セット（GradeBoundarySet）を畳み、境界を評価項目へ直付け。
+ *   gradeBoundarySets / gradeBoundaries → gradeItemBoundaries（参照が gradeItemId へ）
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
@@ -422,7 +413,8 @@ export type GradeArchiveVersion =
   | "1.11.0"
   | "1.12.0"
   | "1.13.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.13.0"
+  | "1.14.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.14.0"
 
 // バージョン変換の型（版ごとのアーカイブ全体の型・変換器・チェーン）は
 // electron-src/lib/import/grade-transformers/types.ts が持つ。

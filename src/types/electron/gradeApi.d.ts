@@ -5,7 +5,6 @@
 import type { GradeItemExclusion } from "@prisma/client"
 
 import type {
-  GradeBoundarySetWithItemAndBoundaries,
   GradeCalculationResult,
   GradeCellTarget,
   GradeConstraintData,
@@ -234,22 +233,12 @@ export interface GradeAPI {
     reorderDataSources: (
       items: { id: string; order: number }[]
     ) => Promise<{ success: boolean; error?: string }>
-    getBoundarySets: (gradeId: string) => Promise<{
-      success: boolean
-      boundarySets?: GradeBoundarySetWithItemAndBoundaries[]
-      error?: string
-    }>
-    upsertBoundarySet: (data: {
-      gradeId: string
+    replaceGradeItemBoundaries: (data: {
       gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
-    }) => Promise<{
-      success: boolean
-      boundarySet?: GradeBoundarySetWithItemAndBoundaries
-      error?: string
-    }>
-    deleteBoundarySet: (
-      id: string
+    }) => Promise<{ success: boolean; error?: string }>
+    deleteGradeItemBoundaries: (
+      gradeItemId: string
     ) => Promise<{ success: boolean; error?: string }>
     upsertGradeOverride: (
       data: GradeCellTarget & {

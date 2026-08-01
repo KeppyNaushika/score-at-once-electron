@@ -17,6 +17,7 @@ import {
 } from "../../../electron-src/lib/import/coursework-transformers/legacyShape"
 import { transformGradeToLatest } from "../../../electron-src/lib/import/grade-transformers"
 import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/grade-transformers/legacyShape"
+import type { GradeArchiveDataV1_13_0 } from "../../../electron-src/lib/import/grade-transformers/types"
 import type { GradeArchiveManifest } from "../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../src/types/gradeArchive.types"
 
@@ -30,7 +31,6 @@ const manifest: GradeArchiveManifest = {
     gradeItems: 1,
     dataSources: 0,
     manualScores: 0,
-    boundarySets: 2,
     boundaries: 0,
     classrooms: 0,
     students: 0,
@@ -115,8 +115,8 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     const gradeItemNameById = new Map(
       data.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
     )
-    expect(data.gradeBoundarySets).toHaveLength(1)
-    expect(gradeItemNameById.get(data.gradeBoundarySets[0].gradeItemId)).toBe(
+    expect(data.gradeItemBoundaries).toHaveLength(1)
+    expect(gradeItemNameById.get(data.gradeItemBoundaries[0].gradeItemId)).toBe(
       "知識・技能"
     )
     expect(data.gradeOverrides).toHaveLength(1)
@@ -142,7 +142,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
   it("targetType は新形式へ持ち越さない（行に列そのものが無い）", () => {
     const { data } = transformGradeToLatest(buildV1_9_0Archive())
 
-    expect(data.gradeBoundarySets[0]).not.toHaveProperty("targetType")
+    expect(data.gradeItemBoundaries[0]).not.toHaveProperty("targetType")
     expect(data.gradeOverrides[0]).not.toHaveProperty("targetType")
   })
 
@@ -185,9 +185,12 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
       transformGradeToLatest(archive)
 
     // 総合の名残が無いので 1.9.0→1.10.0 は当たらない。射影形式である以上
-    // 1.12.0→1.13.0 の平坦化だけは必ず通る
+    // 1.12.0→1.13.0 の平坦化と 1.13.0→1.14.0 の境界セット畳みは必ず通る
     expect(warnings.some((warning) => warning.includes("1.9.0"))).toBe(false)
-    expect(appliedTransformations).toEqual([{ from: "1.12.0", to: "1.13.0" }])
+    expect(appliedTransformations).toEqual([
+      { from: "1.12.0", to: "1.13.0" },
+      { from: "1.13.0", to: "1.14.0" },
+    ])
     expect(originalVersion).toBe("1.12.0")
   })
 
@@ -197,7 +200,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
 
     const { data, warnings } = transformGradeToLatest(archive)
 
-    expect(data.gradeBoundarySets).toHaveLength(1)
+    expect(data.gradeItemBoundaries).toHaveLength(1)
     expect(data.gradeOverrides).toHaveLength(0)
     // 上書きは元々0件なので上書き側の warning は出ない
     expect(warnings.some((warning) => warning.includes("手動上書き"))).toBe(
@@ -785,5 +788,112 @@ describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化�
     expect(warnings.some((warning) => warning.includes("同名の評価項目"))).toBe(
       true
     )
+  })
+})
+
+/**
+ * v1.13.0 が実際に書き出していた形。平坦なセクションだが、境界は属性を持たない容器
+ * GradeBoundarySet を挟み、gradeBoundarySetId でセット越しに評価項目を指していた。
+ */
+function buildV1_13_0Archive(): GradeArchiveDataV1_13_0 {
+  // 現行形式を作ってから境界のセクションを 1.13.0 の形へ差し替える。
+  // 境界以外の形は 1.13.0 と 1.14.0 で同じなので、そのまま流用できる
+  const { data } = transformGradeToLatest(buildV1_9_0Archive())
+  const gradeItemId = data.gradeItems[0].id
+  const { gradeItemBoundaries: _currentBoundaries, ...withoutBoundaries } = data
+  return {
+    ...withoutBoundaries,
+    manifest: { ...data.manifest, version: "1.13.0" },
+    gradeBoundarySets: [
+      {
+        id: "set-1",
+        gradeId: data.grades[0].id,
+        gradeItemId,
+        createdAt: "1970-01-01T00:00:00.000Z",
+        updatedAt: "1970-01-01T00:00:00.000Z",
+      },
+    ],
+    gradeBoundaries: [
+      {
+        id: "boundary-1",
+        gradeBoundarySetId: "set-1",
+        label: "A",
+        minPercentage: "80",
+        order: 0,
+        createdAt: "1970-01-01T00:00:00.000Z",
+        updatedAt: "1970-01-01T00:00:00.000Z",
+      },
+      {
+        id: "boundary-2",
+        gradeBoundarySetId: "set-1",
+        label: "B",
+        minPercentage: "60",
+        order: 1,
+        createdAt: "1970-01-01T00:00:00.000Z",
+        updatedAt: "1970-01-01T00:00:00.000Z",
+      },
+    ],
+  }
+}
+
+describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む）", () => {
+  it("境界がセット越しでなく評価項目を直接指すようになる", () => {
+    const archive = buildV1_13_0Archive()
+    const { data, appliedTransformations, originalVersion } =
+      transformGradeToLatest(archive)
+
+    expect(originalVersion).toBe("1.13.0")
+    expect(appliedTransformations).toEqual([{ from: "1.13.0", to: "1.14.0" }])
+    // 容器のセクションは残らない
+    expect(data).not.toHaveProperty("gradeBoundarySets")
+    expect(data).not.toHaveProperty("gradeBoundaries")
+    expect(data.gradeItemBoundaries).toHaveLength(2)
+    expect(
+      data.gradeItemBoundaries.every(
+        (boundary) => boundary.gradeItemId === data.gradeItems[0].id
+      )
+    ).toBe(true)
+    // ラベル・閾値・並び順は境界セットを畳んでも変わらない
+    expect(
+      data.gradeItemBoundaries.map((boundary) => [
+        boundary.label,
+        boundary.minPercentage,
+        boundary.order,
+      ])
+    ).toEqual([
+      ["A", "80", 0],
+      ["B", "60", 1],
+    ])
+  })
+
+  it("境界を1本も持たないセットは畳めば消える（空セットは復元しない）", () => {
+    const archive = buildV1_13_0Archive()
+    archive.gradeBoundaries = []
+
+    const { data, warnings } = transformGradeToLatest(archive)
+
+    expect(data.gradeItemBoundaries).toHaveLength(0)
+    // 失われた情報は無いので警告も出さない
+    expect(warnings.some((warning) => warning.includes("1.13.0"))).toBe(false)
+  })
+
+  it("属するセットが見つからない境界は破棄して警告する", () => {
+    const archive = buildV1_13_0Archive()
+    archive.gradeBoundarySets = []
+
+    const { data, warnings } = transformGradeToLatest(archive)
+
+    expect(data.gradeItemBoundaries).toHaveLength(0)
+    expect(warnings.some((warning) => warning.includes("2件"))).toBe(true)
+  })
+
+  it("現行形式のアーカイブには当たらない（二重適用しない）", () => {
+    const current = transformGradeToLatest(buildV1_13_0Archive()).data
+
+    const { appliedTransformations, originalVersion } =
+      transformGradeToLatest(current)
+
+    expect(appliedTransformations).toEqual([])
+    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
   })
 })

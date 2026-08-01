@@ -113,11 +113,7 @@ function buildGrade(
         inputMode?: string
         letterScales?: { label: string; score: number; order: number }[]
       }[]
-    }[]
-    boundarySets?: {
-      id: string
-      gradeItemId: string
-      boundaries: {
+      boundaries?: {
         label: string
         minPercentage: unknown
         order: number
@@ -138,6 +134,7 @@ function buildGrade(
   // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
   const gradeItems = (overrides.gradeItems ?? []).map((gradeItem) => ({
     ...gradeItem,
+    boundaries: gradeItem.boundaries ?? [],
     dataSources: gradeItem.dataSources.map((rawDataSource) => {
       // 推定に使う他データソースは中間テーブル（gradeDataSourceInclude 同梱）。
       // テストケースは id 配列で書けるようにし、ここで行の形へ寄せる。
@@ -187,7 +184,6 @@ function buildGrade(
     id: overrides.id ?? "gp1",
     name: overrides.name ?? "テストPJ",
     gradeItems,
-    boundarySets: overrides.boundarySets ?? [],
     gradeClassrooms: overrides.gradeClassrooms ?? [],
   }
 }
@@ -309,12 +305,6 @@ describe("calculateGrades", () => {
               order: 0,
             },
           ],
-        },
-      ],
-      boundarySets: [
-        {
-          id: "bs1",
-          gradeItemId: "gi1",
           boundaries: [
             { label: "A", minPercentage: 80, order: 0 },
             { label: "B", minPercentage: 60, order: 1 },
@@ -472,12 +462,6 @@ describe("calculateGrades", () => {
               order: 0,
             },
           ],
-        },
-      ],
-      boundarySets: [
-        {
-          id: "bs1",
-          gradeItemId: "gi1",
           boundaries: [
             { label: "A", minPercentage: 80, order: 0 },
             { label: "B", minPercentage: 60, order: 1 },
@@ -833,12 +817,6 @@ describe("calculateGrades", () => {
               order: 0,
             },
           ],
-        },
-      ],
-      boundarySets: [
-        {
-          id: "bs1",
-          gradeItemId: "gi1",
           boundaries: [
             { label: "A", minPercentage: 90, order: 0 },
             { label: "B", minPercentage: 70, order: 1 },
@@ -1180,9 +1158,9 @@ describe("calculateGrades", () => {
               estimationSources: [],
             },
           ],
+          boundaries: [],
         },
       ],
-      boundarySets: [],
       gradeClassrooms: [],
     }
     mockFindUnique.mockResolvedValue(grade)

@@ -663,18 +663,15 @@ export async function seedGradeProject(
     { label: "E", minPercentage: 0 },
   ]
   for (const gradeItemId of gradeItemIds) {
-    const boundarySet = await db.gradeBoundarySet.create({
-      data: { id: crypto.randomUUID(), gradeId, gradeItemId },
-    })
     for (
       let boundaryIndex = 0;
       boundaryIndex < boundaryLabels.length;
       boundaryIndex++
     ) {
-      await db.gradeBoundary.create({
+      await db.gradeItemBoundary.create({
         data: {
           id: crypto.randomUUID(),
-          gradeBoundarySetId: boundarySet.id,
+          gradeItemId,
           label: boundaryLabels[boundaryIndex].label,
           minPercentage: boundaryLabels[boundaryIndex].minPercentage,
           order: boundaryIndex,

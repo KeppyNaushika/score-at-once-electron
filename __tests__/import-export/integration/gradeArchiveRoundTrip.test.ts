@@ -217,17 +217,20 @@ function toLegacyArchive(
     },
     courseworkArchive: collected.courseworkArchive,
     boundariesData: {
-      boundarySets: collected.gradeBoundarySets.map((boundarySet) => ({
-        gradeItemId: boundarySet.gradeItemId,
-        gradeItemName: gradeItemNameById.get(boundarySet.gradeItemId)!,
-        boundaries: collected.gradeBoundaries
-          .filter((boundary) => boundary.gradeBoundarySetId === boundarySet.id)
-          .map((boundary) => ({
-            label: boundary.label,
-            minPercentage: Number(boundary.minPercentage),
-            order: boundary.order,
-          })),
-      })),
+      // 旧形式は評価項目ごとの入れ子。境界を持つ項目だけを載せる
+      boundarySets: collected.gradeItems
+        .map((gradeItem) => ({
+          gradeItemId: gradeItem.id,
+          gradeItemName: gradeItemNameById.get(gradeItem.id)!,
+          boundaries: collected.gradeItemBoundaries
+            .filter((boundary) => boundary.gradeItemId === gradeItem.id)
+            .map((boundary) => ({
+              label: boundary.label,
+              minPercentage: Number(boundary.minPercentage),
+              order: boundary.order,
+            })),
+        }))
+        .filter((boundarySet) => boundarySet.boundaries.length > 0),
     },
   }
 }
@@ -483,7 +486,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 1,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 0,
           students: 1,
@@ -604,7 +606,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 1,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 0,
           students: 1,
@@ -716,7 +717,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 1,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 0,
           students: 1,
@@ -811,7 +811,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 0,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 0,
           students: 0,
@@ -906,7 +905,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 1,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 0,
           students: 1,
@@ -1045,7 +1043,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 1,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 0,
           students: 1,
@@ -1411,12 +1408,9 @@ describe("grade-archive ラウンドトリップ", () => {
         overrideLabel: "4",
       },
     })
-    const boundarySet = await prisma.gradeBoundarySet.create({
-      data: { gradeId: grade.id, gradeItemId: secondItem.id },
-    })
-    await prisma.gradeBoundary.create({
+    await prisma.gradeItemBoundary.create({
       data: {
-        gradeBoundarySetId: boundarySet.id,
+        gradeItemId: secondItem.id,
         label: "3",
         minPercentage: 50,
         order: 0,
@@ -1451,11 +1445,11 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(overrides).toHaveLength(1)
     expect(overrides[0].gradeItemId).toBe(importedSecondId)
 
-    const boundarySets = await prisma.gradeBoundarySet.findMany({
-      where: { gradeId: result.gradeId! },
+    const boundaries = await prisma.gradeItemBoundary.findMany({
+      where: { gradeItem: { gradeId: result.gradeId! } },
     })
-    expect(boundarySets).toHaveLength(1)
-    expect(boundarySets[0].gradeItemId).toBe(importedSecondId)
+    expect(boundaries).toHaveLength(1)
+    expect(boundaries[0].gradeItemId).toBe(importedSecondId)
   })
 
   it("uuid を持たない旧アーカイブで同名項目があれば、取り違えず警告して落とす", async () => {
@@ -2174,7 +2168,6 @@ describe("grade-archive ラウンドトリップ", () => {
           gradeItems: 1,
           dataSources: 1,
           manualScores: 1,
-          boundarySets: 0,
           boundaries: 0,
           classrooms: 1,
           students: 1,

@@ -18,9 +18,27 @@ import type {
 } from "@/types/grade.types"
 
 const GRADE_ITEMS = [
-  { id: "gi-knowledge", name: "知識・技能", order: 0, dataSources: [] },
-  { id: "gi-thinking", name: "思考・判断・表現", order: 1, dataSources: [] },
-  { id: "gi-attitude", name: "態度", order: 2, dataSources: [] },
+  {
+    id: "gi-knowledge",
+    name: "知識・技能",
+    order: 0,
+    dataSources: [],
+    boundaries: [],
+  },
+  {
+    id: "gi-thinking",
+    name: "思考・判断・表現",
+    order: 1,
+    dataSources: [],
+    boundaries: [],
+  },
+  {
+    id: "gi-attitude",
+    name: "態度",
+    order: 2,
+    dataSources: [],
+    boundaries: [],
+  },
 ]
 
 /** 観点3つのラベルから生徒結果を作る */
@@ -60,7 +78,6 @@ function makeResult(students: StudentGradeResult[]): GradeCalculationResult {
     classNames: [],
     gradeItems: GRADE_ITEMS,
     students,
-    boundarySets: [],
   }
 }
 
@@ -138,11 +155,37 @@ function exclusionLabelRows(
 describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）", () => {
   // 実データ構成: 知識・技能/思考・判断・表現/態度(A/B/C) + 評定(5..1) の4項目。
   // すべて GradeItem 同士の比較。評定 GradeItem を比較先にする。
+  const HYOTEI_BOUNDARIES = [
+    { label: "5", minPercentage: 80 },
+    { label: "4", minPercentage: 65 },
+    { label: "3", minPercentage: 50 },
+    { label: "2", minPercentage: 35 },
+    { label: "1", minPercentage: 0 },
+  ]
+
   const ITEMS_WITH_HYOTEI = [
-    { id: "gi-k", name: "知識・技能", order: 0, dataSources: [] },
-    { id: "gi-s", name: "思考・判断・表現", order: 1, dataSources: [] },
-    { id: "gi-a", name: "態度", order: 2, dataSources: [] },
-    { id: "gi-h", name: "評定", order: 3, dataSources: [] },
+    {
+      id: "gi-k",
+      name: "知識・技能",
+      order: 0,
+      dataSources: [],
+      boundaries: [],
+    },
+    {
+      id: "gi-s",
+      name: "思考・判断・表現",
+      order: 1,
+      dataSources: [],
+      boundaries: [],
+    },
+    { id: "gi-a", name: "態度", order: 2, dataSources: [], boundaries: [] },
+    {
+      id: "gi-h",
+      name: "評定",
+      order: 3,
+      dataSources: [],
+      boundaries: HYOTEI_BOUNDARIES,
+    },
   ]
 
   function makeStudent4(
@@ -190,18 +233,6 @@ describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）"
       classNames: [],
       gradeItems: ITEMS_WITH_HYOTEI,
       students,
-      boundarySets: [
-        {
-          gradeItemId: "gi-h",
-          boundaries: [
-            { label: "5", minPercentage: 80 },
-            { label: "4", minPercentage: 65 },
-            { label: "3", minPercentage: 50 },
-            { label: "2", minPercentage: 35 },
-            { label: "1", minPercentage: 0 },
-          ],
-        },
-      ],
     }
   }
 
@@ -367,12 +398,34 @@ describe("gradeConstraints: 補助", () => {
 })
 
 describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
-  /** 評定を含む4項目。名前は呼び出し側から差し替えられる */
-  function makeItems(knowledgeName: string) {
+  /** 弱→強が C, B, A になる境界。順位換算（A/B/C → 3/2/1）の検証に使う */
+  const RANK_BOUNDARIES = [
+    { label: "C", minPercentage: 0 },
+    { label: "B", minPercentage: 50 },
+    { label: "A", minPercentage: 80 },
+  ]
+
+  /** 評定を含む3項目。名前と境界は呼び出し側から差し替えられる */
+  function makeItems(
+    knowledgeName: string,
+    boundaries: { label: string; minPercentage: number }[] = []
+  ) {
     return [
-      { id: "gi-k", name: knowledgeName, order: 0, dataSources: [] },
-      { id: "gi-s", name: "思考・判断・表現", order: 1, dataSources: [] },
-      { id: "gi-h", name: "評定", order: 2, dataSources: [] },
+      {
+        id: "gi-k",
+        name: knowledgeName,
+        order: 0,
+        dataSources: [],
+        boundaries,
+      },
+      {
+        id: "gi-s",
+        name: "思考・判断・表現",
+        order: 1,
+        dataSources: [],
+        boundaries,
+      },
+      { id: "gi-h", name: "評定", order: 2, dataSources: [], boundaries },
     ]
   }
 
@@ -428,7 +481,6 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
       classNames: [],
       gradeItems: before,
       students: [makeStudentFor(before, violatingLabels)],
-      boundarySets: [],
     }
 
     const after = makeItems("知識・技能（改称）")
@@ -454,7 +506,6 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
       students: [
         makeStudentFor(items, { "gi-k": "A", "gi-s": "A", "gi-h": "3" }),
       ],
-      boundarySets: [],
     }
     const withMissingViewpoint: GradeConstraintData = {
       ...consistency,
@@ -469,11 +520,12 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
     expect(errors.get("c1")).toContain("見つかりません")
   })
 
-  // 旧実装は boundarySets を項目名で引いていた。id引きへ移す際に式評価側の
-  // 参照を直し忘れると、A/B/C の順位換算が効かなくなり item()/mean() が NaN になる。
+  // 旧実装は境界を項目名で引いていた。id引きへ移す際に式評価側の参照を直し忘れると、
+  // A/B/C の順位換算が効かなくなり item()/mean() が NaN になる。
   // 既存テストが評定に数値ラベル "5" を使っていたため素通りしていた。
   it("式ルールが非数値ラベル(A/B/C)を順位へ換算できる", () => {
-    const items = makeItems("知識・技能")
+    // 弱→強が C, B, A なので C は順位1
+    const items = makeItems("知識・技能", RANK_BOUNDARIES)
     const result: GradeCalculationResult = {
       gradeId: "g1",
       gradeName: "1学期",
@@ -482,15 +534,6 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
       students: [
         makeStudentFor(items, { "gi-k": "C", "gi-s": "A", "gi-h": "A" }),
       ],
-      // 弱→強が C, B, A なので C は順位1
-      boundarySets: items.map((gradeItem) => ({
-        gradeItemId: gradeItem.id,
-        boundaries: [
-          { label: "C", minPercentage: 0 },
-          { label: "B", minPercentage: 50 },
-          { label: "A", minPercentage: 80 },
-        ],
-      })),
     }
     const expr: GradeConstraintData = {
       ...baseConstraint,
@@ -505,7 +548,7 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
   })
 
   it("式ルールの mean() が非数値ラベルを集計できる", () => {
-    const items = makeItems("知識・技能")
+    const items = makeItems("知識・技能", RANK_BOUNDARIES)
     const result: GradeCalculationResult = {
       gradeId: "g1",
       gradeName: "1学期",
@@ -514,14 +557,6 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
       students: [
         makeStudentFor(items, { "gi-k": "A", "gi-s": "A", "gi-h": "C" }),
       ],
-      boundarySets: items.map((gradeItem) => ({
-        gradeItemId: gradeItem.id,
-        boundaries: [
-          { label: "C", minPercentage: 0 },
-          { label: "B", minPercentage: 50 },
-          { label: "A", minPercentage: 80 },
-        ],
-      })),
     }
     // 観点平均3(=A) と評定1(=C) の乖離2 > 1
     const expr: GradeConstraintData = {

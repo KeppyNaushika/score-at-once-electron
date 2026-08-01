@@ -21,11 +21,11 @@ import {
   validateConstraintExpression,
 } from "@/lib/gradeConstraints"
 import type {
-  GradeBoundarySetWithItemAndBoundaries,
   GradeCalculationResult,
   GradeConstraintData,
   GradeConstraintInput,
   GradeConstraintKind,
+  GradeItemWithDataSources,
 } from "@/types/grade.types"
 
 import { ConsistencyFields } from "./ConsistencyFields"
@@ -33,8 +33,7 @@ import { MutualExclusionFields } from "./MutualExclusionFields"
 
 interface ConstraintRulesEditorProps {
   gradeId: string
-  gradeItems: { id: string; name: string; order: number }[]
-  boundarySets: GradeBoundarySetWithItemAndBoundaries[]
+  gradeItems: GradeItemWithDataSources[]
 }
 
 const KIND_LABELS: Record<GradeConstraintKind, string> = {
@@ -55,15 +54,13 @@ const EXPRESSION_HELP = [
   "演算子: and / or / not / == / != / > / < / >= / <=",
 ].join("\n")
 
-/** boundarySets から観点別評価に登場しうるラベルの一覧を作る */
-function collectLabels(
-  boundarySets: GradeBoundarySetWithItemAndBoundaries[]
-): string[] {
-  const set = new Set<string>()
-  for (const boundarySet of boundarySets) {
-    for (const boundary of boundarySet.boundaries) set.add(boundary.label)
+/** 評価項目の境界から、観点別評価に登場しうるラベルの一覧を作る */
+function collectLabels(gradeItems: GradeItemWithDataSources[]): string[] {
+  const labels = new Set<string>()
+  for (const gradeItem of gradeItems) {
+    for (const boundary of gradeItem.boundaries) labels.add(boundary.label)
   }
-  return Array.from(set)
+  return Array.from(labels)
 }
 
 /** 「評定」にあたる項目を推測（名前に「評定」を含む最後の項目、無ければ末尾） */
@@ -79,7 +76,6 @@ function guessTargetGradeItem(
 export function ConstraintRulesEditor({
   gradeId,
   gradeItems,
-  boundarySets,
 }: ConstraintRulesEditorProps) {
   const { constraints, createConstraint, updateConstraint, deleteConstraint } =
     useGradeConstraints(gradeId)
@@ -88,7 +84,7 @@ export function ConstraintRulesEditor({
     null
   )
 
-  const labels = useMemo(() => collectLabels(boundarySets), [boundarySets])
+  const labels = useMemo(() => collectLabels(gradeItems), [gradeItems])
 
   // プレビュー用に成績算出結果を取得
   const loadCalc = useCallback(async () => {

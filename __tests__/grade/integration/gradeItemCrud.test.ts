@@ -20,10 +20,6 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
-  getBoundarySetsByGradeId,
-  upsertBoundarySet,
-} from "@/electron-src/lib/prisma/gradeBoundary"
-import {
   createDataSource,
   deleteDataSource,
   getDataSourcesByGradeItemId,
@@ -36,6 +32,7 @@ import {
   reorderGradeItems,
   updateGradeItem,
 } from "@/electron-src/lib/prisma/gradeItem"
+import { replaceGradeItemBoundaries } from "@/electron-src/lib/prisma/gradeItemBoundary"
 
 import {
   cleanupTestDatabase,
@@ -307,7 +304,7 @@ describe("GradeDataSource CRUD", () => {
   })
 })
 
-describe("GradeBoundary CRUD", () => {
+describe("GradeItemBoundary CRUD", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
   })
@@ -316,15 +313,23 @@ describe("GradeBoundary CRUD", () => {
     await cleanupTestDatabase()
   })
 
-  it("評価項目の境界セットを作成できる", async () => {
+  /** 境界のラベルを order 昇順で読む */
+  async function readBoundaryLabels(gradeItemId: string): Promise<string[]> {
+    const boundaries = await testPrisma.gradeItemBoundary.findMany({
+      where: { gradeItemId },
+      orderBy: { order: "asc" },
+    })
+    return boundaries.map((boundary) => boundary.label)
+  }
+
+  it("評価項目に境界を引ける", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
       name: "知識・技能",
     })
 
-    const result = await upsertBoundarySet({
-      gradeId: grade.id,
+    const result = await replaceGradeItemBoundaries({
       gradeItemId: gradeItemResult.gradeItem!.id,
       boundaries: [
         { label: "A", minPercentage: 90, order: 0 },
@@ -333,24 +338,25 @@ describe("GradeBoundary CRUD", () => {
     })
 
     expect(result.success).toBe(true)
-    expect(result.boundarySet!.gradeItemId).toBe(gradeItemResult.gradeItem!.id)
+    expect(await readBoundaryLabels(gradeItemResult.gradeItem!.id)).toEqual([
+      "A",
+      "B",
+    ])
   })
 
-  it("同一キーで再upsertすると境界が置換される", async () => {
+  it("同じ評価項目へ再度書くと境界が置換される", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
       name: "知識・技能",
     })
 
-    await upsertBoundarySet({
-      gradeId: grade.id,
+    await replaceGradeItemBoundaries({
       gradeItemId: gradeItemResult.gradeItem!.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
 
-    const result = await upsertBoundarySet({
-      gradeId: grade.id,
+    const result = await replaceGradeItemBoundaries({
       gradeItemId: gradeItemResult.gradeItem!.id,
       boundaries: [
         { label: "S", minPercentage: 95, order: 0 },
@@ -360,11 +366,36 @@ describe("GradeBoundary CRUD", () => {
     })
 
     expect(result.success).toBe(true)
-    expect(result.boundarySet!.boundaries).toHaveLength(3)
-    expect(result.boundarySet!.boundaries[0].label).toBe("S")
+    expect(await readBoundaryLabels(gradeItemResult.gradeItem!.id)).toEqual([
+      "S",
+      "A",
+      "B",
+    ])
   })
 
-  it("getBoundarySetsByGradeIdで全セットを取得できる", async () => {
+  it("空配列で置換すると境界が1本も残らない", async () => {
+    const grade = await createTestGrade()
+    const gradeItemResult = await createGradeItem({
+      gradeId: grade.id,
+      name: "知識・技能",
+    })
+
+    await replaceGradeItemBoundaries({
+      gradeItemId: gradeItemResult.gradeItem!.id,
+      boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
+    })
+    const result = await replaceGradeItemBoundaries({
+      gradeItemId: gradeItemResult.gradeItem!.id,
+      boundaries: [],
+    })
+
+    expect(result.success).toBe(true)
+    expect(await readBoundaryLabels(gradeItemResult.gradeItem!.id)).toEqual([])
+  })
+
+  // 境界は専用APIでなく評価項目の子として降ってくる。境界0本の項目も
+  // 「境界の無い評価項目」として必ず並ぶ（設定画面が全項目の編集欄を出せる）
+  it("評価項目一覧が境界を同梱して返す（0本の項目も落とさない）", async () => {
     const grade = await createTestGrade()
     const firstItem = await createGradeItem({
       gradeId: grade.id,
@@ -374,22 +405,24 @@ describe("GradeBoundary CRUD", () => {
       gradeId: grade.id,
       name: "項目2",
     })
+    await createGradeItem({ gradeId: grade.id, name: "項目3" })
 
-    await upsertBoundarySet({
-      gradeId: grade.id,
+    await replaceGradeItemBoundaries({
       gradeItemId: firstItem.gradeItem!.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
-    await upsertBoundarySet({
-      gradeId: grade.id,
+    await replaceGradeItemBoundaries({
       gradeItemId: secondItem.gradeItem!.id,
       boundaries: [{ label: "B", minPercentage: 70, order: 0 }],
     })
 
-    const result = await getBoundarySetsByGradeId(grade.id)
+    const result = await getGradeItemsByExamId(grade.id)
 
     expect(result.success).toBe(true)
-    expect(result.boundarySets).toHaveLength(2)
+    expect(result.gradeItems).toHaveLength(3)
+    expect(
+      result.gradeItems!.map((gradeItem) => gradeItem.boundaries.length)
+    ).toEqual([1, 1, 0])
   })
 })
 

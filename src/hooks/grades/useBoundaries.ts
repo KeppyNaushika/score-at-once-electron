@@ -1,30 +1,21 @@
 import { useCallback, useEffect, useState } from "react"
 
-import type {
-  GradeBoundarySetWithItemAndBoundaries,
-  GradeWithRelations,
-} from "@/types/grade.types"
+import type { GradeWithRelations } from "@/types/grade.types"
 
-/** 成績評定の境界値セットの取得・保存を管理するフック */
+/**
+ * 評価項目ごとの成績境界の取得・保存を管理するフック。
+ *
+ * 境界は評価項目の子として成績本体と一緒に降ってくるので、専用の取得APIは無い。
+ */
 export function useBoundaries(gradeId: string) {
-  const [exam, setExam] = useState<GradeWithRelations | null>(null)
-  const [boundarySets, setBoundarySets] = useState<
-    GradeBoundarySetWithItemAndBoundaries[]
-  >([])
+  const [grade, setGrade] = useState<GradeWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
     try {
-      const [gpResult, bsResult] = await Promise.all([
-        window.electronAPI.grade.getById(gradeId),
-        window.electronAPI.grade.getBoundarySets(gradeId),
-      ])
-
-      if (gpResult.success && gpResult.grade) {
-        setExam(gpResult.grade)
-      }
-      if (bsResult.success && bsResult.boundarySets) {
-        setBoundarySets(bsResult.boundarySets)
+      const result = await window.electronAPI.grade.getById(gradeId)
+      if (result.success && result.grade) {
+        setGrade(result.grade)
       }
     } catch (error) {
       console.error("Error loading boundaries:", error)
@@ -37,27 +28,13 @@ export function useBoundaries(gradeId: string) {
     loadData()
   }, [loadData])
 
-  const saveBoundarySet = useCallback(
+  const saveBoundaries = useCallback(
     async (data: {
       gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => {
-      const result = await window.electronAPI.grade.upsertBoundarySet({
-        gradeId,
-        ...data,
-      })
-      if (result.success) {
-        await loadData()
-      }
-      return result
-    },
-    [gradeId, loadData]
-  )
-
-  const deleteBoundarySet = useCallback(
-    async (boundarySetId: string) => {
       const result =
-        await window.electronAPI.grade.deleteBoundarySet(boundarySetId)
+        await window.electronAPI.grade.replaceGradeItemBoundaries(data)
       if (result.success) {
         await loadData()
       }
@@ -66,5 +43,17 @@ export function useBoundaries(gradeId: string) {
     [loadData]
   )
 
-  return { exam, boundarySets, loading, saveBoundarySet, deleteBoundarySet }
+  const deleteBoundaries = useCallback(
+    async (gradeItemId: string) => {
+      const result =
+        await window.electronAPI.grade.deleteGradeItemBoundaries(gradeItemId)
+      if (result.success) {
+        await loadData()
+      }
+      return result
+    },
+    [loadData]
+  )
+
+  return { grade, loading, saveBoundaries, deleteBoundaries }
 }

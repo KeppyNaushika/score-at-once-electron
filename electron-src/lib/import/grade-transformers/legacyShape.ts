@@ -21,8 +21,6 @@ import type {
   CollectedCourseworkData,
 } from "../../../../src/types/courseworkArchive.types"
 import type {
-  ArchiveGradeBoundaryRow,
-  ArchiveGradeBoundarySetRow,
   ArchiveGradeClassroomRow,
   ArchiveGradeConstraintExclusionLabelRow,
   ArchiveGradeConstraintLabelValueRow,
@@ -44,6 +42,43 @@ import type {
   GradeSections,
 } from "../../../../src/types/gradeArchive.types"
 import type { LegacyCollectedCourseworkData } from "../coursework-transformers/legacyShape"
+
+// =============================================================================
+// v1.13.0 の形状定義（境界セットを畳む前。1.14.0 との差分だけを宣言する）
+// =============================================================================
+
+/**
+ * v1.13.0 の GradeBoundarySet（評価項目ごとの成績境界セット）の行。
+ * 属性を持たない容器で、1.14.0 で畳まれた。
+ */
+export interface ArchiveGradeBoundarySetRowV1_13_0 {
+  id: string
+  gradeId: string
+  gradeItemId: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** v1.13.0 の GradeBoundary（境界1本）の行。親はセットで、評価項目は間接参照だった */
+export interface ArchiveGradeBoundaryRowV1_13_0 {
+  id: string
+  gradeBoundarySetId: string
+  label: string
+  /** Decimal */
+  minPercentage: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** v1.13.0 の成績本体セクション群 */
+export type GradeSectionsV1_13_0 = Omit<
+  GradeSections,
+  "gradeItemBoundaries"
+> & {
+  gradeBoundarySets: ArchiveGradeBoundarySetRowV1_13_0[]
+  gradeBoundaries: ArchiveGradeBoundaryRowV1_13_0[]
+}
 
 // =============================================================================
 // v1.12.0 以前の形状定義（ここだけが知っていればよい負債）
@@ -284,7 +319,7 @@ const legacyClassroomId = (reference: { id?: string; name: string }): string =>
 
 /** 展開結果。セクション群と外部参照、および失われたものの警告 */
 export interface FlattenedLegacyGrade {
-  sections: GradeSections
+  sections: GradeSectionsV1_13_0
   studentsData: ArchiveCwStudent[]
   classesData: ArchiveCwClass[]
   membershipsData: ArchiveCwMembership[]
@@ -634,8 +669,8 @@ export function flattenLegacyGrade(
   }
 
   // ── 境界セット ───────────────────────────────────────────
-  const gradeBoundarySets: ArchiveGradeBoundarySetRow[] = []
-  const gradeBoundaries: ArchiveGradeBoundaryRow[] = []
+  const gradeBoundarySets: ArchiveGradeBoundarySetRowV1_13_0[] = []
+  const gradeBoundaries: ArchiveGradeBoundaryRowV1_13_0[] = []
   let droppedBoundarySets = 0
   for (const legacySet of boundariesData.boundarySets) {
     const gradeItemId = resolveGradeItemId(legacySet)
