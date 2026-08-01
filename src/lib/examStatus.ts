@@ -102,36 +102,43 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
       )
       ?.map((examStudent) => examStudent.id) || []
 
-  // 受験・見込み生徒の数をカウント（複数ページの答案でも1人1回のみ）
-  const answerSheetCount = new Set(
-    exam.answerImages
-      ?.filter((answerImage) =>
-        participatingExamStudentIds.includes(answerImage.examStudentId)
-      )
-      ?.map((answerImage) => answerImage.examStudentId)
-  ).size
+  // 採点の対象になる受験者（複数ページの答案でも1人1回のみ）。
+  // 答案画像が無い生徒は採点できないので、分母にも分子にもこの集合を使う
+  const scorableExamStudentIds = [
+    ...new Set(
+      exam.answerImages
+        ?.filter((answerImage) =>
+          participatingExamStudentIds.includes(answerImage.examStudentId)
+        )
+        ?.map((answerImage) => answerImage.examStudentId)
+    ),
+  ]
+
+  const answerSheetCount = scorableExamStudentIds.length
 
   const expectedScoringCount = questionAnswerCount * answerSheetCount
 
-  // unscored以外のquestionScoresの個数を取得
-  // 受験・見込み生徒のQuestionScoreのみをカウント（欠席生徒を除外）
+  // 採点対象の受験者の、採点済みQuestionScore。
+  // 分母（expectedScoringCount）と同じ受験者集合で数えないと、分子が分母を超えて
+  // 進捗が100%を超える。
+  // partial/pending は partialScore が入力済みの場合のみ採点済みとする。
   const actualScoringCount =
-    exam.cropRegions?.reduce((total, region) => {
-      if (region.type === "QUESTION_ANSWER" && region.questionScores) {
-        const validQuestionScores = region.questionScores.filter(
-          (score) =>
-            score.status !== "unscored" &&
-            participatingExamStudentIds.includes(score.examStudentId) &&
-            // partial/pending は partialScore が入力済みの場合のみ採点済みとする
-            !(
-              (score.status === "partial" || score.status === "pending") &&
-              score.partialScore === null
-            )
-        )
-        return total + validQuestionScores.length
-      }
-      return total
-    }, 0) || 0
+    exam.cropRegions
+      ?.filter(
+        (cropRegion) =>
+          cropRegion.type === "QUESTION_ANSWER" && cropRegion.questionScores
+      )
+      .flatMap((cropRegion) => cropRegion.questionScores)
+      .filter(
+        (questionScore) =>
+          questionScore.status !== "unscored" &&
+          scorableExamStudentIds.includes(questionScore.examStudentId) &&
+          !(
+            (questionScore.status === "partial" ||
+              questionScore.status === "pending") &&
+            questionScore.partialScore === null
+          )
+      ).length ?? 0
 
   const hasScoring =
     expectedScoringCount > 0 && actualScoringCount >= expectedScoringCount

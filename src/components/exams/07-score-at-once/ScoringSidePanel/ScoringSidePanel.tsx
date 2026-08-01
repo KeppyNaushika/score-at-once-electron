@@ -317,7 +317,7 @@ export function ScoringSidePanel({
             isOpen={isSectionOpen("progress")}
             onToggle={() => toggleSection("progress")}
           >
-            <ExamProgressCard examId={examId} />
+            <ExamProgressCard questionProgress={questionProgress} />
           </SidePanelSection>
 
           {/* 設問ナビゲーター */}

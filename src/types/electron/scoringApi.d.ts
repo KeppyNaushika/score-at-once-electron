@@ -117,15 +117,6 @@ export interface ScoringAPI {
     completedQuestions: number
     percentage: number
   }>
-  getExamProgress: (examId: string) => Promise<{
-    totalStudents: number
-    totalQuestions: number
-    totalItems: number
-    scoredItems: number
-    finalizedItems: number
-    scoredPercentage: number
-    finalizedPercentage: number
-  }>
   /** 裁定サマリ（解決できなかった競合・確定後に新提案が入ったセル） */
   getExamDecisionSummary: (
     examId: string,

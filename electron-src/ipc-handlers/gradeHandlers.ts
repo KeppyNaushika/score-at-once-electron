@@ -38,7 +38,6 @@ import {
   updateGradeConstraint,
 } from "../lib/prisma/gradeConstraint"
 import {
-  calculateSourceMaxScore,
   createDataSource,
   deleteDataSource,
   getExamCandidates,
@@ -329,19 +328,6 @@ export function setupGradeHandlers(): void {
   registerHandler("grade:getExamCropRegions", async (examId: string) => {
     return getExamCropRegions(examId)
   })
-
-  registerHandler(
-    "grade:calculateSourceMaxScore",
-    async (data: {
-      type: string
-      examId?: string
-      subtotalId?: string
-      cropRegionId?: string
-      courseworkItemId?: string
-    }) => {
-      return calculateSourceMaxScore(data)
-    }
-  )
 
   // =====================================================================
   // GradeBoundary

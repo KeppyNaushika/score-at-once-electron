@@ -1,10 +1,48 @@
 import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 
+import type { ExamProgressSource } from "../../../src/lib/examStatus"
+import { toScoringStatus } from "../../../src/types/scoringStatus.types"
 import { getExamDirectory } from "../dataManager"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { examPageWithContentInclude } from "./examPage"
+
+/**
+ * 進捗計算（renderer の getExamProgress）が読む元データの select。
+ * 一覧と単体取得で同じ形を返すため、選択列はここが唯一の定義になる。
+ * 進捗そのものは main では算出しない（計算の唯一の実装は renderer）。
+ */
+const examProgressSourceSelect = {
+  examPages: {
+    select: {
+      id: true,
+      studentAnswerImages: {
+        select: { examStudentId: true },
+      },
+      cropRegions: {
+        select: {
+          type: true,
+          questionScores: {
+            select: {
+              status: true,
+              examStudentId: true,
+              partialScore: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  examSubtotalGroups: {
+    select: { id: true },
+  },
+  examStudents: {
+    // 進捗計算は受験者IDで答案・採点を突き合わせるので id が要る。
+    // select で主キーを落とすとこの突き合わせが黙って全滅する。
+    select: { id: true, status: true },
+  },
+} satisfies Prisma.ExamSelect
 
 /** 試験一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得、ユーザーでフィルタリング） */
 export const getExamsForList = async (userId: string) => {
@@ -31,40 +69,46 @@ export const getExamsForList = async (userId: string) => {
       },
       createdAt: true,
       updatedAt: true,
-      examPages: {
-        select: {
-          id: true,
-          studentAnswerImages: {
-            select: { examStudentId: true },
-          },
-          cropRegions: {
-            select: {
-              type: true,
-              questionScores: {
-                select: {
-                  status: true,
-                  examStudentId: true,
-                  partialScore: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      examSubtotalGroups: {
-        select: { id: true },
-      },
-      examStudents: {
-        // 進捗計算（renderer の getExamProgress）は受験者IDで答案・採点を突き合わせるので
-        // id が要る。select で主キーを落とすとこの突き合わせが黙って全滅する。
-        select: { id: true, status: true },
-      },
+      ...examProgressSourceSelect,
     },
     orderBy: {
       createdAt: "desc",
     },
   })
 }
+
+/**
+ * 進捗計算の元データを、renderer が読む形へ整える。
+ *
+ * examPage 配下に入れ子になっている採点領域・答案画像を平坦化し、Decimal の partialScore を
+ * number へ変換する（Prisma の Decimal は IPC を渡ると壊れるため境界で1回だけ変換する）。
+ * 一覧と単体取得の双方がこれを通るので、変換の実装はここだけになる。
+ */
+export const toExamProgressSource = (
+  exam: Prisma.ExamGetPayload<{ select: typeof examProgressSourceSelect }>
+): ExamProgressSource => ({
+  examPages: exam.examPages.map((examPage) => ({ id: examPage.id })),
+  cropRegions: exam.examPages.flatMap((examPage) =>
+    examPage.cropRegions.map((cropRegion) => ({
+      type: cropRegion.type,
+      questionScores: cropRegion.questionScores.map((questionScore) => ({
+        status: toScoringStatus(questionScore.status),
+        examStudentId: questionScore.examStudentId,
+        partialScore:
+          questionScore.partialScore == null
+            ? null
+            : Number(questionScore.partialScore),
+      })),
+    }))
+  ),
+  answerImages: exam.examPages.flatMap((examPage) =>
+    examPage.studentAnswerImages.map((studentAnswerImage) => ({
+      examStudentId: studentAnswerImage.examStudentId,
+    }))
+  ),
+  examStudents: exam.examStudents,
+  examSubtotalGroups: exam.examSubtotalGroups,
+})
 
 /** IDで試験を取得する（全リレーション含む: userExams・examPages・examSubtotalGroups・examStudents） */
 export const getExamById = async (id: string) => {

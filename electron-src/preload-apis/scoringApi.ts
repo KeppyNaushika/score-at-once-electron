@@ -43,8 +43,6 @@ export function createScoringApi() {
       ),
     getAnswerSheetProgress: (answerSheetId: string) =>
       ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
-    getExamProgress: (examId: string) =>
-      ipcRenderer.invoke("get-exam-progress", examId),
     getExamDecisionSummary: (examId: string, userId: string) =>
       ipcRenderer.invoke("get-exam-decision-summary", examId, userId),
     getCropRegionAssignments: (examId: string, userId: string) =>

@@ -81,3 +81,45 @@ describe("getExamProgress の受験者スコープ", () => {
     expect(progress.actualScoringCount).toBe(0)
   })
 })
+
+/**
+ * 進捗の分子と分母は同じ受験者集合で数える。
+ */
+describe("getExamProgress の受験者集合", () => {
+  it("答案画像が無い生徒の採点は分子にも入らない", () => {
+    const progress = getExamProgress({
+      examPages: [{ id: "page-1" }],
+      // 答案画像があるのは A のみ。B は採点行だけ存在する
+      answerImages: [{ examStudentId: EXAM_STUDENT_A }],
+      cropRegions: [
+        {
+          type: "QUESTION_ANSWER",
+          questionScores: [
+            {
+              examStudentId: EXAM_STUDENT_A,
+              status: "correct",
+              partialScore: null,
+            },
+            {
+              examStudentId: EXAM_STUDENT_B,
+              status: "correct",
+              partialScore: null,
+            },
+          ],
+        },
+      ],
+      examStudents: [
+        { id: EXAM_STUDENT_A, status: "participating" },
+        { id: EXAM_STUDENT_B, status: "participating" },
+      ],
+      examSubtotalGroups: [],
+    })
+
+    expect(progress.expectedScoringCount).toBe(1)
+    expect(progress.actualScoringCount).toBe(1)
+    // 分子が分母を超えないこと（100%超の進捗の再発検知）
+    expect(progress.actualScoringCount).toBeLessThanOrEqual(
+      progress.expectedScoringCount
+    )
+  })
+})

@@ -95,6 +95,24 @@ export type GradeItemWithDataSources = Pick<
   dataSources: GradeDataSourceWithRelations[]
 }
 
+/**
+ * データソースの新規作成入力。
+ *
+ * 参照先のidは種別ごとに1つだけ使う（`crop_region` なら `cropRegionId` のみ）。
+ * 満点は元データから毎回導くため入力に含めない（`weight` は換算満点で別物）。
+ */
+export interface GradeDataSourceInput {
+  gradeItemId: string
+  type: GradeDataSourceType
+  examId?: string
+  subtotalId?: string
+  cropRegionId?: string
+  courseworkItemId?: string
+  courseworkId?: string
+  name: string
+  weight: number
+}
+
 /** データソース（リレーション付き） */
 export type GradeDataSourceWithRelations = Omit<
   GradeDataSource,
