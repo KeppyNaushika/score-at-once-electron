@@ -8,11 +8,14 @@ import type {
   FontSizeOption,
   IndividualReportData,
   IndividualReportOptions,
+  ReportPopulation,
   TableColumns,
 } from "@/electron-src/lib/export/individual-report/types"
 
 interface ScoreTablePreviewProps {
   report: IndividualReportData
+  /** 設問別正答率・得点率の供給元（試験に1つ） */
+  population: ReportPopulation
   options: IndividualReportOptions
   fontScale: number
 }
@@ -46,21 +49,23 @@ function ScoreDisplay({
 
 export function ScoreTablePreview({
   report,
+  population,
   options,
   fontScale,
 }: ScoreTablePreviewProps) {
-  const data = report.scoringData.scores
+  const questionScores = report.scoringData.scores
   const columns = options.questionTableColumns
   const tableFontScale =
     fontScale * getFontSizeScale(options.questionTableFontSize)
 
-  if (data.length === 0) return null
+  if (questionScores.length === 0) return null
 
   // 1列表示の場合は従来のテーブル形式
   if (columns === 1) {
     return (
       <SingleColumnTable
         report={report}
+        population={population}
         options={options}
         fontScale={tableFontScale}
       />
@@ -71,6 +76,7 @@ export function ScoreTablePreview({
   return (
     <MultiColumnTable
       report={report}
+      population={population}
       options={options}
       fontScale={tableFontScale}
       columns={columns}
@@ -83,14 +89,16 @@ export function ScoreTablePreview({
  */
 function SingleColumnTable({
   report,
+  population,
   options,
   fontScale,
 }: {
   report: IndividualReportData
+  population: ReportPopulation
   options: IndividualReportOptions
   fontScale: number
 }) {
-  const data = report.scoringData.scores
+  const questionScores = report.scoringData.scores
   const baseFontSize = 11 * fontScale
 
   const cellStyle: React.CSSProperties = {
@@ -173,20 +181,16 @@ function SingleColumnTable({
           </tr>
         </thead>
         <tbody>
-          {data.map((questionScore, index) => {
+          {questionScores.map((questionScore, index) => {
             const isAlt = index % 2 === 1
             const rowStyle: React.CSSProperties = {
               backgroundColor: isAlt ? "#fafafa" : "transparent",
             }
 
             const correctRate =
-              report.statistics.questionCorrectRates[
-                questionScore.questionId
-              ] ?? 0
+              population.questionCorrectRates[questionScore.questionId] ?? 0
             const scoreRate =
-              report.statistics.questionScoreRates?.[
-                questionScore.questionId
-              ] ?? 0
+              population.questionScoreRates[questionScore.questionId] ?? 0
 
             const { mark, markColor } = getMarkInfo(questionScore.status)
 
@@ -292,26 +296,30 @@ function SingleColumnTable({
  */
 function MultiColumnTable({
   report,
+  population,
   options,
   fontScale,
   columns,
 }: {
   report: IndividualReportData
+  population: ReportPopulation
   options: IndividualReportOptions
   fontScale: number
   columns: TableColumns
 }) {
-  const data = report.scoringData.scores
+  const questionScores = report.scoringData.scores
   const baseFontSize = 10 * fontScale
 
-  // データを列数で分割
-  const rowsPerColumn = Math.ceil(data.length / columns)
-  const columnData: (typeof data)[] = []
-  for (let i = 0; i < columns; i++) {
-    const start = i * rowsPerColumn
-    const end = Math.min(start + rowsPerColumn, data.length)
-    columnData.push(data.slice(start, end))
-  }
+  // 設問を列数ぶんに分割
+  const rowsPerColumn = Math.ceil(questionScores.length / columns)
+  const questionScoreColumns = Array.from(
+    { length: columns },
+    (_unused, columnIndex) =>
+      questionScores.slice(
+        columnIndex * rowsPerColumn,
+        columnIndex * rowsPerColumn + rowsPerColumn
+      )
+  )
 
   const cellStyle: React.CSSProperties = {
     padding: `${1.5 * fontScale}mm ${2 * fontScale}mm`,
@@ -343,8 +351,8 @@ function MultiColumnTable({
       </h2>
 
       <div style={{ display: "flex", gap: "2mm" }}>
-        {columnData.map((colData, colIndex) => (
-          <div key={colIndex} style={{ width: columnWidth }}>
+        {questionScoreColumns.map((columnQuestionScores, columnIndex) => (
+          <div key={columnIndex} style={{ width: columnWidth }}>
             <table
               style={{
                 width: "100%",
@@ -408,7 +416,7 @@ function MultiColumnTable({
                 </tr>
               </thead>
               <tbody>
-                {colData.map((questionScore, index) => {
+                {columnQuestionScores.map((questionScore, index) => {
                   const isAlt = index % 2 === 1
                   const rowStyle: React.CSSProperties = {
                     backgroundColor: isAlt ? "#fafafa" : "transparent",
@@ -459,7 +467,7 @@ function MultiColumnTable({
                       {options.showCorrectRate && (
                         <td style={{ ...cellStyle, textAlign: "center" }}>
                           {Math.round(
-                            report.statistics.questionCorrectRates[
+                            population.questionCorrectRates[
                               questionScore.questionId
                             ] ?? 0
                           )}
@@ -469,7 +477,7 @@ function MultiColumnTable({
                       {options.showScoreRate && (
                         <td style={{ ...cellStyle, textAlign: "center" }}>
                           {Math.round(
-                            report.statistics.questionScoreRates?.[
+                            population.questionScoreRates[
                               questionScore.questionId
                             ] ?? 0
                           )}

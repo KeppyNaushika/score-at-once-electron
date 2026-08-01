@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   IndividualReportData,
   IndividualReportOptions,
+  ReportPopulation,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ReturnStudentDiff } from "@/electron-src/lib/prisma/returnSnapshot"
 
@@ -71,7 +72,10 @@ interface StudentSelectionCardProps {
   captureReturn: (examStudentIds: string[]) => Promise<boolean>
   // プレビュー関連
   exportTab?: ExportTabType
-  previewData?: IndividualReportData | null
+  previewReport?: {
+    report: IndividualReportData
+    population: ReportPopulation
+  } | null
   isPreviewLoading?: boolean
   previewError?: string | null
   previewStudentId?: string
@@ -113,7 +117,7 @@ export function StudentSelectionCard({
   capturingReturn,
   captureReturn,
   exportTab,
-  previewData,
+  previewReport,
   isPreviewLoading,
   previewError,
   previewStudentId,
@@ -424,10 +428,11 @@ export function StudentSelectionCard({
               <div className="flex flex-1 items-center justify-center">
                 <p className="text-sm text-destructive">{previewError}</p>
               </div>
-            ) : previewData && individualReportOptions ? (
+            ) : previewReport && individualReportOptions ? (
               <div className="mx-auto">
                 <IndividualReportPreview
-                  report={previewData}
+                  report={previewReport.report}
+                  population={previewReport.population}
                   options={individualReportOptions}
                   scale={0.45}
                 />

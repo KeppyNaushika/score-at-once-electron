@@ -183,6 +183,37 @@ export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
   })
 }
 
+/**
+ * 複数の小計項目の設問割り当てを1クエリでまとめて引く。
+ *
+ * 生徒×小計のループの内側で `getCropSubtotalsBySubtotalId` を呼ぶと
+ * 生徒数×小計数のクエリが飛ぶ。割り当ては生徒に依らないのでループの外で1回引く。
+ *
+ * @returns 小計 id → 割り当てられた設問領域 id。id を渡した小計は必ずキーに現れる
+ */
+export const getQuestionAssignmentsBySubtotalIds = async (
+  subtotalIds: string[]
+): Promise<Map<string, string[]>> => {
+  const assignmentsBySubtotalId = new Map<string, string[]>(
+    subtotalIds.map((subtotalId) => [subtotalId, []])
+  )
+  if (subtotalIds.length === 0) return assignmentsBySubtotalId
+
+  const cropSubtotals = await prisma.cropSubtotal.findMany({
+    where: {
+      subtotalId: { in: subtotalIds },
+      assignmentType: "QUESTION_ASSIGNMENT",
+    },
+    select: { subtotalId: true, cropRegionId: true },
+  })
+  for (const cropSubtotal of cropSubtotals) {
+    assignmentsBySubtotalId
+      .get(cropSubtotal.subtotalId)
+      ?.push(cropSubtotal.cropRegionId)
+  }
+  return assignmentsBySubtotalId
+}
+
 /** 設問領域IDでSUBTOTAL_DEFINITION型の紐付けを取得する（旧SubtotalDefinition互換） */
 export const getSubtotalDefinitionsByCropRegionId = async (
   cropRegionId: string

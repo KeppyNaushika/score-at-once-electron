@@ -6,6 +6,7 @@ import type { CropRegion } from "@prisma/client"
 
 import prisma from "../../prisma/client"
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
+import { getQuestionAssignmentsBySubtotalIds } from "../../prisma/cropSubtotal"
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
@@ -15,24 +16,27 @@ import {
   resolveEffectiveScores,
 } from "../../shared/calculations/scoreResolution"
 import {
-  calculateSubtotalScoreBySubtotalId,
+  computeSubtotalScore,
+  type QuestionAssignmentsBySubtotalId,
   type QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
 import type { SubtotalGroupData, SubtotalScore } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
-  buildScoreByStudentId,
   calculateQuestionCorrectRates,
   calculateQuestionScoreRates,
-  calculateStatisticsForStudent,
-  type StudentClassroomForStatistics,
+  collectRawTotalScores,
+  collectReportSubtotals,
+  collectSubtotalRawScores,
 } from "./statisticsCalculator"
 import type {
   ExamInfoForReport,
   GetIndividualReportDataOptions,
   GetIndividualReportDataResult,
   IndividualReportData,
+  ReportClassroom,
+  ReportPopulation,
   StudentInfoForReport,
   SubtotalGroupInfo,
   SubtotalGroupsForReportResult,
@@ -108,29 +112,36 @@ export async function fetchIndividualReportData(
       decisionsResult.success ? (decisionsResult.decisions ?? []) : []
     )
 
-    // 全生徒の小計点を計算（Subtotal単位）
-    const allScoringData = await Promise.all(
-      allScoringDataFromExcel.map(async (scoringData) => {
-        const subtotalScores = await buildSubtotalScoresFromGroups(
-          scoringData.examStudentId,
-          subtotalGroupsData,
-          allQuestionScores,
-          questionRegions
-        )
-        return { ...scoringData, subtotalScores }
-      })
+    // 設問割り当ては生徒に依らないので、生徒ループの外で1回だけ引く
+    const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
+      subtotalGroupsData.flatMap((group) =>
+        group.subtotals.map((subtotal) => subtotal.id)
+      )
     )
 
+    // 全生徒の小計点を計算（Subtotal単位）
+    const allScoringData = allScoringDataFromExcel.map((scoringData) => ({
+      ...scoringData,
+      subtotalScores: buildSubtotalScoresFromGroups(
+        scoringData.examStudentId,
+        subtotalGroupsData,
+        allQuestionScores,
+        questionRegions,
+        questionAssignments
+      ),
+    }))
+
     // 選択された生徒の小計点を計算
-    const selectedScoringData = await Promise.all(
-      selectedScoringDataFromExcel.map(async (scoringData) => {
-        const subtotalScores = await buildSubtotalScoresFromGroups(
+    const selectedScoringData = selectedScoringDataFromExcel.map(
+      (scoringData) => ({
+        ...scoringData,
+        subtotalScores: buildSubtotalScoresFromGroups(
           scoringData.examStudentId,
           subtotalGroupsData,
           allQuestionScores,
-          questionRegions
-        )
-        return { ...scoringData, subtotalScores }
+          questionRegions,
+          questionAssignments
+        ),
       })
     )
 
@@ -139,39 +150,33 @@ export async function fetchIndividualReportData(
     const questionScoreRates = calculateQuestionScoreRates(allScoringData)
 
     // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
-    // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）。
-    const studentReportClassrooms = (
+    // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）で、
+    // その交差は renderer が memberStudentIds から求める。
+    const reportClassrooms: ReportClassroom[] = (
       await getClassroomMembersForExam(examId)
-    ).filter((examClassroom) => examClassroom.studentReport)
-
-    // studentId → 本人が所属する studentReport 学級（複数学級対応）。学級ごとに
-    // 1回だけ変換し、生徒ごとの走査（O(学級×学級人数)）を避ける。
-    const studentClassroomsByStudentId = new Map<
-      string,
-      StudentClassroomForStatistics[]
-    >()
-    for (const examClassroom of studentReportClassrooms) {
-      const memberStudentIds = examClassroom.classroom.memberships.map(
-        (membership) => membership.studentId
-      )
-      const entry: StudentClassroomForStatistics = {
+    )
+      .filter((examClassroom) => examClassroom.studentReport)
+      .map((examClassroom) => ({
         classroomId: examClassroom.classroomId,
         className: examClassroom.classroom.name,
         grade:
           examClassroom.classroom.grade != null
             ? String(examClassroom.classroom.grade)
             : null,
-        memberStudentIds,
-      }
-      for (const studentId of memberStudentIds) {
-        const list = studentClassroomsByStudentId.get(studentId)
-        if (list) list.push(entry)
-        else studentClassroomsByStudentId.set(studentId, [entry])
-      }
-    }
+        memberStudentIds: examClassroom.classroom.memberships.map(
+          (membership) => membership.studentId
+        ),
+      }))
 
-    // 全生徒の合計点索引を1回だけ構築し、各生徒の統計算出で共有（再構築の O(N^2) 回避）
-    const scoreByStudentId = buildScoreByStudentId(allScoringData)
+    // 統計の母集団。生徒ごとには変わらないので試験に1つだけ返す
+    const population: ReportPopulation = {
+      rawTotalScores: collectRawTotalScores(allScoringData),
+      subtotalRawScores: collectSubtotalRawScores(allScoringData),
+      subtotals: collectReportSubtotals(allScoringData),
+      classrooms: reportClassrooms,
+      questionCorrectRates,
+      questionScoreRates,
+    }
 
     // 各生徒のレポートデータを構築
     const reports: IndividualReportData[] = selectedScoringData.map(
@@ -186,20 +191,6 @@ export async function fetchIndividualReportData(
           attendanceNumber: scoringData.attendanceNumber ?? null,
         }
 
-        // 本人が所属する studentReport 学級（事前構築した Map から O(1) 取得）
-        const studentClassrooms =
-          studentClassroomsByStudentId.get(scoringData.studentId) ?? []
-
-        // 統計データ（subtotalScoresから直接グループ情報を取得可能）
-        const statistics = calculateStatisticsForStudent(
-          scoringData.totalScore,
-          allScoringData,
-          studentClassrooms,
-          questionCorrectRates,
-          questionScoreRates,
-          scoreByStudentId
-        )
-
         // 学習アドバイス
         const learningAdvice = generateLearningAdvice(
           scoringData.scores,
@@ -211,7 +202,6 @@ export async function fetchIndividualReportData(
           studentInfo,
           examInfo,
           scoringData,
-          statistics,
           learningAdvice,
         }
       }
@@ -224,6 +214,7 @@ export async function fetchIndividualReportData(
       success: true,
       reports,
       examInfo,
+      population,
       warnings: warnings.hasWarnings ? warnings.data : undefined,
     }
   } catch (error) {
@@ -262,12 +253,13 @@ async function getSubtotalGroupsWithSubtotals(
  * SubtotalGroup単位で小計点を計算
  * CropRegion（SUBTOTAL_SCORE）を使わず、Subtotalから直接計算
  */
-async function buildSubtotalScoresFromGroups(
+function buildSubtotalScoresFromGroups(
   examStudentId: string,
   subtotalGroups: SubtotalGroupData[],
   allQuestionScores: EffectiveScore[],
-  questionRegions: CropRegion[]
-): Promise<SubtotalScore[]> {
+  questionRegions: CropRegion[],
+  questionAssignments: QuestionAssignmentsBySubtotalId
+): SubtotalScore[] {
   // 採点データを変換
   const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
     (score) => ({
@@ -282,11 +274,11 @@ async function buildSubtotalScoresFromGroups(
 
   for (const group of subtotalGroups) {
     for (const subtotal of group.subtotals) {
-      const scoreResult = await calculateSubtotalScoreBySubtotalId(
+      const scoreResult = computeSubtotalScore(
         examStudentId,
-        subtotal.id,
         questionScoreData,
-        questionRegions
+        questionRegions,
+        questionAssignments.get(subtotal.id) ?? []
       )
 
       results.push({

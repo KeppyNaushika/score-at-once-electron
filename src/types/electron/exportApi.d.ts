@@ -288,16 +288,4 @@ export interface ExportAPI {
     outputPath?: string
     error?: string
   }>
-
-  // Progress listeners
-  onExportProgress: (
-    callback: (progress: {
-      current: number
-      total: number
-      step: string
-      percentage: number
-      currentStepIndex?: number
-      totalSteps?: number
-    }) => void
-  ) => () => void
 }

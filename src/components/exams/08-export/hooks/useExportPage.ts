@@ -315,16 +315,6 @@ export function useExportPage() {
     loadStudentData()
   }, [loadStudentData])
 
-  // プログレスリスナーの設定
-  useEffect(() => {
-    const removeListener = window.electronAPI.onExportProgress?.((progress) => {
-      setExportProgress(progress.percentage)
-      setCurrentStep(progress.step)
-    })
-
-    return removeListener
-  }, [])
-
   // フィルタリング（既にソート済みの students を使用）
   const filteredStudents = students.filter((examStudent) => {
     const student = examStudent.student

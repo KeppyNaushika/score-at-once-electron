@@ -141,3 +141,81 @@ describe("computeItemAnalysis - dValue", () => {
     expect(dValueOf(result, "q2")).toBeNull()
   })
 })
+
+// ================== 識別力の判定帯 ==================
+
+/**
+ * 判定帯（0.2 / 0.3 / 0.4）を作る 4 人。
+ *
+ * q_rank が合計点の順位を確定させ、上位群・下位群はそれぞれ 1 人になる
+ * （groupSize = round(4 × 0.27) = 1）。その 2 人の q_target 得点率の差が
+ * そのまま D 値になるので、狙った値を厳密に作れる。
+ */
+function makeBandStudents(
+  topTargetScore: number,
+  bottomTargetScore: number
+): ItemAnalysisInputStudent[] {
+  const rankScores = [300, 200, 100, 0]
+  const targetScores = [topTargetScore, 0, 0, bottomTargetScore]
+  return rankScores.map((rankScore, studentIndex) => ({
+    items: [
+      {
+        questionId: "q_rank",
+        label: "q_rank",
+        maxScore: 300,
+        score: rankScore,
+        isCorrect: rankScore === 300,
+      },
+      {
+        questionId: "q_target",
+        label: "q_target",
+        maxScore: 100,
+        score: targetScores[studentIndex],
+        isCorrect: targetScores[studentIndex] === 100,
+      },
+    ],
+  }))
+}
+
+function dValueLevelOf(students: ItemAnalysisInputStudent[]) {
+  return computeItemAnalysis(students)!.items.find(
+    (item) => item.questionId === "q_target"
+  )!.dValueLevel
+}
+
+/**
+ * 識別係数・D値の判定帯。`discriminationLevel` と `dValueLevel` は同一の
+ * 判定関数を共有しているので、値を厳密に作れる D 値側で境界を固定する。
+ */
+describe("computeItemAnalysis - 識別力の判定帯", () => {
+  it("負の識別力は negative", () => {
+    expect(dValueLevelOf(makeBandStudents(0, 20))).toBe("negative")
+  })
+
+  it("0 は poor", () => {
+    expect(dValueLevelOf(makeBandStudents(0, 0))).toBe("poor")
+  })
+
+  it("0.2 未満は poor", () => {
+    expect(dValueLevelOf(makeBandStudents(19, 0))).toBe("poor")
+  })
+
+  it("0.2 ちょうどは marginal（境界は下側を含む）", () => {
+    expect(dValueLevelOf(makeBandStudents(20, 0))).toBe("marginal")
+  })
+
+  it("0.3 ちょうどは acceptable", () => {
+    expect(dValueLevelOf(makeBandStudents(30, 0))).toBe("acceptable")
+  })
+
+  it("0.4 ちょうどは good", () => {
+    expect(dValueLevelOf(makeBandStudents(40, 0))).toBe("good")
+  })
+
+  it("算出できない場合は insufficient", () => {
+    // 1人だけなら群サイズ0で D 値が出せない
+    expect(dValueLevelOf(makeBandStudents(40, 0).slice(0, 1))).toBe(
+      "insufficient"
+    )
+  })
+})

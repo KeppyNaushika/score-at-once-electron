@@ -4,6 +4,7 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
+import { getQuestionAssignmentsBySubtotalIds } from "../../prisma/cropSubtotal"
 import { getExamById } from "../../prisma/exam"
 import { getStudentsForExam } from "../../prisma/examStudent"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
@@ -16,7 +17,8 @@ import {
   ScoreConflict,
 } from "../../shared/calculations/scoreResolution"
 import {
-  calculateSubtotalScoreBySubtotalId,
+  computeSubtotalScore,
+  type QuestionAssignmentsBySubtotalId,
   QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
 import {
@@ -239,6 +241,13 @@ async function buildScoringData(
   subtotalGroups: SubtotalGroupData[],
   questionScores: EffectiveScore[]
 ): Promise<ScoringData[]> {
+  // 設問割り当ては生徒に依らないので、生徒ループの外で1回だけ引く
+  const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
+    subtotalGroups.flatMap((group) =>
+      group.subtotals.map((subtotal) => subtotal.id)
+    )
+  )
+
   return Promise.all(
     selectedExamStudents.map(async (examStudent) => {
       const examStudentScores = questionScores.filter(
@@ -246,11 +255,12 @@ async function buildScoringData(
       )
 
       const scores = buildScoreDetails(examStudentScores, questionRegions)
-      const subtotalScores = await buildSubtotalScores(
+      const subtotalScores = buildSubtotalScores(
         examStudent.id,
         subtotalGroups,
         questionRegions,
-        questionScores
+        questionScores,
+        questionAssignments
       )
 
       const allUnscored = scores.every((score) => score.status === "unscored")
@@ -319,12 +329,13 @@ function buildScoreDetails(
  * @param allQuestionScores - 全受験者の設問スコア配列
  * @returns 小計スコア配列
  */
-async function buildSubtotalScores(
+function buildSubtotalScores(
   examStudentId: string,
   subtotalGroups: SubtotalGroupData[],
   questionRegions: CropRegion[],
-  allQuestionScores: EffectiveScore[]
-): Promise<SubtotalScore[]> {
+  allQuestionScores: EffectiveScore[],
+  questionAssignments: QuestionAssignmentsBySubtotalId
+): SubtotalScore[] {
   // 設問スコアデータを変換
   const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
     (score) => ({
@@ -339,11 +350,11 @@ async function buildSubtotalScores(
 
   for (const group of subtotalGroups) {
     for (const subtotal of group.subtotals) {
-      const scoreResult = await calculateSubtotalScoreBySubtotalId(
+      const scoreResult = computeSubtotalScore(
         examStudentId,
-        subtotal.id,
         questionScoreData,
-        questionRegions
+        questionRegions,
+        questionAssignments.get(subtotal.id) ?? []
       )
 
       results.push({

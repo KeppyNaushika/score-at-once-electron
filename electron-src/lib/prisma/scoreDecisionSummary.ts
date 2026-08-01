@@ -14,9 +14,9 @@ import type {
 } from "@/types/scoreDecision.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
+import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import prisma from "./client"
-import { calculateActualScore } from "./questionScore"
 import { canDecideExamScores } from "./scoreDecision"
 
 const cellKey = (examStudentId: string, cropRegionId: string): string =>

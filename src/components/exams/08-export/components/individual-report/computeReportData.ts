@@ -5,9 +5,11 @@
 import type {
   IndividualReportData,
   IndividualReportOptions,
-  StatisticsData,
+  RawTotalScoreEntry,
+  ReportClassroom,
+  ReportPopulation,
+  ReportSubtotal,
   SubtotalRawScores,
-  SubtotalStatistics,
 } from "@/electron-src/lib/export/individual-report/types"
 import {
   calculateAverage,
@@ -15,7 +17,10 @@ import {
   calculateRank,
   calculateStandardDeviation,
 } from "@/electron-src/lib/shared/calculations/numericStats"
-import type { SubtotalScore } from "@/electron-src/lib/shared/types"
+import type {
+  ScoringData,
+  SubtotalScore,
+} from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 /** 受験状態フィルタ */
@@ -48,68 +53,85 @@ interface GroupedSubtotalData {
 // 統計フィルタリング
 // ============================
 
+/** 受験状態フィルタに合致するか */
+function isIncludedStatus(
+  status: ExamStudentStatus,
+  includeStatuses: BoxPlotIncludeStatuses
+): boolean {
+  if (status === "participating") return includeStatuses.participating
+  if (status === "expected") return includeStatuses.expected
+  if (status === "absent") return includeStatuses.absent
+  return true
+}
+
+/** 未採点（null）を除いた得点だけを取り出す */
+function toScores(rawTotalScores: RawTotalScoreEntry[]): number[] {
+  return rawTotalScores
+    .map((rawTotalScore) => rawTotalScore.totalScore)
+    .filter((score): score is number => score !== null)
+}
+
+/** 偏差値。本人が未採点なら 0、母集団にばらつきが無ければ 50 */
+function toDeviation(
+  studentScore: number | null,
+  average: number,
+  stdDev: number
+): number {
+  if (studentScore === null) return 0
+  if (stdDev === 0) return 50
+  return Math.round(((studentScore - average) / stdDev) * 10 + 50)
+}
+
+/** 本人が所属する生徒表示学級だけに絞る（1人が複数学級に属することがある） */
+export function selectStudentClassrooms(
+  classrooms: ReportClassroom[],
+  studentId: string
+): ReportClassroom[] {
+  return classrooms.filter((classroom) =>
+    classroom.memberStudentIds.includes(studentId)
+  )
+}
+
 /**
- * 受験状態フィルタ付きで統計を再計算
+ * 受験状態フィルタを適用して統計を算出する。
+ *
+ * 母集団は試験に1つで、本人の得点と所属学級だけが生徒ごとに変わる。
  */
 export function computeFilteredStats(
-  report: IndividualReportData,
-  statuses: BoxPlotIncludeStatuses
-): StatisticsData {
-  const raw = report.statistics.rawTotalScores
-  if (!raw || raw.length === 0) return report.statistics
+  population: ReportPopulation,
+  scoringData: ScoringData,
+  includeStatuses: BoxPlotIncludeStatuses
+) {
+  const includedTotalScores = population.rawTotalScores.filter(
+    (rawTotalScore) => isIncludedStatus(rawTotalScore.status, includeStatuses)
+  )
+  const overallScores = toScores(includedTotalScores)
+  const overallAverage = calculateAverage(overallScores)
+  const overallStdDev = calculateStandardDeviation(overallScores)
+  const studentScore = scoringData.totalScore
 
-  const includeAll =
-    statuses.participating && statuses.expected && statuses.absent
-  if (includeAll) return report.statistics
-
-  const filterByStatus = (entries: typeof raw) =>
-    entries.filter((entry) => {
-      if (entry.status === "participating") return statuses.participating
-      if (entry.status === "expected") return statuses.expected
-      if (entry.status === "absent") return statuses.absent
-      return true
-    })
-
-  const filteredAll = filterByStatus(raw)
-  const allScores = filteredAll
-    .map((entry) => entry.totalScore)
-    .filter((score): score is number => score !== null)
-
-  const overallAvg = calculateAverage(allScores)
-  const overallStd = calculateStandardDeviation(allScores)
-  const studentScore = report.scoringData.totalScore
-  const deviation =
-    studentScore === null || overallStd === 0
-      ? studentScore === null
-        ? 0
-        : 50
-      : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
-
-  // 学級別統計を受験状態フィルタ付きで再計算（学級ごとに memberStudentIds で母集団を絞る）
-  const classrooms = report.statistics.classrooms.map((classroom) => {
-    const memberSet = new Set(classroom.memberStudentIds)
-    const filteredMembers = filteredAll.filter((entry) =>
-      memberSet.has(entry.studentId)
+  // 学級ごとに memberStudentIds で母集団を絞る。所属判定は受験者数だけ繰り返すので、
+  // 在籍者の集合を学級ごとに1回だけ組む（配列の走査を内側に置くと生徒数×在籍者数になる）
+  const classrooms = selectStudentClassrooms(
+    population.classrooms,
+    scoringData.studentId
+  ).map((classroom) => {
+    const memberStudentIds = new Set(classroom.memberStudentIds)
+    const classroomTotalScores = includedTotalScores.filter((rawTotalScore) =>
+      memberStudentIds.has(rawTotalScore.studentId)
     )
-    const classroomScores = filteredMembers
-      .map((entry) => entry.totalScore)
-      .filter((score): score is number => score !== null)
+    const classroomScores = toScores(classroomTotalScores)
     const classroomAverage = calculateAverage(classroomScores)
     const classroomStdDev = calculateStandardDeviation(classroomScores)
     return {
-      ...classroom,
+      classroomId: classroom.classroomId,
+      className: classroom.className,
+      grade: classroom.grade,
       average: classroomAverage,
       stdDev: classroomStdDev,
       // 偏差値も同じ母集団で算出する（平均・順位と食い違わせない）
-      deviation:
-        studentScore === null
-          ? 0
-          : classroomStdDev === 0
-            ? 50
-            : Math.round(
-                ((studentScore - classroomAverage) / classroomStdDev) * 10 + 50
-              ),
-      total: filteredMembers.length,
+      deviation: toDeviation(studentScore, classroomAverage, classroomStdDev),
+      total: classroomTotalScores.length,
       rank:
         studentScore !== null
           ? calculateRank(studentScore, classroomScores)
@@ -118,19 +140,16 @@ export function computeFilteredStats(
   })
 
   return {
-    ...report.statistics,
     overall: {
-      ...report.statistics.overall,
-      average: overallAvg,
-      stdDev: overallStd,
-      total: filteredAll.length,
+      average: overallAverage,
+      stdDev: overallStdDev,
+      total: includedTotalScores.length,
     },
     classrooms,
     personal: {
-      ...report.statistics.personal,
-      deviation,
+      deviation: toDeviation(studentScore, overallAverage, overallStdDev),
       overallRank:
-        studentScore !== null ? calculateRank(studentScore, allScores) : 0,
+        studentScore !== null ? calculateRank(studentScore, overallScores) : 0,
     },
   }
 }
@@ -140,63 +159,34 @@ export function computeFilteredStats(
 // ============================
 
 /**
- * 小計点箱ひげ図の統計を受験状態フィルタ付きで再計算
+ * 小計点箱ひげ図の統計を受験状態フィルタ付きで算出
  */
 export function computeFilteredSubtotalStats(
-  rawScores: SubtotalRawScores[],
-  subtotalStatistics: SubtotalStatistics[],
+  subtotalRawScores: SubtotalRawScores[],
+  subtotals: ReportSubtotal[],
   includeStatuses: BoxPlotIncludeStatuses
 ): ComputedSubtotalStat[] {
-  const includeAll =
-    includeStatuses.participating &&
-    includeStatuses.expected &&
-    includeStatuses.absent
-
-  return subtotalStatistics.map((stat) => {
-    const rawData = rawScores.find(
-      (subtotalRawScore) => subtotalRawScore.subtotalId === stat.subtotalId
+  return subtotals.map((subtotal) => {
+    const rawScores = subtotalRawScores.find(
+      (subtotalRawScore) => subtotalRawScore.subtotalId === subtotal.subtotalId
     )
-
-    if (!rawData || includeAll) {
-      return {
-        subtotalId: stat.subtotalId,
-        subtotalLabel: stat.subtotalLabel,
-        subtotalGroupId: stat.subtotalGroupId,
-        boxPlot: stat.boxPlot,
-        average: stat.average,
-        maxScore: stat.maxScore,
-      }
-    }
-
-    const filteredScores = rawData.scores
-      .filter((rawScore) => {
-        if (rawScore.status === "participating")
-          return includeStatuses.participating
-        if (rawScore.status === "expected") return includeStatuses.expected
-        if (rawScore.status === "absent") return includeStatuses.absent
-        return true
-      })
-      .map((rawScore) => rawScore.score)
+    const includedScores = (rawScores?.scores ?? [])
+      .filter((studentSubtotalScore) =>
+        isIncludedStatus(studentSubtotalScore.status, includeStatuses)
+      )
+      .map((studentSubtotalScore) => studentSubtotalScore.score)
       .filter((score): score is number => score !== null)
 
-    if (filteredScores.length === 0) {
-      return {
-        subtotalId: stat.subtotalId,
-        subtotalLabel: stat.subtotalLabel,
-        subtotalGroupId: stat.subtotalGroupId,
-        boxPlot: { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
-        average: 0,
-        maxScore: stat.maxScore,
-      }
-    }
-
     return {
-      subtotalId: stat.subtotalId,
-      subtotalLabel: stat.subtotalLabel,
-      subtotalGroupId: stat.subtotalGroupId,
-      boxPlot: calculateBoxPlot(filteredScores),
-      average: calculateAverage(filteredScores),
-      maxScore: stat.maxScore,
+      subtotalId: subtotal.subtotalId,
+      subtotalLabel: subtotal.subtotalLabel,
+      subtotalGroupId: subtotal.subtotalGroupId,
+      boxPlot:
+        includedScores.length > 0
+          ? calculateBoxPlot(includedScores)
+          : { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
+      average: calculateAverage(includedScores),
+      maxScore: subtotal.maxScore,
     }
   })
 }
@@ -225,24 +215,17 @@ export function isTotalScoreStat(statId: string): boolean {
  * 母集団は当該学級の受験日所属生徒に限る（memberStudentIds で絞る）。
  */
 export function computeFilteredClassroomStats(
-  rawTotalScores: {
-    studentId: string
-    totalScore: number | null
-    status: ExamStudentStatus
-  }[],
-  classrooms: {
-    classroomId: string
-    className: string
-    memberStudentIds: string[]
-  }[],
+  rawTotalScores: RawTotalScoreEntry[],
+  classrooms: ReportClassroom[],
   totalMaxScore: number,
   includeStatuses: BoxPlotIncludeStatuses
 ): ComputedSubtotalStat[] {
   return classrooms.map((classroom) => {
-    const memberIds = new Set(classroom.memberStudentIds)
+    // 在籍者の集合は学級ごとに1回だけ組む（受験者数ぶん所属判定を繰り返すため）
+    const memberStudentIds = new Set(classroom.memberStudentIds)
     const stat = computeFilteredOverallStat(
       rawTotalScores.filter((rawTotalScore) =>
-        memberIds.has(rawTotalScore.studentId)
+        memberStudentIds.has(rawTotalScore.studentId)
       ),
       totalMaxScore,
       includeStatuses
@@ -257,34 +240,25 @@ export function computeFilteredClassroomStats(
 }
 
 export function computeFilteredOverallStat(
-  rawTotalScores: {
-    studentId: string
-    totalScore: number | null
-    status: ExamStudentStatus
-  }[],
+  rawTotalScores: RawTotalScoreEntry[],
   totalMaxScore: number,
   includeStatuses: BoxPlotIncludeStatuses
 ): ComputedSubtotalStat {
-  const filteredScores = rawTotalScores
-    .filter((rawTotalScore) => {
-      if (rawTotalScore.status === "participating")
-        return includeStatuses.participating
-      if (rawTotalScore.status === "expected") return includeStatuses.expected
-      if (rawTotalScore.status === "absent") return includeStatuses.absent
-      return true
-    })
-    .map((rawTotalScore) => rawTotalScore.totalScore)
-    .filter((score): score is number => score !== null)
+  const includedScores = toScores(
+    rawTotalScores.filter((rawTotalScore) =>
+      isIncludedStatus(rawTotalScore.status, includeStatuses)
+    )
+  )
 
   return {
     subtotalId: OVERALL_STAT_ID,
     subtotalLabel: "合計点",
     subtotalGroupId: "__overall__",
     boxPlot:
-      filteredScores.length > 0
-        ? calculateBoxPlot(filteredScores)
+      includedScores.length > 0
+        ? calculateBoxPlot(includedScores)
         : { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
-    average: calculateAverage(filteredScores),
+    average: calculateAverage(includedScores),
     maxScore: totalMaxScore,
   }
 }
@@ -429,7 +403,7 @@ export function getVisibleSectionIndices(
  */
 export function buildStatsItems(
   report: IndividualReportData,
-  filteredStats: StatisticsData,
+  filteredStats: ReturnType<typeof computeFilteredStats>,
   options: IndividualReportOptions
 ): { label: string; value: string }[] {
   const items: { label: string; value: string }[] = []

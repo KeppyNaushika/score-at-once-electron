@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import type {
   IndividualReportData,
   IndividualReportOptions,
+  ReportPopulation,
 } from "@/electron-src/lib/export/individual-report/types"
 
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
@@ -23,6 +24,7 @@ import {
   getVisibleSectionIndices,
   groupSubtotalData,
   isTotalScoreStat,
+  selectStudentClassrooms,
   splitItemsIntoColumns,
 } from "./computeReportData"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"
@@ -47,6 +49,7 @@ export interface PageAllocation {
  */
 export function generatePrintHtml(
   reports: IndividualReportData[],
+  population: ReportPopulation,
   options: IndividualReportOptions,
   reportsPageAllocations?: PageAllocation[][]
 ): string {
@@ -60,6 +63,7 @@ export function generatePrintHtml(
 
       const reportHtml = generateSingleReportHtml(
         report,
+        population,
         options,
         fontScale,
         visibleSectionIndices,
@@ -124,6 +128,7 @@ export function generatePrintHtml(
  */
 function generateSingleReportHtml(
   report: IndividualReportData,
+  population: ReportPopulation,
   options: IndividualReportOptions,
   fontScale: number,
   visibleSectionIndices: number[],
@@ -145,6 +150,7 @@ function generateSingleReportHtml(
       const sectionElement = renderSectionElement(
         sectionIndex,
         report,
+        population,
         options,
         fontScale
       )
@@ -168,6 +174,7 @@ function generateSingleReportHtml(
 function renderSectionElement(
   index: number,
   report: IndividualReportData,
+  population: ReportPopulation,
   options: IndividualReportOptions,
   fontScale: number
 ): React.ReactElement | null {
@@ -180,7 +187,8 @@ function renderSectionElement(
 
     case 2: {
       const filteredStats = computeFilteredStats(
-        report,
+        population,
+        report.scoringData,
         options.boxPlotIncludeStatuses
       )
       const items = buildStatsItems(report, filteredStats, options)
@@ -247,8 +255,8 @@ function renderSectionElement(
         absent: true,
       }
       const computedStats = computeFilteredSubtotalStats(
-        report.statistics.subtotalRawScores || [],
-        report.statistics.subtotalStatistics,
+        population.subtotalRawScores,
+        population.subtotals,
         includeStatuses
       )
 
@@ -287,7 +295,7 @@ function renderSectionElement(
       if (graphOptions.showTotalScoreBoxPlot) {
         allStats.push(
           computeFilteredOverallStat(
-            report.statistics.rawTotalScores || [],
+            population.rawTotalScores,
             report.scoringData.totalMaxScore,
             includeStatuses
           )
@@ -298,8 +306,11 @@ function renderSectionElement(
       if (options.statistics.boxPlot.classroom) {
         allStats.push(
           ...computeFilteredClassroomStats(
-            report.statistics.rawTotalScores || [],
-            report.statistics.classrooms,
+            population.rawTotalScores,
+            selectStudentClassrooms(
+              population.classrooms,
+              report.scoringData.studentId
+            ),
             report.scoringData.totalMaxScore,
             includeStatuses
           )
@@ -358,6 +369,7 @@ function renderSectionElement(
       // 設問テーブル（既にhooks不使用）
       return React.createElement(ScoreTablePreview, {
         report,
+        population,
         options,
         fontScale,
       })
@@ -366,7 +378,7 @@ function renderSectionElement(
       // 学習アドバイス（既にhooks不使用）
       const learningAdvice = calculateLearningAdvice(
         report.scoringData.scores,
-        report.statistics.questionCorrectRates,
+        population.questionCorrectRates,
         options.adviceOptions
       )
       return React.createElement(LearningAdvicePreview, {

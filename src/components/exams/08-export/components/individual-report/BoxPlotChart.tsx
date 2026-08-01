@@ -11,7 +11,7 @@
 import { useMemo } from "react"
 
 import type {
-  StatisticsData,
+  ReportPopulation,
   SubtotalGroupSelection,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ScoringData } from "@/electron-src/lib/shared/types"
@@ -23,6 +23,7 @@ import {
   computeFilteredOverallStat,
   computeFilteredSubtotalStats,
   isTotalScoreStat,
+  selectStudentClassrooms,
 } from "./computeReportData"
 
 const DEFAULT_INCLUDE_STATUSES: BoxPlotIncludeStatuses = {
@@ -32,7 +33,7 @@ const DEFAULT_INCLUDE_STATUSES: BoxPlotIncludeStatuses = {
 }
 
 interface BoxPlotChartProps {
-  statistics: StatisticsData
+  population: ReportPopulation
   scoringData: ScoringData
   fontScale: number
   showMin?: boolean
@@ -57,7 +58,7 @@ interface BoxPlotChartProps {
  * hooks付きラッパー（プレビュー用）
  */
 export function BoxPlotChart({
-  statistics,
+  population,
   scoringData,
   fontScale,
   showMin = true,
@@ -75,16 +76,16 @@ export function BoxPlotChart({
   showTotalScoreBoxPlot = false,
   showClassroomBoxPlot = false,
 }: BoxPlotChartProps) {
-  // renderer側で統計を再計算（受験状態フィルタ対応）
+  // renderer側で統計を算出（受験状態フィルタ対応）
   const computedStats = useMemo(() => {
     return computeFilteredSubtotalStats(
-      statistics.subtotalRawScores || [],
-      statistics.subtotalStatistics,
+      population.subtotalRawScores,
+      population.subtotals,
       boxPlotIncludeStatuses
     )
   }, [
-    statistics.subtotalRawScores,
-    statistics.subtotalStatistics,
+    population.subtotalRawScores,
+    population.subtotals,
     boxPlotIncludeStatuses,
   ])
 
@@ -130,30 +131,31 @@ export function BoxPlotChart({
   const overallStat = useMemo(() => {
     if (!showTotalScoreBoxPlot) return null
     return computeFilteredOverallStat(
-      statistics.rawTotalScores || [],
+      population.rawTotalScores,
       scoringData.totalMaxScore,
       boxPlotIncludeStatuses
     )
   }, [
     showTotalScoreBoxPlot,
-    statistics.rawTotalScores,
+    population.rawTotalScores,
     scoringData.totalMaxScore,
     boxPlotIncludeStatuses,
   ])
 
-  // 学級ごとの合計点箱ひげ図（複数学級対応）
+  // 学級ごとの合計点箱ひげ図（本人の所属学級それぞれ）
   const classroomStats = useMemo(() => {
     if (!showClassroomBoxPlot) return []
     return computeFilteredClassroomStats(
-      statistics.rawTotalScores || [],
-      statistics.classrooms,
+      population.rawTotalScores,
+      selectStudentClassrooms(population.classrooms, scoringData.studentId),
       scoringData.totalMaxScore,
       boxPlotIncludeStatuses
     )
   }, [
     showClassroomBoxPlot,
-    statistics.rawTotalScores,
-    statistics.classrooms,
+    population.rawTotalScores,
+    population.classrooms,
+    scoringData.studentId,
     scoringData.totalMaxScore,
     boxPlotIncludeStatuses,
   ])

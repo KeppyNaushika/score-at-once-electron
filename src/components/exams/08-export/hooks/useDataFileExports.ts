@@ -101,13 +101,18 @@ export function useDataFileExports({
           studentPlacements,
         })
 
-      if (!dataResult.success || !dataResult.reports) {
+      if (
+        !dataResult.success ||
+        !dataResult.reports ||
+        !dataResult.population
+      ) {
         throw new Error(dataResult.error || "データ取得に失敗しました")
       }
 
       // 2. HTMLを生成（プレビューと同じ構造）
       const html = generatePrintHtml(
         dataResult.reports,
+        dataResult.population,
         individualReportOptions
       )
 

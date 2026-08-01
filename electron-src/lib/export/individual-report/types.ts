@@ -7,7 +7,6 @@ import type { SubtotalGroup } from "@prisma/client"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import { defineStringUnion } from "../../../../src/types/stringUnion"
-import type { BoxPlotData } from "../../shared/calculations/numericStats"
 import type { ScoringData, StudentExportPlacement } from "../../shared/types"
 
 // ================== 表示モード関連 ==================
@@ -198,27 +197,20 @@ export interface SubtotalRawScores {
   scores: StudentSubtotalScore[]
 }
 
-/** 生徒ごとの合計点データ（renderer側での統計再計算用） */
+/** 生徒ごとの合計点データ（統計の母集団） */
 export interface RawTotalScoreEntry {
   studentId: string
   totalScore: number | null
   status: ExamStudentStatus
-  className?: string
-  grade?: string
 }
 
-/** 小計別統計データ */
-export interface SubtotalStatistics {
+/** 小計の識別・表示情報（統計値は持たない） */
+export interface ReportSubtotal {
   subtotalId: string
   subtotalLabel: string
   maxScore: number
-  average: number
-  stdDev: number
-  boxPlot: BoxPlotData
   /** SubtotalGroup ID */
   subtotalGroupId: string
-  /** SubtotalGroup名 */
-  subtotalGroupName: string
 }
 
 /** SubtotalGroup選択UI用（Prisma型のサブセット。id/name のみ使用） */
@@ -231,64 +223,42 @@ export interface SubtotalGroupSelection {
 }
 
 /**
- * 学級別統計（個人成績表の複数学級比較用）
+ * 生徒表示（studentReport）対象の学級と、その受験日所属生徒。
  *
- * 母集団は「studentReport 選択学級 ∩ 本人の受験日所属学級」の各学級全体。
- * 1人の生徒が複数の studentReport 学級に属する場合は複数エントリになる。
+ * ある生徒の学級統計の母集団は「本人が memberStudentIds に含まれる学級」全体。
+ * 1人の生徒が複数の studentReport 学級に属することがある。
  */
-export interface ClassroomStatisticsEntry {
+export interface ReportClassroom {
   classroomId: string
   className: string
   grade: string | null
-  /**
-   * 当該学級の受験日所属生徒ID（renderer 側の受験状態フィルタ再計算用の母集団）。
-   * rawTotalScores を studentId で絞り込むためのキー。
-   */
+  /** 当該学級の受験日所属生徒ID。rawTotalScores を絞り込むキー */
   memberStudentIds: string[]
-  average: number
-  stdDev: number
-  /** 当該学級を母集団とした偏差値 */
-  deviation: number
-  boxPlot: BoxPlotData
-  /** 母集団サイズ（受験状態フィルタ前の在籍生徒数。順位の分母表示に使用） */
-  total: number
-  /** この生徒の当該学級内順位（同点同順位。0=未採点・対象外） */
-  rank: number
 }
 
-/** 統計データ */
-export interface StatisticsData {
-  // 全体統計
-  overall: {
-    average: number
-    stdDev: number
-    boxPlot: BoxPlotData
-    total: number
-  }
-
-  // 学級統計（studentReport 選択学級ごと。複数学級対応）
-  classrooms: ClassroomStatisticsEntry[]
-
-  // 個人統計
-  personal: {
-    deviation: number
-    overallRank: number
-  }
-
-  // 設問別正答率
-  questionCorrectRates: Record<string, number>
-
-  // 設問別得点率
-  questionScoreRates: Record<string, number>
-
-  // 小計別統計
-  subtotalStatistics: SubtotalStatistics[]
-
-  // 小計別生スコア（renderer側でのbox plot再計算用）
-  subtotalRawScores: SubtotalRawScores[]
-
-  // 全生徒の合計点データ（renderer側での統計再計算用）
+/**
+ * 個人成績表の統計母集団。試験に1つで、生徒ごとには変わらない。
+ *
+ * 平均・偏差値・順位・箱ひげ図といった統計値はここに持たない。renderer 側の
+ * computeReportData が受験状態フィルタを適用して算出する（同じ式を main と
+ * renderer に二重実装しない）。
+ */
+export interface ReportPopulation {
+  /** 全受験者の合計点 */
   rawTotalScores: RawTotalScoreEntry[]
+  /** 小計ごとの全受験者得点 */
+  subtotalRawScores: SubtotalRawScores[]
+  /** 小計の識別・表示情報 */
+  subtotals: ReportSubtotal[]
+  /** 生徒表示対象の学級 */
+  classrooms: ReportClassroom[]
+  /**
+   * 設問別正答率。renderer は全受験者の設問別得点を持たないため main で集計する
+   * （素点を渡すと受験者数×設問数のペイロードになる）。
+   */
+  questionCorrectRates: Record<string, number>
+  /** 設問別得点率。集計を main で行う理由は questionCorrectRates と同じ */
+  questionScoreRates: Record<string, number>
 }
 
 /** 学習アドバイス用問題データ */
@@ -305,12 +275,11 @@ export interface LearningAdviceData {
   reviewQuestions: AdviceQuestion[]
 }
 
-/** 個人成績表1枚分のデータ */
+/** 個人成績表1枚分のデータ。母集団は生徒ごとに変わらないので ReportPopulation が持つ */
 export interface IndividualReportData {
   studentInfo: StudentInfoForReport
   examInfo: ExamInfoForReport
   scoringData: ScoringData
-  statistics: StatisticsData
   learningAdvice: LearningAdviceData
 }
 
@@ -330,6 +299,8 @@ export interface GetIndividualReportDataResult {
   success: boolean
   reports?: IndividualReportData[]
   examInfo?: ExamInfoForReport
+  /** 統計の母集団（試験に1つ） */
+  population?: ReportPopulation
   error?: string
   warnings?: {
     noScoringData: string[]

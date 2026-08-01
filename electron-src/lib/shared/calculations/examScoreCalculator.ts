@@ -7,7 +7,7 @@
  * 受験者として登録されていない生徒はスコアを引けず、データなし（null）になる。
  */
 
-import { calculateActualScore } from "../../prisma/questionScore"
+import { calculateActualScore } from "./actualScore"
 import type { ExamDataCache, ExamStudentScores } from "./gradeCalculatorTypes"
 
 /**
