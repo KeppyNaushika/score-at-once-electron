@@ -83,3 +83,7 @@ __tests__/screenshots/artifacts/
 # スクリプト設定ファイル（個人情報を含む）
 scripts/*.config.json
 !scripts/*.config.example.json
+
+# lint/format のキャッシュ
+.eslintcache
+.prettiercache
