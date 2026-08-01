@@ -1,35 +1,25 @@
 /**
  * PDFツール関連API
  */
+import type { PdfPageInput, RotationDegree } from "@/types/pdfTools.types"
+
 export interface PdfToolsAPI {
   pdfTools: {
     mergePdfs: (options: {
-      pages: Array<{
-        filePath: string
-        pageNumber: number
-        rotation?: 0 | 90 | 180 | 270
-        // 2-in-1用
-        isNUpCombined?: boolean
-        combinedPages?: number[]
-        nUpLayout?: "2x1" | "1x2"
-      }>
+      pages: PdfPageInput[]
       outputPath: string
     }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
+    /** 出力ページを1ページ1ファイルのPDFへ書き出す */
     splitPdf: (options: {
-      filePath: string
+      pages: PdfPageInput[]
       outputDir: string
       prefix?: string
     }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
-    rotatePages: (options: {
-      filePath: string
-      rotations: Array<{ pageNumber: number; rotation: 0 | 90 | 180 | 270 }>
-      outputPath: string
-    }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
     exportAsPng: (options: {
       imageBuffers: Array<{
         buffer: Buffer
         name: string
-        rotation?: 0 | 90 | 180 | 270
+        rotation?: RotationDegree
       }>
       outputDir: string
     }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
@@ -51,6 +41,11 @@ export interface PdfToolsAPI {
       success: boolean
       pageCount?: number
       name?: string
+      /** 1ページ目の幅（ポイント） */
+      pageWidth?: number
+      /** 1ページ目の高さ（ポイント） */
+      pageHeight?: number
+      isEncrypted?: boolean
       error?: string
     }>
     /** ドラッグ&ドロップされたFileオブジェクトからパスを取得 */

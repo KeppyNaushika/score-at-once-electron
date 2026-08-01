@@ -17,15 +17,19 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Trash2 } from "lucide-react"
+import { GripVertical, RotateCcw, RotateCw, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { OutputPage } from "@/types/pdfTools.types"
+import type { OutputPage, RotationDegree } from "@/types/pdfTools.types"
+
+/** 回転角の並び。左右の回転はこの並びを1つずらす */
+const ROTATION_CYCLE: RotationDegree[] = [0, 90, 180, 270]
 
 interface OutputPreviewProps {
   pages: OutputPage[]
   onPagesChange: (pages: OutputPage[]) => void
   onDeletePage: (page: OutputPage) => void
+  onRotatePage: (page: OutputPage, rotation: RotationDegree) => void
   disabled: boolean
 }
 
@@ -33,6 +37,7 @@ export default function OutputPreview({
   pages,
   onPagesChange,
   onDeletePage,
+  onRotatePage,
   disabled,
 }: OutputPreviewProps) {
   const sensors = useSensors(
@@ -61,6 +66,23 @@ export default function OutputPreview({
     onDeletePage(page)
   }
 
+  /** ページを 90° 単位で回す（step: -1 = 左, 1 = 右） */
+  const handleRotatePage = (page: OutputPage, step: -1 | 1) => {
+    const currentIndex = ROTATION_CYCLE.indexOf(page.rotation)
+    const rotation =
+      ROTATION_CYCLE[
+        (currentIndex + step + ROTATION_CYCLE.length) % ROTATION_CYCLE.length
+      ]
+    // 即座に表示へ反映（ドラッグ並び替えの順序を維持）
+    onPagesChange(
+      pages.map((otherPage) =>
+        otherPage.id === page.id ? { ...otherPage, rotation } : otherPage
+      )
+    )
+    // 永続化（設定変更による再生成時も反映）
+    onRotatePage(page, rotation)
+  }
+
   if (pages.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -87,6 +109,8 @@ export default function OutputPreview({
               index={index}
               disabled={disabled}
               onDelete={() => handleDeletePage(page)}
+              onRotateLeft={() => handleRotatePage(page, -1)}
+              onRotateRight={() => handleRotatePage(page, 1)}
             />
           ))}
         </div>
@@ -100,6 +124,8 @@ interface SortablePageItemProps {
   index: number
   disabled: boolean
   onDelete: () => void
+  onRotateLeft: () => void
+  onRotateRight: () => void
 }
 
 function SortablePageItem({
@@ -107,6 +133,8 @@ function SortablePageItem({
   index,
   disabled,
   onDelete,
+  onRotateLeft,
+  onRotateRight,
 }: SortablePageItemProps) {
   const {
     attributes,
@@ -163,13 +191,35 @@ function SortablePageItem({
         )}
       </div>
 
-      {/* ホバー時オーバーレイ（削除ボタン） */}
+      {/* ホバー時オーバーレイ（回転・削除ボタン） */}
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity",
+          "pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 bg-black/40 opacity-0 transition-opacity",
           !disabled && "group-hover:opacity-100"
         )}
       >
+        <button
+          className="pointer-events-auto rounded-full bg-white/90 p-1.5 text-foreground shadow-md transition-colors hover:bg-white"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRotateLeft()
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          title="左に90°回転"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
+        <button
+          className="pointer-events-auto rounded-full bg-white/90 p-1.5 text-foreground shadow-md transition-colors hover:bg-white"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRotateRight()
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          title="右に90°回転"
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+        </button>
         <button
           className="pointer-events-auto rounded-full bg-red-500 p-1.5 text-white shadow-md transition-colors hover:bg-red-600"
           onClick={(e) => {
@@ -194,7 +244,8 @@ function SortablePageItem({
           <span className="truncate text-[10px] text-white">
             {shortFileName}
           </span>
-          <span className="text-[10px] text-white/80">
+          <span className="text-[10px] whitespace-nowrap text-white/80">
+            {page.rotation !== 0 && `${page.rotation}° `}
             {page.isNUpCombined && page.combinedPages
               ? page.combinedPages.join("+")
               : page.sourcePageNumber}

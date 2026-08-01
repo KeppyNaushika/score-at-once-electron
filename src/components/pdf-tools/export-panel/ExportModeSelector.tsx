@@ -31,12 +31,6 @@ export default function ExportModeSelector({
           </Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="split" id="mode-split" />
-          <Label htmlFor="mode-split" className="cursor-pointer text-sm">
-            分割
-          </Label>
-        </div>
-        <div className="flex items-center space-x-2">
           <RadioGroupItem value="interleave" id="mode-interleave" />
           <Label htmlFor="mode-interleave" className="cursor-pointer text-sm">
             交互挿入

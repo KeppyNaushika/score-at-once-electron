@@ -6,56 +6,40 @@ import * as fs from "fs"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
-import type { PdfToolsResult, RotationDegree } from "@/types/pdfTools.types"
+import type {
+  PdfPageInput,
+  PdfToolsResult,
+  RotationDegree,
+} from "@/types/pdfTools.types"
 
 import { writeDecryptedPdfCopy } from "../lib/pdf-tools/decryptedPdfCopy"
-import { type MergePageInput, mergePdfs } from "../lib/pdf-tools/pdfMerger"
-import {
-  type RotatePageInput,
-  rotatePdfPages,
-} from "../lib/pdf-tools/pdfRotator"
+import { mergePdfs } from "../lib/pdf-tools/pdfMerger"
 import { splitPdf } from "../lib/pdf-tools/pdfSplitter"
 import { exportPagesToPng } from "../lib/pdf-tools/pdfToPng"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
-/** PDFツール（結合・分割・回転・2-in-1・PNG書き出し）に関するIPCチャンネルを登録する */
+/** PDFツール（結合・分割・2-in-1・PNG書き出し）に関するIPCチャンネルを登録する */
 export function setupPdfToolsHandlers(): void {
   // PDF結合
   registerHandler(
     "pdf-tools:merge-pdfs",
     async (options: {
-      pages: MergePageInput[]
+      pages: PdfPageInput[]
       outputPath: string
     }): Promise<PdfToolsResult> => {
       return await mergePdfs(options.pages, options.outputPath)
     }
   )
 
-  // PDF分割
+  // PDF分割（1ページ1ファイル）
   registerHandler(
     "pdf-tools:split-pdf",
     async (options: {
-      filePath: string
+      pages: PdfPageInput[]
       outputDir: string
       prefix?: string
     }): Promise<PdfToolsResult> => {
-      return await splitPdf(options.filePath, options.outputDir, options.prefix)
-    }
-  )
-
-  // ページ回転
-  registerHandler(
-    "pdf-tools:rotate-pages",
-    async (options: {
-      filePath: string
-      rotations: RotatePageInput[]
-      outputPath: string
-    }): Promise<PdfToolsResult> => {
-      return await rotatePdfPages(
-        options.filePath,
-        options.rotations,
-        options.outputPath
-      )
+      return await splitPdf(options.pages, options.outputDir, options.prefix)
     }
   )
 
@@ -128,6 +112,9 @@ export function setupPdfToolsHandlers(): void {
       success: boolean
       pageCount?: number
       name?: string
+      pageWidth?: number
+      pageHeight?: number
+      isEncrypted?: boolean
       error?: string
     }> => {
       if (!fs.existsSync(filePath)) {
@@ -141,8 +128,18 @@ export function setupPdfToolsHandlers(): void {
       })
       const pageCount = pdfDoc.getPageCount()
       const name = path.basename(filePath)
+      // ページサイズは1ページ目を代表値とする（ページごとに異なるPDFもあるため）
+      const { width: pageWidth, height: pageHeight } =
+        pageCount > 0 ? pdfDoc.getPage(0).getSize() : { width: 0, height: 0 }
 
-      return { success: true, pageCount, name }
+      return {
+        success: true,
+        pageCount,
+        name,
+        pageWidth,
+        pageHeight,
+        isEncrypted: pdfDoc.isEncrypted,
+      }
     }
   )
 

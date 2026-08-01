@@ -8,6 +8,7 @@ import type {
   InterleaveConfig,
   OutputPage,
   PdfExportMode,
+  RotationDegree,
 } from "@/types/pdfTools.types"
 
 import ExportPanel from "./export-panel/ExportPanel"
@@ -18,12 +19,15 @@ export default function PdfToolsMainView() {
   const [outputPages, setOutputPages] = useState<OutputPage[]>([])
   const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
   const [interleaveConfig, setInterleaveConfig] = useState<InterleaveConfig>({
-    enabled: false,
     transforms: [],
   })
   const [isProcessing, setIsProcessing] = useState(false)
   // 出力プレビューから除外されたページ（"fileId:pageNumber" のセット）
   const [excludedPages, setExcludedPages] = useState<Set<string>>(new Set())
+  // 出力プレビューで個別に回されたページ（"fileId:pageNumber" → 回転角）
+  const [pageRotations, setPageRotations] = useState<
+    Map<string, RotationDegree>
+  >(new Map())
 
   // リサイズ関連の状態
   const [leftPanelWidth, setLeftPanelWidth] = useState(50) // パーセント
@@ -39,17 +43,20 @@ export default function PdfToolsMainView() {
     setOutputPages((prev) =>
       prev.filter((page) => page.sourceFileId !== fileId)
     )
-    // ファイル削除時に対応する除外ページもクリア
-    setExcludedPages((prev) => {
-      const next = new Set<string>()
-      for (const key of prev) {
-        if (!key.startsWith(`${fileId}:`)) next.add(key)
-      }
-      return next
-    })
+    // ファイル削除時に対応する除外ページ・ページ別回転もクリア
+    setExcludedPages((prev) => withoutFilePages(prev, fileId))
+    setPageRotations((prev) => withoutFileRotations(prev, fileId))
   }
 
   const handleFileUpdated = (updatedFile: ImportedFile) => {
+    // ファイル単位の回転を変えたら、そのファイルのページ別回転は指定し直しとみなす
+    const previousFile = importedFiles.find(
+      (file) => file.id === updatedFile.id
+    )
+    if (previousFile && previousFile.rotation !== updatedFile.rotation) {
+      setPageRotations((prev) => withoutFileRotations(prev, updatedFile.id))
+    }
+
     setImportedFiles((prev) =>
       prev.map((file) => (file.id === updatedFile.id ? updatedFile : file))
     )
@@ -74,16 +81,23 @@ export default function PdfToolsMainView() {
     })
   }, [])
 
+  /** 出力プレビューでページ単位に指定された回転を記録（永続的） */
+  const handlePageRotated = useCallback(
+    (page: OutputPage, rotation: RotationDegree) => {
+      setPageRotations((prev) => {
+        const next = new Map(prev)
+        // 2-in-1結合ページは先頭ページ番号を代表キーにする（生成側のキーと揃える）
+        next.set(`${page.sourceFileId}:${page.sourcePageNumber}`, rotation)
+        return next
+      })
+    },
+    []
+  )
+
   /** 除外ページのリセット（ファイル指定 or 全体） */
   const handleResetExcludedPages = useCallback((fileId?: string) => {
     if (fileId) {
-      setExcludedPages((prev) => {
-        const next = new Set<string>()
-        for (const key of prev) {
-          if (!key.startsWith(`${fileId}:`)) next.add(key)
-        }
-        return next
-      })
+      setExcludedPages((prev) => withoutFilePages(prev, fileId))
     } else {
       setExcludedPages(new Set())
     }
@@ -157,6 +171,7 @@ export default function PdfToolsMainView() {
           importedFiles={importedFiles}
           outputPages={outputPages}
           excludedPages={excludedPages}
+          pageRotations={pageRotations}
           exportMode={exportMode}
           interleaveConfig={interleaveConfig}
           isProcessing={isProcessing}
@@ -164,9 +179,31 @@ export default function PdfToolsMainView() {
           onInterleaveConfigChange={setInterleaveConfig}
           onOutputPagesChange={handleOutputPagesChange}
           onPageExcluded={handlePageExcluded}
+          onPageRotated={handlePageRotated}
           onProcessingChange={setIsProcessing}
         />
       </div>
     </div>
   )
+}
+
+/** "fileId:pageNumber" キーの集合から、指定ファイルの分を取り除く */
+function withoutFilePages(pageKeys: Set<string>, fileId: string): Set<string> {
+  const next = new Set<string>()
+  for (const pageKey of pageKeys) {
+    if (!pageKey.startsWith(`${fileId}:`)) next.add(pageKey)
+  }
+  return next
+}
+
+/** "fileId:pageNumber" → 回転角のマップから、指定ファイルの分を取り除く */
+function withoutFileRotations(
+  pageRotations: Map<string, RotationDegree>,
+  fileId: string
+): Map<string, RotationDegree> {
+  const next = new Map<string, RotationDegree>()
+  for (const [pageKey, rotation] of pageRotations) {
+    if (!pageKey.startsWith(`${fileId}:`)) next.set(pageKey, rotation)
+  }
+  return next
 }

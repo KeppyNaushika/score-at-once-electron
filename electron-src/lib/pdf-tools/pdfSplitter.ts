@@ -1,10 +1,14 @@
 /**
  * PDF分割ユーティリティ
- * PDFを個別ページに分割
+ * 出力ページを1ページ1ファイルのPDFとして書き出す
  */
 import * as fs from "fs"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
+
+import type { PdfPageInput } from "@/types/pdfTools.types"
+
+import { appendPageToPdf, type SourcePdfCache } from "./pdfMerger"
 
 interface SplitResult {
   success: boolean
@@ -13,42 +17,39 @@ interface SplitResult {
 }
 
 /**
- * PDFを個別ページに分割
+ * 出力ページを1ページ1ファイルのPDFへ分割して書き出す。
+ *
+ * 結合（mergePdfs）と同じページ入力を受け取るので、並び替え・除外・回転・2-in-1
+ * といった出力プレビューの編集内容がそのまま反映される。
+ *
+ * @param pages 書き出す順のページ入力。1件が1ファイルになる
+ * @param outputDir 出力先ディレクトリ
+ * @param prefix 出力ファイル名の接頭辞（既定は "page"）
  */
 export async function splitPdf(
-  filePath: string,
+  pages: PdfPageInput[],
   outputDir: string,
   prefix?: string
 ): Promise<SplitResult> {
   try {
-    const fileBuffer = fs.readFileSync(filePath)
-    // owner-password のみの暗号化PDF（印刷/コピー制限）はユーザーパスワード無しで
-    // 内容を読めるため、ignoreEncryption で pdf-lib の EncryptedPDFError を回避する。
-    // ユーザーパスワード付きPDFはインポート時に復号済み複製へ差し替え済み。
-    const sourcePdf = await PDFDocument.load(fileBuffer, {
-      ignoreEncryption: true,
-    })
-    const pageCount = sourcePdf.getPageCount()
-
-    // 出力ディレクトリを作成
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true })
     }
 
-    const baseName = prefix || path.basename(filePath, ".pdf")
+    const baseName = prefix || "page"
+    // 元ファイルの読み込みは全ページで共有する
+    const pdfCache: SourcePdfCache = new Map()
     const outputPaths: string[] = []
 
-    for (let i = 0; i < pageCount; i++) {
-      const pageNumber = i + 1
-      const newPdf = await PDFDocument.create()
-      const [copiedPage] = await newPdf.copyPages(sourcePdf, [i])
-      newPdf.addPage(copiedPage)
+    for (const [index, page] of pages.entries()) {
+      const singlePagePdf = await PDFDocument.create()
+      const appended = await appendPageToPdf(singlePagePdf, page, pdfCache)
+      // 元ファイル欠損・ページ番号不正で1ページも入らなかったら空PDFを作らずに飛ばす
+      if (!appended) continue
 
-      const outputFileName = `${baseName}_page_${pageNumber}.pdf`
-      const outputPath = path.join(outputDir, outputFileName)
-
-      const pdfBytes = await newPdf.save()
-      fs.writeFileSync(outputPath, pdfBytes)
+      const paddedIndex = String(index + 1).padStart(3, "0")
+      const outputPath = path.join(outputDir, `${baseName}_${paddedIndex}.pdf`)
+      fs.writeFileSync(outputPath, await singlePagePdf.save())
       outputPaths.push(outputPath)
     }
 

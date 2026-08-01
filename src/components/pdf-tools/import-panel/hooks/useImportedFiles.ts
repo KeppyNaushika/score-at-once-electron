@@ -3,7 +3,7 @@ import { toast } from "sonner"
 
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 import { type ConvertedImage, PDF_RENDER_SCALE } from "@/lib/pdfConverter"
-import type { ImportedFile } from "@/types/pdfTools.types"
+import type { ImportedFile, SourcePdfMetadata } from "@/types/pdfTools.types"
 
 /** PDFファイルの読み込み・ページ情報取得・サムネイル生成を行うフック */
 export function useImportedFiles() {
@@ -16,7 +16,12 @@ export function useImportedFiles() {
 
   // 変換済み画像から ImportedFile を構築する（ページ数・サムネイルは画像から導出）
   const buildImportedFile = useCallback(
-    (name: string, path: string, images: ConvertedImage[]): ImportedFile => {
+    (
+      name: string,
+      path: string,
+      images: ConvertedImage[],
+      sourcePdfMetadata: SourcePdfMetadata | null
+    ): ImportedFile => {
       const pageCount = images.length
       const thumbnails = images.map((image) =>
         arrayBufferToDataUrl(image.buffer, image.type)
@@ -39,6 +44,7 @@ export function useImportedFiles() {
           layout: "2x1",
         },
         rotation: 0,
+        sourcePdfMetadata,
       }
     },
     []
@@ -53,6 +59,9 @@ export function useImportedFiles() {
         // パスワード入力がキャンセルされた → このファイルはスキップ
         return null
       }
+
+      // ページサイズ・暗号化有無は復号済み複製へ差し替える前の元PDFから読む
+      const sourcePdfMetadata = await readSourcePdfMetadata(originalPath)
 
       // 書き出し(pdf-lib)は暗号化PDFを読めないため、保護されていたPDFは
       // 復号済みページ画像から再構成した一時PDFのパスに差し替える
@@ -76,7 +85,12 @@ export function useImportedFiles() {
         )
       }
 
-      return buildImportedFile(file.name, filePath, conversion.images)
+      return buildImportedFile(
+        file.name,
+        filePath,
+        conversion.images,
+        sourcePdfMetadata
+      )
     },
     [convertPdfWithRetry, buildImportedFile]
   )
@@ -135,6 +149,36 @@ export function useImportedFiles() {
     passwordDialog,
     handlePasswordSubmit,
     handlePasswordCancel,
+  }
+}
+
+/**
+ * 元PDFのページ数・ページサイズ・暗号化有無を読み取る。
+ * 情報表示のためだけなので、読めなくても取り込み自体は続行できるよう null を返す。
+ */
+async function readSourcePdfMetadata(
+  filePath: string
+): Promise<SourcePdfMetadata | null> {
+  try {
+    const pdfInfoResult = await window.electronAPI.pdfTools.getPdfInfo(filePath)
+    if (
+      !pdfInfoResult.success ||
+      pdfInfoResult.pageCount === undefined ||
+      pdfInfoResult.pageWidth === undefined ||
+      pdfInfoResult.pageHeight === undefined ||
+      pdfInfoResult.isEncrypted === undefined
+    ) {
+      return null
+    }
+    return {
+      pageCount: pdfInfoResult.pageCount,
+      pageWidth: pdfInfoResult.pageWidth,
+      pageHeight: pdfInfoResult.pageHeight,
+      isEncrypted: pdfInfoResult.isEncrypted,
+    }
+  } catch (error) {
+    console.error(`Failed to read PDF info for ${filePath}:`, error)
+    return null
   }
 }
 
