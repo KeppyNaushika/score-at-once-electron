@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type {
   IndividualReportData,
   IndividualReportOptions,
+  ReportPopulation,
 } from "@/electron-src/lib/export/individual-report/types"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +42,8 @@ const CONTENT_HEIGHT_MM = A4_HEIGHT_MM - PAGE_PADDING_MM * 2
 
 interface IndividualReportPreviewProps {
   report: IndividualReportData
+  /** 統計の母集団（試験に1つ）。平均・偏差値・順位・箱ひげ図はここから算出する */
+  population: ReportPopulation
   options: IndividualReportOptions
   scale?: number
   className?: string
@@ -50,6 +53,7 @@ interface IndividualReportPreviewProps {
 
 export function IndividualReportPreview({
   report,
+  population,
   options,
   scale = 1,
   className,
@@ -69,12 +73,12 @@ export function IndividualReportPreview({
   const learningAdvice = useMemo(() => {
     return calculateLearningAdvice(
       report.scoringData.scores,
-      report.statistics.questionCorrectRates,
+      population.questionCorrectRates,
       options.adviceOptions
     )
   }, [
     report.scoringData.scores,
-    report.statistics.questionCorrectRates,
+    population.questionCorrectRates,
     options.adviceOptions,
   ])
 
@@ -85,8 +89,13 @@ export function IndividualReportPreview({
 
   // 統計サマリーの計算
   const filteredStats = useMemo(
-    () => computeFilteredStats(report, options.boxPlotIncludeStatuses),
-    [report, options.boxPlotIncludeStatuses]
+    () =>
+      computeFilteredStats(
+        population,
+        report.scoringData,
+        options.boxPlotIncludeStatuses
+      ),
+    [population, report.scoringData, options.boxPlotIncludeStatuses]
   )
 
   const statsItems = useMemo(
@@ -199,7 +208,7 @@ export function IndividualReportPreview({
               得点分布
             </h2>
             <BoxPlotChart
-              statistics={report.statistics}
+              population={population}
               scoringData={report.scoringData}
               fontScale={fontScale}
               showMin={options.graphOptions.showBoxPlotMin}
@@ -223,6 +232,7 @@ export function IndividualReportPreview({
         return options.showQuestionTable ? (
           <ScoreTablePreview
             report={report}
+            population={population}
             options={options}
             fontScale={fontScale}
           />

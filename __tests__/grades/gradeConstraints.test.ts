@@ -155,12 +155,13 @@ function exclusionLabelRows(
 describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）", () => {
   // 実データ構成: 知識・技能/思考・判断・表現/態度(A/B/C) + 評定(5..1) の4項目。
   // すべて GradeItem 同士の比較。評定 GradeItem を比較先にする。
+  // order は段階の並び（小さいほど上位）。上書き方向の判定でのみ使われる
   const HYOTEI_BOUNDARIES = [
-    { label: "5", minPercentage: 80 },
-    { label: "4", minPercentage: 65 },
-    { label: "3", minPercentage: 50 },
-    { label: "2", minPercentage: 35 },
-    { label: "1", minPercentage: 0 },
+    { label: "5", minPercentage: 80, order: 0 },
+    { label: "4", minPercentage: 65, order: 1 },
+    { label: "3", minPercentage: 50, order: 2 },
+    { label: "2", minPercentage: 35, order: 3 },
+    { label: "1", minPercentage: 0, order: 4 },
   ]
 
   const ITEMS_WITH_HYOTEI = [
@@ -399,16 +400,17 @@ describe("gradeConstraints: 補助", () => {
 
 describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
   /** 弱→強が C, B, A になる境界。順位換算（A/B/C → 3/2/1）の検証に使う */
+  // order は段階の並び（小さいほど上位）。上書き方向の判定でのみ使われる
   const RANK_BOUNDARIES = [
-    { label: "C", minPercentage: 0 },
-    { label: "B", minPercentage: 50 },
-    { label: "A", minPercentage: 80 },
+    { label: "A", minPercentage: 80, order: 0 },
+    { label: "B", minPercentage: 50, order: 1 },
+    { label: "C", minPercentage: 0, order: 2 },
   ]
 
   /** 評定を含む3項目。名前と境界は呼び出し側から差し替えられる */
   function makeItems(
     knowledgeName: string,
-    boundaries: { label: string; minPercentage: number }[] = []
+    boundaries: { label: string; minPercentage: number; order: number }[] = []
   ) {
     return [
       {

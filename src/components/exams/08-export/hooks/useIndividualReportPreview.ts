@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
-import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
-import type { IndividualReportData } from "@/electron-src/lib/export/individual-report/types"
+import type {
+  IndividualReportData,
+  IndividualReportOptions,
+  ReportPopulation,
+} from "@/electron-src/lib/export/individual-report/types"
 
 interface UseIndividualReportPreviewOptions {
   examId: string
@@ -13,8 +16,14 @@ interface UseIndividualReportPreviewOptions {
   enabled?: boolean
 }
 
+/** プレビュー1枚分と、その統計母集団。母集団は生徒ごとに変わらないので対で持つ */
+interface PreviewReport {
+  report: IndividualReportData
+  population: ReportPopulation
+}
+
 interface UseIndividualReportPreviewResult {
-  previewData: IndividualReportData | null
+  previewReport: PreviewReport | null
   isLoading: boolean
   error: string | null
   previewStudentId: string | null
@@ -32,9 +41,7 @@ export function useIndividualReportPreview({
   options,
   enabled = true,
 }: UseIndividualReportPreviewOptions): UseIndividualReportPreviewResult {
-  const [previewData, setPreviewData] = useState<IndividualReportData | null>(
-    null
-  )
+  const [previewReport, setPreviewReport] = useState<PreviewReport | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // プレビュー対象の生徒ID（デフォルトは選択リストの最初）
@@ -58,13 +65,13 @@ export function useIndividualReportPreview({
       }
     } else {
       setPreviewStudentId(null)
-      setPreviewData(null)
+      setPreviewReport(null)
     }
   }, [selectedExamStudentIds, previewStudentId])
 
   const fetchPreviewData = useCallback(async () => {
     if (!enabled || !examId || !previewStudentId) {
-      setPreviewData(null)
+      setPreviewReport(null)
       return
     }
 
@@ -80,16 +87,19 @@ export function useIndividualReportPreview({
         studentPlacements,
       })
 
-      if (result.success && result.reports && result.reports.length > 0) {
-        setPreviewData(result.reports[0])
+      if (result.success && result.reports?.length && result.population) {
+        setPreviewReport({
+          report: result.reports[0],
+          population: result.population,
+        })
       } else {
         setError(result.error || "プレビューデータの取得に失敗しました")
-        setPreviewData(null)
+        setPreviewReport(null)
       }
     } catch (err) {
       console.error("Preview fetch error:", err)
       setError(err instanceof Error ? err.message : "不明なエラー")
-      setPreviewData(null)
+      setPreviewReport(null)
     } finally {
       setIsLoading(false)
     }
@@ -102,7 +112,7 @@ export function useIndividualReportPreview({
   }, [fetchPreviewData])
 
   return {
-    previewData,
+    previewReport,
     isLoading,
     error,
     previewStudentId,

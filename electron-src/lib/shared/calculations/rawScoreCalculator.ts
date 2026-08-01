@@ -10,7 +10,10 @@ import {
   findExamStudentScores,
 } from "./examScoreCalculator"
 import type { ExamDataCache } from "./gradeCalculatorTypes"
-import { calculateSubtotalScoreBySubtotalId } from "./subtotalCalculator"
+import {
+  computeSubtotalScore,
+  type QuestionAssignmentsBySubtotalId,
+} from "./subtotalCalculator"
 
 /**
  * coursework / coursework_total で参照する評価項目の構造（Prisma include のサブセット）
@@ -42,9 +45,12 @@ export function findCourseworkStudentScore<
 }
 
 /**
- * DataSourceからrawScoreを取得（推定前の実スコア）
+ * DataSourceからrawScoreを取得（推定前の実スコア・純粋）
+ *
+ * @param questionAssignments 小計 id → 割り当て設問領域 id。生徒ループの外で
+ *   1回だけ引いたものを渡す（`subtotal` 型が参照する）
  */
-export async function getRawScore(
+export function getRawScore(
   studentId: string,
   dataSource: {
     type: string
@@ -56,8 +62,9 @@ export async function getRawScore(
       items: CourseworkItemForRawScore[]
     } | null
   },
-  examDataCache: Map<string, ExamDataCache>
-): Promise<number | null> {
+  examDataCache: Map<string, ExamDataCache>,
+  questionAssignments: QuestionAssignmentsBySubtotalId
+): number | null {
   if (dataSource.type === "exam_total" && dataSource.examId) {
     return calculateExamTotalScore(studentId, dataSource.examId, examDataCache)
   } else if (
@@ -72,15 +79,12 @@ export async function getRawScore(
       examDataCache
     )
     if (examData && examStudent) {
-      const result = await calculateSubtotalScoreBySubtotalId(
+      return computeSubtotalScore(
         examStudent.examStudentId,
-        dataSource.subtotalId,
         examStudent.questionScores,
-        examData.cropRegions as Parameters<
-          typeof calculateSubtotalScoreBySubtotalId
-        >[3]
-      )
-      return result.score
+        examData.cropRegions,
+        questionAssignments.get(dataSource.subtotalId) ?? []
+      ).score
     }
   } else if (
     dataSource.type === "crop_region" &&

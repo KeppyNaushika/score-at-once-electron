@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { calculateActualScore } from "@/electron-src/lib/prisma/questionScore"
+import { calculateActualScore } from "@/electron-src/lib/shared/calculations/actualScore"
 import {
   calculateEffectiveScoreValue,
   ResolvableDecision,

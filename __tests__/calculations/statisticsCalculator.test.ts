@@ -1,16 +1,19 @@
 /**
- * statisticsCalculator のnull score対応テスト
+ * statisticsCalculator の母集団収集テスト
  *
  * テスト対象:
- * - calculateSubtotalStatistics: subtotalScore.score が null の場合に統計から除外
+ * - collectReportSubtotals: 小計の識別・表示情報の収集
+ * - collectRawTotalScores: 全受験者の合計点の収集
  * - collectSubtotalRawScores: subtotalScore.score が null の場合に除外
- * - calculateStatisticsForStudent: totalScore が null の場合の統計処理
+ *
+ * 統計値（平均・偏差値・順位・箱ひげ図）の算出は renderer 側なので
+ * `computeReportData.test.ts` が受け持つ。
  */
 import { describe, expect, it } from "vitest"
 
 import {
-  calculateStatisticsForStudent,
-  calculateSubtotalStatistics,
+  collectRawTotalScores,
+  collectReportSubtotals,
   collectSubtotalRawScores,
 } from "@/electron-src/lib/export/individual-report/statisticsCalculator"
 import type { ScoringData } from "@/electron-src/lib/shared/types"
@@ -32,13 +35,12 @@ function createScoringData(
   }
 }
 
-// ================== calculateSubtotalStatistics ==================
+// ================== collectReportSubtotals ==================
 
-describe("calculateSubtotalStatistics", () => {
-  it("score が null の生徒を統計から除外する", () => {
-    const data: ScoringData[] = [
+describe("collectReportSubtotals", () => {
+  it("最初の受験者から小計の識別・表示情報を取り出す", () => {
+    const allScoringData: ScoringData[] = [
       createScoringData({
-        examStudentId: "s1",
         studentId: "s1",
         subtotalScores: [
           {
@@ -53,62 +55,6 @@ describe("calculateSubtotalStatistics", () => {
         ],
       }),
       createScoringData({
-        examStudentId: "s2",
-        studentId: "s2",
-        subtotalScores: [
-          {
-            subtotalId: "sub1",
-            subtotalGroupId: "g1",
-            subtotalGroupName: "G1",
-            subtotalLabel: "小計1",
-            score: null, // 全設問未採点
-            maxScore: 50,
-            hasQuestionAssignments: true,
-          },
-        ],
-      }),
-      createScoringData({
-        examStudentId: "s3",
-        studentId: "s3",
-        subtotalScores: [
-          {
-            subtotalId: "sub1",
-            subtotalGroupId: "g1",
-            subtotalGroupName: "G1",
-            subtotalLabel: "小計1",
-            score: 50,
-            maxScore: 50,
-            hasQuestionAssignments: true,
-          },
-        ],
-      }),
-    ]
-
-    const result = calculateSubtotalStatistics(data)
-    expect(result).toHaveLength(1)
-    // s2(null)は除外され、s1(30) と s3(50) のみで平均 = 40
-    expect(result[0].average).toBe(40)
-  })
-
-  it("全員 null の場合は空配列で統計計算（平均0）", () => {
-    const data: ScoringData[] = [
-      createScoringData({
-        examStudentId: "s1",
-        studentId: "s1",
-        subtotalScores: [
-          {
-            subtotalId: "sub1",
-            subtotalGroupId: "g1",
-            subtotalGroupName: "G1",
-            subtotalLabel: "小計1",
-            score: null,
-            maxScore: 50,
-            hasQuestionAssignments: true,
-          },
-        ],
-      }),
-      createScoringData({
-        examStudentId: "s2",
         studentId: "s2",
         subtotalScores: [
           {
@@ -124,49 +70,52 @@ describe("calculateSubtotalStatistics", () => {
       }),
     ]
 
-    const result = calculateSubtotalStatistics(data)
-    expect(result).toHaveLength(1)
-    expect(result[0].average).toBe(0)
-    expect(result[0].stdDev).toBe(0)
+    expect(collectReportSubtotals(allScoringData)).toEqual([
+      {
+        subtotalId: "sub1",
+        subtotalLabel: "小計1",
+        maxScore: 50,
+        subtotalGroupId: "g1",
+      },
+    ])
   })
 
-  it("0点の生徒は統計に含まれる", () => {
-    const data: ScoringData[] = [
+  it("受験者がいなければ空配列", () => {
+    expect(collectReportSubtotals([])).toEqual([])
+  })
+})
+
+// ================== collectRawTotalScores ==================
+
+describe("collectRawTotalScores", () => {
+  it("合計点と受験状態を全受験者ぶん集める（null もそのまま残す）", () => {
+    const allScoringData: ScoringData[] = [
       createScoringData({
-        examStudentId: "s1",
         studentId: "s1",
-        subtotalScores: [
-          {
-            subtotalId: "sub1",
-            subtotalGroupId: "g1",
-            subtotalGroupName: "G1",
-            subtotalLabel: "小計1",
-            score: 0, // 全問不正解
-            maxScore: 50,
-            hasQuestionAssignments: true,
-          },
-        ],
+        totalScore: 80,
+        status: "participating",
       }),
       createScoringData({
-        examStudentId: "s2",
         studentId: "s2",
-        subtotalScores: [
-          {
-            subtotalId: "sub1",
-            subtotalGroupId: "g1",
-            subtotalGroupName: "G1",
-            subtotalLabel: "小計1",
-            score: 100,
-            maxScore: 50,
-            hasQuestionAssignments: true,
-          },
-        ],
+        totalScore: null,
+        status: "absent",
       }),
     ]
 
-    const result = calculateSubtotalStatistics(data)
-    // 0点と100点の平均 = 50
-    expect(result[0].average).toBe(50)
+    expect(collectRawTotalScores(allScoringData)).toEqual([
+      { studentId: "s1", totalScore: 80, status: "participating" },
+      { studentId: "s2", totalScore: null, status: "absent" },
+    ])
+  })
+
+  it("受験状態が未設定なら participating とみなす", () => {
+    const allScoringData: ScoringData[] = [
+      createScoringData({ studentId: "s1", totalScore: 80 }),
+    ]
+
+    expect(collectRawTotalScores(allScoringData)[0].status).toBe(
+      "participating"
+    )
   })
 })
 
@@ -239,162 +188,5 @@ describe("collectSubtotalRawScores", () => {
     const result = collectSubtotalRawScores(data)
     expect(result[0].scores).toHaveLength(1)
     expect(result[0].scores[0].score).toBe(0)
-  })
-})
-
-// ================== calculateStatisticsForStudent ==================
-
-describe("calculateStatisticsForStudent", () => {
-  const emptyRates: Record<string, number> = {}
-
-  /** allData 全員を母集団とする単一学級を作る（学級統計テスト用） */
-  const classOf = (
-    allData: ScoringData[]
-  ): {
-    classroomId: string
-    className: string
-    grade: string | null
-    memberStudentIds: string[]
-  }[] => [
-    {
-      classroomId: "c1",
-      className: "1組",
-      grade: null,
-      memberStudentIds: allData.map((scoringData) => scoringData.studentId),
-    },
-  ]
-
-  it("totalScore が null の生徒は偏差値0・順位0", () => {
-    const allData: ScoringData[] = [
-      createScoringData({ studentId: "s1", totalScore: 80 }),
-      createScoringData({ studentId: "s2", totalScore: null }),
-      createScoringData({ studentId: "s3", totalScore: 60 }),
-    ]
-
-    const result = calculateStatisticsForStudent(
-      null,
-      allData,
-      classOf(allData),
-      emptyRates,
-      emptyRates
-    )
-
-    expect(result.personal.deviation).toBe(0)
-    expect(result.personal.overallRank).toBe(0)
-    expect(result.classrooms[0].rank).toBe(0)
-  })
-
-  it("totalScore が null の生徒は全体・学級統計から除外される", () => {
-    const allData: ScoringData[] = [
-      createScoringData({ studentId: "s1", totalScore: 80 }),
-      createScoringData({ studentId: "s2", totalScore: null }),
-      createScoringData({ studentId: "s3", totalScore: 60 }),
-    ]
-
-    const result = calculateStatisticsForStudent(
-      80,
-      allData,
-      classOf(allData),
-      emptyRates,
-      emptyRates
-    )
-
-    // s2(null)を除外して s1(80) と s3(60) のみで平均 = 70
-    expect(result.overall.average).toBe(70)
-    // 学級平均も同じ母集団なので 70
-    expect(result.classrooms[0].average).toBe(70)
-  })
-
-  it("全員 null の場合は平均0・標準偏差0", () => {
-    const allData: ScoringData[] = [
-      createScoringData({ studentId: "s1", totalScore: null }),
-      createScoringData({ studentId: "s2", totalScore: null }),
-    ]
-
-    const result = calculateStatisticsForStudent(
-      null,
-      allData,
-      classOf(allData),
-      emptyRates,
-      emptyRates
-    )
-
-    expect(result.overall.average).toBe(0)
-    expect(result.overall.stdDev).toBe(0)
-    expect(result.personal.deviation).toBe(0)
-    expect(result.personal.overallRank).toBe(0)
-  })
-
-  it("0点の生徒は統計に含まれる（nullとは区別される）", () => {
-    const allData: ScoringData[] = [
-      createScoringData({ studentId: "s1", totalScore: 0 }),
-      createScoringData({ studentId: "s2", totalScore: 100 }),
-    ]
-
-    const result = calculateStatisticsForStudent(
-      0,
-      allData,
-      classOf(allData),
-      emptyRates,
-      emptyRates
-    )
-
-    // 0点と100点の平均 = 50
-    expect(result.overall.average).toBe(50)
-    // 0点の生徒は順位2位
-    expect(result.personal.overallRank).toBe(2)
-  })
-
-  it("studentReport 学級が未選択（空配列）なら学級統計は空", () => {
-    const allData: ScoringData[] = [
-      createScoringData({ studentId: "s1", totalScore: 80 }),
-      createScoringData({ studentId: "s2", totalScore: 60 }),
-    ]
-
-    const result = calculateStatisticsForStudent(
-      80,
-      allData,
-      [],
-      emptyRates,
-      emptyRates
-    )
-
-    expect(result.classrooms).toEqual([])
-  })
-
-  it("複数の studentReport 学級に属する生徒は学級ごとの統計を持つ", () => {
-    const allData: ScoringData[] = [
-      createScoringData({ studentId: "s1", totalScore: 80 }),
-      createScoringData({ studentId: "s2", totalScore: 60 }),
-      createScoringData({ studentId: "s3", totalScore: 40 }),
-    ]
-
-    const result = calculateStatisticsForStudent(
-      80,
-      allData,
-      [
-        {
-          classroomId: "cA",
-          className: "A組",
-          grade: null,
-          memberStudentIds: ["s1", "s2"], // 平均=70・s1は1位
-        },
-        {
-          classroomId: "cB",
-          className: "B組",
-          grade: null,
-          memberStudentIds: ["s1", "s3"], // 平均=60・s1は1位
-        },
-      ],
-      emptyRates,
-      emptyRates
-    )
-
-    expect(result.classrooms).toHaveLength(2)
-    expect(result.classrooms[0].average).toBe(70)
-    expect(result.classrooms[0].rank).toBe(1)
-    expect(result.classrooms[0].total).toBe(2)
-    expect(result.classrooms[1].average).toBe(60)
-    expect(result.classrooms[1].rank).toBe(1)
   })
 })

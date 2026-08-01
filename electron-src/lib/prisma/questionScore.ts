@@ -84,44 +84,6 @@ async function recordScoreAudit(opts: {
   })
 }
 
-/**
- * 実際の得点を計算する関数
- * @param questionScore 採点データ
- * @param maxScore 配点
- * @returns 実際の得点
- */
-export const calculateActualScore = (
-  questionScore: { status: string; partialScore?: number | null },
-  maxScore: number
-): number | null => {
-  switch (questionScore.status) {
-    case "correct":
-      return maxScore
-    case "final":
-      // 廃止済みstatus。未変換の旧データへの耐性として残す
-      // （確定値は partialScore、満点確定時は null のことがある）
-      return questionScore.partialScore !== null &&
-        questionScore.partialScore !== undefined
-        ? Number(questionScore.partialScore)
-        : maxScore
-    case "incorrect":
-    case "no_answer":
-    case "double_mark":
-      return 0 // 誤答・無答・Wマークは 0/配点 と表示
-    case "unscored":
-      return null // 未採点は null を返して -/配点 と表示
-    case "partial":
-    case "pending":
-    case "proposed": // 廃止済みstatus（旧データ耐性）
-      return questionScore.partialScore !== null &&
-        questionScore.partialScore !== undefined
-        ? Number(questionScore.partialScore)
-        : null
-    default:
-      return 0
-  }
-}
-
 // 採点データの型定義
 // 注: "proposed"/"final" は廃止済み。QuestionScoreは常に採点者ごとの「提案」であり、
 // 確定はScoreDecision（scoreDecision.ts）で表現する。

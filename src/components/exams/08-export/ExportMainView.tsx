@@ -98,7 +98,7 @@ export default function ExportMainView() {
   } = useReturnDiff(exam?.id ?? "")
 
   const {
-    previewData,
+    previewReport,
     isLoading: isPreviewLoading,
     error: previewError,
     previewStudentId,
@@ -369,7 +369,7 @@ export default function ExportMainView() {
               captureReturn={captureReturn}
               // プレビュー関連
               exportTab={exportTab}
-              previewData={previewData}
+              previewReport={previewReport}
               isPreviewLoading={isPreviewLoading}
               previewError={previewError}
               previewStudentId={previewStudentId ?? undefined}

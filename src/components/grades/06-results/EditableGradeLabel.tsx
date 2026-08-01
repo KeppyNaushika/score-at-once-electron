@@ -5,6 +5,9 @@ import { useCallback, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 
+/** 上書きが自動算出値に対してどちら向きか */
+type OverrideDirection = "up" | "down" | "fixed" | "custom"
+
 interface EditableGradeLabelProps {
   /** 実効値 */
   gradeLabel: string | null
@@ -12,16 +15,58 @@ interface EditableGradeLabelProps {
   originalLabel: string | null
   /** 上書き値 */
   overrideLabel: string | null
-  /** 境界ラベル配列（minPercentage降順） */
-  boundaryLabels: string[]
+  /** その評価項目の成績境界。配列の並び順は問わない（判定は値と order で行う） */
+  boundaries: { label: string; minPercentage: number; order: number }[]
   onCommit: (newLabel: string | null) => void
+}
+
+/**
+ * 上書きの向きを求める。
+ *
+ * **要求得点率（minPercentage）の大小で判定し、boundaries の並び順には依存しない。**
+ * 「配列の先頭ほど上位の評価」という取り決めはどこにも無いので、並びに寄りかかると
+ * 算出側のソートが変わった瞬間に、型もテストも通ったまま矢印だけが逆を向く。
+ *
+ * 要求得点率が同じ段階が複数ある場合は `order` で比較する。境界エディタは強い評価を
+ * 先頭に並べて `order` を振るので、**`order` が小さいほど上位**。同点時にどちらの
+ * ラベルを採るかを決めている determineGradeLabel の安定ソートとも向きが一致する。
+ *
+ * 境界に無いラベル（教員が任意入力したもの）は "custom"。
+ */
+export function resolveOverrideDirection(
+  originalLabel: string,
+  overrideLabel: string,
+  boundaries: { label: string; minPercentage: number; order: number }[]
+): OverrideDirection {
+  const originalBoundary = boundaries.find(
+    (boundary) => boundary.label === originalLabel
+  )
+  const overrideBoundary = boundaries.find(
+    (boundary) => boundary.label === overrideLabel
+  )
+  if (!originalBoundary || !overrideBoundary) return "custom"
+
+  // 上方修正＝上書き先のほうが要求得点率が高い
+  if (overrideBoundary.minPercentage !== originalBoundary.minPercentage) {
+    return overrideBoundary.minPercentage > originalBoundary.minPercentage
+      ? "up"
+      : "down"
+  }
+
+  // 要求得点率が同じなら段階の並び（order が小さいほど上位）で比べる
+  if (overrideBoundary.order !== originalBoundary.order) {
+    return overrideBoundary.order < originalBoundary.order ? "up" : "down"
+  }
+
+  // 同じ段階への上書き（固定用途）
+  return "fixed"
 }
 
 export function EditableGradeLabel({
   gradeLabel,
   originalLabel,
   overrideLabel,
-  boundaryLabels,
+  boundaries,
   onCommit,
 }: EditableGradeLabelProps) {
   const [editing, setEditing] = useState(false)
@@ -94,20 +139,14 @@ export function EditableGradeLabel({
     ? `自動算出: ${originalLabel ?? "-"} → 手動: ${overrideLabel}`
     : undefined
 
-  // Override方向の判定
-  let overrideDirection: "up" | "down" | "fixed" | "custom" | null = null
-  if (isOverridden && originalLabel && overrideLabel) {
-    const originalIndex = boundaryLabels.indexOf(originalLabel)
-    const overrideIndex = boundaryLabels.indexOf(overrideLabel)
-    if (originalIndex !== -1 && overrideIndex !== -1) {
-      if (overrideIndex < originalIndex) overrideDirection = "up"
-      else if (overrideIndex > originalIndex) overrideDirection = "down"
-      else overrideDirection = "fixed"
-    } else {
-      overrideDirection = "custom"
-    }
-  } else if (isOverridden) {
-    overrideDirection = "custom"
+  // Override方向の判定。上書き値が空文字でも「手で触ったセル」であることは
+  // 示す必要があるので custom（*）へ倒す
+  let overrideDirection: OverrideDirection | null = null
+  if (isOverridden) {
+    overrideDirection =
+      originalLabel && overrideLabel
+        ? resolveOverrideDirection(originalLabel, overrideLabel, boundaries)
+        : "custom"
   }
 
   return (

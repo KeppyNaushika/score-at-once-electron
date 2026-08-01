@@ -15,6 +15,7 @@ import type {
 } from "../../../../src/types/grade.types"
 import { toGradeDataSourceType } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
+import { getQuestionAssignmentsBySubtotalIds } from "../../prisma/cropSubtotal"
 import { computeLiveMaxScore } from "../../prisma/gradeDataSource"
 import {
   adjustEstimate,
@@ -219,16 +220,27 @@ async function buildGradeCalcContext(gradeId: string) {
     dataSourceInfos.map((dataSourceInfo) => [dataSourceInfo.id, dataSourceInfo])
   )
 
+  // subtotal 型ソースの設問割り当ては生徒に依らないので、素点収集の前に1回だけ引く。
+  // 以前は生徒×ソースのループ内で引いており、対象者数×ソース数のクエリが飛んでいた。
+  const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
+    allDataSources.flatMap((dataSource) =>
+      dataSource.type === "subtotal" && dataSource.subtotalId
+        ? [dataSource.subtotalId]
+        : []
+    )
+  )
+
   // === パス1: 全対象者 × 全DataSourceの rawScore を収集して素点行列を組む ===
   const rawScoreRows: RawScoreRow[] = []
 
   for (const gradeStudent of gradeStudents) {
     const cells: RawScoreCell[] = []
     for (const dataSource of allDataSources) {
-      let raw = await getRawScore(
+      let raw = getRawScore(
         gradeStudent.studentId,
         dataSource,
-        examDataCache
+        examDataCache,
+        questionAssignments
       )
 
       // 見込→欠測対応: treatExpectedAsMissing が true かつ
@@ -713,6 +725,7 @@ export async function calculateGrades(
             .map((boundary) => ({
               label: boundary.label,
               minPercentage: Number(boundary.minPercentage),
+              order: boundary.order,
             })),
         })),
         students,

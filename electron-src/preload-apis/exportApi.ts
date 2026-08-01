@@ -126,20 +126,5 @@ export function createExportApi() {
     // R / exametrika 向けデータ出力（#834）
     exportRData: (options: ExportRDataOptions) =>
       ipcRenderer.invoke("export-r-data", options),
-
-    // Progress listeners
-    onExportProgress: (
-      callback: (progress: {
-        current: number
-        total: number
-        step: string
-        percentage: number
-      }) => void
-    ) => {
-      ipcRenderer.on("export-progress", (_event, progress) =>
-        callback(progress)
-      )
-      return () => ipcRenderer.removeAllListeners("export-progress")
-    },
   }
 }

@@ -394,8 +394,12 @@ export interface GradeCalculationResult {
     name: string
     order: number
     dataSources: { id: string; name: string }[]
-    /** その評価項目の成績境界（minPercentage降順）。override方向の判定に使う */
-    boundaries: { label: string; minPercentage: number }[]
+    /**
+     * その評価項目の成績境界。表示順として minPercentage 降順で返すが、
+     * override 方向の判定は minPercentage と order で行うため配列の並び順に意味は無い。
+     * order は境界エディタが振る段階の並びで、**小さいほど上位**。
+     */
+    boundaries: { label: string; minPercentage: number; order: number }[]
   }[]
   students: StudentGradeResult[]
 }
