@@ -59,7 +59,6 @@ export async function collectExamData(
       include: {
         examPages: {
           include: {
-            masterImages: true,
             studentAnswerImages: true,
             cropRegions: {
               include: {
@@ -232,13 +231,9 @@ export async function collectExamData(
     const answerSheetPaths: string[] = []
 
     for (const page of exam.examPages) {
-      for (const masterImage of page.masterImages) {
+      if (page.imagePath) {
         // projects/ → exams/ パス正規化（v0.6.x リネーム対応）
-        const normalized = masterImage.imagePath.replace(
-          /^projects\//,
-          "exams/"
-        )
-        masterImagePaths.push(normalized)
+        masterImagePaths.push(page.imagePath.replace(/^projects\//, "exams/"))
       }
       if (!isTemplate) {
         for (const studentAnswerImage of page.studentAnswerImages) {
@@ -389,6 +384,8 @@ export async function collectExamData(
         id: page.id,
         examId: page.examId,
         pageNumber: page.pageNumber,
+        imagePath: page.imagePath,
+        pageSize: page.pageSize,
         createdAt: page.createdAt.toISOString(),
         updatedAt: page.updatedAt.toISOString(),
       })),
@@ -496,17 +493,7 @@ export async function collectExamData(
           ),
       // v1.2.0+: pageImagesは空配列（後方互換性のため維持）
       pageImages: [],
-      // v1.2.0+: 新形式
-      masterImages: exam.examPages.flatMap((page) =>
-        page.masterImages.map((masterImage) => ({
-          id: masterImage.id,
-          examPageId: masterImage.examPageId,
-          imagePath: masterImage.imagePath,
-          pageSize: masterImage.pageSize,
-          createdAt: masterImage.createdAt.toISOString(),
-          updatedAt: masterImage.updatedAt.toISOString(),
-        }))
-      ),
+      // 模範解答画像は v1.23.0 で examPages へ畳んだ（masterImages セクションは無い）
       studentAnswerImages: isTemplate
         ? []
         : exam.examPages.flatMap((page) =>

@@ -17,8 +17,10 @@ import {
 import {
   deleteMasterAnswer,
   getMasterAnswersByExamId,
+  type MasterAnswerFileData,
+  replaceMasterAnswerImage,
+  updateExamPagePageSize,
   updateMasterAnswersOrder,
-  updateMasterImagePageSize,
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
@@ -220,37 +222,36 @@ export function setupMiscHandlers(): void {
     return await deleteClassroom(classroomId)
   })
 
-  // Master image handlers
+  // 模範解答ページ（ExamPage）のハンドラ。id はすべて ExamPage.id
   registerHandler(
     "upload-master-answers",
-    async (
-      examId: string,
-      filesData: {
-        name: string
-        type: string
-        buffer: ArrayBuffer
-        path?: string
-      }[]
-    ) => {
+    async (examId: string, filesData: MasterAnswerFileData[]) => {
       return await uploadMasterAnswers(examId, filesData)
     }
   )
 
-  registerHandler("delete-master-answer", async (answerId: string) => {
-    return await deleteMasterAnswer(answerId)
+  registerHandler(
+    "replace-master-answer-image",
+    async (examPageId: string, fileData: MasterAnswerFileData) => {
+      return await replaceMasterAnswerImage(examPageId, fileData)
+    }
+  )
+
+  registerHandler("delete-master-answer", async (examPageId: string) => {
+    return await deleteMasterAnswer(examPageId)
   })
 
   registerHandler(
     "update-master-answers-order",
-    async (answerOrders: { id: string; pageNumber: number }[]) => {
-      return await updateMasterAnswersOrder(answerOrders)
+    async (pageOrders: { id: string; pageNumber: number }[]) => {
+      return await updateMasterAnswersOrder(pageOrders)
     }
   )
 
   registerHandler(
-    "update-master-image-page-size",
-    async (id: string, pageSize: string) => {
-      return await updateMasterImagePageSize(id, pageSize)
+    "update-exam-page-page-size",
+    async (examPageId: string, pageSize: string) => {
+      return await updateExamPagePageSize(examPageId, pageSize)
     }
   )
 
@@ -315,9 +316,7 @@ export function setupMiscHandlers(): void {
   )
 
   registerHandler("get-master-images-by-exam-id", async (examId: string) => {
-    const masterAnswers = await getMasterAnswersByExamId(examId)
-    // Dateオブジェクトをそのまま返す
-    return masterAnswers
+    return await getMasterAnswersByExamId(examId)
   })
 
   // Data management handlers

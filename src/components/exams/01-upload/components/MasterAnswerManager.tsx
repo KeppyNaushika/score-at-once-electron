@@ -13,7 +13,8 @@ import { MasterAnswerGallery } from "./MasterAnswerGallery"
  * 機能:
  * - ファイルアップロード機能
  * - 模範解答画像一覧表示
- * - 画像の削除・順序変更
+ * - 模範解答画像の差し替え
+ * - ページの削除・順序変更
  * - パスワード保護PDFの処理
  * - 画像URL管理
  *
@@ -33,9 +34,11 @@ export function MasterAnswerManager({
     isUploading,
     uploadProgress,
     isDeleting,
+    isReplacing,
     isMoving,
     passwordDialog,
     uploadAnswers,
+    replaceAnswerImage,
     deleteAnswer,
     moveAnswer,
     updatePageSize,
@@ -59,8 +62,10 @@ export function MasterAnswerManager({
         answers={answers}
         imageUrls={imageUrls}
         isDeleting={isDeleting}
+        isReplacing={isReplacing}
         isMoving={isMoving}
         onDeleteAnswer={deleteAnswer}
+        onReplaceAnswer={replaceAnswerImage}
         onMoveAnswer={moveAnswer}
         onPageSizeChange={updatePageSize}
       />

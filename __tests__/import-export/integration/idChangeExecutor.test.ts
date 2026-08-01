@@ -346,7 +346,7 @@ describe("executeIdChanges", () => {
         },
       })
       await prisma.examPage.create({
-        data: { id: pageId, examId, pageNumber: 1 },
+        data: { id: pageId, examId, pageNumber: 1, imagePath: "" },
       })
       await prisma.cropRegion.create({
         data: {

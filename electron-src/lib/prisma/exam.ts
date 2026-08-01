@@ -122,7 +122,6 @@ export const getExamById = async (id: string) => {
       },
       examPages: {
         include: {
-          masterImages: true,
           studentAnswerImages: {
             include: {
               examStudent: { include: { student: true } },
@@ -185,7 +184,7 @@ export const getExam = async (id: string) => {
 }
 
 /**
- * 試験スカラー + examPages（masterImages 含む）を1クエリで取得する。
+ * 試験スカラー + examPages（模範解答画像を含む）を1クエリで取得する。
  * 採点画面（07）がタイトル用 examName とページ画像を必要とする用途向け。
  */
 export const getExamWithPages = async (id: string) => {
@@ -223,7 +222,6 @@ export const createExam = async (
       },
       examPages: {
         include: {
-          masterImages: true,
           studentAnswerImages: true,
           cropRegions: true,
         },

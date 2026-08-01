@@ -2,7 +2,7 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import { type CropRegion, User } from "@prisma/client"
+import { type CropRegion, type ExamPage, User } from "@prisma/client"
 
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
@@ -35,15 +35,6 @@ export type CropRegionArea = Omit<
 // ============================================================================
 // Core Type Definitions
 // ============================================================================
-
-type MasterImage = {
-  id: string
-  examId: string
-  imagePath: string
-  pageNumber: number
-  createdAt: Date
-  updatedAt: Date
-}
 
 /**
  * 採点領域のタイプ定義
@@ -106,9 +97,9 @@ export interface InitialDataState {
   /** 現在のユーザー */
   currentUser: User | null
   /** マスター画像一覧 */
-  masterImages: MasterImage[]
+  masterImages: ExamPage[]
   /** 選択中のマスター画像 */
-  selectedMasterImage: MasterImage | null
+  selectedMasterImage: ExamPage | null
   /** 背景画像のURL */
   backgroundImageUrl: string | null
   /** 画像の寸法 */

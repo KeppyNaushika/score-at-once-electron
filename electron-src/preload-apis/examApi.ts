@@ -24,18 +24,23 @@ export function createExamApi() {
       examId: string // exam オブジェクトではなく examId を直接渡す
     ) => ipcRenderer.invoke("delete-exam", examId),
 
-    // MasterAnswer related
+    // 模範解答ページ（ExamPage）。id はすべて ExamPage.id
     uploadMasterAnswers: (
       examId: string,
       filesData: { name: string; type: string; buffer: ArrayBuffer }[]
     ) => ipcRenderer.invoke("upload-master-answers", examId, filesData),
-    deleteMasterAnswer: (answerId: string) =>
-      ipcRenderer.invoke("delete-master-answer", answerId),
+    replaceMasterAnswerImage: (
+      examPageId: string,
+      fileData: { name: string; type: string; buffer: ArrayBuffer }
+    ) =>
+      ipcRenderer.invoke("replace-master-answer-image", examPageId, fileData),
+    deleteMasterAnswer: (examPageId: string) =>
+      ipcRenderer.invoke("delete-master-answer", examPageId),
     updateMasterAnswersOrder: (
-      answerOrders: { id: string; pageNumber: number }[]
-    ) => ipcRenderer.invoke("update-master-answers-order", answerOrders),
-    updateMasterImagePageSize: (id: string, pageSize: string) =>
-      ipcRenderer.invoke("update-master-image-page-size", id, pageSize),
+      pageOrders: { id: string; pageNumber: number }[]
+    ) => ipcRenderer.invoke("update-master-answers-order", pageOrders),
+    updateExamPagePageSize: (examPageId: string, pageSize: string) =>
+      ipcRenderer.invoke("update-exam-page-page-size", examPageId, pageSize),
     getMasterImagesByExamId: (examId: string) =>
       ipcRenderer.invoke("get-master-images-by-exam-id", examId),
     getExamPagesByExamId: (examId: string) =>

@@ -1,3 +1,4 @@
+import type { ExamPage } from "@prisma/client"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
@@ -7,14 +8,6 @@ import {
   InitialDataState,
 } from "@/components/exams/02-template/types"
 import { toCropRegionAreaType } from "@/types/cropRegionAreaType.types"
-type MasterImage = {
-  id: string
-  examId: string
-  imagePath: string
-  pageNumber: number
-  createdAt: Date
-  updatedAt: Date
-}
 
 /**
  * テンプレートページの初期データ読み込みと状態管理を担当するカスタムフック
@@ -95,39 +88,29 @@ export function useTemplateData(examId: string | undefined) {
       const examPages = exam.examPages
 
       // マスター画像の処理
-      let processedMasterImages: MasterImage[] = []
-      let selectedImage: MasterImage | null = null
+      let processedMasterImages: ExamPage[] = []
+      let selectedImage: ExamPage | null = null
       let backgroundUrl: string | null = null
       let dimensions: ImageDimensions | null = null
 
       if (examPages && examPages.length > 0) {
-        // examPagesからmaster imagesを抽出してソート
-        const masterImages = examPages
-          .filter((page) => page.masterImages && page.masterImages.length > 0)
-          .map((page) => {
-            const masterImage = page.masterImages?.[0]
-            return {
-              id: page.id,
-              examId: page.examId,
-              imagePath: masterImage?.imagePath || "",
-              pageNumber: page.pageNumber,
-              createdAt: page.createdAt,
-              updatedAt: page.updatedAt,
-            }
-          })
-          .sort(
-            (masterImageA, masterImageB) =>
-              masterImageA.pageNumber - masterImageB.pageNumber
+        // 模範解答画像を持つページだけを対象にする（画像の無いページには領域を引けない）
+        processedMasterImages = examPages
+          .filter((page) => page.imagePath)
+          .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
+
+        // 全ページが模範解答なし（旧バージョンで消されたまま移行した試験）なら
+        // 選べる背景が無い。ここで [0] を素通しすると undefined 参照で画面ごと落ち、
+        // どのページが欠けているのかを確かめることすらできなくなる
+        selectedImage = processedMasterImages[0] ?? null
+
+        if (selectedImage?.imagePath) {
+          // 最初の画像のURLと寸法を取得
+          backgroundUrl = await window.electronAPI.resolveFileProtocolPath(
+            selectedImage.imagePath
           )
-
-        processedMasterImages = masterImages
-        selectedImage = processedMasterImages[0]
-
-        // 最初の画像のURLと寸法を取得
-        backgroundUrl = await window.electronAPI.resolveFileProtocolPath(
-          selectedImage.imagePath
-        )
-        dimensions = await loadImageDimensions(backgroundUrl)
+          dimensions = await loadImageDimensions(backgroundUrl)
+        }
       }
 
       // 既存のレイアウト領域を取得
@@ -197,6 +180,8 @@ export function useTemplateData(examId: string | undefined) {
         (masterImage) => masterImage.id === imageId
       )
       if (!image || !examId) return
+
+      if (!image.imagePath) return
 
       try {
         // 新しい画像のURLと寸法を取得

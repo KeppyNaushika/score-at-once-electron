@@ -14,9 +14,11 @@ async function migrateImagePathsInDatabase(): Promise<void> {
   try {
     const prisma = getPrismaClient()
 
+    // 模範解答画像は ExamPage が持つ（旧 MasterImage テーブルは畳んで廃止済み）。
+    // この関数はマイグレーション適用後に走るので、旧テーブルを引いてはいけない
     const [masterResult, answerResult] = await prisma.$transaction([
       prisma.$executeRawUnsafe(
-        `UPDATE "MasterImage" SET "imagePath" = 'exams/' || SUBSTR("imagePath", LENGTH('projects/') + 1) WHERE "imagePath" LIKE 'projects/%'`
+        `UPDATE "ExamPage" SET "imagePath" = 'exams/' || SUBSTR("imagePath", LENGTH('projects/') + 1) WHERE "imagePath" LIKE 'projects/%'`
       ),
       prisma.$executeRawUnsafe(
         `UPDATE "StudentAnswerImage" SET "imagePath" = 'exams/' || SUBSTR("imagePath", LENGTH('projects/') + 1) WHERE "imagePath" LIKE 'projects/%'`
@@ -25,7 +27,7 @@ async function migrateImagePathsInDatabase(): Promise<void> {
 
     if (masterResult > 0 || answerResult > 0) {
       console.log(
-        `Migrated imagePath in DB: MasterImage=${masterResult}, StudentAnswerImage=${answerResult}`
+        `Migrated imagePath in DB: ExamPage=${masterResult}, StudentAnswerImage=${answerResult}`
       )
     }
   } catch (error) {

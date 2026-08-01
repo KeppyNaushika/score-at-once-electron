@@ -96,7 +96,7 @@ async function createExamWithCropRegions(options: {
 
   const pageId = generateId()
   await prisma.examPage.create({
-    data: { id: pageId, examId, pageNumber: 1 },
+    data: { id: pageId, examId, pageNumber: 1, imagePath: "" },
   })
 
   for (let i = 0; i < cropRegionIds.length; i++) {

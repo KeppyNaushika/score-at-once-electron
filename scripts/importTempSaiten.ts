@@ -481,14 +481,6 @@ async function importExam(
         id: examPageId,
         examId,
         pageNumber: pageNum,
-        createdAt: now,
-        updatedAt: now,
-      },
-    })
-    await prisma.masterImage.create({
-      data: {
-        id: crypto.randomUUID(),
-        examPageId,
         imagePath: masterRelPaths[pi],
         pageSize: "A4",
         createdAt: now,

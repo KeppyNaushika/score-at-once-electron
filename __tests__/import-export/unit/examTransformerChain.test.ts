@@ -331,10 +331,10 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
   return raw as unknown as ExamArchiveData
 }
 
-/** 現行 (v1.22.0) 最小形状 */
+/** 現行 (v1.23.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.22.0"),
+    manifest: createManifest("1.23.0"),
     examData: {
       exam: {
         id: "exam-1",
@@ -348,7 +348,6 @@ function createCurrentArchiveData(): ExamArchiveData {
       examPages: [],
       cropRegions: [],
       pageImages: [],
-      masterImages: [],
       studentAnswerImages: [],
       examStudents: [],
       userExams: [],
@@ -374,7 +373,7 @@ function createCurrentArchiveData(): ExamArchiveData {
 }
 
 /**
- * 旧形状（1.22.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
+ * 旧形状（1.23.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
  * 旧キーの行は型の外から入れる（`Object.assign` で足りるので `as` は使わない）。
  */
 const putLegacyRows = (
@@ -385,13 +384,13 @@ const putLegacyRows = (
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全22変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全23変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.22.0")
-    expect(result.appliedTransformations).toHaveLength(22)
-    expect(result.data.manifest.version).toBe("1.22.0")
+    expect(result.finalVersion).toBe("1.23.0")
+    expect(result.appliedTransformations).toHaveLength(23)
+    expect(result.data.manifest.version).toBe("1.23.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -402,10 +401,13 @@ describe("transformExamArchiveToLatest", () => {
     expect(examData.examPages).toHaveLength(1)
     expect(examDataRecord.projectPages).toBeUndefined()
 
-    // pageImages → MasterImage/StudentAnswerImage 分離（projectPageId を継承）
-    expect(examData.masterImages).toEqual([
-      expect.objectContaining({ id: "img-1", examPageId: "page-1" }),
-    ])
+    // pageImages → 模範解答/答案 分離（projectPageId を継承）のうち、
+    // 模範解答は最終的にページへ畳まれる
+    expect(examData.examPages[0]).toMatchObject({
+      id: "page-1",
+      imagePath: "master-images/1.png",
+      pageSize: "A4",
+    })
     expect(examData.studentAnswerImages).toEqual([
       expect.objectContaining({
         id: "img-2",
@@ -484,6 +486,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
       { from: "1.21.0", to: "1.22.0" },
+      { from: "1.22.0", to: "1.23.0" },
     ])
 
     const examData = result.data.examData
@@ -602,7 +605,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.22.0")
+    expect(detection.version).toBe("1.23.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -640,9 +643,10 @@ describe("transformExamArchiveToLatest", () => {
     expect(detection.version).toBe("1.1.0")
 
     const result = transformExamArchiveToLatest(data)
-    expect(result.data.examData.masterImages).toEqual([
-      expect.objectContaining({ id: "img-1", examPageId: "page-1" }),
-    ])
+    expect(result.data.examData.examPages[0]).toMatchObject({
+      id: "page-1",
+      imagePath: "master-images/1.png",
+    })
     expect(result.data.examData.studentAnswerImages).toEqual([
       expect.objectContaining({ id: "img-2", examStudentId: "examstudent-1" }),
     ])
@@ -700,6 +704,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
       { from: "1.21.0", to: "1.22.0" },
+      { from: "1.22.0", to: "1.23.0" },
     ])
     // キーごと落ちる（取り込み先が存在しないため）
     const transformedExamData = result.data.examData as unknown as Record<
@@ -713,13 +718,13 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
-  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.22.0 になる", () => {
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.23.0 になる", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.17.0"
 
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.finalVersion).toBe("1.22.0")
+    expect(result.finalVersion).toBe("1.23.0")
     expect(result.warnings).toEqual([])
   })
 
@@ -748,6 +753,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
       { from: "1.21.0", to: "1.22.0" },
+      { from: "1.22.0", to: "1.23.0" },
     ])
     // キーごと落ちる（アーカイブは正本であり復活防止をしないため）
     const transformedRecord = result.data as unknown as Record<string, unknown>
@@ -769,6 +775,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.19.0", to: "1.20.0" },
       { from: "1.20.0", to: "1.21.0" },
       { from: "1.21.0", to: "1.22.0" },
+      { from: "1.22.0", to: "1.23.0" },
     ])
     expect(result.data.scoresData.cropRegionAssignments).toEqual([])
   })
@@ -832,6 +839,7 @@ describe("transformExamArchiveToLatest", () => {
     expect(result.appliedTransformations).toEqual([
       { from: "1.20.0", to: "1.21.0" },
       { from: "1.21.0", to: "1.22.0" },
+      { from: "1.22.0", to: "1.23.0" },
     ])
     expect(result.data.examData.studentAnswerImages).toEqual([
       expect.objectContaining({
@@ -1003,11 +1011,110 @@ describe("transformExamArchiveToLatest", () => {
     expect(examData).not.toHaveProperty("examExportSettings")
   })
 
+  test("1.22.0 → 1.23.0: 模範解答画像がページへ畳まれる", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.22.0"
+    putLegacyRows(data.examData, {
+      examPages: [
+        {
+          id: "page-1",
+          examId: "exam-1",
+          pageNumber: 1,
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+      masterImages: [
+        {
+          id: "image-1",
+          examPageId: "page-1",
+          imagePath: "exams/exam-1/master-images/1.png",
+          pageSize: "B4",
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+    })
+
+    const result = transformExamArchiveToLatest(data)
+    const examData = result.data.examData
+
+    expect(examData.examPages[0]).toMatchObject({
+      id: "page-1",
+      imagePath: "exams/exam-1/master-images/1.png",
+      pageSize: "B4",
+    })
+    // 畳んだ側のセクションは残さない
+    expect(examData).not.toHaveProperty("masterImages")
+    expect(result.warnings).toEqual([])
+  })
+
+  test("1.22.0 → 1.23.0: 模範解答の無いページは画像なしで残り、件数が警告に出る", () => {
+    // 旧実装では「答案が残っているページの模範解答だけを削除する」ことができた。
+    // ここでページを捨てると採点領域も答案も道連れになるので、消さずに引き継ぐ
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.22.0"
+    putLegacyRows(data.examData, {
+      examPages: [
+        {
+          id: "page-ghost",
+          examId: "exam-1",
+          pageNumber: 1,
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+      masterImages: [],
+    })
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.data.examData.examPages).toHaveLength(1)
+    expect(result.data.examData.examPages[0]).toMatchObject({
+      id: "page-ghost",
+      imagePath: null,
+      pageSize: "A4",
+    })
+    expect(result.warnings.some((warning) => warning.includes("1件"))).toBe(
+      true
+    )
+  })
+
+  test("1.22.0 → 1.23.0: 再適用しても畳み終わった画像パスを消さない（冪等）", () => {
+    // 形状フロアが版数を引き下げると、既に 1.23.0 の形をしたデータへこの変換器が
+    // もう一度かかる。masterImages が無いからといってページの imagePath を
+    // 無条件に上書きすると、取り込んだ試験の模範解答が全滅する
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.22.0"
+    putLegacyRows(data.examData, {
+      examPages: [
+        {
+          id: "page-1",
+          examId: "exam-1",
+          pageNumber: 1,
+          imagePath: "exams/exam-1/master-images/1.png",
+          pageSize: "B4",
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+    })
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.data.examData.examPages[0]).toMatchObject({
+      id: "page-1",
+      imagePath: "exams/exam-1/master-images/1.png",
+      pageSize: "B4",
+    })
+    expect(result.warnings).toEqual([])
+  })
+
   test("現行形式は無変換で素通しされる", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.22.0")
+    expect(result.originalVersion).toBe("1.23.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)

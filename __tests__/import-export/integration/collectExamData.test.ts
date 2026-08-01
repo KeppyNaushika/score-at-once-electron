@@ -78,6 +78,14 @@ describe("collectExamData", () => {
     expect(data.scoresData.questionScores.length).toBe(12) // 4 regions × 3 students
     expect(data.masterImagePaths.length).toBe(2)
     expect(data.answerSheetPaths.length).toBe(6) // 3 students × 2 pages
+
+    // 模範解答画像はページが持つ（v1.23.0 で masterImages セクションを畳んだ）
+    expect(data.examData.examPages[0]).toMatchObject({
+      pageNumber: 1,
+      imagePath: `exams/${testExam.exam.id}/master-images/page1.png`,
+      pageSize: "A4",
+    })
+    expect(data.examData).not.toHaveProperty("masterImages")
   })
 
   // DC-2: 現在ユーザーのスコアのみ収集される

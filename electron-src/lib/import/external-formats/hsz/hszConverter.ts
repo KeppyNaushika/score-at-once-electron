@@ -67,37 +67,20 @@ export async function convertHszToScore(
       pageUuidMap.set(sheetPage.page, generateUuid())
     }
 
-    // 4. ExamPages 生成
-    const examPages = sheet_pages.map((sheetPage) => ({
-      id: pageUuidMap.get(sheetPage.page)!,
-      examId,
-      pageNumber: sheetPage.page + 1, // Score at Onceは1始まり
-      createdAt: now,
-      updatedAt: now,
-    }))
-
-    // 5. MasterImages 生成
-    const masterImages: Array<{
-      id: string
-      examPageId: string
-      imagePath: string
-      createdAt: string
-      updatedAt: string
-    }> = []
-
-    for (const sheetPage of sheet_pages) {
+    // 4. ExamPages 生成（模範解答画像はページが持つ）
+    const examPages = sheet_pages.map((sheetPage) => {
       const imgFileName = `correct_${sheetPage.page}.png`
-      const imgEntry = entries.find((entry) => entry.entryName === imgFileName)
-      if (imgEntry) {
-        masterImages.push({
-          id: generateUuid(),
-          examPageId: pageUuidMap.get(sheetPage.page)!,
-          imagePath: imgFileName,
-          createdAt: now,
-          updatedAt: now,
-        })
+      const hasImage = entries.some((entry) => entry.entryName === imgFileName)
+      return {
+        id: pageUuidMap.get(sheetPage.page)!,
+        examId,
+        pageNumber: sheetPage.page + 1, // Score at Onceは1始まり
+        imagePath: hasImage ? imgFileName : "",
+        pageSize: "A4",
+        createdAt: now,
+        updatedAt: now,
       }
-    }
+    })
 
     // 6. CropRegions 生成（sheet_fields → cropRegions変換）
     // ページ番号 → 画像サイズ マッピング（ピクセル→正規化座標変換用）
@@ -145,7 +128,6 @@ export async function convertHszToScore(
       examPages,
       cropRegions,
       pageImages: [], // v1.2.0以降は使用しない
-      masterImages,
       studentAnswerImages: [],
       examStudents: [],
       userExams: [],
@@ -173,7 +155,7 @@ export async function convertHszToScore(
         scores: 0,
         annotations: 0,
         subtotalGroups: subtotalData.subtotalGroups.length,
-        masterImages: masterImages.length,
+        masterImages: examPages.filter((page) => page.imagePath).length,
         answerSheetImages: 0,
       },
     }

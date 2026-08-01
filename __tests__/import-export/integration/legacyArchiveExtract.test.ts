@@ -151,7 +151,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
 
     // チェーン警告が伝播する
     expect(data.transformWarnings.length).toBeGreaterThan(0)
-    expect(data.manifest.version).toBe("1.22.0")
+    expect(data.manifest.version).toBe("1.23.0")
 
     cleanupTempDir(data.tempDir)
   })
@@ -222,13 +222,14 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     const data = result.data!
     createdPaths.push(data.tempDir)
 
-    expect(data.manifest.version).toBe("1.22.0")
+    expect(data.manifest.version).toBe("1.23.0")
     expect(data.examData.exam.id).toBe("exam-1")
     expect(data.examData.examPages).toHaveLength(1)
     expect(data.examData.examClassrooms).toEqual([])
-    expect(data.examData.masterImages).toEqual([
-      expect.objectContaining({ id: "img-1", examPageId: "page-1" }),
-    ])
+    expect(data.examData.examPages[0]).toMatchObject({
+      id: "page-1",
+      imagePath: "master-images/1.png",
+    })
     expect(data.studentsData.students[0].studentNumber).toBe("1001")
     expect(data.scoresData.scoreDecisions).toEqual([])
     expect(data.tagsData).toBeDefined()
@@ -252,7 +253,6 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
         examPages: [],
         cropRegions: [],
         pageImages: [],
-        masterImages: [],
         studentAnswerImages: [],
         examStudents: [],
         userExams: [],
@@ -281,7 +281,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     createdPaths.push(data.tempDir)
 
     expect(data.transformWarnings).toEqual([])
-    expect(data.manifest.version).toBe("1.22.0")
+    expect(data.manifest.version).toBe("1.23.0")
 
     cleanupTempDir(data.tempDir)
   })

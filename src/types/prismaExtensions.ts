@@ -147,7 +147,6 @@ export type ExamForDetail = Prisma.ExamGetPayload<{
     userExams: { include: { user: true } }
     examPages: {
       include: {
-        masterImages: true
         studentAnswerImages: {
           include: { examStudent: { include: { student: true } } }
         }

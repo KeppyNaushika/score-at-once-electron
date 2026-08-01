@@ -238,6 +238,8 @@ export function useExportPage() {
         if (!masterImages || masterImages.length === 0) return
 
         const firstImage = masterImages[0]
+        if (!firstImage.imagePath) return
+
         const imageUrl = await window.electronAPI.resolveFileProtocolPath(
           firstImage.imagePath
         )

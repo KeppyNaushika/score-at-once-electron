@@ -61,7 +61,7 @@ export function setupExamHandlers(): void {
     return getExam(examId)
   })
 
-  // 試験スカラー + examPages（masterImages 含む）を1クエリで。採点画面用。
+  // 試験スカラー + examPages（模範解答画像を含む）を1クエリで。採点画面用。
   registerHandler("get-exam-with-pages", async (examId: string) => {
     return getExamWithPages(examId)
   })

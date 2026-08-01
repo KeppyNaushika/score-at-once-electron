@@ -3,15 +3,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import {
-  MasterAnswer,
-  MasterAnswersState,
-} from "@/components/exams/01-upload/types"
+import { MasterAnswersState } from "@/components/exams/01-upload/types"
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 import { ConvertedImage } from "@/lib/pdfConverter"
 
 import {
-  convertExamPagesToMasterAnswers,
   createUploadData,
   generateImageUrls,
   generatePageNumberUpdateRequests,
@@ -21,24 +18,26 @@ import {
 } from "../utils/imageUtils"
 
 /**
- * マスター解答管理フック
- * @param {string} examId - 試験ID
- * @param {MasterAnswer[]} initialAnswers - 初期解答リスト
- * @param {function} onAnswersChange - 解答変更時のコールバック
- * @returns {object} マスター解答管理の状態と操作関数
+ * 模範解答ページの管理フック
+ *
+ * 模範解答ページは ExamPage そのもの。ここで扱う id はすべて ExamPage.id である。
+ *
+ * @param examId - 試験ID
+ * @param initialAnswers - 初期ページリスト
+ * @param onAnswersChange - 変更時のコールバック
  */
 export function useMasterAnswers(
   examId: string,
-  initialAnswers: MasterAnswer[],
-  onAnswersChange: (answers: MasterAnswer[]) => void
+  initialAnswers: ExamPageWithContent[],
+  onAnswersChange: (answers: ExamPageWithContent[]) => void
 ) {
-  // 状態管理
   const [state, setState] = useState<MasterAnswersState>({
     answers: [],
     imageUrls: {},
     isUploading: false,
     uploadProgress: 0,
     isDeleting: {},
+    isReplacing: {},
     isMoving: false,
   })
 
@@ -50,9 +49,6 @@ export function useMasterAnswers(
     handlePasswordCancel,
   } = usePdfPasswordConversion()
 
-  /**
-   * 初期解答とURLの設定
-   */
   useEffect(() => {
     const sortedAnswers = sortImagesByPageNumber(initialAnswers)
     setState((prev) => ({ ...prev, answers: sortedAnswers }))
@@ -70,19 +66,36 @@ export function useMasterAnswers(
   }, [initialAnswers])
 
   /**
-   * 画像アップロード処理
-   * @param {File[]} files - アップロード対象のファイルリスト
+   * DBを引き直して一覧と画像URLを差し替える。
+   * ページ番号の振り直しや答案のカスケード削除まで含めて、main 側の結果をそのまま反映する
    */
+  const reloadAnswers = useCallback(async () => {
+    const fetchedPages = await window.electronAPI.getExamPagesByExamId(examId)
+    const sortedAnswers = sortImagesByPageNumber(fetchedPages ?? [])
+    const urls = await generateImageUrls(sortedAnswers)
+
+    setState((prev) => ({ ...prev, answers: sortedAnswers, imageUrls: urls }))
+    onAnswersChange(sortedAnswers)
+    return sortedAnswers
+  }, [examId, onAnswersChange])
+
+  /** File を main へ渡せる形（PDFは画像へ変換済み）にする。キャンセル時は null */
+  const toUploadData = useCallback(
+    async (file: File): Promise<ConvertedImage[] | null> => {
+      if (file.type === "application/pdf") {
+        const pdfConversion = await convertPdfWithRetry(file)
+        if (pdfConversion === null) return null
+        return pdfConversion.images
+      }
+      return await createUploadData(file)
+    },
+    [convertPdfWithRetry]
+  )
+
   const uploadAnswers = useCallback(
     async (files: File[]) => {
       if (!examId) {
         toast.error("試験IDが指定されていません。")
-        return
-      }
-
-      // クライアントサイドチェック
-      if (typeof window === "undefined") {
-        toast.error("この機能はクライアントサイドでのみ利用可能です。")
         return
       }
 
@@ -91,22 +104,11 @@ export function useMasterAnswers(
       try {
         const allFilesData: ConvertedImage[] = []
 
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i]
-
-          if (file.type === "application/pdf") {
-            // Convert PDF to individual page images with password handling
-            const pdfConversion = await convertPdfWithRetry(file)
-            if (pdfConversion === null) {
-              // ユーザーがパスワード入力をキャンセルした場合はアップロードを中断
-              return
-            }
-            allFilesData.push(...pdfConversion.images)
-          } else {
-            // Handle regular image files
-            const imageData = await createUploadData(file)
-            allFilesData.push(...imageData)
-          }
+        for (const file of files) {
+          const fileData = await toUploadData(file)
+          // ユーザーがパスワード入力をキャンセルした場合はアップロードを中断
+          if (fileData === null) return
+          allFilesData.push(...fileData)
         }
 
         const result = await window.electronAPI.uploadMasterAnswers(
@@ -115,33 +117,17 @@ export function useMasterAnswers(
         )
 
         if (result) {
-          const totalPages = allFilesData.length
           const pdfCount = files.filter(
             (file) => file.type === "application/pdf"
           ).length
-          const imageCount = files.length - pdfCount
-
-          const message = generateUploadSuccessMessage(
-            totalPages,
-            pdfCount,
-            imageCount
+          toast.success(
+            generateUploadSuccessMessage(
+              allFilesData.length,
+              pdfCount,
+              files.length - pdfCount
+            )
           )
-          toast.success(message)
-
-          // Get updated exam pages (masterImages を含む軽量クエリ)
-          const updatedPages =
-            await window.electronAPI.getExamPagesByExamId(examId)
-          if (updatedPages && updatedPages.length > 0) {
-            const masterAnswers = convertExamPagesToMasterAnswers(updatedPages)
-            const sortedUpdatedAnswers = sortImagesByPageNumber(masterAnswers)
-
-            setState((prev) => ({ ...prev, answers: sortedUpdatedAnswers }))
-            onAnswersChange(sortedUpdatedAnswers)
-
-            // Update answer URLs
-            const newUrls = await generateImageUrls(sortedUpdatedAnswers)
-            setState((prev) => ({ ...prev, imageUrls: newUrls }))
-          }
+          await reloadAnswers()
         }
       } catch (error) {
         console.error("Upload failed:", error)
@@ -150,53 +136,80 @@ export function useMasterAnswers(
         setState((prev) => ({ ...prev, isUploading: false }))
       }
     },
-    [examId, onAnswersChange, convertPdfWithRetry]
+    [examId, toUploadData, reloadAnswers]
   )
 
   /**
-   * 画像削除処理
-   * @param {string} imageId - 削除対象の画像ID
+   * 模範解答画像だけを差し替える。採点領域・答案・採点結果はそのまま残る。
+   * 複数ページのPDFを渡された場合は1ページ目だけを使う（1ページ＝1枚のため）
    */
-  const deleteAnswer = useCallback(
-    async (answerId: string) => {
+  const replaceAnswerImage = useCallback(
+    async (examPageId: string, file: File) => {
       setState((prev) => ({
         ...prev,
-        isDeleting: { ...prev.isDeleting, [answerId]: true },
+        isReplacing: { ...prev.isReplacing, [examPageId]: true },
       }))
 
       try {
-        const result = await window.electronAPI.deleteMasterAnswer(answerId)
-        const updatedAnswers = sortImagesByPageNumber(
-          convertExamPagesToMasterAnswers(result.examPages)
+        const fileData = await toUploadData(file)
+        if (fileData === null) return
+        if (fileData.length === 0) {
+          toast.error("画像を読み取れませんでした。")
+          return
+        }
+        if (fileData.length > 1) {
+          toast.info(
+            `複数ページのファイルです。1ページ目だけを差し替えに使います（残り${fileData.length - 1}ページは無視）。`
+          )
+        }
+
+        await window.electronAPI.replaceMasterAnswerImage(
+          examPageId,
+          fileData[0]
         )
-        const newUrls = await generateImageUrls(updatedAnswers)
-
-        setState((prev) => ({
-          ...prev,
-          answers: updatedAnswers,
-          isDeleting: { ...prev.isDeleting, [answerId]: false },
-          imageUrls: newUrls,
-        }))
-
-        onAnswersChange(updatedAnswers)
-        toast.success("画像を削除しました。")
+        await reloadAnswers()
+        toast.success("模範解答画像を差し替えました。")
       } catch (error) {
-        console.error("Failed to delete image:", error)
-        toast.error("画像の削除に失敗しました。")
+        console.error("Failed to replace master answer image:", error)
+        toast.error("模範解答画像の差し替えに失敗しました。")
+      } finally {
         setState((prev) => ({
           ...prev,
-          isDeleting: { ...prev.isDeleting, [answerId]: false },
+          isReplacing: { ...prev.isReplacing, [examPageId]: false },
         }))
       }
     },
-    [onAnswersChange]
+    [toUploadData, reloadAnswers]
   )
 
   /**
-   * 解答移動処理
-   * @param {number} fromIndex - 移動元のインデックス
-   * @param {"left" | "right"} direction - 移動方向
+   * ページごと削除する。答案画像・採点結果もカスケード削除されるため、
+   * 呼び出し側で確認を取ってから呼ぶこと
    */
+  const deleteAnswer = useCallback(
+    async (examPageId: string) => {
+      setState((prev) => ({
+        ...prev,
+        isDeleting: { ...prev.isDeleting, [examPageId]: true },
+      }))
+
+      try {
+        await window.electronAPI.deleteMasterAnswer(examPageId)
+        await reloadAnswers()
+        toast.success("ページを削除しました。")
+      } catch (error) {
+        console.error("Failed to delete page:", error)
+        toast.error("ページの削除に失敗しました。")
+      } finally {
+        setState((prev) => ({
+          ...prev,
+          isDeleting: { ...prev.isDeleting, [examPageId]: false },
+        }))
+      }
+    },
+    [reloadAnswers]
+  )
+
   const moveAnswer = useCallback(
     async (fromIndex: number, direction: "left" | "right") => {
       const newAnswers = moveImageInList(state.answers, fromIndex, direction)
@@ -205,8 +218,9 @@ export function useMasterAnswers(
       setState((prev) => ({ ...prev, isMoving: true }))
 
       try {
-        const updateRequests = generatePageNumberUpdateRequests(newAnswers)
-        await window.electronAPI.updateMasterAnswersOrder(updateRequests)
+        await window.electronAPI.updateMasterAnswersOrder(
+          generatePageNumberUpdateRequests(newAnswers)
+        )
 
         setState((prev) => ({ ...prev, answers: newAnswers }))
         onAnswersChange(newAnswers)
@@ -221,20 +235,14 @@ export function useMasterAnswers(
   )
 
   const updatePageSize = useCallback(
-    async (answerId: string, pageSize: string) => {
+    async (examPageId: string, pageSize: string) => {
       try {
-        await window.electronAPI.updateMasterImagePageSize(answerId, pageSize)
-        setState((prev) => ({
-          ...prev,
-          answers: prev.answers.map((answer) =>
-            answer.id === answerId ? { ...answer, pageSize } : answer
-          ),
-        }))
-        onAnswersChange(
-          state.answers.map((answer) =>
-            answer.id === answerId ? { ...answer, pageSize } : answer
-          )
+        await window.electronAPI.updateExamPagePageSize(examPageId, pageSize)
+        const updatedAnswers = state.answers.map((answer) =>
+          answer.id === examPageId ? { ...answer, pageSize } : answer
         )
+        setState((prev) => ({ ...prev, answers: updatedAnswers }))
+        onAnswersChange(updatedAnswers)
         toast.success("用紙サイズを変更しました")
       } catch (error) {
         console.error("Failed to update page size:", error)
@@ -248,6 +256,7 @@ export function useMasterAnswers(
     ...state,
     passwordDialog,
     uploadAnswers,
+    replaceAnswerImage,
     deleteAnswer,
     moveAnswer,
     updatePageSize,

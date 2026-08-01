@@ -116,7 +116,6 @@ describe("アーカイブデータ構造", () => {
       const data = createArchiveExamData()
 
       expect(data.pageImages).toEqual([])
-      expect(data.masterImages).toEqual([])
       expect(data.studentAnswerImages).toEqual([])
       expect(data.examStudents).toEqual([])
       expect(data.userExams).toEqual([])

@@ -58,10 +58,7 @@ export async function createImportImageRecords(
 ): Promise<void> {
   const newExamId = idMappings.exam[data.examData.exam.id]
 
-  // MasterImage レコードの作成
-  if (data.examData.masterImages && data.examData.masterImages.length > 0) {
-    await createMasterImageRecords(data, idMappings, newExamId, tx)
-  }
+  // 模範解答画像は ExamPage 自身が持つため、ページ作成時（importExamCore）に入っている
 
   // StudentAnswerImage レコードの作成
   if (
@@ -74,44 +71,6 @@ export async function createImportImageRecords(
 
   // v1.1.0以前との後方互換性（pageImagesを使用）
   await createLegacyImageRecords(data, idMappings, newExamId, tx)
-}
-
-/**
- * MasterImageレコードの作成
- */
-async function createMasterImageRecords(
-  data: ExtractedArchiveData,
-  idMappings: IdMappings,
-  newExamId: string,
-  tx: PrismaTransaction
-): Promise<void> {
-  for (const masterImage of data.examData.masterImages!) {
-    const newExamPageId = idMappings.examPage[masterImage.examPageId]
-    if (!newExamPageId) continue
-
-    // 既存のMasterImageレコードをチェック
-    const existing = await tx.masterImage.findFirst({
-      where: { examPageId: newExamPageId },
-    })
-    if (existing) continue
-
-    const filename = path.basename(masterImage.imagePath)
-    const newImagePath = `exams/${newExamId}/master-images/${filename}`
-
-    const existingById = await tx.masterImage.findUnique({
-      where: { id: masterImage.id },
-    })
-    if (!existingById) {
-      await tx.masterImage.create({
-        data: {
-          id: masterImage.id,
-          examPageId: newExamPageId,
-          imagePath: newImagePath,
-          pageSize: masterImage.pageSize ?? "A4",
-        },
-      })
-    }
-  }
 }
 
 /**
@@ -175,33 +134,9 @@ async function createLegacyImageRecords(
     const newExamPageId = idMappings.examPage[pageImage.examPageId]
     if (!newExamPageId) continue
 
-    const filename = path.basename(pageImage.imagePath)
-
-    if (pageImage.imageType === "MODEL_ANSWER") {
-      // 既存のMasterImageレコードをチェック
-      const existingMaster = await tx.masterImage.findFirst({
-        where: { examPageId: newExamPageId },
-      })
-      if (existingMaster) continue
-
-      const newImagePath = `exams/${newExamId}/master-images/${filename}`
-
-      const existingById = await tx.masterImage.findUnique({
-        where: { id: pageImage.id },
-      })
-      if (!existingById) {
-        await tx.masterImage.create({
-          data: {
-            id: pageImage.id,
-            examPageId: newExamPageId,
-            imagePath: newImagePath,
-          },
-        })
-      }
-    } else if (
-      pageImage.imageType === "STUDENT_ANSWER" &&
-      pageImage.studentId
-    ) {
+    // 模範解答（MODEL_ANSWER）はページが持つので、ここでは答案だけを見る。
+    // v1.1.0 以前の pageImages は変換器が masterImages を経て examPages へ畳んでいる
+    if (pageImage.imageType === "STUDENT_ANSWER" && pageImage.studentId) {
       const newStudentId = idMappings.student[pageImage.studentId]
       if (!newStudentId) continue
 

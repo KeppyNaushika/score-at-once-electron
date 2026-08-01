@@ -431,10 +431,6 @@ export async function seedExamWithScoring(
     data: { id: crypto.randomUUID(), examId, subtotalGroupId },
   })
 
-  const examPage = await db.examPage.create({
-    data: { id: crypto.randomUUID(), examId, pageNumber: 1 },
-  })
-
   // マスター画像（プレースホルダー白PNG）
   const masterDir = path.join(TEST_DATA_DIR, "exams", examId, "master-images")
   fs.mkdirSync(masterDir, { recursive: true })
@@ -453,10 +449,11 @@ export async function seedExamWithScoring(
   const relMasterPath = path
     .relative(TEST_DATA_DIR, masterPath)
     .replace(/\\/g, "/")
-  await db.masterImage.create({
+  const examPage = await db.examPage.create({
     data: {
       id: crypto.randomUUID(),
-      examPageId: examPage.id,
+      examId,
+      pageNumber: 1,
       imagePath: relMasterPath,
     },
   })
@@ -715,7 +712,7 @@ export async function seedSimpleExam(
     },
   })
   await db.examPage.create({
-    data: { id: crypto.randomUUID(), examId, pageNumber: 1 },
+    data: { id: crypto.randomUUID(), examId, pageNumber: 1, imagePath: "" },
   })
   console.log(`  [SEED] 通常試験 (examId=${examId})`)
   return examId

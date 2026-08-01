@@ -62,7 +62,7 @@ async function buildFixture(): Promise<Fixture> {
 
   const exam = await testPrisma.exam.create({ data: { examName: "期末考査" } })
   const examPage = await testPrisma.examPage.create({
-    data: { examId: exam.id, pageNumber: 1 },
+    data: { examId: exam.id, pageNumber: 1, imagePath: "" },
   })
   const cropRegion = await testPrisma.cropRegion.create({
     data: {

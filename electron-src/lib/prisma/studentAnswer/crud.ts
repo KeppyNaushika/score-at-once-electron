@@ -43,17 +43,20 @@ async function getMasterMarkersForExamPage(
     return cache.get(examPageId) ?? null
   }
 
-  const masterImage = await prisma.masterImage.findFirst({
-    where: { examPageId },
+  const examPage = await prisma.examPage.findUnique({
+    where: { id: examPageId },
   })
 
-  if (!masterImage) {
+  // 模範解答画像を持たないページはマーカー補正の基準にできない。
+  // ここを通すと sharp に空パス（＝データディレクトリ）を渡してしまい、
+  // 例外がアップロード全体を巻き込んで1枚も保存されなくなる
+  if (!examPage?.imagePath) {
     cache.set(examPageId, null)
     return null
   }
 
   const dataDir = getDataDirectory()
-  const imagePath = path.join(dataDir, masterImage.imagePath)
+  const imagePath = path.join(dataDir, examPage.imagePath)
   const result: MarkerDetectionResult = await detectCornerMarkers(
     imagePath,
     colorThreshold

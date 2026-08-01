@@ -24,7 +24,7 @@ interface FullTestExamOptions {
   includeScores?: boolean
   /** アノテーションを生成するか (default: false) */
   includeAnnotations?: boolean
-  /** マスター画像レコードを作成するか (default: false) */
+  /** ページに模範解答画像のパスを入れるか (default: false)。false なら空パス */
   includeMasterImages?: boolean
   /** 答案画像レコードを作成するか (default: false) */
   includeStudentAnswerImages?: boolean
@@ -34,7 +34,13 @@ export interface FullTestExam {
   user: { id: string; username: string; name: string }
   exam: { id: string; examName: string }
   userExam: { id: string }
-  pages: Array<{ id: string; examId: string; pageNumber: number }>
+  pages: Array<{
+    id: string
+    examId: string
+    pageNumber: number
+    imagePath: string | null
+    pageSize: string
+  }>
   cropRegions: Array<{
     id: string
     examPageId: string
@@ -84,11 +90,6 @@ export interface FullTestExam {
     id: string
     questionScoreId: string
     userId: string
-  }>
-  masterImages: Array<{
-    id: string
-    examPageId: string
-    imagePath: string
   }>
   studentAnswerImages: Array<{
     id: string
@@ -167,6 +168,9 @@ export async function createFullTestExam(
         id: crypto.randomUUID(),
         examId: exam.id,
         pageNumber: i + 1,
+        imagePath: includeMasterImages
+          ? `exams/${exam.id}/master-images/page${i + 1}.png`
+          : "",
       },
     })
     pages.push(page)
@@ -351,21 +355,6 @@ export async function createFullTestExam(
     drawingAnnotations.push(drawingAnnotation)
   }
 
-  // 14. マスター画像レコード
-  const masterImages = []
-  if (includeMasterImages) {
-    for (const page of pages) {
-      const masterImage = await prisma.masterImage.create({
-        data: {
-          id: crypto.randomUUID(),
-          examPageId: page.id,
-          imagePath: `exams/${exam.id}/master-images/page${page.pageNumber}.png`,
-        },
-      })
-      masterImages.push(masterImage)
-    }
-  }
-
   // 15. 答案画像レコード
   const studentAnswerImages = []
   if (includeStudentAnswerImages) {
@@ -431,6 +420,8 @@ export async function createFullTestExam(
       id: page.id,
       examId: page.examId,
       pageNumber: page.pageNumber,
+      imagePath: page.imagePath,
+      pageSize: page.pageSize,
     })),
     cropRegions: cropRegions.map((cropRegion) => ({
       id: cropRegion.id,
@@ -478,11 +469,6 @@ export async function createFullTestExam(
       id: drawingAnnotation.id,
       questionScoreId: drawingAnnotation.questionScoreId,
       userId: drawingAnnotation.userId,
-    })),
-    masterImages: masterImages.map((masterImage) => ({
-      id: masterImage.id,
-      examPageId: masterImage.examPageId,
-      imagePath: masterImage.imagePath,
     })),
     studentAnswerImages: studentAnswerImages.map((studentAnswerImage) => ({
       id: studentAnswerImage.id,

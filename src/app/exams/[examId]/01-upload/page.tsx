@@ -5,11 +5,11 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { MasterAnswerManager } from "@/components/exams/01-upload/components/MasterAnswerManager"
-import type { MasterAnswer } from "@/components/exams/01-upload/types"
-import { convertExamPagesToMasterAnswers } from "@/components/exams/01-upload/utils/imageUtils"
+import { sortImagesByPageNumber } from "@/components/exams/01-upload/utils/imageUtils"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 
 /**
  * MasterImageStepPage - 模範解答アップロードページ
@@ -32,7 +32,7 @@ export default function MasterAnswerStepPage() {
   const examId =
     typeof paramsExamId === "string" ? paramsExamId : paramsExamId?.[0]
 
-  const [masterAnswers, setMasterAnswers] = useState<MasterAnswer[]>([])
+  const [masterAnswers, setMasterAnswers] = useState<ExamPageWithContent[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   /**
@@ -45,17 +45,9 @@ export default function MasterAnswerStepPage() {
     if (!examId) return
     setIsLoading(true)
     try {
-      // masterImages を含む examPages のみ必要な軽量クエリ
+      // 模範解答ページはページそのもの。答案の件数も削除確認で使うので一緒に持つ
       const fetchedPages = await window.electronAPI.getExamPagesByExamId(examId)
-      if (fetchedPages && fetchedPages.length > 0) {
-        // examPages から master answers を抽出してソート
-        const masterAnswers = convertExamPagesToMasterAnswers(
-          fetchedPages
-        ).sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
-        setMasterAnswers(masterAnswers)
-      } else {
-        setMasterAnswers([])
-      }
+      setMasterAnswers(sortImagesByPageNumber(fetchedPages ?? []))
     } catch (error) {
       console.error("Failed to load master answers:", error)
       toast.error("模範解答画像の読み込みに失敗しました。")
@@ -77,17 +69,14 @@ export default function MasterAnswerStepPage() {
    *
    * @param updatedImages - 更新された画像データリスト
    */
-  const handleAnswersChange = useCallback((updatedAnswers: MasterAnswer[]) => {
-    // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
-    // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
-    // 必要であれば、このコールバックで再度 exam を fetch して整合性を確認することも可能。
-    // ただし、MasterImageManager が自身の変更を onMasterImagesChange で通知するなら、
-    // その通知されたリストをそのまま使うのがシンプル。
-    setMasterAnswers(updatedAnswers) // MasterAnswerManagerからの最新のリストで状態を更新
-    toast("模範解答更新", {
-      description: "模範解答リストが更新されました。",
-    })
-  }, [])
+  const handleAnswersChange = useCallback(
+    (updatedAnswers: ExamPageWithContent[]) => {
+      // 追加・差し替え・削除の結果は MasterAnswerManager 側で DB を引き直して渡ってくる。
+      // ここはそれを受けて画面の状態を合わせるだけ
+      setMasterAnswers(updatedAnswers)
+    },
+    []
+  )
 
   /**
    * 次のステップへ遷移する

@@ -666,6 +666,7 @@ describe("edgeCases", () => {
         id: generateId(),
         examId,
         pageNumber: 1,
+        imagePath: "",
       },
     })
 

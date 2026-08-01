@@ -8,6 +8,7 @@ import { PageSizes, PDFDocument } from "pdf-lib"
 import { getAbsolutePathFromData } from "../dataManager"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
+import { resolveExamPaperSize } from "../shared/utilities/examPaperSize"
 import { getCropRegionsByExamId } from "./cropRegion"
 import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 import { getExamById } from "./exam"
@@ -53,7 +54,7 @@ export interface PdfExportPageData {
   pageNumber: number
   imagePath: string
   imageUrl: string // file:// URL形式
-  // 用紙サイズ（mm→px変換基準。個別表示と一致させるため MasterImage.pageSize を反映）
+  // 用紙サイズ（mm→px変換基準。個別表示と一致させるため ExamPage.pageSize を反映）
   pageSize: string
   scoringData: Array<{
     questionScoreId: string
@@ -141,17 +142,9 @@ export async function getPdfExportData(options: {
       return { success: false, error: "試験が見つかりません" }
     }
 
-    // 用紙サイズ（MasterImageのpageSizeフィールドから取得、デフォルトA4）
-    // 個別表示（ScoringMainView）と同一ロジックで算出し、フォント・線幅の
-    // mm→px変換基準を一致させる
-    let pageSize = "A4"
-    for (const page of exam.examPages ?? []) {
-      const masterImage = page.masterImages?.[0]
-      if (masterImage?.pageSize) {
-        pageSize = masterImage.pageSize
-        break
-      }
-    }
+    // 用紙サイズ。個別表示（ScoringMainView）と同じ関数で決めて、
+    // フォント・線幅の mm→px 変換基準を一致させる
+    const pageSize = resolveExamPaperSize(exam.examPages)
 
     // 採点領域を取得
     const cropRegions = await getCropRegionsByExamId(examId)
