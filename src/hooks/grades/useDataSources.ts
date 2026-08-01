@@ -94,6 +94,18 @@ export function useDataSources(gradeId: string) {
     [loadData, loadSourceFits]
   )
 
+  const reorderGradeItems = useCallback(
+    async (gradeItemOrders: { id: string; order: number }[]) => {
+      const result =
+        await window.electronAPI.grade.reorderGradeItems(gradeItemOrders)
+      if (result.success) {
+        await loadData()
+      }
+      return result
+    },
+    [loadData]
+  )
+
   const createDataSource = useCallback(
     async (data: {
       gradeItemId: string
@@ -228,6 +240,7 @@ export function useDataSources(gradeId: string) {
     createGradeItem,
     updateGradeItem,
     deleteGradeItem,
+    reorderGradeItems,
     createDataSource,
     updateDataSource,
     batchUpdateDataSources,

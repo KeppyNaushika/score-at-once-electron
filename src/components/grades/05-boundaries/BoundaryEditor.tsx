@@ -13,10 +13,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import type { GradeBoundaryData } from "@/types/grade.types"
+import type { GradeBoundarySetWithItemAndBoundaries } from "@/types/grade.types"
 
 interface BoundaryEditorProps {
-  boundaries: GradeBoundaryData[]
+  /** 対象評価項目の境界セット。まだ作られていなければ undefined */
+  boundarySet: GradeBoundarySetWithItemAndBoundaries | undefined
   onSave: (
     boundaries: { label: string; minPercentage: number; order: number }[]
   ) => Promise<void>
@@ -36,25 +37,26 @@ let nextId = 1
  * ラベルと最低パーセンテージの組み合わせを編集し、変更を500msデバウンスで自動保存する。
  * DnDで行を並び替え可能。minPercentageが降順でない場合は赤い枠線で警告する。
  */
-export function BoundaryEditor({ boundaries, onSave }: BoundaryEditorProps) {
+export function BoundaryEditor({ boundarySet, onSave }: BoundaryEditorProps) {
   const [items, setItems] = useState<EditableBoundary[]>([])
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // 境界セット自体を依存に取る。未作成のうちは undefined で参照が変わらないため、
+  // 保存前に追加した行が再レンダリングのたびに消えることはない。セットが削除されて
+  // undefined へ戻ったときだけ行が空に戻る。
   useEffect(() => {
-    if (boundaries.length > 0) {
-      const sorted = [...boundaries].sort(
-        (firstBoundary, secondBoundary) =>
-          secondBoundary.minPercentage - firstBoundary.minPercentage
-      )
-      setItems(
-        sorted.map((boundary) => ({
-          id: `boundary-${nextId++}`,
-          label: boundary.label,
-          minPercentage: String(boundary.minPercentage),
-        }))
-      )
-    }
-  }, [boundaries])
+    const sorted = [...(boundarySet?.boundaries ?? [])].sort(
+      (firstBoundary, secondBoundary) =>
+        secondBoundary.minPercentage - firstBoundary.minPercentage
+    )
+    setItems(
+      sorted.map((boundary) => ({
+        id: `boundary-${nextId++}`,
+        label: boundary.label,
+        minPercentage: String(boundary.minPercentage),
+      }))
+    )
+  }, [boundarySet])
 
   const debouncedSave = useCallback(
     (updatedItems: EditableBoundary[]) => {
