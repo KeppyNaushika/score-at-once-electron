@@ -1,14 +1,7 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
@@ -182,7 +175,7 @@ export default function AnswerIndividualView({
     containerRef,
     imageLoaded,
     loadedImages,
-    textBoundsCache,
+    textBoundsCacheRef,
   } = useImageCanvas({
     currentScoringData,
     currentCropRegion,
@@ -225,14 +218,16 @@ export default function AnswerIndividualView({
   }, [loadedImages, onImageSizeChanged])
 
   // scrollContainerRefの同期（split表示のスクロール同期用）
-  // useLayoutEffectでDOMコミット直後に確実に設定
-  useLayoutEffect(() => {
-    if (scrollContainerRef && containerRef.current) {
-      ;(
-        scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
-      ).current = containerRef.current
-    }
-  })
+  // コールバックrefならDOMのコミットと同時に両方のrefへ行き渡る
+  const setContainerElement = useCallback(
+    (element: HTMLDivElement | null) => {
+      containerRef.current = element
+      if (scrollContainerRef) {
+        scrollContainerRef.current = element
+      }
+    },
+    [containerRef, scrollContainerRef]
+  )
 
   // Canvas・テキストボックス統合フック
   const {
@@ -353,7 +348,7 @@ export default function AnswerIndividualView({
       // Shift制約で正円/正方形にするため
       imageAspectRatio,
       // テキスト境界キャッシュ（ヒットテスト用）
-      textBoundsCache,
+      textBoundsCacheRef,
     })
 
   // お気に入りアノテーションIDのセット
@@ -464,7 +459,7 @@ export default function AnswerIndividualView({
     <div className="relative h-full w-full overflow-hidden">
       {/* CSS スクロール + scale 方式のメインキャンバス */}
       <div
-        ref={containerRef}
+        ref={setContainerElement}
         className="grid h-full w-full overflow-auto"
         style={{
           cursor:

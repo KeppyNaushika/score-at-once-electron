@@ -41,7 +41,7 @@ export function useImageLoader({
         return
       }
 
-      let imagesToLoad: { path: string; pageNumber: number }[] = []
+      let imagesToLoad: { path: string; pageNumber: number }[]
 
       if (showMultiplePages && studentAnswerImages) {
         // 複数ページ表示：同一生徒の全ページを取得

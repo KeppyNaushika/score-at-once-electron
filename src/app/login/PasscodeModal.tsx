@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -43,15 +43,8 @@ export function PasscodeModal({
   const { inputRef: passcodeInputRef, onOpenAutoFocus } =
     useDialogAutoFocus(isOpen)
 
-  // 呼び出し側（login/page.tsx）は選択中ユーザーを保持したまま isOpen だけを
-  // 落とすため、このコンポーネントはアンマウントされず state が残る。
-  // 前回の誤ったパスコードとエラーを持ち越さないよう、開くたびに作り直す。
-  useEffect(() => {
-    if (isOpen) {
-      setPasscode("")
-      setError("")
-    }
-  }, [isOpen])
+  // 呼び出し側（login/page.tsx）は閉じている間このコンポーネントを
+  // マウントしないため、開くたびに入力とエラーは初期値から始まる。
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

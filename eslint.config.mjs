@@ -102,15 +102,18 @@ export default [
       // React Hooks（v7 の React Compiler 由来ルール）
       // recommended は 16 ルールだが上2つしか有効化していなかったため追加する。
       // 既存の違反を先に潰す必要があるので、いったん全て warn で可視化し、
-      // 件数がゼロになったものから error へ引き上げる。カッコ内は導入時点の件数。
+      // 件数がゼロになったものから error へ引き上げる方針。
       //
-      // 実バグ（優先して潰す）
-      "react-hooks/set-state-in-render": "warn", // 2件 useMemo内setStateで無限ループ危険
-      "react-hooks/static-components": "warn", // 3件 レンダー中のコンポーネント定義で状態リセット
-      "react-hooks/immutability": "warn", // 5件 props書き換え・宣言前アクセス
-      // 設計課題（key での作り直しへ移行が必要。件数が多く別途対応）
-      "react-hooks/set-state-in-effect": "warn", // 88件
-      "react-hooks/refs": "warn", // 22件
+      // 違反ゼロにしたので error（再混入を止める）
+      "react-hooks/set-state-in-render": "error",
+      "react-hooks/static-components": "error",
+      "react-hooks/immutability": "error",
+      "react-hooks/refs": "error",
+      // 残る違反は「effect から非同期ローダーを呼ぶ」形が大半。ルールは setState への
+      // 到達可能性だけを見るため await 後の更新も警告になるが、Suspense を使わない
+      // 現構成では代替手段がない。props→state のミラーリングや開くたびのリセットは
+      // key での作り直し・派生値化に置き換え済みなので、新規の混入はその形を疑うこと。
+      "react-hooks/set-state-in-effect": "warn", // 68件（うち大半は非同期ローダー呼び出し）
       // 現時点で違反ゼロ（将来の混入を防ぐ保険）
       "react-hooks/error-boundaries": "warn",
       "react-hooks/globals": "warn",
@@ -141,7 +144,7 @@ export default [
       // Canvas 描画のため ref から生の HTMLImageElement が必要で next/image に
       // 置き換えられない。Electron アプリで LCP 最適化の対象でもないので入れない。
       "@next/next/no-html-link-for-pages": "off",
-      "@next/next/no-assign-module-variable": "warn", // 1件 module のシャドウイング
+      "@next/next/no-assign-module-variable": "error",
       "@next/next/no-sync-scripts": "error",
       "@next/next/no-document-import-in-page": "error",
       "@next/next/no-head-import-in-document": "error",
@@ -153,10 +156,9 @@ export default [
       "no-console": "off",
       "no-undef": "off", // TypeScript handles this
 
-      // ESLint 10 の recommended で新規に有効化されたルール。
-      // 既存違反があるため一旦 warn で可視化する（ゼロになったら error へ）。
-      "no-useless-assignment": "warn", // 12件 読まれない代入
-      "preserve-caught-error": "warn", // 7件 catch した原因を cause で引き継いでいない
+      // ESLint 10 の recommended で新規に有効化されたルール。違反ゼロにしたので error。
+      "no-useless-assignment": "error", // 読まれない代入
+      "preserve-caught-error": "error", // catch した原因を cause で引き継いでいない
 
       // Import sorting
       "simple-import-sort/imports": "error",

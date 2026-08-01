@@ -39,15 +39,18 @@ interface PdfConversionOutcome {
  *
  * const images = await convertPdfWithRetry(file) // null = キャンセル
  *
- * <PasswordDialog
- *   isOpen={passwordDialog.isOpen}
- *   onClose={handlePasswordCancel}
- *   onSubmit={handlePasswordSubmit}
- *   fileName={passwordDialog.fileName}
- *   error={passwordDialog.hasError ? "パスワードが正しくありません" : undefined}
- *   isLoading={passwordDialog.isLoading}
- *   isFirstAttempt={!passwordDialog.hasError}
- * />
+ * // 閉じている間はマウントしない（開くたびに入力が初期値から始まる）
+ * {passwordDialog.isOpen && (
+ *   <PasswordDialog
+ *     isOpen={passwordDialog.isOpen}
+ *     onClose={handlePasswordCancel}
+ *     onSubmit={handlePasswordSubmit}
+ *     fileName={passwordDialog.fileName}
+ *     error={passwordDialog.hasError ? "パスワードが正しくありません" : undefined}
+ *     isLoading={passwordDialog.isLoading}
+ *     isFirstAttempt={!passwordDialog.hasError}
+ *   />
+ * )}
  * ```
  */
 export function usePdfPasswordConversion() {

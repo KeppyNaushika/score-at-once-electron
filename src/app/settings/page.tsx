@@ -162,25 +162,30 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
 
-        <UserEditModal
-          isOpen={isUserEditOpen}
-          onClose={() => {
-            setIsUserEditOpen(false)
-            setSelectedUser(null)
-          }}
-          onUserUpdated={handleUserUpdated}
-          user={selectedUser}
-        />
+        {/* 閉じている間はマウントしない。開くたびに対象ユーザーの値でフォームが作り直される */}
+        {isUserEditOpen && (
+          <UserEditModal
+            isOpen={isUserEditOpen}
+            onClose={() => {
+              setIsUserEditOpen(false)
+              setSelectedUser(null)
+            }}
+            onUserUpdated={handleUserUpdated}
+            user={selectedUser}
+          />
+        )}
 
-        <PasscodeEditModal
-          isOpen={isPasscodeEditOpen}
-          onClose={() => {
-            setIsPasscodeEditOpen(false)
-            setSelectedUser(null)
-          }}
-          onPasscodeUpdated={handlePasscodeUpdated}
-          user={selectedUser}
-        />
+        {isPasscodeEditOpen && (
+          <PasscodeEditModal
+            isOpen={isPasscodeEditOpen}
+            onClose={() => {
+              setIsPasscodeEditOpen(false)
+              setSelectedUser(null)
+            }}
+            onPasscodeUpdated={handlePasscodeUpdated}
+            user={selectedUser}
+          />
+        )}
       </div>
     </ProtectedRoute>
   )

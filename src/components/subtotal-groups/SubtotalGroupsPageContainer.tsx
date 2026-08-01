@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus, Search } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 
 export function SubtotalGroupsPageContainer() {
   const [subtotalGroups, setSubtotalGroups] = useState<SubtotalGroup[]>([])
-  const [filteredGroups, setFilteredGroups] = useState<SubtotalGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [showModal, setShowModal] = useState(false)
@@ -29,7 +28,6 @@ export function SubtotalGroupsPageContainer() {
           "IPCハンドラーが利用できません。Electronアプリを再起動してください。"
         )
         setSubtotalGroups([])
-        setFilteredGroups([])
         return
       }
 
@@ -38,14 +36,12 @@ export function SubtotalGroupsPageContainer() {
       const result = await window.electronAPI.getSubtotalGroups()
       if (result.success && result.subtotalGroups) {
         setSubtotalGroups(result.subtotalGroups)
-        setFilteredGroups(result.subtotalGroups)
       } else {
         console.error("Failed to fetch subtotal groups:", result.error)
       }
     } catch (error) {
       console.error("Error fetching subtotal groups:", error)
       setSubtotalGroups([])
-      setFilteredGroups([])
     } finally {
       setLoading(false)
     }
@@ -54,6 +50,12 @@ export function SubtotalGroupsPageContainer() {
   useEffect(() => {
     fetchSubtotalGroups()
   }, [fetchSubtotalGroups])
+
+  // 新規作成
+  const handleCreate = useCallback(() => {
+    setEditingGroup(null)
+    setShowModal(true)
+  }, [])
 
   // キーボードショートカット
   useEffect(() => {
@@ -74,34 +76,25 @@ export function SubtotalGroupsPageContainer() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [fetchSubtotalGroups, showModal])
+  }, [fetchSubtotalGroups, handleCreate, showModal])
 
   // 検索フィルタリング（グループ名と小計項目名で検索）
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredGroups(subtotalGroups)
-    } else {
-      const searchLower = searchTerm.toLowerCase()
-      const filtered = subtotalGroups.filter((group) => {
-        // グループ名で検索
-        const matchesGroupName = group.name.toLowerCase().includes(searchLower)
+  const filteredGroups = useMemo(() => {
+    if (!searchTerm) return subtotalGroups
 
-        // 小計項目名で検索
-        const matchesSubtotalName = group.subtotals.some((subtotal) =>
-          subtotal.name.toLowerCase().includes(searchLower)
-        )
+    const searchLower = searchTerm.toLowerCase()
+    return subtotalGroups.filter((group) => {
+      // グループ名で検索
+      const matchesGroupName = group.name.toLowerCase().includes(searchLower)
 
-        return matchesGroupName || matchesSubtotalName
-      })
-      setFilteredGroups(filtered)
-    }
+      // 小計項目名で検索
+      const matchesSubtotalName = group.subtotals.some((subtotal) =>
+        subtotal.name.toLowerCase().includes(searchLower)
+      )
+
+      return matchesGroupName || matchesSubtotalName
+    })
   }, [searchTerm, subtotalGroups])
-
-  // 新規作成
-  const handleCreate = () => {
-    setEditingGroup(null)
-    setShowModal(true)
-  }
 
   // 編集
   const handleEdit = (group: SubtotalGroup) => {

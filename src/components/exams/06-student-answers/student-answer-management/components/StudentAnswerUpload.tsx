@@ -128,15 +128,17 @@ export function StudentAnswerUpload({
       </div>
 
       {/* PDFパスワードダイアログ */}
-      <PasswordDialog
-        isOpen={passwordDialog.isOpen}
-        onClose={handlePasswordCancel}
-        onSubmit={handlePasswordSubmit}
-        fileName={passwordDialog.fileName}
-        error={passwordDialog.hasError ? "invalid-password" : undefined}
-        isLoading={passwordDialog.isLoading}
-        isFirstAttempt={!passwordDialog.hasError}
-      />
+      {passwordDialog.isOpen && (
+        <PasswordDialog
+          isOpen={passwordDialog.isOpen}
+          onClose={handlePasswordCancel}
+          onSubmit={handlePasswordSubmit}
+          fileName={passwordDialog.fileName}
+          error={passwordDialog.hasError ? "invalid-password" : undefined}
+          isLoading={passwordDialog.isLoading}
+          isFirstAttempt={!passwordDialog.hasError}
+        />
+      )}
     </div>
   )
 }

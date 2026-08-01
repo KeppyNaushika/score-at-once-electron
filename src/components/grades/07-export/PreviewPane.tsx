@@ -22,7 +22,8 @@ export function PreviewPane({ html }: PreviewPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState<number | null>(null)
-  const contentSizeRef = useRef({ width: 595, height: 842 })
+  // 実測したコンテンツ寸法。レンダーで読むのでrefではなくstateで持つ
+  const [contentSize, setContentSize] = useState({ width: 595, height: 842 })
   const initializedRef = useRef(false)
 
   // Shadow DOMにHTMLを挿入し、実際の描画サイズを測定
@@ -61,7 +62,11 @@ export function PreviewPane({ html }: PreviewPaneProps) {
       const width = wrapper.offsetWidth
       const height = wrapper.offsetHeight
       if (width > 0 && height > 0) {
-        contentSizeRef.current = { width, height }
+        setContentSize((prev) =>
+          prev.width === width && prev.height === height
+            ? prev
+            : { width, height }
+        )
       }
 
       // 初期スケールを算出
@@ -73,8 +78,8 @@ export function PreviewPane({ html }: PreviewPaneProps) {
             container.clientWidth -
             parseFloat(computedStyle.paddingLeft) -
             parseFloat(computedStyle.paddingRight)
-          if (availableWidth > 0 && contentSizeRef.current.width > 0) {
-            setScale(Math.min(availableWidth / contentSizeRef.current.width, 1))
+          if (availableWidth > 0 && width > 0) {
+            setScale(Math.min(availableWidth / width, 1))
             initializedRef.current = true
           }
         }
@@ -123,7 +128,7 @@ export function PreviewPane({ html }: PreviewPaneProps) {
   }, [handleWheel])
 
   const effectiveScale = scale ?? 1
-  const { width: contentWidth, height: contentHeight } = contentSizeRef.current
+  const { width: contentWidth, height: contentHeight } = contentSize
 
   return (
     <div

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -45,11 +45,23 @@ export function CourseworkImportDialog({
   onCancel,
   onConfirm,
 }: CourseworkImportDialogProps) {
-  const [selections, setSelections] = useState<Record<string, string>>({})
+  // ユーザーが明示的に変更した分のみ保持する。どの preview に対する選択かを
+  // 一緒に持ち、preview が切り替わったら前回の選択は無効になる
+  const [manualSelections, setManualSelections] = useState<{
+    preview: CourseworkArchiveImportPreview | null
+    values: Record<string, string>
+  }>({ preview: null, values: {} })
+  const selections = useMemo(
+    () => (manualSelections.preview === preview ? manualSelections.values : {}),
+    [manualSelections, preview]
+  )
 
-  useEffect(() => {
-    setSelections({})
-  }, [preview])
+  const selectArchive = (archiveId: string, value: string) => {
+    setManualSelections({
+      preview,
+      values: { ...selections, [archiveId]: value },
+    })
+  }
 
   const initialSelections = useMemo(() => {
     const init: Record<string, string> = {}
@@ -109,10 +121,7 @@ export function CourseworkImportDialog({
                   <RadioGroup
                     value={effectiveSelections[coursework.archiveId] ?? "new"}
                     onValueChange={(value) =>
-                      setSelections((prev) => ({
-                        ...prev,
-                        [coursework.archiveId]: value,
-                      }))
+                      selectArchive(coursework.archiveId, value)
                     }
                     className="space-y-1"
                   >

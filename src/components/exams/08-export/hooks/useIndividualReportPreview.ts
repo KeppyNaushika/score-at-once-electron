@@ -42,7 +42,9 @@ export function useIndividualReportPreview({
 
   // optionsの最新値を保持（データ取得時に使用）
   const optionsRef = useRef(options)
-  optionsRef.current = options
+  useEffect(() => {
+    optionsRef.current = options
+  })
 
   // 選択された生徒が変わったらプレビュー対象をリセット
   useEffect(() => {

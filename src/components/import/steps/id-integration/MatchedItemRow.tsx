@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronDown, ChevronRight } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import {
   Select,
@@ -11,11 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { IdChoice } from "@/types/examArchive.types"
+import { isIdChoice } from "@/types/examArchive.types"
 
 import { SubtotalMappingEditor } from "./SubtotalMappingEditor"
 import { SubtotalPreview } from "./SubtotalPreview"
 import type { DecisionType, MatchedItemRowProps } from "./types"
-import { ENTITY_LABELS } from "./types"
+import { ENTITY_LABELS, isDecisionType } from "./types"
 
 /**
  * マッチしたアイテムの行（共通コンポーネント）
@@ -28,20 +29,9 @@ export function MatchedItemRow({
   onDecisionChange,
   wizard,
 }: MatchedItemRowProps) {
-  const [decision, setDecision] = useState<DecisionType>(
-    currentDecision ?? "same_person"
-  )
-  const [idChoice, setIdChoice] = useState<IdChoice>(
-    currentIdChoice ?? "use_existing_id"
-  )
-
-  useEffect(() => {
-    if (currentDecision !== undefined) setDecision(currentDecision)
-  }, [currentDecision])
-
-  useEffect(() => {
-    if (currentIdChoice !== undefined) setIdChoice(currentIdChoice)
-  }, [currentIdChoice])
+  // 決定内容はウィザードの state が正。ローカルには複製せず props から算出する
+  const decision: DecisionType = currentDecision ?? "same_person"
+  const idChoice: IdChoice = currentIdChoice ?? "use_existing_id"
 
   const [showPreview, setShowPreview] = useState(false)
 
@@ -56,18 +46,13 @@ export function MatchedItemRow({
     item.additionalInfo?.existingSubtotals?.length
 
   const handleDecisionChange = (value: string) => {
-    const newDecision = value as DecisionType
-    setDecision(newDecision)
-    onDecisionChange(
-      newDecision,
-      newDecision === "same_person" ? idChoice : undefined
-    )
+    if (!isDecisionType(value)) return
+    onDecisionChange(value, value === "same_person" ? idChoice : undefined)
   }
 
   const handleIdChoiceChange = (value: string) => {
-    const newIdChoice = value as IdChoice
-    setIdChoice(newIdChoice)
-    onDecisionChange(decision, newIdChoice)
+    if (!isIdChoice(value)) return
+    onDecisionChange(decision, value)
   }
 
   return (

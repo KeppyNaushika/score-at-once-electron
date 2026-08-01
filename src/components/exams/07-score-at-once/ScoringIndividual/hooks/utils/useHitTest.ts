@@ -74,17 +74,16 @@ type HitTestResult = string | null
 interface UseHitTestUtilsProps {
   /** 現在のズーム倍率（画面上のピクセルサイズを一定にするため） */
   zoom?: number
-  /** テキスト要素の境界キャッシュ（レンダリング結果から取得） */
-  textBoundsCache?: Map<
-    string,
-    { x: number; y: number; width: number; height: number }
+  /** テキスト要素の境界キャッシュ（描画結果。当たり判定時に .current を読む） */
+  textBoundsCacheRef?: React.MutableRefObject<
+    Map<string, { x: number; y: number; width: number; height: number }>
   >
 }
 
 /** 描画要素（線・矩形・楕円・テキスト）に対するズーム対応の当たり判定ユーティリティフック */
 export function useHitTestUtils({
   zoom = 1,
-  textBoundsCache,
+  textBoundsCacheRef,
 }: UseHitTestUtilsProps = {}) {
   // ズームを考慮した許容値を計算（画面上で一定サイズになるように）
   const { handleRadius, lineWidth } = useMemo(() => {
@@ -299,7 +298,7 @@ export function useHitTestUtils({
           }
 
           // 2. キャッシュされた境界を使用（レンダリング結果と完全一致）
-          const cachedBounds = textBoundsCache?.get(element.id)
+          const cachedBounds = textBoundsCacheRef?.current.get(element.id)
           if (cachedBounds) {
             const left = cachedBounds.x
             const top = cachedBounds.y
@@ -375,7 +374,7 @@ export function useHitTestUtils({
       distanceToLineSegment,
       HANDLE_RADIUS,
       LINE_WIDTH,
-      textBoundsCache,
+      textBoundsCacheRef,
     ]
   )
 

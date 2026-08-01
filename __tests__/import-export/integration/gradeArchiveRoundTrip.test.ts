@@ -1473,7 +1473,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_legacy_${suffix}` },
     })
-    const gradeStudent = await prisma.gradeStudent.create({
+    await prisma.gradeStudent.create({
       data: { gradeId: grade.id, studentId: student.id },
     })
     await prisma.gradeItem.create({
@@ -1619,7 +1619,7 @@ describe("grade-archive ラウンドトリップ", () => {
     await prisma.gradeClassroom.create({
       data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
     })
-    const gradeStudent = await prisma.gradeStudent.create({
+    await prisma.gradeStudent.create({
       data: { gradeId: grade.id, studentId: student.id },
     })
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -42,15 +42,8 @@ export function UserEditModal({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Update form data when user prop changes
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        username: user.username,
-        name: user.name,
-      })
-    }
-  }, [user])
+  // 呼び出し側（settings/page.tsx）は閉じている間このコンポーネントを
+  // マウントしないため、開くたびに対象ユーザーの値から始まる。
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

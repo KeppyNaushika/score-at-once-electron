@@ -1,7 +1,7 @@
 "use client"
 
 import { Trash2 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -76,12 +76,13 @@ export function OmrConfigInlineForm({
   })
   const [saving, setSaving] = useState(false)
 
-  // numChoicesが変わったらラベルを調整
-  useEffect(() => {
+  /** 選択肢数の変更に合わせてラベルと正解の選択位置を詰める */
+  const changeNumChoices = (nextNumChoices: number) => {
+    setNumChoices(nextNumChoices)
     setChoiceLabels((prev) => {
-      if (prev.length >= numChoices) return prev.slice(0, numChoices)
+      if (prev.length >= nextNumChoices) return prev.slice(0, nextNumChoices)
       const newLabels = [...prev]
-      for (let i = prev.length; i < numChoices; i++) {
+      for (let i = prev.length; i < nextNumChoices; i++) {
         newLabels.push(DEFAULT_CHOICE_LABELS[i] ?? `${i + 1}`)
       }
       return newLabels
@@ -89,11 +90,11 @@ export function OmrConfigInlineForm({
     setCorrectIndices((prev) => {
       const next = new Set<number>()
       prev.forEach((idx) => {
-        if (idx < numChoices) next.add(idx)
+        if (idx < nextNumChoices) next.add(idx)
       })
       return next
     })
-  }, [numChoices])
+  }
 
   const handleSave = useCallback(async () => {
     setSaving(true)
@@ -150,7 +151,7 @@ export function OmrConfigInlineForm({
           min={2}
           max={10}
           value={numChoices}
-          onChange={(e) => setNumChoices(Number(e.target.value) || 4)}
+          onChange={(e) => changeNumChoices(Number(e.target.value) || 4)}
           className="h-8 w-20"
         />
         <Select value={choiceLayout} onValueChange={setChoiceLayout}>

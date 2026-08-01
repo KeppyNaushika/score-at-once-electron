@@ -224,14 +224,17 @@ export default function ClassroomDetailPage() {
           </div>
         </div>
 
-        {/* モーダル */}
-        <ClassroomModal
-          isOpen={isClassroomModalOpen}
-          onClose={() => setIsClassroomModalOpen(false)}
-          onSave={handleSaveClassroom}
-          classroomToEdit={classroomData}
-        />
+        {/* モーダル（閉じている間はマウントしない。開くたびにフォームを作り直す） */}
+        {isClassroomModalOpen && (
+          <ClassroomModal
+            isOpen={isClassroomModalOpen}
+            onClose={() => setIsClassroomModalOpen(false)}
+            onSave={handleSaveClassroom}
+            classroomToEdit={classroomData}
+          />
+        )}
 
+        {/* 入力途中の表を開き直しても保つため、閉じてもマウントしたままにする */}
         <ClassroomStudentImportModal
           isOpen={isStudentImportModalOpen}
           onClose={() => setIsStudentImportModalOpen(false)}
@@ -240,16 +243,18 @@ export default function ClassroomDetailPage() {
           className={classroomData?.name || ""}
         />
 
-        <StudentClassroomMembershipModal
-          isOpen={isMembershipModalOpen}
-          onClose={() => setIsMembershipModalOpen(false)}
-          onSave={handleSaveMembership}
-          studentId={membershipToEdit?.studentId}
-          classroomId={classroomId}
-          availableStudents={students}
-          availableClassrooms={[]}
-          membershipToEdit={membershipToEdit}
-        />
+        {isMembershipModalOpen && (
+          <StudentClassroomMembershipModal
+            isOpen={isMembershipModalOpen}
+            onClose={() => setIsMembershipModalOpen(false)}
+            onSave={handleSaveMembership}
+            studentId={membershipToEdit?.studentId}
+            classroomId={classroomId}
+            availableStudents={students}
+            availableClassrooms={[]}
+            membershipToEdit={membershipToEdit}
+          />
+        )}
       </div>
     </ProtectedRoute>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { CheckCircle, Clock, Info } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +38,30 @@ interface ScoreDecisionFormProps {
   onDecided: () => void
 }
 
+/** 既存の確定があればそれを、無ければ先頭の提案をフォームの初期値にする */
+function toInitialFormValues(cell: ScoreDecisionFormProps["cell"]) {
+  if (cell.decision) {
+    return {
+      verdict: cell.decision.verdict,
+      score: cell.decision.score !== null ? String(cell.decision.score) : "",
+      comment: cell.decision.comment ?? "",
+      sourceQuestionScoreId: cell.decision.sourceQuestionScoreId,
+    }
+  }
+
+  const firstProposal = cell.proposals[0]
+  return {
+    verdict: firstProposal?.status ?? "correct",
+    score:
+      firstProposal?.partialScore !== null &&
+      firstProposal?.partialScore !== undefined
+        ? String(firstProposal.partialScore)
+        : "",
+    comment: "",
+    sourceQuestionScoreId: firstProposal?.questionScoreId ?? null,
+  }
+}
+
 /**
  * 1セル分の比較・確定フォーム（裁定パネルの右ペイン）。
  *
@@ -51,33 +75,17 @@ export function ScoreDecisionForm({
   onDecided,
 }: ScoreDecisionFormProps) {
   const { user } = useAuth()
-  const [verdict, setVerdict] = useState<ScoringStatus>("correct")
-  const [score, setScore] = useState("")
-  const [comment, setComment] = useState("")
+
+  // 呼び出し側（ScoreDecisionPanel）がセルごとの key でこのフォームを作り直すため、
+  // 既存の確定（あれば）を初期値としてそのまま state に置ける。
+  const initial = toInitialFormValues(cell)
+  const [verdict, setVerdict] = useState<ScoringStatus>(initial.verdict)
+  const [score, setScore] = useState(initial.score)
+  const [comment, setComment] = useState(initial.comment)
   const [sourceQuestionScoreId, setSourceQuestionScoreId] = useState<
     string | null
-  >(null)
+  >(initial.sourceQuestionScoreId)
   const [deciding, setDeciding] = useState(false)
-
-  // セルを切り替えたら、既存の確定（あれば）を初期値としてフォームを組み直す
-  useEffect(() => {
-    if (cell.decision) {
-      setVerdict(cell.decision.verdict)
-      setScore(cell.decision.score !== null ? String(cell.decision.score) : "")
-      setComment(cell.decision.comment ?? "")
-      setSourceQuestionScoreId(cell.decision.sourceQuestionScoreId)
-    } else {
-      setVerdict(cell.proposals[0]?.status ?? "correct")
-      setScore(
-        cell.proposals[0]?.partialScore !== null &&
-          cell.proposals[0]?.partialScore !== undefined
-          ? String(cell.proposals[0].partialScore)
-          : ""
-      )
-      setComment("")
-      setSourceQuestionScoreId(cell.proposals[0]?.questionScoreId ?? null)
-    }
-  }, [cell])
 
   const needsScore = NEEDS_SCORE.includes(verdict)
   const parsedScore = score === "" ? null : Number(score)

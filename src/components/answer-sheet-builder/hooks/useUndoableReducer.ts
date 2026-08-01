@@ -5,12 +5,14 @@
  * テキスト入力連打対策のデバウンスあり。
  */
 
-import { useCallback, useReducer, useRef } from "react"
+import { useCallback, useReducer } from "react"
 
 interface UndoableState<S> {
   past: S[]
   present: S
   future: S[]
+  /** 直近に履歴へ積んだアクション。連打のデバウンス判定に使う */
+  lastAction: { type: string; timestamp: number } | null
 }
 
 const MAX_HISTORY = 50
@@ -38,8 +40,6 @@ export function useUndoableReducer<S, A extends { type: string }>(
   innerReducer: (state: S, action: A) => S,
   initialState: S
 ): UndoableResult<S, A> {
-  const lastActionRef = useRef<{ type: string; timestamp: number } | null>(null)
-
   function undoableReducer(
     undoState: UndoableState<S>,
     action: A
@@ -48,6 +48,7 @@ export function useUndoableReducer<S, A extends { type: string }>(
       if (undoState.past.length === 0) return undoState
       const previous = undoState.past[undoState.past.length - 1]
       return {
+        ...undoState,
         past: undoState.past.slice(0, -1),
         present: previous,
         future: [undoState.present, ...undoState.future],
@@ -58,6 +59,7 @@ export function useUndoableReducer<S, A extends { type: string }>(
       if (undoState.future.length === 0) return undoState
       const next = undoState.future[0]
       return {
+        ...undoState,
         past: [...undoState.past, undoState.present],
         present: next,
         future: undoState.future.slice(1),
@@ -80,12 +82,12 @@ export function useUndoableReducer<S, A extends { type: string }>(
 
     // デバウンス: 同一アクションタイプが短時間内に連続した場合、pastを増やさない
     const now = Date.now()
-    const last = lastActionRef.current
+    const last = undoState.lastAction
     const isBatched =
       last !== null &&
       last.type === action.type &&
       now - last.timestamp < BATCH_TIME_MS
-    lastActionRef.current = { type: action.type, timestamp: now }
+    const lastAction = { type: action.type, timestamp: now }
 
     if (isBatched) {
       // pastは変えず、presentだけ更新
@@ -93,6 +95,7 @@ export function useUndoableReducer<S, A extends { type: string }>(
         ...undoState,
         present: newPresent,
         future: [],
+        lastAction,
       }
     }
 
@@ -106,6 +109,7 @@ export function useUndoableReducer<S, A extends { type: string }>(
       past: newPast,
       present: newPresent,
       future: [],
+      lastAction,
     }
   }
 
@@ -113,6 +117,7 @@ export function useUndoableReducer<S, A extends { type: string }>(
     past: [],
     present: initialState,
     future: [],
+    lastAction: null,
   })
 
   const undo = useCallback(() => rawDispatch({ type: "UNDO" } as A), [])

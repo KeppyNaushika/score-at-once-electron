@@ -174,24 +174,21 @@ export function calculateCellsWithExistingAnswers<
   for (const examStudent of sortedStudents) {
     for (const examPage of examPages) {
       // そのセルに対応する答案があるかチェック
-      let hasAnswerForCell = false
-
-      if (mode === "upload" && existingAnswers) {
-        // アップロードモード: existingAnswers（DB答案の占有信号）から判定
-        hasAnswerForCell = existingAnswers.some(
-          (answer) =>
-            answer.examStudentId === examStudent.id &&
-            answer.examPageId === examPage.id
-        )
-      } else {
-        // 確認モード: files から判定
-        hasAnswerForCell = files.some(
-          (file) =>
-            file.examStudentId === examStudent.id &&
-            file.examPageId === examPage.id &&
-            !disabledState.files.has(file.id)
-        )
-      }
+      const hasAnswerForCell =
+        mode === "upload" && existingAnswers
+          ? // アップロードモード: existingAnswers（DB答案の占有信号）から判定
+            existingAnswers.some(
+              (answer) =>
+                answer.examStudentId === examStudent.id &&
+                answer.examPageId === examPage.id
+            )
+          : // 確認モード: files から判定
+            files.some(
+              (file) =>
+                file.examStudentId === examStudent.id &&
+                file.examPageId === examPage.id &&
+                !disabledState.files.has(file.id)
+            )
 
       if (hasAnswerForCell) {
         addCellToLookup(cells, examStudent, examPage)

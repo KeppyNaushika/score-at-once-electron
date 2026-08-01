@@ -1,7 +1,7 @@
 "use client"
 
 import { Search } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -62,6 +62,14 @@ interface StudentClassroomMembershipModalProps {
   } | null
 }
 
+/** Date/文字列を <input type="date"> が受け付ける YYYY-MM-DD へ整える */
+const formatDateForInput = (date: Date | string | null | undefined): string => {
+  if (!date) return ""
+  const parsedDate = typeof date === "string" ? new Date(date) : date
+  if (isNaN(parsedDate.getTime())) return ""
+  return parsedDate.toISOString().split("T")[0]
+}
+
 export default function StudentClassroomMembershipModal({
   isOpen,
   onClose,
@@ -72,55 +80,26 @@ export default function StudentClassroomMembershipModal({
   availableClassrooms,
   membershipToEdit,
 }: StudentClassroomMembershipModalProps) {
-  const [studentId, setStudentId] = useState(initialStudentId || "")
-  const [classroomId, setClassroomId] = useState(initialClassroomId || "")
-  const [attendanceNumber, setAttendanceNumber] = useState<string>("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [notes, setNotes] = useState("")
+  // 呼び出し側は閉じている間このコンポーネントをマウントしないため、
+  // 開くたびに membershipToEdit（無ければ初期指定）の内容からフォームが始まる。
+  const [studentId, setStudentId] = useState(
+    membershipToEdit?.studentId ?? initialStudentId ?? ""
+  )
+  const [classroomId, setClassroomId] = useState(
+    membershipToEdit?.classroomId ?? initialClassroomId ?? ""
+  )
+  const [attendanceNumber, setAttendanceNumber] = useState<string>(
+    membershipToEdit?.attendanceNumber?.toString() ?? ""
+  )
+  const [startDate, setStartDate] = useState(() =>
+    formatDateForInput(membershipToEdit?.startDate)
+  )
+  const [endDate, setEndDate] = useState(() =>
+    formatDateForInput(membershipToEdit?.endDate)
+  )
+  const [notes, setNotes] = useState(membershipToEdit?.notes ?? "")
   const [studentSearchTerm, setStudentSearchTerm] = useState("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-
-  const formatDateForInput = (
-    date: Date | string | null | undefined
-  ): string => {
-    if (!date) return ""
-    const parsedDate = typeof date === "string" ? new Date(date) : date
-    if (isNaN(parsedDate.getTime())) return ""
-    return parsedDate.toISOString().split("T")[0]
-  }
-
-  useEffect(() => {
-    let canceled = false
-    const frame = requestAnimationFrame(() => {
-      if (canceled) {
-        return
-      }
-
-      if (membershipToEdit) {
-        setStudentId(membershipToEdit.studentId)
-        setClassroomId(membershipToEdit.classroomId)
-        setAttendanceNumber(membershipToEdit.attendanceNumber?.toString() || "")
-        setStartDate(formatDateForInput(membershipToEdit.startDate))
-        setEndDate(formatDateForInput(membershipToEdit.endDate))
-        setNotes(membershipToEdit.notes || "")
-      } else {
-        setStudentId(initialStudentId || "")
-        setClassroomId(initialClassroomId || "")
-        setAttendanceNumber("")
-        setStartDate("")
-        setEndDate("")
-        setNotes("")
-      }
-      setStudentSearchTerm("")
-      setErrors({})
-    })
-
-    return () => {
-      canceled = true
-      cancelAnimationFrame(frame)
-    }
-  }, [membershipToEdit, initialStudentId, initialClassroomId, isOpen])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}

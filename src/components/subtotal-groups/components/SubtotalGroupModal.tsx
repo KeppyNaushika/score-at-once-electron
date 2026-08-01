@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Plus, Trash2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import type {
   SubtotalGroup,
@@ -121,11 +121,21 @@ export function SubtotalGroupModal({
   onSave,
   editingGroup,
 }: SubtotalGroupModalProps) {
+  // 呼び出し側（SubtotalGroupsPageContainer）は閉じている間このコンポーネントを
+  // マウントしないため、開くたびに editingGroup の内容からフォームが始まる。
   const [formData, setFormData] = useState<SubtotalGroupFormData>({
-    name: "",
+    name: editingGroup?.name ?? "",
     subtotals: [],
   })
-  const [subtotals, setSubtotals] = useState<SubtotalFormData[]>([])
+  const [subtotals, setSubtotals] = useState<SubtotalFormData[]>(() =>
+    [...(editingGroup?.subtotals ?? [])]
+      .sort((subtotalA, subtotalB) => subtotalA.order - subtotalB.order)
+      .map((subtotal, index) => ({
+        id: subtotal.id,
+        name: subtotal.name,
+        order: index,
+      }))
+  )
   const [saving, setSaving] = useState(false)
 
   const sensors = useSensors(
@@ -134,31 +144,6 @@ export function SubtotalGroupModal({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
-
-  // フォームを初期化
-  useEffect(() => {
-    if (editingGroup) {
-      setFormData({
-        name: editingGroup.name,
-        subtotals: [],
-      })
-      setSubtotals(
-        editingGroup.subtotals
-          .sort((subtotalA, subtotalB) => subtotalA.order - subtotalB.order)
-          .map((subtotal, index) => ({
-            id: subtotal.id,
-            name: subtotal.name,
-            order: index,
-          }))
-      )
-    } else {
-      setFormData({
-        name: "",
-        subtotals: [],
-      })
-      setSubtotals([])
-    }
-  }, [editingGroup, isOpen])
 
   // 小計項目を追加
   const addSubtotal = () => {

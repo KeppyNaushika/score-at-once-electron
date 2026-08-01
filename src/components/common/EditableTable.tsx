@@ -34,16 +34,15 @@ function EditableCell<T>({
   table,
 }: EditableCellProps<T>) {
   const initialValue = getValue()
-  const [value, setValue] = useState(initialValue)
+  // 編集中の下書き。null なら確定済みのセル値をそのまま表示する
+  const [draftValue, setDraftValue] = useState<string | null>(null)
+  const strValue = draftValue ?? String(initialValue ?? "")
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
 
   const onBlur = () => {
     const meta = table.options.meta as TableMeta | undefined
-    meta?.updateData(row.index, column.id, String(value ?? ""))
+    meta?.updateData(row.index, column.id, strValue)
+    setDraftValue(null)
   }
 
   const moveFocus = (target: HTMLInputElement) => {
@@ -104,7 +103,6 @@ function EditableCell<T>({
     { placeholder?: string; validate?: (value: string) => boolean } | undefined
 
   // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
-  const strValue = String(value ?? "")
   const isInvalid =
     strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
 
@@ -112,7 +110,7 @@ function EditableCell<T>({
     <input
       ref={inputRef}
       value={strValue}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setDraftValue(e.target.value)}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
       className={`absolute inset-0 h-full w-full border-none px-4 py-2 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none ${

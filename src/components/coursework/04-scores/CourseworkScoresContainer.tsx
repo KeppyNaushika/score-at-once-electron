@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useMemo } from "react"
 
 import { EditableTable } from "@/components/common/EditableTable"
 import { Button } from "@/components/ui/button"
@@ -43,9 +43,6 @@ export function CourseworkScoresContainer({
   const { items, studentRows, loading, bulkUpdateCells } =
     useCourseworkScores(courseworkId)
 
-  // 前回のテーブルデータを保持（diff検出用）
-  const prevDataRef = useRef<ScoreRow[]>([])
-
   const tableData = useMemo(() => {
     const data = studentRows.map((row): ScoreRow => {
       const tableRow: ScoreRow = {
@@ -69,7 +66,6 @@ export function CourseworkScoresContainer({
       }
       return tableRow
     })
-    prevDataRef.current = data
     return data
   }, [studentRows, items])
 
@@ -181,7 +177,8 @@ export function CourseworkScoresContainer({
 
   const handleDataChange = useCallback(
     (newData: ScoreRow[]) => {
-      const prev = prevDataRef.current
+      // 変更前の値は今描画しているテーブルデータそのもの
+      const prev = tableData
       const changes: {
         courseworkItemId: string
         courseworkStudentId: string
@@ -280,7 +277,7 @@ export function CourseworkScoresContainer({
         bulkUpdateCells(changes)
       }
     },
-    [items, bulkUpdateCells]
+    [items, tableData, bulkUpdateCells]
   )
 
   if (loading) {

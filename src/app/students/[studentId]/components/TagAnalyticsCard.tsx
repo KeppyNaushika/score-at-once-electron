@@ -63,9 +63,6 @@ interface TagAnalyticsCardProps {
 }
 
 export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
-  const nextIdRef = useRef(1)
-  const createId = useCallback(() => `b${nextIdRef.current++}`, [])
-
   // 初期状態：タグが1つ以上あれば各タグを系列に、なければ合計1つ
   const [seriesList, setSeriesList] = useState<BarSeriesConfig[]>(() => {
     const tagSet = new Set<string>()
@@ -76,7 +73,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
 
     if (tags.length > 0) {
       return tags.map((tag, i) => ({
-        id: `b${nextIdRef.current++}`,
+        id: `b${i}`,
         label: tag,
         tags: new Set([tag]),
         subtotalId: "__total__",
@@ -85,7 +82,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
     }
     return [
       {
-        id: createId(),
+        id: "b0",
         label: "合計",
         tags: new Set<string>(),
         subtotalId: "__total__",
@@ -93,6 +90,10 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
       },
     ]
   })
+
+  // 初期系列が b0.. を使い切っているので、追加系列はその次から採番する
+  const nextIdRef = useRef(seriesList.length)
+  const createId = useCallback(() => `b${nextIdRef.current++}`, [])
 
   // 全タグ一覧
   const allTags = useMemo(() => {

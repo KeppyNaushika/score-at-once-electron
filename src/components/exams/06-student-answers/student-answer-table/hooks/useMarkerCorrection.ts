@@ -36,7 +36,9 @@ export function useMarkerCorrection({
   const originalBuffersRef = useRef<Map<string, ArrayBuffer>>(new Map())
   const runIdRef = useRef(0)
   const filesRef = useRef(files)
-  filesRef.current = files
+  useEffect(() => {
+    filesRef.current = files
+  })
   const [correctingFileIds, setCorrectingFileIds] = useState<Set<string>>(
     new Set()
   )

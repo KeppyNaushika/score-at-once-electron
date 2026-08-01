@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -45,42 +45,21 @@ export default function ClassroomModal({
   onSave,
   classroomToEdit,
 }: ClassroomModalProps) {
-  const [name, setName] = useState("")
-  const [classroomCode, setClassroomCode] = useState("")
-  const [grade, setGrade] = useState<number | undefined>(undefined)
-  const [description, setDescription] = useState("")
-  const [isVisible, setIsVisible] = useState(true)
+  // 呼び出し側は閉じている間このコンポーネントをマウントしないため、
+  // 開くたびに classroomToEdit の内容からフォームが始まる。
+  const [name, setName] = useState(classroomToEdit?.name ?? "")
+  const [classroomCode, setClassroomCode] = useState(
+    classroomToEdit?.classroomCode ?? ""
+  )
+  const [grade, setGrade] = useState<number | undefined>(
+    classroomToEdit?.grade ?? undefined
+  )
+  const [description, setDescription] = useState(
+    classroomToEdit?.description ?? ""
+  )
+  const [isVisible, setIsVisible] = useState(classroomToEdit?.isVisible ?? true)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const { inputRef: nameInputRef, onOpenAutoFocus } = useDialogAutoFocus(isOpen)
-
-  useEffect(() => {
-    let cancelled = false
-    const frame = requestAnimationFrame(() => {
-      if (cancelled) {
-        return
-      }
-
-      if (classroomToEdit) {
-        setName(classroomToEdit.name)
-        setClassroomCode(classroomToEdit.classroomCode ?? "")
-        setGrade(classroomToEdit.grade ?? undefined)
-        setDescription(classroomToEdit.description ?? "")
-        setIsVisible(classroomToEdit.isVisible ?? true)
-      } else {
-        setName("")
-        setClassroomCode("")
-        setGrade(undefined)
-        setDescription("")
-        setIsVisible(true)
-      }
-      setErrors({})
-    })
-
-    return () => {
-      cancelled = true
-      cancelAnimationFrame(frame)
-    }
-  }, [classroomToEdit, isOpen])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}

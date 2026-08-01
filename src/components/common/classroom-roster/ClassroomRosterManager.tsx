@@ -150,7 +150,12 @@ export function ClassroomRosterManager({
   onShowAddDialogChange,
 }: ClassroomRosterManagerProps) {
   const [internalShowAddDialog, setInternalShowAddDialog] = useState(false)
-  const [localEntries, setLocalEntries] = useState(entries)
+  // DnD の楽観更新。どの entries に対する並びかを一緒に持ち、
+  // 親がデータを読み直したら（entries が差し替わったら）破棄して最新に従う
+  const [reorderedEntries, setReorderedEntries] = useState<{
+    source: ClassroomRosterEntry[]
+    entries: ClassroomRosterEntry[]
+  } | null>(null)
   const [availableClassrooms, setAvailableClassrooms] = useState<
     AvailableClassroomOption[]
   >([])
@@ -166,9 +171,8 @@ export function ClassroomRosterManager({
   const showAddDialog = externalShowAddDialog ?? internalShowAddDialog
   const setShowAddDialog = onShowAddDialogChange ?? setInternalShowAddDialog
 
-  useEffect(() => {
-    setLocalEntries(entries)
-  }, [entries])
+  const localEntries =
+    reorderedEntries?.source === entries ? reorderedEntries.entries : entries
 
   const loadAvailableClassrooms = useCallback(async () => {
     if (!fetchAvailableClassrooms) return
@@ -197,14 +201,14 @@ export function ClassroomRosterManager({
     const newOrder = [...localEntries]
     const [removed] = newOrder.splice(oldIndex, 1)
     newOrder.splice(newIndex, 0, removed)
-    setLocalEntries(newOrder)
+    setReorderedEntries({ source: entries, entries: newOrder })
 
     try {
       await onReorder(newOrder.map((entry) => entry.id))
       onChanged?.()
     } catch (err) {
       console.error("Failed to reorder classrooms:", err)
-      setLocalEntries(entries)
+      setReorderedEntries(null)
     }
   }
 

@@ -1,6 +1,6 @@
 // import { checkForAutoFinalization } from "@/components/exams/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 import type { QuestionScore } from "@prisma/client"
-import { useCallback, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -32,7 +32,9 @@ export function useBatchScoring({
 }: UseBatchScoringProps) {
   // questionScoresの最新値をrefで保持（useCallbackの依存配列から除去するため）
   const questionScoresRef = useRef(questionScores)
-  questionScoresRef.current = questionScores
+  useEffect(() => {
+    questionScoresRef.current = questionScores
+  })
 
   /** 採点行を画面状態から取り除く（ref も同期してループ中の次反復に反映させる） */
   const removeScoreFromState = useCallback(
@@ -107,7 +109,7 @@ export function useBatchScoring({
       // 引数の解析
       let answerIds: string | string[]
       let status: ScoringStatus
-      let inputPartialScore: number | null = null
+      let inputPartialScore: number | null
 
       if (
         typeof statusOrAnswerIds === "string" &&

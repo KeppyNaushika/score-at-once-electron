@@ -74,7 +74,8 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
 
   const [seriesList, setSeriesList] = useState<SeriesConfig[]>(() => [
     {
-      id: `s${nextIdRef.current++}`,
+      // 初期系列のidは固定。nextIdRef は追加系列（createId）専用にする
+      id: "s0",
       label: "合計",
       tags: new Set<string>(),
       subtotalId: "__total__",

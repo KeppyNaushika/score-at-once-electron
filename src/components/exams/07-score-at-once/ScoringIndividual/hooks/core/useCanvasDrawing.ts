@@ -932,7 +932,9 @@ export function useCanvasDrawing({
   // executeTextCanvasDrawのfinally内で再帰呼び出しする際、
   // 古いクロージャのdrawTextCanvasではなく最新版を使用する
   const latestDrawTextCanvasRef = useRef(drawTextCanvas)
-  latestDrawTextCanvasRef.current = drawTextCanvas
+  useEffect(() => {
+    latestDrawTextCanvasRef.current = drawTextCanvas
+  })
 
   const executeTextCanvasDraw = useCallback(async () => {
     if (isDrawingTextCanvasRef.current) {

@@ -33,10 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
   const checkAuth = async () => {
     try {
       // electron-storeから認証トークンを取得
@@ -66,6 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
 
   const quickLogin = async (selectedUser: User) => {
     try {

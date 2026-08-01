@@ -44,16 +44,15 @@ interface ExportContainerProps {
 export function ExportContainer({ gradeId }: ExportContainerProps) {
   const { result, loading, error, recalculate } = useGradeResults(gradeId)
 
-  // 生徒選択（共有ステート）
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
-    new Set()
-  )
+  // 生徒選択（共有ステート）。null は「まだ触っていない」= 全員選択の意味
+  const [selectedStudentsState, setSelectedStudentsState] =
+    useState<Set<string> | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassroom, setSelectedClassroom] = useState<string>("__all__")
   const [selectionTab, setSelectionTab] = useState<"selection" | "preview">(
     "selection"
   )
-  const [previewStudentId, setPreviewStudentId] = useState("")
+  const [previewStudentIdState, setPreviewStudentId] = useState("")
 
   // 個人成績通知書オプション
   const [reportOptions, setReportOptionsState] = useState<GradeReportOptions>(
@@ -136,15 +135,15 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
 
   const studentsRef = useMemo(() => result?.students ?? [], [result])
 
-  // result が来たら全員選択を初期化
-  useMemo(() => {
-    if (studentsRef.length > 0 && selectedStudents.size === 0) {
-      setSelectedStudents(
-        new Set(studentsRef.map((student) => student.studentId))
-      )
-      setPreviewStudentId(studentsRef[0]?.studentId ?? "")
-    }
-  }, [studentsRef]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 初期状態（未操作）は全員選択・先頭生徒プレビューとして算出で表現する
+  const selectedStudents = useMemo(
+    () =>
+      selectedStudentsState ??
+      new Set(studentsRef.map((student) => student.studentId)),
+    [selectedStudentsState, studentsRef]
+  )
+  const previewStudentId =
+    previewStudentIdState || (studentsRef[0]?.studentId ?? "")
 
   const classNames = useMemo(() => {
     const names = new Set<string>()
@@ -174,25 +173,23 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
 
   const selectAllFiltered = () => {
     const ids = filteredStudents.map((student) => student.studentId)
-    setSelectedStudents((prev) => new Set([...prev, ...ids]))
+    setSelectedStudentsState(new Set([...selectedStudents, ...ids]))
   }
 
   const deselectAllFiltered = () => {
     const filteredIds = new Set(
       filteredStudents.map((student) => student.studentId)
     )
-    setSelectedStudents(
-      (prev) => new Set([...prev].filter((id) => !filteredIds.has(id)))
+    setSelectedStudentsState(
+      new Set([...selectedStudents].filter((id) => !filteredIds.has(id)))
     )
   }
 
   const toggleStudent = (id: string) => {
-    setSelectedStudents((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+    const next = new Set(selectedStudents)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedStudentsState(next)
   }
 
   const selectedStudentIds = useMemo(() => {

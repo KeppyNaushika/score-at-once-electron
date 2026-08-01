@@ -1,7 +1,7 @@
 "use client"
 
 import type { Prisma } from "@prisma/client"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -42,48 +42,23 @@ export default function StudentModal({
   onUpdate,
   studentToEdit,
 }: StudentModalProps) {
-  const [studentId, setStudentId] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastNameKana, setLastNameKana] = useState("")
-  const [firstNameKana, setFirstNameKana] = useState("")
+  // 呼び出し側は閉じている間このコンポーネントをマウントしないため、
+  // 開くたびに studentToEdit の内容からフォームが始まる。
+  const [studentId, setStudentId] = useState(studentToEdit?.studentNumber ?? "")
+  const [lastName, setLastName] = useState(studentToEdit?.lastName ?? "")
+  const [firstName, setFirstName] = useState(studentToEdit?.firstName ?? "")
+  const [lastNameKana, setLastNameKana] = useState(
+    studentToEdit?.lastNameKana ?? ""
+  )
+  const [firstNameKana, setFirstNameKana] = useState(
+    studentToEdit?.firstNameKana ?? ""
+  )
   const [enrollmentYear, setEnrollmentYear] = useState<number | undefined>(
-    undefined
+    studentToEdit?.enrollmentYear ?? undefined
   )
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const { inputRef: studentIdInputRef, onOpenAutoFocus } =
     useDialogAutoFocus(isOpen)
-
-  useEffect(() => {
-    let canceled = false
-    const frame = requestAnimationFrame(() => {
-      if (canceled) {
-        return
-      }
-
-      if (studentToEdit) {
-        setStudentId(studentToEdit.studentNumber)
-        setLastName(studentToEdit.lastName)
-        setFirstName(studentToEdit.firstName)
-        setLastNameKana(studentToEdit.lastNameKana)
-        setFirstNameKana(studentToEdit.firstNameKana)
-        setEnrollmentYear(studentToEdit.enrollmentYear ?? undefined)
-      } else {
-        setStudentId("")
-        setLastName("")
-        setFirstName("")
-        setLastNameKana("")
-        setFirstNameKana("")
-        setEnrollmentYear(undefined)
-      }
-      setErrors({})
-    })
-
-    return () => {
-      canceled = true
-      cancelAnimationFrame(frame)
-    }
-  }, [studentToEdit, isOpen])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}

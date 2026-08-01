@@ -98,7 +98,8 @@ export const deployPendingMigrations = (options?: {
           restoreBackup(backupPath)
         }
         throw new Error(
-          `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`
+          `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`,
+          { cause: error }
         )
       }
     }

@@ -59,7 +59,8 @@ export async function initializeApp(): Promise<void> {
     } catch (dbError) {
       console.error("Database setup failed:", dbError)
       throw new Error(
-        `Database initialization failed: ${dbError instanceof Error ? dbError.message : dbError}`
+        `Database initialization failed: ${dbError instanceof Error ? dbError.message : dbError}`,
+        { cause: dbError }
       )
     }
 
@@ -89,6 +90,8 @@ export async function initializeApp(): Promise<void> {
     console.error("Failed to initialize application:", error)
     // アプリケーションを終了させるのではなく、エラー状態を明確にする
     const errorMessage = error instanceof Error ? error.message : String(error)
-    throw new Error(`Application initialization failed: ${errorMessage}`)
+    throw new Error(`Application initialization failed: ${errorMessage}`, {
+      cause: error,
+    })
   }
 }

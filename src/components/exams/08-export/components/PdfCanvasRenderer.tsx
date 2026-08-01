@@ -436,7 +436,9 @@ export function PdfCanvasRenderer({
 
   // レンダリング開始トリガーを監視
   const renderAllPagesRef = useRef(renderAllPagesParallel)
-  renderAllPagesRef.current = renderAllPagesParallel
+  useEffect(() => {
+    renderAllPagesRef.current = renderAllPagesParallel
+  })
 
   useEffect(() => {
     if (startRendering && !isRendering && pages.length > 0) {

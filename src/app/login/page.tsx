@@ -27,10 +27,6 @@ export default function UserSelection() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const { quickLogin } = useAuth()
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
   const loadUsers = async () => {
     try {
       const result = await window.electronAPI.fetchUsers()
@@ -42,6 +38,10 @@ export default function UserSelection() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadUsers()
+  }, [])
 
   const handleUserSelect = async (user: User) => {
     if (user.passcodeType && user.passcodeType !== "none") {
@@ -164,7 +164,8 @@ export default function UserSelection() {
         onUserCreated={handleUserCreated}
       />
 
-      {selectedUser && (
+      {/* 閉じている間はマウントしない。開くたびに入力とエラーが作り直される */}
+      {selectedUser && showPasscodeModal && (
         <PasscodeModal
           isOpen={showPasscodeModal}
           onClose={() => setShowPasscodeModal(false)}

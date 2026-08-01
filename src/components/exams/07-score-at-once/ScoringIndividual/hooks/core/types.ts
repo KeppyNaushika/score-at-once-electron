@@ -70,9 +70,8 @@ export interface UseImageCanvasReturn {
   containerRef: React.RefObject<HTMLDivElement | null>
   imageLoaded: boolean
   loadedImages: HTMLImageElement[]
-  textBoundsCache: Map<
-    string,
-    { x: number; y: number; width: number; height: number }
+  textBoundsCacheRef: React.MutableRefObject<
+    Map<string, { x: number; y: number; width: number; height: number }>
   >
 }
 

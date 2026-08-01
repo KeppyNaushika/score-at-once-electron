@@ -39,12 +39,9 @@ export function ColorPicker({
   className,
 }: ColorPickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState(value)
-
-  // 外部からのvalue変更を反映
-  React.useEffect(() => {
-    setInputValue(value)
-  }, [value])
+  // HEXとして未完成な入力途中の下書き。null なら外部のvalueをそのまま表示する
+  const [draftValue, setDraftValue] = React.useState<string | null>(null)
+  const inputValue = draftValue ?? value
 
   // HEX形式のバリデーション
   const isValidHex = (hex: string): boolean => {
@@ -58,24 +55,26 @@ export function ColorPicker({
     if (!newValue.startsWith("#")) {
       newValue = "#" + newValue
     }
-    setInputValue(newValue)
 
-    // 有効なHEX形式なら親に通知
+    // 有効なHEX形式なら親に通知し、以降は外部のvalueに追従させる
     if (isValidHex(newValue)) {
+      setDraftValue(null)
       onChange(newValue)
+    } else {
+      setDraftValue(newValue)
     }
   }
 
   // ネイティブカラーピッカーからの変更
   const handleNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value.toUpperCase()
-    setInputValue(newColor)
+    setDraftValue(null)
     onChange(newColor)
   }
 
   // プリセット選択
   const handlePresetClick = (color: string) => {
-    setInputValue(color)
+    setDraftValue(null)
     onChange(color)
   }
 

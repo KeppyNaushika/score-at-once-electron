@@ -178,7 +178,8 @@ export function useCropRegionSave(
       defaultPoints?: number
     ): Promise<CropRegionArea | null> => {
       // タイプに応じたラベルと配点を設定
-      let label = ""
+      // label は switch の default で必ず代入されるため初期値を持たない
+      let label: string
       let points = null
 
       switch (type) {
