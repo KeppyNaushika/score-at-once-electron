@@ -74,10 +74,7 @@ export const uploadMasterAnswers = async (
   examId: string,
   filesData: MasterAnswerFileData[]
 ): Promise<ExamPage[]> => {
-  const exam = await prisma.exam.findUnique({
-    where: { id: examId },
-    select: { id: true },
-  })
+  const exam = await prisma.exam.findUnique({ where: { id: examId } })
   if (!exam) {
     throw new Error("Exam not found for master answer upload")
   }
@@ -85,7 +82,6 @@ export const uploadMasterAnswers = async (
   const lastPage = await prisma.examPage.findFirst({
     where: { examId },
     orderBy: { pageNumber: "desc" },
-    select: { pageNumber: true },
   })
   const highestPageNumber = lastPage?.pageNumber ?? 0
 
@@ -196,7 +192,7 @@ export const deleteMasterAnswer = async (
 ): Promise<DeleteMasterAnswerResult> => {
   const targetPage = await prisma.examPage.findUnique({
     where: { id: examPageId },
-    include: { studentAnswerImages: { select: { imagePath: true } } },
+    include: { studentAnswerImages: true },
   })
 
   if (!targetPage) {
@@ -253,7 +249,6 @@ export const updateMasterAnswersOrder = async (
 
   const pages = await prisma.examPage.findMany({
     where: { id: { in: pageOrders.map((pageOrder) => pageOrder.id) } },
-    select: { id: true, examId: true, pageNumber: true },
   })
   if (pages.length === 0) {
     throw new Error("No exam pages found for reordering")

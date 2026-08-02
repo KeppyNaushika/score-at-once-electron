@@ -276,8 +276,13 @@ model UserExam {
   @@index([examId])
 }
 
+/// 試験で使う小計点グループ。どの集計に含めるかのフラグを持つ。
+///
+/// idは決定論的に生成する（`buildExamSubtotalGroupId`）。`@default(uuid())` だと
+/// 2端末が同じ(試験, 小計点グループ)を追加したとき、uuidが違い@@uniqueが同値の行が
+/// できてNAS同期で衝突する。同一idなら行レベルLWWで1行へ収束する。
 model ExamSubtotalGroup {
-  id                 String        @id @default(uuid())
+  id                 String        @id
   examId             String
   subtotalGroupId    String
   selectedForTable   Boolean       @default(false) // 小計点テーブルに含めるグループ
@@ -286,6 +291,10 @@ model ExamSubtotalGroup {
   updatedAt          DateTime      @default(now()) @updatedAt
   exam               Exam          @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   subtotalGroup      SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([examId, subtotalGroupId])
+  @@index([examId])
+  @@index([subtotalGroupId])
 }
 
 model QuestionScore {
@@ -941,6 +950,20 @@ model GradeStudent {
 /// 成績データソース（6種: exam_total / subtotal / crop_region / coursework / coursework_total）
 /// coursework型は CourseworkItem（試験外成績資料の評価項目）を参照する
 /// coursework_total型は Coursework（試験外成績資料）全体を参照し、全評価項目のスコアを合算する
+///
+/// 参照列（examId / subtotalId / cropRegionId / courseworkItemId / courseworkId）は
+/// type ごとに使う組み合わせが変わり、**同じ列でも type によって意味が違う**。
+/// 特に examId は type によって必要だったり冗長だったりするので、消さないこと。
+///
+/// | type             | 参照列                    | examId の意味                                  |
+/// | ---------------- | ------------------------- | ---------------------------------------------- |
+/// | exam_total       | examId                    | 合計点を取る試験そのもの（必須）               |
+/// | subtotal         | examId + subtotalId       | **必須**。SubtotalGroup は Exam と多対多なので、|
+/// |                  |                           | どの試験のスコアを集計するかは subtotalId から |
+/// |                  |                           | は辿れない                                     |
+/// | crop_region      | examId + cropRegionId     | 冗長（cropRegion.examPage.examId で辿れる）    |
+/// | coursework       | courseworkItemId          | 使わない                                       |
+/// | coursework_total | courseworkId              | 使わない                                       |
 model GradeDataSource {
   id                     String   @id @default(uuid())
   gradeItemId            String
@@ -1360,6 +1383,11 @@ model AsbHeaderField {
   order            Int     @default(0)
   fontSize         Float? // label タイプ用
   linkedRegionType String? // "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "STUDENT_NAME" | "STUDENT_ID"
+
+  /// sqlite-nas-sync は `id` と `updatedAt` を持つテーブルだけを同期対象として自動検出し、
+  /// LWW の判定にも updatedAt を使う。この2列が無いと同期の対象外になる
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   definition AsbDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
 

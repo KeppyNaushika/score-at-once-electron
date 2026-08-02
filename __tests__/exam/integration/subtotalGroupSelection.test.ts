@@ -7,6 +7,8 @@
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { buildExamSubtotalGroupId } from "../../../electron-src/lib/prisma/deterministicId"
+
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
@@ -18,6 +20,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
+  addSubtotalGroupToExam,
   getSubtotalGroupSelection,
   setSubtotalGroupSelection,
 } from "@/electron-src/lib/prisma/subtotalGroup"
@@ -40,7 +43,11 @@ async function createTestData() {
   for (const name of ["国語", "数学", "英語"]) {
     const group = await testPrisma.subtotalGroup.create({ data: { name } })
     await testPrisma.examSubtotalGroup.create({
-      data: { examId: exam.id, subtotalGroupId: group.id },
+      data: {
+        id: buildExamSubtotalGroupId(exam.id, group.id),
+        examId: exam.id,
+        subtotalGroupId: group.id,
+      },
     })
     groupIds.push(group.id)
   }
@@ -97,5 +104,44 @@ describe("小計グループ出力選択フラグ", () => {
     const selection = await getSubtotalGroupSelection(exam.id)
     expect(selection.tableGroupIds).toEqual([])
     expect(selection.boxPlotGroupIds).toEqual([])
+  })
+})
+
+describe("試験への小計グループ追加", () => {
+  it("同じ組み合わせを2回追加しても1行のまま（重複でフラグが二重化しない）", async () => {
+    // 重複すると selectedForTable / selectedForBoxPlot が行ごとに食い違い、
+    // どちらが効くかが読み取り順次第になる
+    const exam = await testPrisma.exam.create({
+      data: { examName: "重複テスト" },
+    })
+    const group = await testPrisma.subtotalGroup.create({
+      data: { name: "国語" },
+    })
+
+    const first = await addSubtotalGroupToExam(exam.id, group.id)
+    const second = await addSubtotalGroupToExam(exam.id, group.id)
+
+    expect(first.success).toBe(true)
+    expect(second.success).toBe(true)
+    expect(
+      await testPrisma.examSubtotalGroup.count({
+        where: { examId: exam.id, subtotalGroupId: group.id },
+      })
+    ).toBe(1)
+  })
+
+  it("idが(試験, 小計グループ)から決まる（2端末で同じidになりNAS同期で衝突しない）", async () => {
+    const exam = await testPrisma.exam.create({
+      data: { examName: "決定論的idテスト" },
+    })
+    const group = await testPrisma.subtotalGroup.create({
+      data: { name: "数学" },
+    })
+
+    const result = await addSubtotalGroupToExam(exam.id, group.id)
+
+    expect(result.examSubtotalGroup?.id).toBe(
+      buildExamSubtotalGroupId(exam.id, group.id)
+    )
   })
 })

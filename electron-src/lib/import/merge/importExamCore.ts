@@ -9,6 +9,7 @@ import * as crypto from "crypto"
 import * as path from "path"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
+import { buildExamSubtotalGroupId } from "../../prisma/deterministicId"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
 
@@ -243,34 +244,31 @@ export async function processExamSubtotalGroups(
   for (const examSubtotalGroup of data.examData.examSubtotalGroups) {
     const newGroupId =
       idMappings.subtotalGroup[examSubtotalGroup.subtotalGroupId]
-    if (newGroupId) {
-      const existing = await tx.examSubtotalGroup.findFirst({
-        where: { examId: newExamId, subtotalGroupId: newGroupId },
-      })
-      if (existing) {
-        idMappings.examSubtotalGroup[examSubtotalGroup.id] = existing.id
-      } else {
-        const existingById = await tx.examSubtotalGroup.findUnique({
-          where: { id: examSubtotalGroup.id },
-        })
-        if (existingById) {
-          idMappings.examSubtotalGroup[examSubtotalGroup.id] =
-            examSubtotalGroup.id
-        } else {
-          await tx.examSubtotalGroup.create({
-            data: {
-              id: examSubtotalGroup.id,
-              examId: newExamId,
-              subtotalGroupId: newGroupId,
-              selectedForTable: examSubtotalGroup.selectedForTable ?? false,
-              selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
-            },
-          })
-          idMappings.examSubtotalGroup[examSubtotalGroup.id] =
-            examSubtotalGroup.id
-        }
-      }
-    }
+    if (!newGroupId) continue
+
+    // **探すキーは DB が守っているキーに合わせる。** id は新規作成時にしか意味を持たない。
+    // 決定論的idは「これから作る行」の名前を決めるだけで、既にある行がその名前で
+    // 入っている保証は無い（旧バージョンで作られた行、id を再計算しない経路を通った行）。
+    // ここで id を探しにいくと、同じ組み合わせの行があるのに見つけられず create 側へ落ち、
+    // unique 違反でアーカイブ取り込みがトランザクションごと巻き戻る。
+    const linked = await tx.examSubtotalGroup.upsert({
+      where: {
+        examId_subtotalGroupId: {
+          examId: newExamId,
+          subtotalGroupId: newGroupId,
+        },
+      },
+      create: {
+        id: buildExamSubtotalGroupId(newExamId, newGroupId),
+        examId: newExamId,
+        subtotalGroupId: newGroupId,
+        selectedForTable: examSubtotalGroup.selectedForTable ?? false,
+        selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
+      },
+      update: {},
+    })
+    // 既存行に当たった場合その id は決定論的とは限らないので、実際の行の id を記録する
+    idMappings.examSubtotalGroup[examSubtotalGroup.id] = linked.id
   }
 }
 

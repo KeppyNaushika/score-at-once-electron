@@ -15,6 +15,14 @@ function joinIds(parentId: string, childKey: string): string {
   return `${parentId}:${childKey}`
 }
 
+/** 試験と小計点グループの紐付け（ExamSubtotalGroup）のid */
+export function buildExamSubtotalGroupId(
+  examId: string,
+  subtotalGroupId: string
+): string {
+  return joinIds(examId, subtotalGroupId)
+}
+
 /** consistency ルールの集計対象観点（GradeConstraintViewpoint）のid */
 export function buildConstraintViewpointId(
   constraintId: string,
