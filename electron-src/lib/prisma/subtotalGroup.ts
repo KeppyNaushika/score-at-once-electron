@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
+import { buildExamSubtotalGroupId } from "./deterministicId"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
@@ -326,18 +327,25 @@ export async function getActiveSubtotalGroupsForExam(examId: string) {
 }
 
 /**
- * 試験に小計点グループを追加
+ * 試験に小計点グループを追加する。
+ *
+ * idが(試験, 小計点グループ)から決まるので upsert で足りる。2端末が同時に同じ組み合わせを
+ * 追加しても同一idの1行へ収束し、既にある紐付けを二重に作ることもない
+ * （以前は素の create で、重複防止は @@unique も無いまま呼び出し側任せだった）。
  */
 export async function addSubtotalGroupToExam(
   examId: string,
   subtotalGroupId: string
 ) {
   try {
-    const examSubtotalGroup = await prisma.examSubtotalGroup.create({
-      data: {
+    const examSubtotalGroup = await prisma.examSubtotalGroup.upsert({
+      where: { examId_subtotalGroupId: { examId, subtotalGroupId } },
+      create: {
+        id: buildExamSubtotalGroupId(examId, subtotalGroupId),
         examId,
         subtotalGroupId,
       },
+      update: {},
       include: {
         subtotalGroup: {
           include: {

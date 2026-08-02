@@ -14,6 +14,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/grade-transformers/legacyShape"
+import { buildExamSubtotalGroupId } from "../../../electron-src/lib/prisma/deterministicId"
 import type { GradeArchiveData } from "../../../src/types/gradeArchive.types"
 import {
   cleanupTestDatabase,
@@ -1658,7 +1659,11 @@ describe("grade-archive ラウンドトリップ", () => {
         data: { name: groupName },
       })
       await prisma.examSubtotalGroup.create({
-        data: { examId, subtotalGroupId: group.id },
+        data: {
+          id: buildExamSubtotalGroupId(examId, group.id),
+          examId,
+          subtotalGroupId: group.id,
+        },
       })
       return prisma.subtotal.create({
         data: { subtotalGroupId: group.id, name: "大問1", order: 0 },

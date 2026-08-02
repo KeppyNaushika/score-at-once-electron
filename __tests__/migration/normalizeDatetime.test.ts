@@ -198,6 +198,10 @@ describe("DateTime正規化マイグレーション", () => {
   const POST_MIGRATION_TABLES = new Set([
     "AsbCharGuide",
     "AsbDefinitionTag", // 20260713000000 で追加。normalize migration より後で ISO text 生成
+    // 表そのものは normalize migration より前からあるが、当時は DateTime 列を持たなかった。
+    // createdAt/updatedAt は 20260802030000（同期対象にするための追加）で ISO text として
+    // 生まれるため、integer(ms) の混在が起こらない
+    "AsbHeaderField",
     "AuditLog",
     "Coursework",
     "CourseworkClassroom", // 旧 CourseworkClass（20260704010000 でリネーム）
