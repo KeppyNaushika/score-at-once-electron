@@ -396,7 +396,7 @@ describe("edgeCases", () => {
       cropRegionId: cropRegion.id,
       subtotalId:
         subtotalsData.subtotals[i % subtotalsData.subtotals.length].id,
-      assignmentType: "auto",
+      assignmentType: "QUESTION_ASSIGNMENT",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }))
@@ -675,7 +675,7 @@ describe("edgeCases", () => {
         id: generateId(),
         examPageId: page.id,
         label: "問1",
-        type: "QUESTION",
+        type: "QUESTION_ANSWER",
         x: 0,
         y: 0,
         width: 100,

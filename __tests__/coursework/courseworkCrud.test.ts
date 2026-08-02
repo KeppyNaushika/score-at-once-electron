@@ -28,6 +28,7 @@ import {
   getCourseworkCandidates,
   getCourseworkClassroomRemovalPreview,
   getCourseworkClassrooms,
+  getCourseworks,
   getCourseworkScoresByItemId,
   getCourseworkStudents,
   removeClassroomFromCoursework,
@@ -97,6 +98,54 @@ describe("Coursework CRUD", () => {
     const updated = await updateCoursework(id, { name: "改題レポート" })
     expect(updated.success).toBe(true)
     expect(updated.coursework!.name).toBe("改題レポート")
+  })
+
+  it("一覧と詳細は件数表示が読む評価項目・名簿を行として返す", async () => {
+    const created = await createCoursework({ name: "件数の出る資料" })
+    const courseworkId = created.coursework!.id
+    // 作成直後の返り値も一覧・詳細と同じ形（型がそう名乗っている）
+    expect(created.coursework!.items).toEqual([])
+    expect(created.coursework!.students).toEqual([])
+
+    await createCourseworkItem({ courseworkId, name: "知識", maxScore: 100 })
+    await createCourseworkItem({ courseworkId, name: "技能", maxScore: 50 })
+    const student = await testPrisma.student.create({
+      data: {
+        studentNumber: "C001",
+        lastName: "佐藤",
+        firstName: "花子",
+        lastNameKana: "サトウ",
+        firstNameKana: "ハナコ",
+      },
+    })
+    await addStudentsToCoursework(courseworkId, [student.id])
+
+    // 件数を数えるのは renderer。main は `_count` を作らず行を渡し切る
+    const list = await getCourseworks()
+    const listed = list.courseworks!.find(
+      (coursework) => coursework.id === courseworkId
+    )!
+    expect(listed.items.length).toBe(2)
+    expect(listed.students.length).toBe(1)
+
+    const detail = await getCourseworkById(courseworkId)
+    expect(detail.coursework!.items.length).toBe(2)
+    expect(detail.coursework!.students.length).toBe(1)
+
+    // 満点は Decimal のまま渡すと renderer 側で壊れる
+    expect(typeof listed.items[0].maxScore).toBe("number")
+  })
+
+  it("更新後の返り値も評価項目・名簿を保つ", async () => {
+    const created = await createCoursework({ name: "更新される資料" })
+    const courseworkId = created.coursework!.id
+    await createCourseworkItem({ courseworkId, name: "知識", maxScore: 100 })
+
+    const updated = await updateCoursework(courseworkId, { name: "改題" })
+
+    expect(updated.coursework!.name).toBe("改題")
+    expect(updated.coursework!.items.length).toBe(1)
+    expect(updated.coursework!.students).toEqual([])
   })
 
   it("評価項目を作成（変換表付き）・更新・削除できる", async () => {

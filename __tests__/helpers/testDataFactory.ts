@@ -154,7 +154,7 @@ export function createArchiveExamData(
       id: generateId(),
       examPageId: page.id,
       label: `問${pageIndex * cropRegionsPerPage + regionIndex + 1}`,
-      type: "QUESTION",
+      type: "QUESTION_ANSWER",
       x: 0,
       y: regionIndex * 100,
       width: 200,

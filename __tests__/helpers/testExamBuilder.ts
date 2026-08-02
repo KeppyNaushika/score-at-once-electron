@@ -187,7 +187,7 @@ export async function createFullTestExam(
           id: crypto.randomUUID(),
           examPageId: page.id,
           label: `問${cropRegions.length + 1}`,
-          type: "QUESTION",
+          type: "QUESTION_ANSWER",
           x: 0,
           y: j * 100,
           width: 200,
@@ -228,13 +228,16 @@ export async function createFullTestExam(
     })
     students.push(student)
 
-    // メンバーシップ
+    // メンバーシップ。
+    // 在籍判定は受験日（examDate）基準なので、既定の startDate（作成時刻）のままだと
+    // 試験日時点では誰も在籍していないことになる。試験日より前から在籍させる。
     const membership = await prisma.studentClassroomMembership.create({
       data: {
         id: crypto.randomUUID(),
         studentId: student.id,
         classroomId: classroom.id,
         attendanceNumber: i + 1,
+        startDate: new Date("2025-04-01"),
       },
     })
     memberships.push(membership)
@@ -305,7 +308,7 @@ export async function createFullTestExam(
         id: crypto.randomUUID(),
         cropRegionId: cropRegions[i].id,
         subtotalId: subtotals[subtotalIdx].id,
-        assignmentType: "auto",
+        assignmentType: "QUESTION_ASSIGNMENT",
       },
     })
     cropSubtotals.push(cropSubtotal)
