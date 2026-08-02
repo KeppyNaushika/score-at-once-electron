@@ -7,7 +7,12 @@ import prisma from "./client"
  * 採点領域も受験者も同じ examId から引くため、両者が別の試験のものになることは
  * 構造的に起こらない（examScopeGuard による検査を足す必要が無い唯一の書き込み経路）。
  */
-export const initializeScoringRecords = async (examId: string) => {
+export const initializeScoringRecords = async (
+  examId: string
+): Promise<
+  | { success: true; initialized: number; message: string }
+  | { success: false; error: string }
+> => {
   try {
     return await prisma.$transaction(
       async (tx) => {
@@ -74,7 +79,7 @@ export const initializeScoringRecords = async (examId: string) => {
         }
 
         return {
-          success: true,
+          success: true as const,
           initialized: scoringRecords.length,
           message: `${scoringRecords.length} scoring records initialized`,
         }
@@ -88,7 +93,7 @@ export const initializeScoringRecords = async (examId: string) => {
   } catch (error) {
     console.error("Failed to initialize scoring records:", error)
     return {
-      success: false,
+      success: false as const,
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
