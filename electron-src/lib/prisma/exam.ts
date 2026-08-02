@@ -13,36 +13,16 @@ import { examPageWithContentInclude } from "./examPage"
  * 一覧と単体取得で同じ形を返すため、選択列はここが唯一の定義になる。
  * 進捗そのものは main では算出しない（計算の唯一の実装は renderer）。
  */
-const examProgressSourceSelect = {
+const examProgressSourceInclude = {
   examPages: {
-    select: {
-      id: true,
-      studentAnswerImages: {
-        select: { examStudentId: true },
-      },
-      cropRegions: {
-        select: {
-          type: true,
-          questionScores: {
-            select: {
-              status: true,
-              examStudentId: true,
-              partialScore: true,
-            },
-          },
-        },
-      },
+    include: {
+      studentAnswerImages: true,
+      cropRegions: { include: { questionScores: true } },
     },
   },
-  examSubtotalGroups: {
-    select: { id: true },
-  },
-  examStudents: {
-    // 進捗計算は受験者IDで答案・採点を突き合わせるので id が要る。
-    // select で主キーを落とすとこの突き合わせが黙って全滅する。
-    select: { id: true, status: true },
-  },
-} satisfies Prisma.ExamSelect
+  examSubtotalGroups: true,
+  examStudents: true,
+} satisfies Prisma.ExamInclude
 
 /** 試験一覧用の軽量クエリ（ステップ判定に必要な最小限のデータのみ取得、ユーザーでフィルタリング） */
 export const getExamsForList = async (userId: string) => {
@@ -54,22 +34,12 @@ export const getExamsForList = async (userId: string) => {
         },
       },
     },
-    select: {
-      id: true,
-      examName: true,
-      examDate: true,
-      description: true,
+    include: {
       examTags: {
-        select: {
-          tag: {
-            select: { id: true, name: true, color: true },
-          },
-        },
+        include: { tag: true },
         orderBy: { tag: { order: "asc" } },
       },
-      createdAt: true,
-      updatedAt: true,
-      ...examProgressSourceSelect,
+      ...examProgressSourceInclude,
     },
     orderBy: {
       createdAt: "desc",
@@ -85,7 +55,7 @@ export const getExamsForList = async (userId: string) => {
  * 一覧と単体取得の双方がこれを通るので、変換の実装はここだけになる。
  */
 export const toExamProgressSource = (
-  exam: Prisma.ExamGetPayload<{ select: typeof examProgressSourceSelect }>
+  exam: Prisma.ExamGetPayload<{ include: typeof examProgressSourceInclude }>
 ): ExamProgressSource => ({
   examPages: exam.examPages.map((examPage) => ({ id: examPage.id })),
   cropRegions: exam.examPages.flatMap((examPage) =>
@@ -163,17 +133,11 @@ export const getExamById = async (id: string) => {
         },
       },
       examTags: {
-        select: {
-          tag: {
-            select: { id: true, name: true, color: true },
-          },
-        },
+        include: { tag: true },
         orderBy: { tag: { order: "asc" } },
       },
       // 試験削除時に参照を失う（examIdがSetNull・cropRegion経由はcascade削除）成績データソース
-      gradeDataSources: {
-        select: { id: true },
-      },
+      gradeDataSources: true,
     },
   })
 }
@@ -237,11 +201,7 @@ export const createExam = async (
       },
       examStudents: true,
       examTags: {
-        select: {
-          tag: {
-            select: { id: true, name: true, color: true },
-          },
-        },
+        include: { tag: true },
         orderBy: { tag: { order: "asc" } },
       },
     },
@@ -266,7 +226,6 @@ export const updateExam = async (id: string, data: Prisma.ExamUpdateInput) => {
   // 差分記録用に変更前を取得
   const before = await prisma.exam.findUnique({
     where: { id },
-    select: { examName: true, examDate: true, description: true },
   })
 
   const exam = await prisma.exam.update({
@@ -281,19 +240,11 @@ export const updateExam = async (id: string, data: Prisma.ExamUpdateInput) => {
     scopeId: exam.id,
     scopeLabel: exam.examName,
     target: exam.examName,
-    changes: diffFields(
-      before ?? undefined,
-      {
-        examName: exam.examName,
-        examDate: exam.examDate,
-        description: exam.description,
-      },
-      [
-        { field: "examName", label: "試験名" },
-        { field: "examDate", label: "試験日" },
-        { field: "description", label: "説明" },
-      ]
-    ),
+    changes: diffFields(before ?? undefined, exam, [
+      { field: "examName", label: "試験名" },
+      { field: "examDate", label: "試験日" },
+      { field: "description", label: "説明" },
+    ]),
   })
 
   return exam
@@ -303,7 +254,6 @@ export const updateExam = async (id: string, data: Prisma.ExamUpdateInput) => {
 export const deleteExam = async (id: string) => {
   const before = await prisma.exam.findUnique({
     where: { id },
-    select: { examName: true },
   })
 
   const exam = await prisma.exam.delete({

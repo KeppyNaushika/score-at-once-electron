@@ -407,8 +407,8 @@ export function CourseworkListContainer() {
                         <div className="text-sm text-muted-foreground">
                           {coursework.description || "説明なし"}
                           {" / "}
-                          生徒: {coursework._count.students}名 / 評価項目:{" "}
-                          {coursework._count.items}
+                          生徒: {coursework.students.length}名 / 評価項目:{" "}
+                          {coursework.items.length}
                         </div>
                         {coursework.tags.length > 0 && (
                           <div className="mt-1 flex flex-wrap gap-1">

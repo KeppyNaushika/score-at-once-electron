@@ -313,6 +313,7 @@ export async function getPdfExportData(options: {
           // 小計点を計算
           const subtotalResult = await calculateSubtotalScoreForStudent(
             examStudent.id,
+            examId,
             subtotalRegion.id,
             allScores.map((score) => ({
               examStudentId: score.examStudentId,

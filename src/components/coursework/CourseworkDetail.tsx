@@ -153,11 +153,9 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge variant="outline">{classNames || "学級未登録"}</Badge>
             <Badge variant="outline">
-              生徒: {coursework._count?.students ?? 0}名
+              生徒: {coursework.students.length}名
             </Badge>
-            <Badge variant="outline">
-              評価項目: {coursework._count?.items ?? 0}
-            </Badge>
+            <Badge variant="outline">評価項目: {coursework.items.length}</Badge>
             {coursework.date && (
               <Badge variant="secondary">
                 実施日: {new Date(coursework.date).toLocaleDateString("ja-JP")}

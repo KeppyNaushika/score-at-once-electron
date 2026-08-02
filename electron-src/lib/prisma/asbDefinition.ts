@@ -81,7 +81,6 @@ const fullInclude = {
                 include: {
                   choiceOptions: {
                     orderBy: { choiceIndex: "asc" as const },
-                    select: { choiceIndex: true, label: true, isCorrect: true },
                   },
                 },
               },
@@ -94,7 +93,6 @@ const fullInclude = {
             include: {
               choiceOptions: {
                 orderBy: { choiceIndex: "asc" as const },
-                select: { choiceIndex: true, label: true, isCorrect: true },
               },
             },
           },
@@ -114,30 +112,10 @@ export async function listAsbDefinitions(
 ): Promise<ASBDefinitionListItem[]> {
   const rows = await prisma.asbDefinition.findMany({
     where: { userId },
-    select: {
-      id: true,
-      name: true,
-      paperSize: true,
-      orientation: true,
-      updatedAt: true,
-      createdAt: true,
-      tags: {
-        select: {
-          tag: true,
-        },
-      },
+    include: {
+      tags: { include: { tag: true } },
       majorQuestions: {
-        select: {
-          subQuestions: {
-            select: {
-              points: true,
-              usesBranchPoints: true,
-              branchQuestions: {
-                select: { points: true },
-              },
-            },
-          },
-        },
+        include: { subQuestions: { include: { branchQuestions: true } } },
       },
     },
     orderBy: { updatedAt: "desc" },
@@ -450,7 +428,6 @@ export async function deleteAsbDefinition(id: string): Promise<boolean> {
   try {
     const before = await prisma.asbDefinition.findUnique({
       where: { id },
-      select: { name: true },
     })
     await prisma.asbDefinition.delete({ where: { id } })
 

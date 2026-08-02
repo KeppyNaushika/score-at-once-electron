@@ -45,7 +45,7 @@ function makeExamStudent(
     customOrder,
     createdAt: EPOCH,
     updatedAt: EPOCH,
-    _count: { studentAnswerImages: 0 },
+    studentAnswerImages: [],
     student: {
       id: studentId,
       studentNumber,

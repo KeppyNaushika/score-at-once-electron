@@ -17,7 +17,6 @@ async function resolveGradeIdOf(
 ): Promise<string | null> {
   const gradeStudent = await prisma.gradeStudent.findUnique({
     where: { id: gradeStudentId },
-    select: { gradeId: true },
   })
   return gradeStudent?.gradeId ?? null
 }

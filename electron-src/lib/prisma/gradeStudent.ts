@@ -21,7 +21,6 @@ import {
 async function getExamReferenceDate(gradeId: string): Promise<Date | null> {
   const grade = await prisma.grade.findUnique({
     where: { id: gradeId },
-    select: { referenceDate: true },
   })
   return grade?.referenceDate ?? null
 }
@@ -37,7 +36,7 @@ export async function getStudentsByGradeId(gradeId: string) {
         student: {
           include: {
             memberships: {
-              include: { classroom: { select: { id: true, name: true } } },
+              include: { classroom: true },
             },
           },
         },
@@ -67,7 +66,6 @@ export async function getGradeClassrooms(gradeId: string) {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
-              select: { studentId: true },
             },
           },
         },
@@ -109,11 +107,9 @@ export async function getAvailableClassroomsForGrade(
     const [existing, gradeStudents] = await Promise.all([
       prisma.gradeClassroom.findMany({
         where: { gradeId },
-        select: { classroomId: true },
       }),
       prisma.gradeStudent.findMany({
         where: { gradeId },
-        select: { studentId: true },
       }),
     ])
 
@@ -151,7 +147,6 @@ export async function getAvailableStudentsForGrade(
     const referenceDate = await getExamReferenceDate(gradeId)
     const gradeStudents = await prisma.gradeStudent.findMany({
       where: { gradeId },
-      select: { studentId: true },
     })
 
     const students = await getAvailableStudentsForTarget({
@@ -180,7 +175,6 @@ const gradeRosterAdapter: RosterAdapter = {
   listExistingStudents: (targetId) =>
     prisma.gradeStudent.findMany({
       where: { gradeId: targetId },
-      select: { studentId: true, customOrder: true },
     }),
   createStudents: async (targetId, rows) => {
     await prisma.gradeStudent.createMany({
@@ -228,7 +222,6 @@ const gradeRosterAdapter: RosterAdapter = {
   listOtherClassroomIds: async (targetId, exceptClassroomId) => {
     const rows = await prisma.gradeClassroom.findMany({
       where: { gradeId: targetId, classroomId: { not: exceptClassroomId } },
-      select: { classroomId: true },
     })
     return rows.map((gradeClassroom) => gradeClassroom.classroomId)
   },

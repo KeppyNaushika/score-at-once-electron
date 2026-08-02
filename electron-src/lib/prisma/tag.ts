@@ -96,7 +96,6 @@ export async function updateTag(
 export async function deleteTag(id: string) {
   const before = await prisma.tag.findUnique({
     where: { id },
-    select: { name: true },
   })
 
   const tag = await prisma.tag.delete({

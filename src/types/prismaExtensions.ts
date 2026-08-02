@@ -7,10 +7,28 @@
  * @module types/prisma-extensions
  */
 
-import type { GradeDataSource, Prisma, QuestionScore } from "@prisma/client"
+import type { Prisma, QuestionScore } from "@prisma/client"
 
 import type { ExamStudentStatus } from "./examStudentStatus.types"
 import type { ScoringStatus } from "./scoringStatus.types"
+
+/**
+ * `serializePrisma` を通した後の形を型に反映する。
+ *
+ * 変換は Decimal → number と Date → string の2つだけで、これはシリアライザの実装
+ * （serializePrisma.ts）と1対1に対応する。行をそのまま IPC へ渡す経路が増えると、
+ * 「型は Decimal / 実体は number」という乖離が Pick や手書きの再宣言で散らばるため、
+ * 変換の型もここに1つだけ置く。
+ */
+export type Serialized<T> = T extends Prisma.Decimal
+  ? number
+  : T extends Date
+    ? string
+    : T extends Array<infer Element>
+      ? Serialized<Element>[]
+      : T extends object
+        ? { [Key in keyof T]: Serialized<T[Key]> }
+        : T
 
 // =============================================================================
 // Student関連型
@@ -71,9 +89,9 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
  *
  * 実体は Exam×Student×Classroom の結合を生徒1人へ畳んだもので、基底は Student ではなく
  * **ExamStudent**。受験状態（status）・並び順（customOrder）は ExamStudent の実列、
- * 生徒識別・学級所属は `examStudent.student(.memberships.classroom)`、答案枚数は
- * `examStudent._count.studentAnswerImages` として Prisma スキーマに完全追随する
- * （答案は ExamStudent の子なので、試験での絞り込みは不要）。
+ * 生徒識別・学級所属は `examStudent.student(.memberships.classroom)`、答案は
+ * `examStudent.studentAnswerImages` として Prisma スキーマに完全追随する
+ * （答案は ExamStudent の子なので、試験での絞り込みは不要。枚数は renderer が `.length`）。
  * 機能ごとに手書きで重複宣言せず、05/06/08・electron 出力すべてがこの型を参照する。
  *
  * status のみ ExamStudentStatus へ narrowing する（DB 上は string。Prisma+SQLite が enum を
@@ -88,7 +106,7 @@ export type ExamStudentWithMemberships = Omit<
           memberships: { include: { classroom: true } }
         }
       }
-      _count: { select: { studentAnswerImages: true } }
+      studentAnswerImages: true
     }
   }>,
   "status"
@@ -161,10 +179,10 @@ export type ExamForDetail = Prisma.ExamGetPayload<{
       include: { subtotalGroup: { include: { subtotals: true } } }
     }
     examStudents: { include: { student: true } }
-    examTags: {
-      select: { tag: { select: { id: true; name: true; color: true } } }
-    }
-    gradeDataSources: { select: { id: true } }
+    examTags: { include: { tag: true } }
+    // 参照している成績データソース。件数は renderer が `.length` で取る
+    // （Decimal 列を持つのでハンドラで serializePrisma を通している）
+    gradeDataSources: true
   }
 }> & {
   /** IPCハンドラーで平坦化されるcropRegions（進捗計算用・スコアは軽量／partialScore は number にシリアライズ済み） */
@@ -226,12 +244,30 @@ export type StudentAnswerDatasetExamPage = Prisma.ExamPageGetPayload<{
 }>
 
 /**
+ * 06 データセットの行となる ExamStudent 実体。
+ *
+ * 答案は列側（`StudentAnswerDatasetExamPage.studentAnswerImages`）が持つ。
+ * StudentAnswerImage は ExamStudent と ExamPage の両方の子なので、行にも同梱すると
+ * 同じ集合が1つの応答に二重に載る。行はこの画面では答案を読まない。
+ */
+export type StudentAnswerDatasetExamStudent = Omit<
+  Prisma.ExamStudentGetPayload<{
+    include: {
+      student: {
+        include: { memberships: { include: { classroom: true } } }
+      }
+    }
+  }>,
+  "status"
+> & { status: ExamStudentStatus }
+
+/**
  * 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）。
- * 行＝examStudents（ExamStudentWithMemberships）／列＝examPages（実体）。
+ * 行＝examStudents（実体）／列＝examPages（実体）。
  * IPC 返り値の SSOT。status は ExamStudentWithMemberships と同様に narrowing する。
  */
 export interface StudentAnswersDataset {
-  examStudents: ExamStudentWithMemberships[]
+  examStudents: StudentAnswerDatasetExamStudent[]
   examPages: StudentAnswerDatasetExamPage[]
 }
 
@@ -262,29 +298,6 @@ export type ExamSubtotalGroupWithSubtotalGroup =
   Prisma.ExamSubtotalGroupGetPayload<{
     include: { subtotalGroup: { include: { subtotals: true } } }
   }>
-
-// =============================================================================
-// GradeDataSource関連型
-// =============================================================================
-
-/**
- * 満点をライブ算出（computeLiveMaxScore）するために必要な、
- * データソースの識別フィールドだけを抜き出した型。
- *
- * 満点は常にこれらの種別・IDから元データ（設問配点 / 評価項目満点）を引いて
- * 算出するため、満点値そのものは入力に含めない。
- */
-export type GradeDataSourceMaxScoreRef = Pick<GradeDataSource, "type"> &
-  Partial<
-    Pick<
-      GradeDataSource,
-      | "examId"
-      | "subtotalId"
-      | "cropRegionId"
-      | "courseworkItemId"
-      | "courseworkId"
-    >
-  >
 
 /**
  * 試験の出力設定一式（重ね描きのスタイル・可視性・個人成績表の設定/節/グラフ）。

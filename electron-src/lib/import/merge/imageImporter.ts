@@ -145,7 +145,6 @@ async function createLegacyImageRecords(
         where: {
           examId_studentId: { examId: newExamId, studentId: newStudentId },
         },
-        select: { id: true },
       })
       if (!examStudent) continue
 

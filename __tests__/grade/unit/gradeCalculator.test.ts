@@ -23,36 +23,9 @@ const mockFindUnique = vi.fn()
 const mockFindMany = vi.fn()
 const mockExamPageFindMany = vi.fn()
 const mockExamStudentFindMany = vi.fn()
-// cropSubtotal.findMany は2用途で呼ばれる。select の形で撃ち分けて別々に数える。
-// 1) 満点のライブ算出（computeLiveMaxScore）— データソース1件ごと
-// 2) 設問割り当ての一括取得（getQuestionAssignmentsBySubtotalIds）— 素点収集の前に1回
-const mockSubtotalMaxScoreRows = vi.fn()
-const mockQuestionAssignmentRows = vi.fn()
-const mockCropSubtotalFindMany = vi.fn(
-  (args: { select?: Record<string, unknown> }) =>
-    args.select && "cropRegion" in args.select
-      ? mockSubtotalMaxScoreRows(args)
-      : mockQuestionAssignmentRows(args)
-)
-
-// computeLiveMaxScore は coursework 型の満点を courseworkItem.findUnique で引く。
-// buildGrade が courseworkItemId → maxScore を登録し、モックはそれを返す。
-const courseworkItemMaxScores = new Map<string, unknown>()
-const mockCourseworkItemFindUnique = vi.fn(
-  ({ where: { id } }: { where: { id: string } }) =>
-    Promise.resolve(
-      courseworkItemMaxScores.has(id)
-        ? { maxScore: courseworkItemMaxScores.get(id) }
-        : null
-    )
-)
-// computeLiveMaxScore は coursework_total 型の満点を courseworkId で全項目を
-// findMany して合算する。courseworkId → 各項目の {maxScore} を登録し、モックが返す。
-const courseworkTotalItems = new Map<string, { maxScore: unknown }[]>()
-const mockCourseworkItemFindMany = vi.fn(
-  ({ where: { courseworkId } }: { where: { courseworkId: string } }) =>
-    Promise.resolve(courseworkTotalItems.get(courseworkId) ?? [])
-)
+// 小計の設問割り当ても満点の元データも Grade の取得に同梱されるので、
+// このモックは「別クエリが立っていないこと」を見張るためだけに置く。
+const mockCropSubtotalFindMany = vi.fn().mockResolvedValue([])
 vi.mock("@/electron-src/lib/prisma/client", () => ({
   default: {
     grade: {
@@ -68,16 +41,8 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
     examStudent: {
       findMany: (...args: unknown[]) => mockExamStudentFindMany(...args),
     },
-    // 小計の設問割り当て。素点収集の前に1回だけ引かれる
     cropSubtotal: {
-      findMany: (...args: [{ select?: Record<string, unknown> }]) =>
-        mockCropSubtotalFindMany(...args),
-    },
-    courseworkItem: {
-      findUnique: (...args: [{ where: { id: string } }]) =>
-        mockCourseworkItemFindUnique(...args),
-      findMany: (...args: [{ where: { courseworkId: string } }]) =>
-        mockCourseworkItemFindMany(...args),
+      findMany: (...args: unknown[]) => mockCropSubtotalFindMany(...args),
     },
   },
 }))
@@ -143,10 +108,6 @@ function buildGrade(
     }[]
   } = {}
 ) {
-  // 満点は computeLiveMaxScore が courseworkItem.findUnique で引くため、
-  // 各テストの満点を courseworkItemId にひもづけてモックへ登録し直す。
-  courseworkItemMaxScores.clear()
-
   // 旧 manual 形式（manualScores/inputMode/letterScales をトップレベルに持つ）を、
   // 新スキーマの coursework 形式（courseworkItem に内包）へ変換する。
   // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
@@ -176,9 +137,7 @@ function buildGrade(
       if (!isCoursework) {
         return { ...dataSource, courseworkItem: null }
       }
-      // computeLiveMaxScore がこのIDで満点を引けるよう登録
       const courseworkItemId = `${dataSource.id}-item`
-      courseworkItemMaxScores.set(courseworkItemId, dataSource.maxScore)
       return {
         ...dataSource,
         type: "coursework",
@@ -269,8 +228,7 @@ describe("calculateGrades", () => {
     // 試験データを使わないケースの既定値（小計テストだけが上書きする）
     mockExamPageFindMany.mockResolvedValue([])
     mockExamStudentFindMany.mockResolvedValue([])
-    mockSubtotalMaxScoreRows.mockResolvedValue([])
-    mockQuestionAssignmentRows.mockResolvedValue([])
+    mockCropSubtotalFindMany.mockResolvedValue([])
   })
 
   it("試験が見つからない場合はエラー", async () => {
@@ -1119,9 +1077,6 @@ describe("calculateGrades", () => {
 
   it("coursework_total: 資料の全評価項目のスコア・満点を合算する", async () => {
     // 資料 cw1 は2項目（満点 50 + 30 = 80）。生徒 s1 は 40 + 30 = 70 点。
-    courseworkTotalItems.clear()
-    courseworkTotalItems.set("cw1", [{ maxScore: 50 }, { maxScore: 30 }])
-
     const grade = {
       id: "gp1",
       name: "PJ",
@@ -1718,18 +1673,30 @@ describe("calculateGrades - subtotal 型データソース", () => {
         scoreDecisions: [],
       },
     ])
-    // 満点のライブ算出（q1・q2 の配点合計 = 20）
-    mockSubtotalMaxScoreRows.mockResolvedValue([
-      { cropRegion: { points: 10, examPage: { examId: EXAM_ID } } },
-      { cropRegion: { points: 10, examPage: { examId: EXAM_ID } } },
-    ])
     mockCalculateActualScore.mockImplementation(
       (questionScore: { status: string }, maxScore: number) =>
         questionScore.status === "correct" ? maxScore : 0
     )
   }
 
-  function buildSubtotalGrade() {
+  /**
+   * 小計の設問割り当て1件。取得側の include で cropRegion（＋所属試験）まで
+   * 同梱されるので、満点も素点もこの行から読める。
+   */
+  function questionAssignment(cropRegionId: string, examId: string) {
+    return {
+      cropRegion: {
+        id: cropRegionId,
+        type: "QUESTION_ANSWER",
+        points: 10,
+        examPage: { examId },
+      },
+    }
+  }
+
+  function buildSubtotalGrade(
+    cropSubtotals: ReturnType<typeof questionAssignment>[]
+  ) {
     return buildGrade({
       gradeItems: [
         {
@@ -1747,7 +1714,7 @@ describe("calculateGrades - subtotal 型データソース", () => {
               subtotalId: SUBTOTAL_ID,
               cropRegionId: null,
               exam: { id: EXAM_ID },
-              subtotal: { id: SUBTOTAL_ID },
+              subtotal: { id: SUBTOTAL_ID, cropSubtotals },
               cropRegion: null,
               order: 0,
             },
@@ -1765,14 +1732,15 @@ describe("calculateGrades - subtotal 型データソース", () => {
     mockExamData()
   })
 
-  it("事前取得した割り当てから小計点を算出する", async () => {
-    mockFindUnique.mockResolvedValue(buildSubtotalGrade())
-    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+  it("同梱された割り当てから小計点と満点を算出する", async () => {
     // 小計 sub1 に q1・q2 が割り当てられている
-    mockQuestionAssignmentRows.mockResolvedValue([
-      { subtotalId: SUBTOTAL_ID, cropRegionId: "q1" },
-      { subtotalId: SUBTOTAL_ID, cropRegionId: "q2" },
-    ])
+    mockFindUnique.mockResolvedValue(
+      buildSubtotalGrade([
+        questionAssignment("q1", EXAM_ID),
+        questionAssignment("q2", EXAM_ID),
+      ])
+    )
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
 
@@ -1781,32 +1749,31 @@ describe("calculateGrades - subtotal 型データソース", () => {
       result.result!.students[0].gradeItemResults[0].sourceScores[0]
     // q1 正答10点 + q2 誤答0点 = 10点
     expect(sourceScore.rawScore).toBe(10)
+    // 満点も同じ割り当て行から出る（q1・q2 の配点合計 = 20）
     expect(sourceScore.maxScore).toBe(20)
   })
 
-  it("割り当ての取得は生徒ループの外で1回だけ（生徒数に比例させない）", async () => {
-    mockFindUnique.mockResolvedValue(buildSubtotalGrade())
+  it("割り当てのために別クエリを立てない（生徒数に比例させない）", async () => {
+    mockFindUnique.mockResolvedValue(
+      buildSubtotalGrade([questionAssignment("q1", EXAM_ID)])
+    )
     mockFindMany.mockResolvedValue([
       buildStudent({ id: "s1" }),
       buildStudent({ id: "s2" }),
       buildStudent({ id: "s3" }),
     ])
-    mockQuestionAssignmentRows.mockResolvedValue([
-      { subtotalId: SUBTOTAL_ID, cropRegionId: "q1" },
-    ])
 
     await calculateGrades("gp1")
 
-    expect(mockQuestionAssignmentRows).toHaveBeenCalledTimes(1)
+    expect(mockCropSubtotalFindMany).not.toHaveBeenCalled()
   })
 
   it("当該試験に割り当てが無ければ素点は null", async () => {
-    mockFindUnique.mockResolvedValue(buildSubtotalGrade())
-    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
     // 他試験の設問だけが割り当てられている（SubtotalGroup は試験横断で共有される）
-    mockQuestionAssignmentRows.mockResolvedValue([
-      { subtotalId: SUBTOTAL_ID, cropRegionId: "other-exam-q1" },
-    ])
+    mockFindUnique.mockResolvedValue(
+      buildSubtotalGrade([questionAssignment("other-exam-q1", "other-exam")])
+    )
+    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
 

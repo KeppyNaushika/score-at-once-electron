@@ -22,7 +22,7 @@ import {
 } from "@/lib/answerOverlayPlacement"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
-import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -56,7 +56,7 @@ interface UseCanvasDrawingProps {
   selectionRectangle: SelectionRectangle | null
   pageSpacing?: number
   isDraggingElement?: boolean
-  allAnnotations?: DrawingAnnotationWithQuestionScore[]
+  allAnnotations?: AnnotationWithContext[]
   currentCropRegionId?: string | null
   hoveredElementId?: string | null
   allCropRegionsWithStatus?: CropRegionWithStatus[]

@@ -9,16 +9,21 @@
  * 分岐ロジックはここが単一のソースになる。
  */
 
-import type { GradeDataSourceMaxScoreRef } from "../../../../src/types/prismaExtensions"
+import { selectExamCropRegions } from "./subtotalAssignments"
 
 /**
  * 満点算出に必要な元データ。
  *
  * 各リレーションは種別ごとに1つだけ使われる（`type` が `crop_region` なら `cropRegion` のみ）。
- * main 側は `gradeDataSourceInclude` 同梱の payload をそのまま渡し、renderer 側は
- * 取得済みの選択肢からこの形へ組み立てて渡す。
+ * main 側は取得した GradeDataSource の行をそのまま渡し、renderer 側は取得済みの選択肢から
+ * この形へ組み立てて渡す。
+ *
+ * 各IDは持たない。満点は「どの元データか」ではなく「元データそのもの」から出るため、
+ * 種別と（試験横断の小計を絞る）examId 以外は算出に要らない。
  */
-export type MaxScorePayloadSource = GradeDataSourceMaxScoreRef & {
+export interface MaxScorePayloadSource {
+  type: string
+  examId?: string | null
   cropRegion?: { points: number | null } | null
   courseworkItem?: { maxScore: unknown } | null
   coursework?: { items: Array<{ maxScore: unknown }> } | null
@@ -27,7 +32,12 @@ export type MaxScorePayloadSource = GradeDataSourceMaxScoreRef & {
   } | null
   subtotal?: {
     cropSubtotals: Array<{
-      cropRegion: { points: number | null; examPage: { examId: string } }
+      // id は重複割り当てを畳むために要る（CropSubtotal に unique が無い）
+      cropRegion: {
+        id: string
+        points: number | null
+        examPage: { examId: string }
+      }
     }>
   } | null
 }
@@ -55,15 +65,12 @@ export function computeMaxScoreFromPayload(
         .flatMap((examPage) => examPage.cropRegions)
         .reduce((sum, cropRegion) => sum + (cropRegion.points ?? 0), 0)
     case "subtotal":
-      return (dataSource.subtotal?.cropSubtotals ?? [])
-        .filter(
-          (cropSubtotal) =>
-            cropSubtotal.cropRegion.examPage.examId === dataSource.examId
-        )
-        .reduce(
-          (sum, cropSubtotal) => sum + (cropSubtotal.cropRegion.points ?? 0),
-          0
-        )
+      // 得点側（computeSubtotalScore）と同じ規則で畳んでから合計する。
+      // 片方だけ重複を残すと満点と得点が食い違い、成績ラベルが静かにずれる。
+      return selectExamCropRegions(
+        dataSource.examId ?? "",
+        dataSource.subtotal?.cropSubtotals ?? []
+      ).reduce((sum, cropRegion) => sum + (cropRegion.points ?? 0), 0)
     default:
       return 0
   }

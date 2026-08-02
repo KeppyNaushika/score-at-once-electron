@@ -79,14 +79,7 @@ export async function applyStudentAnswerPlacements(
           moves.map((move) =>
             tx.studentAnswerImage.findUnique({
               where: { id: move.fileId },
-              select: {
-                id: true,
-                examStudentId: true,
-                examPageId: true,
-                imagePath: true,
-                createdAt: true,
-                examPage: { select: { examId: true } },
-              },
+              include: { examPage: true },
             })
           )
         )
@@ -117,7 +110,6 @@ export async function applyStudentAnswerPlacements(
               id: move.finalExamPageId,
               examId: current.examPage.examId,
             },
-            select: { id: true },
           })
           if (!targetPage) {
             throw new Error(
@@ -132,7 +124,6 @@ export async function applyStudentAnswerPlacements(
               id: finalExamStudentId,
               examId: current.examPage.examId,
             },
-            select: { id: true },
           })
           if (!targetExamStudent) {
             throw new Error(
@@ -164,7 +155,6 @@ export async function applyStudentAnswerPlacements(
               examStudentId: plan.finalExamStudentId,
               id: { notIn: batchFileIds },
             },
-            select: { id: true },
           })
           if (occupant) {
             throw new Error(
@@ -258,7 +248,6 @@ export async function applyStudentAnswerPlacements(
               examStudentId: plan.current.examStudentId,
               cropRegionId: { in: sourceCropRegionIds },
             },
-            select: { id: true },
           })
           const scoreDecisions = await tx.scoreDecision.findMany({
             where: {
@@ -318,7 +307,6 @@ export async function applyStudentAnswerPlacements(
                   examStudentId: scope.finalExamStudentId,
                   compoundAnswerId: { in: scope.compoundAnswerIds },
                 },
-                select: { id: true },
               })
             for (const compoundAnswerScore of staleCompoundAnswerScores) {
               if (!movingCompoundAnswerScoreIds.has(compoundAnswerScore.id)) {
@@ -333,14 +321,12 @@ export async function applyStudentAnswerPlacements(
               examStudentId: scope.finalExamStudentId,
               cropRegionId: { in: scope.cropRegionIds },
             },
-            select: { id: true },
           })
           const staleScoreDecisions = await tx.scoreDecision.findMany({
             where: {
               examStudentId: scope.finalExamStudentId,
               cropRegionId: { in: scope.cropRegionIds },
             },
-            select: { id: true },
           })
           for (const questionScore of staleQuestionScores) {
             if (!movingQuestionScoreIds.has(questionScore.id)) {

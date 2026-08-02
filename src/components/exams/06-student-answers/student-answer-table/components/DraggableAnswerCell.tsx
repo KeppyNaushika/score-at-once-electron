@@ -14,12 +14,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 interface DraggableAnswerCellProps {
   fileId: string
   // 生徒・ページは実体のまま受け取る（座標 droppable の examPageId・削除確認の氏名/ページ表示に使う）
-  examStudent: ExamStudentWithMemberships
+  examStudent: StudentAnswerDatasetExamStudent
   examPage: ExamPageColumn
   onDelete: () => void
   children: React.ReactNode

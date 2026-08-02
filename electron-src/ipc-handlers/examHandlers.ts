@@ -11,6 +11,7 @@ import {
   updateExam,
 } from "../lib/prisma/exam"
 import { getExamPagesByExamId } from "../lib/prisma/examPage"
+import { serializePrisma } from "../lib/prisma/serializePrisma"
 import { registerHandler } from "./ipcHandlerUtils"
 
 /**
@@ -72,10 +73,13 @@ export function setupExamHandlers(): void {
       return null
     }
 
-    // Dateオブジェクトをそのまま返す
-    // Decimalオブジェクトはnumberに変換（Structured Clone非対応のため）
+    // Dateオブジェクトはそのまま返す（Structured Clone が対応しているため）。
+    // Decimal は非対応なので number へ倒す。
     return {
       ...exam,
+      // 成績データソースは Decimal 列（weight / absentRatio / absentOffset）を持つ。
+      // 手書きで列を選び直さず、共有シリアライザを1回通す。
+      gradeDataSources: serializePrisma(exam.gradeDataSources),
       // examPagesのcropRegionsのquestionScoresをシリアライズ
       examPages:
         exam.examPages?.map((page) => ({

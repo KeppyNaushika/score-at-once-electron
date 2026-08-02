@@ -27,10 +27,9 @@ export async function fetchGradeExportData(
 
     const grade = await prisma.grade.findUnique({
       where: { id: gradeId },
-      select: {
-        name: true,
+      include: {
         gradeClassrooms: {
-          include: { classroom: { select: { name: true } } },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
       },

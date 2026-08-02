@@ -3,6 +3,8 @@
  * @description 全描画ツールの統合CRUD操作（自動バックアップ付き）
  */
 
+import type { Prisma } from "@prisma/client"
+
 import type {
   AnnotationWithContext,
   DrawingAnnotation,
@@ -15,6 +17,36 @@ import { narrowAnnotationUnions } from "../../../src/types/drawingAnnotation.typ
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveExamScopeByQuestionScore } from "./auditScope"
 import prisma from "./client"
+import { serializePrisma } from "./serializePrisma"
+
+/**
+ * アノテーションの作成者。パスコードだけを落とす。
+ *
+ * これは機密除去であって、表示のために列を削る縮小射影ではない
+ * （規約: Prisma include の出力は射影せずそのまま持つ）。
+ */
+const authorOmit = { passcode: true } satisfies Prisma.UserOmit
+
+/** 作成者だけを同梱する（設問の文脈が要らない経路） */
+export const annotationWithAuthorInclude = {
+  user: { omit: authorOmit },
+} satisfies Prisma.DrawingAnnotationInclude
+
+/**
+ * 作成者と設問の文脈を同梱する（SSOT）。
+ *
+ * 以前は経路ごとに `select` の中身が違い、どこかで `examStudentId` を落としても
+ * `as` で潰した型が通ってしまい、注釈が実行時に消えていた。行をそのまま持つ。
+ */
+export const annotationWithContextInclude = {
+  user: { omit: authorOmit },
+  questionScore: {
+    include: {
+      cropRegion: true,
+      examStudent: { include: { student: true } },
+    },
+  },
+} satisfies Prisma.DrawingAnnotationInclude
 
 /**
  * 描画アノテーションを作成する
@@ -35,7 +67,6 @@ export async function createDrawingAnnotation(
     // 外部キー制約の事前検証
     const questionScoreExists = await prisma.questionScore.findUnique({
       where: { id: data.questionScoreId },
-      select: { id: true },
     })
 
     if (!questionScoreExists) {
@@ -49,7 +80,6 @@ export async function createDrawingAnnotation(
 
     const userExists = await prisma.user.findUnique({
       where: { id: data.userId },
-      select: { id: true },
     })
 
     if (!userExists) {
@@ -107,31 +137,11 @@ export async function createDrawingAnnotation(
         displayY: createData.displayY,
         userId: createData.userId,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
     if (duplicate) {
-      return duplicate as DrawingAnnotation
+      return serializePrisma(duplicate) as DrawingAnnotation
     }
 
     const result = await prisma.drawingAnnotation.create({
@@ -141,27 +151,7 @@ export async function createDrawingAnnotation(
         ...createData,
       },
       // 透明度制御に必要なquestionScore情報を含める
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
     // 監査ログ: 採点マーク追加（マークごとに個別記録。集約は同一idの連続操作のみ）
@@ -177,7 +167,7 @@ export async function createDrawingAnnotation(
       scopeLabel: scope.scopeLabel,
     })
 
-    return result as DrawingAnnotation
+    return serializePrisma(result) as DrawingAnnotation
   } catch (error) {
     console.error("描画アノテーション作成エラー:", error)
     throw error
@@ -206,18 +196,10 @@ export async function getDrawingAnnotationsByQuestionScore(
         ...(userId && { userId }),
       },
       orderBy: { createdAt: "asc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-      },
+      include: annotationWithAuthorInclude,
     })
 
-    return result as DrawingAnnotation[]
+    return serializePrisma(result) as DrawingAnnotation[]
   } catch (error) {
     console.error("描画アノテーション取得エラー:", error)
     throw error
@@ -229,13 +211,13 @@ export async function getDrawingAnnotationsByQuestionScore(
  * @param examStudentId 試験の受験者ID（ExamStudent.id）
  * @param type フィルタする描画タイプ（オプション）
  * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
- * @returns Promise<DrawingAnnotationWithQuestionScore[]> 描画アノテーション配列（設問情報付き）
+ * @returns Promise<AnnotationWithContext[]> 描画アノテーション配列（設問情報付き）
  */
 export async function getDrawingAnnotationsByExamStudent(
   examStudentId: string,
   type?: DrawingType,
   userId?: string
-): Promise<DrawingAnnotation[]> {
+): Promise<AnnotationWithContext[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
       where: {
@@ -249,30 +231,10 @@ export async function getDrawingAnnotationsByExamStudent(
         }),
       },
       orderBy: { createdAt: "asc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
-    return result as DrawingAnnotation[]
+    return serializePrisma(result).map(narrowAnnotationUnions)
   } catch (error) {
     console.error("学生別描画アノテーション取得エラー:", error)
     throw error
@@ -290,7 +252,7 @@ export async function getDrawingAnnotationsByExam(
   examId: string,
   type?: DrawingType,
   userId?: string
-): Promise<DrawingAnnotation[]> {
+): Promise<AnnotationWithContext[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
       where: {
@@ -312,44 +274,10 @@ export async function getDrawingAnnotationsByExam(
         { questionScore: { cropRegionId: "asc" } },
         { createdAt: "asc" },
       ],
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            examStudentId: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-            examStudent: {
-              select: {
-                id: true,
-                student: {
-                  select: {
-                    id: true,
-                    studentNumber: true,
-                    lastName: true,
-                    firstName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
-    return result as DrawingAnnotation[]
+    return serializePrisma(result).map(narrowAnnotationUnions)
   } catch (error) {
     console.error("試験別描画アノテーション取得エラー:", error)
     throw error
@@ -379,32 +307,11 @@ export async function getDrawingAnnotationsByCropRegion(
         ...(userId && { userId }),
       },
       orderBy: { createdAt: "asc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            examStudentId: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
     // status 同様、DB 上 String の union 列を境界で literal union へ絞る
-    return result.map(narrowAnnotationUnions)
+    return serializePrisma(result).map(narrowAnnotationUnions)
   } catch (error) {
     console.error("設問別描画アノテーション取得エラー:", error)
     throw error
@@ -429,27 +336,7 @@ export async function updateDrawingAnnotation(
         updatedAt: new Date(),
       },
       // 透明度制御に必要なquestionScore情報を含める
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
     // 監査ログ: 採点マーク編集。同じマークの連続編集（移動・色変更等）は集約する。
@@ -477,7 +364,7 @@ export async function updateDrawingAnnotation(
         : {}),
     })
 
-    return result as DrawingAnnotation
+    return serializePrisma(result) as DrawingAnnotation
   } catch (error) {
     console.error("描画アノテーション更新エラー:", error)
     throw error
@@ -494,18 +381,9 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
     // 削除前にtombstone記録用の情報を取得
     const annotation = await prisma.drawingAnnotation.findUnique({
       where: { id },
-      select: {
-        id: true,
+      include: {
         questionScore: {
-          select: {
-            cropRegion: {
-              select: {
-                examPage: {
-                  select: { examId: true },
-                },
-              },
-            },
-          },
+          include: { cropRegion: { include: { examPage: true } } },
         },
       },
     })
@@ -572,7 +450,7 @@ export async function batchCreateDrawingAnnotations(
       })
     )
 
-    return results as DrawingAnnotation[]
+    return results
   } catch (error) {
     console.error("描画アノテーション一括作成エラー:", error)
     throw error
@@ -598,27 +476,7 @@ export async function batchUpdateDrawingAnnotations(
             updatedAt: new Date(),
           },
           // 透明度制御に必要なquestionScore情報を含める
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-              },
-            },
-            questionScore: {
-              select: {
-                id: true,
-                cropRegionId: true,
-                cropRegion: {
-                  select: {
-                    id: true,
-                    label: true,
-                  },
-                },
-              },
-            },
-          },
+          include: annotationWithContextInclude,
         })
       })
     )
@@ -639,7 +497,7 @@ export async function batchUpdateDrawingAnnotations(
       })
     }
 
-    return results as DrawingAnnotation[]
+    return serializePrisma(results) as DrawingAnnotation[]
   } catch (error) {
     console.error("描画アノテーション一括更新エラー:", error)
     throw error
@@ -657,7 +515,6 @@ export async function getDrawingAnnotationStats(
   try {
     const annotations = await prisma.drawingAnnotation.findMany({
       where: { questionScoreId },
-      select: { type: true },
     })
 
     const byType: Record<DrawingType, number> = {
@@ -693,18 +550,10 @@ export async function getDrawingAnnotationById(
   try {
     const result = await prisma.drawingAnnotation.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-      },
+      include: annotationWithAuthorInclude,
     })
 
-    return result as DrawingAnnotation | null
+    return serializePrisma(result) as DrawingAnnotation | null
   } catch (error) {
     console.error("描画アノテーション単体取得エラー:", error)
     throw error
@@ -725,44 +574,10 @@ export async function toggleAnnotationFavorite(
     const result = await prisma.drawingAnnotation.update({
       where: { id },
       data: { isFavorite },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            examStudentId: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-            examStudent: {
-              select: {
-                id: true,
-                student: {
-                  select: {
-                    id: true,
-                    studentNumber: true,
-                    lastName: true,
-                    firstName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
-    return result as DrawingAnnotation
+    return serializePrisma(result) as DrawingAnnotation
   } catch (error) {
     console.error("アノテーションお気に入り切替エラー:", error)
     throw error
@@ -789,47 +604,13 @@ export async function getAnnotationsForBrowse(
         },
       },
       orderBy: { updatedAt: "desc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-        questionScore: {
-          select: {
-            id: true,
-            examStudentId: true,
-            cropRegionId: true,
-            cropRegion: {
-              select: {
-                id: true,
-                label: true,
-              },
-            },
-            examStudent: {
-              select: {
-                id: true,
-                student: {
-                  select: {
-                    id: true,
-                    studentNumber: true,
-                    lastName: true,
-                    firstName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      include: annotationWithContextInclude,
     })
 
     // getDrawingAnnotationsByCropRegion と同じく、include した形を型で表明する
     // （`as` で潰すと select から examStudent を落としても型検査が通り、
     //  注釈ブラウザの氏名表示と生徒フィルタが実行時に壊れる）
-    return result.map(narrowAnnotationUnions)
+    return serializePrisma(result).map(narrowAnnotationUnions)
   } catch (error) {
     console.error("ブラウズ用アノテーション取得エラー:", error)
     throw error

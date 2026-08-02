@@ -124,13 +124,11 @@ export async function deleteGradeItem(id: string) {
   try {
     const before = await prisma.gradeItem.findUnique({
       where: { id },
-      select: { name: true, gradeId: true },
     })
 
     const disabledConstraintNames = await prisma.$transaction(async (tx) => {
       const affected = await tx.gradeConstraint.findMany({
         where: { viewpoints: { some: { gradeItemId: id } }, enabled: true },
-        select: { id: true, name: true },
       })
       // 理由は disabledReason へ。message は教員が書いた違反の説明で、結果表の
       // ツールチップに出るため汚さない。

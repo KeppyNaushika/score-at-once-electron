@@ -2,25 +2,23 @@
  * 個人成績表用データ取得・統合ロジック
  */
 
-import type { CropRegion } from "@prisma/client"
-
 import prisma from "../../prisma/client"
-import { getCropRegionsByExamId } from "../../prisma/cropRegion"
-import { getQuestionAssignmentsBySubtotalIds } from "../../prisma/cropSubtotal"
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
-import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
+import {
+  getActiveSubtotalGroupsForExam,
+  type SubtotalGroupForScoring,
+} from "../../prisma/subtotalGroup"
 import {
   EffectiveScore,
   resolveEffectiveScores,
 } from "../../shared/calculations/scoreResolution"
 import {
   computeSubtotalScore,
-  type QuestionAssignmentsBySubtotalId,
   type QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
-import type { SubtotalGroupData, SubtotalScore } from "../../shared/types"
+import type { SubtotalScore } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
@@ -86,7 +84,7 @@ export async function fetchIndividualReportData(
     // 試験に紐づくタグを取得
     const examTags = await prisma.examTag.findMany({
       where: { examId },
-      select: { tag: { select: { name: true } } },
+      include: { tag: true },
     })
 
     // 試験情報
@@ -99,11 +97,7 @@ export async function fetchIndividualReportData(
     // 試験のactiveなSubtotalGroupsとSubtotalsを取得
     const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(examId)
 
-    // CropRegionsと採点データを取得
-    const cropRegions = await getCropRegionsByExamId(examId)
-    const questionRegions = cropRegions.filter(
-      (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
-    )
+    // 採点データを取得（小計の配点は割り当て行が持つので設問領域は引かない）
     const questionScoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
     // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
@@ -112,22 +106,14 @@ export async function fetchIndividualReportData(
       decisionsResult.success ? (decisionsResult.decisions ?? []) : []
     )
 
-    // 設問割り当ては生徒に依らないので、生徒ループの外で1回だけ引く
-    const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
-      subtotalGroupsData.flatMap((group) =>
-        group.subtotals.map((subtotal) => subtotal.id)
-      )
-    )
-
     // 全生徒の小計点を計算（Subtotal単位）
     const allScoringData = allScoringDataFromExcel.map((scoringData) => ({
       ...scoringData,
       subtotalScores: buildSubtotalScoresFromGroups(
         scoringData.examStudentId,
+        examId,
         subtotalGroupsData,
-        allQuestionScores,
-        questionRegions,
-        questionAssignments
+        allQuestionScores
       ),
     }))
 
@@ -137,10 +123,9 @@ export async function fetchIndividualReportData(
         ...scoringData,
         subtotalScores: buildSubtotalScoresFromGroups(
           scoringData.examStudentId,
+          examId,
           subtotalGroupsData,
-          allQuestionScores,
-          questionRegions,
-          questionAssignments
+          allQuestionScores
         ),
       })
     )
@@ -228,25 +213,19 @@ export async function fetchIndividualReportData(
 }
 
 /**
- * SubtotalGroupとSubtotalの情報を取得
+ * 試験で有効な SubtotalGroup を取得する（各小計は設問割り当てを実体で持つ）
  */
 async function getSubtotalGroupsWithSubtotals(
   examId: string
-): Promise<SubtotalGroupData[]> {
+): Promise<SubtotalGroupForScoring[]> {
   const result = await getActiveSubtotalGroupsForExam(examId)
   if (!result.success || !result.examSubtotalGroups) {
     return []
   }
 
-  return result.examSubtotalGroups.map((examSubtotalGroup) => ({
-    groupId: examSubtotalGroup.subtotalGroup.id,
-    groupName: examSubtotalGroup.subtotalGroup.name,
-    subtotals: examSubtotalGroup.subtotalGroup.subtotals.map((subtotal) => ({
-      id: subtotal.id,
-      name: subtotal.name,
-      order: subtotal.order,
-    })),
-  }))
+  return result.examSubtotalGroups.map(
+    (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+  )
 }
 
 /**
@@ -255,10 +234,9 @@ async function getSubtotalGroupsWithSubtotals(
  */
 function buildSubtotalScoresFromGroups(
   examStudentId: string,
-  subtotalGroups: SubtotalGroupData[],
-  allQuestionScores: EffectiveScore[],
-  questionRegions: CropRegion[],
-  questionAssignments: QuestionAssignmentsBySubtotalId
+  examId: string,
+  subtotalGroups: SubtotalGroupForScoring[],
+  allQuestionScores: EffectiveScore[]
 ): SubtotalScore[] {
   // 採点データを変換
   const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
@@ -270,30 +248,26 @@ function buildSubtotalScoresFromGroups(
     })
   )
 
-  const results: SubtotalScore[] = []
-
-  for (const group of subtotalGroups) {
-    for (const subtotal of group.subtotals) {
+  return subtotalGroups.flatMap((subtotalGroup) =>
+    subtotalGroup.subtotals.map((subtotal) => {
       const scoreResult = computeSubtotalScore(
         examStudentId,
+        examId,
         questionScoreData,
-        questionRegions,
-        questionAssignments.get(subtotal.id) ?? []
+        subtotal.cropSubtotals
       )
 
-      results.push({
+      return {
         subtotalId: subtotal.id,
-        subtotalGroupId: group.groupId,
-        subtotalGroupName: group.groupName,
+        subtotalGroupId: subtotalGroup.id,
+        subtotalGroupName: subtotalGroup.name,
         subtotalLabel: subtotal.name,
         score: scoreResult.score,
         maxScore: scoreResult.maxScore,
         hasQuestionAssignments: scoreResult.hasQuestionAssignments,
-      })
-    }
-  }
-
-  return results
+      }
+    })
+  )
 }
 
 /**

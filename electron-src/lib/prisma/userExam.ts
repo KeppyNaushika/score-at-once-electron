@@ -54,7 +54,6 @@ export const getUserRoleInExam = async (
       where: {
         userId_examId: { userId, examId },
       },
-      select: { role: true },
     })
     return userExam ? (userExam.role as UserRole) : null
   } catch (error) {
@@ -356,7 +355,6 @@ export const searchUsersForInvitation = async (
     // Get existing member IDs
     const existingMembers = await prisma.userExam.findMany({
       where: { examId },
-      select: { userId: true },
     })
     const existingMemberIds = existingMembers.map((member) => member.userId)
 
@@ -366,11 +364,8 @@ export const searchUsersForInvitation = async (
         id: { notIn: existingMemberIds },
         OR: [{ username: { contains: query } }, { name: { contains: query } }],
       },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-      },
+      // パスコードだけを落とす（機密除去。縮小射影ではない）
+      omit: { passcode: true },
       take: 10,
     })
   } catch (error) {

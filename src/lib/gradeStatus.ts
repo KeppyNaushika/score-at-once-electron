@@ -5,7 +5,24 @@
  * 詳細ページでフェーズカード+進捗を表示するために使用
  */
 
-import type { GradeWithRelations } from "@/types/grade.types"
+/**
+ * 進捗判定が読む最小の形。
+ *
+ * 一覧（GradeSummary）と詳細（GradeWithRelations）の双方から渡せるよう、DB の行を
+ * 名指しせず「この関数が読むフィールド」だけを構造で要求する。読まないものは
+ * `unknown[]` にしてあり、件数以外を触れないことが型で分かる。
+ */
+interface GradeProgressSource {
+  id: string
+  gradeStudents: unknown[]
+  gradeItems: {
+    boundaries: unknown[]
+    dataSources: {
+      type: string
+      courseworkItem?: { scores: unknown[] } | null
+    }[]
+  }[]
+}
 
 interface GradeStatus {
   step: number
@@ -31,9 +48,9 @@ export interface GradeStepCompletion {
  * 成績算出試験の各ステップ完了状態を取得
  */
 export function getGradeCompletion(
-  grade: GradeWithRelations
+  grade: GradeProgressSource
 ): GradeStepCompletion {
-  const studentCount = grade._count?.gradeStudents ?? 0
+  const studentCount = grade.gradeStudents.length
   // 境界が引かれている評価項目が1つでもあるか。境界の有無は行の有無そのものなので、
   // 「境界0本だが設定済み」という状態は作れない
   const hasAnyBoundary = grade.gradeItems.some(
@@ -54,7 +71,7 @@ export function getGradeCompletion(
   const allManualScoresEntered =
     !hasCourseworkDataSources ||
     courseworkDataSources.every(
-      (dataSource) => (dataSource.courseworkItem?._count?.scores ?? 0) > 0
+      (dataSource) => (dataSource.courseworkItem?.scores.length ?? 0) > 0
     )
 
   return {
@@ -69,7 +86,7 @@ export function getGradeCompletion(
 /**
  * 成績算出試験の現在のステータス（次のステップ）を判定
  */
-export function getGradeStatus(grade: GradeWithRelations): GradeStatus {
+export function getGradeStatus(grade: GradeProgressSource): GradeStatus {
   const id = grade.id
   const completion = getGradeCompletion(grade)
 

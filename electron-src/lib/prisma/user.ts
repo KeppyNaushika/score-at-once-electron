@@ -89,7 +89,6 @@ export const updateUser = async (
   try {
     const before = await prisma.user.findUnique({
       where: { id: userId },
-      select: { username: true, name: true },
     })
 
     const user = await prisma.user.update({
@@ -105,14 +104,10 @@ export const updateUser = async (
       entityType: "User",
       entityId: user.id,
       target: user.name,
-      changes: diffFields(
-        before ?? undefined,
-        { username: user.username, name: user.name },
-        [
-          { field: "name", label: "名前" },
-          { field: "username", label: "ユーザー名" },
-        ]
-      ),
+      changes: diffFields(before ?? undefined, user, [
+        { field: "name", label: "名前" },
+        { field: "username", label: "ユーザー名" },
+      ]),
     })
 
     return user

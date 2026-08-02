@@ -13,8 +13,8 @@ import type {
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import type {
-  ExamStudentWithMemberships,
   PlacedAnswerImage,
+  StudentAnswerDatasetExamStudent,
 } from "@/types/prismaExtensions"
 
 // Preview mode for different display options
@@ -53,7 +53,7 @@ export interface AnswerTableCell<
 export interface AnswerTableRow<
   TItem extends AnswerImageIdentity = AnswerImageIdentity,
 > {
-  examStudent: ExamStudentWithMemberships
+  examStudent: StudentAnswerDatasetExamStudent
   cells: AnswerTableCell<TItem>[]
 }
 
@@ -104,7 +104,7 @@ export interface SortableTableCellProps {
 }
 
 export interface EmptyTableCellProps {
-  examStudent: ExamStudentWithMemberships | null
+  examStudent: StudentAnswerDatasetExamStudent | null
   examPage: ExamPageColumn | null // droppable の examPageId・表示 pageNumber
   isPositionDisabled: boolean
   isPendingChange?: boolean
@@ -165,7 +165,7 @@ export interface UseDragDropParams<
   onFilesChange: (files: TItem[]) => void
   getEnabledFiles: () => TItem[]
   getDisabledFiles: () => TItem[]
-  students?: ExamStudentWithMemberships[]
+  students?: StudentAnswerDatasetExamStudent[]
   examPages?: ExamPageColumn[]
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy
@@ -199,7 +199,7 @@ export interface UseDragDropReturn<
 /** upload / view の答案テーブルが共有する基底プロパティ */
 interface AnswerTableBaseProps {
   examId: string
-  students: ExamStudentWithMemberships[]
+  students: StudentAnswerDatasetExamStudent[]
   examPages: ExamPageColumn[]
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   onReloadData?: () => void

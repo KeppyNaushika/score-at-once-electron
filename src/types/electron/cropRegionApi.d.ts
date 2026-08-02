@@ -18,6 +18,7 @@ import type {
 } from "@/electron-src/lib/prisma/cropSubtotal"
 import type { SubtotalWithGroupAndCrops } from "@/electron-src/lib/prisma/subtotal"
 import type {
+  subtotalGroupForScoringInclude,
   SubtotalGroupWithSubtotals,
   SubtotalGroupWithSubtotalsExamsAndTags,
 } from "@/electron-src/lib/prisma/subtotalGroup"
@@ -144,11 +145,7 @@ export interface CropRegionAPI {
     success: boolean
     examSubtotalGroups?: Prisma.ExamSubtotalGroupGetPayload<{
       include: {
-        subtotalGroup: {
-          include: {
-            subtotals: true
-          }
-        }
+        subtotalGroup: { include: typeof subtotalGroupForScoringInclude }
       }
     }>[]
     error?: string

@@ -12,8 +12,8 @@ import type { PendingChange } from "@/components/exams/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
 import type {
-  ExamStudentWithMemberships,
   StudentAnswerDatasetExamPage,
+  StudentAnswerDatasetExamStudent,
 } from "@/types/prismaExtensions"
 
 // Types
@@ -67,7 +67,7 @@ export function StudentAnswersTabsNavigation({
 
 interface StudentAnswersTabContentProps {
   examId: string
-  students: ExamStudentWithMemberships[]
+  students: StudentAnswerDatasetExamStudent[]
   examPages: StudentAnswerDatasetExamPage[]
   pendingChanges: PendingChange[]
   affectedCells: Set<string>

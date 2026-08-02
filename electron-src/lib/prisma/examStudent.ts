@@ -16,7 +16,6 @@ export async function getExamReferenceDate(
 ): Promise<Date | null> {
   const exam = await prisma.exam.findUnique({
     where: { id: examId },
-    select: { examDate: true },
   })
   return exam?.examDate ?? null
 }
@@ -47,13 +46,14 @@ export async function getStudentsForExam(examId: string) {
             },
           },
         },
-        // 答案は ExamStudent の子なので、この試験の枚数がそのまま得られる
-        _count: { select: { studentAnswerImages: true } },
+        // 答案は ExamStudent の子なので、この試験の分がそのまま得られる。
+        // 行のまま渡し切り、枚数は renderer が `.length` で取る
+        studentAnswerImages: true,
       },
     })
 
     // ExamStudent をそのまま返し、status のみ ExamStudentStatus へ narrowing する。
-    // 生徒識別・学級所属・答案枚数は examStudent.student(.memberships / ._count) 配下に
+    // 生徒識別・学級所属・答案は examStudent.student(.memberships) / .studentAnswerImages 配下に
     // Prisma スキーマのまま保持する（フラットな畳み込みはしない）。
     const examStudentsWithMemberships: ExamStudentWithMemberships[] =
       examStudents.map((examStudent) => ({
@@ -85,7 +85,6 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
         examId,
         studentId: { in: studentIds },
       },
-      select: { studentId: true },
     })
 
     const existingStudentIds = new Set(
@@ -298,7 +297,6 @@ export async function getClassroomsNotInExam(
     const referenceDate = await getExamReferenceDate(examId)
     const examStudents = await prisma.examStudent.findMany({
       where: { examId },
-      select: { studentId: true },
     })
 
     const classrooms = await getAvailableClassroomsForTarget({
@@ -330,7 +328,6 @@ export async function getStudentsNotInExam(examId: string, activeOnly = true) {
     const referenceDate = await getExamReferenceDate(examId)
     const examStudents = await prisma.examStudent.findMany({
       where: { examId },
-      select: { studentId: true },
     })
 
     const students = await getAvailableStudentsForTarget({

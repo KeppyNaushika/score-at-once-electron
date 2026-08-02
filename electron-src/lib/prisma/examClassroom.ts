@@ -239,7 +239,7 @@ export const removeExamClassroom = async (
   try {
     const before = await prisma.examClassroom.findUnique({
       where: { id },
-      select: { examId: true, classroom: { select: { name: true } } },
+      include: { classroom: true },
     })
 
     const deleted = await prisma.examClassroom.delete({
@@ -273,7 +273,6 @@ export const removeExamClassroomByIds = async (
   try {
     const classroom = await prisma.classroom.findUnique({
       where: { id: classroomId },
-      select: { name: true },
     })
 
     const deleted = await prisma.examClassroom.delete({
@@ -321,7 +320,6 @@ export const getAvailableClassroomsForExam = async (
     // Get classrooms already associated with this exam
     const existingExamClassrooms = await prisma.examClassroom.findMany({
       where: { examId },
-      select: { classroomId: true },
     })
     const existingClassroomIds = existingExamClassrooms.map(
       (examClassroom) => examClassroom.classroomId
@@ -417,7 +415,6 @@ export const addStudentsFromClassroom = async (
     // 4. 既存の ExamStudent を取得
     const existingExamStudents = await prisma.examStudent.findMany({
       where: { examId },
-      select: { studentId: true, customOrder: true },
     })
     const existingStudentIds = new Set(
       existingExamStudents.map((examStudent) => examStudent.studentId)
@@ -498,7 +495,6 @@ export const getClassroomMembersForExam = async (
                 { attendanceNumber: "asc" },
                 { student: { studentNumber: "asc" } },
               ],
-              select: { studentId: true },
             },
           },
         },

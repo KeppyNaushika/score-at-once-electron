@@ -22,11 +22,9 @@ export async function getPageScoreScope(
   const [cropRegions, compoundAnswers] = await Promise.all([
     client.cropRegion.findMany({
       where: { examPageId },
-      select: { id: true },
     }),
     client.compoundAnswer.findMany({
       where: { examPageId },
-      select: { id: true },
     }),
   ])
   return {

@@ -12,6 +12,7 @@ import type {
   GradeDataSourceWithRelations,
   GradeItemExclusionInput,
   GradeItemWithDataSources,
+  GradeSummary,
   GradeWithRelations,
 } from "../grade.types"
 import type {
@@ -25,7 +26,7 @@ export interface GradeAPI {
   grade: {
     getAll: () => Promise<{
       success: boolean
-      grades?: GradeWithRelations[]
+      grades?: GradeSummary[]
       error?: string
     }>
     getById: (id: string) => Promise<{

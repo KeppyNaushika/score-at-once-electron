@@ -22,17 +22,17 @@ import type {
   ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
-  sortedStudents: ExamStudentWithMemberships[]
+  sortedStudents: StudentAnswerDatasetExamStudent[]
   examPages: ExamPageColumn[]
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   mode?: "upload" | "view"
   enhancedIsCellDisabled: (
-    examStudent: ExamStudentWithMemberships,
+    examStudent: StudentAnswerDatasetExamStudent,
     examPage: ExamPageColumn
   ) => boolean
   allowOverwrite?: boolean
@@ -103,11 +103,11 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
       // 有効セル（無効でないセル）を詰める順に列挙する。順序は入れ子の向きで表現し、
       // page-first は列を外側、student-first は行を外側に回す（序数の比較子を持たない）。
       const validPositions: Array<{
-        examStudent: ExamStudentWithMemberships
+        examStudent: StudentAnswerDatasetExamStudent
         examPage: ExamPageColumn
       }> = []
       const collectPosition = (
-        examStudent: ExamStudentWithMemberships,
+        examStudent: StudentAnswerDatasetExamStudent,
         examPage: ExamPageColumn
       ) => {
         const isManuallyDisabled =

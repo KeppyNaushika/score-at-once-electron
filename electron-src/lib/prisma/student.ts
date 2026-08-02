@@ -88,14 +88,6 @@ export const updateStudent = async (
   try {
     const before = await prisma.student.findUnique({
       where: { id },
-      select: {
-        lastName: true,
-        firstName: true,
-        lastNameKana: true,
-        firstNameKana: true,
-        studentNumber: true,
-        enrollmentYear: true,
-      },
     })
 
     const student = await prisma.student.update({
@@ -121,25 +113,14 @@ export const updateStudent = async (
       entityType: "Student",
       entityId: student.id,
       target: studentLabel(student),
-      changes: diffFields(
-        before ?? undefined,
-        {
-          lastName: student.lastName,
-          firstName: student.firstName,
-          lastNameKana: student.lastNameKana,
-          firstNameKana: student.firstNameKana,
-          studentNumber: student.studentNumber,
-          enrollmentYear: student.enrollmentYear,
-        },
-        [
-          { field: "lastName", label: "姓" },
-          { field: "firstName", label: "名" },
-          { field: "lastNameKana", label: "姓（かな）" },
-          { field: "firstNameKana", label: "名（かな）" },
-          { field: "studentNumber", label: "学籍番号" },
-          { field: "enrollmentYear", label: "入学年度" },
-        ]
-      ),
+      changes: diffFields(before ?? undefined, student, [
+        { field: "lastName", label: "姓" },
+        { field: "firstName", label: "名" },
+        { field: "lastNameKana", label: "姓（かな）" },
+        { field: "firstNameKana", label: "名（かな）" },
+        { field: "studentNumber", label: "学籍番号" },
+        { field: "enrollmentYear", label: "入学年度" },
+      ]),
     })
 
     return student
@@ -154,7 +135,6 @@ export const deleteStudent = async (id: string): Promise<void> => {
   try {
     const before = await prisma.student.findUnique({
       where: { id },
-      select: { lastName: true, firstName: true },
     })
 
     await prisma.student.delete({ where: { id } })
@@ -204,13 +184,7 @@ export const getStudentExamResults = async (
       include: {
         exam: {
           include: {
-            examTags: {
-              select: {
-                tag: {
-                  select: { id: true, name: true },
-                },
-              },
-            },
+            examTags: { include: { tag: true } },
             examPages: {
               include: {
                 cropRegions: {

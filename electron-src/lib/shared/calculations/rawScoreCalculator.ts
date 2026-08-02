@@ -12,7 +12,7 @@ import {
 import type { ExamDataCache } from "./gradeCalculatorTypes"
 import {
   computeSubtotalScore,
-  type QuestionAssignmentsBySubtotalId,
+  type QuestionAssignmentForSubtotal,
 } from "./subtotalCalculator"
 
 /**
@@ -47,8 +47,8 @@ export function findCourseworkStudentScore<
 /**
  * DataSourceからrawScoreを取得（推定前の実スコア・純粋）
  *
- * @param questionAssignments 小計 id → 割り当て設問領域 id。生徒ループの外で
- *   1回だけ引いたものを渡す（`subtotal` 型が参照する）
+ * `subtotal` 型が読む設問割り当ては `dataSource.subtotal.cropSubtotals` に同梱されている
+ * （取得側の include で一緒に引く）。生徒ごとに引き直さない。
  */
 export function getRawScore(
   studentId: string,
@@ -57,33 +57,37 @@ export function getRawScore(
     examId: string | null
     subtotalId: string | null
     cropRegionId: string | null
+    /**
+     * 小計の設問割り当て。取得側の include が必ず同梱するので optional にしない
+     * （optional にすると include を忘れた呼び出しがコンパイルを通り、
+     *  subtotal 型のデータソースが全生徒欠測として静かに扱われる）。
+     */
+    subtotal: { cropSubtotals: QuestionAssignmentForSubtotal[] } | null
     courseworkItem?: CourseworkItemForRawScore | null
     coursework?: {
       items: CourseworkItemForRawScore[]
     } | null
   },
-  examDataCache: Map<string, ExamDataCache>,
-  questionAssignments: QuestionAssignmentsBySubtotalId
+  examDataCache: Map<string, ExamDataCache>
 ): number | null {
   if (dataSource.type === "exam_total" && dataSource.examId) {
     return calculateExamTotalScore(studentId, dataSource.examId, examDataCache)
   } else if (
     dataSource.type === "subtotal" &&
-    dataSource.subtotalId &&
+    dataSource.subtotal &&
     dataSource.examId
   ) {
-    const examData = examDataCache.get(dataSource.examId)
     const examStudent = findExamStudentScores(
       studentId,
       dataSource.examId,
       examDataCache
     )
-    if (examData && examStudent) {
+    if (examStudent) {
       return computeSubtotalScore(
         examStudent.examStudentId,
+        dataSource.examId,
         examStudent.questionScores,
-        examData.cropRegions,
-        questionAssignments.get(dataSource.subtotalId) ?? []
+        dataSource.subtotal.cropSubtotals
       ).score
     }
   } else if (

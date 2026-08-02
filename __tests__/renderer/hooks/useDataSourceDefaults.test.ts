@@ -7,8 +7,8 @@
  * 移設で満点のルールが変わっていないことをここで固定する。
  *
  * 特に小計点型は、renderer が「選択肢として取得済みの設問領域」から割り当てを辿るのに対し、
- * main の正規実装（computeLiveMaxScore）は cropSubtotal を直接引く。両者が同じ集合を
- * 見ていることが前提なので、割り当ての有無で結果が動くことを明示する。
+ * main は取得時に同梱した cropSubtotals から辿る。両者が同じ集合を見ていることが前提なので、
+ * 割り当ての有無で結果が動くことを明示する。
  */
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"

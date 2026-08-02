@@ -36,7 +36,6 @@ async function resolveExamIdByExamStudent(
 ): Promise<Map<string, string>> {
   const rows = await client.examStudent.findMany({
     where: { id: { in: examStudentIds } },
-    select: { id: true, examId: true },
   })
   return new Map(
     rows.map((examStudent) => [examStudent.id, examStudent.examId])
@@ -80,7 +79,7 @@ export async function assertCropRegionsInSameExam(
       where: {
         id: { in: [...new Set(pairs.map((pair) => pair.cropRegionId))] },
       },
-      select: { id: true, examPage: { select: { examId: true } } },
+      include: { examPage: true },
     }),
     resolveExamIdByExamStudent(client, [
       ...new Set(pairs.map((pair) => pair.examStudentId)),
@@ -113,7 +112,7 @@ export async function assertCompoundAnswersInSameExam(
       where: {
         id: { in: [...new Set(pairs.map((pair) => pair.compoundAnswerId))] },
       },
-      select: { id: true, examPage: { select: { examId: true } } },
+      include: { examPage: true },
     }),
     resolveExamIdByExamStudent(client, [
       ...new Set(pairs.map((pair) => pair.examStudentId)),

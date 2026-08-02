@@ -75,12 +75,7 @@ export interface CourseworkScoreUpsertInput {
 
 /** 評価項目（リレーション付き） */
 export type CourseworkItemWithLetterScales = Omit<
-  Prisma.CourseworkItemGetPayload<{
-    include: {
-      letterScales: true
-      _count: { select: { scores: true; gradeDataSources: true } }
-    }
-  }>,
+  Prisma.CourseworkItemGetPayload<{ include: { letterScales: true } }>,
   "maxScore" | "inputMode" | "letterScales"
 > & {
   maxScore: number
@@ -93,19 +88,10 @@ export type CourseworkItemWithLetterScales = Omit<
 export type CourseworkWithRelations = Omit<
   Prisma.CourseworkGetPayload<{
     include: {
-      classrooms: {
-        include: { classroom: { select: { id: true; name: true } } }
-      }
-      tags: {
-        include: { tag: { select: { id: true; name: true; color: true } } }
-      }
-      items: {
-        include: {
-          letterScales: true
-          _count: { select: { scores: true; gradeDataSources: true } }
-        }
-      }
-      _count: { select: { items: true; students: true } }
+      classrooms: { include: { classroom: true } }
+      tags: { include: { tag: true } }
+      items: { include: { letterScales: true } }
+      students: true
     }
   }>,
   "date" | "items"
@@ -121,27 +107,31 @@ export type CourseworkStudentWithMemberships =
       student: {
         include: {
           memberships: {
-            include: { classroom: { select: { id: true; name: true } } }
+            include: { classroom: true }
           }
         }
       }
     }
   }>
 
-/** 一覧表示用の軽量サマリ（フィルタ用に tags/classrooms を同梱） */
+/**
+ * 一覧表示用（フィルタ用に tags/classrooms、件数表示用に items/students を同梱）。
+ *
+ * `getCourseworks` は serializePrisma を通すので、Decimal は number・Date は文字列で届く。
+ * 評価項目は CourseworkWithRelations と同じく置き換える（生の payload を埋めると
+ * `maxScore` が Prisma.Decimal を名乗ったまま実体が number になる）。
+ */
 export type CourseworkSummary = Omit<
   Prisma.CourseworkGetPayload<{
     include: {
-      _count: { select: { items: true; students: true } }
-      tags: {
-        include: { tag: { select: { id: true; name: true; color: true } } }
-      }
-      classrooms: {
-        include: { classroom: { select: { id: true; name: true } } }
-      }
+      items: true
+      students: true
+      tags: { include: { tag: true } }
+      classrooms: { include: { classroom: true } }
     }
   }>,
-  "date"
+  "date" | "items"
 > & {
   date: string | null
+  items: CourseworkItemWithLetterScales[]
 }

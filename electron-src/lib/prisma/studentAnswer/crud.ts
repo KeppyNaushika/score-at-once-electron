@@ -101,7 +101,6 @@ export async function uploadStudentAnswers(
     ]
     const validExamPages = await prisma.examPage.findMany({
       where: { examId, id: { in: requestedExamPageIds } },
-      select: { id: true },
     })
     const validExamPageIds = new Set(validExamPages.map((page) => page.id))
     const staleExamPageId = requestedExamPageIds.find(
@@ -127,7 +126,6 @@ export async function uploadStudentAnswers(
     if (requestedExamStudentIds.length > 0) {
       const validExamStudents = await prisma.examStudent.findMany({
         where: { examId, id: { in: requestedExamStudentIds } },
-        select: { id: true },
       })
       if (validExamStudents.length !== requestedExamStudentIds.length) {
         return {
@@ -380,7 +378,6 @@ export async function getStudentAnswersDataset(examId: string) {
                 memberships: { include: { classroom: true } },
               },
             },
-            _count: { select: { studentAnswerImages: true } },
           },
         },
         examPages: {
@@ -500,7 +497,6 @@ async function countStudentAnswerScoreData(
             cropRegionId: { in: cropRegionIds },
             ...SCORED_QUESTION_SCORE_FILTER,
           },
-          select: { cropRegionId: true },
           distinct: ["cropRegionId"],
         }),
     cropRegionIds.length === 0
@@ -551,7 +547,6 @@ export async function getStudentAnswerScoreSummary(answerSheetId: string) {
   try {
     const answerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
-      select: { examPageId: true, examStudentId: true },
     })
 
     if (!answerSheet) {
@@ -622,7 +617,6 @@ export async function deleteStudentAnswer(answerSheetId: string) {
           // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
           const questionScores = await tx.questionScore.findMany({
             where: { examStudentId, cropRegionId: { in: cropRegionIds } },
-            select: { id: true },
           })
           const questionScoreIds = questionScores.map(
             (questionScore) => questionScore.id

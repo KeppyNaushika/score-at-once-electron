@@ -1,13 +1,13 @@
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
-  ExamStudentWithMemberships,
   StudentAnswerDatasetExamPage,
+  StudentAnswerDatasetExamStudent,
 } from "@/types/prismaExtensions"
 
 // Local component-specific types
 export interface StudentAnswerUploadProps {
   examId: string
-  students: ExamStudentWithMemberships[]
+  students: StudentAnswerDatasetExamStudent[]
   // 列＝ExamPage 実体（配置済み答案を子に持つ）。Prisma include のまま持ち回る。
   examPages: StudentAnswerDatasetExamPage[]
   onUploadComplete?: () => void

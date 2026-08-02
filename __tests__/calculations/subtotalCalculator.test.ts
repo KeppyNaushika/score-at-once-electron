@@ -5,22 +5,19 @@
  * - computeSubtotalScore: hasScoredQuestion パターン（純粋）
  * - calculateSubtotalScoreForStudent: hasScoredQuestion パターン
  *
- * DB関数（getCropSubtotals*）と calculateActualScore をモックして
+ * DB関数（getCropSubtotalsForScoring）と calculateActualScore をモックして
  * 純粋なロジックのみを検証する
  */
 import type { CropRegion } from "@prisma/client"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // モック設定（import前に定義）
-const mockGetCropSubtotalsByCropRegionId = vi.fn()
-const mockGetQuestionAssignmentsBySubtotalIds = vi.fn()
+const mockGetCropSubtotalsForScoring = vi.fn()
 const mockCalculateActualScore = vi.fn()
 
 vi.mock("@/electron-src/lib/prisma/cropSubtotal", () => ({
-  getCropSubtotalsByCropRegionId: (...args: unknown[]) =>
-    mockGetCropSubtotalsByCropRegionId(...args),
-  getQuestionAssignmentsBySubtotalIds: (...args: unknown[]) =>
-    mockGetQuestionAssignmentsBySubtotalIds(...args),
+  getCropSubtotalsForScoring: (...args: unknown[]) =>
+    mockGetCropSubtotalsForScoring(...args),
 }))
 
 vi.mock("@/electron-src/lib/shared/calculations/actualScore", () => ({
@@ -31,6 +28,7 @@ vi.mock("@/electron-src/lib/shared/calculations/actualScore", () => ({
 import {
   calculateSubtotalScoreForStudent,
   computeSubtotalScore,
+  type QuestionAssignmentForSubtotal,
   type QuestionScoreForSubtotal,
 } from "@/electron-src/lib/shared/calculations/subtotalCalculator"
 
@@ -59,6 +57,21 @@ function createCropRegion(
   } as CropRegion
 }
 
+/**
+ * 小計への設問割り当て1件。割り当て先の設問領域を実体で持つので、
+ * 配点も所属試験もこの行から読める。
+ */
+function createQuestionAssignment(
+  cropRegionId: string,
+  examId: string,
+  points: number,
+  type: string = "QUESTION_ANSWER"
+): QuestionAssignmentForSubtotal {
+  return {
+    cropRegion: { id: cropRegionId, type, points, examPage: { examId } },
+  }
+}
+
 function createQuestionScore(
   examStudentId: string,
   cropRegionId: string,
@@ -71,13 +84,12 @@ function createQuestionScore(
 // ================== computeSubtotalScore ==================
 
 describe("computeSubtotalScore", () => {
-  const cropRegions = [
-    createCropRegion({ id: "q1", points: 10 }),
-    createCropRegion({ id: "q2", points: 20 }),
-    createCropRegion({ id: "q3", points: 30 }),
+  /** この小計に割り当てられた設問領域（呼び出し側が実体で渡す） */
+  const questionAssignments = [
+    createQuestionAssignment("q1", "exam1", 10),
+    createQuestionAssignment("q2", "exam1", 20),
+    createQuestionAssignment("q3", "exam1", 30),
   ]
-  /** この小計に割り当てられた設問領域（呼び出し側が事前取得して渡す） */
-  const assignedCropRegionIds = ["q1", "q2", "q3"]
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -97,9 +109,9 @@ describe("computeSubtotalScore", () => {
 
     const result = computeSubtotalScore(
       "s1",
+      "exam1",
       scores,
-      cropRegions,
-      assignedCropRegionIds
+      questionAssignments
     )
 
     expect(result.score).toBe(25)
@@ -118,9 +130,9 @@ describe("computeSubtotalScore", () => {
 
     const result = computeSubtotalScore(
       "s1",
+      "exam1",
       scores,
-      cropRegions,
-      assignedCropRegionIds
+      questionAssignments
     )
 
     expect(result.score).toBeNull()
@@ -142,9 +154,9 @@ describe("computeSubtotalScore", () => {
 
     const result = computeSubtotalScore(
       "s1",
+      "exam1",
       scores,
-      cropRegions,
-      assignedCropRegionIds
+      questionAssignments
     )
 
     expect(result.score).toBe(40) // 10 + 30
@@ -161,9 +173,9 @@ describe("computeSubtotalScore", () => {
 
     const result = computeSubtotalScore(
       "s1",
+      "exam1",
       scores,
-      cropRegions,
-      assignedCropRegionIds
+      questionAssignments
     )
 
     expect(result.score).toBe(0)
@@ -171,7 +183,7 @@ describe("computeSubtotalScore", () => {
   })
 
   it("割り当てが無い → null, hasQuestionAssignments=false", () => {
-    const result = computeSubtotalScore("s1", [], cropRegions, [])
+    const result = computeSubtotalScore("s1", "exam1", [], [])
 
     expect(result.score).toBeNull()
     expect(result.hasQuestionAssignments).toBe(false)
@@ -186,13 +198,30 @@ describe("computeSubtotalScore", () => {
 
     const result = computeSubtotalScore(
       "s1",
+      "exam1",
       scores,
-      cropRegions,
-      assignedCropRegionIds
+      questionAssignments
     )
 
     expect(result.score).toBe(10)
     expect(result.maxScore).toBe(60) // q1+q2+q3 の配点合計
+  })
+
+  it("同じ設問が複数の割り当てで重複していても配点は1回だけ数える", () => {
+    mockCalculateActualScore.mockReturnValue(10)
+
+    const result = computeSubtotalScore(
+      "s1",
+      "exam1",
+      [createQuestionScore("s1", "q1", "correct")],
+      [
+        createQuestionAssignment("q1", "exam1", 10),
+        createQuestionAssignment("q1", "exam1", 10),
+      ]
+    )
+
+    expect(result.score).toBe(10)
+    expect(result.maxScore).toBe(10)
   })
 })
 
@@ -207,19 +236,21 @@ describe("calculateSubtotalScoreForStudent", () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // CropRegion(SUBTOTAL_SCORE) → CropSubtotal → Subtotal のチェーン
-    mockGetCropSubtotalsByCropRegionId.mockResolvedValue([
+    // CropRegion(SUBTOTAL_SCORE) → CropSubtotal → Subtotal（割り当て同梱）のチェーン
+    mockGetCropSubtotalsForScoring.mockResolvedValue([
       {
         subtotalId: "item1",
         cropRegionId: "subtotal-region-1",
         assignmentType: "SUBTOTAL_SCORE",
-        subtotal: { subtotalGroupId: "group1" },
+        subtotal: {
+          subtotalGroupId: "group1",
+          cropSubtotals: [
+            createQuestionAssignment("q1", "exam1", 10),
+            createQuestionAssignment("q2", "exam1", 20),
+          ],
+        },
       },
     ])
-    // group1 → item1 → q1, q2
-    mockGetQuestionAssignmentsBySubtotalIds.mockResolvedValue(
-      new Map([["item1", ["q1", "q2"]]])
-    )
   })
 
   it("全設問採点済み → score に合計点", async () => {
@@ -231,6 +262,7 @@ describe("calculateSubtotalScoreForStudent", () => {
 
     const result = await calculateSubtotalScoreForStudent(
       "s1",
+      "exam1",
       "subtotal-region-1",
       scores,
       cropRegions
@@ -249,6 +281,7 @@ describe("calculateSubtotalScoreForStudent", () => {
 
     const result = await calculateSubtotalScoreForStudent(
       "s1",
+      "exam1",
       "subtotal-region-1",
       scores,
       cropRegions
@@ -258,7 +291,7 @@ describe("calculateSubtotalScoreForStudent", () => {
   })
 
   it("グループ定義が無い場合のフォールバックでも null 対応", async () => {
-    mockGetCropSubtotalsByCropRegionId.mockResolvedValue([])
+    mockGetCropSubtotalsForScoring.mockResolvedValue([])
 
     const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "q1", "unscored"),
@@ -268,20 +301,22 @@ describe("calculateSubtotalScoreForStudent", () => {
 
     const result = await calculateSubtotalScoreForStudent(
       "s1",
+      "exam1",
       "subtotal-region-1",
       scores,
       cropRegions
     )
 
-    // フォールバック（calculateStudentTotalScoreWithMax）でもnull
+    // フォールバック（全設問合計）でもnull
     expect(result.score).toBeNull()
   })
 
   it("エラー時 → score が null", async () => {
-    mockGetCropSubtotalsByCropRegionId.mockRejectedValue(new Error("DB error"))
+    mockGetCropSubtotalsForScoring.mockRejectedValue(new Error("DB error"))
 
     const result = await calculateSubtotalScoreForStudent(
       "s1",
+      "exam1",
       "subtotal-region-1",
       [],
       cropRegions
@@ -290,20 +325,51 @@ describe("calculateSubtotalScoreForStudent", () => {
     expect(result.score).toBeNull()
     expect(result.hasQuestionAssignments).toBe(false)
   })
+
+  it("GROUP間ANDで共通する設問だけを算入する", async () => {
+    // group1 は q1,q2 / group2 は q2 のみ → 共通は q2
+    mockGetCropSubtotalsForScoring.mockResolvedValue([
+      {
+        subtotal: {
+          subtotalGroupId: "group1",
+          cropSubtotals: [
+            createQuestionAssignment("q1", "exam1", 10),
+            createQuestionAssignment("q2", "exam1", 20),
+          ],
+        },
+      },
+      {
+        subtotal: {
+          subtotalGroupId: "group2",
+          cropSubtotals: [createQuestionAssignment("q2", "exam1", 20)],
+        },
+      },
+    ])
+    mockCalculateActualScore.mockReturnValue(20)
+
+    const result = await calculateSubtotalScoreForStudent(
+      "s1",
+      "exam1",
+      "subtotal-region-1",
+      [
+        createQuestionScore("s1", "q1", "correct"),
+        createQuestionScore("s1", "q2", "correct"),
+      ],
+      cropRegions
+    )
+
+    expect(result.score).toBe(20)
+    expect(result.maxScore).toBe(20)
+  })
 })
 
 // ================== computeSubtotalScore（純粋・試験横断） ==================
 
 /**
- * SubtotalGroup は複数の試験で共有されるため、割り当てには他試験の設問領域 id も
+ * SubtotalGroup は複数の試験で共有されるため、割り当てには他試験の設問領域も
  * 混ざる。当該試験の設問領域だけを算入することを固定する。
  */
 describe("computeSubtotalScore - 複数試験で共有された小計", () => {
-  const examACropRegions = [
-    createCropRegion({ id: "examA-q1", points: 10 }),
-    createCropRegion({ id: "examA-q2", points: 20 }),
-  ]
-
   beforeEach(() => {
     vi.clearAllMocks()
     // 配点をそのまま得点として返す（正答のみ）
@@ -315,7 +381,11 @@ describe("computeSubtotalScore - 複数試験で共有された小計", () => {
 
   it("他試験の設問領域は得点にも満点にも算入しない", () => {
     // 割り当てには試験Bの設問（examB-q1）も含まれる
-    const assignedCropRegionIds = ["examA-q1", "examA-q2", "examB-q1"]
+    const questionAssignments = [
+      createQuestionAssignment("examA-q1", "examA", 10),
+      createQuestionAssignment("examA-q2", "examA", 20),
+      createQuestionAssignment("examB-q1", "examB", 50),
+    ]
     const scores: QuestionScoreForSubtotal[] = [
       createQuestionScore("s1", "examA-q1", "correct"),
       createQuestionScore("s1", "examA-q2", "correct"),
@@ -325,9 +395,9 @@ describe("computeSubtotalScore - 複数試験で共有された小計", () => {
 
     const result = computeSubtotalScore(
       "s1",
+      "examA",
       scores,
-      examACropRegions,
-      assignedCropRegionIds
+      questionAssignments
     )
 
     expect(result.score).toBe(30)
@@ -338,9 +408,12 @@ describe("computeSubtotalScore - 複数試験で共有された小計", () => {
   it("当該試験の設問が1つも割り当てられていなければ hasQuestionAssignments は false", () => {
     const result = computeSubtotalScore(
       "s1",
+      "examA",
       [createQuestionScore("s1", "examB-q1", "correct")],
-      examACropRegions,
-      ["examB-q1", "examB-q2"]
+      [
+        createQuestionAssignment("examB-q1", "examB", 10),
+        createQuestionAssignment("examB-q2", "examB", 20),
+      ]
     )
 
     expect(result.hasQuestionAssignments).toBe(false)
@@ -354,9 +427,9 @@ describe("computeSubtotalScore - 複数試験で共有された小計", () => {
       createQuestionScore("s2", "examA-q2", "correct"),
     ]
 
-    const result = computeSubtotalScore("s1", scores, examACropRegions, [
-      "examA-q1",
-      "examA-q2",
+    const result = computeSubtotalScore("s1", "examA", scores, [
+      createQuestionAssignment("examA-q1", "examA", 10),
+      createQuestionAssignment("examA-q2", "examA", 20),
     ])
 
     // 満点は割り当て設問ぶん計上され、得点は本人の分だけ

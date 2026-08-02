@@ -10,7 +10,7 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -47,7 +47,7 @@ export interface UseImageCanvasProps {
   // ドラッグ中の軽量化用
   isDraggingElement?: boolean
   // 透明度制御用の全アノテーション
-  allAnnotations?: DrawingAnnotationWithQuestionScore[]
+  allAnnotations?: AnnotationWithContext[]
   currentCropRegionId?: string | null
   // ホバー中の要素ID（ハンドル表示用）
   hoveredElementId?: string | null

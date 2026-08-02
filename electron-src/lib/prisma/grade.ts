@@ -2,6 +2,8 @@
  * Grade（成績算出試験）のPrisma操作関数
  */
 
+import type { Prisma } from "@prisma/client"
+
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import {
@@ -16,33 +18,68 @@ import {
 import { serializePrisma } from "./serializePrisma"
 
 /**
+ * Grade を GradeWithRelations として返すときの include（SSOT）。
+ *
+ * 取得も作成も更新も同じ形を返す。以前は取得系だけが gradeStudents を同梱しており、
+ * IPC の型は4経路とも GradeWithRelations を名乗っていたため、作成結果を一覧・詳細へ
+ * そのまま渡すと `gradeStudents.length` が実行時に落ちた。
+ */
+const gradeWithRelationsInclude = {
+  gradeClassrooms: {
+    include: { classroom: true },
+    orderBy: { order: "asc" },
+  },
+  gradeItems: {
+    include: gradeItemWithDataSourcesInclude,
+    orderBy: { order: "asc" },
+  },
+  // 対象者は行のまま渡し切る。件数は renderer が `.length` で取る
+  // （件数も計算値なので main では作らない）
+  gradeStudents: true,
+} satisfies Prisma.GradeInclude
+
+/**
+ * 一覧が読む分だけの include（SSOT）。
+ *
+ * 一覧が使うのは「名前・学級・対象者数・評価項目数」と、次のステップ判定
+ * （`gradeStatus`）が読む「境界の有無・データソースの種別・資料の点数の有無」だけ。
+ * 満点の元データ（exam.examPages / subtotal.cropSubtotals / coursework.items）も
+ * 表示名用の参照先も、03/04/05 画面が使う `grade.getById` の側にだけあればよい。
+ *
+ * 列は削らない（規約: Prisma include の出力を射影せずそのまま持つ）。減らすのは
+ * 「引くリレーション」であって列ではない。
+ */
+export const gradeSummaryInclude = {
+  gradeClassrooms: {
+    include: { classroom: true },
+    orderBy: { order: "asc" },
+  },
+  gradeStudents: true,
+  gradeItems: {
+    include: {
+      boundaries: { orderBy: { order: "asc" } },
+      dataSources: {
+        // 資料の点数は「入力に着手済みか」の判定に要る。判定するのは renderer。
+        include: { courseworkItem: { include: { scores: true } } },
+        orderBy: { order: "asc" },
+      },
+    },
+    orderBy: { order: "asc" },
+  },
+} satisfies Prisma.GradeInclude
+
+/**
  * 全成績算出試験を取得
  */
 export async function getAllGrades() {
   try {
     const grades = await prisma.grade.findMany({
-      include: {
-        gradeClassrooms: {
-          include: { classroom: true },
-          orderBy: { order: "asc" },
-        },
-        gradeItems: {
-          include: gradeItemWithDataSourcesInclude,
-          orderBy: { order: "asc" },
-        },
-        _count: {
-          select: {
-            gradeItems: true,
-            gradeStudents: true,
-          },
-        },
-      },
+      include: gradeSummaryInclude,
       orderBy: { createdAt: "desc" },
     })
-    return {
-      success: true,
-      grades: grades.map((grade) => hydrateGrade(serializePrisma(grade))),
-    }
+    // 一覧は満点を表示しないので hydrate（maxScore の付与）は通さない。
+    // 元データを引いていないため、通しても 0 を並べるだけになる。
+    return { success: true, grades: serializePrisma(grades) }
   } catch (error) {
     console.error("Error getting grade exams:", error)
     return {
@@ -59,22 +96,7 @@ export async function getGradeById(id: string) {
   try {
     const grade = await prisma.grade.findUnique({
       where: { id },
-      include: {
-        gradeClassrooms: {
-          include: { classroom: true },
-          orderBy: { order: "asc" },
-        },
-        gradeItems: {
-          include: gradeItemWithDataSourcesInclude,
-          orderBy: { order: "asc" },
-        },
-        _count: {
-          select: {
-            gradeItems: true,
-            gradeStudents: true,
-          },
-        },
-      },
+      include: gradeWithRelationsInclude,
     })
     if (!grade) {
       return { success: false, error: "Grade exam not found" }
@@ -107,16 +129,7 @@ export async function createGrade(data: {
         description: data.description,
         referenceDate: data.referenceDate ? new Date(data.referenceDate) : null,
       },
-      include: {
-        gradeClassrooms: {
-          include: { classroom: true },
-          orderBy: { order: "asc" },
-        },
-        gradeItems: {
-          include: gradeItemWithDataSourcesInclude,
-          orderBy: { order: "asc" },
-        },
-      },
+      include: gradeWithRelationsInclude,
     })
 
     await recordAuditLog({
@@ -164,21 +177,11 @@ export async function updateGrade(
     }
     const before = await prisma.grade.findUnique({
       where: { id },
-      select: { name: true, description: true },
     })
     const grade = await prisma.grade.update({
       where: { id },
       data: updateData,
-      include: {
-        gradeClassrooms: {
-          include: { classroom: true },
-          orderBy: { order: "asc" },
-        },
-        gradeItems: {
-          include: gradeItemWithDataSourcesInclude,
-          orderBy: { order: "asc" },
-        },
-      },
+      include: gradeWithRelationsInclude,
     })
 
     await recordAuditLog({
@@ -188,14 +191,10 @@ export async function updateGrade(
       scopeId: grade.id,
       scopeLabel: grade.name,
       target: grade.name,
-      changes: diffFields(
-        before ?? undefined,
-        { name: grade.name, description: grade.description },
-        [
-          { field: "name", label: "成績名" },
-          { field: "description", label: "説明" },
-        ]
-      ),
+      changes: diffFields(before ?? undefined, grade, [
+        { field: "name", label: "成績名" },
+        { field: "description", label: "説明" },
+      ]),
     })
 
     return {
@@ -218,7 +217,6 @@ export async function deleteGrade(id: string) {
   try {
     const before = await prisma.grade.findUnique({
       where: { id },
-      select: { name: true },
     })
     await prisma.grade.delete({ where: { id } })
 
@@ -305,7 +303,7 @@ export async function duplicateGrade(id: string) {
         if (!source) return null
 
         // 重複しないコピー名（Grade.name にDB制約は無く、UX目的の best-effort）
-        const allGrades = await tx.grade.findMany({ select: { name: true } })
+        const allGrades = await tx.grade.findMany()
         const copyName = buildCopyName(
           source.name,
           new Set(allGrades.map((grade) => grade.name))

@@ -272,7 +272,6 @@ async function computeExclusiveStudents(
 ): Promise<string[]> {
   const memberships = await prisma.studentClassroomMembership.findMany({
     where: { classroomId },
-    select: { studentId: true },
   })
   const classroomStudentIds = memberships.map(
     (membership) => membership.studentId
@@ -284,7 +283,6 @@ async function computeExclusiveStudents(
   )
   const otherMemberships = await prisma.studentClassroomMembership.findMany({
     where: { classroomId: { in: otherClassroomIds } },
-    select: { studentId: true },
   })
   const otherStudentIds = new Set(
     otherMemberships.map((membership) => membership.studentId)

@@ -7,12 +7,9 @@
 
 import type { QuestionScore } from "@prisma/client"
 
-import {
-  type CropSubtotalWithSubtotal,
-  getCropSubtotalsByCropRegionId,
-  getQuestionAssignmentsBySubtotalIds,
-} from "../../prisma/cropSubtotal"
+import { getCropSubtotalsForScoring } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "./actualScore"
+import { selectExamCropRegions } from "./subtotalAssignments"
 
 /**
  * 小計計算の入力となる、解決済み設問スコアの最小射影（生徒×設問の得点1件）。
@@ -37,12 +34,26 @@ export interface CropRegionForSubtotal {
 }
 
 /**
- * 小計 id → その小計に割り当てられた設問領域 id。
+ * 小計への設問割り当て1件。Prisma の CropSubtotal 行
+ * （`subtotalWithQuestionAssignmentsInclude` 同梱）をそのまま渡せる。
  *
- * SubtotalGroup は複数の試験で共有されうるので、ここには他の試験の設問領域 id も
- * 混ざる。当該試験の分へ絞り込むのは算出側の責務（`cropRegions` と突き合わせる）。
+ * 割り当て先の設問領域を実体で持つので、配点も所属試験もこの行から読める。
+ * SubtotalGroup は複数の試験で共有されうるため、当該試験の分へ絞るのは算出側の責務。
  */
-export type QuestionAssignmentsBySubtotalId = Map<string, string[]>
+export interface QuestionAssignmentForSubtotal {
+  cropRegion: {
+    id: string
+    type: string
+    points: number | null
+    examPage: { examId: string }
+  }
+}
+
+/** 小計点領域（SUBTOTAL_SCORE）に紐づく小計1件。グループ判定と割り当てを併せ持つ */
+export interface SubtotalForCropRegionScore {
+  subtotalGroupId: string
+  cropSubtotals: QuestionAssignmentForSubtotal[]
+}
 
 interface SubtotalScoreResult {
   score: number | null
@@ -54,27 +65,21 @@ interface SubtotalScoreResult {
 /**
  * 小計点を算出する（純粋）。
  *
- * @param assignedCropRegionIds その小計に割り当てられた設問領域 id（他試験の分を含む）
+ * @param examId 対象の試験。割り当てには他試験の設問も混ざるのでこれで絞る
+ * @param questionAssignments その小計に割り当てられた設問（他試験の分を含む）
  */
 export function computeSubtotalScore(
   examStudentId: string,
+  examId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
-  cropRegions: CropRegionForSubtotal[],
-  assignedCropRegionIds: string[]
+  questionAssignments: QuestionAssignmentForSubtotal[]
 ): SubtotalScoreResult {
   const examStudentScores = allQuestionScores.filter(
     (questionScore) => questionScore.examStudentId === examStudentId
   )
 
-  // 現在の試験の CropRegion に限る（SubtotalGroup は複数試験で共有されるため）
-  const examCropRegionIds = new Set(
-    cropRegions.map((cropRegion) => cropRegion.id)
-  )
-  const questionCropRegionIds = assignedCropRegionIds.filter((cropRegionId) =>
-    examCropRegionIds.has(cropRegionId)
-  )
-
-  if (questionCropRegionIds.length === 0) {
+  const assignedCropRegions = selectExamCropRegions(examId, questionAssignments)
+  if (assignedCropRegions.length === 0) {
     return { score: null, maxScore: 0, hasQuestionAssignments: false }
   }
 
@@ -83,17 +88,14 @@ export function computeSubtotalScore(
   let totalMaxScore = 0
   let hasScoredQuestion = false
 
-  for (const questionCropRegionId of new Set(questionCropRegionIds)) {
-    const cropRegion = cropRegions.find(
-      (cropRegion) => cropRegion.id === questionCropRegionId
-    )
-    if (!cropRegion || cropRegion.type !== "QUESTION_ANSWER") continue
+  for (const cropRegion of assignedCropRegions) {
+    if (cropRegion.type !== "QUESTION_ANSWER") continue
 
     const questionMaxScore = cropRegion.points || 0
     totalMaxScore += questionMaxScore
 
     const scoreData = examStudentScores.find(
-      (questionScore) => questionScore.cropRegionId === questionCropRegionId
+      (questionScore) => questionScore.cropRegionId === cropRegion.id
     )
     if (scoreData) {
       const actualScore = calculateActualScore(scoreData, questionMaxScore)
@@ -164,17 +166,17 @@ function computeStudentTotalScore(
  * GROUP内OR・GROUP間ANDで対象設問を絞り込む。グループ定義が無ければ全設問の合計へ
  * フォールバックする。
  *
- * @param subtotalIdsByGroupId 小計点領域に紐づく小計を SubtotalGroup ごとにまとめたもの
- * @param questionAssignments 小計 id → 割り当て設問領域 id
+ * @param cropRegions フォールバック（全設問合計）で読む、その試験の設問領域
+ * @param assignedSubtotals 小計点領域に紐づく小計（所属グループと割り当てを併せ持つ）
  */
 export function computeSubtotalScoreForCropRegion(
   examStudentId: string,
+  examId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegionForSubtotal[],
-  subtotalIdsByGroupId: Map<string, string[]>,
-  questionAssignments: QuestionAssignmentsBySubtotalId
+  assignedSubtotals: SubtotalForCropRegionScore[]
 ): SubtotalScoreResult {
-  if (subtotalIdsByGroupId.size === 0) {
+  if (assignedSubtotals.length === 0) {
     return computeStudentTotalScore(
       examStudentId,
       allQuestionScores,
@@ -183,19 +185,33 @@ export function computeSubtotalScoreForCropRegion(
   }
 
   // 各グループで該当する設問を集める（GROUP内OR）
-  const groupQuestionSets = Array.from(subtotalIdsByGroupId.values()).map(
-    (subtotalIds) =>
-      new Set(
-        subtotalIds.flatMap(
-          (subtotalId) => questionAssignments.get(subtotalId) ?? []
-        )
+  const subtotalGroupIds = [
+    ...new Set(
+      assignedSubtotals.map(
+        (assignedSubtotal) => assignedSubtotal.subtotalGroupId
       )
+    ),
+  ]
+  const cropRegionsByGroup = subtotalGroupIds.map((subtotalGroupId) =>
+    selectExamCropRegions(
+      examId,
+      assignedSubtotals
+        .filter(
+          (assignedSubtotal) =>
+            assignedSubtotal.subtotalGroupId === subtotalGroupId
+        )
+        .flatMap((assignedSubtotal) => assignedSubtotal.cropSubtotals)
+    )
   )
 
   // GROUP間AND：全てのグループに共通する設問だけを残す
-  const [firstGroup, ...restGroups] = groupQuestionSets
-  const finalQuestionIds = Array.from(firstGroup).filter((cropRegionId) =>
-    restGroups.every((group) => group.has(cropRegionId))
+  const [firstGroupCropRegions, ...restGroupCropRegions] = cropRegionsByGroup
+  const finalCropRegions = firstGroupCropRegions.filter((cropRegion) =>
+    restGroupCropRegions.every((groupCropRegions) =>
+      groupCropRegions.some(
+        (groupCropRegion) => groupCropRegion.id === cropRegion.id
+      )
+    )
   )
 
   // 該当する設問の点数と最大点を合計（採点データがある設問のみ最大点に算入）
@@ -207,16 +223,13 @@ export function computeSubtotalScoreForCropRegion(
   let totalMaxScore = 0
   let hasScoredQuestion = false
 
-  for (const questionCropRegionId of finalQuestionIds) {
+  for (const cropRegion of finalCropRegions) {
     const scoreData = examStudentScores.find(
-      (questionScore) => questionScore.cropRegionId === questionCropRegionId
+      (questionScore) => questionScore.cropRegionId === cropRegion.id
     )
     if (!scoreData) continue
 
-    const cropRegion = cropRegions.find(
-      (cropRegion) => cropRegion.id === questionCropRegionId
-    )
-    const questionMaxScore = cropRegion?.points || 0
+    const questionMaxScore = cropRegion.points || 0
     totalMaxScore += questionMaxScore
     const actualScore = calculateActualScore(scoreData, questionMaxScore)
     if (actualScore !== null) {
@@ -237,35 +250,20 @@ export function computeSubtotalScoreForCropRegion(
  */
 export async function calculateSubtotalScoreForStudent(
   examStudentId: string,
+  examId: string,
   subtotalRegionId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
   cropRegions: CropRegionForSubtotal[]
 ): Promise<SubtotalScoreResult> {
   try {
-    const cropSubtotals = (await getCropSubtotalsByCropRegionId(
-      subtotalRegionId
-    )) as CropSubtotalWithSubtotal[]
-
-    // グループ別に小計をまとめる
-    const subtotalIdsByGroupId = new Map<string, string[]>()
-    for (const cropSubtotal of cropSubtotals) {
-      const groupId = cropSubtotal.subtotal?.subtotalGroupId
-      if (!groupId) continue
-      const subtotalIds = subtotalIdsByGroupId.get(groupId)
-      if (subtotalIds) subtotalIds.push(cropSubtotal.subtotalId)
-      else subtotalIdsByGroupId.set(groupId, [cropSubtotal.subtotalId])
-    }
-
-    const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
-      Array.from(subtotalIdsByGroupId.values()).flat()
-    )
+    const cropSubtotals = await getCropSubtotalsForScoring(subtotalRegionId)
 
     return computeSubtotalScoreForCropRegion(
       examStudentId,
+      examId,
       allQuestionScores,
       cropRegions,
-      subtotalIdsByGroupId,
-      questionAssignments
+      cropSubtotals.map((cropSubtotal) => cropSubtotal.subtotal)
     )
   } catch (error) {
     console.error(

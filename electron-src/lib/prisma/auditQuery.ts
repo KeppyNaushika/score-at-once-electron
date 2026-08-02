@@ -117,7 +117,8 @@ export async function getAuditLogs(
     userIds.length > 0
       ? await prisma.user.findMany({
           where: { id: { in: userIds } },
-          select: { id: true, name: true, username: true },
+          // パスコードだけを落とす（機密除去。縮小射影ではない）
+          omit: { passcode: true },
         })
       : []
   const userMap = new Map(users.map((user) => [user.id, user]))
@@ -165,19 +166,10 @@ export async function getAuditLogScopes(): Promise<AuditScopeFacet[]> {
   const rows = await prisma.auditLog.findMany({
     where: { scopeId: { not: null } },
     distinct: ["scopeId"],
-    select: { scopeId: true, scopeLabel: true, category: true },
     orderBy: { createdAt: "desc" },
   })
   return rows
-    .filter(
-      (
-        row
-      ): row is {
-        scopeId: string
-        scopeLabel: string | null
-        category: string
-      } => !!row.scopeId
-    )
+    .filter((row): row is typeof row & { scopeId: string } => !!row.scopeId)
     .map((row) => ({
       scopeId: row.scopeId,
       scopeLabel: row.scopeLabel,

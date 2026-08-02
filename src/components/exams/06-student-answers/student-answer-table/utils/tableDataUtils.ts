@@ -7,7 +7,7 @@ import type {
   AnswerImageIdentity,
   ExamPageColumn,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
  * セルレコード配列に (受験者, ページ) が含まれるかを判定する。
@@ -37,7 +37,7 @@ function hasCell(
  * 両方を `{ id: string }` にすると互いに代入可能で、引数を転置しても
  * コンパイルが通ってしまう（＝表が全滅するのに気付けない）。
  */
-export type CellRow = Pick<ExamStudentWithMemberships, "id" | "studentId">
+export type CellRow = Pick<StudentAnswerDatasetExamStudent, "id" | "studentId">
 export type CellColumn = ExamPageColumn
 
 /**
@@ -95,7 +95,7 @@ export function lookupHasCell(
  */
 export function manualDisabledReason(
   disabledState: ExtendedDisabledState,
-  examStudent: ExamStudentWithMemberships,
+  examStudent: StudentAnswerDatasetExamStudent,
   examPage: CellColumn
 ): DisabledReason {
   if (disabledState.rows.includes(examStudent.id)) {
@@ -110,8 +110,8 @@ export function manualDisabledReason(
 
 /** 生徒をcustomOrder昇順にソートした新しい配列を返す */
 export function sortStudentsByCustomOrder(
-  students: ExamStudentWithMemberships[]
-): ExamStudentWithMemberships[] {
+  students: StudentAnswerDatasetExamStudent[]
+): StudentAnswerDatasetExamStudent[] {
   return [...students].sort((studentA, studentB) => {
     const studentAOrder = studentA.customOrder ?? Number.MAX_SAFE_INTEGER
     const studentBOrder = studentB.customOrder ?? Number.MAX_SAFE_INTEGER
@@ -122,7 +122,7 @@ export function sortStudentsByCustomOrder(
 /** 確認モードで答案が存在しないセル（無効化対象）を O(1) 照合ルックアップで返す */
 export function calculateDynamicDisabledCells<T extends AnswerImageIdentity>(
   files: T[],
-  sortedStudents: ExamStudentWithMemberships[],
+  sortedStudents: StudentAnswerDatasetExamStudent[],
   examPages: ExamPageColumn[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view"
@@ -163,7 +163,7 @@ export function calculateCellsWithExistingAnswers<
   T extends AnswerImageIdentity,
 >(
   files: T[],
-  sortedStudents: ExamStudentWithMemberships[],
+  sortedStudents: StudentAnswerDatasetExamStudent[],
   examPages: ExamPageColumn[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view",

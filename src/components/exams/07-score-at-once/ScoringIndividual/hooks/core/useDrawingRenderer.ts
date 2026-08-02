@@ -9,14 +9,14 @@ import { useCallback } from "react"
 import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
-import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
+import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
 import { renderTextElement } from "../../utils/canvasTextRenderer"
 
 interface UseDrawingRendererReturn {
   convertAnnotationToDrawingElement: (
-    annotation: DrawingAnnotationWithQuestionScore
+    annotation: AnnotationWithContext
   ) => DrawingElement
   drawSingleElement: (
     ctx: CanvasRenderingContext2D,
@@ -37,7 +37,7 @@ interface UseDrawingRendererReturn {
 export function useDrawingRenderer(): UseDrawingRendererReturn {
   // アノテーションをDrawingElement形式に変換する関数
   const convertAnnotationToDrawingElement = useCallback(
-    (annotation: DrawingAnnotationWithQuestionScore): DrawingElement => {
+    (annotation: AnnotationWithContext): DrawingElement => {
       return {
         id: annotation.id,
         type: annotation.type as DrawingElement["type"],

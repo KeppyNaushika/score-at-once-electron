@@ -12,7 +12,7 @@ import type {
   ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
  * upload / view の両テーブルが共有する中核ロジック（DnD・無効状態・テーブルデータ生成・
@@ -21,7 +21,7 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
  */
 interface UseAnswerTableCoreParams<TItem extends AnswerImageIdentity> {
   examId: string
-  students: ExamStudentWithMemberships[]
+  students: StudentAnswerDatasetExamStudent[]
   files: TItem[]
   examPages: ExamPageColumn[]
   fileOrder?: PlacementStrategy
