@@ -205,9 +205,12 @@ export const deleteMasterAnswer = async (
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.examPage.delete({ where: { id: examPageId } })
 
+    // 並びが採番結果を決めるので、id をタイブレークに入れて決定的にする
+    // （pageNumber は一意ではない。詳細は studentAnswer/crud.ts の
+    //  getStudentAnswersDataset のコメント）
     const pages = await tx.examPage.findMany({
       where: { examId },
-      orderBy: { pageNumber: "asc" },
+      orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
     })
 
     for (const [index, page] of pages.entries()) {
@@ -304,7 +307,7 @@ export const getMasterAnswersByExamId = async (
 ): Promise<ExamPage[]> => {
   return prisma.examPage.findMany({
     where: { examId, imagePath: { not: null } },
-    orderBy: { pageNumber: "asc" },
+    orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
   })
 }
 

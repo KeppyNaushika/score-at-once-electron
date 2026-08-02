@@ -5,9 +5,12 @@
  * decimal.js の `toJSON` が**文字列**を返すため、`Decimal` 列が実行時に文字列化し
  * （型は `number` を主張するのに実体は string）という乖離を生んでいた。
  *
- * このシリアライザは `Decimal` を明示的に `number` へ倒すことでその乖離を解消する。
- * `Date` は従来どおり ISO 文字列へ落とす（既存の JSON 直列化挙動を踏襲し、日付表示の
- * 回帰を避けるため）。それ以外は再帰的にクローンする。
+ * 変換するのは `Decimal` → `number` **だけ**。decimal.js のインスタンスはメソッドを
+ * 持つクラスなので structured clone を渡れず、ここで倒す必要がある。
+ *
+ * `Date` は変換しない。structured clone は Date をそのまま渡せるため、変換は IPC の
+ * 要件ではなく旧 `JSON.stringify` 挙動の名残でしかなく、「型は `Date` / 実体は string」
+ * という乖離を全経路にばら撒いていた（型を正直にするより、乖離を作らない方が安い）。
  */
 
 import { Prisma } from "@prisma/client"
@@ -30,7 +33,9 @@ function convert(value: unknown): unknown {
   if (value === null || value === undefined) return value
   if (typeof value !== "object") return value
   if (isDecimalLike(value)) return value.toNumber()
-  if (value instanceof Date) return value.toISOString()
+  // Date は structured clone を渡れる。列挙可能な自前プロパティを持たないので、
+  // 下の Object.entries へ落とすと `{}` になってしまう。ここで複製して返す。
+  if (value instanceof Date) return new Date(value.getTime())
   if (Array.isArray(value)) return value.map(convert)
   const result: Record<string, unknown> = {}
   for (const [key, child] of Object.entries(value)) {

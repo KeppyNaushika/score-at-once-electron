@@ -40,7 +40,6 @@ export function createMockAnnotation(
     isFavorite: false,
     createdAt: new Date(),
     updatedAt: new Date(),
-    userId: "user-1",
     ...overrides,
   }
 }
@@ -69,7 +68,6 @@ function annotationFromCreateData(data: DrawingCreateData): DrawingAnnotation {
     anchorDirection: data.anchorDirection || "top-left",
     displayX: data.displayX || 0,
     displayY: data.displayY || 0,
-    userId: data.userId || "user-1",
   })
 }
 
@@ -79,14 +77,11 @@ export interface MockDrawingAPI {
   delete: ReturnType<typeof vi.fn>
   getByQuestionScore: ReturnType<typeof vi.fn>
   getByExamStudent: ReturnType<typeof vi.fn>
-  getByExam: ReturnType<typeof vi.fn>
   getByCropRegion: ReturnType<typeof vi.fn>
   batchCreate: ReturnType<typeof vi.fn>
-  batchUpdate: ReturnType<typeof vi.fn>
   deleteByQuestionScore: ReturnType<typeof vi.fn>
   toggleFavorite: ReturnType<typeof vi.fn>
   getForBrowse: ReturnType<typeof vi.fn>
-  getStats: ReturnType<typeof vi.fn>
 }
 
 /**
@@ -111,10 +106,6 @@ export function createMockDrawingAPI(): MockDrawingAPI {
       success: true,
       data: [],
     }),
-    getByExam: vi.fn().mockResolvedValue({
-      success: true,
-      data: [],
-    }),
     getByCropRegion: vi.fn().mockResolvedValue({
       success: true,
       data: [],
@@ -125,7 +116,6 @@ export function createMockDrawingAPI(): MockDrawingAPI {
         success: true,
         data: dataList.map(annotationFromCreateData),
       })),
-    batchUpdate: vi.fn().mockResolvedValue({ success: true, data: [] }),
     deleteByQuestionScore: vi.fn().mockResolvedValue({ success: true }),
     toggleFavorite: vi
       .fn()
@@ -136,13 +126,6 @@ export function createMockDrawingAPI(): MockDrawingAPI {
     getForBrowse: vi.fn().mockResolvedValue({
       success: true,
       data: [],
-    }),
-    getStats: vi.fn().mockResolvedValue({
-      success: true,
-      data: {
-        total: 0,
-        byType: { text: 0, line: 0, rectangle: 0, ellipse: 0 },
-      },
     }),
   }
 

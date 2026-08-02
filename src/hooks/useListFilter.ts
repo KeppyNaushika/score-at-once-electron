@@ -16,8 +16,14 @@ export interface ListFilterAccessors<T> {
   tagIds?: (listItem: T) => string[]
   /** 学級フィルタ用の学級 ID 群 */
   classroomIds?: (listItem: T) => string[]
-  /** 日付範囲フィルタ用の日付（ISO 文字列、未設定は null） */
-  date?: (listItem: T) => string | null
+  /**
+   * 日付範囲フィルタ用の日付（未設定は null）。
+   *
+   * DB 由来の行はそのまま `Date` で渡ってくる（IPC の structured clone は Date を
+   * そのまま通す）。フォームや設定由来の ISO 文字列も受けるので、実装に合わせて
+   * 両方を許す（下の絞り込みは `new Date(...)` でどちらも扱える）。
+   */
+  date?: (listItem: T) => string | Date | null
 }
 
 interface UseListFilterResult<T> {

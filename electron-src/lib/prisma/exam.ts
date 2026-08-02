@@ -107,9 +107,7 @@ export const getExamById = async (id: string) => {
             },
           },
         },
-        orderBy: {
-          pageNumber: "asc",
-        },
+        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
       },
       examSubtotalGroups: {
         include: {
@@ -157,7 +155,7 @@ export const getExamWithPages = async (id: string) => {
     include: {
       examPages: {
         include: examPageWithContentInclude,
-        orderBy: { pageNumber: "asc" },
+        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
       },
     },
   })

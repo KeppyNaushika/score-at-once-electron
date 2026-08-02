@@ -91,7 +91,6 @@ export interface FullTestExam {
   drawingAnnotations: Array<{
     id: string
     questionScoreId: string
-    userId: string
   }>
   studentAnswerImages: Array<{
     id: string
@@ -346,15 +345,17 @@ export async function createFullTestExam(
   // 13. DrawingAnnotation作成
   const drawingAnnotations = []
   if (includeAnnotations && questionScores.length > 0) {
-    // 最初のスコアにだけアノテーションを追加
+    // 最初のスコアにだけアノテーションを追加。
+    // type は描ける種別にする（未知の種別は読み取りの境界で除外されるため、
+    // 共有フィクスチャに置くと注釈を使う全テストから消える）。
+    // 未知の種別そのものを検証したいテストは、そのテスト内で行を作ること。
     const drawingAnnotation = await prisma.drawingAnnotation.create({
       data: {
         id: crypto.randomUUID(),
         questionScoreId: questionScores[0].id,
-        type: "circle",
+        type: "line",
         x: 10,
         y: 10,
-        userId: user.id,
       },
     })
     drawingAnnotations.push(drawingAnnotation)
@@ -473,7 +474,6 @@ export async function createFullTestExam(
     drawingAnnotations: drawingAnnotations.map((drawingAnnotation) => ({
       id: drawingAnnotation.id,
       questionScoreId: drawingAnnotation.questionScoreId,
-      userId: drawingAnnotation.userId,
     })),
     studentAnswerImages: studentAnswerImages.map((studentAnswerImage) => ({
       id: studentAnswerImage.id,

@@ -83,7 +83,7 @@ export async function collectExamData(
               },
             },
           },
-          orderBy: { pageNumber: "asc" },
+          orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
         },
         examStudents: true,
         userExams: true,
@@ -267,12 +267,9 @@ export async function collectExamData(
               updatedAt: questionScore.updatedAt.toISOString(),
             })
 
+            // 親の採点データが既にログインユーザーのものへ絞られているので、
+            // 注釈側で採点者を見直す必要は無い（持ち主は親から決まる）
             for (const drawingAnnotation of questionScore.drawingAnnotations) {
-              // ログインユーザーのアノテーションのみを収集
-              if (drawingAnnotation.userId !== userId) {
-                continue
-              }
-
               drawingAnnotations.push({
                 id: drawingAnnotation.id,
                 questionScoreId: drawingAnnotation.questionScoreId,
@@ -296,7 +293,6 @@ export async function collectExamData(
                 displayX: drawingAnnotation.displayX,
                 displayY: drawingAnnotation.displayY,
                 isFavorite: drawingAnnotation.isFavorite,
-                userId: drawingAnnotation.userId,
                 createdAt: drawingAnnotation.createdAt.toISOString(),
                 updatedAt: drawingAnnotation.updatedAt.toISOString(),
               })

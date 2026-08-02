@@ -5,7 +5,7 @@
  * 型が通ってしまう状態だった。include を SSOT 2 本（作成者のみ / 文脈つき）へ畳んだ結果、
  * 行をそのまま渡すことになり Decimal と Date が IPC を越えるようになった。
  *
- * ここでは「どの経路でも同じ形で届くこと」と「シリアライズ済みであること」を固定する。
+ * ここでは「どの経路でも同じ形で届くこと」を固定する。
  * 07 採点画面（個別・グリッド・ブラウザ）はこの形に依存している。
  */
 
@@ -38,13 +38,15 @@ import {
 
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
-/** Date のままだと structured clone は通るが、経路ごとに型が食い違う */
-function expectSerializedTimestamps(row: {
-  createdAt: unknown
-  updatedAt: unknown
-}) {
-  expect(typeof row.createdAt).toBe("string")
-  expect(typeof row.updatedAt).toBe("string")
+/**
+ * 日時は Date のまま届く。structured clone が Date をそのまま通すため、
+ * `serializePrisma` は Decimal だけを倒し Date には触れない。
+ * 経路ごとに Date だったり文字列だったりすると、`updatedAt.getTime()` が
+ * 片方の経路でだけ落ちる。
+ */
+function expectDateTimestamps(row: { createdAt: unknown; updatedAt: unknown }) {
+  expect(row.createdAt).toBeInstanceOf(Date)
+  expect(row.updatedAt).toBeInstanceOf(Date)
 }
 
 describe("採点マークの供給形", () => {
@@ -58,7 +60,7 @@ describe("採点マークの供給形", () => {
     await disconnectTestPrisma()
   })
 
-  it("どの読み取り経路でも日時はシリアライズ済みで届く", async () => {
+  it("どの読み取り経路でも日時は Date のまま届く", async () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
       includeAnnotations: true,
@@ -81,10 +83,10 @@ describe("採点マークの供給形", () => {
 
     // 経路ごとに Date のままだったり文字列だったりすると、
     // `updatedAt.getTime()` が片方でだけ落ちる
-    expectSerializedTimestamps(byQuestionScore[0])
-    expectSerializedTimestamps(byExamStudent[0])
-    expectSerializedTimestamps(byCropRegion[0])
-    expectSerializedTimestamps(forBrowse[0])
+    expectDateTimestamps(byQuestionScore[0])
+    expectDateTimestamps(byExamStudent[0])
+    expectDateTimestamps(byCropRegion[0])
+    expectDateTimestamps(forBrowse[0])
   })
 
   it("文脈つきの経路は受験者と設問の実体を同梱する", async () => {
@@ -107,14 +109,17 @@ describe("採点マークの供給形", () => {
     expect(target.questionScore.examStudent.student.lastName).toBeTruthy()
   })
 
-  it("作成者はパスコードを除いて渡す", async () => {
+  it("作成者は親の採点データからパスコードを除いて渡す", async () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
       includeAnnotations: true,
     })
 
     const forBrowse = await getAnnotationsForBrowse(fixture.exam.id)
-    const author = forBrowse[0].user as unknown as Record<string, unknown>
+    const author = forBrowse[0].questionScore.user as unknown as Record<
+      string,
+      unknown
+    >
 
     // 縮小射影ではなく機密除去。表示に要る列は残す
     expect(author.username).toBe(fixture.user.username)
@@ -131,7 +136,7 @@ describe("採点マークの供給形", () => {
     const forBrowse = await getAnnotationsForBrowse(fixture.exam.id)
     const target = forBrowse[0]
 
-    // DB 上は String。既定へ倒して literal union にする（"circle" は未知の値）
+    // DB 上は String。線種・揃えは既定へ倒して literal union にする
     expect(["text", "line", "rectangle", "ellipse"]).toContain(target.type)
     expect([
       "solid",
@@ -141,5 +146,35 @@ describe("採点マークの供給形", () => {
       "arrow",
       "both_arrow",
     ]).toContain(target.lineStyle)
+  })
+
+  it("描けない種別の行は読み取りの境界で除外される", async () => {
+    const fixture = await createFullTestExam(testPrisma, {
+      includeScores: true,
+      includeAnnotations: true,
+    })
+    const [known] = fixture.drawingAnnotations
+
+    // 旧バージョン・取り込み・DB 直編集で入りうる未知の種別。
+    // 既定の "line" へ倒すと、終点を持たない（endX/endY は既定の 0.0）行が
+    // 答案の原点へ向かう線として描かれてしまう。
+    const unknown = await testPrisma.drawingAnnotation.create({
+      data: {
+        questionScoreId: known.questionScoreId,
+        type: "circle",
+        x: 20,
+        y: 20,
+      },
+    })
+
+    const byQuestionScore = await getDrawingAnnotationsByQuestionScore(
+      known.questionScoreId
+    )
+    const forBrowse = await getAnnotationsForBrowse(fixture.exam.id)
+
+    for (const rows of [byQuestionScore, forBrowse]) {
+      expect(rows.map((row) => row.id)).toContain(known.id)
+      expect(rows.map((row) => row.id)).not.toContain(unknown.id)
+    }
   })
 })

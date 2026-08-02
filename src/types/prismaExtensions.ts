@@ -15,15 +15,18 @@ import type { ScoringStatus } from "./scoringStatus.types"
 /**
  * `serializePrisma` を通した後の形を型に反映する。
  *
- * 変換は Decimal → number と Date → string の2つだけで、これはシリアライザの実装
+ * 変換は Decimal → number の1つだけで、これはシリアライザの実装
  * （serializePrisma.ts）と1対1に対応する。行をそのまま IPC へ渡す経路が増えると、
  * 「型は Decimal / 実体は number」という乖離が Pick や手書きの再宣言で散らばるため、
  * 変換の型もここに1つだけ置く。
+ *
+ * `Date` は変換しない。structured clone がそのまま渡すので、IPC を越えても `Date` の
+ * ままである（以前は旧 `JSON.stringify` 挙動を踏襲して string へ倒していた）。
  */
 export type Serialized<T> = T extends Prisma.Decimal
   ? number
   : T extends Date
-    ? string
+    ? Date
     : T extends Array<infer Element>
       ? Serialized<Element>[]
       : T extends object

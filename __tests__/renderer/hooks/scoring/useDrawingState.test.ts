@@ -50,12 +50,6 @@ vi.mock("@/app/textbox-on-canvas-v3/utils/mathJaxUtils", () => ({
     .mockResolvedValue({ width: 200, height: 50 }),
 }))
 
-const CONTEXT = {
-  currentStudentId: "student-1",
-  currentCropRegionId: "crop-1",
-  currentUserId: "user-1",
-}
-
 function makeElement(overrides: Partial<DrawingElement> = {}): DrawingElement {
   return {
     id: `el-${crypto.randomUUID().slice(0, 8)}`,
@@ -110,7 +104,7 @@ describe("useDrawingState", () => {
       })
 
       const { result, rerender } = renderHook(
-        ({ qsId }) => useDrawingState(qsId, true, CONTEXT),
+        ({ qsId }) => useDrawingState(qsId, true),
         { initialProps: { qsId: "qs-1" } }
       )
 
@@ -131,7 +125,7 @@ describe("useDrawingState", () => {
       })
 
       const { result, rerender } = renderHook(
-        ({ qsId }) => useDrawingState(qsId, true, CONTEXT),
+        ({ qsId }) => useDrawingState(qsId, true),
         { initialProps: { qsId: "qs-1" as string | null } }
       )
 
@@ -149,7 +143,7 @@ describe("useDrawingState", () => {
       })
 
       const { result, rerender } = renderHook(
-        ({ qsId }) => useDrawingState(qsId, true, CONTEXT),
+        ({ qsId }) => useDrawingState(qsId, true),
         { initialProps: { qsId: "qs-1" } }
       )
 
@@ -174,9 +168,7 @@ describe("useDrawingState", () => {
         })
       )
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitFor(() => {
         expect(mockAPI.getByQuestionScore).toHaveBeenCalled()
@@ -213,9 +205,7 @@ describe("useDrawingState", () => {
       })
       mockAPI.create.mockRejectedValue(new Error("保存失敗"))
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitFor(() => {
         expect(mockAPI.getByQuestionScore).toHaveBeenCalled()
@@ -234,7 +224,7 @@ describe("useDrawingState", () => {
     })
 
     it("questionScoreIdがない場合は追加を拒否する", async () => {
-      const { result } = renderHook(() => useDrawingState(null, true, CONTEXT))
+      const { result } = renderHook(() => useDrawingState(null, true))
 
       await act(async () => {
         await result.current.addDrawingElement(makeElement())
@@ -245,9 +235,7 @@ describe("useDrawingState", () => {
     })
 
     it("enablePersistence=falseの場合はDB保存せずローカルのみ", async () => {
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", false, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", false))
 
       const element = makeElement({ id: "local-1" })
       act(() => {
@@ -269,9 +257,7 @@ describe("useDrawingState", () => {
         data: [createMockAnnotation({ id: "a1", x: 0.1 })],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
 
@@ -292,9 +278,7 @@ describe("useDrawingState", () => {
       })
       mockAPI.update.mockRejectedValue(new Error("更新失敗"))
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
 
@@ -321,9 +305,7 @@ describe("useDrawingState", () => {
         ],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 3)
 
@@ -359,9 +341,7 @@ describe("useDrawingState", () => {
         ],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 2)
 
@@ -379,9 +359,7 @@ describe("useDrawingState", () => {
         data: [createMockAnnotation({ id: "a1" })],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
 
@@ -404,9 +382,7 @@ describe("useDrawingState", () => {
       })
       mockAPI.delete.mockRejectedValue(new Error("削除失敗"))
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
 
@@ -433,9 +409,7 @@ describe("useDrawingState", () => {
       })
       mockAPI.batchCreate.mockResolvedValue({ success: true, data: [] })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 2)
 
@@ -458,9 +432,7 @@ describe("useDrawingState", () => {
         data: [createMockAnnotation({ id: "a1" })],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
 
@@ -493,7 +465,7 @@ describe("useDrawingState", () => {
       })
 
       const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT, onChanged)
+        useDrawingState("qs-1", true, onChanged)
       )
 
       await waitFor(() => {
@@ -513,9 +485,7 @@ describe("useDrawingState", () => {
         data: [createMockAnnotation({ id: "a1", x: 0.1 })],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
       expect(result.current.drawingElements[0].x).toBe(0.1)
@@ -536,7 +506,7 @@ describe("useDrawingState", () => {
       })
 
       const { result } = renderHook(() =>
-        useDrawingState("qs-1", true, CONTEXT, onChanged)
+        useDrawingState("qs-1", true, onChanged)
       )
 
       await waitForDrawingElements(result, 1)
@@ -555,9 +525,7 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("選択状態の管理", () => {
     it("addToSelection / removeFromSelection / toggleSelection", () => {
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", false, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", false))
 
       act(() => result.current.addToSelection("a1"))
       expect(result.current.selectedElementIds).toEqual(["a1"])
@@ -579,9 +547,7 @@ describe("useDrawingState", () => {
     })
 
     it("clearSelection", () => {
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", false, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", false))
 
       act(() => result.current.setSelectedElementIds(["a1", "a2", "a3"]))
       act(() => result.current.clearSelection())
@@ -594,9 +560,7 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("ツール・設定の状態管理", () => {
     it("setCurrentTool / setStrokeColor / setStrokeWidth / setLineStyle / setFontSize", () => {
-      const { result } = renderHook(() =>
-        useDrawingState("qs-1", false, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingState("qs-1", false))
 
       act(() => result.current.setCurrentTool("line"))
       expect(result.current.currentTool).toBe("line")

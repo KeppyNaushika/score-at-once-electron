@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 
-import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import {
@@ -195,70 +194,31 @@ export function useScoredAnswerPreview({
 
         const urls: string[] = []
         for (const { page, img } of loadedPages) {
-          const scoringDataForPdf = page.scoringData.map((scoreData) => ({
-            questionScoreId: scoreData.questionScoreId,
-            status: scoreData.status,
-            partialScore: scoreData.partialScore,
-            cropRegion: {
-              id: scoreData.cropRegion.id,
-              x: scoreData.cropRegion.x,
-              y: scoreData.cropRegion.y,
-              width: scoreData.cropRegion.width,
-              height: scoreData.cropRegion.height,
-              label: scoreData.cropRegion.label,
-              maxScore: scoreData.cropRegion.maxScore,
-              examPage: {
-                pageNumber: scoreData.cropRegion.pageNumber,
-              },
-            },
-          }))
+          // main が組み立てた形をそのまま描画エンジンへ渡す（PdfCanvasRenderer と同じ経路）
+          const scoringDataForPdf = page.scoringData
 
+          // 算出できたものだけを描画する。型ガードの出力がそのまま
+          // SubtotalDataForPdf / TotalScoreDataForPdf になるので写し替えは不要。
           const subtotalDataForPdf: SubtotalDataForPdf[] = (
             page.subtotalData || []
+          ).filter(
+            (
+              subtotalData
+            ): subtotalData is typeof subtotalData & { score: number } =>
+              subtotalData.score != null
           )
-            .filter(
-              (
-                subtotalData
-              ): subtotalData is typeof subtotalData & {
-                score: number
-              } => subtotalData.score != null
-            )
-            .map((subtotalData) => ({
-              regionId: subtotalData.regionId,
-              label: subtotalData.label,
-              score: subtotalData.score,
-              x: subtotalData.x,
-              y: subtotalData.y,
-              width: subtotalData.width,
-              height: subtotalData.height,
-              pageNumber: subtotalData.pageNumber,
-            }))
 
           const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
             page.totalScoreData || []
+          ).filter(
+            (
+              totalScoreData
+            ): totalScoreData is typeof totalScoreData & { score: number } =>
+              totalScoreData.score != null
           )
-            .filter(
-              (
-                totalScoreData
-              ): totalScoreData is typeof totalScoreData & {
-                score: number
-              } => totalScoreData.score != null
-            )
-            .map((totalScoreData) => ({
-              regionId: totalScoreData.regionId,
-              score: totalScoreData.score,
-              maxScore: totalScoreData.maxScore,
-              x: totalScoreData.x,
-              y: totalScoreData.y,
-              width: totalScoreData.width,
-              height: totalScoreData.height,
-              pageNumber: totalScoreData.pageNumber,
-            }))
 
-          // annotationsをDrawingAnnotation形式にキャスト
-          // IPC経由のデータは一部フィールドが欠落しているが、
-          // renderAnswerSheetToCanvasが使用するフィールドは全て含まれている
-          const annotations = page.annotations as unknown as DrawingAnnotation[]
+          // main が行をそのまま載せてくるので、キャストも組み立て直しも要らない
+          const annotations = page.annotations
 
           await renderAnswerSheetToCanvas(
             canvas,

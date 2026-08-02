@@ -103,7 +103,6 @@ describe("applyStudentAnswerPlacements", () => {
         type: "circle",
         x: 5,
         y: 5,
-        userId: (await testPrisma.user.findFirstOrThrow()).id,
       },
     })
 
@@ -160,7 +159,6 @@ describe("applyStudentAnswerPlacements", () => {
         type: "circle",
         x: 1,
         y: 1,
-        userId: (await testPrisma.user.findFirstOrThrow()).id,
       },
     })
 

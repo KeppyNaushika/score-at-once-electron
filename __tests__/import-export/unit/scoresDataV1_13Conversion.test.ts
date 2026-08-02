@@ -62,7 +62,6 @@ function annotation(questionScoreId: string): ArchiveAnnotation {
     displayX: 0,
     displayY: 0,
     isFavorite: false,
-    userId: "user-1",
     createdAt: "2026-06-01T10:00:00Z",
     updatedAt: "2026-06-01T10:00:00Z",
   }

@@ -31,11 +31,10 @@ export function setupDrawingHandlers() {
   /** QuestionScoreに紐づく描画アノテーション取得 */
   registerSafeHandler(
     "drawing:getByQuestionScore",
-    async (questionScoreId: string, type?: DrawingType, userId?: string) => {
+    async (questionScoreId: string, type?: DrawingType) => {
       const result = await drawingService.getDrawingAnnotationsByQuestionScore(
         questionScoreId,
-        type,
-        userId
+        type
       )
       return { success: true, data: result }
     },
@@ -54,20 +53,6 @@ export function setupDrawingHandlers() {
       return { success: true, data: result }
     },
     "受験者別描画アノテーション取得に失敗しました"
-  )
-
-  /** 試験全体の描画アノテーション取得（PDF出力用） */
-  registerSafeHandler(
-    "drawing:getByExam",
-    async (examId: string, type?: DrawingType, userId?: string) => {
-      const result = await drawingService.getDrawingAnnotationsByExam(
-        examId,
-        type,
-        userId
-      )
-      return { success: true, data: result }
-    },
-    "試験別描画アノテーション取得に失敗しました"
   )
 
   /** CropRegion（設問）に紐づく全学生の描画アノテーション取得（Grid表示用） */
@@ -129,28 +114,7 @@ export function setupDrawingHandlers() {
     "描画アノテーション一括作成に失敗しました"
   )
 
-  /** 描画アノテーション一括更新 */
-  registerSafeHandler(
-    "drawing:batchUpdate",
-    async (updates: Array<{ id: string; data: DrawingUpdateData }>) => {
-      const result = await drawingService.batchUpdateDrawingAnnotations(updates)
-      return { success: true, data: result }
-    },
-    "描画アノテーション一括更新に失敗しました"
-  )
-
   // ユーティリティ操作
-
-  /** 描画アノテーション統計情報取得 */
-  registerSafeHandler(
-    "drawing:getStats",
-    async (questionScoreId: string) => {
-      const result =
-        await drawingService.getDrawingAnnotationStats(questionScoreId)
-      return { success: true, data: result }
-    },
-    "描画アノテーション統計取得に失敗しました"
-  )
 
   /** アノテーションお気に入り切替 */
   registerSafeHandler(
@@ -173,15 +137,5 @@ export function setupDrawingHandlers() {
       return { success: true, data: result }
     },
     "ブラウズ用アノテーション取得に失敗しました"
-  )
-
-  /** 描画アノテーションID取得 */
-  registerSafeHandler(
-    "drawing:getById",
-    async (id: string) => {
-      const result = await drawingService.getDrawingAnnotationById(id)
-      return { success: true, data: result }
-    },
-    "描画アノテーション取得に失敗しました"
   )
 }

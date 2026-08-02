@@ -22,7 +22,15 @@ import { defineStringUnion } from "./stringUnion"
 export const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
 export type DrawingType = (typeof DRAWING_TYPES)[number]
 
-export const { to: toDrawingType } = defineStringUnion(DRAWING_TYPES, "line")
+/**
+ * `is` は「描ける種別か」の判定に使う。既定値の `"line"` へ倒すと、終点を持たない行
+ * （endX/endY は既定の 0.0）が原点への線として描かれてしまうため、読み取りの境界では
+ * 倒す前に未知の行を落とす（`narrowDrawableAnnotations`）。
+ */
+export const { is: isDrawingType, to: toDrawingType } = defineStringUnion(
+  DRAWING_TYPES,
+  "line"
+)
 
 export const LINE_STYLES = [
   "solid",
@@ -98,15 +106,38 @@ export const narrowAnnotationUnions = <
 })
 
 /**
+ * 読み取りの境界で使う。描けない種別の行を落としてから union を絞る。
+ *
+ * `type` 以外の union 列（線種・揃え・アンカー）は既定へ倒しても見た目が既定に
+ * なるだけで済むが、`type` だけは「何を描くか」そのものなので倒してはいけない。
+ * 未知の種別（旧バージョンで作られた行・取り込み・DB の直接編集）を既定の `"line"`
+ * へ倒すと、終点を持たない行が答案の原点へ向かう線として描かれる。
+ *
+ * 落とした件数は呼び出し側で警告する（黙って減らさない）。
+ */
+export const narrowDrawableAnnotations = <
+  T extends {
+    type: string
+    lineStyle: string
+    horizontalAlign: string
+    verticalAlign: string
+    anchorDirection: string
+  },
+>(
+  rows: T[]
+) => rows.filter((row) => isDrawingType(row.type)).map(narrowAnnotationUnions)
+
+/** SQLite に enum が無いため DB 上 String で保存されている列 */
+type AnnotationUnionColumn =
+  "type" | "lineStyle" | "horizontalAlign" | "verticalAlign" | "anchorDirection"
+
+/**
  * DB 行の String union 列だけを literal union へ差し替える型注入。
  *
  * SQLite に enum が無いため DB 上はすべて String で、列そのものは Prisma の生成型に
  * 追随させる（Prisma が管理する形を手書きで複製しない）。
  */
-type NarrowAnnotationUnions<T> = Omit<
-  T,
-  "type" | "lineStyle" | "horizontalAlign" | "verticalAlign" | "anchorDirection"
-> & {
+type NarrowAnnotationUnions<T> = Omit<T, AnnotationUnionColumn> & {
   type: DrawingType
   lineStyle: LineStyle
   horizontalAlign: AnnotationHorizontalAlign
@@ -117,28 +148,34 @@ type NarrowAnnotationUnions<T> = Omit<
 /** 描画アノテーション1行（Prisma のモデルに union 型注入だけを施したもの） */
 export type DrawingAnnotation = NarrowAnnotationUnions<PrismaDrawingAnnotation>
 
-/** 作成者だけを同梱したアノテーション */
+/** 作成者（＝親 QuestionScore の採点者）を同梱したアノテーション */
 export type AnnotationWithAuthor = NarrowAnnotationUnions<
   Prisma.DrawingAnnotationGetPayload<{
     include: typeof annotationWithAuthorInclude
   }>
 >
 
-// 作成用データ型
+/**
+ * 作成用データ。
+ *
+ * Prisma の入力型（`DrawingAnnotationUncheckedCreateInput`）からは導出しない。
+ * 更新側（下記）が `{ set }` / `{ increment }` を通してしまうのと対で、入力の形を
+ * Prisma に預けると IPC の契約が Prisma の都合で決まってしまう。
+ *
+ * ただしこの型が手書きで済んでいるのは**暫定**である。送り元の Canvas が
+ * `DrawingElement`（DB 行を写した独自 view）を持っているためで、Canvas が行を
+ * そのまま持てばこの型自体が不要になる。→ issue 参照
+ */
 export interface DrawingCreateData {
-  id?: string // フロントエンドで生成したUUIDを使用可能（指定なしの場合はDB側で自動生成）
-  questionScoreId: string // 必須: QuestionScoreは事前に作成されている必要がある
+  /** フロントエンドで生成した UUID を使える（未指定なら DB 側で採番） */
+  id?: string
+  /** 必須。QuestionScore は事前に作成されている必要がある */
+  questionScoreId: string
   type: DrawingType
   x: number
   y: number
   color?: string
   strokeWidth?: number
-
-  // コンテキスト情報（参照用、自動作成には使用しない）
-  examStudentId?: string
-  cropRegionId?: string
-
-  // 全プロパティ（デフォルト値はデータベース側で設定）
   width?: number
   height?: number
   endX?: number
@@ -153,10 +190,19 @@ export interface DrawingCreateData {
   anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
-  userId: string
 }
 
-// 更新用データ型
+/**
+ * 更新用データ。
+ *
+ * Prisma の `DrawingAnnotationUncheckedUpdateInput` から導出してはならない。
+ * あの型は各列が「素の値」か `{ set }` / `{ increment }`（原子更新操作）のどちらでも
+ * よい union なので、導出すると操作オブジェクトが IPC を通る。更新処理は `...data` を
+ * そのまま Prisma へ渡すため実際に効いてしまい、監査ログの `typeof data.text === "string"`
+ * を素通りして記録だけが欠ける。
+ *
+ * 作成用と同じく、Canvas が行をそのまま持てばこの型は不要になる。→ issue 参照
+ */
 export interface DrawingUpdateData {
   x?: number
   y?: number
@@ -177,12 +223,6 @@ export interface DrawingUpdateData {
   displayX?: number
   displayY?: number
   isFavorite?: boolean
-}
-
-// 統計情報用型
-export interface DrawingAnnotationStats {
-  total: number
-  byType: Record<DrawingType, number>
 }
 
 // QuestionScore情報を含む拡張型（アノテーションブラウズパネル用）

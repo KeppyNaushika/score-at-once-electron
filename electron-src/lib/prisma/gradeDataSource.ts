@@ -426,7 +426,7 @@ export async function getExamCropRegions(examId: string) {
           },
         },
       },
-      orderBy: { pageNumber: "asc" },
+      orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
     })
     const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)
     return { success: true, cropRegions: serializePrisma(cropRegions) }

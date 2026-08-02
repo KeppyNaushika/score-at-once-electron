@@ -123,7 +123,6 @@ describe("deleteStudentAnswer", () => {
         type: "circle",
         x: 5,
         y: 5,
-        userId: user.id,
       },
     })
     await testPrisma.scoreDecision.create({
@@ -213,7 +212,7 @@ describe("deleteStudentAnswer", () => {
   })
 
   it("削除した DrawingAnnotation は親 QuestionScore の cascade で消える", async () => {
-    const { examStudentA, page1, region1, image, score, user } =
+    const { examStudentA, page1, region1, image, score } =
       await buildSimpleExam()
 
     const annotation = await testPrisma.drawingAnnotation.create({
@@ -223,7 +222,6 @@ describe("deleteStudentAnswer", () => {
         type: "circle",
         x: 5,
         y: 5,
-        userId: user.id,
       },
     })
 
@@ -367,7 +365,7 @@ describe("getStudentAnswerScoreSummary", () => {
   })
 
   it("採点済みなら hasScoreData=true と内訳を返す", async () => {
-    const { examStudentA, page1, region1, image, score, user } =
+    const { examStudentA, page1, region1, image, score } =
       await buildSimpleExam()
 
     await testPrisma.drawingAnnotation.create({
@@ -377,7 +375,6 @@ describe("getStudentAnswerScoreSummary", () => {
         type: "circle",
         x: 5,
         y: 5,
-        userId: user.id,
       },
     })
 

@@ -46,11 +46,19 @@ export const createExamPage = async (
   return page
 }
 
-/** 試験IDで全ページを取得する（studentAnswerImages.examStudent.student・cropRegions リレーション含む、ページ番号順） */
+/**
+ * 試験IDで全ページを取得する（studentAnswerImages.examStudent.student・cropRegions
+ * リレーション含む、ページ番号順）。
+ *
+ * pageNumber は一意ではない（sync 構成では2台が同時に追加すると同じ番号の行が別 id で
+ * 並ぶ。防ぐ手立ては無い ── 詳細は studentAnswer/crud.ts の getStudentAnswersDataset）。
+ * タイブレークを入れないと 01-upload のページ一覧が読み込みのたびに入れ替わるため、
+ * id で並びを決定的にする。
+ */
 export const getExamPagesByExamId = async (examId: string) => {
   return prisma.examPage.findMany({
     where: { examId },
     include: examPageWithContentInclude,
-    orderBy: { pageNumber: "asc" },
+    orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
   })
 }

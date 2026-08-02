@@ -14,9 +14,14 @@ import type { ArchiveClassesData } from "../../../../src/types/examArchive.types
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
 
+/**
+ * 注釈は採点者を持たない。持ち主は親 QuestionScore（生徒×設問×採点者で1行）から決まる。
+ *
+ * 以前は取り込むユーザーを注釈へ焼き込んでいたため、既存の採点データへ相乗りする場合
+ * （`existingByComposite` で他人の行に当たった場合）に親子で採点者が食い違った。
+ */
 export async function processDrawingAnnotations(
   data: ExtractedArchiveData,
-  currentUserId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
   tx: PrismaTransaction
@@ -58,7 +63,6 @@ export async function processDrawingAnnotations(
             displayX: drawingAnnotation.displayX,
             displayY: drawingAnnotation.displayY,
             isFavorite: drawingAnnotation.isFavorite,
-            userId: currentUserId,
           },
         })
         idMappings.drawingAnnotation[drawingAnnotation.id] =

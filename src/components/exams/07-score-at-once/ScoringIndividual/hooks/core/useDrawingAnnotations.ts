@@ -15,13 +15,6 @@ import type {
 // 既存の描画システム型と互換性を保つため
 import type { DrawingElement } from "../../types"
 
-// QuestionScore自動作成用のコンテキスト情報
-interface DrawingContext {
-  currentExamStudentId?: string
-  currentCropRegionId?: string
-  currentUserId?: string
-}
-
 /**
  * 既存DrawingElementからDrawingCreateDataへの変換
  * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
@@ -29,8 +22,7 @@ interface DrawingContext {
  */
 function convertElementToCreateData(
   element: DrawingElement,
-  questionScoreId: string,
-  userId: string
+  questionScoreId: string
 ): DrawingCreateData {
   return {
     id: element.id, // フロントエンドで生成したUUIDをDBでも使用
@@ -56,7 +48,6 @@ function convertElementToCreateData(
     }),
     horizontalAlign: "left", // デフォルト値
     verticalAlign: "top", // デフォルト値
-    userId,
   }
 }
 
@@ -134,8 +125,7 @@ interface UseDrawingAnnotationsReturn {
  * 統合描画アノテーション管理フック（ScoringIndividual専用）
  */
 export function useDrawingAnnotations(
-  callbacks?: DrawingPersistenceCallbacks,
-  context?: DrawingContext
+  callbacks?: DrawingPersistenceCallbacks
 ): UseDrawingAnnotationsReturn {
   // 状態管理
   const [isLoading, setIsLoading] = useState(false)
@@ -162,7 +152,6 @@ export function useDrawingAnnotations(
 
   /**
    * アノテーション読み込み
-   * contextのcurrentUserIdを使って、ログインユーザーのアノテーションのみ取得
    * @returns 読み込んだアノテーション配列（失敗時は空配列）
    */
   const loadAnnotations = useCallback(
@@ -174,10 +163,11 @@ export function useDrawingAnnotations(
       setError(null)
 
       try {
+        // 採点者で絞る余地は無い。QuestionScore は「生徒×設問×採点者」で1行なので、
+        // この questionScoreId の注釈は全部同じ採点者のものである
         const result = await window.electronAPI.drawing.getByQuestionScore(
           questionScoreId,
-          type,
-          context?.currentUserId
+          type
         )
         if (result.success && result.data) {
           return result.data
@@ -192,7 +182,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError, context?.currentUserId]
+    [handleError]
   )
 
   /**
@@ -207,19 +197,9 @@ export function useDrawingAnnotations(
       setIsLoading(true)
       setError(null)
 
-      // userIdがない場合はエラー
-      if (!context?.currentUserId) {
-        handleError("ユーザーIDが設定されていません")
-        setIsLoading(false)
-        return null
-      }
-
       try {
-        const createData = convertElementToCreateData(
-          element,
-          questionScoreId,
-          context.currentUserId
-        )
+        // 採点者は渡さない。注釈の持ち主は親 QuestionScore から決まる
+        const createData = convertElementToCreateData(element, questionScoreId)
         const result = await window.electronAPI.drawing.create(createData)
 
         if (result.success && result.data) {
@@ -236,7 +216,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError, context]
+    [handleError]
   )
 
   /**
@@ -359,24 +339,13 @@ export function useDrawingAnnotations(
       setIsLoading(true)
       setError(null)
 
-      // userIdがない場合はエラー
-      if (!context?.currentUserId) {
-        handleError("ユーザーIDが設定されていません")
-        setIsLoading(false)
-        return []
-      }
-
       try {
         // 既存のアノテーションをクリア
         await deleteByType(questionScoreId)
 
-        // 新しい要素を一括作成
+        // 新しい要素を一括作成（採点者は親 QuestionScore から決まる）
         const createDataList = elements.map((element) =>
-          convertElementToCreateData(
-            element,
-            questionScoreId,
-            context.currentUserId!
-          )
+          convertElementToCreateData(element, questionScoreId)
         )
 
         const result =
@@ -395,7 +364,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError, deleteByType, context]
+    [handleError, deleteByType]
   )
 
   return {

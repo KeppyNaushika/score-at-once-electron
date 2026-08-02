@@ -31,12 +31,6 @@ vi.mock("@/app/textbox-on-canvas-v3/utils/mathJaxUtils", () => ({
     .mockResolvedValue({ width: 200, height: 50 }),
 }))
 
-const CONTEXT = {
-  currentStudentId: "student-1",
-  currentCropRegionId: "crop-1",
-  currentUserId: "user-1",
-}
-
 function makeElement(overrides: Partial<DrawingElement> = {}): DrawingElement {
   return {
     id: `el-${crypto.randomUUID().slice(0, 8)}`,
@@ -75,20 +69,14 @@ describe("useDrawingAnnotations", () => {
         data: annotations,
       })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       let loaded: DrawingAnnotation[] = []
       await act(async () => {
         loaded = await result.current.loadAnnotations("qs-1")
       })
 
-      expect(mockAPI.getByQuestionScore).toHaveBeenCalledWith(
-        "qs-1",
-        undefined,
-        "user-1"
-      )
+      expect(mockAPI.getByQuestionScore).toHaveBeenCalledWith("qs-1", undefined)
       expect(loaded).toHaveLength(2)
       expect(loaded[0].id).toBe("a1")
     })
@@ -99,20 +87,14 @@ describe("useDrawingAnnotations", () => {
         data: [createMockAnnotation({ type: "line" })],
       })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       let loaded: DrawingAnnotation[] = []
       await act(async () => {
         loaded = await result.current.loadAnnotations("qs-1", "line")
       })
 
-      expect(mockAPI.getByQuestionScore).toHaveBeenCalledWith(
-        "qs-1",
-        "line",
-        "user-1"
-      )
+      expect(mockAPI.getByQuestionScore).toHaveBeenCalledWith("qs-1", "line")
       expect(loaded[0].type).toBe("line")
     })
 
@@ -122,9 +104,7 @@ describe("useDrawingAnnotations", () => {
         error: "読み込みエラー",
       })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
         const data = await result.current.loadAnnotations("qs-1")
@@ -140,9 +120,7 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("saveElement（新規アノテーション作成）", () => {
     it("新規要素を保存すると作成されたアノテーションを返す", async () => {
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       const element = makeElement({ id: "new-1", text: "新規テキスト" })
       await act(async () => {
@@ -159,9 +137,7 @@ describe("useDrawingAnnotations", () => {
         onAnnotationCreated: onCreated,
       }
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(callbacks, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations(callbacks))
 
       await act(async () => {
         await result.current.saveElement(makeElement(), "qs-1")
@@ -170,21 +146,16 @@ describe("useDrawingAnnotations", () => {
       expect(onCreated).toHaveBeenCalledTimes(1)
     })
 
-    it("userIdが未設定の場合エラーになる", async () => {
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, {
-          ...CONTEXT,
-          currentUserId: undefined,
-        })
-      )
+    it("作成データに採点者を載せない（持ち主は親の採点データが決める）", async () => {
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
-        const saved = await result.current.saveElement(makeElement(), "qs-1")
-        expect(saved).toBeNull()
+        await result.current.saveElement(makeElement(), "qs-1")
       })
 
-      expect(mockAPI.create).not.toHaveBeenCalled()
-      expect(result.current.error).toBeTruthy()
+      const [createData] = mockAPI.create.mock.calls[0]
+      expect(createData.questionScoreId).toBe("qs-1")
+      expect("userId" in createData).toBe(false)
     })
 
     it("API失敗時にnullを返す", async () => {
@@ -193,9 +164,7 @@ describe("useDrawingAnnotations", () => {
         error: "作成失敗",
       })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
         const saved = await result.current.saveElement(makeElement(), "qs-1")
@@ -214,9 +183,7 @@ describe("useDrawingAnnotations", () => {
       const updated = createMockAnnotation({ id: "a1", x: 0.9 })
       mockAPI.update.mockResolvedValue({ success: true, data: updated })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
         const returned = await result.current.updateElement(
@@ -240,7 +207,7 @@ describe("useDrawingAnnotations", () => {
       })
 
       const { result } = renderHook(() =>
-        useDrawingAnnotations({ onAnnotationUpdated: onUpdated }, CONTEXT)
+        useDrawingAnnotations({ onAnnotationUpdated: onUpdated })
       )
       await act(async () => {
         await result.current.loadAnnotations("qs-1")
@@ -258,9 +225,7 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("deleteElement（アノテーション削除）", () => {
     it("削除に成功するとtrueを返し対象IDでAPIを呼ぶ", async () => {
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
         const deleted = await result.current.deleteElement("a1")
@@ -278,7 +243,7 @@ describe("useDrawingAnnotations", () => {
       })
 
       const { result } = renderHook(() =>
-        useDrawingAnnotations({ onAnnotationDeleted: onDeleted }, CONTEXT)
+        useDrawingAnnotations({ onAnnotationDeleted: onDeleted })
       )
       await act(async () => {
         await result.current.loadAnnotations("qs-1")
@@ -302,9 +267,7 @@ describe("useDrawingAnnotations", () => {
       })
       mockAPI.batchCreate.mockResolvedValue({ success: true, data: [] })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
       await act(async () => {
         await result.current.loadAnnotations("qs-1")
       })
@@ -325,9 +288,7 @@ describe("useDrawingAnnotations", () => {
         data: newAnnotations,
       })
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
       await act(async () => {
         const synced = await result.current.syncElements(
           [makeElement({ id: "new-1" }), makeElement({ id: "new-2" })],
@@ -350,9 +311,7 @@ describe("useDrawingAnnotations", () => {
         })
       )
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations(undefined, CONTEXT)
-      )
+      const { result } = renderHook(() => useDrawingAnnotations())
 
       // 読み込み開始
       let loadPromise: Promise<DrawingAnnotation[]>

@@ -230,7 +230,6 @@ export function AnnotationBrowserPanel({
             targetQuestionScoreIds: [qsId],
             targetCropRegionId: currentCropRegionId,
             sourceCropRegionId,
-            userId: currentUserId,
           })
         } else {
           // 一覧モード: 選択中の全生徒に追加
@@ -264,7 +263,6 @@ export function AnnotationBrowserPanel({
             targetQuestionScoreIds: targetQsIds,
             targetCropRegionId: currentCropRegionId,
             sourceCropRegionId,
-            userId: currentUserId,
           })
         }
 
