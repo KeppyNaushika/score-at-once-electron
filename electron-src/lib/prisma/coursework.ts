@@ -6,6 +6,8 @@
  * courseworkItemId で項目単位に参照される（点数そのものを共有・再利用）。
  */
 
+import type { Prisma } from "@prisma/client"
+
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import { recordAuditLog } from "./auditLog"
 import {
@@ -31,7 +33,6 @@ import { serializePrisma } from "./serializePrisma"
 async function getCourseworkDate(courseworkId: string): Promise<Date | null> {
   const cw = await prisma.coursework.findUnique({
     where: { id: courseworkId },
-    select: { date: true },
   })
   return cw?.date ?? null
 }
@@ -40,17 +41,37 @@ async function getCourseworkDate(courseworkId: string): Promise<Date | null> {
 // Coursework（トップレベル）
 // =============================================================================
 
+/**
+ * Coursework を CourseworkWithRelations として返すときの include（SSOT）。
+ * 取得も作成も更新も同じ形を返す（作成結果をそのまま詳細画面へ渡せるようにするため）。
+ */
+const courseworkWithRelationsInclude = {
+  classrooms: {
+    include: { classroom: true },
+    orderBy: { order: "asc" },
+  },
+  tags: { include: { tag: true } },
+  items: {
+    include: { letterScales: { orderBy: { order: "asc" } } },
+    orderBy: { order: "asc" },
+  },
+  // 名簿は行のまま渡し切る。件数は renderer が `.length` で取る
+  students: true,
+} satisfies Prisma.CourseworkInclude
+
 /** 試験外成績資料の一覧（サマリ）を取得 */
 export async function getCourseworks() {
   try {
     const courseworks = await prisma.coursework.findMany({
       include: {
-        _count: { select: { items: true, students: true } },
+        // 評価項目・名簿は行のまま渡し切る。件数は renderer が `.length` で取る
+        items: { orderBy: { order: "asc" } },
+        students: true,
         tags: {
-          include: { tag: { select: { id: true, name: true, color: true } } },
+          include: { tag: true },
         },
         classrooms: {
-          include: { classroom: { select: { id: true, name: true } } },
+          include: { classroom: true },
           orderBy: { order: "asc" },
         },
       },
@@ -71,25 +92,7 @@ export async function getCourseworkById(id: string) {
   try {
     const coursework = await prisma.coursework.findUnique({
       where: { id },
-      include: {
-        classrooms: {
-          include: { classroom: { select: { id: true, name: true } } },
-          orderBy: { order: "asc" },
-        },
-        tags: {
-          include: {
-            tag: { select: { id: true, name: true, color: true } },
-          },
-        },
-        items: {
-          include: {
-            letterScales: { orderBy: { order: "asc" } },
-            _count: { select: { scores: true, gradeDataSources: true } },
-          },
-          orderBy: { order: "asc" },
-        },
-        _count: { select: { items: true, students: true } },
-      },
+      include: courseworkWithRelationsInclude,
     })
     if (!coursework) {
       return { success: false, error: "Coursework not found" }
@@ -117,6 +120,7 @@ export async function createCoursework(data: {
         description: data.description ?? null,
         date: data.date ? new Date(data.date) : null,
       },
+      include: courseworkWithRelationsInclude,
     })
 
     await recordAuditLog({
@@ -162,6 +166,7 @@ export async function updateCoursework(
     const coursework = await prisma.coursework.update({
       where: { id },
       data: updateData,
+      include: courseworkWithRelationsInclude,
     })
 
     await recordAuditLog({
@@ -201,7 +206,6 @@ export async function deleteCoursework(id: string) {
 
     const before = await prisma.coursework.findUnique({
       where: { id },
-      select: { name: true },
     })
 
     await prisma.coursework.delete({ where: { id } })
@@ -231,7 +235,7 @@ async function getReferencingGradeNamesForCoursework(
 ): Promise<string[]> {
   const dataSources = await prisma.gradeDataSource.findMany({
     where: { courseworkItem: { courseworkId } },
-    select: { gradeItem: { select: { grade: { select: { name: true } } } } },
+    include: { gradeItem: { include: { grade: true } } },
   })
   return [
     ...new Set(
@@ -246,7 +250,7 @@ async function getReferencingGradeNamesForItem(
 ): Promise<string[]> {
   const dataSources = await prisma.gradeDataSource.findMany({
     where: { courseworkItemId },
-    select: { gradeItem: { select: { grade: { select: { name: true } } } } },
+    include: { gradeItem: { include: { grade: true } } },
   })
   return [
     ...new Set(
@@ -292,10 +296,7 @@ export async function createCourseworkItem(data: {
             },
           }),
       },
-      include: {
-        letterScales: { orderBy: { order: "asc" } },
-        _count: { select: { scores: true, gradeDataSources: true } },
-      },
+      include: { letterScales: { orderBy: { order: "asc" } } },
     })
 
     const scope = await resolveCourseworkScope(data.courseworkId)
@@ -345,10 +346,7 @@ export async function updateCourseworkItem(
     const item = await prisma.courseworkItem.update({
       where: { id },
       data: updateData,
-      include: {
-        letterScales: { orderBy: { order: "asc" } },
-        _count: { select: { scores: true, gradeDataSources: true } },
-      },
+      include: { letterScales: { orderBy: { order: "asc" } } },
     })
 
     const scope = await resolveCourseworkScopeByItem(id)
@@ -387,7 +385,6 @@ export async function deleteCourseworkItem(id: string) {
 
     const before = await prisma.courseworkItem.findUnique({
       where: { id },
-      select: { name: true },
     })
     const scope = await resolveCourseworkScopeByItem(id)
 
@@ -445,18 +442,7 @@ export async function getCourseworkScoresByItemId(courseworkItemId: string) {
     const scores = await prisma.courseworkScore.findMany({
       where: { courseworkItemId },
       include: {
-        courseworkStudent: {
-          include: {
-            student: {
-              select: {
-                id: true,
-                studentNumber: true,
-                lastName: true,
-                firstName: true,
-              },
-            },
-          },
-        },
+        courseworkStudent: { include: { student: true } },
       },
       orderBy: { courseworkStudent: { student: { studentNumber: "asc" } } },
     })
@@ -488,7 +474,6 @@ async function assertSameCoursework(
           in: [...new Set(scores.map((score) => score.courseworkItemId))],
         },
       },
-      select: { id: true, courseworkId: true },
     }),
     prisma.courseworkStudent.findMany({
       where: {
@@ -496,7 +481,6 @@ async function assertSameCoursework(
           in: [...new Set(scores.map((score) => score.courseworkStudentId))],
         },
       },
-      select: { id: true, courseworkId: true },
     }),
   ])
   const courseworkIdByItem = new Map(
@@ -607,7 +591,7 @@ export async function getCourseworkStudents(courseworkId: string) {
         student: {
           include: {
             memberships: {
-              include: { classroom: { select: { id: true, name: true } } },
+              include: { classroom: true },
             },
           },
         },
@@ -635,7 +619,6 @@ export async function getCourseworkClassrooms(courseworkId: string) {
           include: {
             memberships: {
               where: membershipFilterAt(referenceDate),
-              select: { studentId: true },
             },
           },
         },
@@ -671,11 +654,9 @@ export async function getAvailableClassroomsForCoursework(
     const [existing, courseworkStudents] = await Promise.all([
       prisma.courseworkClassroom.findMany({
         where: { courseworkId },
-        select: { classroomId: true },
       }),
       prisma.courseworkStudent.findMany({
         where: { courseworkId },
-        select: { studentId: true },
       }),
     ])
 
@@ -709,7 +690,6 @@ export async function getAvailableStudentsForCoursework(
     const referenceDate = await getCourseworkDate(courseworkId)
     const courseworkStudents = await prisma.courseworkStudent.findMany({
       where: { courseworkId },
-      select: { studentId: true },
     })
 
     const students = await getAvailableStudentsForTarget({
@@ -738,7 +718,6 @@ const courseworkRosterAdapter: RosterAdapter = {
   listExistingStudents: (targetId) =>
     prisma.courseworkStudent.findMany({
       where: { courseworkId: targetId },
-      select: { studentId: true, customOrder: true },
     }),
   createStudents: async (targetId, rows) => {
     await prisma.courseworkStudent.createMany({
@@ -794,7 +773,6 @@ const courseworkRosterAdapter: RosterAdapter = {
         courseworkId: targetId,
         classroomId: { not: exceptClassroomId },
       },
-      select: { classroomId: true },
     })
     return rows.map((courseworkClassroom) => courseworkClassroom.classroomId)
   },
@@ -993,21 +971,7 @@ export async function addCourseworkTag(courseworkId: string, tagId: string) {
 export async function getCourseworkCandidates() {
   try {
     const courseworks = await prisma.coursework.findMany({
-      select: {
-        id: true,
-        name: true,
-        date: true,
-        items: {
-          select: {
-            id: true,
-            name: true,
-            maxScore: true,
-            inputMode: true,
-            order: true,
-          },
-          orderBy: { order: "asc" },
-        },
-      },
+      include: { items: { orderBy: { order: "asc" } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     })
     return { success: true, courseworks: serializePrisma(courseworks) }

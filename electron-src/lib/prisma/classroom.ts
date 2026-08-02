@@ -81,12 +81,6 @@ export const updateClassroom = async (
   try {
     const before = await prisma.classroom.findUnique({
       where: { id },
-      select: {
-        name: true,
-        grade: true,
-        classroomCode: true,
-        description: true,
-      },
     })
 
     const updated = await prisma.classroom.update({
@@ -111,21 +105,12 @@ export const updateClassroom = async (
       entityType: "Classroom",
       entityId: updated.id,
       target: updated.name,
-      changes: diffFields(
-        before ?? undefined,
-        {
-          name: updated.name,
-          grade: updated.grade,
-          classroomCode: updated.classroomCode,
-          description: updated.description,
-        },
-        [
-          { field: "name", label: "学級名" },
-          { field: "grade", label: "学年" },
-          { field: "classroomCode", label: "学級コード" },
-          { field: "description", label: "説明" },
-        ]
-      ),
+      changes: diffFields(before ?? undefined, updated, [
+        { field: "name", label: "学級名" },
+        { field: "grade", label: "学年" },
+        { field: "classroomCode", label: "学級コード" },
+        { field: "description", label: "説明" },
+      ]),
     })
 
     return updated

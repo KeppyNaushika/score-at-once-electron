@@ -33,7 +33,7 @@ export interface DrawingAPI {
       userId?: string
     ) => Promise<{
       success: boolean
-      data?: DrawingAnnotation[]
+      data?: AnnotationWithContext[]
       error?: string
     }>
     getByExam: (

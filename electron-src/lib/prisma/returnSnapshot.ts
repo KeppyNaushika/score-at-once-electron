@@ -175,25 +175,7 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
   // 印刷対象の注釈のみ（有効スコアとして採用された QuestionScore に紐づくもの）を取得
   const annotationRows = await prisma.drawingAnnotation.findMany({
     where: { questionScore: { cropRegion: { examPage: { examId } } } },
-    select: {
-      questionScoreId: true,
-      type: true,
-      x: true,
-      y: true,
-      endX: true,
-      endY: true,
-      width: true,
-      height: true,
-      color: true,
-      strokeWidth: true,
-      lineStyle: true,
-      text: true,
-      fontSize: true,
-      displayX: true,
-      displayY: true,
-      anchorDirection: true,
-      questionScore: { select: { examStudentId: true, cropRegionId: true } },
-    },
+    include: { questionScore: true },
   })
 
   const annotationsByExamStudent = new Map<string, SnapshotAnnotation[]>()
@@ -297,7 +279,6 @@ export const captureReturnSnapshot = async (options: {
     // 返却版を空スコアで上書きしうる（08 で試験を切り替えた直後の stale な選択など）。
     const scopedExamStudents = await prisma.examStudent.findMany({
       where: { examId, id: { in: examStudentIds } },
-      select: { id: true },
     })
     const scopedExamStudentIds = new Set(
       scopedExamStudents.map((examStudent) => examStudent.id)
@@ -384,12 +365,6 @@ export const getReturnDiff = async (
 
     const snapshots = await prisma.returnSnapshot.findMany({
       where: { examStudent: { examId } },
-      select: {
-        examStudentId: true,
-        scoresJson: true,
-        totalScore: true,
-        capturedAt: true,
-      },
     })
     const snapshotByExamStudent = new Map(
       snapshots.map((snapshot) => [snapshot.examStudentId, snapshot])

@@ -41,11 +41,9 @@ export async function previewCourseworkImport(
   for (const coursework of normalized.courseworks) {
     const uuidMatch = await prisma.coursework.findUnique({
       where: { id: coursework.id },
-      select: { id: true, name: true },
     })
     const nameCandidates = await prisma.coursework.findMany({
       where: { name: coursework.name },
-      select: { id: true, name: true },
     })
     matches.push({
       archiveId: coursework.id,

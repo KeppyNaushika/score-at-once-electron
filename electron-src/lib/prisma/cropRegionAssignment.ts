@@ -84,7 +84,8 @@ export const getAssignmentsForExam = async (examId: string) => {
         cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
         user: { userExams: { some: { examId } } },
       },
-      include: { user: { select: { id: true, name: true, username: true } } },
+      // 作成者はパスコードだけを落として渡す（機密除去。縮小射影ではない）
+      include: { user: { omit: { passcode: true } } },
     })
     return { success: true as const, assignments }
   } catch (error) {
@@ -133,7 +134,7 @@ export const assignCropRegion = async (
         assignedBy: assignedByUserId,
       },
       update: { assignedBy: assignedByUserId },
-      include: { user: { select: { id: true, name: true, username: true } } },
+      include: { user: { omit: { passcode: true } } },
     })
 
     const userLabel = await resolveUserLabel(userId)

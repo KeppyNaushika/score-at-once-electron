@@ -56,11 +56,7 @@ export const deleteStudentClassroomMembership = async (
   try {
     const before = await prisma.studentClassroomMembership.findUnique({
       where: { id },
-      select: {
-        classroomId: true,
-        classroom: { select: { name: true } },
-        student: { select: { lastName: true, firstName: true } },
-      },
+      include: { classroom: true, student: true },
     })
 
     await prisma.studentClassroomMembership.delete({ where: { id } })

@@ -23,6 +23,7 @@
     "outDir": "../main",
     "paths": {
       "@/*": ["../src/*"],
+      "@/electron-src/*": ["../electron-src/*"],
       "@prisma/client": ["../generated/prisma/client"]
     }
   },

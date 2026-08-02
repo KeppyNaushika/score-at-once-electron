@@ -14,14 +14,14 @@ import type {
   ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 interface UseDragDropHandlersParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
   onFilesChange: (files: TItem[]) => void
   getEnabledFiles: () => TItem[]
   getDisabledFiles: () => TItem[]
-  students?: ExamStudentWithMemberships[]
+  students?: StudentAnswerDatasetExamStudent[]
   examPages?: ExamPageColumn[]
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy

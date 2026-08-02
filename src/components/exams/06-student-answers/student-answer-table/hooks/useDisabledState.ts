@@ -7,7 +7,7 @@ import type {
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { manualDisabledReason } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type { ExamPageColumn } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
  * 答案テーブルの行・列・セル単位の無効化状態と上書きモードを管理するフック。
@@ -20,7 +20,7 @@ export function useDisabledState({
   students,
   examPages,
 }: {
-  students: ExamStudentWithMemberships[]
+  students: StudentAnswerDatasetExamStudent[]
   examPages: ExamPageColumn[]
 }) {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
@@ -142,7 +142,7 @@ export function useDisabledState({
   }, [])
 
   const isCellDisabled = useCallback(
-    (examStudent: ExamStudentWithMemberships, examPage: CellColumn) => {
+    (examStudent: StudentAnswerDatasetExamStudent, examPage: CellColumn) => {
       return (
         manualDisabledReason(disabledState, examStudent, examPage) !== undefined
       )

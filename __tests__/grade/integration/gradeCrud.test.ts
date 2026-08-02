@@ -108,8 +108,8 @@ describe("Grade CRUD", () => {
 
       const result = await getAllGrades()
 
-      expect(result.grades![0]._count.gradeItems).toBe(1)
-      expect(result.grades![0]._count.gradeStudents).toBe(0)
+      expect(result.grades![0].gradeItems.length).toBe(1)
+      expect(result.grades![0].gradeStudents.length).toBe(0)
     })
   })
 

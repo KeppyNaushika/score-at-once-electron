@@ -8,9 +8,7 @@ import prisma from "./client"
 
 /** タグ側から引く形（紐づく小計点グループ名を表示するため同梱） */
 const tagSubtotalGroupWithSubtotalGroupInclude = {
-  subtotalGroup: {
-    select: { id: true, name: true },
-  },
+  subtotalGroup: true,
 } satisfies Prisma.TagSubtotalGroupInclude
 
 /** 小計点グループ同梱の TagSubtotalGroup（`getTagSubtotalGroups` の返り値） */
@@ -21,9 +19,7 @@ export type TagSubtotalGroupWithSubtotalGroup =
 
 /** 小計点グループ側から引く形（他のタグ紐付けと揃えてタグを同梱する） */
 export const tagSubtotalGroupWithTagInclude = {
-  tag: {
-    select: { id: true, name: true, color: true },
-  },
+  tag: true,
 } satisfies Prisma.TagSubtotalGroupInclude
 
 /** タグ同梱の TagSubtotalGroup（`setSubtotalGroupTags` の返り値） */

@@ -11,10 +11,38 @@ export const cropSubtotalWithRegionAndSubtotalInclude = {
   subtotal: true,
 } satisfies Prisma.CropSubtotalInclude
 
+/**
+ * 小計に割り当てられた設問領域（配点と所属試験まで）。
+ *
+ * 小計点の算出と満点のライブ算出は、どちらもこの行だけを読む。SubtotalGroup は複数の
+ * 試験で共有されうるので、どの試験の設問かは `cropRegion.examPage.examId` で判別する。
+ */
+export const subtotalWithQuestionAssignmentsInclude = {
+  cropSubtotals: {
+    where: {
+      assignmentType: "QUESTION_ASSIGNMENT",
+      cropRegion: { type: "QUESTION_ANSWER" },
+    },
+    include: { cropRegion: { include: { examPage: true } } },
+  },
+} satisfies Prisma.SubtotalInclude
+
 export const cropSubtotalWithSubtotalGroupInclude = {
+  subtotal: { include: { subtotalGroup: true } },
+} satisfies Prisma.CropSubtotalInclude
+
+/**
+ * 小計点領域（SUBTOTAL_SCORE）の得点算出に使う形。
+ *
+ * 紐づく各小計の設問割り当てまで辿るので、小計ごとの追加クエリが要らない。
+ * 04-question-group が使う `cropSubtotalWithSubtotalGroupInclude` とは分ける
+ * （あちらは subtotalId しか読まないので、割り当てグラフを IPC で送る意味がない）。
+ */
+export const cropSubtotalForScoringInclude = {
   subtotal: {
     include: {
       subtotalGroup: true,
+      ...subtotalWithQuestionAssignmentsInclude,
     },
   },
 } satisfies Prisma.CropSubtotalInclude
@@ -49,11 +77,7 @@ export const createCropSubtotal = async (
   // データ整合性チェック
   const cropRegion = await prisma.cropRegion.findUnique({
     where: { id: data.cropRegionId },
-    include: {
-      examPage: {
-        select: { examId: true },
-      },
-    },
+    include: { examPage: true },
   })
 
   if (!cropRegion) {
@@ -103,11 +127,7 @@ export const createManyCropSubtotals = async (
   for (const item of data) {
     const cropRegion = await prisma.cropRegion.findUnique({
       where: { id: item.cropRegionId },
-      include: {
-        examPage: {
-          select: { examId: true },
-        },
-      },
+      include: { examPage: true },
     })
 
     if (!cropRegion) {
@@ -175,43 +195,20 @@ export const getCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
   })
 }
 
+/** 小計点領域に紐づく小計を、設問割り当てまで含めて取得する（得点算出用） */
+export const getCropSubtotalsForScoring = async (cropRegionId: string) => {
+  return prisma.cropSubtotal.findMany({
+    where: { cropRegionId },
+    include: cropSubtotalForScoringInclude,
+  })
+}
+
 /** 小計項目IDで設問-小計紐付けを取得する（cropRegion.examPage リレーション含む） */
 export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
   return prisma.cropSubtotal.findMany({
     where: { subtotalId },
     include: cropSubtotalWithRegionPageInclude,
   })
-}
-
-/**
- * 複数の小計項目の設問割り当てを1クエリでまとめて引く。
- *
- * 生徒×小計のループの内側で `getCropSubtotalsBySubtotalId` を呼ぶと
- * 生徒数×小計数のクエリが飛ぶ。割り当ては生徒に依らないのでループの外で1回引く。
- *
- * @returns 小計 id → 割り当てられた設問領域 id。id を渡した小計は必ずキーに現れる
- */
-export const getQuestionAssignmentsBySubtotalIds = async (
-  subtotalIds: string[]
-): Promise<Map<string, string[]>> => {
-  const assignmentsBySubtotalId = new Map<string, string[]>(
-    subtotalIds.map((subtotalId) => [subtotalId, []])
-  )
-  if (subtotalIds.length === 0) return assignmentsBySubtotalId
-
-  const cropSubtotals = await prisma.cropSubtotal.findMany({
-    where: {
-      subtotalId: { in: subtotalIds },
-      assignmentType: "QUESTION_ASSIGNMENT",
-    },
-    select: { subtotalId: true, cropRegionId: true },
-  })
-  for (const cropSubtotal of cropSubtotals) {
-    assignmentsBySubtotalId
-      .get(cropSubtotal.subtotalId)
-      ?.push(cropSubtotal.cropRegionId)
-  }
-  return assignmentsBySubtotalId
 }
 
 /** 設問領域IDでSUBTOTAL_DEFINITION型の紐付けを取得する（旧SubtotalDefinition互換） */
@@ -232,25 +229,3 @@ export const getSubtotalDefinitionsByCropRegionId = async (
     },
   })
 }
-
-/** getCropSubtotalsByCropRegionIdの戻り値型 */
-export type CropSubtotalWithSubtotal = Prisma.CropSubtotalGetPayload<{
-  include: {
-    subtotal: {
-      include: {
-        subtotalGroup: true
-      }
-    }
-  }
-}>
-
-/** getCropSubtotalsBySubtotalIdの戻り値型 */
-export type CropSubtotalWithCropRegion = Prisma.CropSubtotalGetPayload<{
-  include: {
-    cropRegion: {
-      include: {
-        examPage: true
-      }
-    }
-  }
-}>

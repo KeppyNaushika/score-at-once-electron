@@ -23,7 +23,6 @@ export async function exportCoursework(
 ): Promise<ExportCourseworkArchiveResult> {
   const coursework = await prisma.coursework.findUnique({
     where: { id: options.courseworkId },
-    select: { id: true, name: true },
   })
   if (!coursework) {
     return { success: false, error: "試験外成績資料が見つかりません" }

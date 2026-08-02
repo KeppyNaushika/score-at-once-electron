@@ -34,8 +34,8 @@
 | 保留   | `get-exam-decision-summary`                                            | 再判定（§8）。旧判定は §5 |
 | 保留   | `getStudentAnswerScoreSummary`                                         | 再判定（§8）。旧判定は §5 |
 | 保留   | `grade:classroomRemovalPreview` / `coursework:classroomRemovalPreview` | 再判定（§8）。旧判定は §5 |
-| 違反   | `_count`（本番 9 箇所）                                                | **§8.2**                  |
-| 違反   | 縮小射影 `select`（259 箇所 / 52 ファイル）                            | **§8.3**                  |
+| 違反   | `_count`（本番 9 箇所）                                                | ✅ 撤去済み（§8.2）       |
+| 違反   | 縮小射影 `select`（280 箇所 / 52 ファイル）                            | ✅ 撤去済み（§8.3）       |
 
 §5 には当初の調査記録（実装の所在・入力の内訳）を残してある。結論は採らないが、再調査の手間は省ける。
 
@@ -464,86 +464,120 @@ preload に受信側だけがある（`electron-src/preload-apis/exportApi.ts:13
 
 ---
 
-## 8. 残計画: 縮小射影と `_count` の撤去
+## 8. 実施済み: 縮小射影と `_count` の撤去
 
 §2・§3 の作業中に、より根の深い規約違反が判明した。**用途ごとに `select` で行を細く削っているため、
-同じデータを取るクエリが複数生まれ、互いに知らないまま同じ計算を二重に持っている。**
+同じデータを取るクエリが複数生まれ、互いに知らないまま同じ計算を二重に持っていた。**
 
 ### 8.1 判定基準
 
-| 種別                                        | 扱い     | 理由                                                        |
-| ------------------------------------------- | -------- | ----------------------------------------------------------- |
-| 行の列を削る `select`（縮小射影）           | **撤去** | 規約「Prisma include の出力を射影せずそのまま持つ」に反する |
-| `_count`                                    | **撤去** | 件数は計算値。main で計算して渡すのは §352-361 違反         |
-| `_count: { select: ... }` の内側の `select` | 上に同じ | `_count` ごと消えるので個別判断は不要                       |
+| 種別                              | 扱い     | 理由                                                        |
+| --------------------------------- | -------- | ----------------------------------------------------------- |
+| 行の列を削る `select`（縮小射影） | **撤去** | 規約「Prisma include の出力を射影せずそのまま持つ」に反する |
+| `_count`                          | **撤去** | 件数は計算値。main で計算して渡すのは §352-361 違反         |
+| 機密の除去（`User.passcode` 等）  | **残す** | §370 の「機密除去」。ただし `select` ではなく `omit` で書く |
 
-### 8.2 `_count` の撤去（本番 9 箇所）
+**縮小射影と機密除去は見た目が同じで意図が違う。** 前者は表示に要る列だけを残す縮小で、
+後者は渡してはいけない列だけを落とす。`omit` で書けば、コードを読んだだけで区別がつく。
 
-| 実装                        | 数えているもの             | renderer 側の消費                                             |
-| --------------------------- | -------------------------- | ------------------------------------------------------------- |
-| `grade.ts:33,71`            | gradeStudents / gradeItems | `GradeListContainer.tsx:323`、`gradeStatus.ts:36`             |
-| `coursework.ts:48,91`       | items / students           | `CourseworkListContainer.tsx:410`、`CourseworkDetail.tsx:156` |
-| `coursework.ts:87,297,350`  | scores / gradeDataSources  | `gradeStatus.ts:57`（0 件判定）                               |
-| `gradeDataSource.ts:65`     | scores / gradeDataSources  | 同上                                                          |
-| `examStudent.ts:51`         | studentAnswerImages        | `SortableStudentTableContainer.tsx:155`                       |
-| `studentAnswer/crud.ts:383` | studentAnswerImages        | 同上                                                          |
+### 8.2 `_count` の撤去（実施済み）
 
-対応は `include` でリレーションを渡し切り、renderer で `.length` を取る。既に `gradeDataSource.ts:84`
-がその方針を宣言している。
+| 実装                        | 対応                                                      |
+| --------------------------- | --------------------------------------------------------- |
+| `grade.ts:33,71`            | `gradeStudents: true`（`gradeItems` は既に include 済み） |
+| `coursework.ts` × 5         | `items` / `students` を行で同梱。`scores` 側は消費者ゼロ  |
+| `gradeDataSource.ts:65`     | `scores: true`（`gradeDataSources` は消費者ゼロ）         |
+| `examStudent.ts:51`         | `studentAnswerImages: true`                               |
+| `studentAnswer/crud.ts:383` | 同上                                                      |
 
-**要注意**: `examStudent._count.studentAnswerImages` は答案画像を全行運ぶことになる。
-`prismaExtensions.ts:75` に「Prisma スキーマに完全追随する」という設計意図のコメントがあるので、
-撤去前にそこを読むこと。
+renderer 側は `.length` へ。型宣言（`grade.types` / `coursework.types` / `prismaExtensions`）から
+`_count` を落とした。
 
-### 8.3 縮小射影 `select` の撤去（259 箇所 / 52 ファイル）
+**`_count.gradeDataSources` は本番・renderer とも参照ゼロだった。** 行を渡す形へ置き換えるまでもなく
+撤去できた（`_count` を足すのは安いので、要るか確かめずに足されていた）。
 
-実測 280 箇所のうち `_count` 絡み 21 箇所を除いた残り。上位ファイルは
-`drawingAnnotation.ts`(42) / `coursework.ts`(26) / `gradeDataSource.ts`(22) / `exam.ts`(17) /
-`auditScope.ts`(16)。
+### 8.3 縮小射影 `select` の撤去（実施済み・280 箇所 / 52 ファイル）
 
-**性能を理由に列を絞っている箇所がある。** 例: `scoreDecisionSummary.ts:47`
-「採点行は試験全体で数万行になりうるので、リゾルバに要る列だけを引く」。ここを `include` にすると
-数万行 × 全列が main のメモリに乗る。**規約の是正が性能後退になる**ケースなので、
-一律置換ではなく 1 件ずつ判断すること。
+`electron-src` 配下の `select:` は **0 件**になった。置換の型は 3 つ。
 
-### 8.4 先に潰すべき統合（§8 の入口）
+1. **`select` を消して行ごと取る** — 存在確認（`select: { id: true }`）や監査ログの before 取得。
+   `diffFields` は前後とも行そのものを渡す形に揃えた（片方だけ手書きの literal だと型が食い違う）
+2. **`include` へ置換** — リレーションを辿る射影。`{ examPage: { select: { examId: true } } }`
+   → `{ examPage: true }`
+3. **`omit` へ置換** — `User` から `passcode` を落とす経路（描画アノテーション・監査ログ・
+   採点担当・確定サマリ・招待検索・アーカイブ出力）
 
-`cropSubtotal` に対する 2 本のクエリを 1 本へ。
+**副次的に消えたもの**
 
+- `drawingAnnotation.ts` の include が経路ごとに 4 種類に分岐していた。1 つでも
+  `examStudentId` を落とすと `as` で潰した型が通ってしまい、注釈が実行時に消える。
+  SSOT 2 本（作成者のみ / 文脈つき）へ畳んだ
+- `AnnotationWithContext` / `DrawingAnnotationWithQuestionScore` が Prisma のカラムを
+  手書きで複製していた。`GetPayload<typeof include>` からの導出へ。後者は前者と同型に
+  なったので撤去
+- `GradeDataSourceMaxScoreRef`（縮小 Pick）と `computeLiveMaxScore` を撤去
+- `GradeDataSourceWithRelations` の `exam` / `subtotal` / `cropRegion` / `coursework` が
+  `Pick` で 3 列に絞られていた。include 出力からの導出へ
+- `SubtotalGroupData`（手書きの縮小射影）を撤去し、Prisma の payload をそのまま持つ形へ
+
+**Decimal の越境に注意。** 行ごと渡すと `QuestionScore.partialScore` のような Decimal が
+IPC に乗る。描画アノテーションの返却経路には `serializePrisma` を追加した。
+
+**性能について。** 行数は変わらず列が増えるだけなので、クエリの本数・結合の形は同じ。
+ただし次の 2 経路はペイロードが目に見えて増える。実測して問題が出たら
+「機密除去でも縮小射影でもない第三の理由」として明示的に絞り直すこと。
+
+| 経路                      | 増える分                                     |
+| ------------------------- | -------------------------------------------- |
+| `exam.ts` の試験一覧      | 採点行 1 行あたり 5 列（試験数×受験者×設問） |
+| `scoreDecisionSummary.ts` | 同上（試験全体で数万行になりうる）           |
+
+### 8.4 `cropSubtotal` 2 本のクエリの統合（実施済み）
+
+満点のライブ算出と設問割り当ての取得が、**同じ行を射影違いで 2 回引いていた**。
+`Subtotal` に割り当てを同梱する SSOT include を作り 1 本へ畳んだ。
+
+```ts
+// cropSubtotal.ts
+export const subtotalWithQuestionAssignmentsInclude = {
+  cropSubtotals: {
+    where: {
+      assignmentType: "QUESTION_ASSIGNMENT",
+      cropRegion: { type: "QUESTION_ANSWER" },
+    },
+    include: { cropRegion: { include: { examPage: true } } },
+  },
+} satisfies Prisma.SubtotalInclude
 ```
-現状:
-  A) computeLiveMaxScore（満点）        — データソース1件ごと
-     select: { cropRegion: { points, examPage: { examId } } }
-  B) getQuestionAssignmentsBySubtotalIds — 一括1本
-     select: { subtotalId, cropRegionId }
 
-あるべき姿:
-  buildGradeCalcContext の findUnique の include に
-    subtotal: { include: { cropSubtotals: { include: { cropRegion: { include: { examPage: true } } } } } }
-  を足す → 各データソースが自分の割り当てを最初から持つ
-```
+同時に消えたもの:
 
-これで次が同時に消える。
-
-- `getQuestionAssignmentsBySubtotalIds`（丸ごと不要）
-- `computeLiveMaxScore` の subtotal 分岐（§3 Step 4 が副産物として完了）
-- `Map<subtotalId, ...>`（実体を持てば id 索引が要らない）
+- `getQuestionAssignmentsBySubtotalIds`（丸ごと）
+- `computeLiveMaxScore`（丸ごと。呼び出し元は成績算出 1 箇所だけだった）
+- `Map<subtotalId, string[]>` と `Map<groupId, string[]>`（実体を持てば id 索引が要らない）
 - `computeSubtotalScore` 内の `cropRegions.find()`（行から直接 `points` を読める）
+- §3 Step 4（満点の prefetch）は不要になった
 
-**`Map` を持ち出すこと自体が「実体ではなく id を持っている」徴候。** 規約 §178 は Map を
+**`Map` を持ち出すこと自体が「実体ではなく id を持っている」徴候だった。** 規約 §178 は Map を
 「どうしても id state なら」の逃げ道として許すだけで、本筋は最初から実体を持つこと。
 
----
+純粋関数の入口も変えた。`computeSubtotalScore(examStudentId, examId, scores, questionAssignments)`
+— 割り当ては id の配列ではなく行の配列で受け取る。試験横断の絞り込みは
+`cropRegion.examPage.examId` で行う（従来は「その試験の設問領域 id 集合」との突き合わせだった）。
 
 ## 9. 残計画: §3 Step 4-6（成績算出の分割）
 
 §8.4 を先にやると Step 4 は不要になる。Step 5・6 は §3.10 の記述がそのまま使える。
 
-| Step | 内容                     | 前提                |
-| ---- | ------------------------ | ------------------- |
-| 4    | 満点の prefetch          | **§8.4 で消滅**     |
-| 5    | 取得と計算のファイル分割 | §8.4 の後にやると楽 |
-| 6    | IPC 付け替え             | Step 5 の後         |
+| Step | 内容                     | 状態                       |
+| ---- | ------------------------ | -------------------------- |
+| 4    | 満点の prefetch          | ✅ §8.4 で消滅（実施不要） |
+| 5    | 取得と計算のファイル分割 | 未着手                     |
+| 6    | IPC 付け替え             | 未着手（Step 5 の後）      |
+
+§8 で `gradeCalculator.ts` の prisma 依存は次の 3 クエリだけになった
+（`grade.findUnique` / `gradeStudent.findMany` / 試験ごとの `examStudent`・`examPage`）。
+Step 5 はこの 3 本を `prisma/gradeCalcFetcher.ts` へ移すだけになる。
 
 ---
 
@@ -553,11 +587,13 @@ preload に受信側だけがある（`electron-src/preload-apis/exportApi.ts:13
 
 | 箇所                                   | 内容                                                        | 由来         |
 | -------------------------------------- | ----------------------------------------------------------- | ------------ |
-| `subtotalCalculator.ts:66`             | 生徒×小計ごとに試験全体の採点配列を再フィルタ（二乗）       | 本計画で新設 |
+| `subtotalCalculator.ts:95`             | 生徒×小計ごとに試験全体の採点配列を再フィルタ（二乗）       | 本計画で新設 |
 | `individual-report/dataFetcher.ts:116` | 小計を 3 重に算出（`fetchExportData` の結果を捨てて再計算） | 既存         |
 | `pdfExport.ts:317`                     | 採点済み答案 PDF だけ N×領域のクエリのまま                  | 既存         |
 
-`subtotalCalculator.ts:66` は §8.4 で行に `points` が同梱されれば自然に解ける見込み。
+`subtotalCalculator.ts:95` は **§8.4 では解けなかった**。同梱で消えたのは配点の `find()` であって、
+生徒で採点行を絞る `filter` は残っている（見込みが外れた）。生徒 id をキーにした索引を
+呼び出し側で 1 回作って渡す形にしないと消えない。
 
 ---
 
@@ -573,6 +609,16 @@ preload に受信側だけがある（`electron-src/preload-apis/exportApi.ts:13
 
 §2 は 22 ファイルを触ったが、配線は typecheck しか通っていない。**実画面での確認（プレビュー・
 PDF 出力・生徒切り替え・受験状態フィルタ）が済むまで、テストが緑でも動作は保証されない。**
+
+§8 で IPC の返却形状が広範に変わったため、**この穴は §8 の分だけ広がっている。**
+特に次は自動テストが 1 本も通っていない:
+
+| 経路                                          | 変更内容                                   |
+| --------------------------------------------- | ------------------------------------------ |
+| 07 採点画面の注釈（個別・グリッド・ブラウザ） | include を SSOT 2 本へ畳み、payload が変化 |
+| 05 受験生徒の答案枚数列                       | `_count` → `.length`                       |
+| 成績・資料の一覧／詳細の件数表示              | `_count` → `.length`                       |
+| 04 設問グループの割り当てマトリクス           | `cropSubtotals` 同梱で payload が変化      |
 
 成績結果表も同様で、`resolveOverrideDirection` の純粋関数テストはあるが `ResultsTable` /
 `EditableGradeLabel` の描画テストは無い。

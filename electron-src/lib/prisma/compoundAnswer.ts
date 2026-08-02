@@ -55,7 +55,6 @@ export async function upsertCompoundAnswerScore(data: {
   // 採点（複合解答）。同じ複合解答×操作者の連続採点を集約する。
   const compoundAnswer = await prisma.compoundAnswer.findUnique({
     where: { id: data.compoundAnswerId },
-    select: { examPageId: true },
   })
   const scope = compoundAnswer
     ? await resolveExamScopeByPage(compoundAnswer.examPageId)

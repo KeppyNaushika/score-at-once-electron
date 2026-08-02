@@ -9,12 +9,14 @@ import type { FileState } from "@/components/exams/06-student-answers/student-an
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
 import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
 import type {
-  ExamStudentWithMemberships,
   StudentAnswerDatasetExamPage,
+  StudentAnswerDatasetExamStudent,
 } from "@/types/prismaExtensions"
 
 export function useStudentAnswersData(examId: string) {
-  const [students, setStudents] = useState<ExamStudentWithMemberships[]>([])
+  const [students, setStudents] = useState<StudentAnswerDatasetExamStudent[]>(
+    []
+  )
   // 列＝ExamPage 実体（配置済み答案を子に持つ）を Prisma include のまま保持する。
   const [examPages, setExamPages] = useState<StudentAnswerDatasetExamPage[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -57,7 +59,7 @@ export function useStudentAnswersData(examId: string) {
 
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
-  students?: ExamStudentWithMemberships[],
+  students?: StudentAnswerDatasetExamStudent[],
   examPages?: StudentAnswerDatasetExamPage[]
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])

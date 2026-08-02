@@ -15,8 +15,7 @@ import type {
 } from "../../../../src/types/grade.types"
 import { toGradeDataSourceType } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
-import { getQuestionAssignmentsBySubtotalIds } from "../../prisma/cropSubtotal"
-import { computeLiveMaxScore } from "../../prisma/gradeDataSource"
+import { subtotalWithQuestionAssignmentsInclude } from "../../prisma/cropSubtotal"
 import {
   adjustEstimate,
   applyAdjustmentAndClamp,
@@ -26,6 +25,7 @@ import {
 import { findExamStudentScores } from "./examScoreCalculator"
 import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
 import { gradeStudentForCalcInclude } from "./gradeCalculatorTypes"
+import { computeMaxScoreFromPayload } from "./gradeDataSourceMaxScore"
 import { determineGradeLabel } from "./gradeLabel"
 import { findCourseworkStudentScore, getRawScore } from "./rawScoreCalculator"
 import type { RawScoreCell, RawScoreRow } from "./rawScoreMatrix"
@@ -50,8 +50,19 @@ async function buildGradeCalcContext(gradeId: string) {
         include: {
           dataSources: {
             include: {
-              exam: true,
-              subtotal: true,
+              // 満点は元データからライブ算出する。その元データ（設問配点 / 評価項目満点）を
+              // データソースの行に同梱し、算出のための追加クエリを立てない。
+              exam: {
+                include: {
+                  examPages: {
+                    include: {
+                      cropRegions: { where: { type: "QUESTION_ANSWER" } },
+                    },
+                  },
+                },
+              },
+              // 小計の設問割り当て。満点も素点もこの行から読む
+              subtotal: { include: subtotalWithQuestionAssignmentsInclude },
               cropRegion: true,
               estimationSources: { orderBy: { order: "asc" } },
               // 点数は資料の対象者（CourseworkStudent）経由でのみ引ける。
@@ -130,31 +141,7 @@ async function buildGradeCalcContext(gradeId: string) {
     const [examStudentRows, examPages] = await Promise.all([
       prisma.examStudent.findMany({
         where: { examId },
-        select: {
-          id: true,
-          studentId: true,
-          status: true,
-          questionScores: {
-            select: {
-              id: true,
-              examStudentId: true,
-              cropRegionId: true,
-              status: true,
-              partialScore: true,
-              updatedAt: true,
-            },
-          },
-          scoreDecisions: {
-            select: {
-              examStudentId: true,
-              cropRegionId: true,
-              verdict: true,
-              score: true,
-              decidedAt: true,
-              sourceQuestionScoreId: true,
-            },
-          },
-        },
+        include: { questionScores: true, scoreDecisions: true },
       }),
       prisma.examPage.findMany({
         where: { examId: examId },
@@ -192,11 +179,13 @@ async function buildGradeCalcContext(gradeId: string) {
 
   // 満点は元データ（設問配点 / 評価項目満点）からライブ算出する。
   // GradeDataSource.maxScore 列のスナップショットは使わない（元データ追従）。
-  // 生徒ループの外で1ソース1回だけ算出してマップ化する。
-  const liveMaxScoreMap = new Map<string, number>()
-  for (const dataSource of allDataSources) {
-    liveMaxScoreMap.set(dataSource.id, await computeLiveMaxScore(dataSource))
-  }
+  // 元データは行に同梱済みなので同期算出で足りる。
+  const liveMaxScoreMap = new Map(
+    allDataSources.map((dataSource) => [
+      dataSource.id,
+      computeMaxScoreFromPayload(dataSource),
+    ])
+  )
 
   // DataSource情報をまとめる（推定で使用）
   const dataSourceInfos: DataSourceInfo[] = allDataSources.map((dataSource) => {
@@ -220,28 +209,13 @@ async function buildGradeCalcContext(gradeId: string) {
     dataSourceInfos.map((dataSourceInfo) => [dataSourceInfo.id, dataSourceInfo])
   )
 
-  // subtotal 型ソースの設問割り当ては生徒に依らないので、素点収集の前に1回だけ引く。
-  // 以前は生徒×ソースのループ内で引いており、対象者数×ソース数のクエリが飛んでいた。
-  const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
-    allDataSources.flatMap((dataSource) =>
-      dataSource.type === "subtotal" && dataSource.subtotalId
-        ? [dataSource.subtotalId]
-        : []
-    )
-  )
-
   // === パス1: 全対象者 × 全DataSourceの rawScore を収集して素点行列を組む ===
   const rawScoreRows: RawScoreRow[] = []
 
   for (const gradeStudent of gradeStudents) {
     const cells: RawScoreCell[] = []
     for (const dataSource of allDataSources) {
-      let raw = getRawScore(
-        gradeStudent.studentId,
-        dataSource,
-        examDataCache,
-        questionAssignments
-      )
+      let raw = getRawScore(gradeStudent.studentId, dataSource, examDataCache)
 
       // 見込→欠測対応: treatExpectedAsMissing が true かつ
       // その試験の ExamStudent.status === "expected" → null扱い

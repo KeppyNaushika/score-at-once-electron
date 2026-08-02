@@ -38,7 +38,7 @@ import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
-import type { GradeWithRelations } from "@/types/grade.types"
+import type { GradeSummary } from "@/types/grade.types"
 import type {
   GradeArchiveData,
   GradeArchiveImportPreview,
@@ -59,7 +59,7 @@ const STEP_ICONS: Record<
 }
 
 /** 成績算出一覧のフィルタ対象値（名前・説明・学級名／学級／基準日） */
-const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeWithRelations> = {
+const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeSummary> = {
   searchTexts: (grade) => [
     grade.name,
     grade.description,
@@ -79,7 +79,7 @@ const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeWithRelations> = {
  */
 export function GradeListContainer() {
   const router = useRouter()
-  const [grades, setGrades] = useState<GradeWithRelations[]>([])
+  const [grades, setGrades] = useState<GradeSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
@@ -320,10 +320,8 @@ export function GradeListContainer() {
                           <div className="text-sm text-muted-foreground">
                             {classNames || "学級未登録"}
                             {" / "}
-                            生徒: {grade._count?.gradeStudents ?? 0}名 /
-                            評価項目:{" "}
-                            {grade._count?.gradeItems ??
-                              grade.gradeItems.length}
+                            生徒: {grade.gradeStudents.length}名 / 評価項目:{" "}
+                            {grade.gradeItems.length}
                           </div>
                         </div>
                       </TableCell>

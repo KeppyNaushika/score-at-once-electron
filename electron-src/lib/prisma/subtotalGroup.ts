@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
@@ -20,21 +21,28 @@ export const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
   subtotals: {
     orderBy: { order: "asc" },
   },
-  examSubtotalGroups: {
-    include: {
-      exam: {
-        select: {
-          id: true,
-          examName: true,
-        },
-      },
-    },
-  },
+  examSubtotalGroups: { include: { exam: true } },
   tagSubtotalGroups: {
     include: tagSubtotalGroupWithTagInclude,
     orderBy: { tag: { order: "asc" } },
   },
 } satisfies Prisma.SubtotalGroupInclude
+
+/**
+ * 小計点の算出に使う SubtotalGroup の include。
+ * 各小計は自分の設問割り当てを持つので、小計点も満点も追加クエリ無しで算出できる。
+ */
+export const subtotalGroupForScoringInclude = {
+  subtotals: {
+    include: subtotalWithQuestionAssignmentsInclude,
+    orderBy: { order: "asc" },
+  },
+} satisfies Prisma.SubtotalGroupInclude
+
+/** 設問割り当てまで含む SubtotalGroup（getActiveSubtotalGroupsForExam の返り値） */
+export type SubtotalGroupForScoring = Prisma.SubtotalGroupGetPayload<{
+  include: typeof subtotalGroupForScoringInclude
+}>
 
 /** subtotals を含む SubtotalGroup（create/update/available の返り値） */
 export type SubtotalGroupWithSubtotals = Prisma.SubtotalGroupGetPayload<{
@@ -183,25 +191,8 @@ export async function deleteSubtotalGroup(id: string) {
         },
       },
       include: {
-        cropRegion: {
-          include: {
-            examPage: {
-              include: {
-                exam: {
-                  select: {
-                    id: true,
-                    examName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        subtotal: {
-          select: {
-            name: true,
-          },
-        },
+        cropRegion: { include: { examPage: { include: { exam: true } } } },
+        subtotal: true,
       },
     })
 
@@ -240,7 +231,6 @@ export async function deleteSubtotalGroup(id: string) {
 
     const before = await prisma.subtotalGroup.findUnique({
       where: { id },
-      select: { name: true },
     })
 
     // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
@@ -314,15 +304,7 @@ export async function getActiveSubtotalGroupsForExam(examId: string) {
       where: {
         examId,
       },
-      include: {
-        subtotalGroup: {
-          include: {
-            subtotals: {
-              orderBy: { order: "asc" },
-            },
-          },
-        },
-      },
+      include: { subtotalGroup: { include: subtotalGroupForScoringInclude } },
       orderBy: {
         subtotalGroup: {
           name: "asc",
@@ -400,19 +382,7 @@ export async function removeSubtotalGroupFromExam(
           },
         },
       },
-      include: {
-        cropRegion: {
-          select: {
-            label: true,
-            orderIndex: true,
-          },
-        },
-        subtotal: {
-          select: {
-            name: true,
-          },
-        },
-      },
+      include: { cropRegion: true, subtotal: true },
     })
 
     // 実際に使用されている場合は削除を防ぐ
@@ -458,11 +428,6 @@ export async function getSubtotalGroupSelection(examId: string) {
   try {
     const links = await prisma.examSubtotalGroup.findMany({
       where: { examId },
-      select: {
-        subtotalGroupId: true,
-        selectedForTable: true,
-        selectedForBoxPlot: true,
-      },
     })
     return {
       success: true as const,

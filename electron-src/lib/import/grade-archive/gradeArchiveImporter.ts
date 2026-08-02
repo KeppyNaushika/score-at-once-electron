@@ -69,13 +69,11 @@ export async function previewGradeArchiveImport(
     data.examRefs.map(async (examRef) => {
       const byId = await prisma.exam.findUnique({
         where: { id: examRef.id },
-        select: { id: true },
       })
       const exams = byId
         ? [byId]
         : await prisma.exam.findMany({
             where: { examName: examRef.examName },
-            select: { id: true },
           })
       return {
         examName: examRef.examName,
@@ -120,9 +118,7 @@ export async function previewGradeArchiveImport(
       })
     }
   }
-  const existingStudents = await prisma.student.findMany({
-    select: { id: true, studentNumber: true },
-  })
+  const existingStudents = await prisma.student.findMany({})
   const existingStudentIds = new Set(
     existingStudents.map((student) => student.id)
   )
@@ -147,13 +143,11 @@ export async function previewGradeArchiveImport(
       // uuid 完全一致（同一PC由来）
       const uuidMatch = await prisma.coursework.findUnique({
         where: { id: courseworkPreview.id },
-        select: { id: true, name: true },
       })
       // 名前一致候補（名前は非ユニークなので複数あり得る。uuid一致は除外）
       const nameCandidates = (
         await prisma.coursework.findMany({
           where: { name: courseworkPreview.name },
-          select: { id: true, name: true },
         })
       ).filter((coursework) => coursework.id !== uuidMatch?.id)
       return {
@@ -194,7 +188,6 @@ async function resolveExams(
   for (const examRef of examRefs) {
     const byId = await tx.exam.findUnique({
       where: { id: examRef.id },
-      select: { id: true },
     })
     if (byId) {
       map.set(examRef.id, byId.id)
@@ -209,7 +202,6 @@ async function resolveExams(
     // ユーザーがウィザードで指定していない場合の最後の手段として先頭を採る
     const byName = await tx.exam.findFirst({
       where: { examName: examRef.examName },
-      select: { id: true },
     })
     if (byName) {
       map.set(examRef.id, byName.id)
@@ -304,7 +296,6 @@ export async function importGradeArchive(
         for (const subtotalRef of data.subtotalRefs) {
           const byId = await tx.subtotal.findUnique({
             where: { id: subtotalRef.id },
-            select: { id: true },
           })
           if (byId) {
             subtotalIdMap.set(subtotalRef.id, byId.id)
@@ -317,7 +308,6 @@ export async function importGradeArchive(
               name: subtotalRef.name,
               subtotalGroup: { examSubtotalGroups: { some: { examId } } },
             },
-            select: { id: true },
           })
           if (byName) subtotalIdMap.set(subtotalRef.id, byName.id)
         }
@@ -326,7 +316,6 @@ export async function importGradeArchive(
         for (const cropRegionRef of data.cropRegionRefs) {
           const byId = await tx.cropRegion.findUnique({
             where: { id: cropRegionRef.id },
-            select: { id: true },
           })
           if (byId) {
             cropRegionIdMap.set(cropRegionRef.id, byId.id)
@@ -336,7 +325,6 @@ export async function importGradeArchive(
           if (!examId) continue
           const byLabel = await tx.cropRegion.findFirst({
             where: { label: cropRegionRef.label, examPage: { examId } },
-            select: { id: true },
           })
           if (byLabel) cropRegionIdMap.set(cropRegionRef.id, byLabel.id)
         }
@@ -350,7 +338,6 @@ export async function importGradeArchive(
         for (const archiveCoursework of data.courseworkArchive.courseworks) {
           const byId = await tx.coursework.findUnique({
             where: { id: archiveCoursework.id },
-            select: { id: true },
           })
           if (byId) {
             courseworkIdMap.set(archiveCoursework.id, byId.id)
@@ -358,7 +345,6 @@ export async function importGradeArchive(
           }
           const byName = await tx.coursework.findFirst({
             where: { name: archiveCoursework.name },
-            select: { id: true },
           })
           if (byName) courseworkIdMap.set(archiveCoursework.id, byName.id)
         }
@@ -371,7 +357,6 @@ export async function importGradeArchive(
           if (!archiveItem) continue
           const actualItem = await tx.courseworkItem.findUnique({
             where: { id: actualItemId },
-            select: { courseworkId: true },
           })
           if (actualItem) {
             courseworkIdMap.set(
@@ -598,7 +583,6 @@ export async function importGradeArchive(
             ? ((
                 await tx.user.findUnique({
                   where: { id: archiveFrozenScore.frozenByUserId },
-                  select: { id: true },
                 })
               )?.id ?? null)
             : null

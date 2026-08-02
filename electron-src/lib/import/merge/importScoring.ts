@@ -302,7 +302,6 @@ export async function processCropRegionAssignments(
   ]
   const resolvedUsers = await tx.user.findMany({
     where: { username: { in: usernames } },
-    select: { id: true, username: true },
   })
   const userIdByUsername = new Map(
     resolvedUsers.map((user) => [user.username, user.id])

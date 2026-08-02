@@ -39,13 +39,11 @@ export async function assertGradeCellsInSameGrade(
       where: {
         id: { in: [...new Set(cells.map((cell) => cell.gradeStudentId))] },
       },
-      select: { id: true, gradeId: true },
     }),
     client.gradeItem.findMany({
       where: {
         id: { in: [...new Set(cells.map((cell) => cell.gradeItemId))] },
       },
-      select: { id: true, gradeId: true },
     }),
   ])
 

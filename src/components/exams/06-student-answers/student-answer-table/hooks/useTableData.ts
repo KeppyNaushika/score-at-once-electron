@@ -15,16 +15,16 @@ import type {
   ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 interface UseTableDataParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
-  students: ExamStudentWithMemberships[]
+  students: StudentAnswerDatasetExamStudent[]
   examPages: ExamPageColumn[]
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   isCellDisabled: (
-    examStudent: ExamStudentWithMemberships,
+    examStudent: StudentAnswerDatasetExamStudent,
     examPage: ExamPageColumn
   ) => boolean
   mode?: "upload" | "view"
@@ -65,7 +65,10 @@ export function useTableData<TItem extends AnswerImageIdentity>({
 
   // 手動無効化 + 動的無効化を合わせたセル無効判定
   const enhancedIsCellDisabled = useCallback(
-    (examStudent: ExamStudentWithMemberships, examPage: ExamPageColumn) => {
+    (
+      examStudent: StudentAnswerDatasetExamStudent,
+      examPage: ExamPageColumn
+    ) => {
       // 元の無効化チェック
       if (isCellDisabled(examStudent, examPage)) return true
 

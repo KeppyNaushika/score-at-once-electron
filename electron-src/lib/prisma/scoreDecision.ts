@@ -52,7 +52,6 @@ export const canDecideExamScores = async (
 ): Promise<{ allowed: boolean; reason?: string }> => {
   const members = await prisma.userExam.findMany({
     where: { examId },
-    select: { userId: true, role: true },
   })
 
   // メンバー管理なしの旧データは制限しない
@@ -74,7 +73,7 @@ const canDecideScore = async (
 ): Promise<{ allowed: boolean; reason?: string }> => {
   const cropRegion = await prisma.cropRegion.findUnique({
     where: { id: cropRegionId },
-    select: { examPage: { select: { examId: true } } },
+    include: { examPage: true },
   })
   if (!cropRegion) {
     return { allowed: false, reason: "採点領域が見つかりません" }
@@ -120,7 +119,6 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
           examStudentId: data.examStudentId,
         },
       },
-      select: { verdict: true, score: true },
     })
 
     const decision = await prisma.scoreDecision.upsert({

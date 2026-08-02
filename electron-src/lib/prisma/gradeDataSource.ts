@@ -6,11 +6,11 @@ import type { Prisma } from "@prisma/client"
 import * as crypto from "crypto"
 
 import { toGradeDataSourceType } from "../../../src/types/grade.types"
-import type { GradeDataSourceMaxScoreRef } from "../../../src/types/prismaExtensions"
 import { computeMaxScoreFromPayload } from "../shared/calculations/gradeDataSourceMaxScore"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
+import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
 import { buildEstimationSourceId } from "./deterministicId"
 import { serializePrisma } from "./serializePrisma"
 
@@ -19,60 +19,31 @@ import { serializePrisma } from "./serializePrisma"
  * 全生成元（grade / gradeItem / dataSource）でこれを使い、返り値の形状を一致させる。
  * coursework（coursework_total 型が参照する資料）まで含む完全版。
  */
-const gradeDataSourceInclude = {
+export const gradeDataSourceInclude = {
   exam: {
-    select: {
-      id: true,
-      examName: true,
-      examDate: true,
+    include: {
       // maxScore(exam_total) を追加クエリ無しで算出するための元データ。
       examPages: {
-        select: {
-          cropRegions: {
-            where: { type: "QUESTION_ANSWER" },
-            select: { points: true },
-          },
-        },
+        include: { cropRegions: { where: { type: "QUESTION_ANSWER" } } },
       },
     },
   },
-  subtotal: {
-    select: {
-      id: true,
-      name: true,
-      order: true,
-      // maxScore(subtotal) を追加クエリ無しで算出するための元データ。
-      // 領域種別まで条件に書くのは、renderer 側（getExamCropRegions 経由）が
-      // QUESTION_ANSWER の領域だけを見て同じ満点を出すため。同じ条件を両側で明示する。
-      cropSubtotals: {
-        where: {
-          assignmentType: "QUESTION_ASSIGNMENT",
-          cropRegion: { type: "QUESTION_ANSWER" },
-        },
-        select: {
-          cropRegion: {
-            select: { points: true, examPage: { select: { examId: true } } },
-          },
-        },
-      },
-    },
-  },
-  cropRegion: { select: { id: true, label: true, points: true } },
+  // maxScore(subtotal) と設問割り当ての元データ。
+  // 領域種別まで条件に書くのは、renderer 側（getExamCropRegions 経由）が
+  // QUESTION_ANSWER の領域だけを見て同じ満点を出すため。同じ条件を両側で明示する。
+  subtotal: { include: subtotalWithQuestionAssignmentsInclude },
+  cropRegion: true,
   courseworkItem: {
     include: {
-      coursework: { select: { id: true, name: true } },
+      coursework: true,
       letterScales: { orderBy: { order: "asc" } },
-      _count: { select: { scores: true, gradeDataSources: true } },
+      // 点数は行のまま渡し切る。「入力に着手済みか」の判定は renderer が
+      // `.length` で行う（件数も計算値なので main では作らない）
+      scores: true,
     },
   },
-  coursework: {
-    select: {
-      id: true,
-      name: true,
-      // maxScore(coursework_total) を追加クエリ無しで算出するための元データ。
-      items: { select: { maxScore: true } },
-    },
-  },
+  // maxScore(coursework_total) を追加クエリ無しで算出するための元データ。
+  coursework: { include: { items: true } },
   // estimationMode="selected" のとき推定に使う他データソース（旧 estimationSourceIds のJSON配列）
   estimationSources: { orderBy: { order: "asc" } },
 } satisfies Prisma.GradeDataSourceInclude
@@ -122,28 +93,15 @@ type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
  * 旧 estimationSourceIds（JSON配列）と違い FK で守られているため、参照先が消えれば
  * 行ごと消える。
  *
- * maxScore 算出専用に同梱した集計元（exam.examPages / subtotal.cropSubtotals /
- * coursework.items）は、算出後に落として renderer 返却形状（grade.types の Pick）へ一致させる
- * — untyped な集計元を IPC で送らないため。
+ * 参照先（exam / subtotal / cropRegion / coursework）は include の出力をそのまま持つ。
+ * 以前はここで列を絞り直していたが、それは規約の禁じる縮小射影で、満点の元データを
+ * 落とすと renderer 側で算出できなくなる。
  */
 function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
-  const maxScore = computeMaxScoreFromPayload(dataSource)
-  const { exam, subtotal, coursework, ...rest } = dataSource
   return {
-    ...rest,
+    ...dataSource,
     type: toGradeDataSourceType(dataSource.type),
-    maxScore,
-    exam: exam && {
-      id: exam.id,
-      examName: exam.examName,
-      examDate: exam.examDate,
-    },
-    subtotal: subtotal && {
-      id: subtotal.id,
-      name: subtotal.name,
-      order: subtotal.order,
-    },
-    coursework: coursework && { id: coursework.id, name: coursework.name },
+    maxScore: computeMaxScoreFromPayload(dataSource),
   }
 }
 
@@ -350,7 +308,6 @@ export async function deleteDataSource(id: string) {
   try {
     const before = await prisma.gradeDataSource.findUnique({
       where: { id },
-      select: { name: true, gradeItemId: true },
     })
 
     await prisma.gradeDataSource.delete({ where: { id } })
@@ -408,11 +365,6 @@ export async function reorderDataSources(
 export async function getExamCandidates() {
   try {
     const exams = await prisma.exam.findMany({
-      select: {
-        id: true,
-        examName: true,
-        examDate: true,
-      },
       orderBy: { examDate: "desc" },
     })
     return { success: true, exams }
@@ -470,7 +422,6 @@ export async function getExamCropRegions(examId: string) {
           include: {
             cropSubtotals: {
               where: { assignmentType: "QUESTION_ASSIGNMENT" },
-              select: { subtotalId: true },
             },
           },
         },
@@ -485,88 +436,5 @@ export async function getExamCropRegions(examId: string) {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     }
-  }
-}
-
-/**
- * データソース1件の満点を元データ（設問配点 / 評価項目満点）からライブ算出する。
- *
- * GradeDataSource.maxScore 列はスナップショットに過ぎず、表示・計算では常にこの関数の
- * 算出値を使う（元データを後から変更しても追従させるため）。
- *
- * 入力は識別フィールド（種別・各ID）だけの場面（新規追加の見積り等）向け。集計元だけを
- * 個別クエリで取得し、**満点算出のルール自体は payload 版（`computeMaxScoreFromPayload`）に
- * 委譲する**（分岐ロジックの単一ソース化）。gradeDataSourceInclude 同梱の payload がある
- * 経路では `hydrateGradeDataSource` が同期算出するため、この関数は通らない。
- */
-export async function computeLiveMaxScore(
-  ds: GradeDataSourceMaxScoreRef
-): Promise<number> {
-  switch (ds.type) {
-    case "crop_region": {
-      const cropRegion = ds.cropRegionId
-        ? await prisma.cropRegion.findUnique({
-            where: { id: ds.cropRegionId },
-            select: { points: true },
-          })
-        : null
-      return computeMaxScoreFromPayload({ ...ds, cropRegion })
-    }
-    case "coursework": {
-      const courseworkItem = ds.courseworkItemId
-        ? await prisma.courseworkItem.findUnique({
-            where: { id: ds.courseworkItemId },
-            select: { maxScore: true },
-          })
-        : null
-      return computeMaxScoreFromPayload({ ...ds, courseworkItem })
-    }
-    case "coursework_total": {
-      const items = ds.courseworkId
-        ? await prisma.courseworkItem.findMany({
-            where: { courseworkId: ds.courseworkId },
-            select: { maxScore: true },
-          })
-        : []
-      return computeMaxScoreFromPayload({ ...ds, coursework: { items } })
-    }
-    case "exam_total": {
-      const examPages = ds.examId
-        ? await prisma.examPage.findMany({
-            where: { examId: ds.examId },
-            select: {
-              cropRegions: {
-                where: { type: "QUESTION_ANSWER" },
-                select: { points: true },
-              },
-            },
-          })
-        : []
-      return computeMaxScoreFromPayload({ ...ds, exam: { examPages } })
-    }
-    case "subtotal": {
-      const cropSubtotals =
-        ds.subtotalId && ds.examId
-          ? await prisma.cropSubtotal.findMany({
-              where: {
-                subtotalId: ds.subtotalId,
-                assignmentType: "QUESTION_ASSIGNMENT",
-                // renderer 側と同じ集合になることを条件で明示する（不文律に頼らない）
-                cropRegion: { type: "QUESTION_ANSWER" },
-              },
-              select: {
-                cropRegion: {
-                  select: {
-                    points: true,
-                    examPage: { select: { examId: true } },
-                  },
-                },
-              },
-            })
-          : []
-      return computeMaxScoreFromPayload({ ...ds, subtotal: { cropSubtotals } })
-    }
-    default:
-      return 0
   }
 }

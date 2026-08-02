@@ -271,10 +271,10 @@ export default function GradeDetailPage() {
               <div className="mt-3 flex items-center gap-4">
                 <Badge variant="outline">{classNames || "学級未登録"}</Badge>
                 <Badge variant="outline">
-                  生徒: {exam._count?.gradeStudents ?? 0}名
+                  生徒: {exam.gradeStudents.length}名
                 </Badge>
                 <Badge variant="outline">
-                  評価項目: {exam._count?.gradeItems ?? exam.gradeItems.length}
+                  評価項目: {exam.gradeItems.length}
                 </Badge>
                 {exam.referenceDate && (
                   <Badge variant="secondary">

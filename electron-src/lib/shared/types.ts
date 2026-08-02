@@ -67,17 +67,6 @@ export interface SubtotalScore {
   hasQuestionAssignments: boolean
 }
 
-/** SubtotalGroupとその小計項目の情報（Excel・個人成績表出力で共通） */
-export interface SubtotalGroupData {
-  groupId: string
-  groupName: string
-  subtotals: Array<{
-    id: string
-    name: string
-    order: number
-  }>
-}
-
 export interface ScoreDetail {
   questionId: string
   questionLabel: string

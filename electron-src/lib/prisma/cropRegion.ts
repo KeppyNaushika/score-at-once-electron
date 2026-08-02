@@ -54,7 +54,6 @@ export const createCropRegion = async (
 
   const examPage = await prisma.examPage.findUnique({
     where: { id: data.examPageId },
-    select: { examId: true },
   })
 
   if (!examPage) {
@@ -153,7 +152,6 @@ export const deleteCropRegion = async (id: string) => {
   const scope = await resolveExamScopeByCropRegion(id)
   const before = await prisma.cropRegion.findUnique({
     where: { id },
-    select: { label: true },
   })
 
   const region = await prisma.cropRegion.delete({

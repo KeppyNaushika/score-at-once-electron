@@ -152,7 +152,7 @@ export function SortableStudentTableContainer(
         cellClassName: "text-center",
         cell: (row) => {
           const count =
-            examStudentByStudentId.get(row.id)?._count.studentAnswerImages ?? 0
+            examStudentByStudentId.get(row.id)?.studentAnswerImages.length ?? 0
           return count > 0 ? (
             <Badge variant="secondary" className="tabular-nums">
               {count}枚

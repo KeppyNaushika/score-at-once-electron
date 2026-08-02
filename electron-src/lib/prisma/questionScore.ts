@@ -384,7 +384,6 @@ export const updateQuestionScore = async (
     // 生の Prisma エラーではなく「削除済み」として返す（協調採点で他教員が削除した場合）。
     const before = await prisma.questionScore.findUnique({
       where: { id },
-      select: { status: true, partialScore: true },
     })
 
     if (!before) {
@@ -461,12 +460,6 @@ export const deleteQuestionScore = async (id: string) => {
     // 監査ログ用に削除前の情報を取得
     const before = await prisma.questionScore.findUnique({
       where: { id },
-      select: {
-        cropRegionId: true,
-        examStudentId: true,
-        userId: true,
-        status: true,
-      },
     })
 
     await prisma.questionScore.delete({

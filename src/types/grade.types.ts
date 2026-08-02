@@ -11,23 +11,23 @@
 
 import type {
   Classroom,
-  Coursework,
-  CropRegion,
-  Exam,
   Grade,
   GradeClassroom,
   GradeConstraint,
   GradeConstraintExclusionLabel,
   GradeConstraintLabelValue,
   GradeConstraintViewpoint,
-  GradeDataSource,
-  GradeDataSourceEstimationSource,
   GradeItem,
   GradeItemBoundary,
-  Subtotal,
+  GradeStudent,
+  Prisma,
 } from "@prisma/client"
 
-import type { CourseworkItemWithLetterScales } from "./coursework.types"
+import type { gradeSummaryInclude } from "@/electron-src/lib/prisma/grade"
+import type { gradeDataSourceInclude } from "@/electron-src/lib/prisma/gradeDataSource"
+import type { Serialized } from "@/types/prismaExtensions"
+
+import type { CourseworkLetterScaleData, InputMode } from "./coursework.types"
 import { defineStringUnion } from "./stringUnion"
 
 /**
@@ -72,6 +72,17 @@ export const { to: toGradeDataSourceType } = defineStringUnion(
   "manual"
 )
 
+/**
+ * 一覧が受け取る成績（`grade:getAll` の返り値）。
+ *
+ * 形の SSOT は取得側の `gradeSummaryInclude`。詳細（GradeWithRelations）と違い、
+ * 満点の元データも参照先の表示名も持たない。一覧が読むのは名前・学級・件数と、
+ * 次のステップ判定が読む「境界の有無・データソース種別・資料の点数の有無」だけ。
+ */
+export type GradeSummary = Serialized<
+  Prisma.GradeGetPayload<{ include: typeof gradeSummaryInclude }>
+>
+
 /** 成績算出試験（リレーション付き） */
 export type GradeWithRelations = Omit<Grade, "referenceDate"> & {
   referenceDate: string | null
@@ -79,10 +90,8 @@ export type GradeWithRelations = Omit<Grade, "referenceDate"> & {
     classroom: Pick<Classroom, "id" | "name">
   })[]
   gradeItems: GradeItemWithDataSources[]
-  _count?: {
-    gradeItems: number
-    gradeStudents: number
-  }
+  /** 対象者は行のまま同梱される。件数は `.length` で取る */
+  gradeStudents: GradeStudent[]
 }
 
 /** 評価項目（リレーション付き）。成績境界は行のまま同梱される */
@@ -112,15 +121,30 @@ export interface GradeDataSourceInput {
   weight: number
 }
 
-/** データソース（リレーション付き） */
+/** 取得側の include が返す形そのまま（形の SSOT は `gradeDataSourceInclude`） */
+type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
+  include: typeof gradeDataSourceInclude
+}>
+
+/**
+ * データソース（リレーション付き）。
+ *
+ * 参照先（exam / subtotal / cropRegion / coursework / courseworkItem）は include の
+ * 出力をそのまま持つ。以前は Pick で列を絞っていたが、それは規約の禁じる縮小射影で、
+ * 満点の元データを落とすと renderer 側で算出できなくなる。
+ *
+ * 差分は「境界での型注入」だけ ── DB 上 String の union 列と、IPC で number へ倒れる
+ * Decimal 列を、実体に合わせて宣言し直す。
+ */
 export type GradeDataSourceWithRelations = Omit<
-  GradeDataSource,
+  EnrichedGradeDataSource,
   | "type"
   | "weight"
   | "absentMethod"
   | "absentRatio"
   | "absentOffset"
   | "estimationMode"
+  | "courseworkItem"
 > & {
   type: GradeDataSourceType
   weight: number
@@ -128,29 +152,22 @@ export type GradeDataSourceWithRelations = Omit<
   absentRatio: number
   absentOffset: number
   estimationMode: EstimationMode
-  /**
-   * estimationMode="selected" のとき推定に使う他データソース。
-   * 旧 estimationSourceIds（JSON配列）と違い FK で守られているため、参照先が消えれば行ごと消える。
-   */
-  estimationSources: Array<
-    Pick<
-      GradeDataSourceEstimationSource,
-      "id" | "dataSourceId" | "sourceDataSourceId" | "order"
-    >
-  >
   /** 仮想フィールド。元データ（設問配点/評価項目満点）からライブ算出して付与される。 */
   maxScore: number
-  exam: Pick<Exam, "id" | "examName" | "examDate"> | null
-  subtotal: Pick<Subtotal, "id" | "name" | "order"> | null
-  cropRegion: Pick<CropRegion, "id" | "label" | "points"> | null
-  /** coursework型が参照する評価項目（資料名・項目名・満点・入力モード・変換表） */
+  /**
+   * coursework型が参照する評価項目（資料名・項目名・満点・入力モード・変換表）。
+   * 点数は行のまま同梱される（「入力に着手済みか」は renderer が `.length` で判定する）。
+   */
   courseworkItem:
-    | (CourseworkItemWithLetterScales & {
-        coursework: Pick<Coursework, "id" | "name">
+    | (Omit<
+        NonNullable<EnrichedGradeDataSource["courseworkItem"]>,
+        "maxScore" | "inputMode" | "letterScales"
+      > & {
+        maxScore: number
+        inputMode: InputMode
+        letterScales: CourseworkLetterScaleData[]
       })
     | null
-  /** coursework_total型が参照する資料（全評価項目を合算する対象） */
-  coursework: Pick<Coursework, "id" | "name"> | null
 }
 
 /** 境界データ */

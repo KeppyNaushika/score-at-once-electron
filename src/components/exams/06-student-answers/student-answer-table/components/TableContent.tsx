@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 // ============================================================================
 // セルの DnD ラッパーはスロット（render prop）で外から注入する。
@@ -43,10 +43,10 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 // ============================================================================
 
 /** ファイルセル（答案あり）のラッパーへ渡す情報。children は FilePreviewCell。
- * 生徒・ページは Prisma 構造（ExamStudentWithMemberships / ExamPage 実体）のまま渡す。 */
+ * 生徒・ページは Prisma 構造（StudentAnswerDatasetExamStudent / ExamPage 実体）のまま渡す。 */
 export interface FileCellSlotProps {
   fileId: string
-  examStudent: ExamStudentWithMemberships
+  examStudent: StudentAnswerDatasetExamStudent
   examPage: ExamPageColumn
   isDragDisabled: boolean
   isFileDisabled: boolean
@@ -58,7 +58,7 @@ export interface FileCellSlotProps {
 
 /** 空セル・無効セルのラッパーへ渡す情報（中身の描画もラッパー側が行う）。 */
 export interface EmptyCellSlotProps {
-  examStudent: ExamStudentWithMemberships
+  examStudent: StudentAnswerDatasetExamStudent
   examPage: ExamPageColumn
   isPositionDisabled: boolean
   hasExistingAnswer: boolean

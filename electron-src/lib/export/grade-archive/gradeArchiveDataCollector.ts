@@ -434,7 +434,7 @@ export async function collectGradeArchiveData(
           ],
         },
       },
-      include: { examPage: { select: { examId: true } } },
+      include: { examPage: true },
     }),
   ])
 
@@ -484,7 +484,6 @@ export async function collectGradeArchiveData(
   if (courseworkItemIds.length > 0) {
     const referencedItems = await prisma.courseworkItem.findMany({
       where: { id: { in: courseworkItemIds } },
-      select: { courseworkId: true },
     })
     for (const referencedItem of referencedItems) {
       courseworkIds.add(referencedItem.courseworkId)

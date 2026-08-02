@@ -47,10 +47,7 @@ export async function getAvailableClassroomsForTarget(params: {
     include: {
       memberships: {
         where: activeOnly ? membershipFilterAt(referenceDate) : undefined,
-        select: {
-          studentId: true,
-          student: { select: { lastName: true, firstName: true } },
-        },
+        include: { student: true },
         orderBy: [{ attendanceNumber: "asc" }],
       },
     },

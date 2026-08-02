@@ -4,12 +4,14 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
-import { getQuestionAssignmentsBySubtotalIds } from "../../prisma/cropSubtotal"
 import { getExamById } from "../../prisma/exam"
 import { getStudentsForExam } from "../../prisma/examStudent"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
-import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
+import {
+  getActiveSubtotalGroupsForExam,
+  type SubtotalGroupForScoring,
+} from "../../prisma/subtotalGroup"
 import {
   calculateEffectiveScoreValue,
   EffectiveScore,
@@ -18,14 +20,12 @@ import {
 } from "../../shared/calculations/scoreResolution"
 import {
   computeSubtotalScore,
-  type QuestionAssignmentsBySubtotalId,
   QuestionScoreForSubtotal,
 } from "../../shared/calculations/subtotalCalculator"
 import {
   ScoreDetail,
   ScoringData,
   StudentExportPlacement,
-  SubtotalGroupData,
   SubtotalScore,
 } from "../../shared/types"
 
@@ -174,35 +174,28 @@ export async function fetchExportData(
 
     // SubtotalGroupsを取得（Subtotal単位の小計点計算用）
     const subtotalGroupsResult = await getActiveSubtotalGroupsForExam(examId)
-    const subtotalGroupsData: SubtotalGroupData[] =
+    const subtotalGroups: SubtotalGroupForScoring[] =
       subtotalGroupsResult.success && subtotalGroupsResult.examSubtotalGroups
-        ? subtotalGroupsResult.examSubtotalGroups.map((examSubtotalGroup) => ({
-            groupId: examSubtotalGroup.subtotalGroup.id,
-            groupName: examSubtotalGroup.subtotalGroup.name,
-            subtotals: examSubtotalGroup.subtotalGroup.subtotals.map(
-              (subtotal) => ({
-                id: subtotal.id,
-                name: subtotal.name,
-                order: subtotal.order,
-              })
-            ),
-          }))
+        ? subtotalGroupsResult.examSubtotalGroups.map(
+            (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+          )
         : []
 
     // SubtotalGroupから小計列情報を構築
-    const subtotalColumns: SubtotalColumn[] = subtotalGroupsData.flatMap(
-      (group) =>
-        group.subtotals.map((subtotal) => ({
+    const subtotalColumns: SubtotalColumn[] = subtotalGroups.flatMap(
+      (subtotalGroup) =>
+        subtotalGroup.subtotals.map((subtotal) => ({
           subtotalId: subtotal.id,
           label: subtotal.name,
         }))
     )
 
     // 採点データの構造化
-    const scoringData = await buildScoringData(
+    const scoringData = buildScoringData(
+      examId,
       selectedExamStudents,
       questionRegions,
-      subtotalGroupsData,
+      subtotalGroups,
       questionScores
     )
 
@@ -229,66 +222,55 @@ export async function fetchExportData(
 /**
  * 採点データを構造化する
  *
+ * @param examId - 対象の試験
  * @param selectedExamStudents - 選択された受験者配列
  * @param questionRegions - 設問領域配列
- * @param subtotalGroups - 小計点グループ配列
+ * @param subtotalGroups - 小計点グループ配列（設問割り当て同梱）
  * @param questionScores - 設問スコア
  * @returns 構造化された採点データ
  */
-async function buildScoringData(
+function buildScoringData(
+  examId: string,
   selectedExamStudents: ExportExamStudent[],
   questionRegions: CropRegion[],
-  subtotalGroups: SubtotalGroupData[],
+  subtotalGroups: SubtotalGroupForScoring[],
   questionScores: EffectiveScore[]
-): Promise<ScoringData[]> {
-  // 設問割り当ては生徒に依らないので、生徒ループの外で1回だけ引く
-  const questionAssignments = await getQuestionAssignmentsBySubtotalIds(
-    subtotalGroups.flatMap((group) =>
-      group.subtotals.map((subtotal) => subtotal.id)
+): ScoringData[] {
+  return selectedExamStudents.map((examStudent) => {
+    const examStudentScores = questionScores.filter(
+      (score) => score.examStudentId === examStudent.id
     )
-  )
 
-  return Promise.all(
-    selectedExamStudents.map(async (examStudent) => {
-      const examStudentScores = questionScores.filter(
-        (score) => score.examStudentId === examStudent.id
-      )
+    const scores = buildScoreDetails(examStudentScores, questionRegions)
+    const subtotalScores = buildSubtotalScores(
+      examStudent.id,
+      examId,
+      subtotalGroups,
+      questionScores
+    )
 
-      const scores = buildScoreDetails(examStudentScores, questionRegions)
-      const subtotalScores = buildSubtotalScores(
-        examStudent.id,
-        subtotalGroups,
-        questionRegions,
-        questionScores,
-        questionAssignments
-      )
+    const allUnscored = scores.every((score) => score.status === "unscored")
+    const totalScore = allUnscored
+      ? null
+      : scores.reduce((sum, score) => sum + (score.score ?? 0), 0)
+    const totalMaxScore = scores.reduce((sum, score) => sum + score.maxScore, 0)
 
-      const allUnscored = scores.every((score) => score.status === "unscored")
-      const totalScore = allUnscored
-        ? null
-        : scores.reduce((sum, score) => sum + (score.score ?? 0), 0)
-      const totalMaxScore = scores.reduce(
-        (sum, score) => sum + score.maxScore,
-        0
-      )
-
-      const { student } = examStudent
-      return {
-        examStudentId: examStudent.id,
-        studentId: student.id,
-        studentName: `${student.lastName} ${student.firstName}`,
-        studentNumber: student.studentNumber,
-        grade: examStudent.grade,
-        className: examStudent.className,
-        attendanceNumber: examStudent.attendanceNumber,
-        status: examStudent.status,
-        scores,
-        totalScore,
-        totalMaxScore,
-        subtotalScores,
-      }
-    })
-  )
+    const { student } = examStudent
+    return {
+      examStudentId: examStudent.id,
+      studentId: student.id,
+      studentName: `${student.lastName} ${student.firstName}`,
+      studentNumber: student.studentNumber,
+      grade: examStudent.grade,
+      className: examStudent.className,
+      attendanceNumber: examStudent.attendanceNumber,
+      status: examStudent.status,
+      scores,
+      totalScore,
+      totalMaxScore,
+      subtotalScores,
+    }
+  })
 }
 
 /**
@@ -323,18 +305,19 @@ function buildScoreDetails(
 /**
  * 小計スコアを構築する（Subtotal単位）
  *
+ * 設問割り当ては各小計が実体で持っているので、ここで引き直さない。
+ *
  * @param examStudentId - 受験者ID（ExamStudent.id）
- * @param subtotalGroups - 小計点グループ配列
- * @param questionRegions - 設問領域配列
+ * @param examId - 対象の試験。SubtotalGroup は複数試験で共有されうるので絞りに使う
+ * @param subtotalGroups - 小計点グループ配列（設問割り当て同梱）
  * @param allQuestionScores - 全受験者の設問スコア配列
  * @returns 小計スコア配列
  */
 function buildSubtotalScores(
   examStudentId: string,
-  subtotalGroups: SubtotalGroupData[],
-  questionRegions: CropRegion[],
-  allQuestionScores: EffectiveScore[],
-  questionAssignments: QuestionAssignmentsBySubtotalId
+  examId: string,
+  subtotalGroups: SubtotalGroupForScoring[],
+  allQuestionScores: EffectiveScore[]
 ): SubtotalScore[] {
   // 設問スコアデータを変換
   const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
@@ -346,28 +329,24 @@ function buildSubtotalScores(
     })
   )
 
-  const results: SubtotalScore[] = []
-
-  for (const group of subtotalGroups) {
-    for (const subtotal of group.subtotals) {
+  return subtotalGroups.flatMap((subtotalGroup) =>
+    subtotalGroup.subtotals.map((subtotal) => {
       const scoreResult = computeSubtotalScore(
         examStudentId,
+        examId,
         questionScoreData,
-        questionRegions,
-        questionAssignments.get(subtotal.id) ?? []
+        subtotal.cropSubtotals
       )
 
-      results.push({
+      return {
         subtotalId: subtotal.id,
-        subtotalGroupId: group.groupId,
-        subtotalGroupName: group.groupName,
+        subtotalGroupId: subtotalGroup.id,
+        subtotalGroupName: subtotalGroup.name,
         subtotalLabel: subtotal.name,
         score: scoreResult.score,
         maxScore: scoreResult.maxScore,
         hasQuestionAssignments: scoreResult.hasQuestionAssignments,
-      })
-    }
-  }
-
-  return results
+      }
+    })
+  )
 }

@@ -267,7 +267,6 @@ export async function importCourseworkData(
       if (!classroomId) continue
       const exists = await tx.courseworkClassroom.findUnique({
         where: { courseworkId_classroomId: { courseworkId, classroomId } },
-        select: { id: true },
       })
       if (!exists) {
         await tx.courseworkClassroom.create({
@@ -281,7 +280,6 @@ export async function importCourseworkData(
       if (!tagId) continue
       const exists = await tx.courseworkTag.findUnique({
         where: { courseworkId_tagId: { courseworkId, tagId } },
-        select: { id: true },
       })
       if (!exists) {
         await tx.courseworkTag.create({ data: { courseworkId, tagId } })
@@ -302,7 +300,6 @@ export async function importCourseworkData(
       archiveStudentIdByCourseworkStudent.set(studentRef.id, studentId)
       const exists = await tx.courseworkStudent.findUnique({
         where: { courseworkId_studentId: { courseworkId, studentId } },
-        select: { id: true },
       })
       if (!exists) {
         await tx.courseworkStudent.create({
@@ -319,7 +316,6 @@ export async function importCourseworkData(
     // 点数の宛先は DB の名簿が正なので、張り終えた後に全件を読み直す。
     const dbRoster = await tx.courseworkStudent.findMany({
       where: { courseworkId },
-      select: { id: true, studentId: true },
     })
     const dbIdByStudent = new Map(
       dbRoster.map((courseworkStudent) => [
@@ -376,7 +372,6 @@ export async function importCourseworkData(
     if (decision?.action === "reuse") {
       const exists = await tx.coursework.findUnique({
         where: { id: decision.existingId },
-        select: { id: true },
       })
       reuseId = exists?.id ?? null
       if (!reuseId) {
@@ -387,7 +382,6 @@ export async function importCourseworkData(
     } else if (!decision) {
       const uuidMatch = await tx.coursework.findUnique({
         where: { id: coursework.id },
-        select: { id: true },
       })
       reuseId = uuidMatch?.id ?? null
     }
@@ -397,7 +391,7 @@ export async function importCourseworkData(
       const roster = await ensureJoins(reuseId, coursework.id)
       const existing = await tx.coursework.findUnique({
         where: { id: reuseId },
-        include: { items: { select: { id: true, name: true } } },
+        include: { items: true },
       })
       const existingItemIdByName = new Map(
         (existing?.items ?? []).map((item) => [item.name, item.id])

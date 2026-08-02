@@ -2,6 +2,16 @@
  * @fileoverview 描画アノテーション型定義
  * @description 全描画ツール（テキスト・直線・長方形・楕円）の統合型定義
  */
+import type {
+  DrawingAnnotation as PrismaDrawingAnnotation,
+  Prisma,
+} from "@prisma/client"
+
+import type {
+  annotationWithAuthorInclude,
+  annotationWithContextInclude,
+} from "@/electron-src/lib/prisma/drawingAnnotation"
+
 import { defineStringUnion } from "./stringUnion"
 
 // 基本型定義
@@ -87,50 +97,32 @@ export const narrowAnnotationUnions = <
   anchorDirection: toAnchorDirection(row.anchorDirection),
 })
 
-// データベース対応統合インターフェース
-export interface DrawingAnnotation {
-  id: string
-  questionScoreId: string
+/**
+ * DB 行の String union 列だけを literal union へ差し替える型注入。
+ *
+ * SQLite に enum が無いため DB 上はすべて String で、列そのものは Prisma の生成型に
+ * 追随させる（Prisma が管理する形を手書きで複製しない）。
+ */
+type NarrowAnnotationUnions<T> = Omit<
+  T,
+  "type" | "lineStyle" | "horizontalAlign" | "verticalAlign" | "anchorDirection"
+> & {
   type: DrawingType
-
-  // 基本プロパティ（全要素共通）
-  x: number // 0.0 - 1.0 相対座標
-  y: number // 0.0 - 1.0
-  color: string
-  strokeWidth: number
-
-  // サイズプロパティ
-  width: number // 0.0 - 1.0
-  height: number // 0.0 - 1.0
-
-  // 直線専用プロパティ
-  endX: number // 0.0 - 1.0
-  endY: number // 0.0 - 1.0
   lineStyle: LineStyle
-
-  // テキスト専用プロパティ
-  text: string
-  fontSize: number
-  textBoxWidth: number // 0.0 - 1.0
-  textBoxHeight: number // 0.0 - 1.0
   horizontalAlign: AnnotationHorizontalAlign
   verticalAlign: AnnotationVerticalAlign
-
-  // テキストボックス統合フィールド
   anchorDirection: AnchorDirection
-
-  // 表示プロパティ
-  displayX: number // 0.0 - 1.0
-  displayY: number // 0.0 - 1.0
-
-  // お気に入り
-  isFavorite: boolean
-
-  // メタデータ
-  createdAt: Date
-  updatedAt: Date
-  userId: string
 }
+
+/** 描画アノテーション1行（Prisma のモデルに union 型注入だけを施したもの） */
+export type DrawingAnnotation = NarrowAnnotationUnions<PrismaDrawingAnnotation>
+
+/** 作成者だけを同梱したアノテーション */
+export type AnnotationWithAuthor = NarrowAnnotationUnions<
+  Prisma.DrawingAnnotationGetPayload<{
+    include: typeof annotationWithAuthorInclude
+  }>
+>
 
 // 作成用データ型
 export interface DrawingCreateData {
@@ -194,42 +186,12 @@ export interface DrawingAnnotationStats {
 }
 
 // QuestionScore情報を含む拡張型（アノテーションブラウズパネル用）
-export interface AnnotationWithContext extends DrawingAnnotation {
-  questionScore?: {
-    id: string
-    examStudentId: string
-    cropRegionId: string
-    cropRegion?: { id: string; label: string }
-    examStudent?: {
-      id: string
-      student: {
-        id: string
-        studentNumber: string
-        lastName: string
-        firstName: string
-      }
-    }
-  } | null
-  user?: {
-    id: string
-    username: string
-    name: string | null
-  } | null
-}
-
-// QuestionScore情報を含む拡張型（透明度制御用）
-export interface DrawingAnnotationWithQuestionScore extends DrawingAnnotation {
-  questionScore?: {
-    id: string
-    cropRegionId: string
-    cropRegion?: {
-      id: string
-      label: string
-    }
-  } | null
-  user?: {
-    id: string
-    username: string
-    name: string | null
-  } | null
-}
+/**
+ * 作成者と設問の文脈まで同梱したアノテーション。
+ * 形の SSOT は取得側の include（`annotationWithContextInclude`）で、ここでは導出だけを行う。
+ */
+export type AnnotationWithContext = NarrowAnnotationUnions<
+  Prisma.DrawingAnnotationGetPayload<{
+    include: typeof annotationWithContextInclude
+  }>
+>

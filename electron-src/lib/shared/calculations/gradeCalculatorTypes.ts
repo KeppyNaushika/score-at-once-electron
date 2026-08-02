@@ -18,7 +18,7 @@ export const gradeStudentForCalcInclude = {
   student: {
     include: {
       memberships: {
-        include: { classroom: { select: { id: true, name: true } } },
+        include: { classroom: true },
       },
     },
   },

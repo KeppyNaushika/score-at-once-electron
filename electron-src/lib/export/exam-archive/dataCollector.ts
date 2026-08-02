@@ -133,14 +133,7 @@ export async function collectExamData(
     // v0.3.0以降: ログインユーザーのデータのみをエクスポート
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      omit: { passcode: true },
     })
 
     if (!currentUser) {
@@ -339,7 +332,7 @@ export async function collectExamData(
       // （assignedBy は監査用の付随情報なので持ち回らない）。
       const assignments = await prisma.cropRegionAssignment.findMany({
         where: { cropRegion: { examPage: { examId } } },
-        include: { user: { select: { username: true } } },
+        include: { user: true },
       })
       for (const assignment of assignments) {
         cropRegionAssignments.push({

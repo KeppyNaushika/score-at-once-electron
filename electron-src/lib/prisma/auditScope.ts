@@ -13,7 +13,6 @@ export async function resolveExamScope(
   try {
     const exam = await prisma.exam.findUnique({
       where: { id: examId },
-      select: { examName: true },
     })
     return { scopeId: examId, scopeLabel: exam?.examName ?? null }
   } catch {
@@ -28,7 +27,6 @@ export async function resolveGradeScope(
   try {
     const grade = await prisma.grade.findUnique({
       where: { id: gradeId },
-      select: { name: true },
     })
     return { scopeId: gradeId, scopeLabel: grade?.name ?? null }
   } catch {
@@ -43,7 +41,6 @@ export async function resolveCourseworkScope(
   try {
     const cw = await prisma.coursework.findUnique({
       where: { id: courseworkId },
-      select: { name: true },
     })
     return { scopeId: courseworkId, scopeLabel: cw?.name ?? null }
   } catch {
@@ -58,10 +55,7 @@ export async function resolveCourseworkScopeByItem(
   try {
     const item = await prisma.courseworkItem.findUnique({
       where: { id: courseworkItemId },
-      select: {
-        courseworkId: true,
-        coursework: { select: { name: true } },
-      },
+      include: { coursework: true },
     })
     return {
       scopeId: item?.courseworkId ?? null,
@@ -79,7 +73,7 @@ export async function resolveGradeScopeByItem(
   try {
     const item = await prisma.gradeItem.findUnique({
       where: { id: gradeItemId },
-      select: { gradeId: true, grade: { select: { name: true } } },
+      include: { grade: true },
     })
     return {
       scopeId: item?.gradeId ?? null,
@@ -97,7 +91,7 @@ export async function resolveExamScopeByPage(
   try {
     const page = await prisma.examPage.findUnique({
       where: { id: examPageId },
-      select: { examId: true, exam: { select: { examName: true } } },
+      include: { exam: true },
     })
     return {
       scopeId: page?.examId ?? null,
@@ -115,11 +109,7 @@ export async function resolveExamScopeByCropRegion(
   try {
     const region = await prisma.cropRegion.findUnique({
       where: { id: cropRegionId },
-      select: {
-        examPage: {
-          select: { examId: true, exam: { select: { examName: true } } },
-        },
-      },
+      include: { examPage: { include: { exam: true } } },
     })
     const examId = region?.examPage.examId ?? null
     return {
@@ -138,17 +128,8 @@ export async function resolveExamScopeByQuestionScore(
   try {
     const questionScore = await prisma.questionScore.findUnique({
       where: { id: questionScoreId },
-      select: {
-        cropRegion: {
-          select: {
-            examPage: {
-              select: {
-                examId: true,
-                exam: { select: { examName: true } },
-              },
-            },
-          },
-        },
+      include: {
+        cropRegion: { include: { examPage: { include: { exam: true } } } },
       },
     })
     const examId = questionScore?.cropRegion.examPage.examId ?? null
@@ -168,7 +149,6 @@ export async function resolveStudentLabel(
   try {
     const student = await prisma.student.findUnique({
       where: { id: studentId },
-      select: { lastName: true, firstName: true },
     })
     if (!student) return null
     return `${student.lastName} ${student.firstName}`.trim()
@@ -184,7 +164,7 @@ export async function resolveExamStudentLabel(
   try {
     const examStudent = await prisma.examStudent.findUnique({
       where: { id: examStudentId },
-      select: { student: { select: { lastName: true, firstName: true } } },
+      include: { student: true },
     })
     if (!examStudent) return null
     const { lastName, firstName } = examStudent.student
@@ -199,7 +179,6 @@ export async function resolveUserLabel(userId: string): Promise<string | null> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true },
     })
     return user?.name ?? null
   } catch {

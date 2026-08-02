@@ -44,31 +44,21 @@ export const getExamDecisionSummary = async (
         where: { examPage: { examId }, type: "QUESTION_ANSWER" },
         orderBy: { orderIndex: "asc" },
       }),
-      // 採点行は試験全体で数万行になりうるので、リゾルバに要る列だけを引く。
-      // 氏名は裁定対象セル（通常わずか）が確定してから別途引く。
+      // 採点行は試験全体で数万行になりうる。行はそのまま持ち（射影しない）、
+      // 氏名だけは裁定対象セル（通常わずか）が確定してから別途引いて join を広げない。
       prisma.questionScore.findMany({
         where: {
           cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
-        },
-        select: {
-          id: true,
-          cropRegionId: true,
-          examStudentId: true,
-          userId: true,
-          status: true,
-          partialScore: true,
-          updatedAt: true,
         },
       }),
       prisma.scoreDecision.findMany({
         where: {
           cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
         },
-        include: { decidedBy: { select: { id: true, name: true } } },
+        include: { decidedBy: { omit: { passcode: true } } },
       }),
       prisma.examStudent.findMany({
         where: { examId },
-        select: { id: true, customOrder: true },
       }),
       canDecideExamScores(examId, userId),
       // 担当は「現在この試験のメンバーである人」に限る。非メンバーを担当として
@@ -79,16 +69,15 @@ export const getExamDecisionSummary = async (
           cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
           user: { userExams: { some: { examId } } },
         },
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { omit: { passcode: true } } },
       }),
       prisma.userExam.findMany({
         where: { examId },
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { omit: { passcode: true } } },
       }),
       // 設問の分母は「答案画像がある受験者数」（getExamProgress と同じ数え方）
       prisma.studentAnswerImage.findMany({
         where: { examPage: { examId } },
-        select: { examStudentId: true },
         distinct: ["examStudentId"],
       }),
     ])
@@ -189,13 +178,10 @@ export const getExamDecisionSummary = async (
     const [targetExamStudents, users] = await Promise.all([
       prisma.examStudent.findMany({
         where: { id: { in: targetExamStudentIds } },
-        select: {
-          id: true,
-          student: { select: { lastName: true, firstName: true } },
-        },
+        include: { student: true },
       }),
       targetExamStudentIds.length > 0
-        ? prisma.user.findMany({ select: { id: true, name: true } })
+        ? prisma.user.findMany({ omit: { passcode: true } })
         : Promise.resolve([]),
     ])
     const studentByExamStudentId = new Map(

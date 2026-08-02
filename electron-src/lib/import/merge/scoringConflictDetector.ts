@@ -64,7 +64,7 @@ export async function detectScoringConflicts(
   // CropRegionのラベル・配点を取得（試験の同定にも使う）
   const cropRegions = await prisma.cropRegion.findMany({
     where: { id: { in: existingCropRegionIds } },
-    include: { examPage: { select: { examId: true } } },
+    include: { examPage: true },
   })
   const cropRegionMap = new Map(
     cropRegions.map((cropRegion) => [cropRegion.id, cropRegion])

@@ -78,7 +78,6 @@ function buildMaxScorePayload(
       return {
         type: "subtotal",
         examId: selection.examId,
-        subtotalId: selection.subtotalId,
         subtotal: {
           cropSubtotals: cropRegions
             .filter((cropRegion) =>
@@ -89,6 +88,7 @@ function buildMaxScorePayload(
             )
             .map((cropRegion) => ({
               cropRegion: {
+                id: cropRegion.id,
                 points: cropRegion.points,
                 examPage: { examId: selection.examId },
               },
