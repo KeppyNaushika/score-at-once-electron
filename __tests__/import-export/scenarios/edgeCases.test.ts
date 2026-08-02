@@ -318,7 +318,6 @@ describe("edgeCases", () => {
             displayX: 0,
             displayY: 0,
             isFavorite: false,
-            userId: currentUser.id,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },

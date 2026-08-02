@@ -184,6 +184,7 @@ export const getCropRegionsByExamId = async (examId: string) => {
       { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
       { y: "asc" }, // Y座標（フォールバック）
       { x: "asc" }, // X座標（フォールバック）
+      { id: "asc" }, // 同座標・同ページ番号でも並びを決定的にする
     ],
   })
 
@@ -215,6 +216,7 @@ export const getCropRegionsByExamId = async (examId: string) => {
         { examPage: { pageNumber: "asc" } },
         { y: "asc" },
         { x: "asc" },
+        { id: "asc" },
       ],
     })
   }
@@ -240,6 +242,7 @@ export const getQuestionAnswerRegionsByExamId = async (examId: string) => {
       { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
       { y: "asc" }, // Y座標（フォールバック）
       { x: "asc" }, // X座標（フォールバック）
+      { id: "asc" }, // 同座標・同ページ番号でも並びを決定的にする
     ],
   })
 

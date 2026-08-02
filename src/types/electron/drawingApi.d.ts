@@ -3,9 +3,8 @@
  */
 
 import type {
+  AnnotationWithAuthor,
   AnnotationWithContext,
-  DrawingAnnotation,
-  DrawingAnnotationStats,
   DrawingCreateData,
   DrawingType,
   DrawingUpdateData,
@@ -15,16 +14,17 @@ export interface DrawingAPI {
   drawing: {
     create: (data: DrawingCreateData) => Promise<{
       success: boolean
-      data?: DrawingAnnotation
+      data?: AnnotationWithContext
       error?: string
     }>
+    // 採点者引数は無い。QuestionScore は「生徒×設問×採点者」で1行なので、
+    // 同じ questionScoreId の注釈は全部同じ採点者のものである
     getByQuestionScore: (
       questionScoreId: string,
-      type?: DrawingType,
-      userId?: string
+      type?: DrawingType
     ) => Promise<{
       success: boolean
-      data?: DrawingAnnotation[]
+      data?: AnnotationWithAuthor[]
       error?: string
     }>
     getByExamStudent: (
@@ -34,15 +34,6 @@ export interface DrawingAPI {
     ) => Promise<{
       success: boolean
       data?: AnnotationWithContext[]
-      error?: string
-    }>
-    getByExam: (
-      examId: string,
-      type?: DrawingType,
-      userId?: string
-    ) => Promise<{
-      success: boolean
-      data?: DrawingAnnotation[]
       error?: string
     }>
     // main 側は questionScore（examStudentId / cropRegion）を include して返すので、
@@ -61,7 +52,7 @@ export interface DrawingAPI {
       data: DrawingUpdateData
     ) => Promise<{
       success: boolean
-      data?: DrawingAnnotation
+      data?: AnnotationWithContext
       error?: string
     }>
     delete: (id: string) => Promise<{
@@ -77,27 +68,7 @@ export interface DrawingAPI {
     }>
     batchCreate: (annotations: DrawingCreateData[]) => Promise<{
       success: boolean
-      data?: DrawingAnnotation[]
-      error?: string
-    }>
-    batchUpdate: (
-      updates: Array<{
-        id: string
-        data: DrawingUpdateData
-      }>
-    ) => Promise<{
-      success: boolean
-      data?: DrawingAnnotation[]
-      error?: string
-    }>
-    getStats: (questionScoreId: string) => Promise<{
-      success: boolean
-      data?: DrawingAnnotationStats
-      error?: string
-    }>
-    getById: (id: string) => Promise<{
-      success: boolean
-      data?: DrawingAnnotation | null
+      data?: AnnotationWithContext[]
       error?: string
     }>
     toggleFavorite: (
@@ -105,7 +76,7 @@ export interface DrawingAPI {
       isFavorite: boolean
     ) => Promise<{
       success: boolean
-      data?: DrawingAnnotation
+      data?: AnnotationWithContext
       error?: string
     }>
     getForBrowse: (examId: string) => Promise<{

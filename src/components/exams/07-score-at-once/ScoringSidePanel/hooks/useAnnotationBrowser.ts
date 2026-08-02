@@ -31,10 +31,10 @@ export interface AnnotationFilters {
 // addToTargets用パラメータ
 export interface AddToTargetsParams {
   sourceAnnotation: AnnotationWithContext
+  /** 追加先。採点者は行き先の QuestionScore が決めるので、別途受け取らない */
   targetQuestionScoreIds: string[]
   targetCropRegionId: string
   sourceCropRegionId: string
-  userId: string
 }
 
 /**
@@ -238,7 +238,6 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
         targetQuestionScoreIds,
         targetCropRegionId,
         sourceCropRegionId,
-        userId,
       } = params
 
       // 位置計算: 同一設問→同位置、異設問→中央配置
@@ -291,8 +290,7 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
               existing.verticalAlign === sourceAnnotation.verticalAlign &&
               existing.anchorDirection === sourceAnnotation.anchorDirection &&
               existing.displayX === targetDisplayX &&
-              existing.displayY === targetDisplayY &&
-              existing.userId === userId
+              existing.displayY === targetDisplayY
             )
           })
         }
@@ -327,7 +325,6 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
           anchorDirection: sourceAnnotation.anchorDirection,
           displayX: sourceAnnotation.displayX,
           displayY: sourceAnnotation.displayY,
-          userId,
           ...positionOverride,
         })
       )

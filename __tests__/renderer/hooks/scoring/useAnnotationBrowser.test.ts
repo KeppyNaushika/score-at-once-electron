@@ -376,7 +376,6 @@ describe("useAnnotationBrowser", () => {
         targetQuestionScoreIds: ["qs-target-1"],
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1", // 同一設問
-        userId: "user-1",
       }
 
       await act(async () => {
@@ -401,7 +400,6 @@ describe("useAnnotationBrowser", () => {
         targetQuestionScoreIds: ["qs-1", "qs-2", "qs-3"],
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1",
-        userId: "user-1",
       }
 
       await act(async () => {
@@ -430,7 +428,6 @@ describe("useAnnotationBrowser", () => {
         targetQuestionScoreIds: ["qs-target-1"],
         targetCropRegionId: "cr-2", // 異なる設問
         sourceCropRegionId: "cr-1",
-        userId: "user-1",
       }
 
       await act(async () => {
@@ -460,7 +457,6 @@ describe("useAnnotationBrowser", () => {
         targetQuestionScoreIds: ["qs-target-1"],
         targetCropRegionId: "cr-2",
         sourceCropRegionId: "cr-1",
-        userId: "user-1",
       }
 
       await act(async () => {
@@ -481,7 +477,6 @@ describe("useAnnotationBrowser", () => {
         targetQuestionScoreIds: [],
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1",
-        userId: "user-1",
       }
 
       await act(async () => {

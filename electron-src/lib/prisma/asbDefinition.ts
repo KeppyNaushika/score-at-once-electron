@@ -5,17 +5,7 @@
  * 変換ロジックは asbDefinitionConverters.ts に分離。
  */
 
-import type {
-  AsbBranchQuestion,
-  AsbCharGuide,
-  AsbDefinition,
-  AsbHeaderField,
-  AsbImageElement,
-  AsbMajorQuestion,
-  AsbOmrConfig,
-  AsbSubQuestion,
-  AsbTextElement,
-} from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import type { ASBDefinitionListItem } from "../../../src/types/answerSheetBuilder.types"
 import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefinition.types"
@@ -31,68 +21,35 @@ import prisma from "./client"
 // DB型定義（fullInclude用）
 // =============================================================================
 
-export type DbDefinitionFull = AsbDefinition & {
-  headerFields: AsbHeaderField[]
-  majorQuestions: (AsbMajorQuestion & {
-    subQuestions: (AsbSubQuestion & {
-      branchQuestions: (AsbBranchQuestion & {
-        textElements: AsbTextElement[]
-        imageElements: AsbImageElement[]
-        omrConfig:
-          | (AsbOmrConfig & {
-              choiceOptions: {
-                choiceIndex: number
-                label: string
-                isCorrect: boolean
-              }[]
-            })
-          | null
-      })[]
-      textElements: AsbTextElement[]
-      imageElements: AsbImageElement[]
-      charGuides: AsbCharGuide[]
-      omrConfig:
-        | (AsbOmrConfig & {
-            choiceOptions: {
-              choiceIndex: number
-              label: string
-              isCorrect: boolean
-            }[]
-          })
-        | null
-    })[]
-  })[]
-}
-
 const fullInclude = {
-  headerFields: { orderBy: { order: "asc" as const } },
+  headerFields: { orderBy: { order: "asc" } },
   majorQuestions: {
-    orderBy: { order: "asc" as const },
+    orderBy: { order: "asc" },
     include: {
       subQuestions: {
-        orderBy: { order: "asc" as const },
+        orderBy: { order: "asc" },
         include: {
           branchQuestions: {
-            orderBy: { order: "asc" as const },
+            orderBy: { order: "asc" },
             include: {
-              textElements: { orderBy: { order: "asc" as const } },
-              imageElements: { orderBy: { order: "asc" as const } },
+              textElements: { orderBy: { order: "asc" } },
+              imageElements: { orderBy: { order: "asc" } },
               omrConfig: {
                 include: {
                   choiceOptions: {
-                    orderBy: { choiceIndex: "asc" as const },
+                    orderBy: { choiceIndex: "asc" },
                   },
                 },
               },
             },
           },
-          textElements: { orderBy: { order: "asc" as const } },
-          imageElements: { orderBy: { order: "asc" as const } },
-          charGuides: { orderBy: { order: "asc" as const } },
+          textElements: { orderBy: { order: "asc" } },
+          imageElements: { orderBy: { order: "asc" } },
+          charGuides: { orderBy: { order: "asc" } },
           omrConfig: {
             include: {
               choiceOptions: {
-                orderBy: { choiceIndex: "asc" as const },
+                orderBy: { choiceIndex: "asc" },
               },
             },
           },
@@ -100,7 +57,18 @@ const fullInclude = {
       },
     },
   },
-}
+} satisfies Prisma.AsbDefinitionInclude
+
+/**
+ * `fullInclude` で取得した1行。形の SSOT は include 側にあり、ここは導出だけを行う。
+ *
+ * 以前は同じ形を手書きで複製し、取得箇所で `as DbDefinitionFull` と名乗らせていた。
+ * include に列やリレーションを足しても型は追随せず、逆に include から落としても
+ * 型検査が通ってしまう状態だった。
+ */
+export type DbDefinitionFull = Prisma.AsbDefinitionGetPayload<{
+  include: typeof fullInclude
+}>
 
 // =============================================================================
 // 一覧取得（軽量）
@@ -172,7 +140,7 @@ export async function getAsbDefinition(
     include: fullInclude,
   })
   if (!row) return null
-  return dbToDefinition(row as DbDefinitionFull)
+  return dbToDefinition(row)
 }
 
 // =============================================================================

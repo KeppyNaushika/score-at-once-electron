@@ -17,6 +17,7 @@ import {
   cleanupTempDir,
   extractArchive,
 } from "../../../electron-src/lib/import/exam-archive/archiveExtractor"
+import { EXAM_CURRENT_VERSION } from "../../../src/types/examArchive.types"
 
 const TIMESTAMP = "2026-01-01T00:00:00.000Z"
 
@@ -151,7 +152,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
 
     // チェーン警告が伝播する
     expect(data.transformWarnings.length).toBeGreaterThan(0)
-    expect(data.manifest.version).toBe("1.23.0")
+    expect(data.manifest.version).toBe(EXAM_CURRENT_VERSION)
 
     cleanupTempDir(data.tempDir)
   })
@@ -222,7 +223,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     const data = result.data!
     createdPaths.push(data.tempDir)
 
-    expect(data.manifest.version).toBe("1.23.0")
+    expect(data.manifest.version).toBe(EXAM_CURRENT_VERSION)
     expect(data.examData.exam.id).toBe("exam-1")
     expect(data.examData.examPages).toHaveLength(1)
     expect(data.examData.examClassrooms).toEqual([])
@@ -281,7 +282,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     createdPaths.push(data.tempDir)
 
     expect(data.transformWarnings).toEqual([])
-    expect(data.manifest.version).toBe("1.23.0")
+    expect(data.manifest.version).toBe(EXAM_CURRENT_VERSION)
 
     cleanupTempDir(data.tempDir)
   })

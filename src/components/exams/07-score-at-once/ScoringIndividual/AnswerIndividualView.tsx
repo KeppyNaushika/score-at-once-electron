@@ -135,11 +135,6 @@ export default function AnswerIndividualView({
   const drawingState = useDrawingState(
     currentQuestionScoreId,
     true, // データベース永続化を有効化
-    {
-      currentExamStudentId,
-      currentCropRegionId: currentCropRegion?.id,
-      currentUserId,
-    },
     onAnnotationChanged
   )
 

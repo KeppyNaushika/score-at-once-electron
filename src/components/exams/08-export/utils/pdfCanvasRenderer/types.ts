@@ -1,52 +1,25 @@
 /**
  * PDF出力用Canvas描画の共有型
+ *
+ * 形の SSOT は main 側の `PdfExportPageData`（`electron-src/lib/prisma/pdfExport.ts`）で、
+ * ここでは導出だけを行う。以前は同じ形をこちらでも宣言していたため、
+ * `PdfCanvasRenderer` が受け取ったデータを1件ずつ組み立て直す必要があり、
+ * その過程で union 列を `as` で絞り直していた。
  */
 
-/**
- * 採点データ（PDF出力用）
- */
-export interface ScoringDataForPdf {
-  questionScoreId: string
-  status: string // "unscored" | "correct" | "partial" | "pending" | "incorrect" | "no_answer"
-  partialScore?: number | null
-  cropRegion: {
-    id: string
-    x: number
-    y: number
-    width: number
-    height: number
-    label: string
-    maxScore?: number | null // 配点
-    examPage?: {
-      pageNumber: number
-    }
-  }
-}
+import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 
-/**
- * 小計点データ（PDF出力用）
- */
-export interface SubtotalDataForPdf {
-  regionId: string
-  label: string
-  score: number
-  x: number
-  y: number
-  width: number
-  height: number
-  pageNumber: number
-}
+/** 採点データ（PDF出力用） */
+export type ScoringDataForPdf = PdfExportPageData["scoringData"][number]
 
-/**
- * 合計点データ（PDF出力用）
- */
-export interface TotalScoreDataForPdf {
-  regionId: string
-  score: number
-  maxScore: number
-  x: number
-  y: number
-  width: number
-  height: number
-  pageNumber: number
-}
+/** 小計点データ（PDF出力用）。描画対象は算出できたものだけなので `score` は非 null。 */
+export type SubtotalDataForPdf = Omit<
+  PdfExportPageData["subtotalData"][number],
+  "score"
+> & { score: number }
+
+/** 合計点データ（PDF出力用）。小計と同じく描画時点では `score` が確定している。 */
+export type TotalScoreDataForPdf = Omit<
+  PdfExportPageData["totalScoreData"][number],
+  "score"
+> & { score: number }

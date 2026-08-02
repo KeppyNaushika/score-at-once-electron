@@ -139,9 +139,19 @@ describe("collectExamData", () => {
     const result = await collectExamData(testExam.exam.id, testExam.user.id)
 
     expect(result.success).toBe(true)
-    // アノテーションは全てテストユーザーのもの
+    // アノテーションは自前の採点者を持たないので、持ち主は親の採点データで確かめる。
+    // 収集された採点データはテストユーザーのものだけなので、そこにぶら下がっていれば
+    // そのアノテーションもテストユーザーのものである
+    const ownScoreIds = new Set(
+      result
+        .data!.scoresData.questionScores.filter(
+          (questionScore) => questionScore.userId === testExam.user.id
+        )
+        .map((questionScore) => questionScore.id)
+    )
+    expect(result.data!.scoresData.drawingAnnotations.length).toBeGreaterThan(0)
     for (const annotation of result.data!.scoresData.drawingAnnotations) {
-      expect(annotation.userId).toBe(testExam.user.id)
+      expect(ownScoreIds.has(annotation.questionScoreId)).toBe(true)
     }
   })
 

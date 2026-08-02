@@ -2059,7 +2059,6 @@ describe("executeIdIntegrationImport", () => {
         displayX: 0,
         displayY: 0,
         isFavorite: false,
-        userId: currentUser.id,
         createdAt: now,
         updatedAt: now,
       },

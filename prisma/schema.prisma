@@ -16,7 +16,6 @@ model User {
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
   passcodeType           String?                @default("none")
-  drawingAnnotations     DrawingAnnotation[]
   questionScores         QuestionScore[]
   userExams              UserExam[]
   invitedUserExams       UserExam[]             @relation("InvitedByUser")
@@ -340,6 +339,9 @@ model ScoreDecision {
   @@index([examStudentId])
 }
 
+/// 答案上の手書き採点マーク（テキスト・直線・長方形・楕円）。
+/// 持ち主は親 QuestionScore（生徒×設問×採点者で1行）から一意に決まるので、
+/// 自前の userId は持たない。採点者で絞るときは questionScore.userId を辿る。
 model DrawingAnnotation {
   id              String        @id @default(uuid())
   questionScoreId String
@@ -365,8 +367,6 @@ model DrawingAnnotation {
   isFavorite      Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
   questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
 
   @@index([questionScoreId])

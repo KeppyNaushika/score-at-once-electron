@@ -7,7 +7,6 @@ import type {
   RenderProgress,
 } from "@/components/exams/08-export/types"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
-import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import {
@@ -171,102 +170,32 @@ export function PdfCanvasRenderer({
     ): Promise<RenderedPageData> => {
       const image = await loadImage(page.imageUrl)
 
-      const scoringDataForPdf: ScoringDataForPdf[] = page.scoringData.map(
-        (scoringData) => ({
-          questionScoreId: scoringData.questionScoreId,
-          status: scoringData.status,
-          partialScore: scoringData.partialScore,
-          cropRegion: {
-            id: scoringData.cropRegion.id,
-            x: scoringData.cropRegion.x,
-            y: scoringData.cropRegion.y,
-            width: scoringData.cropRegion.width,
-            height: scoringData.cropRegion.height,
-            label: scoringData.cropRegion.label,
-            maxScore: scoringData.cropRegion.maxScore,
-          },
-        })
-      )
+      // main が include した行をそのまま描画エンジンへ渡す。
+      // 組み立て直すと union 列を `as` で絞り直すことになり、
+      // 落ちた列を既定値で埋める必要も出る。
+      const scoringDataForPdf: ScoringDataForPdf[] = page.scoringData
+      const annotations = page.annotations
 
-      const annotations: DrawingAnnotation[] = page.annotations.map(
-        (annotation) => ({
-          id: annotation.id,
-          questionScoreId: annotation.questionScoreId,
-          type: annotation.type as "text" | "line" | "rectangle" | "ellipse",
-          x: annotation.x,
-          y: annotation.y,
-          color: annotation.color,
-          strokeWidth: annotation.strokeWidth,
-          width: annotation.width,
-          height: annotation.height,
-          endX: annotation.endX,
-          endY: annotation.endY,
-          lineStyle: annotation.lineStyle as
-            "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow",
-          text: annotation.text,
-          fontSize: annotation.fontSize,
-          textBoxWidth: 0,
-          textBoxHeight: 0,
-          horizontalAlign: "left" as const,
-          verticalAlign: "top" as const,
-          displayX: annotation.displayX,
-          displayY: annotation.displayY,
-          anchorDirection: annotation.anchorDirection as
-            | "top-left"
-            | "top"
-            | "top-right"
-            | "left"
-            | "center"
-            | "right"
-            | "bottom-left"
-            | "bottom"
-            | "bottom-right",
-          isFavorite: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          userId: annotation.userId,
-        })
+      // 算出できたものだけを描画する。型ガードの出力がそのまま
+      // SubtotalDataForPdf / TotalScoreDataForPdf（score が非 null）になるので、
+      // 列を写し替える必要はない。
+      const subtotalDataForPdf: SubtotalDataForPdf[] = (
+        page.subtotalData || []
+      ).filter(
+        (
+          subtotalData
+        ): subtotalData is typeof subtotalData & { score: number } =>
+          subtotalData.score != null
       )
-
-      const subtotalDataForPdf: SubtotalDataForPdf[] = (page.subtotalData || [])
-        .filter(
-          (
-            subtotalData
-          ): subtotalData is typeof subtotalData & {
-            score: number
-          } => subtotalData.score != null
-        )
-        .map((subtotalData) => ({
-          regionId: subtotalData.regionId,
-          label: subtotalData.label,
-          score: subtotalData.score,
-          x: subtotalData.x,
-          y: subtotalData.y,
-          width: subtotalData.width,
-          height: subtotalData.height,
-          pageNumber: subtotalData.pageNumber,
-        }))
 
       const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
         page.totalScoreData || []
+      ).filter(
+        (
+          totalScoreData
+        ): totalScoreData is typeof totalScoreData & { score: number } =>
+          totalScoreData.score != null
       )
-        .filter(
-          (
-            totalScoreData
-          ): totalScoreData is typeof totalScoreData & {
-            score: number
-          } => totalScoreData.score != null
-        )
-        .map((totalScoreData) => ({
-          regionId: totalScoreData.regionId,
-          score: totalScoreData.score,
-          maxScore: totalScoreData.maxScore,
-          x: totalScoreData.x,
-          y: totalScoreData.y,
-          width: totalScoreData.width,
-          height: totalScoreData.height,
-          pageNumber: totalScoreData.pageNumber,
-        }))
 
       const blob = await renderAnswerSheetToCanvas(
         canvas,

@@ -1,10 +1,10 @@
-import type { CropRegion } from "@prisma/client"
 import * as crypto from "crypto"
 import { dialog } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 
+import type { AnnotationWithAuthor } from "../../../src/types/drawingAnnotation.types"
 import { getAbsolutePathFromData } from "../dataManager"
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
@@ -27,27 +27,21 @@ function sanitizeFileName(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, "_").trim()
 }
 
-/**
- * getStudentAnswersByExamId の戻り値から、PDF 出力が使う分だけを取り出した形。
- */
-interface StudentAnswerData {
-  id: string
-  examStudentId: string
-  pageNumber: number
-  examPageId: string
-  imagePath: string
-  originalImagePath: string
-  isAbsent: boolean
-  examId: string
-  status: "ready"
-}
-
 // ============================================================
 // Canvas描画エンジン用API
 // ============================================================
 
 /**
- * PDF出力に必要なデータを取得する型定義
+ * PDF出力に必要なデータを取得する型定義。renderer の描画エンジンはこの型から
+ * 入力型を導出する（`pdfCanvasRenderer/types.ts`）ので、形の SSOT はここ1箇所。
+ *
+ * 採点マークは**実体をそのまま載せる**。以前は 17 列を選んで載せ替えていたため、
+ * renderer 側で組み立て直したうえで union 列を `as` で戻し、落ちた列
+ * （textBoxWidth / horizontalAlign / createdAt 等）を `0` や `new Date()` で
+ * 埋めていた。実体を渡せば載せ替えも `as` も要らない。
+ *
+ * 設問領域・小計・合計は描画に要る列だけの形を保つ（規約の read-out 側の carve-out。
+ * 実体をそのまま載せると questionScores まで IPC を越えることになる）。
  */
 export interface PdfExportPageData {
   examStudentId: string
@@ -97,26 +91,7 @@ export interface PdfExportPageData {
   // 合計点データ（後方互換性のため維持）
   totalScore: number | null
   totalMaxScore: number | null
-  annotations: Array<{
-    id: string
-    questionScoreId: string
-    type: string
-    x: number
-    y: number
-    color: string
-    strokeWidth: number
-    width: number
-    height: number
-    endX: number
-    endY: number
-    lineStyle: string
-    text: string
-    fontSize: number
-    displayX: number
-    displayY: number
-    anchorDirection: string
-    userId: string
-  }>
+  annotations: AnnotationWithAuthor[]
 }
 
 interface PdfExportData {
@@ -170,19 +145,9 @@ export async function getPdfExportData(options: {
     ) {
       return { success: false, error: "答案画像の取得に失敗しました" }
     }
-    // Prisma型をStudentAnswerData型に変換
-    const studentAnswers: StudentAnswerData[] =
-      studentAnswersResult.studentAnswerImages.map((image) => ({
-        id: image.id,
-        examStudentId: image.examStudentId,
-        pageNumber: image.examPage.pageNumber,
-        examPageId: image.examPageId,
-        imagePath: image.imagePath,
-        originalImagePath: image.imagePath,
-        isAbsent: image.examStudent.status === "absent",
-        examId: image.examPage.examId,
-        status: "ready" as const,
-      }))
+    // include が作ったグラフ（examStudent{student} / examPage 同梱）をそのまま持つ。
+    // pageNumber・氏名は出力データを組み立てる時点でエンティティから導出する。
+    const studentAnswers = studentAnswersResult.studentAnswerImages
 
     // 選択された受験者のみフィルタリング
     const selectedExamStudents = allExamStudents.filter((examStudent) =>
@@ -201,18 +166,14 @@ export async function getPdfExportData(options: {
       if (studentAnswerList.length === 0) continue
 
       for (const studentAnswer of studentAnswerList) {
-        const imagePath = getAbsolutePathFromData(
-          studentAnswer.originalImagePath
-        )
+        const imagePath = getAbsolutePathFromData(studentAnswer.imagePath)
 
         if (!imagePath || !fs.existsSync(imagePath)) continue
 
-        // ページ番号を取得（型安全：pageNumberは必ず存在する）
-        const pageNumber = studentAnswer.pageNumber
-
-        // このページの採点領域を取得
+        // このページの採点領域を取得。ページの同定は examPageId で行う
+        // （pageNumber は序数で id 以外の unique を持てないため key にならない）
         const pageRegions = cropRegions.filter(
-          (cropRegion) => cropRegion.examPage?.pageNumber === pageNumber
+          (cropRegion) => cropRegion.examPageId === studentAnswer.examPageId
         )
 
         // 採点データを構築
@@ -252,35 +213,15 @@ export async function getPdfExportData(options: {
                 scoringEntry.status !== "unscored")
           )
 
-        // アノテーションを取得
+        // アノテーションを取得（行をそのまま持つ）
         const annotations: PdfExportPageData["annotations"] = []
         for (const scoringEntry of scoringData) {
           if (!scoringEntry.questionScoreId) continue
-          const annots = await getDrawingAnnotationsByQuestionScore(
-            scoringEntry.questionScoreId
+          annotations.push(
+            ...(await getDrawingAnnotationsByQuestionScore(
+              scoringEntry.questionScoreId
+            ))
           )
-          for (const annot of annots) {
-            annotations.push({
-              id: annot.id,
-              questionScoreId: annot.questionScoreId,
-              type: annot.type,
-              x: annot.x,
-              y: annot.y,
-              color: annot.color,
-              strokeWidth: annot.strokeWidth,
-              width: annot.width,
-              height: annot.height,
-              endX: annot.endX,
-              endY: annot.endY,
-              lineStyle: annot.lineStyle,
-              text: annot.text,
-              fontSize: annot.fontSize,
-              displayX: annot.displayX,
-              displayY: annot.displayY,
-              anchorDirection: annot.anchorDirection,
-              userId: annot.userId,
-            })
-          }
         }
 
         // 画像をbase64データURLに変換（Canvasのtainted問題を回避）
@@ -315,13 +256,8 @@ export async function getPdfExportData(options: {
             examStudent.id,
             examId,
             subtotalRegion.id,
-            allScores.map((score) => ({
-              examStudentId: score.examStudentId,
-              cropRegionId: score.cropRegionId,
-              status: score.status,
-              partialScore: score.partialScore,
-            })),
-            cropRegions as CropRegion[]
+            allScores,
+            cropRegions
           )
 
           subtotalData.push({
@@ -395,7 +331,7 @@ export async function getPdfExportData(options: {
         pages.push({
           examStudentId: examStudent.id,
           studentName: `${student.lastName} ${student.firstName}`,
-          pageNumber,
+          pageNumber: studentAnswer.examPage.pageNumber,
           imagePath,
           imageUrl,
           pageSize,

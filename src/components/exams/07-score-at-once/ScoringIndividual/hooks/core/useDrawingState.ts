@@ -31,11 +31,6 @@ import {
 export function useDrawingState(
   questionScoreId?: string | null,
   enablePersistence: boolean = true,
-  context?: {
-    currentExamStudentId?: string
-    currentCropRegionId?: string
-    currentUserId?: string
-  },
   onAnnotationChanged?: () => void
 ): DrawingState &
   DrawingActions & {
@@ -127,8 +122,7 @@ export function useDrawingState(
     loadAnnotations,
     syncElements,
   } = useDrawingAnnotations(
-    enablePersistence ? persistenceCallbacks : undefined,
-    context
+    enablePersistence ? persistenceCallbacks : undefined
   )
 
   // questionScoreIdが変更された時にDBから自動読み込み

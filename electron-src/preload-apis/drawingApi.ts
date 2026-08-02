@@ -1,27 +1,30 @@
-import type { DrawingAnnotation } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
-/** 描画アノテーションのIPC API（CRUD・一括操作・お気に入り・統計取得） */
+import type {
+  DrawingCreateData,
+  DrawingType,
+  DrawingUpdateData,
+} from "@/types/drawingAnnotation.types"
+
+/**
+ * 描画アノテーションのIPC API（CRUD・一括作成・お気に入り・ブラウズ取得）
+ *
+ * 引数の型は契約（`src/types/electron/drawingApi.d.ts`）と同一のものを参照する。
+ * ここで `Partial<DrawingAnnotation>` のような別型を書くと、同じ通信に2つの型定義が
+ * できてしまい（必須のはずの questionScoreId / userId が任意になる等）、どちらが
+ * 正なのか決まらなくなる。
+ */
 export function createDrawingApi() {
   return {
     // Drawing Annotation related
     drawing: {
-      create: (data: Partial<DrawingAnnotation>) =>
+      create: (data: DrawingCreateData) =>
         ipcRenderer.invoke("drawing:create", data),
-      getByQuestionScore: (
-        questionScoreId: string,
-        type?: string,
-        userId?: string
-      ) =>
-        ipcRenderer.invoke(
-          "drawing:getByQuestionScore",
-          questionScoreId,
-          type,
-          userId
-        ),
+      getByQuestionScore: (questionScoreId: string, type?: DrawingType) =>
+        ipcRenderer.invoke("drawing:getByQuestionScore", questionScoreId, type),
       getByExamStudent: (
         examStudentId: string,
-        type?: string,
+        type?: DrawingType,
         userId?: string
       ) =>
         ipcRenderer.invoke(
@@ -30,27 +33,19 @@ export function createDrawingApi() {
           type,
           userId
         ),
-      getByExam: (examId: string, type?: string, userId?: string) =>
-        ipcRenderer.invoke("drawing:getByExam", examId, type, userId),
       getByCropRegion: (cropRegionId: string, userId?: string) =>
         ipcRenderer.invoke("drawing:getByCropRegion", cropRegionId, userId),
-      update: (id: string, data: Partial<DrawingAnnotation>) =>
+      update: (id: string, data: DrawingUpdateData) =>
         ipcRenderer.invoke("drawing:update", id, data),
       delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
-      deleteByQuestionScore: (questionScoreId: string, type?: string) =>
+      deleteByQuestionScore: (questionScoreId: string, type?: DrawingType) =>
         ipcRenderer.invoke(
           "drawing:deleteByQuestionScore",
           questionScoreId,
           type
         ),
-      batchCreate: (annotations: Partial<DrawingAnnotation>[]) =>
+      batchCreate: (annotations: DrawingCreateData[]) =>
         ipcRenderer.invoke("drawing:batchCreate", annotations),
-      batchUpdate: (
-        updates: Array<{ id: string; data: Partial<DrawingAnnotation> }>
-      ) => ipcRenderer.invoke("drawing:batchUpdate", updates),
-      getStats: (questionScoreId: string) =>
-        ipcRenderer.invoke("drawing:getStats", questionScoreId),
-      getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
       toggleFavorite: (id: string, isFavorite: boolean) =>
         ipcRenderer.invoke("drawing:toggleFavorite", id, isFavorite),
       getForBrowse: (examId: string) =>

@@ -325,7 +325,11 @@ export async function getStudentAnswersByExamId(examId: string) {
         examStudent: { include: { student: true } },
         examPage: true,
       },
-      orderBy: [{ examStudentId: "asc" }, { examPage: { pageNumber: "asc" } }],
+      orderBy: [
+        { examStudentId: "asc" },
+        { examPage: { pageNumber: "asc" } },
+        { id: "asc" },
+      ],
     })
 
     // 重複除去フォールバック（@@unique制約適用前のデータ対策）
@@ -381,7 +385,18 @@ export async function getStudentAnswersDataset(examId: string) {
           },
         },
         examPages: {
-          orderBy: { pageNumber: "asc" },
+          // id をタイブレークに入れて並びを決定的にする。
+          //
+          // pageNumber は表示上の序数であって一意ではない。sync 構成では各端末が
+          // 自分のローカル DB へ書き、NAS への反映は行レベルマージ（LWW）なので、
+          // 2台が同時にページを追加すると同じ番号の行が別 id で並ぶ。これは
+          // `@@unique([examId, pageNumber])` では防げない（各端末では制約が満たされ、
+          // 衝突はマージ時に現れる。id 以外の unique は同期違反）。
+          //
+          // 同定は全経路で id なので重複自体は害にならないが、06 の自動配置だけは
+          // この配列の**順序**でファイルを割り当てる（useTableDataGeneration.ts）。
+          // 同値の順序が保証されないと、同じ操作でも答案の配置先が変わってしまう。
+          orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
           include: {
             studentAnswerImages: {
               include: { examStudent: { include: { student: true } } },

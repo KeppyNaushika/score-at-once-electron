@@ -281,13 +281,7 @@ export async function executeIdIntegrationImport(
         )
 
         // 13. DrawingAnnotation
-        await processDrawingAnnotations(
-          data,
-          currentUserId,
-          idMappings,
-          counts,
-          tx
-        )
+        await processDrawingAnnotations(data, idMappings, counts, tx)
 
         // 14. 学級所属
         await processMemberships(data.classesData.memberships, idMappings, tx)

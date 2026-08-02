@@ -60,6 +60,7 @@ import { V1_19_0_to_V1_20_0_Transformer } from "./V1_19_0_to_V1_20_0"
 import { V1_20_0_to_V1_21_0_Transformer } from "./V1_20_0_to_V1_21_0"
 import { V1_21_0_to_V1_22_0_Transformer } from "./V1_21_0_to_V1_22_0"
 import { V1_22_0_to_V1_23_0_Transformer } from "./V1_22_0_to_V1_23_0"
+import { V1_23_0_to_V1_24_0_Transformer } from "./V1_23_0_to_V1_24_0"
 
 const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
@@ -85,6 +86,7 @@ const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_20_0_to_V1_21_0_Transformer(),
   new V1_21_0_to_V1_22_0_Transformer(),
   new V1_22_0_to_V1_23_0_Transformer(),
+  new V1_23_0_to_V1_24_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
@@ -246,6 +248,17 @@ const SHAPE_VERSION_FLOORS: {
         )
       )
     },
+  },
+  {
+    // 注釈が自前の採点者を持っていた頃の userId（V1_23_0_to_V1_24_0 が処理）。
+    // 置き換え先のキーは無く単に消えるだけなので、変換は冪等であり
+    // （既に消えていれば何もしない）併存条件は要らない
+    maxVersion: "1.23.0",
+    marker: "DrawingAnnotation.userId",
+    applies: (data) =>
+      (data.scoresData.drawingAnnotations ?? []).some(
+        (drawingAnnotation) => "userId" in drawingAnnotation
+      ),
   },
 ]
 

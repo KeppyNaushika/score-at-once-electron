@@ -347,7 +347,7 @@ export function setupOMRHandlers(): void {
       // 模範解答ページを取得
       const examPages = await prisma.examPage.findMany({
         where: { examId },
-        orderBy: { pageNumber: "asc" },
+        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
       })
 
       const pages: Array<{
