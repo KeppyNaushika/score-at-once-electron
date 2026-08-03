@@ -7,56 +7,7 @@
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
-import type { AnchorDirection } from "@/lib/textbox-canvas/types"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
-
-/**
- * 描画要素（内部用、DrawingAnnotationから変換）
- */
-interface DrawingElement {
-  id: string
-  type: "text" | "line" | "rectangle" | "ellipse"
-  x: number
-  y: number
-  color: string
-  strokeWidth: number
-  width?: number
-  height?: number
-  endX?: number
-  endY?: number
-  lineStyle?: string
-  text?: string
-  fontSize?: number
-  displayX?: number
-  displayY?: number
-  anchorDirection?: string
-}
-
-/**
- * DrawingAnnotationをDrawingElementに変換
- */
-export function convertAnnotationToDrawingElement(
-  annotation: DrawingAnnotation
-): DrawingElement {
-  return {
-    id: annotation.id,
-    type: annotation.type as "text" | "line" | "rectangle" | "ellipse",
-    x: annotation.x,
-    y: annotation.y,
-    color: annotation.color,
-    strokeWidth: annotation.strokeWidth,
-    width: annotation.width,
-    height: annotation.height,
-    endX: annotation.endX,
-    endY: annotation.endY,
-    lineStyle: annotation.lineStyle,
-    text: annotation.text,
-    fontSize: annotation.fontSize,
-    displayX: annotation.displayX,
-    displayY: annotation.displayY,
-    anchorDirection: annotation.anchorDirection,
-  }
-}
 
 /**
  * 単一の描画要素をCanvas上に描画
@@ -77,7 +28,7 @@ export function convertAnnotationToDrawingElement(
  */
 export async function drawElement(
   ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
+  element: DrawingAnnotation,
   imageWidth: number,
   imageHeight: number,
   offsetX: number = 0,
@@ -98,7 +49,7 @@ export async function drawElement(
     imageHeight
   )
   const fontSizePx = mmToPixels(
-    element.fontSize ?? 4.0,
+    element.fontSize,
     pageSize,
     imageWidth,
     imageHeight
@@ -111,9 +62,8 @@ export async function drawElement(
   switch (element.type) {
     case "text":
       if (element.text) {
-        const anchorDir = (element.anchorDirection ||
-          "top-left") as AnchorDirection
-        const textColor = element.color || "#000000"
+        const anchorDir = element.anchorDirection
+        const textColor = element.color
 
         try {
           const svgElement = await convertTextToSvg(
@@ -191,7 +141,7 @@ export async function drawElement(
       break
 
     case "line":
-      if (element.endX !== undefined && element.endY !== undefined) {
+      {
         const currentEndX = element.endX * imageWidth + offsetX
         const currentEndY = (element.endY - pageOffset) * imageHeight + offsetY
 
@@ -376,7 +326,7 @@ export async function drawElement(
       break
 
     case "rectangle":
-      if (element.width !== undefined && element.height !== undefined) {
+      {
         const rectWidth = element.width * imageWidth
         const rectHeight = element.height * imageHeight
         ctx.strokeRect(currentX, currentY, rectWidth, rectHeight)
@@ -384,7 +334,7 @@ export async function drawElement(
       break
 
     case "ellipse":
-      if (element.width !== undefined && element.height !== undefined) {
+      {
         const rectWidth = element.width * imageWidth
         const rectHeight = element.height * imageHeight
 

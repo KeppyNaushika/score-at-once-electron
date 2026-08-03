@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from "react"
 
 import { DRAWING_TOLERANCES } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
-import type { AnchorDirection } from "@/types/drawingAnnotation.types"
+import type {
+  AnchorDirection,
+  DrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
 
 /**
  * アンカー方向に基づいてテキストの左上位置を計算
@@ -166,13 +168,13 @@ export function useHitTestUtils({
    * @returns "handle:start", "handle:end", "handle:top-left", etc. or "body" or null
    */
   const hitTestElementWithHandle = useCallback(
-    (element: DrawingElement, testX: number, testY: number): HitTestResult => {
+    (
+      element: DrawingAnnotation,
+      testX: number,
+      testY: number
+    ): HitTestResult => {
       switch (element.type) {
         case "line": {
-          if (element.endX === undefined || element.endY === undefined) {
-            return null
-          }
-
           // 1. 端点ハンドル判定（優先）
           if (
             isPointInCircle(testX, testY, element.x, element.y, HANDLE_RADIUS)
@@ -208,10 +210,6 @@ export function useHitTestUtils({
         }
 
         case "rectangle": {
-          if (element.width === undefined || element.height === undefined) {
-            return null
-          }
-
           const left = Math.min(element.x, element.x + element.width)
           const right = Math.max(element.x, element.x + element.width)
           const top = Math.min(element.y, element.y + element.height)
@@ -247,10 +245,6 @@ export function useHitTestUtils({
         }
 
         case "ellipse": {
-          if (element.width === undefined || element.height === undefined) {
-            return null
-          }
-
           const left = Math.min(element.x, element.x + element.width)
           const right = Math.max(element.x, element.x + element.width)
           const top = Math.min(element.y, element.y + element.height)
@@ -320,15 +314,14 @@ export function useHitTestUtils({
           let boxWidth: number
           let boxHeight: number
 
-          if (
-            element.textBoxWidth !== undefined &&
-            element.textBoxHeight !== undefined
-          ) {
+          // テキストボックスの大きさは既定 0.0（＝リサイズされていない）。
+          // その場合はテキストから概算する
+          if (element.textBoxWidth > 0 && element.textBoxHeight > 0) {
             boxWidth = element.textBoxWidth
             boxHeight = element.textBoxHeight
           } else if (element.text) {
             // fontSizeを考慮したサイズ計算（正規化座標で）
-            const fontSize = element.fontSize ?? 16
+            const fontSize = element.fontSize
             const lines = element.text.split("\n")
             const maxLineLength = Math.max(...lines.map((line) => line.length))
             // fontSizeをピクセルから正規化座標に変換（画像幅1000pxを基準）
@@ -341,13 +334,12 @@ export function useHitTestUtils({
           }
 
           // アンカー方向に基づいてバウンディングボックスの位置を計算
-          const anchorDirection = element.anchorDirection ?? "top-left"
           const { left, top } = getTextBoundsFromAnchor(
             element.x,
             element.y,
             boxWidth,
             boxHeight,
-            anchorDirection
+            element.anchorDirection
           )
           const right = left + boxWidth
           const bottom = top + boxHeight
@@ -383,7 +375,7 @@ export function useHitTestUtils({
    * ハンドルまたは本体にヒットすればtrue
    */
   const hitTestElement = useCallback(
-    (element: DrawingElement, testX: number, testY: number): boolean => {
+    (element: DrawingAnnotation, testX: number, testY: number): boolean => {
       return hitTestElementWithHandle(element, testX, testY) !== null
     },
     [hitTestElementWithHandle]
@@ -393,7 +385,11 @@ export function useHitTestUtils({
    * ハンドルの当たり判定（後方互換性のため維持）
    */
   const hitTestHandle = useCallback(
-    (element: DrawingElement, testX: number, testY: number): string | null => {
+    (
+      element: DrawingAnnotation,
+      testX: number,
+      testY: number
+    ): string | null => {
       const result = hitTestElementWithHandle(element, testX, testY)
       if (result && result.startsWith("handle:")) {
         return result.replace("handle:", "")

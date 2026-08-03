@@ -33,7 +33,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useDrawingState } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useDrawingState"
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {
   cleanupMockDrawingAPI,
@@ -50,21 +50,19 @@ vi.mock("@/app/textbox-on-canvas-v3/utils/mathJaxUtils", () => ({
     .mockResolvedValue({ width: 200, height: 50 }),
 }))
 
-function makeElement(overrides: Partial<DrawingElement> = {}): DrawingElement {
-  return {
+function makeElement(
+  overrides: Partial<DrawingAnnotation> = {}
+): DrawingAnnotation {
+  return createMockAnnotation({
     id: `el-${crypto.randomUUID().slice(0, 8)}`,
-    type: "text",
-    x: 0.1,
-    y: 0.2,
-    color: "#ef4444",
-    strokeWidth: 3,
+    questionScoreId: "qs-1",
     ...overrides,
-  }
+  })
 }
 
 /** useLayoutEffect内の非同期loadAnnotationsの完了+useEffectの変換を待つ */
 async function waitForDrawingElements(
-  result: { current: { drawingElements: DrawingElement[] } },
+  result: { current: { drawingElements: DrawingAnnotation[] } },
   expectedLength: number
 ) {
   await waitFor(() => {

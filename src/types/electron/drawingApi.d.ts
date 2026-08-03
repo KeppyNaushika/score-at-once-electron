@@ -3,28 +3,29 @@
  */
 
 import type {
-  AnnotationWithAuthor,
   AnnotationWithContext,
-  DrawingCreateData,
+  DrawingAnnotation,
   DrawingType,
-  DrawingUpdateData,
 } from "../drawingAnnotation.types"
 
 export interface DrawingAPI {
   drawing: {
-    create: (data: DrawingCreateData) => Promise<{
+    // 作成・更新はどちらも行そのものを渡す。DB に保存されている形をそのまま
+    // やり取りするので、変換用の入力型は無い
+    create: (annotation: DrawingAnnotation) => Promise<{
       success: boolean
       data?: AnnotationWithContext
       error?: string
     }>
     // 採点者引数は無い。QuestionScore は「生徒×設問×採点者」で1行なので、
-    // 同じ questionScoreId の注釈は全部同じ採点者のものである
+    // 同じ questionScoreId の注釈は全部同じ採点者のものである。
+    // 返すのは関係を同梱しない行。Canvas はこれを編集して書き戻す
     getByQuestionScore: (
       questionScoreId: string,
       type?: DrawingType
     ) => Promise<{
       success: boolean
-      data?: AnnotationWithAuthor[]
+      data?: DrawingAnnotation[]
       error?: string
     }>
     getByExamStudent: (
@@ -47,10 +48,7 @@ export interface DrawingAPI {
       data?: AnnotationWithContext[]
       error?: string
     }>
-    update: (
-      id: string,
-      data: DrawingUpdateData
-    ) => Promise<{
+    update: (annotation: DrawingAnnotation) => Promise<{
       success: boolean
       data?: AnnotationWithContext
       error?: string
@@ -66,7 +64,7 @@ export interface DrawingAPI {
       success: boolean
       error?: string
     }>
-    batchCreate: (annotations: DrawingCreateData[]) => Promise<{
+    batchCreate: (annotations: DrawingAnnotation[]) => Promise<{
       success: boolean
       data?: AnnotationWithContext[]
       error?: string

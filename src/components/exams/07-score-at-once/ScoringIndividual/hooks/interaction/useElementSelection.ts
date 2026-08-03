@@ -1,14 +1,14 @@
 import { useCallback, useRef } from "react"
 
 import type {
-  DrawingElement,
   LineEditMode,
   RectangleEditMode,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 interface UseElementSelectionProps {
   currentTool: string
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   isCtrlPressed: boolean
 
@@ -19,20 +19,20 @@ interface UseElementSelectionProps {
   setRectangleEditMode: (mode: RectangleEditMode) => void
 
   // Utils
-  hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
+  hitTestElement: (element: DrawingAnnotation, x: number, y: number) => boolean
   getLineEditMode: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => LineEditMode
   getRectangleEditMode: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => RectangleEditMode
 
   // Optional callback for text element re-click
-  onTextElementReClick?: (element: DrawingElement) => void
+  onTextElementReClick?: (element: DrawingAnnotation) => void
 }
 
 /** 描画要素のクリック選択・複数選択・ダブルクリック検出を管理するフック */
@@ -65,7 +65,7 @@ export function useElementSelection({
 
       // 既存要素の選択チェック
       let elementSelected = false
-      let clickedElement: DrawingElement | null = null
+      let clickedElement: DrawingAnnotation | null = null
 
       // 要素がない場合は早期リターン
       if (drawingElements.length === 0) {

@@ -6,11 +6,9 @@
 import type { Prisma } from "@prisma/client"
 
 import type {
-  AnnotationWithAuthor,
   AnnotationWithContext,
-  DrawingCreateData,
+  DrawingAnnotation,
   DrawingType,
-  DrawingUpdateData,
 } from "../../../src/types/drawingAnnotation.types"
 import {
   narrowAnnotationUnions,
@@ -55,14 +53,29 @@ function toDrawableAnnotations<
 }
 
 /**
- * 作成者を同梱する（設問の文脈が要らない経路）。
+ * 行から「見た目を決める列」だけを取り出す。
  *
- * 作成者は注釈自身ではなく親 QuestionScore が持つ。QuestionScore は
- * 「生徒×設問×採点者」で1行なので、注釈の持ち主は親から一意に決まる。
+ * 外すのは3種類だけ。同定用の `id`、DB が管理する時刻、そして独立した書き込み経路を
+ * 持つ `isFavorite`（`toggleDrawingAnnotationFavorite`）。
+ *
+ * Canvas が抱えている行は設問を開いた時点のコピーなので、更新でまるごと書き戻すと
+ * その間に別経路が立てたお気に入りを巻き戻してしまう（サイドパネルで星を付けた直後に
+ * マークを動かすと星が消えていた）。書き込む列と、書き込んではいけない列を、作成の
+ * 重複判定と更新の両方でここ1箇所から決める。
+ *
+ * 列を足すと自動的に appearance へ入る（＝重複判定にも更新にも載る）。独自の書き込み
+ * 経路を持つ列を足すときだけ、ここへ除外を足す。
  */
-export const annotationWithAuthorInclude = {
-  questionScore: { include: { user: { omit: authorOmit } } },
-} satisfies Prisma.DrawingAnnotationInclude
+function toAppearance(annotation: DrawingAnnotation) {
+  const {
+    id: _id,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    isFavorite: _isFavorite,
+    ...appearance
+  } = annotation
+  return appearance
+}
 
 /**
  * 作成者と設問の文脈を同梱する（SSOT）。
@@ -82,83 +95,30 @@ export const annotationWithContextInclude = {
 
 /**
  * 描画アノテーションを作成する
- * @param data 作成データ（questionScoreIdは必須）
+ * @param annotation 作成する行（既定値は送り元が `newDrawingAnnotation` で埋める）
  * @returns Promise<AnnotationWithContext> 作成された描画アノテーション（設問の文脈付き）
  */
 export async function createDrawingAnnotation(
-  data: DrawingCreateData
+  annotation: DrawingAnnotation
 ): Promise<AnnotationWithContext> {
   try {
-    // questionScoreIdは必須
-    if (!data.questionScoreId) {
-      throw new Error(
-        "questionScoreId is required. QuestionScore must be created before adding annotations."
-      )
-    }
-
     // 外部キー制約の事前検証。
     // 併せて注釈の持ち主（＝親の採点者）をここで確定させる。注釈は自前の userId を
     // 持たないので、採点者を引数で受け取る余地そのものが無い。
     const parentQuestionScore = await prisma.questionScore.findUnique({
-      where: { id: data.questionScoreId },
+      where: { id: annotation.questionScoreId },
     })
 
     if (!parentQuestionScore) {
-      throw new Error(`QuestionScore not found: ${data.questionScoreId}`)
+      throw new Error(`QuestionScore not found: ${annotation.questionScoreId}`)
     }
 
-    const createData = {
-      questionScoreId: data.questionScoreId,
-      type: data.type,
-      x: data.x,
-      y: data.y,
-      color: data.color || "#ef4444",
-      // 線幅・文字サイズは mm（用紙サイズ基準）。既定値は schema と揃える
-      // （`3` / `16` は px 時代の名残で、省略時に mm として保存されると
-      //  4〜6倍の大きさで描画される）
-      strokeWidth: data.strokeWidth ?? 0.5,
-      width: data.width || 0.0,
-      height: data.height || 0.0,
-      endX: data.endX || 0.0,
-      endY: data.endY || 0.0,
-      lineStyle: data.lineStyle || "solid",
-      text: data.text || "",
-      fontSize: data.fontSize ?? 4.0,
-      textBoxWidth: data.textBoxWidth || 0.0,
-      textBoxHeight: data.textBoxHeight || 0.0,
-      horizontalAlign: data.horizontalAlign || "left",
-      verticalAlign: data.verticalAlign || "top",
-      anchorDirection: data.anchorDirection || "top-left",
-      displayX: data.displayX || 0.0,
-      displayY: data.displayY || 0.0,
-    }
-
-    // 重複チェック: 全プロパティが完全一致するアノテーションが既に存在する場合はそれを返す。
+    // 重複チェック: 見た目を決める列が完全一致する行が既にあればそれを返す。
+    //
     // アノテーションのコピー時は値を直接コピーするため、浮動小数点の丸め誤差は発生しない。
     // SQLite (IEEE 754 double) と JavaScript (IEEE 754 double) 間で値は保持される。
     const duplicate = await prisma.drawingAnnotation.findFirst({
-      where: {
-        questionScoreId: createData.questionScoreId,
-        type: createData.type,
-        x: createData.x,
-        y: createData.y,
-        color: createData.color,
-        strokeWidth: createData.strokeWidth,
-        width: createData.width,
-        height: createData.height,
-        endX: createData.endX,
-        endY: createData.endY,
-        lineStyle: createData.lineStyle,
-        text: createData.text,
-        fontSize: createData.fontSize,
-        textBoxWidth: createData.textBoxWidth,
-        textBoxHeight: createData.textBoxHeight,
-        horizontalAlign: createData.horizontalAlign,
-        verticalAlign: createData.verticalAlign,
-        anchorDirection: createData.anchorDirection,
-        displayX: createData.displayX,
-        displayY: createData.displayY,
-      },
+      where: toAppearance(annotation),
       include: annotationWithContextInclude,
     })
 
@@ -167,18 +127,14 @@ export async function createDrawingAnnotation(
     }
 
     const result = await prisma.drawingAnnotation.create({
-      data: {
-        // フロントエンドで生成したIDがあれば使用、なければPrismaが自動生成
-        ...(data.id && { id: data.id }),
-        ...createData,
-      },
+      data: annotation,
       // 透明度制御に必要なquestionScore情報を含める
       include: annotationWithContextInclude,
     })
 
     // 監査ログ: 採点マーク追加（マークごとに個別記録。集約は同一idの連続操作のみ）
     const scope = await resolveExamScopeByQuestionScore(
-      createData.questionScoreId
+      annotation.questionScoreId
     )
     await recordAuditLog({
       action: "exam.annotation.create",
@@ -202,14 +158,18 @@ export async function createDrawingAnnotation(
  * 採点者による絞り込みは受け付けない。QuestionScore は「生徒×設問×採点者」で1行なので、
  * 同じ questionScoreId の注釈は全部同じ採点者のものであり、絞る余地が無い。
  *
+ * 関係は同梱しない。呼び出し側（Canvas・PDF 出力）は行を編集して書き戻すので、
+ * 同梱した関係が付いてくると書き戻しの経路に載ってしまう。作成者が要るなら
+ * 親 QuestionScore を持っている側で解決する。
+ *
  * @param questionScoreId QuestionScoreのID
  * @param type フィルタする描画タイプ（オプション）
- * @returns Promise<AnnotationWithAuthor[]> 描画アノテーション配列（作成者付き）
+ * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列
  */
 export async function getDrawingAnnotationsByQuestionScore(
   questionScoreId: string,
   type?: DrawingType
-): Promise<AnnotationWithAuthor[]> {
+): Promise<DrawingAnnotation[]> {
   // 読み取り専用操作のためバックアップ不要
   try {
     const result = await prisma.drawingAnnotation.findMany({
@@ -218,7 +178,6 @@ export async function getDrawingAnnotationsByQuestionScore(
         ...(type && { type }),
       },
       orderBy: { createdAt: "asc" },
-      include: annotationWithAuthorInclude,
     })
 
     return toDrawableAnnotations(
@@ -309,19 +268,25 @@ export async function getDrawingAnnotationsByCropRegion(
 
 /**
  * 描画アノテーションを更新する
- * @param id 描画アノテーションのID
- * @param data 更新データ
+ * @param annotation 更新後の行（同定は `annotation.id`）
  * @returns Promise<AnnotationWithContext> 更新された描画アノテーション（設問の文脈付き）
+ *
+ * 行をそのまま受けるので、Prisma の入力型を経由したときのような `{ set }` /
+ * `{ increment }`（原子更新操作）が混じる余地が無い。
+ *
+ * ただし書き込むのは見た目を決める列だけ（`toAppearance`）。受け取る行は Canvas が
+ * 設問を開いた時点のコピーなので、まるごと書き戻すと自分の書き込み経路を持つ列を
+ * 巻き戻す。`updatedAt` は送られてきた値（＝読み込んだ時点の古い時刻）を使わず
+ * ここで打ち直す。NAS 同期の LWW がこの時刻で勝敗を決めるため。
  */
 export async function updateDrawingAnnotation(
-  id: string,
-  data: DrawingUpdateData
+  annotation: DrawingAnnotation
 ): Promise<AnnotationWithContext> {
   try {
     const result = await prisma.drawingAnnotation.update({
-      where: { id },
+      where: { id: annotation.id },
       data: {
-        ...data,
+        ...toAppearance(annotation),
         updatedAt: new Date(),
       },
       // 透明度制御に必要なquestionScore情報を含める
@@ -338,15 +303,17 @@ export async function updateDrawingAnnotation(
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       coalesceKey: `annotation.update:${result.id}`,
-      // テキスト注釈は after（最新テキスト）を上書き表示
-      ...(typeof data.text === "string"
+      // テキスト注釈は after（最新テキスト）を上書き表示。
+      // 種別で判定する。行を丸ごと受け取る以上、線や矩形にも空文字の text が乗って
+      // いるので「text が来たか」では区別できない
+      ...(annotation.type === "text"
         ? {
             changes: [
               {
                 field: "text",
                 label: "テキスト",
                 before: null,
-                after: data.text,
+                after: annotation.text,
               },
             ],
           }
@@ -429,13 +396,13 @@ export async function deleteDrawingAnnotationsByQuestionScore(
  * @returns Promise<AnnotationWithContext[]> 作成された描画アノテーション配列（設問の文脈付き）
  */
 export async function batchCreateDrawingAnnotations(
-  annotations: DrawingCreateData[]
+  annotations: DrawingAnnotation[]
 ): Promise<AnnotationWithContext[]> {
   try {
     // 各アノテーションに対してcreateDrawingAnnotation関数を使用（QuestionScore自動作成機能を含む）
     const results = await Promise.all(
-      annotations.map(async (data) => {
-        return await createDrawingAnnotation(data)
+      annotations.map(async (annotation) => {
+        return await createDrawingAnnotation(annotation)
       })
     )
 

@@ -18,13 +18,16 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+import type {
+  DrawingAnnotation,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
 
 import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
-import type { CanvasTool, DrawingElement } from "./types"
+import type { CanvasTool } from "./types"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
 
@@ -52,9 +55,9 @@ interface DrawingToolPaletteProps {
   onLineStyleChange: (style: string) => void
 
   // 選択中の要素（スタイル編集用）
-  selectedElements?: DrawingElement[]
+  selectedElements?: DrawingAnnotation[]
   onUpdateSelectedElements?: (
-    updates: Array<{ id: string; updates: Partial<DrawingElement> }>
+    updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
   ) => void
   onClearSelection?: () => void
 

@@ -8,10 +8,7 @@ import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
-import {
-  convertAnnotationToDrawingElement,
-  drawElement,
-} from "./annotationRenderer"
+import { drawElement } from "./annotationRenderer"
 import {
   drawScoreText,
   drawScoringMark,
@@ -161,14 +158,12 @@ export async function renderAnswerSheetToCanvas(
   // y < 1.0の場合は新データとみなし、そのまま使用する
   const basePageOffset = pageNumber - 1
   for (const annotation of annotations) {
-    const element = convertAnnotationToDrawingElement(annotation)
     // y座標が1.0以上の場合のみpageOffsetを適用（旧座標系の互換性対応）
-    const needsPageOffset =
-      element.y >= 1.0 || (element.endY !== undefined && element.endY >= 1.0)
+    const needsPageOffset = annotation.y >= 1.0 || annotation.endY >= 1.0
     const pageOffset = needsPageOffset ? basePageOffset : 0
     await drawElement(
       ctx,
-      element,
+      annotation,
       imageWidth,
       imageHeight,
       0,

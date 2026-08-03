@@ -3,8 +3,10 @@
  * @description SVG-Canvas変換、アスペクト比維持スケーリング、デバッグ機能
  */
 
+import type { AnchorDirection } from "@/types/drawingAnnotation.types"
+
 import { CANVAS_SETTINGS } from "./constants"
-import type { AnchorDirection, Point, SvgRenderResult } from "./types"
+import type { Point, SvgRenderResult } from "./types"
 
 /**
  * SVG要素をCanvasに高品質描画する（実測サイズベース）

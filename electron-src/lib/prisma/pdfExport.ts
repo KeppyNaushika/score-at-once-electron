@@ -4,7 +4,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 
-import type { AnnotationWithAuthor } from "../../../src/types/drawingAnnotation.types"
+import type { DrawingAnnotation } from "../../../src/types/drawingAnnotation.types"
 import { getAbsolutePathFromData } from "../dataManager"
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
@@ -91,7 +91,7 @@ export interface PdfExportPageData {
   // 合計点データ（後方互換性のため維持）
   totalScore: number | null
   totalMaxScore: number | null
-  annotations: AnnotationWithAuthor[]
+  annotations: DrawingAnnotation[]
 }
 
 interface PdfExportData {

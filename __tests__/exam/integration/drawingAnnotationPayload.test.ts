@@ -27,6 +27,8 @@ import {
   getDrawingAnnotationsByCropRegion,
   getDrawingAnnotationsByExamStudent,
   getDrawingAnnotationsByQuestionScore,
+  toggleAnnotationFavorite,
+  updateDrawingAnnotation,
 } from "@/electron-src/lib/prisma/drawingAnnotation"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
@@ -176,5 +178,31 @@ describe("採点マークの供給形", () => {
       expect(rows.map((row) => row.id)).toContain(known.id)
       expect(rows.map((row) => row.id)).not.toContain(unknown.id)
     }
+  })
+
+  it("更新は古い行を受け取ってもお気に入りを巻き戻さない", async () => {
+    const fixture = await createFullTestExam(testPrisma, {
+      includeScores: true,
+      includeAnnotations: true,
+    })
+    const [target] = fixture.drawingAnnotations
+
+    // Canvas は設問を開いた時点の行を抱え続ける。ここではその「古いコピー」を作る
+    const staleRow = await getDrawingAnnotationsByQuestionScore(
+      target.questionScoreId
+    ).then((rows) => rows.find((row) => row.id === target.id))
+    expect(staleRow?.isFavorite).toBe(false)
+
+    // その間にサイドパネルが別経路でお気に入りを立てる
+    await toggleAnnotationFavorite(target.id, true)
+
+    // 古いコピーのまま位置だけ動かして書き戻す（＝マークをドラッグした状態）
+    await updateDrawingAnnotation({ ...staleRow!, x: 0.42 })
+
+    const saved = await testPrisma.drawingAnnotation.findUniqueOrThrow({
+      where: { id: target.id },
+    })
+    expect(saved.x).toBe(0.42)
+    expect(saved.isFavorite).toBe(true)
   })
 })

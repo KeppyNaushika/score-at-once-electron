@@ -13,7 +13,6 @@ import {
   type DrawingPersistenceCallbacks,
   useDrawingAnnotations,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useDrawingAnnotations"
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {
@@ -31,16 +30,14 @@ vi.mock("@/app/textbox-on-canvas-v3/utils/mathJaxUtils", () => ({
     .mockResolvedValue({ width: 200, height: 50 }),
 }))
 
-function makeElement(overrides: Partial<DrawingElement> = {}): DrawingElement {
-  return {
+function makeElement(
+  overrides: Partial<DrawingAnnotation> = {}
+): DrawingAnnotation {
+  return createMockAnnotation({
     id: `el-${crypto.randomUUID().slice(0, 8)}`,
-    type: "text",
-    x: 0.1,
-    y: 0.2,
-    color: "#ef4444",
-    strokeWidth: 3,
+    questionScoreId: "qs-1",
     ...overrides,
-  }
+  })
 }
 
 describe("useDrawingAnnotations", () => {
@@ -124,7 +121,7 @@ describe("useDrawingAnnotations", () => {
 
       const element = makeElement({ id: "new-1", text: "新規テキスト" })
       await act(async () => {
-        const saved = await result.current.saveElement(element, "qs-1")
+        const saved = await result.current.saveElement(element)
         expect(saved).not.toBeNull()
       })
 
@@ -140,7 +137,7 @@ describe("useDrawingAnnotations", () => {
       const { result } = renderHook(() => useDrawingAnnotations(callbacks))
 
       await act(async () => {
-        await result.current.saveElement(makeElement(), "qs-1")
+        await result.current.saveElement(makeElement())
       })
 
       expect(onCreated).toHaveBeenCalledTimes(1)
@@ -150,7 +147,7 @@ describe("useDrawingAnnotations", () => {
       const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
-        await result.current.saveElement(makeElement(), "qs-1")
+        await result.current.saveElement(makeElement())
       })
 
       const [createData] = mockAPI.create.mock.calls[0]
@@ -167,7 +164,7 @@ describe("useDrawingAnnotations", () => {
       const { result } = renderHook(() => useDrawingAnnotations())
 
       await act(async () => {
-        const saved = await result.current.saveElement(makeElement(), "qs-1")
+        const saved = await result.current.saveElement(makeElement())
         expect(saved).toBeNull()
       })
 

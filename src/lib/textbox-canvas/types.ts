@@ -7,21 +7,13 @@
  * - UI Types: ユーザーインターフェース関連
  * - Rendering Types: 描画・変換関連
  * - Hook Types: カスタムフック関連
+ *
+ * アンカー方向はここでは宣言しない。DB 列 `DrawingAnnotation.anchorDirection` の
+ * union が正本（`@/types/drawingAnnotation.types` の `defineStringUnion`）で、
+ * 同じ9方向を手書きで並べると SSOT に方向を足したときにここだけ取り残される。
  */
 
-/**
- * アンカー方向（8方向）
- */
-export type AnchorDirection =
-  | "top-left"
-  | "top"
-  | "top-right"
-  | "left"
-  | "center"
-  | "right"
-  | "bottom-left"
-  | "bottom"
-  | "bottom-right"
+import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 /**
  * 座標系の種類
@@ -80,14 +72,4 @@ export interface SvgRenderResult {
   width: number
   /** 実際の描画高さ */
   height: number
-}
-
-/**
- * 座標変換のオプション
- */
-export interface CoordinateConversionOptions {
-  /** Canvas/画像の幅 */
-  canvasWidth: number
-  /** Canvas/画像の高さ */
-  canvasHeight: number
 }

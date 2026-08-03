@@ -7,11 +7,9 @@ import type {
   Prisma,
 } from "@prisma/client"
 
-import type {
-  annotationWithAuthorInclude,
-  annotationWithContextInclude,
-} from "@/electron-src/lib/prisma/drawingAnnotation"
+import type { annotationWithContextInclude } from "@/electron-src/lib/prisma/drawingAnnotation"
 
+import type { Serialized } from "./prismaExtensions"
 import { defineStringUnion } from "./stringUnion"
 
 // 基本型定義
@@ -148,90 +146,59 @@ type NarrowAnnotationUnions<T> = Omit<T, AnnotationUnionColumn> & {
 /** 描画アノテーション1行（Prisma のモデルに union 型注入だけを施したもの） */
 export type DrawingAnnotation = NarrowAnnotationUnions<PrismaDrawingAnnotation>
 
-/** 作成者（＝親 QuestionScore の採点者）を同梱したアノテーション */
-export type AnnotationWithAuthor = NarrowAnnotationUnions<
-  Prisma.DrawingAnnotationGetPayload<{
-    include: typeof annotationWithAuthorInclude
-  }>
->
-
 /**
- * 作成用データ。
+ * 未保存の1行を作る。
  *
- * Prisma の入力型（`DrawingAnnotationUncheckedCreateInput`）からは導出しない。
- * 更新側（下記）が `{ set }` / `{ increment }` を通してしまうのと対で、入力の形を
- * Prisma に預けると IPC の契約が Prisma の都合で決まってしまう。
+ * 作成も更新も行そのものを渡すので、専用の入力型は無い（かつては
+ * `DrawingCreateData` / `DrawingUpdateData` があったが、Canvas が行を写した
+ * 独自 view を持っていたための変換用で、行を持てば不要になった）。
  *
- * ただしこの型が手書きで済んでいるのは**暫定**である。送り元の Canvas が
- * `DrawingElement`（DB 行を写した独自 view）を持っているためで、Canvas が行を
- * そのまま持てばこの型自体が不要になる。→ issue 参照
+ * 既定値は `schema.prisma` の `@default` と同じ値にする。列を足したときは
+ * 返り値の型（＝ Prisma のモデル）が欠落を検査するので、ここへ既定値を書き足す
+ * まで型が通らない。手書きの入力型のように値が黙って落ちることが無い。
  */
-export interface DrawingCreateData {
-  /** フロントエンドで生成した UUID を使える（未指定なら DB 側で採番） */
-  id?: string
-  /** 必須。QuestionScore は事前に作成されている必要がある */
-  questionScoreId: string
-  type: DrawingType
-  x: number
-  y: number
-  color?: string
-  strokeWidth?: number
-  width?: number
-  height?: number
-  endX?: number
-  endY?: number
-  lineStyle?: LineStyle
-  text?: string
-  fontSize?: number
-  textBoxWidth?: number
-  textBoxHeight?: number
-  horizontalAlign?: AnnotationHorizontalAlign
-  verticalAlign?: AnnotationVerticalAlign
-  anchorDirection?: AnchorDirection
-  displayX?: number
-  displayY?: number
-}
-
-/**
- * 更新用データ。
- *
- * Prisma の `DrawingAnnotationUncheckedUpdateInput` から導出してはならない。
- * あの型は各列が「素の値」か `{ set }` / `{ increment }`（原子更新操作）のどちらでも
- * よい union なので、導出すると操作オブジェクトが IPC を通る。更新処理は `...data` を
- * そのまま Prisma へ渡すため実際に効いてしまい、監査ログの `typeof data.text === "string"`
- * を素通りして記録だけが欠ける。
- *
- * 作成用と同じく、Canvas が行をそのまま持てばこの型は不要になる。→ issue 参照
- */
-export interface DrawingUpdateData {
-  x?: number
-  y?: number
-  color?: string
-  strokeWidth?: number
-  width?: number
-  height?: number
-  endX?: number
-  endY?: number
-  lineStyle?: LineStyle
-  text?: string
-  fontSize?: number
-  textBoxWidth?: number
-  textBoxHeight?: number
-  horizontalAlign?: AnnotationHorizontalAlign
-  verticalAlign?: AnnotationVerticalAlign
-  anchorDirection?: AnchorDirection
-  displayX?: number
-  displayY?: number
-  isFavorite?: boolean
+export function newDrawingAnnotation(
+  seed: Partial<DrawingAnnotation> &
+    Pick<DrawingAnnotation, "questionScoreId" | "type" | "x" | "y">
+): DrawingAnnotation {
+  const now = new Date()
+  return {
+    id: crypto.randomUUID(),
+    color: "#ef4444",
+    // 線幅・文字サイズは mm（用紙サイズ基準）
+    strokeWidth: 0.5,
+    width: 0.0,
+    height: 0.0,
+    endX: 0.0,
+    endY: 0.0,
+    lineStyle: "solid",
+    text: "",
+    fontSize: 4.0,
+    textBoxWidth: 0.0,
+    textBoxHeight: 0.0,
+    horizontalAlign: "left",
+    verticalAlign: "top",
+    anchorDirection: "top-left",
+    displayX: 0.0,
+    displayY: 0.0,
+    isFavorite: false,
+    createdAt: now,
+    updatedAt: now,
+    ...seed,
+  }
 }
 
 // QuestionScore情報を含む拡張型（アノテーションブラウズパネル用）
 /**
  * 作成者と設問の文脈まで同梱したアノテーション。
  * 形の SSOT は取得側の include（`annotationWithContextInclude`）で、ここでは導出だけを行う。
+ * 取得経路は `serializePrisma` を通して IPC へ返すので、同梱した QuestionScore の
+ * `partialScore` は Decimal ではなく number。`Serialized<>` を被せて実体と型を揃える。
  */
 export type AnnotationWithContext = NarrowAnnotationUnions<
-  Prisma.DrawingAnnotationGetPayload<{
-    include: typeof annotationWithContextInclude
-  }>
+  Serialized<
+    Prisma.DrawingAnnotationGetPayload<{
+      include: typeof annotationWithContextInclude
+    }>
+  >
 >

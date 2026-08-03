@@ -2,21 +2,21 @@ import { useCallback } from "react"
 
 import { DRAWING_TOLERANCES } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
-  DrawingElement,
   LineEditMode,
   RectangleEditMode,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** 線・矩形要素の編集モード（移動・端点・リサイズ）を座標から判定するユーティリティフック */
 export function useEditModeUtils() {
   // 線の編集モード判定（開始点、終了点、移動）- PowerPointスタイル
   const getLineEditMode = useCallback(
-    (element: DrawingElement, testX: number, testY: number): LineEditMode => {
-      if (
-        element.type !== "line" ||
-        element.endX === undefined ||
-        element.endY === undefined
-      ) {
+    (
+      element: DrawingAnnotation,
+      testX: number,
+      testY: number
+    ): LineEditMode => {
+      if (element.type !== "line") {
         return null
       }
 
@@ -77,15 +77,11 @@ export function useEditModeUtils() {
   // 矩形の編集モード判定（角・辺でのリサイズ、内部での移動）
   const getRectangleEditMode = useCallback(
     (
-      element: DrawingElement,
+      element: DrawingAnnotation,
       testX: number,
       testY: number
     ): RectangleEditMode => {
-      if (
-        element.type !== "rectangle" ||
-        element.width === undefined ||
-        element.height === undefined
-      ) {
+      if (element.type !== "rectangle") {
         return null
       }
 

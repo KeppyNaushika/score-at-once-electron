@@ -10,17 +10,18 @@ import { DEFAULT_DRAWING_SETTINGS } from "@/components/exams/07-score-at-once/Sc
 import type {
   CanvasTool,
   DrawingActions,
-  DrawingElement,
   DrawingState,
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+import type {
+  DrawingAnnotation,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
 
 // データベース統合フックのインポート
 import {
-  convertAnnotationToElement,
   type DrawingPersistenceCallbacks,
   useDrawingAnnotations,
 } from "./useDrawingAnnotations"
@@ -54,10 +55,12 @@ export function useDrawingState(
   const [fontSize, setFontSize] = useState(DEFAULT_DRAWING_SETTINGS.fontSize)
 
   // 描画要素とステート
-  const [drawingElements, setDrawingElements] = useState<DrawingElement[]>([])
+  const [drawingElements, setDrawingElements] = useState<DrawingAnnotation[]>(
+    []
+  )
   const [isDrawing, setIsDrawing] = useState(false)
   const [currentDrawing, setCurrentDrawing] =
-    useState<Partial<DrawingElement> | null>(null)
+    useState<Partial<DrawingAnnotation> | null>(null)
 
   // 選択とドラッグ（複数選択システム）
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([])
@@ -147,11 +150,10 @@ export function useDrawingState(
       // DB読み込みは非同期 → ロード完了時にバージョンチェックで最新のみ適用
       if (enablePersistence && questionScoreId) {
         const thisVersion = ++loadVersionRef.current
-        loadAnnotations(questionScoreId).then((data) => {
+        loadAnnotations(questionScoreId).then((annotations) => {
           // stale loadを破棄：より新しいロードが開始されていたら無視
           if (thisVersion !== loadVersionRef.current) return
-          const elements = data.map(convertAnnotationToElement)
-          setDrawingElements(elements)
+          setDrawingElements(annotations)
         })
       }
     }
@@ -159,7 +161,7 @@ export function useDrawingState(
 
   // 描画要素操作（データベース統合対応）
   const addDrawingElement = useCallback(
-    async (element: DrawingElement) => {
+    async (element: DrawingAnnotation) => {
       // questionScoreIdがない場合は追加できない
       // （QuestionScoreは設問表示時に自動作成されるはず）
       if (enablePersistence && !questionScoreId) {
@@ -175,7 +177,7 @@ export function useDrawingState(
       // データベースへの保存（バックグラウンド）
       if (enablePersistence && questionScoreId) {
         try {
-          await saveElement(element, questionScoreId)
+          await saveElement(element)
         } catch (error) {
           console.error("描画要素保存エラー:", error)
           // 保存に失敗した場合、ローカル状態をロールバック
@@ -191,8 +193,8 @@ export function useDrawingState(
   )
 
   const updateDrawingElement = useCallback(
-    async (id: string, updates: Partial<DrawingElement>) => {
-      let previousElement: DrawingElement | null = null
+    async (id: string, updates: Partial<DrawingAnnotation>) => {
+      let previousElement: DrawingAnnotation | null = null
 
       // ローカル状態を即座に更新
       setDrawingElements((prev) => {
@@ -209,9 +211,9 @@ export function useDrawingState(
       // データベース更新（バックグラウンド）
       // 既存アノテーションの更新はアノテーションIDで行うためquestionScoreIdは不要
       if (enablePersistence && previousElement !== null) {
-        const elementToUpdate: DrawingElement = previousElement
+        const elementToUpdate: DrawingAnnotation = previousElement
         try {
-          const updatedElement: DrawingElement = {
+          const updatedElement: DrawingAnnotation = {
             ...elementToUpdate,
             ...updates,
           }
@@ -233,9 +235,9 @@ export function useDrawingState(
   // 複数要素を一括更新（1回のsetStateで全て更新）
   const updateDrawingElements = useCallback(
     async (
-      updates: Array<{ id: string; updates: Partial<DrawingElement> }>
+      updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
     ) => {
-      const previousElements: Map<string, DrawingElement> = new Map()
+      const previousElements: Map<string, DrawingAnnotation> = new Map()
       const updateMap = new Map(
         updates.map((update) => [update.id, update.updates])
       )
@@ -273,7 +275,7 @@ export function useDrawingState(
 
   const removeDrawingElement = useCallback(
     async (id: string) => {
-      let removedElement: DrawingElement | null = null
+      let removedElement: DrawingAnnotation | null = null
 
       // ローカル状態を即座に更新
       setDrawingElements((prev) => {
@@ -330,7 +332,7 @@ export function useDrawingState(
 
   // 重複判定：矩形と図形が重なっているかを判定する
   const isElementInRectangle = useCallback(
-    (element: DrawingElement, rect: SelectionRectangle): boolean => {
+    (element: DrawingAnnotation, rect: SelectionRectangle): boolean => {
       // 要素の境界ボックスを取得
       let elementLeft = element.x
       let elementTop = element.y
@@ -339,28 +341,22 @@ export function useDrawingState(
 
       switch (element.type) {
         case "line":
-          if (element.endX !== undefined && element.endY !== undefined) {
-            elementLeft = Math.min(element.x, element.endX)
-            elementTop = Math.min(element.y, element.endY)
-            elementRight = Math.max(element.x, element.endX)
-            elementBottom = Math.max(element.y, element.endY)
-          }
+          elementLeft = Math.min(element.x, element.endX)
+          elementTop = Math.min(element.y, element.endY)
+          elementRight = Math.max(element.x, element.endX)
+          elementBottom = Math.max(element.y, element.endY)
           break
         case "rectangle":
-          if (element.width !== undefined && element.height !== undefined) {
-            elementRight = element.x + element.width
-            elementBottom = element.y + element.height
-          }
+          elementRight = element.x + element.width
+          elementBottom = element.y + element.height
           break
         case "text":
-          if (
-            element.textBoxWidth !== undefined &&
-            element.textBoxHeight !== undefined
-          ) {
+          // テキストボックスの大きさは既定 0.0（＝リサイズされていない）。
+          // その場合は小さな矩形として扱う
+          if (element.textBoxWidth > 0 && element.textBoxHeight > 0) {
             elementRight = element.x + element.textBoxWidth
             elementBottom = element.y + element.textBoxHeight
           } else {
-            // テキストの場合、小さな矩形として扱う
             elementRight = element.x + 0.05
             elementBottom = element.y + 0.03
           }
@@ -434,11 +430,10 @@ export function useDrawingState(
 
     try {
       const thisVersion = ++loadVersionRef.current
-      const data = await loadAnnotations(questionScoreId)
+      const annotations = await loadAnnotations(questionScoreId)
       // stale loadを破棄
       if (thisVersion !== loadVersionRef.current) return
-      const elements = data.map(convertAnnotationToElement)
-      setDrawingElements(elements)
+      setDrawingElements(annotations)
     } catch (error) {
       console.error("データベース読み込みエラー:", error)
     }

@@ -1,92 +1,44 @@
 /**
  * 描画要素レンダリングフック
- * - 単一要素の描画
+ * - 単一要素の描画（線・矩形・楕円）
  * - 線種別描画（矢印、波線、ジグザグ等）
- * - アノテーション変換
+ *
+ * テキストは扱わない。呼び出し側（useCanvasDrawing）は両方のループで
+ * `type === "text"` を飛ばし、テキストだけを別のパスで `renderTextElement` に
+ * 描かせている（数式のレンダリングが非同期で、描画順も他と分ける必要があるため）。
  */
 import { useCallback } from "react"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import { mmToPixels } from "@/lib/paperSize"
-import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
-import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
-
-import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
-import { renderTextElement } from "../../utils/canvasTextRenderer"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 interface UseDrawingRendererReturn {
-  convertAnnotationToDrawingElement: (
-    annotation: AnnotationWithContext
-  ) => DrawingElement
   drawSingleElement: (
     ctx: CanvasRenderingContext2D,
-    element: DrawingElement,
+    element: DrawingAnnotation,
     baseImg: HTMLImageElement,
     offsetX: number,
     offsetY: number,
-    isSelected: boolean,
-    isDragging: boolean,
-    showAnchor?: boolean,
     pageSize?: string
-  ) => Promise<void>
+  ) => void
 }
 
 /**
  * 描画要素のレンダリングを管理するフック
  */
 export function useDrawingRenderer(): UseDrawingRendererReturn {
-  // アノテーションをDrawingElement形式に変換する関数
-  const convertAnnotationToDrawingElement = useCallback(
-    (annotation: AnnotationWithContext): DrawingElement => {
-      return {
-        id: annotation.id,
-        type: annotation.type as DrawingElement["type"],
-        x: annotation.x,
-        y: annotation.y,
-        color: annotation.color,
-        strokeWidth: annotation.strokeWidth,
-        width: annotation.width,
-        height: annotation.height,
-        endX: annotation.endX,
-        endY: annotation.endY,
-        lineStyle: annotation.lineStyle,
-        text: annotation.text,
-        fontSize: annotation.fontSize,
-        textBoxWidth: annotation.textBoxWidth,
-        textBoxHeight: annotation.textBoxHeight,
-        displayX: annotation.displayX,
-        displayY: annotation.displayY,
-        anchorDirection: annotation.anchorDirection,
-      }
-    },
-    []
-  )
-
   // 単一要素を描画するヘルパー関数
   const drawSingleElement = useCallback(
-    async (
+    (
       ctx: CanvasRenderingContext2D,
-      element: DrawingElement,
+      element: DrawingAnnotation,
       baseImg: HTMLImageElement,
       offsetX: number,
       offsetY: number,
-      isSelected: boolean,
-      isDragging: boolean,
-      showAnchor: boolean = true,
       pageSize: string = "A4"
     ) => {
-      // テキストボックスの場合、表示用座標があればそれを使用
-      const displayX =
-        element.type === "text" && element.displayX !== undefined
-          ? element.displayX
-          : element.x
-      const displayY =
-        element.type === "text" && element.displayY !== undefined
-          ? element.displayY
-          : element.y
-
-      const currentX = displayX * baseImg.naturalWidth + offsetX
-      const currentY = displayY * baseImg.naturalHeight + offsetY
+      const currentX = element.x * baseImg.naturalWidth + offsetX
+      const currentY = element.y * baseImg.naturalHeight + offsetY
 
       // mm → canvas pixels 変換
       const strokeWidthPx = mmToPixels(
@@ -96,43 +48,14 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
         baseImg.naturalHeight
       )
 
-      const fontSizePx = mmToPixels(
-        element.fontSize || DEFAULT_DRAWING_SETTINGS.fontSize,
-        pageSize,
-        baseImg.naturalWidth,
-        baseImg.naturalHeight
-      )
-
       // ピクセル変換済みの要素コピー（内部描画関数用）
-      const pxElement = {
-        ...element,
-        strokeWidth: strokeWidthPx,
-        fontSize: fontSizePx,
-      }
+      const pxElement = { ...element, strokeWidth: strokeWidthPx }
 
       ctx.strokeStyle = element.color
       ctx.fillStyle = element.color
       ctx.lineWidth = strokeWidthPx
 
-      // テキスト要素のドラッグ中は軽量描画（長方形のみ）
-      if (isDragging && isSelected && element.type === "text") {
-        drawLightweightTextPlaceholder(ctx, pxElement, currentX, currentY)
-        return
-      }
-
-      // 通常描画
       switch (element.type) {
-        case "text":
-          await drawTextElement(
-            ctx,
-            pxElement,
-            baseImg,
-            isSelected,
-            showAnchor,
-            currentX,
-            currentY
-          )
-          break
         case "line":
           drawLineElement(
             ctx,
@@ -150,94 +73,16 @@ export function useDrawingRenderer(): UseDrawingRendererReturn {
         case "ellipse":
           drawEllipseElement(ctx, pxElement, baseImg, currentX, currentY)
           break
+        case "text":
+          // 呼び出し側が飛ばしている（このフックの冒頭を参照）
+          break
       }
     },
     []
   )
 
   return {
-    convertAnnotationToDrawingElement,
     drawSingleElement,
-  }
-}
-
-/**
- * 軽量テキストプレースホルダーを描画
- */
-function drawLightweightTextPlaceholder(
-  ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
-  currentX: number,
-  currentY: number
-): void {
-  ctx.save()
-  ctx.strokeStyle = element.color
-  ctx.setLineDash([5, 5])
-  ctx.lineWidth = 2
-  ctx.globalAlpha = 0.7
-
-  const boundingWidth = element.text
-    ? Math.max(element.text.length * (element.fontSize || 16) * 0.6, 50)
-    : 50
-  const boundingHeight = Math.max((element.fontSize || 16) * 1.2, 20)
-
-  const anchorDir = element.anchorDirection || "top-left"
-  const textPos = getTextPositionFromAnchor(
-    currentX,
-    currentY,
-    boundingWidth,
-    boundingHeight,
-    anchorDir
-  )
-
-  ctx.strokeRect(textPos.x, textPos.y, boundingWidth, boundingHeight)
-
-  ctx.font = "12px sans-serif"
-  ctx.fillStyle = element.color
-  ctx.globalAlpha = 0.8
-  const shortText = element.text
-    ? element.text.length > 10
-      ? element.text.substring(0, 10) + "..."
-      : element.text
-    : "Text"
-  ctx.fillText(shortText, textPos.x + 5, textPos.y + 15)
-
-  ctx.restore()
-}
-
-/**
- * テキスト要素を描画
- */
-async function drawTextElement(
-  ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
-  baseImg: HTMLImageElement,
-  isSelected: boolean,
-  showAnchor: boolean,
-  currentX: number,
-  currentY: number
-): Promise<void> {
-  if (!element.text) return
-
-  try {
-    await renderTextElement(
-      ctx,
-      element,
-      baseImg.naturalWidth,
-      baseImg.naturalHeight,
-      isSelected,
-      showAnchor
-    )
-  } catch (error) {
-    console.error("テキスト描画エラー:", error)
-    // フォールバック: シンプルテキスト描画
-    ctx.font = `${element.fontSize || 16}px sans-serif`
-    ctx.fillStyle = element.color
-    const lines = element.text.split("\n")
-    const lineHeight = (element.fontSize || 16) * 1.4
-    lines.forEach((line, index) => {
-      ctx.fillText(line, currentX, currentY + index * lineHeight)
-    })
   }
 }
 
@@ -246,15 +91,13 @@ async function drawTextElement(
  */
 function drawLineElement(
   ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
+  element: DrawingAnnotation,
   baseImg: HTMLImageElement,
   offsetX: number,
   offsetY: number,
   currentX: number,
   currentY: number
 ): void {
-  if (element.endX === undefined || element.endY === undefined) return
-
   const currentEndX = element.endX * baseImg.naturalWidth + offsetX
   const currentEndY = element.endY * baseImg.naturalHeight + offsetY
 
@@ -552,13 +395,11 @@ function drawBothArrowLine(
  */
 function drawRectangleElement(
   ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
+  element: DrawingAnnotation,
   baseImg: HTMLImageElement,
   currentX: number,
   currentY: number
 ): void {
-  if (element.width === undefined || element.height === undefined) return
-
   const rectWidth = element.width * baseImg.naturalWidth
   const rectHeight = element.height * baseImg.naturalHeight
   ctx.strokeRect(currentX, currentY, rectWidth, rectHeight)
@@ -569,13 +410,11 @@ function drawRectangleElement(
  */
 function drawEllipseElement(
   ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
+  element: DrawingAnnotation,
   baseImg: HTMLImageElement,
   currentX: number,
   currentY: number
 ): void {
-  if (element.width === undefined || element.height === undefined) return
-
   const rectWidth = element.width * baseImg.naturalWidth
   const rectHeight = element.height * baseImg.naturalHeight
 

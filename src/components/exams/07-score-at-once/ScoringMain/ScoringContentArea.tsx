@@ -1,6 +1,5 @@
 "use client"
 
-import type { QuestionScore } from "@prisma/client"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/AnswerGridView"
@@ -17,6 +16,7 @@ import type {
   ScoringOperationMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
@@ -36,7 +36,7 @@ interface ScoringContentAreaProps {
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   currentExamStudentId?: string
   currentUserId?: string
-  questionScores?: QuestionScore[]
+  questionScores?: SerializedQuestionScore[]
   onQuestionScoreCreated?: () => void
   onAnnotationChanged?: () => void
   annotationRefreshKey?: number

@@ -3,18 +3,24 @@
  * 線・矩形・楕円・テキストの新規作成を管理
  */
 import { useCallback, useRef } from "react"
+import { toast } from "sonner"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+import type {
+  DrawingAnnotation,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
+import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** 新規描画作成フックのプロパティ */
 interface UseDrawingCreationProps {
   /** 現在のツール */
   currentTool: string
+  /** 作成先の採点データ。無ければ行を作れないので新規描画を始めない */
+  questionScoreId: string | null
   /** 描画中フラグ */
   isDrawing: boolean
   /** 描画要素配列 */
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   /** Shiftキー押下状態 */
   isShiftPressed: boolean
   /** 線の色 */
@@ -29,10 +35,11 @@ interface UseDrawingCreationProps {
   setIsDrawing: (drawing: boolean) => void
   /** 描画要素配列設定 */
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
   ) => void
   /** 描画要素追加（DB保存付き） */
-  addDrawingElement: (element: DrawingElement) => void
+  addDrawingElement: (element: DrawingAnnotation) => void
   /** テキストアンカークリック時のコールバック */
   onTextAnchorClick?: (position: { x: number; y: number }) => void
 }
@@ -60,6 +67,7 @@ interface UseDrawingCreationReturn {
  */
 export function useDrawingCreation({
   currentTool,
+  questionScoreId,
   isDrawing,
   drawingElements,
   isShiftPressed,
@@ -73,7 +81,7 @@ export function useDrawingCreation({
   onTextAnchorClick,
 }: UseDrawingCreationProps): UseDrawingCreationReturn {
   // 描画中の要素を追跡（描画完了時にDB保存するため）
-  const drawingElementRef = useRef<DrawingElement | null>(null)
+  const drawingElementRef = useRef<DrawingAnnotation | null>(null)
 
   /**
    * Shift制約を適用（正方形/正円）
@@ -158,6 +166,21 @@ export function useDrawingCreation({
    */
   const handleNewDrawingMouseDown = useCallback(
     (imageCoords: { x: number; y: number }): boolean => {
+      // 採点データが未作成のうちは行を作れない（設問表示時に自動作成される）。
+      //
+      // 黙って弾かない。自動作成が失敗するとこの設問では以後ずっとどのツールも
+      // 反応しなくなり（描いても何も起きない）、画面からは「アプリが壊れた」としか
+      // 見えない。自動作成は設問を選び直したときに再試行されるので、待てば直るのでは
+      // なく何をすれば直るのかを言う。id を固定して、描くたびにトーストが積み上がる
+      // のは防ぐ。
+      if (!questionScoreId) {
+        toast.error(
+          "採点データを準備できていません。設問を選び直してください",
+          { id: "drawing-question-score-missing" }
+        )
+        return false
+      }
+
       // テキストツール
       if (currentTool === "text") {
         if (onTextAnchorClick) {
@@ -168,8 +191,8 @@ export function useDrawingCreation({
 
       // 線の新規作成
       if (currentTool === "line") {
-        const newElement: DrawingElement = {
-          id: crypto.randomUUID(),
+        const newElement = newDrawingAnnotation({
+          questionScoreId,
           type: "line",
           x: imageCoords.x,
           y: imageCoords.y,
@@ -178,7 +201,7 @@ export function useDrawingCreation({
           color: strokeColor,
           strokeWidth,
           lineStyle,
-        }
+        })
         setDrawingElements((prev) => [...prev, newElement])
         drawingElementRef.current = newElement
         setIsDrawing(true)
@@ -187,16 +210,14 @@ export function useDrawingCreation({
 
       // 矩形の新規作成
       if (currentTool === "rectangle") {
-        const newElement: DrawingElement = {
-          id: crypto.randomUUID(),
+        const newElement = newDrawingAnnotation({
+          questionScoreId,
           type: "rectangle",
           x: imageCoords.x,
           y: imageCoords.y,
-          width: 0,
-          height: 0,
           color: strokeColor,
           strokeWidth,
-        }
+        })
         setDrawingElements((prev) => [...prev, newElement])
         drawingElementRef.current = newElement
         setIsDrawing(true)
@@ -205,16 +226,14 @@ export function useDrawingCreation({
 
       // 楕円の新規作成
       if (currentTool === "ellipse") {
-        const newElement: DrawingElement = {
-          id: crypto.randomUUID(),
+        const newElement = newDrawingAnnotation({
+          questionScoreId,
           type: "ellipse",
           x: imageCoords.x,
           y: imageCoords.y,
-          width: 0,
-          height: 0,
           color: strokeColor,
           strokeWidth,
-        }
+        })
         setDrawingElements((prev) => [...prev, newElement])
         drawingElementRef.current = newElement
         setIsDrawing(true)
@@ -225,6 +244,7 @@ export function useDrawingCreation({
     },
     [
       currentTool,
+      questionScoreId,
       strokeColor,
       strokeWidth,
       lineStyle,

@@ -1,39 +1,16 @@
-// Prisma型をインポート
-import type { QuestionScore } from "@prisma/client"
-
 import type {
   CropRegionWithExamPage,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type {
-  AnchorDirection,
+  DrawingAnnotation,
   LineStyle,
 } from "@/types/drawingAnnotation.types"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
-// 描画要素の型定義
-export interface DrawingElement {
-  id: string
-  type: "text" | "line" | "vline" | "hline" | "rectangle" | "ellipse"
-  x: number // 0.0 - 1.0 (画像全体に対する割合)
-  y: number // 0.0 - 1.0
-  width?: number // 0.0 - 1.0
-  height?: number // 0.0 - 1.0
-  endX?: number // 0.0 - 1.0
-  endY?: number // 0.0 - 1.0
-  text?: string
-  color: string
-  strokeWidth: number
-  lineStyle?: LineStyle
-  fontSize?: number
-  // テキストボックス用
-  textBoxWidth?: number // 0.0 - 1.0
-  textBoxHeight?: number // 0.0 - 1.0
-  anchorDirection?: AnchorDirection // テキストのアンカー方向
-  // テキストボックス表示用座標（逆方向ドラッグ対応）
-  displayX?: number // 0.0 - 1.0
-  displayY?: number // 0.0 - 1.0
-}
+// Canvas が持つのは DrawingAnnotation の行そのもの（DB に保存されている形）。
+// 座標 x/y と width/height/endX/endY は 0.0-1.0 の割合、strokeWidth/fontSize は mm。
 
 // 描画ツールの型定義
 export type CanvasTool =
@@ -60,7 +37,7 @@ export interface AnswerIndividualViewProps {
   currentUserId?: string
 
   // アノテーション用: QuestionScore配列（正しいquestionScoreIdを取得するため）
-  questionScores?: QuestionScore[]
+  questionScores?: SerializedQuestionScore[]
 
   // QuestionScore自動作成後のコールバック（リストの更新用）
   onQuestionScoreCreated?: () => void
@@ -107,9 +84,9 @@ export interface DrawingState {
   strokeWidth: number
   lineStyle: LineStyle
   fontSize: number
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   isDrawing: boolean
-  currentDrawing: Partial<DrawingElement> | null
+  currentDrawing: Partial<DrawingAnnotation> | null
   // 複数選択システム
   selectedElementIds: string[] // 選択された要素IDの配列
   isDraggingElement: boolean
@@ -139,15 +116,16 @@ export interface DrawingActions {
   setLineStyle: (style: LineStyle) => void
   setFontSize: (size: number) => void
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
   ) => void
-  addDrawingElement: (element: DrawingElement) => void | Promise<void>
+  addDrawingElement: (element: DrawingAnnotation) => void | Promise<void>
   updateDrawingElement: (
     id: string,
-    updates: Partial<DrawingElement>
+    updates: Partial<DrawingAnnotation>
   ) => void | Promise<void>
   updateDrawingElements: (
-    updates: Array<{ id: string; updates: Partial<DrawingElement> }>
+    updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
   ) => void | Promise<void>
   removeDrawingElement: (id: string) => void | Promise<void>
   // 複数選択システム
@@ -171,11 +149,11 @@ export interface DrawingActions {
   setIsDrawing: (drawing: boolean) => void
   setCurrentDrawing: (
     drawing:
-      | Partial<DrawingElement>
+      | Partial<DrawingAnnotation>
       | null
       | ((
-          prev: Partial<DrawingElement> | null
-        ) => Partial<DrawingElement> | null)
+          prev: Partial<DrawingAnnotation> | null
+        ) => Partial<DrawingAnnotation> | null)
   ) => void
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void

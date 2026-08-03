@@ -7,78 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type {
   DrawingAnnotation,
-  DrawingCreateData,
   DrawingType,
-  DrawingUpdateData,
 } from "@/types/drawingAnnotation.types"
-
-// 既存の描画システム型と互換性を保つため
-import type { DrawingElement } from "../../types"
-
-/**
- * 既存DrawingElementからDrawingCreateDataへの変換
- * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
- * @throws Error questionScoreIdがない場合
- */
-function convertElementToCreateData(
-  element: DrawingElement,
-  questionScoreId: string
-): DrawingCreateData {
-  return {
-    id: element.id, // フロントエンドで生成したUUIDをDBでも使用
-    questionScoreId,
-    type: element.type as DrawingType,
-    x: element.x,
-    y: element.y,
-    color: element.color,
-    strokeWidth: element.strokeWidth,
-    ...(element.width !== undefined && { width: element.width }),
-    ...(element.height !== undefined && { height: element.height }),
-    ...(element.endX !== undefined && { endX: element.endX }),
-    ...(element.endY !== undefined && { endY: element.endY }),
-    ...(element.lineStyle && { lineStyle: element.lineStyle }),
-    ...(element.text && { text: element.text }),
-    ...(element.fontSize && { fontSize: element.fontSize }),
-    ...(element.textBoxWidth && { textBoxWidth: element.textBoxWidth }),
-    ...(element.textBoxHeight && { textBoxHeight: element.textBoxHeight }),
-    ...(element.displayX !== undefined && { displayX: element.displayX }),
-    ...(element.displayY !== undefined && { displayY: element.displayY }),
-    ...(element.anchorDirection && {
-      anchorDirection: element.anchorDirection,
-    }),
-    horizontalAlign: "left", // デフォルト値
-    verticalAlign: "top", // デフォルト値
-  }
-}
-
-/**
- * DrawingAnnotationから既存DrawingElementへの変換
- */
-export function convertAnnotationToElement(
-  annotation: DrawingAnnotation
-): DrawingElement {
-  return {
-    id: annotation.id,
-    type: annotation.type as DrawingElement["type"],
-    x: annotation.x,
-    y: annotation.y,
-    color: annotation.color,
-    strokeWidth: annotation.strokeWidth,
-    width: annotation.width,
-    height: annotation.height,
-    endX: annotation.endX,
-    endY: annotation.endY,
-    lineStyle: annotation.lineStyle,
-    text: annotation.text,
-    fontSize: annotation.fontSize,
-    textBoxWidth: annotation.textBoxWidth,
-    textBoxHeight: annotation.textBoxHeight,
-    displayX: annotation.displayX,
-    displayY: annotation.displayY,
-    anchorDirection:
-      annotation.anchorDirection as DrawingElement["anchorDirection"],
-  }
-}
 
 /**
  * 描画操作のコールバック
@@ -107,16 +37,15 @@ interface UseDrawingAnnotationsReturn {
     questionScoreId: string,
     type?: DrawingType
   ) => Promise<DrawingAnnotation[]>
-  saveElement: (
-    element: DrawingElement,
-    questionScoreId: string
+  saveElement: (element: DrawingAnnotation) => Promise<DrawingAnnotation | null>
+  updateElement: (
+    element: DrawingAnnotation
   ) => Promise<DrawingAnnotation | null>
-  updateElement: (element: DrawingElement) => Promise<DrawingAnnotation | null>
   deleteElement: (elementId: string) => Promise<boolean>
 
   // バッチ操作
   syncElements: (
-    elements: DrawingElement[],
+    elements: DrawingAnnotation[],
     questionScoreId: string
   ) => Promise<DrawingAnnotation[]>
 }
@@ -187,20 +116,16 @@ export function useDrawingAnnotations(
 
   /**
    * 描画要素保存（新規作成）
-   * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
+   * 行をそのまま渡す。questionScoreId は行に載っている
    */
   const saveElement = useCallback(
-    async (
-      element: DrawingElement,
-      questionScoreId: string
-    ): Promise<DrawingAnnotation | null> => {
+    async (element: DrawingAnnotation): Promise<DrawingAnnotation | null> => {
       setIsLoading(true)
       setError(null)
 
       try {
         // 採点者は渡さない。注釈の持ち主は親 QuestionScore から決まる
-        const createData = convertElementToCreateData(element, questionScoreId)
-        const result = await window.electronAPI.drawing.create(createData)
+        const result = await window.electronAPI.drawing.create(element)
 
         if (result.success && result.data) {
           callbacksRef.current.onAnnotationCreated?.(result.data!)
@@ -223,34 +148,13 @@ export function useDrawingAnnotations(
    * 描画要素更新
    */
   const updateElement = useCallback(
-    async (element: DrawingElement): Promise<DrawingAnnotation | null> => {
+    async (element: DrawingAnnotation): Promise<DrawingAnnotation | null> => {
       setIsLoading(true)
       setError(null)
 
       try {
-        const updateData: DrawingUpdateData = {
-          x: element.x,
-          y: element.y,
-          color: element.color,
-          strokeWidth: element.strokeWidth,
-          width: element.width,
-          height: element.height,
-          endX: element.endX,
-          endY: element.endY,
-          lineStyle: element.lineStyle,
-          text: element.text,
-          fontSize: element.fontSize,
-          textBoxWidth: element.textBoxWidth,
-          textBoxHeight: element.textBoxHeight,
-          displayX: element.displayX,
-          displayY: element.displayY,
-          anchorDirection: element.anchorDirection, // アンカー方向の永続化
-        }
-
-        const result = await window.electronAPI.drawing.update(
-          element.id,
-          updateData
-        )
+        // 行をそのまま送り返す。列を選んで詰め替えないので、列を足しても永続化から漏れない
+        const result = await window.electronAPI.drawing.update(element)
 
         if (result.success && result.data) {
           callbacksRef.current.onAnnotationUpdated?.(result.data!)
@@ -333,7 +237,7 @@ export function useDrawingAnnotations(
    */
   const syncElements = useCallback(
     async (
-      elements: DrawingElement[],
+      elements: DrawingAnnotation[],
       questionScoreId: string
     ): Promise<DrawingAnnotation[]> => {
       setIsLoading(true)
@@ -344,12 +248,7 @@ export function useDrawingAnnotations(
         await deleteByType(questionScoreId)
 
         // 新しい要素を一括作成（採点者は親 QuestionScore から決まる）
-        const createDataList = elements.map((element) =>
-          convertElementToCreateData(element, questionScoreId)
-        )
-
-        const result =
-          await window.electronAPI.drawing.batchCreate(createDataList)
+        const result = await window.electronAPI.drawing.batchCreate(elements)
 
         if (result.success && result.data) {
           return result.data

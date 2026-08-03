@@ -27,7 +27,8 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 // テキストボックスCanvas機能をインポート
-import type { AnchorDirection, TextBox } from "@/lib/textbox-canvas/types"
+import type { TextBox } from "@/lib/textbox-canvas/types"
+import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { EnhancedCanvasPreview } from "./EnhancedCanvasPreview"

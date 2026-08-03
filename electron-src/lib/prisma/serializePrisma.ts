@@ -15,6 +15,8 @@
 
 import { Prisma } from "@prisma/client"
 
+import type { Serialized } from "@/types/prismaExtensions"
+
 /**
  * Prisma/decimal.js の Decimal を、コンストラクタ同一性に依存せず判定する。
  * `instanceof` は decimal.js が二重コピー（driver adapter 等）だと外れうるため、
@@ -46,7 +48,13 @@ function convert(value: unknown): unknown {
   return result
 }
 
-/** Prisma Decimal を number へ倒しつつ、IPC 送信可能なプレーン値へ変換する。 */
-export function serializePrisma<T>(data: T): T {
-  return convert(data) as T
+/**
+ * Prisma Decimal を number へ倒しつつ、IPC 送信可能なプレーン値へ変換する。
+ *
+ * 返り値の型は `Serialized<T>`。入力の型をそのまま返すと「型は Decimal / 実体は number」
+ * という乖離になり、後始末が呼び出し側の `as unknown as` へ散らばる。通したか否かを
+ * 型で見分けられるよう、変換の型（prismaExtensions.ts）と実装をここで結び付ける。
+ */
+export function serializePrisma<T>(data: T): Serialized<T> {
+  return convert(data) as Serialized<T>
 }

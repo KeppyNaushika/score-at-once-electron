@@ -4,9 +4,7 @@ import {
   renderSvgToCanvas,
 } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
-import type { AnchorDirection } from "@/lib/textbox-canvas/types"
-
-import type { DrawingElement } from "../types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** SVGキャッシュ（elementId → {text, color, fontSize, svg}） */
 const svgCache = new Map<
@@ -74,14 +72,6 @@ interface TextRenderResult {
 }
 
 /**
- * DrawingElementからAnchorDirectionを取得する
- * anchorDirectionが未設定の場合はデフォルト値を返す
- */
-function getAnchorDirection(element: DrawingElement): AnchorDirection {
-  return element.anchorDirection ?? "top-left"
-}
-
-/**
  * テキスト要素をCanvasに描画する
  * @param ctx Canvas描画コンテキスト
  * @param element 描画する要素
@@ -94,7 +84,7 @@ function getAnchorDirection(element: DrawingElement): AnchorDirection {
  */
 export async function renderTextElement(
   ctx: CanvasRenderingContext2D,
-  element: DrawingElement,
+  element: DrawingAnnotation,
   canvasWidth: number,
   canvasHeight: number,
   isSelected: boolean = false,
@@ -114,9 +104,9 @@ export async function renderTextElement(
 
     const anchorX = element.x * canvasWidth
     const anchorY = element.y * canvasHeight
-    const anchorDirection = getAnchorDirection(element)
-    const textColor = element.color || "#000000"
-    const fontSize = element.fontSize ?? 16
+    const anchorDirection = element.anchorDirection
+    const textColor = element.color
+    const fontSize = element.fontSize
 
     let svgElement = getCachedSvg(element.id, element.text, textColor, fontSize)
 

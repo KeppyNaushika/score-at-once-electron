@@ -1,6 +1,3 @@
-import type { QuestionScore } from "@prisma/client"
-
-import { decimalToNumber } from "@/components/exams/07-score-at-once/types"
 import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 /**
@@ -11,7 +8,7 @@ import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 export async function loadQuestionScores(
   examId: string,
   userId?: string
-): Promise<QuestionScore[]> {
+): Promise<SerializedQuestionScore[]> {
   try {
     const result = await window.electronAPI.getQuestionScoresForExam(
       examId,
@@ -19,21 +16,13 @@ export async function loadQuestionScores(
     )
 
     // Handle both direct array and { success, scores } format
-    // IPC 境界の実体は SerializedQuestionScore（partialScore は number）。
-    let scores: SerializedQuestionScore[]
     if (Array.isArray(result)) {
-      scores = result
-    } else if (result?.success && Array.isArray(result.scores)) {
-      scores = result.scores
-    } else {
-      return []
+      return result
     }
-
-    // Prisma.DecimalをNumberに変換してQuestionScore配列として返す
-    return scores.map((score) => ({
-      ...score,
-      partialScore: decimalToNumber(score.partialScore),
-    })) as QuestionScore[]
+    if (result?.success && Array.isArray(result.scores)) {
+      return result.scores
+    }
+    return []
   } catch (error) {
     console.error("Failed to load question scores:", error)
     return []

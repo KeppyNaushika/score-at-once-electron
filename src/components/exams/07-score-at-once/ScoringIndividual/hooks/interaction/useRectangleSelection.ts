@@ -1,15 +1,15 @@
 import { useCallback } from "react"
 
 import type {
-  DrawingElement,
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 interface UseRectangleSelectionProps {
   currentTool: string
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   isDrawingSelection: boolean
   selectionRectangle: SelectionRectangle | null
