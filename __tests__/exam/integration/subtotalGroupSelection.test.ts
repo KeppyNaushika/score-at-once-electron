@@ -7,8 +7,6 @@
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { buildExamSubtotalGroupId } from "../../../electron-src/lib/prisma/deterministicId"
-
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
@@ -44,7 +42,6 @@ async function createTestData() {
     const group = await testPrisma.subtotalGroup.create({ data: { name } })
     await testPrisma.examSubtotalGroup.create({
       data: {
-        id: buildExamSubtotalGroupId(exam.id, group.id),
         examId: exam.id,
         subtotalGroupId: group.id,
       },
@@ -130,9 +127,9 @@ describe("試験への小計グループ追加", () => {
     ).toBe(1)
   })
 
-  it("idが(試験, 小計グループ)から決まる（2端末で同じidになりNAS同期で衝突しない）", async () => {
+  it("既存の組み合わせを追加し直しても行が増えない（upsertの鍵は@@unique）", async () => {
     const exam = await testPrisma.exam.create({
-      data: { examName: "決定論的idテスト" },
+      data: { examName: "小計グループ追加テスト" },
     })
     const group = await testPrisma.subtotalGroup.create({
       data: { name: "数学" },
@@ -140,8 +137,7 @@ describe("試験への小計グループ追加", () => {
 
     const result = await addSubtotalGroupToExam(exam.id, group.id)
 
-    expect(result.examSubtotalGroup?.id).toBe(
-      buildExamSubtotalGroupId(exam.id, group.id)
-    )
+    expect(result.examSubtotalGroup?.examId).toBe(exam.id)
+    expect(result.examSubtotalGroup?.subtotalGroupId).toBe(group.id)
   })
 })

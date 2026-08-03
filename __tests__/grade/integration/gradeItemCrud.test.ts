@@ -455,7 +455,6 @@ describe("評価項目の削除と制約ルール（issue #1063）", () => {
         order: 0,
         viewpoints: {
           create: viewpointGradeItemIds.map((gradeItemId, index) => ({
-            id: `${targetGradeItemId}:${gradeItemId}`,
             gradeItemId,
             order: index,
           })),

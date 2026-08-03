@@ -7,8 +7,6 @@
 import type { CropRegion, PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
 
-import { buildExamSubtotalGroupId } from "../../electron-src/lib/prisma/deterministicId"
-
 interface FullTestExamOptions {
   /** ページ数 (default: 2) */
   pageCount?: number
@@ -292,7 +290,6 @@ export async function createFullTestExam(
   // 10. ExamSubtotalGroup作成
   const examSubtotalGroup = await prisma.examSubtotalGroup.create({
     data: {
-      id: buildExamSubtotalGroupId(exam.id, subtotalGroup.id),
       examId: exam.id,
       subtotalGroupId: subtotalGroup.id,
     },
@@ -388,7 +385,6 @@ export async function createFullTestExam(
     // 出力設定（正規化済み）: 代表として重ね描きのスタイルを1件入れる
     examExportSettings = await prisma.examAnswerOverlayStyle.create({
       data: {
-        id: `${exam.id}:mark`,
         examId: exam.id,
         overlayKind: "mark",
         position: "middle-center",

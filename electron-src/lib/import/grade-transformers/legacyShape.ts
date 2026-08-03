@@ -6,7 +6,7 @@
  * 行の id も createdAt/updatedAt も持たない行が多い。
  *
  * 展開では、id を持たない行の id を自然キーから組み立てる
- * （`deterministicId.ts` と同じ方針。同じアーカイブを何度読んでも同じ id になる＝冪等）。
+ * （同じアーカイブを何度読んでも同じ id になる＝冪等）。
  * 組み立てた id はアーカイブ内の結合キーとしてのみ使い、DB へは書き込まない
  * （import は全ての行を新しい uuid で作る）。
  *
@@ -290,7 +290,7 @@ export interface LegacyArchiveBoundariesData {
 /** 復元できない日時の下限値。LWW で既存を上書きしない */
 const UNKNOWN_TIMESTAMP = new Date(0).toISOString()
 
-/** 自然キーから決定論的に組み立てる結合行の id（`deterministicId.ts` と同じ規則） */
+/** 自然キーから決定論的に組み立てる結合行の id（アーカイブ内でのみ使い、DBへは書かない） */
 const joinIds = (parentId: string, childKey: string): string =>
   `${parentId}:${childKey}`
 

@@ -37,7 +37,6 @@ export async function processExamExportSettings(
     if (existing) continue
     await tx.examAnswerOverlayStyle.create({
       data: {
-        id: `${newExamId}:${style.overlayKind}`,
         examId: newExamId,
         overlayKind: style.overlayKind,
         position: style.position,
@@ -60,7 +59,6 @@ export async function processExamExportSettings(
     if (existing) continue
     await tx.examAnswerOverlayVisibility.create({
       data: {
-        id: `${newExamId}:${visibility.status}`,
         examId: newExamId,
         status: visibility.status,
         showMark: visibility.showMark,
@@ -104,7 +102,6 @@ export async function processExamExportSettings(
     if (existing) continue
     await tx.examIndividualReportTableSection.create({
       data: {
-        id: `${newExamId}:${section.tableKind}`,
         examId: newExamId,
         tableKind: section.tableKind,
         enabled: section.enabled,
@@ -129,7 +126,6 @@ export async function processExamExportSettings(
     if (existing) continue
     await tx.examIndividualReportStatisticVisibility.create({
       data: {
-        id: `${newExamId}:${visibility.statisticKind}:${visibility.scope}`,
         examId: newExamId,
         statisticKind: visibility.statisticKind,
         scope: visibility.scope,

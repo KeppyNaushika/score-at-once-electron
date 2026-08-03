@@ -12,7 +12,6 @@ import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
-import { buildEstimationSourceId } from "./deterministicId"
 import { serializePrisma } from "./serializePrisma"
 
 /**
@@ -75,7 +74,6 @@ export function buildEstimationSourceRows(
     (sourceDataSourceId) => sourceDataSourceId !== dataSourceId
   )
   return unique.map((sourceDataSourceId, index) => ({
-    id: buildEstimationSourceId(dataSourceId, sourceDataSourceId),
     sourceDataSourceId,
     order: index,
   }))
@@ -191,7 +189,7 @@ export async function createDataSource(data: {
     })
     const nextOrder = (maxOrder._max.order ?? -1) + 1
 
-    // estimationSources のidは自分のidから決定論的に作るため、先にidを確定させる
+    // 自分自身を集計元に選ぶのを弾くため、作成前に自分のidを確定させる
     const dataSourceId = crypto.randomUUID()
 
     const dataSource = await prisma.gradeDataSource.create({
@@ -277,7 +275,7 @@ export async function updateDataSource(
     const { estimationSourceIds, ...rest } = data
     const updateData: Prisma.GradeDataSourceUpdateInput = { ...rest }
     if (estimationSourceIds !== undefined) {
-      // 選択の置き換え。決定論idなので、同じ組み合わせを選び直せば同じ行に戻る。
+      // 選択の総入れ替え。idは uuidv4 なので、選び直すと別idの行になる。
       updateData.estimationSources = {
         deleteMany: {},
         create: buildEstimationSourceRows(id, estimationSourceIds),

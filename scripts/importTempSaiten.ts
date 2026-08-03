@@ -11,7 +11,6 @@
  *   npx tsx scripts/importTempSaiten.ts --config path/to/config  # 設定ファイル指定
  */
 
-import { buildExamSubtotalGroupId } from "../electron-src/lib/prisma/deterministicId"
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
@@ -604,7 +603,6 @@ async function importExam(
     })
     await prisma.examSubtotalGroup.create({
       data: {
-        id: buildExamSubtotalGroupId(examId, groupId),
         examId,
         subtotalGroupId: groupId,
         createdAt: now,

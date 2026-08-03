@@ -11,11 +11,6 @@ import type { GradeConstraintInput } from "../../../src/types/grade.types"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
-import {
-  buildConstraintExclusionLabelId,
-  buildConstraintLabelValueId,
-  buildConstraintViewpointId,
-} from "./deterministicId"
 import { serializePrisma } from "./serializePrisma"
 
 /**
@@ -29,25 +24,17 @@ export const gradeConstraintInclude = {
 } satisfies Prisma.GradeConstraintInclude
 
 /** 集計対象の観点（GradeItem）の nested create 行。重複は畳む（`@@unique` 違反回避）。 */
-function buildConstraintViewpointRows(
-  constraintId: string,
-  gradeItemIds: string[]
-) {
+function buildConstraintViewpointRows(gradeItemIds: string[]) {
   const unique = [...new Set(gradeItemIds)]
   return unique.map((gradeItemId, index) => ({
-    id: buildConstraintViewpointId(constraintId, gradeItemId),
     gradeItemId,
     order: index,
   }))
 }
 
 /** ラベル→数値の対応の nested create 行。 */
-function buildConstraintLabelValueRows(
-  constraintId: string,
-  labelValues: Record<string, number>
-) {
+function buildConstraintLabelValueRows(labelValues: Record<string, number>) {
   return Object.entries(labelValues).map(([label, value], index) => ({
-    id: buildConstraintLabelValueId(constraintId, label),
     label,
     value,
     order: index,
@@ -55,13 +42,9 @@ function buildConstraintLabelValueRows(
 }
 
 /** 混在禁止ラベルの nested create 行。重複は畳む。 */
-function buildConstraintExclusionLabelRows(
-  constraintId: string,
-  labels: string[]
-) {
+function buildConstraintExclusionLabelRows(labels: string[]) {
   const unique = [...new Set(labels)]
   return unique.map((label, index) => ({
-    id: buildConstraintExclusionLabelId(constraintId, label),
     label,
     order: index,
   }))
@@ -71,12 +54,11 @@ function buildConstraintExclusionLabelRows(
  * 制約ルールの設定リレーションを書く（作成・更新・複製・アーカイブ取込の共通経路）。
  * 未指定（undefined）の項目は触らない。指定されたものは総入れ替えする。
  *
- * 据え置く行は update で通し、実際に外れた行だけ削除する。決定論idを使っているため
- * 同一idの delete → create にすると、sqlite-nas-sync の tombstone（秒解像度）が
- * 再作成行の updatedAt より後になったとき相手側で INSERT が抑止され、その端末だけ
- * 設定が消える。
+ * 据え置く行は update で通し、実際に外れた行だけ削除する。全消し→再作成にすると、
+ * 変えていない行まで sqlite-nas-sync の changelog と tombstone を動かすため。
+ * upsert の鍵は id ではなく `@@unique`（idは uuidv4 で端末ごとに異なる）。
  *
- * 子行のidは親idから決まるので、親を作った後に呼ぶ。呼び出し側は必ず同一トランザクション
+ * 子行は親への FK を持つので、親を作った後に呼ぶ。呼び出し側は必ず同一トランザクション
  * で包むこと（本体だけ出来て設定が入らないと、viewpointsゼロ＝「比較先以外の全項目」
  * という設定していないルールとして動き出す）。
  */
@@ -86,10 +68,7 @@ export async function writeConstraintConfig(
   constraint: Partial<GradeConstraintInput>
 ) {
   if (constraint.viewpointGradeItemIds !== undefined) {
-    const rows = buildConstraintViewpointRows(
-      constraintId,
-      constraint.viewpointGradeItemIds
-    )
+    const rows = buildConstraintViewpointRows(constraint.viewpointGradeItemIds)
     await tx.gradeConstraintViewpoint.deleteMany({
       where: {
         constraintId,
@@ -99,8 +78,14 @@ export async function writeConstraintConfig(
       },
     })
     for (const row of rows) {
+      // 鍵は id ではなく `@@unique`。idは uuidv4 で、同じ組み合わせでも端末ごとに異なる
       await tx.gradeConstraintViewpoint.upsert({
-        where: { id: row.id },
+        where: {
+          constraintId_gradeItemId: {
+            constraintId,
+            gradeItemId: row.gradeItemId,
+          },
+        },
         create: { ...row, constraintId },
         update: { order: row.order },
       })
@@ -108,10 +93,7 @@ export async function writeConstraintConfig(
   }
 
   if (constraint.labelValues !== undefined) {
-    const rows = buildConstraintLabelValueRows(
-      constraintId,
-      constraint.labelValues
-    )
+    const rows = buildConstraintLabelValueRows(constraint.labelValues)
     await tx.gradeConstraintLabelValue.deleteMany({
       where: {
         constraintId,
@@ -122,7 +104,7 @@ export async function writeConstraintConfig(
     })
     for (const row of rows) {
       await tx.gradeConstraintLabelValue.upsert({
-        where: { id: row.id },
+        where: { constraintId_label: { constraintId, label: row.label } },
         create: { ...row, constraintId },
         update: { value: row.value, order: row.order },
       })
@@ -130,10 +112,7 @@ export async function writeConstraintConfig(
   }
 
   if (constraint.exclusionLabels !== undefined) {
-    const rows = buildConstraintExclusionLabelRows(
-      constraintId,
-      constraint.exclusionLabels
-    )
+    const rows = buildConstraintExclusionLabelRows(constraint.exclusionLabels)
     await tx.gradeConstraintExclusionLabel.deleteMany({
       where: {
         constraintId,
@@ -144,7 +123,7 @@ export async function writeConstraintConfig(
     })
     for (const row of rows) {
       await tx.gradeConstraintExclusionLabel.upsert({
-        where: { id: row.id },
+        where: { constraintId_label: { constraintId, label: row.label } },
         create: { ...row, constraintId },
         update: { order: row.order },
       })
@@ -201,7 +180,7 @@ export async function createGradeConstraint(data: {
           order: data.constraint.order,
         },
       })
-      // 設定リレーションのidは自分のidから決定論的に作るため、本体作成後に書く
+      // 設定リレーションは本体への FK を持つため、本体作成後に書く
       await writeConstraintConfig(tx, constraint.id, data.constraint)
       return tx.gradeConstraint.findUniqueOrThrow({
         where: { id: constraint.id },

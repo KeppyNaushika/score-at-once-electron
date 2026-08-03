@@ -11,7 +11,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { IdChangeTarget } from "../../../electron-src/lib/import/merge/types"
-import { buildExamSubtotalGroupId } from "../../../electron-src/lib/prisma/deterministicId"
 import {
   createEmptyIdMappings,
   generateId,
@@ -66,10 +65,7 @@ describe("executeIdChanges", () => {
       })
 
       // ExamSubtotalGroup
-      const examSubtotalGroupId = buildExamSubtotalGroupId(
-        examId,
-        existingGroupId
-      )
+      const examSubtotalGroupId = generateId()
       await prisma.examSubtotalGroup.create({
         data: {
           id: examSubtotalGroupId,
@@ -118,17 +114,9 @@ describe("executeIdChanges", () => {
       })
       expect(oldGroup).toBeNull()
 
-      // FK参照が更新されていること。
-      // ExamSubtotalGroup は id が (試験, 小計グループ) から決まるので、
-      // 付け替えに伴って id も組み直される（旧idでは引けない）
-      expect(
-        await prisma.examSubtotalGroup.findUnique({
-          where: { id: examSubtotalGroupId },
-        })
-      ).toBeNull()
-
+      // FK参照が更新されていること。idは uuidv4 なので付け替えでも変わらない
       const examSubtotalGroup = await prisma.examSubtotalGroup.findUnique({
-        where: { id: buildExamSubtotalGroupId(examId, newGroupId) },
+        where: { id: examSubtotalGroupId },
       })
       expect(examSubtotalGroup!.subtotalGroupId).toBe(newGroupId)
 
@@ -195,16 +183,18 @@ describe("executeIdChanges", () => {
       })
 
       // 複数のExamSubtotalGroup
+      const examSubtotalGroup1Id = generateId()
+      const examSubtotalGroup2Id = generateId()
       await prisma.examSubtotalGroup.create({
         data: {
-          id: buildExamSubtotalGroupId(exam1Id, existingGroupId),
+          id: examSubtotalGroup1Id,
           examId: exam1Id,
           subtotalGroupId: existingGroupId,
         },
       })
       await prisma.examSubtotalGroup.create({
         data: {
-          id: buildExamSubtotalGroupId(exam2Id, existingGroupId),
+          id: examSubtotalGroup2Id,
           examId: exam2Id,
           subtotalGroupId: existingGroupId,
         },
@@ -245,12 +235,12 @@ describe("executeIdChanges", () => {
         await executeIdChanges(targets, idMappings, warnings, tx)
       })
 
-      // 全てのFK参照が更新されていること（idも組み直される）
+      // 全てのFK参照が更新されていること
       const examSubtotalGroup1 = await prisma.examSubtotalGroup.findUnique({
-        where: { id: buildExamSubtotalGroupId(exam1Id, newGroupId) },
+        where: { id: examSubtotalGroup1Id },
       })
       const examSubtotalGroup2 = await prisma.examSubtotalGroup.findUnique({
-        where: { id: buildExamSubtotalGroupId(exam2Id, newGroupId) },
+        where: { id: examSubtotalGroup2Id },
       })
       expect(examSubtotalGroup1!.subtotalGroupId).toBe(newGroupId)
       expect(examSubtotalGroup2!.subtotalGroupId).toBe(newGroupId)

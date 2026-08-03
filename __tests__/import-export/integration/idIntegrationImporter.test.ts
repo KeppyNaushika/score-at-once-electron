@@ -50,7 +50,6 @@ vi.mock("../../../electron-src/lib/import/merge/imageImporter", () => ({
 }))
 
 import { executeIdIntegrationImport } from "../../../electron-src/lib/import/merge/idIntegrationImporter"
-import { buildAssignmentId } from "../../../electron-src/lib/prisma/cropRegionAssignment"
 
 const prisma = getTestPrismaClient()
 
@@ -1608,7 +1607,7 @@ describe("executeIdIntegrationImport", () => {
   })
 
   // II-22b: v1.20.0: 採点担当（CropRegionAssignment）が merge 経路でも復元される
-  it("II-22b: 採点担当がmerge経路で作成され、idは決定論的になる", async () => {
+  it("II-22b: 採点担当がmerge経路で作成され、idは取り込み先で振り直される", async () => {
     const { data, examId, regionId } = createBasicTestData()
 
     const now = new Date().toISOString()
@@ -1642,8 +1641,10 @@ describe("executeIdIntegrationImport", () => {
     })
     expect(assignments.length).toBe(1)
     expect(assignments[0].userId).toBe(currentUser.id)
-    // idはアーカイブから持ち回らず (設問, 担当者) から再生成する
-    expect(assignments[0].id).toBe(buildAssignmentId(regionId, currentUser.id))
+    // idはアーカイブから持ち回らず、取り込み先で uuidv4 を振り直す
+    expect(assignments[0].id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    )
 
     expect(
       result.warnings?.some((warning) => warning.includes("no_such_user"))

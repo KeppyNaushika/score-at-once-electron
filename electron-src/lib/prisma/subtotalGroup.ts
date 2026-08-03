@@ -3,7 +3,6 @@ import type { Prisma } from "@prisma/client"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
-import { buildExamSubtotalGroupId } from "./deterministicId"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
@@ -341,7 +340,6 @@ export async function addSubtotalGroupToExam(
     const examSubtotalGroup = await prisma.examSubtotalGroup.upsert({
       where: { examId_subtotalGroupId: { examId, subtotalGroupId } },
       create: {
-        id: buildExamSubtotalGroupId(examId, subtotalGroupId),
         examId,
         subtotalGroupId,
       },
