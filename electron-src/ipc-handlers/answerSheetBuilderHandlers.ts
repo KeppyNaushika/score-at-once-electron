@@ -454,8 +454,10 @@ export function setupAnswerSheetBuilderHandlers(): void {
           headerFields: regeneratedHeaderFields,
         },
         majorQuestions: regeneratedMajorQuestions,
-        createdAt: undefined as unknown as string,
-        updatedAt: undefined as unknown as string,
+        // 複製元の日時は引き継がない。保存時に DB が採番した値を
+        // dbToDefinition が載せ直すため、ここでは持たない。
+        createdAt: undefined,
+        updatedAt: undefined,
       }
 
       await saveAsbDefinition(duplicated, userId)
