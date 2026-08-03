@@ -4,7 +4,7 @@
  */
 import { useCallback } from "react"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** リサイズの元の境界 */
 export interface ResizeOriginalBounds {
@@ -22,11 +22,12 @@ interface UseElementResizeProps {
   imageAspectRatio?: number
   /** 描画要素配列設定 */
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
   ) => void
   /** ヒットテストハンドル関数 */
   hitTestHandle: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => string | null
@@ -38,14 +39,14 @@ interface UseElementResizeReturn {
   getResizeHandle: (
     normalizedX: number,
     normalizedY: number,
-    element: DrawingElement
+    element: DrawingAnnotation
   ) => string | null
   /** 要素をリサイズ */
   handleElementResize: (
     normalizedX: number,
     normalizedY: number,
     handle: string,
-    element: DrawingElement,
+    element: DrawingAnnotation,
     originalBounds: ResizeOriginalBounds
   ) => void
 }
@@ -188,7 +189,7 @@ export function useElementResize({
     (
       normalizedX: number,
       normalizedY: number,
-      element: DrawingElement
+      element: DrawingAnnotation
     ): string | null => {
       if (element.type === "line") {
         return null
@@ -216,7 +217,7 @@ export function useElementResize({
       normalizedX: number,
       normalizedY: number,
       handle: string,
-      element: DrawingElement,
+      element: DrawingAnnotation,
       originalBounds: ResizeOriginalBounds
     ) => {
       const clampedMouseX = Math.max(0, Math.min(1, normalizedX))

@@ -12,13 +12,15 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { calculateQuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/utils/progressCalculator"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 const EXAM_PAGE_ID = "page-1"
 const CROP_REGION_ID = "region-1"
 const EXAM_STUDENT_A = "es-a"
 
 /** 1ページ・1設問・答案1枚。その1マスに任意の採点状況を入れる */
-function buildProgress(status: string, partialScore: number | null) {
+function buildProgress(status: ScoringStatus, partialScore: number | null) {
   const cropRegions = [
     { id: CROP_REGION_ID, examPageId: EXAM_PAGE_ID, label: "問1" },
   ] as unknown as CropRegionWithExamPage[]
@@ -34,14 +36,11 @@ function buildProgress(status: string, partialScore: number | null) {
       status,
       partialScore,
     },
-  ]
+  ] as SerializedQuestionScore[]
 
-  return calculateQuestionProgress(
-    cropRegions,
-    answerImages,
-    // partialScore は IPC 越しに number 化済みのものが渡る
-    questionScores as unknown as Parameters<typeof calculateQuestionProgress>[2]
-  )[CROP_REGION_ID]
+  return calculateQuestionProgress(cropRegions, answerImages, questionScores)[
+    CROP_REGION_ID
+  ]
 }
 
 describe("calculateQuestionProgress の確定件数", () => {

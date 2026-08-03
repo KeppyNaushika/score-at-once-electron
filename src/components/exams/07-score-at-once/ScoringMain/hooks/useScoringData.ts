@@ -1,4 +1,3 @@
-import type { QuestionScore } from "@prisma/client"
 import { useCallback, useState } from "react"
 
 import { useBatchScoring } from "@/components/exams/07-score-at-once/ScoringData/hooks/useBatchScoring"
@@ -8,6 +7,7 @@ import type {
 } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { loadQuestionScores } from "@/components/exams/07-score-at-once/ScoringData/utils/dataLoader"
 import { calculateQuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/utils/progressCalculator"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 interface UseScoringDataProps {
   currentUserId: string | null
@@ -25,7 +25,9 @@ export function useScoringData({
   studentAnswerImages,
   cropRegions,
 }: UseScoringDataProps) {
-  const [questionScores, setQuestionScores] = useState<QuestionScore[]>([])
+  const [questionScores, setQuestionScores] = useState<
+    SerializedQuestionScore[]
+  >([])
 
   // Batch scoring hook
   const { handleBatchScore } = useBatchScoring({

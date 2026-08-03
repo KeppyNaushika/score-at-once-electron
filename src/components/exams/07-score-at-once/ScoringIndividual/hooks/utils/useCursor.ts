@@ -4,7 +4,7 @@
  */
 import { useCallback } from "react"
 
-import type { DrawingElement } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** カーソルスタイルの種類 */
 type CursorStyle =
@@ -26,7 +26,7 @@ interface UseCursorProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** ヒットテストハンドル関数（オプション） */
   hitTestHandle?: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => string | null
@@ -40,7 +40,7 @@ interface UseCursorReturn {
   resetCursor: () => void
   /** リサイズカーソルの種類を取得 */
   getResizeCursor: (
-    element: DrawingElement | null,
+    element: DrawingAnnotation | null,
     handle: string
   ) => CursorStyle
 }
@@ -90,7 +90,7 @@ export function useCursor({ canvasRef }: UseCursorProps): UseCursorReturn {
    * @returns カーソルスタイル
    */
   const getResizeCursor = useCallback(
-    (element: DrawingElement | null, handle: string): CursorStyle => {
+    (element: DrawingAnnotation | null, handle: string): CursorStyle => {
       if (!element) {
         // 要素がない場合はハンドル名から推測
         const cursorMap: Record<string, CursorStyle> = {

@@ -5,11 +5,11 @@
 import { useCallback, useState } from "react"
 
 import { useCursor } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/utils/useCursor"
+import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
-  DrawingElement,
-  SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+  DrawingAnnotation,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
 
 import { useDrawingCreation } from "./useDrawingCreation"
 import { useElementMovement } from "./useElementMovement"
@@ -23,8 +23,10 @@ interface UseCanvasInteractionProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** 現在のツール */
   currentTool: string
+  /** 作成先の採点データ（新規アノテーションの行に載せる） */
+  questionScoreId: string | null
   /** 描画要素配列 */
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   /** 選択中の要素ID配列 */
   selectedElementIds: string[]
   /** 要素ドラッグ中フラグ */
@@ -32,7 +34,7 @@ interface UseCanvasInteractionProps {
   /** 描画中フラグ */
   isDrawing: boolean
   /** 現在描画中の要素 */
-  currentDrawing: Partial<DrawingElement> | null
+  currentDrawing: Partial<DrawingAnnotation> | null
   /** 選択範囲ドラッグ中フラグ */
   isDrawingSelection: boolean
   /** 選択範囲矩形 */
@@ -69,44 +71,48 @@ interface UseCanvasInteractionProps {
   setIsDrawing: (drawing: boolean) => void
   setCurrentDrawing: (
     drawing:
-      | Partial<DrawingElement>
+      | Partial<DrawingAnnotation>
       | null
       | ((
-          prev: Partial<DrawingElement> | null
-        ) => Partial<DrawingElement> | null)
+          prev: Partial<DrawingAnnotation> | null
+        ) => Partial<DrawingAnnotation> | null)
   ) => void
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: "start" | "end" | "move" | null) => void
   setRectangleEditMode: (mode: "resize" | "move" | null) => void
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
   ) => void
-  addDrawingElement: (element: DrawingElement) => void
-  updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
+  addDrawingElement: (element: DrawingAnnotation) => void
+  updateDrawingElement: (
+    id: string,
+    updates: Partial<DrawingAnnotation>
+  ) => void
   removeDrawingElement: (id: string) => void
 
   // ユーティリティ
-  hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
+  hitTestElement: (element: DrawingAnnotation, x: number, y: number) => boolean
   hitTestHandle: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => string | null
   getLineEditMode: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => "start" | "end" | "move" | null
   getRectangleEditMode: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => "resize" | "move" | null
 
   // コールバック
   onTextAnchorClick?: (position: { x: number; y: number }) => void
-  onTextElementReClick?: (element: DrawingElement) => void
+  onTextElementReClick?: (element: DrawingAnnotation) => void
   setHoveredElementId?: (id: string | null) => void
 }
 
@@ -140,6 +146,7 @@ interface UseCanvasInteractionReturn {
 export function useCanvasInteraction({
   canvasRef,
   currentTool,
+  questionScoreId,
   drawingElements,
   selectedElementIds,
   isDraggingElement,
@@ -198,6 +205,7 @@ export function useCanvasInteraction({
     handleNewDrawingMouseUp,
   } = useDrawingCreation({
     currentTool,
+    questionScoreId,
     isDrawing,
     drawingElements,
     isShiftPressed,
@@ -294,7 +302,7 @@ export function useCanvasInteraction({
 
       // ハンドルヒット情報を収集
       type HandleHit = {
-        element: DrawingElement
+        element: DrawingAnnotation
         type: "line-endpoint" | "resize-handle" | "text-anchor"
         handleName: string
         distance: number
@@ -309,10 +317,8 @@ export function useCanvasInteraction({
             imageCoords.y
           )
           if (editMode === "start" || editMode === "end") {
-            const handleX =
-              editMode === "start" ? element.x : (element.endX ?? element.x)
-            const handleY =
-              editMode === "start" ? element.y : (element.endY ?? element.y)
+            const handleX = editMode === "start" ? element.x : element.endX
+            const handleY = editMode === "start" ? element.y : element.endY
             handleHits.push({
               element,
               type: "line-endpoint",
@@ -716,7 +722,7 @@ export function useCanvasInteraction({
             (element) => element.id === resizeElementId
           )
           if (resizedElement) {
-            const updates: Partial<DrawingElement> = {
+            const updates: Partial<DrawingAnnotation> = {
               x: resizedElement.x,
               y: resizedElement.y,
             }

@@ -123,7 +123,7 @@ export function SubtotalGroupCard({
 
           {/* 作成日 */}
           <div className="border-t pt-2 text-xs text-muted-foreground">
-            作成: {new Date(group.createdAt).toLocaleDateString("ja-JP")}
+            作成: {group.createdAt.toLocaleDateString("ja-JP")}
           </div>
         </div>
       </CardContent>

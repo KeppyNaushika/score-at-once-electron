@@ -7,10 +7,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
-import type {
-  DrawingElement,
-  SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
   CropRegionWithExamPage,
   ScoringData,
@@ -22,7 +19,10 @@ import {
 } from "@/lib/answerOverlayPlacement"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
-import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
+import type {
+  AnnotationWithContext,
+  DrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -49,7 +49,7 @@ interface UseCanvasDrawingProps {
   currentScoringData: ScoringData | null
   currentCropRegion?: CropRegionWithExamPage | null
   zoom: number
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   isDrawing: boolean
   isDrawingSelection: boolean
@@ -93,8 +93,7 @@ export function useCanvasDrawing({
   scoringMarkConfig,
   pageSize = "A4",
 }: UseCanvasDrawingProps): void {
-  const { convertAnnotationToDrawingElement, drawSingleElement } =
-    useDrawingRenderer()
+  const { drawSingleElement } = useDrawingRenderer()
 
   // ドラッグ状態を同期的に追跡するref
   const isDraggingRef = useRef(isDraggingElement ?? false)
@@ -389,17 +388,13 @@ export function useCanvasDrawing({
             const annotOffsetX = (canvasWidth - annotPageImg.naturalWidth) / 2
             const annotOffsetY = calcPageOffset(annotPageIndex)
 
-            const element = convertAnnotationToDrawingElement(annotation)
             ctx.globalAlpha = 0.5
-            await drawSingleElement(
+            drawSingleElement(
               ctx,
-              element,
+              annotation,
               annotPageImg,
               annotOffsetX,
               annotOffsetY,
-              false,
-              false,
-              false,
               pageSize
             )
             ctx.globalAlpha = 1.0
@@ -414,15 +409,12 @@ export function useCanvasDrawing({
 
           const isSelected = selectedElementIds.includes(element.id)
           ctx.globalAlpha = isDragging && !isSelected ? 0.3 : 1.0
-          await drawSingleElement(
+          drawSingleElement(
             ctx,
             element,
             currentPageImg,
             currentOffsetX,
             currentOffsetY,
-            isSelected,
-            false,
-            true,
             pageSize
           )
           ctx.globalAlpha = 1.0
@@ -469,7 +461,6 @@ export function useCanvasDrawing({
       allAnnotations,
       currentCropRegionId,
       scoringMarkImagesRef,
-      convertAnnotationToDrawingElement,
       drawSingleElement,
       allCropRegionsWithStatus,
       scoringMarkConfig,
@@ -519,7 +510,7 @@ export function useCanvasDrawing({
 
     // ハンドル描画ヘルパー関数
     const drawElementHandles = (
-      element: DrawingElement,
+      element: DrawingAnnotation,
       handleSize: number,
       halfHandle: number,
       fillColor: string,
@@ -532,70 +523,68 @@ export function useCanvasDrawing({
       ctx.lineWidth = 2
 
       switch (element.type) {
-        case "line":
-          if (element.endX !== undefined && element.endY !== undefined) {
-            ctx.fillStyle = opacity < 1.0 ? fillColor : "#22c55e"
-            const startX = element.x * currentPageImg.naturalWidth + offsetX
-            const startY = element.y * currentPageImg.naturalHeight + offsetY
-            ctx.fillRect(
-              startX - halfHandle,
-              startY - halfHandle,
-              handleSize,
-              handleSize
-            )
-            ctx.strokeRect(
-              startX - halfHandle,
-              startY - halfHandle,
-              handleSize,
-              handleSize
-            )
+        case "line": {
+          ctx.fillStyle = opacity < 1.0 ? fillColor : "#22c55e"
+          const startX = element.x * currentPageImg.naturalWidth + offsetX
+          const startY = element.y * currentPageImg.naturalHeight + offsetY
+          ctx.fillRect(
+            startX - halfHandle,
+            startY - halfHandle,
+            handleSize,
+            handleSize
+          )
+          ctx.strokeRect(
+            startX - halfHandle,
+            startY - halfHandle,
+            handleSize,
+            handleSize
+          )
 
-            ctx.fillStyle = opacity < 1.0 ? fillColor : "#ef4444"
-            const endX = element.endX * currentPageImg.naturalWidth + offsetX
-            const endY = element.endY * currentPageImg.naturalHeight + offsetY
+          ctx.fillStyle = opacity < 1.0 ? fillColor : "#ef4444"
+          const endX = element.endX * currentPageImg.naturalWidth + offsetX
+          const endY = element.endY * currentPageImg.naturalHeight + offsetY
+          ctx.fillRect(
+            endX - halfHandle,
+            endY - halfHandle,
+            handleSize,
+            handleSize
+          )
+          ctx.strokeRect(
+            endX - halfHandle,
+            endY - halfHandle,
+            handleSize,
+            handleSize
+          )
+          break
+        }
+        case "rectangle":
+        case "ellipse": {
+          const x = element.x * currentPageImg.naturalWidth + offsetX
+          const y = element.y * currentPageImg.naturalHeight + offsetY
+          const w = element.width * currentPageImg.naturalWidth
+          const h = element.height * currentPageImg.naturalHeight
+          const corners = [
+            { x, y },
+            { x: x + w, y },
+            { x, y: y + h },
+            { x: x + w, y: y + h },
+          ]
+          corners.forEach((corner) => {
             ctx.fillRect(
-              endX - halfHandle,
-              endY - halfHandle,
+              corner.x - halfHandle,
+              corner.y - halfHandle,
               handleSize,
               handleSize
             )
             ctx.strokeRect(
-              endX - halfHandle,
-              endY - halfHandle,
+              corner.x - halfHandle,
+              corner.y - halfHandle,
               handleSize,
               handleSize
             )
-          }
+          })
           break
-        case "rectangle":
-        case "ellipse":
-          if (element.width !== undefined && element.height !== undefined) {
-            const x = element.x * currentPageImg.naturalWidth + offsetX
-            const y = element.y * currentPageImg.naturalHeight + offsetY
-            const w = element.width * currentPageImg.naturalWidth
-            const h = element.height * currentPageImg.naturalHeight
-            const corners = [
-              { x, y },
-              { x: x + w, y },
-              { x, y: y + h },
-              { x: x + w, y: y + h },
-            ]
-            corners.forEach((corner) => {
-              ctx.fillRect(
-                corner.x - halfHandle,
-                corner.y - halfHandle,
-                handleSize,
-                handleSize
-              )
-              ctx.strokeRect(
-                corner.x - halfHandle,
-                corner.y - halfHandle,
-                handleSize,
-                handleSize
-              )
-            })
-          }
-          break
+        }
         case "text":
           if (element.text) {
             const textX = element.x * currentPageImg.naturalWidth + offsetX
@@ -667,17 +656,16 @@ export function useCanvasDrawing({
         const anchorY = element.y * currentPageImg.naturalHeight + offsetY
 
         const boundingWidth = element.text
-          ? Math.max(element.text.length * (element.fontSize || 16) * 0.6, 50)
+          ? Math.max(element.text.length * element.fontSize * 0.6, 50)
           : 50
-        const boundingHeight = Math.max((element.fontSize || 16) * 1.2, 20)
+        const boundingHeight = Math.max(element.fontSize * 1.2, 20)
 
-        const anchorDir = element.anchorDirection || "top-left"
         const textPos = getTextPositionFromAnchor(
           anchorX,
           anchorY,
           boundingWidth,
           boundingHeight,
-          anchorDir
+          element.anchorDirection
         )
 
         ctx.strokeRect(textPos.x, textPos.y, boundingWidth, boundingHeight)
@@ -781,18 +769,13 @@ export function useCanvasDrawing({
         const isCurrentQuestion =
           annotation.questionScore?.cropRegionId === currentCropRegionId
 
-        let element: DrawingElement
-        if (isCurrentQuestion) {
-          const localElement = drawingElementsMap.get(annotation.id)
-          if (localElement) {
-            element = localElement
-          } else {
-            // drawingElementsに存在しない = ローカルで削除済み → 描画スキップ
-            return null
-          }
-        } else {
-          element = convertAnnotationToDrawingElement(annotation)
-        }
+        // 現在の設問はローカル状態（編集中の値）を優先する。
+        // drawingElements に無い＝ローカルで削除済み → 描画スキップ
+        const localElement = isCurrentQuestion
+          ? drawingElementsMap.get(annotation.id)
+          : undefined
+        if (isCurrentQuestion && !localElement) return null
+        const element: DrawingAnnotation = localElement ?? annotation
 
         const isSelected =
           isCurrentQuestion && selectedElementIds.includes(element.id)
@@ -809,7 +792,7 @@ export function useCanvasDrawing({
           ctx.save()
           ctx.translate(0, annotPageOffsetY)
           const fontSizePx = mmToPixels(
-            element.fontSize || 4.0,
+            element.fontSize,
             pageSize,
             canvasWidth,
             annotPageHeight
@@ -864,7 +847,7 @@ export function useCanvasDrawing({
             ctx.save()
             ctx.translate(0, currentPageOffsetY)
             const fontSizePx = mmToPixels(
-              element.fontSize || 4.0,
+              element.fontSize,
               pageSize,
               canvasWidth,
               currentPageHeight
@@ -910,7 +893,6 @@ export function useCanvasDrawing({
     currentCropRegion,
     allCropRegionsWithStatus,
     textBoundsCacheRef,
-    convertAnnotationToDrawingElement,
     pageSize,
   ])
 

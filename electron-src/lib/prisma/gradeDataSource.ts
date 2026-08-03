@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client"
 import * as crypto from "crypto"
 
 import { toGradeDataSourceType } from "../../../src/types/grade.types"
+import type { Serialized } from "../../../src/types/prismaExtensions"
 import { computeMaxScoreFromPayload } from "../shared/calculations/gradeDataSourceMaxScore"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
@@ -80,10 +81,18 @@ export function buildEstimationSourceRows(
   }))
 }
 
-/** gradeDataSourceInclude で取得した DataSource（集計元同梱）の型。 */
-type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
-  include: typeof gradeDataSourceInclude
-}>
+/**
+ * gradeDataSourceInclude で取得し、`serializePrisma` を通した DataSource（集計元同梱）の型。
+ *
+ * ハイドレートは IPC へ返す直前だけで行うので、入力は常にシリアライズ済み
+ * （Decimal は number）である。`Serialized<>` を被せておくことで、通し忘れた行を
+ * そのまま渡すと型検査で落ちる。
+ */
+type SerializedGradeDataSource = Serialized<
+  Prisma.GradeDataSourceGetPayload<{
+    include: typeof gradeDataSourceInclude
+  }>
+>
 
 /**
  * serialize 済み DataSource に、仮想フィールド maxScore を（同梱済み元データから）付与する。
@@ -97,7 +106,7 @@ type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
  * 以前はここで列を絞り直していたが、それは規約の禁じる縮小射影で、満点の元データを
  * 落とすと renderer 側で算出できなくなる。
  */
-function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
+function hydrateGradeDataSource(dataSource: SerializedGradeDataSource) {
   return {
     ...dataSource,
     type: toGradeDataSourceType(dataSource.type),
@@ -105,10 +114,12 @@ function hydrateGradeDataSource(dataSource: EnrichedGradeDataSource) {
   }
 }
 
-type EnrichedGradeItem = { dataSources: EnrichedGradeDataSource[] }
+type GradeItemWithDataSources = { dataSources: SerializedGradeDataSource[] }
 
 /** GradeItem 1件の dataSources を全てハイドレートする。 */
-export function hydrateGradeItem<GI extends EnrichedGradeItem>(gradeItem: GI) {
+export function hydrateGradeItem<GI extends GradeItemWithDataSources>(
+  gradeItem: GI
+) {
   return {
     ...gradeItem,
     dataSources: gradeItem.dataSources.map(hydrateGradeDataSource),
@@ -116,16 +127,16 @@ export function hydrateGradeItem<GI extends EnrichedGradeItem>(gradeItem: GI) {
 }
 
 /** GradeItem 配列を全てハイドレートする。 */
-export function hydrateGradeItems<GI extends EnrichedGradeItem>(
+export function hydrateGradeItems<GI extends GradeItemWithDataSources>(
   gradeItems: GI[]
 ) {
   return gradeItems.map(hydrateGradeItem)
 }
 
 /** Grade 全体（gradeItems[].dataSources[]）をハイドレートする。 */
-export function hydrateGrade<G extends { gradeItems: EnrichedGradeItem[] }>(
-  grade: G
-) {
+export function hydrateGrade<
+  G extends { gradeItems: GradeItemWithDataSources[] },
+>(grade: G) {
   return { ...grade, gradeItems: hydrateGradeItems(grade.gradeItems) }
 }
 

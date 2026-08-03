@@ -2,12 +2,14 @@ import { useCallback } from "react"
 
 import type {
   CanvasTool,
-  DrawingElement,
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+import type {
+  DrawingAnnotation,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
 
 import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
 import { useHandTool } from "./interaction/useHandTool"
@@ -35,11 +37,13 @@ interface UseAnswerDisplayEventsProps {
 
   // Drawing state
   currentTool: CanvasTool
-  drawingElements: DrawingElement[]
+  /** 作成先の採点データ（新規アノテーションの行に載せる） */
+  questionScoreId: string | null
+  drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   isDraggingElement: boolean
   isDrawing: boolean
-  currentDrawing: Partial<DrawingElement> | null
+  currentDrawing: Partial<DrawingAnnotation> | null
   strokeColor: string
   strokeWidth: number
   lineStyle: LineStyle
@@ -82,11 +86,11 @@ interface UseAnswerDisplayEventsProps {
   setIsDrawing: (drawing: boolean) => void
   setCurrentDrawing: (
     drawing:
-      | Partial<DrawingElement>
+      | Partial<DrawingAnnotation>
       | null
       | ((
-          prev: Partial<DrawingElement> | null
-        ) => Partial<DrawingElement> | null)
+          prev: Partial<DrawingAnnotation> | null
+        ) => Partial<DrawingAnnotation> | null)
   ) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
@@ -97,14 +101,18 @@ interface UseAnswerDisplayEventsProps {
   setCurrentHandle: (handle: string | null) => void
   setHoveredElementId: (id: string | null) => void
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
   ) => void
-  addDrawingElement: (element: DrawingElement) => void
-  updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
+  addDrawingElement: (element: DrawingAnnotation) => void
+  updateDrawingElement: (
+    id: string,
+    updates: Partial<DrawingAnnotation>
+  ) => void
   removeDrawingElement: (id: string) => void
 
   // テキスト再編集
-  onTextElementReClick?: (element: DrawingElement) => void
+  onTextElementReClick?: (element: DrawingAnnotation) => void
 
   // 画像アスペクト比（Shift制約用）
   imageAspectRatio?: number
@@ -175,6 +183,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   } = useCanvasInteraction({
     canvasRef,
     currentTool: props.currentTool,
+    questionScoreId: props.questionScoreId,
     drawingElements: props.drawingElements,
     selectedElementIds: props.selectedElementIds,
     isDraggingElement: props.isDraggingElement,

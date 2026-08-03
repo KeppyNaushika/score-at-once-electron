@@ -1,4 +1,3 @@
-import type { QuestionScore } from "@prisma/client"
 import {
   useCallback,
   useEffect,
@@ -19,6 +18,7 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { ExamWithPages } from "@/types/electron/examApi"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 const areArraysEqual = (a: string[], b: string[]) => {
@@ -47,7 +47,7 @@ interface UseScoringFilterProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: CropRegionWithExamPage[]
   currentCropRegionId: string | null
-  questionScores: QuestionScore[]
+  questionScores: SerializedQuestionScore[]
   selectedStudentAnswerImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
   exam: ExamWithPages | null

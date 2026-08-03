@@ -1,16 +1,16 @@
 /**
  * useImageCanvas関連の型定義
  */
-import type {
-  DrawingElement,
-  SelectionRectangle,
-} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
   CropRegionWithExamPage,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
+import type {
+  AnnotationWithContext,
+  DrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -32,8 +32,8 @@ export interface UseImageCanvasProps {
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   zoom: number
   position: { x: number; y: number }
-  drawingElements: DrawingElement[]
-  currentDrawing: Partial<DrawingElement> | null
+  drawingElements: DrawingAnnotation[]
+  currentDrawing: Partial<DrawingAnnotation> | null
   isDrawing: boolean
   strokeColor: string
   strokeWidth: number

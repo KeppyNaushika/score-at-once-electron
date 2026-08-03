@@ -4,10 +4,13 @@
  */
 
 /** Prismaから基本型とPayload型をインポート */
-import type { Prisma, QuestionScore } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 /** Prisma拡張型をprismaExtensions.tsからインポート */
-import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
+import type {
+  SerializedQuestionScore,
+  StudentAnswerImageWithExamPageAndStudent,
+} from "@/types/prismaExtensions"
 import {
   type ScoringStatus,
   toScoringStatus,
@@ -124,10 +127,10 @@ export interface MasterGridItem {
  * シンプルな線形検索でscoringDataオブジェクトを置き換え
  */
 export function findQuestionScore(
-  questionScores: QuestionScore[],
+  questionScores: SerializedQuestionScore[],
   examStudentId: string,
   cropRegionId: string
-): QuestionScore | undefined {
+): SerializedQuestionScore | undefined {
   return questionScores.find(
     (score) =>
       score.examStudentId === examStudentId &&
@@ -139,7 +142,7 @@ export function findQuestionScore(
  * QuestionScore配列から採点状況を取得
  */
 export function getScoringStatusFromArray(
-  questionScores: QuestionScore[],
+  questionScores: SerializedQuestionScore[],
   examStudentId: string,
   cropRegionId?: string
 ): ScoringStatus {
@@ -149,15 +152,6 @@ export function getScoringStatusFromArray(
   return toScoringStatus(score?.status)
 }
 
-/**
- * Prisma.Decimalを安全にnumberに変換
- */
-export function decimalToNumber(
-  decimal: Prisma.Decimal | number | string | null | undefined
-): number | null {
-  if (decimal === null || decimal === undefined) return null
-  return Number(decimal.toString())
-}
 /**
  * ショートカット管理システムの型定義
  * 一括採点ページ専用のショートカット管理機能

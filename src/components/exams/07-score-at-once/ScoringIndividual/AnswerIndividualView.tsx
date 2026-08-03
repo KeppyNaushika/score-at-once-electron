@@ -235,6 +235,7 @@ export default function AnswerIndividualView({
     handleTextElementReClick,
   } = useCanvasIntegration({
     loadedImages,
+    questionScoreId: currentQuestionScoreId,
     drawingElements: drawingState.drawingElements,
     setDrawingElements: drawingState.setDrawingElements,
     addDrawingElement: drawingState.addDrawingElement,
@@ -288,6 +289,7 @@ export default function AnswerIndividualView({
       loadedImages,
       pageSpacing,
       currentTool: drawingState.currentTool,
+      questionScoreId: currentQuestionScoreId,
       drawingElements: drawingState.drawingElements,
       // 複数選択システム
       selectedElementIds: drawingState.selectedElementIds,
@@ -350,7 +352,7 @@ export default function AnswerIndividualView({
   const favoriteElementIds = useMemo(() => {
     const ids = new Set<string>()
     for (const element of drawingState.drawingElements) {
-      if ((element as { isFavorite?: boolean }).isFavorite) {
+      if (element.isFavorite) {
         ids.add(element.id)
       }
     }

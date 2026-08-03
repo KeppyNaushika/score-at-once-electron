@@ -1,14 +1,14 @@
 import { useCallback, useRef } from "react"
 
 import type {
-  DrawingElement,
   LineEditMode,
   RectangleEditMode,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 interface UseElementMovementProps {
   currentTool: string
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   isDraggingElement: boolean
   lineEditMode: LineEditMode
@@ -19,15 +19,18 @@ interface UseElementMovementProps {
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
   setRectangleEditMode: (mode: RectangleEditMode) => void
-  updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
+  updateDrawingElement: (
+    id: string,
+    updates: Partial<DrawingAnnotation>
+  ) => void
   // リサイズ操作用の追加
   setIsResizingElement?: (resizing: boolean) => void
   setResizeHandle?: (handle: string | null) => void
 
   // Utils
-  hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
+  hitTestElement: (element: DrawingAnnotation, x: number, y: number) => boolean
   hitTestHandle?: (
-    element: DrawingElement,
+    element: DrawingAnnotation,
     x: number,
     y: number
   ) => string | null
@@ -51,13 +54,13 @@ export function useElementMovement({
 }: UseElementMovementProps) {
   // パフォーマンス最適化: デバウンス用のタイマー
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const pendingUpdatesRef = useRef<Map<string, Partial<DrawingElement>>>(
+  const pendingUpdatesRef = useRef<Map<string, Partial<DrawingAnnotation>>>(
     new Map()
   )
 
   // 即時更新関数（デバウンスなし）
   const debouncedUpdate = useCallback(
-    (elementId: string, updates: Partial<DrawingElement>) => {
+    (elementId: string, updates: Partial<DrawingAnnotation>) => {
       // 即座に更新を実行
       updateDrawingElement(elementId, updates)
     },
@@ -66,7 +69,7 @@ export function useElementMovement({
 
   // リサイズ状態
   const resizeStartRef = useRef<{
-    element: DrawingElement
+    element: DrawingAnnotation
     handle: string
     startX: number
     startY: number
@@ -76,22 +79,12 @@ export function useElementMovement({
     originalHeight: number
   } | null>(null)
 
-  // 移動開始時の状態を保存（絶対座標計算用）
+  // 移動開始時の状態を保存（絶対座標計算用）。
+  // 行をそのまま控える（座標だけ抜き出すと、どの列を動かすかの判断が抜き出した形に依存する）
   const moveStartRef = useRef<{
     startMouseX: number
     startMouseY: number
-    elements: Map<
-      string,
-      {
-        x: number
-        y: number
-        endX?: number
-        endY?: number
-        displayX?: number
-        displayY?: number
-        type?: string
-      }
-    >
+    elements: Map<string, DrawingAnnotation>
   } | null>(null)
 
   // リサイズ処理
@@ -164,7 +157,7 @@ export function useElementMovement({
         }
       }
 
-      const updates: Partial<DrawingElement> = { x: newX, y: newY }
+      const updates: Partial<DrawingAnnotation> = { x: newX, y: newY }
       if (element.type === "rectangle" || element.type === "ellipse") {
         updates.width = newWidth
         updates.height = newHeight
@@ -212,11 +205,7 @@ export function useElementMovement({
           let newY = imageCoords.y
 
           // Shiftキーが押されている場合は縦横制限（開始時の終了点座標を使用）
-          if (
-            isShiftPressed &&
-            originalFirstElement.endX !== undefined &&
-            originalFirstElement.endY !== undefined
-          ) {
+          if (isShiftPressed) {
             const deltaX = Math.abs(newX - originalFirstElement.endX)
             const deltaY = Math.abs(newY - originalFirstElement.endY)
 
@@ -266,28 +255,21 @@ export function useElementMovement({
           selectedElementIds.forEach((elementId) => {
             const originalCoords = moveStartRef.current?.elements.get(elementId)
             if (originalCoords) {
-              const updates: Partial<DrawingElement> = {
+              const updates: Partial<DrawingAnnotation> = {
                 x: originalCoords.x + deltaX,
                 y: originalCoords.y + deltaY,
               }
 
               // 線の場合はendX/endYも更新
-              if (
-                originalCoords.endX !== undefined &&
-                originalCoords.endY !== undefined
-              ) {
+              if (originalCoords.type === "line") {
                 updates.endX = originalCoords.endX + deltaX
                 updates.endY = originalCoords.endY + deltaY
               }
 
               // テキストの場合はdisplayX/displayYも更新
               if (originalCoords.type === "text") {
-                if (originalCoords.displayX !== undefined) {
-                  updates.displayX = originalCoords.displayX + deltaX
-                }
-                if (originalCoords.displayY !== undefined) {
-                  updates.displayY = originalCoords.displayY + deltaY
-                }
+                updates.displayX = originalCoords.displayX + deltaX
+                updates.displayY = originalCoords.displayY + deltaY
               }
 
               debouncedUpdate(elementId, updates)
@@ -302,28 +284,21 @@ export function useElementMovement({
         selectedElementIds.forEach((elementId) => {
           const originalCoords = moveStartRef.current?.elements.get(elementId)
           if (originalCoords) {
-            const updates: Partial<DrawingElement> = {
+            const updates: Partial<DrawingAnnotation> = {
               x: originalCoords.x + deltaX,
               y: originalCoords.y + deltaY,
             }
 
             // 線の場合はendX/endYも更新
-            if (
-              originalCoords.endX !== undefined &&
-              originalCoords.endY !== undefined
-            ) {
+            if (originalCoords.type === "line") {
               updates.endX = originalCoords.endX + deltaX
               updates.endY = originalCoords.endY + deltaY
             }
 
             // テキストの場合はdisplayX/displayYも更新
             if (originalCoords.type === "text") {
-              if (originalCoords.displayX !== undefined) {
-                updates.displayX = originalCoords.displayX + deltaX
-              }
-              if (originalCoords.displayY !== undefined) {
-                updates.displayY = originalCoords.displayY + deltaY
-              }
+              updates.displayX = originalCoords.displayX + deltaX
+              updates.displayY = originalCoords.displayY + deltaY
             }
 
             debouncedUpdate(elementId, updates)
@@ -394,32 +369,13 @@ export function useElementMovement({
   // 外部から移動開始状態を初期化する関数
   const initializeMoveStart = useCallback(
     (imageCoords: { x: number; y: number }, elementIds: string[]) => {
-      const elementsMap = new Map<
-        string,
-        {
-          x: number
-          y: number
-          endX?: number
-          endY?: number
-          displayX?: number
-          displayY?: number
-          type?: string
-        }
-      >()
+      const elementsMap = new Map<string, DrawingAnnotation>()
       for (const elementId of elementIds) {
         const element = drawingElements.find(
           (candidateElement) => candidateElement.id === elementId
         )
         if (element) {
-          elementsMap.set(elementId, {
-            x: element.x,
-            y: element.y,
-            endX: element.endX,
-            endY: element.endY,
-            displayX: element.displayX,
-            displayY: element.displayY,
-            type: element.type,
-          })
+          elementsMap.set(elementId, element)
         }
       }
       moveStartRef.current = {

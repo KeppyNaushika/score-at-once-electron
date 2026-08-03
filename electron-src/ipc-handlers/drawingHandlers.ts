@@ -4,9 +4,8 @@
  */
 
 import type {
-  DrawingCreateData,
+  DrawingAnnotation,
   DrawingType,
-  DrawingUpdateData,
 } from "../../src/types/drawingAnnotation.types"
 import * as drawingService from "../lib/prisma/drawingAnnotation"
 import { registerSafeHandler } from "./ipcHandlerUtils"
@@ -21,8 +20,8 @@ export function setupDrawingHandlers() {
   /** 描画アノテーション作成 */
   registerSafeHandler(
     "drawing:create",
-    async (data: DrawingCreateData) => {
-      const result = await drawingService.createDrawingAnnotation(data)
+    async (annotation: DrawingAnnotation) => {
+      const result = await drawingService.createDrawingAnnotation(annotation)
       return { success: true, data: result }
     },
     "描画アノテーション作成に失敗しました"
@@ -71,8 +70,8 @@ export function setupDrawingHandlers() {
   /** 描画アノテーション更新 */
   registerSafeHandler(
     "drawing:update",
-    async (id: string, data: DrawingUpdateData) => {
-      const result = await drawingService.updateDrawingAnnotation(id, data)
+    async (annotation: DrawingAnnotation) => {
+      const result = await drawingService.updateDrawingAnnotation(annotation)
       return { success: true, data: result }
     },
     "描画アノテーション更新に失敗しました"
@@ -106,7 +105,7 @@ export function setupDrawingHandlers() {
   /** 描画アノテーション一括作成 */
   registerSafeHandler(
     "drawing:batchCreate",
-    async (annotations: DrawingCreateData[]) => {
+    async (annotations: DrawingAnnotation[]) => {
       const result =
         await drawingService.batchCreateDrawingAnnotations(annotations)
       return { success: true, data: result }

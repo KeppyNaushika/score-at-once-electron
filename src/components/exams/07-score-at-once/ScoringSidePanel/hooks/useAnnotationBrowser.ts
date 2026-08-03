@@ -4,9 +4,10 @@ import { useCallback, useMemo, useState } from "react"
 
 import type {
   AnnotationWithContext,
-  DrawingCreateData,
+  DrawingAnnotation,
   DrawingType,
 } from "@/types/drawingAnnotation.types"
+import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 // 重複省略後の表示アイテム
 export interface AnnotationDisplayItem {
@@ -38,6 +39,30 @@ export interface AddToTargetsParams {
 }
 
 /**
+ * 行から「見た目を決める列」だけを取り出す。
+ *
+ * 外すのは同定用の id、履歴（時刻）、独立した書き込み経路を持つお気に入り、そして
+ * 同梱した関係。main 側の `toAppearance`（drawingAnnotation.ts）と同じ切り方で、
+ * 列を足すと自動的に対象へ入る。
+ *
+ * 返りを `Record` にするのは、比較する側が列名を知らずに回すため（列名を並べた
+ * 時点で足し忘れが起きる）。
+ */
+function toAppearance(
+  annotation: AnnotationWithContext
+): Record<string, unknown> {
+  const {
+    questionScore: _questionScore,
+    id: _id,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    isFavorite: _isFavorite,
+    ...appearance
+  } = annotation
+  return appearance
+}
+
+/**
  * 重複省略のグルーピングキーを生成
  */
 function getGroupingKey(annotation: AnnotationWithContext): string {
@@ -64,7 +89,7 @@ function getGroupingKey(annotation: AnnotationWithContext): string {
  */
 function centerPosition(
   source: AnnotationWithContext
-): Partial<DrawingCreateData> {
+): Partial<DrawingAnnotation> {
   if (source.type === "line") {
     const midX = (source.x + source.endX) / 2
     const midY = (source.y + source.endY) / 2
@@ -183,8 +208,7 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
       // updatedAt descで最新を代表にする
       const sorted = [...annotations].sort(
         (annotationA, annotationB) =>
-          new Date(annotationB.updatedAt).getTime() -
-          new Date(annotationA.updatedAt).getTime()
+          annotationB.updatedAt.getTime() - annotationA.updatedAt.getTime()
       )
       items.push({
         representative: sorted[0],
@@ -199,8 +223,8 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
       if (itemA.isFavorite !== itemB.isFavorite)
         return itemA.isFavorite ? -1 : 1
       return (
-        new Date(itemB.representative.updatedAt).getTime() -
-        new Date(itemA.representative.updatedAt).getTime()
+        itemB.representative.updatedAt.getTime() -
+        itemA.representative.updatedAt.getTime()
       )
     })
 
@@ -242,58 +266,45 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
 
       // 位置計算: 同一設問→同位置、異設問→中央配置
       const isSameQuestion = sourceCropRegionId === targetCropRegionId
-      const positionOverride = isSameQuestion
+      const positionOverride: Partial<DrawingAnnotation> = isSameQuestion
         ? {}
         : centerPosition(sourceAnnotation)
 
-      // フロントエンド側重複チェック: allAnnotationsを使ってローカルで判定
-      // 既に同一プロパティのアノテーションが存在するquestionScoreIdを除外する
-      const newQuestionScoreIds = targetQuestionScoreIds.filter(
-        (questionScoreId) => {
-          // このquestionScoreIdに紐づく既存アノテーションの中で、ソースと同一のものがあるか
-          return !allAnnotations.some((existing) => {
-            if (existing.questionScore?.id !== questionScoreId) return false
-            // 位置はpositionOverrideを適用した値と比較
-            const targetX =
-              (positionOverride as { x?: number }).x ?? sourceAnnotation.x
-            const targetY =
-              (positionOverride as { y?: number }).y ?? sourceAnnotation.y
-            const targetEndX =
-              (positionOverride as { endX?: number }).endX ??
-              sourceAnnotation.endX
-            const targetEndY =
-              (positionOverride as { endY?: number }).endY ??
-              sourceAnnotation.endY
-            const targetDisplayX =
-              (positionOverride as { displayX?: number }).displayX ??
-              sourceAnnotation.displayX
-            const targetDisplayY =
-              (positionOverride as { displayY?: number }).displayY ??
-              sourceAnnotation.displayY
+      // コピー元から見た目の列だけを引き継ぐ。列を選んで詰め替えないので、
+      // 列が増えてもコピー先へ運ばれる。
+      // 同定と履歴（id・時刻）とお気に入りは引き継がず、新しい行として作る
+      const {
+        questionScore: _questionScore,
+        id: _id,
+        createdAt: _createdAt,
+        updatedAt: _updatedAt,
+        isFavorite: _isFavorite,
+        ...sourceAppearance
+      } = sourceAnnotation
 
-            return (
-              existing.type === sourceAnnotation.type &&
-              existing.x === targetX &&
-              existing.y === targetY &&
-              existing.color === sourceAnnotation.color &&
-              existing.strokeWidth === sourceAnnotation.strokeWidth &&
-              existing.width === sourceAnnotation.width &&
-              existing.height === sourceAnnotation.height &&
-              existing.endX === targetEndX &&
-              existing.endY === targetEndY &&
-              existing.lineStyle === sourceAnnotation.lineStyle &&
-              existing.text === sourceAnnotation.text &&
-              existing.fontSize === sourceAnnotation.fontSize &&
-              existing.textBoxWidth === sourceAnnotation.textBoxWidth &&
-              existing.textBoxHeight === sourceAnnotation.textBoxHeight &&
-              existing.horizontalAlign === sourceAnnotation.horizontalAlign &&
-              existing.verticalAlign === sourceAnnotation.verticalAlign &&
-              existing.anchorDirection === sourceAnnotation.anchorDirection &&
-              existing.displayX === targetDisplayX &&
-              existing.displayY === targetDisplayY
+      // コピー後の見た目。重複判定も作成もこの1つから導く
+      const targetAppearance = { ...sourceAppearance, ...positionOverride }
+
+      // フロントエンド側重複チェック: allAnnotationsを使ってローカルで判定。
+      // 既に同じ見た目のアノテーションを持つ questionScoreId を除外する。
+      //
+      // 列を並べて突き合わせない。列を足したときに判定へ入れ忘れると、見た目の違う
+      // マークを重複と見なしてコピーが黙って落ちる（main 側の重複判定も同じ理由で
+      // 構造的に持っている）。
+      //
+      // questionScoreId だけは比べない。コピー元のものが載っているうえ、行き先は
+      // 直前の絞り込みで既に一致させてある。
+      const newQuestionScoreIds = targetQuestionScoreIds.filter(
+        (questionScoreId) =>
+          !allAnnotations.some((existing) => {
+            if (existing.questionScore?.id !== questionScoreId) return false
+            const existingAppearance = toAppearance(existing)
+            return Object.entries(targetAppearance).every(
+              ([column, value]) =>
+                column === "questionScoreId" ||
+                existingAppearance[column] === value
             )
           })
-        }
       )
 
       const skipped = targetQuestionScoreIds.length - newQuestionScoreIds.length
@@ -303,36 +314,15 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
         return { created: 0, skipped }
       }
 
-      const createDataList: DrawingCreateData[] = newQuestionScoreIds.map(
-        (questionScoreId) => ({
-          questionScoreId: questionScoreId,
-          type: sourceAnnotation.type,
-          x: sourceAnnotation.x,
-          y: sourceAnnotation.y,
-          color: sourceAnnotation.color,
-          strokeWidth: sourceAnnotation.strokeWidth,
-          width: sourceAnnotation.width,
-          height: sourceAnnotation.height,
-          endX: sourceAnnotation.endX,
-          endY: sourceAnnotation.endY,
-          lineStyle: sourceAnnotation.lineStyle,
-          text: sourceAnnotation.text,
-          fontSize: sourceAnnotation.fontSize,
-          textBoxWidth: sourceAnnotation.textBoxWidth,
-          textBoxHeight: sourceAnnotation.textBoxHeight,
-          horizontalAlign: sourceAnnotation.horizontalAlign,
-          verticalAlign: sourceAnnotation.verticalAlign,
-          anchorDirection: sourceAnnotation.anchorDirection,
-          displayX: sourceAnnotation.displayX,
-          displayY: sourceAnnotation.displayY,
-          ...positionOverride,
-        })
+      const newAnnotations: DrawingAnnotation[] = newQuestionScoreIds.map(
+        (questionScoreId) =>
+          newDrawingAnnotation({ ...targetAppearance, questionScoreId })
       )
 
       try {
-        if (createDataList.length === 1) {
+        if (newAnnotations.length === 1) {
           const result = await window.electronAPI.drawing.create(
-            createDataList[0]
+            newAnnotations[0]
           )
           if (result.success && result.data) {
             setAllAnnotations((prev) => [
@@ -340,9 +330,9 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
               ...prev,
             ])
           }
-        } else if (createDataList.length > 1) {
+        } else if (newAnnotations.length > 1) {
           const result =
-            await window.electronAPI.drawing.batchCreate(createDataList)
+            await window.electronAPI.drawing.batchCreate(newAnnotations)
           if (result.success && result.data) {
             setAllAnnotations((prev) => [
               ...(result.data as AnnotationWithContext[]),
@@ -350,7 +340,7 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
             ])
           }
         }
-        return { created: createDataList.length, skipped }
+        return { created: newAnnotations.length, skipped }
       } catch (error) {
         console.error("アノテーション追加エラー:", error)
         return { created: 0, skipped }

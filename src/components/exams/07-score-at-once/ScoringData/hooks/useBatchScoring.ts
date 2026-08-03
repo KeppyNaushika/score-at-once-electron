@@ -1,5 +1,4 @@
 // import { checkForAutoFinalization } from "@/components/exams/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
-import type { QuestionScore } from "@prisma/client"
 import { useCallback, useEffect, useRef } from "react"
 import { toast } from "sonner"
 
@@ -8,6 +7,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface UseBatchScoringProps {
@@ -16,8 +16,10 @@ interface UseBatchScoringProps {
   currentCropRegionId: string | null
   currentUserId: string | null
   setCurrentUserId: (userId: string) => void
-  questionScores: QuestionScore[]
-  setQuestionScores: React.Dispatch<React.SetStateAction<QuestionScore[]>>
+  questionScores: SerializedQuestionScore[]
+  setQuestionScores: React.Dispatch<
+    React.SetStateAction<SerializedQuestionScore[]>
+  >
 }
 
 /** 選択された答案に対する一括採点（楽観的UI更新+DB保存）を実行するフック */
@@ -61,12 +63,9 @@ export function useBatchScoring({
               questionScore.id === scoreId
                 ? {
                     ...questionScore,
-                    // 状態は Decimal 型だが実体は number（IPC で serialize 済み）。
-                    // 本ファイル既存の Decimal-lie キャスト idiom に合わせる。
-                    partialScore:
-                      dbScore.partialScore as unknown as QuestionScore["partialScore"],
+                    partialScore: dbScore.partialScore,
                     status: dbScore.status,
-                    updatedAt: new Date(dbScore.updatedAt),
+                    updatedAt: dbScore.updatedAt,
                   }
                 : questionScore
             )
@@ -189,22 +188,14 @@ export function useBatchScoring({
             if (inputPartialScore !== null && inputPartialScore !== undefined) {
               newScore = inputPartialScore
             } else {
-              newScore =
-                currentScore?.partialScore !== undefined &&
-                currentScore?.partialScore !== null
-                  ? Number(currentScore.partialScore)
-                  : null
+              newScore = currentScore?.partialScore ?? null
             }
             break
           case "pending":
             if (inputPartialScore !== null && inputPartialScore !== undefined) {
               newScore = inputPartialScore
             } else {
-              newScore =
-                currentScore?.partialScore !== undefined &&
-                currentScore?.partialScore !== null
-                  ? Number(currentScore.partialScore)
-                  : null
+              newScore = currentScore?.partialScore ?? null
             }
             break
         }
@@ -212,10 +203,7 @@ export function useBatchScoring({
         if (currentScore?.id) {
           // Update: 楽観的にUI更新
           const scoreId = currentScore.id
-          const optimisticPartialScore =
-            newScore !== null
-              ? (newScore as unknown as QuestionScore["partialScore"])
-              : null
+          const optimisticPartialScore = newScore
           setQuestionScores((prev) =>
             prev.map((questionScore) =>
               questionScore.id === scoreId
@@ -255,7 +243,7 @@ export function useBatchScoring({
                     questionScore.id === scoreId
                       ? {
                           ...questionScore,
-                          updatedAt: new Date(updatedScore.updatedAt),
+                          updatedAt: updatedScore.updatedAt,
                         }
                       : questionScore
                   )
@@ -278,14 +266,11 @@ export function useBatchScoring({
           // Create: 仮IDで楽観的にUI追加
           const tempId = crypto.randomUUID()
           const now = new Date()
-          const optimisticScore: QuestionScore = {
+          const optimisticScore: SerializedQuestionScore = {
             id: tempId,
             cropRegionId: currentCropRegion.id,
             examStudentId: studentAnswerImage.examStudentId,
-            partialScore:
-              newScore !== null
-                ? (newScore as unknown as QuestionScore["partialScore"])
-                : null,
+            partialScore: newScore,
             status: scoringStatus,
             userId: effectiveUserId,
             createdAt: now,
@@ -318,8 +303,8 @@ export function useBatchScoring({
                       ? {
                           ...questionScore,
                           id: createdScore.id,
-                          createdAt: new Date(createdScore.createdAt),
-                          updatedAt: new Date(createdScore.updatedAt),
+                          createdAt: createdScore.createdAt,
+                          updatedAt: createdScore.updatedAt,
                         }
                       : questionScore
                   )

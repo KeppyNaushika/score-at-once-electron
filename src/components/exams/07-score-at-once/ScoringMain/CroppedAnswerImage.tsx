@@ -6,7 +6,6 @@ import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once
 import { PAPER_DIMENSIONS } from "@/lib/paperSize"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
-import type { DrawingElement } from "../ScoringIndividual/types"
 import { renderTextElement } from "../ScoringIndividual/utils/canvasTextRenderer"
 
 /**
@@ -323,7 +322,6 @@ function toCanvasY(
 
 /**
  * テキスト描画（テキストレンダラー使用: MathJax/SVG対応）
- * DrawingAnnotationをDrawingElementに変換し、renderTextElementで描画
  */
 async function drawGridText(
   ctx: CanvasRenderingContext2D,
@@ -338,19 +336,14 @@ async function drawGridText(
 ) {
   if (!anno.text) return
 
-  // DrawingAnnotation → DrawingElement に変換
   // renderTextElementは element.x * canvasWidth でアンカーピクセル位置を計算するため、
-  // Grid Canvas空間での0-1座標に変換する
-  const element: DrawingElement = {
+  // Grid Canvas空間での0-1座標へ載せ替えた行を渡す（列は落とさない）
+  const element: DrawingAnnotation = {
+    ...anno,
     id: `grid-${anno.id}`,
-    type: "text",
     x: (anno.x - visibleX) / visibleWidth,
     y: (anno.y - visibleY) / visibleHeight,
-    color: anno.color,
-    strokeWidth: anno.strokeWidth,
-    text: anno.text,
     fontSize: anno.fontSize * scaleFactor,
-    anchorDirection: anno.anchorDirection || "top-left",
   }
 
   await renderTextElement(

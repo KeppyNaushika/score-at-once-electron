@@ -337,10 +337,7 @@ export async function getStudentAnswersByExamId(examId: string) {
     for (const studentAnswerImage of studentAnswerImages) {
       const key = `${studentAnswerImage.examStudentId}-${studentAnswerImage.examPageId}`
       const existing = seen.get(key)
-      if (
-        !existing ||
-        new Date(studentAnswerImage.updatedAt) > new Date(existing.updatedAt)
-      ) {
+      if (!existing || studentAnswerImage.updatedAt > existing.updatedAt) {
         seen.set(key, studentAnswerImage)
       }
     }
@@ -420,10 +417,7 @@ export async function getStudentAnswersDataset(examId: string) {
       >()
       for (const answerImage of examPage.studentAnswerImages) {
         const existing = latestByExamStudentId.get(answerImage.examStudentId)
-        if (
-          !existing ||
-          new Date(answerImage.updatedAt) > new Date(existing.updatedAt)
-        ) {
+        if (!existing || answerImage.updatedAt > existing.updatedAt) {
           latestByExamStudentId.set(answerImage.examStudentId, answerImage)
         }
       }

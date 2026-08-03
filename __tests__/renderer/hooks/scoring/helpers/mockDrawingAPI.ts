@@ -6,10 +6,7 @@
 
 import { vi } from "vitest"
 
-import type {
-  DrawingAnnotation,
-  DrawingCreateData,
-} from "@/types/drawingAnnotation.types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** テスト用アノテーションデータを作成 */
 export function createMockAnnotation(
@@ -44,33 +41,6 @@ export function createMockAnnotation(
   }
 }
 
-/** DrawingCreateDataからアノテーションを生成（createのモック用） */
-function annotationFromCreateData(data: DrawingCreateData): DrawingAnnotation {
-  return createMockAnnotation({
-    id: data.id || `annotation-${crypto.randomUUID().slice(0, 8)}`,
-    questionScoreId: data.questionScoreId,
-    type: data.type,
-    x: data.x,
-    y: data.y,
-    color: data.color || "#ef4444",
-    strokeWidth: data.strokeWidth || 3,
-    width: data.width || 0,
-    height: data.height || 0,
-    endX: data.endX || 0,
-    endY: data.endY || 0,
-    lineStyle: data.lineStyle || "solid",
-    text: data.text || "",
-    fontSize: data.fontSize || 16,
-    textBoxWidth: data.textBoxWidth || 0,
-    textBoxHeight: data.textBoxHeight || 0,
-    horizontalAlign: data.horizontalAlign || "left",
-    verticalAlign: data.verticalAlign || "top",
-    anchorDirection: data.anchorDirection || "top-left",
-    displayX: data.displayX || 0,
-    displayY: data.displayY || 0,
-  })
-}
-
 export interface MockDrawingAPI {
   create: ReturnType<typeof vi.fn>
   update: ReturnType<typeof vi.fn>
@@ -89,14 +59,19 @@ export interface MockDrawingAPI {
  */
 export function createMockDrawingAPI(): MockDrawingAPI {
   const mockDrawing: MockDrawingAPI = {
-    create: vi.fn().mockImplementation(async (data: DrawingCreateData) => ({
-      success: true,
-      data: annotationFromCreateData(data),
-    })),
-    update: vi.fn().mockImplementation(async (id: string, data: unknown) => ({
-      success: true,
-      data: createMockAnnotation({ id, ...(data as object) }),
-    })),
+    // 作成も更新も行そのものを受け取り、そのまま返す
+    create: vi
+      .fn()
+      .mockImplementation(async (annotation: DrawingAnnotation) => ({
+        success: true,
+        data: annotation,
+      })),
+    update: vi
+      .fn()
+      .mockImplementation(async (annotation: DrawingAnnotation) => ({
+        success: true,
+        data: annotation,
+      })),
     delete: vi.fn().mockResolvedValue({ success: true }),
     getByQuestionScore: vi.fn().mockResolvedValue({
       success: true,
@@ -112,9 +87,9 @@ export function createMockDrawingAPI(): MockDrawingAPI {
     }),
     batchCreate: vi
       .fn()
-      .mockImplementation(async (dataList: DrawingCreateData[]) => ({
+      .mockImplementation(async (annotations: DrawingAnnotation[]) => ({
         success: true,
-        data: dataList.map(annotationFromCreateData),
+        data: annotations,
       })),
     deleteByQuestionScore: vi.fn().mockResolvedValue({ success: true }),
     toggleFavorite: vi

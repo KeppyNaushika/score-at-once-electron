@@ -7,8 +7,9 @@
  * - 初期化処理
  */
 
-import type { QuestionScore } from "@prisma/client"
 import { useCallback, useEffect } from "react"
+
+import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 /**
  * useScoringActionsの入力パラメータ
@@ -21,9 +22,9 @@ interface UseScoringActionsParams {
   /** 試験情報（存在確認用） */
   exam: unknown | null
   /** 採点スコア読み込み関数 */
-  loadQuestionScores: (examId: string) => Promise<QuestionScore[]>
+  loadQuestionScores: (examId: string) => Promise<SerializedQuestionScore[]>
   /** 採点スコア設定関数 */
-  setQuestionScores: (scores: QuestionScore[]) => void
+  setQuestionScores: (scores: SerializedQuestionScore[]) => void
   /** 表示設定: 生徒名表示状態 */
   showStudentNames: boolean
   /** 表示設定: 生徒名表示設定関数 */

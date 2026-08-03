@@ -5,26 +5,29 @@
 import { useCallback, useMemo } from "react"
 
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
-import type { DrawingElement } from "../../types"
 import { useTextboxIntegration } from "../text/useTextboxIntegration"
 
 /** Canvas初期化およびテキストボックス統合フックのパラメータ */
 interface UseCanvasIntegrationParams {
   /** 読み込み済み画像配列 */
   loadedImages: HTMLImageElement[]
+  /** 作成先の採点データ（新規アノテーションの行に載せる） */
+  questionScoreId: string | null
   /** 描画要素配列 */
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   /** 描画要素設定関数 */
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
   ) => void
   /** 描画要素追加関数 */
-  addDrawingElement: (element: DrawingElement) => void | Promise<void>
+  addDrawingElement: (element: DrawingAnnotation) => void | Promise<void>
   /** 描画要素更新関数 */
   updateDrawingElement: (
     id: string,
-    updates: Partial<DrawingElement>
+    updates: Partial<DrawingAnnotation>
   ) => void | Promise<void>
   /** 現在の採点データ */
   currentScoringData: ScoringData | null
@@ -45,13 +48,7 @@ interface UseCanvasIntegrationReturn {
   /** テキストアンカークリックハンドラー */
   handleTextAnchorClick: (position: { x: number; y: number }) => void
   /** テキスト要素再編集ハンドラー */
-  handleTextElementReClick: (element: {
-    x: number
-    y: number
-    text?: string
-    id: string
-    color?: string
-  }) => void
+  handleTextElementReClick: (element: DrawingAnnotation) => void
 }
 
 /**
@@ -66,6 +63,7 @@ interface UseCanvasIntegrationReturn {
  */
 export function useCanvasIntegration({
   loadedImages,
+  questionScoreId,
   drawingElements,
   setDrawingElements,
   addDrawingElement,
@@ -90,8 +88,7 @@ export function useCanvasIntegration({
 
   // テキストボックス統合フック
   const textboxIntegration = useTextboxIntegration({
-    canvasWidth,
-    canvasHeight,
+    questionScoreId,
     drawingElements,
     updateDrawingElements: setDrawingElements,
     addDrawingElement,
@@ -108,20 +105,14 @@ export function useCanvasIntegration({
 
   // テキスト要素の再編集処理
   const handleTextElementReClick = useCallback(
-    (element: {
-      x: number
-      y: number
-      text?: string
-      id: string
-      color?: string
-    }) => {
+    (element: DrawingAnnotation) => {
       // テキスト編集モーダルを開く
       textboxIntegration.openTextboxModal(
         { x: element.x, y: element.y },
-        element.text || "",
+        element.text,
         element.id
       )
-      textboxIntegration.setCurrentTextColor(element.color || "#000000")
+      textboxIntegration.setCurrentTextColor(element.color)
     },
     [textboxIntegration]
   )

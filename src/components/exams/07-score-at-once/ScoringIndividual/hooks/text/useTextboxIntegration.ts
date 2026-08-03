@@ -5,31 +5,27 @@
 
 import { useCallback, useState } from "react"
 
-import {
-  drawingElementToTextBox,
-  textBoxToDrawingElement,
-} from "@/lib/textbox-canvas/coordinateConversion"
-import type { TextBox } from "@/lib/textbox-canvas/types"
-import type { AnchorDirection } from "@/types/drawingAnnotation.types"
+import type {
+  AnchorDirection,
+  DrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
+import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
-import type { DrawingElement } from "../../types"
 
 interface UseTextboxIntegrationProps {
-  /** Canvas/画像の幅（px） */
-  canvasWidth: number
-  /** Canvas/画像の高さ（px） */
-  canvasHeight: number
+  /** 作成先の採点データ。無ければ行を作れないのでテキストを確定できない */
+  questionScoreId: string | null
   /** 現在の描画要素配列 */
-  drawingElements: DrawingElement[]
+  drawingElements: DrawingAnnotation[]
   /** 描画要素更新関数（直接state更新用、非推奨） */
-  updateDrawingElements: (elements: DrawingElement[]) => void
+  updateDrawingElements: (elements: DrawingAnnotation[]) => void
   /** 新規描画要素追加関数（DB永続化対応） */
-  addDrawingElement?: (element: DrawingElement) => void | Promise<void>
+  addDrawingElement?: (element: DrawingAnnotation) => void | Promise<void>
   /** 描画要素更新関数（DB永続化対応） */
   updateDrawingElement?: (
     id: string,
-    updates: Partial<DrawingElement>
+    updates: Partial<DrawingAnnotation>
   ) => void | Promise<void>
 }
 
@@ -62,20 +58,15 @@ interface UseTextboxIntegrationReturn {
   currentAnchorDirection: AnchorDirection
   /** アンカー方向を更新 */
   setCurrentAnchorDirection: (direction: AnchorDirection) => void
-  /** テキストを確定してDrawingElementとして追加/更新 */
+  /** テキストを確定してDrawingAnnotationとして追加/更新 */
   confirmText: () => void
   /** 編集をキャンセル */
   cancelEdit: () => void
-  /** DrawingElementをTextBoxに変換 */
-  convertToTextBox: (element: DrawingElement) => TextBox | null
-  /** TextBoxをDrawingElementに変換 */
-  convertToDrawingElement: (textBox: TextBox) => DrawingElement
 }
 
 /** 個別採点画面でテキストボックスの追加・編集・座標変換を統合するフック */
 export function useTextboxIntegration({
-  canvasWidth,
-  canvasHeight,
+  questionScoreId,
   drawingElements,
   updateDrawingElements,
   addDrawingElement,
@@ -110,12 +101,8 @@ export function useTextboxIntegration({
           (element) => element.id === elementId
         )
         if (existingElement && existingElement.type === "text") {
-          setCurrentFontSize(
-            existingElement.fontSize ?? DEFAULT_DRAWING_SETTINGS.fontSize
-          )
-          setCurrentAnchorDirection(
-            existingElement.anchorDirection ?? "top-left"
-          )
+          setCurrentFontSize(existingElement.fontSize)
+          setCurrentAnchorDirection(existingElement.anchorDirection)
         }
       } else {
         // 新規の場合はデフォルト値
@@ -138,7 +125,7 @@ export function useTextboxIntegration({
     setEditingElementId(null)
   }, [])
 
-  // テキストを確定してDrawingElementとして追加/更新
+  // テキストを確定してDrawingAnnotationとして追加/更新
   const confirmText = useCallback(async () => {
     if (!currentTextValue.trim()) {
       closeTextboxModal()
@@ -175,10 +162,10 @@ export function useTextboxIntegration({
         })
         updateDrawingElements(updatedElements)
       }
-    } else {
+    } else if (questionScoreId) {
       // 新規要素の追加
-      const newElement: DrawingElement = {
-        id: crypto.randomUUID(),
+      const newElement = newDrawingAnnotation({
+        questionScoreId,
         type: "text",
         x: currentPosition.x,
         y: currentPosition.y,
@@ -187,7 +174,7 @@ export function useTextboxIntegration({
         strokeWidth: 1,
         fontSize: currentFontSize,
         anchorDirection: currentAnchorDirection,
-      }
+      })
 
       if (addDrawingElement) {
         // DB永続化対応の追加関数を使用
@@ -206,6 +193,7 @@ export function useTextboxIntegration({
     currentFontSize,
     currentAnchorDirection,
     editingElementId,
+    questionScoreId,
     drawingElements,
     updateDrawingElements,
     addDrawingElement,
@@ -217,50 +205,6 @@ export function useTextboxIntegration({
   const cancelEdit = useCallback(() => {
     closeTextboxModal()
   }, [closeTextboxModal])
-
-  // DrawingElementをTextBoxに変換
-  const convertToTextBox = useCallback(
-    (element: DrawingElement): TextBox | null => {
-      if (element.type !== "text" || !element.text) {
-        return null
-      }
-
-      return drawingElementToTextBox(
-        {
-          id: element.id,
-          x: element.x,
-          y: element.y,
-          text: element.text,
-          fontSize: element.fontSize,
-          color: element.color,
-        },
-        { canvasWidth, canvasHeight }
-      )
-    },
-    [canvasWidth, canvasHeight]
-  )
-
-  // TextBoxをDrawingElementに変換
-  const convertToDrawingElement = useCallback(
-    (textBox: TextBox): DrawingElement => {
-      const drawingElementData = textBoxToDrawingElement(textBox, {
-        canvasWidth,
-        canvasHeight,
-      })
-
-      return {
-        id: drawingElementData.id,
-        type: drawingElementData.type,
-        x: drawingElementData.x,
-        y: drawingElementData.y,
-        text: drawingElementData.text,
-        color: drawingElementData.color,
-        strokeWidth: 1,
-        fontSize: drawingElementData.fontSize,
-      }
-    },
-    [canvasWidth, canvasHeight]
-  )
 
   return {
     showTextboxModal,
@@ -277,7 +221,5 @@ export function useTextboxIntegration({
     setCurrentAnchorDirection,
     confirmText,
     cancelEdit,
-    convertToTextBox,
-    convertToDrawingElement,
   }
 }

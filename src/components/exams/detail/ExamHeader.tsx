@@ -74,11 +74,11 @@ export default function ExamHeader({
             {exam.examDate && (
               <Badge variant="outline">
                 <Calendar className="mr-1 h-3 w-3" />
-                {new Date(exam.examDate).toLocaleDateString()}
+                {exam.examDate.toLocaleDateString()}
               </Badge>
             )}
             <Badge variant="secondary">
-              作成日: {new Date(exam.createdAt).toLocaleDateString()}
+              作成日: {exam.createdAt.toLocaleDateString()}
             </Badge>
           </div>
         </div>
