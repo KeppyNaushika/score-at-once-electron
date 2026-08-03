@@ -20,11 +20,6 @@ interface EditableTableProps<T> {
   getRowProps?: (row: Row<T>) => { className?: string }
 }
 
-/** Table meta with updateData function for editable cells */
-interface TableMeta {
-  updateData: (rowIndex: number, columnId: string, value: string) => void
-}
-
 type EditableCellProps<T> = CellContext<T, unknown>
 
 function EditableCell<T>({
@@ -40,8 +35,7 @@ function EditableCell<T>({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const onBlur = () => {
-    const meta = table.options.meta as TableMeta | undefined
-    meta?.updateData(row.index, column.id, strValue)
+    table.options.meta?.updateData?.(row.index, column.id, strValue)
     setDraftValue(null)
   }
 
@@ -99,8 +93,7 @@ function EditableCell<T>({
     }
   }
 
-  const meta = column.columnDef.meta as
-    { placeholder?: string; validate?: (value: string) => boolean } | undefined
+  const meta = column.columnDef.meta
 
   // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
   const isInvalid =
@@ -197,19 +190,14 @@ export function EditableTable<T extends object>({
   )
 
   const hasReadOnlyColumns = useMemo(
-    () =>
-      columns.some(
-        (column) =>
-          (column.meta as { readOnly?: boolean } | undefined)?.readOnly
-      ),
+    () => columns.some((column) => column.meta?.readOnly),
     [columns]
   )
 
   const editableColumns = useMemo(
     () => [
       ...columns.map((column) => {
-        const meta = column.meta as { readOnly?: boolean } | undefined
-        if (meta?.readOnly) return column // readOnlyカラムは元のセルレンダラーを維持
+        if (column.meta?.readOnly) return column // readOnlyカラムは元のセルレンダラーを維持
         return { ...column, cell: EditableCell }
       }),
       // 行追加ボタン列
@@ -264,8 +252,7 @@ export function EditableTable<T extends object>({
       updateData: (rowIndex: number, columnId: string, value: string) => {
         // readOnlyカラムへの変更を無視
         const column = columns.find((candidate) => candidate.id === columnId)
-        if ((column?.meta as { readOnly?: boolean } | undefined)?.readOnly)
-          return
+        if (column?.meta?.readOnly) return
 
         setTableData((old) => {
           const newData = old.map((row, index) => {
@@ -325,10 +312,7 @@ export function EditableTable<T extends object>({
 
     if (hasReadOnlyColumns) {
       // マージ型ペースト: readOnlyカラムをスキップし、editableカラムのみにデータをマッピング
-      const editableCols = columns.filter(
-        (column) =>
-          !(column.meta as { readOnly?: boolean } | undefined)?.readOnly
-      )
+      const editableCols = columns.filter((column) => !column.meta?.readOnly)
 
       // フォーカスセルの位置を起点にする
       const activeElement = document.activeElement as HTMLInputElement | null
