@@ -11,7 +11,6 @@ import * as fs from "fs"
 import * as path from "path"
 import sharp from "sharp"
 
-import { buildExamSubtotalGroupId } from "../../../electron-src/lib/prisma/deterministicId"
 import { createPrismaClientForPath } from "../../helpers/testPrismaClient"
 import {
   computeRegionDefinitions,
@@ -430,7 +429,6 @@ export async function seedExamWithScoring(
   }
   await db.examSubtotalGroup.create({
     data: {
-      id: buildExamSubtotalGroupId(examId, subtotalGroupId),
       examId,
       subtotalGroupId,
     },

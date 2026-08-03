@@ -9,7 +9,6 @@ import * as crypto from "crypto"
 import * as path from "path"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
-import { buildExamSubtotalGroupId } from "../../prisma/deterministicId"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
 
@@ -246,11 +245,10 @@ export async function processExamSubtotalGroups(
       idMappings.subtotalGroup[examSubtotalGroup.subtotalGroupId]
     if (!newGroupId) continue
 
-    // **探すキーは DB が守っているキーに合わせる。** id は新規作成時にしか意味を持たない。
-    // 決定論的idは「これから作る行」の名前を決めるだけで、既にある行がその名前で
-    // 入っている保証は無い（旧バージョンで作られた行、id を再計算しない経路を通った行）。
-    // ここで id を探しにいくと、同じ組み合わせの行があるのに見つけられず create 側へ落ち、
-    // unique 違反でアーカイブ取り込みがトランザクションごと巻き戻る。
+    // **探すキーは DB が守っているキーに合わせる。** id は uuidv4 なので端末ごとに異なり、
+    // アーカイブ側の id とも一致しない。ここで id を探しにいくと、同じ組み合わせの行が
+    // あるのに見つけられず create 側へ落ち、unique 違反でアーカイブ取り込みが
+    // トランザクションごと巻き戻る。
     const linked = await tx.examSubtotalGroup.upsert({
       where: {
         examId_subtotalGroupId: {
@@ -259,7 +257,6 @@ export async function processExamSubtotalGroups(
         },
       },
       create: {
-        id: buildExamSubtotalGroupId(newExamId, newGroupId),
         examId: newExamId,
         subtotalGroupId: newGroupId,
         selectedForTable: examSubtotalGroup.selectedForTable ?? false,
@@ -267,7 +264,7 @@ export async function processExamSubtotalGroups(
       },
       update: {},
     })
-    // 既存行に当たった場合その id は決定論的とは限らないので、実際の行の id を記録する
+    // idは uuidv4 なのでアーカイブ側の id とは一致しない。実際の行の id を記録する
     idMappings.examSubtotalGroup[examSubtotalGroup.id] = linked.id
   }
 }

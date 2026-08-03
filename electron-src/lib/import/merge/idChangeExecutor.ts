@@ -17,7 +17,6 @@
  * 既存レコードのUNIQUEフィールドを一時値に変更してから新レコードを作成し、旧を削除する。
  */
 
-import { buildExamSubtotalGroupId } from "../../prisma/deterministicId"
 import type { IdChangeTarget, IdMappings, PrismaTransaction } from "./types"
 
 /**
@@ -252,20 +251,11 @@ export const SUBTOTAL_GROUP_CASCADE_MOVERS: CascadeMover[] = [
     // 既に持つことはありえない（兄弟の GradeStudent / CourseworkStudent は
     // 移行先の生徒が実在しうるので重複潰しを持つ。ここは事情が違う）。
     model: "ExamSubtotalGroup",
-    move: async (tx, from, to) => {
-      const rows = await tx.examSubtotalGroup.findMany({
+    move: (tx, from, to) =>
+      tx.examSubtotalGroup.updateMany({
         where: { subtotalGroupId: from },
-      })
-      for (const link of rows) {
-        await tx.examSubtotalGroup.update({
-          where: { id: link.id },
-          data: {
-            subtotalGroupId: to,
-            id: buildExamSubtotalGroupId(link.examId, to),
-          },
-        })
-      }
-    },
+        data: { subtotalGroupId: to },
+      }),
   },
   {
     model: "Subtotal",

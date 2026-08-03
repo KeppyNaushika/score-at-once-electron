@@ -6,53 +6,10 @@
  * 担当0人の設問は全員担当とみなす（絞り込みの規則は renderer の
  * `useAssignedCropRegions` が持つ）。
  */
-import * as crypto from "crypto"
-
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
 import { canDecideExamScores } from "./scoreDecision"
-
-/**
- * 採点担当のid名前空間（RFC 4122 の名前ベースUUID用）。
- * この値を変えると既存の割当と別idになるため固定する。
- */
-const ASSIGNMENT_NAMESPACE = "b6f1f0c8-3a5e-5d21-9a6e-0c7f2d4a8e31"
-
-/**
- * (設問, 担当者) から決定論的にidを作る（RFC 4122 v5 相当）。
- *
- * `@default(uuid())` に任せると、2端末が同じペアを割り当てたときに
- * id違い・`@@unique`同値の行ができてNAS同期で衝突する。同一idなら
- * 行レベルLWWで1行へ収束する。
- */
-export function buildAssignmentId(
-  cropRegionId: string,
-  userId: string
-): string {
-  const namespaceBytes = Buffer.from(
-    ASSIGNMENT_NAMESPACE.replace(/-/g, ""),
-    "hex"
-  )
-  const hash = crypto
-    .createHash("sha1")
-    .update(namespaceBytes)
-    .update(`${cropRegionId}:${userId}`)
-    .digest()
-
-  // version 5 / variant RFC 4122 のビットを立てる
-  hash[6] = (hash[6] & 0x0f) | 0x50
-  hash[8] = (hash[8] & 0x3f) | 0x80
-
-  const hex = hash.subarray(0, 16).toString("hex")
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20, 32),
-  ].join("-")
-}
 
 /**
  * 割当の編集権限。確定と同じく試験OWNERのみ。
@@ -128,7 +85,6 @@ export const assignCropRegion = async (
     const assignment = await prisma.cropRegionAssignment.upsert({
       where: { cropRegionId_userId: { cropRegionId, userId } },
       create: {
-        id: buildAssignmentId(cropRegionId, userId),
         cropRegionId,
         userId,
         assignedBy: assignedByUserId,
@@ -175,19 +131,21 @@ export const unassignCropRegion = async (
       return { success: false as const, error: permission.reason }
     }
 
-    const deleted = await prisma.cropRegionAssignment.deleteMany({
-      where: { cropRegionId, userId },
+    // 監査ログに実際の行のidを載せるため、削除前に引く（idは計算で出せない）
+    const assignment = await prisma.cropRegionAssignment.findUnique({
+      where: { cropRegionId_userId: { cropRegionId, userId } },
     })
-    if (deleted.count === 0) {
+    if (!assignment) {
       return { success: true as const }
     }
+    await prisma.cropRegionAssignment.delete({ where: { id: assignment.id } })
 
     const userLabel = await resolveUserLabel(userId)
     await recordAuditLog({
       action: "exam.score.unassign",
       userId: requestedByUserId,
       entityType: "CropRegionAssignment",
-      entityId: buildAssignmentId(cropRegionId, userId),
+      entityId: assignment.id,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       summary: `設問の採点担当から${userLabel ?? userId}を外しました`,

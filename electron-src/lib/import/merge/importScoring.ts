@@ -11,7 +11,6 @@ import type {
   FileOverviewData,
   ScoringConflictConfig,
 } from "../../../../src/types/examArchive.types"
-import { buildAssignmentId } from "../../prisma/cropRegionAssignment"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { isNewerByLww } from "./decisionMergePolicy"
 import { resolveScoringConflict } from "./scoringConflictResolver"
@@ -283,8 +282,7 @@ export async function processCompoundAnswerScores(
  * CropRegionAssignment（設問ごとの採点担当）を処理
  *
  * 担当者は `username` で移行先DBを引く（ユーザーはアーカイブを越えない）。
- * 解決できない担当は取り込まない。idは (cropRegionId, userId) から決定論的に
- * 再生成するので、両端で同じペアを割り当てていれば1行に収束する。
+ * 解決できない担当は取り込まない。idはアーカイブから持ち回らず取り込み先で振り直す。
  * 既に同じ割当があれば何もしない（担当は有無だけの情報でLWWの対象が無い）。
  */
 export async function processCropRegionAssignments(
@@ -333,7 +331,6 @@ export async function processCropRegionAssignments(
 
     await tx.cropRegionAssignment.create({
       data: {
-        id: buildAssignmentId(newRegionId, assigneeUserId),
         cropRegionId: newRegionId,
         userId: assigneeUserId,
         assignedBy: currentUserId,

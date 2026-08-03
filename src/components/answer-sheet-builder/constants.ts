@@ -106,9 +106,16 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
 // デフォルト問題構造
 // =====================
 
-let _nextId = 1
+/**
+ * 解答用紙定義の要素id。
+ *
+ * この値は `asbDefinitionConverters` がそのままDBの主キーへ書く。ASBは同期対象なので、
+ * 端末をまたいで衝突しない uuidv4 でなければならない（旧実装の `asb_${Date.now()}_${連番}`
+ * は連番がレンダラー起動ごとに1へ戻るため、2端末が同じミリ秒に最初の要素を作ると
+ * 同一idになり、無関係な2要素がLWWで片方に上書きされた）。
+ */
 export function generateId(): string {
-  return `asb_${Date.now()}_${_nextId++}`
+  return crypto.randomUUID()
 }
 
 export function createDefaultBranchQuestion(label?: string): BranchQuestion {

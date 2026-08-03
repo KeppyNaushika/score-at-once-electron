@@ -5,7 +5,7 @@
  *
  * 旧形式は結合行（学級・タグ・名簿・点数・変換表）の id を持たない。これらはいずれも
  * `@@unique` を持つ中間テーブルなので、自然キーから id を組み立てる
- * （`deterministicId.ts` と同じ方針。同じアーカイブを何度読んでも同じ id になる＝冪等）。
+ * （同じアーカイブを何度読んでも同じ id になる＝冪等）。
  * 組み立てた id はアーカイブ内の結合キーとしてのみ使い、DB へは書き込まない
  * （import は名簿行を新しい uuid で作る）。
  */
@@ -72,7 +72,7 @@ export interface LegacyCollectedCourseworkData {
 /** 旧形式に無い作成・更新時刻の代わり。実際の値は失われているので下限値を使う */
 const UNKNOWN_TIMESTAMP = new Date(0).toISOString()
 
-/** 中間テーブルの id を自然キーから組み立てる（deterministicId.ts と同じ規則） */
+/** 中間テーブルの id を自然キーから組み立てる（アーカイブ内でのみ使い、DBへは書かない） */
 const joinIds = (parentId: string, childKey: string) =>
   `${parentId}:${childKey}`
 

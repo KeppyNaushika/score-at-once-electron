@@ -21,7 +21,6 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { buildAssignmentId } from "@/electron-src/lib/prisma/cropRegionAssignment"
 import { getExamDecisionSummary } from "@/electron-src/lib/prisma/scoreDecisionSummary"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
@@ -58,8 +57,7 @@ async function createGrader(name: string, examId: string | null) {
 
 async function assignGrader(cropRegionId: string, userId: string) {
   await testPrisma.cropRegionAssignment.create({
-    // 決定論的id。uuid を振ると2端末で同値別idの行ができて同期で衝突する
-    data: { id: buildAssignmentId(cropRegionId, userId), cropRegionId, userId },
+    data: { cropRegionId, userId },
   })
 }
 

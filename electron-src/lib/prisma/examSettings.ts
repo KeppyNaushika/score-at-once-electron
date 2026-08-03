@@ -44,14 +44,6 @@ export interface ExamExportSettings {
   individualReport: IndividualReportOptions
 }
 
-/** 行の id は (examId, 区分) から決まる。upsert 差分書き込みで tombstone を避ける */
-const overlayStyleId = (examId: string, overlayKind: OverlayKind): string =>
-  `${examId}:${overlayKind}`
-const overlayVisibilityId = (examId: string, status: string): string =>
-  `${examId}:${status}`
-const tableSectionId = (examId: string, tableKind: string): string =>
-  `${examId}:${tableKind}`
-
 /** 試験の出力設定を取得する（未設定の項目は既定値で補う） */
 export async function getExamExportSettings(
   examId: string
@@ -178,7 +170,6 @@ export async function upsertExamExportSettings(
         where: { examId_overlayKind: { examId, overlayKind } },
         update: values,
         create: {
-          id: overlayStyleId(examId, overlayKind),
           examId,
           overlayKind,
           ...values,
@@ -196,7 +187,6 @@ export async function upsertExamExportSettings(
         where: { examId_status: { examId, status } },
         update: values,
         create: {
-          id: overlayVisibilityId(examId, status),
           examId,
           status,
           ...values,
@@ -213,7 +203,6 @@ export async function upsertExamExportSettings(
           },
           update: { shown },
           create: {
-            id: `${examId}:${statisticKind}:${scope}`,
             examId,
             statisticKind,
             scope,
@@ -280,7 +269,6 @@ export async function upsertExamExportSettings(
         },
         update: values,
         create: {
-          id: tableSectionId(examId, section.tableKind),
           examId,
           tableKind: section.tableKind,
           ...values,

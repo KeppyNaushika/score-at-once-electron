@@ -524,8 +524,10 @@ export type AnswerSheetAction =
 `TextElementEditor.tsx:71` / `ImageElementEditor.tsx:74` / `ManuscriptPaperSettings.tsx:104` も
 同じ `generateId()` を使っているので、関数の中身を変えれば揃う。
 
-`__tests__/import-export/unit/deterministicIdCoverage.test.ts` が既に `generateId()` を検出対象に
-入れているため、決定論的 id テーブルへの誤用はそちらで止まる。
+`generateId()` は 2026-08-03 に `crypto.randomUUID()` へ変えた。旧実装
+（`asb_${Date.now()}_${連番}`）は連番がレンダラー起動ごとに 1 へ戻るため、2端末が同じミリ秒に
+最初の要素を作ると**同一の主キー**になり、無関係な2要素が LWW で片方に上書きされた。
+`__tests__/import-export/unit/uuidIdCoverage.test.ts` が id 生成の不変式を守っている。
 
 ### 6.3 生 `dispatch` の封じ込め
 
@@ -748,7 +750,7 @@ OMR 設定フォーム / `SubQuestionForm.tsx` / `BranchQuestionForm.tsx` / acti
 
 ## 8. 付随して直すもの
 
-### 8.1 OMR 設定・選択肢の決定論的 id（#1128 へ合流）
+### 8.1 OMR 設定・選択肢の id が往復しない
 
 renderer の `OMRCellConfig` に id が無く、`asbDefinitionConverters.ts:566` が保存のたびに
 `crypto.randomUUID()` を振り直す。id が往復する子としない子が混在している。
@@ -760,15 +762,23 @@ renderer の `OMRCellConfig` に id が無く、`asbDefinitionConverters.ts:566`
 
 **本計画の範囲では複合 unique を鍵にすれば足りる**（§4.4）。移行は不要。
 
-ただし2端末が同じ小問に OMR を作ると **id 違い・unique 同値**の行ができる。これは #1128 が扱って
-いる形そのものなので、**この2テーブルを #1128 の対象表に追加する**。決定論的 id は #1128 で行う。
+2端末が同じ小問に OMR を作ると id 違い・unique 同値の行ができるが、これは sqlite-nas-sync が
+LWW で1行へ収束させる（#1128 のコメント参照）。**id を決定論的にする必要はない。**
+
+残る問題は id が往復しないことそのもので、更新が実質「削除＋新規作成」になり毎回 changelog と
+tombstone が動く。ただし `saveAsbDefinition`（`asbDefinition.ts:161`）が保存のたびに定義ごと
+`deleteMany` してから作り直しているため、**churn は OMR に限らず定義全体で起きている**。
+renderer が id を持つ子は同じ id で作り直されるので値としては往復するが、行としては毎回
+削除→再作成である。**本計画の段階1（IPC 分割）で、定義全体を upsert 差分書き込みへ変えるときに
+まとめて解消する。** `OMRCellConfig` に id を持たせるのはその一部。
 
 ### 8.2 `setAsbDefinitionTags` も delete → recreate
 
 `electron-src/lib/prisma/asbDefinitionTag.ts:48` が `deleteMany` → `createMany`。同期対象テーブルへの
-delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠と #1128 の id 衝突の両方に該当する。
+delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠に該当する。
 
-**段階1で upsert 差分へ変える。** `AsbDefinitionTag` の決定論的 id は #1128 の対象表に既に載っている。
+**段階1で upsert 差分へ変える。** id は uuidv4 のままでよく、鍵は `@@unique` にする
+（#1128 の決定論的 id 化は撤回された）。
 
 ### 8.3 既存行のバックフィル
 
@@ -844,7 +854,7 @@ delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠と 
 - **`AsbDefinition` のフラット列の正規化** — 設定が列としてフラットに並ぶ形は触らない
 - **画像ファイルの共有** — DB は同期されるがファイル実体はローカルに残る。別課題（#1052）
 - **既存 `asb_` 形式 id の書き換え** — 参照されておらず、変える必要が無い
-- **OMR の決定論的 id 化** — #1128。本計画では複合 unique を鍵にするだけ
+- **OMR の id 往復** — 定義全体の delete → recreate と一体なので段階1で扱う（§8.1）
 
 ---
 
@@ -891,15 +901,15 @@ delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠と 
 
 ## 13. 関連
 
-| 文書 / issue                                                              | 関係                                           |
-| ------------------------------------------------------------------------- | ---------------------------------------------- |
-| [docs/schema-relation-audit.md](./schema-relation-audit.md) §6.1          | 発端。Asb 系を同期対象にした作業               |
-| [docs/ownership-and-sharing-design.md](./ownership-and-sharing-design.md) | 所有と共有（#1127）。段階4〜5 の前提           |
-| [docs/coding-style.md](./coding-style.md) 「IPC の粒度」                  | 本計画から起こした規約                         |
-| #1126                                                                     | 本計画の元になった issue                       |
-| #1127                                                                     | 所有と共有の設計。段階4〜5 の前提              |
-| #1128                                                                     | 決定論的 id。OMR 2テーブルの追加が必要（§8.1） |
-| #1052                                                                     | 画像ファイルの共有                             |
+| 文書 / issue                                                              | 関係                                                      |
+| ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [docs/schema-relation-audit.md](./schema-relation-audit.md) §6.1          | 発端。Asb 系を同期対象にした作業                          |
+| [docs/ownership-and-sharing-design.md](./ownership-and-sharing-design.md) | 所有と共有（#1127）。段階4〜5 の前提                      |
+| [docs/coding-style.md](./coding-style.md) 「IPC の粒度」                  | 本計画から起こした規約                                    |
+| #1126                                                                     | 本計画の元になった issue                                  |
+| #1127                                                                     | 所有と共有の設計。段階4〜5 の前提                         |
+| #1128                                                                     | 決定論的 id は撤回。競合解決は sqlite-nas-sync 側（§8.1） |
+| #1052                                                                     | 画像ファイルの共有                                        |
 
 ---
 

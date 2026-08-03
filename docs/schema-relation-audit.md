@@ -137,9 +137,9 @@ PDF 出力に複製されており、過去2回のずれに続く3回目をこ�
 
 4.1 と同じく「制約の代用コード」が書かれている状態。
 
-ただし `@@unique` を足すだけでは済まない。`@default(uuid())` のままだと、2端末が同じ組み合わせを
-作ったとき id 違い・unique 同値の行ができて NAS 同期で衝突する。この表は真の多対多なので
-中間テーブル自体は残り、**unique を持つなら決定論的 id が要る**（手順は §6.2）。
+2端末が同じ組み合わせを作ると id 違い・unique 同値の行ができるが、**これは sqlite-nas-sync が
+解決する**ので、アプリ側で id を組み立てる必要はない（§6.2）。この表は真の多対多なので
+中間テーブル自体は残り、`@@unique` を足すだけでよい。
 
 ### 4.3 `GradeDataSource.examId` は `crop_region` 型で冗長
 
@@ -285,19 +285,21 @@ DELETE + INSERT が changelog と `_tombstone` に流れる。後の実測で、
 
 ### 6.2 `ExamSubtotalGroup` の unique（4.2）✅ 対応済み
 
-**unique の追加だけでは足りない。id の決定論化とセットで行う。**
+`@@unique([examId, subtotalGroupId])` を足す。同じ試験に同じ小計点グループを2人の教員が追加すると
+id 違い・unique 同値の行が2つできるが、**これは sqlite-nas-sync が解決する**。`conflict.ts` の
+`applyInsert` がセカンダリUNIQUE違反を検出し、`updatedAt` の LWW で敗者行を削除して1行へ収束させる
+（DELETEトリガーが `_changelog` / `_tombstone` に載るので他クライアントにも伝播する）。
 
-`@@unique([examId, subtotalGroupId])` を足しただけだと、2人の教員が同じ試験に同じ小計点グループを
-追加したとき、`@default(uuid())` のせいで **id 違い・unique 同値**の行が2つでき、NAS 同期で衝突する。
-これは既知の罠で、`CropRegionAssignment` / `GradeConstraintViewpoint` /
-`GradeConstraintLabelValue` / `GradeConstraintExclusionLabel` / `GradeDataSourceEstimationSource` は
-id を親子キーから決定論的に組み立てることで回避している（同一 id なら行レベル LWW が1行へ収束する）。
+> **旧方針（撤回済み）** — 当初はここで id を親子キーから決定論的に組み立てる方針を採り、
+> migration `20260802040000_exam_subtotal_group_deterministic_id` で `@default(uuid())` を外した。
+> 根拠は「id 違い・unique 同値の行が NAS 同期で衝突する」だったが、これは**ライブラリのソースを
+> 読まずに置いた誤った前提**だった（issue #1128 参照）。決定論的 id はむしろ削除した id を再利用
+> するため、付け外しの多い表で「過去の削除 tombstone が未来の同一組み合わせを撃つ」「別端末の
+> 新規作成が他端末の解除に吸収される」混線を生む。2026-08-03 に全テーブルを uuidv4 へ戻した。
+> 既存行の合成 id はそのまま残してある（各クライアントが独立に振り直すと端末ごとに別 id になり、
+> かえって重複を作るため）。id が混在していても、同定は `@@unique` で行うので問題ない。
 
-§4.1 で `examPageId @unique` を避けたのと同じ制約がここにも効く。違いは、あちらは 1:1 なので
-畳めば unique 自体が要らなくなったのに対し、こちらは真の多対多なので中間テーブルが残り、
-**unique を持つなら決定論的 id が要る**という点。
-
-migration `20260802040000_exam_subtotal_group_deterministic_id` で対応した。以下は実施内容。
+実施内容:
 
 1. **重複行の確認**（あれば移行で潰す）
 
@@ -306,23 +308,15 @@ migration `20260802040000_exam_subtotal_group_deterministic_id` で対応した�
    GROUP BY examId, subtotalGroupId HAVING COUNT(*) > 1;
    ```
 
-2. **`deterministicId.ts` に `buildExamSubtotalGroupId(examId, subtotalGroupId)` を足す。**
-   既存の `joinIds` に倣って単純連結にすること。uuidv5 ではない理由が同ファイルの冒頭に書いてある —
-   既存行の id を振り直すマイグレーションが同じ id を組み立てられる必要があり、SQLite に sha1 が
-   無いので SQL 側で uuidv5 を再現できない
-3. **マイグレーション**: 重複を潰し、既存行の id を決定論的 id へ振り直し、`@@unique` と `@@index`
-   を追加する。他テーブルからの FK は無いので、DB 内で id を変えること自体は安全（確認してから進める）
-4. **アーカイブの扱いを決める。** `ExamSubtotalGroup.id` は他テーブルからは参照されないが、
-   **試験アーカイブが id を運んでいる**（`dataCollector.ts` が書き出し、`importExamCore.ts` が
-   その id で作る）。旧アーカイブの id は uuid 形式なので、そのまま取り込むと決定論的 id の
-   前提が崩れる。取り込み時に `buildExamSubtotalGroupId` で組み直すか、変換器で id を
-   置き換えるかを決めること。**「同じ組み合わせの行が、ローカルには決定論的 id で、
-   アーカイブには uuid で入っている」状態が unique 違反になる**ので、ここは飛ばせない
-5. **スキーマに `@id` のみ**（`@default(uuid())` を外す）と、決定論的 id の理由をコメントで残す。
-   他の決定論的 id テーブルと同じ書き方に揃える
-6. **代用コードを外す** — `addSubtotalGroupToExam` は素の `create` から upsert へ
+   重複を1行へ畳むとき、**属性は読み取り側の意味論に合わせて集約する**。`selectedForTable` /
+   `selectedForBoxPlot` は「1行でも true なら選択」と読まれるので、最古の行の値をそのまま採ると
+   新しい行にしか無い選択が黙って消える（migration では重複行をまたいで OR している）
+
+2. **マイグレーション**: 重複を潰し、`@@unique` と `@@index` を追加する
+3. **代用コードを外す** — `addSubtotalGroupToExam` は素の `create` から upsert へ
    （`electron-src/lib/prisma/subtotalGroup.ts`）、インポートの `findFirst`
-   （`electron-src/lib/import/merge/importExamCore.ts`）は id 一致で足りるようになる
+   （`electron-src/lib/import/merge/importExamCore.ts`）も upsert にする。
+   **鍵は id ではなく `@@unique`**（id は uuidv4 で端末ごとに異なるため）
 
 #### 何が直るか
 

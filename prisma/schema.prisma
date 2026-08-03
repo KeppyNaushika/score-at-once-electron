@@ -204,11 +204,11 @@ model CropRegion {
 /// 担当が0人の設問は全員担当とみなす（割当漏れによる採点不能の回避と、
 /// 割当を使っていない既存試験の後方互換）。
 ///
-/// idは uuidv5(cropRegionId + userId) で決定論的に生成する。`@default(uuid())` だと
-/// 2端末が同じ(設問, 担当者)ペアを割り当てたとき、uuidが違い@@uniqueが同値の行が
-/// できてNAS同期で衝突する。同一idなら行レベルLWWで1行へ収束する。
+/// 2端末が同じ(設問, 担当者)ペアを割り当てるとid違い・`@@unique`同値の行ができるが、
+/// これは sqlite-nas-sync が解決する（`conflict.ts` の applyInsert が敗者行をLWWで
+/// 削除し、DELETEトリガー経由で全クライアントが勝者へ収束する）。idは uuidv4 でよい。
 model CropRegionAssignment {
-  id           String     @id
+  id           String     @id @default(uuid())
   cropRegionId String
   userId       String
   /// 割り当てたOWNER（監査用）。ユーザー削除時はnullにして割当自体は残す
@@ -277,11 +277,11 @@ model UserExam {
 
 /// 試験で使う小計点グループ。どの集計に含めるかのフラグを持つ。
 ///
-/// idは決定論的に生成する（`buildExamSubtotalGroupId`）。`@default(uuid())` だと
-/// 2端末が同じ(試験, 小計点グループ)を追加したとき、uuidが違い@@uniqueが同値の行が
-/// できてNAS同期で衝突する。同一idなら行レベルLWWで1行へ収束する。
+/// 2端末が同じ(試験, 小計点グループ)を追加するとid違い・`@@unique`同値の行ができるが、
+/// これは sqlite-nas-sync が解決する（敗者行をLWWで削除して1行へ収束させる）。
+/// 書き込みは必ず `@@unique` を鍵に upsert すること（idは同定に使わない）。
 model ExamSubtotalGroup {
-  id                 String        @id
+  id                 String        @id @default(uuid())
   examId             String
   subtotalGroupId    String
   selectedForTable   Boolean       @default(false) // 小計点テーブルに含めるグループ
@@ -835,11 +835,11 @@ model GradeConstraint {
 /// consistency ルールの集計対象となる観点（旧 config.viewpointItems）。
 /// 空なら target 以外の全項目を対象にする、という既定の意味は評価側が持つ。
 ///
-/// idは決定論的に生成する（`buildConstraintViewpointId`）。`@default(uuid())` だと
-/// 2端末が同じ(ルール, 項目)を追加したときid違い・`@@unique`同値の行ができてNAS同期で
-/// 衝突する。同一idなら行レベルLWWで1行へ収束する。
+/// 2端末が同じ(ルール, 項目)を追加するとid違い・`@@unique`同値の行ができるが、これは
+/// sqlite-nas-sync が解決する（敗者行をLWWで削除して1行へ収束させる）。
+/// 書き込みは必ず `@@unique` を鍵に upsert すること（idは同定に使わない）。
 model GradeConstraintViewpoint {
-  id           String   @id
+  id           String   @id @default(uuid())
   constraintId String
   gradeItemId  String
   order        Int      @default(0)
@@ -856,9 +856,9 @@ model GradeConstraintViewpoint {
 
 /// consistency ルールのラベル→数値の対応（旧 config.labelValues。例 A=5, B=3, C=1）。
 /// labelは境界ラベルの文字列であり実体参照ではないため、そのまま値として持つ。
-/// idは決定論的に生成する（`buildConstraintLabelValueId`）。理由は GradeConstraintViewpoint と同じ。
+/// idは uuidv4。競合の扱いは GradeConstraintViewpoint と同じ。
 model GradeConstraintLabelValue {
-  id           String   @id
+  id           String   @id @default(uuid())
   constraintId String
   label        String
   value        Decimal
@@ -873,9 +873,9 @@ model GradeConstraintLabelValue {
 }
 
 /// mutual_exclusion ルールの混在禁止ラベル集合（旧 config.labels。例 ["A", "C"]）。
-/// idは決定論的に生成する（`buildConstraintExclusionLabelId`）。理由は GradeConstraintViewpoint と同じ。
+/// idは uuidv4。競合の扱いは GradeConstraintViewpoint と同じ。
 model GradeConstraintExclusionLabel {
-  id           String   @id
+  id           String   @id @default(uuid())
   constraintId String
   label        String
   order        Int      @default(0)
@@ -1007,9 +1007,9 @@ model GradeDataSource {
 /// 欠損推定に使う他データソース（旧 GradeDataSource.estimationSourceIds のJSON配列）。
 /// JSON配列ではFKが効かず、参照先データソースを削除してもdangling idが残っていた（issue #1063）。
 ///
-/// idは決定論的に生成する（`buildEstimationSourceId`）。理由は GradeConstraintViewpoint と同じ。
+/// idは uuidv4。競合の扱いは GradeConstraintViewpoint と同じ。
 model GradeDataSourceEstimationSource {
-  id                 String   @id
+  id                 String   @id @default(uuid())
   /// 推定を行う側
   dataSourceId       String
   /// 推定の材料に使う側（同一Grade内の他データソース）
