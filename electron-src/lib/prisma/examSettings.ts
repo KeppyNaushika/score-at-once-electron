@@ -240,7 +240,7 @@ export async function upsertExamExportSettings(
     await tx.examIndividualReportSettings.upsert({
       where: { examId },
       update: reportValues,
-      create: { id: examId, examId, ...reportValues },
+      create: { examId, ...reportValues },
     })
 
     const sections = [
@@ -284,7 +284,7 @@ export async function upsertExamExportSettings(
     await tx.examIndividualReportGraphSettings.upsert({
       where: { examId },
       update: graphValues,
-      create: { id: examId, examId, ...graphValues },
+      create: { examId, ...graphValues },
     })
   })
 

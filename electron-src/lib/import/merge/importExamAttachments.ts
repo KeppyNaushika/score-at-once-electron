@@ -85,7 +85,7 @@ export async function processExamExportSettings(
       void createdAt
       void updatedAt
       await tx.examIndividualReportSettings.create({
-        data: { id: newExamId, examId: newExamId, ...values },
+        data: { examId: newExamId, ...values },
       })
     }
   }
@@ -152,7 +152,7 @@ export async function processExamExportSettings(
       void createdAt
       void updatedAt
       await tx.examIndividualReportGraphSettings.create({
-        data: { id: newExamId, examId: newExamId, ...values },
+        data: { examId: newExamId, ...values },
       })
     }
   }
