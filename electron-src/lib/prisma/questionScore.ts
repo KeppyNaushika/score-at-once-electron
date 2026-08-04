@@ -7,6 +7,7 @@ import {
 } from "./auditScope"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
+import { isRecordNotFoundError } from "./prismaErrors"
 
 /**
  * 採点対象が既に無いことを表す機械可読な理由コード。
@@ -20,16 +21,6 @@ export const SCORE_TARGET_DELETED = "target-deleted" as const
 /** 上記を利用者へ伝える文言（renderer はこれをそのまま表示してよい） */
 const SCORE_TARGET_DELETED_MESSAGE =
   "この答案は削除されたため採点を保存できません"
-
-/** Prisma の「更新/削除対象が見つからない」エラー（P2025）か */
-function isRecordNotFoundError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "P2025"
-  )
-}
 
 /** QuestionScore.status を日本語表示に変換（監査ログ差分用） */
 const scoreStatusLabel = (status: string | null | undefined): string => {

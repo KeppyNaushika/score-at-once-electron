@@ -114,7 +114,6 @@ export async function executeIdIntegrationImport(
     studentAnswerImage: {},
     examStudent: {},
     userExam: {},
-    examSubtotalGroup: {},
     cropSubtotal: {},
     questionScore: {},
     drawingAnnotation: {},

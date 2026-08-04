@@ -98,7 +98,6 @@ export async function executeStudentImport(
     studentAnswerImage: {},
     examStudent: {},
     userExam: {},
-    examSubtotalGroup: {},
     cropSubtotal: {},
     questionScore: {},
     drawingAnnotation: {},

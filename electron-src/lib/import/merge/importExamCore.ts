@@ -249,7 +249,7 @@ export async function processExamSubtotalGroups(
     // アーカイブ側の id とも一致しない。ここで id を探しにいくと、同じ組み合わせの行が
     // あるのに見つけられず create 側へ落ち、unique 違反でアーカイブ取り込みが
     // トランザクションごと巻き戻る。
-    const linked = await tx.examSubtotalGroup.upsert({
+    await tx.examSubtotalGroup.upsert({
       where: {
         examId_subtotalGroupId: {
           examId: newExamId,
@@ -264,8 +264,6 @@ export async function processExamSubtotalGroups(
       },
       update: {},
     })
-    // idは uuidv4 なのでアーカイブ側の id とは一致しない。実際の行の id を記録する
-    idMappings.examSubtotalGroup[examSubtotalGroup.id] = linked.id
   }
 }
 

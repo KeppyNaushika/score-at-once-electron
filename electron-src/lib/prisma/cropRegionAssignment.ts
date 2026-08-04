@@ -9,6 +9,7 @@
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
+import { isRecordNotFoundError } from "./prismaErrors"
 import { canDecideExamScores } from "./scoreDecision"
 
 /**
@@ -131,21 +132,19 @@ export const unassignCropRegion = async (
       return { success: false as const, error: permission.reason }
     }
 
-    // 監査ログに実際の行のidを載せるため、削除前に引く（idは計算で出せない）
-    const assignment = await prisma.cropRegionAssignment.findUnique({
+    // 鍵は `@@unique`（idは uuidv4 で計算できない）。delete の戻り値から
+    // 監査ログ用のidを取る。事前に findUnique で引くと2文に割れ、その隙間で
+    // 同期が相手の DELETE を適用したときに P2025 で失敗扱いになる
+    const deleted = await prisma.cropRegionAssignment.delete({
       where: { cropRegionId_userId: { cropRegionId, userId } },
     })
-    if (!assignment) {
-      return { success: true as const }
-    }
-    await prisma.cropRegionAssignment.delete({ where: { id: assignment.id } })
 
     const userLabel = await resolveUserLabel(userId)
     await recordAuditLog({
       action: "exam.score.unassign",
       userId: requestedByUserId,
       entityType: "CropRegionAssignment",
-      entityId: assignment.id,
+      entityId: deleted.id,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       summary: `設問の採点担当から${userLabel ?? userId}を外しました`,
@@ -153,6 +152,10 @@ export const unassignCropRegion = async (
 
     return { success: true as const }
   } catch (error) {
+    // 既に外れている（同期で消えた・二重クリック）。求めた状態にはなっているので成功
+    if (isRecordNotFoundError(error)) {
+      return { success: true as const }
+    }
     console.error("Failed to unassign crop region:", error)
     return {
       success: false as const,

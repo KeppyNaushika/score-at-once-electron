@@ -389,7 +389,6 @@ export function createEmptyIdMappings(): IdMappings {
     studentAnswerImage: {},
     examStudent: {},
     userExam: {},
-    examSubtotalGroup: {},
     cropSubtotal: {},
     questionScore: {},
     drawingAnnotation: {},
