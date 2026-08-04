@@ -17,7 +17,6 @@ export interface IdMappings {
   studentAnswerImage: Record<string, string>
   examStudent: Record<string, string>
   userExam: Record<string, string>
-  examSubtotalGroup: Record<string, string>
   cropSubtotal: Record<string, string>
   questionScore: Record<string, string>
   drawingAnnotation: Record<string, string>

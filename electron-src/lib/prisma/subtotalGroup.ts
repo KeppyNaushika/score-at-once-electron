@@ -328,8 +328,9 @@ export async function getActiveSubtotalGroupsForExam(examId: string) {
 /**
  * 試験に小計点グループを追加する。
  *
- * idが(試験, 小計点グループ)から決まるので upsert で足りる。2端末が同時に同じ組み合わせを
- * 追加しても同一idの1行へ収束し、既にある紐付けを二重に作ることもない
+ * **鍵は id ではなく `@@unique`。** id は uuidv4 なので端末ごとに異なり、同じ組み合わせの
+ * 行を引くのに使えない。2端末が同時に同じ組み合わせを追加すると id 違いの行が2つできるが、
+ * sqlite-nas-sync が LWW で1行へ収束させる
  * （以前は素の create で、重複防止は @@unique も無いまま呼び出し側任せだった）。
  */
 export async function addSubtotalGroupToExam(

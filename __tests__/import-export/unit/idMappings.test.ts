@@ -30,7 +30,6 @@ describe("IdMappings", () => {
         "studentAnswerImage",
         "examStudent",
         "userExam",
-        "examSubtotalGroup",
         "cropSubtotal",
         "questionScore",
         "drawingAnnotation",

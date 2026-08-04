@@ -241,10 +241,7 @@ export const CLASSROOM_CASCADE_MOVERS: CascadeMover[] = [
  */
 export const SUBTOTAL_GROUP_CASCADE_MOVERS: CascadeMover[] = [
   {
-    // id が (examId, subtotalGroupId) から決まるので、付け替えたら id も組み直す。
-    // updateMany で subtotalGroupId だけ動かすと id が旧グループを指したまま残り、
-    // (a) 同じ試験のアーカイブを再取り込みしたとき組み合わせ一致の行を id で引けず
-    // unique 違反、(b) 同僚のPCは同じ組を新idで持つので同期で2行目が押し寄せる。
+    // id は uuidv4 で行の内容を反映しないので、付け替えても id は据え置く。
     //
     // UNIQUE([examId, subtotalGroupId]) の衝突は起きない。changeSubtotalGroupId が
     // 移行先グループを必ず新規 create するので、その試験が移行先へのリンクを
