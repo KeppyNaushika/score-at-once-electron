@@ -96,7 +96,7 @@
     "file-selector": "^4.0.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.28.0",
-    "next": "^16.2.12",
+    "next": "^16.3.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",
